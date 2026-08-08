@@ -610,6 +610,7 @@ export class BoardImpl {
    *   pins: Array<{pin: string, mode: string, driveHigh: boolean}>,
    *   warnings: Array<{severity: string, partId?: string, message: string}>,
    *   nodeVoltages: Array<{net: string, voltage: number}>,
+   *   capacitors: Array<{id: string, voltage: number}>,
    * }}
    */
   getRenderState() {
@@ -634,6 +635,9 @@ export class BoardImpl {
         net: n.id,
         voltage: this.nodeVoltage(n.id),
       })),
+      capacitors: this.parts
+        .filter(p => p.kind === 'capacitor')
+        .map(p => ({ id: p.id, voltage: this.getCapVoltage(p.id) })),
     };
   }
 
