@@ -103,6 +103,12 @@ export class BoardImpl {
     this.nodeVoltages = new Map();
 
     /**
+     * Inductor currents: part id → current through the inductor.
+     * @type {Map<string, number>}
+     */
+    this.inductorCurrents = new Map();
+
+    /**
      * Cached LED currents from last solve.
      * @type {Map<string, number>}
      */
@@ -319,6 +325,39 @@ export class BoardImpl {
 
     const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
     return { hz, on: true };
+  }
+
+  /**
+   * Seven-segment display brightness: returns brightness for each segment.
+   * The display part has terminals: a, b, c, d, e, f, g, dp, common.
+   * Each segment is an LED between its terminal and the common terminal.
+   *
+   * @param {string} partId
+   * @returns {{ a: number, b: number, c: number, d: number, e: number, f: number, g: number, dp: number }}
+   */
+  sevenSegmentBrightness(partId) {
+    const result = { a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, dp: 0 };
+    const segments = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp'];
+    for (const seg of segments) {
+      const ledId = `${partId}_${seg}`;
+      result[seg] = this.ledBrightness(ledId);
+    }
+    return result;
+  }
+
+  /**
+   * RGB LED brightness: returns brightness for each channel.
+   * The part has terminals: r, g, b, common.
+   *
+   * @param {string} partId
+   * @returns {{ r: number, g: number, b: number }}
+   */
+  rgbLedBrightness(partId) {
+    return {
+      r: this.ledBrightness(`${partId}_r`),
+      g: this.ledBrightness(`${partId}_g`),
+      b: this.ledBrightness(`${partId}_b`),
+    };
   }
 
   // ─── Boundary B: user interaction ────────────────────────────────────────
@@ -617,6 +656,34 @@ export class BoardImpl {
           }
           break;
         }
+        case 'ldr': {
+          // Photoresistor: control 0…1 maps to resistance range.
+          // 0 = dark (high R, e.g. 1MΩ), 1 = bright (low R, e.g. 100Ω).
+          const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
+          const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+          const light = this.controls.get(part.id) ?? 0;
+          const ohms = rDark * Math.pow(rLight / rDark, light);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
+        case 'ntc': {
+          // NTC thermistor: control 0…1 maps from cold (high R) to hot (low R).
+          // Simplified: exponential interpolation between rCold and rHot.
+          const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
+          const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
+          const temp = this.controls.get(part.id) ?? 0;
+          const ohms = rCold * Math.pow(rHot / rCold, temp);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
         case 'button':
         case 'switch': {
           const pressed = (this.controls.get(part.id) ?? 0) === 1;
@@ -776,13 +843,38 @@ export class BoardImpl {
 
         case 'resistor': {
           const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
-          // Find the other terminal of this resistor
           const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
           const otherNet = this._netForTerminal(part.id, otherTerminal);
           if (!otherNet) continue;
           const result = this._traceToSourceInner(
             otherNet, part.id, visited, rAccum + ohms
           );
+          if (result) return result;
+          break;
+        }
+
+        case 'ldr': {
+          const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
+          const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+          const light = this.controls.get(part.id) ?? 0;
+          const ohms = rDark * Math.pow(rLight / rDark, light);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum + ohms);
+          if (result) return result;
+          break;
+        }
+
+        case 'ntc': {
+          const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
+          const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
+          const temp = this.controls.get(part.id) ?? 0;
+          const ohms = rCold * Math.pow(rHot / rCold, temp);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum + ohms);
           if (result) return result;
           break;
         }

@@ -197,7 +197,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Assign node indices (skip ground and, when power is off, skip nets that
   // only connect to active sources and have no passive element terminals).
   const passiveKinds = new Set(['resistor', 'capacitor', 'diode', 'led',
-    'potentiometer', 'button', 'switch', 'buzzer']);
+    'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
+    'npn', 'pnp', 'zener', 'inductor']);
 
   /** @type {Map<string, number>} net id → node index */
   const nodeIndex = new Map();
@@ -248,11 +249,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
   // ─── Stamp elements ─────────────────────────────────────────────────────
 
-  // Diode/LED operating points for Newton–Raphson
-  /** @type {Map<string, number>} part id → voltage across diode */
+  // Diode/LED/transistor operating points for Newton–Raphson
+  /** @type {Map<string, number>} part id → voltage across junction */
   const diodeVoltages = new Map();
   for (const part of parts) {
-    if (part.kind === 'led' || part.kind === 'diode') {
+    if (part.kind === 'led' || part.kind === 'diode' || part.kind === 'npn'
+        || part.kind === 'pnp' || part.kind === 'zener') {
       diodeVoltages.set(part.id, 0); // initial guess
     }
   }
@@ -301,11 +303,27 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'buzzer':
-          // Model as a small resistance (100 Ω)
           stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId);
           break;
 
-        // gnd, switch, capacitor: handled implicitly or not yet
+        case 'ldr':
+        case 'ntc':
+          stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls);
+          break;
+
+        case 'npn':
+          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          break;
+
+        case 'pnp':
+          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          break;
+
+        case 'zener':
+          stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          break;
+
+        // gnd, capacitor, inductor, seven_segment, rgb_led: handled elsewhere or composite
       }
     }
 
@@ -327,20 +345,35 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       break;
     }
 
-    // Update diode operating points and check convergence
+    // Update diode/transistor operating points and check convergence
     let maxDelta = 0;
     for (const part of parts) {
-      if (part.kind !== 'led' && part.kind !== 'diode') continue;
+      if (!diodeVoltages.has(part.id)) continue;
 
-      const anodeNet = findNet(nets, part.id, 'anode');
-      const cathodeNet = findNet(nets, part.id, 'cathode');
-      if (!anodeNet && !cathodeNet) continue;
+      let vNew;
+      if (part.kind === 'npn') {
+        // Track Vbe
+        const netB = findNet(nets, part.id, 'base');
+        const netE = findNet(nets, part.id, 'emitter');
+        const idxB = netB ? nodeIndex.get(netB) : undefined;
+        const idxE = netE ? nodeIndex.get(netE) : undefined;
+        vNew = (idxB !== undefined ? solution[idxB] : 0) - (idxE !== undefined ? solution[idxE] : 0);
+      } else if (part.kind === 'pnp') {
+        const netE = findNet(nets, part.id, 'emitter');
+        const netB = findNet(nets, part.id, 'base');
+        const idxE = netE ? nodeIndex.get(netE) : undefined;
+        const idxB = netB ? nodeIndex.get(netB) : undefined;
+        vNew = (idxE !== undefined ? solution[idxE] : 0) - (idxB !== undefined ? solution[idxB] : 0);
+      } else {
+        // LED, diode, zener: anode - cathode
+        const anodeNet = findNet(nets, part.id, 'anode');
+        const cathodeNet = findNet(nets, part.id, 'cathode');
+        const anodeIdx = anodeNet ? nodeIndex.get(anodeNet) : undefined;
+        const cathodeIdx = cathodeNet ? nodeIndex.get(cathodeNet) : undefined;
+        vNew = (anodeIdx !== undefined ? solution[anodeIdx] : 0) -
+               (cathodeIdx !== undefined ? solution[cathodeIdx] : 0);
+      }
 
-      const anodeIdx = anodeNet ? nodeIndex.get(anodeNet) : undefined;
-      const cathodeIdx = cathodeNet ? nodeIndex.get(cathodeNet) : undefined;
-      const vAnode = anodeIdx !== undefined ? solution[anodeIdx] : 0;
-      const vCathode = cathodeIdx !== undefined ? solution[cathodeIdx] : 0;
-      const vNew = vAnode - vCathode;
       const vOld = diodeVoltages.get(part.id) ?? 0;
 
       maxDelta = Math.max(maxDelta, Math.abs(vNew - vOld));
@@ -390,6 +423,73 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const i = vAcross >= vf ? (vAcross - vf) / rd : 0;
       currents.set('anode', i);    // into anode
       currents.set('cathode', -i); // out of cathode
+    }
+
+    if (part.kind === 'zener') {
+      const anodeNet = findNet(nets, part.id, 'anode');
+      const cathodeNet = findNet(nets, part.id, 'cathode');
+      const vAnode = anodeNet ? (nodeVoltages.get(anodeNet) ?? 0) : 0;
+      const vCathode = cathodeNet ? (nodeVoltages.get(cathodeNet) ?? 0) : 0;
+      const vf = /** @type {number} */ (part.params.vf ?? 0.7);
+      const vz = /** @type {number} */ (part.params.vz ?? 5.1);
+      const rd = 10;
+      const rzener = /** @type {number} */ (part.params.rz ?? 5);
+      const vAcross = vAnode - vCathode;
+      let i;
+      if (vAcross >= vf) i = (vAcross - vf) / rd;
+      else if (vAcross <= -vz) i = (vAcross + vz) / rzener;
+      else i = 0;
+      currents.set('anode', i);
+      currents.set('cathode', -i);
+    }
+
+    if (part.kind === 'npn' || part.kind === 'pnp') {
+      // Extract collector current from node voltages
+      const netB = findNet(nets, part.id, 'base');
+      const netC = findNet(nets, part.id, 'collector');
+      const netE = findNet(nets, part.id, 'emitter');
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      const vC = netC ? (nodeVoltages.get(netC) ?? 0) : 0;
+      const vE = netE ? (nodeVoltages.get(netE) ?? 0) : 0;
+      const beta = /** @type {number} */ (part.params.beta ?? 100);
+      const vbeThresh = /** @type {number} */ (part.params.vbe ?? 0.7);
+      const rd = 10;
+
+      let ib, ic;
+      if (part.kind === 'npn') {
+        const vbe = vB - vE;
+        ib = vbe >= vbeThresh ? (vbe - vbeThresh) / rd : 0;
+        ic = beta * ib;
+      } else {
+        const veb = vE - vB;
+        ib = veb >= vbeThresh ? (veb - vbeThresh) / rd : 0;
+        ic = beta * ib;
+      }
+      currents.set('base', ib);
+      currents.set('collector', ic);
+      currents.set('emitter', -(ib + ic));
+    }
+
+    if (part.kind === 'ldr' || part.kind === 'ntc') {
+      const netA = findNet(nets, part.id, 'a');
+      const netB = findNet(nets, part.id, 'b');
+      const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      let ohms;
+      if (part.kind === 'ldr') {
+        const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
+        const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+        const light = controls.get(part.id) ?? 0;
+        ohms = Math.max(0.001, rDark * Math.pow(rLight / rDark, light));
+      } else {
+        const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
+        const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
+        const temp = controls.get(part.id) ?? 0;
+        ohms = Math.max(0.001, rCold * Math.pow(rHot / rCold, temp));
+      }
+      const i = (vA - vB) / ohms;
+      currents.set('a', -i);
+      currents.set('b', i);
     }
 
     if (part.kind === 'vcc' && vsIndex.has(part.id)) {
@@ -622,6 +722,169 @@ function stampTwoTerminal(A, netA, netB, g, nodeIndex) {
     A.add(idxA, idxB, -g);
     A.add(idxB, idxA, -g);
   }
+}
+
+// ─── New component stamp functions ──────────────────────────────────────────
+
+/**
+ * Stamp a variable resistor (LDR or NTC). Resistance depends on control value.
+ */
+function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls) {
+  let ohms;
+  if (part.kind === 'ldr') {
+    const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
+    const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+    const light = controls.get(part.id) ?? 0;
+    ohms = rDark * Math.pow(rLight / rDark, light);
+  } else {
+    // ntc
+    const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
+    const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
+    const temp = controls.get(part.id) ?? 0;
+    ohms = rCold * Math.pow(rHot / rCold, temp);
+  }
+  ohms = Math.max(ohms, 0.001);
+  const netA = findNet(nets, part.id, 'a');
+  const netB = findNet(nets, part.id, 'b');
+  stampTwoTerminal(A, netA, netB, 1 / ohms, nodeIndex);
+}
+
+/**
+ * Stamp an NPN transistor. Simplified Ebers-Moll:
+ * Terminals: base, collector, emitter.
+ * B-E junction: diode with Vbe ≈ 0.7V.
+ * C-E: controlled current source Ic = β × Ib (β from params, default 100).
+ * Linearized: Ic = gm × Vbe - Ic0 (Norton companion model).
+ */
+function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+  const beta = /** @type {number} */ (part.params.beta ?? 100);
+  const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
+  const rd = 10; // base-emitter dynamic resistance
+
+  const netB = findNet(nets, part.id, 'base');
+  const netC = findNet(nets, part.id, 'collector');
+  const netE = findNet(nets, part.id, 'emitter');
+
+  const idxB = netB ? nodeIndex.get(netB) : undefined;
+  const idxC = netC ? nodeIndex.get(netC) : undefined;
+  const idxE = netE ? nodeIndex.get(netE) : undefined;
+
+  // B-E junction: diode model
+  const vAcross = diodeVoltages.get(part.id) ?? 0;
+  const { gEq, iEq } = diodeCompanion(vAcross, vbe, rd);
+
+  // Stamp B-E diode
+  if (idxB !== undefined) A.add(idxB, idxB, gEq);
+  if (idxE !== undefined) A.add(idxE, idxE, gEq);
+  if (idxB !== undefined && idxE !== undefined) {
+    A.add(idxB, idxE, -gEq);
+    A.add(idxE, idxB, -gEq);
+  }
+  if (idxB !== undefined) b[idxB] -= iEq;
+  if (idxE !== undefined) b[idxE] += iEq;
+
+  // C-E current source: Ic = β × Ib = β × gEq × Vbe + β × iEq
+  // This is a voltage-controlled current source from B-E to C-E.
+  // gm = β × gEq, Ic0 = β × iEq
+  const gm = beta * gEq;
+  const ic0 = beta * iEq;
+
+  // Stamp: current from collector to emitter proportional to Vbe
+  if (idxC !== undefined && idxB !== undefined) A.add(idxC, idxB, gm);
+  if (idxC !== undefined && idxE !== undefined) A.add(idxC, idxE, -gm);
+  if (idxE !== undefined && idxB !== undefined) A.add(idxE, idxB, -gm);
+  if (idxE !== undefined) A.add(idxE, idxE, gm);
+
+  if (idxC !== undefined) b[idxC] -= ic0;
+  if (idxE !== undefined) b[idxE] += ic0;
+}
+
+/**
+ * Stamp a PNP transistor. Mirror of NPN with reversed polarities.
+ * Terminals: base, collector, emitter.
+ */
+function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+  const beta = /** @type {number} */ (part.params.beta ?? 100);
+  const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
+  const rd = 10;
+
+  const netB = findNet(nets, part.id, 'base');
+  const netC = findNet(nets, part.id, 'collector');
+  const netE = findNet(nets, part.id, 'emitter');
+
+  const idxB = netB ? nodeIndex.get(netB) : undefined;
+  const idxC = netC ? nodeIndex.get(netC) : undefined;
+  const idxE = netE ? nodeIndex.get(netE) : undefined;
+
+  // E-B junction: diode (reversed from NPN — emitter is higher)
+  const vAcross = -(diodeVoltages.get(part.id) ?? 0);
+  const { gEq, iEq } = diodeCompanion(vAcross, vbe, rd);
+
+  // Stamp E-B diode
+  if (idxE !== undefined) A.add(idxE, idxE, gEq);
+  if (idxB !== undefined) A.add(idxB, idxB, gEq);
+  if (idxE !== undefined && idxB !== undefined) {
+    A.add(idxE, idxB, -gEq);
+    A.add(idxB, idxE, -gEq);
+  }
+  if (idxE !== undefined) b[idxE] -= iEq;
+  if (idxB !== undefined) b[idxB] += iEq;
+
+  // C-E current source (reversed direction from NPN)
+  const gm = beta * gEq;
+  const ic0 = beta * iEq;
+
+  if (idxE !== undefined && idxE !== undefined) A.add(idxE, idxE, gm);
+  if (idxE !== undefined && idxB !== undefined) A.add(idxE, idxB, -gm);
+  if (idxC !== undefined && idxE !== undefined) A.add(idxC, idxE, -gm);
+  if (idxC !== undefined && idxB !== undefined) A.add(idxC, idxB, gm);
+
+  if (idxE !== undefined) b[idxE] -= ic0;
+  if (idxC !== undefined) b[idxC] += ic0;
+}
+
+/**
+ * Stamp a Zener diode.
+ * Forward: like a regular diode (Vf ≈ 0.7V).
+ * Reverse: conducts at Vz (breakdown voltage), maintaining Vz across it.
+ * Terminals: anode, cathode.
+ */
+function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+  const vf = /** @type {number} */ (part.params.vf ?? 0.7);
+  const vz = /** @type {number} */ (part.params.vz ?? 5.1);
+  const rd = 10;
+  const rzener = /** @type {number} */ (part.params.rz ?? 5); // zener dynamic R
+
+  const netA = findNet(nets, part.id, 'anode');
+  const netC = findNet(nets, part.id, 'cathode');
+  const idxA = netA ? nodeIndex.get(netA) : undefined;
+  const idxC = netC ? nodeIndex.get(netC) : undefined;
+
+  const vAcross = diodeVoltages.get(part.id) ?? 0;
+
+  let gEq, iEq;
+  if (vAcross >= vf) {
+    // Forward conduction
+    gEq = 1 / rd;
+    iEq = -vf / rd;
+  } else if (vAcross <= -vz) {
+    // Zener breakdown (reverse conduction)
+    gEq = 1 / rzener;
+    iEq = vz / rzener; // current flows cathode→anode in breakdown
+  } else {
+    // Off region
+    gEq = 1e-9;
+    iEq = 0;
+  }
+
+  if (idxA !== undefined) A.add(idxA, idxA, gEq);
+  if (idxC !== undefined) A.add(idxC, idxC, gEq);
+  if (idxA !== undefined && idxC !== undefined) {
+    A.add(idxA, idxC, -gEq);
+    A.add(idxC, idxA, -gEq);
+  }
+  if (idxA !== undefined) b[idxA] -= iEq;
+  if (idxC !== undefined) b[idxC] += iEq;
 }
 
 export { Matrix, solve, diodeCompanion, findNet };

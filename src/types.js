@@ -58,7 +58,9 @@
 
 /**
  * @typedef {'vcc' | 'gnd' | 'resistor' | 'capacitor' | 'diode' | 'led'
- *   | 'potentiometer' | 'button' | 'switch' | 'buzzer' | 'mcu'} PartKind
+ *   | 'potentiometer' | 'button' | 'switch' | 'buzzer' | 'mcu'
+ *   | 'npn' | 'pnp' | 'ldr' | 'ntc' | 'inductor' | 'zener'
+ *   | 'seven_segment' | 'rgb_led'} PartKind
  */
 
 /**
