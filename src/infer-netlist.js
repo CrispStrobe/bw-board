@@ -61,8 +61,29 @@ export function inferNetlist(stc) {
     const pinId = `P${pin.port}.${pin.bit}`;
     const safeName = pin.name.replace(/[^a-zA-Z0-9_]/g, '_');
 
+    // Detect buzzer by name convention
+    const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
+
     switch (pin.direction) {
       case 'output': {
+        if (isBuzzer) {
+          // pin → buzzer → GND
+          const buzzId = `BUZZ_${safeName}`;
+          parts.push({
+            id: buzzId, kind: 'buzzer',
+            params: {}, terminals: ['a', 'b'],
+          });
+          nets.push({
+            id: `net_${safeName}_pin`,
+            terminals: [
+              { part: 'MCU', terminal: pinId },
+              { part: buzzId, terminal: 'a' },
+            ],
+          });
+          gndNet.terminals.push({ part: buzzId, terminal: 'b' });
+          break;
+        }
+
         if (pin.activeLow) {
           // VCC → 1kΩ → LED → pin (active-low, the correct wiring)
           const rId = `R_${safeName}`;
