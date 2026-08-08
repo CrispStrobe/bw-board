@@ -65,6 +65,25 @@ export function inferNetlist(stc) {
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
 
     switch (pin.direction) {
+      case 'tone': {
+        // Timer-driven GPIO toggle → buzzer between pin and GND.
+        // buzzerTone measures the toggle period; nothing in the MCU knows about sound.
+        const buzzId = `BUZZ_${safeName}`;
+        parts.push({
+          id: buzzId, kind: 'buzzer',
+          params: {}, terminals: ['a', 'b'],
+        });
+        nets.push({
+          id: `net_${safeName}_pin`,
+          terminals: [
+            { part: 'MCU', terminal: pinId },
+            { part: buzzId, terminal: 'a' },
+          ],
+        });
+        gndNet.terminals.push({ part: buzzId, terminal: 'b' });
+        break;
+      }
+
       case 'output':
       case 'pwm': {
         if (isBuzzer) {

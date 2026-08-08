@@ -326,12 +326,18 @@ export function createEmu8051Adapter(wasm, opts = {}) {
 
     loadHex(hexString) {
       if (!wasm._emu_load_hex) return;
-      const bytes = new TextEncoder().encode(hexString);
-      const ptr = wasm._malloc(bytes.length + 1);
-      wasm.HEAPU8.set(bytes, ptr);
-      wasm.HEAPU8[ptr + bytes.length] = 0;
-      wasm._emu_load_hex(ptr, bytes.length);
-      wasm._free(ptr);
+      if (wasm.stringToUTF8 && wasm._malloc) {
+        // Emscripten module with stringToUTF8 helper
+        const len = hexString.length;
+        const ptr = wasm._malloc(len + 1);
+        wasm.stringToUTF8(hexString, ptr, len + 1);
+        wasm._emu_load_hex(ptr, len);
+        wasm._free(ptr);
+      } else if (wasm.ccall) {
+        // Emscripten ccall fallback
+        wasm.ccall('emu_load_hex', 'number', ['string', 'number'],
+                   [hexString, hexString.length]);
+      }
     },
 
     /** Clean up registered function pointers. */
