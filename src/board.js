@@ -348,6 +348,12 @@ export class BoardImpl {
     const halfPeriodNs = Number(last - prev);
     if (halfPeriodNs <= 0) return { hz: 0, on: false };
 
+    // Staleness check: if the last edge is more than 100ms ago,
+    // the buzzer has stopped toggling (e.g., after a debug halt).
+    // Report as off rather than a meaninglessly low frequency.
+    const age = this.timeNs - last;
+    if (age > 100_000_000n) return { hz: 0, on: false };
+
     const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
     return { hz, on: true };
   }
