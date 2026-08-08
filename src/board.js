@@ -142,6 +142,7 @@ export class BoardImpl {
     }
 
     this._solve();
+    this._recordLedSamples();
   }
 
   // ─── Boundary A: McuToBoard ──────────────────────────────────────────────
