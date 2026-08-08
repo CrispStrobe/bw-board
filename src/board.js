@@ -671,6 +671,7 @@ export class BoardImpl {
       pinStates: new Map(this.pinStates),
       controls: new Map(this.controls),
       capVoltages: new Map(this.capVoltages),
+      inductorCurrents: new Map(this.inductorCurrents),
     };
   }
 
@@ -684,6 +685,7 @@ export class BoardImpl {
     this.pinStates = new Map(snap.pinStates);
     this.controls = new Map(snap.controls);
     this.capVoltages = new Map(snap.capVoltages);
+    this.inductorCurrents = new Map(snap.inductorCurrents ?? []);
 
     // Re-initialize LED/buzzer tracking
     this.ledHistory.clear();
