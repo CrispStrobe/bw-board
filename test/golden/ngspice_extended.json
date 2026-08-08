@@ -1,0 +1,156 @@
+{
+  "generator": "run_ngspice_extended.py",
+  "tool": "ngspice-42",
+  "result_count": 19,
+  "results": [
+    {
+      "name": "pin_quasi_low_led",
+      "measured": {
+        "v_anode": 1.979604,
+        "v_cathode": 0.07550991,
+        "v1#branch": -0.0030204
+      }
+    },
+    {
+      "name": "pin_quasi_high_led",
+      "measured": {
+        "v_pin": 1.877506,
+        "v_anode": 1.733613,
+        "vpin#branch": -0.000143894
+      }
+    },
+    {
+      "name": "pin_pushpull_high_led",
+      "measured": {
+        "v_pin": 4.92449,
+        "v_anode": 1.904094,
+        "vpin#branch": -0.0030204
+      }
+    },
+    {
+      "name": "two_leds_parallel",
+      "measured": {
+        "v_a1": 1.905951,
+        "v_a2": 1.905951,
+        "v1#branch": -0.0061881
+      }
+    },
+    {
+      "name": "two_leds_series",
+      "measured": {
+        "v_a1": 3.695668,
+        "v_mid": 1.847834,
+        "v1#branch": -0.00130433
+      }
+    },
+    {
+      "name": "divider_1k_1k_3.3V",
+      "measured": {
+        "v_mid": 1.65,
+        "v1#branch": -0.00165
+      }
+    },
+    {
+      "name": "divider_1k_1k_5.0V",
+      "measured": {
+        "v_mid": 2.5,
+        "v1#branch": -0.0025
+      }
+    },
+    {
+      "name": "divider_1k_1k_12.0V",
+      "measured": {
+        "v_mid": 6.0,
+        "v1#branch": -0.006
+      }
+    },
+    {
+      "name": "T_network",
+      "measured": {
+        "v_mid": 3.142857,
+        "v_out": 2.857143,
+        "v1#branch": -0.00185714
+      }
+    },
+    {
+      "name": "pi_network",
+      "measured": {
+        "v_out": 3.333333,
+        "v1#branch": -0.00416667
+      }
+    },
+    {
+      "name": "npn_ce_amplifier",
+      "measured": {
+        "v_base": 2.040387,
+        "v_collector": 5.5598,
+        "v_emitter": 1.377107,
+        "v1#branch": -0.00146985
+      }
+    },
+    {
+      "name": "npn_emitter_follower",
+      "measured": {
+        "v_inp": 2.5,
+        "v_emitter": 1.829513,
+        "v1#branch": -0.0018114,
+        "vin#branch": -1.8114e-05
+      }
+    },
+    {
+      "name": "zener_3v3_regulator",
+      "measured": {
+        "v_out": 3.300764,
+        "v1#branch": -0.0051492
+      }
+    },
+    {
+      "name": "zener_5v1_from_12v",
+      "measured": {
+        "v_out": 5.108326,
+        "v1#branch": -0.00689167
+      }
+    },
+    {
+      "name": "nmos_inverter",
+      "measured": {
+        "v_drain": 0.0002857096,
+        "v1#branch": -0.00499971,
+        "vin#branch": 0.0
+      }
+    },
+    {
+      "name": "nmos_inverter_off",
+      "measured": {
+        "v_drain": 5.0,
+        "v1#branch": -5.01e-12,
+        "vin#branch": 0.0
+      }
+    },
+    {
+      "name": "current_divider",
+      "measured": {
+        "v_node": 6.666667
+      }
+    },
+    {
+      "name": "resistor_cube_face",
+      "measured": {
+        "v_a": 5.0,
+        "v_b": 5.0,
+        "v_c": 5.0,
+        "v_d": 5.0,
+        "v1#branch": -8.67362e-19
+      }
+    },
+    {
+      "name": "opamp_inverting",
+      "measured": {
+        "v_out": -4.99995,
+        "v_inn": 4.999945e-06,
+        "vin#branch": -0.000499995,
+        "e1#branch": 0.000499995
+      }
+    }
+  ]
+}
