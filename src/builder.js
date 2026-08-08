@@ -158,6 +158,59 @@ export class NetlistBuilder {
     return this;
   }
 
+  // ─── Editing ─────────────────────────────────────────────────────────────
+
+  /**
+   * Remove a part and all its wiring.
+   * @param {string} id
+   * @returns {this}
+   */
+  removePart(id) {
+    const part = this._partMap.get(id);
+    if (!part) return this;
+
+    this._parts = this._parts.filter(p => p.id !== id);
+    this._partMap.delete(id);
+
+    // Remove all net memberships that reference this part
+    for (const [netId, members] of this._netMembers) {
+      for (const m of [...members]) {
+        if (m.startsWith(id + '.')) members.delete(m);
+      }
+      if (members.size <= 1) this._netMembers.delete(netId);
+    }
+
+    return this;
+  }
+
+  /**
+   * Disconnect a terminal from its net.
+   * @param {string} ref - e.g. "R1.a"
+   * @returns {this}
+   */
+  unwire(ref) {
+    for (const [netId, members] of this._netMembers) {
+      if (members.has(ref)) {
+        members.delete(ref);
+        if (members.size <= 1) this._netMembers.delete(netId);
+        break;
+      }
+    }
+    return this;
+  }
+
+  /**
+   * Check if a terminal is currently wired to anything.
+   * @param {string} ref - e.g. "R1.a"
+   * @returns {boolean}
+   */
+  isWired(ref) {
+    for (const members of this._netMembers.values()) {
+      if (members.has(ref)) return true;
+    }
+    return false;
+  }
+
   // ─── Build ──────────────────────────────────────────────────────────────
 
   /**
