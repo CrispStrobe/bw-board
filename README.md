@@ -103,6 +103,36 @@ const errors = validateNetlist(parts, nets);
 // errors: [{severity: 'error'|'warning', message, partId?, netId?}]
 ```
 
+## Quick start
+
+```js
+import { BoardImpl, inferNetlist } from './lib/bw-board/index.js';
+
+// 1. Infer a circuit from pin declarations
+const { parts, nets } = inferNetlist({
+  pins: [
+    { name: 'led1', port: 1, bit: 0, direction: 'output', activeLow: true },
+    { name: 'pot',  port: 1, bit: 3, direction: 'analog', activeLow: false },
+  ],
+});
+
+// 2. Create the board (setNetlist validates and throws on errors)
+const board = new BoardImpl(5.0);
+board.setNetlist(parts, nets);
+
+// 3. Drive pins as the MCU would
+board.setPin('P1.0', 'quasi', false);  // LED on (active-low)
+board.setPin('P1.3', 'input', false);  // ADC input
+board.setControl('POT_pot', 0.5);      // user turns the knob
+board.advanceTo(25_000_000n);          // 25 ms of simulation
+
+// 4. Read the state for the UI
+const state = board.getRenderState();
+// state.leds[0].brightness ≈ 0.145
+// state.controls[0].value === 0.5
+// state.warnings.length === 0
+```
+
 ## Testing
 
 ```bash
