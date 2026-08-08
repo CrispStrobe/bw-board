@@ -27,10 +27,18 @@ describe('inferNetlist edge cases', () => {
 
   it('unknown direction produces a note', () => {
     const result = inferNetlist({
-      pins: [{ name: 'mystery', port: 2, bit: 0, direction: 'pwm', activeLow: false }],
+      pins: [{ name: 'mystery', port: 2, bit: 0, direction: 'serial', activeLow: false }],
     });
     assert.ok(result.notes.length > 0, 'should produce a warning note');
-    assert.ok(result.notes[0].includes('pwm'), `note should mention the direction: ${result.notes[0]}`);
+    assert.ok(result.notes[0].includes('serial'), `note should mention the direction: ${result.notes[0]}`);
+  });
+
+  it('pwm direction is handled as output', () => {
+    const result = inferNetlist({
+      pins: [{ name: 'lamp', port: 1, bit: 3, direction: 'pwm', activeLow: true }],
+    });
+    assert.equal(result.notes.length, 0, 'pwm is a valid direction');
+    assert.ok(result.parts.some(p => p.kind === 'led'), 'pwm creates an LED');
   });
 
   it('multiple analog pins each get their own pot', () => {

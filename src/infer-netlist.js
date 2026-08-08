@@ -65,7 +65,8 @@ export function inferNetlist(stc) {
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
 
     switch (pin.direction) {
-      case 'output': {
+      case 'output':
+      case 'pwm': {
         if (isBuzzer) {
           // pin → buzzer → GND
           const buzzId = `BUZZ_${safeName}`;

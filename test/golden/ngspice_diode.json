@@ -1,0 +1,220 @@
+{
+  "generator": "run_ngspice_diode.py",
+  "tool": "ngspice-42",
+  "result_count": 30,
+  "results": [
+    {
+      "name": "led_red_100",
+      "measured": {
+        "v_anode": 2.251542,
+        "v1#branch": -0.0274846
+      }
+    },
+    {
+      "name": "led_red_220",
+      "measured": {
+        "v_anode": 2.075827,
+        "v1#branch": -0.0132917
+      }
+    },
+    {
+      "name": "led_red_330",
+      "measured": {
+        "v_anode": 2.015388,
+        "v1#branch": -0.00904428
+      }
+    },
+    {
+      "name": "led_red_470",
+      "measured": {
+        "v_anode": 1.973542,
+        "v1#branch": -0.00643927
+      }
+    },
+    {
+      "name": "led_red_680",
+      "measured": {
+        "v_anode": 1.937518,
+        "v1#branch": -0.00450365
+      }
+    },
+    {
+      "name": "led_red_1000",
+      "measured": {
+        "v_anode": 1.905951,
+        "v1#branch": -0.00309405
+      }
+    },
+    {
+      "name": "led_red_2200",
+      "measured": {
+        "v_anode": 1.853385,
+        "v1#branch": -0.00143028
+      }
+    },
+    {
+      "name": "led_red_4700",
+      "measured": {
+        "v_anode": 1.811144,
+        "v1#branch": -0.00067848
+      }
+    },
+    {
+      "name": "led_red_10000",
+      "measured": {
+        "v_anode": 1.772989,
+        "v1#branch": -0.000322701
+      }
+    },
+    {
+      "name": "led_red_220_3v3",
+      "measured": {
+        "v_anode": 1.966893,
+        "v1#branch": -0.00605958
+      }
+    },
+    {
+      "name": "led_red_470_3v3",
+      "measured": {
+        "v_anode": 1.902873,
+        "v1#branch": -0.00297261
+      }
+    },
+    {
+      "name": "led_red_1000_3v3",
+      "measured": {
+        "v_anode": 1.854048,
+        "v1#branch": -0.00144595
+      }
+    },
+    {
+      "name": "led_blue_220",
+      "measured": {
+        "v_anode": 3.170545,
+        "v1#branch": -0.0083157
+      }
+    },
+    {
+      "name": "led_blue_470",
+      "measured": {
+        "v_anode": 3.090935,
+        "v1#branch": -0.00406184
+      }
+    },
+    {
+      "name": "led_blue_1000",
+      "measured": {
+        "v_anode": 3.032493,
+        "v1#branch": -0.00196751
+      }
+    },
+    {
+      "name": "si_diode_100",
+      "measured": {
+        "v_anode": 0.7777667,
+        "v1#branch": -0.0422223
+      }
+    },
+    {
+      "name": "si_diode_1000",
+      "measured": {
+        "v_anode": 0.6532286,
+        "v1#branch": -0.00434677
+      }
+    },
+    {
+      "name": "si_diode_10000",
+      "measured": {
+        "v_anode": 0.5477564,
+        "v1#branch": -0.000445224
+      }
+    },
+    {
+      "name": "two_leds_series_5.0V",
+      "measured": {
+        "v_a1": 3.695668,
+        "v_mid": 1.847834,
+        "v1#branch": -0.00130433
+      }
+    },
+    {
+      "name": "two_leds_series_3.3V",
+      "measured": {
+        "v_a1": 3.280171,
+        "v_mid": 1.640086,
+        "v1#branch": -1.98289e-05
+      }
+    },
+    {
+      "name": "two_leds_series_7.0V",
+      "measured": {
+        "v_a1": 3.816349,
+        "v_mid": 1.908174,
+        "v1#branch": -0.00318365
+      }
+    },
+    {
+      "name": "rc_at_0.1RC",
+      "measured": {
+        "v_cap": 0.4758129,
+        "t": 0.1
+      }
+    },
+    {
+      "name": "rc_at_0.2RC",
+      "measured": {
+        "v_cap": 0.9063465,
+        "t": 0.2
+      }
+    },
+    {
+      "name": "rc_at_0.5RC",
+      "measured": {
+        "v_cap": 1.96735,
+        "t": 0.5
+      }
+    },
+    {
+      "name": "rc_at_0.7RC",
+      "measured": {
+        "v_cap": 2.51708,
+        "t": 0.7
+      }
+    },
+    {
+      "name": "rc_at_1.0RC",
+      "measured": {
+        "v_cap": 3.160617,
+        "t": 1.0
+      }
+    },
+    {
+      "name": "rc_at_1.5RC",
+      "measured": {
+        "v_cap": 3.884379,
+        "t": 1.5
+      }
+    },
+    {
+      "name": "rc_at_2.0RC",
+      "measured": {
+        "v_cap": 4.323367,
+        "t": 2.0
+      }
+    },
+    {
+      "name": "rc_at_3.0RC",
+      "measured": {
+        "v_cap": 4.751119,
+        "t": 3.0
+      }
+    },
+    {
+      "name": "rc_at_5.0RC",
+      "measured": {
+        "v_cap": 4.966345,
+        "t": 5.0
+      }
+    }
+  ]
+}
