@@ -117,31 +117,84 @@ function solve(A, b) {
 // ─── LED / diode model for Newton–Raphson ────────────────────────────────────
 
 /**
- * Piecewise-linear diode model.
- * Below Vf: very high resistance (1 MΩ) — effectively off.
- * Above Vf: dynamic resistance Rd with voltage offset Vf.
+ * Diode companion model for Newton-Raphson linearization.
  *
- * For Newton–Raphson, we linearize around the current operating point:
- *   I = G_eq * V_across + I_eq
+ * Two models available:
+ *   1. Piecewise-linear (default, fast): sharp knee at Vf.
+ *   2. Shockley exponential (accurate): I = Is × (e^(V/nVt) - 1).
+ *
+ * The Shockley model gives a smooth I-V curve with realistic behavior
+ * near the knee voltage, better for small-signal and temperature analysis.
  *
  * @param {number} vAcross - voltage across the diode (anode - cathode)
- * @param {number} vf - forward voltage
- * @param {number} rd - dynamic resistance
+ * @param {number} vf - forward voltage (piecewise) or nominal Vf (Shockley)
+ * @param {number} rd - dynamic resistance at rated current
+ * @param {object} [opts] - optional Shockley parameters
+ * @param {number} [opts.is] - saturation current (default: computed from Vf)
+ * @param {number} [opts.n] - ideality factor (default: 1.8 for LED, 1.0 for Si)
+ * @param {boolean} [opts.shockley] - use Shockley model (default: false)
  * @returns {{ gEq: number, iEq: number }}
  */
-function diodeCompanion(vAcross, vf, rd) {
+function diodeCompanion(vAcross, vf, rd, opts) {
+  if (opts && opts.shockley) {
+    return shockleyCompanion(vAcross, vf, rd, opts.is, opts.n);
+  }
+
+  // Piecewise-linear (original model)
   if (vAcross < vf) {
-    // Off region: very high resistance
-    const gOff = 1e-9; // 1 GΩ
+    const gOff = 1e-9;
     return { gEq: gOff, iEq: 0 };
   } else {
-    // On region: I = (V - Vf) / Rd
-    // Linearized: I = (1/Rd) * V - Vf/Rd
-    // So G_eq = 1/Rd, I_eq = -Vf/Rd (Norton source current)
     const gEq = 1 / rd;
     const iEq = -vf / rd;
     return { gEq, iEq };
   }
+}
+
+/**
+ * Shockley diode companion model.
+ * I = Is × (e^(V / nVt) - 1)
+ * Linearized at operating point V0:
+ *   G_eq = dI/dV = Is/(nVt) × e^(V0/nVt)
+ *   I_eq = I(V0) - G_eq × V0
+ *
+ * @param {number} vAcross
+ * @param {number} vf - nominal forward voltage (used to compute Is if not given)
+ * @param {number} rd - dynamic resistance (fallback)
+ * @param {number} [is] - saturation current
+ * @param {number} [n] - ideality factor
+ * @returns {{ gEq: number, iEq: number }}
+ */
+function shockleyCompanion(vAcross, vf, rd, is, n) {
+  const VT = 0.02585; // thermal voltage at 25°C (kT/q)
+  const nVt = (n ?? 1.8) * VT;
+
+  // Compute Is from Vf if not given: at Vf, I ≈ 20mA (rated)
+  // Is = I_rated / (e^(Vf/nVt) - 1)
+  if (is === undefined) {
+    const expVf = Math.exp(Math.min(vf / nVt, 80)); // clamp to avoid overflow
+    is = 0.020 / Math.max(expVf - 1, 1e-30);
+  }
+
+  // Clamp vAcross to avoid overflow in exp
+  const vClamped = Math.min(vAcross, nVt * 80);
+
+  if (vClamped < -5 * nVt) {
+    // Deep reverse bias: essentially off
+    return { gEq: 1e-12, iEq: 0 };
+  }
+
+  const expV = Math.exp(vClamped / nVt);
+  const iD = is * (expV - 1);
+  const gEq = is * expV / nVt; // dI/dV
+
+  // Clamp gEq to avoid numerical issues
+  const gClamped = Math.min(Math.max(gEq, 1e-12), 1e6);
+
+  // Norton: I_eq = I(V0) - G_eq × V0
+  const iEq = iD - gClamped * vAcross;
+
+  return { gEq: gClamped, iEq };
 }
 
 // ─── MNA circuit builder ─────────────────────────────────────────────────────
