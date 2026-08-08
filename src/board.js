@@ -332,6 +332,136 @@ export class BoardImpl {
         this._solveLedChain(part);
       }
     }
+
+    // Resolve remaining unresolved nets (e.g. pull-up/pull-down to an input pin).
+    // For each unresolved net, trace through resistors/buttons to find a voltage source.
+    // If there's no load (only high-Z connections), voltage equals the source voltage.
+    for (const net of this.nets) {
+      if (this.nodeVoltages.has(net.id)) continue;
+      this._resolveNet(net);
+    }
+  }
+
+  /**
+   * Resolve a net's voltage by finding all Thévenin sources connected to it
+   * (through resistors, buttons, or directly). Combines parallel sources.
+   * High-Z connections (input pins, open buttons) contribute nothing.
+   *
+   * @param {Net} net
+   */
+  _resolveNet(net) {
+    // Gather all Thévenin sources reaching this net
+    const sources = this._gatherSources(net.id);
+    if (sources.length === 0) return;
+
+    if (sources.length === 1) {
+      // Single source: voltage is Vth (no current flows through the series R
+      // because there's no other path — only high-Z loads)
+      this.nodeVoltages.set(net.id, sources[0].vTh);
+      return;
+    }
+
+    // Multiple sources: combine in parallel using Norton equivalent.
+    // I_total = Σ(Vth_i / Rth_i), G_total = Σ(1 / Rth_i)
+    // V_node = I_total / G_total
+    let iTotal = 0;
+    let gTotal = 0;
+    for (const s of sources) {
+      if (s.rTh <= 0) { s.rTh = 0.001; } // avoid division by zero
+      gTotal += 1 / s.rTh;
+      iTotal += s.vTh / s.rTh;
+    }
+    this.nodeVoltages.set(net.id, gTotal > 0 ? iTotal / gTotal : 0);
+  }
+
+  /**
+   * Gather Thévenin sources that can reach a net (directly or through
+   * resistors/closed buttons). Does not follow through LEDs or buzzers.
+   *
+   * @param {string} netId
+   * @returns {Array<{vTh: number, rTh: number}>}
+   */
+  _gatherSources(netId) {
+    /** @type {Array<{vTh: number, rTh: number}>} */
+    const sources = [];
+    this._gatherSourcesInner(netId, new Set(), 0, sources);
+    return sources;
+  }
+
+  /**
+   * @param {string} netId
+   * @param {Set<string>} visited
+   * @param {number} rAccum
+   * @param {Array<{vTh: number, rTh: number}>} out
+   */
+  _gatherSourcesInner(netId, visited, rAccum, out) {
+    if (visited.has(netId)) return;
+    visited.add(netId);
+
+    // If this net has a known voltage, it's a source
+    const knownV = this.nodeVoltages.get(netId);
+    if (knownV !== undefined) {
+      out.push({ vTh: knownV, rTh: rAccum });
+      return;
+    }
+
+    const net = this.netMap.get(netId);
+    if (!net) return;
+
+    for (const t of net.terminals) {
+      const part = this.partMap.get(t.part);
+      if (!part) continue;
+
+      switch (part.kind) {
+        case 'vcc':
+          out.push({ vTh: this.vcc, rTh: rAccum });
+          break;
+        case 'gnd':
+          out.push({ vTh: 0, rTh: rAccum });
+          break;
+        case 'mcu': {
+          const state = this.pinStates.get(t.terminal);
+          if (!state) break;
+          const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
+          if (thev !== 'high-z') {
+            out.push({ vTh: thev.vTh, rTh: rAccum + thev.rTh });
+          }
+          break;
+        }
+        case 'resistor': {
+          const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
+        case 'button': {
+          const pressed = (this.controls.get(part.id) ?? 0) === 1;
+          if (!pressed) break;
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum, out);
+          }
+          break;
+        }
+        case 'potentiometer': {
+          if (t.terminal === 'wiper') {
+            const wiperNet = this._netForTerminal(part.id, 'wiper');
+            if (wiperNet) {
+              const wV = this.nodeVoltages.get(wiperNet);
+              if (wV !== undefined) {
+                out.push({ vTh: wV, rTh: rAccum });
+              }
+            }
+          }
+          break;
+        }
+        // LEDs, buzzers, capacitors: not followed through
+      }
+    }
   }
 
   /**
