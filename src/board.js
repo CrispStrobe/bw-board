@@ -467,6 +467,42 @@ export class BoardImpl {
   /** All nets in the current netlist. @returns {Net[]} */
   getNets() { return this.nets; }
 
+  /**
+   * Get the expected terminal names for a part kind.
+   * Returns null for MCU (terminals are PinIds) and composites.
+   * Useful for the UI inspector panel.
+   *
+   * @param {string} kind
+   * @returns {string[] | null}
+   */
+  static getTerminalsForKind(kind) {
+    const map = {
+      vcc: ['vcc'], gnd: ['gnd'],
+      resistor: ['a', 'b'], capacitor: ['a', 'b'], inductor: ['a', 'b'],
+      diode: ['anode', 'cathode'], led: ['anode', 'cathode'],
+      zener: ['anode', 'cathode'],
+      potentiometer: ['a', 'b', 'wiper'],
+      button: ['a', 'b'], switch: ['a', 'b'],
+      buzzer: ['a', 'b'], ldr: ['a', 'b'], ntc: ['a', 'b'],
+      npn: ['base', 'collector', 'emitter'],
+      pnp: ['base', 'collector', 'emitter'],
+    };
+    return map[kind] ?? null;
+  }
+
+  /**
+   * Get all known part kinds.
+   * @returns {string[]}
+   */
+  static getPartKinds() {
+    return [
+      'vcc', 'gnd', 'resistor', 'capacitor', 'inductor',
+      'diode', 'led', 'zener', 'potentiometer',
+      'button', 'switch', 'buzzer', 'ldr', 'ntc',
+      'npn', 'pnp', 'seven_segment', 'rgb_led', 'mcu',
+    ];
+  }
+
   /** All LED part IDs. @returns {string[]} */
   getLeds() { return this.parts.filter(p => p.kind === 'led').map(p => p.id); }
 
