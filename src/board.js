@@ -231,7 +231,8 @@ export class BoardImpl {
    * @returns {number} voltage 0…VCC
    */
   readAnalog(pin) {
-    return this._pinVoltage(pin);
+    const v = this._pinVoltage(pin);
+    return Number.isFinite(v) ? v : 0;
   }
 
   // ─── Boundary B: instruments ─────────────────────────────────────────────
@@ -241,7 +242,8 @@ export class BoardImpl {
    * @returns {number}
    */
   nodeVoltage(netId) {
-    return this.nodeVoltages.get(netId) ?? 0;
+    const v = this.nodeVoltages.get(netId) ?? 0;
+    return Number.isFinite(v) ? v : 0;
   }
 
   /**
@@ -253,7 +255,8 @@ export class BoardImpl {
     const result = this._solveMNA(false);
     const partCurrents = result.branchCurrents.get(partId);
     if (!partCurrents) return 0;
-    return partCurrents.get(terminal) ?? 0;
+    const i = partCurrents.get(terminal) ?? 0;
+    return Number.isFinite(i) ? i : 0;
   }
 
   /**
@@ -268,7 +271,8 @@ export class BoardImpl {
     // testNodeB is used as the reference (V=0), so R = V_A / I_test
     const result = this._solveMNA(true, a, b, testCurrent);
     const vA = result.nodeVoltages.get(a) ?? 0;
-    return Math.abs(vA) / testCurrent;
+    const r = Math.abs(vA) / testCurrent;
+    return Number.isFinite(r) ? r : 0;
   }
 
   // ─── Boundary B: transducers ─────────────────────────────────────────────
@@ -442,6 +446,15 @@ export class BoardImpl {
     return this.capVoltages.get(partId) ?? 0;
   }
 
+  /**
+   * Current through an inductor (DC steady-state).
+   * @param {string} partId
+   * @returns {number}
+   */
+  getInductorCurrent(partId) {
+    return this.inductorCurrents.get(partId) ?? 0;
+  }
+
   // ─── Part queries ───────────────────────────────────────────────────────
 
   /** All parts in the current netlist. @returns {Part[]} */
@@ -531,6 +544,41 @@ export class BoardImpl {
             partId: part.id,
             message: `${part.id}: current ${(current * 1000).toFixed(1)} mA exceeds 20 mA rating. Add or increase the series resistor.`,
           });
+        }
+      }
+
+      // Check for MCU pins driving into VCC or GND directly (short circuit)
+      if (part.kind === 'mcu') {
+        for (const terminal of part.terminals) {
+          const state = this.pinStates.get(terminal);
+          if (!state || state.mode === 'input') continue;
+
+          // Find the net this pin is on
+          const net = this.nets.find(n => n.terminals.some(
+            t => t.part === part.id && t.terminal === terminal
+          ));
+          if (!net) continue;
+
+          // Check if this net is directly connected to VCC or GND
+          for (const t of net.terminals) {
+            if (t.part === part.id) continue;
+            const other = this.partMap.get(t.part);
+            if (!other) continue;
+            if (other.kind === 'vcc' && state.mode !== 'input' && !state.driveHigh) {
+              warnings.push({
+                severity: 'danger',
+                partId: part.id,
+                message: `${terminal}: pin drives LOW but is wired directly to VCC. This is a short circuit.`,
+              });
+            }
+            if (other.kind === 'gnd' && state.mode !== 'input' && state.driveHigh && state.mode === 'pushpull') {
+              warnings.push({
+                severity: 'danger',
+                partId: part.id,
+                message: `${terminal}: pin drives HIGH but is wired directly to GND. This is a short circuit.`,
+              });
+            }
+          }
         }
       }
     }
