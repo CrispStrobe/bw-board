@@ -521,7 +521,7 @@ export class BoardImpl {
     if (!this._changeListeners) return;
     const event = { type, detail };
     for (const fn of this._changeListeners) {
-      fn(event);
+      try { fn(event); } catch { /* listener error must not break the board */ }
     }
   }
 

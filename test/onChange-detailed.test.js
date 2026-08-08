@@ -122,21 +122,22 @@ describe('onChange: event ordering', () => {
 });
 
 describe('onChange: listener error isolation', () => {
-  it('throwing listener does not break the board', () => {
+  it('throwing listener does not break the board or other listeners', () => {
     const board = new BoardImpl(5.0);
     board.setNetlist([], []);
     const good = [];
     board.onChange(() => { throw new Error('boom'); });
     board.onChange(e => good.push(e.type));
 
-    // Should not throw even though first listener throws
-    try {
-      board.setPin('P1.0', 'quasi', false);
-    } catch {
-      // The throw propagates, but the board state should be updated
-    }
-    // Board state should be updated regardless
+    // Should not throw — error is caught internally
+    board.setPin('P1.0', 'quasi', false);
+
+    // Board state should be updated
     assert.deepEqual(board.getPinState('P1.0'), { mode: 'quasi', driveHigh: false });
+
+    // Second listener should have fired despite the first throwing
+    assert.ok(good.includes('pin'),
+      'second listener should fire even when first throws');
   });
 });
 
