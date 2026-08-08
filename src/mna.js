@@ -311,6 +311,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls);
           break;
 
+        case 'inductor':
+          // Inductor companion model is time-dependent and handled
+          // separately in advanceTo. For DC steady-state MNA, an
+          // inductor is a short circuit (zero resistance wire).
+          stampTwoTerminal(A,
+            findNet(nets, part.id, 'a'),
+            findNet(nets, part.id, 'b'),
+            1 / 0.001, // 1 mΩ — effectively a wire for DC
+            nodeIndex);
+          break;
+
         case 'npn':
           stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
           break;
@@ -488,6 +499,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         ohms = Math.max(0.001, rCold * Math.pow(rHot / rCold, temp));
       }
       const i = (vA - vB) / ohms;
+      currents.set('a', -i);
+      currents.set('b', i);
+    }
+
+    if (part.kind === 'inductor') {
+      const netA = findNet(nets, part.id, 'a');
+      const netB = findNet(nets, part.id, 'b');
+      const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      // DC: inductor is a wire, current = V_drop / R_wire
+      const i = (vA - vB) / 0.001;
       currents.set('a', -i);
       currents.set('b', i);
     }

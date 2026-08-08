@@ -162,6 +162,11 @@ export class BoardImpl {
           this.capVoltages.set(p.id, 0); // start uncharged
         }
       }
+      if (p.kind === 'inductor') {
+        if (!this.inductorCurrents.has(p.id)) {
+          this.inductorCurrents.set(p.id, 0); // start with zero current
+        }
+      }
     }
 
     this._solve();
@@ -878,6 +883,15 @@ export class BoardImpl {
           }
           break;
         }
+        case 'inductor': {
+          // DC steady state: inductor is a wire (zero resistance)
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum, out);
+          }
+          break;
+        }
         case 'ldr': {
           // Photoresistor: control 0…1 maps to resistance range.
           // 0 = dark (high R, e.g. 1MΩ), 1 = bright (low R, e.g. 100Ω).
@@ -1071,6 +1085,16 @@ export class BoardImpl {
           const result = this._traceToSourceInner(
             otherNet, part.id, visited, rAccum + ohms
           );
+          if (result) return result;
+          break;
+        }
+
+        case 'inductor': {
+          // DC: wire (zero resistance)
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum);
           if (result) return result;
           break;
         }
