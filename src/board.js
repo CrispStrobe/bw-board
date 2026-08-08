@@ -120,6 +120,8 @@ export class BoardImpl {
         this.buzzerEdges.set(p.id, []);
       }
     }
+
+    this._solve();
   }
 
   // ─── Boundary A: McuToBoard ──────────────────────────────────────────────
@@ -309,7 +311,8 @@ export class BoardImpl {
    */
   setPower(on) {
     this.powered = on;
-    if (on) this._solve();
+    this._solve();
+    this._recordLedSamples();
   }
 
   // ─── Internal: MNA solver bridge ──────────────────────────────────────────
@@ -492,15 +495,17 @@ export class BoardImpl {
    * @param {Array<{vTh: number, rTh: number}>} out
    */
   _gatherSourcesInner(netId, visited, rAccum, out) {
-    if (visited.has(netId)) return;
-    visited.add(netId);
-
-    // If this net has a known voltage, it's a source
+    // If this net has a known voltage, it's a terminal source —
+    // return it without marking visited, so parallel paths to the
+    // same known net (e.g. two resistors both to GND) are all found.
     const knownV = this.nodeVoltages.get(netId);
     if (knownV !== undefined) {
       out.push({ vTh: knownV, rTh: rAccum });
       return;
     }
+
+    if (visited.has(netId)) return;
+    visited.add(netId);
 
     const net = this.netMap.get(netId);
     if (!net) return;
@@ -534,7 +539,8 @@ export class BoardImpl {
           }
           break;
         }
-        case 'button': {
+        case 'button':
+        case 'switch': {
           const pressed = (this.controls.get(part.id) ?? 0) === 1;
           if (!pressed) break;
           const otherT = t.terminal === 'a' ? 'b' : 'a';
@@ -703,9 +709,10 @@ export class BoardImpl {
           break;
         }
 
-        case 'button': {
+        case 'button':
+        case 'switch': {
           const pressed = (this.controls.get(part.id) ?? 0) === 1;
-          if (!pressed) continue; // open button = no connection
+          if (!pressed) continue; // open = no connection
           const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
           const otherNet = this._netForTerminal(part.id, otherTerminal);
           if (!otherNet) continue;
@@ -776,14 +783,36 @@ export class BoardImpl {
   _recordLedSamples() {
     for (const [partId, history] of this.ledHistory) {
       const current = this.ledCurrents.get(partId) ?? 0;
+
+      // Deduplicate: if the last sample has the same current and time, skip
+      const last = history.length > 0 ? history[history.length - 1] : null;
+      if (last && last.tNs === this.timeNs && last.current === current) continue;
+
+      // If the time hasn't changed but current has, update in place
+      if (last && last.tNs === this.timeNs) {
+        last.current = current;
+        continue;
+      }
+
       history.push({ tNs: this.timeNs, current });
 
-      // Prune old samples beyond the window
-      const cutoff = this.timeNs > BRIGHTNESS_WINDOW_NS * 2n
-        ? this.timeNs - BRIGHTNESS_WINDOW_NS * 2n
+      // Prune old samples, but always keep at least one sample before
+      // the brightness window start so the integrator has an initial value.
+      // Window starts at now - BRIGHTNESS_WINDOW_NS.
+      const windowStart = this.timeNs > BRIGHTNESS_WINDOW_NS
+        ? this.timeNs - BRIGHTNESS_WINDOW_NS
         : 0n;
-      while (history.length > 1 && history[0].tNs < cutoff) {
-        history.shift();
+
+      // Keep the most recent sample at or before windowStart, remove everything before it
+      let keepIdx = -1;
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].tNs <= windowStart) {
+          keepIdx = i;
+          break;
+        }
+      }
+      if (keepIdx > 0) {
+        history.splice(0, keepIdx);
       }
     }
   }

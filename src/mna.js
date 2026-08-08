@@ -284,6 +284,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'button':
+        case 'switch':
           stampButton(A, b, part, nets, nodeIndex, groundNetId, controls);
           break;
 
