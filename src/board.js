@@ -14,6 +14,7 @@
 /** @typedef {import('./types.js').TheveninSource} TheveninSource */
 
 import { pinThevenin } from './pin-model.js';
+import { solveMNA } from './mna.js';
 
 /**
  * Internal pin state.
@@ -179,8 +180,10 @@ export class BoardImpl {
    * @returns {number}
    */
   branchCurrent(partId, terminal) {
-    // Requires MNA solver — not implemented yet.
-    throw new Error('branchCurrent requires the MNA solver (not yet implemented)');
+    const result = this._solveMNA(false);
+    const partCurrents = result.branchCurrents.get(partId);
+    if (!partCurrents) return 0;
+    return partCurrents.get(terminal) ?? 0;
   }
 
   /**
@@ -190,8 +193,12 @@ export class BoardImpl {
    */
   resistance(a, b) {
     if (this.powered) return 'requires-power-off';
-    // Actual resistance measurement requires MNA solver.
-    throw new Error('resistance measurement not yet implemented');
+
+    const testCurrent = 0.001; // 1 mA test current
+    // testNodeB is used as the reference (V=0), so R = V_A / I_test
+    const result = this._solveMNA(true, a, b, testCurrent);
+    const vA = result.nodeVoltages.get(a) ?? 0;
+    return Math.abs(vA) / testCurrent;
   }
 
   // ─── Boundary B: transducers ─────────────────────────────────────────────
@@ -288,6 +295,31 @@ export class BoardImpl {
   setPower(on) {
     this.powered = on;
     if (on) this._solve();
+  }
+
+  // ─── Internal: MNA solver bridge ──────────────────────────────────────────
+
+  /**
+   * Run the MNA solver on the current netlist.
+   * @param {boolean} powerOff - if true, omit active sources (for resistance)
+   * @param {string} [testNodeA] - inject test current from this net
+   * @param {string} [testNodeB] - inject test current to this net
+   * @param {number} [testCurrent] - test current magnitude
+   */
+  _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
+    // Build pin source map from current pin states
+    /** @type {Map<string, import('./types.js').TheveninSource>} */
+    const pinSources = new Map();
+    for (const [pinId, state] of this.pinStates) {
+      pinSources.set(pinId, pinThevenin(state.mode, state.driveHigh, this.vcc));
+    }
+
+    return solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
+      powerOff,
+      testNodeA,
+      testNodeB,
+      testCurrent,
+    });
   }
 
   // ─── Internal: closed-form solver ────────────────────────────────────────
