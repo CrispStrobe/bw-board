@@ -1,0 +1,594 @@
+/**
+ * Board implementation — closed-form solver for the starter-kit component set.
+ *
+ * No MNA solver yet. Handles: resistor, LED, potentiometer, button, buzzer,
+ * capacitor, VCC, GND, and MCU pins via Thévenin equivalents.
+ *
+ * @module
+ */
+
+/** @typedef {import('./types.js').Part} Part */
+/** @typedef {import('./types.js').Net} Net */
+/** @typedef {import('./types.js').PinId} PinId */
+/** @typedef {import('./types.js').PinMode} PinMode */
+/** @typedef {import('./types.js').TheveninSource} TheveninSource */
+
+import { pinThevenin } from './pin-model.js';
+
+/**
+ * Internal pin state.
+ * @typedef {object} PinState
+ * @property {PinMode} mode
+ * @property {boolean} driveHigh
+ */
+
+/**
+ * LED default parameters.
+ */
+const LED_VF = 2.0;       // forward voltage threshold
+const LED_RD = 10;         // dynamic resistance above threshold
+const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
+
+/**
+ * Brightness integrator window.
+ */
+const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
+
+export class BoardImpl {
+  constructor(vcc = 5.0) {
+    /** @type {number} */
+    this.vcc = vcc;
+
+    /** @type {boolean} */
+    this.powered = true;
+
+    /** @type {Part[]} */
+    this.parts = [];
+
+    /** @type {Net[]} */
+    this.nets = [];
+
+    /** @type {Map<string, Part>} part id → Part */
+    this.partMap = new Map();
+
+    /** @type {Map<string, Net>} net id → Net */
+    this.netMap = new Map();
+
+    /** @type {Map<string, PinState>} PinId → state */
+    this.pinStates = new Map();
+
+    /** @type {Map<string, number>} part id → control value (pot 0…1, button 0/1) */
+    this.controls = new Map();
+
+    /** @type {bigint} current simulation time in nanoseconds */
+    this.timeNs = 0n;
+
+    /**
+     * LED brightness history: part id → array of {tNs, current} samples.
+     * @type {Map<string, Array<{tNs: bigint, current: number}>>}
+     */
+    this.ledHistory = new Map();
+
+    /**
+     * Buzzer edge history: part id → array of timestamps when the driving net toggled.
+     * @type {Map<string, bigint[]>}
+     */
+    this.buzzerEdges = new Map();
+
+    /**
+     * Cached node voltages from last solve.
+     * @type {Map<string, number>}
+     */
+    this.nodeVoltages = new Map();
+
+    /**
+     * Cached LED currents from last solve.
+     * @type {Map<string, number>}
+     */
+    this.ledCurrents = new Map();
+  }
+
+  // ─── Boundary B: setNetlist ──────────────────────────────────────────────
+
+  /**
+   * @param {Part[]} parts
+   * @param {Net[]} nets
+   */
+  setNetlist(parts, nets) {
+    this.parts = parts;
+    this.nets = nets;
+    this.partMap = new Map(parts.map(p => [p.id, p]));
+    this.netMap = new Map(nets.map(n => [n.id, n]));
+    this.ledHistory.clear();
+    this.buzzerEdges.clear();
+    this.nodeVoltages.clear();
+    this.ledCurrents.clear();
+
+    for (const p of parts) {
+      if (p.kind === 'led') {
+        this.ledHistory.set(p.id, []);
+      }
+      if (p.kind === 'buzzer') {
+        this.buzzerEdges.set(p.id, []);
+      }
+    }
+  }
+
+  // ─── Boundary A: McuToBoard ──────────────────────────────────────────────
+
+  /**
+   * @param {PinId} pin
+   * @param {PinMode} mode
+   * @param {boolean} driveHigh
+   */
+  setPin(pin, mode, driveHigh) {
+    const prev = this.pinStates.get(pin);
+    this.pinStates.set(pin, { mode, driveHigh });
+    this._solve();
+    this._recordLedSamples();
+
+    // Record buzzer edges on state change
+    if (prev && prev.driveHigh !== driveHigh) {
+      this._recordBuzzerEdges(pin);
+    }
+  }
+
+  /**
+   * @param {bigint} tNs
+   */
+  advanceTo(tNs) {
+    this.timeNs = tNs;
+    // Record LED current samples at this timestamp
+    this._recordLedSamples();
+  }
+
+  // ─── Boundary A: BoardToMcu ──────────────────────────────────────────────
+
+  /**
+   * @param {PinId} pin
+   * @returns {0 | 1}
+   */
+  readPin(pin) {
+    const v = this._pinVoltage(pin);
+    // Standard TTL threshold for 5V: ~1.5V (VIL max ~0.8V, VIH min ~2.0V).
+    // Use midpoint ~1.5V for simplicity.
+    return v > 1.5 ? 1 : 0;
+  }
+
+  /**
+   * @param {PinId} pin
+   * @returns {number} voltage 0…VCC
+   */
+  readAnalog(pin) {
+    return this._pinVoltage(pin);
+  }
+
+  // ─── Boundary B: instruments ─────────────────────────────────────────────
+
+  /**
+   * @param {string} netId
+   * @returns {number}
+   */
+  nodeVoltage(netId) {
+    return this.nodeVoltages.get(netId) ?? 0;
+  }
+
+  /**
+   * @param {string} partId
+   * @param {string} terminal
+   * @returns {number}
+   */
+  branchCurrent(partId, terminal) {
+    // Requires MNA solver — not implemented yet.
+    throw new Error('branchCurrent requires the MNA solver (not yet implemented)');
+  }
+
+  /**
+   * @param {string} a
+   * @param {string} b
+   * @returns {number | 'requires-power-off'}
+   */
+  resistance(a, b) {
+    if (this.powered) return 'requires-power-off';
+    // Actual resistance measurement requires MNA solver.
+    throw new Error('resistance measurement not yet implemented');
+  }
+
+  // ─── Boundary B: transducers ─────────────────────────────────────────────
+
+  /**
+   * @param {string} partId
+   * @returns {number} 0…1
+   */
+  ledBrightness(partId) {
+    const history = this.ledHistory.get(partId);
+    if (!history || history.length === 0) return 0;
+
+    const now = this.timeNs;
+    const windowStart = now > BRIGHTNESS_WINDOW_NS ? now - BRIGHTNESS_WINDOW_NS : 0n;
+
+    // Find the most recent sample at or before windowStart (the "initial" value
+    // for the window), plus all samples within the window.
+    let initialCurrent = 0;
+    let initialIdx = -1;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].tNs <= windowStart) {
+        initialCurrent = history[i].current;
+        initialIdx = i;
+        break;
+      }
+    }
+
+    // Build the step function over [windowStart, now].
+    // Each segment holds a constant current until the next change.
+    /** @type {Array<{tNs: bigint, current: number}>} */
+    const steps = [];
+
+    // Start of window: either the initial sample's value or 0
+    steps.push({ tNs: windowStart, current: initialCurrent });
+
+    // Add all samples within the window
+    for (const s of history) {
+      if (s.tNs > windowStart && s.tNs <= now) {
+        steps.push(s);
+      }
+    }
+
+    // Integrate the step function
+    const windowNs = now - windowStart;
+    if (windowNs <= 0n) {
+      // Time hasn't advanced — return instantaneous value
+      const last = history[history.length - 1];
+      return Math.min(1, Math.max(0, last.current / LED_I_RATED));
+    }
+
+    let weightedSum = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const nextT = i + 1 < steps.length ? steps[i + 1].tNs : now;
+      const dt = nextT - steps[i].tNs;
+      weightedSum += steps[i].current * Number(dt);
+    }
+
+    const avgCurrent = weightedSum / Number(windowNs);
+    return Math.min(1, Math.max(0, avgCurrent / LED_I_RATED));
+  }
+
+  /**
+   * @param {string} partId
+   * @returns {{hz: number, on: boolean}}
+   */
+  buzzerTone(partId) {
+    const edges = this.buzzerEdges.get(partId);
+    if (!edges || edges.length < 2) return { hz: 0, on: false };
+
+    // Measure period from the last two edges
+    const last = edges[edges.length - 1];
+    const prev = edges[edges.length - 2];
+    const halfPeriodNs = Number(last - prev);
+    if (halfPeriodNs <= 0) return { hz: 0, on: false };
+
+    const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
+    return { hz, on: true };
+  }
+
+  // ─── Boundary B: user interaction ────────────────────────────────────────
+
+  /**
+   * @param {string} partId
+   * @param {number} value
+   */
+  setControl(partId, value) {
+    this.controls.set(partId, value);
+    this._solve();
+  }
+
+  /**
+   * @param {boolean} on
+   */
+  setPower(on) {
+    this.powered = on;
+    if (on) this._solve();
+  }
+
+  // ─── Internal: closed-form solver ────────────────────────────────────────
+
+  /**
+   * Resolve node voltages for the current state. Closed-form only.
+   *
+   * Strategy: walk each net and determine its voltage from the sources
+   * connected to it (VCC, GND, pin Thévenin equivalents, potentiometer wipers).
+   * For simple series chains (pin → resistor → LED → net), solve the loop
+   * analytically.
+   */
+  _solve() {
+    this.nodeVoltages.clear();
+    this.ledCurrents.clear();
+
+    if (!this.powered) return;
+
+    // Set known voltages: VCC and GND nets
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        const part = this.partMap.get(t.part);
+        if (!part) continue;
+        if (part.kind === 'vcc') {
+          this.nodeVoltages.set(net.id, this.vcc);
+        } else if (part.kind === 'gnd') {
+          this.nodeVoltages.set(net.id, 0);
+        }
+      }
+    }
+
+    // Resolve potentiometer wipers
+    for (const part of this.parts) {
+      if (part.kind === 'potentiometer') {
+        this._solvePot(part);
+      }
+    }
+
+    // Resolve LED chains: find LEDs and trace their series path
+    for (const part of this.parts) {
+      if (part.kind === 'led') {
+        this._solveLedChain(part);
+      }
+    }
+  }
+
+  /**
+   * Solve a potentiometer: wiper voltage = VCC × position.
+   * Assumes terminals are ["a", "b", "wiper"] with a→VCC, b→GND.
+   * @param {Part} pot
+   */
+  _solvePot(pot) {
+    const position = this.controls.get(pot.id) ?? 0.5;
+    // Find the nets connected to terminals a and b
+    const netA = this._netForTerminal(pot.id, 'a');
+    const netB = this._netForTerminal(pot.id, 'b');
+    const netW = this._netForTerminal(pot.id, 'wiper');
+
+    if (!netA || !netB || !netW) return;
+
+    const vA = this.nodeVoltages.get(netA) ?? 0;
+    const vB = this.nodeVoltages.get(netB) ?? 0;
+
+    // Wiper voltage: linear interpolation from b to a
+    const vWiper = vB + (vA - vB) * position;
+    this.nodeVoltages.set(netW, vWiper);
+  }
+
+  /**
+   * Solve an LED in a series chain. Traces from the LED's anode and cathode
+   * back to voltage sources (VCC/GND/pin Thévenin) through resistors,
+   * then solves the loop analytically.
+   *
+   * @param {Part} led
+   */
+  _solveLedChain(led) {
+    const vf = /** @type {number} */ (led.params.vf ?? LED_VF);
+    const rd = LED_RD;
+
+    // LED terminals: "anode" and "cathode"
+    const anodeNet = this._netForTerminal(led.id, 'anode');
+    const cathodeNet = this._netForTerminal(led.id, 'cathode');
+    if (!anodeNet || !cathodeNet) return;
+
+    // Trace from anode side: find the Thévenin source looking outward
+    const anodeSource = this._traceToSource(anodeNet, led.id);
+    // Trace from cathode side
+    const cathodeSource = this._traceToSource(cathodeNet, led.id);
+
+    if (!anodeSource || !cathodeSource) return;
+
+    // Both sides resolved: solve the loop.
+    // Convention: current flows anode → cathode (positive = LED is forward-biased).
+    // V_anode_source - I*R_anode - Vf - I*Rd - I*R_cathode - V_cathode_source = 0
+    // (Vth_a - Vth_c - Vf) = I * (Rth_a + Rd + Rth_c)
+
+    const vDiff = anodeSource.vTh - cathodeSource.vTh;
+    const rTotal = anodeSource.rTh + rd + cathodeSource.rTh;
+
+    let current;
+    if (vDiff >= vf) {
+      // Forward biased, above threshold
+      current = (vDiff - vf) / rTotal;
+    } else {
+      // Below threshold or reverse biased — no current
+      current = 0;
+    }
+
+    this.ledCurrents.set(led.id, current);
+
+    // Set node voltages at the LED terminals
+    // V_anode_node = V_anode_source - I * R_anode_source
+    this.nodeVoltages.set(anodeNet, anodeSource.vTh - current * anodeSource.rTh);
+    this.nodeVoltages.set(cathodeNet, cathodeSource.vTh + current * cathodeSource.rTh);
+  }
+
+  /**
+   * Trace from a net outward (excluding `excludePart`) to find a Thévenin
+   * equivalent source. Follows through resistors, buttons (closed = wire),
+   * to reach VCC, GND, or an MCU pin.
+   *
+   * Returns {vTh, rTh} accumulated along the path, or null if no source found.
+   *
+   * @param {string} netId
+   * @param {string} excludePart - part to exclude (the LED we're tracing from)
+   * @returns {{ vTh: number; rTh: number } | null}
+   */
+  _traceToSource(netId, excludePart) {
+    return this._traceToSourceInner(netId, excludePart, new Set(), 0);
+  }
+
+  /**
+   * @param {string} netId
+   * @param {string} excludePart
+   * @param {Set<string>} visited - nets already visited (cycle detection)
+   * @param {number} rAccum - resistance accumulated so far
+   * @returns {{ vTh: number; rTh: number } | null}
+   */
+  _traceToSourceInner(netId, excludePart, visited, rAccum) {
+    if (visited.has(netId)) return null;
+    visited.add(netId);
+
+    const net = this.netMap.get(netId);
+    if (!net) return null;
+
+    // Check if this net has a known voltage source
+    const knownV = this.nodeVoltages.get(netId);
+    if (knownV !== undefined) {
+      return { vTh: knownV, rTh: rAccum };
+    }
+
+    // Look at parts connected to this net (excluding the one we came from)
+    for (const t of net.terminals) {
+      if (t.part === excludePart) continue;
+
+      const part = this.partMap.get(t.part);
+      if (!part) continue;
+
+      switch (part.kind) {
+        case 'vcc':
+          return { vTh: this.vcc, rTh: rAccum };
+
+        case 'gnd':
+          return { vTh: 0, rTh: rAccum };
+
+        case 'mcu': {
+          // The terminal name is the PinId
+          const pinId = t.terminal;
+          const state = this.pinStates.get(pinId);
+          if (!state) continue;
+          const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
+          if (thev === 'high-z') continue;
+          return { vTh: thev.vTh, rTh: rAccum + thev.rTh };
+        }
+
+        case 'resistor': {
+          const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
+          // Find the other terminal of this resistor
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(
+            otherNet, part.id, visited, rAccum + ohms
+          );
+          if (result) return result;
+          break;
+        }
+
+        case 'button': {
+          const pressed = (this.controls.get(part.id) ?? 0) === 1;
+          if (!pressed) continue; // open button = no connection
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(
+            otherNet, part.id, visited, rAccum
+          );
+          if (result) return result;
+          break;
+        }
+
+        case 'potentiometer': {
+          // If connected to the wiper, return the wiper voltage
+          if (t.terminal === 'wiper') {
+            const wiperNet = this._netForTerminal(part.id, 'wiper');
+            if (wiperNet) {
+              const wV = this.nodeVoltages.get(wiperNet);
+              if (wV !== undefined) {
+                return { vTh: wV, rTh: rAccum };
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Find the voltage at an MCU pin by looking at the net it's connected to.
+   * @param {PinId} pin
+   * @returns {number}
+   */
+  _pinVoltage(pin) {
+    // Find the MCU part and the net this pin is connected to
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        const part = this.partMap.get(t.part);
+        if (part && part.kind === 'mcu' && t.terminal === pin) {
+          return this.nodeVoltages.get(net.id) ?? 0;
+        }
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Find the net connected to a specific terminal of a part.
+   * @param {string} partId
+   * @param {string} terminal
+   * @returns {string | undefined} net id
+   */
+  _netForTerminal(partId, terminal) {
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        if (t.part === partId && t.terminal === terminal) {
+          return net.id;
+        }
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Record current LED current values as samples for brightness integration.
+   */
+  _recordLedSamples() {
+    for (const [partId, history] of this.ledHistory) {
+      const current = this.ledCurrents.get(partId) ?? 0;
+      history.push({ tNs: this.timeNs, current });
+
+      // Prune old samples beyond the window
+      const cutoff = this.timeNs > BRIGHTNESS_WINDOW_NS * 2n
+        ? this.timeNs - BRIGHTNESS_WINDOW_NS * 2n
+        : 0n;
+      while (history.length > 1 && history[0].tNs < cutoff) {
+        history.shift();
+      }
+    }
+  }
+
+  /**
+   * Check if a pin change affects a buzzer and record the edge.
+   * @param {PinId} pin
+   */
+  _recordBuzzerEdges(pin) {
+    // Find buzzers connected to a net that includes this pin
+    for (const part of this.parts) {
+      if (part.kind !== 'buzzer') continue;
+      // Check if this buzzer shares a net with the pin
+      const buzzerNet = this._netForTerminal(part.id, 'a') ||
+                        this._netForTerminal(part.id, 'b');
+      if (!buzzerNet) continue;
+
+      const net = this.netMap.get(buzzerNet);
+      if (!net) continue;
+
+      for (const t of net.terminals) {
+        const p = this.partMap.get(t.part);
+        if (p && p.kind === 'mcu' && t.terminal === pin) {
+          const edges = this.buzzerEdges.get(part.id);
+          if (edges) {
+            edges.push(this.timeNs);
+            // Keep only recent edges
+            while (edges.length > 100) edges.shift();
+          }
+          break;
+        }
+      }
+    }
+  }
+}
