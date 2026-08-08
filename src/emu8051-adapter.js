@@ -102,44 +102,63 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   function setupPushCallbacks() {
     if (!wasm.addFunction || !wasm._emu_set_board_callbacks) return false;
 
+    // Guard: Emscripten's addFunction can fail with WASM type signature
+    // mismatches (e.g., i64 legalization splits uint64_t into two i32 args,
+    // but the generated WASM shim expects the original signature).
+    // Try it and fall back to poll mode if it throws.
+
     // on_pin_change(port, bit, mode, drive, user_data)
-    pinCbPtr = wasm.addFunction((port, bit, modeIdx, drive, _ud) => {
-      if (!board) return;
-      const pinId = `P${port}.${bit}`;
-      const mode = MODE_NAMES[modeIdx] ?? 'quasi';
-      const driveHigh = drive !== 0;
-      lastState.set(pinId, { mode, driveHigh });
-      board.setPin(pinId, mode, driveHigh);
-      stats.pushCallbackCount++;
-      stats.pinChangeCount++;
-    }, 'viiiii'); // void(int, int, int, int, void*)
+    try {
+      // Emscripten type sig: v=void, i=int32, d=double
+      pinCbPtr = wasm.addFunction((port, bit, modeIdx, drive, _ud) => {
+        if (!board) return;
+        const pinId = `P${port}.${bit}`;
+        const mode = MODE_NAMES[modeIdx] ?? 'quasi';
+        const driveHigh = drive !== 0;
+        lastState.set(pinId, { mode, driveHigh });
+        board.setPin(pinId, mode, driveHigh);
+        stats.pushCallbackCount++;
+        stats.pinChangeCount++;
+      }, 'viiiii');
 
-    // on_read_pin(port, bit, user_data) → int
-    readPinCbPtr = wasm.addFunction((port, bit, _ud) => {
-      if (!board) return 0;
-      return board.readPin(`P${port}.${bit}`);
-    }, 'iiii'); // int(int, int, void*)
+      readPinCbPtr = wasm.addFunction((port, bit, _ud) => {
+        if (!board) return 0;
+        return board.readPin(`P${port}.${bit}`);
+      }, 'iiii');
 
-    // on_read_analog(port, bit, user_data) → double
-    readAnalogCbPtr = wasm.addFunction((port, bit, _ud) => {
-      if (!board) return 0;
-      return board.readAnalog(`P${port}.${bit}`);
-    }, 'diiv'); // double(int, int, void*)
+      readAnalogCbPtr = wasm.addFunction((port, bit, _ud) => {
+        if (!board) return 0;
+        return board.readAnalog(`P${port}.${bit}`);
+      }, 'diii');
 
-    // on_advance(t_ns, user_data)
-    advanceCbPtr = wasm.addFunction((tNsLo, tNsHi, _ud) => {
-      if (!board) return;
-      const tNs = BigInt(tNsLo >>> 0) | (BigInt(tNsHi >>> 0) << 32n);
-      board.advanceTo(tNs);
-      stats.advanceToCount++;
-    }, 'viii'); // void(uint32, uint32, void*)
+      // on_advance: uint64_t is legalized to two i32 args without WASM_BIGINT
+      advanceCbPtr = wasm.addFunction((tNsLo, tNsHi, _ud) => {
+        if (!board) return;
+        const tNs = BigInt(tNsLo >>> 0) | (BigInt(tNsHi >>> 0) << 32n);
+        board.advanceTo(tNs);
+        stats.advanceToCount++;
+      }, 'viii');
 
-    wasm._emu_set_board_callbacks(
-      pinCbPtr, readPinCbPtr, readAnalogCbPtr, advanceCbPtr, 0
-    );
+      wasm._emu_set_board_callbacks(
+        pinCbPtr, readPinCbPtr, readAnalogCbPtr, advanceCbPtr, 0
+      );
 
-    stats.mode = 'push';
-    return true;
+      stats.mode = 'push';
+      return true;
+    } catch (e) {
+      // WASM function signature mismatch — fall back to poll mode.
+      // This happens when Emscripten legalizes i64 into split i32 args
+      // and the addFunction shim doesn't match. Clean up any partial
+      // registrations.
+      if (wasm.removeFunction) {
+        if (pinCbPtr) { try { wasm.removeFunction(pinCbPtr); } catch {} }
+        if (readPinCbPtr) { try { wasm.removeFunction(readPinCbPtr); } catch {} }
+        if (readAnalogCbPtr) { try { wasm.removeFunction(readAnalogCbPtr); } catch {} }
+        if (advanceCbPtr) { try { wasm.removeFunction(advanceCbPtr); } catch {} }
+      }
+      pinCbPtr = readPinCbPtr = readAnalogCbPtr = advanceCbPtr = null;
+      return false;
+    }
   }
 
   // ─── Poll mode helpers ───────────────────────────────────────────────
