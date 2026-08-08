@@ -591,6 +591,48 @@ export class BoardImpl {
       }
     }
 
+    // Check for LED wired backward (cathode to VCC, anode to GND)
+    for (const part of this.parts) {
+      if (part.kind !== 'led') continue;
+      const anodeNet = this._netForTerminal(part.id, 'anode');
+      const cathodeNet = this._netForTerminal(part.id, 'cathode');
+      if (!anodeNet || !cathodeNet) continue;
+
+      const anodeV = this.nodeVoltages.get(anodeNet) ?? 0;
+      const cathodeV = this.nodeVoltages.get(cathodeNet) ?? 0;
+      if (cathodeV > anodeV + 0.5) {
+        warnings.push({
+          severity: 'warning',
+          partId: part.id,
+          message: `${part.id}: LED appears to be wired backward (cathode at ${cathodeV.toFixed(1)}V > anode at ${anodeV.toFixed(1)}V). Swap anode and cathode.`,
+        });
+      }
+    }
+
+    // Check for output pins with nothing connected
+    for (const part of this.parts) {
+      if (part.kind !== 'mcu') continue;
+      for (const terminal of part.terminals) {
+        const state = this.pinStates.get(terminal);
+        if (!state || state.mode === 'input') continue;
+
+        const net = this.nets.find(n => n.terminals.some(
+          t => t.part === part.id && t.terminal === terminal
+        ));
+        if (!net) continue;
+
+        // Check if this pin's net has only the MCU terminal (nothing else connected)
+        const externalTerminals = net.terminals.filter(t => t.part !== part.id);
+        if (externalTerminals.length === 0) {
+          warnings.push({
+            severity: 'warning',
+            partId: part.id,
+            message: `${terminal}: output pin is driving but nothing is connected to it.`,
+          });
+        }
+      }
+    }
+
     return warnings;
   }
 
