@@ -1,0 +1,185 @@
+{
+  "generator": "run_ngspice.py",
+  "tool": "ngspice-42",
+  "note": "Ground truth from industry-standard SPICE simulator",
+  "result_count": 21,
+  "results": [
+    {
+      "name": "divider_1000_1000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_mid": 2.5,
+        "v1#branch": -0.0025
+      }
+    },
+    {
+      "name": "divider_1000_2000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_mid": 3.333333,
+        "v1#branch": -0.00166667
+      }
+    },
+    {
+      "name": "divider_1000_3000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_mid": 3.75,
+        "v1#branch": -0.00125
+      }
+    },
+    {
+      "name": "divider_2200_4700",
+      "source": "ngspice-42",
+      "measured": {
+        "v_mid": 3.405797,
+        "v1#branch": -0.000724638
+      }
+    },
+    {
+      "name": "divider_10000_10000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_mid": 2.5,
+        "v1#branch": -0.00025
+      }
+    },
+    {
+      "name": "divider_470_10000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_mid": 4.775549,
+        "v1#branch": -0.000477555
+      }
+    },
+    {
+      "name": "led_red_220",
+      "source": "ngspice-42",
+      "measured": {
+        "v_anode": 2.075827,
+        "v1#branch": -0.0132917
+      }
+    },
+    {
+      "name": "led_red_1000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_anode": 1.905951,
+        "v1#branch": -0.00309405
+      }
+    },
+    {
+      "name": "led_blue_470",
+      "source": "ngspice-42",
+      "measured": {
+        "v_anode": 3.090935,
+        "v1#branch": -0.00406184
+      }
+    },
+    {
+      "name": "parallel_1k_1k",
+      "source": "ngspice-42",
+      "measured": {
+        "v_vcc": 5.0,
+        "v1#branch": -0.01
+      }
+    },
+    {
+      "name": "series_1k_1k_1k",
+      "source": "ngspice-42",
+      "measured": {
+        "v_n1": 3.333333,
+        "v_n2": 1.666667,
+        "v1#branch": -0.00166667
+      }
+    },
+    {
+      "name": "wheatstone_1000_1000_1000_1000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_na": 2.5,
+        "v_nb": 2.5,
+        "v1#branch": -0.005
+      }
+    },
+    {
+      "name": "wheatstone_1000_1000_1000_2000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_na": 2.5,
+        "v_nb": 3.333333,
+        "v1#branch": -0.00416667
+      }
+    },
+    {
+      "name": "wheatstone_1000_2000_3000_4000",
+      "source": "ngspice-42",
+      "measured": {
+        "v_na": 3.75,
+        "v_nb": 3.333333,
+        "v1#branch": -0.00208333
+      }
+    },
+    {
+      "name": "npn_switch",
+      "source": "ngspice-42",
+      "measured": {
+        "v_collector": 0.0703992,
+        "v_base": 0.7000261,
+        "v1#branch": -0.0049296,
+        "v2#branch": -0.000429997
+      }
+    },
+    {
+      "name": "nmos_switch",
+      "source": "ngspice-42",
+      "measured": {
+        "v_drain": 0.003332963,
+        "v1#branch": -0.00499667,
+        "v2#branch": 0.0
+      }
+    },
+    {
+      "name": "opamp_noninvert",
+      "source": "ngspice-42",
+      "measured": {
+        "v_out": 4.99995,
+        "v_inn": 0.499995,
+        "v_inp": 0.5,
+        "v1#branch": 0.0,
+        "e1#branch": -0.000499995
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_1.0RC",
+      "source": "ngspice-42",
+      "measured": {
+        "v_cap": 3.160617,
+        "t_actual": 1.0
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_2.0RC",
+      "source": "ngspice-42",
+      "measured": {
+        "v_cap": 4.323367,
+        "t_actual": 2.0
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_5.0RC",
+      "source": "ngspice-42",
+      "measured": {
+        "v_cap": 4.966345,
+        "t_actual": 5.0
+      }
+    },
+    {
+      "name": "isource_2mA",
+      "source": "ngspice-42",
+      "measured": {
+        "v_node": 2.0
+      }
+    }
+  ]
+}
