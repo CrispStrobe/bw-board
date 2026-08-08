@@ -14,3 +14,4 @@ export { inferNetlist, checkWiring } from './infer-netlist.js';
 export { runTrace } from './scripted-mcu.js';
 export { runConformance, formatReport } from './conformance.js';
 export { createEmu8051Adapter, formatPollingLossReport } from './emu8051-adapter.js';
+export { validateNetlist, assertValidNetlist } from './validate.js';

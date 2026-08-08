@@ -8,7 +8,8 @@
     ".": "./src/index.js",
     "./types": "./src/types.js",
     "./conformance": "./src/conformance.js",
-    "./emu8051-adapter": "./src/emu8051-adapter.js"
+    "./emu8051-adapter": "./src/emu8051-adapter.js",
+    "./validate": "./src/validate.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js"

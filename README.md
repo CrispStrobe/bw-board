@@ -56,10 +56,48 @@ This module has zero runtime dependencies and is designed to be vendored into
 
 Either way, keep the zero-dependency rule — it is what lets this ship inside a permissive bundle.
 
+### Vendoring: which files to copy
+
+A vendoring script should copy exactly these files:
+
+```
+src/index.js
+src/types.js
+src/pin-model.js
+src/board.js
+src/mna.js
+src/validate.js
+src/infer-netlist.js
+src/scripted-mcu.js
+src/conformance.js
+src/emu8051-adapter.js
+```
+
+`src/index.js` is the single entry point. All imports are relative within `src/`.
+No build step, no dependencies, no generated files. Copy the directory and import.
+
+### Netlist validation
+
+Use `validateNetlist(parts, nets)` before calling `setNetlist` to catch common
+mistakes (wrong terminal names, missing GND, unknown part kinds) before the solver
+silently produces plausible wrong answers:
+
+```js
+import { validateNetlist, BoardImpl } from 'bw-board';
+
+const errors = validateNetlist(parts, nets);
+const fatal = errors.filter(e => e.severity === 'error');
+if (fatal.length > 0) {
+  console.error('Netlist errors:', fatal.map(e => e.message));
+} else {
+  board.setNetlist(parts, nets);
+}
+```
+
 ## Testing
 
 ```bash
-npm test                    # 156 tests, node --test
+npm test                    # node --test
 node bench/perf.js          # performance benchmark
 ```
 
@@ -67,11 +105,12 @@ node bench/perf.js          # performance benchmark
 
 ```
 src/
-  index.js              — module entry point
+  index.js              — module entry point (single import)
   types.js              — boundary A + B type definitions (JSDoc)
   pin-model.js          — Thévenin equivalents for the four port modes
   board.js              — Board implementation (closed-form + RC)
   mna.js                — MNA solver (branchCurrent, resistance)
+  validate.js           — netlist validation (catch misuse before solve)
   infer-netlist.js      — boundary C: infer netlist from project.stc.pins
   scripted-mcu.js       — test harness: timestamped pin events
   conformance.js        — boundary-A conformance kit
