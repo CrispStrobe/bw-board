@@ -1,0 +1,789 @@
+{
+  "generator": "compute_oracles.py",
+  "note": "Computed independently from bw-board solver. Do not regenerate from solver output.",
+  "oracle_count": 55,
+  "oracles": [
+    {
+      "name": "divider_1000_1000",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 1000,
+        "r2": 1000
+      },
+      "expected": {
+        "v_mid": 2.5,
+        "current_mA": 2.5
+      }
+    },
+    {
+      "name": "divider_1000_2000",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 1000,
+        "r2": 2000
+      },
+      "expected": {
+        "v_mid": 3.333333,
+        "current_mA": 1.666667
+      }
+    },
+    {
+      "name": "divider_1000_3000",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 1000,
+        "r2": 3000
+      },
+      "expected": {
+        "v_mid": 3.75,
+        "current_mA": 1.25
+      }
+    },
+    {
+      "name": "divider_2200_4700",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 2200,
+        "r2": 4700
+      },
+      "expected": {
+        "v_mid": 3.405797,
+        "current_mA": 0.724638
+      }
+    },
+    {
+      "name": "divider_10000_10000",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 10000,
+        "r2": 10000
+      },
+      "expected": {
+        "v_mid": 2.5,
+        "current_mA": 0.25
+      }
+    },
+    {
+      "name": "divider_470_10000",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 470,
+        "r2": 10000
+      },
+      "expected": {
+        "v_mid": 4.775549,
+        "current_mA": 0.477555
+      }
+    },
+    {
+      "name": "divider_100_900",
+      "circuit": {
+        "type": "voltage_divider",
+        "vcc": 5.0,
+        "r1": 100,
+        "r2": 900
+      },
+      "expected": {
+        "v_mid": 4.5,
+        "current_mA": 5.0
+      }
+    },
+    {
+      "name": "led_red_220",
+      "circuit": {
+        "type": "led_circuit",
+        "vcc": 5.0,
+        "r": 220,
+        "vf": 2.0,
+        "rd": 10,
+        "r_pin": 25
+      },
+      "expected": {
+        "current_mA": 11.764706,
+        "brightness": 0.588235
+      }
+    },
+    {
+      "name": "led_red_330",
+      "circuit": {
+        "type": "led_circuit",
+        "vcc": 5.0,
+        "r": 330,
+        "vf": 2.0,
+        "rd": 10,
+        "r_pin": 25
+      },
+      "expected": {
+        "current_mA": 8.219178,
+        "brightness": 0.410959
+      }
+    },
+    {
+      "name": "led_red_1k",
+      "circuit": {
+        "type": "led_circuit",
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0,
+        "rd": 10,
+        "r_pin": 25
+      },
+      "expected": {
+        "current_mA": 2.898551,
+        "brightness": 0.144928
+      }
+    },
+    {
+      "name": "led_blue_470",
+      "circuit": {
+        "type": "led_circuit",
+        "vcc": 5.0,
+        "r": 470,
+        "vf": 3.2,
+        "rd": 10,
+        "r_pin": 25
+      },
+      "expected": {
+        "current_mA": 3.564356,
+        "brightness": 0.178218
+      }
+    },
+    {
+      "name": "led_blue_1k",
+      "circuit": {
+        "type": "led_circuit",
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 3.2,
+        "rd": 10,
+        "r_pin": 25
+      },
+      "expected": {
+        "current_mA": 1.73913,
+        "brightness": 0.086957
+      }
+    },
+    {
+      "name": "led_ir_100",
+      "circuit": {
+        "type": "led_circuit",
+        "vcc": 5.0,
+        "r": 100,
+        "vf": 1.8,
+        "rd": 10,
+        "r_pin": 25
+      },
+      "expected": {
+        "current_mA": 23.703704,
+        "brightness": 1.0
+      }
+    },
+    {
+      "name": "active_low_quasi_sink",
+      "circuit": {
+        "type": "active_low_led",
+        "mode": "quasi",
+        "drive": "low"
+      },
+      "expected": {
+        "current_mA": 2.898551,
+        "brightness": 0.144928
+      }
+    },
+    {
+      "name": "active_low_quasi_source",
+      "circuit": {
+        "type": "active_low_led",
+        "mode": "quasi",
+        "drive": "high"
+      },
+      "expected": {
+        "current_mA": 0.0,
+        "brightness": 0.0
+      }
+    },
+    {
+      "name": "naive_wiring_quasi_high",
+      "circuit": {
+        "type": "naive_led",
+        "mode": "quasi",
+        "drive": "high"
+      },
+      "expected": {
+        "current_mA": 0.1321,
+        "brightness": 0.006605
+      }
+    },
+    {
+      "name": "naive_wiring_pushpull_high",
+      "circuit": {
+        "type": "naive_led",
+        "mode": "pushpull",
+        "drive": "high"
+      },
+      "expected": {
+        "current_mA": 2.898551,
+        "brightness": 0.144928
+      }
+    },
+    {
+      "name": "parallel_1000_1000",
+      "circuit": {
+        "type": "parallel_resistors",
+        "vcc": 5.0,
+        "resistors": [
+          1000,
+          1000
+        ]
+      },
+      "expected": {
+        "r_equivalent": 500.0,
+        "total_current_mA": 10.0
+      }
+    },
+    {
+      "name": "parallel_1000_2000",
+      "circuit": {
+        "type": "parallel_resistors",
+        "vcc": 5.0,
+        "resistors": [
+          1000,
+          2000
+        ]
+      },
+      "expected": {
+        "r_equivalent": 666.666667,
+        "total_current_mA": 7.5
+      }
+    },
+    {
+      "name": "parallel_1000_1000_1000",
+      "circuit": {
+        "type": "parallel_resistors",
+        "vcc": 5.0,
+        "resistors": [
+          1000,
+          1000,
+          1000
+        ]
+      },
+      "expected": {
+        "r_equivalent": 333.333333,
+        "total_current_mA": 15.0
+      }
+    },
+    {
+      "name": "parallel_470_1000_2200",
+      "circuit": {
+        "type": "parallel_resistors",
+        "vcc": 5.0,
+        "resistors": [
+          470,
+          1000,
+          2200
+        ]
+      },
+      "expected": {
+        "r_equivalent": 279.157667,
+        "total_current_mA": 17.911025
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_0.1RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 10000,
+        "c": 0.0001,
+        "t_seconds": 0.1,
+        "t_rc_multiples": 0.1
+      },
+      "expected": {
+        "voltage": 0.475813,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_0.5RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 10000,
+        "c": 0.0001,
+        "t_seconds": 0.5,
+        "t_rc_multiples": 0.5
+      },
+      "expected": {
+        "voltage": 1.967347,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_1.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 10000,
+        "c": 0.0001,
+        "t_seconds": 1.0,
+        "t_rc_multiples": 1.0
+      },
+      "expected": {
+        "voltage": 3.160603,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_2.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 10000,
+        "c": 0.0001,
+        "t_seconds": 2.0,
+        "t_rc_multiples": 2.0
+      },
+      "expected": {
+        "voltage": 4.323324,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_10000_0.0001_at_5.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 10000,
+        "c": 0.0001,
+        "t_seconds": 5.0,
+        "t_rc_multiples": 5.0
+      },
+      "expected": {
+        "voltage": 4.96631,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_1000_0.001_at_0.1RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 1000,
+        "c": 0.001,
+        "t_seconds": 0.1,
+        "t_rc_multiples": 0.1
+      },
+      "expected": {
+        "voltage": 0.475813,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_1000_0.001_at_0.5RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 1000,
+        "c": 0.001,
+        "t_seconds": 0.5,
+        "t_rc_multiples": 0.5
+      },
+      "expected": {
+        "voltage": 1.967347,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_1000_0.001_at_1.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 1000,
+        "c": 0.001,
+        "t_seconds": 1.0,
+        "t_rc_multiples": 1.0
+      },
+      "expected": {
+        "voltage": 3.160603,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_1000_0.001_at_2.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 1000,
+        "c": 0.001,
+        "t_seconds": 2.0,
+        "t_rc_multiples": 2.0
+      },
+      "expected": {
+        "voltage": 4.323324,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_1000_0.001_at_5.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 1000,
+        "c": 0.001,
+        "t_seconds": 5.0,
+        "t_rc_multiples": 5.0
+      },
+      "expected": {
+        "voltage": 4.96631,
+        "rc_seconds": 1.0
+      }
+    },
+    {
+      "name": "rc_100000_1e-06_at_0.1RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 100000,
+        "c": 1e-06,
+        "t_seconds": 0.01,
+        "t_rc_multiples": 0.1
+      },
+      "expected": {
+        "voltage": 0.475813,
+        "rc_seconds": 0.1
+      }
+    },
+    {
+      "name": "rc_100000_1e-06_at_0.5RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 100000,
+        "c": 1e-06,
+        "t_seconds": 0.049999999999999996,
+        "t_rc_multiples": 0.5
+      },
+      "expected": {
+        "voltage": 1.967347,
+        "rc_seconds": 0.1
+      }
+    },
+    {
+      "name": "rc_100000_1e-06_at_1.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 100000,
+        "c": 1e-06,
+        "t_seconds": 0.09999999999999999,
+        "t_rc_multiples": 1.0
+      },
+      "expected": {
+        "voltage": 3.160603,
+        "rc_seconds": 0.1
+      }
+    },
+    {
+      "name": "rc_100000_1e-06_at_2.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 100000,
+        "c": 1e-06,
+        "t_seconds": 0.19999999999999998,
+        "t_rc_multiples": 2.0
+      },
+      "expected": {
+        "voltage": 4.323324,
+        "rc_seconds": 0.1
+      }
+    },
+    {
+      "name": "rc_100000_1e-06_at_5.0RC",
+      "circuit": {
+        "type": "rc_charge",
+        "vcc": 5.0,
+        "r": 100000,
+        "c": 1e-06,
+        "t_seconds": 0.49999999999999994,
+        "t_rc_multiples": 5.0
+      },
+      "expected": {
+        "voltage": 4.96631,
+        "rc_seconds": 0.1
+      }
+    },
+    {
+      "name": "wheatstone_1000_1000_1000_1000",
+      "circuit": {
+        "type": "wheatstone",
+        "vcc": 5.0,
+        "r1": 1000,
+        "r2": 1000,
+        "r3": 1000,
+        "r4": 1000
+      },
+      "expected": {
+        "v_a": 2.5,
+        "v_b": 2.5,
+        "v_bridge": 0.0,
+        "balanced": true
+      }
+    },
+    {
+      "name": "wheatstone_1000_1000_1000_2000",
+      "circuit": {
+        "type": "wheatstone",
+        "vcc": 5.0,
+        "r1": 1000,
+        "r2": 1000,
+        "r3": 1000,
+        "r4": 2000
+      },
+      "expected": {
+        "v_a": 2.5,
+        "v_b": 3.333333,
+        "v_bridge": -0.833333,
+        "balanced": false
+      }
+    },
+    {
+      "name": "wheatstone_1000_2000_3000_4000",
+      "circuit": {
+        "type": "wheatstone",
+        "vcc": 5.0,
+        "r1": 1000,
+        "r2": 2000,
+        "r3": 3000,
+        "r4": 4000
+      },
+      "expected": {
+        "v_a": 3.75,
+        "v_b": 3.333333,
+        "v_bridge": 0.416667,
+        "balanced": false
+      }
+    },
+    {
+      "name": "thevenin_quasi_low",
+      "circuit": {
+        "type": "pin_thevenin",
+        "mode": "quasi",
+        "drive": "low",
+        "vcc": 5.0
+      },
+      "expected": {
+        "vth": 0,
+        "rth": 25
+      }
+    },
+    {
+      "name": "thevenin_quasi_high",
+      "circuit": {
+        "type": "pin_thevenin",
+        "mode": "quasi",
+        "drive": "high",
+        "vcc": 5.0
+      },
+      "expected": {
+        "vth": 5.0,
+        "rth": 21700
+      }
+    },
+    {
+      "name": "thevenin_pushpull_low",
+      "circuit": {
+        "type": "pin_thevenin",
+        "mode": "pushpull",
+        "drive": "low",
+        "vcc": 5.0
+      },
+      "expected": {
+        "vth": 0,
+        "rth": 25
+      }
+    },
+    {
+      "name": "thevenin_pushpull_high",
+      "circuit": {
+        "type": "pin_thevenin",
+        "mode": "pushpull",
+        "drive": "high",
+        "vcc": 5.0
+      },
+      "expected": {
+        "vth": 5.0,
+        "rth": 25
+      }
+    },
+    {
+      "name": "norton_3_source",
+      "circuit": {
+        "type": "norton_combination",
+        "sources": [
+          {
+            "v": 5.0,
+            "r": 1000
+          },
+          {
+            "v": 0.0,
+            "r": 2000
+          },
+          {
+            "v": 0.0,
+            "r": 3000
+          }
+        ]
+      },
+      "expected": {
+        "v_node": 2.727273,
+        "g_total": 0.001833333
+      }
+    },
+    {
+      "name": "pot_0.0",
+      "circuit": {
+        "type": "potentiometer",
+        "vcc": 5.0,
+        "position": 0.0
+      },
+      "expected": {
+        "v_wiper": 0.0
+      }
+    },
+    {
+      "name": "pot_0.25",
+      "circuit": {
+        "type": "potentiometer",
+        "vcc": 5.0,
+        "position": 0.25
+      },
+      "expected": {
+        "v_wiper": 1.25
+      }
+    },
+    {
+      "name": "pot_0.5",
+      "circuit": {
+        "type": "potentiometer",
+        "vcc": 5.0,
+        "position": 0.5
+      },
+      "expected": {
+        "v_wiper": 2.5
+      }
+    },
+    {
+      "name": "pot_0.75",
+      "circuit": {
+        "type": "potentiometer",
+        "vcc": 5.0,
+        "position": 0.75
+      },
+      "expected": {
+        "v_wiper": 3.75
+      }
+    },
+    {
+      "name": "pot_1.0",
+      "circuit": {
+        "type": "potentiometer",
+        "vcc": 5.0,
+        "position": 1.0
+      },
+      "expected": {
+        "v_wiper": 5.0
+      }
+    },
+    {
+      "name": "pwm_duty_10",
+      "circuit": {
+        "type": "pwm_brightness",
+        "duty": 0.1,
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0
+      },
+      "expected": {
+        "brightness": 0.014493,
+        "steady_brightness": 0.144928
+      }
+    },
+    {
+      "name": "pwm_duty_25",
+      "circuit": {
+        "type": "pwm_brightness",
+        "duty": 0.25,
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0
+      },
+      "expected": {
+        "brightness": 0.036232,
+        "steady_brightness": 0.144928
+      }
+    },
+    {
+      "name": "pwm_duty_50",
+      "circuit": {
+        "type": "pwm_brightness",
+        "duty": 0.5,
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0
+      },
+      "expected": {
+        "brightness": 0.072464,
+        "steady_brightness": 0.144928
+      }
+    },
+    {
+      "name": "pwm_duty_75",
+      "circuit": {
+        "type": "pwm_brightness",
+        "duty": 0.75,
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0
+      },
+      "expected": {
+        "brightness": 0.108696,
+        "steady_brightness": 0.144928
+      }
+    },
+    {
+      "name": "pwm_duty_90",
+      "circuit": {
+        "type": "pwm_brightness",
+        "duty": 0.9,
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0
+      },
+      "expected": {
+        "brightness": 0.130435,
+        "steady_brightness": 0.144928
+      }
+    },
+    {
+      "name": "pwm_duty_100",
+      "circuit": {
+        "type": "pwm_brightness",
+        "duty": 1.0,
+        "vcc": 5.0,
+        "r": 1000,
+        "vf": 2.0
+      },
+      "expected": {
+        "brightness": 0.144928,
+        "steady_brightness": 0.144928
+      }
+    }
+  ]
+}
