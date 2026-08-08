@@ -586,6 +586,49 @@ export class BoardImpl {
     return warnings;
   }
 
+  // ─── UI render state ─────────────────────────────────────────────────────
+
+  /**
+   * Get everything the UI needs to render the current board state in one call.
+   * Avoids the UI having to make 20+ individual queries per frame.
+   *
+   * @returns {{
+   *   powered: boolean,
+   *   timeNs: bigint,
+   *   vcc: number,
+   *   leds: Array<{id: string, brightness: number, color?: string}>,
+   *   buzzers: Array<{id: string, hz: number, on: boolean}>,
+   *   controls: Array<{id: string, kind: string, value: number}>,
+   *   pins: Array<{pin: string, mode: string, driveHigh: boolean}>,
+   *   warnings: Array<{severity: string, partId?: string, message: string}>,
+   *   nodeVoltages: Array<{net: string, voltage: number}>,
+   * }}
+   */
+  getRenderState() {
+    return {
+      powered: this.powered,
+      timeNs: this.timeNs,
+      vcc: this.vcc,
+      leds: this.parts
+        .filter(p => p.kind === 'led')
+        .map(p => ({
+          id: p.id,
+          brightness: this.ledBrightness(p.id),
+          color: /** @type {string | undefined} */ (p.params.color),
+        })),
+      buzzers: this.parts
+        .filter(p => p.kind === 'buzzer')
+        .map(p => ({ id: p.id, ...this.buzzerTone(p.id) })),
+      controls: this.getControls(),
+      pins: this.getPinStates(),
+      warnings: this.getWarnings(),
+      nodeVoltages: this.nets.map(n => ({
+        net: n.id,
+        voltage: this.nodeVoltage(n.id),
+      })),
+    };
+  }
+
   // ─── Reset ──────────────────────────────────────────────────────────────
 
   /**
