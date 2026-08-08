@@ -33,6 +33,11 @@ const KNOWN_TERMINALS = {
   pnp: ['base', 'collector', 'emitter'],
   inductor: ['a', 'b'],
   zener: ['anode', 'cathode'],
+  nmos: ['gate', 'drain', 'source'],
+  pmos: ['gate', 'drain', 'source'],
+  opamp: ['inp', 'inn', 'out'],
+  vsource: ['pos', 'neg'],
+  isource: ['pos', 'neg'],
   seven_segment: null, // composite — sub-parts have their own terminals
   rgb_led: null, // composite
   mcu: null, // terminals are PinIds, validated separately

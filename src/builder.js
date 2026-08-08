@@ -36,6 +36,11 @@ const TERMINALS = {
   diode: ['anode', 'cathode'],
   led: ['anode', 'cathode'],
   zener: ['anode', 'cathode'],
+  nmos: ['gate', 'drain', 'source'],
+  pmos: ['gate', 'drain', 'source'],
+  opamp: ['inp', 'inn', 'out'],
+  vsource: ['pos', 'neg'],
+  isource: ['pos', 'neg'],
   potentiometer: ['a', 'b', 'wiper'],
   button: ['a', 'b'],
   switch: ['a', 'b'],
@@ -109,6 +114,26 @@ export class NetlistBuilder {
 
   pnp(id, beta = 100, vbe = 0.7) {
     return this._addPart(id, 'pnp', { beta, vbe }, TERMINALS.pnp);
+  }
+
+  nmos(id, vth = 2.0, k = 0.5) {
+    return this._addPart(id, 'nmos', { vth, k }, TERMINALS.nmos);
+  }
+
+  pmos(id, vth = -2.0, k = 0.5) {
+    return this._addPart(id, 'pmos', { vth, k }, TERMINALS.pmos);
+  }
+
+  opamp(id, gain = 1e6) {
+    return this._addPart(id, 'opamp', { gain }, TERMINALS.opamp);
+  }
+
+  vsource(id, volts) {
+    return this._addPart(id, 'vsource', { volts }, TERMINALS.vsource);
+  }
+
+  isource(id, amps) {
+    return this._addPart(id, 'isource', { amps }, TERMINALS.isource);
   }
 
   /** MCU with arbitrary pin terminals. */

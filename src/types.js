@@ -60,7 +60,8 @@
  * @typedef {'vcc' | 'gnd' | 'resistor' | 'capacitor' | 'diode' | 'led'
  *   | 'potentiometer' | 'button' | 'switch' | 'buzzer' | 'mcu'
  *   | 'npn' | 'pnp' | 'ldr' | 'ntc' | 'inductor' | 'zener'
- *   | 'seven_segment' | 'rgb_led'} PartKind
+ *   | 'seven_segment' | 'rgb_led'
+ *   | 'nmos' | 'pmos' | 'opamp' | 'vsource' | 'isource'} PartKind
  */
 
 /**

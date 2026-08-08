@@ -486,6 +486,11 @@ export class BoardImpl {
       buzzer: ['a', 'b'], ldr: ['a', 'b'], ntc: ['a', 'b'],
       npn: ['base', 'collector', 'emitter'],
       pnp: ['base', 'collector', 'emitter'],
+      nmos: ['gate', 'drain', 'source'],
+      pmos: ['gate', 'drain', 'source'],
+      opamp: ['inp', 'inn', 'out'],
+      vsource: ['pos', 'neg'],
+      isource: ['pos', 'neg'],
     };
     return map[kind] ?? null;
   }
@@ -499,7 +504,8 @@ export class BoardImpl {
       'vcc', 'gnd', 'resistor', 'capacitor', 'inductor',
       'diode', 'led', 'zener', 'potentiometer',
       'button', 'switch', 'buzzer', 'ldr', 'ntc',
-      'npn', 'pnp', 'seven_segment', 'rgb_led', 'mcu',
+      'npn', 'pnp', 'nmos', 'pmos', 'opamp',
+      'vsource', 'isource', 'seven_segment', 'rgb_led', 'mcu',
     ];
   }
 
