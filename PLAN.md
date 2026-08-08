@@ -4,7 +4,8 @@
 
 The board layer between an emulated 8051 MCU and a TinkerCAD-style circuit designer.
 It resolves pin drive states into node voltages, LED brightness, and buzzer tones
-using closed-form models — no SPICE, no matrix solver (yet).
+using closed-form models for the fast path, with an MNA solver behind
+the interface for branchCurrent and resistance measurement.
 
 ## Architecture
 
@@ -93,10 +94,24 @@ Files: `src/scripted-mcu.ts`, `test/led-active-low.test.ts`
 - Only needed for `branchCurrent` and `resistance`.
 - `resistance` returns `'requires-power-off'` when board is powered.
 
+## Status
+
+| Phase | Status | Tests |
+|-------|--------|-------|
+| 1 — Interfaces (boundary A + B) | Done | — |
+| 2 — Closed-form solver + pin model | Done | 8 LED, 6 pot, 3 buzzer, 3 button, 5 cap |
+| 3 — Scripted-MCU harness + tests | Done | 2 trace tests |
+| 4 — Pot → ADC path | Done | 6 tests |
+| 5 — Transducers (PWM brightness, buzzer tone) | Done | 4 PWM tests |
+| 6 — MNA solver (branchCurrent, resistance) | Done | 8 MNA tests |
+| 7 — inferNetlist (boundary C) | Done | 9 tests |
+| 8 — All four port modes | Done | 10 tests |
+
+Total: 56 tests, all hand-computed oracles.
+
 ## Non-goals for now
 
 - No UI, no builder, no drag-and-wire.
-- No inference from `project.stc.pins` (boundary C) — that comes after the solver.
 - No runtime dependencies. No build tools. `node --test`.
 - No UART, SPI, EEPROM, watchdog.
 
@@ -108,12 +123,23 @@ bw-board/
   CLAUDE.md
   THIRD-PARTY.md
   LICENSE
+  package.json
   src/
-    types.ts          — boundary A + B type definitions
-    pin-model.ts      — Thévenin equivalents for the four port modes
-    board.ts          — Board implementation (closed-form solver)
-    scripted-mcu.ts   — test harness: timestamped pin events
+    index.js          — module entry point
+    types.js          — boundary A + B type definitions (JSDoc)
+    pin-model.js      — Thévenin equivalents for the four port modes
+    board.js          — Board implementation (closed-form solver)
+    mna.js            — MNA solver (branchCurrent, resistance)
+    infer-netlist.js  — boundary C: infer netlist from project.stc.pins
+    scripted-mcu.js   — test harness: timestamped pin events
   test/
-    led-active-low.test.ts
-    pot-adc.test.ts
+    led-active-low.test.js
+    pot-adc.test.js
+    buzzer.test.js
+    button-resistance.test.js
+    capacitor.test.js
+    pwm-brightness.test.js
+    mna-solver.test.js
+    infer-netlist.test.js
+    port-modes.test.js
 ```
