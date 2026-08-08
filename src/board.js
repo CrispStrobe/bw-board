@@ -291,11 +291,9 @@ export class BoardImpl {
     // Find the most recent sample at or before windowStart (the "initial" value
     // for the window), plus all samples within the window.
     let initialCurrent = 0;
-    let initialIdx = -1;
     for (let i = history.length - 1; i >= 0; i--) {
       if (history[i].tNs <= windowStart) {
         initialCurrent = history[i].current;
-        initialIdx = i;
         break;
       }
     }
