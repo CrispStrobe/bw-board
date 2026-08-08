@@ -154,6 +154,7 @@ export class BoardImpl {
 
     this._solve();
     this._recordLedSamples();
+    this._notifyChange('netlist');
   }
 
   // ─── Boundary A: McuToBoard ──────────────────────────────────────────────
@@ -173,6 +174,8 @@ export class BoardImpl {
     if (prev && prev.driveHigh !== driveHigh) {
       this._recordBuzzerEdges(pin);
     }
+
+    this._notifyChange('pin', { pin, mode, driveHigh });
   }
 
   /**
@@ -190,6 +193,7 @@ export class BoardImpl {
 
     // Record LED current samples at this timestamp
     this._recordLedSamples();
+    this._notifyChange('time', { tNs });
   }
 
   // ─── Boundary A: BoardToMcu ──────────────────────────────────────────────
@@ -369,6 +373,7 @@ export class BoardImpl {
   setControl(partId, value) {
     this.controls.set(partId, value);
     this._solve();
+    this._notifyChange('control', { partId, value });
   }
 
   /**
@@ -378,6 +383,211 @@ export class BoardImpl {
     this.powered = on;
     this._solve();
     this._recordLedSamples();
+    this._notifyChange('power', { on });
+  }
+
+  // ─── State getters ───────────────────────────────────────────────────────
+
+  /** Current simulation time in nanoseconds. @returns {bigint} */
+  getTime() { return this.timeNs; }
+
+  /** Whether the board is powered. @returns {boolean} */
+  isPowered() { return this.powered; }
+
+  /** Supply voltage. @returns {number} */
+  getVcc() { return this.vcc; }
+
+  /**
+   * Current state of an MCU pin.
+   * @param {PinId} pin
+   * @returns {{ mode: PinMode, driveHigh: boolean } | null}
+   */
+  getPinState(pin) {
+    const s = this.pinStates.get(pin);
+    return s ? { mode: s.mode, driveHigh: s.driveHigh } : null;
+  }
+
+  /**
+   * Current value of a user control (pot position, button state).
+   * @param {string} partId
+   * @returns {number | undefined}
+   */
+  getControl(partId) {
+    return this.controls.get(partId);
+  }
+
+  /**
+   * Current voltage across a capacitor.
+   * @param {string} partId
+   * @returns {number}
+   */
+  getCapVoltage(partId) {
+    return this.capVoltages.get(partId) ?? 0;
+  }
+
+  // ─── Part queries ───────────────────────────────────────────────────────
+
+  /** All parts in the current netlist. @returns {Part[]} */
+  getParts() { return this.parts; }
+
+  /** All nets in the current netlist. @returns {Net[]} */
+  getNets() { return this.nets; }
+
+  /** All LED part IDs. @returns {string[]} */
+  getLeds() { return this.parts.filter(p => p.kind === 'led').map(p => p.id); }
+
+  /** All buzzer part IDs. @returns {string[]} */
+  getBuzzers() { return this.parts.filter(p => p.kind === 'buzzer').map(p => p.id); }
+
+  /**
+   * All controllable parts: pots, buttons, switches, LDRs, NTCs.
+   * @returns {Array<{id: string, kind: string, value: number}>}
+   */
+  getControls() {
+    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc'];
+    return this.parts
+      .filter(p => controllable.includes(p.kind))
+      .map(p => ({ id: p.id, kind: p.kind, value: this.controls.get(p.id) ?? 0 }));
+  }
+
+  /**
+   * All MCU pin IDs currently tracked.
+   * @returns {Array<{pin: string, mode: string, driveHigh: boolean}>}
+   */
+  getPinStates() {
+    return [...this.pinStates.entries()].map(([pin, s]) => ({
+      pin, mode: s.mode, driveHigh: s.driveHigh,
+    }));
+  }
+
+  // ─── Change notification ────────────────────────────────────────────────
+
+  /**
+   * Register a callback for board state changes.
+   * Called after every setPin, setControl, setPower, advanceTo, and setNetlist.
+   *
+   * @param {(event: {type: string, detail?: any}) => void} fn
+   */
+  onChange(fn) {
+    if (!this._changeListeners) this._changeListeners = [];
+    this._changeListeners.push(fn);
+  }
+
+  /**
+   * Remove a previously registered change listener.
+   * @param {(event: {type: string, detail?: any}) => void} fn
+   */
+  offChange(fn) {
+    if (!this._changeListeners) return;
+    this._changeListeners = this._changeListeners.filter(f => f !== fn);
+  }
+
+  /** @param {string} type @param {any} [detail] */
+  _notifyChange(type, detail) {
+    if (!this._changeListeners) return;
+    const event = { type, detail };
+    for (const fn of this._changeListeners) {
+      fn(event);
+    }
+  }
+
+  // ─── Circuit warnings ──────────────────────────────────────────────────
+
+  /**
+   * Check the circuit for potential problems: overcurrent, missing
+   * ground path, LED without resistor, etc.
+   *
+   * @returns {Array<{severity: 'warning' | 'danger', partId?: string, message: string}>}
+   */
+  getWarnings() {
+    /** @type {Array<{severity: 'warning' | 'danger', partId?: string, message: string}>} */
+    const warnings = [];
+
+    if (!this.powered) return warnings;
+
+    for (const part of this.parts) {
+      if (part.kind === 'led') {
+        const current = this.ledCurrents.get(part.id) ?? 0;
+        if (current > 0.025) { // > 25 mA
+          warnings.push({
+            severity: 'danger',
+            partId: part.id,
+            message: `${part.id}: current ${(current * 1000).toFixed(1)} mA exceeds 20 mA rating. Add or increase the series resistor.`,
+          });
+        }
+      }
+    }
+
+    return warnings;
+  }
+
+  // ─── Reset ──────────────────────────────────────────────────────────────
+
+  /**
+   * Reset simulation state without changing the netlist.
+   * Clears pin states, time, capacitor voltages, LED history, buzzer edges.
+   * Parts, nets, and controls are preserved.
+   */
+  reset() {
+    this.pinStates.clear();
+    this.timeNs = 0n;
+    this.capVoltages.clear();
+    this.ledHistory.clear();
+    this.buzzerEdges.clear();
+    this.nodeVoltages.clear();
+    this.ledCurrents.clear();
+    this.inductorCurrents.clear();
+
+    // Re-initialize cap voltages and LED/buzzer tracking
+    for (const p of this.parts) {
+      if (p.kind === 'led') this.ledHistory.set(p.id, []);
+      if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
+      if (p.kind === 'capacitor') this.capVoltages.set(p.id, 0);
+    }
+
+    this._solve();
+    this._recordLedSamples();
+    this._notifyChange('reset');
+  }
+
+  // ─── State snapshot ─────────────────────────────────────────────────────
+
+  /**
+   * Take a snapshot of the current board state for save/undo.
+   * @returns {object}
+   */
+  snapshot() {
+    return {
+      timeNs: this.timeNs,
+      powered: this.powered,
+      pinStates: new Map(this.pinStates),
+      controls: new Map(this.controls),
+      capVoltages: new Map(this.capVoltages),
+    };
+  }
+
+  /**
+   * Restore a previously taken snapshot.
+   * @param {object} snap
+   */
+  restore(snap) {
+    this.timeNs = snap.timeNs;
+    this.powered = snap.powered;
+    this.pinStates = new Map(snap.pinStates);
+    this.controls = new Map(snap.controls);
+    this.capVoltages = new Map(snap.capVoltages);
+
+    // Re-initialize LED/buzzer tracking
+    this.ledHistory.clear();
+    this.buzzerEdges.clear();
+    for (const p of this.parts) {
+      if (p.kind === 'led') this.ledHistory.set(p.id, []);
+      if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
+    }
+
+    this._solve();
+    this._recordLedSamples();
+    this._notifyChange('restore');
   }
 
   // ─── Internal: MNA solver bridge ──────────────────────────────────────────
