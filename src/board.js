@@ -87,6 +87,12 @@ export class BoardImpl {
      * @type {Map<string, number>}
      */
     this.ledCurrents = new Map();
+
+    /**
+     * Capacitor voltages: part id → current voltage across the cap.
+     * @type {Map<string, number>}
+     */
+    this.capVoltages = new Map();
   }
 
   // ─── Boundary B: setNetlist ──────────────────────────────────────────────
@@ -102,6 +108,7 @@ export class BoardImpl {
     this.netMap = new Map(nets.map(n => [n.id, n]));
     this.ledHistory.clear();
     this.buzzerEdges.clear();
+    this.capVoltages.clear();
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
 
@@ -138,7 +145,15 @@ export class BoardImpl {
    * @param {bigint} tNs
    */
   advanceTo(tNs) {
+    const prevNs = this.timeNs;
     this.timeNs = tNs;
+
+    // Integrate capacitor RC steps
+    if (tNs > prevNs && this.powered) {
+      const dtSec = Number(tNs - prevNs) / 1e9;
+      this._integrateCapacitors(dtSec);
+    }
+
     // Record LED current samples at this timestamp
     this._recordLedSamples();
   }
@@ -320,6 +335,56 @@ export class BoardImpl {
       testNodeB,
       testCurrent,
     });
+  }
+
+  // ─── Internal: capacitor RC integration ───────────────────────────────────
+
+  /**
+   * Integrate capacitor voltages using closed-form RC step.
+   * V += (Vt − V) · (1 − e^(−dt/RC))
+   * where Vt is the target voltage from the driving source and RC is the
+   * time constant.
+   *
+   * @param {number} dtSec - time step in seconds
+   */
+  _integrateCapacitors(dtSec) {
+    for (const part of this.parts) {
+      if (part.kind !== 'capacitor') continue;
+
+      const farads = /** @type {number} */ (part.params.farads ?? 0.0001);
+      const netA = this._netForTerminal(part.id, 'a');
+      const netB = this._netForTerminal(part.id, 'b');
+      if (!netA || !netB) continue;
+
+      // Clear the cap's own node voltage so _traceToSource doesn't
+      // find the cached value from the previous step.
+      this.nodeVoltages.delete(netA);
+
+      // Find the driving source for the capacitor's node.
+      // Look for the Thévenin equivalent driving the capacitor's "a" terminal.
+      const source = this._traceToSource(netA, part.id);
+      const groundSource = this._traceToSource(netB, part.id);
+
+      if (!source) continue;
+
+      // Target voltage across the capacitor
+      const vTarget = source.vTh - (groundSource ? groundSource.vTh : 0);
+      const rSource = source.rTh + (groundSource ? groundSource.rTh : 0);
+
+      if (rSource <= 0) continue;
+
+      const rc = rSource * farads;
+      const vCap = this.capVoltages.get(part.id) ?? 0;
+      const vNew = vCap + (vTarget - vCap) * (1 - Math.exp(-dtSec / rc));
+
+      this.capVoltages.set(part.id, vNew);
+
+      // Update node voltages for the capacitor's terminals
+      // The capacitor voltage determines the node voltage at its "a" terminal
+      // relative to "b"
+      const vB = this.nodeVoltages.get(netB) ?? 0;
+      this.nodeVoltages.set(netA, vB + vNew);
+    }
   }
 
   // ─── Internal: closed-form solver ────────────────────────────────────────

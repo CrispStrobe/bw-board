@@ -1,0 +1,16 @@
+{
+  "name": "bw-board",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Board layer between an emulated MCU and a circuit designer",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./types": "./src/types.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "author": "CrispStrobe <cze+github@mailbox.org>"
+}
