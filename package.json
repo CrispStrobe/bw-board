@@ -6,7 +6,9 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./types": "./src/types.js"
+    "./types": "./src/types.js",
+    "./conformance": "./src/conformance.js",
+    "./emu8051-adapter": "./src/emu8051-adapter.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js"
