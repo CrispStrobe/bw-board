@@ -15,6 +15,7 @@
 
 import { pinThevenin } from './pin-model.js';
 import { solveMNA } from './mna.js';
+import { validateNetlist } from './validate.js';
 
 /**
  * Internal pin state.
@@ -128,6 +129,17 @@ export class BoardImpl {
    * @param {Net[]} nets
    */
   setNetlist(parts, nets) {
+    // Validate the netlist and reject malformed input. Without this,
+    // a wrong terminal name (e.g. {a,b} instead of {anode,cathode} for
+    // an LED) silently produces brightness 0 — a plausible wrong answer.
+    const errors = validateNetlist(parts, nets);
+    const fatal = errors.filter(e => e.severity === 'error');
+    if (fatal.length > 0) {
+      throw new Error(
+        'Invalid netlist:\n' + fatal.map(e => `  - ${e.message}`).join('\n')
+      );
+    }
+
     this.parts = parts;
     this.nets = nets;
     this.partMap = new Map(parts.map(p => [p.id, p]));

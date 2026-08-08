@@ -178,12 +178,21 @@ export function validateNetlist(parts, nets) {
 
   // ─── Structural checks ─────────────────────────────────────────────
 
-  // Must have a GND reference
+  // Check for GND reference — required when VCC is present
   const hasGnd = parts.some(p => p.kind === 'gnd');
-  if (!hasGnd && parts.length > 0) {
+  const hasVcc = parts.some(p => p.kind === 'vcc');
+  const hasMcu = parts.some(p => p.kind === 'mcu');
+  if (hasVcc && !hasGnd && !hasMcu) {
+    // VCC without GND and no MCU to provide ground → error
     errors.push({
       severity: 'error',
-      message: 'Netlist has no GND part. A ground reference is required for the solver.',
+      message: 'Netlist has VCC but no GND part and no MCU. A ground reference is required.',
+    });
+  } else if (hasVcc && !hasGnd) {
+    // VCC without GND but MCU present → warning (MCU pin can be ground)
+    errors.push({
+      severity: 'warning',
+      message: 'Netlist has VCC but no GND part. The MCU pin provides a ground path, but an explicit GND is recommended.',
     });
   }
 

@@ -78,20 +78,29 @@ No build step, no dependencies, no generated files. Copy the directory and impor
 
 ### Netlist validation
 
-Use `validateNetlist(parts, nets)` before calling `setNetlist` to catch common
-mistakes (wrong terminal names, missing GND, unknown part kinds) before the solver
-silently produces plausible wrong answers:
+`setNetlist` validates the netlist and **throws on errors** — wrong terminal names
+(e.g. `{a,b}` instead of `{anode,cathode}` for an LED), unknown part kinds, missing
+ground reference, NaN parameters. This prevents the solver from silently producing
+plausible wrong answers.
 
 ```js
-import { validateNetlist, BoardImpl } from 'bw-board';
+import { BoardImpl } from 'bw-board';
+
+try {
+  board.setNetlist(parts, nets);
+} catch (e) {
+  // e.message lists the specific errors
+  console.error(e.message);
+}
+```
+
+For pre-flight checking without throwing, use `validateNetlist` directly:
+
+```js
+import { validateNetlist } from 'bw-board';
 
 const errors = validateNetlist(parts, nets);
-const fatal = errors.filter(e => e.severity === 'error');
-if (fatal.length > 0) {
-  console.error('Netlist errors:', fatal.map(e => e.message));
-} else {
-  board.setNetlist(parts, nets);
-}
+// errors: [{severity: 'error'|'warning', message, partId?, netId?}]
 ```
 
 ## Testing

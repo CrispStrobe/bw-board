@@ -293,9 +293,13 @@ describe('empty net (no terminals)', () => {
   it('does not crash', () => {
     const board = new BoardImpl(5.0);
     board.setNetlist(
-      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] }],
+      [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      ],
       [
         { id: 'n1', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+        { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] },
         { id: 'nempty', terminals: [] }, // no terminals
       ],
     );

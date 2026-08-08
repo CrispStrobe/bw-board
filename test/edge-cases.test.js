@@ -146,8 +146,14 @@ describe('setNetlist resets state', () => {
 
     // Replace with a different netlist — old LED1 history should be gone
     board.setNetlist(
-      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] }],
-      [{ id: 'n1', terminals: [{ part: 'VCC', terminal: 'vcc' }] }],
+      [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      ],
+      [
+        { id: 'n1', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+        { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+      ],
     );
     assert.equal(board.ledBrightness('LED1'), 0);
   });

@@ -151,24 +151,22 @@ describe('beginner mistakes', () => {
 });
 
 describe('pathological inputs', () => {
-  it('NaN resistance does not crash', () => {
+  it('NaN resistance is rejected by setNetlist', () => {
     const board = new BoardImpl(5.0);
-    board.setNetlist(
-      [
-        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
-        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
-        { id: 'R1', kind: 'resistor', params: { ohms: NaN }, terminals: ['a', 'b'] },
-      ],
-      [
-        { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },
-        { id: 'n2', terminals: [{ part: 'R1', terminal: 'b' }] },
-        { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] },
-      ],
-    );
-    // Should not throw
-    const v = board.nodeVoltage('n2');
-    // We accept NaN for the pathological input — the key is no crash
-    assert.ok(typeof v === 'number', 'should return a number (possibly NaN for NaN input)');
+    assert.throws(() => {
+      board.setNetlist(
+        [
+          { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+          { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+          { id: 'R1', kind: 'resistor', params: { ohms: NaN }, terminals: ['a', 'b'] },
+        ],
+        [
+          { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },
+          { id: 'n2', terminals: [{ part: 'R1', terminal: 'b' }] },
+          { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+        ],
+      );
+    }, /Invalid netlist/, 'NaN ohms should be rejected');
   });
 
   it('Infinity resistance does not crash', () => {
