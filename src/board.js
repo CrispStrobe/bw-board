@@ -35,6 +35,26 @@ const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
  */
 const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
 
+/**
+ * Combine multiple Thévenin sources into one via Norton equivalents.
+ * @param {Array<{vTh: number, rTh: number}>} sources
+ * @returns {{ vTh: number, rTh: number } | null}
+ */
+function combineThevenin(sources) {
+  if (sources.length === 0) return null;
+  if (sources.length === 1) return sources[0];
+
+  let iTotal = 0;
+  let gTotal = 0;
+  for (const s of sources) {
+    const r = Math.max(s.rTh, 0.001);
+    gTotal += 1 / r;
+    iTotal += s.vTh / r;
+  }
+  if (gTotal <= 0) return null;
+  return { vTh: iTotal / gTotal, rTh: 1 / gTotal };
+}
+
 export class BoardImpl {
   constructor(vcc = 5.0) {
     /** @type {number} */
@@ -351,6 +371,28 @@ export class BoardImpl {
    * @param {number} dtSec - time step in seconds
    */
   _integrateCapacitors(dtSec) {
+    // Temporarily strip cached voltages from non-ideal-source nets so
+    // _gatherSources traces all the way to VCC/GND/pin Thévenins and
+    // accumulates the real source impedance. Without this, a net like
+    // "MCU quasi-high → 10kΩ pull-up net" gets cached as V=5V (correct)
+    // but with implied R=0 (wrong — the quasi pin has 21.7kΩ behind it).
+    const savedVoltages = new Map(this.nodeVoltages);
+    const idealNets = new Set();
+    for (const net of this.nets) {
+      for (const t of net.terminals) {
+        const p = this.partMap.get(t.part);
+        if (p && (p.kind === 'vcc' || p.kind === 'gnd')) {
+          idealNets.add(net.id);
+        }
+      }
+    }
+    // Keep only VCC/GND net voltages
+    for (const [netId] of this.nodeVoltages) {
+      if (!idealNets.has(netId)) {
+        this.nodeVoltages.delete(netId);
+      }
+    }
+
     for (const part of this.parts) {
       if (part.kind !== 'capacitor') continue;
 
@@ -359,20 +401,28 @@ export class BoardImpl {
       const netB = this._netForTerminal(part.id, 'b');
       if (!netA || !netB) continue;
 
-      // Clear the cap's own node voltage so _traceToSource doesn't
-      // find the cached value from the previous step.
-      this.nodeVoltages.delete(netA);
+      // Use _gatherSources to find ALL Thévenin sources reaching each
+      // terminal, including their series resistance. This is critical:
+      // _traceToSource stops at cached node voltages and loses the source
+      // impedance behind them (e.g., a quasi pin's 21.7kΩ behind a net
+      // that _resolveNet cached as "5V").
+      const aSources = this._gatherSources(netA);
+      const bSources = this._gatherSources(netB);
 
-      // Find the driving source for the capacitor's node.
-      // Look for the Thévenin equivalent driving the capacitor's "a" terminal.
-      const source = this._traceToSource(netA, part.id);
-      const groundSource = this._traceToSource(netB, part.id);
+      // Remove any sources from the cap's own side (avoid self-reference)
+      // gatherSources already skips the cap because it doesn't trace
+      // through capacitors.
 
-      if (!source) continue;
+      if (aSources.length === 0 && bSources.length === 0) continue;
 
-      // Target voltage across the capacitor
-      const vTarget = source.vTh - (groundSource ? groundSource.vTh : 0);
-      const rSource = source.rTh + (groundSource ? groundSource.rTh : 0);
+      // Combine each side into a single Thévenin equivalent via Norton.
+      const aThev = combineThevenin(aSources);
+      const bThev = combineThevenin(bSources);
+
+      if (!aThev && !bThev) continue;
+
+      const vTarget = (aThev ? aThev.vTh : 0) - (bThev ? bThev.vTh : 0);
+      const rSource = (aThev ? aThev.rTh : 0) + (bThev ? bThev.rTh : 0);
 
       if (rSource <= 0) continue;
 
@@ -387,6 +437,13 @@ export class BoardImpl {
       // relative to "b"
       const vB = this.nodeVoltages.get(netB) ?? 0;
       this.nodeVoltages.set(netA, vB + vNew);
+    }
+
+    // Restore cached voltages for non-cap nets
+    for (const [netId, v] of savedVoltages) {
+      if (!this.nodeVoltages.has(netId)) {
+        this.nodeVoltages.set(netId, v);
+      }
     }
   }
 
