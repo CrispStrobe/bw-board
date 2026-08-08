@@ -537,7 +537,11 @@ export class BoardImpl {
 
     for (const part of this.parts) {
       if (part.kind === 'led') {
-        const current = this.ledCurrents.get(part.id) ?? 0;
+        // Use closed-form current if available, fall back to MNA
+        let current = this.ledCurrents.get(part.id) ?? 0;
+        if (current === 0) {
+          try { current = this.branchCurrent(part.id, 'anode'); } catch {}
+        }
         if (current > 0.025) { // > 25 mA
           warnings.push({
             severity: 'danger',
