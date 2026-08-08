@@ -139,6 +139,11 @@ export class BoardImpl {
       if (p.kind === 'buzzer') {
         this.buzzerEdges.set(p.id, []);
       }
+      if (p.kind === 'capacitor') {
+        if (!this.capVoltages.has(p.id)) {
+          this.capVoltages.set(p.id, 0); // start uncharged
+        }
+      }
     }
 
     this._solve();
@@ -497,6 +502,21 @@ export class BoardImpl {
     for (const net of this.nets) {
       if (this.nodeVoltages.has(net.id)) continue;
       this._resolveNet(net);
+    }
+
+    // Override net voltages for capacitor nodes with their actual charge state.
+    // The static solve gives the long-term target voltage; the cap's current
+    // charge may be different (it hasn't reached steady state yet).
+    for (const part of this.parts) {
+      if (part.kind !== 'capacitor') continue;
+      const capV = this.capVoltages.get(part.id);
+      if (capV === undefined) continue;
+      const netA = this._netForTerminal(part.id, 'a');
+      const netB = this._netForTerminal(part.id, 'b');
+      if (netA) {
+        const vB = netB ? (this.nodeVoltages.get(netB) ?? 0) : 0;
+        this.nodeVoltages.set(netA, vB + capV);
+      }
     }
   }
 
