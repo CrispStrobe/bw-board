@@ -362,3 +362,211 @@ describe('emu8051 adapter: conformance', () => {
     assert.ok(modeChange?.pass, 'mode change events should pass');
   });
 });
+
+// ─── Push mode tests ──────────────────────────────────────────────────────
+
+/**
+ * Create a mock WASM module that supports push callbacks (addFunction).
+ * Simulates the real WASM push path: on_pin_change fires during execution.
+ */
+function createPushMockWasm() {
+  const base = createMockWasm();
+
+  // Registered callbacks
+  let onPinChange = null;
+  let onReadPin = null;
+  let onReadAnalog = null;
+  let onAdvance = null;
+  let nextFnPtr = 100;
+  const fnPtrs = new Map();
+
+  const sfr = new Uint8Array(256);
+  sfr[0x80] = 0xFF; sfr[0x90] = 0xFF; sfr[0xA0] = 0xFF; sfr[0xB0] = 0xFF;
+  let timeNs = 0n;
+  let vcc = 5.0;
+
+  const m1Addrs = [0x93, 0x91, 0x95, 0xB1, 0xB3, 0xC9];
+  const m0Addrs = [0x94, 0x92, 0x96, 0xB2, 0xB4, 0xCA];
+
+  function getPinMode(port, bit) {
+    const m1 = (sfr[m1Addrs[port]] >> bit) & 1;
+    const m0 = (sfr[m0Addrs[port]] >> bit) & 1;
+    return (m1 << 1) | m0;
+  }
+
+  function emitPinChanges(port) {
+    if (!onPinChange) return;
+    for (let bit = 0; bit < 8; bit++) {
+      const mode = getPinMode(port, bit);
+      const drive = (sfr[0x80 + port * 0x10] >> bit) & 1;
+      onPinChange(port, bit, mode, drive, 0);
+    }
+  }
+
+  return {
+    ...base,
+    HEAPU8: new Uint8Array(65536),
+
+    _emu_init() {},
+    _emu_reset(wipe) {
+      sfr.fill(0);
+      sfr[0x80] = 0xFF; sfr[0x90] = 0xFF;
+      sfr[0xA0] = 0xFF; sfr[0xB0] = 0xFF;
+      timeNs = 0n;
+    },
+    _emu_set_fosc() {},
+    _emu_set_vcc(v) { vcc = v; },
+
+    _emu_get_sfr(addr) { return sfr[addr]; },
+    _emu_set_sfr(addr, val) {
+      const old = sfr[addr];
+      sfr[addr] = val & 0xFF;
+      // Detect port data or mode register writes and emit callbacks
+      const portAddrs = [0x80, 0x90, 0xA0, 0xB0];
+      for (let p = 0; p < 4; p++) {
+        if (addr === portAddrs[p] || addr === m1Addrs[p] || addr === m0Addrs[p]) {
+          if (old !== (val & 0xFF)) emitPinChanges(p);
+          return;
+        }
+      }
+    },
+
+    _emu_advance_to_ns(lo, hi) {
+      timeNs = BigInt(lo >>> 0) | (BigInt(hi >>> 0) << 32n);
+      if (onAdvance) onAdvance(lo, hi, 0);
+      return 100;
+    },
+
+    _emu_get_time_ns_lo() { return Number(timeNs & 0xFFFFFFFFn); },
+    _emu_get_time_ns_hi() { return Number((timeNs >> 32n) & 0xFFFFFFFFn); },
+    _emu_get_pin_mode(port, bit) { return getPinMode(port, bit); },
+    _emu_get_pin_drive(port, bit) { return (sfr[0x80 + port * 0x10] >> bit) & 1; },
+    _emu_set_pin_input() {},
+    _emu_set_adc_voltage() {},
+
+    // Push mode API
+    addFunction(fn, sig) {
+      const ptr = nextFnPtr++;
+      fnPtrs.set(ptr, fn);
+      return ptr;
+    },
+    removeFunction(ptr) { fnPtrs.delete(ptr); },
+
+    _emu_set_board_callbacks(pinCb, readCb, analogCb, advCb, ud) {
+      onPinChange = fnPtrs.get(pinCb) ?? null;
+      onReadPin = fnPtrs.get(readCb) ?? null;
+      onReadAnalog = fnPtrs.get(analogCb) ?? null;
+      onAdvance = fnPtrs.get(advCb) ?? null;
+    },
+
+    _malloc(n) { return 1024; },
+    _free() {},
+  };
+}
+
+describe('emu8051 adapter: push mode', () => {
+  it('auto-detects push mode when addFunction is available', () => {
+    const wasm = createPushMockWasm();
+    const adapter = createEmu8051Adapter(wasm);
+
+    adapter.attachBoard({
+      setPin() {},
+      advanceTo() {},
+      readPin() { return 0; },
+      readAnalog() { return 0; },
+    });
+
+    const stats = adapter.getStats();
+    assert.equal(stats.mode, 'push', 'should auto-detect push mode');
+  });
+
+  it('receives pin changes via push callback', () => {
+    const wasm = createPushMockWasm();
+    const adapter = createEmu8051Adapter(wasm);
+
+    const calls = [];
+    adapter.attachBoard({
+      setPin(pin, mode, driveHigh) { calls.push({ pin, mode, driveHigh }); },
+      advanceTo() {},
+      readPin() { return 0; },
+      readAnalog() { return 0; },
+    });
+
+    const before = calls.length;
+    adapter.writePort(1, 0x00); // all P1 low
+
+    const newCalls = calls.slice(before);
+    assert.ok(newCalls.length > 0, 'push mode should emit pin changes');
+    const p10 = newCalls.find(c => c.pin === 'P1.0');
+    assert.ok(p10);
+    assert.equal(p10.driveHigh, false);
+  });
+
+  it('push mode receives advanceTo via callback', () => {
+    const wasm = createPushMockWasm();
+    const adapter = createEmu8051Adapter(wasm);
+
+    const times = [];
+    adapter.attachBoard({
+      setPin() {},
+      advanceTo(tNs) { times.push(tNs); },
+      readPin() { return 0; },
+      readAnalog() { return 0; },
+    });
+
+    adapter.runNs(10000);
+
+    assert.ok(times.length > 0, 'should receive advanceTo via push');
+    assert.equal(typeof times[0], 'bigint');
+  });
+
+  it('push mode has zero polling', () => {
+    const wasm = createPushMockWasm();
+    const adapter = createEmu8051Adapter(wasm);
+
+    adapter.attachBoard({
+      setPin() {},
+      advanceTo() {},
+      readPin() { return 0; },
+      readAnalog() { return 0; },
+    });
+
+    adapter.writePort(1, 0x00);
+    adapter.runNs(10000);
+
+    const stats = adapter.getStats();
+    assert.equal(stats.pollCount, 0, 'push mode should not poll');
+    assert.ok(stats.pushCallbackCount > 0, 'should have received push callbacks');
+  });
+
+  it('mode changes via setPortMode fire push callbacks', () => {
+    const wasm = createPushMockWasm();
+    const adapter = createEmu8051Adapter(wasm);
+
+    const modes = new Set();
+    adapter.attachBoard({
+      setPin(pin, mode) { modes.add(mode); },
+      advanceTo() {},
+      readPin() { return 0; },
+      readAnalog() { return 0; },
+    });
+
+    adapter.setPortMode(1, 0x00, 0xFF); // push-pull
+    assert.ok(modes.has('pushpull'), 'should see pushpull mode via push callback');
+  });
+
+  it('destroy cleans up function pointers', () => {
+    const wasm = createPushMockWasm();
+    const adapter = createEmu8051Adapter(wasm);
+
+    adapter.attachBoard({
+      setPin() {},
+      advanceTo() {},
+      readPin() { return 0; },
+      readAnalog() { return 0; },
+    });
+
+    // Should not throw
+    adapter.destroy();
+  });
+});
