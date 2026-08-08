@@ -9,7 +9,8 @@
     "./types": "./src/types.js",
     "./conformance": "./src/conformance.js",
     "./emu8051-adapter": "./src/emu8051-adapter.js",
-    "./validate": "./src/validate.js"
+    "./validate": "./src/validate.js",
+    "./builder": "./src/builder.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js"

@@ -71,6 +71,7 @@ src/infer-netlist.js
 src/scripted-mcu.js
 src/conformance.js
 src/emu8051-adapter.js
+src/builder.js
 ```
 
 `src/index.js` is the single entry point. All imports are relative within `src/`.
