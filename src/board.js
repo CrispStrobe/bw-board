@@ -116,6 +116,15 @@ export class BoardImpl {
     this.ledCurrents = new Map();
 
     /**
+     * Oscilloscope probes: net id → ring buffer of {tNs, voltage} samples.
+     * @type {Map<string, Array<{tNs: bigint, v: number}>>}
+     */
+    this._probes = new Map();
+
+    /** Maximum samples per probe (ring buffer size). */
+    this._probeMaxSamples = 10000;
+
+    /**
      * Capacitor voltages: part id → current voltage across the cap.
      * @type {Map<string, number>}
      */
@@ -202,14 +211,25 @@ export class BoardImpl {
     const prevNs = this.timeNs;
     this.timeNs = tNs;
 
-    // Integrate capacitor RC steps
+    // Integrate reactive components
     if (tNs > prevNs && this.powered) {
       const dtSec = Number(tNs - prevNs) / 1e9;
       this._integrateCapacitors(dtSec);
+      this._integrateInductors(dtSec);
     }
 
     // Record LED current samples at this timestamp
     this._recordLedSamples();
+
+    // Record oscilloscope probe samples
+    for (const [netId, data] of this._probes) {
+      const v = this.nodeVoltages.get(netId) ?? 0;
+      data.push({ tNs, v: Number.isFinite(v) ? v : 0 });
+      if (data.length > this._probeMaxSamples) {
+        data.splice(0, data.length - this._probeMaxSamples);
+      }
+    }
+
     this._notifyChange('time', { tNs });
   }
 
@@ -244,6 +264,51 @@ export class BoardImpl {
   nodeVoltage(netId) {
     const v = this.nodeVoltages.get(netId) ?? 0;
     return Number.isFinite(v) ? v : 0;
+  }
+
+  // ─── Oscilloscope probes ────────────────────────────────────────────────
+
+  /**
+   * Attach an oscilloscope probe to a net. Starts recording voltage
+   * samples at each advanceTo call.
+   * @param {string} netId
+   */
+  addProbe(netId) {
+    if (!this._probes.has(netId)) {
+      this._probes.set(netId, []);
+    }
+  }
+
+  /**
+   * Remove a probe from a net.
+   * @param {string} netId
+   */
+  removeProbe(netId) {
+    this._probes.delete(netId);
+  }
+
+  /**
+   * Get the recorded waveform for a probed net.
+   * @param {string} netId
+   * @returns {Array<{tNs: bigint, v: number}>}
+   */
+  getProbeData(netId) {
+    return this._probes.get(netId) ?? [];
+  }
+
+  /**
+   * Get all active probe net IDs.
+   * @returns {string[]}
+   */
+  getProbes() {
+    return [...this._probes.keys()];
+  }
+
+  /** Clear all probe data without removing probes. */
+  clearProbeData() {
+    for (const [, data] of this._probes) {
+      data.length = 0;
+    }
   }
 
   /**
@@ -409,6 +474,44 @@ export class BoardImpl {
     this._solve();
     this._recordLedSamples();
     this._notifyChange('power', { on });
+  }
+
+  // ─── Internal: inductor integration ───────────────────────────────────────
+
+  /**
+   * Integrate inductor currents using backward Euler companion model.
+   * V = L · dI/dt → I_new = I_old + (V_across / L) · dt
+   *
+   * At each step, the inductor acts like a current source (I_old) in
+   * parallel with a conductance (dt/L). For the closed-form path, we
+   * compute the voltage across the inductor from the surrounding network
+   * and update the current.
+   *
+   * @param {number} dtSec
+   */
+  _integrateInductors(dtSec) {
+    if (dtSec <= 0) return;
+
+    for (const part of this.parts) {
+      if (part.kind !== 'inductor') continue;
+
+      const henrys = /** @type {number} */ (part.params.henrys ?? 0.01);
+      if (henrys <= 0) continue;
+
+      const netA = this._netForTerminal(part.id, 'a');
+      const netB = this._netForTerminal(part.id, 'b');
+      if (!netA || !netB) continue;
+
+      const vA = this.nodeVoltages.get(netA) ?? 0;
+      const vB = this.nodeVoltages.get(netB) ?? 0;
+      const vAcross = vA - vB;
+
+      // Backward Euler: I_new = I_old + (V / L) × dt
+      const iOld = this.inductorCurrents.get(part.id) ?? 0;
+      const iNew = iOld + (vAcross / henrys) * dtSec;
+
+      this.inductorCurrents.set(part.id, iNew);
+    }
   }
 
   // ─── State getters ───────────────────────────────────────────────────────
