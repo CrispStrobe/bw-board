@@ -265,7 +265,7 @@ describe('example: 05-scheduler', () => {
 // ─── All examples: common checks ──────────────────────────────────────────
 
 describe('all examples: inferNetlist → validate → board', () => {
-  for (const name of ['01-blink', '02-button', '03-potentiometer', '04-brightness', '05-scheduler']) {
+  for (const name of ['01-blink', '02-button', '03-potentiometer', '04-brightness', '05-scheduler', '06-dimmer']) {
     const stc = loadPins(name);
     if (!stc) continue;
 
