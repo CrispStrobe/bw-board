@@ -89,6 +89,8 @@ describe('BoardImpl method surface', () => {
     'getParts', 'getNets', 'getLeds', 'getBuzzers', 'getControls', 'getPinStates',
     // Lifecycle
     'onChange', 'offChange', 'getWarnings', 'reset', 'snapshot', 'restore',
+    // New getters
+    'getInductorCurrent', 'getRenderState',
   ];
 
   for (const method of expectedMethods) {
