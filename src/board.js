@@ -1504,35 +1504,39 @@ export class BoardImpl {
     for (const [partId, history] of this.ledHistory) {
       const current = this.ledCurrents.get(partId) ?? 0;
 
-      // Deduplicate: if the last sample has the same current and time, skip
       const last = history.length > 0 ? history[history.length - 1] : null;
+
+      // Skip if nothing changed (same time and current)
       if (last && last.tNs === this.timeNs && last.current === current) continue;
 
-      // If the time hasn't changed but current has, update in place
+      // If time hasn't changed but current has, update in place
       if (last && last.tNs === this.timeNs) {
         last.current = current;
         continue;
       }
 
+      // Skip recording if the current hasn't changed since the last sample
+      // (steady state — no need to record the same value repeatedly)
+      if (last && last.current === current) continue;
+
       history.push({ tNs: this.timeNs, current });
 
-      // Prune old samples, but always keep at least one sample before
-      // the brightness window start so the integrator has an initial value.
-      // Window starts at now - BRIGHTNESS_WINDOW_NS.
-      const windowStart = this.timeNs > BRIGHTNESS_WINDOW_NS
-        ? this.timeNs - BRIGHTNESS_WINDOW_NS
-        : 0n;
+      // Prune only when the history is large (amortized O(1))
+      if (history.length > 200) {
+        const windowStart = this.timeNs > BRIGHTNESS_WINDOW_NS
+          ? this.timeNs - BRIGHTNESS_WINDOW_NS
+          : 0n;
 
-      // Keep the most recent sample at or before windowStart, remove everything before it
-      let keepIdx = -1;
-      for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].tNs <= windowStart) {
-          keepIdx = i;
-          break;
+        let keepIdx = -1;
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].tNs <= windowStart) {
+            keepIdx = i;
+            break;
+          }
         }
-      }
-      if (keepIdx > 0) {
-        history.splice(0, keepIdx);
+        if (keepIdx > 0) {
+          history.splice(0, keepIdx);
+        }
       }
     }
   }
