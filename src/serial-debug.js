@@ -147,6 +147,14 @@ export function createSerialDebugTarget(transport, opts = {}) {
   let helloCapabilities = null;
   let haltSkewNs = 0n;
 
+  /**
+   * Why we are detached — the UI needs to distinguish three cases:
+   *   null:          no connection attempted yet ("choose a port")
+   *   string:        connection failed or link lost (the reason)
+   *   'link-lost':   was connected, link died mid-session
+   */
+  let detachReason = null;
+
   /** @type {Array<{resolve: Function, reject: Function, cmd: number}>} */
   let pending = [];
 
@@ -163,7 +171,9 @@ export function createSerialDebugTarget(transport, opts = {}) {
   });
 
   transport.onClose(() => {
+    const wasConnected = state !== 'detached';
     state = 'detached';
+    detachReason = wasConnected ? 'link-lost' : detachReason;
     for (const p of pending) p.reject(new Error('link closed'));
     pending = [];
   });
@@ -214,15 +224,27 @@ export function createSerialDebugTarget(transport, opts = {}) {
   // ─── DebugTarget interface ─────────────────────────────────────────
 
   const target = {
-    /** Connect and discover capabilities. */
+    /**
+     * Connect and discover capabilities.
+     *
+     * On reconnect after link loss: the chip kept running. Our position
+     * is stale, skewNs is unbounded. The target stays detached until
+     * connect() is called explicitly — it does NOT auto-reconnect,
+     * because pretending we know the program state would be lying.
+     *
+     * The front end should tell the user: "Connection lost. The board
+     * kept running. Press Connect to restart the debug session."
+     */
     async connect() {
       state = 'halted'; // assume halted until proven otherwise
+      detachReason = null;
       try {
         const data = await sendCommand(CMD.HELLO);
         helloCapabilities = data;
         return { connected: true };
       } catch (e) {
         state = 'detached';
+        detachReason = e.message;
         throw e;
       }
     },
@@ -342,6 +364,15 @@ export function createSerialDebugTarget(transport, opts = {}) {
 
     /** Whether the link is alive. */
     isConnected() { return state !== 'detached'; },
+
+    /**
+     * Why the target is detached. The UI needs three sentences:
+     *   null          → "Choose a serial port"
+     *   'link-lost'   → "Connection lost. The board kept running.
+     *                     Press Connect to restart the debug session."
+     *   other string  → the error message from the failed connection
+     */
+    getDetachReason() { return detachReason; },
   };
 
   return target;

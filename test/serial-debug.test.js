@@ -215,6 +215,32 @@ describe('serial target: detached', () => {
   });
 });
 
+describe('serial target: detach reasons', () => {
+  it('no connection attempted → reason is null', () => {
+    const t = createMockTransport();
+    const target = createSerialDebugTarget(t);
+    assert.equal(target.getDetachReason(), null, '"choose a port"');
+  });
+
+  it('connection succeeded → reason cleared', async () => {
+    const t = createMockTransport({ [CMD.HELLO]: [] });
+    const target = createSerialDebugTarget(t);
+    await target.connect();
+    assert.equal(target.getDetachReason(), null);
+  });
+
+  it('link lost mid-session → reason is "link-lost"', async () => {
+    const t = createMockTransport({ [CMD.HELLO]: [] });
+    const target = createSerialDebugTarget(t);
+    await target.connect();
+
+    t.disconnect();
+    assert.equal(target.state(), 'detached');
+    assert.equal(target.getDetachReason(), 'link-lost',
+      'UI shows: "Connection lost. The board kept running."');
+  });
+});
+
 // ─── Halt event ──────────────────────────────────────────────────────────
 
 describe('serial target: halt event', () => {
