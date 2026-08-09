@@ -287,13 +287,161 @@ function buildChipModel(def) {
   };
 }
 
+// ─── Custom chips (sequential logic beyond simple gates/FFs) ────────────
+
+/** 74HC93 — 4-bit ripple counter. CLK-A drives QA, QA→CLK-B drives QB-QD. */
+const CHIP_74HC93 = {
+  terminals: ['clk_a', 'clk_b', 'r0_1', 'r0_2', 'qa', 'qb', 'qc', 'qd', 'vcc', 'gnd'],
+
+  init() {
+    return {
+      drives: { qa: { vTh: 0, rTh: R_OUT }, qb: { vTh: 0, rTh: R_OUT },
+                qc: { vTh: 0, rTh: R_OUT }, qd: { vTh: 0, rTh: R_OUT } },
+      count: 0,
+      _lastClkA: false,
+      _lastClkB: false,
+    };
+  },
+
+  stamp(ctx) {
+    ctx.conductance('clk_a', null, 1 / R_INPUT);
+    ctx.conductance('clk_b', null, 1 / R_INPUT);
+    ctx.conductance('r0_1', null, 1 / R_INPUT);
+    ctx.conductance('r0_2', null, 1 / R_INPUT);
+  },
+
+  update(part, state, read) {
+    const vcc = read('vcc') || 5.0;
+    const threshold = vcc * 0.5;
+
+    // Reset: both R0 pins HIGH → counter resets
+    if (read('r0_1') > threshold && read('r0_2') > threshold) {
+      if (state.count !== 0) {
+        state.count = 0;
+        state.drives.qa = { vTh: 0, rTh: R_OUT };
+        state.drives.qb = { vTh: 0, rTh: R_OUT };
+        state.drives.qc = { vTh: 0, rTh: R_OUT };
+        state.drives.qd = { vTh: 0, rTh: R_OUT };
+        return true;
+      }
+      return false;
+    }
+
+    let changed = false;
+
+    // CLK-A falling edge increments QA (divide-by-2)
+    const clkA = read('clk_a') > threshold;
+    if (!clkA && state._lastClkA) {
+      state.count = (state.count ^ 1); // toggle bit 0
+      changed = true;
+    }
+    state._lastClkA = clkA;
+
+    // CLK-B falling edge increments QB-QD (divide-by-8)
+    // In normal wiring, QA feeds CLK-B externally
+    const clkB = read('clk_b') > threshold;
+    if (!clkB && state._lastClkB) {
+      // Increment upper 3 bits
+      const upper = (state.count >> 1) + 1;
+      state.count = (state.count & 1) | ((upper & 7) << 1);
+      changed = true;
+    }
+    state._lastClkB = clkB;
+
+    if (changed) {
+      state.drives.qa = { vTh: (state.count & 1) ? vcc : 0, rTh: R_OUT };
+      state.drives.qb = { vTh: (state.count & 2) ? vcc : 0, rTh: R_OUT };
+      state.drives.qc = { vTh: (state.count & 4) ? vcc : 0, rTh: R_OUT };
+      state.drives.qd = { vTh: (state.count & 8) ? vcc : 0, rTh: R_OUT };
+    }
+    return changed;
+  },
+};
+
+/** CD4511 — BCD-to-7-segment latch/decoder/driver. */
+const CHIP_CD4511 = {
+  terminals: ['a', 'b', 'c', 'd', 'le', 'bl', 'lt',
+              'qa', 'qb', 'qc', 'qd', 'qe', 'qf', 'qg', 'vcc', 'gnd'],
+
+  init() {
+    const drives = {};
+    for (const s of ['qa','qb','qc','qd','qe','qf','qg']) {
+      drives[s] = { vTh: 0, rTh: R_OUT };
+    }
+    return { drives, _latchedBCD: 0 };
+  },
+
+  stamp(ctx) {
+    for (const p of ['a','b','c','d','le','bl','lt']) {
+      ctx.conductance(p, null, 1 / R_INPUT);
+    }
+  },
+
+  update(part, state, read) {
+    const vcc = read('vcc') || 5.0;
+    const threshold = vcc * 0.5;
+
+    const blActive = read('bl') < threshold; // blank: active LOW
+    const ltActive = read('lt') < threshold; // lamp test: active LOW
+    const leActive = read('le') > threshold; // latch enable: active HIGH = latch (hold)
+
+    // BCD-to-7-segment truth table (common cathode, outputs active HIGH)
+    //        qg qf qe qd qc qb qa
+    const SEGMENTS = [
+      0b0111111, // 0: a-f on
+      0b0000110, // 1: b,c
+      0b1011011, // 2: a,b,d,e,g
+      0b1001111, // 3: a,b,c,d,g
+      0b1100110, // 4: b,c,f,g
+      0b1101101, // 5: a,c,d,f,g
+      0b1111101, // 6: a,c,d,e,f,g
+      0b0000111, // 7: a,b,c
+      0b1111111, // 8: all
+      0b1101111, // 9: a,b,c,d,f,g
+    ];
+
+    let segments;
+
+    if (ltActive) {
+      segments = 0b1111111; // lamp test: all on
+    } else if (blActive) {
+      segments = 0b0000000; // blank: all off
+    } else {
+      // Read BCD input (or use latched value)
+      if (!leActive) {
+        const bcd = (read('d') > threshold ? 8 : 0) |
+                    (read('c') > threshold ? 4 : 0) |
+                    (read('b') > threshold ? 2 : 0) |
+                    (read('a') > threshold ? 1 : 0);
+        state._latchedBCD = bcd;
+      }
+      segments = state._latchedBCD < 10 ? SEGMENTS[state._latchedBCD] : 0;
+    }
+
+    let changed = false;
+    const segNames = ['qa','qb','qc','qd','qe','qf','qg'];
+    for (let i = 0; i < 7; i++) {
+      const on = (segments >> i) & 1;
+      const newV = on ? vcc : 0;
+      if ((state.drives[segNames[i]]?.vTh ?? -1) !== newV) {
+        state.drives[segNames[i]] = { vTh: newV, rTh: R_OUT };
+        changed = true;
+      }
+    }
+    return changed;
+  },
+};
+
 /**
- * Register all 74HC/CD logic chips from the table.
+ * Register all 74HC/CD logic chips from the table + custom chips.
  */
 export function registerLogicChips() {
   for (const def of CHIPS) {
     registerDevice(def.kind, buildChipModel(def));
   }
+  // Custom sequential chips
+  registerDevice('74hc93', CHIP_74HC93);
+  registerDevice('cd4511', CHIP_CD4511);
 }
 
 export { CHIPS, buildChipModel };

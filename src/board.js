@@ -1038,6 +1038,25 @@ export class BoardImpl {
   }
 
   /**
+   * Get the state of a registered device or built-in shift register.
+   * Returns the device's internal state object (drives, FSM state, etc.)
+   * or null if the part has no device state.
+   *
+   * For shift registers: { shiftReg, latchReg, oeActive }
+   * For registry devices: whatever the model's init() returned + mutations
+   *
+   * @param {string} partId
+   * @returns {object | null}
+   */
+  getDeviceState(partId) {
+    // Built-in shift register
+    const sr = this._shiftRegisters.get(partId);
+    if (sr) return { shiftReg: sr.shiftReg, latchReg: sr.latchReg, oeActive: sr.oeActive ?? true };
+    // Registry devices
+    return this._deviceStates.get(partId) ?? null;
+  }
+
+  /**
    * All MCU pin IDs currently tracked.
    * @returns {Array<{pin: string, mode: string, driveHigh: boolean}>}
    */
