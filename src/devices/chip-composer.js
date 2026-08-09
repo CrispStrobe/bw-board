@@ -432,6 +432,60 @@ const CHIP_CD4511 = {
   },
 };
 
+/** 74HC95 — 4-bit parallel-load shift register.
+ *  Mode=L: shift right on CLK (serial in from SER).
+ *  Mode=H: parallel load from A-D on CLK. */
+const CHIP_74HC95 = {
+  terminals: ['ser', 'a', 'b', 'c', 'd', 'mode', 'clk', 'qa', 'qb', 'qc', 'qd', 'vcc', 'gnd'],
+
+  init() {
+    return {
+      drives: { qa: { vTh: 0, rTh: R_OUT }, qb: { vTh: 0, rTh: R_OUT },
+                qc: { vTh: 0, rTh: R_OUT }, qd: { vTh: 0, rTh: R_OUT } },
+      reg: 0, // 4-bit register
+      _lastClk: false,
+    };
+  },
+
+  stamp(ctx) {
+    for (const p of ['ser', 'a', 'b', 'c', 'd', 'mode', 'clk']) {
+      ctx.conductance(p, null, 1 / R_INPUT);
+    }
+  },
+
+  update(part, state, read) {
+    const vcc = read('vcc') || 5.0;
+    const threshold = vcc * 0.5;
+    const clkHigh = read('clk') > threshold;
+
+    if (!clkHigh || state._lastClk) { state._lastClk = clkHigh; return false; }
+    state._lastClk = clkHigh;
+
+    const modeParallel = read('mode') > threshold;
+    let newReg;
+
+    if (modeParallel) {
+      // Parallel load
+      newReg = ((read('a') > threshold ? 1 : 0)) |
+               ((read('b') > threshold ? 1 : 0) << 1) |
+               ((read('c') > threshold ? 1 : 0) << 2) |
+               ((read('d') > threshold ? 1 : 0) << 3);
+    } else {
+      // Shift right: MSB ← SER, others shift right
+      const ser = read('ser') > threshold ? 1 : 0;
+      newReg = ((state.reg >> 1) | (ser << 3)) & 0xF;
+    }
+
+    if (newReg === state.reg) return false;
+    state.reg = newReg;
+    state.drives.qa = { vTh: (newReg & 1) ? vcc : 0, rTh: R_OUT };
+    state.drives.qb = { vTh: (newReg & 2) ? vcc : 0, rTh: R_OUT };
+    state.drives.qc = { vTh: (newReg & 4) ? vcc : 0, rTh: R_OUT };
+    state.drives.qd = { vTh: (newReg & 8) ? vcc : 0, rTh: R_OUT };
+    return true;
+  },
+};
+
 /**
  * Register all 74HC/CD logic chips from the table + custom chips.
  */
@@ -441,6 +495,7 @@ export function registerLogicChips() {
   }
   // Custom sequential chips
   registerDevice('74hc93', CHIP_74HC93);
+  registerDevice('74hc95', CHIP_74HC95);
   registerDevice('cd4511', CHIP_CD4511);
 }
 

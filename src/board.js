@@ -1042,6 +1042,7 @@ export class BoardImpl {
       // Named variants (real part numbers)
       'battery_9v', 'battery_aa', 'battery_coin', 'lm7805', 'ld1117v33',
       'gas_sensor', 'ambient_light', 'ir_transmitter',
+      '74hc95', 'lm339', 'timer_556',
     ];
   }
 

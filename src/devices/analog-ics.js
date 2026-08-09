@@ -17,6 +17,12 @@ const R_OUT = 50;
 /**
  * Register analog IC and discrete device models.
  */
+/**
+ * Register analog IC and discrete device models.
+ *
+ * Includes: TIP120, LM393 (dual comparator), LM339 (quad comparator),
+ * TMP36, light bulb, optocoupler, 556 (dual 555 timer).
+ */
 export function registerAnalogICs() {
 
   // ─── TIP120 Darlington transistor ─────────────────────────────────
@@ -183,6 +189,127 @@ export function registerAnalogICs() {
       if (shouldBeOn === state._on) return false;
       state._on = shouldBeOn;
       return true;
+    },
+  });
+
+  // ─── LM339 Quad comparator ────────────────────────────────────────
+  // Same as LM393 but four channels. Open-collector outputs.
+  registerDevice('lm339', {
+    terminals: ['1_pos', '1_neg', '1_out', '2_pos', '2_neg', '2_out',
+                '3_pos', '3_neg', '3_out', '4_pos', '4_neg', '4_out', 'vcc', 'gnd'],
+
+    init() {
+      return {
+        drives: { '1_out': null, '2_out': null, '3_out': null, '4_out': null },
+        _comp: [0, 0, 0, 0],
+      };
+    },
+
+    stamp(ctx) {
+      for (let i = 1; i <= 4; i++) {
+        ctx.conductance(`${i}_pos`, null, 1 / R_INPUT);
+        ctx.conductance(`${i}_neg`, null, 1 / R_INPUT);
+      }
+    },
+
+    update(part, state, read) {
+      let changed = false;
+      for (let i = 1; i <= 4; i++) {
+        const result = read(`${i}_pos`) > read(`${i}_neg`) ? 1 : 0;
+        if (result !== state._comp[i - 1]) {
+          state._comp[i - 1] = result;
+          state.drives[`${i}_out`] = result ? null : { vTh: 0.2, rTh: 10 };
+          changed = true;
+        }
+      }
+      return changed;
+    },
+  });
+
+  // ─── 556 Dual timer ───────────────────────────────────────────────
+  // Two independent 555 timer channels in one package.
+  // Terminals prefixed with 1_ and 2_ for each channel.
+  registerDevice('timer_556', {
+    terminals: [
+      '1_trigger', '1_threshold', '1_control', '1_discharge', '1_output', '1_reset',
+      '2_trigger', '2_threshold', '2_control', '2_discharge', '2_output', '2_reset',
+      'vcc', 'gnd',
+    ],
+
+    init(part) {
+      const rOut = part.params?.rOut ?? 50;
+      return {
+        drives: {
+          '1_output': { vTh: 0, rTh: rOut },
+          '2_output': { vTh: 0, rTh: rOut },
+        },
+        _ch: [
+          { ffOut: 0, dischargeActive: true },
+          { ffOut: 0, dischargeActive: true },
+        ],
+      };
+    },
+
+    stamp(ctx, part, state) {
+      const rDiv = 5000;
+      const rDischarge = 10;
+
+      for (const prefix of ['1_', '2_']) {
+        ctx.conductance(`${prefix}threshold`, null, 1 / R_INPUT);
+        ctx.conductance(`${prefix}trigger`, null, 1 / R_INPUT);
+        ctx.conductance(`${prefix}reset`, null, 1 / R_INPUT);
+        // Internal divider on control pin
+        ctx.conductance('vcc', `${prefix}control`, 1 / rDiv);
+        ctx.conductance(`${prefix}control`, 'gnd', 1 / (rDiv * 2));
+      }
+
+      // Discharge switches
+      const ch1 = state._ch[0];
+      const ch2 = state._ch[1];
+      if (ch1.dischargeActive) ctx.conductance('1_discharge', 'gnd', 1 / rDischarge);
+      if (ch2.dischargeActive) ctx.conductance('2_discharge', 'gnd', 1 / rDischarge);
+    },
+
+    update(part, state, read) {
+      const vcc = read('vcc');
+      const vGnd = read('gnd');
+      const rOut = part.params?.rOut ?? 50;
+      let changed = false;
+
+      for (let ch = 0; ch < 2; ch++) {
+        const prefix = `${ch + 1}_`;
+        const cs = state._ch[ch];
+
+        const vThreshold = read(`${prefix}threshold`) - vGnd;
+        const vTrigger = read(`${prefix}trigger`) - vGnd;
+        const vControl = read(`${prefix}control`) - vGnd;
+        const vReset = read(`${prefix}reset`) - vGnd;
+        const effectiveVcc = vcc - vGnd;
+
+        if (effectiveVcc < 0.5) continue;
+
+        const upperThreshold = vControl;
+        const lowerThreshold = vControl / 2;
+        const resetActive = vReset < (effectiveVcc * 0.3);
+
+        let newFf = cs.ffOut;
+        if (resetActive) newFf = 0;
+        else {
+          if (vThreshold > upperThreshold) newFf = 0;
+          if (vTrigger < lowerThreshold) newFf = 1;
+        }
+
+        if (newFf !== cs.ffOut) {
+          cs.ffOut = newFf;
+          cs.dischargeActive = (newFf === 0);
+          state.drives[`${prefix}output`] = {
+            vTh: newFf ? vcc : vGnd,
+            rTh: rOut,
+          };
+          changed = true;
+        }
+      }
+      return changed;
     },
   });
 }
