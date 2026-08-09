@@ -20,3 +20,4 @@ export { validateNetlist, assertValidNetlist } from './validate.js';
 export { NetlistBuilder } from './builder.js';
 export { createSerialDebugTarget } from './serial-debug.js';
 export { createDebugTarget, getTargetKinds } from './debug-target-factory.js';
+export { registerDevice, unregisterDevice, getDevice, registeredKinds, initDeviceState } from './devices.js';

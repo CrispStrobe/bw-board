@@ -16,6 +16,7 @@
 import { pinThevenin } from './pin-model.js';
 import { solveMNA } from './mna.js';
 import { validateNetlist } from './validate.js';
+import { getDevice, initDeviceState } from './devices.js';
 
 /**
  * Internal pin state.
@@ -149,6 +150,12 @@ export class BoardImpl {
     this.capVoltages = new Map();
 
     /**
+     * Registered-device states: part id → model state (incl. state.drives).
+     * @type {Map<string, object>}
+     */
+    this._deviceStates = new Map();
+
+    /**
      * LED cube state: part id → { selectPins, dataPins, polarity, voxelHistory }.
      * Each voxel accumulates lit-time over the brightness window.
      * @type {Map<string, object>}
@@ -216,6 +223,12 @@ export class BoardImpl {
           history: [{ tNs: 0n, litMask: 0n }],
         });
       }
+    }
+
+    this._deviceStates = new Map();
+    for (const p of parts) {
+      const st = initDeviceState(p);
+      if (st) this._deviceStates.set(p.id, st);
     }
 
     this._solve();
@@ -1285,6 +1298,7 @@ export class BoardImpl {
       // value for the current simulation time.
       capVoltages: this.capVoltages,
       tSeconds: Number(this.timeNs) / 1e9,
+      deviceStates: this._deviceStates,
     });
   }
 
@@ -1306,7 +1320,7 @@ export class BoardImpl {
    */
   _needsMNA() {
     for (const p of this.parts) {
-      if (MNA_ONLY_KINDS.has(p.kind)) return true;
+      if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
     }
     return false;
   }
@@ -1334,7 +1348,20 @@ export class BoardImpl {
    * instrument cache all come from one solution.
    */
   _solveViaMNA() {
-    const res = this._solveMNA(false);
+    let res = this._solveMNA(false);
+    this._adoptSolution(res);
+    // Devices react to the solved voltages (a gate sees its input change),
+    // may change what they drive, and the network is re-solved — to a
+    // bounded fixpoint, so a chain of gates settles within one event.
+    for (let round = 0; round < 10; round++) {
+      if (!this._updateDevices()) break;
+      res = this._solveMNA(false);
+      this._adoptSolution(res);
+    }
+  }
+
+  /** Adopt an MNA solution as the board's current answer. */
+  _adoptSolution(res) {
     this.nodeVoltages = new Map(res.nodeVoltages);
     for (const part of this.parts) {
       if (part.kind !== 'led') continue;
@@ -1342,6 +1369,23 @@ export class BoardImpl {
       this.ledCurrents.set(part.id, Math.max(0, c ? (c.get('anode') ?? 0) : 0));
     }
     this._mnaCache = res;
+  }
+
+  /** One update pass over all registered devices. True if any changed. */
+  _updateDevices() {
+    if (this._deviceStates.size === 0) return false;
+    let changed = false;
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (!model || !model.update) continue;
+      const state = this._deviceStates.get(part.id);
+      const read = (terminal) => {
+        const n = this._netForTerminal(part.id, terminal);
+        return n ? (this.nodeVoltages.get(n) ?? 0) : 0;
+      };
+      if (model.update(part, state, read, this.timeNs)) changed = true;
+    }
+    return changed;
   }
 
   /**
@@ -1371,9 +1415,17 @@ export class BoardImpl {
       res = solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
         tSeconds: t0 + i * h,
         transient: { dtSec: h, capVoltages: cv, inductorCurrents: il },
+        deviceStates: this._deviceStates,
       });
       cv = res.capVoltagesNext ?? cv;
       il = res.inductorCurrentsNext ?? il;
+      // One device pass per sub-step: a comparator/gate that flips here is
+      // seen by the network on the NEXT sub-step — switching resolution is
+      // one sub-step, which is the stated accuracy of this integrator.
+      if (this._deviceStates.size > 0) {
+        this.nodeVoltages = new Map(res.nodeVoltages);
+        this._updateDevices();
+      }
     }
     this.capVoltages = new Map(cv);
     this.inductorCurrents = new Map(il);

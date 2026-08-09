@@ -22,6 +22,8 @@
 /**
  * Dense matrix backed by a flat Float64Array.
  */
+import { getDevice } from './devices.js';
+
 class Matrix {
   /**
    * @param {number} rows
@@ -548,8 +550,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
         }
 
-        // gnd, capacitor, inductor, seven_segment, rgb_led, led_matrix:
+        // gnd, seven_segment, rgb_led, led_matrix:
         // handled elsewhere or composite
+
+        default: {
+          // Registered device models (src/devices.js): stamp whatever the
+          // device currently drives as Thévenin sources — exactly like MCU
+          // pins — plus the model's own analog loading.
+          const model = getDevice(part.kind);
+          if (model) {
+            const state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
+            stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,
+              transient ? transient.dtSec : undefined);
+          }
+          break;
+        }
       }
     }
 
@@ -865,6 +880,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const iVcc = solution[nodeCount + vsIdx];
       currents.set('vcc', iVcc);
     }
+
+    // Registered device models may report their own terminal currents.
+    {
+      const model = getDevice(part.kind);
+      if (model && model.branchCurrents) {
+        const state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
+        const read = (terminal) => {
+          const n = findNet(nets, part.id, terminal);
+          return n ? (nodeVoltages.get(n) ?? 0) : 0;
+        };
+        for (const [t, i] of model.branchCurrents(part, state, read)) currents.set(t, i);
+      }
+    }
   }
 
   // Transient next-state: what the caller stores for the next step.
@@ -1090,6 +1118,50 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
   const netB = findNet(nets, part.id, 'b');
   const g = 1 / 100; // 100 Ω
   stampTwoTerminal(A, netA, netB, g, nodeIndex);
+}
+
+/**
+ * Stamp a registered device: its `state.drives` as Norton sources, then the
+ * model's own `stamp(ctx)` for input impedance / analog loading.
+ */
+function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec) {
+  // Drives: terminal → {vTh, rTh} | null
+  for (const [terminal, drive] of Object.entries(state.drives ?? {})) {
+    if (!drive) continue;
+    const net = findNet(nets, part.id, terminal);
+    const idx = net ? nodeIndex.get(net) : undefined;
+    if (idx === undefined) continue;
+    const g = 1 / Math.max(drive.rTh, 1e-3);
+    A.add(idx, idx, g);
+    b[idx] += drive.vTh * g;
+  }
+  if (!model.stamp) return;
+  const ctx = {
+    netFor: (terminal) => findNet(nets, part.id, terminal),
+    conductance: (tA, tB, g) => {
+      const netA = findNet(nets, part.id, tA);
+      const netB = tB ? findNet(nets, part.id, tB) : undefined;
+      stampTwoTerminal(A, netA, netB, g, nodeIndex);
+    },
+    thevenin: (terminal, vTh, rTh) => {
+      const net = findNet(nets, part.id, terminal);
+      const idx = net ? nodeIndex.get(net) : undefined;
+      if (idx === undefined) return;
+      const g = 1 / Math.max(rTh, 1e-3);
+      A.add(idx, idx, g);
+      b[idx] += vTh * g;
+    },
+    current: (terminal, amps) => {
+      const net = findNet(nets, part.id, terminal);
+      const idx = net ? nodeIndex.get(net) : undefined;
+      if (idx !== undefined) b[idx] += amps;
+    },
+    vcc,
+    tSeconds,
+    dtSec,
+    control: controls.get(part.id),
+  };
+  model.stamp(ctx, part, state);
 }
 
 /**

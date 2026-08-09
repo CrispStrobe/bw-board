@@ -12,6 +12,8 @@
 /** @typedef {import('./types.js').Part} Part */
 /** @typedef {import('./types.js').Net} Net */
 
+import { getDevice, registeredKinds } from './devices.js';
+
 /**
  * Known terminal names for each part kind.
  * @type {Record<string, string[] | null>}
@@ -99,18 +101,19 @@ export function validateNetlist(parts, nets) {
     }
     partIds.add(part.id);
 
-    // Unknown part kind
-    if (!(part.kind in KNOWN_TERMINALS)) {
+    // Unknown part kind — registered device models extend the known set.
+    const deviceModel = getDevice(part.kind);
+    if (!(part.kind in KNOWN_TERMINALS) && !deviceModel) {
       errors.push({
         severity: 'error',
-        message: `Unknown part kind "${part.kind}" for part "${part.id}". Known kinds: ${Object.keys(KNOWN_TERMINALS).join(', ')}`,
+        message: `Unknown part kind "${part.kind}" for part "${part.id}". Known kinds: ${Object.keys(KNOWN_TERMINALS).join(', ')} + registered devices: ${registeredKinds().join(', ') || '(none)'}`,
         partId: part.id,
       });
       continue;
     }
 
     // Terminal validation
-    const expectedTerminals = KNOWN_TERMINALS[part.kind];
+    const expectedTerminals = deviceModel ? deviceModel.terminals : KNOWN_TERMINALS[part.kind];
     if (expectedTerminals !== null) {
       for (const t of part.terminals) {
         if (!expectedTerminals.includes(t)) {
@@ -135,7 +138,7 @@ export function validateNetlist(parts, nets) {
     }
 
     // Parameter validation
-    const requiredParams = REQUIRED_PARAMS[part.kind];
+    const requiredParams = deviceModel ? deviceModel.requiredParams : REQUIRED_PARAMS[part.kind];
     if (requiredParams) {
       for (const p of requiredParams) {
         if (part.params[p] === undefined) {
