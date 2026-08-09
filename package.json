@@ -12,7 +12,9 @@
     "./emu8051-debug": "./src/emu8051-debug.js",
     "./debug-session": "./src/debug-session.js",
     "./validate": "./src/validate.js",
-    "./builder": "./src/builder.js"
+    "./builder": "./src/builder.js",
+    "./serial-debug": "./src/serial-debug.js",
+    "./debug-target-factory": "./src/debug-target-factory.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js"

@@ -1,6 +1,6 @@
 # bw-board
 
-Board layer between an emulated 8051 MCU and a TinkerCAD-style circuit designer.
+Board layer between an emulated 8051 MCU and a bench-style circuit designer.
 Resolves pin drive states into node voltages, LED brightness, and buzzer tones.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
@@ -35,6 +35,7 @@ Measured on a single core (Node 20, Linux), 11-part netlist (2 LEDs, pot, button
 | setPin (closed-form solve) | ~184 K ops/sec | Re-solves on every pin change |
 | setControl (pot, re-solve) | ~109 K ops/sec | |
 | branchCurrent (MNA solve) | ~12 K ops/sec | Full matrix solve per call |
+| branchCurrent (MNA cached) | ~7.6 M ops/sec | Cache hit — no state change between reads |
 | readAnalog (no re-solve) | ~824 K ops/sec | Pure lookup |
 | 595 shift register burst | ~253 K edges/sec | 24 edges per write |
 
@@ -81,6 +82,10 @@ src/infer-netlist.js
 src/scripted-mcu.js
 src/conformance.js
 src/emu8051-adapter.js
+src/emu8051-debug.js
+src/debug-session.js
+src/serial-debug.js
+src/debug-target-factory.js
 src/builder.js
 ```
 

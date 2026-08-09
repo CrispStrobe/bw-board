@@ -18,3 +18,5 @@ export { createEmu8051DebugTarget } from './emu8051-debug.js';
 export { createDebugSession } from './debug-session.js';
 export { validateNetlist, assertValidNetlist } from './validate.js';
 export { NetlistBuilder } from './builder.js';
+export { createSerialDebugTarget } from './serial-debug.js';
+export { createDebugTarget, getTargetKinds } from './debug-target-factory.js';
