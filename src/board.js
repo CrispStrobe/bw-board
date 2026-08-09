@@ -1037,6 +1037,11 @@ export class BoardImpl {
       '74hc00', '74hc02', '74hc04', '74hc08', '74hc10', '74hc11', '74hc14',
       '74hc20', '74hc21', '74hc27', '74hc32', '74hc73', '74hc74', '74hc86',
       '74hc93', '74hc132', 'cd4511',
+      // Misc parts
+      'dc_motor_encoder', 'keypad_4x4', 'dip_switch', 'vibration_motor', 'polarized_cap',
+      // Named variants (real part numbers)
+      'battery_9v', 'battery_aa', 'battery_coin', 'lm7805', 'ld1117v33',
+      'gas_sensor', 'ambient_light', 'ir_transmitter',
     ];
   }
 
