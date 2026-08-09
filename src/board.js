@@ -143,6 +143,9 @@ export class BoardImpl {
     /** Next scope channel handle. */
     this._nextScopeHandle = 1;
 
+    /** Whether the last MNA solve converged. */
+    this._lastSolveConverged = true;
+
     /**
      * 74HC595 shift register states: part id → FSM state.
      * @type {Map<string, {shiftReg: number, latchReg: number, lastClock: boolean, lastLatch: boolean}>}
@@ -1117,6 +1120,16 @@ export class BoardImpl {
 
     if (!this.powered) return warnings;
 
+    // Non-convergence: the solver could not find a consistent operating point.
+    // This is a RESULT, not an error — the UI can render "circuit did not settle".
+    if (this._lastSolveConverged === false) {
+      warnings.push({
+        severity: 'danger',
+        message: 'Circuit did not converge — voltages shown are approximate. ' +
+          'This can happen with circuits that have no stable operating point.',
+      });
+    }
+
     for (const part of this.parts) {
       if (part.kind === 'led') {
         // Use closed-form current if available, fall back to MNA
@@ -1428,6 +1441,10 @@ export class BoardImpl {
       this.ledCurrents.set(part.id, Math.max(0, c ? (c.get('anode') ?? 0) : 0));
     }
     this._mnaCache = res;
+    // Track non-convergence — a solver that cannot converge must say so.
+    // Returning the last iterate as if it were an answer is the numerical
+    // form of the silent-degradation bug.
+    this._lastSolveConverged = res.converged !== false;
   }
 
   /**
