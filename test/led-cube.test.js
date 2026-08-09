@@ -1,18 +1,27 @@
 /**
- * LED cube: 4x4x4 multiplexed LED cube with POV integration.
+ * LED cube: multiplexed LED cube with POV integration.
  *
- * Polarity is a parameter, not an assumption: 'active-high' (default)
- * means pin HIGH lights the voxel; 'active-low' means pin LOW does.
+ * Default: 8 scan lines × 8 data bits (matching the STC12 cube hardware:
+ * 4 layers × 2 colour groups, P0 as 8-bit data, P2 as 8-bit select).
+ *
+ * A voxel lit on exactly one of 8 scan lines has 12.5% duty (1/8).
+ *
+ * Polarity is a parameter, not an assumption.
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 
-function makeCube(polarity = 'active-high') {
-  const selectPins = ['P2.0', 'P2.1', 'P2.2', 'P2.3'];
+function makeCube(opts = {}) {
+  const scanLines = opts.scanLines ?? 8;
+  const dataBits = opts.dataBits ?? 8;
+  const polarity = opts.polarity ?? 'active-high';
+
+  const selectPins = [];
+  for (let i = 0; i < scanLines; i++) selectPins.push(`P2.${i}`);
   const dataPins = [];
-  for (let i = 0; i < 16; i++) dataPins.push(`P0.${i}`);
+  for (let i = 0; i < dataBits; i++) dataPins.push(`P0.${i}`);
 
   const mcuTerminals = [...selectPins, ...dataPins];
 
@@ -20,7 +29,7 @@ function makeCube(polarity = 'active-high') {
     { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
     { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
     { id: 'CUBE', kind: 'led_cube', params: {
-      layers: 4, cols: 16, polarity, selectPins, dataPins,
+      layers: scanLines, cols: dataBits, polarity, selectPins, dataPins,
     }, terminals: [] },
     { id: 'MCU', kind: 'mcu', params: {}, terminals: mcuTerminals },
   ];
@@ -29,8 +38,6 @@ function makeCube(polarity = 'active-high') {
     { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
     { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] },
   ];
-
-  // Each MCU pin on its own net
   for (const pin of mcuTerminals) {
     nets.push({ id: `n_${pin}`, terminals: [{ part: 'MCU', terminal: pin }] });
   }
@@ -39,164 +46,171 @@ function makeCube(polarity = 'active-high') {
 }
 
 describe('LED cube: basic voxel control', () => {
-  it('all dark initially', () => {
+  it('default: 8 scan × 8 data = 64 voxels', () => {
     const { parts, nets } = makeCube();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
     board.advanceTo(25_000_000n);
 
-    const brightness = board.cubeBrightness('CUBE');
-    assert.equal(brightness.length, 64, '4×4×4 = 64 voxels');
-    assert.ok(brightness.every(b => b === 0), 'all dark');
+    const b = board.cubeBrightness('CUBE');
+    assert.equal(b.length, 64);
+    assert.ok(b.every(v => v === 0), 'all dark');
   });
 
-  it('one voxel lit: select layer 0, data col 0', () => {
+  it('one voxel lit: select line 0, data bit 0', () => {
     const { parts, nets, selectPins, dataPins } = makeCube();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
-
-    // Select layer 0, data col 0
-    board.setPin(selectPins[0], 'pushpull', true); // active-high: HIGH = active
+    board.setPin(selectPins[0], 'pushpull', true);
     board.setPin(dataPins[0], 'pushpull', true);
     board.advanceTo(25_000_000n);
 
     const b = board.cubeBrightness('CUBE');
-    assert.ok(b[0] > 0.9, `voxel [0,0] lit: ${b[0]}`);
-    assert.ok(b[1] === 0, 'voxel [0,1] dark');
-    assert.ok(b[16] === 0, 'voxel [1,0] dark (different layer)');
-  });
-
-  it('active-low polarity: LOW lights the voxel', () => {
-    const { parts, nets, selectPins, dataPins } = makeCube('active-low');
-    const board = new BoardImpl(5.0);
-    board.setNetlist(parts, nets);
-
-    // Active-low: LOW = active
-    board.setPin(selectPins[0], 'pushpull', false); // LOW = select
-    board.setPin(dataPins[0], 'pushpull', false); // LOW = lit
-    board.advanceTo(25_000_000n);
-
-    const b = board.cubeBrightness('CUBE');
-    assert.ok(b[0] > 0.9, `active-low voxel [0,0]: ${b[0]}`);
-  });
-
-  it('active-low: HIGH means dark', () => {
-    const { parts, nets, selectPins, dataPins } = makeCube('active-low');
-    const board = new BoardImpl(5.0);
-    board.setNetlist(parts, nets);
-
-    board.setPin(selectPins[0], 'pushpull', false); // select
-    board.setPin(dataPins[0], 'pushpull', true); // HIGH = dark in active-low
-    board.advanceTo(25_000_000n);
-
-    const b = board.cubeBrightness('CUBE');
-    assert.ok(b[0] === 0, `active-low HIGH = dark: ${b[0]}`);
+    assert.ok(b[0] > 0.9, `voxel [0,0]: ${b[0]}`);
+    assert.equal(b[1], 0);
+    assert.equal(b[8], 0, 'different scan line');
   });
 });
 
-describe('LED cube: POV scanning', () => {
-  it('scanning 4 layers at 120Hz: each voxel ~25% brightness', () => {
+describe('LED cube: polarity parameter', () => {
+  it('active-high: HIGH = lit', () => {
+    const { parts, nets, selectPins, dataPins } = makeCube();
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    board.setPin(selectPins[0], 'pushpull', true);
+    board.setPin(dataPins[0], 'pushpull', true);
+    board.advanceTo(25_000_000n);
+    assert.ok(board.cubeBrightness('CUBE')[0] > 0.9);
+  });
+
+  it('active-low: LOW = lit', () => {
+    const { parts, nets, selectPins, dataPins } = makeCube({ polarity: 'active-low' });
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    board.setPin(selectPins[0], 'pushpull', false);
+    board.setPin(dataPins[0], 'pushpull', false);
+    board.advanceTo(25_000_000n);
+    assert.ok(board.cubeBrightness('CUBE')[0] > 0.9);
+  });
+
+  it('flipping polarity inverts the result', () => {
+    const drive = (pol) => {
+      const { parts, nets, selectPins, dataPins } = makeCube({ polarity: pol });
+      const board = new BoardImpl(5.0);
+      board.setNetlist(parts, nets);
+      board.setPin(selectPins[0], 'pushpull', true);
+      board.setPin(dataPins[0], 'pushpull', true);
+      board.advanceTo(25_000_000n);
+      return board.cubeBrightness('CUBE')[0];
+    };
+    assert.ok(drive('active-high') > 0.9);
+    assert.equal(drive('active-low'), 0);
+  });
+});
+
+describe('LED cube: POV duty cycle', () => {
+  it('8-line scan: 1/8 duty = 12.5% brightness per voxel', () => {
     const { parts, nets, selectPins, dataPins } = makeCube();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
 
-    // Scan 4 layers at 120 Hz = 2.083ms per layer
-    // Each layer ON for 1/4 of the time
-    const LAYER_NS = 2_083_333n; // ~2.083ms
-    const SCAN_CYCLES = 15; // 15 full scans = ~125ms, well past 20ms window
+    for (const dp of dataPins) board.setPin(dp, 'pushpull', true);
 
-    // Light all columns on every layer
-    for (const dp of dataPins) {
-      board.setPin(dp, 'pushpull', true);
-    }
+    // 8 scan lines at ~1.006ms each (measured from emu8051-stc)
+    const LINE_NS = 1_006_000n;
+    const SCANS = 20;
 
-    for (let scan = 0; scan < SCAN_CYCLES; scan++) {
-      for (let layer = 0; layer < 4; layer++) {
-        const t = BigInt(scan * 4 + layer) * LAYER_NS;
-        // Deselect all layers
-        for (const sp of selectPins) {
-          board.setPin(sp, 'pushpull', false);
-        }
-        // Select this layer
-        board.setPin(selectPins[layer], 'pushpull', true);
+    for (let scan = 0; scan < SCANS; scan++) {
+      for (let line = 0; line < 8; line++) {
+        const t = BigInt(scan * 8 + line) * LINE_NS;
+        for (const sp of selectPins) board.setPin(sp, 'pushpull', false);
+        board.setPin(selectPins[line], 'pushpull', true);
         board.advanceTo(t);
       }
     }
-    board.advanceTo(BigInt(SCAN_CYCLES * 4) * LAYER_NS);
+    board.advanceTo(BigInt(SCANS * 8) * LINE_NS);
 
     const b = board.cubeBrightness('CUBE');
 
-    // Each voxel is lit ~1/4 of the time. The last active layer gets
-    // a slightly larger share because it's still selected at query time.
-    // Accept 0.15–0.40 to account for scan timing within the window.
+    // 1/8 duty = 12.5%. Allow scan-edge timing variance.
     for (let v = 0; v < 64; v++) {
-      assert.ok(b[v] > 0.15 && b[v] < 0.40,
-        `voxel ${v}: ${b[v].toFixed(3)} ≈ 0.25`);
+      assert.ok(b[v] > 0.08 && b[v] < 0.22,
+        `voxel ${v}: ${(b[v]*100).toFixed(1)}% ≈ 12.5%`);
     }
   });
 
-  it('one layer always on: 100% brightness for that layer', () => {
+  it('4-line custom cube: 1/4 duty = 25%', () => {
+    const { parts, nets, selectPins, dataPins } = makeCube({ scanLines: 4 });
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+
+    for (const dp of dataPins) board.setPin(dp, 'pushpull', true);
+
+    const LINE_NS = 2_000_000n;
+    const SCANS = 15;
+
+    for (let scan = 0; scan < SCANS; scan++) {
+      for (let line = 0; line < 4; line++) {
+        const t = BigInt(scan * 4 + line) * LINE_NS;
+        for (const sp of selectPins) board.setPin(sp, 'pushpull', false);
+        board.setPin(selectPins[line], 'pushpull', true);
+        board.advanceTo(t);
+      }
+    }
+    board.advanceTo(BigInt(SCANS * 4) * LINE_NS);
+
+    const b = board.cubeBrightness('CUBE');
+    // The last active scan line gets extra time (still selected at query).
+    // Accept wider range for that line.
+    for (let v = 0; v < 32; v++) {
+      assert.ok(b[v] > 0.12 && b[v] < 0.45,
+        `voxel ${v}: ${(b[v]*100).toFixed(1)}% ≈ 25%`);
+    }
+  });
+
+  it('static single line: 100% for that line, 0% for others', () => {
     const { parts, nets, selectPins, dataPins } = makeCube();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
 
-    // Layer 0 always on, all columns on
     board.setPin(selectPins[0], 'pushpull', true);
-    for (const dp of dataPins) {
-      board.setPin(dp, 'pushpull', true);
-    }
+    for (const dp of dataPins) board.setPin(dp, 'pushpull', true);
     board.advanceTo(25_000_000n);
 
     const b = board.cubeBrightness('CUBE');
-
-    // Layer 0: 100% brightness
-    for (let col = 0; col < 16; col++) {
-      assert.ok(b[col] > 0.9, `layer 0 col ${col}: ${b[col]}`);
-    }
-
-    // Other layers: 0% brightness
-    for (let v = 16; v < 64; v++) {
-      assert.equal(b[v], 0, `layer ${Math.floor(v/16)} col ${v%16}: dark`);
-    }
+    for (let col = 0; col < 8; col++) assert.ok(b[col] > 0.9);
+    for (let v = 8; v < 64; v++) assert.equal(b[v], 0);
   });
 });
 
 describe('LED cube: performance', () => {
-  it('120Hz scan rate: 960 select changes/sec', () => {
+  it('120Hz scan of 8 lines + 60fps cubeBrightness', () => {
     const { parts, nets, selectPins, dataPins } = makeCube();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
+    for (const dp of dataPins) board.setPin(dp, 'pushpull', true);
 
-    for (const dp of dataPins) {
-      board.setPin(dp, 'pushpull', true);
-    }
+    const LINE_NS = 1_006_000n;
+    const SCANS = 120;
 
-    const LAYER_NS = 2_083_333n;
-    const SCANS = 120; // 1 second of scanning
-
-    const start = performance.now();
+    const s1 = performance.now();
     for (let scan = 0; scan < SCANS; scan++) {
-      for (let layer = 0; layer < 4; layer++) {
-        const t = BigInt(scan * 4 + layer) * LAYER_NS;
+      for (let line = 0; line < 8; line++) {
+        const t = BigInt(scan * 8 + line) * LINE_NS;
         for (const sp of selectPins) board.setPin(sp, 'pushpull', false);
-        board.setPin(selectPins[layer], 'pushpull', true);
+        board.setPin(selectPins[line], 'pushpull', true);
         board.advanceTo(t);
       }
     }
-    const elapsed = performance.now() - start;
+    const e1 = performance.now() - s1;
+    console.log(`# Cube scan: ${SCANS*8} line changes in ${e1.toFixed(0)}ms`);
 
-    console.log(`# Cube scan: ${SCANS} scans (${SCANS*4} layer changes) in ${elapsed.toFixed(0)}ms`);
-    console.log(`# = ${(SCANS * 4 / (elapsed / 1000) / 1000).toFixed(1)}K layer changes/sec`);
+    const s2 = performance.now();
+    for (let f = 0; f < 60; f++) board.cubeBrightness('CUBE');
+    const e2 = performance.now() - s2;
+    console.log(`# cubeBrightness: 60 frames in ${e2.toFixed(0)}ms = ${(60/(e2/1000)).toFixed(0)} fps`);
 
-    // cubeBrightness on 64 voxels
-    const start2 = performance.now();
-    for (let frame = 0; frame < 60; frame++) {
-      board.cubeBrightness('CUBE');
-    }
-    const elapsed2 = performance.now() - start2;
-    console.log(`# cubeBrightness: 60 frames in ${elapsed2.toFixed(0)}ms = ${(60/(elapsed2/1000)).toFixed(0)} fps`);
-
-    assert.ok(elapsed < 2000, `scan should complete in <2s: ${elapsed.toFixed(0)}ms`);
-    assert.ok(elapsed2 < 500, `60 brightness frames in <500ms: ${elapsed2.toFixed(0)}ms`);
+    assert.ok(e1 < 2000);
+    assert.ok(e2 < 500);
   });
 });

@@ -184,8 +184,12 @@ export class BoardImpl {
         }
       }
       if (p.kind === 'led_cube') {
-        const layers = /** @type {number} */ (p.params.layers ?? 4);
-        const cols = /** @type {number} */ (p.params.cols ?? 16);
+        // Default: 8 scan lines × 8 data bits.
+        // The STC12 cube scans 8 lines (4 layers × 2 colour groups)
+        // with P0 as 8-bit data. A voxel lit on exactly one scan line
+        // has 12.5% duty (1/8), not 25%.
+        const layers = /** @type {number} */ (p.params.layers ?? 8);
+        const cols = /** @type {number} */ (p.params.cols ?? 8);
         const polarity = /** @type {string} */ (p.params.polarity ?? 'active-high');
         const voxels = layers * cols;
         // History: array of {tNs, litMask} where litMask is a BigInt bitmask
