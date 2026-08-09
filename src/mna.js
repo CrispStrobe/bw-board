@@ -317,12 +317,18 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           vsIndex.set(part.id, vsCount++);
         }
       }
-      // Independent voltage source
+      // Independent voltage source (may have current limit for CC mode)
       if (part.kind === 'vsource') {
         const posNet = findNet(nets, part.id, 'pos');
         if (posNet && nodeIndex.has(posNet)) {
           vsIndex.set(part.id, vsCount++);
         }
+      }
+      // Named power supply kinds that act as voltage sources
+      if ((part.kind === 'battery_9v' || part.kind === 'battery_aa' || part.kind === 'battery_coin' ||
+           part.kind === 'solar_cell') && part.params?.iLimit) {
+        // These can have current limits too, but they are registered devices
+        // and don't participate in the vsource MNA row. Skip here.
       }
       // Instantaneous solve with known capacitor charge: the capacitor IS a
       // voltage source at an instant, so it holds its stored voltage.
@@ -668,9 +674,43 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
     }
 
+    // Check vsource current limits (CC mode transition).
+    // If a source with iLimit has |I| > iLimit, reduce its voltage to
+    // clamp the current. This iterates alongside NR until both settle.
+    let ccChanged = false;
+    for (const part of parts) {
+      if (part.kind !== 'vsource') continue;
+      const iLimit = part.params?.iLimit;
+      if (iLimit == null || iLimit <= 0) continue;
+      const vsIdx = vsIndex.get(part.id);
+      if (vsIdx === undefined) continue;
+
+      const iActual = solution[nodeCount + vsIdx];
+      if (Math.abs(iActual) > iLimit * 1.01) {
+        // Overcurrent: reduce the source voltage. The effective voltage that
+        // would give exactly iLimit depends on the load, but we can estimate
+        // by computing Rload = V/I and setting V_new = iLimit * Rload.
+        const nominalV = sourceVoltage(part, tSeconds, vcc);
+        const rLoad = Math.abs(iActual) > 1e-12 ? Math.abs(nominalV / iActual) : 1e6;
+        const clampedV = iLimit * rLoad * Math.sign(nominalV);
+        // Store the clamped voltage for this iteration
+        if (!part._ccClampedVolts || Math.abs(part._ccClampedVolts - clampedV) > 0.001) {
+          part._ccClampedVolts = clampedV;
+          ccChanged = true;
+        }
+      } else if (part._ccClampedVolts !== undefined) {
+        // Current is within limit — revert to CV mode
+        const nominalV = sourceVoltage(part, tSeconds, vcc);
+        if (Math.abs(iActual) < iLimit * 0.99) {
+          delete part._ccClampedVolts;
+          ccChanged = true;
+        }
+      }
+    }
+
     // If nothing nonlinear, or everything settled, stop.
-    if ((diodeVoltages.size === 0 && opampRegions.size === 0)
-        || (maxDelta < NR_TOL && !regionChanged)) {
+    if ((diodeVoltages.size === 0 && opampRegions.size === 0 && !ccChanged)
+        || (maxDelta < NR_TOL && !regionChanged && !ccChanged)) {
       converged = true;
       break;
     }
@@ -1583,7 +1623,8 @@ export function sourceVoltage(part, tSeconds, vcc) {
  * for time-varying operation (sine/square/triangle/pulse).
  */
 function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0) {
-  const volts = sourceVoltage(part, tSeconds, vcc);
+  // Use clamped voltage if in CC mode (current limit active)
+  const volts = part._ccClampedVolts !== undefined ? part._ccClampedVolts : sourceVoltage(part, tSeconds, vcc);
   const posNet = findNet(nets, part.id, 'pos');
   const negNet = findNet(nets, part.id, 'neg');
 
