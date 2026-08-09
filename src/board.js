@@ -1017,6 +1017,12 @@ export class BoardImpl {
       'ultrasonic', 'pir', 'tilt_sensor', 'flex_sensor', 'force_sensor', 'phototransistor',
       'neopixel', 'bargraph',
       'decade_counter', 'dff', 'jkff', 'darlington_driver', 'piezo',
+      // Analog ICs + discrete
+      'tip120', 'lm393', 'tmp36', 'light_bulb', 'optocoupler',
+      // Real DIP chips (chip-composer)
+      '74hc00', '74hc02', '74hc04', '74hc08', '74hc10', '74hc11', '74hc14',
+      '74hc20', '74hc21', '74hc27', '74hc32', '74hc73', '74hc74', '74hc86',
+      '74hc93', '74hc132', 'cd4511',
     ];
   }
 
