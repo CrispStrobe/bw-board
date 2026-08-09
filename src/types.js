@@ -21,7 +21,7 @@
  *   input       — high impedance, drives nothing.
  *   opendrain   — strong pull-down, no pull-up at all.
  *
- * @typedef {'quasi' | 'pushpull' | 'input' | 'opendrain'} PinMode
+ * @typedef {'quasi' | 'pushpull' | 'input' | 'opendrain' | 'input-pullup'} PinMode
  */
 
 /**

@@ -39,6 +39,21 @@ function makePullUpCircuit() {
   return { parts, nets };
 }
 
+describe('pin model — input-pullup Thévenin values', () => {
+  it('input-pullup = weak pull-up ~35kΩ to VCC', () => {
+    const t = pinThevenin('input-pullup', false, 5.0);
+    assert.notEqual(t, 'high-z');
+    assert.equal(t.vTh, 5.0);
+    assert.equal(t.rTh, 35000);
+  });
+
+  it('input-pullup ignores driveHigh — always pulls up', () => {
+    const tLow = pinThevenin('input-pullup', false, 5.0);
+    const tHigh = pinThevenin('input-pullup', true, 5.0);
+    assert.deepEqual(tLow, tHigh, 'driveHigh does not matter');
+  });
+});
+
 describe('pin model — Thévenin values', () => {
   it('quasi low = strong sink', () => {
     const t = pinThevenin('quasi', false, 5.0);
@@ -133,5 +148,94 @@ describe('open-drain with external pull-up', () => {
     // Release it → bus high again
     board.setPin('P1.0', 'opendrain', true);
     assert.equal(board.readPin('P1.0'), 1, 'released → bus high again');
+  });
+});
+
+describe('input-pullup with button to ground', () => {
+  // The standard Arduino idiom: INPUT_PULLUP with a button between pin and GND.
+  // Open: node voltage = VCC (pulled up through 35kΩ). readPin = 1.
+  // Pressed: node voltage = 0V (button shorts to GND). readPin = 0.
+  function makeButtonCircuit() {
+    return {
+      parts: [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'BTN', kind: 'button', params: {}, terminals: ['a', 'b'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      ],
+      nets: [
+        { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+        { id: 'net_pin', terminals: [
+          { part: 'MCU', terminal: 'P1.0' },
+          { part: 'BTN', terminal: 'a' },
+        ]},
+        { id: 'net_gnd', terminals: [
+          { part: 'GND', terminal: 'gnd' },
+          { part: 'BTN', terminal: 'b' },
+        ]},
+      ],
+    };
+  }
+
+  it('button open → node voltage = VCC, readPin = 1', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makeButtonCircuit();
+    board.setNetlist(parts, nets);
+
+    board.setPin('P1.0', 'input-pullup', false);
+    board.setControl('BTN', 0); // button not pressed
+
+    const v = board.nodeVoltage('net_pin');
+    assert.ok(Math.abs(v - 5.0) < 0.01,
+      `open button: node voltage should be ~5.0V, got ${v}`);
+    assert.equal(board.readPin('P1.0'), 1, 'reads HIGH');
+  });
+
+  it('button pressed → node voltage = 0V, readPin = 0', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makeButtonCircuit();
+    board.setNetlist(parts, nets);
+
+    board.setPin('P1.0', 'input-pullup', false);
+    board.setControl('BTN', 1); // button pressed
+
+    const v = board.nodeVoltage('net_pin');
+    assert.ok(Math.abs(v) < 0.01,
+      `pressed button: node voltage should be ~0V, got ${v}`);
+    assert.equal(board.readPin('P1.0'), 0, 'reads LOW');
+  });
+
+  it('resistor to GND — voltage divider asserted', () => {
+    // 10kΩ to GND with 35kΩ internal pull-up: V = 5 * 35k/(35k+10k) = 3.889V
+    // Wait — divider from VCC through pull-up R to node, then through external R to GND:
+    // V_node = VCC * R_ext / (R_pullup + R_ext) — NO.
+    // Thévenin: pin drives vTh=5V through rTh=35kΩ. External 10kΩ to GND.
+    // V_node = 5 * 10000 / (35000 + 10000) = 1.111V
+    const parts = [
+      { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'R_EXT', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+      { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+    ];
+    const nets = [
+      { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+      { id: 'net_pin', terminals: [
+        { part: 'MCU', terminal: 'P1.0' },
+        { part: 'R_EXT', terminal: 'a' },
+      ]},
+      { id: 'net_gnd', terminals: [
+        { part: 'GND', terminal: 'gnd' },
+        { part: 'R_EXT', terminal: 'b' },
+      ]},
+    ];
+
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    board.setPin('P1.0', 'input-pullup', false);
+
+    const v = board.nodeVoltage('net_pin');
+    const expected = 5.0 * 10000 / (35000 + 10000); // 1.111V
+    assert.ok(Math.abs(v - expected) < 0.05,
+      `divider: expected ~${expected.toFixed(3)}V, got ${v.toFixed(3)}V`);
   });
 });

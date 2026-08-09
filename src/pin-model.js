@@ -1,7 +1,8 @@
 /**
- * Pin model — Thévenin equivalents for the four STC12 port modes.
+ * Pin model — Thévenin equivalents for MCU port modes.
  *
- * Source: STC12-PERIPHERAL-MODEL.md §3 and datasheet §4.6.
+ * The four STC12 modes come from STC12-PERIPHERAL-MODEL.md §3 and
+ * datasheet §4.6. input-pullup is the AVR/Arduino INPUT_PULLUP idiom.
  * Values are order-of-magnitude fits, not precision — good enough to teach
  * the active-low lesson, not good enough for silicon correlation.
  *
@@ -27,6 +28,13 @@ const R_STRONG = 25;
 const R_QUASI_PULLUP = 21700;
 
 /**
+ * Internal pull-up resistance for input-pullup mode.
+ * AVR datasheets specify 20–50 kΩ; we use the midpoint.
+ * This is a range, not a precise value.
+ */
+const R_INPUT_PULLUP = 35000;
+
+/**
  * Returns the Thévenin equivalent for a pin in the given mode and drive state.
  *
  * @param {PinMode} mode
@@ -49,6 +57,9 @@ export function pinThevenin(mode, driveHigh, vcc) {
     case 'input':
       return 'high-z';
 
+    case 'input-pullup':
+      return { vTh: vcc, rTh: R_INPUT_PULLUP };
+
     case 'opendrain':
       return driveHigh
         ? 'high-z'
@@ -59,4 +70,4 @@ export function pinThevenin(mode, driveHigh, vcc) {
   }
 }
 
-export { R_STRONG, R_QUASI_PULLUP };
+export { R_STRONG, R_QUASI_PULLUP, R_INPUT_PULLUP };
