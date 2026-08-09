@@ -30,20 +30,20 @@ Measured on a single core (Node 20, Linux), 11-part netlist (2 LEDs, pot, button
 
 | Operation | Throughput | Notes |
 |-----------|-----------|-------|
-| advanceTo + setPin (1 kHz PWM, 2 LEDs) | ~25 K cycles/sec (~150 K calls/sec) | The main simulation loop |
-| setPin (closed-form solve) | ~160 K ops/sec | Re-solves on every pin change |
-| setControl (pot, re-solve) | ~200 K ops/sec | |
-| branchCurrent (MNA solve) | ~15 K ops/sec | Full matrix solve per call |
-| readAnalog (no re-solve) | ~1.6 M ops/sec | Pure lookup |
-| ledBrightness (integration) | ~330 K ops/sec | Time-weighted average |
+| advanceTo (steady state) | ~233 K ops/sec | Skips recording when nothing changed |
+| advanceTo + setPin (PWM loop) | ~194 K calls/sec | The main simulation loop |
+| setPin (closed-form solve) | ~184 K ops/sec | Re-solves on every pin change |
+| setControl (pot, re-solve) | ~109 K ops/sec | |
+| branchCurrent (MNA solve) | ~12 K ops/sec | Full matrix solve per call |
+| readAnalog (no re-solve) | ~824 K ops/sec | Pure lookup |
+| 595 shift register burst | ~253 K edges/sec | 24 edges per write |
 
-The closed-form path runs at 150 K+ calls/sec. At a 1 kHz simulated PWM with 6 calls per
-cycle, that is 25 K simulated cycles per wall-clock second — enough to run a 1 MHz MCU at
-~40× slower than real time. The MNA solver is only invoked on demand (branchCurrent /
-resistance), not per cycle.
+**PCA PWM performance:** 1 second of 8-bit PWM at FOSC/12 simulated in 75ms
+= **13.4× real time**. 7200 edges/sec against 194K capacity = 27× headroom.
 
-The buzzer audio path needs ~48 kHz sampling. At 150 K setPin calls/sec, that is ~3 K
-simulated MCU cycles per audio sample — adequate for the starter-kit frequencies (100 Hz–5 kHz).
+**Meter block cliff:** `branchCurrent` per edge is 12K ops/sec against 7.2K
+edges/sec = 1.6× margin at real time. Meter blocks should sample at display
+rate (~60 Hz), not per edge — which is what a real multimeter does.
 
 ## Integration path
 
