@@ -218,13 +218,32 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * @param {string} [opts.testNodeA] - inject test current from this net (for resistance)
  * @param {string} [opts.testNodeB] - inject test current to this net (for resistance)
  * @param {number} [opts.testCurrent] - test current magnitude (default 0.001 A)
- * @returns {{ nodeVoltages: Map<string, number>, branchCurrents: Map<string, Map<string, number>> }}
+ * @param {number} [opts.tSeconds] - simulation time, for time-varying sources (default 0)
+ * @param {Map<string, number>} [opts.capVoltages] - part id → present capacitor voltage.
+ *   When given (and not in transient mode), each capacitor is stamped as a voltage
+ *   source holding its stored voltage — which is what a capacitor IS at an instant.
+ *   Without it, capacitors are DC-open (legacy operating-point behaviour).
+ * @param {{dtSec: number, capVoltages: Map<string, number>, inductorCurrents: Map<string, number>}} [opts.transient]
+ *   Backward-Euler transient step: capacitors stamp as G=C/dt ∥ I=G·V_prev,
+ *   inductors as G=dt/L ∥ I=I_prev. The result then carries capVoltagesNext /
+ *   inductorCurrentsNext for the caller to store.
+ * @returns {{ nodeVoltages: Map<string, number>, branchCurrents: Map<string, Map<string, number>>,
+ *             capVoltagesNext?: Map<string, number>, inductorCurrentsNext?: Map<string, number>,
+ *             converged?: boolean }}
  */
 export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const powerOff = opts.powerOff ?? false;
   const testNodeA = opts.testNodeA;
   const testNodeB = opts.testNodeB;
   const testCurrent = opts.testCurrent ?? 0.001;
+  const tSeconds = opts.tSeconds ?? 0;
+  const transient = opts.transient ?? null;
+  const capVoltagesIn = transient ? transient.capVoltages : opts.capVoltages;
+  // Every node gets a tiny conductance to the reference (gmin). This keeps a
+  // floating net (e.g. behind a DC-open capacitor or an off transistor) from
+  // making the matrix singular — which used to be caught silently and returned
+  // a plausible, wrong all-zeros solution.
+  const GMIN = 1e-12;
 
   // Build node list. Ground is implicit (node index -1 → not in matrix).
   // For resistance measurement, use testNodeB as the reference so that
@@ -289,7 +308,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           vsIndex.set(part.id, vsCount++);
         }
       }
-      // Op-amp output is a voltage source (VCVS)
+      // Op-amp output is a voltage source (VCVS with rail clamping)
       if (part.kind === 'opamp') {
         const outNet = findNet(nets, part.id, 'out');
         if (outNet && nodeIndex.has(outNet)) {
@@ -300,6 +319,15 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (part.kind === 'vsource') {
         const posNet = findNet(nets, part.id, 'pos');
         if (posNet && nodeIndex.has(posNet)) {
+          vsIndex.set(part.id, vsCount++);
+        }
+      }
+      // Instantaneous solve with known capacitor charge: the capacitor IS a
+      // voltage source at an instant, so it holds its stored voltage.
+      if (part.kind === 'capacitor' && !transient && capVoltagesIn) {
+        const netA = findNet(nets, part.id, 'a');
+        const netB = findNet(nets, part.id, 'b');
+        if ((netA && nodeIndex.has(netA)) || (netB && nodeIndex.has(netB))) {
           vsIndex.set(part.id, vsCount++);
         }
       }
@@ -319,19 +347,28 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Diode/LED/transistor operating points for Newton–Raphson
   /** @type {Map<string, number>} part id → voltage across junction */
   const diodeVoltages = new Map();
+  // Op-amp output region: 'linear' | 'high' | 'low' (rail saturation).
+  /** @type {Map<string, string>} */
+  const opampRegions = new Map();
   for (const part of parts) {
     if (part.kind === 'led' || part.kind === 'diode' || part.kind === 'npn'
         || part.kind === 'pnp' || part.kind === 'zener'
         || part.kind === 'nmos' || part.kind === 'pmos') {
       diodeVoltages.set(part.id, 0); // initial guess
     }
+    if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
   }
 
   // Newton–Raphson iterations
   const MAX_NR_ITER = 50;
   const NR_TOL = 1e-6;
+  // Junction-voltage damping: an exponential nonlinearity can fling NR across
+  // volts per iteration and oscillate forever; classic per-step limiting keeps
+  // every update inside the model's trust region.
+  const NR_MAX_STEP = 0.5;
 
   let solution = new Float64Array(dim);
+  let converged = false;
 
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
     // Clear matrix
@@ -379,16 +416,53 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls);
           break;
 
-        case 'inductor':
-          // Inductor companion model is time-dependent and handled
-          // separately in advanceTo. For DC steady-state MNA, an
-          // inductor is a short circuit (zero resistance wire).
-          stampTwoTerminal(A,
-            findNet(nets, part.id, 'a'),
-            findNet(nets, part.id, 'b'),
-            1 / 0.001, // 1 mΩ — effectively a wire for DC
-            nodeIndex);
+        case 'inductor': {
+          if (transient) {
+            // Backward-Euler companion: i(t+dt) = i(t) + (dt/L)·v(t+dt)
+            // → conductance dt/L in parallel with a Norton source of i(t).
+            const L = /** @type {number} */ (part.params.henries ?? 0.001);
+            const g = transient.dtSec / Math.max(L, 1e-12);
+            const iPrev = transient.inductorCurrents.get(part.id) ?? 0;
+            const netA = findNet(nets, part.id, 'a');
+            const netB = findNet(nets, part.id, 'b');
+            stampTwoTerminal(A, netA, netB, g, nodeIndex);
+            const idxA = netA ? nodeIndex.get(netA) : undefined;
+            const idxB = netB ? nodeIndex.get(netB) : undefined;
+            if (idxA !== undefined) b[idxA] -= iPrev; // i flows a→b
+            if (idxB !== undefined) b[idxB] += iPrev;
+          } else {
+            // DC steady-state: an inductor is a short (1 mΩ wire).
+            stampTwoTerminal(A,
+              findNet(nets, part.id, 'a'),
+              findNet(nets, part.id, 'b'),
+              1 / 0.001,
+              nodeIndex);
+          }
           break;
+        }
+
+        case 'capacitor': {
+          if (transient) {
+            // Backward-Euler companion: i = C/dt · (v(t+dt) − v(t))
+            // → conductance C/dt in parallel with a Norton source C/dt·v(t).
+            const C = /** @type {number} */ (part.params.farads ?? 0.0001);
+            const g = C / Math.max(transient.dtSec, 1e-15);
+            const vPrev = transient.capVoltages.get(part.id) ?? 0;
+            const netA = findNet(nets, part.id, 'a');
+            const netB = findNet(nets, part.id, 'b');
+            stampTwoTerminal(A, netA, netB, g, nodeIndex);
+            const idxA = netA ? nodeIndex.get(netA) : undefined;
+            const idxB = netB ? nodeIndex.get(netB) : undefined;
+            if (idxA !== undefined) b[idxA] += g * vPrev;
+            if (idxB !== undefined) b[idxB] -= g * vPrev;
+          } else if (capVoltagesIn && vsIndex.has(part.id)) {
+            // Instantaneous solve: hold the stored voltage as a source row.
+            stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex,
+              capVoltagesIn.get(part.id) ?? 0);
+          }
+          // else: DC operating point — a capacitor is open (gmin covers the net).
+          break;
+        }
 
         case 'npn':
           stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
@@ -407,11 +481,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'opamp':
-          stampOpamp(A, b, part, nets, nodeIndex, groundNetId);
+          stampOpamp(A, b, part, nets, nodeIndex, groundNetId, vsIndex, opampRegions, vcc);
           break;
 
         case 'vsource':
-          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc);
+          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds);
           break;
 
         case 'isource':
@@ -487,6 +561,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (idxB !== undefined) b[idxB] -= testCurrent;
     }
 
+    // gmin from every node to the reference: keeps floating nets solvable.
+    for (let i = 0; i < nodeCount; i++) A.add(i, i, GMIN);
+
     // Solve
     const Acopy = A.clone();
     const bcopy = new Float64Array(b);
@@ -537,12 +614,51 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
       const vOld = diodeVoltages.get(part.id) ?? 0;
 
-      maxDelta = Math.max(maxDelta, Math.abs(vNew - vOld));
-      diodeVoltages.set(part.id, vNew);
+      // Damped update: never move a junction voltage more than NR_MAX_STEP
+      // per iteration. The raw delta still drives the convergence check, so
+      // a clamped step cannot be mistaken for convergence.
+      const rawDelta = vNew - vOld;
+      const vDamped = vOld + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, rawDelta));
+      maxDelta = Math.max(maxDelta, Math.abs(rawDelta));
+      diodeVoltages.set(part.id, vDamped);
     }
 
-    // If no diodes or converged, stop
-    if (diodeVoltages.size === 0 || maxDelta < NR_TOL) break;
+    // Op-amp region transitions: linear ↔ saturated at a supply rail.
+    let regionChanged = false;
+    for (const part of parts) {
+      if (part.kind !== 'opamp' || !vsIndex.has(part.id)) continue;
+      const gain = /** @type {number} */ (part.params.gain ?? 1e6);
+      const railLow = /** @type {number} */ (part.params.railLow ?? 0);
+      const railHigh = /** @type {number} */ (part.params.railHigh ?? vcc);
+      const netP = findNet(nets, part.id, 'inp');
+      const netN = findNet(nets, part.id, 'inn');
+      const idxP = netP ? nodeIndex.get(netP) : undefined;
+      const idxN = netN ? nodeIndex.get(netN) : undefined;
+      const vP = idxP !== undefined ? solution[idxP] : (netP === groundNetId ? 0 : 0);
+      const vN = idxN !== undefined ? solution[idxN] : (netN === groundNetId ? 0 : 0);
+      const vIdeal = gain * (vP - vN);
+      const region = opampRegions.get(part.id);
+      let next = region;
+      if (region === 'linear') {
+        if (vIdeal > railHigh) next = 'high';
+        else if (vIdeal < railLow) next = 'low';
+      } else if (region === 'high') {
+        if (vIdeal < railHigh) next = 'linear';
+      } else if (region === 'low') {
+        if (vIdeal > railLow) next = 'linear';
+      }
+      if (next !== region) {
+        opampRegions.set(part.id, next);
+        regionChanged = true;
+      }
+    }
+
+    // If nothing nonlinear, or everything settled, stop.
+    if ((diodeVoltages.size === 0 && opampRegions.size === 0)
+        || (maxDelta < NR_TOL && !regionChanged)) {
+      converged = true;
+      break;
+    }
   }
 
   // ─── Extract results ────────────────────────────────────────────────────
@@ -686,10 +802,49 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const netB = findNet(nets, part.id, 'b');
       const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
-      // DC: inductor is a wire, current = V_drop / R_wire
-      const i = (vA - vB) / 0.001;
+      let i;
+      if (transient) {
+        const L = /** @type {number} */ (part.params.henries ?? 0.001);
+        const iPrev = transient.inductorCurrents.get(part.id) ?? 0;
+        i = iPrev + (transient.dtSec / Math.max(L, 1e-12)) * (vA - vB);
+      } else {
+        // DC: inductor is a wire, current = V_drop / R_wire
+        i = (vA - vB) / 0.001;
+      }
       currents.set('a', -i);
       currents.set('b', i);
+    }
+
+    if (part.kind === 'capacitor') {
+      const netA = findNet(nets, part.id, 'a');
+      const netB = findNet(nets, part.id, 'b');
+      const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      let i = 0;
+      if (transient) {
+        const C = /** @type {number} */ (part.params.farads ?? 0.0001);
+        const vPrev = transient.capVoltages.get(part.id) ?? 0;
+        i = (C / Math.max(transient.dtSec, 1e-15)) * ((vA - vB) - vPrev);
+      } else if (vsIndex.has(part.id)) {
+        // Instantaneous: the source row's current variable is the cap current.
+        i = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
+      }
+      currents.set('a', -i);
+      currents.set('b', i);
+    }
+
+    if (part.kind === 'opamp' && vsIndex.has(part.id)) {
+      // Output current from the source row (positive = out of the output).
+      const iOut = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
+      currents.set('out', iOut);
+      currents.set('inp', 0);
+      currents.set('inn', 0);
+    }
+
+    if (part.kind === 'vsource' && vsIndex.has(part.id)) {
+      const iSrc = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
+      currents.set('pos', iSrc);
+      currents.set('neg', -iSrc);
     }
 
     // Drawable parts: supply current from VCC to GND
@@ -712,7 +867,27 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
   }
 
-  return { nodeVoltages, branchCurrents };
+  // Transient next-state: what the caller stores for the next step.
+  if (transient) {
+    const capVoltagesNext = new Map();
+    const inductorCurrentsNext = new Map();
+    for (const part of parts) {
+      if (part.kind === 'capacitor') {
+        const netA = findNet(nets, part.id, 'a');
+        const netB = findNet(nets, part.id, 'b');
+        const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+        const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+        capVoltagesNext.set(part.id, vA - vB);
+      }
+      if (part.kind === 'inductor') {
+        const c = branchCurrents.get(part.id);
+        inductorCurrentsNext.set(part.id, c ? (c.get('b') ?? 0) : 0);
+      }
+    }
+    return { nodeVoltages, branchCurrents, capVoltagesNext, inductorCurrentsNext, converged };
+  }
+
+  return { nodeVoltages, branchCurrents, converged };
 }
 
 // ─── Stamp functions ─────────────────────────────────────────────────────────
@@ -1213,13 +1388,25 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
 // ─── Op-amp stamp ───────────────────────────────────────────────────────────
 
 /**
- * Stamp an ideal op-amp. Terminals: inp (non-inverting), inn (inverting), out.
- * Model: Vout = A × (Vinp - Vinn), with A → infinity (ideal).
- * In MNA: this is a VCVS with very high gain, stamped as a voltage source
- * whose value is A × (V+ - V-).
+ * Stamp an op-amp as a VCVS with supply-rail clamping.
+ * Terminals: inp (non-inverting), inn (inverting), out.
+ *
+ * Linear region:  V(out) − gain·V(inp) + gain·V(inn) = 0   (extra MNA row)
+ * Saturated:      V(out) = railHigh | railLow               (same row, fixed)
+ *
+ * The region lives in `opampRegions` and is settled by the NR loop: an ideal
+ * VCVS whose ideal output leaves [railLow, railHigh] flips to the rail; a
+ * railed op-amp whose input difference reverses flips back. A real op-amp
+ * cannot output 900 V, and a model that can teaches the wrong electronics.
+ *
+ * Regression note: the previous implementation allocated a source row it never
+ * stamped — a guaranteed-singular matrix, silently caught, returning all-zero
+ * voltages for ANY circuit containing an op-amp.
  */
-function stampOpamp(A, b, part, nets, nodeIndex, groundNetId) {
-  const gain = /** @type {number} */ (part.params.gain ?? 1e6); // open-loop gain
+function stampOpamp(A, b, part, nets, nodeIndex, groundNetId, vsIndex, opampRegions, vcc) {
+  const gain = /** @type {number} */ (part.params.gain ?? 1e6);
+  const railLow = /** @type {number} */ (part.params.railLow ?? 0);
+  const railHigh = /** @type {number} */ (part.params.railHigh ?? vcc);
 
   const netP = findNet(nets, part.id, 'inp');
   const netN = findNet(nets, part.id, 'inn');
@@ -1229,34 +1416,102 @@ function stampOpamp(A, b, part, nets, nodeIndex, groundNetId) {
   const idxN = netN ? nodeIndex.get(netN) : undefined;
   const idxO = netO ? nodeIndex.get(netO) : undefined;
 
-  // Use the voltage source row for this opamp
-  const dim = nodeIndex.size;
-  const vsIdx = part._vsIdx; // set during counting
-  // Actually we need to look it up from vsIndex passed around...
-  // For now, use the simpler Norton approach: model as a VCCS with
-  // very high transconductance, plus a small output resistance.
+  const vsIdx = vsIndex.get(part.id);
+  if (vsIdx === undefined || idxO === undefined) return;
 
-  // Norton: Iout = gm × (V+ - V-), gm = gain / Rout
-  const rOut = /** @type {number} */ (part.params.rOut ?? 1);
-  const gm = gain / rOut; // very large
-  const gOut = 1 / rOut;
+  const row = nodeIndex.size + vsIdx;
 
-  // Output conductance
-  if (idxO !== undefined) A.add(idxO, idxO, gOut);
+  // The output node carries the source's branch current variable.
+  A.set(idxO, row, 1);
 
-  // VCCS: current into output proportional to (V+ - V-)
-  if (idxO !== undefined && idxP !== undefined) A.add(idxO, idxP, gm);
-  if (idxO !== undefined && idxN !== undefined) A.add(idxO, idxN, -gm);
+  const region = opampRegions.get(part.id) ?? 'linear';
+  if (region === 'linear') {
+    // V(out) − gain·(V(inp) − V(inn)) = 0
+    A.set(row, idxO, 1);
+    if (idxP !== undefined) A.add(row, idxP, -gain);
+    if (idxN !== undefined) A.add(row, idxN, gain);
+    b[row] = 0;
+  } else {
+    // Saturated at a rail: V(out) = rail
+    A.set(row, idxO, 1);
+    b[row] = region === 'high' ? railHigh : railLow;
+  }
+}
+
+/**
+ * Stamp a capacitor holding its stored voltage as a source row:
+ * V(a) − V(b) = vStored. Used for instantaneous solves (no dt), where a
+ * capacitor genuinely is a voltage source.
+ */
+function stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex, vStored) {
+  const netA = findNet(nets, part.id, 'a');
+  const netB = findNet(nets, part.id, 'b');
+  const idxA = netA ? nodeIndex.get(netA) : undefined;
+  const idxB = netB ? nodeIndex.get(netB) : undefined;
+  const vsIdx = vsIndex.get(part.id);
+  if (vsIdx === undefined) return;
+  const row = nodeIndex.size + vsIdx;
+  if (idxA !== undefined) { A.set(row, idxA, 1); A.set(idxA, row, 1); }
+  if (idxB !== undefined) { A.set(row, idxB, -1); A.set(idxB, row, -1); }
+  b[row] = vStored;
+}
+
+/**
+ * Evaluate a source's voltage at simulation time t.
+ *
+ * params.wave selects the shape; absent or 'dc' is a constant `volts`.
+ *   { wave: 'sine'|'square'|'triangle'|'pulse', freq, amplitude, offset, phase, duty }
+ * amplitude is the peak deviation from offset; duty applies to square/pulse
+ * (fraction of the period spent high, default 0.5); phase is in degrees.
+ * A 'pulse' swings offset → offset+amplitude; the others swing symmetrically.
+ *
+ * This is the whole electrical model of a function generator.
+ *
+ * @param {Part} part
+ * @param {number} tSeconds
+ * @param {number} vcc - fallback for a plain DC source with no volts param
+ * @returns {number}
+ */
+export function sourceVoltage(part, tSeconds, vcc) {
+  const p = part.params ?? {};
+  const wave = /** @type {string} */ (p.wave ?? 'dc');
+  const volts = /** @type {number} */ (p.volts ?? vcc);
+  if (wave === 'dc') return volts;
+
+  const freq = /** @type {number} */ (p.freq ?? 1000);
+  const amplitude = /** @type {number} */ (p.amplitude ?? volts);
+  const offset = /** @type {number} */ (p.offset ?? 0);
+  const phaseDeg = /** @type {number} */ (p.phase ?? 0);
+  const duty = Math.min(1, Math.max(0, /** @type {number} */ (p.duty ?? 0.5)));
+
+  // Position in the cycle, 0…1, phase-shifted.
+  const cycles = tSeconds * freq + phaseDeg / 360;
+  const frac = cycles - Math.floor(cycles);
+
+  switch (wave) {
+    case 'sine':
+      return offset + amplitude * Math.sin(2 * Math.PI * frac);
+    case 'square':
+      return offset + (frac < duty ? amplitude : -amplitude);
+    case 'pulse':
+      return offset + (frac < duty ? amplitude : 0);
+    case 'triangle':
+      // Rises from −amplitude at frac=0 to +amplitude at frac=0.5, back down.
+      return offset + amplitude * (frac < 0.5 ? (4 * frac - 1) : (3 - 4 * frac));
+    default:
+      return volts;
+  }
 }
 
 // ─── Independent sources ────────────────────────────────────────────────────
 
 /**
  * Independent voltage source. Terminals: pos, neg.
- * Params: {volts} — the source voltage.
+ * Params: {volts} — DC value; plus the waveform params of `sourceVoltage`
+ * for time-varying operation (sine/square/triangle/pulse).
  */
-function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc) {
-  const volts = /** @type {number} */ (part.params.volts ?? vcc);
+function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0) {
+  const volts = sourceVoltage(part, tSeconds, vcc);
   const posNet = findNet(nets, part.id, 'pos');
   const negNet = findNet(nets, part.id, 'neg');
 
