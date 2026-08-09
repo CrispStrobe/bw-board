@@ -87,6 +87,12 @@ src/debug-session.js
 src/serial-debug.js
 src/debug-target-factory.js
 src/builder.js
+src/devices.js
+src/devices/logic-gates.js
+src/devices/relay.js
+src/devices/dc-motor.js
+src/devices/servo.js
+src/devices/timer-555.js
 ```
 
 `src/index.js` is the single entry point. All imports are relative within `src/`.
@@ -162,18 +168,25 @@ node bench/perf.js          # performance benchmark
 src/
   index.js              — module entry point (single import)
   types.js              — boundary A + B type definitions (JSDoc)
-  pin-model.js          — Thévenin equivalents for the four port modes
-  board.js              — Board implementation (closed-form + RC)
+  pin-model.js          — Thévenin equivalents for five port modes
+  board.js              — Board implementation (closed-form + RC + scope)
   mna.js                — MNA solver (branchCurrent, resistance)
   validate.js           — netlist validation (catch misuse before solve)
   infer-netlist.js      — boundary C: infer netlist from project.stc.pins
+  devices.js            — device model registry (extension point)
+  devices/              — registered device models:
+    logic-gates.js      — AND/OR/NOT/NAND/NOR/XOR (74HC-flavored)
+    relay.js            — SPDT relay with coil hysteresis
+    dc-motor.js         — back-EMF + winding R, speed integration
+    servo.js            — PWM pulse-width decoder, angle slew
+    timer-555.js        — behavioral 555 (comparators + FF + discharge)
   scripted-mcu.js       — test harness: timestamped pin events
   conformance.js        — boundary-A conformance kit
   emu8051-adapter.js    — adapter for the emu8051-stc WASM emulator
 bench/
   perf.js               — performance benchmark
 test/
-  *.test.js             — ~995 tests
+  *.test.js             — ~1131 tests
 ```
 
 ## License
