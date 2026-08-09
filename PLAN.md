@@ -34,9 +34,26 @@
 | cubeBrightness 64 voxels | 817 fps | `90d44d2` |
 | Cube scan 8 lines | 2.3K changes/s | `90d44d2` |
 
+## What is NOT ours
+
+- **Rung 8** (on-chip monitor vs both emulators on same image) belongs to **ucsim-stc** —
+  they own the ladder and the harness (`run_control_diff.sh`). emu8051-stc already drove
+  our codec through their bridge (`test_monitor_bwboard.mjs`, 24 assertions, `635ef43`).
+  Our `rung8-serial-reads.test.js` is a fixture for the interchangeability suite, not a
+  competing rung implementation.
+- **The codec round-trip is already proven** — five implementations (C firmware, Python
+  monitor, C test, stc12live.js, serial-debug.js) have been diffed by emu8051-stc's bridge.
+
+## What IS ours
+
+- **DebugTarget interchangeability** (`debug-target-conformance.test.js`): same caller
+  drives either target without knowing which. Branching on capabilities() only.
+- **Boundary B** (the board engine, stable)
+- **The circuit extension design** (`CIRCUIT-EXTENSION.md`)
+
 ## Blocked on
 
-Nothing. Boundary B is stable. The circuit extension lives in `extensions/CrispStrobe/circuit.js` (read-only reference for bw-board).
+Nothing. Boundary B is stable.
 
 ## Standing rules
 
