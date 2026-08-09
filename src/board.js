@@ -134,6 +134,15 @@ export class BoardImpl {
     this._probeMaxSamples = 10000;
 
     /**
+     * Scope channels: handle → channel config + ring buffer.
+     * @type {Map<number, object>}
+     */
+    this._scopeChannels = new Map();
+
+    /** Next scope channel handle. */
+    this._nextScopeHandle = 1;
+
+    /**
      * Capacitor voltages: part id → current voltage across the cap.
      * @type {Map<string, number>}
      */
@@ -227,6 +236,11 @@ export class BoardImpl {
     this._solve();
     this._recordLedSamples();
 
+    // Update scope channel min/max for voltage changes between sample points
+    if (this._scopeChannels.size > 0) {
+      this._feedScopeVoltages();
+    }
+
     // Record buzzer edges on state change
     if (prev && prev.driveHigh !== driveHigh) {
       this._recordBuzzerEdges(pin);
@@ -263,6 +277,11 @@ export class BoardImpl {
 
     // Record LED current samples at this timestamp
     this._recordLedSamples();
+
+    // Update scope channels (fixed cadence, min/max decimation)
+    if (this._scopeChannels.size > 0) {
+      this._updateScopeChannels(tNs);
+    }
 
     // Record oscilloscope probe samples
     for (const [netId, data] of this._probes) {
@@ -351,6 +370,168 @@ export class BoardImpl {
   clearProbeData() {
     for (const [, data] of this._probes) {
       data.length = 0;
+    }
+  }
+
+  // ─── Scope channels ────────────────────────────────────────────────────
+
+  /**
+   * Attach a scope channel with fixed sim-time cadence and (min,max) decimation.
+   *
+   * @param {object} opts
+   * @param {'voltage' | 'current'} opts.type - Channel type
+   * @param {string} [opts.netId] - Net to probe (for voltage channels)
+   * @param {string} [opts.partId] - Part to probe (for current channels)
+   * @param {string} [opts.terminal] - Terminal to probe (for current channels)
+   * @param {number} [opts.sampleRateHz=100000] - Sim-time sample rate
+   * @param {number} [opts.depth=8192] - Ring buffer depth in (min,max) pairs
+   * @returns {number} Channel handle
+   */
+  addScopeChannel(opts) {
+    const handle = this._nextScopeHandle++;
+    const sampleRateHz = opts.sampleRateHz ?? 100_000;
+    const depth = opts.depth ?? 8192;
+    const intervalNs = BigInt(Math.round(1e9 / sampleRateHz));
+
+    const ch = {
+      type: opts.type,
+      netId: opts.netId ?? null,
+      partId: opts.partId ?? null,
+      terminal: opts.terminal ?? null,
+      sampleRateHz,
+      intervalNs,
+      depth,
+      // Ring buffer: interleaved [min0, max0, min1, max1, ...]
+      samples: new Float64Array(depth * 2),
+      writeIndex: 0,     // next write position (in pairs, 0..depth-1)
+      count: 0,          // how many pairs have been written total
+      startTNs: 0n,      // sim-time of the oldest sample in the buffer
+      // For voltage channels: track running (min, max) within current bucket
+      _bucketMin: Infinity,
+      _bucketMax: -Infinity,
+      _nextSampleNs: this.timeNs + intervalNs, // next sample point
+    };
+
+    this._scopeChannels.set(handle, ch);
+    return handle;
+  }
+
+  /**
+   * Remove a scope channel.
+   * @param {number} handle
+   */
+  removeScopeChannel(handle) {
+    this._scopeChannels.delete(handle);
+  }
+
+  /** Remove all scope channels. */
+  clearScopeChannels() {
+    this._scopeChannels.clear();
+  }
+
+  /**
+   * Get the waveform data for a scope channel.
+   * @param {number} handle
+   * @returns {{samples: Float64Array, startTNs: bigint, sampleIntervalNs: bigint,
+   *            writeIndex: number, count: number, channelType: string} | null}
+   */
+  getScopeData(handle) {
+    const ch = this._scopeChannels.get(handle);
+    if (!ch) return null;
+    return {
+      samples: ch.samples,
+      startTNs: ch.startTNs,
+      sampleIntervalNs: ch.intervalNs,
+      writeIndex: ch.writeIndex,
+      count: ch.count,
+      channelType: ch.type,
+    };
+  }
+
+  /**
+   * Sample all current-type scope channels once (call from display loop, ~60 Hz).
+   * Returns a Map of handle → instantaneous current.
+   * @returns {Map<number, number>}
+   */
+  sampleCurrentChannels() {
+    const results = new Map();
+    for (const [handle, ch] of this._scopeChannels) {
+      if (ch.type !== 'current') continue;
+      const current = this.branchCurrent(ch.partId, ch.terminal);
+      // Write into ring buffer as a single (min=max=current) pair
+      const idx = ch.writeIndex * 2;
+      ch.samples[idx] = current;
+      ch.samples[idx + 1] = current;
+      ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
+      ch.count++;
+      if (ch.count > ch.depth) {
+        ch.startTNs += ch.intervalNs;
+      }
+      results.set(handle, current);
+    }
+    return results;
+  }
+
+  /**
+   * Get all active scope channel handles.
+   * @returns {number[]}
+   */
+  getScopeChannels() {
+    return [...this._scopeChannels.keys()];
+  }
+
+  /**
+   * Update scope channel min/max with current voltages (no flush).
+   * Called from setPin/setControl to capture intra-bucket voltage changes.
+   * @private
+   */
+  _feedScopeVoltages() {
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.type !== 'voltage') continue;
+      const v = this.nodeVoltages.get(ch.netId) ?? 0;
+      const val = Number.isFinite(v) ? v : 0;
+      if (val < ch._bucketMin) ch._bucketMin = val;
+      if (val > ch._bucketMax) ch._bucketMax = val;
+    }
+  }
+
+  /**
+   * Feed the current voltage into scope voltage channels.
+   * Called from advanceTo when time crosses sample boundaries.
+   * @private
+   */
+  _updateScopeChannels(tNs) {
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.type !== 'voltage') continue;
+
+      // Get current voltage
+      const v = this.nodeVoltages.get(ch.netId) ?? 0;
+      const val = Number.isFinite(v) ? v : 0;
+
+      // Track running min/max for this bucket
+      if (val < ch._bucketMin) ch._bucketMin = val;
+      if (val > ch._bucketMax) ch._bucketMax = val;
+
+      // Flush completed buckets
+      while (tNs >= ch._nextSampleNs) {
+        const idx = ch.writeIndex * 2;
+        ch.samples[idx] = ch._bucketMin;
+        ch.samples[idx + 1] = ch._bucketMax;
+        ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
+        ch.count++;
+
+        // Update start time when buffer wraps
+        if (ch.count > ch.depth) {
+          ch.startTNs = ch._nextSampleNs - ch.intervalNs * BigInt(ch.depth - 1);
+        } else if (ch.count === 1) {
+          ch.startTNs = ch._nextSampleNs - ch.intervalNs;
+        }
+
+        ch._nextSampleNs += ch.intervalNs;
+        // Reset bucket for next interval
+        ch._bucketMin = val;
+        ch._bucketMax = val;
+      }
     }
   }
 
