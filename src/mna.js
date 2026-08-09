@@ -493,7 +493,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'vsource':
-          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds);
+          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds, controls);
           break;
 
         case 'isource':
@@ -690,7 +690,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // Overcurrent: reduce the source voltage. The effective voltage that
         // would give exactly iLimit depends on the load, but we can estimate
         // by computing Rload = V/I and setting V_new = iLimit * Rload.
-        const nominalV = sourceVoltage(part, tSeconds, vcc);
+        const nominalV = (controls && controls.has(part.id))
+          ? controls.get(part.id) : sourceVoltage(part, tSeconds, vcc);
         const rLoad = Math.abs(iActual) > 1e-12 ? Math.abs(nominalV / iActual) : 1e6;
         const clampedV = iLimit * rLoad * Math.sign(nominalV);
         // Store the clamped voltage for this iteration
@@ -700,7 +701,6 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
       } else if (part._ccClampedVolts !== undefined) {
         // Current is within limit — revert to CV mode
-        const nominalV = sourceVoltage(part, tSeconds, vcc);
         if (Math.abs(iActual) < iLimit * 0.99) {
           delete part._ccClampedVolts;
           ccChanged = true;
@@ -1622,9 +1622,16 @@ export function sourceVoltage(part, tSeconds, vcc) {
  * Params: {volts} — DC value; plus the waveform params of `sourceVoltage`
  * for time-varying operation (sine/square/triangle/pulse).
  */
-function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0) {
-  // Use clamped voltage if in CC mode (current limit active)
-  const volts = part._ccClampedVolts !== undefined ? part._ccClampedVolts : sourceVoltage(part, tSeconds, vcc);
+function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null) {
+  // Control value overrides params.volts for interactive adjustment (bench supply knob)
+  let volts;
+  if (part._ccClampedVolts !== undefined) {
+    volts = part._ccClampedVolts;
+  } else if (controls && controls.has(part.id)) {
+    volts = controls.get(part.id);
+  } else {
+    volts = sourceVoltage(part, tSeconds, vcc);
+  }
   const posNet = findNet(nets, part.id, 'pos');
   const negNet = findNet(nets, part.id, 'neg');
 

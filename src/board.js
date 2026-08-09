@@ -1110,14 +1110,18 @@ export class BoardImpl {
   getBuzzers() { return this.parts.filter(p => p.kind === 'buzzer').map(p => p.id); }
 
   /**
-   * All controllable parts: pots, buttons, switches, LDRs, NTCs.
+   * All controllable parts: pots, buttons, switches, LDRs, NTCs, vsources.
+   * vsource control value = voltage (for bench supply knob).
    * @returns {Array<{id: string, kind: string, value: number}>}
    */
   getControls() {
-    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc'];
+    const controllable = ['potentiometer', 'button', 'switch', 'ldr', 'ntc', 'vsource'];
     return this.parts
       .filter(p => controllable.includes(p.kind))
-      .map(p => ({ id: p.id, kind: p.kind, value: this.controls.get(p.id) ?? 0 }));
+      .map(p => ({
+        id: p.id, kind: p.kind,
+        value: this.controls.get(p.id) ?? (p.kind === 'vsource' ? (p.params?.volts ?? 5) : 0),
+      }));
   }
 
   /**

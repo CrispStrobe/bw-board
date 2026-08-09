@@ -31,18 +31,24 @@ the engine. This file is the authoritative source for kind slugs and coverage st
 | `header` | **TODO** | Pin header (passive connector, wire-only) |
 | `usb_a` | **TODO** | USB-A connector (5V power + data pins) |
 
-## Tier 2 — instruments (decision: NOT part kinds)
+## Tier 2 — instruments (revised ruling: HYBRID)
 
-| Item | Decision | Reason |
-|------|----------|--------|
-| `multimeter` | **UI panel** | Already `Multimeter.jsx` — reads board.branchCurrent/nodeVoltage |
-| `oscilloscope` | **UI panel** | Already `ScopePanel.jsx` — reads scope channel data |
-| `function_generator` | **UI panel** | Already `vsource` with wave param — UI controls params |
-| `power_supply` | **UI panel + vsource iLimit** | Spec filed, mna.js unblocked for CC mode |
+In standalone circuits (no MCU), instruments ARE the primary interaction. A learner places
+a power supply, turns it up, and watches an LED light. The ruling:
 
-Instruments are NOT added to getPartKinds(). They are UI panels that consume boundary-B
-methods. Adding them as parts would create "two models of one thing" — a part in the netlist
-AND a panel reading the same data.
+| Item | Kind slug | Role |
+|------|-----------|------|
+| `power_supply` | `vsource` with `iLimit` param | **Part in netlist** — it IS a voltage source. UI shows CV/CC mode and lets user adjust voltage/limit via setControl. Already implemented (CC mode in mna.js). |
+| `function_generator` | `vsource` with `wave` param | **Part in netlist** — it IS a vsource with sine/square/triangle. UI provides waveform controls. Already implemented. |
+| `multimeter` | NOT a part kind | **UI panel + probe placement** — reads boundary-B methods (nodeVoltage, branchCurrent, resistance). Probes are placed on nets, not stamped in MNA. |
+| `oscilloscope` | NOT a part kind | **UI panel + scope channels** — reads getScopeData(). Channels attached to nets via addScopeChannel(), not as netlist parts. |
+
+The distinction: power supply and function generator ARE sources in the circuit (they supply
+energy). Multimeter and oscilloscope are OBSERVERS (they measure without affecting the circuit,
+ideally). Making an observer a netlist part would load the circuit it's measuring.
+
+This means `power_supply` and `function_generator` need no new kinds — they are `vsource`
+with specific params. The UI provides knobs that call `setControl()` or update params.
 
 ## Tier 3 — boards and targets (NOT part kinds)
 
@@ -56,7 +62,10 @@ AND a panel reading the same data.
 ## Coverage summary
 
 - Catalogue entries: 114
-- Distinct kinds: 88
-- Engine has: 98 (includes device-registry kinds when all modules registered)
-- Engine lacks (Tier 1): 14 (of which `l293d` is covered by `h_bridge`)
-- Decided not-a-kind: 8 (Tier 2 instruments + Tier 3 boards)
+- Distinct kinds needed: 88
+- Engine has: 111 (includes all device-registry kinds when modules registered)
+- Tier 1: 14/14 DONE (l293d covered by h_bridge)
+- Tier 2: power_supply + function_generator = existing vsource (no new kind needed);
+  multimeter + oscilloscope = UI panels consuming boundary-B (no part kind)
+- Tier 3: not part kinds (emulation targets / geometry)
+- **All catalogue kinds that should be engine kinds: COMPLETE**
