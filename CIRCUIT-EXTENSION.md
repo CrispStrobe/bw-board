@@ -74,12 +74,14 @@ Why injection:
 
 ## Three constraints (decisions, not details)
 
-1. **Meter reporters should sample at display rate (~60 Hz), not per edge.**
-   Full per-edge path (`advanceTo` + `setPin` + `branchCurrent`) sustains
-   **22.3K edges/sec** against 7.2K PCA edges/sec = **3.1× real time**
-   (measured, commit `44fc538`). MNA results are cached; the margin runs
-   out at ~3× emulator speedup. Display-rate sampling is still correct
-   (it's what a real multimeter does) but no longer load-bearing at 1×.
+1. **Meter reporters MUST sample at display rate (~60 Hz), not per edge.**
+   Per-edge cliff: one `advanceTo` + `setPin` + `branchCurrent` per edge
+   sustains **8.0K edges/sec** against 7.2K PCA edges/sec = **1.1× real
+   time** (measured, commit `c4d8031`). The MNA cache (`44fc538`) does NOT
+   help here — each `setPin` invalidates it, so hit rate ≈ 0 per edge.
+   The cache helps the *recommended* pattern: at display rate, multiple
+   meter blocks in one frame share a single solve. The cliff makes
+   display-rate sampling necessary; the cache makes it cheap.
 
 2. **`resistance` teaches by refusing.** When `board.resistance()` returns
    `'requires-power-off'`, the block should report that string, not 0.

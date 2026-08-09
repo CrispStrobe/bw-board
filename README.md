@@ -41,12 +41,19 @@ Measured on a single core (Node 20, Linux), 11-part netlist (2 LEDs, pot, button
 **PCA PWM performance:** 1 second of 8-bit PWM at FOSC/12 simulated in 75ms
 = **13.4× real time**. 7200 edges/sec against 194K capacity = 27× headroom.
 
-**Meter block performance (measured, commit `44fc538`):** the full per-edge
-path (`advanceTo` + `setPin` + `branchCurrent`) sustains **22.3K edges/sec**
-against a PCA rate of 7.2K edges/sec = **3.1× real time**. MNA results
-are cached and only re-solved on state change. Meter blocks should still
-sample at display rate (~60 Hz) — a real multimeter integrates and shows
-one number, and the margin runs out at ~3× emulator speedup.
+**Meter block cliff (measured, commit `c4d8031`, method below):** the full
+per-edge path — one `advanceTo` + one `setPin` + one `branchCurrent` per
+edge — sustains **8.0K edges/sec** against a PCA rate of 7.2K edges/sec
+= **1.1× real time**. The MNA cache (`44fc538`) has zero hit rate here
+because each `setPin` invalidates it. The cache helps the *recommended*
+pattern instead: at display rate (~60 Hz), multiple meter blocks in one
+frame share a single MNA solve. Meter blocks MUST sample at display rate,
+not per edge — the cliff makes it necessary, and a real multimeter does
+the same thing.
+
+Measurement method: 3000 PCA 8-bit PWM cycles (50% duty, FOSC/12),
+one `branchCurrent('LED_lamp', 'anode')` per edge, 50-cycle warmup,
+Node 20, single core.
 
 ## Integration path
 
