@@ -981,6 +981,17 @@ export class BoardImpl {
       eeprom: ['sda', 'scl', 'vcc', 'gnd'],
       shift_register: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'],
       char_lcd: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'],
+      // Device-registry kinds
+      gate_and: ['in0', 'in1', 'out'],
+      gate_or: ['in0', 'in1', 'out'],
+      gate_not: ['in0', 'out'],
+      gate_nand: ['in0', 'in1', 'out'],
+      gate_nor: ['in0', 'in1', 'out'],
+      gate_xor: ['in0', 'in1', 'out'],
+      relay: ['coil_a', 'coil_b', 'com', 'nc', 'no'],
+      dc_motor: ['a', 'b'],
+      servo: ['signal', 'vcc', 'gnd'],
+      timer_555: ['vcc', 'gnd', 'trigger', 'threshold', 'control', 'discharge', 'output', 'reset'],
     };
     return map[kind] ?? null;
   }
@@ -998,6 +1009,9 @@ export class BoardImpl {
       'vsource', 'isource', 'seven_segment', 'rgb_led',
       'shift_register', 'char_lcd', 'led_matrix', 'led_cube',
       'ir_receiver', 'temp_sensor', 'eeprom', 'mcu',
+      // Device-registry kinds (registered at runtime, listed here for discovery)
+      'gate_and', 'gate_or', 'gate_not', 'gate_nand', 'gate_nor', 'gate_xor',
+      'relay', 'dc_motor', 'servo', 'timer_555',
     ];
   }
 

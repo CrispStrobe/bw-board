@@ -63,7 +63,9 @@
  *   | 'seven_segment' | 'rgb_led'
  *   | 'nmos' | 'pmos' | 'opamp' | 'vsource' | 'isource'
  *   | 'shift_register' | 'char_lcd' | 'led_matrix' | 'led_cube'
- *   | 'ir_receiver' | 'temp_sensor' | 'eeprom'} PartKind
+ *   | 'ir_receiver' | 'temp_sensor' | 'eeprom'
+ *   | 'gate_and' | 'gate_or' | 'gate_not' | 'gate_nand' | 'gate_nor' | 'gate_xor'
+ *   | 'relay' | 'dc_motor' | 'servo' | 'timer_555'} PartKind
  */
 
 /**
