@@ -305,6 +305,17 @@ export class BoardImpl {
       }
     }
 
+    // Run device updates — timed transitions (relay switching, motor spin-up,
+    // servo travel, echo pulses) need to see the new time and potentially
+    // change state. If a device changes, re-solve the network so downstream
+    // voltages reflect the new configuration.
+    if (this._deviceStates.size > 0 || this._shiftRegisters.size > 0) {
+      for (let round = 0; round < 5; round++) {
+        if (!this._updateDevices()) break;
+        this._solve();
+      }
+    }
+
     // Record LED current samples at this timestamp
     this._recordLedSamples();
 

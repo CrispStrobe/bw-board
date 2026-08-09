@@ -34,4 +34,5 @@ export { registerDisplayDevices } from './devices/display.js';
 export { registerDigitalICs } from './devices/digital-ics.js';
 export { registerLogicChips } from './devices/chip-composer.js';
 export { registerAnalogICs } from './devices/analog-ics.js';
+export { registerMiscParts } from './devices/misc-parts.js';
 export { R_INPUT_PULLUP } from './pin-model.js';
