@@ -14,7 +14,13 @@
     "./validate": "./src/validate.js",
     "./builder": "./src/builder.js",
     "./serial-debug": "./src/serial-debug.js",
-    "./debug-target-factory": "./src/debug-target-factory.js"
+    "./debug-target-factory": "./src/debug-target-factory.js",
+    "./devices": "./src/devices.js",
+    "./devices/logic-gates": "./src/devices/logic-gates.js",
+    "./devices/relay": "./src/devices/relay.js",
+    "./devices/dc-motor": "./src/devices/dc-motor.js",
+    "./devices/servo": "./src/devices/servo.js",
+    "./devices/timer-555": "./src/devices/timer-555.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js"
