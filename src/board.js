@@ -317,8 +317,12 @@ export class BoardImpl {
    * @returns {number}
    */
   branchCurrent(partId, terminal) {
-    const result = this._solveMNA(false);
-    const partCurrents = result.branchCurrents.get(partId);
+    // Cache the MNA result — only re-solve when the state has changed.
+    // The cache is invalidated by setPin, setControl, setPower, setNetlist.
+    if (!this._mnaCache) {
+      this._mnaCache = this._solveMNA(false);
+    }
+    const partCurrents = this._mnaCache.branchCurrents.get(partId);
     if (!partCurrents) return 0;
     const i = partCurrents.get(terminal) ?? 0;
     return Number.isFinite(i) ? i : 0;
@@ -1036,6 +1040,7 @@ export class BoardImpl {
   _solve() {
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
+    this._mnaCache = null; // invalidate MNA cache
 
     if (!this.powered) return;
 
