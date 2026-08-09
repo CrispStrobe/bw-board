@@ -692,6 +692,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       currents.set('b', i);
     }
 
+    // Drawable parts: supply current from VCC to GND
+    if (part.kind === 'char_lcd' || part.kind === 'ir_receiver' ||
+        part.kind === 'temp_sensor' || part.kind === 'eeprom') {
+      const vNet = findNet(nets, part.id, 'vcc');
+      const gNet = findNet(nets, part.id, 'gnd');
+      const vV = vNet ? (nodeVoltages.get(vNet) ?? 0) : 0;
+      const vG = gNet ? (nodeVoltages.get(gNet) ?? 0) : 0;
+      const rSupply = part.kind === 'ir_receiver' ? 1000 : 5000;
+      const iSupply = (vV - vG) / rSupply;
+      currents.set('vcc', -iSupply);
+      currents.set('gnd', iSupply);
+    }
+
     if (part.kind === 'vcc' && vsIndex.has(part.id)) {
       const vsIdx = vsIndex.get(part.id);
       const iVcc = solution[nodeCount + vsIdx];
