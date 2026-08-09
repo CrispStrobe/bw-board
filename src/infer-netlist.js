@@ -25,10 +25,22 @@
  */
 
 /**
+ * A port declaration (whole-port I/O).
+ * @typedef {object} StcPort
+ * @property {string} name
+ * @property {number} port
+ * @property {string} sfr - e.g. "P0"
+ * @property {number} width - typically 8
+ * @property {'output' | 'input'} direction
+ * @property {boolean} activeLow
+ */
+
+/**
  * @typedef {object} StcProject
  * @property {string} [device]
  * @property {number} [clock]
  * @property {StcPin[]} pins
+ * @property {StcPort[]} [ports]
  */
 
 /**
@@ -220,6 +232,79 @@ export function inferNetlist(stc) {
 
       default:
         notes.push(`Unknown direction '${pin.direction}' for pin ${pin.name} (${pinId})`);
+    }
+  }
+
+  // ─── Port declarations (whole-port I/O) ────────────────────────────────
+
+  if (stc.ports) {
+    for (const port of stc.ports) {
+      const safeName = port.name.replace(/[^a-zA-Z0-9_]/g, '_');
+      const width = port.width ?? 8;
+
+      if (port.direction === 'output') {
+        // PORT OUTPUT: each bit gets a load.
+        // Common pattern: 7-segment display or 8-LED bar.
+        // Add 8 LEDs with series resistors, each on one port bit.
+        for (let bit = 0; bit < width; bit++) {
+          const pinId = `P${port.port}.${bit}`;
+          const segName = width === 8 && bit < 7
+            ? ['a', 'b', 'c', 'd', 'e', 'f', 'g'][bit]
+            : bit === 7 ? 'dp' : `b${bit}`;
+          const rId = `R_${safeName}_${segName}`;
+          const ledId = `LED_${safeName}_${segName}`;
+
+          // Add pin to MCU terminals if not already there
+          if (!mcuTerminals.includes(pinId)) mcuTerminals.push(pinId);
+
+          parts.push({
+            id: rId, kind: 'resistor',
+            params: { ohms: 330 }, terminals: ['a', 'b'],
+          });
+          parts.push({
+            id: ledId, kind: 'led',
+            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
+          });
+
+          if (port.activeLow) {
+            // Active-low: VCC → R → LED → pin
+            vccNet.terminals.push({ part: rId, terminal: 'a' });
+            nets.push({
+              id: `net_${safeName}_${segName}_r_led`,
+              terminals: [
+                { part: rId, terminal: 'b' },
+                { part: ledId, terminal: 'anode' },
+              ],
+            });
+            nets.push({
+              id: `net_${safeName}_${segName}_pin`,
+              terminals: [
+                { part: ledId, terminal: 'cathode' },
+                { part: 'MCU', terminal: pinId },
+              ],
+            });
+          } else {
+            // Active-high: pin → R → LED → GND
+            nets.push({
+              id: `net_${safeName}_${segName}_pin_r`,
+              terminals: [
+                { part: 'MCU', terminal: pinId },
+                { part: rId, terminal: 'a' },
+              ],
+            });
+            nets.push({
+              id: `net_${safeName}_${segName}_r_led`,
+              terminals: [
+                { part: rId, terminal: 'b' },
+                { part: ledId, terminal: 'anode' },
+              ],
+            });
+            gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
+          }
+        }
+      } else {
+        notes.push(`Unknown port direction '${port.direction}' for port ${port.name}`);
+      }
     }
   }
 
