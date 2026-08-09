@@ -31,4 +31,5 @@ export { registerSensors } from './devices/sensors.js';
 export { registerHBridge } from './devices/h-bridge.js';
 export { registerMotorDrivers } from './devices/motor-drivers.js';
 export { registerDisplayDevices } from './devices/display.js';
+export { registerDigitalICs } from './devices/digital-ics.js';
 export { R_INPUT_PULLUP } from './pin-model.js';

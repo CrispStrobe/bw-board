@@ -1016,6 +1016,7 @@ export class BoardImpl {
       'h_bridge', 'stepper', 'solenoid',
       'ultrasonic', 'pir', 'tilt_sensor', 'flex_sensor', 'force_sensor', 'phototransistor',
       'neopixel', 'bargraph',
+      'decade_counter', 'dff', 'jkff', 'darlington_driver', 'piezo',
     ];
   }
 

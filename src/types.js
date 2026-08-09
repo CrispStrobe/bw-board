@@ -69,7 +69,8 @@
  *   | 'battery' | 'vreg' | 'fuse'
  *   | 'h_bridge' | 'stepper' | 'solenoid'
  *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor'
- *   | 'neopixel' | 'bargraph'} PartKind
+ *   | 'neopixel' | 'bargraph'
+ *   | 'decade_counter' | 'dff' | 'jkff' | 'darlington_driver' | 'piezo'} PartKind
  */
 
 /**
