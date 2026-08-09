@@ -33,26 +33,16 @@
  * no `emu_dbg_set_bp_write` is exported, so there is no way to reach them. They
  * are reported absent rather than accepted-and-ignored.
  *
- * ## No heap view — why memory is read a byte at a time
+ * ## Memory reads: fast path and slow path
  *
- * Neither emu8051 build exposes `Module.HEAPU8` (checked against both the one
- * vendored in brickwright-lite and the current upstream build; the exported
- * runtime is `ccall cwrap addFunction removeFunction UTF8ToString
- * stringToUTF8` and nothing else). Every WASM entry point that hands JS a
- * POINTER is therefore unreachable — which is `emu_dbg_read_mem`, and the
- * `struct dbg_halt_reason *` the halt callback is given.
+ * `readMem` feature-detects `HEAPU8` and `_emu_dbg_read_mem`. When available
+ * (upstream builds after the HEAPU8 export), a 256-byte read is one WASM call.
+ * When absent (the pinned build in brickwright-lite), it falls back to
+ * value-returning accessors (`emu_get_code/_iram/_sfr/_xdata`), one call per
+ * byte — the same code that was here before, still correct, just slower.
  *
- * So this wrapper uses only value-returning calls: `emu_get_code` /
- * `_iram` / `_sfr` / `_xdata` for reads, which compute exactly what
- * `dbg_read_mem` computes (same switch, same bounds — read them side by side),
- * and it reconstructs the halt reason from the accessors plus what it asked
- * for. The one thing genuinely lost is `bp_id`; it is recovered by matching the
- * halted PC against the breakpoints we set, and reported as absent when that is
- * ambiguous rather than guessed.
- *
- * Exporting HEAPU8 from the WASM build would let both go back to the direct
- * route. Until then this is not a workaround to be tidied away later — it is
- * the only thing that works against what actually ships.
+ * The halt reason struct is still unreachable on builds without HEAPU8, so
+ * `bp_id` is recovered by matching the halted PC against known breakpoints.
  *
  * ## The budget-halt wart, absorbed
  *
@@ -382,6 +372,19 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             if (SPACE[space] === undefined) {
                 return { unsupported: `no such address space: ${space}` };
             }
+
+            // Fast path: if the build exports HEAPU8 and _emu_dbg_read_mem,
+            // read the whole block in one WASM call. Feature-detect: the
+            // vendored build in brickwright-lite may be older and lack these.
+            if (wasm.HEAPU8 && wasm._emu_dbg_read_mem && space !== 'bit') {
+                const ptr = wasm._emu_dbg_read_mem(SPACE[space], addr, len);
+                if (ptr) {
+                    return new Uint8Array(wasm.HEAPU8.buffer, ptr, len).slice();
+                }
+                // fall through to byte-at-a-time if pointer is null
+            }
+
+            // Slow path: one value-returning call per byte (always works)
             const out = new Uint8Array(len);
             for (let i = 0; i < len; i++) out[i] = readByte(space, (addr + i) & 0xFFFF);
             return out;

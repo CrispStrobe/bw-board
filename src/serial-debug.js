@@ -3,8 +3,11 @@
  *
  * Same DebugTarget interface as emu8051-debug.js, different capability row.
  * This one talks to real silicon over a serial link, using the protocol in
- * stc/include/live-proto.h. The codec is NOT reimplemented — this file
- * frames and parses per the C header, which is the single source of truth.
+ * stc/include/live-proto.h. The codec IS a reimplementation in JavaScript
+ * (JS cannot #include C headers), making this the fifth implementation of
+ * the wire format. The constants and framing match live-proto.h by intent;
+ * agreement is verified by testing against the firmware codec running inside
+ * emu8051-stc, not by self-round-trip.
  *
  * Key differences from the emulator target:
  *   steps:       ['block']         — no insn (costs P3.2), no line/over/out
