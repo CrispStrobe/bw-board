@@ -415,7 +415,8 @@ export class BoardImpl {
       intervalNs,
       depth,
       // Ring buffer: interleaved [min0, max0, min1, max1, ...]
-      samples: new Float64Array(depth * 2),
+      // Unwritten regions are NaN, never flat 0 — per boundary-B v2.
+      samples: new Float64Array(depth * 2).fill(NaN),
       writeIndex: 0,     // next write position (in pairs, 0..depth-1)
       count: 0,          // how many pairs have been written total
       startTNs: 0n,      // sim-time of the oldest sample in the buffer

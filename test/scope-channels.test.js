@@ -93,6 +93,21 @@ describe('scope channels: lifecycle', () => {
     assert.equal(data.channelType, 'voltage');
     assert.equal(typeof data.sampleIntervalNs, 'bigint');
   });
+
+  it('unwritten buffer regions are NaN, not 0', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makeSimpleResistor();
+    board.setNetlist(parts, nets);
+
+    const ch = board.addScopeChannel({ type: 'voltage', netId: 'net_pin', depth: 100 });
+    const data = board.getScopeData(ch);
+
+    // Before any advanceTo, all samples should be NaN
+    assert.ok(Number.isNaN(data.samples[0]), 'unwritten min should be NaN');
+    assert.ok(Number.isNaN(data.samples[1]), 'unwritten max should be NaN');
+    assert.ok(Number.isNaN(data.samples[198]), 'last unwritten min should be NaN');
+    assert.ok(Number.isNaN(data.samples[199]), 'last unwritten max should be NaN');
+  });
 });
 
 // ─── Voltage sampling at fixed cadence ──────────────────────────────────
