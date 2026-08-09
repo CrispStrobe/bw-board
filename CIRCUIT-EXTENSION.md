@@ -74,13 +74,12 @@ Why injection:
 
 ## Three constraints (decisions, not details)
 
-1. **Meter reporters MUST sample at display rate (~60 Hz), not per edge.**
+1. **Meter reporters should sample at display rate (~60 Hz), not per edge.**
    Full per-edge path (`advanceTo` + `setPin` + `branchCurrent`) sustains
-   **8.0K edges/sec** against 7.2K PCA edges/sec = **1.1× real time**
-   (measured, commit `c4d8031`). Barely above — any emulator speedup
-   erases the margin. The display-rate cache is effectively **load-bearing**.
-   Cache the last MNA result and return it for 16ms before re-solving.
-   This is what a real multimeter does.
+   **22.3K edges/sec** against 7.2K PCA edges/sec = **3.1× real time**
+   (measured, commit `44fc538`). MNA results are cached; the margin runs
+   out at ~3× emulator speedup. Display-rate sampling is still correct
+   (it's what a real multimeter does) but no longer load-bearing at 1×.
 
 2. **`resistance` teaches by refusing.** When `board.resistance()` returns
    `'requires-power-off'`, the block should report that string, not 0.

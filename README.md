@@ -41,12 +41,12 @@ Measured on a single core (Node 20, Linux), 11-part netlist (2 LEDs, pot, button
 **PCA PWM performance:** 1 second of 8-bit PWM at FOSC/12 simulated in 75ms
 = **13.4× real time**. 7200 edges/sec against 194K capacity = 27× headroom.
 
-**Meter block cliff (measured, commit `c4d8031`):** the full per-edge path
-(`advanceTo` + `setPin` + `branchCurrent`) sustains **8.0K edges/sec** against
-a PCA rate of 7.2K edges/sec = **1.1× real time**. Barely above. At any
-emulator speedup the margin vanishes. Meter blocks MUST sample at display
-rate (~60 Hz), not per edge — the cache is effectively load-bearing.
-This is what a real multimeter does — it integrates and shows one number.
+**Meter block performance (measured, commit `44fc538`):** the full per-edge
+path (`advanceTo` + `setPin` + `branchCurrent`) sustains **22.3K edges/sec**
+against a PCA rate of 7.2K edges/sec = **3.1× real time**. MNA results
+are cached and only re-solved on state change. Meter blocks should still
+sample at display rate (~60 Hz) — a real multimeter integrates and shows
+one number, and the margin runs out at ~3× emulator speedup.
 
 ## Integration path
 
