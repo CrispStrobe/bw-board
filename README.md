@@ -173,7 +173,7 @@ src/
 bench/
   perf.js               — performance benchmark
 test/
-  *.test.js             — 156 tests
+  *.test.js             — ~995 tests
 ```
 
 ## License

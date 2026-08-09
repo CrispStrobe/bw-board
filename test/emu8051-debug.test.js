@@ -75,12 +75,21 @@ describe('debug target: capabilities are what this emulator can really do', () =
         assert.equal(t.state(), 'halted', 'and it did not move');
     });
 
-    it('does NOT claim watchpoints — the C has them, the WASM does not export them', async () => {
+    it('watchpoint capability matches what the WASM actually exports', async () => {
         const t = await target(); if (skip(t)) return;
-        assert.ok(!t.capabilities().breakpoints.includes('write'));
-        const r = t.setBreakpoint({ kind: 'write', space: 'iram', addr: 8, len: 2 });
-        assert.ok(r.unsupported);
-        assert.match(r.unsupported, /sampling/, 'and it says what to do instead');
+        const caps = t.capabilities();
+        // Feature detection: if the WASM exports _emu_dbg_set_bp_write,
+        // the target claims 'write' breakpoints. Otherwise it refuses.
+        if (caps.breakpoints.includes('write')) {
+            // WASM exports watchpoints — setting one should succeed
+            const r = t.setBreakpoint({ kind: 'write', space: 'iram', addr: 8, len: 2 });
+            assert.ok(!r || !r.unsupported, 'write breakpoint accepted when WASM exports it');
+        } else {
+            // WASM lacks the export — target must refuse with a reason
+            const r = t.setBreakpoint({ kind: 'write', space: 'iram', addr: 8, len: 2 });
+            assert.ok(r.unsupported);
+            assert.match(r.unsupported, /sampling/, 'and it says what to do instead');
+        }
     });
 });
 
