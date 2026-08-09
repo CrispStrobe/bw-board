@@ -1099,6 +1099,7 @@ export class BoardImpl {
       // Tier 1 catalogue parts
       'photodiode', 'soil_moisture', 'relay_dpdt', 'solar_cell', 'gearmotor',
       '74hc75', '74hc283', 'header', 'usb_a', 'ir_remote', 'clock_display',
+      'pcf8574', 'char_lcd_i2c',
     ];
   }
 
