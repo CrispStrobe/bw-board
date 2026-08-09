@@ -1096,6 +1096,9 @@ export class BoardImpl {
       'battery_9v', 'battery_aa', 'battery_coin', 'lm7805', 'ld1117v33',
       'gas_sensor', 'ambient_light', 'ir_transmitter',
       '74hc95', 'lm339', 'timer_556',
+      // Tier 1 catalogue parts
+      'photodiode', 'soil_moisture', 'relay_dpdt', 'solar_cell', 'gearmotor',
+      '74hc75', '74hc283', 'header', 'usb_a', 'ir_remote', 'clock_display',
     ];
   }
 
