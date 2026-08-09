@@ -62,7 +62,7 @@
  *   | 'npn' | 'pnp' | 'ldr' | 'ntc' | 'inductor' | 'zener'
  *   | 'seven_segment' | 'rgb_led'
  *   | 'nmos' | 'pmos' | 'opamp' | 'vsource' | 'isource'
- *   | 'shift_register' | 'char_lcd' | 'led_matrix'
+ *   | 'shift_register' | 'char_lcd' | 'led_matrix' | 'led_cube'
  *   | 'ir_receiver' | 'temp_sensor' | 'eeprom'} PartKind
  */
 

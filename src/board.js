@@ -129,6 +129,13 @@ export class BoardImpl {
      * @type {Map<string, number>}
      */
     this.capVoltages = new Map();
+
+    /**
+     * LED cube state: part id → { selectPins, dataPins, polarity, voxelHistory }.
+     * Each voxel accumulates lit-time over the brightness window.
+     * @type {Map<string, object>}
+     */
+    this._cubes = new Map();
   }
 
   // ─── Boundary B: setNetlist ──────────────────────────────────────────────
@@ -173,8 +180,19 @@ export class BoardImpl {
       }
       if (p.kind === 'inductor') {
         if (!this.inductorCurrents.has(p.id)) {
-          this.inductorCurrents.set(p.id, 0); // start with zero current
+          this.inductorCurrents.set(p.id, 0);
         }
+      }
+      if (p.kind === 'led_cube') {
+        const layers = /** @type {number} */ (p.params.layers ?? 4);
+        const cols = /** @type {number} */ (p.params.cols ?? 16);
+        const polarity = /** @type {string} */ (p.params.polarity ?? 'active-high');
+        const voxels = layers * cols;
+        // History: array of {tNs, litMask} where litMask is a BigInt bitmask
+        this._cubes.set(p.id, {
+          layers, cols, polarity,
+          history: [{ tNs: 0n, litMask: 0n }],
+        });
       }
     }
 
@@ -199,6 +217,11 @@ export class BoardImpl {
     // Record buzzer edges on state change
     if (prev && prev.driveHigh !== driveHigh) {
       this._recordBuzzerEdges(pin);
+    }
+
+    // Update LED cube voxel state
+    for (const [cubeId] of this._cubes) {
+      this._updateCube(cubeId);
     }
 
     this._notifyChange('pin', { pin, mode, driveHigh });
@@ -461,6 +484,129 @@ export class BoardImpl {
     };
   }
 
+  /**
+   * LED cube voxel brightness: POV-integrated over ~20ms.
+   *
+   * A voxel is lit when its layer select is active AND its column data
+   * bit is active. Polarity is a parameter: 'active-high' (default)
+   * means a pin HIGH lights the voxel; 'active-low' means pin LOW does.
+   *
+   * Returns a flat array of brightness values [0..1] for all voxels,
+   * in layer-major order: [layer0_col0, layer0_col1, ..., layer3_col15].
+   *
+   * @param {string} partId
+   * @returns {number[]}
+   */
+  cubeBrightness(partId) {
+    const cube = this._cubes.get(partId);
+    if (!cube) return [];
+
+    const { layers, cols, history } = cube;
+    const total = layers * cols;
+    const result = new Array(total).fill(0);
+
+    const now = this.timeNs;
+    const windowStart = now > BRIGHTNESS_WINDOW_NS ? now - BRIGHTNESS_WINDOW_NS : 0n;
+    const windowNs = now - windowStart;
+    if (windowNs <= 0n) return result;
+
+    // Find initial state before window
+    let initialMask = 0n;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].tNs <= windowStart) {
+        initialMask = history[i].litMask;
+        break;
+      }
+    }
+
+    // Build step function over the window
+    /** @type {Array<{tNs: bigint, mask: bigint}>} */
+    const steps = [{ tNs: windowStart, mask: initialMask }];
+    for (const s of history) {
+      if (s.tNs > windowStart && s.tNs <= now) {
+        steps.push({ tNs: s.tNs, mask: s.litMask });
+      }
+    }
+
+    // Integrate each voxel's lit time
+    for (let i = 0; i < steps.length; i++) {
+      const nextT = i + 1 < steps.length ? steps[i + 1].tNs : now;
+      const dt = Number(nextT - steps[i].tNs);
+      const mask = steps[i].mask;
+
+      for (let v = 0; v < total; v++) {
+        if ((mask >> BigInt(v)) & 1n) {
+          result[v] += dt;
+        }
+      }
+    }
+
+    // Normalize to 0..1
+    const windowF = Number(windowNs);
+    for (let v = 0; v < total; v++) {
+      result[v] = Math.min(1, result[v] / windowF);
+    }
+
+    return result;
+  }
+
+  /**
+   * Update cube voxel state from current pin states.
+   * Called from advanceTo after pin state changes.
+   * @param {string} partId
+   */
+  _updateCube(partId) {
+    const cube = this._cubes.get(partId);
+    if (!cube) return;
+
+    const part = this.partMap.get(partId);
+    if (!part) return;
+
+    const { layers, cols, polarity, history } = cube;
+    const activeHigh = polarity !== 'active-low';
+
+    // Read select and data pin states from the part's params
+    const selectPins = /** @type {string[]} */ (part.params.selectPins ?? []);
+    const dataPins = /** @type {string[]} */ (part.params.dataPins ?? []);
+
+    let litMask = 0n;
+
+    for (let layer = 0; layer < layers && layer < selectPins.length; layer++) {
+      const selState = this.pinStates.get(selectPins[layer]);
+      if (!selState) continue;
+
+      const selActive = activeHigh ? selState.driveHigh : !selState.driveHigh;
+      if (!selActive) continue;
+
+      for (let col = 0; col < cols && col < dataPins.length; col++) {
+        const dataState = this.pinStates.get(dataPins[col]);
+        if (!dataState) continue;
+
+        const dataActive = activeHigh ? dataState.driveHigh : !dataState.driveHigh;
+        if (dataActive) {
+          litMask |= 1n << BigInt(layer * cols + col);
+        }
+      }
+    }
+
+    // Record only if changed
+    const last = history.length > 0 ? history[history.length - 1] : null;
+    if (!last || last.litMask !== litMask) {
+      history.push({ tNs: this.timeNs, litMask });
+
+      // Prune when large
+      if (history.length > 200) {
+        const windowStart = this.timeNs > BRIGHTNESS_WINDOW_NS
+          ? this.timeNs - BRIGHTNESS_WINDOW_NS : 0n;
+        let keepIdx = -1;
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].tNs <= windowStart) { keepIdx = i; break; }
+        }
+        if (keepIdx > 0) history.splice(0, keepIdx);
+      }
+    }
+  }
+
   // ─── Boundary B: user interaction ────────────────────────────────────────
 
   /**
@@ -621,7 +767,7 @@ export class BoardImpl {
       'button', 'switch', 'buzzer', 'ldr', 'ntc',
       'npn', 'pnp', 'nmos', 'pmos', 'opamp',
       'vsource', 'isource', 'seven_segment', 'rgb_led',
-      'shift_register', 'char_lcd', 'led_matrix',
+      'shift_register', 'char_lcd', 'led_matrix', 'led_cube',
       'ir_receiver', 'temp_sensor', 'eeprom', 'mcu',
     ];
   }

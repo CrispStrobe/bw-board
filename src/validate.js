@@ -41,6 +41,7 @@ const KNOWN_TERMINALS = {
   shift_register: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'],
   char_lcd: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'],
   led_matrix: null, // composite — variable size
+  led_cube: null, // composite — select + data pins are params, not fixed terminals
   ir_receiver: ['vcc', 'gnd', 'out'],
   temp_sensor: ['vcc', 'gnd', 'dq'],
   eeprom: ['sda', 'scl', 'vcc', 'gnd'],
