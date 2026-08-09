@@ -65,7 +65,11 @@
  *   | 'shift_register' | 'char_lcd' | 'led_matrix' | 'led_cube'
  *   | 'ir_receiver' | 'temp_sensor' | 'eeprom'
  *   | 'gate_and' | 'gate_or' | 'gate_not' | 'gate_nand' | 'gate_nor' | 'gate_xor'
- *   | 'relay' | 'dc_motor' | 'servo' | 'timer_555'} PartKind
+ *   | 'relay' | 'dc_motor' | 'servo' | 'timer_555'
+ *   | 'battery' | 'vreg' | 'fuse'
+ *   | 'h_bridge' | 'stepper' | 'solenoid'
+ *   | 'ultrasonic' | 'pir' | 'tilt_sensor' | 'flex_sensor' | 'force_sensor' | 'phototransistor'
+ *   | 'neopixel' | 'bargraph'} PartKind
  */
 
 /**
