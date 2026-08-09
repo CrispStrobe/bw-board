@@ -32,6 +32,15 @@ const LED_RD = 10;         // dynamic resistance above threshold
 const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
 
 /**
+ * Part kinds the closed-form walker cannot represent. Their presence routes
+ * _solve() through the full MNA path — the walker would otherwise report
+ * voltages as if these parts were absent.
+ */
+const MNA_ONLY_KINDS = new Set([
+  'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'zener', 'diode', 'vsource', 'isource',
+]);
+
+/**
  * Brightness integrator window.
  */
 const BRIGHTNESS_WINDOW_NS = 20_000_000n; // 20 ms
@@ -241,8 +250,15 @@ export class BoardImpl {
     // Integrate reactive components
     if (tNs > prevNs && this.powered) {
       const dtSec = Number(tNs - prevNs) / 1e9;
-      this._integrateCapacitors(dtSec);
-      this._integrateInductors(dtSec);
+      if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
+        // Semiconductors + reactive parts (or a running waveform source):
+        // the closed-form integrators cannot see either, so sub-step the
+        // transient MNA solve across the interval.
+        this._integrateTransientMNA(dtSec);
+      } else {
+        this._integrateCapacitors(dtSec);
+        this._integrateInductors(dtSec);
+      }
     }
 
     // Record LED current samples at this timestamp
@@ -1078,19 +1094,117 @@ export class BoardImpl {
    * @param {number} [testCurrent] - test current magnitude
    */
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
-    // Build pin source map from current pin states
+    return solveMNA(this.parts, this.nets, this._pinSources(), this.controls, this.vcc, {
+      powerOff,
+      testNodeA,
+      testNodeB,
+      testCurrent,
+      // Instruments must see the circuit as it IS: a half-charged capacitor
+      // pins its nets at its stored voltage, and a waveform source is at its
+      // value for the current simulation time.
+      capVoltages: this.capVoltages,
+      tSeconds: Number(this.timeNs) / 1e9,
+    });
+  }
+
+  /** Build the pin source map from current pin states. */
+  _pinSources() {
     /** @type {Map<string, import('./types.js').TheveninSource>} */
     const pinSources = new Map();
     for (const [pinId, state] of this.pinStates) {
       pinSources.set(pinId, pinThevenin(state.mode, state.driveHigh, this.vcc));
     }
+    return pinSources;
+  }
 
-    return solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
-      powerOff,
-      testNodeA,
-      testNodeB,
-      testCurrent,
-    });
+  /**
+   * Does this netlist contain parts the closed-form walker cannot represent?
+   * If so, node voltages must come from the full MNA solve — the walker would
+   * silently report voltages as if those parts were absent, which is the
+   * "plausible, wrong" answer this project's doctrine forbids.
+   */
+  _needsMNA() {
+    for (const p of this.parts) {
+      if (MNA_ONLY_KINDS.has(p.kind)) return true;
+    }
+    return false;
+  }
+
+  /** Any capacitor or inductor present? */
+  _hasReactive() {
+    for (const p of this.parts) {
+      if (p.kind === 'capacitor' || p.kind === 'inductor') return true;
+    }
+    return false;
+  }
+
+  /** Any source whose value moves with time? */
+  _hasTimeVaryingSource() {
+    for (const p of this.parts) {
+      if (p.kind === 'vsource' && p.params && p.params.wave && p.params.wave !== 'dc') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Full-MNA instantaneous solve: node voltages, LED currents and the
+   * instrument cache all come from one solution.
+   */
+  _solveViaMNA() {
+    const res = this._solveMNA(false);
+    this.nodeVoltages = new Map(res.nodeVoltages);
+    for (const part of this.parts) {
+      if (part.kind !== 'led') continue;
+      const c = res.branchCurrents.get(part.id);
+      this.ledCurrents.set(part.id, Math.max(0, c ? (c.get('anode') ?? 0) : 0));
+    }
+    this._mnaCache = res;
+  }
+
+  /**
+   * Transient integration through MNA: sub-step backward Euler across dtSec,
+   * carrying capacitor voltages and inductor currents forward. Used when
+   * MNA-only parts coexist with reactive parts, or a waveform source runs —
+   * the closed-form RC/RL integrators cannot see either.
+   *
+   * @param {number} dtSec
+   */
+  _integrateTransientMNA(dtSec) {
+    const tEnd = Number(this.timeNs) / 1e9;
+    const t0 = tEnd - dtSec;
+    // Sub-step: 100 µs of simulated time, capped at 200 steps per call so a
+    // long idle advance cannot stall the caller. Adaptive control can replace
+    // this; the cap is a stated accuracy limit, not a hidden one.
+    const SUB = 1e-4;
+    let n = Math.max(1, Math.ceil(dtSec / SUB));
+    if (n > 200) n = 200;
+    const h = dtSec / n;
+
+    const pinSources = this._pinSources();
+    let cv = this.capVoltages;
+    let il = this.inductorCurrents;
+    let res = null;
+    for (let i = 1; i <= n; i++) {
+      res = solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
+        tSeconds: t0 + i * h,
+        transient: { dtSec: h, capVoltages: cv, inductorCurrents: il },
+      });
+      cv = res.capVoltagesNext ?? cv;
+      il = res.inductorCurrentsNext ?? il;
+    }
+    this.capVoltages = new Map(cv);
+    this.inductorCurrents = new Map(il);
+    if (res) {
+      this.nodeVoltages = new Map(res.nodeVoltages);
+      for (const part of this.parts) {
+        if (part.kind !== 'led') continue;
+        const c = res.branchCurrents.get(part.id);
+        this.ledCurrents.set(part.id, Math.max(0, c ? (c.get('anode') ?? 0) : 0));
+      }
+      this._mnaCache = res;
+    }
   }
 
   // ─── Internal: capacitor RC integration ───────────────────────────────────
@@ -1196,6 +1310,13 @@ export class BoardImpl {
     this._mnaCache = null; // invalidate MNA cache
 
     if (!this.powered) return;
+
+    // Parts beyond the walker's vocabulary? One full MNA solve answers
+    // everything coherently (and primes the instrument cache for free).
+    if (this._needsMNA()) {
+      this._solveViaMNA();
+      return;
+    }
 
     // Set known voltages: VCC and GND nets
     for (const net of this.nets) {
