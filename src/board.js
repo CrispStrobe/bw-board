@@ -144,6 +144,12 @@ export class BoardImpl {
     this._nextScopeHandle = 1;
 
     /**
+     * 74HC595 shift register states: part id → FSM state.
+     * @type {Map<string, {shiftReg: number, latchReg: number, lastClock: boolean, lastLatch: boolean}>}
+     */
+    this._shiftRegisters = new Map();
+
+    /**
      * Capacitor voltages: part id → current voltage across the cap.
      * @type {Map<string, number>}
      */
@@ -207,6 +213,14 @@ export class BoardImpl {
         if (!this.inductorCurrents.has(p.id)) {
           this.inductorCurrents.set(p.id, 0);
         }
+      }
+      if (p.kind === 'shift_register') {
+        this._shiftRegisters.set(p.id, {
+          shiftReg: 0,    // 8-bit shift register
+          latchReg: 0,    // 8-bit output latch
+          lastClock: false,
+          lastLatch: false,
+        });
       }
       if (p.kind === 'led_cube') {
         // Default: 8 scan lines × 8 data bits.
@@ -1372,10 +1386,69 @@ export class BoardImpl {
     this._mnaCache = res;
   }
 
+  /**
+   * Update 74HC595 shift register FSMs. Returns true if any output changed.
+   * Called from the settle loop alongside _updateDevices.
+   */
+  _updateShiftRegisters() {
+    if (this._shiftRegisters.size === 0) return false;
+    let changed = false;
+    const VCC = this.vcc;
+    const VIH = 0.7 * VCC;
+    const VIL = 0.3 * VCC;
+
+    for (const part of this.parts) {
+      if (part.kind !== 'shift_register') continue;
+      const sr = this._shiftRegisters.get(part.id);
+      if (!sr) continue;
+
+      const readV = (terminal) => {
+        const n = this._netForTerminal(part.id, terminal);
+        return n ? (this.nodeVoltages.get(n) ?? 0) : 0;
+      };
+
+      const dataV = readV('data');
+      const clockV = readV('clock');
+      const latchV = readV('latch');
+      const oeV = readV('oe');
+
+      const clockHigh = clockV > VIH;
+      const latchHigh = latchV > VIH;
+      const dataBit = dataV > VIH ? 1 : 0;
+      const oeActive = oeV < VIL; // active LOW
+
+      // Rising edge on clock: shift in data bit
+      if (clockHigh && !sr.lastClock) {
+        sr.shiftReg = ((sr.shiftReg << 1) | dataBit) & 0xFF;
+      }
+      sr.lastClock = clockHigh;
+
+      // Rising edge on latch: copy shift to output
+      if (latchHigh && !sr.lastLatch) {
+        if (sr.latchReg !== sr.shiftReg) {
+          sr.latchReg = sr.shiftReg;
+          changed = true;
+        }
+      }
+      sr.lastLatch = latchHigh;
+
+      // Update output drives based on OE and latch contents
+      // (This is read by the MNA via the closed-form or MNA solver)
+      // We store the drive state for the solver to pick up
+      sr.oeActive = oeActive;
+    }
+    return changed;
+  }
+
   /** One update pass over all registered devices. True if any changed. */
   _updateDevices() {
-    if (this._deviceStates.size === 0) return false;
     let changed = false;
+    // Built-in shift registers
+    if (this._shiftRegisters.size > 0) {
+      if (this._updateShiftRegisters()) changed = true;
+    }
+    // Registry devices
+    if (this._deviceStates.size === 0) return changed;
     for (const part of this.parts) {
       const model = getDevice(part.kind);
       if (!model || !model.update) continue;
@@ -1601,6 +1674,27 @@ export class BoardImpl {
         this.nodeVoltages.set(netA, vB + capV);
       }
     }
+
+    // Settle built-in shift registers (clock edge → latch → output change → re-solve).
+    if (this._shiftRegisters.size > 0) {
+      for (let round = 0; round < 3; round++) {
+        if (!this._updateShiftRegisters()) break;
+        // Re-resolve affected output nets
+        for (const part of this.parts) {
+          if (part.kind !== 'shift_register') continue;
+          for (let i = 0; i < 8; i++) {
+            const netId = this._netForTerminal(part.id, `q${i}`);
+            if (netId && !this.nodeVoltages.has(netId)) continue;
+            if (netId) {
+              // Clear and re-resolve this net
+              this.nodeVoltages.delete(netId);
+              const net = this.netMap.get(netId);
+              if (net) this._resolveNet(net);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1689,6 +1783,21 @@ export class BoardImpl {
           if (thev !== 'high-z') {
             out.push({ vTh: thev.vTh, rTh: rAccum + thev.rTh });
           }
+          break;
+        }
+        case 'shift_register': {
+          // Output terminals q0-q7 are Thévenin drivers from the latch register
+          const sr = this._shiftRegisters.get(part.id);
+          if (sr && t.terminal.startsWith('q')) {
+            const bitIdx = parseInt(t.terminal.slice(1), 10);
+            if (!isNaN(bitIdx) && sr.oeActive !== false) {
+              const bitVal = (sr.latchReg >> bitIdx) & 1;
+              const rOut = /** @type {number} */ (part.params?.rOut ?? 50);
+              out.push({ vTh: bitVal ? this.vcc : 0, rTh: rAccum + rOut });
+            }
+            // If OE inactive: high-Z, don't push any source
+          }
+          // Input terminals (data, clock, latch, oe): high impedance, ignore
           break;
         }
         case 'resistor': {
