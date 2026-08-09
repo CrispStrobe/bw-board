@@ -150,7 +150,7 @@ describe('serial target: refusals', () => {
     const target = createSerialDebugTarget(t);
     await target.connect();
 
-    const result = await target.writeMemory('sfr', 0x98, [0x50]);
+    const result = await target.writeMem('sfr', 0x98, [0x50]);
     assert.ok(result.refused, 'SCON write refused');
     assert.ok(result.refused.includes('UART'), `reason mentions UART: ${result.refused}`);
   });
@@ -160,7 +160,7 @@ describe('serial target: refusals', () => {
     const target = createSerialDebugTarget(t);
     await target.connect();
 
-    const result = await target.writeMemory('sfr', 0x99, [0x41]);
+    const result = await target.writeMem('sfr', 0x99, [0x41]);
     assert.ok(result.refused);
   });
 
@@ -169,7 +169,7 @@ describe('serial target: refusals', () => {
     const target = createSerialDebugTarget(t);
     await target.connect();
 
-    const result = await target.writeMemory('sfr', 0x9C, [0x00]);
+    const result = await target.writeMem('sfr', 0x9C, [0x00]);
     assert.ok(result.refused);
   });
 
@@ -179,7 +179,7 @@ describe('serial target: refusals', () => {
     await target.connect();
 
     // Writing P1 (0x90) should be allowed (auto-reply handles the response)
-    const result = await target.writeMemory('sfr', 0x90, [0xFF]);
+    const result = await target.writeMem('sfr', 0x90, [0xFF]);
     assert.equal(result, undefined, 'P1 write allowed');
   });
 });

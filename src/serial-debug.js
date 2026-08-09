@@ -293,7 +293,10 @@ export function createSerialDebugTarget(transport, opts = {}) {
       return { stepped: true };
     },
 
-    async setBreakpoint(kind, task, stateVal) {
+    async setBreakpoint(bp) {
+      const kind = bp?.kind ?? bp;
+      const task = bp?.task ?? 0;
+      const stateVal = bp?.state ?? 0;
       if (kind !== 'yield') {
         return { unsupported: `breakpoint kind '${kind}' not available` };
       }
@@ -307,7 +310,7 @@ export function createSerialDebugTarget(transport, opts = {}) {
       await sendCommand(CMD.BPCLR, [handle]);
     },
 
-    async readMemory(space, addr, len) {
+    async readMem(space, addr, len) {
       const spaceId = SPACE[space] ?? 0;
       const data = await sendCommand(CMD.READ, [
         spaceId, (addr >> 8) & 0xFF, addr & 0xFF, len,
@@ -315,7 +318,7 @@ export function createSerialDebugTarget(transport, opts = {}) {
       return data;
     },
 
-    async writeMemory(space, addr, bytes) {
+    async writeMem(space, addr, bytes) {
       const spaceId = SPACE[space] ?? 0;
 
       // Refuse writes to protected SFRs
