@@ -594,6 +594,11 @@ export class BoardImpl {
       opamp: ['inp', 'inn', 'out'],
       vsource: ['pos', 'neg'],
       isource: ['pos', 'neg'],
+      ir_receiver: ['vcc', 'gnd', 'out'],
+      temp_sensor: ['vcc', 'gnd', 'dq'],
+      eeprom: ['sda', 'scl', 'vcc', 'gnd'],
+      shift_register: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'],
+      char_lcd: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'],
     };
     return map[kind] ?? null;
   }
@@ -608,7 +613,9 @@ export class BoardImpl {
       'diode', 'led', 'zener', 'potentiometer',
       'button', 'switch', 'buzzer', 'ldr', 'ntc',
       'npn', 'pnp', 'nmos', 'pmos', 'opamp',
-      'vsource', 'isource', 'seven_segment', 'rgb_led', 'mcu',
+      'vsource', 'isource', 'seven_segment', 'rgb_led',
+      'shift_register', 'char_lcd', 'led_matrix',
+      'ir_receiver', 'temp_sensor', 'eeprom', 'mcu',
     ];
   }
 
