@@ -71,10 +71,21 @@ describe('module exports', () => {
   it('assertValidNetlist is a function', () => {
     assert.equal(typeof mod.assertValidNetlist, 'function');
   });
+
+  it('createEmu8051DebugTarget is a function', () => {
+    assert.equal(typeof mod.createEmu8051DebugTarget, 'function');
+  });
+
+  it('createDebugSession is a function', () => {
+    assert.equal(typeof mod.createDebugSession, 'function');
+  });
 });
 
 describe('BoardImpl method surface', () => {
-  const board = new BoardImpl(5.0);
+  // `mod.` — a bare BoardImpl here threw at suite-BUILD time, which node:test
+  // reports separately from the failure count, so the whole block was quietly
+  // not running while the run still said "0 fail".
+  const board = new mod.BoardImpl(5.0);
 
   const expectedMethods = [
     // Boundary A

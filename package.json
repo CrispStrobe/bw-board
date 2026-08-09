@@ -9,6 +9,8 @@
     "./types": "./src/types.js",
     "./conformance": "./src/conformance.js",
     "./emu8051-adapter": "./src/emu8051-adapter.js",
+    "./emu8051-debug": "./src/emu8051-debug.js",
+    "./debug-session": "./src/debug-session.js",
     "./validate": "./src/validate.js",
     "./builder": "./src/builder.js"
   },

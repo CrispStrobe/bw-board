@@ -14,5 +14,7 @@ export { inferNetlist, checkWiring } from './infer-netlist.js';
 export { runTrace } from './scripted-mcu.js';
 export { runConformance, formatReport } from './conformance.js';
 export { createEmu8051Adapter, formatPollingLossReport } from './emu8051-adapter.js';
+export { createEmu8051DebugTarget } from './emu8051-debug.js';
+export { createDebugSession } from './debug-session.js';
 export { validateNetlist, assertValidNetlist } from './validate.js';
 export { NetlistBuilder } from './builder.js';
