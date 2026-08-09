@@ -93,6 +93,12 @@ src/devices/relay.js
 src/devices/dc-motor.js
 src/devices/servo.js
 src/devices/timer-555.js
+src/devices/power.js
+src/devices/sensors.js
+src/devices/h-bridge.js
+src/devices/motor-drivers.js
+src/devices/display.js
+src/devices/digital-ics.js
 ```
 
 `src/index.js` is the single entry point. All imports are relative within `src/`.
@@ -174,19 +180,25 @@ src/
   validate.js           — netlist validation (catch misuse before solve)
   infer-netlist.js      — boundary C: infer netlist from project.stc.pins
   devices.js            — device model registry (extension point)
-  devices/              — registered device models:
+  devices/              — registered device models (60 part kinds total):
     logic-gates.js      — AND/OR/NOT/NAND/NOR/XOR (74HC-flavored)
     relay.js            — SPDT relay with coil hysteresis
     dc-motor.js         — back-EMF + winding R, speed integration
     servo.js            — PWM pulse-width decoder, angle slew
     timer-555.js        — behavioral 555 (comparators + FF + discharge)
+    power.js            — battery, voltage regulator, fuse
+    sensors.js          — ultrasonic, PIR, tilt, flex, force, phototransistor
+    h-bridge.js         — L293D-style dual half-bridge motor driver
+    motor-drivers.js    — stepper motor, solenoid
+    display.js          — neopixel (WS2812B), bargraph
+    digital-ics.js      — decade counter, D/JK flip-flops, Darlington, piezo
   scripted-mcu.js       — test harness: timestamped pin events
   conformance.js        — boundary-A conformance kit
   emu8051-adapter.js    — adapter for the emu8051-stc WASM emulator
 bench/
   perf.js               — performance benchmark
 test/
-  *.test.js             — ~1131 tests
+  *.test.js             — ~1138 tests
 ```
 
 ## License
