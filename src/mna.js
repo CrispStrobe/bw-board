@@ -422,7 +422,60 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
           break;
 
-        // gnd, capacitor, inductor, seven_segment, rgb_led: handled elsewhere or composite
+        // ─── Drawable parts: minimal electrical models ─────────────
+        // These are not full simulations — they provide input impedance
+        // and supply current so the net they sit on is loaded correctly.
+        // Without this, the simulator reports voltages as if the part
+        // were absent, which is worse than not drawing it.
+
+        case 'char_lcd': {
+          // HD44780: ~1mA supply current, data pins are high-Z inputs.
+          // Model: VCC-GND current draw as a resistor (~5kΩ at 5V = 1mA).
+          const vccNet = findNet(nets, part.id, 'vcc');
+          const gndNet = findNet(nets, part.id, 'gnd');
+          stampTwoTerminal(A, vccNet, gndNet, 1 / 5000, nodeIndex); // ~1mA at 5V
+          break;
+        }
+
+        case 'shift_register': {
+          // 74HC595: ~80µA supply + data/clock/latch are CMOS inputs (~10MΩ).
+          // Outputs are push-pull but modeled separately as LEDs.
+          const dataNet = findNet(nets, part.id, 'data');
+          const clockNet = findNet(nets, part.id, 'clock');
+          const latchNet = findNet(nets, part.id, 'latch');
+          // CMOS input: very high impedance to GND (doesn't load the pin)
+          if (dataNet) stampTwoTerminal(A, dataNet, undefined, 1e-7, nodeIndex);
+          if (clockNet) stampTwoTerminal(A, clockNet, undefined, 1e-7, nodeIndex);
+          if (latchNet) stampTwoTerminal(A, latchNet, undefined, 1e-7, nodeIndex);
+          break;
+        }
+
+        case 'ir_receiver': {
+          // IR receiver module: ~5mA supply, output is open-collector with pull-up.
+          const vNet = findNet(nets, part.id, 'vcc');
+          const gNet = findNet(nets, part.id, 'gnd');
+          stampTwoTerminal(A, vNet, gNet, 1 / 1000, nodeIndex); // ~5mA at 5V
+          break;
+        }
+
+        case 'temp_sensor': {
+          // DS18B20: ~1mA supply, DQ is open-drain (needs external pull-up).
+          const vNet = findNet(nets, part.id, 'vcc');
+          const gNet = findNet(nets, part.id, 'gnd');
+          stampTwoTerminal(A, vNet, gNet, 1 / 5000, nodeIndex); // ~1mA at 5V
+          break;
+        }
+
+        case 'eeprom': {
+          // I2C EEPROM: ~1mA supply, SDA/SCL are open-drain (high-Z input).
+          const vNet = findNet(nets, part.id, 'vcc');
+          const gNet = findNet(nets, part.id, 'gnd');
+          stampTwoTerminal(A, vNet, gNet, 1 / 5000, nodeIndex);
+          break;
+        }
+
+        // gnd, capacitor, inductor, seven_segment, rgb_led, led_matrix:
+        // handled elsewhere or composite
       }
     }
 

@@ -785,6 +785,11 @@ export class BoardImpl {
       }
     }
 
+    // Note: drawable-only parts have minimal electrical models (supply
+    // current + input impedance) but no functional simulation. The part
+    // loads the net correctly but its behavior is not modeled.
+    // This is stated honestly rather than hidden.
+
     return warnings;
   }
 
