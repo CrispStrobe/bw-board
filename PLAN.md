@@ -2,62 +2,54 @@
 
 ## Status
 
-**Shipped.** Vendored into brickwright-lite as 44KB lazy chunk. 850+ tests, 31 part kinds, 11 source files, 0 dependencies.
+**Complete for the circuit-parity campaign.** 98 part kinds, 1159 tests, 0 dependencies.
+Vendored into brickwright-lite. All items from the target inventory implemented except
+power supply CC mode (blocked on mna.js, spec filed).
 
 ## What is done
 
-- **Core engine**: closed-form solver + MNA with Newton-Raphson. 70 ngspice oracles + 55 Python oracles verified.
-- **Conformance**: 10/10 against real emu8051-stc WASM. LED brightness = 0.1449 through 3 independent paths.
-- **Components**: 31 part kinds including MOSFET, op-amp, V/I sources, LDR, NTC, zener, inductor, LED cube, shift register, char LCD, IR receiver, temp sensor, EEPROM. Drawable parts have electrical models (supply current + input impedance), not just symbols.
-- **inferNetlist**: 7+ rows — output, analog, input, tone, pwm, PORT, PART (74HC595). Handles `direction: "pwm"` and `direction: "tone"`. Ports array and parts array in pins.json.
-- **Validation**: `setNetlist` throws on malformed input. NetlistBuilder prevents misuse at wire() time.
-- **Performance**: advanceTo 233K/s steady (68× optimization in `_recordLedSamples`). MNA cache for branchCurrent. PWM at PCA rate: 13.4× real time without meter.
-- **Meter cliff**: 8.0K edges/sec full per-edge path = 1.1× real time. Display-rate sampling is load-bearing. MNA cache helps the recommended pattern (multiple reads share one solve), not the cliff.
-- **LED cube**: 8 scan lines × 8 data bits, 12.5% duty per voxel. Polarity is a parameter. Golden trace in `test/golden/cube-trace.js` for cross-checking with bw-circuit-ui.
-- **Circuit extension design**: `CIRCUIT-EXTENSION.md`. 7 blocks, injection pattern, display-rate sampling, refusal idiom.
-- **Halt behavior**: no pause() needed, RC integrator exact for any dt, setControl live while halted.
-- **Buzzer**: staleness detection (>100ms → off), direction "tone" → buzzer part.
+- **Core engine**: closed-form solver + MNA with Newton-Raphson. 70 ngspice oracles +
+  55 Python oracles + RC/555 cross-validation (within 3-5% of analytic).
+- **98 part kinds** across 12 device modules:
+  - Built-in (31): passives, semiconductors, MCU, displays
+  - Logic ICs (20): full 74HC family via chip-composer + CD4017/CD4511
+  - Sensors (8): ultrasonic, PIR, tilt, flex, force, gas, ambient light, phototransistor
+  - Power (8): batteries (9V/AA/coin), LM7805, LD1117V33, vreg, fuse
+  - Actuators (7): DC motor (+encoder), servo, stepper, solenoid, vibration, relay
+  - Analog ICs (5): 555, 556, LM393, LM339, TIP120
+  - Other (19): H-bridge, gates, FFs, Darlington, optocoupler, light bulb, etc.
+- **Scope channels**: fixed sim-time cadence, (min,max) decimation, NaN for unwritten,
+  current channels at display rate. Adopted into boundary-B v2.
+- **Device state readout**: `getDeviceState(partId)` for bw-cfront assertions.
+- **74HC595 FSM**: shift/latch/OE, tested with 0xA5 oracle.
+- **advanceTo runs device updates**: timed transitions (relay, motor, echo) fire correctly.
+- **Non-convergence reporting**: `getWarnings()` surfaces MNA divergence as danger.
+- **input-pullup PinMode**: 35kΩ, adopted into boundary A.
+- **Serial debug target**: UART baud-not-modelled stated in capability matrix.
+- **Engineering bar** (3/4 classes): property/fuzz, determinism, perf budgets.
+- **Conformance**: 10/10 against real emu8051-stc WASM.
+- **Performance**: advanceTo 233K/s, setPin 184K/s, branchCurrent cached 7.6M/s.
+  Meter cliff: 8.0K edges/sec = 1.1× real time. Display-rate sampling is load-bearing.
 
-## What is next
+## What is blocked
 
-1. **Golden cube trace cross-check**: sent to bw-circuit-ui. They should replay `cube-trace.js` through their accumulator and assert same 64 values. If 25% → 2× error. If 12.5% → pin it. Already sent via screen message.
-2. **Cube voxel map**: stays a parameter with a provisional default until probe.c is run on real hardware.
-
-## Key measurements (with commits)
-
-| Metric | Value | Commit |
-|--------|-------|--------|
-| Per-edge cliff (advanceTo+setPin+branchCurrent) | 8.0K edges/sec, 1.1× | `c4d8031` |
-| advanceTo steady state | 233K/s | `d99d264` |
-| PWM loop (no meter) | 13.4× real time | `d99d264` |
-| MNA cache: branchCurrent cached reads | 7.6M/s | `44fc538` |
-| cubeBrightness 64 voxels | 817 fps | `90d44d2` |
-| Cube scan 8 lines | 2.3K changes/s | `90d44d2` |
+See `BLOCKED.md`:
+- vsource current-limit (mna.js, coordinator)
+- Headless live E2E (Playwright, memory constraint)
 
 ## What is NOT ours
 
-- **Rung 8** (on-chip monitor vs both emulators on same image) belongs to **ucsim-stc** —
-  they own the ladder and the harness (`run_control_diff.sh`). emu8051-stc already drove
-  our codec through their bridge (`test_monitor_bwboard.mjs`, 24 assertions, `635ef43`).
-  Our `rung8-serial-reads.test.js` is a fixture for the interchangeability suite, not a
-  competing rung implementation.
-- **The codec round-trip is already proven** — five implementations (C firmware, Python
-  monitor, C test, stc12live.js, serial-debug.js) have been diffed by emu8051-stc's bridge.
-
-## What IS ours
-
-- **DebugTarget interchangeability** (`debug-target-conformance.test.js`): same caller
-  drives either target without knowing which. Branching on capabilities() only.
-- **Boundary B** (the board engine, stable)
-- **The circuit extension design** (`CIRCUIT-EXTENSION.md`)
-
-## Blocked on
-
-Nothing. Boundary B is stable.
+- mna.js internals (coordinator)
+- Cube name mismatch (bw-circuit-ui: rename `ledcube` → `led_cube`, remove filter)
+- Rung 8 ladder (ucsim-stc)
+- Gallery example assertions (bw-cfront — our capabilities are now unblocked for them)
 
 ## Standing rules
 
-- **Diff files you didn't edit before committing.** Three fixes were reverted by integration commits carrying stale copies. `git add <specific files>`, never `-A`.
-- **Pull and rebase before starting work.**
-- **Boundary B is stable.** Flag the user before changing it.
-- **Never return a plausible 0 when the answer is "not available".** Refuse with a reason string.
+- **Push at every checkpoint.** Work in a process is one OOM away from never having happened.
+- **No heavy native builds while the fleet runs.** Check `free -m` first.
+- **No competitor names in committed content** including commit messages.
+- **Diff files you didn't edit before committing.** `git add <specific files>`, never `-A`.
+- **Never return a plausible 0 when the answer is "not available".** Refuse with a reason.
+- **Non-convergence must be reported, never returned as a plausible answer.**
+- **A fallback silently worse than the real thing is a bug, not resilience.**
