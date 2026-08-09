@@ -42,13 +42,29 @@ class CircuitExtension {
   }
 
   nodeVoltage({ NET }) {
-    if (!this._board) return 0;
+    if (!this._board) return 'needs the simulator';
     return this._board.nodeVoltage(NET);
+  }
+
+  resistance({ A, B }) {
+    if (!this._board) return 'needs the simulator';
+    return this._board.resistance(A, B);
+    // returns 'requires-power-off' when powered — a DIFFERENT refusal
   }
 
   // ...
 }
 ```
+
+**Never return 0 when no board is attached.** Zero volts is a real measurement (a
+grounded net reads 0 V), so the no-board case would be indistinguishable from a
+real result. All five reporters must return `'needs the simulator'` when `_board`
+is null. Two distinct refusals:
+
+- **no board attached** → `'needs the simulator'`
+- **powered, so ohms cannot be measured** → `'requires-power-off'`
+
+Commands (`setControl`, `setPower`) returning nothing when there is no board is fine.
 
 Why injection:
 1. The extension runs in the VM's sandbox. It cannot `import` from a sibling bundle.
