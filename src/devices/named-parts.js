@@ -1,0 +1,143 @@
+/**
+ * Named part variants — real part numbers as aliases with fixed params.
+ *
+ * These are thin wrappers that register specific part numbers with their
+ * datasheet parameters pre-set. Consumers use the real part name (e.g.
+ * 'battery_9v', 'lm7805') and get correct electrical behavior.
+ *
+ * @module
+ */
+
+import { registerDevice } from '../devices.js';
+
+const R_OUT = 50;
+const R_INPUT = 1e6;
+
+/**
+ * Register named part variants.
+ */
+export function registerNamedParts() {
+
+  // ─── Battery variants ─────────────────────────────────────────────
+
+  // 9V PP3 battery: 9V EMF, ~1Ω internal resistance
+  registerDevice('battery_9v', {
+    terminals: ['pos', 'neg'],
+    init() { return { drives: { pos: { vTh: 9.0, rTh: 1.0 } } }; },
+    stamp(ctx) { ctx.thevenin('pos', 9.0, 1.0); },
+    update() { return false; },
+  });
+
+  // 1.5V AA battery: 1.5V EMF, ~0.3Ω internal resistance
+  registerDevice('battery_aa', {
+    terminals: ['pos', 'neg'],
+    init() { return { drives: { pos: { vTh: 1.5, rTh: 0.3 } } }; },
+    stamp(ctx) { ctx.thevenin('pos', 1.5, 0.3); },
+    update() { return false; },
+  });
+
+  // 3V coin cell (CR2032): 3V EMF, ~10Ω internal resistance (high for coin cells)
+  registerDevice('battery_coin', {
+    terminals: ['pos', 'neg'],
+    init() { return { drives: { pos: { vTh: 3.0, rTh: 10.0 } } }; },
+    stamp(ctx) { ctx.thevenin('pos', 3.0, 10.0); },
+    update() { return false; },
+  });
+
+  // ─── Named voltage regulators ─────────────────────────────────────
+
+  // LM7805: 5V output, 1.5V dropout
+  registerDevice('lm7805', {
+    terminals: ['in', 'out', 'gnd'],
+    init() {
+      return { drives: { out: { vTh: 5.0, rTh: 1.0 } }, _vOut: 5.0 };
+    },
+    stamp(ctx) { ctx.conductance('in', 'gnd', 1 / R_INPUT); },
+    update(part, state, read) {
+      const vIn = read('in') - read('gnd');
+      const actual = Math.min(5.0, Math.max(0, vIn - 1.5));
+      if (Math.abs(actual - state._vOut) < 0.01) return false;
+      state._vOut = actual;
+      state.drives.out = { vTh: read('gnd') + actual, rTh: 1.0 };
+      return true;
+    },
+  });
+
+  // LD1117V33: 3.3V output, 1.1V dropout
+  registerDevice('ld1117v33', {
+    terminals: ['in', 'out', 'gnd'],
+    init() {
+      return { drives: { out: { vTh: 3.3, rTh: 0.5 } }, _vOut: 3.3 };
+    },
+    stamp(ctx) { ctx.conductance('in', 'gnd', 1 / R_INPUT); },
+    update(part, state, read) {
+      const vIn = read('in') - read('gnd');
+      const actual = Math.min(3.3, Math.max(0, vIn - 1.1));
+      if (Math.abs(actual - state._vOut) < 0.01) return false;
+      state._vOut = actual;
+      state.drives.out = { vTh: read('gnd') + actual, rTh: 0.5 };
+      return true;
+    },
+  });
+
+  // ─── Gas sensor (MQ-series style) ────────────────────────────────
+  // Resistance decreases with gas concentration.
+  // Control param: gas = 0..1 (concentration).
+  // Clean air: ~100kΩ, high concentration: ~1kΩ.
+  registerDevice('gas_sensor', {
+    terminals: ['a', 'b', 'heater_a', 'heater_b'],
+    init() { return { drives: {}, _ohms: 100000 }; },
+    stamp(ctx, part, state) {
+      ctx.conductance('a', 'b', 1 / state._ohms);
+      // Heater coil: ~30Ω resistive element
+      ctx.conductance('heater_a', 'heater_b', 1 / 30);
+    },
+    update(part, state) {
+      const gas = part.params?.gas ?? 0;
+      const rClean = part.params?.rClean ?? 100000;
+      const rSaturated = part.params?.rSaturated ?? 1000;
+      const newOhms = rClean * Math.pow(rSaturated / rClean, gas);
+      if (Math.abs(newOhms - state._ohms) / state._ohms < 0.01) return false;
+      state._ohms = newOhms;
+      return true;
+    },
+  });
+
+  // ─── Ambient light sensor (analog, like TEMT6000) ─────────────────
+  // Output voltage proportional to light level. Linear: 0V (dark) to VCC (bright).
+  registerDevice('ambient_light', {
+    terminals: ['vcc', 'out', 'gnd'],
+    init(part) {
+      const light = part.params?.light ?? 0.5;
+      return { drives: { out: { vTh: 5.0 * light, rTh: R_OUT } }, _light: light };
+    },
+    stamp(ctx) { /* output driven by state.drives */ },
+    update(part, state, read) {
+      const light = part.params?.light ?? 0.5;
+      if (Math.abs(light - state._light) < 0.01) return false;
+      const vcc = read('vcc') || 5.0;
+      state._light = light;
+      state.drives.out = { vTh: vcc * light, rTh: R_OUT };
+      return true;
+    },
+  });
+
+  // ─── IR transmitter (just an IR LED electrically) ─────────────────
+  // Same as a regular LED but with IR wavelength (not visible).
+  // The device state tracks whether it's "emitting" for simulation purposes.
+  registerDevice('ir_transmitter', {
+    terminals: ['anode', 'cathode'],
+    init() { return { drives: {}, emitting: false }; },
+    stamp(ctx) {
+      // Forward voltage ~1.2V for IR, dynamic R ~10Ω
+      ctx.conductance('anode', 'cathode', 1 / 110); // simplified
+    },
+    update(part, state, read) {
+      const v = read('anode') - read('cathode');
+      const newEmitting = v > 1.0;
+      if (newEmitting === state.emitting) return false;
+      state.emitting = newEmitting;
+      return false; // no electrical re-solve needed
+    },
+  });
+}
