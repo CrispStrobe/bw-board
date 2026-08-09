@@ -268,6 +268,14 @@ export function createSerialDebugTarget(transport, opts = {}) {
         timeFreezes: true,
         consumes: ['timer0', 'timer1', 'uart1', 'brt'],
         detachable: true,
+        // Baud rate is NOT modelled by the emulator: TX fires immediately
+        // regardless of BRT/Timer config. "Emulation passed" does not mean
+        // "the wire works" — a baud mismatch is invisible in emulation.
+        timing: {
+          baud: false,
+          reason: 'emulator delivers bytes immediately; baud mismatch ' +
+            'between BRT (STC12) and T2H/T2L (STC15) cannot be detected',
+        },
       };
     },
 
