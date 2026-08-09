@@ -317,8 +317,11 @@ export class BoardImpl {
    * @returns {number}
    */
   branchCurrent(partId, terminal) {
+    if (!this.powered) return 0; // no current without power
+
     // Cache the MNA result — only re-solve when the state has changed.
-    // The cache is invalidated by setPin, setControl, setPower, setNetlist.
+    // The cache is invalidated by _solve() (called by setPin, setControl,
+    // setPower, setNetlist).
     if (!this._mnaCache) {
       this._mnaCache = this._solveMNA(false);
     }
