@@ -29,9 +29,12 @@
  * doing something else"). `capabilities().steps` therefore omits `line`, and
  * calling it returns `{unsupported}`.
  *
- * **Watchpoints are refused.** `dbg_breakpoint` has BP_WRITE and BP_READ, but
- * no `emu_dbg_set_bp_write` is exported, so there is no way to reach them. They
- * are reported absent rather than accepted-and-ignored.
+ * **Watchpoints are feature-detected.** Upstream builds now export
+ * `emu_dbg_set_bp_write`; older builds (the pinned one in brickwright-lite)
+ * do not. When absent, `write` breakpoints are refused with a reason. When
+ * present, they are offered in `capabilities().breakpoints` and require a
+ * `space` parameter because iram and sfr overlap at 0x80+. Read watchpoints
+ * remain unsupported in all builds.
  *
  * ## Memory reads: fast path and slow path
  *
@@ -267,10 +270,15 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
     const target = {
         capabilities() {
+            // Feature-detect watchpoints: available if _emu_dbg_set_bp_write exists
+            const hasWatchpoints = typeof wasm._emu_dbg_set_bp_write === 'function';
+
             return {
                 // `line` is absent on purpose — see "Two corrections" above.
                 steps: ['insn', 'block', 'over', 'out'],
-                breakpoints: ['code', 'yield'],
+                breakpoints: hasWatchpoints
+                    ? ['code', 'yield', 'write']
+                    : ['code', 'yield'],
                 spaces: ['code', 'iram', 'sfr', 'xram', 'bit'],
                 writable: ['code', 'iram', 'sfr', 'xram', 'bit'],
                 sfrs: 'all',
@@ -351,10 +359,25 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 }
                 pc = addr;
                 handle = wasm._emu_dbg_set_bp_yield(addr, idx, bp.state);
-            } else if (bp.kind === 'write' || bp.kind === 'read') {
+            } else if (bp.kind === 'write') {
+                if (typeof wasm._emu_dbg_set_bp_write !== 'function') {
+                    return { unsupported:
+                        'this build exposes no watchpoints. Poll the variable between blocks ' +
+                        'instead — and label that as sampling, because it is.' };
+                }
+                // Watchpoint: requires a space (iram and sfr overlap at 0x80+)
+                const space = bp.space ?? 'iram';
+                const spaceId = SPACE[space];
+                if (spaceId === undefined) {
+                    return { unsupported: `no such address space: ${space}` };
+                }
+                handle = wasm._emu_dbg_set_bp_write(spaceId, bp.addr);
+                pc = bp.addr; // for matching on halt
+            } else if (bp.kind === 'read') {
                 return { unsupported:
-                    'this build exposes no watchpoints. Poll the variable between blocks ' +
-                    'instead — and label that as sampling, because it is.' };
+                    'read watchpoints are not available. Write watchpoints are ' +
+                    (typeof wasm._emu_dbg_set_bp_write === 'function' ? 'available' : 'also not available') +
+                    '.' };
             } else {
                 return { unsupported: `no such breakpoint kind: ${bp.kind}` };
             }
