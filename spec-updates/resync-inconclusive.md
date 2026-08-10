@@ -12,18 +12,24 @@ in `9f69af9`.
 
 ## What was excluded
 
-**(b) Insufficient run time**: tested at 100ms (5× original). The firmware
-sits in a tight polling loop at PC 0x0053-0x0054 and never breaks out.
-More time does not change the result.
+**(b) Insufficient run time**: excluded at 100ms.
+
+**(a) `-inject` does not deliver bytes**: excluded by ucsim-stc `3e9c839` —
+`inject_byte` → `input_avail` → `serial.tick` → RI at +83µs → byte in SBUF.
+
+**(c) Firmware does not process the byte**: excluded by a minimal echo test —
+the PC trace shows the firmware leaving its `if (RI)` polling loop, entering
+the handler, and reaching SBUF write. The byte IS processed.
 
 ## Live hypothesis
 
-**(a) `-inject` and `-S out=` may not interact correctly in `stc12_trace`.**
-The `-inject` flag (a81091e) schedules byte delivery to the UART RX path.
-The `-S uart=0,out=FILE` captures TX output. But 0 bytes were captured even
-for a valid HELLO frame sent without any torn-frame preamble.
+**(d) `-S uart=0,out=FILE` does not capture TX output in this trace mode.**
+The echo test: firmware processes the injected byte (PC leaves polling loop
+at tick ~70981, enters handler at 0x003B-0x0069), but the output file is
+0 bytes. `-inject` works, the firmware echoes — the output capture path is
+the remaining suspect.
 
-This is ucsim-stc's binary. They are frozen on the weekly limit until Aug 15.
+This is ucsim-stc's binary.
 
 ## Minimal reproduction
 
