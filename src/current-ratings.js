@@ -178,10 +178,12 @@ export function getMaxCurrent(kind) {
 
 /**
  * STC12 port and chip current limits.
- * Source: STC12C5A60S2 datasheet §4.6 Electrical Characteristics.
+ * Source: stc12c5a60s2-lab/docs/PINOUT.md (the shared contract).
+ * The contract says "should stay under ~120 mA" — guidance, not absolute max.
+ * A DRC warning is the right response; a refusal is not.
  */
 export const PORT_LIMITS = {
   perPin: { sink: 0.020, source: 0.000230 },  // 20 mA sink, 230 µA source (quasi)
-  perPort: { sink: 0.080 },                     // 80 mA aggregate per 8-bit port
-  perChip: { sink: 0.150 },                     // 150 mA total chip sink current
+  perPort: { sink: 0.080 },                     // 80 mA aggregate per 8-bit port (§4.6)
+  perChip: { sink: 0.120 },                     // ~120 mA total chip (contract figure)
 };

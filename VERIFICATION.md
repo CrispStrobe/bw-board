@@ -39,6 +39,7 @@ consistency, but it is NOT the same as matching hardware.
 | Boundary A conformance: 10/10 against real emu8051-stc WASM | `test/conformance-real-wasm.test.js` |
 | Serial codec: 5 implementations agree on wire format | Verified by emu8051-stc's bridge test (`test_monitor_bwboard.mjs`) |
 | Determinism: same netlist + same program = bit-identical waveform | `test/determinism.test.js` |
+| PCA PWM rate: 7.2K edges/sec (SYSclk/12/256 = 3600 Hz = 7200 edges) | Independently measured by bw-board (perf budget) and ucsim-stc (PCA model), same arithmetic by separate routes |
 
 ## 3. Asserted but unverified (engineering assumptions)
 
