@@ -65,22 +65,25 @@ Each produced a plausible wrong answer that would have shipped.
 | **BENCH-UART** | Monitor over real UART, halt skew, ISP contention | Pre-registered: 500 ±50 ms halt |
 | **BENCH-PWM** | LED current, servo pulse, motor duty on silicon | Pre-registered: 1.46 mA at 50% duty |
 
+## Serial DebugTarget e2e — DONE
+
+`serial-debug.js` driven against emu8051's real UART running `10-live-firmware`
+with no mock in the path. HELLO, REGS (8 fields), READ (iram[0]) all
+round-tripped successfully. Two independent implementations (host JS codec +
+firmware C codec) agree over a transport neither owns. Category 2b.
+
+Idle-timeout resync: unreachable under emu8051 (instant bytes). ucsim (`44bad89`)
+reports it IS reachable once `-inject TIME,BYTE` lands — Timer 1 wall clock
+runs, 5ms timeout would fire. Blocked on ucsim-stc adding the flag, then
+bw-board writes the resync test.
+
 ## What is open, not bench-blocked
 
 | Item | Owner | Status |
 |------|-------|--------|
-| Serial DebugTarget e2e against real firmware UART (no mock) | bw-board | UART-ENTRY-POINTS.md entry points exist; test not yet written |
 | Cube oracle path (`test/golden/`) contradicts "not golden-file" | bw-board | Noted, not moved |
 | bw-parts / bw-board rating table convergence | Both | Vendored copy in bw-board; bw-parts owns canonical |
-
-## What I would pick up next
-
-The serial DebugTarget e2e test: `serial-debug.js` against emu8051's real UART
-running `10-live-firmware`, through the documented entry points, with HELLO/POS/REGS/READ
-round-tripped and the idle-timeout resync gap stated explicitly. The hex exists
-(`stc/build/stc12c5a60s2/10-live-firmware/main.ihx`), the WASM is rebuilt, and
-the entry points are documented. It is the last codec cross-check that can be
-done without silicon.
+| Idle-timeout resync test | ucsim-stc `-inject` flag, then bw-board | Blocked on ucsim-stc `44bad89` |
 
 ## Principles this campaign produced
 
