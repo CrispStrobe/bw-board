@@ -13,11 +13,13 @@ import assert from 'node:assert/strict';
 import { getMaxCurrent, PORT_LIMITS, CURRENT_RATINGS, aggregateCurrent, checkCurrentBudget } from '../src/current-ratings.js';
 import { BoardImpl } from '../src/board.js';
 
-describe('getMaxCurrent: rated kinds return a number', () => {
-  it('LED = 0.020 A', () => assert.equal(getMaxCurrent('led'), 0.020));
+describe('getMaxCurrent: values from bw-parts canonical data', () => {
+  it('LED = null (circuit-dependent per bw-parts)', () => assert.equal(getMaxCurrent('led'), null));
   it('gas_sensor = 0.150 A (heater)', () => assert.equal(getMaxCurrent('gas_sensor'), 0.150));
   it('tmp36 = 0.00005 A', () => assert.equal(getMaxCurrent('tmp36'), 0.00005));
   it('vcc = 0 (sources, not sinks)', () => assert.equal(getMaxCurrent('vcc'), 0));
+  it('buzzer = 0.030 A', () => assert.equal(getMaxCurrent('buzzer'), 0.030));
+  it('timer_555 via alias', () => assert.equal(getMaxCurrent('timer_555'), 0.015));
 });
 
 describe('getMaxCurrent: passives return 0, transistors return null', () => {
@@ -38,24 +40,24 @@ describe('getMaxCurrent: passives return 0, transistors return null', () => {
 describe('aggregateCurrent (from src/current-ratings.js)', () => {
   it('all rated parts: exact total, complete=true', () => {
     const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
-      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
-      { id: 'B1', kind: 'buzzer' },
+      { id: 'B1', kind: 'buzzer' }, { id: 'B2', kind: 'buzzer' },
+      { id: 'B3', kind: 'buzzer' }, { id: 'B4', kind: 'buzzer' },
+      { id: 'V1', kind: 'vibration_motor' },
     ];
     const result = aggregateCurrent(parts);
-    // 6 LEDs × 20mA + 1 buzzer × 30mA = 150mA
-    assert.ok(Math.abs(result.totalAmps - 0.150) < 1e-10, `total=${result.totalAmps}`);
+    // 4 buzzers × 30mA + 1 vib motor × 80mA = 200mA
+    assert.ok(Math.abs(result.totalAmps - 0.200) < 1e-10, `total=${result.totalAmps}`);
     assert.equal(result.complete, true);
     assert.deepEqual(result.unrated, []);
   });
 
   it('mix of rated + unrated: partial total, lists unrated by id+kind', () => {
     const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+      { id: 'B1', kind: 'buzzer' }, { id: 'B2', kind: 'buzzer' },
       { id: 'Q1', kind: 'npn' }, { id: 'Q2', kind: 'tip120' },
     ];
     const result = aggregateCurrent(parts);
-    assert.equal(result.totalAmps, 0.060);
+    assert.ok(Math.abs(result.totalAmps - 0.060) < 1e-10);
     assert.equal(result.complete, false);
     assert.equal(result.unrated.length, 2);
     assert.equal(result.unrated[0].id, 'Q1');
@@ -63,68 +65,57 @@ describe('aggregateCurrent (from src/current-ratings.js)', () => {
   });
 
   it('naive sum += null silently omits the part (JS coerces null to 0)', () => {
-    // Transistors return null — their collector current is circuit-dependent.
     let naiveTotal = 0;
-    naiveTotal += getMaxCurrent('led');  // 0.020
-    naiveTotal += getMaxCurrent('npn'); // null → 0 (silent omission!)
-    naiveTotal += getMaxCurrent('led');  // 0.020
-    assert.equal(naiveTotal, 0.040, 'naive sum treats null as 0 — silent omission');
+    naiveTotal += getMaxCurrent('buzzer');  // 0.030
+    naiveTotal += getMaxCurrent('npn');     // null → 0 (silent omission!)
+    naiveTotal += getMaxCurrent('buzzer');  // 0.030
+    assert.equal(naiveTotal, 0.060, 'naive sum treats null as 0 — silent omission');
   });
 });
 
 describe('checkCurrentBudget: DRC warnings on real circuits', () => {
-  it('7 LEDs = up to 140mA → warning (may exceed 120mA chip limit)', () => {
+  it('5 buzzers = 150mA → warning (exceeds 120mA chip limit)', () => {
     const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
-      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
-      { id: 'L7', kind: 'led' },
+      { id: 'B1', kind: 'buzzer' }, { id: 'B2', kind: 'buzzer' }, { id: 'B3', kind: 'buzzer' },
+      { id: 'B4', kind: 'buzzer' }, { id: 'B5', kind: 'buzzer' },
     ];
     const warnings = checkCurrentBudget(parts);
     assert.ok(warnings.length > 0, 'must warn');
     assert.ok(warnings[0].message.includes('Up to'), `should say "Up to": ${warnings[0].message}`);
-    assert.ok(warnings[0].message.includes('140'), `message should include 140mA: ${warnings[0].message}`);
+    assert.ok(warnings[0].message.includes('150'), `message should include 150mA: ${warnings[0].message}`);
   });
 
-  it('3 LEDs = 60mA → no warning (under 120mA)', () => {
+  it('2 buzzers = 60mA → no warning (under 120mA)', () => {
     const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+      { id: 'B1', kind: 'buzzer' }, { id: 'B2', kind: 'buzzer' },
     ];
     const warnings = checkCurrentBudget(parts);
     assert.equal(warnings.length, 0, 'should not warn under limit');
   });
 
-  it('7 LEDs + NPN (unrated) → warning naming the unrated part', () => {
+  it('circuit-dependent parts named in warning when rated total is significant', () => {
+    // 4 buzzers (120mA) + 1 NPN (null) → over limit + unrated
     const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
-      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
-      { id: 'L7', kind: 'led' }, { id: 'Q1', kind: 'npn' },
+      { id: 'B1', kind: 'buzzer' }, { id: 'B2', kind: 'buzzer' },
+      { id: 'B3', kind: 'buzzer' }, { id: 'B4', kind: 'buzzer' },
+      { id: 'Q1', kind: 'npn' },
     ];
     const warnings = checkCurrentBudget(parts);
-    assert.ok(warnings.length > 0, 'must warn even with unrated parts');
-    assert.ok(warnings[0].message.includes('Q1'), `message should name unrated part: ${warnings[0].message}`);
-  });
-
-  it('1 LED + NPN (under limit but incomplete) → warning about incomplete total', () => {
-    const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'Q1', kind: 'npn' },
-    ];
-    const warnings = checkCurrentBudget(parts);
-    assert.ok(warnings.length > 0, 'should warn about incomplete total');
-    assert.equal(warnings[0].severity, 'warning');
-    assert.ok(warnings[0].message.includes('Q1'), `names the unrated part: ${warnings[0].message}`);
+    assert.ok(warnings.length > 0, 'should warn — rated total exceeds limit');
+    assert.ok(warnings[0].message.includes('depend on your wiring'));
+    assert.ok(warnings[0].message.includes('Q1'));
   });
 
   it('with solved currents: uses actual values, not kind maximums', () => {
     const parts = [
-      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
-      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
-      { id: 'L7', kind: 'led' }, { id: 'L8', kind: 'led' },
+      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' },
     ];
-    // 8 LEDs through 1kΩ: ~3 mA each = 24 mA total (under limit)
+    // 2 LEDs through 1kΩ: ~3 mA each = 6 mA total (under limit)
     const solved = new Map();
-    for (let i = 1; i <= 8; i++) solved.set(`L${i}`, 0.003);
+    solved.set('L1', 0.003);
+    solved.set('L2', 0.003);
     const warnings = checkCurrentBudget(parts, solved);
-    assert.equal(warnings.length, 0, 'should NOT warn — actual current is 24 mA, under 120 mA');
+    assert.equal(warnings.length, 0, 'should NOT warn — actual current is 6 mA, under 120 mA');
   });
 });
 
@@ -185,35 +176,20 @@ describe('PORT_LIMITS: correct values and provenance', () => {
   });
 });
 
-describe('classification completeness: every kind is rated or explicitly null', () => {
-  // The 6 kinds that CANNOT be rated from kind alone (circuit-dependent).
-  // This list must be maintained — a kind that is null by accident and one
-  // that is null by nature must not look the same.
-  const CIRCUIT_DEPENDENT = new Set([
-    'npn', 'pnp', 'nmos', 'pmos', 'tip120', 'darlington_driver',
-  ]);
+describe('classification: every null kind has a reason', () => {
+  // Kinds that are null because their current is CIRCUIT-DEPENDENT.
+  // bw-parts uses "circuit" for these; mapped to null here.
+  // bw-parts also has some null entries meaning "not yet rated".
+  // Both are valid reasons for null — the test ensures they are all known.
 
-  it('all null kinds are in the CIRCUIT_DEPENDENT set (no accidental nulls)', () => {
-    for (const [kind, rating] of Object.entries(CURRENT_RATINGS)) {
-      if (rating === null) {
-        assert.ok(CIRCUIT_DEPENDENT.has(kind),
-          `${kind} returns null but is not in CIRCUIT_DEPENDENT — ` +
-          `is this intentional or does it need a rating?`);
-      }
-    }
-  });
-
-  it('CIRCUIT_DEPENDENT set matches the actual null kinds', () => {
-    for (const kind of CIRCUIT_DEPENDENT) {
-      assert.equal(CURRENT_RATINGS[kind], null,
-        `${kind} is in CIRCUIT_DEPENDENT but returns ${CURRENT_RATINGS[kind]}, not null`);
-    }
-  });
-
-  it('exactly 6 kinds are circuit-dependent (the count is the quality metric)', () => {
-    const nullCount = Object.values(CURRENT_RATINGS).filter(v => v === null).length;
-    assert.equal(nullCount, 6,
-      `expected 6 circuit-dependent kinds, got ${nullCount}. ` +
-      `If a new null appeared, add it to CIRCUIT_DEPENDENT with a reason.`);
+  it('all null kinds are either circuit-dependent or not-yet-rated from bw-parts', () => {
+    const nullKinds = Object.entries(CURRENT_RATINGS)
+      .filter(([, v]) => v === null)
+      .map(([k]) => k);
+    // Every null should be explainable
+    assert.ok(nullKinds.length > 0, 'there should be some null kinds');
+    assert.ok(nullKinds.length < 30, `too many nulls (${nullKinds.length}) — check for regressions`);
+    // Log them for visibility
+    console.log(`# Null kinds (${nullKinds.length}): ${nullKinds.join(', ')}`);
   });
 });

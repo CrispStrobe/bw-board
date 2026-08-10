@@ -1,189 +1,157 @@
 /**
  * Maximum current ratings per part kind.
  *
- * OWNERSHIP: bw-parts owns the rating DATA (datasheets, sourcing).
+ * OWNERSHIP: bw-parts owns the rating DATA (bw-parts/current-ratings.json).
  * bw-board owns the SEMANTICS (what 0 vs null means for the DRC).
- * bw-parts/current-ratings.json is the canonical data source.
- * This file should be checked against it; two tables that must agree
- * by hand will drift.
  *
- * Three states:
+ * This module loads bw-parts' canonical data at import time via a vendored
+ * copy, applies the semantic mapping, and resolves name aliases.
+ *
+ * Three states after mapping:
  *   number > 0 — this kind draws this much (amps)
  *   0          — not a consumer of chip supply current (passives, sources)
  *   null       — depends on the circuit; DRC says "depends on your wiring"
  *
- * Values are in AMPS.
+ * bw-parts uses a four-state schema:
+ *   number     — rated mA
+ *   0          — not a consumer
+ *   "circuit"  — depends on wiring → mapped to null here
+ *   null       — not yet rated → mapped to null here (flagged separately)
  *
  * @module
  */
 
-/**
- * Maximum current draw per part kind in typical use.
- * null = circuit-dependent (cannot be summed — DRC names the parts).
- *
- * @type {Record<string, number | null>}
- */
-export const CURRENT_RATINGS = {
-  // ─── LEDs and indicators ──────────────────────────────────────────
-  led: 0.020,           // 20 mA typical (datasheet: absolute max 25-30 mA)
-  rgb_led: 0.060,       // 20 mA × 3 channels
-  seven_segment: 0.020, // per segment, but typically one lit = 20 mA
-  neopixel: 0.060,      // 60 mA per pixel at full white (20 mA × 3)
-  bargraph: 0.020,      // per segment
-  ir_transmitter: 0.020,// IR LED, same as visible LED
-  ir_remote: 0.020,     // IR LED
-  light_bulb: 0.100,    // typical miniature bulb
+// ─── Vendored data from bw-parts/current-ratings.json ───────────────────
+// This is the canonical source. bw-parts owns names and ratings.
+// When bw-parts updates, re-vendor this object.
+// Units in bw-parts: mA. Converted to amps below.
 
-  // ─── Sensors (typical supply current) ─────────────────────────────
-  ldr: 0.001,           // sensing current through divider, not supply
-  ntc: 0.001,           // sensing current
-  phototransistor: 0.005, // max collector current ~5 mA
-  photodiode: 0.001,    // photocurrent ~1 mA max
-  tmp36: 0.00005,       // 50 µA quiescent (TMP36 datasheet)
-  ultrasonic: 0.015,    // HC-SR04: 15 mA operating
-  pir: 0.000065,        // ~65 µA quiescent (typical PIR)
-  tilt_sensor: 0,       // passive switch, no current
-  flex_sensor: 0.001,   // sensing current through divider
-  force_sensor: 0.001,  // sensing current
-  gas_sensor: 0.150,    // MQ series heater: ~150 mA (significant!)
-  ambient_light: 0.001, // ~1 mA
-  soil_moisture: 0.020, // ~20 mA (electrolysis current)
-  temp_sensor: 0.001,   // DS18B20 style: ~1 mA
-
-  // ─── Motors and actuators ─────────────────────────────────────────
-  dc_motor: 0.500,      // typical small DC motor stall current
-  dc_motor_encoder: 0.500,
-  gearmotor: 0.500,
-  servo: 0.500,         // typical servo stall current
-  stepper: 0.500,       // per coil, typical
-  vibration_motor: 0.100, // ~100 mA
-  solenoid: 0.300,      // typical small solenoid
-  buzzer: 0.030,        // ~30 mA (piezo buzzer with driver)
-  piezo: 0.001,         // passive piezo, negligible current
-
-  // ─── Relays ───────────────────────────────────────────────────────
-  relay: 0.080,         // typical 5V relay coil: ~25 mA; with driver: ~80 mA
-  relay_dpdt: 0.080,
-
-  // ─── ICs ──────────────────────────────────────────────────────────
-  shift_register: 0.080, // 74HC595: 70 mA max (outputs active)
-  char_lcd: 0.002,      // HD44780: ~2 mA (no backlight)
-  char_lcd_i2c: 0.020,  // with backlight: ~20 mA
-  pcf8574: 0.0001,      // 100 µA quiescent
-  timer_555: 0.006,     // ~6 mA (NE555 quiescent)
-  timer_556: 0.012,     // 2 × 555
-  opamp: 0.002,         // typical: 1-4 mA
-  lm393: 0.001,         // 1 mA
-  lm339: 0.002,         // 2 mA (4 comparators)
-  ir_receiver: 0.001,   // ~1 mA
-
-  // ─── Logic ICs (per chip, not per gate) ───────────────────────────
-  '74hc00': 0.00008,    // 80 µA quiescent (CMOS)
-  '74hc02': 0.00008,
-  '74hc04': 0.00008,
-  '74hc08': 0.00008,
-  '74hc10': 0.00008,
-  '74hc11': 0.00008,
-  '74hc14': 0.00008,
-  '74hc20': 0.00008,
-  '74hc21': 0.00008,
-  '74hc27': 0.00008,
-  '74hc32': 0.00008,
-  '74hc73': 0.00008,
-  '74hc74': 0.00008,
-  '74hc75': 0.00008,
-  '74hc86': 0.00008,
-  '74hc93': 0.00008,
-  '74hc95': 0.00008,
-  '74hc132': 0.00008,
-  cd4511: 0.00008,
-  decade_counter: 0.00008,
-  dff: 0.00008,
-  jkff: 0.00008,
-  '74hc283': 0.00008,
-
-  // ─── Power (these SUPPLY current, not consume it) ─────────────────
-  // Rated as 0 because they don't load a port — they source.
-  vcc: 0,
-  gnd: 0,
-  battery: 0,
-  battery_9v: 0,
-  battery_aa: 0,
-  battery_coin: 0,
-  vsource: 0,
-  isource: 0,
-  solar_cell: 0,
-
-  // ─── Passives ─────────────────────────────────────────────────────
-  // Passives limit or store current; they don't independently draw from a port.
-  // Rated as 0: they are current-limiters, not current-consumers. The LED or
-  // motor on the other end of the resistor is the thing with the rating.
-  resistor: 0,
-  capacitor: 0,
-  polarized_cap: 0,
-  inductor: 0,
-  diode: 0,
-  zener: 0,
-
-  // ─── Transistors: CANNOT be rated from kind alone ─────────────────
-  // Collector/drain current is set by the circuit (base drive, load,
-  // supply), not by the transistor's type. These return null, and the
-  // DRC says "X parts depend on your wiring" rather than "not counted".
-  npn: null,        // collector current = circuit-dependent
-  pnp: null,        // collector current = circuit-dependent
-  nmos: null,       // drain current = circuit-dependent
-  pmos: null,       // drain current = circuit-dependent
-  tip120: null,     // Darlington collector = circuit-dependent
-  darlington_driver: null, // 8-ch open collector = circuit-dependent
-
-  // ─── Switches (passive, no current rating) ────────────────────────
-  button: 0,
-  switch: 0,
-  potentiometer: 0,     // passive — draws from VCC/GND, not from an MCU port
-  dip_switch: 0,
-  keypad_4x4: 0,
-
-  // ─── Connectors (passive) ─────────────────────────────────────────
-  header: 0,
-  usb_a: 0,            // provides power, doesn't consume from MCU
-
-  // ─── Drivers ──────────────────────────────────────────────────────
-  h_bridge: 0.006,     // L293D quiescent: ~6 mA (output current from VCC2, not logic)
-  optocoupler: 0.010,  // LED side: ~10 mA
-
-  // ─── Display composites ───────────────────────────────────────────
-  led_matrix: 0.160,   // 8×8 matrix: up to 8 LEDs at 20 mA = 160 mA (multiplexed)
-  led_cube: 0.160,     // same as matrix (one scan line at a time)
-  clock_display: 0.080, // 4-digit 7-seg: ~80 mA max
-
-  // ─── Other ────────────────────────────────────────────────────────
-  eeprom: 0.005,       // ~5 mA during write
-  mcu: 0,             // the MCU itself doesn't load its own ports
-  fuse: 0,            // passes current, doesn't consume
-  vreg: 0.005,        // quiescent current ~5 mA (7805)
-  lm7805: 0.005,
-  ld1117v33: 0.005,
-
-  // ─── Abstract gate primitives (not user-facing) ───────────────────
-  gate_and: 0.00008,
-  gate_or: 0.00008,
-  gate_not: 0.00008,
-  gate_nand: 0.00008,
-  gate_nor: 0.00008,
-  gate_xor: 0.00008,
+/** @type {Record<string, number | string | null>} */
+const BW_PARTS_RATINGS = {
+  "resistor": 0, "capacitor": 0, "polarized_cap": 0,
+  "diode": 0, "zener": 0, "inductor": 0,
+  "button": 0, "potentiometer": 0, "slide_switch": 0,
+  "dip_switch_spst": 0, "dip_switch_dpst": 0,
+  "ldr": 0, "photodiode": 0, "flex_sensor": 0,
+  "force_sensor": 0, "tilt_switch": 0, "tilt_switch_v2": 0,
+  "ntc": 0, "keypad_4x4": 0, "ir_remote": 0, "switch": 0,
+  "light_sensor": 0.1, "ir_receiver": 5, "ultrasonic": 15,
+  "ultrasonic_3pin": 15, "pir": 0.15, "soil_moisture": 0.05,
+  "tmp36": 0.05, "gas_sensor": 150,
+  "led": "circuit", "rgb_led": "circuit", "light_bulb": "circuit",
+  "neopixel": "circuit", "neopixel_jewel": "circuit",
+  "neopixel_ring": "circuit", "neopixel_strip": "circuit",
+  "seven_segment": "circuit",
+  "vibration_motor": 80, "dc_motor": "circuit",
+  "dc_motor_encoder": "circuit", "servo": 350,
+  "hobby_gearmotor": "circuit", "buzzer": 30,
+  "seven_segment_clock": 10, "char_lcd": 2, "lcd_i2c": 2,
+  "battery_9v": 0, "battery_aa": 0, "battery_coin": 0,
+  "solar_cell": 0, "potato_battery": 0, "lemon_battery": 0,
+  "lm7805": 5, "ld1117v33": 5, "breadboard_psu": 10,
+  "npn": "circuit", "pnp": "circuit",
+  "nmos": "circuit", "pmos": "circuit",
+  "nmos_power": "circuit", "pmos_power": "circuit",
+  "tip120": "circuit",
+  "relay": "circuit", "relay_dpdt": "circuit",
+  "motor_driver_l293d": "circuit",
+  "optocoupler": 0,
+  "74hc00": 1, "74hc02": 1, "74hc04": 1, "74hc08": 1,
+  "74hc10": 1, "74hc11": 1, "74hc14": 1, "74hc20": 1,
+  "74hc21": 1, "74hc27": 1, "74hc32": 1, "74hc73": 1,
+  "74hc74": 1, "74hc75": 1, "74hc86": 1, "74hc93": 1,
+  "74hc95": 1, "74hc132": 1, "74hc283": 1, "74hc595": 1,
+  "cd4017": 1, "cd4511": 1, "pcf8574": 0.1,
+  "555": 15, "556": 30, "opamp": 3, "lm393": 2.5, "lm339": 2.5,
+  "arduino_uno": 50, "attiny85": 12, "stc_mcu": 20, "mcu": 20,
+  "multimeter": 0, "oscilloscope": 0, "function_gen": 0,
+  "power_supply": 0,
+  "vcc": 0, "gnd": 0, "vsource": 0, "isource": 0,
+  "breadboard_full": 0, "breadboard_half": 0, "breadboard_mini": 0,
+  "header": 0, "usb_a": 0,
+  "temp_sensor": null, "eeprom": null,
+  "led_matrix": null, "led_cube": null, "microbit": null,
 };
+
+// ─── Name aliases: bw-board kind → bw-parts kind ────────────────────────
+// bw-parts owns names. Where bw-board uses a different slug, map here.
+const NAME_ALIASES = {
+  'timer_555': '555',
+  'timer_556': '556',
+  'gearmotor': 'hobby_gearmotor',
+  'h_bridge': 'motor_driver_l293d',
+  'shift_register': '74hc595',
+  'dip_switch': 'dip_switch_spst',
+  'tilt_sensor': 'tilt_switch',
+  'clock_display': 'seven_segment_clock',
+  'char_lcd_i2c': 'lcd_i2c',
+  'ambient_light': 'light_sensor',
+  'phototransistor': 'light_sensor',
+  'decade_counter': 'cd4017',
+  'battery': 'battery_9v',      // generic battery → defaults to 9V
+  'vreg': 'lm7805',             // generic vreg → defaults to 7805
+  'fuse': null,                  // not in bw-parts (rated 0 here)
+  'solenoid': null,              // not in bw-parts
+  'stepper': null,               // not in bw-parts
+  'piezo': null,                 // not in bw-parts
+  'bargraph': null,              // not in bw-parts
+  'ir_transmitter': null,        // not in bw-parts
+  'darlington_driver': null,     // not in bw-parts
+  'soil_moisture': 'soil_moisture',
+};
+
+// ─── Build the consumed ratings table ───────────────────────────────────
+
+/** @type {Record<string, number | null>} */
+export const CURRENT_RATINGS = {};
+
+// First: import everything from bw-parts, converting mA → A
+for (const [kind, rating] of Object.entries(BW_PARTS_RATINGS)) {
+  if (rating === 'circuit') {
+    CURRENT_RATINGS[kind] = null; // circuit-dependent
+  } else if (rating === null) {
+    CURRENT_RATINGS[kind] = null; // not yet rated
+  } else {
+    CURRENT_RATINGS[kind] = rating / 1000; // mA → A
+  }
+}
+
+// Then: add bw-board-only kinds not in bw-parts (with local ratings)
+const LOCAL_ONLY = {
+  fuse: 0,
+  solenoid: 0.300,
+  stepper: 0.500,
+  piezo: 0.001,
+  bargraph: 0.020,
+  ir_transmitter: 0.020,
+  darlington_driver: null,
+  // Abstract gate primitives (internal, not user-facing)
+  gate_and: 0.00008, gate_or: 0.00008, gate_not: 0.00008,
+  gate_nand: 0.00008, gate_nor: 0.00008, gate_xor: 0.00008,
+  // Digital IC abstractions
+  dff: 0.00008, jkff: 0.00008,
+  // Named regulator aliases already covered via bw-parts
+};
+
+for (const [kind, rating] of Object.entries(LOCAL_ONLY)) {
+  if (!(kind in CURRENT_RATINGS)) {
+    CURRENT_RATINGS[kind] = rating;
+  }
+}
 
 /**
  * Get the maximum current rating for a part kind.
- * Returns the rating in amps, or null if the kind cannot be rated
- * (current depends on the specific circuit, not the kind alone).
+ * Checks bw-parts canonical name first, then bw-board aliases.
  *
  * @param {string} kind
  * @returns {number | null}
  */
 export function getMaxCurrent(kind) {
   if (kind in CURRENT_RATINGS) return CURRENT_RATINGS[kind];
-  return null; // unknown kind — cannot be summed
+  // Check alias
+  const alias = NAME_ALIASES[kind];
+  if (alias && alias in CURRENT_RATINGS) return CURRENT_RATINGS[alias];
+  return null; // unknown kind
 }
 
 /**
@@ -199,18 +167,13 @@ export function getMaxCurrent(kind) {
  * A DRC warning is the right response to exceeding these; a refusal is not.
  */
 export const PORT_LIMITS = {
-  perPin: { sink: 0.020, source: 0.000230 },  // 20 mA sink, 230 µA source (§4.1 mode tables)
-  perPort: { sink: 0.080 },                     // 80 mA per port (8051 family guidance, not in STC12 datasheet)
-  perChip: { sink: 0.120 },                     // 120 mA total chip (§4.1 intro: "had better drive lower than")
+  perPin: { sink: 0.020, source: 0.000230 },
+  perPort: { sink: 0.080 },
+  perChip: { sink: 0.120 },
 };
 
 /**
  * Compute aggregate current for a list of part kinds.
- *
- * Returns the sum of rated parts, a list of unrated part kinds, and whether
- * the total is complete. When the total is incomplete, the consumer should
- * warn: "at least X mA (parts Y, Z not counted) exceeds limit" — never
- * silently sum what it can.
  *
  * @param {Array<{id: string, kind: string}>} parts
  * @returns {{ totalAmps: number, unrated: Array<{id: string, kind: string}>, complete: boolean }}
@@ -231,12 +194,6 @@ export function aggregateCurrent(parts) {
 
 /**
  * Check a circuit's parts against chip current limits.
- * Returns DRC warnings for aggregate current budget violations.
- *
- * When `solvedCurrents` is provided (a Map of partId → amps from MNA),
- * uses actual solved currents instead of kind maximums. This gives a
- * realistic answer ("24 mA through your 1kΩ resistors") instead of a
- * worst-case bound ("up to 160 mA at maximum ratings").
  *
  * @param {Array<{id: string, kind: string}>} parts
  * @param {Map<string, number>} [solvedCurrents] - partId → actual amps from MNA
@@ -247,30 +204,24 @@ export function checkCurrentBudget(parts, solvedCurrents) {
   const chipLimit = PORT_LIMITS.perChip.sink;
 
   if (solvedCurrents && solvedCurrents.size > 0) {
-    // Use actual solved currents — realistic, not worst-case
     let totalAmps = 0;
     const contributors = [];
     for (const [id, amps] of solvedCurrents) {
       totalAmps += Math.abs(amps);
       if (Math.abs(amps) > 0.001) contributors.push(id);
     }
-
     if (totalAmps > chipLimit) {
-      const totalMa = (totalAmps * 1000).toFixed(1);
-      const limitMa = (chipLimit * 1000).toFixed(0);
       warnings.push({
         severity: 'danger',
         type: 'aggregate-current',
-        message: `Total current draw ${totalMa} mA exceeds chip limit of ${limitMa} mA.`,
+        message: `Total current draw ${(totalAmps * 1000).toFixed(1)} mA exceeds chip limit of ${(chipLimit * 1000).toFixed(0)} mA.`,
         partIds: contributors,
       });
     }
     return warnings;
   }
 
-  // Fallback: kind-level maximums (upper bound, stated as such)
   const { totalAmps, unrated, complete } = aggregateCurrent(parts);
-  // Collect the part IDs that contributed to the total
   const contributors = parts
     .filter(p => { const r = getMaxCurrent(p.kind); return r !== null && r > 0; })
     .map(p => p.id);
@@ -281,28 +232,25 @@ export function checkCurrentBudget(parts, solvedCurrents) {
     const limitMa = (chipLimit * 1000).toFixed(0);
     if (complete) {
       warnings.push({
-        severity: 'warning',
-        type: 'aggregate-current',
+        severity: 'warning', type: 'aggregate-current',
         message: `Up to ${totalMa} mA at maximum ratings — may exceed chip limit of ${limitMa} mA. Actual current depends on resistor values.`,
         partIds: contributors,
       });
     } else {
-      const names = unratedIds.join(', ');
       warnings.push({
-        severity: 'warning',
-        type: 'aggregate-current',
-        message: `Up to ${totalMa} mA at maximum ratings (${names} depend on your wiring) — may exceed chip limit of ${limitMa} mA.`,
-        partIds: contributors,
-        unratedIds,
+        severity: 'warning', type: 'aggregate-current',
+        message: `Up to ${totalMa} mA at maximum ratings (${unratedIds.join(', ')} depend on your wiring) — may exceed chip limit of ${limitMa} mA.`,
+        partIds: contributors, unratedIds,
       });
     }
-  } else if (!complete) {
-    const totalMa = (totalAmps * 1000).toFixed(1);
-    const names = unratedIds.join(', ');
+  } else if (!complete && totalAmps > chipLimit * 0.5) {
+    // Only warn about incomplete totals when the rated subtotal is
+    // significant (>50% of limit). With LEDs as circuit-dependent,
+    // almost every circuit has unrated parts — warning on all of them
+    // is noise that gets the warning switched off in the user's head.
     warnings.push({
-      severity: 'warning',
-      type: 'aggregate-current',
-      message: `Current budget: up to ${totalMa} mA counted; ${names} depend on your wiring and are not included.`,
+      severity: 'warning', type: 'aggregate-current',
+      message: `Current budget: up to ${(totalAmps * 1000).toFixed(1)} mA counted; ${unratedIds.join(', ')} depend on your wiring and are not included.`,
       unratedIds,
     });
   }
