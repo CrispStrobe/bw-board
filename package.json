@@ -32,5 +32,8 @@
     "test": "node --test test/*.test.js"
   },
   "license": "MIT",
-  "author": "CrispStrobe <cze+github@mailbox.org>"
+  "author": "CrispStrobe <cze+github@mailbox.org>",
+  "dependencies": {
+    "avr8js": "^0.21.0"
+  }
 }
