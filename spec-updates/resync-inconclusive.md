@@ -17,17 +17,26 @@ in `9f69af9`.
 **(a) `-inject` does not deliver bytes**: excluded by ucsim-stc `3e9c839` —
 `inject_byte` → `input_avail` → `serial.tick` → RI at +83µs → byte in SBUF.
 
-**(c) Firmware does not process the byte**: excluded by a minimal echo test —
-the PC trace shows the firmware leaving its `if (RI)` polling loop, entering
-the handler, and reaching SBUF write. The byte IS processed.
+**(c) CORRECTION: firmware never leaves RI poll.** The earlier report
+claimed the PC left the polling loop and entered "the handler at 0x003B".
+That was wrong on two counts: 0x003B is the PCA vector (interrupt 7),
+not the UART handler (0x0023). And the echo program's UART poll is at
+0x0069 (`JNB RI,$-3`), not 0x0038. The PC trace shows init completing
+and the poll starting, then NO further changes — the inject does not
+cause RI to rise during the `run` command.
 
 ## Live hypothesis
 
-**(d) `-S uart=0,out=FILE` does not capture TX output in this trace mode.**
-The echo test: firmware processes the injected byte (PC leaves polling loop
-at tick ~70981, enters handler at 0x003B-0x0069), but the output file is
-0 bytes. `-inject` works, the firmware echoes — the output capture path is
-the remaining suspect.
+**(d) The inject does not fire during the `run` command in stc12_trace.**
+ucsim-stc `3e9c839` confirmed the inject mechanism works in an
+instrumented unit test. But in the actual stc12_trace binary:
+- Echo program polls RI at 0x0069 — never breaks out
+- No PC change after tick ~72609, even with 200M-tick run
+- Inject at 10ms (well past init) does not cause RI to rise
+- `-S out=` produces 0 bytes (no TX because no RX was processed)
+
+The firmware is correct (SCON=0x50, EA=1, ES=1, polling RI). The
+inject scheduling or dispatch during the `run` loop is the suspect.
 
 This is ucsim-stc's binary.
 
