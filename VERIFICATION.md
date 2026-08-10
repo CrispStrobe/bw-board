@@ -128,3 +128,24 @@ measurement (real silicon, scope trace, photograph) can discharge a
 prediction. This is the polarity observation applied to the bench list:
 four codebases agreeing from the same source cannot confirm each other,
 and neither can a prediction confirm itself through the model that made it.
+
+## Empirical case: a category 2 check that passed while one side was wrong
+
+On 2026-08-10 the limitation above stopped being an argument and became a
+record. See `stc/docs/EVIDENCE-CATEGORIES.md` § "The case that made this
+concrete" (`0a91b07`).
+
+bw-circuit-ui cross-checked terminal definitions against bw-parts' 115
+sidecars. It passed. bw-parts' MCU sidecar carried the generic 8051 pinout
+with wrong pin names (pin 10 = `rxd` instead of `P3.0`, pins 29–31 =
+`psen`/`ale`/`ea` instead of `P4.4`/`P4.5`/`P4.6` GPIOs — signals the
+STC12 does not have). The cross-check excluded MCU as "deliberately
+different", so the one part carrying a real error was the one part not
+compared. Category 2 agreement was perfect while one side was wrong.
+
+What found it: bw-parts checking its own sidecar against `docs/PINOUT.md`
+and the datasheet — a source, not another agent. Three lessons:
+
+1. Category 2 agreement can be perfect while one side is wrong.
+2. Every exclusion in a cross-check is an unchecked claim.
+3. Going to the source is not ceremony — it was the only thing that worked.
