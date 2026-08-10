@@ -2,9 +2,15 @@
  * AVR end-to-end: blink.c → avr-gcc → Intel HEX → avr8js → adapter → board.
  *
  * WHAT THIS ESTABLISHES: the first cross-architecture program runs through
- * the board engine. An ATmega328P blink compiled by avr-gcc, executed by
- * avr8js, drives an LED through the same adapter contract as the STC12.
- * F_CPU = 16 MHz (from the compile response, not hard-coded).
+ * the board engine. An ATmega328P blink compiled locally by avr-gcc,
+ * executed by avr8js, drives an LED through the same adapter contract
+ * as the STC12. F_CPU = 16 MHz (hard-coded literal matching the
+ * AVR-COMPILE-CONTRACT.md per-board value for Uno/Nano).
+ *
+ * NOTE: this test builds the hex locally, not from bw-cfront's compile
+ * endpoint. The F_CPU/clockHz seam (compile response → adapter config)
+ * is NOT exercised here — that requires obtaining both values from the
+ * same endpoint response.
  *
  * WHAT THIS DOES NOT ESTABLISH: Arduino library support (bare AVR C only),
  * timing accuracy beyond the clock match, or anything about real silicon.
@@ -90,7 +96,10 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     }
 
     const hex = readFileSync(hexFile, 'utf8');
-    const fcpu = 16000000; // from compile response
+    // Hard-coded to match the -DF_CPU flag above and the contract's
+    // Uno/Nano default. A real integration test would read this from
+    // the compile endpoint's response.fcpu field.
+    const fcpu = 16000000;
 
     const adapter = createAvr8jsAdapter({ clockHz: fcpu });
     adapter.loadProgram(parseHex(hex));
@@ -115,7 +124,7 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     const pinV = board.nodeVoltage('pin');
 
     console.log(`# AVR blink at t=600ms: brightness=${brightness.toFixed(4)} pin=${pinV.toFixed(1)}V`);
-    console.log(`# F_CPU=${fcpu} (from compile response, not hard-coded)`);
+    console.log(`# F_CPU=${fcpu} (hard-coded literal, matches contract Uno/Nano default)`);
     console.log(`# Pin changes: ${adapter.stats.pinChangeCount}`);
 
     // Derived prediction: VCC=5V, R=220Ω, LED Vf=2V Rd=10Ω, pin Rth=25Ω.
