@@ -167,8 +167,8 @@ function testSetPinShape(adapter) {
     if (typeof first.pin !== 'string') {
       return { name, pass: false, detail: `pin should be a string (e.g. "P1.0"), got ${typeof first.pin}: ${first.pin}`, severity: 'required' };
     }
-    if (!['quasi', 'pushpull', 'input', 'opendrain'].includes(first.mode)) {
-      return { name, pass: false, detail: `mode should be one of quasi/pushpull/input/opendrain, got "${first.mode}"`, severity: 'required' };
+    if (!['quasi', 'pushpull', 'input', 'opendrain', 'input-pullup'].includes(first.mode)) {
+      return { name, pass: false, detail: `mode should be one of quasi/pushpull/input/opendrain/input-pullup, got "${first.mode}"`, severity: 'required' };
     }
     if (typeof first.driveHigh !== 'boolean') {
       return { name, pass: false, detail: `driveHigh should be boolean, got ${typeof first.driveHigh}`, severity: 'required' };
