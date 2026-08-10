@@ -10,7 +10,8 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getMaxCurrent, PORT_LIMITS } from '../src/current-ratings.js';
+import { getMaxCurrent, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from '../src/current-ratings.js';
+import { BoardImpl } from '../src/board.js';
 
 describe('getMaxCurrent: rated kinds return a number', () => {
   it('LED = 0.020 A', () => assert.equal(getMaxCurrent('led'), 0.020));
@@ -19,88 +20,135 @@ describe('getMaxCurrent: rated kinds return a number', () => {
   it('vcc = 0 (sources, not sinks)', () => assert.equal(getMaxCurrent('vcc'), 0));
 });
 
-describe('getMaxCurrent: unratable kinds return null', () => {
-  it('resistor = null (depends on voltage and value)', () => {
-    assert.equal(getMaxCurrent('resistor'), null);
+describe('getMaxCurrent: passives return 0, transistors return null', () => {
+  it('resistor = 0 (current-limiter, not consumer)', () => {
+    assert.equal(getMaxCurrent('resistor'), 0);
   });
-  it('npn = null (depends on circuit)', () => {
+  it('npn = null (collector current is circuit-dependent)', () => {
     assert.equal(getMaxCurrent('npn'), null);
   });
-  it('potentiometer = null', () => {
-    assert.equal(getMaxCurrent('potentiometer'), null);
+  it('potentiometer = 0 (passive)', () => {
+    assert.equal(getMaxCurrent('potentiometer'), 0);
   });
   it('unknown kind = null', () => {
     assert.equal(getMaxCurrent('nonexistent_part'), null);
   });
 });
 
-describe('aggregate current check: null handling', () => {
-  /**
-   * Reference implementation of a safe aggregate check.
-   * This is how consumers SHOULD sum current ratings.
-   * @returns {{ total: number, unrated: string[], complete: boolean }}
-   */
-  function aggregateCurrent(partKinds) {
-    let total = 0;
-    const unrated = [];
-    for (const kind of partKinds) {
-      const rating = getMaxCurrent(kind);
-      if (rating === null) {
-        unrated.push(kind);
-      } else {
-        total += rating;
-      }
-    }
-    return { total, unrated, complete: unrated.length === 0 };
-  }
-
+describe('aggregateCurrent (from src/current-ratings.js)', () => {
   it('all rated parts: exact total, complete=true', () => {
-    const parts = ['led', 'led', 'led', 'led', 'led', 'led', 'buzzer'];
+    const parts = [
+      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
+      { id: 'B1', kind: 'buzzer' },
+    ];
     const result = aggregateCurrent(parts);
     // 6 LEDs × 20mA + 1 buzzer × 30mA = 150mA
-    assert.ok(Math.abs(result.total - 0.150) < 1e-10, `total=${result.total}`);
+    assert.ok(Math.abs(result.totalAmps - 0.150) < 1e-10, `total=${result.totalAmps}`);
     assert.equal(result.complete, true);
     assert.deepEqual(result.unrated, []);
-    // This exceeds the 120 mA chip limit
-    assert.ok(result.total > PORT_LIMITS.perChip.sink,
-      `${result.total * 1000} mA > ${PORT_LIMITS.perChip.sink * 1000} mA limit`);
   });
 
-  it('mix of rated + unrated: partial total, lists unrated', () => {
-    const parts = ['led', 'led', 'led', 'resistor', 'npn'];
+  it('mix of rated + unrated: partial total, lists unrated by id+kind', () => {
+    const parts = [
+      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+      { id: 'Q1', kind: 'npn' }, { id: 'Q2', kind: 'tip120' },
+    ];
     const result = aggregateCurrent(parts);
-    // 3 LEDs × 20mA = 60mA (partial — resistor and npn not counted)
-    assert.equal(result.total, 0.060);
+    assert.equal(result.totalAmps, 0.060);
     assert.equal(result.complete, false);
-    assert.deepEqual(result.unrated, ['resistor', 'npn']);
+    assert.equal(result.unrated.length, 2);
+    assert.equal(result.unrated[0].id, 'Q1');
+    assert.equal(result.unrated[1].kind, 'tip120');
   });
 
   it('naive sum += null silently omits the part (JS coerces null to 0)', () => {
-    // In JavaScript: null coerces to 0 in arithmetic, so sum += null is sum += 0.
-    // This is WORSE than NaN — it produces a plausible-looking number that
-    // silently excludes unrated parts from the total.
+    // Transistors return null — their collector current is circuit-dependent.
     let naiveTotal = 0;
-    naiveTotal += getMaxCurrent('led');      // 0.020
-    naiveTotal += getMaxCurrent('resistor'); // null → 0 (silent omission!)
-    naiveTotal += getMaxCurrent('led');      // 0.020
-
-    // The total looks correct (0.040) but it does not account for the resistor.
-    // If the resistor were drawing significant current, the warning would not fire.
+    naiveTotal += getMaxCurrent('led');  // 0.020
+    naiveTotal += getMaxCurrent('npn'); // null → 0 (silent omission!)
+    naiveTotal += getMaxCurrent('led');  // 0.020
     assert.equal(naiveTotal, 0.040, 'naive sum treats null as 0 — silent omission');
-    // This is why the consumer must check for null explicitly.
+  });
+});
+
+describe('checkCurrentBudget: DRC warnings on real circuits', () => {
+  it('7 LEDs = 140mA → danger warning (exceeds 120mA chip limit)', () => {
+    const parts = [
+      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
+      { id: 'L7', kind: 'led' },
+    ];
+    const warnings = checkCurrentBudget(parts);
+    assert.ok(warnings.length > 0, 'must warn');
+    assert.equal(warnings[0].severity, 'danger');
+    assert.ok(warnings[0].message.includes('140'), `message should include 140mA: ${warnings[0].message}`);
   });
 
-  it('over-limit circuit with one unrated part: must still warn', () => {
-    // 7 LEDs = 140mA (over 120mA limit) + 1 resistor (null)
-    const parts = ['led', 'led', 'led', 'led', 'led', 'led', 'led', 'resistor'];
-    const result = aggregateCurrent(parts);
+  it('3 LEDs = 60mA → no warning (under 120mA)', () => {
+    const parts = [
+      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+    ];
+    const warnings = checkCurrentBudget(parts);
+    assert.equal(warnings.length, 0, 'should not warn under limit');
+  });
 
-    // The rated total alone (140mA) exceeds the limit
-    assert.ok(result.total > PORT_LIMITS.perChip.sink,
-      'rated-only subtotal still exceeds limit → must warn');
-    // And we know the total is incomplete
-    assert.equal(result.complete, false);
-    // The correct message: "at least 140 mA (resistor not counted) exceeds 120 mA"
+  it('7 LEDs + NPN transistor (unrated) → danger warning naming the unrated part', () => {
+    const parts = [
+      { id: 'L1', kind: 'led' }, { id: 'L2', kind: 'led' }, { id: 'L3', kind: 'led' },
+      { id: 'L4', kind: 'led' }, { id: 'L5', kind: 'led' }, { id: 'L6', kind: 'led' },
+      { id: 'L7', kind: 'led' }, { id: 'Q1', kind: 'npn' },
+    ];
+    const warnings = checkCurrentBudget(parts);
+    assert.ok(warnings.length > 0, 'must warn even with unrated parts');
+    assert.equal(warnings[0].severity, 'danger');
+    assert.ok(warnings[0].message.includes('Q1'), `message should name unrated part: ${warnings[0].message}`);
+  });
+
+  it('1 LED + NPN (under limit but incomplete) → warning about incomplete total', () => {
+    const parts = [
+      { id: 'L1', kind: 'led' }, { id: 'Q1', kind: 'npn' },
+    ];
+    const warnings = checkCurrentBudget(parts);
+    assert.ok(warnings.length > 0, 'should warn about incomplete total');
+    assert.equal(warnings[0].severity, 'warning');
+    assert.ok(warnings[0].message.includes('Q1'), `names the unrated part: ${warnings[0].message}`);
+  });
+});
+
+describe('getWarnings includes current budget on real board', () => {
+  it('8 LEDs on a board triggers current warning via getWarnings()', () => {
+    const parts = [
+      { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ];
+    for (let i = 0; i < 8; i++) {
+      parts.push({ id: `LED${i}`, kind: 'led', params: { vForward: 2.0 }, terminals: ['anode', 'cathode'] });
+      parts.push({ id: `R${i}`, kind: 'resistor', params: { ohms: 220 }, terminals: ['a', 'b'] });
+    }
+    parts.push({ id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0','P1.1','P1.2','P1.3','P1.4','P1.5','P1.6','P1.7'] });
+
+    const nets = [
+      { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+      { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+    ];
+    for (let i = 0; i < 8; i++) {
+      nets[0].terminals.push({ part: `R${i}`, terminal: 'a' });
+      nets.push({ id: `net_led${i}`, terminals: [
+        { part: `R${i}`, terminal: 'b' }, { part: `LED${i}`, terminal: 'anode' },
+      ]});
+      nets.push({ id: `net_pin${i}`, terminals: [
+        { part: `LED${i}`, terminal: 'cathode' }, { part: 'MCU', terminal: `P1.${i}` },
+      ]});
+    }
+
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    for (let i = 0; i < 8; i++) board.setPin(`P1.${i}`, 'quasi', false);
+
+    const warnings = board.getWarnings();
+    const budgetWarning = warnings.find(w => w.message.includes('mA') && w.message.includes('limit'));
+    assert.ok(budgetWarning, 'getWarnings should include a current budget warning for 8 LEDs');
   });
 });
 

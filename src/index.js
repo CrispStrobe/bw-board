@@ -38,5 +38,5 @@ export { registerMiscParts } from './devices/misc-parts.js';
 export { registerNamedParts } from './devices/named-parts.js';
 export { registerTier1Parts } from './devices/tier1-parts.js';
 export { registerI2CParts } from './devices/i2c-parts.js';
-export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS } from './current-ratings.js';
+export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from './current-ratings.js';
 export { R_INPUT_PULLUP } from './pin-model.js';

@@ -17,6 +17,7 @@ import { pinThevenin } from './pin-model.js';
 import { solveMNA } from './mna.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
+import { checkCurrentBudget } from './current-ratings.js';
 
 /**
  * Internal pin state.
@@ -1315,6 +1316,11 @@ export class BoardImpl {
     // current + input impedance) but no functional simulation. The part
     // loads the net correctly but its behavior is not modeled.
     // This is stated honestly rather than hidden.
+
+    // Aggregate current budget check — warns when total exceeds chip limit.
+    // Uses real part kinds from the circuit, not a hand-built test array.
+    const budgetWarnings = checkCurrentBudget(this.parts);
+    for (const w of budgetWarnings) warnings.push(w);
 
     return warnings;
   }
