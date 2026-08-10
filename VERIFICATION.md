@@ -1,9 +1,12 @@
 # What this engine actually verifies
 
-**Nothing in this engine has been validated against real silicon.** Two emulators
-agreeing, or a model matching ngspice, is evidence — it is not hardware. This
-document separates the claims by their evidence level so a future reader knows
-what to trust and what to check first on a bench.
+**Nothing in this engine has been validated against real silicon.** Silicon is
+the only source independent of every document we have read. Two emulators
+agreeing, or a model matching ngspice, is evidence — it is not hardware.
+
+This document classifies claims by their evidence level. The classification
+matters: agreement between models that read the same document catches
+transcription slips but **cannot catch a shared misreading of the source**.
 
 ## 1. Verified against a datasheet or measurement
 
@@ -11,8 +14,9 @@ These numbers have a citation. They are as good as the source.
 
 | Claim | Source |
 |-------|--------|
-| Quasi-bidir pin sources ~230 µA | STC12 datasheet §4.6: "weak pull-up current ~230 µA at VCC=5V" |
-| Push-pull sink/source ~20 mA | STC12 datasheet §4.6: "sink/source 20 mA per pin" |
+| Quasi-bidir pin sources ~230 µA (actual 150–250 µA) | STC12 datasheet §4.1 port mode tables |
+| Push-pull sink ~20 mA | STC12 datasheet §4.1 + §4.8 |
+| Chip total: "had better drive lower than 120 mA" | STC12 datasheet §4.1 intro (guidance, not absolute max) |
 | R_STRONG = 25 Ω | Derived: 5V / 200mA (10 pins × 20mA absolute max) |
 | R_QUASI_PULLUP = 21700 Ω | Derived: 5V / 230µA |
 | R_INPUT_PULLUP = 35000 Ω | AVR datasheet: 20–50 kΩ range, midpoint |
@@ -23,24 +27,46 @@ These numbers have a citation. They are as good as the source.
 | TMP36: 10 mV/°C + 500 mV offset | TMP36 datasheet (Analog Devices) |
 | TIP120 Vbe ≈ 1.4 V (2× junction) | TIP120 datasheet (Darlington pair) |
 | 74HC CMOS thresholds: 30%/70% VCC | 74HC family datasheet (VIL/VIH specifications) |
+| Per-port 80 mA | 8051 family guidance (NOT in STC12 datasheet) |
 
-## 2. Verified against another model (cross-implementation agreement)
+## 2a. Independent-source agreement (STRONG)
 
-Two independent implementations agree. This is real evidence of internal
-consistency, but it is NOT the same as matching hardware.
+Two implementations whose information came from **different places** — a
+different upstream codebase, an independent reference solver, or a physical
+measurement. This is the strongest cross-check short of hardware.
+
+| Claim | Evidence | Why independent |
+|-------|----------|----------------|
+| 347-image corpus: zero genuine disagreements between emu8051-stc and ucsim-stc | ucsim-stc `239dff6` | **Different upstream projects** — emu8051 (jcmvbkbc/emu8051) and ucsim (sdcc.sourceforge.net/ucsim) are forks written by different people years apart. Agreement here is closer to hardware verification than any other evidence in this project. |
+| 70 ngspice golden circuits agree (stated tolerances per test) | `test/golden/ngspice_*.json` | **Independent reference solver** — ngspice is a mature open-source SPICE implementation with decades of validation. Our MNA solver was not derived from it. |
+| LED brightness: emu8051 PCA → adapter → board = **0.07248**, analytic = **0.07246** (0.03%) | `test/brightness-emu8051.test.js` | **Cross-boundary check** — emu8051's PCA model (C, stc12.c:543) and bw-board's brightness integrator (JS, board.js) were written independently by different agents. The adapter bug (all edges at time zero) was found by this check — self-consistency could not have found it. |
+
+## 2b. Same-source agreement (catches transcription, NOT misreadings)
+
+Two implementations both derived from **the same document** or from each
+other. Catches arithmetic errors, transcription slips, and drift. Genuinely
+useful. **Cannot catch a misreading of the source.** The four-codebase
+polarity agreement is the clearest example: all four read the same vendor
+animation tables.
+
+| Claim | Evidence | Shared source | What would move it to 2a |
+|-------|----------|---------------|--------------------------|
+| Cube polarity: active-HIGH assumed by all four codebases | bw-board, bw-circuit-ui, emu8051-stc trace, sb3-creator kernel | **Same vendor animation tables** — all four derived from the same tables, so a shared misreading produces identical agreement | A photograph of a lit LED at `(FE, 01)` on real hardware. Pre-registered prediction: one LED lights. |
+| Cube brightness: bw-board and bw-circuit-ui agree on 64 voxel values | `test/golden/cube-trace.js` | Both derive from the same duty model (12.5% = 1/8 scan lines) | A current measurement on a real cube during a known scan pattern |
+| PCA PWM rate: 7.2K edges/sec | bw-board perf budget + ucsim-stc PCA model | Both derived from `SYSclk/12/256` = same datasheet arithmetic | A frequency counter on the real CEX0 pin |
+| Closed-form RC matches MNA transient (±5%) | `test/cross-validate-transient.test.js` | Both are our own code, using the same physics | An oscilloscope on a real RC circuit |
+| 555 astable period within 3% of analytic | 214ms vs 207.9ms | Both use the same 0.693×RC formula | An oscilloscope on a real 555 circuit |
+| 55 Python-computed oracle values match | `test/golden/oracles.json` | Python oracles and JS solver both implement the same equations | — |
+| Serial codec: 5 implementations agree on wire format | emu8051-stc bridge test | All five read `live-proto.h` | A logic analyser on the real UART |
+| Determinism: bit-identical waveform twice | `test/determinism.test.js` | Same code, same inputs | (Internal consistency, not a cross-check) |
+
+## 2c. Single-implementation assertion (weakest)
+
+One model, no cross-check. Honest and weakest.
 
 | Claim | Evidence |
 |-------|----------|
-| Closed-form RC matches MNA transient (±5%) | `test/cross-validate-transient.test.js`: analytic V(t)=VCC*(1-e^(-t/RC)) vs board integration |
-| 555 astable period within 3% of analytic formula | Measured 214ms vs theoretical 207.9ms |
-| 70 ngspice golden circuits agree (stated tolerances per test) | `test/golden/ngspice_*.json` — independent SPICE reference solver |
-| 55 Python-computed oracle values match | `test/golden/oracles.json` |
-| Cube brightness: bw-board and bw-circuit-ui accumulator agree on 64 voxel values | `test/golden/cube-trace.js` |
-| Boundary A conformance: 10/10 against real emu8051-stc WASM | `test/conformance-real-wasm.test.js` |
-| Serial codec: 5 implementations agree on wire format | Verified by emu8051-stc's bridge test (`test_monitor_bwboard.mjs`) |
-| Determinism: same netlist + same program = bit-identical waveform | `test/determinism.test.js` |
-| PCA PWM rate: 7.2K edges/sec (SYSclk/12/256 = 3600 Hz = 7200 edges) | Independently measured by bw-board (perf budget) and ucsim-stc (PCA model), same arithmetic by separate routes |
-| LED brightness at 50% PCA duty: emu8051 → adapter → board = **0.07248**, analytic = **0.07246** (0.03% difference) | `test/brightness-emu8051.test.js`: real emulated PCA edges through the push-mode adapter into the brightness integrator. The adapter bug (all edges at time zero) was found by this check — self-consistency could not have found it. |
+| Boundary A conformance: 10/10 against real emu8051-stc WASM | `test/conformance-real-wasm.test.js` — tests that the adapter satisfies the contract, not that the contract matches hardware |
 
 ## 3. Asserted but unverified (engineering assumptions)
 
@@ -83,6 +109,9 @@ These are limitations, stated so nobody discovers them on a bench.
 ## The principle
 
 A limitation stated where it can be seen costs nothing. The same limitation
-discovered after a bench session costs hours of debugging "why doesn't my real
-circuit match the simulation?" Every entry in section 4 is a possible answer to
-that question, pre-written.
+discovered after a bench session costs hours. Every entry in section 4 is a
+possible answer to "why doesn't my real circuit match the simulation?"
+
+Agreement between models is evidence. Agreement between models that read
+the same document is weaker evidence. Silicon is the only test that is
+independent of every document we have read.
