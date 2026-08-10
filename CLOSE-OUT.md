@@ -72,10 +72,12 @@ with no mock in the path. HELLO, REGS (8 fields), READ (iram[0]) all
 round-tripped successfully. Two independent implementations (host JS codec +
 firmware C codec) agree over a transport neither owns. Category 2b.
 
-Idle-timeout resync: unreachable under emu8051 (instant bytes). ucsim (`44bad89`)
-reports it IS reachable once `-inject TIME,BYTE` lands — Timer 1 wall clock
-runs, 5ms timeout would fire. Blocked on ucsim-stc adding the flag, then
-bw-board writes the resync test.
+Idle-timeout resync: unreachable under emu8051 (instant bytes). ucsim
+`stc12_trace -inject` (a81091e) CAN reach it — Timer 1 wall clock runs, 5ms
+timeout fires. Test framework written: sends a torn frame, waits 10ms for
+idle timeout, sends valid HELLO. **Loudly skips** when `stc12_trace` binary is
+absent (needs rebuild). When the binary is available, the test runs the
+resync path end-to-end.
 
 ## What is open, not bench-blocked
 
@@ -83,7 +85,7 @@ bw-board writes the resync test.
 |------|-------|--------|
 | Cube oracle path (`test/golden/`) contradicts "not golden-file" | bw-board | Noted, not moved |
 | bw-parts / bw-board rating table convergence | Both | Vendored copy in bw-board; bw-parts owns canonical |
-| Idle-timeout resync test | ucsim-stc `-inject` flag, then bw-board | Blocked on ucsim-stc `44bad89` |
+| Idle-timeout resync execution | ucsim-stc | `stc12_trace` needs rebuild with `-inject` (link error). Test framework ready, skips loudly. |
 
 ## Principles this campaign produced
 
