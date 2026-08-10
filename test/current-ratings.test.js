@@ -10,7 +10,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getMaxCurrent, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from '../src/current-ratings.js';
+import { getMaxCurrent, PORT_LIMITS, CURRENT_RATINGS, aggregateCurrent, checkCurrentBudget } from '../src/current-ratings.js';
 import { BoardImpl } from '../src/board.js';
 
 describe('getMaxCurrent: rated kinds return a number', () => {
@@ -182,5 +182,38 @@ describe('PORT_LIMITS: correct values and provenance', () => {
   });
   it('perChip sink = 120 mA (datasheet §4.1 intro)', () => {
     assert.equal(PORT_LIMITS.perChip.sink, 0.120);
+  });
+});
+
+describe('classification completeness: every kind is rated or explicitly null', () => {
+  // The 6 kinds that CANNOT be rated from kind alone (circuit-dependent).
+  // This list must be maintained — a kind that is null by accident and one
+  // that is null by nature must not look the same.
+  const CIRCUIT_DEPENDENT = new Set([
+    'npn', 'pnp', 'nmos', 'pmos', 'tip120', 'darlington_driver',
+  ]);
+
+  it('all null kinds are in the CIRCUIT_DEPENDENT set (no accidental nulls)', () => {
+    for (const [kind, rating] of Object.entries(CURRENT_RATINGS)) {
+      if (rating === null) {
+        assert.ok(CIRCUIT_DEPENDENT.has(kind),
+          `${kind} returns null but is not in CIRCUIT_DEPENDENT — ` +
+          `is this intentional or does it need a rating?`);
+      }
+    }
+  });
+
+  it('CIRCUIT_DEPENDENT set matches the actual null kinds', () => {
+    for (const kind of CIRCUIT_DEPENDENT) {
+      assert.equal(CURRENT_RATINGS[kind], null,
+        `${kind} is in CIRCUIT_DEPENDENT but returns ${CURRENT_RATINGS[kind]}, not null`);
+    }
+  });
+
+  it('exactly 6 kinds are circuit-dependent (the count is the quality metric)', () => {
+    const nullCount = Object.values(CURRENT_RATINGS).filter(v => v === null).length;
+    assert.equal(nullCount, 6,
+      `expected 6 circuit-dependent kinds, got ${nullCount}. ` +
+      `If a new null appeared, add it to CIRCUIT_DEPENDENT with a reason.`);
   });
 });

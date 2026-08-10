@@ -121,13 +121,16 @@ export const CURRENT_RATINGS = {
   diode: 0,
   zener: 0,
 
-  // ─── Transistors (current depends on circuit) ─────────────────────
-  npn: null,
-  pnp: null,
-  nmos: null,
-  pmos: null,
-  tip120: null,
-  darlington_driver: null,
+  // ─── Transistors: CANNOT be rated from kind alone ─────────────────
+  // Collector/drain current is set by the circuit (base drive, load,
+  // supply), not by the transistor's type. These return null, and the
+  // DRC says "X parts depend on your wiring" rather than "not counted".
+  npn: null,        // collector current = circuit-dependent
+  pnp: null,        // collector current = circuit-dependent
+  nmos: null,       // drain current = circuit-dependent
+  pmos: null,       // drain current = circuit-dependent
+  tip120: null,     // Darlington collector = circuit-dependent
+  darlington_driver: null, // 8-ch open collector = circuit-dependent
 
   // ─── Switches (passive, no current rating) ────────────────────────
   button: 0,
@@ -284,7 +287,7 @@ export function checkCurrentBudget(parts, solvedCurrents) {
       warnings.push({
         severity: 'warning',
         type: 'aggregate-current',
-        message: `Up to ${totalMa} mA at maximum ratings (${names} not counted) — may exceed chip limit of ${limitMa} mA.`,
+        message: `Up to ${totalMa} mA at maximum ratings (${names} depend on your wiring) — may exceed chip limit of ${limitMa} mA.`,
         partIds: contributors,
         unratedIds,
       });
@@ -295,7 +298,7 @@ export function checkCurrentBudget(parts, solvedCurrents) {
     warnings.push({
       severity: 'warning',
       type: 'aggregate-current',
-      message: `Current budget incomplete: up to ${totalMa} mA counted, but ${names} could not be rated.`,
+      message: `Current budget: up to ${totalMa} mA counted; ${names} depend on your wiring and are not included.`,
       unratedIds,
     });
   }
