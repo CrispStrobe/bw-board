@@ -1,12 +1,16 @@
 /**
  * Maximum current ratings per part kind.
  *
- * Used by static port-current checks: sum the max current of everything
- * on a port and warn before exceeding aggregate limits.
+ * OWNERSHIP: bw-parts owns the rating DATA (datasheets, sourcing).
+ * bw-board owns the SEMANTICS (what 0 vs null means for the DRC).
+ * bw-parts/current-ratings.json is the canonical data source.
+ * This file should be checked against it; two tables that must agree
+ * by hand will drift.
  *
- * Sources cited where available. Unrated kinds return null (not 0) —
- * a part that silently contributes 0 mA to a sum produces a confident
- * wrong total; null produces a question.
+ * Three states:
+ *   number > 0 — this kind draws this much (amps)
+ *   0          — not a consumer of chip supply current (passives, sources)
+ *   null       — depends on the circuit; DRC says "depends on your wiring"
  *
  * Values are in AMPS.
  *
@@ -15,7 +19,7 @@
 
 /**
  * Maximum current draw per part kind in typical use.
- * null = not rated (cannot be summed — must be flagged).
+ * null = circuit-dependent (cannot be summed — DRC names the parts).
  *
  * @type {Record<string, number | null>}
  */
