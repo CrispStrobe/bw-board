@@ -4,9 +4,11 @@
 the only source independent of every document we have read. Two emulators
 agreeing, or a model matching ngspice, is evidence — it is not hardware.
 
-This document classifies claims by their evidence level. The classification
-matters: agreement between models that read the same document catches
-transcription slips but **cannot catch a shared misreading of the source**.
+This document classifies claims per the canonical taxonomy in
+`stc/docs/EVIDENCE-CATEGORIES.md` (Cat 1: independent-source, Cat 2:
+same-source, Cat 3: single-implementation). The classification matters:
+same-source agreement catches transcription slips but **cannot catch a
+shared misreading of the source**.
 
 ## 1. Verified against a datasheet or measurement
 
