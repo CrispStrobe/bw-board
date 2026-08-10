@@ -112,7 +112,9 @@ describe('motor end-to-end: compiled PCA 8-bit PWM through emu8051 → H-bridge 
     const adapter = createEmu8051Adapter(wasm, { fosc: 11059200, vcc: 5.0, ports: [1, 3] });
     adapter.attachBoard(board);
     adapter.loadHex(readFileSync(HEX_FILES['50rev'], 'utf8'));
-    adapter.runNs(10_000_000);
+    // 5ms not 10ms: with corrected SETB/CLR cycle counts (1 MC not 3),
+    // main() finishes before 10ms and direction reverts to coast.
+    adapter.runNs(5_000_000);
 
     const stats = adapter.getStats();
     const in1V = board.nodeVoltage('in1');
