@@ -118,9 +118,13 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     console.log(`# F_CPU=${fcpu} (from compile response, not hard-coded)`);
     console.log(`# Pin changes: ${adapter.stats.pinChangeCount}`);
 
-    // LED should be ON (D13 LOW, current flowing through LED)
-    assert.ok(brightness > 0.1,
-      `LED should be bright during ON period, got ${brightness.toFixed(4)}`);
+    // Derived prediction: VCC=5V, R=220Ω, LED Vf=2V Rd=10Ω, pin Rth=25Ω.
+    // Total series R = 220+10+25 = 255Ω. I = (5-2)/255 = 11.76 mA.
+    // Brightness = 11.76/20 = 0.5882. Tolerance ±5%.
+    const expected = (5.0 - 2.0) / (220 + 10 + 25) / 0.020; // 0.5882
+    assert.ok(Math.abs(brightness - expected) < expected * 0.05,
+      `LED brightness should be ~${expected.toFixed(4)}, got ${brightness.toFixed(4)}. ` +
+      `Derived: I=(5-2)/(220+10+25)=11.76mA, brightness=11.76/20=0.5882.`);
     assert.ok(pinV < 1.0,
       `D13 should be LOW (driving LED), got ${pinV.toFixed(1)}V`);
 
