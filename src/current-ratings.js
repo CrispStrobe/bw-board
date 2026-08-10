@@ -226,28 +226,53 @@ export function aggregateCurrent(parts) {
  * Check a circuit's parts against chip current limits.
  * Returns DRC warnings for aggregate current budget violations.
  *
+ * When `solvedCurrents` is provided (a Map of partId → amps from MNA),
+ * uses actual solved currents instead of kind maximums. This gives a
+ * realistic answer ("24 mA through your 1kΩ resistors") instead of a
+ * worst-case bound ("up to 160 mA at maximum ratings").
+ *
  * @param {Array<{id: string, kind: string}>} parts
+ * @param {Map<string, number>} [solvedCurrents] - partId → actual amps from MNA
  * @returns {Array<{severity: 'warning' | 'danger', message: string}>}
  */
-export function checkCurrentBudget(parts) {
+export function checkCurrentBudget(parts, solvedCurrents) {
   const warnings = [];
-  const { totalAmps, unrated, complete } = aggregateCurrent(parts);
-
   const chipLimit = PORT_LIMITS.perChip.sink;
+
+  if (solvedCurrents && solvedCurrents.size > 0) {
+    // Use actual solved currents — realistic, not worst-case
+    let totalAmps = 0;
+    for (const [, amps] of solvedCurrents) {
+      totalAmps += Math.abs(amps);
+    }
+
+    if (totalAmps > chipLimit) {
+      const totalMa = (totalAmps * 1000).toFixed(1);
+      const limitMa = (chipLimit * 1000).toFixed(0);
+      warnings.push({
+        severity: 'danger',
+        message: `Total current draw ${totalMa} mA exceeds chip limit of ${limitMa} mA.`,
+      });
+    }
+    return warnings;
+  }
+
+  // Fallback: kind-level maximums (upper bound, stated as such)
+  const { totalAmps, unrated, complete } = aggregateCurrent(parts);
 
   if (totalAmps > chipLimit) {
     const totalMa = (totalAmps * 1000).toFixed(1);
     const limitMa = (chipLimit * 1000).toFixed(0);
     if (complete) {
       warnings.push({
-        severity: 'danger',
-        message: `Total current draw ${totalMa} mA exceeds chip limit of ${limitMa} mA.`,
+        severity: 'warning',
+        message: `Up to ${totalMa} mA at maximum ratings — may exceed chip limit of ${limitMa} mA. Actual current depends on resistor values.`,
       });
     } else {
       const names = unrated.map(u => u.id).join(', ');
       warnings.push({
-        severity: 'danger',
-        message: `At least ${totalMa} mA (${names} not counted) exceeds chip limit of ${limitMa} mA.`,
+        severity: 'warning',
+        message: `Up to ${totalMa} mA at maximum ratings (${names} not counted) — may exceed chip limit of ${limitMa} mA.`,
       });
     }
   } else if (!complete) {
@@ -255,7 +280,7 @@ export function checkCurrentBudget(parts) {
     const names = unrated.map(u => u.id).join(', ');
     warnings.push({
       severity: 'warning',
-      message: `Current budget incomplete: ${totalMa} mA counted, but ${names} could not be rated. Actual total may be higher.`,
+      message: `Current budget incomplete: up to ${totalMa} mA counted, but ${names} could not be rated.`,
     });
   }
 

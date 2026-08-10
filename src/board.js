@@ -1317,9 +1317,16 @@ export class BoardImpl {
     // loads the net correctly but its behavior is not modeled.
     // This is stated honestly rather than hidden.
 
-    // Aggregate current budget check — warns when total exceeds chip limit.
-    // Uses real part kinds from the circuit, not a hand-built test array.
-    const budgetWarnings = checkCurrentBudget(this.parts);
+    // Aggregate current budget check — uses actual solved currents when
+    // available (realistic), falls back to kind maximums (upper bound).
+    const solvedCurrents = new Map();
+    for (const part of this.parts) {
+      if (part.kind === 'led') {
+        const i = this.ledCurrents.get(part.id);
+        if (i !== undefined && i > 0) solvedCurrents.set(part.id, i);
+      }
+    }
+    const budgetWarnings = checkCurrentBudget(this.parts, solvedCurrents.size > 0 ? solvedCurrents : undefined);
     for (const w of budgetWarnings) warnings.push(w);
 
     return warnings;
