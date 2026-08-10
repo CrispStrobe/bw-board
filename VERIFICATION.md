@@ -40,6 +40,7 @@ consistency, but it is NOT the same as matching hardware.
 | Serial codec: 5 implementations agree on wire format | Verified by emu8051-stc's bridge test (`test_monitor_bwboard.mjs`) |
 | Determinism: same netlist + same program = bit-identical waveform | `test/determinism.test.js` |
 | PCA PWM rate: 7.2K edges/sec (SYSclk/12/256 = 3600 Hz = 7200 edges) | Independently measured by bw-board (perf budget) and ucsim-stc (PCA model), same arithmetic by separate routes |
+| LED brightness at 50% PCA duty: emu8051 → adapter → board = **0.07248**, analytic = **0.07246** (0.03% difference) | `test/brightness-emu8051.test.js`: real emulated PCA edges through the push-mode adapter into the brightness integrator. The adapter bug (all edges at time zero) was found by this check — self-consistency could not have found it. |
 
 ## 3. Asserted but unverified (engineering assumptions)
 
