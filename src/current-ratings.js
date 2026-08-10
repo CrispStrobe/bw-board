@@ -179,17 +179,17 @@ export function getMaxCurrent(kind) {
 /**
  * STC12 port and chip current limits.
  *
- * ONLY the per-pin 20 mA figure is from the STC12C5A60S2 datasheet (§4.8:
- * "the push-pull mode the drive current can be up to 20mA").
- *
- * The per-port and per-chip aggregates are standard 8051-family engineering
- * guidance — widely used across the family, but NOT stated in the STC12
- * datasheet. The datasheet contains no aggregate current table.
+ * Per-pin: §4.1 mode tables (all ports P0-P5): "Sink Current up to 20mA,
+ *   pull-up Current is 230µA, actual pull-up current is 250uA ~ 150uA"
+ * Push-pull source: §4.1 push-pull row: "current can be up to 20mA"
+ * Per-chip: §4.1 intro: "the whole chip had better drive lower than 120mA"
+ *   (guidance — "had better", not absolute max)
+ * Per-port: NOT in the STC12 datasheet. 80 mA is 8051-family convention.
  *
  * A DRC warning is the right response to exceeding these; a refusal is not.
  */
 export const PORT_LIMITS = {
-  perPin: { sink: 0.020, source: 0.000230 },  // 20 mA sink (datasheet §4.8), 230 µA source (quasi)
+  perPin: { sink: 0.020, source: 0.000230 },  // 20 mA sink, 230 µA source (§4.1 mode tables)
   perPort: { sink: 0.080 },                     // 80 mA per port (8051 family guidance, not in STC12 datasheet)
-  perChip: { sink: 0.120 },                     // ~120 mA total (8051 family guidance, not in STC12 datasheet)
+  perChip: { sink: 0.120 },                     // 120 mA total chip (§4.1 intro: "had better drive lower than")
 };
