@@ -1,142 +1,98 @@
 # bw-board
 
-Board layer between an emulated 8051 MCU and a bench-style circuit designer.
-Resolves pin drive states into node voltages, LED brightness, and buzzer tones.
+Circuit simulation engine for a learning-oriented breadboard designer.
+Resolves pin drive states into node voltages, LED brightness, buzzer tones,
+servo angles, motor speeds, and relay states — from pin-level physics, not
+shortcuts.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
+1216 tests, 0 failures. 111 part kinds.
 
-## What it does
+## What is in this repo
 
-- **Netlist + pin resolution**: parts (VCC, GND, resistor, LED, pot, button, switch,
-  buzzer, capacitor, diode) connected by nets, resolved against MCU pin Thévenin equivalents.
-- **Four STC12 port modes** as different Thévenin sources: quasi-bidirectional (sink 20 mA /
-  source ~230 µA), push-pull, input-only, open-drain.
-- **Closed-form fast path**: voltage dividers, LED threshold + dynamic R, RC exponential,
-  pot divider, button. No matrix solver needed for the starter-kit component set.
-- **MNA solver** (behind the interface): for `branchCurrent` and `resistance`. Linear MNA
-  with Newton–Raphson for diodes. Gaussian elimination with partial pivoting.
-- **Instruments**: `nodeVoltage`, `branchCurrent`, `resistance` (returns `'requires-power-off'`
-  when the board is live — because a real DMM measures ohms with the power off).
-- **Transducers**: `ledBrightness` (current × PWM duty integrated over 20 ms),
-  `buzzerTone` (toggle period → frequency for Web Audio).
-- **`inferNetlist`** (boundary C): generates a default circuit from `project.stc.pins`.
-- **Boundary-A conformance kit**: `runConformance(mcuAdapter)` — executable test suite
-  that any MCU implementation runs to verify it satisfies the contract.
-- **emu8051-stc adapter**: bridges the WASM emulator API to boundary A via polling.
+**Core engine** (`src/board.js`, `src/mna.js`): closed-form solver for
+resistive networks + MNA with Newton–Raphson for nonlinear elements (diodes,
+transistors, op-amps, zener). Gaussian elimination with partial pivoting.
+CV→CC power supply mode (vsource with `iLimit`). Scope channels with fixed
+sim-time cadence and min/max decimation. `advanceTo` sub-steps through device
+deadlines so timed transitions (relay switching, motor spin-up, servo travel)
+fire at the correct simulated time, not just at the destination.
 
-## Performance budget
+**111 part kinds** across built-in models (31) and a device registry (80):
+- Passives: resistor, capacitor, inductor, diode, zener, LED, potentiometer,
+  button, switch, buzzer, LDR, NTC, fuse
+- Semiconductors: NPN, PNP, NMOS, PMOS, op-amp, TIP120
+- 18 DIP logic ICs via chip-composer (74HC00/02/04/08/10/11/14/20/21/27/32/
+  73/74/86/93/95/132, CD4511) — one table-driven helper, not 18 hand-written models
+- Digital ICs: CD4017 decade counter, D/JK flip-flops, 74HC283 adder,
+  74HC75 latch, PCF8574 I2C expander, Darlington driver
+- Analog ICs: 555 timer, 556 dual, LM393/LM339 comparators
+- Power: battery variants (9V/AA/coin), LM7805, LD1117V33, solar cell, USB-A
+- Actuators: DC motor (back-EMF), motor with encoder (quadrature), servo
+  (pulse-width decode from pin edges), stepper, solenoid, vibration motor,
+  relay SPDT/DPDT, H-bridge (L293D)
+- Sensors: TMP36, ultrasonic, PIR, tilt, flex, force, gas, phototransistor,
+  photodiode, soil moisture, ambient light
+- Display: NeoPixel (WS2812B NRZ decode from 800 kHz pin edges), bargraph,
+  clock display, I2C LCD backpack
+- Connectors: header, USB-A
 
-Measured on a single core (Node 20, Linux), 11-part netlist (2 LEDs, pot, button, buzzer):
+**Two DebugTarget implementations** (`src/emu8051-debug.js`, `src/serial-debug.js`):
+same interface, different capabilities. Factory at `src/debug-target-factory.js`.
 
-| Operation | Throughput | Notes |
-|-----------|-----------|-------|
-| advanceTo (steady state) | ~233 K ops/sec | Skips recording when nothing changed |
-| advanceTo + setPin (PWM loop) | ~194 K calls/sec | The main simulation loop |
-| setPin (closed-form solve) | ~184 K ops/sec | Re-solves on every pin change |
-| setControl (pot, re-solve) | ~109 K ops/sec | |
-| branchCurrent (MNA solve) | ~12 K ops/sec | Full matrix solve per call |
-| branchCurrent (MNA cached) | ~7.6 M ops/sec | Cache hit — no state change between reads |
-| readAnalog (no re-solve) | ~824 K ops/sec | Pure lookup |
-| 595 shift register burst | ~253 K edges/sec | 24 edges per write |
+**DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
+chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,
+device sub-step overflow. Two-budget current ratings vendored from
+`bw-parts/current-ratings.json`.
 
-**PCA PWM performance:** 1 second of 8-bit PWM at FOSC/12 simulated in 75ms
-= **13.4× real time**. 7200 edges/sec against 194K capacity = 27× headroom.
+**Five port modes**: quasi-bidirectional (25 Ω sink / 21.7 kΩ source),
+push-pull, input-only, open-drain, input-pullup (35 kΩ, AVR). Source:
+STC12 datasheet §4.1 for the first four; AVR datasheet for input-pullup.
 
-**Meter block cliff (measured, commit `c4d8031`, method below):** the full
-per-edge path — one `advanceTo` + one `setPin` + one `branchCurrent` per
-edge — sustains **8.0K edges/sec** against a PCA rate of 7.2K edges/sec
-= **1.1× real time**. The MNA cache (`44fc538`) has zero hit rate here
-because each `setPin` invalidates it. The cache helps the *recommended*
-pattern instead: at display rate (~60 Hz), multiple meter blocks in one
-frame share a single MNA solve. Meter blocks MUST sample at display rate,
-not per edge — the cliff makes it necessary, and a real multimeter does
-the same thing.
+## What is verified
 
-Measurement method: 3000 PCA 8-bit PWM cycles (50% duty, FOSC/12),
-one `branchCurrent('LED_lamp', 'anode')` per edge, 50-cycle warmup,
-Node 20, single core.
+Evidence categories per `stc/docs/EVIDENCE-CATEGORIES.md`. Full ledger at
+`stc/docs/VERIFICATION-LEDGER.md`.
 
-## Integration path
+**Nothing in this repo has been validated against real silicon.**
 
-This module has zero runtime dependencies and is designed to be vendored into
-`brickwright-lite` (a fully-permissive BSD-3/Apache-2.0/MIT bundle). Options:
+Key results (all category 2b unless noted):
+- Servo: 1500.0 µs at 90° (emu8051), 1499.6 µs (ucsim), 0.4 µs spread
+- Motor: 84/128/192 of 256 counts, period 277561 ns
+- LED brightness: 0.07248 end-to-end (found the adapter time-zero bug)
+- 70 ngspice golden circuits (category 1 — independent solver)
+- 347-image corpus: 0 disagreements across two emulators (category 1 — different upstreams)
+- Serial DebugTarget: HELLO/REGS/READ round-tripped against real firmware
+  UART with no mock. Baud accuracy not modelled (emu8051 §9 trap).
+- NeoPixel: all four WS2812B timing windows pass (T0H=362 ns, T1H=814 ns)
 
-1. **Vendor via sync script** (like `sb3-creator`): publish to npm, then a sync script
-   copies the built module into the bundle.
-2. **Fold directly**: copy `src/` into the consuming project. No build step needed.
+16 defects found and fixed during verification. See `CLOSE-OUT.md`.
 
-Either way, keep the zero-dependency rule — it is what lets this ship inside a permissive bundle.
+## What is NOT done
 
-### Vendoring: which files to copy
+- **Bench session** (BENCH-ADC/CUBE/UART/PWM): four pre-registered predictions
+  in `stc/docs/BENCH-SESSION.md`, all hardware-blocked
+- **Idle-timeout resync**: test framework written, blocked on `stc12_trace`
+  rebuild with `-inject` (ucsim-stc a81091e)
+- **Headless live E2E** (Playwright): blocked on memory constraints
+- **Mutual inductance / transformers**: not modelled
+- **Propagation delay in logic gates**: gates respond in zero time
+- **Temperature, tolerance, parasitics**: not modelled. See `VERIFICATION.md` §4
 
-A vendoring script should copy exactly these files:
+## How to run
 
-```
-src/index.js
-src/types.js
-src/pin-model.js
-src/board.js
-src/mna.js
-src/validate.js
-src/infer-netlist.js
-src/scripted-mcu.js
-src/conformance.js
-src/emu8051-adapter.js
-src/emu8051-debug.js
-src/debug-session.js
-src/serial-debug.js
-src/debug-target-factory.js
-src/builder.js
-src/devices.js
-src/devices/logic-gates.js
-src/devices/relay.js
-src/devices/dc-motor.js
-src/devices/servo.js
-src/devices/timer-555.js
-src/devices/power.js
-src/devices/sensors.js
-src/devices/h-bridge.js
-src/devices/motor-drivers.js
-src/devices/display.js
-src/devices/digital-ics.js
+```bash
+npm test                    # node --test (1216 tests)
+node bench/perf.js          # performance benchmark
 ```
 
-`src/index.js` is the single entry point. All imports are relative within `src/`.
-No build step, no dependencies, no generated files. Copy the directory and import.
-
-### Netlist validation
-
-`setNetlist` validates the netlist and **throws on errors** — wrong terminal names
-(e.g. `{a,b}` instead of `{anode,cathode}` for an LED), unknown part kinds, missing
-ground reference, NaN parameters. This prevents the solver from silently producing
-plausible wrong answers.
-
-```js
-import { BoardImpl } from 'bw-board';
-
-try {
-  board.setNetlist(parts, nets);
-} catch (e) {
-  // e.message lists the specific errors
-  console.error(e.message);
-}
-```
-
-For pre-flight checking without throwing, use `validateNetlist` directly:
-
-```js
-import { validateNetlist } from 'bw-board';
-
-const errors = validateNetlist(parts, nets);
-// errors: [{severity: 'error'|'warning', message, partId?, netId?}]
-```
+Requires Node 20+. No build step, no dependencies.
 
 ## Quick start
 
 ```js
-import { BoardImpl, inferNetlist } from './lib/bw-board/index.js';
+import { BoardImpl, inferNetlist } from './src/index.js';
 
-// 1. Infer a circuit from pin declarations
 const { parts, nets } = inferNetlist({
   pins: [
     { name: 'led1', port: 1, bit: 0, direction: 'output', activeLow: true },
@@ -144,62 +100,42 @@ const { parts, nets } = inferNetlist({
   ],
 });
 
-// 2. Create the board (setNetlist validates and throws on errors)
 const board = new BoardImpl(5.0);
 board.setNetlist(parts, nets);
-
-// 3. Drive pins as the MCU would
 board.setPin('P1.0', 'quasi', false);  // LED on (active-low)
-board.setPin('P1.3', 'input', false);  // ADC input
-board.setControl('POT_pot', 0.5);      // user turns the knob
-board.advanceTo(25_000_000n);          // 25 ms of simulation
+board.setControl('POT_pot', 0.5);
+board.advanceTo(25_000_000n);
 
-// 4. Read the state for the UI
 const state = board.getRenderState();
 // state.leds[0].brightness ≈ 0.145
-// state.controls[0].value === 0.5
-// state.warnings.length === 0
 ```
 
-## Testing
+## Vendoring
 
-```bash
-npm test                    # node --test
-node bench/perf.js          # performance benchmark
-```
+Copy `src/` into the consuming project. `src/index.js` is the single entry
+point. All imports are relative within `src/`. No build step, no dependencies.
 
-## Files
+## Performance
 
-```
-src/
-  index.js              — module entry point (single import)
-  types.js              — boundary A + B type definitions (JSDoc)
-  pin-model.js          — Thévenin equivalents for five port modes
-  board.js              — Board implementation (closed-form + RC + scope)
-  mna.js                — MNA solver (branchCurrent, resistance)
-  validate.js           — netlist validation (catch misuse before solve)
-  infer-netlist.js      — boundary C: infer netlist from project.stc.pins
-  devices.js            — device model registry (extension point)
-  devices/              — registered device models (60 part kinds total):
-    logic-gates.js      — AND/OR/NOT/NAND/NOR/XOR (74HC-flavored)
-    relay.js            — SPDT relay with coil hysteresis
-    dc-motor.js         — back-EMF + winding R, speed integration
-    servo.js            — PWM pulse-width decoder, angle slew
-    timer-555.js        — behavioral 555 (comparators + FF + discharge)
-    power.js            — battery, voltage regulator, fuse
-    sensors.js          — ultrasonic, PIR, tilt, flex, force, phototransistor
-    h-bridge.js         — L293D-style dual half-bridge motor driver
-    motor-drivers.js    — stepper motor, solenoid
-    display.js          — neopixel (WS2812B), bargraph
-    digital-ics.js      — decade counter, D/JK flip-flops, Darlington, piezo
-  scripted-mcu.js       — test harness: timestamped pin events
-  conformance.js        — boundary-A conformance kit
-  emu8051-adapter.js    — adapter for the emu8051-stc WASM emulator
-bench/
-  perf.js               — performance benchmark
-test/
-  *.test.js             — ~1138 tests
-```
+Measured on a single core (Node 20, Linux), 11-part netlist:
+
+| Operation | Throughput |
+|-----------|-----------|
+| advanceTo (steady state) | ~233 K ops/sec |
+| setPin (closed-form) | ~184 K ops/sec |
+| branchCurrent (MNA cached) | ~7.6 M ops/sec |
+| branchCurrent (MNA solve) | ~12 K ops/sec |
+
+Meter cliff: 8.0 K edges/sec full per-edge path = 1.1× real time.
+Display-rate sampling is load-bearing.
+
+## Key documents
+
+- `VERIFICATION.md` — what is verified, to what standard, and what is not
+- `CLOSE-OUT.md` — campaign results: numbers, categories, defects, open items
+- `DEVICE-CENSUS.md` — which device models respond to pin voltages vs block calls
+- `PARTS-TARGET.md` — engine-specific notes on the parts catalogue
+- `BLOCKED.md` — items waiting on external work
 
 ## License
 
