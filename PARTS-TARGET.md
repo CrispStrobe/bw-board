@@ -39,3 +39,25 @@ that watch SCL/SDA edges directly — no shared bus abstraction needed.
 
 vsource CC mode: implemented in mna.js (`06935ad`). `setControl()` adjusts voltage
 in real time for the bench-supply knob experience.
+
+## Behaviour-class substitution
+
+The target ecosystem's own guidance is that a missing sensor gets represented
+by a similar one, because what matters is the behaviour class. There are only
+four that matter for the long tail of sensors:
+
+| Class | Engine model | Substitutes for |
+|-------|-------------|-----------------|
+| 3-pin analog sensor | `tmp36` (V = f(stimulus)) | Any sensor with VCC/GND/signal that outputs a voltage proportional to a physical quantity |
+| 2-pin analog sensor | `ldr` / `ntc` / `flex_sensor` / `force_sensor` (R = f(stimulus)) | Any sensor whose resistance varies with a physical quantity; use as one half of a voltage divider |
+| Digital contact closure | `button` / `switch` / `tilt_sensor` (open/closed) | Reed switch, vibration switch, any sensor that reduces to a contact closing |
+| I2C device | `pcf8574` / `char_lcd_i2c` (SCL/SDA behavioral decode) | Any I2C peripheral; the protocol is the same, only the register set differs |
+
+A model that covers these four classes honestly covers the long tail by
+substitution — which is a much smaller job than 114 individual models.
+
+**Unverified identifications** (from the target catalogue): the clock display
+(HT16K33 vs TM1637 — not interchangeable), ATtiny (85 assumed), micro:bit
+(v1 vs v2), gas sensor (MQ-series, no specific part). Do not build a model
+whose timing or pinout depends on which one it is without stating which was
+assumed.
