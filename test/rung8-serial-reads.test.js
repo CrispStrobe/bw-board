@@ -16,12 +16,15 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { buildFrame, FrameReceiver, CMD } from '../src/serial-debug.js';
 
 const require = createRequire(import.meta.url);
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 const HEX_PATH = '/tmp/10-live-firmware.hex';
-const WASM_PATH = '/mnt/volume1/code/emu8051-stc/build/emu8051.js';
+const WASM_PATH = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
 
 let createEmu8051;
 try { createEmu8051 = require(WASM_PATH); } catch {}

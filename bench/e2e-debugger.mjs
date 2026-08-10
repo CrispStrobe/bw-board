@@ -38,8 +38,7 @@ const SB3 = process.env.SB3_CREATOR || path.join(code, 'sb3-creator');
 const STCC = process.env.STC_COMPILER || path.join(code, 'stc-compiler');
 const WASM = process.env.EMU8051_JS
     || [path.join(code, 'emu8051-stc/build/emu8051.js'),
-        path.join(code, 'lego/brickwright-lite/overlay/scratch-gui/src/lib/emu8051/emu8051.js'),
-        '/mnt/volume1/code/emu8051-stc/build/emu8051.js'].find(existsSync);
+        path.join(code, 'lego/brickwright-lite/overlay/scratch-gui/src/lib/emu8051/emu8051.js')].find(existsSync);
 
 function need(what, where) {
     if (!where || !existsSync(where)) {

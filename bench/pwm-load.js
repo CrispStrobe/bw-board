@@ -11,7 +11,10 @@ import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { readFileSync, existsSync } from 'node:fs';
 
-const DIMMER_PINS = '/mnt/volume1/code/stc/examples/06-dimmer/pins.json';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const DIMMER_PINS = path.resolve(here, '../../stc/examples/06-dimmer/pins.json');
 
 // ─── Build the 06-dimmer circuit ──────────────────────────────────────────
 

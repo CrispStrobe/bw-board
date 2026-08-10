@@ -13,11 +13,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { validateNetlist } from '../src/validate.js';
 
-const EXAMPLES_DIR = '/mnt/volume1/code/stc/examples';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const EXAMPLES_DIR = path.resolve(here, '../../stc/examples');
 const DIMMER_PINS = `${EXAMPLES_DIR}/06-dimmer/pins.json`;
 
 function loadDimmer() {

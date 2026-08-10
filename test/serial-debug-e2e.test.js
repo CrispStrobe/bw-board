@@ -34,17 +34,14 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 const WASM_CANDIDATES = [
   path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
-  '/mnt/volume1/code/emu8051-stc/build/emu8051.js',
 ].filter(Boolean);
 
 const HEX_CANDIDATES = [
   path.resolve(here, '../../stc/build/stc12c5a60s2/10-live-firmware/main.ihx'),
-  '/mnt/volume1/code/stc/build/stc12c5a60s2/10-live-firmware/main.ihx',
 ].filter(Boolean);
 
 const TRACE_CANDIDATES = [
   path.resolve(here, '../../ucsim-stc/ucsim/src/sims/s51.src/stc12_trace'),
-  '/mnt/volume1/code/ucsim-stc/ucsim/src/sims/s51.src/stc12_trace',
 ].filter(Boolean);
 
 let createEmu8051 = null;

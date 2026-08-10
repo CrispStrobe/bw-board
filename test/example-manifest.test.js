@@ -6,11 +6,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { validateNetlist } from '../src/validate.js';
 import { BoardImpl } from '../src/board.js';
 
-const EXAMPLES_DIR = '/mnt/volume1/code/stc/examples';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const EXAMPLES_DIR = path.resolve(here, '../../stc/examples');
 const MANIFEST_PATH = `${EXAMPLES_DIR}/manifest.json`;
 
 describe('example manifest: all bundles valid', () => {

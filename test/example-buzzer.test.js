@@ -8,11 +8,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist, checkWiring } from '../src/infer-netlist.js';
 import { validateNetlist } from '../src/validate.js';
 
-const PINS_PATH = '/mnt/volume1/code/stc/examples/07-buzzer/pins.json';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const PINS_PATH = path.resolve(here, '../../stc/examples/07-buzzer/pins.json');
 
 function loadBuzzer() {
   if (!existsSync(PINS_PATH)) return null;

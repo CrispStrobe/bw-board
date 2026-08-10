@@ -7,9 +7,13 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createDebugTarget, getTargetKinds } from '../src/debug-target-factory.js';
 import { buildFrame, CMD } from '../src/serial-debug.js';
 import { BoardImpl } from '../src/board.js';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Mock serial transport ───────────────────────────────────────────────
 
@@ -142,7 +146,7 @@ describe('factory → conformance: both targets satisfy the interface', () => {
     try {
       const { createRequire } = await import('node:module');
       const require = createRequire(import.meta.url);
-      createEmu8051 = require('/mnt/volume1/code/emu8051-stc/build/emu8051.js');
+      createEmu8051 = require(path.resolve(here, '../../emu8051-stc/build/emu8051.js'));
     } catch { return; } // WASM not available — skip
 
     const wasm = await createEmu8051();

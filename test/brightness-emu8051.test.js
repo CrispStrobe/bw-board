@@ -30,7 +30,6 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const CANDIDATES = [
   process.env.EMU8051_JS,
   path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
-  '/mnt/volume1/code/emu8051-stc/build/emu8051.js',
 ].filter(Boolean);
 
 let createEmu8051 = null;

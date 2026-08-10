@@ -12,15 +12,18 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 
 const require = createRequire(import.meta.url);
+const here = path.dirname(fileURLToPath(import.meta.url));
 
-const WASM_PATH = '/mnt/volume1/code/emu8051-stc/build/emu8051.js';
-const HEX_PATH = '/mnt/volume1/code/stc/examples/06-dimmer/06-dimmer.hex';
-const PINS_PATH = '/mnt/volume1/code/stc/examples/06-dimmer/pins.json';
+const WASM_PATH = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
+const HEX_PATH = path.resolve(here, '../../stc/examples/06-dimmer/06-dimmer.hex');
+const PINS_PATH = path.resolve(here, '../../stc/examples/06-dimmer/pins.json');
 
 let createEmu8051;
 try { createEmu8051 = require(WASM_PATH); } catch {}
