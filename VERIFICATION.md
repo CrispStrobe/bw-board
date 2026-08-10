@@ -117,3 +117,14 @@ possible answer to "why doesn't my real circuit match the simulation?"
 Agreement between models is evidence. Agreement between models that read
 the same document is weaker evidence. Silicon is the only test that is
 independent of every document we have read.
+
+## Rule: category 2 cannot discharge a prediction
+
+A pre-registered prediction (BENCH-SESSION.md) is itself category 2 — it
+was derived from the same models and the same datasheet as the engine.
+Re-deriving the same number in an emulator checks that we transcribed
+consistently, not that the chip behaves that way. Only a category 1
+measurement (real silicon, scope trace, photograph) can discharge a
+prediction. This is the polarity observation applied to the bench list:
+four codebases agreeing from the same source cannot confirm each other,
+and neither can a prediction confirm itself through the model that made it.
