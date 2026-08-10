@@ -266,6 +266,25 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (groundNetId) break;
     }
+    // No gnd symbol on the bench: the battery's negative pole is the
+    // reference — exactly where a scope ground clip goes on a real
+    // single-supply build. Without this, MCU pin Thevenin sources stamp
+    // against a node no net maps to, pin current has no return path, and
+    // a battery-fed board with pin-driven LEDs reads brightness 0 forever.
+    // (spec-updates/ground-fallback-vsource-neg.md, 2026-08-10)
+    if (!groundNetId) {
+      outer:
+      for (const net of nets) {
+        for (const t of net.terminals) {
+          if (t.terminal !== 'neg') continue;
+          const part = parts.find(p => p.id === t.part);
+          if (part && part.kind === 'vsource') {
+            groundNetId = net.id;
+            break outer;
+          }
+        }
+      }
+    }
   }
 
   // Assign node indices (skip ground and, when power is off, skip nets that
