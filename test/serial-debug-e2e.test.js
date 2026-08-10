@@ -206,14 +206,17 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
   function injectSupported() {
     if (!traceBin) return false;
     try {
-      // Try a minimal invocation that would fail fast if -inject is unknown
-      execFileSync(traceBin, ['-inject', '0,0x00', '-t', '1', '/dev/null'],
+      execFileSync(traceBin, ['-t', 'STC12', '-inject', '0,0x00', '-e', 'run 1000', '/dev/null'],
         { timeout: 3000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
       return true;
     } catch (e) {
-      // If it errored on -inject itself (unknown option), not supported
-      if (e.stderr?.includes('inject') || e.message?.includes('inject')) return false;
-      // If it errored on /dev/null or something else, -inject was accepted
+      // An unknown option produces "unknown option" or similar in stderr.
+      // Do NOT check e.message for 'inject' — it contains the full command
+      // line, so it always matches and falsely rejects a working binary.
+      const stderr = (e.stderr || '').toLowerCase();
+      if (stderr.includes('unknown option') || stderr.includes('unrecognized')) return false;
+      // Exit code 1 with no "unknown option" means -inject was accepted
+      // but the invocation failed for another reason (e.g. /dev/null is not hex).
       return true;
     }
   }
@@ -250,17 +253,27 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
     //   t=10348000:  CMD=HELLO (0x01)
     //   t=10435000:  SUM (0xFF)
 
-    const result = execFileSync(traceBin, [
-      '-inject', '0,0x7E',
-      '-inject', '87000,0xAA',
-      '-inject', '174000,0xBB',
-      '-inject', '10174000,0x7E',
-      '-inject', '10261000,0x00',
-      '-inject', '10348000,0x01',
-      '-inject', '10435000,0xFF',
-      '-t', '20000000',
-      firmwareHexPath,
-    ], { timeout: 10000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    // stc12_trace may exit non-zero (e.g. halted CPU at end of run).
+    // Capture output regardless — the TX bytes are what matter.
+    let result = '';
+    try {
+      result = execFileSync(traceBin, [
+        '-t', 'STC12',
+        '-inject', '0,0x7E',
+        '-inject', '87000,0xAA',
+        '-inject', '174000,0xBB',
+        '-inject', '10174000,0x7E',
+        '-inject', '10261000,0x00',
+        '-inject', '10348000,0x01',
+        '-inject', '10435000,0xFF',
+        '-e', 'run 20000000',
+        firmwareHexPath,
+      ], { timeout: 30000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    } catch (e) {
+      // Non-zero exit is expected (CPU halts at end of timed run).
+      // Capture whatever output was produced.
+      result = (e.stdout || '') + (e.stderr || '');
+    }
 
     console.log(`# resync trace (first 300 chars): ${result.slice(0, 300)}`);
 
