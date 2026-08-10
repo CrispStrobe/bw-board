@@ -14,7 +14,7 @@ How boundary B becomes blocks.
 | `set [CONTROL] to (N)` | `setControl` | command | `board.setControl(control, n)` |
 | `turn power [ON/OFF]` | `setPower` | command | `board.setPower(on)` |
 
-All seven calls verified clean with no gaps (`bw-board` commit `88ac0d6`).
+All seven calls verified clean with no gaps (`bw-board` commit `fce625c`).
 
 ## How the Board instance reaches the extension
 
@@ -77,7 +77,7 @@ Why injection:
 1. **Meter reporters MUST sample at display rate (~60 Hz), not per edge.**
    Per-edge cliff: one `advanceTo` + `setPin` + `branchCurrent` per edge
    sustains **8.0K edges/sec** against 7.2K PCA edges/sec = **1.1× real
-   time** (measured, commit `c4d8031`). The MNA cache (`44fc538`) does NOT
+   time** (measured, commit `ce58b39`). The MNA cache (`bf925dc`) does NOT
    help here — each `setPin` invalidates it, so hit rate ≈ 0 per edge.
    The cache helps the *recommended* pattern: at display rate, multiple
    meter blocks in one frame share a single solve. The cliff makes

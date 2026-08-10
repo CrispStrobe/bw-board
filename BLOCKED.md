@@ -2,7 +2,7 @@
 
 ## ~~vsource current-limit (power supply CC mode)~~ RESOLVED
 
-Implemented in `06935ad`. `vsource` now accepts `params.iLimit` — CV→CC
+Implemented in `e060978`. `vsource` now accepts `params.iLimit` — CV→CC
 transition iterates in the NR loop.
 
 ---

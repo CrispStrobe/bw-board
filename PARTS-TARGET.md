@@ -10,7 +10,7 @@ This file does NOT duplicate it. It records only:
 Do not add catalogue entries here. If a slug is wrong for the engine,
 raise it with bw-parts — they own the canonical name.
 
-## Instrument ruling (2db84b2)
+## Instrument ruling (f5250e1)
 
 | Instrument | Engine role |
 |------------|------------|
@@ -37,7 +37,7 @@ list: `BoardImpl.getPartKinds()` after registering all device modules.
 Kinds that need I2C bus modeling (`pcf8574`, `char_lcd_i2c`) have behavioral decoders
 that watch SCL/SDA edges directly — no shared bus abstraction needed.
 
-vsource CC mode: implemented in mna.js (`06935ad`). `setControl()` adjusts voltage
+vsource CC mode: implemented in mna.js (`e060978`). `setControl()` adjusts voltage
 in real time for the bench-supply knob experience.
 
 ## Behaviour-class substitution

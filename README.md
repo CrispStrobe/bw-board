@@ -73,7 +73,7 @@ Key results (all category 2b unless noted):
 - **Bench session** (BENCH-ADC/CUBE/UART/PWM): four pre-registered predictions
   in `stc/docs/BENCH-SESSION.md`, all hardware-blocked
 - **Idle-timeout resync**: test framework written, blocked on `stc12_trace`
-  rebuild with `-inject` (ucsim-stc a81091e)
+  rebuild with `-inject` (ucsim-stc ccc3e9d)
 - **Headless live E2E** (Playwright): blocked on memory constraints
 - **Mutual inductance / transformers**: not modelled
 - **Propagation delay in logic gates**: gates respond in zero time

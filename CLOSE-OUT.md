@@ -73,7 +73,7 @@ round-tripped successfully. Two independent implementations (host JS codec +
 firmware C codec) agree over a transport neither owns. Category 2b.
 
 Idle-timeout resync: unreachable under emu8051 (instant bytes). ucsim
-`stc12_trace -inject` (a81091e) CAN reach it — Timer 1 wall clock runs, 5ms
+`stc12_trace -inject` (ccc3e9d) CAN reach it — Timer 1 wall clock runs, 5ms
 timeout fires. Test framework written: sends a torn frame, waits 10ms for
 idle timeout, sends valid HELLO. **Loudly skips** when `stc12_trace` binary is
 absent (needs rebuild). When the binary is available, the test runs the

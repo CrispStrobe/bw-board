@@ -39,7 +39,7 @@ measurement. This is the strongest cross-check short of hardware.
 
 | Claim | Evidence | Why independent |
 |-------|----------|----------------|
-| 347-image corpus: zero genuine disagreements between emu8051-stc and ucsim-stc | ucsim-stc `239dff6` | **Different upstream projects** — emu8051 (jcmvbkbc/emu8051) and ucsim (sdcc.sourceforge.net/ucsim) are forks written by different people years apart. Agreement here is closer to hardware verification than any other evidence in this project. |
+| 347-image corpus: zero genuine disagreements between emu8051-stc and ucsim-stc | ucsim-stc `c6e3cea` | **Different upstream projects** — emu8051 (jcmvbkbc/emu8051) and ucsim (sdcc.sourceforge.net/ucsim) are forks written by different people years apart. Agreement here is closer to hardware verification than any other evidence in this project. |
 | 70 ngspice golden circuits agree (stated tolerances per test) | `test/golden/ngspice_*.json` | **Independent reference solver** — ngspice is a mature open-source SPICE implementation with decades of validation. Our MNA solver was not derived from it. |
 | LED brightness: emu8051 PCA → adapter → board = **0.07248**, analytic = **0.07246** (0.03%) | `test/brightness-emu8051.test.js` | **Cross-boundary check** — emu8051's PCA model (C, stc12.c:543) and bw-board's brightness integrator (JS, board.js) were written independently by different agents. The adapter bug (all edges at time zero) was found by this check — self-consistency could not have found it. |
 
@@ -53,7 +53,7 @@ animation tables.
 
 | Claim | Evidence | Shared source | What would move it to 2a |
 |-------|----------|---------------|--------------------------|
-| Servo pulse width: emu8051 1500.0 µs, ucsim 1499.6 µs at 90° (0.4 µs spread) | `test/servo-e2e.test.js`, `c02fa9f` | Both emulators' PCA dispatch was fixed **after exchanging findings** (IE.6=ELVD, vector=0x3B) within the same hour. They converged, they did not arrive independently. The **derived value** (1500 µs = FOSC/12 counts × period) is the real anchor — arithmetic fixed before either emulator ran. | A frequency counter on the real CEX0 pin |
+| Servo pulse width: emu8051 1500.0 µs, ucsim 1499.6 µs at 90° (0.4 µs spread) | `test/servo-e2e.test.js`, `cce2192` | Both emulators' PCA dispatch was fixed **after exchanging findings** (IE.6=ELVD, vector=0x3B) within the same hour. They converged, they did not arrive independently. The **derived value** (1500 µs = FOSC/12 counts × period) is the real anchor — arithmetic fixed before either emulator ran. | A frequency counter on the real CEX0 pin |
 | Cube polarity: active-HIGH assumed by all four codebases | bw-board, bw-circuit-ui, emu8051-stc trace, sb3-creator kernel | **Same vendor animation tables** — all four derived from the same tables, so a shared misreading produces identical agreement | A photograph of a lit LED at `(FE, 01)` on real hardware. Pre-registered prediction: one LED lights. |
 | Cube brightness: bw-board and bw-circuit-ui agree on 64 voxel values | `test/golden/cube-trace.js` | Both derive from the same duty model (12.5% = 1/8 scan lines) | A current measurement on a real cube during a known scan pattern |
 | PCA PWM rate: 7.2K edges/sec | bw-board perf budget + ucsim-stc PCA model | Both derived from `SYSclk/12/256` = same datasheet arithmetic | A frequency counter on the real CEX0 pin |
@@ -134,7 +134,7 @@ and neither can a prediction confirm itself through the model that made it.
 
 On 2026-08-10 the limitation above stopped being an argument and became a
 record. See `stc/docs/EVIDENCE-CATEGORIES.md` § "The case that made this
-concrete" (`0a91b07`).
+concrete" (`3a72635`).
 
 bw-circuit-ui cross-checked terminal definitions against bw-parts' 115
 sidecars. It passed. bw-parts' MCU sidecar carried the generic 8051 pinout
