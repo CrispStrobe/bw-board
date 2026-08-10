@@ -1,2 +1,5 @@
 node_modules/
 .claude/
+
+# Agent working notes: local context, not documentation.
+CLAUDE.md
