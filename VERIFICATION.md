@@ -149,3 +149,27 @@ and the datasheet — a source, not another agent. Three lessons:
 1. Category 2 agreement can be perfect while one side is wrong.
 2. Every exclusion in a cross-check is an unchecked claim.
 3. Going to the source is not ceremony — it was the only thing that worked.
+
+## Rule: assert the property, not the symptom
+
+Testing for the absence of the specific wrong thing catches only the wrong
+thing you already thought of. Asserting what something IS catches the whole
+class of errors, including the one nobody imagined.
+
+In this engine:
+- `getWarnings()` documents all five warning types it can emit. The UI
+  asserts against the published list, not against the absence of a specific
+  unknown type. A new warning type that is not in the list fails the
+  contract rather than being silently dropped by a filter.
+- The current-ratings classification test asserts that every `null` kind is
+  in the explicit `CIRCUIT_DEPENDENT` set — not that "resistor is not null".
+  A new kind returning `null` by accident fails the test.
+- The non-convergence check asserts that `converged` is tracked and surfaced,
+  not that a specific circuit doesn't produce NaN. Any circuit that diverges
+  gets a warning, not just the ones someone thought to test.
+
+The MCU pin-map case made this concrete: asserting "PSEN is absent" would
+pass a sidecar with every pin shifted by one, or P0 ascending, or `rxd`
+where `P3.0` belongs. Asserting "pin 32 IS P0.7 and P0 runs descending"
+catches all of those. Three agents found this rule independently in the
+same evening; it is a property of good tests, not a style preference.
