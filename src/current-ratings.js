@@ -233,7 +233,7 @@ export function aggregateCurrent(parts) {
  *
  * @param {Array<{id: string, kind: string}>} parts
  * @param {Map<string, number>} [solvedCurrents] - partId → actual amps from MNA
- * @returns {Array<{severity: 'warning' | 'danger', message: string}>}
+ * @returns {Array<{severity: 'warning'|'danger', type: string, message: string, partIds?: string[], unratedIds?: string[]}>}
  */
 export function checkCurrentBudget(parts, solvedCurrents) {
   const warnings = [];
@@ -242,8 +242,10 @@ export function checkCurrentBudget(parts, solvedCurrents) {
   if (solvedCurrents && solvedCurrents.size > 0) {
     // Use actual solved currents — realistic, not worst-case
     let totalAmps = 0;
-    for (const [, amps] of solvedCurrents) {
+    const contributors = [];
+    for (const [id, amps] of solvedCurrents) {
       totalAmps += Math.abs(amps);
+      if (Math.abs(amps) > 0.001) contributors.push(id);
     }
 
     if (totalAmps > chipLimit) {
@@ -251,7 +253,9 @@ export function checkCurrentBudget(parts, solvedCurrents) {
       const limitMa = (chipLimit * 1000).toFixed(0);
       warnings.push({
         severity: 'danger',
+        type: 'aggregate-current',
         message: `Total current draw ${totalMa} mA exceeds chip limit of ${limitMa} mA.`,
+        partIds: contributors,
       });
     }
     return warnings;
@@ -259,6 +263,11 @@ export function checkCurrentBudget(parts, solvedCurrents) {
 
   // Fallback: kind-level maximums (upper bound, stated as such)
   const { totalAmps, unrated, complete } = aggregateCurrent(parts);
+  // Collect the part IDs that contributed to the total
+  const contributors = parts
+    .filter(p => { const r = getMaxCurrent(p.kind); return r !== null && r > 0; })
+    .map(p => p.id);
+  const unratedIds = unrated.map(u => u.id);
 
   if (totalAmps > chipLimit) {
     const totalMa = (totalAmps * 1000).toFixed(1);
@@ -266,21 +275,28 @@ export function checkCurrentBudget(parts, solvedCurrents) {
     if (complete) {
       warnings.push({
         severity: 'warning',
+        type: 'aggregate-current',
         message: `Up to ${totalMa} mA at maximum ratings — may exceed chip limit of ${limitMa} mA. Actual current depends on resistor values.`,
+        partIds: contributors,
       });
     } else {
-      const names = unrated.map(u => u.id).join(', ');
+      const names = unratedIds.join(', ');
       warnings.push({
         severity: 'warning',
+        type: 'aggregate-current',
         message: `Up to ${totalMa} mA at maximum ratings (${names} not counted) — may exceed chip limit of ${limitMa} mA.`,
+        partIds: contributors,
+        unratedIds,
       });
     }
   } else if (!complete) {
     const totalMa = (totalAmps * 1000).toFixed(1);
-    const names = unrated.map(u => u.id).join(', ');
+    const names = unratedIds.join(', ');
     warnings.push({
       severity: 'warning',
+      type: 'aggregate-current',
       message: `Current budget incomplete: up to ${totalMa} mA counted, but ${names} could not be rated.`,
+      unratedIds,
     });
   }
 

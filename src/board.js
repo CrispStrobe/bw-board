@@ -1191,10 +1191,25 @@ export class BoardImpl {
    * Check the circuit for potential problems: overcurrent, missing
    * ground path, LED without resistor, etc.
    *
-   * @returns {Array<{severity: 'warning' | 'danger', partId?: string, message: string}>}
+   * Warning types emitted (for UI filter/label matching):
+   *   - 'overcurrent'       — single LED exceeds rated current
+   *   - 'no-resistor'       — LED has no series current limiter
+   *   - 'aggregate-current' — chip/port total exceeds budget
+   *   - 'non-convergence'   — MNA solver did not converge
+   *   - 'substep-overflow'  — advanceTo hit device sub-step cap
+   *
+   * Each warning has: severity, message, and optionally:
+   *   partId   — single offending part (overcurrent, no-resistor)
+   *   partIds  — array of contributing parts (aggregate-current)
+   *   unratedIds — parts excluded from the total (aggregate-current)
+   *   type     — machine-readable warning type string
+   *
+   * @returns {Array<{severity: 'warning'|'danger', message: string, partId?: string,
+   *           partIds?: string[], unratedIds?: string[], type?: string}>}
    */
   getWarnings() {
-    /** @type {Array<{severity: 'warning' | 'danger', partId?: string, message: string}>} */
+    /** @type {Array<{severity: 'warning'|'danger', message: string, partId?: string,
+     *           partIds?: string[], unratedIds?: string[], type?: string}>} */
     const warnings = [];
 
     if (!this.powered) return warnings;
