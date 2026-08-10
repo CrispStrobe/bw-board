@@ -41,8 +41,15 @@ stc12_trace -t STC12 \
 # Actual:   /tmp/tx.bin is 0 bytes
 ```
 
-The firmware loops at 0x0053-0x0054. Either the injected bytes are not
-reaching SBUF/RI, or the UART interrupt is not configured in this mode.
+The firmware DOES reach its monitor loop — the trace ends at PC 0x0D9A
+(`live-monitor.h:110: sym_read16(0)` = reading `bw_ms` in the monitor
+idle loop). The early 0x0053-0x0054 addresses were transient init code
+(`mov r6,a` / `mov dpl,r5`), not a vector trap.
+
+The firmware is running and waiting for UART input. The injected bytes
+are not triggering the UART handler. Either `-inject` does not set
+SBUF/RI in this build, or the UART interrupt configuration in `-t STC12`
+mode does not match what the firmware expects.
 
 ## What this does NOT affect
 
