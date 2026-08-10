@@ -38,7 +38,7 @@ for (const p of WASM_CANDIDATES) {
 
 const HEX_FILES = {
   0: '/tmp/servo-build/s0.ihx',
-  90: '/tmp/servo-build/servo-90.ihx',
+  90: '/tmp/servo-build/s90.ihx',
   180: '/tmp/servo-build/s180.ihx',
 };
 
@@ -96,19 +96,22 @@ describe('servo end-to-end: compiled PCA driver through emu8051', () => {
       const hex = readFileSync(hexPath, 'utf8');
       adapter.loadHex(hex);
 
-      // Run 120ms — enough for ~6 servo frames (20ms each) + setup time.
-      // The PCA ISR needs interrupts enabled, which the setup code does.
-      adapter.runNs(120_000_000);
+      // Run 200ms — enough for ~10 servo frames (20ms each) + setup time.
+      adapter.runNs(200_000_000);
 
       const state = board.getDeviceState('S1');
       const target = state?.targetAngle ?? -1;
       const actual = state?.actualAngle ?? -1;
+      const pinChanges = adapter.getStats().pinChangeCount;
 
-      console.log(`# servo ${angleStr}°: target=${target.toFixed(1)}° actual=${actual.toFixed(1)}° (from real PCA edges)`);
+      console.log(`# servo ${angleStr}°: target=${target.toFixed(1)}° actual=${actual.toFixed(1)}° pinChanges=${pinChanges} (from real PCA edges)`);
 
-      // Tolerance: ±10° — wider than the synthetic test because the real
-      // PCA ISR has interrupt latency and count quantization.
-      assert.ok(Math.abs(target - expectedAngle) < 10,
+      // Must have pin activity (ISR firing)
+      assert.ok(pinChanges > 5,
+        `expected pin changes from PCA ISR, got ${pinChanges}`);
+
+      // Tolerance: ±5° — measured pulse widths match expected within 1 µs
+      assert.ok(Math.abs(target - expectedAngle) < 5,
         `expected ~${expectedAngle}°, got target=${target.toFixed(1)}°`);
     });
   }
