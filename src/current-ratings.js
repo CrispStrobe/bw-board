@@ -1,207 +1,205 @@
 /**
- * Maximum current ratings per part kind.
+ * Current ratings — two budgets: chip I/O pins and supply rail.
  *
  * OWNERSHIP: bw-parts owns the rating DATA (bw-parts/current-ratings.json).
- * bw-board owns the SEMANTICS (what 0 vs null means for the DRC).
+ * bw-board owns the SEMANTICS and the DRC checks.
  *
- * This module loads bw-parts' canonical data at import time via a vendored
- * copy, applies the semantic mapping, and resolves name aliases.
+ * Schema (from bw-parts cf3eb7d):
+ *   { chip_mA: number|'circuit'|null, supply_mA: number|'circuit'|null }
+ *   number    — rated mA
+ *   0         — not a consumer of this budget
+ *   'circuit' — depends on wiring → mapped to null here
+ *   null      — not yet rated → mapped to null here
  *
- * Three states after mapping:
- *   number > 0 — this kind draws this much (amps)
- *   0          — not a consumer of chip supply current (passives, sources)
- *   null       — depends on the circuit; DRC says "depends on your wiring"
- *
- * bw-parts uses a four-state schema:
- *   number     — rated mA
- *   0          — not a consumer
- *   "circuit"  — depends on wiring → mapped to null here
- *   null       — not yet rated → mapped to null here (flagged separately)
+ * Two budgets:
+ *   chip_mA   — current through MCU I/O pins (120 mA chip total, §4.1)
+ *   supply_mA — current from the power rail (USB 500 mA limit)
  *
  * @module
  */
 
-// ─── Vendored data from bw-parts/current-ratings.json ───────────────────
-// This is the canonical source. bw-parts owns names and ratings.
-// When bw-parts updates, re-vendor this object.
-// Units in bw-parts: mA. Converted to amps below.
+// ─── Vendored data from bw-parts/current-ratings.json (cf3eb7d) ─────────
 
-/** @type {Record<string, number | string | null>} */
+/** @type {Record<string, {chip_mA: number|string|null, supply_mA: number|string|null}>} */
 const BW_PARTS_RATINGS = {
-  "resistor": 0, "capacitor": 0, "polarized_cap": 0,
-  "diode": 0, "zener": 0, "inductor": 0,
-  "button": 0, "potentiometer": 0, "slide_switch": 0,
-  "dip_switch_spst": 0, "dip_switch_dpst": 0,
-  "ldr": 0, "photodiode": 0, "flex_sensor": 0,
-  "force_sensor": 0, "tilt_switch": 0, "tilt_switch_v2": 0,
-  "ntc": 0, "keypad_4x4": 0, "ir_remote": 0, "switch": 0,
-  "light_sensor": 0.1, "ir_receiver": 5, "ultrasonic": 15,
-  "ultrasonic_3pin": 15, "pir": 0.15, "soil_moisture": 0.05,
-  "tmp36": 0.05, "gas_sensor": 150,
-  "led": "circuit", "rgb_led": "circuit", "light_bulb": "circuit",
-  "neopixel": "circuit", "neopixel_jewel": "circuit",
-  "neopixel_ring": "circuit", "neopixel_strip": "circuit",
-  "seven_segment": "circuit",
-  "vibration_motor": 80, "dc_motor": "circuit",
-  "dc_motor_encoder": "circuit", "servo": 350,
-  "hobby_gearmotor": "circuit", "buzzer": 30,
-  "seven_segment_clock": 10, "char_lcd": 2, "lcd_i2c": 2,
-  "battery_9v": 0, "battery_aa": 0, "battery_coin": 0,
-  "solar_cell": 0, "potato_battery": 0, "lemon_battery": 0,
-  "lm7805": 5, "ld1117v33": 5, "breadboard_psu": 10,
-  "npn": "circuit", "pnp": "circuit",
-  "nmos": "circuit", "pmos": "circuit",
-  "nmos_power": "circuit", "pmos_power": "circuit",
-  "tip120": "circuit",
-  "relay": "circuit", "relay_dpdt": "circuit",
-  "motor_driver_l293d": "circuit",
-  "optocoupler": 0,
-  "74hc00": 1, "74hc02": 1, "74hc04": 1, "74hc08": 1,
-  "74hc10": 1, "74hc11": 1, "74hc14": 1, "74hc20": 1,
-  "74hc21": 1, "74hc27": 1, "74hc32": 1, "74hc73": 1,
-  "74hc74": 1, "74hc75": 1, "74hc86": 1, "74hc93": 1,
-  "74hc95": 1, "74hc132": 1, "74hc283": 1, "74hc595": 1,
-  "cd4017": 1, "cd4511": 1, "pcf8574": 0.1,
-  "555": 15, "556": 30, "opamp": 3, "lm393": 2.5, "lm339": 2.5,
-  "arduino_uno": 50, "attiny85": 12, "stc_mcu": 20, "mcu": 20,
-  "multimeter": 0, "oscilloscope": 0, "function_gen": 0,
-  "power_supply": 0,
-  "vcc": 0, "gnd": 0, "vsource": 0, "isource": 0,
-  "breadboard_full": 0, "breadboard_half": 0, "breadboard_mini": 0,
-  "header": 0, "usb_a": 0,
-  "temp_sensor": null, "eeprom": null,
-  "led_matrix": null, "led_cube": null, "microbit": null,
+  "resistor":        { chip_mA: 0, supply_mA: 0 },
+  "capacitor":       { chip_mA: 0, supply_mA: 0 },
+  "polarized_cap":   { chip_mA: 0, supply_mA: 0 },
+  "diode":           { chip_mA: 0, supply_mA: 0 },
+  "zener":           { chip_mA: 0, supply_mA: 0 },
+  "inductor":        { chip_mA: 0, supply_mA: 0 },
+  "button":          { chip_mA: 0, supply_mA: 0 },
+  "potentiometer":   { chip_mA: 0, supply_mA: 0 },
+  "slide_switch":    { chip_mA: 0, supply_mA: 0 },
+  "dip_switch_spst": { chip_mA: 0, supply_mA: 0 },
+  "dip_switch_dpst": { chip_mA: 0, supply_mA: 0 },
+  "ldr":             { chip_mA: 0, supply_mA: 0 },
+  "photodiode":      { chip_mA: 0, supply_mA: 0 },
+  "flex_sensor":     { chip_mA: 0, supply_mA: 0 },
+  "force_sensor":    { chip_mA: 0, supply_mA: 0 },
+  "tilt_switch":     { chip_mA: 0, supply_mA: 0 },
+  "tilt_switch_v2":  { chip_mA: 0, supply_mA: 0 },
+  "ntc":             { chip_mA: 0, supply_mA: 0 },
+  "keypad_4x4":      { chip_mA: 0, supply_mA: 0 },
+  "ir_remote":       { chip_mA: 0, supply_mA: 0 },
+  "switch":          { chip_mA: 0, supply_mA: 0 },
+  "light_sensor":    { chip_mA: 0.1,  supply_mA: 0.1 },
+  "ir_receiver":     { chip_mA: 5,    supply_mA: 5 },
+  "ultrasonic":      { chip_mA: 0,    supply_mA: 15 },
+  "ultrasonic_3pin": { chip_mA: 0,    supply_mA: 15 },
+  "pir":             { chip_mA: 0,    supply_mA: 0.15 },
+  "soil_moisture":   { chip_mA: 0.05, supply_mA: 0.05 },
+  "tmp36":           { chip_mA: 0,    supply_mA: 0.05 },
+  "gas_sensor":      { chip_mA: 0,    supply_mA: 150 },
+  "led":             { chip_mA: "circuit", supply_mA: "circuit" },
+  "rgb_led":         { chip_mA: "circuit", supply_mA: "circuit" },
+  "light_bulb":      { chip_mA: "circuit", supply_mA: "circuit" },
+  "seven_segment":   { chip_mA: "circuit", supply_mA: "circuit" },
+  "neopixel":        { chip_mA: 0, supply_mA: "circuit" },
+  "neopixel_jewel":  { chip_mA: 0, supply_mA: "circuit" },
+  "neopixel_ring":   { chip_mA: 0, supply_mA: "circuit" },
+  "neopixel_strip":  { chip_mA: 0, supply_mA: "circuit" },
+  "servo":           { chip_mA: 0, supply_mA: 350 },
+  "vibration_motor": { chip_mA: 0, supply_mA: 80 },
+  "dc_motor":        { chip_mA: 0, supply_mA: "circuit" },
+  "dc_motor_encoder":{ chip_mA: 0, supply_mA: "circuit" },
+  "hobby_gearmotor": { chip_mA: 0, supply_mA: "circuit" },
+  "buzzer":          { chip_mA: "circuit", supply_mA: 30 },
+  "seven_segment_clock": { chip_mA: 0, supply_mA: 10 },
+  "char_lcd":        { chip_mA: 0, supply_mA: 2 },
+  "lcd_i2c":         { chip_mA: 0, supply_mA: 2 },
+  "battery_9v":      { chip_mA: 0, supply_mA: 0 },
+  "battery_aa":      { chip_mA: 0, supply_mA: 0 },
+  "battery_coin":    { chip_mA: 0, supply_mA: 0 },
+  "solar_cell":      { chip_mA: 0, supply_mA: 0 },
+  "potato_battery":  { chip_mA: 0, supply_mA: 0 },
+  "lemon_battery":   { chip_mA: 0, supply_mA: 0 },
+  "lm7805":          { chip_mA: 0, supply_mA: 5 },
+  "ld1117v33":       { chip_mA: 0, supply_mA: 5 },
+  "breadboard_psu":  { chip_mA: 0, supply_mA: 10 },
+  "npn":             { chip_mA: "circuit", supply_mA: "circuit" },
+  "pnp":             { chip_mA: "circuit", supply_mA: "circuit" },
+  "nmos":            { chip_mA: "circuit", supply_mA: "circuit" },
+  "pmos":            { chip_mA: "circuit", supply_mA: "circuit" },
+  "nmos_power":      { chip_mA: "circuit", supply_mA: "circuit" },
+  "pmos_power":      { chip_mA: "circuit", supply_mA: "circuit" },
+  "tip120":          { chip_mA: "circuit", supply_mA: "circuit" },
+  "relay":           { chip_mA: 0, supply_mA: "circuit" },
+  "relay_dpdt":      { chip_mA: 0, supply_mA: "circuit" },
+  "motor_driver_l293d": { chip_mA: 0, supply_mA: "circuit" },
+  "optocoupler":     { chip_mA: 0, supply_mA: 0 },
+  "74hc00": { chip_mA: 0, supply_mA: 1 }, "74hc02": { chip_mA: 0, supply_mA: 1 },
+  "74hc04": { chip_mA: 0, supply_mA: 1 }, "74hc08": { chip_mA: 0, supply_mA: 1 },
+  "74hc10": { chip_mA: 0, supply_mA: 1 }, "74hc11": { chip_mA: 0, supply_mA: 1 },
+  "74hc14": { chip_mA: 0, supply_mA: 1 }, "74hc20": { chip_mA: 0, supply_mA: 1 },
+  "74hc21": { chip_mA: 0, supply_mA: 1 }, "74hc27": { chip_mA: 0, supply_mA: 1 },
+  "74hc32": { chip_mA: 0, supply_mA: 1 }, "74hc73": { chip_mA: 0, supply_mA: 1 },
+  "74hc74": { chip_mA: 0, supply_mA: 1 }, "74hc75": { chip_mA: 0, supply_mA: 1 },
+  "74hc86": { chip_mA: 0, supply_mA: 1 }, "74hc93": { chip_mA: 0, supply_mA: 1 },
+  "74hc95": { chip_mA: 0, supply_mA: 1 }, "74hc132": { chip_mA: 0, supply_mA: 1 },
+  "74hc283": { chip_mA: 0, supply_mA: 1 }, "74hc595": { chip_mA: 0, supply_mA: 1 },
+  "cd4017": { chip_mA: 0, supply_mA: 1 }, "cd4511": { chip_mA: 0, supply_mA: 1 },
+  "pcf8574": { chip_mA: 0, supply_mA: 0.1 },
+  "555": { chip_mA: 0, supply_mA: 15 }, "556": { chip_mA: 0, supply_mA: 30 },
+  "opamp": { chip_mA: 0, supply_mA: 3 }, "lm393": { chip_mA: 0, supply_mA: 2.5 },
+  "lm339": { chip_mA: 0, supply_mA: 2.5 },
+  "arduino_uno": { chip_mA: 0, supply_mA: 50 }, "attiny85": { chip_mA: 0, supply_mA: 12 },
+  "stc_mcu": { chip_mA: 0, supply_mA: 20 }, "mcu": { chip_mA: 0, supply_mA: 20 },
+  "multimeter": { chip_mA: 0, supply_mA: 0 }, "oscilloscope": { chip_mA: 0, supply_mA: 0 },
+  "function_gen": { chip_mA: 0, supply_mA: 0 }, "power_supply": { chip_mA: 0, supply_mA: 0 },
+  "vcc": { chip_mA: 0, supply_mA: 0 }, "gnd": { chip_mA: 0, supply_mA: 0 },
+  "vsource": { chip_mA: 0, supply_mA: 0 }, "isource": { chip_mA: 0, supply_mA: 0 },
+  "breadboard_full": { chip_mA: 0, supply_mA: 0 }, "breadboard_half": { chip_mA: 0, supply_mA: 0 },
+  "breadboard_mini": { chip_mA: 0, supply_mA: 0 },
+  "header": { chip_mA: 0, supply_mA: 0 }, "usb_a": { chip_mA: 0, supply_mA: 0 },
+  "temp_sensor": { chip_mA: null, supply_mA: null },
+  "eeprom": { chip_mA: null, supply_mA: null },
+  "led_matrix": { chip_mA: null, supply_mA: null },
+  "led_cube": { chip_mA: null, supply_mA: null },
+  "microbit": { chip_mA: null, supply_mA: null },
 };
 
-// ─── Name aliases: bw-board kind → bw-parts kind ────────────────────────
-// bw-parts owns names. Where bw-board uses a different slug, map here.
+// ─── Name aliases ───────────────────────────────────────────────────────
 const NAME_ALIASES = {
-  'timer_555': '555',
-  'timer_556': '556',
-  'gearmotor': 'hobby_gearmotor',
-  'h_bridge': 'motor_driver_l293d',
-  'shift_register': '74hc595',
-  'dip_switch': 'dip_switch_spst',
-  'tilt_sensor': 'tilt_switch',
-  'clock_display': 'seven_segment_clock',
-  'char_lcd_i2c': 'lcd_i2c',
-  'ambient_light': 'light_sensor',
-  'phototransistor': 'light_sensor',
-  'decade_counter': 'cd4017',
-  'battery': 'battery_9v',      // generic battery → defaults to 9V
-  'vreg': 'lm7805',             // generic vreg → defaults to 7805
-  'fuse': null,                  // not in bw-parts (rated 0 here)
-  'solenoid': null,              // not in bw-parts
-  'stepper': null,               // not in bw-parts
-  'piezo': null,                 // not in bw-parts
-  'bargraph': null,              // not in bw-parts
-  'ir_transmitter': null,        // not in bw-parts
-  'darlington_driver': null,     // not in bw-parts
-  'soil_moisture': 'soil_moisture',
+  'timer_555': '555', 'timer_556': '556', 'gearmotor': 'hobby_gearmotor',
+  'h_bridge': 'motor_driver_l293d', 'shift_register': '74hc595',
+  'dip_switch': 'dip_switch_spst', 'tilt_sensor': 'tilt_switch',
+  'clock_display': 'seven_segment_clock', 'char_lcd_i2c': 'lcd_i2c',
+  'ambient_light': 'light_sensor', 'phototransistor': 'light_sensor',
+  'decade_counter': 'cd4017', 'battery': 'battery_9v', 'vreg': 'lm7805',
 };
 
-// ─── Build the consumed ratings table ───────────────────────────────────
+// ─── Local-only kinds ───────────────────────────────────────────────────
+const LOCAL_ONLY = {
+  fuse:              { chip_mA: 0, supply_mA: 0 },
+  solenoid:          { chip_mA: 0, supply_mA: 300 },
+  stepper:           { chip_mA: 0, supply_mA: 500 },
+  piezo:             { chip_mA: 0, supply_mA: 1 },
+  bargraph:          { chip_mA: "circuit", supply_mA: "circuit" },
+  ir_transmitter:    { chip_mA: "circuit", supply_mA: 20 },
+  darlington_driver: { chip_mA: "circuit", supply_mA: "circuit" },
+  gate_and: { chip_mA: 0, supply_mA: 0.08 }, gate_or: { chip_mA: 0, supply_mA: 0.08 },
+  gate_not: { chip_mA: 0, supply_mA: 0.08 }, gate_nand: { chip_mA: 0, supply_mA: 0.08 },
+  gate_nor: { chip_mA: 0, supply_mA: 0.08 }, gate_xor: { chip_mA: 0, supply_mA: 0.08 },
+  dff: { chip_mA: 0, supply_mA: 0.08 }, jkff: { chip_mA: 0, supply_mA: 0.08 },
+};
 
-/** @type {Record<string, number | null>} */
+// ─── Build the consumed ratings ─────────────────────────────────────────
+
+function parseRating(mA) {
+  if (mA === 'circuit' || mA === null || mA === undefined) return null;
+  if (typeof mA !== 'number') return null; // guard against any other string
+  return mA / 1000;
+}
+
+/** @type {Record<string, {chipAmps: number|null, supplyAmps: number|null}>} */
 export const CURRENT_RATINGS = {};
 
-// First: import everything from bw-parts, converting mA → A
-for (const [kind, rating] of Object.entries(BW_PARTS_RATINGS)) {
-  if (rating === 'circuit') {
-    CURRENT_RATINGS[kind] = null; // circuit-dependent
-  } else if (rating === null) {
-    CURRENT_RATINGS[kind] = null; // not yet rated
-  } else {
-    CURRENT_RATINGS[kind] = rating / 1000; // mA → A
-  }
+for (const [kind, r] of Object.entries(BW_PARTS_RATINGS)) {
+  CURRENT_RATINGS[kind] = { chipAmps: parseRating(r.chip_mA), supplyAmps: parseRating(r.supply_mA) };
 }
-
-// Then: add bw-board-only kinds not in bw-parts (with local ratings)
-const LOCAL_ONLY = {
-  fuse: 0,
-  solenoid: 0.300,
-  stepper: 0.500,
-  piezo: 0.001,
-  bargraph: 0.020,
-  ir_transmitter: 0.020,
-  darlington_driver: null,
-  // Abstract gate primitives (internal, not user-facing)
-  gate_and: 0.00008, gate_or: 0.00008, gate_not: 0.00008,
-  gate_nand: 0.00008, gate_nor: 0.00008, gate_xor: 0.00008,
-  // Digital IC abstractions
-  dff: 0.00008, jkff: 0.00008,
-  // Named regulator aliases already covered via bw-parts
-};
-
-for (const [kind, rating] of Object.entries(LOCAL_ONLY)) {
+for (const [kind, r] of Object.entries(LOCAL_ONLY)) {
   if (!(kind in CURRENT_RATINGS)) {
-    CURRENT_RATINGS[kind] = rating;
+    CURRENT_RATINGS[kind] = { chipAmps: parseRating(r.chip_mA), supplyAmps: parseRating(r.supply_mA) };
   }
 }
 
-/**
- * Get the maximum current rating for a part kind.
- * Checks bw-parts canonical name first, then bw-board aliases.
- *
- * @param {string} kind
- * @returns {number | null}
- */
-export function getMaxCurrent(kind) {
-  if (kind in CURRENT_RATINGS) return CURRENT_RATINGS[kind];
-  // Check alias
-  const alias = NAME_ALIASES[kind];
-  if (alias && alias in CURRENT_RATINGS) return CURRENT_RATINGS[alias];
-  return null; // unknown kind
+function resolve(kind) {
+  return CURRENT_RATINGS[kind] ?? (NAME_ALIASES[kind] ? CURRENT_RATINGS[NAME_ALIASES[kind]] : undefined);
 }
 
-/**
- * STC12 port and chip current limits.
- *
- * Per-pin: §4.1 mode tables (all ports P0-P5): "Sink Current up to 20mA,
- *   pull-up Current is 230µA, actual pull-up current is 250uA ~ 150uA"
- * Push-pull source: §4.1 push-pull row: "current can be up to 20mA"
- * Per-chip: §4.1 intro: "the whole chip had better drive lower than 120mA"
- *   (guidance — "had better", not absolute max)
- * Per-port: NOT in the STC12 datasheet. 80 mA is 8051-family convention.
- *
- * A DRC warning is the right response to exceeding these; a refusal is not.
- */
+/** @param {string} kind @returns {number | null} */
+export function getMaxCurrent(kind) { const r = resolve(kind); return r ? r.chipAmps : null; }
+
+/** @param {string} kind @returns {number | null} */
+export function getSupplyCurrent(kind) { const r = resolve(kind); return r ? r.supplyAmps : null; }
+
 export const PORT_LIMITS = {
   perPin: { sink: 0.020, source: 0.000230 },
   perPort: { sink: 0.080 },
   perChip: { sink: 0.120 },
+  supplyUsb: { sink: 0.500 },
 };
 
-/**
- * Compute aggregate current for a list of part kinds.
- *
- * @param {Array<{id: string, kind: string}>} parts
- * @returns {{ totalAmps: number, unrated: Array<{id: string, kind: string}>, complete: boolean }}
- */
+/** @param {Array<{id: string, kind: string}>} parts */
 export function aggregateCurrent(parts) {
-  let totalAmps = 0;
-  const unrated = [];
+  let totalAmps = 0, supplyAmps = 0;
+  const unrated = [], supplyUnrated = [];
   for (const p of parts) {
-    const rating = getMaxCurrent(p.kind);
-    if (rating === null) {
-      unrated.push({ id: p.id, kind: p.kind });
-    } else {
-      totalAmps += rating;
-    }
+    const chip = getMaxCurrent(p.kind);
+    const supply = getSupplyCurrent(p.kind);
+    if (chip === null) unrated.push({ id: p.id, kind: p.kind }); else totalAmps += chip;
+    if (supply === null) supplyUnrated.push({ id: p.id, kind: p.kind }); else supplyAmps += supply;
   }
-  return { totalAmps, unrated, complete: unrated.length === 0 };
+  return { totalAmps, unrated, complete: unrated.length === 0,
+           supplyAmps, supplyUnrated, supplyComplete: supplyUnrated.length === 0 };
 }
 
-/**
- * Check a circuit's parts against chip current limits.
- *
- * @param {Array<{id: string, kind: string}>} parts
- * @param {Map<string, number>} [solvedCurrents] - partId → actual amps from MNA
- * @returns {Array<{severity: 'warning'|'danger', type: string, message: string, partIds?: string[], unratedIds?: string[]}>}
- */
+/** @param {Array<{id: string, kind: string}>} parts @param {Map<string, number>} [solvedCurrents] */
 export function checkCurrentBudget(parts, solvedCurrents) {
   const warnings = [];
   const chipLimit = PORT_LIMITS.perChip.sink;
+  const supplyLimit = PORT_LIMITS.supplyUsb.sink;
 
   if (solvedCurrents && solvedCurrents.size > 0) {
     let totalAmps = 0;
@@ -211,48 +209,40 @@ export function checkCurrentBudget(parts, solvedCurrents) {
       if (Math.abs(amps) > 0.001) contributors.push(id);
     }
     if (totalAmps > chipLimit) {
-      warnings.push({
-        severity: 'danger',
-        type: 'aggregate-current',
-        message: `Total current draw ${(totalAmps * 1000).toFixed(1)} mA exceeds chip limit of ${(chipLimit * 1000).toFixed(0)} mA.`,
-        partIds: contributors,
-      });
+      warnings.push({ severity: 'danger', type: 'aggregate-current',
+        message: `Total I/O current ${(totalAmps*1000).toFixed(1)} mA exceeds chip limit of ${(chipLimit*1000).toFixed(0)} mA.`,
+        partIds: contributors });
     }
     return warnings;
   }
 
-  const { totalAmps, unrated, complete } = aggregateCurrent(parts);
-  const contributors = parts
-    .filter(p => { const r = getMaxCurrent(p.kind); return r !== null && r > 0; })
-    .map(p => p.id);
-  const unratedIds = unrated.map(u => u.id);
+  const agg = aggregateCurrent(parts);
 
-  if (totalAmps > chipLimit) {
-    const totalMa = (totalAmps * 1000).toFixed(1);
-    const limitMa = (chipLimit * 1000).toFixed(0);
-    if (complete) {
-      warnings.push({
-        severity: 'warning', type: 'aggregate-current',
-        message: `Up to ${totalMa} mA at maximum ratings — may exceed chip limit of ${limitMa} mA. Actual current depends on resistor values.`,
-        partIds: contributors,
-      });
-    } else {
-      warnings.push({
-        severity: 'warning', type: 'aggregate-current',
-        message: `Up to ${totalMa} mA at maximum ratings (${unratedIds.join(', ')} depend on your wiring) — may exceed chip limit of ${limitMa} mA.`,
-        partIds: contributors, unratedIds,
-      });
-    }
-  } else if (!complete && totalAmps > chipLimit * 0.5) {
-    // Only warn about incomplete totals when the rated subtotal is
-    // significant (>50% of limit). With LEDs as circuit-dependent,
-    // almost every circuit has unrated parts — warning on all of them
-    // is noise that gets the warning switched off in the user's head.
-    warnings.push({
-      severity: 'warning', type: 'aggregate-current',
-      message: `Current budget: up to ${(totalAmps * 1000).toFixed(1)} mA counted; ${unratedIds.join(', ')} depend on your wiring and are not included.`,
-      unratedIds,
-    });
+  // Chip budget
+  if (agg.totalAmps > chipLimit) {
+    const ids = agg.unrated.map(u => u.id);
+    warnings.push({ severity: 'warning', type: 'aggregate-current',
+      message: agg.complete
+        ? `Up to ${(agg.totalAmps*1000).toFixed(1)} mA at maximum ratings — may exceed chip limit of ${(chipLimit*1000).toFixed(0)} mA.`
+        : `Up to ${(agg.totalAmps*1000).toFixed(1)} mA at maximum ratings (${ids.join(', ')} depend on your wiring) — may exceed chip limit of ${(chipLimit*1000).toFixed(0)} mA.`,
+      partIds: parts.filter(p => { const r = getMaxCurrent(p.kind); return r !== null && r > 0; }).map(p => p.id),
+      unratedIds: ids.length ? ids : undefined });
+  } else if (!agg.complete && agg.totalAmps > chipLimit * 0.5) {
+    const ids = agg.unrated.map(u => u.id);
+    warnings.push({ severity: 'warning', type: 'aggregate-current',
+      message: `Current budget: up to ${(agg.totalAmps*1000).toFixed(1)} mA counted; ${ids.join(', ')} depend on your wiring.`,
+      unratedIds: ids });
+  }
+
+  // Supply budget
+  if (agg.supplyAmps > supplyLimit) {
+    const ids = agg.supplyUnrated.map(u => u.id);
+    warnings.push({ severity: 'danger', type: 'supply-current',
+      message: agg.supplyComplete
+        ? `Total supply current ${(agg.supplyAmps*1000).toFixed(1)} mA exceeds USB limit of ${(supplyLimit*1000).toFixed(0)} mA.`
+        : `At least ${(agg.supplyAmps*1000).toFixed(1)} mA supply current (${ids.join(', ')} depend on your wiring) exceeds USB limit of ${(supplyLimit*1000).toFixed(0)} mA.`,
+      partIds: parts.filter(p => { const r = getSupplyCurrent(p.kind); return r !== null && r > 0; }).map(p => p.id),
+      unratedIds: ids.length ? ids : undefined });
   }
 
   return warnings;
