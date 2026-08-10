@@ -112,6 +112,10 @@ export function createEmu8051Adapter(wasm, opts = {}) {
       // Emscripten type sig: v=void, i=int32, d=double
       pinCbPtr = wasm.addFunction((port, bit, modeIdx, drive, _ud) => {
         if (!board) return;
+        // Advance board time to the emulator's current time BEFORE applying
+        // the pin change. Without this, the brightness integrator sees all
+        // toggles at the same board time and cannot integrate duty.
+        board.advanceTo(getCurrentTimeNs());
         const pinId = `P${port}.${bit}`;
         const mode = MODE_NAMES[modeIdx] ?? 'quasi';
         const driveHigh = drive !== 0;
