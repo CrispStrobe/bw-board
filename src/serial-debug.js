@@ -9,6 +9,11 @@
  * agreement is verified by testing against the firmware codec running inside
  * emu8051-stc, not by self-round-trip.
  *
+ * UART contract: emu8051-stc/docs/UART-ENTRY-POINTS.md (aa59b33).
+ * §9 trap: a target passing against an untimed UART model is 2b, not cat 1.
+ * Idle-timeout resync is unreachable in emulation (bytes arrive instantly).
+ * Only BENCH-UART settles whether the wire works.
+ *
  * Key differences from the emulator target:
  *   steps:       ['block']         — no insn (costs P3.2), no line/over/out
  *   breakpoints: ['yield']         — no code BPs (no PSEN on STC12)
