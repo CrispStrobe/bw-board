@@ -147,6 +147,7 @@ export function createAvr8jsAdapter(opts = {}) {
 
   return {
     cpu,
+    clockHz,
 
     loadProgram(words) {
       progMem.fill(0);
