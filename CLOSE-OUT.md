@@ -98,7 +98,19 @@ time with 29ms margin past SCON write).
 |------|-------|--------|
 | Cube oracle path (`test/golden/`) contradicts "not golden-file" | bw-board | Noted, not moved |
 | bw-parts / bw-board rating table convergence | Both | Vendored copy in bw-board; bw-parts owns canonical |
-| Idle-timeout resync execution | ucsim-stc | `stc12_trace` needs rebuild with `-inject` (link error). Test framework ready, skips loudly. |
+| bw-parts 004: Arduino Nano A6/A7 analog-only + Pi Pico 43 terminals | bw-board | Read, not implemented — needs part-model loader |
+| bw-parts 004: pin alternate-function data for UI pin-chooser | bw-board + bw-circuit-ui | Read, not implemented |
+
+## Spec-updates acted on
+
+Convention adopted per bw-parts `a6f9240`. Scan at session start +
+when told something landed.
+
+| Source | Highest read | Notes |
+|--------|-------------|-------|
+| bw-parts | 004 | Read; 005/006 are for bw-circuit-ui |
+| ucsim-stc | 017 | Acted on (resync -inject/-until-ns) |
+| emu8051-stc | 008 | Read (interrupt vectors) |
 
 ## Principles this campaign produced
 
