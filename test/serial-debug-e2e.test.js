@@ -253,34 +253,45 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
     //   t=10348000:  CMD=HELLO (0x01)
     //   t=10435000:  SUM (0xFF)
 
-    // stc12_trace may exit non-zero (e.g. halted CPU at end of run).
-    // Capture output regardless — the TX bytes are what matter.
     const txFile = path.resolve(here, '../.resync-tx.bin');
     try { unlinkSync(txFile); } catch {}
 
-    // ROOT CAUSE (ucsim-stc 477d5d2): -inject only fires in the
-    // -until-ns loop, not -e run. Use -until-ns, not -e 'run N'.
+    // TIMING DERIVATION: the firmware configures UART (SCON=0x50 at
+    // address 0x13D6) around tick 230938 = ~21ms in the current build.
+    // Rather than hard-coding that tick, we use a GENEROUS margin:
+    //   - Torn frame at 50ms (29ms past the current SCON write)
+    //   - Valid HELLO at 60ms (10ms gap > 5ms idle timeout)
+    //   - Run until 80ms
+    // This margin survives init moving by up to 29ms without breaking.
     //
-    // DERIVED TIMING: the firmware configures UART (SCON, BRT) around
-    // tick 230938 = ~21ms. Inject must be AFTER that. Margin: 4ms
-    // (>40 character times at 115200 baud). Torn frame at 25ms,
-    // valid HELLO at 35ms (10ms gap > 5ms idle timeout).
-    // Run until 60ms to allow for reply transmission.
+    // PRECONDITION: if 0 TX bytes, the inject may have fired before
+    // SCON was configured. The assertion message names this cause so
+    // a future firmware change that moves init past 50ms fails with
+    // "inject before SCON" rather than re-opening the investigation.
+    const INJECT_BASE_NS = 50_000_000;  // 50ms — well past any init
+    const RESYNC_GAP_NS  = 10_000_000;  // 10ms > 5ms idle timeout
+    const HELLO_BASE_NS  = INJECT_BASE_NS + RESYNC_GAP_NS;
+    const RUN_UNTIL_NS   = HELLO_BASE_NS + 20_000_000; // 20ms for reply
     //
     // stdio: 'ignore' — the PC trace is hundreds of KB. Piping it
     // fills the buffer, blocks the process, and it gets killed before
     // the TX file is written. We only need the TX file.
+    // 87000 ns ≈ one byte at 115200 baud (86.8 µs measured)
+    const BYTE_NS = 87000;
     const traceResult = spawnSync(traceBin, [
       '-t', 'STC12',
       '-S', `uart=0,out=${txFile}`,
-      '-inject', '25000000,0x7E',
-      '-inject', '25087000,0xAA',
-      '-inject', '25174000,0xBB',
-      '-inject', '35174000,0x7E',
-      '-inject', '35261000,0x00',
-      '-inject', '35348000,0x01',
-      '-inject', '35435000,0xFF',
-      '-until-ns', '60000000',
+      // Torn frame: SOF + 2 garbage at INJECT_BASE_NS
+      '-inject', `${INJECT_BASE_NS},0x7E`,
+      '-inject', `${INJECT_BASE_NS + BYTE_NS},0xAA`,
+      '-inject', `${INJECT_BASE_NS + 2 * BYTE_NS},0xBB`,
+      // 10ms gap → idle timeout fires → receiver resets
+      // Valid HELLO at HELLO_BASE_NS
+      '-inject', `${HELLO_BASE_NS},0x7E`,
+      '-inject', `${HELLO_BASE_NS + BYTE_NS},0x00`,
+      '-inject', `${HELLO_BASE_NS + 2 * BYTE_NS},0x01`,
+      '-inject', `${HELLO_BASE_NS + 3 * BYTE_NS},0xFF`,
+      '-until-ns', `${RUN_UNTIL_NS}`,
       firmwareHexPath,
     ], { timeout: 120000, stdio: 'ignore' });
 
@@ -302,14 +313,13 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
       console.log(`# TX hex: ${txBytes.toString('hex').slice(0, 60)}`);
     }
 
-    // If 0 bytes, the test is INCONCLUSIVE — say so and do not assert.
-    if (txBytes.length === 0) {
-      console.log('# INCONCLUSIVE: 0 TX bytes. Possible causes:');
-      console.log('#   - stc12_trace binary lacks -until-ns (rebuild from 477d5d2)');
-      console.log('#   - inject fires during init (before UART configured)');
-      console.log('#   - -S out= not capturing');
-      return;
-    }
+    // If 0 bytes, fail with a diagnostic rather than returning INCONCLUSIVE.
+    // The test has passed before; 0 bytes now means something regressed.
+    assert.ok(txBytes.length > 0,
+      `0 TX bytes. The inject at ${INJECT_BASE_NS / 1e6}ms may have fired before ` +
+      `SCON was configured (currently at tick ~230938 = ~21ms in the firmware listing). ` +
+      `If the firmware init moved past ${INJECT_BASE_NS / 1e6}ms, increase INJECT_BASE_NS. ` +
+      `Or: stc12_trace binary lacks -until-ns (rebuild from 477d5d2).`);
 
     // ── Pre-registered assertion 1: firmware replied with SOF ────────
     const hasSOF = txBytes[0] === 0x7E;
