@@ -30,7 +30,13 @@ import {
   adcConfig,
 } from 'avr8js';
 
-/** Arduino pin name → { port: 'B'|'C'|'D', bit } for the ATmega328P. */
+/**
+ * Arduino pin name → { port, bit } for the ATmega328P.
+ * A6/A7 are analog-only (no port register bit) — present on the Nano
+ * but not the Uno. They appear in the pin map as { analogOnly: true }
+ * so the adapter returns them to the board as analog reads but never
+ * drives them as GPIOs.
+ */
 export const ATMEGA328P_PINS = {
   D0: { port: 'D', bit: 0 }, D1: { port: 'D', bit: 1 },
   D2: { port: 'D', bit: 2 }, D3: { port: 'D', bit: 3 },
@@ -42,11 +48,15 @@ export const ATMEGA328P_PINS = {
   A0: { port: 'C', bit: 0 }, A1: { port: 'C', bit: 1 },
   A2: { port: 'C', bit: 2 }, A3: { port: 'C', bit: 3 },
   A4: { port: 'C', bit: 4 }, A5: { port: 'C', bit: 5 },
+  // Nano-only: analog-only pins (ADC channels 6 and 7, no port bit)
+  A6: { analogOnly: true, adcChannel: 6 },
+  A7: { analogOnly: true, adcChannel: 7 },
 };
 
 const PORT_PINS = { B: {}, C: {}, D: {} };
-for (const [name, { port, bit }] of Object.entries(ATMEGA328P_PINS)) {
-  PORT_PINS[port][bit] = name;
+for (const [name, def] of Object.entries(ATMEGA328P_PINS)) {
+  if (def.analogOnly) continue; // A6/A7 have no port register
+  PORT_PINS[def.port][def.bit] = name;
 }
 
 /**
@@ -95,15 +105,14 @@ export function createAvr8jsAdapter(opts = {}) {
   /** Push one pin's CURRENT electrical role to the board. */
   function publishPin(portKey, bit) {
     if (!board) return;
-    // Time FIRST, edge second — the 8051 push mode's contract. Without this
-    // every edge in an advanceNs batch lands at the board's stale clock and
-    // the LED persistence window averages a history that never happened
-    // (measured: a 50 % duty blink read brightness 0).
     if (board.advanceTo) {
       board.advanceTo(BigInt(Math.round((cpu.cycles / clockHz) * 1e9)));
     }
     const name = PORT_PINS[portKey][bit];
     if (!name) return; // not a header pin (crystal, reset, ...)
+    // A6/A7 are analog-only — no DDR/PORT bits, never driven as GPIO
+    const pinDef = ATMEGA328P_PINS[name];
+    if (pinDef?.analogOnly) return;
     const ddr = cpu.data[REG[portKey].ddr];
     const out = cpu.data[REG[portKey].port];
     const driven = !!(ddr & (1 << bit));

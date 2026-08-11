@@ -1101,6 +1101,8 @@ export class BoardImpl {
       'photodiode', 'soil_moisture', 'relay_dpdt', 'solar_cell', 'gearmotor',
       '74hc75', '74hc283', 'header', 'usb_a', 'ir_remote', 'clock_display',
       'pcf8574', 'char_lcd_i2c',
+      // Board kinds (multi-arch, per bw-parts 004)
+      'arduino_uno', 'arduino_nano', 'pi_pico',
     ];
   }
 
