@@ -5,7 +5,8 @@
 - **`parseIntelHex`** (`src/intel-hex.js`): canonical Intel HEX → Uint16Array loader for AVR flash. Little-endian byte pairs, checksum validation, extended address records (types 02/04). 17 oracle tests. `avr-e2e.test.js` now uses the shared parser.
 - **Board-kind power pins** (`src/devices/board-kinds.js`): `arduino_nano`, `arduino_uno`, `pi_pico` device models that stamp power terminals (5V, 3V3, GND, VIN, VBUS, VSYS) as Thévenin sources. GPIO terminals left for the boundary-A adapter. 13 oracle tests.
 - **Twin-implementation documentation**: `pin-functions.js` cross-references `bw-circuit-ui/src/model/pin-functions.js`; `spec-updates/pin-alternates-schema.md` §Two implementations records both accessor call sites.
-- **AVR cross-check** (`test/avr-cross-check.test.js`): avr8js vs simavr on the same firmware. 21 PB5 transitions, values agree perfectly. Positive control confirms VCD has real transitions. **AVR row: category 3 → category 1** (two-implementation agreement, independent lineage).
+- **AVR cross-check** (`test/avr-cross-check.test.js`): avr8js vs simavr on the same firmware. 21 PB5 transitions, values agree perfectly. Positive control confirms VCD has real transitions. **AVR row: category 3 → category 1** (two-implementation agreement, independent lineage). Recorded as `spec-updates/avr-cross-check.md`.
+- **debug-target-factory 'avr8js' routing** (`src/debug-target-factory.js`): factory now routes 'emulator', 'avr8js', and 'serial'. The avr8js path creates an adapter, attaches board, parses hex, and dynamically imports `avr8js-debug.js` (coordinator writing `createAvr8jsDebugTarget` against this seam). Returns `{ adapter }` without target until that module exists.
 
 ## Completed previously
 
@@ -27,7 +28,7 @@
 | Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | Coordinator recategorised rows in `844966a` — retired "2b", applied defined categories 1/2/3. | AVR row now cat 1 (avr8js + simavr). Update ledger to reflect. |
 | `spec-updates/pin-alternates-schema.md` | Schema settled, twin implementations documented. | Waiting on bw-parts to populate remaining null pins. |
 | `spec-updates/rst-polarity.md` | RST active HIGH on STC12. Engine hard-codes per kind. | Not yet implemented in board.js — a per-family polarity table is needed. |
-| `debug-target-factory.js` | Only knows 'emulator' (emu8051) and 'serial'. | Needs 'avr' kind routing for avr8js adapter (and eventually rp2040js). |
+| `debug-target-factory.js` | Routes 'emulator', 'avr8js', 'serial'. | Coordinator writing `createAvr8jsDebugTarget` in `avr8js-debug.js` — dynamic import slot ready. rp2040 deferred until it lands on a default branch. |
 
 ## Learned this session
 
