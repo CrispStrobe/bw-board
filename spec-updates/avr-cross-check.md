@@ -10,20 +10,24 @@ The AVR LED-brightness result (0.5882, derived from VCC 5V, R 220Ω,
 LED Vf 2V / Rd 10Ω, pin Rth 25Ω → I = 11.76 mA) was category 3:
 single implementation (avr8js), no cross-check, no silicon.
 
-As of 758d0c7, the same firmware run through **simavr** (independent
-lineage — different upstream, different authors, different validation
-history) produces the same pin trace. This is category 1 territory:
-two independent implementations agree.
+Two cross-checks now run, both using **simavr** (independent lineage —
+different upstream, different authors, different validation history):
+
+1. A tight PB5 toggle loop (21 transitions) — confirms pin-level
+   edge agreement.
+2. The **actual brightness firmware** (`_delay_ms(500)` blink, 2 cycles)
+   — confirms duty-cycle agreement on the same program shape that
+   produced the 0.5882 result.
 
 ## Evidence
 
-**Test:** `test/avr-cross-check.test.js`
+**Test:** `test/avr-cross-check.test.js` (two test cases)
+
+### Test 1: tight toggle (pin-level edge agreement)
 
 **Firmware:** tight PB5 toggle loop (10 ON/OFF cycles, `SLEEP_MODE_PWR_DOWN`
 to halt cleanly). Compiled once by avr-gcc 7.3.0 at `-Os`.
 `.text` sections verified identical between plain and VCD-instrumented builds.
-
-**Results:**
 
 | Metric | avr8js | simavr |
 |--------|--------|--------|
@@ -34,24 +38,55 @@ to halt cleanly). Compiled once by avr-gcc 7.3.0 at `-Os`.
 | First clear-LOW | 1125 ns | 1120 ns |
 | Later timing drift | — | ≤ 3 cycles (~185 ns) |
 
-**Positive control:** VCD file contains 21 timestamps in 289 bytes.
-An empty VCD (the trap that turned a resync PASS into INCONCLUSIVE)
-is explicitly asserted against before trusting the match.
+### Test 2: brightness firmware (duty-cycle agreement)
+
+**Firmware:** `_delay_ms(500)` toggling PB5, 2 full ON/OFF cycles, then
+`SLEEP_MODE_PWR_DOWN`. This is the same program shape as the avr-e2e
+test that produced the 0.5882 brightness (the only difference: 2 cycles
++ sleep instead of infinite loop, so simavr exits cleanly).
+
+| Metric | avr8js | simavr |
+|--------|--------|--------|
+| PB5 transitions | 5 | 5 |
+| Value sequence | all agree | all agree |
+| ON period | 500,000,125 ns | 500,000,130 ns |
+| ON-period difference | — | **5 ns** (< 1 cycle) |
+| Expected ON period | 500,000,000 ns | 500,000,000 ns |
+
+The 5 ns inter-simulator difference is less than a single clock cycle
+(62.5 ns at 16 MHz). Both simulators produce a 50% duty cycle to
+within 130 ns of the theoretical 500 ms.
+
+**Why this closes the gap:** Brightness 0.5882 is a function of pin
+duty and the circuit model. The circuit model (VCC, R, LED Vf/Rd,
+pin Rth → 11.76 mA) is bw-board's own analytic derivation, never
+simulator-dependent. The simulator-dependent half is the pin duty
+cycle — and that is what this cross-check tests on the actual
+brightness firmware, not a different program.
+
+### Positive control (both tests)
+
+Both VCD files are asserted non-empty before any comparison. An empty
+VCD (the trap that turned a resync PASS into INCONCLUSIVE) would
+produce false agreement.
 
 ## Timing note
 
 The two simulators agree on the first few transitions within 1 cycle
-(62.5 ns at 16 MHz). Later iterations of the loop drift by up to
-~3 cycles. This is expected: the loop's branch and pipeline timing
-are implementation details of each simulator. The cross-check asserts
-**value agreement** (same transitions in the same order), not
-sub-cycle timing identity.
+(62.5 ns at 16 MHz). The tight-toggle test drifts by up to ~3 cycles
+on later iterations — expected, since branch/pipeline modeling differs.
+The brightness firmware shows sub-cycle agreement on the timing that
+matters: the 500 ms delay period.
+
+The cross-check asserts **value agreement** (same transitions in the
+same order) and **duty-cycle agreement** (ON periods match), not
+sub-cycle identity on every edge.
 
 ## Category assignment
 
 | Row | Old | New | Reason |
 |-----|-----|-----|--------|
-| AVR LED brightness 0.5882 | 3 | 1 | Two independent simulators (avr8js, simavr) agree on pin trace. No shared lineage. |
+| AVR LED brightness 0.5882 | 3 | 1 | Two independent simulators (avr8js, simavr) agree on pin trace AND duty cycle of the brightness firmware. No shared lineage. |
 
 ## Dependencies
 

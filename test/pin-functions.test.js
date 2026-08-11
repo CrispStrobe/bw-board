@@ -53,60 +53,50 @@ describe('getPinFunctions: three-state distinction', () => {
     console.log(`# ${emptyPin}: [] (audited, no alternates)`);
   });
 
-  it('null and [] are distinguishable — real data, Uno vs STC12', () => {
+  it('[] and [...] are distinguishable — real data, Uno pins', () => {
     if (!hasParts) return loudSkip('bw-parts sidecars not reachable');
 
-    // The Uno sidecar has 28 terminals, ALL with functions: null
-    // (entirely unaudited). The STC12 has pins with [] (audited, GPIO
-    // only) and [...] (audited with alternates). These are REAL nulls,
-    // not synthetic — the distinction must survive the API.
+    // The Uno sidecar is now fully audited (bw-parts populated all pins).
+    // Verify the three states that exist in real data: [] (no alternates),
+    // [...] (has alternates), and that they are distinguishable.
 
-    // Uno: every pin should return null (unaudited)
-    const unoFn = getPinFunctions('arduino_uno', 'd0');
-    assert.equal(unoFn, null,
-      'Uno d0 must return null (unaudited), not [] — ' +
-      'if this returns [], the API collapses unaudited into audited-none');
+    // Uno d0: GPIO + serial
+    const unoD0 = getPinFunctions('arduino_uno', 'd0');
+    assert.ok(Array.isArray(unoD0) && unoD0.length > 0,
+      `Uno d0 should have functions, got ${JSON.stringify(unoD0)}`);
 
-    // STC12: find a pin with [] (audited, no alternates)
-    const stcPins = getBoardPins('stc_mcu');
-    let emptyPin = null;
-    for (const p of stcPins) {
-      const fn = getPinFunctions('stc_mcu', p);
-      if (Array.isArray(fn) && fn.length === 0) { emptyPin = p; break; }
-    }
-    assert.ok(emptyPin, 'STC12 should have at least one pin with []');
-    const stcFn = getPinFunctions('stc_mcu', emptyPin);
-    assert.ok(Array.isArray(stcFn) && stcFn.length === 0,
-      `${emptyPin} must return [] (audited, none)`);
+    // Uno gnd: audited, no alternates → []
+    const unoGnd = getPinFunctions('arduino_uno', 'gnd');
+    assert.ok(Array.isArray(unoGnd) && unoGnd.length === 0,
+      `Uno gnd should return [] (no alternates), got ${JSON.stringify(unoGnd)}`);
 
-    // THE CRITICAL ASSERTION: null (Uno) !== [] (STC12)
-    assert.notDeepEqual(unoFn, stcFn,
-      'Uno null and STC12 [] must be distinguishable — ' +
-      'a pin chooser showing "GPIO only" for an unaudited Uno pin ' +
-      'would confidently offer something it cannot verify');
-
-    // Also check an audited STC12 pin has entries
-    const auditedFn = getPinFunctions('stc_mcu', 'P1.0');
-    assert.ok(Array.isArray(auditedFn) && auditedFn.length > 0,
+    // STC12: also has both states
+    const stcAudited = getPinFunctions('stc_mcu', 'P1.0');
+    assert.ok(Array.isArray(stcAudited) && stcAudited.length > 0,
       'P1.0 must have audited alternates');
 
-    console.log(`# Uno d0: ${JSON.stringify(unoFn)} (null = unaudited)`);
-    console.log(`# STC12 ${emptyPin}: ${JSON.stringify(stcFn)} ([] = audited, none)`);
-    console.log(`# STC12 P1.0: ${JSON.stringify(auditedFn)} (audited with entries)`);
-    console.log('# null vs [] distinction: VERIFIED with real sidecar data');
+    console.log(`# Uno d0: ${JSON.stringify(unoD0)} (audited, has alternates)`);
+    console.log(`# Uno gnd: ${JSON.stringify(unoGnd)} (audited, no alternates)`);
+    console.log(`# STC12 P1.0: ${JSON.stringify(stcAudited)} (audited with entries)`);
+    console.log('# [] vs [...] distinction: VERIFIED with real sidecar data');
+    console.log('# Note: null state tested with synthetic data in separate test');
   });
 
-  it('all 28 Uno pins return null (entirely unaudited)', () => {
+  it('all 28 Uno pins are now audited (no nulls)', () => {
     if (!hasParts) return loudSkip('bw-parts sidecars not reachable');
     const pins = getBoardPins('arduino_uno');
     if (!pins) return loudSkip('arduino_uno sidecar not found');
     assert.equal(pins.length, 28, 'Uno should have 28 terminals');
+    let audited = 0, empty = 0, populated = 0;
     for (const p of pins) {
       const fn = getPinFunctions('arduino_uno', p);
-      assert.equal(fn, null,
-        `Uno ${p} must return null (unaudited), got ${JSON.stringify(fn)}`);
+      assert.notEqual(fn, null,
+        `Uno ${p} should be audited (not null) — bw-parts populated all pins`);
+      assert.ok(Array.isArray(fn), `Uno ${p} should return an array`);
+      if (fn.length === 0) empty++; else populated++;
+      audited++;
     }
-    console.log('# All 28 Uno pins: null (unaudited)');
+    console.log(`# Uno: ${audited} audited (${populated} with functions, ${empty} GPIO/non-GPIO)`);
   });
 
   it('STC12: audited and empty pins both exist', () => {

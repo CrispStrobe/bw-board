@@ -86,6 +86,52 @@ int main(void) {
 }
 `;
 
+/**
+ * Brightness firmware: the ACTUAL program behind the 0.5882 row.
+ * _delay_ms(500) toggling PB5. Two cycles then sleep, so simavr exits.
+ */
+const BLINK_BRIGHTNESS_C = `
+#include <avr/io.h>
+#include <util/delay.h>
+#include <avr/sleep.h>
+int main(void) {
+    DDRB |= (1 << PB5);
+    for (unsigned char i = 0; i < 2; i++) {
+        PORTB |= (1 << PB5);
+        _delay_ms(500);
+        PORTB &= ~(1 << PB5);
+        _delay_ms(500);
+    }
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    sleep_mode();
+    return 0;
+}
+`;
+
+const BLINK_BRIGHTNESS_VCD_C = `
+#include <avr/io.h>
+#include <util/delay.h>
+#include <avr/sleep.h>
+#include <avr/avr_mcu_section.h>
+
+AVR_MCU(F_CPU, "atmega328p");
+AVR_MCU_VCD_FILE("blink.vcd", 1000);
+AVR_MCU_VCD_PORT_PIN('B', 5, "PB5");
+
+int main(void) {
+    DDRB |= (1 << PB5);
+    for (unsigned char i = 0; i < 2; i++) {
+        PORTB |= (1 << PB5);
+        _delay_ms(500);
+        PORTB &= ~(1 << PB5);
+        _delay_ms(500);
+    }
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    sleep_mode();
+    return 0;
+}
+`;
+
 // ─── VCD parser ─────────────────────────────────────────────────────────
 
 /**
@@ -176,6 +222,41 @@ async function runAvr8js(hexStr, clockHz = 16_000_000) {
     avrInstruction(cpu);
     cpu.tick();
     // Check for SLEEP instruction (the CPU goes to sleep mode)
+    if (cpu.sleeping) break;
+  }
+
+  return transitions;
+}
+
+/**
+ * Run the blink hex through avr8js for 2.1 seconds of simulated time.
+ * Returns PB5 transitions.
+ */
+async function runAvr8jsBlink(hexStr, clockHz = 16_000_000) {
+  const { CPU, avrInstruction, AVRIOPort, portBConfig } = await import('avr8js');
+
+  const words = parseIntelHex(hexStr);
+  const cpu = new CPU(words);
+  const portB = new AVRIOPort(cpu, portBConfig);
+
+  const transitions = [];
+  let lastPB5 = -1;
+
+  portB.addListener(() => {
+    const pb5 = (cpu.data[0x25] >> 5) & 1;
+    const ddr5 = (cpu.data[0x24] >> 5) & 1;
+    if (ddr5 && pb5 !== lastPB5) {
+      const timeNs = BigInt(Math.round((cpu.cycles / clockHz) * 1e9));
+      transitions.push({ timeNs, pin: 'PB5', value: pb5 });
+      lastPB5 = pb5;
+    }
+  });
+
+  // Run 2.1 seconds: 2 blink cycles (2s) + margin
+  const targetCycles = Math.round(2.1 * clockHz);
+  while (cpu.cycles < targetCycles) {
+    avrInstruction(cpu);
+    cpu.tick();
     if (cpu.sleeping) break;
   }
 
@@ -325,6 +406,146 @@ describe('AVR cross-check: avr8js vs simavr', () => {
       try {
         for (const f of ['toggle.c', 'toggle.elf', 'toggle.hex',
           'toggle_vcd.c', 'toggle_vcd.elf', 'trace.vcd', 'gtkwave_trace.vcd']) {
+          try { unlinkSync(path.join(tmp, f)); } catch {}
+        }
+        try { require('fs').rmdirSync(tmp); } catch {}
+      } catch {}
+    }
+  });
+
+  // ─── Brightness firmware cross-check ──────────────────────────────────
+
+  it('brightness firmware (500ms blink) duty cycle agrees between simulators', async () => {
+    if (!hasAvrGcc) return loudSkip('avr-gcc not installed');
+    if (!hasSimavr) return loudSkip('simavr not installed');
+    if (!hasSimavrHeaders) return loudSkip('libsimavr-dev not installed');
+    if (!hasAvr8js) return loudSkip('avr8js not installed');
+
+    const tmp = mkdtempSync(path.join(tmpdir(), 'avr-blink-'));
+    const clockHz = 16_000_000;
+
+    try {
+      // ── Compile both versions ──────────────────────────────────────
+      const plainSrc = path.join(tmp, 'blink.c');
+      const plainElf = path.join(tmp, 'blink.elf');
+      const plainHex = path.join(tmp, 'blink.hex');
+      const vcdSrc = path.join(tmp, 'blink_vcd.c');
+      const vcdElf = path.join(tmp, 'blink_vcd.elf');
+
+      writeFileSync(plainSrc, BLINK_BRIGHTNESS_C);
+      writeFileSync(vcdSrc, BLINK_BRIGHTNESS_VCD_C);
+
+      execFileSync('avr-gcc', [
+        '-mmcu=atmega328p', `-DF_CPU=${clockHz}UL`, '-Os', '-g',
+        '-o', plainElf, plainSrc,
+      ], { stdio: 'pipe' });
+      execFileSync('avr-objcopy', ['-O', 'ihex', '-R', '.eeprom', plainElf, plainHex],
+        { stdio: 'pipe' });
+      execFileSync('avr-gcc', [
+        '-mmcu=atmega328p', `-DF_CPU=${clockHz}UL`, '-Os', '-g',
+        '-I/usr/include/simavr',
+        '-o', vcdElf, vcdSrc,
+      ], { stdio: 'pipe' });
+
+      // Verify same machine code
+      const plainDis = execFileSync('avr-objdump', ['-d', '-j', '.text', plainElf],
+        { encoding: 'utf8', stdio: 'pipe' }).replace(/^.*?:\s+file format.*$/m, '');
+      const vcdDis = execFileSync('avr-objdump', ['-d', '-j', '.text', vcdElf],
+        { encoding: 'utf8', stdio: 'pipe' }).replace(/^.*?:\s+file format.*$/m, '');
+      assert.equal(plainDis, vcdDis, '.text must be identical');
+
+      // ── Run avr8js ─────────────────────────────────────────────────
+      const hexStr = readFileSync(plainHex, 'utf8');
+      const avr8jsTrace = await runAvr8jsBlink(hexStr, clockHz);
+
+      console.log(`# avr8js blink: ${avr8jsTrace.length} PB5 transitions`);
+      // DDR write + 2 cycles × 2 edges = 5 transitions
+      assert.ok(avr8jsTrace.length >= 5,
+        `avr8js should have >= 5 transitions, got ${avr8jsTrace.length}`);
+
+      // ── Run simavr ─────────────────────────────────────────────────
+      // 2 cycles × 1000ms = 2 seconds. simavr exits on sleep.
+      const simResult = spawnSync('simavr', [
+        '-m', 'atmega328p', '-f', String(clockHz), vcdElf,
+      ], {
+        cwd: tmp,
+        stdio: 'pipe',
+        timeout: 120_000, // 2s simulated time may take tens of seconds
+      });
+
+      let vcdFile = null;
+      for (const name of ['blink.vcd', 'gtkwave_trace.vcd']) {
+        const p = path.join(tmp, name);
+        if (existsSync(p)) { vcdFile = p; break; }
+      }
+
+      if (!vcdFile) {
+        assert.fail('simavr produced no VCD file for brightness firmware');
+      }
+
+      const vcdText = readFileSync(vcdFile, 'utf8');
+      const simTrace = parseVCD(vcdText);
+
+      // ── POSITIVE CONTROL ───────────────────────────────────────────
+      console.log(`# simavr blink: ${simTrace.length} PB5 transitions`);
+      assert.ok(simTrace.length >= 5,
+        `POSITIVE CONTROL: simavr blink VCD has ${simTrace.length} transitions ` +
+        `(expected >= 5). Check VCD is not empty.`);
+
+      // ── Compare edge counts and values ─────────────────────────────
+      assert.equal(avr8jsTrace.length, simTrace.length,
+        `Edge count: avr8js=${avr8jsTrace.length}, simavr=${simTrace.length}`);
+
+      for (let i = 0; i < avr8jsTrace.length; i++) {
+        assert.equal(avr8jsTrace[i].value, simTrace[i].value,
+          `Edge ${i} value: avr8js=${avr8jsTrace[i].value}, simavr=${simTrace[i].value}`);
+      }
+
+      // ── Compare ON-period duration (the duty cycle) ────────────────
+      // Find the first ON period: the edge where PB5 goes HIGH, then LOW.
+      const avr8jsOnEdge = avr8jsTrace.find(e => e.value === 1);
+      const avr8jsOffEdge = avr8jsTrace.find(e => e.value === 0 && e.timeNs > avr8jsOnEdge.timeNs);
+      const simOnEdge = simTrace.find(e => e.value === 1);
+      const simOffEdge = simTrace.find(e => e.value === 0 && e.timeNs > simOnEdge.timeNs);
+
+      const avr8jsOnNs = avr8jsOffEdge.timeNs - avr8jsOnEdge.timeNs;
+      const simOnNs = simOffEdge.timeNs - simOnEdge.timeNs;
+      const expectedNs = 500_000_000n; // 500 ms
+
+      console.log(`# ON period: avr8js=${avr8jsOnNs}ns simavr=${simOnNs}ns expected=500000000ns`);
+      console.log(`# avr8js delta: ${avr8jsOnNs - expectedNs}ns`);
+      console.log(`# simavr delta: ${simOnNs - expectedNs}ns`);
+
+      // Both should be within ~1 ms of 500 ms (cycle-rounding of _delay_ms)
+      const toleranceNs = 1_000_000n; // 1 ms
+      assert.ok(
+        (avr8jsOnNs > expectedNs - toleranceNs) && (avr8jsOnNs < expectedNs + toleranceNs),
+        `avr8js ON period ${avr8jsOnNs}ns should be ~500ms`);
+      assert.ok(
+        (simOnNs > expectedNs - toleranceNs) && (simOnNs < expectedNs + toleranceNs),
+        `simavr ON period ${simOnNs}ns should be ~500ms`);
+
+      // The two simulators should agree within 1 cycle per ms of delay
+      // (500 cycles at 16 MHz = 31.25 µs)
+      const interSimDiff = avr8jsOnNs > simOnNs
+        ? avr8jsOnNs - simOnNs : simOnNs - avr8jsOnNs;
+      console.log(`# Inter-simulator ON-period difference: ${interSimDiff}ns`);
+      assert.ok(interSimDiff < 100_000n, // 100 µs generous tolerance
+        `ON-period difference ${interSimDiff}ns exceeds 100µs between simulators`);
+
+      // Log all transitions for the record
+      for (let i = 0; i < avr8jsTrace.length; i++) {
+        console.log(`#   edge ${i}: avr8js=${avr8jsTrace[i].timeNs}ns ` +
+          `simavr=${simTrace[i].timeNs}ns val=${avr8jsTrace[i].value}`);
+      }
+
+      console.log(`# ✓ Brightness cross-check PASSED: same firmware, ` +
+        `same duty cycle, two independent simulators`);
+
+    } finally {
+      try {
+        for (const f of ['blink.c', 'blink.elf', 'blink.hex',
+          'blink_vcd.c', 'blink_vcd.elf', 'blink.vcd', 'gtkwave_trace.vcd']) {
           try { unlinkSync(path.join(tmp, f)); } catch {}
         }
         try { require('fs').rmdirSync(tmp); } catch {}
