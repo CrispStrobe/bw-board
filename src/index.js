@@ -41,4 +41,10 @@ export { registerI2CParts } from './devices/i2c-parts.js';
 export { registerAllDevices } from './register-all.js';
 export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from './current-ratings.js';
 export { R_INPUT_PULLUP } from './pin-model.js';
-export { getPinFunctions, getBoardPins, getPinInfo } from './pin-functions.js';
+// pin-functions.js is NODE-ONLY (it reads the bw-parts sibling checkout via
+// node:fs) and is deliberately NOT exported here: this file is the browser
+// entry, and a bundler handed a node:fs import fails the whole app build —
+// the same lesson as vite-isms in runtime-agnostic modules, node flavour.
+// Node-side consumers (tests, tooling) import './pin-functions.js' directly.
+// Browser consumers get pin functions from bw-circuit-ui's VENDORED sidecar
+// registry, which is the same bw-parts data through the sync pipeline.
