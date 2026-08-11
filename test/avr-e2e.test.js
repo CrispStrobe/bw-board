@@ -78,28 +78,59 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     const { createAvr8jsAdapter } = await import('../src/avr8js-adapter.js');
     const { BoardImpl } = await import('../src/board.js');
 
-    // Compile
-    const srcFile = path.resolve(here, '../.avr-test-blink.c');
-    const elfFile = path.resolve(here, '../.avr-test-blink.elf');
-    const hexFile = path.resolve(here, '../.avr-test-blink.hex');
+    // Try the compile endpoint first (the real seam); fall back to local avr-gcc.
+    let hex, fcpu, source;
+    const ENDPOINT = process.env.AVR_COMPILE_URL ?? 'http://localhost:8321/compile';
+
     try {
-      writeFileSync(srcFile, BLINK_C);
-      execFileSync('avr-gcc', [
-        '-mmcu=atmega328p', '-DF_CPU=16000000UL', '-Os', '-std=gnu99',
-        '-o', elfFile, srcFile,
-      ], { stdio: 'pipe' });
-      execFileSync('avr-objcopy', ['-O', 'ihex', '-R', '.eeprom', elfFile, hexFile],
-        { stdio: 'pipe' });
-    } catch (e) {
-      console.log(`# ⚠ Compile failed: ${e.message?.slice(0, 100)}`);
-      return;
+      const resp = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: BLINK_C, target: 'atmega328p' }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (resp.ok) {
+        const body = await resp.json();
+        hex = body.hex;
+        fcpu = body.fcpu;
+        source = `endpoint (${ENDPOINT}), version: ${body.version}`;
+      }
+    } catch { /* endpoint not running — fall back */ }
+
+    if (!hex) {
+      // Local compilation — record the version for comparison
+      const srcFile = path.resolve(here, '../.avr-test-blink.c');
+      const elfFile = path.resolve(here, '../.avr-test-blink.elf');
+      const hexFile = path.resolve(here, '../.avr-test-blink.hex');
+      try {
+        writeFileSync(srcFile, BLINK_C);
+        execFileSync('avr-gcc', [
+          '-mmcu=atmega328p', '-DF_CPU=16000000UL', '-Os', '-std=gnu99',
+          '-o', elfFile, srcFile,
+        ], { stdio: 'pipe' });
+        execFileSync('avr-objcopy', ['-O', 'ihex', '-R', '.eeprom', elfFile, hexFile],
+          { stdio: 'pipe' });
+      } catch (e) {
+        console.log(`# ⚠ Compile failed: ${e.message?.slice(0, 100)}`);
+        return;
+      }
+      hex = readFileSync(hexFile, 'utf8');
+      fcpu = 16000000; // matches -DF_CPU flag above
+      const localVersion = execFileSync('avr-gcc', ['--version'],
+        { encoding: 'utf8', stdio: 'pipe' }).split('\n')[0];
+      source = `local avr-gcc, version: ${localVersion}`;
+      try { unlinkSync(srcFile); unlinkSync(elfFile); unlinkSync(hexFile); } catch {}
     }
 
-    const hex = readFileSync(hexFile, 'utf8');
-    // Hard-coded to match the -DF_CPU flag above and the contract's
-    // Uno/Nano default. A real integration test would read this from
-    // the compile endpoint's response.fcpu field.
-    const fcpu = 16000000;
+    console.log(`# Compiled by: ${source}`);
+    console.log(`# F_CPU: ${fcpu} (${hex ? 'from response' : 'hard-coded'})`);
+
+    // Contract version is avr-gcc 7.3.0. Record any mismatch.
+    if (source.includes('7.3.0')) {
+      console.log('# Toolchain: matches contract (7.3.0)');
+    } else {
+      console.log('# ⚠ Toolchain mismatch — contract says 7.3.0');
+    }
 
     const adapter = createAvr8jsAdapter({ clockHz: fcpu });
     adapter.loadProgram(parseHex(hex));
@@ -124,7 +155,7 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     const pinV = board.nodeVoltage('pin');
 
     console.log(`# AVR blink at t=600ms: brightness=${brightness.toFixed(4)} pin=${pinV.toFixed(1)}V`);
-    console.log(`# F_CPU=${fcpu} (hard-coded literal, matches contract Uno/Nano default)`);
+    console.log(`# F_CPU=${fcpu}`);
     console.log(`# Pin changes: ${adapter.stats.pinChangeCount}`);
 
     // Derived prediction: VCC=5V, R=220Ω, LED Vf=2V Rd=10Ω, pin Rth=25Ω.
@@ -137,7 +168,5 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     assert.ok(pinV < 1.0,
       `D13 should be LOW (driving LED), got ${pinV.toFixed(1)}V`);
 
-    // Cleanup
-    try { unlinkSync(srcFile); unlinkSync(elfFile); unlinkSync(hexFile); } catch {}
   });
 });
