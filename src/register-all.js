@@ -27,6 +27,7 @@ import { registerMiscParts } from './devices/misc-parts.js';
 import { registerNamedParts } from './devices/named-parts.js';
 import { registerTier1Parts } from './devices/tier1-parts.js';
 import { registerI2CParts } from './devices/i2c-parts.js';
+import { registerBoardKinds } from './devices/board-kinds.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -46,4 +47,5 @@ export function registerAllDevices() {
   registerNamedParts();
   registerTier1Parts();
   registerI2CParts();
+  registerBoardKinds();
 }
