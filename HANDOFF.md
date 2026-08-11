@@ -1,8 +1,15 @@
-# bw-board handoff — 2026-08-11
+# bw-board handoff — 2026-08-11 (session 2)
 
-## Completed since brief
+## Completed this session
 
-- **111 part kinds**, 1231 tests, all green. Full target inventory.
+- **`parseIntelHex`** (`src/intel-hex.js`): canonical Intel HEX → Uint16Array loader for AVR flash. Little-endian byte pairs, checksum validation, extended address records (types 02/04). 17 oracle tests. `avr-e2e.test.js` now uses the shared parser.
+- **Board-kind power pins** (`src/devices/board-kinds.js`): `arduino_nano`, `arduino_uno`, `pi_pico` device models that stamp power terminals (5V, 3V3, GND, VIN, VBUS, VSYS) as Thévenin sources. GPIO terminals left for the boundary-A adapter. 13 oracle tests.
+- **Twin-implementation documentation**: `pin-functions.js` cross-references `bw-circuit-ui/src/model/pin-functions.js`; `spec-updates/pin-alternates-schema.md` §Two implementations records both accessor call sites.
+- **AVR cross-check** (`test/avr-cross-check.test.js`): avr8js vs simavr on the same firmware. 21 PB5 transitions, values agree perfectly. Positive control confirms VCD has real transitions. **AVR row: category 3 → category 1** (two-implementation agreement, independent lineage).
+
+## Completed previously
+
+- **111 part kinds**, now 1264 tests, all green.
 - **Servo/motor/relay/button/ADC** verified end-to-end through emu8051 + board.
 - **Servo pulse**: 1499.6 µs (emu8051) = 1499.6 µs (ucsim) after SETB/CLR cycle fix.
 - **LED brightness**: 0.07248 end-to-end, 0.5882 for AVR blink (both derived, exact).
@@ -12,31 +19,28 @@
 - **getPinFunctions()**: reads bw-parts sidecars, preserves null vs [] distinction.
 - **Two-budget DRC**: chip 120 mA + supply 500 mA USB, vendored from bw-parts.
 - **Scope channels**, advanceTo sub-stepping, CC mode in MNA, input-pullup PinMode.
-- **Path sweep**: 0 absolute paths in tracked files.
-- **README, CLOSE-OUT, VERIFICATION.md, DEVICE-CENSUS.md** all current.
 
 ## In flight
 
 | File | Intent | Next step |
 |------|--------|-----------|
-| Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | Coordinator recategorised rows in `844966a` — retired "2b", applied defined categories 1/2/3. | Read `844966a`, verify bw-board's rows match. NeoPixel row is now eligible for cat 1 cross-check (cycle fix landed). |
-| `spec-updates/pin-alternates-schema.md` | Schema settled: `"functions"`, `null` vs `[]`, `"analog_only"` as list value. | bw-parts generates JSON, bw-board vendors it. `getPinFunctions()` already reads sidecars. Waiting on bw-parts to populate remaining nulls. |
+| Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | Coordinator recategorised rows in `844966a` — retired "2b", applied defined categories 1/2/3. | AVR row now cat 1 (avr8js + simavr). Update ledger to reflect. |
+| `spec-updates/pin-alternates-schema.md` | Schema settled, twin implementations documented. | Waiting on bw-parts to populate remaining null pins. |
 | `spec-updates/rst-polarity.md` | RST active HIGH on STC12. Engine hard-codes per kind. | Not yet implemented in board.js — a per-family polarity table is needed. |
-| `spec-updates/i2c-ack-policy.md` | Observe-only is the contract. Drivers must not check ACK. | Recorded. No code change needed unless ACK driving is built later. |
+| `debug-target-factory.js` | Only knows 'emulator' (emu8051) and 'serial'. | Needs 'avr' kind routing for avr8js adapter (and eventually rp2040js). |
 
-## Learned, not yet in a spec-update
+## Learned this session
 
-- **`execFileSync` with piped stdio blocks on large trace output** — use `spawnSync` with `stdio: 'ignore'` and read results from files. Cost two days of "INCONCLUSIVE" on the resync test.
-- **`-inject` only fires in stc12_trace's `-until-ns` loop, not `-e run`** — two mutually exclusive execution loops. Any test combining `-e` with `-inject` silently does nothing.
-- **Inject timing must be derived, not guessed** — the firmware configures UART at ~21ms; injecting before that delivers bytes to an unconfigured UART. Use a generous margin (50ms) with a named constant and a diagnostic assertion.
-- **The Uno sidecar is entirely unaudited (28 null pins)** — do not alias it to the Nano. The null-vs-[] distinction is the Uno's main contribution to testing.
+- **simavr VCD trace requires `AVR_MCU_VCD_PORT_PIN` macro** (not the raw struct form — fields differ between simavr versions). Needs `-I/usr/include/simavr` and `libsimavr-dev`.
+- **simavr `--list-cores` returns exit code 1** — `which simavr` is the reliable probe.
+- **The rp2040js adapter commits (bc6476d etc.) exist in lite** but on a branch not merged to its default branch. They touch debug-target-factory.js and infer-netlist.js (bw-board's files, vendored into lite).
+- **avr8js and simavr agree on transition values but diverge ~3 cycles on timing** for later loop iterations. This is expected — pipeline/interrupt modeling differs. The cross-check asserts values, not sub-cycle timing.
 
 ## Blocked
 
 | Item | Blocked on | Owner |
 |------|-----------|-------|
 | NeoPixel cat 1 cross-check | Re-measure on fixed emu8051 WASM | bw-board (emu8051 build available) |
-| Pi Pico adapter | No RP2040 emulator exists | Nobody — out of scope this campaign |
 | Headless live E2E (Playwright) | Memory constraint on shared VPS | Deferred |
 
 ## Standing rules
