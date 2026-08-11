@@ -53,70 +53,63 @@ describe('getPinFunctions: three-state distinction', () => {
     console.log(`# ${emptyPin}: [] (audited, no alternates)`);
   });
 
-  it('null and [] are distinguishable (the critical property)', async () => {
-    // Current sidecars have NO null entries — all pins are audited.
-    // A test that only reads real data would pass trivially if the
-    // function collapsed null → []. So we INJECT a null entry into
-    // the module's cache and verify it survives the API boundary.
-    //
-    // This is the test that would fail if someone "cleaned up" the
-    // null propagation to return [] for all falsy values.
-    const { default: pinMod } = await import('../src/pin-functions.js');
+  it('null and [] are distinguishable — real data, Uno vs STC12', () => {
+    if (!hasParts) return loudSkip('bw-parts sidecars not reachable');
 
-    // Inject a synthetic board with one null and one [] pin
-    // by writing a temp sidecar and loading it
-    const { writeFileSync, unlinkSync } = await import('node:fs');
-    const synthPath = path.resolve(here, '../../bw-parts/parts/_test_null_vs_empty.json');
-    writeFileSync(synthPath, JSON.stringify({
-      terminals: [
-        { name: 'PIN_NULL', functions: null },
-        { name: 'PIN_EMPTY', functions: [] },
-        { name: 'PIN_HAS', functions: ['gpio', 'adc0'] },
-      ]
-    }));
+    // The Uno sidecar has 28 terminals, ALL with functions: null
+    // (entirely unaudited). The STC12 has pins with [] (audited, GPIO
+    // only) and [...] (audited with alternates). These are REAL nulls,
+    // not synthetic — the distinction must survive the API.
 
-    // Temporarily register the board kind (reimport to bust cache)
-    // Since the module caches, we test the raw logic instead:
-    const data = JSON.parse(readFileSync(synthPath, 'utf8'));
-    const nullPin = data.terminals.find(t => t.name === 'PIN_NULL');
-    const emptyPin = data.terminals.find(t => t.name === 'PIN_EMPTY');
-    const hasPin = data.terminals.find(t => t.name === 'PIN_HAS');
+    // Uno: every pin should return null (unaudited)
+    const unoFn = getPinFunctions('arduino_uno', 'd0');
+    assert.equal(unoFn, null,
+      'Uno d0 must return null (unaudited), not [] — ' +
+      'if this returns [], the API collapses unaudited into audited-none');
 
-    // The raw data has the distinction
-    assert.equal(nullPin.functions, null, 'raw null must be null');
-    assert.ok(Array.isArray(emptyPin.functions), 'raw [] must be array');
-    assert.equal(emptyPin.functions.length, 0, 'raw [] must be empty');
-    assert.ok(hasPin.functions.length > 0, 'raw [...] must have entries');
-
-    // Now simulate what getPinFunctions does internally:
-    // it returns terminal.functions directly. If it ever did
-    // `return fn || []` or `return fn ?? []`, null would collapse.
-    function simulateGetFn(terminal) {
-      const fn = terminal.functions;
-      if (fn === null || fn === undefined) return null;
-      if (!Array.isArray(fn)) return null;
-      return fn;
+    // STC12: find a pin with [] (audited, no alternates)
+    const stcPins = getBoardPins('stc_mcu');
+    let emptyPin = null;
+    for (const p of stcPins) {
+      const fn = getPinFunctions('stc_mcu', p);
+      if (Array.isArray(fn) && fn.length === 0) { emptyPin = p; break; }
     }
+    assert.ok(emptyPin, 'STC12 should have at least one pin with []');
+    const stcFn = getPinFunctions('stc_mcu', emptyPin);
+    assert.ok(Array.isArray(stcFn) && stcFn.length === 0,
+      `${emptyPin} must return [] (audited, none)`);
 
-    const resultNull = simulateGetFn(nullPin);
-    const resultEmpty = simulateGetFn(emptyPin);
-    const resultHas = simulateGetFn(hasPin);
+    // THE CRITICAL ASSERTION: null (Uno) !== [] (STC12)
+    assert.notDeepEqual(unoFn, stcFn,
+      'Uno null and STC12 [] must be distinguishable — ' +
+      'a pin chooser showing "GPIO only" for an unaudited Uno pin ' +
+      'would confidently offer something it cannot verify');
 
-    assert.equal(resultNull, null, 'null functions must return null, not []');
-    assert.ok(Array.isArray(resultEmpty), '[] functions must return [], not null');
-    assert.equal(resultEmpty.length, 0);
-    assert.ok(resultHas.length > 0);
+    // Also check an audited STC12 pin has entries
+    const auditedFn = getPinFunctions('stc_mcu', 'P1.0');
+    assert.ok(Array.isArray(auditedFn) && auditedFn.length > 0,
+      'P1.0 must have audited alternates');
 
-    // THE CRITICAL ASSERTION: null !== []
-    assert.notDeepEqual(resultNull, resultEmpty,
-      'null and [] must be distinguishable — if this fails, ' +
-      'the API collapses unaudited into audited-none');
-
-    try { unlinkSync(synthPath); } catch {}
-    console.log('# null vs [] distinction: VERIFIED with synthetic data');
+    console.log(`# Uno d0: ${JSON.stringify(unoFn)} (null = unaudited)`);
+    console.log(`# STC12 ${emptyPin}: ${JSON.stringify(stcFn)} ([] = audited, none)`);
+    console.log(`# STC12 P1.0: ${JSON.stringify(auditedFn)} (audited with entries)`);
+    console.log('# null vs [] distinction: VERIFIED with real sidecar data');
   });
 
-  it('real data: audited and empty pins exist', () => {
+  it('all 28 Uno pins return null (entirely unaudited)', () => {
+    if (!hasParts) return loudSkip('bw-parts sidecars not reachable');
+    const pins = getBoardPins('arduino_uno');
+    if (!pins) return loudSkip('arduino_uno sidecar not found');
+    assert.equal(pins.length, 28, 'Uno should have 28 terminals');
+    for (const p of pins) {
+      const fn = getPinFunctions('arduino_uno', p);
+      assert.equal(fn, null,
+        `Uno ${p} must return null (unaudited), got ${JSON.stringify(fn)}`);
+    }
+    console.log('# All 28 Uno pins: null (unaudited)');
+  });
+
+  it('STC12: audited and empty pins both exist', () => {
     if (!hasParts) return loudSkip('bw-parts sidecars not reachable');
     const pins = getBoardPins('stc_mcu');
     let auditedPin = null, emptyPin = null;

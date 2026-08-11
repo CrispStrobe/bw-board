@@ -32,8 +32,8 @@ const PARTS_DIR = path.resolve(here, '../../bw-parts/parts');
 const BOARD_FILES = {
   stc_mcu: 'stc_mcu.json',
   stc12: 'stc_mcu.json',          // alias
-  arduino_uno: 'arduino_nano.json', // Uno is a subset of Nano (no A6/A7)
-  arduino_nano: 'arduino_nano.json',
+  arduino_uno: 'arduino_uno.json', // 28 terminals, entirely unaudited (all null)
+  arduino_nano: 'arduino_nano.json', // 30 terminals including A6/A7 analog-only
   pi_pico: 'pi_pico.json',
 };
 
