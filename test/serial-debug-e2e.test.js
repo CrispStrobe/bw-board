@@ -23,8 +23,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, unlinkSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSerialDebugTarget, buildFrame, CMD } from '../src/serial-debug.js';
@@ -256,84 +256,98 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
     // stc12_trace may exit non-zero (e.g. halted CPU at end of run).
     // Capture output regardless — the TX bytes are what matter.
     const txFile = path.resolve(here, '../.resync-tx.bin');
-    let result = '';
-    try {
-      // ROOT CAUSE (ucsim-stc 477d5d2): -inject only fires in the
-      // -until-ns loop, not -e run. Use -until-ns, not -e 'run N'.
-      result = execFileSync(traceBin, [
-        '-t', 'STC12',
-        '-S', `uart=0,out=${txFile}`,
-        '-inject', '0,0x7E',
-        '-inject', '87000,0xAA',
-        '-inject', '174000,0xBB',
-        '-inject', '10174000,0x7E',
-        '-inject', '10261000,0x00',
-        '-inject', '10348000,0x01',
-        '-inject', '10435000,0xFF',
-        '-until-ns', '20000000',
-        firmwareHexPath,
-      ], { timeout: 30000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    } catch (e) {
-      // Non-zero exit is expected (CPU halts at end of timed run).
-      // Capture whatever output was produced.
-      result = (e.stdout || '') + (e.stderr || '');
+    try { unlinkSync(txFile); } catch {}
+
+    // ROOT CAUSE (ucsim-stc 477d5d2): -inject only fires in the
+    // -until-ns loop, not -e run. Use -until-ns, not -e 'run N'.
+    //
+    // DERIVED TIMING: the firmware configures UART (SCON, BRT) around
+    // tick 230938 = ~21ms. Inject must be AFTER that. Margin: 4ms
+    // (>40 character times at 115200 baud). Torn frame at 25ms,
+    // valid HELLO at 35ms (10ms gap > 5ms idle timeout).
+    // Run until 60ms to allow for reply transmission.
+    //
+    // stdio: 'ignore' — the PC trace is hundreds of KB. Piping it
+    // fills the buffer, blocks the process, and it gets killed before
+    // the TX file is written. We only need the TX file.
+    const traceResult = spawnSync(traceBin, [
+      '-t', 'STC12',
+      '-S', `uart=0,out=${txFile}`,
+      '-inject', '25000000,0x7E',
+      '-inject', '25087000,0xAA',
+      '-inject', '25174000,0xBB',
+      '-inject', '35174000,0x7E',
+      '-inject', '35261000,0x00',
+      '-inject', '35348000,0x01',
+      '-inject', '35435000,0xFF',
+      '-until-ns', '60000000',
+      firmwareHexPath,
+    ], { timeout: 120000, stdio: 'ignore' });
+
+    if (traceResult.signal) {
+      console.log(`# stc12_trace killed by ${traceResult.signal}`);
     }
 
     // Capture UART TX to a temp file — the PC trace does NOT contain
     // serial output, so string-matching the trace for '7e' or '81'
     // would match program counter addresses (false positive).
     // Previous assertions 1+2 passed on exactly this false positive.
-    // txFile was set above before the invocation
     let txBytes = Buffer.alloc(0);
     try {
       txBytes = readFileSync(txFile);
-    } catch { /* file may not exist if -S out= was not used */ }
+    } catch { /* file may not exist */ }
 
     console.log(`# UART TX bytes: ${txBytes.length}`);
     if (txBytes.length > 0) {
       console.log(`# TX hex: ${txBytes.toString('hex').slice(0, 60)}`);
     }
 
-    // Pre-registered assertion 1: firmware replied with SOF (0x7E)
-    const hasSOF = txBytes.includes(0x7E);
-
-    // Pre-registered assertion 2: reply contains HELLO response (0x81)
-    const hasHelloReply = txBytes.includes(0x81);
-
-    // Pre-registered assertion 3: reply has payload (length > 0)
-    // The HELLO reply frame is: SOF LEN CMD=0x81 payload... SUM
-    // LEN > 0 means version info is present.
-    let replyLen = 0;
-    const sofIdx = txBytes.indexOf(0x7E);
-    if (sofIdx >= 0 && sofIdx + 1 < txBytes.length) {
-      replyLen = txBytes[sofIdx + 1];
-    }
-
-    // POSITIVE CONTROL for assertion 4 (no reply to torn frame):
-    // If we see ANY TX bytes, they must come from the valid HELLO,
-    // not from the garbage. The control is: the same channel and
-    // reader DID see the valid HELLO reply (assertions 1+2 above).
-    // Without this, "no reply to torn frame" is indistinguishable
-    // from "we were not listening".
-
-    console.log(`# SOF in TX: ${hasSOF}, HELLO reply (0x81): ${hasHelloReply}, payload len: ${replyLen}`);
-
+    // If 0 bytes, the test is INCONCLUSIVE — say so and do not assert.
     if (txBytes.length === 0) {
-      // The firmware produced no TX output at all. This could mean:
-      // - The -S out= flag was not passed (trace output mode issue)
-      // - The firmware never reached the UART handler
-      // - The inject timing is wrong
-      // This is INCONCLUSIVE, not a pass. Report it honestly.
-      console.log('# INCONCLUSIVE: no UART TX bytes captured.');
-      console.log('# The stc12_trace -S out= flag may need to be wired,');
-      console.log('# or the firmware did not process the injected bytes.');
-      console.log('# Previous "PASS" was a false positive: assertions matched');
-      console.log('# hex digits in PC addresses, not UART TX data.');
-    } else if (hasSOF && hasHelloReply) {
-      console.log('# PASS: idle-timeout resync confirmed under timed emulation.');
-      console.log('# Category 2b — same datasheet, timed emulator.');
-      assert.ok(replyLen > 0,
-        'Pre-registered prediction 3: HELLO reply should contain version (LEN > 0)');
+      console.log('# INCONCLUSIVE: 0 TX bytes. Possible causes:');
+      console.log('#   - stc12_trace binary lacks -until-ns (rebuild from 477d5d2)');
+      console.log('#   - inject fires during init (before UART configured)');
+      console.log('#   - -S out= not capturing');
+      return;
     }
+
+    // ── Pre-registered assertion 1: firmware replied with SOF ────────
+    const hasSOF = txBytes[0] === 0x7E;
+    assert.ok(hasSOF,
+      `Prediction 1: first TX byte must be SOF (0x7E), got 0x${txBytes[0]?.toString(16)}`);
+
+    // ── Pre-registered assertion 2: HELLO response (CMD | 0x80) ─────
+    assert.ok(txBytes.length >= 3 && txBytes[2] === 0x81,
+      `Prediction 2: CMD byte must be 0x81 (HELLO reply), got 0x${txBytes[2]?.toString(16)}`);
+
+    // ── Pre-registered assertion 3: payload length > 0 ──────────────
+    const replyLen = txBytes[1];
+    assert.ok(replyLen > 0,
+      `Prediction 3: LEN must be > 0 (version in payload), got ${replyLen}`);
+
+    // ── Pre-registered assertion 4 + positive control ───────────────
+    // "No reply to torn frame" is an absence claim. It passes by
+    // omission if the reader was never listening. The positive control:
+    // assertions 1-3 PASSED, proving the channel captured a real reply.
+    // Therefore: the output contains ONLY the valid HELLO reply, and
+    // NO bytes from the garbage frame. If the firmware had replied to
+    // the garbage, txBytes would contain more than one frame.
+    //
+    // Expected: exactly one frame = SOF(1) + LEN(1) + CMD(1) + payload(LEN) + SUM(1)
+    const expectedLen = 1 + 1 + 1 + replyLen + 1;
+    assert.equal(txBytes.length, expectedLen,
+      `Prediction 4: exactly one reply frame (${expectedLen} bytes), got ${txBytes.length}. ` +
+      `Extra bytes would mean the firmware replied to the torn frame too.`);
+
+    console.log('# ALL 4 PREDICTIONS CONFIRMED:');
+    console.log(`#   1. SOF (0x7E): ✓`);
+    console.log(`#   2. CMD=0x81 (HELLO reply): ✓`);
+    console.log(`#   3. LEN=${replyLen} (payload present): ✓`);
+    console.log(`#   4. Exactly ${expectedLen} bytes (no reply to torn frame): ✓`);
+    console.log('# Idle-timeout resync CONFIRMED under timed emulation.');
+    console.log('# Category 2b — single emulator with bit timing.');
+
+    // Cleanup
+    try { unlinkSync(txFile); } catch {}
   });
 });
