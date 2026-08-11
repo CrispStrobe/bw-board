@@ -1,20 +1,21 @@
-# Spec-update: pin alternate-function schema
+# Spec-update: pin alternate-function schema (REVISED)
 
 **From:** bw-board
 **To:** bw-parts (data owner), bw-circuit-ui (consumer)
-**Re:** bw-parts spec-update 004, pin alternate-function data
+**Re:** bw-parts spec-update 004 + 007, bw-circuit-ui pin-alternate-functions.md
 
-## The question
+## Decision: adopt `"functions"`, not `"alternates"`
 
-bw-circuit-ui's pin chooser needs structured per-pin alternate-function
-data. bw-parts owns the audited pin tables (fbfacf8: STC12 vs PINOUT.md,
-ATmega328P vs DS40002061B, RP2040 vs 2023-03-02 datasheet). bw-board
-consumes the data and exports it to the UI.
+bw-parts (007) and bw-circuit-ui both use `"functions"`. bw-board's
+earlier draft used `"alternates"`. **Adopting `"functions"`** — the data
+owner and the consumer already agree on the name. bw-board owns neither
+the data nor the UI that reads it.
 
-## Proposed schema
+`"analog_only"` is a value inside the `functions` list, not a separate
+boolean. One list is simpler to consume than a list plus a flag, and
+both parties already use this form.
 
-bw-parts produces a JSON file per board kind. bw-board vendors it.
-bw-circuit-ui reads it through bw-board's API.
+## Agreed schema (all three repos use these exact words)
 
 ```json
 {
@@ -24,76 +25,46 @@ bw-circuit-ui reads it through bw-board's API.
   "pins": {
     "D13": {
       "port": "PB5",
-      "digital": true,
-      "alternates": ["SCK", "LED"],
+      "functions": ["SCK", "LED"],
       "notes": "onboard LED"
     },
     "A4": {
       "port": "PC4",
-      "digital": true,
-      "alternates": ["ADC4", "SDA"],
+      "functions": ["ADC4", "SDA"],
       "notes": "I2C data — requires pull-up"
     },
     "A6": {
       "port": null,
-      "digital": false,
-      "alternates": ["ADC6"],
-      "notes": "analog-only, no digital I/O"
+      "functions": ["analog_only", "ADC6"],
+      "notes": "no digital I/O, no port register bit"
     },
     "RST": {
       "port": null,
-      "digital": false,
-      "alternates": null,
-      "notes": "active HIGH reset (STC12) / active LOW (AVR)"
+      "functions": null,
+      "notes": "not yet audited"
     }
   }
 }
 ```
 
-## Three requirements
+## Null vs empty (agreed by all three, not reopened)
 
-### 1. A pin has multiple functions
+- `"functions": null` — not yet audited. Unknown.
+- `"functions": []` — audited, genuinely none (GPIO only).
 
-`"alternates": ["ADC3", "CCP0"]` — the list is ordered by common usage.
-P1.3 on the STC12 is GPIO + ADC3 + CCP0, which is a real collision this
-project has already hit (the servo driver uses CCP0 on P1.3, blocking
-ADC3 on the same pin).
+These are different claims. Coverage is measurable.
 
-### 2. A pin lacks a function others have
+## Three requirements (unchanged)
 
-`"digital": false` — A6/A7 on the Nano are analog-only. The pin chooser
-must show WHY a pin is unavailable (analog-only) rather than just omitting
-it. The `digital` field is the flag; `notes` carries the human reason.
+1. **Multiple functions per pin**: `["ADC3", "CCP0"]` — ordered by usage.
+2. **Analog-only**: `["analog_only", "ADC6"]` — a value in the list, not
+   a separate field. The pin chooser shows why the pin is unavailable.
+3. **Unknown vs none**: `null` until checked, `[]` means checked-and-none.
 
-### 3. Unknown vs none (CRITICAL)
+## Data flow
 
-`"alternates": null` — not yet checked. Nobody has audited this pin.
-`"alternates": []` — checked, there are none. Only GPIO.
+- **bw-parts generates** the JSON from audited pin tables (fbfacf8 etc.)
+- **bw-board vendors** it and exports `getPinFunctions(boardKind, pinName)`
+- **bw-circuit-ui consumes** it through that API
 
-These are different claims. Absent data must not read as "no alternates".
-Coverage is measurable: "37 of 40 pins audited" is a statement; an
-implicit absence is not.
-
-This is the same failure caught five times this week: a check that passes
-because nothing was examined. A pin with `null` alternates should render
-as "unknown" in the chooser, not as an empty list.
-
-## Data ownership
-
-**bw-parts generates the JSON** from their audited pin tables. They own
-the data and the datasheet citations. bw-board vendors the JSON and
-exports `getPinAlternates(boardKind, pinName)`. bw-circuit-ui consumes it.
-
-If bw-board hand-encodes the data, there are two copies of the same facts
-maintained by two agents, and the audited one is not the one the UI reads.
-
-## What bw-board provides
-
-```js
-// Exported from src/index.js
-export function getPinAlternates(boardKind, pinName) {
-  // Returns { port, digital, alternates, notes } or null if unknown board
-}
-```
-
-The function reads the vendored JSON. It does not generate the data.
+One source of truth. No hand-encoded copies.
