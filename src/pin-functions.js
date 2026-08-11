@@ -10,6 +10,15 @@
  * Does NOT re-encode the data — reads bw-parts' audited sidecars
  * so there is one source of truth with datasheet citations.
  *
+ * TWIN IMPLEMENTATION: bw-circuit-ui has its own accessor at
+ *   bw-circuit-ui/src/model/pin-functions.js (getPinFunctionsForPart)
+ * which reads the same schema from vendored sidecars in the browser
+ * bundle. That split is architecturally right (browser code cannot
+ * import across a sibling repo path), but it means the four states
+ * (null, [], [...], ["analog_only"]) are interpreted in two places.
+ * If the schema gains a fifth state, BOTH accessors must be updated.
+ * See spec-updates/pin-alternates-schema.md §Two implementations.
+ *
  * @module
  */
 

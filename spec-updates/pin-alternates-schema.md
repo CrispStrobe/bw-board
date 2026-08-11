@@ -64,7 +64,27 @@ These are different claims. Coverage is measurable.
 ## Data flow
 
 - **bw-parts generates** the JSON from audited pin tables (fbfacf8 etc.)
-- **bw-board vendors** it and exports `getPinFunctions(boardKind, pinName)`
-- **bw-circuit-ui consumes** it through that API
+- **bw-board** reads sidecars at `../../bw-parts/parts/` via
+  `src/pin-functions.js` → `getPinFunctions(boardKind, pinName)`.
+  Node-only (uses `node:fs`); not exported from the browser entry.
+- **bw-circuit-ui** reads the same schema from its own vendored copy via
+  `src/model/pin-functions.js` → `getPinFunctionsForPart(kind)`.
+  Browser-safe; reads from its parts registry, not a sibling path.
 
-One source of truth. No hand-encoded copies.
+One source of truth (bw-parts). No hand-encoded copies.
+
+## Two implementations
+
+The schema has two independent accessors that must agree on the four
+states (`null`, `[]`, `[...]`, `["analog_only"]`). This is architecturally
+right — a browser bundle cannot import across sibling repo paths — but
+it means a schema change (a fifth state, a reinterpretation of
+`analog_only`) must update both files:
+
+| Repo | File | API |
+|------|------|-----|
+| bw-board | `src/pin-functions.js` | `getPinFunctions(boardKind, pinName)` |
+| bw-circuit-ui | `src/model/pin-functions.js` | `getPinFunctionsForPart(kind)` |
+
+Both repos test the `null`-vs-`[]` boundary. If the schema evolves,
+verify that both accessor test suites cover the new state.
