@@ -41,3 +41,4 @@ export { registerI2CParts } from './devices/i2c-parts.js';
 export { registerAllDevices } from './register-all.js';
 export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from './current-ratings.js';
 export { R_INPUT_PULLUP } from './pin-model.js';
+export { getPinFunctions, getBoardPins, getPinInfo } from './pin-functions.js';
