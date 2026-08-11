@@ -26,6 +26,8 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { parseIntelHex } from '../src/intel-hex.js';
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 let hasAvrGcc = false;
@@ -37,23 +39,6 @@ try { await import('avr8js'); hasAvr8js = true; } catch {}
 function loudSkip(reason) {
   console.log(`# ⚠ SKIPPED: ${reason}`);
   return true;
-}
-
-function parseHex(hex) {
-  const bytes = new Uint8Array(0x8000);
-  for (const line of hex.split('\n')) {
-    if (!line.startsWith(':')) continue;
-    const len = parseInt(line.slice(1, 3), 16);
-    const addr = parseInt(line.slice(3, 7), 16);
-    const type = parseInt(line.slice(7, 9), 16);
-    if (type !== 0) continue;
-    for (let i = 0; i < len; i++) {
-      bytes[addr + i] = parseInt(line.slice(9 + i * 2, 11 + i * 2), 16);
-    }
-  }
-  const words = new Uint16Array(bytes.length / 2);
-  for (let i = 0; i < words.length; i++) words[i] = bytes[i * 2] | (bytes[i * 2 + 1] << 8);
-  return words;
 }
 
 const BLINK_C = `
@@ -133,7 +118,7 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     }
 
     const adapter = createAvr8jsAdapter({ clockHz: fcpu });
-    adapter.loadProgram(parseHex(hex));
+    adapter.loadProgram(parseIntelHex(hex));
 
     const board = new BoardImpl(5.0);
     board.setNetlist(
