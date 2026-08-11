@@ -206,7 +206,7 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
   function injectSupported() {
     if (!traceBin) return false;
     try {
-      execFileSync(traceBin, ['-t', 'STC12', '-inject', '0,0x00', '-e', 'run 1000', '/dev/null'],
+      execFileSync(traceBin, ['-t', 'STC12', '-inject', '0,0x00', '-until-ns', '1000', '/dev/null'],
         { timeout: 3000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
       return true;
     } catch (e) {
@@ -258,6 +258,8 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
     const txFile = path.resolve(here, '../.resync-tx.bin');
     let result = '';
     try {
+      // ROOT CAUSE (ucsim-stc 477d5d2): -inject only fires in the
+      // -until-ns loop, not -e run. Use -until-ns, not -e 'run N'.
       result = execFileSync(traceBin, [
         '-t', 'STC12',
         '-S', `uart=0,out=${txFile}`,
@@ -268,7 +270,7 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
         '-inject', '10261000,0x00',
         '-inject', '10348000,0x01',
         '-inject', '10435000,0xFF',
-        '-e', 'run 20000000',
+        '-until-ns', '20000000',
         firmwareHexPath,
       ], { timeout: 30000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
     } catch (e) {

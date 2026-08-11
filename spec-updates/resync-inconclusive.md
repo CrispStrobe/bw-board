@@ -25,20 +25,20 @@ not the UART handler (0x0023). And the echo program's UART poll is at
 and the poll starting, then NO further changes — the inject does not
 cause RI to rise during the `run` command.
 
-## Live hypothesis
+## Root cause (found by ucsim-stc 477d5d2)
 
-**(d) The inject does not fire during the `run` command in stc12_trace.**
-ucsim-stc `3e9c839` confirmed the inject mechanism works in an
-instrumented unit test. But in the actual stc12_trace binary:
-- Echo program polls RI at 0x0069 — never breaks out
-- No PC change after tick ~72609, even with 200M-tick run
-- Inject at 10ms (well past init) does not cause RI to rise
-- `-S out=` produces 0 bytes (no TX because no RX was processed)
+**(d) `-inject` only fires in the `-until-ns` loop, not `-e run`.**
+The inject queue is read by the `-until-ns` time-stepping loop.
+`-e run` bypasses that loop entirely, so injected bytes are never
+delivered. All our test invocations used `-e run`.
 
-The firmware is correct (SCON=0x50, EA=1, ES=1, polling RI). The
-inject scheduling or dispatch during the `run` loop is the suspect.
+**Fix:** replace `-e 'run 20000000'` with `-until-ns 100000000`.
 
-This is ucsim-stc's binary.
+**Status:** current binary (Aug 10 18:50) does NOT have `-until-ns`.
+Needs rebuild from `477d5d2`. Once rebuilt, the resync test changes
+one flag and the echo program should receive the byte and reply.
+
+This is ucsim-stc's binary to rebuild.
 
 ## Minimal reproduction
 
