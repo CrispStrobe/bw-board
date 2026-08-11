@@ -72,12 +72,25 @@ with no mock in the path. HELLO, REGS (8 fields), READ (iram[0]) all
 round-tripped successfully. Two independent implementations (host JS codec +
 firmware C codec) agree over a transport neither owns. Category 2b.
 
-Idle-timeout resync: unreachable under emu8051 (instant bytes). ucsim
-`stc12_trace -inject` (ccc3e9d) CAN reach it — Timer 1 wall clock runs, 5ms
-timeout fires. Test framework written: sends a torn frame, waits 10ms for
-idle timeout, sends valid HELLO. **Loudly skips** when `stc12_trace` binary is
-absent (needs rebuild). When the binary is available, the test runs the
-resync path end-to-end.
+## Idle-timeout resync — CONFIRMED (`b46726a`)
+
+All 4 pre-registered predictions from `292bac7` confirmed on first real
+execution — none adjusted after seeing the output:
+
+1. SOF (0x7E): firmware replied after torn frame + 10ms gap ✓
+2. CMD=0x81 (HELLO response) ✓
+3. LEN=9 (payload present — version data) ✓
+4. Exactly 13 bytes (no reply to torn frame). Positive control: the valid
+   HELLO DID produce a reply on the same channel, so the absence carries weight. ✓
+
+Category 2b — single emulator with bit timing (86.8 µs/byte). emu8051
+cannot exercise this path (instant bytes, no inter-byte gaps — by
+construction, not by neglect). BENCH-UART settles it on real silicon.
+
+Three bugs found on the path: piped stdio blocked on 200KB trace output
+(SIGTERM), `-e run` bypasses `-inject` dispatch (ucsim-stc 477d5d2), and
+inject fired during init before UART configured (fixed by deriving inject
+time with 29ms margin past SCON write).
 
 ## What is open, not bench-blocked
 
