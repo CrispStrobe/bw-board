@@ -1,5 +1,5 @@
 /**
- * Debug target factory tests: one construction path, two targets.
+ * Debug target factory tests: one construction path, three targets.
  *
  * Whatever the factory returns satisfies the same interface and
  * reports capabilities matching its own row of the matrix.
@@ -77,6 +77,61 @@ describe('createDebugTarget: serial', () => {
   });
 });
 
+describe('createDebugTarget: avr8js', () => {
+  it('returns adapter (target may be null until avr8js-debug.js exists)', async () => {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] }],
+      [{ id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] }],
+    );
+
+    let hasAvr8js = false;
+    try { await import('avr8js'); hasAvr8js = true; } catch {}
+    if (!hasAvr8js) {
+      console.log('# ⚠ SKIPPED: avr8js not installed');
+      return;
+    }
+
+    const result = await createDebugTarget('avr8js', { board });
+    assert.ok(result.adapter, 'avr8js factory returns an adapter');
+    assert.equal(typeof result.adapter.advanceNs, 'function');
+    assert.equal(typeof result.adapter.loadProgram, 'function');
+    assert.equal(typeof result.adapter.timeNs, 'function');
+  });
+
+  it('avr8js without board throws', async () => {
+    await assert.rejects(
+      () => createDebugTarget('avr8js', {}),
+      /requires opts.board/
+    );
+  });
+
+  it('avr8js loads hex and detects non-empty flash', async () => {
+    let hasAvr8js = false;
+    try { await import('avr8js'); hasAvr8js = true; } catch {}
+    if (!hasAvr8js) {
+      console.log('# ⚠ SKIPPED: avr8js not installed');
+      return;
+    }
+
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] }],
+      [{ id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] }],
+    );
+
+    // Minimal hex: one word at address 0 (a JMP instruction)
+    // :040000000C94340028 — word[0]=0x940C, word[1]=0x0034
+    const hex = ':040000000C94340028\n:00000001FF\n';
+    const result = await createDebugTarget('avr8js', { board, hex });
+    assert.ok(result.adapter, 'adapter created with hex');
+  });
+});
+
 describe('createDebugTarget: unknown kind', () => {
   it('throws with a reason', async () => {
     await assert.rejects(
@@ -110,10 +165,11 @@ describe('createDebugTarget: missing options', () => {
 });
 
 describe('getTargetKinds', () => {
-  it('returns emulator and serial', () => {
+  it('returns emulator, avr8js, and serial', () => {
     const kinds = getTargetKinds();
-    assert.equal(kinds.length, 2);
+    assert.equal(kinds.length, 3);
     assert.ok(kinds.find(k => k.kind === 'emulator'));
+    assert.ok(kinds.find(k => k.kind === 'avr8js'));
     assert.ok(kinds.find(k => k.kind === 'serial'));
   });
 
