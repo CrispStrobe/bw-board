@@ -172,3 +172,57 @@ test('loadProgram resets PC to the origin and runs from SRAM', () => {
   assert.ok(b.calls.some(c => c.name === 'GP25' && c.mode === 'pushpull'),
     'the loaded program drives GP25');
 });
+
+// FOLLOWER — the digital-input leg, hand-assembled: GP25 mirrors GP2,
+// which the BOARD drives. The pad's INPUT ENABLE must be set — pads
+// reset with IE off in rp2040js, so GPIO_IN reads 0 no matter what the
+// board does until the firmware writes the pad (the SDK's gpio_init
+// does; so does generateC's bw_setup for input pins).
+//   0x00  0x2005  movs r0, #5
+//   0x02  0x4909  ldr  r1, =0x400140CC   ; GPIO25_CTRL (lit @0x28)
+//   0x04  0x6008  str  r0, [r1]
+//   0x06  0x4909  ldr  r1, =0x40014014   ; GPIO2_CTRL  (lit @0x2C)
+//   0x08  0x6008  str  r0, [r1]
+//   0x0A  0x2042  movs r0, #0x42         ; IE | SCHMITT
+//   0x0C  0x4908  ldr  r1, =0x4001c00c   ; PADS GPIO2  (lit @0x30)
+//   0x0E  0x6008  str  r0, [r1]
+//   0x10  0x2001  movs r0, #1
+//   0x12  0x0640  lsls r0, r0, #25
+//   0x14  0x4907  ldr  r1, =0xd0000000   ; SIO (lit @0x34)
+//   0x16  0x6248  str  r0, [r1, #0x24]   ; OE_SET GP25
+//   loop:
+//   0x18  0x684A  ldr  r2, [r1, #4]      ; GPIO_IN
+//   0x1A  0x2304  movs r3, #4            ; bit 2
+//   0x1C  0x421A  tst  r2, r3
+//   0x1E  0xD001  beq  off
+//   0x20  0x6148  str  r0, [r1, #0x14]   ; OUT_SET
+//   0x22  0xE7F9  b    loop
+//   0x24  0x6188  str  r0, [r1, #0x18]   ; OUT_CLR (off:)
+//   0x26  0xE7F7  b    loop
+test('digital input: GP25 follows the board level on GP2 within a slice', () => {
+  const FOLLOWER = new Uint16Array([
+    0x2005, 0x4909, 0x6008, 0x4909, 0x6008, 0x2042, 0x4908, 0x6008,
+    0x2001, 0x0640, 0x4907, 0x6248,
+    0x684A, 0x2304, 0x421A, 0xD001, 0x6148, 0xE7F9, 0x6188, 0xE7F7,
+    0x40CC, 0x4001, 0x4014, 0x4001, 0xc00c, 0x4001, 0x0000, 0xd000,
+  ]);
+  const a = createRp2040jsAdapter({ program: FOLLOWER });
+  let gp2Level = 0;
+  const b = stubBoard();
+  b.readPin = (name) => (name === 'GP2' ? gp2Level : 0);
+  a.attachBoard(b);
+
+  const lastGp25 = () => {
+    const g = b.calls.filter(c => c.name === 'GP25' && c.mode === 'pushpull');
+    return g.length ? g[g.length - 1].high : undefined;
+  };
+
+  a.advanceNs(100_000);
+  assert.equal(lastGp25(), false, 'GP2 low -> GP25 low');
+  gp2Level = 1;
+  a.advanceNs(100_000);
+  assert.equal(lastGp25(), true, 'the board raised GP2 -> GP25 follows high');
+  gp2Level = 0;
+  a.advanceNs(100_000);
+  assert.equal(lastGp25(), false, 'and back down');
+});

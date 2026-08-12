@@ -116,3 +116,36 @@ function awaitBoard() {
   // uncluttered.)
   return { BoardImpl: BoardImplRef };
 }
+
+// FOLLOWER — the digital-input leg, hand-assembled: PB0 (D8) mirrors
+// PB1 (D9), which the BOARD drives. Encodings from the instruction set
+// manual:
+//   word 0  SBI DDRB,0     0x9A20   (D8 output; D9 stays input)
+//   word 1  IN r24,PINB    0xB183   <- loop
+//   word 2  SBRC r24,1     0xFD81   (skip if D9 low)
+//   word 3  SBI PORTB,0    0x9A28   (D8 high)
+//   word 4  SBRS r24,1     0xFF81   (skip if D9 high)
+//   word 5  CBI PORTB,0    0x9828   (D8 low)
+//   word 6  RJMP .-6       0xCFFA   (back to IN)
+test('digital input: D8 follows the board level on D9 within a slice', () => {
+  const FOLLOWER = new Uint16Array([0x9A20, 0xB183, 0xFD81, 0x9A28, 0xFF81, 0x9828, 0xCFFA]);
+  const a = createAvr8jsAdapter({ program: FOLLOWER });
+  let d9Level = 0;
+  const b = stubBoard();
+  b.readPin = (name) => (name === 'D9' ? d9Level : 0);
+  a.attachBoard(b);
+
+  const lastD8 = () => {
+    const d8 = b.calls.filter(c => c.name === 'D8' && c.mode === 'pushpull');
+    return d8.length ? d8[d8.length - 1].high : undefined;
+  };
+
+  a.advanceNs(100_000);
+  assert.equal(lastD8(), false, 'D9 low -> D8 low');
+  d9Level = 1;
+  a.advanceNs(100_000);
+  assert.equal(lastD8(), true, 'the board raised D9 -> D8 follows high');
+  d9Level = 0;
+  a.advanceNs(100_000);
+  assert.equal(lastD8(), false, 'and back down');
+});

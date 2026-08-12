@@ -117,6 +117,18 @@ export function createRp2040jsAdapter(opts = {}) {
     rp2040.gpio[def.index].addListener((state) => publishPin(def.index, state));
   }
 
+  /** Boundary A's digital-input leg: every pin the MCU is NOT driving
+   *  (output-enable clear) takes its level from the solved circuit —
+   *  the same rule as the 8051 and AVR adapters. */
+  function syncInputs() {
+    if (!board || !board.readPin) return;
+    for (const def of Object.values(RP2040_PINS)) {
+      const pin = rp2040.gpio[def.index];
+      if (pin.outputEnable) continue;
+      pin.setInputValue(board.readPin(`GP${def.index}`) === 1);
+    }
+  }
+
   // ADC: answer a conversion with the BOARD's node voltage on that
   // channel's pin. rp2040js's default handler reads channelValues[] and
   // completes after the 2 µs sample time via a clock alarm — refresh the
@@ -180,10 +192,16 @@ export function createRp2040jsAdapter(opts = {}) {
       for (const def of Object.values(RP2040_PINS)) {
         publishPin(def.index, rp2040.gpio[def.index].value);
       }
+      syncInputs();
     },
+
+    /** Re-read every input pin from the board (also called internally at
+     *  each advance slice; exposed for the debug target's runFor). */
+    syncInputs,
 
     /** Run the CPU forward by deltaNs of simulated time, then sync the board clock. */
     advanceNs(deltaNs) {
+      syncInputs();
       const target = clock.nanos + deltaNs;
       while (clock.nanos < target) {
         if (core.waiting) {

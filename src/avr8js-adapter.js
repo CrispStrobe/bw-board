@@ -146,6 +146,21 @@ export function createAvr8jsAdapter(opts = {}) {
     });
   }
 
+  /** Boundary A's digital-input leg: every pin the MCU is NOT driving
+   *  (DDR bit clear) takes its level from the solved circuit. Mirrors the
+   *  emu8051 adapter's syncPinInputs — a button wired to a pin works the
+   *  same way on every core. Called at each advance slice, so a press
+   *  propagates within one frame. */
+  function syncInputs() {
+    if (!board || !board.readPin) return;
+    for (const [name, def] of Object.entries(ATMEGA328P_PINS)) {
+      if (def.analogOnly) continue;
+      const ddr = cpu.data[REG[def.port].ddr];
+      if (ddr & (1 << def.bit)) continue; // MCU-driven: the board listens, not talks
+      ioPorts[def.port].setPin(def.bit, board.readPin(name) === 1);
+    }
+  }
+
   // ADC: when the program starts a conversion, answer with the BOARD's node
   // voltage on that channel's pin (A0–A5 = ADC0–5) — boundary A's analog leg.
   adc.onADCRead = (input) => {
@@ -178,10 +193,16 @@ export function createAvr8jsAdapter(opts = {}) {
       for (const key of Object.keys(ioPorts)) {
         for (let bit = 0; bit < 8; bit++) publishPin(key, bit);
       }
+      syncInputs();
     },
+
+    /** Re-read every input pin from the board (also called internally at
+     *  each advance slice; exposed for the debug target's runFor). */
+    syncInputs,
 
     /** Run the CPU forward by deltaNs of simulated time, then sync the board clock. */
     advanceNs(deltaNs) {
+      syncInputs();
       const targetCycles = cpu.cycles + Math.round((deltaNs / 1e9) * clockHz);
       while (cpu.cycles < targetCycles) {
         avrInstruction(cpu);

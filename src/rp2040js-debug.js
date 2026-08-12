@@ -349,6 +349,10 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
 
     runFor(budgetNs) {
       if (detached || !running) return 'idle';
+      // The debug loop bypasses adapter.advanceNs, so the board's input
+      // levels are re-read here — once per pump slice, same cadence as a
+      // free run. A button works identically under the debugger.
+      if (adapter.syncInputs) adapter.syncInputs();
       return execute(clock.nanos + budgetNs);
     },
 
