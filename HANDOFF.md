@@ -1,17 +1,19 @@
-# bw-board handoff — 2026-08-11 (session 2)
+# bw-board handoff — 2026-08-12
 
-## Completed this session
+**1280 tests, 0 failures.** All pushed to master.
+
+## Completed this session (sessions 2–3)
 
 - **`parseIntelHex`** (`src/intel-hex.js`): canonical Intel HEX → Uint16Array loader for AVR flash. Little-endian byte pairs, checksum validation, extended address records (types 02/04). 17 oracle tests. `avr-e2e.test.js` now uses the shared parser.
 - **Board-kind power pins** (`src/devices/board-kinds.js`): `arduino_nano`, `arduino_uno`, `pi_pico` device models that stamp power terminals (5V, 3V3, GND, VIN, VBUS, VSYS) as Thévenin sources. GPIO terminals left for the boundary-A adapter. 13 oracle tests.
 - **Twin-implementation documentation**: `pin-functions.js` cross-references `bw-circuit-ui/src/model/pin-functions.js`; `spec-updates/pin-alternates-schema.md` §Two implementations records both accessor call sites.
-- **AVR cross-check** (`test/avr-cross-check.test.js`): two tests. (a) Tight toggle: 21 PB5 transitions agree. (b) **Brightness firmware** (`_delay_ms(500)` blink): ON period avr8js=500000125ns, simavr=500000130ns — **5 ns difference** (< 1 cycle). This is the actual firmware behind the 0.5882 result. **AVR row: category 3 → category 1**. Recorded as `spec-updates/avr-cross-check.md`.
-- **debug-target-factory 'avr8js' routing** (`src/debug-target-factory.js`): factory now routes 'emulator', 'avr8js', and 'serial'. The avr8js path creates an adapter, attaches board, parses hex, and dynamically imports `avr8js-debug.js` (coordinator writing `createAvr8jsDebugTarget` against this seam). Returns `{ adapter }` without target until that module exists.
+- **AVR cross-check** (`test/avr-cross-check.test.js`): two tests, both against **simavr** (independent lineage). (a) Tight toggle: 21 PB5 transitions agree. (b) **Brightness firmware** (`_delay_ms(500)` blink, the actual program behind 0.5882): ON period avr8js=500000125ns, simavr=500000130ns — **5 ns difference** (< 1 cycle). Positive control asserts VCD non-empty. **AVR row: category 3 → category 1.** Recorded as `spec-updates/avr-cross-check.md`.
+- **debug-target-factory 'avr8js' routing** (`src/debug-target-factory.js`): factory routes 'emulator', 'avr8js', 'serial'. The avr8js path creates adapter, attaches board, parses hex via `parseIntelHex`, dynamically imports `avr8js-debug.js` (coordinator writing `createAvr8jsDebugTarget`). Returns `{ adapter }` without target until that module exists. 3 factory tests.
+- **Uno sidecar now fully audited**: bw-parts populated all 28 Uno pins (was all-null). pin-functions tests updated accordingly.
 
-## Completed previously
+## Completed previously (session 1 and before)
 
-- **111 part kinds**, now 1264 tests, all green.
-- **Servo/motor/relay/button/ADC** verified end-to-end through emu8051 + board.
+- **111 part kinds**, servo/motor/relay/button/ADC end-to-end through emu8051 + board.
 - **Servo pulse**: 1499.6 µs (emu8051) = 1499.6 µs (ucsim) after SETB/CLR cycle fix.
 - **LED brightness**: 0.07248 end-to-end, 0.5882 for AVR blink (both derived, exact).
 - **Idle-timeout resync**: all 4 pre-registered predictions confirmed via stc12_trace -inject.
@@ -20,25 +22,25 @@
 - **getPinFunctions()**: reads bw-parts sidecars, preserves null vs [] distinction.
 - **Two-budget DRC**: chip 120 mA + supply 500 mA USB, vendored from bw-parts.
 - **Scope channels**, advanceTo sub-stepping, CC mode in MNA, input-pullup PinMode.
+- **avr8js adapter USART0 + full ADC** (efa7ac9): USART0 peripheral, ADC channels 0–7, onSerial callback.
 
 ## In flight
 
 | File | Intent | Next step |
 |------|--------|-----------|
-| Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | Coordinator recategorised rows in `844966a` — retired "2b", applied defined categories 1/2/3. | AVR row now cat 1 (avr8js + simavr). Update ledger to reflect. |
-| `spec-updates/pin-alternates-schema.md` | Schema settled, twin implementations documented. | Waiting on bw-parts to populate remaining null pins. |
+| Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | AVR row now cat 1 (avr8js + simavr cross-check). | Update ledger row to reflect cat 1 with the evidence from `spec-updates/avr-cross-check.md`. |
 | `spec-updates/rst-polarity.md` | RST active HIGH on STC12. Engine hard-codes per kind. | Not yet implemented in board.js — a per-family polarity table is needed. |
-| `debug-target-factory.js` | Routes 'emulator', 'avr8js', 'serial'. | Coordinator writing `createAvr8jsDebugTarget` in `avr8js-debug.js` — dynamic import slot ready. rp2040 deferred until it lands on a default branch. |
+| `debug-target-factory.js` | Routes 'emulator', 'avr8js', 'serial'. | Coordinator writing `createAvr8jsDebugTarget` in `avr8js-debug.js` — dynamic import slot ready. rp2040 deferred until it lands on a default branch and is announced. |
+| `spec-updates/pin-alternates-schema.md` | Schema settled, twin implementations documented. | All boards now fully audited (zero nulls). Schema stable. |
 
-- **Uno sidecar now fully audited** — bw-parts populated all 28 Uno pins (was all-null). pin-functions tests updated: null-vs-[] now tested with synthetic data only.
+## Learned (not yet in a spec-update)
 
-## Learned this session
-
-- **simavr VCD trace requires `AVR_MCU_VCD_PORT_PIN` macro** (not the raw struct form — fields differ between simavr versions). Needs `-I/usr/include/simavr` and `libsimavr-dev`.
-- **simavr `--list-cores` returns exit code 1** — `which simavr` is the reliable probe.
+- **simavr VCD trace requires `AVR_MCU_VCD_PORT_PIN` macro** (not the raw struct form — fields differ between simavr versions). Needs `-I/usr/include/simavr` and `libsimavr-dev` packages.
+- **simavr `--list-cores` returns exit code 1** — `which simavr` is the reliable probe in tests.
 - **simavr buffers VCD, flushes only on clean exit** — infinite-loop firmware produces 0-byte VCD. Use finite firmware with `SLEEP_MODE_PWR_DOWN` so simavr stops cleanly.
-- **The rp2040js adapter commits (bc6476d etc.) exist in lite** but on a branch not merged to its default branch. They touch debug-target-factory.js and infer-netlist.js (bw-board's files, vendored into lite).
-- **avr8js and simavr agree on transition values but diverge ~3 cycles on timing** for later loop iterations. This is expected — pipeline/interrupt modeling differs. The cross-check asserts values, not sub-cycle timing.
+- **The rp2040js adapter commits (bc6476d etc.) exist in lite** but on a branch not merged to its default branch. They touch debug-target-factory.js and infer-netlist.js. Coordinator says: treat as exploratory until merged and announced. Do not build against it.
+- **avr8js and simavr agree on transition values but diverge ~3 cycles on timing** for later tight-loop iterations. For the brightness firmware (500ms delay), agreement is < 1 cycle (5 ns). The cross-check asserts values and duty, not sub-cycle identity.
+- **`execFileSync` with piped stdio blocks on large trace output** — use `spawnSync` with `stdio: 'ignore'` and read results from files.
 
 ## Blocked
 
