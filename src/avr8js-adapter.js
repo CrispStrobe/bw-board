@@ -24,7 +24,7 @@
  */
 
 import {
-  CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART,
+  CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART, PinState,
   portBConfig, portCConfig, portDConfig,
   timer0Config, timer1Config, timer2Config,
   adcConfig, usart0Config,
@@ -112,7 +112,11 @@ export function createAvr8jsAdapter(opts = {}) {
     D: { ddr: 0x2a, port: 0x2b },
   };
 
-  /** Push one pin's CURRENT electrical role to the board. */
+  /** Push one pin's CURRENT electrical role to the board.
+   *  Uses AVRIOPort.pinState() which reads lastValue — the override-applied
+   *  output — so hardware-timer PWM edges (timerOverridePin) propagate to the
+   *  board correctly. Reading the raw PORT register would miss timer overrides
+   *  because the timer modifies overrideMask/overrideValue, not PORT itself. */
   function publishPin(portKey, bit) {
     if (!board) return;
     if (board.advanceTo) {
@@ -123,14 +127,13 @@ export function createAvr8jsAdapter(opts = {}) {
     // A6/A7 are analog-only — no DDR/PORT bits, never driven as GPIO
     const pinDef = ATMEGA328P_PINS[name];
     if (pinDef?.analogOnly) return;
-    const ddr = cpu.data[REG[portKey].ddr];
-    const out = cpu.data[REG[portKey].port];
-    const driven = !!(ddr & (1 << bit));
-    const high = !!(out & (1 << bit));
-    // AVR semantics: output → hard push-pull; input with PORT bit → weak
-    // internal pull-up (~35 kΩ); plain input → high-Z.
-    if (driven) board.setPin(name, 'pushpull', high);
-    else board.setPin(name, high ? 'input-pullup' : 'input', high);
+    const state = ioPorts[portKey].pinState(bit);
+    switch (state) {
+      case PinState.High:   board.setPin(name, 'pushpull', true);      break;
+      case PinState.Low:    board.setPin(name, 'pushpull', false);     break;
+      case PinState.InputPullUp: board.setPin(name, 'input-pullup', true); break;
+      default:              board.setPin(name, 'input', false);        break;
+    }
     stats.pinChangeCount++;
   }
 
