@@ -271,3 +271,46 @@ describe('factory → conformance: both targets satisfy the interface', () => {
     assert.equal(caps.timeFreezes, true);
   });
 });
+
+describe('createDebugTarget: rp2040js', () => {
+  it('returns an adapter that drives the board from SRAM Thumb', async () => {
+    const board = new BoardImpl(3.3);
+    board.setNetlist(
+      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] }],
+      [{ id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }] }],
+    );
+
+    let hasRp2040js = false;
+    try { await import('rp2040js'); hasRp2040js = true; } catch {}
+    if (!hasRp2040js) {
+      console.log('# ⚠ SKIPPED: rp2040js not installed');
+      return;
+    }
+
+    // The hand-assembled GP25 blink from rp2040js-adapter.test.js.
+    const BLINK = new Uint16Array([
+      0x2005, 0x4907, 0x6008, 0x2001, 0x0640, 0x4906, 0x6248,
+      0x6148, 0x22C8, 0x3A01, 0xD1FD, 0x6188, 0x22C8, 0x3A01, 0xD1FD, 0xE7F6,
+      0x40CC, 0x4001, 0x0000, 0xd000,
+    ]);
+
+    const result = await createDebugTarget('rp2040js', { board, program: BLINK });
+    assert.ok(result.adapter, 'rp2040js factory returns an adapter');
+    assert.equal(typeof result.adapter.advanceNs, 'function');
+    assert.equal(typeof result.adapter.loadProgram, 'function');
+    // Debug target does not exist yet: adapter-only mode is the contract.
+    assert.equal(result.target, null, 'no target until rp2040js-debug.js exists');
+
+    // The program actually runs against the attached board.
+    result.adapter.advanceNs(100_000);
+    const state = board.pinStates.get('GP25');
+    assert.ok(state, 'GP25 reached the board');
+    assert.equal(state.mode, 'pushpull');
+  });
+
+  it('is absent from getTargetKinds until the Pico has a compile route', () => {
+    assert.ok(!getTargetKinds().some(k => k.kind === 'rp2040js'));
+  });
+});

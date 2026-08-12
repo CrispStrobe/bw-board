@@ -15,6 +15,10 @@
  * Target kinds:
  *   'emulator'  — STC12 / 8051 via emu8051 WASM
  *   'avr8js'    — ATmega328P via avr8js (pure TS, no WASM)
+ *   'rp2040js'  — Raspberry Pi Pico via rp2040js (pure TS; adapter-only
+ *                 until rp2040js-debug.js exists, and absent from
+ *                 getTargetKinds() until the Pico has a compile route —
+ *                 a picker entry nothing can build for would be a lie)
  *   'serial'    — live hardware over serial
  *
  * @module
@@ -62,11 +66,14 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'avr8js') {
     return createAvr8jsTarget(opts);
   }
+  if (kind === 'rp2040js') {
+    return createRp2040jsTarget(opts);
+  }
   if (kind === 'serial') {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'rp2040js', or 'serial'.`
   );
 }
 
@@ -168,6 +175,40 @@ async function createAvr8jsTarget(opts) {
     }
   } catch {
     // avr8js-debug.js does not exist yet — adapter-only mode
+  }
+
+  return { target, adapter };
+}
+
+// ─── Pico target (RP2040 via rp2040js) ──────────────────────────────────
+
+async function createRp2040jsTarget(opts) {
+  const {
+    board, program, symbols,
+    clockHz = 125_000_000, vcc = 3.3,
+  } = opts;
+
+  if (!board) throw new Error('rp2040js target requires opts.board');
+
+  // Same adapter-first, board-second, program-third pattern. The program
+  // is Thumb halfwords into SRAM (the no-bootrom path) — hex/UF2-to-flash
+  // arrives with the Pico compile route, whichever one the roadmap picks.
+  const { createRp2040jsAdapter } = await import('./rp2040js-adapter.js');
+  const adapter = createRp2040jsAdapter({ clockHz, vcc });
+  adapter.attachBoard(board);
+  if (program) adapter.loadProgram(program);
+
+  // Debug target: the coordinator writes createRp2040jsDebugTarget next.
+  // Until then the factory returns { adapter } without a target — the
+  // caller can run the simulation, just not debug it.
+  let target = null;
+  try {
+    const mod = await import('./rp2040js-debug.js');
+    if (mod.createRp2040jsDebugTarget) {
+      target = mod.createRp2040jsDebugTarget(adapter, { symbols });
+    }
+  } catch {
+    // rp2040js-debug.js does not exist yet — adapter-only mode
   }
 
   return { target, adapter };
