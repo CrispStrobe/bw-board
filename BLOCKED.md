@@ -20,4 +20,21 @@ shrinks or memory is available. Check `~/.cache/ms-playwright` before installing
 
 ---
 
-*Last updated: 2026-08-09*
+---
+
+## Pull-down PinMode for rp2040js
+
+**Blocked on:** MNA spec-update + hand-computed oracle tests (engine-level change).
+
+**What:** RP2040's `InputPullDown` GPIOPinState has no boundary-A PinMode
+equivalent. The rp2040js adapter maps it to plain `'input'`, losing the
+pull-down. Circuits relying on pull-down (button to GND without external
+resistor) will not behave correctly.
+
+**Scope:** PinMode extension is shared with any future platform that has
+pull-downs (STM32, ESP32). Requires MNA change to model the ~50 kΩ pull-down
+Thévenin equivalent.
+
+---
+
+*Last updated: 2026-08-12*
