@@ -300,8 +300,12 @@ describe('createDebugTarget: rp2040js', () => {
     assert.ok(result.adapter, 'rp2040js factory returns an adapter');
     assert.equal(typeof result.adapter.advanceNs, 'function');
     assert.equal(typeof result.adapter.loadProgram, 'function');
-    // Debug target does not exist yet: adapter-only mode is the contract.
-    assert.equal(result.target, null, 'no target until rp2040js-debug.js exists');
+    // The debug target exists now — the factory wires it with the symbols.
+    assert.ok(result.target, 'rp2040js debug target constructed');
+    const caps = result.target.capabilities();
+    assert.deepEqual(caps.steps, ['insn', 'block']);
+    assert.deepEqual(caps.breakpoints, ['code', 'yield']);
+    assert.equal(caps.timeFreezes, true);
 
     // The program actually runs against the attached board.
     result.adapter.advanceNs(100_000);

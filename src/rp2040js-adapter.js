@@ -36,7 +36,7 @@
  * @module
  */
 
-import { RP2040, GPIOPinState } from 'rp2040js';
+import { RP2040, GPIOPinState, ConsoleLogger, LogLevel } from 'rp2040js';
 
 export const RAM_START = 0x20000000;
 
@@ -76,6 +76,11 @@ export function createRp2040jsAdapter(opts = {}) {
   const rp2040 = new RP2040();
   const clock = rp2040.clock;
   const core = rp2040.core;
+  // Errors only, and never throw: a program that escapes into unmapped
+  // memory logs ONE line per instruction at warn level — a runaway loop
+  // floods the host console (298 MB observed) and an emulated program's
+  // bad read must never take the app down with it.
+  rp2040.logger = new ConsoleLogger(LogLevel.Error, false);
 
   let board = null;
   const stats = { pinChangeCount: 0, advanceToCount: 0, adcReadCount: 0 };
@@ -134,14 +139,30 @@ export function createRp2040jsAdapter(opts = {}) {
     if (serialListener) serialListener(byte);
   };
 
+  // Entry point of the LOADED program — resetToProgram() restores it. A
+  // plain core.reset() fetches PC from the vector table, and without a
+  // bootrom that lands in unmapped memory: the core NOP-slides through
+  // 0xffff opcodes, logging one warning per instruction (a 298 MB flood
+  // in the test that found this).
+  let entryPC = RAM_START;
+  let entrySP = opts.sp ?? RAM_START + rp2040.sram.length;
+
   function loadProgram(halfwords, origin = RAM_START) {
     for (let i = 0; i < halfwords.length; i++) {
       rp2040.writeUint16(origin + i * 2, halfwords[i]);
     }
-    core.PC = origin;
-    core.SP = opts.sp ?? RAM_START + rp2040.sram.length;
+    entryPC = origin;
+    core.PC = entryPC;
+    core.SP = entrySP;
   }
   if (opts.program) loadProgram(opts.program);
+
+  /** Reset the core AND return to the loaded program's entry point. */
+  function resetToProgram() {
+    core.reset();
+    core.PC = entryPC;
+    core.SP = entrySP;
+  }
 
   return {
     rp2040,
@@ -149,6 +170,7 @@ export function createRp2040jsAdapter(opts = {}) {
     clockHz,
 
     loadProgram,
+    resetToProgram,
 
     /** Receive every byte the program transmits on UART0 (print output). */
     onSerial(cb) { serialListener = cb; },
