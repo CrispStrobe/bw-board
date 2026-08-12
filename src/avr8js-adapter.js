@@ -24,10 +24,10 @@
  */
 
 import {
-  CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC,
+  CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART,
   portBConfig, portCConfig, portDConfig,
   timer0Config, timer1Config, timer2Config,
-  adcConfig,
+  adcConfig, usart0Config,
 } from 'avr8js';
 
 /**
@@ -91,6 +91,16 @@ export function createAvr8jsAdapter(opts = {}) {
   new AVRTimer(cpu, timer1Config);
   new AVRTimer(cpu, timer2Config);
   const adc = new AVRADC(cpu, adcConfig);
+  // Without a USART the UDRE0 flag reads 0 forever and any generated
+  // print() BUSY-WAITS — one blocked task starves the whole cooperative
+  // scheduler and the symptom looks like a dead program, not a missing
+  // peripheral (cost a real debugging session, 2026-08-12). The USART also
+  // carries print() to the host: onSerial receives each transmitted byte.
+  const usart = new AVRUSART(cpu, usart0Config, clockHz);
+  usart.onByteTransmit = (byte) => {
+    if (serialListener) serialListener(byte);
+  };
+  let serialListener = null;
 
   let board = null;
   const stats = { pinChangeCount: 0, advanceToCount: 0, adcReadCount: 0 };
@@ -138,7 +148,9 @@ export function createAvr8jsAdapter(opts = {}) {
   adc.onADCRead = (input) => {
     stats.adcReadCount++;
     let volts = 0;
-    if (board && board.readAnalog && input.channel <= 5) {
+    // Channels 0..7: A0..A5 are header pins; 6 and 7 are the Nano's
+    // ADC-only pads — stopping at 5 here is how a pot on A6 read 0.
+    if (board && board.readAnalog && input.channel <= 7) {
       try { volts = board.readAnalog(`A${input.channel}`) ?? 0; } catch { volts = 0; }
     }
     // avr8js completes the conversion after the sampling cycles elapse.
@@ -148,6 +160,9 @@ export function createAvr8jsAdapter(opts = {}) {
   return {
     cpu,
     clockHz,
+
+    /** Receive every byte the program transmits on UART0 (print output). */
+    onSerial(cb) { serialListener = cb; },
 
     loadProgram(words) {
       progMem.fill(0);
