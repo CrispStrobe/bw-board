@@ -66,6 +66,9 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'avr8js' || kind === 'atmega2560' || kind === 'attiny85') {
     return createAvr8jsTarget(kind, opts);
   }
+  if (kind === 'eater6502') {
+    return createEater6502Target(opts);
+  }
   if (kind === 'rp2040js') {
     return createRp2040jsTarget(opts);
   }
@@ -73,7 +76,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'rp2040js', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'eater6502', 'rp2040js', or 'serial'.`
   );
 }
 
@@ -187,6 +190,37 @@ async function createAvr8jsTarget(kind, opts) {
   return { target, adapter };
 }
 
+// ─── 6502 breadboard computer (Eater-style) ─────────────────────────────
+
+async function createEater6502Target(opts) {
+  const { board, rom, symbols } = opts;
+
+  if (!board) throw new Error('eater6502 target requires opts.board');
+
+  const { createM6502Adapter } = await import('./m6502-adapter.js');
+  const adapterOpts = {};
+  if (rom) adapterOpts.rom = rom instanceof Uint8Array ? rom : new Uint8Array(rom);
+  const adapter = createM6502Adapter(adapterOpts);
+  if (rom) {
+    // Set reset vector if the ROM image includes it at its natural position
+    // ($FFFC/$FFFD relative to the ROM base). The adapter's loadRom + reset
+    // in attachBoard handles this.
+  }
+  adapter.attachBoard(board);
+
+  let target = null;
+  try {
+    const mod = await import('./m6502-debug.js');
+    if (mod.createM6502DebugTarget) {
+      target = mod.createM6502DebugTarget(adapter, { symbols });
+    }
+  } catch {
+    // m6502-debug.js not available — adapter-only mode
+  }
+
+  return { target, adapter };
+}
+
 // ─── Pico target (RP2040 via rp2040js) ──────────────────────────────────
 
 async function createRp2040jsTarget(opts) {
@@ -267,6 +301,11 @@ export function getTargetKinds() {
       kind: 'attiny85',
       label: 'Simulated (ATtiny85)',
       description: 'AVR instruction-level emulation. ATtiny85/Digispark programs.',
+    },
+    {
+      kind: 'eater6502',
+      label: 'Simulated (6502 breadboard)',
+      description: '6502 instruction-level emulation. VIA/ACIA-based breadboard computers.',
     },
     {
       kind: 'rp2040js',

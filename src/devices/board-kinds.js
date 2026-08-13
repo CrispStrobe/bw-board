@@ -148,6 +148,19 @@ const PICO_TERMINALS = [
   'run', 'swclk', 'swdio',
 ];
 
+// ─── Eater 6502 breadboard computer ─────────────────────────────────────
+
+const EATER6502_TERMINALS = [
+  // VIA1 port A (PA0-PA7) — main GPIO, LED bar, LCD, etc.
+  'via1.pa0', 'via1.pa1', 'via1.pa2', 'via1.pa3',
+  'via1.pa4', 'via1.pa5', 'via1.pa6', 'via1.pa7',
+  // VIA1 port B (PB0-PB7) — PB6 is T2 pulse input, PB7 is T1 square wave
+  'via1.pb0', 'via1.pb1', 'via1.pb2', 'via1.pb3',
+  'via1.pb4', 'via1.pb5', 'via1.pb6', 'via1.pb7',
+  // Power rails
+  '5v', 'gnd',
+];
+
 /**
  * Register board-kind device models.
  */
@@ -155,4 +168,5 @@ export function registerBoardKinds() {
   registerDevice('arduino_nano', boardModel(NANO_TERMINALS, 5.0));
   registerDevice('arduino_uno', boardModel(UNO_TERMINALS, 5.0));
   registerDevice('pi_pico', boardModel(PICO_TERMINALS, 3.3));
+  registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
 }

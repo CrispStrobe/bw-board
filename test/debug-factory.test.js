@@ -165,13 +165,14 @@ describe('createDebugTarget: missing options', () => {
 });
 
 describe('getTargetKinds', () => {
-  it('returns all target kinds including mega and attiny85', () => {
+  it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    assert.equal(kinds.length, 6);
+    assert.equal(kinds.length, 7);
     assert.ok(kinds.find(k => k.kind === 'emulator'));
     assert.ok(kinds.find(k => k.kind === 'avr8js'));
     assert.ok(kinds.find(k => k.kind === 'atmega2560'));
     assert.ok(kinds.find(k => k.kind === 'attiny85'));
+    assert.ok(kinds.find(k => k.kind === 'eater6502'));
     assert.ok(kinds.find(k => k.kind === 'rp2040js'));
     assert.ok(kinds.find(k => k.kind === 'serial'));
   });
