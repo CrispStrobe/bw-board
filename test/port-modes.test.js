@@ -22,7 +22,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
-import { pinThevenin } from '../src/pin-model.js';
+import { pinThevenin, R_INPUT_PULLDOWN } from '../src/pin-model.js';
 
 function makePullUpCircuit() {
   const parts = [
@@ -237,5 +237,159 @@ describe('input-pullup with button to ground', () => {
     const expected = 5.0 * 10000 / (35000 + 10000); // 1.111V
     assert.ok(Math.abs(v - expected) < 0.05,
       `divider: expected ~${expected.toFixed(3)}V, got ${v.toFixed(3)}V`);
+  });
+});
+
+// ─── input-pulldown (RP2040) ────────────────────────────────────────────────
+// Oracle arithmetic from spec-updates/input-pulldown.md.
+// Thévenin: vTh = 0 V, rTh = 50 kΩ (RP2040 Datasheet §2.19.6.3, Table 628).
+
+describe('pin model — input-pulldown Thévenin values', () => {
+  it('input-pulldown = weak pull-down ~50 kΩ to GND', () => {
+    const t = pinThevenin('input-pulldown', false, 5.0);
+    assert.notEqual(t, 'high-z');
+    assert.equal(t.vTh, 0);
+    assert.equal(t.rTh, 50000);
+  });
+
+  it('input-pulldown ignores driveHigh — always pulls down', () => {
+    const tLow = pinThevenin('input-pulldown', false, 5.0);
+    const tHigh = pinThevenin('input-pulldown', true, 5.0);
+    assert.deepEqual(tLow, tHigh, 'driveHigh does not matter');
+  });
+
+  it('R_INPUT_PULLDOWN exported as 50000', () => {
+    assert.equal(R_INPUT_PULLDOWN, 50000);
+  });
+});
+
+describe('input-pulldown: standalone (no external connection)', () => {
+  // Pin with internal pull-down only — node voltage = 0 V, readPin = 0.
+  it('pull-down alone → node = 0 V, readPin = 0', () => {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      ],
+      [
+        { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] },
+        { id: 'net_pin', terminals: [{ part: 'MCU', terminal: 'P1.0' }] },
+        { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+      ]
+    );
+    board.setPin('P1.0', 'input-pulldown', false);
+
+    const v = board.nodeVoltage('net_pin');
+    assert.ok(Math.abs(v) < 0.01,
+      `standalone pull-down: expected ~0 V, got ${v.toFixed(3)} V`);
+    assert.equal(board.readPin('P1.0'), 0, 'reads LOW');
+  });
+});
+
+describe('input-pulldown with resistor to VCC (voltage divider)', () => {
+  it('100 kΩ to VCC → V = 5×50k/(50k+100k) = 1.6667 V, readPin = 1', () => {
+    // Thévenin: pin vTh=0 through 50 kΩ; external 100 kΩ to VCC (5 V).
+    // V_node = 5 * 50000 / (50000 + 100000) = 1.6667 V
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'R_EXT', kind: 'resistor', params: { ohms: 100000 }, terminals: ['a', 'b'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      ],
+      [
+        { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R_EXT', terminal: 'a' }] },
+        { id: 'net_pin', terminals: [{ part: 'MCU', terminal: 'P1.0' }, { part: 'R_EXT', terminal: 'b' }] },
+        { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+      ]
+    );
+    board.setPin('P1.0', 'input-pulldown', false);
+
+    const v = board.nodeVoltage('net_pin');
+    const expected = 5.0 * 50000 / (50000 + 100000); // 1.6667 V
+    assert.ok(Math.abs(v - expected) < 0.05,
+      `divider: expected ~${expected.toFixed(4)} V, got ${v.toFixed(4)} V`);
+    assert.equal(board.readPin('P1.0'), 1,
+      '1.6667 V > 1.5 V threshold → reads HIGH');
+  });
+
+  it('10 kΩ to VCC → V = 5×50k/(50k+10k) = 4.1667 V, readPin = 1', () => {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'R_EXT', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      ],
+      [
+        { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R_EXT', terminal: 'a' }] },
+        { id: 'net_pin', terminals: [{ part: 'MCU', terminal: 'P1.0' }, { part: 'R_EXT', terminal: 'b' }] },
+        { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+      ]
+    );
+    board.setPin('P1.0', 'input-pulldown', false);
+
+    const v = board.nodeVoltage('net_pin');
+    const expected = 5.0 * 50000 / (50000 + 10000); // 4.1667 V
+    assert.ok(Math.abs(v - expected) < 0.05,
+      `divider: expected ~${expected.toFixed(4)} V, got ${v.toFixed(4)} V`);
+    assert.equal(board.readPin('P1.0'), 1, 'well above threshold');
+  });
+});
+
+describe('input-pulldown with button to VCC', () => {
+  // RP2040 idiom: button between VCC and pin, internal pull-down.
+  // Open → pulled to 0 V, readPin = 0.
+  // Pressed → shorted to VCC, readPin = 1.
+  function makePulldownButtonCircuit() {
+    return {
+      parts: [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'BTN', kind: 'button', params: {}, terminals: ['a', 'b'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      ],
+      nets: [
+        { id: 'net_vcc', terminals: [
+          { part: 'VCC', terminal: 'vcc' },
+          { part: 'BTN', terminal: 'a' },
+        ]},
+        { id: 'net_pin', terminals: [
+          { part: 'MCU', terminal: 'P1.0' },
+          { part: 'BTN', terminal: 'b' },
+        ]},
+        { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] },
+      ],
+    };
+  }
+
+  it('button open → node = 0 V, readPin = 0', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makePulldownButtonCircuit();
+    board.setNetlist(parts, nets);
+    board.setPin('P1.0', 'input-pulldown', false);
+    board.setControl('BTN', 0);
+
+    const v = board.nodeVoltage('net_pin');
+    assert.ok(Math.abs(v) < 0.01,
+      `open button: expected ~0 V, got ${v.toFixed(3)} V`);
+    assert.equal(board.readPin('P1.0'), 0, 'reads LOW');
+  });
+
+  it('button pressed → node = VCC, readPin = 1', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makePulldownButtonCircuit();
+    board.setNetlist(parts, nets);
+    board.setPin('P1.0', 'input-pulldown', false);
+    board.setControl('BTN', 1);
+
+    const v = board.nodeVoltage('net_pin');
+    assert.ok(Math.abs(v - 5.0) < 0.01,
+      `pressed button: expected ~5.0 V, got ${v.toFixed(3)} V`);
+    assert.equal(board.readPin('P1.0'), 1, 'reads HIGH');
   });
 });

@@ -140,8 +140,8 @@ test('attachBoard publishes every header pin in an input mode at reset', () => {
   const byName = new Map(b.calls.filter(c => c.name).map(c => [c.name, c]));
   assert.equal(byName.size, 29, 'all 29 header pins published');
   for (const [name, c] of byName) {
-    assert.ok(c.mode === 'input' || c.mode === 'input-pullup',
-      `${name} at reset is an input, got ${c.mode}`);
+    assert.ok(c.mode === 'input' || c.mode === 'input-pullup' || c.mode === 'input-pulldown',
+      `${name} at reset is an input mode, got ${c.mode}`);
   }
 });
 

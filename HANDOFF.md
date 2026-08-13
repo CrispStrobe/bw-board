@@ -1,8 +1,12 @@
-# bw-board handoff — 2026-08-12
+# bw-board handoff — 2026-08-13
 
-**1310 tests, 0 failures.** All pushed to master.
+**1324 tests, 0 failures.** All pushed to master and main.
 
-## Completed this session (session 4)
+## Completed this session (session 5)
+
+- **`input-pulldown` PinMode** (MNA-gated): the RP2040's internal pull-down is now a real Thévenin source (vTh=0 V, rTh=50 kΩ, RP2040 Datasheet §2.19.6.3 Table 628). `rp2040js-adapter.js` maps `GPIOPinState.InputPullDown` → `'input-pulldown'` instead of the previous `'input'` lie. `InputBusKeeper` stays as `'input'` (adjudicated in `spec-updates/input-pulldown.md` — the bus-keeper is a latch, not a resistor). 8 hand-computed oracle tests: standalone pull-down, divider with 100kΩ and 10kΩ, button-to-VCC open/pressed, Thévenin values, driveHigh invariance.
+
+## Completed previously (session 4)
 
 - **AVR PWM observation** (`src/avr8js-adapter.js`): `publishPin` now uses `AVRIOPort.pinState()` instead of raw PORT register reads. Timer overrides (OC0A/OC0B on Timer0, OC2A/OC2B on Timer2) propagate to the board as real edges, so `ledBrightness` reflects hardware-PWM duty cycle. Without this fix, `analogWrite()` on an AVR had no effect on the board — the timer modified `overrideMask`/`overrideValue` but `publishPin` read the raw PORT register.
 - **8 PWM oracle tests** (`test/avr8js-pwm.test.js`): Timer0 fast PWM on D5/D6 at 25/50/75% duty, Timer2 on D3/D11, edge-level transition counting, duty monotonicity, and simultaneous OC0A+OC0B with independent duties. All oracles are arithmetic: f_PWM = 16MHz/(64×256) = 976.5625 Hz; brightness = 0.15 × OCR/256. Each test runs 25 ms of simulated time (fills the 20 ms persistence window).
@@ -28,7 +32,7 @@
 |------|--------|-----------|
 | Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | AVR row now cat 1. | Update ledger row with evidence from `spec-updates/avr-cross-check.md`. |
 | `spec-updates/rst-polarity.md` | RST active HIGH on STC12. | Not yet implemented — per-family polarity table needed in board.js. |
-| `spec-updates/rp2040js-feasibility.md` | Adapter + debug target landed. | Pull-down PinMode extension (MNA change); rp2040js PWM oracle tests. |
+| `spec-updates/rp2040js-feasibility.md` | Adapter + debug target landed. Pull-down PinMode done. | rp2040js PWM oracle tests. |
 
 ## Learned (not yet in a spec-update)
 
@@ -44,7 +48,7 @@
 |------|-----------|-------|
 | NeoPixel cat 1 cross-check | Re-measure on fixed emu8051 WASM | bw-board (emu8051 build available) |
 | Headless live E2E (Playwright) | Memory constraint on shared VPS | Deferred |
-| Pull-down PinMode | MNA spec-update + hand-computed oracle | Engine owners |
+| ~~Pull-down PinMode~~ | ~~RESOLVED~~ — `input-pulldown` PinMode landed | — |
 
 ## Standing rules
 

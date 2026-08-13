@@ -35,6 +35,12 @@ const R_QUASI_PULLUP = 21700;
 const R_INPUT_PULLUP = 35000;
 
 /**
+ * Internal pull-down resistance for input-pulldown mode.
+ * RP2040 Datasheet §2.19.6.3, Table 628: typical 50 kΩ (range 40–80 kΩ).
+ */
+const R_INPUT_PULLDOWN = 50000;
+
+/**
  * Returns the Thévenin equivalent for a pin in the given mode and drive state.
  *
  * @param {PinMode} mode
@@ -60,6 +66,9 @@ export function pinThevenin(mode, driveHigh, vcc) {
     case 'input-pullup':
       return { vTh: vcc, rTh: R_INPUT_PULLUP };
 
+    case 'input-pulldown':
+      return { vTh: 0, rTh: R_INPUT_PULLDOWN };
+
     case 'opendrain':
       return driveHigh
         ? 'high-z'
@@ -70,4 +79,4 @@ export function pinThevenin(mode, driveHigh, vcc) {
   }
 }
 
-export { R_STRONG, R_QUASI_PULLUP, R_INPUT_PULLUP };
+export { R_STRONG, R_QUASI_PULLUP, R_INPUT_PULLUP, R_INPUT_PULLDOWN };

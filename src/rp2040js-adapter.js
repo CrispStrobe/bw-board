@@ -16,11 +16,9 @@
  *    rp2040js's own Simulator uses.
  *  - Pins are single-bank GPIOs with per-pin function select. rp2040js
  *    reports each pin's electrical role as a GPIOPinState; the adapter
- *    maps that to the board's PinMode. The RP2040's pad pull-DOWN has no
- *    PinMode equivalent yet (the 8051/AVR never needed one) — it maps to
- *    plain 'input' with the pull-down LOST. Extending PinMode is an
- *    mna-gated change (spec-update + hand-computed oracle) and stays with
- *    the engine owners; this comment is the marker.
+ *    maps that to the board's PinMode. InputPullDown → 'input-pulldown'
+ *    (vTh=0, rTh=50 kΩ per RP2040 §2.19.6.3). InputBusKeeper → plain
+ *    'input' with the latch behavior lost (see spec-updates/input-pulldown.md).
  *  - 3.3 V part. ADC is 12-bit (0..4095), channels 0–2 on GP26–GP28
  *    (channel 3 = VSYS/3 and 4 = the temperature sensor never reach the
  *    header, so they never reach the board).
@@ -104,8 +102,13 @@ export function createRp2040jsAdapter(opts = {}) {
       case GPIOPinState.InputPullUp:
         board.setPin(name, 'input-pullup', true);
         break;
-      // InputPullDown / InputBusKeeper: no PinMode for a pull-down yet —
-      // published as plain high-Z input, pull LOST (see module header).
+      case GPIOPinState.InputPullDown:
+        board.setPin(name, 'input-pulldown', false);
+        break;
+      // InputBusKeeper: the bus-keeper latches the last driven level — a
+      // stateful behavior with no Thévenin equivalent. Published as plain
+      // high-Z input, bus-keep behavior LOST. See spec-updates/input-pulldown.md
+      // §BusKeeper adjudication.
       default:
         board.setPin(name, 'input', false);
         break;
