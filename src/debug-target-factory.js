@@ -15,10 +15,10 @@
  * Target kinds:
  *   'emulator'  — STC12 / 8051 via emu8051 WASM
  *   'avr8js'    — ATmega328P via avr8js (pure TS, no WASM)
- *   'rp2040js'  — Raspberry Pi Pico via rp2040js (pure TS; adapter-only
- *                 until rp2040js-debug.js exists, and absent from
- *                 getTargetKinds() until the Pico has a compile route —
- *                 a picker entry nothing can build for would be a lie)
+ *   'rp2040js'  — Raspberry Pi Pico via rp2040js (pure TS). Listed in
+ *                 getTargetKinds() since 2026-08-13: the hosted rp2040
+ *                 compile route exists, so the picker entry stopped
+ *                 being a lie
  *   'serial'    — live hardware over serial
  *
  * @module
@@ -250,6 +250,11 @@ export function getTargetKinds() {
       kind: 'avr8js',
       label: 'Simulated (ATmega328P)',
       description: 'AVR instruction-level emulation. Arduino Nano/Uno programs.',
+    },
+    {
+      kind: 'rp2040js',
+      label: 'Simulated (RP2040)',
+      description: 'ARM Cortex-M0+ emulation. Raspberry Pi Pico programs.',
     },
     {
       kind: 'serial',

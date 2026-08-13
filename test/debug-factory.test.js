@@ -165,9 +165,9 @@ describe('createDebugTarget: missing options', () => {
 });
 
 describe('getTargetKinds', () => {
-  it('returns emulator, avr8js, and serial', () => {
+  it('returns emulator, avr8js, rp2040js, and serial', () => {
     const kinds = getTargetKinds();
-    assert.equal(kinds.length, 3);
+    assert.equal(kinds.length, 4);
     assert.ok(kinds.find(k => k.kind === 'emulator'));
     assert.ok(kinds.find(k => k.kind === 'avr8js'));
     assert.ok(kinds.find(k => k.kind === 'serial'));
@@ -315,7 +315,11 @@ describe('createDebugTarget: rp2040js', () => {
     assert.equal(state.mode, 'pushpull');
   });
 
-  it('is absent from getTargetKinds until the Pico has a compile route', () => {
-    assert.ok(!getTargetKinds().some(k => k.kind === 'rp2040js'));
+  it('is listed in getTargetKinds — the Pico compile route exists now', () => {
+    // The interim test asserted ABSENCE while nothing could build for the
+    // Pico. The hosted rp2040 target shipped 2026-08-12; the entry is due.
+    const kind = getTargetKinds().find(k => k.kind === 'rp2040js');
+    assert.ok(kind, 'rp2040js is offered');
+    assert.match(kind.label, /RP2040/);
   });
 });
