@@ -256,7 +256,12 @@ export class BoardImpl {
     this._deviceStates = new Map();
     for (const p of parts) {
       const st = initDeviceState(p);
-      if (st) this._deviceStates.set(p.id, st);
+      if (st) {
+        // Remember which drives the model itself owns (power rails) —
+        // the GPIO pre-pass below must never overwrite those.
+        st._staticDrives = new Set(Object.keys(st.drives ?? {}));
+        this._deviceStates.set(p.id, st);
+      }
     }
 
     this._solve();
@@ -1488,6 +1493,7 @@ export class BoardImpl {
    * @param {number} [testCurrent] - test current magnitude
    */
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
+    this._syncDeviceGpioDrives();
     return solveMNA(this.parts, this.nets, this._pinSources(), this.controls, this.vcc, {
       powerOff,
       testNodeA,
@@ -1500,6 +1506,33 @@ export class BoardImpl {
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
     });
+  }
+
+  /** Copy pin states onto board-kind device drives — the engine half of
+   *  the contract board-kinds.js declares (`gpioFollowsPinStates`): a GPIO
+   *  terminal the adapter drives via setPin() gets the same Thévenin
+   *  treatment an MCU-kind pin gets, at the board's own logic level.
+   *  Power-rail entries set at init are never touched. */
+  _syncDeviceGpioDrives() {
+    if (this._deviceStates.size === 0) return;
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (!model || !model.gpioFollowsPinStates) continue;
+      const st = this._deviceStates.get(part.id);
+      if (!st) continue;
+      const vLogic = model.vcc ?? this.vcc;
+      for (const terminal of part.terminals) {
+        if (st._staticDrives && st._staticDrives.has(terminal)) continue;
+        const ps = this.pinStates.get(String(terminal).toLowerCase());
+        if (ps) {
+          const thev = pinThevenin(ps.mode, ps.driveHigh, vLogic);
+          if (thev) st.drives[terminal] = thev;
+          else delete st.drives[terminal];   // high-Z input: no source
+        } else {
+          delete st.drives[terminal];
+        }
+      }
+    }
   }
 
   /** Build the pin source map from current pin states.
@@ -1724,6 +1757,7 @@ export class BoardImpl {
     if (n > 200) n = 200;
     const h = dtSec / n;
 
+    this._syncDeviceGpioDrives();
     const pinSources = this._pinSources();
     let cv = this.capVoltages;
     let il = this.inductorCurrents;

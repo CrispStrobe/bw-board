@@ -400,3 +400,64 @@ describe('board-kind LED circuit', () => {
       `LED brightness should be ~${expected.toFixed(4)}, got ${brightness.toFixed(4)}`);
   });
 });
+
+describe('board-kind GPIO follows pinStates (the engine half of the contract)', () => {
+  it('setPin lights a bench LED wired to a Nano GPIO terminal', () => {
+    // The module header always CLAIMED this worked "exactly like MCU
+    // pins"; no stamping path existed until 2026-08-13, and every
+    // board-kind bench LED was dark at engine level.
+    const board = makeBoard(
+      [
+        { id: 'NANO', kind: 'arduino_nano', params: {},
+          terminals: ['gnd', 'd13'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 220 }, terminals: ['a', 'b'] },
+        { id: 'LED1', kind: 'led', params: { vForward: 2.0 }, terminals: ['anode', 'cathode'] },
+      ],
+      [
+        { id: 'n_pin', terminals: [
+          { part: 'NANO', terminal: 'd13' },
+          { part: 'R1', terminal: 'a' },
+        ]},
+        { id: 'n_mid', terminals: [
+          { part: 'R1', terminal: 'b' },
+          { part: 'LED1', terminal: 'anode' },
+        ]},
+        { id: 'n_gnd', terminals: [
+          { part: 'LED1', terminal: 'cathode' },
+          { part: 'NANO', terminal: 'gnd' },
+        ]},
+      ],
+    );
+    // The adapter speaks the datasheet spelling; the join is case-blind.
+    board.setPin('D13', 'pushpull', true);
+    const on = board.ledBrightness('LED1');
+    assert.ok(on > 0.3, `driven HIGH lights the LED (brightness ${on.toFixed(3)})`);
+    board.setPin('D13', 'pushpull', false);
+    assert.equal(board.ledBrightness('LED1'), 0, 'driven LOW darkens it');
+  });
+
+  it('a Pico GPIO drives at 3.3 V, not the board default 5 V', () => {
+    const board = makeBoard(
+      [
+        { id: 'PICO', kind: 'pi_pico', params: {}, terminals: ['gnd_1', 'gp15'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+      ],
+      [
+        { id: 'n_pin', terminals: [
+          { part: 'PICO', terminal: 'gp15' },
+          { part: 'R1', terminal: 'a' },
+        ]},
+        { id: 'n_gnd', terminals: [
+          { part: 'R1', terminal: 'b' },
+          { part: 'PICO', terminal: 'gnd_1' },
+        ]},
+      ],
+    );
+    board.setPin('GP15', 'pushpull', true);
+    // Hand-computed: 3.3 V through the push-pull's 25 ohm into 10 k is
+    // 3.3 x 10000/10025 = 3.2918 V. A 5 V board would read 4.9875.
+    const v = board.nodeVoltage('n_pin');
+    assert.ok(Math.abs(v - 3.2918) < 0.02,
+      `a Pico pin sources 3.3 V logic, got ${v.toFixed(4)} V`);
+  });
+});

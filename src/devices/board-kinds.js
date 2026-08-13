@@ -7,10 +7,14 @@
  * to what standalone VCC/GND parts provide.
  *
  * GPIO terminals are NOT stamped here. They are driven by the boundary-A
- * adapter (avr8js-adapter, rp2040js-adapter) via board.setPin(), which
- * populates pinStates and feeds _pinSources() into MNA exactly like MCU
- * pins do. The device model handles only the power rails the adapter
- * doesn't touch.
+ * adapter (avr8js-adapter, rp2040js-adapter) via board.setPin(); the
+ * board copies those pin states into this model's `state.drives` before
+ * each solve (the `gpioFollowsPinStates` flag below) — the same Thévenin
+ * treatment MCU-kind pins get. The device model itself handles only the
+ * power rails the adapter doesn't touch. (Until 2026-08-13 this header
+ * CLAIMED the pinSources path covered board-kind GPIO; no such path
+ * existed, and a bench LED on a board-kind part never lit at engine
+ * level — the app's canvas had been reading pin states directly.)
  *
  * Why not just use separate VCC/GND parts? Because the designer places
  * ONE board (e.g. an Arduino Nano), and that board has 5V, 3V3, GND, GND2
@@ -54,7 +58,7 @@ function classifyTerminal(name) {
  * Build a device model for a board kind given its terminal list.
  * Power terminals are stamped; GPIO terminals are left for the adapter.
  */
-function boardModel(allTerminals, vcc) {
+function boardModel(allTerminals, boardVcc) {
   const powerTerminals = [];
   const gpioTerminals = [];
   for (const t of allTerminals) {
@@ -103,6 +107,13 @@ function boardModel(allTerminals, vcc) {
     },
 
     update() { return false; }, // static power rails
+
+    // The board copies pinStates onto state.drives for GPIO terminals
+    // before each solve; power-rail entries (set at init) are never
+    // overwritten. vcc is the board's logic level — a Pico pin drives
+    // 3.3 V, a Nano pin 5 V, whatever the bench supply is.
+    gpioFollowsPinStates: true,
+    vcc: boardVcc,
   };
 }
 
