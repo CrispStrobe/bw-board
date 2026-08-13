@@ -49,6 +49,18 @@
  * @param {StcProject} stc
  * @returns {{ parts: Part[], nets: Net[], notes: string[] }}
  */
+/**
+ * The terminal name a declared pin joins the board under. 8051 pins carry
+ * port/bit; Arduino and Pico pins carry `where` (D13, GP15) — the header
+ * name IS the terminal (the board's pin join is case-blind, so the
+ * spelling only affects display). This lived as a downstream patch in the
+ * app's vendored copy until 2026-08-13; a re-vendor silently destroyed it
+ * once, which is why it moved upstream — and to MODULE scope, because
+ * checkWiring needs it too.
+ * @param {StcPin} p
+ */
+const pinName = (p) => p.where ? String(p.where) : `P${p.port}.${p.bit}`;
+
 export function inferNetlist(stc) {
   /** @type {Part[]} */
   const parts = [];
@@ -61,8 +73,8 @@ export function inferNetlist(stc) {
   parts.push({ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] });
   parts.push({ id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] });
 
-  // Collect MCU terminals from declared pins
-  const mcuTerminals = stc.pins.map(p => `P${p.port}.${p.bit}`);
+  // Collect MCU terminals from declared pins (header names — see pinName).
+  const mcuTerminals = stc.pins.map(pinName);
   parts.push({ id: 'MCU', kind: 'mcu', params: {}, terminals: mcuTerminals });
 
   // VCC and GND nets (shared by multiple parts)
@@ -70,7 +82,7 @@ export function inferNetlist(stc) {
   const gndNet = { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] };
 
   for (const pin of stc.pins) {
-    const pinId = `P${pin.port}.${pin.bit}`;
+    const pinId = pinName(pin);
     const safeName = pin.name.replace(/[^a-zA-Z0-9_]/g, '_');
 
     // Detect buzzer by name convention
@@ -420,9 +432,9 @@ export function checkWiring(declaredPins, wiredParts, wiredNets) {
   }
 
   // Check: declared pins with nothing wired
-  const declaredPinIds = new Set(declaredPins.map(p => `P${p.port}.${p.bit}`));
+  const declaredPinIds = new Set(declaredPins.map(pinName));
   for (const pin of declaredPins) {
-    const pinId = `P${pin.port}.${pin.bit}`;
+    const pinId = pinName(pin);
     if (!wiredPinIds.has(pinId)) {
       notes.push(`Pin ${pin.name} (${pinId}) is declared as ${pin.direction} but has nothing wired to it`);
     }
