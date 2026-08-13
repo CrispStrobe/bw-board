@@ -63,8 +63,8 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'emulator') {
     return createEmulatorTarget(opts);
   }
-  if (kind === 'avr8js') {
-    return createAvr8jsTarget(opts);
+  if (kind === 'avr8js' || kind === 'atmega2560' || kind === 'attiny85') {
+    return createAvr8jsTarget(kind, opts);
   }
   if (kind === 'rp2040js') {
     return createRp2040jsTarget(opts);
@@ -73,7 +73,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'rp2040js', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'rp2040js', or 'serial'.`
   );
 }
 
@@ -131,19 +131,26 @@ async function createEmulatorTarget(opts) {
 
 // ─── AVR target (ATmega328P via avr8js) ─────────────────────────────────
 
-async function createAvr8jsTarget(opts) {
+async function createAvr8jsTarget(kind, opts) {
   const {
     board, hex, symbols,
-    clockHz = 16_000_000, vcc = 5.0,
+    clockHz, vcc,
   } = opts;
 
   if (!board) throw new Error('avr8js target requires opts.board');
 
+  // Map factory kind to chip name: 'avr8js' → 'atmega328p' (default)
+  const chip = kind === 'atmega2560' ? 'atmega2560'
+    : kind === 'attiny85' ? 'attiny85' : 'atmega328p';
+
   // avr8js has no destructive init — order is flexible, but we follow the
   // same adapter-first, board-second, program-third pattern for consistency.
 
-  // 1. Adapter
-  const adapter = createAvr8jsAdapter({ clockHz, vcc });
+  // 1. Adapter (chip param selects pin map, ports, timers, etc.)
+  const adapterOpts = { chip };
+  if (clockHz != null) adapterOpts.clockHz = clockHz;
+  if (vcc != null) adapterOpts.vcc = vcc;
+  const adapter = createAvr8jsAdapter(adapterOpts);
 
   // 2. Attach board
   adapter.attachBoard(board);
@@ -250,6 +257,16 @@ export function getTargetKinds() {
       kind: 'avr8js',
       label: 'Simulated (ATmega328P)',
       description: 'AVR instruction-level emulation. Arduino Nano/Uno programs.',
+    },
+    {
+      kind: 'atmega2560',
+      label: 'Simulated (ATmega2560)',
+      description: 'AVR instruction-level emulation. Arduino Mega programs.',
+    },
+    {
+      kind: 'attiny85',
+      label: 'Simulated (ATtiny85)',
+      description: 'AVR instruction-level emulation. ATtiny85/Digispark programs.',
     },
     {
       kind: 'rp2040js',

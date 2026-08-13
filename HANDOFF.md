@@ -1,10 +1,13 @@
 # bw-board handoff — 2026-08-13
 
-**1324 tests, 0 failures.** All pushed to master and main.
+**1341 tests, 0 failures.** All pushed to master and main.
 
 ## Completed this session (session 5)
 
-- **`input-pulldown` PinMode** (MNA-gated): the RP2040's internal pull-down is now a real Thévenin source (vTh=0 V, rTh=50 kΩ, RP2040 Datasheet §2.19.6.3 Table 628). `rp2040js-adapter.js` maps `GPIOPinState.InputPullDown` → `'input-pulldown'` instead of the previous `'input'` lie. `InputBusKeeper` stays as `'input'` (adjudicated in `spec-updates/input-pulldown.md` — the bus-keeper is a latch, not a resistor). 8 hand-computed oracle tests: standalone pull-down, divider with 100kΩ and 10kΩ, button-to-VCC open/pressed, Thévenin values, driveHigh invariance.
+- **ATmega2560 (Arduino Mega) adapter variant** (`src/avr-chips.js`, `src/avr8js-adapter.js`): chip-parameterized adapter with `opts.chip = 'atmega2560'`. Ports A-L (11 ports), pin map D0-D53 + A0-A15 with descending PC (D30-37) and PL (D42-49) runs. Corrected OC pin mappings for Timer0-5 (OC0A=PB7/D13, OC0B=PG5/D4 — different from 328P). 16 ADC channels. USART0 at Mega interrupt vectors. 9 oracle tests: pin map verification (descending runs, A8-A15), blink on D13/PB7, Timer0 PWM on Mega OC0A, port coverage.
+- **ATtiny85 adapter variant**: `opts.chip = 'attiny85'`. Single PORTB at 0x36/0x37/0x38 (different from 328P). AVRTimer for Timer0 at ATtiny addresses, ATtinyTimer1 for Timer1 (hook chaining on shared TIFR/TIMSK). ADC with non-trivial channel-to-pin mapping (ADC0→P5, ADC1→P2, ADC2→P4, ADC3→P3). No USART. 8 MHz default clock. 8 oracle tests: pin map, blink at 8 MHz, Timer0 PWM, ADC mapping, clock timing.
+- **Factory routes**: `createDebugTarget('atmega2560', ...)` and `createDebugTarget('attiny85', ...)` reuse the avr8js debug target with chip-specific adapters. `getTargetKinds()` lists all 6 kinds.
+- **`input-pulldown` PinMode** (MNA-gated): the RP2040's internal pull-down is now a real Thévenin source (vTh=0 V, rTh=50 kΩ, RP2040 Datasheet §2.19.6.3 Table 628). `rp2040js-adapter.js` maps `GPIOPinState.InputPullDown` → `'input-pulldown'`. 8 hand-computed oracle tests.
 
 ## Completed previously (session 4)
 
