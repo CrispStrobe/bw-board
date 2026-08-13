@@ -71,6 +71,48 @@ export class Z80 {
         const hi = this.read(this.sp); this.sp = (this.sp + 1) & 0xffff;
         return lo | (hi << 8);
     }
+    /** One CB-page rotate/shift with full flags (H=N=0, P=parity). */
+    _rot(kind, v) {
+        let c;
+        let r;
+        switch (kind) {
+            case 0: c = v >> 7; r = ((v << 1) | c) & 0xff; break;               // RLC
+            case 1: c = v & 1; r = ((v >> 1) | (c << 7)) & 0xff; break;         // RRC
+            case 2: c = v >> 7; r = ((v << 1) | (this.f & FC)) & 0xff; break;   // RL
+            case 3: c = v & 1; r = ((v >> 1) | ((this.f & FC) << 7)) & 0xff; break; // RR
+            case 4: c = v >> 7; r = (v << 1) & 0xff; break;                     // SLA
+            case 5: c = v & 1; r = ((v >> 1) | (v & 0x80)) & 0xff; break;       // SRA
+            case 6: c = v >> 7; r = ((v << 1) | 1) & 0xff; break;               // SLL (undocumented)
+            default: c = v & 1; r = v >> 1;                                     // SRL
+        }
+        this._setF((r & (FS | FX | FY)) | (r === 0 ? FZ : 0) | PARITY[r] | c);
+        return r;
+    }
+
+    _cb() {
+        this._m1();                       // the prefix's own M1 refresh
+        const op = this._fetch();
+        const k = op & 7;
+        const isHL = k === 6;
+        const grp = op >> 6;
+        if (grp === 0) {
+            this._setR(k, this._rot((op >> 3) & 7, this._getR(k)));
+            return isHL ? 15 : 8;
+        }
+        const bit = (op >> 3) & 7;
+        if (grp === 1) {                  // BIT: X/Y from the operand — or
+            const v = this._getR(k);      // from MEMPTR's high byte for (HL)
+            const set = v & (1 << bit);
+            const xySrc = isHL ? (this.wz >> 8) : v;
+            this._setF((this.f & FC) | FH | (set ? 0 : (FZ | FP))
+                | (bit === 7 && set ? FS : 0) | (xySrc & (FX | FY)));
+            return isHL ? 12 : 8;
+        }
+        const v = this._getR(k);
+        this._setR(k, grp === 2 ? (v & ~(1 << bit)) & 0xff : v | (1 << bit));
+        return isHL ? 15 : 8;
+    }
+
     /** Condition code by index: NZ Z NC C PO PE P M. */
     _cc(k) {
         switch (k) {
@@ -346,6 +388,7 @@ export class Z80 {
             // ---- interrupt enables ---------------------------------------
             case 0xf3: this.iff1 = 0; this.iff2 = 0; return 4;
             case 0xfb: this.iff1 = 1; this.iff2 = 1; this.eiLatch = 1; return 4;
+            case 0xcb: return this._cb();
             default:
                 throw new Error(`z80: opcode ${op.toString(16).padStart(2, '0')} not yet implemented`);
         }
