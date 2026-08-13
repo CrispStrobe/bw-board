@@ -412,6 +412,75 @@ describe('HD44780 device registration', () => {
   });
 });
 
+// ─── RS/RW nibble-phase reset (via device model update()) ──────────────────
+// The HD44780's internal nibble counter resets when RS or RW changes.
+// This test exercises the device model's update() function directly,
+// simulating the E-pulse sequence that BeebEater's firmware generates.
+
+describe('HD44780 device model: nibble phase resets on RS/RW change', () => {
+  beforeEach(() => { registerHD44780(); });
+  afterEach(() => { try { unregisterDevice('hd44780'); } catch {} });
+
+  it('stray write nibble is discarded when RW changes to 1 (read)', () => {
+    const model = getDevice('hd44780');
+    const part = { id: 'LCD', kind: 'hd44780', params: { cols: 16, rows: 2 } };
+    const state = model.init(part);
+    const pins = {
+      vss: 0, vdd: 5, v0: 2.5, rs: 0, rw: 0, e: 0,
+      d0: 0, d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0, d7: 0,
+      a: 5, k: 0,
+    };
+    const read = (t) => pins[t] ?? 0;
+    let t = 0n;
+
+    // 8-bit function set: set 4-bit mode (0x20 = DL=0)
+    pins.d5 = 5; // D5=1 → bit 5 of 0x20
+    pins.e = 5; model.update(part, state, read, t); t += 1000n; // E rise
+    pins.e = 0; model.update(part, state, read, t); t += 100_000n; // E fall → latch
+    assert.equal(state.is4Bit, true, 'should switch to 4-bit mode');
+    pins.d5 = 0;
+
+    // Stray write nibble (0x08 on D4-D7): high nibble of garbage
+    pins.d7 = 5; // D7=1 → nibble 0x08
+    pins.e = 5; model.update(part, state, read, t); t += 1000n;
+    pins.e = 0; model.update(part, state, read, t); t += 100_000n;
+    // nibblePhase should be 1 (waiting for low nibble)
+    assert.equal(state._nibblePhase, 1, 'stray nibble should set phase=1');
+    pins.d7 = 0;
+
+    // RW changes to 1 (read mode, like busy-flag poll) → phase resets
+    pins.rw = 5;
+    pins.e = 5; model.update(part, state, read, t); t += 1000n;
+    pins.e = 0; model.update(part, state, read, t); t += 100_000n;
+    // Phase should have reset to 0 when RW changed
+    // Then the read E pulse advanced it: 0→1
+    assert.equal(state._nibblePhase, 1, 'read E pulse: 0→1');
+
+    pins.e = 5; model.update(part, state, read, t); t += 1000n;
+    pins.e = 0; model.update(part, state, read, t); t += 100_000n;
+    assert.equal(state._nibblePhase, 0, 'second read E pulse: 1→0');
+
+    // RW changes back to 0 → phase resets again
+    pins.rw = 0;
+
+    // Now write a real command: 0x0F (display on, cursor on, blink on)
+    // High nibble: 0x0 (D4-D7 all 0)
+    pins.e = 5; model.update(part, state, read, t); t += 1000n;
+    pins.e = 0; model.update(part, state, read, t); t += 100_000n;
+    assert.equal(state._nibblePhase, 1);
+
+    // Low nibble: 0xF (D4-D7 all 1)
+    pins.d4 = 5; pins.d5 = 5; pins.d6 = 5; pins.d7 = 5;
+    pins.e = 5; model.update(part, state, read, t); t += 1000n;
+    pins.e = 0; model.update(part, state, read, t); t += 100_000n;
+
+    // The 0x0F command should have been executed correctly
+    assert.equal(state.displayOn, true, 'display should be on');
+    assert.equal(state.cursorOn, true, 'cursor should be on');
+    assert.equal(state.blinkOn, true, 'blink should be on');
+  });
+});
+
 // ─── AC wrapping (§5.1) ────────────────────────────────────────────────────
 
 describe('HD44780 address counter wrapping', () => {
