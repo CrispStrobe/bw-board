@@ -1524,13 +1524,14 @@ export class BoardImpl {
       for (const terminal of part.terminals) {
         if (st._staticDrives && st._staticDrives.has(terminal)) continue;
         const ps = this.pinStates.get(String(terminal).toLowerCase());
-        if (ps) {
-          const thev = pinThevenin(ps.mode, ps.driveHigh, vLogic);
-          if (thev) st.drives[terminal] = thev;
-          else delete st.drives[terminal];   // high-Z input: no source
-        } else {
-          delete st.drives[terminal];
-        }
+        // pinThevenin returns the STRING 'high-z' for undriven modes, not
+        // null — storing it as a drive made stampDevice compute 1/NaN and
+        // poisoned the whole matrix (every node NaN, rendered as 0 V; a
+        // fully-staged bench with a correct gp15 drive read dark because
+        // 28 innocent input pins each stamped NaN).
+        const thev = ps ? pinThevenin(ps.mode, ps.driveHigh, vLogic) : null;
+        if (thev && typeof thev === 'object') st.drives[terminal] = thev;
+        else delete st.drives[terminal];   // high-Z / no state: no source
       }
     }
   }

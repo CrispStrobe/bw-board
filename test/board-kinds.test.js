@@ -461,3 +461,48 @@ describe('board-kind GPIO follows pinStates (the engine half of the contract)', 
       `a Pico pin sources 3.3 V logic, got ${v.toFixed(4)} V`);
   });
 });
+
+describe('board-kind GPIO with idle input pins and reactive parts', () => {
+  it('28 undriven inputs must not poison the solve (high-z is a string)', () => {
+    // The production failure verbatim: a fully-staged bench read dark
+    // because pinThevenin('input') returns the STRING 'high-z', it was
+    // stored as a drive, and stampDevice computed 1/NaN — every node in
+    // the matrix went NaN and rendered as 0 V.
+    const board = makeBoard(
+      [
+        { id: 'PICO', kind: 'pi_pico', params: {},
+          terminals: ['gnd_1', 'gp14', 'gp15'] },
+        { id: 'C1', kind: 'capacitor', params: { farads: 1e-7 }, terminals: ['a', 'b'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+        { id: 'LED1', kind: 'led', params: { vForward: 2.0 }, terminals: ['anode', 'cathode'] },
+      ],
+      [
+        { id: 'n_pin', terminals: [
+          { part: 'PICO', terminal: 'gp15' },
+          { part: 'R1', terminal: 'a' },
+        ]},
+        { id: 'n_mid', terminals: [
+          { part: 'R1', terminal: 'b' },
+          { part: 'LED1', terminal: 'anode' },
+        ]},
+        { id: 'n_gnd', terminals: [
+          { part: 'LED1', terminal: 'cathode' },
+          { part: 'C1', terminal: 'b' },
+          { part: 'PICO', terminal: 'gnd_1' },
+        ]},
+        { id: 'n_cap', terminals: [
+          { part: 'C1', terminal: 'a' },
+          { part: 'PICO', terminal: 'gp14' },
+        ]},
+      ],
+    );
+    // The adapter publishes EVERY pin — the undriven one stays input.
+    board.setPin('GP14', 'input', false);
+    board.setPin('GP15', 'pushpull', true);
+    board.advanceTo(5_000_000n); // reactive part → the transient path runs
+    const v = board.nodeVoltage('n_pin');
+    assert.ok(Number.isFinite(v), `pin net voltage is a number, got ${v}`);
+    assert.ok(v > 3.0, `the driven pin holds ~3.3 V through the load, got ${v.toFixed(3)}`);
+    assert.ok(board.ledBrightness('LED1') > 0.03, 'the LED lights');
+  });
+});
