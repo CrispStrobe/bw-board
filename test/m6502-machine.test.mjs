@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { W65C22 } from '../src/w65c22.js';
 import { W65C51 } from '../src/w65c51.js';
-import { M6502Machine, EATER6502 } from '../src/m6502-machine.js';
+import { M6502Machine, EATER6502, HB6502 } from '../src/m6502-machine.js';
 
 test('VIA T1 free-run: first timeout at LATCH+1, then every LATCH+2', () => {
     const via = new W65C22();
@@ -176,4 +176,106 @@ test('machine: VIA T1 interrupt reaches the CPU through shared IRQB', () => {
     m.advanceToMs(1);
     assert.equal(m.mem[0x10], 0x77, 'woke from WAI, vectored, returned');
     assert.equal(m.chips.via1.irqAsserted, false, 'flag cleared in handler');
+});
+
+// ---------------------------------------------------------------------------
+// HB6502 preset (mike42/6502-computer, CC-BY-4.0)
+// 65C02 + 65C22 + 65C51N, 1.8432 MHz, 32K RAM, 16K ROM at $C000.
+// VIA at $8000, ACIA at $8400 — decoded by 74LS138 in the I/O window.
+// ---------------------------------------------------------------------------
+
+test('HB6502: config sanity — 1.8432 MHz, RAM to $7FFF, ROM at $C000', () => {
+    assert.equal(HB6502.clockHz, 1_843_200);
+    const ram = HB6502.regions.find((r) => r.kind === 'ram');
+    const rom = HB6502.regions.find((r) => r.kind === 'rom');
+    assert.deepEqual(ram, { kind: 'ram', start: 0x0000, end: 0x7fff });
+    assert.deepEqual(rom, { kind: 'rom', start: 0xc000, end: 0xffff });
+    const via = HB6502.chips.find((c) => c.kind === 'via');
+    const acia = HB6502.chips.find((c) => c.kind === 'acia');
+    assert.equal(via.at, 0x8000);
+    assert.equal(acia.at, 0x8400);
+});
+
+// Same blink logic as the Eater test, re-targeted to the HB6502 address map:
+// VIA at $8000, ROM entry at $C000. T1 latch 998 → period 1000 cycles =
+// 1000/1843200 s ≈ 0.5425 ms at 1.8432 MHz.
+const HB_BLINK_ROM = [
+    0xa9, 0xff, 0x8d, 0x03, 0x80,       // LDA #$FF, STA $8003 (DDRA)
+    0xa9, 0x40, 0x8d, 0x0b, 0x80,       // LDA #$40, STA $800B (ACR T1 free-run)
+    0xa9, 0xe6, 0x8d, 0x04, 0x80,       // LDA #$E6, STA $8004 (T1C-L = 998 lo)
+    0xa9, 0x03, 0x8d, 0x05, 0x80,       // LDA #$03, STA $8005 (T1C-H, start)
+    0xad, 0x0d, 0x80,                    // wait: LDA $800D (IFR)
+    0x29, 0x40,                          // AND #$40
+    0xf0, 0xf9,                          // BEQ wait
+    0xad, 0x04, 0x80,                    // LDA $8004 (clear IFR6)
+    0xad, 0x01, 0x80,                    // LDA $8001 (ORA)
+    0x49, 0x01,                          // EOR #$01
+    0x8d, 0x01, 0x80,                    // STA $8001 (toggle PA0)
+    0x4c, 0x14, 0xc0,                    // JMP $C014 (wait)
+];
+
+test('HB6502: ROM blink toggles via1.PA0 on the T1 grid', () => {
+    const events = [];
+    const m = new M6502Machine(HB6502, {
+        onPinChange: (pin, level, tMs) => events.push({ pin, level, tMs }),
+    });
+    m.loadRom(HB_BLINK_ROM);           // loads at $C000 (first rom region)
+    m.mem[0xfffc] = 0x00; m.mem[0xfffd] = 0xc0; // reset vector → $C000
+    m.reset();
+    m.advanceToMs(4);                   // ~4 ms at 1.8432 MHz ≈ 7373 cycles
+    const seeds = events.filter((e) => e.tMs < 0.05);
+    assert.equal(seeds.length, 8, 'DDRA seeds 8 PA pins');
+    assert.ok(seeds.every((e) => e.level === 0));
+    const edges = events.filter((e) => e.pin === 'via1.PA0' && e.tMs >= 0.05);
+    assert.ok(edges.length >= 5, `expected 5+ edges, got ${edges.length}`);
+    assert.deepEqual(edges.slice(0, 4).map((e) => e.level), [1, 0, 1, 0]);
+    // Period is 1000 cycles ≈ 542.53 µs at 1.8432 MHz.
+    const periodUs = 1000 / HB6502.clockHz * 1e6;
+    const t0 = edges[0].tMs * 1000;
+    for (let i = 1; i < edges.length; i++) {
+        const offUs = edges[i].tMs * 1000 - (t0 + i * periodUs);
+        assert.ok(Math.abs(offUs) <= 6, `edge ${i} off grid by ${offUs.toFixed(1)}µs`);
+    }
+});
+
+test('HB6502: serial TX through the ACIA at $8400', () => {
+    const serial = [];
+    const m = new M6502Machine(HB6502, {
+        onSerial: (byte, tMs) => serial.push({ byte, tMs }),
+    });
+    m.loadRom([
+        0xa9, 0x48, 0x8d, 0x00, 0x84,   // LDA #'H', STA $8400
+        0xa9, 0x69, 0x8d, 0x00, 0x84,   // LDA #'i', STA $8400
+        0xdb,                            // STP
+    ]);
+    m.mem[0xfffc] = 0x00; m.mem[0xfffd] = 0xc0;
+    m.reset();
+    m.advanceToMs(1);
+    assert.deepEqual(serial.map((s) => s.byte), [0x48, 0x69]);
+    assert.ok(serial[1].tMs > serial[0].tMs);
+    assert.ok(m.cpu.stopped, 'STP parked the machine');
+});
+
+test('HB6502: open bus in the I/O gap reads $FF, writes vanish', () => {
+    const m = new M6502Machine(HB6502, {});
+    // $8800 (speaker toggle) and $8C00 (IRQ controller) are not modelled;
+    // they sit in the open-bus gap between ACIA ($8403) and ROM ($C000).
+    assert.equal(m._read(0x8800), 0xff, 'speaker address is open bus');
+    assert.equal(m._read(0x8c00), 0xff, 'IRQ controller is open bus');
+    m._write(0x8800, 0x42);             // should not throw
+    assert.equal(m._read(0x8800), 0xff, 'still open bus after write');
+});
+
+test('HB6502: 32K RAM covers full $0000–$7FFF, ROM is read-only', () => {
+    const m = new M6502Machine(HB6502, {});
+    // RAM at the top of the 32K range
+    m._write(0x7fff, 0xaa);
+    assert.equal(m._read(0x7fff), 0xaa, 'top of RAM is writable');
+    // Zero page is inside RAM
+    m._write(0x00ff, 0xbb);
+    assert.equal(m._read(0x00ff), 0xbb, 'zero page works');
+    // ROM is not writable
+    m.mem[0xc000] = 0xcc;
+    m._write(0xc000, 0xdd);
+    assert.equal(m._read(0xc000), 0xcc, 'ROM write ignored');
 });

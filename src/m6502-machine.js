@@ -40,6 +40,30 @@ export const EATER6502 = Object.freeze({
     ],
 });
 
+/**
+ * mike42/6502-computer (CC-BY-4.0 Mike Billington).
+ * 65C02 + 65C22 + 65C51N, 1.8432 MHz, 32K RAM, 16K ROM (one bank of a
+ * physically-switched 32K EEPROM). 74LS138 decodes A12/A11/A10 in the
+ * $8000–$BFFF I/O window (active when A15=1, A14=0).
+ *   VIA  $8000  (Y0)
+ *   ACIA $8400  (Y1)
+ *   speaker toggle $8800 (Y2) — not modelled, read-toggled latch
+ *   IRQ priority encoder $8C00 (Y3) — not modelled, glue logic
+ * ROM bank select is a physical SPDT switch on EEPROM A14, not software-
+ * controlled; the CPU always sees 16K at $C000–$FFFF.
+ */
+export const HB6502 = Object.freeze({
+    clockHz: 1_843_200,
+    regions: [
+        { kind: 'ram', start: 0x0000, end: 0x7fff },
+        { kind: 'rom', start: 0xc000, end: 0xffff },
+    ],
+    chips: [
+        { kind: 'via', name: 'via1', at: 0x8000 },
+        { kind: 'acia', name: 'acia1', at: 0x8400 },
+    ],
+});
+
 export class M6502Machine {
     /**
      * @param {MachineConfig} [config]
