@@ -87,6 +87,13 @@ export function registerHD44780() {
 
         // E pin edge detection
         _lastE: false,
+        // RS/RW tracking for nibble-phase reset (§Application Note):
+        // The HD44780's internal nibble counter resets to "high nibble"
+        // whenever the operation type changes (RS or RW changes between
+        // E pulses). This keeps the 4-bit interface synchronized when
+        // a partial write is abandoned for a read (e.g., busy-flag poll).
+        _lastRs: 0,
+        _lastRw: 0,
 
         // Public: text state for UI consumption
         text: Array.from({ length: rows }, () => ' '.repeat(cols)),
@@ -116,6 +123,22 @@ export function registerHD44780() {
 
       const rs = read('rs') > threshold ? 1 : 0;
       const rw = read('rw') > threshold ? 1 : 0;
+
+      // ── Nibble-phase reset on RS/RW change ──────────────────
+      // The HD44780's internal nibble counter resets to "expecting
+      // high nibble" whenever RS or RW changes between E pulses.
+      // This ensures that a partial write (one nibble latched,
+      // waiting for the second) is discarded when the controller
+      // switches to a read or to a different register. Without
+      // this, the 4-bit interface desynchronizes when firmware
+      // sends two-nibble writes where the first nibble triggers a
+      // mode change (e.g., the 8-bit → 4-bit function-set switch
+      // in the init-by-instruction sequence).
+      if (rs !== state._lastRs || rw !== state._lastRw) {
+        state._nibblePhase = 0;
+        state._lastRs = rs;
+        state._lastRw = rw;
+      }
 
       // ── Read mode: drive data pins while E is high ──────────
       if (rw === 1 && eHigh) {
@@ -236,7 +259,16 @@ function _ddramAddr(ac) {
 }
 
 // ─── Instruction execution (§Table 6, p.24) ──────────────────────────────
+// After each instruction completes, the internal nibble counter resets to
+// "expecting high nibble." This keeps the 4-bit interface synchronized
+// even when stray E pulses occur during 8-bit → 4-bit mode transitions
+// (as in BeebEater's init sequence, where LCD_WRITE always sends two
+// nibbles but the first one triggers the mode switch).
 function _execute(state, rs, data, tNs) {
+  // Reset the nibble phase: after an instruction completes, the HD44780
+  // expects the high nibble first for the next operation.
+  state._nibblePhase = 0;
+
   if (rs === 1) {
     // Data write: write to DDRAM or CGRAM at current AC
     if (state.acIsCgram) {
@@ -479,6 +511,8 @@ function _getModel() {
           _nibblePhase: 0,
           _highNibble: 0,
           _lastE: false,
+          _lastRs: 0,
+          _lastRw: 0,
           text: Array.from({ length: rows }, () => ' '.repeat(cols)),
           _cols: cols,
           _rows: rows,
