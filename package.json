@@ -29,7 +29,7 @@
     "./devices/digital-ics": "./src/devices/digital-ics.js"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js test/*.test.mjs"
   },
   "license": "MIT",
   "author": "CrispStrobe <cze+github@mailbox.org>",
