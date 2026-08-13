@@ -1,0 +1,182 @@
+/**
+ * The composable 6502 machine — a CONFIG realized, not a fixed build.
+ *
+ * A machine is { clockHz, regions, chips }: RAM/ROM address ranges plus
+ * peripheral chips (W65C22 VIA, W65C51 ACIA) at their decoded addresses.
+ * The config can come from a preset (EATER6502 below), from MAP/CHIP
+ * declarations in the pseudocode, or from the bus extractor solving a
+ * hand-wired breadboard's glue logic — this class does not care which.
+ * The bus stays inside: execution is instruction-stepped (the vector-
+ * verified W65C02 core), peripherals advance by each instruction's cycle
+ * count, and only pin-level effects (VIA ports, ACIA TX/RX) cross the
+ * boundary, in the same {tMs, pin, level} shape every other device emits.
+ *
+ * IRQ wiring: every chip's IRQ output is open-drain onto the CPU's IRQB —
+ * asserted if ANY chip asserts, exactly like the shared line on the bench.
+ *
+ * @module
+ */
+import { W65C02 } from './w65c02.js';
+import { W65C22 } from './w65c22.js';
+import { W65C51 } from './w65c51.js';
+
+/**
+ * @typedef {object} MachineConfig
+ * @property {number} clockHz phi2 frequency
+ * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions inclusive ranges
+ * @property {Array<{kind: 'via'|'acia', name: string, at: number}>} chips base addresses
+ */
+
+/** The canonical breadboard-computer preset: RAM low, VIA at $6000, ACIA at $5000, ROM high. */
+export const EATER6502 = Object.freeze({
+    clockHz: 1_000_000,
+    regions: [
+        { kind: 'ram', start: 0x0000, end: 0x3fff },
+        { kind: 'rom', start: 0x8000, end: 0xffff },
+    ],
+    chips: [
+        { kind: 'via', name: 'via1', at: 0x6000 },
+        { kind: 'acia', name: 'acia1', at: 0x5000 },
+    ],
+});
+
+export class M6502Machine {
+    /**
+     * @param {MachineConfig} [config]
+     * @param {{ onPinChange?: (pin: string, level: 0|1, tMs: number) => void,
+     *           onSerial?: (byte: number, tMs: number) => void }} [hooks]
+     */
+    constructor(config = EATER6502, hooks = {}) {
+        this.config = config;
+        this.hooks = hooks;
+        this.clockHz = config.clockHz;
+        this.mem = new Uint8Array(65536);
+        /** @type {Record<string, W65C22|W65C51>} */
+        this.chips = {};
+        this._decode = [];
+        for (const r of config.regions) {
+            this._decode.push({ ...r, chip: null });
+        }
+        for (const c of config.chips) {
+            const span = c.kind === 'via' ? 16 : 4;
+            let chip;
+            if (c.kind === 'via') {
+                chip = new W65C22({
+                    onPortChange: (port, value, ddr) => this._portChange(c.name, port, value, ddr),
+                });
+            } else if (c.kind === 'acia') {
+                chip = new W65C51({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            } else {
+                throw new Error(`unknown chip kind in machine config: ${c.kind}`);
+            }
+            this.chips[c.name] = chip;
+            this._decode.push({ kind: c.kind, start: c.at, end: c.at + span - 1, chip });
+        }
+        // Overlap is a wiring bug the user should hear about, not silence.
+        const sorted = [...this._decode].sort((a, b) => a.start - b.start);
+        for (let i = 1; i < sorted.length; i++) {
+            if (sorted[i].start <= sorted[i - 1].end) {
+                throw new Error(`machine config: ${sorted[i - 1].kind} and ${sorted[i].kind} overlap at $${sorted[i].start.toString(16)}`);
+            }
+        }
+        /** Last observed level per port pin, for edge detection. */
+        this._pinLevels = {};
+        this.cycles = 0;
+        this.cpu = new W65C02({
+            read: (a) => this._read(a),
+            write: (a, v) => this._write(a, v),
+        });
+    }
+
+    /** Machine time in (fractional) milliseconds. */
+    get tMs() { return this.cycles * 1000 / this.clockHz; }
+
+    _region(addr) {
+        for (const r of this._decode) if (addr >= r.start && addr <= r.end) return r;
+        return null;
+    }
+
+    _read(addr) {
+        const r = this._region(addr);
+        if (!r) return 0xff; // open bus reads high, like the undriven data lines
+        if (r.chip) return r.chip.read(addr - r.start);
+        return this.mem[addr];
+    }
+
+    _write(addr, val) {
+        const r = this._region(addr);
+        if (!r || r.kind === 'rom') return; // writes to ROM/open bus vanish
+        if (r.chip) { r.chip.write(addr - r.start, val); return; }
+        this.mem[addr] = val;
+    }
+
+    _portChange(chipName, port, value, ddr) {
+        if (!this.hooks.onPinChange) return;
+        for (let bit = 0; bit < 8; bit++) {
+            const mask = 1 << bit;
+            if (!(ddr & mask)) continue; // only driven pins produce edges
+            const pin = `${chipName}.P${port.toUpperCase()}${bit}`;
+            const level = value & mask ? 1 : 0;
+            if (this._pinLevels[pin] !== level) {
+                this._pinLevels[pin] = level;
+                this.hooks.onPinChange(pin, level, this.tMs);
+            }
+        }
+    }
+
+    /** Load a ROM image at an address (defaults to the first rom region's start). */
+    loadRom(bytes, at) {
+        const rom = this.config.regions.find((r) => r.kind === 'rom');
+        const base = at ?? (rom ? rom.start : 0x8000);
+        this.mem.set(bytes, base);
+    }
+
+    /** Reset the CPU through the vector at $FFFC (part of the ROM image). */
+    reset() {
+        this.cpu.reset();
+        this.cycles += 7;
+        this._advanceChips(7);
+    }
+
+    _advanceChips(n) {
+        for (const name of Object.keys(this.chips)) {
+            const chip = this.chips[name];
+            if (chip.advance) chip.advance(n);
+        }
+    }
+
+    _anyIrq() {
+        for (const name of Object.keys(this.chips)) {
+            if (this.chips[name].irqAsserted) return true;
+        }
+        return false;
+    }
+
+    /** One instruction (or one idle cycle when waiting); returns cycles consumed. */
+    step() {
+        let n = this.cpu.step();
+        if (n === 0) {
+            if (this.cpu.stopped) return 0; // STP: only reset revives, time stops mattering
+            n = 1; // WAI: time still passes while parked
+        }
+        this.cycles += n;
+        this._advanceChips(n);
+        if (this._anyIrq() && this.cpu.irq()) { // level-triggered shared IRQB
+            this.cycles += 7; // the interrupt sequence is bus time too
+            this._advanceChips(7);
+        }
+        return n;
+    }
+
+    /** Run until machine time reaches tMs (or the CPU executes STP). */
+    advanceToMs(tMs) {
+        const target = Math.ceil(tMs * this.clockHz / 1000);
+        while (this.cycles < target) {
+            if (this.step() === 0) break;
+        }
+    }
+}
+
+export default M6502Machine;
