@@ -40,6 +40,7 @@ export { registerNamedParts } from './devices/named-parts.js';
 export { registerTier1Parts } from './devices/tier1-parts.js';
 export { registerI2CParts } from './devices/i2c-parts.js';
 export { registerBoardKinds } from './devices/board-kinds.js';
+export { registerHD44780, createHD44780, hd44780Write8, hd44780Write4, hd44780ReadBF } from './devices/hd44780.js';
 export { registerAllDevices } from './register-all.js';
 export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from './current-ratings.js';
 export { R_INPUT_PULLUP } from './pin-model.js';
