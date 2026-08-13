@@ -5,10 +5,11 @@
  * UNDOCUMENTED behavior included: X/Y flags from results, the Q latch that
  * SCF/CCF read, R's per-M1 increment, WZ/MEMPTR).
  *
- * STATUS: SCAFFOLD under active grinding — the state model, flag helpers
- * and the first instruction groups are in; unimplemented opcodes throw,
- * and scripts/grind-z80.mjs sorts files into pass / fail / not-yet so
- * growth is measurable per session. Do not wire into a machine yet.
+ * STATUS: VECTOR-COMPLETE — 1,604/1,604 files, 1.6 million vectors, all
+ * pages (main, CB, ED with the interrupted-repeat rules, DD/FD with the
+ * undocumented index halves, DDCB/FDCB). Interrupt delivery (IM 0/1/2,
+ * NMI) is NOT yet modeled — the machine layer adds it next; nothing in
+ * the single-step suite exercises it.
  *
  * @module
  */
@@ -330,6 +331,117 @@ export class Z80 {
         return f;
     }
 
+    /** One ALU-group operation (ADD ADC SUB SBC AND XOR OR CP) on A. */
+    _aluOp(g, v) {
+        switch (g) {
+            case 0: this._add8(v, false); break;
+            case 1: this._add8(v, true); break;
+            case 2: this._sub8(v, false, false); break;
+            case 3: this._sub8(v, true, false); break;
+            case 4: this._logic(v, '&'); break;
+            case 5: this._logic(v, '^'); break;
+            case 6: this._logic(v, '|'); break;
+            default: this._sub8(v, false, true);
+        }
+    }
+
+    _ddfd(iy, qBefore) {
+        this._m1();
+        const op = this._fetch();
+        const getIx = () => iy ? this.iy : this.ix;
+        const setIx = (v) => { if (iy) this.iy = v & 0xffff; else this.ix = v & 0xffff; };
+        const getH = () => getIx() >> 8;
+        const setH = (v) => setIx((getIx() & 0xff) | ((v & 0xff) << 8));
+        const getL = () => getIx() & 0xff;
+        const setL = (v) => setIx((getIx() & 0xff00) | (v & 0xff));
+        /** (IX+d): fetch the displacement, compute the address, set MEMPTR. */
+        const disp = () => {
+            const d = this._fetch();
+            const a = (getIx() + (d << 24 >> 24)) & 0xffff;
+            this.wz = a;
+            return a;
+        };
+        // Substituted register access: H/L mean the index halves — EXCEPT in
+        // (IX+d) memory forms, where the register operand is the REAL H/L.
+        const sub = (k) => k === 4 ? getH() : k === 5 ? getL() : this._getR(k);
+        const setSub = (k, v) => { if (k === 4) setH(v); else if (k === 5) setL(v); else this._setR(k, v); };
+
+        // LD block with substitution.
+        if (op >= 0x40 && op <= 0x7f && op !== 0x76) {
+            const dst = (op >> 3) & 7;
+            const src = op & 7;
+            if (src === 6) { const a = disp(); this._setR(dst, this.read(a)); return 19; }
+            if (dst === 6) { const a = disp(); this.write(a, this._getR(src)); return 19; }
+            setSub(dst, sub(src));
+            return 8;
+        }
+        // ALU block with substitution.
+        if (op >= 0x80 && op <= 0xbf) {
+            if ((op & 7) === 6) { this._aluOp((op >> 3) & 7, this.read(disp())); return 19; }
+            this._aluOp((op >> 3) & 7, sub(op & 7));
+            return 8;
+        }
+        switch (op) {
+            case 0x09: setIx(this._add16(getIx(), this.bc)); return 15;
+            case 0x19: setIx(this._add16(getIx(), this.de)); return 15;
+            case 0x29: setIx(this._add16(getIx(), getIx())); return 15;
+            case 0x39: setIx(this._add16(getIx(), this.sp)); return 15;
+            case 0x21: setIx(this._fetch16()); return 14;
+            case 0x22: { const nn = this._fetch16(); const v = getIx(); this.write(nn, v & 0xff); this.write((nn + 1) & 0xffff, v >> 8); this.wz = (nn + 1) & 0xffff; return 20; }
+            case 0x2a: { const nn = this._fetch16(); setIx(this.read(nn) | (this.read((nn + 1) & 0xffff) << 8)); this.wz = (nn + 1) & 0xffff; return 20; }
+            case 0x23: setIx(getIx() + 1); return 10;
+            case 0x2b: setIx(getIx() - 1); return 10;
+            case 0x24: setH(this._inc8(getH())); return 8;
+            case 0x25: setH(this._dec8(getH())); return 8;
+            case 0x26: setH(this._fetch()); return 11;
+            case 0x2c: setL(this._inc8(getL())); return 8;
+            case 0x2d: setL(this._dec8(getL())); return 8;
+            case 0x2e: setL(this._fetch()); return 11;
+            case 0x34: { const a = disp(); this.write(a, this._inc8(this.read(a))); return 23; }
+            case 0x35: { const a = disp(); this.write(a, this._dec8(this.read(a))); return 23; }
+            case 0x36: { const a = disp(); this.write(a, this._fetch()); return 19; }
+            case 0xe1: setIx(this._pop16()); return 14;
+            case 0xe5: this._push16(getIx()); return 15;
+            case 0xe3: {
+                const lo = this.read(this.sp); const hi = this.read((this.sp + 1) & 0xffff);
+                this.write(this.sp, getIx() & 0xff); this.write((this.sp + 1) & 0xffff, getIx() >> 8);
+                setIx(lo | (hi << 8)); this.wz = getIx(); return 23;
+            }
+            case 0xe9: this.pc = getIx(); return 8;
+            case 0xf9: this.sp = getIx(); return 10;
+            case 0xcb: {
+                // DDCB/FDCB: displacement BEFORE the sub-opcode, which is
+                // fetched WITHOUT an M1 refresh (R advances only twice).
+                const a = disp();
+                const so = this._fetch();
+                const k = so & 7;
+                const grp = so >> 6;
+                const bit = (so >> 3) & 7;
+                if (grp === 1) {   // BIT b,(IX+d): X/Y from the ADDRESS high byte
+                    const v = this.read(a);
+                    const set = v & (1 << bit);
+                    this._setF((this.f & FC) | FH | (set ? 0 : (FZ | FP))
+                        | (bit === 7 && set ? FS : 0) | ((a >> 8) & (FX | FY)));
+                    return 20;
+                }
+                let r = this.read(a);
+                r = grp === 0 ? this._rot((so >> 3) & 7, r)
+                    : grp === 2 ? (r & ~(1 << bit)) & 0xff : r | (1 << bit);
+                this.write(a, r);
+                if (k !== 6) this._setR(k, r);   // undocumented copy-to-register
+                return 23;
+            }
+            default:
+                // Any other opcode: the prefix was a 4-cycle no-op before a
+                // normal instruction (its own M1 already counted above).
+                // The prefix CLEARS the Q consideration: a prefixed SCF/CCF
+                // always takes its X/Y from F|A (vector-established — the
+                // failing quarter were exactly the q!=0 cases).
+                void qBefore;
+                return 4 + this._main(op, 0);
+        }
+    }
+
     /** Condition code by index: NZ Z NC C PO PE P M. */
     _cc(k) {
         switch (k) {
@@ -439,17 +551,7 @@ export class Z80 {
         }
         // ALU block 0x80-0xbf.
         if (op >= 0x80 && op <= 0xbf) {
-            const v = this._getR(op & 7);
-            switch ((op >> 3) & 7) {
-                case 0: this._add8(v, false); break;
-                case 1: this._add8(v, true); break;
-                case 2: this._sub8(v, false, false); break;
-                case 3: this._sub8(v, true, false); break;
-                case 4: this._logic(v, '&'); break;
-                case 5: this._logic(v, '^'); break;
-                case 6: this._logic(v, '|'); break;
-                default: this._sub8(v, false, true);
-            }
+            this._aluOp((op >> 3) & 7, this._getR(op & 7));
             return (op & 7) === 6 ? 7 : 4;
         }
         switch (op) {
@@ -607,6 +709,8 @@ export class Z80 {
             case 0xfb: this.iff1 = 1; this.iff2 = 1; this.eiLatch = 1; return 4;
             case 0xcb: return this._cb();
             case 0xed: return this._ed();
+            case 0xdd: return this._ddfd(false, qBefore);
+            case 0xfd: return this._ddfd(true, qBefore);
             default:
                 throw new Error(`z80: opcode ${op.toString(16).padStart(2, '0')} not yet implemented`);
         }
