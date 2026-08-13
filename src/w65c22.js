@@ -187,6 +187,10 @@ export class W65C22 {
             this.inB = level ? this.inB | mask : this.inB & ~mask;
             // T2 pulse-count mode decrements on PB6 falling edges; IFR5 sets
             // when the counter REACHES ZERO (datasheet §2.10, Figure 2-5).
+            // KNOWN DIVERGENCE: MAME's 6522 (BSD-3, MOS/Rockwell lineage)
+            // fires on UNDERFLOW instead — the N+1th pulse. We model the
+            // W65C22 and follow WDC's figure; any MAME differential must
+            // expect this diff, and a silicon probe is the tiebreaker.
             if (bit === 6 && falling && (this.acr & 0x20)) {
                 this.t2c = (this.t2c - 1) & 0xffff;
                 if (this.t2c === 0 && !this.t2Fired) { this.t2Fired = true; this._setIfr(T2); }
