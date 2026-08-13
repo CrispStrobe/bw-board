@@ -48,6 +48,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRp2040jsAdapter, RP2040_PINS, RAM_START } from '../src/rp2040js-adapter.js';
+import { BoardImpl as BoardImplRef } from '../src/board.js';
+import { registerAllDevices } from '../src/register-all.js';
+registerAllDevices();
 
 const BLINK = new Uint16Array([
   0x2005, 0x4907, 0x6008, 0x2001, 0x0640, 0x4906, 0x6248,
@@ -225,4 +228,27 @@ test('digital input: GP25 follows the board level on GP2 within a slice', () => 
   gp2Level = 0;
   a.advanceNs(100_000);
   assert.equal(lastGp25(), false, 'and back down');
+});
+
+test('the pin join is case-blind: GP15 lights a bench LED wired to gp15', () => {
+  // The exact production failure: adapters speak the datasheet spelling
+  // (GP15), sidecars and the inferred bench speak lowercase (gp15). The
+  // board joins case-blind; neither side needs to know about the other's
+  // spelling. (bw-board's own AVR path had been "fixed" by patching a
+  // vendored copy downstream — which the next re-vendor would destroy.)
+  const b = new BoardImplRef(3.3);
+  b.setNetlist(
+    [{ id: 'MCU', kind: 'mcu', params: {}, terminals: ['gp15'] },
+     { id: 'R1', kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] },
+     { id: 'L1', kind: 'led', params: {}, terminals: ['anode', 'cathode'] },
+     { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] }],
+    [{ id: 'n1', terminals: [{ part: 'MCU', terminal: 'gp15' }, { part: 'R1', terminal: 'a' }] },
+     { id: 'n2', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'L1', terminal: 'anode' }] },
+     { id: 'n3', terminals: [{ part: 'L1', terminal: 'cathode' }, { part: 'GND', terminal: 'gnd' }] }]);
+  b.setPower(true);
+  b.setPin('GP15', 'pushpull', true);
+  assert.ok(b.ledBrightness('L1') > 0.05, 'the LED lights across the case divide');
+  assert.equal(b.readPin('GP15'), 1, 'the read leg joins the same way');
+  b.setPin('GP15', 'pushpull', false);
+  assert.equal(b.ledBrightness('L1'), 0, 'and follows the drive back down');
 });

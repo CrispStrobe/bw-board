@@ -346,7 +346,9 @@ describe('snapshot/restore', () => {
     const snap = board.snapshot();
     board.setPin('P1.0', 'pushpull', false);
 
-    // Snapshot should still have the old state
-    assert.equal(snap.pinStates.get('P1.0').mode, 'quasi');
+    // Snapshot should still have the old state. Keys are canonical
+    // lowercase (the case-blind pin join); spellings live in `.as`.
+    assert.equal(snap.pinStates.get('p1.0').mode, 'quasi');
+    assert.equal(snap.pinStates.get('p1.0').as, 'P1.0');
   });
 });

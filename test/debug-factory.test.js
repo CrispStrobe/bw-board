@@ -309,7 +309,8 @@ describe('createDebugTarget: rp2040js', () => {
 
     // The program actually runs against the attached board.
     result.adapter.advanceNs(100_000);
-    const state = board.pinStates.get('GP25');
+    // The public accessor is case-blind (the raw map keys canonically).
+    const state = board.getPinState('GP25');
     assert.ok(state, 'GP25 reached the board');
     assert.equal(state.mode, 'pushpull');
   });
