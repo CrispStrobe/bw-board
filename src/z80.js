@@ -33,8 +33,8 @@ export class Z80 {
         this.outPort = bus.out || (() => {});
         this.a = 0; this.f = 0; this.b = 0; this.c = 0; this.d = 0; this.e = 0;
         this.h = 0; this.l = 0;
-        this.a_ = 0; this.f_ = 0; this.b_ = 0; this.c_ = 0; this.d_ = 0; this.e_ = 0;
-        this.h_ = 0; this.l_ = 0;
+        /* shadow set (accessed as af_/bc_/de_/hl_ pair views below) */
+        Object.assign(this, { a_: 0, f_: 0, b_: 0, c_: 0, d_: 0, e_: 0, h_: 0, l_: 0 });
         this.ix = 0; this.iy = 0; this.sp = 0; this.pc = 0;
         this.i = 0; this.r = 0; this.wz = 0;
         this.iff1 = 0; this.iff2 = 0; this.im = 0;
@@ -52,8 +52,34 @@ export class Z80 {
     set hl(v) { this.h = (v >> 8) & 0xff; this.l = v & 0xff; }
     get af() { return (this.a << 8) | this.f; }
     set af(v) { this.a = (v >> 8) & 0xff; this.f = v & 0xff; }
+    get af_() { return (this.a_ << 8) | this.f_; }
+    set af_(v) { this.a_ = (v >> 8) & 0xff; this.f_ = v & 0xff; }
+    get bc_() { return (this.b_ << 8) | this.c_; }
+    set bc_(v) { this.b_ = (v >> 8) & 0xff; this.c_ = v & 0xff; }
+    get de_() { return (this.d_ << 8) | this.e_; }
+    set de_(v) { this.d_ = (v >> 8) & 0xff; this.e_ = v & 0xff; }
+    get hl_() { return (this.h_ << 8) | this.l_; }
+    set hl_(v) { this.h_ = (v >> 8) & 0xff; this.l_ = v & 0xff; }
 
     _m1() { this.r = (this.r & 0x80) | ((this.r + 1) & 0x7f); }
+    _push16(v) {
+        this.sp = (this.sp - 1) & 0xffff; this.write(this.sp, (v >> 8) & 0xff);
+        this.sp = (this.sp - 1) & 0xffff; this.write(this.sp, v & 0xff);
+    }
+    _pop16() {
+        const lo = this.read(this.sp); this.sp = (this.sp + 1) & 0xffff;
+        const hi = this.read(this.sp); this.sp = (this.sp + 1) & 0xffff;
+        return lo | (hi << 8);
+    }
+    /** Condition code by index: NZ Z NC C PO PE P M. */
+    _cc(k) {
+        switch (k) {
+            case 0: return !(this.f & FZ); case 1: return !!(this.f & FZ);
+            case 2: return !(this.f & FC); case 3: return !!(this.f & FC);
+            case 4: return !(this.f & FP); case 5: return !!(this.f & FP);
+            case 6: return !(this.f & FS); default: return !!(this.f & FS);
+        }
+    }
     _fetch() { const v = this.read(this.pc); this.pc = (this.pc + 1) & 0xffff; return v; }
     _fetch16() { const lo = this._fetch(); return lo | (this._fetch() << 8); }
     _setF(v) { this.f = v & 0xff; this.q = this.f; }
@@ -233,6 +259,93 @@ export class Z80 {
                 this._setF((this.f & (FS | FZ | FP | FC)) | FH | FN | (this.a & (FX | FY)));
                 return 4;
             case 0x76: this.halted = true; return 4;   // HALT: PC stays past it (suite-verified)
+            // ---- accumulator loads via pairs (MEMPTR rules per the suite) --
+            case 0x02: this.write(this.bc, this.a); this.wz = ((this.bc + 1) & 0xff) | (this.a << 8); return 7;
+            case 0x12: this.write(this.de, this.a); this.wz = ((this.de + 1) & 0xff) | (this.a << 8); return 7;
+            case 0x0a: this.a = this.read(this.bc); this.wz = (this.bc + 1) & 0xffff; return 7;
+            case 0x1a: this.a = this.read(this.de); this.wz = (this.de + 1) & 0xffff; return 7;
+            case 0x22: { const nn = this._fetch16(); this.write(nn, this.l); this.write((nn + 1) & 0xffff, this.h); this.wz = (nn + 1) & 0xffff; return 16; }
+            case 0x2a: { const nn = this._fetch16(); this.l = this.read(nn); this.h = this.read((nn + 1) & 0xffff); this.wz = (nn + 1) & 0xffff; return 16; }
+            case 0x32: { const nn = this._fetch16(); this.write(nn, this.a); this.wz = ((nn + 1) & 0xff) | (this.a << 8); return 13; }
+            case 0x3a: { const nn = this._fetch16(); this.a = this.read(nn); this.wz = (nn + 1) & 0xffff; return 13; }
+            // ---- accumulator rotates (X/Y from the result, S/Z/P kept) ----
+            case 0x07: { const c = this.a >> 7; this.a = ((this.a << 1) | c) & 0xff; this._setF((this.f & (FS | FZ | FP)) | (this.a & (FX | FY)) | c); return 4; }
+            case 0x0f: { const c = this.a & 1; this.a = ((this.a >> 1) | (c << 7)) & 0xff; this._setF((this.f & (FS | FZ | FP)) | (this.a & (FX | FY)) | c); return 4; }
+            case 0x17: { const c = this.a >> 7; this.a = ((this.a << 1) | (this.f & FC)) & 0xff; this._setF((this.f & (FS | FZ | FP)) | (this.a & (FX | FY)) | c); return 4; }
+            case 0x1f: { const c = this.a & 1; this.a = ((this.a >> 1) | ((this.f & FC) << 7)) & 0xff; this._setF((this.f & (FS | FZ | FP)) | (this.a & (FX | FY)) | c); return 4; }
+            case 0x27: { // DAA
+                let corr = 0; let c = this.f & FC;
+                if ((this.f & FH) || (this.a & 0x0f) > 9) corr = 6;
+                if (c || this.a > 0x99) { corr |= 0x60; c = FC; }
+                const before = this.a;
+                this.a = (this.f & FN) ? (this.a - corr) & 0xff : (this.a + corr) & 0xff;
+                this._setF((this.f & FN) | c | (this.a & (FS | FX | FY)) | (this.a === 0 ? FZ : 0)
+                    | PARITY[this.a] | (((before ^ this.a) & 0x10) ? FH : 0));
+                return 4;
+            }
+            // ---- exchanges ------------------------------------------------
+            case 0x08: { const t = this.af; this.af = (this.a_ << 8) | this.f_; this.a_ = t >> 8; this.f_ = t & 0xff; return 4; }
+            case 0xd9: {
+                let t = this.bc; this.bc = (this.b_ << 8) | this.c_; this.b_ = t >> 8; this.c_ = t & 0xff;
+                t = this.de; this.de = (this.d_ << 8) | this.e_; this.d_ = t >> 8; this.e_ = t & 0xff;
+                t = this.hl; this.hl = (this.h_ << 8) | this.l_; this.h_ = t >> 8; this.l_ = t & 0xff;
+                return 4;
+            }
+            case 0xeb: { const t = this.de; this.de = this.hl; this.hl = t; return 4; }
+            case 0xe3: {
+                const lo = this.read(this.sp); const hi = this.read((this.sp + 1) & 0xffff);
+                this.write(this.sp, this.l); this.write((this.sp + 1) & 0xffff, this.h);
+                this.hl = lo | (hi << 8); this.wz = this.hl; return 19;
+            }
+            // ---- relative jumps -------------------------------------------
+            case 0x10: { // DJNZ
+                const d = this._fetch();
+                this.b = (this.b - 1) & 0xff;
+                if (this.b) { this.pc = (this.pc + (d << 24 >> 24)) & 0xffff; this.wz = this.pc; return 13; }
+                return 8;
+            }
+            case 0x18: { const d = this._fetch(); this.pc = (this.pc + (d << 24 >> 24)) & 0xffff; this.wz = this.pc; return 12; }
+            case 0x20: case 0x28: case 0x30: case 0x38: {
+                const d = this._fetch();
+                if (this._cc((op >> 3) & 3)) { this.pc = (this.pc + (d << 24 >> 24)) & 0xffff; this.wz = this.pc; return 12; }
+                return 7;
+            }
+            // ---- absolute jumps / calls / returns -------------------------
+            case 0xc3: this.pc = this._fetch16(); this.wz = this.pc; return 10;
+            case 0xc2: case 0xca: case 0xd2: case 0xda: case 0xe2: case 0xea: case 0xf2: case 0xfa: {
+                const nn = this._fetch16(); this.wz = nn;
+                if (this._cc((op >> 3) & 7)) this.pc = nn;
+                return 10;
+            }
+            case 0xcd: { const nn = this._fetch16(); this._push16(this.pc); this.pc = nn; this.wz = nn; return 17; }
+            case 0xc4: case 0xcc: case 0xd4: case 0xdc: case 0xe4: case 0xec: case 0xf4: case 0xfc: {
+                const nn = this._fetch16(); this.wz = nn;
+                if (this._cc((op >> 3) & 7)) { this._push16(this.pc); this.pc = nn; return 17; }
+                return 10;
+            }
+            case 0xc9: this.pc = this._pop16(); this.wz = this.pc; return 10;
+            case 0xc0: case 0xc8: case 0xd0: case 0xd8: case 0xe0: case 0xe8: case 0xf0: case 0xf8:
+                if (this._cc((op >> 3) & 7)) { this.pc = this._pop16(); this.wz = this.pc; return 11; }
+                return 5;
+            case 0xc7: case 0xcf: case 0xd7: case 0xdf: case 0xe7: case 0xef: case 0xf7: case 0xff:
+                this._push16(this.pc); this.pc = op & 0x38; this.wz = this.pc; return 11;
+            case 0xe9: this.pc = this.hl; return 4;
+            // ---- stack ----------------------------------------------------
+            case 0xc5: this._push16(this.bc); return 11;
+            case 0xd5: this._push16(this.de); return 11;
+            case 0xe5: this._push16(this.hl); return 11;
+            case 0xf5: this._push16(this.af); return 11;
+            case 0xc1: this.bc = this._pop16(); return 10;
+            case 0xd1: this.de = this._pop16(); return 10;
+            case 0xe1: this.hl = this._pop16(); return 10;
+            case 0xf1: this.af = this._pop16(); return 10;
+            case 0xf9: this.sp = this.hl; return 6;
+            // ---- I/O ------------------------------------------------------
+            case 0xd3: { const n = this._fetch(); const port = n | (this.a << 8); this.outPort(port, this.a); this.wz = ((n + 1) & 0xff) | (this.a << 8); return 11; }
+            case 0xdb: { const n = this._fetch(); const port = n | (this.a << 8); this.a = this.inPort(port) & 0xff; this.wz = (port + 1) & 0xffff; return 11; }
+            // ---- interrupt enables ---------------------------------------
+            case 0xf3: this.iff1 = 0; this.iff2 = 0; return 4;
+            case 0xfb: this.iff1 = 1; this.iff2 = 1; this.eiLatch = 1; return 4;
             default:
                 throw new Error(`z80: opcode ${op.toString(16).padStart(2, '0')} not yet implemented`);
         }

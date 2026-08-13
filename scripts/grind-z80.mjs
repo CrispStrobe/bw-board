@@ -33,7 +33,16 @@ const REGS = (process.env.FIELDS || 'pc,sp,a,b,c,d,e,f,h,l,i,r,wz,ix,iy,af_,bc_,
     .split(',');
 
 const mem = new Uint8Array(65536);
-const cpu = new Z80({ read: (a) => mem[a & 0xffff], write: (a, v) => { mem[a & 0xffff] = v & 0xff; } });
+let ports = [];
+const cpu = new Z80({
+    read: (a) => mem[a & 0xffff],
+    write: (a, v) => { mem[a & 0xffff] = v & 0xff; },
+    in: (port) => {
+        const p = ports.find((x) => x[0] === port && x[2] === 'r');
+        return p ? p[1] : 0xff;
+    },
+    out: () => {},
+});
 
 const load = (t) => {
     for (const [addr, val] of t.initial.ram) mem[addr] = val;
@@ -67,6 +76,7 @@ for (const file of files) {
     let threw = null;
     for (const t of tests) {
         load(t);
+        ports = t.ports || [];
         let n;
         try { n = cpu.step(); } catch (e) { threw = e.message; wipe(t); break; }
         const diffs = [];
