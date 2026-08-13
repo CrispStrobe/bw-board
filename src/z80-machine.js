@@ -30,6 +30,19 @@ export const SEARLE = Object.freeze({
     ],
 });
 
+/** CP/M 64K preset — all RAM (CP/M needs to write page zero at $0000),
+ *  MC6850 ACIA at $80/$81 for console, same clock as the SEARLE board.
+ *  Disk I/O uses ports $10–$15 handled by the host (not modeled here). */
+export const CPM64K = Object.freeze({
+    clockHz: 7_372_800,
+    regions: [
+        { kind: 'ram', start: 0x0000, end: 0xffff },
+    ],
+    ports: [
+        { kind: 'acia6850', name: 'acia1', at: 0x80 },
+    ],
+});
+
 export class Z80Machine {
     /** @param {typeof SEARLE} [config]
      *  @param {{ onSerial?: (byte:number, tMs:number)=>void }} [hooks] */
