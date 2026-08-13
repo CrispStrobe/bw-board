@@ -113,6 +113,223 @@ export class Z80 {
         return isHL ? 15 : 8;
     }
 
+    _sbc16(v) {
+        const a = this.hl;
+        const c = this.f & FC;
+        const r = a - v - c;
+        const rr = r & 0xffff;
+        this.wz = (a + 1) & 0xffff;
+        this._setF(((rr >> 8) & (FS | FX | FY)) | (rr === 0 ? FZ : 0) | FN
+            | (((a ^ v ^ rr) & 0x1000) ? FH : 0)
+            | (((a ^ v) & (a ^ rr) & 0x8000) ? FP : 0)
+            | (r < 0 ? FC : 0));
+        this.hl = rr;
+    }
+
+    _adc16(v) {
+        const a = this.hl;
+        const c = this.f & FC;
+        const r = a + v + c;
+        const rr = r & 0xffff;
+        this.wz = (a + 1) & 0xffff;
+        this._setF(((rr >> 8) & (FS | FX | FY)) | (rr === 0 ? FZ : 0)
+            | (((a ^ v ^ rr) & 0x1000) ? FH : 0)
+            | ((~(a ^ v) & (a ^ rr) & 0x8000) ? FP : 0)
+            | (r > 0xffff ? FC : 0));
+        this.hl = rr;
+    }
+
+    _ed() {
+        this._m1();
+        const op = this._fetch();
+        const pair = (k) => k === 0 ? this.bc : k === 1 ? this.de : k === 2 ? this.hl : this.sp;
+        const setPair = (k, v) => { if (k === 0) this.bc = v; else if (k === 1) this.de = v; else if (k === 2) this.hl = v; else this.sp = v; };
+        // IN r,(C) / OUT (C),r rows.
+        if (op >= 0x40 && op <= 0x7f) {
+            const k = (op >> 3) & 7;
+            switch (op & 7) {
+                case 0: { // IN r,(C) — r=6 sets flags only
+                    const v = this.inPort(this.bc) & 0xff;
+                    this.wz = (this.bc + 1) & 0xffff;
+                    if (k !== 6) this._setR(k, v);
+                    this._setF((this.f & FC) | (v & (FS | FX | FY)) | (v === 0 ? FZ : 0) | PARITY[v]);
+                    return 12;
+                }
+                case 1: // OUT (C),r — r=6 outputs 0
+                    this.outPort(this.bc, k === 6 ? 0 : this._getR(k));
+                    this.wz = (this.bc + 1) & 0xffff;
+                    return 12;
+                case 2:
+                    if (op & 8) this._adc16(pair(k >> 1)); else this._sbc16(pair(k >> 1));
+                    return 15;
+                case 3: {
+                    const nn = this._fetch16();
+                    if (op & 8) { setPair(k >> 1, this.read(nn) | (this.read((nn + 1) & 0xffff) << 8)); }
+                    else { const v = pair(k >> 1); this.write(nn, v & 0xff); this.write((nn + 1) & 0xffff, v >> 8); }
+                    this.wz = (nn + 1) & 0xffff;
+                    return 20;
+                }
+                case 4: { // NEG (all mirrors)
+                    const v = this.a;
+                    this.a = 0;
+                    this._sub8(v, false, false);
+                    return 8;
+                }
+                case 5: // RETN / RETI (all mirrors): IFF1 <- IFF2
+                    this.pc = this._pop16();
+                    this.wz = this.pc;
+                    this.iff1 = this.iff2;
+                    return 14;
+                case 6: // IM: pattern 0,0,1,2 by bits 4-3
+                    this.im = [0, 0, 1, 2][k & 3];
+                    return 8;
+                default: // 7: LD I,A / LD R,A / LD A,I / LD A,R / RRD / RLD / NONI
+                    switch (op) {
+                        case 0x47: this.i = this.a; return 9;
+                        case 0x4f: this.r = this.a; return 9;
+                        case 0x57: case 0x5f: {
+                            this.a = op === 0x57 ? this.i : this.r;
+                            this._setF((this.f & FC) | (this.a & (FS | FX | FY))
+                                | (this.a === 0 ? FZ : 0) | (this.iff2 ? FP : 0));
+                            return 9;
+                        }
+                        case 0x67: { // RRD
+                            const m = this.read(this.hl);
+                            this.write(this.hl, ((this.a << 4) | (m >> 4)) & 0xff);
+                            this.a = (this.a & 0xf0) | (m & 0x0f);
+                            this.wz = (this.hl + 1) & 0xffff;
+                            this._setF((this.f & FC) | (this.a & (FS | FX | FY))
+                                | (this.a === 0 ? FZ : 0) | PARITY[this.a]);
+                            return 18;
+                        }
+                        case 0x6f: { // RLD
+                            const m = this.read(this.hl);
+                            this.write(this.hl, ((m << 4) | (this.a & 0x0f)) & 0xff);
+                            this.a = (this.a & 0xf0) | (m >> 4);
+                            this.wz = (this.hl + 1) & 0xffff;
+                            this._setF((this.f & FC) | (this.a & (FS | FX | FY))
+                                | (this.a === 0 ? FZ : 0) | PARITY[this.a]);
+                            return 18;
+                        }
+                        default: return 8;   // ED 77/7F: NONI
+                    }
+            }
+        }
+        // Block instructions.
+        if (op >= 0xa0 && op <= 0xbb && (op & 4) === 0) {
+            const dir = (op & 8) ? -1 : 1;      // LDI/LDD by bit 3
+            const rep = op >= 0xb0;
+            switch (op & 3) {
+                case 0: { // LDI/LDD/LDIR/LDDR
+                    const v = this.read(this.hl);
+                    this.write(this.de, v);
+                    this.hl = (this.hl + dir) & 0xffff;
+                    this.de = (this.de + dir) & 0xffff;
+                    this.bc = (this.bc - 1) & 0xffff;
+                    const n = (this.a + v) & 0xff;
+                    let f = (this.f & (FS | FZ | FC)) | (this.bc ? FP : 0)
+                        | ((n & 2) ? FY : 0) | ((n & 8) ? FX : 0);
+                    if (rep && this.bc) {
+                        this.pc = (this.pc - 2) & 0xffff;
+                        this.wz = (this.pc + 1) & 0xffff;
+                        // Interrupted repeat: X/Y come from PC's high byte.
+                        f = (f & ~(FX | FY)) | ((this.pc >> 8) & (FX | FY));
+                        this._setF(f);
+                        return 21;
+                    }
+                    this._setF(f);
+                    return 16;
+                }
+                case 1: { // CPI/CPD/CPIR/CPDR
+                    const v = this.read(this.hl);
+                    const r = (this.a - v) & 0xff;
+                    const hc = ((this.a ^ v ^ r) & 0x10) ? 1 : 0;
+                    this.hl = (this.hl + dir) & 0xffff;
+                    this.bc = (this.bc - 1) & 0xffff;
+                    this.wz = (this.wz + dir) & 0xffff;
+                    const n = (r - hc) & 0xff;
+                    let f = (this.f & FC) | FN | (r & FS) | (r === 0 ? FZ : 0)
+                        | (hc ? FH : 0) | (this.bc ? FP : 0)
+                        | ((n & 2) ? FY : 0) | ((n & 8) ? FX : 0);
+                    if (rep && this.bc && r !== 0) {
+                        this.pc = (this.pc - 2) & 0xffff;
+                        this.wz = (this.pc + 1) & 0xffff;
+                        f = (f & ~(FX | FY)) | ((this.pc >> 8) & (FX | FY));
+                        this._setF(f);
+                        return 21;
+                    }
+                    this._setF(f);
+                    return 16;
+                }
+                case 2: { // INI/IND/INIR/INDR
+                    const v = this.inPort(this.bc) & 0xff;
+                    this.wz = (this.bc + dir) & 0xffff;
+                    this.write(this.hl, v);
+                    this.hl = (this.hl + dir) & 0xffff;
+                    this.b = (this.b - 1) & 0xff;
+                    const k = v + ((this.c + dir) & 0xff);
+                    let f = (this.b & (FS | FX | FY)) | (this.b === 0 ? FZ : 0)
+                        | ((v & 0x80) ? FN : 0) | (k > 0xff ? (FH | FC) : 0)
+                        | PARITY[(k & 7) ^ this.b];
+                    if (rep && this.b) {
+                        this.pc = (this.pc - 2) & 0xffff;
+                        f = this._ioRepeatFlags(f, v);
+                        this._setF(f);
+                        return 21;
+                    }
+                    this._setF(f);
+                    return 16;
+                }
+                default: { // OUTI/OUTD/OTIR/OTDR
+                    const v = this.read(this.hl);
+                    this.hl = (this.hl + dir) & 0xffff;
+                    this.b = (this.b - 1) & 0xff;
+                    this.outPort((this.b << 8) | this.c, v);
+                    this.wz = (((this.b << 8) | this.c) + dir) & 0xffff;
+                    const k = v + this.l;
+                    let f = (this.b & (FS | FX | FY)) | (this.b === 0 ? FZ : 0)
+                        | ((v & 0x80) ? FN : 0) | (k > 0xff ? (FH | FC) : 0)
+                        | PARITY[(k & 7) ^ this.b];
+                    if (rep && this.b) {
+                        this.pc = (this.pc - 2) & 0xffff;
+                        f = this._ioRepeatFlags(f, v);
+                        this._setF(f);
+                        return 21;
+                    }
+                    this._setF(f);
+                    return 16;
+                }
+            }
+        }
+        return 8;   // every other ED opcode: NONI
+    }
+
+    /** The interrupted-repeat flag corrections for INxR/OTxR (the behavior
+     *  nailed down by the 2021-era block-flags research the suite encodes):
+     *  X/Y from PC high; when the transfer carried, H tells whether B's low
+     *  nibble borrows/carries on the NEXT step and P flips by the parity
+     *  delta of B±1 vs B (direction by the N flag). */
+    _ioRepeatFlags(f, v) {
+        // Derived from the vectors themselves and validated 3,990/3,990
+        // before landing: WZ = pc+1 (overriding the bc-based one); X/Y from
+        // PC high; P = baseP ^ 1 ^ parity((B+adj)&7) with adj = carry ?
+        // (N ? -1 : +1) : 0; H only under carry, testing B's low nibble at
+        // the borrow/carry edge for the NEXT step.
+        this.wz = (this.pc + 1) & 0xffff;
+        f = (f & ~(FX | FY)) | ((this.pc >> 8) & (FX | FY));
+        const carry = (f & FC) !== 0;
+        const adj = carry ? ((v & 0x80) ? -1 : 1) : 0;
+        f ^= FP ^ PARITY[(this.b + adj) & 7];
+        if (carry) {
+            f = (f & ~FH) | (((v & 0x80)
+                ? (this.b & 0x0f) === 0x00
+                : (this.b & 0x0f) === 0x0f) ? FH : 0);
+        } else {
+            f &= ~FH;
+        }
+        return f;
+    }
+
     /** Condition code by index: NZ Z NC C PO PE P M. */
     _cc(k) {
         switch (k) {
@@ -389,6 +606,7 @@ export class Z80 {
             case 0xf3: this.iff1 = 0; this.iff2 = 0; return 4;
             case 0xfb: this.iff1 = 1; this.iff2 = 1; this.eiLatch = 1; return 4;
             case 0xcb: return this._cb();
+            case 0xed: return this._ed();
             default:
                 throw new Error(`z80: opcode ${op.toString(16).padStart(2, '0')} not yet implemented`);
         }
