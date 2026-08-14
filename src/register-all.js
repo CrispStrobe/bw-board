@@ -29,6 +29,7 @@ import { registerTier1Parts } from './devices/tier1-parts.js';
 import { registerI2CParts } from './devices/i2c-parts.js';
 import { registerBoardKinds } from './devices/board-kinds.js';
 import { registerHD44780 } from './devices/hd44780.js';
+import { registerMatrix8x8 } from './devices/matrix8x8.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -50,4 +51,5 @@ export function registerAllDevices() {
   registerI2CParts();
   registerBoardKinds();
   registerHD44780();
+  registerMatrix8x8();
 }

@@ -295,9 +295,155 @@ export const ATTINY85 = {
   usart: null,  // no USART on ATtiny85
 };
 
+// ─── ATtiny88 (Blinkenrocket congress badge) ──────────────────────────────
+// 28-pin, 8 KB flash, 512 B SRAM, 64 B internal EEPROM, 8 MHz internal RC.
+// Ports B/C/D at standard ATmega addresses; Port A at 0x2C–0x2E.
+// Timer0 is a simplified 8-bit counter (CS bits in a single TCCR0A register,
+// no separate TCCR0B).  We map TCCRB → 0x45 (the firmware's TCCR0A) so
+// avr8js reads the prescaler bits correctly, and point TCCRA at an unused
+// address (0x62) the firmware never touches.
+// Interrupt vectors are 1-word: address = vectorNum − 1.
+
+/** @type {Record<string, {port?: string, bit?: number, analogOnly?: boolean, adcChannel?: number}>} */
+export const ATTINY88_PINS = {
+  // Port B: PB0–PB7 (display columns on blinkenrocket)
+  PB0: { port: 'B', bit: 0 }, PB1: { port: 'B', bit: 1 },
+  PB2: { port: 'B', bit: 2 }, PB3: { port: 'B', bit: 3 },
+  PB4: { port: 'B', bit: 4 }, PB5: { port: 'B', bit: 5 },
+  PB6: { port: 'B', bit: 6 }, PB7: { port: 'B', bit: 7 },
+  // Port C: PC0–PC7 (ADC0–5 on PC0–5; PC3=BTN_RIGHT, PC7=BTN_LEFT)
+  PC0: { port: 'C', bit: 0 }, PC1: { port: 'C', bit: 1 },
+  PC2: { port: 'C', bit: 2 }, PC3: { port: 'C', bit: 3 },
+  PC4: { port: 'C', bit: 4 }, PC5: { port: 'C', bit: 5 },
+  PC6: { port: 'C', bit: 6 }, PC7: { port: 'C', bit: 7 },
+  // Port D: PD0–PD7 (display rows on blinkenrocket)
+  PD0: { port: 'D', bit: 0 }, PD1: { port: 'D', bit: 1 },
+  PD2: { port: 'D', bit: 2 }, PD3: { port: 'D', bit: 3 },
+  PD4: { port: 'D', bit: 4 }, PD5: { port: 'D', bit: 5 },
+  PD6: { port: 'D', bit: 6 }, PD7: { port: 'D', bit: 7 },
+  // Port A: PA0–PA3 (PA0=modem input on blinkenrocket)
+  PA0: { port: 'A', bit: 0 }, PA1: { port: 'A', bit: 1 },
+  PA2: { port: 'A', bit: 2 }, PA3: { port: 'A', bit: 3 },
+  // Analog-only channels
+  A6: { analogOnly: true, adcChannel: 6 },
+  A7: { analogOnly: true, adcChannel: 7 },
+};
+
+// Port A at ATtiny88-specific addresses (not the ATmega2560 portAConfig)
+const attiny88PortAConfig = {
+  PIN: 0x2C, DDR: 0x2D, PORT: 0x2E,
+  externalInterrupts: [],
+};
+
+const ATTINY88_PORTS = {
+  A: attiny88PortAConfig,
+  B: portBConfig,  // same addresses as ATmega328P
+  C: portCConfig,
+  D: portDConfig,
+};
+
+// Timer0 — simplified 8-bit counter.
+// TCCRA → 0x62 (unused address; firmware never writes here, so WGM/COM stay 0).
+// TCCRB → 0x45 (ATtiny88's TCCR0A, which contains CS00/CS01/CS02).
+// Overflow rate is identical in normal and fast-PWM modes (both overflow at
+// 0xFF), so if something else writes 0x62 by accident the timer still works.
+// No OC0A/OC0B output compare pins on ATtiny88.
+const attiny88Timer0 = {
+  bits: 8, captureInterrupt: 0,
+  compAInterrupt: 0x0C,  // TIMER0_COMPA, vect_num 12
+  compBInterrupt: 0x0D,  // TIMER0_COMPB, vect_num 13
+  compCInterrupt: 0,
+  ovfInterrupt: 0x0E,    // TIMER0_OVF, vect_num 14
+  TIFR: 0x35, OCRA: 0x47, OCRB: 0x48, OCRC: 0, ICR: 0,
+  TCNT: 0x46,
+  TCCRA: 0x62,  // unused data address — keeps WGM/COM at 0
+  TCCRB: 0x45,  // ATtiny88's TCCR0A (contains CS bits)
+  TCCRC: 0,
+  TIMSK: 0x6E,
+  dividers: timer01Dividers,
+  compPortA: 0, compPinA: 0,  // no OC0A output
+  compPortB: 0, compPinB: 0,  // no OC0B output
+  compPortC: 0, compPinC: 0,
+  externalClockPort: 0, externalClockPin: 0,
+  TOV: 1, OCFA: 2, OCFB: 4, OCFC: 0,
+  TOIE: 1, OCIEA: 2, OCIEB: 4, OCIEC: 0,
+};
+
+// Timer1 — standard 16-bit timer, same register addresses as ATmega328P.
+const attiny88Timer1 = {
+  bits: 16,
+  captureInterrupt: 0x08,  // TIMER1_CAPT, vect_num 8
+  compAInterrupt: 0x09,    // TIMER1_COMPA, vect_num 9
+  compBInterrupt: 0x0A,    // TIMER1_COMPB, vect_num 10
+  compCInterrupt: 0,       // no OC1C
+  ovfInterrupt: 0x0B,      // TIMER1_OVF, vect_num 11
+  TIFR: 0x36, OCRA: 0x88, OCRB: 0x8A, OCRC: 0, ICR: 0x86,
+  TCNT: 0x84, TCCRA: 0x80, TCCRB: 0x81, TCCRC: 0x82,
+  TIMSK: 0x6F,
+  dividers: timer01Dividers,
+  compPortA: 0, compPinA: 0,
+  compPortB: 0, compPinB: 0,
+  compPortC: 0, compPinC: 0,
+  externalClockPort: 0, externalClockPin: 0,
+  TOV: 1, OCFA: 2, OCFB: 4, OCFC: 0,
+  TOIE: 1, OCIEA: 2, OCIEB: 4, OCIEC: 0,
+};
+
+const ATTINY88_TIMERS = [attiny88Timer0, attiny88Timer1];
+
+// ADC: 8 channels, same register addresses as ATmega328P.
+const ATTINY88_ADC = {
+  ADMUX: 0x7C, ADCSRA: 0x7A, ADCSRB: 0x7B, ADCL: 0x78, ADCH: 0x79,
+  DIDR0: 0x7E, adcInterrupt: 0x10,  // ADC, vect_num 16
+  numChannels: 8, muxInputMask: 0x0F,
+  adcReferences: [1/*AREF*/, 0/*AVCC*/, 4/*Reserved*/, 2/*Internal1V1*/],
+  muxChannels: Object.fromEntries(
+    [...Array(8)].map((_, i) => [i, { type: 0, channel: i }])
+  ),
+};
+
+// ADC channel → pin name (ADC0–5 = PC0–5, ADC6–7 = analog only)
+const ATTINY88_ADC_MAP = {
+  0: 'PC0', 1: 'PC1', 2: 'PC2', 3: 'PC3',
+  4: 'PC4', 5: 'PC5', 6: 'A6', 7: 'A7',
+};
+
+// Internal EEPROM: 64 bytes, same register addresses as avr8js defaults
+// except the EE_READY interrupt vector and timing at 8 MHz.
+export const ATTINY88_EEPROM = {
+  eepromReadyInterrupt: 0x11,  // EE_READY, vect_num 17
+  EECR: 0x3F, EEDR: 0x40, EEARL: 0x41, EEARH: 0x42,
+  eraseCycles: 14400,   // 1.8 ms at 8 MHz
+  writeCycles: 14400,
+};
+
+// TWI register addresses for the stub peripheral.
+export const ATTINY88_TWI = {
+  TWBR: 0xB8, TWSR: 0xB9, TWAR: 0xBA,
+  TWDR: 0xBB, TWCR: 0xBC, TWAMR: 0xBD,
+};
+
+export const ATTINY88 = {
+  name: 'ATtiny88',
+  flashWords: 4096,     // 8 KB = 4K words
+  sramBytes: 512,
+  eepromBytes: 64,
+  clockHz: 8_000_000,   // 8 MHz internal RC
+  vcc: 5.0,
+  pins: ATTINY88_PINS,
+  ports: ATTINY88_PORTS,
+  timers: ATTINY88_TIMERS,
+  adc: ATTINY88_ADC,
+  adcChannelToPin: ATTINY88_ADC_MAP,
+  usart: null,  // no USART
+  eeprom: ATTINY88_EEPROM,
+  twi: ATTINY88_TWI,
+};
+
 /** Lookup by name string, case-insensitive. */
 export const CHIPS = {
   atmega328p: ATMEGA328P,
   atmega2560: ATMEGA2560,
   attiny85: ATTINY85,
+  attiny88: ATTINY88,
 };
