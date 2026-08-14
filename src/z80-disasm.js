@@ -24,18 +24,29 @@ const BLOCK = {
     0xb8: 'LDDR', 0xb9: 'CPDR', 0xba: 'INDR', 0xbb: 'OTDR',
 };
 
+/** Well-known CP/M page-zero entry points — useful labels even for
+ *  symbol-less binaries like BBCBASIC.COM. */
+export const CPM_LABELS = new Map([[0x0000, 'WBOOT'], [0x0005, 'BDOS'], [0x0100, 'TPA']]);
+
 /**
  * @param {(a:number)=>number} read @param {number} pc
+ * @param {{ labels?: Map<number,string> }} [opts] — addresses render as
+ *   their label (`CALL BDOS` instead of `CALL $0005`) when one is known.
  * @returns {{ text: string, bytes: number[], length: number }}
  */
-export function disasmZ80(read, pc) {
+export function disasmZ80(read, pc, opts = {}) {
     const bytes = [];
     let i = 0;
     const next = () => { const b = read((pc + i) & 0xffff) & 0xff; bytes.push(b); i++; return b; };
     const n8 = () => `$${h2(next())}`;
     const n16 = () => { const lo = next(); const hi = next(); return `$${h4(lo | (hi << 8))}`; };
     const rel = () => { const d = next(); return `$${h4((pc + i + (d << 24 >> 24)) & 0xffff)}`; };
-    const done = (text) => ({ text, bytes, length: i });
+    const done = (text) => {
+        if (opts.labels) {
+            text = text.replace(/\$([0-9A-F]{4})/g, (m0, hex) => opts.labels.get(parseInt(hex, 16)) ?? m0);
+        }
+        return { text, bytes, length: i };
+    };
 
     let ixMode = null;       // 'IX' | 'IY'
     let op = next();

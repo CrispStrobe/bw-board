@@ -98,20 +98,52 @@ const TABLE = new Array(256);
  * Disassemble one instruction.
  * @param {(a:number)=>number} read
  * @param {number} pc
+ * @param {{ labels?: Map<number,string> }} [opts] — addresses render as
+ *   their label (`JSR reset` instead of `JSR $8000`) when one is known.
  * @returns {{ text: string, bytes: number[], length: number }}
  */
-export function disasm6502(read, pc) {
+export function disasm6502(read, pc, opts = {}) {
     const op = read(pc) & 0xff;
     const [mn, mode] = TABLE[op];
     const [n, fmt] = MODES[mode];
     const operands = [];
     for (let i = 0; i < n; i++) operands.push(read((pc + 1 + i) & 0xffff) & 0xff);
-    const arg = fmt(operands, pc);
+    let arg = fmt(operands, pc);
+    if (opts.labels && arg) {
+        arg = arg.replace(/\$([0-9A-F]{4})/g, (m0, hex) => opts.labels.get(parseInt(hex, 16)) ?? m0);
+    }
     return {
         text: arg ? `${mn} ${arg}` : mn,
         bytes: [op, ...operands],
         length: 1 + n,
     };
+}
+
+/**
+ * Parse ld65's VICE label file (`ld65 -Ln labels.txt`) into the pieces the
+ * debugger wants: a labels map for the disassembler, and — when the @bw
+ * naming convention is present (`_bw_task0_state` etc. from generateC via
+ * cc65) — the scheduler-symbols object m6502-debug's yield breakpoints,
+ * block stepping and position() consume.
+ * Line shape: `al 00F00A .some_label`
+ * @param {string} text
+ * @returns {{ labels: Map<number,string>, scheduler: { tasks: Array<{name: string, state: {addr: number, size: number}}> } }}
+ */
+export function symbolsFromLd65Labels(text) {
+    const labels = new Map();
+    const tasks = [];
+    for (const line of String(text).split(/\r?\n/)) {
+        const m = line.match(/^al\s+([0-9A-Fa-f]+)\s+\.(.+)$/);
+        if (!m) continue;
+        const addr = parseInt(m[1], 16) & 0xffff;
+        const name = m[2].replace(/^_/, '');
+        if (!labels.has(addr)) labels.set(addr, name);
+        const t = name.match(/^(bw_task\d+)_state$/);
+        // The scheduler state vars are `unsigned int` on cc65: 2 bytes.
+        if (t) tasks.push({ name: t[1], state: { addr, size: 2 } });
+    }
+    tasks.sort((a, b) => a.name.localeCompare(b.name));
+    return { labels, scheduler: { tasks } };
 }
 
 export default disasm6502;

@@ -58,3 +58,24 @@ test('lengths ground against the vector suite pc-deltas (every opcode)', (t) => 
     }
     assert.ok(checked >= 200, `${checked} opcodes length-checked`);
 });
+
+test('labels: known addresses render by name; ld65 label files parse to symbols', async () => {
+    const { symbolsFromLd65Labels } = await import('../src/w65c02-disasm.js');
+    const syms = symbolsFromLd65Labels([
+        'al 008000 .reset',
+        'al 000204 ._bw_task0_state',
+        'al 000206 ._bw_task1_state',
+        'al 00F00A ._main',
+    ].join('\n'));
+    assert.equal(syms.labels.get(0x8000), 'reset');
+    assert.deepEqual(syms.scheduler.tasks.map((t) => t.name), ['bw_task0', 'bw_task1']);
+    assert.deepEqual(syms.scheduler.tasks[0].state, { addr: 0x0204, size: 2 });
+
+    const mem = [0x20, 0x00, 0x80];       // JSR $8000
+    const r = disasm6502((a) => mem[a] ?? 0, 0, { labels: syms.labels });
+    assert.equal(r.text, 'JSR reset');
+
+    const { disasmZ80, CPM_LABELS } = await import('../src/z80-disasm.js');
+    const z = disasmZ80((a) => [0xcd, 0x05, 0x00][a] ?? 0, 0, { labels: CPM_LABELS });
+    assert.equal(z.text, 'CALL BDOS', 'symbol-less CP/M binaries still get entry-point names');
+});
