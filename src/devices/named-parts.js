@@ -80,6 +80,28 @@ export function registerNamedParts() {
     },
   });
 
+  // The rest of the 78xx/AMS1117 families are the same regulator with
+  // different setpoints — one factory, datasheet numbers only.
+  const regulator = (kind, vOut, dropout, rOut) => registerDevice(kind, {
+    terminals: ['in', 'out', 'gnd'],
+    init() {
+      return { drives: { out: { vTh: vOut, rTh: rOut } }, _vOut: vOut };
+    },
+    stamp(ctx) { ctx.conductance('in', 'gnd', 1 / R_INPUT); },
+    update(part, state, read) {
+      const vIn = read('in') - read('gnd');
+      const actual = Math.min(vOut, Math.max(0, vIn - dropout));
+      if (Math.abs(actual - state._vOut) < 0.01) return false;
+      state._vOut = actual;
+      state.drives.out = { vTh: read('gnd') + actual, rTh: rOut };
+      return true;
+    },
+  });
+  regulator('lm7809', 9.0, 2.0, 1.0);
+  regulator('lm7812', 12.0, 2.0, 1.0);
+  regulator('ams1117_50', 5.0, 1.1, 0.5);
+  regulator('ams1117_33', 3.3, 1.1, 0.5);
+
   // ─── Gas sensor (MQ-series style) ────────────────────────────────
   // Resistance decreases with gas concentration.
   // Control param: gas = 0..1 (concentration).
