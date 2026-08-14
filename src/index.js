@@ -42,6 +42,9 @@ export { registerI2CParts } from './devices/i2c-parts.js';
 export { registerBoardKinds } from './devices/board-kinds.js';
 export { registerHD44780, createHD44780, hd44780Write8, hd44780Write4, hd44780ReadBF } from './devices/hd44780.js';
 export { registerAllDevices } from './register-all.js';
+export { registerAudioParts } from './devices/audio-parts.js';
+export { registerMPU6050 } from './devices/mpu6050.js';
+export { registerSSD1306, ssd1306Pixel } from './devices/ssd1306.js';
 export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from './current-ratings.js';
 export { R_INPUT_PULLUP } from './pin-model.js';
 // pin-functions.js is NODE-ONLY (it reads the bw-parts sibling checkout via
