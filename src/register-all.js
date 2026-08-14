@@ -30,6 +30,7 @@ import { registerI2CParts } from './devices/i2c-parts.js';
 import { registerBoardKinds } from './devices/board-kinds.js';
 import { registerHD44780 } from './devices/hd44780.js';
 import { registerMatrix8x8 } from './devices/matrix8x8.js';
+import { registerDallasParts } from './devices/dallas-parts.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -52,4 +53,5 @@ export function registerAllDevices() {
   registerBoardKinds();
   registerHD44780();
   registerMatrix8x8();
+  registerDallasParts();
 }
