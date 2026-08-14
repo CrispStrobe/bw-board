@@ -1,0 +1,72 @@
+CP/M 2.2 — Provenance and License
+====================================
+
+Source of CCP+BDOS binary (cpm22-64k.bin)
+-----------------------------------------
+
+Assembled from the Z80 disassembly of CP/M 2.2 by Clark A. Calkins
+(reconstructed from memory image, February 27, 1981), obtained from the
+Unofficial CP/M Website at https://www.cpm.z80.de/ (file cpm2-asm.zip).
+
+The only modification: MEM EQU changed from 62 to 64 (64K system), and
+four 8080-dialect "A,M" operands changed to the Z80 equivalent "A,(HL)".
+Assembled with pasmo 0.5.3.
+
+The original CPM.SYS binary (cpm22-b.zip, Xerox 1800 distribution) was
+also obtained from the same site as a cross-check.
+
+BIOS (bios.asm / bios.bin)
+--------------------------
+
+Written for the bw-board project.  MIT license.  No Digital Research code.
+Console: MC6850 ACIA at ports $80/$81.
+Disk: host-side RAM-disk controller via ports $10–$15.
+
+
+License — 2022 clarification by Bryan Sparks (DRDOS, Inc.)
+==========================================================
+
+From: Bryan Sparks <*****@drycanyon.com>    Thu, Jul 7, 2022, 8:04 AM
+To: Scott Chapman <******@mischko.com>
+
+"Let this paragraph represent a right to use, distribute, modify, enhance,
+and otherwise make available in a nonexclusive manner CP/M and its
+derivatives. This right comes from the company, DRDOS, Inc.'s purchase of
+Digital Research, the company and all assets, dating back to the mid-1990's.
+DRDOS, Inc. and I, Bryan Sparks, President of DRDOS, Inc. as its
+representative, is the owner of CP/M and the successor in interest of
+Digital Research assets."
+
+This supersedes the 2001 Lineo/Caldera grant whose "as part of the
+Unofficial CP/M Web Site" clause was ambiguous about redistribution.
+The 2022 wording removes that constraint.
+
+
+Previous license (2001, Lineo, Inc.)
+====================================
+
+From: Bryan Sparks, CEO, Lineo, Inc.
+Date: Fri, 19 Oct 2001
+
+"Let this email represent a right to use, distribute, modify, enhance and
+otherwise make available in a nonexclusive manner the CP/M technology as
+part of the 'Unofficial CP/M Web Site' with its maintainers, developers and
+community.
+
+I further state that as Chairman and CEO of Lineo, Inc. that I have the
+right to do offer such a license.
+
+Lineo and its affiliates, partners and employees make no warranties of any
+kind with regards to this technology and its usefulness or lack thereof."
+
+
+NOTICE chain
+============
+
+The CCP and BDOS binaries are distributable under the 2022 Bryan Sparks /
+DRDOS, Inc. grant above.  They contain "Copyright (C) 1979, Digital
+Research" in their embedded strings.  The BIOS is our own work (MIT).
+
+For the brickwright-lite NOTICE file: CP/M 2.2 CCP+BDOS, originally
+Copyright (C) 1979 Digital Research, redistributed under the nonexclusive
+grant from DRDOS, Inc. (Bryan Sparks, 7 July 2022).
