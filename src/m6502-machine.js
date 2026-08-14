@@ -19,12 +19,16 @@
 import { W65C02 } from './w65c02.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
+import { NS16C550 } from './ns16c550.js';
 
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz phi2 frequency
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions inclusive ranges
- * @property {Array<{kind: 'via'|'acia', name: string, at: number}>} chips base addresses
+ * @property {Array<{kind: 'via'|'acia'|'uart16550', name: string, at: number, xtal?: number}>} chips
+ *   base addresses; xtal overrides a uart16550's input clock (defaults to
+ *   the machine clock — the KiT wiring — since a breadboard that gives the
+ *   UART its own can states it explicitly).
  */
 
 /** The canonical breadboard-computer preset: RAM low, VIA at $6000, ACIA at $5000, ROM high. */
@@ -64,6 +68,54 @@ export const HB6502 = Object.freeze({
     ],
 });
 
+/**
+ * Garth Wilson's 6502 primer machine (wilsonminesco.com/6502primer) — the
+ * design Ben Eater credits as his ancestor, so this preset is EATER6502's
+ * parent with the primer's own expansion discipline: one NAND package of
+ * decode, I/O devices on individual address lines in the $4000-$7FFF
+ * window (each mirrors through its subwindow; use the canonical address).
+ * Shape is uncopyrightable fact; the primer text itself is unlicensed and
+ * stays research-only. VIA3 at $4800 exists in the primer's plan and is
+ * omitted here only to keep the preset to the chips a program can
+ * meaningfully drive today — declare it via MAP/CHIP when needed.
+ */
+export const WILSON6502 = Object.freeze({
+    clockHz: 1_000_000,
+    regions: [
+        { kind: 'ram', start: 0x0000, end: 0x3fff },
+        { kind: 'rom', start: 0x8000, end: 0xffff },
+    ],
+    chips: [
+        { kind: 'via', name: 'via1', at: 0x6000 },
+        { kind: 'via', name: 'via2', at: 0x5000 },
+        { kind: 'acia', name: 'acia1', at: 0x4400 },
+    ],
+});
+
+/**
+ * KiT-shaped preset (Kiran Tomlinson's Cornell breadboard build, blog
+ * series cs.cornell.edu/~kt/post/6502-1 — no license on the repos, so the
+ * MAP below is encoded from documented facts and nothing is copied).
+ * W65C02 @ 1 MHz; RAM to $6FFF; the $7000-$77FF dual-port VRAM appears as
+ * plain RAM (the video side is unmodeled — the CPU-visible behavior of a
+ * dual-port SRAM without a reader IS plain RAM); VIA at $7800; NS16C550
+ * at $7820 clocked from the system clock, so the KiT's divisor 13 gives
+ * ~4808 baud; ROM high. The 16550 over the W65C51 is the build's stated
+ * dodge of the ACIA TDRE bug — LSR polling works here and on silicon.
+ */
+export const KIT1 = Object.freeze({
+    clockHz: 1_000_000,
+    regions: [
+        { kind: 'ram', start: 0x0000, end: 0x6fff },
+        { kind: 'ram', start: 0x7000, end: 0x77ff },
+        { kind: 'rom', start: 0x8000, end: 0xffff },
+    ],
+    chips: [
+        { kind: 'via', name: 'via1', at: 0x7800 },
+        { kind: 'uart16550', name: 'uart1', at: 0x7820 },
+    ],
+});
+
 export class M6502Machine {
     /**
      * @param {MachineConfig} [config]
@@ -82,7 +134,7 @@ export class M6502Machine {
             this._decode.push({ ...r, chip: null });
         }
         for (const c of config.chips) {
-            const span = c.kind === 'via' ? 16 : 4;
+            const span = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8 : 4;
             let chip;
             if (c.kind === 'via') {
                 chip = new W65C22({
@@ -91,6 +143,11 @@ export class M6502Machine {
             } else if (c.kind === 'acia') {
                 chip = new W65C51({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            } else if (c.kind === 'uart16550') {
+                chip = new NS16C550({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                    clockHz: c.xtal || config.clockHz,
                 });
             } else {
                 throw new Error(`unknown chip kind in machine config: ${c.kind}`);
