@@ -8,7 +8,7 @@
  * which is what makes the three config sources one.
  *
  * Method: no symbolic solving. Nets are built union-find style from the
- * wires; each chip's select condition (62256/28C256: CSB low; W65C22:
+ * wires; each chip's select condition (62256: CSB low; 28C256: CEB low; W65C22:
  * CS1 high AND CS2B low; W65C51: CS0 high AND CS1B low) is EVALUATED at
  * all 65536 addresses by propagating A0-A15 through the NAND network.
  * Wire the decode wrong and the extraction is wrong in exactly the way
@@ -26,7 +26,7 @@
 
 const SELECT = {
     62256: { kind: 'ram', low: ['csb'] },
-    '28c256': { kind: 'rom', low: ['csb'] },
+    '28c256': { kind: 'rom', low: ['ceb'] },
     w65c22: { kind: 'via', high: ['cs1'], low: ['cs2b'] },
     w65c51: { kind: 'acia', high: ['cs0'], low: ['cs1b'] },
 };

@@ -21,7 +21,7 @@
  * @module
  */
 
-const MEM_SELECT = { 62256: { kind: 'ram', low: ['csb'] }, '28c256': { kind: 'rom', low: ['csb'] } };
+const MEM_SELECT = { 62256: { kind: 'ram', low: ['csb'] }, '28c256': { kind: 'rom', low: ['ceb'] } };
 
 export function extractZ80Machine(circuit) {
     const reasons = [];
