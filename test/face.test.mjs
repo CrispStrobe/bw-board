@@ -40,11 +40,15 @@ describe('sim resolver', () => {
             { id: 'D', kind: 'spectrum_display', params: { cols: 2, levels: [1, 0] }, terminals: ['vcc', 'gnd'] },
             { id: 'RA', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
             { id: 'RB', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+            { id: 'RL', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
             { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0', 'P1.7'] },
         ], [
             net('nv', ['VCC', 'vcc'], ['D', 'vcc'], ['RA', 'a']),
-            net('ng', ['GND', 'gnd'], ['D', 'gnd'], ['RB', 'b']),
+            net('ng', ['GND', 'gnd'], ['D', 'gnd'], ['RB', 'b'], ['RL', 'b']),
             net('nm', ['RA', 'b'], ['RB', 'a'], ['MCU', 'P1.7']),
+            // P1.0 must live on a real net: readAnalog reads solved nets,
+            // not pin drives — an unwired pin reads a constant.
+            net('nl', ['MCU', 'P1.0'], ['RL', 'a']),
         ]);
         board.setPin('P1.7', 'input', false);
         board.advanceTo(1n);
