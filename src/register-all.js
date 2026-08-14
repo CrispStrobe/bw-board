@@ -32,6 +32,7 @@ import { registerHD44780 } from './devices/hd44780.js';
 import { registerMatrix8x8 } from './devices/matrix8x8.js';
 import { registerDallasParts } from './devices/dallas-parts.js';
 import { registerBoardICs } from './devices/board-ics.js';
+import { registerTier2Parts } from './devices/tier2-parts.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -56,4 +57,5 @@ export function registerAllDevices() {
   registerMatrix8x8();
   registerDallasParts();
   registerBoardICs();
+  registerTier2Parts();
 }
