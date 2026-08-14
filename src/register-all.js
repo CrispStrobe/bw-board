@@ -37,6 +37,7 @@ import { registerST7920 } from './devices/st7920.js';
 import { registerAdcSensors } from './devices/adc-sensors.js';
 import { registerLevelMux } from './devices/level-mux.js';
 import { registerBenchMeters } from './devices/bench-meters.js';
+import { registerKitSensors } from './devices/kit-sensors.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -66,4 +67,5 @@ export function registerAllDevices() {
   registerAdcSensors();
   registerLevelMux();
   registerBenchMeters();
+  registerKitSensors();
 }
