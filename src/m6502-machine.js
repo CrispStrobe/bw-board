@@ -20,15 +20,20 @@ import { W65C02 } from './w65c02.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
 import { NS16C550 } from './ns16c550.js';
+import { Latch374 } from './latch374.js';
 
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz phi2 frequency
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions inclusive ranges
- * @property {Array<{kind: 'via'|'acia'|'uart16550', name: string, at: number, xtal?: number}>} chips
+ * @property {Array<{kind: 'via'|'acia'|'uart16550'|'latch', name: string, at: number,
+ *   xtal?: number, span?: number}>} chips
  *   base addresses; xtal overrides a uart16550's input clock (defaults to
  *   the machine clock — the KiT wiring — since a breadboard that gives the
- *   UART its own can states it explicitly).
+ *   UART its own can states it explicitly). span widens the decoded window
+ *   beyond the chip's register count — PARTIAL DECODE, the breadboard
+ *   normal: registers mirror through the window (a latch on a bare
+ *   A12-A14 match owns a whole $1000 like cool-web's $7xxx LED port).
  */
 
 /** The canonical breadboard-computer preset: RAM low, VIA at $6000, ACIA at $5000, ROM high. */
@@ -134,7 +139,10 @@ export class M6502Machine {
             this._decode.push({ ...r, chip: null });
         }
         for (const c of config.chips) {
-            const span = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8 : 4;
+            const regs = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8
+                : c.kind === 'latch' ? 1 : 4;
+            const span = c.span || regs;
+            if (span < regs) throw new Error(`machine config: ${c.kind} span ${span} smaller than its ${regs} registers`);
             let chip;
             if (c.kind === 'via') {
                 chip = new W65C22({
@@ -149,11 +157,15 @@ export class M6502Machine {
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
                     clockHz: c.xtal || config.clockHz,
                 });
+            } else if (c.kind === 'latch') {
+                chip = new Latch374({
+                    onChange: (value, prev) => this._latchChange(c.name, value, prev),
+                });
             } else {
                 throw new Error(`unknown chip kind in machine config: ${c.kind}`);
             }
             this.chips[c.name] = chip;
-            this._decode.push({ kind: c.kind, start: c.at, end: c.at + span - 1, chip });
+            this._decode.push({ kind: c.kind, start: c.at, end: c.at + span - 1, regs, chip });
         }
         // Overlap is a wiring bug the user should hear about, not silence.
         const sorted = [...this._decode].sort((a, b) => a.start - b.start);
@@ -182,14 +194,14 @@ export class M6502Machine {
     _read(addr) {
         const r = this._region(addr);
         if (!r) return 0xff; // open bus reads high, like the undriven data lines
-        if (r.chip) return r.chip.read(addr - r.start);
+        if (r.chip) return r.chip.read((addr - r.start) % r.regs); // mirrors through the window
         return this.mem[addr];
     }
 
     _write(addr, val) {
         const r = this._region(addr);
         if (!r || r.kind === 'rom') return; // writes to ROM/open bus vanish
-        if (r.chip) { r.chip.write(addr - r.start, val); return; }
+        if (r.chip) { r.chip.write((addr - r.start) % r.regs, val); return; }
         this.mem[addr] = val;
     }
 
@@ -204,6 +216,16 @@ export class M6502Machine {
                 this._pinLevels[pin] = level;
                 this.hooks.onPinChange(pin, level, this.tMs);
             }
+        }
+    }
+
+    _latchChange(chipName, value, prev) {
+        if (!this.hooks.onPinChange) return;
+        for (let bit = 0; bit < 8; bit++) {
+            const mask = 1 << bit;
+            if ((value & mask) === (prev & mask)) continue;
+            // Q, not P: latch outputs are always driven — no DDR exists.
+            this.hooks.onPinChange(`${chipName}.Q${bit}`, value & mask ? 1 : 0, this.tMs);
         }
     }
 

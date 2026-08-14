@@ -53,7 +53,9 @@ export function extractZ80Machine(circuit) {
     for (const p of parts) {
         if (p.kind === 'vcc') setDriver(find(key(p.id, 'vcc')), { type: 'const', value: 1 }, p.id);
         if (p.kind === 'gnd') setDriver(find(key(p.id, 'gnd')), { type: 'const', value: 0 }, p.id);
-        if (p.kind === '74hc00') {
+        // 74HC132 = 74HC00 pinout/truth table with Schmitt inputs; the
+        // hysteresis is invisible at logic level, so it aliases here too.
+        if (p.kind === '74hc00' || p.kind === '74hc132') {
             for (let g = 1; g <= 4; g++) {
                 setDriver(find(key(p.id, `${g}y`)), { type: 'nand', gate: `${p.id}.${g}`, a: find(key(p.id, `${g}a`)), b: find(key(p.id, `${g}b`)) }, `${p.id}.${g}y`);
             }

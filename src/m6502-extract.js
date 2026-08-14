@@ -78,7 +78,11 @@ export function extract6502Machine(circuit) {
     for (const p of parts) {
         if (p.kind === 'vcc') setDriver(find(key(p.id, 'vcc')), { type: 'const', value: 1 }, p.id);
         if (p.kind === 'gnd') setDriver(find(key(p.id, 'gnd')), { type: 'const', value: 0 }, p.id);
-        if (p.kind === '74hc00') {
+        // The 74HC132 is the 74HC00 with Schmitt-trigger inputs — same
+        // pinout, same truth table; hysteresis is invisible at logic level.
+        // It is the Wilson-primer decode gate (its spare Schmitt inputs
+        // double as the reset conditioner there).
+        if (p.kind === '74hc00' || p.kind === '74hc132') {
             for (let g = 1; g <= 4; g++) {
                 setDriver(find(key(p.id, `${g}y`)), {
                     type: 'nand', gate: `${p.id}.${g}`,
