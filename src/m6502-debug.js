@@ -14,6 +14,8 @@
  * @param {object} [opts]
  * @param {object} [opts.symbols] — { scheduler: { tasks: [...] } }
  */
+import { disasm6502 } from './w65c02-disasm.js';
+
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
@@ -52,6 +54,13 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         p: cpu.p,
         cycles: machine.cycles,
       };
+    },
+
+    /** Live disassembly at addr (vector-length-ground table; reads the
+     *  machine's memory, so POKEd code disassembles too). Returns
+     *  { text, bytes, length } — parity-plus with emu8051's disasm(). */
+    disasm(addr) {
+      return disasm6502((a) => machine.mem[a & 0xffff], addr & 0xffff);
     },
 
     onHalt(cb) { haltListeners.push(cb); },

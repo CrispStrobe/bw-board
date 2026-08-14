@@ -53,3 +53,31 @@ test('IM 1 delivery: an ACIA RX interrupt reaches RST $38', () => {
     m.advanceToMs(m.tMs + 2);
     assert.equal(out, 'Q', 'interrupt woke HALT, handler echoed');
 });
+
+test('debug targets: live disassembly panes on both retro machines', async () => {
+    const { createZ80DebugTarget } = await import('../src/z80-debug.js');
+    const m = new Z80Machine(SEARLE, {});
+    m.load(Uint8Array.from(ROM), 0);
+    const t = createZ80DebugTarget({ machine: m });
+    assert.equal(t.disasm(0).text, 'LD A,$03');
+    assert.equal(t.disasm(2).text, 'OUT ($80),A');
+    // Step to a breakpoint and read registers there.
+    t.setBreakpoint({ kind: 'code', addr: 0x08 });
+    t.run();
+    t.runFor(1_000_000_000);
+    assert.equal(t.regs().pc, 0x08);
+    assert.equal(t.disasm(t.regs().pc).text, 'LD HL,$001F');
+
+    const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+    const { M6502Machine, EATER6502 } = await import('../src/m6502-machine.js');
+    const m2 = new M6502Machine(EATER6502, {});
+    m2.loadRom([0xa9, 0xff, 0x8d, 0x03, 0x60, 0xdb]);
+    m2.mem[0xfffc] = 0x00; m2.mem[0xfffd] = 0x80;
+    m2.reset();
+    const t2 = createM6502DebugTarget({ machine: m2 });
+    assert.equal(t2.disasm(0x8000).text, 'LDA #$FF');
+    assert.equal(t2.disasm(0x8002).text, 'STA $6003');
+    // POKEd code disassembles too — the live-pane property.
+    m2.mem[0x0200] = 0x1a;
+    assert.equal(t2.disasm(0x0200).text, 'INC A');
+});
