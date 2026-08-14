@@ -6,7 +6,7 @@ servo angles, motor speeds, and relay states — from pin-level physics, not
 shortcuts.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
-1216 tests, 0 failures. 111 part kinds.
+1357 tests, 0 failures. 129+ part kinds. Two vector-verified CPU cores.
 
 ## What is in this repo
 
@@ -37,8 +37,49 @@ fire at the correct simulated time, not just at the destination.
   clock display, I2C LCD backpack
 - Connectors: header, USB-A
 
-**Two DebugTarget implementations** (`src/emu8051-debug.js`, `src/serial-debug.js`):
-same interface, different capabilities. Factory at `src/debug-target-factory.js`.
+**DebugTarget implementations** — emu8051 (with `emu_disasm`, verified
+237/0 against an independent table), avr8js (ATmega328P/2560, ATtiny85
+via chip param), rp2040js, eater6502, serial (real firmware over UART).
+Factory at `src/debug-target-factory.js`. Disassembly panes for the
+non-8051 targets are planned (live table disasm for owned cores,
+service-side objdump listings for toolchain targets).
+
+## The retro tier (2026-08)
+
+**Two CPU cores, ours, verified end to end against ground truth:**
+- `src/w65c02.js` — W65C02, 2,540,000/2,540,000 SingleStepTests vectors,
+  both Klaus Dormann suites (52M instructions), 52.6M instructions in
+  lockstep with vrEmu6502 (three documented, vector-adjudicated
+  divergences). Grinder: `scripts/grind-w65c02.mjs`.
+- `src/z80.js` — Z80, 1,604/1,604 vector files (1.6M vectors) including
+  the undocumented machinery: X/Y flags, the Q latch, MEMPTR, R per M1,
+  interrupted-repeat block-op rules derived from the vectors themselves.
+  Grinder: `scripts/grind-z80.mjs`.
+
+**Composable machines** — a machine is a CONFIG (preset, declared
+MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
+extractors):
+- `src/m6502-machine.js` — regions + memory-mapped chips (`src/w65c22.js`
+  VIA, `src/w65c51.js` ACIA, both datasheet clean-room). Presets:
+  EATER6502, HB6502 (mike42, CC-BY facts). Extractor:
+  `src/m6502-extract.js` (contention/open-vector refusals with
+  addresses named).
+- `src/z80-machine.js` — regions + PORT-mapped chips (`src/mc6850.js`),
+  IM 1 delivery in the machine layer. Presets: SEARLE, CPM64K.
+  Extractor: `src/z80-extract.js` (MREQ/IORQ-aware, per-space
+  contention).
+- `src/vdu-decoder.js` — the BBC VDU byte protocol as typed events
+  (graphics without video hardware); `src/devices/hd44780.js` — the
+  parallel character LCD as a board part.
+
+**Whole-system smokes** (each skips loudly without its local artifact):
+BBC BASIC 4 boots interactively on the 6502 machine with LCD state
+asserted (`scripts/beebeater-smoke.mjs`); R.T. Russell's BBC BASIC
+(Z80) boots over a CP/M shim (`scripts/bbcz80-smoke.mjs`); CP/M 2.2
+with our own BIOS boots to A> and runs BBCBASIC.COM
+(`scripts/cpm-smoke.mjs`); Microsoft BASIC 1.1 boots via the
+basic-m6502-bw port. Twin-run CPU differential:
+`scripts/twinrun-6502.mjs`.
 
 **DRC warnings** (`getWarnings()`): overcurrent, missing resistor, aggregate
 chip budget (120 mA, §4.1) + supply budget (500 mA USB), non-convergence,
@@ -82,7 +123,7 @@ Key results (all category 2b unless noted):
 ## How to run
 
 ```bash
-npm test                    # node --test (1216 tests)
+npm test                    # node --test (1357 tests)
 node bench/perf.js          # performance benchmark
 ```
 
