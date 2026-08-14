@@ -112,7 +112,11 @@ const BUILTIN_KINDS = new Set([
   'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
   'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'vsource', 'isource', 'mcu',
   'seven_segment', 'rgb_led', 'led_matrix', 'led_cube',
-  'char_lcd', 'shift_register', 'ir_receiver', 'temp_sensor', 'eeprom',
+  // char_lcd moved OUT of the built-ins 2026-08-14: it was a
+  // validation-only entry with no board behavior, while the registry
+  // has the real HD44780 silicon — registerHD44780() provides the
+  // kind under the designer catalog's terminal names.
+  'shift_register', 'ir_receiver', 'temp_sensor', 'eeprom',
 ]);
 
 export { BUILTIN_KINDS };

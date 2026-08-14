@@ -45,7 +45,7 @@ const BUSY_DEFAULT_NS = 37_000n;     // all other instructions
  */
 export function registerHD44780() {
 
-  registerDevice('hd44780', {
+  const model = {
     // The standard 16-pin LCD module
     terminals: [
       'vss', 'vdd', 'v0',           // power + contrast
@@ -245,6 +245,30 @@ export function registerHD44780() {
 
       return false;
     },
+  };
+
+  registerDevice('hd44780', model);
+
+  // 'char_lcd' — the SAME silicon under the designer catalog's terminal
+  // names. bw-circuit-ui ships the part as char_lcd with the designer's
+  // house convention (vcc/gnd/vo/bl_a/bl_k where the datasheet says
+  // vdd/vss/v0/a/k; rs/rw/e/d0-d7 agree). One model, two skins — a
+  // second implementation here would be the terminal-contract divergence
+  // class all over again, one layer down.
+  const LCD_ALIAS = { vdd: 'vcc', vss: 'gnd', v0: 'vo', a: 'bl_a', k: 'bl_k' };
+  registerDevice('char_lcd', {
+    terminals: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+      'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'],
+    init: (part) => model.init(part),
+    stamp(ctx) {
+      for (let i = 0; i < 8; i++) ctx.conductance(`d${i}`, null, 1 / R_INPUT);
+      ctx.conductance('rs', null, 1 / R_INPUT);
+      ctx.conductance('rw', null, 1 / R_INPUT);
+      ctx.conductance('e', null, 1 / R_INPUT);
+      ctx.conductance('bl_a', 'bl_k', 1 / 100);
+    },
+    update: (part, state, read, tNs) =>
+      model.update(part, state, (t) => read(LCD_ALIAS[t] ?? t), tNs),
   });
 }
 

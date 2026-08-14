@@ -512,3 +512,83 @@ describe('HD44780 address counter wrapping', () => {
     assert.equal(s.ac, 0x00, 'AC should wrap from 0x67 to 0x00');
   });
 });
+
+// ─── char_lcd: the designer-catalog skin of the same silicon ────────────────
+// bw-circuit-ui ships the part as 'char_lcd' with the designer's house
+// terminal names (vcc/gnd/vo/bl_a/bl_k). The alias registration must be
+// the SAME model — proven by driving it through the alias names only.
+
+describe('char_lcd alias (designer terminal names)', () => {
+  beforeEach(() => { registerHD44780(); });
+  afterEach(() => {
+    try { unregisterDevice('hd44780'); } catch {}
+    try { unregisterDevice('char_lcd'); } catch {}
+  });
+
+  it('registers with the designer catalog terminal list', () => {
+    const model = getDevice('char_lcd');
+    assert.ok(model, 'char_lcd should be registered');
+    assert.deepEqual(model.terminals, [
+      'rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+      'vcc', 'gnd', 'vo', 'bl_a', 'bl_k',
+    ]);
+  });
+
+  it('writes land in DDRAM and text through the alias names', () => {
+    const model = getDevice('char_lcd');
+    const part = { id: 'LCD1', kind: 'char_lcd', params: { cols: 16, rows: 2 } };
+    const state = model.init(part);
+    // Pins keyed by the DESIGNER's names — vdd/a/k must never appear.
+    const pins = {
+      vcc: 5, gnd: 0, vo: 2.5, rs: 0, rw: 0, e: 0,
+      d0: 0, d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0, d7: 0,
+      bl_a: 5, bl_k: 0,
+    };
+    const read = (t) => pins[t] ?? 0;
+    let t = 0n;
+    const setData = (byte) => { for (let i = 0; i < 8; i++) pins[`d${i}`] = (byte >> i) & 1 ? 5 : 0; };
+    const pulse = (rs, byte) => {
+      pins.rs = rs ? 5 : 0; setData(byte);
+      pins.e = 5; model.update(part, state, read, t); t += 1000n;
+      pins.e = 0; model.update(part, state, read, t); t += 100_000n;
+    };
+
+    pulse(0, 0x38); // function set: 8-bit, 2-line
+    pulse(0, 0x0c); // display on
+    pulse(0, 0x06); // entry mode: increment
+    pulse(0, 0x01); t += 2_000_000n; // clear
+    pulse(1, 0x48); // 'H'
+    pulse(1, 0x49); // 'I'
+
+    assert.equal(state.displayOn, true);
+    assert.equal(state.text[0].slice(0, 2), 'HI');
+  });
+});
+
+// ─── Board attach: char_lcd gets live registry state on a real board ───────
+describe('char_lcd on BoardImpl', () => {
+  it('a seated char_lcd part carries device state readable by the UI', async () => {
+    const { BoardImpl } = await import('../src/board.js');
+    const { registerAllDevices } = await import('../src/register-all.js');
+    registerAllDevices();
+    const parts = [
+      { id: 'vcc1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'gnd1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'lcd1', kind: 'char_lcd', params: { cols: 16, rows: 2 },
+        terminals: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+          'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'] },
+    ];
+    const nets = [
+      { id: 'n_vcc', terminals: [{ part: 'vcc1', terminal: 'vcc' }, { part: 'lcd1', terminal: 'vcc' }, { part: 'lcd1', terminal: 'bl_a' }] },
+      { id: 'n_gnd', terminals: [{ part: 'gnd1', terminal: 'gnd' }, { part: 'lcd1', terminal: 'gnd' }, { part: 'lcd1', terminal: 'bl_k' }] },
+    ];
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    board.advanceTo(1n);
+    const ds = board.getDeviceState('lcd1');
+    assert.ok(ds, 'char_lcd must have registry device state on the board');
+    assert.equal(ds.text.length, 2);
+    assert.equal(ds.text[0].length, 16);
+    assert.equal(ds.displayOn, false, 'display starts off, like real silicon');
+  });
+});
