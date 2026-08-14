@@ -34,6 +34,7 @@ import { registerDallasParts } from './devices/dallas-parts.js';
 import { registerBoardICs } from './devices/board-ics.js';
 import { registerTier2Parts } from './devices/tier2-parts.js';
 import { registerST7920 } from './devices/st7920.js';
+import { registerAdcSensors } from './devices/adc-sensors.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -60,4 +61,5 @@ export function registerAllDevices() {
   registerBoardICs();
   registerTier2Parts();
   registerST7920();
+  registerAdcSensors();
 }
