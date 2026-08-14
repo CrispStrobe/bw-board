@@ -933,6 +933,34 @@ export class BoardImpl {
   }
 
   /**
+   * Set a named parameter on a part's params object.
+   * Used by the environment-stimulus extension to inject world conditions
+   * (temperature, humidity, magnetic field, etc.) into device models.
+   * @param {string} partId
+   * @param {string} param - Parameter name (e.g. 'temperature', 'field')
+   * @param {*} value
+   */
+  setPartParam(partId, param, value) {
+    const part = this.parts.find(p => p.id === partId);
+    if (!part) return;
+    if (!part.params) part.params = {};
+    part.params[param] = value;
+    this._solve();
+    this._notifyChange('param', { partId, param, value });
+  }
+
+  /**
+   * Get a named parameter from a part's params object.
+   * @param {string} partId
+   * @param {string} param
+   * @returns {*}
+   */
+  getPartParam(partId, param) {
+    const part = this.parts.find(p => p.id === partId);
+    return part?.params?.[param];
+  }
+
+  /**
    * @param {boolean} on
    */
   setPower(on) {
