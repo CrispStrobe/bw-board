@@ -43,6 +43,7 @@ import { registerThirtySeven } from './devices/thirtyseven.js';
 import { registerAnalogAmps } from './devices/analog-amps.js';
 import { registerMsgeq7 } from './devices/msgeq7.js';
 import { registerUartPeer } from './devices/uart-peer.js';
+import { registerRf433 } from './devices/rf433.js';
 import { registerAudioParts } from './devices/audio-parts.js';
 import { registerMPU6050 } from './devices/mpu6050.js';
 import { registerSSD1306 } from './devices/ssd1306.js';
@@ -81,6 +82,7 @@ export function registerAllDevices() {
   registerAnalogAmps();
   registerMsgeq7();
   registerUartPeer();
+  registerRf433();
   registerAudioParts();
   registerMPU6050();
   registerSSD1306();

@@ -208,31 +208,34 @@ function queueBytes(state, bytes, tNs, baud) {
     state._txEdges = state._txEdges.concat(buildUartFrame(bytes, start, baud));
 }
 
-// ─── The air: a shared radio neighborhood per params.air ───────────────
-// Module-scoped by design: one project is one board is one air (multiple
-// airs = multiple names). Members register their live state; addresses
-// are read from each member's CURRENT config, so renames and ORGL are
-// visible to inquirers. Tests use distinct air names for isolation.
-const AIR = new Map();
+// ─── The air: now the GENERAL medium engine (src/air.js) ───────────────
+// The HC-05 is the bt kind's citizen: space `bt:${params.air}`, address
+// from the live config (renames visible to inquirers), delivery = queue
+// bytes onto the member's TXD. Symmetric-link state stays KIND
+// semantics layered here, per the air contract.
+import { joinAir, airOthers as genOthers, airFind as genFind, resetAir } from '../air.js';
 
 function airJoin(id, state) {
-    if (!AIR.has(id)) AIR.set(id, new Set());
-    AIR.get(id).add(state);
-    state._air = id;
+    state._member = joinAir(`bt:${id}`, {
+        state,
+        addr: () => state.config.addr,
+        // bt is connection-oriented: the stream bridges through kind-layer
+        // state access (queueBytes on the linked peer, timed at the
+        // receiving module's baud) — generic delivery is not the path.
+        deliver: () => { },
+    });
 }
 
-/** Test hygiene: clear an air's membership (module-scoped state would
- *  otherwise accumulate members across boards created in one process). */
-export function airReset(id) { AIR.delete(id); }
+/** Test hygiene, kept under the old name for the bt kind. */
+export function airReset(id) { resetAir(`bt:${id}`); }
 
 function airOthers(state) {
-    const members = AIR.get(state._air);
-    if (!members) return [];
-    return [...members].filter((m) => m !== state);
+    return genOthers(state._member).map((m) => m.state);
 }
 
 function airFind(state, addr) {
-    return airOthers(state).find((m) => m.config.addr === addr) || null;
+    const m = genFind(state._member, addr);
+    return m ? m.state : null;
 }
 
 // Auto-unique default address: five placed modules must not collide, so
