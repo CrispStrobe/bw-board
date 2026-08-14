@@ -102,10 +102,13 @@ export function registerUartPeer() {
             return {
                 drives: {
                     txd: { vTh: 5, rTh: R_OUT },      // idle high
-                    state: { vTh: 0, rTh: R_OUT },
+                    state: { vTh: 0, rTh: R_OUT },     // HIGH while connected
                 },
                 received: [],                          // data-mode bytes from the MCU
                 atLog: [],                             // AT commands seen
+                config: defaultConfig(part),           // the firmware's settings
+                paired: [],                            // bonded addresses
+                linked: null,                          // connected peer address
                 _rx: null, _rxBaud: 0,
                 _txEdges: [], _txIdx: 0,
                 _peerSeq: 0,
@@ -139,7 +142,7 @@ export function registerUartPeer() {
                         const cmd = String.fromCharCode(...state._lineBuf).trim();
                         state._lineBuf = [];
                         state.atLog.push(cmd);
-                        const reply = atReply(part, cmd);
+                        const reply = atCommand(part, state, cmd);
                         this._queue(state, `${reply}\r\n`, tNs, baud);
                         changed = true;
                     }
@@ -166,6 +169,14 @@ export function registerUartPeer() {
             if (state._txIdx >= state._txEdges.length && state._txEdges.length) {
                 state._txEdges = []; state._txIdx = 0;
             }
+
+            // The STATE pin is the module's own truth-teller: high while
+            // a link is up — what tutorials wire to an LED or an interrupt.
+            const stLevel = state.linked ? vcc : 0;
+            if (state.drives.state.vTh !== stLevel) {
+                state.drives.state = { vTh: stLevel, rTh: R_OUT };
+                changed = true;
+            }
             return changed;
         },
 
@@ -179,11 +190,88 @@ export function registerUartPeer() {
     });
 }
 
-function atReply(part, cmd) {
+function defaultConfig(part) {
+    return {
+        name: part.params?.name ?? 'HC-05',
+        pswd: '1234',
+        uart: { baud: part.params?.baud ?? 9600, stop: 0, parity: 0 },
+        role: 0,                                   // 0 slave, 1 master, 2 loopback
+        cmode: 0,                                  // 0 bind-only, 1 any
+        clazz: 0,
+        bind: '0:0:0',
+        addr: part.params?.addr ?? '98d3:31:fc190d',
+    };
+}
+
+/**
+ * The documented 2.0-20100601 command surface (the EGBT/HC-05 AT set):
+ * settings mutate real state, ORGL restores factory, and the
+ * inquiry/pair/link family answers against the STIMULUS surface —
+ * params.nearby = [{addr, name, class}] scripts the radio neighborhood,
+ * since the radio itself is out of scope by doctrine. Firmware that
+ * does the full tutorial dance (INIT, INQ, PAIR, BIND, LINK, STATE?)
+ * sees the documented behavior end to end.
+ */
+function atCommand(part, state, cmd) {
+    const c = state.config;
+    const nearby = part.params?.nearby || [];
+    const findNear = (addr) => nearby.find((d) => d.addr === addr);
+    let m;
+
     if (cmd === 'AT') return 'OK';
-    if (cmd === 'AT+NAME?') return `+NAME:${part.params?.name ?? 'HC-05'}\r\nOK`;
+    if (cmd === 'AT+INIT') return 'OK';
+    if (cmd === 'AT+RESET') { state.linked = null; return 'OK'; }
+    if (cmd === 'AT+ORGL') { state.config = defaultConfig({ params: {} }); state.paired = []; return 'OK';    }
     if (cmd === 'AT+VERSION?') return '+VERSION:2.0-20100601\r\nOK';
-    if (cmd === 'AT+UART?') return `+UART:${part.params?.baud ?? 9600},0,0\r\nOK`;
+    if (cmd === 'AT+ADDR?') return `+ADDR:${c.addr}\r\nOK`;
+    if (cmd === 'AT+NAME?') return `+NAME:${c.name}\r\nOK`;
+    if ((m = /^AT\+NAME=(.*)$/.exec(cmd))) { c.name = m[1]; return 'OK'; }
+    if (cmd === 'AT+PSWD?') return `+PSWD:${c.pswd}\r\nOK`;
+    if ((m = /^AT\+PSWD=(.*)$/.exec(cmd))) { c.pswd = m[1]; return 'OK'; }
+    if (cmd === 'AT+UART?') return `+UART:${c.uart.baud},${c.uart.stop},${c.uart.parity}\r\nOK`;
+    if ((m = /^AT\+UART=(\d+),(\d+),(\d+)$/.exec(cmd))) {
+        c.uart = { baud: Number(m[1]), stop: Number(m[2]), parity: Number(m[3]) };
+        return 'OK';
+    }
+    if (cmd === 'AT+ROLE?') return `+ROLE:${c.role}\r\nOK`;
+    if ((m = /^AT\+ROLE=([012])$/.exec(cmd))) { c.role = Number(m[1]); return 'OK'; }
+    if (cmd === 'AT+CMODE?') return `+CMOD:${c.cmode}\r\nOK`;
+    if ((m = /^AT\+CMODE=([01])$/.exec(cmd))) { c.cmode = Number(m[1]); return 'OK'; }
+    if (cmd === 'AT+CLASS?') return `+CLASS:${c.clazz}\r\nOK`;
+    if ((m = /^AT\+CLASS=(\w+)$/.exec(cmd))) { c.clazz = m[1]; return 'OK'; }
+    if (cmd === 'AT+BIND?') return `+BIND:${c.bind}\r\nOK`;
+    if ((m = /^AT\+BIND=(.+)$/.exec(cmd))) { c.bind = m[1].replace(/,/g, ':'); return 'OK'; }
+    if (cmd === 'AT+RMAAD') { state.paired = []; return 'OK'; }
+    if (cmd === 'AT+ADCN?') return `+ADCN:${state.paired.length}\r\nOK`;
+    if (cmd === 'AT+STATE?') {
+        const st = state.linked ? 'CONNECTED'
+            : state.paired.length ? 'PAIRED' : 'INITIALIZED';
+        return `+STATE:${st}\r\nOK`;
+    }
+    if (cmd === 'AT+INQ') {
+        const lines = nearby.map((d) => `+INQ:${d.addr},${d.class ?? '1F00'},7FFF`);
+        return [...lines, 'OK'].join('\r\n');
+    }
+    if (cmd === 'AT+INQC') return 'OK';
+    if ((m = /^AT\+RNAME\?(.+)$/.exec(cmd))) {
+        const d = findNear(m[1].replace(/,/g, ':'));
+        return d ? `+RNAME:${d.name}\r\nOK` : 'FAIL';
+    }
+    if ((m = /^AT\+PAIR=(.+?),\d+$/.exec(cmd))) {
+        const addr = m[1].replace(/,/g, ':');
+        if (!findNear(addr)) return 'FAIL';
+        if (!state.paired.includes(addr)) state.paired.push(addr);
+        return 'OK';
+    }
+    if ((m = /^AT\+LINK=(.+)$/.exec(cmd))) {
+        const addr = m[1].replace(/,/g, ':');
+        if (c.cmode === 1 || state.paired.includes(addr) || findNear(addr)) {
+            state.linked = addr;
+            return 'OK';
+        }
+        return 'FAIL';
+    }
+    if (cmd === 'AT+DISC') { state.linked = null; return '+DISC:SUCCESS\r\nOK'; }
     return 'ERROR:(0)';
 }
 

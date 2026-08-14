@@ -93,6 +93,36 @@ describe('HC-05', () => {
         assert.deepEqual(reply, [0x6f, 0x6b], 'peer text arrives on TXD');
     });
 
+    it('the full tutorial dance: settings, inquiry, pair, link, STATE pin', () => {
+        const nearby = [{ addr: '1234:56:abcdef', name: 'RoboPeer', class: '1F00' }];
+        const r = rig({ nearby }, true);
+        r.board.setPin('P1.0', 'pushpull', true);
+        r.idle(1_000_000n);
+        const ask = (cmd, maxBytes, ns = 60_000_000n) => {
+            r.sendText(`${cmd}\r\n`);
+            return String.fromCharCode(...r.readReply(maxBytes, ns));
+        };
+
+        assert.equal(ask('AT+INIT', 4), 'OK\r\n');
+        assert.equal(ask('AT+NAME=Rover', 4), 'OK\r\n');
+        assert.match(ask('AT+NAME?', 14), /\+NAME:Rover/);
+        assert.match(ask('AT+PSWD?', 13), /\+PSWD:1234/);
+        assert.match(ask('AT+STATE?', 22), /\+STATE:INITIALIZED/);
+        assert.match(ask('AT+INQ', 40), /\+INQ:1234:56:abcdef,1F00/);
+        assert.equal(ask('AT+PAIR=1234,56,abcdef,20', 4), 'OK\r\n');
+        assert.match(ask('AT+ADCN?', 12), /\+ADCN:1/);
+        assert.equal(ask('AT+LINK=1234,56,abcdef', 4), 'OK\r\n');
+        assert.match(ask('AT+STATE?', 20), /\+STATE:CONNECTED/);
+        r.board.setPin('P1.2', 'input', false);
+        // The STATE terminal is not wired in this rig's netlist, so read
+        // the device's own drive instead: linked → high.
+        assert.ok(r.board.getDeviceState('BT').linked, 'link is up');
+        assert.match(ask('AT+DISC', 20), /\+DISC:SUCCESS/);
+        assert.equal(r.board.getDeviceState('BT').linked, null);
+        assert.equal(ask('AT+ORGL', 4), 'OK\r\n');
+        assert.match(ask('AT+NAME?', 14), /\+NAME:HC-05/, 'factory reset restored the name');
+    });
+
     it('AT mode at 38400: AT answers OK, unknown answers ERROR', () => {
         const r = rig({}, true);
         r.board.setPin('P1.0', 'pushpull', true);
