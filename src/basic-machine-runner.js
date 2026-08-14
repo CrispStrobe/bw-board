@@ -39,7 +39,7 @@ import { M6502Machine, EATER6502 } from './m6502-machine.js';
 
 /** Phases, in order: boot → ready → running → done. */
 
-const MS_PROFILE = {
+export const MS_PROFILE = {
     // Boot-time question/answer pairs, awaited in order.
     bootPrompts: [
         { expect: 'MEMORY SIZE?', send: '\r' },
@@ -53,6 +53,14 @@ const MS_PROFILE = {
     // MS BASIC 1.1 wants CR line endings and upper-case keywords work
     // everywhere; leave the program text as given otherwise.
     newline: '\r',
+    // Keystroke pacing in simulated ms. This ROM's polling loop keeps
+    // up at 4/30 (measured); a BeebEater-class BBC BASIC ROM on the
+    // same machine DROPS characters after Enter unless typed at human
+    // speed — its profile needs charMs 30 / crMs 300 (campaign log
+    // 2026-08-14). Pacing is a profile property for exactly that
+    // reason.
+    charMs: 4,
+    crMs: 30,
 };
 
 export class BasicMachineRunner {
@@ -124,15 +132,20 @@ export class BasicMachineRunner {
         if (this._result) return this._result;
         const m = this.machine;
 
-        // Paced character entry: one char per ~4 simulated ms keeps the
-        // ACIA queue shallow (BASIC polls every few hundred cycles; a
-        // whole line at once risks the documented rx overrun).
+        // Paced character entry keeps the ACIA queue shallow (BASIC
+        // polls every few hundred cycles; a whole line at once risks
+        // the documented rx overrun) and honors the profile's typing
+        // speed — CRs get the long gap because line processing (and on
+        // some ROMs, a type-ahead flush) happens right after Enter.
         if (this._sendQueue.length) {
+            const { charMs, crMs } = this.profile;
             let spent = 0;
             while (this._sendQueue.length && spent < sliceMs) {
-                m.chips.acia1.rxPush(this._sendQueue.shift().charCodeAt(0));
-                m.advanceToMs(m.tMs + 4);
-                spent += 4;
+                const ch = this._sendQueue.shift();
+                m.chips.acia1.rxPush(ch.charCodeAt(0));
+                const gap = ch === '\r' ? crMs : charMs;
+                m.advanceToMs(m.tMs + gap);
+                spent += gap;
             }
         } else {
             m.advanceToMs(m.tMs + sliceMs);
