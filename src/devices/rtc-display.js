@@ -56,7 +56,7 @@ export function registerRtcDisplay() {
                 _lastNs: null, _acc: 0n,
             };
             state.regs[0x0e] = 0x1c;              // control power-on default
-            state._i2c = createI2CSlave({
+            const handlers = {
                 onAddress: (a7, rw) => {
                     const mine = a7 === (part.params?.address ?? 0x68);
                     if (mine && rw === 0) state._first = true;
@@ -73,7 +73,9 @@ export function registerRtcDisplay() {
                     state.ptr = (state.ptr + 1) % 0x13;
                     return v;
                 },
-            });
+            };
+            state.i2cHandlers = handlers;
+            state._i2c = createI2CSlave(handlers);
             return state;
         },
 

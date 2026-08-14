@@ -1163,6 +1163,21 @@ export class BoardImpl {
   }
 
   /**
+   * Return I2C handler objects from all devices on the board that expose them.
+   * Each entry has { onAddress, onWriteByte, onReadByte, onStop? }.
+   * Used by the TWI bridge to route hardware-TWI transactions to device models
+   * without going through the bit-level I2C slave engine.
+   * @returns {Array<{onAddress: Function, onWriteByte: Function, onReadByte: Function, onStop?: Function}>}
+   */
+  getI2CHandlers() {
+    const result = [];
+    for (const [, state] of this._deviceStates) {
+      if (state.i2cHandlers) result.push(state.i2cHandlers);
+    }
+    return result;
+  }
+
+  /**
    * All MCU pin IDs currently tracked.
    * @returns {Array<{pin: string, mode: string, driveHigh: boolean}>}
    */

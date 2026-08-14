@@ -75,6 +75,19 @@ const ATMEGA328P_USART = {
   UBRRL: 0xc4, UBRRH: 0xc5, UDR: 0xc6,
 };
 
+// TWI register addresses (same as twiConfig from avr8js).
+const ATMEGA328P_TWI = {
+  twiInterrupt: 0x30,   // vector 25, word address (25-1)*2
+  TWBR: 0xb8, TWSR: 0xb9, TWAR: 0xba,
+  TWDR: 0xbb, TWCR: 0xbc, TWAMR: 0xbd,
+};
+
+// SPI register addresses (same as spiConfig from avr8js).
+const ATMEGA328P_SPI = {
+  spiInterrupt: 0x22,   // vector 18, word address (18-1)*2
+  SPCR: 0x4c, SPSR: 0x4d, SPDR: 0x4e,
+};
+
 export const ATMEGA328P = {
   name: 'ATmega328P',
   flashWords: 0x4000,   // 32 KB = 16K words
@@ -87,6 +100,8 @@ export const ATMEGA328P = {
   adc: ATMEGA328P_ADC,
   adcChannelToPin: ATMEGA328P_ADC_MAP,
   usart: ATMEGA328P_USART,
+  twi: ATMEGA328P_TWI,
+  spi: ATMEGA328P_SPI,
 };
 
 // ─── ATmega2560 (Arduino Mega) ─────────────────────────────────────────────
@@ -203,6 +218,19 @@ const ATMEGA2560_USART = {
   UBRRL: 0xc4, UBRRH: 0xc5, UDR: 0xc6,
 };
 
+// ATmega2560 TWI: same register addresses, different interrupt vector.
+const ATMEGA2560_TWI = {
+  twiInterrupt: 0x4c,   // vector 39, word address (39-1)*2
+  TWBR: 0xb8, TWSR: 0xb9, TWAR: 0xba,
+  TWDR: 0xbb, TWCR: 0xbc, TWAMR: 0xbd,
+};
+
+// ATmega2560 SPI: same register addresses, different interrupt vector.
+const ATMEGA2560_SPI = {
+  spiInterrupt: 0x26,   // vector 20, word address (20-1)*2
+  SPCR: 0x4c, SPSR: 0x4d, SPDR: 0x4e,
+};
+
 export const ATMEGA2560 = {
   name: 'ATmega2560',
   flashWords: 0x20000,  // 256 KB = 128K words
@@ -215,6 +243,8 @@ export const ATMEGA2560 = {
   adc: ATMEGA2560_ADC,
   adcChannelToPin: ATMEGA2560_ADC_MAP,
   usart: ATMEGA2560_USART,
+  twi: ATMEGA2560_TWI,
+  spi: ATMEGA2560_SPI,
 };
 
 // ─── ATtiny85 ───────────────────────────────────────────────────────────────

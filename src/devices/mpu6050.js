@@ -69,7 +69,7 @@ export function registerMPU6050() {
             // WHO_AM_I (0x75): always 0x68.
             state.regs[0x75] = 0x68;
 
-            state._i2c = createI2CSlave({
+            const handlers = {
                 onAddress: (a7, rw) => {
                     const ad0 = part.params?.ad0 ?? 0;
                     const mine = a7 === (0x68 | (ad0 ? 1 : 0));
@@ -91,7 +91,9 @@ export function registerMPU6050() {
                     state.ptr = (state.ptr + 1) & 0x7f;
                     return v;
                 },
-            });
+            };
+            state.i2cHandlers = handlers;
+            state._i2c = createI2CSlave(handlers);
             return state;
         },
 

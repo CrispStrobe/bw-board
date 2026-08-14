@@ -79,7 +79,7 @@ export function registerSSD1306() {
                 _dataStream: false,
             };
 
-            state._i2c = createI2CSlave({
+            const handlers = {
                 onAddress: (a7, rw) => {
                     const addr = part.params?.address ?? 0x3c;
                     const mine = a7 === addr;
@@ -121,7 +121,9 @@ export function registerSSD1306() {
                 },
                 onReadByte: () => 0,
                 onStop: () => { state._ctrl = -1; state._dataStream = false; },
-            });
+            };
+            state.i2cHandlers = handlers;
+            state._i2c = createI2CSlave(handlers);
             return state;
         },
 

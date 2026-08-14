@@ -14,8 +14,11 @@
 import {
   CPU, avrInstruction, AVRIOPort, AVRTimer, AVRADC, AVRUSART, PinState,
   ATtinyTimer1, attinyTimer1Config,
+  AVRTWI, AVRSPI,
 } from 'avr8js';
 import { CHIPS, ATMEGA328P } from './avr-chips.js';
+import { createTWIBridge } from './twi-bridge.js';
+import { createSPIBridge } from './spi-bridge.js';
 
 // Re-export for backward compatibility (existing tests import this)
 export { ATMEGA328P_PINS } from './avr-chips.js';
@@ -89,6 +92,24 @@ export function createAvr8jsAdapter(opts = {}) {
     usart.onByteTransmit = (byte) => {
       if (serialListener) serialListener(byte);
     };
+  }
+
+  // ── TWI (I2C hardware peripheral) ──
+  let twi = null;
+  let twiBridge = null;
+  if (chip.twi) {
+    twi = new AVRTWI(cpu, chip.twi, clockHz);
+    twiBridge = createTWIBridge(twi);
+    twi.eventHandler = twiBridge;
+  }
+
+  // ── SPI (hardware peripheral) ──
+  let spi = null;
+  let spiBridge = null;
+  if (chip.spi) {
+    spi = new AVRSPI(cpu, chip.spi, clockHz);
+    spiBridge = createSPIBridge(spi);
+    spi.onByte = spiBridge.onByte;
   }
 
   let board = null;
@@ -172,6 +193,9 @@ export function createAvr8jsAdapter(opts = {}) {
         for (let bit = 0; bit < 8; bit++) publishPin(key, bit);
       }
       syncInputs();
+      // Wire TWI/SPI bridges to the board's device handlers.
+      if (twiBridge) twiBridge.attach(b);
+      if (spiBridge) spiBridge.attach(b);
     },
 
     syncInputs,
@@ -194,5 +218,9 @@ export function createAvr8jsAdapter(opts = {}) {
     },
 
     stats,
+    twi,
+    twiBridge,
+    spi,
+    spiBridge,
   };
 }

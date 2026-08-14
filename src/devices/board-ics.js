@@ -47,7 +47,7 @@ export function registerBoardICs() {
                 _mode: 'addr',
                 _pageBase: 0, _pageOff: 0, _pending: [],
             };
-            state._i2c = createI2CSlave({
+            const handlers = {
                 onAddress: (a7, rw) => {
                     const mine = a7 === (part.params?.address ?? 0x50);
                     if (mine && rw === 0) { state._mode = 'addr'; state._pending = []; }
@@ -81,7 +81,9 @@ export function registerBoardICs() {
                     }
                     state._pending = [];
                 },
-            });
+            };
+            state.i2cHandlers = handlers;
+            state._i2c = createI2CSlave(handlers);
             return state;
         },
 

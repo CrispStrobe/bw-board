@@ -22,6 +22,12 @@
 | PaulStoffregen/OneWire | MIT (compatible) | Compiled to HEX for DS18B20 cross-check |
 | milesburton/DallasTemperature | MIT | Compiled to HEX for DS18B20 cross-check |
 | olikraus/u8g2 | BSD-2-Clause | Compiled to HEX for ST7920 cross-check |
+| adafruit/RTClib | MIT | Compiled to HEX for DS3231 TWI bridge cross-check |
+| jrowberg/i2cdevlib | MIT | I2Cdev + MPU6050 compiled to HEX for TWI bridge cross-check |
+| adafruit/Adafruit_SSD1306 | BSD-2-Clause | Compiled to HEX for SSD1306 TWI bridge cross-check |
+| adafruit/Adafruit-GFX-Library | BSD-2-Clause | Compiled to HEX as SSD1306 dependency |
+| adafruit/Adafruit_BusIO | MIT | Compiled to HEX as RTClib/SSD1306 dependency |
+| arduino/ArduinoCore-avr | LGPL-2.1 | Core + Wire library compiled to HEX for TWI bridge tests; LGPL stays in compiled binary only |
 
 ## Test-time references (not shipped)
 
