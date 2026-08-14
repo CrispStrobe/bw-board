@@ -14,6 +14,15 @@
 |---|---|---|
 | wokwi/avr8js | MIT | AVR MCU emulator (npm dependency) |
 
+## Shipped compiled binaries (source not vendored, build-time only)
+
+| project | licence | relationship |
+|---|---|---|
+| arduino-libraries/LiquidCrystal | LGPL-2.1 | Compiled to HEX for avr8js HD44780 cross-check; LGPL stays in compiled binary only, no source vendored |
+| PaulStoffregen/OneWire | MIT (compatible) | Compiled to HEX for DS18B20 cross-check |
+| milesburton/DallasTemperature | MIT | Compiled to HEX for DS18B20 cross-check |
+| olikraus/u8g2 | BSD-2-Clause | Compiled to HEX for ST7920 cross-check |
+
 ## Test-time references (not shipped)
 
 | project | licence | relationship |
