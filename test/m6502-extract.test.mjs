@@ -41,7 +41,7 @@ function eaterCircuit() {
     w('glue1', '1y', 'glue1', '3a'); w('glue1', '2y', 'glue1', '3b');
     w('glue1', '3y', 'ram1', 'csb');
     // ROM.CSB = ~A15
-    w('glue1', '1y', 'rom1', 'csb');
+    w('glue1', '1y', 'rom1', 'ceb');
     // g4: VIA.CS2B = NAND(~A15, A14); VIA.CS1 = A13
     w('glue1', '1y', 'glue1', '4a'); w('cpu1', 'a14', 'glue1', '4b');
     w('glue1', '4y', 'via1', 'cs2b');

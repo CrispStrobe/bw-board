@@ -22,7 +22,7 @@ function searleCircuit() {
     w('cpu1', 'mreqb', 'glue1', '1a'); w('cpu1', 'mreqb', 'glue1', '1b');   // g1: ~mreq
     w('cpu1', 'a15', 'glue1', '2a'); w('cpu1', 'a15', 'glue1', '2b');       // g2: ~a15
     w('glue1', '1y', 'glue1', '3a'); w('glue1', '2y', 'glue1', '3b');       // g3: rom csb
-    w('glue1', '3y', 'rom1', 'csb');
+    w('glue1', '3y', 'rom1', 'ceb');
     w('glue1', '1y', 'glue1', '4a'); w('cpu1', 'a15', 'glue1', '4b');       // g4: ram csb
     w('glue1', '4y', 'ram1', 'csb');
     w('cpu1', 'iorqb', 'glue2', '1a'); w('cpu1', 'iorqb', 'glue2', '1b');   // ~iorq
