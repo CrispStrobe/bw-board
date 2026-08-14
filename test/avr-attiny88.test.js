@@ -299,3 +299,183 @@ test('blinkenrocket firmware: button press advances pattern', { skip: !firmwareE
   assert.ok(diff > 0.01 || matrixState.brightness.reduce((s, v) => s + v, 0) > 0,
     `Expected pattern change after button press (diff=${diff.toFixed(4)})`);
 });
+
+// ── Modem: ADC stimulus → EEPROM (stage 4 stretch) ─────────────────────────
+// Clean-room Hamming(24,16) FEC encoder + FSK voltage waveform.
+// Encodes one FRAMES animation, feeds it as ADC samples, asserts it arrives
+// in the external I2C EEPROM.
+
+// Hamming parity tables (derived from the (24,16) code, not copied)
+const HPL = [0,3,5,6,6,5,3,0,7,4,2,1,1,2,4,7];
+const HPH = [0,9,10,3,11,2,1,8,12,5,6,15,7,14,13,4];
+
+function parity128(b) { return HPL[b & 0x0f] ^ HPH[(b >> 4) & 0x0f]; }
+function parity2416(b1, b2) { return parity128(b1) | (parity128(b2) << 4); }
+
+/** FEC-encode data bytes: every 2 data bytes → 3 raw bytes (data, data, parity). */
+function fecEncode(dataBytes) {
+  const raw = [];
+  for (let i = 0; i < dataBytes.length; i += 2) {
+    const d0 = dataBytes[i];
+    const d1 = i + 1 < dataBytes.length ? dataBytes[i + 1] : 0x00;
+    raw.push(d0, d1, parity2416(d0, d1));
+  }
+  return raw;
+}
+
+/**
+ * Build an ADC voltage waveform encoding the given protocol data bytes.
+ *
+ * The blinkenrocket modem (V2, ADC-based) classifies frequency every
+ * 8 ADC samples: delta-sum ≥ 150 = FREQ_HIGH, else FREQ_LOW.
+ * Bit value from pulse length: ≥ 6 windows = 1, < 6 = 0.
+ *
+ * @param {number[]} dataBytes - Protocol bytes (START1..END), pre-FEC.
+ * @returns {number[]} Voltage samples (0.0–5.0 V).
+ */
+function buildModemWaveform(dataBytes) {
+  const rawBytes = fecEncode(dataBytes);
+  const SAMPLES_PER_WINDOW = 8;
+  const LONG = 7;   // windows for bit 1 (bitlength ≥ 6)
+  const SHORT = 3;  // windows for bit 0 (bitlength < 6)
+
+  const windows = [];
+
+  // Phase 1: establish frequency (10 windows HIGH)
+  for (let i = 0; i < 10; i++) windows.push('H');
+  // Phase 2: silence → idle reset (30 windows LOW)
+  for (let i = 0; i < 30; i++) windows.push('L');
+  // Phase 3: re-establish (1 window HIGH = skip edge)
+  windows.push('H');
+
+  // Phase 4: encoded data.  Start from HIGH (the skip edge).
+  // The modem shifts bits in LSB-first: (byte >> 1) | (new_bit << 7).
+  // So the FIRST bit decoded lands at bit 0 after 7 more shifts.
+  // We must send bit 0 first, bit 7 last.
+  let curFreq = 'H';
+  for (const byte of rawBytes) {
+    for (let bitPos = 0; bitPos <= 7; bitPos++) {
+      const bit = (byte >> bitPos) & 1;
+      const hold = bit ? LONG : SHORT;
+      for (let w = 0; w < hold; w++) windows.push(curFreq);
+      curFreq = curFreq === 'H' ? 'L' : 'H';
+    }
+  }
+
+  // Phase 5: trailing silence (trigger final processing)
+  for (let i = 0; i < 40; i++) windows.push('L');
+
+  // Convert windows to voltage samples
+  const volts = [];
+  for (const w of windows) {
+    for (let s = 0; s < SAMPLES_PER_WINDOW; s++) {
+      volts.push(w === 'H' ? (s & 1 ? 4.5 : 0.5) : 2.5);
+    }
+  }
+  return volts;
+}
+
+test('modem: ADC waveform delivers one FRAMES animation to external EEPROM', { skip: !firmwareExists && 'firmware hex not found' }, () => {
+  registerMatrix8x8();
+
+  const hexStr = readFileSync(HEX_PATH, 'utf8');
+  const flash = parseIntelHex(hexStr, 8192);
+  const adapter = createAvr8jsAdapter({ chip: 'attiny88', program: flash });
+
+  // 8 KB external EEPROM (24C64), starts as 0xFF (unprogrammed)
+  const extEE = new Uint8Array(8192).fill(0xFF);
+  wirePeripherals(adapter, { externalEeprom: extEE });
+
+  // The animation frame we want to transmit:
+  // A simple checkerboard pattern (easy to verify)
+  const frameData = [0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55, 0xAA, 0x55];
+
+  // Protocol: START1 START2 PATTERN1 PATTERN2 HEADER META DATA END
+  const protocolBytes = [
+    0xa5, 0x5a,       // START1, START2
+    0x0f, 0xf0,       // PATTERN1, PATTERN2
+    0x20, 0x08,       // HEADER: type=FRAMES(0x2), length=8
+    0x0e, 0x00,       // META: speed, delay
+    ...frameData,     // 8 bytes of frame data
+    0x84, 0x00,       // END + padding (FEC needs even count)
+  ];
+
+  const waveform = buildModemWaveform(protocolBytes);
+
+  // ADC sample counter — readAnalog returns the next voltage from the waveform.
+  // The waveform starts AFTER boot to avoid samples being consumed before
+  // interrupts are enabled (modem.enable() configures ADC during init, but
+  // sei() comes later — ADC reads during boot go nowhere).
+  let sampleIdx = 0;
+  let adcReads = 0;
+  let waveformStarted = false;
+
+  const pinVolts = {};
+  const board = {
+    setPin(name, mode, high) {
+      pinVolts[name] = (mode === 'pushpull' && high) ? 5.0 : 0.0;
+    },
+    advanceTo() {},
+    readPin(name) {
+      if (name === 'PC3' || name === 'PC7') return 1;
+      return 0;
+    },
+    readAnalog(name) {
+      if (name === 'A6') {
+        adcReads++;
+        if (waveformStarted && sampleIdx < waveform.length) {
+          return waveform[sampleIdx++];
+        }
+        return 2.5; // silence
+      }
+      return 0;
+    },
+  };
+
+  adapter.attachBoard(board);
+
+  // Boot the firmware (200ms — lets init complete + sei() enables interrupts)
+  for (let ms = 0; ms < 200; ms += 5) adapter.advanceNs(5_000_000);
+
+  // Start the waveform and run long enough for decoding + EEPROM write.
+  waveformStarted = true;
+  for (let ms = 0; ms < 1500; ms += 5) adapter.advanceNs(5_000_000);
+
+  // Verify: the external EEPROM should now contain the animation.
+  //
+  // EEPROM layout (from storage.cc):
+  //   Byte 0:    num_anims (written by storage.sync())
+  //   Byte 1:    page_offset of first animation (written by storage.save())
+  //   Byte 256+: animation data, 32-byte aligned (written by storage.append())
+  //
+  // storage.save() calls i2c_write for the page offset, then append() for
+  // the data.  storage.sync() writes num_anims afterward.  We verify the
+  // animation data directly — that is the proof the modem→FEC→storage path
+  // delivered the bits.
+
+  // Page offset at byte 1 (written by save())
+  assert.equal(extEE[1], 0, `page offset should be 0 (first animation), got ${extEE[1]}`);
+
+  // Animation data lives at byte 256 (page 0 × 32 + metadata area 256)
+  const animBase = 256;
+
+  // Header: type=FRAMES(0x2), length=8
+  assert.equal(extEE[animBase], 0x20,
+    `header byte 0: expected 0x20 (FRAMES|len_hi=0), got 0x${extEE[animBase].toString(16)}`);
+  assert.equal(extEE[animBase + 1], 0x08,
+    `header byte 1: expected 0x08 (len_lo=8), got 0x${extEE[animBase + 1].toString(16)}`);
+
+  // META: speed=0x0e, delay=0x00
+  assert.equal(extEE[animBase + 2], 0x0e, 'meta speed');
+  assert.equal(extEE[animBase + 3], 0x00, 'meta delay');
+
+  // Frame data starts at animBase + 4
+  for (let i = 0; i < 8; i++) {
+    assert.equal(extEE[animBase + 4 + i], frameData[i],
+      `frame byte ${i}: expected 0x${frameData[i].toString(16)}, got 0x${extEE[animBase + 4 + i].toString(16)}`);
+  }
+
+  // Confirm ADC signal was consumed
+  assert.ok(sampleIdx >= waveform.length * 0.9,
+    `Expected most samples consumed, got ${sampleIdx}/${waveform.length}`);
+});
