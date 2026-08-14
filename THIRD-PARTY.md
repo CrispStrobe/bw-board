@@ -1,6 +1,11 @@
 # Third-party code and references
 
-This project contains no third-party code at present.
+## Shipped third-party code
+
+| project | licence | relationship |
+|---|---|---|
+| janroesner/sixty5o2 | MIT | Bootloader + hello_world ROM for EATER6502 preset, ported to ca65. Source and binaries in `rom/sixty5o2/` |
+| mike42/6502-computer | CC-BY-4.0 | HB6502 machine preset derived from hardware design (address decode, clock, chip selection). No code copied; wiring facts only |
 
 ## Runtime dependencies
 
@@ -13,6 +18,7 @@ This project contains no third-party code at present.
 | project | licence | relationship |
 |---|---|---|
 | blinkenrocket-firmware | LGPL-3 OR BSD-3 per file | Built (avr-gcc) for ATtiny88 smoke tests; BSD-3 licence elected; binary loaded at test time only, not shipped |
+| mike42/6502-computer ehBASIC | NC (Lee Davidson) | Boot script in test/hb6502-ehbasic-boot.mjs; ROM never committed or shipped |
 
 ## References studied (not copied)
 
