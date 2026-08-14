@@ -1,0 +1,565 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module lcd
+                                      6 	.optsdcc -mmcs51 --model-small
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _main
+                                     12 	.globl _st7920_init
+                                     13 	.globl _st7920_text
+                                     14 	.globl _st7920_data
+                                     15 	.globl _st7920_command
+                                     16 	.globl _st7920_byte
+                                     17 	.globl _delay
+                                     18 	.globl _CY
+                                     19 	.globl _AC
+                                     20 	.globl _F0
+                                     21 	.globl _RS1
+                                     22 	.globl _RS0
+                                     23 	.globl _OV
+                                     24 	.globl _F1
+                                     25 	.globl _P
+                                     26 	.globl _PS
+                                     27 	.globl _PT1
+                                     28 	.globl _PX1
+                                     29 	.globl _PT0
+                                     30 	.globl _PX0
+                                     31 	.globl _RD
+                                     32 	.globl _WR
+                                     33 	.globl _T1
+                                     34 	.globl _T0
+                                     35 	.globl _INT1
+                                     36 	.globl _INT0
+                                     37 	.globl _TXD
+                                     38 	.globl _RXD
+                                     39 	.globl _P3_7
+                                     40 	.globl _P3_6
+                                     41 	.globl _P3_5
+                                     42 	.globl _P3_4
+                                     43 	.globl _P3_3
+                                     44 	.globl _P3_2
+                                     45 	.globl _P3_1
+                                     46 	.globl _P3_0
+                                     47 	.globl _EA
+                                     48 	.globl _ES
+                                     49 	.globl _ET1
+                                     50 	.globl _EX1
+                                     51 	.globl _ET0
+                                     52 	.globl _EX0
+                                     53 	.globl _P2_7
+                                     54 	.globl _P2_6
+                                     55 	.globl _P2_5
+                                     56 	.globl _P2_4
+                                     57 	.globl _P2_3
+                                     58 	.globl _P2_2
+                                     59 	.globl _P2_1
+                                     60 	.globl _P2_0
+                                     61 	.globl _SM0
+                                     62 	.globl _SM1
+                                     63 	.globl _SM2
+                                     64 	.globl _REN
+                                     65 	.globl _TB8
+                                     66 	.globl _RB8
+                                     67 	.globl _TI
+                                     68 	.globl _RI
+                                     69 	.globl _P1_7
+                                     70 	.globl _P1_6
+                                     71 	.globl _P1_5
+                                     72 	.globl _P1_4
+                                     73 	.globl _P1_3
+                                     74 	.globl _P1_2
+                                     75 	.globl _P1_1
+                                     76 	.globl _P1_0
+                                     77 	.globl _TF1
+                                     78 	.globl _TR1
+                                     79 	.globl _TF0
+                                     80 	.globl _TR0
+                                     81 	.globl _IE1
+                                     82 	.globl _IT1
+                                     83 	.globl _IE0
+                                     84 	.globl _IT0
+                                     85 	.globl _P0_7
+                                     86 	.globl _P0_6
+                                     87 	.globl _P0_5
+                                     88 	.globl _P0_4
+                                     89 	.globl _P0_3
+                                     90 	.globl _P0_2
+                                     91 	.globl _P0_1
+                                     92 	.globl _P0_0
+                                     93 	.globl _B
+                                     94 	.globl _ACC
+                                     95 	.globl _PSW
+                                     96 	.globl _IP
+                                     97 	.globl _P3
+                                     98 	.globl _IE
+                                     99 	.globl _P2
+                                    100 	.globl _SBUF
+                                    101 	.globl _SCON
+                                    102 	.globl _P1
+                                    103 	.globl _TH1
+                                    104 	.globl _TH0
+                                    105 	.globl _TL1
+                                    106 	.globl _TL0
+                                    107 	.globl _TMOD
+                                    108 	.globl _TCON
+                                    109 	.globl _PCON
+                                    110 	.globl _DPH
+                                    111 	.globl _DPL
+                                    112 	.globl _SP
+                                    113 	.globl _P0
+                                    114 ;--------------------------------------------------------
+                                    115 ; special function registers
+                                    116 ;--------------------------------------------------------
+                                    117 	.area RSEG    (ABS,DATA)
+      000000                        118 	.org 0x0000
+                           000080   119 _P0	=	0x0080
+                           000081   120 _SP	=	0x0081
+                           000082   121 _DPL	=	0x0082
+                           000083   122 _DPH	=	0x0083
+                           000087   123 _PCON	=	0x0087
+                           000088   124 _TCON	=	0x0088
+                           000089   125 _TMOD	=	0x0089
+                           00008A   126 _TL0	=	0x008a
+                           00008B   127 _TL1	=	0x008b
+                           00008C   128 _TH0	=	0x008c
+                           00008D   129 _TH1	=	0x008d
+                           000090   130 _P1	=	0x0090
+                           000098   131 _SCON	=	0x0098
+                           000099   132 _SBUF	=	0x0099
+                           0000A0   133 _P2	=	0x00a0
+                           0000A8   134 _IE	=	0x00a8
+                           0000B0   135 _P3	=	0x00b0
+                           0000B8   136 _IP	=	0x00b8
+                           0000D0   137 _PSW	=	0x00d0
+                           0000E0   138 _ACC	=	0x00e0
+                           0000F0   139 _B	=	0x00f0
+                                    140 ;--------------------------------------------------------
+                                    141 ; special function bits
+                                    142 ;--------------------------------------------------------
+                                    143 	.area RSEG    (ABS,DATA)
+      000000                        144 	.org 0x0000
+                           000080   145 _P0_0	=	0x0080
+                           000081   146 _P0_1	=	0x0081
+                           000082   147 _P0_2	=	0x0082
+                           000083   148 _P0_3	=	0x0083
+                           000084   149 _P0_4	=	0x0084
+                           000085   150 _P0_5	=	0x0085
+                           000086   151 _P0_6	=	0x0086
+                           000087   152 _P0_7	=	0x0087
+                           000088   153 _IT0	=	0x0088
+                           000089   154 _IE0	=	0x0089
+                           00008A   155 _IT1	=	0x008a
+                           00008B   156 _IE1	=	0x008b
+                           00008C   157 _TR0	=	0x008c
+                           00008D   158 _TF0	=	0x008d
+                           00008E   159 _TR1	=	0x008e
+                           00008F   160 _TF1	=	0x008f
+                           000090   161 _P1_0	=	0x0090
+                           000091   162 _P1_1	=	0x0091
+                           000092   163 _P1_2	=	0x0092
+                           000093   164 _P1_3	=	0x0093
+                           000094   165 _P1_4	=	0x0094
+                           000095   166 _P1_5	=	0x0095
+                           000096   167 _P1_6	=	0x0096
+                           000097   168 _P1_7	=	0x0097
+                           000098   169 _RI	=	0x0098
+                           000099   170 _TI	=	0x0099
+                           00009A   171 _RB8	=	0x009a
+                           00009B   172 _TB8	=	0x009b
+                           00009C   173 _REN	=	0x009c
+                           00009D   174 _SM2	=	0x009d
+                           00009E   175 _SM1	=	0x009e
+                           00009F   176 _SM0	=	0x009f
+                           0000A0   177 _P2_0	=	0x00a0
+                           0000A1   178 _P2_1	=	0x00a1
+                           0000A2   179 _P2_2	=	0x00a2
+                           0000A3   180 _P2_3	=	0x00a3
+                           0000A4   181 _P2_4	=	0x00a4
+                           0000A5   182 _P2_5	=	0x00a5
+                           0000A6   183 _P2_6	=	0x00a6
+                           0000A7   184 _P2_7	=	0x00a7
+                           0000A8   185 _EX0	=	0x00a8
+                           0000A9   186 _ET0	=	0x00a9
+                           0000AA   187 _EX1	=	0x00aa
+                           0000AB   188 _ET1	=	0x00ab
+                           0000AC   189 _ES	=	0x00ac
+                           0000AF   190 _EA	=	0x00af
+                           0000B0   191 _P3_0	=	0x00b0
+                           0000B1   192 _P3_1	=	0x00b1
+                           0000B2   193 _P3_2	=	0x00b2
+                           0000B3   194 _P3_3	=	0x00b3
+                           0000B4   195 _P3_4	=	0x00b4
+                           0000B5   196 _P3_5	=	0x00b5
+                           0000B6   197 _P3_6	=	0x00b6
+                           0000B7   198 _P3_7	=	0x00b7
+                           0000B0   199 _RXD	=	0x00b0
+                           0000B1   200 _TXD	=	0x00b1
+                           0000B2   201 _INT0	=	0x00b2
+                           0000B3   202 _INT1	=	0x00b3
+                           0000B4   203 _T0	=	0x00b4
+                           0000B5   204 _T1	=	0x00b5
+                           0000B6   205 _WR	=	0x00b6
+                           0000B7   206 _RD	=	0x00b7
+                           0000B8   207 _PX0	=	0x00b8
+                           0000B9   208 _PT0	=	0x00b9
+                           0000BA   209 _PX1	=	0x00ba
+                           0000BB   210 _PT1	=	0x00bb
+                           0000BC   211 _PS	=	0x00bc
+                           0000D0   212 _P	=	0x00d0
+                           0000D1   213 _F1	=	0x00d1
+                           0000D2   214 _OV	=	0x00d2
+                           0000D3   215 _RS0	=	0x00d3
+                           0000D4   216 _RS1	=	0x00d4
+                           0000D5   217 _F0	=	0x00d5
+                           0000D6   218 _AC	=	0x00d6
+                           0000D7   219 _CY	=	0x00d7
+                                    220 ;--------------------------------------------------------
+                                    221 ; overlayable register banks
+                                    222 ;--------------------------------------------------------
+                                    223 	.area REG_BANK_0	(REL,OVR,DATA)
+      000000                        224 	.ds 8
+                                    225 ;--------------------------------------------------------
+                                    226 ; internal ram data
+                                    227 ;--------------------------------------------------------
+                                    228 	.area DSEG    (DATA)
+                                    229 ;--------------------------------------------------------
+                                    230 ; overlayable items in internal ram
+                                    231 ;--------------------------------------------------------
+                                    232 	.area	OSEG    (OVR,DATA)
+                                    233 	.area	OSEG    (OVR,DATA)
+                                    234 ;--------------------------------------------------------
+                                    235 ; Stack segment in internal ram
+                                    236 ;--------------------------------------------------------
+                                    237 	.area	SSEG
+      000008                        238 __start__stack:
+      000008                        239 	.ds	1
+                                    240 
+                                    241 ;--------------------------------------------------------
+                                    242 ; indirectly addressable internal ram data
+                                    243 ;--------------------------------------------------------
+                                    244 	.area ISEG    (DATA)
+                                    245 ;--------------------------------------------------------
+                                    246 ; absolute internal ram data
+                                    247 ;--------------------------------------------------------
+                                    248 	.area IABS    (ABS,DATA)
+                                    249 	.area IABS    (ABS,DATA)
+                                    250 ;--------------------------------------------------------
+                                    251 ; bit data
+                                    252 ;--------------------------------------------------------
+                                    253 	.area BSEG    (BIT)
+                                    254 ;--------------------------------------------------------
+                                    255 ; paged external ram data
+                                    256 ;--------------------------------------------------------
+                                    257 	.area PSEG    (PAG,XDATA)
+                                    258 ;--------------------------------------------------------
+                                    259 ; external ram data
+                                    260 ;--------------------------------------------------------
+                                    261 	.area XSEG    (XDATA)
+                                    262 ;--------------------------------------------------------
+                                    263 ; absolute external ram data
+                                    264 ;--------------------------------------------------------
+                                    265 	.area XABS    (ABS,XDATA)
+                                    266 ;--------------------------------------------------------
+                                    267 ; external initialized ram data
+                                    268 ;--------------------------------------------------------
+                                    269 	.area XISEG   (XDATA)
+                                    270 	.area HOME    (CODE)
+                                    271 	.area GSINIT0 (CODE)
+                                    272 	.area GSINIT1 (CODE)
+                                    273 	.area GSINIT2 (CODE)
+                                    274 	.area GSINIT3 (CODE)
+                                    275 	.area GSINIT4 (CODE)
+                                    276 	.area GSINIT5 (CODE)
+                                    277 	.area GSINIT  (CODE)
+                                    278 	.area GSFINAL (CODE)
+                                    279 	.area CSEG    (CODE)
+                                    280 ;--------------------------------------------------------
+                                    281 ; interrupt vector
+                                    282 ;--------------------------------------------------------
+                                    283 	.area HOME    (CODE)
+      000000                        284 __interrupt_vect:
+      000000 02 00 06         [24]  285 	ljmp	__sdcc_gsinit_startup
+                                    286 ;--------------------------------------------------------
+                                    287 ; global & static initialisations
+                                    288 ;--------------------------------------------------------
+                                    289 	.area HOME    (CODE)
+                                    290 	.area GSINIT  (CODE)
+                                    291 	.area GSFINAL (CODE)
+                                    292 	.area GSINIT  (CODE)
+                                    293 	.globl __sdcc_gsinit_startup
+                                    294 	.globl __sdcc_program_startup
+                                    295 	.globl __start__stack
+                                    296 	.globl __mcs51_genXINIT
+                                    297 	.globl __mcs51_genXRAMCLEAR
+                                    298 	.globl __mcs51_genRAMCLEAR
+                                    299 	.area GSFINAL (CODE)
+      00005F 02 00 03         [24]  300 	ljmp	__sdcc_program_startup
+                                    301 ;--------------------------------------------------------
+                                    302 ; Home
+                                    303 ;--------------------------------------------------------
+                                    304 	.area HOME    (CODE)
+                                    305 	.area HOME    (CODE)
+      000003                        306 __sdcc_program_startup:
+      000003 02 01 27         [24]  307 	ljmp	_main
+                                    308 ;	return from main will return to caller
+                                    309 ;--------------------------------------------------------
+                                    310 ; code
+                                    311 ;--------------------------------------------------------
+                                    312 	.area CSEG    (CODE)
+                                    313 ;------------------------------------------------------------
+                                    314 ;Allocation info for local variables in function 'delay'
+                                    315 ;------------------------------------------------------------
+                                    316 ;t                         Allocated to registers 
+                                    317 ;------------------------------------------------------------
+                                    318 ;	04_st7920_lcd/lcd.c:28: void delay(uint16_t t) {
+                                    319 ;	-----------------------------------------
+                                    320 ;	 function delay
+                                    321 ;	-----------------------------------------
+      000062                        322 _delay:
+                           000007   323 	ar7 = 0x07
+                           000006   324 	ar6 = 0x06
+                           000005   325 	ar5 = 0x05
+                           000004   326 	ar4 = 0x04
+                           000003   327 	ar3 = 0x03
+                           000002   328 	ar2 = 0x02
+                           000001   329 	ar1 = 0x01
+                           000000   330 	ar0 = 0x00
+      000062 AE 82            [24]  331 	mov	r6,dpl
+      000064 AF 83            [24]  332 	mov	r7,dph
+                                    333 ;	04_st7920_lcd/lcd.c:29: while (t--) // Simple delay loop (more than 1us at 12MHz)
+      000066                        334 00101$:
+      000066 8E 04            [24]  335 	mov	ar4,r6
+      000068 8F 05            [24]  336 	mov	ar5,r7
+      00006A 1E               [12]  337 	dec	r6
+      00006B BE FF 01         [24]  338 	cjne	r6,#0xff,00111$
+      00006E 1F               [12]  339 	dec	r7
+      00006F                        340 00111$:
+      00006F EC               [12]  341 	mov	a,r4
+      000070 4D               [12]  342 	orl	a,r5
+      000071 70 F3            [24]  343 	jnz	00101$
+                                    344 ;	04_st7920_lcd/lcd.c:31: }
+      000073 22               [24]  345 	ret
+                                    346 ;------------------------------------------------------------
+                                    347 ;Allocation info for local variables in function 'st7920_byte'
+                                    348 ;------------------------------------------------------------
+                                    349 ;d                         Allocated to registers r7 
+                                    350 ;i                         Allocated to registers r6 
+                                    351 ;------------------------------------------------------------
+                                    352 ;	04_st7920_lcd/lcd.c:33: void st7920_byte(uint8_t d) {
+                                    353 ;	-----------------------------------------
+                                    354 ;	 function st7920_byte
+                                    355 ;	-----------------------------------------
+      000074                        356 _st7920_byte:
+      000074 AF 82            [24]  357 	mov	r7,dpl
+                                    358 ;	04_st7920_lcd/lcd.c:34: for(uint8_t i = 0; i < 8; i++) { // MSB first
+      000076 7E 00            [12]  359 	mov	r6,#0x00
+      000078                        360 00103$:
+      000078 BE 08 00         [24]  361 	cjne	r6,#0x08,00116$
+      00007B                        362 00116$:
+      00007B 50 14            [24]  363 	jnc	00101$
+                                    364 ;	04_st7920_lcd/lcd.c:35: ST7920_SCLK = 0; // Toggle bits on rising edge
+                                    365 ;	assignBit
+      00007D C2 A7            [12]  366 	clr	_P2_7
+                                    367 ;	04_st7920_lcd/lcd.c:36: ST7920_SID = d & 0x80;
+      00007F EF               [12]  368 	mov	a,r7
+      000080 23               [12]  369 	rl	a
+      000081 54 01            [12]  370 	anl	a,#0x01
+                                    371 ;	assignBit
+      000083 24 FF            [12]  372 	add	a,#0xff
+      000085 92 A5            [24]  373 	mov	_P2_5,c
+                                    374 ;	04_st7920_lcd/lcd.c:37: d <<= 1;
+      000087 8F 05            [24]  375 	mov	ar5,r7
+      000089 ED               [12]  376 	mov	a,r5
+      00008A 2D               [12]  377 	add	a,r5
+      00008B FF               [12]  378 	mov	r7,a
+                                    379 ;	04_st7920_lcd/lcd.c:38: ST7920_SCLK = 1; // Reset state
+                                    380 ;	assignBit
+      00008C D2 A7            [12]  381 	setb	_P2_7
+                                    382 ;	04_st7920_lcd/lcd.c:34: for(uint8_t i = 0; i < 8; i++) { // MSB first
+      00008E 0E               [12]  383 	inc	r6
+      00008F 80 E7            [24]  384 	sjmp	00103$
+      000091                        385 00101$:
+                                    386 ;	04_st7920_lcd/lcd.c:40: ST7920_SCLK = 0; // Reset state
+                                    387 ;	assignBit
+      000091 C2 A7            [12]  388 	clr	_P2_7
+                                    389 ;	04_st7920_lcd/lcd.c:41: }
+      000093 22               [24]  390 	ret
+                                    391 ;------------------------------------------------------------
+                                    392 ;Allocation info for local variables in function 'st7920_command'
+                                    393 ;------------------------------------------------------------
+                                    394 ;cmd                       Allocated to registers r7 
+                                    395 ;------------------------------------------------------------
+                                    396 ;	04_st7920_lcd/lcd.c:43: void st7920_command(uint8_t cmd) {
+                                    397 ;	-----------------------------------------
+                                    398 ;	 function st7920_command
+                                    399 ;	-----------------------------------------
+      000094                        400 _st7920_command:
+      000094 AF 82            [24]  401 	mov	r7,dpl
+                                    402 ;	04_st7920_lcd/lcd.c:44: ST7920_CS = 1;
+                                    403 ;	assignBit
+      000096 D2 A6            [12]  404 	setb	_P2_6
+                                    405 ;	04_st7920_lcd/lcd.c:45: st7920_byte(0b11111000);
+      000098 75 82 F8         [24]  406 	mov	dpl,#0xf8
+      00009B C0 07            [24]  407 	push	ar7
+      00009D 12 00 74         [24]  408 	lcall	_st7920_byte
+      0000A0 D0 07            [24]  409 	pop	ar7
+                                    410 ;	04_st7920_lcd/lcd.c:48: st7920_byte(0xF0 & cmd);        // high nibble
+      0000A2 74 F0            [12]  411 	mov	a,#0xf0
+      0000A4 5F               [12]  412 	anl	a,r7
+      0000A5 F5 82            [12]  413 	mov	dpl,a
+      0000A7 C0 07            [24]  414 	push	ar7
+      0000A9 12 00 74         [24]  415 	lcall	_st7920_byte
+      0000AC D0 07            [24]  416 	pop	ar7
+                                    417 ;	04_st7920_lcd/lcd.c:49: st7920_byte(0xF0 & (cmd << 4)); // low nibble
+      0000AE EF               [12]  418 	mov	a,r7
+      0000AF C4               [12]  419 	swap	a
+      0000B0 54 F0            [12]  420 	anl	a,#0xf0
+      0000B2 FF               [12]  421 	mov	r7,a
+      0000B3 74 F0            [12]  422 	mov	a,#0xf0
+      0000B5 5F               [12]  423 	anl	a,r7
+      0000B6 F5 82            [12]  424 	mov	dpl,a
+      0000B8 12 00 74         [24]  425 	lcall	_st7920_byte
+                                    426 ;	04_st7920_lcd/lcd.c:50: ST7920_CS = 0;
+                                    427 ;	assignBit
+      0000BB C2 A6            [12]  428 	clr	_P2_6
+                                    429 ;	04_st7920_lcd/lcd.c:51: }
+      0000BD 22               [24]  430 	ret
+                                    431 ;------------------------------------------------------------
+                                    432 ;Allocation info for local variables in function 'st7920_data'
+                                    433 ;------------------------------------------------------------
+                                    434 ;data                      Allocated to registers r7 
+                                    435 ;------------------------------------------------------------
+                                    436 ;	04_st7920_lcd/lcd.c:53: void st7920_data(uint8_t data) {
+                                    437 ;	-----------------------------------------
+                                    438 ;	 function st7920_data
+                                    439 ;	-----------------------------------------
+      0000BE                        440 _st7920_data:
+      0000BE AF 82            [24]  441 	mov	r7,dpl
+                                    442 ;	04_st7920_lcd/lcd.c:54: ST7920_CS = 1;
+                                    443 ;	assignBit
+      0000C0 D2 A6            [12]  444 	setb	_P2_6
+                                    445 ;	04_st7920_lcd/lcd.c:55: st7920_byte(0b11111010);
+      0000C2 75 82 FA         [24]  446 	mov	dpl,#0xfa
+      0000C5 C0 07            [24]  447 	push	ar7
+      0000C7 12 00 74         [24]  448 	lcall	_st7920_byte
+      0000CA D0 07            [24]  449 	pop	ar7
+                                    450 ;	04_st7920_lcd/lcd.c:58: st7920_byte(0xF0 & data);        // high nibble
+      0000CC 74 F0            [12]  451 	mov	a,#0xf0
+      0000CE 5F               [12]  452 	anl	a,r7
+      0000CF F5 82            [12]  453 	mov	dpl,a
+      0000D1 C0 07            [24]  454 	push	ar7
+      0000D3 12 00 74         [24]  455 	lcall	_st7920_byte
+      0000D6 D0 07            [24]  456 	pop	ar7
+                                    457 ;	04_st7920_lcd/lcd.c:59: st7920_byte(0xF0 & (data << 4)); // low nibble
+      0000D8 EF               [12]  458 	mov	a,r7
+      0000D9 C4               [12]  459 	swap	a
+      0000DA 54 F0            [12]  460 	anl	a,#0xf0
+      0000DC FF               [12]  461 	mov	r7,a
+      0000DD 74 F0            [12]  462 	mov	a,#0xf0
+      0000DF 5F               [12]  463 	anl	a,r7
+      0000E0 F5 82            [12]  464 	mov	dpl,a
+      0000E2 12 00 74         [24]  465 	lcall	_st7920_byte
+                                    466 ;	04_st7920_lcd/lcd.c:60: ST7920_CS = 0;
+                                    467 ;	assignBit
+      0000E5 C2 A6            [12]  468 	clr	_P2_6
+                                    469 ;	04_st7920_lcd/lcd.c:61: }
+      0000E7 22               [24]  470 	ret
+                                    471 ;------------------------------------------------------------
+                                    472 ;Allocation info for local variables in function 'st7920_text'
+                                    473 ;------------------------------------------------------------
+                                    474 ;str                       Allocated to registers 
+                                    475 ;------------------------------------------------------------
+                                    476 ;	04_st7920_lcd/lcd.c:63: void st7920_text(const char* str) {
+                                    477 ;	-----------------------------------------
+                                    478 ;	 function st7920_text
+                                    479 ;	-----------------------------------------
+      0000E8                        480 _st7920_text:
+      0000E8 AD 82            [24]  481 	mov	r5,dpl
+      0000EA AE 83            [24]  482 	mov	r6,dph
+      0000EC AF F0            [24]  483 	mov	r7,b
+                                    484 ;	04_st7920_lcd/lcd.c:64: while (*str) {
+      0000EE                        485 00101$:
+      0000EE 8D 82            [24]  486 	mov	dpl,r5
+      0000F0 8E 83            [24]  487 	mov	dph,r6
+      0000F2 8F F0            [24]  488 	mov	b,r7
+      0000F4 12 01 3B         [24]  489 	lcall	__gptrget
+      0000F7 FC               [12]  490 	mov	r4,a
+      0000F8 60 18            [24]  491 	jz	00104$
+                                    492 ;	04_st7920_lcd/lcd.c:65: st7920_data((uint8_t)(*str));
+      0000FA 8C 82            [24]  493 	mov	dpl,r4
+      0000FC C0 07            [24]  494 	push	ar7
+      0000FE C0 06            [24]  495 	push	ar6
+      000100 C0 05            [24]  496 	push	ar5
+      000102 12 00 BE         [24]  497 	lcall	_st7920_data
+      000105 D0 05            [24]  498 	pop	ar5
+      000107 D0 06            [24]  499 	pop	ar6
+      000109 D0 07            [24]  500 	pop	ar7
+                                    501 ;	04_st7920_lcd/lcd.c:66: str++;
+      00010B 0D               [12]  502 	inc	r5
+      00010C BD 00 DF         [24]  503 	cjne	r5,#0x00,00101$
+      00010F 0E               [12]  504 	inc	r6
+      000110 80 DC            [24]  505 	sjmp	00101$
+      000112                        506 00104$:
+                                    507 ;	04_st7920_lcd/lcd.c:68: }
+      000112 22               [24]  508 	ret
+                                    509 ;------------------------------------------------------------
+                                    510 ;Allocation info for local variables in function 'st7920_init'
+                                    511 ;------------------------------------------------------------
+                                    512 ;	04_st7920_lcd/lcd.c:70: void st7920_init() { // Figure 8-bit interface from ST7920 datasheet
+                                    513 ;	-----------------------------------------
+                                    514 ;	 function st7920_init
+                                    515 ;	-----------------------------------------
+      000113                        516 _st7920_init:
+                                    517 ;	04_st7920_lcd/lcd.c:71: ST7920_SCLK = 0; // Reset state
+                                    518 ;	assignBit
+      000113 C2 A7            [12]  519 	clr	_P2_7
+                                    520 ;	04_st7920_lcd/lcd.c:72: ST7920_RST = 0; // Force reset
+                                    521 ;	assignBit
+      000115 C2 B4            [12]  522 	clr	_P3_4
+                                    523 ;	04_st7920_lcd/lcd.c:73: ST7920_CS = 0;  // Defined state
+                                    524 ;	assignBit
+      000117 C2 A6            [12]  525 	clr	_P2_6
+                                    526 ;	04_st7920_lcd/lcd.c:74: delay(40000);
+      000119 90 9C 40         [24]  527 	mov	dptr,#0x9c40
+      00011C 12 00 62         [24]  528 	lcall	_delay
+                                    529 ;	04_st7920_lcd/lcd.c:75: ST7920_RST = 1;
+                                    530 ;	assignBit
+      00011F D2 B4            [12]  531 	setb	_P3_4
+                                    532 ;	04_st7920_lcd/lcd.c:76: delay(40000); // Wait for more than 40ms after Vcc rises to 4.5V
+      000121 90 9C 40         [24]  533 	mov	dptr,#0x9c40
+                                    534 ;	04_st7920_lcd/lcd.c:77: }
+      000124 02 00 62         [24]  535 	ljmp	_delay
+                                    536 ;------------------------------------------------------------
+                                    537 ;Allocation info for local variables in function 'main'
+                                    538 ;------------------------------------------------------------
+                                    539 ;	04_st7920_lcd/lcd.c:79: void main(void) {
+                                    540 ;	-----------------------------------------
+                                    541 ;	 function main
+                                    542 ;	-----------------------------------------
+      000127                        543 _main:
+                                    544 ;	04_st7920_lcd/lcd.c:80: st7920_init();
+      000127 12 01 13         [24]  545 	lcall	_st7920_init
+                                    546 ;	04_st7920_lcd/lcd.c:81: st7920_command(ST7920_DISP_ON);
+      00012A 75 82 0C         [24]  547 	mov	dpl,#0x0c
+      00012D 12 00 94         [24]  548 	lcall	_st7920_command
+                                    549 ;	04_st7920_lcd/lcd.c:83: st7920_text("Hello, World!");
+      000130 90 01 5B         [24]  550 	mov	dptr,#___str_0
+      000133 75 F0 80         [24]  551 	mov	b,#0x80
+      000136 12 00 E8         [24]  552 	lcall	_st7920_text
+      000139                        553 00103$:
+                                    554 ;	04_st7920_lcd/lcd.c:86: }
+      000139 80 FE            [24]  555 	sjmp	00103$
+                                    556 	.area CSEG    (CODE)
+                                    557 	.area CONST   (CODE)
+                                    558 	.area CONST   (CODE)
+      00015B                        559 ___str_0:
+      00015B 48 65 6C 6C 6F 2C 20   560 	.ascii "Hello, World!"
+             57 6F 72 6C 64 21
+      000168 00                     561 	.db 0x00
+                                    562 	.area CSEG    (CODE)
+                                    563 	.area XINIT   (CODE)
+                                    564 	.area CABS    (ABS,CODE)

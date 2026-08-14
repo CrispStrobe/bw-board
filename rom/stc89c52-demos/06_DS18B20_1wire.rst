@@ -1,0 +1,942 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 4.2.0 #13081 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module wire
+                                      6 	.optsdcc -mmcs51 --model-small
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _segment_dp
+                                     12 	.globl _segment_map
+                                     13 	.globl _main
+                                     14 	.globl _int_to_digits
+                                     15 	.globl _tf0_isr
+                                     16 	.globl _timer0_init
+                                     17 	.globl _temp_to_celsius
+                                     18 	.globl _ds18b20_read_temperature
+                                     19 	.globl _ds18b20_start_conversion
+                                     20 	.globl _wire_read_byte
+                                     21 	.globl _wire_write_byte
+                                     22 	.globl _wire_init
+                                     23 	.globl _delay
+                                     24 	.globl _CY
+                                     25 	.globl _AC
+                                     26 	.globl _F0
+                                     27 	.globl _RS1
+                                     28 	.globl _RS0
+                                     29 	.globl _OV
+                                     30 	.globl _F1
+                                     31 	.globl _P
+                                     32 	.globl _PS
+                                     33 	.globl _PT1
+                                     34 	.globl _PX1
+                                     35 	.globl _PT0
+                                     36 	.globl _PX0
+                                     37 	.globl _RD
+                                     38 	.globl _WR
+                                     39 	.globl _T1
+                                     40 	.globl _T0
+                                     41 	.globl _INT1
+                                     42 	.globl _INT0
+                                     43 	.globl _TXD
+                                     44 	.globl _RXD
+                                     45 	.globl _P3_7
+                                     46 	.globl _P3_6
+                                     47 	.globl _P3_5
+                                     48 	.globl _P3_4
+                                     49 	.globl _P3_3
+                                     50 	.globl _P3_2
+                                     51 	.globl _P3_1
+                                     52 	.globl _P3_0
+                                     53 	.globl _EA
+                                     54 	.globl _ES
+                                     55 	.globl _ET1
+                                     56 	.globl _EX1
+                                     57 	.globl _ET0
+                                     58 	.globl _EX0
+                                     59 	.globl _P2_7
+                                     60 	.globl _P2_6
+                                     61 	.globl _P2_5
+                                     62 	.globl _P2_4
+                                     63 	.globl _P2_3
+                                     64 	.globl _P2_2
+                                     65 	.globl _P2_1
+                                     66 	.globl _P2_0
+                                     67 	.globl _SM0
+                                     68 	.globl _SM1
+                                     69 	.globl _SM2
+                                     70 	.globl _REN
+                                     71 	.globl _TB8
+                                     72 	.globl _RB8
+                                     73 	.globl _TI
+                                     74 	.globl _RI
+                                     75 	.globl _P1_7
+                                     76 	.globl _P1_6
+                                     77 	.globl _P1_5
+                                     78 	.globl _P1_4
+                                     79 	.globl _P1_3
+                                     80 	.globl _P1_2
+                                     81 	.globl _P1_1
+                                     82 	.globl _P1_0
+                                     83 	.globl _TF1
+                                     84 	.globl _TR1
+                                     85 	.globl _TF0
+                                     86 	.globl _TR0
+                                     87 	.globl _IE1
+                                     88 	.globl _IT1
+                                     89 	.globl _IE0
+                                     90 	.globl _IT0
+                                     91 	.globl _P0_7
+                                     92 	.globl _P0_6
+                                     93 	.globl _P0_5
+                                     94 	.globl _P0_4
+                                     95 	.globl _P0_3
+                                     96 	.globl _P0_2
+                                     97 	.globl _P0_1
+                                     98 	.globl _P0_0
+                                     99 	.globl _B
+                                    100 	.globl _ACC
+                                    101 	.globl _PSW
+                                    102 	.globl _IP
+                                    103 	.globl _P3
+                                    104 	.globl _IE
+                                    105 	.globl _P2
+                                    106 	.globl _SBUF
+                                    107 	.globl _SCON
+                                    108 	.globl _P1
+                                    109 	.globl _TH1
+                                    110 	.globl _TH0
+                                    111 	.globl _TL1
+                                    112 	.globl _TL0
+                                    113 	.globl _TMOD
+                                    114 	.globl _TCON
+                                    115 	.globl _PCON
+                                    116 	.globl _DPH
+                                    117 	.globl _DPL
+                                    118 	.globl _SP
+                                    119 	.globl _P0
+                                    120 	.globl _int_to_digits_PARM_2
+                                    121 	.globl _digits
+                                    122 	.globl _decimal_index
+                                    123 	.globl _seg_digit
+                                    124 ;--------------------------------------------------------
+                                    125 ; special function registers
+                                    126 ;--------------------------------------------------------
+                                    127 	.area RSEG    (ABS,DATA)
+      000000                        128 	.org 0x0000
+                           000080   129 _P0	=	0x0080
+                           000081   130 _SP	=	0x0081
+                           000082   131 _DPL	=	0x0082
+                           000083   132 _DPH	=	0x0083
+                           000087   133 _PCON	=	0x0087
+                           000088   134 _TCON	=	0x0088
+                           000089   135 _TMOD	=	0x0089
+                           00008A   136 _TL0	=	0x008a
+                           00008B   137 _TL1	=	0x008b
+                           00008C   138 _TH0	=	0x008c
+                           00008D   139 _TH1	=	0x008d
+                           000090   140 _P1	=	0x0090
+                           000098   141 _SCON	=	0x0098
+                           000099   142 _SBUF	=	0x0099
+                           0000A0   143 _P2	=	0x00a0
+                           0000A8   144 _IE	=	0x00a8
+                           0000B0   145 _P3	=	0x00b0
+                           0000B8   146 _IP	=	0x00b8
+                           0000D0   147 _PSW	=	0x00d0
+                           0000E0   148 _ACC	=	0x00e0
+                           0000F0   149 _B	=	0x00f0
+                                    150 ;--------------------------------------------------------
+                                    151 ; special function bits
+                                    152 ;--------------------------------------------------------
+                                    153 	.area RSEG    (ABS,DATA)
+      000000                        154 	.org 0x0000
+                           000080   155 _P0_0	=	0x0080
+                           000081   156 _P0_1	=	0x0081
+                           000082   157 _P0_2	=	0x0082
+                           000083   158 _P0_3	=	0x0083
+                           000084   159 _P0_4	=	0x0084
+                           000085   160 _P0_5	=	0x0085
+                           000086   161 _P0_6	=	0x0086
+                           000087   162 _P0_7	=	0x0087
+                           000088   163 _IT0	=	0x0088
+                           000089   164 _IE0	=	0x0089
+                           00008A   165 _IT1	=	0x008a
+                           00008B   166 _IE1	=	0x008b
+                           00008C   167 _TR0	=	0x008c
+                           00008D   168 _TF0	=	0x008d
+                           00008E   169 _TR1	=	0x008e
+                           00008F   170 _TF1	=	0x008f
+                           000090   171 _P1_0	=	0x0090
+                           000091   172 _P1_1	=	0x0091
+                           000092   173 _P1_2	=	0x0092
+                           000093   174 _P1_3	=	0x0093
+                           000094   175 _P1_4	=	0x0094
+                           000095   176 _P1_5	=	0x0095
+                           000096   177 _P1_6	=	0x0096
+                           000097   178 _P1_7	=	0x0097
+                           000098   179 _RI	=	0x0098
+                           000099   180 _TI	=	0x0099
+                           00009A   181 _RB8	=	0x009a
+                           00009B   182 _TB8	=	0x009b
+                           00009C   183 _REN	=	0x009c
+                           00009D   184 _SM2	=	0x009d
+                           00009E   185 _SM1	=	0x009e
+                           00009F   186 _SM0	=	0x009f
+                           0000A0   187 _P2_0	=	0x00a0
+                           0000A1   188 _P2_1	=	0x00a1
+                           0000A2   189 _P2_2	=	0x00a2
+                           0000A3   190 _P2_3	=	0x00a3
+                           0000A4   191 _P2_4	=	0x00a4
+                           0000A5   192 _P2_5	=	0x00a5
+                           0000A6   193 _P2_6	=	0x00a6
+                           0000A7   194 _P2_7	=	0x00a7
+                           0000A8   195 _EX0	=	0x00a8
+                           0000A9   196 _ET0	=	0x00a9
+                           0000AA   197 _EX1	=	0x00aa
+                           0000AB   198 _ET1	=	0x00ab
+                           0000AC   199 _ES	=	0x00ac
+                           0000AF   200 _EA	=	0x00af
+                           0000B0   201 _P3_0	=	0x00b0
+                           0000B1   202 _P3_1	=	0x00b1
+                           0000B2   203 _P3_2	=	0x00b2
+                           0000B3   204 _P3_3	=	0x00b3
+                           0000B4   205 _P3_4	=	0x00b4
+                           0000B5   206 _P3_5	=	0x00b5
+                           0000B6   207 _P3_6	=	0x00b6
+                           0000B7   208 _P3_7	=	0x00b7
+                           0000B0   209 _RXD	=	0x00b0
+                           0000B1   210 _TXD	=	0x00b1
+                           0000B2   211 _INT0	=	0x00b2
+                           0000B3   212 _INT1	=	0x00b3
+                           0000B4   213 _T0	=	0x00b4
+                           0000B5   214 _T1	=	0x00b5
+                           0000B6   215 _WR	=	0x00b6
+                           0000B7   216 _RD	=	0x00b7
+                           0000B8   217 _PX0	=	0x00b8
+                           0000B9   218 _PT0	=	0x00b9
+                           0000BA   219 _PX1	=	0x00ba
+                           0000BB   220 _PT1	=	0x00bb
+                           0000BC   221 _PS	=	0x00bc
+                           0000D0   222 _P	=	0x00d0
+                           0000D1   223 _F1	=	0x00d1
+                           0000D2   224 _OV	=	0x00d2
+                           0000D3   225 _RS0	=	0x00d3
+                           0000D4   226 _RS1	=	0x00d4
+                           0000D5   227 _F0	=	0x00d5
+                           0000D6   228 _AC	=	0x00d6
+                           0000D7   229 _CY	=	0x00d7
+                                    230 ;--------------------------------------------------------
+                                    231 ; overlayable register banks
+                                    232 ;--------------------------------------------------------
+                                    233 	.area REG_BANK_0	(REL,OVR,DATA)
+      000000                        234 	.ds 8
+                                    235 ;--------------------------------------------------------
+                                    236 ; internal ram data
+                                    237 ;--------------------------------------------------------
+                                    238 	.area DSEG    (DATA)
+      000008                        239 _seg_digit::
+      000008                        240 	.ds 1
+      000009                        241 _decimal_index::
+      000009                        242 	.ds 1
+      00000A                        243 _digits::
+      00000A                        244 	.ds 8
+      000012                        245 _int_to_digits_PARM_2:
+      000012                        246 	.ds 3
+      000015                        247 _int_to_digits_i_65537_26:
+      000015                        248 	.ds 2
+      000017                        249 _int_to_digits_sloc0_1_0:
+      000017                        250 	.ds 3
+                                    251 ;--------------------------------------------------------
+                                    252 ; overlayable items in internal ram
+                                    253 ;--------------------------------------------------------
+                                    254 	.area	OSEG    (OVR,DATA)
+                                    255 	.area	OSEG    (OVR,DATA)
+      00001A                        256 _wire_write_byte_j_65536_5:
+      00001A                        257 	.ds 1
+                                    258 	.area	OSEG    (OVR,DATA)
+      00001A                        259 _wire_read_byte_j_65536_9:
+      00001A                        260 	.ds 1
+      00001B                        261 _wire_read_byte_byte_65536_9:
+      00001B                        262 	.ds 1
+                                    263 ;--------------------------------------------------------
+                                    264 ; Stack segment in internal ram
+                                    265 ;--------------------------------------------------------
+                                    266 	.area	SSEG
+      00001C                        267 __start__stack:
+      00001C                        268 	.ds	1
+                                    269 
+                                    270 ;--------------------------------------------------------
+                                    271 ; indirectly addressable internal ram data
+                                    272 ;--------------------------------------------------------
+                                    273 	.area ISEG    (DATA)
+                                    274 ;--------------------------------------------------------
+                                    275 ; absolute internal ram data
+                                    276 ;--------------------------------------------------------
+                                    277 	.area IABS    (ABS,DATA)
+                                    278 	.area IABS    (ABS,DATA)
+                                    279 ;--------------------------------------------------------
+                                    280 ; bit data
+                                    281 ;--------------------------------------------------------
+                                    282 	.area BSEG    (BIT)
+                                    283 ;--------------------------------------------------------
+                                    284 ; paged external ram data
+                                    285 ;--------------------------------------------------------
+                                    286 	.area PSEG    (PAG,XDATA)
+                                    287 ;--------------------------------------------------------
+                                    288 ; external ram data
+                                    289 ;--------------------------------------------------------
+                                    290 	.area XSEG    (XDATA)
+                                    291 ;--------------------------------------------------------
+                                    292 ; absolute external ram data
+                                    293 ;--------------------------------------------------------
+                                    294 	.area XABS    (ABS,XDATA)
+                                    295 ;--------------------------------------------------------
+                                    296 ; external initialized ram data
+                                    297 ;--------------------------------------------------------
+                                    298 	.area XISEG   (XDATA)
+                                    299 	.area HOME    (CODE)
+                                    300 	.area GSINIT0 (CODE)
+                                    301 	.area GSINIT1 (CODE)
+                                    302 	.area GSINIT2 (CODE)
+                                    303 	.area GSINIT3 (CODE)
+                                    304 	.area GSINIT4 (CODE)
+                                    305 	.area GSINIT5 (CODE)
+                                    306 	.area GSINIT  (CODE)
+                                    307 	.area GSFINAL (CODE)
+                                    308 	.area CSEG    (CODE)
+                                    309 ;--------------------------------------------------------
+                                    310 ; interrupt vector
+                                    311 ;--------------------------------------------------------
+                                    312 	.area HOME    (CODE)
+      000000                        313 __interrupt_vect:
+      000000 02 00 11         [24]  314 	ljmp	__sdcc_gsinit_startup
+      000003 32               [24]  315 	reti
+      000004                        316 	.ds	7
+      00000B 02 01 81         [24]  317 	ljmp	_tf0_isr
+                                    318 ;--------------------------------------------------------
+                                    319 ; global & static initialisations
+                                    320 ;--------------------------------------------------------
+                                    321 	.area HOME    (CODE)
+                                    322 	.area GSINIT  (CODE)
+                                    323 	.area GSFINAL (CODE)
+                                    324 	.area GSINIT  (CODE)
+                                    325 	.globl __sdcc_gsinit_startup
+                                    326 	.globl __sdcc_program_startup
+                                    327 	.globl __start__stack
+                                    328 	.globl __mcs51_genXINIT
+                                    329 	.globl __mcs51_genXRAMCLEAR
+                                    330 	.globl __mcs51_genRAMCLEAR
+                                    331 ;	06_DS18B20_1wire/wire.c:123: volatile uint8_t seg_digit = 0;     // current display index
+      00006A 75 08 00         [24]  332 	mov	_seg_digit,#0x00
+                                    333 ;	06_DS18B20_1wire/wire.c:124: volatile uint8_t decimal_index = 2; // where is the decimal point
+      00006D 75 09 02         [24]  334 	mov	_decimal_index,#0x02
+                                    335 	.area GSFINAL (CODE)
+      000070 02 00 0E         [24]  336 	ljmp	__sdcc_program_startup
+                                    337 ;--------------------------------------------------------
+                                    338 ; Home
+                                    339 ;--------------------------------------------------------
+                                    340 	.area HOME    (CODE)
+                                    341 	.area HOME    (CODE)
+      00000E                        342 __sdcc_program_startup:
+      00000E 02 02 8E         [24]  343 	ljmp	_main
+                                    344 ;	return from main will return to caller
+                                    345 ;--------------------------------------------------------
+                                    346 ; code
+                                    347 ;--------------------------------------------------------
+                                    348 	.area CSEG    (CODE)
+                                    349 ;------------------------------------------------------------
+                                    350 ;Allocation info for local variables in function 'delay'
+                                    351 ;------------------------------------------------------------
+                                    352 ;t                         Allocated to registers 
+                                    353 ;------------------------------------------------------------
+                                    354 ;	06_DS18B20_1wire/wire.c:23: void delay(uint16_t t) {
+                                    355 ;	-----------------------------------------
+                                    356 ;	 function delay
+                                    357 ;	-----------------------------------------
+      000073                        358 _delay:
+                           000007   359 	ar7 = 0x07
+                           000006   360 	ar6 = 0x06
+                           000005   361 	ar5 = 0x05
+                           000004   362 	ar4 = 0x04
+                           000003   363 	ar3 = 0x03
+                           000002   364 	ar2 = 0x02
+                           000001   365 	ar1 = 0x01
+                           000000   366 	ar0 = 0x00
+      000073 AE 82            [24]  367 	mov	r6,dpl
+      000075 AF 83            [24]  368 	mov	r7,dph
+                                    369 ;	06_DS18B20_1wire/wire.c:24: while (t--) // Simple delay loop (more than 1us at 12MHz)
+      000077                        370 00101$:
+      000077 8E 04            [24]  371 	mov	ar4,r6
+      000079 8F 05            [24]  372 	mov	ar5,r7
+      00007B 1E               [12]  373 	dec	r6
+      00007C BE FF 01         [24]  374 	cjne	r6,#0xff,00111$
+      00007F 1F               [12]  375 	dec	r7
+      000080                        376 00111$:
+      000080 EC               [12]  377 	mov	a,r4
+      000081 4D               [12]  378 	orl	a,r5
+      000082 70 F3            [24]  379 	jnz	00101$
+                                    380 ;	06_DS18B20_1wire/wire.c:26: }
+      000084 22               [24]  381 	ret
+                                    382 ;------------------------------------------------------------
+                                    383 ;Allocation info for local variables in function 'wire_init'
+                                    384 ;------------------------------------------------------------
+                                    385 ;	06_DS18B20_1wire/wire.c:30: void wire_init() { // https://www.analog.com/media/en/technical-documentation/data-sheets/ds18b20.pdf p 15
+                                    386 ;	-----------------------------------------
+                                    387 ;	 function wire_init
+                                    388 ;	-----------------------------------------
+      000085                        389 _wire_init:
+                                    390 ;	06_DS18B20_1wire/wire.c:31: DS18B20_DQ = 0;   // Assert reset pulse
+                                    391 ;	assignBit
+      000085 C2 B7            [12]  392 	clr	_P3_7
+                                    393 ;	06_DS18B20_1wire/wire.c:32: delay(480);
+      000087 90 01 E0         [24]  394 	mov	dptr,#0x01e0
+      00008A 12 00 73         [24]  395 	lcall	_delay
+                                    396 ;	06_DS18B20_1wire/wire.c:33: DS18B20_DQ = 1;
+                                    397 ;	assignBit
+      00008D D2 B7            [12]  398 	setb	_P3_7
+                                    399 ;	06_DS18B20_1wire/wire.c:34: delay(5);
+      00008F 90 00 05         [24]  400 	mov	dptr,#0x0005
+      000092 12 00 73         [24]  401 	lcall	_delay
+                                    402 ;	06_DS18B20_1wire/wire.c:35: while(DS18B20_DQ); // Wait for presence pulse (FIXME: Maybe add timeout for peripheral failures)
+      000095                        403 00101$:
+      000095 20 B7 FD         [24]  404 	jb	_P3_7,00101$
+                                    405 ;	06_DS18B20_1wire/wire.c:36: delay(500);
+      000098 90 01 F4         [24]  406 	mov	dptr,#0x01f4
+                                    407 ;	06_DS18B20_1wire/wire.c:37: }
+      00009B 02 00 73         [24]  408 	ljmp	_delay
+                                    409 ;------------------------------------------------------------
+                                    410 ;Allocation info for local variables in function 'wire_write_byte'
+                                    411 ;------------------------------------------------------------
+                                    412 ;byte                      Allocated to registers r7 
+                                    413 ;j                         Allocated with name '_wire_write_byte_j_65536_5'
+                                    414 ;i                         Allocated to registers r6 
+                                    415 ;------------------------------------------------------------
+                                    416 ;	06_DS18B20_1wire/wire.c:39: void wire_write_byte(uint8_t byte) {
+                                    417 ;	-----------------------------------------
+                                    418 ;	 function wire_write_byte
+                                    419 ;	-----------------------------------------
+      00009E                        420 _wire_write_byte:
+      00009E AF 82            [24]  421 	mov	r7,dpl
+                                    422 ;	06_DS18B20_1wire/wire.c:40: volatile uint8_t j = 0;
+      0000A0 75 1A 00         [24]  423 	mov	_wire_write_byte_j_65536_5,#0x00
+                                    424 ;	06_DS18B20_1wire/wire.c:41: for(uint8_t i = 0; i < 8; i++) {
+      0000A3 7E 00            [12]  425 	mov	r6,#0x00
+      0000A5                        426 00106$:
+      0000A5 BE 08 00         [24]  427 	cjne	r6,#0x08,00127$
+      0000A8                        428 00127$:
+      0000A8 50 24            [24]  429 	jnc	00108$
+                                    430 ;	06_DS18B20_1wire/wire.c:42: DS18B20_DQ = 0; // Start time slot
+                                    431 ;	assignBit
+      0000AA C2 B7            [12]  432 	clr	_P3_7
+                                    433 ;	06_DS18B20_1wire/wire.c:43: j++; // small delay
+      0000AC E5 1A            [12]  434 	mov	a,_wire_write_byte_j_65536_5
+      0000AE 04               [12]  435 	inc	a
+      0000AF F5 1A            [12]  436 	mov	_wire_write_byte_j_65536_5,a
+                                    437 ;	06_DS18B20_1wire/wire.c:44: DS18B20_DQ = (byte & 0x01);  // Write bit (0 or 1 ... math also introduces needed delay)
+      0000B1 EF               [12]  438 	mov	a,r7
+      0000B2 54 01            [12]  439 	anl	a,#0x01
+                                    440 ;	assignBit
+      0000B4 FD               [12]  441 	mov	r5,a
+      0000B5 24 FF            [12]  442 	add	a,#0xff
+      0000B7 92 B7            [24]  443 	mov	_P3_7,c
+                                    444 ;	06_DS18B20_1wire/wire.c:45: j = 6;
+      0000B9 75 1A 06         [24]  445 	mov	_wire_write_byte_j_65536_5,#0x06
+                                    446 ;	06_DS18B20_1wire/wire.c:46: while(j--);
+      0000BC                        447 00101$:
+      0000BC E5 1A            [12]  448 	mov	a,_wire_write_byte_j_65536_5
+      0000BE FD               [12]  449 	mov	r5,a
+      0000BF 14               [12]  450 	dec	a
+      0000C0 F5 1A            [12]  451 	mov	_wire_write_byte_j_65536_5,a
+      0000C2 ED               [12]  452 	mov	a,r5
+      0000C3 70 F7            [24]  453 	jnz	00101$
+                                    454 ;	06_DS18B20_1wire/wire.c:47: DS18B20_DQ = 1; // Finish time slot
+                                    455 ;	assignBit
+      0000C5 D2 B7            [12]  456 	setb	_P3_7
+                                    457 ;	06_DS18B20_1wire/wire.c:48: byte >>= 1;
+      0000C7 EF               [12]  458 	mov	a,r7
+      0000C8 C3               [12]  459 	clr	c
+      0000C9 13               [12]  460 	rrc	a
+      0000CA FF               [12]  461 	mov	r7,a
+                                    462 ;	06_DS18B20_1wire/wire.c:41: for(uint8_t i = 0; i < 8; i++) {
+      0000CB 0E               [12]  463 	inc	r6
+      0000CC 80 D7            [24]  464 	sjmp	00106$
+      0000CE                        465 00108$:
+                                    466 ;	06_DS18B20_1wire/wire.c:50: }
+      0000CE 22               [24]  467 	ret
+                                    468 ;------------------------------------------------------------
+                                    469 ;Allocation info for local variables in function 'wire_read_byte'
+                                    470 ;------------------------------------------------------------
+                                    471 ;j                         Allocated with name '_wire_read_byte_j_65536_9'
+                                    472 ;byte                      Allocated with name '_wire_read_byte_byte_65536_9'
+                                    473 ;i                         Allocated to registers r7 
+                                    474 ;------------------------------------------------------------
+                                    475 ;	06_DS18B20_1wire/wire.c:52: uint8_t wire_read_byte(void) {
+                                    476 ;	-----------------------------------------
+                                    477 ;	 function wire_read_byte
+                                    478 ;	-----------------------------------------
+      0000CF                        479 _wire_read_byte:
+                                    480 ;	06_DS18B20_1wire/wire.c:53: volatile uint8_t j = 0, byte = 0;
+      0000CF 75 1A 00         [24]  481 	mov	_wire_read_byte_j_65536_9,#0x00
+      0000D2 75 1B 00         [24]  482 	mov	_wire_read_byte_byte_65536_9,#0x00
+                                    483 ;	06_DS18B20_1wire/wire.c:55: for(uint8_t i = 0; i < 8; i++) {
+      0000D5 7F 00            [12]  484 	mov	r7,#0x00
+      0000D7                        485 00106$:
+      0000D7 BF 08 00         [24]  486 	cjne	r7,#0x08,00127$
+      0000DA                        487 00127$:
+      0000DA 50 2C            [24]  488 	jnc	00104$
+                                    489 ;	06_DS18B20_1wire/wire.c:56: DS18B20_DQ = 0; // Start time slot
+                                    490 ;	assignBit
+      0000DC C2 B7            [12]  491 	clr	_P3_7
+                                    492 ;	06_DS18B20_1wire/wire.c:57: j++; // small delay
+      0000DE E5 1A            [12]  493 	mov	a,_wire_read_byte_j_65536_9
+      0000E0 04               [12]  494 	inc	a
+      0000E1 F5 1A            [12]  495 	mov	_wire_read_byte_j_65536_9,a
+                                    496 ;	06_DS18B20_1wire/wire.c:58: DS18B20_DQ = 1; // Release bus
+                                    497 ;	assignBit
+      0000E3 D2 B7            [12]  498 	setb	_P3_7
+                                    499 ;	06_DS18B20_1wire/wire.c:59: j = 1;
+      0000E5 75 1A 01         [24]  500 	mov	_wire_read_byte_j_65536_9,#0x01
+                                    501 ;	06_DS18B20_1wire/wire.c:60: while(j--);
+      0000E8                        502 00101$:
+      0000E8 E5 1A            [12]  503 	mov	a,_wire_read_byte_j_65536_9
+      0000EA FE               [12]  504 	mov	r6,a
+      0000EB 14               [12]  505 	dec	a
+      0000EC F5 1A            [12]  506 	mov	_wire_read_byte_j_65536_9,a
+      0000EE EE               [12]  507 	mov	a,r6
+      0000EF 70 F7            [24]  508 	jnz	00101$
+                                    509 ;	06_DS18B20_1wire/wire.c:61: byte |= (DS18B20_DQ<<i);
+      0000F1 A2 B7            [12]  510 	mov	c,_P3_7
+      0000F3 E4               [12]  511 	clr	a
+      0000F4 33               [12]  512 	rlc	a
+      0000F5 FE               [12]  513 	mov	r6,a
+      0000F6 8F F0            [24]  514 	mov	b,r7
+      0000F8 05 F0            [12]  515 	inc	b
+      0000FA EE               [12]  516 	mov	a,r6
+      0000FB 80 02            [24]  517 	sjmp	00132$
+      0000FD                        518 00130$:
+      0000FD 25 E0            [12]  519 	add	a,acc
+      0000FF                        520 00132$:
+      0000FF D5 F0 FB         [24]  521 	djnz	b,00130$
+      000102 FE               [12]  522 	mov	r6,a
+      000103 42 1B            [12]  523 	orl	_wire_read_byte_byte_65536_9,a
+                                    524 ;	06_DS18B20_1wire/wire.c:55: for(uint8_t i = 0; i < 8; i++) {
+      000105 0F               [12]  525 	inc	r7
+      000106 80 CF            [24]  526 	sjmp	00106$
+      000108                        527 00104$:
+                                    528 ;	06_DS18B20_1wire/wire.c:63: return byte;
+      000108 85 1B 82         [24]  529 	mov	dpl,_wire_read_byte_byte_65536_9
+                                    530 ;	06_DS18B20_1wire/wire.c:64: }
+      00010B 22               [24]  531 	ret
+                                    532 ;------------------------------------------------------------
+                                    533 ;Allocation info for local variables in function 'ds18b20_start_conversion'
+                                    534 ;------------------------------------------------------------
+                                    535 ;	06_DS18B20_1wire/wire.c:66: void ds18b20_start_conversion() {
+                                    536 ;	-----------------------------------------
+                                    537 ;	 function ds18b20_start_conversion
+                                    538 ;	-----------------------------------------
+      00010C                        539 _ds18b20_start_conversion:
+                                    540 ;	06_DS18B20_1wire/wire.c:67: wire_init();
+      00010C 12 00 85         [24]  541 	lcall	_wire_init
+                                    542 ;	06_DS18B20_1wire/wire.c:68: wire_write_byte(0xCC); // Skip ROM (only thing connected to P3_7)
+      00010F 75 82 CC         [24]  543 	mov	dpl,#0xcc
+      000112 12 00 9E         [24]  544 	lcall	_wire_write_byte
+                                    545 ;	06_DS18B20_1wire/wire.c:69: wire_write_byte(0x44); // Convert T
+      000115 75 82 44         [24]  546 	mov	dpl,#0x44
+                                    547 ;	06_DS18B20_1wire/wire.c:70: }
+      000118 02 00 9E         [24]  548 	ljmp	_wire_write_byte
+                                    549 ;------------------------------------------------------------
+                                    550 ;Allocation info for local variables in function 'ds18b20_read_temperature'
+                                    551 ;------------------------------------------------------------
+                                    552 ;temp                      Allocated to registers 
+                                    553 ;------------------------------------------------------------
+                                    554 ;	06_DS18B20_1wire/wire.c:72: int16_t ds18b20_read_temperature() {
+                                    555 ;	-----------------------------------------
+                                    556 ;	 function ds18b20_read_temperature
+                                    557 ;	-----------------------------------------
+      00011B                        558 _ds18b20_read_temperature:
+                                    559 ;	06_DS18B20_1wire/wire.c:74: wire_init();
+      00011B 12 00 85         [24]  560 	lcall	_wire_init
+                                    561 ;	06_DS18B20_1wire/wire.c:75: wire_write_byte(0xCC); // Skip ROM
+      00011E 75 82 CC         [24]  562 	mov	dpl,#0xcc
+      000121 12 00 9E         [24]  563 	lcall	_wire_write_byte
+                                    564 ;	06_DS18B20_1wire/wire.c:76: wire_write_byte(0xBE); // Read Scratchpad
+      000124 75 82 BE         [24]  565 	mov	dpl,#0xbe
+      000127 12 00 9E         [24]  566 	lcall	_wire_write_byte
+                                    567 ;	06_DS18B20_1wire/wire.c:77: temp = wire_read_byte();
+      00012A 12 00 CF         [24]  568 	lcall	_wire_read_byte
+      00012D AF 82            [24]  569 	mov	r7,dpl
+      00012F 7E 00            [12]  570 	mov	r6,#0x00
+                                    571 ;	06_DS18B20_1wire/wire.c:78: temp |= wire_read_byte() << 8;
+      000131 C0 07            [24]  572 	push	ar7
+      000133 C0 06            [24]  573 	push	ar6
+      000135 12 00 CF         [24]  574 	lcall	_wire_read_byte
+      000138 AD 82            [24]  575 	mov	r5,dpl
+      00013A D0 06            [24]  576 	pop	ar6
+      00013C D0 07            [24]  577 	pop	ar7
+      00013E 8D 04            [24]  578 	mov	ar4,r5
+      000140 7D 00            [12]  579 	mov	r5,#0x00
+      000142 EF               [12]  580 	mov	a,r7
+      000143 42 05            [12]  581 	orl	ar5,a
+      000145 EE               [12]  582 	mov	a,r6
+      000146 42 04            [12]  583 	orl	ar4,a
+      000148 8D 82            [24]  584 	mov	dpl,r5
+      00014A 8C 83            [24]  585 	mov	dph,r4
+                                    586 ;	06_DS18B20_1wire/wire.c:79: return temp;
+                                    587 ;	06_DS18B20_1wire/wire.c:80: }
+      00014C 22               [24]  588 	ret
+                                    589 ;------------------------------------------------------------
+                                    590 ;Allocation info for local variables in function 'temp_to_celsius'
+                                    591 ;------------------------------------------------------------
+                                    592 ;raw                       Allocated to registers r6 r7 
+                                    593 ;------------------------------------------------------------
+                                    594 ;	06_DS18B20_1wire/wire.c:82: uint16_t temp_to_celsius(uint16_t raw) {
+                                    595 ;	-----------------------------------------
+                                    596 ;	 function temp_to_celsius
+                                    597 ;	-----------------------------------------
+      00014D                        598 _temp_to_celsius:
+      00014D AE 82            [24]  599 	mov	r6,dpl
+      00014F AF 83            [24]  600 	mov	r7,dph
+                                    601 ;	06_DS18B20_1wire/wire.c:84: return (raw * 10) / 16; // Return temperature in 0.01 degrees C
+      000151 8E 1A            [24]  602 	mov	__mulint_PARM_2,r6
+      000153 8F 1B            [24]  603 	mov	(__mulint_PARM_2 + 1),r7
+      000155 90 00 0A         [24]  604 	mov	dptr,#0x000a
+      000158 12 02 F3         [24]  605 	lcall	__mulint
+      00015B AE 82            [24]  606 	mov	r6,dpl
+      00015D E5 83            [12]  607 	mov	a,dph
+      00015F C4               [12]  608 	swap	a
+      000160 CE               [12]  609 	xch	a,r6
+      000161 C4               [12]  610 	swap	a
+      000162 54 0F            [12]  611 	anl	a,#0x0f
+      000164 6E               [12]  612 	xrl	a,r6
+      000165 CE               [12]  613 	xch	a,r6
+      000166 54 0F            [12]  614 	anl	a,#0x0f
+      000168 CE               [12]  615 	xch	a,r6
+      000169 6E               [12]  616 	xrl	a,r6
+      00016A CE               [12]  617 	xch	a,r6
+                                    618 ;	06_DS18B20_1wire/wire.c:85: }
+      00016B 8E 82            [24]  619 	mov	dpl,r6
+      00016D F5 83            [12]  620 	mov	dph,a
+      00016F 22               [24]  621 	ret
+                                    622 ;------------------------------------------------------------
+                                    623 ;Allocation info for local variables in function 'timer0_init'
+                                    624 ;------------------------------------------------------------
+                                    625 ;	06_DS18B20_1wire/wire.c:113: void timer0_init(void) {
+                                    626 ;	-----------------------------------------
+                                    627 ;	 function timer0_init
+                                    628 ;	-----------------------------------------
+      000170                        629 _timer0_init:
+                                    630 ;	06_DS18B20_1wire/wire.c:114: TMOD &= 0xF0;	/* Clear Timer 0 mode bits */
+      000170 53 89 F0         [24]  631 	anl	_TMOD,#0xf0
+                                    632 ;	06_DS18B20_1wire/wire.c:115: TMOD |= 0x1;	/* Set Timer 0 mode to 16-bit */
+      000173 43 89 01         [24]  633 	orl	_TMOD,#0x01
+                                    634 ;	06_DS18B20_1wire/wire.c:116: TH0 = 0xdc;	/* Set Timer 0 high byte for 16-bit mode */
+      000176 75 8C DC         [24]  635 	mov	_TH0,#0xdc
+                                    636 ;	06_DS18B20_1wire/wire.c:117: TL0 = 0x00;	/* Set Timer 0 low byte for 16-bit mode */
+      000179 75 8A 00         [24]  637 	mov	_TL0,#0x00
+                                    638 ;	06_DS18B20_1wire/wire.c:118: TF0 = 0;	/* Clear Timer 0 overflow flag */
+                                    639 ;	assignBit
+      00017C C2 8D            [12]  640 	clr	_TF0
+                                    641 ;	06_DS18B20_1wire/wire.c:119: TR0 = 1;	/* Start Timer 0 */
+                                    642 ;	assignBit
+      00017E D2 8C            [12]  643 	setb	_TR0
+                                    644 ;	06_DS18B20_1wire/wire.c:120: }
+      000180 22               [24]  645 	ret
+                                    646 ;------------------------------------------------------------
+                                    647 ;Allocation info for local variables in function 'tf0_isr'
+                                    648 ;------------------------------------------------------------
+                                    649 ;val                       Allocated to registers r7 
+                                    650 ;------------------------------------------------------------
+                                    651 ;	06_DS18B20_1wire/wire.c:127: void tf0_isr(void) __interrupt(TF0_VECTOR) {
+                                    652 ;	-----------------------------------------
+                                    653 ;	 function tf0_isr
+                                    654 ;	-----------------------------------------
+      000181                        655 _tf0_isr:
+      000181 C0 E0            [24]  656 	push	acc
+      000183 C0 82            [24]  657 	push	dpl
+      000185 C0 83            [24]  658 	push	dph
+      000187 C0 07            [24]  659 	push	ar7
+      000189 C0 06            [24]  660 	push	ar6
+      00018B C0 01            [24]  661 	push	ar1
+      00018D C0 D0            [24]  662 	push	psw
+      00018F 75 D0 00         [24]  663 	mov	psw,#0x00
+                                    664 ;	06_DS18B20_1wire/wire.c:128: LED_DIGIT = 0x00; // Turn off all segments
+      000192 75 80 00         [24]  665 	mov	_P0,#0x00
+                                    666 ;	06_DS18B20_1wire/wire.c:129: P2 = seg_digit<<2; // activate digit i (P2_2..P2_4)
+      000195 E5 08            [12]  667 	mov	a,_seg_digit
+      000197 25 E0            [12]  668 	add	a,acc
+      000199 25 E0            [12]  669 	add	a,acc
+      00019B F5 A0            [12]  670 	mov	_P2,a
+                                    671 ;	06_DS18B20_1wire/wire.c:132: uint8_t val = segment_map[digits[seg_digit]];
+      00019D E5 08            [12]  672 	mov	a,_seg_digit
+      00019F 24 0A            [12]  673 	add	a,#_digits
+      0001A1 F9               [12]  674 	mov	r1,a
+      0001A2 E7               [12]  675 	mov	a,@r1
+      0001A3 90 03 F8         [24]  676 	mov	dptr,#_segment_map
+      0001A6 93               [24]  677 	movc	a,@a+dptr
+      0001A7 FF               [12]  678 	mov	r7,a
+                                    679 ;	06_DS18B20_1wire/wire.c:133: if(seg_digit == decimal_index) {
+      0001A8 E5 09            [12]  680 	mov	a,_decimal_index
+      0001AA B5 08 08         [24]  681 	cjne	a,_seg_digit,00102$
+                                    682 ;	06_DS18B20_1wire/wire.c:134: val |= segment_dp;
+      0001AD 90 04 08         [24]  683 	mov	dptr,#_segment_dp
+      0001B0 E4               [12]  684 	clr	a
+      0001B1 93               [24]  685 	movc	a,@a+dptr
+      0001B2 FE               [12]  686 	mov	r6,a
+      0001B3 42 07            [12]  687 	orl	ar7,a
+      0001B5                        688 00102$:
+                                    689 ;	06_DS18B20_1wire/wire.c:136: LED_DIGIT = val;
+      0001B5 8F 80            [24]  690 	mov	_P0,r7
+                                    691 ;	06_DS18B20_1wire/wire.c:137: seg_digit++;
+      0001B7 E5 08            [12]  692 	mov	a,_seg_digit
+      0001B9 04               [12]  693 	inc	a
+      0001BA F5 08            [12]  694 	mov	_seg_digit,a
+                                    695 ;	06_DS18B20_1wire/wire.c:138: if(seg_digit > 7)
+      0001BC E5 08            [12]  696 	mov	a,_seg_digit
+      0001BE 24 F8            [12]  697 	add	a,#0xff - 0x07
+      0001C0 50 03            [24]  698 	jnc	00104$
+                                    699 ;	06_DS18B20_1wire/wire.c:139: seg_digit = 0;
+      0001C2 75 08 00         [24]  700 	mov	_seg_digit,#0x00
+      0001C5                        701 00104$:
+                                    702 ;	06_DS18B20_1wire/wire.c:142: TH0 = 0xfc;	/* Set Timer 0 high byte for 16-bit mode */
+      0001C5 75 8C FC         [24]  703 	mov	_TH0,#0xfc
+                                    704 ;	06_DS18B20_1wire/wire.c:143: TL0 = 0x66;	/* Set Timer 0 low byte for 16-bit mode */
+      0001C8 75 8A 66         [24]  705 	mov	_TL0,#0x66
+                                    706 ;	06_DS18B20_1wire/wire.c:144: TF0 = 0;	/* Clear Timer 0 overflow flag */
+                                    707 ;	assignBit
+      0001CB C2 8D            [12]  708 	clr	_TF0
+                                    709 ;	06_DS18B20_1wire/wire.c:145: }
+      0001CD D0 D0            [24]  710 	pop	psw
+      0001CF D0 01            [24]  711 	pop	ar1
+      0001D1 D0 06            [24]  712 	pop	ar6
+      0001D3 D0 07            [24]  713 	pop	ar7
+      0001D5 D0 83            [24]  714 	pop	dph
+      0001D7 D0 82            [24]  715 	pop	dpl
+      0001D9 D0 E0            [24]  716 	pop	acc
+      0001DB 32               [24]  717 	reti
+                                    718 ;	eliminated unneeded push/pop ar0
+                                    719 ;	eliminated unneeded push/pop b
+                                    720 ;------------------------------------------------------------
+                                    721 ;Allocation info for local variables in function 'int_to_digits'
+                                    722 ;------------------------------------------------------------
+                                    723 ;ptr                       Allocated with name '_int_to_digits_PARM_2'
+                                    724 ;val                       Allocated to registers r6 r7 
+                                    725 ;i                         Allocated to registers r5 
+                                    726 ;i                         Allocated with name '_int_to_digits_i_65537_26'
+                                    727 ;temp_N                    Allocated to registers r6 r7 
+                                    728 ;sloc0                     Allocated with name '_int_to_digits_sloc0_1_0'
+                                    729 ;------------------------------------------------------------
+                                    730 ;	06_DS18B20_1wire/wire.c:147: void int_to_digits(int16_t val, uint8_t *ptr) {
+                                    731 ;	-----------------------------------------
+                                    732 ;	 function int_to_digits
+                                    733 ;	-----------------------------------------
+      0001DC                        734 _int_to_digits:
+      0001DC AE 82            [24]  735 	mov	r6,dpl
+      0001DE AF 83            [24]  736 	mov	r7,dph
+                                    737 ;	06_DS18B20_1wire/wire.c:148: for(uint8_t i = 0; i < 8; i++) {
+      0001E0 7D 00            [12]  738 	mov	r5,#0x00
+      0001E2                        739 00107$:
+      0001E2 BD 08 00         [24]  740 	cjne	r5,#0x08,00139$
+      0001E5                        741 00139$:
+      0001E5 50 17            [24]  742 	jnc	00101$
+                                    743 ;	06_DS18B20_1wire/wire.c:149: ptr[i] = 0;
+      0001E7 ED               [12]  744 	mov	a,r5
+      0001E8 25 12            [12]  745 	add	a,_int_to_digits_PARM_2
+      0001EA FA               [12]  746 	mov	r2,a
+      0001EB E4               [12]  747 	clr	a
+      0001EC 35 13            [12]  748 	addc	a,(_int_to_digits_PARM_2 + 1)
+      0001EE FB               [12]  749 	mov	r3,a
+      0001EF AC 14            [24]  750 	mov	r4,(_int_to_digits_PARM_2 + 2)
+      0001F1 8A 82            [24]  751 	mov	dpl,r2
+      0001F3 8B 83            [24]  752 	mov	dph,r3
+      0001F5 8C F0            [24]  753 	mov	b,r4
+      0001F7 E4               [12]  754 	clr	a
+      0001F8 12 02 D8         [24]  755 	lcall	__gptrput
+                                    756 ;	06_DS18B20_1wire/wire.c:148: for(uint8_t i = 0; i < 8; i++) {
+      0001FB 0D               [12]  757 	inc	r5
+      0001FC 80 E4            [24]  758 	sjmp	00107$
+      0001FE                        759 00101$:
+                                    760 ;	06_DS18B20_1wire/wire.c:153: int16_t temp_N = (val < 0) ? -val : val;
+      0001FE 8F 05            [24]  761 	mov	ar5,r7
+      000200 ED               [12]  762 	mov	a,r5
+      000201 30 E7 09         [24]  763 	jnb	acc.7,00111$
+      000204 C3               [12]  764 	clr	c
+      000205 E4               [12]  765 	clr	a
+      000206 9E               [12]  766 	subb	a,r6
+      000207 FC               [12]  767 	mov	r4,a
+      000208 E4               [12]  768 	clr	a
+      000209 9F               [12]  769 	subb	a,r7
+      00020A FD               [12]  770 	mov	r5,a
+      00020B 80 04            [24]  771 	sjmp	00112$
+      00020D                        772 00111$:
+      00020D 8E 04            [24]  773 	mov	ar4,r6
+      00020F 8F 05            [24]  774 	mov	ar5,r7
+      000211                        775 00112$:
+      000211 8C 06            [24]  776 	mov	ar6,r4
+      000213 8D 07            [24]  777 	mov	ar7,r5
+                                    778 ;	06_DS18B20_1wire/wire.c:156: while (temp_N > 0 && i >= 0) {
+      000215 75 15 07         [24]  779 	mov	_int_to_digits_i_65537_26,#0x07
+      000218 75 16 00         [24]  780 	mov	(_int_to_digits_i_65537_26 + 1),#0x00
+      00021B                        781 00103$:
+      00021B 8E 02            [24]  782 	mov	ar2,r6
+      00021D 8F 03            [24]  783 	mov	ar3,r7
+      00021F C3               [12]  784 	clr	c
+      000220 E4               [12]  785 	clr	a
+      000221 9A               [12]  786 	subb	a,r2
+      000222 74 80            [12]  787 	mov	a,#(0x00 ^ 0x80)
+      000224 8B F0            [24]  788 	mov	b,r3
+      000226 63 F0 80         [24]  789 	xrl	b,#0x80
+      000229 95 F0            [12]  790 	subb	a,b
+      00022B 50 60            [24]  791 	jnc	00109$
+      00022D E5 16            [12]  792 	mov	a,(_int_to_digits_i_65537_26 + 1)
+      00022F 20 E7 5B         [24]  793 	jb	acc.7,00109$
+                                    794 ;	06_DS18B20_1wire/wire.c:158: ptr[7-i] = temp_N % 10;
+      000232 74 07            [12]  795 	mov	a,#0x07
+      000234 C3               [12]  796 	clr	c
+      000235 95 15            [12]  797 	subb	a,_int_to_digits_i_65537_26
+      000237 F8               [12]  798 	mov	r0,a
+      000238 E4               [12]  799 	clr	a
+      000239 95 16            [12]  800 	subb	a,(_int_to_digits_i_65537_26 + 1)
+      00023B F9               [12]  801 	mov	r1,a
+      00023C E8               [12]  802 	mov	a,r0
+      00023D 25 12            [12]  803 	add	a,_int_to_digits_PARM_2
+      00023F F5 17            [12]  804 	mov	_int_to_digits_sloc0_1_0,a
+      000241 E9               [12]  805 	mov	a,r1
+      000242 35 13            [12]  806 	addc	a,(_int_to_digits_PARM_2 + 1)
+      000244 F5 18            [12]  807 	mov	(_int_to_digits_sloc0_1_0 + 1),a
+      000246 85 14 19         [24]  808 	mov	(_int_to_digits_sloc0_1_0 + 2),(_int_to_digits_PARM_2 + 2)
+      000249 75 1A 0A         [24]  809 	mov	__modsint_PARM_2,#0x0a
+      00024C 75 1B 00         [24]  810 	mov	(__modsint_PARM_2 + 1),#0x00
+      00024F 8A 82            [24]  811 	mov	dpl,r2
+      000251 8B 83            [24]  812 	mov	dph,r3
+      000253 C0 03            [24]  813 	push	ar3
+      000255 C0 02            [24]  814 	push	ar2
+      000257 12 03 86         [24]  815 	lcall	__modsint
+      00025A AC 82            [24]  816 	mov	r4,dpl
+      00025C D0 02            [24]  817 	pop	ar2
+      00025E D0 03            [24]  818 	pop	ar3
+      000260 85 17 82         [24]  819 	mov	dpl,_int_to_digits_sloc0_1_0
+      000263 85 18 83         [24]  820 	mov	dph,(_int_to_digits_sloc0_1_0 + 1)
+      000266 85 19 F0         [24]  821 	mov	b,(_int_to_digits_sloc0_1_0 + 2)
+      000269 EC               [12]  822 	mov	a,r4
+      00026A 12 02 D8         [24]  823 	lcall	__gptrput
+                                    824 ;	06_DS18B20_1wire/wire.c:161: temp_N = temp_N / 10;
+      00026D 75 1A 0A         [24]  825 	mov	__divsint_PARM_2,#0x0a
+      000270 75 1B 00         [24]  826 	mov	(__divsint_PARM_2 + 1),#0x00
+      000273 8A 82            [24]  827 	mov	dpl,r2
+      000275 8B 83            [24]  828 	mov	dph,r3
+      000277 12 03 BC         [24]  829 	lcall	__divsint
+      00027A AC 82            [24]  830 	mov	r4,dpl
+      00027C AD 83            [24]  831 	mov	r5,dph
+      00027E 8C 06            [24]  832 	mov	ar6,r4
+      000280 8D 07            [24]  833 	mov	ar7,r5
+                                    834 ;	06_DS18B20_1wire/wire.c:164: i = i - 1;
+      000282 15 15            [12]  835 	dec	_int_to_digits_i_65537_26
+      000284 74 FF            [12]  836 	mov	a,#0xff
+      000286 B5 15 02         [24]  837 	cjne	a,_int_to_digits_i_65537_26,00144$
+      000289 15 16            [12]  838 	dec	(_int_to_digits_i_65537_26 + 1)
+      00028B                        839 00144$:
+      00028B 80 8E            [24]  840 	sjmp	00103$
+      00028D                        841 00109$:
+                                    842 ;	06_DS18B20_1wire/wire.c:166: }
+      00028D 22               [24]  843 	ret
+                                    844 ;------------------------------------------------------------
+                                    845 ;Allocation info for local variables in function 'main'
+                                    846 ;------------------------------------------------------------
+                                    847 ;temperature               Allocated to registers 
+                                    848 ;i                         Allocated to registers r7 
+                                    849 ;i                         Allocated to registers r7 
+                                    850 ;------------------------------------------------------------
+                                    851 ;	06_DS18B20_1wire/wire.c:169: void main(void) {
+                                    852 ;	-----------------------------------------
+                                    853 ;	 function main
+                                    854 ;	-----------------------------------------
+      00028E                        855 _main:
+                                    856 ;	06_DS18B20_1wire/wire.c:171: timer0_init();
+      00028E 12 01 70         [24]  857 	lcall	_timer0_init
+                                    858 ;	06_DS18B20_1wire/wire.c:173: for(uint8_t i = 0; i < 8; i++) {
+      000291 7F 00            [12]  859 	mov	r7,#0x00
+      000293                        860 00105$:
+      000293 BF 08 00         [24]  861 	cjne	r7,#0x08,00141$
+      000296                        862 00141$:
+      000296 50 09            [24]  863 	jnc	00101$
+                                    864 ;	06_DS18B20_1wire/wire.c:174: digits[i] = 0;
+      000298 EF               [12]  865 	mov	a,r7
+      000299 24 0A            [12]  866 	add	a,#_digits
+      00029B F8               [12]  867 	mov	r0,a
+      00029C 76 00            [12]  868 	mov	@r0,#0x00
+                                    869 ;	06_DS18B20_1wire/wire.c:173: for(uint8_t i = 0; i < 8; i++) {
+      00029E 0F               [12]  870 	inc	r7
+      00029F 80 F2            [24]  871 	sjmp	00105$
+      0002A1                        872 00101$:
+                                    873 ;	06_DS18B20_1wire/wire.c:177: ET0 = 1;	/* Enable Timer 0 interrupt */
+                                    874 ;	assignBit
+      0002A1 D2 A9            [12]  875 	setb	_ET0
+                                    876 ;	06_DS18B20_1wire/wire.c:178: EA  = 1; /* Enable global interrupts */
+                                    877 ;	assignBit
+      0002A3 D2 AF            [12]  878 	setb	_EA
+      0002A5                        879 00110$:
+                                    880 ;	06_DS18B20_1wire/wire.c:181: EA  = 0; /* Disable for aliasing issues */
+                                    881 ;	assignBit
+      0002A5 C2 AF            [12]  882 	clr	_EA
+                                    883 ;	06_DS18B20_1wire/wire.c:182: ds18b20_start_conversion();
+      0002A7 12 01 0C         [24]  884 	lcall	_ds18b20_start_conversion
+                                    885 ;	06_DS18B20_1wire/wire.c:183: EA = 1;
+                                    886 ;	assignBit
+      0002AA D2 AF            [12]  887 	setb	_EA
+                                    888 ;	06_DS18B20_1wire/wire.c:184: for (uint8_t i = 0; i < 15; i++) {
+      0002AC 7F 00            [12]  889 	mov	r7,#0x00
+      0002AE                        890 00108$:
+      0002AE BF 0F 00         [24]  891 	cjne	r7,#0x0f,00143$
+      0002B1                        892 00143$:
+      0002B1 50 0D            [24]  893 	jnc	00102$
+                                    894 ;	06_DS18B20_1wire/wire.c:185: delay(10000);
+      0002B3 90 27 10         [24]  895 	mov	dptr,#0x2710
+      0002B6 C0 07            [24]  896 	push	ar7
+      0002B8 12 00 73         [24]  897 	lcall	_delay
+      0002BB D0 07            [24]  898 	pop	ar7
+                                    899 ;	06_DS18B20_1wire/wire.c:184: for (uint8_t i = 0; i < 15; i++) {
+      0002BD 0F               [12]  900 	inc	r7
+      0002BE 80 EE            [24]  901 	sjmp	00108$
+      0002C0                        902 00102$:
+                                    903 ;	06_DS18B20_1wire/wire.c:187: EA  = 0; /* Disable for aliasing issues */
+                                    904 ;	assignBit
+      0002C0 C2 AF            [12]  905 	clr	_EA
+                                    906 ;	06_DS18B20_1wire/wire.c:188: temperature = ds18b20_read_temperature();
+      0002C2 12 01 1B         [24]  907 	lcall	_ds18b20_read_temperature
+                                    908 ;	06_DS18B20_1wire/wire.c:189: temperature = temp_to_celsius(temperature);
+      0002C5 12 01 4D         [24]  909 	lcall	_temp_to_celsius
+                                    910 ;	06_DS18B20_1wire/wire.c:191: int_to_digits(temperature, digits);
+      0002C8 75 12 0A         [24]  911 	mov	_int_to_digits_PARM_2,#_digits
+      0002CB 75 13 00         [24]  912 	mov	(_int_to_digits_PARM_2 + 1),#0x00
+      0002CE 75 14 40         [24]  913 	mov	(_int_to_digits_PARM_2 + 2),#0x40
+      0002D1 12 01 DC         [24]  914 	lcall	_int_to_digits
+                                    915 ;	06_DS18B20_1wire/wire.c:192: EA = 1;
+                                    916 ;	assignBit
+      0002D4 D2 AF            [12]  917 	setb	_EA
+                                    918 ;	06_DS18B20_1wire/wire.c:195: }
+      0002D6 80 CD            [24]  919 	sjmp	00110$
+                                    920 	.area CSEG    (CODE)
+                                    921 	.area CONST   (CODE)
+      0003F8                        922 _segment_map:
+      0003F8 3F                     923 	.db #0x3f	; 63
+      0003F9 06                     924 	.db #0x06	; 6
+      0003FA 5B                     925 	.db #0x5b	; 91
+      0003FB 4F                     926 	.db #0x4f	; 79	'O'
+      0003FC 66                     927 	.db #0x66	; 102	'f'
+      0003FD 6D                     928 	.db #0x6d	; 109	'm'
+      0003FE 7D                     929 	.db #0x7d	; 125
+      0003FF 07                     930 	.db #0x07	; 7
+      000400 7F                     931 	.db #0x7f	; 127
+      000401 6F                     932 	.db #0x6f	; 111	'o'
+      000402 77                     933 	.db #0x77	; 119	'w'
+      000403 7C                     934 	.db #0x7c	; 124
+      000404 39                     935 	.db #0x39	; 57	'9'
+      000405 5E                     936 	.db #0x5e	; 94
+      000406 79                     937 	.db #0x79	; 121	'y'
+      000407 71                     938 	.db #0x71	; 113	'q'
+      000408                        939 _segment_dp:
+      000408 80                     940 	.db #0x80	; 128
+                                    941 	.area XINIT   (CODE)
+                                    942 	.area CABS    (ABS,CODE)
