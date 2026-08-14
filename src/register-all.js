@@ -40,6 +40,7 @@ import { registerBenchMeters } from './devices/bench-meters.js';
 import { registerKitSensors } from './devices/kit-sensors.js';
 import { registerRtcDisplay } from './devices/rtc-display.js';
 import { registerThirtySeven } from './devices/thirtyseven.js';
+import { registerAnalogAmps } from './devices/analog-amps.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -72,4 +73,5 @@ export function registerAllDevices() {
   registerKitSensors();
   registerRtcDisplay();
   registerThirtySeven();
+  registerAnalogAmps();
 }
