@@ -6,6 +6,7 @@
 |---|---|---|
 | janroesner/sixty5o2 | MIT | Bootloader + hello_world ROM for EATER6502 preset, ported to ca65. Source and binaries in `rom/sixty5o2/` |
 | mike42/6502-computer | CC-BY-4.0 | HB6502 machine preset derived from hardware design (address decode, clock, chip selection). No code copied; wiring facts only |
+| treideme/stc89c52-demos | Apache-2.0 | 16 SDCC demos for HC6800-ES learning board, compiled to IHX in `rom/stc89c52-demos/`. Cross-check corpus for 8051 device models |
 
 ## Runtime dependencies
 
