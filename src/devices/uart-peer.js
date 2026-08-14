@@ -99,7 +99,7 @@ export function registerUartPeer() {
         terminals: ['vcc', 'gnd', 'rxd', 'txd', 'key', 'state'],
 
         init(part) {
-            return {
+            const state = {
                 drives: {
                     txd: { vTh: 5, rTh: R_OUT },      // idle high
                     state: { vTh: 0, rTh: R_OUT },     // HIGH while connected
@@ -114,6 +114,10 @@ export function registerUartPeer() {
                 _peerSeq: 0,
                 _lineBuf: [],
             };
+            // Join the AIR: every module with the same params.air shares a
+            // radio neighborhood — place five, they all see each other.
+            airJoin(part.params?.air ?? 'air0', state);
+            return state;
         },
 
         stamp(ctx) {
@@ -148,6 +152,17 @@ export function registerUartPeer() {
                     }
                 } else {
                     state.received.push(byte);
+                    // THE BRIDGE: a live link carries data to the peer
+                    // module's TXD — robot A's MCU writes, robot B's MCU
+                    // reads, exactly like the paired hardware.
+                    if (state.linked) {
+                        const peer = airFind(state, state.linked);
+                        if (peer) {
+                            const peerBaud = peer.config.uart.baud;
+                            queueBytes(peer, [byte], tNs, peerBaud);
+                            changed = true;
+                        }
+                    }
                 }
             }
 
@@ -181,13 +196,52 @@ export function registerUartPeer() {
         },
 
         _queue(state, text, tNs, baud) {
-            const bytes = [...text].map((c) => c.charCodeAt(0) & 0xff);
-            const start = state._txEdges.length
-                ? state._txEdges[state._txEdges.length - 1].t + 1_000_000n
-                : tNs + 500_000n;                     // half a ms of turnaround
-            state._txEdges = state._txEdges.concat(buildUartFrame(bytes, start, baud));
+            queueBytes(state, [...text].map((c) => c.charCodeAt(0) & 0xff), tNs, baud);
         },
     });
+}
+
+function queueBytes(state, bytes, tNs, baud) {
+    const start = state._txEdges.length
+        ? state._txEdges[state._txEdges.length - 1].t + 1_000_000n
+        : tNs + 500_000n;                             // half a ms of turnaround
+    state._txEdges = state._txEdges.concat(buildUartFrame(bytes, start, baud));
+}
+
+// ─── The air: a shared radio neighborhood per params.air ───────────────
+// Module-scoped by design: one project is one board is one air (multiple
+// airs = multiple names). Members register their live state; addresses
+// are read from each member's CURRENT config, so renames and ORGL are
+// visible to inquirers. Tests use distinct air names for isolation.
+const AIR = new Map();
+
+function airJoin(id, state) {
+    if (!AIR.has(id)) AIR.set(id, new Set());
+    AIR.get(id).add(state);
+    state._air = id;
+}
+
+/** Test hygiene: clear an air's membership (module-scoped state would
+ *  otherwise accumulate members across boards created in one process). */
+export function airReset(id) { AIR.delete(id); }
+
+function airOthers(state) {
+    const members = AIR.get(state._air);
+    if (!members) return [];
+    return [...members].filter((m) => m !== state);
+}
+
+function airFind(state, addr) {
+    return airOthers(state).find((m) => m.config.addr === addr) || null;
+}
+
+// Auto-unique default address: five placed modules must not collide, so
+// the tail derives from the part id when none is declared.
+function addrFor(part) {
+    if (part.params?.addr) return part.params.addr;
+    let h = 0;
+    for (const ch of String(part.id ?? '')) h = ((h * 31) + ch.charCodeAt(0)) & 0xffffff;
+    return `98d3:31:${h.toString(16).padStart(6, '0')}`;
 }
 
 function defaultConfig(part) {
@@ -199,7 +253,7 @@ function defaultConfig(part) {
         cmode: 0,                                  // 0 bind-only, 1 any
         clazz: 0,
         bind: '0:0:0',
-        addr: part.params?.addr ?? '98d3:31:fc190d',
+        addr: addrFor(part),
     };
 }
 
@@ -214,7 +268,12 @@ function defaultConfig(part) {
  */
 function atCommand(part, state, cmd) {
     const c = state.config;
-    const nearby = part.params?.nearby || [];
+    // The neighborhood = every OTHER module on this air (live configs, so
+    // renames show up in inquiry) + any scripted extras from params.
+    const airDevices = airOthers(state).map((s) => ({
+        addr: s.config.addr, name: s.config.name, class: s.config.clazz || '1F00',
+    }));
+    const nearby = airDevices.concat(part.params?.nearby || []);
     const findNear = (addr) => nearby.find((d) => d.addr === addr);
     let m;
 
@@ -267,11 +326,21 @@ function atCommand(part, state, cmd) {
         const addr = m[1].replace(/,/g, ':');
         if (c.cmode === 1 || state.paired.includes(addr) || findNear(addr)) {
             state.linked = addr;
+            // A link is SYMMETRIC: the peer module (if it is a real air
+            // member, not a scripted extra) sees the connection too — its
+            // STATE pin rises and its data bridges back.
+            const peer = airFind(state, addr);
+            if (peer) peer.linked = c.addr;
             return 'OK';
         }
         return 'FAIL';
     }
-    if (cmd === 'AT+DISC') { state.linked = null; return '+DISC:SUCCESS\r\nOK'; }
+    if (cmd === 'AT+DISC') {
+        const peer = state.linked ? airFind(state, state.linked) : null;
+        if (peer && peer.linked === c.addr) peer.linked = null;
+        state.linked = null;
+        return '+DISC:SUCCESS\r\nOK';
+    }
     return 'ERROR:(0)';
 }
 
