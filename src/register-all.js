@@ -39,6 +39,7 @@ import { registerLevelMux } from './devices/level-mux.js';
 import { registerBenchMeters } from './devices/bench-meters.js';
 import { registerKitSensors } from './devices/kit-sensors.js';
 import { registerRtcDisplay } from './devices/rtc-display.js';
+import { registerThirtySeven } from './devices/thirtyseven.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -70,4 +71,5 @@ export function registerAllDevices() {
   registerBenchMeters();
   registerKitSensors();
   registerRtcDisplay();
+  registerThirtySeven();
 }
