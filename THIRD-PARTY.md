@@ -2,6 +2,18 @@
 
 This project contains no third-party code at present.
 
+## Runtime dependencies
+
+| project | licence | relationship |
+|---|---|---|
+| wokwi/avr8js | MIT | AVR MCU emulator (npm dependency) |
+
+## Test-time references (not shipped)
+
+| project | licence | relationship |
+|---|---|---|
+| blinkenrocket-firmware | LGPL-3 OR BSD-3 per file | Built (avr-gcc) for ATtiny88 smoke tests; BSD-3 licence elected; binary loaded at test time only, not shipped |
+
 ## References studied (not copied)
 
 | project | licence | relationship |
