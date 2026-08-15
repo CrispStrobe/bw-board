@@ -424,7 +424,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
         case 'vcc':
           if (!powerOff) {
-            stampVoltageSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc);
+            // params.volts makes the rail per-part adjustable (a 3.3V
+            // rail beside the 5V one); the board default stays the
+            // fallback. board.js's seed path already honored this —
+            // the solver must agree or the seed lies.
+            stampVoltageSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex,
+              Number.isFinite(part.params?.volts) ? part.params.volts : vcc);
           }
           break;
 
