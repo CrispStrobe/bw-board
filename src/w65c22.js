@@ -217,6 +217,32 @@ export class W65C22 {
 
     /** IRQ line state (active = true). */
     get irqAsserted() { return this._irq; }
+
+    /** Snapshot VIA state for machine save. */
+    saveState() {
+        return {
+            ora: this.ora, orb: this.orb, ddra: this.ddra, ddrb: this.ddrb,
+            inA: this.inA, inB: this.inB,
+            t1c: this.t1c, t1l: this.t1l, t1Fired: this.t1Fired, t1pb7: this.t1pb7,
+            t2c: this.t2c, t2ll: this.t2ll, t2Fired: this.t2Fired,
+            sr: this.sr, acr: this.acr, pcr: this.pcr,
+            ifr: this.ifr, ier: this.ier,
+            ca1: this.ca1, ca2: this.ca2, cb1: this.cb1, cb2: this.cb2,
+            _irq: this._irq,
+        };
+    }
+
+    /** Restore from a saveState() snapshot. */
+    loadState(s) {
+        this.ora = s.ora; this.orb = s.orb; this.ddra = s.ddra; this.ddrb = s.ddrb;
+        this.inA = s.inA; this.inB = s.inB;
+        this.t1c = s.t1c; this.t1l = s.t1l; this.t1Fired = s.t1Fired; this.t1pb7 = s.t1pb7;
+        this.t2c = s.t2c; this.t2ll = s.t2ll; this.t2Fired = s.t2Fired;
+        this.sr = s.sr; this.acr = s.acr; this.pcr = s.pcr;
+        this.ifr = s.ifr; this.ier = s.ier;
+        this.ca1 = s.ca1; this.ca2 = s.ca2; this.cb1 = s.cb1; this.cb2 = s.cb2;
+        this._irq = s._irq ?? false;
+    }
 }
 
 export default W65C22;

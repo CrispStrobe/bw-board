@@ -316,6 +316,32 @@ export class TMS9918 {
         }
         if (coincidence) this.status |= 0x20; // C
     }
+    /** Snapshot VDP state for machine save. */
+    saveState() {
+        return {
+            vram: this.vram.slice(),
+            regs: this.regs.slice(),
+            status: this.status,
+            addr: this.addr,
+            _latch: this._latch,
+            _readBuf: this._readBuf,
+            _toFrame: this._toFrame,
+            frame: this.frame,
+        };
+    }
+
+    /** Restore from a saveState() snapshot. */
+    loadState(s) {
+        this.vram.set(s.vram);
+        this.regs.set(s.regs);
+        this.status = s.status;
+        this.addr = s.addr;
+        this._latch = s._latch;
+        this._readBuf = s._readBuf;
+        this._toFrame = s._toFrame;
+        this.frame = s.frame;
+        this._renderFrame();
+    }
 }
 
 export default TMS9918;

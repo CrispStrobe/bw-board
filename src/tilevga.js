@@ -126,6 +126,25 @@ export class TileVGA {
         }
         return { width: TILE_W, height: TILE_H, rgba, frame: this.frame, signal: true };
     }
+    saveState() {
+        return {
+            vram: this.vram.slice(),
+            dispControl: this.dispControl.slice(),
+            dispTiles: this.dispTiles.slice(),
+            dispCharset: this.dispCharset.slice(),
+            frame: this.frame,
+            _toVblank: this._toVblank,
+        };
+    }
+
+    loadState(s) {
+        this.vram.set(s.vram);
+        this.dispControl.set(s.dispControl);
+        this.dispTiles.set(s.dispTiles);
+        this.dispCharset.set(s.dispCharset);
+        this.frame = s.frame;
+        this._toVblank = s._toVblank;
+    }
 }
 
 export default TileVGA;

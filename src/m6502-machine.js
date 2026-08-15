@@ -345,6 +345,44 @@ export class M6502Machine {
         return n;
     }
 
+    /** CPU state keys to snapshot (same pattern as Z80Machine.CPU_STATE). */
+    static CPU_STATE = ['pc', 'a', 'x', 'y', 's', 'p'];
+
+    /**
+     * Snapshot the whole machine — CPU, memory, chip state — as a plain
+     * JSON-able object (mem is a Uint8Array; the caller chooses encoding).
+     * Chips with their own saveState() are included; chips without are
+     * skipped with the same contract as Z80Machine.
+     */
+    saveState() {
+        const cpu = {};
+        for (const k of M6502Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
+        const chips = {};
+        for (const [name, c] of Object.entries(this.chips)) {
+            if (typeof c.saveState === 'function') chips[name] = c.saveState();
+        }
+        return {
+            v: 1,
+            cpu,
+            cycles: this.cycles,
+            mem: this.mem.slice(),
+            chips,
+        };
+    }
+
+    /** Restore a saveState() snapshot onto an identically-built machine
+     *  (same config, same ROM load). */
+    loadState(s) {
+        if (s.v !== 1) throw new Error(`unknown machine state version ${s.v}`);
+        for (const k of M6502Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
+        this.cycles = s.cycles;
+        this.mem.set(s.mem);
+        for (const [name, cs] of Object.entries(s.chips ?? {})) {
+            const c = this.chips[name];
+            if (c && typeof c.loadState === 'function') c.loadState(cs);
+        }
+    }
+
     /** Run until machine time reaches tMs (or the CPU executes STP). */
     advanceToMs(tMs) {
         const target = Math.ceil(tMs * this.clockHz / 1000);
