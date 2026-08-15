@@ -19,6 +19,7 @@
 import { Z80 } from './z80.js';
 import { MC6850 } from './mc6850.js';
 import { Z80CTC } from './z80-ctc.js';
+import { ZXULA } from './zx-ula.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -76,6 +77,11 @@ export class Z80Machine {
                 throw new Error(`unknown port chip kind: ${p.kind}`);
             }
         }
+        // A Spectrum-shaped machine: config.ula = true attaches the ULA,
+        // which decodes ONLY A0 (every even port) and shares the
+        // machine's memory for the live screen.
+        this.ula = config.ula ? new ZXULA(this.mem) : null;
+        if (this.ula) this.chips.ula = this.ula;
         this._romRanges = (config.regions || []).filter((r) => r.kind === 'rom');
         this.cpu = new Z80({
             read: (a) => this.mem[a & 0xffff],
@@ -85,10 +91,12 @@ export class Z80Machine {
                 this.mem[a] = v & 0xff;
             },
             in: (port) => {
+                if (this.ula && (port & 1) === 0) return this.ula.in(port);
                 const e = this._portMap.get(port & 0xff);
                 return e ? e.chip.read(e.rs) : 0xff;
             },
             out: (port, v) => {
+                if (this.ula && (port & 1) === 0) { this.ula.out(port, v, this.cycles); return; }
                 const e = this._portMap.get(port & 0xff);
                 if (e) e.chip.write(e.rs, v);
             },
