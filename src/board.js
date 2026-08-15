@@ -375,13 +375,17 @@ export class BoardImpl {
       // No devices: original fast path
       this.timeNs = tNs;
 
-      if (tNs > prevNs && this.powered) {
+      if (tNs > prevNs && (this.powered || this._hasReactive())) {
         const dtSec = Number(tNs - prevNs) / 1e9;
         if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
           this._integrateTransientMNA(dtSec);
-        } else {
+        } else if (this.powered) {
           this._integrateCapacitors(dtSec);
           this._integrateInductors(dtSec);
+        } else {
+          // Power off with stored energy: route through the transient
+          // MNA so the discharge is solved against the dead network.
+          this._integrateTransientMNA(dtSec);
         }
       }
     }
@@ -1811,6 +1815,11 @@ export class BoardImpl {
         tSeconds: t0 + i * h,
         transient: { dtSec: h, capVoltages: cv, inductorCurrents: il },
         deviceStates: this._deviceStates,
+        // Power off strips the sources but NOT the storage: capacitor
+        // and inductor companions keep stamping, so stored energy
+        // discharges through whatever network remains (the audit found
+        // every discharge-on-power-loss demo frozen instead).
+        powerOff: !this.powered,
       });
       cv = res.capVoltagesNext ?? cv;
       il = res.inductorCurrentsNext ?? il;

@@ -12,7 +12,7 @@
  * @module
  */
 
-import { registerDevice } from '../devices.js';
+import { registerDevice, getDevice } from '../devices.js';
 
 const R_OUT_DEFAULT = 50;
 const R_DISCHARGE = 10;     // discharge switch on-resistance
@@ -118,5 +118,18 @@ export function registerTimer555() {
 
       return true;
     },
+  });
+
+  // The gallery's kind is '555' (the designer catalog's name); the
+  // registry only knew 'timer_555', so every gallery 555 was accepted
+  // by validation and modelled by NOTHING — output stuck at 0V forever
+  // (audit escalation, pc27; same disease as rgb_led). One model, two
+  // names; terminal order follows the kind table's catalog order.
+  const base = getDevice('timer_555');
+  registerDevice('555', {
+    terminals: ['gnd', 'trigger', 'output', 'reset', 'control', 'threshold', 'discharge', 'vcc'],
+    init: (part) => base.init(part),
+    stamp: (ctx, part, state) => base.stamp(ctx, part, state),
+    update: (part, state, read, tNs) => base.update(part, state, read, tNs),
   });
 }
