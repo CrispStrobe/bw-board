@@ -107,6 +107,109 @@ test('ATtiny88: wirePeripherals adds EEPROM and TWI', () => {
   assert.ok(a.twiInstalled, 'TWI stub installed');
 });
 
+// ── Hand-assembled blink + button-read pin-trace tests ────────────────────
+// Lightweight programs that verify the ATtiny88's pin I/O directly.
+
+test('ATtiny88 blink: PB0 toggles at 8 MHz', () => {
+  // Program: SBI DDRB,0 ; loop: SBI PORTB,0 ; CBI PORTB,0 ; RJMP loop
+  // SBI encoding: 1001 1010 AAAA Abbb (A = I/O addr, b = bit)
+  // CBI encoding: 1001 1000 AAAA Abbb
+  // DDRB = I/O $04, PORTB = I/O $05
+  // SBI $04,0 = 1001_1010_0010_0000 = 0x9A20
+  // SBI $05,0 = 1001_1010_0010_1000 = 0x9A28
+  // CBI $05,0 = 1001_1000_0010_1000 = 0x9828
+  // RJMP -2   = 0xCFFE
+  const flash = new Uint16Array(4096);
+  flash[0] = 0x9a20; // SBI DDRB, 0
+  flash[1] = 0x9a28; // SBI PORTB, 0
+  flash[2] = 0x9828; // CBI PORTB, 0
+  flash[3] = 0xcffd; // RJMP -3 (back to flash[1])
+
+  const adapter = createAvr8jsAdapter({ chip: 'attiny88', program: flash });
+
+  // Track pin state changes
+  const edges = [];
+  const board = {
+    setPin(name, mode, high) {
+      if (name === 'PB0') edges.push({ mode, high });
+    },
+    advanceTo() {},
+    readPin() { return 0; },
+    readAnalog() { return 0; },
+  };
+  adapter.attachBoard(board);
+
+  // Run 100µs at 8 MHz = 800 cycles → many toggle iterations
+  adapter.advanceNs(100_000);
+
+  // PB0 should have toggled multiple times (each SBI/CBI is 2 cycles,
+  // RJMP is 2 cycles → ~133 toggle pairs in 800 cycles)
+  const highs = edges.filter(e => e.high).length;
+  const lows = edges.filter(e => !e.high).length;
+  assert.ok(highs > 10, `PB0 should go high many times, got ${highs}`);
+  assert.ok(lows > 10, `PB0 should go low many times, got ${lows}`);
+  // Highs and lows should be approximately equal (±3 for init edges)
+  assert.ok(Math.abs(highs - lows) <= 3,
+    `toggle should be symmetric: ${highs} highs, ${lows} lows`);
+});
+
+test('ATtiny88 button-read: PC3 input follows board level', () => {
+  // Program:
+  //   SBI DDRC, 4    ; PC4 = output (mirror)
+  //   SBI PORTC, 3   ; enable pull-up on PC3
+  // loop:
+  //   SBIC PINC, 3   ; skip next if PC3 low (button pressed)
+  //   SBI PORTC, 4   ; PC4 high (button not pressed)
+  //   SBIS PINC, 3   ; skip next if PC3 high (button not pressed)
+  //   CBI PORTC, 4   ; PC4 low (button pressed)
+  //   RJMP loop
+  //
+  // DDRC = I/O $07, PORTC = I/O $08, PINC = I/O $06
+  // SBI $07,4 = 0x9A3C    SBI $08,3 = 0x9A43
+  // SBIC $06,3 = 0x9933   SBI $08,4 = 0x9A44
+  // SBIS $06,3 = 0x9B33   CBI $08,4 = 0x9844
+  // RJMP -5 = 0xCFFB
+  const flash = new Uint16Array(4096);
+  flash[0] = 0x9a3c; // SBI DDRC, 4
+  flash[1] = 0x9a43; // SBI PORTC, 3 (pull-up)
+  flash[2] = 0x9933; // SBIC PINC, 3
+  flash[3] = 0x9a44; // SBI PORTC, 4
+  flash[4] = 0x9b33; // SBIS PINC, 3
+  flash[5] = 0x9844; // CBI PORTC, 4
+  flash[6] = 0xcffb; // RJMP -5 (back to flash[2])
+
+  const adapter = createAvr8jsAdapter({ chip: 'attiny88', program: flash });
+
+  let pc4High = null;
+  let pc3Level = 1; // button not pressed (pulled up)
+  const board = {
+    setPin(name, mode, high) {
+      if (name === 'PC4') pc4High = high;
+    },
+    advanceTo() {},
+    readPin(name) {
+      if (name === 'PC3') return pc3Level;
+      return 0;
+    },
+    readAnalog() { return 0; },
+  };
+  adapter.attachBoard(board);
+
+  // Run with button NOT pressed → PC4 should go HIGH
+  adapter.advanceNs(50_000);
+  assert.equal(pc4High, true, 'PC4 mirrors PC3: not pressed → HIGH');
+
+  // Press the button (PC3 LOW)
+  pc3Level = 0;
+  adapter.advanceNs(50_000);
+  assert.equal(pc4High, false, 'PC4 mirrors PC3: pressed → LOW');
+
+  // Release the button
+  pc3Level = 1;
+  adapter.advanceNs(50_000);
+  assert.equal(pc4High, true, 'PC4 mirrors PC3: released → HIGH');
+});
+
 // ── Blinkenrocket firmware smoke test ──────────────────────────────────────
 // Requires the firmware hex to be built at the expected path.
 
