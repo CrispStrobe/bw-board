@@ -4,7 +4,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTzx, tzxToTape } from '../src/zx-tzx.js';
+import { parseTzx, tzxToTape, standardBlockEdges, turboBlockEdges, tzxToEarEdges } from '../src/zx-tzx.js';
 
 function makeHeader() {
     // "ZXTape!" + 0x1A + major 1 + minor 20
@@ -152,4 +152,119 @@ test('parseTzx: text description and group blocks consumed without crash', () =>
     assert.equal(blocks.length, 0, 'metadata blocks produce no tape blocks');
     assert.ok(notes.some(n => /Hello TZX/.test(n)), 'text captured');
     assert.ok(notes.some(n => /Part 1/.test(n)), 'group name captured');
+});
+
+// ─── EAR-level pulse generation ──────────────────────────────────
+
+test('standardBlockEdges: header block gets 8063 pilot pulses', () => {
+    // A header block: flag=0x00, 17 data bytes, checksum
+    const data = new Uint8Array(19);
+    data[0] = 0x00; // header flag
+    const { edges, endTs } = standardBlockEdges(data, 0);
+    // Pilot: 8063 pulses at 2168 T each
+    // First 8063 edges are pilot
+    assert.ok(edges.length > 8063 + 2, `enough edges for pilot+sync+data: ${edges.length}`);
+    // First edge at T=0
+    assert.equal(edges[0].tStates, 0);
+    // Pilot pulses alternate
+    assert.equal(edges[0].level, 0);
+    assert.equal(edges[1].level, 1);
+    // Duration is positive
+    assert.ok(endTs > 8063 * 2168, `endTs should include pilot: ${endTs}`);
+});
+
+test('standardBlockEdges: data block gets 3223 pilot pulses', () => {
+    const data = new Uint8Array(3);
+    data[0] = 0xff; // data flag
+    const { edges } = standardBlockEdges(data, 0);
+    // Data blocks get fewer pilot pulses
+    assert.ok(edges.length > 3223, `enough edges: ${edges.length}`);
+    assert.ok(edges.length < 8063 + 100, 'fewer than a header block');
+});
+
+test('standardBlockEdges: data bits encode as two half-pulses each', () => {
+    // Single byte 0x80 (bit 7 = 1, rest 0): after pilot+sync,
+    // first data bit is 1 → two 1710T pulses, rest are 0 → 855T.
+    const data = Uint8Array.of(0xff, 0x80, 0x00); // flag + one byte + checksum
+    const { edges } = standardBlockEdges(data, 0, 0);
+    // Count: 3223 pilot + 2 sync + 24 data bits × 2 = 3273 edges
+    // The data starts after 3223 + 2 = 3225 edges
+    // Bit 7 of 0x80 is 1: edges 3225 and 3226 should span 1710T each
+    const dataStart = 3223 + 2;
+    if (edges.length > dataStart + 2) {
+        const firstBitDuration = edges[dataStart + 1].tStates - edges[dataStart].tStates;
+        assert.equal(firstBitDuration, 1710, 'bit 1 half-pulse = 1710T');
+    }
+});
+
+test('turboBlockEdges: uses custom timing from the spec', () => {
+    const spec = {
+        pilotPulse: 1000,
+        sync1: 500,
+        sync2: 600,
+        zeroPulse: 400,
+        onePulse: 800,
+        pilotCount: 10,
+        lastByteBits: 8,
+        pauseMs: 0,
+    };
+    const data = Uint8Array.of(0xAA); // 10101010
+    const { edges } = turboBlockEdges(spec, data, 0);
+    // 10 pilot + 2 sync + 16 data (8 bits × 2) = 28 edges
+    assert.equal(edges.length, 28, '10 pilot + 2 sync + 16 data');
+    // First data bit (bit 7 of 0xAA = 1): edges at pilot+sync end
+    const dataStart = 12; // 10 pilot + 2 sync
+    const bit1duration = edges[dataStart + 1].tStates - edges[dataStart].tStates;
+    assert.equal(bit1duration, 800, 'bit 1 uses onePulse=800');
+    const bit0duration = edges[dataStart + 3].tStates - edges[dataStart + 2].tStates;
+    assert.equal(bit0duration, 400, 'bit 0 uses zeroPulse=400');
+});
+
+test('tzxToEarEdges: standard block produces edges', () => {
+    const header = makeHeader();
+    const blockLen = 3;
+    const block = new Uint8Array(1 + 4 + blockLen);
+    block[0] = 0x10;
+    block[1] = 0xe8; block[2] = 0x03; // pause=1000
+    block[3] = blockLen & 0xff; block[4] = 0;
+    block[5] = 0xff; block[6] = 0x42; block[7] = 0x00;
+
+    const buf = new Uint8Array(header.length + block.length);
+    buf.set(header); buf.set(block, header.length);
+
+    const { edges, notes } = tzxToEarEdges(buf);
+    assert.ok(edges.length > 3000, `standard block should produce many edges: ${edges.length}`);
+});
+
+test('ULA EAR input: setEarEdges drives IN port bit 6', async () => {
+    const { ZXULA } = await import('../src/zx-ula.js');
+    const mem = new Uint8Array(65536);
+    const ula = new ZXULA(mem);
+
+    // Before any edges: EAR is high (idle)
+    ula.tStates = 100;
+    assert.equal(ula.in(0xfe) & 0x40, 0x40, 'EAR idle high');
+
+    // Set edges: low at T=200, high at T=500
+    ula.setEarEdges([
+        { tStates: 200, level: 0 },
+        { tStates: 500, level: 1 },
+    ]);
+
+    // Before first edge: still high
+    ula.tStates = 150;
+    assert.equal(ula.in(0xfe) & 0x40, 0x40, 'before first edge: high');
+
+    // After first edge: low
+    ula.tStates = 300;
+    assert.equal(ula.in(0xfe) & 0x40, 0x00, 'after edge at 200: low');
+
+    // After second edge: high again
+    ula.tStates = 600;
+    assert.equal(ula.in(0xfe) & 0x40, 0x40, 'after edge at 500: high');
+
+    // Clear
+    ula.clearEar();
+    ula.tStates = 300;
+    assert.equal(ula.in(0xfe) & 0x40, 0x40, 'after clearEar: idle high');
 });

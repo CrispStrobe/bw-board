@@ -80,6 +80,12 @@ export class ZXULA {
         this._intLeft = 0;
         this.frame = 0;
         this.tStates = 0;          // total T-states, the edge clock
+        // EAR input: a timed pulse list from the tape engine. Each entry
+        // is { tStates, level } — the EAR bit flips at that T-state.
+        // Between edges, the last level holds. Idle = 1 (high).
+        this._earEdges = [];
+        this._earIdx = 0;
+        this._earLevel = 1;
     }
 
     /**
@@ -117,6 +123,9 @@ export class ZXULA {
         this.tStates = s.tStates; this._toFrame = s.toFrame; this._intLeft = s.intLeft;
         this.rows.fill(0x1f);
         this.speakerEdges.length = 0;
+        this._earEdges = [];
+        this._earIdx = 0;
+        this._earLevel = 1;
     }
 
     // ── Contention ─────────────────────────────────────────────────
@@ -153,6 +162,25 @@ export class ZXULA {
         return pattern < 6 ? 6 - pattern : 0;
     }
 
+    /**
+     * Feed a list of timed EAR edges for bit-level tape playback.
+     * Each entry: { tStates: number, level: 0|1 }. The list must be
+     * sorted by tStates. Called by the TZX pulse scheduler.
+     * @param {Array<{tStates: number, level: 0|1}>} edges
+     */
+    setEarEdges(edges) {
+        this._earEdges = edges;
+        this._earIdx = 0;
+        this._earLevel = 1; // idle high before first edge
+    }
+
+    /** Clear the EAR input (tape stopped/ejected). */
+    clearEar() {
+        this._earEdges = [];
+        this._earIdx = 0;
+        this._earLevel = 1;
+    }
+
     /** Face-input contract: the currently held key names. */
     setKeys(names) {
         this.rows.fill(0x1f);
@@ -170,7 +198,14 @@ export class ZXULA {
         for (let r = 0; r < 8; r++) {
             if (((high >> r) & 1) === 0) v &= this.rows[r];
         }
-        return 0xa0 | v; // bit7/5 float high, bit6 EAR idle high, no tape
+        // Advance EAR state to the current T-state position
+        while (this._earIdx < this._earEdges.length
+            && this.tStates >= this._earEdges[this._earIdx].tStates) {
+            this._earLevel = this._earEdges[this._earIdx].level;
+            this._earIdx++;
+        }
+        const ear = this._earLevel ? 0x40 : 0x00;
+        return 0xa0 | ear | v; // bit7/5 float high, bit6 = EAR
     }
 
     /** OUT to any even port. */
