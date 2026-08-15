@@ -21,6 +21,7 @@ import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
 import { TMS9918 } from './tms9918.js';
 import { SimpleVGA } from './simplevga.js';
+import { TileVGA } from './tilevga.js';
 import { NS16C550 } from './ns16c550.js';
 import { Latch374 } from './latch374.js';
 
@@ -142,7 +143,8 @@ export class M6502Machine {
         }
         for (const c of config.chips) {
             const regs = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8
-                : c.kind === 'latch' ? 1 : c.kind === 'vdp' ? 2 : 4;
+                : c.kind === 'latch' ? 1 : c.kind === 'vdp' ? 2
+                : c.kind === 'tilevga' ? 0x4000 : 4;
             const span = c.span || regs;
             if (span < regs) throw new Error(`machine config: ${c.kind} span ${span} smaller than its ${regs} registers`);
             let chip;
@@ -167,6 +169,11 @@ export class M6502Machine {
                 // TMS9918A: frame pacing derives from the CPU clock the
                 // machine advances chips with (60 Hz VBLANK + IRQ).
                 chip = new TMS9918({ clockHz: config.clockHz });
+            } else if (c.kind === 'tilevga') {
+                // rene6502's tile VGA card: a 16K dual-port VRAM window
+                // (addressed like any chip), vblank pacing off the CPU
+                // clock. Reads AND writes hit the same VRAM — dual-port.
+                chip = new TileVGA({ clockHz: config.clockHz });
             } else if (c.kind === 'simplevga') {
                 // Not an addressed chip: a write-snoop card on the ROM
                 // window with its bank line on the VIA's port B. No
