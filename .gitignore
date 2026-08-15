@@ -4,3 +4,4 @@ node_modules/
 # Agent working notes: local context, not documentation.
 CLAUDE.md
 .resync-tx.bin
+scripts/tms9918/vdppeer
