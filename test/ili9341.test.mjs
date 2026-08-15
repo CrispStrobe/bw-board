@@ -85,10 +85,12 @@ describe('ILI9341 SPI TFT', () => {
   it('unknown commands are recorded, never crash the decode', () => {
     const l = makeLcd();
     l.wake();
-    l.cmd(0xb1, 0x00, 0x1b); // frame rate control — unimplemented
+    l.cmd(0xb1, 0x00, 0x1b); // FRMCTR1 — now a named no-op, NOT in unknown[]
+    l.cmd(0xd0, 0x42);        // truly unimplemented opcode
     l.cmd(0x2c);
     l.clockByte(0xff, true); l.clockByte(0xff, true);
-    assert.ok(l.state.unknown.includes(0xb1));
+    assert.ok(!l.state.unknown.includes(0xb1), '0xb1 is a named no-op now');
+    assert.ok(l.state.unknown.includes(0xd0), 'truly unknown opcode recorded');
     assert.equal(l.state.writes, 1, 'pixel path still works after it');
   });
 
@@ -102,5 +104,111 @@ describe('ILI9341 SPI TFT', () => {
     l.clockByte(0xf8, true); l.clockByte(0x00, true); // pure red
     const rgba = ili9341Rgba(l.state);
     assert.deepEqual([...rgba.slice(0, 4)], [248, 0, 0, 255]);
+  });
+
+  // ── v2 features ───────────────────────────────────────────────────
+
+  it('INVON/INVOFF toggle inversion; ili9341Rgba inverts colors', () => {
+    const l = makeLcd();
+    l.wake();
+    l.window(0, 0, 0, 0);
+    l.cmd(0x2c);
+    l.clockByte(0xf8, true); l.clockByte(0x00, true); // red 0xF800
+    assert.equal(l.state.inverted, false);
+    const normal = ili9341Rgba(l.state);
+    assert.deepEqual([...normal.slice(0, 3)], [248, 0, 0], 'red uninverted');
+
+    l.cmd(0x21); // INVON
+    assert.equal(l.state.inverted, true);
+    const inv = ili9341Rgba(l.state);
+    // Inverted: R=255-248=7, G=255-0=255, B=255-0=255
+    assert.deepEqual([...inv.slice(0, 3)], [7, 255, 255], 'inverted red → cyan');
+
+    l.cmd(0x20); // INVOFF
+    assert.equal(l.state.inverted, false);
+  });
+
+  it('VSCRDEF + VSCRSADD apply vertical scroll in ili9341Rgba', () => {
+    const l = makeLcd();
+    l.wake();
+    // VSCRDEF: TFA=10, VSA=300, BFA=10 (total=320)
+    l.cmd(0x33, 0, 10, 1, 0x2c, 0, 10); // VSA = 0x012c = 300
+    assert.equal(l.state.scrollTFA, 10);
+    assert.equal(l.state.scrollVSA, 300);
+    assert.equal(l.state.scrollBFA, 10);
+
+    // Write a red pixel at GRAM row 20, col 0
+    l.window(0, 0, 20, 20);
+    l.cmd(0x2c);
+    l.clockByte(0xf8, true); l.clockByte(0x00, true);
+
+    // VSCRSADD: scroll start = 20 — row 20 in GRAM should appear at
+    // display row TFA (=10) in the scrolling area.
+    l.cmd(0x37, 0, 20);
+    assert.equal(l.state.scrollStart, 20);
+
+    // The GRAM red pixel is at row 20. With scroll applied, the rgba
+    // output at display row 10 (start of VSA) should show the pixel
+    // that was at GRAM row 20.
+    const rgba = ili9341Rgba(l.state);
+    const at10 = rgba.slice(10 * ILI9341_W * 4, 10 * ILI9341_W * 4 + 3);
+    assert.deepEqual([...at10], [248, 0, 0], 'scrolled red pixel at display row 10');
+  });
+
+  it('MADCTL BGR bit swaps R/B in ili9341Rgba', () => {
+    const l = makeLcd();
+    l.wake();
+    l.window(0, 0, 0, 0);
+    l.cmd(0x2c);
+    l.clockByte(0xf8, true); l.clockByte(0x00, true); // red 0xF800
+
+    // Without BGR (default): R=248, G=0, B=0
+    const rgb = ili9341Rgba(l.state);
+    assert.deepEqual([...rgb.slice(0, 3)], [248, 0, 0]);
+
+    // Set MADCTL with BGR bit (bit 3 = 0x08)
+    l.cmd(0x36, 0x08);
+    const bgr = ili9341Rgba(l.state);
+    // BGR swaps R and B: what was red (R=248) becomes blue (B=248)
+    assert.deepEqual([...bgr.slice(0, 3)], [0, 0, 248], 'BGR swaps R↔B');
+  });
+
+  it('RAMRD 0x2E: dummy byte then R,G,B from GRAM', () => {
+    const l = makeLcd();
+    l.wake();
+    // Write a known pixel at (5, 5): green 0x07E0
+    l.window(5, 5, 5, 5);
+    l.cmd(0x2c);
+    l.clockByte(0x07, true); l.clockByte(0xe0, true);
+    assert.equal(l.state.gram[5 * ILI9341_W + 5], 0x07e0);
+
+    // Issue RAMRD (0x2E) — sets up read buffer
+    l.window(5, 5, 5, 5);
+    l.cmd(0x2e);
+    assert.equal(l.state._ramReading, true);
+
+    // Read buffer should have [dummy, R, G, B]
+    // Green 0x07E0 = R=0, G=252(0xFC), B=0
+    assert.equal(l.state._readBuf.length, 4);
+    assert.equal(l.state._readBuf[0], 0x00, 'dummy byte');
+    assert.equal(l.state._readBuf[1], 0x00, 'R from green pixel');
+    assert.equal(l.state._readBuf[2], 0xfc, 'G from green pixel');
+    assert.equal(l.state._readBuf[3], 0x00, 'B from green pixel');
+  });
+
+  it('power/gamma opcodes are named no-ops, not in unknown[]', () => {
+    const l = makeLcd();
+    l.wake();
+    // Send ALL the measured Adafruit init opcodes
+    const ops = [0xef, 0xcf, 0xed, 0xe8, 0xcb, 0xf7, 0xea,
+                 0xc0, 0xc1, 0xc5, 0xc7, 0xb1, 0xb6,
+                 0xf2, 0x26, 0xe0, 0xe1];
+    for (const op of ops) l.cmd(op, 0x00); // each with one param byte
+    assert.equal(l.state.unknown.length, 0,
+      `all driver opcodes should be named no-ops, got unknown=[${l.state.unknown.map(b => '0x' + b.toString(16))}]`);
+    // Pixel path still works after
+    l.cmd(0x2c);
+    l.clockByte(0xff, true); l.clockByte(0xff, true);
+    assert.equal(l.state.writes, 1);
   });
 });
