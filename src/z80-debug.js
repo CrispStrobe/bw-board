@@ -66,9 +66,11 @@ export function createZ80DebugTarget(adapter) {
       };
     },
 
-    /** Live disassembly (vector-length-ground; reads machine memory). */
+    /** Live disassembly (vector-length-ground; reads through the bus,
+     *  so a 128K machine disassembles the PAGE the CPU actually sees). */
     disasm(addr) {
-      return disasmZ80((a) => machine.mem[a & 0xffff], addr & 0xffff);
+      const rd = machine.readBus ?? ((a) => machine.mem[a & 0xffff]);
+      return disasmZ80((a) => rd(a & 0xffff), addr & 0xffff);
     },
 
     onHalt(cb) { haltListeners.push(cb); },
@@ -214,14 +216,24 @@ export function createZ80DebugTarget(adapter) {
 
     readMem(space, addr, len) {
       if (space !== 'mem') return { unsupported: `no space '${space}' on z80` };
+      const rd = machine.readBus ?? ((a) => machine.mem[a & 0xffff]);
       const out = new Uint8Array(len);
-      for (let i = 0; i < len; i++) out[i] = machine.mem[(addr + i) & 0xffff];
+      for (let i = 0; i < len; i++) out[i] = rd((addr + i) & 0xffff);
       return out;
     },
 
     writeMem(space, addr, data) {
       if (space !== 'mem') return { refused: `no space '${space}' on z80` };
-      for (let i = 0; i < data.length; i++) machine.mem[(addr + i) & 0xffff] = data[i] & 0xff;
+      // A debugger patches what the CPU sees, ROM included — that is
+      // the point of a poke. On 128K that means the mapped ROM slot
+      // and the mapped page; on 48K, flat memory as always.
+      const wr = machine._zx128
+        ? (a, v) => {
+          if (a < 0x4000) machine.roms[machine._bank.rom][a] = v;
+          else machine.writeBus(a, v);
+        }
+        : (a, v) => { machine.mem[a & 0xffff] = v & 0xff; };
+      for (let i = 0; i < data.length; i++) wr((addr + i) & 0xffff, data[i] & 0xff);
       return undefined;
     },
   };

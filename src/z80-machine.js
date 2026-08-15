@@ -106,7 +106,25 @@ export class Z80Machine {
         // A Spectrum-shaped machine: config.ula = true attaches the ULA,
         // which decodes ONLY A0 (every even port) and shares the
         // machine's memory for the live screen.
-        this.ula = config.ula ? new ZXULA(this.mem) : null;
+        //
+        // config.zx128 = true builds the 128K memory model on top:
+        // 8×16K RAM pages, two 16K ROMs, port $7FFD banking. The flat
+        // 64K keeps holding the two FIXED windows — page 5 at $4000 and
+        // page 2 at $8000 are subarray VIEWS into it, so the 48K screen
+        // path, tape trap and debug reads stay truthful there — while
+        // $C000 pages and the ROM window go through the bus closures.
+        this._zx128 = !!config.zx128;
+        if (this._zx128) {
+            this.pages = Array.from({ length: 8 }, (_, i) =>
+                i === 5 ? this.mem.subarray(0x4000, 0x8000)
+                    : i === 2 ? this.mem.subarray(0x8000, 0xc000)
+                        : new Uint8Array(16384));
+            this.roms = [new Uint8Array(16384), new Uint8Array(16384)];
+            this._bank = { page: 0, rom: 0, shadow: 0, locked: 0 };
+        }
+        this.ula = (config.ula || this._zx128)
+            ? new ZXULA(this.mem, this._zx128 ? { frameTstates: 70908 } : {})
+            : null;
         if (this.ula) this.chips.ula = this.ula;
         // Kempston joystick (config.kempston, default ON with the ULA):
         // the interface most archive games probe. Decoded the classic
@@ -115,13 +133,29 @@ export class Z80Machine {
         this._kempston = (config.kempston ?? !!config.ula) ? 0 : null;
         this.tape = null; // insertTape() attaches; the $0556 trap consumes
         this._romRanges = (config.regions || []).filter((r) => r.kind === 'rom');
+        const read48 = (a) => this.mem[a & 0xffff];
+        const write48 = (a, v) => {
+            a &= 0xffff;
+            for (const r of this._romRanges) if (a >= r.start && a <= r.end) return;
+            this.mem[a] = v & 0xff;
+        };
+        const read128 = (a) => {
+            a &= 0xffff;
+            if (a < 0x4000) return this.roms[this._bank.rom][a];
+            if (a < 0xc000) return this.mem[a];
+            return this.pages[this._bank.page][a - 0xc000];
+        };
+        const write128 = (a, v) => {
+            a &= 0xffff;
+            if (a < 0x4000) return; // ROM
+            if (a < 0xc000) { this.mem[a] = v & 0xff; return; }
+            this.pages[this._bank.page][a - 0xc000] = v & 0xff;
+        };
+        this.readBus = this._zx128 ? read128 : read48;
+        this.writeBus = this._zx128 ? write128 : write48;
         this.cpu = new Z80({
-            read: (a) => this.mem[a & 0xffff],
-            write: (a, v) => {
-                a &= 0xffff;
-                for (const r of this._romRanges) if (a >= r.start && a <= r.end) return;
-                this.mem[a] = v & 0xff;
-            },
+            read: this.readBus,
+            write: this.writeBus,
             in: (port) => {
                 if (this.ula && (port & 1) === 0) return this.ula.in(port);
                 if (this._kempston !== null && (port & 0x21) === 0x01) return this._kempston;
@@ -130,6 +164,9 @@ export class Z80Machine {
             },
             out: (port, v) => {
                 if (this.ula && (port & 1) === 0) { this.ula.out(port, v, this.cycles); return; }
+                // 128K banking: $7FFD partial decode (A15 and A1 low),
+                // write-only, dead once the lock bit has been set.
+                if (this._zx128 && (port & 0x8002) === 0) { this._setBank(v); return; }
                 const e = this._portMap.get(port & 0xff);
                 if (e) e.chip.write(e.rs, v);
             },
@@ -143,6 +180,26 @@ export class Z80Machine {
 
     /** Insert a .TAP; the $0556 trap serves blocks in order. */
     insertTape(tapBuf) { this.tape = new ZXTape(tapBuf); }
+
+    /** OUT $7FFD: bits 0-2 page at $C000, bit 3 shadow screen (page 7),
+     *  bit 4 ROM select, bit 5 lock-until-reset. */
+    _setBank(v) {
+        if (this._bank.locked) return;
+        this._bank.page = v & 0x07;
+        this._bank.rom = (v >> 4) & 1;
+        const shadow = (v >> 3) & 1;
+        if (shadow !== this._bank.shadow) {
+            this._bank.shadow = shadow;
+            this.ula.screen = shadow ? this.pages[7] : this.mem.subarray(0x4000, 0x8000);
+        }
+        this._bank.locked = (v >> 5) & 1;
+    }
+
+    /** Load a 16K ROM image into slot 0 (128 editor) or 1 (48 BASIC). */
+    loadRom128(slot, bytes) {
+        if (!this._zx128) throw new Error('loadRom128 needs a zx128 machine');
+        this.roms[slot & 1].set(bytes.subarray(0, 16384));
+    }
 
     /**
      * Face-input contract, joystick side: the same button mask the
@@ -185,6 +242,12 @@ export class Z80Machine {
             mem: this.mem.slice(),
             tapePos: this.tape ? this.tape.pos : null,
             chips,
+            // 128K: the six real pages (5 and 2 live in mem) + banking.
+            // ROMs are load-time configuration, like the 48K ROM.
+            zx128: this._zx128 ? {
+                pages: [0, 1, 3, 4, 6, 7].map((i) => this.pages[i].slice()),
+                bank: { ...this._bank },
+            } : null,
         };
     }
 
@@ -202,6 +265,15 @@ export class Z80Machine {
         for (const [name, cs] of Object.entries(s.chips ?? {})) {
             const c = this.chips[name];
             if (c && typeof c.loadState === 'function') c.loadState(cs);
+        }
+        if (s.zx128 && this._zx128) {
+            [0, 1, 3, 4, 6, 7].forEach((page, i) => this.pages[page].set(s.zx128.pages[i]));
+            this._bank.locked = 0;                        // let _setBank apply
+            this._setBank(
+                s.zx128.bank.page
+                | (s.zx128.bank.shadow << 3)
+                | (s.zx128.bank.rom << 4)
+                | (s.zx128.bank.locked << 5));
         }
     }
 
