@@ -47,6 +47,14 @@ export const CPM64K = Object.freeze({
 });
 
 export class Z80Machine {
+    /** Every scalar the core carries — the snapshot contract. */
+    static CPU_STATE = [
+        'a', 'f', 'b', 'c', 'd', 'e', 'h', 'l',
+        'a_', 'f_', 'b_', 'c_', 'd_', 'e_', 'h_', 'l_',
+        'ix', 'iy', 'sp', 'pc', 'i', 'r', 'wz',
+        'iff1', 'iff2', 'im', 'q', 'eiLatch', 'halted', 'cycles',
+    ];
+
     /** @param {typeof SEARLE} [config]
      *  @param {{ onSerial?: (byte:number, tMs:number)=>void }} [hooks] */
     constructor(config = SEARLE, hooks = {}) {
@@ -112,6 +120,50 @@ export class Z80Machine {
 
     /** Insert a .TAP; the $0556 trap serves blocks in order. */
     insertTape(tapBuf) { this.tape = new ZXTape(tapBuf); }
+
+    /**
+     * Snapshot the whole machine — CPU, memory, ULA, tape position —
+     * as a plain JSON-able object (mem is a Uint8Array; the caller
+     * chooses the encoding). The point: a 7-emulated-minute boot
+     * (Abersoft compiling tron from tape) becomes a one-time cost,
+     * restored in milliseconds. Chips with their own saveState()
+     * are included; chips without are skipped, so restore only a
+     * machine whose transient chip state doesn't matter — or teach
+     * the chip to snapshot.
+     */
+    saveState() {
+        const cpu = {};
+        for (const k of Z80Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
+        const chips = {};
+        for (const [name, c] of Object.entries(this.chips)) {
+            if (typeof c.saveState === 'function') chips[name] = c.saveState();
+        }
+        return {
+            v: 1,
+            cpu,
+            cycles: this.cycles,
+            mem: this.mem.slice(),
+            tapePos: this.tape ? this.tape.pos : null,
+            chips,
+        };
+    }
+
+    /** Restore a saveState() snapshot onto an identically-built machine
+     *  (same config, same ROM load, same insertTape call). */
+    loadState(s) {
+        if (s.v !== 1) throw new Error(`unknown machine state version ${s.v}`);
+        for (const k of Z80Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
+        this.cycles = s.cycles;
+        this.mem.set(s.mem);
+        if (s.tapePos != null) {
+            if (!this.tape) throw new Error('snapshot has a tape position but no tape is inserted');
+            this.tape.pos = s.tapePos;
+        }
+        for (const [name, cs] of Object.entries(s.chips ?? {})) {
+            const c = this.chips[name];
+            if (c && typeof c.loadState === 'function') c.loadState(cs);
+        }
+    }
 
     _advanceChips(n) {
         for (const k of Object.keys(this.chips)) {

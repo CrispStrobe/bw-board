@@ -30,7 +30,8 @@
  *  pbm2scr via gforth — BSD sed can't run the Makefile's VERSION grep,
  *  hence the explicit VERSION.)
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { Z80Machine } from '../src/z80-machine.js';
@@ -43,14 +44,25 @@ for (const [p, hint] of [[romPath, 'build zxs-rom'], [tapPath, 'see header for t
     if (!existsSync(p)) { console.error(`SKIP (loudly): ${p} missing — ${hint}`); process.exit(2); }
 }
 
+const rom = readFileSync(romPath);
+const tap = readFileSync(tapPath);
+
 const m = new Z80Machine({
     clockHz: 3_500_000,
     regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }],
     ula: true,
 });
-m.load(readFileSync(romPath), 0);
+m.load(rom, 0);
 m.cpu.pc = 0;
-m.insertTape(readFileSync(tapPath));
+m.insertTape(tap);
+
+// The boot + full compile is ~7 emulated minutes. Snapshot it: the
+// first run pays, every later run restores to the settled menu in
+// milliseconds. Keyed on ROM+TAP content; delete the file (or set
+// TRON_FULL=1) to re-verify the whole path.
+const cachePath = tapPath + '.bootstate.json';
+const cacheKey = createHash('sha256').update(rom).update(tap).digest('hex');
+const useCache = !process.env.TRON_FULL;
 
 let t = 0;
 const press = (...combos) => {
@@ -72,19 +84,42 @@ const delta = (a, b) => { let n = 0; for (let i = 0; i < a.length; i++) if (a[i]
 const checks = [];
 const expect = (what, ok) => { checks.push(ok); console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`); };
 
-// 1. Boot BASIC, LOAD "" → Abersoft Forth.
-m.advanceToMs(t = 4200);
-press(['j'], ['sym', 'p'], ['sym', 'p'], ['enter']);
-m.advanceToMs(t += 8000);
-expect('Abersoft fig-Forth boots from the tron tape',
-    zxScreenText(m.mem).some((l) => /fig-FORTH 1\.1A/.test(l)));
+let restored = false;
+if (useCache && existsSync(cachePath)) {
+    const s = JSON.parse(readFileSync(cachePath, 'utf8'));
+    if (s.key === cacheKey) {
+        s.state.mem = Uint8Array.from(Buffer.from(s.state.mem, 'base64'));
+        m.loadState(s.state);
+        t = s.tMs;
+        restored = true;
+        console.log('boot state restored from cache (TRON_FULL=1 re-runs the whole path)');
+    }
+}
 
-// 2. LOADT 1 LOAD — compile the whole game from tape (the long haul).
-type('LOADT 1 LOAD\n');
-while (m.tape.pos < m.tape.blocks.length && t < 600_000) m.advanceToMs(t += 5000);
-expect(`all ${m.tape.blocks.length} tape blocks consumed (source + fonts + title)`,
-    m.tape.pos === m.tape.blocks.length);
-m.advanceToMs(t += 30_000); // graphics load + auto-run settle on the menu
+if (!restored) {
+    // 1. Boot BASIC, LOAD "" → Abersoft Forth.
+    m.advanceToMs(t = 4200);
+    press(['j'], ['sym', 'p'], ['sym', 'p'], ['enter']);
+    m.advanceToMs(t += 8000);
+    expect('Abersoft fig-Forth boots from the tron tape',
+        zxScreenText(m.mem).some((l) => /fig-FORTH 1\.1A/.test(l)));
+
+    // 2. LOADT 1 LOAD — compile the whole game from tape (the long haul).
+    type('LOADT 1 LOAD\n');
+    while (m.tape.pos < m.tape.blocks.length && t < 600_000) m.advanceToMs(t += 5000);
+    expect(`all ${m.tape.blocks.length} tape blocks consumed (source + fonts + title)`,
+        m.tape.pos === m.tape.blocks.length);
+    m.advanceToMs(t += 30_000); // graphics load + auto-run settle on the menu
+
+    if (useCache) {
+        const state = m.saveState();
+        writeFileSync(cachePath, JSON.stringify({
+            key: cacheKey, tMs: t,
+            state: { ...state, mem: Buffer.from(state.mem).toString('base64') },
+        }));
+        console.log('boot state cached for next time:', cachePath);
+    }
+}
 const menu = bitmap();
 expect('title/menu drawn (bitmap populated)', menu.reduce((n, b) => n + (b !== 0 ? 1 : 0), 0) > 500);
 

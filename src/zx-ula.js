@@ -94,6 +94,22 @@ export class ZXULA {
         return { hz: Math.round(hz), on: true };
     }
 
+    /** Machine-snapshot hooks. Held keys and recorded speaker edges
+     *  are transients and reset; timing state carries over exactly. */
+    saveState() {
+        return {
+            border: this.border, speaker: this.speaker, frame: this.frame,
+            tStates: this.tStates, toFrame: this._toFrame, intLeft: this._intLeft,
+        };
+    }
+
+    loadState(s) {
+        this.border = s.border; this.speaker = s.speaker; this.frame = s.frame;
+        this.tStates = s.tStates; this._toFrame = s.toFrame; this._intLeft = s.intLeft;
+        this.rows.fill(0x1f);
+        this.speakerEdges.length = 0;
+    }
+
     /** Face-input contract: the currently held key names. */
     setKeys(names) {
         this.rows.fill(0x1f);

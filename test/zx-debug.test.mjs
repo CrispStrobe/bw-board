@@ -89,3 +89,28 @@ test('FLASH: attribute bit 7 swaps ink/paper on the 16-frame phase', async () =>
     u.frame = 32;
     assert.equal(px(u.renderFrame()), 2, 'phase 0 again');
 });
+
+test('machine snapshot: save/load round-trips and resumes identically', async () => {
+    const { Z80Machine } = await import('../src/z80-machine.js');
+    const prog = [0x21, 0x00, 0x40, 0x34, 0x23, 0x18, 0xfc]; // LD HL,$4000 / loop: INC (HL) / INC HL / JR loop
+    const build = () => {
+        const m = new Z80Machine({ clockHz: 3_500_000, regions: [{ kind: 'rom', start: 0, end: 0x00ff }], ula: true }, {});
+        m.load(Uint8Array.from(prog), 0);
+        m.cpu.pc = 0; m.cpu.sp = 0xff00;
+        return m;
+    };
+    const a = build();
+    a.advanceToMs(40);
+    const snap = a.saveState();
+    const b = build();
+    b.loadState(snap);
+    assert.equal(b.cpu.pc, a.cpu.pc);
+    assert.equal(b.cpu.hl, a.cpu.hl);
+    assert.equal(b.ula.frame, a.ula.frame);
+    assert.deepEqual([...b.mem.slice(0x4000, 0x4020)], [...a.mem.slice(0x4000, 0x4020)]);
+    // Resumed execution stays in lockstep with the original.
+    a.advanceToMs(80); b.advanceToMs(80);
+    assert.equal(b.cpu.pc, a.cpu.pc);
+    assert.equal(b.cpu.hl, a.cpu.hl);
+    assert.deepEqual([...b.mem.slice(0x4000, 0x4040)], [...a.mem.slice(0x4000, 0x4040)]);
+});
