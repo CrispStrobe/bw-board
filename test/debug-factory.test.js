@@ -307,8 +307,8 @@ describe('createDebugTarget: rp2040js', () => {
     // The debug target exists now — the factory wires it with the symbols.
     assert.ok(result.target, 'rp2040js debug target constructed');
     const caps = result.target.capabilities();
-    assert.deepEqual(caps.steps, ['insn', 'block']);
-    assert.deepEqual(caps.breakpoints, ['code', 'yield']);
+    assert.deepEqual(caps.steps, ['insn', 'block', 'over', 'out']);
+    assert.deepEqual(caps.breakpoints, ['code', 'yield', 'write']);
     assert.equal(caps.timeFreezes, true);
 
     // The program actually runs against the attached board.
