@@ -71,6 +71,26 @@ export class MC6850 {
     }
 
     get irqAsserted() { return this._irq; }
+
+    saveState() {
+        return {
+            rx: this.rx.slice(),
+            rdrf: this.rdrf,
+            overrun: this.overrun,
+            control: this.control,
+            _rxByte: this._rxByte,
+            _irq: this._irq,
+        };
+    }
+
+    loadState(s) {
+        this.rx = s.rx.slice();
+        this.rdrf = s.rdrf;
+        this.overrun = s.overrun;
+        this.control = s.control;
+        this._rxByte = s._rxByte;
+        this._irq = s._irq ?? false;
+    }
 }
 
 export default MC6850;

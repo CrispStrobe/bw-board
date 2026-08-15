@@ -112,6 +112,36 @@ export class Z80CTC {
             }
         }
     }
+
+    saveState() {
+        return {
+            vector: this.vector,
+            ch: this.ch.map(c => ({
+                control: c.control,
+                tc: c.tc,
+                count: c.count,
+                running: c.running,
+                expectTc: c.expectTc,
+                irq: c.irq,
+                _acc: c._acc,
+            })),
+        };
+    }
+
+    loadState(s) {
+        this.vector = s.vector;
+        for (let i = 0; i < 4; i++) {
+            const c = this.ch[i];
+            const sc = s.ch[i];
+            c.control = sc.control;
+            c.tc = sc.tc;
+            c.count = sc.count;
+            c.running = sc.running;
+            c.expectTc = sc.expectTc;
+            c.irq = sc.irq;
+            c._acc = sc._acc;
+        }
+    }
 }
 
 export default Z80CTC;
