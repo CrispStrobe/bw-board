@@ -1,81 +1,90 @@
-# bw-board handoff — 2026-08-15 (bw-blocks lane, session 11)
+# bw-board handoff — 2026-08-16
 
-**bw-board: 1850 tests, 0 failures (16 skips, all firmware-dependent).**
-**sb3-creator: 469 tests (25 oracle + 400 corpus + 44 gallery-e2e), 0 failures, 0 skips.**
+**1883 tests, 0 failures (20 skips — firmware/ROM dependent).** Both branches (master + main) pushed.
 
-## bw-blocks lane: what was done this session
+## Completed this session (session 12)
 
-### Palette families (bw-board)
+### AY-3-8912 PSG (`src/ay-3-8912.js`)
+Clean-room from GI datasheet. 16 registers, tone/noise/envelope counters at clock/16, 17-bit LFSR noise, audioTone() per-channel {hz, on, vol}. Wired into Z80Machine on zx128 configs: $FFFD select/read, $BFFD data write. saveState/loadState. 11 tests.
 
-- **Controller panel UI layer** (`3f475a7`): `src/controller-extension.js` (Scratch extension, 5 blocks: controllerValue/X/Y/Pressed reporters + setWidget command, dynamic WIDGETS menu, i18n en/de/fr), `src/controller-stage-view.js` (stage-view descriptor for brickwright-lite: render hints, enter/exit lifecycle, serialize/restore), 16 integration tests in `test/controller-integration.test.js`. All exported from `src/index.js`.
+### .z80 128K loading + saving (`src/zx-z80file.js`)
+parseZ80 extended: v2 hw 3/4, v3 hw 4/5/6/12 → `{is128, banks[8], port7ffd, ayRegs, aySelected}`. loadZ80 sets all 8 pages, applies _setBank, loads AY registers + selected register. saveZ80 dispatches: 48K→v1 compressed, 128K→v3 with ED-ED compressed banks + AY state. 128K-on-48K refuses. Round-trip test proves banks+AY+banking survive.
 
-- **Datalogger** (`b233494`): `src/datalogger.js` (DataLogger class, named time-series, ring-buffer 10K cap, CSV export single+multi-series with sample-and-hold, JSON persistence), `src/datalogger-extension.js` (7 blocks: log/clearSeries/clearAll/latestValue/entryCount/seriesCount/seriesNames, auto-creates logger on first call, publishes to vm.runtime.dataLogger). 25 tests in `test/datalogger.test.js`.
+### 128K SNA (`src/zx-sna.js`)
+131103-byte format: 48K dump + PC + port$7FFD + 5 remaining banks. loadSNA128/saveSNA128 round-trip all 8 banks and banking state. 4 tests.
 
-- **Environment-stimulus** (`b233494`): `src/stimulus-catalogue.js` (STIMULUS_CATALOGUE: 25+ device kinds → world-facing params with labels, ranges, units, mechanism), `src/stimulus-extension.js` (set/get stimulus blocks, dynamic PARTS/PARAMS menus from board parts, routes through setControl or setPartParam). `src/board.js` gained `setPartParam()`/`getPartParam()` public API. 24 tests in `test/stimulus.test.js`.
+### TZX container (`src/zx-tzx.js`)
+Standard speed data blocks ($10) extract to ZXTape-compatible {flag, data}. Turbo/pure/direct/CSW/generalized blocks REFUSED with named notes. tzxToTape() provides the trap() interface. 7 tests.
 
-### Referee vocabulary (sb3-creator)
+### ULA memory contention (`src/zx-ula.js`, `src/z80-machine.js`)
+Per-instruction approximation (stated accuracy bound). ULA.contend(frameTs) returns 0-6 wait states from the 8-T-state contention pattern. Machine wraps read/write/in/out when config.contention=true. OFF by default. 48K + 128K frame geometry. 7 tests. Design note: `spec-updates/ula-contention.md` (APPROVED).
 
-- **Servo/motor/595** (`bbb3374`): 7 opcodes in KNOWN. New `devices[]` trace channel (servo angle, motor speed/dir, shift_out value+pin edges). `nameInput()` for device-name extraction from type-12 inputs. compareTraces() compares device events. 7 tests.
+### Debug parity: AVR + RP2040 (`src/avr8js-debug.js`, `src/rp2040js-debug.js`)
+Step-over/out + TRUE write watchpoints on both targets. AVR: RCALL/CALL/ICALL call detection, SP-depth wait, cpu.writeHooks. RP2040: Thumb BL detection, return-address breakpoint, writeUint8/16/32 wrap. 8 parity tests.
 
-- **settone** (`7c60379`): `stc12_settone` opcode, new `tones[]` trace channel, ±5 Hz comparator tolerance. 3 tests.
+### M6502Machine saveState/loadState (`src/m6502-machine.js`)
+CPU registers, cycles, full memory, chip state. W65C22 VIA, TMS9918 VDP, TileVGA hooks. Round-trip lockstep test. 3 tests.
 
-- **String/list/math** (`44ab440`): 12 opcodes — `operator_letter_of`, `operator_length`, `operator_contains`, `operator_mathop` (14 math functions), `operator_random` (deterministic midpoint), 7 list ops (`data_addtolist/deleteoflist/insertatlist/replaceitemoflist/itemoflist/lengthoflist/listcontainsitem`). List state tracked in `trace.lists`. 7 tests.
+### Z80 ACIA + CTC saveState hooks (`src/mc6850.js`, `src/z80-ctc.js`)
+MC6850 rx/control/overrun/IRQ. Z80CTC vector + 4-channel timer state. 3 tests.
 
-- **partStimulus timeline** (`44ab440`): `opts.partStimulus` accepts `{tMs, part, param, value}` for sensor world-params (distance, touch, g-vectors). `partStimAt()` lookup. Ready for campaign sensor examples.
+### MC6845 enhancements (`src/mc6845.js`)
+saveState/loadState (registers only — vram is a live view). opts.charH sets R9, opts.charset flows from Z80Machine config. Extractor accepts rs/rsb for the register-select pin. 4 tests.
 
-### Corpus raise
+### ATtiny88 pin-trace acceptance
+Hand-assembled blink (PB0 toggle symmetric at 8 MHz) + button-read (PC3→PC4 mirror). 2 tests.
 
-60 device seeds (12 tone, 15 servo, 12 motor, 23 shift_register) + 57 list seeds across 200 total. All parse clean with no unsupported opcodes.
+### tron-on-128K regression
+48K game (tron TAP) boots on zx128 in ROM1+lock 48K compatibility mode. Tape trap guard verified through banked bus. 1 test (skips without ROM/TAP).
 
-### Engine bug fix (bw-board)
+### Blinkenrocket modem full loop
+encodeTextMessage("Hi") → 90504 PCM samples → ATtiny88 ADC6 → firmware demodulates (52869 ADC reads) → FEC-decoded TEXT pattern "Hi" in external EEPROM. The sound-becomes-data proof. 1 test (skips without firmware hex).
 
-- **_recordBuzzerEdges** (`2b961fa`): fixed `||` short-circuit that only checked terminal `a` — VCC→a wiring masked the MCU on terminal `b`. Now iterates both terminals. Unblocked 07-buzzer-siren.
-
-### Gallery-e2e skip closures (sb3-creator)
-
-- **08-led-chaser-595 + 20-shift-register-binary**: shift_register added to TERMINALS map. Tests unskipped with real assertions (circuit loads, parts found).
-- **07-buzzer-siren**: unskipped after _recordBuzzerEdges fix. Test toggles pin at 440 Hz, asserts buzzerTone reports ~440 Hz.
-- **Wired-machine extraction** (`151a662`): 4 new tests — eater6502-bench (zero refusals), eater6502-contention-bug (asserts "bus contention" + named $address), z80-bench (zero refusals), eater6502-vdp-hello (zero refusals).
-
-**Gallery-e2e: 44 pass, 0 fail, 0 skips. BLOCKED dict is empty.**
-
-### Audit resolution (sb3-creator)
-
-- EXPECTED.md updated: pc19 buzzer-DC (now reports {hz:2400, on:true}), pc20 RGB composite (note updated), 33 inductor henrys note removed.
-- AUDIT/pc13-pc24.md: escalations E1 (NPN saturation `c378bb0`), E2 (buzzer DC `39b0c10`), E3 (RGB composite `39b0c10`) all marked RESOLVED with commit hashes.
-- AUDIT.md: henrys/windingR bug marked RESOLVED (`2e95d6e`).
+### Earlier sessions (8-11) — still in tree
+- TWI/SPI transaction bridge, ILI9341 v2+parallel, DFPlayer/ZE08, vcc params.volts, henrys fix regression, dc_motor R alias + windingH, MC6845 CRTC, UART frame devices, controller/datalogger/stimulus extensions.
 
 ## Artifact locations
 
-| Artifact | Repo | Path |
-|----------|------|------|
-| Controller extension | bw-board | `src/controller-extension.js` |
-| Controller stage view | bw-board | `src/controller-stage-view.js` |
-| Controller binding | bw-board | `src/controller-binding.js` |
-| Datalogger engine | bw-board | `src/datalogger.js` |
-| Datalogger extension | bw-board | `src/datalogger-extension.js` |
-| Stimulus catalogue | bw-board | `src/stimulus-catalogue.js` |
-| Stimulus extension | bw-board | `src/stimulus-extension.js` |
-| Trace oracle (referee) | sb3-creator | `src/utils/traceOracle.js` |
-| Corpus generator | sb3-creator | `test/corpus-generator.test.mjs` |
-| Gallery-e2e | sb3-creator | `test/gallery-e2e.test.mjs` |
-| Oracle tests | sb3-creator | `test/trace-oracle.test.mjs` |
+| Artifact | Path |
+|----------|------|
+| AY-3-8912 PSG | `src/ay-3-8912.js` |
+| TZX container | `src/zx-tzx.js` |
+| .z80 48K+128K | `src/zx-z80file.js` |
+| .SNA 48K+128K | `src/zx-sna.js` |
+| ULA contention | `src/zx-ula.js` (contend method) + `src/z80-machine.js` (wrappers) |
+| Contention design note | `spec-updates/ula-contention.md` |
+| Debug parity AVR/RP2040 | `src/avr8js-debug.js`, `src/rp2040js-debug.js` |
+| M6502 saveState | `src/m6502-machine.js` |
+| Z80 chip saveState | `src/mc6850.js`, `src/z80-ctc.js` |
+| MC6845 CRTC | `src/mc6845.js` |
+| Modem encoder | `src/blinkenrocket-modem.js` |
+| Modem e2e test | `test/blinkenrocket-modem-e2e.test.mjs` |
+| ATtiny88 chip + tests | `src/avr-chips.js` (ATTINY88), `test/avr-attiny88.test.js` |
+| ILI9341 SPI+parallel | `src/devices/ili9341.js` |
+| TWI/SPI bridge | `src/twi-bridge.js`, `src/spi-bridge.js` |
 
-## Blocked / not started
+## In flight / next
 
-| Item | Blocker | Notes |
-|------|---------|-------|
-| Arduino CC0 campaign porting (73 sketches) | Not started | Doctrine in `reference/arduino-cc0-campaign.md`. Referee vocabulary for strings/lists/math/sensors is now ready. |
-| ADXL335 / Memsic2125 device models | Coordinator (new device kinds) | Campaign doc says coordinator takes these |
-| Orientation/tilt input face | bw-circuit-ui | ONE contract, three consumers (adxl335/memsic2125/mpu6050) |
-| Custom-sprite-art → Costumes tab | bw-bundle | UI task, outside bw-board scope. Research done: button at pseudocode-importer.jsx:1059, flow at 1080-1192 |
-| partStimulus in corpus generator | Needs device-model examples first | Timeline plumbing ready, no generator seeds yet |
+| Item | Status | Notes |
+|------|--------|-------|
+| Campaign escalation duty | Standing/reactive | No findings pending |
+| Contention FUSE vectors | Ready to start | Design approved; implement classic FUSE-derived test cases (contended LDIR, border timing loop) with stated tolerance |
+| 128K game acceptance | Needs .z80 game file | Boot a 128K .z80 with AY music, verify audioTone reports non-zero |
+
+## Blocked
+
+| Item | Blocker |
+|------|---------|
+| 128K ROM acceptance tests | 128.ROM not present locally — tests skip |
+| tron-on-128K full run | 48.ROM + tron TAP required — test skips |
+| vsource PCM via board solver | Adapter readAnalog is stale between advanceTo calls — direct readAnalog stub works; board-level vsource needs adapter-side ADC timing reform |
 
 ## Standing rules
 
-- Push at every checkpoint. Notify blocked agents by name when you clear their blocker.
-- No positioning in committed content. Licence audit names are kept.
-- `free -m` before anything heavy. Check `~/.cache/ms-playwright` before installing.
-- Assert the property, not the symptom. A check that has never failed has not been shown to work.
-- Nothing has run on real silicon. Categories 1/2/3 per `stc/docs/EVIDENCE-CATEGORIES.md`.
-- mna.js/board.js core paths are coordinator-only. Helper methods (setPartParam, _recordBuzzerEdges) are ok.
+- Push both branches (master + main) at every checkpoint
+- No positioning in committed content
+- `free -m` before anything heavy
+- mna.js/board.js core paths are coordinator-only
+- Assert the property, not the symptom
+- Do NOT deploy Vercel (rate-limited ~24h); GH Pages is the deploy path
+- ATtiny85/88: PC masks modulo flash size (d242855) — any 8K-or-smaller part
