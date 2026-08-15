@@ -49,6 +49,7 @@ import { registerNrf24 } from './devices/nrf24.js';
 import { registerAudioParts } from './devices/audio-parts.js';
 import { registerMPU6050 } from './devices/mpu6050.js';
 import { registerSSD1306 } from './devices/ssd1306.js';
+import { registerUartFrame } from './devices/uart-frame.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -90,4 +91,5 @@ export function registerAllDevices() {
   registerAudioParts();
   registerMPU6050();
   registerSSD1306();
+  registerUartFrame();
 }
