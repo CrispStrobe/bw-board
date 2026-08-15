@@ -1,65 +1,37 @@
-# bw-board handoff — 2026-08-13
+# bw-board handoff — 2026-08-15
 
-**1362 tests, 0 failures (1 skip: grinder).** All pushed to master and main.
+**1784 tests, 0 failures (12 skips).** All pushed to master and main.
 
-## Completed this session (session 5)
+## Completed this session (session 8)
 
-- **ATmega2560 (Arduino Mega) adapter variant** (`src/avr-chips.js`, `src/avr8js-adapter.js`): chip-parameterized adapter with `opts.chip = 'atmega2560'`. Ports A-L (11 ports), pin map D0-D53 + A0-A15 with descending PC (D30-37) and PL (D42-49) runs. Corrected OC pin mappings for Timer0-5 (OC0A=PB7/D13, OC0B=PG5/D4 — different from 328P). 16 ADC channels. USART0 at Mega interrupt vectors. 9 oracle tests: pin map verification (descending runs, A8-A15), blink on D13/PB7, Timer0 PWM on Mega OC0A, port coverage.
-- **ATtiny85 adapter variant**: `opts.chip = 'attiny85'`. Single PORTB at 0x36/0x37/0x38 (different from 328P). AVRTimer for Timer0 at ATtiny addresses, ATtinyTimer1 for Timer1 (hook chaining on shared TIFR/TIMSK). ADC with non-trivial channel-to-pin mapping (ADC0→P5, ADC1→P2, ADC2→P4, ADC3→P3). No USART. 8 MHz default clock. 8 oracle tests: pin map, blink at 8 MHz, Timer0 PWM, ADC mapping, clock timing.
-- **Factory routes**: `createDebugTarget('atmega2560', ...)` and `createDebugTarget('attiny85', ...)` reuse the avr8js debug target with chip-specific adapters. `getTargetKinds()` lists all 6 kinds.
-- **Eater 6502 wiring** (`src/m6502-adapter.js`, `src/m6502-debug.js`): factory routes `'eater6502'` through M6502Machine → boundary-A adapter → board → boundary-D debug target. Adapter translates VIA `onPinChange` → `board.setPin` (time first, edge second); input pins sync back via `via.setInput`. Debug target: insn step, code breakpoints, register window (pc/a/x/y/sp/p/cycles), memory read/write. `board-kinds.js` entry: `eater6502` with `via1.pa0-pa7`, `via1.pb0-pb7` GPIO terminals, 5V, `gpioFollowsPinStates`. 7 oracle tests through the full factory path. Machine internals (w65c02.js, w65c22.js, w65c51.js, m6502-machine.js) untouched — coordinator-owned.
-- **`input-pulldown` PinMode** (MNA-gated): the RP2040's internal pull-down is now a real Thévenin source (vTh=0 V, rTh=50 kΩ, RP2040 Datasheet §2.19.6.3 Table 628). `rp2040js-adapter.js` maps `GPIOPinState.InputPullDown` → `'input-pulldown'`. 8 hand-computed oracle tests.
+- **TWI/SPI transaction bridge** (`src/twi-bridge.js`, `src/spi-bridge.js`, `src/avr8js-adapter.js`): AVRTWI + AVRSPI instantiated for ATmega328P/ATmega2560. TWI bridge routes hardware Wire transactions to the same I2C handler objects the bit-bang engine uses — one behavior, two transports. AT24C02/DS3231/MPU6050/SSD1306 refactored to expose `state.i2cHandlers`. `BoardImpl.getI2CHandlers()` discovers them. Validated with compiled Arduino sketches: RTClib (hour=12/min=30/sec=0), i2cdevlib MPU6050 (az=16384 for flat), Adafruit SSD1306 (64 lit pixels). 11 tests.
+- **ILI9341 v2** (`src/devices/ili9341.js`): display inversion (0x20/0x21), vertical scroll (VSCRDEF+VSCRSADD), MADCTL BGR bit in ili9341Rgba, RAMRD 0x2E with dummy-byte rule, 17 power/gamma vendor opcodes as named no-ops clearing unknown[]. 5 new oracle tests, Adafruit fixture stays green.
+- **ILI9341 8080-parallel mode** (`ili9341_par`): 8-bit data bus D0-D7 with WR/RD/RS/CS strobes. Shared command/pixel logic refactored into helpers. RD strobe drives bus for RAMRD readback. 8 parallel-path oracle tests mirror the SPI ones. 19 ILI9341 tests total.
+- **DFPlayer Mini + ZE08-CH2O** (`src/devices/uart-frame.js`): UART frame-protocol devices on the edge engine. DFPlayer: 9600 8N1, 10-byte frames with two's complement checksum, play/pause/next/prev/volume/playTrack/reset, query replies, busy pin active-low. ZE08: periodic 9-byte frames at ~1 Hz, params.ch2o_ppb stimulus. 16 golden tests.
+- **vcc params.volts** (`src/board.js`, `src/mna.js`): per-part rail voltage override in all 3 solve paths (closed-form, MNA stamp, pre-solve). 2 oracle tests.
+- **henrys fix regression** (`src/mna.js`): MNA inductor stamp reads henrys (canonical) with henries fallback. Flyback regression test: 1mH vs 100mH produce measurably different peaks (6.286 vs 6.596 V).
+- **dc_motor R alias + windingH** (`src/devices/dc-motor.js`): params.R accepted as alias for windingR (3 gallery circuits used R). params.windingH adds series winding inductance (default 5 mH). 4 oracle tests.
+- **MC6845 CRTC** (`src/mc6845.js`): Z80 tier video chip, clean-room from Motorola datasheet. R0-R17 via address/data port pair, start address (R12/R13), cursor (R10/R11/R14/R15), text rendering via charset param, videoFrame() contract matching TMS9918/SimpleVGA. 16 golden tests.
 
-## Completed previously (session 4)
+## Completed previously (session 5-7)
 
-- **AVR PWM observation** (`src/avr8js-adapter.js`): `publishPin` now uses `AVRIOPort.pinState()` instead of raw PORT register reads. Timer overrides (OC0A/OC0B on Timer0, OC2A/OC2B on Timer2) propagate to the board as real edges, so `ledBrightness` reflects hardware-PWM duty cycle. Without this fix, `analogWrite()` on an AVR had no effect on the board — the timer modified `overrideMask`/`overrideValue` but `publishPin` read the raw PORT register.
-- **8 PWM oracle tests** (`test/avr8js-pwm.test.js`): Timer0 fast PWM on D5/D6 at 25/50/75% duty, Timer2 on D3/D11, edge-level transition counting, duty monotonicity, and simultaneous OC0A+OC0B with independent duties. All oracles are arithmetic: f_PWM = 16MHz/(64×256) = 976.5625 Hz; brightness = 0.15 × OCR/256. Each test runs 25 ms of simulated time (fills the 20 ms persistence window).
-- **rp2040js feasibility note** (`spec-updates/rp2040js-feasibility.md`): API surface, GPIO/timer model, boundary-A adapter pattern fit, and open gaps (pull-down PinMode, PWM oracle tests). Updated to reflect that the adapter and debug target already landed (coordinator commits 58227a6, 75a2246, 255dd78).
-
-## Completed previously (sessions 1–3)
-
-- **`parseIntelHex`** (`src/intel-hex.js`): canonical Intel HEX → Uint16Array loader for AVR flash. Little-endian byte pairs, checksum validation, extended address records (types 02/04). 17 oracle tests.
-- **Board-kind power pins** (`src/devices/board-kinds.js`): `arduino_nano`, `arduino_uno`, `pi_pico` device models that stamp power terminals (5V, 3V3, GND, VIN, VBUS, VSYS) as Thévenin sources. 13 oracle tests.
-- **AVR cross-check** (`test/avr-cross-check.test.js`): avr8js vs simavr, 5 ns agreement on 500ms blink. **AVR row: category 1.**
-- **debug-target-factory** routes 'emulator', 'avr8js', 'rp2040js', 'serial'.
-- **rp2040js adapter + debug target** (coordinator): GPIO listeners, ADC, UART0, WFI/WFE, program loading to SRAM, boundary-D breakpoints/step/memory.
-- **avr8js adapter USART0 + full ADC** (efa7ac9): USART0 peripheral, ADC channels 0–7, onSerial callback.
-- **111 part kinds**, servo/motor/relay/button/ADC end-to-end through emu8051 + board.
-- **LED brightness**: 0.07248 end-to-end (8051), 0.5882 for AVR blink (both derived, exact).
-- **Scope channels**, advanceTo sub-stepping, CC mode in MNA, input-pullup PinMode.
-- **Two-budget DRC**: chip 120 mA + supply 500 mA USB.
-- **getPinFunctions()**, twin-implementation docs, Uno sidecar fully audited.
+- ATmega2560/ATtiny85/ATtiny88 adapter variants, Eater 6502 wiring, input-pulldown PinMode
+- AVR PWM observation, rp2040js feasibility, board-kind power pins
+- parseIntelHex, AVR cross-check, debug-target-factory, scope channels
+- 111+ part kinds, LED brightness, CC mode, DRC, twin-implementation docs
 
 ## In flight
 
 | File | Intent | Next step |
 |------|--------|-----------|
-| Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | AVR row now cat 1. | Update ledger row with evidence from `spec-updates/avr-cross-check.md`. |
-| `spec-updates/rst-polarity.md` | RST active HIGH on STC12. | Not yet implemented — per-family polarity table needed in board.js. |
-| `spec-updates/rp2040js-feasibility.md` | Adapter + debug target landed. Pull-down PinMode done. | rp2040js PWM oracle tests. |
-
-## Learned (not yet in a spec-update)
-
-- **avr8js timer override path**: `AVRTimer.updateCompA/B()` → `timerOverridePin()` → `writeGpio()` → GPIO listener. The override modifies `overrideMask`/`overrideValue`, not the PORT register. `publishPin` must use `pinState()` (which reads `lastValue`, the override-applied output) rather than the raw PORT register. Using the raw register silently drops all hardware-PWM edges.
-- **simavr VCD trace requires `AVR_MCU_VCD_PORT_PIN` macro**, buffers, flushes only on clean exit.
-- **avr8js and simavr agree on transition values but diverge ~3 cycles on timing** for later tight-loop iterations.
-- **`execFileSync` with piped stdio blocks on large trace output** — use `spawnSync` with `stdio: 'ignore'`.
-- **rp2040js GPIOPinState.InputPullDown** has no boundary-A PinMode equivalent. Currently mapped to plain `'input'`, pull lost.
-
-## Blocked
-
-| Item | Blocked on | Owner |
-|------|-----------|-------|
-| NeoPixel cat 1 cross-check | Re-measure on fixed emu8051 WASM | bw-board (emu8051 build available) |
-| Headless live E2E (Playwright) | Memory constraint on shared VPS | Deferred |
-| ~~Pull-down PinMode~~ | ~~RESOLVED~~ — `input-pulldown` PinMode landed | — |
+| Ledger (`stc/docs/VERIFICATION-LEDGER.md`) | AVR row now cat 1. | Update ledger row. |
+| `spec-updates/rst-polarity.md` | RST active HIGH on STC12. | Per-family polarity table needed. |
+| `spec-updates/rp2040js-feasibility.md` | Adapter + debug target landed. | rp2040js PWM oracle tests. |
 
 ## Standing rules
 
 - Push at every checkpoint. Notify blocked agents by name when you clear their blocker.
 - No positioning in committed content. Licence audit names are kept.
 - `free -m` before anything heavy. Check `~/.cache/ms-playwright` before installing.
-- Scan other repos' `spec-updates/` at session start.
 - Assert the property, not the symptom. A check that has never failed has not been shown to work.
-- VERIFICATION-LEDGER.md is the authority for categories. Prose matches the ledger, never the reverse.
 - Nothing has run on real silicon. Categories 1/2/3 per `stc/docs/EVIDENCE-CATEGORIES.md`.
