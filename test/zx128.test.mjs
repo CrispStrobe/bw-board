@@ -116,3 +116,34 @@ test('48K mode: the original ROM boots on the BANKED machine (USR0 semantics)', 
     m.advanceToMs(m.tMs + 300);
     assert.notEqual(zxScreenText(m.mem, { font }).filter(Boolean).join('|'), text, 'keys reach 48 BASIC');
 });
+
+test('the REAL 128K ROM boots: menu, navigation, ROM-driven banking', async (t) => {
+    const { readFileSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { homedir } = await import('node:os');
+    const { zxScreenText } = await import('../src/zx-ula.js');
+    // STECCY (MIT, ukw100) ships the pair under the Amstrad permission;
+    // its 48.rom is md5-identical to our zxs-rom source build, which
+    // cross-validates both sourcings. Local copy beside our 48.ROM.
+    const romPath = process.env.ZX128_ROM || join(homedir(), 'code', 'zxs-rom', '128.ROM');
+    if (!existsSync(romPath)) { t.skip('128.ROM not present — see STECCY provenance note'); return; }
+
+    const rom = readFileSync(romPath);
+    const m = new Z80Machine({ clockHz: 3_546_900, zx128: true }, {});
+    m.loadRom128(0, rom.subarray(0, 16384));      // 128 editor
+    m.loadRom128(1, rom.subarray(16384, 32768));  // 48 BASIC
+    m.cpu.pc = 0;
+    m.advanceToMs(3000);
+    const font = m.roms[1].subarray(0x3d00, 0x4000);
+    const menu = zxScreenText(m.mem, { font }).filter(Boolean).join('|');
+    assert.ok(/128 BASIC/.test(menu), `the menu lists 128 BASIC (${JSON.stringify(menu)})`);
+    assert.ok(/1986 Sinclair Research/.test(menu), 'the 1986 copyright line');
+
+    // ENTER selects Tape Loader — and the ROM's own code drives OUR
+    // banking: the loader runs from ROM 1.
+    m.ula.setKeys(['enter']); m.advanceToMs(3200); m.ula.setKeys([]);
+    m.advanceToMs(4000);
+    const loader = zxScreenText(m.mem, { font }).filter(Boolean).join('|');
+    assert.ok(/Tape Loader/.test(loader), 'ENTER navigated the menu');
+    assert.equal(m._bank.rom, 1, 'the 128 ROM banked itself to ROM 1 for the loader');
+});
