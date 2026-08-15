@@ -18,6 +18,7 @@
  */
 import { Z80 } from './z80.js';
 import { MC6850 } from './mc6850.js';
+import { Z80CTC } from './z80-ctc.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -56,13 +57,24 @@ export class Z80Machine {
         this.chips = {};
         this._portMap = new Map();
         for (const p of config.ports || []) {
-            if (p.kind !== 'acia6850') throw new Error(`unknown port chip kind: ${p.kind}`);
-            const chip = new MC6850({
-                onTx: (b) => { if (this.hooks.onSerial) this.hooks.onSerial(b, this.tMs); },
-            });
-            this.chips[p.name] = chip;
-            this._portMap.set(p.at & 0xff, { chip, rs: 0 });
-            this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });
+            if (p.kind === 'acia6850') {
+                const chip = new MC6850({
+                    onTx: (b) => { if (this.hooks.onSerial) this.hooks.onSerial(b, this.tMs); },
+                });
+                this.chips[p.name] = chip;
+                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
+                this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });
+            } else if (p.kind === 'ctc') {
+                // Z8430: four consecutive ports, one per channel. The
+                // scheduler timebase the Z80 emitter axis waits on.
+                const chip = new Z80CTC({ clockHz: config.clockHz });
+                this.chips[p.name] = chip;
+                for (let ch = 0; ch < 4; ch++) {
+                    this._portMap.set((p.at + ch) & 0xff, { chip, rs: ch });
+                }
+            } else {
+                throw new Error(`unknown port chip kind: ${p.kind}`);
+            }
         }
         this._romRanges = (config.regions || []).filter((r) => r.kind === 'rom');
         this.cpu = new Z80({
@@ -88,6 +100,13 @@ export class Z80Machine {
     /** Load an image into memory (ROM regions included — loading is not a bus write). */
     load(bytes, at = 0) { this.mem.set(bytes.subarray ? bytes.subarray(0, 65536 - at) : bytes, at); }
 
+    _advanceChips(n) {
+        for (const k of Object.keys(this.chips)) {
+            const c = this.chips[k];
+            if (typeof c.advance === 'function') c.advance(n);
+        }
+    }
+
     _anyIrq() {
         for (const k of Object.keys(this.chips)) if (this.chips[k].irqAsserted) return true;
         return false;
@@ -97,20 +116,40 @@ export class Z80Machine {
     step() {
         if (this.cpu.halted && !(this._anyIrq() && this.cpu.iff1)) {
             this.cycles += 4;               // HALT burns NOPs until an interrupt
+            this._advanceChips(4);
             return 4;
         }
         if (this._anyIrq() && this.cpu.iff1 && !this.cpu.eiLatch) {
-            // IM 1 acknowledge: RST $38, IFF1/IFF2 cleared, 13 cycles.
             this.cpu.halted = false;
             this.cpu.iff1 = 0; this.cpu.iff2 = 0;
             this.cpu._push16(this.cpu.pc);
+            if (this.cpu.im === 2) {
+                // IM 2: the interrupting chip supplies the vector byte
+                // (Z8430 daisy chain — ackVector also clears the
+                // channel); the handler address comes from the table at
+                // I:vector. 19 cycles per the Z80 manual.
+                let vec = 0xff;
+                for (const k of Object.keys(this.chips)) {
+                    const c = this.chips[k];
+                    if (c.irqAsserted && typeof c.ackVector === 'function') { vec = c.ackVector(); break; }
+                }
+                const at = ((this.cpu.i & 0xff) << 8) | (vec & 0xfe);
+                this.cpu.pc = this.mem[at] | (this.mem[at + 1] << 8);
+                this.cpu.wz = this.cpu.pc;
+                this.cycles += 19;
+                this._advanceChips(19);
+                return 19;
+            }
+            // IM 1 acknowledge: RST $38, 13 cycles.
             this.cpu.pc = 0x0038;
             this.cpu.wz = 0x0038;
             this.cycles += 13;
+            this._advanceChips(13);
             return 13;
         }
         const n = this.cpu.step();
         this.cycles += n;
+        this._advanceChips(n);
         return n;
     }
 
