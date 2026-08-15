@@ -1,14 +1,17 @@
 /**
  * .Z80 — the archive's dominant Spectrum snapshot format, all three
- * header generations, 48K machines only (stated: 128K pages refuse
- * with the hardware mode named, they don't half-load).
+ * header generations. 48K and 128K machines.
  *
  * v1: 30-byte header, then the whole 48K ($4000-$FFFF), optionally
  *     ED-ED run-compressed, terminated by 00 ED ED 00.
  * v2/v3: header PC == 0 flags an extra header (length word at 30,
  *     real PC at 32, hardware mode at 34), then PAGES: each is
  *     [len:word][page#][data], len $FFFF meaning 16384 bytes stored
- *     uncompressed. 48K page numbers: 8 → $4000, 4 → $8000, 5 → $C000.
+ *     uncompressed.
+ *     48K page numbers: 8 → $4000, 4 → $8000, 5 → $C000.
+ *     128K page numbers: 3-10 → banks 0-7 (page# - 3 = bank).
+ *     Byte 35: last OUT $7FFD (bank switching state).
+ *     Bytes 39-55: AY register contents (17 bytes, when the chip exists).
  *
  * Compression, both directions: ED ED nn vv = nn repeats of vv. A run
  * is only encoded at length 5+, EXCEPT runs of ED which encode from
@@ -68,9 +71,17 @@ function decompress(buf, start, out, v1End) {
     return i - start;
 }
 
-const V2_PAGE_AT = { 8: 0x0000, 4: 0x4000, 5: 0x8000 }; // offsets into the 48K block
+const V2_PAGE_AT_48K = { 8: 0x0000, 4: 0x4000, 5: 0x8000 }; // offsets into the 48K block
 
-/** Parse a .z80 of any version into { regs, border, mem48k }. */
+// 128K hardware modes per .z80 spec
+const HW_128K_V2 = new Set([3, 4]);           // v2: mode 3 = 128K, 4 = 128K+IF1
+const HW_128K_V3 = new Set([4, 5, 6, 12]);    // v3: mode 4 = 128K, 5 = 128K+IF1, 6 = +3, 12 = +2/+2A
+
+/**
+ * Parse a .z80 of any version into either:
+ *   48K: { version, regs, border, mem48k, is128: false }
+ *   128K: { version, regs, border, banks: Uint8Array[8], port7ffd, ayRegs, is128: true }
+ */
 export function parseZ80(buf) {
     if (buf.length < 30) throw new Error('not a .z80 file: shorter than the v1 header');
     const r16 = (o) => buf[o] | (buf[o + 1] << 8);
@@ -85,13 +96,13 @@ export function parseZ80(buf) {
         iff1: buf[27] ? 1 : 0, iff2: buf[28] ? 1 : 0, im: buf[29] & 0x03,
     };
     const border = (flags12 >> 1) & 0x07;
-    const mem48k = new Uint8Array(RAM_LEN);
 
     if (regs.pc !== 0) {
-        // v1: one block, compressed when flags bit 5 says so.
+        // v1: one block, always 48K.
+        const mem48k = new Uint8Array(RAM_LEN);
         if (flags12 & 0x20) decompress(buf, 30, mem48k, true);
         else mem48k.set(buf.subarray(30, 30 + RAM_LEN));
-        return { version: 1, regs, border, mem48k };
+        return { version: 1, regs, border, mem48k, is128: false };
     }
 
     // v2/v3: extra header, then pages.
@@ -99,32 +110,98 @@ export function parseZ80(buf) {
     regs.pc = r16(32);
     const hw = buf[34];
     const version = extra === 23 ? 2 : 3;
-    const ok48 = version === 2 ? [0, 1] : [0, 1, 3];
-    if (!ok48.includes(hw)) {
-        throw new Error(`.z80 hardware mode ${hw} is not a 48K machine — 128K snapshots are a stated later step`);
+
+    // Determine if 128K
+    const is128 = version === 2 ? HW_128K_V2.has(hw) : HW_128K_V3.has(hw);
+
+    if (!is128) {
+        // 48K mode
+        const ok48 = version === 2 ? [0, 1] : [0, 1, 3];
+        if (!ok48.includes(hw)) {
+            throw new Error(`.z80 hardware mode ${hw} (version ${version}) is not a recognized 48K or 128K machine`);
+        }
+        const mem48k = new Uint8Array(RAM_LEN);
+        let i = 32 + extra;
+        while (i + 3 <= buf.length) {
+            const len = r16(i); const page = buf[i + 2];
+            i += 3;
+            const at = V2_PAGE_AT_48K[page];
+            if (at === undefined) { i += (len === 0xffff ? 16384 : len); continue; }
+            const dst = mem48k.subarray(at, at + 16384);
+            if (len === 0xffff) { dst.set(buf.subarray(i, i + 16384)); i += 16384; }
+            else { decompress(buf, i, dst, false); i += len; }
+        }
+        return { version, regs, border, mem48k, is128: false };
     }
+
+    // 128K mode
+    const port7ffd = buf[35];
+    // AY registers: bytes 39-55 (17 bytes) in the extra header, if present
+    const ayRegs = extra >= 25 ? buf.slice(39, 56) : new Uint8Array(16);
+    const banks = Array.from({ length: 8 }, () => new Uint8Array(16384));
     let i = 32 + extra;
     while (i + 3 <= buf.length) {
         const len = r16(i); const page = buf[i + 2];
         i += 3;
-        const at = V2_PAGE_AT[page];
-        if (at === undefined) { i += (len === 0xffff ? 16384 : len); continue; } // ROM copies etc: skip
-        const dst = mem48k.subarray(at, at + 16384);
-        if (len === 0xffff) { dst.set(buf.subarray(i, i + 16384)); i += 16384; }
-        else { decompress(buf, i, dst, false); i += len; }
+        // 128K pages: 3-10 → banks 0-7
+        const bank = page - 3;
+        if (bank >= 0 && bank < 8) {
+            if (len === 0xffff) { banks[bank].set(buf.subarray(i, i + 16384)); i += 16384; }
+            else { decompress(buf, i, banks[bank], false); i += len; }
+        } else {
+            // ROM pages or unknown: skip
+            i += (len === 0xffff ? 16384 : len);
+        }
     }
-    return { version, regs, border, mem48k };
+    return { version, regs, border, banks, port7ffd, ayRegs, is128: true };
 }
 
-/** Restore a .z80 onto a 48K machine (ROM already loaded). */
+/** Restore a .z80 onto a machine (ROM already loaded).
+ *  128K snapshots require machine._zx128 = true. */
 export function loadZ80(machine, buf) {
-    const { regs, border, mem48k } = parseZ80(buf);
+    const snap = parseZ80(buf);
     const cpu = machine.cpu;
-    for (const [k, v] of Object.entries(regs)) cpu[k] = v;
+    for (const [k, v] of Object.entries(snap.regs)) cpu[k] = v;
     cpu.halted = 0;
     cpu.eiLatch = 0;
-    if (machine.ula) machine.ula.border = border;
-    machine.mem.set(mem48k, RAM_BASE);
+    if (machine.ula) machine.ula.border = snap.border;
+
+    if (!snap.is128) {
+        // 48K loading (the original path)
+        if (machine._zx128) {
+            // 48K snapshot on a 128K machine: load into the visible 48K
+            machine.mem.set(snap.mem48k, RAM_BASE);
+        } else {
+            machine.mem.set(snap.mem48k, RAM_BASE);
+        }
+        return;
+    }
+
+    // 128K loading
+    if (!machine._zx128) {
+        throw new Error('128K .z80 snapshot requires a zx128 machine (config.zx128 = true)');
+    }
+
+    // Load all 8 banks. Pages 5 and 2 are subarrays of machine.mem,
+    // so setting them updates the flat memory automatically.
+    for (let b = 0; b < 8; b++) {
+        machine.pages[b].set(snap.banks[b]);
+    }
+
+    // Apply the banking state
+    machine._bank.locked = 0; // allow _setBank to apply
+    machine._setBank(snap.port7ffd);
+
+    // AY registers
+    if (machine.ay && snap.ayRegs) {
+        for (let r = 0; r < 16 && r < snap.ayRegs.length; r++) {
+            machine.ay.select(r);
+            machine.ay.write(snap.ayRegs[r]);
+        }
+        // The selected register is conventionally the last value written
+        // to $FFFD; byte 38 of the extra header carries it when present.
+        // We default to 0 since most snapshots don't encode this.
+    }
 }
 
 /** Serialize a running 48K machine as v1 compressed. */

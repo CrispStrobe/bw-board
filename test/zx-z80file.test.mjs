@@ -84,8 +84,8 @@ test('v2 header: PC from the extra header, pages land, 128K refuses by mode', ()
     assert.equal(r.border, 1);
     assert.deepEqual([...r.mem48k.slice(0, 8)], [...page.slice(0, 8)], 'page 8 at $4000');
 
-    buf[34] = 4; // 128K
-    assert.throws(() => parseZ80(buf), /128K/, 'refuses with the mode named');
+    buf[34] = 2; // SamRam — not a recognized 48K or 128K mode
+    assert.throws(() => parseZ80(buf), /not a recognized/, 'refuses unrecognized hw mode');
 });
 
 test('the debug target takes both formats through one loadSnapshot', async (t) => {
@@ -107,4 +107,103 @@ test('the debug target takes both formats through one loadSnapshot', async (t) =
     });
     assert.equal(bare.loadSnapshot(saveZ80(m)), false, 'no ULA refuses');
     assert.equal(createZ80DebugTarget({ machine: zx() }).loadSnapshot(Uint8Array.of(1, 2, 3)), false, 'junk refuses');
+});
+
+// ─── 128K .z80 tests ──────────────────────────────────────────────
+
+test('parseZ80: v3 hw=4 (128K) produces is128 + 8 banks + port7ffd', () => {
+    // Build a synthetic v3 128K .z80 with two pages (bank 0 and bank 5)
+    const w16 = (arr, off, v) => { arr[off] = v & 0xff; arr[off + 1] = (v >> 8) & 0xff; };
+    const header = new Uint8Array(86); // 30 + 2 (extra len) + 54 (extra header)
+    header[6] = 0; header[7] = 0; // PC=0 → v2/v3
+    w16(header, 30, 54);           // extra header length = 54 → v3
+    w16(header, 32, 0x1234);       // real PC
+    header[34] = 4;                // hw mode 4 = 128K
+    header[35] = 0x13;             // last OUT $7FFD: bank 3, ROM 1, shadow
+    // AY registers at bytes 39-55 (offsets in the file)
+    for (let i = 0; i < 16; i++) header[39 + i] = 0x10 + i;
+
+    // Page for bank 0 (page# = 3): uncompressed
+    const page0 = new Uint8Array(3 + 16384);
+    w16(page0, 0, 0xffff); // len = $FFFF = uncompressed
+    page0[2] = 3;           // page# 3 = bank 0
+    page0[3] = 0xAA;        // first byte of bank 0
+
+    // Page for bank 5 (page# = 8): uncompressed
+    const page5 = new Uint8Array(3 + 16384);
+    w16(page5, 0, 0xffff);
+    page5[2] = 8;           // page# 8 = bank 5
+    page5[3] = 0xBB;
+
+    const buf = new Uint8Array(header.length + page0.length + page5.length);
+    buf.set(header);
+    buf.set(page0, header.length);
+    buf.set(page5, header.length + page0.length);
+
+    const snap = parseZ80(buf);
+    assert.equal(snap.is128, true);
+    assert.equal(snap.version, 3);
+    assert.equal(snap.regs.pc, 0x1234);
+    assert.equal(snap.port7ffd, 0x13);
+    assert.equal(snap.banks[0][0], 0xAA, 'bank 0 first byte');
+    assert.equal(snap.banks[5][0], 0xBB, 'bank 5 first byte');
+    assert.equal(snap.ayRegs[0], 0x10, 'AY R0');
+    assert.equal(snap.ayRegs[15], 0x1f, 'AY R15');
+});
+
+test('loadZ80 128K: banks land in machine.pages, banking applied', () => {
+    const m = new Z80Machine({
+        clockHz: 3_546_900,
+        regions: [{ kind: 'ram', start: 0, end: 0xffff }],
+        zx128: true,
+    }, {});
+
+    // Build a minimal 128K .z80 v3
+    const w16 = (arr, off, v) => { arr[off] = v & 0xff; arr[off + 1] = (v >> 8) & 0xff; };
+    const header = new Uint8Array(86);
+    header[0] = 0x42; // A = 0x42
+    header[6] = 0; header[7] = 0; // PC=0 → v2/v3
+    w16(header, 8, 0xff00);       // SP
+    w16(header, 30, 54);          // extra = 54 → v3
+    w16(header, 32, 0x8000);      // real PC
+    header[34] = 4;               // hw = 128K
+    header[35] = 0x03;            // port $7FFD: bank 3 at $C000, ROM 0
+    // AY: R0 = 0x42
+    header[39] = 0x42;
+
+    // One page: bank 3 (page# = 6) with a marker byte
+    const page = new Uint8Array(3 + 16384);
+    w16(page, 0, 0xffff);
+    page[2] = 6; // page# 6 = bank 3
+    page[3 + 100] = 0xDE; // marker at offset 100
+
+    const buf = new Uint8Array(header.length + page.length);
+    buf.set(header); buf.set(page, header.length);
+
+    loadZ80(m, buf);
+    assert.equal(m.cpu.a, 0x42, 'register A restored');
+    assert.equal(m.cpu.pc, 0x8000, 'PC restored');
+    assert.equal(m._bank.page, 3, 'bank 3 paged in');
+    // Bank 3 is at $C000 now — read via the bus
+    assert.equal(m.readBus(0xc000 + 100), 0xDE, 'bank 3 data visible at $C000');
+    // AY register
+    assert.ok(m.ay, 'AY chip exists');
+    m.ay.select(0);
+    assert.equal(m.ay.read(), 0x42, 'AY R0 = 0x42');
+});
+
+test('loadZ80 128K on 48K machine throws', () => {
+    const m = new Z80Machine({
+        clockHz: 3_546_900,
+        regions: [{ kind: 'ram', start: 0, end: 0xffff }],
+    }, {});
+
+    const w16 = (arr, off, v) => { arr[off] = v & 0xff; arr[off + 1] = (v >> 8) & 0xff; };
+    const header = new Uint8Array(86);
+    header[6] = 0; header[7] = 0;
+    w16(header, 30, 54);
+    w16(header, 32, 0x1000);
+    header[34] = 4; // 128K hw mode
+
+    assert.throws(() => loadZ80(m, header), /128K .z80 snapshot requires a zx128 machine/);
 });
