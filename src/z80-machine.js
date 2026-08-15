@@ -85,7 +85,8 @@ export class Z80Machine {
                 // chip masks addresses with length-1).
                 const vramAt = p.vramAt ?? 0xf000;
                 const vramSize = p.vramSize ?? 0x0800;
-                const chip = new MC6845({ clockHz: config.clockHz, vramSize, charH: p.charH });
+                const charset = p.charset instanceof Uint8Array ? p.charset : undefined;
+                const chip = new MC6845({ clockHz: config.clockHz, vramSize, charH: p.charH, charset });
                 chip.vram = this.mem.subarray(vramAt, vramAt + vramSize);
                 this.chips[p.name] = chip;
                 this._portMap.set(p.at & 0xff, { chip, rs: 0 });

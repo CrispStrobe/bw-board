@@ -101,13 +101,19 @@ export function extractZ80Machine(circuit) {
             ioChips.push({ part: p, pins, ioKind: 'acia6850', rsPin: 'rs', selected: new Uint8Array(256) });
         } else if (p.kind === 'mc6845') {
             // The CRTC: /CS decodes low in port space; the register
-            // select (the sidecar's rsb — RS on the silicon) rides A0.
+            // select rides A0. The SILICON calls it RS (active-HIGH),
+            // but the bw-parts sidecar currently names it rsb — accept
+            // either spelling so a sidecar rename doesn't break wiring.
             // MA0-MA13/RA0-RA4 generate the framebuffer scan on a real
             // board and are decorative here — the machine gives the chip
             // a live view of system RAM at params.vramAt instead.
+            const hasRsWire = wires.some(w =>
+                (w.from === p.id && w.fromTerminal === 'rs') ||
+                (w.to === p.id && w.toTerminal === 'rs'));
+            const rsName = hasRsWire ? 'rs' : 'rsb';
             const pins = [{ net: find(key(p.id, 'csb')), want: 0, t: 'csb' }];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
-            ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: 'rsb', selected: new Uint8Array(256) });
+            ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: rsName, selected: new Uint8Array(256) });
         }
     }
     if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM or ACIA on the board');

@@ -102,9 +102,10 @@ export class MC6845 {
         this.regs[6] = DEFAULT_ROWS;// R6: vertical displayed
         this.regs[7] = 27;          // R7: vsync position
         this.regs[8] = 0;           // R8: interlace mode
-        this.regs[9] = DEFAULT_CHAR_H - 1; // R9: max scan line (8−1 = 7)
+        const initCharH = opts.charH ?? DEFAULT_CHAR_H;
+        this.regs[9] = initCharH - 1; // R9: max scan line
         this.regs[10] = 0;          // R10: cursor start (line 0, no blink)
-        this.regs[11] = DEFAULT_CHAR_H - 1; // R11: cursor end
+        this.regs[11] = initCharH - 1; // R11: cursor end
         // R12-R17: start address and cursor default to 0
 
         /** @type {Uint8Array} Video RAM — character codes */
@@ -264,5 +265,29 @@ export class MC6845 {
             mode: 'text',
             signal: true,
         };
+    }
+
+    /**
+     * Snapshot CRTC state for machine save. The vram is a live subarray
+     * view of system memory — the machine's mem.slice() already carries
+     * it, so we snapshot only registers and frame-related state.
+     */
+    saveState() {
+        return {
+            regs: Array.from(this.regs),
+            _addrReg: this._addrReg,
+            frame: this.frame,
+            writes: this.writes,
+            _toFrame: this._toFrame,
+        };
+    }
+
+    /** Restore from a saveState() snapshot. */
+    loadState(s) {
+        this.regs.set(s.regs);
+        this._addrReg = s._addrReg;
+        this.frame = s.frame;
+        this.writes = s.writes;
+        this._toFrame = s._toFrame;
     }
 }

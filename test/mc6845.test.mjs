@@ -273,3 +273,75 @@ describe('MC6845 text rendering', () => {
         assert.ok(rgba.length > 0, 'rendering with wrap-around succeeds');
     });
 });
+
+describe('MC6845 saveState/loadState', () => {
+
+    it('round-trip preserves registers and frame counter', () => {
+        const crtc = new MC6845();
+        crtc.write(0, 1); crtc.write(1, 40);  // cols = 40
+        crtc.write(0, 12); crtc.write(1, 0x02); // start addr high
+        crtc.write(0, 13); crtc.write(1, 0x00); // start addr low
+        crtc.advance(100000);
+
+        const snap = crtc.saveState();
+        assert.equal(snap.regs[1], 40);
+        assert.equal(snap.regs[12], 0x02);
+        assert.ok(snap.frame > 0, 'frames advanced');
+
+        // Mutate
+        crtc.write(0, 1); crtc.write(1, 80);
+        assert.equal(crtc.cols, 80);
+
+        // Restore
+        crtc.loadState(snap);
+        assert.equal(crtc.cols, 40, 'cols restored');
+        assert.equal(crtc.startAddr, 0x0200, 'start addr restored');
+    });
+
+    it('vram is NOT in the snapshot (live view of machine memory)', () => {
+        const crtc = new MC6845();
+        crtc.vram[0] = 0x41;
+        const snap = crtc.saveState();
+        assert.ok(!('vram' in snap), 'vram not in snapshot');
+    });
+});
+
+describe('MC6845 charset from config', () => {
+
+    it('opts.charH sets R9 and cursor end at construction', () => {
+        const crtc = new MC6845({ charH: 16 });
+        assert.equal(crtc.charH, 16, 'charH = 16');
+        assert.equal(crtc.cursorEnd, 15, 'cursor end = charH - 1');
+    });
+
+    it('opts.charset renders a known glyph', () => {
+        const charH = 8;
+        const charset = new Uint8Array(256 * charH);
+        // Define 'X' (0x58) as a distinctive pattern: all bits set on row 0
+        charset[0x58 * charH + 0] = 0xff;
+        // All other rows of X are 0
+
+        const crtc = new MC6845({
+            charset,
+            charH,
+            fg: [255, 255, 255, 255],
+            bg: [0, 0, 0, 255],
+        });
+        crtc.write(0, 1); crtc.write(1, 2);  // 2 cols
+        crtc.write(0, 6); crtc.write(1, 1);  // 1 row
+        // Move cursor away
+        crtc.write(0, 14); crtc.write(1, 0);
+        crtc.write(0, 15); crtc.write(1, 99);
+
+        crtc.vram[0] = 0x58; // 'X'
+        const rgba = crtc.rgba();
+        const w = 2 * 8;
+
+        // Row 0 pixel 0 of 'X': glyph byte 0xFF, bit 7 set → FG
+        assert.equal(rgba[0], 255, 'X row 0 px 0 = FG');
+        assert.equal(rgba[1], 255);
+        // Row 1 pixel 0 of 'X': glyph byte 0x00, bit 7 clear → BG
+        const row1 = (1 * w) * 4;
+        assert.equal(rgba[row1], 0, 'X row 1 px 0 = BG');
+    });
+});
