@@ -203,8 +203,16 @@ export function createAvr8jsAdapter(opts = {}) {
     advanceNs(deltaNs) {
       syncInputs();
       const targetCycles = cpu.cycles + Math.round((deltaNs / 1e9) * clockHz);
+      // Flash-size PC mask: real AVRs address flash modulo its size, and
+      // on ≤8K parts the linker RELIES on it — RJMP/RCALL wrap through
+      // the top of flash (blinkenrocket's ctor loop does exactly this).
+      // avr8js wraps only sequential fetch, so a wrapping call sends
+      // cpu.pc negative and the core executes garbage. Masking after
+      // each instruction is what the silicon's program counter does.
+      const pcMask = cpu.progMem.length - 1;
       while (cpu.cycles < targetCycles) {
         avrInstruction(cpu);
+        cpu.pc &= pcMask;
         cpu.tick();
       }
       if (board && board.advanceTo) {

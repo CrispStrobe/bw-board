@@ -582,3 +582,18 @@ test('modem: ADC waveform delivers one FRAMES animation to external EEPROM', { s
   assert.ok(sampleIdx >= waveform.length * 0.9,
     `Expected most samples consumed, got ${sampleIdx}/${waveform.length}`);
 });
+
+test('PC wraps modulo flash size on relative jumps — the ≤8K linker contract', () => {
+  // The linker on small-flash parts emits RJMP/RCALL that wrap through
+  // the top of flash (blinkenrocket's __do_global_ctors does). Real
+  // silicon addresses flash modulo its size; the adapter must too.
+  // Program: word 0 = RJMP -3 → pc would be -2; must land at 0xFFE.
+  const prog = new Uint16Array(4096);
+  prog[0] = 0xcffd;                 // RJMP .-6 (k = -3 words)
+  prog[0xffe] = 0x0000;             // NOP at the wrap target
+  prog[0xfff] = 0xcffe;            // RJMP .-4 → hold in high flash
+  const a = createAvr8jsAdapter({ chip: 'attiny88', program: prog });
+  a.advanceNs(10_000);
+  assert.ok(a.cpu.pc >= 0 && a.cpu.pc < 4096, `pc stayed in flash (${a.cpu.pc})`);
+  assert.ok(a.cpu.pc >= 0xffd, `execution wrapped to high flash (0x${a.cpu.pc.toString(16)})`);
+});
