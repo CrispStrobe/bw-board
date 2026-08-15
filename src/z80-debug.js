@@ -9,6 +9,7 @@
  */
 import { disasmZ80 } from './z80-disasm.js';
 import { loadSNA, SNA_SIZE } from './zx-sna.js';
+import { loadZ80 } from './zx-z80file.js';
 
 /** @param {{ machine: import('./z80-machine.js').Z80Machine }} adapter */
 export function createZ80DebugTarget(adapter) {
@@ -190,12 +191,19 @@ export function createZ80DebugTarget(adapter) {
       return true;
     },
 
-    /** Load a 48K .SNA snapshot — the face's drag-a-snapshot-in path.
-     *  Returns false on machines without a ULA (not a Spectrum). */
+    /** Load a 48K snapshot — the face's drag-a-file-in path. A 48K
+     *  .SNA is exactly its fixed size; anything else is tried as .z80
+     *  (all three header generations). Returns false on machines
+     *  without a ULA or on formats that refuse (128K, junk). */
     loadSnapshot(buf) {
-      if (!machine.ula || buf.length < SNA_SIZE) return false;
-      loadSNA(machine, buf);
-      return true;
+      if (!machine.ula) return false;
+      try {
+        if (buf.length === SNA_SIZE) loadSNA(machine, buf);
+        else loadZ80(machine, buf);
+        return true;
+      } catch {
+        return false;
+      }
     },
 
     readMem(space, addr, len) {
