@@ -167,7 +167,7 @@ describe('createDebugTarget: missing options', () => {
 describe('getTargetKinds', () => {
   it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    assert.equal(kinds.length, 7);
+    assert.equal(kinds.length, 8);
     assert.ok(kinds.find(k => k.kind === 'emulator'));
     assert.ok(kinds.find(k => k.kind === 'avr8js'));
     assert.ok(kinds.find(k => k.kind === 'atmega2560'));

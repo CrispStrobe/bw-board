@@ -63,7 +63,7 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'emulator') {
     return createEmulatorTarget(opts);
   }
-  if (kind === 'avr8js' || kind === 'atmega2560' || kind === 'attiny85') {
+  if (kind === 'avr8js' || kind === 'atmega2560' || kind === 'attiny85' || kind === 'attiny88') {
     return createAvr8jsTarget(kind, opts);
   }
   if (kind === 'eater6502') {
@@ -76,7 +76,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'eater6502', 'rp2040js', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'rp2040js', or 'serial'.`
   );
 }
 
@@ -144,7 +144,8 @@ async function createAvr8jsTarget(kind, opts) {
 
   // Map factory kind to chip name: 'avr8js' → 'atmega328p' (default)
   const chip = kind === 'atmega2560' ? 'atmega2560'
-    : kind === 'attiny85' ? 'attiny85' : 'atmega328p';
+    : kind === 'attiny85' ? 'attiny85'
+      : kind === 'attiny88' ? 'attiny88' : 'atmega328p';
 
   // avr8js has no destructive init — order is flexible, but we follow the
   // same adapter-first, board-second, program-third pattern for consistency.
@@ -306,6 +307,11 @@ export function getTargetKinds() {
       kind: 'attiny85',
       label: 'Simulated (ATtiny85)',
       description: 'AVR instruction-level emulation. ATtiny85/Digispark programs.',
+    },
+    {
+      kind: 'attiny88',
+      label: 'Simulated (ATtiny88)',
+      description: 'AVR instruction-level emulation. ATtiny88 (blinkenrocket-class boards).',
     },
     {
       kind: 'eater6502',

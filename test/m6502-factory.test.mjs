@@ -214,7 +214,7 @@ test('factory: memory read/write on 6502', async () => {
 test('getTargetKinds includes eater6502', () => {
   const kinds = getTargetKinds();
   assert.ok(kinds.find(k => k.kind === 'eater6502'));
-  assert.equal(kinds.length, 7);
+  assert.equal(kinds.length, 8);
 });
 
 test('factory: a custom config reaches the machine — the wired-extractor path', async () => {
@@ -256,4 +256,17 @@ test('factory: a custom config reaches the machine — the wired-extractor path'
   // And the video face lights up through the debug target.
   const f = target.video();
   assert.ok(f && f.width > 0, 'target.video() serves the VDP frame');
+});
+
+test('factory: attiny88 is a first-class target kind', async () => {
+  const kinds = getTargetKinds();
+  assert.ok(kinds.find(k => k.kind === 'attiny88'), 'listed in the picker');
+  const board = new BoardImpl(5.0);
+  board.setNetlist(
+    [{ id: 'g', kind: 'gnd', params: {}, terminals: ['gnd'] }],
+    [{ id: 'ng', terminals: [{ part: 'g', terminal: 'gnd' }] }]
+  );
+  const { adapter } = await createDebugTarget('attiny88', { board });
+  assert.equal(adapter.chip.name, 'ATtiny88');
+  assert.equal(adapter.clockHz, 8_000_000);
 });
