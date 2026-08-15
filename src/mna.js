@@ -819,7 +819,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const cathodeNet = findNet(nets, part.id, 'cathode');
       const vAnode = anodeNet ? (nodeVoltages.get(anodeNet) ?? 0) : 0;
       const vCathode = cathodeNet ? (nodeVoltages.get(cathodeNet) ?? 0) : 0;
-      const vf = /** @type {number} */ (part.params.vf ?? 2.0);
+      // A bare LED is a ~2 V junction; a bare diode is silicon, 0.7 V.
+      // (Sweep finding 2026-08-15: both defaulted to 2.0, so an
+      // unparameterized diode behaved exactly like an LED.)
+      const vf = /** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0));
       const rd = 10; // dynamic resistance
       const vAcross = vAnode - vCathode;
       const i = vAcross >= vf ? (vAcross - vf) / rd : 0;
@@ -1087,7 +1090,7 @@ function stampResistor(A, b, part, nets, nodeIndex, groundNetId) {
 function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const anodeNet = findNet(nets, part.id, 'anode');
   const cathodeNet = findNet(nets, part.id, 'cathode');
-  const vf = /** @type {number} */ (part.params.vf ?? 2.0);
+  const vf = /** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0));
   const rd = 10;
 
   const vAcross = diodeVoltages.get(part.id) ?? 0;

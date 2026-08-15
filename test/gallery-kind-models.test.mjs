@@ -170,3 +170,27 @@ describe('power-off discharge with devices on the board (substep path)', () => {
     assert.ok(v1 > 0.1, `a real exponential, not an instant zero: ${v1}`);
   });
 });
+
+describe('diode default Vf (wiring-sweep escalation 2026-08-15)', () => {
+  it('a bare diode is silicon (0.7 V), not an LED junction', () => {
+    const mk = (kind) => {
+      const b = new BoardImpl(5.0);
+      b.setNetlist([
+        { id: 'v1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'r1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+        { id: 'd1', kind, params: {}, terminals: ['anode', 'cathode'] },
+      ], [
+        { id: 'n_v', terminals: [{ part: 'v1', terminal: 'vcc' }, { part: 'r1', terminal: 'a' }] },
+        { id: 'n_a', terminals: [{ part: 'r1', terminal: 'b' }, { part: 'd1', terminal: 'anode' }] },
+        { id: 'n_g', terminals: [{ part: 'g1', terminal: 'gnd' }, { part: 'd1', terminal: 'cathode' }] },
+      ]);
+      b.advanceTo(1_000_000n);
+      return b.nodeVoltages.get('n_a');
+    };
+    const vDiode = mk('diode');
+    const vLed = mk('led');
+    assert.ok(Math.abs(vDiode - 0.74) < 0.1, `bare diode anode ~0.74 V, got ${vDiode}`);
+    assert.ok(vLed > 1.9, `bare LED keeps its ~2 V junction, got ${vLed}`);
+  });
+});
