@@ -22,7 +22,7 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   const symbols = opts.symbols ?? null;
 
   let runState = 'halted'; // 'halted' | 'running'
-  let pendingStep = null;  // { kind: 'insn'|'block', remaining }
+  let pendingStep = null;  // { kind: 'insn'|'block'|'over'|'out', ... }
   const haltListeners = [];
   const breakpoints = new Map();
   let nextBpId = 1;
@@ -32,11 +32,35 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     for (const cb of haltListeners) cb(info);
   }
 
+  // Write watchpoints trap TRUE writes (any store to a watched address,
+  // same-value included) by wrapping the core's write callback — the
+  // same semantics emu8051's _emu_dbg_set_bp_write gives. The wrap is
+  // installed only while at least one watch exists, so the fast path
+  // stays untouched.
+  const writeWatches = new Map(); // id → { addr, len }
+  let watchHit = null;
+  let origWrite = null;
+  function syncWriteTrap() {
+    if (writeWatches.size && !origWrite) {
+      origWrite = cpu.write;
+      cpu.write = (a, v) => {
+        const aa = a & 0xffff;
+        for (const [id, w] of writeWatches) {
+          if (aa >= w.addr && aa < w.addr + w.len) watchHit = { bp: id, addr: aa, value: v & 0xff };
+        }
+        return origWrite(a, v);
+      };
+    } else if (!writeWatches.size && origWrite) {
+      cpu.write = origWrite;
+      origWrite = null;
+    }
+  }
+
   return {
     capabilities() {
       return {
-        steps: symbols ? ['insn', 'block'] : ['insn'],
-        breakpoints: symbols ? ['code', 'yield'] : ['code'],
+        steps: [...(symbols ? ['insn', 'block'] : ['insn']), 'over', 'out'],
+        breakpoints: [...(symbols ? ['code', 'yield'] : ['code']), 'write'],
         timeFreezes: true,
         consumes: [],
       };
@@ -82,10 +106,20 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         breakpoints.set(id, { kind: 'yield', addr: y.addr, task: spec.task, state: spec.state });
         return id;
       }
+      if (spec.kind === 'write') {
+        if (spec.addr == null) return { unsupported: 'addr required' };
+        const id = nextBpId++;
+        writeWatches.set(id, { addr: spec.addr & 0xffff, len: spec.len ?? 1 });
+        syncWriteTrap();
+        return id;
+      }
       return { unsupported: `unknown breakpoint kind: ${spec.kind}` };
     },
 
-    clearBreakpoint(id) { breakpoints.delete(id); },
+    clearBreakpoint(id) {
+      breakpoints.delete(id);
+      if (writeWatches.delete(id)) syncWriteTrap();
+    },
 
     run() { runState = 'running'; pendingStep = null; },
 
@@ -101,6 +135,27 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         if (!symbols) return { unsupported: 'block step requires symbols' };
         runState = 'running';
         pendingStep = { kind: 'block' };
+        return undefined;
+      }
+      if (kind === 'over') {
+        // Depth-wait only when the NEXT opcode is call-class (JSR/BRK);
+        // anything else is a plain instruction step — a lone PHA must
+        // not turn step-over into run-until-someday.
+        const op = machine.mem[cpu.pc & 0xffff];
+        if (op !== 0x20 && op !== 0x00) {
+          runState = 'running';
+          pendingStep = { kind: 'insn', remaining: 1 };
+          return undefined;
+        }
+        runState = 'running';
+        pendingStep = { kind: 'over', sp0: cpu.s, entered: false };
+        return undefined;
+      }
+      if (kind === 'out') {
+        // Run until the current frame returns: RTS/RTI pops lift the
+        // (descending) stack pointer above where it stands now.
+        runState = 'running';
+        pendingStep = { kind: 'out', sp0: cpu.s };
         return undefined;
       }
       return { unsupported: `step kind '${kind}' not supported` };
@@ -139,6 +194,14 @@ export function createM6502DebugTarget(adapter, opts = {}) {
             }
             pendingStep.started = true;
           }
+          if (pendingStep.kind === 'over' && pendingStep.entered && cpu.s >= pendingStep.sp0) {
+            halt({ cause: 'step' });
+            return 'halted';
+          }
+          if (pendingStep.kind === 'out' && cpu.s > pendingStep.sp0) {
+            halt({ cause: 'step' });
+            return 'halted';
+          }
         }
 
         const n = machine.step();
@@ -148,9 +211,17 @@ export function createM6502DebugTarget(adapter, opts = {}) {
           return 'halted';
         }
 
+        if (watchHit) {
+          const hit = watchHit;
+          watchHit = null;
+          halt({ cause: 'watchpoint', ...hit });
+          return 'halted';
+        }
+
         if (pendingStep?.kind === 'insn') {
           pendingStep.remaining--;
         }
+        if (pendingStep?.kind === 'over') pendingStep.entered = true;
       }
 
       return runState === 'halted' ? 'halted' : 'budget';

@@ -176,8 +176,8 @@ test('factory: capabilities declare what the 6502 target offers', async () => {
   });
 
   const caps = target.capabilities();
-  assert.deepEqual(caps.steps, ['insn']);
-  assert.deepEqual(caps.breakpoints, ['code']);
+  assert.deepEqual(caps.steps, ['insn', 'over', 'out']);
+  assert.deepEqual(caps.breakpoints, ['code', 'write']);
   assert.equal(caps.timeFreezes, true);
 });
 

@@ -21,9 +21,35 @@ export function createZ80DebugTarget(adapter) {
   let nextBpId = 1;
   const halt = (info) => { runState = 'halted'; for (const cb of haltListeners) cb(info); };
 
+  // Write watchpoints trap TRUE writes by wrapping the core's write
+  // callback (installed only while a watch exists) — emu8051 parity.
+  // The trap sits ABOVE the machine's ROM filter, so a store aimed at
+  // ROM still fires: the program wrote, even if memory refused.
+  const writeWatches = new Map(); // id → { addr, len }
+  let watchHit = null;
+  let origWrite = null;
+  const syncWriteTrap = () => {
+    if (writeWatches.size && !origWrite) {
+      origWrite = cpu.write;
+      cpu.write = (a, v) => {
+        const aa = a & 0xffff;
+        for (const [id, w] of writeWatches) {
+          if (aa >= w.addr && aa < w.addr + w.len) watchHit = { bp: id, addr: aa, value: v & 0xff };
+        }
+        return origWrite(a, v);
+      };
+    } else if (!writeWatches.size && origWrite) {
+      cpu.write = origWrite;
+      origWrite = null;
+    }
+  };
+
+  // Call-class opcodes for step-over: CALL nn, CALL cc,nn, and RST n.
+  const isCallClass = (op) => op === 0xcd || (op & 0xc7) === 0xc4 || (op & 0xc7) === 0xc7;
+
   return {
     capabilities() {
-      return { steps: ['insn'], breakpoints: ['code'], timeFreezes: true, consumes: [] };
+      return { steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true, consumes: [] };
     },
 
     state() { return runState; },
@@ -46,6 +72,13 @@ export function createZ80DebugTarget(adapter) {
     onHalt(cb) { haltListeners.push(cb); },
 
     setBreakpoint(spec) {
+      if (spec.kind === 'write') {
+        if (spec.addr == null) return { unsupported: 'addr required' };
+        const id = nextBpId++;
+        writeWatches.set(id, { addr: spec.addr & 0xffff, len: spec.len ?? 1 });
+        syncWriteTrap();
+        return id;
+      }
       if (spec.kind !== 'code') return { unsupported: `unknown breakpoint kind: ${spec.kind}` };
       if (spec.addr == null) return { unsupported: 'addr required' };
       const id = nextBpId++;
@@ -53,15 +86,39 @@ export function createZ80DebugTarget(adapter) {
       return id;
     },
 
-    clearBreakpoint(id) { breakpoints.delete(id); },
+    clearBreakpoint(id) {
+      breakpoints.delete(id);
+      if (writeWatches.delete(id)) syncWriteTrap();
+    },
 
     run() { runState = 'running'; pendingStep = null; },
 
     step(kind, count = 1) {
-      if (kind !== 'insn') return { unsupported: `step kind '${kind}' not supported` };
-      runState = 'running';
-      pendingStep = { kind: 'insn', remaining: count };
-      return undefined;
+      if (kind === 'insn') {
+        runState = 'running';
+        pendingStep = { kind: 'insn', remaining: count };
+        return undefined;
+      }
+      if (kind === 'over') {
+        // Depth-wait only when the next opcode is call-class; a PUSH
+        // must not turn step-over into run-until-someday. A false
+        // conditional CALL never deepens, so the depth check falls
+        // through to a single-step naturally.
+        if (!isCallClass(machine.mem[cpu.pc & 0xffff])) {
+          runState = 'running';
+          pendingStep = { kind: 'insn', remaining: 1 };
+          return undefined;
+        }
+        runState = 'running';
+        pendingStep = { kind: 'over', sp0: cpu.sp, entered: false };
+        return undefined;
+      }
+      if (kind === 'out') {
+        runState = 'running';
+        pendingStep = { kind: 'out', sp0: cpu.sp };
+        return undefined;
+      }
+      return { unsupported: `step kind '${kind}' not supported` };
     },
 
     /** Spend up to budgetNs of simulated time. Returns 'halted' or 'budget'. */
@@ -72,9 +129,24 @@ export function createZ80DebugTarget(adapter) {
         for (const [id, bp] of breakpoints) {
           if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
         }
-        if (pendingStep && pendingStep.remaining <= 0) { halt({ cause: 'step' }); return 'halted'; }
+        if (pendingStep) {
+          if (pendingStep.kind === 'insn' && pendingStep.remaining <= 0) { halt({ cause: 'step' }); return 'halted'; }
+          if (pendingStep.kind === 'over' && pendingStep.entered
+            && ((cpu.sp - pendingStep.sp0) & 0x8000) === 0) { halt({ cause: 'step' }); return 'halted'; }
+          if (pendingStep.kind === 'out'
+            && cpu.sp !== pendingStep.sp0 && ((cpu.sp - pendingStep.sp0) & 0x8000) === 0) {
+            halt({ cause: 'step' }); return 'halted';
+          }
+        }
         machine.step();
-        if (pendingStep) pendingStep.remaining--;
+        if (watchHit) {
+          const hit = watchHit;
+          watchHit = null;
+          halt({ cause: 'watchpoint', ...hit });
+          return 'halted';
+        }
+        if (pendingStep?.kind === 'insn') pendingStep.remaining--;
+        if (pendingStep?.kind === 'over') pendingStep.entered = true;
       }
       return runState === 'halted' ? 'halted' : 'budget';
     },
