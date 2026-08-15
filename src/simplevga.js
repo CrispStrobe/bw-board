@@ -54,8 +54,16 @@ export const SVGA_PALETTE = Array.from({ length: 16 }, (_, i) => {
 });
 
 export class SimpleVGA {
-    constructor() {
-        this.vram = new Uint8Array(0x10000); // two 32K banks
+    /**
+     * @param {{rows?: number}} [opts] visible rows. MEASURED default:
+     *   snake.rom's vram_init fills 128 rows per 32K bank with vsync at
+     *   row 117 — a 640x400-derived frame, ~100 visible rows, each
+     *   scanned four times; the second bank is the DOUBLE BUFFER
+     *   (PORTB page-flips which frame scans out), not row extension.
+     */
+    constructor({ rows = 100 } = {}) {
+        this.rows = rows;
+        this.vram = new Uint8Array(0x10000); // two 32K banks (double buffer)
         this.bank = 0;
         this.writes = 0;   // change generation for pollers
     }
@@ -76,43 +84,52 @@ export class SimpleVGA {
      * region. All-zero VRAM — the skipped-init case — fails both.
      */
     signal() {
-        let hsyncRows = 0;
-        for (let row = 0; row < SVGA_H; row++) {
-            const at = row * SVGA_STRIDE + HSYNC_START;
-            if ((this.vram[at] & BIT_HSYNC) && (this.vram[at + (HSYNC_END - HSYNC_START) - 1] & BIT_HSYNC)) {
-                hsyncRows++;
-            }
+        // Polarities MEASURED from vram_init's actual output (snake.rom,
+        // VRAM dump 2026-08-15): HSYNC idle-HIGH — visible bytes carry
+        // the bit set ($BE/$B0) and the pulse is the bit going LOW ($90)
+        // at exactly the pulse columns; VSYNC is idle-LOW, pulsing HIGH
+        // on its row(s). The first draft assumed set-during-pulse and
+        // refused a perfectly good picture.
+        let goodRows = 0;
+        const bankBase = this.bank << 15;
+        for (let row = 0; row < this.rows; row++) {
+            const base = bankBase + row * SVGA_STRIDE;
+            const idleSet = this.vram[base] & BIT_HSYNC;             // visible: idle high
+            const pulseClear = !(this.vram[base + HSYNC_START] & BIT_HSYNC)
+                && !(this.vram[base + HSYNC_END - 1] & BIT_HSYNC);   // pulse: low
+            if (idleSet && pulseClear) goodRows++;
         }
-        if (hsyncRows < SVGA_H * 0.9) return false;
-        for (let row = SVGA_H; row < 256; row++) {
-            if (this.vram[row * SVGA_STRIDE + HSYNC_START] & BIT_VSYNC) return true;
+        if (goodRows < this.rows * 0.9) return false;
+        for (let row = 0; row < 128; row++) {
+            if (this.vram[bankBase + row * SVGA_STRIDE + HSYNC_START] & BIT_VSYNC) return true;
         }
         return false;
     }
 
     /** Palette indices (0-15), row-major 160x240; null without sync. */
     renderFrame() {
-        if (!this.signal()) return { width: SVGA_W, height: SVGA_H, indices: null, signal: false };
-        const indices = new Uint8Array(SVGA_W * SVGA_H);
-        for (let row = 0; row < SVGA_H; row++) {
-            const base = row * SVGA_STRIDE;
+        if (!this.signal()) return { width: SVGA_W, height: this.rows, indices: null, signal: false };
+        const bankBase = this.bank << 15;
+        const indices = new Uint8Array(SVGA_W * this.rows);
+        for (let row = 0; row < this.rows; row++) {
+            const base = bankBase + row * SVGA_STRIDE;
             for (let x = 0; x < SVGA_W; x++) {
                 indices[row * SVGA_W + x] = this.vram[base + x] & PIXEL_MASK;
             }
         }
-        return { width: SVGA_W, height: SVGA_H, indices, signal: true };
+        return { width: SVGA_W, height: this.rows, indices, signal: true };
     }
 
     /** The common video-face contract (see TMS9918.videoFrame). signal
      *  false = the monitor is not locked; the face shows NO SIGNAL. */
     videoFrame() {
-        return { width: SVGA_W, height: SVGA_H, rgba: this.rgba(), frame: this.writes, signal: this.signal() };
+        return { width: SVGA_W, height: this.rows, rgba: this.rgba(), frame: this.writes, signal: this.signal() };
     }
 
     /** RGBA for a canvas face; black frame (not null) when unlocked —
      *  the face draws NO SIGNAL over it, mirroring a real monitor. */
     rgba() {
-        const out = new Uint8ClampedArray(SVGA_W * SVGA_H * 4);
+        const out = new Uint8ClampedArray(SVGA_W * this.rows * 4);
         const f = this.renderFrame();
         if (!f.signal) {
             for (let i = 3; i < out.length; i += 4) out[i] = 255;

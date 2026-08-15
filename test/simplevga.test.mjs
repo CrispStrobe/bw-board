@@ -12,14 +12,20 @@ const BIT_HSYNC = 0x20, BIT_VSYNC = 0x40;
  *  pulse bytes in every row's sync columns, one VSYNC row below the
  *  visible region. */
 function initSync(card) {
-  for (let row = 0; row < 256; row++) {
-    for (let col = 164; col < 188; col++) {
-      const linear = row * SVGA_STRIDE + col;
-      card.bank = linear >> 15;
-      card.write(0x8000 + (linear & 0x7fff), BIT_HSYNC | (row >= SVGA_H ? BIT_VSYNC : 0));
+  // The MEASURED vram_init frame: ONE 32K bank holds 128 rows; HSYNC
+  // idle-high on visible bytes, LOW in pulse columns 164-187; VSYNC
+  // idle-low, high on its marker row (117 in snake.rom). The second
+  // bank is the double buffer, initialized separately when tested.
+  const keepBank = card.bank;
+  for (let row = 0; row < 128; row++) {
+    for (let col = 0; col < 256; col++) {
+      const inPulse = col >= 164 && col < 188;
+      let b = inPulse ? 0x90 : 0xb0;
+      if (row === 117 && inPulse) b |= BIT_VSYNC;
+      card.write(0x8000 + row * SVGA_STRIDE + col, b);
     }
   }
-  card.bank = 0;
+  card.bank = keepBank;
 }
 
 describe('SimpleVGA card', () => {
@@ -53,14 +59,17 @@ describe('SimpleVGA card', () => {
     assert.equal(f.indices[10], 0x05, 'only the low nibble is color');
   });
 
-  it('the bank line moves writes into the upper 32K (rows past 127)', () => {
+  it('the bank line PAGE-FLIPS between two frames (double buffer)', () => {
     const card = new SimpleVGA();
-    initSync(card);
-    // Row 200, column 7: linear = 200*256+7 = 51207 → bank 1, offset 51207-32768
+    card.setBank(0); initSync(card);
+    card.setBank(1); initSync(card);
     card.setBank(1);
-    card.write(0x8000 + (200 * SVGA_STRIDE + 7 - 0x8000), 0x09);
-    const f = card.renderFrame();
-    assert.equal(f.indices[200 * SVGA_W + 7], 0x09);
+    card.write(0x8000 + 20 * SVGA_STRIDE + 7, 0xb0 | 0x09);
+    let f = card.renderFrame();
+    assert.equal(f.indices[20 * SVGA_W + 7], 0x09, 'bank 1 frame shows its pixel');
+    card.setBank(0);
+    f = card.renderFrame();
+    assert.equal(f.indices[20 * SVGA_W + 7], 0, 'bank 0 frame does not');
   });
 
   it('machine glue: a 65C02 program paints through the ROM window', () => {
@@ -91,9 +100,12 @@ describe('SimpleVGA card', () => {
     m.advanceToMs(1);
     const card = m.chips.vga;
     assert.equal(card.vram[0], 0x0e, 'the STA $8000 landed in VRAM bank 0');
+    // initSync overwrites the whole stream; re-poke the pixel the way a
+    // real program does: pixel nibble OR'd into the idle sync bits.
     initSync(card);
-    card.bank = 0; // initSync leaves bank 1; pixel readback is bank-independent
-    assert.equal(card.renderFrame().indices[0] & 0x0f, 0x0e & 0x0f);
+    card.bank = 0;
+    card.write(0x8000, 0xb0 | 0x0e);
+    assert.equal(card.renderFrame().indices[0], 0x0e);
   });
 
   it('rgba: NO SIGNAL renders black, sync renders the palette', () => {
@@ -130,7 +142,7 @@ describe('videoFrame contract', () => {
     const v = createM6502DebugTarget(adapter).video();
     assert.ok(v, 'card surfaces through video()');
     assert.equal(v.width, SVGA_W);
-    assert.equal(v.height, SVGA_H);
+    assert.equal(v.height, 100); // measured default rows
     assert.equal(v.signal, false, 'honest: no vram_init yet, no signal');
   });
 });

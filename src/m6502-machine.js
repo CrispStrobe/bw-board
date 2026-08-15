@@ -171,7 +171,7 @@ export class M6502Machine {
                 // Not an addressed chip: a write-snoop card on the ROM
                 // window with its bank line on the VIA's port B. No
                 // decode entry — it occupies no address of its own.
-                this._vgaCard = new SimpleVGA();
+                this._vgaCard = new SimpleVGA({ rows: c.rows });
                 this.chips[c.name] = this._vgaCard;
                 continue;
             } else {
