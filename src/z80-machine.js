@@ -138,6 +138,11 @@ export class Z80Machine {
         this.ay = this._zx128 ? new AY38912({ clockHz: config.clockHz }) : null;
         if (this.ay) this.chips.ay = this.ay;
         this.tape = null; // insertTape() attaches; the $0556 trap consumes
+        // Generic PC traps — the $0556 tape trap's mechanism, opened up:
+        // addr → handler(machine) returning the cycles consumed (>0 =
+        // handled, instruction skipped; falsy = fall through and execute
+        // normally). The CP/M BDOS console shim is the first tenant.
+        this.pcTraps = new Map();
         this._romRanges = (config.regions || []).filter((r) => r.kind === 'rom');
         const read48 = (a) => this.mem[a & 0xffff];
         const write48 = (a, v) => {
@@ -364,6 +369,15 @@ export class Z80Machine {
             this.cycles += 13;
             this._advanceChips(13);
             return 13;
+        }
+        const trap = this.pcTraps.get(this.cpu.pc);
+        if (trap) {
+            const n = trap(this);
+            if (n > 0) {
+                this.cycles += n;
+                this._advanceChips(n);
+                return n;
+            }
         }
         // LD-BYTES fast-load trap: with a tape inserted, entering the
         // ROM's loader at $0556 loads the next block instantly and RETs.

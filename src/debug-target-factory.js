@@ -197,12 +197,12 @@ async function createAvr8jsTarget(kind, opts) {
 // ─── 6502 breadboard computer (Eater-style) ─────────────────────────────
 
 async function createZ80Target(opts) {
-  const { board, rom, config, pc } = opts;
+  const { board, rom, config, pc, cpm } = opts;
   // The Z80 bench has no GPIO boundary — board is optional; when
   // present it only receives time sync (the serial console is the
   // observable surface, via adapter.onSerial / sendSerial).
   const { createZ80Adapter } = await import('./z80-adapter.js');
-  const adapter = createZ80Adapter({ config, rom, romAt: opts.romAt, pc });
+  const adapter = createZ80Adapter({ config, rom, romAt: opts.romAt, pc, cpm });
   if (board) adapter.attachBoard(board);
   else adapter.attachBoard({ advanceTo() {} });
 

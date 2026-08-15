@@ -298,3 +298,22 @@ test('factory: z80 accepts a custom config — the extracted-machine path', asyn
   });
   assert.equal(adapter.clockHz, 1_000_000, 'config flowed through');
 });
+
+test('factory: z80 cpm mode boots BBC BASIC interactively', async (t) => {
+  const { readFileSync: rf, existsSync: ex } = await import('node:fs');
+  const { join: j } = await import('node:path');
+  const { homedir: hd } = await import('node:os');
+  const comPath = process.env.BBCZ80_COM || j(hd(), 'code', 'BBCZ80', 'bin', 'cpm', 'BBCBASIC.COM');
+  if (!ex(comPath)) { t.skip('BBCBASIC.COM not present (zlib, rtrussell/BBCZ80)'); return; }
+
+  const { adapter } = await createDebugTarget('z80', { cpm: { com: rf(comPath) } });
+  let out = '';
+  adapter.onSerial((b) => { out += String.fromCharCode(b); });
+  adapter.advanceNs(500_000_000);
+  assert.ok(/BBC BASIC \(Z80\)/.test(out), 'the interpreter announces itself');
+  assert.ok(out.endsWith('>'), 'ready at the prompt');
+  for (const ch of 'PRINT 2+2\r') adapter.sendSerial(ch.charCodeAt(0));
+  adapter.advanceNs(300_000_000);
+  assert.ok(/4/.test(out.slice(-20)), `typed command answered (${JSON.stringify(out.slice(-30))})`);
+  assert.equal(adapter.exited(), false, 'still live at the prompt');
+});
