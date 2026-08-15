@@ -65,4 +65,111 @@ export function loadSNA(machine, buf) {
     cpu.eiLatch = 0;
 }
 
-export default { saveSNA, loadSNA, SNA_SIZE };
+/** 128K SNA: 131103 bytes. */
+export const SNA128_SIZE = 27 + 49152 + 4 + 5 * 16384;
+
+/** Restore a 128K .SNA onto a zx128 machine. */
+export function loadSNA128(machine, buf) {
+    if (buf.length < SNA128_SIZE) {
+        throw new Error(`not a 128K .SNA: ${buf.length} bytes, expected ${SNA128_SIZE}`);
+    }
+    if (!machine._zx128) {
+        throw new Error('128K .SNA requires a zx128 machine (config.zx128 = true)');
+    }
+    const cpu = machine.cpu;
+    const r16 = (off) => buf[off] | (buf[off + 1] << 8);
+
+    // Header (same as 48K)
+    cpu.i = buf[0];
+    cpu.hl_ = r16(1); cpu.de_ = r16(3); cpu.bc_ = r16(5); cpu.af_ = r16(7);
+    cpu.hl = r16(9); cpu.de = r16(11); cpu.bc = r16(13);
+    cpu.iy = r16(15); cpu.ix = r16(17);
+    cpu.iff1 = cpu.iff2 = (buf[19] & 0x04) ? 1 : 0;
+    cpu.r = buf[20];
+    cpu.af = r16(21); cpu.sp = r16(23);
+    cpu.im = buf[25];
+    if (machine.ula) machine.ula.border = buf[26] & 0x07;
+
+    // 48K RAM: pages 5 ($4000), 2 ($8000), and the banked page at $C000
+    machine.mem.set(buf.subarray(27, 27 + 49152), 0x4000);
+
+    // Extension header at 49179
+    const ext = 27 + 49152;
+    cpu.pc = r16(ext);
+    const port7ffd = buf[ext + 2];
+    // byte ext+3 = TRDOS flag (ignored)
+
+    // The banked page at $C000 in the 48K dump
+    const bankedPage = port7ffd & 0x07;
+
+    // Copy the $C000 portion of the 48K dump into the correct bank
+    // (it's already in machine.mem at $C000, but we need it in pages[])
+    machine.pages[bankedPage].set(
+        buf.subarray(27 + 32768, 27 + 49152) // $C000-$FFFF from the dump
+    );
+
+    // Remaining 5 banks follow the extension, in order 0-7 skipping
+    // pages 5, 2, and the currently banked page
+    const skip = new Set([5, 2, bankedPage]);
+    let off = ext + 4;
+    for (let b = 0; b < 8; b++) {
+        if (skip.has(b)) continue;
+        machine.pages[b].set(buf.subarray(off, off + 16384));
+        off += 16384;
+    }
+
+    // Apply banking
+    machine._bank.locked = 0;
+    machine._setBank(port7ffd);
+
+    cpu.halted = 0;
+    cpu.eiLatch = 0;
+}
+
+/** Serialize a running 128K machine as 128K .SNA. */
+export function saveSNA128(machine) {
+    if (!machine._zx128) throw new Error('saveSNA128 needs a zx128 machine');
+    const cpu = machine.cpu;
+    const out = new Uint8Array(SNA128_SIZE);
+    const w = (off, v) => { out[off] = v & 0xff; out[off + 1] = (v >> 8) & 0xff; };
+
+    // Header (same as 48K but NO pushed PC — 128K stores it in the extension)
+    out[0] = cpu.i;
+    w(1, cpu.hl_); w(3, cpu.de_); w(5, cpu.bc_); w(7, cpu.af_);
+    w(9, cpu.hl); w(11, cpu.de); w(13, cpu.bc);
+    w(15, cpu.iy); w(17, cpu.ix);
+    out[19] = cpu.iff2 ? 0x04 : 0x00;
+    out[20] = cpu.r;
+    w(21, cpu.af); w(23, cpu.sp);
+    out[25] = cpu.im;
+    out[26] = machine.ula ? machine.ula.border : 0;
+
+    // 48K RAM dump: pages 5 ($4000) + 2 ($8000) + banked ($C000)
+    out.set(machine.mem.subarray(0x4000, 0x10000), 27);
+    // $C000 region comes from the currently banked page
+    const bankedPage = machine._bank.page;
+    out.set(machine.pages[bankedPage], 27 + 32768);
+
+    // Extension
+    const ext = 27 + 49152;
+    w(ext, cpu.pc);
+    const port7ffd = bankedPage
+        | (machine._bank.shadow << 3)
+        | (machine._bank.rom << 4)
+        | (machine._bank.locked << 5);
+    out[ext + 2] = port7ffd;
+    out[ext + 3] = 0; // TRDOS flag
+
+    // Remaining 5 banks
+    const skip = new Set([5, 2, bankedPage]);
+    let off = ext + 4;
+    for (let b = 0; b < 8; b++) {
+        if (skip.has(b)) continue;
+        out.set(machine.pages[b], off);
+        off += 16384;
+    }
+
+    return out;
+}
+
+export default { saveSNA, loadSNA, SNA_SIZE, loadSNA128, saveSNA128, SNA128_SIZE };
