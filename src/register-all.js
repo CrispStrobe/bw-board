@@ -29,6 +29,7 @@ import { registerTier1Parts } from './devices/tier1-parts.js';
 import { registerI2CParts } from './devices/i2c-parts.js';
 import { registerBoardKinds } from './devices/board-kinds.js';
 import { registerHD44780 } from './devices/hd44780.js';
+import { registerILI9341 } from './devices/ili9341.js';
 import { registerMatrix8x8 } from './devices/matrix8x8.js';
 import { registerDallasParts } from './devices/dallas-parts.js';
 import { registerBoardICs } from './devices/board-ics.js';
@@ -69,6 +70,7 @@ export function registerAllDevices() {
   registerI2CParts();
   registerBoardKinds();
   registerHD44780();
+  registerILI9341();
   registerMatrix8x8();
   registerDallasParts();
   registerBoardICs();
