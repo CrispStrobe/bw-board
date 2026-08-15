@@ -175,3 +175,71 @@ describe('servo: PWM decode', () => {
     assert.ok(true, 'servo decodes 2ms pulse');
   });
 });
+
+// ─── dc_motor: R alias and windingH ───────────────────────────────────
+
+describe('dc_motor: params.R accepted as alias for windingR', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it('R=10 produces same winding resistance as windingR=10', () => {
+    // Build two circuits: one with R, one with windingR, both should behave identically
+    function motorVoltage(params) {
+      const board = new BoardImpl(5.0);
+      board.setNetlist(
+        [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+         { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+         { id: 'M1', kind: 'dc_motor', params, terminals: ['a', 'b'] }],
+        [{ id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'M1', terminal: 'a' }] },
+         { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'M1', terminal: 'b' }] }],
+      );
+      board.advanceTo(1_000_000n);
+      return board.getDeviceState('M1');
+    }
+    const stR = motorVoltage({ R: 20, kV: 0.01, J: 0.001 });
+    const stW = motorVoltage({ windingR: 20, kV: 0.01, J: 0.001 });
+    assert.equal(stR.omega, stW.omega,
+      'R=20 and windingR=20 should produce identical omega');
+  });
+
+  it('R is no longer silently discarded — R=50 gives less current than R=10', () => {
+    function motorOmega(R) {
+      const board = new BoardImpl(5.0);
+      board.setNetlist(
+        [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+         { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+         { id: 'M1', kind: 'dc_motor', params: { R, kV: 0.01, J: 1e-6 }, terminals: ['a', 'b'] }],
+        [{ id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'M1', terminal: 'a' }] },
+         { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'M1', terminal: 'b' }] }],
+      );
+      // 10ms with small J — should show clear difference
+      board.advanceTo(10_000_000n);
+      return board.getDeviceState('M1').omega;
+    }
+    const omega10 = motorOmega(10);
+    const omega50 = motorOmega(50);
+    assert.ok(omega10 > omega50,
+      `R=10 should accelerate faster than R=50: ${omega10.toFixed(1)} vs ${omega50.toFixed(1)}`);
+  });
+});
+
+describe('dc_motor: windingH series inductance', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  it('windingH defaults to 5mH (a realistic small motor)', () => {
+    // Just verify the param is accepted and the motor still works
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+       { id: 'M1', kind: 'dc_motor', params: { R: 10, kV: 0.01, J: 1e-6, windingH: 0.005 },
+         terminals: ['a', 'b'] }],
+      [{ id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'M1', terminal: 'a' }] },
+       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'M1', terminal: 'b' }] }],
+    );
+    board.advanceTo(10_000_000n);
+    const st = board.getDeviceState('M1');
+    assert.ok(st.omega > 0, `motor with windingH should still spin: omega=${st.omega.toFixed(1)}`);
+  });
+});

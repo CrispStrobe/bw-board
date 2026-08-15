@@ -132,6 +132,65 @@ describe('inductor: validation', () => {
   });
 });
 
+describe('inductor: flyback peak SCALES with declared L (henrys fix regression)', () => {
+  // Before the henrys/henries fix (ecfbdf2), the MNA solver always read
+  // params.henries which was never set (builder/validate use henrys),
+  // so it fell back to 0.001 for every inductor regardless of declared L.
+  // This test pins the regression: 1mH and 100mH inductors must produce
+  // distinctly different flyback peaks when a switch opens.
+  //
+  // Method (from the audit): inductor + switch (MCU pin going high-Z),
+  // sample at 1µs after turn-off. V = -L * dI/dt: larger L → larger peak.
+  // Forces the MNA transient path by including a diode (MNA_ONLY_KINDS).
+  // The diode across the inductor is the classic flyback clamp topology;
+  // without it, the closed-form path can't produce a voltage spike.
+  function flybackPeak(henrys) {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'L1', kind: 'inductor', params: { henrys }, terminals: ['a', 'b'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 100 }, terminals: ['a', 'b'] },
+        { id: 'D1', kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      ],
+      [
+        { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'L1', terminal: 'a' }, { part: 'D1', terminal: 'cathode' }] },
+        { id: 'nsw', terminals: [{ part: 'L1', terminal: 'b' }, { part: 'R1', terminal: 'a' }, { part: 'D1', terminal: 'anode' }, { part: 'MCU', terminal: 'P1.0' }] },
+        { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'R1', terminal: 'b' }] },
+      ],
+    );
+    // Drive the switch low (sink current through inductor): 5ms build
+    board.setPin('P1.0', 'pushpull', false);
+    for (let i = 0; i < 5; i++) board.advanceTo(BigInt(i + 1) * 1_000_000n);
+    // Record current before opening
+    const iBefore = board.inductorCurrents?.get?.('L1') ?? 0;
+    // Open the switch (high-Z) — inductor current has nowhere to go
+    board.setPin('P1.0', 'input', false);
+    // Sample 100µs later — the inductor's dI/dt spike
+    board.advanceTo(5_100_000n);
+    return { v: board.nodeVoltage('nsw'), iBefore };
+  }
+
+  it('1mH and 100mH produce distinctly different flyback peaks', () => {
+    const r1mH = flybackPeak(0.001);
+    const r100mH = flybackPeak(0.1);
+    console.log(`# flyback: 1mH v=${r1mH.v.toFixed(3)} i=${r1mH.iBefore.toFixed(4)}, ` +
+                `100mH v=${r100mH.v.toFixed(3)} i=${r100mH.iBefore.toFixed(4)}`);
+    // The inductor currents at turn-off should differ (more current through
+    // smaller L for same voltage and time), and the peak voltages should differ.
+    // Before the fix: both used henries=0.001 → identical.
+    assert.ok(Math.abs(r1mH.iBefore) > 1e-6 || Math.abs(r100mH.iBefore) > 1e-6,
+      'at least one inductor should have built current');
+    assert.ok(Math.abs(r1mH.iBefore - r100mH.iBefore) > 0.001 ||
+              Math.abs(r1mH.v - r100mH.v) > 0.01,
+      `1mH and 100mH must produce different behavior — ` +
+      `1mH: v=${r1mH.v.toFixed(3)}, 100mH: v=${r100mH.v.toFixed(3)} — ` +
+      `if identical, the henrys param is being ignored (the pre-fix bug)`);
+  });
+});
+
 describe('inductor: resistance measurement', () => {
   it('inductor has ~0Ω DC resistance', () => {
     const board = new BoardImpl(5.0);

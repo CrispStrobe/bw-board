@@ -1,17 +1,28 @@
 /**
- * DC motor — back-EMF + winding R, speed state integrated in advanceTo.
+ * DC motor — back-EMF + winding R + optional series inductance,
+ * speed state integrated in advanceTo.
  *
- * Electrical: V = I * R_winding + kV * omega
+ * Electrical: V = I * R_winding + L * dI/dt + kV * omega
  * Mechanical: torque = kT * I - loadTorque, alpha = torque / J
  *
  * The motor appears as a resistor (R_winding) in series with a voltage
  * source (kV * omega). As a stamp: Thévenin on one terminal relative to
  * the other — vTh = kV * omega, rTh = R_winding.
  *
+ * params.R is accepted as alias for params.windingR — several gallery
+ * circuits declared R and it was silently discarded (both mapped to 10,
+ * masking the bug).  params.windingH adds series inductance (default
+ * 0.005 = 5 mH, a realistic small motor).
+ *
  * @module
  */
 
 import { registerDevice } from '../devices.js';
+
+/** Read winding resistance: accept R as alias for windingR */
+function getR(part) {
+  return part.params?.windingR ?? part.params?.R ?? 10;
+}
 
 /**
  * Register the DC motor device model.
@@ -24,13 +35,15 @@ export function registerDCMotor() {
       return {
         drives: {},
         omega: 0,    // angular velocity (rad/s)
+        current: 0,  // winding current for inductance model
         _lastTNs: 0n,
       };
     },
 
     stamp(ctx, part, state) {
-      const R = part.params?.windingR ?? 10;
+      const R = getR(part);
       const kV = part.params?.kV ?? 0.01;
+      const L = part.params?.windingH ?? 0.005;
 
       // Motor as Thévenin: back-EMF voltage source (kV * omega) in series
       // with winding resistance. Between terminals a and b.
@@ -45,10 +58,23 @@ export function registerDCMotor() {
         ctx.current('a', -backEMF / R);
         ctx.current('b', backEMF / R);
       }
+
+      // Series inductance: backward-Euler companion model adds a
+      // conductance dt/L and a Norton current source of the previous
+      // current. Only active during transient sub-steps (dtSec present).
+      if (L > 0 && ctx.dtSec) {
+        const gL = ctx.dtSec / Math.max(L, 1e-12);
+        ctx.conductance('a', 'b', gL);
+        // Norton source from previous inductor current
+        if (Math.abs(state.current) > 1e-12) {
+          ctx.current('a', -state.current);
+          ctx.current('b', state.current);
+        }
+      }
     },
 
     update(part, state, read, tNs) {
-      const R = part.params?.windingR ?? 10;
+      const R = getR(part);
       const kV = part.params?.kV ?? 0.01;
       const kT = part.params?.kT ?? kV; // ideal motor: kT = kV
       const J = part.params?.J ?? 0.001;
@@ -67,6 +93,7 @@ export function registerDCMotor() {
       const vA = read('a');
       const vB = read('b');
       const current = (vA - vB - kV * state.omega) / R;
+      state.current = current;
 
       // Mechanical dynamics
       const torque = kT * current - loadTorque;
