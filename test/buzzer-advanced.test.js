@@ -68,11 +68,16 @@ describe('buzzer: silence after stopping', () => {
     board.setPin('P1.5', 'pushpull', true);
     board.advanceTo(1_000_000n);
 
+    // SEMANTIC CHANGE 2026-08-15 (audit E2): an ACTIVE buzzer has a
+    // built-in oscillator — steady DC across it IS sound. A single
+    // edge that leaves the pin HIGH therefore leaves the buzzer ON at
+    // its rated tone; the old assertion encoded the bug.
     const tone = board.buzzerTone('BUZZ');
-    assert.equal(tone.on, false, 'single edge should not produce tone');
+    assert.equal(tone.on, true, 'pin left high = DC across an active buzzer = sound');
+    assert.equal(tone.hz, 2400, 'rated tone, not a measured toggle frequency');
   });
 
-  it('steady high → no sound', () => {
+  it('steady high → the RATED tone (active buzzer on DC)', () => {
     const board = new BoardImpl(5.0);
     const { parts, nets } = makeBuzzerCircuit();
     board.setNetlist(parts, nets);
@@ -81,7 +86,8 @@ describe('buzzer: silence after stopping', () => {
     board.advanceTo(10_000_000n);
 
     const tone = board.buzzerTone('BUZZ');
-    assert.equal(tone.on, false, 'steady high = no toggle = no sound');
+    assert.equal(tone.on, true, 'steady DC sounds the built-in oscillator');
+    assert.equal(tone.hz, 2400);
   });
 
   it('steady low → no sound', () => {
