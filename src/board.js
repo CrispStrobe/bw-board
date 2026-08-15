@@ -368,7 +368,7 @@ export class BoardImpl {
     // correct time, not just at the destination. Without this, a relay with
     // a 5ms deadline jumped 0→100ms would only see 100ms, and an encoder
     // would undercount edges by the entire interval.
-    if (hasDevices && this.powered) {
+    if (hasDevices && (this.powered || this._hasReactive())) {
       const MAX_DEVICE_SUBSTEPS = 200;
       let steps = 0;
       let cursor = prevNs;
@@ -386,9 +386,13 @@ export class BoardImpl {
         if (dtSec > 0) {
           if (this._needsMNA() && (this._hasReactive() || this._hasTimeVaryingSource())) {
             this._integrateTransientMNA(dtSec);
-          } else {
+          } else if (this.powered) {
             this._integrateCapacitors(dtSec);
             this._integrateInductors(dtSec);
+          } else {
+            // Power off with stored energy: same rule as the fast path —
+            // the discharge is solved against the dead network.
+            this._integrateTransientMNA(dtSec);
           }
         }
 

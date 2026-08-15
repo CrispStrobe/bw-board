@@ -131,3 +131,42 @@ describe('composite expansion + buzzer DC (last audit escalations)', () => {
     assert.equal(b.buzzerTone('bz').on, false, 'power off silences it');
   });
 });
+
+describe('power-off discharge with devices on the board (substep path)', () => {
+  it('a charged cap still discharges at tau when a device forces substepping', () => {
+    // Same RC as above PLUS a 555 — its device state forces the
+    // device-substep path in advanceTo, which used to skip power-off
+    // integration entirely (the gate read `hasDevices && this.powered`),
+    // freezing stored charge the moment a device shared the board.
+    const parts = [
+      { id: 'v1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'r1', kind: 'resistor', params: { ohms: 100 }, terminals: ['a', 'b'] },
+      { id: 'c1', kind: 'capacitor', params: { farads: 0.001 }, terminals: ['a', 'b'] },
+      { id: 'rb', kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] },
+      { id: 't1', kind: '555', params: {},
+        terminals: ['gnd', 'trigger', 'output', 'reset', 'control', 'threshold', 'discharge', 'vcc'] },
+    ];
+    const nets = [
+      { id: 'n_v', terminals: [{ part: 'v1', terminal: 'vcc' }, { part: 'r1', terminal: 'a' }, { part: 't1', terminal: 'vcc' }] },
+      { id: 'n_c', terminals: [{ part: 'r1', terminal: 'b' }, { part: 'c1', terminal: 'a' }, { part: 'rb', terminal: 'a' }] },
+      { id: 'n_g', terminals: [{ part: 'g1', terminal: 'gnd' }, { part: 'c1', terminal: 'b' }, { part: 'rb', terminal: 'b' }, { part: 't1', terminal: 'gnd' }] },
+    ];
+    const b = new BoardImpl(5.0);
+    b.setNetlist(parts, nets);
+    // Tick-wise like a real session (MCU boards advance in ms steps);
+    // a single multi-second jump is bounded by the documented 200-substep
+    // accuracy cap and is not what sessions do.
+    for (let t = 100n; t <= 2000n; t += 100n) b.advanceTo(t * 1_000_000n);
+    const v0 = b.capVoltages.get('c1');
+    assert.ok(v0 > 4.5, `charged, got ${v0}`);
+    b.setPower(false);
+    for (let t = 2100n; t <= 6700n; t += 100n) b.advanceTo(t * 1_000_000n);
+    const v1 = b.capVoltages.get('c1');
+    // The dead 555's supply pin is itself a load through r1, so the
+    // discharge runs FASTER than the bleeder-only tau — before the fix
+    // the substep path froze the charge entirely (v1 === v0).
+    assert.ok(v1 < v0 / Math.E, `discharging faster than bleeder-only tau, got ${v1}`);
+    assert.ok(v1 > 0.1, `a real exponential, not an instant zero: ${v1}`);
+  });
+});
