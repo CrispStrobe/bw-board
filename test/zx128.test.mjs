@@ -185,3 +185,47 @@ test('128 BASIC key-click drives the AY chip', async (t) => {
     });
     assert.ok(anyWritten, `AY registers should be touched by the 128 ROM (regs: [${ayRegs}])`);
 });
+
+test('tron-on-128K: a 48K game runs on the banked machine in 48K mode', async (t) => {
+    const { readFileSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { homedir } = await import('node:os');
+    const { zxScreenText } = await import('../src/zx-ula.js');
+    const { ZXTape } = await import('../src/zx-tape.js');
+
+    const romPath = process.env.ZX_ROM || join(homedir(), 'code', 'zxs-rom', '48.ROM');
+    const tapPath = join(homedir(), 'code', 'tron-0xf', 'tron_0xf.compilable.tap');
+    if (!existsSync(romPath)) { t.skip('48.ROM not present'); return; }
+    if (!existsSync(tapPath)) { t.skip('tron TAP not present'); return; }
+
+    const rom = readFileSync(romPath);
+    const tap = readFileSync(tapPath);
+
+    // The 128K-in-48K-mode pattern: ROM 1 (48 BASIC) + lock.
+    const m = new Z80Machine({ clockHz: 3_546_900, zx128: true }, {});
+    m.loadRom128(1, rom);
+    m._bank.locked = 0;
+    m._setBank(0x30); // ROM 1 + lock
+    m.cpu.pc = 0;
+    m.insertTape(tap);
+
+    // Boot to BASIC prompt (~4.2s emulated)
+    m.advanceToMs(4200);
+    const font = m.roms[1].subarray(0x3d00, 0x4000);
+    const bootText = zxScreenText(m.mem, { font }).filter(Boolean).join('|');
+    assert.ok(/1982/.test(bootText),
+        `48K BASIC boots on the 128K bus: ${JSON.stringify(bootText)}`);
+
+    // Type LOAD ""
+    const press = (keys) => {
+        m.ula.setKeys(keys); m.advanceToMs(m.tMs + 120);
+        m.ula.setKeys([]); m.advanceToMs(m.tMs + 120);
+    };
+    press(['j']); press(['sym', 'p']); press(['sym', 'p']); press(['enter']);
+    m.advanceToMs(m.tMs + 30000);
+
+    const afterLoad = zxScreenText(m.mem, { font }).filter(Boolean).join('|');
+    assert.notEqual(afterLoad, bootText,
+        'the tape loaded content onto the 128K machine in 48K mode');
+    assert.ok(m.tape.pos > 0, `tape blocks were consumed (pos=${m.tape.pos})`);
+});
