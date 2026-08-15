@@ -452,7 +452,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           if (transient) {
             // Backward-Euler companion: i(t+dt) = i(t) + (dt/L)·v(t+dt)
             // → conductance dt/L in parallel with a Norton source of i(t).
-            const L = /** @type {number} */ (part.params.henries ?? 0.001);
+            const L = /** @type {number} */ (part.params.henrys ?? part.params.henries ?? 0.001);
             const g = transient.dtSec / Math.max(L, 1e-12);
             const iPrev = transient.inductorCurrents.get(part.id) ?? 0;
             const netA = findNet(nets, part.id, 'a');
@@ -883,7 +883,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
       let i;
       if (transient) {
-        const L = /** @type {number} */ (part.params.henries ?? 0.001);
+        const L = /** @type {number} */ (part.params.henrys ?? part.params.henries ?? 0.001);
         const iPrev = transient.inductorCurrents.get(part.id) ?? 0;
         i = iPrev + (transient.dtSec / Math.max(L, 1e-12)) * (vA - vB);
       } else {
