@@ -118,3 +118,56 @@ test('a permuted address bus refuses rather than scrambling bytes', () => {
     assert.equal(r.ok, false);
     assert.match(r.reasons.join(';'), /rom1\.a0.*straight/);
 });
+
+test('a TMS9918 wired on the bus extracts as a vdp chip', () => {
+    // The eater decode with the ACIA swapped for a TMS9918: both strobes
+    // ride the same select net (glue2.3y, low over $4000-$5FFF), MODE
+    // rides A0. The window mirrors coarsely — noted, not refused.
+    const c = eaterCircuit();
+    c.parts = c.parts.filter((p) => p.id !== 'acia1').concat({ id: 'vdp1', kind: 'tms9918' });
+    c.wires = c.wires.filter((w) => w.from !== 'acia1' && w.to !== 'acia1');
+    const w = (from, ft, to, tt) => c.wires.push({ from, fromTerminal: ft, to, toTerminal: tt });
+    w('glue2', '3y', 'vdp1', 'csrb');
+    w('glue2', '3y', 'vdp1', 'cswb');
+    w('cpu1', 'a0', 'vdp1', 'mode');
+    const r = extract6502Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    const vdp = r.chips.find((x) => x.kind === 'vdp');
+    assert.ok(vdp, 'vdp extracted');
+    assert.equal(vdp.at, 0x4000);
+    assert.ok(r.lines.some((l) => /TMS9918 AT \$4000/.test(l)), r.lines.join('; '));
+});
+
+test('tilevga ribbon card: free window extracts, colliding window refuses by address', () => {
+    // Refusal first: on the full eater decode, a $4000 window runs into
+    // the ACIA's select at $5000 — named, like every other contention.
+    const clash = eaterCircuit();
+    clash.parts.push({ id: 'vga1', kind: 'tilevga', params: { at: 0x4000 } });
+    clash.wires.push({ from: 'vga1', fromTerminal: 'bus', to: 'cpu1', toTerminal: 'a0' });
+    let r = extract6502Machine(clash);
+    assert.equal(r.ok, false);
+    assert.ok(r.reasons[0].includes('$5000') && r.reasons[0].includes('acia1'), r.reasons.join('; '));
+
+    // Pass: strip the VIA/ACIA decode so $4000-$7FFF is open bus, and
+    // the card claims it.
+    const free = eaterCircuit();
+    const gone = new Set(['via1', 'acia1', 'glue2']);
+    free.parts = free.parts.filter((p) => !gone.has(p.id));
+    free.wires = free.wires.filter((w) => !gone.has(w.from) && !gone.has(w.to));
+    free.parts.push({ id: 'vga1', kind: 'tilevga', params: { at: 0x4000 } });
+    free.wires.push({ from: 'vga1', fromTerminal: 'bus', to: 'cpu1', toTerminal: 'a0' });
+    r = extract6502Machine(free);
+    assert.ok(r.ok, r.reasons.join('; '));
+    assert.deepEqual(r.chips, [{ kind: 'tilevga', name: 'vga1', at: 0x4000 }]);
+    assert.ok(r.lines.some((l) => /TILEVGA AT \$4000/.test(l)));
+
+    // And an unwired ribbon is a named refusal, not a silent no-card.
+    const loose = eaterCircuit();
+    const gone2 = new Set(['via1', 'acia1', 'glue2']);
+    loose.parts = loose.parts.filter((p) => !gone2.has(p.id));
+    loose.wires = loose.wires.filter((w) => !gone2.has(w.from) && !gone2.has(w.to));
+    loose.parts.push({ id: 'vga1', kind: 'tilevga', params: { at: 0x4000 } });
+    r = extract6502Machine(loose);
+    assert.equal(r.ok, false);
+    assert.ok(r.reasons[0].includes('ribbon'), r.reasons.join('; '));
+});

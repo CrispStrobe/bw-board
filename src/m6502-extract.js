@@ -29,8 +29,14 @@ const SELECT = {
     '28c256': { kind: 'rom', low: ['ceb'] },
     w65c22: { kind: 'via', high: ['cs1'], low: ['cs2b'] },
     w65c51: { kind: 'acia', high: ['cs0'], low: ['cs1b'] },
+    // TMS9918A: both strobes must decode low in one window. v1 contract,
+    // stated: wire /CSR and /CSW from the SELECT side of the glue only —
+    // the R/W / phi2 gating a real board adds is timing, and this
+    // extractor models the address domain (same bound as RWB above).
+    tms9918: { kind: 'vdp', low: ['csrb', 'cswb'] },
 };
-const RS_PINS = { via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'] };
+const RS_PINS = { via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'] };
+const CHIP_DECL = { via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA' };
 
 /**
  * @param {{parts: Array<{id: string, kind: string}>, wires: Array<{from: string, fromTerminal: string, to: string, toTerminal: string}>}} circuit
@@ -197,10 +203,43 @@ export function extract6502Machine(circuit) {
             const rs = RS_PINS[c.kind];
             const bad = straight(c.part.id, rs, rs.map((_, i) => i));
             if (bad) { reasons.push(`${c.part.id}.${bad} must ride A${rs.indexOf(bad)} — register selects are the low address lines`); continue; }
-            const span = c.kind === 'via' ? 16 : 4;
+            const span = c.kind === 'via' ? 16 : c.kind === 'vdp' ? 2 : 4;
             if (r.count > span) notes.push(`${c.part.id} mirrors through ${hx(r.lo)}-${hx(r.hi)} (decoded coarsely); its registers sit at ${hx(r.lo)}`);
             chips.push({ kind: c.kind, name: c.part.id, at: r.lo });
         }
+    }
+    if (reasons.length) return { ok: false, notes, reasons };
+
+    // ---- tilevga: the ribbon card, not a decoded chip -------------------
+    // rene6502's card arrives on the expansion ribbon and claims a fixed
+    // 16K window (the real cent1 pulls the RAM and gives it $0000-$3FFF).
+    // The sidecar models that: one abstract `bus` terminal, the window
+    // base in params.at. Extraction checks the ribbon is actually
+    // connected and that the window collides with nothing already decoded.
+    for (const p of parts) {
+        if (p.kind !== 'tilevga') continue;
+        const ribbon = wires.some((w) =>
+            (w.from === p.id && String(w.fromTerminal).toLowerCase() === 'bus' && w.to === cpu.id)
+            || (w.to === p.id && String(w.toTerminal).toLowerCase() === 'bus' && w.from === cpu.id));
+        if (!ribbon) {
+            reasons.push(`${p.id}.bus is not wired to ${cpu.id} — the card rides the CPU bus ribbon`);
+            continue;
+        }
+        const at = (p.params && p.params.at != null) ? Number(p.params.at) : 0x4000;
+        const end = at + 0x3fff;
+        if (at < 0 || end > 0xffff || (at & 0x3fff) !== 0) {
+            reasons.push(`${p.id}: window base ${hx(at)} must be 16K-aligned inside the address space`);
+            continue;
+        }
+        let clash = null;
+        for (let a = at; a <= end && !clash; a++) {
+            for (const c of selChips) if (c.selected[a]) { clash = { a, id: c.part.id }; break; }
+        }
+        if (clash) {
+            reasons.push(`bus contention at ${hx(clash.a)}: ${p.id}'s VRAM window overlaps ${clash.id} — move the window (params.at) or shrink the decode`);
+            continue;
+        }
+        chips.push({ kind: 'tilevga', name: p.id, at });
     }
     if (reasons.length) return { ok: false, notes, reasons };
 
@@ -219,7 +258,7 @@ export function extract6502Machine(circuit) {
 
     const lines = [
         ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
-        ...chips.map((c) => `CHIP ${c.name} = ${c.kind === 'via' ? 'W65C22' : 'W65C51'} AT ${hx(c.at)}`),
+        ...chips.map((c) => `CHIP ${c.name} = ${CHIP_DECL[c.kind]} AT ${hx(c.at)}`),
     ];
     return {
         ok: true,
