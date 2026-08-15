@@ -1,8 +1,14 @@
 # bw-board handoff — 2026-08-15
 
-**1784 tests, 0 failures (12 skips).** All pushed to master and main.
+**1820 tests, 0 failures.** All pushed to master and main.
 
-## Completed this session (session 8)
+## Completed this session (session 10)
+
+- **Debug parity: AVR + RP2040** (`src/avr8js-debug.js`, `src/rp2040js-debug.js`): step-over/out + TRUE write watchpoints mirroring the 6502/Z80 targets. AVR: RCALL/CALL/ICALL call detection, SP-depth wait. RP2040: Thumb BL detection, return-address breakpoint (ARM BL doesn't touch SP). Write watchpoints via cpu.writeHooks (AVR) and rp2040.writeUint8/16/32 wrap (RP2040). 8 parity tests.
+- **M6502Machine saveState/loadState** (`src/m6502-machine.js`): CPU registers, cycles, full memory, chip state. W65C22 VIA, TMS9918 VDP, TileVGA hooks. Round-trip lockstep test (20+10 insns matches 30 from fresh). 3 tests.
+- **Z80 ACIA + CTC saveState hooks** (`src/mc6850.js`, `src/z80-ctc.js`): MC6850 rx/control/overrun/IRQ state. Z80CTC vector + per-channel timer state. Lockstep round-trip tests. 3 tests.
+
+## Completed previously (session 8-9)
 
 - **TWI/SPI transaction bridge** (`src/twi-bridge.js`, `src/spi-bridge.js`, `src/avr8js-adapter.js`): AVRTWI + AVRSPI instantiated for ATmega328P/ATmega2560. TWI bridge routes hardware Wire transactions to the same I2C handler objects the bit-bang engine uses — one behavior, two transports. AT24C02/DS3231/MPU6050/SSD1306 refactored to expose `state.i2cHandlers`. `BoardImpl.getI2CHandlers()` discovers them. Validated with compiled Arduino sketches: RTClib (hour=12/min=30/sec=0), i2cdevlib MPU6050 (az=16384 for flat), Adafruit SSD1306 (64 lit pixels). 11 tests.
 - **ILI9341 v2** (`src/devices/ili9341.js`): display inversion (0x20/0x21), vertical scroll (VSCRDEF+VSCRSADD), MADCTL BGR bit in ili9341Rgba, RAMRD 0x2E with dummy-byte rule, 17 power/gamma vendor opcodes as named no-ops clearing unknown[]. 5 new oracle tests, Adafruit fixture stays green.
