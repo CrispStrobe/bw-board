@@ -66,10 +66,44 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
   let insnRemaining = null;
   /** True while a step('block') runs to the next yield address. */
   let blockStep = false;
+  /** Step-over/out state: { kind: 'over'|'out', sp0, entered? } */
+  let depthStep = null;
   /** PC we just halted at: one instruction of grace on resume, or a
    *  breakpoint would re-fire forever without ever executing. */
   let resumeGuard = null;
   let listeners = [];
+
+  // ─── write watchpoints ──────────────────────────────────────────────
+  // rp2040js has no per-address hooks; we wrap rp2040.writeUint8/16/32
+  // to intercept stores to watched addresses. The wrap is installed only
+  // while at least one watch exists.
+  const writeWatches = new Map(); // id → { addr, len }
+  let watchHit = null;
+  let origWrite8 = null, origWrite16 = null, origWrite32 = null;
+
+  function checkWatch(addr, value, size) {
+    for (const [id, w] of writeWatches) {
+      if (addr + size > w.addr && addr < w.addr + w.len) {
+        watchHit = { bp: id, addr, value: value & 0xff };
+      }
+    }
+  }
+
+  function syncWriteTrap() {
+    if (writeWatches.size && !origWrite8) {
+      origWrite8 = rp2040.writeUint8.bind(rp2040);
+      origWrite16 = rp2040.writeUint16.bind(rp2040);
+      origWrite32 = rp2040.writeUint32.bind(rp2040);
+      rp2040.writeUint8 = (a, v) => { checkWatch(a, v, 1); return origWrite8(a, v); };
+      rp2040.writeUint16 = (a, v) => { checkWatch(a, v, 2); return origWrite16(a, v); };
+      rp2040.writeUint32 = (a, v) => { checkWatch(a, v, 4); return origWrite32(a, v); };
+    } else if (!writeWatches.size && origWrite8) {
+      rp2040.writeUint8 = origWrite8;
+      rp2040.writeUint16 = origWrite16;
+      rp2040.writeUint32 = origWrite32;
+      origWrite8 = origWrite16 = origWrite32 = null;
+    }
+  }
 
   // ─── breakpoints ────────────────────────────────────────────────────
   let nextHandle = 1;
@@ -129,6 +163,16 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
     return out;
   }
 
+  /** Is the Thumb instruction at `pc` a BL (branch-with-link, the call)? */
+  function isCallOpcode(pc) {
+    // BL is a 32-bit Thumb instruction: first halfword 11110xxxxxxxxxxx
+    const hw1 = rp2040.readUint16(pc);
+    if ((hw1 & 0xf800) !== 0xf000) return false;
+    const hw2 = rp2040.readUint16(pc + 2);
+    // Second halfword: 11x1xxxxxxxxxxx (BL, not BLX which is 11x0...)
+    return (hw2 & 0xd000) === 0xd000;
+  }
+
   // ─── the run loop core ──────────────────────────────────────────────
 
   function announce(cause, hit) {
@@ -182,6 +226,44 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       clock.tick(cycles * cycleNanos);
       resumeGuard = null; // one instruction executed: breakpoints re-arm
 
+      // Write watchpoint fired during the instruction
+      if (watchHit) {
+        const hit = watchHit;
+        watchHit = null;
+        running = false;
+        insnRemaining = null;
+        blockStep = false;
+        depthStep = null;
+        resumeGuard = core.PC & ~1;
+        syncBoard();
+        for (const cb of listeners) cb({
+          cause: 'watchpoint', bp: hit.bp, addr: hit.addr, value: hit.value,
+          pc: core.PC & ~1, tNs: adapter.timeNs(), skewNs: 0n,
+        });
+        return 'halted';
+      }
+
+      // Step-over/out tracking
+      if (depthStep) {
+        const curPc = core.PC & ~1;
+        if (depthStep.kind === 'over') {
+          // ARM step-over: halt when PC reaches the return site
+          if (curPc === depthStep.returnPc) {
+            running = false; depthStep = null;
+            resumeGuard = curPc;
+            syncBoard(); announce('step');
+            return 'halted';
+          }
+        } else if (depthStep.kind === 'out') {
+          if (core.SP > depthStep.sp0) {
+            running = false; depthStep = null;
+            resumeGuard = curPc;
+            syncBoard(); announce('step');
+            return 'halted';
+          }
+        }
+      }
+
       if (insnRemaining !== null && --insnRemaining <= 0) {
         running = false;
         insnRemaining = null;
@@ -208,12 +290,8 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
   const target = {
     capabilities() {
       return {
-        // 'over'/'out' need call-depth tracking; declared absent rather
-        // than pretended (the capability matrix exists for exactly this).
-        steps: ['insn', 'block'],
-        breakpoints: ['code', 'yield'],
-        // ARM has ONE flat address space; these are named windows onto it
-        // (addresses are absolute in both).
+        steps: ['insn', 'block', 'over', 'out'],
+        breakpoints: ['code', 'yield', 'write'],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped',
@@ -231,6 +309,7 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
     run() {
       insnRemaining = null;
       blockStep = false;
+      depthStep = null;
       running = true;
     },
 
@@ -239,6 +318,7 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       running = false;
       insnRemaining = null;
       blockStep = false;
+      depthStep = null;
       syncBoard();
       announce('pause');
     },
@@ -247,6 +327,7 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       if (kind === 'insn') {
         insnRemaining = count;
         blockStep = false;
+        depthStep = null;
         running = true;
         return undefined;
       }
@@ -258,6 +339,37 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
         }
         blockStep = true;
         insnRemaining = null;
+        depthStep = null;
+        running = true;
+        return undefined;
+      }
+      if (kind === 'over') {
+        const pc = core.PC & ~1;
+        if (!isCallOpcode(pc)) {
+          insnRemaining = 1;
+          blockStep = false;
+          depthStep = null;
+          running = true;
+          return undefined;
+        }
+        // ARM BL is 4 bytes (32-bit Thumb); the return address is PC+4.
+        // Use a temporary code breakpoint at the return site — ARM BL
+        // doesn't modify SP (it saves to LR), so the SP-depth heuristic
+        // that works for 6502/Z80/AVR doesn't apply here.
+        depthStep = { kind: 'over', returnPc: pc + 4 };
+        insnRemaining = null;
+        blockStep = false;
+        running = true;
+        return undefined;
+      }
+      if (kind === 'out') {
+        // Run until SP rises above its current level (a POP {PC} or
+        // epilogue restoring LR then BX LR). For leaf functions that
+        // never touched SP this waits forever — a stated limitation,
+        // same as the AVR and 6502 targets.
+        depthStep = { kind: 'out', sp0: core.SP };
+        insnRemaining = null;
+        blockStep = false;
         running = true;
         return undefined;
       }
@@ -290,6 +402,14 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
         bpAt.set(addr, handle);
         return handle;
       }
+      if (bp.kind === 'write') {
+        if (typeof bp.addr !== 'number') return { unsupported: 'write watchpoint needs addr' };
+        const handle = nextHandle++;
+        bps.set(handle, { kind: 'write', addr: bp.addr });
+        writeWatches.set(handle, { addr: bp.addr, len: bp.len ?? 1 });
+        syncWriteTrap();
+        return handle;
+      }
       return { unsupported: `no such breakpoint kind: ${bp.kind}` };
     },
 
@@ -297,6 +417,7 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       const bp = bps.get(handle);
       if (!bp) return;
       bps.delete(handle);
+      if (writeWatches.delete(handle)) syncWriteTrap();
       bpAt.clear();
       for (const [h, b] of bps) bpAt.set(b.addr, h);
     },
@@ -337,13 +458,13 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
     },
 
     reset() {
-      // NOT core.reset() bare: that fetches PC from a vector table this
-      // no-bootrom setup does not have (see the adapter's resetToProgram).
       adapter.resetToProgram();
       running = false;
       insnRemaining = null;
       blockStep = false;
+      depthStep = null;
       resumeGuard = null;
+      watchHit = null;
       syncBoard();
     },
 

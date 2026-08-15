@@ -44,8 +44,8 @@ function make(program, symbols) {
 test('capabilities: declares what it has, not what it wishes', () => {
   const { target } = make(BLINK);
   const caps = target.capabilities();
-  assert.deepEqual(caps.steps, ['insn', 'block']);
-  assert.deepEqual(caps.breakpoints, ['code', 'yield']);
+  assert.deepEqual(caps.steps, ['insn', 'block', 'over', 'out']);
+  assert.deepEqual(caps.breakpoints, ['code', 'yield', 'write']);
   assert.equal(caps.timeFreezes, true);
   assert.deepEqual(caps.consumes, []);
 });

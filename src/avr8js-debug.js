@@ -72,10 +72,49 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
   let insnRemaining = null;
   /** True while a step('block') runs to the next yield address. */
   let blockStep = false;
+  /** Step-over/out state: { kind: 'over'|'out', sp0, entered? } */
+  let depthStep = null;
   /** Byte PC we just halted at: one instruction of grace on resume, or a
    *  breakpoint would re-fire forever without ever executing. */
   let resumeGuard = null;
   let listeners = [];
+
+  // ─── write watchpoints ──────────────────────────────────────────────
+  // avr8js exposes cpu.writeHooks[addr] — a per-address callback that
+  // intercepts cpu.writeData(). We install a thin hook for each watched
+  // address; on fire it records the hit and lets the write through.
+  const writeWatches = new Map(); // id → { addr, len }
+  let watchHit = null;
+  const installedHooks = new Map(); // addr → original hook (or null)
+
+  function syncWriteHooks() {
+    // Collect all watched addresses
+    const needed = new Set();
+    for (const [, w] of writeWatches) {
+      for (let a = w.addr; a < w.addr + w.len; a++) needed.add(a);
+    }
+    // Install hooks for new addresses
+    for (const a of needed) {
+      if (installedHooks.has(a)) continue;
+      const orig = cpu.writeHooks[a] || null;
+      installedHooks.set(a, orig);
+      cpu.writeHooks[a] = (value, oldValue, addr, mask) => {
+        for (const [id, w] of writeWatches) {
+          if (addr >= w.addr && addr < w.addr + w.len) {
+            watchHit = { bp: id, addr, value: value & 0xff };
+          }
+        }
+        return orig ? orig(value, oldValue, addr, mask) : false;
+      };
+    }
+    // Remove hooks for addresses no longer watched
+    for (const [a, orig] of installedHooks) {
+      if (!needed.has(a)) {
+        cpu.writeHooks[a] = orig;
+        installedHooks.delete(a);
+      }
+    }
+  }
 
   // ─── breakpoints ────────────────────────────────────────────────────
   let nextHandle = 1;
@@ -135,6 +174,19 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
     return out;
   }
 
+  /** AVR SP from the SPH:SPL registers (data[0x5E]:data[0x5D]). */
+  function readSP() { return cpu.data[0x5d] | (cpu.data[0x5e] << 8); }
+
+  /** Is the AVR opcode at word-address `wpc` a call-class instruction?
+   *  CALL (0x940E/0x940F), RCALL (0xDxxx), ICALL (0x9509), EICALL (0x9519). */
+  function isCallOpcode(wpc) {
+    const op = cpu.progMem[wpc] ?? 0;
+    if ((op & 0xf000) === 0xd000) return true;            // RCALL
+    if ((op & 0xfe0e) === 0x940e) return true;             // CALL (32-bit)
+    if (op === 0x9509 || op === 0x9519) return true;       // ICALL / EICALL
+    return false;
+  }
+
   // ─── the run loop core ──────────────────────────────────────────────
 
   function announce(cause, hit) {
@@ -177,6 +229,44 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       cpu.tick();
       resumeGuard = null; // one instruction executed: breakpoints re-arm
 
+      // Write watchpoint fired during the instruction
+      if (watchHit) {
+        const hit = watchHit;
+        watchHit = null;
+        running = false;
+        insnRemaining = null;
+        blockStep = false;
+        depthStep = null;
+        resumeGuard = cpu.pc * 2;
+        syncBoard();
+        announce('watchpoint', { handle: hit.bp, kind: 'write' });
+        for (const cb of listeners) cb({
+          cause: 'watchpoint', bp: hit.bp, addr: hit.addr, value: hit.value,
+          pc: cpu.pc * 2, tNs: adapter.timeNs(), skewNs: 0n,
+        });
+        return 'halted';
+      }
+
+      // Step-over: after entering the call, wait for SP to recover
+      if (depthStep) {
+        if (depthStep.kind === 'over') {
+          if (!depthStep.entered) depthStep.entered = true;
+          else if (readSP() >= depthStep.sp0) {
+            running = false; depthStep = null;
+            resumeGuard = cpu.pc * 2;
+            syncBoard(); announce('step');
+            return 'halted';
+          }
+        } else if (depthStep.kind === 'out') {
+          if (readSP() > depthStep.sp0) {
+            running = false; depthStep = null;
+            resumeGuard = cpu.pc * 2;
+            syncBoard(); announce('step');
+            return 'halted';
+          }
+        }
+      }
+
       if (insnRemaining !== null && --insnRemaining <= 0) {
         running = false;
         insnRemaining = null;
@@ -201,10 +291,8 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
   const target = {
     capabilities() {
       return {
-        // 'over'/'out' need call-depth tracking; declared absent rather
-        // than pretended (the capability matrix exists for exactly this).
-        steps: ['insn', 'block'],
-        breakpoints: ['code', 'yield'],
+        steps: ['insn', 'block', 'over', 'out'],
+        breakpoints: ['code', 'yield', 'write'],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped', // AVR I/O registers live in the data space
@@ -222,16 +310,16 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
     run() {
       insnRemaining = null;
       blockStep = false;
+      depthStep = null;
       running = true;
     },
 
     halt() {
-      // The loop is synchronous and owned by the caller's runFor slices, so
-      // "halt" is simply: stop being running, tell the listeners why.
       if (!running) return;
       running = false;
       insnRemaining = null;
       blockStep = false;
+      depthStep = null;
       syncBoard();
       announce('pause');
     },
@@ -240,6 +328,7 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       if (kind === 'insn') {
         insnRemaining = count;
         blockStep = false;
+        depthStep = null;
         running = true;
         return undefined;
       }
@@ -251,6 +340,31 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         }
         blockStep = true;
         insnRemaining = null;
+        depthStep = null;
+        running = true;
+        return undefined;
+      }
+      if (kind === 'over') {
+        // Depth-wait only when the NEXT opcode is call-class; anything
+        // else is a plain instruction step — a lone PUSH must not turn
+        // step-over into run-until-someday.
+        if (!isCallOpcode(cpu.pc)) {
+          insnRemaining = 1;
+          blockStep = false;
+          depthStep = null;
+          running = true;
+          return undefined;
+        }
+        depthStep = { kind: 'over', sp0: readSP(), entered: false };
+        insnRemaining = null;
+        blockStep = false;
+        running = true;
+        return undefined;
+      }
+      if (kind === 'out') {
+        depthStep = { kind: 'out', sp0: readSP() };
+        insnRemaining = null;
+        blockStep = false;
         running = true;
         return undefined;
       }
@@ -282,6 +396,14 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         bpAt.set(addr, handle);
         return handle;
       }
+      if (bp.kind === 'write') {
+        if (typeof bp.addr !== 'number') return { unsupported: 'write watchpoint needs addr' };
+        const handle = nextHandle++;
+        bps.set(handle, { kind: 'write', addr: bp.addr });
+        writeWatches.set(handle, { addr: bp.addr, len: bp.len ?? 1 });
+        syncWriteHooks();
+        return handle;
+      }
       return { unsupported: `no such breakpoint kind: ${bp.kind}` };
     },
 
@@ -289,8 +411,7 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       const bp = bps.get(handle);
       if (!bp) return;
       bps.delete(handle);
-      // Another handle may share the address only if set twice; rebuild the
-      // hot map from what remains rather than guessing.
+      if (writeWatches.delete(handle)) syncWriteHooks();
       bpAt.clear();
       for (const [h, b] of bps) bpAt.set(b.addr, h);
     },
@@ -340,7 +461,9 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       running = false;
       insnRemaining = null;
       blockStep = false;
+      depthStep = null;
       resumeGuard = null;
+      watchHit = null;
       syncBoard();
     },
 
