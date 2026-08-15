@@ -1127,11 +1127,13 @@ function stampVoltageSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, v
   const dim = nodeIndex.size;
   const row = dim + vsIdx;
 
-  // Voltage source from ground to vccNet: V(vccNet) - V(gnd) = vcc
-  // V(gnd) = 0, so V(vccNet) = vcc
+  // Voltage source from ground to vccNet: V(vccNet) - V(gnd) = volts
+  // V(gnd) = 0, so V(vccNet) = volts.  Per-part params.volts overrides
+  // the board default so the designer can expose editable rail voltages.
+  const volts = part.params?.volts ?? vcc;
   A.set(row, nodeIdx, 1);
   A.set(nodeIdx, row, 1);
-  b[row] = vcc;
+  b[row] = volts;
 }
 
 /**

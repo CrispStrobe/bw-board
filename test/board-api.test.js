@@ -180,4 +180,30 @@ describe('Board API: powered state', () => {
     board.setPower(true);
     assert.equal(board.nodeVoltage('nv'), 5.0);
   });
+
+  it('vcc part with params.volts overrides board vcc', () => {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [{ id: 'VCC33', kind: 'vcc', params: { volts: 3.3 }, terminals: ['vcc'] },
+       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+       { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+      [{ id: 'rail33', terminals: [{ part: 'VCC33', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },
+       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'R1', terminal: 'b' }] }],
+    );
+    assert.equal(board.nodeVoltage('rail33'), 3.3,
+      'vcc with params.volts=3.3 should solve at 3.3 V, not 5.0');
+  });
+
+  it('vcc part without params.volts defaults to board vcc', () => {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+      [{ id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+       { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }],
+      [{ id: 'rail5', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },
+       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'R1', terminal: 'b' }] }],
+    );
+    assert.equal(board.nodeVoltage('rail5'), 5.0,
+      'vcc without params.volts should default to board vcc');
+  });
 });

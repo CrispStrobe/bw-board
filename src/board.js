@@ -1961,7 +1961,7 @@ export class BoardImpl {
         const part = this.partMap.get(t.part);
         if (!part) continue;
         if (part.kind === 'vcc') {
-          this.nodeVoltages.set(net.id, this.vcc);
+          this.nodeVoltages.set(net.id, part.params?.volts ?? this.vcc);
         } else if (part.kind === 'gnd') {
           this.nodeVoltages.set(net.id, 0);
         }
@@ -2101,7 +2101,7 @@ export class BoardImpl {
 
       switch (part.kind) {
         case 'vcc':
-          out.push({ vTh: this.vcc, rTh: rAccum });
+          out.push({ vTh: part.params?.volts ?? this.vcc, rTh: rAccum });
           break;
         case 'gnd':
           out.push({ vTh: 0, rTh: rAccum });
@@ -2318,7 +2318,7 @@ export class BoardImpl {
 
       switch (part.kind) {
         case 'vcc':
-          return { vTh: this.vcc, rTh: rAccum };
+          return { vTh: part.params?.volts ?? this.vcc, rTh: rAccum };
 
         case 'gnd':
           return { vTh: 0, rTh: rAccum };
