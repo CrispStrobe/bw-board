@@ -151,3 +151,40 @@ export class ZXULA {
 }
 
 export default ZXULA;
+
+/**
+ * Decode the bitmap screen back to text by matching each 8x8 cell
+ * against the ROM character set (chars 32-127 at ROM $3D00). Cells
+ * that match no glyph (graphics, UDGs, inverse video) become '?'.
+ * This turns every Spectrum acceptance test from pixel-counting into
+ * string assertion — the same jump the HD44780's text state gave.
+ * @param {Uint8Array} mem the machine's 64K (ROM font + screen)
+ */
+export function zxScreenText(mem) {
+    const lines = [];
+    for (let row = 0; row < 24; row++) {
+        let line = '';
+        for (let col = 0; col < 32; col++) {
+            const y0 = row * 8;
+            const cell = [];
+            for (let dy = 0; dy < 8; dy++) {
+                const y = y0 + dy;
+                const addr = 0x4000 | ((y & 0xc0) << 5) | ((y & 0x07) << 8) | ((y & 0x38) << 2) | col;
+                cell.push(mem[addr]);
+            }
+            let ch = '?';
+            if (cell.every((b) => b === 0)) { ch = ' '; }
+            else {
+                for (let c = 32; c < 128; c++) {
+                    const g = 0x3d00 + (c - 32) * 8;
+                    let ok = true;
+                    for (let dy = 0; dy < 8; dy++) if (mem[g + dy] !== cell[dy]) { ok = false; break; }
+                    if (ok) { ch = String.fromCharCode(c); break; }
+                }
+            }
+            line += ch;
+        }
+        lines.push(line.trimEnd());
+    }
+    return lines;
+}
