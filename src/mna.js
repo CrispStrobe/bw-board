@@ -377,6 +377,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Op-amp output region: 'linear' | 'high' | 'low' (rail saturation).
   /** @type {Map<string, string>} */
   const opampRegions = new Map();
+  // BJT operating regions: 'active' (Ic = beta*Ib VCCS) or 'saturated'
+  // (Vce clamped near vceSat). Without this, a switching transistor's
+  // collector gets driven arbitrarily negative — the audit measured
+  // -420V on pc24 — because beta*Ib exceeded anything the load allows.
+  const bjtRegions = new Map();
   for (const part of parts) {
     if (part.kind === 'led' || part.kind === 'diode' || part.kind === 'npn'
         || part.kind === 'pnp' || part.kind === 'zener'
@@ -384,6 +389,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       diodeVoltages.set(part.id, 0); // initial guess
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
+    if (part.kind === 'npn' || part.kind === 'pnp') bjtRegions.set(part.id, 'active');
   }
 
   // Newton–Raphson iterations
@@ -497,11 +503,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
 
         case 'npn':
-          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id));
           break;
 
         case 'pnp':
-          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id));
           break;
 
         case 'nmos':
@@ -694,6 +700,46 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (next !== region) {
         opampRegions.set(part.id, next);
+        regionChanged = true;
+      }
+    }
+
+    // BJT region transitions: active ↔ saturated.
+    for (const part of parts) {
+      if (part.kind !== 'npn' && part.kind !== 'pnp') continue;
+      const beta = /** @type {number} */ (part.params.beta ?? 100);
+      const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
+      const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+      const netC = findNet(nets, part.id, 'collector');
+      const netE = findNet(nets, part.id, 'emitter');
+      const idxC = netC ? nodeIndex.get(netC) : undefined;
+      const idxE = netE ? nodeIndex.get(netE) : undefined;
+      const vC = idxC !== undefined ? solution[idxC] : 0;
+      const vE = idxE !== undefined ? solution[idxE] : 0;
+      // Both polarities express "how far the output junction is from
+      // its saturation floor" as a positive number in active mode.
+      const vOut = part.kind === 'npn' ? vC - vE : vE - vC;
+      const region = bjtRegions.get(part.id);
+      let next = region;
+      if (region === 'active') {
+        // The VCCS demanded more collector current than the load can
+        // pass: the solver answers by driving the junction below its
+        // saturation floor. That is the entry signal.
+        if (vOut < vceSat) next = 'saturated';
+      } else {
+        // Leave saturation when base drive no longer sustains it:
+        // the base junction has fallen out of conduction, or the
+        // clamp current exceeds beta*Ib (with margin against
+        // flip-flopping; the outer loop re-iterates on change).
+        const vJ = diodeVoltages.get(part.id) ?? 0; // vBE (npn) / vEB (pnp)
+        const rd = 10;
+        const iB = vJ > vbe ? (vJ - vbe) / rd : 0;
+        const gS = 10;
+        const iC = Math.max(0, gS * (vOut - vceSat));
+        if (vJ < vbe - 0.15 || beta * iB < iC * 0.95) next = 'active';
+      }
+      if (next !== region) {
+        bjtRegions.set(part.id, next);
         regionChanged = true;
       }
     }
@@ -1282,10 +1328,11 @@ function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, control
  * C-E: controlled current source Ic = β × Ib (β from params, default 100).
  * Linearized: Ic = gm × Vbe - Ic0 (Norton companion model).
  */
-function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active') {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10; // base-emitter dynamic resistance
+  const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
 
   const netB = findNet(nets, part.id, 'base');
   const netC = findNet(nets, part.id, 'collector');
@@ -1309,6 +1356,24 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   if (idxB !== undefined) b[idxB] -= iEq;
   if (idxE !== undefined) b[idxE] += iEq;
 
+  // Saturated: the VCCS is replaced by a Vce clamp — a stiff
+  // conductance holding collector ≈ emitter + vceSat, so Ic becomes
+  // whatever the LOAD passes at Vce(sat), which is the physics of a
+  // switched-on transistor. The region decision lives in the Newton
+  // loop beside the op-amp's.
+  if (region === 'saturated') {
+    const gS = 10; // 100 mΩ-class clamp
+    if (idxC !== undefined) A.add(idxC, idxC, gS);
+    if (idxE !== undefined) A.add(idxE, idxE, gS);
+    if (idxC !== undefined && idxE !== undefined) {
+      A.add(idxC, idxE, -gS);
+      A.add(idxE, idxC, -gS);
+    }
+    if (idxC !== undefined) b[idxC] += gS * vceSat;
+    if (idxE !== undefined) b[idxE] -= gS * vceSat;
+    return;
+  }
+
   // C-E current source: Ic = β × Ib = β × gEq × Vbe + β × iEq
   // This is a voltage-controlled current source from B-E to C-E.
   // gm = β × gEq, Ic0 = β × iEq
@@ -1329,7 +1394,7 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  * Stamp a PNP transistor. Mirror of NPN with reversed polarities.
  * Terminals: base, collector, emitter.
  */
-function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active') {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10;
@@ -1343,8 +1408,25 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const idxE = netE ? nodeIndex.get(netE) : undefined;
 
   // E-B junction: diode (reversed from NPN — emitter is higher)
-  const vAcross = -(diodeVoltages.get(part.id) ?? 0);
+  // The Newton store already computes vE - vB for pnp (the update loop
+  // at ~line 640) — negating it again meant conduction required base
+  // ABOVE emitter, so no PNP ever conducted (audit escalation, pc32).
+  const vAcross = diodeVoltages.get(part.id) ?? 0;
   const { gEq, iEq } = diodeCompanion(vAcross, vbe, rd);
+  const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+  if (region === 'saturated') {
+    // Clamp emitter ≈ collector + vceSat (mirror of the NPN clamp).
+    const gS = 10;
+    if (idxE !== undefined) A.add(idxE, idxE, gS);
+    if (idxC !== undefined) A.add(idxC, idxC, gS);
+    if (idxE !== undefined && idxC !== undefined) {
+      A.add(idxE, idxC, -gS);
+      A.add(idxC, idxE, -gS);
+    }
+    if (idxE !== undefined) b[idxE] += gS * vceSat;
+    if (idxC !== undefined) b[idxC] -= gS * vceSat;
+    return;
+  }
 
   // Stamp E-B diode
   if (idxE !== undefined) A.add(idxE, idxE, gEq);
