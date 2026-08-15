@@ -75,3 +75,17 @@ test('audioTone(): 440 Hz square on the beeper reads back as ~440 Hz', async () 
     u2.advance(1000);
     assert.equal(u2.audioTone().on, false);
 });
+
+test('FLASH: attribute bit 7 swaps ink/paper on the 16-frame phase', async () => {
+    const { ZXULA, ZX_BORDER } = await import('../src/zx-ula.js');
+    const mem = new Uint8Array(65536);
+    mem[0x4000] = 0x80;         // one ink pixel top-left
+    mem[0x5800] = 0x80 | 0x02;  // FLASH, ink red, paper black
+    const u = new ZXULA(mem);
+    const px = (f) => { const w = f.width; return f.indices[(ZX_BORDER * w) + ZX_BORDER]; };
+    assert.equal(px(u.renderFrame()), 2, 'phase 0: ink red');
+    u.frame = 16;
+    assert.equal(px(u.renderFrame()), 0, 'phase 1: swapped to paper black');
+    u.frame = 32;
+    assert.equal(px(u.renderFrame()), 2, 'phase 0 again');
+});

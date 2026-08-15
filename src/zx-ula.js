@@ -144,6 +144,9 @@ export class ZXULA {
     renderFrame() {
         const W = ZX_W + 2 * ZX_BORDER, H = ZX_H + 2 * ZX_BORDER;
         const indices = new Uint8Array(W * H).fill(this.border);
+        // FLASH: attribute bit 7 swaps ink/paper for 16 frames of
+        // every 32 — the real ULA's cursor blink.
+        const flashPhase = (this.frame >> 4) & 1;
         for (let y = 0; y < ZX_H; y++) {
             // The interleave: bits [7:6]=Y7Y6, [5:3]=Y2Y1Y0, [2:0]=Y5Y4Y3
             const addr = 0x4000
@@ -154,8 +157,9 @@ export class ZXULA {
                 const bits = this.mem[addr + cx];
                 const attr = this.mem[0x5800 + (y >> 3) * 32 + cx];
                 const bright = (attr & 0x40) ? 8 : 0;
-                const ink = (attr & 0x07) + bright;
-                const paper = ((attr >> 3) & 0x07) + bright;
+                let ink = (attr & 0x07) + bright;
+                let paper = ((attr >> 3) & 0x07) + bright;
+                if ((attr & 0x80) && flashPhase) { const s = ink; ink = paper; paper = s; }
                 const row = (y + ZX_BORDER) * W + ZX_BORDER + cx * 8;
                 for (let b = 0; b < 8; b++) {
                     indices[row + b] = (bits >> (7 - b)) & 1 ? ink : paper;
