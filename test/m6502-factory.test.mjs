@@ -216,3 +216,44 @@ test('getTargetKinds includes eater6502', () => {
   assert.ok(kinds.find(k => k.kind === 'eater6502'));
   assert.equal(kinds.length, 7);
 });
+
+test('factory: a custom config reaches the machine — the wired-extractor path', async () => {
+  // What extract6502Machine emits from hand-wiring: same shape, custom
+  // addresses, extra chips. The VIA sits at $7000 (not the preset's
+  // $6000) and a VDP joins the bus — the machine must grow both.
+  const config = {
+    clockHz: 1_000_000,
+    regions: [
+      { kind: 'ram', start: 0x0000, end: 0x3fff },
+      { kind: 'rom', start: 0x8000, end: 0xffff },
+    ],
+    chips: [
+      { kind: 'via', name: 'via1', at: 0x7000 },
+      { kind: 'vdp', name: 'vdp1', at: 0x5000 },
+    ],
+  };
+  const board = new BoardImpl(5.0);
+  board.setNetlist(
+    [
+      { id: 'eater', kind: 'mcu', params: {}, terminals: ['via1.PA0'] },
+      { id: 'g', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    ],
+    [
+      { id: 'n1', terminals: [{ part: 'eater', terminal: 'via1.PA0' }] },
+      { id: 'ng', terminals: [{ part: 'g', terminal: 'gnd' }] },
+    ]
+  );
+  board.setPower(true);
+
+  const { target, adapter } = await createDebugTarget('eater6502', {
+    board, rom: makeRomImage(), config,
+  });
+  assert.ok(adapter.machine.chips.via1, 'the VIA exists');
+  assert.ok(adapter.machine.chips.vdp1, 'the wiring grew a VDP');
+  // The VIA answers at ITS address: write DDRA via $7003 through the CPU bus.
+  adapter.machine._write(0x7003, 0xff);
+  assert.equal(adapter.machine._read(0x7003), 0xff, 'VIA decoded at $7000');
+  // And the video face lights up through the debug target.
+  const f = target.video();
+  assert.ok(f && f.width > 0, 'target.video() serves the VDP frame');
+});

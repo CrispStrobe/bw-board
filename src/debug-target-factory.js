@@ -193,12 +193,17 @@ async function createAvr8jsTarget(kind, opts) {
 // ─── 6502 breadboard computer (Eater-style) ─────────────────────────────
 
 async function createEater6502Target(opts) {
-  const { board, rom, symbols } = opts;
+  const { board, rom, symbols, config } = opts;
 
   if (!board) throw new Error('eater6502 target requires opts.board');
 
   const { createM6502Adapter } = await import('./m6502-adapter.js');
   const adapterOpts = {};
+  // Custom machine config — the wired-extractor path: the designer
+  // circuit's bus wiring becomes {regions, chips} via extract6502Machine,
+  // and the SAME machine the default preset builds grows video chips,
+  // extra VIAs, whatever the wiring says. Default stays EATER6502.
+  if (config) adapterOpts.config = config;
   if (rom) adapterOpts.rom = rom instanceof Uint8Array ? rom : new Uint8Array(rom);
   const adapter = createM6502Adapter(adapterOpts);
   if (rom) {
