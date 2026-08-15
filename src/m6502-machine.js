@@ -296,6 +296,21 @@ export class M6502Machine {
     }
 
     /** One instruction (or one idle cycle when waiting); returns cycles consumed. */
+    /**
+     * Face-input contract: press/release the four control buttons a
+     * human (or a face capturing arrow keys) drives. Convention from
+     * gfoot's simplevga snake — ACTIVE-LOW buttons on the first VIA's
+     * PA0..PA3 (down, up, right, left). mask bit set = pressed.
+     */
+    setButtons(mask) {
+        const via = Object.values(this.chips).find((c) => c && typeof c.setInput === 'function' && 'inA' in c);
+        if (!via) return false;
+        for (let bit = 0; bit < 4; bit++) {
+            via.setInput('a', bit, (mask >> bit) & 1 ? 0 : 1);
+        }
+        return true;
+    }
+
     step() {
         let n = this.cpu.step();
         if (n === 0) {
@@ -304,6 +319,18 @@ export class M6502Machine {
         }
         this.cycles += n;
         this._advanceChips(n);
+        // With a simplevga card present, its frame pulse reaches the
+        // first VIA's PA4 (the canonical snake hookup: "VGA_V to the
+        // 6522's PA4") — a 60 Hz square derived from machine time, so
+        // frame-paced games run without a scanline model.
+        if (this._vgaCard) {
+            const phase = Math.floor(this.cycles / (this.clockHz / 120)) & 1;
+            if (phase !== this._vsPhase) {
+                this._vsPhase = phase;
+                const via = Object.values(this.chips).find((c) => c && typeof c.setInput === 'function' && 'inA' in c);
+                if (via) via.setInput('a', 4, phase);
+            }
+        }
         if (this._anyIrq() && this.cpu.irq()) { // level-triggered shared IRQB
             this.cycles += 7; // the interrupt sequence is bus time too
             this._advanceChips(7);

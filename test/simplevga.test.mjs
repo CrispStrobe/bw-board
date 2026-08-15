@@ -134,3 +134,50 @@ describe('videoFrame contract', () => {
     assert.equal(v.signal, false, 'honest: no vram_init yet, no signal');
   });
 });
+
+describe('input contract (the snake hookup)', () => {
+  const cfg = {
+    clockHz: 1_000_000,
+    regions: [
+      { kind: 'ram', start: 0x0000, end: 0x3fff },
+      { kind: 'rom', start: 0xc000, end: 0xffff },
+    ],
+    chips: [
+      { kind: 'via', name: 'via1', at: 0x6000 },
+      { kind: 'simplevga', name: 'vga', at: 0 },
+    ],
+  };
+  const boot = () => {
+    const rom = new Uint8Array(0x4000).fill(0xea);
+    rom[0x3ffc] = 0x00; rom[0x3ffd] = 0xc0;
+    const m = new M6502Machine(cfg);
+    m.loadRom(rom, 0xc000);
+    m.reset();
+    return m;
+  };
+
+  it('setButtons drives PA0-3 active-low; IRA reads them back', () => {
+    const m = boot();
+    m.setButtons(0b0101); // down + right pressed
+    // DDRA all input by default; read IRA through the bus at $6001
+    const ira = m._read(0x6001);
+    assert.equal(ira & 0x01, 0, 'PA0 (down) low = pressed');
+    assert.equal(ira & 0x02, 0x02, 'PA1 (up) high = released');
+    assert.equal(ira & 0x04, 0, 'PA2 (right) low = pressed');
+    assert.equal(ira & 0x08, 0x08, 'PA3 (left) high = released');
+  });
+
+  it('the vga card pulses PA4 at 60 Hz machine time', () => {
+    const m = boot();
+    let edges = 0;
+    let last = m._read(0x6001) & 0x10;
+    // run one simulated second in 1ms slices, counting PA4 transitions
+    for (let ms = 1; ms <= 1000; ms++) {
+      m.advanceToMs(ms);
+      const now = m._read(0x6001) & 0x10;
+      if (now !== last) { edges++; last = now; }
+    }
+    // 60 Hz square = 120 edges/second; sampling at 1ms sees all of them
+    assert.ok(edges >= 118 && edges <= 122, `expected ~120 PA4 edges, got ${edges}`);
+  });
+});

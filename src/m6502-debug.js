@@ -163,6 +163,16 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * skip unchanged frames. null when the machine has no VDP — the
      * UI shows no screen rather than a black lie.
      */
+    /**
+     * Face-input contract, write side: the face (VdpScreen with
+     * keyboard focus, on-screen buttons) reports the pressed-button
+     * mask; the machine maps it onto the snake hookup (active-low
+     * PA0..3). Returns false when the machine has no VIA to receive it.
+     */
+    setButtons(mask) {
+      return typeof machine.setButtons === 'function' ? machine.setButtons(mask) : false;
+    },
+
     video() {
       // Any chip implementing the common videoFrame() contract counts —
       // TMS9918, simplevga, and whatever video hardware comes next.
