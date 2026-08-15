@@ -66,6 +66,9 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'avr8js' || kind === 'atmega2560' || kind === 'attiny85' || kind === 'attiny88') {
     return createAvr8jsTarget(kind, opts);
   }
+  if (kind === 'z80') {
+    return createZ80Target(opts);
+  }
   if (kind === 'eater6502') {
     return createEater6502Target(opts);
   }
@@ -76,7 +79,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'rp2040js', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'z80', 'rp2040js', or 'serial'.`
   );
 }
 
@@ -193,6 +196,26 @@ async function createAvr8jsTarget(kind, opts) {
 
 // ─── 6502 breadboard computer (Eater-style) ─────────────────────────────
 
+async function createZ80Target(opts) {
+  const { board, rom, config, pc } = opts;
+  // The Z80 bench has no GPIO boundary — board is optional; when
+  // present it only receives time sync (the serial console is the
+  // observable surface, via adapter.onSerial / sendSerial).
+  const { createZ80Adapter } = await import('./z80-adapter.js');
+  const adapter = createZ80Adapter({ config, rom, romAt: opts.romAt, pc });
+  if (board) adapter.attachBoard(board);
+  else adapter.attachBoard({ advanceTo() {} });
+
+  let target = null;
+  try {
+    const mod = await import('./z80-debug.js');
+    if (mod.createZ80DebugTarget) {
+      target = mod.createZ80DebugTarget({ machine: adapter.machine });
+    }
+  } catch { /* adapter-only mode */ }
+  return { target, adapter };
+}
+
 async function createEater6502Target(opts) {
   const { board, rom, symbols, config } = opts;
 
@@ -307,6 +330,11 @@ export function getTargetKinds() {
       kind: 'attiny85',
       label: 'Simulated (ATtiny85)',
       description: 'AVR instruction-level emulation. ATtiny85/Digispark programs.',
+    },
+    {
+      kind: 'z80',
+      label: 'Simulated (Z80)',
+      description: 'Composable Z80 machine — Searle bench, CP/M, ZX Spectrum configs.',
     },
     {
       kind: 'attiny88',

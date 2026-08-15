@@ -214,7 +214,7 @@ test('factory: memory read/write on 6502', async () => {
 test('getTargetKinds includes eater6502', () => {
   const kinds = getTargetKinds();
   assert.ok(kinds.find(k => k.kind === 'eater6502'));
-  assert.equal(kinds.length, 8);
+  assert.equal(kinds.length, 9);
 });
 
 test('factory: a custom config reaches the machine — the wired-extractor path', async () => {
@@ -269,4 +269,32 @@ test('factory: attiny88 is a first-class target kind', async () => {
   const { adapter } = await createDebugTarget('attiny88', { board });
   assert.equal(adapter.chip.name, 'ATtiny88');
   assert.equal(adapter.clockHz, 8_000_000);
+});
+
+test('factory: z80 target boots, serial flows both ways, debug attaches', async () => {
+  // The z80-bench example's run path: EI/HALT loop with an IM1 handler
+  // that echoes the ACIA RX byte (the fixture from z80-machine.test).
+  const rom = new Uint8Array(0x100);
+  rom.set([0x3e, 0x03, 0xd3, 0x80, 0x3e, 0x82, 0xd3, 0x80, 0xfb, 0x76, 0x18, 0xfd], 0);
+  rom.set([0xdb, 0x81, 0xd3, 0x81, 0xfb, 0xed, 0x4d], 0x38);
+
+  const { target, adapter } = await createDebugTarget('z80', { rom });
+  assert.ok(adapter, 'adapter created');
+  assert.ok(target, 'debug target created');
+  assert.equal(adapter.clockHz, 7_372_800, 'SEARLE default config');
+
+  let out = '';
+  adapter.onSerial((b) => { out += String.fromCharCode(b); });
+  adapter.advanceNs(2_000_000);
+  assert.ok(adapter.sendSerial(0x51), 'RX path reaches the ACIA');
+  adapter.advanceNs(2_000_000);
+  assert.equal(out, 'Q', 'the machine echoed through the factory surface');
+  assert.deepEqual(target.capabilities().steps, ['insn', 'over', 'out']);
+});
+
+test('factory: z80 accepts a custom config — the extracted-machine path', async () => {
+  const { adapter } = await createDebugTarget('z80', {
+    config: { clockHz: 1_000_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }], ports: [] },
+  });
+  assert.equal(adapter.clockHz, 1_000_000, 'config flowed through');
 });
