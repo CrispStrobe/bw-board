@@ -39,9 +39,10 @@ describe('gallery kind coverage', () => {
       'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'vsource', 'isource', 'mcu',
       'seven_segment', 'shift_register', 'ir_receiver', 'temp_sensor',
       'eeprom', 'led_matrix', 'led_cube',
+      'rgb_led', // expanded to _r/_g/_b sub-LEDs in setNetlist
     ]);
     // The shame list. It may only SHRINK; a new inert kind is a bug.
-    const KNOWN_INERT = new Set(['rgb_led']);
+    const KNOWN_INERT = new Set([]); // emptied 2026-08-15: rgb_led expands to sub-LEDs now
     const kinds = BoardImpl.getPartKinds ? BoardImpl.getPartKinds() : [];
     assert.ok(kinds.length > 50, `kind table enumerable, got ${kinds.length}`);
     const inert = kinds.filter((k) =>
@@ -79,5 +80,54 @@ describe('stored charge survives power-off (audit escalation)', () => {
       `one tau of discharge: expected ~${(v0 / Math.E).toFixed(2)}, got ${v1}`);
     const node = b.nodeVoltages.get('n_c');
     assert.ok(Math.abs(node - v1) < 0.05, 'the node tells the same truth as the cap state');
+  });
+});
+
+describe('composite expansion + buzzer DC (last audit escalations)', () => {
+  it('a designer-placed rgb_led lights its channels', () => {
+    const parts = [
+      { id: 'v1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'rr', kind: 'resistor', params: { ohms: 220 }, terminals: ['a', 'b'] },
+      { id: 'rgb', kind: 'rgb_led', params: {},
+        terminals: ['r_anode', 'g_anode', 'b_anode', 'cathode'] },
+    ];
+    const nets = [
+      { id: 'n_v', terminals: [{ part: 'v1', terminal: 'vcc' }, { part: 'rr', terminal: 'a' }] },
+      { id: 'n_r', terminals: [{ part: 'rr', terminal: 'b' }, { part: 'rgb', terminal: 'r_anode' }] },
+      { id: 'n_g', terminals: [{ part: 'rgb', terminal: 'g_anode' }] },
+      { id: 'n_b', terminals: [{ part: 'rgb', terminal: 'b_anode' }] },
+      { id: 'n_k', terminals: [{ part: 'rgb', terminal: 'cathode' }, { part: 'g1', terminal: 'gnd' }] },
+    ];
+    const b = new BoardImpl(5.0);
+    b.setNetlist(parts, nets);
+    b.advanceTo(1n);
+    const { r, g, b: blue } = b.rgbLedBrightness('rgb');
+    assert.ok(r > 0.05, `red channel lit through its resistor, got ${r}`);
+    assert.equal(g, 0, 'green unwired stays dark');
+    assert.equal(blue, 0, 'blue unwired stays dark');
+    // and it is no longer a 5V short: the red anode sits at a diode-ish drop
+    const vAnode = b.nodeVoltages.get('n_r');
+    assert.ok(vAnode > 1 && vAnode < 4, `real diode drop at the anode, got ${vAnode}`);
+  });
+
+  it('an active buzzer on plain DC sounds its rated tone', () => {
+    const parts = [
+      { id: 'v1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+      { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'bz', kind: 'buzzer', params: {}, terminals: ['a', 'b'] },
+    ];
+    const nets = [
+      { id: 'n_v', terminals: [{ part: 'v1', terminal: 'vcc' }, { part: 'bz', terminal: 'a' }] },
+      { id: 'n_g', terminals: [{ part: 'g1', terminal: 'gnd' }, { part: 'bz', terminal: 'b' }] },
+    ];
+    const b = new BoardImpl(5.0);
+    b.setNetlist(parts, nets);
+    b.advanceTo(1n);
+    const tone = b.buzzerTone('bz');
+    assert.equal(tone.on, true, 'DC across an active buzzer IS sound');
+    assert.equal(tone.hz, 2400);
+    b.setPower(false);
+    assert.equal(b.buzzerTone('bz').on, false, 'power off silences it');
   });
 });

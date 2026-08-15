@@ -189,11 +189,50 @@ export class BoardImpl {
    * @param {Part[]} parts
    * @param {Net[]} nets
    */
+  /**
+   * Composite parts expand into the sub-LEDs their read surfaces
+   * already expect (rgbLedBrightness reads `${id}_r/_g/_b`,
+   * sevenSegmentBrightness `${id}_a..dp`). The declaration path
+   * (infer-netlist) always built these; a DESIGNER-placed composite
+   * had nothing — validated, rendered, and electrically inert, 5V
+   * through with no drop (audit escalation E3). The original part
+   * stays in the list for identity; the synthetic LEDs carry the
+   * electrical role.
+   */
+  static _expandComposites(parts, nets) {
+    const extraParts = [];
+    const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    const netsOf = (partId, terminal) => netCopies.filter(
+      (n) => n.terminals.some((t) => t.part === partId && t.terminal === terminal));
+    const addLed = (id, anodeNets, cathodeNets) => {
+      extraParts.push({ id, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+      for (const n of anodeNets) n.terminals.push({ part: id, terminal: 'anode' });
+      for (const n of cathodeNets) n.terminals.push({ part: id, terminal: 'cathode' });
+    };
+    for (const p of parts) {
+      if (p.kind === 'rgb_led') {
+        const cath = netsOf(p.id, 'cathode');
+        addLed(`${p.id}_r`, netsOf(p.id, 'r_anode'), cath);
+        addLed(`${p.id}_g`, netsOf(p.id, 'g_anode'), cath);
+        addLed(`${p.id}_b`, netsOf(p.id, 'b_anode'), cath);
+      } else if (p.kind === 'seven_segment') {
+        const common = netsOf(p.id, 'common');
+        for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
+          addLed(`${p.id}_${seg}`, netsOf(p.id, seg), common);
+        }
+      }
+    }
+    return extraParts.length
+      ? { parts: [...parts, ...extraParts], nets: netCopies }
+      : { parts, nets };
+  }
+
   setNetlist(parts, nets) {
     // Validate the netlist and reject malformed input. Without this,
     // a wrong terminal name (e.g. {a,b} instead of {anode,cathode} for
     // an LED) silently produces brightness 0 — a plausible wrong answer.
     const errors = validateNetlist(parts, nets);
+    ({ parts, nets } = BoardImpl._expandComposites(parts, nets));
     const fatal = errors.filter(e => e.severity === 'error');
     if (fatal.length > 0) {
       throw new Error(
@@ -750,7 +789,7 @@ export class BoardImpl {
    */
   buzzerTone(partId) {
     const edges = this.buzzerEdges.get(partId);
-    if (!edges || edges.length < 2) return { hz: 0, on: false };
+    if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
 
     // Measure period from the last two edges
     const last = edges[edges.length - 1];
@@ -762,10 +801,28 @@ export class BoardImpl {
     // the buzzer has stopped toggling (e.g., after a debug halt).
     // Report as off rather than a meaninglessly low frequency.
     const age = this.timeNs - last;
-    if (age > 100_000_000n) return { hz: 0, on: false };
+    if (age > 100_000_000n) return this._buzzerDcTone(partId);
 
     const hz = 1e9 / (2 * halfPeriodNs); // two edges = one full period
     return { hz, on: true };
+  }
+
+  /**
+   * An ACTIVE buzzer has a built-in oscillator: sustained DC across it
+   * IS sound (its own doc said so; the implementation demanded MCU
+   * edges — audit escalation E2). Rated tone via params.toneHz,
+   * datasheet-typical 2400 Hz default.
+   */
+  _buzzerDcTone(partId) {
+    const part = this.partMap.get(partId);
+    if (!part || part.kind !== 'buzzer' || !this.powered) return { hz: 0, on: false };
+    const netOf = (terminal) => {
+      const n = this.nets.find((x) => x.terminals.some((t) => t.part === partId && t.terminal === terminal));
+      return n ? n.id : null;
+    };
+    const v = Math.abs((this.nodeVoltages.get(netOf('a')) ?? 0) - (this.nodeVoltages.get(netOf('b')) ?? 0));
+    if (v > 2.0) return { hz: part.params?.toneHz ?? 2400, on: true, dc: true };
+    return { hz: 0, on: false };
   }
 
   /**
