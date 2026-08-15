@@ -142,7 +142,7 @@ describe('videoFrame contract', () => {
     const v = createM6502DebugTarget(adapter).video();
     assert.ok(v, 'card surfaces through video()');
     assert.equal(v.width, SVGA_W);
-    assert.equal(v.height, 100); // measured default rows
+    assert.equal(v.height, 128); // the full bank renders
     assert.equal(v.signal, false, 'honest: no vram_init yet, no signal');
   });
 });

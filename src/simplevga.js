@@ -57,11 +57,12 @@ export class SimpleVGA {
     /**
      * @param {{rows?: number}} [opts] visible rows. MEASURED default:
      *   snake.rom's vram_init fills 128 rows per 32K bank with vsync at
-     *   row 117 — a 640x400-derived frame, ~100 visible rows, each
-     *   scanned four times; the second bank is the DOUBLE BUFFER
-     *   (PORTB page-flips which frame scans out), not row extension.
+     *   row 117 — and gameplay occupies the FULL 128 rows (snake's own
+     *   head crawls row 120): sync lives in columns 164+, never in the
+     *   0-159 pixel columns, so all 128 rows render. The second bank
+     *   is the DOUBLE BUFFER (PORTB page-flips), not row extension.
      */
-    constructor({ rows = 100 } = {}) {
+    constructor({ rows = 128 } = {}) {
         this.rows = rows;
         this.vram = new Uint8Array(0x10000); // two 32K banks (double buffer)
         this.bank = 0;
