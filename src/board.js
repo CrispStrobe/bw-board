@@ -2565,27 +2565,26 @@ export class BoardImpl {
    * @param {PinId} pin
    */
   _recordBuzzerEdges(pin) {
-    // Find buzzers connected to a net that includes this pin
+    // Find buzzers connected to a net that includes this pin.
+    // Must check BOTH terminals — the buzzer may be wired either way
+    // (VCC→a, MCU→b or MCU→a, GND→b).
     for (const part of this.parts) {
       if (part.kind !== 'buzzer') continue;
-      // Check if this buzzer shares a net with the pin
-      const buzzerNet = this._netForTerminal(part.id, 'a') ||
-                        this._netForTerminal(part.id, 'b');
-      if (!buzzerNet) continue;
-
-      const net = this.netMap.get(buzzerNet);
-      if (!net) continue;
-
-      for (const t of net.terminals) {
-        const p = this.partMap.get(t.part);
-        if (p && p.kind === 'mcu' && String(t.terminal).toLowerCase() === pin) {
-          const edges = this.buzzerEdges.get(part.id);
-          if (edges) {
-            edges.push(this.timeNs);
-            // Keep only recent edges
-            while (edges.length > 100) edges.shift();
+      for (const term of ['a', 'b']) {
+        const buzzerNet = this._netForTerminal(part.id, term);
+        if (!buzzerNet) continue;
+        const net = this.netMap.get(buzzerNet);
+        if (!net) continue;
+        for (const t of net.terminals) {
+          const p = this.partMap.get(t.part);
+          if (p && p.kind === 'mcu' && String(t.terminal).toLowerCase() === pin) {
+            const edges = this.buzzerEdges.get(part.id);
+            if (edges) {
+              edges.push(this.timeNs);
+              while (edges.length > 100) edges.shift();
+            }
+            return; // found — one edge per setPin call
           }
-          break;
         }
       }
     }
