@@ -19,6 +19,7 @@
 import { Z80 } from './z80.js';
 import { MC6850 } from './mc6850.js';
 import { Z80CTC } from './z80-ctc.js';
+import { MC6845 } from './mc6845.js';
 import { ZXULA } from './zx-ula.js';
 import { ZXTape } from './zx-tape.js';
 
@@ -71,6 +72,21 @@ export class Z80Machine {
                 const chip = new MC6850({
                     onTx: (b) => { if (this.hooks.onSerial) this.hooks.onSerial(b, this.tMs); },
                 });
+                this.chips[p.name] = chip;
+                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
+                this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });
+            } else if (p.kind === 'crtc') {
+                // MC6845: address/data port pair. On the real board the
+                // CRTC only GENERATES addresses — the framebuffer is
+                // shared system RAM — so the chip's vram becomes a live
+                // subarray view of machine memory at p.vramAt: CPU
+                // stores appear on screen with no copying, exactly like
+                // the silicon. vramSize must be a power of two (the
+                // chip masks addresses with length-1).
+                const vramAt = p.vramAt ?? 0xf000;
+                const vramSize = p.vramSize ?? 0x0800;
+                const chip = new MC6845({ clockHz: config.clockHz, vramSize, charH: p.charH });
+                chip.vram = this.mem.subarray(vramAt, vramAt + vramSize);
                 this.chips[p.name] = chip;
                 this._portMap.set(p.at & 0xff, { chip, rs: 0 });
                 this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });

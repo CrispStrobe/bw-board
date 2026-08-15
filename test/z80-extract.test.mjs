@@ -67,3 +67,22 @@ test('an ACIA whose rs is not A0 refuses', () => {
     assert.equal(r.ok, false);
     assert.match(r.reasons.join(';'), /rs must ride A0/);
 });
+
+test('an MC6845 wired in port space extracts as a crtc with its RAM framebuffer noted', () => {
+    const c = searleCircuit();
+    c.parts.push({ id: 'crtc1', kind: 'mc6845', params: { vramAt: 0xf000 } });
+    const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    // Select low over ports $00-$7F: csb = NAND(~iorq, ~a7); rsb rides A0.
+    w('cpu1', 'a7', 'glue2', '2a'); w('cpu1', 'a7', 'glue2', '2b');     // ~a7
+    w('glue2', '1y', 'glue2', '3a'); w('glue2', '2y', 'glue2', '3b');   // NAND(~iorq, ~a7)
+    w('glue2', '3y', 'crtc1', 'csb');
+    w('cpu1', 'a0', 'crtc1', 'rsb');
+    const r = extractZ80Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    const crtc = r.ports.find((p) => p.kind === 'crtc');
+    assert.ok(crtc, 'crtc extracted');
+    assert.equal(crtc.at, 0x00);
+    assert.equal(crtc.vramAt, 0xf000);
+    assert.ok(r.notes.some((n) => /framebuffer is system RAM at \$F000/.test(n)), r.notes.join('; '));
+    assert.ok(r.lines.some((l) => /crtc1 = MC6845 AT PORT \$0000/.test(l)), r.lines.join('; '));
+});

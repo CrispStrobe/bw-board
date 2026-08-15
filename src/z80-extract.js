@@ -98,7 +98,16 @@ export function extractZ80Machine(circuit) {
                 { net: find(key(p.id, 'cs2b')), want: 0, t: 'cs2b' },
             ];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
-            ioChips.push({ part: p, pins, selected: new Uint8Array(256) });
+            ioChips.push({ part: p, pins, ioKind: 'acia6850', rsPin: 'rs', selected: new Uint8Array(256) });
+        } else if (p.kind === 'mc6845') {
+            // The CRTC: /CS decodes low in port space; the register
+            // select (the sidecar's rsb — RS on the silicon) rides A0.
+            // MA0-MA13/RA0-RA4 generate the framebuffer scan on a real
+            // board and are decorative here — the machine gives the chip
+            // a live view of system RAM at params.vramAt instead.
+            const pins = [{ net: find(key(p.id, 'csb')), want: 0, t: 'csb' }];
+            for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
+            ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: 'rsb', selected: new Uint8Array(256) });
         }
     }
     if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM or ACIA on the board');
@@ -151,10 +160,15 @@ export function extractZ80Machine(circuit) {
         let lo = -1, hi = -1, count = 0;
         for (let a = 0; a < 256; a++) if (c.selected[a]) { if (lo < 0) lo = a; hi = a; count++; }
         if (lo < 0) { reasons.push(`${c.part.id} is never selected in port space — check its select wiring`); continue; }
-        const rs = netDriver.get(find(key(c.part.id, 'rs')));
-        if (!rs || rs.type !== 'addr' || rs.bit !== 0) { reasons.push(`${c.part.id}.rs must ride A0 — the register select is the low address line`); continue; }
+        const rs = netDriver.get(find(key(c.part.id, c.rsPin)));
+        if (!rs || rs.type !== 'addr' || rs.bit !== 0) { reasons.push(`${c.part.id}.${c.rsPin} must ride A0 — the register select is the low address line`); continue; }
         if (count > 2) notes.push(`${c.part.id} mirrors through ports ${hx(lo)}-${hx(hi)}; its registers sit at ${hx(lo)}`);
-        ports.push({ kind: 'acia6850', name: c.part.id, at: lo });
+        const entry = { kind: c.ioKind, name: c.part.id, at: lo };
+        if (c.ioKind === 'crtc') {
+            entry.vramAt = c.part.params?.vramAt ?? 0xf000;
+            notes.push(`${c.part.id}: framebuffer is system RAM at ${hx(entry.vramAt)} (params.vramAt) — the MA/RA pins are the real board's scan generator, unused here`);
+        }
+        ports.push(entry);
     }
     if (reasons.length) return { ok: false, notes, reasons };
 
@@ -164,7 +178,7 @@ export function extractZ80Machine(circuit) {
         ports,
         lines: [
             ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
-            ...ports.map((p) => `CHIP ${p.name} = MC6850 AT PORT ${hx(p.at)}`),
+            ...ports.map((p) => `CHIP ${p.name} = ${p.kind === 'crtc' ? 'MC6845' : 'MC6850'} AT PORT ${hx(p.at)}`),
         ],
         notes,
         reasons: [],
