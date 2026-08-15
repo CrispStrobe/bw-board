@@ -105,3 +105,32 @@ describe('SimpleVGA card', () => {
     assert.deepEqual([...card.rgba().slice(0, 4)], [255, 255, 255, 255]);
   });
 });
+
+describe('videoFrame contract', () => {
+  it('the debug target finds the vga card through videoFrame()', async () => {
+    const { createM6502Adapter } = await import('../src/m6502-adapter.js');
+    const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+    const rom = new Uint8Array(0x4000).fill(0xea);
+    rom[0x3ffc] = 0x00; rom[0x3ffd] = 0xc0;
+    const adapter = createM6502Adapter({
+      config: {
+        clockHz: 1_000_000,
+        regions: [
+          { kind: 'ram', start: 0x0000, end: 0x3fff },
+          { kind: 'rom', start: 0xc000, end: 0xffff },
+        ],
+        chips: [
+          { kind: 'via', name: 'via1', at: 0x6000 },
+          { kind: 'simplevga', name: 'vga', at: 0 },
+        ],
+      },
+      rom, romAt: 0xc000,
+    });
+    adapter.machine.reset();
+    const v = createM6502DebugTarget(adapter).video();
+    assert.ok(v, 'card surfaces through video()');
+    assert.equal(v.width, SVGA_W);
+    assert.equal(v.height, SVGA_H);
+    assert.equal(v.signal, false, 'honest: no vram_init yet, no signal');
+  });
+});

@@ -99,6 +99,12 @@ export class SimpleVGA {
         return { width: SVGA_W, height: SVGA_H, indices, signal: true };
     }
 
+    /** The common video-face contract (see TMS9918.videoFrame). signal
+     *  false = the monitor is not locked; the face shows NO SIGNAL. */
+    videoFrame() {
+        return { width: SVGA_W, height: SVGA_H, rgba: this.rgba(), frame: this.writes, signal: this.signal() };
+    }
+
     /** RGBA for a canvas face; black frame (not null) when unlocked —
      *  the face draws NO SIGNAL over it, mirroring a real monitor. */
     rgba() {

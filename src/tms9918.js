@@ -165,6 +165,13 @@ export class TMS9918 {
         };
     }
 
+    /** The common video-face contract every video chip implements:
+     *  {width, height, rgba, frame, mode?, signal} — frame is a change
+     *  generation so pollers skip unchanged repaints. */
+    videoFrame() {
+        return { width: 256, height: 192, rgba: this.rgba(), frame: this.frame, mode: this.mode, signal: true };
+    }
+
     /** Last frame as RGBA for a canvas face; transparent → backdrop. */
     rgba() {
         const out = new Uint8ClampedArray(WIDTH * HEIGHT * 4);

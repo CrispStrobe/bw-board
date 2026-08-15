@@ -164,15 +164,10 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * UI shows no screen rather than a black lie.
      */
     video() {
+      // Any chip implementing the common videoFrame() contract counts —
+      // TMS9918, simplevga, and whatever video hardware comes next.
       for (const chip of Object.values(machine.chips || {})) {
-        if (typeof chip.rgba === 'function' && chip.indices) {
-          return {
-            width: 256, height: 192,
-            rgba: chip.rgba(),
-            mode: chip.mode,
-            frame: chip.frame,
-          };
-        }
+        if (typeof chip.videoFrame === 'function') return chip.videoFrame();
       }
       return null;
     },
