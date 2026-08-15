@@ -155,6 +155,12 @@ export function createZ80DebugTarget(adapter) {
 
     timeNs() { return BigInt(Math.round(machine.tMs * 1e6)); },
 
+    /** Face-input contract, joystick side: the VdpScreen button mask
+     *  onto the Kempston port. False without the interface. */
+    setButtons(mask) {
+      return typeof machine.setButtons === 'function' ? machine.setButtons(mask) : false;
+    },
+
     /**
      * Face-input contract, Spectrum flavor: key NAMES, not a button
      * mask — the ULA scans a real 8x5 matrix and the face's keyboard

@@ -114,3 +114,25 @@ test('machine snapshot: save/load round-trips and resumes identically', async ()
     assert.equal(b.cpu.hl, a.cpu.hl);
     assert.deepEqual([...b.mem.slice(0x4000, 0x4040)], [...a.mem.slice(0x4000, 0x4040)]);
 });
+
+test('Kempston joystick: the face button mask reads back as 000FUDLR on port $1F', () => {
+    const { m, t } = zx();
+    const inPort = (p) => m.cpu.inPort(p);
+    assert.equal(inPort(0x1f), 0x00, 'idle joystick reads 0');
+    assert.equal(t.setButtons(0b00100), true);      // face: right
+    assert.equal(inPort(0x1f), 0x01, 'right = Kempston bit 0');
+    t.setButtons(0b01000);                          // face: left
+    assert.equal(inPort(0x1f), 0x02);
+    t.setButtons(0b00001);                          // face: down
+    assert.equal(inPort(0x1f), 0x04);
+    t.setButtons(0b00010);                          // face: up
+    assert.equal(inPort(0x1f), 0x08);
+    t.setButtons(0b10010);                          // fire + up
+    assert.equal(inPort(0x1f), 0x18);
+    t.setButtons(0);
+    assert.equal(inPort(0x1f), 0x00, 'released');
+    // Decode: any odd port with A5 low answers; even ports stay ULA's.
+    t.setButtons(0b00100);
+    assert.equal(inPort(0xdf), 0x01, 'mirrors where A5 is low and A0 high');
+    assert.equal(inPort(0xfe) & 0x1f, 0x1f, 'the ULA keyboard is untouched');
+});

@@ -108,6 +108,11 @@ export class Z80Machine {
         // machine's memory for the live screen.
         this.ula = config.ula ? new ZXULA(this.mem) : null;
         if (this.ula) this.chips.ula = this.ula;
+        // Kempston joystick (config.kempston, default ON with the ULA):
+        // the interface most archive games probe. Decoded the classic
+        // way — A5 low on an ODD port (the ULA owns even ports) — and
+        // read as 000FUDLR active-HIGH, idle $00.
+        this._kempston = (config.kempston ?? !!config.ula) ? 0 : null;
         this.tape = null; // insertTape() attaches; the $0556 trap consumes
         this._romRanges = (config.regions || []).filter((r) => r.kind === 'rom');
         this.cpu = new Z80({
@@ -119,6 +124,7 @@ export class Z80Machine {
             },
             in: (port) => {
                 if (this.ula && (port & 1) === 0) return this.ula.in(port);
+                if (this._kempston !== null && (port & 0x21) === 0x01) return this._kempston;
                 const e = this._portMap.get(port & 0xff);
                 return e ? e.chip.read(e.rs) : 0xff;
             },
@@ -137,6 +143,23 @@ export class Z80Machine {
 
     /** Insert a .TAP; the $0556 trap serves blocks in order. */
     insertTape(tapBuf) { this.tape = new ZXTape(tapBuf); }
+
+    /**
+     * Face-input contract, joystick side: the same button mask the
+     * 6502 machines take (bit0 down, bit1 up, bit2 right, bit3 left,
+     * bit4 fire) mapped onto Kempston bit order (000FUDLR). False
+     * when the machine has no Kempston interface.
+     */
+    setButtons(mask) {
+        if (this._kempston === null) return false;
+        this._kempston =
+            ((mask >> 2) & 1)          // right
+            | (((mask >> 3) & 1) << 1) // left
+            | ((mask & 1) << 2)        // down
+            | (((mask >> 1) & 1) << 3) // up
+            | (mask & 0x10);           // fire
+        return true;
+    }
 
     /**
      * Snapshot the whole machine — CPU, memory, ULA, tape position —
