@@ -193,3 +193,40 @@ describe('TMS9918 in the machine', () => {
     assert.equal(m.mem[0x10], 2, 'exactly two frame interrupts in 2.5 frames');
   });
 });
+
+describe('debug target video()', () => {
+  it('exposes the VDP frame as RGBA; null without a VDP', async () => {
+    const { createM6502Adapter } = await import('../src/m6502-adapter.js');
+    const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+    const cfg = {
+      clockHz: 1_000_000,
+      regions: [
+        { kind: 'ram', start: 0x0000, end: 0x3fff },
+        { kind: 'rom', start: 0xc000, end: 0xffff },
+      ],
+      chips: [{ kind: 'vdp', name: 'vdp', at: 0x9000 }],
+    };
+    const rom = new Uint8Array(0x4000).fill(0xea);
+    rom[0x3ffc] = 0x00; rom[0x3ffd] = 0xc0;
+    const adapter = createM6502Adapter({ config: cfg, rom, romAt: 0xc000 });
+    adapter.machine.reset();
+    // Backdrop cyan, screen blank → whole frame is backdrop after VBLANK
+    adapter.machine.chips.vdp.write(1, 0x07);
+    adapter.machine.chips.vdp.write(1, 0x87);
+    adapter.machine.advanceToMs(1000 / 60 + 1);
+    const target = createM6502DebugTarget(adapter);
+    const v = target.video();
+    assert.ok(v, 'machine with a VDP exposes video');
+    assert.equal(v.width, 256);
+    assert.equal(v.height, 192);
+    assert.ok(v.frame >= 1, 'at least one VBLANK rendered');
+    // cyan = [66, 235, 245, 255]
+    assert.deepEqual([...v.rgba.slice(0, 4)], [66, 235, 245, 255]);
+
+    const bare = createM6502Adapter({
+      config: { ...cfg, chips: [] }, rom, romAt: 0xc000,
+    });
+    const bareTarget = createM6502DebugTarget(bare);
+    assert.equal(bareTarget.video(), null, 'no VDP → null, never a black lie');
+  });
+});

@@ -156,6 +156,27 @@ export function createM6502DebugTarget(adapter, opts = {}) {
       return runState === 'halted' ? 'halted' : 'budget';
     },
 
+    /**
+     * The machine's video output, when the config declared a TMS9918
+     * (CHIP vdp = TMS9918 AT $addr): the last VBLANK's frame as RGBA
+     * for a canvas face, plus mode and frame counter so a poller can
+     * skip unchanged frames. null when the machine has no VDP — the
+     * UI shows no screen rather than a black lie.
+     */
+    video() {
+      for (const chip of Object.values(machine.chips || {})) {
+        if (typeof chip.rgba === 'function' && chip.indices) {
+          return {
+            width: 256, height: 192,
+            rgba: chip.rgba(),
+            mode: chip.mode,
+            frame: chip.frame,
+          };
+        }
+      }
+      return null;
+    },
+
     position() {
       if (!symbols?.scheduler?.tasks) return [];
       const result = [];
