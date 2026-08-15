@@ -1753,6 +1753,15 @@ export class BoardImpl {
           earliest = state._echoEndNs;
         }
       }
+      // Generic timed edge (PWM sensors like the Memsic 2125): a model
+      // that sets _nextEdgeNs gets sub-stepped TO the edge, because
+      // pulseIn-grade timing is the point — the 1 ms grid is not enough.
+      if (state._nextEdgeNs && state._nextEdgeNs > afterNs &&
+          state._nextEdgeNs <= beforeNs) {
+        if (earliest === null || state._nextEdgeNs < earliest) {
+          earliest = state._nextEdgeNs;
+        }
+      }
     }
 
     // For continuous devices (motor, encoder, servo): impose a max sub-step

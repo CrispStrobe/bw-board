@@ -11,6 +11,7 @@
  * Idempotent: registerDevice overwrites by kind, so calling twice is safe.
  */
 import { registerLogicGates } from './devices/logic-gates.js';
+import { registerAccelerometers } from './devices/accelerometers.js';
 import { registerRelay } from './devices/relay.js';
 import { registerDCMotor } from './devices/dc-motor.js';
 import { registerServo } from './devices/servo.js';
@@ -59,6 +60,7 @@ export function registerAllDevices() {
   registerTimer555();
   registerPowerDevices();
   registerSensors();
+  registerAccelerometers();
   registerHBridge();
   registerMotorDrivers();
   registerDisplayDevices();
