@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { Z80Machine } from '../src/z80-machine.js';
+import { createZ80DebugTarget } from '../src/z80-debug.js';
+import { ZX_W, ZX_H, ZX_BORDER, ZX_PALETTE } from '../src/zx-ula.js';
+
+/**
+ * The Spectrum face surface on the Z80 debug target: video() serves
+ * the ULA's frame, setKeys() routes key names into the matrix, and
+ * insertTape() attaches a TAP — the same contract shape m6502-debug
+ * gives the browser (setButtons/video), Spectrum-flavored.
+ */
+
+const zx = () => {
+    const m = new Z80Machine({
+        clockHz: 3_500_000,
+        regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }],
+        ula: true,
+    });
+    return { m, t: createZ80DebugTarget({ machine: m }) };
+};
+
+test('video(): the ULA frame reaches the debug target', () => {
+    const { m, t } = zx();
+    // Paint one ink pixel: top-left bitmap byte $80, attr ink=2 (red).
+    m.mem[0x4000] = 0x80;
+    m.mem[0x5800] = 0x02;
+    const f = t.video();
+    assert.ok(f, 'a frame is served');
+    assert.equal(f.width, ZX_W + 2 * ZX_BORDER);
+    assert.equal(f.height, ZX_H + 2 * ZX_BORDER);
+    const px = (ZX_BORDER * f.width + ZX_BORDER) * 4;
+    assert.deepEqual([...f.rgba.slice(px, px + 3)], ZX_PALETTE[2].slice(0, 3), 'the ink pixel is red');
+});
+
+test('setKeys(): names land in the ULA matrix, and clear again', () => {
+    const { m, t } = zx();
+    assert.equal(t.setKeys(['a']), true);
+    assert.equal(m.ula.in(0xfdfe) & 0x01, 0, 'A half-row bit 0 pulled low');
+    assert.equal(t.setKeys([]), true);
+    assert.equal(m.ula.in(0xfdfe) & 0x1f, 0x1f, 'released');
+});
+
+test('insertTape() through the target; absent hardware answers false', () => {
+    const { m, t } = zx();
+    // One header block: len=3 (flag+byte+checksum).
+    assert.equal(t.insertTape(Uint8Array.from([3, 0, 0x00, 0xaa, 0xaa])), true);
+    assert.equal(m.tape.blocks.length, 1);
+
+    const bare = createZ80DebugTarget({
+        machine: { cpu: {}, mem: new Uint8Array(65536), chips: {}, tMs: 0, cycles: 0 },
+    });
+    assert.equal(bare.setKeys(['a']), false, 'no ULA: setKeys refuses');
+    assert.equal(bare.video(), null, 'no video chip: null');
+    assert.equal(bare.insertTape(Uint8Array.of(0)), false, 'no tape support: refuses');
+});
+
+test('audioTone(): 440 Hz square on the beeper reads back as ~440 Hz', async () => {
+    const { ZXULA } = await import('../src/zx-ula.js');
+    const u = new ZXULA(new Uint8Array(65536));
+    // Half-period of 440 Hz at 3.5 MHz ≈ 3977 T-states.
+    for (let i = 0; i < 40; i++) {
+        u.advance(3977);
+        u.out(0xfe, ((i & 1) << 4), u.tStates);
+    }
+    const tone = u.audioTone();
+    assert.ok(tone.on, 'a sustained square is a tone');
+    assert.ok(Math.abs(tone.hz - 440) < 5, `estimated ${tone.hz} Hz`);
+    // Silence after: the window slides past the last edge.
+    u.advance(400_000);
+    assert.deepEqual(u.audioTone(), { hz: 0, on: false });
+    // A lone click is not a tone.
+    const u2 = new ZXULA(new Uint8Array(65536));
+    u2.advance(1000); u2.out(0xfe, 0x10, u2.tStates);
+    u2.advance(1000);
+    assert.equal(u2.audioTone().on, false);
+});

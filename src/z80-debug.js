@@ -81,6 +81,42 @@ export function createZ80DebugTarget(adapter) {
 
     timeNs() { return BigInt(Math.round(machine.tMs * 1e6)); },
 
+    /**
+     * Face-input contract, Spectrum flavor: key NAMES, not a button
+     * mask — the ULA scans a real 8x5 matrix and the face's keyboard
+     * focus routing passes held key names straight through. Returns
+     * false when the machine has no ULA to receive them.
+     */
+    setKeys(names) {
+      if (!machine.ula || typeof machine.ula.setKeys !== 'function') return false;
+      machine.ula.setKeys(names);
+      return true;
+    },
+
+    video() {
+      // The ULA is the Spectrum's video chip; otherwise any chip
+      // implementing the common videoFrame() contract counts (MC6845
+      // and friends arrive on this same surface).
+      if (machine.ula && typeof machine.ula.videoFrame === 'function') return machine.ula.videoFrame();
+      for (const chip of Object.values(machine.chips || {})) {
+        if (typeof chip.videoFrame === 'function') return chip.videoFrame();
+      }
+      return null;
+    },
+
+    /** Audio-face contract: the beeper's current {hz, on}, or null. */
+    audio() {
+      if (machine.ula && typeof machine.ula.audioTone === 'function') return machine.ula.audioTone();
+      return null;
+    },
+
+    /** Insert a .TAP for the ROM fast-load trap; false without support. */
+    insertTape(tapBuf) {
+      if (typeof machine.insertTape !== 'function') return false;
+      machine.insertTape(tapBuf);
+      return true;
+    },
+
     readMem(space, addr, len) {
       if (space !== 'mem') return { unsupported: `no space '${space}' on z80` };
       const out = new Uint8Array(len);

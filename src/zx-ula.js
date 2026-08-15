@@ -55,6 +55,7 @@ const MATRIX = {
     space: [7, 0], sym: [7, 1], m: [7, 2], n: [7, 3], b: [7, 4],
 };
 
+const CLOCK_HZ = 3_500_000;  // the 48K machine's fixed clock
 const FRAME_TSTATES = 69888; // 48K frame at 3.5 MHz → 50.08 Hz
 const INT_LENGTH = 32;
 
@@ -69,6 +70,28 @@ export class ZXULA {
         this._toFrame = FRAME_TSTATES;
         this._intLeft = 0;
         this.frame = 0;
+        this.tStates = 0;          // total T-states, the edge clock
+    }
+
+    /**
+     * The audio-face contract, shaped like the buzzer's {hz, on}: the
+     * dominant beeper frequency over the recent window, estimated from
+     * speaker edges. Fewer than 4 edges in the window = silence — a
+     * lone level change is a click, not a tone.
+     * @param {number} [windowTs] look-back in T-states (default 50 ms)
+     */
+    audioTone(windowTs = 175_000) {
+        const since = this.tStates - windowTs;
+        const e = this.speakerEdges;
+        let first = e.length;
+        while (first > 0 && e[first - 1][0] >= since) first--;
+        const n = e.length - first;
+        if (n < 4) return { hz: 0, on: false };
+        const span = e[e.length - 1][0] - e[first][0];
+        if (span <= 0) return { hz: 0, on: false };
+        // n edges bound n-1 half-periods; a full period is two of them.
+        const hz = CLOCK_HZ / (2 * (span / (n - 1)));
+        return { hz: Math.round(hz), on: true };
     }
 
     /** Face-input contract: the currently held key names. */
@@ -104,6 +127,7 @@ export class ZXULA {
 
     /** @param {number} t T-states elapsed */
     advance(t) {
+        this.tStates += t;
         if (this._intLeft > 0) this._intLeft = Math.max(0, this._intLeft - t);
         this._toFrame -= t;
         while (this._toFrame <= 0) {
