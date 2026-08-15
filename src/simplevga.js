@@ -20,10 +20,14 @@
  *   (signal() === false) instead of painting pixels a real monitor
  *   would never lock onto. That refusal is the educational point.
  *
- * Palette: 4-bit pixel read as IRGB (bit3 intensity, bit2 R, bit1 G,
- * bit0 B). STATED ASSUMPTION — the bit-to-DAC order comes from the
- * schematic, which has not been transcribed yet; the mapping is
- * isolated in PALETTE so a schematic read corrects one table.
+ * Palette: 4-bit pixel as IRGB — CONFIRMED against hardware/
+ * schematic.png (rev 2, 29/12/2020), transcribed 2026-08-15: the
+ * 74HCT273 latch drives Q0→VGA_B, Q1→VGA_G, Q2→VGA_R through
+ * 470Ω/220Ω pads, and Q3 drives the COMMON bottom rail of the three
+ * 680Ω resistors — a shared intensity bit that lifts even channels
+ * whose color bit is low (hence the dim-channel value below). Q5/Q6
+ * carry VGA_H/VGA_V, matching vga.s's %00100000/%01000000 sync bits;
+ * Q4/Q7 are the /HR//VR counter resets.
  */
 
 export const SVGA_W = 160;      // 640 / 4
