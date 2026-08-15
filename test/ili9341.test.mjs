@@ -212,3 +212,122 @@ describe('ILI9341 SPI TFT', () => {
     assert.equal(l.state.writes, 1);
   });
 });
+
+// =====================================================================
+// ILI9341 8080-parallel mode (ili9341_par)
+// =====================================================================
+
+function makeParLcd() {
+  registerILI9341();
+  const model = getDevice('ili9341_par');
+  const part = { id: 'tft_par', kind: 'ili9341_par', params: {} };
+  const state = model.init(part);
+  const pins = { vcc: 3.3, gnd: 0, cs: 3.3, rst: 3.3, rs: 0, wr: 3.3, rd: 3.3,
+                 d0: 0, d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0, d7: 0, led: 3.3 };
+  const read = (t) => pins[t] ?? 0;
+  let t = 0n;
+
+  /** Write one byte via the 8080 bus: set data + RS, pulse WR low→high. */
+  const writeByte = (byte, isData) => {
+    pins.rs = isData ? 3.3 : 0;
+    for (let i = 0; i < 8; i++) pins[`d${i}`] = (byte >> i) & 1 ? 3.3 : 0;
+    pins.wr = 0; model.update(part, state, read, t); t += 100n;
+    pins.wr = 3.3; model.update(part, state, read, t); t += 100n; // rising edge latches
+  };
+  const select = (on) => { pins.cs = on ? 0 : 3.3; model.update(part, state, read, t); t += 100n; };
+  const cmd = (c, ...params) => { writeByte(c, false); for (const p of params) writeByte(p, true); };
+  const wake = () => { select(true); cmd(0x11); cmd(0x29); };
+  const window = (x0, x1, y0, y1) => {
+    cmd(0x2a, x0 >> 8, x0 & 0xff, x1 >> 8, x1 & 0xff);
+    cmd(0x2b, y0 >> 8, y0 & 0xff, y1 >> 8, y1 & 0xff);
+  };
+  return { model, part, state, pins, read, writeByte, select, cmd, wake, window };
+}
+
+describe('ILI9341 8080-parallel mode', () => {
+  beforeEach(() => { try { unregisterDevice('ili9341'); } catch {} try { unregisterDevice('ili9341_par'); } catch {} });
+
+  it('boots sleeping; SLPOUT + DISPON wake it (parallel mirrors SPI)', () => {
+    const l = makeParLcd();
+    assert.equal(l.state.sleeping, true);
+    assert.equal(l.state.displayOn, false);
+    l.wake();
+    assert.equal(l.state.sleeping, false);
+    assert.equal(l.state.displayOn, true);
+  });
+
+  it('RAMWR fills the CASET/PASET window — same as SPI path', () => {
+    const l = makeParLcd();
+    l.wake();
+    l.window(10, 11, 20, 21); // 2x2 window
+    l.cmd(0x2c);
+    const px = [0xf800, 0x07e0, 0x001f, 0xffff];
+    for (const p of px) { l.writeByte(p >> 8, true); l.writeByte(p & 0xff, true); }
+    assert.equal(l.state.gram[20 * ILI9341_W + 10], 0xf800, '(10,20) red');
+    assert.equal(l.state.gram[20 * ILI9341_W + 11], 0x07e0, '(11,20) green');
+    assert.equal(l.state.gram[21 * ILI9341_W + 10], 0x001f, '(10,21) blue');
+    assert.equal(l.state.gram[21 * ILI9341_W + 11], 0xffff, '(11,21) white');
+    assert.equal(l.state.writes, 4);
+  });
+
+  it('MADCTL MV swaps coordinates — same as SPI path', () => {
+    const l = makeParLcd();
+    l.wake();
+    l.cmd(0x36, 0x20); // MV
+    l.window(5, 5, 9, 9);
+    l.cmd(0x2c);
+    l.writeByte(0xf8, true); l.writeByte(0x00, true);
+    assert.equal(l.state.gram[5 * ILI9341_W + 9], 0xf800);
+  });
+
+  it('RESX low resets to sleeping defaults', () => {
+    const l = makeParLcd();
+    l.wake();
+    assert.equal(l.state.displayOn, true);
+    l.pins.rst = 0; l.model.update(l.part, l.state, l.read, 999999n);
+    assert.equal(l.state.displayOn, false);
+    assert.equal(l.state.sleeping, true);
+  });
+
+  it('unknown commands recorded, pixel path survives', () => {
+    const l = makeParLcd();
+    l.wake();
+    l.cmd(0xd0, 0x42);
+    l.cmd(0x2c);
+    l.writeByte(0xff, true); l.writeByte(0xff, true);
+    assert.ok(l.state.unknown.includes(0xd0));
+    assert.equal(l.state.writes, 1);
+  });
+
+  it('INVON/INVOFF toggle inversion (parallel path)', () => {
+    const l = makeParLcd();
+    l.wake();
+    l.window(0, 0, 0, 0);
+    l.cmd(0x2c); l.writeByte(0xf8, true); l.writeByte(0x00, true); // red
+    l.cmd(0x21); // INVON
+    assert.equal(l.state.inverted, true);
+    const inv = ili9341Rgba(l.state);
+    assert.deepEqual([...inv.slice(0, 3)], [7, 255, 255], 'inverted red = cyan');
+    l.cmd(0x20); // INVOFF
+    assert.equal(l.state.inverted, false);
+  });
+
+  it('ili9341Rgba works identically for parallel-mode state', () => {
+    const l = makeParLcd();
+    l.wake();
+    l.window(0, 0, 0, 0);
+    l.cmd(0x2c); l.writeByte(0xf8, true); l.writeByte(0x00, true); // red
+    const rgba = ili9341Rgba(l.state);
+    assert.deepEqual([...rgba.slice(0, 4)], [248, 0, 0, 255]);
+  });
+
+  it('power/gamma opcodes are named no-ops in parallel mode too', () => {
+    const l = makeParLcd();
+    l.wake();
+    const ops = [0xef, 0xcf, 0xed, 0xe8, 0xcb, 0xf7, 0xea,
+                 0xc0, 0xc1, 0xc5, 0xc7, 0xb1, 0xb6,
+                 0xf2, 0x26, 0xe0, 0xe1];
+    for (const op of ops) l.cmd(op, 0x00);
+    assert.equal(l.state.unknown.length, 0);
+  });
+});
