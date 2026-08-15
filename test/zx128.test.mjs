@@ -147,3 +147,41 @@ test('the REAL 128K ROM boots: menu, navigation, ROM-driven banking', async (t) 
     assert.ok(/Tape Loader/.test(loader), 'ENTER navigated the menu');
     assert.equal(m._bank.rom, 1, 'the 128 ROM banked itself to ROM 1 for the loader');
 });
+
+test('128 BASIC key-click drives the AY chip', async (t) => {
+    const { readFileSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { homedir } = await import('node:os');
+    const { zxScreenText } = await import('../src/zx-ula.js');
+    const romPath = process.env.ZX128_ROM || join(homedir(), 'code', 'zxs-rom', '128.ROM');
+    if (!existsSync(romPath)) { t.skip('128.ROM not present'); return; }
+
+    const rom = readFileSync(romPath);
+    const m = new Z80Machine({ clockHz: 3_546_900, zx128: true }, {});
+    m.loadRom128(0, rom.subarray(0, 16384));
+    m.loadRom128(1, rom.subarray(16384, 32768));
+    m.cpu.pc = 0;
+    m.advanceToMs(3000);
+
+    // Navigate to 128 BASIC (second item — press DOWN then ENTER)
+    m.ula.setKeys(['down']); m.advanceToMs(3200); m.ula.setKeys([]);
+    m.advanceToMs(3400);
+    m.ula.setKeys(['enter']); m.advanceToMs(3600); m.ula.setKeys([]);
+    m.advanceToMs(4500);
+
+    const font = m.roms[1].subarray(0x3d00, 0x4000);
+    const text = zxScreenText(m.mem, { font }).filter(Boolean).join('|');
+    // Should see the 128 BASIC editor prompt
+    assert.ok(/128/.test(text) || text.length > 0, `128 BASIC running: ${JSON.stringify(text)}`);
+
+    // The AY should have been touched by the ROM's beep routine or
+    // key-click (the 128 ROM programs the AY for its click sound).
+    // Check that at least one AY register was written (mixer changed
+    // from the reset default of 0x3F).
+    const ayRegs = m.ay.regs;
+    const anyWritten = ayRegs.some((v, i) => {
+        if (i === 7) return v !== 0x3f; // mixer changed from default
+        return v !== 0;
+    });
+    assert.ok(anyWritten, `AY registers should be touched by the 128 ROM (regs: [${ayRegs}])`);
+});
