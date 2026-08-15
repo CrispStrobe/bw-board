@@ -211,8 +211,13 @@ export default ZXULA;
  * This turns every Spectrum acceptance test from pixel-counting into
  * string assertion — the same jump the HD44780's text state gave.
  * @param {Uint8Array} mem the machine's 64K (ROM font + screen)
+ * @param {{font?: Uint8Array}} [opts] the 768-byte character set
+ *   (chars 32-127 × 8 rows). Defaults to mem's $3D00 — right for a
+ *   48K machine; a BANKED machine's flat mem has no ROM, so pass
+ *   machine.roms[1].subarray(0x3d00, 0x4000) there.
  */
-export function zxScreenText(mem) {
+export function zxScreenText(mem, opts = {}) {
+    const font = opts.font ?? mem.subarray(0x3d00, 0x4000);
     const lines = [];
     for (let row = 0; row < 24; row++) {
         let line = '';
@@ -228,9 +233,9 @@ export function zxScreenText(mem) {
             if (cell.every((b) => b === 0)) { ch = ' '; }
             else {
                 for (let c = 32; c < 128; c++) {
-                    const g = 0x3d00 + (c - 32) * 8;
+                    const g = (c - 32) * 8;
                     let ok = true;
-                    for (let dy = 0; dy < 8; dy++) if (mem[g + dy] !== cell[dy]) { ok = false; break; }
+                    for (let dy = 0; dy < 8; dy++) if (font[g + dy] !== cell[dy]) { ok = false; break; }
                     if (ok) { ch = String.fromCharCode(c); break; }
                 }
             }

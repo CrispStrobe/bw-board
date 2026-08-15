@@ -89,3 +89,30 @@ test('snapshot round-trip carries pages and banking', () => {
     assert.equal(m2.readBus(0xc010), 0x99, 'page 6 contents restored');
     assert.equal(m2.ula.screen, m2.pages[7], 'the ULA renders the shadow after restore');
 });
+
+test('48K mode: the original ROM boots on the BANKED machine (USR0 semantics)', async (t) => {
+    const { readFileSync, existsSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { homedir } = await import('node:os');
+    const { zxScreenText } = await import('../src/zx-ula.js');
+    const romPath = process.env.ZX_ROM || join(homedir(), 'code', 'zxs-rom', '48.ROM');
+    if (!existsSync(romPath)) { t.skip('48.ROM not built'); return; }
+
+    // How every 128K machine runs 48K software: 48 BASIC in ROM slot 1,
+    // OUT $7FFD with ROM 1 + LOCK, then reset into it.
+    const m = zx128();
+    m.loadRom128(1, readFileSync(romPath));
+    m.cpu.outPort(BANK, 0x30);               // ROM 1 + lock
+    m.cpu.pc = 0;
+    m.advanceToMs(4200);
+    const font = m.roms[1].subarray(0x3d00, 0x4000);
+    const text = zxScreenText(m.mem, { font }).filter(Boolean).join('|');
+    assert.ok(/1982/.test(text), `the (c) 1982 boot screen on the banked bus (${JSON.stringify(text)})`);
+
+    // The whole 48K input path holds: a keypress lands via the ULA.
+    m.ula.setKeys(['b']);
+    m.advanceToMs(m.tMs + 150);
+    m.ula.setKeys([]);
+    m.advanceToMs(m.tMs + 300);
+    assert.notEqual(zxScreenText(m.mem, { font }).filter(Boolean).join('|'), text, 'keys reach 48 BASIC');
+});

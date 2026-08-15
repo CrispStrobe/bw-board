@@ -326,8 +326,12 @@ export class Z80Machine {
         }
         // LD-BYTES fast-load trap: with a tape inserted, entering the
         // ROM's loader at $0556 loads the next block instantly and RETs.
-        if (this.tape && this.cpu.pc === 0x0556 && this.ula) {
-            this.tape.trap(this.cpu, this.mem);
+        // On a 128K machine the address only means LD-BYTES when the
+        // 48 BASIC ROM (slot 1) is mapped — the 128 editor ROM has
+        // different code at $0556 and must not be trapped.
+        if (this.tape && this.cpu.pc === 0x0556 && this.ula
+            && (!this._zx128 || this._bank.rom === 1)) {
+            this.tape.trap(this.cpu, this.mem, this.writeBus);
             this.cpu.pc = this.cpu._pop16();
             this.cycles += 100; // a token cost; the real routine took minutes
             this._advanceChips(100);

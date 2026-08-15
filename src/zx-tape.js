@@ -44,9 +44,12 @@ export class ZXTape {
      * The LD-BYTES trap body. Call when PC = $0556.
      * @param {import('./z80.js').Z80} cpu
      * @param {Uint8Array} mem
+     * @param {(a: number, v: number) => void} [write] bus write — a 128K
+     *   machine passes its banked writeBus so a load into the $C000
+     *   window lands in the mapped PAGE, not the flat array.
      * @returns {boolean} true when handled (caller RETs the CPU)
      */
-    trap(cpu, mem) {
+    trap(cpu, mem, write) {
         if (this.pos >= this.blocks.length) {
             // No tape left: report failure the way BREAK does — carry
             // reset — so the ROM prints its error instead of hanging.
@@ -68,7 +71,8 @@ export class ZXTape {
         const len = (cpu.d << 8) | cpu.e;
         const n = Math.min(len, block.data.length);
         if (load) {
-            for (let i = 0; i < n; i++) mem[(dest + i) & 0xffff] = block.data[i];
+            const w = write ?? ((a, v) => { mem[a] = v; });
+            for (let i = 0; i < n; i++) w((dest + i) & 0xffff, block.data[i]);
         }
         // Register state a successful LD-BYTES leaves behind, per the
         // ROM listing: IX past the end, DE zero, carry set.
