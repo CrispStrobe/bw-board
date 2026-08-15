@@ -382,6 +382,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // collector gets driven arbitrarily negative — the audit measured
   // -420V on pc24 — because beta*Ib exceeded anything the load allows.
   const bjtRegions = new Map();
+  const mosRegions = new Map();
   for (const part of parts) {
     if (part.kind === 'led' || part.kind === 'diode' || part.kind === 'npn'
         || part.kind === 'pnp' || part.kind === 'zener'
@@ -390,6 +391,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
     if (part.kind === 'npn' || part.kind === 'pnp') bjtRegions.set(part.id, 'active');
+    if (part.kind === 'nmos' || part.kind === 'pmos') mosRegions.set(part.id, 'saturation');
   }
 
   // Newton–Raphson iterations
@@ -511,11 +513,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'nmos':
-          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id));
           break;
 
         case 'pmos':
-          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages);
+          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id));
           break;
 
         case 'opamp':
@@ -724,8 +726,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (region === 'active') {
         // The VCCS demanded more collector current than the load can
         // pass: the solver answers by driving the junction below its
-        // saturation floor. That is the entry signal.
-        if (vOut < vceSat) next = 'saturated';
+        // saturation floor. That is the entry signal — but ONLY for a
+        // CONDUCTING device. An off transistor whose output is pulled
+        // past the rail (a cutoff PNP with a grounded emitter, say)
+        // also shows vOut < vceSat, and clamping THAT invented -0.2 V
+        // collectors and above-rail followers, oscillating against
+        // the leave test forever (sweep escalation 2026-08-15).
+        const vJon = diodeVoltages.get(part.id) ?? 0;
+        if (vJon > vbe - 0.05 && vOut < vceSat) next = 'saturated';
       } else {
         // Leave saturation when base drive no longer sustains it:
         // the base junction has fallen out of conduction, or the
@@ -740,6 +748,37 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (next !== region) {
         bjtRegions.set(part.id, next);
+        regionChanged = true;
+      }
+    }
+
+    // MOSFET region transitions: saturation ↔ triode. Same doctrine
+    // as the BJTs: enter triode only while CONDUCTING and the channel
+    // has collapsed below the overdrive; back to saturation when the
+    // drain lifts clear (small hysteresis against flip-flopping).
+    for (const part of parts) {
+      if (part.kind !== 'nmos' && part.kind !== 'pmos') continue;
+      const vth = /** @type {number} */ (part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0));
+      const vgs = diodeVoltages.get(part.id) ?? 0; // vGS (nmos) / vSG (pmos)
+      const vov = vgs - Math.abs(vth);
+      const netD = findNet(nets, part.id, 'drain');
+      const netS = findNet(nets, part.id, 'source');
+      const idxD = netD ? nodeIndex.get(netD) : undefined;
+      const idxS = netS ? nodeIndex.get(netS) : undefined;
+      const vD = idxD !== undefined ? solution[idxD] : 0;
+      const vS = idxS !== undefined ? solution[idxS] : 0;
+      const vds = part.kind === 'nmos' ? vD - vS : vS - vD;
+      const region = mosRegions.get(part.id);
+      let next = region;
+      if (vov <= 0) {
+        next = 'saturation'; // cutoff path owns it; reset for clean re-entry
+      } else if (region === 'saturation') {
+        if (vds < vov * 0.95) next = 'triode';
+      } else {
+        if (vds > vov * 1.05) next = 'saturation';
+      }
+      if (next !== region) {
+        mosRegions.set(part.id, next);
         regionChanged = true;
       }
     }
@@ -1507,7 +1546,7 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  * Linear/saturation: Id = K × (Vgs - Vth)² (simplified).
  * Linearized as Norton companion for NR.
  */
-function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation') {
   const vth = /** @type {number} */ (part.params.vth ?? 2.0);
   const k = /** @type {number} */ (part.params.k ?? 0.5); // A/V² (transconductance parameter)
 
@@ -1529,6 +1568,19 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
     if (idxD !== undefined && idxS !== undefined) {
       A.add(idxD, idxS, -gOff);
       A.add(idxS, idxD, -gOff);
+    }
+  } else if (region === 'triode') {
+    // Fully-enhanced switch with small vds: the channel is a resistor,
+    // Rds(on) ≈ 1/(2K·Vov). Without this region the saturation VCCS
+    // demanded K·Vov² amps through any load and the drain ran away to
+    // -2247 V (sweep escalation 2026-08-15) — the NPN lesson, again.
+    const vov = vgs - vth;
+    const gOn = 2 * k * Math.max(vov, 0.05);
+    if (idxD !== undefined) A.add(idxD, idxD, gOn);
+    if (idxS !== undefined) A.add(idxS, idxS, gOn);
+    if (idxD !== undefined && idxS !== undefined) {
+      A.add(idxD, idxS, -gOn);
+      A.add(idxS, idxD, -gOn);
     }
   } else {
     // On: Id = K(Vgs - Vth)². Linearized:
@@ -1560,7 +1612,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
 }
 
 /** P-channel MOSFET: mirror of NMOS with reversed gate sense. */
-function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
+function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation') {
   const vth = /** @type {number} */ (part.params.vth ?? -2.0);
   const k = /** @type {number} */ (part.params.k ?? 0.5);
 
@@ -1582,6 +1634,15 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
     if (idxD !== undefined && idxS !== undefined) {
       A.add(idxD, idxS, -gOff);
       A.add(idxS, idxD, -gOff);
+    }
+  } else if (region === 'triode') {
+    // Enhanced switch, small |vds|: channel = Rds(on) ≈ 1/(2K·Vov).
+    const gOn = 2 * k * Math.max(vsg - Math.abs(vth), 0.05);
+    if (idxD !== undefined) A.add(idxD, idxD, gOn);
+    if (idxS !== undefined) A.add(idxS, idxS, gOn);
+    if (idxD !== undefined && idxS !== undefined) {
+      A.add(idxD, idxS, -gOn);
+      A.add(idxS, idxD, -gOn);
     }
   } else {
     const vov = vsg - Math.abs(vth);
