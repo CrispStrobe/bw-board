@@ -22,6 +22,7 @@ import { Z80CTC } from './z80-ctc.js';
 import { MC6845 } from './mc6845.js';
 import { ZXULA } from './zx-ula.js';
 import { ZXTape } from './zx-tape.js';
+import { AY38912 } from './ay-3-8912.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -131,6 +132,11 @@ export class Z80Machine {
         // way — A5 low on an ODD port (the ULA owns even ports) — and
         // read as 000FUDLR active-HIGH, idle $00.
         this._kempston = (config.kempston ?? !!config.ula) ? 0 : null;
+        // AY-3-8912 PSG: always present on 128K machines. Port decode
+        // per the 128K schematic: $FFFD (A15=1,A14=1,A1=0) = select/read,
+        // $BFFD (A15=1,A14=0,A1=0) = data write.
+        this.ay = this._zx128 ? new AY38912({ clockHz: config.clockHz }) : null;
+        if (this.ay) this.chips.ay = this.ay;
         this.tape = null; // insertTape() attaches; the $0556 trap consumes
         this._romRanges = (config.regions || []).filter((r) => r.kind === 'rom');
         const read48 = (a) => this.mem[a & 0xffff];
@@ -159,6 +165,8 @@ export class Z80Machine {
             in: (port) => {
                 if (this.ula && (port & 1) === 0) return this.ula.in(port);
                 if (this._kempston !== null && (port & 0x21) === 0x01) return this._kempston;
+                // AY read: $FFFD (A15=1, A14=1, A1=0)
+                if (this.ay && (port & 0xc002) === 0xc000) return this.ay.read();
                 const e = this._portMap.get(port & 0xff);
                 return e ? e.chip.read(e.rs) : 0xff;
             },
@@ -167,6 +175,10 @@ export class Z80Machine {
                 // 128K banking: $7FFD partial decode (A15 and A1 low),
                 // write-only, dead once the lock bit has been set.
                 if (this._zx128 && (port & 0x8002) === 0) { this._setBank(v); return; }
+                // AY select: $FFFD (A15=1, A14=1, A1=0)
+                if (this.ay && (port & 0xc002) === 0xc000) { this.ay.select(v); return; }
+                // AY data: $BFFD (A15=1, A14=0, A1=0)
+                if (this.ay && (port & 0xc002) === 0x8000) { this.ay.write(v); return; }
                 const e = this._portMap.get(port & 0xff);
                 if (e) e.chip.write(e.rs, v);
             },
