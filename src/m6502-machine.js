@@ -144,6 +144,7 @@ export class M6502Machine {
         for (const c of config.chips) {
             const regs = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8
                 : c.kind === 'latch' ? 1 : c.kind === 'vdp' ? 2
+                : c.kind === 'console' ? 8
                 : c.kind === 'tilevga' ? 0x4000 : 4;
             const span = c.span || regs;
             if (span < regs) throw new Error(`machine config: ${c.kind} span ${span} smaller than its ${regs} registers`);
@@ -165,6 +166,20 @@ export class M6502Machine {
                 chip = new Latch374({
                     onChange: (value, prev) => this._latchChange(c.name, value, prev),
                 });
+            } else if (c.kind === 'console') {
+                // py65mon-convention MMIO console (the interface Tali
+                // Forth 2 and the py65 ecosystem target): write reg 1
+                // ($F001) emits a character; read reg 4 ($F004) returns
+                // the next queued key or 0. Eight registers so the
+                // window covers $F000-$F007 like py65mon's.
+                const rx = [];
+                chip = {
+                    rx,
+                    read: (reg) => (reg === 4 ? (rx.length ? rx.shift() : 0) : 0),
+                    write: (reg, v) => {
+                        if (reg === 1 && this.hooks.onSerial) this.hooks.onSerial(v & 0xff, this.tMs);
+                    },
+                };
             } else if (c.kind === 'vdp') {
                 // TMS9918A: frame pacing derives from the CPU clock the
                 // machine advances chips with (60 Hz VBLANK + IRQ).

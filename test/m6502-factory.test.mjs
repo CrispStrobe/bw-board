@@ -317,3 +317,21 @@ test('factory: z80 cpm mode boots BBC BASIC interactively', async (t) => {
   assert.ok(/4/.test(out.slice(-20)), `typed command answered (${JSON.stringify(out.slice(-30))})`);
   assert.equal(adapter.exited(), false, 'still live at the prompt');
 });
+
+test('factory: py65mon mode boots Tali Forth 2 interactively (public domain)', async (t) => {
+  const { readFileSync: rf, existsSync: ex } = await import('node:fs');
+  const { join: j } = await import('node:path');
+  const { homedir: hd } = await import('node:os');
+  const binPath = process.env.TALI_BIN || j(hd(), 'code', 'TaliForth2', 'taliforth-py65mon.bin');
+  if (!ex(binPath)) { t.skip('taliforth-py65mon.bin not present (PD, SamCoVT/TaliForth2)'); return; }
+
+  const { target, adapter } = await createDebugTarget('eater6502', { py65mon: true, rom: rf(binPath) });
+  assert.ok(target, 'debug target rides along');
+  let out = '';
+  adapter.onSerial((b) => { out += String.fromCharCode(b & 0x7f); });
+  adapter.advanceNs(2_000_000_000);
+  assert.ok(/Tali Forth 2/i.test(out), 'the Forth announces itself');
+  for (const ch of '2 3 + .\n') adapter.sendSerial(ch.charCodeAt(0));
+  adapter.advanceNs(1_000_000_000);
+  assert.ok(/5\s+ok/i.test(out.slice(-30)), `typed Forth answered (${JSON.stringify(out.slice(-30))})`);
+});

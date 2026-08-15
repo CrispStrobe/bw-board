@@ -78,6 +78,14 @@ export function createM6502Adapter(opts = {}) {
 
     onSerial(cb) { serialListener = cb; },
 
+    /** RX side: feed a byte to a 'console' MMIO chip (py65mon getc). */
+    sendSerial(byte) {
+      for (const chip of Object.values(machine.chips)) {
+        if (chip && Array.isArray(chip.rx)) { chip.rx.push(byte & 0xff); return true; }
+      }
+      return false;
+    },
+
     loadRom(bytes, at) {
       machine.loadRom(bytes, at);
     },

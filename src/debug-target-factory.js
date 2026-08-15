@@ -110,7 +110,7 @@ async function createEmulatorTarget(opts) {
   const adapter = createEmu8051Adapter(wasm, { fosc, vcc, mode: 'poll' });
 
   // 2. Attach board
-  adapter.attachBoard(board);
+  adapter.attachBoard(board ?? { advanceTo() {}, setPin() {}, readPin() { return 0; } });
 
   // 3. Load hex
   if (hex) {
@@ -216,13 +216,30 @@ async function createZ80Target(opts) {
   return { target, adapter };
 }
 
+/** py65mon-shaped config: RAM low, the $F000 MMIO console window
+ *  carved out of high ROM — what Tali Forth 2 (public domain) and the
+ *  whole py65 ecosystem target. */
+const PY65MON = Object.freeze({
+  clockHz: 1_000_000,
+  regions: [
+    { kind: 'ram', start: 0x0000, end: 0x7fff },
+    { kind: 'rom', start: 0x8000, end: 0xefff },
+    { kind: 'rom', start: 0xf008, end: 0xffff },
+  ],
+  chips: [{ kind: 'console', name: 'con1', at: 0xf000 }],
+});
+
 async function createEater6502Target(opts) {
   const { board, rom, symbols, config } = opts;
 
-  if (!board) throw new Error('eater6502 target requires opts.board');
+  // A board is required for pin-level runs; the py65mon console-only
+  // shape (Tali Forth etc.) has no pins to publish, so a time-sync
+  // stub suffices — same stance as the z80 target.
+  if (!board && !opts.py65mon) throw new Error('eater6502 target requires opts.board');
 
   const { createM6502Adapter } = await import('./m6502-adapter.js');
   const adapterOpts = {};
+  if (opts.py65mon) adapterOpts.config = PY65MON;
   // Custom machine config — the wired-extractor path: the designer
   // circuit's bus wiring becomes {regions, chips} via extract6502Machine,
   // and the SAME machine the default preset builds grows video chips,
