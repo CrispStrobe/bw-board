@@ -8,6 +8,7 @@
  * @module
  */
 import { disasmZ80 } from './z80-disasm.js';
+import { loadSNA, SNA_SIZE } from './zx-sna.js';
 
 /** @param {{ machine: import('./z80-machine.js').Z80Machine }} adapter */
 export function createZ80DebugTarget(adapter) {
@@ -186,6 +187,14 @@ export function createZ80DebugTarget(adapter) {
     insertTape(tapBuf) {
       if (typeof machine.insertTape !== 'function') return false;
       machine.insertTape(tapBuf);
+      return true;
+    },
+
+    /** Load a 48K .SNA snapshot — the face's drag-a-snapshot-in path.
+     *  Returns false on machines without a ULA (not a Spectrum). */
+    loadSnapshot(buf) {
+      if (!machine.ula || buf.length < SNA_SIZE) return false;
+      loadSNA(machine, buf);
       return true;
     },
 
