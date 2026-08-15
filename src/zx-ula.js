@@ -119,6 +119,40 @@ export class ZXULA {
         this.speakerEdges.length = 0;
     }
 
+    // ── Contention ─────────────────────────────────────────────────
+    // Per-instruction approximation: given the current T-state position
+    // in the frame, return the wait-state penalty from the 8-T-state
+    // contention pattern. Returns 0 during border/blanking time.
+    // The contention table: pattern offset 0→6, 1→5, ..., 6→0, 7→0.
+
+    /** @type {number} T-states per scan line (224 for 48K, 228 for 128K) */
+    get _lineTstates() { return this._frameTstates === 70908 ? 228 : 224; }
+
+    /** @type {number} first contended scan line (48K: 64, 128K: 63) */
+    get _firstContendedLine() { return this._frameTstates === 70908 ? 63 : 64; }
+
+    /** @type {number} last contended scan line (exclusive) */
+    get _lastContendedLine() { return this._firstContendedLine + 192; }
+
+    /**
+     * Memory contention penalty for a bus access at the current frame
+     * position. Returns 0 when not in the contended display area.
+     * @param {number} frameTs — T-states into the current frame
+     *   (typically machine.cycles % frameTstates)
+     * @returns {number} wait states (0-6)
+     */
+    contend(frameTs) {
+        const lineTs = this._lineTstates;
+        const line = Math.floor(frameTs / lineTs);
+        if (line < this._firstContendedLine || line >= this._lastContendedLine) return 0;
+        const col = frameTs % lineTs;
+        // Only the first 128 T-states of each line are contended
+        // (the pixel/attr fetch area)
+        if (col >= 128) return 0;
+        const pattern = col & 7; // 0-7 position in the 8-T-state cycle
+        return pattern < 6 ? 6 - pattern : 0;
+    }
+
     /** Face-input contract: the currently held key names. */
     setKeys(names) {
         this.rows.fill(0x1f);

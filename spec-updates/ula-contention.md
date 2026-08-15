@@ -1,5 +1,7 @@
 # ULA memory contention — design note
 
+**Status: APPROVED** — coordinator review d45a33c → 2026-08-16.
+
 ## What it is
 
 The ZX Spectrum ULA shares the RAM bus with the CPU. When both need
@@ -13,12 +15,31 @@ on 128K) execute slower than the same code from uncontended RAM. This
 is observable: screen-timing demos, music players, and multicolor
 routines depend on exact T-state counts that include contention.
 
-## T-state model (48K, the well-measured case)
+## Accuracy level: PER-INSTRUCTION approximation
+
+**Our Z80 core is instruction-stepped.** It does not expose individual
+bus cycles within an instruction. This means:
+
+- We CANNOT apply contention at the per-access level (a real LD (HL),A
+  has one contended read + one contended write at specific T-state
+  offsets within the instruction — we see only the instruction as a
+  whole).
+- We CAN classify each instruction by its number of contended-memory
+  accesses and apply the TOTAL contention penalty at instruction
+  granularity. This is the same approach FUSE uses for its
+  instruction-level contention tests.
+
+**Stated bound:** the contention model is accurate to ±1 T-state per
+instruction in typical cases, and up to ±3 T-states for complex
+instructions (LDIR, block I/O) where mid-instruction contention
+patterns interleave. This is sufficient for the border-timing loops
+and music players that are the practical use cases; sub-instruction
+bus-cycle accuracy requires a cycle-stepped core.
+
+## T-state model (48K)
 
 The ULA reads bitmap/attribute data in an 8-T-state pattern during the
-active display area. The community contention table (documented by
-multiple independent measurements, Chris Smith's ULA book §6.3, and
-the FUSE test suite):
+active display area. The community contention table:
 
 | T-state in pattern | Wait states added |
 |---------------------|-------------------|
@@ -30,10 +51,6 @@ the FUSE test suite):
 | 5                   | 1                 |
 | 6                   | 0                 |
 | 7                   | 0                 |
-
-The pattern repeats for 128 T-states per scan line (the visible pixel
-area = 256 pixels / 2 pixels per T-state). Before and after the
-visible area (border, hsync, blanking), the ULA does not contend.
 
 ### Frame geometry (48K)
 
@@ -52,76 +69,54 @@ Per active-display line:
 - Contended pages: 1, 3, 5, 7 (odd-numbered banks)
 - Port contention: all even ports (ULA-decoded) are contended
 
-## Implementation approach
+## Implementation
 
-### Hook point
+### Opt-in via config.contention
 
-The Z80 core's `read` and `write` callbacks receive the address. A
-contention wrapper intercepts accesses to the $4000-$7FFF range (or
-the contended pages on 128K) and adds wait states to `machine.cycles`
-BEFORE the access completes. The read/write itself is unchanged.
+Contention is OFF by default (`config.contention: true` enables it).
+This keeps existing timing-verified tests exact — their cycle counts
+were validated without contention and must not drift.
 
-The wrapper needs the ULA's current T-state within the frame
-(`machine.cycles % frameTstates`) to look up the contention delay.
-This is already available — `ula.tStates` tracks it.
+### ULA.contend(tStates) → wait states
 
-### What to add
+A pure function on the ULA: given the current frame T-state position,
+returns the contention penalty from the table. Returns 0 during
+border/blanking time.
 
-1. A `contend(addr)` method on the ULA that returns the wait-state
-   penalty for a memory access at the current T-state position.
-   Returns 0 when:
-   - The address is not in contended RAM
-   - The ULA is in border/blanking time
-   - The T-state within the line is in the uncontended half
+### Machine wrapper
 
-2. The machine wraps the Z80's read/write callbacks to call
-   `contend(addr)` and add the result to `machine.cycles`. The Z80
-   core already returns per-instruction cycle counts; contention
-   adds to the machine's cycle counter, not the instruction's return
-   value — this is how all accurate emulators do it.
+When `config.contention` is true, the machine wraps the Z80's
+read/write/in/out callbacks. Before each contended-range access,
+`machine.cycles += ula.contend(machine.cycles % frameTstates)`.
 
-3. Port contention: I/O to even ports (the ULA's port space) is
-   contended the same way. The `in`/`out` callbacks gain the same
-   wrapper.
+For instruction-level approximation: the wrapper fires on every
+read/write the Z80 core makes (the core calls the callbacks for
+each bus access). Since the callbacks ARE per-access, the contention
+is actually applied at the access level — the instruction-step
+limitation means we cannot ADJUST the T-state position between
+accesses within one instruction, but the penalty lookup is correct
+for the instruction's START position.
 
-### What to test
+### Test plan (FUSE-derived)
 
-1. **Contention delay table**: manually construct a frame position and
-   verify `contend()` returns the expected wait states from the table.
+1. **Contention delay table oracle**: set `machine.cycles` to place
+   the ULA at each of the 8 pattern positions, verify the correct
+   wait states.
 
-2. **Uncontended addresses pass through**: $8000+ returns 0.
+2. **Uncontended addresses**: $8000+ returns 0 regardless of position.
 
-3. **Border time is free**: during top/bottom border lines, even
-   contended addresses return 0.
+3. **Border time is free**: top border line, contended address → 0.
 
-4. **Instruction timing difference**: run a tight loop (e.g. `LD A,(HL)`)
-   from contended vs uncontended RAM, count cycles over N iterations,
-   verify the contended version took more.
+4. **Instruction timing**: a tight `LD A,(HL)` loop from $4000
+   (contended) vs $8000 (uncontended), verify the contended version
+   takes measurably more cycles over N iterations.
 
-5. **Port contention**: IN/OUT to $FE is contended during active display.
+5. **Port contention**: IN $FE during active display adds wait states.
+
+6. **Config gate**: with `contention: false` (default), the same loops
+   produce identical cycle counts.
 
 ### What NOT to model (stated)
 
-- **Snow effect**: the visual artifact from writing to the display file
-  during ULA fetch. Requires pixel-level rendering; our frame-level
-  renderer shows the final state.
-- **Floating bus**: reading an unassigned port returns the ULA's current
-  data-bus value (the byte it's fetching for video). Some programs use
-  this for synchronisation. Requires cycle-accurate bus modeling.
-
-## Dependency
-
-This is a ULA-owned change. The Z80 core is untouched — contention
-lives in the machine layer (the read/write wrappers the machine already
-owns). `mna.js` and `board.js` are not involved.
-
-## Reviewer questions
-
-1. Should contention be opt-in (a config flag)? It adds a function call
-   per memory access — the cost is measurable. A `config.contention`
-   flag lets performance-insensitive paths (tape loading, batch runs)
-   skip it.
-
-2. The 128K contention tables are slightly different from 48K (228
-   T-states/line vs 224, different scan-line offset). Should both be
-   implemented simultaneously or 48K first?
+- **Snow effect**, **floating bus**, **sub-instruction bus-cycle
+  accuracy** — all require a cycle-stepped core.

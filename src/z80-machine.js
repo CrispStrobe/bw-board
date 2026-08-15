@@ -159,10 +159,38 @@ export class Z80Machine {
         };
         this.readBus = this._zx128 ? read128 : read48;
         this.writeBus = this._zx128 ? write128 : write48;
+
+        // Contention: opt-in via config.contention. Wraps bus callbacks
+        // to add ULA wait-state penalties on contended-range accesses.
+        // Per-instruction approximation (see spec-updates/ula-contention.md).
+        this._contention = !!(config.contention && this.ula);
+        const isContended = this._zx128
+            ? (a) => { // 128K: pages 1,3,5,7 are contended
+                a &= 0xffff;
+                if (a >= 0x4000 && a < 0x8000) return true; // page 5 (always mapped)
+                if (a >= 0xc000) return (this._bank.page & 1) === 1;
+                return false;
+              }
+            : (a) => (a & 0xffff) >= 0x4000 && (a & 0xffff) < 0x8000;
+
+        const applyContention = (a) => {
+            if (!this._contention || !isContended(a)) return;
+            const penalty = this.ula.contend(this.cycles % this.ula._frameTstates);
+            if (penalty > 0) this.cycles += penalty;
+        };
+
+        const readContended = (a) => { applyContention(a); return this.readBus(a); };
+        const writeContended = (a, v) => { applyContention(a); return this.writeBus(a, v); };
+
+        const readFn = this._contention ? readContended : this.readBus;
+        const writeFn = this._contention ? writeContended : this.writeBus;
+
         this.cpu = new Z80({
-            read: this.readBus,
-            write: this.writeBus,
+            read: readFn,
+            write: writeFn,
             in: (port) => {
+                // Port contention: even ports (ULA-decoded) are contended
+                if (this._contention && (port & 1) === 0) applyContention(0x4000);
                 if (this.ula && (port & 1) === 0) return this.ula.in(port);
                 if (this._kempston !== null && (port & 0x21) === 0x01) return this._kempston;
                 // AY read: $FFFD (A15=1, A14=1, A1=0)
@@ -171,6 +199,7 @@ export class Z80Machine {
                 return e ? e.chip.read(e.rs) : 0xff;
             },
             out: (port, v) => {
+                if (this._contention && (port & 1) === 0) applyContention(0x4000);
                 if (this.ula && (port & 1) === 0) { this.ula.out(port, v, this.cycles); return; }
                 // 128K banking: $7FFD partial decode (A15 and A1 low),
                 // write-only, dead once the lock bit has been set.
