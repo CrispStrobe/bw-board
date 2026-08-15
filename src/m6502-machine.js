@@ -20,6 +20,7 @@ import { W65C02 } from './w65c02.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
 import { TMS9918 } from './tms9918.js';
+import { SimpleVGA } from './simplevga.js';
 import { NS16C550 } from './ns16c550.js';
 import { Latch374 } from './latch374.js';
 
@@ -166,6 +167,13 @@ export class M6502Machine {
                 // TMS9918A: frame pacing derives from the CPU clock the
                 // machine advances chips with (60 Hz VBLANK + IRQ).
                 chip = new TMS9918({ clockHz: config.clockHz });
+            } else if (c.kind === 'simplevga') {
+                // Not an addressed chip: a write-snoop card on the ROM
+                // window with its bank line on the VIA's port B. No
+                // decode entry — it occupies no address of its own.
+                this._vgaCard = new SimpleVGA();
+                this.chips[c.name] = this._vgaCard;
+                continue;
             } else {
                 throw new Error(`unknown chip kind in machine config: ${c.kind}`);
             }
@@ -204,6 +212,10 @@ export class M6502Machine {
     }
 
     _write(addr, val) {
+        // The simplevga card snoops the write strobe in $8000-$FFFF —
+        // a write-only overlay on the ROM window (reads still hit ROM),
+        // exactly the real card's bus arrangement.
+        if (this._vgaCard && addr >= 0x8000) this._vgaCard.write(addr, val);
         const r = this._region(addr);
         if (!r || r.kind === 'rom') return; // writes to ROM/open bus vanish
         if (r.chip) { r.chip.write((addr - r.start) % r.regs, val); return; }
@@ -211,6 +223,9 @@ export class M6502Machine {
     }
 
     _portChange(chipName, port, value, ddr) {
+        // The simplevga card's bank line rides the VIA's port B
+        // (vga.s: `inc PORTB` at the row-128 crossing).
+        if (this._vgaCard && port === 'B') this._vgaCard.setBank(value);
         if (!this.hooks.onPinChange) return;
         for (let bit = 0; bit < 8; bit++) {
             const mask = 1 << bit;
