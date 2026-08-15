@@ -207,3 +207,42 @@ test('loadZ80 128K on 48K machine throws', () => {
 
     assert.throws(() => loadZ80(m, header), /128K .z80 snapshot requires a zx128 machine/);
 });
+
+test('v3 128K round-trip: banks, banking, AY, and registers all travel', () => {
+    const zx128 = () => new Z80Machine({ clockHz: 3_546_900, zx128: true }, {});
+    const m = zx128();
+    Object.assign(m.cpu, { pc: 0x8123, sp: 0xbf00, a: 0x42, im: 1, iff1: 1, iff2: 1, i: 0x3f });
+    m.cpu.hl = 0x1122; m.cpu.bc_ = 0xddee;
+    for (let b = 0; b < 8; b++) m.pages[b][b] = 0xa0 + b;
+    m.cpu.outPort(0x7ffd, 0x08 | 6);          // page 6, shadow screen
+    m.ula.border = 3;
+    m.ay.select(7); m.ay.write(0x38);          // mixer: tones on
+    m.ay.select(0); m.ay.write(0xfd);          // tone A fine
+    m.ay.select(2);                            // leave a selected register
+
+    const snap = saveZ80(m);
+    const parsed = parseZ80(snap);
+    assert.equal(parsed.version, 3);
+    assert.equal(parsed.is128, true);
+
+    const m2 = zx128();
+    loadZ80(m2, snap);
+    for (const k of ['pc', 'sp', 'a', 'im', 'iff1', 'hl', 'bc_', 'i']) assert.equal(m2.cpu[k], m.cpu[k], k);
+    for (let b = 0; b < 8; b++) assert.equal(m2.pages[b][b], 0xa0 + b, `bank ${b}`);
+    assert.equal(m2._bank.page, 6);
+    assert.equal(m2._bank.shadow, 1);
+    assert.equal(m2.ula.screen, m2.pages[7], 'shadow screen restored');
+    assert.equal(m2.ula.border, 3);
+    assert.equal(m2.ay.regs[7], 0x38, 'AY mixer');
+    assert.equal(m2.ay.regs[0], 0xfd, 'AY tone A');
+    assert.equal(m2.ay._selected, 2, 'AY selected register');
+});
+
+test('saveZ80 dispatch: a 48K machine still writes v1', (t) => {
+    if (!existsSync(romPath)) { t.skip('48.ROM not built'); return; }
+    const m = zx();
+    m.advanceToMs(500);
+    const parsed = parseZ80(saveZ80(m));
+    assert.equal(parsed.version, 1);
+    assert.equal(parsed.is128, false);
+});

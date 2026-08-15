@@ -136,8 +136,9 @@ export function parseZ80(buf) {
 
     // 128K mode
     const port7ffd = buf[35];
-    // AY registers: bytes 39-55 (17 bytes) in the extra header, if present
-    const ayRegs = extra >= 25 ? buf.slice(39, 56) : new Uint8Array(16);
+    // AY state: byte 38 = last-selected register, bytes 39-54 = R0-R15.
+    const aySelected = extra >= 25 ? buf[38] & 0x0f : 0;
+    const ayRegs = extra >= 25 ? buf.slice(39, 55) : new Uint8Array(16);
     const banks = Array.from({ length: 8 }, () => new Uint8Array(16384));
     let i = 32 + extra;
     while (i + 3 <= buf.length) {
@@ -153,7 +154,7 @@ export function parseZ80(buf) {
             i += (len === 0xffff ? 16384 : len);
         }
     }
-    return { version, regs, border, banks, port7ffd, ayRegs, is128: true };
+    return { version, regs, border, banks, port7ffd, ayRegs, aySelected, is128: true };
 }
 
 /** Restore a .z80 onto a machine (ROM already loaded).
@@ -198,14 +199,14 @@ export function loadZ80(machine, buf) {
             machine.ay.select(r);
             machine.ay.write(snap.ayRegs[r]);
         }
-        // The selected register is conventionally the last value written
-        // to $FFFD; byte 38 of the extra header carries it when present.
-        // We default to 0 since most snapshots don't encode this.
+        // Byte 38: the register the last OUT $FFFD selected.
+        machine.ay.select(snap.aySelected ?? 0);
     }
 }
 
-/** Serialize a running 48K machine as v1 compressed. */
+/** Serialize a machine: 48K → v1 compressed; zx128 → v3 with banks. */
 export function saveZ80(machine) {
+    if (machine._zx128) return saveZ80v3(machine);
     const cpu = machine.cpu;
     const h = new Uint8Array(30);
     const w16 = (o, v) => { h[o] = v & 0xff; h[o + 1] = (v >> 8) & 0xff; };
@@ -226,3 +227,48 @@ export function saveZ80(machine) {
 }
 
 export default { parseZ80, loadZ80, saveZ80, compressZ80 };
+
+/** v3 128K writer: 30-byte base (PC = 0 sentinel), 55-byte extra
+ *  header (hw mode 4, port $7FFD, AY state), banks 0-7 as pages 3-10,
+ *  each ED-ED compressed. Readable by every v3-aware emulator. */
+function saveZ80v3(machine) {
+    const cpu = machine.cpu;
+    const h = new Uint8Array(30 + 2 + 55);
+    const w16 = (o, v) => { h[o] = v & 0xff; h[o + 1] = (v >> 8) & 0xff; };
+    h[0] = cpu.a; h[1] = cpu.f;
+    w16(2, cpu.bc); w16(4, cpu.hl);
+    w16(6, 0);                       // PC = 0: the v2/v3 sentinel
+    w16(8, cpu.sp);
+    h[10] = cpu.i; h[11] = cpu.r & 0x7f;
+    h[12] = ((cpu.r >> 7) & 1) | (((machine.ula ? machine.ula.border : 0) & 7) << 1);
+    w16(13, cpu.de); w16(15, cpu.bc_); w16(17, cpu.de_); w16(19, cpu.hl_);
+    h[21] = (cpu.af_ >> 8) & 0xff; h[22] = cpu.af_ & 0xff;
+    w16(23, cpu.iy); w16(25, cpu.ix);
+    h[27] = cpu.iff1 ? 1 : 0; h[28] = cpu.iff2 ? 1 : 0; h[29] = cpu.im & 0x03;
+    w16(30, 55);                     // v3 extra header length
+    w16(32, cpu.pc);                 // the real PC
+    h[34] = 4;                       // hardware: 128K
+    h[35] = machine._bank.page
+        | (machine._bank.shadow << 3)
+        | (machine._bank.rom << 4)
+        | (machine._bank.locked << 5);
+    if (machine.ay) {
+        h[37] = 0x04;                // flags: AY in use
+        h[38] = machine.ay._selected & 0x0f;
+        h.set(machine.ay.regs.subarray(0, 16), 39);
+    }
+    const parts = [h];
+    for (let bank = 0; bank < 8; bank++) {
+        const body = compressZ80(machine.pages[bank]);
+        const blk = new Uint8Array(3 + body.length);
+        blk[0] = body.length & 0xff; blk[1] = (body.length >> 8) & 0xff;
+        blk[2] = bank + 3;           // page number
+        blk.set(body, 3);
+        parts.push(blk);
+    }
+    const total = parts.reduce((n, p2) => n + p2.length, 0);
+    const out = new Uint8Array(total);
+    let off = 0;
+    for (const p2 of parts) { out.set(p2, off); off += p2.length; }
+    return out;
+}
