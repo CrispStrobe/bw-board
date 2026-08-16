@@ -48,6 +48,7 @@ const KNOWN_TERMINALS = {
   temp_sensor: ['vcc', 'gnd', 'dq'],
   eeprom: ['sda', 'scl', 'vcc', 'gnd'],
   seven_segment: null, // composite — sub-parts have their own terminals
+  seven_seg_3: null, // composite — 3-digit multiplexed (a..dp + com0..com2)
   rgb_led: null, // composite
   mcu: null, // terminals are PinIds, validated separately
 };

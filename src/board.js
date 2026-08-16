@@ -220,6 +220,20 @@ export class BoardImpl {
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
           addLed(`${p.id}_${seg}`, netsOf(p.id, seg), common);
         }
+      } else if (p.kind === 'seven_seg_3') {
+        // 3-digit multiplexed display (056SMG-3, the retro console's score):
+        // eight shared segment lines, one common per digit. Each digit is
+        // eight LEDs from the shared segment net to that digit's common —
+        // 24 synthetic LEDs total. The multiplex physics falls out for
+        // free: a segment lights only while ITS digit's common is pulled
+        // low, and the brightness filter integrates the scan duty exactly
+        // as it does for the matrices.
+        for (let digit = 0; digit < 3; digit++) {
+          const common = netsOf(p.id, `com${digit}`);
+          for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
+            addLed(`${p.id}_d${digit}_${seg}`, netsOf(p.id, seg), common);
+          }
+        }
       }
     }
     return extraParts.length
@@ -228,6 +242,7 @@ export class BoardImpl {
   }
 
   setNetlist(parts, nets) {
+    this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     // Validate the netlist and reject malformed input. Without this,
     // a wrong terminal name (e.g. {a,b} instead of {anode,cathode} for
     // an LED) silently produces brightness 0 — a plausible wrong answer.
@@ -848,6 +863,23 @@ export class BoardImpl {
   }
 
   /**
+   * 3-digit seven-segment brightness, one map per digit. The contract for
+   * the UI face: index = digit (com0..com2), keys = segments. Built on the
+   * same synthetic LEDs the composite expansion creates.
+   *
+   * @param {string} partId
+   * @returns {Array<{ a: number, b: number, c: number, d: number, e: number, f: number, g: number, dp: number }>}
+   */
+  sevenSeg3Brightness(partId) {
+    const segments = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp'];
+    return [0, 1, 2].map((digit) => {
+      const m = {};
+      for (const seg of segments) m[seg] = this.ledBrightness(`${partId}_d${digit}_${seg}`);
+      return m;
+    });
+  }
+
+  /**
    * RGB LED brightness: returns brightness for each channel.
    * The part has terminals: r, g, b, common.
    *
@@ -1183,7 +1215,7 @@ export class BoardImpl {
       'diode', 'led', 'zener', 'potentiometer',
       'button', 'switch', 'buzzer', 'ldr', 'ntc',
       'npn', 'pnp', 'nmos', 'pmos', 'opamp',
-      'vsource', 'isource', 'seven_segment', 'rgb_led',
+      'vsource', 'isource', 'seven_segment', 'seven_seg_3', 'rgb_led',
       'shift_register', 'char_lcd', 'led_matrix', 'led_cube',
       'ir_receiver', 'temp_sensor', 'eeprom', 'mcu',
       // Device-registry kinds (registered at runtime, listed here for discovery)
@@ -1674,7 +1706,28 @@ export class BoardImpl {
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
     }
-    return false;
+    // Shared-LED fan-out is beyond the walker's vocabulary: _solveLedChain
+    // traces each LED's series path INDEPENDENTLY, so two LEDs sharing a
+    // net (a multiplexed display's segment bus, a charlieplexed pair)
+    // produce a phantom operating point — a diode 'conducting' at full
+    // brightness while the shared resistor carries no current (found via
+    // the seven_seg_3 composite, 2026-08-16; reproduced with three bare
+    // LEDs on one anode net). The walker's own doctrine applies: beyond
+    // the vocabulary, one full MNA solve answers everything coherently.
+    if (this._ledFanout === undefined) {
+      const seen = new Set();
+      this._ledFanout = false;
+      for (const net of this.nets) {
+        let count = 0;
+        for (const t of net.terminals) {
+          const part = this.partMap.get(t.part);
+          if (part && part.kind === 'led') count++;
+        }
+        if (count >= 2) { this._ledFanout = true; break; }
+      }
+      void seen;
+    }
+    return this._ledFanout;
   }
 
   /** Any capacitor or inductor present? */
