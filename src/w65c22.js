@@ -77,7 +77,21 @@ export class W65C22 {
                 return (this._pbOut() & this.ddrb) | (this.inB & ~this.ddrb);
             case 0x1: // IRA: reads the pins themselves
                 if ((this.pcr & 0x0e) !== 0x02) this._clearIfr(CA1 | CA2); else this._clearIfr(CA1);
-                return (this.ora & this.ddra) | (this.inA & ~this.ddra);
+                // CA2 pulse-output mode (PCR bits 3-1 = 101): every IRA
+                // read emits one low pulse on CA2 — the datasheet's read
+                // handshake, and the Bad Apple player's SD CLOCK ("USE CA2
+                // as clock to save more cycles!!!"). One LDA PORTA is one
+                // SPI clock; reg $F below reads WITHOUT pulsing.
+                {
+                    // Capture FIRST, pulse AFTER: the CPU reads the pin
+                    // level of the current cycle; the handshake pulse then
+                    // advances whatever is listening. Pulsing before the
+                    // capture returned the NEXT SPI bit and the Bad Apple
+                    // init spun on CMD0 forever, one bit out of phase.
+                    const v = (this.ora & this.ddra) | (this.inA & ~this.ddra);
+                    if ((this.pcr & 0x0e) === 0x0a && this.hooks.onCa2Pulse) this.hooks.onCa2Pulse();
+                    return v;
+                }
             case 0x2: return this.ddrb;
             case 0x3: return this.ddra;
             case 0x4: this._clearIfr(T1); return this.t1c & 0xff;
@@ -91,6 +105,8 @@ export class W65C22 {
             case 0xc: return this.pcr;
             case 0xd: return (this.ifr & 0x7f) | ((this.ifr & this.ier & 0x7f) ? 0x80 : 0);
             case 0xe: return this.ier | 0x80;
+            case 0xf: // IRA no-handshake: same pins, no IFR clear, no CA2 pulse
+                return (this.ora & this.ddra) | (this.inA & ~this.ddra);
             default: // 0xf: ORA without handshake — no flag clearing
                 return (this.ora & this.ddra) | (this.inA & ~this.ddra);
         }

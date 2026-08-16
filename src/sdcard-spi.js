@@ -84,14 +84,18 @@ export class SDCardSPI {
         this.acmd = false;
         this.outQueue.push(0xff);               // NCR turnaround
         if (wasAcmd && cmd === 41) {            // ACMD41: idle once, then ready
-            this.outQueue.push(this.acmd41Seen ? R1_OK : R1_IDLE);
-            this.acmd41Seen = true;
+            if (!this.acmd41Seen) { this.outQueue.push(R1_IDLE); this.acmd41Seen = true; }
+            else { this.outQueue.push(R1_OK); this.ready = true; }
             return;
         }
         switch (cmd) {
             case 0: this.outQueue.push(R1_IDLE); break;
             case 8: this.outQueue.push(R1_IDLE, 0x00, 0x00, 0x01, 0xaa); break;
-            case 55: this.acmd = true; this.outQueue.push(this.acmd41Seen ? R1_OK : R1_IDLE); break;
+            // CMD55 answers idle until an ACMD41 has actually RETURNED
+            // ready — answering $00 during the init loop reads as an
+            // error to real firmware and triggers a full re-init (the
+            // Bad Apple player did exactly that, forever).
+            case 55: this.acmd = true; this.outQueue.push(this.ready ? R1_OK : R1_IDLE); break;
             case 58: this.outQueue.push(R1_OK, 0xc0, 0xff, 0x80, 0x00); break;
             case 16: this.outQueue.push(R1_OK); break;
             case 17: this.outQueue.push(R1_OK); this._queueBlock(arg); break;
@@ -151,7 +155,24 @@ export class SDCardSPI {
         const falling = this.sck === 1 && level === 0;
         this.sck = level;
         if (this.cs !== 0) return;              // deselected: high-Z, stay idle
-        if (rising) {
+        if (rising) this._rising();
+        else if (falling) this._setMiso((this.outByte >> (7 - this.bitIdx)) & 1);
+    }
+
+    /**
+     * One full clock via the VIA's CA2 read-handshake pulse (the Bad
+     * Apple trick: LDA PORTA IS the SPI clock). CA2 idles high and
+     * pulses low: present the bit on the falling half, sample on the
+     * rise back.
+     */
+    clockPulse() {
+        if (this.cs !== 0) return;
+        this._setMiso((this.outByte >> (7 - this.bitIdx)) & 1);
+        this._rising();
+    }
+
+    _rising() {
+        {
             this.inShift = ((this.inShift << 1) | this.mosi) & 0xff;
             this.bitIdx++;
             if (this.bitIdx === 8) {
@@ -165,8 +186,6 @@ export class SDCardSPI {
                 // updating it here made the 8th sampled bit belong to the
                 // next byte (CMD0 read back $FE instead of $01).
             }
-        } else if (falling) {
-            this._setMiso((this.outByte >> (7 - this.bitIdx)) & 1);
         }
     }
 

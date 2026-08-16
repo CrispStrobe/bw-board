@@ -179,6 +179,15 @@ export class M6502Machine {
             if (c.kind === 'via') {
                 chip = new W65C22({
                     onPortChange: (port, value, ddr) => this._portChange(c.name, port, value, ddr),
+                    // CA2 read-handshake pulse → any SD card clocked the
+                    // Bad Apple way (sck: 'ca2') gets one SPI clock per
+                    // LDA PORTA.
+                    onCa2Pulse: () => {
+                        if (!this._sdCards) return;
+                        for (const e of this._sdCards) {
+                            if (e.via === c.name && e.sckCa2) e.sd.clockPulse();
+                        }
+                    },
                 });
                 // Initial input levels per config: a machine states what
                 // sits on its input pins (a missing LCD reads low, a
@@ -231,6 +240,21 @@ export class M6502Machine {
                 this._vgaNmi = !!c.nmi;
                 this.chips[c.name] = this._vgaCard;
                 continue;
+            } else if (c.kind === 'framebuffer') {
+                // Bus-snooping framebuffer — Eater's "world's worst video
+                // card" shape: it watches WRITES in a shared-RAM window
+                // ($2000-$3FFF on the real card) and paints from what it
+                // sees; the CPU's reads still hit RAM. No decode entry.
+                const fb = {
+                    at: c.at, size: c.size || 0x2000,
+                    buf: new Uint8Array(c.size || 0x2000),
+                    frame: 0,
+                    getFrame() { return this.buf; },
+                };
+                if (!this._fbSnoops) this._fbSnoops = [];
+                this._fbSnoops.push(fb);
+                this.chips[c.name] = fb;
+                continue;
             } else if (c.kind === 'sdcard') {
                 // SPI-mode SD card on a VIA's port pins (the Bad Apple
                 // storage hookup). Like simplevga: wires only, no bus
@@ -239,10 +263,15 @@ export class M6502Machine {
                 const sd = new SDCardSPI(c.pins);
                 if (!this._sdCards) this._sdCards = [];
                 this._sdCards.push({
-                    sd, via: c.via || 'via1',
+                    sd, via: c.via || 'via1', sckCa2: c.pins.sck === 'ca2',
                     port: (c.pins.port || 'a').toUpperCase(),
-                    miso: c.pins.miso, last: null,
-                    bits: [c.pins.cs, c.pins.mosi, c.pins.sck], // cs first, data before clock
+                    // MISO may live on the OTHER port: the Bad Apple build
+                    // moved it to PB7 so a single LDA PORTB + ROL grabs the
+                    // bit into carry (their comment: "Moved to other port
+                    // top bit").
+                    miso: c.pins.miso, misoPort: (c.pins.misoPort || c.pins.port || 'a').toLowerCase(),
+                    last: null,
+                    bits: [c.pins.cs, c.pins.mosi, c.pins.sck].filter((b) => typeof b === 'number'), // cs first, data before clock
                 });
                 this.chips[c.name] = sd;
                 continue;
@@ -309,6 +338,11 @@ export class M6502Machine {
         // a write-only overlay on the ROM window (reads still hit ROM),
         // exactly the real card's bus arrangement.
         if (this._vgaCard && addr >= 0x8000) this._vgaCard.write(addr, val);
+        if (this._fbSnoops) {
+            for (const fb of this._fbSnoops) {
+                if (addr >= fb.at && addr < fb.at + fb.size) { fb.buf[addr - fb.at] = val; fb.frame++; }
+            }
+        }
         const r = this._region(addr);
         if (!r || r.kind === 'rom') return; // writes to ROM/open bus vanish
         if (r.chip) { r.chip.write((addr - r.start) % r.regs, val); return; }
@@ -327,8 +361,7 @@ export class M6502Machine {
                 if (chipName !== e.via || port.toUpperCase() !== e.port) continue;
                 if (!e.sd.onMiso) {
                     const via = this.chips[e.via];
-                    const p = e.port.toLowerCase();
-                    e.sd.onMiso = (level) => via && via.setInput(p, e.miso, level);
+                    e.sd.onMiso = (level) => via && via.setInput(e.misoPort, e.miso, level);
                 }
                 const prev = e.last;
                 e.last = value;
