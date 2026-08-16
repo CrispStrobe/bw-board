@@ -73,7 +73,16 @@ export function createZ80DebugTarget(adapter) {
       return disasmZ80((a) => rd(a & 0xffff), addr & 0xffff);
     },
 
-    onHalt(cb) { haltListeners.push(cb); },
+    onHalt(cb) {
+      haltListeners.push(cb);
+      // The session treats the return value as an unsubscribe and
+      // CALLS it on destroy — push()'s return (the new length) made
+      // every bench teardown throw 'h is not a function'.
+      return () => {
+        const i = haltListeners.indexOf(cb);
+        if (i >= 0) haltListeners.splice(i, 1);
+      };
+    },
 
     setBreakpoint(spec) {
       if (spec.kind === 'write') {

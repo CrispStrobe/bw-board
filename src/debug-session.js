@@ -184,7 +184,7 @@ export function createDebugSession(target, opts = {}) {
         /** True while a step is still in flight. */
         get stepping() { return stepping; },
 
-        destroy() { unsubscribe(); }
+        destroy() { if (typeof unsubscribe === 'function') unsubscribe(); }
     };
 
     return session;
