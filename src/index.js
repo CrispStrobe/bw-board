@@ -62,3 +62,4 @@ export { StimulusExtension } from './stimulus-extension.js';
 // Node-side consumers (tests, tooling) import './pin-functions.js' directly.
 // Browser consumers get pin functions from bw-circuit-ui's VENDORED sidecar
 // registry, which is the same bw-parts data through the sync pipeline.
+export { describeMedia, applyMedia, parseIhex } from './machine-media.js';
