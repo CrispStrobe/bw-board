@@ -123,6 +123,12 @@ export function createM6502DebugTarget(adapter, opts = {}) {
 
     run() { runState = 'running'; pendingStep = null; },
 
+    /** The session's pause verb — same contract as a breakpoint hit. */
+    halt() { halt({ cause: 'pause' }); },
+
+    /** Reboot through the reset vector at $FFFC. */
+    reset() { pendingStep = null; machine.reset(); runState = 'halted'; },
+
     halt() { halt({ cause: 'user' }); },
 
     step(kind, count = 1) {

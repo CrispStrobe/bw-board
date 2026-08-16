@@ -97,6 +97,10 @@ export function createZ80DebugTarget(adapter) {
 
     run() { runState = 'running'; pendingStep = null; },
 
+    /** The session's pause verb: stop executing NOW and tell the
+     *  halt listeners why — same contract as a breakpoint hit. */
+    halt() { halt({ cause: 'pause' }); },
+
     step(kind, count = 1) {
       if (kind === 'insn') {
         runState = 'running';

@@ -98,7 +98,11 @@ export function createDebugSession(target, opts = {}) {
 
         /** ⚑ — from a reset, or resume from a pause. */
         start() {
-            if (intent === 'stopped') target.reset();
+            // Machine-bench targets (z80/6502) may carry no reset — they
+            // boot already-reset from the factory, and a CP/M program's
+            // "reset state" (pc $0100) is not the CPU's. Absence means
+            // "start from the state the machine is in".
+            if (intent === 'stopped' && typeof target.reset === 'function') target.reset();
             lastHalt = null;
             intent = 'running';
             target.run();
@@ -125,7 +129,10 @@ export function createDebugSession(target, opts = {}) {
          * target supports and the one a Scratch user means by "next".
          */
         step(kind = 'block', count = 1) {
-            if (intent === 'stopped') { target.reset(); intent = 'paused'; }
+            if (intent === 'stopped') {
+                if (typeof target.reset === 'function') target.reset();
+                intent = 'paused';
+            }
             const refusal = target.step(kind, count);
             if (refusal) return refusal;   // {unsupported}, passed straight through
             stepping = true;
@@ -141,7 +148,7 @@ export function createDebugSession(target, opts = {}) {
         /** ⏹ */
         stop() {
             if (intent === 'running') target.halt();
-            target.reset();
+            if (typeof target.reset === 'function') target.reset();
             intent = 'stopped';
             lastHalt = null;
             stepping = false;
