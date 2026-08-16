@@ -137,11 +137,16 @@ export function validateNetlist(parts, nets) {
       }
     }
 
-    // Parameter validation
+    // Parameter validation. `params` is OPTIONAL on a netlist part — curated
+    // example files ship chips and displays with no params object at all,
+    // and reading through it undefended crashed the VALIDATOR itself, which
+    // the designer's load path swallows: the board came up empty, silently,
+    // for any circuit containing such a part (the pendant, 2026-08-16).
+    const params = part.params ?? {};
     const requiredParams = deviceModel ? deviceModel.requiredParams : REQUIRED_PARAMS[part.kind];
     if (requiredParams) {
       for (const p of requiredParams) {
-        if (part.params[p] === undefined) {
+        if (params[p] === undefined) {
           errors.push({
             severity: 'warning',
             message: `Part "${part.id}" (${part.kind}) is missing required param "${p}"`,
@@ -152,14 +157,14 @@ export function validateNetlist(parts, nets) {
     }
 
     // Param value validation
-    if (part.params.ohms !== undefined) {
-      const v = /** @type {number} */ (part.params.ohms);
+    if (params.ohms !== undefined) {
+      const v = /** @type {number} */ (params.ohms);
       if (typeof v !== 'number' || Number.isNaN(v)) {
         errors.push({ severity: 'error', message: `Part "${part.id}": ohms is not a valid number`, partId: part.id });
       }
     }
-    if (part.params.farads !== undefined) {
-      const v = /** @type {number} */ (part.params.farads);
+    if (params.farads !== undefined) {
+      const v = /** @type {number} */ (params.farads);
       if (typeof v !== 'number' || v < 0 || Number.isNaN(v)) {
         errors.push({ severity: 'error', message: `Part "${part.id}": farads must be a non-negative number`, partId: part.id });
       }

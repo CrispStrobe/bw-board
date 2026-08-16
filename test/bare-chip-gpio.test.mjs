@@ -156,3 +156,26 @@ describe('arduino_mega as MCU-pin surface (example-sweep regression)', () => {
     assert.equal(board.readPin('A0'), 0, 'a0 reads its pulled-down net');
   });
 });
+
+describe('netlist parts without params (curated-file shape)', () => {
+  it('validate and solve — the validator itself must not crash', () => {
+    // Curated example files ship chips/displays with NO params object.
+    // Reading part.params undefended crashed validateNetlist, the
+    // designer swallowed it, and the board came up empty (pendant bug).
+    const board = makeBoard(
+      [
+        { id: 'MCU', kind: 'attiny88', terminals: ['pb0'] },          // no params
+        { id: 'M', kind: 'matrix8x8', terminals: ['col0', 'row0'] },  // no params
+        { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+        { id: 'GND1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      ],
+      [
+        { id: 'n1', terminals: [{ part: 'MCU', terminal: 'pb0' }, { part: 'R1', terminal: 'a' }, { part: 'M', terminal: 'col0' }] },
+        { id: 'n2', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'GND1', terminal: 'gnd' }, { part: 'M', terminal: 'row0' }] },
+      ],
+    );
+    assert.equal(board.getParts().length, 4, 'all four parts accepted');
+    board.setPin('PB0', 'pushpull', true);
+    assert.ok(board.nodeVoltage('n1') > 4.0, 'still solves');
+  });
+});
