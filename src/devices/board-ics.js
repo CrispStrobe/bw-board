@@ -104,6 +104,106 @@ export function registerBoardICs() {
         },
     });
 
+    // ─── AT24C64 / 24C64 ───────────────────────────────────────────────
+    // The blinkenrocket badge's animation store (a 24C64 in DIP-8:
+    // A0 A1 A2 GND | SDA SCL WP VCC). Three datasheet differences from
+    // the AT24C02 above, each a classic gotcha:
+    //   - TWO-byte word address (high, then low; 13 bits used of 16)
+    //   - 32-byte page writes — the low FIVE address bits wrap
+    //   - WP pin: writes are silently DISCARDED at STOP while WP is high
+    //     (the device still ACKs — that is what the silicon does)
+    // The A0–A2 pins are sampled ELECTRICALLY to form the bus address
+    // 0b1010|A2A1A0, so strapping them in the circuit works exactly like
+    // on the bench; unwired pins read low (datasheet default on the
+    // Atmel/ST parts — internal pull-downs).
+    registerDevice('at24c64', {
+        terminals: ['a0', 'a1', 'a2', 'gnd', 'sda', 'scl', 'wp', 'vcc'],
+
+        init(part) {
+            const SIZE = 8192, PAGE = 32;
+            const state = {
+                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                mem: new Array(SIZE).fill(0xff),      // erased EEPROM reads 0xFF
+                wordAddr: 0,
+                _mode: 'addr-hi',
+                _pageBase: 0, _pageOff: 0, _pending: [],
+                _addrPins: 0,                          // sampled A2A1A0
+                _wp: false,
+            };
+            // Preload: params.contents = array of bytes (media slots and
+            // examples use this to ship animation data).
+            if (Array.isArray(part.params?.contents)) {
+                for (let i = 0; i < Math.min(SIZE, part.params.contents.length); i++) {
+                    state.mem[i] = part.params.contents[i] & 0xff;
+                }
+            }
+            const handlers = {
+                onAddress: (a7, rw) => {
+                    const mine = a7 === (0x50 | state._addrPins);
+                    if (mine && rw === 0) { state._mode = 'addr-hi'; state._pending = []; }
+                    return mine;
+                },
+                onWriteByte: (b) => {
+                    if (state._mode === 'addr-hi') {
+                        state.wordAddr = (b << 8) & 0x1f00;
+                        state._mode = 'addr-lo';
+                    } else if (state._mode === 'addr-lo') {
+                        state.wordAddr = (state.wordAddr | (b & 0xff)) % 8192;
+                        state._pageBase = state.wordAddr & ~(PAGE - 1);
+                        state._pageOff = state.wordAddr & (PAGE - 1);
+                        state._mode = 'data';
+                    } else {
+                        state._pending.push([state._pageBase | state._pageOff, b]);
+                        state._pageOff = (state._pageOff + 1) & (PAGE - 1);
+                    }
+                    return true;
+                },
+                onReadByte: () => {
+                    const v = state.mem[state.wordAddr];
+                    state.wordAddr = (state.wordAddr + 1) % SIZE;
+                    return v;
+                },
+                onStop: () => {
+                    if (!state._wp) {
+                        for (const [a, v] of state._pending) state.mem[a] = v;
+                    }
+                    if (state._pending.length) {
+                        state.wordAddr = (state._pageBase | state._pageOff) % SIZE;
+                    }
+                    state._pending = [];
+                },
+            };
+            state.i2cHandlers = handlers;
+            state._i2c = createI2CSlave(handlers);
+            return state;
+        },
+
+        stamp(ctx) {
+            ctx.conductance('scl', null, 1 / R_INPUT);
+            // A0–A2 and WP: input loading plus a weak pull-down so an
+            // unwired strap pin reads a defined LOW, not a floating NaN.
+            for (const t of ['a0', 'a1', 'a2', 'wp']) {
+                ctx.conductance(t, null, 1 / R_INPUT);
+            }
+        },
+
+        update(part, state, read) {
+            const vcc = read('vcc') || 5.0;
+            const th = vcc * 0.5;
+            state._addrPins = (read('a2') > th ? 4 : 0) |
+                              (read('a1') > th ? 2 : 0) |
+                              (read('a0') > th ? 1 : 0);
+            state._wp = read('wp') > th;
+            const driveLow = feedI2CSlave(state._i2c, read('scl') > th, read('sda') > th);
+            const nowLow = state.drives.sda.rTh === R_OUT;
+            if (driveLow !== nowLow) {
+                state.drives.sda = driveLow ? { vTh: 0, rTh: R_OUT } : { vTh: 0, rTh: R_OFF };
+                return true;
+            }
+            return false;
+        },
+    });
+
     // ─── XPT2046 ───────────────────────────────────────────────────────
     registerDevice('xpt2046', {
         terminals: ['vcc', 'gnd', 'csb', 'dclk', 'din', 'dout', 'xp', 'yp', 'vbat', 'aux'],

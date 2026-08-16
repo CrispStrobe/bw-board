@@ -174,3 +174,122 @@ describe('XPT2046', () => {
         assert.ok(Math.abs(t - expect) <= 8, `temp ~${expect}, got ${t}`);
     });
 });
+
+// ─── AT24C64 (the blinkenrocket badge's animation store) ─────────────
+function eeprom64Board(params = {}, strap = {}) {
+    const board = new BoardImpl(5.0);
+    const parts = [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] },
+        { id: 'R2', kind: 'resistor', params: { ohms: 4700 }, terminals: ['a', 'b'] },
+        { id: 'U1', kind: 'at24c64', params,
+          terminals: ['a0', 'a1', 'a2', 'gnd', 'sda', 'scl', 'wp', 'vcc'] },
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0', 'P1.1'] },
+    ];
+    const nets = [
+        { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }, { part: 'R2', terminal: 'a' }, { part: 'U1', terminal: 'vcc' }] },
+        { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'U1', terminal: 'gnd' }] },
+        { id: 'nscl', terminals: [{ part: 'MCU', terminal: 'P1.0' }, { part: 'R1', terminal: 'b' }, { part: 'U1', terminal: 'scl' }] },
+        { id: 'nsda', terminals: [{ part: 'MCU', terminal: 'P1.1' }, { part: 'R2', terminal: 'b' }, { part: 'U1', terminal: 'sda' }] },
+    ];
+    // Optional straps: tie a0/a1/a2/wp to VCC through the supply net
+    for (const pin of ['a0', 'a1', 'a2', 'wp']) {
+        if (strap[pin]) nets[0].terminals.push({ part: 'U1', terminal: pin });
+    }
+    board.setNetlist(parts, nets);
+    let t = 0n;
+    const tick = () => { t += 5_000n; board.advanceTo(t); };
+    const scl = (h) => { board.setPin('P1.0', 'opendrain', h); tick(); };
+    const sda = (h) => { board.setPin('P1.1', 'opendrain', h); tick(); };
+    const sdaRead = () => board.readAnalog('P1.1') > 2.5;
+    const start = () => { sda(true); scl(true); sda(false); scl(false); };
+    const stop = () => { sda(false); scl(true); sda(true); };
+    const writeByte = (b) => {
+        for (let i = 7; i >= 0; i--) { sda(!!((b >> i) & 1)); scl(true); scl(false); }
+        sda(true); scl(true);
+        const acked = !sdaRead();
+        scl(false);
+        return acked;
+    };
+    const readByte = (ack) => {
+        sda(true);
+        let v = 0;
+        for (let i = 7; i >= 0; i--) { scl(true); if (sdaRead()) v |= 1 << i; scl(false); }
+        sda(!ack); scl(true); scl(false); sda(true);
+        return v;
+    };
+    return { board, start, stop, writeByte, readByte };
+}
+
+describe('AT24C64', () => {
+    it('two-byte addressing: write at 0x1234 reads back at 0x1234, not 0x34', () => {
+        const e = eeprom64Board();
+        e.start();
+        assert.equal(e.writeByte(0xa0), true, 'ACKs 0x50 with straps low');
+        e.writeByte(0x12); e.writeByte(0x34);        // word address, high first
+        e.writeByte(0x99);
+        e.stop();
+
+        e.start(); e.writeByte(0xa0); e.writeByte(0x12); e.writeByte(0x34);
+        e.start(); e.writeByte(0xa1);
+        assert.equal(e.readByte(false), 0x99, 'random read at 0x1234');
+        e.stop();
+
+        e.start(); e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x34);
+        e.start(); e.writeByte(0xa1);
+        assert.equal(e.readByte(false), 0xff, '0x0034 untouched — no one-byte aliasing');
+        e.stop();
+    });
+
+    it('32-byte pages: offset 30 write wraps to the page start, not the next page', () => {
+        const e = eeprom64Board();
+        e.start();
+        e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x3e);  // page 0x20-0x3F, offset 30
+        e.writeByte(0x11); e.writeByte(0x22); e.writeByte(0x33);  // 0x3E, 0x3F, wrap → 0x20
+        e.stop();
+
+        e.start(); e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x20);
+        e.start(); e.writeByte(0xa1);
+        assert.equal(e.readByte(false), 0x33, 'third byte wrapped to 0x20');
+        e.stop();
+
+        e.start(); e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x40);
+        e.start(); e.writeByte(0xa1);
+        assert.equal(e.readByte(false), 0xff, '0x40 (next page) untouched');
+        e.stop();
+    });
+
+    it('A0 strap high moves the bus address to 0x51', () => {
+        const e = eeprom64Board({}, { a0: true });
+        e.start();
+        assert.equal(e.writeByte(0xa0), false, '0x50: nobody home');
+        e.stop();
+        e.start();
+        assert.equal(e.writeByte(0xa2), true, '0x51 ACKs');
+        e.stop();
+    });
+
+    it('WP high: writes ACK but are DISCARDED at STOP', () => {
+        const e = eeprom64Board({}, { wp: true });
+        e.start();
+        e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x10);
+        assert.equal(e.writeByte(0x55), true, 'data still ACKs (datasheet)');
+        e.stop();
+        e.start(); e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x10);
+        e.start(); e.writeByte(0xa1);
+        assert.equal(e.readByte(false), 0xff, 'nothing was written');
+        e.stop();
+    });
+
+    it('params.contents preloads the array (animation images ship this way)', () => {
+        const e = eeprom64Board({ contents: [0xde, 0xad, 0xbe, 0xef] });
+        e.start(); e.writeByte(0xa0); e.writeByte(0x00); e.writeByte(0x00);
+        e.start(); e.writeByte(0xa1);
+        assert.equal(e.readByte(true), 0xde);
+        assert.equal(e.readByte(true), 0xad);
+        assert.equal(e.readByte(true), 0xbe);
+        assert.equal(e.readByte(false), 0xef);
+        e.stop();
+    });
+});
