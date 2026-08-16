@@ -19,6 +19,7 @@ import {
 import { CHIPS, ATMEGA328P } from './avr-chips.js';
 import { createTWIBridge } from './twi-bridge.js';
 import { createSPIBridge } from './spi-bridge.js';
+import { createUSIBridge } from './usi-bridge.js';
 
 // Re-export for backward compatibility (existing tests import this)
 export { ATMEGA328P_PINS } from './avr-chips.js';
@@ -83,7 +84,7 @@ export function createAvr8jsAdapter(opts = {}) {
   }
 
   // ── ADC ──
-  const adc = new AVRADC(cpu, chip.adc);
+  const adc = chip.adc ? new AVRADC(cpu, chip.adc) : null;
 
   // ── USART ──
   let serialListener = null;
@@ -101,6 +102,12 @@ export function createAvr8jsAdapter(opts = {}) {
     twi = new AVRTWI(cpu, chip.twi, clockHz);
     twiBridge = createTWIBridge(twi);
     twi.eventHandler = twiBridge;
+  }
+
+  // ── USI (ATtiny85 software I2C) ──
+  let usiBridge = null;
+  if (chip.usi) {
+    usiBridge = createUSIBridge(cpu, chip.usi);
   }
 
   // ── SPI (hardware peripheral) ──
@@ -159,18 +166,20 @@ export function createAvr8jsAdapter(opts = {}) {
   }
 
   // ADC: read from board's analog voltage on the mapped pin.
-  const adcMap = chip.adcChannelToPin;
-  adc.onADCRead = (input) => {
-    stats.adcReadCount++;
-    let volts = 0;
-    if (board && board.readAnalog && input.channel != null) {
-      const pinName = adcMap[input.channel];
-      if (pinName) {
-        try { volts = board.readAnalog(pinName) ?? 0; } catch { volts = 0; }
+  const adcMap = chip.adcChannelToPin ?? {};
+  if (adc) {
+    adc.onADCRead = (input) => {
+      stats.adcReadCount++;
+      let volts = 0;
+      if (board && board.readAnalog && input.channel != null) {
+        const pinName = adcMap[input.channel];
+        if (pinName) {
+          try { volts = board.readAnalog(pinName) ?? 0; } catch { volts = 0; }
+        }
       }
-    }
-    adc.completeADCRead(Math.max(0, Math.min(1023, Math.round((volts / vcc) * 1023))));
-  };
+      adc.completeADCRead(Math.max(0, Math.min(1023, Math.round((volts / vcc) * 1023))));
+    };
+  }
 
   return {
     cpu,
@@ -193,8 +202,9 @@ export function createAvr8jsAdapter(opts = {}) {
         for (let bit = 0; bit < 8; bit++) publishPin(key, bit);
       }
       syncInputs();
-      // Wire TWI/SPI bridges to the board's device handlers.
+      // Wire TWI/USI/SPI bridges to the board's device handlers.
       if (twiBridge) twiBridge.attach(b);
+      if (usiBridge) usiBridge.attach(b);
       if (spiBridge) spiBridge.attach(b);
     },
 
@@ -228,6 +238,7 @@ export function createAvr8jsAdapter(opts = {}) {
     stats,
     twi,
     twiBridge,
+    usiBridge,
     spi,
     spiBridge,
   };

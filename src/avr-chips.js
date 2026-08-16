@@ -310,6 +310,18 @@ const ATTINY85_ADC = {
 // ADC channel → pin name (non-trivial mapping on ATtiny85)
 const ATTINY85_ADC_MAP = { 0: 'P5', 1: 'P2', 2: 'P4', 3: 'P3' };
 
+// USI register addresses (ATtiny85 datasheet §15.11)
+// Data-space addresses: USIDR=0x2F, USISR=0x2E, USICR=0x2D
+// Interrupt vectors (1-word, address = vectorNum - 1):
+//   USI START = vector 7 → 0x06, USI OVERFLOW = vector 8 → 0x07
+const ATTINY85_USI = {
+  USIDR: 0x2F,
+  USISR: 0x2E,
+  USICR: 0x2D,
+  usiOverflowInterrupt: 0x07,
+  usiStartInterrupt: 0x06,
+};
+
 export const ATTINY85 = {
   name: 'ATtiny85',
   flashWords: 4096,     // 8 KB = 4K words
@@ -323,6 +335,7 @@ export const ATTINY85 = {
   adc: ATTINY85_ADC,
   adcChannelToPin: ATTINY85_ADC_MAP,
   usart: null,  // no USART on ATtiny85
+  usi: ATTINY85_USI,    // USI peripheral for software I2C (TinyWireM)
 };
 
 // ─── ATtiny88 (Blinkenrocket congress badge) ──────────────────────────────
@@ -470,10 +483,204 @@ export const ATTINY88 = {
   twi: ATTINY88_TWI,
 };
 
+// ─── ATtiny2313 ────────────────────────────────────────────────────────────
+// 20-pin DIP, 2 KB flash (1K words), 128 B SRAM, 128 B EEPROM.
+// Ports: A (PA0-PA2, 3 pins), B (PB0-PB7, 8 pins), D (PD0-PD6, 7 pins).
+// Has a real USART (not USI), Timer0 (8-bit), Timer1 (16-bit). NO ADC.
+// Register addresses from ATtiny2313 datasheet (doc2543).
+// Port register addresses same as ATmega328P: A=0x20-22, B=0x23-25, D=0x29-2B.
+// Interrupt vectors are 1-word (flash < 8 KB): address = vectorNum - 1.
+
+const ATTINY2313_PINS = {
+  // Port A: PA0=XTAL1, PA1=XTAL2, PA2=RESET — only PA0-PA2 usable as GPIO
+  PA0: { port: 'A', bit: 0 },  // also XTAL1 (not usable if ext crystal)
+  PA1: { port: 'A', bit: 1 },  // also XTAL2
+  PA2: { port: 'A', bit: 2 },  // also RESET (usually not GPIO)
+  // Port B: PB0-PB7 all available
+  PB0: { port: 'B', bit: 0 },  // AIN0/PCINT0
+  PB1: { port: 'B', bit: 1 },  // AIN1/PCINT1
+  PB2: { port: 'B', bit: 2 },  // OC0A/PCINT2
+  PB3: { port: 'B', bit: 3 },  // OC1A/PCINT3
+  PB4: { port: 'B', bit: 4 },  // OC1B/PCINT4
+  PB5: { port: 'B', bit: 5 },  // MOSI/DI/PCINT5
+  PB6: { port: 'B', bit: 6 },  // MISO/DO/PCINT6
+  PB7: { port: 'B', bit: 7 },  // USCK/SCL/PCINT7
+  // Port D: PD0-PD6 (7 pins)
+  PD0: { port: 'D', bit: 0 },  // RXD
+  PD1: { port: 'D', bit: 1 },  // TXD
+  PD2: { port: 'D', bit: 2 },  // INT0/XCK
+  PD3: { port: 'D', bit: 3 },  // INT1
+  PD4: { port: 'D', bit: 4 },  // T0
+  PD5: { port: 'D', bit: 5 },  // OC0B/T1
+  PD6: { port: 'D', bit: 6 },  // ICP1
+};
+
+// ATtiny2313 port addresses match ATmega328P (portAConfig, portBConfig, portDConfig)
+const ATTINY2313_PORTS = {
+  A: portAConfig,  // PIN=0x20, DDR=0x21, PORT=0x22
+  B: portBConfig,  // PIN=0x23, DDR=0x24, PORT=0x25
+  D: portDConfig,  // PIN=0x29, DDR=0x2A, PORT=0x2B
+};
+
+// ATtiny2313 vector table (doc2543 Table 9-1, 1-word vectors: addr = vectorNum - 1):
+//   V4:TIMER1_CAPT=0x03, V5:TIMER1_COMPA=0x04, V6:TIMER1_OVF=0x05,
+//   V7:TIMER0_OVF=0x06, V8:USART0_RX=0x07, V9:USART0_UDRE=0x08,
+//   V10:USART0_TX=0x09, V13:TIMER1_COMPB=0x0C,
+//   V14:TIMER0_COMPA=0x0D, V15:TIMER0_COMPB=0x0E
+
+// Timer0 (8-bit): TCCR0A=0x30, TCCR0B=0x33, TCNT0=0x32, OCR0A=0x36, OCR0B=0x3C
+// TIFR=0x58, TIMSK=0x59, same bit layout as ATtiny85 Timer0
+const attiny2313Timer0Fixed = {
+  bits: 8, captureInterrupt: 0,
+  compAInterrupt: 0x0D,  // vector 14
+  compBInterrupt: 0x0E,  // vector 15
+  compCInterrupt: 0,
+  ovfInterrupt: 0x06,    // vector 7
+  TIFR: 0x58, OCRA: 0x36, OCRB: 0x3C, OCRC: 0, ICR: 0,
+  TCNT: 0x32, TCCRA: 0x30, TCCRB: 0x33, TCCRC: 0,
+  TIMSK: 0x59,
+  dividers: timer01Dividers,
+  compPortA: portBConfig.PORT, compPinA: 2,  // OC0A = PB2
+  compPortB: portDConfig.PORT, compPinB: 5,  // OC0B = PD5
+  compPortC: 0, compPinC: 0,
+  externalClockPort: portDConfig.PORT, externalClockPin: 4,
+  TOV: 1 << 1, OCFA: 1 << 3, OCFB: 1 << 4, OCFC: 0,
+  TOIE: 1 << 1, OCIEA: 1 << 3, OCIEB: 1 << 4, OCIEC: 0,
+};
+
+const attiny2313Timer1Fixed = {
+  bits: 16,
+  captureInterrupt: 0x03,  // vector 4: TIMER1_CAPT
+  compAInterrupt: 0x04,    // vector 5: TIMER1_COMPA
+  compBInterrupt: 0x0C,    // vector 13: TIMER1_COMPB
+  compCInterrupt: 0,
+  ovfInterrupt: 0x05,      // vector 6: TIMER1_OVF
+  TIFR: 0x58, OCRA: 0x4A, OCRB: 0x48, OCRC: 0, ICR: 0x44,
+  TCNT: 0x4C, TCCRA: 0x4F, TCCRB: 0x4E, TCCRC: 0x42,
+  TIMSK: 0x59,
+  dividers: timer01Dividers,
+  compPortA: portBConfig.PORT, compPinA: 3,
+  compPortB: portBConfig.PORT, compPinB: 4,
+  compPortC: 0, compPinC: 0,
+  externalClockPort: portDConfig.PORT, externalClockPin: 5,
+  TOV: 1 << 7, OCFA: 1 << 6, OCFB: 1 << 5, OCFC: 0,
+  TOIE: 1 << 7, OCIEA: 1 << 6, OCIEB: 1 << 5, OCIEC: 0,
+};
+
+const ATTINY2313_TIMERS_FIXED = [attiny2313Timer0Fixed, attiny2313Timer1Fixed];
+
+// USART registers (data-space addresses, datasheet §14.10):
+//   UDR=0x2C, UCSRA=0x2B, UCSRB=0x2A, UCSRC=0x23, UBRRH=0x22, UBRRL=0x29
+// Vectors: RXC=vector 8→0x07, UDRE=vector 9→0x08, TXC=vector 10→0x09
+const ATTINY2313_USART = {
+  rxCompleteInterrupt: 0x07,
+  dataRegisterEmptyInterrupt: 0x08,
+  txCompleteInterrupt: 0x09,
+  UCSRA: 0x2B, UCSRB: 0x2A, UCSRC: 0x23,
+  UBRRL: 0x29, UBRRH: 0x22, UDR: 0x2C,
+};
+
+export const ATTINY2313 = {
+  name: 'ATtiny2313',
+  flashWords: 1024,     // 2 KB = 1K words
+  sramBytes: 128,
+  clockHz: 8_000_000,   // 8 MHz internal RC (default, CKDIV8 fuse may halve)
+  vcc: 5.0,
+  pins: ATTINY2313_PINS,
+  ports: ATTINY2313_PORTS,
+  timers: ATTINY2313_TIMERS_FIXED,
+  adc: null,            // NO ADC on ATtiny2313
+  adcChannelToPin: {},
+  usart: ATTINY2313_USART,
+};
+
+// ─── ATtiny13 ──────────────────────────────────────────────────────────────
+// 8-pin DIP, 1 KB flash (512 words), 64 B SRAM, 64 B EEPROM.
+// Single Port B (PB0-PB5, 6 pins) at same addresses as ATtiny85.
+// Timer0 only (8-bit). 4-channel ADC. NO USART, NO USI (unlike t85).
+// Register addresses from ATtiny13 datasheet (doc2535).
+// Interrupt vectors are 1-word: address = vectorNum - 1.
+// Vector table: 1:RESET, 2:INT0(0x01), 3:PCINT0(0x02), 4:TIM0_OVF(0x03),
+//   5:EE_RDY(0x04), 6:ANA_COMP(0x05), 7:TIM0_COMPA(0x06), 8:TIM0_COMPB(0x07),
+//   9:WDT(0x08), 10:ADC(0x09)
+
+const ATTINY13_PINS = {
+  PB0: { port: 'B', bit: 0 },  // MOSI/OC0A/AIN0/PCINT0
+  PB1: { port: 'B', bit: 1 },  // MISO/OC0B/AIN1/INT0/PCINT1
+  PB2: { port: 'B', bit: 2 },  // SCK/ADC1/T0/PCINT2
+  PB3: { port: 'B', bit: 3 },  // ADC3/CLKI/PCINT3
+  PB4: { port: 'B', bit: 4 },  // ADC2/PCINT4
+  PB5: { port: 'B', bit: 5 },  // ADC0/RESET/PCINT5
+};
+
+// Port B at ATtiny13/85 addresses (same as attiny85PortBConfig)
+const attiny13PortBConfig = {
+  PIN: 0x36, DDR: 0x37, PORT: 0x38,
+  externalInterrupts: [],
+};
+
+const ATTINY13_PORTS = { B: attiny13PortBConfig };
+
+// Timer0 (8-bit): same register addresses as ATtiny85 Timer0.
+// TIFR0 at data 0x58, TIMSK0 at 0x59 (avr-libc iotn13a.h: _SFR_IO8(0x38) → data 0x58).
+// Vectors: TIM0_OVF=V4→0x03, TIM0_COMPA=V7→0x06, TIM0_COMPB=V8→0x07
+
+const attiny13Timer0 = {
+  bits: 8, captureInterrupt: 0,
+  compAInterrupt: 0x06,  // vector 7: TIM0_COMPA
+  compBInterrupt: 0x07,  // vector 8: TIM0_COMPB
+  compCInterrupt: 0,
+  ovfInterrupt: 0x03,    // vector 4: TIM0_OVF
+  TIFR: 0x58, OCRA: 0x49, OCRB: 0x48, OCRC: 0, ICR: 0,
+  TCNT: 0x52, TCCRA: 0x4A, TCCRB: 0x53, TCCRC: 0,
+  TIMSK: 0x59,
+  dividers: timer01Dividers,
+  compPortA: attiny13PortBConfig.PORT, compPinA: 0,  // OC0A = PB0
+  compPortB: attiny13PortBConfig.PORT, compPinB: 1,  // OC0B = PB1
+  compPortC: 0, compPinC: 0,
+  externalClockPort: attiny13PortBConfig.PORT, externalClockPin: 2,  // T0 = PB2
+  TOV: 1 << 1, OCFA: 1 << 3, OCFB: 1 << 4, OCFC: 0,
+  TOIE: 1 << 1, OCIEA: 1 << 3, OCIEB: 1 << 4, OCIEC: 0,
+};
+
+const ATTINY13_TIMERS = [attiny13Timer0];
+
+// ADC: 4 single-ended channels, different register addresses from t85
+// From iotn13a.h / datasheet:
+//   ADMUX=0x27, ADCSRA=0x26, ADCL=0x24, ADCH=0x25, ADCSRB=0x23, DIDR0=0x34
+// Channels: ADC0=PB5, ADC1=PB2, ADC2=PB4, ADC3=PB3 (same mapping as t85!)
+// ADC interrupt: vector 10→0x09
+const ATTINY13_ADC = {
+  ADMUX: 0x27, ADCSRA: 0x26, ADCSRB: 0x23, ADCL: 0x24, ADCH: 0x25,
+  DIDR0: 0x34, adcInterrupt: 0x09, numChannels: 4, muxInputMask: 0x03,
+  adcReferences: [1/*VCC*/, 0/*AREF*/, 4/*Reserved*/, 3/*Internal1V1*/],
+  muxChannels: Object.fromEntries(
+    [...Array(4)].map((_, i) => [i, { type: 0, channel: i }])
+  ),
+};
+
+const ATTINY13_ADC_MAP = { 0: 'PB5', 1: 'PB2', 2: 'PB4', 3: 'PB3' };
+
+export const ATTINY13 = {
+  name: 'ATtiny13',
+  flashWords: 512,      // 1 KB = 512 words
+  sramBytes: 64,
+  clockHz: 9_600_000,   // 9.6 MHz internal RC (default, CKDIV8 → 1.2 MHz)
+  vcc: 5.0,
+  pins: ATTINY13_PINS,
+  ports: ATTINY13_PORTS,
+  timers: ATTINY13_TIMERS,
+  adc: ATTINY13_ADC,
+  adcChannelToPin: ATTINY13_ADC_MAP,
+  usart: null,  // no USART
+};
+
 /** Lookup by name string, case-insensitive. */
 export const CHIPS = {
   atmega328p: ATMEGA328P,
   atmega2560: ATMEGA2560,
   attiny85: ATTINY85,
   attiny88: ATTINY88,
+  attiny2313: ATTINY2313,
+  attiny13: ATTINY13,
 };
