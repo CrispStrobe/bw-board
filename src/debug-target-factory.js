@@ -164,7 +164,12 @@ async function createAvr8jsTarget(kind, opts) {
 
   // 3. Load hex → parse to word-addressed Uint16Array → load into flash
   if (hex) {
-    const words = parseIntelHex(hex);
+    // Sized to the CHIP's flash, not the parser's ATmega328P default: a
+    // 16384-word parse on an ATtiny's 4096-word progMem throws RangeError
+    // "offset is out of bounds" at set() — the pendant's first crash once
+    // the attach dispatch routed it here (2026-08-16) — and the 2560
+    // needs it BIGGER. Neither direction can stay implicit.
+    const words = parseIntelHex(hex, adapter.chip.flashWords * 2);
     adapter.loadProgram(words);
 
     // Sanity: AVR reset vector is at word 0. A JMP instruction starts with
