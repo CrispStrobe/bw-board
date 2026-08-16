@@ -147,6 +147,6 @@ describe('chip-composer: all chips register without error', () => {
 
   it(`all ${CHIPS.length} chips are registered`, () => {
     // If setup() didn't throw, all registered successfully
-    assert.equal(CHIPS.length, 15, `expected 15 chip definitions`);
+    assert.equal(CHIPS.length, 16, `expected 16 chip definitions`);
   });
 });

@@ -114,26 +114,97 @@ export function registerKitSensors() {
             return true;                                     // re-stamp the pots
         },
     });
+
+    // ─── DHT22 (AM2302) ───────────────────────────────────────────────
+    // Identical protocol framing to DHT11 but 16-bit values at 0.1 resolution.
+    // Registered as a separate kind so the circuit model can distinguish them.
+    registerDevice('dht22', {
+        terminals: ['vcc', 'gnd', 'data'],
+
+        init() {
+            return {
+                drives: { data: { vTh: 0, rTh: R_OFF } },
+                _data: true, _fellNs: -1n,
+                _frame: null,
+                _frameIdx: 0,
+                _lastReadNs: -2_000_000_000n,
+            };
+        },
+
+        stamp() {},
+
+        update(part, state, read, tNs) {
+            const vcc = read('vcc') || 5.0;
+            const th = vcc * 0.5;
+            const v = read('data') > th;
+
+            if (state._frame) {
+                let changed = false;
+                while (state._frameIdx < state._frame.length
+                    && tNs >= state._frame[state._frameIdx].t) {
+                    const edge = state._frame[state._frameIdx++];
+                    state.drives.data = edge.low
+                        ? { vTh: 0, rTh: R_OUT } : { vTh: 0, rTh: R_OFF };
+                    changed = true;
+                }
+                if (state._frameIdx >= state._frame.length) state._frame = null;
+                state._data = read('data') > th;
+                return changed;
+            }
+
+            if (!v && state._data) state._fellNs = tNs;
+            if (v && !state._data && state._fellNs >= 0n) {
+                const lowUs = Number((tNs - state._fellNs) / 1000n);
+                if (lowUs >= 1000) {
+                    if (tNs - state._lastReadNs >= 1_000_000_000n) {
+                        state._lastReadNs = tNs;
+                        state._frame = buildFrame(part, tNs);
+                        state._frameIdx = 0;
+                    }
+                }
+            }
+            state._data = v;
+            return false;
+        },
+    });
 }
 
 function buildFrame(part, t0) {
-    const h = Math.max(0, Math.min(95, Math.round(part.params?.humidity ?? 50)));
-    const t = Math.max(0, Math.min(50, Math.round(part.params?.temperature ?? 25)));
-    const bytes = [h, 0, t, 0];
+    const isDHT22 = part.kind === 'dht22' || part.params?.variant === 'dht22';
+    let bytes;
+
+    if (isDHT22) {
+        // DHT22: 16-bit ×10, -40..80 °C, 0..100 % RH
+        const h = Math.max(0, Math.min(100, part.params?.humidity ?? 50));
+        const t = Math.max(-40, Math.min(80, part.params?.temperature ?? 25));
+        const hRaw = Math.round(h * 10);
+        const tRaw = Math.round(Math.abs(t) * 10);
+        bytes = [
+            (hRaw >> 8) & 0xFF,
+            hRaw & 0xFF,
+            ((tRaw >> 8) & 0x7F) | (t < 0 ? 0x80 : 0),
+            tRaw & 0xFF,
+        ];
+    } else {
+        // DHT11: integer-only, 0..50 °C, 0..95 % RH
+        const h = Math.max(0, Math.min(95, Math.round(part.params?.humidity ?? 50)));
+        const t = Math.max(0, Math.min(50, Math.round(part.params?.temperature ?? 25)));
+        bytes = [h, 0, t, 0];
+    }
     bytes.push((bytes[0] + bytes[1] + bytes[2] + bytes[3]) & 0xff);
 
     const edges = [];
-    let now = t0 + 20_000n;                                  // sensor turnaround
+    let now = t0 + 20_000n;
     const seg = (low, us) => { edges.push({ t: now, low }); now += BigInt(us) * 1000n; };
-    seg(true, 80);                                           // response: 80 µs low
-    seg(false, 80);                                          // 80 µs high
+    seg(true, 80);
+    seg(false, 80);
     for (const byte of bytes) {
         for (let i = 7; i >= 0; i--) {
-            seg(true, 50);                                   // bit preamble
-            seg(false, (byte >> i) & 1 ? 70 : 27);           // width IS the bit
+            seg(true, 50);
+            seg(false, (byte >> i) & 1 ? 70 : 27);
         }
     }
-    edges.push({ t: now, low: false });                      // release the line
+    edges.push({ t: now, low: false });
     return edges;
 }
 

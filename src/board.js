@@ -1199,7 +1199,7 @@ export class BoardImpl {
       // Real DIP chips (chip-composer)
       '74hc00', '74hc02', '74hc04', '74hc08', '74hc10', '74hc11', '74hc14',
       '74hc20', '74hc21', '74hc27', '74hc32', '74hc73', '74hc74', '74hc86',
-      '74hc93', '74hc132', 'cd4511',
+      '74hc93', '74hc132', 'cd4093', 'cd4511',
       // Misc parts
       'dc_motor_encoder', 'keypad_4x4', 'dip_switch', 'vibration_motor', 'polarized_cap',
       // Named variants (real part numbers)
@@ -1209,7 +1209,7 @@ export class BoardImpl {
       // Tier 1 catalogue parts
       'photodiode', 'soil_moisture', 'relay_dpdt', 'solar_cell', 'gearmotor',
       '74hc75', '74hc283', 'header', 'usb_a', 'ir_remote', 'clock_display',
-      'pcf8574', 'char_lcd_i2c',
+      'pcf8574', 'char_lcd_i2c', 'mcp4725',
       // Board kinds (multi-arch, per bw-parts 004)
       'arduino_uno', 'arduino_nano', 'pi_pico',
     ];

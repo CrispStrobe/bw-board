@@ -160,6 +160,15 @@ const CHIPS = [
       { type: 'schmitt_nand', inputs: ['4a','4b'], output: '4y' },
     ]},
 
+  // CD4093 — Quad 2-input Schmitt NAND (CMOS equivalent of 74HC132)
+  { kind: 'cd4093', pins: ['1a','1b','1y','2a','2b','2y','gnd','3y','3a','3b','4y','4a','4b','vcc'],
+    gates: [
+      { type: 'schmitt_nand', inputs: ['1a','1b'], output: '1y' },
+      { type: 'schmitt_nand', inputs: ['2a','2b'], output: '2y' },
+      { type: 'schmitt_nand', inputs: ['3a','3b'], output: '3y' },
+      { type: 'schmitt_nand', inputs: ['4a','4b'], output: '4y' },
+    ]},
+
   // 74HC74 — Dual D flip-flop (with preset/clear)
   { kind: '74hc74', pins: ['1clr','1d','1clk','1pre','1q','1q_bar','gnd','2q_bar','2q','2pre','2clk','2d','2clr','vcc'],
     ffs: [
