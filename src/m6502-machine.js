@@ -24,6 +24,7 @@ import { SimpleVGA } from './simplevga.js';
 import { TileVGA } from './tilevga.js';
 import { NS16C550 } from './ns16c550.js';
 import { Latch374 } from './latch374.js';
+import { SDCardSPI } from './sdcard-spi.js';
 
 /**
  * @typedef {object} MachineConfig
@@ -227,7 +228,23 @@ export class M6502Machine {
                 // window with its bank line on the VIA's port B. No
                 // decode entry — it occupies no address of its own.
                 this._vgaCard = new SimpleVGA({ rows: c.rows });
+                this._vgaNmi = !!c.nmi;
                 this.chips[c.name] = this._vgaCard;
+                continue;
+            } else if (c.kind === 'sdcard') {
+                // SPI-mode SD card on a VIA's port pins (the Bad Apple
+                // storage hookup). Like simplevga: wires only, no bus
+                // window, no decode entry. config: {kind:'sdcard',
+                // name, via:'via1', pins:{cs,sck,mosi,miso, port?}}.
+                const sd = new SDCardSPI(c.pins);
+                if (!this._sdCards) this._sdCards = [];
+                this._sdCards.push({
+                    sd, via: c.via || 'via1',
+                    port: (c.pins.port || 'a').toUpperCase(),
+                    miso: c.pins.miso, last: null,
+                    bits: [c.pins.cs, c.pins.mosi, c.pins.sck], // cs first, data before clock
+                });
+                this.chips[c.name] = sd;
                 continue;
             } else {
                 throw new Error(`unknown chip kind in machine config: ${c.kind}`);
@@ -302,6 +319,26 @@ export class M6502Machine {
         // The simplevga card's bank line rides the VIA's port B
         // (vga.s: `inc PORTB` at the row-128 crossing).
         if (this._vgaCard && port === 'B') this._vgaCard.setBank(value);
+        // SD cards listen to their VIA's output pins; MISO answers
+        // through setInput. Edge ORDER matters within one write: CS,
+        // then MOSI (data stable), then SCK (the sampling edge).
+        if (this._sdCards) {
+            for (const e of this._sdCards) {
+                if (chipName !== e.via || port.toUpperCase() !== e.port) continue;
+                if (!e.sd.onMiso) {
+                    const via = this.chips[e.via];
+                    const p = e.port.toLowerCase();
+                    e.sd.onMiso = (level) => via && via.setInput(p, e.miso, level);
+                }
+                const prev = e.last;
+                e.last = value;
+                if (prev === null) continue;
+                const diff = prev ^ value;
+                for (const bit of e.bits) {
+                    if ((diff >> bit) & 1) e.sd.pinChange(bit, (value >> bit) & 1);
+                }
+            }
+        }
         // Bit-bang serial TX: watch the tx pin; falling edge while idle
         // is a start bit — arm the mid-bit sampler.
         const bb = this._bb;
@@ -414,9 +451,19 @@ export class M6502Machine {
         if (this._vgaCard) {
             const phase = Math.floor(this.cycles / (this.clockHz / 120)) & 1;
             if (phase !== this._vsPhase) {
+                const falling = this._vsPhase === 1 && phase === 0;
                 this._vsPhase = phase;
                 const via = Object.values(this.chips).find((c) => c && typeof c.setInput === 'function' && 'inA' in c);
                 if (via) via.setInput('a', 4, phase);
+                // vsync → NMI (config {kind:'simplevga', nmi: true}): the
+                // Bad Apple hookup — the frame pulse on the 6502's NMI pin
+                // gives adaptive per-frame pacing with no timer at all.
+                // Edge-triggered like the pin: the FALLING edge fires.
+                if (falling && this._vgaNmi) {
+                    this.cpu.nmi();
+                    this.cycles += 7; // the interrupt sequence is bus time
+                    this._advanceChips(7);
+                }
             }
         }
         if (this._anyIrq() && this.cpu.irq()) { // level-triggered shared IRQB

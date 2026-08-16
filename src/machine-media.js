@@ -36,6 +36,8 @@ const SLOTS = {
     eater6502: [
         { id: 'rom', label: 'ROM image', accept: [...BIN_EXT, ...HEX_EXT], at: 0x8000,
           hint: '32 KB at $8000, vectors included — what cc65/ca65 emit' },
+        { id: 'sd-image', label: 'SD card image', accept: ['.img', '.bin', '.sd'],
+          hint: 'raw block image for a wired sdcard chip (Bad Apple streams from here)' },
     ],
     gpascal: [
         { id: 'rom', label: 'ROM image', accept: BIN_EXT, at: 0x8000,
@@ -146,6 +148,13 @@ export function applyMedia(target, entries, opts = {}) {
                 case 'tape': {
                     if (!machine || !machine.loadTape) throw new Error('target has no tape deck');
                     machine.loadTape(bytes);
+                    break;
+                }
+                case 'sd-image': {
+                    const sd = machine && Object.values(machine.chips || {})
+                        .find((c) => c && typeof c.setImage === 'function');
+                    if (!sd) throw new Error('no sdcard chip in this machine config');
+                    sd.setImage(bytes);
                     break;
                 }
                 case 'snapshot': {
