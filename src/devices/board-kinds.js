@@ -135,6 +135,23 @@ const UNO_TERMINALS = [
   '5v', '3v3', 'gnd', 'gnd2', 'gnd3', 'vin', 'aref', 'reset',
 ];
 
+// ─── Arduino Mega 2560 ───────────────────────────────────────────────────
+// 78 terminals, spellings from the bw-parts sidecar (arduino_mega.json).
+// Unregistered until 2026-08-16, so a Mega body was ELECTRICALLY DEAD —
+// same class of bug as the bare-chip gap, found by the example sweep.
+
+const MEGA_TERMINALS = [
+  'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9',
+  'd10', 'd11', 'd12', 'd13', 'gnd', 'aref', 'd14', 'd15', 'd16', 'd17',
+  'd18', 'd19', 'd20', 'd21', 'reset', '3v3', '5v', 'gnd2', 'gnd3', 'vin',
+  'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7',
+  'a8', 'a9', 'a10', 'a11', 'a12', 'a13', 'a14', 'a15',
+  'd22', 'd23', 'd24', 'd25', 'd26', 'd27', 'd28', 'd29', 'd30', 'd31',
+  'd32', 'd33', 'd34', 'd35', 'd36', 'd37', 'd38', 'd39', 'd40', 'd41',
+  'd42', 'd43', 'd44', 'd45', 'd46', 'd47', 'd48', 'd49', 'd50', 'd51',
+  'd52', 'd53',
+];
+
 // ─── Pi Pico ─────────────────────────────────────────────────────────────
 
 const PICO_TERMINALS = [
@@ -207,6 +224,7 @@ const ATTINY85_TERMINALS = [
 export function registerBoardKinds() {
   registerDevice('arduino_nano', boardModel(NANO_TERMINALS, 5.0));
   registerDevice('arduino_uno', boardModel(UNO_TERMINALS, 5.0));
+  registerDevice('arduino_mega', boardModel(MEGA_TERMINALS, 5.0));
   registerDevice('pi_pico', boardModel(PICO_TERMINALS, 3.3));
   registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
   registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));

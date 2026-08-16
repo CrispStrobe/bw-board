@@ -133,3 +133,26 @@ describe('bare attiny85 as MCU-pin surface', () => {
     assert.ok(board.nodeVoltage('n_pb1') > 4.0, 'pb1 drives high');
   });
 });
+
+describe('arduino_mega as MCU-pin surface (example-sweep regression)', () => {
+  it('5v sources; d13 drives; a0 reads', () => {
+    const board = makeBoard(
+      [
+        { id: 'MEGA', kind: 'arduino_mega', params: {}, terminals: ['5v', 'gnd', 'd13', 'a0'] },
+        { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+        { id: 'R2', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+      ],
+      [
+        { id: 'n_d13', terminals: [{ part: 'MEGA', terminal: 'd13' }, { part: 'R1', terminal: 'a' }] },
+        { id: 'n_gnd', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'MEGA', terminal: 'gnd' }, { part: 'R2', terminal: 'b' }] },
+        { id: 'n_a0', terminals: [{ part: 'MEGA', terminal: 'a0' }, { part: 'R2', terminal: 'a' }] },
+        { id: 'n_5v', terminals: [{ part: 'MEGA', terminal: '5v' }] },
+      ],
+    );
+    assert.ok(board.nodeVoltage('n_5v') > 4.9, 'Mega 5v pin sources');
+    board.setPin('D13', 'pushpull', true);
+    assert.ok(board.nodeVoltage('n_d13') > 4.0, 'd13 drives high');
+    board.setPin('A0', 'input', false);
+    assert.equal(board.readPin('A0'), 0, 'a0 reads its pulled-down net');
+  });
+});
