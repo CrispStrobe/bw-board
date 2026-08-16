@@ -55,3 +55,79 @@ test('unknown slots are named, not thrown', () => {
     assert.equal(errors[0].slot, 'floppy');
     assert.match(errors[0].error, /unknown slot/);
 });
+
+// ── AT24C64 EEPROM media slot ────────────────────────────────────
+
+test('describeMedia adds eeprom slot when circuit has at24c64 part', () => {
+    const parts = [
+        { id: 'eep1', kind: 'at24c64', declName: 'animStore' },
+        { id: 'mcu', kind: 'mcu' },
+    ];
+    const slots = describeMedia('eater6502', { parts });
+    const eepromSlot = slots.find(s => s.id === 'eeprom:eep1');
+    assert.ok(eepromSlot, 'should have eeprom slot for at24c64 part');
+    assert.match(eepromSlot.label, /animStore/);
+    assert.ok(eepromSlot.accept.includes('.bin'));
+    assert.ok(eepromSlot.accept.includes('.hex'));
+});
+
+test('describeMedia returns no eeprom slot when no at24c64 in circuit', () => {
+    const parts = [{ id: 'mcu', kind: 'mcu' }];
+    const slots = describeMedia('eater6502', { parts });
+    assert.ok(!slots.some(s => s.id.startsWith('eeprom:')));
+});
+
+test('describeMedia with no parts option still works (backward compat)', () => {
+    const slots = describeMedia('eater6502');
+    assert.ok(slots.some(s => s.id === 'rom'));
+    assert.ok(!slots.some(s => s.id.startsWith('eeprom:')));
+});
+
+test('applyMedia eeprom slot writes contents via board.setPartParam', () => {
+    const parts = [{ id: 'eep1', kind: 'at24c64', declName: 'store' }];
+    const written = {};
+    const board = {
+        setPartParam(partId, param, value) { written[`${partId}.${param}`] = value; },
+    };
+    const data = new Uint8Array([0x41, 0x42, 0x43]);
+    const { applied, errors } = applyMedia(
+        { machine: {}, kind: 'eater6502' },
+        { 'eeprom:eep1': data },
+        { parts, board },
+    );
+    assert.deepEqual(applied, ['eeprom:eep1']);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(written['eep1.contents'], [0x41, 0x42, 0x43]);
+});
+
+test('applyMedia eeprom slot rejects files > 8192 bytes', () => {
+    const parts = [{ id: 'eep1', kind: 'at24c64' }];
+    const big = new Uint8Array(8193);
+    const { applied, errors } = applyMedia(
+        { machine: {}, kind: 'eater6502' },
+        { 'eeprom:eep1': big },
+        { parts },
+    );
+    assert.deepEqual(applied, []);
+    assert.equal(errors.length, 1);
+    assert.match(errors[0].error, /exceeds.*8192/);
+});
+
+test('applyMedia eeprom slot accepts Intel HEX', () => {
+    const parts = [{ id: 'eep1', kind: 'at24c64' }];
+    const written = {};
+    const board = {
+        setPartParam(partId, param, value) { written[`${partId}.${param}`] = value; },
+    };
+    // Two bytes at address 0: 0xA9, 0x42
+    const hex = ':02000000A94214\n:00000001FF\n';
+    const hexBytes = new TextEncoder().encode(hex);
+    const { applied, errors } = applyMedia(
+        { machine: {}, kind: 'eater6502' },
+        { 'eeprom:eep1': hexBytes },
+        { parts, board },
+    );
+    assert.deepEqual(applied, ['eeprom:eep1']);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(written['eep1.contents'], [0xa9, 0x42]);
+});

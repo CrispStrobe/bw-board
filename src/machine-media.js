@@ -67,11 +67,31 @@ const SLOTS = {
 /**
  * Slots for a target kind, or [] for kinds whose loading story is the
  * compile chain (MCUs flash hex through the existing build path).
+ *
+ * When `parts` is provided (the circuit's part list), dynamic slots
+ * are added for circuit peripherals that accept loadable data (e.g.,
+ * AT24C64 EEPROMs carrying animation data for the blinkenrocket).
+ *
  * @param {string} kind
+ * @param {{parts?: Array<{id: string, kind: string, declName?: string}>}} [opts]
  * @returns {MediaSlot[]}
  */
-export function describeMedia(kind) {
-    return SLOTS[kind] || [];
+export function describeMedia(kind, opts) {
+    const slots = [...(SLOTS[kind] || [])];
+    // Dynamic: AT24C64 EEPROM parts in the circuit get a loadable slot
+    if (opts?.parts) {
+        for (const p of opts.parts) {
+            if (p.kind === 'at24c64') {
+                slots.push({
+                    id: `eeprom:${p.id}`,
+                    label: `EEPROM (${p.declName || p.id})`,
+                    accept: [...BIN_EXT, ...HEX_EXT],
+                    hint: '8 KB max — animation data, lookup tables',
+                });
+            }
+        }
+    }
+    return slots;
 }
 
 /** Parse Intel HEX text into {bytes, origin}. Records must be type 00/01. */
@@ -109,12 +129,15 @@ const isHexText = (bytes) => bytes.length > 1 && bytes[0] === 0x3a; // ':'
  *
  * @param {object} target - from createDebugTarget (adapter/machine reachable)
  * @param {Record<string, Uint8Array>} entries
- * @param {{kind?: string}} [opts] - target kind when the target doesn't carry it
+ * @param {{kind?: string, parts?: Array, board?: object}} [opts]
+ *   kind: target kind when the target doesn't carry it
+ *   parts: circuit parts list (for dynamic eeprom slots)
+ *   board: BoardImpl instance (for setPartParam on eeprom writes)
  * @returns {{applied: string[], errors: {slot: string, error: string}[]}}
  */
 export function applyMedia(target, entries, opts = {}) {
     const kind = opts.kind || target.kind;
-    const slots = new Map(describeMedia(kind).map((s) => [s.id, s]));
+    const slots = new Map(describeMedia(kind, { parts: opts.parts }).map((s) => [s.id, s]));
     const machine = target.machine || target.adapter?.machine;
     const adapter = target.adapter || target;
     const applied = [];
@@ -163,8 +186,32 @@ export function applyMedia(target, entries, opts = {}) {
                     machine.loadSnapshot(bytes);
                     break;
                 }
-                default:
+                default: {
+                    // Dynamic eeprom slots: eeprom:<partId>
+                    if (slotId.startsWith('eeprom:')) {
+                        const partId = slotId.slice(7);
+                        const EEPROM_MAX = 8192;
+                        if (bytes.length > EEPROM_MAX) {
+                            throw new Error(`${bytes.length} bytes exceeds ${EEPROM_MAX}-byte EEPROM capacity`);
+                        }
+                        const contents = Array.from(bytes);
+                        // Write via board.setPartParam if available (live circuit)
+                        if (opts.board && typeof opts.board.setPartParam === 'function') {
+                            opts.board.setPartParam(partId, 'contents', contents);
+                        }
+                        // Also write into the device state if the machine has it running
+                        if (machine?.chips) {
+                            const chip = Object.values(machine.chips)
+                                .find((c) => c && c._partId === partId);
+                            if (chip && chip.mem) {
+                                chip.mem.fill(0xff);
+                                for (let i = 0; i < contents.length; i++) chip.mem[i] = contents[i];
+                            }
+                        }
+                        break;
+                    }
                     throw new Error('slot registered but not routed — add its case');
+                }
             }
             applied.push(slotId);
         } catch (e) {
