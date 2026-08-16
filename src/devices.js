@@ -79,6 +79,19 @@ export function registerDevice(kind, model) {
   REGISTRY.set(kind, model);
 }
 
+/**
+ * Whether a device model is registered for this kind. The circuit UI asks
+ * this before deciding whether a board-level kind (arduino_uno, attiny85,
+ * ...) keeps its identity in the engine netlist or collapses to the
+ * generic 'mcu' surface — a registered model is strictly more truthful
+ * (power rails source, gpioFollowsPinStates, readPin works).
+ * @param {string} kind
+ * @returns {boolean}
+ */
+export function hasDevice(kind) {
+  return REGISTRY.has(kind);
+}
+
 /** @param {string} kind @returns {DeviceModel | undefined} */
 export function getDevice(kind) {
   return REGISTRY.get(kind);

@@ -21,7 +21,7 @@ export { validateNetlist, assertValidNetlist } from './validate.js';
 export { NetlistBuilder } from './builder.js';
 export { createSerialDebugTarget } from './serial-debug.js';
 export { createDebugTarget, getTargetKinds } from './debug-target-factory.js';
-export { registerDevice, unregisterDevice, getDevice, registeredKinds, initDeviceState } from './devices.js';
+export { registerDevice, unregisterDevice, getDevice, hasDevice, registeredKinds, initDeviceState } from './devices.js';
 export { registerLogicGates } from './devices/logic-gates.js';
 export { registerRelay } from './devices/relay.js';
 export { registerDCMotor } from './devices/dc-motor.js';
