@@ -2500,11 +2500,19 @@ export class BoardImpl {
    */
   _pinVoltage(pin) {
     const key = String(pin).toLowerCase();
-    // Find the MCU part and the net this pin is connected to
+    // The pin namespace lives on the MCU-surface part: the STC12 body
+    // (kind 'mcu') or any gpioFollowsPinStates device (dev boards, bare
+    // chips). Only matching kind 'mcu' meant readPin() returned 0 for
+    // every input on an Arduino body or a bare ATtiny — the pendant's
+    // buttons pressed into the void while its outputs worked (the output
+    // path goes through device drives, not through here).
     for (const net of this.nets) {
       for (const t of net.terminals) {
         const part = this.partMap.get(t.part);
-        if (part && part.kind === 'mcu' && String(t.terminal).toLowerCase() === key) {
+        if (!part || String(t.terminal).toLowerCase() !== key) continue;
+        if (part.kind === 'mcu') return this.nodeVoltages.get(net.id) ?? 0;
+        const model = getDevice(part.kind);
+        if (model && model.gpioFollowsPinStates) {
           return this.nodeVoltages.get(net.id) ?? 0;
         }
       }

@@ -161,6 +161,46 @@ const EATER6502_TERMINALS = [
   '5v', 'gnd',
 ];
 
+// ─── Bare MCU chips (DIP bodies, not dev boards) ────────────────────────
+//
+// A bare chip differs from a dev board in exactly one way: it has no
+// regulator, so its vcc/avcc/gnd pins are CONSUMERS — the bench supplies
+// them via wired VCC/GND symbols. Stamping them as sources here would
+// fight whatever the user actually wired (a 3.3 V bench on an attiny's
+// vcc pin must win). So: no power drives, no stamp; GPIO terminals
+// follow pinStates exactly like board-kind GPIO does.
+//
+// Without this registration the chip was ELECTRICALLY ABSENT: the
+// boundary-A adapter published pin states nobody consumed, because
+// board.js's _pinSources recognizes only kind 'mcu' (the STC12 body).
+// The blinkenrocket pendant's matrix stayed dark with a perfectly
+// running firmware (owner report, 2026-08-16).
+
+function bareChipModel(allTerminals, chipVcc) {
+  return {
+    terminals: allTerminals,
+    init() { return { drives: {} }; },
+    update() { return false; },
+    gpioFollowsPinStates: true,
+    vcc: chipVcc,
+  };
+}
+
+// Terminal spellings must match the bw-parts sidecar (the netlist's own
+// namespace) — this is what the adapter's lowercased AVR pin names join
+// against. DIP-28, per the audited sidecar.
+const ATTINY88_TERMINALS = [
+  'pc6', 'pd0', 'pd1', 'pd2', 'pd3', 'pd4', 'vcc', 'gnd',
+  'pb6', 'pb7', 'pd5', 'pd6', 'pd7', 'pb0', 'pb1', 'pb2',
+  'pb3', 'pb4', 'pb5', 'avcc', 'pa0', 'pc0', 'pc1', 'pc2',
+  'pc3', 'pc4', 'pc5', 'pc7',
+];
+
+// DIP-8. pb5 doubles as reset on the real part; electrically it is a pin.
+const ATTINY85_TERMINALS = [
+  'pb5', 'pb3', 'pb4', 'gnd', 'pb0', 'pb1', 'pb2', 'vcc',
+];
+
 /**
  * Register board-kind device models.
  */
@@ -169,4 +209,6 @@ export function registerBoardKinds() {
   registerDevice('arduino_uno', boardModel(UNO_TERMINALS, 5.0));
   registerDevice('pi_pico', boardModel(PICO_TERMINALS, 3.3));
   registerDevice('eater6502', boardModel(EATER6502_TERMINALS, 5.0));
+  registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));
+  registerDevice('attiny85', bareChipModel(ATTINY85_TERMINALS, 5.0));
 }
