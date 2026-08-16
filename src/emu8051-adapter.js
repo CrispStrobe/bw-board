@@ -67,9 +67,28 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   const vcc = opts.vcc ?? 5.0;
   const ports = opts.ports ?? [1, 3];
   const pollIntervalNs = opts.pollIntervalNs ?? 1000;
+  const part = String(opts.part ?? 'stc12c5a60s2').toLowerCase();
 
   // Initialize
   wasm._emu_init(1); // STC12 mode
+  // Part selection — the ABI contract with emu8051-stc: _emu_set_part(id)
+  // after emu_init, before any hex load. The table is the contract; both
+  // sides cite it (STC15-PERIPHERAL-MODEL.md §3 for what each id implies —
+  // an STC15 program on the STC12 model loses P5 SILENTLY, which is how
+  // the RBS15667 console's buzzer would die with no error anywhere).
+  const PART_IDS = {
+    stc12c5a60s2: 0, stc12c5a16s2: 0,
+    stc15f2k60s2: 1, stc15w408as: 1,
+    stc89c52: 2, stc89c52rc: 2,
+  };
+  const partId = PART_IDS[part] ?? 0;
+  if (typeof wasm._emu_set_part === 'function') {
+    wasm._emu_set_part(partId);
+  } else if (partId !== 0) {
+    // Truthful refusal, not silence: the build cannot model this part.
+    console.warn(`[emu8051-adapter] this emulator build has no _emu_set_part — ` +
+      `'${part}' runs on the STC12 model (P5 and STC15-only registers will refuse)`);
+  }
   wasm._emu_set_fosc(fosc);
   wasm._emu_set_vcc(vcc);
 

@@ -88,7 +88,7 @@ export async function createDebugTarget(kind, opts) {
 async function createEmulatorTarget(opts) {
   const {
     wasm, board, hex, symbols,
-    fosc = 11059200, vcc = 5.0,
+    fosc = 11059200, vcc = 5.0, part,
   } = opts;
 
   if (!wasm) throw new Error('emulator target requires opts.wasm');
@@ -107,7 +107,7 @@ async function createEmulatorTarget(opts) {
   //   4. Create debug target (reads the loaded image)
 
   // 1. Adapter
-  const adapter = createEmu8051Adapter(wasm, { fosc, vcc, mode: 'poll' });
+  const adapter = createEmu8051Adapter(wasm, { fosc, vcc, part, mode: 'poll' });
 
   // 2. Attach board
   adapter.attachBoard(board ?? { advanceTo() {}, setPin() {}, readPin() { return 0; } });
