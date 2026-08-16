@@ -135,6 +135,14 @@ export function extractZ80Machine(circuit) {
             ];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
             ioChips.push({ part: p, pins, ioKind: 'acia6850', rsPin: 'rs', selected: new Uint8Array(256) });
+        } else if (p.kind === '74hc374') {
+            // Write-only OUT port — PainfulDiodes' first program: the
+            // decode glue strobes clk low during the IO write and the
+            // '374 latches on the rising edge as the strobe ends; /OE is
+            // strapped low, the Q pins face the LEDs, never the bus.
+            const pins = [{ net: find(key(p.id, 'clk')), want: 0, t: 'clk' }];
+            for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.clk is undriven — a floating latch clock is not an OUT port`);
+            ioChips.push({ part: p, pins, ioKind: 'latch', rsPin: null, selected: new Uint8Array(256) });
         } else if (p.kind === 'mc6845') {
             // The CRTC: /CS decodes low in port space; the register
             // select rides A0. The SILICON calls it RS (active-HIGH),
@@ -152,7 +160,7 @@ export function extractZ80Machine(circuit) {
             ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: rsName, selected: new Uint8Array(256) });
         }
     }
-    if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM or ACIA on the board');
+    if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM, ACIA or OUT latch on the board');
     if (reasons.length) return { ok: false, notes, reasons };
 
     try {
@@ -202,8 +210,10 @@ export function extractZ80Machine(circuit) {
         let lo = -1, hi = -1, count = 0;
         for (let a = 0; a < 256; a++) if (c.selected[a]) { if (lo < 0) lo = a; hi = a; count++; }
         if (lo < 0) { reasons.push(`${c.part.id} is never selected in port space — check its select wiring`); continue; }
-        const rs = netDriver.get(find(key(c.part.id, c.rsPin)));
-        if (!rs || rs.type !== 'addr' || rs.bit !== 0) { reasons.push(`${c.part.id}.${c.rsPin} must ride A0 — the register select is the low address line`); continue; }
+        if (c.rsPin) {
+            const rs = netDriver.get(find(key(c.part.id, c.rsPin)));
+            if (!rs || rs.type !== 'addr' || rs.bit !== 0) { reasons.push(`${c.part.id}.${c.rsPin} must ride A0 — the register select is the low address line`); continue; }
+        }
         if (count > 2) notes.push(`${c.part.id} mirrors through ports ${hx(lo)}-${hx(hi)}; its registers sit at ${hx(lo)}`);
         const entry = { kind: c.ioKind, name: c.part.id, at: lo };
         if (c.ioKind === 'crtc') {
@@ -220,7 +230,7 @@ export function extractZ80Machine(circuit) {
         ports,
         lines: [
             ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
-            ...ports.map((p) => `CHIP ${p.name} = ${p.kind === 'crtc' ? 'MC6845' : 'MC6850'} AT PORT ${hx(p.at)}`),
+            ...ports.map((p) => `CHIP ${p.name} = ${p.kind === 'crtc' ? 'MC6845' : p.kind === 'latch' ? '74HC374 OUT latch' : 'MC6850'} AT PORT ${hx(p.at)}`),
         ],
         notes,
         reasons: [],

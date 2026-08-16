@@ -23,6 +23,7 @@ import { MC6845 } from './mc6845.js';
 import { ZXULA } from './zx-ula.js';
 import { ZXTape } from './zx-tape.js';
 import { AY38912 } from './ay-3-8912.js';
+import { Latch374 } from './latch374.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -58,7 +59,8 @@ export class Z80Machine {
     ];
 
     /** @param {typeof SEARLE} [config]
-     *  @param {{ onSerial?: (byte:number, tMs:number)=>void }} [hooks] */
+     *  @param {{ onSerial?: (byte:number, tMs:number)=>void,
+     *            onPinChange?: (pin:string, level:0|1, tMs:number)=>void }} [hooks] */
     constructor(config = SEARLE, hooks = {}) {
         this.config = config;
         this.hooks = hooks;
@@ -92,6 +94,17 @@ export class Z80Machine {
                 this.chips[p.name] = chip;
                 this._portMap.set(p.at & 0xff, { chip, rs: 0 });
                 this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });
+            } else if (p.kind === 'latch') {
+                // 74HC374 as a write-only OUT port — the first program of
+                // every Searle-lineage build: OUT (n),A lights eight LEDs.
+                // Same chip class and the same Q-pin emission contract as
+                // the 6502 machine's latch, so an attached board's
+                // chip-qualified pins light whatever the bench wires to Q.
+                const chip = new Latch374({
+                    onChange: (value, prev) => this._latchChange(p.name, value, prev),
+                });
+                this.chips[p.name] = chip;
+                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
             } else if (p.kind === 'ctc') {
                 // Z8430: four consecutive ports, one per channel. The
                 // scheduler timebase the Z80 emitter axis waits on.
@@ -220,6 +233,17 @@ export class Z80Machine {
     }
 
     get tMs() { return this.cycles * 1000 / this.clockHz; }
+
+    /** Latch outputs as pin edges — Q, not P: a '374 output is always
+     *  driven, no DDR exists. Identical contract to the 6502 machine. */
+    _latchChange(chipName, value, prev) {
+        if (!this.hooks.onPinChange) return;
+        for (let bit = 0; bit < 8; bit++) {
+            const mask = 1 << bit;
+            if ((value & mask) === (prev & mask)) continue;
+            this.hooks.onPinChange(`${chipName}.Q${bit}`, value & mask ? 1 : 0, this.tMs);
+        }
+    }
 
     /** Load an image into memory (ROM regions included — loading is not a bus write). */
     load(bytes, at = 0) { this.mem.set(bytes.subarray ? bytes.subarray(0, 65536 - at) : bytes, at); }

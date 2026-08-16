@@ -33,6 +33,17 @@ export function createZ80Adapter(opts = {}) {
             stats.serialCount++;
             if (serialListener) serialListener(byte);
         },
+        onPinChange(pin, level, tMs) {
+            // Latch Q edges onto an attached board — time first, edge
+            // second, the invariant every adapter keeps. The pin id is
+            // chip-qualified ('latch1.Q3'); the board resolves it onto
+            // the seated part's terminal, so OUT (n),A lights whatever
+            // the bench wires to the '374's outputs.
+            if (!board) return;
+            if (board.advanceTo) board.advanceTo(BigInt(Math.round(tMs * 1e6)));
+            board.setPin(pin, 'pushpull', !!level);
+            stats.pinChangeCount = (stats.pinChangeCount || 0) + 1;
+        },
     });
 
     if (opts.rom) machine.load(opts.rom, opts.romAt ?? 0);

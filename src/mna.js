@@ -640,7 +640,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           // pins — plus the model's own analog loading.
           const model = getDevice(part.kind);
           if (model) {
-            const state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
+            let state = (opts.deviceStates && opts.deviceStates.get(part.id)) || { drives: {} };
+            // Ownership: a chip-qualified pin drive (a machine emulating
+            // this chip at bus level) outranks the device model's own
+            // electrical drive on that terminal. Without this, a Z80's
+            // OUT-latch Q pins fought the '374 model (whose clk/d nets
+            // are dead on a machine bench, so it drove its power-on 0)
+            // and every lit LED sat at a divider instead of ON.
+            const qual = opts.qualifiedSources && opts.qualifiedSources.get(part.id);
+            if (qual && state.drives) {
+              const drives = { ...state.drives };
+              let changed = false;
+              for (const term of qual.keys()) {
+                if (term in drives) { delete drives[term]; changed = true; }
+              }
+              if (changed) state = { ...state, drives };
+            }
             stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,
               transient ? transient.dtSec : undefined);
           }
