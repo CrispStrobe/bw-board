@@ -472,6 +472,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           }
           break;
 
+        // Chip-qualified drives (opts.qualifiedSources) are stamped after
+        // this loop — they attach to parts of ANY kind, including ones the
+        // solver has no model for (a machine's w65c22).
+
+
         case 'buzzer':
           stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId);
           break;
@@ -627,6 +632,24 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
               transient ? transient.dtSec : undefined);
           }
           break;
+        }
+      }
+    }
+
+    // Chip-qualified drives: Norton sources on arbitrary part terminals —
+    // how a machine adapter's `via.pa0` reaches the net a seated (possibly
+    // unmodeled) chip is wired to. Grouped per part so findNet gets the
+    // part id, exactly like stampMcuPins gets it from its part.
+    if (!powerOff && opts.qualifiedSources) {
+      for (const [partId, terms] of opts.qualifiedSources) {
+        for (const [terminal, source] of terms) {
+          const pinNet = findNet(nets, partId, terminal);
+          if (!pinNet) continue;
+          const nodeIdx = nodeIndex.get(pinNet);
+          if (nodeIdx === undefined) continue;
+          const g = 1 / source.rTh;
+          A.add(nodeIdx, nodeIdx, g);
+          b[nodeIdx] += source.vTh / source.rTh;
         }
       }
     }

@@ -283,6 +283,9 @@ export class BoardImpl {
 
   setNetlist(parts, nets) {
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
+    this._qualCache = new Map(); // qualified-pin resolutions are per-netlist
+    this._mcuSurface = undefined;
+    this._hasQualifiedPin = false;
     // Validate the netlist and reject malformed input. Without this,
     // a wrong terminal name (e.g. {a,b} instead of {anode,cathode} for
     // an LED) silently produces brightness 0 — a plausible wrong answer.
@@ -377,6 +380,7 @@ export class BoardImpl {
     pin = asGiven.toLowerCase();
     const prev = this.pinStates.get(pin);
     this.pinStates.set(pin, { mode, driveHigh, as: asGiven });
+    if (!this._hasQualifiedPin && this._resolveQualified(pin)) this._hasQualifiedPin = true;
     this._solve();
     this._recordLedSamples();
 
@@ -1685,6 +1689,7 @@ export class BoardImpl {
       capVoltages: this.capVoltages,
       tSeconds: Number(this.timeNs) / 1e9,
       deviceStates: this._deviceStates,
+      qualifiedSources: this._qualifiedSources(),
     });
   }
 
@@ -1723,6 +1728,73 @@ export class BoardImpl {
    * netlist author's (sidecars say d13/gp15, hand-written tests say P1.0).
    * pinStates keys are canonical lowercase; the bridge lives here, in
    * board-land, so the gated solver never learns about spelling. */
+  /** Lowercased terminal names on every MCU-surface part (kind 'mcu' or a
+   *  gpioFollowsPinStates device). A pin id matching one of these is a BARE
+   *  pin — 'p1.0' is the 8051's P1.0, never part 'p1' terminal '0'. */
+  _mcuSurfaceTerminals() {
+    if (this._mcuSurface) return this._mcuSurface;
+    const set = new Set();
+    for (const part of this.parts) {
+      const model = getDevice(part.kind);
+      if (part.kind !== 'mcu' && !(model && model.gpioFollowsPinStates)) continue;
+      for (const t of part.terminals) set.add(String(t).toLowerCase());
+    }
+    this._mcuSurface = set;
+    return set;
+  }
+
+  /**
+   * Resolve a chip-qualified pin id — `<partId>.<terminal>` — onto a part
+   * terminal. This is how a machine adapter addresses chips the board has
+   * no electrical model for: a 6502 machine's VIA emits `via.pa0`, and the
+   * board turns that into a drive on whatever net the seated w65c22's PA0
+   * terminal is wired to. No device model required — the part only has to
+   * exist in the netlist. Bare MCU pin names win: they are checked first,
+   * so an 8051's 'P1.0' never parses as part 'P1'.
+   * @param {string} keyLower - already-lowercased pin id
+   * @returns {{ partId: string, terminal: string } | null} canonical spelling
+   */
+  _resolveQualified(keyLower) {
+    if (!keyLower.includes('.')) return null;
+    if (this._mcuSurfaceTerminals().has(keyLower)) return null;
+    if (!this._qualCache) this._qualCache = new Map();
+    if (this._qualCache.has(keyLower)) return this._qualCache.get(keyLower);
+    let resolved = null;
+    const dot = keyLower.indexOf('.');
+    const partKey = keyLower.slice(0, dot);
+    const termKey = keyLower.slice(dot + 1);
+    for (const part of this.parts) {
+      if (String(part.id).toLowerCase() !== partKey) continue;
+      for (const t of part.terminals) {
+        if (String(t).toLowerCase() === termKey) {
+          resolved = { partId: part.id, terminal: String(t) };
+          break;
+        }
+      }
+      break;
+    }
+    this._qualCache.set(keyLower, resolved);
+    return resolved;
+  }
+
+  /** Thévenin drives for qualified pins, grouped per part — the machine-chip
+   *  half of what _pinSources() does for the MCU body. */
+  _qualifiedSources() {
+    if (!this._hasQualifiedPin) return null;
+    /** @type {Map<string, Map<string, import('./types.js').TheveninSource>>} */
+    const out = new Map();
+    for (const [key, state] of this.pinStates) {
+      const q = this._resolveQualified(key);
+      if (!q) continue;
+      const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
+      if (!thev || typeof thev !== 'object') continue; // high-z: no source
+      let terms = out.get(q.partId);
+      if (!terms) { terms = new Map(); out.set(q.partId, terms); }
+      terms.set(q.terminal, thev);
+    }
+    return out.size ? out : null;
+  }
+
   _pinSources() {
     /** @type {Map<string, import('./types.js').TheveninSource>} */
     const pinSources = new Map();
@@ -1754,6 +1826,9 @@ export class BoardImpl {
     // the seven_seg_3 composite, 2026-08-16; reproduced with three bare
     // LEDs on one anode net). The walker's own doctrine applies: beyond
     // the vocabulary, one full MNA solve answers everything coherently.
+    // Qualified pins drive arbitrary part terminals — outside the walker's
+    // vocabulary entirely.
+    if (this._hasQualifiedPin) return true;
     if (this._ledFanout === undefined) {
       const seen = new Set();
       this._ledFanout = false;
@@ -1978,6 +2053,7 @@ export class BoardImpl {
         tSeconds: t0 + i * h,
         transient: { dtSec: h, capVoltages: cv, inductorCurrents: il },
         deviceStates: this._deviceStates,
+      qualifiedSources: this._qualifiedSources(),
         // Power off strips the sources but NOT the storage: capacitor
         // and inductor companions keep stamping, so stored energy
         // discharges through whatever network remains (the audit found
@@ -2609,6 +2685,13 @@ export class BoardImpl {
           return this.nodeVoltages.get(net.id) ?? 0;
         }
       }
+    }
+    // Chip-qualified id: read the net at that part's terminal, whatever the
+    // part's kind — this is how a machine's VIA input pin sees a button.
+    const q = this._resolveQualified(key);
+    if (q) {
+      const netId = this._netForTerminal(q.partId, q.terminal);
+      if (netId !== undefined) return this.nodeVoltages.get(netId) ?? 0;
     }
     return 0;
   }
