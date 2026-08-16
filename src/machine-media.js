@@ -146,8 +146,9 @@ export function applyMedia(target, entries, opts = {}) {
                     break;
                 }
                 case 'tape': {
-                    if (!machine || !machine.loadTape) throw new Error('target has no tape deck');
-                    machine.loadTape(bytes);
+                    const deck = machine && (machine.insertTape || machine.loadTape);
+                    if (!deck) throw new Error('target has no tape deck');
+                    deck.call(machine, bytes);
                     break;
                 }
                 case 'sd-image': {
@@ -205,6 +206,13 @@ export async function runMediaBundle(manifest, files, opts = {}) {
         machine = new M6502Machine(
             manifest.machineConfig || (manifest.machine === 'gpascal' ? GPASCAL : EATER6502),
             opts.hooks || {});
+    } else if (manifest.machine === 'zx48' || manifest.machine === 'zx128' || manifest.machine === 'z80') {
+        const { Z80Machine, SEARLE } = await import('./z80-machine.js');
+        const config = manifest.machineConfig
+            || (manifest.machine === 'zx48'
+                ? { clockHz: 3_500_000, regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }], ula: true }
+                : manifest.machine === 'zx128' ? { clockHz: 3_546_900, zx128: true } : SEARLE);
+        machine = new Z80Machine(config, opts.hooks || {});
     } else {
         throw new Error(`no machine factory for '${manifest.machine}' — pass opts.createMachine`);
     }
@@ -231,6 +239,8 @@ export async function runMediaBundle(manifest, files, opts = {}) {
 
     if (manifest.entry != null) {
         machine.cpu.pc = manifest.entry & 0xffff;
+    } else if (manifest.machine.startsWith('zx') || manifest.machine === 'z80') {
+        machine.cpu.pc = 0x0000; // Z80 family resets to $0000
     } else {
         machine.cpu.pc = machine.mem[0xfffc] | (machine.mem[0xfffd] << 8);
     }

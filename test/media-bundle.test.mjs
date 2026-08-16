@@ -60,3 +60,28 @@ test('the Bad Apple bundle runs end to end from its manifest',
         const snap2 = Buffer.from(fb.buf).toString('hex');
         assert.notEqual(snap1, snap2, 'frames move');
     });
+
+// The Spectrum bundle: 48K ROM (shippable-with-notice, local copy) +
+// the tron tape — the zx48 machine boots from its manifest and the
+// tape deck is armed. Skips honestly when either local file is absent.
+const zxRom = join(homedir(), 'code', 'zxs-rom', '48.ROM');
+const tronTap = join(homedir(), 'code', 'tron-0xf', 'target', 'tron_0xf_v0.3.0-dev_compilable.tap');
+const haveZx = existsSync(zxRom) && existsSync(tronTap);
+
+test('the zx48 tron bundle boots from its manifest',
+    { skip: haveZx ? false : 'local ROM/tape absent' }, async () => {
+        const manifest = {
+            machine: 'zx48',
+            slots: { rom: '48.rom', tape: 'tron.tap' },
+        };
+        const files = {
+            '48.rom': readFileSync(zxRom),
+            'tron.tap': readFileSync(tronTap),
+        };
+        const { machine, applied, errors } = await runMediaBundle(manifest, files);
+        assert.deepEqual(errors, []);
+        assert.deepEqual(applied.sort(), ['rom', 'tape']);
+        machine.advanceToMs(4500);   // RAM test + boot
+        const frames = machine.mem[0x5c78] | (machine.mem[0x5c79] << 8);
+        assert.ok(frames > 100, `FRAMES counting (${frames}) — the 48K ROM is alive`);
+    });
