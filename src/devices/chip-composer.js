@@ -495,6 +495,92 @@ const CHIP_74HC95 = {
   },
 };
 
+/** 74HC374 — Octal D flip-flop with 3-state outputs (DIP-20).
+ *  Positive-edge CLK captures D0-D7 → Q0-Q7.
+ *  /OE (active LOW) enables outputs; HIGH → high-Z. */
+const CHIP_74HC374 = {
+  terminals: ['oeb','q0','d0','d1','q1','q2','d2','d3','q3','gnd',
+              'clk','q4','d4','d5','q5','q6','d6','d7','q7','vcc'],
+
+  init() {
+    const drives = {};
+    for (let i = 0; i < 8; i++) drives[`q${i}`] = { vTh: 0, rTh: R_OUT };
+    return { drives, reg: 0, _lastClk: false };
+  },
+
+  stamp(ctx) {
+    ctx.conductance('clk', null, 1 / R_INPUT);
+    ctx.conductance('oeb', null, 1 / R_INPUT);
+    for (let i = 0; i < 8; i++) ctx.conductance(`d${i}`, null, 1 / R_INPUT);
+  },
+
+  update(part, state, read) {
+    const vcc = read('vcc') || 5.0;
+    const th = vcc * 0.5;
+    const clkHigh = read('clk') > th;
+
+    // Capture on rising edge
+    if (clkHigh && !state._lastClk) {
+      let newReg = 0;
+      for (let i = 0; i < 8; i++) if (read(`d${i}`) > th) newReg |= 1 << i;
+      state.reg = newReg;
+    }
+    state._lastClk = clkHigh;
+
+    // Output enable
+    const oe = read('oeb') < th;
+    let changed = false;
+    for (let i = 0; i < 8; i++) {
+      const v = oe ? ((state.reg >> i) & 1 ? vcc : 0) : 0;
+      const r = oe ? R_OUT : 1e9;
+      if ((state.drives[`q${i}`]?.vTh ?? -1) !== v || (state.drives[`q${i}`]?.rTh ?? -1) !== r) {
+        state.drives[`q${i}`] = { vTh: v, rTh: r };
+        changed = true;
+      }
+    }
+    return changed;
+  },
+};
+
+/** 74HC688 — 8-bit identity comparator (DIP-20).
+ *  /P=Q output goes LOW when P0-P7 = Q0-Q7 and /G is LOW. */
+const CHIP_74HC688 = {
+  terminals: ['gb','p0','q0','p1','q1','p2','q2','p3','q3','gnd',
+              'p4','q4','p5','q5','p6','q6','p7','q7','pqb','vcc'],
+
+  init() {
+    return { drives: { pqb: { vTh: 5, rTh: R_OUT } } };
+  },
+
+  stamp(ctx) {
+    ctx.conductance('gb', null, 1 / R_INPUT);
+    for (let i = 0; i < 8; i++) {
+      ctx.conductance(`p${i}`, null, 1 / R_INPUT);
+      ctx.conductance(`q${i}`, null, 1 / R_INPUT);
+    }
+  },
+
+  update(part, state, read) {
+    const vcc = read('vcc') || 5.0;
+    const th = vcc * 0.5;
+    const enabled = read('gb') < th; // active LOW
+    let equal = true;
+    if (enabled) {
+      for (let i = 0; i < 8; i++) {
+        if ((read(`p${i}`) > th) !== (read(`q${i}`) > th)) { equal = false; break; }
+      }
+    } else {
+      equal = false; // disabled → output HIGH (inactive)
+    }
+    const newV = equal ? 0 : vcc; // active LOW
+    if ((state.drives.pqb?.vTh ?? -1) !== newV) {
+      state.drives.pqb = { vTh: newV, rTh: R_OUT };
+      return true;
+    }
+    return false;
+  },
+};
+
 /**
  * Register all 74HC/CD logic chips from the table + custom chips.
  */
@@ -506,6 +592,11 @@ export function registerLogicChips() {
   registerDevice('74hc93', CHIP_74HC93);
   registerDevice('74hc95', CHIP_74HC95);
   registerDevice('cd4511', CHIP_CD4511);
+  registerDevice('74hc374', CHIP_74HC374);
+  registerDevice('74hc688', CHIP_74HC688);
+  // TTL LS-series aliases — same logic, same pinout
+  const hc32 = buildChipModel(CHIPS.find(c => c.kind === '74hc32'));
+  registerDevice('74ls32', hc32);
 }
 
 export { CHIPS, buildChipModel };

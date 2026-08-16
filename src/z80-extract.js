@@ -60,6 +60,36 @@ export function extractZ80Machine(circuit) {
                 setDriver(find(key(p.id, `${g}y`)), { type: 'nand', gate: `${p.id}.${g}`, a: find(key(p.id, `${g}a`)), b: find(key(p.id, `${g}b`)) }, `${p.id}.${g}y`);
             }
         }
+        // 74HC32 / 74LS32 — Quad 2-input OR (same pinout as 74HC00)
+        if (p.kind === '74hc32' || p.kind === '74ls32') {
+            for (let g = 1; g <= 4; g++) {
+                setDriver(find(key(p.id, `${g}y`)), { type: 'or', gate: `${p.id}.${g}`, a: find(key(p.id, `${g}a`)), b: find(key(p.id, `${g}b`)) }, `${p.id}.${g}y`);
+            }
+        }
+        // 74HC244 — Octal buffer (two groups of 4, each with /OE)
+        if (p.kind === '74hc244') {
+            for (let g = 1; g <= 2; g++) {
+                const oeNet = find(key(p.id, `${g}oeb`));
+                for (let i = 0; i < 4; i++) {
+                    setDriver(find(key(p.id, `${g}y${i}`)), { type: 'buf', a: find(key(p.id, `${g}a${i}`)), oe: oeNet }, `${p.id}.${g}y${i}`);
+                }
+            }
+        }
+        // 74HC245 — Octal transceiver (DIR selects A→B or B→A, /OE enables).
+        // In address decode, DIR is typically tied HIGH (A→B) or LOW (B→A).
+        // We register both output directions; evalNet resolves per DIR.
+        if (p.kind === '74hc245') {
+            const oeNet = find(key(p.id, 'oeb'));
+            const dirNet = find(key(p.id, 'dir'));
+            for (let i = 0; i < 8; i++) {
+                const aNet = find(key(p.id, `a${i}`));
+                const bNet = find(key(p.id, `b${i}`));
+                // Only register if the output net isn't already driven by
+                // something stronger (e.g. address lines from the CPU).
+                if (!netDriver.has(bNet)) setDriver(bNet, { type: 'buf', a: aNet, oe: oeNet }, `${p.id}.b${i}`);
+                if (!netDriver.has(aNet)) setDriver(aNet, { type: 'buf', a: bNet, oe: oeNet }, `${p.id}.a${i}`);
+            }
+        }
     }
     if (reasons.length) return { ok: false, notes, reasons };
 
@@ -75,9 +105,15 @@ export function extractZ80Machine(circuit) {
         else if (d.type === 'addr') v = (addr >> d.bit) & 1;
         else if (d.type === 'cycle') v = cycle[d.sig];
         else if (d.type === 'const') v = d.value;
-        else {
+        else if (d.type === 'nand') {
             const a = evalNet(d.a, depth + 1); const b = evalNet(d.b, depth + 1);
             v = (a === null || b === null) ? null : 1 - (a & b);
+        } else if (d.type === 'or') {
+            const a = evalNet(d.a, depth + 1); const b = evalNet(d.b, depth + 1);
+            v = (a === null || b === null) ? null : (a | b);
+        } else if (d.type === 'buf') {
+            const oe = evalNet(d.oe, depth + 1);
+            v = (oe === 0) ? evalNet(d.a, depth + 1) : null;
         }
         memo.set(net, v);
         return v;

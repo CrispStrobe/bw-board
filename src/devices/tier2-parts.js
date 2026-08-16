@@ -65,6 +65,51 @@ export function registerTier2Parts() {
         },
     });
 
+    // ─── 74HC244 ───────────────────────────────────────────────────────
+    // Octal buffer/line driver with 3-state outputs (DIP-20). Two groups
+    // of 4 buffers each with separate /OE pins. When /OEn=LOW, YnX=AnX.
+    registerDevice('74hc244', {
+        terminals: ['vcc', 'gnd', '1oeb', '2oeb',
+            '1a0', '1a1', '1a2', '1a3', '1y0', '1y1', '1y2', '1y3',
+            '2a0', '2a1', '2a2', '2a3', '2y0', '2y1', '2y2', '2y3'],
+
+        init() {
+            return { drives: {}, _cfg: '' };
+        },
+
+        stamp(ctx) {
+            ctx.conductance('1oeb', null, 1 / R_INPUT);
+            ctx.conductance('2oeb', null, 1 / R_INPUT);
+        },
+
+        update(part, state, read) {
+            const vcc = read('vcc') || 5.0;
+            const th = vcc * 0.5;
+            const oe1 = read('1oeb') < th;
+            const oe2 = read('2oeb') < th;
+            const cfg = `${oe1}:${oe2}`;
+            if (cfg !== state._cfg) { state._cfg = cfg; state.drives = {}; return true; }
+
+            let changed = false;
+            for (let g = 1; g <= 2; g++) {
+                const en = g === 1 ? oe1 : oe2;
+                for (let i = 0; i < 4; i++) {
+                    const pin = `${g}y${i}`;
+                    if (!en) {
+                        if (state.drives[pin]) { delete state.drives[pin]; changed = true; }
+                        continue;
+                    }
+                    const level = read(`${g}a${i}`) > th ? vcc : 0;
+                    if (!state.drives[pin] || state.drives[pin].vTh !== level) {
+                        state.drives[pin] = { vTh: level, rTh: R_OUT };
+                        changed = true;
+                    }
+                }
+            }
+            return changed;
+        },
+    });
+
     // ─── 74HC245 ───────────────────────────────────────────────────────
     registerDevice('74hc245', {
         terminals: ['vcc', 'gnd', 'dir', 'oeb',
@@ -151,6 +196,67 @@ export function registerTier2Parts() {
             const qh = (reg >> 7) & 1;
             state.drives.qh = { vTh: qh ? vcc : 0, rTh: R_OUT };
             state.drives.qhb = { vTh: qh ? 0 : vcc, rTh: R_OUT };
+            return true;
+        },
+    });
+
+    // ─── 74C922 ────────────────────────────────────────────────────────
+    // 16-key encoder (DIP-18). Scans a 4×4 keypad matrix (Y1-Y4 rows,
+    // X1-X4 columns), outputs 4-bit binary on A-D with data-available
+    // (DA). In simulation: params.key (0-15) selects the pressed key,
+    // params.pressed activates it. DA goes HIGH when a key is valid;
+    // /OE gates the outputs.
+    registerDevice('74c922', {
+        terminals: ['y1','y2','y3','y4','osc','kbm','x4','x3','vss',
+                    'x2','x1','da','oeb','d','c','b','a','vcc'],
+
+        init() {
+            return {
+                drives: {
+                    a: { vTh: 0, rTh: R_OUT }, b: { vTh: 0, rTh: R_OUT },
+                    c: { vTh: 0, rTh: R_OUT }, d: { vTh: 0, rTh: R_OUT },
+                    da: { vTh: 0, rTh: R_OUT },
+                },
+                _key: -1,
+            };
+        },
+
+        stamp(ctx) {
+            ctx.conductance('oeb', null, 1 / R_INPUT);
+            ctx.conductance('osc', null, 1 / R_INPUT);
+            ctx.conductance('kbm', null, 1 / R_INPUT);
+            for (let i = 1; i <= 4; i++) {
+                ctx.conductance(`x${i}`, null, 1 / R_INPUT);
+                ctx.conductance(`y${i}`, null, 1 / R_INPUT);
+            }
+        },
+
+        update(part, state, read) {
+            const vcc = read('vcc') || 5.0;
+            const th = vcc * 0.5;
+            const oe = read('oeb') < th;
+            const pressed = !!part.params?.pressed;
+            const key = pressed ? Math.trunc(part.params?.key ?? 0) & 0xF : -1;
+
+            if (key === state._key && state._oe === oe) return false;
+            state._key = key;
+            state._oe = oe;
+
+            const hasKey = key >= 0;
+            state.drives.da = { vTh: hasKey ? vcc : 0, rTh: R_OUT };
+
+            if (oe && hasKey) {
+                state.drives.a = { vTh: (key & 1) ? vcc : 0, rTh: R_OUT };
+                state.drives.b = { vTh: (key & 2) ? vcc : 0, rTh: R_OUT };
+                state.drives.c = { vTh: (key & 4) ? vcc : 0, rTh: R_OUT };
+                state.drives.d = { vTh: (key & 8) ? vcc : 0, rTh: R_OUT };
+            } else {
+                const r = oe ? R_OUT : 1e9;
+                state.drives.a = { vTh: 0, rTh: r };
+                state.drives.b = { vTh: 0, rTh: r };
+                state.drives.c = { vTh: 0, rTh: r };
+                state.drives.d = { vTh: 0, rTh: r };
+            }
             return true;
         },
     });

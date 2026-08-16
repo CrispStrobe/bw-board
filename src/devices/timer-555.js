@@ -132,4 +132,85 @@ export function registerTimer555() {
     stamp: (ctx, part, state) => base.stamp(ctx, part, state),
     update: (part, state, read, tNs) => base.update(part, state, read, tNs),
   });
+
+  // ─── 556 — Dual 555 Timer (DIP-14) ──────────────────────────────────
+  // Two independent 555 sections sharing VCC and GND.
+  // Section 1: 1dis, 1thr, 1ctl, 1rst, 1out, 1trg
+  // Section 2: 2dis, 2thr, 2ctl, 2rst, 2out, 2trg
+  registerDevice('556', {
+    terminals: ['1dis','1thr','1ctl','1rst','1out','1trg','gnd',
+                '2trg','2out','2rst','2ctl','2thr','2dis','vcc'],
+
+    init(part) {
+      const rOut = part.params?.rOut ?? R_OUT_DEFAULT;
+      return {
+        drives: {
+          '1out': { vTh: 0, rTh: rOut },
+          '2out': { vTh: 0, rTh: rOut },
+        },
+        ff: [0, 0],               // flip-flop state per section
+        _discharge: [true, true], // discharge switch per section
+      };
+    },
+
+    stamp(ctx, part, state) {
+      // Input impedance on threshold, trigger, reset per section
+      for (const pfx of ['1', '2']) {
+        ctx.conductance(`${pfx}thr`, null, 1 / R_INPUT);
+        ctx.conductance(`${pfx}trg`, null, 1 / R_INPUT);
+        ctx.conductance(`${pfx}rst`, null, 1 / R_INPUT);
+        // Internal divider: vcc → 5kΩ → control → 10kΩ → gnd
+        ctx.conductance('vcc', `${pfx}ctl`, 1 / R_DIVIDER);
+        ctx.conductance(`${pfx}ctl`, 'gnd', 1 / (R_DIVIDER * 2));
+      }
+      // Discharge switches
+      if (state._discharge[0]) ctx.conductance('1dis', 'gnd', 1 / R_DISCHARGE);
+      if (state._discharge[1]) ctx.conductance('2dis', 'gnd', 1 / R_DISCHARGE);
+    },
+
+    update(part, state, read) {
+      const rOut = part.params?.rOut ?? R_OUT_DEFAULT;
+      const vcc = read('vcc');
+      const vGnd = read('gnd');
+      const effectiveVcc = vcc - vGnd;
+
+      if (effectiveVcc < 0.5) {
+        let c = false;
+        for (let s = 0; s < 2; s++) {
+          if (state.ff[s] !== 0) {
+            state.ff[s] = 0;
+            state.drives[`${s + 1}out`] = { vTh: vGnd, rTh: rOut };
+            state._discharge[s] = true;
+            c = true;
+          }
+        }
+        return c;
+      }
+
+      let changed = false;
+      for (let s = 0; s < 2; s++) {
+        const pfx = `${s + 1}`;
+        const vCtl = read(`${pfx}ctl`) - vGnd;
+        const upper = vCtl;
+        const lower = vCtl / 2;
+        const resetActive = (read(`${pfx}rst`) - vGnd) < (effectiveVcc * 0.3);
+        let newFf = state.ff[s];
+
+        if (resetActive) {
+          newFf = 0;
+        } else {
+          if ((read(`${pfx}thr`) - vGnd) > upper) newFf = 0;
+          if ((read(`${pfx}trg`) - vGnd) < lower) newFf = 1;
+        }
+
+        if (newFf !== state.ff[s]) {
+          state.ff[s] = newFf;
+          state.drives[`${pfx}out`] = { vTh: newFf ? vcc : vGnd, rTh: rOut };
+          state._discharge[s] = (newFf === 0);
+          changed = true;
+        }
+      }
+      return changed;
+    },
+  });
 }

@@ -68,6 +68,36 @@ test('an ACIA whose rs is not A0 refuses', () => {
     assert.match(r.reasons.join(';'), /rs must ride A0/);
 });
 
+test('chip select through a 74HC244 buffer and 74LS32 OR gate is visible', () => {
+    // ROM: OR(mreqb, a15) → active LOW when mreq active AND a15=0 → $0000-$7FFF.
+    //      The select passes through a 74HC244 buffer (/1OE tied to GND).
+    // RAM: standard NAND decode for $8000-$FFFF.
+    const parts = [
+        { id: 'cpu1', kind: 'z80' }, { id: 'rom1', kind: '28c256' },
+        { id: 'ram1', kind: '62256' },
+        { id: 'glue1', kind: '74hc00' }, { id: 'buf1', kind: '74hc244' },
+        { id: 'or1', kind: '74ls32' }, { id: 'gnd1', kind: 'gnd' },
+    ];
+    const wires = [];
+    const w = (f, ft, t, tt) => wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    for (let i = 0; i <= 14; i++) { w('cpu1', `a${i}`, 'rom1', `a${i}`); w('cpu1', `a${i}`, 'ram1', `a${i}`); }
+    // ROM select: OR(mreqb, a15) — LOW when mreqb=0 AND a15=0
+    w('cpu1', 'mreqb', 'or1', '1a'); w('cpu1', 'a15', 'or1', '1b');
+    w('or1', '1y', 'buf1', '1a0');                                            // feed into buffer
+    w('gnd1', 'gnd', 'buf1', '1oeb');                                         // enable buffer
+    w('buf1', '1y0', 'rom1', 'ceb');                                          // buffered select → ROM
+    // RAM: NAND(~mreq, a15) — standard Searle decode for upper half
+    w('cpu1', 'mreqb', 'glue1', '1a'); w('cpu1', 'mreqb', 'glue1', '1b');   // ~mreq
+    w('glue1', '1y', 'glue1', '3a'); w('cpu1', 'a15', 'glue1', '3b');       // NAND(~mreq, a15) → csb
+    w('glue1', '3y', 'ram1', 'csb');
+    const r = extractZ80Machine({ parts, wires });
+    assert.ok(r.ok, r.reasons.join('; '));
+    assert.deepEqual(r.regions, [
+        { kind: 'rom', start: 0x0000, end: 0x7fff },
+        { kind: 'ram', start: 0x8000, end: 0xffff },
+    ]);
+});
+
 test('an MC6845 wired in port space extracts as a crtc with its RAM framebuffer noted', () => {
     const c = searleCircuit();
     c.parts.push({ id: 'crtc1', kind: 'mc6845', params: { vramAt: 0xf000 } });
