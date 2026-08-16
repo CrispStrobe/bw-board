@@ -233,13 +233,21 @@ async function createEater6502Target(opts) {
   const { board, rom, symbols, config } = opts;
 
   // A board is required for pin-level runs; the py65mon console-only
-  // shape (Tali Forth etc.) has no pins to publish, so a time-sync
-  // stub suffices — same stance as the z80 target.
-  if (!board && !opts.py65mon) throw new Error('eater6502 target requires opts.board');
+  // shape (Tali Forth etc.) and the gpascal serial-console shape have
+  // no pins to publish, so a time-sync stub suffices — same stance as
+  // the z80 target.
+  if (!board && !opts.py65mon && !opts.gpascal) throw new Error('eater6502 target requires opts.board');
 
   const { createM6502Adapter } = await import('./m6502-adapter.js');
   const adapterOpts = {};
   if (opts.py65mon) adapterOpts.config = PY65MON;
+  // Gammon's G-Pascal board: VIA at $7FF0, bit-banged 4800-baud serial.
+  // The ROM (MIT) is vendored at vendor/gpascal/gpascal.bin; callers in
+  // environments with fetch/fs pass it via opts.rom like every ROM.
+  if (opts.gpascal) {
+    const { GPASCAL } = await import('./m6502-machine.js');
+    adapterOpts.config = GPASCAL;
+  }
   // Custom machine config — the wired-extractor path: the designer
   // circuit's bus wiring becomes {regions, chips} via extract6502Machine,
   // and the SAME machine the default preset builds grows video chips,

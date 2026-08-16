@@ -124,6 +124,32 @@ export const KIT1 = Object.freeze({
     ],
 });
 
+/**
+ * Nick Gammon's G-Pascal board (MIT, nickgammon/G-Pascal) — the Eater
+ * 6502 with the VIA at $7FF0 and NO ACIA: serial is BIT-BANGED on the
+ * VIA, 4800 baud 8N1 — PA1 out, PA0 in with the start bit's falling
+ * edge also on CB2 (PCR input-negative edge → IFR3 → IRQ). The ROM
+ * carries a Pascal compiler, a 65C02 assembler and a text editor —
+ * an interactive machine that is shippable end to end.
+ *
+ * inputs.b = 0x00: the LCD data bus reads not-busy when no LCD device
+ * drives it. With the default floating-high inB, every LCD write burns
+ * the driver's full 255-retry busy timeout and the banner takes 2.5
+ * SECONDS of machine time to appear (measured; the same trap as
+ * BeebEater's PB7 busy-poll, in port-A/B clothing).
+ */
+export const GPASCAL = Object.freeze({
+    clockHz: 1_000_000,
+    regions: [
+        { kind: 'ram', start: 0x0000, end: 0x3fff },
+        { kind: 'rom', start: 0x8000, end: 0xffff },
+    ],
+    chips: [
+        { kind: 'via', name: 'via1', at: 0x7ff0, inputs: { b: 0x00 } },
+    ],
+    serial: { kind: 'via-bitbang', chip: 'via1', txBit: 1, rxBit: 0, cb2: true, baud: 4800 },
+});
+
 export class M6502Machine {
     /**
      * @param {MachineConfig} [config]
@@ -153,6 +179,13 @@ export class M6502Machine {
                 chip = new W65C22({
                     onPortChange: (port, value, ddr) => this._portChange(c.name, port, value, ddr),
                 });
+                // Initial input levels per config: a machine states what
+                // sits on its input pins (a missing LCD reads low, a
+                // pulled-up serial line reads high). Default stays 0xff.
+                if (c.inputs) {
+                    if (c.inputs.a != null) chip.inA = c.inputs.a & 0xff;
+                    if (c.inputs.b != null) chip.inB = c.inputs.b & 0xff;
+                }
             } else if (c.kind === 'acia') {
                 chip = new W65C51({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
@@ -211,6 +244,27 @@ export class M6502Machine {
         }
         /** Last observed level per port pin, for edge detection. */
         this._pinLevels = {};
+        // ── Bit-banged VIA serial (config.serial.kind === 'via-bitbang') ──
+        // TX: watch the tx pin's edges from _portChange; a falling edge
+        // while idle is a start bit — schedule 8 mid-bit samples in
+        // machine cycles and shift them LSB-first into a byte for
+        // hooks.onSerial. RX: serialIn() schedules pin/CB2 transitions
+        // as cycle-stamped events applied in step(); the firmware's
+        // cycle-counted receive loop then reads real levels at real
+        // times. One codec, both directions, no chip pretends to be a
+        // UART that the board never had.
+        if (config.serial && config.serial.kind === 'via-bitbang') {
+            const s = config.serial;
+            this._bb = {
+                chip: s.chip, txBit: s.txBit ?? 1, rxBit: s.rxBit ?? 0,
+                cb2: s.cb2 !== false,
+                bitCycles: Math.round(config.clockHz / (s.baud || 4800)),
+                txLevel: 1, txIdle: true, txByte: 0, txCount: 0, txNext: 0,
+                events: [],   // {at: cycle, port, bit, level, cb2}
+            };
+        } else {
+            this._bb = null;
+        }
         this.cycles = 0;
         this.cpu = new W65C02({
             read: (a) => this._read(a),
@@ -248,6 +302,18 @@ export class M6502Machine {
         // The simplevga card's bank line rides the VIA's port B
         // (vga.s: `inc PORTB` at the row-128 crossing).
         if (this._vgaCard && port === 'B') this._vgaCard.setBank(value);
+        // Bit-bang serial TX: watch the tx pin; falling edge while idle
+        // is a start bit — arm the mid-bit sampler.
+        const bb = this._bb;
+        if (bb && chipName === bb.chip && port.toUpperCase() === 'A' && (ddr & (1 << bb.txBit))) {
+            const level = (value >> bb.txBit) & 1;
+            if (bb.txIdle && bb.txLevel === 1 && level === 0) {
+                bb.txIdle = false;
+                bb.txByte = 0; bb.txCount = 0;
+                bb.txNext = this.cycles + Math.round(bb.bitCycles * 1.5);
+            }
+            bb.txLevel = level;
+        }
         if (!this.hooks.onPinChange) return;
         for (let bit = 0; bit < 8; bit++) {
             const mask = 1 << bit;
@@ -357,7 +423,56 @@ export class M6502Machine {
             this.cycles += 7; // the interrupt sequence is bus time too
             this._advanceChips(7);
         }
+        if (this._bb) this._bbTick();
         return n;
+    }
+
+    /** Bit-bang serial housekeeping — due RX events and TX samples. */
+    _bbTick() {
+        const bb = this._bb;
+        // Apply due scheduled input transitions (RX byte in flight).
+        while (bb.events.length && bb.events[0].at <= this.cycles) {
+            const ev = bb.events.shift();
+            const via = this.chips[bb.chip];
+            if (!via) continue;
+            if (ev.cb2 != null) via.setControl('cb2', ev.cb2);
+            if (ev.level != null) via.setInput('a', bb.rxBit, ev.level);
+        }
+        // TX sampler: mid-bit reads of the tx line, LSB first.
+        if (!bb.txIdle && this.cycles >= bb.txNext) {
+            bb.txByte |= bb.txLevel << bb.txCount;
+            bb.txCount++;
+            bb.txNext += bb.bitCycles;
+            if (bb.txCount === 8) {
+                if (this.hooks.onSerial) this.hooks.onSerial(bb.txByte & 0xff, this.tMs);
+                bb.txIdle = true;
+            }
+        }
+    }
+
+    /**
+     * Feed one byte INTO the bit-banged serial line (keyboard → machine):
+     * start-bit falling edge on the rx pin (and CB2, where the board ties
+     * them together), data bits LSB-first, stop bit high. All scheduled
+     * in machine cycles so the firmware's cycle-counted receive loop
+     * samples real levels at real times.
+     * @param {number} byte
+     * @returns {boolean} accepted (false when this machine has no bit-bang serial)
+     */
+    serialIn(byte) {
+        const bb = this._bb;
+        if (!bb) return false;
+        const bit = bb.bitCycles;
+        // Clear of any byte still being clocked in.
+        const last = bb.events.length ? bb.events[bb.events.length - 1].at : this.cycles;
+        let t = Math.max(this.cycles + bit, last + 2 * bit);
+        bb.events.push({ at: t, level: 0, cb2: bb.cb2 ? 0 : null });         // start bit
+        if (bb.cb2) bb.events.push({ at: t + (bit >> 1), cb2: 1 });          // CB2 pulse ends
+        for (let k = 0; k < 8; k++) {
+            bb.events.push({ at: t + (k + 1) * bit, level: (byte >> k) & 1 });
+        }
+        bb.events.push({ at: t + 9 * bit, level: 1 });                       // stop bit / idle
+        return true;
     }
 
     /** CPU state keys to snapshot (same pattern as Z80Machine.CPU_STATE). */
