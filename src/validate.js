@@ -176,7 +176,12 @@ export function validateNetlist(parts, nets) {
 
   for (const net of nets) {
     if (netIds.has(net.id)) {
-      errors.push({ severity: 'warning', message: `Duplicate net id "${net.id}"`, netId: net.id });
+      // ERROR, not warning: solveMNA indexes matrix columns by net id, so a
+      // duplicated id leaves one orphaned all-zero column — the matrix goes
+      // singular and the silent bail returns 0 V on EVERY net. A whole bench
+      // reading dead with power on traced back to exactly this
+      // (eater6502-full-build via a cui merge-nets id collision, 2026-08-17).
+      errors.push({ severity: 'error', message: `Duplicate net id "${net.id}" — two distinct nets sharing an id makes the solve singular (all nets read 0 V)`, netId: net.id });
     }
     netIds.add(net.id);
 

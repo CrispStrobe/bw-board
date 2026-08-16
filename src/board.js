@@ -1829,6 +1829,14 @@ export class BoardImpl {
     // Qualified pins drive arbitrary part terminals — outside the walker's
     // vocabulary entirely.
     if (this._hasQualifiedPin) return true;
+    // KNOWN GAP (2026-08-17, found via parallel rail caps): a capacitor
+    // wired DIRECTLY across the rails reads 0 V on the walker path — the
+    // walker's RC handling covers series topologies only. Routing ALL
+    // reactive benches to MNA here was tried and REJECTED: it demoted the
+    // walker's exact RC exponentials to one-step Backward-Euler and broke
+    // the validated timing tests (63%-at-1RC read 2.5 V). The narrow shape
+    // needs its own fix; benches with devices/MNA-only parts already take
+    // the MNA path and are unaffected.
     if (this._ledFanout === undefined) {
       const seen = new Set();
       this._ledFanout = false;

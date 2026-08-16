@@ -345,6 +345,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   let vsCount = 0;
   /** @type {Map<string, number>} part id → voltage source index in the extra rows */
   const vsIndex = new Map();
+  const capPairSeen = new Set();
 
   if (!powerOff) {
     for (const part of parts) {
@@ -376,10 +377,20 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       // Instantaneous solve with known capacitor charge: the capacitor IS a
       // voltage source at an instant, so it holds its stored voltage.
+      // ONE row per distinct net pair: six decoupling caps across the same
+      // rail pair used to make six IDENTICAL rows — linearly dependent,
+      // matrix singular, and the silent singular-bail returned ALL-ZERO
+      // voltages for the whole bench (eater6502-full-build, 2026-08-17).
+      // Parallel caps share their node voltage, so they always store the
+      // same value and one source row speaks for all of them. A cap with
+      // both terminals on one net constrains nothing and gets no row.
       if (part.kind === 'capacitor' && !transient && capVoltagesIn) {
         const netA = findNet(nets, part.id, 'a');
         const netB = findNet(nets, part.id, 'b');
-        if ((netA && nodeIndex.has(netA)) || (netB && nodeIndex.has(netB))) {
+        const pairKey = `${netA ?? '-'}\u0000${netB ?? '-'}`;
+        if (netA !== netB && !capPairSeen.has(pairKey) &&
+            ((netA && nodeIndex.has(netA)) || (netB && nodeIndex.has(netB)))) {
+          capPairSeen.add(pairKey);
           vsIndex.set(part.id, vsCount++);
         }
       }
@@ -527,6 +538,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             if (idxB !== undefined) b[idxB] -= g * vPrev;
           } else if (capVoltagesIn && vsIndex.has(part.id)) {
             // Instantaneous solve: hold the stored voltage as a source row.
+            // (Only the first cap of each net pair carries the row — see
+            // the allocation above.)
             stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex,
               capVoltagesIn.get(part.id) ?? 0);
           }

@@ -81,9 +81,18 @@ export function inferNetlist(stc) {
   const vccNet = { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] };
   const gndNet = { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] };
 
+  const usedNames = new Set();
   for (const pin of stc.pins) {
     const pinId = pinName(pin);
-    const safeName = pin.name.replace(/[^a-zA-Z0-9_]/g, '_');
+    let safeName = pin.name.replace(/[^a-zA-Z0-9_]/g, '_');
+    // Two pins may carry the same NAME on different ports ('led' on P1.0
+    // and P3.0). Every net and part id below derives from safeName, so a
+    // repeat minted duplicate net ids — which the board now rejects as
+    // fatal (they make the MNA matrix singular). Disambiguate by pin.
+    if (usedNames.has(safeName)) {
+      safeName = `${safeName}_${pinId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+    }
+    usedNames.add(safeName);
 
     // Detect buzzer by name convention
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
