@@ -55,6 +55,7 @@ export { DataLogger } from './datalogger.js';
 export { DataLoggerExtension } from './datalogger-extension.js';
 export { STIMULUS_CATALOGUE, getStimulusParams, getStimulusKinds, getStimulusParts } from './stimulus-catalogue.js';
 export { StimulusExtension } from './stimulus-extension.js';
+export { runDcSweep, runAcSweep, correlateAt, logSpace } from './sweep.js';
 // pin-functions.js is NODE-ONLY (it reads the bw-parts sibling checkout via
 // node:fs) and is deliberately NOT exported here: this file is the browser
 // entry, and a bundler handed a node:fs import fails the whole app build —
