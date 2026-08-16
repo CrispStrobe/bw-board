@@ -49,6 +49,39 @@ test('G-Pascal boots and sends its banner over bit-banged serial', () => {
     assert.match(banner, /Type H for help/);
 });
 
+test('the ONBOARD assembler: type, assemble, run, Hello world', () => {
+    // The full on-machine toolchain loop: Insert source into the ROM's
+    // editor, Assemble with its resident 65C02 assembler, RUn — and the
+    // program prints back over the same bit-banged wire. Pacing matters
+    // and is part of what this asserts: type into a machine that is
+    // still printing and the CB2 receive ISR (a ~2 ms busy-loop per
+    // char) tramples the T1-paced TX — on our model exactly as on the
+    // real board. A human-speed sender sees clean text.
+    const rx = [];
+    const m = bootedMachine(rx);
+    m.advanceToMs(800);
+    rx.length = 0;
+    let t = 800;
+    const wait = (ms) => { t += ms; m.advanceToMs(t); };
+    const key = (code) => { m.serialIn(code); wait(7); };
+    const line = (s, settle = 80) => { for (const ch of s) key(ch.charCodeAt(0)); key(0x0a); wait(settle); };
+    line('I', 300);                     // let "Enter source..." finish
+    line('      jmp begin');
+    line('hello asciiz "Hello, world!"');
+    line('begin lda #<hello');
+    line('      ldx #>hello');
+    line('      jsr print');
+    line('      rts');
+    key(0x1b); wait(400);               // Esc ends insert
+    line('A', 4000);
+    line('RU', 4000);
+    const out = text(rx);
+    assert.match(out, /Assemble finished: No errors/,
+        `assembler unhappy: ${JSON.stringify(out.slice(-200))}`);
+    assert.match(out, /Hello, world!/);
+    assert.match(out, /Run finished/);
+});
+
 test('a typed H round-trips through CB2 + the cycle-counted receive loop', () => {
     const rx = [];
     const m = bootedMachine(rx);
