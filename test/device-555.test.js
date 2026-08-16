@@ -153,6 +153,131 @@ describe('555 timer: astable oscillator', () => {
   });
 });
 
+describe('555 timer: params-based free-running (island nets)', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  /** 555 with VCC/GND/reset/output wired but threshold/trigger/discharge/control
+   *  on island nets — the eater bench pattern. With params.frequency set, the
+   *  output should oscillate at that frequency. */
+  function makeIsland555(frequency, duty) {
+    const params = { rOut: 50, frequency };
+    if (duty !== undefined) params.duty = duty;
+    return {
+      parts: [
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+        { id: 'U1', kind: 'timer_555', params,
+          terminals: ['vcc', 'gnd', 'trigger', 'threshold', 'control', 'discharge', 'output', 'reset'] },
+        { id: 'R_LOAD', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+      ],
+      nets: [
+        { id: 'net_vcc', terminals: [
+          { part: 'VCC', terminal: 'vcc' },
+          { part: 'U1', terminal: 'vcc' },
+          { part: 'U1', terminal: 'reset' },
+        ]},
+        { id: 'net_gnd', terminals: [
+          { part: 'GND', terminal: 'gnd' },
+          { part: 'U1', terminal: 'gnd' },
+          { part: 'R_LOAD', terminal: 'b' },
+        ]},
+        // All function pins on island nets (floating)
+        { id: 'net_thr', terminals: [{ part: 'U1', terminal: 'threshold' }] },
+        { id: 'net_trg', terminals: [{ part: 'U1', terminal: 'trigger' }] },
+        { id: 'net_ctrl', terminals: [{ part: 'U1', terminal: 'control' }] },
+        { id: 'net_dis', terminals: [{ part: 'U1', terminal: 'discharge' }] },
+        { id: 'net_out', terminals: [
+          { part: 'U1', terminal: 'output' },
+          { part: 'R_LOAD', terminal: 'a' },
+        ]},
+      ],
+    };
+  }
+
+  it('free-running 10 Hz: output toggles ~20 times in 1 second', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makeIsland555(10);
+    board.setNetlist(parts, nets);
+
+    let flips = 0;
+    let lastOut = 0;
+    for (let ms = 1; ms <= 1000; ms++) {
+      board.advanceTo(BigInt(ms) * 1_000_000n);
+      const out = board.nodeVoltage('net_out') > 2.5 ? 1 : 0;
+      if (out !== lastOut) { flips++; lastOut = out; }
+    }
+
+    // 10 Hz = 10 cycles = 20 flips per second
+    assert.ok(flips >= 14, `expected ~20 flips at 10 Hz, got ${flips}`);
+    assert.ok(flips <= 26, `too many flips (${flips}) at 10 Hz`);
+  });
+
+  it('free-running 100 Hz with 75% duty', () => {
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makeIsland555(100, 0.75);
+    board.setNetlist(parts, nets);
+
+    let flips = 0;
+    let lastOut = 0;
+    let highMs = 0;
+    let lastState = 0;
+    let lastChangeMs = 0;
+    const highTimes = [];
+
+    for (let ms = 1; ms <= 200; ms++) {
+      board.advanceTo(BigInt(ms) * 1_000_000n);
+      const out = board.nodeVoltage('net_out') > 2.5 ? 1 : 0;
+      if (out !== lastOut) {
+        if (lastOut === 1) highTimes.push(ms - lastChangeMs);
+        flips++;
+        lastOut = out;
+        lastChangeMs = ms;
+      }
+    }
+
+    // 100 Hz = 100 cycles in 1s = 20 cycles in 200ms = 40 flips
+    assert.ok(flips >= 30, `expected ~40 flips at 100 Hz/200ms, got ${flips}`);
+  });
+
+  it('no frequency param → no oscillation (stays LOW)', () => {
+    const board = new BoardImpl(5.0);
+    // Same island-net setup but NO frequency param
+    const { parts, nets } = makeIsland555(undefined);
+    // Remove frequency from params
+    parts[2].params = { rOut: 50 };
+    board.setNetlist(parts, nets);
+
+    let flips = 0;
+    let lastOut = 0;
+    for (let ms = 1; ms <= 500; ms++) {
+      board.advanceTo(BigInt(ms) * 1_000_000n);
+      const out = board.nodeVoltage('net_out') > 2.5 ? 1 : 0;
+      if (out !== lastOut) { flips++; lastOut = out; }
+    }
+
+    assert.ok(flips <= 1, `without frequency param, should not oscillate, got ${flips} flips`);
+  });
+
+  it('wired astable STILL works (comparator mode, not free-running)', () => {
+    // The standard wired astable from the existing tests should still work
+    // even though update() now checks for free-running mode
+    const board = new BoardImpl(5.0);
+    const { parts, nets } = makeAstableCircuit();
+    board.setNetlist(parts, nets);
+
+    let flips = 0;
+    let lastOut = 0;
+    for (let ms = 1; ms <= 1000; ms++) {
+      board.advanceTo(BigInt(ms) * 1_000_000n);
+      const out = board.nodeVoltage('net_out') > 2.5 ? 1 : 0;
+      if (out !== lastOut) { flips++; lastOut = out; }
+    }
+
+    assert.ok(flips >= 4, `wired astable should oscillate, got ${flips} flips`);
+  });
+});
+
 describe('555 timer: monostable basics', () => {
   beforeEach(setup);
   afterEach(teardown);

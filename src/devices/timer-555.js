@@ -33,6 +33,9 @@ export function registerTimer555() {
         },
         ffOut: 0,            // flip-flop output: 0=LOW, 1=HIGH
         _dischargeActive: true, // discharge switch closed when output LOW
+        _lastToggleNs: 0n,   // for params-based free-running mode
+        _freeRunning: false,
+        _freeRunChecked: false,
       };
     },
 
@@ -67,10 +70,8 @@ export function registerTimer555() {
       const vReset = read('reset');
       const rOut = part.params?.rOut ?? R_OUT_DEFAULT;
 
-      // Effective VCC (relative to GND pin)
       const effectiveVcc = vcc - vGnd;
       if (effectiveVcc < 0.5) {
-        // No power — output LOW, discharge closed
         if (state.ffOut !== 0) {
           state.ffOut = 0;
           state.drives.output = { vTh: vGnd, rTh: rOut };
@@ -80,13 +81,57 @@ export function registerTimer555() {
         return false;
       }
 
-      // Control voltage sets the upper threshold.
-      // If externally driven, it overrides the internal divider.
-      // The internal divider makes control ≈ 2/3 VCC.
-      const upperThreshold = vControl - vGnd;  // voltage at control relative to GND
-      const lowerThreshold = upperThreshold / 2; // 1/3 VCC from the midpoint
+      // ── Params-based free-running fallback ──────────────────────────
+      // When params.frequency is set and function pins (threshold,
+      // trigger) sit on island nets (floating at the internal divider
+      // bias), oscillate at the specified frequency. This lets bench
+      // 555s produce a clock without a wired R/C astable circuit.
+      const freq = part.params?.frequency;
+      if (freq && freq > 0) {
+        if (!state._freeRunChecked) {
+          state._freeRunChecked = true;
+          // Island detection: on island nets, R_INPUT (1 MΩ) pulls
+          // threshold and trigger to null (≈0V in the solver), since
+          // nothing external drives them. When both pins sit near 0V
+          // with power present, they're floating — engage free-running.
+          const tol = effectiveVcc * 0.2;
+          const thrIsland = Math.abs(vThreshold - vGnd) < tol;
+          const trgIsland = Math.abs(vTrigger - vGnd) < tol;
+          state._freeRunning = thrIsland && trgIsland;
+          if (state._freeRunning) state._lastToggleNs = BigInt(tNs);
+        }
 
-      // Reset (active LOW): forces output LOW
+        if (state._freeRunning) {
+          const duty = part.params?.duty ?? 0.5;
+          const periodNs = BigInt(Math.round(1e9 / freq));
+          const highNs = BigInt(Math.round(Number(periodNs) * duty));
+          const lowNs = periodNs - highNs;
+          const elapsed = BigInt(tNs) - state._lastToggleNs;
+
+          let newFf = state.ffOut;
+          if (state.ffOut === 1 && elapsed >= highNs) {
+            newFf = 0;
+            state._lastToggleNs = BigInt(tNs);
+          } else if (state.ffOut === 0 && elapsed >= lowNs) {
+            newFf = 1;
+            state._lastToggleNs = BigInt(tNs);
+          }
+
+          if (newFf !== state.ffOut) {
+            state.ffOut = newFf;
+            state.drives.output = {
+              vTh: newFf ? vcc : vGnd, rTh: rOut,
+            };
+            state._dischargeActive = (newFf === 0);
+            return true;
+          }
+          return false;
+        }
+      }
+
+      // ── Wired comparator mode (standard behavioral model) ──────────
+      const upperThreshold = vControl - vGnd;
+      const lowerThreshold = upperThreshold / 2;
       const resetActive = (vReset - vGnd) < (effectiveVcc * 0.3);
 
       let newFf = state.ffOut;
@@ -94,12 +139,9 @@ export function registerTimer555() {
       if (resetActive) {
         newFf = 0;
       } else {
-        // Upper comparator: threshold > control → RESET flip-flop (output LOW)
         if ((vThreshold - vGnd) > upperThreshold) {
           newFf = 0;
         }
-        // Lower comparator: trigger < 1/3 VCC → SET flip-flop (output HIGH)
-        // SET dominates if both conditions are true simultaneously (555 spec)
         if ((vTrigger - vGnd) < lowerThreshold) {
           newFf = 1;
         }
@@ -108,12 +150,10 @@ export function registerTimer555() {
       if (newFf === state.ffOut) return false;
 
       state.ffOut = newFf;
-      // Output HIGH: drive to VCC. Output LOW: drive to GND.
       state.drives.output = {
         vTh: newFf ? vcc : vGnd,
         rTh: rOut,
       };
-      // Discharge switch: closed when output is LOW (flip-flop reset)
       state._dischargeActive = (newFf === 0);
 
       return true;

@@ -1829,14 +1829,9 @@ export class BoardImpl {
     // Qualified pins drive arbitrary part terminals — outside the walker's
     // vocabulary entirely.
     if (this._hasQualifiedPin) return true;
-    // KNOWN GAP (2026-08-17, found via parallel rail caps): a capacitor
-    // wired DIRECTLY across the rails reads 0 V on the walker path — the
-    // walker's RC handling covers series topologies only. Routing ALL
-    // reactive benches to MNA here was tried and REJECTED: it demoted the
-    // walker's exact RC exponentials to one-step Backward-Euler and broke
-    // the validated timing tests (63%-at-1RC read 2.5 V). The narrow shape
-    // needs its own fix; benches with devices/MNA-only parts already take
-    // the MNA path and are unaffected.
+    // RESOLVED (was KNOWN GAP 2026-08-17): rail-parallel caps now handled
+    // in _integrateCapacitors — the rSource=0 instant-charge path sets the
+    // cap voltage to vTarget directly. Series RC exponentials preserved.
     if (this._ledFanout === undefined) {
       const seen = new Set();
       this._ledFanout = false;
@@ -2126,10 +2121,23 @@ export class BoardImpl {
         }
       }
     }
-    // Keep only VCC/GND net voltages
+    // Keep only VCC/GND net voltages — and ensure they hold the correct
+    // source voltage so _gatherSources returns the right vTh when it
+    // short-circuits on a known-voltage net (rail-parallel cap path).
     for (const [netId] of this.nodeVoltages) {
       if (!idealNets.has(netId)) {
         this.nodeVoltages.delete(netId);
+      }
+    }
+    for (const net of this.nets) {
+      if (!idealNets.has(net.id)) continue;
+      for (const t of net.terminals) {
+        const p = this.partMap.get(t.part);
+        if (p && p.kind === 'vcc') {
+          this.nodeVoltages.set(net.id, p.params?.volts ?? this.vcc);
+        } else if (p && p.kind === 'gnd') {
+          this.nodeVoltages.set(net.id, 0);
+        }
       }
     }
 
@@ -2164,11 +2172,20 @@ export class BoardImpl {
       const vTarget = (aThev ? aThev.vTh : 0) - (bThev ? bThev.vTh : 0);
       const rSource = (aThev ? aThev.rTh : 0) + (bThev ? bThev.rTh : 0);
 
-      if (rSource <= 0) continue;
-
-      const rc = rSource * farads;
       const vCap = this.capVoltages.get(part.id) ?? 0;
-      const vNew = vCap + (vTarget - vCap) * (1 - Math.exp(-dtSec / rc));
+      let vNew;
+      if (rSource <= 0 && aThev && bThev) {
+        // Rail-parallel cap (no series R, sources on BOTH sides): ideal
+        // sources charge the cap instantly (τ = RC → 0).
+        vNew = vTarget;
+      } else if (rSource <= 0) {
+        // Only one side has a zero-impedance source, the other is
+        // floating — the cap holds its existing charge.
+        continue;
+      } else {
+        const rc = rSource * farads;
+        vNew = vCap + (vTarget - vCap) * (1 - Math.exp(-dtSec / rc));
+      }
 
       this.capVoltages.set(part.id, vNew);
 
