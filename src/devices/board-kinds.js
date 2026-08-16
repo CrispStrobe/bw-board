@@ -158,6 +158,7 @@ const PICO_TERMINALS = [
   'gp0', 'gp1', 'gp2', 'gp3', 'gp4', 'gp5', 'gp6', 'gp7',
   'gp8', 'gp9', 'gp10', 'gp11', 'gp12', 'gp13', 'gp14', 'gp15',
   'gp16', 'gp17', 'gp18', 'gp19', 'gp20', 'gp21', 'gp22',
+  'gp25',  // onboard LED pin (not on header, but electrically real)
   'gp26', 'gp27', 'gp28',
   'vbus', 'vsys', '3v3', '3v3_en', 'adc_vref',
   'gnd_1', 'gnd_2', 'gnd_3', 'gnd_4', 'gnd_5', 'gnd_6', 'gnd_7',

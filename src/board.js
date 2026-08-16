@@ -234,6 +234,46 @@ export class BoardImpl {
             addLed(`${p.id}_d${digit}_${seg}`, netsOf(p.id, seg), common);
           }
         }
+      } else if (p.kind === 'pi_pico') {
+        // Onboard LED: GP25 → 1 kΩ resistor → LED → GND (hardwired on PCB).
+        // Expand to synthetic resistor + LED so ledBrightness('<id>_onboard')
+        // reports the onboard LED state — same pattern as seven_segment.
+        const gp25Nets = netsOf(p.id, 'gp25');
+        const gndNets = netsOf(p.id, 'gnd_1');
+        if (gp25Nets.length > 0) {
+          // If gnd_1 has no net yet, look for any gnd terminal that does
+          let cathNets = gndNets;
+          if (cathNets.length === 0) {
+            for (const gn of ['gnd_2','gnd_3','gnd_4','gnd_5','gnd_6','gnd_7','agnd','swd_gnd']) {
+              cathNets = netsOf(p.id, gn);
+              if (cathNets.length > 0) break;
+            }
+          }
+          if (cathNets.length === 0) {
+            // No ground net connected — create an internal ground net
+            // tied to the pi_pico's gnd_1 terminal for the onboard LED
+            const internalGnd = {
+              id: `${p.id}__onboard_gnd`, terminals: [{ part: p.id, terminal: 'gnd_1' }],
+            };
+            netCopies.push(internalGnd);
+            cathNets = [internalGnd];
+          }
+          // Internal net between resistor and LED anode
+          const midNet = {
+            id: `${p.id}__onboard_mid`, terminals: [],
+          };
+          netCopies.push(midNet);
+          // Synthetic 1 kΩ resistor: gp25 → a, b → midNet
+          const rId = `${p.id}_onboard_r`;
+          extraParts.push({ id: rId, kind: 'resistor', params: { resistance: 1000 }, terminals: ['a', 'b'] });
+          for (const n of gp25Nets) n.terminals.push({ part: rId, terminal: 'a' });
+          midNet.terminals.push({ part: rId, terminal: 'b' });
+          // Synthetic LED: anode → midNet, cathode → gnd
+          const ledId = `${p.id}_onboard`;
+          extraParts.push({ id: ledId, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
+          midNet.terminals.push({ part: ledId, terminal: 'anode' });
+          for (const n of cathNets) n.terminals.push({ part: ledId, terminal: 'cathode' });
+        }
       }
     }
     return extraParts.length
