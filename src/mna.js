@@ -1798,6 +1798,14 @@ function stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex, vStored) {
   const row = nodeIndex.size + vsIdx;
   if (idxA !== undefined) { A.set(row, idxA, 1); A.set(idxA, row, 1); }
   if (idxB !== undefined) { A.set(row, idxB, -1); A.set(idxB, row, -1); }
+  // A small series term on the branch diagonal: V(a)-V(b) - I*R = vStored.
+  // As a PURE source row, a discharged cap wired straight across the rails
+  // asserted V(rail)=0 against the supply's V(rail)=5 — overdetermined, and
+  // elimination let the CAP win: the whole eater6502 bench read a dead rail
+  // at every instant (2026-08-17). With 0.1 mΩ in the row, the supply wins,
+  // the cap takes the inrush, and a charged cap under mA-scale load holds
+  // its voltage to ~0.3 µV — inside the solver suite's 1e-6 contract.
+  A.set(row, row, -1e-4);
   b[row] = vStored;
 }
 
