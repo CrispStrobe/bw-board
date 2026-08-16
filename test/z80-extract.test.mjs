@@ -98,6 +98,37 @@ test('chip select through a 74HC244 buffer and 74LS32 OR gate is visible', () =>
     ]);
 });
 
+test('PainfulDiodes-style decode with UM245R, 74LS32 OR and 74LS04 inverter', () => {
+    const parts = [
+        { id: 'cpu1', kind: 'z80' }, { id: 'rom1', kind: '28c256' },
+        { id: 'ram1', kind: '62256' }, { id: 'fifo1', kind: 'um245r' },
+        { id: 'u1g', kind: '74ls32' }, { id: 'u5g', kind: '74ls32' },
+        { id: 'u2', kind: '74ls04' }, { id: 'gnd1', kind: 'gnd' },
+    ];
+    const wires = [];
+    const w = (f, ft, t, tt) => wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    for (let i = 0; i <= 14; i++) { w('cpu1', `a${i}`, 'rom1', `a${i}`); w('cpu1', `a${i}`, 'ram1', `a${i}`); }
+    w('cpu1', 'a0', 'u2', '5a');
+    w('cpu1', 'a15', 'u2', '6a');
+    w('u2', '6y', 'u1g', '3a'); w('cpu1', 'mreqb', 'u1g', '3b');
+    w('u1g', '3y', 'ram1', 'csb');
+    w('cpu1', 'mreqb', 'u1g', '4a'); w('cpu1', 'a15', 'u1g', '4b');
+    w('u1g', '4y', 'rom1', 'ceb');
+    w('cpu1', 'rdb', 'u5g', '1a'); w('cpu1', 'iorqb', 'u5g', '1b');
+    w('u2', '5y', 'u1g', '2a'); w('u5g', '1y', 'u1g', '2b');
+    w('u1g', '2y', 'fifo1', 'rdb');
+    const r = extractZ80Machine({ parts, wires });
+    assert.ok(r.ok, r.reasons.join('; '));
+    assert.deepEqual(r.regions, [
+        { kind: 'rom', start: 0x0000, end: 0x7fff },
+        { kind: 'ram', start: 0x8000, end: 0xffff },
+    ]);
+    const fifo = r.ports.find(p => p.kind === 'um245r');
+    assert.ok(fifo, 'UM245R extracted as port device');
+    assert.equal(fifo.at, 0x01, 'UM245R at port 1 (odd ports)');
+    assert.ok(r.lines.some(l => /fifo1 = UM245R AT PORT \$0001/.test(l)), r.lines.join('; '));
+});
+
 test('an MC6845 wired in port space extracts as a crtc with its RAM framebuffer noted', () => {
     const c = searleCircuit();
     c.parts.push({ id: 'crtc1', kind: 'mc6845', params: { vramAt: 0xf000 } });

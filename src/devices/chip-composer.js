@@ -597,6 +597,8 @@ export function registerLogicChips() {
   // TTL LS-series aliases — same logic, same pinout
   const hc32 = buildChipModel(CHIPS.find(c => c.kind === '74hc32'));
   registerDevice('74ls32', hc32);
+  const hc04 = buildChipModel(CHIPS.find(c => c.kind === '74hc04'));
+  registerDevice('74ls04', hc04);
 }
 
 export { CHIPS, buildChipModel };

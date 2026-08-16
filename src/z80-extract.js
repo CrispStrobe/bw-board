@@ -50,6 +50,11 @@ export function extractZ80Machine(circuit) {
     for (let bit = 0; bit < 16; bit++) setDriver(find(key(cpu.id, `a${bit}`)), { type: 'addr', bit }, `${cpu.id}.a${bit}`);
     setDriver(find(key(cpu.id, 'mreqb')), { type: 'cycle', sig: 'mreqb' }, `${cpu.id}.mreqb`);
     setDriver(find(key(cpu.id, 'iorqb')), { type: 'cycle', sig: 'iorqb' }, `${cpu.id}.iorqb`);
+    // /RD and /WR: needed for port decodes that gate on the bus strobe
+    // (UM245R's /RD IS the chip select; PainfulDiodes §5 ORs /RD into
+    // the port-read term). During port sweep we assert /RD active.
+    setDriver(find(key(cpu.id, 'rdb')), { type: 'cycle', sig: 'rdb' }, `${cpu.id}.rdb`);
+    setDriver(find(key(cpu.id, 'wrb')), { type: 'cycle', sig: 'wrb' }, `${cpu.id}.wrb`);
     for (const p of parts) {
         if (p.kind === 'vcc') setDriver(find(key(p.id, 'vcc')), { type: 'const', value: 1 }, p.id);
         if (p.kind === 'gnd') setDriver(find(key(p.id, 'gnd')), { type: 'const', value: 0 }, p.id);
@@ -58,6 +63,12 @@ export function extractZ80Machine(circuit) {
         if (p.kind === '74hc00' || p.kind === '74hc132') {
             for (let g = 1; g <= 4; g++) {
                 setDriver(find(key(p.id, `${g}y`)), { type: 'nand', gate: `${p.id}.${g}`, a: find(key(p.id, `${g}a`)), b: find(key(p.id, `${g}b`)) }, `${p.id}.${g}y`);
+            }
+        }
+        // 74HC04 / 74LS04 — Hex inverter
+        if (p.kind === '74hc04' || p.kind === '74ls04') {
+            for (let g = 1; g <= 6; g++) {
+                setDriver(find(key(p.id, `${g}y`)), { type: 'not', a: find(key(p.id, `${g}a`)) }, `${p.id}.${g}y`);
             }
         }
         // 74HC32 / 74LS32 — Quad 2-input OR (same pinout as 74HC00)
@@ -94,7 +105,7 @@ export function extractZ80Machine(circuit) {
     if (reasons.length) return { ok: false, notes, reasons };
 
     let addr = 0;
-    let cycle = { mreqb: 1, iorqb: 1 };
+    let cycle = { mreqb: 1, iorqb: 1, rdb: 1, wrb: 1 };
     let memo = new Map();
     const evalNet = (net, depth = 0) => {
         if (depth > 32) throw new Error('combinational loop in the glue network');
@@ -111,6 +122,9 @@ export function extractZ80Machine(circuit) {
         } else if (d.type === 'or') {
             const a = evalNet(d.a, depth + 1); const b = evalNet(d.b, depth + 1);
             v = (a === null || b === null) ? null : (a | b);
+        } else if (d.type === 'not') {
+            const a = evalNet(d.a, depth + 1);
+            v = a === null ? null : 1 - a;
         } else if (d.type === 'buf') {
             const oe = evalNet(d.oe, depth + 1);
             v = (oe === 0) ? evalNet(d.a, depth + 1) : null;
@@ -144,13 +158,6 @@ export function extractZ80Machine(circuit) {
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.clk is undriven — a floating latch clock is not an OUT port`);
             ioChips.push({ part: p, pins, ioKind: 'latch', rsPin: null, selected: new Uint8Array(256) });
         } else if (p.kind === 'mc6845') {
-            // The CRTC: /CS decodes low in port space; the register
-            // select rides A0. The SILICON calls it RS (active-HIGH),
-            // but the bw-parts sidecar currently names it rsb — accept
-            // either spelling so a sidecar rename doesn't break wiring.
-            // MA0-MA13/RA0-RA4 generate the framebuffer scan on a real
-            // board and are decorative here — the machine gives the chip
-            // a live view of system RAM at params.vramAt instead.
             const hasRsWire = wires.some(w =>
                 (w.from === p.id && w.fromTerminal === 'rs') ||
                 (w.to === p.id && w.toTerminal === 'rs'));
@@ -158,18 +165,25 @@ export function extractZ80Machine(circuit) {
             const pins = [{ net: find(key(p.id, 'csb')), want: 0, t: 'csb' }];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
             ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: rsName, selected: new Uint8Array(256) });
+        } else if (p.kind === 'um245r') {
+            // The UM245R is a parallel FIFO: its /RD pin IS the decoded
+            // port-read strobe, not a traditional chip-select. It has no
+            // register select — it is one port, not two.
+            const rdNet = find(key(p.id, 'rdb'));
+            if (!netDriver.has(rdNet)) reasons.push(`${p.id}.rdb is undriven — a floating read strobe is not a decode`);
+            ioChips.push({ part: p, pins: [{ net: rdNet, want: 0, t: 'rdb' }], ioKind: 'um245r', rsPin: null, selected: new Uint8Array(256) });
         }
     }
     if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM, ACIA or OUT latch on the board');
     if (reasons.length) return { ok: false, notes, reasons };
 
     try {
-        cycle = { mreqb: 0, iorqb: 1 };            // memory cycles
+        cycle = { mreqb: 0, iorqb: 1, rdb: 1, wrb: 1 };   // memory cycles (no read/write strobe)
         for (addr = 0; addr < 65536; addr++) {
             memo = new Map();
             for (const c of memChips) c.selected[addr] = evalNet(c.net) === 0 ? 1 : 0;
         }
-        cycle = { mreqb: 1, iorqb: 0 };            // I/O cycles, 8-bit ports
+        cycle = { mreqb: 1, iorqb: 0, rdb: 0, wrb: 1 };   // I/O read cycles
         for (addr = 0; addr < 256; addr++) {
             memo = new Map();
             for (const c of ioChips) {
@@ -211,6 +225,7 @@ export function extractZ80Machine(circuit) {
         for (let a = 0; a < 256; a++) if (c.selected[a]) { if (lo < 0) lo = a; hi = a; count++; }
         if (lo < 0) { reasons.push(`${c.part.id} is never selected in port space — check its select wiring`); continue; }
         if (c.rsPin) {
+            // Register-select devices (ACIA, CRTC): rs must ride A0
             const rs = netDriver.get(find(key(c.part.id, c.rsPin)));
             if (!rs || rs.type !== 'addr' || rs.bit !== 0) { reasons.push(`${c.part.id}.${c.rsPin} must ride A0 — the register select is the low address line`); continue; }
         }
@@ -230,7 +245,10 @@ export function extractZ80Machine(circuit) {
         ports,
         lines: [
             ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
-            ...ports.map((p) => `CHIP ${p.name} = ${p.kind === 'crtc' ? 'MC6845' : p.kind === 'latch' ? '74HC374 OUT latch' : 'MC6850'} AT PORT ${hx(p.at)}`),
+            ...ports.map((p) => {
+                const label = p.kind === 'crtc' ? 'MC6845' : p.kind === 'um245r' ? 'UM245R' : p.kind === 'latch' ? '74HC374 OUT latch' : 'MC6850';
+                return `CHIP ${p.name} = ${label} AT PORT ${hx(p.at)}`;
+            }),
         ],
         notes,
         reasons: [],
