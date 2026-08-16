@@ -180,3 +180,59 @@ export function applyMedia(target, entries, opts = {}) {
     }
     return { applied, errors };
 }
+
+/**
+ * Run a MEDIA BUNDLE — the brickwright-media.json contract the GPL Lab
+ * ships: machine config, slot→filename mapping, documented preload
+ * writes (bench preconditions), entry PC. One call from manifest +
+ * fetched files to a running machine; the app's media panel needs no
+ * machine knowledge at all.
+ *
+ * @param {object} manifest - parsed brickwright-media.json
+ * @param {Record<string, Uint8Array>} files - fetched, keyed by filename
+ * @param {{createMachine?: (config: object) => object}} [opts]
+ *   createMachine defaults to the composable 6502 for machine
+ *   'eater6502'; other machine kinds pass their own factory.
+ * @returns {Promise<{machine: object, applied: string[], errors: {slot: string, error: string}[]}>}
+ */
+export async function runMediaBundle(manifest, files, opts = {}) {
+    const errors = [];
+    let machine;
+    if (opts.createMachine) {
+        machine = opts.createMachine(manifest.machineConfig);
+    } else if (manifest.machine === 'eater6502' || manifest.machine === 'gpascal') {
+        const { M6502Machine, EATER6502, GPASCAL } = await import('./m6502-machine.js');
+        machine = new M6502Machine(
+            manifest.machineConfig || (manifest.machine === 'gpascal' ? GPASCAL : EATER6502),
+            opts.hooks || {});
+    } else {
+        throw new Error(`no machine factory for '${manifest.machine}' — pass opts.createMachine`);
+    }
+
+    // Bench preconditions FIRST — they are the state the software
+    // assumes exists before it runs (the Bad Apple DDRB lesson). Each
+    // carries its `why` in the manifest, so a UI can show provenance.
+    for (const w of manifest.preload?.writes || []) {
+        machine._write(w.addr, w.value & 0xff);
+    }
+
+    // Slots: filenames → bytes → the existing media routing. A slot
+    // whose file is missing errors by name instead of throwing.
+    const entries = {};
+    for (const [slot, filename] of Object.entries(manifest.slots || {})) {
+        if (files[filename]) entries[slot] = files[filename];
+        else errors.push({ slot, error: `file not provided: ${filename}` });
+    }
+    // RAM-program manifests ('entry' with a hex/bin that self-locates
+    // below the ROM window) route through the rom slot's loader — the
+    // machine's loadRom writes RAM regions just as well.
+    const media = applyMedia({ machine, kind: manifest.machine }, entries, { kind: manifest.machine });
+    errors.push(...media.errors);
+
+    if (manifest.entry != null) {
+        machine.cpu.pc = manifest.entry & 0xffff;
+    } else {
+        machine.cpu.pc = machine.mem[0xfffc] | (machine.mem[0xfffd] << 8);
+    }
+    return { machine, applied: media.applied, errors };
+}
