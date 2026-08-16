@@ -238,10 +238,14 @@ async function createEater6502Target(opts) {
   const { board, rom, symbols, config } = opts;
 
   // A board is required for pin-level runs; the py65mon console-only
-  // shape (Tali Forth etc.) and the gpascal serial-console shape have
-  // no pins to publish, so a time-sync stub suffices — same stance as
-  // the z80 target.
-  if (!board && !opts.py65mon && !opts.gpascal) throw new Error('eater6502 target requires opts.board');
+  // shape (Tali Forth etc.), the gpascal serial-console shape, and the
+  // wired-extractor path (opts.config from extract6502Machine — a bus
+  // machine with no pin boundary) have no pins to publish, so a
+  // time-sync stub suffices — same stance as the z80 target. A bare
+  // ROM boot (opts.rom on the default Eater map) rides the same stub.
+  if (!board && !opts.py65mon && !opts.gpascal && !config && !rom) {
+    throw new Error('eater6502 target requires opts.board');
+  }
 
   const { createM6502Adapter } = await import('./m6502-adapter.js');
   const adapterOpts = {};
@@ -265,7 +269,11 @@ async function createEater6502Target(opts) {
     // ($FFFC/$FFFD relative to the ROM base). The adapter's loadRom + reset
     // in attachBoard handles this.
   }
-  adapter.attachBoard(board);
+  // Board-less machines still need attachBoard (it performs the reset
+  // through $FFFC); the stub absorbs pin traffic the way the z80
+  // target's stub absorbs time sync. setPin matters: a VIA in the
+  // extracted config publishes pin edges even when nothing listens.
+  adapter.attachBoard(board || { advanceTo() {}, setPin() {} });
 
   let target = null;
   try {
