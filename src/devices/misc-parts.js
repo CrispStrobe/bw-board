@@ -148,6 +148,63 @@ export function registerMiscParts() {
     },
   });
 
+  // ─── Slide switch (SPDT) ─────────────────────────────────────────
+  // Three-terminal SPDT: params.position = 0 connects a↔com,
+  // position = 1 connects b↔com. Default position 0.
+  registerDevice('slide_switch', {
+    terminals: ['a', 'com', 'b'],
+    init() { return { drives: {}, _pos: -1 }; },
+    stamp(ctx, part) {
+      const pos = part.params?.position ?? 0;
+      if (pos === 0) ctx.conductance('a', 'com', 1 / 0.1);
+      else           ctx.conductance('b', 'com', 1 / 0.1);
+    },
+    update(part, state) {
+      const pos = part.params?.position ?? 0;
+      if (pos === state._pos) return false;
+      state._pos = pos;
+      return true;
+    },
+  });
+
+  // ─── DIP switch SPST variant ────────────────────────────────────
+  // 4-position SPST — same as dip_switch but with 1-indexed terminal
+  // names (1a/1b..4a/4b instead of s0_a/s0_b).
+  registerDevice('dip_switch_spst', {
+    terminals: ['1a', '2a', '3a', '4a', '1b', '2b', '3b', '4b'],
+    init() { return { drives: {}, _state: 0 }; },
+    stamp(ctx, part) {
+      const sw = part.params?.switches ?? 0;
+      for (let i = 0; i < 4; i++) {
+        if ((sw >> i) & 1) ctx.conductance(`${i+1}a`, `${i+1}b`, 1 / 0.1);
+      }
+    },
+    update(part, state) {
+      const sw = part.params?.switches ?? 0;
+      if (sw === state._state) return false;
+      state._state = sw;
+      return true;
+    },
+  });
+
+  // ─── DIP switch DPST variant ────────────────────────────────────
+  // 2-position DPST — each position has two independent contacts.
+  registerDevice('dip_switch_dpst', {
+    terminals: ['1a', '1b', '2a', '2b', '1a_out', '1b_out', '2a_out', '2b_out'],
+    init() { return { drives: {}, _state: 0 }; },
+    stamp(ctx, part) {
+      const sw = part.params?.switches ?? 0;
+      if ((sw >> 0) & 1) { ctx.conductance('1a', '1a_out', 1 / 0.1); ctx.conductance('1b', '1b_out', 1 / 0.1); }
+      if ((sw >> 1) & 1) { ctx.conductance('2a', '2a_out', 1 / 0.1); ctx.conductance('2b', '2b_out', 1 / 0.1); }
+    },
+    update(part, state) {
+      const sw = part.params?.switches ?? 0;
+      if (sw === state._state) return false;
+      state._state = sw;
+      return true;
+    },
+  });
+
   // ─── Vibration motor ──────────────────────────────────────────────
   // Small DC motor — just cares about on/off and spin direction.
   // Modeled as a simple resistive load.
