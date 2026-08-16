@@ -294,6 +294,31 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     'npn', 'pnp', 'zener', 'inductor', 'nmos', 'pmos', 'opamp',
     'vsource', 'isource']);
 
+  // EVERY net bearing a gnd symbol IS the reference — EXCEPT in the
+  // power-off resistance measurement, where testNodeB is the reference
+  // and gnd symbols are deliberately inactive (the T-network test's
+  // contract: a dangling gnd must not become a shunt path). The election above
+  // picks one net as node 0 — but a circuit can have DISJOINT ground
+  // islands (the .dig-translated PC module: the clock's local gnd
+  // symbol vs the chips' gnd net), and leaving the others as ordinary
+  // nets lets them float: the clock's "ground" rode up to 4.97 V and
+  // the oscillator sat dead. Hand-wired boards never showed it because
+  // their grounds share rails. Merge all gnd-bearing nets into the
+  // elected one — physically they are the same node.
+  if (groundNetId && !(powerOff && testNodeB)) {
+    const isGndNet = (net) => net.id !== groundNetId && net.terminals.some((t) => {
+      const p = parts.find((pp) => pp.id === t.part);
+      return p && p.kind === 'gnd';
+    });
+    const main = nets.find((n) => n.id === groundNetId);
+    for (let i = nets.length - 1; i >= 0; i--) {
+      if (isGndNet(nets[i])) {
+        main.terminals.push(...nets[i].terminals);
+        nets.splice(i, 1);
+      }
+    }
+  }
+
   /** @type {Map<string, number>} net id → node index */
   const nodeIndex = new Map();
   let nodeCount = 0;
