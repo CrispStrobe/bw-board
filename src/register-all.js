@@ -51,6 +51,7 @@ import { registerAudioParts } from './devices/audio-parts.js';
 import { registerMPU6050 } from './devices/mpu6050.js';
 import { registerSSD1306 } from './devices/ssd1306.js';
 import { registerUartFrame } from './devices/uart-frame.js';
+import { registerSAP1Chips } from './devices/sap1-chips.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -94,4 +95,5 @@ export function registerAllDevices() {
   registerMPU6050();
   registerSSD1306();
   registerUartFrame();
+  registerSAP1Chips();
 }
