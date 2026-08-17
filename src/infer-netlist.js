@@ -407,6 +407,38 @@ export function inferNetlist(stc) {
     }
   }
 
+  // Bus-named pins imply their display: 'sda'+'scl' is the 4-pin OLED,
+  // 'cs'+'dc'+'sck'+'mosi' the SPI TFT. The pin loop above already made
+  // each an output net; seat the panel on those nets so a generated
+  // bench SHOWS what the program draws — before this, a device-picked
+  // calculator bench carried the keys and no display (the verbs declare
+  // no part, so nothing else can know).
+  const findPin = (n) => stc.pins.find((q) => String(q.name).toLowerCase() === n);
+  const netOfPin = (pin) => {
+    if (!pin) return null;
+    const safe = String(pin.name).replace(/[^a-zA-Z0-9_]/g, '_');
+    return nets.find((nn) => nn.id === `net_io_${safe}` || nn.id.startsWith(`net_io_${safe}_`)) || null;
+  };
+  const sdaPin = findPin('sda'), sclPin = findPin('scl');
+  const sdaNet = netOfPin(sdaPin), sclNet = netOfPin(sclPin);
+  if (sdaNet && sclNet) {
+    parts.push({ id: 'OLED', kind: 'ssd1306', params: {}, terminals: ['vcc', 'gnd', 'sda', 'scl'] });
+    sdaNet.terminals.push({ part: 'OLED', terminal: 'sda' });
+    sclNet.terminals.push({ part: 'OLED', terminal: 'scl' });
+    vccNet.terminals.push({ part: 'OLED', terminal: 'vcc' });
+    gndNet.terminals.push({ part: 'OLED', terminal: 'gnd' });
+    notes.push('sda/scl pins: seated an SSD1306 OLED on the bus');
+  }
+  const tftNets = ['cs', 'dc', 'sck', 'mosi'].map((n) => netOfPin(findPin(n)));
+  if (tftNets.every(Boolean)) {
+    parts.push({ id: 'TFT', kind: 'ili9341', params: {},
+      terminals: ['vcc', 'gnd', 'cs', 'rst', 'dc', 'mosi', 'sck', 'miso', 'led'] });
+    ['cs', 'dc', 'sck', 'mosi'].forEach((t, i) => tftNets[i].terminals.push({ part: 'TFT', terminal: t }));
+    vccNet.terminals.push({ part: 'TFT', terminal: 'vcc' }, { part: 'TFT', terminal: 'led' }, { part: 'TFT', terminal: 'rst' });
+    gndNet.terminals.push({ part: 'TFT', terminal: 'gnd' });
+    notes.push('cs/dc/sck/mosi pins: seated an ILI9341 TFT on the SPI bus');
+  }
+
   // Add the shared VCC and GND nets
   nets.push(vccNet);
   nets.push(gndNet);
