@@ -71,14 +71,27 @@ export class Z80Machine {
         /** @type {Record<string, MC6850>} */
         this.chips = {};
         this._portMap = new Map();
+        // Direction-aware port slots: a read-strobed chip (74HC244 IN) and
+        // a write-strobed chip (74HC374 OUT) legally share one port — IN
+        // and OUT decode to different silicon on real boards, and the
+        // extractor's contention rules allow exactly that pair. A single
+        // last-wins slot sent OUT (0),A into the buffer's no-op write and
+        // the LEDs never lit. Level-selected chips claim both sides.
+        const mapPort = (port, entry, sides = 'rw') => {
+            const key = port & 0xff;
+            const slot = this._portMap.get(key) || {};
+            if (sides.includes('r')) slot.r = entry;
+            if (sides.includes('w')) slot.w = entry;
+            this._portMap.set(key, slot);
+        };
         for (const p of config.ports || []) {
             if (p.kind === 'acia6850') {
                 const chip = new MC6850({
                     onTx: (b) => { if (this.hooks.onSerial) this.hooks.onSerial(b, this.tMs); },
                 });
                 this.chips[p.name] = chip;
-                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
-                this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });
+                mapPort(p.at, { chip, rs: 0 });
+                mapPort(p.at + 1, { chip, rs: 1 });
             } else if (p.kind === 'crtc') {
                 // MC6845: address/data port pair. On the real board the
                 // CRTC only GENERATES addresses — the framebuffer is
@@ -93,8 +106,8 @@ export class Z80Machine {
                 const chip = new MC6845({ clockHz: config.clockHz, vramSize, charH: p.charH, charset });
                 chip.vram = this.mem.subarray(vramAt, vramAt + vramSize);
                 this.chips[p.name] = chip;
-                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
-                this._portMap.set((p.at + 1) & 0xff, { chip, rs: 1 });
+                mapPort(p.at, { chip, rs: 0 });
+                mapPort(p.at + 1, { chip, rs: 1 });
             } else if (p.kind === 'latch') {
                 // 74HC374 as a write-only OUT port — the first program of
                 // every Searle-lineage build: OUT (n),A lights eight LEDs.
@@ -105,7 +118,7 @@ export class Z80Machine {
                     onChange: (value, prev) => this._latchChange(p.name, value, prev),
                 });
                 this.chips[p.name] = chip;
-                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
+                mapPort(p.at, { chip, rs: 0 }, 'w');
             } else if (p.kind === 'buffer') {
                 // 74HC244 as a read-only IN port — the input mirror of
                 // the '374 latch. read() samples the board's pins via
@@ -118,14 +131,14 @@ export class Z80Machine {
                     },
                 });
                 this.chips[p.name] = chip;
-                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
+                mapPort(p.at, { chip, rs: 0 }, 'r');
             } else if (p.kind === 'ctc') {
                 // Z8430: four consecutive ports, one per channel. The
                 // scheduler timebase the Z80 emitter axis waits on.
                 const chip = new Z80CTC({ clockHz: config.clockHz });
                 this.chips[p.name] = chip;
                 for (let ch = 0; ch < 4; ch++) {
-                    this._portMap.set((p.at + ch) & 0xff, { chip, rs: ch });
+                    mapPort(p.at + ch, { chip, rs: ch });
                 }
             } else {
                 throw new Error(`unknown port chip kind: ${p.kind}`);
@@ -227,7 +240,8 @@ export class Z80Machine {
                 if (this._kempston !== null && (port & 0x21) === 0x01) return this._kempston;
                 // AY read: $FFFD (A15=1, A14=1, A1=0)
                 if (this.ay && (port & 0xc002) === 0xc000) return this.ay.read();
-                const e = this._portMap.get(port & 0xff);
+                const slot = this._portMap.get(port & 0xff);
+                const e = slot && (slot.r || slot.w);
                 return e ? e.chip.read(e.rs) : 0xff;
             },
             out: (port, v) => {
@@ -240,7 +254,8 @@ export class Z80Machine {
                 if (this.ay && (port & 0xc002) === 0xc000) { this.ay.select(v); return; }
                 // AY data: $BFFD (A15=1, A14=0, A1=0)
                 if (this.ay && (port & 0xc002) === 0x8000) { this.ay.write(v); return; }
-                const e = this._portMap.get(port & 0xff);
+                const slot = this._portMap.get(port & 0xff);
+                const e = slot && (slot.w || slot.r);
                 if (e) e.chip.write(e.rs, v);
             },
         });
