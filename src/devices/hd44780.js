@@ -67,6 +67,12 @@ export function registerHD44780() {
         ac: 0,                             // address counter (7 bits)
         acIsCgram: false,                  // true when AC points into CGRAM
 
+        // Contrast: the LC drive is VDD−V0 (§Power supply, p.14). Near
+        // 0 V on V0 the segments are fully dark against the backlight;
+        // as V0 rises toward VDD the drive collapses and the text fades
+        // out. 0..1 for the face; updated from the nets every step.
+        contrast: 1,
+
         // Display control (§Table 6)
         displayOn: false,                  // D: display on/off
         cursorOn: false,                   // C: cursor on/off
@@ -116,6 +122,17 @@ export function registerHD44780() {
     update(part, state, read, tNs) {
       const vdd = read('vdd') || 5.0;
       const threshold = vdd * 0.4;  // CMOS-level threshold
+
+      // Contrast tracks the V0 pin continuously: drive = VDD − V0. The
+      // knee mirrors a real 5 V module — full contrast with V0 below
+      // ~1 V, fading through the pot's travel, gone by V0 ≈ 3 V. An
+      // unwired V0 reads 0 V (grounded-by-gmin), which is max contrast —
+      // the same default every wiring tutorial uses.
+      {
+        const v0 = read('v0') || 0;
+        const drive = vdd - v0;
+        state.contrast = Math.max(0, Math.min(1, (drive - 2) / 2));
+      }
 
       const eHigh = read('e') > threshold;
       const wasE = state._lastE;
