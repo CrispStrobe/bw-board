@@ -17,6 +17,7 @@ import { pinThevenin } from './pin-model.js';
 import { solveMNA } from './mna.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
+import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 
 /**
@@ -1335,6 +1336,46 @@ export class BoardImpl {
    * @param {string} partId
    * @returns {object | null}
    */
+  /**
+   * Fast-path I2C: feed one complete transaction (address byte first,
+   * payload after) straight into every I2C-slave device's decoder —
+   * synthesized edges on the pure state machine, ZERO solver work.
+   *
+   * Why it exists: the simulator JS driver bit-bangs the bus through
+   * setPin, and every edge is a full MNA solve — a single 1024-byte
+   * display clear is ~29k solves, and the calculator's first frame took
+   * longer than the app's run budget (found 2026-08-17: displayOn
+   * arrived, the text never did). The C/emulator chains keep the real
+   * electrical bit-bang; this is the honest shortcut for the pure-JS
+   * runner, same decoder, same handlers, same framing rules.
+   *
+   * @param {number[]} bytes — [addressByte, ...payload]
+   * @returns {number} how many slave decoders were fed
+   */
+  i2cInject(bytes) {
+    let fed = 0;
+    for (const [, st] of this._deviceStates) {
+      if (!st || !st._i2c || !st._i2c.handlers) continue;
+      const s = st._i2c;
+      const edge = (scl, sda) => feedI2CSlave(s, scl, sda);
+      edge(true, true);                      // bus idle
+      edge(true, false); edge(false, false); // START
+      for (const b of bytes) {
+        for (let k = 7; k >= 0; k--) {
+          const bit = ((b >> k) & 1) === 1;
+          edge(false, bit);
+          edge(true, bit);
+          edge(false, bit);
+        }
+        edge(false, true); edge(true, true); edge(false, true); // ACK clock
+      }
+      edge(false, false); edge(true, false); edge(true, true);  // STOP
+      fed++;
+    }
+    if (fed) this._notifyChange('device', { i2cInject: bytes.length });
+    return fed;
+  }
+
   getDeviceState(partId) {
     // Built-in shift register
     const sr = this._shiftRegisters.get(partId);

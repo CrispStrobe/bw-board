@@ -163,9 +163,12 @@ describe('getBoardPins: returns terminal names', () => {
     assert.equal(pins.length, 30);
   });
 
-  it('pi_pico has 43 pins', () => {
+  it('pi_pico has 44 pins', () => {
     if (!hasParts) return loudSkip('bw-parts sidecars not reachable');
+    // 40 header pins + 3 SWD pads + gp25, the INTERNAL onboard-LED
+    // terminal (internal: true in the sidecar — no breadboard lead,
+    // but a real net the engine expands to 1k + LED).
     const pins = getBoardPins('pi_pico');
-    assert.equal(pins.length, 43);
+    assert.equal(pins.length, 44);
   });
 });
