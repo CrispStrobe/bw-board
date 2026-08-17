@@ -143,6 +143,14 @@ export class BoardImpl {
     /** Maximum samples per probe (ring buffer size). */
     this._probeMaxSamples = 10000;
 
+    /** Digital fast path (see setPin): net → logic-level volts pending a
+     *  deferred solve; the pin → qualification cache; the dirty flag every
+     *  analog read surface flushes on. */
+    this._digitalOverlay = new Map();
+    this._solveDirty = false;
+    this._fastNetCache = new Map();
+    this._fastNets = new Map();
+
     /**
      * Scope channels: handle → channel config + ring buffer.
      * @type {Map<number, object>}
@@ -363,6 +371,15 @@ export class BoardImpl {
       }
     }
 
+    // Topology caches die with the topology (the qualification and
+    // MCU-surface caches were built against the OLD nets).
+    this._fastNetCache = new Map();
+    this._fastNets = new Map();
+    this._digitalOverlay = new Map();
+    this._solveDirty = false;
+    this._mcuSurface = null;
+    this._qualCache = null;
+
     this._deviceStates = new Map();
     for (const p of parts) {
       const st = initDeviceState(p);
@@ -394,6 +411,26 @@ export class BoardImpl {
     const prev = this.pinStates.get(pin);
     this.pinStates.set(pin, { mode, driveHigh, as: asGiven });
     if (!this._hasQualifiedPin && this._resolveQualified(pin)) this._hasQualifiedPin = true;
+
+    // Digital fast path: when the driven net's only consumers are pure
+    // digital decoders (I2C slave engines) and passives, an emulator
+    // bit-banging the bus does not need an MNA solve per edge — a
+    // 1024-byte display clear is ~60k edges, and per-edge solving made
+    // the in-app Pico sim run ~1000x slower than wall clock (measured
+    // 2026-08-17: 90 s of wall time never finished the SSD1306 init).
+    // The decoders get their edges eagerly at logic level through the
+    // same state machines i2cInject feeds; the solve is DEFERRED to the
+    // next analog read, so every observable voltage stays exact. Nets
+    // with an analog observer (LED, buzzer, scope, cube, anything not a
+    // decoder) never take this branch — edge timing IS their signal.
+    const fast = this._digitalFastInfo(pin);
+    if (fast) {
+      this._solveDirty = true;
+      this._settleDigital();
+      this._notifyChange('pin', { pin: asGiven, mode, driveHigh });
+      return;
+    }
+
     this._solve();
     this._recordLedSamples();
 
@@ -415,10 +452,174 @@ export class BoardImpl {
     this._notifyChange('pin', { pin: asGiven, mode, driveHigh });
   }
 
+  /** Materialize any deferred digital state through a real solve. Every
+   *  analog read surface calls this first, so a caller can never observe
+   *  the fast path — only its absence of intermediate solves. */
+  _flushSolve() {
+    if (!this._solveDirty) return;
+    this._solve();
+    this._recordLedSamples();
+  }
+
+  /**
+   * Qualify a pin for the digital fast path and cache the verdict.
+   *
+   * A pin qualifies when its net's members are exactly: the MCU-surface
+   * part it belongs to, passive resistors, and at least one device whose
+   * state carries an I2C slave engine (`_i2c`). Anything else on the net
+   * — an LED, a buzzer, a transistor, another MCU — is an analog
+   * consumer whose signal lives in the edges, so the eager solve stays.
+   * Scope channels and probes anywhere on the board disable the fast
+   * path wholesale: waveform fidelity is the point of both.
+   *
+   * @param {string} pinLower - canonical lowercase pin id
+   * @returns {{netId: string, pinLower: string, vLogic: number,
+   *   feeders: Array<{part: Part, terminalNets: Map<string, string>}>} | null}
+   */
+  _digitalFastInfo(pinLower) {
+    if (this._scopeChannels.size > 0 || this._probes.size > 0) return null;
+    if (!this._fastNetCache) this._fastNetCache = new Map();
+    if (this._fastNetCache.has(pinLower)) return this._fastNetCache.get(pinLower);
+    let info = null;
+    resolve: {
+      // The pin's home: the MCU body or a gpioFollowsPinStates device.
+      let homePart = null;
+      let homeTerminal = null;
+      for (const part of this.parts) {
+        const model = getDevice(part.kind);
+        const isSurface = part.kind === 'mcu' || (model && model.gpioFollowsPinStates);
+        if (!isSurface) continue;
+        for (const t of part.terminals) {
+          if (String(t).toLowerCase() === pinLower) {
+            homePart = part;
+            homeTerminal = String(t);
+            break;
+          }
+        }
+        if (homePart) break;
+      }
+      if (!homePart) break resolve;
+      const netId = this._netForTerminal(homePart.id, homeTerminal);
+      if (!netId) break resolve;
+      const net = this.nets.find((n) => n.id === netId);
+      if (!net) break resolve;
+      const feeders = [];
+      const seen = new Set();
+      for (const t of net.terminals) {
+        if (t.part === homePart.id) continue;
+        const part = this.partMap.get(t.part);
+        if (!part) break resolve;
+        if (part.kind === 'resistor') continue;
+        const st = this._deviceStates.get(part.id);
+        if (st && st._i2c) {
+          if (!seen.has(part.id)) {
+            seen.add(part.id);
+            // Terminal→net map so the decoder's read() never rescans.
+            const terminalNets = new Map();
+            for (const term of part.terminals) {
+              const n = this._netForTerminal(part.id, term);
+              if (n) terminalNets.set(term, n);
+            }
+            feeders.push({ part, terminalNets });
+          }
+          continue;
+        }
+        break resolve; // analog consumer — edges are its signal
+      }
+      if (!feeders.length) break resolve;
+      const homeModel = getDevice(homePart.kind);
+      const vLogic = (homeModel && homeModel.vcc) ?? this.vcc;
+      info = { netId, pinLower, vLogic, feeders };
+      if (!this._fastNets) this._fastNets = new Map();
+      this._fastNets.set(netId, info);
+    }
+    this._fastNetCache.set(pinLower, info);
+    return info;
+  }
+
+  /** The bus level a fast net settles to: the strongest driver among the
+   *  master pin's Thévenin source and every slave drive a decoder holds
+   *  on this net; nothing driving means the pull-up wins. This is the
+   *  digital twin of what one MNA solve would conclude — an I2C read
+   *  works BECAUSE the slave's data/ACK drive beats the released master. */
+  _fastNetLevel(info) {
+    // A source stiffer than this counts as driving; anything weaker is a
+    // released output (device models publish "off" as {vTh: 0, rTh: 1e9},
+    // which must NOT read as a low drive) or a mere keeper — the bus
+    // pull-up out-argues those. Real drivers are 25–50 Ω; the weakest
+    // intentional source, the input pull-down, is 50 kΩ.
+    const R_DRIVING = 1e5;
+    let best = null;
+    const consider = (d) => {
+      if (d && typeof d === 'object' && d.rTh < R_DRIVING &&
+          (!best || d.rTh < best.rTh)) best = d;
+    };
+    const ps = this.pinStates.get(info.pinLower);
+    if (ps) consider(pinThevenin(ps.mode, ps.driveHigh, info.vLogic));
+    for (const f of info.feeders) {
+      const st = this._deviceStates.get(f.part.id);
+      if (!st || !st.drives) continue;
+      for (const [term, n] of f.terminalNets) {
+        if (n !== info.netId) continue;
+        consider(st.drives[term]);
+      }
+    }
+    return best ? best.vTh : info.vLogic;
+  }
+
+  /**
+   * Digital settle: recompute every fast net's level and feed the
+   * decoders until nothing changes — the fixpoint the analog settle loop
+   * reaches through repeated solves, at logic level and zero solves.
+   * One master edge per call; a decoder that responds (ACK, read-bit
+   * data) changes its drive, the recompute sees it, and the next
+   * iteration publishes the new bus level for the master to read.
+   */
+  _settleDigital() {
+    if (!this._fastNets || this._fastNets.size === 0) return;
+    for (let round = 0; round < 8; round++) {
+      let changed = false;
+      for (const [netId, info] of this._fastNets) {
+        const level = this._fastNetLevel(info);
+        if (this._digitalOverlay.get(netId) !== level) {
+          this._digitalOverlay.set(netId, level);
+          changed = true;
+        }
+      }
+      if (!changed) break;
+      const fed = new Set();
+      for (const [, info] of this._fastNets) {
+        for (const f of info.feeders) {
+          if (fed.has(f.part.id)) continue;
+          fed.add(f.part.id);
+          const model = getDevice(f.part.kind);
+          if (!model || !model.update) continue;
+          const state = this._deviceStates.get(f.part.id);
+          if (!state) continue;
+          const read = (terminal) => {
+            const n = f.terminalNets.get(terminal);
+            if (!n) return 0;
+            const ov = this._digitalOverlay.get(n);
+            return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
+          };
+          model.update(f.part, state, read, this.timeNs);
+        }
+      }
+    }
+  }
+
   /**
    * @param {bigint} tNs
    */
   advanceTo(tNs) {
+    // No flush here, deliberately: the rp2040js adapter calls advanceTo
+    // before EVERY published edge ("time first, edge second"), so a flush
+    // would resurrect the per-edge solve the fast path exists to remove.
+    // This is sound because deferred state only ever lives on nets whose
+    // sole consumers are digital decoders — every net an LED sampler,
+    // probe, or reactive integrator can see is unchanged since the last
+    // real solve, so the analog work below reads correct values. The
+    // decoders themselves read through the overlay (_updateDevices).
     const prevNs = this.timeNs;
     if (tNs < prevNs) return;
     if (tNs === prevNs) {
@@ -554,6 +755,10 @@ export class BoardImpl {
    * @returns {number}
    */
   nodeVoltage(netId) {
+    // Overlay-first for the same reason as _pinVoltage: the deferred
+    // digital level IS the settled value; everything else is unchanged.
+    const ov = this._digitalOverlay.get(netId);
+    if (ov !== undefined) return ov;
     const v = this.nodeVoltages.get(netId) ?? 0;
     return Number.isFinite(v) ? v : 0;
   }
@@ -566,6 +771,10 @@ export class BoardImpl {
    * @param {string} netId
    */
   addProbe(netId) {
+    // A probe wants real waveforms: materialize any deferred digital
+    // state and stop qualifying nets for the fast path (the qualifier
+    // checks _probes before its cache, so this takes effect at once).
+    this._flushSolve();
     if (!this._probes.has(netId)) {
       this._probes.set(netId, []);
     }
@@ -772,6 +981,7 @@ export class BoardImpl {
    * @returns {number}
    */
   branchCurrent(partId, terminal) {
+    this._flushSolve();
     if (!this.powered) return 0; // no current without power
 
     // Cache the MNA result — only re-solve when the state has changed.
@@ -2073,7 +2283,12 @@ export class BoardImpl {
       const state = this._deviceStates.get(part.id);
       const read = (terminal) => {
         const n = this._netForTerminal(part.id, terminal);
-        return n ? (this.nodeVoltages.get(n) ?? 0) : 0;
+        if (!n) return 0;
+        // Overlay first: while the digital fast path holds deferred
+        // levels, the last-solved voltage on those nets is stale — a
+        // decoder reading it would see phantom edges.
+        const ov = this._digitalOverlay.get(n);
+        return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
       if (model.update(part, state, read, this.timeNs)) changed = true;
     }
@@ -2268,6 +2483,10 @@ export class BoardImpl {
    * analytically.
    */
   _solve() {
+    // Any real solve materializes the pin states the fast path deferred —
+    // pinStates is already current, so clearing the overlay IS the flush.
+    this._solveDirty = false;
+    this._digitalOverlay.clear();
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
     this._mnaCache = null; // invalidate MNA cache
@@ -2747,6 +2966,16 @@ export class BoardImpl {
    */
   _pinVoltage(pin) {
     const key = String(pin).toLowerCase();
+    // Overlay-first, no flush: the digital fast path's levels ARE the
+    // electrically-settled values for their nets (a driven push-pull rail
+    // or a pulled-up bus), and every net NOT in the overlay is unchanged
+    // since the last real solve. Flushing here instead would put a full
+    // MNA solve inside syncInputs — which the adapters run every advance
+    // slice — and quietly resurrect the per-edge cost.
+    const at = (netId) => {
+      const ov = this._digitalOverlay.get(netId);
+      return ov !== undefined ? ov : (this.nodeVoltages.get(netId) ?? 0);
+    };
     // The pin namespace lives on the MCU-surface part: the STC12 body
     // (kind 'mcu') or any gpioFollowsPinStates device (dev boards, bare
     // chips). Only matching kind 'mcu' meant readPin() returned 0 for
@@ -2757,10 +2986,10 @@ export class BoardImpl {
       for (const t of net.terminals) {
         const part = this.partMap.get(t.part);
         if (!part || String(t.terminal).toLowerCase() !== key) continue;
-        if (part.kind === 'mcu') return this.nodeVoltages.get(net.id) ?? 0;
+        if (part.kind === 'mcu') return at(net.id);
         const model = getDevice(part.kind);
         if (model && model.gpioFollowsPinStates) {
-          return this.nodeVoltages.get(net.id) ?? 0;
+          return at(net.id);
         }
       }
     }
@@ -2769,7 +2998,7 @@ export class BoardImpl {
     const q = this._resolveQualified(key);
     if (q) {
       const netId = this._netForTerminal(q.partId, q.terminal);
-      if (netId !== undefined) return this.nodeVoltages.get(netId) ?? 0;
+      if (netId !== undefined) return at(netId);
     }
     return 0;
   }
