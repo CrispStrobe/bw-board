@@ -53,14 +53,14 @@ describe('example: 09-shift-register', () => {
     assert.ok(mcu.terminals.includes('P3.5'), 'latch pin');
   });
 
-  it('LED names follow segment convention', () => {
+  it('LED names follow q0-q7 output convention', () => {
     const { parts } = inferNetlist(stc);
     const leds = parts.filter(p => p.kind === 'led');
     const names = leds.map(p => p.id);
 
-    for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
-      assert.ok(names.some(n => n.includes(seg)),
-        `should have segment ${seg}: ${names.join(', ')}`);
+    for (let i = 0; i < 8; i++) {
+      assert.ok(names.some(n => n.includes(`q${i}`)),
+        `should have output q${i}: ${names.join(', ')}`);
     }
   });
 

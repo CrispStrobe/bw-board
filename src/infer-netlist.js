@@ -504,7 +504,9 @@ export function inferNetlist(stc, opts) {
         // above, so both idioms produce the identical bench shape.
         const roles = {};
         for (const role of ['data', 'clock', 'latch']) {
-          if (part[role]) roles[role] = pinName(part[role]);
+          // Top-level (parser output) or nested in part.pins (JSON fixture)
+          const coord = part[role] ?? (part.pins && part.pins[role]);
+          if (coord) roles[role] = typeof coord === 'string' ? coord : pinName(coord);
         }
         if (Object.keys(roles).length === 3) {
           emit595(safeName, roles, !!part.activeLow);
