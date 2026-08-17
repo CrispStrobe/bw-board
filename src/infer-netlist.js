@@ -102,7 +102,51 @@ export function inferNetlist(stc, opts) {
   const matrixColNames = new Set(isMatrix ? colPins.map(lname) : []);
 
   const usedNames = new Set();
+  // ── Bit-banged 74HC595: three OUTPUT pins named data + clock + latch,
+  // as a trio, are the shift-register idiom (the PART declaration says it
+  // explicitly; a program that bit-bangs the raw pins says it by naming
+  // them). The bench places the board's BEHAVIORAL shift_register — its
+  // terminals are literally data/clock/latch/q0..q7 — with 8 LED+resistor
+  // outputs, so the shifted pattern actually lights. Without this rule the
+  // regenerated benches turned the 74HC595 example into three plain LEDs
+  // (found 2026-08-17: the e2e test asked "where is the shift register?").
+  // All three names must be present and outputs — a lone pin named
+  // 'clock' stays an ordinary pin.
+  const trioConsumed = new Set();
+  {
+    const named = (re) => stc.pins.find((p) =>
+      re.test(p.name) && (p.direction === 'output' || p.direction === 'pwm'));
+    const dataPin = named(/^data$/i);
+    const clockPin = named(/^(clock|clk)$/i);
+    const latchPin = named(/^(latch|rclk)$/i);
+    if (dataPin && clockPin && latchPin) {
+      const srId = 'SR_595';
+      parts.push({ id: srId, kind: 'shift_register', params: {},
+        terminals: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] });
+      for (const [role, p] of [['data', dataPin], ['clock', clockPin], ['latch', latchPin]]) {
+        const pid = pinName(p);
+        if (!mcuTerminals.includes(pid)) mcuTerminals.push(pid);
+        nets.push({ id: `net_595_${role}`,
+          terminals: [{ part: 'MCU', terminal: pid }, { part: srId, terminal: role }] });
+        trioConsumed.add(p.name);
+      }
+      gndNet.terminals.push({ part: srId, terminal: 'oe' }); // outputs enabled
+      for (let bit = 0; bit < 8; bit++) {
+        const rId = `R_595_q${bit}`;
+        const ledId = `LED_595_q${bit}`;
+        parts.push({ id: rId, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
+        parts.push({ id: ledId, kind: 'led', params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'] });
+        nets.push({ id: `net_595_q${bit}_out`,
+          terminals: [{ part: srId, terminal: `q${bit}` }, { part: rId, terminal: 'a' }] });
+        nets.push({ id: `net_595_q${bit}_led`,
+          terminals: [{ part: rId, terminal: 'b' }, { part: ledId, terminal: 'anode' }] });
+        gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
+      }
+    }
+  }
+
   for (const pin of stc.pins) {
+    if (trioConsumed.has(pin.name)) continue; // wired to the 595 above
     const pinId = pinName(pin);
     let safeName = pin.name.replace(/[^a-zA-Z0-9_]/g, '_');
     // Two pins may carry the same NAME on different ports ('led' on P1.0
@@ -144,9 +188,10 @@ export function inferNetlist(stc, opts) {
       continue;
     }
 
-    // Detect buzzer and motor by name convention
+    // Detect buzzer, motor and relay by name convention
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
     const isMotor = /motor|fan\b/i.test(pin.name) && !isBuzzer;
+    const isRelay = /relay/i.test(pin.name) && !isBuzzer && !isMotor;
 
     switch (pin.direction) {
       case 'tone': {
@@ -189,6 +234,29 @@ export function inferNetlist(stc, opts) {
           nets.push({ id: `net_${safeName}_col`,
             terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'collector' }] });
           vccNet.terminals.push({ part: mId, terminal: 'a' });
+          gndNet.terminals.push({ part: qId, terminal: 'emitter' });
+          break;
+        }
+        if (isRelay) {
+          // Same driver topology as the motor — an MCU pin cannot source a
+          // relay coil either: pin → 1k → NPN base; coil VCC→coil_a,
+          // coil_b→collector, emitter→GND. Found the same day the same way
+          // (2026-08-17): the relay-clicker's regenerated bench had no
+          // relay in it, and the e2e test asked where it went.
+          const rId = `R_${safeName}`;
+          const qId = `Q_${safeName}`;
+          const kId = `RELAY_${safeName}`;
+          parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
+          parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['base', 'collector', 'emitter'] });
+          parts.push({ id: kId, kind: 'relay', params: {},
+            terminals: ['coil_a', 'coil_b', 'com', 'nc', 'no'] });
+          nets.push({ id: `net_${safeName}_pin`,
+            terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
+          nets.push({ id: `net_${safeName}_base`,
+            terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'base' }] });
+          nets.push({ id: `net_${safeName}_coil`,
+            terminals: [{ part: kId, terminal: 'coil_b' }, { part: qId, terminal: 'collector' }] });
+          vccNet.terminals.push({ part: kId, terminal: 'coil_a' });
           gndNet.terminals.push({ part: qId, terminal: 'emitter' });
           break;
         }
