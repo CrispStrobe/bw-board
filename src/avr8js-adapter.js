@@ -148,12 +148,28 @@ export function createAvr8jsAdapter(opts = {}) {
   for (const key of Object.keys(ioPorts)) {
     ioPorts[key].addListener(() => {
       for (let bit = 0; bit < 8; bit++) publishPin(key, bit);
+      // Inputs must see the board the CPU just changed: syncInputs() ran
+      // only at slice boundaries, so a keypad scan — drive a row, read a
+      // column IN THE SAME SLICE — read frozen pre-slice levels and no
+      // matrix key could ever register (the calculator bench, 2026-08-17).
+      // Refreshing after every output edge is what the silicon does: the
+      // PIN register follows the pin, always.
+      if (!inInputSync) syncInputs();
     });
   }
 
   /** Sync input pins from board → CPU (buttons, external signals). */
+  let inInputSync = false;
   function syncInputs() {
     if (!board || !board.readPin) return;
+    inInputSync = true;
+    try {
+      syncInputsBody();
+    } finally {
+      inInputSync = false;
+    }
+  }
+  function syncInputsBody() {
     for (const [name, def] of Object.entries(chip.pins)) {
       if (def.analogOnly) continue;
       const port = ioPorts[def.port];
