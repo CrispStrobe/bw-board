@@ -520,7 +520,7 @@ describe('emu8051 adapter: push mode', () => {
     assert.equal(typeof times[0], 'bigint');
   });
 
-  it('push mode has zero polling', () => {
+  it('push mode polls exactly once, at attach', () => {
     const wasm = createPushMockWasm();
     const adapter = createEmu8051Adapter(wasm);
 
@@ -535,7 +535,13 @@ describe('emu8051 adapter: push mode', () => {
     adapter.runNs(10000);
 
     const stats = adapter.getStats();
-    assert.equal(stats.pollCount, 0, 'push mode should not poll');
+    // One full publish at attach is by design: push callbacks fire only on
+    // CHANGES, so without it a pin the firmware never writes (a button
+    // input at its reset value) is never seated on the board and its
+    // read-back is 0 — every untouched active-low button reads held-down
+    // (the 76-multimeter mode button, 2026-08-17). Steady-state stays
+    // callback-driven: no polling after attach.
+    assert.equal(stats.pollCount, 1, 'push mode polls once at attach, then never');
     assert.ok(stats.pushCallbackCount > 0, 'should have received push callbacks');
   });
 

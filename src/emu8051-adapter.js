@@ -264,8 +264,14 @@ export function createEmu8051Adapter(wasm, opts = {}) {
 
       if (stats.mode !== 'push') {
         stats.mode = 'poll';
-        pollPins(); // initial state
       }
+      // Initial full publish in BOTH modes. Push callbacks fire only on
+      // CHANGES, so a pin the firmware never writes — a button input
+      // sitting at its reset value — was never seated on the board: the
+      // net floated at 0 V and the read-back callback returned 0, i.e.
+      // every untouched active-low button read as held-down forever
+      // (found by the 76-multimeter mode button, 2026-08-17).
+      pollPins();
     },
 
     writePort(port, value) {
