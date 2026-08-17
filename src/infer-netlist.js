@@ -81,6 +81,26 @@ export function inferNetlist(stc, opts) {
   const vccNet = { id: 'net_vcc', terminals: [{ part: 'VCC', terminal: 'vcc' }] };
   const gndNet = { id: 'net_gnd', terminals: [{ part: 'GND', terminal: 'gnd' }] };
 
+  // Pins that belong to a synthesized STRUCTURE get no generic LED/button:
+  //  - I2C/SPI bus pins carry a display, not an LED per line (the Pico
+  //    calculator bench hung LEDs on sda/scl — owner screenshot, 2026-08-17),
+  //  - rowN/colN pin families are a matrix KEYPAD: buttons sit BETWEEN a row
+  //    and a column, not from each column to ground. A generic bench made
+  //    the calculator untypable.
+  const lname = (p) => String(p.name).toLowerCase();
+  const nameSet = new Set(stc.pins.map(lname));
+  const hasI2cBus = nameSet.has('sda') && nameSet.has('scl');
+  const hasSpiBus = ['cs', 'dc', 'sck', 'mosi'].every((n) => nameSet.has(n));
+  const rowPins = stc.pins.filter((p) => /^row\d+$/i.test(p.name) &&
+    (p.direction === 'output' || p.direction === 'pwm'));
+  const colPins = stc.pins.filter((p) => /^col\d+$/i.test(p.name) && p.direction === 'input');
+  const isMatrix = rowPins.length >= 2 && colPins.length >= 2;
+  const bareNames = new Set();
+  if (hasI2cBus) { bareNames.add('sda'); bareNames.add('scl'); }
+  if (hasSpiBus) ['cs', 'dc', 'sck', 'mosi'].forEach((n) => bareNames.add(n));
+  if (isMatrix) rowPins.forEach((p) => bareNames.add(lname(p)));
+  const matrixColNames = new Set(isMatrix ? colPins.map(lname) : []);
+
   const usedNames = new Set();
   for (const pin of stc.pins) {
     const pinId = pinName(pin);
@@ -93,6 +113,24 @@ export function inferNetlist(stc, opts) {
       safeName = `${safeName}_${pinId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
     }
     usedNames.add(safeName);
+
+    if (bareNames.has(lname(pin))) {
+      // Structure pin: just the net; the display/keypad synthesis below
+      // attaches the real part.
+      nets.push({ id: `net_${safeName}_pin`,
+        terminals: [{ part: 'MCU', terminal: pinId }] });
+      continue;
+    }
+    if (matrixColNames.has(lname(pin))) {
+      // Keypad column: pull-up to VCC; the buttons come per row below.
+      const rId = `R_PU_${safeName}`;
+      parts.push({ id: rId, kind: 'resistor',
+        params: { ohms: 10000 }, terminals: ['a', 'b'] });
+      nets.push({ id: `net_${safeName}_pin`,
+        terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'b' }] });
+      vccNet.terminals.push({ part: rId, terminal: 'a' });
+      continue;
+    }
 
     // Detect buzzer by name convention
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
@@ -423,6 +461,23 @@ export function inferNetlist(stc, opts) {
     return nets.find((nn) => nn.terminals.some(
       (t) => t.part === 'MCU' && t.terminal === term)) || null;
   };
+  if (isMatrix) {
+    // The keypad itself: a button at every row/column crossing. Scanning
+    // drives one row low; a pressed key pulls its column low through it.
+    for (const rp of rowPins) {
+      const rNet = netOfPin(rp);
+      if (!rNet) continue;
+      for (const cp of colPins) {
+        const cNet = netOfPin(cp);
+        if (!cNet) continue;
+        const btnId = `BTN_${lname(rp)}_${lname(cp)}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        parts.push({ id: btnId, kind: 'button', params: {}, terminals: ['a', 'b'] });
+        rNet.terminals.push({ part: btnId, terminal: 'a' });
+        cNet.terminals.push({ part: btnId, terminal: 'b' });
+      }
+    }
+    notes.push(`row/col pins: seated a ${rowPins.length}x${colPins.length} keypad matrix`);
+  }
   const sdaPin = findPin('sda'), sclPin = findPin('scl');
   const sdaNet = netOfPin(sdaPin), sclNet = netOfPin(sclPin);
   if (sdaNet && sclNet) {
