@@ -12,7 +12,7 @@ function bench() {
   const parts = [
     { id: 'lcd', kind: 'hd44780', params: {},
       terminals: ['vss', 'vdd', 'v0', 'rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'a', 'k'] },
-    { id: 'pot1', kind: 'potentiometer', params: { ohms: 10000 }, terminals: ['a', 'wiper', 'b'] },
+    { id: 'pot1', kind: 'potentiometer', params: { ohms: 10000, position: 0.15 }, terminals: ['a', 'wiper', 'b'] },
     { id: 'v1', kind: 'vcc', params: {}, terminals: ['vcc'] },
     { id: 'g1', kind: 'gnd', params: {}, terminals: ['gnd'] },
   ];
@@ -42,6 +42,15 @@ describe('hd44780 contrast pot', () => {
     assert.ok(mid > 0.05 && mid < 0.95, `mid travel is partial, got ${mid}`);
     assert.ok(blank < 0.05, `V0 near VDD is invisible, got ${blank}`);
     assert.ok(sharp > mid && mid > blank, 'monotonic along the travel');
+  });
+
+  it('the authored position is the power-on state: sharp before any touch', () => {
+    const b = bench();
+    b.advanceTo(1_000_000n);
+    // params.position 0.15 puts the wiper near ground — the example ships
+    // readable, and the user's first pot drag still takes over.
+    assert.ok(b.getDeviceState('lcd').contrast > 0.9,
+      `authored default is sharp, got ${b.getDeviceState('lcd').contrast}`);
   });
 
   it('an unwired V0 keeps the tutorial default: full contrast', () => {

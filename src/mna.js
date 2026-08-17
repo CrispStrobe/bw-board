@@ -1238,7 +1238,12 @@ function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  * @param {Map<string, number>} controls
  */
 function stampPotentiometer(A, b, part, nets, nodeIndex, groundNetId, controls) {
-  const position = controls.get(part.id) ?? 0.5;
+  // params.position is the AUTHORED default — where the example's trimmer
+  // was left. The user's control always wins once touched; mid-travel
+  // remains the fallback. (The LCD contrast pot defaulted to a washed-out
+  // 0.25 contrast because every pot woke at 0.5 regardless of wiring.)
+  const authored = Number.isFinite(part.params?.position) ? part.params.position : 0.5;
+  const position = controls.get(part.id) ?? authored;
   const totalOhms = /** @type {number} */ (part.params.ohms ?? 10000);
 
   // R_a_wiper = totalOhms * (1 - position), R_wiper_b = totalOhms * position
