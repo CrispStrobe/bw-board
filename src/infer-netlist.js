@@ -168,16 +168,16 @@ export function inferNetlist(stc, opts) {
           const qId = `Q_${safeName}`;
           const mId = `MOTOR_${safeName}`;
           parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
-          parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['b', 'c', 'e'] });
+          parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['base', 'collector', 'emitter'] });
           parts.push({ id: mId, kind: 'dc_motor', params: {}, terminals: ['a', 'b'] });
           nets.push({ id: `net_${safeName}_pin`,
             terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
           nets.push({ id: `net_${safeName}_base`,
-            terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'b' }] });
+            terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'base' }] });
           nets.push({ id: `net_${safeName}_col`,
-            terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'c' }] });
+            terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'collector' }] });
           vccNet.terminals.push({ part: mId, terminal: 'a' });
-          gndNet.terminals.push({ part: qId, terminal: 'e' });
+          gndNet.terminals.push({ part: qId, terminal: 'emitter' });
           break;
         }
         if (isBuzzer) {
