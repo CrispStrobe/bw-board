@@ -61,7 +61,7 @@
  */
 const pinName = (p) => p.where ? String(p.where) : `P${p.port}.${p.bit}`;
 
-export function inferNetlist(stc) {
+export function inferNetlist(stc, opts) {
   /** @type {Part[]} */
   const parts = [];
   /** @type {Net[]} */
@@ -426,12 +426,17 @@ export function inferNetlist(stc) {
   const sdaPin = findPin('sda'), sclPin = findPin('scl');
   const sdaNet = netOfPin(sdaPin), sclNet = netOfPin(sclPin);
   if (sdaNet && sclNet) {
-    parts.push({ id: 'OLED', kind: 'ssd1306', params: {}, terminals: ['vcc', 'gnd', 'sda', 'scl'] });
-    sdaNet.terminals.push({ part: 'OLED', terminal: 'sda' });
-    sclNet.terminals.push({ part: 'OLED', terminal: 'scl' });
-    vccNet.terminals.push({ part: 'OLED', terminal: 'vcc' });
-    gndNet.terminals.push({ part: 'OLED', terminal: 'gnd' });
-    notes.push('sda/scl pins: seated an SSD1306 OLED on the bus');
+    // Which panel sits on the bus is the PROGRAM's business (oled vs lcd
+    // verbs) — callers that know pass opts.display; 'oled' is the default.
+    const isLcd = opts && opts.display === 'lcd';
+    const dispId = isLcd ? 'LCD' : 'OLED';
+    parts.push({ id: dispId, kind: isLcd ? 'char_lcd_i2c' : 'ssd1306',
+      params: {}, terminals: isLcd ? ['sda', 'scl', 'vcc', 'gnd'] : ['vcc', 'gnd', 'sda', 'scl'] });
+    sdaNet.terminals.push({ part: dispId, terminal: 'sda' });
+    sclNet.terminals.push({ part: dispId, terminal: 'scl' });
+    vccNet.terminals.push({ part: dispId, terminal: 'vcc' });
+    gndNet.terminals.push({ part: dispId, terminal: 'gnd' });
+    notes.push(`sda/scl pins: seated ${isLcd ? 'an I2C character LCD' : 'an SSD1306 OLED'} on the bus`);
   }
   const tftNets = ['cs', 'dc', 'sck', 'mosi'].map((n) => netOfPin(findPin(n)));
   if (tftNets.every(Boolean)) {
