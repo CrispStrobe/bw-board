@@ -132,8 +132,9 @@ export function inferNetlist(stc, opts) {
       continue;
     }
 
-    // Detect buzzer by name convention
+    // Detect buzzer and motor by name convention
     const isBuzzer = /buzz|speaker|tone|beep/i.test(pin.name);
+    const isMotor = /motor|fan\b/i.test(pin.name) && !isBuzzer;
 
     switch (pin.direction) {
       case 'tone': {
@@ -157,6 +158,28 @@ export function inferNetlist(stc, opts) {
 
       case 'output':
       case 'pwm': {
+        if (isMotor) {
+          // pin → NPN base via 1k; motor VCC→collector, emitter→GND. A pin
+          // named 'motor' rendered as an LED and the owner asked, fairly,
+          // where the motor was (2026-08-17). The transistor is not
+          // decoration: an MCU pin cannot source a motor, which is the
+          // same lesson the port-current examples teach.
+          const rId = `R_${safeName}`;
+          const qId = `Q_${safeName}`;
+          const mId = `MOTOR_${safeName}`;
+          parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
+          parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['b', 'c', 'e'] });
+          parts.push({ id: mId, kind: 'dc_motor', params: {}, terminals: ['a', 'b'] });
+          nets.push({ id: `net_${safeName}_pin`,
+            terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
+          nets.push({ id: `net_${safeName}_base`,
+            terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'b' }] });
+          nets.push({ id: `net_${safeName}_col`,
+            terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'c' }] });
+          vccNet.terminals.push({ part: mId, terminal: 'a' });
+          gndNet.terminals.push({ part: qId, terminal: 'e' });
+          break;
+        }
         if (isBuzzer) {
           // pin → buzzer → GND
           const buzzId = `BUZZ_${safeName}`;
