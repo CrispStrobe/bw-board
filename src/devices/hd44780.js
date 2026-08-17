@@ -101,7 +101,8 @@ export function registerHD44780() {
         _lastRs: 0,
         _lastRw: 0,
 
-        // Public: text state for UI consumption
+        // Public: state for UI consumption
+        backlight: 0,    // 0..1 from A-K branch current (rated 20 mA)
         text: Array.from({ length: rows }, () => ' '.repeat(cols)),
         _cols: cols,
         _rows: rows,
@@ -121,7 +122,16 @@ export function registerHD44780() {
 
     update(part, state, read, tNs) {
       const vdd = read('vdd') || 5.0;
+      const vss = read('vss') || 0;
       const threshold = vdd * 0.4;  // CMOS-level threshold
+
+      // ── Backlight: A-K branch current → brightness 0..1 ──────
+      // The stamp models the backlight LED as 100Ω (conductance 1/100).
+      // Current = (Va - Vk) / 100. Normalize to 20 mA rated.
+      const vA = read('a');
+      const vK = read('k');
+      const blCurrent = Math.max(0, (vA - vK)) / 100;
+      state.backlight = Math.min(1, Math.max(0, blCurrent / 0.020));
 
       // Contrast tracks the V0 pin continuously: drive = VDD − V0. The
       // knee mirrors a real 5 V module — full contrast with V0 below
@@ -555,6 +565,8 @@ function _getModel() {
           _lastRs: 0,
           _lastRw: 0,
           text: Array.from({ length: rows }, () => ' '.repeat(cols)),
+          backlight: 0,
+          contrast: 1,
           _cols: cols,
           _rows: rows,
         };
