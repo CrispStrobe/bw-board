@@ -83,6 +83,12 @@ export function createM6502Adapter(opts = {}) {
     sendSerial(byte) {
       if (machine.serialIn && machine.serialIn(byte & 0xff)) return true;
       for (const chip of Object.values(machine.chips)) {
+        // A real UART raises its data-ready flag through rxPush(); poking
+        // the raw rx array bypassed RDRF, so MS BASIC polled status forever
+        // and typing at MEMORY SIZE? did nothing (owner report,
+        // 2026-08-17). The bare-array path stays for the py65mon console
+        // chip, whose read() shifts rx directly.
+        if (chip && typeof chip.rxPush === 'function') { chip.rxPush(byte & 0xff); return true; }
         if (chip && Array.isArray(chip.rx)) { chip.rx.push(byte & 0xff); return true; }
       }
       return false;
