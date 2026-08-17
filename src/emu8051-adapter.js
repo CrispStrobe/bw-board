@@ -193,8 +193,15 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   }
 
   function getCurrentTimeNs() {
-    const lo = wasm._emu_get_time_ns_lo();
-    const hi = wasm._emu_get_time_ns_hi();
+    // >>> 0 is load-bearing: the wasm returns uint32_t but Emscripten's
+    // glue delivers a SIGNED i32, so past 2^31 ns (2.147 s of sim time)
+    // the low word goes negative — time ran backwards, the brightness
+    // window integrated nothing (dark display digits), and the next
+    // splitNs built a target near 2^64 that advance chased forever
+    // (found by the 76-multimeter chain test, 2026-08-17). The push
+    // callbacks already guarded with tNsLo >>> 0; this path did not.
+    const lo = wasm._emu_get_time_ns_lo() >>> 0;
+    const hi = wasm._emu_get_time_ns_hi() >>> 0;
     return BigInt(lo) | (BigInt(hi) << 32n);
   }
 
