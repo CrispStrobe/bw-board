@@ -165,6 +165,23 @@ export function extractZ80Machine(circuit) {
             const pins = [{ net: find(key(p.id, 'csb')), want: 0, t: 'csb' }];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
             ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: rsName, dir: 'level', selected: new Uint8Array(256) });
+        } else if (p.kind === '74hc244') {
+            // Read-only IN port — the input mirror of the '374 OUT latch.
+            // The decode glue strobes /OE low during the IO read; the
+            // buffer's A-inputs face the buttons/DIP switches, the Y
+            // outputs face the data bus. Both /OE groups are checked;
+            // the first driven one wins (most builds strap both together
+            // or use only group 1).
+            const oe1Net = find(key(p.id, '1oeb'));
+            const oe2Net = find(key(p.id, '2oeb'));
+            const oe1Driven = netDriver.has(oe1Net);
+            const oe2Driven = netDriver.has(oe2Net);
+            if (oe1Driven || oe2Driven) {
+                const pins = [];
+                if (oe1Driven) pins.push({ net: oe1Net, want: 0, t: '1oeb' });
+                if (oe2Driven) pins.push({ net: oe2Net, want: 0, t: '2oeb' });
+                ioChips.push({ part: p, pins, ioKind: 'buffer', rsPin: null, dir: 'read', selected: new Uint8Array(256) });
+            }
         } else if (p.kind === 'um245r') {
             // The UM245R is a parallel FIFO: its /RD pin IS the decoded
             // port-read strobe, not a traditional chip-select. It has no
@@ -267,7 +284,7 @@ export function extractZ80Machine(circuit) {
         lines: [
             ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
             ...ports.map((p) => {
-                const label = p.kind === 'crtc' ? 'MC6845' : p.kind === 'um245r' ? 'UM245R' : p.kind === 'latch' ? '74HC374 OUT latch' : 'MC6850';
+                const label = p.kind === 'crtc' ? 'MC6845' : p.kind === 'um245r' ? 'UM245R' : p.kind === 'latch' ? '74HC374 OUT latch' : p.kind === 'buffer' ? '74HC244 IN buffer' : 'MC6850';
                 return `CHIP ${p.name} = ${label} AT PORT ${hx(p.at)}`;
             }),
         ],

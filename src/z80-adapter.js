@@ -25,6 +25,9 @@ export function createZ80Adapter(opts = {}) {
     const stats = { serialCount: 0, advanceToCount: 0 };
     let serialListener = null;
 
+    // Collect buffer chip names for syncInputs
+    const bufferChips = (config.ports || []).filter(p => p.kind === 'buffer').map(p => p.name);
+
     const machine = new Z80Machine(config, {
         onSerial(byte, tMs) {
             if (board && board.advanceTo) {
@@ -44,9 +47,32 @@ export function createZ80Adapter(opts = {}) {
             board.setPin(pin, 'pushpull', !!level);
             stats.pinChangeCount = (stats.pinChangeCount || 0) + 1;
         },
+        onBufferRead(chipName) {
+            // 74HC244 IN port: sample the board's pins for each A-input.
+            // Pin names are chip-qualified: 'buf1.1A0' through 'buf1.2A3'.
+            if (!board || !board.readPin) return 0xff;
+            let value = 0;
+            for (let bit = 0; bit < 8; bit++) {
+                // Group 1: bits 0-3 → 1a0-1a3, Group 2: bits 4-7 → 2a0-2a3
+                const group = bit < 4 ? 1 : 2;
+                const pin = bit < 4 ? bit : bit - 4;
+                const level = board.readPin(`${chipName}.${group}a${pin}`);
+                if (level) value |= (1 << bit);
+            }
+            return value;
+        },
     });
 
     if (opts.rom) machine.load(opts.rom, opts.romAt ?? 0);
+
+    /** Sync input pins: board → buffer chips. Buffer reads are live
+     *  (onBufferRead samples on each IN), so syncInputs is a no-op for
+     *  buffers. Kept for API parity with the 6502 adapter. */
+    function syncInputs() {
+        // Buffer chips read live via onBufferRead hook — no pre-sync needed.
+        // Future: if VIA-like chips are added to Z80 builds, sync their
+        // DDR-cleared pins here (same pattern as m6502-adapter).
+    }
 
     // ── Interactive CP/M console (opts.cpm = { com }) ────────────────
     // BBCBASIC.COM (zlib, rtrussell/BBCZ80) or any .COM boots at $0100
@@ -132,7 +158,10 @@ export function createZ80Adapter(opts = {}) {
             board = b;
             machine.cpu.pc = opts.pc ?? (opts.cpm ? 0x0100 : 0);
             if (opts.cpm) machine.cpu.sp = 0xfdff;
+            syncInputs();
         },
+
+        syncInputs,
 
         /** CP/M mode: true once the program performed a warm boot. */
         exited() { return cpmExited; },

@@ -147,3 +147,41 @@ test('an MC6845 wired in port space extracts as a crtc with its RAM framebuffer 
     assert.ok(r.notes.some((n) => /framebuffer is system RAM at \$F000/.test(n)), r.notes.join('; '));
     assert.ok(r.lines.some((l) => /crtc1 = MC6845 AT PORT \$0000/.test(l)), r.lines.join('; '));
 });
+
+test('a 74HC244 whose /OE is decoded from IORQ+RD extracts as a buffer IN port', () => {
+    // Standalone circuit (no ACIA to avoid mirroring contention):
+    // ROM $0000-$7FFF, RAM $8000-$FFFF, buffer at port $01 (odd ports).
+    // Decode: /1OE = OR(iorqb, a0) → LOW when iorqb=0 AND a0=1.
+    const parts = [
+        { id: 'cpu1', kind: 'z80' }, { id: 'rom1', kind: '28c256' },
+        { id: 'ram1', kind: '62256' }, { id: 'buf1', kind: '74hc244' },
+        { id: 'glue1', kind: '74hc00' }, { id: 'or1', kind: '74ls32' },
+        { id: 'gnd1', kind: 'gnd' },
+    ];
+    const wires = [];
+    const w = (f, ft, t, tt) => wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    for (let i = 0; i <= 14; i++) { w('cpu1', `a${i}`, 'rom1', `a${i}`); w('cpu1', `a${i}`, 'ram1', `a${i}`); }
+    // Memory decode: standard Searle (NAND gates)
+    w('cpu1', 'mreqb', 'glue1', '1a'); w('cpu1', 'mreqb', 'glue1', '1b');   // ~mreq
+    w('cpu1', 'a15', 'glue1', '2a'); w('cpu1', 'a15', 'glue1', '2b');       // ~a15
+    w('glue1', '1y', 'glue1', '3a'); w('glue1', '2y', 'glue1', '3b');       // NAND(~mreq,~a15)→rom
+    w('glue1', '3y', 'rom1', 'ceb');
+    w('glue1', '1y', 'glue1', '4a'); w('cpu1', 'a15', 'glue1', '4b');       // NAND(~mreq,a15)→ram
+    w('glue1', '4y', 'ram1', 'csb');
+    // Buffer decode: OR(iorqb, a0) → LOW when iorqb=0 AND a0=1 → port $01
+    w('cpu1', 'iorqb', 'or1', '1a'); w('cpu1', 'a0', 'or1', '1b');
+    // Need to invert: OR gives 1 when either is high. We want LOW when
+    // iorqb=0 AND a0=0 (even ports). Actually let's do:
+    // /1OE = NAND(~iorq, ~a0) → active when iorq active AND a0=0 → even ports
+    // Use glue1 gates we haven't used: not available (all 4 used).
+    // Instead: tie /1OE to the OR output directly — OR(iorqb, a0) = LOW
+    // only when BOTH are 0, i.e. iorqb=0 AND a0=0 → port $00,$02,$04...
+    w('or1', '1y', 'buf1', '1oeb');
+    const r = extractZ80Machine({ parts, wires });
+    assert.ok(r.ok, r.reasons.join('; '));
+    const buf = r.ports.find(p => p.kind === 'buffer');
+    assert.ok(buf, 'buffer extracted as port device');
+    // OR(iorqb, a0)=0 when both 0 → even ports: $00, $02, $04...
+    assert.equal(buf.at, 0x00, `buffer at even ports, base $00`);
+    assert.ok(r.lines.some(l => /buf1 = 74HC244 IN buffer AT PORT \$0000/.test(l)), r.lines.join('; '));
+});

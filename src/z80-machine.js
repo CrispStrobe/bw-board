@@ -24,6 +24,7 @@ import { ZXULA } from './zx-ula.js';
 import { ZXTape } from './zx-tape.js';
 import { AY38912 } from './ay-3-8912.js';
 import { Latch374 } from './latch374.js';
+import { Buffer244 } from './buffer244.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -102,6 +103,19 @@ export class Z80Machine {
                 // chip-qualified pins light whatever the bench wires to Q.
                 const chip = new Latch374({
                     onChange: (value, prev) => this._latchChange(p.name, value, prev),
+                });
+                this.chips[p.name] = chip;
+                this._portMap.set(p.at & 0xff, { chip, rs: 0 });
+            } else if (p.kind === 'buffer') {
+                // 74HC244 as a read-only IN port — the input mirror of
+                // the '374 latch. read() samples the board's pins via
+                // the onRead hook; the adapter wires the hook to
+                // board.readPin for each A-input.
+                const chip = new Buffer244({
+                    onRead: () => {
+                        if (!this.hooks.onBufferRead) return 0xff;
+                        return this.hooks.onBufferRead(p.name);
+                    },
                 });
                 this.chips[p.name] = chip;
                 this._portMap.set(p.at & 0xff, { chip, rs: 0 });

@@ -253,7 +253,12 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
     //   t=10348000:  CMD=HELLO (0x01)
     //   t=10435000:  SUM (0xFF)
 
-    const txFile = path.resolve(here, '../.resync-tx.bin');
+    // TX file MUST be in /tmp — stc12_trace's serial-out file open
+    // silently fails on some mount types (the NFS/fuse mount at
+    // /mnt/volume1 creates the file but never flushes bytes to it;
+    // /tmp on ext4 works). Diagnosed 2026-08-17: the root cause of
+    // the pre-existing "0 TX bytes" failure since b46726a.
+    const txFile = path.resolve('/tmp', `.bw-board-resync-tx-${process.pid}.bin`);
     try { unlinkSync(txFile); } catch {}
 
     // TIMING DERIVATION: the firmware configures UART (SCON=0x50 at
