@@ -415,9 +415,13 @@ export function inferNetlist(stc) {
   // no part, so nothing else can know).
   const findPin = (n) => stc.pins.find((q) => String(q.name).toLowerCase() === n);
   const netOfPin = (pin) => {
+    // Robust against net-naming schemes: the pin's net is the one carrying
+    // the MCU's own terminal for it (guessing id prefixes missed —
+    // outputs name theirs net_<name>_pin_r).
     if (!pin) return null;
-    const safe = String(pin.name).replace(/[^a-zA-Z0-9_]/g, '_');
-    return nets.find((nn) => nn.id === `net_io_${safe}` || nn.id.startsWith(`net_io_${safe}_`)) || null;
+    const term = pinName(pin);
+    return nets.find((nn) => nn.terminals.some(
+      (t) => t.part === 'MCU' && t.terminal === term)) || null;
   };
   const sdaPin = findPin('sda'), sclPin = findPin('scl');
   const sdaNet = netOfPin(sdaPin), sclNet = netOfPin(sclPin);
