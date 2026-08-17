@@ -113,6 +113,41 @@ export function inferNetlist(stc, opts) {
   // All three names must be present and outputs — a lone pin named
   // 'clock' stays an ordinary pin.
   const trioConsumed = new Set();
+  // ONE emitter for both 595 idioms — the named-pin trio below and the
+  // explicit PART declaration later — so the bench shape is identical
+  // either way: behavioral shift_register, OE grounded (outputs enabled),
+  // 8× series-330Ω + LED on q0..q7.
+  const emit595 = (prefix, pinsByRole, activeLow = false) => {
+    const srId = `SR_${prefix}`;
+    parts.push({ id: srId, kind: 'shift_register', params: {},
+      terminals: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] });
+    for (const [role, pid] of Object.entries(pinsByRole)) {
+      if (!mcuTerminals.includes(pid)) mcuTerminals.push(pid);
+      nets.push({ id: `net_${prefix}_${role}`,
+        terminals: [{ part: 'MCU', terminal: pid }, { part: srId, terminal: role }] });
+    }
+    gndNet.terminals.push({ part: srId, terminal: 'oe' }); // outputs enabled
+    for (let bit = 0; bit < 8; bit++) {
+      const rId = `R_${prefix}_q${bit}`;
+      const ledId = `LED_${prefix}_q${bit}`;
+      parts.push({ id: rId, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
+      parts.push({ id: ledId, kind: 'led', params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'] });
+      if (activeLow) {
+        // Output LOW lights: VCC → R → LED → Qn (current sinks into the pin)
+        vccNet.terminals.push({ part: rId, terminal: 'a' });
+        nets.push({ id: `net_${prefix}_q${bit}_led`,
+          terminals: [{ part: rId, terminal: 'b' }, { part: ledId, terminal: 'anode' }] });
+        nets.push({ id: `net_${prefix}_q${bit}_out`,
+          terminals: [{ part: ledId, terminal: 'cathode' }, { part: srId, terminal: `q${bit}` }] });
+      } else {
+        nets.push({ id: `net_${prefix}_q${bit}_out`,
+          terminals: [{ part: srId, terminal: `q${bit}` }, { part: rId, terminal: 'a' }] });
+        nets.push({ id: `net_${prefix}_q${bit}_led`,
+          terminals: [{ part: rId, terminal: 'b' }, { part: ledId, terminal: 'anode' }] });
+        gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
+      }
+    }
+  };
   {
     const named = (re) => stc.pins.find((p) =>
       re.test(p.name) && (p.direction === 'output' || p.direction === 'pwm'));
@@ -120,28 +155,10 @@ export function inferNetlist(stc, opts) {
     const clockPin = named(/^(clock|clk)$/i);
     const latchPin = named(/^(latch|rclk)$/i);
     if (dataPin && clockPin && latchPin) {
-      const srId = 'SR_595';
-      parts.push({ id: srId, kind: 'shift_register', params: {},
-        terminals: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] });
-      for (const [role, p] of [['data', dataPin], ['clock', clockPin], ['latch', latchPin]]) {
-        const pid = pinName(p);
-        if (!mcuTerminals.includes(pid)) mcuTerminals.push(pid);
-        nets.push({ id: `net_595_${role}`,
-          terminals: [{ part: 'MCU', terminal: pid }, { part: srId, terminal: role }] });
-        trioConsumed.add(p.name);
-      }
-      gndNet.terminals.push({ part: srId, terminal: 'oe' }); // outputs enabled
-      for (let bit = 0; bit < 8; bit++) {
-        const rId = `R_595_q${bit}`;
-        const ledId = `LED_595_q${bit}`;
-        parts.push({ id: rId, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'] });
-        parts.push({ id: ledId, kind: 'led', params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'] });
-        nets.push({ id: `net_595_q${bit}_out`,
-          terminals: [{ part: srId, terminal: `q${bit}` }, { part: rId, terminal: 'a' }] });
-        nets.push({ id: `net_595_q${bit}_led`,
-          terminals: [{ part: rId, terminal: 'b' }, { part: ledId, terminal: 'anode' }] });
-        gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
-      }
+      emit595('595', {
+        data: pinName(dataPin), clock: pinName(clockPin), latch: pinName(latchPin),
+      });
+      for (const p of [dataPin, clockPin, latchPin]) trioConsumed.add(p.name);
     }
   }
 
@@ -199,7 +216,7 @@ export function inferNetlist(stc, opts) {
         // buzzerTone measures the toggle period; nothing in the MCU knows about sound.
         const buzzId = `BUZZ_${safeName}`;
         parts.push({
-          id: buzzId, kind: 'buzzer',
+          id: buzzId, kind: 'buzzer', declName: pin.name,
           params: {}, terminals: ['a', 'b'],
         });
         nets.push({
@@ -264,7 +281,7 @@ export function inferNetlist(stc, opts) {
           // pin → buzzer → GND
           const buzzId = `BUZZ_${safeName}`;
           parts.push({
-            id: buzzId, kind: 'buzzer',
+            id: buzzId, kind: 'buzzer', declName: pin.name,
             params: {}, terminals: ['a', 'b'],
           });
           nets.push({
@@ -287,7 +304,7 @@ export function inferNetlist(stc, opts) {
             params: { ohms: 1000 }, terminals: ['a', 'b'],
           });
           parts.push({
-            id: ledId, kind: 'led',
+            id: ledId, kind: 'led', declName: pin.name,
             params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
           });
           // VCC → R.a
@@ -317,7 +334,7 @@ export function inferNetlist(stc, opts) {
             params: { ohms: 1000 }, terminals: ['a', 'b'],
           });
           parts.push({
-            id: ledId, kind: 'led',
+            id: ledId, kind: 'led', declName: pin.name,
             params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
           });
           // MCU pin → R.a
@@ -346,7 +363,7 @@ export function inferNetlist(stc, opts) {
         // Potentiometer across VCC/GND, wiper → pin
         const potId = `POT_${safeName}`;
         parts.push({
-          id: potId, kind: 'potentiometer',
+          id: potId, kind: 'potentiometer', declName: pin.name,
           params: { ohms: 10000 }, terminals: ['a', 'b', 'wiper'],
         });
         // VCC → pot.a
@@ -373,7 +390,7 @@ export function inferNetlist(stc, opts) {
           params: { ohms: 10000 }, terminals: ['a', 'b'],
         });
         parts.push({
-          id: btnId, kind: 'button',
+          id: btnId, kind: 'button', declName: pin.name,
           params: {}, terminals: ['a', 'b'],
         });
         // VCC → R_PU.a
@@ -476,74 +493,27 @@ export function inferNetlist(stc, opts) {
     for (const part of stc.parts) {
       const safeName = part.name.replace(/[^a-zA-Z0-9_]/g, '_');
 
-      if (part.kind === '74hc595') {
-        // 74HC595: 3 MCU pins → shift register → 8 outputs with LEDs.
-        // The shift register is modeled as a black box in the netlist:
-        // the board doesn't simulate the shift register logic itself
-        // (that requires edge-order modeling), but it creates the
-        // output LEDs so the circuit designer can show them.
-
-        // Add the 3 MCU pins
-        for (const pinId of Object.values(part.pins)) {
-          if (!mcuTerminals.includes(pinId)) mcuTerminals.push(pinId);
+      if (part.type === '74hc595' || part.kind === '74hc595') {
+        // PART leds = 74HC595 data P1.0 clock P1.1 latch P1.2 — the parsed
+        // shape carries {type, data/clock/latch coord objects, activeLow}.
+        // (An earlier version of this branch tested part.kind and part.pins,
+        // which the parser never produces — so PART-only programs inferred
+        // NO circuit at all, and the 8-LED chaser had no benches to
+        // generate. Found 2026-08-17 closing the owner's device-picker
+        // report.) The emitter is shared with the bit-banged-trio rule
+        // above, so both idioms produce the identical bench shape.
+        const roles = {};
+        for (const role of ['data', 'clock', 'latch']) {
+          if (part[role]) roles[role] = pinName(part[role]);
         }
-
-        // Wire MCU pins to nets (the shift register connections)
-        for (const [role, pinId] of Object.entries(part.pins)) {
-          nets.push({
-            id: `net_${safeName}_${role}`,
-            terminals: [{ part: 'MCU', terminal: pinId }],
-          });
-        }
-
-        // Create output LEDs (the display that the shift register drives)
-        const numOutputs = part.outputs ?? 8;
-        for (let bit = 0; bit < numOutputs; bit++) {
-          const segName = numOutputs === 8 && bit < 7
-            ? ['a', 'b', 'c', 'd', 'e', 'f', 'g'][bit]
-            : bit === 7 ? 'dp' : `q${bit}`;
-          const rId = `R_${safeName}_${segName}`;
-          const ledId = `LED_${safeName}_${segName}`;
-
-          parts.push({
-            id: rId, kind: 'resistor',
-            params: { ohms: 330 }, terminals: ['a', 'b'],
-          });
-          parts.push({
-            id: ledId, kind: 'led',
-            params: { vf: 2.0, color: 'red' }, terminals: ['anode', 'cathode'],
-          });
-
-          if (part.activeLow) {
-            vccNet.terminals.push({ part: rId, terminal: 'a' });
-            nets.push({
-              id: `net_${safeName}_${segName}_r_led`,
-              terminals: [
-                { part: rId, terminal: 'b' },
-                { part: ledId, terminal: 'anode' },
-              ],
-            });
-            // Output goes to GND through the LED (active-low:
-            // shift register output LOW → current flows → LED on)
-            gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
-          } else {
-            // Active-high: output → R → LED → GND
-            nets.push({
-              id: `net_${safeName}_${segName}_out`,
-              terminals: [{ part: rId, terminal: 'a' }],
-            });
-            nets.push({
-              id: `net_${safeName}_${segName}_r_led`,
-              terminals: [
-                { part: rId, terminal: 'b' },
-                { part: ledId, terminal: 'anode' },
-              ],
-            });
-            gndNet.terminals.push({ part: ledId, terminal: 'cathode' });
-          }
+        if (Object.keys(roles).length === 3) {
+          emit595(safeName, roles, !!part.activeLow);
+        } else {
+          notes.push(`74HC595 part ${part.name} is missing pin roles: ` +
+            `have ${Object.keys(roles).join(', ') || 'none'}`);
         }
       } else {
-        notes.push(`Unknown part kind '${part.kind}' for part ${part.name}`);
+        notes.push(`Unknown part kind '${part.type || part.kind}' for part ${part.name}`);
       }
     }
   }
