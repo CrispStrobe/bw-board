@@ -204,6 +204,7 @@ function putPixel(state, rgb565) {
 
 export function registerILI9341() {
     registerDevice('ili9341', {
+        digitalFastPath: true,
         terminals: ['vcc', 'gnd', 'cs', 'rst', 'dc', 'mosi', 'sck', 'miso', 'led'],
 
         init() {
@@ -289,6 +290,7 @@ export function registerILI9341() {
     // WR strobe (data latched on rising edge), RD strobe, RS = D/CX,
     // RST. Same command set, same GRAM.
     registerDevice('ili9341_par', {
+        digitalFastPath: true,
         terminals: ['vcc', 'gnd', 'cs', 'rst', 'rs', 'wr', 'rd',
                     'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'led'],
 

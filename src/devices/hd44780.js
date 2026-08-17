@@ -46,6 +46,7 @@ const BUSY_DEFAULT_NS = 37_000n;     // all other instructions
 export function registerHD44780() {
 
   const model = {
+    digitalFastPath: true,
     // The standard 16-pin LCD module
     terminals: [
       'vss', 'vdd', 'v0',           // power + contrast

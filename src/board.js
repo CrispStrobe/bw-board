@@ -413,16 +413,16 @@ export class BoardImpl {
     if (!this._hasQualifiedPin && this._resolveQualified(pin)) this._hasQualifiedPin = true;
 
     // Digital fast path: when the driven net's only consumers are pure
-    // digital decoders (I2C slave engines) and passives, an emulator
-    // bit-banging the bus does not need an MNA solve per edge — a
-    // 1024-byte display clear is ~60k edges, and per-edge solving made
-    // the in-app Pico sim run ~1000x slower than wall clock (measured
-    // 2026-08-17: 90 s of wall time never finished the SSD1306 init).
-    // The decoders get their edges eagerly at logic level through the
-    // same state machines i2cInject feeds; the solve is DEFERRED to the
-    // next analog read, so every observable voltage stays exact. Nets
-    // with an analog observer (LED, buzzer, scope, cube, anything not a
-    // decoder) never take this branch — edge timing IS their signal.
+    // digital decoders (I2C slaves, SPI displays, shift registers) and
+    // passives, an emulator bit-banging the bus does not need an MNA
+    // solve per edge — a 1024-byte display clear is ~60k edges, and
+    // per-edge solving made the in-app Pico sim run ~1000x slower than
+    // wall clock (measured 2026-08-17). The decoders get their edges
+    // eagerly at logic level through their update/FSM; the solve is
+    // DEFERRED to the next analog read, so every observable voltage
+    // stays exact. Nets with an analog observer (LED, buzzer, scope,
+    // cube, anything not a decoder) never take this branch — edge
+    // timing IS their signal.
     const fast = this._digitalFastInfo(pin);
     if (fast) {
       this._solveDirty = true;
@@ -465,12 +465,13 @@ export class BoardImpl {
    * Qualify a pin for the digital fast path and cache the verdict.
    *
    * A pin qualifies when its net's members are exactly: the MCU-surface
-   * part it belongs to, passive resistors, and at least one device whose
-   * state carries an I2C slave engine (`_i2c`). Anything else on the net
-   * — an LED, a buzzer, a transistor, another MCU — is an analog
-   * consumer whose signal lives in the edges, so the eager solve stays.
-   * Scope channels and probes anywhere on the board disable the fast
-   * path wholesale: waveform fidelity is the point of both.
+   * part it belongs to, passive resistors, and at least one DIGITAL
+   * decoder — a registered device with update() (I2C slave, SPI display,
+   * etc.) or a built-in shift_register. Anything else on the net — an
+   * LED, a buzzer, a transistor, another MCU — is an analog consumer
+   * whose signal lives in the edges, so the eager solve stays. Scope
+   * channels and probes anywhere on the board disable the fast path
+   * wholesale: waveform fidelity is the point of both.
    *
    * @param {string} pinLower - canonical lowercase pin id
    * @returns {{netId: string, pinLower: string, vLogic: number,
@@ -510,8 +511,20 @@ export class BoardImpl {
         const part = this.partMap.get(t.part);
         if (!part) break resolve;
         if (part.kind === 'resistor') continue;
+        // A digital decoder is: (a) a registered device whose state
+        // carries an I2C slave (_i2c) or declares digitalFastPath, or
+        // (b) a built-in shift register (74HC595 FSM). Both operate at
+        // logic level and never need analog edge timing. Their update/FSM
+        // runs in the settle loop at the resolved digital level, exactly
+        // as one MNA solve would conclude — but without the matrix.
+        // Devices that have analog concerns (probes, muxes, level
+        // shifters) do NOT qualify even though they have update().
+        const model = getDevice(part.kind);
         const st = this._deviceStates.get(part.id);
-        if (st && st._i2c) {
+        const isDigitalDecoder = (st && st._i2c)
+          || (model && model.digitalFastPath)
+          || part.kind === 'shift_register';
+        if (isDigitalDecoder) {
           if (!seen.has(part.id)) {
             seen.add(part.id);
             // Terminal→net map so the decoder's read() never rescans.
@@ -592,6 +605,12 @@ export class BoardImpl {
         for (const f of info.feeders) {
           if (fed.has(f.part.id)) continue;
           fed.add(f.part.id);
+          if (f.part.kind === 'shift_register') {
+            // Built-in FSM: feed via the same _updateShiftRegisters path,
+            // but with voltages from the overlay so deferred state is seen.
+            this._settleShiftRegister(f.part.id, f.terminalNets);
+            continue;
+          }
           const model = getDevice(f.part.kind);
           if (!model || !model.update) continue;
           const state = this._deviceStates.get(f.part.id);
@@ -606,6 +625,41 @@ export class BoardImpl {
         }
       }
     }
+  }
+
+  /** Settle one shift register from the digital overlay — the same FSM
+   *  _updateShiftRegisters runs, but reading voltages from the overlay
+   *  so deferred edges are visible. */
+  _settleShiftRegister(partId, terminalNets) {
+    const sr = this._shiftRegisters.get(partId);
+    if (!sr) return;
+    const VCC = this.vcc;
+    const VIH = 0.7 * VCC;
+    const VIL = 0.3 * VCC;
+
+    const readV = (terminal) => {
+      const n = terminalNets.get(terminal);
+      if (!n) return 0;
+      const ov = this._digitalOverlay.get(n);
+      return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
+    };
+
+    const clockHigh = readV('clock') > VIH;
+    const latchHigh = readV('latch') > VIH;
+    const oeV = readV('oe');
+    const oeActive = oeV < VIL;
+
+    if (clockHigh && !sr.lastClock) {
+      const dataHigh = readV('data') > VIH;
+      sr.shiftReg = ((sr.shiftReg << 1) | (dataHigh ? 1 : 0)) & 0xff;
+    }
+    sr.lastClock = clockHigh;
+
+    if (latchHigh && !sr.lastLatch) {
+      sr.latchReg = sr.shiftReg;
+    }
+    sr.lastLatch = latchHigh;
+    sr.oeActive = oeActive;
   }
 
   /**
@@ -759,6 +813,9 @@ export class BoardImpl {
     // digital level IS the settled value; everything else is unchanged.
     const ov = this._digitalOverlay.get(netId);
     if (ov !== undefined) return ov;
+    // A net not in the overlay but with a dirty solve needs flushing —
+    // shift register outputs depend on latchReg updated by the fast path.
+    if (this._solveDirty) this._flushSolve();
     const v = this.nodeVoltages.get(netId) ?? 0;
     return Number.isFinite(v) ? v : 0;
   }

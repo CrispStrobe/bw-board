@@ -40,6 +40,7 @@ const R_INPUT = 1e6;
 export function registerST7920() {
 
     registerDevice('st7920', {
+        digitalFastPath: true,
         terminals: ['vcc', 'gnd', 'cs', 'sclk', 'sid', 'rstb'],
 
         init() {

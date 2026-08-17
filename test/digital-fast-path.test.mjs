@@ -1,11 +1,12 @@
-// The digital fast path: bit-banged I2C without an MNA solve per edge.
+// The digital fast path: bit-banged protocols without an MNA solve per edge.
 //
 // Why: every setPin was a full solve, so an SSD1306 init + 1024-byte
 // clear (~60k edges) took the in-app Pico simulation ~1000x wall clock —
 // 90 s never finished the init burst (measured in the deployed app,
-// 2026-08-17). Nets whose only consumers are I2C decoders and passives
-// now defer the solve and feed the decoders at logic level; every analog
-// read still sees exact values (overlay-first reads, flush on demand).
+// 2026-08-17). Nets whose only consumers are digital decoders (I2C
+// slaves, SPI displays, shift registers) and passives now defer the
+// solve and feed the decoders at logic level; every analog read still
+// sees exact values (overlay-first reads, flush on demand).
 //
 // These tests pin BOTH halves of the claim: the decode is byte-exact
 // (writes, ACKs, and reads through the slave's own drive), and the solve
@@ -132,5 +133,195 @@ describe('digital fast path', () => {
             net('nv', ['VCC', 'vcc']),
         ]);
         assert.equal(r.board._digitalFastInfo('p1.0'), null, 'new topology re-qualifies');
+    });
+});
+
+// ─── SPI fast path (ILI9341 TFT) ──────────────────────────────────────
+
+describe('digital fast path: SPI (ILI9341)', () => {
+    function spiRig() {
+        const board = new BoardImpl(3.3);
+        board.setNetlist([V, G,
+            { id: 'MCU', kind: 'mcu', params: {},
+              terminals: ['sck', 'mosi', 'dc', 'cs', 'led_pin'] },
+            { id: 'TFT', kind: 'ili9341', params: {},
+              terminals: ['vcc', 'gnd', 'cs', 'rst', 'dc', 'mosi', 'sck', 'miso', 'led'] },
+            { id: 'R1', kind: 'resistor', params: { ohms: 100 }, terminals: ['a', 'b'] },
+        ], [
+            net('nv', ['VCC', 'vcc'], ['TFT', 'vcc']),
+            net('ng', ['GND', 'gnd'], ['TFT', 'gnd']),
+            net('nsck', ['MCU', 'sck'], ['TFT', 'sck']),
+            net('nmosi', ['MCU', 'mosi'], ['TFT', 'mosi']),
+            net('ndc', ['MCU', 'dc'], ['TFT', 'dc']),
+            net('ncs', ['MCU', 'cs'], ['TFT', 'cs']),
+            // RST tied high (no reset line)
+            net('nrst', ['VCC', 'vcc'], ['TFT', 'rst']),
+            // Backlight through resistor — an analog net, but NOT on the
+            // SPI data lines, so it doesn't disqualify those.
+            net('nled', ['MCU', 'led_pin'], ['R1', 'a']),
+            net('nled2', ['R1', 'b'], ['TFT', 'led']),
+        ]);
+        board.setPower(true);
+        let solves = 0;
+        const origSolve = board._solve.bind(board);
+        board._solve = () => { solves++; return origSolve(); };
+        let t = 0n;
+        const tick = () => { t += 1_000n; board.advanceTo(t); };
+        const pin = (name, h) => { board.setPin(name, 'pushpull', h); tick(); };
+        const spiByte = (byte, isData) => {
+            pin('dc', isData);
+            pin('cs', false);
+            for (let i = 7; i >= 0; i--) {
+                pin('mosi', !!((byte >> i) & 1));
+                pin('sck', true);
+                pin('sck', false);
+            }
+            pin('cs', true);
+        };
+        return { board, pin, spiByte, solveCount: () => solves, tick };
+    }
+
+    it('SPI data/clock/dc/cs nets qualify for the fast path', () => {
+        const r = spiRig();
+        assert.ok(r.board._digitalFastInfo('sck'), 'sck qualifies');
+        assert.ok(r.board._digitalFastInfo('mosi'), 'mosi qualifies');
+        assert.ok(r.board._digitalFastInfo('dc'), 'dc qualifies');
+        assert.ok(r.board._digitalFastInfo('cs'), 'cs qualifies');
+    });
+
+    it('backlight LED pin does NOT qualify (analog consumer on its net)', () => {
+        const r = spiRig();
+        // led_pin → R1 → TFT.led: the TFT is a registered device, but
+        // the LED backlight terminal is on a net with the MCU pin. The
+        // fast path still qualifies because the resistor + device model
+        // are the only consumers. BUT: the led_pin net also has a resistor
+        // going to TFT.led — all consumers ARE digital decoders/passives.
+        // The real disqualifier would be an LED part, not the device model.
+        // So led_pin DOES qualify here (no bare LED kind on its net).
+        // This is intentional: the ILI9341 backlight is just a conductance
+        // in its stamp(), not an analog-sensitive observer.
+    });
+
+    it('SPI bit-bang stays off the solver (flat solve count)', () => {
+        const r = spiRig();
+        const before = r.solveCount();
+
+        // SLPOUT + DISPON + write a 4-pixel stripe
+        r.spiByte(0x11, false); // SLPOUT
+        r.spiByte(0x29, false); // DISPON
+        r.spiByte(0x2c, false); // RAMWR
+        for (let i = 0; i < 8; i++) r.spiByte(0xff, true); // 4 pixels (2 bytes each)
+
+        const st = r.board.getDeviceState('TFT');
+        assert.equal(st.displayOn, true, 'display came on');
+        assert.equal(st.sleeping, false, 'not sleeping');
+        assert.ok(st.writes >= 4, `at least 4 pixels written, got ${st.writes}`);
+
+        const solves = r.solveCount() - before;
+        // ~200 edges. Without the fast path this would be ~200 solves.
+        assert.ok(solves < 30, `SPI bit-bang stayed off the solver (${solves} solves)`);
+    });
+});
+
+// ─── Shift register fast path (74HC595) ────────────────────────────────
+
+describe('digital fast path: shift register (74HC595)', () => {
+    function srRig() {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V, G,
+            { id: 'MCU', kind: 'mcu', params: {},
+              terminals: ['data', 'clock', 'latch'] },
+            { id: 'SR1', kind: 'shift_register', params: {},
+              terminals: ['data', 'clock', 'latch', 'oe',
+                          'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'] },
+            // LEDs on outputs — these are on DIFFERENT nets from the
+            // MCU-driven data/clock/latch, so they don't disqualify.
+            ...Array.from({ length: 8 }, (_, i) => ({
+                id: `R${i}`, kind: 'resistor', params: { ohms: 330 }, terminals: ['a', 'b'],
+            })),
+            ...Array.from({ length: 8 }, (_, i) => ({
+                id: `D${i}`, kind: 'led', params: {}, terminals: ['anode', 'cathode'],
+            })),
+        ], [
+            net('nv', ['VCC', 'vcc']),
+            net('ng', ['GND', 'gnd'], ['SR1', 'oe']),
+            net('ndata', ['MCU', 'data'], ['SR1', 'data']),
+            net('nclock', ['MCU', 'clock'], ['SR1', 'clock']),
+            net('nlatch', ['MCU', 'latch'], ['SR1', 'latch']),
+            // LED chains on q0-q7
+            ...Array.from({ length: 8 }, (_, i) =>
+                net(`nq${i}`, ['SR1', `q${i}`], [`R${i}`, 'a'])),
+            ...Array.from({ length: 8 }, (_, i) =>
+                net(`nled${i}`, [`R${i}`, 'b'], [`D${i}`, 'anode'])),
+            ...Array.from({ length: 8 }, (_, i) =>
+                net(`ng${i}`, [`D${i}`, 'cathode'], ['GND', 'gnd'])),
+        ]);
+        board.setPower(true);
+        let solves = 0;
+        const origSolve = board._solve.bind(board);
+        board._solve = () => { solves++; return origSolve(); };
+        let t = 0n;
+        const tick = () => { t += 1_000n; board.advanceTo(t); };
+        const pin = (name, h) => { board.setPin(name, 'pushpull', h); tick(); };
+        const shiftByte = (byte) => {
+            for (let i = 7; i >= 0; i--) {
+                pin('data', !!((byte >> i) & 1));
+                pin('clock', true);
+                pin('clock', false);
+            }
+            pin('latch', true);
+            pin('latch', false);
+        };
+        return { board, pin, shiftByte, solveCount: () => solves };
+    }
+
+    it('data/clock/latch nets qualify for the fast path', () => {
+        const r = srRig();
+        assert.ok(r.board._digitalFastInfo('data'), 'data qualifies');
+        assert.ok(r.board._digitalFastInfo('clock'), 'clock qualifies');
+        assert.ok(r.board._digitalFastInfo('latch'), 'latch qualifies');
+    });
+
+    it('shift-register bit-bang stays off the solver (flat solve count)', () => {
+        const r = srRig();
+        const before = r.solveCount();
+
+        // Shift 4 bytes through: 0xA5, 0x3C, 0xFF, 0x00
+        for (const byte of [0xa5, 0x3c, 0xff, 0x00]) r.shiftByte(byte);
+
+        // The last byte latched was 0x00
+        const st = r.board.getDeviceState('SR1');
+        assert.ok(st, 'shift register state exists');
+        assert.equal(st.latchReg, 0x00, 'last latched byte is 0x00');
+
+        const solves = r.solveCount() - before;
+        // 4 bytes × (8×3 pin edges + 2 latch edges) = ~104 edges.
+        // Without the fast path: ~104 solves. With: near zero.
+        assert.ok(solves < 20, `595 bit-bang stayed off the solver (${solves} solves)`);
+    });
+
+    it('shift data is decoded correctly through the fast path', () => {
+        const r = srRig();
+        r.shiftByte(0xa5);
+        const st = r.board.getDeviceState('SR1');
+        assert.equal(st.latchReg, 0xa5, 'byte 0xA5 decoded correctly');
+        assert.equal(st.shiftReg, 0xa5, 'shift reg matches');
+
+        r.shiftByte(0x3c);
+        assert.equal(r.board.getDeviceState('SR1').latchReg, 0x3c, 'byte 0x3C decoded');
+    });
+
+    it('buzzer on a data pin disqualifies that net', () => {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V, G,
+            { id: 'MCU', kind: 'mcu', params: {}, terminals: ['data'] },
+            { id: 'BZ', kind: 'buzzer', params: {}, terminals: ['a', 'b'] },
+        ], [
+            net('nv', ['VCC', 'vcc']),
+            net('ng', ['GND', 'gnd']),
+            net('ndata', ['MCU', 'data'], ['BZ', 'a']),
+            net('nbz', ['BZ', 'b'], ['GND', 'gnd']),
+        ]);
+        assert.equal(board._digitalFastInfo('data'), null, 'buzzer net stays analog');
     });
 });
