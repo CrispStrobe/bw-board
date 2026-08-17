@@ -115,10 +115,22 @@ export function inferNetlist(stc, opts) {
     usedNames.add(safeName);
 
     if (bareNames.has(lname(pin))) {
-      // Structure pin: just the net; the display/keypad synthesis below
-      // attaches the real part.
-      nets.push({ id: `net_${safeName}_pin`,
-        terminals: [{ part: 'MCU', terminal: pinId }] });
+      const isI2c = hasI2cBus && (lname(pin) === 'sda' || lname(pin) === 'scl');
+      const net = { id: `net_${safeName}_pin`,
+        terminals: [{ part: 'MCU', terminal: pinId }] };
+      if (isI2c) {
+        // The two most classic resistors in electronics: I2C is an
+        // open-drain bus, and without pull-ups it idles at 0 V forever.
+        // The 8051 firmware configures sda/scl open-drain (correctly!),
+        // and the bench without these resistors was dead on the emulator
+        // AND would be dead on real silicon (49-lcd-hello, 2026-08-17).
+        const rId = `R_PU_${safeName}`;
+        parts.push({ id: rId, kind: 'resistor',
+          params: { ohms: 4700 }, terminals: ['a', 'b'] });
+        net.terminals.push({ part: rId, terminal: 'b' });
+        vccNet.terminals.push({ part: rId, terminal: 'a' });
+      }
+      nets.push(net);
       continue;
     }
     if (matrixColNames.has(lname(pin))) {
