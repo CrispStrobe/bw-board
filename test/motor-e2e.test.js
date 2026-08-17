@@ -159,8 +159,9 @@ describe('motor end-to-end: compiled PCA 8-bit PWM through emu8051 → H-bridge 
 
     console.log(`# 100% brake: pinChanges=${stats.pinChangeCount} OUT1=${out1?.vTh?.toFixed(1) ?? 'float'}V OUT2=${out2?.vTh?.toFixed(1) ?? 'float'}V`);
 
-    // 100% duty = pin stays HIGH = no PWM edges. Only setup pin changes.
-    assert.ok(stats.pinChangeCount < 20,
+    // 100% duty = pin stays HIGH = no PWM edges. Only setup + initial
+    // seating pin changes (attach-time seating publishes all port pins).
+    assert.ok(stats.pinChangeCount < 40,
       `100% duty should produce few pin changes (no PWM toggle), got ${stats.pinChangeCount}`);
     // Outputs should be driven (EN constantly HIGH)
     assert.ok(out1 && out1.vTh > 2.0, 'OUT1 should be driven HIGH');
