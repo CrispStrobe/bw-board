@@ -58,7 +58,7 @@ export function registerMiscParts() {
       const kT = part.params?.kT ?? kV;
       const J = part.params?.J ?? 0.001;
       const ppr = part.params?.pulsesPerRev ?? 20; // encoder pulses per revolution
-      const vcc = 5.0;
+      const vcc = read('vcc') || 5.0;
 
       if (state._lastTNs === 0n) { state._lastTNs = tNs; return false; }
       const dtSec = Number(tNs - state._lastTNs) / 1e9;
