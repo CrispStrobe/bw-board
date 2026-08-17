@@ -148,7 +148,7 @@ export function extractZ80Machine(circuit) {
                 { net: find(key(p.id, 'cs2b')), want: 0, t: 'cs2b' },
             ];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
-            ioChips.push({ part: p, pins, ioKind: 'acia6850', rsPin: 'rs', selected: new Uint8Array(256) });
+            ioChips.push({ part: p, pins, ioKind: 'acia6850', rsPin: 'rs', dir: 'level', selected: new Uint8Array(256) });
         } else if (p.kind === '74hc374') {
             // Write-only OUT port — PainfulDiodes' first program: the
             // decode glue strobes clk low during the IO write and the
@@ -156,7 +156,7 @@ export function extractZ80Machine(circuit) {
             // strapped low, the Q pins face the LEDs, never the bus.
             const pins = [{ net: find(key(p.id, 'clk')), want: 0, t: 'clk' }];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.clk is undriven — a floating latch clock is not an OUT port`);
-            ioChips.push({ part: p, pins, ioKind: 'latch', rsPin: null, selected: new Uint8Array(256) });
+            ioChips.push({ part: p, pins, ioKind: 'latch', rsPin: null, dir: 'write', selected: new Uint8Array(256) });
         } else if (p.kind === 'mc6845') {
             const hasRsWire = wires.some(w =>
                 (w.from === p.id && w.fromTerminal === 'rs') ||
@@ -164,14 +164,14 @@ export function extractZ80Machine(circuit) {
             const rsName = hasRsWire ? 'rs' : 'rsb';
             const pins = [{ net: find(key(p.id, 'csb')), want: 0, t: 'csb' }];
             for (const pin of pins) if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
-            ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: rsName, selected: new Uint8Array(256) });
+            ioChips.push({ part: p, pins, ioKind: 'crtc', rsPin: rsName, dir: 'level', selected: new Uint8Array(256) });
         } else if (p.kind === 'um245r') {
             // The UM245R is a parallel FIFO: its /RD pin IS the decoded
             // port-read strobe, not a traditional chip-select. It has no
             // register select — it is one port, not two.
             const rdNet = find(key(p.id, 'rdb'));
             if (!netDriver.has(rdNet)) reasons.push(`${p.id}.rdb is undriven — a floating read strobe is not a decode`);
-            ioChips.push({ part: p, pins: [{ net: rdNet, want: 0, t: 'rdb' }], ioKind: 'um245r', rsPin: null, selected: new Uint8Array(256) });
+            ioChips.push({ part: p, pins: [{ net: rdNet, want: 0, t: 'rdb' }], ioKind: 'um245r', rsPin: null, dir: 'read', selected: new Uint8Array(256) });
         }
     }
     if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM, ACIA or OUT latch on the board');
@@ -183,13 +183,26 @@ export function extractZ80Machine(circuit) {
             memo = new Map();
             for (const c of memChips) c.selected[addr] = evalNet(c.net) === 0 ? 1 : 0;
         }
-        cycle = { mreqb: 1, iorqb: 0, rdb: 0, wrb: 1 };   // I/O read cycles
-        for (addr = 0; addr < 256; addr++) {
-            memo = new Map();
-            for (const c of ioChips) {
-                let on = 1;
-                for (const pin of c.pins) if (evalNet(pin.net) !== pin.want) { on = 0; break; }
-                c.selected[addr] = on;
+        // I/O cycles, evaluated per chip DIRECTION: a level-selected chip
+        // (ACIA /CS) decodes with both strobes idle; a read-strobed chip
+        // (UM245R) under RD low; a write-strobed chip (the OUT latch,
+        // whose clk is IORQ|WR glue) under WR low. One shared read cycle
+        // hid every write-strobed decode — the latch was 'never selected'.
+        const IO_CYCLES = {
+            level: { mreqb: 1, iorqb: 0, rdb: 1, wrb: 1 },
+            read: { mreqb: 1, iorqb: 0, rdb: 0, wrb: 1 },
+            write: { mreqb: 1, iorqb: 0, rdb: 1, wrb: 0 },
+        };
+        for (const dir of ['level', 'read', 'write']) {
+            cycle = IO_CYCLES[dir];
+            for (addr = 0; addr < 256; addr++) {
+                memo = new Map();
+                for (const c of ioChips) {
+                    if ((c.dir || 'level') !== dir) continue;
+                    let on = 1;
+                    for (const pin of c.pins) if (evalNet(pin.net) !== pin.want) { on = 0; break; }
+                    c.selected[addr] = on;
+                }
             }
         }
     } catch (e) {
@@ -203,7 +216,15 @@ export function extractZ80Machine(circuit) {
     }
     for (let a = 0; a < 256; a++) {
         const on = ioChips.filter((c) => c.selected[a]);
-        if (on.length > 1) return { ok: false, notes, reasons: [`port-space contention at port ${hx(a)}: ${on.map((c) => c.part.id).join(' and ')}`] };
+        if (on.length > 1) {
+            // A read-strobed and a write-strobed chip legally share a port
+            // (IN and OUT decode to different silicon on real boards). A
+            // level-selected chip answers both directions, so it conflicts
+            // with anything; same-direction pairs always conflict.
+            const dirs = on.map((c) => c.dir || 'level');
+            const legal = on.length === 2 && dirs.includes('read') && dirs.includes('write');
+            if (!legal) return { ok: false, notes, reasons: [`port-space contention at port ${hx(a)}: ${on.map((c) => c.part.id).join(' and ')}`] };
+        }
     }
 
     const regions = [];
