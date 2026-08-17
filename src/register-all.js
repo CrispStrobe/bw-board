@@ -54,6 +54,7 @@ import { registerUartFrame } from './devices/uart-frame.js';
 import { registerSAP1Chips } from './devices/sap1-chips.js';
 import { registerMCP4725 } from './devices/mcp4725.js';
 import { registerUM245R } from './devices/um245r.js';
+import { registerPS2Device } from './devices/ps2-device.js';
 
 export function registerAllDevices() {
   registerLogicGates();
@@ -100,4 +101,5 @@ export function registerAllDevices() {
   registerSAP1Chips();
   registerMCP4725();
   registerUM245R();
+  registerPS2Device();
 }

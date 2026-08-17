@@ -138,6 +138,24 @@ test('a TMS9918 wired on the bus extracts as a vdp chip', () => {
     assert.ok(r.lines.some((l) => /TMS9918 AT \$4000/.test(l)), r.lines.join('; '));
 });
 
+test('a PS/2 keyboard wired to VIA port A + CA1 is detected as a peripheral', () => {
+    const c = eaterCircuit();
+    c.parts.push({ id: 'kbd1', kind: 'ps2' });
+    const w = (from, ft, to, tt) => c.wires.push({ from, fromTerminal: ft, to, toTerminal: tt });
+    // d0-d7 → VIA PA0-PA7
+    for (let i = 0; i < 8; i++) w('kbd1', `d${i}`, 'via1', `pa${i}`);
+    // da → VIA CA1
+    w('kbd1', 'da', 'via1', 'ca1');
+    const r = extract6502Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    assert.ok(r.peripherals, 'peripherals array exists');
+    assert.equal(r.peripherals.length, 1);
+    assert.deepEqual(r.peripherals[0], {
+        kind: 'ps2', name: 'kbd1', via: 'via1', port: 'a', control: 'ca1',
+    });
+    assert.ok(r.notes.some((n) => /PS\/2 keyboard/.test(n)));
+});
+
 test('tilevga ribbon card: free window extracts, colliding window refuses by address', () => {
     // Refusal first: on the full eater decode, a $4000 window runs into
     // the ACIA's select at $5000 — named, like every other contention.

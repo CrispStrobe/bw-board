@@ -277,10 +277,38 @@ export function extractZ80Machine(circuit) {
     }
     if (reasons.length) return { ok: false, notes, reasons };
 
+    // ---- PS/2 keyboards wired to a 74HC244 IN buffer -------------------
+    // On a Z80 build the capture chain's parallel byte sits on the
+    // buffer's A-inputs, which face the data bus through the buffer.
+    // DA may wire to /INT or a spare port for polling.
+    const peripherals = [];
+    for (const p of parts) {
+        if (p.kind !== 'ps2') continue;
+        let bufferPart = null;
+
+        for (let bit = 0; bit < 8; bit++) {
+            const dNet = find(key(p.id, `d${bit}`));
+            for (const ioc of ioChips) {
+                if (ioc.ioKind !== 'buffer') continue;
+                // 74HC244 A-inputs: 1a0-1a3 (group 1), 2a0-2a3 (group 2)
+                const group = bit < 4 ? 1 : 2;
+                const pin = `${group}a${bit % 4}`;
+                if (find(key(ioc.part.id, pin)) === dNet) {
+                    bufferPart = ioc.part.id;
+                }
+            }
+        }
+        if (bufferPart) {
+            peripherals.push({ kind: 'ps2', name: p.id, buffer: bufferPart });
+            notes.push(`${p.id}: PS/2 keyboard on IN buffer ${bufferPart}`);
+        }
+    }
+
     return {
         ok: true,
         regions,
         ports,
+        peripherals,
         lines: [
             ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
             ...ports.map((p) => {

@@ -256,6 +256,49 @@ export function extract6502Machine(circuit) {
     for (let a = 0; a < 65536; a++) if (!covered[a]) holes++;
     if (holes) notes.push(`${holes} addresses decode to nothing (open bus) — reads there return $FF`);
 
+    // ---- PS/2 keyboards wired to VIA port pins -------------------------
+    // Not bus-decoded: the capture chain's parallel byte sits on PA/PB,
+    // DATA AVAILABLE strobes CA1/CA2/CB1/CB2. Detected by net overlap.
+    const peripherals = [];
+    for (const p of parts) {
+        if (p.kind !== 'ps2') continue;
+        let viaChip = null;
+        let port = null;
+        let control = null;
+
+        // Check d0-d7: if they share a net with a VIA's PA/PB pins
+        for (let bit = 0; bit < 8; bit++) {
+            const dNet = find(key(p.id, `d${bit}`));
+            for (const c of chips) {
+                if (c.kind !== 'via') continue;
+                for (const [prt, prefix] of [['a', 'pa'], ['b', 'pb']]) {
+                    if (find(key(c.name, `${prefix}${bit}`)) === dNet) {
+                        viaChip = c.name;
+                        port = prt;
+                    }
+                }
+            }
+        }
+        // Check da: find the control line it's wired to
+        const daNet = find(key(p.id, 'da'));
+        if (viaChip) {
+            for (const ctl of ['ca1', 'ca2', 'cb1', 'cb2']) {
+                if (find(key(viaChip, ctl)) === daNet) {
+                    control = ctl;
+                }
+            }
+        }
+        if (viaChip && port) {
+            peripherals.push({
+                kind: 'ps2', name: p.id,
+                via: viaChip,
+                port,
+                control: control || 'ca1',
+            });
+            notes.push(`${p.id}: PS/2 keyboard on ${viaChip} port ${port.toUpperCase()}, DA → ${(control || 'ca1').toUpperCase()}`);
+        }
+    }
+
     const lines = [
         ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
         ...chips.map((c) => `CHIP ${c.name} = ${CHIP_DECL[c.kind]} AT ${hx(c.at)}`),
@@ -264,6 +307,7 @@ export function extract6502Machine(circuit) {
         ok: true,
         regions: regions.map(({ kind, start, end }) => ({ kind, start, end })),
         chips,
+        peripherals,
         lines,
         notes,
         reasons: [],

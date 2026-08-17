@@ -13,10 +13,18 @@
  * board.readPin('via1.PA3') → via.setInput('a', 3, level). Only pins
  * whose DDR bit is clear are read back.
  *
+ * PS/2 keyboard: when attachBoard detects a 'ps2' part wired to a VIA,
+ * it bridges the board device's PS2Keyboard to the machine VIA via
+ * ps2OnVia — the same proven path the standalone ps2.test.mjs exercises.
+ * The VIA's CA1 edge-trigger needs per-frame strobe callbacks, not
+ * polled sync, which is why this runs on the machine side.
+ *
  * @module
  */
 
 import { M6502Machine, EATER6502 } from './m6502-machine.js';
+import { ps2OnVia } from './ps2.js';
+import { getDevice } from './devices.js';
 
 /**
  * @param {object} [opts]
@@ -72,6 +80,71 @@ export function createM6502Adapter(opts = {}) {
     }
   }
 
+  /**
+   * Detect PS/2 parts on the board and wire them to the machine VIA via
+   * ps2OnVia. The wiring is inferred from the board's nets: if a PS/2
+   * part's d0-d7 terminals share nets with a VIA's PA0-PA7 (or PB0-PB7),
+   * that determines the port. The DA terminal's net partner determines
+   * the control line (CA1/CA2/CB1/CB2).
+   */
+  function bridgePS2(b) {
+    if (!b.parts || !b.nets) return;
+
+    for (const part of b.parts) {
+      if (part.kind !== 'ps2') continue;
+      const state = b.getDeviceState(part.id);
+      if (!state || !state._kbd) continue;
+
+      // Find which VIA port the data lines are wired to
+      let viaName = null;
+      let port = null;
+      let control = 'ca1'; // default
+
+      for (const net of b.nets) {
+        const ps2Term = net.terminals.find(t => t.part === part.id);
+        if (!ps2Term) continue;
+        const term = ps2Term.terminal;
+
+        // Check data lines d0-d7
+        if (/^d[0-7]$/.test(term)) {
+          const viaTerm = net.terminals.find(t => {
+            if (t.part === part.id) return false;
+            const p = b.partMap ? b.partMap.get(t.part) : b.parts.find(pp => pp.id === t.part);
+            return p && (p.kind === 'mcu' || p.kind === 'w65c22');
+          });
+          if (viaTerm) {
+            viaName = viaTerm.part;
+            const m = String(viaTerm.terminal).match(/^P([AB])(\d)$/i);
+            if (m) port = m[1].toLowerCase();
+          }
+        }
+
+        // Check DA line → control line
+        if (term === 'da') {
+          const viaTerm = net.terminals.find(t => {
+            if (t.part === part.id) return false;
+            return true; // any partner
+          });
+          if (viaTerm) {
+            const m = String(viaTerm.terminal).match(/^(CA1|CA2|CB1|CB2)$/i);
+            if (m) control = m[1].toLowerCase();
+          }
+        }
+      }
+
+      // Wire it up: find the machine VIA that corresponds to the board part
+      if (!port) port = 'a'; // default to port A
+      const chipEntry = config.chips.find(c =>
+        c.kind === 'via' && (c.name === viaName || !viaName));
+      if (!chipEntry) continue;
+      const via = machine.chips[chipEntry.name];
+      if (!via) continue;
+
+      const cap = ps2OnVia(state._kbd, via, { port, control });
+      machine.attachDevice(`ps2_${part.id}`, cap);
+    }
+  }
+
   return {
     machine,
     clockHz: config.clockHz,
@@ -100,6 +173,9 @@ export function createM6502Adapter(opts = {}) {
 
     attachBoard(b) {
       board = b;
+      // Bridge PS/2 parts to the machine VIA before reset, so the
+      // capture chain's advance() runs from the first instruction.
+      bridgePS2(b);
       // Reset drives the CPU through $FFFC and publishes initial pin state.
       machine.reset();
       syncInputs();

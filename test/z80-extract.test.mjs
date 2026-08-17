@@ -185,3 +185,33 @@ test('a 74HC244 whose /OE is decoded from IORQ+RD extracts as a buffer IN port',
     assert.equal(buf.at, 0x00, `buffer at even ports, base $00`);
     assert.ok(r.lines.some(l => /buf1 = 74HC244 IN buffer AT PORT \$0000/.test(l)), r.lines.join('; '));
 });
+
+test('a PS/2 keyboard wired to a 74HC244 buffer is detected as a peripheral', () => {
+    // ROM + RAM + buffer at port $00, with PS/2 d0-d7 → buffer 1a0-1a3 + 2a0-2a3
+    const parts = [
+        { id: 'cpu1', kind: 'z80' }, { id: 'rom1', kind: '28c256' },
+        { id: 'ram1', kind: '62256' }, { id: 'buf1', kind: '74hc244' },
+        { id: 'glue1', kind: '74hc00' }, { id: 'or1', kind: '74ls32' },
+        { id: 'gnd1', kind: 'gnd' }, { id: 'kbd1', kind: 'ps2' },
+    ];
+    const wires = [];
+    const w = (f, ft, t, tt) => wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    for (let i = 0; i <= 14; i++) { w('cpu1', `a${i}`, 'rom1', `a${i}`); w('cpu1', `a${i}`, 'ram1', `a${i}`); }
+    w('cpu1', 'mreqb', 'glue1', '1a'); w('cpu1', 'mreqb', 'glue1', '1b');
+    w('cpu1', 'a15', 'glue1', '2a'); w('cpu1', 'a15', 'glue1', '2b');
+    w('glue1', '1y', 'glue1', '3a'); w('glue1', '2y', 'glue1', '3b');
+    w('glue1', '3y', 'rom1', 'ceb');
+    w('glue1', '1y', 'glue1', '4a'); w('cpu1', 'a15', 'glue1', '4b');
+    w('glue1', '4y', 'ram1', 'csb');
+    w('cpu1', 'iorqb', 'or1', '1a'); w('cpu1', 'a0', 'or1', '1b');
+    w('or1', '1y', 'buf1', '1oeb');
+    // PS/2 d0-d3 → buffer 1a0-1a3, d4-d7 → buffer 2a0-2a3
+    for (let i = 0; i < 4; i++) w('kbd1', `d${i}`, 'buf1', `1a${i}`);
+    for (let i = 0; i < 4; i++) w('kbd1', `d${i + 4}`, 'buf1', `2a${i}`);
+    const r = extractZ80Machine({ parts, wires });
+    assert.ok(r.ok, r.reasons.join('; '));
+    assert.ok(r.peripherals, 'peripherals array exists');
+    assert.equal(r.peripherals.length, 1);
+    assert.deepEqual(r.peripherals[0], { kind: 'ps2', name: 'kbd1', buffer: 'buf1' });
+    assert.ok(r.notes.some(n => /PS\/2 keyboard/.test(n)));
+});
