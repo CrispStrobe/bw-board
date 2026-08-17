@@ -238,9 +238,21 @@ export class BoardImpl {
         // Onboard LED: GP25 → 1 kΩ resistor → LED → GND (hardwired on PCB).
         // Expand to synthetic resistor + LED so ledBrightness('<id>_onboard')
         // reports the onboard LED state — same pattern as seven_segment.
-        const gp25Nets = netsOf(p.id, 'gp25');
+        let gp25Nets = netsOf(p.id, 'gp25');
         const gndNets = netsOf(p.id, 'gnd_1');
-        if (gp25Nets.length > 0) {
+        if (gp25Nets.length === 0) {
+          // GP25 unwired is the NORMAL case — the LED is on the PCB, no
+          // jumper ever touches it. Synthesize the internal anode net so
+          // the onboard LED exists on every seated Pico, wires or not
+          // (gating on an external gp25 net left ledBrightness dark on
+          // exactly the benches the feature was built for).
+          const internalAnode = {
+            id: `${p.id}__onboard_anode`, terminals: [{ part: p.id, terminal: 'gp25' }],
+          };
+          netCopies.push(internalAnode);
+          gp25Nets = [internalAnode];
+        }
+        {
           // If gnd_1 has no net yet, look for any gnd terminal that does
           let cathNets = gndNets;
           if (cathNets.length === 0) {
