@@ -376,10 +376,28 @@ export class Z80Machine {
         }
     }
 
+    /**
+     * Attach a non-bus device that needs machine time (a PS/2 capture
+     * chain, a sensor with its own pacing). It gets advance(cycles) in
+     * step with the chips but owns no addresses — its outputs reach the
+     * CPU through chip inputs or port reads, like the bench.
+     */
+    attachDevice(name, dev) {
+        this.devices = this.devices || {};
+        this.devices[name] = dev;
+        return dev;
+    }
+
     _advanceChips(n) {
         for (const k of Object.keys(this.chips)) {
             const c = this.chips[k];
             if (typeof c.advance === 'function') c.advance(n);
+        }
+        if (this.devices) {
+            for (const k of Object.keys(this.devices)) {
+                const d = this.devices[k];
+                if (typeof d.advance === 'function') d.advance(n);
+            }
         }
     }
 

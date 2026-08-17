@@ -18,6 +18,8 @@
  * extractor's output — the same three-source doctrine as the 6502.
  */
 import { Z80Machine, SEARLE, CPM64K } from './z80-machine.js';
+import { getDevice } from './devices.js';
+import { PS2Keyboard, PS2Capture } from './ps2.js';
 
 export function createZ80Adapter(opts = {}) {
     const config = opts.config ?? (opts.cpm ? CPM64K : SEARLE);
@@ -70,8 +72,76 @@ export function createZ80Adapter(opts = {}) {
      *  buffers. Kept for API parity with the 6502 adapter. */
     function syncInputs() {
         // Buffer chips read live via onBufferRead hook — no pre-sync needed.
-        // Future: if VIA-like chips are added to Z80 builds, sync their
-        // DDR-cleared pins here (same pattern as m6502-adapter).
+    }
+
+    /** Publish initial latch output levels to the board at attach time.
+     *  Without this, push-callback adapters miss the initial state: the
+     *  onPinChange hook only fires on CHANGES, so a latch whose reset
+     *  value is $00 never calls setPin — the board's solver starts with
+     *  no source on those nets. (The 8051 fix, emu8051-adapter 0263cd4.) */
+    function seatLatchPins() {
+        if (!board) return;
+        const latchChips = (config.ports || []).filter(p => p.kind === 'latch');
+        for (const lc of latchChips) {
+            const chip = machine.chips[lc.name];
+            if (!chip) continue;
+            const value = chip.value ?? 0;
+            for (let bit = 0; bit < 8; bit++) {
+                board.setPin(`${lc.name}.Q${bit}`, 'pushpull', !!(value & (1 << bit)));
+            }
+        }
+    }
+
+    /**
+     * Detect PS/2 parts on the board and wire them to the machine.
+     * On Z80 builds the PS/2 capture chain feeds a 74HC244 buffer's
+     * A-inputs — the onBufferRead hook samples them on each IN.
+     * The machine's attachDevice gives PS2Capture cycle time so frame
+     * pacing works.
+     */
+    function bridgePS2(b) {
+        if (!b.parts || !b.nets) return;
+
+        for (const part of b.parts) {
+            if (part.kind !== 'ps2') continue;
+            const state = b.getDeviceState(part.id);
+            if (!state || !state._kbd) continue;
+
+            // Find which buffer the PS/2 data lines are wired to
+            let bufferName = null;
+            for (const net of b.nets) {
+                const ps2Term = net.terminals.find(t => t.part === part.id);
+                if (!ps2Term || !/^d[0-7]$/.test(ps2Term.terminal)) continue;
+                const bufTerm = net.terminals.find(t => {
+                    if (t.part === part.id) return false;
+                    const p = b.partMap ? b.partMap.get(t.part) : b.parts.find(pp => pp.id === t.part);
+                    return p && p.kind === '74hc244';
+                });
+                if (bufTerm) bufferName = bufTerm.part;
+            }
+
+            // Create a PS2Capture that writes bytes into the buffer's
+            // input state. The onBufferRead hook will sample these on
+            // each IN instruction.
+            const cap = new PS2Capture(state._kbd, {
+                onByte: (byte) => {
+                    // Store the byte where onBufferRead will find it
+                    if (cap._lastByte !== undefined) cap._lastByte = byte;
+                },
+            });
+            cap._lastByte = 0;
+
+            // If we found the buffer, patch its read to include PS/2 data
+            if (bufferName) {
+                const chip = machine.chips[bufferName];
+                if (chip && typeof chip.read === 'function') {
+                    const origRead = chip.read.bind(chip);
+                    chip.read = () => cap._lastByte ?? origRead();
+                }
+            }
+
+            machine.attachDevice(`ps2_${part.id}`, cap);
+        }
     }
 
     // ── Interactive CP/M console (opts.cpm = { com }) ────────────────
@@ -156,8 +226,10 @@ export function createZ80Adapter(opts = {}) {
 
         attachBoard(b) {
             board = b;
+            bridgePS2(b);
             machine.cpu.pc = opts.pc ?? (opts.cpm ? 0x0100 : 0);
             if (opts.cpm) machine.cpu.sp = 0xfdff;
+            seatLatchPins();
             syncInputs();
         },
 
