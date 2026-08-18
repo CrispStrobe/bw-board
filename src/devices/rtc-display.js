@@ -109,6 +109,7 @@ export function registerRtcDisplay() {
 
     // ─── MAX7219 matrix module ─────────────────────────────────────────
     registerDevice('max7219', {
+        digitalFastPath: true,
         terminals: ['vcc', 'gnd', 'din', 'clk', 'cs', 'dout'],
 
         init() {
