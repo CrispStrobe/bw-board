@@ -19,13 +19,26 @@
  *
  * State:
  *   brightness  Float64Array(rows*cols) — row-major [row*cols+col], 0.0–1.0
+ *   levels      Uint8Array(rows*cols)   — row-major, quantized 0..MATRIX_LEVELS
  *   rows        number — row count (for face rendering)
  *   cols        number — column count (for face rendering)
+ *
+ * The levels grid is the per-pixel brightness surface (Layer 1).
+ * 0 = off, MATRIX_LEVELS = full on.  On/off is sugar for level 0 / MAX.
+ * Depth is a single constant so it can widen (e.g. 4-bit = 16 levels)
+ * without touching any verb or face code.
  *
  * @module
  */
 
 import { registerDevice } from '../devices.js';
+
+/**
+ * Maximum brightness level (0..MATRIX_LEVELS inclusive = MATRIX_LEVELS+1 values).
+ * Default 3 → 4 levels (2 bits/pixel): 0 off, 1 dim, 2 mid, 3 full.
+ * Widen to e.g. 15 for 4-bit depth without touching verbs or faces.
+ */
+export const MATRIX_LEVELS = 3;
 
 const R_INPUT = 1e6;
 
@@ -58,6 +71,7 @@ function makeMatrixModel(defaultRows, defaultCols) {
         cols,
         _terminals: terms,
         brightness: new Float64Array(n),
+        levels: new Uint8Array(n),
         _onNs: new Float64Array(n),
         _windowStartNs: 0,
         _lastNs: 0,
@@ -107,7 +121,7 @@ function makeMatrixModel(defaultRows, defaultCols) {
 
       state._lastNs = now;
 
-      // At end of each window, compute brightness and reset accumulators
+      // At end of each window, compute brightness and quantize levels
       const elapsed = now - state._windowStartNs;
       if (elapsed >= state._windowNs) {
         let changed = false;
@@ -115,6 +129,11 @@ function makeMatrixModel(defaultRows, defaultCols) {
           const b = elapsed > 0 ? Math.min(1.0, state._onNs[i] / elapsed) : 0;
           if (Math.abs(b - state.brightness[i]) > 0.002) changed = true;
           state.brightness[i] = b;
+          // Quantize: map [0,1] → 0..MATRIX_LEVELS with equal-width bins.
+          // level = round(b * MATRIX_LEVELS), clamped to [0, MATRIX_LEVELS].
+          const lev = Math.min(MATRIX_LEVELS, Math.round(b * MATRIX_LEVELS));
+          if (state.levels[i] !== lev) changed = true;
+          state.levels[i] = lev;
           state._onNs[i] = 0;
         }
         state._windowStartNs = now;
