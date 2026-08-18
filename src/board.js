@@ -229,15 +229,16 @@ export class BoardImpl {
         for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
           addLed(`${p.id}_${seg}`, netsOf(p.id, seg), common);
         }
-      } else if (p.kind === 'seven_seg_3') {
-        // 3-digit multiplexed display (056SMG-3, the retro console's score):
-        // eight shared segment lines, one common per digit. Each digit is
-        // eight LEDs from the shared segment net to that digit's common —
-        // 24 synthetic LEDs total. The multiplex physics falls out for
-        // free: a segment lights only while ITS digit's common is pulled
-        // low, and the brightness filter integrates the scan duty exactly
-        // as it does for the matrices.
-        for (let digit = 0; digit < 3; digit++) {
+      } else if (p.kind === 'seven_seg_3' || p.kind === 'seven_seg_4') {
+        // Multiplexed displays (3-digit 056SMG-3; 4-digit as on the Prechin
+        // A2's tubes): eight shared segment lines, one common per digit.
+        // Each digit is eight LEDs from the shared segment net to that
+        // digit's common. The multiplex physics falls out for free: a
+        // segment lights only while ITS digit's common is pulled low, and
+        // the brightness filter integrates the scan duty exactly as it
+        // does for the matrices.
+        const nDigits = p.kind === 'seven_seg_4' ? 4 : 3;
+        for (let digit = 0; digit < nDigits; digit++) {
           const common = netsOf(p.id, `com${digit}`);
           for (const seg of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp']) {
             addLed(`${p.id}_d${digit}_${seg}`, netsOf(p.id, seg), common);
@@ -1194,9 +1195,9 @@ export class BoardImpl {
    * @param {string} partId
    * @returns {Array<{ a: number, b: number, c: number, d: number, e: number, f: number, g: number, dp: number }>}
    */
-  sevenSeg3Brightness(partId) {
+  sevenSeg3Brightness(partId, digits = 3) {
     const segments = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'dp'];
-    return [0, 1, 2].map((digit) => {
+    return Array.from({ length: digits }, (_, digit) => {
       const m = {};
       for (const seg of segments) m[seg] = this.ledBrightness(`${partId}_d${digit}_${seg}`);
       return m;
@@ -1539,7 +1540,7 @@ export class BoardImpl {
       'diode', 'led', 'zener', 'potentiometer',
       'button', 'switch', 'buzzer', 'ldr', 'ntc',
       'npn', 'pnp', 'nmos', 'pmos', 'opamp',
-      'vsource', 'isource', 'seven_segment', 'seven_seg_3', 'rgb_led',
+      'vsource', 'isource', 'seven_segment', 'seven_seg_3', 'seven_seg_4', 'rgb_led',
       'shift_register', 'char_lcd', 'led_matrix', 'led_cube',
       'ir_receiver', 'temp_sensor', 'eeprom', 'mcu',
       // Device-registry kinds (registered at runtime, listed here for discovery)

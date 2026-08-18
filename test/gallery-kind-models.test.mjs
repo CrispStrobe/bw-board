@@ -37,7 +37,7 @@ describe('gallery kind coverage', () => {
       'vcc', 'gnd', 'resistor', 'capacitor', 'inductor', 'diode', 'led',
       'zener', 'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
       'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'vsource', 'isource', 'mcu',
-      'seven_segment', 'seven_seg_3', 'shift_register', 'ir_receiver', 'temp_sensor',
+      'seven_segment', 'seven_seg_3', 'seven_seg_4', 'shift_register', 'ir_receiver', 'temp_sensor',
       'eeprom', 'led_matrix', 'led_cube',
       'rgb_led', // expanded to _r/_g/_b sub-LEDs in setNetlist
     ]);

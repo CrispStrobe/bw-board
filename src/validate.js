@@ -49,6 +49,7 @@ const KNOWN_TERMINALS = {
   eeprom: ['sda', 'scl', 'vcc', 'gnd'],
   seven_segment: null, // composite — sub-parts have their own terminals
   seven_seg_3: null, // composite — 3-digit multiplexed (a..dp + com0..com2)
+  seven_seg_4: null, // composite — 4-digit multiplexed (a..dp + com0..com3), the A2 tube
   rgb_led: null, // composite
   mcu: null, // terminals are PinIds, validated separately
 };
