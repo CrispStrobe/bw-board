@@ -2287,9 +2287,15 @@ export class BoardImpl {
       const sr = this._shiftRegisters.get(part.id);
       if (!sr) continue;
 
+      // Overlay-first: if the digital fast path has deferred state for
+      // a net, the overlay value is the electrically settled level — the
+      // stale nodeVoltages would re-clock edges that _settleShiftRegister
+      // already processed.
       const readV = (terminal) => {
         const n = this._netForTerminal(part.id, terminal);
-        return n ? (this.nodeVoltages.get(n) ?? 0) : 0;
+        if (!n) return 0;
+        const ov = this._digitalOverlay.get(n);
+        return ov !== undefined ? ov : (this.nodeVoltages.get(n) ?? 0);
       };
 
       const dataV = readV('data');
