@@ -905,6 +905,111 @@ function readVeml7700Reg(part, state, reg) {
     }
 }
 
+// ─── AS5600 ──────────────────────────────────────────────────────────
+//
+// AMS AS5600: 12-bit contactless magnetic rotary position sensor.
+// I2C address fixed at 0x36. Register-pointer protocol (8-bit pointer,
+// 8-bit register reads, some registers are 12-bit across two bytes).
+//
+// Register map (datasheet Table 15):
+//   0x00       ZMCO         burn count (read-only, 0..3)
+//   0x01-0x02  ZPOS         zero position (12-bit, H:L)
+//   0x03-0x04  MPOS         max position (12-bit)
+//   0x05-0x06  MANG         max angle (12-bit)
+//   0x07-0x08  CONF         configuration (16-bit, H:L)
+//   0x0B       STATUS       magnet status: MD(5) ML(4) MH(3)
+//   0x0C-0x0D  RAWANGLE     raw angle (12-bit, 0..4095)
+//   0x0E-0x0F  ANGLE        filtered angle (12-bit)
+//   0x1A       AGC          automatic gain control (0..255)
+//   0x1B-0x1C  MAGNITUDE    CORDIC magnitude (12-bit)
+
+function registerAS5600() {
+    registerDevice('as5600', {
+        terminals: ['vcc', 'gnd', 'sda', 'scl', 'dir', 'out'],
+
+        init(part) {
+            const regs = new Uint8Array(0x20);
+            regs[0x0b] = 0x20;              // STATUS: magnet detected (MD=1)
+            regs[0x1a] = 0x80;              // AGC: mid-range default
+
+            const state = {
+                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                regs,
+                ptr: 0,
+                _first: true,
+                // Readable state for faces
+                angle: part.params?.angle ?? 0,
+                magnitude: part.params?.magnitude ?? 2048,
+            };
+
+            state._i2c = createI2CSlave({
+                onAddress: (a7, rw) => {
+                    const mine = a7 === 0x36;
+                    if (mine && rw === 0) state._first = true;
+                    return mine;
+                },
+                onWriteByte: (b) => {
+                    if (state._first) {
+                        state.ptr = b & 0x1f;
+                        state._first = false;
+                        return true;
+                    }
+                    writeAs5600Reg(state, state.ptr, b);
+                    state.ptr = (state.ptr + 1) & 0x1f;
+                    return true;
+                },
+                onReadByte: () => {
+                    const v = readAs5600Reg(part, state, state.ptr);
+                    state.ptr = (state.ptr + 1) & 0x1f;
+                    return v;
+                },
+            });
+            return state;
+        },
+
+        stamp(ctx) {
+            ctx.conductance('scl', null, 1 / R_INPUT);
+            ctx.conductance('dir', null, 1 / R_INPUT);
+            ctx.conductance('out', null, 1 / R_INPUT);
+        },
+
+        update(part, state, read) {
+            state.angle = part.params?.angle ?? 0;
+            state.magnitude = part.params?.magnitude ?? 2048;
+            return i2cUpdate(state, read, read('vcc'));
+        },
+    });
+}
+
+function readAs5600Reg(part, state, reg) {
+    // Convert angle (0..360 degrees) to 12-bit (0..4095)
+    const angleDeg = part.params?.angle ?? 0;
+    const norm = ((angleDeg % 360) + 360) % 360;    // handle negatives
+    const raw12 = Math.min(4095, Math.round(norm / 360 * 4096));
+    const mag = Math.max(0, Math.min(4095, Math.round(part.params?.magnitude ?? 2048)));
+
+    switch (reg) {
+        case 0x00: return 0;                         // ZMCO: 0 burns
+        case 0x0b: return 0x20;                      // STATUS: magnet detected
+        case 0x0c: return (raw12 >> 8) & 0x0f;       // RAWANGLE high (4 bits)
+        case 0x0d: return raw12 & 0xff;               // RAWANGLE low
+        case 0x0e: return (raw12 >> 8) & 0x0f;       // ANGLE high (= raw here)
+        case 0x0f: return raw12 & 0xff;               // ANGLE low
+        case 0x1a: return state.regs[0x1a];           // AGC
+        case 0x1b: return (mag >> 8) & 0x0f;          // MAGNITUDE high
+        case 0x1c: return mag & 0xff;                  // MAGNITUDE low
+        default: return state.regs[reg] ?? 0;
+    }
+}
+
+function writeAs5600Reg(state, reg, v) {
+    // Writable config registers: ZPOS, MPOS, MANG, CONF
+    if (reg >= 0x01 && reg <= 0x08) {
+        state.regs[reg] = v;
+    }
+    // Everything else is read-only
+}
+
 // ─── Registration ────────────────────────────────────────────────────
 
 export function registerI2CSensors() {
@@ -915,4 +1020,5 @@ export function registerI2CSensors() {
     registerVL53L0X();
     registerSGP30();
     registerVEML7700();
+    registerAS5600();
 }

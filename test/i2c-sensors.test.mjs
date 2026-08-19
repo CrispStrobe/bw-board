@@ -625,3 +625,79 @@ describe('VEML7700', () => {
         assert.equal(st.white, 800);
     });
 });
+
+// ─── AS5600 ──────────────────────────────────────────────────────────
+
+describe('AS5600', () => {
+    it('fixed address 0x36', () => {
+        const { handlers } = i2cRig('as5600', {}, ['dir', 'out']);
+        assert.equal(handlers.onAddress(0x36, 0), true);
+        assert.equal(handlers.onAddress(0x37, 0), false);
+    });
+
+    it('STATUS shows magnet detected (MD=1)', () => {
+        const { readRegs } = i2cRig('as5600', {}, ['dir', 'out']);
+        const [status] = readRegs(0x36, 0x0b, 1);
+        assert.equal(status & 0x20, 0x20, 'MD bit set');
+    });
+
+    it('RAWANGLE reads 0° correctly', () => {
+        const { readRegs } = i2cRig('as5600', { angle: 0 }, ['dir', 'out']);
+        const [h, l] = readRegs(0x36, 0x0c, 2);
+        const raw = ((h & 0x0f) << 8) | l;
+        assert.equal(raw, 0, '0° → raw 0');
+    });
+
+    it('RAWANGLE reads 180° correctly', () => {
+        const { readRegs } = i2cRig('as5600', { angle: 180 }, ['dir', 'out']);
+        const [h, l] = readRegs(0x36, 0x0c, 2);
+        const raw = ((h & 0x0f) << 8) | l;
+        // Oracle: round(180/360 * 4096) = 2048
+        assert.equal(raw, 2048, '180° → raw 2048');
+    });
+
+    it('RAWANGLE reads 359° correctly', () => {
+        const { readRegs } = i2cRig('as5600', { angle: 359 }, ['dir', 'out']);
+        const [h, l] = readRegs(0x36, 0x0c, 2);
+        const raw = ((h & 0x0f) << 8) | l;
+        // Oracle: round(359/360 * 4096) = round(4084.7) = 4085
+        assert.equal(raw, 4085, '359° → raw 4085');
+    });
+
+    it('ANGLE register matches RAWANGLE', () => {
+        const { readRegs } = i2cRig('as5600', { angle: 90 }, ['dir', 'out']);
+        const [rh, rl] = readRegs(0x36, 0x0c, 2);
+        const [ah, al] = readRegs(0x36, 0x0e, 2);
+        assert.equal(((rh & 0x0f) << 8) | rl, ((ah & 0x0f) << 8) | al,
+            'ANGLE = RAWANGLE');
+    });
+
+    it('MAGNITUDE reads from params', () => {
+        const { readRegs } = i2cRig('as5600', { magnitude: 3000 }, ['dir', 'out']);
+        const [h, l] = readRegs(0x36, 0x1b, 2);
+        const mag = ((h & 0x0f) << 8) | l;
+        assert.equal(mag, 3000, 'magnitude = 3000');
+    });
+
+    it('config registers are writable', () => {
+        const { readRegs, writeReg } = i2cRig('as5600', {}, ['dir', 'out']);
+        writeReg(0x36, 0x07, 0xAB);
+        const [v] = readRegs(0x36, 0x07, 1);
+        assert.equal(v, 0xAB, 'CONF_H written and read back');
+    });
+
+    it('angle wraps at 360°', () => {
+        const { readRegs } = i2cRig('as5600', { angle: 450 }, ['dir', 'out']);
+        const [h, l] = readRegs(0x36, 0x0c, 2);
+        const raw = ((h & 0x0f) << 8) | l;
+        // 450 % 360 = 90 → round(90/360 * 4096) = 1024
+        assert.equal(raw, 1024, '450° wraps to 90° → raw 1024');
+    });
+
+    it('getDeviceState exposes angle and magnitude', () => {
+        const { board } = i2cRig('as5600', { angle: 45, magnitude: 1500 }, ['dir', 'out']);
+        const st = board.getDeviceState('U1');
+        assert.equal(st.angle, 45);
+        assert.equal(st.magnitude, 1500);
+    });
+});

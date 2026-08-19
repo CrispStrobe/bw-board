@@ -189,6 +189,11 @@ export const STIMULUS_CATALOGUE = {
     { param: 'white', label: 'White channel', min: 0, max: 120000, step: 1, unit: 'lx', mechanism: 'param' },
   ],
 
+  as5600: [
+    { param: 'angle', label: 'Angle', min: 0, max: 360, step: 0.1, unit: '°', mechanism: 'param' },
+    { param: 'magnitude', label: 'Magnet strength', min: 0, max: 4095, step: 1, unit: '', mechanism: 'param' },
+  ],
+
   // ── Rotary encoder ───────────────────────────────────────────────────
 
   ky040: [
