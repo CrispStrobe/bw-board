@@ -97,6 +97,10 @@ export function bindPanelToBoard(panel, board) {
  * @param {{autoPump?: boolean}} [opts]
  * @returns {{ pump: () => void, dispose: () => void }}
  */
+// Decoration kinds (mirrors controller.js DECORATION_TYPES — this file is
+// deliberately import-free): presentation only, never bound.
+const DECORATIONS = new Set(['text', 'image']);
+
 export function bindPanelToVariables(panel, vm, opts = {}) {
   const autoPump = opts.autoPump !== false;
 
@@ -119,13 +123,14 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
   };
 
   // Which widget types READ from the variable (displays), vs WRITE to it (inputs).
-  const isDisplay = (w) => w.type === 'gauge' || w.type === 'matrix' || w.type === 'lcd';
+  const isDisplay = (w) => w.type === 'gauge' || w.type === 'matrix' || w.type === 'lcd' || w.type === 'sevenseg';
 
   // widget -> variable (inputs)
   function onPanelEvent(event, detail) {
     if (event !== 'input') return;
     const w = panel.getWidget(detail.name);
     if (!w || !w.binding || w.binding.target !== 'variable') return;
+    if (DECORATIONS.has(w.type)) return;              // presentation only
     if (isDisplay(w)) return;                     // read-only, handled by pump()
     const v = findVar(w.binding.variableName);
     if (v) v.value = panel.getValue(detail.name);
@@ -136,6 +141,7 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
   const shown = new Map();
   function pump() {
     for (const w of panel.getWidgets()) {
+      if (DECORATIONS.has(w.type)) continue;          // presentation only
       if (!w.binding || w.binding.target !== 'variable' || !isDisplay(w)) continue;
       const v = findVar(w.binding.variableName);
       if (!v) continue;
@@ -184,6 +190,7 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
  * @returns {number | null}
  */
 function mapWidgetToControl(w, param) {
+  if (DECORATIONS.has(w.type)) return null;         // presentation only
   switch (w.type) {
     case 'slider':
     case 'dial': {
