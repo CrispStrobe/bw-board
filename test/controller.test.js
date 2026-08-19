@@ -979,4 +979,24 @@ describe('ControllerPanel — sevenseg display widget', () => {
     assert.equal(w.config.digits, 8);
     assert.deepEqual(w.binding, { target: 'variable', variableName: 'shown' });
   });
+
+  // Regression: the pump must dispatch sevenseg like gauge/matrix/lcd. The
+  // sevenseg type shipped with isDisplay + setSevenSegValue but the pump's
+  // setter dispatch had no sevenseg branch, so a bound sevenseg face never
+  // updated — caught only by the pump-path test, not the direct-setter tests.
+  it('a bound sevenseg follows its variable through the pump', () => {
+    const p = new ControllerPanel();
+    p.addWidget('num', 'sevenseg');
+    p.bindToVariable('num', 'shown');
+    const vars = { id_shown: { name: 'shown', value: 0 } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find((v) => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    b.pump();
+    assert.equal(p.getValue('num'), 0);
+    vars.id_shown.value = 168;
+    b.pump();
+    assert.equal(p.getValue('num'), 168, 'pump wrote the variable into the sevenseg face');
+    b.dispose();
+  });
 });

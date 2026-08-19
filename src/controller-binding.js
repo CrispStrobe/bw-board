@@ -159,6 +159,8 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
             panel.setGaugeValue(w.name, nv);
           } else if (typeof panel.setMatrixValue === 'function' && w.type === 'matrix') {
             panel.setMatrixValue(w.name, nv);
+          } else if (typeof panel.setSevenSegValue === 'function' && w.type === 'sevenseg') {
+            panel.setSevenSegValue(w.name, nv);
           }
         }
       }
