@@ -81,6 +81,90 @@ export function bindPanelToBoard(panel, board) {
 }
 
 /**
+ * Wire a controller panel to the program's VARIABLES — the live show/change
+ * loop. This is the "extension layer" bindPanelToBoard defers variable
+ * bindings to:
+ *   INPUT widgets (slider/button/dpad/dial/joystick) WRITE the bound variable
+ *     on every input — you turn a knob, the program's variable changes.
+ *   DISPLAY widgets (gauge, and future matrix/display/sevenseg) READ the bound
+ *     variable and show it — the program sets a variable, the face updates.
+ *
+ * The read direction is polled (`pump()`), driven by requestAnimationFrame in
+ * the browser; pass {autoPump:false} and call pump() yourself in tests.
+ *
+ * @param {import('./controller.js').ControllerPanel} panel
+ * @param {{runtime: object}} vm the scratch-vm instance (for stage variables)
+ * @param {{autoPump?: boolean}} [opts]
+ * @returns {{ pump: () => void, dispose: () => void }}
+ */
+export function bindPanelToVariables(panel, vm, opts = {}) {
+  const autoPump = opts.autoPump !== false;
+
+  const stage = () => {
+    const r = vm && vm.runtime;
+    return r && r.getTargetForStage ? r.getTargetForStage() : null;
+  };
+  const findVar = (name) => {
+    const s = stage();
+    if (!s) return null;
+    if (typeof s.lookupVariableByNameAndType === 'function') {
+      const v = s.lookupVariableByNameAndType(name, '');
+      if (v) return v;
+    }
+    const vars = s.variables || {};
+    for (const id of Object.keys(vars)) {
+      if (vars[id] && vars[id].name === name) return vars[id];
+    }
+    return null;
+  };
+
+  // Which widget types READ from the variable (displays), vs WRITE to it (inputs).
+  const isDisplay = (w) => w.type === 'gauge' || w.type === 'matrix';   // + display/sevenseg as they land
+
+  // widget -> variable (inputs)
+  function onPanelEvent(event, detail) {
+    if (event !== 'input') return;
+    const w = panel.getWidget(detail.name);
+    if (!w || !w.binding || w.binding.target !== 'variable') return;
+    if (isDisplay(w)) return;                     // read-only, handled by pump()
+    const v = findVar(w.binding.variableName);
+    if (v) v.value = panel.getValue(detail.name);
+  }
+  panel.addListener(onPanelEvent);
+
+  // variable -> widget (displays), polled
+  const shown = new Map();
+  function pump() {
+    for (const w of panel.getWidgets()) {
+      if (!w.binding || w.binding.target !== 'variable' || !isDisplay(w)) continue;
+      const v = findVar(w.binding.variableName);
+      if (!v) continue;
+      const nv = Number(v.value);
+      if (shown.get(w.name) !== nv) {
+        shown.set(w.name, nv);
+        if (typeof panel.setGaugeValue === 'function' && w.type === 'gauge') {
+          panel.setGaugeValue(w.name, nv);
+        } else if (typeof panel.setMatrixValue === 'function' && w.type === 'matrix') {
+          panel.setMatrixValue(w.name, nv);
+        }
+      }
+    }
+    if (autoPump && raf) raf = requestAnimationFrame(pump);
+  }
+  let raf = autoPump && typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame(pump) : null;
+
+  return {
+    pump,
+    dispose() {
+      panel.removeListener(onPanelEvent);
+      if (raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      raf = null;
+    },
+  };
+}
+
+/**
  * Map a widget's current state to a board control value.
  *
  * Potentiometer control range: 0..1
