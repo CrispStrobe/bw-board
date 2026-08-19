@@ -27,6 +27,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   DPAD:     'dpad',
   DIAL:     'dial',
   GAUGE:    'gauge',
+  MATRIX:   'matrix',
 });
 
 /** Default configs per widget type. */
@@ -37,6 +38,12 @@ const DEFAULTS = {
   dpad:     { up: false, down: false, left: false, right: false },
   dial:     { min: 0, max: 360, value: 0 },
   gauge:    { min: 0, max: 100, value: 0, label: '' },
+  // A dot-matrix DISPLAY: read-only face driven by a program variable. The
+  // state is one number — a row-major bitmask (bit r*cols+c set = lit), so
+  // it flows through the same numeric variable binding every other display
+  // uses. 5x5 covers the micro:bit; rows*cols must stay <= 32 for the
+  // bitmask to survive int coercion everywhere.
+  matrix:   { rows: 5, cols: 5, value: 0 },
 };
 
 // ─── ControllerPanel ────────────────────────────────────────────────────────
@@ -96,6 +103,7 @@ export class ControllerPanel {
     if (type === 'slider') w.state = { value: config.value ?? w.config.min };
     if (type === 'dial') w.state = { value: config.value ?? w.config.min };
     if (type === 'gauge') w.state = { value: config.value ?? w.config.min };
+    if (type === 'matrix') w.state = { value: config.value ?? 0 };
     this._widgets.set(name, w);
     this._emit('add', { name, type });
     return w;
@@ -202,6 +210,20 @@ export class ControllerPanel {
     this._emit('input', { name, value: w.state.value });
   }
 
+  /**
+   * Set matrix display state. Read-only indicator like the gauge: driven by
+   * the program (variable binding), never by touch.
+   * @param {string} name
+   * @param {number} bits - row-major bitmask, bit (r*cols+c) = dot lit
+   */
+  setMatrixValue(name, bits) {
+    const w = this._requireWidget(name, 'matrix');
+    const cells = (w.config.rows | 0) * (w.config.cols | 0);
+    const mask = cells >= 32 ? 0xFFFFFFFF : (1 << cells) - 1;
+    w.state.value = (Number(bits) || 0) & mask;
+    this._emit('input', { name, value: w.state.value });
+  }
+
   // ── State query (program-facing API for extension blocks) ─────────────
 
   /** Scalar value for any widget (slider/dial/gauge value, button 0/1, joystick magnitude, dpad bitmask). */
@@ -212,6 +234,7 @@ export class ControllerPanel {
       case 'slider':
       case 'dial':
       case 'gauge':
+      case 'matrix':
         return w.state.value;
       case 'button':
         return w.state.pressed ? 1 : 0;

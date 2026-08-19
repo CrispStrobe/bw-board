@@ -783,3 +783,54 @@ describe('ControllerPanel — D-pad world-facing binding', () => {
     binding.dispose();
   });
 });
+
+// ── Matrix display widget — the faceplate triplet's display primitive.
+// Read-only like the gauge: the program writes a variable, the binding pumps
+// it into the widget; the face renders the bitmask. Upstreamed with the
+// micro:bit-matrix reference triplet (2026-08-19).
+
+describe('ControllerPanel — matrix display widget', () => {
+  it('adds a matrix with 5x5 defaults and zero state', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('scr', 'matrix');
+    assert.equal(w.type, 'matrix');
+    assert.equal(w.config.rows, 5);
+    assert.equal(w.config.cols, 5);
+    assert.equal(w.state.value, 0);
+  });
+
+  it('setMatrixValue stores the bitmask and emits input', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'matrix');
+    const events = [];
+    p.addListener((e, d) => { if (e === 'input') events.push(d); });
+    p.setMatrixValue('scr', 0b101);
+    assert.equal(p.getValue('scr'), 5);
+    assert.deepEqual(events, [{ name: 'scr', value: 5 }]);
+  });
+
+  it('masks the bitmask to rows*cols bits and coerces junk to 0', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'matrix', { rows: 2, cols: 2 });
+    p.setMatrixValue('scr', 0b10111);   // 5 bits into a 4-cell matrix
+    assert.equal(p.getValue('scr'), 0b0111);
+    p.setMatrixValue('scr', 'garbage');
+    assert.equal(p.getValue('scr'), 0);
+  });
+
+  it('rejects setMatrixValue on a non-matrix widget', () => {
+    const p = new ControllerPanel();
+    p.addWidget('g', 'gauge');
+    assert.throws(() => p.setMatrixValue('g', 1), /matrix/);
+  });
+
+  it('persists via toJSON/fromJSON with binding', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'matrix', {}, { x: 1, y: 2 });
+    p.getWidget('scr').binding = { target: 'variable', variableName: 'screen' };
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    const w = r.getWidget('scr');
+    assert.equal(w.type, 'matrix');
+    assert.deepEqual(w.binding, { target: 'variable', variableName: 'screen' });
+  });
+});
