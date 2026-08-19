@@ -30,6 +30,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   MATRIX:   'matrix',
   KEYPAD:   'keypad',
   LCD:      'lcd',
+  OLED:     'oled',
   SEVENSEG: 'sevenseg',
   TEXT:     'text',
   IMAGE:    'image',
@@ -57,6 +58,9 @@ const DEFAULTS = {
   matrix:   { rows: 5, cols: 5, value: 0 },
   keypad:   { cols: 4, rows: 4, labels: null, value: '' },
   lcd:      { cols: 4, rows: 2, text: '' },
+  // A text OLED DISPLAY: read-only multi-row text face driven by a program
+  // variable (newlines separate rows; each row clipped to `cols` on render).
+  oled:     { rows: 4, cols: 21, text: '' },
   // A 7-segment numeric DISPLAY: read-only face showing the bound variable's
   // value right-aligned across `digits` tubes (the display contract is one
   // NUMERIC variable per display widget). Overflow renders as dashes.
@@ -130,6 +134,7 @@ export class ControllerPanel {
     if (type === 'matrix') w.state = { value: config.value ?? 0 };
     if (type === 'keypad') w.state = { value: '' };
     if (type === 'lcd') w.state = { text: '' };
+    if (type === 'oled') w.state = { text: config.text ?? '' };
     if (type === 'sevenseg') w.state = { value: config.value ?? 0 };
     this._widgets.set(name, w);
     this._emit('add', { name, type });
@@ -319,6 +324,35 @@ export class ControllerPanel {
   }
 
   /**
+   * Set OLED text. Display-only, driven by the program or a variable binding;
+   * newlines separate rows and each row is clipped to `cols` on render.
+   * @param {string} name
+   * @param {string} text
+   */
+  setOledText(name, text) {
+    const w = this._requireWidget(name, 'oled');
+    w.state.text = String(text);
+    this._emit('input', { name, text: w.state.text });
+  }
+
+  /**
+   * Get the OLED text as an array of `rows` rows, each padded to `cols` wide.
+   * @param {string} name
+   * @returns {string[]}
+   */
+  getOledRows(name) {
+    const w = this._widgets.get(name);
+    if (!w || w.type !== 'oled') return [];
+    const { rows, cols } = w.config;
+    const lines = String(w.state.text || '').split('\n');
+    const result = [];
+    for (let i = 0; i < rows; i++) {
+      result.push((lines[i] || '').slice(0, cols).padEnd(cols, ' '));
+    }
+    return result;
+  }
+
+  /**
    * Set 7-segment display value. Read-only indicator like the gauge: driven
    * by the program (variable binding), never by touch. Stores the raw
    * number; the face truncates to integer and handles overflow.
@@ -356,6 +390,8 @@ export class ControllerPanel {
         return w.state.value;
       case 'lcd':
         return w.state.text;
+      case 'oled':
+        return w.state.text || '';
       default:
         return 0;
     }

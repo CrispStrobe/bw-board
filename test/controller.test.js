@@ -1000,3 +1000,42 @@ describe('ControllerPanel — sevenseg display widget', () => {
     b.dispose();
   });
 });
+
+describe('ControllerPanel — oled display widget', () => {
+  it('adds an oled with default rows/cols and empty text', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('scr', 'oled');
+    assert.equal(w.type, 'oled');
+    assert.equal(w.config.rows, 4);
+    assert.equal(w.config.cols, 21);
+    assert.equal(w.state.text, '');
+  });
+
+  it('setOledText stores text and getOledRows pads/clips to rows x cols', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'oled', { rows: 2, cols: 5 });
+    const events = [];
+    p.addListener((e, d) => { if (e === 'input') events.push(d); });
+    p.setOledText('scr', 'HELLO WORLD\nHI');
+    assert.equal(p.getValue('scr'), 'HELLO WORLD\nHI');
+    assert.deepEqual(p.getOledRows('scr'), ['HELLO', 'HI   ']);  // clipped + padded
+    assert.equal(events.length, 1);
+    assert.throws(() => p.setOledText('nope', 'x'), /not found|oled/);
+  });
+
+  it('a bound oled follows its variable through the pump (regression)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'oled', { rows: 2, cols: 8 });
+    p.bindToVariable('scr', 'display');
+    const vars = { id_display: { name: 'display', value: '' } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find((v) => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    b.pump();
+    assert.equal(p.getValue('scr'), '');
+    vars.id_display.value = '12 + 3\n= 15';
+    b.pump();
+    assert.equal(p.getValue('scr'), '12 + 3\n= 15', 'pump wrote the variable into the oled face');
+    b.dispose();
+  });
+});
