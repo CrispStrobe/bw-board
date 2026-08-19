@@ -26,6 +26,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   SLIDER:   'slider',
   DPAD:     'dpad',
   DIAL:     'dial',
+  GAUGE:    'gauge',
 });
 
 /** Default configs per widget type. */
@@ -35,6 +36,7 @@ const DEFAULTS = {
   slider:   { min: 0, max: 100, step: 1, value: 0 },
   dpad:     { up: false, down: false, left: false, right: false },
   dial:     { min: 0, max: 360, value: 0 },
+  gauge:    { min: 0, max: 100, value: 0, label: '' },
 };
 
 // ─── ControllerPanel ────────────────────────────────────────────────────────
@@ -93,6 +95,7 @@ export class ControllerPanel {
     // Sliders/dials start at min unless a value was specified in config.
     if (type === 'slider') w.state = { value: config.value ?? w.config.min };
     if (type === 'dial') w.state = { value: config.value ?? w.config.min };
+    if (type === 'gauge') w.state = { value: config.value ?? w.config.min };
     this._widgets.set(name, w);
     this._emit('add', { name, type });
     return w;
@@ -185,15 +188,30 @@ export class ControllerPanel {
     this._emit('input', { name, value: w.state.value });
   }
 
+  /**
+   * Set gauge value.  Gauges are read-only indicators driven by the
+   * program or by a pin/variable binding — not by direct user touch.
+   * Clamped to [min, max].
+   * @param {string} name
+   * @param {number} value
+   */
+  setGaugeValue(name, value) {
+    const w = this._requireWidget(name, 'gauge');
+    const { min, max } = w.config;
+    w.state.value = Math.max(min, Math.min(max, value));
+    this._emit('input', { name, value: w.state.value });
+  }
+
   // ── State query (program-facing API for extension blocks) ─────────────
 
-  /** Scalar value for any widget (slider/dial value, button 0/1, joystick magnitude, dpad bitmask). */
+  /** Scalar value for any widget (slider/dial/gauge value, button 0/1, joystick magnitude, dpad bitmask). */
   getValue(name) {
     const w = this._widgets.get(name);
     if (!w) return 0;
     switch (w.type) {
       case 'slider':
       case 'dial':
+      case 'gauge':
         return w.state.value;
       case 'button':
         return w.state.pressed ? 1 : 0;
@@ -254,6 +272,31 @@ export class ControllerPanel {
   bindToPart(widgetName, partId, param) {
     const w = this._requireWidget(widgetName);
     w.binding = { target: 'part', partId, param: param ?? null };
+    this._emit('bind', { name: widgetName, binding: w.binding });
+  }
+
+  /**
+   * Bind a widget to a pin.  For input widgets (joystick, slider) the
+   * widget value is written to the pin; for gauges the pin value is
+   * read and displayed.
+   * @param {string} widgetName
+   * @param {string} pinName - e.g. 'P1.0'
+   */
+  bindToPin(widgetName, pinName) {
+    const w = this._requireWidget(widgetName);
+    w.binding = { target: 'pin', pinName };
+    this._emit('bind', { name: widgetName, binding: w.binding });
+  }
+
+  /**
+   * Bind a widget to a Scratch variable.  Input widgets write to the
+   * variable; gauges read from it.
+   * @param {string} widgetName
+   * @param {string} variableName
+   */
+  bindToVariable(widgetName, variableName) {
+    const w = this._requireWidget(widgetName);
+    w.binding = { target: 'variable', variableName };
     this._emit('bind', { name: widgetName, binding: w.binding });
   }
 
@@ -332,5 +375,5 @@ export class ControllerPanel {
  * @property {object} config
  * @property {object} state
  * @property {{ x: number, y: number }} layout
- * @property {{ target: 'part' | 'program', partId?: string, param?: string } | null} binding
+ * @property {{ target: 'part' | 'pin' | 'variable' | 'program', partId?: string, param?: string, pinName?: string, variableName?: string } | null} binding
  */

@@ -222,6 +222,8 @@ export class ControllerExtension {
     const val = Number(VALUE);
     if (w.type === 'slider' || w.type === 'dial') {
       p.setSliderInput(name, val);
+    } else if (w.type === 'gauge') {
+      p.setGaugeValue(name, val);
     } else if (w.type === 'button') {
       p.setButtonInput(name, !!val);
     } else if (w.type === 'joystick') {

@@ -356,6 +356,283 @@ describe('createControllerDriver', () => {
   });
 });
 
+// ─── D-pad widget ──────────────────────────────────────────────────────────
+
+describe('ControllerPanel: D-pad widget', () => {
+  it('adds a dpad with default state (all false)', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('dpad1', 'dpad');
+    assert.equal(w.type, 'dpad');
+    assert.equal(w.state.up, false);
+    assert.equal(w.state.down, false);
+    assert.equal(w.state.left, false);
+    assert.equal(w.state.right, false);
+  });
+
+  it('setDpadInput sets and rejects invalid direction', () => {
+    const p = new ControllerPanel();
+    p.addWidget('dpad1', 'dpad');
+    p.setDpadInput('dpad1', 'up', true);
+    assert.equal(p.getWidget('dpad1').state.up, true);
+    assert.throws(() => p.setDpadInput('dpad1', 'diagonal', true), /Invalid/);
+  });
+
+  it('getValue returns bitmask (up=1 down=2 left=4 right=8)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('dpad1', 'dpad');
+    p.setDpadInput('dpad1', 'up', true);
+    p.setDpadInput('dpad1', 'right', true);
+    assert.equal(p.getValue('dpad1'), 1 | 8); // 9
+  });
+
+  it('getX/getY map to -1/0/1', () => {
+    const p = new ControllerPanel();
+    p.addWidget('dpad1', 'dpad');
+    p.setDpadInput('dpad1', 'right', true);
+    assert.equal(p.getX('dpad1'), 1);
+    assert.equal(p.getY('dpad1'), 0);
+    p.setDpadInput('dpad1', 'up', true);
+    assert.equal(p.getY('dpad1'), 1);
+  });
+
+  it('isPressed returns true if any direction held', () => {
+    const p = new ControllerPanel();
+    p.addWidget('dpad1', 'dpad');
+    assert.equal(p.isPressed('dpad1'), false);
+    p.setDpadInput('dpad1', 'left', true);
+    assert.equal(p.isPressed('dpad1'), true);
+  });
+
+  it('resets on play mode', () => {
+    const p = new ControllerPanel();
+    p.addWidget('dpad1', 'dpad');
+    p.getWidget('dpad1').state.up = true;
+    p.setMode('play');
+    assert.equal(p.getWidget('dpad1').state.up, false);
+  });
+
+  it('persists via toJSON/fromJSON', () => {
+    const p = new ControllerPanel();
+    p.addWidget('dpad1', 'dpad', {}, { x: 5, y: 10 });
+    p.bindToPart('dpad1', 'sw1', 'x');
+    const json = p.toJSON();
+    const p2 = ControllerPanel.fromJSON(json);
+    const w = p2.getWidget('dpad1');
+    assert.equal(w.type, 'dpad');
+    assert.deepEqual(w.binding, { target: 'part', partId: 'sw1', param: 'x' });
+    assert.equal(w.layout.x, 5);
+  });
+});
+
+// ─── Gauge widget ──────────────────────────────────────────────────────────
+
+describe('ControllerPanel: gauge (read-only indicator)', () => {
+  it('adds a gauge with default config', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('meter', 'gauge', { min: 0, max: 5, label: 'V' });
+    assert.equal(w.type, 'gauge');
+    assert.equal(w.config.label, 'V');
+    assert.equal(w.state.value, 0);
+  });
+
+  it('setGaugeValue clamps to [min, max]', () => {
+    const p = new ControllerPanel();
+    p.addWidget('meter', 'gauge', { min: 0, max: 100 });
+    p.setGaugeValue('meter', 50);
+    assert.equal(p.getValue('meter'), 50);
+    p.setGaugeValue('meter', 200);
+    assert.equal(p.getValue('meter'), 100);
+    p.setGaugeValue('meter', -10);
+    assert.equal(p.getValue('meter'), 0);
+  });
+
+  it('setGaugeValue rejects non-gauge', () => {
+    const p = new ControllerPanel();
+    p.addWidget('btn', 'button');
+    assert.throws(() => p.setGaugeValue('btn', 42));
+  });
+
+  it('gauge does NOT drive board.setControl (read-only)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('meter', 'gauge', { min: 0, max: 100 });
+    p.bindToPart('meter', 'pot1');
+
+    const calls = [];
+    const mockBoard = { setControl(id, v) { calls.push({ id, v }); } };
+    const bridge = bindPanelToBoard(p, mockBoard);
+
+    p.setGaugeValue('meter', 50);
+    assert.equal(calls.length, 0);
+
+    bridge.dispose();
+  });
+
+  it('persists with pin binding', () => {
+    const p = new ControllerPanel();
+    p.addWidget('meter', 'gauge', { min: 0, max: 5, label: 'V' }, { x: 20, y: 30 });
+    p.bindToPin('meter', 'P1.3');
+
+    const json = p.toJSON();
+    const p2 = ControllerPanel.fromJSON(json);
+    const w = p2.getWidget('meter');
+    assert.equal(w.type, 'gauge');
+    assert.equal(w.config.max, 5);
+    assert.deepEqual(w.binding, { target: 'pin', pinName: 'P1.3' });
+  });
+});
+
+// ─── Pin and variable bindings ─────────────────────────────────────────────
+
+describe('ControllerPanel: pin binding', () => {
+  it('bindToPin stores target=pin', () => {
+    const p = new ControllerPanel();
+    p.addWidget('sl', 'slider', { min: 0, max: 255 });
+    p.bindToPin('sl', 'P1.0');
+    assert.deepEqual(p.getWidget('sl').binding, { target: 'pin', pinName: 'P1.0' });
+  });
+
+  it('pin-bound slider calls board.writePin', () => {
+    const p = new ControllerPanel();
+    p.addWidget('sl', 'slider', { min: 0, max: 100 });
+    p.bindToPin('sl', 'P1.0');
+
+    const calls = [];
+    const mockBoard = {
+      setControl() {},
+      writePin(pin, val) { calls.push({ pin, val }); },
+    };
+    const bridge = bindPanelToBoard(p, mockBoard);
+    p.setSliderInput('sl', 50);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].pin, 'P1.0');
+    assert.equal(calls[0].val, 0.5);
+    bridge.dispose();
+  });
+
+  it('pin-bound joystick calls board.writePin', () => {
+    const p = new ControllerPanel();
+    p.addWidget('joy', 'joystick');
+    p.bindToPin('joy', 'P1.3');
+
+    const calls = [];
+    const mockBoard = {
+      setControl() {},
+      writePin(pin, val) { calls.push({ pin, val }); },
+    };
+    const bridge = bindPanelToBoard(p, mockBoard);
+    p.setJoystickInput('joy', 100, 0);
+    assert.equal(calls[0].pin, 'P1.3');
+    assert.equal(calls[0].val, 1.0);
+    bridge.dispose();
+  });
+
+  it('pin binding round-trips', () => {
+    const p = new ControllerPanel();
+    p.addWidget('sl', 'slider');
+    p.bindToPin('sl', 'P2.5');
+    const p2 = ControllerPanel.fromJSON(p.toJSON());
+    assert.deepEqual(p2.getWidget('sl').binding, { target: 'pin', pinName: 'P2.5' });
+  });
+});
+
+describe('ControllerPanel: variable binding', () => {
+  it('bindToVariable stores target=variable', () => {
+    const p = new ControllerPanel();
+    p.addWidget('sl', 'slider');
+    p.bindToVariable('sl', 'speed');
+    assert.deepEqual(p.getWidget('sl').binding, { target: 'variable', variableName: 'speed' });
+  });
+
+  it('variable-bound gauge persists', () => {
+    const p = new ControllerPanel();
+    p.addWidget('meter', 'gauge', { min: 0, max: 100, label: 'RPM' });
+    p.bindToVariable('meter', 'motor_speed');
+    const p2 = ControllerPanel.fromJSON(p.toJSON());
+    assert.deepEqual(p2.getWidget('meter').binding, { target: 'variable', variableName: 'motor_speed' });
+  });
+
+  it('variable-bound widgets do not call board methods', () => {
+    const p = new ControllerPanel();
+    p.addWidget('sl', 'slider', { min: 0, max: 100 });
+    p.bindToVariable('sl', 'level');
+
+    const calls = [];
+    const mockBoard = {
+      setControl(id, v) { calls.push(id); },
+      writePin(pin, v) { calls.push(pin); },
+    };
+    const bridge = bindPanelToBoard(p, mockBoard);
+    p.setSliderInput('sl', 50);
+    assert.equal(calls.length, 0);
+    bridge.dispose();
+  });
+});
+
+// ─── Steering widgets: full persistence round-trip ─────────────────────────
+
+describe('Steering widgets: joystick + slider + gauge save/load', () => {
+  it('all three survive with mixed bindings', () => {
+    const orig = new ControllerPanel();
+    orig.addWidget('joy1', 'joystick', {}, { x: 10, y: 10 });
+    orig.bindToPin('joy1', 'P1.3');
+    orig.addWidget('speed', 'slider', { min: 0, max: 255 }, { x: 120, y: 10 });
+    orig.bindToVariable('speed', 'motor_pwm');
+    orig.addWidget('volts', 'gauge', { min: 0, max: 5, label: 'V' }, { x: 10, y: 100 });
+    orig.bindToPin('volts', 'P1.7');
+
+    const data = orig.toJSON();
+    const live = new ControllerPanel();
+    live.addWidget('stale', 'button'); // will be replaced
+    const restored = ControllerPanel.fromJSON(data);
+    for (const name of live.getWidgetNames()) live.removeWidget(name);
+    for (const w of restored.getWidgets()) {
+      const a = live.addWidget(w.name, w.type, w.config, w.layout);
+      if (w.binding) a.binding = { ...w.binding };
+    }
+
+    assert.equal(live.getWidget('stale'), null);
+    assert.deepEqual(live.getWidgetNames(), ['joy1', 'speed', 'volts']);
+    assert.deepEqual(live.getWidget('joy1').binding, { target: 'pin', pinName: 'P1.3' });
+    assert.deepEqual(live.getWidget('speed').binding, { target: 'variable', variableName: 'motor_pwm' });
+    assert.deepEqual(live.getWidget('volts').binding, { target: 'pin', pinName: 'P1.7' });
+    assert.equal(live.getWidget('volts').config.label, 'V');
+  });
+
+  it('restored bindings drive board after round-trip', () => {
+    const orig = new ControllerPanel();
+    orig.addWidget('joy1', 'joystick');
+    orig.bindToPin('joy1', 'P1.0');
+    orig.addWidget('sl', 'slider', { min: 0, max: 100 });
+    orig.bindToPart('sl', 'pot1');
+    orig.addWidget('meter', 'gauge', { min: 0, max: 100 });
+    orig.bindToPin('meter', 'P1.5');
+
+    const live = ControllerPanel.fromJSON(orig.toJSON());
+
+    const pinCalls = [];
+    const partCalls = [];
+    const mockBoard = {
+      setControl(id, v) { partCalls.push({ id, v }); },
+      writePin(pin, v) { pinCalls.push({ pin, v }); },
+    };
+    const bridge = bindPanelToBoard(live, mockBoard);
+
+    live.setJoystickInput('joy1', 50, 0);
+    assert.equal(pinCalls.length, 1);
+    assert.equal(pinCalls[0].pin, 'P1.0');
+
+    live.setSliderInput('sl', 50);
+    assert.equal(partCalls.length, 1);
+    assert.equal(partCalls[0].id, 'pot1');
+
+    live.setGaugeValue('meter', 75);
+    assert.equal(pinCalls.length, 1); // gauge is read-only
+    assert.equal(partCalls.length, 1);
+
+    bridge.dispose();
+  });
+});
+
 // ── D-pad — upstreamed from brickwright-lite c1edb5ba, where this widget
 // landed IN THE VENDORED COPY and drifted from this repo (the vendor
 // freshness gate caught it, 2026-08-19). The engine change and these tests
