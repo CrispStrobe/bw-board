@@ -28,7 +28,15 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   DIAL:     'dial',
   GAUGE:    'gauge',
   MATRIX:   'matrix',
+  TEXT:     'text',
+  IMAGE:    'image',
 });
+
+/**
+ * Decoration kinds: presentation only - neither input nor display. The
+ * binding layers skip them entirely (no variable writes, no pump).
+ */
+export const DECORATION_TYPES = new Set(['text', 'image']);
 
 /** Default configs per widget type. */
 const DEFAULTS = {
@@ -43,7 +51,9 @@ const DEFAULTS = {
   // it flows through the same numeric variable binding every other display
   // uses. 5x5 covers the micro:bit; rows*cols must stay <= 32 for the
   // bitmask to survive int coercion everywhere.
-  matrix:   { rows: 5, cols: 5, value: 0 },
+  matrix:   { rows: 5, cols: 5, value: 0 },  // Decorations (presentation only, never bound):
+  text:     { text: 'Label', fontSize: 16, color: '#334155' },
+  image:    { src: '', alt: '' },
 };
 
 // ─── ControllerPanel ────────────────────────────────────────────────────────
@@ -95,7 +105,10 @@ export class ControllerPanel {
       type,
       config: { ...DEFAULTS[type], ...config },
       state: { ...DEFAULTS[type] },
-      layout: { x: layout.x ?? 0, y: layout.y ?? 0 },
+      // Placement + presentation: x/y and any editor fields (w/h/rotation/
+      // color/label) survive verbatim. NOT state: state.{x,y} is a
+      // joystick's INPUT value; layout is where the widget SITS.
+      layout: { x: 0, y: 0, ...layout },
       binding: null,
     };
     // state is mutable; config is the template.
@@ -125,6 +138,42 @@ export class ControllerPanel {
   }
 
   getWidget(name) { return this._widgets.get(name) ?? null; }
+
+  /**
+   * Merge layout fields (placement/size/rotation/color/label). Emits
+   * 'layout' so views re-render and hosts persist.
+   * @param {string} name
+   * @param {object} patch
+   */
+  setWidgetLayout(name, patch) {
+    const w = this._requireWidget(name);
+    w.layout = { ...w.layout, ...patch };
+    this._emit('layout', { name });
+    return w;
+  }
+
+  /**
+   * Rename a widget. The widget OBJECT moves (binding, layout, state all
+   * travel with it), so nothing is orphaned; refuses collisions and empty
+   * names. Emits 'rename' with both names so hosts can re-key anything
+   * external.
+   * @param {string} oldName
+   * @param {string} newName
+   */
+  renameWidget(oldName, newName) {
+    const w = this._requireWidget(oldName);
+    newName = String(newName || '').trim();
+    if (!newName) throw new Error('Widget name cannot be empty');
+    if (newName === oldName) return w;
+    if (this._widgets.has(newName)) throw new Error(`Widget '${newName}' already exists`);
+    // rebuild the map so iteration order (== paint order) is preserved
+    const entries = [...this._widgets.entries()].map(([k, v]) =>
+      k === oldName ? [newName, v] : [k, v]);
+    this._widgets = new Map(entries);
+    w.name = newName;
+    this._emit('rename', { oldName, newName });
+    return w;
+  }
   getWidgetNames() { return [...this._widgets.keys()]; }
   getWidgets() { return [...this._widgets.values()]; }
 

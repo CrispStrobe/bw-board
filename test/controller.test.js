@@ -7,8 +7,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ControllerPanel, WIDGET_TYPES } from '../src/controller.js';
-import { bindPanelToBoard, createControllerDriver } from '../src/controller-binding.js';
+import { ControllerPanel, WIDGET_TYPES, DECORATION_TYPES } from '../src/controller.js';
+import { bindPanelToBoard, createControllerDriver, bindPanelToVariables } from '../src/controller-binding.js';
 import { BoardImpl } from '../src/board.js';
 
 // ── Widget CRUD ─────────────────────────────────────────────────────────────
@@ -832,5 +832,96 @@ describe('ControllerPanel — matrix display widget', () => {
     const w = r.getWidget('scr');
     assert.equal(w.type, 'matrix');
     assert.deepEqual(w.binding, { target: 'variable', variableName: 'screen' });
+  });
+});
+
+// ── Widget layout model + decorations (the widgets-editor campaign) ────────
+
+describe('ControllerPanel — layout model (move/resize/rotate/colour/label)', () => {
+  it('addWidget keeps every layout field verbatim', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('j', 'joystick', {}, { x: 8, y: 16, w: 120, h: 90, rotation: 15, color: '#f00', label: 'Steer' });
+    assert.deepEqual(w.layout, { x: 8, y: 16, w: 120, h: 90, rotation: 15, color: '#f00', label: 'Steer' });
+  });
+
+  it('setWidgetLayout merges and emits layout', () => {
+    const p = new ControllerPanel();
+    p.addWidget('j', 'joystick', {}, { x: 8, y: 16 });
+    const events = [];
+    p.addListener((e, d) => { if (e === 'layout') events.push(d); });
+    p.setWidgetLayout('j', { w: 200, rotation: 30 });
+    assert.deepEqual(p.getWidget('j').layout, { x: 8, y: 16, w: 200, rotation: 30 });
+    assert.deepEqual(events, [{ name: 'j' }]);
+  });
+
+  it('layout fields survive toJSON/fromJSON round-trip', () => {
+    const p = new ControllerPanel();
+    p.addWidget('j', 'joystick', {}, { x: 8, y: 16, w: 120, rotation: 45, color: '#0f0', label: 'L' });
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    assert.deepEqual(r.getWidget('j').layout, { x: 8, y: 16, w: 120, rotation: 45, color: '#0f0', label: 'L' });
+  });
+
+  it('layout.{x,y} never touches a joystick state.{x,y} (input vs placement)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('j', 'joystick', {}, { x: 50, y: 60 });
+    p.setJoystickInput('j', -30, 70);
+    assert.equal(p.getWidget('j').state.x, -30);
+    assert.equal(p.getWidget('j').layout.x, 50);
+    p.setWidgetLayout('j', { x: 99 });
+    assert.equal(p.getWidget('j').state.x, -30, 'input untouched by placement');
+  });
+
+  it('renameWidget preserves binding + layout, refuses collisions/empties', () => {
+    const p = new ControllerPanel();
+    p.addWidget('a', 'button', {}, { x: 1, color: '#00f' });
+    p.addWidget('b', 'button');
+    p.bindToVariable('a', 'btnA');
+    p.renameWidget('a', 'fire');
+    assert.equal(p.getWidget('a'), null);
+    const w = p.getWidget('fire');
+    assert.deepEqual(w.binding, { target: 'variable', variableName: 'btnA' });
+    assert.equal(w.layout.color, '#00f');
+    assert.throws(() => p.renameWidget('fire', 'b'), /already exists/);
+    assert.throws(() => p.renameWidget('fire', '  '), /empty/);
+    // paint order preserved: fire stays first
+    assert.deepEqual(p.getWidgetNames(), ['fire', 'b']);
+  });
+});
+
+describe('ControllerPanel — decoration widgets (text/image)', () => {
+  it('text and image exist with defaults and are DECORATION_TYPES', () => {
+    const p = new ControllerPanel();
+    const tw = p.addWidget('t', 'text');
+    const iw = p.addWidget('i', 'image');
+    assert.equal(tw.config.text, 'Label');
+    assert.equal(iw.config.src, '');
+    assert.ok(DECORATION_TYPES.has('text') && DECORATION_TYPES.has('image'));
+    assert.equal(p.getValue('t'), 0);
+  });
+
+  it('decorations survive persistence with config + layout', () => {
+    const p = new ControllerPanel();
+    p.addWidget('t', 'text', { text: 'Hello', fontSize: 24, color: '#123456' }, { x: 5, y: 6, rotation: 10 });
+    p.addWidget('i', 'image', { src: 'data:image/png;base64,AAAA' }, { w: 80, h: 60 });
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    assert.equal(r.getWidget('t').config.text, 'Hello');
+    assert.equal(r.getWidget('t').layout.rotation, 10);
+    assert.equal(r.getWidget('i').config.src, 'data:image/png;base64,AAAA');
+    assert.equal(r.getWidget('i').layout.h, 60);
+  });
+
+  it('the variable binding layer skips decorations entirely', () => {
+    const p = new ControllerPanel();
+    p.addWidget('t', 'text');
+    p.bindToVariable('t', 'oops');   // a user CAN mis-bind; the layer must ignore it
+    const vars = { id_oops: { name: 'oops', value: 7 } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find((v) => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    b.pump();
+    assert.equal(vars.id_oops.value, 7, 'pump never wrote through a decoration');
+    p._emit('input', { name: 't' });
+    assert.equal(vars.id_oops.value, 7, 'input path never wrote either');
+    b.dispose();
   });
 });
