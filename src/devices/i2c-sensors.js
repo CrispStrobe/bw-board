@@ -782,6 +782,129 @@ function sgp30Execute(part, state, cmd) {
     }
 }
 
+// ─── VEML7700 ────────────────────────────────────────────────────────
+//
+// Vishay VEML7700: high-accuracy ambient light sensor.
+// I2C address fixed at 0x10. 16-bit register protocol:
+// write = [cmd_code, data_low, data_high], read after cmd = [low, high].
+//
+// Register map (datasheet Table 1):
+//   0x00  ALS_CONF    configuration (gain, integration time, power)
+//   0x01  ALS_WH      high threshold window
+//   0x02  ALS_WL      low threshold window
+//   0x03  PSM         power saving mode
+//   0x04  ALS         ambient light output (16-bit, raw counts)
+//   0x05  WHITE       white channel output (16-bit)
+//
+// Resolution depends on gain + integration time. Default (gain 1, 100ms):
+// resolution = 0.0576 lx/count → count = lux / 0.0576.
+
+function registerVEML7700() {
+    registerDevice('veml7700', {
+        terminals: ['vcc', 'gnd', 'sda', 'scl'],
+
+        init(part) {
+            const regs = new Uint16Array(6);
+            // ALS_CONF default: gain=1, IT=100ms, ALS_SD=0 (on)
+            regs[0] = 0x0000;
+
+            const state = {
+                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                regs,
+                ptr: 0,
+                _phase: 'cmd',       // 'cmd' | 'dlo' | 'dhi'
+                _writeLow: 0,
+                _readLow: true,
+                // Readable state for faces
+                lux: part.params?.lux ?? 0,
+                white: part.params?.white ?? 0,
+            };
+
+            state._i2c = createI2CSlave({
+                onAddress: (a7, rw) => {
+                    const mine = a7 === 0x10;
+                    if (mine && rw === 0) state._phase = 'cmd';
+                    if (mine && rw === 1) state._readLow = true;
+                    return mine;
+                },
+                onWriteByte: (b) => {
+                    if (state._phase === 'cmd') {
+                        state.ptr = b & 0x07;
+                        state._phase = 'dlo';
+                        return true;
+                    }
+                    if (state._phase === 'dlo') {
+                        state._writeLow = b;
+                        state._phase = 'dhi';
+                        return true;
+                    }
+                    // dhi — complete the 16-bit write
+                    const val = state._writeLow | (b << 8);
+                    if (state.ptr <= 3) state.regs[state.ptr] = val;
+                    state._phase = 'cmd';
+                    return true;
+                },
+                onReadByte: () => {
+                    const v = readVeml7700Reg(part, state, state.ptr);
+                    let byte;
+                    if (state._readLow) {
+                        byte = v & 0xff;
+                        state._readLow = false;
+                    } else {
+                        byte = (v >> 8) & 0xff;
+                        state._readLow = true;
+                    }
+                    return byte;
+                },
+            });
+            return state;
+        },
+
+        stamp(ctx) {
+            ctx.conductance('scl', null, 1 / R_INPUT);
+        },
+
+        update(part, state, read) {
+            state.lux = part.params?.lux ?? 0;
+            state.white = part.params?.white ?? 0;
+            return i2cUpdate(state, read, read('vcc'));
+        },
+    });
+}
+
+function readVeml7700Reg(part, state, reg) {
+    const shutDown = !!(state.regs[0] & 0x01);      // ALS_SD bit
+
+    // Gain lookup: bits 12:11
+    const gainBits = (state.regs[0] >> 11) & 0x03;
+    const gains = [1, 2, 0.125, 0.25];
+    const gain = gains[gainBits];
+
+    // Integration time lookup: bits 9:6
+    const itBits = (state.regs[0] >> 6) & 0x0f;
+    const itMap = { 0: 100, 1: 200, 2: 400, 3: 800, 8: 50, 12: 25 };
+    const itMs = itMap[itBits] ?? 100;
+
+    // Resolution = 0.0576 at gain=1, IT=100ms; scales inversely with both
+    const resolution = 0.0576 * (100 / itMs) * (1 / gain);
+
+    switch (reg) {
+        case 0x00: case 0x01: case 0x02: case 0x03:
+            return state.regs[reg];
+        case 0x04: {                                 // ALS
+            if (shutDown) return 0;
+            const lux = part.params?.lux ?? 0;
+            return Math.max(0, Math.min(65535, Math.round(lux / resolution)));
+        }
+        case 0x05: {                                 // WHITE
+            if (shutDown) return 0;
+            const w = part.params?.white ?? (part.params?.lux ?? 0);
+            return Math.max(0, Math.min(65535, Math.round(w / resolution)));
+        }
+        default: return 0;
+    }
+}
+
 // ─── Registration ────────────────────────────────────────────────────
 
 export function registerI2CSensors() {
@@ -791,4 +914,5 @@ export function registerI2CSensors() {
     registerINA219();
     registerVL53L0X();
     registerSGP30();
+    registerVEML7700();
 }

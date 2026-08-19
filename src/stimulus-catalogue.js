@@ -184,6 +184,10 @@ export const STIMULUS_CATALOGUE = {
     { param: 'eCO2', label: 'eCO₂', min: 400, max: 60000, step: 1, unit: 'ppm', mechanism: 'param' },
     { param: 'TVOC', label: 'TVOC', min: 0, max: 60000, step: 1, unit: 'ppb', mechanism: 'param' },
   ],
+  veml7700: [
+    { param: 'lux', label: 'Illuminance', min: 0, max: 120000, step: 1, unit: 'lx', mechanism: 'param' },
+    { param: 'white', label: 'White channel', min: 0, max: 120000, step: 1, unit: 'lx', mechanism: 'param' },
+  ],
 
   // ── Rotary encoder ───────────────────────────────────────────────────
 

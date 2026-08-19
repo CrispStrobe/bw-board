@@ -531,3 +531,97 @@ describe('SGP30', () => {
         assert.equal(st.TVOC, 50);
     });
 });
+
+// ─── VEML7700 ────────────────────────────────────────────────────────
+
+describe('VEML7700', () => {
+    /** Write a 16-bit register (cmd + low + high). */
+    function writeVeml(handlers, reg, val) {
+        handlers.onAddress(0x10, 0);
+        handlers.onWriteByte(reg);
+        handlers.onWriteByte(val & 0xff);
+        handlers.onWriteByte((val >> 8) & 0xff);
+    }
+
+    /** Read a 16-bit register (set pointer via write, then read 2 bytes LE). */
+    function readVeml(handlers, reg) {
+        handlers.onAddress(0x10, 0);
+        handlers.onWriteByte(reg);
+        handlers.onAddress(0x10, 1);
+        const lo = handlers.onReadByte();
+        const hi = handlers.onReadByte();
+        return lo | (hi << 8);
+    }
+
+    it('fixed address 0x10', () => {
+        const { handlers } = i2cRig('veml7700', {});
+        assert.equal(handlers.onAddress(0x10, 0), true);
+        assert.equal(handlers.onAddress(0x11, 0), false);
+    });
+
+    it('ALS reads lux at default resolution (gain=1, IT=100ms)', () => {
+        const { handlers } = i2cRig('veml7700', { lux: 500 });
+        // Default config: gain=1, IT=100ms → resolution = 0.0576 lx/count
+        // Oracle: round(500 / 0.0576) = 8681
+        const raw = readVeml(handlers, 0x04);
+        assert.equal(raw, 8681, '500 lux → raw 8681 at 0.0576 lx/count');
+    });
+
+    it('ALS reads 0 when shut down (ALS_SD = 1)', () => {
+        const { handlers } = i2cRig('veml7700', { lux: 500 });
+        // Set ALS_SD bit (bit 0 of ALS_CONF)
+        writeVeml(handlers, 0x00, 0x0001);
+        const raw = readVeml(handlers, 0x04);
+        assert.equal(raw, 0, 'ALS = 0 when shut down');
+    });
+
+    it('gain×2 halves the raw count', () => {
+        const { handlers } = i2cRig('veml7700', { lux: 500 });
+        // Gain = 2 → bits 12:11 = 01 → 0x0800
+        writeVeml(handlers, 0x00, 0x0800);
+        // Resolution = 0.0576 * (100/100) * (1/2) = 0.0288
+        // Oracle: round(500 / 0.0288) = 17361
+        const raw = readVeml(handlers, 0x04);
+        assert.equal(raw, 17361, 'gain×2 → raw 17361');
+    });
+
+    it('IT=200ms doubles the raw count vs IT=100ms', () => {
+        const { handlers } = i2cRig('veml7700', { lux: 100 });
+        // IT=200ms → bits 9:6 = 0001 → 0x0040
+        writeVeml(handlers, 0x00, 0x0040);
+        // Resolution = 0.0576 * (100/200) * (1/1) = 0.0288
+        // Oracle: round(100 / 0.0288) = 3472
+        const raw = readVeml(handlers, 0x04);
+        assert.equal(raw, 3472, 'IT=200ms → raw 3472');
+    });
+
+    it('WHITE channel defaults to lux value when white param absent', () => {
+        const { handlers } = i2cRig('veml7700', { lux: 200 });
+        const als = readVeml(handlers, 0x04);
+        const white = readVeml(handlers, 0x05);
+        assert.equal(white, als, 'WHITE = ALS when no white param');
+    });
+
+    it('WHITE channel uses explicit white param', () => {
+        const { handlers } = i2cRig('veml7700', { lux: 200, white: 300 });
+        const als = readVeml(handlers, 0x04);
+        const white = readVeml(handlers, 0x05);
+        // ALS: round(200/0.0576) = 3472, WHITE: round(300/0.0576) = 5208
+        assert.equal(als, 3472, 'ALS = 3472');
+        assert.equal(white, 5208, 'WHITE = 5208');
+    });
+
+    it('config register reads back what was written', () => {
+        const { handlers } = i2cRig('veml7700', {});
+        writeVeml(handlers, 0x00, 0x1234);
+        const conf = readVeml(handlers, 0x00);
+        assert.equal(conf, 0x1234);
+    });
+
+    it('getDeviceState exposes lux and white', () => {
+        const { board } = i2cRig('veml7700', { lux: 750, white: 800 });
+        const st = board.getDeviceState('U1');
+        assert.equal(st.lux, 750);
+        assert.equal(st.white, 800);
+    });
+});
