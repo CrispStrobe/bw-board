@@ -62,6 +62,7 @@ export class ControllerPanel {
     if (mode === 'play') {
       for (const w of this._widgets.values()) {
         if (w.type === 'button' && !w.config.toggle) w.state.pressed = false;
+        if (w.type === 'dpad') { w.state.up = false; w.state.down = false; w.state.left = false; w.state.right = false; }
       }
     }
     this._emit('mode', { mode });
@@ -155,6 +156,21 @@ export class ControllerPanel {
   }
 
   /**
+   * Set D-pad direction state.
+   * @param {string} name
+   * @param {'up'|'down'|'left'|'right'} direction
+   * @param {boolean} pressed
+   */
+  setDpadInput(name, direction, pressed) {
+    const w = this._requireWidget(name, 'dpad');
+    if (!['up', 'down', 'left', 'right'].includes(direction)) {
+      throw new Error(`Invalid D-pad direction: ${direction}`);
+    }
+    w.state[direction] = !!pressed;
+    this._emit('input', { name, direction, pressed: w.state[direction] });
+  }
+
+  /**
    * Set slider / dial value.  Clamped to [min, max].
    * @param {string} name
    * @param {number} value
@@ -171,7 +187,7 @@ export class ControllerPanel {
 
   // ── State query (program-facing API for extension blocks) ─────────────
 
-  /** Scalar value for any widget (slider/dial value, button 0/1, joystick magnitude). */
+  /** Scalar value for any widget (slider/dial value, button 0/1, joystick magnitude, dpad bitmask). */
   getValue(name) {
     const w = this._widgets.get(name);
     if (!w) return 0;
@@ -183,27 +199,40 @@ export class ControllerPanel {
         return w.state.pressed ? 1 : 0;
       case 'joystick':
         return Math.round(Math.sqrt(w.state.x ** 2 + w.state.y ** 2));
+      case 'dpad':
+        // Bitmask: up=1, down=2, left=4, right=8
+        return (w.state.up ? 1 : 0) | (w.state.down ? 2 : 0)
+             | (w.state.left ? 4 : 0) | (w.state.right ? 8 : 0);
       default:
         return 0;
     }
   }
 
-  /** Joystick X axis (-100..100). Returns 0 for non-joystick widgets. */
+  /** X axis: joystick -100..100, D-pad -1/0/1.  0 for other types. */
   getX(name) {
     const w = this._widgets.get(name);
-    return w?.type === 'joystick' ? w.state.x : 0;
+    if (!w) return 0;
+    if (w.type === 'joystick') return w.state.x;
+    if (w.type === 'dpad') return (w.state.right ? 1 : 0) - (w.state.left ? 1 : 0);
+    return 0;
   }
 
-  /** Joystick Y axis (-100..100). Returns 0 for non-joystick widgets. */
+  /** Y axis: joystick -100..100, D-pad -1/0/1.  0 for other types. */
   getY(name) {
     const w = this._widgets.get(name);
-    return w?.type === 'joystick' ? w.state.y : 0;
+    if (!w) return 0;
+    if (w.type === 'joystick') return w.state.y;
+    if (w.type === 'dpad') return (w.state.up ? 1 : 0) - (w.state.down ? 1 : 0);
+    return 0;
   }
 
-  /** Button pressed state. Returns false for non-button widgets. */
+  /** Button/D-pad pressed state. For D-pad, returns true if any direction is pressed. */
   isPressed(name) {
     const w = this._widgets.get(name);
-    return w?.type === 'button' ? w.state.pressed : false;
+    if (!w) return false;
+    if (w.type === 'button') return w.state.pressed;
+    if (w.type === 'dpad') return w.state.up || w.state.down || w.state.left || w.state.right;
+    return false;
   }
 
   /** All widget names → current scalar values. */

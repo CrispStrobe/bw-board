@@ -84,6 +84,12 @@ function mapWidgetToControl(w, param) {
       const axis = param === 'y' ? w.state.y : w.state.x;
       return (axis + 100) / 200;
     }
+    case 'dpad': {
+      // param selects axis: 'x' → left/right, 'y' → up/down, default → any-pressed
+      if (param === 'x') return ((w.state.right ? 1 : 0) - (w.state.left ? 1 : 0) + 1) / 2;
+      if (param === 'y') return ((w.state.up ? 1 : 0) - (w.state.down ? 1 : 0) + 1) / 2;
+      return (w.state.up || w.state.down || w.state.left || w.state.right) ? 1 : 0;
+    }
     default:
       return null;
   }

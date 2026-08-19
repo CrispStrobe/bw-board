@@ -227,6 +227,13 @@ export class ControllerExtension {
     } else if (w.type === 'joystick') {
       // setWidget on a joystick sets X; use controllerY block for Y
       p.setJoystickInput(name, val, p.getY(name));
+    } else if (w.type === 'dpad') {
+      // setWidget on a dpad: bitmask (up=1, down=2, left=4, right=8)
+      const v = Math.round(val);
+      p.setDpadInput(name, 'up',    !!(v & 1));
+      p.setDpadInput(name, 'down',  !!(v & 2));
+      p.setDpadInput(name, 'left',  !!(v & 4));
+      p.setDpadInput(name, 'right', !!(v & 8));
     }
   }
 }
