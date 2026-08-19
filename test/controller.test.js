@@ -938,3 +938,45 @@ describe('ControllerPanel — setWidgetConfig', () => {
     assert.deepEqual(events, [{ name: 't' }]);
   });
 });
+
+describe('ControllerPanel — sevenseg display widget', () => {
+  it('adds a sevenseg with 4-digit defaults and zero state', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('num', 'sevenseg');
+    assert.equal(w.type, 'sevenseg');
+    assert.equal(w.config.digits, 4);
+    assert.equal(w.state.value, 0);
+  });
+
+  it('setSevenSegValue stores the number and emits input', () => {
+    const p = new ControllerPanel();
+    p.addWidget('num', 'sevenseg');
+    const events = [];
+    p.addListener((e, d) => { if (e === 'input') events.push(d); });
+    p.setSevenSegValue('num', 42);
+    assert.equal(p.getValue('num'), 42);
+    p.setSevenSegValue('num', -7.9);
+    assert.equal(p.getValue('num'), -7.9);   // raw store; the FACE truncates
+    assert.equal(events.length, 2);
+  });
+
+  it('coerces junk to 0 and rejects wrong widget type', () => {
+    const p = new ControllerPanel();
+    p.addWidget('num', 'sevenseg');
+    p.setSevenSegValue('num', 'garbage');
+    assert.equal(p.getValue('num'), 0);
+    p.addWidget('g', 'gauge');
+    assert.throws(() => p.setSevenSegValue('g', 1), /sevenseg/);
+  });
+
+  it('persists via toJSON/fromJSON with binding', () => {
+    const p = new ControllerPanel();
+    p.addWidget('num', 'sevenseg', { digits: 8 }, { x: 3, y: 0 });
+    p.getWidget('num').binding = { target: 'variable', variableName: 'shown' };
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    const w = r.getWidget('num');
+    assert.equal(w.type, 'sevenseg');
+    assert.equal(w.config.digits, 8);
+    assert.deepEqual(w.binding, { target: 'variable', variableName: 'shown' });
+  });
+});
