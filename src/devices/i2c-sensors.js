@@ -672,6 +672,116 @@ function writeVl53Reg(state, reg, v) {
     }
 }
 
+// ─── SGP30 ───────────────────────────────────────────────────────────
+//
+// Sensirion SGP30: multi-pixel gas sensor for indoor air quality.
+// I2C address fixed at 0x58. Command-based protocol (no register pointer):
+// each command is a 2-byte word, followed by optional data words with CRC.
+//
+// Key commands (datasheet Table 10):
+//   0x2032  Init_air_quality    — must be called first, starts measurement
+//   0x2008  Measure_air_quality — returns eCO2 (ppm) + TVOC (ppb), each
+//                                 16-bit with CRC8 byte after each word
+//   0x2050  Measure_raw_signals — returns H2 + Ethanol raw signals
+//   0x201E  Get_feature_set     — 2 bytes + CRC (product type + version)
+//   0x3682  Get_serial_id       — 6 bytes + 3 CRCs
+//   0x0020  Measure_test        — self-test, returns 0xD400 if pass
+//
+// CRC-8 poly 0x31, init 0xFF (Sensirion standard).
+
+function sgp30Crc(d0, d1) {
+    let crc = 0xff;
+    for (const b of [d0, d1]) {
+        crc ^= b;
+        for (let i = 0; i < 8; i++) crc = (crc & 0x80) ? ((crc << 1) ^ 0x31) & 0xff : (crc << 1) & 0xff;
+    }
+    return crc;
+}
+
+function registerSGP30() {
+    registerDevice('sgp30', {
+        terminals: ['vcc', 'gnd', 'sda', 'scl'],
+
+        init(part) {
+            const state = {
+                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                _cmdBuf: [],
+                _response: [],
+                _respIdx: 0,
+                _initialized: false,
+                // Readable state for faces
+                eCO2: part.params?.eCO2 ?? 400,
+                TVOC: part.params?.TVOC ?? 0,
+            };
+
+            state._i2c = createI2CSlave({
+                onAddress: (a7, rw) => {
+                    const mine = a7 === 0x58;
+                    if (mine && rw === 0) state._cmdBuf = [];
+                    if (mine && rw === 1) state._respIdx = 0;
+                    return mine;
+                },
+                onWriteByte: (b) => {
+                    state._cmdBuf.push(b);
+                    if (state._cmdBuf.length === 2) {
+                        const cmd = (state._cmdBuf[0] << 8) | state._cmdBuf[1];
+                        state._response = sgp30Execute(part, state, cmd);
+                    }
+                    return true;
+                },
+                onReadByte: () => {
+                    if (state._respIdx < state._response.length) {
+                        return state._response[state._respIdx++];
+                    }
+                    return 0;
+                },
+            });
+            return state;
+        },
+
+        stamp(ctx) {
+            ctx.conductance('scl', null, 1 / R_INPUT);
+        },
+
+        update(part, state, read) {
+            state.eCO2 = part.params?.eCO2 ?? 400;
+            state.TVOC = part.params?.TVOC ?? 0;
+            return i2cUpdate(state, read, read('vcc'));
+        },
+    });
+}
+
+function sgp30Execute(part, state, cmd) {
+    switch (cmd) {
+        case 0x2032:                                 // Init_air_quality
+            state._initialized = true;
+            return [];
+        case 0x2008: {                               // Measure_air_quality
+            if (!state._initialized) return [0, 0, 0, 0, 0, 0];
+            const co2 = Math.max(400, Math.min(60000, Math.round(part.params?.eCO2 ?? 400)));
+            const tvoc = Math.max(0, Math.min(60000, Math.round(part.params?.TVOC ?? 0)));
+            const co2h = (co2 >> 8) & 0xff, co2l = co2 & 0xff;
+            const tvoch = (tvoc >> 8) & 0xff, tvocl = tvoc & 0xff;
+            return [co2h, co2l, sgp30Crc(co2h, co2l), tvoch, tvocl, sgp30Crc(tvoch, tvocl)];
+        }
+        case 0x201e: {                               // Get_feature_set
+            return [0x00, 0x22, sgp30Crc(0x00, 0x22)];
+        }
+        case 0x3682: {                               // Get_serial_id
+            return [0x00, 0x00, sgp30Crc(0x00, 0x00),
+                    0x00, 0x48, sgp30Crc(0x00, 0x48),
+                    0x44, 0x30, sgp30Crc(0x44, 0x30)];
+        }
+        case 0x0020:                                 // Measure_test
+            return [0xd4, 0x00, sgp30Crc(0xd4, 0x00)];
+        case 0x2050: {                               // Measure_raw_signals
+            return [0x26, 0x00, sgp30Crc(0x26, 0x00),
+                    0x1a, 0x00, sgp30Crc(0x1a, 0x00)];
+        }
+        default: return [];
+    }
+}
+
 // ─── Registration ────────────────────────────────────────────────────
 
 export function registerI2CSensors() {
@@ -680,4 +790,5 @@ export function registerI2CSensors() {
     registerBH1750();
     registerINA219();
     registerVL53L0X();
+    registerSGP30();
 }

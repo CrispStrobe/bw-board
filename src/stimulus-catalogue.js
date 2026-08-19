@@ -180,6 +180,11 @@ export const STIMULUS_CATALOGUE = {
     { param: 'distance_mm', label: 'Distance', min: 0, max: 2000, step: 1, unit: 'mm', mechanism: 'param' },
   ],
 
+  sgp30: [
+    { param: 'eCO2', label: 'eCO₂', min: 400, max: 60000, step: 1, unit: 'ppm', mechanism: 'param' },
+    { param: 'TVOC', label: 'TVOC', min: 0, max: 60000, step: 1, unit: 'ppb', mechanism: 'param' },
+  ],
+
   // ── Rotary encoder ───────────────────────────────────────────────────
 
   ky040: [

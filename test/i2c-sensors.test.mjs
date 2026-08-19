@@ -448,3 +448,86 @@ describe('VL53L0X', () => {
         assert.equal(st.distance_mm, 350);
     });
 });
+
+// ─── SGP30 ───────────────────────────────────────────────────────────
+
+describe('SGP30', () => {
+    /** Send a 2-byte command word to the SGP30. */
+    function sendCmd(handlers, cmd) {
+        handlers.onAddress(0x58, 0);            // write
+        handlers.onWriteByte((cmd >> 8) & 0xff);
+        handlers.onWriteByte(cmd & 0xff);
+    }
+
+    /** Read N bytes from the SGP30. */
+    function readBytes(handlers, n) {
+        handlers.onAddress(0x58, 1);            // read
+        const out = [];
+        for (let i = 0; i < n; i++) out.push(handlers.onReadByte());
+        return out;
+    }
+
+    it('fixed address 0x58', () => {
+        const { handlers } = i2cRig('sgp30', {});
+        assert.equal(handlers.onAddress(0x58, 0), true);
+        assert.equal(handlers.onAddress(0x59, 0), false);
+    });
+
+    it('Get_feature_set returns product type + version with valid CRC', () => {
+        const { handlers } = i2cRig('sgp30', {});
+        sendCmd(handlers, 0x201e);
+        const [h, l, crc] = readBytes(handlers, 3);
+        assert.equal(h, 0x00, 'product type 0');
+        assert.equal(l, 0x22, 'version 0x22');
+        // Verify CRC: poly 0x31, init 0xFF
+        let c = 0xff;
+        for (const b of [h, l]) { c ^= b; for (let i = 0; i < 8; i++) c = (c & 0x80) ? ((c << 1) ^ 0x31) & 0xff : (c << 1) & 0xff; }
+        assert.equal(crc, c, 'CRC valid');
+    });
+
+    it('Measure_test returns 0xD400 (pass)', () => {
+        const { handlers } = i2cRig('sgp30', {});
+        sendCmd(handlers, 0x0020);
+        const [h, l] = readBytes(handlers, 2);
+        assert.equal((h << 8) | l, 0xd400, 'self-test pass');
+    });
+
+    it('Measure_air_quality returns 400/0 before init', () => {
+        const { handlers } = i2cRig('sgp30', { eCO2: 1000, TVOC: 200 });
+        sendCmd(handlers, 0x2008);              // measure without init
+        const [co2h, co2l, , tvoch, tvocl] = readBytes(handlers, 6);
+        assert.equal((co2h << 8) | co2l, 0, 'eCO2 = 0 before init');
+        assert.equal((tvoch << 8) | tvocl, 0, 'TVOC = 0 before init');
+    });
+
+    it('Measure_air_quality returns eCO2 + TVOC after init', () => {
+        const { handlers } = i2cRig('sgp30', { eCO2: 1500, TVOC: 300 });
+        sendCmd(handlers, 0x2032);              // Init_air_quality
+        sendCmd(handlers, 0x2008);              // Measure_air_quality
+        const [co2h, co2l, co2crc, tvoch, tvocl, tvoccrc] = readBytes(handlers, 6);
+        assert.equal((co2h << 8) | co2l, 1500, 'eCO2 = 1500 ppm');
+        assert.equal((tvoch << 8) | tvocl, 300, 'TVOC = 300 ppb');
+        // Verify CRCs
+        let c1 = 0xff;
+        for (const b of [co2h, co2l]) { c1 ^= b; for (let i = 0; i < 8; i++) c1 = (c1 & 0x80) ? ((c1 << 1) ^ 0x31) & 0xff : (c1 << 1) & 0xff; }
+        assert.equal(co2crc, c1, 'eCO2 CRC valid');
+        let c2 = 0xff;
+        for (const b of [tvoch, tvocl]) { c2 ^= b; for (let i = 0; i < 8; i++) c2 = (c2 & 0x80) ? ((c2 << 1) ^ 0x31) & 0xff : (c2 << 1) & 0xff; }
+        assert.equal(tvoccrc, c2, 'TVOC CRC valid');
+    });
+
+    it('eCO2 clamps to 400..60000', () => {
+        const { handlers } = i2cRig('sgp30', { eCO2: 100 });
+        sendCmd(handlers, 0x2032);
+        sendCmd(handlers, 0x2008);
+        const [h, l] = readBytes(handlers, 2);
+        assert.equal((h << 8) | l, 400, 'eCO2 clamped to 400 minimum');
+    });
+
+    it('getDeviceState exposes eCO2 and TVOC', () => {
+        const { board } = i2cRig('sgp30', { eCO2: 800, TVOC: 50 });
+        const st = board.getDeviceState('U1');
+        assert.equal(st.eCO2, 800);
+        assert.equal(st.TVOC, 50);
+    });
+});
