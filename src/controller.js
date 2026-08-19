@@ -153,6 +153,19 @@ export class ControllerPanel {
   }
 
   /**
+   * Merge config fields (a text decoration's text/fontSize/color, an
+   * image's src…). Emits 'config' so views re-render and hosts persist.
+   * @param {string} name
+   * @param {object} patch
+   */
+  setWidgetConfig(name, patch) {
+    const w = this._requireWidget(name);
+    w.config = { ...w.config, ...patch };
+    this._emit('config', { name });
+    return w;
+  }
+
+  /**
    * Rename a widget. The widget OBJECT moves (binding, layout, state all
    * travel with it), so nothing is orphaned; refuses collisions and empty
    * names. Emits 'rename' with both names so hosts can re-key anything

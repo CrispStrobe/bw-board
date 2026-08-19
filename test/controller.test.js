@@ -925,3 +925,16 @@ describe('ControllerPanel — decoration widgets (text/image)', () => {
     b.dispose();
   });
 });
+
+describe('ControllerPanel — setWidgetConfig', () => {
+  it('merges config and emits config (text decoration editing)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('t', 'text');
+    const events = [];
+    p.addListener((e, d) => { if (e === 'config') events.push(d); });
+    p.setWidgetConfig('t', { text: 'Hello', fontSize: 24 });
+    assert.equal(p.getWidget('t').config.text, 'Hello');
+    assert.equal(p.getWidget('t').config.color, '#334155', 'unpatched fields keep defaults');
+    assert.deepEqual(events, [{ name: 't' }]);
+  });
+});
