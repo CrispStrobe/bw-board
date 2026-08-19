@@ -27,6 +27,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   DPAD:     'dpad',
   DIAL:     'dial',
   GAUGE:    'gauge',
+  SEVENSEG: 'sevenseg',
 });
 
 /** Default configs per widget type. */
@@ -37,6 +38,10 @@ const DEFAULTS = {
   dpad:     { up: false, down: false, left: false, right: false },
   dial:     { min: 0, max: 360, value: 0 },
   gauge:    { min: 0, max: 100, value: 0, label: '' },
+  // A 7-segment numeric DISPLAY: read-only face showing the bound variable's
+  // value right-aligned across `digits` tubes (the display contract is one
+  // NUMERIC variable per display widget). Overflow renders as dashes.
+  sevenseg: { digits: 4, value: 0 },
 };
 
 // ─── ControllerPanel ────────────────────────────────────────────────────────
@@ -96,6 +101,7 @@ export class ControllerPanel {
     if (type === 'slider') w.state = { value: config.value ?? w.config.min };
     if (type === 'dial') w.state = { value: config.value ?? w.config.min };
     if (type === 'gauge') w.state = { value: config.value ?? w.config.min };
+    if (type === 'sevenseg') w.state = { value: config.value ?? 0 };
     this._widgets.set(name, w);
     this._emit('add', { name, type });
     return w;
@@ -202,6 +208,19 @@ export class ControllerPanel {
     this._emit('input', { name, value: w.state.value });
   }
 
+  /**
+   * Set 7-segment display value. Read-only indicator like the gauge: driven
+   * by the program (variable binding), never by touch. Stores the raw
+   * number; the face truncates to integer and handles overflow.
+   * @param {string} name
+   * @param {number} value
+   */
+  setSevenSegValue(name, value) {
+    const w = this._requireWidget(name, 'sevenseg');
+    w.state.value = Number(value) || 0;
+    this._emit('input', { name, value: w.state.value });
+  }
+
   // ── State query (program-facing API for extension blocks) ─────────────
 
   /** Scalar value for any widget (slider/dial/gauge value, button 0/1, joystick magnitude, dpad bitmask). */
@@ -212,6 +231,7 @@ export class ControllerPanel {
       case 'slider':
       case 'dial':
       case 'gauge':
+      case 'sevenseg':
         return w.state.value;
       case 'button':
         return w.state.pressed ? 1 : 0;
