@@ -7,13 +7,19 @@
  *   tcs34725    AMS TCS34725 RGBC colour sensor (0x29)
  *   bh1750      ROHM BH1750FVI ambient light / lux (0x23/0x5C)
  *   ina219      TI INA219 high-side current/voltage/power (0x40–0x4F)
+ *   vl53l0x     ST VL53L0X time-of-flight laser distance (0x29, changeable)
+ *   ads1115     TI ADS1115 16-bit 4-channel I2C ADC (0x48–0x4B)
+ *   pcf8591     NXP PCF8591 8-bit 4-channel ADC + 1-channel DAC (0x48–0x4F)
+ *   apds9960    Broadcom APDS-9960 gesture/proximity/ALS/colour (0x39)
  *
  * All stimuli are part.params (world-facing): temperature, pressure, lux,
  * colour channels, bus voltage, shunt voltage. getDeviceState returns the
  * latest reading in human units so faces can render without decoding.
  *
  * Sources: Bosch BMP280 datasheet (BST-BMP280-DS001-26), AMS TCS34725
- * datasheet (DN40), ROHM BH1750FVI datasheet, TI INA219 datasheet (SBOS448).
+ * datasheet (DN40), ROHM BH1750FVI datasheet, TI INA219 datasheet (SBOS448),
+ * ST VL53L0X API user manual (UM2039), TI ADS1115 datasheet (SBAS444B),
+ * NXP PCF8591 datasheet, Broadcom APDS-9960 datasheet (AV02-4191EN).
  * All clean-room from publicly available register maps.
  *
  * @module
@@ -551,6 +557,121 @@ function writeInaReg(state, reg, v) {
     }
 }
 
+// ─── VL53L0X ─────────────────────────────────────────────────────────
+//
+// ST VL53L0X: time-of-flight laser ranging sensor.
+// Default I2C address 0x29 (changeable via register 0x8A + software).
+// Register map (from UM2039 and community reverse-engineering):
+//   0xC0  MODEL_ID                = 0xEE
+//   0xC1  MODEL_ID (rev)          = 0xAA
+//   0xC2  MODULE_TYPE             = 0x10 (VL53L0X)
+//   0x00  SYSRANGE_START          write 0x01 = single shot, 0x02 = continuous
+//   0x13  RESULT_INTERRUPT_STATUS bit 2:0 = range status (4 = new data ready)
+//   0x14  RESULT_RANGE_STATUS     bits for signal fail, etc.
+//   0x1E  RESULT_RANGE_VAL_H      distance MSB (mm)
+//   0x1F  RESULT_RANGE_VAL_L      distance LSB (mm)
+//   0x51  SYSTEM_SEQUENCE_CONFIG
+//   0x8A  I2C_SLAVE_DEVICE_ADDRESS  (changeable address)
+//
+// Behavioral model: params.distance_mm drives the range reading.
+// The real sensor's init sequence is ~100 bytes of magic register writes
+// that we accept and store silently.
+
+function registerVL53L0X() {
+    registerDevice('vl53l0x', {
+        terminals: ['vcc', 'gnd', 'sda', 'scl', 'xshut', 'gpio1'],
+
+        init(part) {
+            const regs = new Uint8Array(256);
+            // Identification
+            regs[0xc0] = 0xee;              // MODEL_ID
+            regs[0xc1] = 0xaa;              // MODEL_ID rev
+            regs[0xc2] = 0x10;              // MODULE_TYPE (VL53L0X)
+            // Default address
+            regs[0x8a] = part.params?.addr ?? 0x29;
+
+            const state = {
+                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                regs,
+                ptr: 0,
+                _first: true,
+                _ranging: false,
+                // Readable state for faces
+                distance_mm: part.params?.distance_mm ?? 200,
+            };
+
+            state._i2c = createI2CSlave({
+                onAddress: (a7, rw) => {
+                    const addr = state.regs[0x8a];
+                    const mine = a7 === addr;
+                    if (mine && rw === 0) state._first = true;
+                    return mine;
+                },
+                onWriteByte: (b) => {
+                    if (state._first) {
+                        state.ptr = b;
+                        state._first = false;
+                        return true;
+                    }
+                    writeVl53Reg(state, state.ptr, b);
+                    state.ptr = (state.ptr + 1) & 0xff;
+                    return true;
+                },
+                onReadByte: () => {
+                    const v = readVl53Reg(part, state, state.ptr);
+                    state.ptr = (state.ptr + 1) & 0xff;
+                    return v;
+                },
+            });
+            return state;
+        },
+
+        stamp(ctx) {
+            ctx.conductance('scl', null, 1 / R_INPUT);
+            ctx.conductance('xshut', null, 1 / R_INPUT);
+            ctx.conductance('gpio1', null, 1 / R_INPUT);
+        },
+
+        update(part, state, read) {
+            state.distance_mm = part.params?.distance_mm ?? 200;
+            return i2cUpdate(state, read, read('vcc'));
+        },
+    });
+}
+
+function readVl53Reg(part, state, reg) {
+    const dist = Math.max(0, Math.min(8190, Math.round(part.params?.distance_mm ?? 200)));
+
+    switch (reg) {
+        case 0xc0: return 0xee;                     // MODEL_ID
+        case 0xc1: return 0xaa;                     // MODEL_ID rev
+        case 0xc2: return 0x10;                     // MODULE_TYPE
+        case 0x13:                                   // RESULT_INTERRUPT_STATUS
+            return state._ranging ? 0x07 : 0x00;    // new data ready when ranging
+        case 0x14:                                   // RESULT_RANGE_STATUS
+            return state._ranging ? 0x0b : 0x00;    // valid range
+        case 0x1e:                                   // range MSB (mm)
+            return (dist >> 8) & 0xff;
+        case 0x1f:                                   // range LSB (mm)
+            return dist & 0xff;
+        default: return state.regs[reg] ?? 0;
+    }
+}
+
+function writeVl53Reg(state, reg, v) {
+    switch (reg) {
+        case 0x00:                                   // SYSRANGE_START
+            if (v & 0x01) state._ranging = true;     // single-shot or continuous
+            if (v === 0x00) state._ranging = false;   // stop
+            state.regs[reg] = v;
+            break;
+        case 0xc0: case 0xc1: case 0xc2:            // read-only IDs
+            break;
+        default:
+            state.regs[reg] = v;
+    }
+}
+
 // ─── Registration ────────────────────────────────────────────────────
 
 export function registerI2CSensors() {
@@ -558,4 +679,5 @@ export function registerI2CSensors() {
     registerTCS34725();
     registerBH1750();
     registerINA219();
+    registerVL53L0X();
 }

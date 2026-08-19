@@ -176,6 +176,10 @@ export const STIMULUS_CATALOGUE = {
     { param: 'shuntOhms', label: 'Shunt resistance', min: 0.001, max: 1, step: 0.001, unit: 'Ω', mechanism: 'param' },
   ],
 
+  vl53l0x: [
+    { param: 'distance_mm', label: 'Distance', min: 0, max: 2000, step: 1, unit: 'mm', mechanism: 'param' },
+  ],
+
   // ── Rotary encoder ───────────────────────────────────────────────────
 
   ky040: [

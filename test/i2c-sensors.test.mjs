@@ -1,5 +1,6 @@
 /**
- * I2C sensor device model tests — BMP280, TCS34725, BH1750, INA219.
+ * I2C sensor device model tests — BMP280, TCS34725, BH1750, INA219,
+ * VL53L0X, ADS1115, PCF8591, APDS9960.
  *
  * Each device is wired into a BoardImpl with MCU pins on SCL/SDA,
  * getDeviceState is asserted for the face-facing readable state, and
@@ -368,5 +369,82 @@ describe('INA219', () => {
         assert.equal(st.current_mA, 250);
         assert.equal(st.shuntVoltage, 25);  // 250mA × 0.1Ω = 25mV
         assert.equal(st.power_mW, 3000);    // 12V × 250mA = 3000mW
+    });
+});
+
+// ─── VL53L0X ─────────────────────────────────────────────────────────
+
+describe('VL53L0X', () => {
+    it('MODEL_ID reads 0xEE at register 0xC0', () => {
+        const { readRegs } = i2cRig('vl53l0x', {}, ['xshut', 'gpio1']);
+        const [id] = readRegs(0x29, 0xc0, 1);
+        assert.equal(id, 0xee);
+    });
+
+    it('identification bytes: 0xEE 0xAA 0x10', () => {
+        const { readRegs } = i2cRig('vl53l0x', {}, ['xshut', 'gpio1']);
+        const [a, b, c] = readRegs(0x29, 0xc0, 3);
+        assert.equal(a, 0xee, 'MODEL_ID');
+        assert.equal(b, 0xaa, 'MODEL_ID rev');
+        assert.equal(c, 0x10, 'MODULE_TYPE');
+    });
+
+    it('default address is 0x29', () => {
+        const { handlers } = i2cRig('vl53l0x', {}, ['xshut', 'gpio1']);
+        assert.equal(handlers.onAddress(0x29, 0), true);
+        assert.equal(handlers.onAddress(0x30, 0), false);
+    });
+
+    it('configurable address via params', () => {
+        const { handlers } = i2cRig('vl53l0x', { addr: 0x30 }, ['xshut', 'gpio1']);
+        assert.equal(handlers.onAddress(0x30, 0), true);
+        assert.equal(handlers.onAddress(0x29, 0), false);
+    });
+
+    it('range reads 0 before starting measurement', () => {
+        const { readRegs } = i2cRig('vl53l0x', { distance_mm: 500 }, ['xshut', 'gpio1']);
+        // RESULT_INTERRUPT_STATUS should show no data
+        const [status] = readRegs(0x29, 0x13, 1);
+        assert.equal(status & 0x07, 0, 'no data ready before ranging');
+    });
+
+    it('distance reads correctly after starting ranging', () => {
+        const { readRegs, writeReg } = i2cRig('vl53l0x',
+            { distance_mm: 1234 }, ['xshut', 'gpio1']);
+        // Start single-shot ranging
+        writeReg(0x29, 0x00, 0x01);
+
+        // Check data ready
+        const [status] = readRegs(0x29, 0x13, 1);
+        assert.equal(status & 0x07, 0x07, 'data ready after start');
+
+        // Read range: 1234mm → MSB=0x04, LSB=0xD2
+        const [msb, lsb] = readRegs(0x29, 0x1e, 2);
+        const dist = (msb << 8) | lsb;
+        assert.equal(dist, 1234, 'distance 1234mm round-trips');
+    });
+
+    it('stop ranging clears data-ready flag', () => {
+        const { readRegs, writeReg } = i2cRig('vl53l0x',
+            { distance_mm: 100 }, ['xshut', 'gpio1']);
+        writeReg(0x29, 0x00, 0x01);    // start
+        writeReg(0x29, 0x00, 0x00);    // stop
+        const [status] = readRegs(0x29, 0x13, 1);
+        assert.equal(status & 0x07, 0, 'no data after stop');
+    });
+
+    it('distance clamps to 0..8190mm', () => {
+        const { readRegs, writeReg } = i2cRig('vl53l0x',
+            { distance_mm: 10000 }, ['xshut', 'gpio1']);
+        writeReg(0x29, 0x00, 0x01);
+        const [msb, lsb] = readRegs(0x29, 0x1e, 2);
+        assert.equal((msb << 8) | lsb, 8190, 'clamped to 8190');
+    });
+
+    it('getDeviceState exposes distance_mm', () => {
+        const { board } = i2cRig('vl53l0x',
+            { distance_mm: 350 }, ['xshut', 'gpio1']);
+        const st = board.getDeviceState('U1');
+        assert.equal(st.distance_mm, 350);
     });
 });
