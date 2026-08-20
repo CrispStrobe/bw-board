@@ -14,16 +14,27 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { registerAllDevices } from '../src/register-all.js';
 import { getDevice } from '../src/devices.js';
 
 registerAllDevices();
 
-const EXAMPLES_DIR = '/mnt/volume1/code/lego/brickwright-lite/overlay/scratch-gui/examples';
+// Sibling-checkout pattern, like examples-gate.test.mjs. This was a single
+// hardcoded VPS path (/mnt/volume1/...), so on every other machine the bench
+// sweep found 0 files and the ">= 95 benches" assertion failed as a matter of
+// geography rather than of anything about the STC15 — two permanently red
+// tests that told you nothing. Now: env override, then the local checkout,
+// then the VPS layout; absent everywhere, the sweep SKIPS instead of failing.
+const EXAMPLES_DIR = [
+  process.env.STC15_BENCH_DIR,
+  join(homedir(), 'code', 'lego', 'brickwright-lite', 'overlay', 'scratch-gui', 'examples'),
+  '/mnt/volume1/code/lego/brickwright-lite/overlay/scratch-gui/examples',
+].filter(Boolean).find((d) => existsSync(d));
 
 // Collect all stc15 bench files
 const benchFiles = [];
-if (existsSync(EXAMPLES_DIR)) {
+if (EXAMPLES_DIR) {
   for (const dir of readdirSync(EXAMPLES_DIR, { withFileTypes: true })) {
     if (!dir.isDirectory()) continue;
     const f = join(EXAMPLES_DIR, dir.name, 'circuit.stc15f2k60s2.json');
@@ -68,7 +79,8 @@ describe(`STC15 device registration`, () => {
 });
 
 describe(`STC15 bench terminal validation (${benchFiles.length} benches)`, () => {
-  it(`found >= 95 stc15 benches`, () => {
+  it(`found >= 95 stc15 benches`, (t) => {
+    if (!EXAMPLES_DIR) { t.skip('no brickwright-lite examples checkout'); return; }
     assert.ok(benchFiles.length >= 95,
       `expected >= 95 benches, found ${benchFiles.length}`);
   });
