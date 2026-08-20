@@ -16,11 +16,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { M6502Machine, EATER6502 } from '../src/m6502-machine.js';
 import { createHD44780, hd44780Write8 } from '../src/devices/hd44780.js';
 
-const BOOTLOADER_PATH = '/mnt/volume1/code/bw-board/rom/sixty5o2/bootloader.bin';
-const HELLO_PATH = '/mnt/volume1/code/bw-board/rom/sixty5o2/hello_world.bin';
+// These two ROMs live in THIS repository, at rom/sixty5o2/. They were reached
+// through an absolute /mnt/volume1 path -- a VPS checkout -- so off that one
+// machine the file was "missing" and both tests skipped, silently, against
+// binaries sitting right beside the test.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROM_DIR = path.join(HERE, '..', 'rom', 'sixty5o2');
+const BOOTLOADER_PATH = path.join(ROM_DIR, 'bootloader.bin');
+const HELLO_PATH = path.join(ROM_DIR, 'hello_world.bin');
 
 /**
  * Wire a VIA to an HD44780 in 8-bit mode.

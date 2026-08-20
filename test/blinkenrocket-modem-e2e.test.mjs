@@ -21,7 +21,24 @@ import { wirePeripherals } from '../src/avr-peripherals.js';
 import { parseIntelHex } from '../src/intel-hex.js';
 import { encodeTextMessage, MODEM_RATE } from '../src/blinkenrocket-modem.js';
 
-const HEX_PATH = '/mnt/volume1/code/blinkenrocket-firmware/build/main.hex';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+// The blinkenrocket firmware is a SIBLING checkout, not a fixture in this
+// repo, so it is looked up rather than assumed. It used to be a single
+// absolute /mnt/volume1 path, which resolved on one VPS and nowhere else --
+// so every test needing it skipped, and a skip reads as a deliberate
+// exclusion rather than as a broken path. The env var comes first so a
+// build in an unusual place can still be pointed at.
+const HEX_CANDIDATES = [
+  process.env.BLINKENROCKET_HEX,
+  path.join(HERE, '..', '..', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
+  path.join(HERE, '..', '..', 'blinkenrocket-firmware', 'build', 'main.hex'),
+  path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
+  path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
+].filter(Boolean);
+const HEX_PATH = HEX_CANDIDATES.find(p => existsSync(p)) || HEX_CANDIDATES[HEX_CANDIDATES.length - 1];
+
 
 test('modem full loop: encodeTextMessage → firmware ADC → EEPROM pattern', {
     skip: !existsSync(HEX_PATH) && 'blinkenrocket firmware hex not found at ' + HEX_PATH,

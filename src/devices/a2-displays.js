@@ -15,8 +15,13 @@
  * flickerWarning when the shared port is driven by both. The ISR
  * owns the shadow byte; direct port writes race with the scan.
  *
- * Reference: /mnt/volume1/code/stc/docs/A2-BOARD-SUPPORT.md
- * Wiring: /mnt/volume1/code/stc/docs/BOARD-PRECHIN-A2.md
+ * Reference: stc/docs/A2-BOARD-SUPPORT.md
+ * Wiring: stc/docs/BOARD-PRECHIN-A2.md
+ *
+ * (Repo-relative. These were absolute /mnt/volume1 paths naming one VPS
+ * checkout -- harmless here, since they are doc pointers in a comment rather
+ * than anything the module loads, but they send a reader to a directory that
+ * exists on exactly one machine.)
  *
  * @module
  */
