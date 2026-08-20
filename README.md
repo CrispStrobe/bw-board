@@ -181,3 +181,36 @@ Display-rate sampling is load-bearing.
 ## License
 
 MIT. See [LICENSE](LICENSE) and [THIRD-PARTY.md](THIRD-PARTY.md).
+
+
+## Working in a git worktree
+
+`node_modules` is no longer tracked (it used to be committed as a symlink
+pointing at its own path, which dead-ended module resolution in a fresh
+clone). A new worktree therefore starts with no dependencies, and the symptom
+is specific and misleading: **every test that spawns a subprocess dies on
+import**, because `avr8js` cannot be resolved. It looks like nineteen
+unrelated failures, not one missing install.
+
+Either install normally:
+
+```sh
+npm ci
+```
+
+or, to avoid a second copy on disk, borrow the main checkout's:
+
+```sh
+ln -s /path/to/bw-board/node_modules node_modules
+```
+
+## The lcapy oracle
+
+`test/lcapy-oracle.test.mjs` checks the MNA solver against **lcapy**, an
+independent symbolic circuit solver, rather than against hand-computed values
+or our own recorded output. It skips — loudly, naming what it looked for — if
+no Python with lcapy is available:
+
+```sh
+pipx install lcapy          # or set LCAPY_PYTHON to an interpreter that has it
+```
