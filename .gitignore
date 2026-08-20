@@ -1,4 +1,10 @@
 node_modules/
+# ...and node_modules as a SYMLINK, which `node_modules/` does not match: a
+# trailing slash means "directory only". That is how a self-referential
+# node_modules symlink came to be COMMITTED here — tracked under an ignore
+# rule that could not see it — dead-ending module resolution in any fresh
+# clone until it was untracked.
+node_modules
 .claude/
 
 # Agent working notes: local context, not documentation.
