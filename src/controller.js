@@ -21,19 +21,24 @@
 // ─── Widget type constants ─────────────────────────────────────────────────
 
 export const WIDGET_TYPES = /** @type {const} */ ({
-  JOYSTICK: 'joystick',
-  BUTTON:   'button',
-  SLIDER:   'slider',
-  DPAD:     'dpad',
-  DIAL:     'dial',
-  GAUGE:    'gauge',
-  MATRIX:   'matrix',
-  KEYPAD:   'keypad',
-  LCD:      'lcd',
-  OLED:     'oled',
-  SEVENSEG: 'sevenseg',
-  TEXT:     'text',
-  IMAGE:    'image',
+  JOYSTICK:  'joystick',
+  BUTTON:    'button',
+  SLIDER:    'slider',
+  DPAD:      'dpad',
+  DIAL:      'dial',
+  GAUGE:     'gauge',
+  MATRIX:    'matrix',
+  KEYPAD:    'keypad',
+  LCD:       'lcd',
+  OLED:      'oled',
+  SEVENSEG:  'sevenseg',
+  KEYBOARD:  'keyboard',
+  BARGRAPH:  'bargraph',
+  SIMPLEVGA: 'simplevga',
+  MONO_LCD:  'mono_lcd',
+  RGB_LIGHT: 'rgb_light',
+  TEXT:      'text',
+  IMAGE:     'image',
 });
 
 /**
@@ -65,6 +70,22 @@ const DEFAULTS = {
   // value right-aligned across `digits` tubes (the display contract is one
   // NUMERIC variable per display widget). Overflow renders as dashes.
   sevenseg: { digits: 4, value: 0 },
+  // KEYBOARD input widget: serial-FIFO, lossless. Each keypress pushes its
+  // ASCII byte into _fifo (an array); variable binding appends the char to a
+  // growing string buffer (the input line). getValue() returns the last ASCII
+  // code (secondary "current key held" readout).
+  keyboard: { lastKey: 0 },
+  // BARGRAPH display: a horizontal/vertical level bar driven by a numeric variable.
+  bargraph: { min: 0, max: 100, value: 0, segments: 10, label: '' },
+  // SIMPLEVGA display: framebuffer variable -> VGA screen. The state holds a
+  // palette-indexed pixel buffer (Uint8Array); the pump writes it from a
+  // numeric variable referencing the board's SimpleVGA renderer.
+  simplevga: { width: 160, height: 120, value: 0 },
+  // MONO_LCD display: byte-buffer mono LCD (EV3 = 178×128, NXT = 100×64).
+  mono_lcd: { width: 178, height: 128, buffer: null },
+  // RGB_LIGHT display: a single RGB status light (WeDo/Boost hubs).
+  // value = 24-bit 0xRRGGBB or a Lego color ID (0..10) depending on mode.
+  rgb_light: { mode: 'rgb', value: 0 },
   // Decorations (presentation only, never bound):
   text:     { text: 'Label', fontSize: 16, color: '#334155' },
   image:    { src: '', alt: '' },
@@ -97,6 +118,7 @@ export class ControllerPanel {
         if (w.type === 'button' && !w.config.toggle) w.state.pressed = false;
         if (w.type === 'dpad') { w.state.up = false; w.state.down = false; w.state.left = false; w.state.right = false; }
         if (w.type === 'keypad') w.state.value = '';
+        if (w.type === 'keyboard') { w.state.lastKey = 0; w.state._fifo = []; w.state._lineBuffer = ''; }
       }
     }
     this._emit('mode', { mode });
@@ -136,6 +158,16 @@ export class ControllerPanel {
     if (type === 'lcd') w.state = { text: '' };
     if (type === 'oled') w.state = { text: config.text ?? '' };
     if (type === 'sevenseg') w.state = { value: config.value ?? 0 };
+    if (type === 'bargraph') w.state = { value: config.value ?? config.min ?? 0 };
+    if (type === 'simplevga') w.state = { value: 0, buffer: null };
+    if (type === 'mono_lcd') w.state = { buffer: null, text: '' };
+    if (type === 'rgb_light') w.state = { value: config.value ?? 0 };
+    if (type === 'keyboard') w.state = { lastKey: 0, _fifo: [] };
+    if (type === 'keyboard') w.state = { lastKey: 0, _fifo: [], _lineBuffer: '' };
+    if (type === 'bargraph') w.state = { value: config.value ?? w.config.min };
+    if (type === 'simplevga') w.state = { value: 0 };
+    if (type === 'mono_lcd') w.state = { buffer: null };
+    if (type === 'rgb_light') w.state = { value: config.value ?? 0 };
     this._widgets.set(name, w);
     this._emit('add', { name, type });
     return w;
@@ -365,6 +397,129 @@ export class ControllerPanel {
     this._emit('input', { name, value: w.state.value });
   }
 
+  // ── New display/input widget methods ──────────────────────────────────
+
+  /**
+   * Set bargraph level. Display-only, driven by program or variable binding.
+   * Clamped to [min, max].
+   * @param {string} name
+   * @param {number} value
+   */
+  setBargraphValue(name, value) {
+    const w = this._requireWidget(name, 'bargraph');
+    const { min, max } = w.config;
+    w.state.value = Math.max(min, Math.min(max, Number(value) || 0));
+    this._emit('input', { name, value: w.state.value });
+  }
+
+  /**
+   * Set a single pixel on the SimpleVGA framebuffer.
+   * @param {string} name
+   * @param {number} x - column (0-based)
+   * @param {number} y - row (0-based)
+   * @param {number} colorIndex - palette index (0 clears)
+   */
+  setVgaPixel(name, x, y, colorIndex) {
+    const w = this._requireWidget(name, 'simplevga');
+    const { width, height } = w.config;
+    x = Math.trunc(x); y = Math.trunc(y);
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+    if (!w.state.buffer) w.state.buffer = new Uint8Array(width * height);
+    w.state.buffer[y * width + x] = (Number(colorIndex) || 0) & 0xFF;
+    this._emit('input', { name, x, y, colorIndex });
+  }
+
+  /**
+   * Clear the SimpleVGA framebuffer.
+   * @param {string} name
+   */
+  clearVga(name) {
+    const w = this._requireWidget(name, 'simplevga');
+    if (w.state.buffer) w.state.buffer.fill(0);
+    else w.state.buffer = new Uint8Array(w.config.width * w.config.height);
+    this._emit('input', { name, cleared: true });
+  }
+
+  /**
+   * Set a pixel on the mono LCD (EV3/NXT-style).
+   * @param {string} name
+   * @param {number} x
+   * @param {number} y
+   * @param {boolean} on
+   */
+  setMonoLcdPixel(name, x, y, on) {
+    const w = this._requireWidget(name, 'mono_lcd');
+    const { width, height } = w.config;
+    x = Math.trunc(x); y = Math.trunc(y);
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+    if (!w.state.buffer) w.state.buffer = new Uint8Array(Math.ceil(width * height / 8));
+    const idx = y * width + x;
+    const byte = idx >> 3, bit = idx & 7;
+    if (on) w.state.buffer[byte] |= (1 << bit);
+    else w.state.buffer[byte] &= ~(1 << bit);
+    this._emit('input', { name, x, y, on });
+  }
+
+  /**
+   * Write text to the mono LCD at a cursor position. Simplified: stores
+   * the text string and lets the face render it.
+   * @param {string} name
+   * @param {string} text
+   */
+  setMonoLcdText(name, text) {
+    const w = this._requireWidget(name, 'mono_lcd');
+    w.state.text = String(text);
+    this._emit('input', { name, text: w.state.text });
+  }
+
+  /**
+   * Clear the mono LCD.
+   * @param {string} name
+   */
+  clearMonoLcd(name) {
+    const w = this._requireWidget(name, 'mono_lcd');
+    if (w.state.buffer) w.state.buffer.fill(0);
+    w.state.text = '';
+    this._emit('input', { name, cleared: true });
+  }
+
+  /**
+   * Set the RGB light color.
+   * @param {string} name
+   * @param {number} color - 0xRRGGBB (24-bit) or Lego color ID (0..10)
+   */
+  setRgbLightColor(name, color) {
+    const w = this._requireWidget(name, 'rgb_light');
+    w.state.value = (Number(color) || 0) & 0xFFFFFF;
+    this._emit('input', { name, value: w.state.value });
+  }
+
+  /**
+   * Push a key into the keyboard FIFO. Each key is an ASCII code.
+   * @param {string} name
+   * @param {number} keyCode - ASCII code
+   */
+  pushKeyboardKey(name, keyCode) {
+    const w = this._requireWidget(name, 'keyboard');
+    const code = Math.trunc(Number(keyCode) || 0) & 0xFF;
+    if (!w.state._fifo) w.state._fifo = [];
+    w.state._fifo.push(code);
+    w.state.lastKey = code;
+    this._emit('input', { name, keyCode: code });
+  }
+
+  /**
+   * Read the next key from the keyboard FIFO (consuming it). Returns 0
+   * if the FIFO is empty — the same contract as a serial read.
+   * @param {string} name
+   * @returns {number} ASCII code or 0
+   */
+  readKeyboardKey(name) {
+    const w = this._requireWidget(name, 'keyboard');
+    if (!w.state._fifo || w.state._fifo.length === 0) return 0;
+    return w.state._fifo.shift();
+  }
+
   // ── State query (program-facing API for extension blocks) ─────────────
 
   /** Scalar value for any widget (slider/dial/gauge value, button 0/1, joystick magnitude, dpad bitmask). */
@@ -377,6 +532,9 @@ export class ControllerPanel {
       case 'gauge':
       case 'matrix':
       case 'sevenseg':
+      case 'bargraph':
+      case 'simplevga':
+      case 'rgb_light':
         return w.state.value;
       case 'button':
         return w.state.pressed ? 1 : 0;
@@ -391,7 +549,10 @@ export class ControllerPanel {
       case 'lcd':
         return w.state.text;
       case 'oled':
+      case 'mono_lcd':
         return w.state.text || '';
+      case 'keyboard':
+        return w.state.lastKey || 0;
       default:
         return 0;
     }

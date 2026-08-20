@@ -54,12 +54,19 @@ export const WIDGET_RENDER_INFO = {
     inputEvents: ['pointermove', 'pointerdown', 'pointerup'],
     icon: 'dial',
   },
-  gauge:    { minSize: { w: 120, h: 60 },  inputEvents: [], icon: 'gauge' },
-  matrix:   { minSize: { w: 90, h: 90 },   inputEvents: [], icon: 'matrix' },
-  sevenseg: { minSize: { w: 120, h: 52 },  inputEvents: [], icon: 'sevenseg' },
+  gauge:     { minSize: { w: 120, h: 60 },  inputEvents: [], icon: 'gauge' },
+  matrix:    { minSize: { w: 90, h: 90 },   inputEvents: [], icon: 'matrix' },
+  sevenseg:  { minSize: { w: 120, h: 52 },  inputEvents: [], icon: 'sevenseg' },
+  // New display widgets
+  bargraph:  { minSize: { w: 160, h: 40 },  inputEvents: [], icon: 'bargraph' },
+  simplevga: { minSize: { w: 160, h: 120 }, inputEvents: [], icon: 'simplevga' },
+  mono_lcd:  { minSize: { w: 178, h: 128 }, inputEvents: [], icon: 'mono_lcd' },
+  rgb_light: { minSize: { w: 60, h: 60 },   inputEvents: [], icon: 'rgb_light' },
+  // New input widget
+  keyboard:  { minSize: { w: 240, h: 80 },  inputEvents: ['keydown', 'keyup'], icon: 'keyboard' },
   // Decorations: presentation only, no input events, never bound.
-  text:     { minSize: { w: 60, h: 24 },   inputEvents: [], icon: 'text' },
-  image:    { minSize: { w: 60, h: 60 },   inputEvents: [], icon: 'image' },
+  text:      { minSize: { w: 60, h: 24 },   inputEvents: [], icon: 'text' },
+  image:     { minSize: { w: 60, h: 60 },   inputEvents: [], icon: 'image' },
 };
 
 // ─── Stage-view descriptor ─────────────────────────────────────────────────

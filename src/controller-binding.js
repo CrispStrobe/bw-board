@@ -35,7 +35,7 @@ export function bindPanelToBoard(panel, board) {
     if (!w || !w.binding) return;
 
     // Display widgets are read-only — they don't push values out
-    if (w.type === 'gauge' || w.type === 'lcd' || w.type === 'oled') return;
+    if (DISPLAYS.has(w.type)) return;
 
     if (w.binding.target === 'part') {
       const { partId, param } = w.binding;
@@ -59,7 +59,7 @@ export function bindPanelToBoard(panel, board) {
     sync() {
       for (const w of panel.getWidgets()) {
         if (!w.binding) continue;
-        if (w.type === 'gauge' || w.type === 'lcd' || w.type === 'oled') continue; // read-only
+        if (DISPLAYS.has(w.type)) continue; // read-only
         if (w.binding.target === 'part') {
           const mapped = mapWidgetToControl(w, w.binding.param);
           if (mapped !== null) {
@@ -101,6 +101,12 @@ export function bindPanelToBoard(panel, board) {
 // deliberately import-free): presentation only, never bound.
 const DECORATIONS = new Set(['text', 'image']);
 
+// Display widget types: read-only, driven by variable binding (program→face).
+const DISPLAYS = new Set([
+  'gauge', 'matrix', 'lcd', 'oled', 'sevenseg',
+  'bargraph', 'simplevga', 'mono_lcd', 'rgb_light',
+]);
+
 export function bindPanelToVariables(panel, vm, opts = {}) {
   const autoPump = opts.autoPump !== false;
 
@@ -123,7 +129,7 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
   };
 
   // Which widget types READ from the variable (displays), vs WRITE to it (inputs).
-  const isDisplay = (w) => w.type === 'gauge' || w.type === 'matrix' || w.type === 'lcd' || w.type === 'oled' || w.type === 'sevenseg';
+  const isDisplay = (w) => DISPLAYS.has(w.type);
 
   // widget -> variable (inputs)
   function onPanelEvent(event, detail) {
@@ -133,7 +139,15 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
     if (DECORATIONS.has(w.type)) return;              // presentation only
     if (isDisplay(w)) return;                     // read-only, handled by pump()
     const v = findVar(w.binding.variableName);
-    if (v) v.value = panel.getValue(detail.name);
+    if (!v) return;
+    if (w.type === 'keyboard') {
+      // Keyboard: APPEND the character to the variable's string (input line).
+      // The program reads and clears it. Never overwrite with lastKey.
+      const code = detail.keyCode || 0;
+      if (code >= 0x20 && code < 0x7f) v.value = String(v.value || '') + String.fromCharCode(code);
+    } else {
+      v.value = panel.getValue(detail.name);
+    }
   }
   panel.addListener(onPanelEvent);
 
@@ -145,24 +159,31 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
       if (!w.binding || w.binding.target !== 'variable' || !isDisplay(w)) continue;
       const v = findVar(w.binding.variableName);
       if (!v) continue;
-      if (w.type === 'lcd' || w.type === 'oled') {
+      if (w.type === 'lcd' || w.type === 'oled' || w.type === 'mono_lcd') {
         const sv = String(v.value);
         if (shown.get(w.name) !== sv) {
           shown.set(w.name, sv);
           if (w.type === 'lcd' && typeof panel.setLcdText === 'function') panel.setLcdText(w.name, sv);
           else if (w.type === 'oled' && typeof panel.setOledText === 'function') panel.setOledText(w.name, sv);
+          else if (w.type === 'mono_lcd' && typeof panel.setMonoLcdText === 'function') panel.setMonoLcdText(w.name, sv);
         }
       } else {
         const nv = Number(v.value);
         if (shown.get(w.name) !== nv) {
           shown.set(w.name, nv);
-          if (typeof panel.setGaugeValue === 'function' && w.type === 'gauge') {
+          if (w.type === 'gauge' && typeof panel.setGaugeValue === 'function') {
             panel.setGaugeValue(w.name, nv);
-          } else if (typeof panel.setMatrixValue === 'function' && w.type === 'matrix') {
+          } else if (w.type === 'matrix' && typeof panel.setMatrixValue === 'function') {
             panel.setMatrixValue(w.name, nv);
-          } else if (typeof panel.setSevenSegValue === 'function' && w.type === 'sevenseg') {
+          } else if (w.type === 'sevenseg' && typeof panel.setSevenSegValue === 'function') {
             panel.setSevenSegValue(w.name, nv);
+          } else if (w.type === 'bargraph' && typeof panel.setBargraphValue === 'function') {
+            panel.setBargraphValue(w.name, nv);
+          } else if (w.type === 'rgb_light' && typeof panel.setRgbLightColor === 'function') {
+            panel.setRgbLightColor(w.name, nv);
           }
+          // simplevga: pixel-level — the pump pushes the whole value;
+          // actual pixel rendering is the face's job.
         }
       }
     }
@@ -219,8 +240,18 @@ function mapWidgetToControl(w, param) {
       // Keypad value is a string (key label or index) — returned as-is
       // for variable bindings; for part/pin bindings, parse as number.
       return typeof w.state.value === 'string' ? (parseFloat(w.state.value) || 0) : 0;
+    case 'keyboard':
+      // For part/pin binding: send the lastKey ASCII code normalized 0..1
+      return (w.state.lastKey || 0) / 127;
     case 'gauge':
     case 'lcd':
+    case 'oled':
+    case 'bargraph':
+    case 'simplevga':
+    case 'mono_lcd':
+    case 'rgb_light':
+    case 'sevenseg':
+    case 'matrix':
       // Display widgets are read-only — mapping returns null (no output)
       return null;
     default:
