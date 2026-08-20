@@ -36,6 +36,7 @@ import { registerDallasParts } from './devices/dallas-parts.js';
 import { registerBoardICs } from './devices/board-ics.js';
 import { registerTier2Parts } from './devices/tier2-parts.js';
 import { registerTier3Parts } from './devices/tier3-parts.js';
+import { registerBusMemory } from './devices/bus-memory.js';
 import { registerST7920 } from './devices/st7920.js';
 import { registerAdcSensors } from './devices/adc-sensors.js';
 import { registerLevelMux } from './devices/level-mux.js';
@@ -86,6 +87,7 @@ export function registerAllDevices() {
   registerBoardICs();
   registerTier2Parts();
   registerTier3Parts();
+  registerBusMemory();
   registerST7920();
   registerAdcSensors();
   registerLevelMux();

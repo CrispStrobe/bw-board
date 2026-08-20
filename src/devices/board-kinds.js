@@ -237,20 +237,29 @@ const STC15_TERMINALS = [
   'VCC',                                                               // 18
   'P5.5',                                                              // 19
   'GND',                                                               // 20
-  // Right side, pins 21–40 (bottom to top)
-  'P3.0', 'P3.1', 'P3.2', 'P3.3', 'P3.4', 'P3.5', 'P3.6', 'P3.7', // 21-28
-  'P4.1', 'P4.2',                                                     // 29-30
-  'P4.4',                                                              // 31
-  'P2.0', 'P2.1', 'P2.2', 'P2.3', 'P2.4', 'P2.5', 'P2.6', 'P2.7', // 32-39
+  // Right side, pins 40 DOWN TO 21 — the order the package RENDERS in.
+  // Pin 1 is top-left and pins descend the left column to 20 at the
+  // bottom-left; pin 21 is bottom-right and they ascend to 40 at the
+  // top-right. So a symbol drawn top-to-bottom lists 40, 39, … 21.
+  // (Ordered 21→40 until this commit, which disagreed with
+  // bw-circuit-ui's own stc15_mcu sidecar — and terminal order is what
+  // drives wire-attachment positions on that side. The sidecar was
+  // right; docs/PINOUT-STC15.md's DIP diagram in the stc repo settles
+  // it: pin 40 = P4.5/ALE top-right, pin 21 = P3.0/RxD bottom-right.)
   'P4.5',                                                              // 40
-  // Lowercase aliases (some benches use lowercase port names)
+  'P2.7', 'P2.6', 'P2.5', 'P2.4', 'P2.3', 'P2.2', 'P2.1', 'P2.0', // 39-32
+  'P4.4',                                                              // 31
+  'P4.2', 'P4.1',                                                     // 30-29
+  'P3.7', 'P3.6', 'P3.5', 'P3.4', 'P3.3', 'P3.2', 'P3.1', 'P3.0', // 28-21
+  // Lowercase aliases, same order (some benches use lowercase port names)
   'p0.0', 'p0.1', 'p0.2', 'p0.3', 'p0.4', 'p0.5', 'p0.6', 'p0.7',
   'p1.0', 'p1.1', 'p1.2', 'p1.3', 'p1.4', 'p1.5', 'p1.6', 'p1.7',
   'p5.4', 'vcc', 'p5.5', 'gnd',
-  'p3.0', 'p3.1', 'p3.2', 'p3.3', 'p3.4', 'p3.5', 'p3.6', 'p3.7',
-  'p4.1', 'p4.2', 'p4.4',
-  'p2.0', 'p2.1', 'p2.2', 'p2.3', 'p2.4', 'p2.5', 'p2.6', 'p2.7',
   'p4.5',
+  'p2.7', 'p2.6', 'p2.5', 'p2.4', 'p2.3', 'p2.2', 'p2.1', 'p2.0',
+  'p4.4',
+  'p4.2', 'p4.1',
+  'p3.7', 'p3.6', 'p3.5', 'p3.4', 'p3.3', 'p3.2', 'p3.1', 'p3.0',
 ];
 
 /**
