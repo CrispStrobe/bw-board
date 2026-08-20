@@ -36,8 +36,12 @@ const R_INPUT = 1e6;
 export function registerBoardICs() {
 
     // ─── AT24C02 ───────────────────────────────────────────────────────
+    // Real DIP-8: A0 A1 A2 GND | SDA SCL WP VCC — same package as
+    // the AT24C64 below. A0–A2 set the I2C bus address 0b1010|A2A1A0;
+    // WP HIGH = writes silently discarded at STOP (device still ACKs).
+    // Unwired strap pins read LOW (internal pull-downs on real parts).
     registerDevice('at24c02', {
-        terminals: ['vcc', 'gnd', 'sda', 'scl'],
+        terminals: ['a0', 'a1', 'a2', 'gnd', 'sda', 'scl', 'wp', 'vcc'],
 
         init(part) {
             const state = {
@@ -46,10 +50,12 @@ export function registerBoardICs() {
                 wordAddr: 0,
                 _mode: 'addr',
                 _pageBase: 0, _pageOff: 0, _pending: [],
+                _addrPins: 0,                          // sampled A2A1A0
+                _wp: false,
             };
             const handlers = {
                 onAddress: (a7, rw) => {
-                    const mine = a7 === (part.params?.address ?? 0x50);
+                    const mine = a7 === (0x50 | state._addrPins);
                     if (mine && rw === 0) { state._mode = 'addr'; state._pending = []; }
                     return mine;
                 },
@@ -73,7 +79,9 @@ export function registerBoardICs() {
                     return v;
                 },
                 onStop: () => {
-                    for (const [a, v] of state._pending) state.mem[a] = v;
+                    if (!state._wp) {
+                        for (const [a, v] of state._pending) state.mem[a] = v;
+                    }
                     if (state._pending.length) {
                         // Sequential reads continue past the written page in
                         // the datasheet's current-address sense.
@@ -89,11 +97,20 @@ export function registerBoardICs() {
 
         stamp(ctx) {
             ctx.conductance('scl', null, 1 / R_INPUT);
+            // A0–A2 and WP: input loading plus a weak pull-down so an
+            // unwired strap pin reads a defined LOW, not a floating NaN.
+            for (const t of ['a0', 'a1', 'a2', 'wp']) {
+                ctx.conductance(t, null, 1 / R_INPUT);
+            }
         },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
+            state._addrPins = (read('a2') > th ? 4 : 0) |
+                              (read('a1') > th ? 2 : 0) |
+                              (read('a0') > th ? 1 : 0);
+            state._wp = read('wp') > th;
             const driveLow = feedI2CSlave(state._i2c, read('scl') > th, read('sda') > th);
             const nowLow = state.drives.sda.rTh === R_OUT;
             if (driveLow !== nowLow) {
