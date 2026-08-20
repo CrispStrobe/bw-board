@@ -1215,11 +1215,16 @@ function findNet(nets, partId, terminal) {
 function stampResistor(A, b, part, nets, nodeIndex, groundNetId) {
   const netA = findNet(nets, part.id, 'a');
   const netB = findNet(nets, part.id, 'b');
+  // A leg on NO net carries no current. Ground has no matrix row, so
+  // nodeIndex.get(gnd) is undefined exactly like a terminal on no net — the
+  // two were indistinguishable and this element was stamped as if the loose
+  // leg were GROUNDED. Net IDs are non-empty strings, so real ground passes.
+  if (!netA || !netB) return;
   const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
   const g = 1 / ohms;
 
-  const idxA = netA ? nodeIndex.get(netA) : undefined;
-  const idxB = netB ? nodeIndex.get(netB) : undefined;
+  const idxA = nodeIndex.get(netA);
+  const idxB = nodeIndex.get(netB);
 
   if (idxA !== undefined) A.add(idxA, idxA, g);
   if (idxB !== undefined) A.add(idxB, idxB, g);
@@ -1445,8 +1450,24 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
  * @param {Map<string, number>} nodeIndex
  */
 function stampTwoTerminal(A, netA, netB, g, nodeIndex) {
-  const idxA = netA ? nodeIndex.get(netA) : undefined;
-  const idxB = netB ? nodeIndex.get(netB) : undefined;
+  // A leg on NO net carries no current, so the element contributes nothing.
+  //
+  // This has to be said explicitly because the ground net has no matrix row —
+  // it is the reference — so `nodeIndex.get(gnd)` is undefined, exactly like a
+  // terminal that is on no net at all. The two states were indistinguishable,
+  // and the code below adds the self-conductance in both cases, which is right
+  // for ground and wrong for air: a resistor with one leg unconnected was
+  // stamped as a resistor TO GROUND, silently loading whatever it touched.
+  //
+  // Found by an independent solver: a MAX4466 board read 2.5 V on its bias
+  // node where lcapy said 5 V, because a 1k with one leg in the air was acting
+  // as the lower half of a divider. Imported schematics have unconnected pins
+  // constantly — no-fit parts, spare gates, test points — and every one of
+  // them was a phantom load. Net IDs are non-empty strings, so a real ground
+  // net still passes this guard.
+  if (!netA || !netB) return;
+  const idxA = nodeIndex.get(netA);
+  const idxB = nodeIndex.get(netB);
 
   if (idxA !== undefined) A.add(idxA, idxA, g);
   if (idxB !== undefined) A.add(idxB, idxB, g);

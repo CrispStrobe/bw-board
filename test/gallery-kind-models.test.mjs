@@ -163,10 +163,26 @@ describe('power-off discharge with devices on the board (substep path)', () => {
     b.setPower(false);
     for (let t = 2100n; t <= 6700n; t += 100n) b.advanceTo(t * 1_000_000n);
     const v1 = b.capVoltages.get('c1');
-    // The dead 555's supply pin is itself a load through r1, so the
-    // discharge runs FASTER than the bleeder-only tau — before the fix
-    // the substep path froze the charge entirely (v1 === v0).
-    assert.ok(v1 < v0 / Math.E, `discharging faster than bleeder-only tau, got ${v1}`);
+    // CORRECTED. This used to assert the discharge ran FASTER than the
+    // bleeder-only tau, on the reasoning that the dead 555 was itself a load.
+    // It was — but not through anything physical: six of its eight terminals
+    // (trigger, output, reset, control, threshold, discharge) are on NO net in
+    // this fixture, and the solver stamped an unconnected terminal as if it
+    // were tied to GROUND. The extra current was flowing out of pins that are
+    // not attached to anything.
+    //
+    // With that fixed the discharge is exactly the bleeder RC and nothing
+    // else, so assert the closed form rather than an inequality — it pins the
+    // physics instead of merely bounding it.
+    //   tau = 4700 * 0.001 = 4.7 s; the window is 6700 - 2100 = 4.6 s
+    const tau = 4700 * 0.001;
+    const expected = v0 * Math.exp(-4.6 / tau);
+    assert.ok(Math.abs(v1 - expected) < 0.05,
+      `bleeder-only discharge: expected ${expected.toFixed(4)} V after 4.6 s `
+      + `of a ${tau} s tau, got ${v1.toFixed(4)}`);
+    // Still guards the original regression: the substep path once froze the
+    // charge entirely, leaving v1 === v0.
+    assert.ok(v1 < v0 - 1, `charge did not move at all: v0=${v0} v1=${v1}`);
     assert.ok(v1 > 0.1, `a real exponential, not an instant zero: ${v1}`);
   });
 });
