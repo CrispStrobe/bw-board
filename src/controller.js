@@ -158,16 +158,11 @@ export class ControllerPanel {
     if (type === 'lcd') w.state = { text: '' };
     if (type === 'oled') w.state = { text: config.text ?? '' };
     if (type === 'sevenseg') w.state = { value: config.value ?? 0 };
-    if (type === 'bargraph') w.state = { value: config.value ?? config.min ?? 0 };
+    if (type === 'bargraph') w.state = { value: config.value ?? w.config.min };
     if (type === 'simplevga') w.state = { value: 0, buffer: null };
     if (type === 'mono_lcd') w.state = { buffer: null, text: '' };
     if (type === 'rgb_light') w.state = { value: config.value ?? 0 };
     if (type === 'keyboard') w.state = { lastKey: 0, _fifo: [] };
-    if (type === 'keyboard') w.state = { lastKey: 0, _fifo: [], _lineBuffer: '' };
-    if (type === 'bargraph') w.state = { value: config.value ?? w.config.min };
-    if (type === 'simplevga') w.state = { value: 0 };
-    if (type === 'mono_lcd') w.state = { buffer: null };
-    if (type === 'rgb_light') w.state = { value: config.value ?? 0 };
     this._widgets.set(name, w);
     this._emit('add', { name, type });
     return w;

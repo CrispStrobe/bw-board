@@ -1039,3 +1039,231 @@ describe('ControllerPanel — oled display widget', () => {
     b.dispose();
   });
 });
+
+// ─── Bargraph widget ───────────────────────────────────────────────────────
+
+describe('ControllerPanel — bargraph widget', () => {
+  it('adds with defaults and clamps to [min, max]', () => {
+    const p = new ControllerPanel();
+    const w = p.addWidget('bar', 'bargraph', { min: 0, max: 100 });
+    assert.equal(w.type, 'bargraph');
+    assert.equal(w.state.value, 0);
+    p.setBargraphValue('bar', 50);
+    assert.equal(p.getValue('bar'), 50);
+    p.setBargraphValue('bar', 200);
+    assert.equal(p.getValue('bar'), 100);
+    p.setBargraphValue('bar', -10);
+    assert.equal(p.getValue('bar'), 0);
+  });
+
+  it('is a display — does NOT drive board.setControl', () => {
+    const p = new ControllerPanel();
+    p.addWidget('bar', 'bargraph');
+    p.bindToPart('bar', 'pot1');
+    const calls = [];
+    const mock = { setControl(id, v) { calls.push(id); } };
+    const b = bindPanelToBoard(p, mock);
+    p.setBargraphValue('bar', 50);
+    assert.equal(calls.length, 0);
+    b.dispose();
+  });
+
+  it('persists via toJSON/fromJSON', () => {
+    const p = new ControllerPanel();
+    p.addWidget('bar', 'bargraph', { min: 0, max: 200, segments: 20 }, { x: 5 });
+    p.bindToVariable('bar', 'level');
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    const w = r.getWidget('bar');
+    assert.equal(w.type, 'bargraph');
+    assert.equal(w.config.max, 200);
+    assert.equal(w.config.segments, 20);
+    assert.deepEqual(w.binding, { target: 'variable', variableName: 'level' });
+  });
+
+  it('variable pump drives bargraph', () => {
+    const p = new ControllerPanel();
+    p.addWidget('bar', 'bargraph', { min: 0, max: 100 });
+    p.bindToVariable('bar', 'level');
+    const vars = { id_level: { name: 'level', value: 75 } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find(v => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    b.pump();
+    assert.equal(p.getValue('bar'), 75);
+    b.dispose();
+  });
+});
+
+// ─── SimpleVGA widget ──────────────────────────────────────────────────────
+
+describe('ControllerPanel — simplevga widget', () => {
+  it('draws and clears pixels', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'simplevga', { width: 4, height: 3 });
+    p.setVgaPixel('scr', 1, 2, 5);
+    assert.equal(p.getWidget('scr').state.buffer[2 * 4 + 1], 5);
+    p.clearVga('scr');
+    assert.equal(p.getWidget('scr').state.buffer[2 * 4 + 1], 0);
+  });
+
+  it('clamps out-of-bounds pixels (no crash)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'simplevga', { width: 4, height: 3 });
+    p.setVgaPixel('scr', -1, 0, 1);
+    p.setVgaPixel('scr', 4, 0, 1);
+    p.setVgaPixel('scr', 0, 3, 1);
+    // buffer never allocated because all were out of bounds
+    assert.equal(p.getWidget('scr').state.buffer, null);
+  });
+
+  it('persists via toJSON/fromJSON', () => {
+    const p = new ControllerPanel();
+    p.addWidget('scr', 'simplevga', { width: 8, height: 6 });
+    p.bindToVariable('scr', 'fb');
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    assert.equal(r.getWidget('scr').config.width, 8);
+    assert.deepEqual(r.getWidget('scr').binding, { target: 'variable', variableName: 'fb' });
+  });
+});
+
+// ─── Mono LCD widget ───────────────────────────────────────────────────────
+
+describe('ControllerPanel — mono_lcd widget', () => {
+  it('sets pixels in a bit-packed buffer', () => {
+    const p = new ControllerPanel();
+    p.addWidget('lcd', 'mono_lcd', { width: 16, height: 8 });
+    p.setMonoLcdPixel('lcd', 3, 0, true);
+    const buf = p.getWidget('lcd').state.buffer;
+    assert.equal((buf[0] >> 3) & 1, 1);
+    p.setMonoLcdPixel('lcd', 3, 0, false);
+    assert.equal((buf[0] >> 3) & 1, 0);
+  });
+
+  it('sets and clears text', () => {
+    const p = new ControllerPanel();
+    p.addWidget('lcd', 'mono_lcd', { width: 100, height: 64 });
+    p.setMonoLcdText('lcd', 'Hello');
+    assert.equal(p.getValue('lcd'), 'Hello');
+    p.clearMonoLcd('lcd');
+    assert.equal(p.getValue('lcd'), '');
+  });
+
+  it('persists via toJSON/fromJSON', () => {
+    const p = new ControllerPanel();
+    p.addWidget('lcd', 'mono_lcd', { width: 178, height: 128 });
+    p.bindToVariable('lcd', 'display');
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    assert.equal(r.getWidget('lcd').type, 'mono_lcd');
+    assert.deepEqual(r.getWidget('lcd').binding, { target: 'variable', variableName: 'display' });
+  });
+
+  it('variable pump drives mono_lcd text', () => {
+    const p = new ControllerPanel();
+    p.addWidget('lcd', 'mono_lcd');
+    p.bindToVariable('lcd', 'display');
+    const vars = { id_d: { name: 'display', value: 'Row1' } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find(v => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    b.pump();
+    assert.equal(p.getValue('lcd'), 'Row1');
+    b.dispose();
+  });
+});
+
+// ─── RGB light widget ──────────────────────────────────────────────────────
+
+describe('ControllerPanel — rgb_light widget', () => {
+  it('sets color as 24-bit RGB', () => {
+    const p = new ControllerPanel();
+    p.addWidget('led', 'rgb_light');
+    p.setRgbLightColor('led', 0xFF00FF);
+    assert.equal(p.getValue('led'), 0xFF00FF);
+  });
+
+  it('masks to 24 bits', () => {
+    const p = new ControllerPanel();
+    p.addWidget('led', 'rgb_light');
+    p.setRgbLightColor('led', 0x1FFFFFF);
+    assert.equal(p.getValue('led'), 0xFFFFFF);
+  });
+
+  it('is a display — does NOT drive board.setControl', () => {
+    const p = new ControllerPanel();
+    p.addWidget('led', 'rgb_light');
+    p.bindToPart('led', 'led1');
+    const calls = [];
+    const mock = { setControl(id, v) { calls.push(id); } };
+    const b = bindPanelToBoard(p, mock);
+    p.setRgbLightColor('led', 0xFF0000);
+    assert.equal(calls.length, 0);
+    b.dispose();
+  });
+
+  it('persists via toJSON/fromJSON', () => {
+    const p = new ControllerPanel();
+    p.addWidget('led', 'rgb_light', { mode: 'rgb' });
+    p.bindToVariable('led', 'color');
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    assert.equal(r.getWidget('led').type, 'rgb_light');
+    assert.deepEqual(r.getWidget('led').binding, { target: 'variable', variableName: 'color' });
+  });
+
+  it('variable pump drives rgb_light', () => {
+    const p = new ControllerPanel();
+    p.addWidget('led', 'rgb_light');
+    p.bindToVariable('led', 'color');
+    const vars = { id_c: { name: 'color', value: 0x00FF00 } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find(v => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    b.pump();
+    assert.equal(p.getValue('led'), 0x00FF00);
+    b.dispose();
+  });
+});
+
+// ─── Keyboard widget ───────────────────────────────────────────────────────
+
+describe('ControllerPanel — keyboard widget', () => {
+  it('pushes keys into FIFO and reads them back', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    p.pushKeyboardKey('kb', 65);
+    p.pushKeyboardKey('kb', 66);
+    assert.equal(p.getValue('kb'), 66);
+    assert.equal(p.readKeyboardKey('kb'), 65);
+    assert.equal(p.readKeyboardKey('kb'), 66);
+    assert.equal(p.readKeyboardKey('kb'), 0);
+  });
+
+  it('masks key codes to 0..255', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    p.pushKeyboardKey('kb', 300);
+    assert.equal(p.getValue('kb'), 300 & 0xFF);
+  });
+
+  it('persists via toJSON/fromJSON', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    p.bindToVariable('kb', 'input_line');
+    const r = ControllerPanel.fromJSON(p.toJSON());
+    assert.equal(r.getWidget('kb').type, 'keyboard');
+    assert.deepEqual(r.getWidget('kb').binding, { target: 'variable', variableName: 'input_line' });
+  });
+
+  it('variable binding appends printable chars to string', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    p.bindToVariable('kb', 'line');
+    const vars = { id_l: { name: 'line', value: '' } };
+    const vm = { runtime: { getTargetForStage: () => ({ variables: vars,
+        lookupVariableByNameAndType: (n) => Object.values(vars).find(v => v.name === n) || null }) } };
+    const b = bindPanelToVariables(p, vm, { autoPump: false });
+    p.pushKeyboardKey('kb', 72);
+    p.pushKeyboardKey('kb', 105);
+    assert.equal(vars.id_l.value, 'Hi');
+    b.dispose();
+  });
+});
