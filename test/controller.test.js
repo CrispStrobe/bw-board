@@ -1266,4 +1266,50 @@ describe('ControllerPanel — keyboard widget', () => {
     assert.equal(vars.id_l.value, 'Hi');
     b.dispose();
   });
+
+  it('hasKeyboardInput returns true when FIFO non-empty, false when empty', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    assert.equal(p.hasKeyboardInput('kb'), false);
+    p.pushKeyboardKey('kb', 65);
+    assert.equal(p.hasKeyboardInput('kb'), true);
+    p.readKeyboardKey('kb'); // consume
+    assert.equal(p.hasKeyboardInput('kb'), false);
+  });
+
+  it('FIFO is lossless and in-order under rapid input', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    const input = 'Hello, World!';
+    for (const ch of input) p.pushKeyboardKey('kb', ch.charCodeAt(0));
+    let result = '';
+    while (p.hasKeyboardInput('kb')) {
+      result += String.fromCharCode(p.readKeyboardKey('kb'));
+    }
+    assert.equal(result, input);
+    assert.equal(p.readKeyboardKey('kb'), 0); // empty
+  });
+
+  it('play-mode reset clears the FIFO', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    p.pushKeyboardKey('kb', 65);
+    assert.equal(p.hasKeyboardInput('kb'), true);
+    p.setMode('play');
+    assert.equal(p.hasKeyboardInput('kb'), false);
+    assert.equal(p.readKeyboardKey('kb'), 0);
+  });
+
+  it('getValue returns lastKey (non-consuming peek)', () => {
+    const p = new ControllerPanel();
+    p.addWidget('kb', 'keyboard');
+    p.pushKeyboardKey('kb', 65);
+    p.pushKeyboardKey('kb', 66);
+    // getValue returns lastKey (66), does NOT consume FIFO
+    assert.equal(p.getValue('kb'), 66);
+    assert.equal(p.getValue('kb'), 66); // still 66
+    // FIFO still has both entries
+    assert.equal(p.readKeyboardKey('kb'), 65);
+    assert.equal(p.readKeyboardKey('kb'), 66);
+  });
 });

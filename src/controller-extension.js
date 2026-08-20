@@ -38,6 +38,7 @@ const translations = {
     'ctrl.lcdClear':   'LCD [NAME] clear',
     'ctrl.rgbLight':   'set light [NAME] color [COLOR]',
     'ctrl.readKey':    'read key from [NAME]',
+    'ctrl.hasKey':     '[NAME] has input?',
     'ctrl.noPanel':    '(no panel)',
   },
   de: {
@@ -55,6 +56,7 @@ const translations = {
     'ctrl.lcdClear':   'LCD [NAME] löschen',
     'ctrl.rgbLight':   'Licht [NAME] Farbe [COLOR]',
     'ctrl.readKey':    'Taste lesen von [NAME]',
+    'ctrl.hasKey':     '[NAME] hat Eingabe?',
     'ctrl.noPanel':    '(kein Panel)',
   },
   fr: {
@@ -72,6 +74,7 @@ const translations = {
     'ctrl.lcdClear':   'LCD [NAME] effacer',
     'ctrl.rgbLight':   'lumière [NAME] couleur [COLOR]',
     'ctrl.readKey':    'lire touche de [NAME]',
+    'ctrl.hasKey':     '[NAME] a une entrée ?',
     'ctrl.noPanel':    '(pas de panneau)',
   },
 };
@@ -270,6 +273,14 @@ export class ControllerExtension {
             NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
           },
         },
+        {
+          opcode: 'keyboardHasInput',
+          blockType: Scratch.BlockType.BOOLEAN,
+          text: t('ctrl.hasKey'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+          },
+        },
       ],
       menus: {
         WIDGETS: {
@@ -352,6 +363,11 @@ export class ControllerExtension {
   readKeyboard({ NAME }) {
     const p = this.panel;
     return p ? p.readKeyboardKey(String(NAME)) : 0;
+  }
+
+  keyboardHasInput({ NAME }) {
+    const p = this.panel;
+    return p ? p.hasKeyboardInput(String(NAME)) : false;
   }
 
   // ── Generic set widget ──────────────────────────────────────────────

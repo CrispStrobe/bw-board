@@ -515,6 +515,16 @@ export class ControllerPanel {
     return w.state._fifo.shift();
   }
 
+  /**
+   * Check if the keyboard FIFO has pending input.
+   * @param {string} name
+   * @returns {boolean}
+   */
+  hasKeyboardInput(name) {
+    const w = this._requireWidget(name, 'keyboard');
+    return !!(w.state._fifo && w.state._fifo.length > 0);
+  }
+
   // ── State query (program-facing API for extension blocks) ─────────────
 
   /** Scalar value for any widget (slider/dial/gauge value, button 0/1, joystick magnitude, dpad bitmask). */

@@ -59,7 +59,7 @@ describe('ControllerExtension: getInfo contract', () => {
         'controllerPressed', 'setWidget', 'setBargraphLevel',
         'vgaDrawPixel', 'vgaClear',
         'monoLcdPixel', 'monoLcdText', 'monoLcdClear',
-        'setRgbLight', 'readKeyboard',
+        'setRgbLight', 'readKeyboard', 'keyboardHasInput',
       ]);
     } finally {
       globalThis.Scratch = origScratch;
