@@ -56,7 +56,10 @@ describe('ControllerExtension: getInfo contract', () => {
         .map(b => b.opcode);
       assert.deepEqual(opcodes, [
         'controllerValue', 'controllerX', 'controllerY',
-        'controllerPressed', 'setWidget',
+        'controllerPressed', 'setWidget', 'setBargraphLevel',
+        'vgaDrawPixel', 'vgaClear',
+        'monoLcdPixel', 'monoLcdText', 'monoLcdClear',
+        'setRgbLight', 'readKeyboard',
       ]);
     } finally {
       globalThis.Scratch = origScratch;

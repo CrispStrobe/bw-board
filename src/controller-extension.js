@@ -30,6 +30,14 @@ const translations = {
     'ctrl.y':          '[NAME] y',
     'ctrl.pressed':    '[NAME] pressed?',
     'ctrl.setWidget':  'set [NAME] to [VALUE]',
+    'ctrl.setBargraph': 'set bargraph [NAME] to [VALUE]',
+    'ctrl.vgaDraw':    'VGA [NAME] draw x [X] y [Y] color [COLOR]',
+    'ctrl.vgaClear':   'VGA [NAME] clear',
+    'ctrl.lcdPixel':   'LCD [NAME] pixel x [X] y [Y] [ON]',
+    'ctrl.lcdText':    'LCD [NAME] text [TEXT]',
+    'ctrl.lcdClear':   'LCD [NAME] clear',
+    'ctrl.rgbLight':   'set light [NAME] color [COLOR]',
+    'ctrl.readKey':    'read key from [NAME]',
     'ctrl.noPanel':    '(no panel)',
   },
   de: {
@@ -39,6 +47,14 @@ const translations = {
     'ctrl.y':          '[NAME] y',
     'ctrl.pressed':    '[NAME] gedrückt?',
     'ctrl.setWidget':  'setze [NAME] auf [VALUE]',
+    'ctrl.setBargraph': 'Bargraph [NAME] auf [VALUE]',
+    'ctrl.vgaDraw':    'VGA [NAME] Pixel x [X] y [Y] Farbe [COLOR]',
+    'ctrl.vgaClear':   'VGA [NAME] löschen',
+    'ctrl.lcdPixel':   'LCD [NAME] Pixel x [X] y [Y] [ON]',
+    'ctrl.lcdText':    'LCD [NAME] Text [TEXT]',
+    'ctrl.lcdClear':   'LCD [NAME] löschen',
+    'ctrl.rgbLight':   'Licht [NAME] Farbe [COLOR]',
+    'ctrl.readKey':    'Taste lesen von [NAME]',
     'ctrl.noPanel':    '(kein Panel)',
   },
   fr: {
@@ -48,6 +64,14 @@ const translations = {
     'ctrl.y':          '[NAME] y',
     'ctrl.pressed':    '[NAME] appuyé ?',
     'ctrl.setWidget':  'mettre [NAME] à [VALUE]',
+    'ctrl.setBargraph': 'bargraphe [NAME] à [VALUE]',
+    'ctrl.vgaDraw':    'VGA [NAME] pixel x [X] y [Y] couleur [COLOR]',
+    'ctrl.vgaClear':   'VGA [NAME] effacer',
+    'ctrl.lcdPixel':   'LCD [NAME] pixel x [X] y [Y] [ON]',
+    'ctrl.lcdText':    'LCD [NAME] texte [TEXT]',
+    'ctrl.lcdClear':   'LCD [NAME] effacer',
+    'ctrl.rgbLight':   'lumière [NAME] couleur [COLOR]',
+    'ctrl.readKey':    'lire touche de [NAME]',
     'ctrl.noPanel':    '(pas de panneau)',
   },
 };
@@ -169,6 +193,83 @@ export class ControllerExtension {
             VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
           },
         },
+        {
+          opcode: 'setBargraphLevel',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.setBargraph'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+            VALUE: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+          },
+        },
+        '---',
+        {
+          opcode: 'vgaDrawPixel',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.vgaDraw'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+            X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            COLOR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+          },
+        },
+        {
+          opcode: 'vgaClear',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.vgaClear'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+          },
+        },
+        '---',
+        {
+          opcode: 'monoLcdPixel',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.lcdPixel'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+            X: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            Y: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0 },
+            ON: { type: Scratch.ArgumentType.NUMBER, defaultValue: 1 },
+          },
+        },
+        {
+          opcode: 'monoLcdText',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.lcdText'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+            TEXT: { type: Scratch.ArgumentType.STRING, defaultValue: 'Hello' },
+          },
+        },
+        {
+          opcode: 'monoLcdClear',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.lcdClear'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+          },
+        },
+        '---',
+        {
+          opcode: 'setRgbLight',
+          blockType: Scratch.BlockType.COMMAND,
+          text: t('ctrl.rgbLight'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+            COLOR: { type: Scratch.ArgumentType.NUMBER, defaultValue: 0xFF0000 },
+          },
+        },
+        '---',
+        {
+          opcode: 'readKeyboard',
+          blockType: Scratch.BlockType.REPORTER,
+          text: t('ctrl.readKey'),
+          arguments: {
+            NAME: { type: Scratch.ArgumentType.STRING, menu: 'WIDGETS', defaultValue: '' },
+          },
+        },
       ],
       menus: {
         WIDGETS: {
@@ -211,7 +312,49 @@ export class ControllerExtension {
     return p ? p.isPressed(String(NAME)) : false;
   }
 
-  // ── Commands ─────────────────────────────────────────────────────────
+  // ── Display/input widget commands ──────────────────────────────────
+
+  setBargraphLevel({ NAME, VALUE }) {
+    const p = this.panel;
+    if (p) p.setBargraphValue(String(NAME), Number(VALUE));
+  }
+
+  vgaDrawPixel({ NAME, X, Y, COLOR }) {
+    const p = this.panel;
+    if (p) p.setVgaPixel(String(NAME), Number(X), Number(Y), Number(COLOR));
+  }
+
+  vgaClear({ NAME }) {
+    const p = this.panel;
+    if (p) p.clearVga(String(NAME));
+  }
+
+  monoLcdPixel({ NAME, X, Y, ON }) {
+    const p = this.panel;
+    if (p) p.setMonoLcdPixel(String(NAME), Number(X), Number(Y), !!Number(ON));
+  }
+
+  monoLcdText({ NAME, TEXT }) {
+    const p = this.panel;
+    if (p) p.setMonoLcdText(String(NAME), String(TEXT));
+  }
+
+  monoLcdClear({ NAME }) {
+    const p = this.panel;
+    if (p) p.clearMonoLcd(String(NAME));
+  }
+
+  setRgbLight({ NAME, COLOR }) {
+    const p = this.panel;
+    if (p) p.setRgbLightColor(String(NAME), Number(COLOR));
+  }
+
+  readKeyboard({ NAME }) {
+    const p = this.panel;
+    return p ? p.readKeyboardKey(String(NAME)) : 0;
+  }
+
+  // ── Generic set widget ──────────────────────────────────────────────
 
   setWidget({ NAME, VALUE }) {
     const p = this.panel;
@@ -230,12 +373,25 @@ export class ControllerExtension {
       // setWidget on a joystick sets X; use controllerY block for Y
       p.setJoystickInput(name, val, p.getY(name));
     } else if (w.type === 'dpad') {
-      // setWidget on a dpad: bitmask (up=1, down=2, left=4, right=8)
       const v = Math.round(val);
       p.setDpadInput(name, 'up',    !!(v & 1));
       p.setDpadInput(name, 'down',  !!(v & 2));
       p.setDpadInput(name, 'left',  !!(v & 4));
       p.setDpadInput(name, 'right', !!(v & 8));
+    } else if (w.type === 'bargraph') {
+      p.setBargraphValue(name, val);
+    } else if (w.type === 'sevenseg') {
+      p.setSevenSegValue(name, val);
+    } else if (w.type === 'matrix') {
+      p.setMatrixValue(name, val);
+    } else if (w.type === 'rgb_light') {
+      p.setRgbLightColor(name, val);
+    } else if (w.type === 'lcd') {
+      p.setLcdText(name, String(VALUE));
+    } else if (w.type === 'oled') {
+      p.setOledText(name, String(VALUE));
+    } else if (w.type === 'mono_lcd') {
+      p.setMonoLcdText(name, String(VALUE));
     }
   }
 }
