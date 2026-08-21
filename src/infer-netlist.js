@@ -241,16 +241,22 @@ export function inferNetlist(stc, opts) {
           const rId = `R_${safeName}`;
           const qId = `Q_${safeName}`;
           const mId = `MOTOR_${safeName}`;
+          const dId = `D_${safeName}`;
           parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
           parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['base', 'collector', 'emitter'] });
           parts.push({ id: mId, kind: 'dc_motor', params: {}, terminals: ['a', 'b'] });
+          parts.push({ id: dId, kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] });
           nets.push({ id: `net_${safeName}_pin`,
             terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
           nets.push({ id: `net_${safeName}_base`,
             terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'base' }] });
           nets.push({ id: `net_${safeName}_col`,
-            terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'collector' }] });
+            terminals: [{ part: mId, terminal: 'b' }, { part: qId, terminal: 'collector' },
+              { part: dId, terminal: 'anode' }] });
           vccNet.terminals.push({ part: mId, terminal: 'a' });
+          // Reverse-biased during normal operation; conducts the motor's
+          // inductive current when the transistor switches off.
+          vccNet.terminals.push({ part: dId, terminal: 'cathode' });
           gndNet.terminals.push({ part: qId, terminal: 'emitter' });
           break;
         }
@@ -263,17 +269,21 @@ export function inferNetlist(stc, opts) {
           const rId = `R_${safeName}`;
           const qId = `Q_${safeName}`;
           const kId = `RELAY_${safeName}`;
+          const dId = `D_${safeName}`;
           parts.push({ id: rId, kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] });
           parts.push({ id: qId, kind: 'npn', params: {}, terminals: ['base', 'collector', 'emitter'] });
           parts.push({ id: kId, kind: 'relay', params: {},
             terminals: ['coil_a', 'coil_b', 'com', 'nc', 'no'] });
+          parts.push({ id: dId, kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] });
           nets.push({ id: `net_${safeName}_pin`,
             terminals: [{ part: 'MCU', terminal: pinId }, { part: rId, terminal: 'a' }] });
           nets.push({ id: `net_${safeName}_base`,
             terminals: [{ part: rId, terminal: 'b' }, { part: qId, terminal: 'base' }] });
           nets.push({ id: `net_${safeName}_coil`,
-            terminals: [{ part: kId, terminal: 'coil_b' }, { part: qId, terminal: 'collector' }] });
+            terminals: [{ part: kId, terminal: 'coil_b' }, { part: qId, terminal: 'collector' },
+              { part: dId, terminal: 'anode' }] });
           vccNet.terminals.push({ part: kId, terminal: 'coil_a' });
+          vccNet.terminals.push({ part: dId, terminal: 'cathode' });
           gndNet.terminals.push({ part: qId, terminal: 'emitter' });
           break;
         }
