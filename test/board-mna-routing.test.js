@@ -11,7 +11,7 @@ const gnd = { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] };
 const r = (id, ohms) => ({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] });
 
 test('nodeVoltage sees a diode load (walker used to report 5 V)', () => {
-  // 5 V → 1 kΩ → diode (Vf 0.7, rd 10) → GND.
+  // 5 V → 1 kΩ → diode (Vf 0.7, rd 10) → GND. PWL default:
   // i = (5 − 0.7)/1010 = 4.257 mA; anode node = 0.7 + 0.010·i·1000 = 0.7426 V.
   const b = new BoardImpl();
   b.setNetlist(

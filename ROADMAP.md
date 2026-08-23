@@ -76,6 +76,15 @@ already written and is dead code — no caller passes `opts.shockley`. Turn it o
 `diode`/`led`/BJT junctions behind pnjlim-style limiting so NR stays stable; keep the
 piecewise-linear knee as the closed-form fast path's model and as a per-part opt-out.
 
+### E1.3b Shockley default flip — coordinated, after E1.3
+E1.3 landed Shockley OPT-IN (`params.model:'shockley'`): the measured
+canonical-bench shift is +3.9 % and the walker still answers the knee, so a
+silent default flip is two-truths-on-one-bench plus unannounced corpus
+drift. The flip is one coordinated change: route all junction benches past
+the walker (or teach the walker the exponential), flip the default, and
+re-measure the shipped corpus WITH the examples owner in the same landing.
+Blocked on: corpus re-measurement scheduling. Not on code.
+
 ### E1.4 Convergence fallback ladder — `src/mna.js` (GATED)
 When plain NR fails, do not report failure immediately: try GMIN stepping (raise GMIN,
 converge, ratchet down), then source stepping (scale all sources 0→1). Only after the

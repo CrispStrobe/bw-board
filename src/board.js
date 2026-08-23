@@ -2245,6 +2245,11 @@ export class BoardImpl {
   _needsMNA() {
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
+      // An opted-in Shockley junction is beyond the walker's knee
+      // vocabulary: letting the walker answer nodeVoltage while the
+      // instruments answer from the exponential model is two truths on
+      // one bench (spec-updates/shockley-junction-limiting.md).
+      if ((p.kind === 'led' || p.kind === 'diode') && p.params?.model === 'shockley') return true;
     }
     // Shared-LED fan-out is beyond the walker's vocabulary: _solveLedChain
     // traces each LED's series path INDEPENDENTLY, so two LEDs sharing a
