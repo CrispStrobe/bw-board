@@ -54,6 +54,13 @@ export function createAvr8jsAdapter(opts = {}) {
   const vcc = opts.vcc ?? chip.vcc;
 
   const progMem = new Uint16Array(chip.flashWords);
+  if (opts.program && opts.program.length > chip.flashWords) {
+    // Refuse WITH THE SIZE NAMED — a silent truncation boots garbage and a
+    // bare RangeError names neither the image nor the chip.
+    throw new Error(`Program is ${opts.program.length} words `
+      + `(${opts.program.length * 2} bytes); ${chip.name} flash holds `
+      + `${chip.flashWords} words (${chip.flashWords * 2} bytes)`);
+  }
   if (opts.program) progMem.set(opts.program);
   const cpu = new CPU(progMem, chip.sramBytes);
 

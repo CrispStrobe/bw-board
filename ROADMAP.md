@@ -297,7 +297,7 @@ Verified against the engine line by line:
 | 74HC373 | ✅ **E5.6 done** | transparent latch in chip-composer, with the not-a-'374 oracle (data during LE-high propagates); sidecars landed (bw-parts 9d9fef8, bw-circuit-ui 90161eb), both families |
 | 74HC595 | ✅ | FSM + oracle |
 | 74HC(T)04/14/00/32/08/138/245 | ✅ | **E5.7 done**: 74hct* kinds + params.family:'hct' give TTL-fixed 0.8/2.0 V (1.4 V center for the mid-rail models); aliases for hct00/04/08/14/32/138/245 |
-| ATmega88PA | ⚠️ **E5.8** | avr8js family runs 328P/tiny13/85/88/2313; the mega88PA chip config needs verifying/adding |
+| ATmega88PA | ✅ **E5.8 done** | chip entry with the family's ONE-word vector table (half the 328P addresses), 8 KB/1 KB bounds; blink + UART hand-assembled oracles; oversize image refused with the size named |
 | DIP oscillator cans (1.8432 MHz, 1 MHz) | ✅ **E5.9 done** | `osc_can` (OE/GND/OUT/VCC, params.freq) drives its square via E4.1 wakes so dividers count real edges; '93-chain f/16 oracle; sidecar landed (osc_can, DIP-14 corner leads) |
 | MAX232 | ✅ **E5.10 done** | devices/max232.js: ±8 V inverting drivers behind 300 Ω, receivers with 1.3 V threshold + real 5 kΩ load (fail-safe high), pump rails probeable; loopback oracle |
 | 330 Ω bussed SIP network | ✅ **E5.11 done** | rnet_sip (params pins/ohms/topology): pure stamp device; oracles include the bussed-misuse measurement (path through the common pin) |
@@ -323,7 +323,7 @@ kind aliases 74hct*) switches the thresholds. Oracle: a 3.6 V input at
 VCC 5 reads high for HCT and high for HC, but 2.2 V reads high ONLY for
 HCT. Not gated.
 
-### E5.8 ATmega88PA chip config — `src/avr-chips.js`
+### E5.8 ATmega88PA chip config — DONE
 Same family as the 328P with 8 KB flash / 1 KB SRAM and near-identical
 register file. Verify what the 168P example variants actually run on,
 add the mega88PA entry, and give it a board fixture. Acceptance: blink +

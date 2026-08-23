@@ -104,6 +104,44 @@ export const ATMEGA328P = {
   spi: ATMEGA328P_SPI,
 };
 
+// ─── ATmega88PA (E5.8) ─────────────────────────────────────────────────────
+//
+// Same die family as the 328P (doc8271 covers 48A..328P together): identical
+// pinout, identical port/peripheral REGISTER addresses — the whole difference
+// that matters here is memory size and the interrupt vector table. With
+// ≤ 8 KB flash the vectors are RJMP-sized, ONE word apart (table 11-6), where
+// the 328P's are JMP-sized and two apart: vector n (1-based) lives at word
+// address n−1, i.e. every 328P interrupt address divided by two. A config
+// that reused the 328P vectors would fire every ISR into the middle of the
+// wrong handler — the reason this is a real chip entry and not an alias.
+const v88 = (vector1Based) => vector1Based - 1;
+
+const ATMEGA88PA_TIMERS = [
+  { ...ATMEGA328P_TIMERS[0], captureInterrupt: 0,
+    compAInterrupt: v88(15), compBInterrupt: v88(16), ovfInterrupt: v88(17) },
+  { ...ATMEGA328P_TIMERS[1], captureInterrupt: v88(11),
+    compAInterrupt: v88(12), compBInterrupt: v88(13), ovfInterrupt: v88(14) },
+  { ...ATMEGA328P_TIMERS[2], captureInterrupt: 0,
+    compAInterrupt: v88(8), compBInterrupt: v88(9), ovfInterrupt: v88(10) },
+];
+
+export const ATMEGA88PA = {
+  name: 'ATmega88PA',
+  flashWords: 4096,     // 8 KB = 4K words
+  sramBytes: 1024,
+  clockHz: 16_000_000,
+  vcc: 5.0,
+  pins: ATMEGA328P_PINS,
+  ports: ATMEGA328P_PORTS,
+  timers: ATMEGA88PA_TIMERS,
+  adc: { ...ATMEGA328P_ADC, adcInterrupt: v88(22) },
+  adcChannelToPin: ATMEGA328P_ADC_MAP,
+  usart: { ...ATMEGA328P_USART, rxCompleteInterrupt: v88(19),
+    dataRegisterEmptyInterrupt: v88(20), txCompleteInterrupt: v88(21) },
+  twi: { ...ATMEGA328P_TWI, twiInterrupt: v88(25) },
+  spi: { ...ATMEGA328P_SPI, spiInterrupt: v88(18) },
+};
+
 // ─── ATmega2560 (Arduino Mega) ─────────────────────────────────────────────
 // Pin map from the official Arduino Mega schematic.
 // Ports C (D30-37) and L (D42-49) count DESCENDING: PC7=D30, PL7=D42.
@@ -678,6 +716,7 @@ export const ATTINY13 = {
 /** Lookup by name string, case-insensitive. */
 export const CHIPS = {
   atmega328p: ATMEGA328P,
+  atmega88pa: ATMEGA88PA,
   atmega2560: ATMEGA2560,
   attiny85: ATTINY85,
   attiny88: ATTINY88,
