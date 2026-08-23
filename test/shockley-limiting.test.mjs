@@ -12,10 +12,17 @@ const GND = { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] };
 const R = (id, ohms) => ({ id, kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] });
 
 describe('Shockley diode: closed-form Vf at spot currents', () => {
-  // Drive exact currents with an isource; Vf must match
-  //   v = vfRef + nVt·ln(i/20 mA)   (n = 1, Is derived from Vf 0.7 @ 20 mA)
-  // to < 1 mV. PWL cannot produce these numbers at all (it answers vf + i·rd).
-  for (const [iMa, hand] of [[1, 0.62256], [10, 0.68208], [100, 0.74161]]) {
+  // Drive exact currents with an isource. The model is junction + series
+  // rs (default 2 Ω), Is calibrated so the TOTAL drop is exactly vf at
+  // the rated 20 mA:
+  //   v(i) = (vf − 0.02·rs) + nVt·ln(i/20 mA) + i·rs
+  // n = 1, vf = 0.7, rs = 2 → vJrated = 0.66:
+  //   1 mA:   0.66 − 25.85m·ln20 + 0.002 = 0.58455
+  //   10 mA:  0.66 − 25.85m·ln2  + 0.02  = 0.66208
+  //   20 mA:  vf exactly (the calibration anchor)
+  //   100 mA: 0.66 + 25.85m·ln5  + 0.2   = 0.90161
+  // PWL cannot produce these numbers at all (it answers vf + i·rd).
+  for (const [iMa, hand] of [[1, 0.58455], [10, 0.66208], [20, 0.70000], [100, 0.90161]]) {
     it(`${iMa} mA → ${hand} V`, () => {
       const parts = [
         GND,
@@ -32,19 +39,19 @@ describe('Shockley diode: closed-form Vf at spot currents', () => {
       const board = new BoardImpl(5.0);
       board.setNetlist(parts, nets);
       const v = board.nodeVoltage('n_a');
-      // hand: 0.7 + 0.02585·ln(iMa/20)
       assert.ok(Math.abs(v - hand) < 0.001,
-        `Vf at ${iMa} mA must be ${hand} V (0.7 + 25.85 mV·ln(${iMa}/20)), got ${v.toFixed(5)}`);
+        `Vf at ${iMa} mA must be ${hand} V (composite with rs=2), got ${v.toFixed(5)}`);
     });
   }
 });
 
 describe('canonical LED bench: the opt-in shift is measured and bounded', () => {
-  it('5 V / 1 kΩ / LED (shockley): current within 4.5 % of the PWL value', () => {
+  it('5 V / 1 kΩ / LED (shockley): current within 6 % of the PWL value', () => {
     // PWL: i = (5−2)/1010 = 2.9703 mA (the knee has rd = 10 in series).
-    // Shockley has no series rd: (5−v)/1000 = Is·e^(v/nVt) with n = 1.8,
-    // Is from 2 V @ 20 mA → fixed point i = 3.0869 mA, v = 1.9131 V —
-    // a +3.9 % shift. Measured and stated, not hidden: this number is WHY
+    // Shockley composite (n = 1.8, rs = 2, Is calibrated for 2 V total at
+    // 20 mA): fixed point of (5−v)/1000 = i with
+    // v = 1.96 + 46.53m·ln(i/20m) + 2i → i = 3.1202 mA, v = 1.8798 V —
+    // a +5.0 % shift. Measured and stated, not hidden: this number is WHY
     // the default stays PWL until the corpus flip (ROADMAP E1.3b).
     const parts = [VCC, GND, R('R1', 1000),
       { id: 'L1', kind: 'led', params: { vf: 2.0, model: 'shockley' }, terminals: ['anode', 'cathode'] }];
@@ -57,10 +64,10 @@ describe('canonical LED bench: the opt-in shift is measured and bounded', () => 
     board.setNetlist(parts, nets);
     const i = Math.abs(board.branchCurrent('L1', 'anode'));
     const iPwl = (5 - 2) / 1010;
-    assert.ok(Math.abs(i - 3.0869e-3) < 0.02e-3,
-      `Shockley bench current must be 3.0869 mA (hand fixed point), got ${(i * 1e3).toFixed(4)} mA`);
-    assert.ok(Math.abs(i - iPwl) / iPwl < 0.045,
-      `shift vs PWL must stay under 4.5 %, got ${(100 * Math.abs(i - iPwl) / iPwl).toFixed(2)} %`);
+    assert.ok(Math.abs(i - 3.1202e-3) < 0.02e-3,
+      `Shockley bench current must be 3.1202 mA (hand fixed point), got ${(i * 1e3).toFixed(4)} mA`);
+    assert.ok(Math.abs(i - iPwl) / iPwl < 0.06,
+      `shift vs PWL must stay under 6 %, got ${(100 * Math.abs(i - iPwl) / iPwl).toFixed(2)} %`);
     // One truth on the bench: an opted-in junction routes past the walker,
     // so nodeVoltage and branchCurrent agree.
     const vLed = board.nodeVoltage('n_led');

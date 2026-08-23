@@ -24,6 +24,7 @@
 
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA,
+  shockleyParams, shockleyEval, shockleyJunctionFromTotal,
 } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
@@ -43,15 +44,12 @@ function junctionG(part, vAcross, vf, rd) {
     if (vAcross > vf + EPS) return 1 / rd;
     return (vAcross - vf + EPS) / (2 * EPS * rd);
   }
-  const nVt = opts.n * VT;
-  let is = opts.is;
-  if (is === undefined) {
-    const expVf = Math.exp(Math.min(vf / nVt, 80));
-    is = 0.020 / Math.max(expVf - 1, 1e-30);
-  }
-  const vClamped = Math.min(vAcross, nVt * 80);
-  if (vClamped < -5 * nVt) return 1e-12;
-  return Math.min(Math.max(is * Math.exp(vClamped / nVt) / nVt, 1e-12), 1e6);
+  // Composite small-signal conductance: junction gj behind rs, evaluated
+  // at the operating TOTAL voltage — the same composite the DC stamp uses.
+  const p = shockleyParams(opts, vf);
+  const vJ = shockleyJunctionFromTotal(vAcross, Math.min(vAcross, vf), p);
+  const { gj } = shockleyEval(vJ, p);
+  return gj / (1 + gj * p.rs);
 }
 
 /**

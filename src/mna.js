@@ -190,7 +190,16 @@ function solveAssembled(A, b) {
  */
 function diodeCompanion(vAcross, vf, rd, opts) {
   if (opts && opts.shockley) {
-    return shockleyCompanion(vAcross, vf, rd, opts.is, opts.n);
+    // COMPOSITE linearization: junction + series rs as one branch,
+    // i(v_total) with v_total = vJ + i·rs. `vAcross` here is the stored
+    // JUNCTION voltage state (the NR variable); the returned Norton is in
+    // terms of the TOTAL branch voltage the network sees. rs = 0 (the
+    // direct-call/test path) reduces exactly to the bare exponential.
+    const p = shockleyParams({ ...opts, rs: opts.rs ?? 0 }, vf);
+    const { i, gj } = shockleyEval(vAcross, p);
+    const gEq = gj / (1 + gj * p.rs);
+    const vTotalOp = vAcross + i * p.rs;
+    return { gEq, iEq: i - gEq * vTotalOp };
   }
 
   // Piecewise-linear knee with a C1 parabolic blend over ±PWL_KNEE_EPS.
@@ -264,8 +273,67 @@ function junctionOpts(part) {
     shockley: true,
     is: part.params?.is,
     n: part.params?.n ?? (part.kind === 'led' ? 1.8 : 1.0),
+    // Series bulk resistance (SPICE's RS). Without it the exponential
+    // undershoots the declared Vf everywhere below rated current — the
+    // E1.3b corpus delta showed PWL consistently a little above each
+    // LED's Vf and bare Shockley consistently below: the knee's rd was
+    // crudely modelling this term, and dropping it moved AWAY from the
+    // devices. 2 Ω is a typical LED/small-diode bulk value.
+    rs: part.params?.rs ?? 2,
   };
 }
+
+/**
+ * Shockley parameters with the TOTAL-drop calibration: Is is chosen so
+ * that junction + rs together drop exactly vf at the rated 20 mA — the
+ * teaching anchor "this LED drops vf at its rated current" stays true
+ * with bulk resistance in the model.
+ */
+function shockleyParams(opts, vf) {
+  const nVt = opts.n * VT_25C;
+  const rs = opts.rs ?? 0;
+  let is = opts.is;
+  if (is === undefined) {
+    const vJrated = vf - 0.020 * rs;
+    const expVf = Math.exp(Math.min(vJrated / nVt, 80));
+    is = 0.020 / Math.max(expVf - 1, 1e-30);
+  }
+  return { nVt, is, rs };
+}
+
+/** Junction current and conductance at a JUNCTION voltage. */
+function shockleyEval(vJ, p) {
+  const vClamped = Math.min(vJ, p.nVt * 80);
+  if (vClamped < -5 * p.nVt) return { i: -p.is, gj: 1e-12 };
+  const expV = Math.exp(vClamped / p.nVt);
+  return {
+    i: p.is * (expV - 1),
+    gj: Math.min(Math.max(p.is * expV / p.nVt, 1e-12), 1e6),
+  };
+}
+
+/**
+ * Recover the junction voltage from a TOTAL (node-difference) voltage:
+ * solve vJ + f(vJ)·rs = vTotal by scalar Newton from the last state.
+ */
+function shockleyJunctionFromTotal(vTotal, vJ0, p) {
+  if (!(p.rs > 0)) return vTotal;
+  let vJ = vJ0;
+  for (let k = 0; k < 40; k++) {
+    const { i, gj } = shockleyEval(vJ, p);
+    const resid = vJ + i * p.rs - vTotal;
+    if (Math.abs(resid) < 1e-12) break;
+    let step = resid / (1 + gj * p.rs);
+    // The scalar Newton needs its own junction limiting.
+    if (step > p.nVt * 4) step = p.nVt * 4;
+    if (step < -p.nVt * 4) step = -p.nVt * 4;
+    vJ -= step;
+    if (Math.abs(step) < 1e-12) break;
+  }
+  return vJ;
+}
+
+const VT_25C = 0.02585;
 
 /** Junction current at a solved voltage — must match what was stamped. */
 function junctionCurrent(part, vAcross, vf, rd) {
@@ -274,15 +342,11 @@ function junctionCurrent(part, vAcross, vf, rd) {
     return pwlKneeCurrent(vAcross, vf, rd);
   }
   const VT = 0.02585;
-  const nVt = opts.n * VT;
-  let is = opts.is;
-  if (is === undefined) {
-    const expVf = Math.exp(Math.min(vf / nVt, 80));
-    is = 0.020 / Math.max(expVf - 1, 1e-30);
-  }
-  const vClamped = Math.min(vAcross, nVt * 80);
-  if (vClamped < -5 * nVt) return -is;
-  return is * (Math.exp(vClamped / nVt) - 1);
+  // Total-voltage evaluation of the composite: recover the junction
+  // voltage behind rs, then the current — must match the stamp.
+  const p = shockleyParams(opts, vf);
+  const vJ = shockleyJunctionFromTotal(vAcross, Math.min(vAcross, vf), p);
+  return shockleyEval(vJ, p).i;
 }
 
 /**
@@ -307,15 +371,9 @@ function pnjlim(vnew, vold, nVt, vcrit) {
 function junctionLimitParams(part, vf) {
   const opts = junctionOpts(part);
   if (!opts) return null;
-  const VT = 0.02585;
-  const nVt = opts.n * VT;
-  let is = opts.is;
-  if (is === undefined) {
-    const expVf = Math.exp(Math.min(vf / nVt, 80));
-    is = 0.020 / Math.max(expVf - 1, 1e-30);
-  }
-  const vcrit = nVt * Math.log(nVt / (Math.SQRT2 * is));
-  return { nVt, vcrit };
+  const p = shockleyParams(opts, vf);
+  const vcrit = p.nVt * Math.log(p.nVt / (Math.SQRT2 * p.is));
+  return { nVt: p.nVt, vcrit, p };
 }
 
 /**
@@ -1026,14 +1084,20 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // oscillates on two junctions in series-opposition). Everything else
       // keeps the flat NR_MAX_STEP clamp. The RAW delta still drives the
       // convergence check, so a limited step cannot fake convergence.
-      const rawDelta = vNew - vOld;
+      let rawDelta = vNew - vOld;
       let vLimited;
       const lim = (part.kind === 'led' || part.kind === 'diode')
         ? junctionLimitParams(part,
             /** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)))
         : null;
       if (lim) {
-        vLimited = pnjlim(vNew, vOld, lim.nVt, lim.vcrit);
+        // The solve gives TOTAL branch volts; the NR state is the
+        // JUNCTION voltage behind rs — recover it, limit it, and drive
+        // convergence from the junction-space delta (total-minus-junction
+        // would carry the i·rs drop as phantom non-convergence).
+        const vJnew = shockleyJunctionFromTotal(vNew, vOld, lim.p);
+        rawDelta = vJnew - vOld;
+        vLimited = pnjlim(vJnew, vOld, lim.nVt, lim.vcrit);
       } else if (part.kind === 'nmos' || part.kind === 'pmos') {
         // The stored variable is vGS (nmos) / vSG (pmos), so the effective
         // threshold is |vth| in both senses.
@@ -2424,3 +2488,4 @@ export { Matrix, solve, diodeCompanion, findNet };
 // the AC stamps MUST evaluate the same models as the DC stamps, so the
 // model functions are shared rather than re-derived there.
 export { junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA };
+export { shockleyParams, shockleyEval, shockleyJunctionFromTotal };
