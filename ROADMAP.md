@@ -294,11 +294,11 @@ Verified against the engine line by line:
 | W65C22 VIA | ✅ | timers count phi2 |
 | **W65C51N ACIA** | ✅ **as the N silicon** | the infamous TDRE bug (bit 4 stuck) is what the model implements — matches the ordered part; a `params.datasheetTdre` variant is a later nicety |
 | NE555 | ✅ | timer_555 |
-| 74HC373 | ✅ **E5.6 done** | transparent latch in chip-composer, with the not-a-'374 oracle (data during LE-high propagates); the bw-circuit-ui sidecar pinout is the remaining half |
+| 74HC373 | ✅ **E5.6 done** | transparent latch in chip-composer, with the not-a-'374 oracle (data during LE-high propagates); sidecars landed (bw-parts 9d9fef8, bw-circuit-ui 90161eb), both families |
 | 74HC595 | ✅ | FSM + oracle |
 | 74HC(T)04/14/00/32/08/138/245 | ✅ | **E5.7 done**: 74hct* kinds + params.family:'hct' give TTL-fixed 0.8/2.0 V (1.4 V center for the mid-rail models); aliases for hct00/04/08/14/32/138/245 |
 | ATmega88PA | ⚠️ **E5.8** | avr8js family runs 328P/tiny13/85/88/2313; the mega88PA chip config needs verifying/adding |
-| DIP oscillator cans (1.8432 MHz, 1 MHz) | ✅ **E5.9 done** | `osc_can` (OE/GND/OUT/VCC, params.freq) drives its square via E4.1 wakes so dividers count real edges; '93-chain f/16 oracle; sidecar pinout pending |
+| DIP oscillator cans (1.8432 MHz, 1 MHz) | ✅ **E5.9 done** | `osc_can` (OE/GND/OUT/VCC, params.freq) drives its square via E4.1 wakes so dividers count real edges; '93-chain f/16 oracle; sidecar landed (osc_can, DIP-14 corner leads) |
 | MAX232 | ❌ **E5.10** | no model |
 | 330 Ω bussed SIP network | ❌ **E5.11** | wiring discretes works; the PART (common-pin topology) does not exist |
 | 10-seg LED bars | ✅ | bargraph |
