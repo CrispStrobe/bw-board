@@ -268,7 +268,11 @@ function pwlKneeCurrent(v, vf, rd) {
  * behind the param. Ideality: LEDs 1.8, silicon 1.0, via params.n.
  */
 function junctionOpts(part) {
-  if (part.params?.model !== 'shockley') return undefined;
+  // E1.3b MEASUREMENT BUILD: Shockley is the DEFAULT on this branch
+  // (params.model:'pwl' opts out). Exists so the examples owner can
+  // produce per-claim corpus deltas against a recorded baseline before
+  // the flip lands on master. Do not merge without that measurement.
+  if (part.params?.model === 'pwl') return undefined;
   return {
     shockley: true,
     is: part.params?.is,

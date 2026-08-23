@@ -2354,11 +2354,9 @@ export class BoardImpl {
   _needsMNA() {
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
-      // An opted-in Shockley junction is beyond the walker's knee
-      // vocabulary: letting the walker answer nodeVoltage while the
-      // instruments answer from the exponential model is two truths on
-      // one bench (spec-updates/shockley-junction-limiting.md).
-      if ((p.kind === 'led' || p.kind === 'diode') && p.params?.model === 'shockley') return true;
+      // E1.3b MEASUREMENT BUILD: Shockley is the default, so EVERY
+      // non-pwl junction routes past the walker — one bench, one truth.
+      if ((p.kind === 'led' || p.kind === 'diode') && p.params?.model !== 'pwl') return true;
     }
     // A potentiometer with a LOADED wiper is beyond the walker:
     // _solvePot answers the unloaded midpoint while _solveLedChain treats
