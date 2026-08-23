@@ -37,12 +37,21 @@ describe('solver agreement: pot loaded by divider', () => {
     board.setPin('P1.3', 'input', false);
     board.setControl('POT', 0.5);
 
-    // Closed-form: pot wiper = 2.5V (ideal), then divider R1/R2 from 2.5V
-    // V_node = 2.5 * R2/(R1+R2) = 2.5 * 0.5 = 1.25V
+    // A LOADED wiper is NOT an ideal 2.5 V source: it is 2.5 V behind
+    // 5k‖5k = 2.5 kΩ. V_node = 2.5·R2/(Rth + R1 + R2) = 2.5·1000/4500
+    // = 0.5556 V, and the wiper itself sags to 1.1111 V.
+    // (This test used to EXPECT the stitched walker answer 1.25 V — the
+    // wiper-as-ideal-source artifact that violated KCL at the wiper by
+    // the whole load current; re-derived 2026-08-23 when loaded wipers
+    // were routed to MNA.)
     const vCF = board.nodeVoltage('nm');
-    assertClose(vCF, 1.25, 0.05, 'closed-form');
+    assertClose(vCF, 2.5 * 1000 / 4500, 0.005, 'loaded divider node');
+    const vW = board.nodeVoltage('nw');
+    assertClose(vW, 2.5 * 2000 / 4500, 0.005, 'wiper behind its Thevenin');
+    // KCL closes at the wiper: pot halves vs R1.
+    const residual = (5 - vW) / 5000 - vW / 5000 - (vW - vCF) / 1000;
+    assert.ok(Math.abs(residual) < 1e-6, `KCL residual ${residual}`);
 
-    // MNA should give the same
     const i = board.branchCurrent('R1', 'b');
     assert.ok(!Number.isNaN(i), 'MNA current not NaN');
   });

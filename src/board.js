@@ -369,6 +369,7 @@ export class BoardImpl {
 
   setNetlist(parts, nets) {
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
+    this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
     this._qualCache = new Map(); // qualified-pin resolutions are per-netlist
     this._mcuSurface = undefined;
     this._hasQualifiedPin = false;
@@ -2359,6 +2360,31 @@ export class BoardImpl {
       // one bench (spec-updates/shockley-junction-limiting.md).
       if ((p.kind === 'led' || p.kind === 'diode') && p.params?.model === 'shockley') return true;
     }
+    // A potentiometer with a LOADED wiper is beyond the walker:
+    // _solvePot answers the unloaded midpoint while _solveLedChain treats
+    // that midpoint as an ideal source — a stitched answer that violates
+    // KCL at the wiper by exactly what the load draws (measured: a 10 kΩ
+    // pot at 50 % feeding 220 Ω + LED read 2.5000 V while sourcing
+    // 2.174 mA from nowhere; found by the examples owner's KCL residual
+    // check, 2026-08-23). An MCU input is high-Z and does not load;
+    // anything else on the wiper net does.
+    if (this._wiperLoaded === undefined) {
+      this._wiperLoaded = false;
+      for (const p of this.parts) {
+        if (p.kind !== 'potentiometer') continue;
+        const wnetId = this._netForTerminal(p.id, 'wiper');
+        if (!wnetId) continue;
+        const wnet = (this._solveNets ?? this.nets).find(n => n.id === wnetId);
+        if (!wnet) continue;
+        for (const t of wnet.terminals) {
+          if (t.part === p.id) continue;
+          const other = this.partMap.get(t.part);
+          if (other && other.kind !== 'mcu') { this._wiperLoaded = true; break; }
+        }
+        if (this._wiperLoaded) break;
+      }
+    }
+    if (this._wiperLoaded) return true;
     // Shared-LED fan-out is beyond the walker's vocabulary: _solveLedChain
     // traces each LED's series path INDEPENDENTLY, so two LEDs sharing a
     // net (a multiplexed display's segment bus, a charlieplexed pair)

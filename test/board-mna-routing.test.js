@@ -68,6 +68,51 @@ test('a function generator runs the board through advanceTo', () => {
   assert.ok(Math.abs(b.nodeVoltage('sig') - 0.5) < 0.05, `3T/4: ${b.nodeVoltage('sig')}`);
 });
 
+test('a LOADED pot wiper routes to MNA; an ADC wiper stays on the walker', () => {
+  // 5 V → 10 kΩ pot at 50 % → wiper → 220 Ω → LED → GND.
+  // The walker used to stitch two half-answers: _solvePot said the
+  // UNLOADED midpoint (2.5000 V) while _solveLedChain drew 2.174 mA from
+  // it as an ideal source — a KCL violation of exactly that 2.174 mA at
+  // the wiper, found by the examples owner's residual check (2026-08-23).
+  // MNA hand oracle with the C1 knee: the LED lands in the blend band at
+  // v = 1.9887 (u = 0.0137, i = u²/(4·0.025·10) = 0.188 mA), so
+  // wiper = 2.0301 and KCL closes exactly.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd,
+      { id: 'P1', kind: 'potentiometer', params: { ohms: 10000 }, terminals: ['a', 'wiper', 'b'] },
+      r('R1', 220),
+      { id: 'D1', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] }],
+    [
+      { id: 'top', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'P1', terminal: 'a' }] },
+      { id: 'wip', terminals: [{ part: 'P1', terminal: 'wiper' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'led', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'gnd', terminals: [
+        { part: 'G1', terminal: 'gnd' }, { part: 'D1', terminal: 'cathode' }, { part: 'P1', terminal: 'b' },
+      ] },
+    ]);
+  const vW = b.nodeVoltage('wip');
+  const vL = b.nodeVoltage('led');
+  assert.ok(Math.abs(vW - 2.0301) < 0.005, `loaded wiper sags to 2.0301, got ${vW.toFixed(4)}`);
+  const residual = (5 - vW) / 5000 - vW / 5000 - (vW - vL) / 220;
+  assert.ok(Math.abs(residual) < 1e-6,
+    `KCL closes at the wiper: residual ${(residual * 1e3).toFixed(4)} mA`);
+
+  // The canonical ADC bench (wiper → MCU pin only) keeps the walker and
+  // its exact unloaded midpoint — an input pin is high-Z.
+  const adc = new BoardImpl();
+  adc.setNetlist(
+    [vcc, gnd,
+      { id: 'P1', kind: 'potentiometer', params: { ohms: 10000 }, terminals: ['a', 'wiper', 'b'] },
+      { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.3'] }],
+    [
+      { id: 'top', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'P1', terminal: 'a' }] },
+      { id: 'wip', terminals: [{ part: 'P1', terminal: 'wiper' }, { part: 'MCU', terminal: 'P1.3' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'P1', terminal: 'b' }] },
+    ]);
+  assert.ok(Math.abs(adc.nodeVoltage('wip') - 2.5) < 1e-9, 'unloaded midpoint stays exact');
+});
+
 test('RC charging beside a diode: transient MNA carries the cap forward', () => {
   // 5 V → 1 kΩ → n1 → cap 1 µF → GND, plus a diode from n1 to GND (Vf 0.7)
   // that clamps the node: the cap charges toward min(5 V target, clamp ≈ 0.74 V).
