@@ -69,7 +69,12 @@ export function registerAnalogICs() {
     init() {
       return {
         drives: { '1_out': null, '2_out': null }, // null = high-Z (open collector)
-        _comp: [0, 0], // output states: 0=LOW(sinking), 1=floating
+        // null = NOT YET EVALUATED: the first update always applies its
+        // drive. The old init of 0-with-floating-drives was inconsistent
+        // — a comparator whose first comparison came out low never sank
+        // until the input crossed high and back (found by the E3.6
+        // hysteresis oracle's fresh-bench case).
+        _comp: [null, null], // 0=LOW(sinking), 1=floating
       };
     },
 
@@ -81,25 +86,23 @@ export function registerAnalogICs() {
     },
 
     update(part, state, read) {
+      // E3.6: optional hysteresis in volts (default 0 — the bare LM393
+      // has none, and the datasheet-honest default keeps every existing
+      // bench bit-identical; h=0 uses the exact legacy comparison).
+      const h = part.params?.hysteresis ?? 0;
       let changed = false;
-
-      // Comparator 1
-      const comp1 = read('1_pos') > read('1_neg') ? 1 : 0;
-      if (comp1 !== state._comp[0]) {
-        state._comp[0] = comp1;
-        // Open-collector: V+ > V- → float (null), V+ < V- → sink to GND (Vce_sat ~ 0.2V)
-        state.drives['1_out'] = comp1 ? null : { vTh: 0.2, rTh: 10 };
-        changed = true;
+      for (let i = 1; i <= 2; i++) {
+        const d = read(`${i}_pos`) - read(`${i}_neg`);
+        const prev = state._comp[i - 1];
+        const comp = (h === 0 || prev === null) ? (d > 0 ? 1 : 0)
+          : (prev === 1 ? (d < -h / 2 ? 0 : 1) : (d > h / 2 ? 1 : 0));
+        if (comp !== prev) {
+          state._comp[i - 1] = comp;
+          // Open-collector: high → float (null), low → sink (Vce_sat ~0.2 V)
+          state.drives[`${i}_out`] = comp ? null : { vTh: 0.2, rTh: 10 };
+          changed = true;
+        }
       }
-
-      // Comparator 2
-      const comp2 = read('2_pos') > read('2_neg') ? 1 : 0;
-      if (comp2 !== state._comp[1]) {
-        state._comp[1] = comp2;
-        state.drives['2_out'] = comp2 ? null : { vTh: 0.2, rTh: 10 };
-        changed = true;
-      }
-
       return changed;
     },
   });
@@ -144,55 +147,106 @@ export function registerAnalogICs() {
     terminals: ['a', 'b'],
 
     init(part) {
-      return { drives: {}, brightness: 0 };
+      return { drives: {}, brightness: 0, _tempK: 0, _lastTNs: null, _rNow: null };
     },
 
-    stamp(ctx, part) {
-      const ohms = part.params?.ohms ?? 500; // typical incandescent
-      ctx.conductance('a', 'b', 1 / ohms);
+    stamp(ctx, part, state) {
+      // E3.6, opt-in with params.filament: a PTC filament whose
+      // resistance grows with its own dissipation — cold it is
+      // params.ohms/10 (tungsten's ~10:1 hot/cold ratio), at rated
+      // dissipation it warms to params.ohms, and the one-pole thermal
+      // state in update() makes INRUSH demonstrable: the first
+      // milliseconds draw ~10× the steady current, which is why real
+      // bulbs die at switch-on. Default (no param) stays the fixed
+      // resistor every existing bench solved.
+      const ohms = part.params?.ohms ?? 500;
+      const r = part.params?.filament ? (state._rNow ?? ohms / 10) : ohms;
+      ctx.conductance('a', 'b', 1 / r);
     },
 
-    update(part, state, read) {
+    update(part, state, read, tNs) {
       const vA = read('a');
       const vB = read('b');
       const v = Math.abs(vA - vB);
       const vRated = part.params?.vRated ?? 5.0;
       const newBrightness = Math.min(1.0, (v / vRated) ** 2);
+      let changed = false;
 
-      if (Math.abs(newBrightness - state.brightness) < 0.001) return false;
-      state.brightness = newBrightness;
-      return false; // brightness is read-only state, no electrical re-solve
+      if (part.params?.filament) {
+        const rHot = part.params?.ohms ?? 500;
+        const rCold = rHot / 10;
+        // Thermal pole: tauMs (default 30 ms — small-bulb scale).
+        const tauMs = part.params?.tauMs ?? 30;
+        // Steady temp normalized so rated dissipation (vRated²/rHot)
+        // lands the filament AT rHot: tSS = P / pRated, r = rCold + (rHot−rCold)·min(tSS,1)… 
+        const r = state._rNow ?? rCold;
+        const p = v * v / r;
+        const pRated = vRated * vRated / rHot;
+        const tSS = Math.min(p / pRated, 1.5);
+        const dtMs = state._lastTNs === null ? 0 : Number(tNs - state._lastTNs) / 1e6;
+        state._lastTNs = tNs;
+        const alpha = dtMs <= 0 ? 0 : 1 - Math.exp(-dtMs / tauMs);
+        state._tempK = state._tempK + (tSS - state._tempK) * alpha;
+        const rNew = rCold + (rHot - rCold) * Math.min(state._tempK, 1);
+        if (state._rNow === null || Math.abs(rNew - state._rNow) > state._rNow * 0.02) {
+          state._rNow = rNew;
+          changed = true; // the network must see the new filament
+        } else {
+          state._rNow = rNew;
+        }
+      }
+
+      if (Math.abs(newBrightness - state.brightness) >= 0.001) {
+        state.brightness = newBrightness;
+      }
+      return changed;
     },
   });
 
   // ─── Optocoupler ──────────────────────────────────────────────────
-  // LED side (anode/cathode) drives a phototransistor (collector/emitter).
-  // When LED current > threshold, transistor saturates.
+  // E3.6: the LED side is a real junction segment (off: 1 MΩ leak; on:
+  // rd above vf, so vLed clamps near vf + i·rd instead of the old
+  // 150 Ω-from-zero fiction), and the output is SCALED by the current
+  // transfer ratio instead of snapping to one saturation conductance:
+  // the phototransistor can sink at most CTR·iLed, modeled as a
+  // conductance ctr·iLed/vceSat — half the LED current, half the sink.
   registerDevice('optocoupler', {
     terminals: ['anode', 'cathode', 'collector', 'emitter'],
 
     init() {
-      return { drives: {}, _on: false };
+      return { drives: {}, _on: false, _gCe: 0 };
     },
 
     stamp(ctx, part, state) {
-      // LED side: forward voltage drop modeled as simple resistor above Vf
-      const rd = 50; // dynamic R of internal LED
-      ctx.conductance('anode', 'cathode', 1 / (rd + 100));
-
-      // Transistor side: controlled by LED state
+      const rd = 50; // dynamic R of the internal LED
+      const vf = part.params?.vf ?? 1.2;
       if (state._on) {
-        ctx.conductance('collector', 'emitter', 1 / 5); // saturated: ~5Ω
+        // Conducting segment: i = (v − vf)/rd as a Norton pair.
+        ctx.conductance('anode', 'cathode', 1 / rd);
+        // Norton pair for i = (v − vf)/rd: the −vf/rd constant is an
+        // inflow at the anode and an outflow at the cathode (b += amps
+        // is inflow in this MNA).
+        ctx.current('anode', vf / rd);
+        ctx.current('cathode', -vf / rd);
+      } else {
+        ctx.conductance('anode', 'cathode', 1e-6); // dark leakage
       }
+      if (state._gCe > 0) ctx.conductance('collector', 'emitter', state._gCe);
     },
 
     update(part, state, read) {
+      const rd = 50;
+      const vf = part.params?.vf ?? 1.2;
+      const ctr = part.params?.ctr ?? 1.0;
+      const vceSat = 0.2;
       const vLed = read('anode') - read('cathode');
-      const vfThreshold = part.params?.vf ?? 1.2;
-      const shouldBeOn = vLed > vfThreshold;
-
-      if (shouldBeOn === state._on) return false;
-      state._on = shouldBeOn;
+      const on = vLed > vf;
+      const iLed = on ? Math.max(0, (vLed - vf) / rd) : 0;
+      const gCe = Math.min(ctr * iLed / vceSat, 1 / 5); // cap at the old hard-sat 5 Ω
+      const changed = on !== state._on || Math.abs(gCe - state._gCe) > state._gCe * 0.05 + 1e-9;
+      if (!changed) return false;
+      state._on = on;
+      state._gCe = gCe;
       return true;
     },
   });
@@ -206,7 +260,7 @@ export function registerAnalogICs() {
     init() {
       return {
         drives: { '1_out': null, '2_out': null, '3_out': null, '4_out': null },
-        _comp: [0, 0, 0, 0],
+        _comp: [null, null, null, null], // null = not yet evaluated (see lm393)
       };
     },
 
@@ -218,10 +272,14 @@ export function registerAnalogICs() {
     },
 
     update(part, state, read) {
+      const h = part.params?.hysteresis ?? 0; // E3.6, same contract as lm393
       let changed = false;
       for (let i = 1; i <= 4; i++) {
-        const result = read(`${i}_pos`) > read(`${i}_neg`) ? 1 : 0;
-        if (result !== state._comp[i - 1]) {
+        const d = read(`${i}_pos`) - read(`${i}_neg`);
+        const prev = state._comp[i - 1];
+        const result = (h === 0 || prev === null) ? (d > 0 ? 1 : 0)
+          : (prev === 1 ? (d < -h / 2 ? 0 : 1) : (d > h / 2 ? 1 : 0));
+        if (result !== prev) {
           state._comp[i - 1] = result;
           state.drives[`${i}_out`] = result ? null : { vTh: 0.2, rTh: 10 };
           changed = true;

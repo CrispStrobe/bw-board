@@ -187,7 +187,7 @@ Prerequisite for the SPICE-netlist importer (bw-circuit-ui X1.1) to cover real d
 File `spec-updates/controlled-sources.md`. Oracles: each source type against the
 textbook two-port answer.
 
-### E3.6 Behavioral honesty upgrades — device files, not gated
+### E3.6 Behavioral honesty upgrades — DONE
 - `optocoupler`: LED side gets a real junction (reuse diode stamp via `ctx`), output
   scaled by a CTR param (default 1.0) instead of on/off.
 - `lm393`/`lm339`: optional hysteresis param (default 0 — datasheet-honest).
