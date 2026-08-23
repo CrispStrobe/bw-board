@@ -11,6 +11,20 @@ available"; non-convergence is reported, never hidden.
 Phases are ordered by dependency. E0 is shippable immediately; E1 is the prerequisite
 for E2–E4 being affordable.
 
+## Status (2026-08-23, end of day) — do not redo landed work
+
+LANDED on master: E0 (50c3bf7), E1.1 sparse LU + reuse (d9136cc..e2da40f),
+E1.2 adaptive transient (011639f), E1.3/E1.4 opt-in Shockley + ladder
+(8ca1504) + series-rs (35cf233), E2.1 true AC (c49ff5f), boundary-B
+setDeviceControl (0f1f29e), E3.1 op-amp macromodel + E3.5a vcvs/vccs
+(fea58ed), plus four defect fixes found by the examples owner's
+instruments: loaded-wiper KCL routing (40db90f), advance-pattern
+invariance / solver-owned motor winding / C1 PWL knee (2ac81e6), walker
+coverage fall-through (0a3e9c0), shared-terminal net coalescing
+(2235de5). OPEN: E1.3b default flip (owner pedagogy ruling — the
+crossover table is in sb3-creator test/measurements/E13B-SHOCKLEY-DELTA.md),
+E1.5, E2.2/E2.3, E3.2–E3.4, E3.5b (cccs/ccvs), E3.6, E4, E5 below.
+
 ---
 
 ## E0 — Correctness fixes in the current engine (days)
@@ -197,11 +211,83 @@ steps, and the rule that a fired event forces a solve point). Oracles: a 3-inver
 ring oscillator whose period is 6·tpd; a glitch on a hazard circuit that the fixpoint
 model provably cannot show.
 
+### E4.1a Gate propagation delay rides E4.1 — the 74* curriculum unlock
+Once scheduled events exist, `devices/logic-gates.js` (and the
+chip-composer 74HC family) gain `tpd` (default a few ns, per-part
+override): ring oscillators whose period is Σtpd, hazard/glitch demos a
+fixpoint model provably cannot show, honest flip-flop setup/hold lessons.
+This is the single engine item that most widens the 74*/retro example
+space — sequence it accordingly. Oracles as in E4.1.
+
 ### E4.2 Logic-analyzer channels — engine side
 Digital channels on the existing scope-tap contract (boundary B v2 §5): sampled at
 edge events (cheap once E4.1 exists), stored as (t, level) transitions rather than
 (min,max) pairs. Small spec addendum to `spec-updates/scope-tap.md`. UI lands in
 bw-circuit-ui X2.5.
+
+---
+
+## E5 — Retro & TTL example-space enablers (scoped 2026-08-23, owner-requested)
+
+Context, so the scope is understood: the retro tier is a layered stack —
+instruction-level CPU cores (w65c02/z80/m6507) booting real ROMs; ~34
+register-level bus-peripheral models clean-room from datasheets (W65C22
+VIA, W65C51/MC6850 ACIA, TMS9918 VDP with the four-sprites-per-line
+rule, MC6845, M6532, AY-3-8912, NS16C550, ZX ULA, PS/2, SD-SPI,
+memories as real byte arrays); the bus extractor deriving the machine
+FROM THE DRAWN WIRING by evaluating every select condition at all 65536
+addresses, refusing bus contention and open vectors with addresses
+named; and chip-qualified Norton drives carrying pin levels into the
+MNA. Wiring differently genuinely changes the machine — or produces a
+named refusal. The corpus uses a fraction of this (~14 of 236 examples
+touch the tier). New EXAMPLE WAVES are the examples owner's lane and
+gated by lite PLAN.md Milestone 0's review-debt rule; the items below
+are the ENGINE work that widens the space those waves can draw on.
+
+### E5.1 Extractor SELECT vocabulary — `src/m6502-extract.js` (+ z80 twin)
+The decode evaluator knows five select shapes (62256, 28C256, W65C22,
+W65C51, TMS9918). Each addition is one SELECT-table entry + RS_PINS/
+CHIP_DECL rows + an extraction fixture. Candidates in model-inventory
+order: MC6850 (cs0 high, cs1 high, cs2b low), M6532 (cs1 high, cs2b
+low, rs0b for RAM select), NS16C550, AY-3-8912 (BDIR/BC1 latch shape —
+needs a two-phase select note), UM245R. Acceptance per chip: a
+hand-wired decode fixture extracts the right window; a deliberately
+contending decode is refused with the address named. Not gated (no
+mna.js).
+
+### E5.2 Address-permutation support — `src/m6502-extract.js` (v1 bound lifted)
+The extractor refuses a permuted address bus (correct v1 honesty: it
+scrambles bytes inside a chip without changing its range). Real
+breadboards permute A-lines for routing convenience constantly. Scope:
+detect the permutation per chip (A-pin k rides CPU line π(k)), store it
+in the chip config, and apply it in the machine's byte access path;
+refuse only genuinely unmappable wiring. Acceptance: a fixture with two
+swapped RAM address lines boots and reads back what it wrote through
+the permutation; the refusal stays for a data/address cross-wire.
+
+### E5.3 MCP23008 port expander — `src/devices/` (named gap, stc ROADMAP)
+I2C GPIO expander to the same standard as pcf8574 (which exists):
+register model (IODIR/GPIO/OLAT + address pins), i2c-slave engine hookup,
+drives per boundary B. Acceptance: bit-banged I2C from a scripted MCU
+sets an output pin that lights an LED through the solver; input path
+reads a button. Not gated.
+
+### E5.4 Generic NxM scanned matrix part — `src/devices/` (named gap)
+The 16x8 retro-console matrix and the LED-cube are special-cased;
+lessons want arbitrary row/column scanned matrices with duty-correct
+brightness (1/rows). One parameterised part (rows, cols, polarity),
+sharing the led-perception duty integration. Acceptance: an 8x8 scanned
+at 1/8 duty reads brightness 0.125·(i/i_rated) per lit cell; a
+charlieplexed fixture refuses with a reason rather than guessing.
+Not gated.
+
+### E5.5 Bus TIMING domain — long-horizon, do not start casually
+The extractor models the ADDRESS domain; RWB/PHI2/data are checked for
+presence, not timing. A timing domain (setup/hold at the bus, wait
+states, /CSR-vs-/CSW write gating the TMS9918 note already names) is
+real work with E4's event queue as its substrate. Record-only until E4
+lands and a lesson actually needs it — the refusal-with-reason posture
+is the honest interim.
 
 ---
 
