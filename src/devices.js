@@ -41,6 +41,11 @@
  * @property {(part: import('./types.js').Part, state: object,
  *             read: (terminal: string) => number) => Map<string, number>} [branchCurrents]
  *   Optional terminal currents for the instruments.
+ * Scheduled events: `update()` may set `state._wakeNs` (BigInt, absolute
+ * sim time) and the board sub-steps advanceTo TO that instant exactly —
+ * the canonical deadline field (spec-updates/scheduled-device-events.md);
+ * clear it (null) when consumed. Legacy per-device deadline fields keep
+ * working.
  * @property {(part: import('./types.js').Part, state: object,
  *             verb: string, value: *) => boolean} [control]
  *   High-level user/program intent — the write counterpart of

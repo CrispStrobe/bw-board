@@ -70,21 +70,49 @@ function makeGateModel(kind, evalFn) {
       // the board's actual supply instead of a hard-coded 5 V.
       state._vcc = ctx.vcc;
     },
-    update(part, state, read) {
+    update(part, state, read, tNs) {
       const vcc = state._vcc ?? 5.0;
       const inputs = readInputs(part, state, read, vcc);
       const outLevel = evalFn(inputs);
+      const rOut = part.params?.rOut ?? R_OUT_DEFAULT;
+      const tpdNs = part.params?.tpdNs;
 
-      if (outLevel === state._outLevel &&
-          inputs.every((v, i) => v === state._lastInputs[i])) {
-        return false;
+      if (!tpdNs) {
+        // Immediate switching — today's fixpoint behaviour, bit-identical
+        // (spec-updates/scheduled-device-events.md rule 3).
+        if (outLevel === state._outLevel &&
+            inputs.every((v, i) => v === state._lastInputs[i])) {
+          return false;
+        }
+        state._lastInputs = inputs;
+        state._outLevel = outLevel;
+        state.drives.out = { vTh: outLevel ? vcc : 0, rTh: rOut };
+        return true;
       }
 
+      // Scheduled switching with INERTIAL semantics: a computed change is
+      // pended tpd into the future; inputs reverting first cancel it — a
+      // pulse shorter than tpd does not propagate, which is the physics
+      // and the teaching point. `_wakeNs` is the canonical deadline the
+      // board sub-steps to exactly.
       state._lastInputs = inputs;
-      state._outLevel = outLevel;
-      const rOut = part.params?.rOut ?? R_OUT_DEFAULT;
-      state.drives.out = { vTh: outLevel ? vcc : 0, rTh: rOut };
-      return true;
+      if (outLevel === state._outLevel) {
+        if (state._pendingOut) {
+          state._pendingOut = null;
+          state._wakeNs = null;
+        }
+      } else if (!state._pendingOut || state._pendingOut.level !== outLevel) {
+        state._pendingOut = { level: outLevel, atNs: tNs + BigInt(tpdNs) };
+        state._wakeNs = state._pendingOut.atNs;
+      }
+      if (state._pendingOut && tNs >= state._pendingOut.atNs) {
+        state._outLevel = state._pendingOut.level;
+        state.drives.out = { vTh: state._outLevel ? vcc : 0, rTh: rOut };
+        state._pendingOut = null;
+        state._wakeNs = null;
+        return true;
+      }
+      return false;
     },
   };
 }
