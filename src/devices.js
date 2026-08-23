@@ -41,6 +41,14 @@
  * @property {(part: import('./types.js').Part, state: object,
  *             read: (terminal: string) => number) => Map<string, number>} [branchCurrents]
  *   Optional terminal currents for the instruments.
+ * @property {(part: import('./types.js').Part, state: object,
+ *             verb: string, value: *) => boolean} [control]
+ *   High-level user/program intent — the write counterpart of
+ *   getDeviceState (boundary B setDeviceControl,
+ *   spec-updates/set-device-control.md). Return true if the verb was
+ *   handled (the board re-solves and notifies); anything else means "not
+ *   a verb this device understands" and the board records a visible
+ *   refusal warning rather than dropping it silently.
  */
 
 /**

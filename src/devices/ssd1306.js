@@ -41,6 +41,7 @@
 
 import { registerDevice } from '../devices.js';
 import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
+import { FUNSCII } from '../funscii-font.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -142,7 +143,81 @@ export function registerSSD1306() {
             }
             return false;
         },
+
+        // High-level verbs (boundary B setDeviceControl,
+        // spec-updates/set-device-control.md). These write the same GDDRAM
+        // the register path writes; the I2C machinery is untouched and
+        // stays authoritative for MCU-driven benches. Drawing implies the
+        // learner wants to see it, so drawing verbs switch the display on.
+        control(part, state, verb, value) {
+            switch (verb) {
+                case 'clear':
+                    state.fb.fill(0);
+                    state._tRow = 0; state._tCol = 0;
+                    state.displayOn = true;
+                    return true;
+                case 'cursor': {
+                    const [r, c] = asPair(value);
+                    state._tRow = clampInt(r, 0, PAGES - 1);
+                    state._tCol = clampInt(c, 0, WIDTH / 8 - 1);
+                    return true;
+                }
+                case 'print':
+                    drawText(state, String(value));
+                    state.displayOn = true;
+                    return true;
+                case 'pixel': {
+                    const a = Array.isArray(value) ? value : [];
+                    setPx(state, a[0] | 0, a[1] | 0, a.length < 3 || !!a[2]);
+                    state.displayOn = true;
+                    return true;
+                }
+                case 'hline': {
+                    const [x0, x1, y] = asTriple(value);
+                    const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
+                    for (let x = lo; x <= hi; x++) setPx(state, x, y, true);
+                    state.displayOn = true;
+                    return true;
+                }
+                case 'show':
+                    state.displayOn = true;
+                    return true;
+            }
+            return false;
+        },
     });
+}
+
+// ─── High-level drawing helpers ────────────────────────────────────
+function clampInt(v, lo, hi) { return Math.max(lo, Math.min(hi, v | 0)); }
+function asPair(v) { return Array.isArray(v) ? [v[0] | 0, v[1] | 0] : [0, 0]; }
+function asTriple(v) { return Array.isArray(v) ? [v[0] | 0, v[1] | 0, v[2] | 0] : [0, 0, 0]; }
+
+function setPx(s, x, y, on) {
+    if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return;
+    const i = (y >> 3) * WIDTH + x;
+    const bit = 1 << (y & 7);
+    s.fb[i] = on ? (s.fb[i] | bit) : (s.fb[i] & ~bit);
+}
+
+/** 8×8 funscii glyphs on a 16×8 text-cell grid; wraps, scroll-free. */
+function drawText(s, text) {
+    let row = s._tRow ?? 0;
+    let col = s._tCol ?? 0;
+    for (const ch of text) {
+        if (ch === '\n') { row = (row + 1) % PAGES; col = 0; continue; }
+        const code = ch.charCodeAt(0) & 0xff;
+        for (let gy = 0; gy < 8; gy++) {
+            const bits = FUNSCII[code * 8 + gy]; // bit 0 = leftmost
+            for (let gx = 0; gx < 8; gx++) {
+                setPx(s, col * 8 + gx, row * 8 + gy, (bits >> gx) & 1);
+            }
+        }
+        col++;
+        if (col >= WIDTH / 8) { col = 0; row = (row + 1) % PAGES; }
+    }
+    s._tRow = row;
+    s._tCol = col;
 }
 
 // ─── Data write into GDDRAM ────────────────────────────────────────

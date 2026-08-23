@@ -16,12 +16,96 @@
  * differs.
  */
 import { registerDevice } from '../devices.js';
+import { FUNSCII } from '../funscii-font.js';
 
 const R_INPUT = 1e6;
 const R_OUT = 50;
 const R_OFF = 1e9;
 export const ILI9341_W = 240;
 export const ILI9341_H = 320;
+
+// ─── High-level verbs (boundary B setDeviceControl) ───────────────
+// spec-updates/set-device-control.md. Writes the same GRAM the SPI /
+// parallel bus paths write; the register machinery stays authoritative
+// for MCU-driven benches. Drawing wakes the panel (a learner who prints
+// wants to see it).
+
+/** @param {number} r @param {number} g @param {number} b */
+function rgb565(r, g, b) {
+    return (((r & 0xf8) << 8) | ((g & 0xfc) << 3) | ((b & 0xf8) >> 3)) & 0xffff;
+}
+
+function iliWake(state) { state.sleeping = false; state.displayOn = true; }
+
+function iliSetPx(state, x, y, px) {
+    if (x < 0 || x >= ILI9341_W || y < 0 || y >= ILI9341_H) return;
+    state.gram[y * ILI9341_W + x] = px;
+}
+
+function ili9341Control(part, state, verb, value) {
+    switch (verb) {
+        case 'clear': {
+            const a = Array.isArray(value) ? value : [0, 0, 0];
+            state.gram.fill(rgb565(a[0] | 0, a[1] | 0, a[2] | 0));
+            state._tRow = 0; state._tCol = 0;
+            iliWake(state);
+            return true;
+        }
+        case 'cursor': {
+            const a = Array.isArray(value) ? value : [0, 0];
+            state._tRow = Math.max(0, Math.min(ILI9341_H / 8 - 1, a[0] | 0));
+            state._tCol = Math.max(0, Math.min(ILI9341_W / 8 - 1, a[1] | 0));
+            return true;
+        }
+        case 'print': {
+            iliDrawText(state, String(value));
+            iliWake(state);
+            return true;
+        }
+        case 'pixel': {
+            const a = Array.isArray(value) ? value : [0, 0, 255, 255, 255];
+            iliSetPx(state, a[0] | 0, a[1] | 0,
+                rgb565(a[2] ?? 255, a[3] ?? 255, a[4] ?? 255));
+            iliWake(state);
+            return true;
+        }
+        case 'fill': {
+            const a = Array.isArray(value) ? value : [];
+            const [x0, y0, x1, y1] = [a[0] | 0, a[1] | 0, a[2] | 0, a[3] | 0];
+            const px = rgb565(a[4] ?? 255, a[5] ?? 255, a[6] ?? 255);
+            const xa = Math.min(x0, x1), xb = Math.max(x0, x1);
+            const ya = Math.min(y0, y1), yb = Math.max(y0, y1);
+            for (let y = ya; y <= yb; y++) {
+                for (let x = xa; x <= xb; x++) iliSetPx(state, x, y, px);
+            }
+            iliWake(state);
+            return true;
+        }
+    }
+    return false;
+}
+
+/** 8×8 funscii glyphs, white on untouched background, wrapping cells. */
+function iliDrawText(state, text) {
+    const cols = ILI9341_W / 8, rows = ILI9341_H / 8;
+    const white = rgb565(255, 255, 255);
+    let row = state._tRow ?? 0;
+    let col = state._tCol ?? 0;
+    for (const ch of text) {
+        if (ch === '\n') { row = (row + 1) % rows; col = 0; continue; }
+        const code = ch.charCodeAt(0) & 0xff;
+        for (let gy = 0; gy < 8; gy++) {
+            const bits = FUNSCII[code * 8 + gy]; // bit 0 = leftmost
+            for (let gx = 0; gx < 8; gx++) {
+                if ((bits >> gx) & 1) iliSetPx(state, col * 8 + gx, row * 8 + gy, white);
+            }
+        }
+        col++;
+        if (col >= cols) { col = 0; row = (row + 1) % rows; }
+    }
+    state._tRow = row;
+    state._tCol = col;
+}
 
 // ─── Shared state factory ─────────────────────────────────────────
 
@@ -205,6 +289,7 @@ function putPixel(state, rgb565) {
 export function registerILI9341() {
     registerDevice('ili9341', {
         digitalFastPath: true,
+        control: ili9341Control,
         terminals: ['vcc', 'gnd', 'cs', 'rst', 'dc', 'mosi', 'sck', 'miso', 'led'],
 
         init() {
@@ -291,6 +376,7 @@ export function registerILI9341() {
     // RST. Same command set, same GRAM.
     registerDevice('ili9341_par', {
         digitalFastPath: true,
+        control: ili9341Control,
         terminals: ['vcc', 'gnd', 'cs', 'rst', 'rs', 'wr', 'rd',
                     'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'led'],
 

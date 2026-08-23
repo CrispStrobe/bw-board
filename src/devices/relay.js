@@ -27,6 +27,18 @@ export function registerRelay() {
       };
     },
 
+    // Boundary B setDeviceControl (spec-updates/set-device-control.md):
+    // 'state' is user intent and overrides the coil, clearing any pending
+    // switch timer — like pressing the armature with a finger.
+    control(part, state, verb, value) {
+      if (verb === 'state') {
+        state.energized = !!value;
+        state._pendingState = null;
+        return true;
+      }
+      return false;
+    },
+
     stamp(ctx, part, state) {
       const coilR = part.params?.coilR ?? 200;
 

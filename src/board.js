@@ -1360,6 +1360,63 @@ export class BoardImpl {
   }
 
   /**
+   * Boundary B: high-level device intent — the write counterpart of
+   * getDeviceState() (spec-updates/set-device-control.md). Routes to the
+   * device model's optional `control(part, state, verb, value)` hook;
+   * `verb === 'state'` falls back to the plain control channel. Refusals
+   * return false AND surface in getWarnings() — the devices extension
+   * called this method for months while no board defined it, so every
+   * actuator block was a silent no-op; silence is not an option twice.
+   *
+   * @param {string} partId
+   * @param {string} verb
+   * @param {*} value
+   * @returns {boolean} true if a device accepted the verb
+   */
+  setDeviceControl(partId, verb, value) {
+    const part = this.parts.find(p => p.id === partId);
+    if (!part) {
+      this._recordRefusedControl(partId, verb, 'no such part');
+      return false;
+    }
+    const model = getDevice(part.kind);
+    const state = this._deviceStates.get(partId);
+    if (model && model.control && state) {
+      let handled = false;
+      try {
+        handled = model.control(part, state, verb, value) === true;
+      } catch (err) {
+        this._recordRefusedControl(partId, verb, String(err?.message ?? err));
+        return false;
+      }
+      if (handled) {
+        this._solve();
+        this._notifyChange('deviceControl', { partId, verb });
+        return true;
+      }
+    }
+    // Plain on/off intent maps to the existing control channel — the same
+    // semantics setControl has always had (buzzer enable, switch state).
+    if (verb === 'state' && typeof value === 'number') {
+      this.setControl(partId, value);
+      return true;
+    }
+    this._recordRefusedControl(partId, verb,
+      `"${part.kind}" has no simulator action for this`);
+    return false;
+  }
+
+  /** @param {string} partId @param {string} verb @param {string} why */
+  _recordRefusedControl(partId, verb, why) {
+    if (!this._refusedControls) this._refusedControls = new Map();
+    const key = `${partId} ${verb}`;
+    const cur = this._refusedControls.get(key);
+    if (cur) { cur.count++; return; }
+    if (this._refusedControls.size >= 20) return; // bounded; first 20 shapes
+    this._refusedControls.set(key, { partId, verb, why, count: 1 });
+  }
+
+  /**
    * Set a named parameter on a part's params object.
    * Used by the environment-stimulus extension to inject world conditions
    * (temperature, humidity, magnetic field, etc.) into device models.
@@ -1739,6 +1796,20 @@ export class BoardImpl {
     /** @type {Array<{severity: 'warning'|'danger', message: string, partId?: string,
      *           partIds?: string[], unratedIds?: string[], type?: string}>} */
     const warnings = [];
+
+    // Refused device-control verbs are user-intent feedback and show
+    // regardless of power state (spec-updates/set-device-control.md).
+    if (this._refusedControls) {
+      for (const { partId, verb, why, count } of this._refusedControls.values()) {
+        warnings.push({
+          severity: 'warning',
+          type: 'device-control-refused',
+          partId,
+          message: `"${verb}" on ${partId} was ignored — ${why}` +
+            (count > 1 ? ` (${count}×)` : ''),
+        });
+      }
+    }
 
     if (!this.powered) return warnings;
 

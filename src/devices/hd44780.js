@@ -121,6 +121,38 @@ export function registerHD44780() {
       ctx.conductance('a', 'k', 1 / 100);
     },
 
+    // High-level verbs (boundary B setDeviceControl,
+    // spec-updates/set-device-control.md): write the same DDRAM/AC the
+    // bus path writes; the register machinery stays authoritative for
+    // MCU-driven benches. Printing implies the learner wants to see it.
+    control(part, state, verb, value) {
+      switch (verb) {
+        case 'clear':
+          state.ddram.fill(0x20);
+          state.ac = 0;
+          state.displayOn = true;
+          return true;
+        case 'cursor': {
+          const a = Array.isArray(value) ? value : [0, 0];
+          // Line bases per the common controller mapping (2- and 4-line).
+          const bases = [0x00, 0x40, 0x14, 0x54];
+          const row = Math.max(0, Math.min(3, a[0] | 0));
+          const col = Math.max(0, Math.min(39, a[1] | 0));
+          state.ac = (bases[row] + col) & 0x7f;
+          return true;
+        }
+        case 'print': {
+          for (const ch of String(value)) {
+            state.ddram[_ddramAddr(state.ac)] = ch.charCodeAt(0) & 0xff;
+            state.ac = (state.ac + 1) & 0x7f;
+          }
+          state.displayOn = true;
+          return true;
+        }
+      }
+      return false;
+    },
+
     update(part, state, read, tNs) {
       const vdd = read('vdd') || 5.0;
       const vss = read('vss') || 0;
@@ -297,6 +329,7 @@ export function registerHD44780() {
     },
     update: (part, state, read, tNs) =>
       model.update(part, state, (t) => read(LCD_ALIAS[t] ?? t), tNs),
+    control: (part, state, verb, value) => model.control(part, state, verb, value),
   });
 }
 

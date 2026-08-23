@@ -45,6 +45,26 @@ export function registerDisplayDevices() {
       ctx.conductance('din', null, 1 / R_INPUT);
     },
 
+    // Boundary B setDeviceControl (spec-updates/set-device-control.md).
+    // Writes the same pixels[] the WS2812B bit decoder writes; an
+    // out-of-range index is refused (visibly, via the board's warning).
+    control(part, state, verb, value) {
+      if (verb === 'neopixel') {
+        const a = Array.isArray(value) ? value : [];
+        const i = a[0] | 0;
+        if (i < 0 || i >= state.pixels.length) return false;
+        state.pixels[i] = (((a[1] | 0) & 0xff) << 16)
+          | (((a[2] | 0) & 0xff) << 8)
+          | ((a[3] | 0) & 0xff);
+        return true;
+      }
+      if (verb === 'clearNeopixels') {
+        state.pixels.fill(0);
+        return true;
+      }
+      return false;
+    },
+
     update(part, state, read, tNs) {
       const vcc = read('vcc') || 5.0;
       const threshold = vcc * 0.5;

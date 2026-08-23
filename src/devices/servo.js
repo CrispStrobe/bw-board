@@ -36,6 +36,17 @@ export function registerServo() {
       // VCC/GND: power draw not modeled (would need current spec)
     },
 
+    // Boundary B setDeviceControl (spec-updates/set-device-control.md):
+    // 'angle' sets the TARGET; the slew limit stays the model's honesty —
+    // a real servo does not teleport.
+    control(part, state, verb, value) {
+      if (verb === 'angle') {
+        state.targetAngle = Math.max(0, Math.min(180, Number(value) || 0));
+        return true;
+      }
+      return false;
+    },
+
     update(part, state, read, tNs) {
       const minPulseUs = part.params?.minPulseUs ?? 1000;
       const maxPulseUs = part.params?.maxPulseUs ?? 2000;
