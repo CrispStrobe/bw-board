@@ -116,13 +116,18 @@ export function registerAnalogICs() {
       return {
         drives: { out: { vTh: vOut, rTh: R_OUT } },
         _tempC: tempC,
+        _benchT: 25,
       };
     },
 
-    stamp(ctx) { /* output drive handled by state.drives */ },
+    stamp(ctx, part, state) {
+      // E2.2: capture the bench temperature; it is the DEFAULT reading —
+      // an explicit params.tempC pins the sensor and is never overridden.
+      state._benchT = ctx.temperatureC ?? 25;
+    },
 
     update(part, state) {
-      const tempC = part.params?.tempC ?? 25;
+      const tempC = part.params?.tempC ?? state._benchT ?? 25;
       if (Math.abs(tempC - state._tempC) < 0.1) return false;
 
       state._tempC = tempC;

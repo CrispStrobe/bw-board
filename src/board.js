@@ -177,6 +177,8 @@ export class BoardImpl {
      * @type {Map<number, object>}
      */
     this._scopeChannels = new Map();
+    /** Bench temperature in °C (E2.2, spec-updates/bench-temperature.md). */
+    this.temperatureC = 25;
 
     /** Next scope channel handle. */
     this._nextScopeHandle = 1;
@@ -977,6 +979,13 @@ export class BoardImpl {
           this._solve();
         }
 
+        // Feed the scope at every sub-step, not only at the advance's
+        // end: a digital channel records its transition AT the wake that
+        // caused it (E4.2 — the end-of-advance feed alone collapsed a
+        // whole ring oscillation into one sample), and analog envelopes
+        // get the same per-event fidelity.
+        if (this._scopeChannels.size > 0) this._updateScopeChannels(nextT);
+
         cursor = nextT;
         steps++;
 
@@ -1123,16 +1132,38 @@ export class BoardImpl {
    * Attach a scope channel with fixed sim-time cadence and (min,max) decimation.
    *
    * @param {object} opts
-   * @param {'voltage' | 'current'} opts.type - Channel type
-   * @param {string} [opts.netId] - Net to probe (for voltage channels)
+   * @param {'voltage' | 'current' | 'digital'} opts.type - Channel type
+   * @param {string} [opts.netId] - Net to probe (voltage/digital channels)
    * @param {string} [opts.partId] - Part to probe (for current channels)
    * @param {string} [opts.terminal] - Terminal to probe (for current channels)
    * @param {number} [opts.sampleRateHz=100000] - Sim-time sample rate
    * @param {number} [opts.depth=8192] - Ring buffer depth in (min,max) pairs
+   *   (voltage) or transitions (digital, default 4096)
+   * @param {number} [opts.threshold] - Digital logic threshold in volts
+   *   (default vcc/2, captured at add time)
    * @returns {number} Channel handle
    */
   addScopeChannel(opts) {
     const handle = this._nextScopeHandle++;
+    if (opts.type === 'digital') {
+      // E4.2: a logic-analyzer channel stores (t, level) TRANSITIONS,
+      // not sampled envelopes — with E4.1 every gate flip and source
+      // edge lands on a solve point, so the timestamps are exact, and
+      // a quiet net costs nothing however long the run.
+      const depth = opts.depth ?? 4096;
+      this._scopeChannels.set(handle, {
+        type: 'digital',
+        netId: opts.netId ?? null,
+        threshold: opts.threshold ?? this.vcc / 2,
+        depth,
+        // Interleaved [tNs0, level0, tNs1, level1, ...]; NaN = unwritten.
+        trans: new Float64Array(depth * 2).fill(NaN),
+        writeIndex: 0,
+        count: 0,
+        _lastLevel: null,
+      });
+      return handle;
+    }
     const sampleRateHz = opts.sampleRateHz ?? 100_000;
     const depth = opts.depth ?? 8192;
     const intervalNs = BigInt(Math.round(1e9 / sampleRateHz));
@@ -1183,6 +1214,16 @@ export class BoardImpl {
   getScopeData(handle) {
     const ch = this._scopeChannels.get(handle);
     if (!ch) return null;
+    if (ch.type === 'digital') {
+      return {
+        transitions: ch.trans,
+        writeIndex: ch.writeIndex,
+        count: ch.count,
+        depth: ch.depth,
+        threshold: ch.threshold,
+        channelType: 'digital',
+      };
+    }
     return {
       samples: ch.samples,
       startTNs: ch.startTNs,
@@ -1232,12 +1273,27 @@ export class BoardImpl {
    */
   _feedScopeVoltages() {
     for (const [, ch] of this._scopeChannels) {
+      if (ch.type === 'digital') { this._feedDigital(ch, this.timeNs); continue; }
       if (ch.type !== 'voltage') continue;
       const v = this.nodeVoltages.get(ch.netId) ?? 0;
       const val = Number.isFinite(v) ? v : 0;
       if (val < ch._bucketMin) ch._bucketMin = val;
       if (val > ch._bucketMax) ch._bucketMax = val;
     }
+  }
+
+  /** Record a digital channel's level at tNs, only when it changed.
+   * @private */
+  _feedDigital(ch, tNs) {
+    const v = this.nodeVoltages.get(ch.netId) ?? 0;
+    const level = (Number.isFinite(v) ? v : 0) > ch.threshold ? 1 : 0;
+    if (ch._lastLevel === level) return;
+    ch._lastLevel = level;
+    const idx = ch.writeIndex * 2;
+    ch.trans[idx] = Number(tNs);
+    ch.trans[idx + 1] = level;
+    ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
+    ch.count++;
   }
 
   /**
@@ -1247,6 +1303,7 @@ export class BoardImpl {
    */
   _updateScopeChannels(tNs) {
     for (const [, ch] of this._scopeChannels) {
+      if (ch.type === 'digital') { this._feedDigital(ch, tNs); continue; }
       if (ch.type !== 'voltage') continue;
 
       // Get current voltage
@@ -1689,6 +1746,23 @@ export class BoardImpl {
   /**
    * @param {boolean} on
    */
+  /**
+   * Bench temperature in celsius (E2.2). Default 25. Consumers: every
+   * silicon junction's forward drop (−2 mV/°C — diode, LED, zener
+   * forward, BJT Vbe) and the TMP36's default reading. A part whose
+   * user-set param already fixes the quantity (params.tempC on a TMP36,
+   * an explicit control) is NOT overridden.
+   * @param {number} celsius
+   */
+  setTemperature(celsius) {
+    const t = Number(celsius);
+    if (!Number.isFinite(t)) return;
+    if (t === this.temperatureC) return;
+    this.temperatureC = t;
+    this._solve();
+    this._notifyChange('temperature', { celsius: t });
+  }
+
   setPower(on) {
     this.powered = on;
     this._solve();
@@ -1725,6 +1799,7 @@ export class BoardImpl {
     const op = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
       this.controls, this.vcc, {
         tSeconds: Number(this.timeNs) / 1e9,
+        temperatureC: this.temperatureC,
         deviceStates: this._deviceStates,
         qualifiedSources: this._qualifiedSources(),
         powerOff: !this.powered,
@@ -2422,6 +2497,7 @@ export class BoardImpl {
     this._syncDeviceGpioDrives();
     return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, {
       powerOff,
+      temperatureC: this.temperatureC,
       testNodeA,
       testNodeB,
       testCurrent,
@@ -2887,6 +2963,7 @@ export class BoardImpl {
     const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) =>
       (nSolves++, solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, {
         tSeconds: tStart + hs,
+        temperatureC: this.temperatureC,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
           capCurrents: ccS, inductorVoltages: lvS },
         deviceStates: this._deviceStates,

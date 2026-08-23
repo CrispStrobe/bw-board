@@ -122,3 +122,24 @@ UI does (not engine's job):
 - Timebase zoom (select a window within the ring buffer)
 - Channel display (color, scale, position)
 - Trigger holdoff
+
+## Addendum (E4.2): digital channels — transitions, not envelopes
+
+`addScopeChannel({type: 'digital', netId, threshold?, depth?})` records
+(t, level) TRANSITIONS instead of sampled (min,max) pairs: the level is
+`v > threshold` (threshold defaults to vcc/2, captured at add time), and
+a write happens only when the level CHANGES. Storage is an interleaved
+ring `[tNs, level, ...]` (Float64Array, depth transitions, default
+4096, NaN = unwritten), returned by `getScopeData` as `{transitions,
+writeIndex, count, depth, threshold, channelType: 'digital'}`.
+
+Why this is exact rather than sampled: E4.1 makes every source edge and
+scheduled gate flip a solve point (step barriers + the 1 ns BE seed), and
+digital channels are fed at every accepted sub-step and every
+instantaneous solve — so a transition's timestamp is the sim-time of the
+solve that produced it, not a bucket boundary. A quiet net costs nothing
+however long the run; a fixpoint double-flip at one instant records both
+transitions, honestly.
+
+The UI's half stays the UI's: rendering the staircase, aligning multiple
+channels, bus grouping, protocol decode (bw-circuit-ui X2.5).

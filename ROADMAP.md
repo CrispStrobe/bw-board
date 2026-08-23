@@ -127,7 +127,7 @@ for linear circuits. Depends on E1.1 (complex solve reuses the sparse kernel).
 This is the single most visible capability gap against the commercial field; it also
 makes op-amp frequency response meaningful once E3.1 lands.
 
-### E2.2 Temperature as a bench parameter — `src/board.js` + device files
+### E2.2 Temperature as a bench parameter — DONE
 `setTemperature(celsius)` on the Board (default 25). Consumers: diode/LED Vf
 (−2 mV/°C), BJT Vbe, NTC (already parameterised — route the bench temperature in as
 the default control), TMP36 (reads it directly). Boundary-B addition → needs a short
@@ -136,7 +136,7 @@ API, default, which models consume it, and the rule that parts with an explicit
 user-set control are NOT overridden). Oracle: TMP36 at 25 °C reads 0.750 V; a red LED
 chain's current shifts by the hand-computed dVf.
 
-### E2.3 Tolerance metadata passthrough — `src/mna.js` param handling (small)
+### E2.3 Tolerance metadata passthrough — DONE (pinned by test; engine stays deterministic)
 Parts gain optional `params.tolerance` (fraction, e.g. 0.05). The ENGINE does not
 randomize — it only stores and exposes the field; randomization happens in the
 UI-side Monte-Carlo runner (bw-circuit-ui X2.3) which builds offline boards with
@@ -219,7 +219,7 @@ fixpoint model provably cannot show, honest flip-flop setup/hold lessons.
 This is the single engine item that most widens the 74*/retro example
 space — sequence it accordingly. Oracles as in E4.1.
 
-### E4.2 Logic-analyzer channels — engine side
+### E4.2 Logic-analyzer channels — DONE (engine side)
 Digital channels on the existing scope-tap contract (boundary B v2 §5): sampled at
 edge events (cheap once E4.1 exists), stored as (t, level) transitions rather than
 (min,max) pairs. Small spec addendum to `spec-updates/scope-tap.md`. UI lands in

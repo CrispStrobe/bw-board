@@ -488,6 +488,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const testNodeB = opts.testNodeB;
   const testCurrent = opts.testCurrent ?? 0.001;
   const tSeconds = opts.tSeconds ?? 0;
+  // E2.2: silicon junctions shift −2 mV/°C. Assigned on EVERY entry (no
+  // stale state); solveMNA is synchronous and never re-enters, and a
+  // worker thread has its own module instance.
+  benchTemperatureC = opts.temperatureC ?? 25;
+  tempVfShiftV = (benchTemperatureC - 25) * -0.002;
   const transient = opts.transient ?? null;
   const capVoltagesIn = transient ? transient.capVoltages : opts.capVoltages;
   // Every node gets a tiny conductance to the reference (gmin). This keeps a
@@ -1120,7 +1125,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       let vLimited;
       const lim = (part.kind === 'led' || part.kind === 'diode')
         ? junctionLimitParams(part,
-            /** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)))
+            effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0))))
         : null;
       if (lim) {
         // The solve gives TOTAL branch volts; the NR state is the
@@ -1184,7 +1189,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     for (const part of parts) {
       if (part.kind !== 'npn' && part.kind !== 'pnp') continue;
       const beta = /** @type {number} */ (part.params.beta ?? 100);
-      const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
+      const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7));
       const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
       const netC = findNet(nets, part.id, 'collector');
       const netE = findNet(nets, part.id, 'emitter');
@@ -1404,7 +1409,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // A bare LED is a ~2 V junction; a bare diode is silicon, 0.7 V.
       // (Sweep finding 2026-08-15: both defaulted to 2.0, so an
       // unparameterized diode behaved exactly like an LED.)
-      const vf = /** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0));
+      const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
       const rd = 10; // dynamic resistance
       const vAcross = vAnode - vCathode;
       // Same model as the stamp — a PWL current read off a Shockley solve
@@ -1419,7 +1424,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const cathodeNet = findNet(nets, part.id, 'cathode');
       const vAnode = anodeNet ? (nodeVoltages.get(anodeNet) ?? 0) : 0;
       const vCathode = cathodeNet ? (nodeVoltages.get(cathodeNet) ?? 0) : 0;
-      const vf = /** @type {number} */ (part.params.vf ?? 0.7);
+      // The forward junction shifts with temperature; vz stays put —
+      // zener/avalanche tempco is a different, weaker physics and
+      // pretending −2 mV/°C would be invention (E2.2 scope note).
+      const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7));
       const vz = /** @type {number} */ (part.params.vz ?? 5.1);
       const rd = 10;
       const rzener = /** @type {number} */ (part.params.rz ?? 5);
@@ -1678,6 +1686,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
  * findNet calls per stamp per NR iteration are O(1) lookups. Arrays without
  * the map — external callers of the exported findNet — keep the linear scan.
  */
+/** Bench-temperature junction shift in volts (E2.2), set per solve. */
+let tempVfShiftV = 0;
+/** The bench temperature itself, for device ctx (same lifetime rules). */
+let benchTemperatureC = 25;
+/** A junction's effective forward drop at the bench temperature. */
+const effVf = (raw) => raw + tempVfShiftV;
+
 const NETS_TERM_MAP = Symbol('bw-term-map');
 const termKey = (partId, terminal) => partId + String.fromCharCode(0) + terminal;
 
@@ -1758,7 +1773,7 @@ function stampResistor(A, b, part, nets, nodeIndex, groundNetId) {
 function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const anodeNet = findNet(nets, part.id, 'anode');
   const cathodeNet = findNet(nets, part.id, 'cathode');
-  const vf = /** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0));
+  const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
   const rd = 10;
 
   const vAcross = diodeVoltages.get(part.id) ?? 0;
@@ -1914,6 +1929,8 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
  * model's own `stamp(ctx)` for input impedance / analog loading.
  */
 function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec, srcScale = 1) {
+  // E2.2: the bench temperature reaches device stamps through ctx (the
+  // TMP36 defaults to it; an explicit params.tempC wins).
   // Drives: terminal → {vTh, rTh, ref?} | null
   //
   // Without `ref` the Norton is stamped against the reference node — right
@@ -1980,6 +1997,7 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
     },
     vcc,
     tSeconds,
+    temperatureC: benchTemperatureC,
     dtSec,
     control: controls.get(part.id),
   };
@@ -2184,7 +2202,7 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
  * Terminals: anode, cathode.
  */
 function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
-  const vf = /** @type {number} */ (part.params.vf ?? 0.7);
+  const vf = effVf(/** @type {number} */ (part.params.vf ?? 0.7)); // vz stays put (see the branch-current twin)
   const vz = /** @type {number} */ (part.params.vz ?? 5.1);
   const rd = 10;
   const rzener = /** @type {number} */ (part.params.rz ?? 5); // zener dynamic R

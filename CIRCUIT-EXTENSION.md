@@ -103,3 +103,14 @@ the Board's query methods:
 - `[PART]` → `board.getParts().filter(p => p.kind !== 'vcc' && p.kind !== 'gnd').map(p => p.id)`
 
 These update when the netlist changes (`board.onChange` with `type === 'netlist'`).
+
+## `params.tolerance` — metadata the engine carries, not applies (E2.3)
+
+Any part may carry `params.tolerance`, a fraction (`0.05` = ±5 %). The
+ENGINE never randomizes: it stores the field untouched and solves with
+the nominal value, so two runs of the same netlist are always identical.
+Consumers live a layer up — bw-circuit-ui's Monte-Carlo runner builds
+offline boards with perturbed values and needs the nominal + tolerance
+pair to survive the trip through `setNetlist` unmodified. The
+passthrough is pinned by `test/tolerance-passthrough.test.mjs`: unknown
+params are not stripped, and the field does not change the solve.
