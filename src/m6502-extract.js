@@ -43,14 +43,20 @@ const SELECT = {
     // 'uart16550' from MAP/CHIP declarations — this entry lets the
     // DRAWN decode reach it.
     ns16c550: { kind: 'uart16550', high: ['cs0', 'cs1'], low: ['cs2b'] },
+    // M6532 RIOT (E5.1): cs1 high, /cs2 low. RS0B is NOT a select — it
+    // partitions the window into RAM (low) and registers (high), and the
+    // core encodes it as address bit 7, so the RS row below demands it
+    // ride A7 exactly like the 6507SBC decode.
+    m6532: { kind: 'riot', high: ['cs1'], low: ['cs2b'] },
 };
 const RS_PINS = {
     via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'],
     acia6850: ['rs'], uart16550: ['a0', 'a1', 'a2'],
+    riot: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'rs0b'],
 };
 const CHIP_DECL = {
     via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA',
-    acia6850: 'MC6850', uart16550: 'NS16C550',
+    acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532',
 };
 
 /**
@@ -220,7 +226,8 @@ export function extract6502Machine(circuit) {
             if (bad) { reasons.push(`${c.part.id}.${bad} must ride A${rs.indexOf(bad)} — register selects are the low address lines`); continue; }
             const span = c.kind === 'via' ? 16
                 : (c.kind === 'vdp' || c.kind === 'acia6850') ? 2
-                : c.kind === 'uart16550' ? 8 : 4;
+                : c.kind === 'uart16550' ? 8
+                : c.kind === 'riot' ? 256 : 4;
             if (r.count > span) notes.push(`${c.part.id} mirrors through ${hx(r.lo)}-${hx(r.hi)} (decoded coarsely); its registers sit at ${hx(r.lo)}`);
             // span = the MEASURED decode window, so the machine mirrors
             // the registers through it exactly like the silicon — a read

@@ -248,7 +248,14 @@ are the ENGINE work that widens the space those waves can draw on.
 The decode evaluator knew five select shapes (62256, 28C256, W65C22,
 W65C51, TMS9918). Each addition is one SELECT-table entry + RS_PINS/
 CHIP_DECL rows + an extraction fixture.
-**MC6850 DONE (first slice):** SELECT entry (cs0·cs1 high, /cs2 low, E
+**MC6850, NS16C550, M6532 DONE:** (NS16C550: DIP-40 pin surface +
+SELECT entry — the machine ran 'uart16550' from declarations already,
+the drawn decode now reaches it; the pre-existing bw-parts sidecar
+carried an 8250-flavored pin table and was replaced, record in
+bw-parts 4b62cbd. M6532: two-select window with RS0B pinned to A7 —
+the RAM/register partition the core encodes as address bit 7 — plus
+the 'riot' machine kind; RAM r/w + DDRA + 256-byte mirror oracles.)
+**MC6850 detail (first slice):** SELECT entry (cs0·cs1 high, /cs2 low, E
 is timing like PHI2), rs on A0, span 2; m6502-machine grew the
 'acia6850' instantiation (same MC6850 core the z80 machines run); the
 extractor now emits the MEASURED decode window as `span`, so registers
@@ -256,9 +263,8 @@ mirror through it like silicon. Fixture: the 6850 in the canonical
 decode's $4000 hole beside the W65C51, floating-select refusal,
 window-collision contention named at $5000, and a machine-level tx/rx +
 mirror oracle.
-Remaining candidates in model-inventory order: M6532 (cs1 high, cs2b
-low, rs0b for RAM select), NS16C550, AY-3-8912 (BDIR/BC1 latch shape —
-needs a two-phase select note), UM245R. Acceptance per chip: a
+Remaining candidates: AY-3-8912 (BDIR/BC1 latch shape — NOT a plain
+address-domain select, needs a two-phase note first), UM245R. Acceptance per chip: a
 hand-wired decode fixture extracts the right window; a deliberately
 contending decode is refused with the address named. Not gated (no
 mna.js).

@@ -109,6 +109,13 @@ const NS16C550 = [   // DIP-40 (PC16550D pinout, TI/NS datasheet)
     'adsb', 'a2', 'a1', 'a0', 'rxrdyb', 'intr', 'out2b', 'rtsb',
     'dtrb', 'out1b', 'mr', 'ctsb', 'dsrb', 'dcdb', 'rib', 'vdd',
 ];
+const M6532 = [   // DIP-40 (MOS 6532 RIOT — RAM, I/O, Timer)
+    'vss', 'a5', 'a4', 'a3', 'a2', 'a1', 'a0', 'pa0',
+    'pa1', 'pa2', 'pa3', 'pa4', 'pa5', 'pa6', 'pa7', 'phi2',
+    'pb7', 'pb6', 'pb5', 'pb4', 'pb3', 'pb2', 'pb1', 'pb0',
+    'irqb', 'd7', 'd6', 'd5', 'd4', 'd3', 'd2', 'd1',
+    'd0', 'resb', 'rwb', 'a6', 'cs2b', 'cs1', 'rs0b', 'vcc',
+];
 const Z80 = [   // DIP-40
     'a11', 'a12', 'a13', 'a14', 'a15', 'clk', 'd4', 'd3',
     'd5', 'd6', 'vcc', 'd2', 'd7', 'd0', 'd1', 'intb',
@@ -134,6 +141,7 @@ export function registerRetroDips() {
     registerDevice('w65c22', dipSurface(W65C22, 5.0));
     registerDevice('w65c51', dipSurface(W65C51, 5.0));
     registerDevice('ns16c550', dipSurface(NS16C550, 5.0));
+    registerDevice('m6532', dipSurface(M6532, 5.0));
     registerDevice('z80', dipSurface(Z80, 5.0));
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
     registerDevice('tms9918', dipSurface(TMS9918, 5.0));
