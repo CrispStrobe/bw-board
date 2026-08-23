@@ -20,7 +20,7 @@ function setup() { registerLogicChips(); registerLogicGates(); registerTier2Part
 function teardown() {
   for (const c of CHIPS) { try { unregisterDevice(c.kind); } catch {} }
   for (const k of ['74hct00', '74hct04', '74hct08', '74hct14', '74hct32',
-    '74hc138', '74hct138', '74hc245', '74hct245', '74hc244', '74hc165', 'ky040',
+    '74hc138', '74hct138', '74hc245', '74hct245', '74hc244', '74hc165', 'ky040', '74ls373',
     'gate_and', 'gate_or', 'gate_not', 'gate_nand', 'gate_nor', 'gate_xor']) {
     try { unregisterDevice(k); } catch {}
   }
@@ -66,6 +66,9 @@ describe('HCT vs HC input thresholds (composed chips)', () => {
     // 0.5 V is low for both (below 0.8 V and below 1.5 V).
     assert.ok(inverterOut('74hc04', 0.5) > 4.0, 'HC sees 0.5 V as low');
     assert.ok(inverterOut('74hct04', 0.5) > 4.0, 'HCT sees 0.5 V as low');
+
+    // LS is TTL proper — the very levels HCT mimics.
+    assert.ok(inverterOut('74ls04', 2.2) < 1.0, 'LS sees 2.2 V as high');
   });
 
   it('params.family hct switches the generic gate kinds too', () => {

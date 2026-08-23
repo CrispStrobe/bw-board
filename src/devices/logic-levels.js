@@ -13,6 +13,9 @@
  */
 
 /**
+ * LS inputs are TTL proper — the same fixed 0.8/2.0 V levels HCT was
+ * built to mimic — so the `74ls*` aliases take the TTL branch too.
+ *
  * @param {import('../types.js').Part} part
  * @param {number} vcc
  * @returns {{ vIL: number, vIH: number }}
@@ -35,7 +38,8 @@ export function inputThreshold(part, vcc) {
   return isHct(part) ? 1.4 : 0.5 * vcc;
 }
 
-/** @param {import('../types.js').Part} part */
+/** TTL-fixed input levels: HCT kinds, LS kinds, or an explicit param.
+ * @param {import('../types.js').Part} part */
 export function isHct(part) {
-  return part.params?.family === 'hct' || /^74hct/.test(part.kind);
+  return part.params?.family === 'hct' || /^74(hct|ls)/.test(part.kind);
 }

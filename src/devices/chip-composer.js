@@ -569,7 +569,8 @@ const CHIP_74HC373 = {
 
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;
-    const th = vcc * 0.5;
+    // Mid-rail for the HC part; TTL center for the '74ls373' alias.
+    const th = part.kind === '74ls373' ? 1.4 : vcc * 0.5;
 
     // Transparent while LE is high: the register tracks D continuously.
     // LE low: the register holds — the falling edge needs no special
@@ -646,6 +647,8 @@ export function registerLogicChips() {
   registerDevice('cd4511', CHIP_CD4511);
   registerDevice('74hc374', CHIP_74HC374);
   registerDevice('74hc373', CHIP_74HC373);
+  // The LS373 on the classic reference boards: same latch, TTL inputs.
+  registerDevice('74ls373', CHIP_74HC373);
   registerDevice('74hc688', CHIP_74HC688);
   // TTL LS-series aliases — same logic, same pinout
   const hc32 = buildChipModel(CHIPS.find(c => c.kind === '74hc32'));
