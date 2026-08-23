@@ -116,6 +116,12 @@ const M6532 = [   // DIP-40 (MOS 6532 RIOT — RAM, I/O, Timer)
     'irqb', 'd7', 'd6', 'd5', 'd4', 'd3', 'd2', 'd1',
     'd0', 'resb', 'rwb', 'a6', 'cs2b', 'cs1', 'rs0b', 'vcc',
 ];
+const AY8912 = [   // DIP-28 (GI AY-3-8912 PSG)
+    'analogc', 'test1', 'vcc', 'analogb', 'analoga', 'vss', 'ioa7',
+    'ioa6', 'ioa5', 'ioa4', 'ioa3', 'ioa2', 'ioa1', 'ioa0',
+    'da7', 'da6', 'da5', 'da4', 'da3', 'da2', 'da1', 'da0',
+    'a8', 'resetb', 'clock', 'bdir', 'bc2', 'bc1',
+];
 const Z80 = [   // DIP-40
     'a11', 'a12', 'a13', 'a14', 'a15', 'clk', 'd4', 'd3',
     'd5', 'd6', 'vcc', 'd2', 'd7', 'd0', 'd1', 'intb',
@@ -142,6 +148,7 @@ export function registerRetroDips() {
     registerDevice('w65c51', dipSurface(W65C51, 5.0));
     registerDevice('ns16c550', dipSurface(NS16C550, 5.0));
     registerDevice('m6532', dipSurface(M6532, 5.0));
+    registerDevice('ay8912', dipSurface(AY8912, 5.0));
     registerDevice('z80', dipSurface(Z80, 5.0));
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
     registerDevice('tms9918', dipSurface(TMS9918, 5.0));

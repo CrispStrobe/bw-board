@@ -59,7 +59,7 @@ const RS_PINS = {
 };
 const CHIP_DECL = {
     via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA',
-    acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532',
+    acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532', psg8912: 'AY38912',
 };
 
 /**
@@ -105,6 +105,11 @@ export function extract6502Machine(circuit) {
     for (let bit = 0; bit < 16; bit++) {
         setDriver(find(key(cpu.id, `a${bit}`)), { type: 'addr', bit }, `${cpu.id}.a${bit}`);
     }
+    // The rwb AXIS (spec-updates/ay-two-phase-select.md): two-phase
+    // chips gate their control pair with the read/write line, so the
+    // evaluator carries rwb next to addr. Single-phase selects never
+    // reference it and cost nothing.
+    setDriver(find(key(cpu.id, 'rwb')), { type: 'rw' }, `${cpu.id}.rwb`);
     for (const p of parts) {
         if (p.kind === 'vcc') setDriver(find(key(p.id, 'vcc')), { type: 'const', value: 1 }, p.id);
         if (p.kind === 'gnd') setDriver(find(key(p.id, 'gnd')), { type: 'const', value: 0 }, p.id);
@@ -125,6 +130,7 @@ export function extract6502Machine(circuit) {
 
     // ---- evaluate a net at one address (memoized per address) ----------
     let addr = 0;
+    let rwb = 0;
     let memo = new Map();
     const evalNet = (net, depth = 0) => {
         if (depth > 32) throw new Error('combinational loop in the glue network');
@@ -133,6 +139,7 @@ export function extract6502Machine(circuit) {
         let v;
         if (!d) v = null; // undriven
         else if (d.type === 'addr') v = (addr >> d.bit) & 1;
+        else if (d.type === 'rw') v = rwb;
         else if (d.type === 'const') v = d.value;
         else {
             const a = evalNet(d.a, depth + 1);
@@ -158,6 +165,25 @@ export function extract6502Machine(circuit) {
         }
         selChips.push({ part: p, kind: spec.kind, pins, selected: new Uint8Array(65536) });
     }
+    // Two-phase chips (spec-updates/ay-two-phase-select.md): BDIR/BC1
+    // name an OPERATION, not a location, so they are classified over the
+    // (addr, rwb) domain instead of joining the SELECT table.
+    const ayChips = [];
+    for (const p of parts) {
+        if (p.kind !== 'ay8912') continue;
+        const bdir = find(key(p.id, 'bdir'));
+        const bc1 = find(key(p.id, 'bc1'));
+        for (const [t, net] of [['bdir', bdir], ['bc1', bc1]]) {
+            if (!netDriver.has(net)) reasons.push(`${p.id}.${t} is undriven — a floating bus-control pin is not a decode`);
+        }
+        // A8 is a plain active-high select input; unwired means tied
+        // high on virtually every board (the datasheet default).
+        const a8 = find(key(p.id, 'a8'));
+        const a8Wired = netDriver.has(a8);
+        if (!a8Wired) notes.push(`${p.id}.a8 is unwired — treated as tied high (the datasheet default)`);
+        ayChips.push({ part: p, bdir, bc1, a8: a8Wired ? a8 : null,
+            latch: new Uint8Array(65536), wr: new Uint8Array(65536), rd: new Uint8Array(65536) });
+    }
     if (!selChips.length) reasons.push('no RAM, ROM, VIA or ACIA on the board');
     if (reasons.length) return { ok: false, notes, reasons };
 
@@ -172,9 +198,39 @@ export function extract6502Machine(circuit) {
                 }
                 c.selected[addr] = on;
             }
+            // Two-phase pass: the pair at rwb=0 (a write cycle) names
+            // latch/write; the pair at rwb=1 (a read cycle) names read —
+            // and BDIR active during a read cycle is refused below.
+            for (const c of ayChips) {
+                const sel = c.a8 === null || evalNet(c.a8) === 1;
+                const bdirW = evalNet(c.bdir); const bc1W = evalNet(c.bc1);
+                rwb = 1; const memoW = memo; memo = new Map();
+                const bdirR = evalNet(c.bdir); const bc1R = evalNet(c.bc1);
+                memo = memoW; rwb = 0;
+                if (!sel) continue;
+                if (bdirW === 1 && bc1W === 1) c.latch[addr] = 1;
+                else if (bdirW === 1 && bc1W === 0) c.wr[addr] = 1;
+                if (bdirR === 1) {
+                    throw new Error(`${c.part.id}: BDIR is active during a CPU read cycle at ${'$' + addr.toString(16).padStart(4, '0')} — gate BDIR with RWB, or a read of that address makes the chip latch bus garbage`);
+                }
+                if (bdirR === 0 && bc1R === 1) c.rd[addr] = 1;
+            }
         }
     } catch (e) {
         return { ok: false, notes, reasons: [e.message] };
+    }
+
+    // ---- AY read-drive contention: the pair (0,1) puts the chip ON the
+    // data bus, so a read window overlapping anything else IS contention.
+    for (const c of ayChips) {
+        for (let a = 0; a < 65536; a++) {
+            if (!c.rd[a]) continue;
+            const other = selChips.find((s2) => s2.selected[a]);
+            if (other) {
+                return { ok: false, notes,
+                    reasons: [`bus contention at ${'$' + a.toString(16).padStart(4, '0')}: ${c.part.id} and ${other.part.id} both drive the data bus on a read — the decode must make them exclusive`] };
+            }
+        }
     }
 
     // ---- contention: two chips at one address --------------------------
@@ -185,6 +241,56 @@ export function extract6502Machine(circuit) {
                 reasons: [`bus contention at $${a.toString(16).padStart(4, '0')}: ${on.map((c) => c.part.id).join(' and ')} are both selected — the decode must make them exclusive`] };
         }
     }
+
+    // ---- AY windows: the two-address shape, canonical parity -----------
+    // Phase-1 contract (spec-updates/ay-two-phase-select.md): latch and
+    // write interleave with period 2 across ONE contiguous window, latch
+    // on the EVEN offsets. Anything else refuses with the address and
+    // the fix named — never a guess.
+    const ayResolved = [];
+    for (const c of ayChips) {
+        let lo = -1; let hi = -1;
+        for (let a = 0; a < 65536; a++) {
+            if (c.latch[a] || c.wr[a]) { if (lo < 0) lo = a; hi = a; }
+        }
+        if (lo < 0) { reasons.push(`${c.part.id} is never selected — check its BDIR/BC1 wiring`); continue; }
+        let bad = null;
+        for (let a = lo; a <= hi && !bad; a++) {
+            const wantLatch = ((a - lo) & 1) === 0;
+            if (wantLatch && !c.latch[a]) {
+                bad = c.wr[a]
+                    ? `${c.part.id}: the WRITE operation sits on the even address ${'$' + a.toString(16).padStart(4, '0')} — phase-1 models the canonical parity (latch even, data odd); swap the BC1 gating`
+                    : `${c.part.id}: BDIR/BC1 do not reduce to the two-address shape at ${'$' + a.toString(16).padStart(4, '0')} (no operation on an address inside the window)`;
+            } else if (!wantLatch && !c.wr[a]) {
+                bad = `${c.part.id}: BDIR/BC1 do not reduce to the two-address shape at ${'$' + a.toString(16).padStart(4, '0')} (expected the data-write operation)`;
+            }
+        }
+        // Reads land wherever BC1's gating puts them — with BC1 = ~A0
+        // that is the EVEN (latch) address, with BC1 = A0-independent
+        // select both; both wirings exist on real boards, so the parity
+        // is RECORDED (readMask bit 0 = even offsets read, bit 1 = odd),
+        // not legislated. Only a read OUTSIDE the window refuses.
+        let readMask = 0;
+        if (!bad) {
+            for (let a = 0; a < 65536 && !bad; a++) {
+                if ((c.latch[a] || c.wr[a]) && (a < lo || a > hi)) {
+                    bad = `${c.part.id}: operations outside the window at ${'$' + a.toString(16).padStart(4, '0')}`;
+                }
+                if (c.rd[a]) {
+                    if (a < lo || a > hi) {
+                        bad = `${c.part.id}: the READ operation at ${'$' + a.toString(16).padStart(4, '0')} sits outside the chip's window — the decode must keep the chip off the bus elsewhere`;
+                    } else {
+                        readMask |= 1 << ((a - lo) & 1);
+                    }
+                }
+            }
+        }
+        if (bad) { reasons.push(bad); continue; }
+        if (readMask === 0) notes.push(`${c.part.id} is wired write-only (no read decode) — common, and legal`);
+        if (hi - lo + 1 > 2) notes.push(`${c.part.id} mirrors through ${'$' + lo.toString(16).padStart(4, '0').toUpperCase()}-${'$' + hi.toString(16).padStart(4, '0').toUpperCase()} (decoded coarsely); its latch/data pair sits at ${'$' + lo.toString(16).padStart(4, '0').toUpperCase()}`);
+        ayResolved.push({ kind: 'psg8912', name: c.part.id, at: lo, span: hi - lo + 1, readMask });
+    }
+    if (reasons.length) return { ok: false, notes, reasons };
 
     // ---- ranges ---------------------------------------------------------
     const hx = (n) => '$' + n.toString(16).toUpperCase().padStart(4, '0');
@@ -268,6 +374,7 @@ export function extract6502Machine(circuit) {
         }
     }
     if (reasons.length) return { ok: false, notes, reasons };
+    chips.push(...ayResolved);
 
     // ---- tilevga: the ribbon card, not a decoded chip -------------------
     // rene6502's card arrives on the expansion ribbon and claims a fixed

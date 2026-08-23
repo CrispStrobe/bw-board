@@ -25,6 +25,7 @@ import { TileVGA } from './tilevga.js';
 import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
 import { M6532 } from './m6532.js';
+import { AY38912 } from './ay-3-8912.js';
 import { Latch374 } from './latch374.js';
 import { SDCardSPI } from './sdcard-spi.js';
 
@@ -33,7 +34,7 @@ import { SDCardSPI } from './sdcard-spi.js';
  * @property {number} clockHz phi2 frequency
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number, perm?: number[]}>} regions
  *   inclusive ranges; perm (E5.2) maps chip A-pin i to CPU address bit perm[i]
- * @property {Array<{kind: 'via'|'acia'|'acia6850'|'riot'|'uart16550'|'latch', name: string, at: number,
+ * @property {Array<{kind: 'via'|'acia'|'acia6850'|'riot'|'psg8912'|'uart16550'|'latch', name: string, at: number,
  *   xtal?: number, span?: number}>} chips
  *   base addresses; xtal overrides a uart16550's input clock (defaults to
  *   the machine clock — the KiT wiring — since a breadboard that gives the
@@ -176,6 +177,7 @@ export class M6502Machine {
                 : c.kind === 'latch' ? 1 : c.kind === 'vdp' ? 2
                 : c.kind === 'acia6850' ? 2
                 : c.kind === 'riot' ? 256
+                : c.kind === 'psg8912' ? 2
                 : c.kind === 'console' ? 8
                 : c.kind === 'tilevga' ? 0x4000 : 4;
             const span = c.span || regs;
@@ -205,6 +207,23 @@ export class M6502Machine {
                 chip = new W65C51({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
                 });
+            } else if (c.kind === 'psg8912') {
+                // AY-3-8912 behind the two-address decode the extractor
+                // classifies (spec-updates/ay-two-phase-select.md):
+                // even offset = latch the register number, odd = data.
+                // The adapter speaks the machine's read(reg)/write(reg)
+                // contract over the core's select/write/read protocol.
+                const ay = new AY38912({ clockHz: c.xtal || config.clockHz });
+                // readMask (from the extractor) says which offsets the
+                // read decode actually reaches; elsewhere the chip is off
+                // the bus and the CPU sees open bus, like the silicon.
+                const readMask = c.readMask ?? 2;
+                chip = {
+                    ay,
+                    read: (reg) => (((readMask >> reg) & 1) ? ay.read() : 0xff),
+                    write: (reg, v) => { if (reg === 0) ay.select(v); else ay.write(v); },
+                    advance: (n) => ay.advance(n),
+                };
             } else if (c.kind === 'riot') {
                 // MOS 6532: 128 bytes RAM + ports + timer in one 256-byte
                 // window, RS encoded as address bit 7 (the core's own
