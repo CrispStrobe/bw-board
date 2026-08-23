@@ -130,6 +130,52 @@ export function registerRetroDips() {
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
     registerDevice('tms9918', dipSurface(TMS9918, 5.0));
 
+    // DIP oscillator can (E5.9) — a POWERED clock module, which a crystal
+    // is not: OE / GND / OUT / VCC in package order (1, 7, 8, 14), square
+    // wave at params.freq behind ~50 Ω when powered and enabled, high-Z
+    // otherwise. Rides the E4.1 wake machinery: the can schedules a wake
+    // at every half-period boundary, computed from ABSOLUTE time so a
+    // long run cannot drift, and the board lands a solve point on each
+    // edge — that is what lets a '93/'161 divider chain count real edges.
+    // The machine tier's clock stays adapter-driven (see the crystal doc
+    // above); this part serves bench lessons and drawn wiring.
+    registerDevice('osc_can', {
+        terminals: ['oe', 'gnd', 'out', 'vcc'],
+        requiredParams: ['freq'],
+        init() {
+            return { drives: { out: null }, _level: -1, _oeWired: false };
+        },
+        stamp(ctx, part, state) {
+            // Real cans pull OE up internally: not-connected means RUN.
+            state._oeWired = ctx.netFor('oe') !== undefined;
+            if (state._oeWired) ctx.thevenin('oe', ctx.vcc, 1e5);
+        },
+        update(part, state, read, tNs) {
+            const freq = Number(part.params?.freq) || 0;
+            const vccV = read('vcc');
+            const powered = vccV > 2.0 && freq > 0;
+            const enabled = !state._oeWired || read('oe') > 1.4;
+            if (!powered || !enabled) {
+                state._wakeNs = null;
+                if (state._level === -1 && !state.drives.out) return false;
+                state._level = -1;
+                state.drives.out = null; // high-Z
+                return true;
+            }
+            // Half-period grid from absolute time (ns): boundary k lies at
+            // round(k · 1e9/(2f)). tNs is exact on a wake because the board
+            // sub-steps TO _wakeNs (spec-updates/scheduled-device-events.md).
+            const hpNs = 1e9 / (2 * freq);
+            const idx = Math.floor((Number(tNs) + 0.5) / hpNs);
+            const level = idx % 2;
+            state._wakeNs = BigInt(Math.round((idx + 1) * hpNs));
+            if (level === state._level) return false;
+            state._level = level;
+            state.drives.out = { vTh: level ? vccV : 0, rTh: part.params?.rOut ?? 50 };
+            return true;
+        },
+    });
+
     // Two-terminal quartz resonator. ['a', 'b'] is what bw-circuit-ui's
     // terminalsForKind() falls back to for this kind, so the two agree.
     registerDevice('crystal', {

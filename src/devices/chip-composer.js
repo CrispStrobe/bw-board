@@ -13,6 +13,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { inputThresholds } from './logic-levels.js';
 
 const R_OUT = 50;
 const R_INPUT = 1e6;
@@ -230,8 +231,9 @@ function buildChipModel(def) {
 
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
-      const VIH = 0.7 * vcc;
-      const VIL = 0.3 * vcc;
+      // HC: 30 %/70 % of the rail. HCT kinds/params: TTL-fixed 0.8/2.0 V
+      // (E5.7) — the same table entry serves both families.
+      const { vIL: VIL, vIH: VIH } = inputThresholds(part, vcc);
 
       function readLogic(pin) {
         const v = read(pin);
@@ -542,6 +544,56 @@ const CHIP_74HC374 = {
   },
 };
 
+/** 74HC373 — Octal TRANSPARENT D latch with 3-state outputs (DIP-20).
+ *  While LE is HIGH the outputs FOLLOW the D inputs (transparent); the
+ *  falling edge of LE latches whatever was present. /OE (active LOW)
+ *  enables the outputs; HIGH → high-Z. Same DIP-20 terminal order as
+ *  the '374 with CLK replaced by LE — but it is NOT a '374: data
+ *  changes during LE-high propagate immediately (the importers refuse
+ *  to alias one to the other for exactly that reason). */
+const CHIP_74HC373 = {
+  terminals: ['oeb','q0','d0','d1','q1','q2','d2','d3','q3','gnd',
+              'le','q4','d4','d5','q5','q6','d6','d7','q7','vcc'],
+
+  init() {
+    const drives = {};
+    for (let i = 0; i < 8; i++) drives[`q${i}`] = { vTh: 0, rTh: R_OUT };
+    return { drives, reg: 0 };
+  },
+
+  stamp(ctx) {
+    ctx.conductance('le', null, 1 / R_INPUT);
+    ctx.conductance('oeb', null, 1 / R_INPUT);
+    for (let i = 0; i < 8; i++) ctx.conductance(`d${i}`, null, 1 / R_INPUT);
+  },
+
+  update(part, state, read) {
+    const vcc = read('vcc') || 5.0;
+    const th = vcc * 0.5;
+
+    // Transparent while LE is high: the register tracks D continuously.
+    // LE low: the register holds — the falling edge needs no special
+    // handling because the last transparent pass already captured it.
+    if (read('le') > th) {
+      let newReg = 0;
+      for (let i = 0; i < 8; i++) if (read(`d${i}`) > th) newReg |= 1 << i;
+      state.reg = newReg;
+    }
+
+    const oe = read('oeb') < th;
+    let changed = false;
+    for (let i = 0; i < 8; i++) {
+      const v = oe ? ((state.reg >> i) & 1 ? vcc : 0) : 0;
+      const r = oe ? R_OUT : 1e9;
+      if ((state.drives[`q${i}`]?.vTh ?? -1) !== v || (state.drives[`q${i}`]?.rTh ?? -1) !== r) {
+        state.drives[`q${i}`] = { vTh: v, rTh: r };
+        changed = true;
+      }
+    }
+    return changed;
+  },
+};
+
 /** 74HC688 — 8-bit identity comparator (DIP-20).
  *  /P=Q output goes LOW when P0-P7 = Q0-Q7 and /G is LOW. */
 const CHIP_74HC688 = {
@@ -593,12 +645,19 @@ export function registerLogicChips() {
   registerDevice('74hc95', CHIP_74HC95);
   registerDevice('cd4511', CHIP_CD4511);
   registerDevice('74hc374', CHIP_74HC374);
+  registerDevice('74hc373', CHIP_74HC373);
   registerDevice('74hc688', CHIP_74HC688);
   // TTL LS-series aliases — same logic, same pinout
   const hc32 = buildChipModel(CHIPS.find(c => c.kind === '74hc32'));
   registerDevice('74ls32', hc32);
   const hc04 = buildChipModel(CHIPS.find(c => c.kind === '74hc04'));
   registerDevice('74ls04', hc04);
+  // HCT aliases (E5.7) — same logic and pinout; the model reads
+  // part.kind, so the TTL-fixed thresholds engage per part.
+  for (const k of ['74hc00', '74hc04', '74hc08', '74hc14', '74hc32']) {
+    registerDevice(k.replace('74hc', '74hct'),
+      buildChipModel(CHIPS.find(c => c.kind === k)));
+  }
 }
 
 export { CHIPS, buildChipModel };

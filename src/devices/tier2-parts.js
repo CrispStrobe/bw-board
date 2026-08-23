@@ -23,7 +23,8 @@
  * @module
  */
 
-import { registerDevice } from '../devices.js';
+import { registerDevice, getDevice } from '../devices.js';
+import { inputThreshold } from './logic-levels.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
@@ -51,7 +52,8 @@ export function registerTier2Parts() {
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
-            const th = vcc * 0.5;
+            // Mid-rail for HC; the 1.4 V TTL center for the HCT alias (E5.7).
+            const th = inputThreshold(part, vcc);
             const enabled = read('g1') > th && read('g2ab') < th && read('g2bb') < th;
             const sel = enabled
                 ? ((read('c') > th ? 4 : 0) | (read('b') > th ? 2 : 0) | (read('a') > th ? 1 : 0))
@@ -127,7 +129,8 @@ export function registerTier2Parts() {
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
-            const th = vcc * 0.5;
+            // Mid-rail for HC; the 1.4 V TTL center for the HCT alias (E5.7).
+            const th = inputThreshold(part, vcc);
             const oe = read('oeb') < th;
             const aToB = read('dir') > th;
             const cfg = `${oe}:${aToB}`;
@@ -156,6 +159,11 @@ export function registerTier2Parts() {
             return changed;
         },
     });
+
+    // HCT aliases (E5.7): same logic and pinout, TTL-fixed input levels.
+    // The models consult part.kind, so sharing the object is safe.
+    registerDevice('74hct138', getDevice('74hc138'));
+    registerDevice('74hct245', getDevice('74hc245'));
 
     // ─── 74HC165 ───────────────────────────────────────────────────────
     registerDevice('74hc165', {

@@ -1,7 +1,8 @@
 /**
  * Logic gates — 74HC-flavored CMOS: AND, OR, NOT, NAND, NOR, XOR.
  *
- * Inputs: threshold at 30% VCC (V_IL) and 70% VCC (V_IH).
+ * Inputs: threshold at 30% VCC (V_IL) and 70% VCC (V_IH); with
+ * `params.family: 'hct'`, TTL-fixed 0.8 V / 2.0 V instead (E5.7).
  * Outputs: Thévenin driver with configurable R_out (default 50 Ohm).
  * Propagation delay: not yet modelled (would need scheduled events in the
  * board loop — noted in the spec, deferred to a second pass).
@@ -10,6 +11,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { inputThresholds } from './logic-levels.js';
 
 const R_OUT_DEFAULT = 50;
 const R_INPUT = 1e6; // CMOS gate input impedance
@@ -35,8 +37,8 @@ function gateTerminals(n) {
  */
 function readInputs(part, state, read, vcc) {
   const n = part.params?.inputs ?? 2;
-  const vIL = 0.3 * vcc;
-  const vIH = 0.7 * vcc;
+  // HC: rail-proportional. params.family:'hct': TTL-fixed 0.8/2.0 V (E5.7).
+  const { vIL, vIH } = inputThresholds(part, vcc);
   const levels = [];
   for (let i = 0; i < n; i++) {
     const v = read(`in${i}`);

@@ -294,11 +294,11 @@ Verified against the engine line by line:
 | W65C22 VIA | ✅ | timers count phi2 |
 | **W65C51N ACIA** | ✅ **as the N silicon** | the infamous TDRE bug (bit 4 stuck) is what the model implements — matches the ordered part; a `params.datasheetTdre` variant is a later nicety |
 | NE555 | ✅ | timer_555 |
-| **74HC373** | ❌ **E5.6** | only the '374 exists, and a transparent latch is not a D flip-flop (the importers already refuse that mapping) |
+| 74HC373 | ✅ **E5.6 done** | transparent latch in chip-composer, with the not-a-'374 oracle (data during LE-high propagates); the bw-circuit-ui sidecar pinout is the remaining half |
 | 74HC595 | ✅ | FSM + oracle |
-| 74HC(T)04/14/00/32/08/138/245 | ✅ as HC | **HCT thresholds are E5.7** |
+| 74HC(T)04/14/00/32/08/138/245 | ✅ | **E5.7 done**: 74hct* kinds + params.family:'hct' give TTL-fixed 0.8/2.0 V (1.4 V center for the mid-rail models); aliases for hct00/04/08/14/32/138/245 |
 | ATmega88PA | ⚠️ **E5.8** | avr8js family runs 328P/tiny13/85/88/2313; the mega88PA chip config needs verifying/adding |
-| DIP oscillator cans (1.8432 MHz, 1 MHz) | ❌ **E5.9** | `crystal` exists (honest open-at-DC); a POWERED clock-can part does not |
+| DIP oscillator cans (1.8432 MHz, 1 MHz) | ✅ **E5.9 done** | `osc_can` (OE/GND/OUT/VCC, params.freq) drives its square via E4.1 wakes so dividers count real edges; '93-chain f/16 oracle; sidecar pinout pending |
 | MAX232 | ❌ **E5.10** | no model |
 | 330 Ω bussed SIP network | ❌ **E5.11** | wiring discretes works; the PART (common-pin topology) does not exist |
 | 10-seg LED bars | ✅ | bargraph |
@@ -308,14 +308,14 @@ Example COVERAGE is the second axis and the examples owner's lane
 (lite ROADMAP §3.5 item 8): even fully-modeled BOM parts are thinly
 exampled today.
 
-### E5.6 74HC373 transparent latch — `src/devices/chip-composer.js`
+### E5.6 74HC373 transparent latch — DONE (engine half)
 The '374 (edge-triggered) exists; the '373 (transparent, LE level-
 gated) does not, and the BOM orders a '373. One chip-composer entry +
 sidecar pinout + oracle: outputs FOLLOW D while LE is high, latch on
 the falling edge, tri-state on /OE — and a test asserting it is NOT a
 '374 (data change during LE-high propagates). Not gated.
 
-### E5.7 HCT input thresholds — `src/devices/logic-gates.js` + chip-composer
+### E5.7 HCT input thresholds — DONE
 HC thresholds are 30 %/70 % of VCC; HCT is TTL-fixed (VIL 0.8 V,
 VIH 2.0 V) regardless of rail — the reason HCT parts are on this BOM at
 all (5 V system mixing MCU drive levels). `params.family: 'hct'` (or
@@ -330,7 +330,7 @@ add the mega88PA entry, and give it a board fixture. Acceptance: blink +
 UART fixture runs on the mega88PA config with the right memory bounds
 (an image over 8 KB refuses with the size named). Not gated.
 
-### E5.9 DIP oscillator can — `src/devices/retro-dips.js`
+### E5.9 DIP oscillator can — DONE (engine half)
 A powered clock module is not a crystal: OE/VCC/GND/OUT, drives a
 square wave at params.freq. The machine tier's clock stays adapter-
 driven (stated in the crystal's own doc); the part serves bench
