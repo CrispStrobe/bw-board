@@ -113,6 +113,38 @@ test('a LOADED pot wiper routes to MNA; an ADC wiper stays on the walker', () =>
   assert.ok(Math.abs(adc.nodeVoltage('wip') - 2.5) < 1e-9, 'unloaded midpoint stays exact');
 });
 
+test('every net answers nodeVoltage — walker gaps fall through to MNA', () => {
+  // Active-low LED off a quasi pin, pin driving HIGH: the LED is off and
+  // the cathode-side net is reachable only through the dead junction.
+  // The walker used to leave such nets ABSENT from nodeVoltages —
+  // undefined, not zero — so a UI probe read blank and a corpus
+  // instrument misread the gap as "not conducting" (116 nets across the
+  // three quasi-pin benches). The coverage check now routes any solve
+  // the walker cannot complete through MNA, where the floating net gets
+  // its gmin-defined level.
+  const b = new BoardImpl();
+  b.setNetlist(
+    [vcc, gnd,
+      { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+      r('R1', 1000),
+      { id: 'D1', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] }],
+    [
+      { id: 'vcc', terminals: [{ part: 'V1', terminal: 'vcc' }, { part: 'D1', terminal: 'anode' }] },
+      { id: 'mid', terminals: [{ part: 'D1', terminal: 'cathode' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'pin', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'MCU', terminal: 'P1.0' }] },
+      { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }] },
+    ]);
+  b.setPin('P1.0', 'quasi', true); // active-low convention: HIGH = LED off
+  for (const netId of ['vcc', 'mid', 'pin', 'gnd']) {
+    const v = b.nodeVoltage(netId);
+    assert.ok(Number.isFinite(v),
+      `net ${netId} must answer with a number, got ${v}`);
+    assert.ok(v >= -0.1 && v <= 5.2, `net ${netId} inside the rails: ${v}`);
+  }
+  // And the LED is indeed off in this state.
+  assert.ok(Math.abs(b.branchCurrent('D1', 'anode')) < 1e-5, 'LED off');
+});
+
 test('RC charging beside a diode: transient MNA carries the cap forward', () => {
   // 5 V → 1 kΩ → n1 → cap 1 µF → GND, plus a diode from n1 to GND (Vf 0.7)
   // that clamps the node: the cap charges toward min(5 V target, clamp ≈ 0.74 V).

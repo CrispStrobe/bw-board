@@ -2991,6 +2991,21 @@ export class BoardImpl {
       this._resolveNet(net);
     }
 
+    // Coverage: a net the walker could not resolve would read UNDEFINED
+    // from nodeVoltage — absent-without-a-reason, a shape every consumer
+    // has to guess about (a UI probe reads blank; a corpus instrument
+    // mis-read the gaps as "not conducting" — 116 nets across the three
+    // quasi-pin benches, while the same circuits under MNA assign every
+    // node). The walker's own doctrine applies: beyond its vocabulary,
+    // one full MNA solve answers everything coherently — a net behind an
+    // off diode gets its gmin-defined floating level instead of a hole.
+    for (const net of this.nets) {
+      if (!this.nodeVoltages.has(net.id)) {
+        this._solveViaMNA();
+        return;
+      }
+    }
+
     // Override net voltages for capacitor nodes with their actual charge state.
     // The static solve gives the long-term target voltage; the cap's current
     // charge may be different (it hasn't reached steady state yet).
