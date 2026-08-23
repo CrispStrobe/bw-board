@@ -1,9 +1,13 @@
 /**
  * Modified Nodal Analysis (MNA) solver.
  *
- * Linear MNA with Newton–Raphson for nonlinear elements (diodes/LEDs).
- * Used only for branchCurrent and resistance — the closed-form path
- * in board.js handles everything else.
+ * Linear MNA with Newton–Raphson for nonlinear elements (diodes, LEDs,
+ * BJTs, MOSFETs, op-amp rails, CC-limited sources), backward-Euler
+ * transient companions for C/L, and an instantaneous mode where charged
+ * capacitors pin their nets. board.js routes to this whenever the bench
+ * contains anything beyond the closed-form walker's vocabulary
+ * (`_needsMNA`), and the instruments (branchCurrent, resistance) always
+ * come here.
  *
  * Matrix form:  [G  B] [v]   [I]
  *               [C  D] [j] = [E]
@@ -1402,15 +1406,32 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
  * model's own `stamp(ctx)` for input impedance / analog loading.
  */
 function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds, dtSec) {
-  // Drives: terminal → {vTh, rTh} | null
+  // Drives: terminal → {vTh, rTh, ref?} | null
+  //
+  // Without `ref` the Norton is stamped against the reference node — right
+  // for a logic output whose return is the shared ground, wrong for a
+  // floating source. With `ref: '<terminal>'` the source drives `terminal`
+  // relative to the device's OWN pin: the standard floating-Thévenin
+  // companion (spec-updates/referenced-device-drives.md).
   for (const [terminal, drive] of Object.entries(state.drives ?? {})) {
     if (!drive) continue;
     const net = findNet(nets, part.id, terminal);
-    const idx = net ? nodeIndex.get(net) : undefined;
-    if (idx === undefined) continue;
+    if (!net) continue;
     const g = 1 / Math.max(drive.rTh, 1e-3);
-    A.add(idx, idx, g);
-    b[idx] += drive.vTh * g;
+    if (drive.ref) {
+      const refNet = findNet(nets, part.id, drive.ref);
+      if (!refNet) continue; // return pin in the air: no current path at all
+      stampTwoTerminal(A, net, refNet, g, nodeIndex);
+      const idx = nodeIndex.get(net);
+      const refIdx = nodeIndex.get(refNet);
+      if (idx !== undefined) b[idx] += drive.vTh * g;
+      if (refIdx !== undefined) b[refIdx] -= drive.vTh * g;
+    } else {
+      const idx = nodeIndex.get(net);
+      if (idx === undefined) continue;
+      A.add(idx, idx, g);
+      b[idx] += drive.vTh * g;
+    }
   }
   if (!model.stamp) return;
   const ctx = {
@@ -1427,6 +1448,22 @@ function stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, t
       const g = 1 / Math.max(rTh, 1e-3);
       A.add(idx, idx, g);
       b[idx] += vTh * g;
+    },
+    // Source between two of the device's own pins: vTh raises termPlus
+    // above termMinus through rTh. Reduces exactly to `thevenin` when the
+    // return pin sits on the reference net; representable nowhere else
+    // before this existed — a battery whose neg is off-ground stamped its
+    // EMF against ground instead (spec-updates/referenced-device-drives.md).
+    theveninBetween: (termPlus, termMinus, vTh, rTh) => {
+      const netP = findNet(nets, part.id, termPlus);
+      const netN = findNet(nets, part.id, termMinus);
+      if (!netP || !netN) return; // a leg in the air carries no current
+      const g = 1 / Math.max(rTh, 1e-3);
+      stampTwoTerminal(A, netP, netN, g, nodeIndex);
+      const idxP = nodeIndex.get(netP);
+      const idxN = nodeIndex.get(netN);
+      if (idxP !== undefined) b[idxP] += vTh * g;
+      if (idxN !== undefined) b[idxN] -= vTh * g;
     },
     current: (terminal, amps) => {
       const net = findNet(nets, part.id, terminal);

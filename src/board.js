@@ -1,8 +1,13 @@
 /**
- * Board implementation — closed-form solver for the starter-kit component set.
+ * Board implementation — boundary B, and the router between two solvers.
  *
- * No MNA solver yet. Handles: resistor, LED, potentiometer, button, buzzer,
- * capacitor, VCC, GND, and MCU pins via Thévenin equivalents.
+ * A closed-form Thévenin walker covers the bare starter-kit vocabulary
+ * (resistor, LED, pot, button, buzzer, RC via graph walk); everything
+ * beyond it — transistors, sources, op-amps, any registered device, LED
+ * fan-out, and ALWAYS the instruments — routes to the MNA solver in
+ * mna.js (`_needsMNA`). A digital fast path defers analog solves for
+ * pure-logic nets. Time integration: fixed-step backward-Euler transient
+ * sub-stepping, device updates to a bounded fixpoint per sub-step.
  *
  * @module
  */

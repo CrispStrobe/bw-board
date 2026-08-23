@@ -45,19 +45,18 @@ export function registerDCMotor() {
       const kV = part.params?.kV ?? 0.01;
       const L = part.params?.windingH ?? 0.005;
 
-      // Motor as Thévenin: back-EMF voltage source (kV * omega) in series
-      // with winding resistance. Between terminals a and b.
-      // The stamp is: conductance between a and b of 1/R, plus a current
-      // source representing the back-EMF.
-      ctx.conductance('a', 'b', 1 / R);
-      // Back-EMF: acts as a voltage source kV*omega opposing current flow.
-      // As Norton equivalent: I_norton = (kV * omega) / R
-      // Current flows from b to a (opposing the applied voltage direction).
-      const backEMF = kV * state.omega;
-      if (Math.abs(backEMF) > 1e-12) {
-        ctx.current('a', -backEMF / R);
-        ctx.current('b', backEMF / R);
-      }
+      // Motor as Thévenin between its own pins: back-EMF (kV·omega, + at a)
+      // in series with the winding resistance, so I(a→b) = (Va−Vb−e)/R —
+      // the same equation update() integrates the mechanics from.
+      //
+      // The previous hand-built Norton pair had the EMF sign INVERTED
+      // (injected −e/R into a where the Thévenin→Norton transform gives
+      // +e/R): electrically the motor drew MORE current the faster it
+      // spun, I = (V+e)/R. Nothing caught it because the mechanical loop
+      // uses its own correct formula and stiff supplies hid the node
+      // shift; a series resistor exposes it — see the free-running oracle
+      // in test/referenced-drives.test.mjs.
+      ctx.theveninBetween('a', 'b', kV * state.omega, R);
 
       // Series inductance: backward-Euler companion model adds a
       // conductance dt/L and a Norton current source of the previous

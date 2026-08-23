@@ -20,21 +20,20 @@ export function registerPowerDevices() {
   registerDevice('battery', {
     terminals: ['pos', 'neg'],
 
-    init(part) {
-      const volts = part.params?.volts ?? 9;
-      return {
-        drives: {
-          pos: { vTh: volts, rTh: part.params?.rInternal ?? 0.5 },
-        },
-      };
+    init() {
+      return { drives: {} };
     },
 
-    stamp(ctx, part, state) {
-      // The battery drives 'pos' relative to 'neg' via state.drives (generic).
-      // Also stamp the internal resistance as a conductance path so current flows.
+    stamp(ctx, part) {
+      // ONE stamp, between the battery's own pins. This used to be stamped
+      // twice — once via state.drives (ground-referenced) and once via
+      // ctx.thevenin — two identical Nortons in parallel, halving the
+      // effective internal resistance; and both were referenced to node 0,
+      // so a battery whose neg terminal was off-ground was simply wrong
+      // (spec-updates/referenced-device-drives.md).
       const rInt = part.params?.rInternal ?? 0.5;
       const volts = part.params?.volts ?? 9;
-      ctx.thevenin('pos', volts, rInt);
+      ctx.theveninBetween('pos', 'neg', volts, rInt);
     },
 
     update() { return false; }, // static — no behavioral changes

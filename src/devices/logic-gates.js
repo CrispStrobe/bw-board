@@ -65,9 +65,13 @@ function makeGateModel(kind, evalFn) {
       for (let i = 0; i < n; i++) {
         ctx.conductance(`in${i}`, null, 1 / R_INPUT);
       }
+      // update() has no ctx; the rail is captured here (stamp runs before
+      // every update pass) so thresholds and the output high level track
+      // the board's actual supply instead of a hard-coded 5 V.
+      state._vcc = ctx.vcc;
     },
     update(part, state, read) {
-      const vcc = 5.0; // TODO: read from ctx when available
+      const vcc = state._vcc ?? 5.0;
       const inputs = readInputs(part, state, read, vcc);
       const outLevel = evalFn(inputs);
 
