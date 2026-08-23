@@ -228,6 +228,49 @@ export class BoardImpl {
    * stays in the list for identity; the synthetic LEDs carry the
    * electrical role.
    */
+  /**
+   * Give each dc_motor's winding inductance to the SOLVER as a real
+   * series inductor on a hidden net between the motor's 'a' terminal and
+   * whatever it was wired to. The device model then owns only R + back-EMF.
+   *
+   * Why: a device-side inductor companion cannot be made consistent with
+   * the adaptive integrator — its Norton memory is frozen across the
+   * step-doubling's full/half solves (a permanent phantom error that
+   * pinned the controller at err ≈ 0.73), its update cadence differs from
+   * the solver's history cycle, and in series with a solver inductor the
+   * shared node divides the two histories' disagreement by a vanishing
+   * conductance (measured as a 1e35 V blow-up). As a first-class solver
+   * inductor it gets trapezoidal companions, error control, and history
+   * management like every other L — and the motor's 'a' pin now reads the
+   * true series winding current as (v_a − v_b − e)/R.
+   * DC is unchanged: the hidden inductor is a 1 mΩ wire there.
+   */
+  static _expandMotorWindings(parts, nets) {
+    const outParts = [...parts];
+    const outNets = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
+    for (const p of parts) {
+      if (p.kind !== 'dc_motor') continue;
+      const L = p.params?.windingH ?? 0.005;
+      if (!(L > 0)) continue;
+      const net = outNets.find((n) =>
+        n.terminals.some((t) => t.part === p.id && t.terminal === 'a'));
+      if (!net) continue;
+      const hidId = `${p.id}_winding`;
+      const hidNetId = `n_${p.id}_winding`;
+      net.terminals = net.terminals.filter(
+        (t) => !(t.part === p.id && t.terminal === 'a'));
+      net.terminals.push({ part: hidId, terminal: 'a' });
+      outNets.push({
+        id: hidNetId,
+        terminals: [{ part: hidId, terminal: 'b' }, { part: p.id, terminal: 'a' }],
+      });
+      outParts.push({
+        id: hidId, kind: 'inductor', params: { henrys: L }, terminals: ['a', 'b'],
+      });
+    }
+    return { parts: outParts, nets: outNets };
+  }
+
   static _expandComposites(parts, nets) {
     const extraParts = [];
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
@@ -333,6 +376,7 @@ export class BoardImpl {
     // an LED) silently produces brightness 0 — a plausible wrong answer.
     const errors = validateNetlist(parts, nets);
     ({ parts, nets } = BoardImpl._expandComposites(parts, nets));
+    ({ parts, nets } = BoardImpl._expandMotorWindings(parts, nets));
     const fatal = errors.filter(e => e.severity === 'error');
     if (fatal.length > 0) {
       throw new Error(

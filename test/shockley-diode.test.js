@@ -68,20 +68,39 @@ describe('Shockley vs piecewise: comparison', () => {
     assert.ok(sh.gEq < 0.001, `Shockley off: gEq=${sh.gEq}`);
   });
 
-  it('Shockley has smooth transition where piecewise has a jump', () => {
-    // Right at Vf: piecewise jumps from 1e-9 to 1/Rd
-    const pw_below = diodeCompanion(1.99, 2.0, 10);
-    const pw_above = diodeCompanion(2.01, 2.0, 10);
-    const pwRatio = pw_above.gEq / pw_below.gEq;
+  it('piecewise is C1 inside its ±25 mV knee band, a knee outside it', () => {
+    // The PWL knee gained a C1 parabolic blend over vf ± 25 mV
+    // (2026-08-23): the HARD corner plus an inductor was a Newton
+    // oscillator — the flyback decay tail parked the junction exactly at
+    // vf and the on/off branches alternated forever. INSIDE the band the
+    // conductance now ramps smoothly; OUTSIDE it both branches are
+    // bit-identical to the original lines, so the knee is still a knee.
+    const inBelow = diodeCompanion(1.99, 2.0, 10);
+    const inAbove = diodeCompanion(2.01, 2.0, 10);
+    const inRatio = inAbove.gEq / inBelow.gEq;
+    assert.ok(inRatio < 10, `inside the band the blend is gentle: ${inRatio}`);
 
-    // Shockley: smooth exponential
+    const outBelow = diodeCompanion(1.94, 2.0, 10);   // below vf − 25 mV
+    const outAbove = diodeCompanion(2.06, 2.0, 10);   // above vf + 25 mV
+    assert.equal(outBelow.gEq, 1e-9, 'off line untouched outside the band');
+    assert.ok(Math.abs(outAbove.gEq - 1 / 10) < 1e-12, 'on line untouched outside the band');
+    assert.ok(outAbove.gEq / outBelow.gEq > 1e6,
+      `across the whole band the knee is still a knee: ${outAbove.gEq / outBelow.gEq}`);
+
+    // Band-edge continuity of the CURRENT (the C1 property the fix is for):
+    // i = gEq·v + iEq evaluated from each side of both edges agrees.
+    // Tolerance 10 nA: the off branch carries the deliberate 1 nS leak
+    // (≈2 nA at 2 V) that the parabola does not — physically negligible,
+    // numerically visible.
+    const iOf = (r, v) => r.gEq * v + r.iEq;
+    const lo = 2.0 - 0.025, hi = 2.0 + 0.025;
+    assert.ok(Math.abs(iOf(diodeCompanion(lo - 1e-9, 2, 10), lo) - iOf(diodeCompanion(lo + 1e-9, 2, 10), lo)) < 1e-8);
+    assert.ok(Math.abs(iOf(diodeCompanion(hi - 1e-9, 2, 10), hi) - iOf(diodeCompanion(hi + 1e-9, 2, 10), hi)) < 1e-8);
+
+    // Shockley: smooth everywhere, unchanged.
     const sh_below = diodeCompanion(1.99, 2.0, 10, { shockley: true, n: 1.8 });
     const sh_above = diodeCompanion(2.01, 2.0, 10, { shockley: true, n: 1.8 });
-    const shRatio = sh_above.gEq / sh_below.gEq;
-
-    // Piecewise ratio should be enormous (1e8+), Shockley should be modest
-    assert.ok(pwRatio > 1e6, `piecewise jump ratio: ${pwRatio}`);
-    assert.ok(shRatio < 10, `Shockley smooth ratio: ${shRatio}`);
+    assert.ok(sh_above.gEq / sh_below.gEq < 10, 'Shockley smooth');
   });
 });
 

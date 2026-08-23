@@ -124,6 +124,65 @@ describe('adaptive transient: idle advance is cheap', () => {
   });
 });
 
+describe('adaptive transient: advance pattern must not change the physics', () => {
+  it('flyback opening: one advanceTo(1 ms) agrees with 100 fine steps', async () => {
+    // Motor + series inductor + clamp diode, switch opens with ~0.9 A
+    // flowing. Found live (2026-08-23) by the flyback lesson gate: a
+    // device-side winding-L companion is inconsistent with multi-solve
+    // stepping, and the single-jump path read −4.7 V at 1 ms (period-2h
+    // oscillation) where fine stepping settles near 0 V — an ADVANCE-
+    // PATTERN-dependent answer, the worst kind of plausible-wrong. The
+    // winding L is now a solver-owned series inductor
+    // (_expandMotorWindings) and both paths must tell one story.
+    const { registerDCMotor } = await import('../src/devices/dc-motor.js');
+    const { unregisterDevice } = await import('../src/devices.js');
+    registerDCMotor();
+    try {
+      const mk = () => {
+        const parts = [
+          { id: 'gnd', kind: 'gnd', params: {}, terminals: ['gnd'] },
+          { id: 'src', kind: 'vsource', params: { volts: 9 }, terminals: ['pos', 'neg'] },
+          { id: 'sw1', kind: 'switch', params: {}, terminals: ['a', 'b'] },
+          { id: 'l1', kind: 'inductor', params: { henrys: 0.001 }, terminals: ['a', 'b'] },
+          { id: 'motor1', kind: 'dc_motor', params: { windingR: 10, kV: 0.01 }, terminals: ['a', 'b'] },
+          { id: 'd1', kind: 'diode', params: { vf: 0.7 }, terminals: ['anode', 'cathode'] },
+        ];
+        const nets = [
+          { id: 'n_src', terminals: [{ part: 'src', terminal: 'pos' }, { part: 'sw1', terminal: 'a' }] },
+          { id: 'n_sw', terminals: [{ part: 'sw1', terminal: 'b' }, { part: 'l1', terminal: 'a' }, { part: 'd1', terminal: 'cathode' }] },
+          { id: 'n_mid', terminals: [{ part: 'l1', terminal: 'b' }, { part: 'motor1', terminal: 'a' }] },
+          { id: 'n_gnd', terminals: [
+            { part: 'gnd', terminal: 'gnd' }, { part: 'src', terminal: 'neg' },
+            { part: 'motor1', terminal: 'b' }, { part: 'd1', terminal: 'anode' },
+          ] },
+        ];
+        const b = new BoardImpl(5.0);
+        b.setNetlist(parts, nets);
+        b.setControl('sw1', 1);
+        b.advanceTo(10_000_000n);
+        b.setControl('sw1', 0);
+        return b;
+      };
+      const spike = mk();
+      spike.advanceTo(10_010_000n);
+      assert.ok(spike.nodeVoltage('n_sw') < -5,
+        `the flyback spike is real at 10 µs, got ${spike.nodeVoltage('n_sw').toFixed(3)} V`);
+      const single = mk();
+      single.advanceTo(11_000_000n);
+      const fine = mk();
+      for (let us = 10; us <= 1000; us += 10) fine.advanceTo(10_000_000n + BigInt(us) * 1000n);
+      const vs = single.nodeVoltage('n_sw');
+      const vf = fine.nodeVoltage('n_sw');
+      assert.ok(Math.abs(vs - vf) < 0.5,
+        `advance pattern changed the answer: single ${vs.toFixed(3)} V vs fine ${vf.toFixed(3)} V`);
+      assert.ok(vs > -1 && vf > -1,
+        `at 1 ms the spike is over on BOTH paths (single ${vs.toFixed(3)}, fine ${vf.toFixed(3)})`);
+    } finally {
+      try { unregisterDevice('dc_motor'); } catch {}
+    }
+  });
+});
+
 describe('adaptive transient: source edges are solve points', () => {
   it('_nextSourceEdgeSec finds square edges exactly', () => {
     const parts = [

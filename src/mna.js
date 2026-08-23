@@ -193,15 +193,42 @@ function diodeCompanion(vAcross, vf, rd, opts) {
     return shockleyCompanion(vAcross, vf, rd, opts.is, opts.n);
   }
 
-  // Piecewise-linear (original model)
-  if (vAcross < vf) {
+  // Piecewise-linear knee with a C1 parabolic blend over ±PWL_KNEE_EPS.
+  // A HARD corner plus an inductor is a Newton oscillator: the flyback
+  // decay tail parks the junction exactly at vf, the on/off branches
+  // alternate per step, and the adaptive integrator tracked the orbit
+  // forever at err ≈ 0.73 (a single 1 ms advance read −4.7 V where fine
+  // stepping settles at +0.7 V) — the diode-corner twin of the MOS
+  // smoothVov fix. Outside the band both branches are BIT-IDENTICAL to
+  // the original lines, so every corpus operating point away from the
+  // knee is untouched.
+  const EPS = PWL_KNEE_EPS;
+  if (vAcross < vf - EPS) {
     const gOff = 1e-9;
     return { gEq: gOff, iEq: 0 };
-  } else {
+  }
+  if (vAcross > vf + EPS) {
     const gEq = 1 / rd;
     const iEq = -vf / rd;
     return { gEq, iEq };
   }
+  // In-band: i(v) = (v − vf + ε)² / (4·ε·rd) — joins i = 0 at vf−ε and the
+  // line (v−vf)/rd at vf+ε with matching slope at both ends.
+  const u = vAcross - vf + EPS;
+  const gEq = u / (2 * EPS * rd);
+  const i = (u * u) / (4 * EPS * rd);
+  return { gEq, iEq: i - gEq * vAcross };
+}
+
+/** Half-width of the PWL knee's C1 blend band (volts). */
+const PWL_KNEE_EPS = 0.025;
+
+/** PWL knee current with the C1 blend — extraction must match the stamp. */
+function pwlKneeCurrent(v, vf, rd) {
+  if (v < vf - PWL_KNEE_EPS) return 0;
+  if (v > vf + PWL_KNEE_EPS) return (v - vf) / rd;
+  const u = v - vf + PWL_KNEE_EPS;
+  return (u * u) / (4 * PWL_KNEE_EPS * rd);
 }
 
 /**
@@ -244,7 +271,7 @@ function junctionOpts(part) {
 function junctionCurrent(part, vAcross, vf, rd) {
   const opts = junctionOpts(part);
   if (!opts) {
-    return vAcross >= vf ? (vAcross - vf) / rd : 0;
+    return pwlKneeCurrent(vAcross, vf, rd);
   }
   const VT = 0.02585;
   const nVt = opts.n * VT;
@@ -1087,9 +1114,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // the base junction has fallen out of conduction, or the
         // clamp current exceeds beta*Ib (with margin against
         // flip-flopping; the outer loop re-iterates on change).
+        // iB through the SAME C1 knee the stamp uses — the old hard-knee
+        // read ZERO for an in-band vbe that genuinely carries current, so
+        // the region entered and left every iteration (collector stuck at
+        // 1.8 V on the ngspice NPN-switch golden, expected 0.07 V).
         const vJ = diodeVoltages.get(part.id) ?? 0; // vBE (npn) / vEB (pnp)
         const rd = 10;
-        const iB = vJ > vbe ? (vJ - vbe) / rd : 0;
+        const iB = pwlKneeCurrent(vJ, vbe, rd);
         const gS = 10;
         const iC = Math.max(0, gS * (vOut - vceSat));
         if (vJ < vbe - 0.15 || beta * iB < iC * 0.95) next = 'active';
@@ -1286,13 +1317,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const rd = 10;
 
       let ib, ic;
+      // Same C1 knee the stamp uses — extraction and stamp must agree.
       if (part.kind === 'npn') {
-        const vbe = vB - vE;
-        ib = vbe >= vbeThresh ? (vbe - vbeThresh) / rd : 0;
+        ib = pwlKneeCurrent(vB - vE, vbeThresh, rd);
         ic = beta * ib;
       } else {
-        const veb = vE - vB;
-        ib = veb >= vbeThresh ? (veb - vbeThresh) / rd : 0;
+        ib = pwlKneeCurrent(vE - vB, vbeThresh, rd);
         ic = beta * ib;
       }
       currents.set('base', ib);

@@ -45,31 +45,23 @@ export function registerDCMotor() {
       const kV = part.params?.kV ?? 0.01;
       const L = part.params?.windingH ?? 0.005;
 
-      // Motor as Thévenin between its own pins: back-EMF (kV·omega, + at a)
-      // in series with the winding resistance, so I(a→b) = (Va−Vb−e)/R —
-      // the same equation update() integrates the mechanics from.
+      // Motor as Thévenin between its own pins: back-EMF (kV·omega, + at
+      // a) behind the winding resistance — the EMF sign matters (the
+      // original Norton pair had it INVERTED, so the motor drew MORE
+      // current the faster it spun; the free-running oracle in
+      // test/referenced-drives.test.mjs keeps that dead).
       //
-      // The previous hand-built Norton pair had the EMF sign INVERTED
-      // (injected −e/R into a where the Thévenin→Norton transform gives
-      // +e/R): electrically the motor drew MORE current the faster it
-      // spun, I = (V+e)/R. Nothing caught it because the mechanical loop
-      // uses its own correct formula and stiff supplies hid the node
-      // shift; a series resistor exposes it — see the free-running oracle
-      // in test/referenced-drives.test.mjs.
+      // The winding INDUCTANCE is deliberately NOT stamped here: the
+      // board expands every dc_motor into motor + a first-class solver
+      // inductor on a hidden series net (_expandMotorWindings). A
+      // device-side inductor companion cannot be made consistent with
+      // the adaptive integrator — frozen Norton memory across the
+      // step-doubling's sub-solves, update cadence out of step with the
+      // solver's histories; the failure modes (a permanent err ≈ 0.73
+      // phantom, a period-2h oscillator, a 1e35 V series blow-up) are
+      // written up at the expansion site.
+      void L;
       ctx.theveninBetween('a', 'b', kV * state.omega, R);
-
-      // Series inductance: backward-Euler companion model adds a
-      // conductance dt/L and a Norton current source of the previous
-      // current. Only active during transient sub-steps (dtSec present).
-      if (L > 0 && ctx.dtSec) {
-        const gL = ctx.dtSec / Math.max(L, 1e-12);
-        ctx.conductance('a', 'b', gL);
-        // Norton source from previous inductor current
-        if (Math.abs(state.current) > 1e-12) {
-          ctx.current('a', -state.current);
-          ctx.current('b', state.current);
-        }
-      }
     },
 
     update(part, state, read, tNs) {
@@ -88,7 +80,9 @@ export function registerDCMotor() {
       state._lastTNs = tNs;
       if (dtSec <= 0) return false;
 
-      // Motor current: I = (V_a - V_b - kV * omega) / R
+      // With the winding L expanded into a solver inductor, the motor's
+      // 'a' pin sits on the hidden net BETWEEN L and R — so this
+      // resistive formula reads the true series winding current.
       const vA = read('a');
       const vB = read('b');
       const current = (vA - vB - kV * state.omega) / R;
