@@ -38,9 +38,20 @@ const SELECT = {
     // high, /cs2 low. The E clock is timing (same bound as PHI2 above);
     // the z80 twin extracts this chip identically on the IO side.
     mc6850: { kind: 'acia6850', high: ['cs0', 'cs1'], low: ['cs2b'] },
+    // NS16C550 (E5.1): same three-select shape as the 6850; /ADS, the
+    // strobes and the crystal are timing. The machine already ran
+    // 'uart16550' from MAP/CHIP declarations — this entry lets the
+    // DRAWN decode reach it.
+    ns16c550: { kind: 'uart16550', high: ['cs0', 'cs1'], low: ['cs2b'] },
 };
-const RS_PINS = { via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'], acia6850: ['rs'] };
-const CHIP_DECL = { via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA', acia6850: 'MC6850' };
+const RS_PINS = {
+    via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'],
+    acia6850: ['rs'], uart16550: ['a0', 'a1', 'a2'],
+};
+const CHIP_DECL = {
+    via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA',
+    acia6850: 'MC6850', uart16550: 'NS16C550',
+};
 
 /**
  * @param {{parts: Array<{id: string, kind: string}>, wires: Array<{from: string, fromTerminal: string, to: string, toTerminal: string}>}} circuit
@@ -208,7 +219,8 @@ export function extract6502Machine(circuit) {
             const bad = straight(c.part.id, rs, rs.map((_, i) => i));
             if (bad) { reasons.push(`${c.part.id}.${bad} must ride A${rs.indexOf(bad)} — register selects are the low address lines`); continue; }
             const span = c.kind === 'via' ? 16
-                : (c.kind === 'vdp' || c.kind === 'acia6850') ? 2 : 4;
+                : (c.kind === 'vdp' || c.kind === 'acia6850') ? 2
+                : c.kind === 'uart16550' ? 8 : 4;
             if (r.count > span) notes.push(`${c.part.id} mirrors through ${hx(r.lo)}-${hx(r.hi)} (decoded coarsely); its registers sit at ${hx(r.lo)}`);
             // span = the MEASURED decode window, so the machine mirrors
             // the registers through it exactly like the silicon — a read

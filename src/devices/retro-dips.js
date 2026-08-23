@@ -102,6 +102,13 @@ const W65C51 = [   // DIP-28
     'xtlo', 'dcdb', 'dsrb', 'rxd', 'dtrb', 'ctsb', 'rtsb', 'nc',
     'txd', 'rs1', 'rs0', 'd7',
 ];
+const NS16C550 = [   // DIP-40 (PC16550D pinout, TI/NS datasheet)
+    'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7',
+    'rclk', 'sin', 'sout', 'cs0', 'cs1', 'cs2b', 'baudoutb', 'xin',
+    'xout', 'wrb', 'wr', 'vss', 'rd', 'rdb', 'ddis', 'txrdyb',
+    'adsb', 'a2', 'a1', 'a0', 'rxrdyb', 'intr', 'out2b', 'rtsb',
+    'dtrb', 'out1b', 'mr', 'ctsb', 'dsrb', 'dcdb', 'rib', 'vdd',
+];
 const Z80 = [   // DIP-40
     'a11', 'a12', 'a13', 'a14', 'a15', 'clk', 'd4', 'd3',
     'd5', 'd6', 'vcc', 'd2', 'd7', 'd0', 'd1', 'intb',
@@ -126,6 +133,7 @@ export function registerRetroDips() {
     registerDevice('w65c02', dipSurface(W65C02, 5.0));
     registerDevice('w65c22', dipSurface(W65C22, 5.0));
     registerDevice('w65c51', dipSurface(W65C51, 5.0));
+    registerDevice('ns16c550', dipSurface(NS16C550, 5.0));
     registerDevice('z80', dipSurface(Z80, 5.0));
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
     registerDevice('tms9918', dipSurface(TMS9918, 5.0));
