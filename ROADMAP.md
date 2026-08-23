@@ -271,15 +271,18 @@ hand-wired decode fixture extracts the right window; a deliberately
 contending decode is refused with the address named. Not gated (no
 mna.js).
 
-### E5.2 Address-permutation support — `src/m6502-extract.js` (v1 bound lifted)
-The extractor refuses a permuted address bus (correct v1 honesty: it
-scrambles bytes inside a chip without changing its range). Real
-breadboards permute A-lines for routing convenience constantly. Scope:
-detect the permutation per chip (A-pin k rides CPU line π(k)), store it
-in the chip config, and apply it in the machine's byte access path;
-refuse only genuinely unmappable wiring. Acceptance: a fixture with two
-swapped RAM address lines boots and reads back what it wrote through
-the permutation; the refusal stays for a data/address cross-wire.
+### E5.2 Address-permutation support — DONE
+DONE 2026-08-23: the extractor detects the permutation per RAM/ROM
+chip (perm[i] = the CPU line chip pin a<i> rides), carries it as
+regions[].perm, and the machine applies it in _read/_write. RAM
+permutes transparently (readback oracle) AND the model is proven real:
+the byte the CPU wrote at $0008 physically lands in cell $0020. A
+permuted ROM scrambles its linearly-programmed image exactly as the
+silicon would (asserted byte-for-byte). Refusals stay for wiring no
+permutation can describe: a data/address cross-wire, a line above the
+window, two pins on one line. Register selects stay strict. The MAP
+grammar cannot express perm — honest, since only drawn wiring can
+produce one.
 
 ### E5.3 MCP23008 port expander — `src/devices/` (named gap, stc ROADMAP)
 I2C GPIO expander to the same standard as pcf8574 (which exists):

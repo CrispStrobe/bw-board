@@ -108,15 +108,29 @@ test('a floating chip select refuses instead of guessing', () => {
     assert.match(r.reasons.join(';'), /acia1\.cs0 is undriven/);
 });
 
-test('a permuted address bus refuses rather than scrambling bytes', () => {
+test('a permuted address bus extracts WITH the permutation (E5.2)', () => {
     const c = eaterCircuit();
     // Swap A0/A1 into the ROM.
     c.wires = c.wires.filter((w) => !(w.to === 'rom1' && (w.toTerminal === 'a0' || w.toTerminal === 'a1')));
     c.wires.push({ from: 'cpu1', fromTerminal: 'a0', to: 'rom1', toTerminal: 'a1' });
     c.wires.push({ from: 'cpu1', fromTerminal: 'a1', to: 'rom1', toTerminal: 'a0' });
     const r = extract6502Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    const rom = r.regions.find((x) => x.kind === 'rom');
+    assert.deepEqual(rom.perm.slice(0, 2), [1, 0], 'a0 rides A1, a1 rides A0');
+    assert.ok(rom.perm.slice(2).every((b, i) => b === i + 2), 'the rest is identity');
+    assert.ok(r.notes.some((n) => /rom1 address lines are permuted/.test(n)),
+        'the permutation is announced, not silent');
+});
+
+test('wiring no permutation can describe still refuses (E5.2 bound)', () => {
+    const c = eaterCircuit();
+    // A data/address cross-wire: ROM a0 onto the CPU's d0.
+    c.wires = c.wires.filter((w) => !(w.to === 'rom1' && w.toTerminal === 'a0'));
+    c.wires.push({ from: 'cpu1', fromTerminal: 'd0', to: 'rom1', toTerminal: 'a0' });
+    const r = extract6502Machine(c);
     assert.equal(r.ok, false);
-    assert.match(r.reasons.join(';'), /rom1\.a0.*straight/);
+    assert.match(r.reasons.join(';'), /rom1\.a0 does not ride a CPU address line/);
 });
 
 test('a TMS9918 wired on the bus extracts as a vdp chip', () => {

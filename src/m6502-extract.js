@@ -16,10 +16,13 @@
  * BUS CONTENTION (two chips selected at one address) and OPEN VECTORS
  * (no ROM at $FFFA-$FFFF), both refused with addresses named.
  *
- * v1 scope, stated: address/register-select pins must ride the CPU's
- * A-lines straight (a permuted address bus scrambles bytes inside a chip
- * without changing its range — refused rather than half-modeled); RWB,
- * PHI2 and the data bus are checked for presence, not timing.
+ * Scope, stated: register-select pins must ride the CPU's A-lines
+ * straight; RAM/ROM address pins may ride them in ANY order — a
+ * permuted bus is detected per chip and carried as regions[].perm for
+ * the machine's byte path (E5.2), while wiring no permutation can
+ * describe (a data line, a glue output, a line above the window) stays
+ * refused. RWB, PHI2 and the data bus are checked for presence, not
+ * timing.
  *
  * @module
  */
@@ -214,12 +217,41 @@ export function extract6502Machine(circuit) {
         const r = rangeOf(c);
         if (!r) { if (!reasons.length) reasons.push(`${c.part.id} is never selected — check its select wiring`); continue; }
         if (c.kind === 'ram' || c.kind === 'rom') {
+            // E5.2: the v1 bound (refuse any permuted bus) is lifted for
+            // RAM/ROM. Each chip A-pin must ride SOME CPU address line
+            // inside the window, each line used exactly once — identity
+            // is the common case, any other bijection is a PERMUTATION
+            // the machine applies in its byte-access path (real
+            // breadboards permute A-lines for routing convenience all
+            // the time, and inside one chip that only relabels cells).
+            // What stays refused is what a permutation cannot describe:
+            // a pin on a data line or glue output, a pin above the
+            // window, two pins on one line.
             const abits = Math.min(15, Math.log2(r.count) | 0);
-            const pinsNeeded = [];
-            for (let i = 0; i < abits; i++) pinsNeeded.push(`a${i}`);
-            const bad = straight(c.part.id, pinsNeeded, pinsNeeded.map((_, i) => i));
-            if (bad) { reasons.push(`${c.part.id}.${bad} does not ride the CPU's matching address line — a permuted bus scrambles bytes; wire A-lines straight`); continue; }
-            regions.push({ kind: c.kind, start: r.lo, end: r.hi, part: c.part.id });
+            const perm = []; // perm[i] = CPU address bit chip pin a<i> rides
+            let bad = null;
+            for (let i = 0; i < abits && !bad; i++) {
+                const d = netDriver.get(find(key(c.part.id, `a${i}`)));
+                if (!d || d.type !== 'addr') {
+                    bad = `${c.part.id}.a${i} does not ride a CPU address line — that is not a permutation, it is a different circuit`;
+                } else if (d.bit >= abits) {
+                    bad = `${c.part.id}.a${i} rides A${d.bit}, above the chip's ${abits}-bit window — not mappable as a permutation`;
+                } else {
+                    perm.push(d.bit);
+                }
+            }
+            if (!bad && new Set(perm).size !== perm.length) {
+                bad = `${c.part.id}: two A-pins ride the same CPU line — not a permutation`;
+            }
+            if (bad) { reasons.push(bad); continue; }
+            const region = { kind: c.kind, start: r.lo, end: r.hi, part: c.part.id };
+            if (perm.some((b, i) => b !== i)) {
+                region.perm = perm;
+                const swaps = perm.map((b, i) => (b !== i ? `a${i}→A${b}` : null))
+                    .filter(Boolean).join(', ');
+                notes.push(`${c.part.id} address lines are permuted (${swaps}) — modeled through the permutation; the bytes land where the wiring says`);
+            }
+            regions.push(region);
         } else {
             const rs = RS_PINS[c.kind];
             const bad = straight(c.part.id, rs, rs.map((_, i) => i));
@@ -332,7 +364,11 @@ export function extract6502Machine(circuit) {
     ];
     return {
         ok: true,
-        regions: regions.map(({ kind, start, end }) => ({ kind, start, end })),
+        // perm (when present) rides into the machine config; the MAP
+        // grammar cannot express it, which is honest — only the drawn
+        // wiring can produce a permuted bus in the first place.
+        regions: regions.map(({ kind, start, end, perm }) =>
+            (perm ? { kind, start, end, perm } : { kind, start, end })),
         chips,
         peripherals,
         lines,

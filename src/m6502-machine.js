@@ -31,7 +31,8 @@ import { SDCardSPI } from './sdcard-spi.js';
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz phi2 frequency
- * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions inclusive ranges
+ * @property {Array<{kind: 'ram'|'rom', start: number, end: number, perm?: number[]}>} regions
+ *   inclusive ranges; perm (E5.2) maps chip A-pin i to CPU address bit perm[i]
  * @property {Array<{kind: 'via'|'acia'|'acia6850'|'riot'|'uart16550'|'latch', name: string, at: number,
  *   xtal?: number, span?: number}>} chips
  *   base addresses; xtal overrides a uart16550's input clock (defaults to
@@ -348,7 +349,23 @@ export class M6502Machine {
         const r = this._region(addr);
         if (!r) return 0xff; // open bus reads high, like the undriven data lines
         if (r.chip) return r.chip.read((addr - r.start) % r.regs); // mirrors through the window
+        if (r.perm) return this.mem[r.start + this._permIdx(addr - r.start, r.perm)];
         return this.mem[addr];
+    }
+
+    /**
+     * E5.2: a permuted address bus, applied where the silicon applies it.
+     * perm[i] names the CPU address bit that chip pin A<i> rides, so the
+     * chip-internal cell index takes CPU bit perm[i] as its bit i. RAM
+     * permutes transparently (reads and writes agree with themselves);
+     * a ROM's linear image scrambles under the CPU's eyes — exactly what
+     * the real breadboard does, so a fixture can assert it.
+     * @param {number} off @param {number[]} perm
+     */
+    _permIdx(off, perm) {
+        let idx = 0;
+        for (let i = 0; i < perm.length; i++) idx |= ((off >> perm[i]) & 1) << i;
+        return idx;
     }
 
     _write(addr, val) {
@@ -364,6 +381,7 @@ export class M6502Machine {
         const r = this._region(addr);
         if (!r || r.kind === 'rom') return; // writes to ROM/open bus vanish
         if (r.chip) { r.chip.write((addr - r.start) % r.regs, val); return; }
+        if (r.perm) { this.mem[r.start + this._permIdx(addr - r.start, r.perm)] = val; return; }
         this.mem[addr] = val;
     }
 
