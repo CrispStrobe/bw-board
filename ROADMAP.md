@@ -264,9 +264,12 @@ decode's $4000 hole beside the W65C51, floating-select refusal,
 window-collision contention named at $5000, and a machine-level tx/rx +
 mirror oracle.
 Remaining candidates, BOTH needing extractor SHAPE work first, not
-just table rows: AY-3-8912 (BDIR/BC1 two-phase latch select) and
-UM245R (directional RD/WR strobes off the decode, the z80 twin's
-dir:'read' shape — and the 6502 machine has no um245r chip kind yet). Acceptance per chip: a
+just table rows: AY-3-8912 — its prerequisite two-phase note is now
+WRITTEN (spec-updates/ay-two-phase-select.md: extend the evaluation
+domain by an rwb axis, classify the BDIR/BC1 protocol, refuse with the
+pair named; acceptance tests specified) — and UM245R (directional
+RD/WR strobes off the decode, the z80 twin's dir:'read' shape — and
+the 6502 machine has no um245r chip kind yet). Acceptance per chip: a
 hand-wired decode fixture extracts the right window; a deliberately
 contending decode is refused with the address named. Not gated (no
 mna.js).
