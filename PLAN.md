@@ -6,6 +6,13 @@
 Vendored into brickwright-lite. All items from the target inventory implemented except
 power supply CC mode (blocked on mna.js, spec filed).
 
+**Next campaign is scoped: see `ROADMAP.md` (2026-08-23)** — engine correctness fixes,
+sparse solver with factorization reuse, adaptive transient, true small-signal AC, model
+depth, scheduled device events. The mna.js items have their spec-updates filed
+(`referenced-device-drives`, `sparse-lu-factor-reuse`, `adaptive-transient`,
+`shockley-junction-limiting`, `ac-small-signal`). Licence rulings for solver work are
+in `ROADMAP.md` §"Backends and licence policy" — read them before importing anything.
+
 ## What is done
 
 - **Core engine**: closed-form solver + MNA with Newton-Raphson. 70 ngspice oracles +
