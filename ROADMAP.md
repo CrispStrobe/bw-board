@@ -263,8 +263,10 @@ mirror through it like silicon. Fixture: the 6850 in the canonical
 decode's $4000 hole beside the W65C51, floating-select refusal,
 window-collision contention named at $5000, and a machine-level tx/rx +
 mirror oracle.
-Remaining candidates: AY-3-8912 (BDIR/BC1 latch shape — NOT a plain
-address-domain select, needs a two-phase note first), UM245R. Acceptance per chip: a
+Remaining candidates, BOTH needing extractor SHAPE work first, not
+just table rows: AY-3-8912 (BDIR/BC1 two-phase latch select) and
+UM245R (directional RD/WR strobes off the decode, the z80 twin's
+dir:'read' shape — and the 6502 machine has no um245r chip kind yet). Acceptance per chip: a
 hand-wired decode fixture extracts the right window; a deliberately
 contending decode is refused with the address named. Not gated (no
 mna.js).
