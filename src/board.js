@@ -46,7 +46,7 @@ const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
  * voltages as if these parts were absent.
  */
 const MNA_ONLY_KINDS = new Set([
-  'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'zener', 'diode', 'vsource', 'isource',
+  'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'zener', 'diode', 'vsource', 'isource', 'vcvs', 'vccs',
 ]);
 
 /**
@@ -328,6 +328,102 @@ export class BoardImpl {
     return { nets: out, merges };
   }
 
+  /**
+   * Expand each opt-in macromodel op-amp (`params.model: 'macro'`) into
+   * the standard single-pole macromodel on hidden nets — SOLVER VIEW
+   * only, like the motor windings (spec-updates/opamp-macromodel.md):
+   *
+   *   G1 (vccs, gm = 2π·GBW·Cint, iMax = SR·Cint) : (inp,inn) → X
+   *   C1 (capacitor, Cint) and Rp (A0/gm)         : X → gnd
+   *   E1 (vcvs ×1, rails)                          : X → OUTI
+   *   Rout                                         : OUTI → out
+   *
+   * The pole (GBW/A0), the slew (iMax/Cint = SR exactly), and the rails
+   * all come from first-class solver parts — C1 gets adaptive-transient
+   * and AC treatment for free, with no device-cadence companion anywhere
+   * (the motor-winding lesson). Ground-referenced like every textbook
+   * macromodel; a bench with no gnd part keeps the ideal row and says so
+   * via getWarnings.
+   */
+  static _expandOpampMacros(parts, nets, vcc) {
+    const notes = [];
+    if (!parts.some(p => p.kind === 'opamp' && p.params?.model === 'macro')) {
+      return { parts, nets, notes };
+    }
+    const gndNetId = nets.find(n => n.terminals.some(t => {
+      const p = parts.find(pp => pp.id === t.part);
+      return p && p.kind === 'gnd';
+    }))?.id;
+    const outNets = nets.map(n => ({ ...n, terminals: [...n.terminals] }));
+    const netHolding = (partId, terminal) => outNets.find(n =>
+      n.terminals.some(t => t.part === partId && t.terminal === terminal));
+    const outParts = [];
+    for (const p of parts) {
+      if (!(p.kind === 'opamp' && p.params?.model === 'macro')) {
+        outParts.push(p);
+        continue;
+      }
+      if (gndNetId === undefined) {
+        notes.push(p.id);
+        outParts.push(p); // ideal row stays; the warning says why
+        continue;
+      }
+      const P = p.params ?? {};
+      const a0 = P.a0 ?? 1e5;
+      const gbw = P.gbw ?? 1e6;
+      const slew = P.slew ?? 0.5e6; // V/s
+      const cint = P.cint ?? 30e-12;
+      const rout = P.rout ?? 100;
+      const gm = 2 * Math.PI * gbw * cint;
+      const ids = {
+        g1: `${p.id}_g1`, c1: `${p.id}_c1`, rp: `${p.id}_rp`,
+        e1: `${p.id}_e1`, ro: `${p.id}_ro`,
+      };
+      outParts.push(
+        { id: ids.g1, kind: 'vccs', params: { gm, iMax: slew * cint },
+          terminals: ['outp', 'outn', 'inp', 'inn'] },
+        { id: ids.c1, kind: 'capacitor', params: { farads: cint }, terminals: ['a', 'b'] },
+        { id: ids.rp, kind: 'resistor', params: { ohms: a0 / gm }, terminals: ['a', 'b'] },
+        { id: ids.e1, kind: 'vcvs',
+          params: { gain: 1, railLow: P.railLow ?? 0, railHigh: P.railHigh ?? vcc },
+          terminals: ['outp', 'outn', 'inp', 'inn'] },
+        { id: ids.ro, kind: 'resistor', params: { ohms: rout }, terminals: ['a', 'b'] },
+      );
+      const X = `n_${p.id}_x`;
+      const OUTI = `n_${p.id}_outi`;
+      netHolding(p.id, 'inp')?.terminals.push({ part: ids.g1, terminal: 'inp' });
+      netHolding(p.id, 'inn')?.terminals.push({ part: ids.g1, terminal: 'inn' });
+      netHolding(p.id, 'out')?.terminals.push({ part: ids.ro, terminal: 'b' });
+      const gndView = outNets.find(n => n.id === gndNetId);
+      gndView.terminals.push(
+        { part: ids.g1, terminal: 'outn' },
+        { part: ids.c1, terminal: 'b' },
+        { part: ids.rp, terminal: 'b' },
+        { part: ids.e1, terminal: 'inn' },
+        { part: ids.e1, terminal: 'outn' },
+      );
+      outNets.push({
+        id: X,
+        terminals: [
+          { part: ids.g1, terminal: 'outp' },
+          { part: ids.c1, terminal: 'a' },
+          { part: ids.rp, terminal: 'a' },
+          { part: ids.e1, terminal: 'inp' },
+        ],
+      });
+      outNets.push({
+        id: OUTI,
+        terminals: [{ part: ids.e1, terminal: 'outp' }, { part: ids.ro, terminal: 'a' }],
+      });
+      // The op-amp itself leaves the solver view: no ideal row, no
+      // phantom pins (its terminal entries go too).
+      for (const n of outNets) {
+        n.terminals = n.terminals.filter(t => t.part !== p.id);
+      }
+    }
+    return { parts: outParts, nets: outNets, notes };
+  }
+
   static _expandComposites(parts, nets) {
     const extraParts = [];
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
@@ -465,11 +561,19 @@ export class BoardImpl {
     // must keep seeing the diode on the net the motor pin is wired to,
     // not one hop into the motor's insides.
     const solveView = BoardImpl._expandMotorWindings(parts, nets);
-    this._solveParts = solveView.parts;
-    this._solveNets = solveView.nets;
+    const macroView = BoardImpl._expandOpampMacros(solveView.parts, solveView.nets, this.vcc);
+    this._solveParts = macroView.parts;
+    this._solveNets = macroView.nets;
+    this._macroFallbacks = macroView.notes;
     for (const p of this._solveParts) {
       if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
         this.inductorCurrents.set(p.id, 0);
+      }
+      // Hidden reactive parts (motor windings, macromodel poles) need
+      // their history seeded like any drawn part — an unseeded macro cap
+      // let the DC solve teleport the output past the slew limit.
+      if (p.kind === 'capacitor' && !this.capVoltages.has(p.id)) {
+        this.capVoltages.set(p.id, 0);
       }
     }
     this.ledHistory.clear();
@@ -2005,6 +2109,23 @@ export class BoardImpl {
       }
     }
 
+    // A macromodel op-amp on a bench with no ground keeps the ideal row —
+    // said out loud, because a flat AC response from a part configured
+    // for GBW would otherwise be a silent downgrade.
+    if (this._macroFallbacks?.length) {
+      for (const id of this._macroFallbacks) {
+        warnings.push({
+          severity: 'warning',
+          type: 'opamp-macro-no-ground',
+          partId: id,
+          message: `${id} is configured as a macromodel op-amp, but the bench ` +
+            'has no ground net to reference the internal pole against — it is ' +
+            'running as an IDEAL op-amp (no bandwidth, no slew) until a gnd ' +
+            'part exists.',
+        });
+      }
+    }
+
     // Refused device-control verbs are user-intent feedback and show
     // regardless of power state (spec-updates/set-device-control.md).
     if (this._refusedControls) {
@@ -2501,7 +2622,12 @@ export class BoardImpl {
 
   /** Any capacitor or inductor present? */
   _hasReactive() {
-    for (const p of this.parts) {
+    // SOLVER view, not the drawing: hidden reactive parts (motor
+    // windings, macromodel poles) must pull advanceTo into transient
+    // integration too — a macro op-amp's internal capacitor never
+    // charged because this scanned only the public parts, and the
+    // follower sat at 0 V forever.
+    for (const p of (this._solveParts ?? this.parts)) {
       if (p.kind === 'capacitor' || p.kind === 'inductor') return true;
     }
     return false;

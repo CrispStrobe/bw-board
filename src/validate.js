@@ -40,6 +40,8 @@ const KNOWN_TERMINALS = {
   opamp: ['inp', 'inn', 'out'],
   vsource: ['pos', 'neg'],
   isource: ['pos', 'neg'],
+  vcvs: ['outp', 'outn', 'inp', 'inn'],
+  vccs: ['outp', 'outn', 'inp', 'inn'],
   shift_register: ['data', 'clock', 'latch', 'oe', 'q0', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7'],
   char_lcd: ['rs', 'rw', 'e', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'vcc', 'gnd', 'vo', 'bl_a', 'bl_k'],
   led_matrix: null, // composite — variable size

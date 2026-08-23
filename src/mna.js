@@ -657,6 +657,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           vsIndex.set(part.id, vsCount++);
         }
       }
+      // Controlled voltage source (spec-updates/controlled-sources.md)
+      if (part.kind === 'vcvs') {
+        const outNet = findNet(nets, part.id, 'outp');
+        if (outNet && nodeIndex.has(outNet)) {
+          vsIndex.set(part.id, vsCount++);
+        }
+      }
       // Independent voltage source (may have current limit for CC mode)
       if (part.kind === 'vsource') {
         const posNet = findNet(nets, part.id, 'pos');
@@ -712,6 +719,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // -420V on pc24 — because beta*Ib exceeded anything the load allows.
   const bjtRegions = new Map();
   const mosRegions = new Map();
+  /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
+  const vccsClamps = new Map();
   for (const part of parts) {
     if (part.kind === 'led' || part.kind === 'diode' || part.kind === 'npn'
         || part.kind === 'pnp' || part.kind === 'zener'
@@ -719,6 +728,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       diodeVoltages.set(part.id, 0); // initial guess
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
+    if (part.kind === 'vcvs' && (part.params?.railLow !== undefined
+        || part.params?.railHigh !== undefined)) {
+      opampRegions.set(part.id, 'linear'); // shares the op-amp rail FSM
+    }
+    if (part.kind === 'vccs' && part.params?.iMax > 0) {
+      vccsClamps.set(part.id, 'linear');
+    }
     if (part.kind === 'npn' || part.kind === 'pnp') bjtRegions.set(part.id, 'active');
     if (part.kind === 'nmos' || part.kind === 'pmos') mosRegions.set(part.id, 'saturation');
   }
@@ -902,6 +918,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
         case 'opamp':
           stampOpamp(A, b, part, nets, nodeIndex, groundNetId, vsIndex, opampRegions, vcc, srcScale);
+          break;
+
+        case 'vcvs':
+          stampVCVS(A, b, part, nets, nodeIndex, vsIndex, opampRegions, srcScale);
+          break;
+
+        case 'vccs':
+          // The iMax clamp is a DYNAMIC limit (slew): at DC it has no
+          // meaning and makes the macromodel's operating point a clamp±
+          // ping-pong through the rails — so it engages only in transient.
+          stampVCCS(A, b, part, nets, nodeIndex, transient ? vccsClamps : null);
           break;
 
         case 'vsource':
@@ -1111,11 +1138,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       diodeVoltages.set(part.id, vLimited);
     }
 
-    // Op-amp region transitions: linear ↔ saturated at a supply rail.
+    // Op-amp / railed-vcvs region transitions: linear ↔ saturated at a
+    // supply rail. The vcvs shares the FSM (controlled-sources.md); one
+    // that declared no rails never enters opampRegions and skips here.
     let regionChanged = false;
     for (const part of parts) {
-      if (part.kind !== 'opamp' || !vsIndex.has(part.id)) continue;
-      const gain = /** @type {number} */ (part.params.gain ?? 1e6);
+      if ((part.kind !== 'opamp' && part.kind !== 'vcvs')
+          || !vsIndex.has(part.id) || !opampRegions.has(part.id)) continue;
+      const gain = /** @type {number} */ (part.params.gain ?? (part.kind === 'vcvs' ? 1 : 1e6));
       const railLow = /** @type {number} */ (part.params.railLow ?? 0);
       const railHigh = /** @type {number} */ (part.params.railHigh ?? vcc);
       const netP = findNet(nets, part.id, 'inp');
@@ -1222,6 +1252,35 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (next !== region) {
         mosRegions.set(part.id, next);
+        regionChanged = true;
+      }
+    }
+
+    // vccs iMax clamp transitions (the op-amp macromodel's slew limit) —
+    // transient only; see the stamp-site note.
+    for (const part of parts) {
+      if (!transient || !vccsClamps.has(part.id)) continue;
+      const gm = /** @type {number} */ (part.params.gm ?? 1e-3);
+      const iMax = /** @type {number} */ (part.params.iMax);
+      const netP = findNet(nets, part.id, 'inp');
+      const netN = findNet(nets, part.id, 'inn');
+      const iP = netP ? nodeIndex.get(netP) : undefined;
+      const iN = netN ? nodeIndex.get(netN) : undefined;
+      const vin = (iP !== undefined ? solution[iP] : 0)
+        - (iN !== undefined ? solution[iN] : 0);
+      const iLin = gm * vin;
+      const region = vccsClamps.get(part.id);
+      let next = region;
+      if (region === 'linear') {
+        if (iLin > iMax) next = 'clamp+';
+        else if (iLin < -iMax) next = 'clamp-';
+      } else if (region === 'clamp+') {
+        if (iLin < iMax * 0.99) next = 'linear';
+      } else if (iLin > -iMax * 0.99) {
+        next = 'linear';
+      }
+      if (next !== region) {
+        vccsClamps.set(part.id, next);
         regionChanged = true;
       }
     }
@@ -1500,6 +1559,32 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // Output current from the source row (positive = out of the output).
       const iOut = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
       currents.set('out', iOut);
+      currents.set('inp', 0);
+      currents.set('inn', 0);
+    }
+
+    if (part.kind === 'vcvs' && vsIndex.has(part.id)) {
+      const iOut = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
+      currents.set('outp', iOut);
+      currents.set('outn', -iOut);
+      currents.set('inp', 0);
+      currents.set('inn', 0);
+    }
+
+    if (part.kind === 'vccs') {
+      const region = vccsClamps.get(part.id) ?? 'linear';
+      let i;
+      if (region === 'clamp+') i = /** @type {number} */ (part.params.iMax);
+      else if (region === 'clamp-') i = -(/** @type {number} */ (part.params.iMax));
+      else {
+        const nP = findNet(nets, part.id, 'inp');
+        const nN = findNet(nets, part.id, 'inn');
+        const vin = (nP ? (nodeVoltages.get(nP) ?? 0) : 0)
+          - (nN ? (nodeVoltages.get(nN) ?? 0) : 0);
+        i = (/** @type {number} */ (part.params.gm ?? 1e-3)) * vin;
+      }
+      currents.set('outp', i);
+      currents.set('outn', -i);
       currents.set('inp', 0);
       currents.set('inn', 0);
     }
@@ -2325,6 +2410,70 @@ function stampOpamp(A, b, part, nets, nodeIndex, groundNetId, vsIndex, opampRegi
     A.set(row, idxO, 1);
     b[row] = region === 'high' ? railHigh : railLow;
   }
+}
+
+/**
+ * Controlled voltage source (spec-updates/controlled-sources.md):
+ * V(outp) − V(outn) = gain·(V(inp) − V(inn)), branch current in the row.
+ * Control pins are ideal (no loading). With rails declared, the shared
+ * op-amp region FSM clamps the output at railLow/railHigh (× srcScale,
+ * consistent with source stepping).
+ */
+function stampVCVS(A, b, part, nets, nodeIndex, vsIndex, opampRegions, srcScale = 1) {
+  const vsIdx = vsIndex.get(part.id);
+  if (vsIdx === undefined) return;
+  const row = nodeIndex.size + vsIdx;
+  const gain = /** @type {number} */ (part.params.gain ?? 1);
+  const idx = (t) => {
+    const n = findNet(nets, part.id, t);
+    return n ? nodeIndex.get(n) : undefined;
+  };
+  const iOp = idx('outp');
+  const iOn = idx('outn');
+  if (iOp !== undefined) { A.add(iOp, row, 1); A.add(row, iOp, 1); }
+  if (iOn !== undefined) { A.add(iOn, row, -1); A.add(row, iOn, -1); }
+  const region = opampRegions.get(part.id) ?? 'linear';
+  if (region === 'linear') {
+    const iIp = idx('inp');
+    const iIn = idx('inn');
+    if (iIp !== undefined) A.add(row, iIp, -gain);
+    if (iIn !== undefined) A.add(row, iIn, gain);
+    b[row] = 0;
+  } else {
+    const railLow = /** @type {number} */ (part.params.railLow ?? 0) * srcScale;
+    const railHigh = /** @type {number} */ (part.params.railHigh ?? 5) * srcScale;
+    b[row] = region === 'high' ? railHigh : railLow;
+  }
+}
+
+/**
+ * Controlled current source: gm·(V(inp) − V(inn)) injected INTO outp,
+ * out of outn. With iMax declared, the clamp FSM pins the output current
+ * at ±iMax (the macromodel's slew limit).
+ */
+function stampVCCS(A, b, part, nets, nodeIndex, vccsClamps) {
+  const gm = /** @type {number} */ (part.params.gm ?? 1e-3);
+  const idx = (t) => {
+    const n = findNet(nets, part.id, t);
+    return n ? nodeIndex.get(n) : undefined;
+  };
+  const iOp = idx('outp');
+  const iOn = idx('outn');
+  const region = vccsClamps?.get(part.id) ?? 'linear';
+  if (region !== 'linear') {
+    const iMax = /** @type {number} */ (part.params.iMax);
+    const iClamp = region === 'clamp+' ? iMax : -iMax;
+    if (iOp !== undefined) b[iOp] += iClamp;
+    if (iOn !== undefined) b[iOn] -= iClamp;
+    return;
+  }
+  const iIp = idx('inp');
+  const iIn = idx('inn');
+  // Injection into outp = +gm·vin → LHS: A[outp][inp] −= gm, etc.
+  if (iOp !== undefined && iIp !== undefined) A.add(iOp, iIp, -gm);
+  if (iOp !== undefined && iIn !== undefined) A.add(iOp, iIn, gm);
+  if (iOn !== undefined && iIp !== undefined) A.add(iOn, iIp, gm);
+  if (iOn !== undefined && iIn !== undefined) A.add(iOn, iIn, -gm);
 }
 
 /**

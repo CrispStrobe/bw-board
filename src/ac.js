@@ -120,6 +120,9 @@ export function acSweep(args) {
     if (p.kind === 'opamp' && idxOf(netOf(p.id, 'out')) !== undefined) {
       rowIndex.set(p.id, acRows++);
     }
+    if (p.kind === 'vcvs' && idxOf(netOf(p.id, 'outp')) !== undefined) {
+      rowIndex.set(p.id, acRows++);
+    }
   }
 
   const N = nodeCount + acRows;
@@ -282,6 +285,48 @@ export function acSweep(args) {
           addC(row, iO, 1, 0);
           if (iP !== undefined) addC(row, iP, -gain, 0);
           if (iN !== undefined) addC(row, iN, gain, 0);
+          break;
+        }
+        case 'vcvs': {
+          if (!rowIndex.has(part.id)) break;
+          const row = nodeCount + rowIndex.get(part.id);
+          const iOp = idxOf(netOf(part.id, 'outp'));
+          if (iOp === undefined) break;
+          const iOn = idxOf(netOf(part.id, 'outn'));
+          addC(iOp, row, 1, 0);
+          addC(row, iOp, 1, 0);
+          if (iOn !== undefined) { addC(iOn, row, -1, 0); addC(row, iOn, -1, 0); }
+          // Region at the OP: a railed buffer is small-signal dead — its
+          // output cannot move, so the row pins the AC output to 0.
+          const gain = P.gain ?? 1;
+          const vinOp = vOp(netOf(part.id, 'inp')) - vOp(netOf(part.id, 'inn'));
+          const railLow = P.railLow;
+          const railHigh = P.railHigh;
+          const railed = (railHigh !== undefined && gain * vinOp > railHigh)
+            || (railLow !== undefined && gain * vinOp < railLow);
+          if (!railed) {
+            const iIp = idxOf(netOf(part.id, 'inp'));
+            const iIn = idxOf(netOf(part.id, 'inn'));
+            if (iIp !== undefined) addC(row, iIp, -gain, 0);
+            if (iIn !== undefined) addC(row, iIn, gain, 0);
+          }
+          break;
+        }
+        case 'vccs': {
+          const gm = P.gm ?? 1e-3;
+          // Clamped at the OP → the output is a fixed current: small-signal 0.
+          if (P.iMax > 0) {
+            const vinOp = vOp(netOf(part.id, 'inp')) - vOp(netOf(part.id, 'inn'));
+            if (Math.abs(gm * vinOp) >= P.iMax) break;
+          }
+          const iOp = idxOf(netOf(part.id, 'outp'));
+          const iOn = idxOf(netOf(part.id, 'outn'));
+          const iIp = idxOf(netOf(part.id, 'inp'));
+          const iIn = idxOf(netOf(part.id, 'inn'));
+          if (iOp !== undefined && iIp !== undefined) addC(iOp, iIp, -gm, 0);
+          if (iOp !== undefined && iIn !== undefined) addC(iOp, iIn, gm, 0);
+          if (iOn !== undefined && iIp !== undefined) addC(iOn, iIp, gm, 0);
+          if (iOn !== undefined && iIn !== undefined) addC(iOn, iIn, -gm, 0);
           break;
         }
         case 'mcu': {
