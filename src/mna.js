@@ -27,7 +27,7 @@
  * Dense matrix backed by a flat Float64Array.
  */
 import { getDevice } from './devices.js';
-import { CooMatrix } from './sparse.js';
+import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 
 class Matrix {
   /**
@@ -122,20 +122,49 @@ function solve(A, b) {
 }
 
 /**
- * Solve the assembled CooMatrix system.
+ * Solve the assembled CooMatrix system — sparse LU with a three-level
+ * reuse ladder (spec-updates/sparse-lu-factor-reuse.md):
  *
- * Interim backend: expand to dense and run the reference elimination —
- * the sparse LU kernel replaces this in the next landing of
- * spec-updates/sparse-lu-factor-reuse.md, behind this same seam.
+ *   1. identical pattern AND identical values → substitution only
+ *      (the idle-transient / repeated-instrument-read case);
+ *   2. identical pattern, new values → numeric refactor along the stored
+ *      pivot order and reach lists, no DFS (the NR-iteration case);
+ *   3. otherwise → full factorization with partial pivoting.
+ *
+ * The cache is module-level: two boards alternating solves miss it and
+ * refactor — never corrupt (pattern equality gates every reuse), and a
+ * failed refactor drops the cache before falling back to a full factor.
  *
  * @param {CooMatrix} A
  * @param {Float64Array} b - consumed
  * @returns {Float64Array}
  */
+let _luCache = null; // { lu: SparseLU, values: Float64Array }
+
 function solveAssembled(A, b) {
-  const dense = new Matrix(A.n, A.n);
-  for (let i = 0; i < A.v.length; i++) dense.add(A.ri[i], A.ci[i], A.v[i]);
-  return solve(dense, b);
+  const csc = toCSC(A);
+  const c = _luCache;
+  if (c && c.lu.samePattern(csc)) {
+    const vals = csc.values;
+    const prev = c.values;
+    let same = vals.length === prev.length;
+    if (same) {
+      for (let i = 0; i < vals.length; i++) {
+        if (vals[i] !== prev[i]) { same = false; break; }
+      }
+    }
+    if (same) return c.lu.solve(b);
+    if (c.lu.refactor(csc)) {
+      c.values = vals.slice();
+      return c.lu.solve(b);
+    }
+    // Refactor bailed: its partial writes invalidated the stored factors.
+    _luCache = null;
+  }
+  const lu = new SparseLU();
+  lu.factor(csc); // throws "Singular matrix at column N" — same contract as dense
+  _luCache = { lu, values: csc.values.slice() };
+  return lu.solve(b);
 }
 
 // ─── LED / diode model for Newton–Raphson ────────────────────────────────────
