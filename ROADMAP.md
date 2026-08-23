@@ -281,6 +281,82 @@ at 1/8 duty reads brightness 0.125·(i/i_rated) per lit cell; a
 charlieplexed fixture refuses with a reason rather than guessing.
 Not gated.
 
+### E5.0 The owner's 6502-build BOM — coverage matrix (2026-08-23)
+The owner's actual parts order (W65C02S build, Mouser) is the concrete
+target: everything on it simulated and example-covered, in the end.
+Verified against the engine line by line:
+
+| BOM part | model | notes |
+|---|---|---|
+| W65C02S | ✅ | CPU core + extractor + machine + debugger |
+| AS6C62256 (62256) | ✅ | real byte array, /CS /OE /WE, floating-strobe hazard modeled |
+| AT28C256 EEPROM | ✅ write incl. | write-cycle time / page mode / SDP unmodeled — note only |
+| W65C22 VIA | ✅ | timers count phi2 |
+| **W65C51N ACIA** | ✅ **as the N silicon** | the infamous TDRE bug (bit 4 stuck) is what the model implements — matches the ordered part; a `params.datasheetTdre` variant is a later nicety |
+| NE555 | ✅ | timer_555 |
+| **74HC373** | ❌ **E5.6** | only the '374 exists, and a transparent latch is not a D flip-flop (the importers already refuse that mapping) |
+| 74HC595 | ✅ | FSM + oracle |
+| 74HC(T)04/14/00/32/08/138/245 | ✅ as HC | **HCT thresholds are E5.7** |
+| ATmega88PA | ⚠️ **E5.8** | avr8js family runs 328P/tiny13/85/88/2313; the mega88PA chip config needs verifying/adding |
+| DIP oscillator cans (1.8432 MHz, 1 MHz) | ❌ **E5.9** | `crystal` exists (honest open-at-DC); a POWERED clock-can part does not |
+| MAX232 | ❌ **E5.10** | no model |
+| 330 Ω bussed SIP network | ❌ **E5.11** | wiring discretes works; the PART (common-pin topology) does not exist |
+| 10-seg LED bars | ✅ | bargraph |
+| caps/resistors/trimmer/switches/DIP-switch/battery holders/headers/USB breakout | ✅ | battery holders = battery with volts param; USB-C breakout is bench furniture |
+
+Example COVERAGE is the second axis and the examples owner's lane
+(lite ROADMAP §3.5 item 8): even fully-modeled BOM parts are thinly
+exampled today.
+
+### E5.6 74HC373 transparent latch — `src/devices/chip-composer.js`
+The '374 (edge-triggered) exists; the '373 (transparent, LE level-
+gated) does not, and the BOM orders a '373. One chip-composer entry +
+sidecar pinout + oracle: outputs FOLLOW D while LE is high, latch on
+the falling edge, tri-state on /OE — and a test asserting it is NOT a
+'374 (data change during LE-high propagates). Not gated.
+
+### E5.7 HCT input thresholds — `src/devices/logic-gates.js` + chip-composer
+HC thresholds are 30 %/70 % of VCC; HCT is TTL-fixed (VIL 0.8 V,
+VIH 2.0 V) regardless of rail — the reason HCT parts are on this BOM at
+all (5 V system mixing MCU drive levels). `params.family: 'hct'` (or
+kind aliases 74hct*) switches the thresholds. Oracle: a 3.6 V input at
+VCC 5 reads high for HCT and high for HC, but 2.2 V reads high ONLY for
+HCT. Not gated.
+
+### E5.8 ATmega88PA chip config — `src/avr-chips.js`
+Same family as the 328P with 8 KB flash / 1 KB SRAM and near-identical
+register file. Verify what the 168P example variants actually run on,
+add the mega88PA entry, and give it a board fixture. Acceptance: blink +
+UART fixture runs on the mega88PA config with the right memory bounds
+(an image over 8 KB refuses with the size named). Not gated.
+
+### E5.9 DIP oscillator can — `src/devices/retro-dips.js`
+A powered clock module is not a crystal: OE/VCC/GND/OUT, drives a
+square wave at params.freq. The machine tier's clock stays adapter-
+driven (stated in the crystal's own doc); the part serves bench
+lessons (frequency counters, dividers via '93/'161) and the drawn-
+wiring story. Model: a square vsource behind 50 Ω when powered, high-Z
+when not. Oracle: a '93 divider chain off a 1 MHz can reads f/16 on a
+scope channel. Not gated.
+
+### E5.10 MAX232 — `src/devices/`
+Dual RS-232 driver/receiver: inverting buffers with ±charge-pump rails
+approximated as ±8 V drive behind 300 Ω, receivers with TTL-out
+inversion and RS-232 thresholds; the four charge-pump capacitor pins
+load as 1 µF each so the canonical wiring draws correctly. The serial
+DATA path already exists (ACIA onTx hooks); this part makes the drawn
+level-shifting honest. Oracle: TTL 5 V in → RS-232 ≈ −8 V out and back.
+Not gated.
+
+### E5.11 Bussed resistor network (SIP) — `src/devices/` or composite
+One part, params {pins, ohms, topology: 'bussed' | 'isolated'}: pin 1
+common + N resistors (bussed) or N isolated pairs. Teaching point: the
+common-pin topology itself (a bussed network CANNOT be used where
+isolated resistors are needed — LED bar current sharing). Expansion into
+hidden resistors (composite precedent) keeps the solver untouched.
+Oracle: 9-pin bussed 330 Ω from a rail lights 8 bargraph segments at
+the hand-computed per-segment current. Not gated.
+
 ### E5.5 Bus TIMING domain — long-horizon, do not start casually
 The extractor models the ADDRESS domain; RWB/PHI2/data are checked for
 presence, not timing. A timing domain (setup/hold at the bus, wait
