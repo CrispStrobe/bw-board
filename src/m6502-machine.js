@@ -34,7 +34,7 @@ import { SDCardSPI } from './sdcard-spi.js';
  * @property {number} clockHz phi2 frequency
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number, perm?: number[]}>} regions
  *   inclusive ranges; perm (E5.2) maps chip A-pin i to CPU address bit perm[i]
- * @property {Array<{kind: 'via'|'acia'|'acia6850'|'riot'|'psg8912'|'uart16550'|'latch', name: string, at: number,
+ * @property {Array<{kind: 'via'|'acia'|'acia6850'|'riot'|'psg8912'|'um245r'|'uart16550'|'latch', name: string, at: number,
  *   xtal?: number, span?: number}>} chips
  *   base addresses; xtal overrides a uart16550's input clock (defaults to
  *   the machine clock — the KiT wiring — since a breadboard that gives the
@@ -178,6 +178,7 @@ export class M6502Machine {
                 : c.kind === 'acia6850' ? 2
                 : c.kind === 'riot' ? 256
                 : c.kind === 'psg8912' ? 2
+                : c.kind === 'um245r' ? 1
                 : c.kind === 'console' ? 8
                 : c.kind === 'tilevga' ? 0x4000 : 4;
             const span = c.span || regs;
@@ -223,6 +224,19 @@ export class M6502Machine {
                     read: (reg) => (((readMask >> reg) & 1) ? ay.read() : 0xff),
                     write: (reg, v) => { if (reg === 0) ay.select(v); else ay.write(v); },
                     advance: (n) => ay.advance(n),
+                };
+            } else if (c.kind === 'um245r') {
+                // USB FIFO at one address: a read takes the next queued
+                // byte (0xff when empty — the pins float high with no
+                // data, and phase-1 has no memory-mapped status; RXF/TXE
+                // are PINS on this part), a write leaves via onSerial.
+                // Feed it with machine.chips.<name>.rxPush(byte).
+                const rx = [];
+                chip = {
+                    rx,
+                    rxPush: (b) => rx.push(b & 0xff),
+                    read: () => (rx.length ? rx.shift() : 0xff),
+                    write: (reg, v) => { if (this.hooks.onSerial) this.hooks.onSerial(v & 0xff, this.tMs); },
                 };
             } else if (c.kind === 'riot') {
                 // MOS 6532: 128 bytes RAM + ports + timer in one 256-byte

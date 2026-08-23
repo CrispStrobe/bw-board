@@ -244,7 +244,7 @@ touch the tier). New EXAMPLE WAVES are the examples owner's lane and
 gated by lite PLAN.md Milestone 0's review-debt rule; the items below
 are the ENGINE work that widens the space those waves can draw on.
 
-### E5.1 Extractor SELECT vocabulary — `src/m6502-extract.js` (+ z80 twin)
+### E5.1 Extractor SELECT vocabulary — DONE (all five candidates)
 The decode evaluator knew five select shapes (62256, 28C256, W65C22,
 W65C51, TMS9918). Each addition is one SELECT-table entry + RS_PINS/
 CHIP_DECL rows + an extraction fixture.
@@ -272,9 +272,14 @@ RECORDED as readMask, not legislated), an AY read window overlapping
 any other chip is bus contention with the address named, BDIR active
 during a read cycle refuses with the fix named, and m6502-machine runs
 'psg8912' over the AY38912 core. ay8912 DIP-28 pin surface added.
-The ONE remaining candidate: UM245R (directional RD/WR strobes off the
-decode, the z80 twin's dir:'read' shape — and the 6502 machine has no
-um245r chip kind yet). Acceptance per chip: a
+**UM245R DONE** — the second consumer of the rwb axis: /RD low during
+read cycles and WR high during write cycles classify into one shared
+window (read-only and write-only wirings noted, disagreeing windows
+refused); /RD active during a write cycle or WR during a read refuses
+with the address and the fix named. m6502-machine runs 'um245r' as a
+one-address FIFO (read = next queued byte or 0xff — RXF/TXE are PINS
+on this part, not registers; write = onSerial; feed via rxPush).
+E5.1 is closed: MC6850, NS16C550, M6532, AY-3-8912, UM245R. Acceptance per chip: a
 hand-wired decode fixture extracts the right window; a deliberately
 contending decode is refused with the address named. Not gated (no
 mna.js).

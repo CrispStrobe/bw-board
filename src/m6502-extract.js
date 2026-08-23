@@ -59,7 +59,7 @@ const RS_PINS = {
 };
 const CHIP_DECL = {
     via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA',
-    acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532', psg8912: 'AY38912',
+    acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532', psg8912: 'AY38912', um245r: 'UM245R',
 };
 
 /**
@@ -184,6 +184,24 @@ export function extract6502Machine(circuit) {
         ayChips.push({ part: p, bdir, bc1, a8: a8Wired ? a8 : null,
             latch: new Uint8Array(65536), wr: new Uint8Array(65536), rd: new Uint8Array(65536) });
     }
+    // UM245R USB FIFO (E5.1, last candidate): directional strobes, the
+    // other thing the rwb axis makes expressible. /RD low during a read
+    // cycle puts the FIFO on the bus; WR high during a write cycle
+    // clocks a byte in. Both are decode outputs, not chip selects.
+    const fifoChips = [];
+    for (const p of parts) {
+        if (p.kind !== 'um245r') continue;
+        const rdb = find(key(p.id, 'rdb'));
+        const wr = find(key(p.id, 'wr'));
+        const rdWired = netDriver.has(rdb);
+        const wrWired = netDriver.has(wr);
+        if (!rdWired && !wrWired) {
+            reasons.push(`${p.id}: neither rdb nor wr is driven — a FIFO with no strobes is not on the bus`);
+            continue;
+        }
+        fifoChips.push({ part: p, rdb: rdWired ? rdb : null, wr: wrWired ? wr : null,
+            rd: new Uint8Array(65536), wrs: new Uint8Array(65536) });
+    }
     if (!selChips.length) reasons.push('no RAM, ROM, VIA or ACIA on the board');
     if (reasons.length) return { ok: false, notes, reasons };
 
@@ -215,14 +233,32 @@ export function extract6502Machine(circuit) {
                 }
                 if (bdirR === 0 && bc1R === 1) c.rd[addr] = 1;
             }
+            for (const c of fifoChips) {
+                // Write phase (rwb=0) with the shared memo; read phase fresh.
+                const wrW = c.wr === null ? 0 : evalNet(c.wr);
+                const rdbW = c.rdb === null ? 1 : evalNet(c.rdb);
+                rwb = 1; const memoW2 = memo; memo = new Map();
+                const rdbR = c.rdb === null ? 1 : evalNet(c.rdb);
+                const wrR = c.wr === null ? 0 : evalNet(c.wr);
+                memo = memoW2; rwb = 0;
+                if (rdbW === 0) {
+                    throw new Error(`${c.part.id}: /RD is active during a CPU write cycle at ${'$' + addr.toString(16).padStart(4, '0')} — gate /RD with RWB, or the FIFO fights the CPU for the bus on writes`);
+                }
+                if (wrR === 1) {
+                    throw new Error(`${c.part.id}: WR is active during a CPU read cycle at ${'$' + addr.toString(16).padStart(4, '0')} — a read would clock bus garbage into the FIFO; gate WR with ~RWB`);
+                }
+                if (rdbR === 0) c.rd[addr] = 1;
+                if (wrW === 1) c.wrs[addr] = 1;
+            }
         }
     } catch (e) {
         return { ok: false, notes, reasons: [e.message] };
     }
 
-    // ---- AY read-drive contention: the pair (0,1) puts the chip ON the
-    // data bus, so a read window overlapping anything else IS contention.
-    for (const c of ayChips) {
+    // ---- read-drive contention: an AY in read mode or a FIFO with /RD
+    // low is ON the data bus, so its read window overlapping anything
+    // else IS contention.
+    for (const c of [...ayChips, ...fifoChips]) {
         for (let a = 0; a < 65536; a++) {
             if (!c.rd[a]) continue;
             const other = selChips.find((s2) => s2.selected[a]);
@@ -289,6 +325,29 @@ export function extract6502Machine(circuit) {
         if (readMask === 0) notes.push(`${c.part.id} is wired write-only (no read decode) — common, and legal`);
         if (hi - lo + 1 > 2) notes.push(`${c.part.id} mirrors through ${'$' + lo.toString(16).padStart(4, '0').toUpperCase()}-${'$' + hi.toString(16).padStart(4, '0').toUpperCase()} (decoded coarsely); its latch/data pair sits at ${'$' + lo.toString(16).padStart(4, '0').toUpperCase()}`);
         ayResolved.push({ kind: 'psg8912', name: c.part.id, at: lo, span: hi - lo + 1, readMask });
+    }
+    // ---- FIFO windows: read and write strobes must agree ----------------
+    for (const c of fifoChips) {
+        const range = (arr) => {
+            let lo = -1; let hi = -1;
+            for (let a = 0; a < 65536; a++) if (arr[a]) { if (lo < 0) lo = a; hi = a; }
+            if (lo < 0) return null;
+            for (let a = lo; a <= hi; a++) if (!arr[a]) return { lo, hi, holed: a };
+            return { lo, hi };
+        };
+        const rr = range(c.rd); const wrange = range(c.wrs);
+        if (rr && rr.holed !== undefined) { reasons.push(`${c.part.id}: the read window is non-contiguous at ${'$' + rr.holed.toString(16).padStart(4, '0')}`); continue; }
+        if (wrange && wrange.holed !== undefined) { reasons.push(`${c.part.id}: the write window is non-contiguous at ${'$' + wrange.holed.toString(16).padStart(4, '0')}`); continue; }
+        if (!rr && !wrange) { reasons.push(`${c.part.id} is never strobed — check the /RD and WR decode`); continue; }
+        if (rr && wrange && (rr.lo !== wrange.lo || rr.hi !== wrange.hi)) {
+            reasons.push(`${c.part.id}: the read window ${'$' + rr.lo.toString(16)}-${'$' + rr.hi.toString(16)} and write window ${'$' + wrange.lo.toString(16)}-${'$' + wrange.hi.toString(16)} disagree — one FIFO address serves both directions`);
+            continue;
+        }
+        const win = rr || wrange;
+        if (!rr) notes.push(`${c.part.id} is wired write-only (no read strobe)`);
+        if (!wrange) notes.push(`${c.part.id} is wired read-only (no write strobe)`);
+        if (win.hi - win.lo + 1 > 1) notes.push(`${c.part.id} mirrors through ${'$' + win.lo.toString(16).padStart(4, '0').toUpperCase()}-${'$' + win.hi.toString(16).padStart(4, '0').toUpperCase()} (decoded coarsely); the FIFO sits at ${'$' + win.lo.toString(16).padStart(4, '0').toUpperCase()}`);
+        ayResolved.push({ kind: 'um245r', name: c.part.id, at: win.lo, span: win.hi - win.lo + 1 });
     }
     if (reasons.length) return { ok: false, notes, reasons };
 
