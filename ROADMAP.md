@@ -299,8 +299,8 @@ Verified against the engine line by line:
 | 74HC(T)04/14/00/32/08/138/245 | ✅ | **E5.7 done**: 74hct* kinds + params.family:'hct' give TTL-fixed 0.8/2.0 V (1.4 V center for the mid-rail models); aliases for hct00/04/08/14/32/138/245 |
 | ATmega88PA | ⚠️ **E5.8** | avr8js family runs 328P/tiny13/85/88/2313; the mega88PA chip config needs verifying/adding |
 | DIP oscillator cans (1.8432 MHz, 1 MHz) | ✅ **E5.9 done** | `osc_can` (OE/GND/OUT/VCC, params.freq) drives its square via E4.1 wakes so dividers count real edges; '93-chain f/16 oracle; sidecar landed (osc_can, DIP-14 corner leads) |
-| MAX232 | ❌ **E5.10** | no model |
-| 330 Ω bussed SIP network | ❌ **E5.11** | wiring discretes works; the PART (common-pin topology) does not exist |
+| MAX232 | ✅ **E5.10 done** | devices/max232.js: ±8 V inverting drivers behind 300 Ω, receivers with 1.3 V threshold + real 5 kΩ load (fail-safe high), pump rails probeable; loopback oracle |
+| 330 Ω bussed SIP network | ✅ **E5.11 done** | rnet_sip (params pins/ohms/topology): pure stamp device; oracles include the bussed-misuse measurement (path through the common pin) |
 | 10-seg LED bars | ✅ | bargraph |
 | caps/resistors/trimmer/switches/DIP-switch/battery holders/headers/USB breakout | ✅ | battery holders = battery with volts param; USB-C breakout is bench furniture |
 
@@ -339,7 +339,7 @@ wiring story. Model: a square vsource behind 50 Ω when powered, high-Z
 when not. Oracle: a '93 divider chain off a 1 MHz can reads f/16 on a
 scope channel. Not gated.
 
-### E5.10 MAX232 — `src/devices/`
+### E5.10 MAX232 — DONE
 Dual RS-232 driver/receiver: inverting buffers with ±charge-pump rails
 approximated as ±8 V drive behind 300 Ω, receivers with TTL-out
 inversion and RS-232 thresholds; the four charge-pump capacitor pins
@@ -348,7 +348,7 @@ DATA path already exists (ACIA onTx hooks); this part makes the drawn
 level-shifting honest. Oracle: TTL 5 V in → RS-232 ≈ −8 V out and back.
 Not gated.
 
-### E5.11 Bussed resistor network (SIP) — `src/devices/` or composite
+### E5.11 Bussed resistor network (SIP) — DONE (engine; sidecar pending)
 One part, params {pins, ohms, topology: 'bussed' | 'isolated'}: pin 1
 common + N resistors (bussed) or N isolated pairs. Teaching point: the
 common-pin topology itself (a bussed network CANNOT be used where
