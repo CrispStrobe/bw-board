@@ -376,7 +376,6 @@ export class BoardImpl {
     // an LED) silently produces brightness 0 — a plausible wrong answer.
     const errors = validateNetlist(parts, nets);
     ({ parts, nets } = BoardImpl._expandComposites(parts, nets));
-    ({ parts, nets } = BoardImpl._expandMotorWindings(parts, nets));
     const fatal = errors.filter(e => e.severity === 'error');
     if (fatal.length > 0) {
       throw new Error(
@@ -388,6 +387,20 @@ export class BoardImpl {
     this.nets = nets;
     this.partMap = new Map(parts.map(p => [p.id, p]));
     this.netMap = new Map(nets.map(n => [n.id, n]));
+    // SOLVER-INTERNAL view: motor winding inductances become first-class
+    // solver inductors on hidden series nets (_expandMotorWindings — the
+    // why lives there). The PUBLIC parts/nets above stay exactly what the
+    // user drew: topology consumers (DRC, corpus invariants, exporters)
+    // must keep seeing the diode on the net the motor pin is wired to,
+    // not one hop into the motor's insides.
+    const solveView = BoardImpl._expandMotorWindings(parts, nets);
+    this._solveParts = solveView.parts;
+    this._solveNets = solveView.nets;
+    for (const p of this._solveParts) {
+      if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
+        this.inductorCurrents.set(p.id, 0);
+      }
+    }
     this.ledHistory.clear();
     this.buzzerEdges.clear();
     this.capVoltages.clear();
@@ -404,11 +417,6 @@ export class BoardImpl {
       if (p.kind === 'capacitor') {
         if (!this.capVoltages.has(p.id)) {
           this.capVoltages.set(p.id, 0); // start uncharged
-        }
-      }
-      if (p.kind === 'inductor') {
-        if (!this.inductorCurrents.has(p.id)) {
-          this.inductorCurrents.set(p.id, 0);
         }
       }
       if (p.kind === 'shift_register') {
@@ -2150,7 +2158,7 @@ export class BoardImpl {
    */
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
     this._syncDeviceGpioDrives();
-    return solveMNA(this.parts, this.nets, this._pinSources(), this.controls, this.vcc, {
+    return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, {
       powerOff,
       testNodeA,
       testNodeB,
@@ -2563,7 +2571,7 @@ export class BoardImpl {
     const qual = this._qualifiedSources();
     let nSolves = 0;
     const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) =>
-      (nSolves++, solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
+      (nSolves++, solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, {
         tSeconds: tStart + hs,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
           capCurrents: ccS, inductorVoltages: lvS },
@@ -3376,7 +3384,10 @@ export class BoardImpl {
    * @returns {string | undefined} net id
    */
   _netForTerminal(partId, terminal) {
-    for (const net of this.nets) {
+    // The SOLVER view: identical to the drawn netlist except that an
+    // expanded motor's 'a' resolves to its hidden winding net, so device
+    // reads and instrument taps see the node its model actually sits on.
+    for (const net of (this._solveNets ?? this.nets)) {
       for (const t of net.terminals) {
         if (t.part === partId && t.terminal === terminal) {
           return net.id;
