@@ -20,6 +20,7 @@
 
 import { pinThevenin } from './pin-model.js';
 import { solveMNA } from './mna.js';
+import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
@@ -1519,6 +1520,61 @@ export class BoardImpl {
     this._solve();
     this._recordLedSamples();
     this._notifyChange('power', { on });
+  }
+
+  /**
+   * Boundary B: true small-signal AC sweep
+   * (spec-updates/ac-small-signal.md; the engine answer that replaces the
+   * time-domain sine correlation — which stays available in sweep.js as
+   * the cross-check the two must agree with on linear circuits).
+   *
+   * Linearizes at the DC operating point and solves the complex system per
+   * frequency; the swept source drives a unit phasor, every other source
+   * is killed. Runs against the SOLVER view (motor windings included).
+   * Refuses — throws — when the operating point did not converge: an AC
+   * answer about a nonexistent bias point is a plausible wrong Bode plot.
+   *
+   * @param {object} opts
+   * @param {string} opts.sourceId - vsource part to sweep
+   * @param {number} opts.from - start frequency, Hz
+   * @param {number} opts.to - end frequency, Hz
+   * @param {number} [opts.pointsPerDecade]
+   * @param {string[]} [opts.probes] - net ids to report (default: all)
+   * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>}>}
+   */
+  runAc({ sourceId, from, to, pointsPerDecade = 20, probes }) {
+    if (!(from > 0) || !(to > from)) {
+      throw new Error('runAc: need 0 < from < to');
+    }
+    // DC operating point: caps open, inductors shorted — the bias the
+    // small-signal model is valid around.
+    const op = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
+      this.controls, this.vcc, {
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+        powerOff: !this.powered,
+      });
+    if (op.converged === false) {
+      throw new Error('runAc: the DC operating point did not converge — ' +
+        'there is no bias point to linearize around');
+    }
+    const decades = Math.log10(to / from);
+    const nPts = Math.max(2, Math.round(decades * pointsPerDecade) + 1);
+    const freqs = Array.from({ length: nPts },
+      (_, i) => from * Math.pow(10, (i * decades) / (nPts - 1)));
+    return acSweep({
+      parts: this._solveParts,
+      nets: this._solveNets,
+      pinSources: this._pinSources(),
+      controls: this.controls,
+      vcc: this.vcc,
+      opVoltages: op.nodeVoltages,
+      deviceStates: this._deviceStates,
+      sourceId,
+      freqs,
+      probes,
+    });
   }
 
   // ─── Internal: inductor integration ───────────────────────────────────────

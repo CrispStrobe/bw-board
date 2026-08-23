@@ -10,6 +10,7 @@
 export { BoardImpl } from './board.js';
 export { pinThevenin, R_STRONG, R_QUASI_PULLUP } from './pin-model.js';
 export { solveMNA } from './mna.js';
+export { acSweep } from './ac.js';
 export { inferNetlist, checkWiring } from './infer-netlist.js';
 export { runTrace } from './scripted-mcu.js';
 export { runConformance, formatReport } from './conformance.js';

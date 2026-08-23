@@ -2420,3 +2420,7 @@ function stampCurrentSource(A, b, part, nets, nodeIndex, groundNetId, srcScale =
 }
 
 export { Matrix, solve, diodeCompanion, findNet };
+// Small-signal linearization helpers for the AC analysis (src/ac.js):
+// the AC stamps MUST evaluate the same models as the DC stamps, so the
+// model functions are shared rather than re-derived there.
+export { junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA };
