@@ -134,6 +134,21 @@ export class BoardImpl {
     this.inductorCurrents = new Map();
 
     /**
+     * Trapezoidal companion history (spec-updates/adaptive-transient.md):
+     * capacitor currents and inductor voltages at the last accepted step.
+     * Valid only while `_trapValid` — any discrete event (setPin,
+     * setControl, power, netlist, a device flip) is a discontinuity, and
+     * the first step after one runs backward Euler to re-seed.
+     * @type {Map<string, number>}
+     */
+    this.capCurrents = new Map();
+    /** @type {Map<string, number>} */
+    this.inductorVoltages = new Map();
+    this._trapValid = false;
+    /** Last accepted adaptive step size (seconds); seeds the next call. */
+    this._transH = 1e-4;
+
+    /**
      * Cached LED currents from last solve.
      * @type {Map<string, number>}
      */
@@ -1813,6 +1828,17 @@ export class BoardImpl {
 
     if (!this.powered) return warnings;
 
+    // Transient attempt overflow: the adaptive integrator hit its runaway
+    // backstop and finished the interval with one coarse BE step.
+    if (this._transientAttemptOverflow) {
+      warnings.push({
+        severity: 'warning',
+        message: 'Transient integration hit its step-attempt backstop — the last ' +
+          'stretch of this interval was integrated coarsely. Waveforms there are ' +
+          'approximate.',
+      });
+    }
+
     // Device sub-step overflow: advanceTo hit the cap on device sub-steps.
     if (this._deviceSubstepOverflow) {
       warnings.push({
@@ -2050,6 +2076,11 @@ export class BoardImpl {
     this.controls = new Map(snap.controls);
     this.capVoltages = new Map(snap.capVoltages);
     this.inductorCurrents = new Map(snap.inductorCurrents ?? []);
+    // Trapezoidal history is NOT snapshotted: _solve() below invalidates
+    // it, so the first step after a restore re-seeds with BE — cleared
+    // here only so stale values never look meaningful in a debugger.
+    this.capCurrents = new Map();
+    this.inductorVoltages = new Map();
 
     // Re-initialize LED/buzzer tracking
     this.ledHistory.clear();
@@ -2436,62 +2467,172 @@ export class BoardImpl {
   }
 
   /**
-   * Transient integration through MNA: sub-step backward Euler across dtSec,
-   * carrying capacitor voltages and inductor currents forward. Used when
-   * MNA-only parts coexist with reactive parts, or a waveform source runs —
-   * the closed-form RC/RL integrators cannot see either.
+   * Transient integration through MNA — adaptive trapezoidal with
+   * backward-Euler restarts (spec-updates/adaptive-transient.md).
+   *
+   * Step control is step-doubling: one trapezoidal step of h against two of
+   * h/2; the element states (capacitor voltages, inductor currents) carry
+   * the error norm, the half-step result is the accepted one, and h scales
+   * by err^(-1/3) (trap is order 2). The first step after any discrete
+   * event (`_trapValid` false — setPin/setControl/power/netlist/device
+   * flip) runs BE to re-seed the trapezoidal history; square/pulse source
+   * edges truncate the step so the edge is a solve point, never straddled,
+   * and restart BE on the far side. With the solver's factor-reuse ladder
+   * the extra half-step solves are numeric refactors, not fresh
+   * factorizations.
+   *
+   * Sampling floor: while scope channels or waveform sources are live, h
+   * is capped at 100 µs so traces keep the fidelity the fixed-step
+   * integrator had. An idle advance with neither runs to h = dtRemaining
+   * in a handful of steps instead of 200.
    *
    * @param {number} dtSec
    */
   _integrateTransientMNA(dtSec) {
     const tEnd = Number(this.timeNs) / 1e9;
     const t0 = tEnd - dtSec;
-    // Sub-step: 100 µs of simulated time, capped at 200 steps per call so a
-    // long idle advance cannot stall the caller. Adaptive control can replace
-    // this; the cap is a stated accuracy limit, not a hidden one.
-    const SUB = 1e-4;
-    let n = Math.max(1, Math.ceil(dtSec / SUB));
-    if (n > 200) n = 200;
-    const h = dtSec / n;
+    const RELTOL = 1e-4;
+    const ABSTOL_V = 1e-6;
+    const ABSTOL_I = 1e-9;
+    const H_MIN = 1e-8;
+    // A BE seed step is UNCONTROLLED (no error estimate), so it must be
+    // tiny: a 100 µs BE step on a 5 kHz tank (ωh ≈ 3) eats the stored
+    // energy before the trapezoidal controller ever runs. 1 µs keeps the
+    // seed's damping negligible for anything the bench can build.
+    const H_SEED = 1e-6;
+    // Trace-fidelity floor (see doc above).
+    const H_SAMPLE = 1e-4;
+    const sampleCapped = this._scopeChannels.size > 0 || this._hasTimeVaryingSource();
+    const hMax = sampleCapped ? H_SAMPLE : dtSec;
+    // A runaway backstop far above any real circuit; hitting it is
+    // reported, never silently absorbed (the old 200-step cap's honesty,
+    // kept at the new scale).
+    const MAX_ATTEMPTS = 20000;
 
     this._syncDeviceGpioDrives();
     const pinSources = this._pinSources();
-    let cv = this.capVoltages;
-    let il = this.inductorCurrents;
-    let res = null;
-    for (let i = 1; i <= n; i++) {
-      res = solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
-        tSeconds: t0 + i * h,
-        transient: { dtSec: h, capVoltages: cv, inductorCurrents: il },
+    const qual = this._qualifiedSources();
+    let nSolves = 0;
+    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) =>
+      (nSolves++, solveMNA(this.parts, this.nets, pinSources, this.controls, this.vcc, {
+        tSeconds: tStart + hs,
+        transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
+          capCurrents: ccS, inductorVoltages: lvS },
         deviceStates: this._deviceStates,
-      qualifiedSources: this._qualifiedSources(),
+        qualifiedSources: qual,
         // Power off strips the sources but NOT the storage: capacitor
         // and inductor companions keep stamping, so stored energy
         // discharges through whatever network remains (the audit found
         // every discharge-on-power-loss demo frozen instead).
         powerOff: !this.powered,
-      });
-      cv = res.capVoltagesNext ?? cv;
-      il = res.inductorCurrentsNext ?? il;
-      // Every sub-step publishes its voltages and feeds the scope at its
-      // intermediate timestamp. Without this, a waveform source sampled only
-      // at advanceTo boundaries aliases to a flat line: a 50 ms tick is an
-      // integer number of 1 kHz periods, so sin() is 0 at every boundary.
-      this.nodeVoltages = new Map(res.nodeVoltages);
+      }));
+
+    let cv = this.capVoltages;
+    let il = this.inductorCurrents;
+    let cc = this.capCurrents;
+    let lv = this.inductorVoltages;
+    let trapReady = this._trapValid;
+    let t = t0;
+    let h = Math.min(Math.max(this._transH, H_MIN), hMax, dtSec);
+    let attempts = 0;
+    let res = null;
+
+    const publish = (r, atSec) => {
+      this.nodeVoltages = new Map(r.nodeVoltages);
       if (this._scopeChannels.size > 0) {
-        const stepNs = this.timeNs - BigInt(Math.round((n - i) * h * 1e9));
-        this._updateScopeChannels(stepNs);
+        const remNs = BigInt(Math.max(0, Math.round((tEnd - atSec) * 1e9)));
+        this._updateScopeChannels(this.timeNs - remNs);
       }
-      // One device pass per sub-step: a comparator/gate that flips here is
-      // seen by the network on the NEXT sub-step — switching resolution is
-      // one sub-step, which is the stated accuracy of this integrator.
-      if (this._deviceStates.size > 0) {
-        this.nodeVoltages = new Map(res.nodeVoltages);
-        this._updateDevices();
+    };
+    const accept = (r, atSec) => {
+      cv = r.capVoltagesNext ?? cv;
+      il = r.inductorCurrentsNext ?? il;
+      cc = r.capCurrentsNext ?? cc;
+      lv = r.inductorVoltagesNext ?? lv;
+      res = r;
+      publish(r, atSec);
+      // One device pass per accepted step: a comparator/gate that flips is
+      // seen by the network on the NEXT step. A flip is a discontinuity —
+      // trapezoidal history restarts and the step shrinks to look closely.
+      if (this._deviceStates.size > 0 && this._updateDevices()) {
+        trapReady = false;
+        h = Math.max(H_MIN, h / 4);
+      }
+    };
+
+    while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
+      attempts++;
+      let hEff = Math.min(h, tEnd - t, hMax);
+      // Square/pulse edges become exact solve points (oracle: an edge at
+      // t = 1.0000 ms is stepped TO, never straddled).
+      const edge = this._nextSourceEdgeSec(t);
+      let atEdge = false;
+      if (edge !== null && edge > t + 1e-15 && edge < t + hEff - 1e-15) {
+        hEff = edge - t;
+        atEdge = true;
+      }
+
+      if (!trapReady || hEff <= 2 * H_MIN) {
+        // Seed / floor step: single BE solve, no error control — kept tiny
+        // (see H_SEED). BE's damping is what a fresh discontinuity needs.
+        const hSeed = Math.min(hEff, H_SEED);
+        const r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
+        t += hSeed;
+        accept(r, t);
+        // Only a seed that reached the edge crossed it.
+        trapReady = !(atEdge && hSeed >= hEff - 1e-18);
+        continue;
+      }
+
+      const full = solveStep(t, hEff, 'trap', cv, il, cc, lv);
+      const h1 = solveStep(t, hEff / 2, 'trap', cv, il, cc, lv);
+      const h2 = solveStep(t + hEff / 2, hEff / 2, 'trap',
+        h1.capVoltagesNext ?? cv, h1.inductorCurrentsNext ?? il,
+        h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
+
+      let err = 0;
+      for (const [id, vH] of h2.capVoltagesNext ?? []) {
+        const vF = full.capVoltagesNext?.get(id) ?? 0;
+        const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
+        err = Math.max(err, Math.abs(vF - vH) / sc);
+      }
+      for (const [id, iH] of h2.inductorCurrentsNext ?? []) {
+        const iF = full.inductorCurrentsNext?.get(id) ?? 0;
+        const sc = ABSTOL_I + RELTOL * Math.max(Math.abs(iH), Math.abs(iF));
+        err = Math.max(err, Math.abs(iF - iH) / sc);
+      }
+
+      if (err <= 1 || !Number.isFinite(err)) {
+        // Non-finite means a solve bailed (singular mid-step) — accept the
+        // half-step result and let the convergence warning say so.
+        publish(h1, t + hEff / 2);
+        t += hEff;
+        accept(h2, t);
+        if (atEdge) trapReady = false;
+        const grow = err > 0 ? Math.min(2, 0.9 * Math.pow(err, -1 / 3)) : 2;
+        h = Math.min(Math.max(hEff * grow, H_MIN), hMax);
+      } else {
+        h = Math.max(hEff * Math.max(0.2, 0.9 * Math.pow(err, -1 / 3)), H_MIN);
       }
     }
+
+    if (t < tEnd - 1e-15) {
+      // Backstop hit: finish with one BE step so board time and element
+      // state agree (this.timeNs has already advanced), and say so.
+      const r = solveStep(t, tEnd - t, 'be', cv, il, cc, lv);
+      accept(r, tEnd);
+      trapReady = false;
+      this._transientAttemptOverflow = true;
+    }
+
     this.capVoltages = new Map(cv);
     this.inductorCurrents = new Map(il);
+    this.capCurrents = new Map(cc);
+    this.inductorVoltages = new Map(lv);
+    this._trapValid = trapReady;
+    this._transH = h;
+    // Observable for the idle-advance solve-count oracle; costs nothing.
+    this._lastTransientSolves = nSolves;
     if (res) {
       this.nodeVoltages = new Map(res.nodeVoltages);
       for (const part of this.parts) {
@@ -2501,6 +2642,38 @@ export class BoardImpl {
       }
       this._mnaCache = res;
     }
+  }
+
+  /**
+   * Next discontinuity of any square/pulse waveform source strictly after
+   * `tSec`, in seconds — or null. Sine/triangle/pcm are continuous and the
+   * LTE controller handles them; only genuine edges need alignment.
+   * @param {number} tSec
+   * @returns {number | null}
+   */
+  _nextSourceEdgeSec(tSec) {
+    let next = null;
+    for (const part of this.parts) {
+      if (part.kind !== 'vsource') continue;
+      const p = part.params ?? {};
+      if (p.wave !== 'square' && p.wave !== 'pulse') continue;
+      const freq = p.freq ?? 1000;
+      if (!(freq > 0)) continue;
+      const period = 1 / freq;
+      const duty = Math.min(1, Math.max(0, p.duty ?? 0.5));
+      const phase = (p.phase ?? 0) / 360;
+      // Edges at cycle fractions 0 and duty.
+      const cycles = tSec * freq + phase;
+      const base = Math.floor(cycles);
+      for (const fracEdge of [0, duty, 1, 1 + duty]) {
+        const tEdge = (base + fracEdge - phase) * period;
+        if (tEdge > tSec + 1e-15) {
+          if (next === null || tEdge < next) next = tEdge;
+          break;
+        }
+      }
+    }
+    return next;
   }
 
   // ─── Internal: capacitor RC integration ───────────────────────────────────
@@ -2630,6 +2803,10 @@ export class BoardImpl {
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
     this._mnaCache = null; // invalidate MNA cache
+    // Every discrete event routes through here — it is a discontinuity for
+    // the transient integrator: trapezoidal history is stale, the next
+    // step re-seeds with backward Euler.
+    this._trapValid = false;
 
     if (!this.powered) return;
 

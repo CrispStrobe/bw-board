@@ -617,18 +617,25 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
         case 'inductor': {
           if (transient) {
-            // Backward-Euler companion: i(t+dt) = i(t) + (dt/L)·v(t+dt)
-            // → conductance dt/L in parallel with a Norton source of i(t).
+            // Companion models (spec-updates/adaptive-transient.md):
+            //   BE:   i(t+h) = i(t) + (h/L)·v(t+h)
+            //         → G = h/L, Norton I = i(t)
+            //   trap: i(t+h) = i(t) + (h/2L)·(v(t+h) + v(t))
+            //         → G = h/2L, Norton I = i(t) + G·v(t)
             const L = /** @type {number} */ (part.params.henrys ?? part.params.henries ?? 0.001);
-            const g = transient.dtSec / Math.max(L, 1e-12);
+            const h = Math.max(transient.dtSec, 1e-15);
             const iPrev = transient.inductorCurrents.get(part.id) ?? 0;
+            const trap = transient.method === 'trap';
+            const g = trap ? h / (2 * Math.max(L, 1e-12)) : h / Math.max(L, 1e-12);
+            const vPrev = trap ? (transient.inductorVoltages?.get(part.id) ?? 0) : 0;
+            const iNorton = iPrev + (trap ? g * vPrev : 0);
             const netA = findNet(nets, part.id, 'a');
             const netB = findNet(nets, part.id, 'b');
             stampTwoTerminal(A, netA, netB, g, nodeIndex);
             const idxA = netA ? nodeIndex.get(netA) : undefined;
             const idxB = netB ? nodeIndex.get(netB) : undefined;
-            if (idxA !== undefined) b[idxA] -= iPrev; // i flows a→b
-            if (idxB !== undefined) b[idxB] += iPrev;
+            if (idxA !== undefined) b[idxA] -= iNorton; // i flows a→b
+            if (idxB !== undefined) b[idxB] += iNorton;
           } else {
             // DC steady-state: an inductor is a short (1 mΩ wire).
             stampTwoTerminal(A,
@@ -642,18 +649,25 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
         case 'capacitor': {
           if (transient) {
-            // Backward-Euler companion: i = C/dt · (v(t+dt) − v(t))
-            // → conductance C/dt in parallel with a Norton source C/dt·v(t).
+            // Companion models (spec-updates/adaptive-transient.md):
+            //   BE:   i = (C/h)·(v(t+h) − v(t))
+            //         → G = C/h, Norton I = G·v(t)
+            //   trap: i = (2C/h)·(v(t+h) − v(t)) − i(t)
+            //         → G = 2C/h, Norton I = G·v(t) + i(t)
             const C = /** @type {number} */ (part.params.farads ?? 0.0001);
-            const g = C / Math.max(transient.dtSec, 1e-15);
+            const h = Math.max(transient.dtSec, 1e-15);
+            const trap = transient.method === 'trap';
+            const g = (trap ? 2 * C : C) / h;
             const vPrev = transient.capVoltages.get(part.id) ?? 0;
+            const iPrev = trap ? (transient.capCurrents?.get(part.id) ?? 0) : 0;
+            const iNorton = g * vPrev + iPrev;
             const netA = findNet(nets, part.id, 'a');
             const netB = findNet(nets, part.id, 'b');
             stampTwoTerminal(A, netA, netB, g, nodeIndex);
             const idxA = netA ? nodeIndex.get(netA) : undefined;
             const idxB = netB ? nodeIndex.get(netB) : undefined;
-            if (idxA !== undefined) b[idxA] += g * vPrev;
-            if (idxB !== undefined) b[idxB] -= g * vPrev;
+            if (idxA !== undefined) b[idxA] += iNorton;
+            if (idxB !== undefined) b[idxB] -= iNorton;
           } else if (capVoltagesIn && vsIndex.has(part.id)) {
             // Instantaneous solve: hold the stored voltage as a source row.
             // (Only the first cap of each net pair carries the row — see
@@ -1170,7 +1184,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (transient) {
         const L = /** @type {number} */ (part.params.henrys ?? part.params.henries ?? 0.001);
         const iPrev = transient.inductorCurrents.get(part.id) ?? 0;
-        i = iPrev + (transient.dtSec / Math.max(L, 1e-12)) * (vA - vB);
+        const h = Math.max(transient.dtSec, 1e-15);
+        if (transient.method === 'trap') {
+          const vPrev = transient.inductorVoltages?.get(part.id) ?? 0;
+          i = iPrev + (h / (2 * Math.max(L, 1e-12))) * ((vA - vB) + vPrev);
+        } else {
+          i = iPrev + (h / Math.max(L, 1e-12)) * (vA - vB);
+        }
       } else {
         // DC: inductor is a wire, current = V_drop / R_wire
         i = (vA - vB) / 0.001;
@@ -1188,7 +1208,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (transient) {
         const C = /** @type {number} */ (part.params.farads ?? 0.0001);
         const vPrev = transient.capVoltages.get(part.id) ?? 0;
-        i = (C / Math.max(transient.dtSec, 1e-15)) * ((vA - vB) - vPrev);
+        const h = Math.max(transient.dtSec, 1e-15);
+        if (transient.method === 'trap') {
+          const iPrev = transient.capCurrents?.get(part.id) ?? 0;
+          i = (2 * C / h) * ((vA - vB) - vPrev) - iPrev;
+        } else {
+          i = (C / h) * ((vA - vB) - vPrev);
+        }
       } else if (vsIndex.has(part.id)) {
         // Instantaneous: the source row's current variable is the cap current.
         i = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
@@ -1244,10 +1270,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
   }
 
-  // Transient next-state: what the caller stores for the next step.
+  // Transient next-state: what the caller stores for the next step. The
+  // trapezoidal companions need the element's own current (cap) and voltage
+  // (inductor) history too, so both are returned alongside the classic pair.
   if (transient) {
     const capVoltagesNext = new Map();
+    const capCurrentsNext = new Map();
     const inductorCurrentsNext = new Map();
+    const inductorVoltagesNext = new Map();
     for (const part of parts) {
       if (part.kind === 'capacitor') {
         const netA = findNet(nets, part.id, 'a');
@@ -1255,13 +1285,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
         const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
         capVoltagesNext.set(part.id, vA - vB);
+        const c = branchCurrents.get(part.id);
+        capCurrentsNext.set(part.id, c ? (c.get('b') ?? 0) : 0);
       }
       if (part.kind === 'inductor') {
         const c = branchCurrents.get(part.id);
         inductorCurrentsNext.set(part.id, c ? (c.get('b') ?? 0) : 0);
+        const netA = findNet(nets, part.id, 'a');
+        const netB = findNet(nets, part.id, 'b');
+        const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+        const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+        inductorVoltagesNext.set(part.id, vA - vB);
       }
     }
-    return { nodeVoltages, branchCurrents, capVoltagesNext, inductorCurrentsNext, converged,
+    return { nodeVoltages, branchCurrents, capVoltagesNext, capCurrentsNext,
+      inductorCurrentsNext, inductorVoltagesNext, converged,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
