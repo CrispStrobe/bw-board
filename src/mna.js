@@ -257,12 +257,18 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // part is on a disconnected net.
   let groundNetId = null;
 
+  // One part lookup for the whole solve. The election / merge / node-index
+  // passes below each ran `parts.find` per terminal — O(parts × terminals)
+  // scans repeated up to 50× by the NR loop on imported boards.
+  /** @type {Map<string, Part>} */
+  const partMap = new Map(parts.map(p => [p.id, p]));
+
   if (powerOff && testNodeB) {
     groundNetId = testNodeB;
   } else {
     for (const net of nets) {
       for (const t of net.terminals) {
-        const part = parts.find(p => p.id === t.part);
+        const part = partMap.get(t.part);
         if (part && part.kind === 'gnd') {
           groundNetId = net.id;
           break;
@@ -281,7 +287,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       for (const net of nets) {
         for (const t of net.terminals) {
           if (t.terminal !== 'neg') continue;
-          const part = parts.find(p => p.id === t.part);
+          const part = partMap.get(t.part);
           if (part && part.kind === 'vsource') {
             groundNetId = net.id;
             break outer;
@@ -309,19 +315,47 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // the oscillator sat dead. Hand-wired boards never showed it because
   // their grounds share rails. Merge all gnd-bearing nets into the
   // elected one — physically they are the same node.
+  // The merge is a SOLVER-LOCAL VIEW. It used to splice the caller's `nets`
+  // array and push into the elected net's own terminals — the board's
+  // netlist was permanently rewritten by the first solve, and any caller
+  // holding the array saw its topology change under it. The caller's arrays
+  // and net objects are never touched now; merged-away gnd net ids still
+  // answer nodeVoltage as 0 via `mergedGndIds` at extraction.
+  /** @type {Set<string>} */
+  const mergedGndIds = new Set();
   if (groundNetId && !(powerOff && testNodeB)) {
     const isGndNet = (net) => net.id !== groundNetId && net.terminals.some((t) => {
-      const p = parts.find((pp) => pp.id === t.part);
+      const p = partMap.get(t.part);
       return p && p.kind === 'gnd';
     });
-    const main = nets.find((n) => n.id === groundNetId);
-    for (let i = nets.length - 1; i >= 0; i--) {
-      if (isGndNet(nets[i])) {
-        main.terminals.push(...nets[i].terminals);
-        nets.splice(i, 1);
+    for (const net of nets) if (isGndNet(net)) mergedGndIds.add(net.id);
+  }
+  if (mergedGndIds.size) {
+    const view = [];
+    let mergedMain = null;
+    for (const net of nets) {
+      if (net.id === groundNetId) {
+        mergedMain = { id: net.id, terminals: net.terminals.slice() };
+        view.push(mergedMain);
+      } else if (!mergedGndIds.has(net.id)) {
+        view.push(net);
       }
     }
+    for (const net of nets) {
+      if (mergedGndIds.has(net.id)) mergedMain.terminals.push(...net.terminals);
+    }
+    nets = view;
+  } else {
+    // Fresh wrapper either way, so the terminal map below attaches to an
+    // array only this solve can see — never to the caller's.
+    nets = nets.slice();
   }
+
+  // terminal → net id, built once per solve. `findNet` was a linear scan of
+  // all nets × all terminals, called several times per element per stamp per
+  // NR iteration — the dominant cost on imported boards before the O(n³)
+  // solve even starts (ROADMAP E1.1; spec-updates/sparse-lu-factor-reuse.md).
+  nets[NETS_TERM_MAP] = buildTermMap(nets);
 
   /** @type {Map<string, number>} net id → node index */
   const nodeIndex = new Map();
@@ -332,7 +366,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     if (powerOff) {
       // Only include nets that have at least one passive element terminal
       const hasPassive = net.terminals.some(t => {
-        const p = parts.find(pp => pp.id === t.part);
+        const p = partMap.get(t.part);
         return p && passiveKinds.has(p.kind);
       });
       if (!hasPassive) continue;
@@ -416,10 +450,6 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const dim = nodeCount + vsCount;
   const A = new Matrix(dim, dim);
   const b = new Float64Array(dim);
-
-  // Part index for looking up nets
-  /** @type {Map<string, Part>} */
-  const partMap = new Map(parts.map(p => [p.id, p]));
 
   // ─── Stamp elements ─────────────────────────────────────────────────────
 
@@ -945,6 +975,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   /** @type {Map<string, number>} */
   const nodeVoltages = new Map();
   if (groundNetId) nodeVoltages.set(groundNetId, 0);
+  // Merged-away gnd island nets are physically the reference too. The caller
+  // still holds them (the merge no longer rewrites its netlist), so they must
+  // answer here — absent entries would read as "unknown net", not 0 V.
+  for (const id of mergedGndIds) nodeVoltages.set(id, 0);
   for (const [netId, idx] of nodeIndex) {
     nodeVoltages.set(netId, solution[idx]);
   }
@@ -1190,6 +1224,28 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 // ─── Stamp functions ─────────────────────────────────────────────────────────
 
 /**
+ * Per-solve terminal→net map. solveMNA attaches one (under a Symbol, on its
+ * own private copy of the nets array — never on the caller's) so the tens of
+ * findNet calls per stamp per NR iteration are O(1) lookups. Arrays without
+ * the map — external callers of the exported findNet — keep the linear scan.
+ */
+const NETS_TERM_MAP = Symbol('bw-term-map');
+const termKey = (partId, terminal) => partId + String.fromCharCode(0) + terminal;
+
+/** @param {Net[]} nets @returns {Map<string, string>} */
+function buildTermMap(nets) {
+  const m = new Map();
+  for (const net of nets) {
+    for (const t of net.terminals) {
+      const k = termKey(t.part, t.terminal);
+      // First net in array order wins — the linear scan's exact semantics.
+      if (!m.has(k)) m.set(k, net.id);
+    }
+  }
+  return m;
+}
+
+/**
  * Find the net connected to a specific terminal of a part.
  * @param {Net[]} nets
  * @param {string} partId
@@ -1197,6 +1253,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
  * @returns {string | undefined}
  */
 function findNet(nets, partId, terminal) {
+  const m = /** @type {Map<string, string> | undefined} */ (nets[NETS_TERM_MAP]);
+  if (m) return m.get(termKey(partId, terminal));
   for (const net of nets) {
     for (const t of net.terminals) {
       if (t.part === partId && t.terminal === terminal) {
