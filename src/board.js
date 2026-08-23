@@ -272,6 +272,62 @@ export class BoardImpl {
     return { parts: outParts, nets: outNets };
   }
 
+  /**
+   * Merge nets that share any (part, terminal) — electrically they are
+   * one node, whatever the wire-derivation upstream produced. Union-find
+   * keyed on terminal membership; the surviving net keeps the FIRST
+   * net's id in input order (deterministic), and every merge is reported
+   * so the drawing tooling can flag the duplication at its source.
+   * @param {import('./types.js').Net[]} nets
+   * @returns {{nets: import('./types.js').Net[], merges: Array<{terminal: string, into: string, from: string}>}}
+   */
+  static _coalesceSharedTerminals(nets) {
+    const owner = new Map(); // "part terminal" → index of first net seen
+    const parent = nets.map((_, i) => i);
+    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const merges = [];
+    nets.forEach((net, i) => {
+      for (const t of net.terminals) {
+        const key = `${t.part} ${t.terminal}`;
+        const first = owner.get(key);
+        if (first === undefined) { owner.set(key, i); continue; }
+        const a = find(first);
+        const b = find(i);
+        if (a !== b) {
+          const into = Math.min(a, b);
+          const from = Math.max(a, b);
+          parent[from] = into;
+          merges.push({
+            terminal: `${t.part}.${t.terminal}`,
+            into: nets[into].id,
+            from: nets[from].id,
+          });
+        }
+      }
+    });
+    if (merges.length === 0) return { nets, merges };
+    const grouped = new Map();
+    nets.forEach((net, i) => {
+      const root = find(i);
+      if (!grouped.has(root)) grouped.set(root, { id: nets[root].id, terminals: [] });
+      grouped.get(root).terminals.push(...net.terminals);
+    });
+    // Dedupe terminals inside each merged net.
+    const out = [...grouped.values()].map(n => {
+      const seen = new Set();
+      return {
+        ...n,
+        terminals: n.terminals.filter(t => {
+          const k = `${t.part} ${t.terminal}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        }),
+      };
+    });
+    return { nets: out, merges };
+  }
+
   static _expandComposites(parts, nets) {
     const extraParts = [];
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
@@ -378,6 +434,19 @@ export class BoardImpl {
     // an LED) silently produces brightness 0 — a plausible wrong answer.
     const errors = validateNetlist(parts, nets);
     ({ parts, nets } = BoardImpl._expandComposites(parts, nets));
+    // ONE TERMINAL IS ONE NODE. Input netlists exist in the wild where a
+    // terminal appears in two nets (five shipped circuits: a gnd pin
+    // reached by two independently-derived wire groups). The old solver
+    // MUTATED the caller's nets during its gnd-island merge, which
+    // accidentally repaired those inputs; the non-mutation fix preserved
+    // the drawn input — duplication included — and every getNets()
+    // consumer then saw a terminal on two nets, resolver-order deciding
+    // which one answered (found by the schematic completeness gate,
+    // adjudicated 2026-08-23). Coalesce deterministically HERE, and say
+    // so via getWarnings rather than repairing in silence.
+    const coalesced = BoardImpl._coalesceSharedTerminals(nets);
+    nets = coalesced.nets;
+    this._netMergeNotes = coalesced.merges;
     const fatal = errors.filter(e => e.severity === 'error');
     if (fatal.length > 0) {
       throw new Error(
@@ -1920,6 +1989,21 @@ export class BoardImpl {
     /** @type {Array<{severity: 'warning'|'danger', message: string, partId?: string,
      *           partIds?: string[], unratedIds?: string[], type?: string}>} */
     const warnings = [];
+
+    // A terminal that appeared in two nets was coalesced at setNetlist —
+    // the merge is correct physics, but the drawing that produced it is
+    // worth fixing at the source, so it stays visible.
+    if (this._netMergeNotes?.length) {
+      for (const { terminal, into, from } of this._netMergeNotes) {
+        warnings.push({
+          severity: 'warning',
+          type: 'net-coalesced',
+          message: `${terminal} appeared in both ${into} and ${from} — merged: ` +
+            'one pin is one node. The drawing (or its wire derivation) lists ' +
+            'the terminal twice.',
+        });
+      }
+    }
 
     // Refused device-control verbs are user-intent feedback and show
     // regardless of power state (spec-updates/set-device-control.md).
