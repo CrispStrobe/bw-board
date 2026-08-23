@@ -596,11 +596,16 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     nets = nets.slice();
   }
 
-  // terminal → net id, built once per solve. `findNet` was a linear scan of
-  // all nets × all terminals, called several times per element per stamp per
-  // NR iteration — the dominant cost on imported boards before the O(n³)
+  // terminal → net id. `findNet` was a linear scan of all nets × all
+  // terminals, called several times per element per stamp per NR
+  // iteration — the dominant cost on imported boards before the O(n³)
   // solve even starts (ROADMAP E1.1; spec-updates/sparse-lu-factor-reuse.md).
-  nets[NETS_TERM_MAP] = buildTermMap(nets);
+  // Memoized ON THE ARRAY, not per call: the board hands the same nets
+  // array to every solve until setNetlist builds a new one, so the map
+  // is a pure function of the array's identity. Measured on the
+  // perf-budget LED bench: ~19K → ~22K setPin/sec — the rebuild was
+  // ~8% self time, real but not the bench's dominant cost.
+  if (!nets[NETS_TERM_MAP]) nets[NETS_TERM_MAP] = buildTermMap(nets);
 
   /** @type {Map<string, number>} net id → node index */
   const nodeIndex = new Map();

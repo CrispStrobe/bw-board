@@ -63,8 +63,8 @@ test('the hand-wired canonical decode extracts to the machine config', () => {
         { kind: 'rom', start: 0x8000, end: 0xffff },
     ]);
     assert.deepEqual(r.chips, [
-        { kind: 'via', name: 'via1', at: 0x6000 },
-        { kind: 'acia', name: 'acia1', at: 0x5000 },
+        { kind: 'via', name: 'via1', at: 0x6000, span: 0x2000 },
+        { kind: 'acia', name: 'acia1', at: 0x5000, span: 0x1000 },
     ]);
     assert.deepEqual(r.lines, [
         'MAP RAM $0000-$3FFF',

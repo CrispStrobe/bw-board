@@ -23,6 +23,7 @@ import { TMS9918 } from './tms9918.js';
 import { SimpleVGA } from './simplevga.js';
 import { TileVGA } from './tilevga.js';
 import { NS16C550 } from './ns16c550.js';
+import { MC6850 } from './mc6850.js';
 import { Latch374 } from './latch374.js';
 import { SDCardSPI } from './sdcard-spi.js';
 
@@ -30,7 +31,7 @@ import { SDCardSPI } from './sdcard-spi.js';
  * @typedef {object} MachineConfig
  * @property {number} clockHz phi2 frequency
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions inclusive ranges
- * @property {Array<{kind: 'via'|'acia'|'uart16550'|'latch', name: string, at: number,
+ * @property {Array<{kind: 'via'|'acia'|'acia6850'|'uart16550'|'latch', name: string, at: number,
  *   xtal?: number, span?: number}>} chips
  *   base addresses; xtal overrides a uart16550's input clock (defaults to
  *   the machine clock — the KiT wiring — since a breadboard that gives the
@@ -171,6 +172,7 @@ export class M6502Machine {
         for (const c of config.chips) {
             const regs = c.kind === 'via' ? 16 : c.kind === 'uart16550' ? 8
                 : c.kind === 'latch' ? 1 : c.kind === 'vdp' ? 2
+                : c.kind === 'acia6850' ? 2
                 : c.kind === 'console' ? 8
                 : c.kind === 'tilevga' ? 0x4000 : 4;
             const span = c.span || regs;
@@ -198,6 +200,13 @@ export class M6502Machine {
                 }
             } else if (c.kind === 'acia') {
                 chip = new W65C51({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            } else if (c.kind === 'acia6850') {
+                // The Motorola-bus ACIA on a 6502 bus — memory-mapped
+                // ctrl/status + data, same chip class the z80 machines
+                // run. Two registers; the extractor names it acia6850.
+                chip = new MC6850({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
                 });
             } else if (c.kind === 'uart16550') {

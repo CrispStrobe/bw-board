@@ -245,10 +245,18 @@ gated by lite PLAN.md Milestone 0's review-debt rule; the items below
 are the ENGINE work that widens the space those waves can draw on.
 
 ### E5.1 Extractor SELECT vocabulary — `src/m6502-extract.js` (+ z80 twin)
-The decode evaluator knows five select shapes (62256, 28C256, W65C22,
+The decode evaluator knew five select shapes (62256, 28C256, W65C22,
 W65C51, TMS9918). Each addition is one SELECT-table entry + RS_PINS/
-CHIP_DECL rows + an extraction fixture. Candidates in model-inventory
-order: MC6850 (cs0 high, cs1 high, cs2b low), M6532 (cs1 high, cs2b
+CHIP_DECL rows + an extraction fixture.
+**MC6850 DONE (first slice):** SELECT entry (cs0·cs1 high, /cs2 low, E
+is timing like PHI2), rs on A0, span 2; m6502-machine grew the
+'acia6850' instantiation (same MC6850 core the z80 machines run); the
+extractor now emits the MEASURED decode window as `span`, so registers
+mirror through it like silicon. Fixture: the 6850 in the canonical
+decode's $4000 hole beside the W65C51, floating-select refusal,
+window-collision contention named at $5000, and a machine-level tx/rx +
+mirror oracle.
+Remaining candidates in model-inventory order: M6532 (cs1 high, cs2b
 low, rs0b for RAM select), NS16C550, AY-3-8912 (BDIR/BC1 latch shape —
 needs a two-phase select note), UM245R. Acceptance per chip: a
 hand-wired decode fixture extracts the right window; a deliberately

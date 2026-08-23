@@ -34,9 +34,13 @@ const SELECT = {
     // the R/W / phi2 gating a real board adds is timing, and this
     // extractor models the address domain (same bound as RWB above).
     tms9918: { kind: 'vdp', low: ['csrb', 'cswb'] },
+    // MC6850 (E5.1): three selects, all address-domain — cs0 and cs1
+    // high, /cs2 low. The E clock is timing (same bound as PHI2 above);
+    // the z80 twin extracts this chip identically on the IO side.
+    mc6850: { kind: 'acia6850', high: ['cs0', 'cs1'], low: ['cs2b'] },
 };
-const RS_PINS = { via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'] };
-const CHIP_DECL = { via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA' };
+const RS_PINS = { via: ['rs0', 'rs1', 'rs2', 'rs3'], acia: ['rs0', 'rs1'], vdp: ['mode'], acia6850: ['rs'] };
+const CHIP_DECL = { via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA', acia6850: 'MC6850' };
 
 /**
  * @param {{parts: Array<{id: string, kind: string}>, wires: Array<{from: string, fromTerminal: string, to: string, toTerminal: string}>}} circuit
@@ -203,9 +207,13 @@ export function extract6502Machine(circuit) {
             const rs = RS_PINS[c.kind];
             const bad = straight(c.part.id, rs, rs.map((_, i) => i));
             if (bad) { reasons.push(`${c.part.id}.${bad} must ride A${rs.indexOf(bad)} — register selects are the low address lines`); continue; }
-            const span = c.kind === 'via' ? 16 : c.kind === 'vdp' ? 2 : 4;
+            const span = c.kind === 'via' ? 16
+                : (c.kind === 'vdp' || c.kind === 'acia6850') ? 2 : 4;
             if (r.count > span) notes.push(`${c.part.id} mirrors through ${hx(r.lo)}-${hx(r.hi)} (decoded coarsely); its registers sit at ${hx(r.lo)}`);
-            chips.push({ kind: c.kind, name: c.part.id, at: r.lo });
+            // span = the MEASURED decode window, so the machine mirrors
+            // the registers through it exactly like the silicon — a read
+            // at any mirrored address hits the chip, not open bus.
+            chips.push({ kind: c.kind, name: c.part.id, at: r.lo, span: r.count });
         }
     }
     if (reasons.length) return { ok: false, notes, reasons };

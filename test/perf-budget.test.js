@@ -47,21 +47,34 @@ describe('perf budget: closed-form path', () => {
   // An order-of-magnitude regression (to ~1K) would still fail.
 
   it('setPin throughput > 10K ops/sec', () => {
+    // Two facts this bench must carry honestly:
+    //  - Since the loaded-wiper KCL fix, this circuit (pot wiper into an
+    //    MCU pin) routes through full MNA, not the closed-form walker:
+    //    the old ~184K baseline measured a different code path. Solo
+    //    baseline on the MNA path is ~20K (2026-08-23).
+    //  - Wall-clock over one long window is a hostage to whatever else
+    //    the machine runs (a sibling repo's suite co-running dropped it
+    //    to 4.5K with the engine untouched). Best-of-chunks measures the
+    //    engine, not the scheduler: a real regression slows EVERY chunk,
+    //    a noisy neighbour only some.
     const { parts, nets } = makeLedCircuit();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
 
-    const N = 20_000;
-    const start = performance.now();
-    for (let i = 0; i < N; i++) {
-      board.setPin('P1.0', 'pushpull', i % 2 === 0);
+    const CHUNK = 4_000;
+    let best = 0;
+    for (let c = 0; c < 5; c++) {
+      const start = performance.now();
+      for (let i = 0; i < CHUNK; i++) {
+        board.setPin('P1.0', 'pushpull', i % 2 === 0);
+      }
+      const opsPerSec = CHUNK / ((performance.now() - start) / 1000);
+      if (opsPerSec > best) best = opsPerSec;
     }
-    const elapsed = (performance.now() - start) / 1000;
-    const opsPerSec = N / elapsed;
 
-    assert.ok(opsPerSec > 10_000,
-      `setPin: ${Math.round(opsPerSec)} ops/sec (budget: 10K). ` +
-      `Baseline ~184K; budget low to survive shared VPS under load.`);
+    assert.ok(best > 10_000,
+      `setPin: best chunk ${Math.round(best)} ops/sec (budget: 10K, ` +
+      `solo MNA-path baseline ~20K).`);
   });
 
   it('advanceTo throughput > 10K ops/sec (steady state)', () => {
