@@ -27,6 +27,7 @@
  * Dense matrix backed by a flat Float64Array.
  */
 import { getDevice } from './devices.js';
+import { CooMatrix } from './sparse.js';
 
 class Matrix {
   /**
@@ -118,6 +119,23 @@ function solve(A, b) {
   }
 
   return x;
+}
+
+/**
+ * Solve the assembled CooMatrix system.
+ *
+ * Interim backend: expand to dense and run the reference elimination —
+ * the sparse LU kernel replaces this in the next landing of
+ * spec-updates/sparse-lu-factor-reuse.md, behind this same seam.
+ *
+ * @param {CooMatrix} A
+ * @param {Float64Array} b - consumed
+ * @returns {Float64Array}
+ */
+function solveAssembled(A, b) {
+  const dense = new Matrix(A.n, A.n);
+  for (let i = 0; i < A.v.length; i++) dense.add(A.ri[i], A.ci[i], A.v[i]);
+  return solve(dense, b);
 }
 
 // ─── LED / diode model for Newton–Raphson ────────────────────────────────────
@@ -448,7 +466,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   }
 
   const dim = nodeCount + vsCount;
-  const A = new Matrix(dim, dim);
+  // Sparse-by-default assembly: the stamps write into a coordinate map with
+  // dense semantics; reset() keeps the slot pattern across NR iterations.
+  const A = new CooMatrix(dim);
   const b = new Float64Array(dim);
 
   // ─── Stamp elements ─────────────────────────────────────────────────────
@@ -488,8 +508,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   let converged = false;
 
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
-    // Clear matrix
-    A.data.fill(0);
+    // Clear values; the assembled pattern survives for factor reuse.
+    A.reset();
     b.fill(0);
 
     // A schematic conventionally draws ONE power symbol per connection point,
@@ -763,10 +783,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     for (let i = 0; i < nodeCount; i++) A.add(i, i, GMIN);
 
     // Solve
-    const Acopy = A.clone();
     const bcopy = new Float64Array(b);
     try {
-      solution = solve(Acopy, bcopy);
+      solution = solveAssembled(A, bcopy);
     } catch {
       // Singular matrix — bail
       break;
