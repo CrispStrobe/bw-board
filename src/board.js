@@ -526,6 +526,7 @@ export class BoardImpl {
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
     this._qualCache = new Map(); // qualified-pin resolutions are per-netlist
+    this._pinNetCache = new Map(); // pin -> net id (per-netlist, see _pinVoltage)
     this._mcuSurface = undefined;
     this._hasQualifiedPin = false;
     // Validate the netlist and reject malformed input. Without this,
@@ -3797,6 +3798,14 @@ export class BoardImpl {
       const ov = this._digitalOverlay.get(netId);
       return ov !== undefined ? ov : (this.nodeVoltages.get(netId) ?? 0);
     };
+    // Per-netlist cache: the scan below is O(nets × terminals) with a
+    // device-registry lookup per hit, and the emulator adapters call
+    // _pinVoltage for EVERY pin on EVERY advance slice (syncInputs) —
+    // ~30 pins × 60 slices/s on the calculator bench, all resolving to
+    // the same nets every time. Cleared in setNetlist beside _qualCache.
+    if (!this._pinNetCache) this._pinNetCache = new Map(); // pre-netlist call
+    const cached = this._pinNetCache.get(key);
+    if (cached !== undefined) return cached === null ? 0 : at(cached);
     // The pin namespace lives on the MCU-surface part: the STC12 body
     // (kind 'mcu') or any gpioFollowsPinStates device (dev boards, bare
     // chips). Only matching kind 'mcu' meant readPin() returned 0 for
@@ -3807,9 +3816,10 @@ export class BoardImpl {
       for (const t of net.terminals) {
         const part = this.partMap.get(t.part);
         if (!part || String(t.terminal).toLowerCase() !== key) continue;
-        if (part.kind === 'mcu') return at(net.id);
+        if (part.kind === 'mcu') { this._pinNetCache.set(key, net.id); return at(net.id); }
         const model = getDevice(part.kind);
         if (model && model.gpioFollowsPinStates) {
+          this._pinNetCache.set(key, net.id);
           return at(net.id);
         }
       }
@@ -3819,8 +3829,9 @@ export class BoardImpl {
     const q = this._resolveQualified(key);
     if (q) {
       const netId = this._netForTerminal(q.partId, q.terminal);
-      if (netId !== undefined) return at(netId);
+      if (netId !== undefined) { this._pinNetCache.set(key, netId); return at(netId); }
     }
+    this._pinNetCache.set(key, null); // a miss is per-netlist too
     return 0;
   }
 
