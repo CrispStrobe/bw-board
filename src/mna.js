@@ -1452,9 +1452,26 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
       const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
-      const i = (vA - vB) / ohms; // current from a to b
-      currents.set('a', -i); // into terminal a
-      currents.set('b', i);  // into terminal b
+      const i = (vA - vB) / ohms; // current from a to b, INSIDE the part
+      // OUT-OF-PART positive. `i` enters at 'a' and leaves at 'b', so the
+      // stored values are its negation at 'a' and itself at 'b'. Both comments
+      // here used to read "into terminal", which states the opposite of what is
+      // stored -- and it was the only place in this file naming a convention
+      // for a passive part, so the one signpost pointed the wrong way. That is
+      // the likeliest reason the codebase carries TWO conventions without
+      // anyone noticing:
+      //   OUT-of-part positive: resistor, button/switch, buzzer, dc-motor, and
+      //     the generic device derivation (dc-motor's hook documents this as
+      //     what a meter in either lead expects)
+      //   INTO-part positive:   led/diode/zener (see "into anode" below), BJT
+      //     (its `emitter: -(ib + ic)` only sums to zero this way), FET, isource
+      // Measured on VCC(5V)->R1(1k)->D1(led)->GND, one current everywhere:
+      // R1.a = -2.9703 mA and D1.anode = +2.9703 mA -- the SAME physical
+      // situation, current entering the leg, with opposite stored signs.
+      // Unifying them is a real behavioural change and its own lane; this
+      // comment only stops the file from misdescribing what it does.
+      currents.set('a', -i); // out of terminal a
+      currents.set('b', i);  // out of terminal b
     }
 
     // A button or switch is stamped as a plain two-terminal conductance
