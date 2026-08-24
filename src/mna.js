@@ -1556,17 +1556,26 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       let id;
       // Same smoothed square law as the stamp — a hard-corner current read
       // off a smoothed solve disagrees with KCL near threshold.
+      // TRIODE: k·vov² is what the saturation VCCS would DEMAND, not what
+      // the channel passes — the stamp models a resistor gOn = 2K·vov and
+      // the current is gOn·vds (the BJT saturation lesson, again: the
+      // extraction must read the same element the solve stamped).
+      const inTriode = mosRegions.get(part.id) === 'triode';
       if (part.kind === 'nmos') {
         const vgs = vG - vS;
         const [vovS] = smoothVov(vgs - vth);
-        id = k * vovS * vovS;
+        id = inTriode
+          ? 2 * k * Math.max(vovS, 0.05) * (vD - vS)   // must match stampNMOS
+          : k * vovS * vovS;
       } else {
         const vsg = vS - vG;
         const [vovS] = smoothVov(vsg - Math.abs(vth));
-        id = k * vovS * vovS;
+        id = inTriode
+          ? 2 * k * Math.max(vovS, 0.05) * (vS - vD)   // must match stampPMOS
+          : k * vovS * vovS;
       }
-      currents.set('drain', id);
-      currents.set('source', -id);
+      currents.set('drain', part.kind === 'nmos' ? id : -id);
+      currents.set('source', part.kind === 'nmos' ? -id : id);
       currents.set('gate', 0); // gate draws no DC current
     }
 
@@ -2309,8 +2318,27 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   const vAcross = diodeVoltages.get(part.id) ?? 0;
   const { gEq, iEq } = diodeCompanion(vAcross, vbe, rd);
   const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+
+  // Stamp E-B diode — in EVERY region. The saturated early-return used
+  // to sit above this stamp (a botched mirror of stampNPN, where the
+  // clamp correctly replaces only the VCCS): a saturated PNP then had
+  // NO base junction at all, the base floated to 0 V through gmin, the
+  // base resistor carried nothing, and the solve converged with
+  // vEB = 5 V — off which the branch-current extraction read 430 mA
+  // "into" a base whose entire path measured 0.43 mA of drive
+  // (pc32-pnp-high-side, found by the EXPECTED-quantities gate).
+  if (idxE !== undefined) A.add(idxE, idxE, gEq);
+  if (idxB !== undefined) A.add(idxB, idxB, gEq);
+  if (idxE !== undefined && idxB !== undefined) {
+    A.add(idxE, idxB, -gEq);
+    A.add(idxB, idxE, -gEq);
+  }
+  if (idxE !== undefined) b[idxE] -= iEq;
+  if (idxB !== undefined) b[idxB] += iEq;
+
   if (region === 'saturated') {
-    // Clamp emitter ≈ collector + vceSat (mirror of the NPN clamp).
+    // Clamp emitter ≈ collector + vceSat (mirror of the NPN clamp);
+    // replaces only the VCCS below, never the junction above.
     const gS = 10;
     if (idxE !== undefined) A.add(idxE, idxE, gS);
     if (idxC !== undefined) A.add(idxC, idxC, gS);
@@ -2322,16 +2350,6 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
     if (idxC !== undefined) b[idxC] -= gS * vceSat;
     return;
   }
-
-  // Stamp E-B diode
-  if (idxE !== undefined) A.add(idxE, idxE, gEq);
-  if (idxB !== undefined) A.add(idxB, idxB, gEq);
-  if (idxE !== undefined && idxB !== undefined) {
-    A.add(idxE, idxB, -gEq);
-    A.add(idxB, idxE, -gEq);
-  }
-  if (idxE !== undefined) b[idxE] -= iEq;
-  if (idxB !== undefined) b[idxB] += iEq;
 
   // C-E current source (reversed direction from NPN)
   const gm = beta * gEq;
@@ -2776,7 +2794,16 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
   const dim = nodeIndex.size;
   const row = dim + vsIdx;
 
-  // V(pos) - V(neg) = volts
+  // V(pos) - V(neg) - rInternal·I = volts. With rInternal absent the
+  // source is ideal, as before. rInternal was ACCEPTED on vsource for as
+  // long as the gallery has carried `battery` benches — the UI resolves
+  // that legacy kind to vsource ("same physics, older word", which is
+  // only true at zero internal resistance) — and then silently dropped:
+  // eight benches and the four German source-resistance lessons
+  // (pc77–pc80) solved with ideal sources under documents teaching
+  // exactly the loaded-terminal-voltage effect. Found by the
+  // EXPECTED-quantities gate; the bw-board `battery` DEVICE always
+  // honored it (referenced-drives oracle), so the gap was this stamp.
   if (idxPos !== undefined) {
     A.set(row, idxPos, 1);
     A.set(idxPos, row, 1);
@@ -2785,6 +2812,8 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
     A.set(row, idxNeg, -1);
     A.set(idxNeg, row, -1);
   }
+  const rInt = Number(part.params?.rInternal) || 0;
+  if (rInt > 0) A.set(row, row, -rInt);
   b[row] = volts;
 }
 

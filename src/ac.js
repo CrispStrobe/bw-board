@@ -367,10 +367,15 @@ export function acSweep(args) {
         }
         case 'vsource': {
           if (part.id !== sourceId) break; // others are AC ground
+          // (Grounding a NON-swept source's net ignores its rInternal —
+          // at the 0.5–2 Ω the gallery uses that error is far below
+          // lesson resolution; stated bound, not an oversight.)
           const row = nodeCount + rowIndex.get(part.id);
           const iP = idxOf(srcPos);
           addC(iP, row, 1, 0);
           addC(row, iP, 1, 0);
+          const rInt = Number(part.params?.rInternal) || 0;
+          if (rInt > 0) addC(row, row, -rInt, 0); // series source resistance
           b[row] = 1; // unit phasor, 0°
           break;
         }
