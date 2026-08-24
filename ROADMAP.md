@@ -13,17 +13,31 @@ for E2–E4 being affordable.
 
 ## Status (2026-08-23, end of day) — do not redo landed work
 
-LANDED on master: E0 (50c3bf7), E1.1 sparse LU + reuse (d9136cc..e2da40f),
-E1.2 adaptive transient (011639f), E1.3/E1.4 opt-in Shockley + ladder
-(8ca1504) + series-rs (35cf233), E2.1 true AC (c49ff5f), boundary-B
+LANDED on master (updated 2026-08-24): E0 (50c3bf7), E1.1 sparse LU +
+reuse (d9136cc..e2da40f), E1.2 adaptive transient (011639f), E1.3/E1.4
+opt-in Shockley + ladder (8ca1504) + series-rs (35cf233), E1.5 worker
+safety + E4.1/E4.1a scheduled events + gate tpd + the step-controller
+floor fix (6be91c2), E2.1 true AC (c49ff5f), E2.2 bench temperature +
+E2.3 tolerance + E4.2 logic-analyzer channels (6fa2893), boundary-B
 setDeviceControl (0f1f29e), E3.1 op-amp macromodel + E3.5a vcvs/vccs
-(fea58ed), plus four defect fixes found by the examples owner's
+(fea58ed), E3.6 honesty upgrades incl. the comparator-init latent fix
+(88e9668), ALL of E5 — E5.6-E5.11 + E5.8 (ea81407..2f9f0af), E5.1's
+five extractor chips MC6850/NS16C550/M6532/AY-3-8912/UM245R with the
+rwb evaluation axis (0ec8558..0060b80), E5.2 address permutation
+(5b2eecd) — plus four defect fixes found by the examples owner's
 instruments: loaded-wiper KCL routing (40db90f), advance-pattern
 invariance / solver-owned motor winding / C1 PWL knee (2ac81e6), walker
 coverage fall-through (0a3e9c0), shared-terminal net coalescing
-(2235de5). OPEN: E1.3b default flip (owner pedagogy ruling — the
-crossover table is in sb3-creator test/measurements/E13B-SHOCKLEY-DELTA.md),
-E1.5, E2.2/E2.3, E3.2–E3.4, E3.5b (cccs/ccvs), E3.6, E4, E5 below.
+(2235de5).
+
+OPEN, and what actually holds each: E1.3b default flip (the ONE item on
+an owner decision — pedagogy ruling, crossover table in sb3-creator
+test/measurements/E13B-SHOCKLEY-DELTA.md); E3.2 BJT Early +
+reverse-active, E3.3 MOS body diode + Meyer caps, E3.4 transformer
+(nothing holds these except the standing mna.js gate: spec-update +
+hand oracles in the same commit); E3.5b cccs/ccvs (deferred by
+spec-updates/controlled-sources.md until the SPICE importer consumes
+them); AY 8910/8913 pin surfaces (when a board needs them).
 
 ---
 
