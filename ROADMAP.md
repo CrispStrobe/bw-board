@@ -30,14 +30,23 @@ invariance / solver-owned motor winding / C1 PWL knee (2ac81e6), walker
 coverage fall-through (0a3e9c0), shared-terminal net coalescing
 (2235de5).
 
-OPEN, and what actually holds each: E1.3b default flip (the ONE item on
-an owner decision — pedagogy ruling, crossover table in sb3-creator
-test/measurements/E13B-SHOCKLEY-DELTA.md); E3.2 BJT Early +
-reverse-active, E3.3 MOS body diode + Meyer caps, E3.4 transformer
-(nothing holds these except the standing mna.js gate: spec-update +
-hand oracles in the same commit); E3.5b cccs/ccvs (deferred by
+OWNER RULINGS (2026-08-24), closing the open questions:
+- E1.3b is RULED: PWL stays the default, Shockley stays opt-in. The
+  curriculum operates below the ~8 mA crossover, where PWL sits closer
+  to the datasheet Vf the lessons quote; a course that contradicts the
+  datasheet it just taught loses more than it gains. Revisit only via a
+  deliberate "real diode curve" lesson that opts in.
+- E3.4 transformer is NEXT (it unblocks the power-supply lesson arc);
+  E3.2 BJT Early/reverse and E3.3 MOS body diode + Meyer caps are
+  DEFERRED until a lesson would show the difference. Same standing
+  mna.js gate when they come up.
+- The filament bulb's inrush stays OPT-IN (params.filament) until an
+  inrush lesson exists to opt in deliberately.
+
+OPEN after the rulings: E3.4 (in progress), E3.2/E3.3 (deferred by
+ruling), E3.5b cccs/ccvs (deferred by
 spec-updates/controlled-sources.md until the SPICE importer consumes
-them); AY 8910/8913 pin surfaces (when a board needs them).
+them), AY 8910/8913 pin surfaces (when a board needs them).
 
 ---
 
