@@ -397,6 +397,27 @@ export class ControllerPanel {
   }
 
   /**
+   * Mirror a PIXEL framebuffer onto an OLED widget — the part-binding
+   * path: an oled widget bound to a circuit SSD1306 shows the device's
+   * actual GDDRAM, not a text approximation (there is none: the
+   * calculator draws through a pixel font and keeps no text shadow).
+   * Format matches the ssd1306 device state: pages×width bytes, LSB at
+   * the top of each 8-row page. The face renders `state.fb` as a canvas
+   * when present; text mode is untouched for variable bindings.
+   * @param {string} name
+   * @param {Uint8Array|number[]} fb
+   * @param {number} [width]
+   * @param {number} [height]
+   */
+  setOledPixels(name, fb, width = 128, height = 64) {
+    const w = this._requireWidget(name, 'oled');
+    w.state.fb = fb instanceof Uint8Array ? Uint8Array.from(fb) : new Uint8Array(fb || []);
+    w.state.fbW = width;
+    w.state.fbH = height;
+    this._emit('input', { name, pixels: true });
+  }
+
+  /**
    * Get the OLED text as an array of `rows` rows, each padded to `cols` wide.
    * @param {string} name
    * @returns {string[]}

@@ -54,7 +54,47 @@ export function bindPanelToBoard(panel, board) {
 
   panel.addListener(onPanelEvent);
 
+  // PART-bound displays: mirror the board device's own state. This
+  // direction did not exist — the board binding pushed widget INPUTS to
+  // setControl and deferred displays to the variable layer, so an oled
+  // widget bound to the circuit's SSD1306 could be selected and then
+  // showed nothing forever (owner report, 2026-08-25). Polled like the
+  // variable pump; the change hash keeps an idle screen free.
+  const shown = new Map();
+  function pumpDisplays() {
+    for (const w of panel.getWidgets()) {
+      if (!w.binding || w.binding.target !== 'part' || !DISPLAYS.has(w.type)) continue;
+      if (typeof board.getDeviceState !== 'function') continue;
+      let st = null;
+      try { st = board.getDeviceState(w.binding.partId); } catch (e) { /* not a device */ }
+      if (!st) continue;
+      if (w.type === 'oled' && st.fb && typeof panel.setOledPixels === 'function') {
+        let h = 0;
+        for (let i = 0; i < st.fb.length; i++) h = ((h * 31) + st.fb[i]) | 0;
+        if (shown.get(w.name) !== h) {
+          shown.set(w.name, h);
+          panel.setOledPixels(w.name, st.fb, 128, 64);
+        }
+      } else if ((w.type === 'lcd' || w.type === 'oled' || w.type === 'terminal') &&
+                 Array.isArray(st.text)) {
+        // Character devices (hd44780 family) keep visible text lines.
+        const sv = st.text.join('\n');
+        if (shown.get(w.name) !== sv) {
+          shown.set(w.name, sv);
+          if (w.type === 'lcd' && typeof panel.setLcdText === 'function') panel.setLcdText(w.name, sv);
+          else if (w.type === 'oled' && typeof panel.setOledText === 'function') panel.setOledText(w.name, sv);
+          else if (typeof panel.setTerminalText === 'function') panel.setTerminalText(w.name, sv);
+        }
+      }
+    }
+    if (raf !== null) raf = requestAnimationFrame(pumpDisplays);
+  }
+  let raf = typeof requestAnimationFrame === 'function'
+    ? requestAnimationFrame(pumpDisplays) : null;
+
   return {
+    /** One display-mirror pass, for tests and headless hosts. */
+    pumpDisplays() { const r = raf; raf = null; pumpDisplays(); raf = r; },
     /** Push all bound widget values to the board (initial sync). */
     sync() {
       for (const w of panel.getWidgets()) {
@@ -76,6 +116,8 @@ export function bindPanelToBoard(panel, board) {
 
     dispose() {
       panel.removeListener(onPanelEvent);
+      if (raf !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      raf = null;
     },
   };
 }
