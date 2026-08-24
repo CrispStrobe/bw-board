@@ -406,6 +406,8 @@ export class ControllerExtension {
       p.setLcdText(name, String(VALUE));
     } else if (w.type === 'oled') {
       p.setOledText(name, String(VALUE));
+    } else if (w.type === 'terminal') {
+      p.setTerminalText(name, String(VALUE));
     } else if (w.type === 'mono_lcd') {
       p.setMonoLcdText(name, String(VALUE));
     }

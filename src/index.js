@@ -48,7 +48,7 @@ export { registerMPU6050 } from './devices/mpu6050.js';
 export { registerSSD1306, ssd1306Pixel } from './devices/ssd1306.js';
 export { getMaxCurrent, CURRENT_RATINGS, PORT_LIMITS, aggregateCurrent, checkCurrentBudget } from './current-ratings.js';
 export { R_INPUT_PULLUP } from './pin-model.js';
-export { ControllerPanel, WIDGET_TYPES } from './controller.js';
+export { ControllerPanel, WIDGET_TYPES, WIDGET_DEFAULTS, DECORATION_TYPES } from './controller.js';
 export { bindPanelToBoard, createControllerDriver } from './controller-binding.js';
 export { ControllerExtension } from './controller-extension.js';
 export { createControllerStageView, WIDGET_RENDER_INFO } from './controller-stage-view.js';

@@ -57,6 +57,16 @@ export const WIDGET_RENDER_INFO = {
   gauge:     { minSize: { w: 120, h: 60 },  inputEvents: [], icon: 'gauge' },
   matrix:    { minSize: { w: 90, h: 90 },   inputEvents: [], icon: 'matrix' },
   sevenseg:  { minSize: { w: 120, h: 52 },  inputEvents: [], icon: 'sevenseg' },
+  // Character displays. These three shipped in WIDGET_TYPES without a render
+  // descriptor, so a host reading `renderInfo[w.type]` got `undefined` and had
+  // to invent a size — found by the gate below, which now requires every
+  // declared type to have one.
+  lcd:       { minSize: { w: 180, h: 60 },  inputEvents: [], icon: 'lcd' },
+  oled:      { minSize: { w: 200, h: 90 },  inputEvents: [], icon: 'oled' },
+  // A scrolling transcript face: wider and taller than the OLED, because its
+  // default window is 40x8 against the OLED's 21x4.
+  terminal:  { minSize: { w: 320, h: 150 }, inputEvents: [], icon: 'terminal' },
+  keypad:    { minSize: { w: 160, h: 160 }, inputEvents: ['pointerdown', 'pointerup'], icon: 'keypad' },
   // New display widgets
   bargraph:  { minSize: { w: 160, h: 40 },  inputEvents: [], icon: 'bargraph' },
   simplevga: { minSize: { w: 160, h: 120 }, inputEvents: [], icon: 'simplevga' },

@@ -1443,6 +1443,25 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       currents.set('b', i);  // into terminal b
     }
 
+    // A button or switch is stamped as a plain two-terminal conductance
+    // (stampButton: 1 mOhm closed, 1e-12 S open), so its branch current is
+    // as computable as a resistor's — but no rule extracted it, and
+    // `branchCurrent` returns a flat 0 for a terminal it finds nothing for.
+    // An ammeter probe on a closed button in a live loop therefore read
+    // 0.0 mA, which is indistinguishable from an open circuit and is the
+    // one answer a continuity-minded learner will not question.
+    if (part.kind === 'button' || part.kind === 'switch') {
+      const netA = findNet(nets, part.id, 'a');
+      const netB = findNet(nets, part.id, 'b');
+      const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      const closed = (controls?.get(part.id) ?? 0) === 1;
+      const g = closed ? 1 / 0.001 : 1e-12;   // must match stampButton
+      const i = (vA - vB) * g;                // current from a to b
+      currents.set('a', -i);                  // same convention as resistor
+      currents.set('b', i);
+    }
+
     if (part.kind === 'led' || part.kind === 'diode') {
       const anodeNet = findNet(nets, part.id, 'anode');
       const cathodeNet = findNet(nets, part.id, 'cathode');
@@ -1494,6 +1513,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vbeThresh = /** @type {number} */ (part.params.vbe ?? 0.7);
       const rd = 10;
 
+      const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+
       let ib, ic;
       // Same C1 knee the stamp uses — extraction and stamp must agree.
       if (part.kind === 'npn') {
@@ -1502,6 +1523,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       } else {
         ib = pwlKneeCurrent(vE - vB, vbeThresh, rd);
         ic = beta * ib;
+      }
+      // SATURATED: beta*Ib is what the VCCS would DEMAND, not what the
+      // branch passes. The stamp knows this — it replaces the VCCS with a
+      // stiff Vce clamp (gS below, matching stampNPN/stampPNP) so the
+      // collector current becomes whatever the LOAD passes at Vce(sat).
+      // The extraction did not, and reported beta*Ib anyway: on
+      // 38-npn-switch an ammeter probe on q1.collector read 43.0 mA while
+      // the same series loop measured 5.8 mA in the load resistor and the
+      // LED. That is a reading a learner cannot reconcile with KCL, and it
+      // cost brickwright-lite's `electricity-transistor-switch` its
+      // checkpoint (docs/LESSON-REVIEW-WAVE-1.md defect 6).
+      if (bjtRegions.get(part.id) === 'saturated') {
+        const gS = 10; // must match stampNPN / stampPNP
+        const vOut = part.kind === 'npn' ? vC - vE : vE - vC;
+        ic = Math.max(0, gS * (vOut - vceSat));
       }
       currents.set('base', ib);
       currents.set('collector', ic);

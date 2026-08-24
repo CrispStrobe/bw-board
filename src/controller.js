@@ -31,6 +31,7 @@ export const WIDGET_TYPES = /** @type {const} */ ({
   KEYPAD:    'keypad',
   LCD:       'lcd',
   OLED:      'oled',
+  TERMINAL:  'terminal',
   SEVENSEG:  'sevenseg',
   KEYBOARD:  'keyboard',
   BARGRAPH:  'bargraph',
@@ -47,8 +48,18 @@ export const WIDGET_TYPES = /** @type {const} */ ({
  */
 export const DECORATION_TYPES = new Set(['text', 'image']);
 
-/** Default configs per widget type. */
-const DEFAULTS = {
+/**
+ * Default configs per widget type.
+ *
+ * Exported (as `WIDGET_DEFAULTS`) because it is the only declaration of what
+ * is configurable about a widget, and a host that edits configuration needs
+ * to be checkable against it. brickwright-lite's widget inspector edited four
+ * keys — `color`, `fontSize`, `src`, `text`, all of them decoration — while a
+ * button's `toggle`, a slider's `min`/`max`/`step` and a gauge's range were
+ * reachable only by hand-editing `controller.json`; nothing caught it,
+ * because there was nothing to check the inspector against.
+ */
+export const WIDGET_DEFAULTS = {
   joystick: { x: 0, y: 0 },
   button:   { toggle: false, pressed: false },
   slider:   { min: 0, max: 100, step: 1, value: 0 },
@@ -66,6 +77,12 @@ const DEFAULTS = {
   // A text OLED DISPLAY: read-only multi-row text face driven by a program
   // variable (newlines separate rows; each row clipped to `cols` on render).
   oled:     { rows: 4, cols: 21, text: '' },
+  // A scrolling TERMINAL display: like `oled`, but the bound variable is a
+  // GROWING transcript, so the face shows the LAST `rows` lines rather than
+  // the first — a program that prints 200 lines into a 8-row terminal must
+  // show line 200, not line 8. Otherwise identical: read-only, one string
+  // variable, each row clipped to `cols`.
+  terminal: { rows: 8, cols: 40, text: '' },
   // A 7-segment numeric DISPLAY: read-only face showing the bound variable's
   // value right-aligned across `digits` tubes (the display contract is one
   // NUMERIC variable per display widget). Overflow renders as dashes.
@@ -136,12 +153,12 @@ export class ControllerPanel {
    */
   addWidget(name, type, config = {}, layout = {}) {
     if (this._widgets.has(name)) throw new Error(`Widget '${name}' already exists`);
-    if (!DEFAULTS[type]) throw new Error(`Unknown widget type: ${type}`);
+    if (!WIDGET_DEFAULTS[type]) throw new Error(`Unknown widget type: ${type}`);
     const w = {
       name,
       type,
-      config: { ...DEFAULTS[type], ...config },
-      state: { ...DEFAULTS[type] },
+      config: { ...WIDGET_DEFAULTS[type], ...config },
+      state: { ...WIDGET_DEFAULTS[type] },
       // Placement + presentation: x/y and any editor fields (w/h/rotation/
       // color/label) survive verbatim. NOT state: state.{x,y} is a
       // joystick's INPUT value; layout is where the widget SITS.
@@ -157,6 +174,7 @@ export class ControllerPanel {
     if (type === 'keypad') w.state = { value: '' };
     if (type === 'lcd') w.state = { text: '' };
     if (type === 'oled') w.state = { text: config.text ?? '' };
+    if (type === 'terminal') w.state = { text: config.text ?? '' };
     if (type === 'sevenseg') w.state = { value: config.value ?? 0 };
     if (type === 'bargraph') w.state = { value: config.value ?? w.config.min };
     if (type === 'simplevga') w.state = { value: 0, buffer: null };
@@ -396,6 +414,52 @@ export class ControllerPanel {
   }
 
   /**
+   * Set TERMINAL text. Display-only, driven by the program or a variable
+   * binding; the whole transcript is held and `getTerminalRows` shows its
+   * tail.
+   * @param {string} name
+   * @param {string} text
+   */
+  setTerminalText(name, text) {
+    const w = this._requireWidget(name, 'terminal');
+    w.state.text = String(text);
+    this._emit('input', { name, text: w.state.text });
+  }
+
+  /**
+   * Get the terminal's visible window: the LAST `rows` lines of the
+   * transcript, each clipped and padded to `cols`.
+   *
+   * Tail-anchored, which is the whole difference from `getOledRows`. A
+   * terminal's variable grows without bound (a program appends to it), so
+   * anchoring at line 0 would freeze the face on the first screenful and
+   * never show what the program just printed.
+   *
+   * A transcript ending in a newline has an empty final line — that is the
+   * cursor's line and it is kept, so a prompt written without a trailing
+   * newline and one written with it do not render identically.
+   * @param {string} name
+   * @returns {string[]}
+   */
+  getTerminalRows(name) {
+    const w = this._widgets.get(name);
+    if (!w || w.type !== 'terminal') return [];
+    const rows = Math.max(1, w.config.rows | 0);
+    const cols = Math.max(1, w.config.cols | 0);
+    const lines = String(w.state.text || '').split('\n');
+    // Long lines wrap rather than truncate: a terminal that silently drops
+    // the end of a line hides exactly the output a learner is reading for.
+    const wrapped = [];
+    for (const line of lines) {
+      if (line.length <= cols) { wrapped.push(line); continue; }
+      for (let i = 0; i < line.length; i += cols) wrapped.push(line.slice(i, i + cols));
+    }
+    const window = wrapped.slice(-rows);
+    while (window.length < rows) window.push('');
+    return window.map(l => l.padEnd(cols, ' '));
+  }
+
+  /**
    * Set 7-segment display value. Read-only indicator like the gauge: driven
    * by the program (variable binding), never by touch. Stores the raw
    * number; the face truncates to integer and handles overflow.
@@ -570,6 +634,7 @@ export class ControllerPanel {
       case 'lcd':
         return w.state.text;
       case 'oled':
+      case 'terminal':
       case 'mono_lcd':
         return w.state.text || '';
       case 'keyboard':
@@ -681,7 +746,13 @@ export class ControllerPanel {
         binding: w.binding ? { ...w.binding } : null,
       });
     }
-    return { version: 1, widgets };
+    // The MODE is part of the layout, not a view preference. A panel whose
+    // widgets are all inputs is unusable in 'edit' (every control renders
+    // disabled), so a round trip that drops the mode turns a working
+    // faceplate into a dead one on the next load. It was dropped here for a
+    // year: four shipped example layouts opened dead, and a host that fixed
+    // them by hand lost the fix on the first save.
+    return { version: 1, mode: this._mode, widgets };
   }
 
   /** Restore from a previously serialized object. */
@@ -694,6 +765,9 @@ export class ControllerPanel {
       const w = panel.addWidget(entry.name, entry.type, entry.config, entry.layout);
       if (entry.binding) w.binding = { ...entry.binding };
     }
+    // Absent or unrecognised: keep the constructor default ('edit'), which is
+    // what every layout written before this field existed means.
+    if (data.mode === 'play' || data.mode === 'edit') panel.setMode(data.mode);
     return panel;
   }
 

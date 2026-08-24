@@ -64,6 +64,23 @@ export function registerDCMotor() {
       ctx.theveninBetween('a', 'b', kV * state.omega, R);
     },
 
+    // Terminal currents, so an ammeter probe on a motor lead reads the
+    // winding current rather than the flat 0 `branchCurrent` returns for a
+    // terminal no rule fills. Same expression `update` uses below, and for
+    // the same reason it is exact: the board expands the winding L onto a
+    // hidden series net, so 'a' sits between L and R and the resistive
+    // formula IS the series current.
+    //
+    // Sign follows the resistor convention in mna.js (current out of the
+    // part at the terminal), so a meter placed in either lead agrees with
+    // one placed in a series resistor.
+    branchCurrents(part, state, read) {
+      const R = getR(part);
+      const kV = part.params?.kV ?? 0.01;
+      const i = (read('a') - read('b') - kV * state.omega) / R;
+      return new Map([['a', -i], ['b', i]]);
+    },
+
     update(part, state, read, tNs) {
       const R = getR(part);
       const kV = part.params?.kV ?? 0.01;

@@ -103,7 +103,7 @@ const DECORATIONS = new Set(['text', 'image']);
 
 // Display widget types: read-only, driven by variable binding (program→face).
 const DISPLAYS = new Set([
-  'gauge', 'matrix', 'lcd', 'oled', 'sevenseg',
+  'gauge', 'matrix', 'lcd', 'oled', 'terminal', 'sevenseg',
   'bargraph', 'simplevga', 'mono_lcd', 'rgb_light',
 ]);
 
@@ -159,12 +159,13 @@ export function bindPanelToVariables(panel, vm, opts = {}) {
       if (!w.binding || w.binding.target !== 'variable' || !isDisplay(w)) continue;
       const v = findVar(w.binding.variableName);
       if (!v) continue;
-      if (w.type === 'lcd' || w.type === 'oled' || w.type === 'mono_lcd') {
+      if (w.type === 'lcd' || w.type === 'oled' || w.type === 'terminal' || w.type === 'mono_lcd') {
         const sv = String(v.value);
         if (shown.get(w.name) !== sv) {
           shown.set(w.name, sv);
           if (w.type === 'lcd' && typeof panel.setLcdText === 'function') panel.setLcdText(w.name, sv);
           else if (w.type === 'oled' && typeof panel.setOledText === 'function') panel.setOledText(w.name, sv);
+          else if (w.type === 'terminal' && typeof panel.setTerminalText === 'function') panel.setTerminalText(w.name, sv);
           else if (w.type === 'mono_lcd' && typeof panel.setMonoLcdText === 'function') panel.setMonoLcdText(w.name, sv);
         }
       } else {
@@ -246,6 +247,7 @@ function mapWidgetToControl(w, param) {
     case 'gauge':
     case 'lcd':
     case 'oled':
+    case 'terminal':
     case 'bargraph':
     case 'simplevga':
     case 'mono_lcd':

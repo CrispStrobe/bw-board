@@ -165,6 +165,54 @@ export function registerI2CParts() {
       ctx.conductance('scl', null, 1 / R_INPUT);
     },
 
+    // High-level verbs (boundary B setDeviceControl,
+    // spec-updates/set-device-control.md). Writes the same `display` rows and
+    // `cursor` the I2C decode below writes, so the bus path stays
+    // authoritative for MCU-driven benches and the two cannot disagree.
+    //
+    // This handler was missing for as long as the model existed, and
+    // char_lcd_i2c was the ONLY display kind in the example corpus without
+    // one — char_lcd, hd44780 and ssd1306 all had it. The consequence was a
+    // learner-facing blank screen on the `74-ammeter` bench with no
+    // indication anything had gone wrong, since `setDeviceControl` simply
+    // returned false: brickwright-lite `docs/LESSON-REVIEW-WAVE-2.md`
+    // defect 1, which cost `measurement-current-burden` its display.
+    control(part, state, verb, value) {
+      const cols = part.params?.cols ?? 16;
+      const rows = part.params?.rows ?? 2;
+      switch (verb) {
+        case 'clear':
+          state.display = Array.from({ length: rows }, () => ' '.repeat(cols));
+          state.cursor = { row: 0, col: 0 };
+          return true;
+        case 'cursor': {
+          // [row, col], clamped into the panel the part declares — the bus
+          // path clamps by construction (a DDRAM address cannot address a
+          // row that is not there), so the verb path must too.
+          const a = Array.isArray(value) ? value : [0, 0];
+          state.cursor = {
+            row: Math.max(0, Math.min(rows - 1, a[0] | 0)),
+            col: Math.max(0, Math.min(cols - 1, a[1] | 0)),
+          };
+          return true;
+        }
+        case 'print': {
+          for (const ch of String(value)) {
+            const { row, col } = state.cursor;
+            if (row >= state.display.length || col >= cols) break;
+            const line = state.display[row];
+            state.display[row] = line.substring(0, col) + ch + line.substring(col + 1);
+            state.cursor = { row, col: col + 1 };
+          }
+          return true;
+        }
+        case 'backlight':
+          state.backlight = !!value;
+          return true;
+      }
+      return false;
+    },
+
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
       const threshold = vcc * 0.5;
