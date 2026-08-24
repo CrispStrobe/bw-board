@@ -34,6 +34,7 @@ const KNOWN_TERMINALS = {
   npn: ['base', 'collector', 'emitter'],
   pnp: ['base', 'collector', 'emitter'],
   inductor: ['a', 'b'],
+  transformer: ['p1', 'p2', 's1', 's2'],
   zener: ['anode', 'cathode'],
   nmos: ['gate', 'drain', 'source'],
   pmos: ['gate', 'drain', 'source'],
@@ -72,6 +73,7 @@ const REQUIRED_PARAMS = {
   pnp: [], // beta/vbe have defaults
   zener: [], // vf/vz have defaults
   inductor: ['henrys'],
+  transformer: [], // l1/l2/k or ratio/lm/k — all have defaults
 };
 
 /**
@@ -161,6 +163,19 @@ export function validateNetlist(parts, nets) {
     }
 
     // Param value validation
+    if (part.kind === 'transformer' && params.k !== undefined) {
+      const k = /** @type {number} */ (params.k);
+      if (!(k > 0 && k < 1)) {
+        errors.push({
+          severity: 'error',
+          message: `Part "${part.id}" (transformer) has k=${k} — coupling must sit in (0, 1). `
+            + `A perfectly coupled pair has a singular inductance matrix: the ideal `
+            + `transformer is the LIMIT of this model, not a member; use k close to 1 `
+            + `(spec-updates/coupled-inductors.md).`,
+          partId: part.id,
+        });
+      }
+    }
     if (params.ohms !== undefined) {
       const v = /** @type {number} */ (params.ohms);
       if (typeof v !== 'number' || Number.isNaN(v)) {

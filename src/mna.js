@@ -551,7 +551,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // only connect to active sources and have no passive element terminals).
   const passiveKinds = new Set(['resistor', 'capacitor', 'diode', 'led',
     'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
-    'npn', 'pnp', 'zener', 'inductor', 'nmos', 'pmos', 'opamp',
+    'npn', 'pnp', 'zener', 'inductor', 'transformer', 'nmos', 'pmos', 'opamp',
     'vsource', 'isource']);
 
   // EVERY net bearing a gnd symbol IS the reference — EXCEPT in the
@@ -874,6 +874,48 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
               findNet(nets, part.id, 'b'),
               1 / 0.001,
               nodeIndex);
+          }
+          break;
+        }
+
+        case 'transformer': {
+          // Coupled pair (spec-updates/coupled-inductors.md): with
+          // Γ = L⁻¹, BE gives i(t+h) = i(t) + h·Γ·v(t+h) and trap
+          // i(t+h) = i(t) + (h/2)·Γ·(v(t+h)+v(t)) — a full 2×2
+          // conductance whose off-diagonal terms ARE the mutual
+          // coupling. State rides the inductor maps as <id>:p / <id>:s.
+          const netP1 = findNet(nets, part.id, 'p1');
+          const netP2 = findNet(nets, part.id, 'p2');
+          const netS1 = findNet(nets, part.id, 's1');
+          const netS2 = findNet(nets, part.id, 's2');
+          if (transient) {
+            const { g11, g12, g22 } = transformerGamma(part);
+            const h = Math.max(transient.dtSec, 1e-15);
+            const trap = transient.method === 'trap';
+            const sc = trap ? h / 2 : h;
+            const iP = transient.inductorCurrents.get(part.id + ':p') ?? 0;
+            const iS = transient.inductorCurrents.get(part.id + ':s') ?? 0;
+            const vpP = trap ? (transient.inductorVoltages?.get(part.id + ':p') ?? 0) : 0;
+            const vpS = trap ? (transient.inductorVoltages?.get(part.id + ':s') ?? 0) : 0;
+            const inP = iP + (trap ? sc * (g11 * vpP + g12 * vpS) : 0);
+            const inS = iS + (trap ? sc * (g12 * vpP + g22 * vpS) : 0);
+            stampPortCoupling(A, netP1, netP2, netP1, netP2, sc * g11, nodeIndex);
+            stampPortCoupling(A, netP1, netP2, netS1, netS2, sc * g12, nodeIndex);
+            stampPortCoupling(A, netS1, netS2, netP1, netP2, sc * g12, nodeIndex);
+            stampPortCoupling(A, netS1, netS2, netS1, netS2, sc * g22, nodeIndex);
+            const ip1 = netP1 ? nodeIndex.get(netP1) : undefined;
+            const ip2 = netP2 ? nodeIndex.get(netP2) : undefined;
+            const is1 = netS1 ? nodeIndex.get(netS1) : undefined;
+            const is2 = netS2 ? nodeIndex.get(netS2) : undefined;
+            if (ip1 !== undefined) b[ip1] -= inP; // i flows p1→p2 (dot at p1)
+            if (ip2 !== undefined) b[ip2] += inP;
+            if (is1 !== undefined) b[is1] -= inS;
+            if (is2 !== undefined) b[is2] += inS;
+          } else {
+            // DC: each winding the same 1 mΩ short a lone inductor is,
+            // and NO coupling — di/dt = 0 induces nothing.
+            stampTwoTerminal(A, netP1, netP2, 1 / 0.001, nodeIndex);
+            stampTwoTerminal(A, netS1, netS2, 1 / 0.001, nodeIndex);
           }
           break;
         }
@@ -1544,6 +1586,33 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       currents.set('b', i);
     }
 
+    if (part.kind === 'transformer') {
+      const vP = (nodeVoltages.get(findNet(nets, part.id, 'p1')) ?? 0)
+        - (nodeVoltages.get(findNet(nets, part.id, 'p2')) ?? 0);
+      const vS = (nodeVoltages.get(findNet(nets, part.id, 's1')) ?? 0)
+        - (nodeVoltages.get(findNet(nets, part.id, 's2')) ?? 0);
+      let iP; let iS;
+      if (transient) {
+        const { g11, g12, g22 } = transformerGamma(part);
+        const h = Math.max(transient.dtSec, 1e-15);
+        const trap = transient.method === 'trap';
+        const sc = trap ? h / 2 : h;
+        const iPp = transient.inductorCurrents.get(part.id + ':p') ?? 0;
+        const iSp = transient.inductorCurrents.get(part.id + ':s') ?? 0;
+        const vpP = trap ? (transient.inductorVoltages?.get(part.id + ':p') ?? 0) : 0;
+        const vpS = trap ? (transient.inductorVoltages?.get(part.id + ':s') ?? 0) : 0;
+        iP = iPp + sc * (g11 * (vP + vpP) + g12 * (vS + vpS));
+        iS = iSp + sc * (g12 * (vP + vpP) + g22 * (vS + vpS));
+      } else {
+        iP = vP / 0.001;
+        iS = vS / 0.001;
+      }
+      currents.set('p1', -iP);
+      currents.set('p2', iP);
+      currents.set('s1', -iS);
+      currents.set('s2', iS);
+    }
+
     if (part.kind === 'capacitor') {
       const netA = findNet(nets, part.id, 'a');
       const netB = findNet(nets, part.id, 'b');
@@ -1668,6 +1737,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
         inductorVoltagesNext.set(part.id, vA - vB);
       }
+      if (part.kind === 'transformer') {
+        const c = branchCurrents.get(part.id);
+        inductorCurrentsNext.set(part.id + ':p', c ? (c.get('p2') ?? 0) : 0);
+        inductorCurrentsNext.set(part.id + ':s', c ? (c.get('s2') ?? 0) : 0);
+        const vP = (nodeVoltages.get(findNet(nets, part.id, 'p1')) ?? 0)
+          - (nodeVoltages.get(findNet(nets, part.id, 'p2')) ?? 0);
+        const vS = (nodeVoltages.get(findNet(nets, part.id, 's1')) ?? 0)
+          - (nodeVoltages.get(findNet(nets, part.id, 's2')) ?? 0);
+        inductorVoltagesNext.set(part.id + ':p', vP);
+        inductorVoltagesNext.set(part.id + ':s', vS);
+      }
     }
     return { nodeVoltages, branchCurrents, capVoltagesNext, capCurrentsNext,
       inductorCurrentsNext, inductorVoltagesNext, converged,
@@ -1692,6 +1772,41 @@ let tempVfShiftV = 0;
 let benchTemperatureC = 25;
 /** A junction's effective forward drop at the bench temperature. */
 const effVf = (raw) => raw + tempVfShiftV;
+
+/**
+ * A transformer's inverse inductance matrix Γ = L⁻¹ (E3.4,
+ * spec-updates/coupled-inductors.md). Accepts {l1, l2, k} or the
+ * pedagogical {ratio, lm, k}; k is clamped inside (0, 1) here as a
+ * belt-and-braces for programmatic callers — validateNetlist REFUSES
+ * out-of-range k with the reason named before a board ever solves.
+ */
+function transformerGamma(part) {
+  const P = part.params ?? {};
+  const n = Number(P.ratio) || 0;
+  const lm = Number(P.lm ?? 10);
+  const l1 = Number(P.l1 ?? (n ? lm : 1));
+  const l2 = Number(P.l2 ?? (n ? lm / (n * n) : 1));
+  const k = Math.min(Math.max(Number(P.k ?? 0.999), 1e-6), 0.999999);
+  const m = k * Math.sqrt(l1 * l2);
+  const det = l1 * l2 - m * m;
+  return { l1, l2, m, g11: l2 / det, g12: -m / det, g22: l1 / det };
+}
+
+/**
+ * Stamp the coupling between two ports: current at port (rowA→rowB)
+ * responding to voltage across port (colA→colB) with conductance g.
+ * With row === col this is exactly stampTwoTerminal's pattern.
+ */
+function stampPortCoupling(A, rowNetA, rowNetB, colNetA, colNetB, g, nodeIndex) {
+  const ra = rowNetA ? nodeIndex.get(rowNetA) : undefined;
+  const rb = rowNetB ? nodeIndex.get(rowNetB) : undefined;
+  const ca = colNetA ? nodeIndex.get(colNetA) : undefined;
+  const cb = colNetB ? nodeIndex.get(colNetB) : undefined;
+  if (ra !== undefined && ca !== undefined) A.add(ra, ca, g);
+  if (ra !== undefined && cb !== undefined) A.add(ra, cb, -g);
+  if (rb !== undefined && ca !== undefined) A.add(rb, ca, -g);
+  if (rb !== undefined && cb !== undefined) A.add(rb, cb, g);
+}
 
 const NETS_TERM_MAP = Symbol('bw-term-map');
 const termKey = (partId, terminal) => partId + String.fromCharCode(0) + terminal;

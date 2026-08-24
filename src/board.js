@@ -47,6 +47,7 @@ const LED_I_RATED = 0.020; // 20 mA rated current (for brightness normalization)
  */
 const MNA_ONLY_KINDS = new Set([
   'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'zener', 'diode', 'vsource', 'isource', 'vcvs', 'vccs',
+  'transformer',
 ]);
 
 /**
@@ -2704,7 +2705,7 @@ export class BoardImpl {
     // charged because this scanned only the public parts, and the
     // follower sat at 0 V forever.
     for (const p of (this._solveParts ?? this.parts)) {
-      if (p.kind === 'capacitor' || p.kind === 'inductor') return true;
+      if (p.kind === 'capacitor' || p.kind === 'inductor' || p.kind === 'transformer') return true;
     }
     return false;
   }

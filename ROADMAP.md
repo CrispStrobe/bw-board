@@ -43,8 +43,7 @@ OWNER RULINGS (2026-08-24), closing the open questions:
 - The filament bulb's inrush stays OPT-IN (params.filament) until an
   inrush lesson exists to opt in deliberately.
 
-OPEN after the rulings: E3.4 (in progress), E3.2/E3.3 (deferred by
-ruling), E3.5b cccs/ccvs (deferred by
+OPEN after the rulings: E3.2/E3.3 (deferred by ruling), E3.5b cccs/ccvs (deferred by
 spec-updates/controlled-sources.md until the SPICE importer consumes
 them), AY 8910/8913 pin surfaces (when a board needs them).
 
@@ -196,7 +195,7 @@ synchronous-rectifier lessons; BSIM is explicitly out of scope. File
 `spec-updates/mos-level1.md`. Oracle: body-diode freewheeling current in an
 inductive-kick circuit; gate-charge plateau visible on the scope.
 
-### E3.4 Coupled inductors / transformer — `src/mna.js` (GATED)
+### E3.4 Coupled inductors / transformer — DONE
 New part kind `transformer` (or `k` coupling on two inductors): standard MNA
 mutual-inductance companion stamps. Currently unrepresentable, and it blocks every
 mains/isolation/boost lesson. File `spec-updates/coupled-inductors.md`. Oracle:

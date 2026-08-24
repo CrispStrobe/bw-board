@@ -195,6 +195,33 @@ export function acSweep(args) {
           addG2(netOf(part.id, 'a'), netOf(part.id, 'b'), 0,
             -1 / (omega * Math.max(P.henrys ?? P.henries ?? 1e-3, 1e-12)));
           break;
+        case 'transformer': {
+          // Coupled pair (spec-updates/coupled-inductors.md): Y(ω) =
+          // Γ/(jω) — pure susceptance B = −Γ/ω with the full 2×2
+          // pattern; the diagonal entries reduce to the lone inductor's.
+          const n = Number(P.ratio) || 0;
+          const lm = Number(P.lm ?? 10);
+          const l1 = Number(P.l1 ?? (n ? lm : 1));
+          const l2 = Number(P.l2 ?? (n ? lm / (n * n) : 1));
+          const k = Math.min(Math.max(Number(P.k ?? 0.999), 1e-6), 0.999999);
+          const m = k * Math.sqrt(l1 * l2);
+          const det = l1 * l2 - m * m;
+          const p1 = netOf(part.id, 'p1'); const p2 = netOf(part.id, 'p2');
+          const s1 = netOf(part.id, 's1'); const s2 = netOf(part.id, 's2');
+          const addPort = (rA, rB, cA, cB, susc) => {
+            const ra = idxOf(rA); const rb = idxOf(rB);
+            const ca = idxOf(cA); const cb = idxOf(cB);
+            if (ra !== undefined && ca !== undefined) addC(ra, ca, 0, susc);
+            if (ra !== undefined && cb !== undefined) addC(ra, cb, 0, -susc);
+            if (rb !== undefined && ca !== undefined) addC(rb, ca, 0, -susc);
+            if (rb !== undefined && cb !== undefined) addC(rb, cb, 0, susc);
+          };
+          addPort(p1, p2, p1, p2, -(l2 / det) / omega);
+          addPort(p1, p2, s1, s2, -(-m / det) / omega);
+          addPort(s1, s2, p1, p2, -(-m / det) / omega);
+          addPort(s1, s2, s1, s2, -(l1 / det) / omega);
+          break;
+        }
         case 'led':
         case 'diode': {
           const na = netOf(part.id, 'anode');

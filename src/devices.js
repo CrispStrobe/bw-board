@@ -134,7 +134,7 @@ export function initDeviceState(part) {
  * (Kept here, not imported from board.js, to avoid a dependency cycle.)
  */
 const BUILTIN_KINDS = new Set([
-  'vcc', 'gnd', 'resistor', 'capacitor', 'inductor', 'diode', 'led', 'zener',
+  'vcc', 'gnd', 'resistor', 'capacitor', 'inductor', 'transformer', 'diode', 'led', 'zener',
   'potentiometer', 'button', 'switch', 'buzzer', 'ldr', 'ntc',
   'npn', 'pnp', 'nmos', 'pmos', 'opamp', 'vsource', 'isource', 'mcu',
   'seven_segment', 'rgb_led', 'led_matrix', 'led_cube',
