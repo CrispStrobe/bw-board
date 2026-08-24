@@ -169,3 +169,30 @@ describe('FET extraction matches the region the solve used (source honesty 3)', 
             `|into-drain| ${(-iD * 1e3).toFixed(4)} mA == load ${(iLoad * 1e3).toFixed(4)} mA`);
     });
 });
+
+describe('buzzer branch current is extractable (KCL-visible load)', () => {
+    it('44-darlington topology: buzzer current equals the collector current', () => {
+        const parts = [
+            { id: 'vcc1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+            { id: 'gnd1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+            { id: 'buzz1', kind: 'buzzer', params: {}, terminals: ['a', 'b'] },
+            { id: 'q1', kind: 'npn', params: { beta: 100 }, terminals: ['base', 'collector', 'emitter'] },
+            { id: 'btn1', kind: 'button', params: {}, terminals: ['a', 'b'] },
+            { id: 'rb1', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+        ];
+        const nets = [
+            { id: 'n_vcc', terminals: [{ part: 'vcc1', terminal: 'vcc' }, { part: 'buzz1', terminal: 'a' }, { part: 'btn1', terminal: 'a' }] },
+            { id: 'n_col', terminals: [{ part: 'buzz1', terminal: 'b' }, { part: 'q1', terminal: 'collector' }] },
+            { id: 'n_btn', terminals: [{ part: 'btn1', terminal: 'b' }, { part: 'rb1', terminal: 'a' }] },
+            { id: 'n_base', terminals: [{ part: 'rb1', terminal: 'b' }, { part: 'q1', terminal: 'base' }] },
+            { id: 'n_gnd', terminals: [{ part: 'gnd1', terminal: 'gnd' }, { part: 'q1', terminal: 'emitter' }] },
+        ];
+        const r = solveMNA(parts, nets, new Map(), new Map([['btn1', 1]]), 5.0, {});
+        assert.ok(r.converged, 'converges');
+        const iBuzz = I(r, 'buzz1', 'b');
+        const iC = I(r, 'q1', 'collector');
+        assert.ok(Math.abs(iBuzz) > 1e-3, `buzzer carries real current: ${(iBuzz * 1e3).toFixed(3)} mA`);
+        assert.ok(Math.abs(iBuzz - iC) < 1e-6,
+            `buzzer ${(iBuzz * 1e3).toFixed(4)} mA == collector ${(iC * 1e3).toFixed(4)} mA`);
+    });
+});

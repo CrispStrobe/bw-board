@@ -1450,6 +1450,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // An ammeter probe on a closed button in a live loop therefore read
     // 0.0 mA, which is indistinguishable from an open circuit and is the
     // one answer a continuity-minded learner will not question.
+    // The buzzer had the same gap the button did: stamped as a plain
+    // 100 Ω (stampBuzzerResistance) but no extraction rule, so its
+    // branchCurrent read 0.0 mA while its own net carried 43 mA — a
+    // KCL-invisible part (found by the EXPECTED-quantities gate on
+    // 44-darlington-motor, where the buzzer IS the load being taught).
+    if (part.kind === 'buzzer') {
+      const netA = findNet(nets, part.id, 'a');
+      const netB = findNet(nets, part.id, 'b');
+      const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      const i = (vA - vB) / 100;              // must match stampBuzzerResistance
+      currents.set('a', -i);
+      currents.set('b', i);
+    }
+
     if (part.kind === 'button' || part.kind === 'switch') {
       const netA = findNet(nets, part.id, 'a');
       const netB = findNet(nets, part.id, 'b');
