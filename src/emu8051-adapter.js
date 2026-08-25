@@ -103,8 +103,28 @@ export function createEmu8051Adapter(wasm, opts = {}) {
     pinChangeCount: 0,
     advanceToCount: 0,
     pushCallbackCount: 0,
+    /** Oscillator clocks the emulator's PCON.IDL fast-forward has jumped.
+     *  Deterministic, so a gate can assert on it without a wall clock. */
+    sleptClocks: 0,
     mode: /** @type {'push' | 'poll' | 'none'} */ ('none'),
   };
+
+  /** Is the emulated core parked on PCON.IDL? The 8051's answer to
+   *  rp2040js's `core.waiting`. Older WASM builds do not export it — treat a
+   *  missing export as "never idle" so the adapter keeps its old behaviour
+   *  rather than guessing. */
+  function coreIsIdle() {
+    return typeof wasm._emu_core_is_idle === 'function' && wasm._emu_core_is_idle() === 1;
+  }
+
+  /** Slept clocks from the emulator, as a Number (the counter is 64-bit but
+   *  stays far below 2^53 for any plausible session). */
+  function sleptClocks() {
+    if (typeof wasm._emu_get_idle_skipped_lo !== 'function') return 0;
+    const lo = wasm._emu_get_idle_skipped_lo() >>> 0;
+    const hi = wasm._emu_get_idle_skipped_hi() >>> 0;
+    return hi * 4294967296 + lo;
+  }
 
   // ─── Push mode setup ─────────────────────────────────────────────────
 
@@ -319,7 +339,26 @@ export function createEmu8051Adapter(wasm, opts = {}) {
         if (pollIntervalNs > 0 && ns > pollIntervalNs) {
           let current = getCurrentTimeNs();
           while (current < targetNs) {
-            const stepEnd = current + BigInt(pollIntervalNs);
+            // A PARKED core cannot change a pin, so polling it every
+            // pollIntervalNs (1 us by default) observes nothing new — and the
+            // sub-slicing caps how far the emulator's own PCON.IDL
+            // fast-forward may jump inside one call. Measured on the
+            // sleep/wake/sleep loop over 100 ms of sim: poll mode spent 830 ms
+            // of wall making 92,161 board advances, against 1 ms in push mode,
+            // even though the emulator was already skipping a million clocks.
+            //
+            // While idle, hand the whole remaining slice to the emulator in
+            // one call. It jumps to just before the Timer 0 overflow, runs the
+            // ISR on the normal per-clock path and returns, so the loop still
+            // polls once per wake — which is the only moment a pin can move.
+            //
+            // The re-check is per iteration, never hoisted: the moment the
+            // core is executing again this reverts to the 1 us cadence. That
+            // ordering is the whole lesson of the avr8js fast-forward, whose
+            // first cut let execution fall through a sleep at a slice
+            // boundary and took blinkenrocket dark.
+            const idle = coreIsIdle();
+            const stepEnd = idle ? targetNs : current + BigInt(pollIntervalNs);
             const end = stepEnd < targetNs ? stepEnd : targetNs;
             const [lo, hi] = splitNs(end);
             wasm._emu_advance_to_ns(lo, hi);
@@ -328,7 +367,12 @@ export function createEmu8051Adapter(wasm, opts = {}) {
               stats.advanceToCount++;
               board.advanceTo(getCurrentTimeNs());
             }
-            current = getCurrentTimeNs();
+            const next = getCurrentTimeNs();
+            // A slice that advanced nothing would spin for ever; the emulator
+            // always moves at least one clock, but assert the contract rather
+            // than trust it.
+            if (next <= current) break;
+            current = next;
           }
         } else {
           const [lo, hi] = splitNs(targetNs);
@@ -358,7 +402,10 @@ export function createEmu8051Adapter(wasm, opts = {}) {
       return (hi << 2) | (lo & 0x03);
     },
 
-    getStats() { return { ...stats }; },
+    getStats() { return { ...stats, sleptClocks: sleptClocks() }; },
+
+    /** Is the emulated core parked on PCON.IDL right now? */
+    isCoreIdle() { return coreIsIdle(); },
 
     loadHex(hexString) {
       if (!wasm._emu_load_hex) return;

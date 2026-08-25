@@ -9,6 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
+      # needs its built WASM. Checking it out is the difference between that
+      # gate RUNNING and it skipping on every CI run — the failure mode this
+      # project has already paid for once, where fifteen cross-repo tests
+      # skipped silently for weeks and a skip reads the same as a pass in the
+      # summary line. Pinned, so this repo's verdict does not float with
+      # another repo's HEAD.
+      - uses: actions/checkout@v4
+        with:
+          repository: CrispStrobe/emu8051-stc
+          ref: e473e906c1a8db9a50e5b70ef42171e79a0de372
+          # Actions refuses a path outside the workspace, so the sibling lands
+          # INSIDE it and the test looks in both places.
+          path: emu8051-stc
       - uses: actions/setup-node@v4
         with:
           node-version: 22
