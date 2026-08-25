@@ -9,13 +9,19 @@
 // TIM3 ticked, the NVIC vectored, WFI woke, and the USART transmitted
 // (the H/L phases only print on the millisecond grid).
 //
-// FINDING (2026-08-25, labwired 3b9c704): upstream's `--vcd` records
-// pc and nothing else — SystemBus::write_u32's peripheral branch never
-// calls on_memory_write, AND Machine.observers never reaches
-// bus.observers. Our fork fixes both (CrispStrobe/labwired-core,
-// branch bw/mmio-write-observers); the second test below uses the
-// fork's MMIO-carrying VCD for a pin-edge timeline comparison and
-// SKIPS itself against an unpatched upstream binary.
+// THE FLEET BUILDS THE FORK (owner ruling 2026-08-25): the canonical
+// oracle binary comes from CrispStrobe/labwired-core, default branch
+// bw/mmio-write-observers (= upstream 3b9c704 + our observer fix,
+// pinned at 5b7461d; upstream PR w1ne/labwired-core#1067 carries the
+// same patch). Build: cargo build --release -p labwired-cli, then
+// LABWIRED_CLI=<target>/release/labwired.
+//
+// FINDING the fork fixes (upstream 3b9c704): `--vcd` recorded pc and
+// nothing else — SystemBus::write_u32's peripheral branch never called
+// on_memory_write, AND Machine.observers never reached bus.observers.
+// The second test below uses the fork's MMIO-carrying VCD for a
+// pin-edge timeline comparison and SKIPS itself against an unpatched
+// upstream binary.
 //
 // Gated on TWO env inputs so CI without the oracle skips loudly:
 //   LABWIRED_CLI = path to the built labwired binary

@@ -1,10 +1,10 @@
 # The differential-oracle system manifest: bw-board's hand-rolled F0
 # machine vs LabWired's stm32f0 model, same ELF on both.
 #
-# stm32f0-chip.yaml is copied verbatim from labwired-core
-# configs/chips/onboarding/stm32f0.yaml (MIT, (C) 2026 Andrii Shylenko)
-# so the harness is self-contained; refresh it when the oracle's pin
-# (LABWIRED_SHA below the test) moves.
+# stm32f0-chip.yaml is copied from labwired-core's onboarding config
+# (MIT, (C) 2026 Andrii Shylenko), with our irq wiring added — see the
+# comment in that file. The fleet's oracle binary builds from OUR fork:
+# CrispStrobe/labwired-core @ bw/mmio-write-observers (pin 5b7461d).
 name: "bw-f0-oracle"
 chip: "./stm32f0-chip.yaml"
 board_io: []
