@@ -127,7 +127,7 @@ export function createAvr8jsAdapter(opts = {}) {
   }
 
   let board = null;
-  const stats = { pinChangeCount: 0, advanceToCount: 0, adcReadCount: 0 };
+  const stats = { pinChangeCount: 0, advanceToCount: 0, adcReadCount: 0, instructions: 0, sleptCycles: 0 };
 
   /** Push one pin's CURRENT electrical role to the board.
    *  Uses AVRIOPort.pinState() which reads lastValue — the override-applied
@@ -243,7 +243,52 @@ export function createAvr8jsAdapter(opts = {}) {
       // cpu.pc negative and the core executes garbage. Masking after
       // each instruction is what the silicon's program counter does.
       const pcMask = cpu.progMem.length - 1;
+      // SLEEP fast-forward: avr8js implements the SLEEP opcode as a NOP,
+      // so a firmware that idles correctly on silicon would still grind
+      // this interpreter at full clock (the pico lane measured that spin
+      // at 89% of the page's CPU before its own fix). Silicon semantics,
+      // kept exactly — the first cut broke blinkenrocket by letting
+      // execution FALL THROUGH a sleep at the end of a slice:
+      //   - a sleeping core stays PARKED at the SLEEP instruction until a
+      //     wake source actually pends an enabled interrupt;
+      //   - the waking ISR's return address is the instruction AFTER
+      //     sleep, so the opcode is consumed on the wake path only;
+      //   - a clock event that pends nothing (a timer counting with its
+      //     interrupt masked) does not wake the core.
+      // SE gate: SMCR bit0 on the megas and the tiny88; MCUCR bit5 on
+      // the tiny85 (avr-libc's sleep.h writes exactly these).
+      const sleepReg = chipName === 'attiny85' ? 0x55 : 0x53;
+      const sleepBit = chipName === 'attiny85' ? 0x20 : 0x01;
       while (cpu.cycles < targetCycles) {
+        if (cpu.progMem[cpu.pc] === 0x9588 && (cpu.data[sleepReg] & sleepBit)) {
+          if (cpu.interruptsEnabled && cpu.nextInterrupt >= 0) {
+            // Wake: sleep completes, the ISR returns to the instruction
+            // after it — consume the opcode before dispatching.
+            avrInstruction(cpu);
+            cpu.pc &= pcMask;
+            cpu.tick();
+            continue;
+          }
+          const evt = cpu.nextClockEvent;
+          if (evt && evt.cycles <= targetCycles) {
+            // Jump to the next scheduled event and fire it WITHOUT the
+            // interrupt dispatch tick() would couple to it (the dispatch
+            // must happen on the wake path above, with the post-sleep
+            // return address). The loop re-checks: if the callback
+            // pended an enabled interrupt, the next iteration wakes.
+            if (evt.cycles > cpu.cycles) { stats.sleptCycles += evt.cycles - cpu.cycles; cpu.cycles = evt.cycles; }
+            evt.callback();
+            cpu.nextClockEvent = evt.next;
+            continue;
+          }
+          // Nothing due before the slice ends: sleep through the rest of
+          // it, still parked — the next slice's syncInputs may pend a
+          // pin-change wake, or a later event will.
+          stats.sleptCycles += targetCycles - cpu.cycles;
+          cpu.cycles = targetCycles;
+          break;
+        }
+        stats.instructions++;
         avrInstruction(cpu);
         cpu.pc &= pcMask;
         cpu.tick();
