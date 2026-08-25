@@ -17,7 +17,7 @@ reading the shipped code.
 | nviennot/stm32-emulator | **GPL-3.0, on unicorn-engine (GPL-2)** | look, don't touch. Architecture ideas only, clean-room; not one line of code |
 | Qiling | GPL-2 (on unicorn) | same; at most a never-shipped analysis tool |
 | Wokwi's STM32 cores | not published | nothing to take |
-| **w1ne/labwired-core** (found 2026-08-25) | **MIT** | **the game-changer candidate** — see the LabWired section below |
+| **w1ne/labwired-core** | **MIT** | **already ADOPTED by this fleet before this doc existed** — see the correction in Phase 4 |
 
 The clean-room boundary, stated: from the GPL projects we may take the
 UNPROTECTABLE ideas — SVD-driven register maps, fault-on-unmapped +
@@ -126,11 +126,37 @@ our peripheral behavior against Renode's for the same firmware — the
 exact ucsim pattern the 8051 corpus uses, minus ucsim's GPL wall.
 Mono/.NET installs on the VPS; this is fleet work.
 
-### Phase 4 — full F103 fidelity: EVALUATE LABWIRED FIRST (re-scoped 2026-08-25)
+### Phase 4 — full F103 fidelity: LABWIRED, per a decision OLDER than this doc
 
-**LabWired Core (w1ne/labwired-core, MIT, Rust, actively developed —
-pushed the day we checked)** changes this phase's calculus entirely.
-Verified via the API and the repo tree, not the marketing page:
+**CORRECTION (2026-08-25, owner's catch):** this doc first presented
+LabWired as a find. It is not. The fleet adopted it before this doc
+existed: `sb3-creator/reference/corpus-and-oracles.md` lists
+labwired-core as the RP2040 second-opinion oracle (layer-5 sweep), and
+`stc/docs/ROADMAP.md` records the decision — seeded ~2026-08-14 —
+"**STM32 — via the labwired-core (MIT) adoption already seeded: G0/F103
+before F4; never hand-rolled**", with validation rows already landed
+(nRF52840 deep/silicon-verified; ESP32-C3 reset-state only, needs a
+runtime differential before oracle use). The meta-lesson joins the
+fleet's collection: this doc verified EXTERNAL repos via the API and
+never grepped OUR OWN .md corpus — scoping a lane starts with
+`grep -ril <topic> */docs */reference *.md`, or you re-derive (or
+contradict) a decision the fleet already made.
+
+**The tension this creates, stated rather than papered over:** Phases
+0–1 above hand-rolled an F030 machine and board — working, tested,
+in-browser-ready JS — against a roadmap line that says "never
+hand-rolled" for STM32. Reconciliation is the OWNER's call, with two
+honest readings: (a) the hand-rolled F0 path ships (it exists today,
+runs in the browser with zero new infrastructure, and its codegen +
+compile target are emulator-agnostic) while labwired-wasm is evaluated
+for the full-fidelity tier — the F0 work then becomes the validation
+BASELINE labwired is compared against; or (b) the roadmap line is
+enforced strictly, the F0 machine becomes a test oracle only, and the
+shipping path waits for labwired-wasm. Either way the sb3-creator
+DEVICE STM32F030 emission, the stc-compiler target, and the chain
+tests survive unchanged — firmware is firmware.
+
+Verified via the API and the repo tree (this part WAS new work):
 - Cores: Cortex-M0+/M3/M4/M7/M33, RISC-V, Xtensa LX6/LX7 (ESP32 paths).
 - Chips modeled include **stm32f103** (with `firmware-f103-conformance`
   and `firmware-f103-fuzztarget` crates — the Blue Pill is a VALIDATED
