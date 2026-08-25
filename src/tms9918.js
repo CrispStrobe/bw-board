@@ -119,6 +119,15 @@ export class TMS9918 {
     /** Level-triggered: frame flag AND interrupt enable (R1 bit 5). */
     get irqAsserted() { return (this.status & 0x80) !== 0 && (this.regs[1] & 0x20) !== 0; }
 
+    /** Cycles to the next VBLANK if its interrupt is enabled — the HALT
+     *  wake horizon. With IE clear the flag still sets, but a halted CPU
+     *  cannot see it: Infinity. */
+    nextWake() {
+        if (!(this.regs[1] & 0x20)) return Infinity;
+        if (this.status & 0x80) return 1;
+        return Math.max(1, this._toFrame);
+    }
+
     /** @param {number} n CPU cycles elapsed */
     advance(n) {
         this._toFrame -= n;

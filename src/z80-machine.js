@@ -388,6 +388,22 @@ export class Z80Machine {
         return dev;
     }
 
+    /** How far a halted CPU may jump in one step: the nearest chip that
+     *  can actually assert INT. Mirrors m6502-machine's WAI fast-forward,
+     *  veto included. Capped so a pathological horizon cannot swallow a
+     *  slice unexamined. */
+    _wakeHorizon() {
+        let h = Infinity;
+        for (const k of Object.keys(this.chips)) {
+            const chip = this.chips[k];
+            if (!chip || !chip.advance) continue;
+            if (typeof chip.nextWake !== 'function') return 4;
+            h = Math.min(h, chip.nextWake());
+        }
+        if (!Number.isFinite(h)) h = Math.round(this.clockHz / 1000);
+        return Math.max(4, Math.min(h, 0x10000));
+    }
+
     _advanceChips(n) {
         for (const k of Object.keys(this.chips)) {
             const c = this.chips[k];
@@ -409,9 +425,19 @@ export class Z80Machine {
     /** One instruction; IM 1 delivery when a chip asserts and IFF1 is set. */
     step() {
         if (this.cpu.halted && !(this._anyIrq() && this.cpu.iff1)) {
-            this.cycles += 4;               // HALT burns NOPs until an interrupt
-            this._advanceChips(4);
-            return 4;
+            // HALT burns NOPs until an interrupt — but burning them FOUR
+            // CYCLES PER CALL made a halted CPU cost more than a running
+            // one (a ZX game HALTing for the 50 Hz frame crawled ~17,500
+            // iterations per frame). Jump to the nearest wake horizon
+            // instead; a chip that advances but cannot name its horizon
+            // vetoes the jump — a skipped event is a correctness bug, a
+            // crawl is only slow. With IFF1 clear nothing can wake this
+            // CPU anyway (there is no NMI source in these machines), so
+            // the jump is just time passing.
+            const n = this._wakeHorizon();
+            this.cycles += n;
+            this._advanceChips(n);
+            return n;
         }
         if (this._anyIrq() && this.cpu.iff1 && !this.cpu.eiLatch) {
             this.cpu.halted = false;

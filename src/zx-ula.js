@@ -234,6 +234,9 @@ export class ZXULA {
     /** Level-triggered like the real pulse: ~32 T-states per frame. */
     get irqAsserted() { return this._intLeft > 0; }
 
+    /** Cycles until the next frame INT — the HALT wake horizon. */
+    nextWake() { return this._intLeft > 0 ? 1 : Math.max(1, this._toFrame); }
+
     /** The screen (with border frame) as palette indices. */
     renderFrame() {
         const W = ZX_W + 2 * ZX_BORDER, H = ZX_H + 2 * ZX_BORDER;

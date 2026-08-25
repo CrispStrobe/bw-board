@@ -67,6 +67,10 @@ export class TileVGA {
     write(off, val) { this.vram[off & 0x3fff] = val & 0xff; }
 
     /** @param {number} cycles CPU cycles elapsed */
+    /** Never asserts an interrupt: a halted CPU cannot be woken here,
+     *  and bulk advance is already the per-instruction norm. */
+    nextWake() { return Infinity; }
+
     advance(cycles) {
         this._toVblank -= cycles;
         while (this._toVblank <= 0) {

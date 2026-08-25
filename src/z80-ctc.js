@@ -97,6 +97,23 @@ export class Z80CTC {
     get irqAsserted() { return this.ch.some((c) => c.irq && (c.control & 0x80)); }
 
     /** @param {number} cycles system-clock cycles elapsed */
+    /** Cycles until the nearest IE-enabled timer channel fires — the
+     *  HALT wake horizon. Channels without interrupt enable count for
+     *  the polling timebase but can never wake a halted CPU. Counter
+     *  mode (external CLK/TRG) is edge-driven from outside: Infinity. */
+    nextWake() {
+        let h = Infinity;
+        for (const c of this.ch) {
+            if (!(c.control & 0x80)) continue;          // no IE: cannot wake
+            if (c.irq) return 1;                        // already asserted
+            if (!c.running || (c.control & 0x40)) continue;
+            const prescale = (c.control & 0x20) ? 256 : 16;
+            const steps = c.count === 0 ? 256 : c.count;
+            h = Math.min(h, Math.max(1, steps * prescale - c._acc));
+        }
+        return h;
+    }
+
     advance(cycles) {
         for (const c of this.ch) {
             if (!c.running || (c.control & 0x40)) continue; // stopped or counter mode

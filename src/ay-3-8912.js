@@ -100,6 +100,10 @@ export class AY38912 {
      * Advance by system-clock cycles. The AY internally divides by 16.
      * @param {number} cycles
      */
+    /** Never asserts an interrupt: a halted CPU cannot be woken here,
+     *  and bulk advance is already the per-instruction norm. */
+    nextWake() { return Infinity; }
+
     advance(cycles) {
         this._acc += cycles;
         const div = 16;
