@@ -75,11 +75,14 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'rp2040js') {
     return createRp2040jsTarget(opts);
   }
+  if (kind === 'stm32f0') {
+    return createStm32F0Target(opts);
+  }
   if (kind === 'serial') {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'z80', 'rp2040js', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'z80', 'rp2040js', 'stm32f0', or 'serial'.`
   );
 }
 
@@ -322,6 +325,30 @@ async function createRp2040jsTarget(opts) {
   return { target, adapter };
 }
 
+// ─── STM32F030 target (hand-rolled light tier) ──────────────────────────
+
+async function createStm32F0Target(opts) {
+  const {
+    board, program, symbols,
+    clockHz = 48_000_000,
+  } = opts;
+
+  if (!board) throw new Error('stm32f0 target requires opts.board');
+
+  // The F0 image is a REAL flash image (vectors first, word 0 = SP,
+  // word 1 = reset) — raw bytes, not the Pico's SRAM halfword trick.
+  const { createStm32F0Adapter } = await import('./stm32-adapter.js');
+  const adapter = createStm32F0Adapter({ clockHz, program });
+  adapter.attachBoard(board);
+
+  // The debug target is the rp2040js one, unchanged: the adapter's
+  // facade (bus + sram + clock) is the whole surface it consumes.
+  const { createRp2040jsDebugTarget } = await import('./rp2040js-debug.js');
+  const target = createRp2040jsDebugTarget(adapter, { symbols });
+
+  return { target, adapter };
+}
+
 // ─── Serial target ───────────────────────────────────────────────────────
 
 async function createSerialTarget(opts) {
@@ -388,6 +415,11 @@ export function getTargetKinds() {
       kind: 'rp2040js',
       label: 'Simulated (RP2040)',
       description: 'ARM Cortex-M0+ emulation. Raspberry Pi Pico programs.',
+    },
+    {
+      kind: 'stm32f0',
+      label: 'Simulated (STM32F030)',
+      description: 'ARM Cortex-M0 emulation. STM32F030 (16K flash / 4K SRAM) programs.',
     },
     {
       kind: 'serial',
