@@ -80,6 +80,26 @@ Target: **STM32F030** (or C0 — same GPIO v2 generation).
   copy the rp2040js-adapter shape), debug target, DebugPanel entry.
 
 ### Phase 2 — F103 Blue Pill (the name people know)
+
+Owner-supplied references (2026-08-25):
+- Board truth: stm32-base.org's STM32F103C8T6 Blue Pill page (schematic,
+  pinout, the PC13 LED, the USB pull-up quirk); mikrocontroller.net's
+  "STM32F103C8T6 Billig Board" article is the acceptance CHECKLIST —
+  the things owners of the real board actually test.
+- **Oracle, GPL-correct use**: nviennot/stm32-emulator (GPL-3, on
+  unicorn) may be RUN server-side for differential comparison — outputs
+  compared, nothing linked, nothing shipped — alongside Renode. Wokwi's
+  STM32 is closed; compare behavior through its public UI only.
+- Test-firmware corpus, roughly by difficulty: cpq's
+  bare-metal-programming-guide (register-level, ideal first subjects),
+  MaJerle/stm32-usart-uart-dma-rx-tx (USART+DMA — DMA is unmodeled,
+  will exercise the unmapped ledger honestly), afiskon/stm32-ssd1306
+  (I2C + the OLED we already model), lamik/EEPROM-emulation-STM32F1
+  (flash writes — a NEW peripheral surface), iliasam/OpenSimpleLidar,
+  PikaPython (an embedded Python — the stress test), LVGL (display
+  stack, far horizon). Most compile for cortex-m3: on our M0-subset
+  machine they run only if rebuilt with -mcpu=cortex-m0 — each corpus
+  entry must state which build it was tested as.
 - GPIO v1 is a DIFFERENT model (CRL/CRH config, AFIO remap) — port
   Renode's F1 GPIO, do not shoehorn v2.
 - APB2/APB1 address map, TIM2/3, USART1 at F1 addresses.
