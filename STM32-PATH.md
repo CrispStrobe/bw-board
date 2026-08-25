@@ -211,6 +211,22 @@ Two uses, in order:
    manifests map onto our circuit model. Hand-writing ARMv7-M remains
    the fallback, not the plan.
 
+   **SPIKE MEASURED, GATE PASSED (2026-08-25, from OUR fork
+   CrispStrobe/labwired-core @ bw/mmio-write-observers — the fleet's
+   canonical labwired source by owner ruling):** they ship a real
+   `crates/wasm` (wasm-bindgen cdylib, its own wasm-opt profile, an
+   event-driven scheduler that is browser-only by construction, even a
+   browser-JIT prototype). `cargo build --release --target
+   wasm32-unknown-unknown -p labwired-wasm` succeeds from the pinned
+   toolchain with zero changes. Raw artifact 92.3 MB of which 71.2 MB
+   is DWARF (workspace `debug = true`); custom-sections-stripped
+   19.55 MB (code 6.5 MB, data 13 MB); **2.12 MB brotli** — smaller
+   than lite's existing vendor chunk (3.3 MB brotli), i.e. a lazy
+   chunk the app can afford. Remaining before Phase 2 ships on it:
+   the wasm-bindgen API surface → boundary-A adapter mapping, and
+   their board-manifest → our-netlist bridge. Size and buildability
+   are no longer open questions.
+
 **Correction this find forces**: the "deliberately OUT" list below said
 no permissive ESP32 emulator exists. That was true of the projects
 checked on 2026-08-25 morning and is now STALE — LabWired's Xtensa
