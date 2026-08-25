@@ -9,13 +9,13 @@
 // TIM3 ticked, the NVIC vectored, WFI woke, and the USART transmitted
 // (the H/L phases only print on the millisecond grid).
 //
-// FINDING (2026-08-25, labwired 3b9c704): the `--vcd` bus trace records
-// only 8-bit RAM-path writes — `SystemBus::write_u32`'s peripheral
-// branch never calls `on_memory_write` (crates/core/src/bus/
-// accessors.rs), so 32-bit MMIO stores (all GPIO/USART traffic) never
-// reach the VCD. Pin-edge timelines therefore cannot come from the VCD
-// today; this harness compares UART byte streams and phase counts
-// instead, and ledgers the cycle ratio.
+// FINDING (2026-08-25, labwired 3b9c704): upstream's `--vcd` records
+// pc and nothing else — SystemBus::write_u32's peripheral branch never
+// calls on_memory_write, AND Machine.observers never reaches
+// bus.observers. Our fork fixes both (CrispStrobe/labwired-core,
+// branch bw/mmio-write-observers); the second test below uses the
+// fork's MMIO-carrying VCD for a pin-edge timeline comparison and
+// SKIPS itself against an unpatched upstream binary.
 //
 // Gated on TWO env inputs so CI without the oracle skips loudly:
 //   LABWIRED_CLI = path to the built labwired binary
@@ -94,9 +94,9 @@ SECTIONS { .text : { KEEP(*(.vectors)) *(.text*) *(.rodata*) } > FLASH
            .bss  : { *(.bss*) *(COMMON) } > RAM }
 `;
 
-function build () {
+function build (phaseMs = 100) {
     const dir = mkdtempSync(join(tmpdir(), 'bw-lw-oracle-'));
-    writeFileSync(join(dir, 'main.c'), FIRMWARE);
+    writeFileSync(join(dir, 'main.c'), FIRMWARE.replace('% 100u', `% ${phaseMs}u`));
     writeFileSync(join(dir, 'link.ld'), LD);
     execFileSync('arm-none-eabi-gcc', ['-mcpu=cortex-m0', '-mthumb', '-Os', '-ffreestanding',
         '-nostdlib', `-T${join(dir, 'link.ld')}`, '-o', join(dir, 'fw.elf'), join(dir, 'main.c'), '-lgcc'], { stdio: 'pipe' });
@@ -199,5 +199,109 @@ describe('labwired differential oracle: STM32F030', { skip }, () => {
             `labwired ${phases} phases, ${cycles} cycles` +
             (perPhase ? ` = ${(perPhase / 1e6).toFixed(2)}M cycles/phase` : '') +
             `; result keys: ${lw.result ? Object.keys(lw.result).join(',') : '-'}`);
+    });
+
+    it('pin-edge timeline: the BSRR write sequence agrees (forked VCD)', () => {
+        // 5 ms phases: --vcd costs ~100x (a pc record per step), so the
+        // blink is shrunk until six phases fit in ~1.5M steps.
+        const dir = build(5);
+        const bin = readFileSync(join(dir, 'fw.bin'));
+        const ours = runOurs(bin, 50_000_000);
+
+        // run mode with --vcd; bounded steps (the fix makes MMIO visible)
+        const vcdPath = join(dir, 'trace.vcd');
+        try {
+            execFileSync(LABWIRED, [
+                '--firmware', join(dir, 'fw.elf'),
+                '--system', join(here, 'fixtures', 'labwired', 'f0-system.yaml'),
+                '--vcd', vcdPath, '--max-steps', '2500000',
+            ], { stdio: 'pipe', timeout: 600_000 });
+        } catch { /* step exhaustion still writes the trace */ }
+        assert.ok(existsSync(vcdPath), 'VCD written');
+
+        // Parse: one value-change group per bus byte-event — collect
+        // (t, addr, byte) where we=1, then reassemble BSRR word writes
+        // from their 4 LE byte events (same timestamp, addr..addr+3).
+        // VCD prints CHANGES only: `we` stays 1 across the four LE byte
+        // events of one word store (no step in between), so triggering
+        // on we-lines alone records just the first byte and every CLEAR
+        // edge vanished — the timeline test's own first catch was of its
+        // parser, not of either simulator. Record on any addr/data
+        // change while we==1.
+        const byId = new Map();
+        let t = 0; const cur = {}; const events = [];
+        for (const raw of readFileSync(vcdPath, 'utf8').split('\n')) {
+            const line = raw.trim();
+            let m;
+            if ((m = line.match(/^\$var\s+\S+\s+\d+\s+(\S+)\s+(\S+)/))) byId.set(m[1], m[2]);
+            else if ((m = line.match(/^#(\d+)$/))) t = Number(m[1]);
+            else if ((m = line.match(/^([01])(\S+)$/)) || (m = line.match(/^b([01]+)\s+(\S+)$/))) {
+                const role = byId.get(m[2]);
+                if (!role) continue;
+                cur[role] = parseInt(m[1], 2) >>> 0;
+                if (cur.we === 1 && cur.addr !== undefined && (role === 'addr' || role === 'data' || role === 'we')) {
+                    events.push({ t, addr: cur.addr, byte: cur.data ?? 0 });
+                }
+            }
+        }
+        const GPIOA_BSRR_ADDR = 0x48000018;
+        const low = events.filter((e) => e.addr === GPIOA_BSRR_ADDR);      // byte 0
+        const b2 = events.filter((e) => e.addr === GPIOA_BSRR_ADDR + 2);   // byte 2 (BR0)
+        if (low.length === 0) {
+            // Upstream binary without the fork's observer fix — the first
+            // test already covered UART equivalence; say why this skips.
+            console.log('pin-edge timeline SKIPPED: this labwired binary does not ' +
+                'trace MMIO writes (use the bw/mmio-write-observers fork)');
+            return;
+        }
+        // Reassemble edges: at each BSRR word write, set if byte0 bit0,
+        // clear if byte2 bit0 (0x00010000 >> 16).
+        const times = new Map();
+        for (const e of low) { if (e.byte & 1) times.set(e.t, true); }
+        for (const e of b2) { if (e.byte & 1) times.set(e.t, false); }
+        const lwEdges = [...times.entries()].sort((a, b) => a[0] - b[0])
+            .map(([tt, high]) => ({ t: tt, high }));
+        assert.ok(lwEdges.length >= 6, `labwired shows PA0 edges (${lwEdges.length})`);
+
+        // Sequence agreement, write-for-write. Our side publishes the
+        // MODER seat (pushpull, low) BEFORE the first BSRR store — a
+        // mode publish, not a drive edge — while the VCD extraction is
+        // BSRR-only; align both at their first RISING edge.
+        const trim = (arr, key) => arr.slice(arr.findIndex((e) => e[key]));
+        const lwT = trim(lwEdges, 'high');
+        const ourT = trim(ours.edges, 'high');
+        const lwSeq = lwT.map((e) => (e.high ? 'H' : 'L')).join('');
+        const ourSeq = ourT.map((e) => (e.high ? 'H' : 'L')).join('');
+        const n = Math.min(lwSeq.length, ourSeq.length);
+        assert.equal(lwSeq.slice(0, n), ourSeq.slice(0, n),
+            `edge directions agree in order (lw=${lwSeq.slice(0, 24)} ours=${ourSeq.slice(0, 24)}; ` +
+            `lw ${lwEdges.length} edges at t=[${lwEdges.slice(0, 6).map((e) => e.t).join(',')}], ` +
+            `ours ${ours.edges.length} at tNs=[${ours.edges.slice(0, 6).map((e) => e.tNs).join(',')}])`);
+
+        // Interval self-consistency + cross-sim RATIO consistency: every
+        // half-period equals the first one within 2% on BOTH sims — the
+        // clock-independent statement of "the blink is even".
+        const ivals = (edges, key) => {
+            const out = [];
+            for (let i = 1; i < edges.length; i++) out.push(edges[i][key] - edges[i - 1][key]);
+            return out;
+        };
+        for (const [name, list] of [['labwired', ivals(lwT, 't')], ['ours', ivals(ourT, 'tNs')]]) {
+            const first = list[0];
+            for (const d of list) {
+                assert.ok(Math.abs(d - first) / first < 0.02,
+                    `${name} half-periods are even (${d} vs ${first})`);
+            }
+        }
+        // The cross-simulator statement: their VCD timebase is CPU
+        // cycles, ours is ns at 48 MHz — the RATIO of a half-period must
+        // be 48 cycles/µs within 1% (measured exact on first landing:
+        // 240,0xx ticks vs 5,000,xxx ns).
+        const ratio = ivals(lwT, 't')[0] / (ivals(ourT, 'tNs')[0] / 1000);
+        assert.ok(Math.abs(ratio - 48) / 48 < 0.01,
+            `the timebases agree at 48 cycles/us (${ratio.toFixed(3)})`);
+        console.log(`pin-edge LEDGER: labwired ${lwT.length} edges @ ` +
+            `${ivals(lwT, 't')[0]} cycles/half-period; ours ${ourT.length} @ ` +
+            `${ivals(ourT, 'tNs')[0]} ns; ratio ${ratio.toFixed(3)} cycles/us`);
     });
 });
