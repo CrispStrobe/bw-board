@@ -206,11 +206,28 @@ function bareChipModel(allTerminals, chipVcc) {
 
 // Terminal spellings must match the bw-parts sidecar (the netlist's own
 // namespace) — this is what the adapter's lowercased AVR pin names join
-// against. DIP-28, per the audited sidecar.
+// against. DIP-28.
+//
+// PIN 22 IS `gnd2`, NOT `pa0`. The PDIP-28 does not bond out port A — PA0-PA3
+// reach a pad only on the 32-pin QFN — and pin 22 is a SECOND GND that
+// somebody needed a name for. Audited against Microchip ATtiny88 datasheet
+// DS40002178; the same audit fixed the top row's column order in
+// bw-circuit-ui's footprint table (14 of 14 columns had been wrong).
+//
+// PA0-PA3 REMAIN in avr-chips.js ATTINY88_PINS and that is correct: those are
+// the DIE's registers (0x2C-0x2E), which exist whatever the package does. This
+// list is the PACKAGE's terminals — what a leg can be soldered to. Firmware
+// driving PA0 on a DIP-28 now finds no terminal to join, which is what the
+// hardware does too.
+//
+// This list is a SET, not a pin order: nothing indexes it, and it is not in
+// package order (the audited order is in the sidecar's `_note`). Said plainly
+// because the comment here used to claim it followed the sidecar, and it does
+// not.
 const ATTINY88_TERMINALS = [
   'pc6', 'pd0', 'pd1', 'pd2', 'pd3', 'pd4', 'vcc', 'gnd',
   'pb6', 'pb7', 'pd5', 'pd6', 'pd7', 'pb0', 'pb1', 'pb2',
-  'pb3', 'pb4', 'pb5', 'avcc', 'pa0', 'pc0', 'pc1', 'pc2',
+  'pb3', 'pb4', 'pb5', 'avcc', 'gnd2', 'pc0', 'pc1', 'pc2',
   'pc3', 'pc4', 'pc5', 'pc7',
 ];
 
