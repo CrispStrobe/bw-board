@@ -59,6 +59,21 @@ no real VTOR requirement; we set the core's VTOR to the image base,
 the same trick the pico debug path uses) + a deterministic test.
 
 ### Phase 1 — STM32F0 minimal board (the first shippable chip)
+**STATUS: SHIPPED, ALL LEVELS (2026-08-25).** Emulator (F0 board on the
+Phase-0 machine incl. ADC + TIM3-compare PWM — the cap vocabulary is
+complete), codegen (`DEVICE STM32F030`, ADC/PWM emit with parse- and
+emit-time refusals beyond the cap), compile service target (pushed;
+deploy gated on the Vercel account cap), lite app wiring (picker,
+compile path, attach, the shared ARM debug target reused via the
+adapter facade), boundary-A adapter in the shared adapter-contract
+roster, designer part (bw-circuit-ui TSSOP20 sidecar + footprint,
+3.3 V bench), engine board kind (`stm32f030` bareChipModel), retarget
+axis (RETARGET_POOLS + DEVPART; ~86 gallery examples offer the F030,
+with servo/motor/display refusals worded against the tier cap), and
+generated + seated `circuit.stm32f030.json` benches. EXTI/SYSCFG from
+the list below stayed out — nothing in the cap needs a pin interrupt
+(the tick wakes WFI), so it waits for a real consumer.
+
 Target: **STM32F030** (or C0 — same GPIO v2 generation).
 - Peripherals, in dependency order: RCC (enable-bits honesty stub —
   writes recorded, reads coherent), GPIOA/B/C (v2: MODER/IDR/ODR/BSRR),
