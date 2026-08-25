@@ -234,6 +234,23 @@ export class W65C22 {
     /** IRQ line state (active = true). */
     get irqAsserted() { return this._irq; }
 
+    /**
+     * Cycles until this chip's next TIME-DRIVEN IFR event — the wake
+     * horizon a parked (WAI) CPU may be fast-forwarded by. Pin-driven
+     * events (CA/CB edges, shift-in) come from outside and arrive at
+     * slice boundaries, so they never bound this. Infinity when neither
+     * timer has a pending expiry.
+     */
+    nextWake() {
+        let h = Infinity;
+        // T1 underflows when the counter passes below zero: t1c+1 cycles.
+        // In one-shot mode a fired timer sets no further flags.
+        if ((this.acr & 0x40) || !this.t1Fired) h = Math.min(h, this.t1c + 1);
+        // T2 one-shot counts phi2 only while unfired.
+        if (!(this.acr & 0x20) && !this.t2Fired) h = Math.min(h, this.t2c + 1);
+        return Math.max(1, h);
+    }
+
     /** Snapshot VIA state for machine save. */
     saveState() {
         return {

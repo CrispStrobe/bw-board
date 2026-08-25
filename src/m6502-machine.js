@@ -515,6 +515,42 @@ export class M6502Machine {
         }
     }
 
+    /**
+     * How far a parked (WAI) CPU may jump in one step: the nearest
+     * TIME-DRIVEN wake source. Chips that advance but cannot name a
+     * horizon veto the jump entirely (n=1 crawl) — a skipped event is a
+     * correctness bug, a crawl is only slow. External input changes
+     * arrive at slice boundaries, so with nothing scheduled the park
+     * re-checks once per millisecond; the jump is also capped so a
+     * pathological horizon cannot swallow a whole slice unexamined.
+     */
+    _wakeHorizon() {
+        let h = Infinity;
+        for (const name of Object.keys(this.chips)) {
+            const chip = this.chips[name];
+            if (!chip || !chip.advance) continue;
+            if (typeof chip.nextWake !== 'function') return 1;
+            h = Math.min(h, chip.nextWake());
+        }
+        if (this.devices) {
+            for (const name of Object.keys(this.devices)) {
+                const dev = this.devices[name];
+                if (!dev || !dev.advance) continue;
+                if (typeof dev.nextWake !== 'function') return 1;
+                h = Math.min(h, dev.nextWake());
+            }
+        }
+        if (this._bb && this._bb.events.length) {
+            h = Math.min(h, Math.max(1, this._bb.events[0].at - this.cycles));
+        }
+        if (this._vgaCard) {
+            const half = this.clockHz / 120;
+            h = Math.min(h, Math.max(1, Math.ceil((Math.floor(this.cycles / half) + 1) * half - this.cycles)));
+        }
+        if (!Number.isFinite(h)) h = Math.round(this.clockHz / 1000);
+        return Math.max(1, Math.min(h, 0x10000));
+    }
+
     _anyIrq() {
         for (const name of Object.keys(this.chips)) {
             if (this.chips[name].irqAsserted) return true;
@@ -542,7 +578,12 @@ export class M6502Machine {
         let n = this.cpu.step();
         if (n === 0) {
             if (this.cpu.stopped) return 0; // STP: only reset revives, time stops mattering
-            n = 1; // WAI: time still passes while parked
+            // WAI: time passes while parked — jump to the nearest wake
+            // horizon instead of crawling one cycle per call (a parked
+            // core was ADVANCING SLOWER than an executing one). Every
+            // advancing chip must name its horizon or veto the jump:
+            // correctness over speed.
+            n = this._wakeHorizon();
         }
         this.cycles += n;
         this._advanceChips(n);

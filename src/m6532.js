@@ -238,6 +238,13 @@ export class M6532 {
      * Advance by N phi2 cycles. Timer decrements once per prescaler period.
      * @param {number} cycles
      */
+    /** Cycles until the timer underflow flag sets — the WAI wake horizon.
+     *  After the first underflow no new flag can set, so Infinity. */
+    nextWake() {
+        if (this.timerUnderflowed) return Infinity;
+        return Math.max(1, this.prescaleCounter + this.timerValue * this.prescaler);
+    }
+
     advance(cycles) {
         for (let i = 0; i < cycles; i++) {
             this.prescaleCounter--;
