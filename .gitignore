@@ -11,3 +11,4 @@ node_modules
 CLAUDE.md
 .resync-tx.bin
 scripts/tms9918/vdppeer
+emu8051-stc/

@@ -24,6 +24,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 import { BoardImpl } from '../src/board.js';
 
@@ -31,8 +32,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 // Beside the repo when developing; inside the workspace in CI, because
 // actions/checkout refuses a path outside it.
 const CANDIDATES = [
-  join(HERE, '..', '..', 'emu8051-stc', 'build', 'emu8051.js'),
-  join(HERE, '..', 'emu8051-stc', 'build', 'emu8051.js'),
+  join(HERE, '..', 'emu8051-stc', 'build', 'emu8051.js'),      // CI layout, checked first
+  join(HERE, '..', '..', 'emu8051-stc', 'build', 'emu8051.js'),// beside the repo
 ];
 const WASM = CANDIDATES.find(existsSync);
 const haveWasm = !!WASM;
@@ -70,8 +71,33 @@ const FOSC = 11_059_200;
 // overflow it wraps and counts a full 65536 ticks: 5,925,925 ns in 1T.
 const T0_PERIOD_NS = 65536 / (FOSC / 1e9);
 
+/* Emscripten's MODULARIZE output is CommonJS (`module.exports =
+ * createEmu8051`). Where the sibling sits BESIDE this repo, Node has no
+ * package.json above it and loads it as CJS, so `import()` gives the factory
+ * on `.default`. In CI it sits INSIDE the workspace — actions/checkout refuses
+ * a path outside it — and bw-board's own package.json says `"type": "module"`,
+ * so Node parses the same file as ESM and `.default` is undefined. That cost a
+ * red CI run with "createEmu8051 is not a function" while every local run was
+ * green: the two locations are not equivalent, and only one of them is the one
+ * CI uses.
+ *
+ * createRequire alone does NOT fix it — Node takes a file's module type from
+ * the nearest package.json whichever loader asks, so the inside copy stays
+ * ESM. Measured both ways on a local reproduction of the CI layout. The CI
+ * step drops a {"type":"commonjs"} marker beside the checkout, which makes
+ * both loaders work; require is used here because it is the honest way to ask
+ * for a CommonJS module, and the assertion below says plainly what is wrong if
+ * the marker ever goes missing. */
+const require = createRequire(import.meta.url);
+function loadFactory() {
+  const mod = require(WASM);
+  return typeof mod === 'function' ? mod : mod?.default;
+}
+
 async function boot(hex, mode) {
-  const createEmu8051 = (await import(WASM)).default;
+  const createEmu8051 = loadFactory();
+  assert.equal(typeof createEmu8051, 'function',
+    `${WASM} did not yield a factory — check how Node is treating its module type`);
   const Module = await createEmu8051();
   const loadHex = Module.cwrap('emu_load_hex', 'number', ['string', 'number']);
   const adapter = createEmu8051Adapter(Module, { mode });

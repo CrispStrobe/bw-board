@@ -23,6 +23,15 @@ jobs:
           # Actions refuses a path outside the workspace, so the sibling lands
           # INSIDE it and the test looks in both places.
           path: emu8051-stc
+      # Emscripten's MODULARIZE output is CommonJS, but a `.js` file inside
+      # this repo — whose package.json says "type": "module" — is parsed as
+      # ESM by Node whichever loader is used, so the factory comes back
+      # undefined. Beside the repo there is no package.json above it and it
+      # loads fine, which is why every local run was green while CI was red
+      # with "createEmu8051 is not a function". The marker makes the two
+      # layouts equivalent.
+      - name: Mark the emulator build as CommonJS
+        run: echo '{"type":"commonjs"}' > emu8051-stc/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22
