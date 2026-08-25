@@ -186,9 +186,57 @@ function m6502Factory() {
   };
 }
 
+async function stm32f0Factory() {
+  const { createStm32F0Adapter, STM32F0_PINS } = await import('../src/stm32-adapter.js');
+  // Hand-assembled F0 blink (no toolchain — the rp2040 factory's policy):
+  //   vectors: SP=0x20001000, reset=0x08000009 (code at +0x08, Thumb)
+  //   0x08 4909  ldr r1, =0x40021014      ; RCC_AHBENR (lit @0x30)
+  //   0x0a 2001  movs r0, #1
+  //   0x0c 0440  lsls r0, r0, #17         ; GPIOAEN
+  //   0x0e 6008  str  r0, [r1]
+  //   0x10 4908  ldr  r1, =0x48000000     ; GPIOA (lit @0x34)
+  //   0x12 2001  movs r0, #1
+  //   0x14 6008  str  r0, [r1]            ; MODER: PA0 output
+  //   loop:
+  //   0x16 2001  movs r0, #1
+  //   0x18 6188  str  r0, [r1, #0x18]     ; BSRR set PA0
+  //   0x1a 22C8  movs r2, #200
+  //   0x1c 3A01  subs r2, #1
+  //   0x1e D1FD  bne  0x1c
+  //   0x20 2001  movs r0, #1
+  //   0x22 0400  lsls r0, r0, #16
+  //   0x24 6188  str  r0, [r1, #0x18]     ; BSRR reset PA0
+  //   0x26 22C8  movs r2, #200
+  //   0x28 3A01  subs r2, #1
+  //   0x2a D1FD  bne  0x28
+  //   0x2c E7F3  b    loop
+  const image = new Uint8Array(0x38);
+  const dv = new DataView(image.buffer);
+  dv.setUint32(0, 0x20001000, true);
+  dv.setUint32(4, 0x08000009, true);
+  const code = [0x4909, 0x2001, 0x0440, 0x6008, 0x4908, 0x2001, 0x6008,
+    0x2001, 0x6188, 0x22C8, 0x3A01, 0xD1FD, 0x2001, 0x0400, 0x6188,
+    0x22C8, 0x3A01, 0xD1FD, 0xE7F3, 0x0000];
+  code.forEach((h, i) => dv.setUint16(8 + 2 * i, h, true));
+  dv.setUint32(0x30, 0x40021014, true);
+  dv.setUint32(0x34, 0x48000000, true);
+  return {
+    name: 'stm32f0',
+    vcc: 3.3,
+    modes: ['pushpull', 'input', 'input-pullup', 'input-pulldown'],
+    pins: Object.keys(STM32F0_PINS),
+    togglePin: 'PA0',
+    inputPin: 'PA1',
+    make() { return createStm32F0Adapter({ program: image }); },
+    // instruction-stepped like rp2040js — a short soak with the same
+    // boundary assertions
+    soakNs: 100_000_000,
+  };
+}
+
 // ─── Contract tests ───────────────────────────────────────────────────────
 
-const GPIO_FACTORIES = [avr8jsFactory, rp2040jsFactory, emu8051Factory];
+const GPIO_FACTORIES = [avr8jsFactory, rp2040jsFactory, emu8051Factory, stm32f0Factory];
 
 for (const factoryFn of GPIO_FACTORIES) {
   describe(`adapter contract: ${factoryFn.name.replace('Factory', '')}`, async () => {

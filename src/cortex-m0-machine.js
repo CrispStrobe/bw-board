@@ -62,6 +62,10 @@ export class CortexM0Machine {
       writeUint32 (addr, v) { machine._write(addr, v, 4); },
     };
     this.core = new CortexM0Core(bus);
+    // Exposed for the debug target's write-watch wrap: the core calls
+    // bus.writeUint8/16/32 through property lookup on THIS object, so
+    // replacing a method here intercepts every store.
+    this.bus = bus;
 
     // The System Control Space is CORE-side silicon (NVIC, VTOR): every
     // M0 firmware talks to it, so the machine provides it natively
@@ -146,6 +150,30 @@ export class CortexM0Machine {
   }
 
   timeNs () { return this.timeNsInternal; }
+
+  /** Nearest peripheral wake in ns (Infinity when none) — the park
+   *  horizon advanceNs and the debug target's execute loop share. */
+  wakeHorizonNs () {
+    let h = Infinity;
+    for (const p of this.peripherals) {
+      if (typeof p.nextWakeNs === 'function') h = Math.min(h, p.nextWakeNs(this));
+    }
+    return h;
+  }
+
+  /** Advance time and peripherals WITHOUT executing instructions — the
+   *  debug target's park path. Applies the same level-triggered wake
+   *  rule as advanceNs: an interrupt that pended before the WFI parked
+   *  never edges again, so the tick must check the level or the debug
+   *  loop sleeps through its own wake (the bug advanceNs already had). */
+  tickNs (deltaNs) {
+    const d = BigInt(Math.max(1, Math.round(deltaNs)));
+    this._advancePeripherals(d);
+    this.timeNsInternal += d;
+    if (this.core.waiting && this.core.checkForInterrupts()) {
+      this.core.waiting = false;
+    }
+  }
 
   /** Interrupt lines: pend IRQn on the core (level handled by callers). */
   setIrq (irq, value) { this.core.setInterrupt(irq, value); }
