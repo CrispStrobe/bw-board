@@ -62,6 +62,29 @@ export class CortexM0Machine {
       writeUint32 (addr, v) { machine._write(addr, v, 4); },
     };
     this.core = new CortexM0Core(bus);
+
+    // The System Control Space is CORE-side silicon (NVIC, VTOR): every
+    // M0 firmware talks to it, so the machine provides it natively
+    // rather than each board remembering to. SysTick and unimplemented
+    // SCS registers land in the unmapped ledger like anything else.
+    this.addPeripheral({
+      base: 0xe000e000,
+      size: 0x1000,
+      read: (off) => {
+        if (off === 0x100) return this.core.enabledInterrupts >>> 0;
+        if (off === 0x200) return this.core.pendingInterrupts >>> 0;
+        if (off === 0xd08) return this.core.VTOR >>> 0;
+        this.unmapped.push({ rw: 'r', addr: 0xe000e000 + off, size: 4, t: this.timeNsInternal });
+        return 0;
+      },
+      write: (off, v) => {
+        if (off === 0x100) { this.core.enabledInterrupts |= v; this.core.interruptsUpdated = true; }
+        else if (off === 0x180) this.core.enabledInterrupts &= ~v;
+        else if (off === 0x280) this.core.pendingInterrupts &= ~v;
+        else if (off === 0xd08) this.core.VTOR = v >>> 0;
+        else this.unmapped.push({ rw: 'w', addr: 0xe000e000 + off, size: 4, value: v, t: this.timeNsInternal });
+      }
+    });
   }
 
   addPeripheral (p) { this.peripherals.push(p); }
@@ -144,6 +167,12 @@ export class CortexM0Machine {
         }
         const cap = this.timeNsInternal + 1_000_000n;
         if (wake > cap) wake = cap;
+        if (wake > target) wake = target;
+        // Floor of 1 us: a peripheral may report "wake ready" while the
+        // core stays parked (an interrupt pended but never NVIC-enabled
+        // — the firmware bug this machine must survive, not hang on).
+        // Sub-microsecond interrupt latency is below this fidelity.
+        if (wake < this.timeNsInternal + 1000n) wake = this.timeNsInternal + 1000n;
         if (wake > target) wake = target;
         const slept = wake - this.timeNsInternal;
         this.stats.sleptNs += slept;
