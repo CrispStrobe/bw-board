@@ -10,10 +10,10 @@
  * update, exposing per-digit segment state for the face to render.
  *
  * LEDBANK8: 8 discrete LEDs on a port. Active-low option (default).
- * Shares P2 with the 7-seg digit select on the A2 board — modeled
- * honestly: both devices can coexist, but the state exposes a
- * flickerWarning when the shared port is driven by both. The ISR
- * owns the shadow byte; direct port writes race with the scan.
+ * Shares P2 with the 7-seg digit select on the A2 board. The devices may
+ * coexist in a netlist because that is the real wiring, but they cannot hold
+ * independent stable patterns: select activity drives D3-D5 and a whole-port
+ * LED write overwrites the 74HC138 address. The state exposes flickerWarning.
  *
  * Reference: stc/docs/A2-BOARD-SUPPORT.md
  * Wiring: stc/docs/BOARD-PRECHIN-A2.md

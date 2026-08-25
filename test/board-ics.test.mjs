@@ -121,7 +121,7 @@ function adcBoard(params = {}) {
     ], [
         { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'RA', terminal: 'a' }, { part: 'RC', terminal: 'a' }, { part: 'U1', terminal: 'vcc' }] },
         { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'RB', terminal: 'b' }, { part: 'RD', terminal: 'b' }, { part: 'U1', terminal: 'gnd' }] },
-        { id: 'nx', terminals: [{ part: 'RA', terminal: 'b' }, { part: 'RB', terminal: 'a' }, { part: 'U1', terminal: 'xp' }] },
+        { id: 'nx', terminals: [{ part: 'RA', terminal: 'b' }, { part: 'RB', terminal: 'a' }, { part: 'U1', terminal: 'xp' }, { part: 'U1', terminal: 'vbat' }] },
         { id: 'na', terminals: [{ part: 'RC', terminal: 'b' }, { part: 'RD', terminal: 'a' }, { part: 'U1', terminal: 'aux' }] },
         { id: 'ncs', terminals: [{ part: 'MCU', terminal: 'P1.0' }, { part: 'U1', terminal: 'csb' }] },
         { id: 'nck', terminals: [{ part: 'MCU', terminal: 'P1.1' }, { part: 'U1', terminal: 'dclk' }] },
@@ -167,11 +167,18 @@ describe('XPT2046', () => {
 
     it('VBAT reads through the internal 1/4 divider; temp diode tracks params', () => {
         const a = adcBoard({ temperature: 45 });
-        // vbat terminal is unwired → reads ~0; the interesting check is temp.
+        const vbat = a.transfer(0xa4, 12);           // A=010, 1.25 V / 4
+        assert.ok(Math.abs(vbat - 256) <= 8, `VBAT divider → ~256, got ${vbat}`);
         const t = a.transfer(0x84, 12);              // A=000 → temp diode
         const expectV = 0.6 - 20 * 0.0021;           // 45 °C
         const expect = Math.round((expectV / 5.0) * 4095);
         assert.ok(Math.abs(t - expect) <= 8, `temp ~${expect}, got ${t}`);
+    });
+
+    it('learning-board mode exposes address 010 as an undivided analog input', () => {
+        const a = adcBoard({ vbatDivider: false });
+        const v = a.transfer(0xa4, 12);
+        assert.ok(Math.abs(v - 1024) <= 8, `1.25/5.0 → ~1024, got ${v}`);
     });
 });
 
