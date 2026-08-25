@@ -142,6 +142,19 @@ never grepped OUR OWN .md corpus — scoping a lane starts with
 `grep -ril <topic> */docs */reference *.md`, or you re-derive (or
 contradict) a decision the fleet already made.
 
+**DECIDED (owner, 2026-08-25): two tiers, permanently.** The
+hand-rolled machine is the LIGHT tier — M0-class chips running
+BrickWright-built firmware, peripheral set CAPPED at what the codegen
+emits (digital I/O, tick timer, USART print, ADC, PWM — the standard
+example vocabulary and no more). Everything beyond — foreign binaries,
+F103/F4, RISC-V, ESP32 — goes through labwired (wasm-spike gate before
+Phase 2; CLI as the CI oracle immediately). The cap is the roadmap's
+"never hand-rolled" intent kept honest: no Thumb-2, no DMA, no
+peripheral forest will ever grow here. STM32C0/G0 share the F0's
+GPIOv2 nearly register-for-register and ride this tier almost free,
+which honors the roadmap's G0-before-F4 ordering. The paragraph below
+records the tension as it stood before the decision.
+
 **The tension this creates, stated rather than papered over:** Phases
 0–1 above hand-rolled an F030 machine and board — working, tested,
 in-browser-ready JS — against a roadmap line that says "never
