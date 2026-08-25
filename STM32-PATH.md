@@ -17,6 +17,7 @@ reading the shipped code.
 | nviennot/stm32-emulator | **GPL-3.0, on unicorn-engine (GPL-2)** | look, don't touch. Architecture ideas only, clean-room; not one line of code |
 | Qiling | GPL-2 (on unicorn) | same; at most a never-shipped analysis tool |
 | Wokwi's STM32 cores | not published | nothing to take |
+| **w1ne/labwired-core** (found 2026-08-25) | **MIT** | **the game-changer candidate** — see the LabWired section below |
 
 The clean-room boundary, stated: from the GPL projects we may take the
 UNPROTECTABLE ideas — SVD-driven register maps, fault-on-unmapped +
@@ -100,6 +101,19 @@ Owner-supplied references (2026-08-25):
   stack, far horizon). Most compile for cortex-m3: on our M0-subset
   machine they run only if rebuilt with -mcpu=cortex-m0 — each corpus
   entry must state which build it was tested as.
+- Second owner batch (2026-08-25, licenses API-checked): small MIT
+  firmware repos usable as corpus subjects — 808017/STM32_LED_Blink
+  (F103 blink, the smallest possible subject), Martlet-Tech/
+  uart-emulation (UART TX), HajjSalad/STM32-Sensor-Data-Simulation
+  (HAL + timers + PWM + ADC), abhigoraya005/STM32_Driver_Development
+  (bare-register GPIO/UART/ADC/timer/SPI/I2C drivers for the F103 —
+  the best of this batch for our register-level machine),
+  DwHz's SRF-04 ultrasonic timer project, extrachange/STM32H7Synth
+  (M7 — LabWired territory, not ours yet), geek-is-big's F401 Proteus
+  model. marwen-maghrebi/Advanced-STM32-Simulations- has **NO license**
+  — reference-only, nothing copied, nothing vendored. The Proteus-based
+  repos' .pdsprj files are for a proprietary simulator; only their C
+  sources matter here.
 - GPIO v1 is a DIFFERENT model (CRL/CRH config, AFIO remap) — port
   Renode's F1 GPIO, do not shoehorn v2.
 - APB2/APB1 address map, TIM2/3, USART1 at F1 addresses.
@@ -112,10 +126,42 @@ our peripheral behavior against Renode's for the same firmware — the
 exact ucsim pattern the 8051 corpus uses, minus ucsim's GPL wall.
 Mono/.NET installs on the VPS; this is fleet work.
 
-### Phase 4 — ARMv7-M (unclaimed, LARGE)
-Thumb-2 encodings, IT blocks, hardware divide, full exception model —
-extending the MIT core. Only this unlocks foreign F103 binaries.
-Weeks, its own lane, not a prerequisite for anything above.
+### Phase 4 — full F103 fidelity: EVALUATE LABWIRED FIRST (re-scoped 2026-08-25)
+
+**LabWired Core (w1ne/labwired-core, MIT, Rust, actively developed —
+pushed the day we checked)** changes this phase's calculus entirely.
+Verified via the API and the repo tree, not the marketing page:
+- Cores: Cortex-M0+/M3/M4/M7/M33, RISC-V, Xtensa LX6/LX7 (ESP32 paths).
+- Chips modeled include **stm32f103** (with `firmware-f103-conformance`
+  and `firmware-f103-fuzztarget` crates — the Blue Pill is a VALIDATED
+  target), F401/405/407/411, F767, RP2040/2350, nRF52/53/54, ESP32/C3/S3,
+  ATmega328P.
+- Deterministic by contract ("same ELF + same manifest = same trace"),
+  CI-native (pass/fail exit codes), hardware-validation workflows, and a
+  **Fidelity Ledger** documenting every place the model short-circuits
+  silicon — independently, they built our honesty-ledger philosophy.
+- A hosted browser playground exists, so in-browser execution of this
+  engine is already proven feasible.
+
+Two uses, in order:
+1. **Oracle, immediately**: the CLI is a better differential oracle for
+   our F0/F103 models than Renode — MIT, deterministic, scriptable,
+   maintained. Runs on the Mac, the VPS, or CI.
+2. **The Phase-4 road**: BEFORE anyone hand-writes Thumb-2 in JS,
+   evaluate compiling LabWired's core to WASM (Rust → wasm32 is
+   first-class; their own playground suggests it is done or close) —
+   the same play as our emu8051 fork, and it would deliver M3/M4/M7 +
+   RISC-V + Xtensa in one move, MIT-clean. Open questions to answer in
+   the evaluation: does the core crate build for wasm32-unknown-unknown;
+   binary size; the boundary-A adapter surface; how their board
+   manifests map onto our circuit model. Hand-writing ARMv7-M remains
+   the fallback, not the plan.
+
+**Correction this find forces**: the "deliberately OUT" list below said
+no permissive ESP32 emulator exists. That was true of the projects
+checked on 2026-08-25 morning and is now STALE — LabWired's Xtensa
+paths are MIT. ESP32 moves from "impossible" to "evaluate with the same
+WASM question".
 
 ### Alongside, cheap and unblocked: ATmega8A
 Not an STM32 but part of the same owner question: a `CHIPS.atmega8a`
@@ -126,7 +172,9 @@ gate (the tiny85 case), an sb3-creator device entry, and
 demand.
 
 ## What is deliberately OUT
-- ESP32/ESP8266, PIC: no permissive emulator exists (QEMU/gpsim are GPL).
+- ESP32/ESP8266: ~~no permissive emulator exists~~ — STALE since the
+  LabWired find (its Xtensa LX6/LX7 paths are MIT); see Phase 4. PIC
+  remains out (gpsim is GPL).
 - Bundling Renode or anything unicorn-based: never.
 - Pretending the M0-subset F103 runs foreign firmware: never — the
   label is part of the deliverable.
