@@ -95,15 +95,17 @@ describe('STM32F0 boundary-A adapter', { skip: hasGcc ? false : 'arm-none-eabi-g
         const board = new BoardImpl(3.3);
         board.setNetlist([
             { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
-            { id: 'MCU', kind: 'mcu', params: {}, terminals: Object.keys(STM32F0_PINS) },
+            // the real registered board kind (TSSOP20 bare chip), not the
+            // generic 'mcu' body — the designer places exactly this part
+            { id: 'MCU', kind: 'stm32f030', params: {}, terminals: Object.keys(STM32F0_PINS).map((n) => n.toLowerCase()) },
             { id: 'R1', kind: 'resistor', params: { ohms: 220 }, terminals: ['a', 'b'] },
             { id: 'D1', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] },
             { id: 'BTN', kind: 'button', params: {}, terminals: ['a', 'b'] },
         ], [
-            { id: 'n1', terminals: [t('MCU', 'PA0'), t('R1', 'a')] },
+            { id: 'n1', terminals: [t('MCU', 'pa0'), t('R1', 'a')] },
             { id: 'n2', terminals: [t('R1', 'b'), t('D1', 'anode')] },
             { id: 'n3', terminals: [t('D1', 'cathode'), t('GND', 'gnd')] },
-            { id: 'n4', terminals: [t('MCU', 'PA1'), t('BTN', 'a')] },
+            { id: 'n4', terminals: [t('MCU', 'pa1'), t('BTN', 'a')] },
             { id: 'n5', terminals: [t('BTN', 'b'), t('GND', 'gnd')] },
         ]);
         const adapter = createStm32F0Adapter({ program: build() });

@@ -219,6 +219,22 @@ const ATTINY85_TERMINALS = [
   'pb5', 'pb3', 'pb4', 'gnd', 'pb0', 'pb1', 'pb2', 'vcc',
 ];
 
+// STM32F030F4P6, TSSOP20 (the classroom breakout the F0 tier targets).
+// Package order, pin 1 top-left down to 10, pin 11 bottom-right up to 20.
+// vss/vdd are named gnd/vcc so classifyTerminal stamps the supply rails;
+// vdda ties to the same 3.3 V rail on the breakout, so it is a second
+// vcc alias, not a separate source. boot0/nrst/pf0/pf1/pa13/pa14 (BOOT,
+// reset, crystal, SWD) are real pads with no GPIO role in the codegen.
+const STM32F030_TERMINALS = [
+  // Left side, pins 1–10
+  'boot0', 'pf0', 'pf1', 'nrst', 'vcc2' /* VDDA, pin 5 */,
+  'pa0', 'pa1', 'pa2', 'pa3', 'pa4',
+  // Right side, pins 20 down to 11 — the order the package renders in
+  // (same rule as the STC15 comment below: top-right is the highest pin).
+  'pa14', 'pa13', 'pa10', 'pa9', 'vcc' /* VDD, pin 16 */,
+  'gnd' /* VSS, pin 15 */, 'pb1', 'pa7', 'pa6', 'pa5',
+];
+
 // STC15F2K60S2 PDIP-40. NOT pin-compatible with the STC12: VCC is pin 18
 // (not 40), RST is pin 17 (P5.4, shared with GPIO), P0 runs ASCENDING
 // (pin 1 = P0.0), XTAL shares P1.6/P1.7 (=ADC6/7). Pin order follows
@@ -274,4 +290,5 @@ export function registerBoardKinds() {
   registerDevice('attiny88', bareChipModel(ATTINY88_TERMINALS, 5.0));
   registerDevice('attiny85', bareChipModel(ATTINY85_TERMINALS, 5.0));
   registerDevice('stc15_mcu', bareChipModel(STC15_TERMINALS, 5.0));
+  registerDevice('stm32f030', bareChipModel(STM32F030_TERMINALS, 3.3));
 }
