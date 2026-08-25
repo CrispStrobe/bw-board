@@ -155,6 +155,15 @@ export class CortexM0Machine {
     const nsPerCycle = 1e9 / this.clockHz;
     while (this.timeNsInternal < target) {
       if (this.core.waiting) {
+        // Level-triggered wake, the core's own top-of-executeInstruction
+        // rule applied here: an interrupt that PENDED BEFORE the WFI
+        // parked never produces a later edge, so the park must check the
+        // level or sleep through its own wake (measured: the tick ISR
+        // ran 600 us late and the blink froze at 0.38x time).
+        if (this.core.checkForInterrupts()) {
+          this.core.waiting = false;
+          continue;
+        }
         // Jump a parked core to the nearest peripheral wake, the slice
         // end, or 1 ms — whichever is first. A peripheral that advances
         // time but offers no horizon would be a veto; Phase 0 has none.
