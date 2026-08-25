@@ -172,8 +172,22 @@ describe('reuse ladder speed ordering (coarse, anti-flake margins)', () => {
       return Number(process.hrtime.bigint() - t0) / reps;
     };
 
-    const tDense = time(() => denseSolve(A, b), 3);
+    // The claim is about the STEADY-STATE algorithm, so every timed path is
+    // warmed past V8's tier-up first. Unwarmed, the measured reps are
+    // dominated by first-call compilation, and how V8 tiers differs by
+    // version: on Node 22 that produced a stable refactor-3.6x-slower-than-
+    // factor inversion on CI runners while Node 20 passed locally — same
+    // commit, same machine reproduces it under Node 22, and warm=10 restores
+    // refactor 10x FASTER than factor. Margins below are unchanged.
     const lu = new SparseLU();
+    for (let i = 0; i < 10; i++) {
+      denseSolve(A, b);
+      lu.factor(csc);
+      lu.refactor(csc);
+      lu.solve(b);
+    }
+
+    const tDense = time(() => denseSolve(A, b), 3);
     const tFactor = time(() => lu.factor(csc), 5);
     const tRefactor = time(() => { lu.refactor(csc); }, 10);
     const tSolve = time(() => lu.solve(b), 20);
