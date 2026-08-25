@@ -298,7 +298,12 @@ function convert(part, cmd, read, vcc) {
     switch (a) {
         case 0b101: v = read('xp'); break;
         case 0b001: v = read('yp'); break;
-        case 0b010: v = read('vbat') * 0.25; break;    // internal 1/4 divider
+        case 0b010:
+            // A bare XPT2046 divides VBAT by four internally. Learning boards
+            // such as the PRECHIN A2 route this command/address to a general
+            // analog input instead, so their preset opts out explicitly.
+            v = read('vbat') * (part.params?.vbatDivider === false ? 1 : 0.25);
+            break;
         case 0b110: v = read('aux'); break;
         case 0b000:
         case 0b111: {
