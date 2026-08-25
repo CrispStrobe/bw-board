@@ -67,6 +67,12 @@ export function createStm32F0Adapter (opts = {}) {
   const peripherals = attachStm32F0(machine, {
     onPinChange: publish,
     onSerialByte: (b) => { if (serialListener) serialListener(b); },
+    // ADC channel n is the PA n pad: the board's solved node voltage.
+    onAnalogRead: (ch) => {
+      if (!board || !board.readAnalog || ch > 7) return 0;
+      const v = board.readAnalog(`PA${ch}`);
+      return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+    },
   });
 
   function syncInputs () {

@@ -168,8 +168,13 @@ export class CortexM0Machine {
    *  loop sleeps through its own wake (the bug advanceNs already had). */
   tickNs (deltaNs) {
     const d = BigInt(Math.max(1, Math.round(deltaNs)));
-    this._advancePeripherals(d);
+    // Time BEFORE peripherals: a peripheral that publishes a pin edge
+    // during its advance stamps it via machine.timeNs(), and the park
+    // ends AT the edge (wake horizon) — so the slice-end time is the
+    // edge's true time. The old order stamped every edge one park
+    // early, which SWAPS an asymmetric PWM duty at the board.
     this.timeNsInternal += d;
+    this._advancePeripherals(d);
     if (this.core.waiting && this.core.checkForInterrupts()) {
       this.core.waiting = false;
     }
@@ -213,15 +218,18 @@ export class CortexM0Machine {
         if (wake > target) wake = target;
         const slept = wake - this.timeNsInternal;
         this.stats.sleptNs += slept;
-        this._advancePeripherals(slept);
+        // Time before peripherals — see tickNs: the park ends at a wake
+        // horizon, so an edge published during this advance carries its
+        // true time instead of the park's start.
         this.timeNsInternal = wake;
+        this._advancePeripherals(slept);
         continue;
       }
       const cycles = this.core.executeInstruction();
       this.stats.instructions++;
       const ns = BigInt(Math.max(1, Math.round(cycles * nsPerCycle)));
+      this.timeNsInternal += ns; // time first — same rule as the park path
       this._advancePeripherals(ns);
-      this.timeNsInternal += ns;
     }
   }
 

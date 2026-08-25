@@ -214,7 +214,7 @@ test('factory: memory read/write on 6502', async () => {
 test('getTargetKinds includes eater6502', () => {
   const kinds = getTargetKinds();
   assert.ok(kinds.find(k => k.kind === 'eater6502'));
-  assert.equal(kinds.length, 9);
+  assert.equal(kinds.length, 10);
 });
 
 test('factory: a custom config reaches the machine — the wired-extractor path', async () => {
