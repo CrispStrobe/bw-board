@@ -42,11 +42,12 @@ function makeLedCircuit() {
 }
 
 describe('perf budget: closed-form path', () => {
-  // Baseline: ~184K setPin/sec, ~233K advanceTo/sec.
-  // Budget: 10K/sec — low to survive shared CI / VPS under load.
+  // Measured 2026-08-26 (best-of-8, solo): ~17K setPin/sec,
+  // ~280K advanceTo/sec. advanceTo keeps its 10K budget: a 27x margin
+  // is not reachable by contention. setPin's is 2K — see below.
   // An order-of-magnitude regression (to ~1K) would still fail.
 
-  it('setPin throughput > 10K ops/sec', () => {
+  it('setPin throughput > 2K ops/sec', () => {
     // Two facts this bench must carry honestly:
     //  - Since the loaded-wiper KCL fix, this circuit (pot wiper into an
     //    MCU pin) routes through full MNA, not the closed-form walker:
@@ -57,6 +58,17 @@ describe('perf budget: closed-form path', () => {
     //    to 4.5K with the engine untouched). Best-of-chunks measures the
     //    engine, not the scheduler: a real regression slows EVERY chunk,
     //    a noisy neighbour only some.
+    //
+    // Best-of-chunks was not enough on its own, because the budget was
+    // never re-derived after the code path changed. Measured 2026-08-26:
+    // solo best-of-8 is 13.5-17.7K, and with this repo's own suite
+    // co-running the BEST chunk fell to 6.3K. A 10K budget therefore sat
+    // inside the range that load alone produces, and went red with the
+    // engine untouched. A budget above the loaded floor reports the
+    // scheduler, not the engine — and a gate that goes red for the wrong
+    // reason gets ignored for the right ones. 2K keeps a ~7x fall from
+    // solo detectable, which is the order-of-magnitude regression this
+    // file says it exists to catch.
     const { parts, nets } = makeLedCircuit();
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
@@ -72,9 +84,9 @@ describe('perf budget: closed-form path', () => {
       if (opsPerSec > best) best = opsPerSec;
     }
 
-    assert.ok(best > 10_000,
-      `setPin: best chunk ${Math.round(best)} ops/sec (budget: 10K, ` +
-      `solo MNA-path baseline ~20K).`);
+    assert.ok(best > 2_000,
+      `setPin: best chunk ${Math.round(best)} ops/sec (budget: 2K, ` +
+      `solo MNA-path baseline 13.5-17.7K).`);
   });
 
   it('advanceTo throughput > 10K ops/sec (steady state)', () => {
