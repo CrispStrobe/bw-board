@@ -143,9 +143,16 @@ const GATE_KINDS = {
 export function registerLogicGates() {
   for (const [kind, evalFn] of Object.entries(GATE_KINDS)) {
     const model = makeGateModel(kind, evalFn);
-    // Dynamic terminals based on input count
+    // Two terminal lists, deliberately. `terminals` is the registration-time
+    // default and must stay a non-empty array (devices.js requires one). It
+    // cannot describe a part it has never seen, so a gate widened with
+    // params.inputs needs `terminalsFor`, which validate.js prefers when the
+    // model offers it. Setting only `terminals` here is what made params.inputs
+    // unreachable: init/stamp/update all honoured it, but no netlist using it
+    // could load, because validation rejected in2 and above.
     const defaultInputs = kind === 'gate_not' ? 1 : 2;
     model.terminals = gateTerminals(defaultInputs);
+    model.terminalsFor = (part) => gateTerminals(part?.params?.inputs ?? defaultInputs);
     registerDevice(kind, model);
   }
 }

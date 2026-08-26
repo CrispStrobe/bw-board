@@ -119,7 +119,13 @@ export function validateNetlist(parts, nets) {
     }
 
     // Terminal validation
-    const expectedTerminals = deviceModel ? deviceModel.terminals : KNOWN_TERMINALS[part.kind];
+    // A model may compute its terminal list per part (a gate widened by
+    // params.inputs); `terminals` is only its default.
+    const expectedTerminals = deviceModel
+      ? (typeof deviceModel.terminalsFor === 'function'
+          ? deviceModel.terminalsFor(part)
+          : deviceModel.terminals)
+      : KNOWN_TERMINALS[part.kind];
     if (expectedTerminals !== null) {
       for (const t of part.terminals) {
         if (!expectedTerminals.includes(t)) {
