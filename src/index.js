@@ -21,6 +21,7 @@ export { createDebugSession } from './debug-session.js';
 export { validateNetlist, assertValidNetlist } from './validate.js';
 export { NetlistBuilder } from './builder.js';
 export { createSerialDebugTarget } from './serial-debug.js';
+export { createStm32Isp } from './stm32-isp.js';
 export { createDebugTarget, getTargetKinds } from './debug-target-factory.js';
 export { registerDevice, unregisterDevice, getDevice, hasDevice, registeredKinds, initDeviceState } from './devices.js';
 export { registerLogicGates } from './devices/logic-gates.js';
