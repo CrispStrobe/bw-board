@@ -211,9 +211,10 @@ Two uses, in order:
    manifests map onto our circuit model. Hand-writing ARMv7-M remains
    the fallback, not the plan.
 
-   **SPIKE MEASURED, GATE PASSED (2026-08-25, from OUR fork
-   CrispStrobe/labwired-core @ bw/mmio-write-observers — the fleet's
-   canonical labwired source by owner ruling):** they ship a real
+   **SPIKE MEASURED, GATE PASSED (2026-08-25, re-pinned 2026-08-26 to
+   CrispStrobe/labwired-core @ main = upstream 41119903c, which merged our
+   observer fix as w1ne/labwired-core#1068 — the old
+   bw/mmio-write-observers pin aborts on any 16-bit peripheral store):** they ship a real
    `crates/wasm` (wasm-bindgen cdylib, its own wasm-opt profile, an
    event-driven scheduler that is browser-only by construction, even a
    browser-JIT prototype). `cargo build --release --target

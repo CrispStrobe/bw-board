@@ -3,8 +3,10 @@
 #
 # stm32f0-chip.yaml is copied from labwired-core's onboarding config
 # (MIT, (C) 2026 Andrii Shylenko), with our irq wiring added — see the
-# comment in that file. The fleet's oracle binary builds from OUR fork:
-# CrispStrobe/labwired-core @ bw/mmio-write-observers (pin 5b7461d).
+# comment in that file. The oracle binary builds from CrispStrobe/labwired-core
+# @ main (pin 41119903c) — our fork synced to upstream, which merged the
+# observer fix as w1ne/labwired-core#1068. The old bw/mmio-write-observers pin
+# aborts on any 16-bit peripheral store; see test/labwired-oracle.test.mjs.
 name: "bw-f0-oracle"
 chip: "./stm32f0-chip.yaml"
 board_io: []

@@ -9,19 +9,36 @@
 // TIM3 ticked, the NVIC vectored, WFI woke, and the USART transmitted
 // (the H/L phases only print on the millisecond grid).
 //
-// THE FLEET BUILDS THE FORK (owner ruling 2026-08-25): the canonical
-// oracle binary comes from CrispStrobe/labwired-core, default branch
-// bw/mmio-write-observers (= upstream 3b9c704 + our observer fix,
-// pinned at 5b7461d; upstream PR w1ne/labwired-core#1067 carries the
-// same patch). Build: cargo build --release -p labwired-cli, then
+// THE FIX IS UPSTREAM NOW (2026-08-26): build from CrispStrobe/labwired-core
+// @ main, pinned at 41119903c — which is upstream w1ne/labwired-core main,
+// our fork synced to it. Build: cargo build --release -p labwired-cli, then
 // LABWIRED_CLI=<target>/release/labwired.
 //
-// FINDING the fork fixes (upstream 3b9c704): `--vcd` recorded pc and
-// nothing else — SystemBus::write_u32's peripheral branch never called
-// on_memory_write, AND Machine.observers never reached bus.observers.
-// The second test below uses the fork's MMIO-carrying VCD for a
-// pin-edge timeline comparison and SKIPS itself against an unpatched
-// upstream binary.
+// FINDING the fix closes (upstream 3b9c704): `--vcd` recorded pc and
+// nothing else — SystemBus::write_u32/u16's peripheral branches never
+// called on_memory_write, AND Machine.observers never reached
+// bus.observers. The second test below uses the MMIO-carrying VCD for a
+// pin-edge timeline comparison and SKIPS itself against a binary built
+// before the fix.
+//
+// DO NOT go back to `bw/mmio-write-observers` (the old pin, 5b7461d). Our
+// PR #1067 was superseded by w1ne/labwired-core#1068, which kept the commit
+// and co-authorship and reshaped both halves — because as submitted it
+// ABORTS the simulator. `write_u16`'s peripheral branch carried a
+// copy-pasted 4-byte notification loop next to its correct 2-byte one, and
+// shifting a u16 right by 16 and 24 is an arithmetic overflow: this
+// workspace sets `overflow-checks = true` with `panic = "abort"` in BOTH
+// profiles, so every 16-bit store to a clocked peripheral died. An ordinary
+// TIMx_ARR write is enough. Our F0 oracle never tripped it only because the
+// CMSIS headers make TIM3 registers `__IO uint32_t` — 32-bit stores take
+// write_u32, whose 4-byte loop was correct.
+//
+// The merged shape derives the event count from the stored type
+// (`notify_peripheral_store(addr, &value.to_le_bytes())`), so a half-word
+// store cannot emit word-shaped events; and registration was fixed at
+// `Machine::add_observer` / `SystemBus::add_observer` instead of mirroring
+// by LENGTH inside advance(), which evicted bus-only observers (the DAP
+// memory tracker) and only converged once a run had started.
 //
 // Gated on TWO env inputs so CI without the oracle skips loudly:
 //   LABWIRED_CLI = path to the built labwired binary
@@ -254,10 +271,10 @@ describe('labwired differential oracle: STM32F030', { skip }, () => {
         const low = events.filter((e) => e.addr === GPIOA_BSRR_ADDR);      // byte 0
         const b2 = events.filter((e) => e.addr === GPIOA_BSRR_ADDR + 2);   // byte 2 (BR0)
         if (low.length === 0) {
-            // Upstream binary without the fork's observer fix — the first
-            // test already covered UART equivalence; say why this skips.
+            // A binary built before the observer fix landed upstream — the
+            // first test already covered UART equivalence; say why this skips.
             console.log('pin-edge timeline SKIPPED: this labwired binary does not ' +
-                'trace MMIO writes (use the bw/mmio-write-observers fork)');
+                'trace MMIO writes (build from labwired-core main, >= 41119903c)');
             return;
         }
         // Reassemble edges: at each BSRR word write, set if byte0 bit0,
