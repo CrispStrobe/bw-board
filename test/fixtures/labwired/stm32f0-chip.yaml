@@ -6,6 +6,23 @@
 
 name: stm32f0
 arch: arm
+# WHY EVERY GPIO PORT CARRIES `config.profile: stm32v2`
+#
+# `type: stm32_gpioport` routes to labwired's STM32**F1** register map
+# (CRL/CRH @0x00, ODR @0x0C, BSRR @0x10). The F0 is a V2-layout part —
+# MODER @0x00, ODR @0x14, BSRR @0x18 — so without the profile every output
+# write lands on a different register and the pads never move. It fails
+# silently: the firmware runs, the UART talks, and the GPIO model simply
+# reports every pad low forever.
+#
+# Found 2026-08-27 while building the boundary-A adapter, which is the first
+# thing here that ever asked labwired for a PAD LEVEL. The oracle never
+# noticed because it compares UART bytes and reassembles pin edges from raw
+# BSRR *word writes* in the VCD — both layout-independent.
+#
+# Upstream's own onboarding configs have the same shape (stm32f0, stm32f072,
+# stm32f4, stm32f746, stm32h743 all declare stm32_gpioport with no profile at
+# V2-family base addresses).
 flash:
   base: 134217728
   size: 256KB
@@ -45,26 +62,38 @@ peripherals:
   type: stm32_gpioport
   bus: sysbus
   base_address: 1207959552
+  config:
+    profile: stm32v2
 - id: gpioPortB
   type: stm32_gpioport
   bus: sysbus
   base_address: 1207960576
+  config:
+    profile: stm32v2
 - id: gpioPortC
   type: stm32_gpioport
   bus: sysbus
   base_address: 1207961600
+  config:
+    profile: stm32v2
 - id: gpioPortD
   type: stm32_gpioport
   bus: sysbus
   base_address: 1207962624
+  config:
+    profile: stm32v2
 - id: gpioPortE
   type: stm32_gpioport
   bus: sysbus
   base_address: 1207963648
+  config:
+    profile: stm32v2
 - id: gpioPortF
   type: stm32_gpioport
   bus: sysbus
   base_address: 1207964672
+  config:
+    profile: stm32v2
 - id: i2c1
   type: stm32f7_i2c
   bus: sysbus

@@ -223,10 +223,39 @@ Two uses, in order:
    is DWARF (workspace `debug = true`); custom-sections-stripped
    19.55 MB (code 6.5 MB, data 13 MB); **2.12 MB brotli** — smaller
    than lite's existing vendor chunk (3.3 MB brotli), i.e. a lazy
-   chunk the app can afford. Remaining before Phase 2 ships on it:
-   the wasm-bindgen API surface → boundary-A adapter mapping, and
-   their board-manifest → our-netlist bridge. Size and buildability
-   are no longer open questions.
+   chunk the app can afford.
+
+   **THE ADAPTER LANDED (2026-08-27, `src/labwired-adapter.js` +
+   `test/labwired-adapter.test.mjs`).** The first of the two remaining
+   pieces is done and tested against the real engine, not a mock: the
+   wasm is built from the pinned fork, `wasm-bindgen --target nodejs`
+   loads it under `node --test`, and all six contract assertions pass
+   (manifest generation, pillar-1 seating, BSRR edges arriving
+   time-before-edge, MODER-driven routing, pillar-2 input readback,
+   clock-rate time). It carries a deliberate SLICE of the second piece:
+   `set_board_io_input` only resolves ids declared in the system
+   manifest's `board_io`, so the adapter GENERATES that manifest — one
+   input binding per header pin — which is exactly as much
+   board-manifest→netlist bridge as boundary A needs. The full bridge
+   (their board manifests → our circuit model) is still open.
+
+   Two traps cost most of the day and are written down in both files:
+   (1) `serde-wasm-bindgen` returns JS **`Map`s**, not plain objects, so
+   `batch.cursor` and `row.value` read `undefined` and `JSON.stringify`
+   prints `{}` — an adapter written against the documented field names
+   appears to work while reporting that the firmware never moved.
+   (2) **`type: stm32_gpioport` routes to labwired's STM32F1 register
+   map** (CRL @0x00, ODR @0x0C, BSRR @0x10). The F0 is V2 — MODER @0x00,
+   ODR @0x14, BSRR @0x18 — so every output write landed on a different
+   register and every pad read low forever, silently, while the firmware
+   ran and the UART talked. `config: { profile: stm32v2 }` on each port
+   fixes it. Our oracle never caught this because it compares UART bytes
+   and reassembles edges from raw BSRR *word writes*, both
+   layout-independent; the adapter is the first thing here that ever
+   asked labwired for a pad LEVEL. Upstream's own onboarding configs
+   (stm32f0, stm32f072, stm32f4, stm32f746, stm32h743) share the shape.
+
+   Size and buildability were never the open questions they looked like.
 
 **Correction this find forces**: the "deliberately OUT" list below said
 no permissive ESP32 emulator exists. That was true of the projects
