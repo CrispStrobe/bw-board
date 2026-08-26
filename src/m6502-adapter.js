@@ -176,6 +176,13 @@ export function createM6502Adapter(opts = {}) {
       // Bridge PS/2 parts to the machine VIA before reset, so the
       // capture chain's advance() runs from the first instruction.
       bridgePS2(b);
+      // Publish machine video through the physical card's board state so a
+      // part-bound controller widget mirrors the actual framebuffer.
+      for (const c of config.chips) {
+        if (c.kind !== 'simplevga') continue;
+        const state = typeof b.getDeviceState === 'function' ? b.getDeviceState(c.name) : null;
+        if (state) state._video = machine.chips[c.name] || null;
+      }
       // Reset drives the CPU through $FFFC and publishes initial pin state.
       machine.reset();
       syncInputs();

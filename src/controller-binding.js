@@ -39,6 +39,11 @@ export function bindPanelToBoard(panel, board) {
 
     if (w.binding.target === 'part') {
       const { partId, param } = w.binding;
+      if (w.type === 'keyboard' && typeof board.setDeviceControl === 'function') {
+        const code = detail.keyCode || 0;
+        if (code) board.setDeviceControl(partId, 'type', String.fromCharCode(code));
+        return;
+      }
       const mapped = mapWidgetToControl(w, param);
       if (mapped !== null) {
         board.setControl(partId, mapped);
@@ -85,6 +90,14 @@ export function bindPanelToBoard(panel, board) {
           else if (w.type === 'oled' && typeof panel.setOledText === 'function') panel.setOledText(w.name, sv);
           else if (typeof panel.setTerminalText === 'function') panel.setTerminalText(w.name, sv);
         }
+      } else if (w.type === 'simplevga' && typeof st.videoFrame === 'function' &&
+                 typeof panel.setVgaFrame === 'function') {
+        const frame = st.videoFrame();
+        const generation = frame && frame.frame;
+        if (frame && shown.get(w.name) !== generation) {
+          shown.set(w.name, generation);
+          panel.setVgaFrame(w.name, frame);
+        }
       }
     }
     if (raf !== null) raf = requestAnimationFrame(pumpDisplays);
@@ -101,6 +114,7 @@ export function bindPanelToBoard(panel, board) {
         if (!w.binding) continue;
         if (DISPLAYS.has(w.type)) continue; // read-only
         if (w.binding.target === 'part') {
+          if (w.type === 'keyboard') continue;
           const mapped = mapWidgetToControl(w, w.binding.param);
           if (mapped !== null) {
             board.setControl(w.binding.partId, mapped);

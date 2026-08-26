@@ -177,7 +177,7 @@ export class ControllerPanel {
     if (type === 'terminal') w.state = { text: config.text ?? '' };
     if (type === 'sevenseg') w.state = { value: config.value ?? 0 };
     if (type === 'bargraph') w.state = { value: config.value ?? w.config.min };
-    if (type === 'simplevga') w.state = { value: 0, buffer: null };
+    if (type === 'simplevga') w.state = { value: 0, buffer: null, rgba: null, signal: false, frame: -1 };
     if (type === 'mono_lcd') w.state = { buffer: null, text: '' };
     if (type === 'rgb_light') w.state = { value: config.value ?? 0 };
     if (type === 'keyboard') w.state = { lastKey: 0, _fifo: [] };
@@ -534,6 +534,18 @@ export class ControllerPanel {
     if (w.state.buffer) w.state.buffer.fill(0);
     else w.state.buffer = new Uint8Array(w.config.width * w.config.height);
     this._emit('input', { name, cleared: true });
+  }
+
+  /** Mirror a machine video card frame into a VGA widget. */
+  setVgaFrame(name, frame) {
+    const w = this._requireWidget(name, 'simplevga');
+    if (!frame) return;
+    w.state.rgba = frame.rgba ? new Uint8ClampedArray(frame.rgba) : null;
+    w.state.signal = frame.signal !== false;
+    w.state.frame = Number(frame.frame) || 0;
+    w.config.width = Number(frame.width) || w.config.width;
+    w.config.height = Number(frame.height) || w.config.height;
+    this._emit('input', { name, frame: w.state.frame, signal: w.state.signal });
   }
 
   /**

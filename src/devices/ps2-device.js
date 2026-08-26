@@ -47,6 +47,36 @@ export function registerPS2Device() {
       };
     },
 
+    // High-level controller widgets deliver ASCII. Convert that intent to
+    // the same Code Set 2 make+break stream as a physical key press; the
+    // machine-side capture chain still clocks every bit into the VIA.
+    control(part, state, verb, value) {
+      if (verb === 'keyDown' || verb === 'keyUp') {
+        try {
+          state[verb](String(value));
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+      if (verb !== 'type') return false;
+      const text = String(value ?? '');
+      for (const raw of text) {
+        const ch = raw.toLowerCase();
+        const key = ch === '\r' || ch === '\n' ? 'enter'
+          : ch === '\b' ? 'backspace'
+            : ch === '\u001b' ? 'escape'
+              : ch === '\t' ? 'tab' : ch;
+        try {
+          state.keyDown(key);
+          state.keyUp(key);
+        } catch (e) {
+          return false;
+        }
+      }
+      return true;
+    },
+
     // No stamp or update needed — protocol delivery is machine-side.
     // The terminals exist for the designer's wiring display only.
   };

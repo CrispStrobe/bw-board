@@ -58,7 +58,7 @@ const RS_PINS = {
     riot: ['a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'rs0b'],
 };
 const CHIP_DECL = {
-    via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA',
+    via: 'W65C22', acia: 'W65C51', vdp: 'TMS9918', tilevga: 'TILEVGA', simplevga: 'SIMPLEVGA',
     acia6850: 'MC6850', uart16550: 'NS16C550', riot: 'M6532', psg8912: 'AY38912', um245r: 'UM245R',
 };
 
@@ -435,6 +435,29 @@ export function extract6502Machine(circuit) {
     if (reasons.length) return { ok: false, notes, reasons };
     chips.push(...ayResolved);
 
+    // gfoot SimpleVGA is a write-snooping card. It occupies no decoded
+    // address range: writes in the ROM window are observed by the card while
+    // CPU reads continue to come from ROM. The abstract ribbon must still be
+    // drawn, so the example teaches the physical bus relationship.
+    for (const p of parts) {
+        if (p.kind !== 'simplevga_card') continue;
+        const ribbon = wires.some((w) =>
+            (w.from === p.id && String(w.fromTerminal).toLowerCase() === 'bus' && w.to === cpu.id)
+            || (w.to === p.id && String(w.toTerminal).toLowerCase() === 'bus' && w.from === cpu.id));
+        if (!ribbon) {
+            reasons.push(`${p.id}.bus is not wired to ${cpu.id} — the card snoops the CPU bus ribbon`);
+            continue;
+        }
+        const via = parts.find((part) => part.kind === 'w65c22');
+        if (!via || find(key(p.id, 'bank')) !== find(key(via.id, 'pb0'))) {
+            reasons.push(`${p.id}.bank is not wired to ${via ? `${via.id}.PB0` : 'a W65C22 PB0'} — software selects the VRAM bank there`);
+            continue;
+        }
+        chips.push({ kind: 'simplevga', name: p.id, rows: Number(p.params?.rows) || 128 });
+        notes.push(`${p.id}: SimpleVGA write-snoop card on the ROM bus; bank select is VIA PB0`);
+    }
+    if (reasons.length) return { ok: false, notes, reasons };
+
     // ---- tilevga: the ribbon card, not a decoded chip -------------------
     // rene6502's card arrives on the expansion ribbon and claims a fixed
     // 16K window (the real cent1 pulls the RAM and gives it $0000-$3FFF).
@@ -526,7 +549,9 @@ export function extract6502Machine(circuit) {
 
     const lines = [
         ...regions.map((r) => `MAP ${r.kind.toUpperCase()} ${hx(r.start)}-${hx(r.end)}`),
-        ...chips.map((c) => `CHIP ${c.name} = ${CHIP_DECL[c.kind]} AT ${hx(c.at)}`),
+        ...chips.map((c) => c.at == null
+            ? `CHIP ${c.name} = ${CHIP_DECL[c.kind]}`
+            : `CHIP ${c.name} = ${CHIP_DECL[c.kind]} AT ${hx(c.at)}`),
     ];
     return {
         ok: true,
