@@ -58,7 +58,9 @@ export function registerMPU6050() {
 
         init(part) {
             const state = {
-                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                // INT starts released. How it drives once asserted is the
+                // host's choice, not ours — see INT_PIN_CFG in update().
+                drives: { sda: { vTh: 0, rTh: R_OFF }, int: { vTh: 0, rTh: R_OFF } },
                 ptr: 0,
                 // Power-on: DEVICE_RESET cleared, SLEEP SET, CLKSEL = 0 (internal 8 MHz).
                 regs: new Uint8Array(128),
@@ -105,13 +107,63 @@ export function registerMPU6050() {
         update(part, state, read) {
             const vcc = read('vcc') || 3.3;
             const th = vcc * 0.5;
+
+            // INT — declared since the part was written, never driven, so the
+            // one thing an IMU's interrupt pin is for (not polling a 6-axis
+            // sensor over I2C at the sample rate) could not be wired.
+            //
+            // The host decides how it behaves, and getting these two bits
+            // backwards is the classic MPU-6050 wiring fault:
+            //   INT_PIN_CFG (0x37) bit 7 ACTL — 1 = ACTIVE LOW
+            //                      bit 6 OPEN — 1 = OPEN DRAIN
+            // Defaults are 0/0, i.e. active HIGH and push-pull, which is why
+            // a tutorial that ties INT to a pull-up and waits for a falling
+            // edge sees nothing until it sets ACTL.
+            //
+            // STATED DIVERGENCE: the interrupt is gated on
+            // INT_ENABLE.DATA_RDY_EN and on being awake, but not on sample
+            // TIMING — this model has no sample clock, its readings come
+            // straight from params, so data is always ready. The pin
+            // therefore asserts as soon as the host enables it, rather than
+            // at the rate SMPLRT_DIV would set. Sooner than silicon, never
+            // later: it cannot hide an interrupt a real part would raise.
+            const sleeping = !!(state.regs[0x6b] & 0x40);
+            const dataRdyEn = !!(state.regs[0x38] & 0x01);
+            const cfg = state.regs[0x37];
+            const activeLow = !!(cfg & 0x80);
+            const openDrain = !!(cfg & 0x40);
+            const asserted = !sleeping && dataRdyEn;
+
+            let want;
+            if (!asserted) {
+                // Idle. Push-pull holds the INACTIVE level; open-drain lets
+                // go and leaves the line to the board's pull-up.
+                want = openDrain
+                    ? { vTh: 0, rTh: R_OFF }
+                    : { vTh: activeLow ? vcc : 0, rTh: R_OUT };
+            } else if (openDrain) {
+                // Open-drain can only pull DOWN, so an active-high open-drain
+                // interrupt cannot signal at all — a real configuration
+                // mistake, and the model reproduces it rather than papering
+                // over it.
+                want = activeLow ? { vTh: 0, rTh: R_OUT } : { vTh: 0, rTh: R_OFF };
+            } else {
+                want = { vTh: activeLow ? 0 : vcc, rTh: R_OUT };
+            }
+            let changed = false;
+            const now = state.drives.int;
+            if (now.rTh !== want.rTh || now.vTh !== want.vTh) {
+                state.drives.int = want;
+                changed = true;
+            }
+
             const driveLow = feedI2CSlave(state._i2c, read('scl') > th, read('sda') > th);
             const nowLow = state.drives.sda.rTh === R_OUT;
             if (driveLow !== nowLow) {
                 state.drives.sda = driveLow ? { vTh: 0, rTh: R_OUT } : { vTh: 0, rTh: R_OFF };
-                return true;
+                changed = true;
             }
-            return false;
+            return changed;
         },
     });
 }
