@@ -11,6 +11,7 @@
  *   74LS189  16×4 static RAM — inverted outputs (the classic trap)
  *   74LS157  quad 2:1 multiplexer — /G enable, S select
  *   74LS107  dual JK flip-flop — falling-edge clock, active-low /CLR
+ *   74LS193  4-bit up/DOWN counter — two clocks, async load, /CO and /BO
  *
  * @module
  */
@@ -152,6 +153,101 @@ export function registerSAP1Chips() {
             const rco = ent && state._count === 0x0f ? vcc : 0;
             if (state.drives.rco.vTh !== rco) {
                 state.drives.rco = { vTh: rco, rTh: R_OUT };
+                changed = true;
+            }
+            return changed;
+        },
+    });
+
+    // ─── 74LS193: 4-bit synchronous up/DOWN binary counter ───────
+    // The counter a stack pointer needs, and the reason it is here: a
+    // 74LS161 counts one way, so CALL can push and RET can never pop.
+    //
+    // Two separate clocks, which is the part that surprises people. There
+    // is no up/down MODE pin: you clock the UP input to count up and the
+    // DOWN input to count down, and the idle one must be held HIGH. Tie
+    // both low and the chip simply stops.
+    //
+    // Its LOAD is ASYNCHRONOUS, unlike the 74LS161 next door whose load
+    // waits for a clock edge. /LOAD low loads immediately, no edge
+    // involved — worth knowing before wiring the two the same way.
+    // CLEAR is asynchronous too and active HIGH, and it beats load.
+    //
+    // /CO and /BO are the cascade outputs and they are NOT simply
+    // "count == 15" and "count == 0": each is gated by its own clock
+    // being LOW, so what comes out is a PULSE that can drive the next
+    // stage's clock input. /CO of one chip into UP of the next is the
+    // whole of a multi-digit counter.
+    registerDevice('74ls193', {
+        terminals: ['d0', 'd1', 'd2', 'd3', 'q0', 'q1', 'q2', 'q3',
+                    'up', 'down', 'loadb', 'clr', 'cob', 'bob', 'vcc', 'gnd'],
+
+        init() {
+            return {
+                drives: {
+                    q0: { vTh: 0, rTh: R_OUT }, q1: { vTh: 0, rTh: R_OUT },
+                    q2: { vTh: 0, rTh: R_OUT }, q3: { vTh: 0, rTh: R_OUT },
+                    cob: { vTh: 0, rTh: R_OUT }, bob: { vTh: 0, rTh: R_OUT },
+                },
+                _count: 0,
+                _lastUp: false,
+                _lastDown: false,
+            };
+        },
+
+        stamp(ctx) {
+            for (const t of ['d0', 'd1', 'd2', 'd3', 'up', 'down', 'loadb', 'clr']) {
+                ctx.conductance(t, null, 1 / R_INPUT);
+            }
+        },
+
+        update(part, state, read) {
+            const vcc = read('vcc') || 5.0;
+            const th = vcc * 0.5;
+            const up = read('up') > th;
+            const down = read('down') > th;
+            const clr = read('clr') > th;          // active HIGH
+            const load = !(read('loadb') > th);    // active LOW, asynchronous
+            let changed = false;
+
+            if (clr) {
+                state._count = 0;                  // clear beats load
+            } else if (load) {
+                let d = 0;
+                for (let i = 0; i < 4; i++) if (read(`d${i}`) > th) d |= (1 << i);
+                state._count = d;
+            } else {
+                // Count on the rising edge of one clock while the other is
+                // held high. Both clocks rising in the same pass is not a
+                // thing a real board does; taking UP first is arbitrary and
+                // the tests do not rely on it.
+                if (up && !state._lastUp && down) {
+                    state._count = (state._count + 1) & 0x0f;
+                } else if (down && !state._lastDown && up) {
+                    state._count = (state._count - 1) & 0x0f;
+                }
+            }
+            state._lastUp = up;
+            state._lastDown = down;
+
+            for (let i = 0; i < 4; i++) {
+                const bit = (state._count >> i) & 1;
+                const v = bit ? vcc : 0;
+                if (state.drives[`q${i}`].vTh !== v) {
+                    state.drives[`q${i}`] = { vTh: v, rTh: R_OUT };
+                    changed = true;
+                }
+            }
+            // Active LOW, and gated by the clock that would advance past the
+            // end: /CO pulses low only while UP is low AND the count is 15.
+            const co = (state._count === 0x0f && !up) ? 0 : vcc;
+            const bo = (state._count === 0x00 && !down) ? 0 : vcc;
+            if (state.drives.cob.vTh !== co) {
+                state.drives.cob = { vTh: co, rTh: R_OUT };
+                changed = true;
+            }
+            if (state.drives.bob.vTh !== bo) {
+                state.drives.bob = { vTh: bo, rTh: R_OUT };
                 changed = true;
             }
             return changed;

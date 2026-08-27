@@ -1,7 +1,13 @@
 name: CI
 on:
   push:
-    branches: [master, main]
+    # Feature branches build too, so a change can be verified on a clean
+    # machine BEFORE it reaches master. A full local run on a developer box
+    # measures the developer's other processes as much as the code — the
+    # setPin budget in test/perf-budget.test.js goes red under a concurrent
+    # suite and passes alone, which is the whole reason that budget had to
+    # be re-derived.
+    branches: [master, main, 'fable/**', 'wip/**']
   pull_request:
 
 jobs:
