@@ -284,6 +284,26 @@ export function createLabwiredAdapter (opts) {
       sim.feed_uart_input(Uint8Array.from([byte & 0xff]));
     },
 
+    /**
+     * Publish whatever the engine has produced since the last look, without
+     * advancing it.
+     *
+     * A debug loop steps the simulator itself (one instruction at a time, to
+     * compare the PC against breakpoints), so it never goes through
+     * `advanceNs` — but the board still has to see the edges those steps
+     * caused, and still has to be advanced to the new time. This is that,
+     * factored out so a debug target does not have to reach into the
+     * adapter's internals or call `advanceNs(0)` and rely on the special case.
+     */
+    pump () {
+      syncInputs();
+      drainEdges();
+      if (board && board.advanceTo) {
+        board.advanceTo(timeNs());
+        stats.advanceToCount++;
+      }
+    },
+
     /** Drain UART bytes the firmware transmitted since the last call. */
     pumpSerial () {
       if (!serialListener || !sim.drain_uart_output) return;

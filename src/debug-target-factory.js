@@ -19,6 +19,14 @@
  *                 getTargetKinds() since 2026-08-13: the hosted rp2040
  *                 compile route exists, so the picker entry stopped
  *                 being a lie
+ *   'labwired'  — the HEAVY tier: any chip labwired models (F103/F4/F7/H7,
+ *                 RISC-V, Xtensa), via labwired-wasm. Needs opts.wasm, the
+ *                 same way 'emulator' does, because a 20 MB engine is the
+ *                 host's to load and cache — not this module's to bundle.
+ *                 Deliberately NOT in getTargetKinds() yet: no host can
+ *                 supply that module today, and a picker entry for something
+ *                 nobody can select is the lie this file's header warns about
+ *                 (it is why 'rp2040js' waited for its compile route).
  *   'serial'    — live hardware over serial
  *
  * @module
@@ -27,6 +35,8 @@
 import { createEmu8051Adapter } from './emu8051-adapter.js';
 import { createSerialDebugTarget } from './serial-debug.js';
 import { createAvr8jsAdapter } from './avr8js-adapter.js';
+import { createLabwiredAdapter } from './labwired-adapter.js';
+import { createLabwiredDebugTarget } from './labwired-debug.js';
 import { parseIntelHex } from './intel-hex.js';
 
 /**
@@ -78,12 +88,44 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'stm32f0') {
     return createStm32F0Target(opts);
   }
+  if (kind === 'labwired') {
+    return createLabwiredTarget(opts);
+  }
   if (kind === 'serial') {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'z80', 'rp2040js', 'stm32f0', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'z80', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
   );
+}
+
+// ─── labwired target (the heavy tier) ───────────────────────────────────
+
+/**
+ * @param {object} opts
+ * @param {object} opts.wasm      instantiated labwired-wasm module
+ * @param {object} opts.board     BoardImpl
+ * @param {string} opts.chipYaml  chip descriptor
+ * @param {Uint8Array} opts.firmware  ELF
+ * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
+ * @param {number} [opts.clockHz]
+ * @param {string} [opts.systemYaml] override the generated manifest
+ */
+async function createLabwiredTarget(opts) {
+  const { wasm, board, chipYaml, firmware, pins, clockHz, systemYaml, name } = opts;
+  if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
+  if (!board) throw new Error('labwired target requires opts.board');
+  if (!chipYaml) throw new Error('labwired target requires opts.chipYaml');
+  if (!firmware) throw new Error('labwired target requires opts.firmware (an ELF)');
+  if (!pins) throw new Error('labwired target requires opts.pins (the header map)');
+
+  // Ordering, as everywhere in this factory: adapter, then board, then target.
+  // attachBoard is what arms the engine's logic capture AND seats every pin, so
+  // a target built before it would read a board nothing has published to.
+  const adapter = createLabwiredAdapter({ wasm, chipYaml, firmware, pins, clockHz, systemYaml, name });
+  adapter.attachBoard(board);
+  const target = createLabwiredDebugTarget({ adapter });
+  return { target, adapter };
 }
 
 // ─── Emulator target (8051 / STC12) ─────────────────────────────────────

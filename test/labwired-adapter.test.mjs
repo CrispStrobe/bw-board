@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 
 import { createLabwiredAdapter, generateSystemYaml } from '../src/labwired-adapter.js';
+import { createDebugTarget } from '../src/debug-target-factory.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const WASM_DIR = process.env.LABWIRED_WASM;
@@ -187,5 +188,77 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
         // move, and it must not overshoot the request.
         assert.ok(t > 0n, 'time did not advance');
         assert.ok(t <= 10_000_000n, `time overshot the request: ${t}`);
+    });
+
+    describe('the debug target, over the same engine', () => {
+        const makeTarget = async () => {
+            const board = recordingBoard();
+            const { target, adapter } = await createDebugTarget('labwired', {
+                wasm, board, chipYaml, firmware, pins: PINS, clockHz: 48_000_000,
+            });
+            return { target, adapter, board };
+        };
+
+        it('declares only what labwired can actually do', async () => {
+            const { target } = await makeTarget();
+            const c = target.capabilities();
+            assert.deepEqual(c.steps, ['insn'], 'block stepping needs a yield set we do not have');
+            assert.deepEqual(c.breakpoints, ['code']);
+            assert.deepEqual(c.writable, [],
+                'the wasm surface has no memory write — offering one would be a lie');
+            assert.equal(c.haltPolicy, 'freeze-timers');
+            // And the refusals are by name, not silence.
+            assert.match(target.step('over').unsupported, /single-instruction/);
+            assert.match(target.writeMem('sram', 0, new Uint8Array(1)).unsupported, /no memory write/);
+            assert.match(target.setBreakpoint({kind: 'write', addr: 0}).unsupported, /code breakpoints only/);
+        });
+
+        it('single-steps, and the PC moves', async () => {
+            const { target } = await makeTarget();
+            const before = target.regs().pc;
+            target.step('insn', 1);
+            target.runFor(1_000_000n);
+            assert.equal(target.state(), 'halted', 'a one-instruction step must halt again');
+            assert.notEqual(target.regs().pc, before, 'the PC did not advance');
+        });
+
+        it('an odd Thumb breakpoint address is refused, not silently never hit', async () => {
+            const { target } = await makeTarget();
+            const r = target.setBreakpoint({ kind: 'code', addr: 0x08000101 });
+            assert.match(r.unsupported, /execution-state flag/);
+        });
+
+        it('a code breakpoint halts, and reports where', async () => {
+            const { target } = await makeTarget();
+            // Step once to learn a reachable address, reset, then break on it.
+            target.step('insn', 1); target.runFor(1_000_000n);
+            const addr = target.regs().pc;
+            target.reset();
+            assert.equal(target.setBreakpoint({ kind: 'code', addr }), undefined);
+            let halt = null;
+            target.onHalt((e) => { halt = e; });
+            target.run();
+            for (let i = 0; i < 20 && target.state() === 'running'; i++) target.runFor(1_000_000n);
+            assert.equal(target.state(), 'halted', `never reached 0x${addr.toString(16)}`);
+            assert.equal(halt.reason, 'breakpoint');
+            assert.equal(halt.addr, addr);
+        });
+
+        it('reading memory works, and an unknown space says so', async () => {
+            const { target } = await makeTarget();
+            const mem = target.readMem('code', 0x08000000, 8);
+            assert.ok(mem instanceof Uint8Array && mem.length === 8, 'code read failed');
+            assert.match(target.readMem('eeprom', 0, 4).unsupported, /no such address space/);
+        });
+
+        it('free-running still drives the board', async () => {
+            const { target, board } = await makeTarget();
+            board.calls.length = 0;
+            target.run();
+            for (let i = 0; i < 30; i++) target.runFor(1_000_000n);
+            const edges = board.calls.filter((c) => c.k === 'setPin' && c.name === 'PA5');
+            assert.ok(edges.length >= 2,
+                `the debug loop bypasses advanceNs, so pump() is what publishes edges — got ${edges.length}`);
+        });
     });
 });

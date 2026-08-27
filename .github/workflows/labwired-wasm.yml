@@ -99,8 +99,35 @@ jobs:
           done
           exit $fail
 
+  # The artifact is only worth publishing if it RUNS. This is the same suite
+  # that is gated on LABWIRED_WASM locally, pointed at what CI just built — so
+  # "the build succeeded" and "the engine works" stop being the same claim.
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: { name: labwired-wasm-a, path: lw }
+      - name: ARM toolchain (the tests build a real F0 ELF)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi
+      - name: Adapter + debug-target contract, against the freshly built engine
+        env:
+          LABWIRED_WASM: ${{ github.workspace }}/lw
+        run: |
+          set -euo pipefail
+          node --test test/labwired-adapter.test.mjs 2>&1 | tee out.txt
+          # A suite that SKIPS is not a suite that passes, and this one skips
+          # itself whenever LABWIRED_WASM or the ARM toolchain is missing —
+          # which in this job would mean the wiring broke, not that there is
+          # nothing to check.
+          grep -q '^# skipped 0' out.txt || { echo "::error::the labwired suite skipped — LABWIRED_WASM or arm-none-eabi-gcc did not reach it"; exit 1; }
+
   publish:
-    needs: determinism
+    needs: [determinism, test]
     if: inputs.publish
     runs-on: ubuntu-latest
     steps:
