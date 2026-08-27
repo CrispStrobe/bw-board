@@ -11,9 +11,15 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
 
 const R_OUT = 50;
+const R_OFF = 1e9;
 const R_INPUT = 1e6;
+// A quasi-bidirectional HIGH is a weak pull-up (the datasheet's ~100 uA
+// source), not a push-pull drive: a button to ground must be able to win,
+// or the port can never read an input.
+const R_PULLUP = 47000;
 
 // ─── I2C decoder helper ─────────────────────────────────────────────────
 
@@ -100,19 +106,48 @@ export function registerI2CParts() {
                 'a0', 'a1', 'a2'],
 
     init(part) {
-      const drives = {};
+      const drives = { sda: { vTh: 0, rTh: R_OFF }, int: { vTh: 0, rTh: R_OFF } };
       for (let i = 0; i < 8; i++) {
-        drives[`p${i}`] = { vTh: 5, rTh: R_OUT }; // quasi-bidirectional, default HIGH
+        // Quasi-bidirectional: a latched 1 is a WEAK pull-up, not a push-pull
+        // high, which is what lets an external switch pull the same pin down
+        // and be read back. A latched 0 is a strong low.
+        drives[`p${i}`] = { vTh: 5, rTh: R_PULLUP };
       }
-      return {
+      const state = {
         drives,
         outputReg: 0xFF, // all HIGH by default (quasi-bidir)
-        _i2c: createI2CDecoder(),
+        port: 0xFF,      // what the pins actually read right now
+        _lastRead: 0xFF, // the port as of the last read/write — INT compares to this
+        _addr: 0x20,
+        _vcc: 5,
       };
+      state._i2c = createI2CSlave({
+        onAddress: (a7) => a7 === state._addr,
+        onWriteByte: (b) => {
+          state.outputReg = b;
+          for (let i = 0; i < 8; i++) {
+            const bit = (b >> i) & 1;
+            state.drives[`p${i}`] = bit
+              ? { vTh: state._vcc, rTh: R_PULLUP }
+              : { vTh: 0, rTh: R_OUT };
+          }
+          // A write is an acknowledge too: the datasheet clears INT on any
+          // access, not only on a read.
+          state._lastRead = state.port;
+          return true;
+        },
+        onReadByte: () => {
+          // Reading is what an input expander is FOR, and it is also the
+          // acknowledge: the pin state at this moment becomes the reference
+          // the next change is measured against.
+          state._lastRead = state.port;
+          return state.port;
+        },
+      });
+      return state;
     },
 
     stamp(ctx) {
-      ctx.conductance('sda', null, 1 / R_INPUT);
       ctx.conductance('scl', null, 1 / R_INPUT);
       for (const a of ['a0', 'a1', 'a2']) ctx.conductance(a, null, 1 / R_INPUT);
     },
@@ -130,28 +165,43 @@ export function registerI2CParts() {
         | ((read('a0') > threshold ? 1 : 0))
         | ((read('a1') > threshold ? 1 : 0) << 1)
         | ((read('a2') > threshold ? 1 : 0) << 2);
-      const addr = part.params?.address ?? strapped;
+      state._addr = part.params?.address ?? strapped;
+      state._vcc = vcc;
 
-      const byteReady = feedI2C(state._i2c, sclHigh, sdaHigh, addr);
-
-      if (!byteReady) return false;
-
-      // First byte is address+R/W. Second byte (if write) is output data.
-      if (state._i2c.bytes.length >= 2) {
-        const rw = state._i2c.bytes[0] & 1;
-        if (rw === 0) {
-          // Write: second byte is the output register
-          const data = state._i2c.bytes[1];
-          if (data === state.outputReg) return false;
-          state.outputReg = data;
-          for (let i = 0; i < 8; i++) {
-            const bit = (data >> i) & 1;
-            state.drives[`p${i}`] = { vTh: bit ? vcc : 0, rTh: R_OUT };
-          }
-          return true;
-        }
+      // SENSE the pins. A quasi-bidirectional pin whose latch holds 1 is only
+      // weakly pulled up, so anything external — a button to ground, another
+      // chip's open-drain output — wins and the port reads what is really
+      // there. That reading is the whole input half of the part, and there
+      // was none: the old decoder could not transmit, so a read returned
+      // nothing and the expander was write-only.
+      let port = 0;
+      for (let i = 0; i < 8; i++) {
+        const latched = (state.outputReg >> i) & 1;
+        const high = latched ? read(`p${i}`) > threshold : false;
+        if (high) port |= 1 << i;
       }
-      return false;
+      state.port = port;
+
+      // INT is an open-drain output that goes LOW as soon as an input differs
+      // from the value the master last saw, and releases when the master
+      // reads (or writes). It is the reason to choose an expander for buttons
+      // at all — without it the master has to poll — and it was declared,
+      // never stamped, never driven: one mention in the whole device, in the
+      // terminals list.
+      const wantInt = port !== state._lastRead ? R_OUT : R_OFF;
+      let changed = false;
+      if (state.drives.int.rTh !== wantInt) {
+        state.drives.int = { vTh: 0, rTh: wantInt };
+        changed = true;
+      }
+
+      const driveLow = feedI2CSlave(state._i2c, sclHigh, sdaHigh);
+      const sdaLowNow = state.drives.sda.rTh === R_OUT;
+      if (driveLow !== sdaLowNow) {
+        state.drives.sda = driveLow ? { vTh: 0, rTh: R_OUT } : { vTh: 0, rTh: R_OFF };
+        changed = true;
+      }
+      return changed;
     },
   });
 
