@@ -215,6 +215,14 @@ export function createLabwiredDebugTarget (opts) {
       return 'running';
     },
 
+    // The runner calls this UNGUARDED — board.advanceTo(target.timeNs()) on
+    // every pump, and again for every register snapshot. Leaving it off the
+    // target made a fully working engine crash the moment it started running,
+    // and the crash named a symbol (`timeNs`) that exists on the adapter, so
+    // it read like an engine fault rather than a missing delegation. Same
+    // one-line bridge the avr8js and rp2040js targets use.
+    timeNs () { return adapter.timeNs(); },
+
     bwMs () { return undefined; },
 
     detach () { detached = true; running = false; },
