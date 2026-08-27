@@ -165,12 +165,22 @@ export function registerTier1Parts() {
 
   // ─── 74HC75: 4-bit level-triggered latch ──────────────────────────
   // Transparent when enable HIGH, latches on falling edge of enable.
+  //
+  // BOTH outputs. The real DIP16 brings out Q and /Q for all four bits —
+  // that is what fills a sixteen-pin package for a four-bit latch — and
+  // this modelled Q only, so four of the chip's pins could be wired on a
+  // board and reached by nothing in the app. Naming follows the 74HC73
+  // and '74 next door: q_bar, not qn.
   registerDevice('74hc75', {
-    terminals: ['1d', '2d', '3d', '4d', '1e', '2e', '1q', '2q', '3q', '4q', 'vcc', 'gnd'],
+    terminals: ['1d', '2d', '3d', '4d', '1e', '2e',
+                '1q', '2q', '3q', '4q',
+                '1q_bar', '2q_bar', '3q_bar', '4q_bar', 'vcc', 'gnd'],
     init() {
       return {
         drives: { '1q': { vTh: 0, rTh: R_OUT }, '2q': { vTh: 0, rTh: R_OUT },
-                  '3q': { vTh: 0, rTh: R_OUT }, '4q': { vTh: 0, rTh: R_OUT } },
+                  '3q': { vTh: 0, rTh: R_OUT }, '4q': { vTh: 0, rTh: R_OUT },
+                  '1q_bar': { vTh: 0, rTh: R_OUT }, '2q_bar': { vTh: 0, rTh: R_OUT },
+                  '3q_bar': { vTh: 0, rTh: R_OUT }, '4q_bar': { vTh: 0, rTh: R_OUT } },
         _latch: [0, 0, 0, 0],
         _lastEn: [false, false],
       };
@@ -195,9 +205,21 @@ export function registerTier1Parts() {
         if (en2) { if (bits[i] !== state._latch[i]) { state._latch[i] = bits[i]; changed = true; } }
       }
       state._lastEn = [en1, en2];
-      if (changed) {
-        for (let i = 0; i < 4; i++) {
-          state.drives[`${i+1}q`] = { vTh: state._latch[i] ? vcc : 0, rTh: R_OUT };
+      // Reconcile every pass rather than only when the latch moves. The old
+      // form wrote the drives inside `if (changed)`, which was harmless while
+      // init's zeros matched a zero latch — but /Q starts HIGH, so a
+      // conditional write would leave all four inverted outputs stuck low
+      // until the first bit happened to change.
+      for (let i = 0; i < 4; i++) {
+        const q = state._latch[i] ? vcc : 0;
+        const qb = state._latch[i] ? 0 : vcc;
+        if (state.drives[`${i + 1}q`].vTh !== q) {
+          state.drives[`${i + 1}q`] = { vTh: q, rTh: R_OUT };
+          changed = true;
+        }
+        if (state.drives[`${i + 1}q_bar`].vTh !== qb) {
+          state.drives[`${i + 1}q_bar`] = { vTh: qb, rTh: R_OUT };
+          changed = true;
         }
       }
       return changed;
