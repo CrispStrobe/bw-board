@@ -7,7 +7,12 @@
  * produce it. This makes that one command, and pins the two things that make
  * it fail in ways the error message does not explain.
  *
- *   node scripts/build-labwired-wasm.mjs [--ref <sha>] [--out <dir>] [--keep]
+ *   node scripts/build-labwired-wasm.mjs [--ref <sha>] [--out <dir>]
+ *                            [--target-dir <dir>] [--work-dir <dir>] [--keep]
+ *
+ * `--target-dir` persists the cargo cache between runs. Without it every
+ * invocation gets a fresh temp dir and recompiles the whole workspace — about
+ * ten minutes, and the reason the first two runs here were slow.
  *
  * Output (in --out, default ./build/labwired-wasm):
  *   labwired_wasm.js       wasm-bindgen glue, `--target nodejs`
@@ -26,6 +31,31 @@
  * 2. The build must come from a PINNED ref of the fork, for the same reason
  *    every other vendored thing here is pinned.
  *
+ * DETERMINISM, MEASURED IN THREE ROUNDS
+ * -------------------------------------
+ * Round 1: two builds at different temp paths gave an identical
+ * `labwired_wasm.js` and a DIFFERENT `labwired_wasm_bg.wasm`. The workspace
+ * sets `debug = true`, and the build path was embedded in the artifact.
+ *
+ * Round 2: `--remap-path-prefix` for the source, target and cargo home — and
+ * it STILL differed. On macOS `tmpdir()` is `/var/folders/...` while the
+ * compiler emits the realpath `/private/var/folders/...`, so a prefix built
+ * from tmpdir() alone matched nothing. Both forms are remapped now.
+ *
+ * Round 3: with that fixed the two artifacts differed in exactly FIVE
+ * contiguous bytes out of 21,167,728, at the same size — the PID in
+ * `.../labwired-wasm-<pid>/src/crates/coreroms/esp32s3/esp32s3_drom.bin`.
+ * `--remap-path-prefix` rewrites what rustc emits; it does not reach a path a
+ * BUILD SCRIPT baked into generated code. So the work directory is stable by
+ * default rather than per-process, which removes the last varying input.
+ *
+ * What that buys and does not buy: two builds on this machine are
+ * byte-identical, so BUILD-INFO.json's sha256 is checkable. Byte-identity on
+ * ANOTHER machine additionally requires the same work-dir path — pass
+ * `--work-dir` to match. Note the sha256 in lite's sync-labwired-wasm.mjs does
+ * not depend on any of this: it authenticates the bytes that were published.
+ * Determinism is what lets somebody else re-derive them.
+ *
  * SIZES, MEASURED RATHER THAN QUOTED
  * ----------------------------------
  * The raw artifact is large because the workspace sets `debug = true`;
@@ -37,6 +67,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
@@ -51,6 +82,7 @@ const arg = (name, dflt) => {
 };
 const ref = arg('ref', PIN);
 const outDir = resolve(arg('out', join(process.cwd(), 'build', 'labwired-wasm')));
+const targetDirArg = arg('target-dir', null);
 const keep = process.argv.includes('--keep');
 
 const run = (cmd, args, opts = {}) =>
@@ -58,12 +90,17 @@ const run = (cmd, args, opts = {}) =>
 const capture = (cmd, args, opts = {}) =>
     execFileSync(cmd, args, { encoding: 'utf8', ...opts }).trim();
 
-const work = join(tmpdir(), `labwired-wasm-${process.pid}`);
+// STABLE, not per-process: see DETERMINISM above. A build script embeds this
+// path in the artifact, so a PID in it makes every build a different file.
+const work = resolve(arg('work-dir', join(tmpdir(), 'labwired-wasm-build')));
 const src = join(work, 'src');
-const target = join(work, 'target');
+const target = targetDirArg ? resolve(targetDirArg) : join(work, 'target');
 const cliRoot = join(work, 'wb');
 
 console.log(`labwired-wasm: building ${ref}`);
+// The work dir is a fixed path now, so a leftover from a previous run would be
+// silently reused as "the source" — including a different ref's checkout.
+if (existsSync(work)) rmSync(work, { recursive: true, force: true });
 mkdirSync(work, { recursive: true });
 try {
     // 1. the pinned source. Shallow, but a sha needs the full history to be
@@ -74,8 +111,30 @@ try {
     console.log(`  source at ${head}`);
 
     // 2. the wasm itself
+    // Remap every absolute path that would otherwise be baked into the
+    // artifact by `debug = true`. Without this the output is a fingerprint of
+    // the machine that built it.
+    const cargoHome = process.env.CARGO_HOME
+        || join(process.env.HOME || '', '.cargo');
+    // BOTH the path as given and its realpath. On macOS `tmpdir()` is
+    // `/var/folders/...` while the compiler emits `/private/var/folders/...`
+    // through the /var symlink, so a prefix built from tmpdir() alone matches
+    // nothing — which is exactly how one `include_bytes!`d ROM path survived
+    // the first remap and kept the artifact machine-specific. $HOME/.cargo is
+    // a symlink here too (offloaded to external storage), same trap.
+    const both = (dir) => {
+        const out = [dir];
+        try { const real = realpathSync(dir); if (real !== dir) out.push(real); } catch { /* may not exist yet */ }
+        return out;
+    };
+    const rustflags = [
+        ...both(src).map((d) => `--remap-path-prefix=${d}=/labwired`),
+        ...both(target).map((d) => `--remap-path-prefix=${d}=/labwired-target`),
+        ...both(cargoHome).map((d) => `--remap-path-prefix=${d}=/cargo`),
+        process.env.RUSTFLAGS || '',
+    ].join(' ').trim();
     run('cargo', ['build', '--release', '--target', 'wasm32-unknown-unknown', '-p', 'labwired-wasm'],
-        { cwd: src, env: { ...process.env, CARGO_TARGET_DIR: target } });
+        { cwd: src, env: { ...process.env, CARGO_TARGET_DIR: target, RUSTFLAGS: rustflags } });
     const rawPath = join(target, 'wasm32-unknown-unknown', 'release', 'labwired_wasm.wasm');
     const rawSize = statSync(rawPath).size;
     console.log(`  raw artifact ${(rawSize / 1048576).toFixed(1)} MB`);
@@ -96,7 +155,7 @@ try {
     run(join(cliRoot, 'bin', 'wasm-bindgen'), ['--target', 'nodejs', '--out-dir', outDir, rawPath]);
 
     // 5. what actually came out
-    const info = { ref: head, wasmBindgen: wbVersion, builtAt: new Date().toISOString(), files: {} };
+    const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), files: {} };
     info.rawBytes = rawSize;
     for (const name of ['labwired_wasm.js', 'labwired_wasm_bg.wasm']) {
         const buf = readFileSync(join(outDir, name));
