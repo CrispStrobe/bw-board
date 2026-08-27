@@ -112,6 +112,13 @@ jobs:
           node-version: 22
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { name: labwired-wasm-a, path: lw }
+      # The suite reaches the factory, which imports the avr8js and rp2040js
+      # adapters, so the repo's own deps have to be here. The first run of this
+      # job died on `Cannot find package 'avr8js'` — the build jobs never need
+      # node_modules, so it was easy to forget the test job does.
+      - name: Install dependencies
+        run: npm ci || npm install
+
       - name: ARM toolchain (the tests build a real F0 ELF)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi
       - name: Adapter + debug-target contract, against the freshly built engine
