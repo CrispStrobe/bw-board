@@ -106,22 +106,72 @@ export function registerNamedParts() {
   // Resistance decreases with gas concentration.
   // Control param: gas = 0..1 (concentration).
   // Clean air: ~100kΩ, high concentration: ~1kΩ.
+  // Two things you can buy, not two names for one. The bare MQ ELEMENT is
+  // four wires: a sense resistance that falls with gas, and a heater coil you
+  // must power yourself. The MODULE is that element on a carrier with a load
+  // resistor, a comparator and a trim pot — four different wires: vcc, gnd,
+  // an analog out and a digital one. bw-parts describes the module and this
+  // modelled only the element, so its sidecar named pins the engine could not
+  // reach. params.package picks; the default stays `element`.
+  const ELEMENT = ['a', 'b', 'heater_a', 'heater_b'];
+  const MODULE = ['vcc', 'gnd', 'aout', 'dout'];
+  const isModule = (part) => part?.params?.package === 'module';
+  const senseOhms = (part) => {
+    const gas = part.params?.gas ?? 0;
+    const rClean = part.params?.rClean ?? 100000;
+    const rSaturated = part.params?.rSaturated ?? 1000;
+    return rClean * Math.pow(rSaturated / rClean, gas);
+  };
+
   registerDevice('gas_sensor', {
-    terminals: ['a', 'b', 'heater_a', 'heater_b'],
-    init() { return { drives: {}, _ohms: 100000 }; },
+    terminals: ELEMENT,
+    terminalsFor: (part) => (isModule(part) ? MODULE : ELEMENT),
+    init(part) {
+      return {
+        drives: isModule(part) ? { aout: { vTh: 0, rTh: R_OUT }, dout: { vTh: 0, rTh: R_OUT } } : {},
+        _ohms: 100000,
+      };
+    },
     stamp(ctx, part, state) {
+      if (isModule(part)) {
+        // The carrier powers its own heater off the rail. The sense divider
+        // is a Thevenin source on aout rather than an internal node, which is
+        // what a module's buffered output behaves like anyway.
+        ctx.conductance('vcc', 'gnd', 1 / 30);
+        return;
+      }
       ctx.conductance('a', 'b', 1 / state._ohms);
       // Heater coil: ~30Ω resistive element
       ctx.conductance('heater_a', 'heater_b', 1 / 30);
     },
-    update(part, state) {
-      const gas = part.params?.gas ?? 0;
-      const rClean = part.params?.rClean ?? 100000;
-      const rSaturated = part.params?.rSaturated ?? 1000;
-      const newOhms = rClean * Math.pow(rSaturated / rClean, gas);
-      if (Math.abs(newOhms - state._ohms) / state._ohms < 0.01) return false;
-      state._ohms = newOhms;
-      return true;
+    update(part, state, read) {
+      const newOhms = senseOhms(part);
+      let changed = false;
+      if (Math.abs(newOhms - state._ohms) / state._ohms >= 0.01) {
+        state._ohms = newOhms;
+        changed = true;
+      }
+      if (!isModule(part)) return changed;
+
+      // aout is the divider the carrier builds: Vcc * RL / (Rs + RL). More
+      // gas means less Rs, which means MORE volts out — the opposite of what
+      // "resistance falls" sounds like, and the reason the test says so.
+      const vcc = read('vcc') || 5.0;
+      const rl = part.params?.loadOhms ?? 10000;
+      const aout = vcc * rl / (state._ohms + rl);
+      // dout is a comparator against a trim pot, and it is ACTIVE LOW: the
+      // module pulls it down when the gas passes the setpoint.
+      const trip = part.params?.trip ?? 0.5;
+      const dout = (part.params?.gas ?? 0) >= trip ? 0 : vcc;
+      if (Math.abs((state.drives.aout?.vTh ?? -1) - aout) > 1e-3) {
+        state.drives.aout = { vTh: aout, rTh: R_OUT };
+        changed = true;
+      }
+      if ((state.drives.dout?.vTh ?? -1) !== dout) {
+        state.drives.dout = { vTh: dout, rTh: R_OUT };
+        changed = true;
+      }
+      return changed;
     },
   });
 
