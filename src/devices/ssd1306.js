@@ -51,6 +51,65 @@ const WIDTH = 128;
 const HEIGHT = 64;
 const PAGES = HEIGHT / 8;
 
+/**
+ * The same controller driven over 4-wire SPI instead of I2C.
+ *
+ * The SSD1306 is one chip with two front ends: I2C wraps every byte in a
+ * control byte, SPI puts the command/data distinction on a D/C# PIN and
+ * sends the byte raw. Everything after that — the command decode, the
+ * three addressing modes, the GDDRAM — is identical, so this shares
+ * `handleCmd` and `writeData` with the I2C device below rather than
+ * describing the controller a second time.
+ *
+ * The Arduboy's display is wired this way, with D/C on PD4.
+ */
+export function createSSD1306SPI () {
+    const state = freshState();
+    return {
+        get fb () { return state.fb; },
+        get displayOn () { return state.displayOn; },
+        get inverted () { return state.inverted; },
+        state,
+        /** One byte off the bus; `dc` is the level of the D/C# pin. */
+        byte (value, dc) {
+            if (dc) writeData(state, value & 0xff);
+            else handleCmd(state, value & 0xff);
+        },
+        /** RES# pulled low — back to the datasheet's power-on state. */
+        reset () {
+            const clean = freshState();
+            for (const key of Object.keys(clean)) state[key] = clean[key];
+        }
+    };
+}
+
+/** The power-on state. Both front ends start here. */
+function freshState () {
+    return {
+        drives: {sda: {vTh: 0, rTh: R_OFF}},
+        fb: new Uint8Array(PAGES * WIDTH),
+        displayOn: false,
+        contrast: 0x7f,
+        inverted: false,
+        entireOn: false,
+        addrMode: 0x02,
+        col: 0, page: 0,
+        colStart: 0, colEnd: 127,
+        pageStart: 0, pageEnd: 7,
+        segRemap: false,
+        comScanDir: 0,
+        muxRatio: 63,
+        displayOffset: 0,
+        startLine: 0,
+        chargePump: false,
+        _ctrl: -1,
+        _cmdState: 'idle',
+        _cmdBuf: [],
+        _dataStream: false,
+        _tRow: 0, _tCol: 0
+    };
+}
+
 export function registerSSD1306() {
 
     registerDevice('ssd1306', {

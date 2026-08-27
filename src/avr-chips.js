@@ -714,10 +714,124 @@ export const ATTINY13 = {
 };
 
 /** Lookup by name string, case-insensitive. */
+// ─── ATmega32U4 (Arduboy / Leonardo / Micro) ───────────────────────────────
+//
+// Register addresses and the 43-entry vector table are from doc7766 (32U4
+// datasheet). What makes this chip different from every other one here is
+// not the core — it is the same AVR — but that the Arduino core for it
+// brings up USB before setup() runs, and USB is the one peripheral avr8js
+// does not model. See PLLCSR below.
+
+/** @type {Record<string, {port?: string, bit?: number, analogOnly?: boolean, adcChannel?: number}>} */
+export const ATMEGA32U4_PINS = {
+  // Arduboy's own wiring (schematic rev 3), which is what the games use.
+  // The display is 4-wire SPI on port B/D, the buttons are active-low
+  // inputs with pull-ups, and the speaker is a differential pair.
+  BTN_UP: {port: 'F', bit: 7}, BTN_RIGHT: {port: 'F', bit: 6},
+  BTN_LEFT: {port: 'F', bit: 5}, BTN_DOWN: {port: 'F', bit: 4},
+  BTN_A: {port: 'E', bit: 6}, BTN_B: {port: 'B', bit: 4},
+  OLED_CS: {port: 'D', bit: 6}, OLED_DC: {port: 'D', bit: 4},
+  OLED_RST: {port: 'D', bit: 7},
+  SPI_SCK: {port: 'B', bit: 1}, SPI_MOSI: {port: 'B', bit: 2},
+  SPI_MISO: {port: 'B', bit: 3},
+  SPEAKER_1: {port: 'C', bit: 6}, SPEAKER_2: {port: 'C', bit: 7},
+  RGB_RED: {port: 'B', bit: 6}, RGB_GREEN: {port: 'B', bit: 7},
+  RGB_BLUE: {port: 'B', bit: 5},
+};
+
+const ATMEGA32U4_PORTS = {
+  B: portBConfig, C: portCConfig, D: portDConfig,
+  E: portEConfig, F: portFConfig,
+};
+
+// TIFR1/TIMSK1 on this chip carry a C channel the 328P's do not.
+const tb32u4 = {TOV: 1, OCFA: 2, OCFB: 4, OCFC: 8, TOIE: 1, OCIEA: 2, OCIEB: 4, OCIEC: 8};
+
+// 43 vectors, JMP-sized: vector n (1-based) lives at word address (n-1)*2.
+const v32u4 = n => (n - 1) * 2;
+
+const ATMEGA32U4_TIMERS = [
+  // Timer0, 8-bit. OC0A on PB7, OC0B on PD0.
+  {bits: 8, captureInterrupt: 0, compAInterrupt: v32u4(22), compBInterrupt: v32u4(23),
+    compCInterrupt: 0, ovfInterrupt: v32u4(24), TIFR: 0x35, OCRA: 0x47, OCRB: 0x48,
+    OCRC: 0, ICR: 0, TCNT: 0x46, TCCRA: 0x44, TCCRB: 0x45, TCCRC: 0, TIMSK: 0x6e,
+    dividers: timer01Dividers, compPortA: portBConfig.PORT, compPinA: 7,
+    compPortB: portDConfig.PORT, compPinB: 0, compPortC: 0, compPinC: 0,
+    externalClockPort: portDConfig.PORT, externalClockPin: 7, ...tb32u4},
+  // Timer1, 16-bit. OC1A/B/C on PB5/PB6/PB7.
+  {bits: 16, captureInterrupt: v32u4(17), compAInterrupt: v32u4(18),
+    compBInterrupt: v32u4(19), compCInterrupt: v32u4(20), ovfInterrupt: v32u4(21),
+    TIFR: 0x36, OCRA: 0x88, OCRB: 0x8a, OCRC: 0x8c, ICR: 0x86, TCNT: 0x84,
+    TCCRA: 0x80, TCCRB: 0x81, TCCRC: 0x82, TIMSK: 0x6f, dividers: timer01Dividers,
+    compPortA: portBConfig.PORT, compPinA: 5, compPortB: portBConfig.PORT, compPinB: 6,
+    compPortC: portBConfig.PORT, compPinC: 7,
+    externalClockPort: portDConfig.PORT, externalClockPin: 6, ...tb32u4},
+  // Timer3, 16-bit, OC3A on PC6 — the pin Arduboy's speaker sits on, which
+  // is why tone output depends on this one being right.
+  {bits: 16, captureInterrupt: v32u4(32), compAInterrupt: v32u4(33),
+    compBInterrupt: v32u4(34), compCInterrupt: v32u4(35), ovfInterrupt: v32u4(36),
+    TIFR: 0x38, OCRA: 0x98, OCRB: 0x9a, OCRC: 0x9c, ICR: 0x96, TCNT: 0x94,
+    TCCRA: 0x90, TCCRB: 0x91, TCCRC: 0x92, TIMSK: 0x71, dividers: timer01Dividers,
+    compPortA: portCConfig.PORT, compPinA: 6, compPortB: 0, compPinB: 0,
+    compPortC: 0, compPinC: 0, externalClockPort: 0, externalClockPin: 0, ...tb32u4},
+  // Timer4 is the 10-bit high-speed timer and has a register layout of its
+  // own that avr8js's timer model does not describe. Left out deliberately:
+  // the Arduino core uses it for PWM on pins Arduboy does not drive.
+];
+
+/** @type {import('avr8js').ADCConfig} */
+const ATMEGA32U4_ADC = {
+  ADMUX: 0x7c, ADCSRA: 0x7a, ADCSRB: 0x7b, ADCL: 0x78, ADCH: 0x79,
+  DIDR0: 0x7e, adcInterrupt: v32u4(30), numChannels: 12, muxInputMask: 0x1f,
+  adcReferences: [1, 0, 4, 2],
+  muxChannels: Object.fromEntries(
+    [...Array(8)].map((_, i) => [i, {type: 0, channel: i}])
+  ),
+};
+
+const ATMEGA32U4_ADC_MAP = Object.fromEntries(
+  [...Array(8)].map((_, i) => [i, `A${i}`])
+);
+
+// USART1 — this chip has no USART0. Serial over USB is a different thing
+// entirely and is not this peripheral.
+const ATMEGA32U4_USART = {
+  rxCompleteInterrupt: v32u4(26), dataRegisterEmptyInterrupt: v32u4(27),
+  txCompleteInterrupt: v32u4(28), UCSRA: 0xc8, UCSRB: 0xc9, UCSRC: 0xca,
+  UBRRL: 0xcc, UBRRH: 0xcd, UDR: 0xce,
+};
+
+const ATMEGA32U4_TWI = {
+  twiInterrupt: v32u4(37),
+  TWBR: 0xb8, TWSR: 0xb9, TWAR: 0xba, TWDR: 0xbb, TWCR: 0xbc, TWAMR: 0xbd,
+};
+
+const ATMEGA32U4_SPI = {
+  spiInterrupt: v32u4(25),
+  SPCR: 0x4c, SPSR: 0x4d, SPDR: 0x4e,
+};
+
+export const ATMEGA32U4 = {
+  name: 'ATmega32U4',
+  flashWords: 0x4000,   // 32 KB = 16K words
+  sramBytes: 2560,
+  clockHz: 16_000_000,
+  vcc: 5.0,
+  pins: ATMEGA32U4_PINS,
+  ports: ATMEGA32U4_PORTS,
+  timers: ATMEGA32U4_TIMERS,
+  adc: ATMEGA32U4_ADC,
+  adcChannelToPin: ATMEGA32U4_ADC_MAP,
+  usart: ATMEGA32U4_USART,
+  twi: ATMEGA32U4_TWI,
+  spi: ATMEGA32U4_SPI,
+};
+
 export const CHIPS = {
   atmega328p: ATMEGA328P,
   atmega88pa: ATMEGA88PA,
   atmega2560: ATMEGA2560,
+  atmega32u4: ATMEGA32U4,
   attiny85: ATTINY85,
   attiny88: ATTINY88,
   attiny2313: ATTINY2313,
