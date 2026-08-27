@@ -83,7 +83,13 @@ function i2cUpdate(state, read, vcc) {
 
 function registerBMP280() {
     registerDevice('bmp280', {
-        terminals: ['vcc', 'gnd', 'sda', 'scl'],
+        // SDO is the ADDRESS SELECT, not decoration: low gives 0x76, high
+        // 0x77, and that is how two BMP280s share a bus. CSB selects the
+        // interface — high is I2C, and pulling it low would put a real part
+        // into SPI, which this model does not speak. Both pins exist on the
+        // breakout and the terminal cross-check has counted them unreachable
+        // since the sidecar was written.
+        terminals: ['vcc', 'gnd', 'sda', 'scl', 'csb', 'sdo'],
 
         init(part) {
             const regs = new Uint8Array(256);
@@ -110,7 +116,11 @@ function registerBMP280() {
 
             state._i2c = createI2CSlave({
                 onAddress: (a7, rw) => {
-                    const addr = part.params?.addr ?? 0x76;
+                    // params.addr WINS when set, so benches that chose an
+                    // address before the pin existed keep it. Otherwise SDO
+                    // decides, which is what the hardware does. An unwired
+                    // SDO reads low and gives 0x76 — the previous default.
+                    const addr = part.params?.addr ?? (state._addrFromSdo ?? 0x76);
                     const mine = a7 === addr;
                     if (mine && rw === 0) state._first = true;
                     return mine;
@@ -136,13 +146,19 @@ function registerBMP280() {
 
         stamp(ctx) {
             ctx.conductance('scl', null, 1 / R_INPUT);
+            ctx.conductance('csb', null, 1 / R_INPUT);
+            ctx.conductance('sdo', null, 1 / R_INPUT);
         },
 
         update(part, state, read) {
             // Refresh readable state from params
             state.temperature = part.params?.temperature ?? 25;
             state.pressure = part.params?.pressure ?? 101325;
-            return i2cUpdate(state, read, read('vcc'));
+            // Sample the strap BEFORE the decoder runs: onAddress fires from
+            // inside i2cUpdate and reads this, and it has no `read` of its own.
+            const vcc = read('vcc') || 3.3;
+            state._addrFromSdo = read('sdo') > vcc * 0.5 ? 0x77 : 0x76;
+            return i2cUpdate(state, read, vcc);
         },
     });
 }
