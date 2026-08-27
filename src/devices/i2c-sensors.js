@@ -242,10 +242,15 @@ function registerTCS34725() {
             regs[0x12] = 0x44;              // ID: TCS34725
 
             const state = {
-                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                // INT is an open-drain output: asserted means pulled LOW, and
+                // idle means RELEASED so the board's pull-up decides. Driving
+                // it high would fight a second device on a shared interrupt
+                // line, which is a normal way to wire these.
+                drives: { sda: { vTh: 0, rTh: R_OFF }, int: { vTh: 0, rTh: R_OFF } },
                 regs,
                 ptr: 0,
                 _first: true,
+                _aint: false,
                 // Readable state for faces
                 red: 0, green: 0, blue: 0, clear: 0,
             };
@@ -258,9 +263,19 @@ function registerTCS34725() {
                 },
                 onWriteByte: (b) => {
                     if (state._first) {
-                        // Command byte: register = bits 4:0
-                        state.ptr = b & 0x1f;
                         state._first = false;
+                        // Command byte: bits 6:5 are the TYPE, and they were
+                        // being discarded. Type 0b11 is SPECIAL FUNCTION, not
+                        // a register address — so "clear the interrupt"
+                        // (0xE6) masked down to 0x06 and overwrote AIHTL, the
+                        // high threshold, instead. Silent: the driver's
+                        // acknowledge quietly moved the threshold it was
+                        // acknowledging.
+                        if (((b >> 5) & 0x03) === 0x03) {
+                            if ((b & 0x1f) === 0x06) state._aint = false;
+                            return true;
+                        }
+                        state.ptr = b & 0x1f;
                         return true;
                     }
                     writeTcsReg(state, state.ptr, b);
@@ -288,9 +303,50 @@ function registerTCS34725() {
             state.green = part.params?.green ?? 0;
             state.blue = part.params?.blue ?? 0;
             state.clear = part.params?.clear ?? (state.red + state.green + state.blue);
-            return i2cUpdate(state, read, read('vcc'));
+            const intChanged = tcsInterrupt(state);
+            return i2cUpdate(state, read, read('vcc')) || intChanged;
         },
     });
+}
+
+/**
+ * Evaluate the clear-channel threshold interrupt and drive the INT pin.
+ *
+ * The whole reason a colour sensor has a pin: instead of polling over I2C,
+ * you set a window (AILT..AIHT) and the part tells you when the light leaves
+ * it. AINT LATCHES — once set it stays set until the driver clears it with
+ * the special-function command, which is what makes it usable as an edge.
+ *
+ * STATED DIVERGENCE: APERS (0x0C) is not applied. Persistence counts
+ * CONSECUTIVE integration cycles out of range, and this model has no
+ * integration cycles — RGBC comes straight from params — so there is nothing
+ * to count. Every out-of-range reading asserts, i.e. the model behaves as
+ * APERS=0 ("every cycle"), which is the setting that generates an interrupt
+ * soonest. A driver relying on persistence to debounce would see the
+ * interrupt earlier here than on silicon, and that is the honest direction
+ * to be wrong in: it cannot hide an interrupt that a real part would raise.
+ *
+ * @returns {boolean} whether the pin's drive changed
+ */
+function tcsInterrupt(state) {
+    const regs = state.regs;
+    const enabled = !!(regs[0x00] & 0x03);          // PON + AEN
+    const aien = !!(regs[0x00] & 0x10);             // ENABLE.AIEN
+    if (!enabled || !aien) {
+        state._aint = false;
+    } else {
+        const low = regs[0x04] | (regs[0x05] << 8);
+        const high = regs[0x06] | (regs[0x07] << 8);
+        const c = Math.max(0, Math.min(65535, Math.round(state.clear)));
+        // Latching: only ever SET here. Clearing is the driver's job, via the
+        // special-function command — a flag that cleared itself as soon as
+        // the light came back could be missed entirely between two polls.
+        if (c < low || c > high) state._aint = true;
+    }
+    const want = state._aint ? R_OUT : R_OFF;
+    if (state.drives.int.rTh === want) return false;
+    state.drives.int = { vTh: 0, rTh: want };
+    return true;
 }
 
 function readTcsReg(part, state, reg) {
@@ -298,7 +354,13 @@ function readTcsReg(part, state, reg) {
 
     switch (reg) {
         case 0x12: return 0x44;                     // ID
-        case 0x13: return enabled ? 0x11 : 0x00;   // STATUS: AVALID + AINT when enabled
+        // STATUS: AVALID[0] is "a conversion finished", AINT[4] is "the clear
+        // channel is outside the threshold window". This used to return 0x11
+        // whenever the part was on — AINT hardcoded SET, so a driver that
+        // polls STATUS for its interrupt saw one pending forever, and one
+        // that waits for it to clear waited forever. AINT now means what it
+        // says; see tcsInterrupt().
+        case 0x13: return (enabled ? 0x01 : 0x00) | (state._aint ? 0x10 : 0x00);
         // RGBC data: 16-bit unsigned LE pairs
         // Clear
         case 0x14: case 0x15: {
