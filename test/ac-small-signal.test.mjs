@@ -148,11 +148,30 @@ describe('AC: honesty and speed', () => {
     }
     const board = new BoardImpl(5.0);
     board.setNetlist(parts, nets);
-    const t0 = process.hrtime.bigint();
-    const rows = board.runAc({ sourceId: 'FG', from: 10, to: 1e6, pointsPerDecade: 40, probes: ['n_50'] });
-    const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+    // BEST of three, against a budget above the LOADED floor. Measured
+    // 2026-08-27: solo runs take 70-180 ms, but with this repo's own suite
+    // co-running the same sweep takes 572-1401 ms — so a 500 ms budget was
+    // breached by every loaded run while the engine was untouched. It never
+    // failed on CI, which is worse rather than better: it only ever went red
+    // on a developer's machine, twice in one day, and both times cost someone
+    // a hunt through their own diff.
+    //
+    // Best-of-three measures the engine rather than the scheduler: a lost
+    // matrix reuse slows EVERY run, a noisy neighbour only some. 1000 ms
+    // still catches a 14x regression from the solo best, which is well inside
+    // what dropping reuse would cost — re-factorising per point is the thing
+    // this test exists to notice.
+    let rows = null;
+    let ms = Infinity;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const t0 = process.hrtime.bigint();
+      rows = board.runAc({ sourceId: 'FG', from: 10, to: 1e6, pointsPerDecade: 40, probes: ['n_50'] });
+      ms = Math.min(ms, Number(process.hrtime.bigint() - t0) / 1e6);
+    }
     assert.ok(rows.length >= 200, `${rows.length} points`);
-    assert.ok(ms < 500, `sweep took ${ms.toFixed(0)} ms — refactor reuse must hold this under 500 ms`);
+    assert.ok(ms < 1000,
+      `best of three sweeps took ${ms.toFixed(0)} ms — refactor reuse must hold this under `
+      + '1000 ms (solo is 70-180 ms; the budget clears a co-running suite deliberately)');
     // The 50-section ladder attenuates hard at the top: sanity, not a flat line.
     const first = rows[0].results.get('n_50').mag;
     const last = rows[rows.length - 1].results.get('n_50').mag;
