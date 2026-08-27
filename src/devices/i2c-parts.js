@@ -90,8 +90,14 @@ function feedI2C(dec, sclHigh, sdaHigh, myAddress) {
 export function registerI2CParts() {
 
   registerDevice('pcf8574', {
+    // A0-A2 are the ADDRESS STRAPS, and they are the reason this chip has
+    // sixteen pins. Without them the model answers at one address, so two
+    // expanders cannot share a bus — which is most of what a port expander
+    // is for. The terminal cross-check has counted them unreachable since
+    // the sidecar was written.
     terminals: ['sda', 'scl', 'vcc', 'gnd',
-                'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'int'],
+                'p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'int',
+                'a0', 'a1', 'a2'],
 
     init(part) {
       const drives = {};
@@ -108,6 +114,7 @@ export function registerI2CParts() {
     stamp(ctx) {
       ctx.conductance('sda', null, 1 / R_INPUT);
       ctx.conductance('scl', null, 1 / R_INPUT);
+      for (const a of ['a0', 'a1', 'a2']) ctx.conductance(a, null, 1 / R_INPUT);
     },
 
     update(part, state, read) {
@@ -115,7 +122,15 @@ export function registerI2CParts() {
       const threshold = vcc * 0.5;
       const sclHigh = read('scl') > threshold;
       const sdaHigh = read('sda') > threshold;
-      const addr = part.params?.address ?? 0x20; // default PCF8574 address
+      // params.address WINS when set, so circuits that chose an address
+      // before the straps existed keep it. Otherwise the pins decide, which
+      // is what the hardware does: 0x20 | A2 A1 A0. Unwired straps read low
+      // and give 0x20 — the same default as before.
+      const strapped = 0x20
+        | ((read('a0') > threshold ? 1 : 0))
+        | ((read('a1') > threshold ? 1 : 0) << 1)
+        | ((read('a2') > threshold ? 1 : 0) << 2);
+      const addr = part.params?.address ?? strapped;
 
       const byteReady = feedI2C(state._i2c, sclHigh, sdaHigh, addr);
 
