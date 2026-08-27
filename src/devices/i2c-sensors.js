@@ -669,17 +669,27 @@ function registerVL53L0X() {
             regs[0x8a] = part.params?.addr ?? 0x29;
 
             const state = {
-                drives: { sda: { vTh: 0, rTh: R_OFF } },
+                // GPIO1 is open-drain: asserted pulls low, idle RELEASES so
+                // the board's pull-up decides and several sensors can share
+                // one interrupt line.
+                drives: { sda: { vTh: 0, rTh: R_OFF }, gpio1: { vTh: 0, rTh: R_OFF } },
                 regs,
                 ptr: 0,
                 _first: true,
                 _ranging: false,
+                _shutdown: false,
                 // Readable state for faces
                 distance_mm: part.params?.distance_mm ?? 200,
             };
 
             state._i2c = createI2CSlave({
                 onAddress: (a7, rw) => {
+                    // No _shutdown check here on purpose. A first cut had one
+                    // and it was DEAD: update() returns before feeding the
+                    // slave engine while XSHUT is low, so the handlers are
+                    // never reached and removing the guard failed no test.
+                    // The silence comes from driving nothing, which is also
+                    // the physical truth — see update().
                     const addr = state.regs[0x8a];
                     const mine = a7 === addr;
                     if (mine && rw === 0) state._first = true;
@@ -704,15 +714,63 @@ function registerVL53L0X() {
             return state;
         },
 
-        stamp(ctx) {
+        stamp(ctx, part, state) {
             ctx.conductance('scl', null, 1 / R_INPUT);
             ctx.conductance('xshut', null, 1 / R_INPUT);
-            ctx.conductance('gpio1', null, 1 / R_INPUT);
+            // Whether XSHUT is WIRED decides how an unwired one is read. A
+            // breakout leaves it pulled up on the carrier, so a bench that
+            // never mentions the pin must get a running sensor — the same
+            // question ctx.netFor answers for the DS1302's crystal, and for
+            // the same reason: read() alone cannot tell "not connected" from
+            // "held at 0 V".
+            state._xshutWired = Boolean(ctx.netFor('xshut'));
         },
 
         update(part, state, read) {
             state.distance_mm = part.params?.distance_mm ?? 200;
-            return i2cUpdate(state, read, read('vcc'));
+            const vcc = read('vcc') || 3.3;
+            const th = vcc * 0.5;
+
+            // XSHUT is active LOW and it is a RESET, not a pause: the
+            // datasheet's shutdown drops the device to its boot state, which
+            // is why re-addressing after release works at all. Coming back up
+            // must therefore forget the assigned address, or the multi-sensor
+            // procedure would appear to work while doing nothing.
+            const down = state._xshutWired ? read('xshut') <= th : false;
+            if (down !== state._shutdown) {
+                state._shutdown = down;
+                if (!down) {
+                    state.regs[0x8a] = part.params?.addr ?? 0x29;
+                    state._ranging = false;
+                }
+            }
+
+            // GPIO1: the ranging-complete interrupt. RESULT_INTERRUPT_STATUS
+            // already reported "new data ready"; the PIN that saves the host
+            // from polling for it was declared, stamped and never driven.
+            const assert = !down && state._ranging;
+            const want = assert ? R_OUT : R_OFF;
+            let changed = false;
+            if (state.drives.gpio1.rTh !== want) {
+                state.drives.gpio1 = { vTh: 0, rTh: want };
+                changed = true;
+            }
+            if (down) {
+                // A shut-down sensor drives NOTHING — SDA included — and this
+                // early return is what actually takes it off the bus: the
+                // slave engine is not fed, so nothing ACKs and no byte comes
+                // back. That is the whole point of the pin. Every VL53L0X
+                // boots at 0x29, so the only way to run two is to hold both
+                // down, release one, re-address it, then release the next,
+                // and a model that answers regardless cannot express the
+                // procedure at all.
+                if (state.drives.sda.rTh !== R_OFF) {
+                    state.drives.sda = { vTh: 0, rTh: R_OFF };
+                    changed = true;
+                }
+                return changed;
+            }
+            return i2cUpdate(state, read, vcc) || changed;
         },
     });
 }
@@ -741,6 +799,13 @@ function writeVl53Reg(state, reg, v) {
         case 0x00:                                   // SYSRANGE_START
             if (v & 0x01) state._ranging = true;     // single-shot or continuous
             if (v === 0x00) state._ranging = false;   // stop
+            state.regs[reg] = v;
+            break;
+        case 0x0b:                                   // SYSTEM_INTERRUPT_CLEAR
+            // How the host acknowledges GPIO1. Without it the pin, once
+            // asserted, would stay low for the rest of the bench and the
+            // second measurement would be indistinguishable from the first.
+            state._ranging = false;
             state.regs[reg] = v;
             break;
         case 0xc0: case 0xc1: case 0xc2:            // read-only IDs
