@@ -204,6 +204,28 @@ export function createLabwiredAdapter (opts) {
     }
   }
 
+  /**
+   * Hand the firmware's UART bytes to the listener.
+   *
+   * labwired's serial is PULL (`drain_uart_output` returns what has
+   * accumulated) while every other adapter here PUSHES a byte at a time. The
+   * difference is real but it is not the caller's problem: a host that had to
+   * poll one adapter and subscribe to the others would grow a branch per
+   * engine, which is the thing boundary A exists to prevent. So this is called
+   * wherever the engine has just run, and `onSerial` behaves the same
+   * everywhere.
+   */
+  function drainSerial () {
+    if (!serialListener || !sim.drain_uart_output) return;
+    let out;
+    try {
+      out = sim.drain_uart_output();
+    } catch (e) {
+      return;                       // a UART-less machine is not an error
+    }
+    if (out && out.length) for (const b of out) serialListener(b);
+  }
+
   function syncInputs () {
     if (!board || !board.readPin) return;
     inInputSync = true;
@@ -268,6 +290,7 @@ export function createLabwiredAdapter (opts) {
       const cycles = Number((BigInt(deltaNs) * clockHzBig) / NS_PER_S);
       if (cycles > 0) sim.step_batch(cycles);
       drainEdges();
+      drainSerial();
       if (board && board.advanceTo) {
         board.advanceTo(timeNs());
         stats.advanceToCount++;
@@ -306,18 +329,19 @@ export function createLabwiredAdapter (opts) {
     pump () {
       syncInputs();
       drainEdges();
+      drainSerial();
       if (board && board.advanceTo) {
         board.advanceTo(timeNs());
         stats.advanceToCount++;
       }
     },
 
-    /** Drain UART bytes the firmware transmitted since the last call. */
-    pumpSerial () {
-      if (!serialListener || !sim.drain_uart_output) return;
-      const out = sim.drain_uart_output();
-      if (out && out.length) for (const b of out) serialListener(b);
-    },
+    /**
+     * Drain UART bytes explicitly. `advanceNs` and `pump` already do this, so
+     * a normal consumer never needs it; it is here for a host that steps the
+     * engine by some other route and still wants the console.
+     */
+    pumpSerial: () => drainSerial(),
 
     stats,
   };
