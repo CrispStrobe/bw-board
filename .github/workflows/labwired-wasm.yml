@@ -87,7 +87,15 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
-          for f in labwired_wasm.js labwired_wasm_bg.wasm; do
+          # Walk what is THERE rather than a hardcoded list. The list went stale
+          # the moment the layout grew nodejs/ and web/ subdirectories, and the
+          # job failed on a missing path instead of on a real difference —
+          # a gate that breaks when the thing it guards changes shape is a gate
+          # nobody will trust the next time it goes red.
+          files=$(cd a && find . -type f \( -name '*.js' -o -name '*.wasm' \) | sort)
+          [ -n "$files" ] || { echo "::error::no build outputs to compare"; exit 1; }
+          echo "comparing:"; echo "$files" | sed 's/^/    /'
+          for f in $files; do
             ha=$(sha256sum "a/$f" | cut -d' ' -f1)
             hb=$(sha256sum "b/$f" | cut -d' ' -f1)
             if [ "$ha" = "$hb" ]; then
