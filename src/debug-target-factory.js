@@ -416,6 +416,23 @@ async function createSerialTarget(opts) {
  * The known target kinds — for the target picker UI.
  * @returns {Array<{kind: string, label: string, description: string}>}
  */
+/**
+ * The labwired kind's menu entry, kept OUT of getTargetKinds() on purpose.
+ *
+ * Its engine is a 20 MB artifact fetched at deploy time and loaded on demand,
+ * so unlike every other kind here it can be genuinely absent. A host that has
+ * probed for it (lite's lib/labwired-engine.js) appends this; a host that has
+ * not must not offer it. That is the same rule that kept 'rp2040js' out of the
+ * list until its compile route existed: a picker entry nobody can select is a
+ * lie the front end tells for us.
+ */
+export const LABWIRED_KIND = {
+  kind: 'labwired',
+  label: 'Simulated (labwired — full fidelity)',
+  description: 'The heavy tier: F103/F4/F7, RISC-V and Xtensa, via the labwired engine. '
+    + 'Downloaded on first use.',
+};
+
 export function getTargetKinds() {
   return [
     {
