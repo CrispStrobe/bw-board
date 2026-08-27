@@ -178,6 +178,34 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
             'a pin could not be driven — the generated board_io is incomplete');
     });
 
+    it('a RAW flash image runs too — the form lite actually compiles', async () => {
+        // The whole point of bin-to-elf.js: labwired takes ELF only, and
+        // everything lite builds is a raw image. If this passes, the heavy tier
+        // can run a lite project without the compile service changing.
+        const adapter = createLabwiredAdapter({
+            wasm, chipYaml, firmware: binToElf(built.bin), pins: PINS, clockHz: 48_000_000,
+        });
+        const board = recordingBoard();
+        adapter.attachBoard(board);
+        board.calls.length = 0;
+        for (let i = 0; i < 40; i++) adapter.advanceNs(1_000_000n);
+        const edges = board.calls.filter((c) => c.k === 'setPin' && c.name === 'PA5');
+        assert.ok(edges.length >= 2,
+            `the wrapped raw image did not run (${edges.length} PA5 edges)`);
+        assert.ok(edges.some((e) => e.high) && edges.some((e) => !e.high));
+    });
+
+    it('the adapter wraps a raw image for you', async () => {
+        const adapter = createLabwiredAdapter({
+            wasm, chipYaml, firmware: built.bin, pins: PINS, clockHz: 48_000_000,
+        });
+        const board = recordingBoard();
+        adapter.attachBoard(board);
+        for (let i = 0; i < 40; i++) adapter.advanceNs(1_000_000n);
+        assert.ok(board.calls.some((c) => c.k === 'setPin' && c.name === 'PA5' && c.high),
+            'passing a .bin straight to the adapter should just work');
+    });
+
     it('time advances at the configured clock rate', () => {
         const adapter = make();
         const board = recordingBoard();

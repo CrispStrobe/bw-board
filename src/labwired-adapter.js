@@ -78,6 +78,8 @@ export function plain (v) {
   return v;
 }
 
+import { toLoadableElf } from './bin-to-elf.js';
+
 /** ns per second, as a bigint numerator for cycle→ns without float drift. */
 const NS_PER_S = 1_000_000_000n;
 
@@ -107,7 +109,7 @@ export function generateSystemYaml (name, chipPath, pins) {
  * @param {object} opts
  * @param {object} opts.wasm            the instantiated labwired-wasm module
  * @param {string} opts.chipYaml        chip descriptor YAML
- * @param {Uint8Array} opts.firmware    ELF image
+ * @param {Uint8Array} opts.firmware    ELF, or a raw flash image (wrapped for you)
  * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
  * @param {number} [opts.clockHz]       engine cycle rate, for cycle→ns
  * @param {string} [opts.systemYaml]    override the generated manifest
@@ -115,7 +117,13 @@ export function generateSystemYaml (name, chipPath, pins) {
  * @returns {object} boundary-A adapter
  */
 export function createLabwiredAdapter (opts) {
-  const { wasm, chipYaml, firmware, pins } = opts;
+  const { wasm, chipYaml, pins } = opts;
+  // Accept a raw flash image as readily as an ELF. labwired's ARM path ends in
+  // `load_elf_bytes` and takes nothing else, while everything lite compiles is
+  // a raw image — so without this the heavy tier could only run firmware built
+  // by a toolchain lite does not have. See bin-to-elf.js for what is lost
+  // (symbols; there were none in a .bin to lose).
+  const firmware = opts.firmware ? toLoadableElf(opts.firmware) : opts.firmware;
   if (!wasm || !wasm.WasmSimulator) throw new Error('labwired-adapter: opts.wasm must expose WasmSimulator');
   if (!chipYaml) throw new Error('labwired-adapter: opts.chipYaml is required');
   if (!pins || Object.keys(pins).length === 0) throw new Error('labwired-adapter: opts.pins is required');
