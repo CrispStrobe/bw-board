@@ -35,7 +35,7 @@ const WASM_DIR = process.env.LABWIRED_WASM;
 let hasGcc = false;
 try { execFileSync('arm-none-eabi-gcc', ['--version'], { stdio: 'pipe' }); hasGcc = true; } catch { /* skip */ }
 
-const skip = !WASM_DIR ? 'set LABWIRED_WASM to the wasm-bindgen nodejs out-dir'
+const skip = !WASM_DIR ? 'set LABWIRED_WASM to the wasm-bindgen NODEJS out-dir (the web target cannot load under node)'
     : !existsSync(join(WASM_DIR, 'labwired_wasm.js')) ? `no labwired_wasm.js in ${WASM_DIR}`
         : !hasGcc ? 'arm-none-eabi-gcc not installed'
             : false;

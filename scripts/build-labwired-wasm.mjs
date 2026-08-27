@@ -15,9 +15,17 @@
  * ten minutes, and the reason the first two runs here were slow.
  *
  * Output (in --out, default ./build/labwired-wasm):
- *   labwired_wasm.js       wasm-bindgen glue, `--target nodejs`
- *   labwired_wasm_bg.wasm  the module
- *   BUILD-INFO.json        ref, sizes (raw / stripped / brotli), sha256s
+ *   nodejs/   glue for `node --test` — CommonJS, loads the wasm with readFileSync
+ *   web/      glue for a browser bundle — ESM with an explicit `init(url)`
+ *   BUILD-INFO.json  ref, sizes (raw / stripped / brotli), sha256s, per target
+ *
+ * TWO TARGETS, because one does not fit both consumers. The `nodejs` glue
+ * `require()`s and reads the wasm off disk; drop that in a browser bundle and
+ * it breaks at build time. `web` was chosen over `bundler` deliberately: the
+ * bundler target hands webpack a wasm IMPORT, which needs
+ * `experiments.asyncWebAssembly` turned on, while `web` fetches the module from
+ * a URL at runtime — exactly how the emu8051 artifact already loads, so it
+ * needs no webpack change at all.
  *
  * TWO PINS THAT ARE NOT OPTIONAL
  * ------------------------------
@@ -65,7 +73,7 @@
  * from this machine rather than a number someone remembers.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync, statSync } from 'node:fs';
+import { mkdirSync, rmSync, existsSync, readFileSync, readdirSync, writeFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -161,32 +169,44 @@ try {
     run('cargo', ['install', 'wasm-bindgen-cli', '--version', wbVersion, '--root', cliRoot, '--quiet'],
         { env: { ...process.env, CARGO_TARGET_DIR: join(work, 'wb-target') } });
 
-    // 5. bindings
+    // 5. bindings, one set per consumer — see the header for why both.
     mkdirSync(outDir, { recursive: true });
-    run(join(cliRoot, 'bin', 'wasm-bindgen'), ['--target', 'nodejs', '--out-dir', outDir, rawPath]);
+    const TARGETS = ['nodejs', 'web'];
+    for (const t of TARGETS) {
+        mkdirSync(join(outDir, t), { recursive: true });
+        run(join(cliRoot, 'bin', 'wasm-bindgen'),
+            ['--target', t, '--out-dir', join(outDir, t), rawPath]);
+    }
 
     // 6. what actually came out
-    const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), files: {} };
+    const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), targets: {} };
     info.rawBytes = rawSize;
-    for (const name of ['labwired_wasm.js', 'labwired_wasm_bg.wasm']) {
-        const buf = readFileSync(join(outDir, name));
-        info.files[name] = {
-            bytes: buf.length,
-            brotliBytes: brotliCompressSync(buf, {
-                params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 11 },
-            }).length,
-            sha256: createHash('sha256').update(buf).digest('hex'),
-        };
+    for (const t of TARGETS) {
+        info.targets[t] = {};
+        for (const name of readdirSync(join(outDir, t))) {
+            if (!/\.(js|wasm)$/.test(name)) continue;   // skip the .d.ts
+            const buf = readFileSync(join(outDir, t, name));
+            info.targets[t][name] = {
+                bytes: buf.length,
+                brotliBytes: brotliCompressSync(buf, {
+                    params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 11 },
+                }).length,
+                sha256: createHash('sha256').update(buf).digest('hex'),
+            };
+        }
     }
     writeFileSync(join(outDir, 'BUILD-INFO.json'), `${JSON.stringify(info, null, 2)}\n`);
 
     console.log(`\nlabwired-wasm: wrote ${outDir}`);
-    for (const [name, f] of Object.entries(info.files)) {
-        console.log(`  ${name.padEnd(22)} ${(f.bytes / 1048576).toFixed(2)} MB` +
-            `  brotli ${(f.brotliBytes / 1048576).toFixed(2)} MB  sha256 ${f.sha256.slice(0, 16)}…`);
+    for (const [t, files] of Object.entries(info.targets)) {
+        console.log(`  [${t}]`);
+        for (const [name, f] of Object.entries(files)) {
+            console.log(`    ${name.padEnd(24)} ${(f.bytes / 1048576).toFixed(2)} MB` +
+                `  brotli ${(f.brotliBytes / 1048576).toFixed(2)} MB  sha256 ${f.sha256.slice(0, 16)}…`);
+        }
+        const br = Object.values(files).reduce((n, f) => n + f.brotliBytes, 0);
+        console.log(`    served (brotli) ${(br / 1048576).toFixed(2)} MB`);
     }
-    const totalBr = Object.values(info.files).reduce((n, f) => n + f.brotliBytes, 0);
-    console.log(`  served (brotli, both files) ${(totalBr / 1048576).toFixed(2)} MB`);
 } finally {
     if (keep) console.log(`\n(kept the work tree at ${work})`);
     else rmSync(work, { recursive: true, force: true });
