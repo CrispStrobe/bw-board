@@ -143,6 +143,36 @@ export function createLabwiredDebugTarget (opts) {
         'rather than silently ineffective.' };
     },
 
+    /**
+     * The decoded instruction AT THE PROGRAM COUNTER, and nowhere else.
+     *
+     * `get_disassembly()` takes no address — it decodes wherever the core is
+     * standing — so this can only answer honestly for the current PC. Asked
+     * about any other address it returns '', because the alternative is to hand
+     * back the PC's instruction labelled as some other address: plausible,
+     * confidently wrong, and exactly the class of answer this tier exists to
+     * avoid. The trace calls it with the halt PC, which is the case that works.
+     *
+     * The string is the engine's own Rust debug form (`Branch { offset: -4 }`),
+     * not assembler text. Left as-is rather than reformatted into something
+     * that merely LOOKS like `b .`: a hand-rolled pretty-printer here would be
+     * inventing mnemonics the engine never claimed.
+     *
+     * This matters more here than on the other tiers. A raw flash image carries
+     * no symbols, so the instruction is the only thing a reader has.
+     * @param {number} addr the address being asked about.
+     * @returns {string} the decode, or '' when it is not the current PC.
+     */
+    disasm (addr) {
+      if (detached) return '';
+      if (((addr >>> 0) & ~1) !== (pc() & ~1)) return '';
+      try {
+        return sim().get_disassembly() || '';
+      } catch (e) {
+        return '';
+      }
+    },
+
     regs () {
       const out = { pc: pc() & ~1, cycles: Number(adapter.timeNs() * clockHzBig / NS_PER_S) };
       try {
