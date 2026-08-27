@@ -38,6 +38,28 @@ const R_OUT = 50;
 const R_OFF = 1e9;           // released: practically not driving
 const R_INPUT = 1e6;
 
+// DS1302 §"Electrical Characteristics": the clock keeps time down to 2.0 V
+// on either rail. Below it the part is off and its registers are not held.
+const V_TIMEKEEP_MIN = 2.0;
+
+/**
+ * Lose everything a powered part was holding. A DS1302 with no cell on VCC1
+ * comes back from a power cut at its power-up state — halted, midnight,
+ * blank RAM — which is exactly the difference a battery pays for.
+ */
+function powerDown(s) {
+    s.ch = true; s.wp = false; s.hour12 = false; s.pm = false;
+    s.sec = 0; s.min = 0; s.hour = 0;
+    s.date = 1; s.month = 1; s.dow = 1; s.year = 0;
+    s.trickle = 0;
+    s.ram.fill(0);
+    s._nsAcc = 0n;
+    s._mode = 'idle'; s._bits = 0; s._buf = 0;
+    s._burst = false; s._burstIdx = 0; s._burstClock = [];
+    s._tx = 0; s._txBits = 0;
+    s.drives.io = { vTh: 0, rTh: R_OFF };
+}
+
 const bcd = (v) => (((v / 10) | 0) << 4) | (v % 10);
 const unbcd = (b) => ((b >> 4) & 0x0f) * 10 + (b & 0x0f);
 
@@ -62,11 +84,16 @@ export function registerDallasParts() {
 
     // ─── DS1302 ────────────────────────────────────────────────────────
     registerDevice('ds1302', {
-        terminals: ['vcc', 'gnd', 'ce', 'sclk', 'io'],
+        // The DIP-8 in full. VCC1 is the battery rail and X1/X2 the crystal;
+        // the model had neither, so bw-parts' eight-pin sidecar named three
+        // legs nothing could reach. `vcc` is pin 1, the part's VCC2 — kept
+        // under the old name because every existing bench wires it.
+        terminals: ['vcc', 'gnd', 'ce', 'sclk', 'io', 'x1', 'x2', 'vcc1'],
 
         init() {
             return {
                 drives: { io: { vTh: 0, rTh: R_OFF } },
+                _osc: true, _powered: true,
                 _ce: false, _sclk: false,
                 _mode: 'cmd', _bits: 0, _buf: 0,
                 _isRam: false, _addr: 0, _burst: false, _burstIdx: 0,
@@ -80,18 +107,61 @@ export function registerDallasParts() {
             };
         },
 
-        stamp(ctx) {
+        stamp(ctx, part, state) {
             ctx.conductance('ce', null, 1 / R_INPUT);
             ctx.conductance('sclk', null, 1 / R_INPUT);
+            // The battery rail needs a reference or an unwired VCC1 floats
+            // and the supply comparison below reads whatever the solver
+            // guessed. The real part draws well under a microamp here.
+            ctx.conductance('vcc1', null, 1 / R_INPUT);
+
+            // Whether the oscillator can run is a question about WIRING, not
+            // about voltage: a quartz resonator has no DC signature at all
+            // (see the `crystal` model — it is two pins with no path between
+            // them), so netFor is the only thing that can answer it.
+            const x1 = ctx.netFor('x1');
+            const x2 = ctx.netFor('x2');
+            state._osc = (!x1 && !x2)      // legacy bench: no crystal modelled
+                ? true
+                : Boolean(x1 && x2 && x1 !== x2);
+
+            // VCC2 needs the same question asked, for a different reason. The
+            // supply read below falls back to 5 V so a bench that never wired
+            // a rail behaves as it always did — but `read() || 5.0` cannot
+            // tell an UNWIRED pin from one a switch has pulled to 0 V, and
+            // reads both as 5. A cut power rail was therefore invisible, and
+            // the three "no cell" cases all failed on it.
+            state._vccWired = Boolean(ctx.netFor('vcc'));
         },
 
         update(part, state, read, tNs) {
-            const vcc = read('vcc') || 5.0;
-            const th = vcc * 0.5;
+            // Supply: the part runs from whichever rail is higher, which is
+            // the entire purpose of VCC1. Unwired, VCC1 sits at 0 through the
+            // pulldown above and VCC2 decides alone, so no existing bench
+            // changes. `|| 5.0` is kept for VCC2 so a bench that never wired
+            // a supply behaves as it always did.
+            const vcc2 = state._vccWired ? (read('vcc') ?? 0) : 5.0;
+            const vBat = read('vcc1') || 0;
+            const vcc = Math.max(vcc2, vBat);
+            const th = vcc2 * 0.5;      // the bus is referenced to VCC2, not the battery
             let changed = false;
 
-            // Timekeeping: seconds accumulate only while CH is clear.
-            if (state._lastNs !== null && !state.ch) {
+            // Below the datasheet's timekeeping minimum the part is simply
+            // off: it does not count, and it does not remember. That second
+            // half is what a coin cell on VCC1 buys, so the model has to lose
+            // the time when there is no cell — otherwise the pin would be
+            // wired and still make no difference.
+            const powered = vcc >= V_TIMEKEEP_MIN;
+            if (!powered && state._powered) {
+                powerDown(state);
+            } else if (powered && !state._powered) {
+                state._lastNs = tNs;    // no seconds accrue across the dark
+            }
+            state._powered = powered;
+
+            // Timekeeping: seconds accumulate only while powered, with the
+            // oscillator able to run, and CH clear.
+            if (state._lastNs !== null && !state.ch && powered && state._osc) {
                 state._nsAcc += tNs - state._lastNs;
                 while (state._nsAcc >= 1_000_000_000n) {
                     state._nsAcc -= 1_000_000_000n;
@@ -101,6 +171,7 @@ export function registerDallasParts() {
                 state._nsAcc = 0n;
             }
             state._lastNs = tNs;
+            if (!powered) return changed;
 
             const ce = read('ce') > th;
             const sclk = read('sclk') > th;
