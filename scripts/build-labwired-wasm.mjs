@@ -110,7 +110,18 @@ try {
     const head = capture('git', ['rev-parse', 'HEAD'], { cwd: src });
     console.log(`  source at ${head}`);
 
-    // 2. the wasm itself
+    // 2. the wasm target FOR LABWIRED'S OWN TOOLCHAIN. Their
+    //    rust-toolchain.toml pins channel 1.95.0 and deliberately lists no
+    //    `targets` (the cross-compile jobs add what they need), so the target
+    //    must be added from INSIDE the checkout, where rustup's
+    //    nearest-ancestor lookup finds that file. Installing wasm32 for
+    //    `stable` in a CI step does nothing for this build: the first CI run
+    //    died with `can't find crate for core` doing exactly that, and it only
+    //    worked on the machine that wrote this because that machine already
+    //    had wasm32 for 1.95.0 from unrelated work.
+    run('rustup', ['target', 'add', 'wasm32-unknown-unknown'], { cwd: src });
+
+    // 3. the wasm itself
     // Remap every absolute path that would otherwise be baked into the
     // artifact by `debug = true`. Without this the output is a fingerprint of
     // the machine that built it.
@@ -139,7 +150,7 @@ try {
     const rawSize = statSync(rawPath).size;
     console.log(`  raw artifact ${(rawSize / 1048576).toFixed(1)} MB`);
 
-    // 3. the MATCHING bindgen CLI, resolved from the lockfile. See the header:
+    // 4. the MATCHING bindgen CLI, resolved from the lockfile. See the header:
     //    Cargo.toml says "0.2.92", the lock resolves something newer, and the
     //    CLI must match what was actually linked.
     const lock = readFileSync(join(src, 'Cargo.lock'), 'utf8');
@@ -150,11 +161,11 @@ try {
     run('cargo', ['install', 'wasm-bindgen-cli', '--version', wbVersion, '--root', cliRoot, '--quiet'],
         { env: { ...process.env, CARGO_TARGET_DIR: join(work, 'wb-target') } });
 
-    // 4. bindings
+    // 5. bindings
     mkdirSync(outDir, { recursive: true });
     run(join(cliRoot, 'bin', 'wasm-bindgen'), ['--target', 'nodejs', '--out-dir', outDir, rawPath]);
 
-    // 5. what actually came out
+    // 6. what actually came out
     const info = { ref: head, wasmBindgen: wbVersion, rustflags, builtAt: new Date().toISOString(), files: {} };
     info.rawBytes = rawSize;
     for (const name of ['labwired_wasm.js', 'labwired_wasm_bg.wasm']) {
