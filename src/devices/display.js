@@ -14,6 +14,10 @@ const R_INPUT = 1e6;
 /**
  * Register display device models.
  */
+// A blocking segment is not infinite resistance: the node still needs a
+// path or the solver has nothing to place it against.
+const R_OPEN_SEG = 1e9;
+
 export function registerDisplayDevices() {
 
   // ─── Neopixel / WS2812B ───────────────────────────────────────────
@@ -122,23 +126,64 @@ export function registerDisplayDevices() {
                 'a5', 'k5', 'a6', 'k6', 'a7', 'k7', 'a8', 'k8', 'a9', 'k9'],
 
     init() {
-      return { drives: {} };
+      return {
+        drives: {},
+        // What the face draws. It was never here, and the renderer reads
+        // `ds.brightness` — so every segment of every bargraph on every bench
+        // was dark no matter what you wired to it. The disp-bargraph examples
+        // ship in seven circuits and showed nothing.
+        brightness: new Array(10).fill(0),
+        // Which segments the LAST solve found forward-biased. Starts true so
+        // the first stamp conducts, as the old fixed conductance did.
+        _on: new Array(10).fill(true),
+      };
     },
 
-    stamp(ctx, part) {
-      // Each segment is a diode (LED) between aN and kN.
-      // Use forward voltage drop model.
+    stamp(ctx, part, state) {
+      // Ten LEDs, each a piecewise-linear diode: below vf it blocks, above it
+      // conducts through rd. The previous stamp was a plain conductance of
+      // 1/(rd+100) in BOTH directions, which is a resistor, not a diode --
+      // reverse-connect a segment and it still passed current, and a forward
+      // one sat on a divider instead of clamping near its forward drop.
+      //
+      // Companion form, linearised about the last solution: I = G*(Va-Vk) -
+      // G*vf, so the conductance carries G and a constant source carries the
+      // offset. `_on` comes from update(), which is the standard
+      // stamp-from-the-previous-solution arrangement this device API allows;
+      // the built-in led/diode kinds get the solver's Newton-Raphson instead.
       const vf = part.params?.vForward ?? 2.0;
-      const rd = part.params?.rDynamic ?? 10;
-
+      const rd = Math.max(1e-3, part.params?.rDynamic ?? 10);
+      const g = 1 / rd;
       for (let i = 0; i < 10; i++) {
-        // Simplified: conductance when forward biased
-        // This is approximate — a real LED stamp needs the MNA diode model.
-        // For the device registry, we model as a conductance with threshold.
-        ctx.conductance(`a${i}`, `k${i}`, 1 / (rd + 100)); // series R approximation
+        if (state?._on?.[i]) {
+          ctx.conductance(`a${i}`, `k${i}`, g);
+          ctx.current(`a${i}`, g * vf);
+          ctx.current(`k${i}`, -g * vf);
+        } else {
+          ctx.conductance(`a${i}`, `k${i}`, 1 / R_OPEN_SEG);
+        }
       }
     },
 
-    update() { return false; }, // passive — no behavioral logic
+    update(part, state, read) {
+      const vf = part.params?.vForward ?? 2.0;
+      const rd = Math.max(1e-3, part.params?.rDynamic ?? 10);
+      const iFull = part.params?.iFull ?? 0.02;   // 20 mA is a lit segment
+      let changed = false;
+      for (let i = 0; i < 10; i++) {
+        const v = (read(`a${i}`) ?? 0) - (read(`k${i}`) ?? 0);
+        // Decide on CURRENT while conducting, not on voltage. Voltage is the
+        // wrong test because the companion source is already in the solution:
+        // a reverse-connected segment dragged its own cathode negative, which
+        // made the measured forward voltage POSITIVE, which kept it on. It
+        // latched at -1.79 V and reported itself lit. Asking "is current still
+        // flowing the right way" cannot self-confirm like that.
+        const amps = (v - vf) / rd;
+        const on = state._on[i] ? amps > 0 : v > vf;
+        if (on !== state._on[i]) { state._on[i] = on; changed = true; }
+        state.brightness[i] = on ? Math.max(0, Math.min(1, amps / iFull)) : 0;
+      }
+      return changed;
+    },
   });
 }
