@@ -40,11 +40,43 @@ at the sensor's output pin via `readAnalog()` — the ADC path.
 | Kind | Protocol | State |
 |------|----------|-------|
 | `neopixel` | WS2812B 1-wire (800kHz edge timing) | `pixels[]` RGB array |
-| `pcf8574` | I2C (SCL/SDA edge decode) | `outputReg` 8-bit |
+| `pcf8574` | I2C both ways (SCL/SDA edge decode) | `outputReg`, sensed `port`, latching `int` |
 | `char_lcd_i2c` | I2C → HD44780 4-bit nibbles | `display[][]` character grid |
 | `clock_display` | 2-wire serial (CLK/DIO) | `digits[]`, `colon` |
 | `cd4511` | Parallel BCD input | 7-segment output drives |
 | `shift_register` (built-in) | Clock/data/latch edges | `shiftReg`, `latchReg` |
+
+## Pins that were declared and did nothing (closed 2026-08-28)
+
+The census question — *could the simulator show a real driver working?* — has
+a second half it did not ask: **could a real driver wire the pin at all?** Six
+devices named terminals the model never consulted. They stamped a conductance
+so the node would not float, and otherwise ignored them, so the pin could be
+connected and changed nothing.
+
+| Kind | Pin(s) | What it does now |
+|------|--------|------------------|
+| `ds1302` | `x1`/`x2`, `vcc1` | Oscillator decided by WIRING (quartz has no DC signature, so `ctx.netFor` is the only thing that can answer); runs from whichever rail is higher and LOSES its registers below 2.0 V |
+| `tcs34725` | `int` | Clear-channel threshold window, latching `AINT`, open-drain pin actually driven |
+| `pcf8574` | `int` — and READS | The expander could not be read at all: its decoder sampled SDA and never drove it. Now senses its pins and interrupts on change |
+| `vl53l0x` | `xshut`, `gpio1` | Shutdown that is a RESET (the only way to run two — they all boot at 0x29), plus the ranging-complete interrupt |
+| `mpu6050` | `int` | Data-ready interrupt, with `INT_PIN_CFG` ACTL/OPEN deciding polarity and drive |
+| `bargraph` | all ten segments | It reported no brightness at all, so every segment was dark; and it was a resistor, not ten diodes |
+
+Two lessons worth keeping:
+
+- **Drawing the pad comes SECOND.** Adding art for a pin the model ignores
+  hands the user a terminal that does nothing. Each of these got behaviour
+  first, then the sidecar.
+- **A pin that cannot change an outcome is indistinguishable from a missing
+  one.** `tcs34725` hid two more bugs behind its dead pin: `STATUS` returned
+  AINT hardcoded SET, and the command byte's TYPE field was discarded so the
+  "clear interrupt" special function overwrote a threshold register.
+
+Sweeping for the same shape at DEVICE level found ten with no behaviour; nine
+are legitimately static (batteries and the resistor network work in `stamp`,
+headers and USB are passive, the crystal and the VGA card are documented
+placeholders). The tenth was `bargraph`.
 
 ## The gap: stubs and missing models are NOT the same gap counted twice
 
