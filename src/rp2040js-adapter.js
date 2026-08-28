@@ -26,15 +26,17 @@
  *    GP25 is the onboard LED on the Pico board itself.
  *
  * Program loading: hand-assembled Thumb (or any raw image) into SRAM, PC
- * and SP set directly — the same no-bootrom shortcut rp2040js's own tests
- * use. Flash/UF2 boot needs the real bootrom and is NOT this adapter's
- * job; the Pico compile route (MicroPython vs bare-metal) is still an open
- * roadmap question and nothing here prejudges it.
+ * and SP set directly — the same shortcut rp2040js's own tests use. The
+ * clean-room bootrom IS installed (rp2040-bootrom.js), so ROM lookups
+ * resolve, but full flash/UF2 boot is still not this adapter's job; the
+ * Pico compile route (MicroPython vs bare-metal) is an open roadmap
+ * question and nothing here prejudges it.
  *
  * @module
  */
 
 import { RP2040, GPIOPinState, ConsoleLogger, LogLevel } from 'rp2040js';
+import { buildBootrom } from './rp2040-bootrom.js';
 
 export const RAM_START = 0x20000000;
 
@@ -79,6 +81,15 @@ export function createRp2040jsAdapter(opts = {}) {
   // floods the host console (298 MB observed) and an emulated program's
   // bad read must never take the app down with it.
   rp2040.logger = new ConsoleLogger(LogLevel.Error, false);
+
+  // rp2040js boots with an all-zero bootrom, so anything that reaches ROM
+  // reads 0x0000 — a `movs r0, r0` slide, not a fault, which is why a
+  // program that jumps there dies far from the jump. Install the clean-room
+  // ROM (rp2040-bootrom.js) so the addresses the SDK actually dereferences
+  // — the §2.8.2 header at 0x10 and the rom_table_lookup pointer at 0x18 —
+  // resolve to real code. Both are Uint32Array(4 KiB words) = 16 KiB, so
+  // the sizes line up exactly; the bytes are little-endian, as ARM reads them.
+  rp2040.loadBootrom(new Uint32Array(buildBootrom().buffer));
 
   let board = null;
   const stats = { pinChangeCount: 0, advanceToCount: 0, adcReadCount: 0 };

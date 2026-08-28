@@ -1,0 +1,323 @@
+/**
+ * A clean-room RP2040 boot ROM, built from the datasheet.
+ *
+ * WHY THIS FILE EXISTS AT ALL, since "just use the real one" is the
+ * obvious answer and it is closed:
+ *
+ * Raspberry Pi's bootrom is BSD-3 — except `mufplib.S`, which carries
+ * "Raspberry Pi (Trading) Ltd hereby grants to you a non-exclusive
+ * license to use the software SOLELY ON A RASPBERRY PI RP2040 DEVICE. No
+ * other use is permitted", or GPLv2 from the copyright owner. An emulator
+ * is not an RP2040 device, and GPL cannot be bundled into a repo whose
+ * whole premise is a permissive base. So the compiled 16 KB blob cannot
+ * ship here, under either of the licences offered, and asking a user to
+ * supply one does not change what the licence says.
+ *
+ * What CAN be done is what this repo already does for the SSD1306 and the
+ * ATmega32U4: implement the documented behaviour. This is RP2040
+ * datasheet section 2.8 — the ROM's fixed header, its function-lookup
+ * table, and the handful of routines the SDK's startup actually calls —
+ * written here as Thumb machine code. None of Raspberry Pi's code is
+ * copied; the datasheet describes an interface and this satisfies it.
+ *
+ * WHAT IT IS NOT. This is not the real bootrom. There is no USB mass
+ * storage, no `reset_usb_boot`, and — the one that currently matters — no
+ * SOFT-FLOAT TABLE. mufplib is exactly the part that is not free, so the
+ * `'SF'` lookup misses and returns 0.
+ *
+ * HOW FAR THAT GETS, measured against MicroPython 1.22.2 for the Pico:
+ * the image loads, boots from its vector table, runs in flash, copies
+ * itself into RAM through the memcpy here and runs there too, and asks
+ * this ROM for nine different functions — memcpy, memcpy44, memset,
+ * memset4, popcount32, clz32 (eighteen times), ctz32, reverse32, and
+ * `'SF'`. Eight are answered. It then panics at step ~26,600, parked in
+ * the SDK's `bkpt #0; b .` loop, entered from 0x10030efa.
+ *
+ * THE PANIC IS NOT THE FLOAT TABLE, which is worth knowing because it is
+ * the obvious suspect and it is wrong. Answering `'SF'` with a non-null
+ * pointer moves the panic by TWO steps — the cost of the extra table
+ * walk — and nothing else. So the licence-blocked piece is not what stops
+ * MicroPython here, and a clean-room soft-float library would not fix it.
+ *
+ * What the firmware reads immediately before panicking is CLOCKS
+ * (0x40008048/4c/6c/70), RESETS' RESET_DONE (0x4000c008), and then the
+ * timer's TIMERAWH/TIMERAWL. Advancing the SimulationClock per
+ * instruction — which the raw probe was not doing, and which
+ * rp2040js-adapter.js does — does not move the panic either. That points
+ * at clock-tree configuration rather than at anything in this file: the
+ * SDK asks how fast clk_sys is running and does not like the answer.
+ *
+ * NAMED, so the next session starts where this one stopped. The SDK's
+ * panic takes its message in a register, and the string is sitting in
+ * flash, so it can simply be read at the moment the panic region is
+ * entered (step ~26,270):
+ *
+ *     r0 = 0xf   r1 = 0   r2 = 0xd0000150   r3 -> "Hard assert"
+ *
+ * `0xd0000150` is SIO + 0x150, which is **spinlock 20**. So a
+ * `hard_assert` involving a hardware spinlock, not a clock read — the
+ * CLOCKS and TIMER accesses just before it are what any SDK init does on
+ * the way past.
+ *
+ * THE CALL CHAIN, walked by recording every BL/BLX taken. This is the
+ * handoff: the assert has an address, and an address survives being
+ * looked up in a symbol table where a generic string does not.
+ *
+ *     0x1002e1a8 -> 0x1002e838
+ *     0x1002e864 -> 0x1002dcbc      ; called before the assert
+ *     0x1002e872 -> 0x1002dccc      ; the function that asserts
+ *     0x1002dce6 -> 0x1002dcbc      ; same helper again
+ *     0x1002dcf4 -> 0x10030f04      ; hard_assertion_failure
+ *     0x10030f08 -> 0x10030ed4      ; panic
+ *
+ * So the failing `hard_assert` is the call at **0x1002dcf4**, inside the
+ * function beginning at or before **0x1002dccc**, reached from
+ * **0x1002e838**. Registers there: r0 = 0xf, r2 = 0xd0000150 (SIO
+ * spinlock 20). Anyone with a MicroPython build carrying symbols can
+ * resolve those three addresses in one `addr2line`.
+ *
+ * And one thing NOT to chase: `"Hard assert"` is the SDK's GENERIC
+ * message. `hard_assertion_failure()` in pico/assert.h calls
+ * `panic("Hard assert")` for every failed `hard_assert()` in the tree, so
+ * the string identifies the mechanism and not the site. Searching for it
+ * finds the handler and nothing else. The next step is a call-stack walk
+ * from the LR chain, not more message reading — and r0 = 0xf is worth a
+ * look, because PICO_SPINLOCK_ID_OS2 is 15.
+ *
+ * Checked and excluded, so nobody re-checks them: rp2040js's spinlock
+ * model is correct (reading an unlocked lock acquires it and returns the
+ * mask, reading a locked one returns 0), `RESET_DONE` reports every
+ * peripheral out of reset (0x1ffffff), `CPUID` correctly reports core 0,
+ * and CLOCKS is fully modelled. None of those is the fault.
+ *
+ * @module
+ */
+
+/** The ROM is 16 KB and lives at 0. */
+export const BOOTROM_SIZE = 0x4000;
+
+/**
+ * Function-table codes, as the datasheet spells them: two ASCII
+ * characters packed little-endian, so 'M','C' is `rom_func_lookup('MC')`.
+ */
+const code = (a, b) => a.charCodeAt(0) | (b.charCodeAt(0) << 8);
+export const ROM_FUNC = {
+    MEMCPY: code('M', 'C'),
+    MEMCPY44: code('C', '4'),
+    MEMSET: code('M', 'S'),
+    MEMSET4: code('S', '4'),
+    // Bit helpers. ARMv6-M has no CLZ instruction, which is exactly why
+    // the ROM carries these — the SDK calls them rather than emitting a
+    // loop at every site. MicroPython asks for clz32 fifteen times during
+    // startup alone.
+    POPCOUNT32: code('P', '3'),
+    CLZ32: code('L', '3'),
+    CTZ32: code('T', '3'),
+    REVERSE32: code('R', '3')
+};
+
+/** Assemble 16-bit Thumb halfwords into the image at a byte offset. */
+function emit (view, offset, halfwords) {
+    halfwords.forEach((hw, i) => view.setUint16(offset + i * 2, hw, true));
+    return offset + halfwords.length * 2;
+}
+
+/**
+ * Build the ROM image.
+ *
+ * Layout follows the datasheet's fixed offsets exactly, because the SDK
+ * reads them by address and nothing else identifies them:
+ *
+ *   0x00  initial SP        0x10  'M','u', version, reserved
+ *   0x04  reset vector      0x14  u16 → function table
+ *   0x08  NMI               0x16  u16 → data table
+ *   0x0c  HardFault         0x18  u16 → table lookup routine
+ *
+ * @returns {Uint8Array} 16 KB, ready to be written at address 0
+ */
+export function buildBootrom () {
+    const rom = new Uint8Array(BOOTROM_SIZE);
+    const view = new DataView(rom.buffer);
+
+    // Routines are laid out from 0x100; the header points at them.
+    let pc = 0x100;
+
+    // ── rom_table_lookup(r0 = table, r1 = code) → r0 = entry, or 0 ──────
+    //
+    // The table is (u16 code, u16 value) pairs ending in a zero code. The
+    // SDK calls this through the pointer at 0x18, so the ADDRESS matters
+    // and the implementation does not.
+    const lookup = pc;
+    pc = emit(view, pc, [
+        0x8802,             // ldrh r2, [r0, #0]     ; entry code
+        0x2a00,             // cmp  r2, #0
+        0xd003,             // beq  .notfound        ; +3: `movs r0,#0`, not the
+                            //                         `bx lr` after it, which
+                            //                         returns the TABLE pointer
+        0x428a,             // cmp  r2, r1
+        0xd003,             // beq  .found
+        0x3004,             // adds r0, #4           ; next pair
+        0xe7f8,             // b    .loop
+        0x2000,             // .notfound: movs r0, #0
+        0x4770,             // bx   lr
+        0x8840,             // .found: ldrh r0, [r0, #2]
+        0x4770              // bx   lr
+    ]);
+
+    // ── memcpy(r0 = dst, r1 = src, r2 = n) → r0 = dst ───────────────────
+    //
+    // Byte at a time. The real ROM is word-optimised; a copy that is
+    // correct and slow is the right trade in an emulator, where the cost
+    // is JS instructions and not silicon cycles.
+    const memcpy = pc;
+    pc = emit(view, pc, [
+        0xb510,             // push {r4, lr}
+        0x0004,             // movs r4, r0           ; keep dst to return
+        0x2a00,             // .loop: cmp r2, #0
+        // +5, not +3. The branch is counted from PC+4 (two halfwords
+        // ahead), so a miscount lands INSIDE the loop body — here it
+        // reached `subs r2, #1`, took the count to -1 and copied for
+        // ever. The bytes already copied stay correct, which is why a
+        // test that only checks the destination passes: the tell is that
+        // the routine never returns.
+        0xd005,             // beq  .done
+        0x780b,             // ldrb r3, [r1, #0]
+        0x7003,             // strb r3, [r0, #0]
+        0x3001,             // adds r0, #1
+        0x3101,             // adds r1, #1
+        0x3a01,             // subs r2, #1
+        0xe7f7,             // b    .loop
+        0x0020,             // .done: movs r0, r4
+        0xbd10              // pop  {r4, pc}
+    ]);
+
+    // ── memset(r0 = dst, r1 = value, r2 = n) → r0 = dst ─────────────────
+    const memset = pc;
+    pc = emit(view, pc, [
+        0xb510,             // push {r4, lr}
+        0x0004,             // movs r4, r0
+        0x2a00,             // .loop: cmp r2, #0
+        0xd003,             // beq  .done            ; +3, counted from PC+4
+        0x7001,             // strb r1, [r0, #0]
+        0x3001,             // adds r0, #1
+        0x3a01,             // subs r2, #1
+        0xe7f9,             // b    .loop
+        0x0020,             // .done: movs r0, r4
+        0xbd10              // pop  {r4, pc}
+    ]);
+
+    // ── clz32(r0) → r0 = leading zeros ──────────────────────────────────
+    const clz32 = pc;
+    pc = emit(view, pc, [
+        0x2200,             // movs r2, #0
+        0x2800,             // cmp  r0, #0
+        0xd004,             // beq  .zero
+        0x0003,             // .loop: movs r3, r0     ; sets N from bit 31
+        0xd403,             // bmi  .done
+        0x0040,             // lsls r0, r0, #1
+        0x3201,             // adds r2, #1
+        0xe7fa,             // b    .loop
+        0x2220,             // .zero: movs r2, #32
+        0x0010,             // .done: movs r0, r2
+        0x4770              // bx   lr
+    ]);
+
+    // ── ctz32(r0) → r0 = trailing zeros ─────────────────────────────────
+    const ctz32 = pc;
+    pc = emit(view, pc, [
+        0x2200,             // movs r2, #0
+        0x2800,             // cmp  r0, #0
+        0xd004,             // beq  .zero
+        0x07c3,             // .loop: lsls r3, r0, #31 ; bit 0 into N
+        0xd403,             // bmi  .done
+        0x0840,             // lsrs r0, r0, #1
+        0x3201,             // adds r2, #1
+        0xe7fa,             // b    .loop
+        0x2220,             // .zero: movs r2, #32
+        0x0010,             // .done: movs r0, r2
+        0x4770              // bx   lr
+    ]);
+
+    // ── popcount32(r0) → r0 = set bits ──────────────────────────────────
+    const popcount32 = pc;
+    pc = emit(view, pc, [
+        0x2200,             // movs r2, #0
+        0x2800,             // .loop: cmp r0, #0
+        0xd004,             // beq  .done
+        0x07c3,             // lsls r3, r0, #31       ; bit 0 into N
+        0xd500,             // bpl  .skip
+        0x3201,             // adds r2, #1
+        0x0840,             // .skip: lsrs r0, r0, #1
+        0xe7f8,             // b    .loop
+        0x0010,             // .done: movs r0, r2
+        0x4770              // bx   lr
+    ]);
+
+    // ── reverse32(r0) → r0 = bits reversed ──────────────────────────────
+    const reverse32 = pc;
+    pc = emit(view, pc, [
+        0x2200,             // movs r2, #0            ; result
+        0x2320,             // movs r3, #32           ; counter
+        0x0052,             // .loop: lsls r2, r2, #1
+        0x07c1,             // lsls r1, r0, #31       ; isolate bit 0…
+        0x0fc9,             // lsrs r1, r1, #31       ; …as a value, not a flag
+        0x430a,             // orrs r2, r1
+        0x0840,             // lsrs r0, r0, #1
+        0x3b01,             // subs r3, #1
+        0xd1f8,             // bne  .loop
+        0x0010,             // movs r0, r2
+        0x4770              // bx   lr
+    ]);
+
+    // A reset handler that goes nowhere: we boot from flash, and this
+    // exists so the vector table is not a pointer to zero.
+    const spin = pc;
+    pc = emit(view, pc, [0xe7fe]);          // b .
+
+    // ── the function table ─────────────────────────────────────────────
+    //
+    // Thumb entry points carry their low bit set. The table stores the
+    // address the caller will `blx` to, so the bit belongs here.
+    const table = (pc + 3) & ~3;
+    const thumb = addr => (addr | 1) & 0xffff;
+    const entries = [
+        [ROM_FUNC.MEMCPY, thumb(memcpy)],
+        [ROM_FUNC.MEMCPY44, thumb(memcpy)],
+        [ROM_FUNC.MEMSET, thumb(memset)],
+        [ROM_FUNC.MEMSET4, thumb(memset)],
+        [ROM_FUNC.POPCOUNT32, thumb(popcount32)],
+        [ROM_FUNC.CLZ32, thumb(clz32)],
+        [ROM_FUNC.CTZ32, thumb(ctz32)],
+        [ROM_FUNC.REVERSE32, thumb(reverse32)]
+    ];
+    let at = table;
+    for (const [c, addr] of entries) {
+        view.setUint16(at, c, true);
+        view.setUint16(at + 2, addr, true);
+        at += 4;
+    }
+    view.setUint32(at, 0, true);            // terminator
+    const dataTable = at + 4;
+    // Empty, and deliberately so. The one data entry a firmware asks for
+    // is 'SF', mufplib's jump table, and answering it with a pointer to
+    // zeros would turn a clean lookup miss into a jump to address 0.
+    // Measured: answering it moves the panic by TWO steps, so the float
+    // table is not what stops MicroPython here.
+    view.setUint32(dataTable, 0, true);
+
+    // ── the fixed header ───────────────────────────────────────────────
+    view.setUint32(0x00, 0x20042000, true);         // initial SP: top of SRAM
+    view.setUint32(0x04, thumb(spin), true);        // reset
+    view.setUint32(0x08, thumb(spin), true);        // NMI
+    view.setUint32(0x0c, thumb(spin), true);        // HardFault
+    rom[0x10] = 0x4d;                               // 'M'
+    rom[0x11] = 0x75;                               // 'u'
+    rom[0x12] = 0x01;                               // version 1
+    rom[0x13] = 0x00;
+    view.setUint16(0x14, table, true);
+    view.setUint16(0x16, dataTable, true);
+    view.setUint16(0x18, thumb(lookup), true);
+    return rom;
+}
+
+export default buildBootrom;
