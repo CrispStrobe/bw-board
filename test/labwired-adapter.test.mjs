@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 
 import { createLabwiredAdapter, generateSystemYaml } from '../src/labwired-adapter.js';
+import { binToElf } from '../src/bin-to-elf.js';
 import { createDebugTarget } from '../src/debug-target-factory.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -69,14 +70,30 @@ SECTIONS {
 }
 `;
 
-function buildElf () {
+/**
+ * Build the test firmware in BOTH forms: the ELF labwired loads, and the raw
+ * flash image lite's compile path actually produces.
+ *
+ * Returns `{ elf, bin }`. The two raw-image tests below referenced a `built`
+ * that never existed and a `binToElf` that was never imported, so they threw
+ * `ReferenceError` on their first execution — which was 2026-08-29, because
+ * the only job that runs this suite (`labwired-wasm.yml`) is
+ * `workflow_dispatch`-only and its last run predates the commit that added
+ * them. A test nobody has ever executed is not a test; the helper now produces
+ * what they ask for and the import is real.
+ */
+function buildFirmware () {
     const dir = mkdtempSync(join(tmpdir(), 'lw-adapter-'));
     writeFileSync(join(dir, 'main.c'), FIRMWARE);
     writeFileSync(join(dir, 'link.ld'), LD);
     execFileSync('arm-none-eabi-gcc', ['-mcpu=cortex-m0', '-mthumb', '-Os', '-ffreestanding',
         '-nostdlib', `-T${join(dir, 'link.ld')}`, '-o', join(dir, 'fw.elf'),
         join(dir, 'main.c'), '-lgcc'], { stdio: 'pipe' });
-    return readFileSync(join(dir, 'fw.elf'));
+    // objcopy -O binary is exactly what the compile service does for the
+    // `format: bin` targets, so `bin` here is the same shape lite hands the app.
+    execFileSync('arm-none-eabi-objcopy', ['-O', 'binary',
+        join(dir, 'fw.elf'), join(dir, 'fw.bin')], { stdio: 'pipe' });
+    return { elf: readFileSync(join(dir, 'fw.elf')), bin: new Uint8Array(readFileSync(join(dir, 'fw.bin'))) };
 }
 
 /** Records every boundary-A call in order, so ordering can be asserted. */
@@ -102,7 +119,8 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
     const require = createRequire(import.meta.url);
     const wasm = WASM_DIR ? require(join(WASM_DIR, 'labwired_wasm.js')) : null;
     const chipYaml = readFileSync(join(here, 'fixtures/labwired/stm32f0-chip.yaml'), 'utf8');
-    const firmware = hasGcc && WASM_DIR ? buildElf() : null;
+    const built = hasGcc && WASM_DIR ? buildFirmware() : null;
+    const firmware = built ? built.elf : null;
 
     const make = () => createLabwiredAdapter({
         wasm, chipYaml, firmware, pins: PINS, clockHz: 48_000_000, name: 'bw-adapter-test',

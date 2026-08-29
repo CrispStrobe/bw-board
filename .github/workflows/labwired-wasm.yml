@@ -181,8 +181,15 @@ jobs:
           # last wins — silently, and only one of them works in a browser.
           mkdir -p flat
           cp out/BUILD-INFO.json flat/
+          # package.json travels too. wasm-bindgen's nodejs glue is CommonJS and
+          # says so ONLY in the package.json it emits beside it; without that
+          # file, dropping the two assets into a repo whose own package.json
+          # says `"type": "module"` makes node parse the glue as ESM and die on
+          # `exports is not defined` — which is exactly what happened the first
+          # time anyone consumed the published assets rather than the CI
+          # artifact. The artifact carried the file; the release did not.
           for t in nodejs web; do
-            for f in out/$t/*.js out/$t/*.wasm; do
+            for f in out/$t/*.js out/$t/*.wasm out/$t/package.json; do
               [ -e "$f" ] || continue
               cp "$f" "flat/$t-$(basename "$f")"
             done
