@@ -80,7 +80,6 @@ export function registerUartFrame() {
             };
         },
 
-
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -202,7 +201,6 @@ export function registerUartFrame() {
                 _emitIntervalNs: 1_000_000_000n,     // ~1 Hz
             };
         },
-
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;

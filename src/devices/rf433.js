@@ -42,7 +42,6 @@ export function registerRf433() {
             return state;
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const level = read('data') > vcc * 0.5 ? 1 : 0;

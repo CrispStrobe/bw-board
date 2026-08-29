@@ -63,7 +63,6 @@ export function registerAdcSensors() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -136,7 +135,6 @@ export function registerAdcSensors() {
             };
         },
 
-
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -206,7 +204,6 @@ export function registerAdcSensors() {
                 _level: 0,
             };
         },
-
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;

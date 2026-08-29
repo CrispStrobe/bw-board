@@ -50,7 +50,6 @@ export function registerDisplayDevices() {
       };
     },
 
-
     // Boundary B setDeviceControl (spec-updates/set-device-control.md).
     // Writes the same pixels[] the WS2812B bit decoder writes; an
     // out-of-range index is refused (visibly, via the board's warning).

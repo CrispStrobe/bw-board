@@ -149,7 +149,6 @@ function registerBMP280() {
             return state;
         },
 
-
         update(part, state, read) {
             // Refresh readable state from params
             state.temperature = part.params?.temperature ?? 25;
@@ -290,7 +289,6 @@ function registerTCS34725() {
             });
             return state;
         },
-
 
         update(part, state, read) {
             // Refresh readable state from params
@@ -452,7 +450,6 @@ function registerBH1750() {
             return state;
         },
 
-
         update(part, state, read) {
             state.lux = part.params?.lux ?? 0;
             return i2cUpdate(state, read, read('vcc'));
@@ -548,7 +545,6 @@ function registerINA219() {
             });
             return state;
         },
-
 
         update(part, state, read) {
             // Refresh readable state from params
@@ -866,7 +862,6 @@ function registerSGP30() {
             return state;
         },
 
-
         update(part, state, read) {
             state.eCO2 = part.params?.eCO2 ?? 400;
             state.TVOC = part.params?.TVOC ?? 0;
@@ -984,7 +979,6 @@ function registerVEML7700() {
             return state;
         },
 
-
         update(part, state, read) {
             state.lux = part.params?.lux ?? 0;
             state.white = part.params?.white ?? 0;
@@ -1087,7 +1081,6 @@ function registerAS5600() {
             });
             return state;
         },
-
 
         update(part, state, read) {
             state.angle = part.params?.angle ?? 0;

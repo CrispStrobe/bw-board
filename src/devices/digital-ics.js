@@ -36,7 +36,6 @@ export function registerDigitalICs() {
       return { drives, count: 0, _lastClk: false };
     },
 
-
     update(part, state, read) {
       const vcc = 5.0;
       const threshold = vcc * 0.5;
@@ -81,7 +80,6 @@ export function registerDigitalICs() {
       };
     },
 
-
     update(part, state, read) {
       const vcc = 5.0;
       const threshold = vcc * 0.5;
@@ -121,7 +119,6 @@ export function registerDigitalICs() {
         _lastClk: false,
       };
     },
-
 
     update(part, state, read) {
       const vcc = 5.0;
@@ -168,7 +165,6 @@ export function registerDigitalICs() {
       }
       return { drives, _levels: new Array(8).fill(0) };
     },
-
 
     update(part, state, read) {
       const vcc = 5.0;

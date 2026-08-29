@@ -78,7 +78,6 @@ export function registerAnalogICs() {
       };
     },
 
-
     update(part, state, read) {
       // E3.6: optional hysteresis in volts (default 0 — the bare LM393
       // has none, and the datasheet-honest default keeps every existing
@@ -257,7 +256,6 @@ export function registerAnalogICs() {
         _comp: [null, null, null, null], // null = not yet evaluated (see lm393)
       };
     },
-
 
     update(part, state, read) {
       const h = part.params?.hysteresis ?? 0; // E3.6, same contract as lm393

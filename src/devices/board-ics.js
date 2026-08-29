@@ -229,7 +229,6 @@ export function registerBoardICs() {
             };
         },
 
-
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;

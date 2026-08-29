@@ -87,7 +87,6 @@ export function registerAnalogAmps() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const gnd = read('gnd') || 0;

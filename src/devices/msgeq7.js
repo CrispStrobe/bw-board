@@ -44,7 +44,6 @@ export function registerMsgeq7() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;

@@ -84,7 +84,6 @@ export function registerRtcDisplay() {
             return state;
         },
 
-
         update(part, state, read, tNs) {
             // The oscillator runs from power-on; only OSF says it once
             // stopped. Machine time is the crystal.
@@ -125,7 +124,6 @@ export function registerRtcDisplay() {
                 _out16: 0,                         // daisy-chain delay line
             };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;

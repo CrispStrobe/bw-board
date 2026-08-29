@@ -192,7 +192,6 @@ export function registerSSD1306() {
             return state;
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 3.3;
             const th = vcc * 0.5;

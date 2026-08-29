@@ -136,7 +136,6 @@ export function registerAudioParts() {
             };
         },
 
-
         update(part, state, read, tNs) {
             const vcc = (read('vdd') || 0) - (read('gnd') || 0);
             if (vcc < 2.0) {
@@ -202,7 +201,6 @@ export function registerAudioParts() {
                 playbackActive: false,              // UI-facing
             };
         },
-
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;

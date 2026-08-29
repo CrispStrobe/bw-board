@@ -98,7 +98,6 @@ export function registerTier3Parts() {
             return { drives, shiftReg: 0, latchReg: 0, _clk: false, _rclk: false, _oe: true };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const vih = vcc * 0.7;
@@ -171,7 +170,6 @@ export function registerTier3Parts() {
             for (let g = 1; g <= 4; g++) drives[`${g}y`] = { vTh: 0, rTh: R_OFF };
             return { drives, _sig: '' };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;

@@ -318,7 +318,6 @@ const CHIP_74HC93 = {
     };
   },
 
-
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;
     const threshold = vcc * 0.5;
@@ -379,7 +378,6 @@ const CHIP_CD4511 = {
     }
     return { drives, _latchedBCD: 0 };
   },
-
 
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;
@@ -451,7 +449,6 @@ const CHIP_74HC95 = {
     };
   },
 
-
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;
     const threshold = vcc * 0.5;
@@ -498,7 +495,6 @@ const CHIP_74HC374 = {
     return { drives, reg: 0, _lastClk: false };
   },
 
-
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;
     const th = vcc * 0.5;
@@ -544,7 +540,6 @@ const CHIP_74HC373 = {
     return { drives, reg: 0 };
   },
 
-
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;
     // Mid-rail for the HC part; TTL center for the '74ls373' alias.
@@ -582,7 +577,6 @@ const CHIP_74HC688 = {
   init() {
     return { drives: { pqb: { vTh: 5, rTh: R_OUT } } };
   },
-
 
   update(part, state, read) {
     const vcc = read('vcc') || 5.0;

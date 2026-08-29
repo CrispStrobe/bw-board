@@ -42,7 +42,6 @@ export function registerSensors() {
       };
     },
 
-
     update(part, state, read, tNs) {
       const vcc = read('vcc') || 5.0;
       const threshold = vcc * 0.5;

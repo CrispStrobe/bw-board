@@ -49,7 +49,6 @@ export function registerTier2Parts() {
             return { drives, _sel: -1 };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             // Mid-rail for HC; the 1.4 V TTL center for the HCT alias (E5.7).
@@ -78,7 +77,6 @@ export function registerTier2Parts() {
         init() {
             return { drives: {}, _cfg: '' };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -117,7 +115,6 @@ export function registerTier2Parts() {
         init() {
             return { drives: {}, _cfg: '' };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -169,7 +166,6 @@ export function registerTier2Parts() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -215,7 +211,6 @@ export function registerTier2Parts() {
                 _key: -1,
             };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;

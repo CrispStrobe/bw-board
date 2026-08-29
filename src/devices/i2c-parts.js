@@ -152,7 +152,6 @@ export function registerI2CParts() {
       return state;
     },
 
-
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
       const threshold = vcc * 0.5;
@@ -225,7 +224,6 @@ export function registerI2CParts() {
         _nibbleHigh: null, // waiting for second nibble
       };
     },
-
 
     // High-level verbs (boundary B setDeviceControl,
     // spec-updates/set-device-control.md). Writes the same `display` rows and

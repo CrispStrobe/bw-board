@@ -859,7 +859,6 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // this loop — they attach to parts of ANY kind, including ones the
         // solver has no model for (a machine's w65c22).
 
-
         case 'buzzer':
           stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId);
           break;

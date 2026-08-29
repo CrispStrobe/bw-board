@@ -108,7 +108,6 @@ export function registerMCP4725() {
       return state;
     },
 
-
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
       state._vcc = vcc;

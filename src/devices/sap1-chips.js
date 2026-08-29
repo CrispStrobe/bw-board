@@ -49,7 +49,6 @@ export function registerSAP1Chips() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -106,7 +105,6 @@ export function registerSAP1Chips() {
                 _lastClk: false,
             };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -190,7 +188,6 @@ export function registerSAP1Chips() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -264,7 +261,6 @@ export function registerSAP1Chips() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -324,7 +320,6 @@ export function registerSAP1Chips() {
             };
         },
 
-
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -366,7 +361,6 @@ export function registerSAP1Chips() {
                 _lastClk: [true, true], // idle high (falling edge trigger)
             };
         },
-
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
