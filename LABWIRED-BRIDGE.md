@@ -1,0 +1,222 @@
+# The board-manifest bridge — measured, then built
+
+STM32-PATH.md Phase 4 left two pieces open after the wasm spike passed:
+
+> the wasm-bindgen API surface → boundary-A adapter mapping, and their
+> board-manifest → our-netlist bridge
+
+The first landed on 2026-08-27 (`src/labwired-adapter.js`). This file is the
+measurement and the ruling behind the second, written before the code, against
+**labwired-core @ `41119903ced44a221a49aa0e8090ab012fbdba68`** (our fork's
+`main`, = upstream) and **this repo at `5f36dfa`**. Every number below was
+counted by running something, not recalled.
+
+## 0. The direction, settled first
+
+The plan's phrasing — "how their board manifests map onto our circuit model" —
+points the wrong way for the law this repo runs on.
+
+**ONE BOARD, ONE TRUTH.** The runner's board is the *designer's* board. A
+labwired board manifest imported *into* our circuit model would be a second
+drawing of the same bench that nothing keeps in step; the very first divergence
+would be invisible, because both halves would look healthy. So the bridge runs
+netlist → manifest, and the consequence is the rule that decides every row of
+the table in §3:
+
+> **THE PAD IS THE BOUNDARY.**
+> labwired owns the silicon side: registers, peripherals, the pad's direction
+> and drive. `board.js` owns the other side: the resistor, the LED's I–V curve,
+> the divider, the shift register, the rail.
+
+The manifest is therefore a **projection of the netlist onto that boundary**,
+not a translation of the circuit. It says which pads exist, which of them the
+board can drive, and what each is wired to — and it deliberately emits **no
+`external_devices`**, because a second model of one LED is exactly the
+disagreement the law exists to prevent.
+
+That single rule is also what makes the refusal ledger meaningful. An
+unrecognised part on an MCU net is *not* a refusal: a 74HC595 on PA0 needs
+nothing from labwired. What is refused is a pad whose behaviour the bridge
+cannot honestly carry.
+
+## 1. What a labwired system manifest can express
+
+`SystemManifest` (`crates/config/src/lib.rs:930`) has 14 fields. Counted:
+
+| field | what it is | usable here |
+| --- | --- | --- |
+| `name`, `chip`, `schema_version` | identity | yes |
+| `cpu_hz` | board clock override for the chip's default | yes — we emit 48 MHz |
+| `board_io` | `BoardIoBinding[]` — the pad boundary | **the bridge's output** |
+| `external_devices` | `ExternalDevice[]` — parts labwired models | **deliberately not emitted** |
+| `parts` | part packs (`labwired.part/v1`) carried in-manifest | not needed |
+| `peripherals` | extra peripherals beyond the chip descriptor | not needed |
+| `memory_overrides` | flash/RAM size overrides | not needed |
+| `motor_models`, `cosim_models` | typed plant models / co-simulation adapters | second-physics; refused by §0 |
+| `debug_uart` | which console the board's USB socket is wired to | F0 has one USART path |
+| `wifi_ap` | per-lab virtual access point | no radio on this chip |
+| `walk_deleted` | scheduler escape hatch | leave on auto-derive |
+
+A `BoardIoBinding` is
+`{id, kind, peripheral, pin, signal, active_high, i2c_address?, device_type?, channel?}`.
+`kind` has **seven** values (`BoardIoKind`): `led`, `button`, `adc_input`,
+`pwm_output`, `i2c_device`, `spi_device`, `uart_device`. `signal` has two:
+`input`, `output`.
+
+**Exactly one of those combinations changes the simulation.** `kind: button`
+with `signal: input` materialises a bus-resident `Button` whose level is applied
+through the owning GPIO's `set_gpio_input`
+(`crates/core/src/bus/from_config.rs:1031`, `attach_board_io_buttons`), and that
+contact is what `set_board_io_input` resolves against
+(`crates/wasm/src/inputs.rs:251`). Everything else is observational:
+
+- `led` / `pwm_output` → `read_gpio_output` (`crates/wasm/src/lib.rs:1341`)
+- `adc_input` → the ADC's `dr`, via `get_board_io_analog_states`
+- the bus kinds → typed state accessors, and never a boolean
+
+So an **output binding cannot contradict our board even in principle**. It only
+gives the pad a name that `get_board_io_states` reports under — which is why the
+bridge names output bindings with **our netlist part id**, so a consumer joins
+labwired's answer straight onto the circuit.
+
+`external_devices` is where labwired's real catalogue lives: **70 canonical
+`device_type` strings** plus **14 legacy aliases** (`peripherals/kit/registry.rs`
+`KITS` + `TYPE_ALIASES`), covering I²C/SPI/UART sensors, displays, motors,
+shift registers and analog sources. It is a good catalogue. We use none of it,
+by §0.
+
+## 2. What our circuit model is
+
+`registerAllDevices()` registers **211 part kinds** (`registeredKinds().length`,
+measured). A netlist is `{parts, nets}`:
+
+```
+parts: [{ id, kind, params, terminals? }]
+nets:  [{ id, terminals: [{ part, terminal }] }]
+```
+
+That is what `BoardImpl` takes and what the MNA solver solves. Note what the
+netlist does **not** carry: bw-circuit-ui's canonical loader rewrites every
+controller kind to the generic `mcu` before the netlist reaches the engine, so
+the netlist alone cannot say which silicon it is. The chip kind is a caller
+input (lite's device picker already knows it) — `buildLabwiredSystem({chipKind})`.
+
+## 3. The mapping table
+
+Classification walks **through** series elements (`resistor`, `fuse`,
+`inductor`, ≤3 hops) to the functional leaf. Stopping at the resistor would
+classify 160 of the corpus's MCU attachments as "a resistor" — true and useless.
+
+| our netlist, at an MCU pad | role | what the manifest gets | why |
+| --- | --- | --- | --- |
+| *(every header pin, unconditionally)* | — | `kind: button, signal: input, id: <header name>` | A pad's direction is a **runtime** property. A binding emitted only for pads that look like inputs today makes the pad undrivable the moment firmware changes MODER — silently, because `set_board_io_input` resolves ids and nothing else. This is the slice `labwired-adapter.js` already generated; it stays. |
+| `led`, `rgb_led`, `bargraph`, `sevenseg8`, `matrix*`, `piezo`, `buzzer`, `relay`, `dc_motor`, `servo`, `stepper`, `solenoid`, `light_bulb`, `optocoupler`, `tip120`, `npn`/`pnp`/`nmos`/`pmos`, `neopixel`, … | `indicator` | + `kind: led, signal: output, id: <our part id>` | Observational. `led` is the label labwired's vocabulary offers for "a pad drives something"; the engine reads `led` and `pwm_output` through the identical call. |
+| `button`, `switch`, `slide_switch`, `dip_switch*`, `reed_switch`, `tilt_sensor`, `touch_ttp223`, `keypad_4x4`, `74c922`, `pir`, `hall_digital`, … | `contact` | the injection binding, re-labelled with the contact's kind | A second `signal: input` binding on one pad attaches a **second** `Button`, and the second overwrites the first's level on every service. One pad, one contact. |
+| `potentiometer`, `ldr`, `ntc`, `tmp36`, `photodiode`, `phototransistor`, `joystick`, `soil_moisture`, `force_sensor`, `flex_sensor`, `hall_analog`, … | `analog` | + `kind: adc_input, signal: input` **and a refusal** | See §4. |
+| `shift_register`, `ultrasonic`, I²C/SPI parts, gates, anything unrecognised | `digital` | + an output binding naming the part | **Not a refusal.** The pad is bridged; the part is our board's business. |
+| `vcc`, `gnd`, `battery*`, regulators only | `rail` | nothing beyond the injection binding | Supply, not signal. |
+| nothing on the net | `floating` | injection binding only | |
+| a controller terminal **outside** the chip's header map that carries a signal | — | **`pin-unmapped` refusal, named** | Nothing on the heavy tier could reach it, and a silent drop is the bug. |
+| PWM-capable pads (PA6/PA7/PB1 on the F0) | *(no special kind)* | — | Whether a pad is driven by TIM3 or by BSRR is a **firmware** fact the netlist cannot see, and labwired reads `pwm_output` and `led` identically. Emitting `pwm_output` from a wiring guess would be a claim the manifest cannot back. |
+
+Board-level refusals: `chip-unmapped` (no heavy-tier descriptor for the board
+kind — only `stm32f030` today), `mcu-absent`, `mcu-ambiguous` (the heavy tier
+runs one core per manifest).
+
+## 4. The one thing the manifest cannot carry, and the fix
+
+An analog pad's level is a **voltage our board solves**. To run the heavy tier
+against the same circuit truth, that voltage has to reach labwired's ADC. It
+cannot, through the wasm boundary as it stands:
+
+- `WasmSimulator::set_adc_value(peripheral, value)`
+  (`crates/wasm/src/inputs.rs:309`) writes `adc.dr` directly and sets EOC. It
+  **names no channel**, so on a bench with two analog pads whichever conversion
+  runs next takes the last value written, whatever channel it selected.
+- The poke does not survive a conversion. `Adc::advance_conversion` rewrites
+  `dr` from the *selected* channel's injected value, and for a channel with
+  nothing injected it writes an **incrementing counter** ("visual feedback",
+  `crates/core/src/peripherals/adc.rs:291`).
+- `board_io kind: adc_input` is read-only — `get_board_io_analog_states` reports
+  `dr`; nothing sets it.
+
+**The core already has the right primitive.** `Adc::set_channel_input(channel,
+millivolts)` (`adc.rs:332`) exists, and the bus reaches it through
+`SystemBus::seed_adc_channel` (`bus/sim_inputs.rs`) whenever an `AnalogSource`
+kit is attached. It is simply not exported through `crates/wasm`. The clean fix
+is one wasm-bindgen method:
+
+```rust
+#[wasm_bindgen]
+pub fn set_adc_channel_millivolts(&mut self, peripheral: &str, channel: u8, mv: u16)
+    -> Result<(), JsValue>
+```
+
+routed through `seed_adc_channel` so it works for every ADC model, not just the
+STM32 one. Until that lands in our fork and a rebuilt artifact is published, an
+analog pad is **named** in the manifest and its injection is **refused**, rather
+than quietly reported as a boolean — which would be a lie about a mid-rail node,
+not a loss of precision.
+
+Two carriers were considered and rejected:
+
+- **Declare the pot as `external_devices: {type: potentiometer}`** and drive it
+  with `set_potentiometer(id, pct)`. The kit's math is
+  `mv = 3300 × pct/100`, so feeding it `pct = 100 × V_solved/3.3` *is* a pure
+  projection, not a second physics. But it hangs the analog path on a
+  hard-coded 3.3 V reference inside the kit and on the `Adc` layout the F0's
+  `stm32f0_adc` resolves to (the profile canonicalises to the generic `adc`,
+  default layout `Stm32F1` — the same shape of trap as the GPIO V1/V2 one that
+  cost a day). It buys nothing the one-line export above does not.
+- **Poke `dr` on every sync.** Racy by construction, per the second bullet
+  above.
+
+## 5. The census — measured over the shipped gallery
+
+`scripts/labwired-bridge-census.mjs`, run against sb3-creator
+`934f594e7da28a347f806a7f9ce2b7a699b57923` and bw-circuit-ui's canonical loader,
+over every shipped `circuit.stm32f030.json`:
+
+```
+benches: 85   loaded: 84   load failures: 1
+pad roles:     indicator=104 analog=31 contact=16 digital=8
+parts at pads: led=112 potentiometer=29 button=24 gnd=13 vcc=9 seven_segment=7
+               shift_register=6 npn=3 rgb_led=3 ldr=3 ultrasonic=3 piezo=2 neopixel=1
+refusals:      analog-injection-unavailable=31
+```
+
+- **60 of 84 benches bridge with a completely empty refusal ledger.**
+- **24 benches** carry **31** refusals — one per analog pad, and nothing else.
+- **Zero** `pin-unmapped`, `chip-unmapped`, `mcu-absent` or `mcu-ambiguous`
+  anywhere in the corpus. Every pad the gallery actually wires (`pa0` 59×,
+  `pa1` 45×, `pa2` 18×, `pa3`/`pa6` 9×, `pa4`/`pa5` 6×, `pb1` 5×, `pa7` 2×) is
+  inside the F0 header map, which is the same set the light tier offers — the
+  two tiers hand a project the same pins, so a design cannot silently lose I/O
+  by changing engine.
+
+`test/labwired-bridge.test.mjs` asserts all of that against
+`test/fixtures/labwired/f030-bench-netlists.json` — the engine-side netlists of
+those 84 benches, resolved once by the script and stamped with the sb3-creator
+commit, so the census runs in this repo with no gallery and no MPL-licensed
+loader in the dependency graph.
+
+### The one load failure, ledgered
+
+`disp-bargraph`'s F030 bench does not load at all: it wires `bar1` (a
+`bargraph`) by terminals `a`/`b`, and this engine's bargraph has
+`a0,k0 … a9,k9` since `3c7cbe8` ("A bargraph that never lit, and was not a
+diode"). The bench predates that fix, so `Circuit.fromJSON` rejects the netlist
+and returns an empty board. **Not a bridge defect and not this lane's to fix** —
+it is a stale corpus file in sb3-creator that needs regenerating against current
+bw-board. Recorded here because a silently skipped bench is how a corpus rots.
+
+## 6. What is still open
+
+1. **The wasm ADC channel export** (§4) — one method in our fork, a rebuilt
+   artifact, and 24 benches move from "named refusal" to "carried".
+2. **Lite wiring** — deliberately not started; see the lane's report.
+3. **Chips beyond the F0.** `LABWIRED_CHIPS` in `src/labwired-chips.js` is the
+   one place a new one is added: a chip YAML, a header pin map that MATCHES the
+   light tier's, an ADC channel map, and the board kinds our registry uses for
+   it. The F103 is the obvious next entry and needs a GPIO **v1** profile, not
+   `stm32v2`.

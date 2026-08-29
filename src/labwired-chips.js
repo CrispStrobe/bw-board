@@ -222,10 +222,50 @@ export const STM32F0_LABWIRED_PINS = (() => {
   return defs;
 })();
 
+/**
+ * ADC channel per header pin. RM0360: ADC_IN`n` is the PA`n` pad for n = 0..7,
+ * which is the same rule `stm32-adapter.js` uses on the light tier
+ * (`onAnalogRead(ch) → board.readAnalog('PA'+ch)`). PA9/PA10/PB1 have no
+ * channel on this part's cap, so they are absent rather than mapped to 0 —
+ * an absent entry is what makes the bridge call an analog attachment on them
+ * a refusal instead of silently reading channel 0.
+ */
+export const STM32F0_ADC_CHANNELS = (() => {
+  const defs = {};
+  for (let bit = 0; bit <= 7; bit++) defs[`PA${bit}`] = bit;
+  return defs;
+})();
+
+/**
+ * Pads the codegen can drive from a timer (TIM3 CH1/CH2/CH4 via AF1).
+ *
+ * Recorded for the bridge's benefit and DELIBERATELY not used to pick a
+ * `board_io` kind: whether a pad is driven by a timer or by BSRR is a firmware
+ * fact the netlist cannot see, and labwired reads `kind: pwm_output` and
+ * `kind: led` through the identical `read_gpio_output` call anyway. Emitting
+ * `pwm_output` from a wiring guess would be a claim the manifest cannot back.
+ */
+export const STM32F0_PWM_PINS = ['PA6', 'PA7', 'PB1'];
+
 /** Everything a caller needs to stand up the F0 on the heavy tier. */
 export const STM32F0 = {
   chipYaml: STM32F0_CHIP_YAML,
   pins: STM32F0_LABWIRED_PINS,
+  adcChannels: STM32F0_ADC_CHANNELS,
+  pwmPins: STM32F0_PWM_PINS,
   clockHz: 48_000_000,
   name: 'bw-stm32f0',
+  /** The ADC peripheral id in the chip YAML above (`set_adc_value`'s target). */
+  adcPeripheral: 'adc',
+  /**
+   * Our engine's board-part kinds that ARE this chip. `board-kinds.js`
+   * registers `stm32f030`; bw-circuit-ui's canonical loader rewrites every
+   * controller kind to the generic `mcu` before the netlist reaches the engine,
+   * so the netlist alone cannot say which silicon it is — the caller passes the
+   * kind, exactly as lite's device picker already knows it.
+   */
+  boardKinds: ['stm32f030'],
 };
+
+/** Board-part kind → heavy-tier chip. The one place a new chip gets added. */
+export const LABWIRED_CHIPS = { stm32f030: STM32F0 };
