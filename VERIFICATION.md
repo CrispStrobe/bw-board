@@ -101,12 +101,13 @@ These are limitations, stated so nobody discovers them on a bench.
 | **Thermal runaway** | No thermal model for transistors or power devices | A transistor that would destroy itself on a bench runs fine in sim |
 | **Capacitor ESR** | Ideal capacitors (no series resistance) | Affects switching regulator behavior and decoupling |
 | **Inductor core saturation** | Linear inductance only | Real inductors saturate and the inductance collapses |
-| **Op-amp slew rate** | Op-amp output changes instantly within rail limits | Fast signals are perfectly reproduced (unrealistically) |
+| **Op-amp slew rate** | The DEFAULT ideal op-amp changes instantly within rail limits; `params.model: 'macro'` (spec-updates/opamp-macromodel.md) does model GBW and slew | Fast signals are perfectly reproduced unless the bench opts in |
+| **Digital input loading** | Logic and high-Z analog inputs draw NOTHING — no input resistance, no leakage, no pin capacitance (spec-updates/ideal-high-z-inputs.md). 178 declarations claimed a 1 MΩ load and none of them ever stamped; the ideal input was adjudicated the right teaching-tier model rather than the number being repaired | A pull-up feeding a logic input reads the full rail. A real 74HC input's ±1 µA leakage, and the divider error it causes with a multi-megohm pull-up, are invisible |
 | **Power dissipation / magic smoke** | No thermal limits | A 1/4W resistor dissipating 10W is fine in sim |
 | **Propagation delay in logic gates** | Gates respond in zero time | Glitches from race conditions are invisible |
 | **MOSFET gate charge** | Instant switching | Real gate drive speed not modelled |
 | **Diode reverse recovery** | Instant off | Switching losses invisible |
-| **Mutual inductance / transformers** | Not modelled | No coupled coils or transformers |
+| **Transmission-line and core-saturation effects in transformers** | Coupled inductors and transformers ARE modelled (E3.4, spec-updates/coupled-inductors.md); leakage beyond the coupling coefficient and core saturation are not | An ideal-enough transformer, but not a real core |
 | **Transmission line effects** | Not modelled | No reflections or impedance matching |
 
 ## The principle
