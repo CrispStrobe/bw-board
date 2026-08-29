@@ -30,6 +30,17 @@ invariance / solver-owned motor winding / C1 PWL knee (2ac81e6), walker
 coverage fall-through (0a3e9c0), shared-terminal net coalescing
 (2235de5).
 
+ALSO LANDED (2026-08-29): the conductance no-op class
+(`spec-updates/ideal-high-z-inputs.md`, f20ee99) — 178 declarations
+across 41 files that could never stamp, because `ctx.conductance(t,
+null, g)` fails `stampTwoTerminal`'s air-leg guard. 176 adjudicated
+INTENDED-IDEAL and deleted (the ideal high-Z input is the model; 1 MΩ
+is not a CMOS input, and GMIN already keeps every pin a real node), 2
+implemented as MISSING-PHYSICS (the MAX232 receiver's datasheet 5 kΩ),
+3 more named and deferred. Ratcheted at 0 by
+`test/conductance-noop-ratchet.test.mjs`, mutation-proved. And E2.1a,
+the AC operating-region follow-up (`ac-operating-region.md`, 33b9fe9).
+
 OWNER RULINGS (2026-08-24), closing the open questions:
 - E1.3b is RULED: PWL stays the default, Shockley stays opt-in. The
   curriculum operates below the ~8 mA crossover, where PWL sits closer
@@ -170,6 +181,17 @@ time-domain path remains available as a cross-check oracle because the two must 
 for linear circuits. Depends on E1.1 (complex solve reuses the sparse kernel).
 This is the single most visible capability gap against the commercial field; it also
 makes op-amp frequency response meaningful once E3.1 lands.
+
+**E2.1a operating-region awareness — DONE.** `spec-updates/ac-operating-region.md`.
+The AC op-amp row used to linearize about the DC bias while ignoring what that
+bias WAS, so a stage at a rail reported |H| = 10 where the truth is 0, and a
+current-limited follower reported 0.99999900. `solveMNA` now returns the
+`opampRegions` it settles, `acSweep` takes it, and the row follows the region:
+railed pins the output VOLTAGE, current-limited pins the branch CURRENT (`i = 0`),
+which are different rows on any load that is not a resistor to AC ground. Each
+sweep point carries `outOfLinear` naming the stage and its region, so a correct
+zero is not a mystery. Closes the limitation `spec-updates/opamp-output-limit.md`
+filed.
 
 ### E2.2 Temperature as a bench parameter — DONE
 `setTemperature(celsius)` on the Board (default 25). Consumers: diode/LED Vf
@@ -422,7 +444,12 @@ inversion and RS-232 thresholds; the four charge-pump capacitor pins
 load as 1 µF each so the canonical wiring draws correctly. The serial
 DATA path already exists (ACIA onTx hooks); this part makes the drawn
 level-shifting honest. Oracle: TTL 5 V in → RS-232 ≈ −8 V out and back.
-Not gated.
+Not gated. **Amended 2026-08-29** (`spec-updates/ideal-high-z-inputs.md`): the
+receiver's datasheet 5 kΩ input resistance was declared with no second terminal
+and so never stamped, which left the drivers reporting an unloaded ±7.976 V —
+a swing the part does not have, since ±8 V behind 300 Ω is calibrated for the
+datasheet's 3 kΩ test load. Stamped against the part's own `gnd`, the loopback
+bench reads the hand value −8000/1063 = −7.525870178 V.
 
 ### E5.11 Bussed resistor network (SIP) — DONE (engine; sidecar pending)
 One part, params {pins, ohms, topology: 'bussed' | 'isolated'}: pin 1
