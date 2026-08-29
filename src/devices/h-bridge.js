@@ -39,12 +39,9 @@ export function registerHBridge() {
       };
     },
 
-    stamp(ctx, part, state) {
-      // The control pins (en1/in1/in2/en2/in3/in4) draw nothing: the
-      // "input impedance" declared here named no second terminal and never
-      // stamped (spec-updates/ideal-high-z-inputs.md).
-    },
-
+    // The control pins (en1/in1/in2/en2/in3/in4) draw nothing, so there is no
+    // stamp: the "input impedance" declared here named no second terminal and
+    // never stamped (spec-updates/ideal-high-z-inputs.md).
     update(part, state, read) {
       const vcc = read('vcc');
       const gnd = read('gnd');

@@ -209,11 +209,11 @@ export function registerRetroDips() {
     registerDevice('crystal', {
         terminals: ['a', 'b'],
         init() { return { drives: {} }; },
-        stamp(ctx) {
-            // No DC path a-to-b. The tiny conductance to ground on each
-            // side stands in for the shunt C0 and keeps each pin a real
-            // node rather than a floating one the solver has to guess at.
-        },
+        // No DC path a-to-b, and no stamp: the two `1 / R_OPEN` legs that
+        // used to be declared here were 1e-12 S, which is GMIN to the last
+        // digit, and solveMNA already adds that to every node. So the shunt
+        // C0 stand-in is real — it is just the solver's, not this model's
+        // (spec-updates/ideal-high-z-inputs.md).
         update() { return false; },
     });
 }

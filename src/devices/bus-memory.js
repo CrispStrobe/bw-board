@@ -110,13 +110,10 @@ function parallelMemory(selPin, terminals, fill, eeprom) {
             };
         },
 
-        stamp(ctx) {
-            // Address and control pins are CMOS inputs: they draw nothing,
-            // which is now what the model actually does. The 1 MOhm
-            // declarations that used to sit here named no second terminal and
-            // never stamped (spec-updates/ideal-high-z-inputs.md).
-        },
-
+        // Address and control pins are CMOS inputs: they draw nothing, which
+        // is now what the model actually does — no stamp. The 1 MOhm
+        // declarations that used to sit here named no second terminal and
+        // never stamped (spec-updates/ideal-high-z-inputs.md).
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;

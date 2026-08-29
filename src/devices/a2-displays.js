@@ -117,10 +117,8 @@ export function registerSevenseg8() {
       };
     },
 
-    stamp(ctx) {
-      // All inputs: high impedance CMOS
-    },
-
+    // All inputs are high-impedance CMOS: no stamp at all
+    // (spec-updates/ideal-high-z-inputs.md).
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
       const th = vcc * 0.5;

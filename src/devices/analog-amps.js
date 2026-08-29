@@ -144,13 +144,10 @@ export function registerAnalogAmps() {
             return { drives, level: 0, bar: false };
         },
 
-        stamp(ctx) {
-            // The SIG input is buffered on the real part — near-zero load,
-            // which is exactly what an unstamped pin is. The 10 MOhm declared
-            // here named no second terminal and never ran
-            // (spec-updates/ideal-high-z-inputs.md).
-        },
-
+        // The SIG input is buffered on the real part — near-zero load, which
+        // is exactly what an unstamped pin is. The 10 MOhm declared here named
+        // no second terminal and never ran, so there is no stamp
+        // (spec-updates/ideal-high-z-inputs.md).
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const full = part.params?.fullScale ?? 1.25;

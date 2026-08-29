@@ -35,12 +35,10 @@ export function registerServo() {
       };
     },
 
-    stamp(ctx, part, state) {
-      // Signal pin: an ideal high-impedance input, which is what this model
-      // computes — the 1 MOhm declared here named no second terminal and
-      // never stamped (spec-updates/ideal-high-z-inputs.md).
-      // VCC/GND: power draw not modeled (would need current spec)
-    },
+    // No stamp. Signal pin: an ideal high-impedance input, which is what this
+    // model computes — the 1 MOhm declared here named no second terminal and
+    // never stamped (spec-updates/ideal-high-z-inputs.md).
+    // VCC/GND: power draw not modeled (would need current spec)
 
     // Boundary B setDeviceControl (spec-updates/set-device-control.md):
     // 'angle' sets the TARGET; the slew limit stays the model's honesty —
