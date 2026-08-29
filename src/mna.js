@@ -720,7 +720,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // Diode/LED/transistor operating points for Newton–Raphson
   /** @type {Map<string, number>} part id → voltage across junction */
   const diodeVoltages = new Map();
-  // Op-amp output region: 'linear' | 'high' | 'low' (rail saturation).
+  // Op-amp output region: 'linear' | 'high' | 'low' (rail saturation) |
+  // 'ilim+' | 'ilim-' (output short-circuit current limit — see
+  // spec-updates/opamp-output-limit.md).
   /** @type {Map<string, string>} */
   const opampRegions = new Map();
   // BJT operating regions: 'active' (Ic = beta*Ib VCCS) or 'saturated'
@@ -739,8 +741,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
     if (part.kind === 'vcvs' && (part.params?.railLow !== undefined
-        || part.params?.railHigh !== undefined)) {
-      opampRegions.set(part.id, 'linear'); // shares the op-amp rail FSM
+        || part.params?.railHigh !== undefined
+        || outputCurrentLimit(part) > 0)) {
+      opampRegions.set(part.id, 'linear'); // shares the op-amp rail/ilim FSM
     }
     if (part.kind === 'vccs' && part.params?.iMax > 0) {
       vccsClamps.set(part.id, 'linear');
@@ -1221,6 +1224,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vP = idxP !== undefined ? solution[idxP] : (netP === groundNetId ? 0 : 0);
       const vN = idxN !== undefined ? solution[idxN] : (netN === groundNetId ? 0 : 0);
       const vIdeal = gain * (vP - vN);
+      // The output the row constrains: one node for an op-amp, the
+      // difference of two for a vcvs (which is what its row holds).
+      const nodeV = (terminal) => {
+        const n = findNet(nets, part.id, terminal);
+        const i = n ? nodeIndex.get(n) : undefined;
+        return i !== undefined ? solution[i] : 0;
+      };
       // Rails scale with source stepping — a full-height rail against
       // tenth-height sources would flip regions against the wrong bound.
       const rHi = railHigh * srcScale;
@@ -1234,6 +1244,35 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         if (vIdeal < rHi) next = 'linear';
       } else if (region === 'low') {
         if (vIdeal > rLo) next = 'linear';
+      }
+      // Output short-circuit current limit (spec-updates/opamp-output-limit.md).
+      // The branch variable is positive INTO the output pin, so i > 0 is the
+      // part SINKING and i < 0 is it SOURCING. The limit scales with source
+      // stepping for the same reason the rails do: in a linear network every
+      // current scales with the sources, and a full-height limit against
+      // tenth-height sources would make the continuation cross regions that
+      // the full-height solve never visits.
+      const iMax = outputCurrentLimit(part) * srcScale;
+      if (iMax > 0) {
+        // The commanded output, rails included — what the part is TRYING to
+        // hold. In limit it cannot, and the sign of the miss says whether the
+        // limit still binds.
+        const vTarget = Math.min(rHi, Math.max(rLo, vIdeal));
+        const vOut = part.kind === 'opamp'
+          ? nodeV('out') : nodeV('outp') - nodeV('outn');
+        const iBranch = solution[nodeCount + /** @type {number} */ (vsIndex.get(part.id))];
+        if (next === region && (region === 'linear' || region === 'high' || region === 'low')) {
+          // Enter only from a region the rail FSM left alone this pass, so
+          // one iteration never changes two things about the same part.
+          if (iBranch > iMax) next = 'ilim+';
+          else if (iBranch < -iMax) next = 'ilim-';
+        } else if (region === 'ilim+') {
+          // Sinking flat out and STILL not down to target: stay. It leaves
+          // the moment the output is at or below what it is aiming for.
+          if (vOut <= vTarget) next = 'linear';
+        } else if (region === 'ilim-') {
+          if (vOut >= vTarget) next = 'linear';
+        }
       }
       if (next !== region) {
         opampRegions.set(part.id, next);
@@ -2659,6 +2698,13 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
  * railed op-amp whose input difference reverses flips back. A real op-amp
  * cannot output 900 V, and a model that can teaches the wrong electronics.
  *
+ * Output limiting (spec-updates/opamp-output-limit.md): `rout` puts the ideal
+ * source behind a finite output resistance, and `iShort` (default 40 mA, the
+ * LM358/TL07x-class datasheet figure) gives the output a short-circuit current
+ * limit. In the ilim± regions the row stops constraining a voltage and
+ * constrains the branch CURRENT instead, which is what a real output stage in
+ * current limit does: the loop is lost and the output collapses to i·Rload.
+ *
  * Regression note: the previous implementation allocated a source row it never
  * stamped — a guaranteed-singular matrix, silently caught, returning all-zero
  * voltages for ANY circuit containing an op-amp.
@@ -2688,17 +2734,49 @@ function stampOpamp(A, b, part, nets, nodeIndex, groundNetId, vsIndex, opampRegi
   A.set(idxO, row, 1);
 
   const region = opampRegions.get(part.id) ?? 'linear';
+  if (region === 'ilim+' || region === 'ilim-') {
+    // Output current limit: the row constrains the BRANCH CURRENT, not a
+    // voltage. i is positive INTO the output pin, so ilim+ is the part
+    // sinking its full short-circuit current and ilim− is it sourcing.
+    const iMax = outputCurrentLimit(part) * srcScale;
+    A.set(row, row, 1);
+    b[row] = region === 'ilim+' ? iMax : -iMax;
+    return;
+  }
+  // Finite output resistance: the ideal source sits behind rout, and the
+  // branch variable is the current into the pin, so V(out) = Videal + rout·i.
+  // rout = 0 (the default) reduces this to the ideal row exactly.
+  const rout = /** @type {number} */ (part.params.rout ?? 0);
   if (region === 'linear') {
-    // V(out) − gain·(V(inp) − V(inn)) = 0
+    // V(out) − rout·i − gain·(V(inp) − V(inn)) = 0
     A.set(row, idxO, 1);
+    if (rout !== 0) A.add(row, row, -rout);
     if (idxP !== undefined) A.add(row, idxP, -gain);
     if (idxN !== undefined) A.add(row, idxN, gain);
     b[row] = 0;
   } else {
-    // Saturated at a rail: V(out) = rail
+    // Saturated at a rail: V(out) − rout·i = rail
     A.set(row, idxO, 1);
+    if (rout !== 0) A.add(row, row, -rout);
     b[row] = region === 'high' ? railHigh : railLow;
   }
+}
+
+/**
+ * Output short-circuit current limit, in amps, for an op-amp or a railed
+ * vcvs. An explicit `params.iShort` wins (0 or negative disables the limit
+ * entirely — the ideal source of before); an op-amp that declares nothing
+ * gets the LM358/TL07x-class datasheet figure, because an op-amp that can
+ * hold 2.5 V into 1 Ω teaches the wrong electronics. A vcvs is a modelling
+ * primitive and stays ideal unless asked.
+ */
+export const OPAMP_ISHORT_DEFAULT = 0.040;
+function outputCurrentLimit(part) {
+  const declared = part.params?.iShort;
+  if (declared !== undefined && declared !== null) {
+    return typeof declared === 'number' && declared > 0 ? declared : 0;
+  }
+  return part.kind === 'opamp' ? OPAMP_ISHORT_DEFAULT : 0;
 }
 
 /**
@@ -2719,9 +2797,20 @@ function stampVCVS(A, b, part, nets, nodeIndex, vsIndex, opampRegions, srcScale 
   };
   const iOp = idx('outp');
   const iOn = idx('outn');
-  if (iOp !== undefined) { A.add(iOp, row, 1); A.add(row, iOp, 1); }
-  if (iOn !== undefined) { A.add(iOn, row, -1); A.add(row, iOn, -1); }
+  if (iOp !== undefined) A.add(iOp, row, 1);
+  if (iOn !== undefined) A.add(iOn, row, -1);
   const region = opampRegions.get(part.id) ?? 'linear';
+  if (region === 'ilim+' || region === 'ilim-') {
+    // Same contract as the op-amp: the row holds the branch current.
+    const iMax = outputCurrentLimit(part) * srcScale;
+    A.set(row, row, 1);
+    b[row] = region === 'ilim+' ? iMax : -iMax;
+    return;
+  }
+  if (iOp !== undefined) A.add(row, iOp, 1);
+  if (iOn !== undefined) A.add(row, iOn, -1);
+  const rout = /** @type {number} */ (part.params.rout ?? 0);
+  if (rout !== 0) A.add(row, row, -rout);
   if (region === 'linear') {
     const iIp = idx('inp');
     const iIn = idx('inn');

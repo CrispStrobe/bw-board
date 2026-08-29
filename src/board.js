@@ -19,7 +19,7 @@
 /** @typedef {import('./types.js').TheveninSource} TheveninSource */
 
 import { pinThevenin } from './pin-model.js';
-import { solveMNA } from './mna.js';
+import { solveMNA, OPAMP_ISHORT_DEFAULT } from './mna.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
@@ -388,7 +388,11 @@ export class BoardImpl {
         { id: ids.c1, kind: 'capacitor', params: { farads: cint }, terminals: ['a', 'b'] },
         { id: ids.rp, kind: 'resistor', params: { ohms: a0 / gm }, terminals: ['a', 'b'] },
         { id: ids.e1, kind: 'vcvs',
-          params: { gain: 1, railLow: P.railLow ?? 0, railHigh: P.railHigh ?? vcc },
+          // The buffer carries the macro op-amp's rails AND its output
+          // current limit, so `model: 'macro'` and the ideal row answer the
+          // same question the same way (spec-updates/opamp-output-limit.md).
+          params: { gain: 1, railLow: P.railLow ?? 0, railHigh: P.railHigh ?? vcc,
+            iShort: P.iShort ?? OPAMP_ISHORT_DEFAULT },
           terminals: ['outp', 'outn', 'inp', 'inn'] },
         { id: ids.ro, kind: 'resistor', params: { ohms: rout }, terminals: ['a', 'b'] },
       );
