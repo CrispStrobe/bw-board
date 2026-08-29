@@ -569,6 +569,13 @@ export class BoardImpl {
     this._solveParts = macroView.parts;
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;
+    // A new netlist is a new bench: every reactive part starts at rest.
+    // The clear has to come BEFORE the seeding below, not after it — it
+    // used to run after, which silently undid the whole seeding pass and
+    // left every HIDDEN reactive part (motor windings, macromodel poles)
+    // absent from capVoltages, because the public-parts loop further down
+    // re-seeded only what the user drew.
+    this.capVoltages.clear();
     for (const p of this._solveParts) {
       if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
         this.inductorCurrents.set(p.id, 0);
@@ -582,7 +589,6 @@ export class BoardImpl {
     }
     this.ledHistory.clear();
     this.buzzerEdges.clear();
-    this.capVoltages.clear();
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
 
@@ -2515,6 +2521,21 @@ export class BoardImpl {
     this.controls = new Map(snap.controls);
     this.capVoltages = new Map(snap.capVoltages);
     this.inductorCurrents = new Map(snap.inductorCurrents ?? []);
+    // A snapshot older than a part carries no state for it, and the designer
+    // restores exactly such a snapshot after every edit: `Circuit._syncNetlist`
+    // snapshots, rebuilds the board, and restores — so a capacitor added since
+    // the snapshot came back UNSEEDED. That is what made a freshly loaded
+    // `43-rc-timing` read 5.0000 V on a capacitor getCapVoltage held at 0
+    // (D23). A reactive part the snapshot never saw starts where a new one
+    // does: uncharged, at rest.
+    for (const p of (this._solveParts ?? this.parts)) {
+      if (p.kind === 'capacitor' && !this.capVoltages.has(p.id)) {
+        this.capVoltages.set(p.id, 0);
+      }
+      if (p.kind === 'inductor' && !this.inductorCurrents.has(p.id)) {
+        this.inductorCurrents.set(p.id, 0);
+      }
+    }
     // Trapezoidal history is NOT snapshotted: _solve() below invalidates
     // it, so the first step after a restore re-seeds with BE — cleared
     // here only so stale values never look meaningful in a debugger.
@@ -3418,17 +3439,56 @@ export class BoardImpl {
       }
     }
 
-    // Override net voltages for capacitor nodes with their actual charge state.
-    // The static solve gives the long-term target voltage; the cap's current
-    // charge may be different (it hasn't reached steady state yet).
+    // Override net voltages for capacitor nodes with their actual charge
+    // state. The walker's answer above is the LONG-TERM one — it has no
+    // vocabulary for a capacitor, so it solved the network as if the part
+    // were an open circuit, which is the t = ∞ operating point. The stored
+    // charge is what the bench is at NOW.
+    //
+    // Three rules, and defect D20's sibling D23 is the reason all three are
+    // written out (docs/WAVE-OPEN-DEFECTS.md). Before, this loop skipped any
+    // capacitor with no entry in capVoltages and only ever moved the `a`
+    // side:
+    //
+    //  - An UNSEEDED capacitor is uncharged, not absent. `restore()` used to
+    //    replace capVoltages wholesale with a snapshot that predated the
+    //    part, and the walker then answered with the open-circuit operating
+    //    point: `43-rc-timing` read 5.0000 V on a capacitor the engine's own
+    //    getCapVoltage held at 0, on the very bench whose lesson asks for the
+    //    reading "at t = 0".
+    //  - An IDEAL source wins. A decoupling capacitor across VCC/GND has a
+    //    zero-impedance source on both sides, so it charges in τ = RC = 0 —
+    //    exactly the rule _integrateCapacitors already applies at every later
+    //    step, and exactly what the MNA path answers on the same bench. The
+    //    old blind override pinned the VCC RAIL ITSELF to the cap's 0 V at
+    //    the first solve, while every net resolved FROM that rail kept 5 V.
+    //  - The free side is the one that moves. If `a` is the rail and `b` is
+    //    the floating plate, `b` is what the charge determines.
+    const railHeld = (netId) => {
+      if (!netId) return false;
+      const net = this.netMap.get(netId);
+      if (!net) return false;
+      return net.terminals.some((t) => {
+        const p = this.partMap.get(t.part);
+        return p && (p.kind === 'vcc' || p.kind === 'gnd');
+      });
+    };
     for (const part of this.parts) {
       if (part.kind !== 'capacitor') continue;
-      const capV = this.capVoltages.get(part.id);
-      if (capV === undefined) continue;
       const netA = this._netForTerminal(part.id, 'a');
       const netB = this._netForTerminal(part.id, 'b');
-      if (netA) {
-        const vB = netB ? (this.nodeVoltages.get(netB) ?? 0) : 0;
+      if (!netA && !netB) continue;
+      const capV = this.capVoltages.get(part.id) ?? 0;
+      const vA = netA ? (this.nodeVoltages.get(netA) ?? 0) : 0;
+      const vB = netB ? (this.nodeVoltages.get(netB) ?? 0) : 0;
+      const aPinned = railHeld(netA);
+      const bPinned = railHeld(netB);
+      if (aPinned && bPinned) {
+        // Instant charge: the network decides, and the cap follows it.
+        this.capVoltages.set(part.id, vA - vB);
+      } else if (aPinned && netB) {
+        this.nodeVoltages.set(netB, vA - capV);
+      } else if (netA) {
         this.nodeVoltages.set(netA, vB + capV);
       }
     }
