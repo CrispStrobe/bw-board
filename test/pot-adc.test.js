@@ -134,3 +134,49 @@ describe('scripted trace — pot sweep', () => {
     assert.equal(allFailures.length, 0, `${allFailures.length} assertion(s) failed`);
   });
 });
+
+// The AUTHORED position is where the example's trimmer was left, and it must
+// answer the same in both solvers. `stampPotentiometer` in mna.js has always
+// honoured `params.position` and says why in its own comment ("the LCD
+// contrast pot defaulted to a washed-out 0.25 contrast because every pot woke
+// at 0.5 regardless of wiring"). The closed-form walker fell back to a bare
+// 0.5 and ignored it, so the SAME bench with the SAME untouched control read
+// 2.5000 V or 1.2500 V depending only on which solver `_needsMNA` picked —
+// found 2026-08-29 while writing the D22 noise design, which has to inject at
+// both call sites for exactly this reason.
+describe('potentiometer authored position', () => {
+  const net = (id, ...ts) => ({ id, terminals: ts.map(([part, terminal]) => ({ part, terminal })) });
+
+  /** `mna` picks a vsource (routes to MNA) or a vcc symbol (the walker). */
+  function wiperVolts(mna) {
+    const top = mna
+      ? { id: 'v1', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] }
+      : { id: 'vcc1', kind: 'vcc', params: {}, terminals: ['vcc'] };
+    const board = new BoardImpl(5.0);
+    board.setNetlist([
+      { id: 'gnd1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'P1', kind: 'potentiometer', params: { ohms: 10000, position: 0.25 },
+        terminals: ['a', 'wiper', 'b'] },
+      { id: 'mcu1', kind: 'mcu', params: {}, terminals: ['a0'] },
+      top,
+    ], [
+      net('ntop', [top.id, mna ? 'pos' : 'vcc'], ['P1', 'a']),
+      net('ngnd', ['gnd1', 'gnd'], ['P1', 'b'], ...(mna ? [['v1', 'neg']] : [])),
+      net('nw', ['P1', 'wiper'], ['mcu1', 'a0']),
+    ]);
+    board.setPin('a0', 'input', false);
+    board.advanceTo(1n);
+    return board.nodeVoltage('nw');
+  }
+
+  it('an untouched control falls back to params.position in BOTH solvers', () => {
+    // 5 V x 0.25 = 1.25 V. The walker answered 2.5000 V until this landed.
+    // MNA carries gmin on every node, so it lands 2.3e-9 short of the exact
+    // divider; the walker is closed-form and exact. 1e-6 covers the gap
+    // without hiding the 1.25 V vs 2.50 V the defect was.
+    assert.ok(Math.abs(wiperVolts(true) - 1.25) < 1e-6, `MNA: ${wiperVolts(true)}`);
+    assert.ok(Math.abs(wiperVolts(false) - 1.25) < 1e-12, `walker: ${wiperVolts(false)}`);
+    assert.ok(Math.abs(wiperVolts(true) - wiperVolts(false)) < 1e-6,
+      'and the two solvers agree on the same bench');
+  });
+});

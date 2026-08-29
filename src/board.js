@@ -3740,7 +3740,16 @@ export class BoardImpl {
    * @param {Part} pot
    */
   _solvePot(pot) {
-    const position = this.controls.get(pot.id) ?? 0.5;
+    // The authored `params.position` is the fallback, NOT a bare 0.5 — the
+    // same rule stampPotentiometer states: "params.position is the AUTHORED
+    // default — where the example's trimmer was left. The user's control
+    // always wins once touched; mid-travel remains the fallback." The walker
+    // ignored it, so a bench with an authored position and an untouched
+    // control had TWO answers depending only on whether _needsMNA routed it
+    // to the other solver: measured 2.5000 V here against MNA's 1.2500 V on
+    // the same 0.25-position pot with an unloaded wiper.
+    const authored = Number.isFinite(pot.params?.position) ? pot.params.position : 0.5;
+    const position = this.controls.get(pot.id) ?? authored;
     // Find the nets connected to terminals a and b
     const netA = this._netForTerminal(pot.id, 'a');
     const netB = this._netForTerminal(pot.id, 'b');
