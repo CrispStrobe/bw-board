@@ -47,6 +47,28 @@ OPEN after the rulings: E3.2/E3.3 (deferred by ruling), E3.5b cccs/ccvs (deferre
 spec-updates/controlled-sources.md until the SPICE importer consumes
 them), AY 8910/8913 pin surfaces (when a board needs them).
 
+ADDED 2026-08-29 — the lite defect wave D18/D20/D23 (+D22 design), landed
+as `999eb66..3e58fd7`:
+- **D18** — the `lm358` device model is FIXED, not retired. E3.1 above says
+  the macromodel "also retires the damped-integrator lm358 device model";
+  it did not, and the model was still halting on a 1 mV output step, so a
+  ×46.4545 stage realised 31.04. It is now a secant iteration on the input
+  error and realises the design gain at every input. Retiring it in favour
+  of a solver `opamp` parameterisation remains open and is now OPTIONAL
+  rather than corrective.
+- **D20** — `spec-updates/opamp-output-limit.md`: the solver op-amp gains
+  `rout` (default 0) and `iShort` (default 40 mA), the latter as two new
+  regions on the existing rail FSM. This is the E3.1 output slice; GBW and
+  slew stay where E3.1 put them, behind `model: 'macro'`.
+- **D23** — the closed-form walker's first-solve capacitor semantics now
+  match the MNA path's (stored state honoured, unseeded = uncharged, an
+  ideal source on both plates wins).
+- **D22** — `spec-updates/seeded-measurement-noise.md`, DESIGN ONLY. The
+  engine half and an example opting in must land together.
+Corpus impact of the whole wave, measured across all 310 sb3-creator
+benches: ONE moved value (76-multimeter's LM358 stage — the defect), zero
+EXPECTED-claim verdicts changed.
+
 ---
 
 ## E0 — Correctness fixes in the current engine (days)

@@ -153,3 +153,29 @@ describe('op-amp output limiting stays deterministic', () => {
     assert.equal(board.nodeVoltage('n_out'), before);
   });
 });
+
+describe('rout in the AC small-signal stamp', () => {
+  it('the AC row carries rout too, so the parameter does not lie', () => {
+    // src/ac.js builds its own small-signal stamps. A parameter the DC row
+    // honours and the AC row drops is the two-truths shape this engine keeps
+    // paying for, so the AC op-amp/vcvs rows carry rout as well.
+    //
+    // Open loop, gain 1, rout 100 Ω into 900 Ω: |H| = 900/1000 = 0.900.
+    const bench = (rout) => {
+      const board = new BoardImpl(5.0);
+      board.setNetlist([GND,
+        { id: 'FG', kind: 'vsource', params: { volts: 2.5 }, terminals: ['pos', 'neg'] },
+        { id: 'U1', kind: 'opamp', params: { gain: 1, rout, railHigh: 10, iShort: 0 },
+          terminals: ['inp', 'inn', 'out'] },
+        R('RL', 900)], [
+        net('n_in', ['FG', 'pos'], ['U1', 'inp']),
+        net('n_out', ['U1', 'out'], ['RL', 'a']),
+        net('n_gnd', ['G1', 'gnd'], ['FG', 'neg'], ['RL', 'b'], ['U1', 'inn']),
+      ]);
+      const rows = board.runAc({ sourceId: 'FG', from: 1e3, to: 1e4, pointsPerDecade: 1, probes: ['n_out'] });
+      return rows[0].results.get('n_out').mag;
+    };
+    assert.ok(Math.abs(bench(0) - 1) < 1e-9, `rout 0 is the ideal source: ${bench(0)}`);
+    assert.ok(Math.abs(bench(100) - 0.9) < 1e-9, `900/1000 = 0.900, got ${bench(100)}`);
+  });
+});

@@ -132,3 +132,18 @@ for more than 40 mA — i.e. only where the defect was.
 7. **Determinism.** Two identical solves of a current-limited bench agree
    bit-for-bit, and the region the FSM settles on does not depend on which
    solve ran first.
+8. **`rout` reaches the AC stamp too.** `src/ac.js` builds its own
+   small-signal rows; a parameter the DC row honours and the AC row drops
+   would be a two-truths bug of exactly the kind this repo keeps paying for.
+   Open loop, gain 1, `rout: 100` into 900 Ω: |H| = 0.900, and 1.000 without.
+
+## Stated limitation
+
+**`iShort` does not participate in the AC small-signal stamp.** Small-signal
+AC linearises about the operating point, and an output pinned at its
+short-circuit current is small-signal DEAD — the correct AC row would be the
+one `src/ac.js` already uses for a railed `vcvs`. That is not implemented here,
+and it is not a regression: the AC op-amp row does not model the RAILS either
+(only the `vcvs` row does), so a saturated op-amp already reports ideal AC
+gain. Both belong to the same follow-up, which should do the op-amp's rails
+and its current limit together rather than half of one.

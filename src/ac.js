@@ -310,6 +310,13 @@ export function acSweep(args) {
           const gain = P.gain ?? 1e6;
           addC(iO, row, 1, 0);
           addC(row, iO, 1, 0);
+          // Finite output resistance (spec-updates/opamp-output-limit.md).
+          // The DC/transient row carries it, so the AC row must too — a
+          // parameter that one solver honours and another drops is the
+          // two-truths shape this engine keeps paying for. rout = 0 (the
+          // default) leaves this row exactly as it was.
+          const rout = P.rout ?? 0;
+          if (rout !== 0) addC(row, row, -rout, 0);
           if (iP !== undefined) addC(row, iP, -gain, 0);
           if (iN !== undefined) addC(row, iN, gain, 0);
           break;
@@ -331,6 +338,8 @@ export function acSweep(args) {
           const railHigh = P.railHigh;
           const railed = (railHigh !== undefined && gain * vinOp > railHigh)
             || (railLow !== undefined && gain * vinOp < railLow);
+          const routE = P.rout ?? 0;
+          if (routE !== 0) addC(row, row, -routE, 0);
           if (!railed) {
             const iIp = idxOf(netOf(part.id, 'inp'));
             const iIn = idxOf(netOf(part.id, 'inn'));
