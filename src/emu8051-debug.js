@@ -18,23 +18,46 @@
  *      front end that believes it would mislead the user. Both are corrected
  *      here rather than passed through. See "Two corrections" below.
  *
- * ## Two corrections
+ * ## Two corrections, one of which the emulator has since adopted
  *
- * **`step('line')` is refused.** `dbg_step` returns success for every kind, and
- * its STEP_LINE branch is commented "Would need a line table. For now, treat as
- * step-insn." A line table is exactly what the WASM has no way to receive. So a
- * front end asking to step one C line would get one INSTRUCTION and no
- * indication of the difference — which is the failure DEBUG-CONTROL-MODEL §1
- * exists to prevent ("a target refuses by returning a reason, never by silently
- * doing something else"). `capabilities().steps` therefore omits `line`, and
- * calling it returns `{unsupported}`.
+ * **`step('line')` is refused.** `dbg_step` used to return success for every
+ * kind while its STEP_LINE branch was commented "Would need a line table. For
+ * now, treat as step-insn." A line table is exactly what the WASM has no way
+ * to receive, so a front end asking to step one C line would get one
+ * INSTRUCTION and no indication of the difference — the failure
+ * DEBUG-CONTROL-MODEL §1 exists to prevent ("a target refuses by returning a
+ * reason, never by silently doing something else"). This wrapper has always
+ * refused it. As of emu8051-stc cf3c7c0 **the emulator refuses it too**:
+ * `emu_dbg_supports_step(STEP_LINE)` is 0 and `emu_dbg_step(1, n)` returns -1.
+ * The correction is still made here, because the pin can move backwards.
  *
- * **Watchpoints are feature-detected.** Upstream builds now export
- * `emu_dbg_set_bp_write`; older builds (the pinned one in brickwright-lite)
- * do not. When absent, `write` breakpoints are refused with a reason. When
- * present, they are offered in `capabilities().breakpoints` and require a
- * `space` parameter because iram and sfr overlap at 0x80+. Read watchpoints
- * remain unsupported in all builds.
+ * **Watchpoints are feature-detected**, and the wording that used to be here
+ * was wrong in a way worth recording: it said "older builds (the pinned one in
+ * brickwright-lite) do not [export `emu_dbg_set_bp_write`]". Instantiated, the
+ * binary lite pinned exported it all along — the claim came from this comment
+ * rather than from the binary, and a lesson hint was written around it. Write
+ * watchpoints require a `space` because iram and sfr overlap at 0x80+. Read
+ * watchpoints remain unsupported in every build: a read changes no state, so a
+ * polling detector cannot see one.
+ *
+ * ## What a write watchpoint here actually is
+ *
+ * A CHANGE detector sampled at instruction boundaries, not a store detector.
+ * A store of the value already there is invisible; an SFR the peripherals move
+ * fires with no instruction responsible (and the reported `pc` is where
+ * execution happened to be, not the writer); two changes inside one
+ * instruction report only the last. That is why a watchpoint halt carries
+ * `prev` alongside `value` — the transition is the evidence.
+ *
+ * ## The cycle step
+ *
+ * Offered only when the build asserts it (`emu_dbg_supports_step`), and this
+ * is the one target that can. `tick()` in the emulator advances ONE oscillator
+ * clock and returns false while the instruction in flight finishes, so there
+ * is a real place to stop between instructions. The other targets in this
+ * repo — 6502, Z80, avr8js, rp2040js — execute a whole instruction per call
+ * and have no such place, so they refuse `cycle` by name rather than deliver
+ * an instruction step wearing a different label.
  *
  * ## Memory reads: fast path and slow path
  *
@@ -44,8 +67,15 @@
  * value-returning accessors (`emu_get_code/_iram/_sfr/_xdata`), one call per
  * byte — the same code that was here before, still correct, just slower.
  *
- * The halt reason struct is still unreachable on builds without HEAPU8, so
- * `bp_id` is recovered by matching the halted PC against known breakpoints.
+ * The halt reason used to be unreachable in every build — it arrives at the
+ * on-halt callback as a `struct dbg_halt_reason *`, a layout JS must not
+ * assume — so `bp_id` was recovered by matching the halted PC against known
+ * breakpoints. That works for code and yield breakpoints and cannot work for a
+ * watchpoint, whose subject is an address rather than a PC. As of emu8051-stc
+ * cf3c7c0 the reason is readable as scalars (`_emu_dbg_halt_bp`,
+ * `_emu_dbg_halt_is_watch`, `_emu_dbg_halt_watch_addr/_value/_prev`), so the
+ * breakpoint is NAMED rather than guessed. The PC-matching path is still here
+ * for older pins.
  *
  * ## The budget-halt wart, absorbed
  *
@@ -62,11 +92,14 @@
  * @module
  */
 
-/** Step kinds, in the order dbg_step_kind declares them. */
-const STEP_KIND = { insn: 0, line: 1, block: 2, over: 3, out: 4 };
+/** Step kinds, in the order dbg_step_kind declares them. Appended, never renumbered. */
+const STEP_KIND = { insn: 0, line: 1, block: 2, over: 3, out: 4, cycle: 5 };
 
 /** Address spaces, in the order dbg_space declares them. */
 const SPACE = { code: 0, iram: 1, sfr: 2, xram: 3, bit: 4 };
+
+/** The same table read the other way, for turning a reported space back into a name. */
+const SPACE_NAME = Object.keys(SPACE);
 
 /** DBG_MAX_BP in debug.h. Exceeding it returns -1, which we turn into a reason. */
 const MAX_BREAKPOINTS = 32;
@@ -141,14 +174,46 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         return hits.length === 1 ? hits[0] : null;
     }
 
+    /** Does this build report its halt reason as scalars? (emu8051-stc cf3c7c0+) */
+    const hasHaltReason = typeof wasm._emu_dbg_halt_is_watch === 'function'
+        && typeof wasm._emu_dbg_halt_bp === 'function';
+
+    /**
+     * Does this build implement a real cycle step? Asked of the emulator, not
+     * inferred: `emu_dbg_supports_step` reports what dbg_step ACTUALLY does,
+     * which is not the same as what it accepts (it accepts `line` and delivers
+     * an instruction). On builds without the export the answer is no.
+     */
+    const hasCycleStep = typeof wasm._emu_dbg_supports_step === 'function'
+        && wasm._emu_dbg_supports_step(STEP_KIND.cycle) === 1;
+
     function haltReason(cause) {
         const pc = wasm._emu_dbg_pc();
-        const hit = cause === 'breakpoint' ? breakpointAt(pc) : null;
-        return {
-            cause,
-            pc,
-            bp: hit ? hit[0] : undefined,
-            bpKind: hit ? hit[1].kind : undefined,
+
+        // The old path, kept for builds that predate the halt-reason exports:
+        // `bp_id` lived in a struct JS cannot read, so the breakpoint was
+        // recovered by matching the halted PC. That works for code and yield
+        // breakpoints — both are set AT an address — and CANNOT work for a
+        // watchpoint, whose "pc" we recorded as the watched ADDRESS because
+        // there was nothing better to key on. Two breakpoints at one address
+        // were reported as "don't know which" rather than resolved by picking.
+        if (!hasHaltReason) {
+            const hit = cause === 'breakpoint' ? breakpointAt(pc) : null;
+            return {
+                cause, pc,
+                bp: hit ? hit[0] : undefined,
+                bpKind: hit ? hit[1].kind : undefined,
+                tasks: positionOf(), tNs: nowNs(), skewNs: 0n
+            };
+        }
+
+        // The emulator now names the breakpoint itself, so nothing is guessed.
+        const bpId = wasm._emu_dbg_halt_bp();
+        const bp = bpId >= 0 ? breakpoints.get(bpId) : undefined;
+        const why = {
+            cause, pc,
+            bp: bp ? bpId : undefined,
+            bpKind: bp ? bp.kind : undefined,
             tasks: positionOf(),
             tNs: nowNs(),
             // Zero, always, and not because nothing was measured: an emulator
@@ -156,6 +221,19 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             // exists so a live chip can say otherwise (§7 decision 4).
             skewNs: 0n
         };
+
+        // A write watchpoint is the one halt whose subject is an ADDRESS, not
+        // a PC. Reporting only "halted at 0x0142" answers a question nobody
+        // asked. `prev` travels with `value` because the transition is the
+        // evidence — a new value with no before is half a measurement.
+        if (cause === 'breakpoint' && wasm._emu_dbg_halt_is_watch() === 1) {
+            why.cause = 'watchpoint';
+            why.space = SPACE_NAME[wasm._emu_dbg_halt_watch_space()] ?? 'iram';
+            why.addr = wasm._emu_dbg_halt_watch_addr();
+            why.value = wasm._emu_dbg_halt_watch_value();
+            why.prev = wasm._emu_dbg_halt_watch_prev();
+        }
+        return why;
     }
 
     function announce(cause) {
@@ -275,7 +353,15 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
             return {
                 // `line` is absent on purpose — see "Two corrections" above.
-                steps: ['insn', 'block', 'over', 'out'],
+                // `cycle` is present only when the build ASSERTS it, and the
+                // export's absence is the answer for older pins. Asking the
+                // emulator beats guessing from a version number, and beats
+                // assuming: a cycle step is only honest on a core with
+                // sub-instruction state, which is why no other target here
+                // offers one.
+                steps: hasCycleStep
+                    ? ['insn', 'cycle', 'block', 'over', 'out']
+                    : ['insn', 'block', 'over', 'out'],
                 breakpoints: hasWatchpoints
                     ? ['code', 'yield', 'write']
                     : ['code', 'yield'],
@@ -313,11 +399,23 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     'stepping one C line needs a line table, which this emulator has no ' +
                     'way to receive. Step one instruction, or one block.' };
             }
+            if (kind === 'cycle' && !hasCycleStep) {
+                return { unsupported:
+                    'this emulator build has no cycle step. Re-vendor from a build that ' +
+                    'exports emu_dbg_supports_step, or step one instruction.' };
+            }
             const k = STEP_KIND[kind];
             if (k === undefined) return { unsupported: `no such step kind: ${kind}` };
             stepping = true;
             pendingCause = 'step';
-            wasm._emu_dbg_step(k, count);
+            // -1 means the emulator itself declined the kind. Passing that back
+            // matters: the alternative is reporting "stepping" for a step that
+            // never started, and then waiting for a halt that never comes.
+            if (wasm._emu_dbg_step(k, count) < 0) {
+                stepping = false;
+                pendingCause = null;
+                return { unsupported: `this emulator build does not implement step kind: ${kind}` };
+            }
             return undefined;
         },
 

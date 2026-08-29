@@ -135,6 +135,13 @@ export function createZ80DebugTarget(adapter) {
         pendingStep = { kind: 'out', sp0: cpu.sp };
         return undefined;
       }
+      if (kind === 'cycle') {
+        return { unsupported:
+          "this Z80 core has no cycle step. Z80Machine.step() executes a whole instruction and " +
+          "returns its T-state count — there is no sub-instruction state to stop in, so a cycle " +
+          "step here would be an instruction step with a different label. Step one instruction; " +
+          "regs().cycles reports what it cost." };
+      }
       return { unsupported: `step kind '${kind}' not supported` };
     },
 

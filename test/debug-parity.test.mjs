@@ -108,3 +108,39 @@ test('capabilities declare the new powers on both targets', () => {
     assert.ok(cz.steps.includes('over') && cz.steps.includes('out'));
     assert.ok(cz.breakpoints.includes('write'));
 });
+
+// ── The cycle step these two cores cannot honestly offer ──────────────────
+//
+// D25 asked for a cycle-level step and named the 6502. Measured before
+// building anything: `W65C02.step()` fetches an opcode, runs `_exec` to
+// completion, and returns the instruction's cycle count; `Z80Machine.step()`
+// is the same shape. Neither has sub-instruction state, so "one cycle" here
+// could only mean "one instruction" — a button that lies, which is the D5
+// lesson. Both therefore REFUSE, and the refusal names the reason so the
+// person reading it learns why rather than assuming a missing feature.
+//
+// These assertions are the honest-refusal half of D25. If a core is ever
+// rewritten into a cycle-stepped state machine, they fail and say so.
+
+test('6502 refuses a cycle step, and says why', () => {
+    const { t } = m6502();
+    assert.ok(!t.capabilities().steps.includes('cycle'),
+        'the 6502 must not advertise a cycle step it cannot take');
+    const refusal = t.step('cycle');
+    assert.match(refusal.unsupported, /no cycle step/i);
+    assert.match(refusal.unsupported, /instruction step with a different label/i,
+        'the refusal must explain, not just decline');
+    // And the thing it offers instead is real: the cycle COST is reported.
+    assert.equal(typeof t.regs().cycles, 'number',
+        'regs().cycles is what a learner reads instead of stepping cycles');
+});
+
+test('Z80 refuses a cycle step, and says why', () => {
+    const { t } = z80();
+    assert.ok(!t.capabilities().steps.includes('cycle'));
+    const refusal = t.step('cycle');
+    assert.match(refusal.unsupported, /no cycle step/i);
+    assert.match(refusal.unsupported, /T-state count/i,
+        'the Z80 refusal names T-states, which is what this core counts');
+    assert.equal(typeof t.regs().cycles, 'number');
+});

@@ -373,6 +373,13 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
         running = true;
         return undefined;
       }
+      if (kind === 'cycle') {
+        return { unsupported:
+          'rp2040js has no cycle step. The core executes a whole instruction per call and the ' +
+          'clock is advanced by its cost afterwards — there is no sub-instruction state to stop ' +
+          'in, so a cycle step here would be an instruction step with a different label. Step ' +
+          'one instruction; regs().cycles reports what it cost.' };
+      }
       return { unsupported: `no such step kind: ${kind}` };
     },
 

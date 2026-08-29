@@ -306,3 +306,117 @@ describe('debug target: the pieces the TUI shows and this must too', () => {
         assert.equal(t.readMem('iram', 0x30, 1)[0], 0x00, 'wipe does not');
     });
 });
+
+// ── The cycle step, and the halt that names an address ────────────────────
+//
+// Both of these need the emulator built at emu8051-stc cf3c7c0 or later. On an
+// older build the capability is absent and the target refuses by name, which
+// is the honest outcome and is asserted as such rather than skipped past.
+
+/** MOV DPTR,#1234h ; NOP ; NOP — a 2-cycle instruction then 1-cycle ones. */
+const CYCLE_HEX = ':05000000901234000025\n:00000001FF\n';
+/** MOV 30h,#00 ; MOV 30h,#42 ; SJMP $ — one watched byte, one real change. */
+const WATCH_HEX = ':0800000075300075304280FEEE\n:00000001FF\n';
+
+async function targetWith(hex) {
+    if (!createEmu8051) return null;
+    const wasm = await createEmu8051();
+    wasm._emu_init(1);
+    wasm._emu_set_fosc(11059200);
+    wasm._emu_set_vcc(5.0);
+    const t = createEmu8051DebugTarget(wasm);
+    wasm.ccall('emu_load_hex', 'number', ['string', 'number'], [hex, hex.length]);
+    t.reset();
+    return t;
+}
+
+/** Drive one step to completion the way a host's animation frame would. */
+function settle(t, budgetNs = 1000) {
+    for (let i = 0; i < 4096 && t.state() === 'running'; i++) t.runFor(budgetNs);
+}
+
+describe('debug target: a cycle step is offered only where cycles exist', () => {
+    it('declares `cycle` when the build asserts it, and never otherwise', async () => {
+        const t = await targetWith(CYCLE_HEX); if (skip(t)) return;
+        const steps = t.capabilities().steps;
+        // Whatever the answer is, it must AGREE with the emulator rather than
+        // with this file's expectations — the point of feature-detection.
+        const declared = steps.includes('cycle');
+        assert.equal(typeof declared, 'boolean');
+        if (!declared) {
+            const refusal = t.step('cycle', 1);
+            assert.match(refusal.unsupported, /no cycle step/i,
+                'a build without the capability must refuse by name, not silently step');
+            return;
+        }
+        assert.ok(!steps.includes('line'), '`line` is still withheld');
+    });
+
+    it('takes 3 cycle steps and 2 instruction steps to cross the same two instructions',
+        async () => {
+            const t = await targetWith(CYCLE_HEX); if (skip(t)) return;
+            if (!t.capabilities().steps.includes('cycle')) return;
+
+            const count = async (kind) => {
+                const u = await targetWith(CYCLE_HEX);
+                let n = 0;
+                while (u.regs().pc < 4 && n < 20) {
+                    assert.equal(u.step(kind, 1), undefined, `${kind} step was refused`);
+                    settle(u);
+                    n++;
+                }
+                return n;
+            };
+
+            const cycles = await count('cycle');
+            const insns = await count('insn');
+            // The CONTRAST is the gate. Equal counts would mean the cycle step
+            // is an instruction step with a different label on the button,
+            // which is worse than not having one.
+            assert.equal(insns, 2, 'two instruction steps reach PC 4');
+            assert.equal(cycles, 3, 'three cycle steps reach PC 4');
+            assert.ok(cycles > insns, 'a cycle step is strictly finer than an instruction step');
+        });
+});
+
+describe('debug target: a watchpoint halt names the byte, not just the PC', () => {
+    it('reports space, address, new value and previous value', async () => {
+        const t = await targetWith(WATCH_HEX); if (skip(t)) return;
+        if (!t.capabilities().breakpoints.includes('write')) return;
+
+        const seen = [];
+        t.onHalt((why) => seen.push(why));
+
+        const handle = t.setBreakpoint({ kind: 'write', space: 'iram', addr: 0x30 });
+        assert.equal(typeof handle, 'number', `watchpoint refused: ${JSON.stringify(handle)}`);
+
+        t.run();
+        settle(t);
+
+        assert.equal(t.state(), 'halted', 'the write stopped the program');
+        const why = seen.at(-1);
+        assert.ok(why, 'a halt was announced');
+        // `cause` is its own value, not 'breakpoint': a front end that wants to
+        // say "wrote 0x42 to 0x30" needs to know that is what happened without
+        // inspecting the breakpoint table.
+        assert.equal(why.cause, 'watchpoint');
+        assert.equal(why.bp, handle, 'the breakpoint is NAMED, not matched by PC');
+        assert.equal(why.space, 'iram');
+        assert.equal(why.addr, 0x30);
+        assert.equal(why.value, 0x42);
+        assert.equal(why.prev, 0x00, 'the transition, not just the destination');
+    });
+
+    it('leaves the watch fields off a halt that is not a watchpoint', async () => {
+        const t = await targetWith(CYCLE_HEX); if (skip(t)) return;
+        const seen = [];
+        t.onHalt((why) => seen.push(why));
+        t.step('insn', 1);
+        settle(t);
+        const why = seen.at(-1);
+        assert.ok(why, 'a halt was announced');
+        assert.equal(why.cause, 'step');
+        assert.equal(why.addr, undefined, 'no address on a step halt');
+        assert.equal(why.value, undefined, 'no value on a step halt');
+    });
+});

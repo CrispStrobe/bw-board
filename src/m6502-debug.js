@@ -173,6 +173,13 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         pendingStep = { kind: 'out', sp0: cpu.s };
         return undefined;
       }
+      if (kind === 'cycle') {
+        return { unsupported:
+          "this 6502 core has no cycle step. W65C02.step() fetches an opcode and runs it to " +
+          "completion, returning the instruction's cycle count — there is no sub-instruction " +
+          "state to stop in, so a cycle step here would be an instruction step with a " +
+          "different label. Step one instruction; regs().cycles reports what it cost." };
+      }
       return { unsupported: `step kind '${kind}' not supported` };
     },
 

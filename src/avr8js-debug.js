@@ -368,6 +368,13 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         running = true;
         return undefined;
       }
+      if (kind === 'cycle') {
+        return { unsupported:
+          'avr8js has no cycle step. avrInstruction() executes a whole instruction and then ' +
+          'advances cpu.cycles by what it cost — there is no sub-instruction state to stop in, ' +
+          'so a cycle step here would be an instruction step with a different label. Step one ' +
+          'instruction; regs().cycles reports what it cost.' };
+      }
       return { unsupported: `no such step kind: ${kind}` };
     },
 
