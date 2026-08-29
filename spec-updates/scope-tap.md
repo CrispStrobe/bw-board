@@ -143,3 +143,47 @@ transitions, honestly.
 
 The UI's half stays the UI's: rendering the staircase, aligning multiple
 channels, bus grouping, protocol decode (bw-circuit-ui X2.5).
+
+## Addendum (bw-circuit-ui D24 / X2.2): `capture: 'sample'` — a series, not an envelope
+
+`addScopeChannel({type: 'voltage', …, capture: 'sample'})` records the
+value AT each sample instant into both slots of the pair, instead of the
+(min, max) of everything that happened inside the bucket. `getScopeData`
+returns `capture: 'envelope' | 'sample'` so a consumer can ASK rather
+than assume. The default is unchanged and every existing channel keeps
+the envelope, which is the right thing for DRAWING — it is what keeps a
+narrow pulse visible at a coarse timebase.
+
+Why a second mode rather than a reinterpretation of the first: an
+envelope pair's two numbers are two DIFFERENT INSTANTS reported as one.
+A transform over them describes a waveform that never existed, and it
+looks plausible, which is worse than looking wrong. Measured on a 1 kHz
+sine at 50 kHz capture, 100 of 250 pairs carried min ≠ max, the widest
+spanning 0.63 V — and nothing in the buffer says which pairs those are.
+
+Three details that are the whole difference between working and nearly
+working, each found by disagreeing with the closed form
+`2.5 + 2·sin(2π·1000·t)`:
+
+1. **The value is interpolated, not held.** Taking the solve that lands
+   at or after the sample instant is a zero-order hold whose time error
+   is a whole solve step: 618 mV of a 2 V amplitude, because the
+   transient controller was stepping 50 µs. Linear interpolation between
+   the two solves that bracket the instant costs no extra solves and
+   brings the same bench to 128 mV.
+2. **The integrator step is capped at the finest sample-series
+   interval.** With 100 µs steps against a 10 µs grid, nine samples in
+   ten came off one line segment. Capping brings the deviation under
+   1 mV. ONLY channels that opt in pay this: an envelope channel's cost
+   is unchanged, which matters because every existing bench uses one.
+3. **`startTNs` is the first SAMPLE's instant, not the first bucket's
+   start.** Those differ by one interval. Getting it wrong reads the
+   whole series one sample early, which looks exactly like an amplitude
+   error — 126 mV of disagreement with the closed form, from an index.
+
+A `type: 'current'` channel now reports `capture: 'sample'`, because
+`sampleCurrentChannels()` has always written one instantaneous reading
+into both slots. That is a statement of what was already true.
+
+Consumer: bw-circuit-ui `src/model/fft.js` refuses an envelope buffer by
+name rather than averaging it into a plausible fake.

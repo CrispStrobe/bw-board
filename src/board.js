@@ -1169,6 +1169,22 @@ export class BoardImpl {
     const sampleRateHz = opts.sampleRateHz ?? 100_000;
     const depth = opts.depth ?? 8192;
     const intervalNs = BigInt(Math.round(1e9 / sampleRateHz));
+    // 'envelope' (the default, unchanged) keeps the (min,max) of everything
+    // that happened inside the bucket — right for DRAWING, because it is what
+    // keeps a narrow pulse visible at a coarse timebase.
+    //
+    // 'sample' records the instantaneous value at the sample instant into both
+    // slots, i.e. a true uniformly-spaced sample series. A transform needs
+    // that and cannot use the other: an envelope's min and max are two
+    // different instants reported as one, so an FFT over it is a spectrum of a
+    // signal that never existed (bw-circuit-ui D24 / X2.2). The value stored is
+    // the solution at the FIRST solve point at or after the sample instant — a
+    // zero-order hold from above, within one solve step of the sample time, and
+    // with E4.1 every source edge is already a solve point.
+    // A current channel is written only by sampleCurrentChannels(), which
+    // stores one instantaneous reading into both slots — so it has always BEEN
+    // a sample series and now says so.
+    const capture = opts.capture === 'sample' || opts.type === 'current' ? 'sample' : 'envelope';
 
     const ch = {
       type: opts.type,
@@ -1177,6 +1193,7 @@ export class BoardImpl {
       terminal: opts.terminal ?? null,
       sampleRateHz,
       intervalNs,
+      capture,
       depth,
       // Ring buffer: interleaved [min0, max0, min1, max1, ...]
       // Unwritten regions are NaN, never flat 0 — per boundary-B v2.
@@ -1188,6 +1205,11 @@ export class BoardImpl {
       _bucketMin: Infinity,
       _bucketMax: -Infinity,
       _nextSampleNs: this.timeNs + intervalNs, // next sample point
+      // For 'sample' channels: the previous solve point, so the value AT the
+      // sample instant can be interpolated rather than held from whichever
+      // solve happened to land next. See _updateScopeChannels.
+      _prevTNs: this.timeNs,
+      _prevVal: null,
     };
 
     this._scopeChannels.set(handle, ch);
@@ -1233,6 +1255,9 @@ export class BoardImpl {
       writeIndex: ch.writeIndex,
       count: ch.count,
       channelType: ch.type,
+      // Which of the two things the pairs are. A consumer that transforms the
+      // buffer must be able to ASK, rather than assume — assuming was D24.
+      capture: ch.capture ?? 'envelope',
     };
   }
 
@@ -1281,6 +1306,11 @@ export class BoardImpl {
       const val = Number.isFinite(v) ? v : 0;
       if (val < ch._bucketMin) ch._bucketMin = val;
       if (val > ch._bucketMax) ch._bucketMax = val;
+      // A setPin/setControl edge is a DISCONTINUITY at this instant, not a
+      // ramp towards it: a sample channel's interpolation must start from the
+      // post-edge value, or the next sample would be drawn part-way up a step
+      // that took no time at all.
+      if (ch.capture === 'sample') { ch._prevTNs = this.timeNs; ch._prevVal = val; }
     }
   }
 
@@ -1319,16 +1349,33 @@ export class BoardImpl {
       // Flush completed buckets
       while (tNs >= ch._nextSampleNs) {
         const idx = ch.writeIndex * 2;
-        ch.samples[idx] = ch._bucketMin;
-        ch.samples[idx + 1] = ch._bucketMax;
+        // A 'sample' channel stores the value AT the sample instant, linearly
+        // interpolated between the two solve points that bracket it. Holding
+        // the later solve's value instead (the obvious implementation) is a
+        // zero-order hold whose time error is a whole solve step: measured on
+        // a 1 kHz sine at 100 kHz capture, 618 mV of a 2 V amplitude, because
+        // the transient controller was taking 50 µs steps. Interpolation
+        // brings the same bench to under 1 mV, and it costs no extra solves.
+        const s = ch.capture === 'sample' ? sampleAtInstant(ch, tNs, val) : 0;
+        ch.samples[idx] = ch.capture === 'sample' ? s : ch._bucketMin;
+        ch.samples[idx + 1] = ch.capture === 'sample' ? s : ch._bucketMax;
         ch.writeIndex = (ch.writeIndex + 1) % ch.depth;
         ch.count++;
 
-        // Update start time when buffer wraps
+        // Update start time when buffer wraps.
+        //
+        // An envelope pair is labelled by the START of the bucket it covers; a
+        // sample is labelled by the INSTANT it was taken, which is one interval
+        // later. Getting that wrong is not a rounding matter: the whole series
+        // reads one sample early, and on a 1 kHz sine at 100 kHz that is a
+        // 126 mV disagreement with the closed form that looks exactly like an
+        // amplitude error.
         if (ch.count > ch.depth) {
           ch.startTNs = ch._nextSampleNs - ch.intervalNs * BigInt(ch.depth - 1);
         } else if (ch.count === 1) {
-          ch.startTNs = ch._nextSampleNs - ch.intervalNs;
+          ch.startTNs = ch.capture === 'sample'
+            ? ch._nextSampleNs
+            : ch._nextSampleNs - ch.intervalNs;
         }
 
         ch._nextSampleNs += ch.intervalNs;
@@ -1336,6 +1383,7 @@ export class BoardImpl {
         ch._bucketMin = val;
         ch._bucketMax = val;
       }
+      if (ch.capture === 'sample') { ch._prevTNs = tNs; ch._prevVal = val; }
     }
   }
 
@@ -2952,7 +3000,20 @@ export class BoardImpl {
     // Trace-fidelity floor (see doc above).
     const H_SAMPLE = 1e-4;
     const sampleCapped = this._scopeChannels.size > 0 || this._hasTimeVaryingSource();
-    const hMax = sampleCapped ? H_SAMPLE : dtSec;
+    // A 'sample'-capture channel asks for the value AT a grid of instants, so
+    // the step must not straddle more than one of them: with 100 µs steps and
+    // a 10 µs capture grid, nine samples in ten came off the same line segment
+    // and a 1 kHz sine reconstructed 128 mV wrong. Capping h at the finest
+    // sample-series interval brings that to under a millivolt. Only channels
+    // that OPT IN pay for it — an envelope channel's cost is unchanged, which
+    // matters because the envelope is what every existing bench uses.
+    let hSeries = Infinity;
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.capture === 'sample' && ch.type === 'voltage') {
+        hSeries = Math.min(hSeries, Number(ch.intervalNs) / 1e9);
+      }
+    }
+    const hMax = Math.min(sampleCapped ? H_SAMPLE : dtSec, hSeries);
     // A runaway backstop far above any real circuit; hitting it is
     // reported, never silently absorbed (the old 200-step cap's honesty,
     // kept at the new scale).
@@ -3928,4 +3989,34 @@ export class BoardImpl {
       }
     }
   }
+}
+
+/**
+ * The value a 'sample'-capture scope channel records at its sample instant.
+ *
+ * The channel's `_nextSampleNs` is the instant being written; `tNs`/`val` are
+ * the solve point that has just been reached, and `ch._prevTNs`/`ch._prevVal`
+ * the one before it. The sample instant lies in between, so the honest answer
+ * is the straight line between the two solves evaluated there — the same
+ * assumption the trapezoidal integrator already makes about the interval it
+ * just crossed.
+ *
+ * Falls back to the current value when there is no previous solve to work
+ * from (the first sample of a channel), which is the only case where a hold
+ * is all the information that exists.
+ *
+ * @param {{_nextSampleNs: bigint, _prevTNs: bigint|null, _prevVal: number|null}} ch
+ * @param {bigint} tNs
+ * @param {number} val
+ * @returns {number}
+ */
+function sampleAtInstant(ch, tNs, val) {
+  const tPrev = ch._prevTNs;
+  const vPrev = ch._prevVal;
+  if (tPrev === null || vPrev === null || tNs <= tPrev) return val;
+  const ts = ch._nextSampleNs;
+  if (ts <= tPrev) return vPrev;
+  if (ts >= tNs) return val;
+  const f = Number(ts - tPrev) / Number(tNs - tPrev);
+  return vPrev + (val - vPrev) * f;
 }
