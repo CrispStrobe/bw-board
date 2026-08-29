@@ -208,3 +208,31 @@ describe('LM358 closed-loop gain (D18)', () => {
         assert.equal(a, b);
     });
 });
+
+describe('LM358 power-up symmetry (the pc85 oscillator case)', () => {
+    it('a zero input error does not leave the output below its own swing', () => {
+        // Both inputs on ground: v+ − v− = 0 EXACTLY, so a halt written on
+        // the input error alone has nothing to do and the drive stays at the
+        // 0 V it was initialised to. That is not a rest state — an LM358's
+        // output cannot sit below gnd + 5 mV — and it is not a corner case
+        // either: on the FIRST solve of any bench every node reads 0, so
+        // e = 0 on both channels. An LM358 triangle oscillator
+        // (sb3-creator's pc85-led-lampe-puls) then stayed dead at 0 V on
+        // every net, where before the whole analog section ran. The old
+        // damped step broke that symmetry by accident, through this same
+        // clamp; now it is deliberate.
+        const board = new BoardImpl(5.0);
+        board.setNetlist([V, G, AMP, R('RL', 10000)], [
+            net('nv', ['VCC', 'vcc'], ['U1', 'vcc']),
+            net('ng', ['GND', 'gnd'], ['U1', 'gnd'],
+                ['U1', '1_pos'], ['U1', '1_neg'], ['RL', 'b']),
+            net('no', ['U1', '1_out'], ['RL', 'a']),
+        ]);
+        board.advanceTo(1n);
+        assert.equal(board.getDeviceState('U1').drives['1_out'].vTh, 0.005,
+            'the drive is pulled to the bottom swing, gnd + 5 mV');
+        // 0.005 V behind R_OUT = 100 Ω into 10 kΩ: 0.005 × 10000/10100.
+        assert.ok(Math.abs(board.nodeVoltage('no') - 0.005 * 10000 / 10100) < 1e-12,
+            `4.95050 mV at the output node, got ${board.nodeVoltage('no')}`);
+    });
+});

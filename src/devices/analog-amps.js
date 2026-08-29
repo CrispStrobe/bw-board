@@ -116,7 +116,18 @@ export function registerAnalogAmps() {
                 // Settled means the INPUT error is closed, not that the output
                 // stopped moving: the old output-step halt is exactly what left
                 // 0.667 mV of input unamplified.
-                if (Math.abs(e) <= E_TOL || Math.abs(next - cur) <= U_TOL) continue;
+                //
+                // …AND the drive is inside the part's own swing. A powered-up
+                // LM358 does not sit below its own bottom swing, and that is
+                // not pedantry: on the very first solve of an oscillator every
+                // node reads 0, so e = 0 EXACTLY on both channels, and an
+                // error-only halt leaves the whole analog section dead at 0 V
+                // forever. The old damped step broke that symmetry by
+                // accident, through the same clamp — pc85-led-lampe-puls (an
+                // LM358 triangle oscillator) is where the corpus differential
+                // caught it.
+                const inSwing = cur >= lo - U_TOL && cur <= hi + U_TOL;
+                if ((Math.abs(e) <= E_TOL && inSwing) || Math.abs(next - cur) <= U_TOL) continue;
                 state.drives[`${ch}_out`] = { vTh: next, rTh: R_OUT };
                 changed = true;
             }
