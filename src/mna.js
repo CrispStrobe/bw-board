@@ -724,6 +724,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // 'ilim+' | 'ilim-' (output short-circuit current limit — see
   // spec-updates/opamp-output-limit.md).
   /** @type {Map<string, string>} */
+  // Settled by the Newton loop below and RETURNED: the region an op-amp or
+  // railed vcvs converged in is not private bookkeeping, it is a property of
+  // the operating point. src/ac.js linearises about that point and cannot
+  // tell a saturated or current-limited stage from a linear one without it —
+  // it was reporting ideal small-signal gain for a stage welded to a rail
+  // (spec-updates/ac-operating-region.md). Recomputing it there from the node
+  // voltages would find the rails and miss the current limit entirely, since
+  // whether iShort binds is a fact about the branch current.
   const opampRegions = new Map();
   // BJT operating regions: 'active' (Ic = beta*Ib VCCS) or 'saturated'
   // (Vce clamped near vceSat). Without this, a switching transistor's
@@ -1909,11 +1917,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
     }
     return { nodeVoltages, branchCurrents, capVoltagesNext, capCurrentsNext,
-      inductorCurrentsNext, inductorVoltagesNext, converged,
+      inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
-  return { nodeVoltages, branchCurrents, converged,
+  return { nodeVoltages, branchCurrents, converged, opampRegions,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
 

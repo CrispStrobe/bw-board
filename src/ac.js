@@ -63,16 +63,31 @@ function junctionG(part, vAcross, vf, rd) {
  * @param {number} args.vcc
  * @param {Map<string, number>} args.opVoltages - converged DC node voltages
  * @param {Map<string, object>} [args.deviceStates]
+ * @param {Map<string, string>} [args.opRegions] - solveMNA's settled
+ *   `opampRegions`: the region each op-amp / railed vcvs converged in at the
+ *   DC bias. Without it the rows below assume `linear`, which is what this
+ *   file did for op-amps unconditionally until
+ *   spec-updates/ac-operating-region.md.
  * @param {string} args.sourceId - the swept vsource part id (unit phasor)
  * @param {number[]} args.freqs - Hz, each > 0
  * @param {string[]} [args.probes] - net ids to report (default: all)
- * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>}>}
+ * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
+ *   outOfLinear?: Array<{part: string, kind: string, region: string}>}>}
  */
 export function acSweep(args) {
   const {
     parts, nets, pinSources, controls, vcc, opVoltages,
-    deviceStates, sourceId, freqs, probes,
+    deviceStates, opRegions, sourceId, freqs, probes,
   } = args;
+
+  // Small-signal validity, per part. A stage at a rail cannot move its output
+  // (its VOLTAGE is pinned); a stage at its short-circuit current cannot move
+  // its current (its CURRENT is pinned). Those are two different rows, and
+  // collapsing them into one is how a plausible wrong Bode plot gets made —
+  // see spec-updates/ac-operating-region.md.
+  const regionOf = (partId) => opRegions?.get(partId) ?? 'linear';
+  const isRailed = (r) => r === 'high' || r === 'low';
+  const isLimited = (r) => r === 'ilim+' || r === 'ilim-';
 
   const partById = new Map(parts.map(p => [p.id, p]));
   const source = partById.get(sourceId);
@@ -308,7 +323,20 @@ export function acSweep(args) {
           const iP = idxOf(netOf(part.id, 'inp'));
           const iN = idxOf(netOf(part.id, 'inn'));
           const gain = P.gain ?? 1e6;
+          const region = regionOf(part.id);
+          // The branch current reaches the output node's KCL whatever the
+          // region — it is what the branch injects, and pinning it to zero is
+          // how a current limit is expressed.
           addC(iO, row, 1, 0);
+          if (isLimited(region)) {
+            // Pinned at iShort: a fixed current, so the SMALL-SIGNAL current
+            // is zero and the output voltage floats to whatever the load
+            // makes of it. Infinite output impedance — which is what a
+            // current limit is. Not `V(out) = 0`: that is the rail's row, and
+            // the two differ on any load that is not a resistor to AC ground.
+            addC(row, row, 1, 0);
+            break;
+          }
           addC(row, iO, 1, 0);
           // Finite output resistance (spec-updates/opamp-output-limit.md).
           // The DC/transient row carries it, so the AC row must too — a
@@ -317,6 +345,12 @@ export function acSweep(args) {
           // default) leaves this row exactly as it was.
           const rout = P.rout ?? 0;
           if (rout !== 0) addC(row, row, -rout, 0);
+          // Saturated: the output is clamped to a rail, so it cannot move and
+          // the gain terms drop. This is the row the `vcvs` case below has
+          // always used; the op-amp row did not have it, so a railed op-amp
+          // reported its full ideal gain at every frequency
+          // (spec-updates/ac-operating-region.md).
+          if (isRailed(region)) break;
           if (iP !== undefined) addC(row, iP, -gain, 0);
           if (iN !== undefined) addC(row, iN, gain, 0);
           break;
@@ -328,16 +362,29 @@ export function acSweep(args) {
           if (iOp === undefined) break;
           const iOn = idxOf(netOf(part.id, 'outn'));
           addC(iOp, row, 1, 0);
-          addC(row, iOp, 1, 0);
-          if (iOn !== undefined) { addC(iOn, row, -1, 0); addC(row, iOn, -1, 0); }
-          // Region at the OP: a railed buffer is small-signal dead — its
-          // output cannot move, so the row pins the AC output to 0.
+          if (iOn !== undefined) addC(iOn, row, -1, 0);
           const gain = P.gain ?? 1;
+          // Region at the OP. Prefer the region solveMNA actually settled on;
+          // fall back to recomputing the RAIL test from the operating-point
+          // voltages, which is what this row did before opRegions existed and
+          // is still right for a caller that passes none. The fallback cannot
+          // see a current limit at all — whether iShort binds is a fact about
+          // the branch current, not the input voltage.
+          const region = regionOf(part.id);
+          if (isLimited(region)) {
+            // Fixed current at the OP: small-signal current is zero.
+            addC(row, row, 1, 0);
+            break;
+          }
+          addC(row, iOp, 1, 0);
+          if (iOn !== undefined) addC(row, iOn, -1, 0);
           const vinOp = vOp(netOf(part.id, 'inp')) - vOp(netOf(part.id, 'inn'));
           const railLow = P.railLow;
           const railHigh = P.railHigh;
-          const railed = (railHigh !== undefined && gain * vinOp > railHigh)
-            || (railLow !== undefined && gain * vinOp < railLow);
+          const railed = opRegions?.has(part.id)
+            ? isRailed(region)
+            : ((railHigh !== undefined && gain * vinOp > railHigh)
+              || (railLow !== undefined && gain * vinOp < railLow));
           const routE = P.rout ?? 0;
           if (routE !== 0) addC(row, row, -routE, 0);
           if (!railed) {
@@ -436,6 +483,18 @@ export function acSweep(args) {
     for (let i = 0; i < nodeCount; i++) addC(i, i, 1e-12, 0);
   };
 
+  // A correct 0 where the caller expected gain is still a mystery unless the
+  // sweep explains itself, so it names the stages whose operating point puts
+  // them outside their linear region. Absent (not empty) when every part is
+  // linear, so a bench that was fine keeps the shape it had.
+  const outOfLinear = [];
+  for (const p of parts) {
+    if (p.kind !== 'opamp' && p.kind !== 'vcvs') continue;
+    if (!rowIndex.has(p.id)) continue;
+    const region = regionOf(p.id);
+    if (region !== 'linear') outOfLinear.push({ part: p.id, kind: p.kind, region });
+  }
+
   // ── Sweep: factor once, refactor per point ──────────────────────────
   const out = [];
   let lu = null;
@@ -466,7 +525,7 @@ export function acSweep(args) {
         phaseDeg: Math.atan2(im, re) * 180 / Math.PI,
       });
     }
-    out.push({ hz, results });
+    out.push(outOfLinear.length ? { hz, results, outOfLinear } : { hz, results });
   }
   return out;
 }

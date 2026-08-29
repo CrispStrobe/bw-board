@@ -126,6 +126,32 @@ can hide the region.
    returns the node voltages and branch currents it returned before, bit for
    bit; the new key is additive.
 
+## Result (measured)
+
+`test/ac-operating-region.test.mjs` run against the tree BEFORE this change
+(`git archive` of the parent commit) and against it after — the base column is
+the mutation proof that these oracles can fail:
+
+| case | before | after |
+| --- | --- | --- |
+| open loop, linear (gain·vin = 1.0 V) | 10.000 | 10.000 |
+| open loop, railed high | **10.000** | 0 |
+| open loop, railed low | **10.000** | 0 |
+| railed with `rout: 100` into 900 Ω | **10.000** | 0 |
+| D20's follower in current limit | **0.9999990000010001** | 0 |
+| limited follower, output also fed 1 kΩ from the source | (no region reported) | 1/1001 = 9.990e-4 |
+| `outOfLinear` on a linear bench | — | absent |
+
+The two linear rows pass identically either way: the change has no false
+positives, and it costs nothing where nothing was wrong. The railed rows are
+the defect — a stage welded to a rail reporting the full open-loop gain of a
+stage that cannot move — and 0.99999900 is the same defect wearing a
+follower's clothes.
+
+The last row is the one that distinguishes the two rows from each other. A
+`V(out) = 0` shortcut would produce 0 there and look correct; `i = 0` produces
+the 1 kΩ / 1 Ω divider the network actually is.
+
 ## Stated limitation
 
 The region is taken at the DC bias and held for the whole sweep, which is what
