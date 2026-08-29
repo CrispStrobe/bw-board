@@ -257,6 +257,28 @@ Two uses, in order:
 
    Size and buildability were never the open questions they looked like.
 
+   **THE BRIDGE LANDED (2026-08-29, `src/labwired-bridge.js` +
+   `LABWIRED-BRIDGE.md` + `test/labwired-bridge.test.mjs` +
+   `test/labwired-roundtrip.test.mjs`).** The second open piece is done, and it
+   settles the DIRECTION the sentence above got backwards: not their manifests
+   into our circuit model, but **our netlist into their manifest**, because
+   one-board-one-truth forbids a second drawing of the same bench. The rule that
+   follows decides every mapping — **the pad is the boundary**: labwired owns
+   registers, peripherals and pad direction; `board.js` owns the resistor, the
+   LED, the divider, the shift register. No `external_devices` is ever emitted.
+   Census over all 85 shipped `circuit.stm32f030.json` benches: 84 load, 60
+   bridge with an EMPTY refusal ledger, 24 carry one named refusal per analog
+   pad, and there is not a single unmapped pin. Two first-contact findings, both
+   found by running a real bench on both tiers against one board — labwired
+   applies **no GPIO pull at all** (a pulled-up idle button reads pressed from
+   reset; the adapter now recovers PUPDR from the peripheral snapshot and hands
+   it to the board), and labwired enters a timer's handler **twice per update
+   event** (measured 1.98 against the light tier's 1.00, with a polled-UIF
+   control proving the counter is fine). Both are in LABWIRED-BRIDGE.md with
+   reproducers. Still open there: one wasm-bindgen export for per-channel analog
+   injection (`Adc::set_channel_input` exists in core, is not exported), and the
+   lite wiring.
+
 **Correction this find forces**: the "deliberately OUT" list below said
 no permissive ESP32 emulator exists. That was true of the projects
 checked on 2026-08-25 morning and is now STALE — LabWired's Xtensa

@@ -51,7 +51,7 @@ cannot honestly carry.
 | `external_devices` | `ExternalDevice[]` — parts labwired models | **deliberately not emitted** |
 | `parts` | part packs (`labwired.part/v1`) carried in-manifest | not needed |
 | `peripherals` | extra peripherals beyond the chip descriptor | not needed |
-| `memory_overrides` | flash/RAM size overrides | not needed |
+| `memory_overrides` | flash/RAM size overrides | **parsed and never read** — see §6 |
 | `motor_models`, `cosim_models` | typed plant models / co-simulation adapters | second-physics; refused by §0 |
 | `debug_uart` | which console the board's USB socket is wired to | F0 has one USART path |
 | `wifi_ap` | per-lab virtual access point | no radio on this chip |
@@ -171,6 +171,97 @@ Two carriers were considered and rejected:
 - **Poke `dr` on every sync.** Racy by construction, per the second bullet
   above.
 
+## 4b. The pull-up that is not there — found by running the round trip
+
+Found the moment a real bench ran on both tiers instead of a recording stub,
+and it is the most important finding in this lane:
+
+**labwired's V2 GPIO model does not model a pull at all.** `V2Gpio::effective_idr()`
+(`crates/core/src/peripherals/gpio.rs:238`) is
+
+```rust
+((self.odr & push_pull) | (self.idr & !driven)) & 0xFFFF
+```
+
+— an undriven input reads its raw `idr` latch, which resets to 0, **whatever
+PUPDR holds**. PUPDR is stored and read back correctly at `0x0C`; it simply has
+no effect on the pad. And `pin_routing` reports only
+`input | output | af | analog`, so the adapter could not see the pull either.
+
+Left alone, that turns the pulled-up idle button — the gallery's *only* button
+idiom — into a key held down from reset. On `01-blink`, where PA1 is a pulled-up
+input with **nothing wired to it**, the heavy tier printed 23 spurious `B` bytes
+where the light tier printed none — while the firmware ran correctly and the LED
+blinked correctly the whole time. No error, anywhere.
+
+The fix is on our side and needs no fork patch: `get_peripheral_snapshot(port)`
+returns the flat V2 register struct **including `pupdr`**, so
+`labwired-adapter.js` reads the pull itself and publishes the pad to the board as
+`input-pullup` / `input-pulldown` / `input` — which is exactly what
+`stm32f0-board.js`'s `_publishAll` does on the light tier. Our board *does* model
+pull resistors (`pin-model.js`, `R_INPUT_PULLUP`), so it solves the pad, and
+`syncInputs` pushes the solved level back into IDR. Two tiers, one description of
+one pad.
+
+Defensive by construction: a family whose snapshot carries no numeric `pupdr`
+(the F1 encodes pulls in CRL/CRH + ODR; nRF52 in PIN_CNF) reports no pull and the
+pad stays a plain input, rather than acquiring an invented one.
+
+Worth an upstream note: an `effective_idr` that honoured PUPDR for undriven pins
+would be a few lines, and the absence is invisible to anything that does not ask
+for a pad LEVEL — the same blind spot that hid the F1/V2 register-map trap.
+
+## 4c. Two interrupt entries per timer update — measured, with the control
+
+The second thing the round trip found, and the reason it compares an edge
+*prefix* rather than an edge count.
+
+Firmware that toggles PA0 once per TIM3 handler entry makes the edge count a
+direct count of interrupt entries, and TIM3 at `PSC=47, ARR=999` on a 48 MHz
+part produces exactly one update event per millisecond. Over 40 ms:
+
+| tier | PA0 level changes in 40 ms | handler entries per update event |
+| --- | --- | --- |
+| light (`CortexM0Machine`) | 39 | **0.97** |
+| heavy (labwired-wasm @ 41119903c) | 78 | **1.95** |
+
+(The ±1 is the update event on the window's last millisecond, which may or may
+not fall inside it. Nothing else here is approximate: a standalone probe over
+the same firmware measured 40 and 79.)
+
+So any interrupt-counted millisecond clock — **which is exactly what our codegen
+emits** — runs at double speed on the heavy tier. A 20 ms blink comes out at
+9.8 ms.
+
+**The control isolates it.** The same grid polled off `TIM3_SR` UIF, with the
+NVIC not involved at all, agrees:
+
+| tier | polled half-period (asked: 20 ms) |
+| --- | --- |
+| light | 20.001 ms |
+| heavy | 20.000 ms |
+
+They agree to five parts in a hundred thousand. The counter, the prescaler and
+the clock are fine. The interrupt path is not.
+labwired's timer IRQ is **level**-pended — `irq_level_held()` is
+`SR & DIER & 0x1F` (`crates/core/src/peripherals/timer.rs:343`) and the walk
+pends the line on every tick while that holds — and the NVIC pending latch is
+not dropped when the peripheral deasserts during the handler. So the
+`TIM3_SR = 0` at the *top* of the ISR is still followed by a second entry. On
+silicon the NVIC clears a level-triggered pending bit once the source deasserts
+before the return.
+
+Not patched here: the fix is in the NVIC's level handling, not a two-line change,
+and proving it needs a full workspace build. It is a clean upstream-PR candidate
+with a five-line reproducer, and the round-trip test carries it as a *named,
+ledgered* assertion with a band wide enough that a repair (→ 1.00) lands inside
+it rather than reading as a regression.
+
+Why the oracle never saw this: it compares UART byte *streams* and reassembles
+edges from raw BSRR word writes. Both agree here — the firmware says the same
+things in the same order. Only the RATE differs, and nothing before the round
+trip ever put a hardware-timed firmware on both engines against one board.
+
 ## 5. The census — measured over the shipped gallery
 
 `scripts/labwired-bridge-census.mjs`, run against sb3-creator
@@ -215,8 +306,32 @@ bw-board. Recorded here because a silently skipped bench is how a corpus rots.
 1. **The wasm ADC channel export** (§4) — one method in our fork, a rebuilt
    artifact, and 24 benches move from "named refusal" to "carried".
 2. **Lite wiring** — deliberately not started; see the lane's report.
-3. **Chips beyond the F0.** `LABWIRED_CHIPS` in `src/labwired-chips.js` is the
+3. **The two tiers disagree about how much memory the part has.**
+   `stm32-adapter.js` builds an **F030F4** — `sramBytes: 4096, flashBytes: 16K`,
+   which is what the TSSOP20 sidecar the designer seats actually is — while
+   `stm32f0-chip.yaml` (copied from upstream's onboarding config) declares
+   **256 KB flash / 64 KB RAM**. A firmware linked against the generous map runs
+   on the heavy tier and silently stops ticking on the light one, which is why
+   the round-trip firmware is linked for the SMALLER of the two. The manifest
+   cannot fix this: `SystemManifest::memory_overrides` is declared, parsed, and
+   **read by nothing** — no construction path in `crates/core` consults it, so a
+   manifest that declares it gets silence, exactly the way `cpu_hz` behaved
+   before upstream started reading it. The real fix is to size the chip
+   descriptor to the part, which also means re-cutting `labwired-chips.js` and
+   re-linking the oracle's firmware — a deliberate act, not a side effect.
+4. **Chips beyond the F0.** `LABWIRED_CHIPS` in `src/labwired-chips.js` is the
    one place a new one is added: a chip YAML, a header pin map that MATCHES the
    light tier's, an ADC channel map, and the board kinds our registry uses for
    it. The F103 is the obvious next entry and needs a GPIO **v1** profile, not
    `stm32v2`.
+
+## 7. Housekeeping note
+
+`build/` is gitignored as of this lane. The 21 MB `labwired-wasm` artifact was
+committed by accident in `5f36dfa` (a `git add -A` that swept the download
+directory) and is untracked again here — but the blob stays reachable in
+master's history, and by the time it was noticed another agent had already
+pushed three commits on top, so rewriting would have rewritten their work too.
+On-disk cost of the mistake: **4.2 MB packed**. If the coordinator wants it gone
+it is a scheduled history rewrite, not something to force-push under a live
+fleet.

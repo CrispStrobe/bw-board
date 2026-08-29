@@ -338,10 +338,11 @@ export function buildLabwiredSystem (opts = {}) {
     // undrivable the moment the firmware changed its mind, silently, because
     // `set_board_io_input` resolves ids and nothing else. The id is the header
     // name because that is what `labwired-adapter.js` passes.
-    bindings.push({
+    const injection = {
       id: header, kind: 'button', peripheral: def.peripheral, pin: def.pin,
       signal: 'input', activeHigh: true, role, why: 'pad injection channel',
-    });
+    };
+    bindings.push(injection);
 
     if (role === 'indicator' || role === 'digital') {
       // Observational only (`read_gpio_output`), named with OUR part id so a
@@ -361,7 +362,7 @@ export function buildLabwiredSystem (opts = {}) {
       // makes the manifest self-describing without a second binding on the
       // same pad (two `signal: input` bindings would attach two Buttons to one
       // pad, and the second would overwrite the first's level every service).
-      bindings[bindings.length - 1].why = `${leaves.find((l) => CONTACT.has(l.kind)).kind} on ${header}`;
+      injection.why = `${leaves.find((l) => CONTACT.has(l.kind)).kind} on ${header}`;
     }
 
     if (role === 'analog') {

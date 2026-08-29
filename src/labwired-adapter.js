@@ -39,8 +39,15 @@
  * the "board-manifest → netlist" bridge: enough for boundary A, and no more.
  * A caller that already has a manifest passes `systemYaml` and keeps it.
  *
- * TWO THINGS THAT COST A DAY, WRITTEN DOWN SO THEY DO NOT AGAIN
- * -------------------------------------------------------------
+ * THREE THINGS THAT COST A DAY EACH, WRITTEN DOWN SO THEY DO NOT AGAIN
+ * --------------------------------------------------------------------
+ * 0. **There is no pull-up.** `pin_routing` reports input/output/af/analog and
+ *    says nothing about PUPDR, and labwired's V2 GPIO model never applies a
+ *    pull: `effective_idr()` is `(odr & push_pull) | (idr & !driven)`, so an
+ *    undriven input reads its raw IDR latch — 0 — whatever PUPDR holds. That
+ *    makes the pulled-up idle button (the gallery's only button idiom) read as
+ *    held down from reset. See `refreshPulls()` for how the register truth is
+ *    recovered and handed to the board instead.
  * 1. `serde-wasm-bindgen` returns JS `Map`s, not plain objects — see `plain()`.
  * 2. The chip manifest MUST give every V2-layout STM32 GPIO port
  *    `config: { profile: stm32v2 }`. `type: stm32_gpioport` routes to
@@ -152,6 +159,10 @@ export function createLabwiredAdapter (opts) {
   const published = new Map();
   /** Last routing mode per pin, refreshed with the edges. */
   const routing = new Map();
+  /** Last pull config per pin: 'up' | 'down' | null. See refreshPulls(). */
+  const pulls = new Map();
+  /** Last MODER|PUPDR|OTYPER signature per port — the reconfiguration detector. */
+  const portConfig = new Map();
 
   const cycleToNs = (cycle) => (BigInt(Math.round(cycle)) * NS_PER_S) / clockHzBig;
   const timeNs = () => (cycleNow * NS_PER_S) / clockHzBig;
@@ -165,8 +176,23 @@ export function createLabwiredAdapter (opts) {
     // board solve the node instead of asserting a level we do not know.
     if (r === 'output' || r === 'af') return 'pushpull';
     if (r === 'analog') return 'analog';
-    return 'input';
+    const pull = pulls.get(name);
+    return pull === 'up' ? 'input-pullup' : pull === 'down' ? 'input-pulldown' : 'input';
   };
+
+  /** True for every mode where the BOARD owns the pad level, not the chip. */
+  const isInputMode = (mode) => mode === 'input' || mode === 'input-pullup' || mode === 'input-pulldown';
+
+  /**
+   * The rest level of an undriven pad — what the board should seat it at.
+   *
+   * An input pad's level is the board's to solve, so what we publish is the
+   * PULL, not a read-back: `input-pullup` seats high, `input-pulldown` low,
+   * a bare input low. This mirrors `stm32f0-board.js`'s `_publishAll`, which is
+   * the point — the two tiers must hand the board the same description of the
+   * same pad.
+   */
+  const restLevelOf = (name) => pulls.get(name) === 'up';
 
   function refreshRouting () {
     if (!sim.pin_routing) return;
@@ -177,9 +203,82 @@ export function createLabwiredAdapter (opts) {
     });
   }
 
-  const publish = (name, high, atNs) => {
+  /**
+   * Publish EVERY pin's current mode and level, the way the light tier's
+   * `_publishAll` does after a MODER/PUPDR write.
+   *
+   * A pad whose CONFIGURATION changed produces no logic edge — nothing on it
+   * moved — so the edge stream alone can never tell the board that a pin just
+   * became a pulled-up input. That is not hypothetical: `01-blink` configures
+   * PA1's pull-up in `main`, AFTER attach, and PA1 is wired to nothing, so it
+   * emits no edge for the rest of the run. Without this the board would hold
+   * the seat-time description of that pad forever.
+   */
+  function publishAll (atNs) {
+    if (!board) return;
+    const sampled = sim.sample_logic_signals ? plain(sim.sample_logic_signals(refs)) : null;
+    names.forEach((name, i) => {
+      const row = Array.isArray(sampled) ? sampled[i] : null;
+      publish(name, !!(row && row.value === true), atNs);
+    });
+  }
+
+  /**
+   * THE PULL-UP THE ROUTING API DOES NOT REPORT.
+   *
+   * `pin_routing` answers input/output/af/analog and nothing about PUPDR, and
+   * labwired's V2 GPIO model does not apply a pull at all: `effective_idr()` is
+   * `(odr & push_pull) | (idr & !driven)`, so an undriven input reads its raw
+   * IDR latch — 0 — however PUPDR is configured. Left alone, that turns the
+   * pulled-up idle button idiom (which is the gallery's ONLY button idiom) into
+   * a key that is held down from reset: on 01-blink it printed 23 spurious
+   * bytes where the light tier printed none, silently, with the firmware
+   * running and the LED blinking correctly the whole time.
+   *
+   * The register truth IS reachable — `get_peripheral_snapshot(port)` returns
+   * the flat V2 struct including `pupdr` — so the pull is read here and handed
+   * to the BOARD, which does model pull resistors (`pin-model.js`
+   * R_INPUT_PULLUP). The board then solves the pad, and `syncInputs` pushes
+   * that solved level back into IDR. That is the same route the light tier
+   * takes, and it is why the two tiers now agree.
+   *
+   * Defensive by construction: a family whose snapshot has no numeric `pupdr`
+   * (the F1's pulls live in CRL/CRH + ODR; nRF52 in PIN_CNF) simply reports no
+   * pull, and the pad stays a plain input rather than acquiring an invented one.
+   */
+  function refreshPulls () {
+    if (!sim.get_peripheral_snapshot) return false;
+    let changed = false;
+    const perPort = new Map();
+    for (const name of names) {
+      const port = pins[name].peripheral;
+      if (!perPort.has(port)) {
+        let snap = null;
+        try { snap = plain(sim.get_peripheral_snapshot(port)); } catch { snap = null; }
+        perPort.set(port, snap);
+        // The port's CONFIGURATION registers, as one signature. This doubles as
+        // the change detector for `publishAll`: two accessor calls per drain,
+        // against a full routing + republish pass only when the firmware has
+        // actually reconfigured something.
+        const sig = snap ? `${snap.moder}|${snap.pupdr}|${snap.otyper}` : 'none';
+        if (portConfig.get(port) !== sig) { portConfig.set(port, sig); changed = true; }
+      }
+      const snap = perPort.get(port);
+      const pupdr = snap && typeof snap.pupdr === 'number' ? snap.pupdr : null;
+      if (pupdr === null) { pulls.set(name, null); continue; }
+      const field = (pupdr >>> (2 * pins[name].pin)) & 3;
+      pulls.set(name, field === 1 ? 'up' : field === 2 ? 'down' : null);
+    }
+    return changed;
+  }
+
+  const publish = (name, highIn, atNs) => {
     if (!board) return;
     const mode = modeOf(name);
+    // An input pad's level belongs to the board; what the chip contributes is
+    // its pull. Publishing the engine's read-back for an input would feed the
+    // board the value we injected into it a moment ago.
+    const high = isInputMode(mode) ? restLevelOf(name) : highIn;
     const prev = published.get(name);
     if (prev && prev.mode === mode && prev.high === high) return;
     published.set(name, { mode, high });
@@ -196,12 +295,16 @@ export function createLabwiredAdapter (opts) {
     if (batch.dropped) stats.edgesDropped = batch.dropped;
     if (typeof batch.nowCycle === 'number') cycleNow = BigInt(Math.round(batch.nowCycle));
     const edges = batch.edges ?? [];
-    if (edges.length) refreshRouting();
+    const reconfigured = refreshPulls();
+    if (edges.length || reconfigured) refreshRouting();
     for (const e of edges) {
       const name = names[e.ch];
       if (name === undefined) continue;             // never fall through to ch 0
       publish(name, !!e.value, cycleToNs(e.cycle));
     }
+    // A reconfiguration moves no pad, so it produces no edge — republish
+    // everything, or the board keeps a description the chip has abandoned.
+    if (reconfigured) publishAll(timeNs());
   }
 
   /**
@@ -232,7 +335,7 @@ export function createLabwiredAdapter (opts) {
     try {
       for (const name of names) {
         // Only pads the firmware is NOT driving take a level from the board.
-        if (modeOf(name) !== 'input') continue;
+        if (!isInputMode(modeOf(name))) continue;
         try {
           sim.set_board_io_input(name, board.readPin(name) === 1);
         } catch (e) {
@@ -264,6 +367,7 @@ export function createLabwiredAdapter (opts) {
       // Arming the watch RETURNS every ref's current level — pillar 1 (seat
       // all pins) and the ch table in one call, before any edge exists.
       const seated = plain(sim.watch_logic_signals(refs));
+      refreshPulls();            // pulls FIRST: the seat mode depends on them
       refreshRouting();
       const atNs = timeNs();
       if (Array.isArray(seated)) {
@@ -273,7 +377,7 @@ export function createLabwiredAdapter (opts) {
           // `value: null` means the engine cannot say (unknown pad). Seat it
           // low rather than skipping: an unseated pin is the bug pillar 1
           // exists to catch, and the board must have a level for every pin.
-          const high = row && row.value === true;
+          const high = isInputMode(mode) ? restLevelOf(name) : (row && row.value === true);
           published.set(name, { mode, high });
           if (board.advanceTo) board.advanceTo(atNs);
           board.setPin(name, mode, high);
@@ -304,6 +408,8 @@ export function createLabwiredAdapter (opts) {
       adapter.sim = sim;
       published.clear();
       routing.clear();
+      pulls.clear();
+      portConfig.clear();
       cursor = 0;
       cycleNow = 0n;
       if (board) adapter.attachBoard(board);

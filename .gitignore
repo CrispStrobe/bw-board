@@ -12,3 +12,8 @@ CLAUDE.md
 .resync-tx.bin
 scripts/tms9918/vdppeer
 emu8051-stc/
+
+# labwired-wasm build output: 21 MB of artifact per run. The build script
+# defaults here (scripts/build-labwired-wasm.mjs --out), and the artifact is
+# published as a release asset, never committed.
+build/

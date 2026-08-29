@@ -85,7 +85,12 @@ for (const bench of benches) {
         const b = circuit.board;
         if (!b || !b.parts.length) throw new Error('the loader produced an empty board');
         netlist = {
-            parts: b.parts.map((p) => ({ id: p.id, kind: p.kind, params: p.params ?? {} })),
+            // `vcc` is a BOARD fact, not a part: the F030 benches declare
+            // `"vcc": 5` at the top of the designer file and every LED current
+            // in the corpus depends on it. Dropping it here would make a
+            // round-trip test solve a different circuit than the gallery does.
+            vcc: b.vcc,
+            parts: b.parts.map((p) => ({ id: p.id, kind: p.kind, params: p.params ?? {}, terminals: p.terminals ?? [] })),
             nets: b.nets.map((n) => ({ id: n.id, terminals: n.terminals })),
         };
     } catch (e) {

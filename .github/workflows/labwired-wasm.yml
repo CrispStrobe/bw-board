@@ -133,17 +133,36 @@ jobs:
 
       - name: ARM toolchain (the tests build a real F0 ELF)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi
-      - name: Adapter + debug-target contract, against the freshly built engine
+      - name: Adapter, bridge and round trip, against the freshly built engine
         env:
           LABWIRED_WASM: ${{ github.workspace }}/lw/nodejs
         run: |
           set -euo pipefail
-          node --test test/labwired-adapter.test.mjs 2>&1 | tee out.txt
-          # A suite that SKIPS is not a suite that passes, and this one skips
-          # itself whenever LABWIRED_WASM or the ARM toolchain is missing —
+          # The round-trip suite is the one that runs a real gallery bench
+          # through the netlist → manifest bridge on BOTH tiers, so it is the
+          # only place a wrong port, a dropped pad or a mislabelled binding
+          # shows up: the adapter suite uses a hand-written pin map and a
+          # recording stub, and cannot see any of that.
+          node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
+                      test/labwired-roundtrip.test.mjs 2>&1 | tee out.txt
+          # A suite that does not RUN is not a suite that passes, and these skip
+          # themselves whenever LABWIRED_WASM or the ARM toolchain is missing —
           # which in this job would mean the wiring broke, not that there is
           # nothing to check.
-          grep -q '^# skipped 0' out.txt || { echo "::error::the labwired suite skipped — LABWIRED_WASM or arm-none-eabi-gcc did not reach it"; exit 1; }
+          #
+          # `# skipped 0` alone was NOT that check. These suites gate at the
+          # `describe(..., { skip })` level, and node then reports
+          # `# tests 0 / # skipped 0` — so the old guard passed cleanly on a run
+          # where the engine never loaded and not one assertion executed. A gate
+          # that cannot fail is not a gate. The floor below is the count the
+          # three suites produce together; raise it when they grow.
+          tests=$(sed -n 's/^# tests \([0-9]*\)$/\1/p' out.txt | tail -1)
+          fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)
+          skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)
+          echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
+          [ "${tests:-0}" -ge 34 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
+          [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 
   publish:
     needs: [determinism, test]

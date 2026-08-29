@@ -142,9 +142,14 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
         for (const name of Object.keys(PINS)) {
             assert.ok(seated.includes(name), `${name} was never seated — pillar 1`);
         }
-        // Every setPin carries a real mode the board can model.
+        // Every setPin carries a real mode the board can model. The two
+        // input-with-a-pull modes are here because labwired does not model a
+        // pull at all and the adapter recovers PUPDR itself — see
+        // `refreshPulls`; without them a pulled-up idle pin reaches the board
+        // as a bare floating input and the board solves the wrong node.
         for (const c of board.calls.filter((c) => c.k === 'setPin')) {
-            assert.ok(['pushpull', 'input', 'analog'].includes(c.mode), `bad mode ${c.mode}`);
+            assert.ok(['pushpull', 'input', 'input-pullup', 'input-pulldown', 'analog'].includes(c.mode),
+                `bad mode ${c.mode}`);
         }
     });
 

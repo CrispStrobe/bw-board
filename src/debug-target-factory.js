@@ -37,6 +37,7 @@ import { createSerialDebugTarget } from './serial-debug.js';
 import { createAvr8jsAdapter } from './avr8js-adapter.js';
 import { createLabwiredAdapter } from './labwired-adapter.js';
 import { createLabwiredDebugTarget } from './labwired-debug.js';
+import { labwiredAdapterOptionsFor } from './labwired-bridge.js';
 import { parseIntelHex } from './intel-hex.js';
 
 /**
@@ -104,20 +105,40 @@ export async function createDebugTarget(kind, opts) {
 /**
  * @param {object} opts
  * @param {object} opts.wasm      instantiated labwired-wasm module
- * @param {object} opts.board     BoardImpl
- * @param {string} opts.chipYaml  chip descriptor
- * @param {Uint8Array} opts.firmware  ELF
- * @param {Record<string,{peripheral:string,pin:number}>} opts.pins header map
+ * @param {object} opts.board     BoardImpl — ALSO the default source of the
+ *   chip descriptor, the header map and the manifest (see below)
+ * @param {Uint8Array} opts.firmware  ELF, or a raw flash image
+ * @param {string} [opts.chipKind] our board-part kind, default `stm32f030`
+ * @param {string} [opts.chipYaml]  chip descriptor, if not derived from the board
+ * @param {Record<string,{peripheral:string,pin:number}>} [opts.pins] header map
  * @param {number} [opts.clockHz]
  * @param {string} [opts.systemYaml] override the generated manifest
  */
 async function createLabwiredTarget(opts) {
-  const { wasm, board, chipYaml, firmware, pins, clockHz, systemYaml, name } = opts;
+  const { wasm, board, firmware, name } = opts;
   if (!wasm) throw new Error("labwired target requires opts.wasm (the labwired-wasm module)");
   if (!board) throw new Error('labwired target requires opts.board');
-  if (!chipYaml) throw new Error('labwired target requires opts.chipYaml');
   if (!firmware) throw new Error('labwired target requires opts.firmware (an ELF)');
-  if (!pins) throw new Error('labwired target requires opts.pins (the header map)');
+
+  // THE BOARD IS THE NETLIST, so it is where the manifest comes from unless the
+  // caller insists otherwise. Requiring a host to hand over `chipYaml` and
+  // `pins` alongside the board invited exactly the divergence one-board-one-
+  // truth forbids: two descriptions of the same bench, and nothing checking
+  // that the pin map matches what the designer actually drew. `refusals` rides
+  // out on the result so a host can SAY why something on the bench will not
+  // move, instead of showing a dead knob.
+  let { chipYaml, pins, clockHz, systemYaml } = opts;
+  let refusals = [];
+  if (!chipYaml || !pins) {
+    const derived = labwiredAdapterOptionsFor({
+      netlist: board, chipKind: opts.chipKind ?? 'stm32f030', mcuId: opts.mcuId, name,
+    });
+    chipYaml = chipYaml ?? derived.chipYaml;
+    pins = pins ?? derived.pins;
+    clockHz = clockHz ?? derived.clockHz;
+    systemYaml = systemYaml ?? derived.systemYaml;
+    refusals = derived.refusals;
+  }
 
   // Ordering, as everywhere in this factory: adapter, then board, then target.
   // attachBoard is what arms the engine's logic capture AND seats every pin, so
@@ -125,7 +146,7 @@ async function createLabwiredTarget(opts) {
   const adapter = createLabwiredAdapter({ wasm, chipYaml, firmware, pins, clockHz, systemYaml, name });
   adapter.attachBoard(board);
   const target = createLabwiredDebugTarget({ adapter });
-  return { target, adapter };
+  return { target, adapter, refusals };
 }
 
 // ─── Emulator target (8051 / STC12) ─────────────────────────────────────
