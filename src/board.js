@@ -3120,6 +3120,18 @@ export class BoardImpl {
         hEff = wake - t;
         atEdge = true; // a wake is a discontinuity: BE restart past it
       }
+      // A 'sample'-capture channel's grid points are barriers too — and this
+      // is the difference between a sample series and an estimate of one. When
+      // the instant is a solve point the value stored is the solution AT it;
+      // otherwise it is interpolated between the solves either side, and on a
+      // 1 kHz sine with 100 µs steps that interpolation is 128 mV of a 2 V
+      // amplitude, i.e. ~6 % of distortion an FFT then reports as real.
+      // NOT a discontinuity: no `atEdge`, so the trapezoidal history survives
+      // and this costs one truncated step, never a BE restart.
+      const grid = this._nextSampleGridSec(t);
+      if (grid !== null && grid > t + 1e-15 && grid < t + hEff - 1e-15) {
+        hEff = grid - t;
+      }
 
       // Only a genuine discontinuity takes the uncontrolled BE seed. A
       // floor-sized step goes through the trapezoidal controller like any
@@ -3227,6 +3239,32 @@ export class BoardImpl {
    * @param {number} tSec
    * @returns {number | null}
    */
+  /**
+   * The next 'sample'-capture grid instant after tSec, in seconds, or null.
+   *
+   * Used as a step barrier so the value a sample channel stores is the
+   * solution AT its sample instant rather than an interpolation between the
+   * solves either side. Unlike a source edge this is not a discontinuity: the
+   * caller truncates the step and does NOT restart backward Euler.
+   *
+   * Only channels that asked for `capture: 'sample'` are considered, so an
+   * envelope channel — which is every channel any existing bench opens — adds
+   * no barriers and costs nothing.
+   *
+   * @param {number} tSec
+   * @returns {number | null}
+   */
+  _nextSampleGridSec(tSec) {
+    if (this._scopeChannels.size === 0) return null;
+    let next = null;
+    for (const [, ch] of this._scopeChannels) {
+      if (ch.capture !== 'sample' || ch.type !== 'voltage') continue;
+      const at = Number(ch._nextSampleNs) / 1e9;
+      if (at > tSec + 1e-15 && (next === null || at < next)) next = at;
+    }
+    return next;
+  }
+
   _nextSourceEdgeSec(tSec) {
     let next = null;
     for (const part of this.parts) {

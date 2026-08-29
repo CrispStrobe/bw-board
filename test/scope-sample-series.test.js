@@ -71,7 +71,7 @@ describe('scope capture modes', () => {
     }
   });
 
-  it('the sampled values ARE 2.5 + 2·sin(2π·1000·t), to 1 mV', () => {
+  it('the sampled values ARE 2.5 + 2·sin(2π·1000·t), to machine precision', () => {
     const board = sineBench();
     const ch = board.addScopeChannel({
       type: 'voltage', netId: 'net_sig', sampleRateHz: 100_000, depth: 1024, capture: 'sample',
@@ -88,8 +88,35 @@ describe('scope capture modes', () => {
       const err = Math.abs(v - want);
       if (err > worst) { worst = err; worstK = k; }
     });
-    assert.ok(worst < 1e-3,
+    // 1e-9, not 1e-3: since the sample grid became a STEP BARRIER the stored
+    // value is the solution at the instant, not an interpolation towards it.
+    // The three numbers this replaced, on this exact bench: 618 mV holding the
+    // next solve, 128 mV interpolating between 100 µs solves, 1e-11 now.
+    assert.ok(worst < 1e-9,
       `worst deviation from the closed form ${worst.toExponential(3)} V at k=${worstK}`);
+  });
+
+  it('the grid is a barrier, so a SLOWER capture is exact too — and costs less', () => {
+    // 10 kHz sample capture is exact and cheaper than the 100 kHz ENVELOPE
+    // every bench already runs, because the barrier caps h at 100 µs, which is
+    // the trace-fidelity floor the integrator was already using. The cost of
+    // the spectrum tap is therefore a CHOICE of rate, not a tax on having one.
+    const board = sineBench();
+    const ch = board.addScopeChannel({
+      type: 'voltage', netId: 'net_sig', sampleRateHz: 10_000, depth: 1024, capture: 'sample',
+    });
+    board.advanceTo(5_000_000n);
+    const data = board.getScopeData(ch);
+    const pairs = written(data);
+    const interval = Number(data.sampleIntervalNs) / 1e9;
+    const t0 = Number(data.startTNs) / 1e9;
+    let worst = 0;
+    pairs.forEach(([v], k) => {
+      const want = 2.5 + 2 * Math.sin(2 * Math.PI * 1000 * (t0 + k * interval));
+      worst = Math.max(worst, Math.abs(v - want));
+    });
+    assert.ok(pairs.length >= 45, `expected ~50 samples, got ${pairs.length}`);
+    assert.ok(worst < 1e-9, `worst deviation ${worst.toExponential(3)} V`);
   });
 
   it('the envelope channel on the SAME bench does not satisfy that — which is the defect', () => {

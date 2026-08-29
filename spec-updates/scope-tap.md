@@ -165,17 +165,26 @@ Three details that are the whole difference between working and nearly
 working, each found by disagreeing with the closed form
 `2.5 + 2·sin(2π·1000·t)`:
 
-1. **The value is interpolated, not held.** Taking the solve that lands
-   at or after the sample instant is a zero-order hold whose time error
-   is a whole solve step: 618 mV of a 2 V amplitude, because the
-   transient controller was stepping 50 µs. Linear interpolation between
-   the two solves that bracket the instant costs no extra solves and
-   brings the same bench to 128 mV.
-2. **The integrator step is capped at the finest sample-series
-   interval.** With 100 µs steps against a 10 µs grid, nine samples in
-   ten came off one line segment. Capping brings the deviation under
-   1 mV. ONLY channels that opt in pay this: an envelope channel's cost
-   is unchanged, which matters because every existing bench uses one.
+1. **The sample grid is a STEP BARRIER.** The integrator truncates its
+   step to land exactly on each sample instant, the same way it already
+   does for a square-source edge — but WITHOUT the backward-Euler
+   restart, because a sample instant is not a discontinuity. The stored
+   value is then the solution AT the instant. Three measurements on one
+   bench, a 1 kHz sine at 100 kHz capture, in the order they were made:
+   holding the next solve's value gave **618 mV** of error on a 2 V
+   amplitude (the step was 50 µs); interpolating between the bracketing
+   solves gave **128 mV**; the barrier gives **1.2e-11 V**.
+   Interpolation is kept as the fallback for any path that reaches a
+   flush without a barrier, so the failure mode is a small error rather
+   than a wrong one.
+2. **A sample channel's step cap is a CHOICE OF RATE, not a tax.** The
+   barrier caps h at the capture interval. At 10 kHz that is 100 µs,
+   which is exactly the trace-fidelity floor the integrator was already
+   using — measured, 5 ms of that bench costs **140 ms** with a 10 kHz
+   sample channel against **225 ms** with the 100 kHz ENVELOPE channel
+   every existing bench opens, so the honest default is cheaper than
+   today. Asking for 100 kHz costs **1226 ms**, and the consumer's UI
+   states the Nyquist it is buying. Envelope channels add no barriers.
 3. **`startTNs` is the first SAMPLE's instant, not the first bucket's
    start.** Those differ by one interval. Getting it wrong reads the
    whole series one sample early, which looks exactly like an amplitude
