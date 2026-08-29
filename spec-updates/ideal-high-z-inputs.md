@@ -279,6 +279,82 @@ hand    −7.5258701787 V   (= −8000/1063)
 Agreement to 2.1e-9 V, the residual being GMIN. The unloaded value it replaces
 is −8000/1003 = −7.9760717846 V.
 
+## Corpus impact (measured)
+
+Two rigs, `git archive` of the tree before the source change and of the final
+tree, sharing one sb3-creator worktree (`649fdda`) and one pinned
+bw-circuit-ui (`af5cc08`), run sequentially under the box's build lock. Every
+node voltage and every branch current of every bench, dumped and compared bit
+for bit — not a tolerance, not a sample:
+
+```
+benches: 279   values compared: 6963
+values moved: 0   bench status changes: 0
+```
+
+The two dumps are byte-identical (sha256
+`d3b6ff2c1d850ca6a57e0084fb936c65fbe7bbac35dd82738f2b7db2bac853b3`), and the
+run was repeated against the FINAL tree after the whitespace pass and the
+removal of six `stamp()` bodies that had been left holding only a comment —
+byte-identical again, so "no value moved" is a statement about what shipped,
+not about a midpoint. sb3-creator's claim census agrees line for line on both
+sides:
+
+```
+TOTAL  claims 2447  checked 1235  mismatched 1  skipped 1211  |  compared 1236 = 50.5 %
+```
+
+Zero verdict changes. The one standing mismatch
+(`arduino-sk-p04-color-mixing`) is present on both sides and is not this
+lane's.
+
+**What this does and does not cover — the rig's own limits, stated.**
+Of 279 example directories, 224 have an authored `circuit.json` and 203 solve;
+the rest decline by name. Of the **71 named device models** that lost a
+declaration, only **ten** appear in a measurable bench at all — `74hc244`,
+`char_lcd_i2c`, `decade_counter`, `lm358`, `max7219`, `neopixel`, `sevenseg8`,
+`ssd1306`, `timer_555`, `ultrasonic` (plus the `555` alias and `hd44780`). So
+the differential is real evidence for those and **silent about the other 61**.
+It is not the primary evidence in any case: the primary evidence is that the
+air-leg guard is the first line of `stampTwoTerminal` and cannot be reached
+past, which makes every deleted call a no-op by construction. The differential
+exists to catch a site the census mis-identified, and it found none.
+
+**The rig was mutation-proved, and the two failed attempts are worth more
+than the successful one.** The method: plant a deleted declaration back LIVE
+(to the part's own `gnd`, i.e. what implementing it would have meant) and
+require the differential to fire.
+
+1. Planted on the `74hc595` inputs: **nothing moved.** Not because the rig is
+   blind — because the corpus contains no `74hc595` and no `shift_register`
+   part at all. The F5 and F1 74HC595 deletions are therefore beyond this
+   instrument entirely, and rest on the hand oracles in
+   `test/ideal-high-z-inputs.test.mjs`.
+2. Re-planted on `timer_555` threshold/trigger/reset — 18 instances in the
+   corpus, and those pins ARE the RC timing node, so it looked like the
+   obvious choice. It would also have moved nothing: `solveBench` declines
+   every bench containing a `timer_555` as a *free-running oscillator — the
+   claim is about a waveform and a solve is an instant*. All 18 are among the
+   76 declines. **The 555 is structurally invisible to this differential.**
+3. Planted on `ssd1306` `scl` (8 solved benches) and the `lm358` inputs
+   (3, including `76-multimeter`):
+
+```
+benches: 279   values compared: 6963
+values moved: 221   bench status changes: 0
+```
+
+   across `70-calculator` (64), `70-calculator-simple` (64), `pc84-led-herz`
+   (46), `pc85-led-lampe-puls` (21), `76-multimeter` (14), `disp-oled` (6),
+   `disp-mono-lcd` (6). Largest single move `pc85-led-lampe-puls` `net_div`,
+   3.49338869727 → 3.17552007670 V.
+
+So the differential is sharp — it resolves a 1.6e-7 V change — and it is
+sharp for the ten device models the corpus instantiates. Its silence about
+the other 61 is a fact about the corpus, not a result. A differential that
+cannot fire proves nothing, and knowing WHICH parts it can speak for is the
+difference between evidence and a green tick.
+
 ## Ratchet
 
 `scripts/conductance-census.mjs --count` is the class size. The ratchet test
