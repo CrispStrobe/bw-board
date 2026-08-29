@@ -10,7 +10,14 @@
  *   node scripts/labwired-bridge-census.mjs \
  *     --gallery   /path/to/sb3-creator/examples \
  *     --circuit-ui /path/to/bw-circuit-ui \
- *     [--emit test/fixtures/labwired/f030-bench-netlists.json]
+ *     [--emit test/fixtures/labwired/f030-bench-netlists.json] \
+ *     [--source-commit <40-hex>] [--variant circuit.<device>.json] [--chip-kind <kind>]
+ *
+ * `--source-commit` is how the fixture gets its provenance when the gallery is
+ * NOT a git checkout — e.g. when the benches were extracted from a ref with
+ * `git show` rather than checked out, which is the cheap way to run this
+ * against a commit that is not the sibling's HEAD. Without it the script asks
+ * git and records `unknown` if there is nothing to ask.
  *
  * WHY IT NEEDS bw-circuit-ui AND THE TEST DOES NOT
  * -----------------------------------------------
