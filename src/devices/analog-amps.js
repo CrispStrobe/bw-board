@@ -4,16 +4,38 @@
  *
  * The op-amp is the genuinely hard one: real feedback needs convergence
  * inside the board's bounded settle loop (ten device/solve rounds per
- * event). The model is a DAMPED INTEGRATOR rather than a naked
- * high-gain stage: each round the output moves G_STEP × (v+ − v−)
- * toward where the error pushes it, clamped to the LM358's real swing
- * (GND up to VCC − 1.5). Under negative feedback with attenuation β the
- * error contracts by |1 − G_STEP·β| per round — a follower (β = 1)
- * lands within millivolts in ten rounds, resistor-gain stages faster —
- * and open-loop (β = 0) it marches rail-ward like the comparator it
- * then is. A naked ×100k VCVS would ping-pong between rails forever;
- * the damping is what makes feedback SOLVABLE, and it is stated here
- * rather than hidden.
+ * event). The output is a Thévenin drive the model re-aims each round;
+ * what changed (2026-08-29, defect D18) is HOW it aims.
+ *
+ * It used to be a damped integrator: output += G_STEP × (v+ − v−), halt
+ * once that step fell below 1 mV. The header claimed "a follower (β = 1)
+ * lands within millivolts in ten rounds, resistor-gain stages faster".
+ * That is backwards, and the corpus caught it. Under negative feedback
+ * with attenuation β the error contracts by |1 − G_STEP·β| per round, so
+ * a GAIN stage — which by construction has SMALL β — converges SLOWEST.
+ * The shipped ×46.45 shunt amplifier (100 kΩ/2.2 kΩ, β = 0.0215)
+ * contracts by 0.9677 per round: closing 99 % of the error needs 141
+ * rounds against the ten the settle loop allows. The 1 mV halt then
+ * froze it at a WRONG fixed point, leaving up to 1 mV/G_STEP = 0.667 mV
+ * of input error unamplified — realised gain 31.04 at a 2 mV input,
+ * 38.79 at 4 mV, 43.39 at 10 mV. Input-dependent, and stable in time, so
+ * it read as physics rather than as arithmetic.
+ *
+ * It is now a SECANT iteration on the input error. For a linear feedback
+ * network the error is affine in the output, e(u) = k − β·u, so two
+ * (u, e) pairs give β exactly and one step lands on e = 0 — whatever β
+ * is, and without the model ever being told what the feedback network
+ * looks like. Round 0 has no history and takes the old damped step;
+ * round 1 is the secant; round 2 confirms |e| ≤ E_TOL and halts. Three
+ * rounds for any resistive feedback, against 141 for the shunt amp.
+ *
+ * The damped step survives as the fallback for every case where the
+ * secant has no slope to work with: open loop (β = 0 — it marches
+ * rail-ward like the comparator it then is) and POSITIVE feedback
+ * (β < 0 — a Schmitt trigger must run to a rail, not be solved to the
+ * unstable point the secant would find). A naked ×100k VCVS would
+ * ping-pong between rails forever; that is why this is an aiming loop
+ * and not a gain block, and it is stated here rather than hidden.
  *
  * LM3915: ten comparators on a 3 dB/step log ladder (datasheet's
  * defining feature — the equal-loudness VU law), reference from
@@ -30,7 +52,16 @@ const R_OUT = 100;          // LM358 output stage, modest drive
 const R_SINK = 50;
 const R_OFF = 1e9;
 const R_INPUT = 1e6;
-const G_STEP = 1.5;         // damped-integrator gain per settle round
+const G_STEP = 1.5;         // fallback damped step per settle round
+// Secant guards. BETA_MIN is the smallest feedback attenuation the secant
+// is allowed to divide by: below it the loop is open (or positive) and the
+// damped march to a rail is the honest answer. E_TOL is the residual input
+// error the loop settles for — it is the ONLY thing that now limits
+// realised gain, at |e|/Vin relative error (5e-5 on the 2 mV shunt bench,
+// against the 33 % the 1 mV output-step halt used to leave).
+const BETA_MIN = 1e-4;
+const E_TOL = 1e-7;         // volts of residual (v+ − v−)
+const U_TOL = 1e-9;         // volts of output movement below which nothing changed
 
 export function registerAnalogAmps() {
 
@@ -44,6 +75,10 @@ export function registerAnalogAmps() {
                     '1_out': { vTh: 0, rTh: R_OUT },
                     '2_out': { vTh: 0, rTh: R_OUT },
                 },
+                // Previous (applied output, resulting input error) pair per
+                // channel — the secant's second point. Null until the first
+                // round has produced one.
+                _prev: { 1: null, 2: null },
             };
         },
 
@@ -58,15 +93,32 @@ export function registerAnalogAmps() {
             const gnd = read('gnd') || 0;
             const hi = vcc - 1.5;              // the LM358's real top swing
             const lo = gnd + 0.005;
+            if (!state._prev) state._prev = { 1: null, 2: null };
             let changed = false;
             for (const ch of ['1', '2']) {
                 const e = read(`${ch}_pos`) - read(`${ch}_neg`);
                 const cur = state.drives[`${ch}_out`].vTh;
-                const next = Math.max(lo, Math.min(hi, cur + G_STEP * e));
-                if (Math.abs(next - cur) > 0.001) {
-                    state.drives[`${ch}_out`] = { vTh: next, rTh: R_OUT };
-                    changed = true;
+                const prev = state._prev[ch];
+                // The secant needs two DISTINCT outputs to measure a slope.
+                let next = null;
+                if (prev && Math.abs(cur - prev.u) > U_TOL) {
+                    // e(u) = k − β·u ⇒ β = −de/du, measured, not assumed.
+                    const beta = (prev.e - e) / (cur - prev.u);
+                    if (Number.isFinite(beta) && beta > BETA_MIN) next = cur + e / beta;
                 }
+                // No usable slope (first round, open loop, positive feedback):
+                // the damped march, which is what makes the rails reachable.
+                if (next === null) next = cur + G_STEP * e;
+                next = Math.max(lo, Math.min(hi, next));
+                // The pair stored is always (output that was APPLIED, error it
+                // produced), so a rail clamp never corrupts the slope estimate.
+                state._prev[ch] = { u: cur, e };
+                // Settled means the INPUT error is closed, not that the output
+                // stopped moving: the old output-step halt is exactly what left
+                // 0.667 mV of input unamplified.
+                if (Math.abs(e) <= E_TOL || Math.abs(next - cur) <= U_TOL) continue;
+                state.drives[`${ch}_out`] = { vTh: next, rTh: R_OUT };
+                changed = true;
             }
             return changed;
         },
