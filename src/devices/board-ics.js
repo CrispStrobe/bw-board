@@ -31,7 +31,12 @@ import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 export function registerBoardICs() {
 
@@ -95,15 +100,10 @@ export function registerBoardICs() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            // A0–A2 and WP: input loading plus a weak pull-down so an
-            // unwired strap pin reads a defined LOW, not a floating NaN.
-            for (const t of ['a0', 'a1', 'a2', 'wp']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
-
+        // A0–A2 and WP need no stamp. The "weak pull-down" that used to be
+        // declared here named no second terminal and never ran; an unwired
+        // strap pin reads a defined LOW because GMIN ties every node to the
+        // reference (spec-updates/ideal-high-z-inputs.md).
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -195,15 +195,10 @@ export function registerBoardICs() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            // A0–A2 and WP: input loading plus a weak pull-down so an
-            // unwired strap pin reads a defined LOW, not a floating NaN.
-            for (const t of ['a0', 'a1', 'a2', 'wp']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
-
+        // A0–A2 and WP need no stamp. The "weak pull-down" that used to be
+        // declared here named no second terminal and never ran; an unwired
+        // strap pin reads a defined LOW because GMIN ties every node to the
+        // reference (spec-updates/ideal-high-z-inputs.md).
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
@@ -234,11 +229,6 @@ export function registerBoardICs() {
             };
         },
 
-        stamp(ctx) {
-            ctx.conductance('csb', null, 1 / R_INPUT);
-            ctx.conductance('dclk', null, 1 / R_INPUT);
-            ctx.conductance('din', null, 1 / R_INPUT);
-        },
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;

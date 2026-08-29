@@ -16,7 +16,12 @@
 import { registerDevice } from '../devices.js';
 
 const R_OUT = 2.0;     // L293D output saturation ~1.4V at 600mA → ~2Ω
-const R_INPUT = 1e6;   // CMOS/TTL input impedance
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 /**
  * Register the H-bridge device model.
@@ -35,13 +40,9 @@ export function registerHBridge() {
     },
 
     stamp(ctx, part, state) {
-      // Input impedance on control pins
-      ctx.conductance('en1', null, 1 / R_INPUT);
-      ctx.conductance('in1', null, 1 / R_INPUT);
-      ctx.conductance('in2', null, 1 / R_INPUT);
-      ctx.conductance('en2', null, 1 / R_INPUT);
-      ctx.conductance('in3', null, 1 / R_INPUT);
-      ctx.conductance('in4', null, 1 / R_INPUT);
+      // The control pins (en1/in1/in2/en2/in3/in4) draw nothing: the
+      // "input impedance" declared here named no second terminal and never
+      // stamped (spec-updates/ideal-high-z-inputs.md).
     },
 
     update(part, state, read) {

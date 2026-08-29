@@ -57,7 +57,12 @@ import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;        // push-pull output impedance
 const R_OFF = 1e9;       // tri-stated / disabled output
-const R_INPUT = 1e6;     // CMOS input: draws nothing, but is not a break
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 export function registerTier3Parts() {
 
@@ -93,11 +98,6 @@ export function registerTier3Parts() {
             return { drives, shiftReg: 0, latchReg: 0, _clk: false, _rclk: false, _oe: true };
         },
 
-        stamp(ctx) {
-            for (const t of ['ser', 'data', 'srclk', 'clock', 'rclk', 'latch', 'oe', 'srclr']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -172,12 +172,6 @@ export function registerTier3Parts() {
             return { drives, _sig: '' };
         },
 
-        stamp(ctx) {
-            for (let g = 1; g <= 4; g++) {
-                ctx.conductance(`${g}a`, null, 1 / R_INPUT);
-                ctx.conductance(`${g}oeb`, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -219,9 +213,6 @@ export function registerTier3Parts() {
             const drives = {};
             for (const [, y] of pairs) drives[y] = { vTh: 0, rTh: R_OUT };
             return { drives, _sig: '' };
-        },
-        stamp(ctx) {
-            for (const [a] of pairs) ctx.conductance(a, null, 1 / R_INPUT);
         },
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;

@@ -39,7 +39,12 @@ import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 export function registerAdcSensors() {
 
@@ -58,11 +63,6 @@ export function registerAdcSensors() {
             };
         },
 
-        stamp(ctx) {
-            ctx.conductance('csb', null, 1 / R_INPUT);
-            ctx.conductance('clk', null, 1 / R_INPUT);
-            ctx.conductance('din', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -136,9 +136,6 @@ export function registerAdcSensors() {
             };
         },
 
-        stamp(ctx) {
-            ctx.conductance('sck', null, 1 / R_INPUT);
-        },
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;
@@ -210,11 +207,6 @@ export function registerAdcSensors() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['s0', 's1', 's2', 's3', 'oe']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;

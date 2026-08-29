@@ -36,7 +36,12 @@ import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;           // released: practically not driving
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 // DS1302 §"Electrical Characteristics": the clock keeps time down to 2.0 V
 // on either rail. Below it the part is off and its registers are not held.
@@ -108,12 +113,9 @@ export function registerDallasParts() {
         },
 
         stamp(ctx, part, state) {
-            ctx.conductance('ce', null, 1 / R_INPUT);
-            ctx.conductance('sclk', null, 1 / R_INPUT);
             // The battery rail needs a reference or an unwired VCC1 floats
             // and the supply comparison below reads whatever the solver
             // guessed. The real part draws well under a microamp here.
-            ctx.conductance('vcc1', null, 1 / R_INPUT);
 
             // Whether the oscillator can run is a question about WIRING, not
             // about voltage: a quartz resonator has no DC signature at all

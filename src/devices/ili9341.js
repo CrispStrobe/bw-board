@@ -18,7 +18,12 @@
 import { registerDevice } from '../devices.js';
 import { FUNSCII } from '../funscii-font.js';
 
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 const R_OUT = 50;
 const R_OFF = 1e9;
 export const ILI9341_W = 240;
@@ -302,9 +307,6 @@ export function registerILI9341() {
         },
 
         stamp(ctx) {
-            for (const t of ['cs', 'rst', 'dc', 'mosi', 'sck']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
             ctx.conductance('led', 'gnd', 1 / 200);
         },
 
@@ -389,10 +391,6 @@ export function registerILI9341() {
         },
 
         stamp(ctx) {
-            for (const t of ['cs', 'rst', 'rs', 'wr', 'rd',
-                             'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
             ctx.conductance('led', 'gnd', 1 / 200);
         },
 

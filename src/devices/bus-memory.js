@@ -71,7 +71,12 @@ import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 const SIZE = 32768;          // 32K x 8
 const ADDR_BITS = 15;        // a0 .. a14
@@ -106,10 +111,10 @@ function parallelMemory(selPin, terminals, fill, eeprom) {
         },
 
         stamp(ctx) {
-            // Address and control pins are CMOS inputs: they draw nothing
-            // but they are not a break in the net either.
-            for (const a of ADDR) ctx.conductance(a, null, 1 / R_INPUT);
-            for (const c of [selPin, 'oeb', 'web']) ctx.conductance(c, null, 1 / R_INPUT);
+            // Address and control pins are CMOS inputs: they draw nothing,
+            // which is now what the model actually does. The 1 MOhm
+            // declarations that used to sit here named no second terminal and
+            // never stamped (spec-updates/ideal-high-z-inputs.md).
         },
 
         update(part, state, read) {

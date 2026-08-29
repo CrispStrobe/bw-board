@@ -33,7 +33,12 @@ import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 // ─── UM66T note table ──────────────────────────────────────────────
 // Ode to Joy (Beethoven, 9th Symphony, 4th movement theme, 1824).
@@ -131,10 +136,6 @@ export function registerAudioParts() {
             };
         },
 
-        stamp(ctx) {
-            ctx.conductance('sel1', null, 1 / R_INPUT);
-            ctx.conductance('sel2', null, 1 / R_INPUT);
-        },
 
         update(part, state, read, tNs) {
             const vcc = (read('vdd') || 0) - (read('gnd') || 0);
@@ -202,12 +203,6 @@ export function registerAudioParts() {
             };
         },
 
-        stamp(ctx) {
-            ctx.conductance('rec', null, 1 / R_INPUT);
-            ctx.conductance('playe', null, 1 / R_INPUT);
-            ctx.conductance('playl', null, 1 / R_INPUT);
-            ctx.conductance('mic', null, 1 / R_INPUT);
-        },
 
         update(part, state, read, tNs) {
             const vcc = read('vcc') || 5.0;

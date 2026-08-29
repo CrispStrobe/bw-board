@@ -19,7 +19,12 @@
 import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 const R_OFF = 1e9;
 
 export function registerSAP1Chips() {
@@ -44,11 +49,6 @@ export function registerSAP1Chips() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['d0', 'd1', 'd2', 'd3', 'clk', 'g1b', 'g2b', 'oe1b', 'oe2b', 'mr']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -107,11 +107,6 @@ export function registerSAP1Chips() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['d0', 'd1', 'd2', 'd3', 'clk', 'clrb', 'loadb', 'enp', 'ent']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -195,11 +190,6 @@ export function registerSAP1Chips() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['d0', 'd1', 'd2', 'd3', 'up', 'down', 'loadb', 'clr']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -274,11 +264,6 @@ export function registerSAP1Chips() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['a0', 'a1', 'a2', 'a3', 'd0', 'd1', 'd2', 'd3', 'csb', 'web']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -339,11 +324,6 @@ export function registerSAP1Chips() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['1a', '1b', '2a', '2b', '3a', '3b', '4a', '4b', 's', 'gb']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -387,11 +367,6 @@ export function registerSAP1Chips() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['1j', '1k', '1clk', '1clrb', '2j', '2k', '2clk', '2clrb']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;

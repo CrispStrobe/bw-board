@@ -99,10 +99,11 @@ function boardModel(allTerminals, boardVcc) {
         } else if (role === 'gnd') {
           ctx.thevenin(name, 0, R_SUPPLY);
         }
-        // vin: external input, high-Z (a pull-down to stop it floating)
-        else if (role === 'vin') {
-          ctx.conductance(name, null, 1 / 1e6);
-        }
+        // vin: external input, high-Z. It gets no stamp at all. There used to
+        // be a pull-down here "to stop it floating", written against no second
+        // terminal, so it never stamped — and it was never needed: solveMNA
+        // ties EVERY node to the reference through GMIN, so an unwired vin
+        // solves to 0 V on its own (spec-updates/ideal-high-z-inputs.md).
       }
     },
 

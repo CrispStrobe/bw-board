@@ -51,7 +51,12 @@ import { registerDevice } from '../devices.js';
 const R_OUT = 100;          // LM358 output stage, modest drive
 const R_SINK = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 const G_STEP = 1.5;         // fallback damped step per settle round
 // Secant guards. BETA_MIN is the smallest feedback attenuation the secant
 // is allowed to divide by: below it the loop is open (or positive) and the
@@ -82,11 +87,6 @@ export function registerAnalogAmps() {
             };
         },
 
-        stamp(ctx) {
-            for (const t of ['1_pos', '1_neg', '2_pos', '2_neg']) {
-                ctx.conductance(t, null, 1 / R_INPUT);
-            }
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 5.0;
@@ -146,9 +146,10 @@ export function registerAnalogAmps() {
         },
 
         stamp(ctx) {
-            // The SIG input is buffered on the real part — near-zero load.
-            ctx.conductance('sig', null, 1 / 10e6);
-            ctx.conductance('mode', null, 1 / R_INPUT);
+            // The SIG input is buffered on the real part — near-zero load,
+            // which is exactly what an unstamped pin is. The 10 MOhm declared
+            // here named no second terminal and never ran
+            // (spec-updates/ideal-high-z-inputs.md).
         },
 
         update(part, state, read) {

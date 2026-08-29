@@ -1026,15 +1026,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
 
         case 'shift_register': {
-          // 74HC595: ~80µA supply + data/clock/latch are CMOS inputs (~10MΩ).
+          // 74HC595: data/clock/latch are CMOS inputs, and an ideal CMOS input
+          // is what this builtin stamps — nothing. Three stampTwoTerminal
+          // calls used to sit here passing `undefined` for the far net, which
+          // the air-leg guard below declines, so they never loaded the pins
+          // they claimed to (spec-updates/ideal-high-z-inputs.md). Deleting
+          // them makes this case agree with the registered `74hc595` model.
           // Outputs are push-pull but modeled separately as LEDs.
-          const dataNet = findNet(nets, part.id, 'data');
-          const clockNet = findNet(nets, part.id, 'clock');
-          const latchNet = findNet(nets, part.id, 'latch');
-          // CMOS input: very high impedance to GND (doesn't load the pin)
-          if (dataNet) stampTwoTerminal(A, dataNet, undefined, 1e-7, nodeIndex);
-          if (clockNet) stampTwoTerminal(A, clockNet, undefined, 1e-7, nodeIndex);
-          if (latchNet) stampTwoTerminal(A, latchNet, undefined, 1e-7, nodeIndex);
           break;
         }
 

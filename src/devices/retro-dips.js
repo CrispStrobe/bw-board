@@ -59,8 +59,16 @@
 
 import { registerDevice } from '../devices.js';
 
-const R_INPUT = 1e6;      // CMOS input: draws nothing, but is not a break
-const R_OPEN = 1e12;      // a quartz resonator at DC
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
+// A quartz resonator has no DC path a-to-b, and needs no stand-in for its
+// shunt C0: the `1 / R_OPEN` legs that used to be declared here were
+// 1e-12 S — numerically GMIN, which solveMNA already adds to every node.
+// See spec-updates/ideal-high-z-inputs.md.
 
 /**
  * A bare DIP pin surface. No power drives: the bench supplies vcc/vdd.
@@ -73,9 +81,6 @@ function dipSurface(terminals, chipVcc) {
     return {
         terminals,
         init() { return { drives: {} }; },
-        stamp(ctx) {
-            for (const t of signals) ctx.conductance(t, null, 1 / R_INPUT);
-        },
         update() { return false; },
         gpioFollowsPinStates: true,
         vcc: chipVcc,
@@ -208,8 +213,6 @@ export function registerRetroDips() {
             // No DC path a-to-b. The tiny conductance to ground on each
             // side stands in for the shunt C0 and keeps each pin a real
             // node rather than a floating one the solver has to guess at.
-            ctx.conductance('a', null, 1 / R_OPEN);
-            ctx.conductance('b', null, 1 / R_OPEN);
         },
         update() { return false; },
     });

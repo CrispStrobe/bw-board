@@ -28,7 +28,12 @@
 
 import { registerDevice } from '../devices.js';
 
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 // ─── 7-segment font table (0-9, A-F) ────────────────────────────────
 // Segment mapping: bit 0=a, 1=b, 2=c, 3=d, 4=e, 5=f, 6=g, 7=dp
@@ -114,11 +119,6 @@ export function registerSevenseg8() {
 
     stamp(ctx) {
       // All inputs: high impedance CMOS
-      for (const t of ['seg_a', 'seg_b', 'seg_c', 'seg_d',
-                        'seg_e', 'seg_f', 'seg_g', 'seg_dp',
-                        'sel_a', 'sel_b', 'sel_c']) {
-        ctx.conductance(t, null, 1 / R_INPUT);
-      }
     },
 
     update(part, state, read) {
@@ -196,11 +196,6 @@ export function registerLedbank8() {
       };
     },
 
-    stamp(ctx) {
-      for (let i = 0; i < 8; i++) {
-        ctx.conductance(`d${i}`, null, 1 / R_INPUT);
-      }
-    },
 
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;

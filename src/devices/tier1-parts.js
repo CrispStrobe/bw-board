@@ -7,7 +7,12 @@
 import { registerDevice } from '../devices.js';
 
 const R_OUT = 50;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 export function registerTier1Parts() {
 
@@ -185,9 +190,6 @@ export function registerTier1Parts() {
         _lastEn: [false, false],
       };
     },
-    stamp(ctx) {
-      for (const p of ['1d','2d','3d','4d','1e','2e']) ctx.conductance(p, null, 1 / R_INPUT);
-    },
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
       const threshold = vcc * 0.5;
@@ -233,11 +235,6 @@ export function registerTier1Parts() {
     init() {
       return { drives: { s0:{vTh:0,rTh:R_OUT}, s1:{vTh:0,rTh:R_OUT},
                          s2:{vTh:0,rTh:R_OUT}, s3:{vTh:0,rTh:R_OUT}, cout:{vTh:0,rTh:R_OUT} } };
-    },
-    stamp(ctx) {
-      for (const p of ['a0','a1','a2','a3','b0','b1','b2','b3','cin']) {
-        ctx.conductance(p, null, 1 / R_INPUT);
-      }
     },
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
@@ -300,10 +297,6 @@ export function registerTier1Parts() {
     init() {
       return { drives: {}, digits: [0, 0, 0, 0], colon: false,
                _bitCount: 0, _byte: 0, _lastClk: false };
-    },
-    stamp(ctx) {
-      ctx.conductance('clk', null, 1 / R_INPUT);
-      ctx.conductance('dio', null, 1 / R_INPUT);
     },
     update(part, state, read) {
       // Simplified TM1637 protocol: clock in bytes, decode as segment data

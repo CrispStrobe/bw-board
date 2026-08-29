@@ -37,7 +37,12 @@ import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 // Sensitivity tables per datasheet.
 const ACCEL_SENS = [16384, 8192, 4096, 2048];    // LSB/g for FS_SEL 0..3
@@ -99,10 +104,6 @@ export function registerMPU6050() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('ad0', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             const vcc = read('vcc') || 3.3;

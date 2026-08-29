@@ -78,12 +78,6 @@ export function registerAnalogICs() {
       };
     },
 
-    stamp(ctx) {
-      ctx.conductance('1_pos', null, 1 / R_INPUT);
-      ctx.conductance('1_neg', null, 1 / R_INPUT);
-      ctx.conductance('2_pos', null, 1 / R_INPUT);
-      ctx.conductance('2_neg', null, 1 / R_INPUT);
-    },
 
     update(part, state, read) {
       // E3.6: optional hysteresis in volts (default 0 — the bare LM393
@@ -264,12 +258,6 @@ export function registerAnalogICs() {
       };
     },
 
-    stamp(ctx) {
-      for (let i = 1; i <= 4; i++) {
-        ctx.conductance(`${i}_pos`, null, 1 / R_INPUT);
-        ctx.conductance(`${i}_neg`, null, 1 / R_INPUT);
-      }
-    },
 
     update(part, state, read) {
       const h = part.params?.hysteresis ?? 0; // E3.6, same contract as lm393
@@ -318,9 +306,6 @@ export function registerAnalogICs() {
       const rDischarge = 10;
 
       for (const prefix of ['1_', '2_']) {
-        ctx.conductance(`${prefix}threshold`, null, 1 / R_INPUT);
-        ctx.conductance(`${prefix}trigger`, null, 1 / R_INPUT);
-        ctx.conductance(`${prefix}reset`, null, 1 / R_INPUT);
         // Internal divider on control pin
         ctx.conductance('vcc', `${prefix}control`, 1 / rDiv);
         ctx.conductance(`${prefix}control`, 'gnd', 1 / (rDiv * 2));

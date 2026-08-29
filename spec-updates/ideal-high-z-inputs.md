@@ -243,6 +243,42 @@ without anyone deciding it should:
 4. **The class only shrinks.** `test/conductance-noop-ratchet.test.mjs` pins
    the census count and fails if a new silent no-op is added.
 
+## Result (measured)
+
+`node scripts/conductance-census.mjs` after the pass:
+
+```
+no-op sites: 0 across 0 files
+live (two real legs) sites: 103
+```
+
+176 deleted, 2 rewritten with their real second node (101 live → 103). Nothing
+in the class remains, so no site needs a "verdict" comment to survive: each is
+either gone or stamping. The files that lost their last use of `R_INPUT` lost
+the constant too, and its line now carries the verdict — including
+`logic-gates.js`, which was **exporting** `R_INPUT` with no importer anywhere
+in the tree or in the vendored copies downstream.
+
+Three comments were crediting a stamp that never ran, and each described
+behaviour that GMIN was actually delivering. They are corrected in place, not
+deleted, because the behaviour they describe is real:
+
+| where | credited | actually |
+| --- | --- | --- |
+| `timer-555.js` island detection | "R_INPUT (1 MΩ) pulls threshold and trigger to ≈0 V" | GMIN does; free-running detection is unaffected |
+| `board-ics.js` AT24C02/64 straps | "a weak pull-down so an unwired strap pin reads a defined LOW" | GMIN does; the address straps read LOW as before |
+| `max232.js` open receiver | "reads 0 V through its own 5 k load" | GMIN does; the 5 k is the load on a WIRED line |
+
+The MAX232 oracle, measured against the hand value:
+
+```
+engine  −7.5258701766 V
+hand    −7.5258701787 V   (= −8000/1063)
+```
+
+Agreement to 2.1e-9 V, the residual being GMIN. The unloaded value it replaces
+is −8000/1003 = −7.9760717846 V.
+
 ## Ratchet
 
 `scripts/conductance-census.mjs --count` is the class size. The ratchet test

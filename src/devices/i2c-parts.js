@@ -15,7 +15,12 @@ import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 // A quasi-bidirectional HIGH is a weak pull-up (the datasheet's ~100 uA
 // source), not a push-pull drive: a button to ground must be able to win,
 // or the port can never read an input.
@@ -147,10 +152,6 @@ export function registerI2CParts() {
       return state;
     },
 
-    stamp(ctx) {
-      ctx.conductance('scl', null, 1 / R_INPUT);
-      for (const a of ['a0', 'a1', 'a2']) ctx.conductance(a, null, 1 / R_INPUT);
-    },
 
     update(part, state, read) {
       const vcc = read('vcc') || 5.0;
@@ -225,10 +226,6 @@ export function registerI2CParts() {
       };
     },
 
-    stamp(ctx) {
-      ctx.conductance('sda', null, 1 / R_INPUT);
-      ctx.conductance('scl', null, 1 / R_INPUT);
-    },
 
     // High-level verbs (boundary B setDeviceControl,
     // spec-updates/set-device-control.md). Writes the same `display` rows and

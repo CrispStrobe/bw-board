@@ -40,7 +40,12 @@ import { registerDevice } from '../devices.js';
  */
 export const MATRIX_LEVELS = 3;
 
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 function makeMatrixModel(defaultRows, defaultCols) {
   return {
@@ -86,8 +91,6 @@ function makeMatrixModel(defaultRows, defaultCols) {
     stamp(ctx, part, state) {
       const cols = state?.cols ?? defaultCols;
       const rows = state?.rows ?? defaultRows;
-      for (let c = 0; c < cols; c++) ctx.conductance('col' + c, null, 1 / R_INPUT);
-      for (let r = 0; r < rows; r++) ctx.conductance('row' + r, null, 1 / R_INPUT);
     },
 
     update(part, state, read, tNs) {

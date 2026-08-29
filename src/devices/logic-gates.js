@@ -14,7 +14,12 @@ import { registerDevice } from '../devices.js';
 import { inputThresholds } from './logic-levels.js';
 
 const R_OUT_DEFAULT = 50;
-const R_INPUT = 1e6; // CMOS gate input impedance
+// A gate input draws nothing: the `1 / R_INPUT` = 1 MOhm declaration that used
+// to sit in stamp() named no second terminal, so the air-leg guard declined it
+// and it never stamped — and 1 MOhm was never a CMOS gate input anyway. The
+// constant was also EXPORTED with no importer anywhere in the tree, which is
+// the shape this repo calls a bug on sight, so both are gone.
+// See spec-updates/ideal-high-z-inputs.md.
 
 /**
  * Build terminal list for a gate with N inputs.
@@ -62,11 +67,7 @@ function makeGateModel(kind, evalFn) {
       };
     },
     stamp(ctx, part, state) {
-      // High-impedance loading on each input
       const n = part.params?.inputs ?? (kind === 'gate_not' ? 1 : 2);
-      for (let i = 0; i < n; i++) {
-        ctx.conductance(`in${i}`, null, 1 / R_INPUT);
-      }
       // update() has no ctx; the rail is captured here (stamp runs before
       // every update pass) so thresholds and the output high level track
       // the board's actual supply instead of a hard-coded 5 V.
@@ -157,4 +158,4 @@ export function registerLogicGates() {
   }
 }
 
-export { GATE_KINDS, R_OUT_DEFAULT, R_INPUT };
+export { GATE_KINDS, R_OUT_DEFAULT };

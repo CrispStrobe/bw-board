@@ -30,7 +30,12 @@ import { createI2CSlave, feedI2CSlave } from './i2c-slave.js';
 
 const R_OUT = 50;
 const R_OFF = 1e9;
-const R_INPUT = 1e6;
+// Input pins draw nothing here, on purpose. These models used to declare
+// `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
+// names no second terminal, which stampTwoTerminal's air-leg guard declines,
+// so it never stamped. 1 MOhm is not a CMOS input either (a 74HC draws 1 uA
+// max). The ideal high-Z input IS the model, and GMIN keeps every pin a real
+// node. See spec-updates/ideal-high-z-inputs.md.
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -144,11 +149,6 @@ function registerBMP280() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('csb', null, 1 / R_INPUT);
-            ctx.conductance('sdo', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             // Refresh readable state from params
@@ -291,11 +291,6 @@ function registerTCS34725() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('int', null, 1 / R_INPUT);
-            ctx.conductance('led', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             // Refresh readable state from params
@@ -457,10 +452,6 @@ function registerBH1750() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('addr', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             state.lux = part.params?.lux ?? 0;
@@ -558,11 +549,6 @@ function registerINA219() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('vin_p', null, 1 / R_INPUT);
-            ctx.conductance('vin_n', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             // Refresh readable state from params
@@ -715,8 +701,6 @@ function registerVL53L0X() {
         },
 
         stamp(ctx, part, state) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('xshut', null, 1 / R_INPUT);
             // Whether XSHUT is WIRED decides how an unwired one is read. A
             // breakout leaves it pulled up on the carrier, so a bench that
             // never mentions the pin must get a running sensor — the same
@@ -882,9 +866,6 @@ function registerSGP30() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             state.eCO2 = part.params?.eCO2 ?? 400;
@@ -1003,9 +984,6 @@ function registerVEML7700() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             state.lux = part.params?.lux ?? 0;
@@ -1110,11 +1088,6 @@ function registerAS5600() {
             return state;
         },
 
-        stamp(ctx) {
-            ctx.conductance('scl', null, 1 / R_INPUT);
-            ctx.conductance('dir', null, 1 / R_INPUT);
-            ctx.conductance('out', null, 1 / R_INPUT);
-        },
 
         update(part, state, read) {
             state.angle = part.params?.angle ?? 0;
