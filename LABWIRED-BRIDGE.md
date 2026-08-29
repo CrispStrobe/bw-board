@@ -265,19 +265,19 @@ trip ever put a hardware-timed firmware on both engines against one board.
 ## 5. The census — measured over the shipped gallery
 
 `scripts/labwired-bridge-census.mjs`, run against sb3-creator
-`934f594e7da28a347f806a7f9ce2b7a699b57923` and bw-circuit-ui's canonical loader,
-over every shipped `circuit.stm32f030.json`:
+`86a5bab6bb1a29ff02e93055f5f42557dbbfb2ba` and bw-circuit-ui
+`60fd1178a099b537de58a68608687da55fd11b86` (the sibling-pin tips):
 
 ```
-benches: 85   loaded: 84   load failures: 1
-pad roles:     indicator=104 analog=31 contact=16 digital=8
-parts at pads: led=112 potentiometer=29 button=24 gnd=13 vcc=9 seven_segment=7
+benches: 85   loaded: 85   load failures: 0
+pad roles:     indicator=112 analog=32 contact=16 digital=8
+parts at pads: led=112 potentiometer=30 button=24 gnd=13 vcc=9 bargraph=8 seven_segment=7
                shift_register=6 npn=3 rgb_led=3 ldr=3 ultrasonic=3 piezo=2 neopixel=1
-refusals:      analog-injection-unavailable=31
+refusals:      analog-injection-unavailable=32
 ```
 
-- **60 of 84 benches bridge with a completely empty refusal ledger.**
-- **24 benches** carry **31** refusals — one per analog pad, and nothing else.
+- **60 of 85 benches bridge with a completely empty refusal ledger.**
+- **25 benches** carry **32** refusals — one per analog pad, and nothing else.
 - **Zero** `pin-unmapped`, `chip-unmapped`, `mcu-absent` or `mcu-ambiguous`
   anywhere in the corpus. Every pad the gallery actually wires (`pa0` 59×,
   `pa1` 45×, `pa2` 18×, `pa3`/`pa6` 9×, `pa4`/`pa5` 6×, `pb1` 5×, `pa7` 2×) is
@@ -291,15 +291,19 @@ those 84 benches, resolved once by the script and stamped with the sb3-creator
 commit, so the census runs in this repo with no gallery and no MPL-licensed
 loader in the dependency graph.
 
-### The one load failure, ledgered
+### The one load failure — RETRACTED: it was the census rig, not the bench
 
-`disp-bargraph`'s F030 bench does not load at all: it wires `bar1` (a
-`bargraph`) by terminals `a`/`b`, and this engine's bargraph has
-`a0,k0 … a9,k9` since `3c7cbe8` ("A bargraph that never lit, and was not a
-diode"). The bench predates that fix, so `Circuit.fromJSON` rejects the netlist
-and returns an empty board. **Not a bridge defect and not this lane's to fix** —
-it is a stale corpus file in sb3-creator that needs regenerating against current
-bw-board. Recorded here because a silently skipped bench is how a corpus rots.
+An earlier revision of this section blamed `disp-bargraph`'s bench file for
+wiring `bar1` by `a`/`b`. **The bench was always correct** (all seven variants
+wire `a0..a7`/`k0..k7` and seat by `a0..k9`). The census script's `setEngine`
+call omitted `getDevice` — the surface production injects — so bw-circuit-ui's
+`terminalsForKind('bargraph')` could not ask the engine, fell back to a generic
+two-terminal `['a','b']`, and the validator rejected the real pin table. The
+instrument blamed its subject. Proven both ways by fab-pins (sb3-creator lane,
+2026-08-29): shipped script 84/85 with disp-bargraph LOAD-FAILED; with
+`getDevice`, 85/85 and disp-bargraph carries exactly one honest refusal (PA7
+analog injection). The same stale-`setEngine`-surface class exists at 14 more
+call sites in sb3-creator's tests and generators — ledgered there.
 
 ## 6. What is still open
 

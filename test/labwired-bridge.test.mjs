@@ -190,7 +190,7 @@ describe('labwired bridge census: the shipped F030 gallery', () => {
         assert.equal(CORPUS.variant, 'circuit.stm32f030.json');
         assert.match(CORPUS.sourceCommit, /^[0-9a-f]{40}$/,
             'a fixture with no provenance cannot be checked for staleness');
-        assert.equal(CORPUS.benches.length, 84);
+        assert.equal(CORPUS.benches.length, 85);
     });
 
     it('every shipped bench bridges — no chip, mcu or pin refusal anywhere', () => {
@@ -217,12 +217,16 @@ describe('labwired bridge census: the shipped F030 gallery', () => {
             assert.deepEqual(built.refusals, [], `${bench} refused something and has no analog pad`);
             clean++;
         }
-        // Measured 2026-08-29 against sb3-creator 934f594. These are exact on
+        // Measured 2026-08-29 against sb3-creator 86a5bab — 85 benches since the
+        // census script gained getDevice in setEngine (disp-bargraph had been
+        // refused by the CENSUS RIG, not by the bench: without getDevice,
+        // terminalsForKind fell back to a generic ['a','b'] and the validator
+        // rejected the bargraph's real a0..k9 pin table). These are exact on
         // purpose: a bridge that quietly stops carrying benches, or quietly
         // starts carrying ones it used to refuse, is the failure this census
         // exists to catch, and a >= would hide the first half of that.
         assert.equal(clean, 60, 'benches carried with an empty ledger');
-        assert.equal(analog, 24, 'benches whose analog pads are refused');
+        assert.equal(analog, 25, 'benches whose analog pads are refused');
     });
 
     it('the analog refusals are exactly the ADC pads, one per pad', () => {
@@ -233,8 +237,8 @@ describe('labwired bridge census: the shipped F030 gallery', () => {
             analogPads += built.attachments.filter((a) => a.role === 'analog').length;
             refusals += built.refusals.length;
         }
-        assert.equal(analogPads, 31);
-        assert.equal(refusals, 31, 'one refusal per analog pad, and nothing else');
+        assert.equal(analogPads, 32);
+        assert.equal(refusals, 32, 'one refusal per analog pad, and nothing else');
     });
 
     it('the pad-role census matches what the corpus actually wires', () => {
@@ -245,6 +249,6 @@ describe('labwired bridge census: the shipped F030 gallery', () => {
                 tally[a.role] = (tally[a.role] ?? 0) + 1;
             }
         }
-        assert.deepEqual(tally, { indicator: 104, analog: 31, contact: 16, digital: 8 });
+        assert.deepEqual(tally, { indicator: 112, analog: 32, contact: 16, digital: 8 });
     });
 });

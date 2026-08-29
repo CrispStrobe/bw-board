@@ -61,11 +61,16 @@ const { registerAllDevices } = await import(new URL('src/register-all.js', here)
 registerAllDevices();
 const { BoardImpl } = await import(new URL('src/board.js', here).href);
 const { inferNetlist, checkWiring } = await import(new URL('src/infer-netlist.js', here).href);
+const { getDevice } = await import(new URL('src/devices.js', here).href);
 const { buildLabwiredSystem } = await import(new URL('src/labwired-bridge.js', here).href);
 
 const cui = pathToFileURL(join(circuitUi, '/'));
 const { setEngine } = await import(new URL('src/engine.js', cui).href);
-setEngine({ BoardImpl, inferNetlist, checkWiring });
+// getDevice is what production injects (lite's circuit-tab setEngine); without it
+// terminalsForKind falls back to a generic two-terminal ['a','b'] and any part
+// with a real pin table (bargraph, ...) is rejected by the validator — the
+// census then blames a correct bench file. fab-pins proved this both ways.
+setEngine({ BoardImpl, inferNetlist, checkWiring, getDevice });
 const { Circuit } = await import(new URL('src/model/circuit.js', cui).href);
 
 const benches = readdirSync(gallery)
