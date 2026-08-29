@@ -306,6 +306,15 @@ bw-board. Recorded here because a silently skipped bench is how a corpus rots.
 1. **The wasm ADC channel export** (§4) — one method in our fork, a rebuilt
    artifact, and 24 benches move from "named refusal" to "carried".
 2. **Lite wiring** — deliberately not started; see the lane's report.
+2b. **Two upstream-PR candidates, both with reproducers here.** §4b: `V2Gpio`
+   (and the F1 and Kinetis families beside it) never applies PUPDR to an
+   undriven pad, so a pulled-up idle input reads low forever — worked around on
+   our side, but the model is wrong for anyone who does not. §4c: a
+   level-pended peripheral IRQ enters its handler twice per event because the
+   NVIC pending latch is not dropped when the source deasserts inside the
+   handler. Neither is patched in our fork: the first needs no patch for us, and
+   the second is in NVIC level handling rather than two lines, so it wants a
+   full workspace build to prove.
 3. **The two tiers disagree about how much memory the part has.**
    `stm32-adapter.js` builds an **F030F4** — `sramBytes: 4096, flashBytes: 16K`,
    which is what the TSSOP20 sidecar the designer seats actually is — while
