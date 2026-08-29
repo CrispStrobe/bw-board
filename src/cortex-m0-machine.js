@@ -184,7 +184,15 @@ export class CortexM0Machine {
   setIrq (irq, value) { this.core.setInterrupt(irq, value); }
 
   advanceNs (deltaNs) {
-    const target = this.timeNsInternal + BigInt(Math.round(deltaNs));
+    // BigInt OR Number. `timeNs()` on every adapter here returns a bigint, so a
+    // host that computes its next slice from one and hands it back — which is
+    // the natural thing to write, and what `labwired-adapter.js` accepts
+    // without complaint — used to hit `Math.round(1_000_000n)` and throw
+    // "Cannot convert a BigInt value to a number". That made the SAME host code
+    // work on the heavy tier and die on the light one, which is precisely the
+    // difference boundary A exists to erase.
+    const target = this.timeNsInternal
+      + (typeof deltaNs === 'bigint' ? deltaNs : BigInt(Math.round(deltaNs)));
     const nsPerCycle = 1e9 / this.clockHz;
     while (this.timeNsInternal < target) {
       if (this.core.waiting) {

@@ -131,8 +131,23 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: ARM toolchain (the tests build a real F0 ELF)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi
+      # The same marker ci.yml writes beside the emu8051 build, for the same
+      # reason and with the same failure text. wasm-bindgen's `nodejs` glue is
+      # CommonJS; the artifact lands INSIDE this repo, whose package.json says
+      # `"type": "module"`; node then parses the glue as ESM and dies on
+      # `exports is not defined in ES module scope`. Beside the repo there is no
+      # package.json above it and it loads fine — which is exactly why this ran
+      # green for a while and then did not. The marker makes the two layouts
+      # equivalent, and the publish step ships the same file with the assets.
+      - name: Mark the engine glue as CommonJS
+        run: echo '{"type":"commonjs"}' > lw/nodejs/package.json
+
+      # binutils named explicitly: the round-trip suite needs objcopy as well as
+      # gcc (it builds the firmware in BOTH forms — the ELF labwired loads and
+      # the raw image lite compiles), and it SKIPS without it. A skip here is a
+      # gate that did not run, which the count floor below now catches.
+      - name: ARM toolchain (the tests build a real F0 ELF and its raw image)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-arm-none-eabi binutils-arm-none-eabi
       - name: Adapter, bridge and round trip, against the freshly built engine
         env:
           LABWIRED_WASM: ${{ github.workspace }}/lw/nodejs

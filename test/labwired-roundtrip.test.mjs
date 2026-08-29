@@ -271,12 +271,20 @@ function benchBoard (netlist, watchPin) {
     return { board, edges };
 }
 
-/** Drive an adapter for `ms` simulated milliseconds, collecting the console. */
+/**
+ * Drive an adapter for `ms` simulated milliseconds, collecting the console.
+ *
+ * The slice is a BIGINT deliberately: every adapter here returns a bigint from
+ * `timeNs()`, so computing the next slice from one and handing it back is the
+ * natural thing for a host to write — and it used to work on the heavy tier and
+ * throw on the light one. Driving both from the same call is how that was found,
+ * and keeping the bigint here is what keeps it found.
+ */
 function drive (adapter, board, ms) {
     const uart = [];
     adapter.onSerial((b) => uart.push(b));
     adapter.attachBoard(board);
-    for (let i = 0; i < ms; i++) adapter.advanceNs(1_000_000);
+    for (let i = 0; i < ms; i++) adapter.advanceNs(1_000_000n);
     return uart;
 }
 
@@ -485,14 +493,14 @@ describe('labwired round trip: a gallery bench on both tiers', { skip }, () => {
         adapter.attachBoard(b.board);
 
         // Released: the pull-up ladder holds PA1 high on OUR board, so no 'B'.
-        for (let i = 0; i < RUN_MS / 2; i++) adapter.advanceNs(1_000_000);
+        for (let i = 0; i < RUN_MS / 2; i++) adapter.advanceNs(1_000_000n);
         const released = uart.filter((x) => x === 0x42).length;
 
         // Pressed: the button shorts PA1 to ground on OUR board, and the level
         // reaches the firmware only through the generated board_io binding.
         const btn = netlist.parts.find((p) => p.kind === 'button');
         b.board.setControl(btn.id, 1);
-        for (let i = 0; i < RUN_MS / 2; i++) adapter.advanceNs(1_000_000);
+        for (let i = 0; i < RUN_MS / 2; i++) adapter.advanceNs(1_000_000n);
         const pressed = uart.filter((x) => x === 0x42).length;
 
         assert.equal(released, 0, 'the firmware saw a press that never happened');
