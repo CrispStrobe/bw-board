@@ -369,7 +369,13 @@ Thévenin. Driving 1 it LETS GO: the pad is high-Z, and nothing on the chip
 decides its level. When PUPDR also asks for the internal pull-up the released
 pad is weakly pulled rather than floating, which is exactly what `quasi` (weak
 pull-up high, strong pull-down low) already describes — so that mode is reused
-rather than a seventh invented.
+rather than a seventh invented. Stated plainly, because reuse is not free:
+`R_QUASI_PULLUP` is 21.7 kΩ, derived from the STC12's 230 µA source spec, while
+an F0's internal pull-up is nearer 40 kΩ. The SHAPE is right and the magnitude
+is within the "order-of-magnitude fits, not precision" band `pin-model.js`
+declares for itself; both tiers are wrong by the identical factor, which is the
+property this lane exists to protect. A per-family weak-pull value would be a
+`pin-model.js` change and belongs to whoever needs the precision.
 
 **Light tier.** `Stm32Gpio._publishAll` reads the OTYPER bit it always stored,
 and an OTYPER *write* now republishes. The second half is not decoration: OTYPER
