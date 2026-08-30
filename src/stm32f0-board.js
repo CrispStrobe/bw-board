@@ -119,7 +119,11 @@ export class Stm32Gpio {
     if (!this._enabled()) return;
     switch (off) {
       case 0x00: this.moder = v >>> 0; this._publishAll(); break;
-      case 0x04: this.otyper = v >>> 0; break;
+      // OTYPER republishes: it changes the pad's DRIVE, not its level, so it
+      // produces no edge of its own — and the F0 idiom writes it BEFORE
+      // MODER, so without this the pad would be seated push-pull and never
+      // corrected. (This is the same class of miss as the PUPDR one on 0x0c.)
+      case 0x04: this.otyper = v >>> 0; this._publishAll(); break;
       case 0x0c: this.pupdr = v >>> 0; this._publishAll(); break;
       case 0x14: this.odr = v & 0xffff; this._publishAll(); break;
       case 0x18: { // BSRR: low half sets, high half resets — atomic on silicon
@@ -133,12 +137,40 @@ export class Stm32Gpio {
     }
   }
 
+  /**
+   * Describe every pad to the board: MODER picks input vs output, OTYPER
+   * picks push-pull vs open drain, PUPDR the pull.
+   *
+   * OPEN DRAIN IS NOT A WEAKER PUSH-PULL — it is half a driver. Driving 0
+   * pulls the pad to ground through the SAME on-resistance push-pull uses;
+   * driving 1 simply lets go, and the pad is HIGH-Z. Nothing on the chip
+   * decides its level then: an LED to ground stays dark and an external
+   * pull-up is what makes the pad high, through THAT resistor. When PUPDR
+   * also asks for the internal pull-up, the released pad is not floating but
+   * weakly pulled — which is exactly `pin-model.js`'s `quasi` (weak pull-up
+   * high, strong pull-down low), so that mode is reused rather than a
+   * seventh one invented.
+   *
+   * A push-pull output ignores PUPDR here on purpose: silicon keeps the pull
+   * connected, but a ~40 kΩ pull beside a 25 Ω driver moves nothing a solver
+   * can see, and publishing it would only make the two tiers describe the
+   * same pad differently.
+   */
   _publishAll () {
     for (let pin = 0; pin < 16; pin++) {
       const mode = (this.moder >>> (2 * pin)) & 3;
       const name = `P${this.portLetter}${pin}`;
       if (mode === 1) {
-        this.onPinChange(name, 'pushpull', ((this.odr >>> pin) & 1) === 1);
+        const high = ((this.odr >>> pin) & 1) === 1;
+        if ((this.otyper >>> pin) & 1) {
+          // Open drain. A pull-DOWN on a released open-drain pad would need a
+          // Thévenin the pin model does not carry; it is not an idiom anyone
+          // writes, so it floats and is ledgered (LABWIRED-BRIDGE.md §6).
+          const pull = (this.pupdr >>> (2 * pin)) & 3;
+          this.onPinChange(name, pull === 1 ? 'quasi' : 'opendrain', high);
+        } else {
+          this.onPinChange(name, 'pushpull', high);
+        }
       } else if (mode === 0) {
         const pull = (this.pupdr >>> (2 * pin)) & 3;
         this.onPinChange(name,

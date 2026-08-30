@@ -57,6 +57,11 @@
  *    firmware runs and the UART talks while every pad reads low forever.
  *    Upstream's own onboarding configs (stm32f0/f072/f4/f746/h743) share this
  *    shape, so a manifest copied from them needs the profile added.
+ * 3. **`pin_routing` says nothing about OTYPER either**, so an open-drain pad
+ *    driving 1 looked like a 3.3 V source and lit an LED silicon leaves dark.
+ *    Recovered from the same snapshot as the pull — see `modeOf` — and fixed
+ *    on the LIGHT tier in the same commit, because a pad description that
+ *    differs between the tiers is worse than one that is uniformly coarse.
  *
  * @module
  */
@@ -161,6 +166,8 @@ export function createLabwiredAdapter (opts) {
   const routing = new Map();
   /** Last pull config per pin: 'up' | 'down' | null. See refreshPulls(). */
   const pulls = new Map();
+  /** True while the pin's OTYPER bit says open drain. See refreshPulls(). */
+  const openDrain = new Map();
   /** Last MODER|PUPDR|OTYPER signature per port — the reconfiguration detector. */
   const portConfig = new Map();
 
@@ -174,7 +181,22 @@ export function createLabwiredAdapter (opts) {
     // far as the circuit is concerned. `unknown` is reported by families that
     // cannot say; treating it as an input is the safe default — it makes the
     // board solve the node instead of asserting a level we do not know.
-    if (r === 'output' || r === 'af') return 'pushpull';
+    if (r === 'output' || r === 'af') {
+      // OTYPER, which `pin_routing` does not report either — recovered from
+      // the register snapshot exactly the way the pull is. An open-drain pad
+      // driving 1 has LET GO: it is high-Z, and the board (or the internal
+      // pull-up, `quasi`) owns the level, not a 3.3 V source. Driving 0 it
+      // pulls to ground through the same on-resistance as push-pull, which
+      // `pin-model.js`'s `opendrain` already says.
+      //
+      // `af` is deliberately not covered: an AF pad's level comes from the
+      // peripheral rather than ODR, so an open-drain AF (I²C) needs the
+      // peripheral's release state, which no accessor reports. Ledgered.
+      if (r === 'output' && openDrain.get(name) === true) {
+        return pulls.get(name) === 'up' ? 'quasi' : 'opendrain';
+      }
+      return 'pushpull';
+    }
     if (r === 'analog') return 'analog';
     const pull = pulls.get(name);
     return pull === 'up' ? 'input-pullup' : pull === 'down' ? 'input-pulldown' : 'input';
@@ -264,6 +286,12 @@ export function createLabwiredAdapter (opts) {
         if (portConfig.get(port) !== sig) { portConfig.set(port, sig); changed = true; }
       }
       const snap = perPort.get(port);
+      // OTYPER travels the same road as PUPDR and for the same reason: the
+      // register is in the snapshot, `pin_routing` does not report it, and a
+      // family whose snapshot has no numeric `otyper` (F1: CRL/CRH; nRF52:
+      // PIN_CNF) reports push-pull rather than acquiring an invented drive.
+      const otyper = snap && typeof snap.otyper === 'number' ? snap.otyper : null;
+      openDrain.set(name, otyper === null ? false : ((otyper >>> pins[name].pin) & 1) === 1);
       const pupdr = snap && typeof snap.pupdr === 'number' ? snap.pupdr : null;
       if (pupdr === null) { pulls.set(name, null); continue; }
       const field = (pupdr >>> (2 * pins[name].pin)) & 3;
@@ -409,6 +437,7 @@ export function createLabwiredAdapter (opts) {
       published.clear();
       routing.clear();
       pulls.clear();
+      openDrain.clear();
       portConfig.clear();
       cursor = 0;
       cycleNow = 0n;

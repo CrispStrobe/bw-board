@@ -70,13 +70,53 @@
  * only come from the two tiers publishing DIFFERENT MODES for the same register
  * state, which is what the mode assertions below actually test.
  *
- * LEDGERED, found while measuring: **neither tier carries OTYPER.** A pad
- * configured open-drain and driven high is published as `pushpull` by
- * `stm32f0-board.js` and by `labwired-adapter.js` alike, so the LED lights on
- * both where silicon would leave it dark. That is a shared fidelity cap, not a
- * parity gap, and it is asserted as an agreement below so that a one-sided fix
- * cannot land silently. Our codegen never emits OTYPER, so the corpus impact
- * today is zero; a foreign binary would see it.
+ * OTYPER — WAS a shared cap, REPAIRED 2026-08-30 on both tiers in one commit
+ * ------------------------------------------------------------------------
+ * The first revision of this file ledgered that NEITHER tier carried OTYPER: a
+ * pad configured open-drain and driven high was published as `pushpull` by
+ * `stm32f0-board.js` (which stored the register and never read it) and by
+ * `labwired-adapter.js` (whose `pin_routing` answers only
+ * input/output/af/analog) alike, so the LED lit on both where silicon leaves it
+ * dark. It was asserted as an AGREEMENT precisely so that a one-sided repair
+ * could not land silently. This is the repair, and it is on both tiers.
+ *
+ * THE PHYSICS, which is the whole of it: an open-drain output is HALF a
+ * driver. Driving 0 it pulls the pad to ground through the same on-resistance
+ * push-pull uses — `pin-model.js` gives `opendrain` low and `pushpull` low the
+ * identical Thévenin (0 V, R_STRONG). Driving 1 it simply LETS GO: the pad is
+ * high-Z and nothing on the chip decides its level. An LED to ground stays
+ * dark; an external pull-up makes the pad high through THAT resistor. When
+ * PUPDR also asks for the internal pull-up the released pad is weakly pulled
+ * rather than floating, which is exactly what `quasi` already describes.
+ *
+ * The three hand-computed oracles, all on the 3.3 V rail lite builds:
+ *
+ *   od LOW, active-low bench (VCC —[1 kΩ]— LED —▶|— PA0), pad = (0 V, 25 Ω):
+ *     I = (3.3 − 2.0) / (1000 + 10 + 25) = 1.3/1035 = 1.256 038 647 3 mA
+ *     brightness = 0.062 801 932 4          — the SAME number push-pull high
+ *     V_pad = I·25 = 0.031 401 0 V            reaches, because it is the same
+ *                                             Thévenin. Open drain DRIVES low.
+ *
+ *   od HIGH, active-high bench (PA0 —[1 kΩ]— LED —▶|— GND), pad = high-Z:
+ *     no source anywhere in the loop ⇒ I = 0, brightness 0, V_pad = 0 V,
+ *     readPin = 0. THE LED IS DARK. This is the case both tiers got wrong.
+ *
+ *   od HIGH + an external 10 kΩ pull-up to the rail, same bench:
+ *     I = (3.3 − 2.0) / (10000 + 1000 + 10) = 1.3/11010 = 118.074 477 7 µA
+ *     brightness = 0.005 903 723 9  (10.6× dimmer than the driven pad)
+ *     V_pad = 3.3 − I·10000 = 2.119 255 222 5 V ⇒ readPin = 1
+ *     The EXTERNAL resistor sets the current; the chip only stopped pulling.
+ *
+ * Corpus impact: zero, and measured — our codegen never emits an OTYPER write,
+ * so nothing in the shipped gallery changes value. A foreign binary loaded
+ * through the ⚡/📂 path is exactly what this repairs.
+ *
+ * Still shared, still ledgered (LABWIRED-BRIDGE.md §6): the firmware's own
+ * READBACK of a released open-drain pad. Both tiers return ODR from IDR rather
+ * than the pad, and the heavy one cannot do better — labwired's `effective_idr`
+ * does not consult OTYPER, so teaching only the light tier would re-open the
+ * gap this commit closes. Same for an open-drain ALTERNATE-FUNCTION pad (I²C),
+ * whose release state no accessor reports.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -89,8 +129,9 @@ import { createRequire } from 'node:module';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
 import { inferNetlist } from '../src/infer-netlist.js';
-import { R_STRONG } from '../src/pin-model.js';
+import { R_STRONG, R_QUASI_PULLUP } from '../src/pin-model.js';
 import { createStm32F0Adapter } from '../src/stm32-adapter.js';
+import { Stm32Rcc, Stm32Gpio } from '../src/stm32f0-board.js';
 import { createLabwiredAdapter } from '../src/labwired-adapter.js';
 import { labwiredAdapterOptionsFor } from '../src/labwired-bridge.js';
 
@@ -101,6 +142,15 @@ const BENCH = inferNetlist({
     device: 'STM32F030',
     clock: 48_000_000,
     pins: [{ name: 'led1', where: 'PA0', port: 0, bit: 0, direction: 'output', activeLow: false }],
+});
+
+/** The same improvisation for an ACTIVE-LOW pin: VCC —[1 kΩ]— LED —▶|— PA0.
+ *  This is the bench on which a pad SINKING current lights the LED, and it is
+ *  therefore the only one that can show that open drain still drives low. */
+const BENCH_AL = inferNetlist({
+    device: 'STM32F030',
+    clock: 48_000_000,
+    pins: [{ name: 'led1', where: 'PA0', port: 0, bit: 0, direction: 'output', activeLow: true }],
 });
 
 /** The rail lite's STM32 runners build the board on (`new BoardImpl(3.3)`). */
@@ -121,6 +171,42 @@ function bench (vcc = VCC) {
     const b = new BoardImpl(vcc);
     b.setNetlist(BENCH.parts, BENCH.nets);
     return b;
+}
+
+/** The active-low bench, on the same rail. */
+function benchAL (vcc = VCC) {
+    const b = new BoardImpl(vcc);
+    b.setNetlist(BENCH_AL.parts, BENCH_AL.nets);
+    return b;
+}
+
+/** The active-high bench with an EXTERNAL pull-up hung on the pad node. This
+ *  is the network a real open-drain design puts there, and the whole point of
+ *  the mode: with the pad released, THIS resistor decides the pad. */
+function benchWithPullup (ohms, vcc = VCC) {
+    const padNet = BENCH.nets.find((n) => n.terminals.some((t) => t.part === 'MCU'));
+    const vccNet = BENCH.nets.find((n) => n.terminals.some((t) => t.part === 'VCC'));
+    assert.ok(padNet && vccNet, 'the improvised bench must expose a pad net and a rail net');
+    const parts = [...BENCH.parts,
+        { id: 'R_pu', kind: 'resistor', params: { ohms }, terminals: ['a', 'b'] }];
+    const nets = BENCH.nets.map((n) =>
+        n.id === padNet.id ? { ...n, terminals: [...n.terminals, { part: 'R_pu', terminal: 'a' }] }
+            : n.id === vccNet.id ? { ...n, terminals: [...n.terminals, { part: 'R_pu', terminal: 'b' }] }
+                : n);
+    const b = new BoardImpl(vcc);
+    b.setNetlist(parts, nets);
+    return b;
+}
+
+/** Settle a bench for a whole brightness window and report what it reads. */
+function settled (b) {
+    b.advanceTo(b.timeNs + 25_000_000n);
+    return {
+        i: b.ledCurrents.get('LED_led1'),
+        brightness: b.ledBrightness('LED_led1'),
+        vPad: b.readAnalog('PA0'),
+        logic: b.readPin('PA0'),
+    };
 }
 
 describe('pad drive: the inferred blink bench, solved by hand', () => {
@@ -230,6 +316,228 @@ describe('pad drive: the inferred blink bench, solved by hand', () => {
     });
 });
 
+// ─── Open drain, hand-derived (ungated: this runs in ordinary CI) ───────────
+
+describe('open drain: the pad that lets go', () => {
+    // Every expectation below is recomputed from the same terms the prose
+    // names, so a moved constant moves the number with it.
+    const I_SINK = (VCC - LED_VF) / (R_SERIES + LED_RD + R_STRONG);
+    const R_PU_EXT = 10_000;
+    const I_PU_EXT = (VCC - LED_VF) / (R_PU_EXT + R_SERIES + LED_RD);
+    const I_PU_INT = (VCC - LED_VF) / (R_QUASI_PULLUP + R_SERIES + LED_RD);
+
+    it('od LOW is a real pull to ground — the SAME Thevenin as push-pull low', () => {
+        // 1.3/1035 A again, and that is the claim: `opendrain` false and
+        // `pushpull` false are the same (0 V, 25 Ω) source, so an open-drain
+        // output sinks exactly as hard as a push-pull one. If a "fix" made
+        // open drain high-Z in BOTH directions, this is what would catch it.
+        assert.equal(I_SINK.toPrecision(10), '0.001256038647');
+        assert.equal((I_SINK / I_RATED).toPrecision(10), '0.06280193237');
+
+        const drive = (mode) => {
+            const b = benchAL();
+            b.setPin('PA0', mode, false);
+            return settled(b);
+        };
+        const od = drive('opendrain');
+        const pp = drive('pushpull');
+
+        assert.ok(Math.abs(od.i - I_SINK) < 1e-12, `od sink ${od.i} A, hand ${I_SINK} A`);
+        assert.ok(Math.abs(od.brightness - I_SINK / I_RATED) < 1e-9,
+            `od-low brightness ${od.brightness}, hand ${I_SINK / I_RATED}`);
+        assert.ok(Math.abs(od.vPad - I_SINK * R_STRONG) < 1e-9,
+            `od-low pad ${od.vPad} V, hand ${I_SINK * R_STRONG} V`);
+        assert.equal(od.logic, 0, 'a pad pulled to ground reads low');
+        // Same source ⇒ same everything. Asserted, not asserted-in-prose.
+        assert.equal(od.i, pp.i, 'open-drain low and push-pull low are one Thevenin');
+        assert.equal(od.brightness, pp.brightness);
+        assert.equal(od.vPad, pp.vPad);
+    });
+
+    it('od HIGH is high-Z: the LED is DARK and the pad is not a source', () => {
+        // The bench the whole lane exists for. PA0 —[1 kΩ]— LED —▶|— GND with
+        // ODR=1: on silicon the transistor is off, nothing sources current,
+        // and the LED does not light. Push-pull on the same bench reads
+        // 0.0628 — which is what BOTH tiers used to publish here.
+        const b = bench();
+        b.setPin('PA0', 'opendrain', true);
+        const r = settled(b);
+        assert.equal(r.i, 0, 'a released pad sources no current');
+        assert.equal(r.brightness, 0, 'the LED on a released open-drain pad is DARK');
+        assert.equal(r.vPad, 0, 'nothing holds the pad up, so the LED chain pulls it to GND');
+        assert.equal(r.logic, 0);
+        // The contrast, so "0" cannot be read as "the bench is broken".
+        assert.ok(Math.abs(BRIGHT_ON - 0.06280193236714975) < 1e-15,
+            'the push-pull value this is being contrasted with');
+    });
+
+    it('od HIGH + an external 10 kΩ pull-up: the RESISTOR sets the pad', () => {
+        // 1.3/11010 A. The pad is high through the external network, at
+        // 2.1193 V — above the 1.5 V logic threshold, so the pin reads 1 —
+        // and the LED is lit but 10.6× dimmer than the driven pad, because
+        // the pull-up, not the chip, is now the source impedance.
+        assert.equal(I_PU_EXT.toPrecision(10), '0.0001180744777');
+        assert.equal((I_PU_EXT / I_RATED).toPrecision(10), '0.005903723887');
+        const vPad = VCC - I_PU_EXT * R_PU_EXT;
+        assert.equal(vPad.toPrecision(10), '2.119255223');
+
+        const b = benchWithPullup(R_PU_EXT);
+        b.setPin('PA0', 'opendrain', true);
+        const r = settled(b);
+        assert.ok(Math.abs(r.i - I_PU_EXT) < 1e-12, `pulled-up od-high ${r.i} A, hand ${I_PU_EXT} A`);
+        assert.ok(Math.abs(r.brightness - I_PU_EXT / I_RATED) < 1e-9,
+            `brightness ${r.brightness}, hand ${I_PU_EXT / I_RATED}`);
+        assert.ok(Math.abs(r.vPad - vPad) < 1e-9, `pad ${r.vPad} V, hand ${vPad} V`);
+        assert.equal(r.logic, 1, 'an externally pulled-up released pad reads HIGH');
+        assert.ok(r.brightness < BRIGHT_ON / 10,
+            'the external resistor must dominate: a pulled-up pad is far dimmer than a driven one');
+
+        // And the same pull-up on a DRIVEN pad is swamped by the 25 Ω driver —
+        // which is why the pull-up only matters once the pad has let go.
+        const driven = benchWithPullup(R_PU_EXT);
+        driven.setPin('PA0', 'pushpull', true);
+        assert.ok(Math.abs(settled(driven).brightness - BRIGHT_ON) < 1e-4,
+            'a 10 kΩ pull-up beside a 25 Ω driver changes nothing measurable');
+    });
+
+    it('od HIGH with the INTERNAL pull-up is `quasi`, not floating', () => {
+        // PUPDR=01 on an open-drain output is a weak pull-up on a released
+        // pad, which is precisely `pin-model.js`'s `quasi` — so that mode is
+        // reused rather than a seventh invented. 1.3/22710 A.
+        assert.equal(I_PU_INT.toPrecision(10), '0.00005724350506');
+        const b = bench();
+        b.setPin('PA0', 'quasi', true);
+        const r = settled(b);
+        assert.ok(Math.abs(r.i - I_PU_INT) < 1e-12, `internal-pull od-high ${r.i} A`);
+        assert.ok(Math.abs(r.vPad - (VCC - I_PU_INT * R_QUASI_PULLUP)) < 1e-9);
+        assert.ok(r.brightness > 0 && r.brightness < BRIGHT_ON / 20,
+            'a weakly pulled-up pad is lit, and barely');
+    });
+});
+
+// ─── Both publishers read OTYPER (ungated: no wasm, no toolchain) ───────────
+
+describe('open drain: the two publishers, at register level', () => {
+    /** LIGHT TIER. The GPIO block alone, driven by register writes. */
+    function lightPad ({ otyper = 0, pupdr = 0, moder = 1, odr = 1 }) {
+        const rcc = new Stm32Rcc();
+        rcc.write(0x14, 1 << 17);                   // AHBENR: GPIOA clock on
+        const seen = [];
+        const gpio = new Stm32Gpio({
+            base: 0x48000000, portIndex: 0, portLetter: 'A', rcc,
+            onPinChange: (pin, mode, high) => { if (pin === 'PA0') seen.push({ mode, high }); },
+        });
+        gpio.write(0x04, otyper);                   // OTYPER first, as the idiom does
+        gpio.write(0x0c, pupdr);
+        gpio.write(0x00, moder);
+        gpio.write(0x14, odr);
+        return seen;
+    }
+
+    it('OTYPER before MODER still reaches the board', () => {
+        // OTYPER changes the DRIVE, not the level, so it produces no edge of
+        // its own — and the F0 idiom writes it BEFORE MODER. Publishing only
+        // on MODER/PUPDR/ODR would seat the pad push-pull and never correct
+        // it, which is one half of how the original gap survived.
+        const seen = lightPad({ otyper: 1 });
+        assert.deepEqual(seen.at(-1), { mode: 'opendrain', high: true },
+            `light tier published ${JSON.stringify(seen)}`);
+        assert.ok(!seen.some((s) => s.mode === 'pushpull'),
+            'an open-drain pad must never be described as push-pull');
+    });
+
+    it('the light tier maps the register combinations', () => {
+        assert.equal(lightPad({ otyper: 0 }).at(-1).mode, 'pushpull');
+        assert.equal(lightPad({ otyper: 1 }).at(-1).mode, 'opendrain');
+        assert.equal(lightPad({ otyper: 1, pupdr: 1 }).at(-1).mode, 'quasi');
+        // A push-pull output's pull is deliberately not published: a 40 kΩ
+        // pull beside a 25 Ω driver moves nothing, and inventing a mode for it
+        // would make the two tiers describe one pad differently.
+        assert.equal(lightPad({ otyper: 0, pupdr: 1 }).at(-1).mode, 'pushpull');
+        // Driving 0 is a real pull to ground in either drive.
+        assert.deepEqual(lightPad({ otyper: 1, odr: 0 }).at(-1), { mode: 'opendrain', high: false });
+    });
+
+    /** HEAVY TIER. A fake engine — the derivation is ours, so it is testable
+     *  without the 21 MB artifact, and it returns `Map`s the way
+     *  serde-wasm-bindgen does so `plain()` is exercised too. */
+    function heavyPad ({ otyper = 0, pupdr = 0, moder = 1, odr = 1, omitOtyper = false }) {
+        const regs = { moder, otyper, pupdr, odr, idr: 0, afrl: 0, afrh: 0, ospeedr: 0, lckr: 0 };
+        if (omitOtyper) delete regs.otyper;
+        const routingOf = (p) => {
+            const m = (moder >>> (2 * p)) & 3;
+            return m === 1 ? 'output' : m === 2 ? 'af' : m === 3 ? 'analog' : 'input';
+        };
+        const levelOf = (p) => ((moder >>> (2 * p)) & 3) === 1 && ((odr >>> p) & 1) === 1;
+        const sim = {
+            watch_logic_signals: (rs) => rs.map((r, i) => new Map(Object.entries(
+                { ch: i, kind: 'gpio', peripheral: r.peripheral, pin: r.pin, value: levelOf(r.pin) }))),
+            sample_logic_signals: (rs) => rs.map((r) => new Map(Object.entries(
+                { kind: 'gpio', peripheral: r.peripheral, pin: r.pin, value: levelOf(r.pin) }))),
+            pin_routing: (rs) => rs.map((r) => new Map(Object.entries(
+                { kind: 'gpio', peripheral: r.peripheral, pin: r.pin, mode: routingOf(r.pin) }))),
+            get_peripheral_snapshot: () => new Map(Object.entries(regs)),
+            read_logic_edges: () => new Map(Object.entries(
+                { cursor: 0, dropped: 0, edges: [], nowCycle: 0 })),
+            step_batch: () => {},
+            set_board_io_input: () => {},
+            drain_uart_output: () => new Uint8Array(0),
+        };
+        const seen = [];
+        const board = {
+            setPin: (pin, mode, high) => { if (pin === 'PA0') seen.push({ mode, high }); },
+            advanceTo: () => {},
+            readPin: () => 0,
+            readAnalog: () => 0,
+        };
+        const adapter = createLabwiredAdapter({
+            wasm: { WasmSimulator: { new_from_config: () => sim } },
+            chipYaml: 'name: fake',
+            pins: { PA0: { peripheral: 'gpioPortA', pin: 0 } },
+        });
+        adapter.attachBoard(board);
+        return seen;
+    }
+
+    it('the heavy tier derives the same modes from the same registers', () => {
+        assert.deepEqual(heavyPad({ otyper: 0 }).at(-1), { mode: 'pushpull', high: true });
+        assert.deepEqual(heavyPad({ otyper: 1 }).at(-1), { mode: 'opendrain', high: true });
+        assert.deepEqual(heavyPad({ otyper: 1, pupdr: 1 }).at(-1), { mode: 'quasi', high: true });
+        assert.deepEqual(heavyPad({ otyper: 0, pupdr: 1 }).at(-1), { mode: 'pushpull', high: true });
+        assert.deepEqual(heavyPad({ otyper: 1, odr: 0 }).at(-1), { mode: 'opendrain', high: false });
+    });
+
+    it('a family whose snapshot has no OTYPER stays push-pull, not invented', () => {
+        // The F1 encodes drive in CRL/CRH and nRF52 in PIN_CNF; neither hands
+        // back a numeric `otyper`. Same defensive shape as the pull.
+        assert.deepEqual(heavyPad({ otyper: 1, omitOtyper: true }).at(-1),
+            { mode: 'pushpull', high: true });
+    });
+
+    it('the two publishers agree on every combination, cell by cell', () => {
+        // THE PARITY CLAIM, in the one place it can be checked without the
+        // engine: same registers in, same mode out, for the whole truth table.
+        // A one-sided repair fails here as well as in the gated run below.
+        const cases = [
+            { otyper: 0, pupdr: 0 }, { otyper: 1, pupdr: 0 },
+            { otyper: 0, pupdr: 1 }, { otyper: 1, pupdr: 1 },
+            { otyper: 1, pupdr: 2 }, { otyper: 1, pupdr: 0, odr: 0 },
+            { otyper: 0, pupdr: 0, odr: 0 },
+        ];
+        for (const c of cases) {
+            const light = lightPad(c).at(-1);
+            const heavy = heavyPad(c).at(-1);
+            assert.deepEqual(heavy, light,
+                `tiers disagree for OTYPER=${c.otyper} PUPDR=${c.pupdr} ODR=${c.odr ?? 1}: `
+                + `light ${JSON.stringify(light)}, heavy ${JSON.stringify(heavy)}`);
+        }
+        // The table must actually contain the repaired cell, or "they agree"
+        // is the agreement of seven push-pull rows.
+        assert.ok(cases.some((c) => lightPad(c).at(-1).mode === 'opendrain'));
+        assert.ok(cases.some((c) => lightPad(c).at(-1).mode === 'quasi'));
+    });
+});
+
 // ─── The parity run: the same firmware on both tiers ────────────────────────
 
 const WASM_DIR = process.env.LABWIRED_WASM;
@@ -308,7 +616,8 @@ int main(void)
 }
 ${VECTORS}`;
 
-/** OTYPER set before MODER: an open-drain output, driven high. */
+/** OTYPER set before MODER: an open-drain output, driven high. The pad has
+ *  LET GO — on the active-high bench the LED must be dark on both tiers. */
 const FW_OPENDRAIN = `${PROLOGUE}
 int main(void)
 {
@@ -316,6 +625,20 @@ int main(void)
     GPIOA_OTYPER = 1u;
     GPIOA_MODER = (1u << 0);
     GPIOA_BSRR = 1u;
+    for (;;) {}
+}
+${VECTORS}`;
+
+/** The same open-drain pad driving LOW. Run against the ACTIVE-LOW bench,
+ *  where a sinking pad lights the LED: the control that stops "open drain is
+ *  high-Z" from being implemented as high-Z in both directions. */
+const FW_OPENDRAIN_LOW = `${PROLOGUE}
+int main(void)
+{
+    bw_clocks();
+    GPIOA_OTYPER = 1u;
+    GPIOA_MODER = (1u << 0);
+    GPIOA_BSRR = (1u << 16);
     for (;;) {}
 }
 ${VECTORS}`;
@@ -354,8 +677,8 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
     };
 
     /** One board per tier plus a tap on the modes PA0 was published under. */
-    function tapped () {
-        const b = bench();
+    function tapped (make = bench) {
+        const b = make();
         const modes = [];
         const inner = b.setPin.bind(b);
         b.setPin = (pin, mode, high) => {
@@ -377,19 +700,19 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
     }
 
     const runs = new Map();
-    function bothTiers (source, ms) {
-        const key = `${source.length}|${ms}`;
+    function bothTiers (source, ms, netlist = BENCH, make = bench) {
+        const key = `${source.length}|${ms}|${netlist === BENCH ? 'ah' : 'al'}`;
         if (runs.has(key)) return runs.get(key);
         const image = fw(source);
 
-        const light = tapped();
+        const light = tapped(make);
         const lightSamples = sample(
             createStm32F0Adapter({ program: image.bin, clockHz: 48_000_000 }), light.board, ms);
 
         const opts = labwiredAdapterOptionsFor({
-            netlist: BENCH, firmware: image.elf, name: 'pad-drive-parity', chipKind: 'stm32f030',
+            netlist, firmware: image.elf, name: 'pad-drive-parity', chipKind: 'stm32f030',
         });
-        const heavy = tapped();
+        const heavy = tapped(make);
         const heavySamples = sample(createLabwiredAdapter({ wasm, ...opts }), heavy.board, ms);
 
         const r = { light, heavy, lightSamples, heavySamples, opts };
@@ -463,28 +786,60 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
         'one of the tiers never turned the LED off');
     });
 
-    it('LEDGERED: neither tier carries OTYPER, and they are wrong together', () => {
-        // An open-drain pad driving 1 is high-Z on silicon and the LED stays
-        // dark. Both tiers publish `pushpull` and light it at the same 0.0628.
-        // This is asserted as an AGREEMENT, not as correctness: it is the shape
-        // of a shared cap, and the assertion exists so that a one-sided repair
-        // — labwired growing OTYPER upstream, or stm32f0-board.js growing it
-        // here — cannot land without someone reading this comment. Our codegen
-        // never writes OTYPER, so the shipped corpus is unaffected; a foreign
-        // binary loaded through the ⚡/📂 path is not.
+    it('REPAIRED: an open-drain pad driving 1 is DARK on both tiers', () => {
+        // This was the ledgered shared cap, and it is the repair. An
+        // open-drain output driving 1 has let go of the pad; on the active-high
+        // bench nothing else sources current, so the LED is dark and the pad
+        // sits at 0 V. Before the repair BOTH tiers published `pushpull` here
+        // and lit it at 0.0628.
         //
-        // When it is fixed, fix it on BOTH tiers in one commit and turn this
-        // into: light 0, heavy 0, modes ['input', 'opendrain'].
+        // Each tier is asserted SEPARATELY against the correct answer, and the
+        // two are then asserted equal. That is what keeps the one-sided
+        // mutation control: reverting either publisher alone (light tier —
+        // drop the OTYPER read in `_publishAll`; heavy tier — drop the
+        // `openDrain` branch in `modeOf`) makes that tier read 0.0628, which
+        // fails its own assertion AND the agreement.
         const r = bothTiers(FW_OPENDRAIN, 40);
         const l = peak(r.lightSamples), h = peak(r.heavySamples);
-        assert.ok(Math.abs(l - h) < 1e-6,
+        console.log(`    [pad parity] open-drain high: light ${l.toFixed(6)}  heavy ${h.toFixed(6)}`);
+        assert.ok(l < BRIGHT_ON / 1000, `light tier lit a released open-drain pad: ${l}`);
+        assert.ok(h < BRIGHT_ON / 1000, `heavy tier lit a released open-drain pad: ${h}`);
+        assert.ok(Math.abs(l - h) < 1e-9,
             `the tiers disagree about an open-drain pad: light ${l}, heavy ${h}`);
-        assert.ok(Math.abs(l - BRIGHT_ON) < 1e-6,
-            `open-drain high reads ${l}; the ledgered behaviour is the push-pull value `
-            + `${BRIGHT_ON} on both tiers`);
-        assert.ok(r.light.modes.includes('pushpull') && r.heavy.modes.includes('pushpull'),
-            'both tiers publish an open-drain output as push-pull — see the comment');
-        assert.ok(!r.light.modes.includes('opendrain') && !r.heavy.modes.includes('opendrain'),
-            'a tier grew OTYPER support: fix BOTH and rewrite this test');
+
+        // …and they say so in the same words, which is the channel a
+        // disagreement would have to travel through: boundary A carries a MODE.
+        for (const [name, t] of [['light', r.light], ['heavy', r.heavy]]) {
+            const first = t.modes.indexOf('opendrain');
+            assert.notEqual(first, -1, `${name} tier never published PA0 as open-drain`);
+            assert.deepEqual([...new Set(t.modes.slice(0, first))].sort(), first ? ['input'] : [],
+                `${name} pad modes before configuration: ${t.modes.slice(0, first).join(', ')}`);
+            assert.deepEqual([...new Set(t.modes.slice(first))], ['opendrain'],
+                `${name} tier stopped describing PA0 as open-drain mid-run`);
+            assert.ok(!t.modes.includes('pushpull'),
+                `${name} tier described an open-drain pad as push-pull`);
+        }
+    });
+
+    it('REPAIRED: the same open-drain pad driving 0 still DRIVES, on both', () => {
+        // The control on the repair. `opendrain` is high-Z in ONE direction
+        // only: driving 0 it pulls to ground through the same 25 Ω push-pull
+        // uses. On the active-low bench (VCC —[1 kΩ]— LED —▶|— PA0) that means
+        // the LED lights at the hand-computed 1.3/1035 A ⇒ 0.0628 — the same
+        // number the push-pull bench reaches, because it is the same Thevenin.
+        // Without this, "open drain never sources" could be implemented as
+        // "open drain never drives" and every assertion above would still pass.
+        const r = bothTiers(FW_OPENDRAIN_LOW, 40, BENCH_AL, benchAL);
+        const l = peak(r.lightSamples), h = peak(r.heavySamples);
+        console.log(`    [pad parity] open-drain low (active-low bench): light ${l.toFixed(6)}`
+            + `  heavy ${h.toFixed(6)}  hand ${BRIGHT_ON.toFixed(6)}`);
+        assert.ok(Math.abs(l - BRIGHT_ON) < 1e-6, `light od-low peak ${l}, hand ${BRIGHT_ON}`);
+        assert.ok(Math.abs(h - BRIGHT_ON) < 1e-6, `heavy od-low peak ${h}, hand ${BRIGHT_ON}`);
+        assert.ok(Math.abs(l - h) < 1e-6,
+            `the tiers sink differently through an open-drain pad: light ${l}, heavy ${h}`);
+        for (const [name, t] of [['light', r.light], ['heavy', r.heavy]]) {
+            assert.ok(t.modes.includes('opendrain'), `${name} tier never published open-drain`);
+            assert.ok(!t.modes.includes('pushpull'), `${name} tier fell back to push-pull`);
+        }
     });
 });
