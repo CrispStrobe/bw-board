@@ -120,9 +120,11 @@ export class Stm32Gpio {
     switch (off) {
       case 0x00: this.moder = v >>> 0; this._publishAll(); break;
       // OTYPER republishes: it changes the pad's DRIVE, not its level, so it
-      // produces no edge of its own — and the F0 idiom writes it BEFORE
-      // MODER, so without this the pad would be seated push-pull and never
-      // corrected. (This is the same class of miss as the PUPDR one on 0x0c.)
+      // produces no edge of its own. Written BEFORE MODER (the usual idiom)
+      // the following MODER write would republish anyway; written to a pin
+      // that is ALREADY an output — make it an output, then make it open
+      // drain — nothing else ever would, and the pad would keep its push-pull
+      // description forever. Same class of miss as the PUPDR one on 0x0c.
       case 0x04: this.otyper = v >>> 0; this._publishAll(); break;
       case 0x0c: this.pupdr = v >>> 0; this._publishAll(); break;
       case 0x14: this.odr = v & 0xffff; this._publishAll(); break;

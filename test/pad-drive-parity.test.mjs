@@ -418,8 +418,11 @@ describe('open drain: the pad that lets go', () => {
 // ─── Both publishers read OTYPER (ungated: no wasm, no toolchain) ───────────
 
 describe('open drain: the two publishers, at register level', () => {
-    /** LIGHT TIER. The GPIO block alone, driven by register writes. */
-    function lightPad ({ otyper = 0, pupdr = 0, moder = 1, odr = 1 }) {
+    const OFF = { otyper: 0x04, pupdr: 0x0c, moder: 0x00, odr: 0x14 };
+
+    /** LIGHT TIER. The GPIO block alone, driven by register writes. `after`
+     *  rewrites registers once the pin is already configured. */
+    function lightPad ({ otyper = 0, pupdr = 0, moder = 1, odr = 1 }, after = null) {
         const rcc = new Stm32Rcc();
         rcc.write(0x14, 1 << 17);                   // AHBENR: GPIOA clock on
         const seen = [];
@@ -427,10 +430,11 @@ describe('open drain: the two publishers, at register level', () => {
             base: 0x48000000, portIndex: 0, portLetter: 'A', rcc,
             onPinChange: (pin, mode, high) => { if (pin === 'PA0') seen.push({ mode, high }); },
         });
-        gpio.write(0x04, otyper);                   // OTYPER first, as the idiom does
-        gpio.write(0x0c, pupdr);
-        gpio.write(0x00, moder);
-        gpio.write(0x14, odr);
+        gpio.write(OFF.otyper, otyper);             // OTYPER first, as the idiom does
+        gpio.write(OFF.pupdr, pupdr);
+        gpio.write(OFF.moder, moder);
+        gpio.write(OFF.odr, odr);
+        if (after) for (const [reg, v] of Object.entries(after)) gpio.write(OFF[reg], v);
         return seen;
     }
 
@@ -461,14 +465,14 @@ describe('open drain: the two publishers, at register level', () => {
     /** HEAVY TIER. A fake engine — the derivation is ours, so it is testable
      *  without the 21 MB artifact, and it returns `Map`s the way
      *  serde-wasm-bindgen does so `plain()` is exercised too. */
-    function heavyPad ({ otyper = 0, pupdr = 0, moder = 1, odr = 1, omitOtyper = false }) {
+    function heavyPad ({ otyper = 0, pupdr = 0, moder = 1, odr = 1, omitOtyper = false }, after = null) {
         const regs = { moder, otyper, pupdr, odr, idr: 0, afrl: 0, afrh: 0, ospeedr: 0, lckr: 0 };
         if (omitOtyper) delete regs.otyper;
         const routingOf = (p) => {
-            const m = (moder >>> (2 * p)) & 3;
+            const m = (regs.moder >>> (2 * p)) & 3;
             return m === 1 ? 'output' : m === 2 ? 'af' : m === 3 ? 'analog' : 'input';
         };
-        const levelOf = (p) => ((moder >>> (2 * p)) & 3) === 1 && ((odr >>> p) & 1) === 1;
+        const levelOf = (p) => ((regs.moder >>> (2 * p)) & 3) === 1 && ((regs.odr >>> p) & 1) === 1;
         const sim = {
             watch_logic_signals: (rs) => rs.map((r, i) => new Map(Object.entries(
                 { ch: i, kind: 'gpio', peripheral: r.peripheral, pin: r.pin, value: levelOf(r.pin) }))),
@@ -496,6 +500,12 @@ describe('open drain: the two publishers, at register level', () => {
             pins: { PA0: { peripheral: 'gpioPortA', pin: 0 } },
         });
         adapter.attachBoard(board);
+        if (after) {
+            // A reconfiguration produces no edge; the adapter has to notice it
+            // in the port-configuration signature and republish.
+            Object.assign(regs, after);
+            adapter.advanceNs(1000n);
+        }
         return seen;
     }
 
@@ -505,6 +515,30 @@ describe('open drain: the two publishers, at register level', () => {
         assert.deepEqual(heavyPad({ otyper: 1, pupdr: 1 }).at(-1), { mode: 'quasi', high: true });
         assert.deepEqual(heavyPad({ otyper: 0, pupdr: 1 }).at(-1), { mode: 'pushpull', high: true });
         assert.deepEqual(heavyPad({ otyper: 1, odr: 0 }).at(-1), { mode: 'opendrain', high: false });
+    });
+
+    it('OTYPER flipped on an ALREADY-configured output still reaches the board', () => {
+        // Written before MODER, the following MODER write republishes anyway —
+        // so the ordinary idiom does not test the OTYPER republish at all, and
+        // a mutation that deleted it passed the whole suite. This is the case
+        // that needs it: make the pin an output, THEN make it open drain.
+        // Nothing else republishes, because changing the drive moves no pad
+        // and therefore emits no edge.
+        //
+        // The two tiers get there by different routes and both are checked:
+        // the light tier republishes on the OTYPER write itself; the heavy
+        // tier carries OTYPER in the port-configuration signature that decides
+        // whether a drain is followed by a full republish.
+        assert.deepEqual(lightPad({ otyper: 0 }, { otyper: 1 }).at(-1),
+            { mode: 'opendrain', high: true }, 'light tier kept a stale push-pull description');
+        assert.deepEqual(heavyPad({ otyper: 0 }, { otyper: 1 }).at(-1),
+            { mode: 'opendrain', high: true }, 'heavy tier kept a stale push-pull description');
+        // …and back again: an open-drain pad reconfigured push-pull must stop
+        // being described as released, or the LED stays dark forever.
+        assert.deepEqual(lightPad({ otyper: 1 }, { otyper: 0 }).at(-1),
+            { mode: 'pushpull', high: true });
+        assert.deepEqual(heavyPad({ otyper: 1 }, { otyper: 0 }).at(-1),
+            { mode: 'pushpull', high: true });
     });
 
     it('a family whose snapshot has no OTYPER stays push-pull, not invented', () => {

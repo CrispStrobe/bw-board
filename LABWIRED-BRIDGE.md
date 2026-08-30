@@ -316,7 +316,9 @@ labwired-core @ `41119903c` (`test/pad-drive-parity.test.mjs`):
 | --- | --- | --- | --- |
 | PA0 driven high, no timer | 0.062802 | 0.062802 | **0** |
 | polled-UIF 20 ms blink, 200 ms | 0.062801 | 0.062798 | 2.4e−6 |
-| open-drain (OTYPER=1) driven high | 0.062802 | 0.062802 | 0 |
+| open-drain (OTYPER=1) driven high, BEFORE §5c | 0.062802 | 0.062802 | 0 |
+| open-drain (OTYPER=1) driven high, AFTER §5c | 0.000000 | 0.000000 | 0 |
+| open-drain driven low, active-low bench (§5c) | 0.062802 | 0.062802 | 0 |
 
 **They agree, and they agree by construction.** Boundary A carries a *mode*, not
 a drive strength: both tiers call `setPin(name, mode, driveHigh)` and the
@@ -347,22 +349,113 @@ silicon would pass ≈ 1.5 mA — same order, within ~20 %. `brightness` is
 normalised average CURRENT, not perceived luminance, which is why a plainly
 visible LED reads 0.06.
 
-**Found while measuring, and now ledgered: neither tier carries OTYPER.** A pad
-configured open-drain and driven high is published as `pushpull` by
-`stm32f0-board.js` (which stores OTYPER and never reads it) and by
+**Found while measuring, and ledgered as a shared cap: neither tier carried
+OTYPER.** A pad configured open-drain and driven high was published as
+`pushpull` by `stm32f0-board.js` (which stored OTYPER and never read it) and by
 `labwired-adapter.js` (whose `pin_routing` answers only
-input/output/af/analog) alike, so the LED lights on both where silicon would
-leave it dark. A shared fidelity cap, not a parity gap; our codegen never writes
-OTYPER so the shipped corpus is unaffected, but a foreign binary loaded through
-the ⚡/📂 path is not. The test asserts it as an AGREEMENT so a one-sided repair
-cannot land silently — fix it on both tiers in one commit, or not at all.
+input/output/af/analog) alike, so the LED lit on both where silicon leaves it
+dark. The test asserted it as an AGREEMENT so a one-sided repair could not land
+silently. **REPAIRED 2026-08-30, both tiers in one commit — see §5c.**
+
+## 5c. OTYPER, repaired on both tiers — hand-derived
+
+The cap §5b named, closed in `e537bd7`. `pin-model.js` already carried the
+`opendrain` mode; what was missing was the two publishers reading the register.
+
+**The physics.** An open-drain output is HALF a driver. Driving 0 it pulls the
+pad to ground through the same on-resistance push-pull uses — `pin-model.js`
+gives `opendrain` low and `pushpull` low the identical `(0 V, R_STRONG)`
+Thévenin. Driving 1 it LETS GO: the pad is high-Z, and nothing on the chip
+decides its level. When PUPDR also asks for the internal pull-up the released
+pad is weakly pulled rather than floating, which is exactly what `quasi` (weak
+pull-up high, strong pull-down low) already describes — so that mode is reused
+rather than a seventh invented.
+
+**Light tier.** `Stm32Gpio._publishAll` reads the OTYPER bit it always stored,
+and an OTYPER *write* now republishes. The second half is not decoration: OTYPER
+changes the DRIVE, not the level, so it emits no edge. Written before MODER the
+following MODER write would republish anyway — but written to a pin that is
+already an output (make it an output, then make it open drain) nothing else ever
+would, and the pad would keep its push-pull description forever. A mutation that
+deleted the republish passed the entire suite until the test for exactly that
+order was added.
+
+**Heavy tier.** `pin_routing` says nothing about OTYPER, just as it says nothing
+about PUPDR, so the register travels the same road §4b opened:
+`get_peripheral_snapshot(port)` returns the flat V2 struct including `otyper`,
+and `modeOf` derives the drive from it. OTYPER was already in the
+port-configuration signature that decides whether a drain is followed by a full
+republish, so a reconfiguration is noticed on both tiers. Defensive the same
+way: a family whose snapshot carries no numeric `otyper` (F1: CRL/CRH; nRF52:
+PIN_CNF) reports push-pull rather than acquiring an invented drive.
+
+**The oracles, by hand, on the 3.3 V rail lite builds** — every digit
+reproduced by the solver (`test/pad-drive-parity.test.mjs`):
+
+| bench | pad Thévenin | I | brightness | V_pad |
+| --- | --- | --- | --- | --- |
+| od LOW, active-low (VCC—1 kΩ—LED—PA0) | (0 V, 25 Ω) | 1.3/1035 = 1.2560386473 mA | 0.0628019324 | 0.0314010 V |
+| od HIGH, active-high (PA0—1 kΩ—LED—GND) | high-Z | **0** | **0** (LED DARK) | 0 V, readPin 0 |
+| od HIGH + external 10 kΩ pull-up | high-Z | 1.3/11010 = 118.0744778 µA | 0.0059037239 | 2.1192552225 V, readPin 1 |
+| od HIGH + internal pull-up (`quasi`) | (3.3 V, 21.7 kΩ) | 1.3/22710 = 57.2435051 µA | 0.0028621753 | 2.0578159401 V |
+
+The first row is the point of the second: open drain *drives* low exactly as
+hard as push-pull, and reaches the same 0.0628 the push-pull bench does, because
+it is the same Thévenin. The third is the point of the whole mode — with the pad
+released the EXTERNAL resistor sets the current (10.6× dimmer than a driven pad)
+and the chip has only stopped pulling.
+
+**Measured on both tiers, same firmware, same bench** (labwired-core
+`41119903c`): open-drain high → light 0.000000, heavy 0.000000; open-drain low
+on the active-low bench → light 0.062802, heavy 0.062802, hand 0.062802.
+
+**Mutation-proven, one tier at a time** (`node --test
+test/pad-drive-parity.test.mjs`, 21 tests green at tip):
+
+| mutation | result |
+| --- | --- |
+| light: drop the OTYPER read in `_publishAll` | 5 fail |
+| heavy: drop the `openDrain` branch in `modeOf` | 4 fail |
+| light: `_publishAll()` removed from the OTYPER write | 1 fail |
+| heavy: `otyper` removed from the port-config signature | 1 fail |
+| light: open drain made high-Z in BOTH directions | 3 fail |
+| heavy: the `quasi` (od + internal pull) case dropped | 2 fail |
+
+**Corpus impact: zero, by construction and by count.** The STM32F030 codegen's
+entire MMIO vocabulary is one `#define` block in sb3-creator
+(`src/utils/sb3Creator.js`, RCC AHBENR/APB1ENR/APB2ENR, GPIOx MODER/PUPDR/IDR/
+ODR/BSRR, TIM3, USART1) — **OTYPER is not among them, and the string does not
+occur anywhere in that repo (0 hits over 288 examples and all sources)**. No
+generated program can configure open drain, so all 85 benches in
+`test/fixtures/labwired/f030-bench-netlists.json` publish exactly what they
+published before: with OTYPER at its reset 0 both publishers return `pushpull`,
+bit-identical to the old code path. What this repairs is the foreign binary
+loaded through the ⚡/📂 path.
+
+**Still shared, still open (and deliberately so):** the firmware's own READBACK
+of a released pad. Both tiers return ODR from IDR rather than the pad, and the
+heavy one cannot do better — labwired's `effective_idr` does not consult OTYPER
+(probed directly: with `otyper=1, moder=output, odr=1`, driving the pad low from
+the board leaves `sample_logic_signals` reporting `true`). Teaching only the
+light tier would re-open the very gap this closes. Same for an open-drain
+ALTERNATE-FUNCTION pad (I²C): its release state comes from the peripheral, and
+no accessor reports it. Both are named in §6.
 
 ## 6. What is still open
 
-0. **OTYPER on both tiers** (§5b) — `pin-model.js` already has the `opendrain`
-   mode; what is missing is the two publishers reading the register. Both sides
-   in one commit, and rewrite the ledgered assertion in
-   `test/pad-drive-parity.test.mjs` to expect brightness 0 on both.
+0. **OTYPER on both tiers** — **REPAIRED 2026-08-30 in `e537bd7`** (light tier
+   `stm32f0-board.js` `_publishAll` + the OTYPER-write republish, heavy tier
+   `labwired-adapter.js` `modeOf` off the register snapshot). Full derivation,
+   oracles, mutation table and the measured zero corpus impact are in §5c; the
+   ledgered assertion in `test/pad-drive-parity.test.mjs` now asserts the
+   repair, tier by tier, and the suite went 10 → 21 tests.
+0b. **What OTYPER still does NOT reach, on either tier** (§5c, deliberately
+   symmetric): the firmware's own readback of a released open-drain pad — both
+   tiers return ODR from IDR, and labwired's `effective_idr` does not consult
+   OTYPER, so a one-sided repair here would re-open item 0. Upstream-PR
+   candidate alongside 2b. Likewise an open-drain ALTERNATE-FUNCTION pad (I²C),
+   whose release state no accessor reports; `modeOf` therefore covers
+   `output` and leaves `af` push-pull.
 1. **The wasm ADC channel export** (§4) — one method in our fork, a rebuilt
    artifact, and 24 benches move from "named refusal" to "carried".
 2. **Lite wiring** — deliberately not started; see the lane's report.

@@ -164,7 +164,9 @@ jobs:
           # 0 on a DC pad and 2.4e-6 across a blink) and pins the hand-computed
           # 0.0628 that answer rests on. Its ORACLE half needs neither the wasm
           # nor gcc and therefore also runs in ordinary CI — what only runs
-          # here is the tier COMPARISON.
+          # here is the tier COMPARISON. Since 2026-08-30 that comparison also
+          # carries OTYPER: an open-drain pad driving 1 must be DARK on both
+          # tiers and driving 0 must still sink on both.
           node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
                       test/labwired-roundtrip.test.mjs \
                       test/pad-drive-parity.test.mjs 2>&1 | tee out.txt
@@ -183,7 +185,7 @@ jobs:
           fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)
           skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)
           echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
-          [ "${tests:-0}" -ge 48 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          [ "${tests:-0}" -ge 59 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
           [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
           [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 
