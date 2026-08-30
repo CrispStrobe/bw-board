@@ -265,7 +265,7 @@ Each with a hand-computed oracle in the same commit.
 
 ## E4 — Mixed-signal timing
 
-### E4.1 Scheduled device events (propagation delay) — `src/board.js` + `src/devices.js`
+### E4.1 Scheduled device events (propagation delay) — DONE (`6be91c2`; hazard oracle completed by the coordinator, 2026-08-30)
 The logic-gates header says it plainly: "Propagation delay: not yet modelled (would
 need scheduled events in the board loop)". Add a per-device event queue: `update()`
 may return `{at: tNs, fire: fn}` scheduling instead of only a boolean; the board's
@@ -277,13 +277,26 @@ steps, and the rule that a fired event forces a solve point). Oracles: a 3-inver
 ring oscillator whose period is 6·tpd; a glitch on a hazard circuit that the fixpoint
 model provably cannot show.
 
-### E4.1a Gate propagation delay rides E4.1 — the 74* curriculum unlock
+### E4.1a Gate propagation delay — DONE (rides `6be91c2`; the 74* curriculum unlock is OPEN for the examples owner)
 Once scheduled events exist, `devices/logic-gates.js` (and the
 chip-composer 74HC family) gain `tpd` (default a few ns, per-part
 override): ring oscillators whose period is Σtpd, hazard/glitch demos a
 fixpoint model provably cannot show, honest flip-flop setup/hold lessons.
 This is the single engine item that most widens the 74*/retro example
 space — sequence it accordingly. Oracles as in E4.1.
+
+STATUS 2026-08-30: this section described work that had ALREADY LANDED
+(`6be91c2`, 2026-08-23 — the spec, the canonical `_wakeNs` wake, gate
+`tpdNs` with inertial sub-tpd cancellation, and four oracles incl. the
+2·Σtpd ring). The roadmap was the stale artifact, found when the
+coordinator sat down to author the contract this text asked for. What
+was genuinely missing was the second oracle the text demands — "a glitch
+on a hazard circuit that the fixpoint model provably cannot show" — now
+in `test/scheduled-gate-tpd.test.mjs`: the static-1 hazard
+Y = A·B + Ā·C with skewed tpds glitches low for exactly the path skew
+(hand timeline in the test), and the same bench un-armed never dips.
+The CONTENT unlock (ring-oscillator and hazard example benches for the
+74* tier) remains open for the examples owner.
 
 ### E4.2 Logic-analyzer channels — DONE (engine side)
 Digital channels on the existing scope-tap contract (boundary B v2 §5): sampled at

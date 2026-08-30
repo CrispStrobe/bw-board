@@ -150,3 +150,85 @@ describe('mixed chain: armed and un-armed gates compose', () => {
     assert.ok(board.nodeVoltage('n_out') > 2.5, 'SLOW high after its 200 ns');
   });
 });
+
+describe('static-1 hazard (the E4.1 oracle the fixpoint provably cannot show)', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  // Y = (A·B) + (Ā·C) with B = C = 1: Y is 1 on BOTH sides of any A
+  // transition, so a fixpoint model holds Y at 1 forever. With skewed
+  // real delays, A falling opens a window where the A·B leg has already
+  // dropped and the Ā·C leg has not yet risen — the classic static-1
+  // glitch. Hand timeline for A: 5→0 at t0, tpd AND=50, NOT=100, OR=50:
+  //   AND1.out falls  t0+50   (A gone, B still 1)
+  //   NOT.out  rises  t0+100 → AND2.out rises t0+150
+  //   OR sees in0 low from t0+50 with in1 still low → Y falls t0+100
+  //   OR sees in1 rise at t0+150               → Y rises t0+200
+  // Glitch: Y low exactly in [t0+100, t0+200) — width = tpd_NOT, the
+  // path-skew, not any input's own width. The pending fall FIRES before
+  // the reverting input arrives, so inertial cancellation (which kills
+  // sub-tpd input pulses) does not kill a genuine hazard.
+  function hazardBench(armed) {
+    const tpd = (ns) => (armed ? { tpdNs: ns } : {});
+    const parts = [VCC, GND,
+      { id: 'SRC', kind: 'vsource', params: { volts: 5 }, terminals: ['pos', 'neg'] },
+      { id: 'AND1', kind: 'gate_and', params: tpd(50), terminals: ['in0', 'in1', 'out'] },
+      { id: 'NOT1', kind: 'gate_not', params: tpd(100), terminals: ['in0', 'out'] },
+      { id: 'AND2', kind: 'gate_and', params: tpd(50), terminals: ['in0', 'in1', 'out'] },
+      { id: 'OR1', kind: 'gate_or', params: tpd(50), terminals: ['in0', 'in1', 'out'] }];
+    const nets = [
+      { id: 'n_vcc', terminals: [
+        { part: 'V1', terminal: 'vcc' },
+        { part: 'AND1', terminal: 'in1' },   // B = 1
+        { part: 'AND2', terminal: 'in1' },   // C = 1
+      ] },
+      { id: 'n_a', terminals: [
+        { part: 'SRC', terminal: 'pos' },
+        { part: 'AND1', terminal: 'in0' },
+        { part: 'NOT1', terminal: 'in0' },
+      ] },
+      { id: 'n_nota', terminals: [
+        { part: 'NOT1', terminal: 'out' }, { part: 'AND2', terminal: 'in0' }] },
+      { id: 'n_p', terminals: [
+        { part: 'AND1', terminal: 'out' }, { part: 'OR1', terminal: 'in0' }] },
+      { id: 'n_q', terminals: [
+        { part: 'AND2', terminal: 'out' }, { part: 'OR1', terminal: 'in1' }] },
+      { id: 'n_y', terminals: [{ part: 'OR1', terminal: 'out' }] },
+      { id: 'n_gnd', terminals: [
+        { part: 'G1', terminal: 'gnd' }, { part: 'SRC', terminal: 'neg' }] },
+    ];
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    board.advanceTo(2_000_000n); // settle well past bring-up: A=1 ⇒ Y=1
+    return board;
+  }
+
+  it('armed gates glitch low for exactly the path skew when A falls', () => {
+    const board = hazardBench(true);
+    assert.ok(board.nodeVoltage('n_y') > 2.5, 'settled: Y = 1 with A = 1');
+    board.setControl('SRC', 0); // A falls at t0 = 2,000,000 ns
+    const at = (dNs) => {
+      board.advanceTo(BigInt(2_000_000 + dNs));
+      return board.nodeVoltage('n_y') > 2.5;
+    };
+    assert.equal(at(80), true, 'before the OR reacts (t0+80) Y still 1');
+    assert.equal(at(130), false, 'the glitch: Y low at t0+130 with BOTH legs low');
+    assert.equal(at(180), false, 'still inside the window at t0+180');
+    assert.equal(at(230), true, 'recovered at t0+230, tpd_OR after the Ā·C leg rose');
+    // And it STAYS recovered — the glitch was the transient, not the answer.
+    assert.equal(at(1000), true, 'steady after: Y = 1 with A = 0');
+  });
+
+  it('the same bench un-armed never dips — which is exactly the fixpoint blindness', () => {
+    const board = hazardBench(false);
+    assert.ok(board.nodeVoltage('n_y') > 2.5, 'settled: Y = 1');
+    board.setControl('SRC', 0);
+    let dipped = false;
+    for (let d = 10; d <= 1000; d += 10) {
+      board.advanceTo(BigInt(2_000_000 + d));
+      if (board.nodeVoltage('n_y') < 2.5) dipped = true;
+    }
+    assert.equal(dipped, false,
+      'the fixpoint holds Y at 1 through the transition — the hazard is invisible without tpd');
+  });
+});
