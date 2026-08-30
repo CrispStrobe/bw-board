@@ -77,9 +77,114 @@ export class M74C922 {
 
     /** @param {0|1} level three-state control, active low */
     setOeb(level) {
-        this.oeb = level ? 1 : 0;
+        const next = level ? 1 : 0;
+        if (next === this.oeb) return;
+        this.oeb = next;
         this._notify();
     }
+}
+
+const R_OUT = 50;
+// Functional weak pull-up. The datasheet guarantees operation with switch
+// resistance up to 50 kOhm but does not specify one fixed pull-up resistance.
+const R_Y_PULLUP = 100_000;
+const SCAN_STEP_NS = 125_000n; // 8 kHz external-clock abstraction (<10 kHz datasheet bound)
+
+/**
+ * Build the solver-facing 74C922 model.
+ *
+ * The real scan rate is selected by Cosc (or an external clock), and debounce
+ * by Ckbm. Circuit device models cannot inspect another part's capacitance,
+ * so this wrapper deliberately models neither RC duration. It uses the
+ * datasheet's synchronous mode at a fixed 8 kHz, below its stated 10 kHz
+ * external-clock ceiling; KBM/debounce remains defeated as documented by the
+ * core. Four scheduled settle points expose the four open-drain columns to
+ * the physical netlist. Using `_wakeNs` makes the result independent of
+ * solver fixpoint count and of the
+ * caller's advanceTo chunk size.
+ */
+export function createM74C922DeviceModel() {
+    const terminals = ['y1','y2','y3','y4','osc','kbm','x4','x3','vss',
+        'x2','x1','da','oeb','d','c','b','a','vcc'];
+    const setDrive = (state, terminal, vTh, rTh) => {
+        const old = state.drives[terminal];
+        if (vTh === null) {
+            if (old === null) return false;
+            state.drives[terminal] = null;
+            return true;
+        }
+        if (old && old.vTh === vTh && old.rTh === rTh) return false;
+        state.drives[terminal] = {vTh, rTh};
+        return true;
+    };
+    const publish = (state, vcc) => {
+        let changed = setDrive(state, 'da', state.encoder.da ? vcc : 0, R_OUT);
+        for (let bit = 0; bit < 4; bit++) {
+            const terminal = ['a', 'b', 'c', 'd'][bit];
+            const v = (state.encoder.code >> bit) & 1 ? vcc : 0;
+            changed = (state.encoder.oeb ? setDrive(state, terminal, null, null) :
+                setDrive(state, terminal, v, R_OUT)) || changed;
+        }
+        return changed;
+    };
+    const commitScan = state => {
+        const next = new Set();
+        for (let key = 0; key < 16; key++) if (state._scanMask & (1 << key)) next.add(key);
+        if (state.encoder.registered !== null && !next.has(state.encoder.registered)) {
+            state.encoder.release(state.encoder.registered);
+        }
+        for (const key of [...state.encoder.held]) if (!next.has(key)) state.encoder.release(key);
+        for (const key of next) if (!state.encoder.held.has(key)) state.encoder.press(key);
+        state._scanMask = 0;
+    };
+    return {
+        terminals,
+        init() {
+            const drives = {
+                a: {vTh: 0, rTh: R_OUT}, b: {vTh: 0, rTh: R_OUT},
+                c: {vTh: 0, rTh: R_OUT}, d: {vTh: 0, rTh: R_OUT},
+                da: {vTh: 0, rTh: R_OUT},
+            };
+            // X outputs are open drain: exactly one sinks while the others Z.
+            for (let c = 1; c <= 4; c++) drives[`x${c}`] = c === 1 ? {vTh: 0, rTh: R_OUT} : null;
+            for (let r = 1; r <= 4; r++) drives[`y${r}`] = {vTh: 5, rTh: R_Y_PULLUP};
+            return {drives, encoder: new M74C922(), _column: 0, _scanMask: 0,
+                _connectedY: [false, false, false, false], _wakeNs: 0n};
+        },
+        stamp(ctx, part, state) {
+            // read() returns zero for a terminal with no net. Record topology
+            // so an unwired Y is interpreted as its real internal pull-up,
+            // not as a phantom closed key.
+            for (let row = 0; row < 4; row++) {
+                state._connectedY[row] = ctx.netFor(`y${row + 1}`) !== undefined;
+            }
+        },
+        update(part, state, read, tNs) {
+            const vcc = read('vcc') || 5;
+            let changed = false;
+            const oeb = read('oeb') > vcc * 0.5 ? 1 : 0;
+            if (oeb !== state.encoder.oeb) {
+                state.encoder.setOeb(oeb);
+                changed = true;
+            }
+            if (state._wakeNs !== null && tNs >= state._wakeNs) {
+                const col = state._column;
+                for (let row = 0; row < 4; row++) {
+                    if (state._connectedY[row] && read(`y${row + 1}`) < vcc * 0.5) {
+                        state._scanMask |= 1 << (row * 4 + col);
+                    }
+                }
+                state._column = (col + 1) & 3;
+                if (state._column === 0) commitScan(state);
+                for (let c = 0; c < 4; c++) {
+                    changed = (c === state._column ? setDrive(state, `x${c + 1}`, 0, R_OUT) :
+                        setDrive(state, `x${c + 1}`, null, null)) || changed;
+                }
+                state._wakeNs = tNs + SCAN_STEP_NS;
+            }
+            return publish(state, vcc) || changed;
+        },
+    };
 }
 
 /**
