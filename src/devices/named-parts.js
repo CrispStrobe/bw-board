@@ -31,8 +31,15 @@ export function registerNamedParts() {
   // 1.5V AA battery: 1.5V EMF, ~0.3Ω internal resistance
   registerDevice('battery_aa', {
     terminals: ['pos', 'neg'],
-    init() { return { drives: { pos: { vTh: 1.5, rTh: 0.3 } } }; },
-    stamp(ctx) { ctx.thevenin('pos', 1.5, 0.3); },
+    init() { return { drives: {} }; },
+    stamp(ctx, part) {
+      const volts = part.params?.volts ?? 1.5;
+      const rInternal = part.params?.rInternal ?? 0.3;
+      // One source between the cell's own terminals. A simultaneous
+      // state.drives source would put a second Norton in parallel, halve the
+      // declared internal resistance, and incorrectly reference pos to ground.
+      ctx.theveninBetween('pos', 'neg', volts, rInternal);
+    },
     update() { return false; },
   });
 

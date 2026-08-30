@@ -41,6 +41,57 @@ describe('battery_9v: 9V across 1kΩ load', () => {
   });
 });
 
+describe('battery_aa: declared cell parameters', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  function loadedVoltage(params, loadOhms = 10) {
+    const parts = [
+      { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
+      { id: 'CELL', kind: 'battery_aa', params, terminals: ['pos', 'neg'] },
+      { id: 'LOAD', kind: 'resistor', params: { ohms: loadOhms }, terminals: ['a', 'b'] },
+    ];
+    const nets = [
+      { id: 'cell_pos', terminals: [
+        { part: 'CELL', terminal: 'pos' },
+        { part: 'LOAD', terminal: 'a' },
+      ] },
+      { id: 'ground', terminals: [
+        { part: 'GND', terminal: 'gnd' },
+        { part: 'CELL', terminal: 'neg' },
+        { part: 'LOAD', terminal: 'b' },
+      ] },
+    ];
+    const board = new BoardImpl(5.0);
+    board.setNetlist(parts, nets);
+    return board.nodeVoltage('cell_pos');
+  }
+
+  it('keeps the 1.5 V / 0.3 Ω default', () => {
+    // Hand oracle: 1.5 V * 10 Ω / (10 Ω + 0.3 Ω) = 1.4563106796 V.
+    assert.ok(Math.abs(loadedVoltage({}) - 1.4563106796) < 1e-9);
+  });
+
+  it('honors volts and rInternal overrides', () => {
+    // Hand oracle: 1.2 V * 10 Ω / (10 Ω + 2 Ω) = 1.0 V.
+    assert.ok(Math.abs(loadedVoltage({ volts: 1.2, rInternal: 2 }) - 1.0) < 1e-9);
+  });
+
+  it('makes the 75-battery-tester verdict thresholds reachable under its 10 Ω load', () => {
+    const cases = [
+      [1.45, 'FULL'],
+      [1.30, 'GOOD'],
+      [1.10, 'WEAK'],
+      [0.90, 'DEAD'],
+    ];
+    const classify = volts => volts > 1.399 ? 'FULL' : volts >= 1.2 ? 'GOOD' : volts >= 1.0 ? 'WEAK' : 'DEAD';
+    for (const [emf, expected] of cases) {
+      const measured = loadedVoltage({ volts: emf });
+      assert.equal(classify(measured), expected, `${emf} V cell loaded to ${measured} V`);
+    }
+  });
+});
+
 describe('lm7805: regulates 9V → 5V', () => {
   beforeEach(setup);
   afterEach(teardown);
