@@ -153,10 +153,18 @@ pub fn set_adc_channel_millivolts(&mut self, peripheral: &str, channel: u8, mv: 
 ```
 
 routed through `seed_adc_channel` so it works for every ADC model, not just the
-STM32 one. Until that lands in our fork and a rebuilt artifact is published, an
-analog pad is **named** in the manifest and its injection is **refused**, rather
-than quietly reported as a boolean — which would be a lie about a mid-rail node,
-not a loss of precision.
+STM32 one.
+
+**LANDED in the fork, 2026-08-30 (`0c0cd0ec`, upstream draft w1ne#1073):**
+`set_adc_channel_millivolts` / `clear_adc_channel` exist on the wasm surface,
+plus core `clear_channel_input` (the mV→count conversion saturates at 4095, so
+the 0xFFFF no-injection sentinel was unreachable through the set API). One
+honest divergence from the sketch above: the landed export routes through the
+`Adc` downcast — the same idiom as `set_adc_value` — not `seed_adc_channel`;
+the generalisation to non-STM32 ADC models is the follow-up if a bench ever
+needs one. The refusal STAYS until the adapter consumes the new export against
+a pinned rebuilt artifact — the export existing and the injection being wired
+are different facts.
 
 Two carriers were considered and rejected:
 
@@ -224,6 +232,7 @@ part produces exactly one update event per millisecond. Over 40 ms:
 | --- | --- | --- |
 | light (`CortexM0Machine`) | 39 | **0.97** |
 | heavy (labwired-wasm @ 41119903c) | 78 | **1.95** |
+| heavy (labwired-wasm @ 0c0cd0ec, level-pend repaired) | 39 | **0.97** |
 
 (The ±1 is the update event on the window's last millisecond, which may or may
 not fall inside it. Nothing else here is approximate: a standalone probe over

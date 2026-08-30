@@ -81,8 +81,9 @@ import { createHash } from 'node:crypto';
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib';
 
 const REPO = 'https://github.com/CrispStrobe/labwired-core.git';
-/** The fork's main, synced to upstream 2026-08-26 (merged w1ne#1068). */
-const PIN = '41119903c';
+/** The fork's main: v0.22.2 + the level-pend/ADC-injection commit
+ * (upstream draft PR w1ne#1073; the fleet builds from the fork). */
+const PIN = '0c0cd0ec3f10c5b291a2bf53705df5cd09765728';
 
 const arg = (name, dflt) => {
     const i = process.argv.indexOf(`--${name}`);

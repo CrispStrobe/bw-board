@@ -441,27 +441,24 @@ describe('labwired round trip: a gallery bench on both tiers', { skip }, () => {
         console.log(`    [round trip] polled UIF: light ${lg.toFixed(3)} ms, heavy ${hg.toFixed(3)} ms`);
     });
 
-    it('LEDGERED: labwired enters the TIM3 handler TWICE per update event', () => {
-        // Measured 2026-08-29 against labwired-core 41119903c. The firmware
-        // toggles PA0 once per ISR entry, so the edge count IS the entry count,
-        // and TIM3 produces exactly one update event per millisecond.
+    it('REPAIRED: labwired enters the TIM3 handler once per update event', () => {
+        // Measured 2026-08-29 against labwired-core 41119903c: ~TWO entries
+        // per update. The IRQ was LEVEL-pended (`irq_level_held()` = SR & DIER
+        // & 0x1F) and the pending latch was never cleared when the peripheral
+        // deasserted during the handler, so `TIM3_SR = 0` at the top of the
+        // ISR was followed by a second entry anyway — every interrupt-counted
+        // millisecond clock ran at DOUBLE speed on the heavy tier, content
+        // agreeing, rate not. The polled control above isolated it to the NVIC.
         //
-        // The light tier gives one edge per ms. labwired gives ~two. Its IRQ is
-        // LEVEL-pended (`irq_level_held()` = SR & DIER & 0x1F), and the pending
-        // latch is not cleared when the peripheral deasserts during the handler,
-        // so the `TIM3_SR = 0` at the top of the ISR is followed by a second
-        // entry anyway. On silicon the NVIC drops a level-triggered pending bit
-        // once the source deasserts before the return.
-        //
-        // Consequence, and the reason the test above compares a PREFIX: any
-        // interrupt-counted millisecond clock — which is what our codegen emits
-        // — runs at DOUBLE speed on the heavy tier. Content agrees; rate does
-        // not. The polled control above isolates it to the NVIC.
-        //
-        // The band is wide on purpose. It fails if the doubling gets worse, and
-        // it fails if the light tier stops being exact — but an upstream fix
-        // that brings labwired to 1.0 lands INSIDE it, so a repair does not
-        // read as a regression. Tighten it to 1.0 when the fix ships.
+        // REPAIRED in the fork on 2026-08-30 (labwired-core 0c0cd0ec, level
+        // reconciliation: a level source's pend follows its line DOWN, with a
+        // level_pended bitset so a software ISPR pend of a low line still
+        // fires once). Measured after: light 0.97, heavy 0.97 over 40 ms.
+        // The band below is tightened to 1.0 per this comment's own earlier
+        // instruction; the firmware toggles PA0 once per ISR entry, so the
+        // edge count IS the entry count, ±1 for the window's last event.
+        // Upstream PR: w1ne/labwired-core#1073 (draft — the fleet works from
+        // the fork; owner ruling 2026-08-30).
         const ms = 40;
         const r = cached('01-blink', FW_IRQ_TOGGLE, ms);
         // +/- 1 because the update event on the window's last millisecond may
@@ -473,8 +470,10 @@ describe('labwired round trip: a gallery bench on both tiers', { skip }, () => {
         assert.ok(Math.abs(transitions(r.light.edges) - ms) <= 1,
             `the reference tier must enter the handler once per update event, got `
             + `${transitions(r.light.edges)} in ${ms} ms`);
-        assert.ok(heavyPer >= 0.9 && heavyPer <= 2.2,
-            `heavy tier entered the handler ${heavyPer.toFixed(2)}x per update event`);
+        assert.ok(Math.abs(transitions(r.heavy.edges) - ms) <= 1,
+            `the heavy tier must enter the handler once per update event, got `
+            + `${transitions(r.heavy.edges)} in ${ms} ms — a second entry per event `
+            + `is the level-latch defect this test ledgered before the fork repaired it`);
     });
 
     it('11-toggle-button: the board drives the pad, and the firmware sees it', () => {
