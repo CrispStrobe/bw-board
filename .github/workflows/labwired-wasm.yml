@@ -158,8 +158,16 @@ jobs:
           # only place a wrong port, a dropped pad or a mislabelled binding
           # shows up: the adapter suite uses a hand-written pin map and a
           # recording stub, and cannot see any of that.
+          #
+          # pad-drive-parity is the second both-tiers suite: it answers whether
+          # the two tiers drive a pad to the same LED brightness (they do, to
+          # 0 on a DC pad and 2.4e-6 across a blink) and pins the hand-computed
+          # 0.0628 that answer rests on. Its ORACLE half needs neither the wasm
+          # nor gcc and therefore also runs in ordinary CI — what only runs
+          # here is the tier COMPARISON.
           node --test test/labwired-adapter.test.mjs test/labwired-bridge.test.mjs \
-                      test/labwired-roundtrip.test.mjs 2>&1 | tee out.txt
+                      test/labwired-roundtrip.test.mjs \
+                      test/pad-drive-parity.test.mjs 2>&1 | tee out.txt
           # A suite that does not RUN is not a suite that passes, and these skip
           # themselves whenever LABWIRED_WASM or the ARM toolchain is missing —
           # which in this job would mean the wiring broke, not that there is
@@ -175,7 +183,7 @@ jobs:
           fails=$(sed -n 's/^# fail \([0-9]*\)$/\1/p' out.txt | tail -1)
           skips=$(sed -n 's/^# skipped \([0-9]*\)$/\1/p' out.txt | tail -1)
           echo "tests=${tests:-?} fail=${fails:-?} skipped=${skips:-?}"
-          [ "${tests:-0}" -ge 34 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
+          [ "${tests:-0}" -ge 48 ] || { echo "::error::only ${tests:-0} tests ran — LABWIRED_WASM or arm-none-eabi-gcc did not reach the suites"; exit 1; }
           [ "${fails:-1}" = 0 ]    || { echo "::error::${fails} labwired tests failed"; exit 1; }
           [ "${skips:-1}" = 0 ]    || { echo "::error::${skips} labwired tests skipped"; exit 1; }
 

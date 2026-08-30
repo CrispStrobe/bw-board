@@ -305,8 +305,64 @@ instrument blamed its subject. Proven both ways by fab-pins (sb3-creator lane,
 analog injection). The same stale-`setEngine`-surface class exists at 14 more
 call sites in sb3-creator's tests and generators — ledgered there.
 
+## 5b. Pad drive: the two tiers agree, and 0.06 is right — measured
+
+fab-lwlite's live browser proof reported `LED_led1` peaking at **0.06** on the
+bench lite improvises for a one-LED F030 blink, and left "does the light tier
+agree?" open. Measured 2026-08-30 at node level, same firmware, same netlist,
+labwired-core @ `41119903c` (`test/pad-drive-parity.test.mjs`):
+
+| firmware | light peak | heavy peak | |Δ| |
+| --- | --- | --- | --- |
+| PA0 driven high, no timer | 0.062802 | 0.062802 | **0** |
+| polled-UIF 20 ms blink, 200 ms | 0.062801 | 0.062798 | 2.4e−6 |
+| open-drain (OTYPER=1) driven high | 0.062802 | 0.062802 | 0 |
+
+**They agree, and they agree by construction.** Boundary A carries a *mode*, not
+a drive strength: both tiers call `setPin(name, mode, driveHigh)` and the
+Thévenin comes from the one shared `pin-model.js`. Neither engine owns a pad
+resistance of its own, so the only channel through which they could disagree is
+publishing DIFFERENT MODES for the same register state — which is what the
+test's mode assertions cover, and what its two mutations (light → `quasi`,
+heavy → `quasi`) each turn red.
+
+**0.06 is the DC on-state, not a duty artifact.** By hand, from `pin-model.js`
+and `board.js::_solveLedChain`, on `PA0 —[1 kΩ]— LED(Vf 2.0, Rd 10) — GND` at
+the 3.3 V rail lite's STM32 runners build (`new BoardImpl(3.3)`):
+
+```
+I  = (3.3 − 0 − 2.0) / (25 + 1000 + 10)  =  1.3 / 1035  =  1.256 038 6 mA
+V_pad = 3.3 − I·25 = 3.268 599 0 V
+brightness = I / 20 mA = 0.062 801 9
+```
+
+Every digit matches the solver. A 33 % blink capped by DUTY alone — an LED
+reaching its 20 mA rating when on — would read 0.333; this bench's series
+resistor holds the on-current to 6.28 % of the rating, a cap 5.3× tighter than
+any duty in the trace, and a blink far slower than the 20 ms perception window
+therefore PEAKS at the DC value. The same bench on the gallery's 5 V rail reads
+0.1449 (3.0/1035 = 2.899 mA) — the rail, not the tier, is why the improvised
+bench is dimmer. Sanity: a real red LED at ~1.3 mA sits near Vf ≈ 1.75 V, so
+silicon would pass ≈ 1.5 mA — same order, within ~20 %. `brightness` is
+normalised average CURRENT, not perceived luminance, which is why a plainly
+visible LED reads 0.06.
+
+**Found while measuring, and now ledgered: neither tier carries OTYPER.** A pad
+configured open-drain and driven high is published as `pushpull` by
+`stm32f0-board.js` (which stores OTYPER and never reads it) and by
+`labwired-adapter.js` (whose `pin_routing` answers only
+input/output/af/analog) alike, so the LED lights on both where silicon would
+leave it dark. A shared fidelity cap, not a parity gap; our codegen never writes
+OTYPER so the shipped corpus is unaffected, but a foreign binary loaded through
+the ⚡/📂 path is not. The test asserts it as an AGREEMENT so a one-sided repair
+cannot land silently — fix it on both tiers in one commit, or not at all.
+
 ## 6. What is still open
 
+0. **OTYPER on both tiers** (§5b) — `pin-model.js` already has the `opendrain`
+   mode; what is missing is the two publishers reading the register. Both sides
+   in one commit, and rewrite the ledgered assertion in
+   `test/pad-drive-parity.test.mjs` to expect brightness 0 on both.
 1. **The wasm ADC channel export** (§4) — one method in our fork, a rebuilt
    artifact, and 24 benches move from "named refusal" to "carried".
 2. **Lite wiring** — deliberately not started; see the lane's report.
