@@ -19,6 +19,7 @@
 /** @typedef {import('./types.js').TheveninSource} TheveninSource */
 
 import { pinThevenin } from './pin-model.js';
+import { buildPinAliasTable } from './pin-aliases.js';
 import { solveMNA, OPAMP_ISHORT_DEFAULT } from './mna.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
@@ -641,6 +642,11 @@ export class BoardImpl {
     this._solveDirty = false;
     this._mcuSurface = null;
     this._qualCache = null;
+    // Dual-function package pins (one pin, two datasheet names) resolved
+    // once per netlist — see pin-aliases.js for the measurement and the
+    // unique-match rule. null on every bench that has none, which is
+    // almost all of them, so _pinSources() pays nothing for this.
+    this._pinAliases = buildPinAliasTable(parts);
 
     this._deviceStates = new Map();
     for (const p of parts) {
@@ -2330,7 +2336,7 @@ export class BoardImpl {
       // Check for MCU pins driving into VCC or GND directly (short circuit)
       if (part.kind === 'mcu') {
         for (const terminal of part.terminals) {
-          const state = this.pinStates.get(String(terminal).toLowerCase());
+          const state = this._pinStateFor(part.id, terminal);
           if (!state || state.mode === 'input') continue;
 
           // Find the net this pin is on
@@ -2385,7 +2391,7 @@ export class BoardImpl {
     for (const part of this.parts) {
       if (part.kind !== 'mcu') continue;
       for (const terminal of part.terminals) {
-        const state = this.pinStates.get(String(terminal).toLowerCase());
+        const state = this._pinStateFor(part.id, terminal);
         if (!state || state.mode === 'input') continue;
 
         const net = this.nets.find(n => n.terminals.some(
@@ -2692,13 +2698,42 @@ export class BoardImpl {
     return out.size ? out : null;
   }
 
+  /**
+   * The pin state driving one MCU-body terminal.
+   *
+   * The case-blind join, plus dual-function package pins: the STC12's
+   * PDIP-40 pin 9 is RST by default and GPIO P4.7 under P4SW, so a netlist
+   * that named it one way used to be undrivable through the other — the
+   * unused spelling was bit-identical to a terminal that does not exist
+   * (measured; src/pin-aliases.js carries the volts and the unique-match
+   * rule). The pin's OWN declared name always wins; the alias only fills a
+   * terminal nothing drove.
+   *
+   * Every electrical lookup of an MCU terminal goes through here: the MNA
+   * path's `_pinSources`, both closed-form source traces, the digital fast
+   * path's qualifier, and the DRC's "is this pin driving" questions. A pin
+   * that drove on one path and not another would be exactly the "plausible,
+   * wrong" split this project forbids.
+   *
+   * @param {string} partId
+   * @param {string} terminal terminal name in any spelling
+   * @returns {PinState | undefined}
+   */
+  _pinStateFor(partId, terminal) {
+    const key = String(terminal).toLowerCase();
+    const own = this.pinStates.get(key);
+    if (own) return own;
+    const alias = this._pinAliases?.get(partId)?.get(key);
+    return alias === undefined ? undefined : this.pinStates.get(alias);
+  }
+
   _pinSources() {
     /** @type {Map<string, import('./types.js').TheveninSource>} */
     const pinSources = new Map();
     for (const part of this.parts) {
       if (part.kind !== 'mcu') continue;
       for (const terminal of part.terminals) {
-        const state = this.pinStates.get(String(terminal).toLowerCase());
+        const state = this._pinStateFor(part.id, terminal);
         if (state) pinSources.set(terminal, pinThevenin(state.mode, state.driveHigh, this.vcc));
       }
     }
@@ -3641,7 +3676,7 @@ export class BoardImpl {
           out.push({ vTh: 0, rTh: rAccum });
           break;
         case 'mcu': {
-          const state = this.pinStates.get(String(t.terminal).toLowerCase());
+          const state = this._pinStateFor(part.id, t.terminal);
           if (!state) break;
           const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
           if (thev !== 'high-z') {
@@ -3869,7 +3904,7 @@ export class BoardImpl {
         case 'mcu': {
           // The terminal name is the PinId
           const pinId = t.terminal;
-          const state = this.pinStates.get(String(pinId).toLowerCase());
+          const state = this._pinStateFor(part.id, pinId);
           if (!state) continue;
           const thev = pinThevenin(state.mode, state.driveHigh, this.vcc);
           if (thev === 'high-z') continue;
