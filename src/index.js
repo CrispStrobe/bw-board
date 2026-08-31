@@ -9,6 +9,12 @@
 
 export { BoardImpl } from './board.js';
 export { pinThevenin, R_STRONG, R_QUASI_PULLUP } from './pin-model.js';
+// The engine owns pin NAMES, so the consumers that audit netlist spellings
+// have to be able to ask it which two names are one physical pin — a
+// catalog gate that cannot ask reports a datasheet-true endpoint as
+// invented. See pin-aliases.js; sb3-creator's bench-invariants gate is the
+// caller that made this an export rather than an internal.
+export { DUAL_FUNCTION_PINS, dualFunctionAlias, buildPinAliasTable } from './pin-aliases.js';
 export { solveMNA } from './mna.js';
 export { acSweep } from './ac.js';
 export { inferNetlist, checkWiring } from './infer-netlist.js';

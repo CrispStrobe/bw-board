@@ -15,7 +15,7 @@
  * and that the un-aliased control produces the idle rail instead.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
@@ -161,4 +161,17 @@ describe('dual-function package pins (STC12 PDIP-40 pin 9: RST / P4.7)', () => {
     assert.deepEqual([...table.get('MCU')], [['p4.7', 'rst']],
       'the table maps the DECLARED terminal (case-blind key) onto the absent name');
   });
+});
+
+// The table is only useful to a cross-repo gate if the gate can reach it.
+// sb3-creator's bench-invariants ratchet asks the ENGINE whether an endpoint
+// names a pin the part has; without this export it would have had to
+// deep-import a private module or re-declare the pair, and a re-declared
+// pair drifts. (producer-must-assert-consumer)
+test('the alias surface is exported from the package entry', async () => {
+  const idx = await import('../src/index.js');
+  assert.equal(typeof idx.dualFunctionAlias, 'function');
+  assert.equal(typeof idx.buildPinAliasTable, 'function');
+  assert.ok(Array.isArray(idx.DUAL_FUNCTION_PINS) && idx.DUAL_FUNCTION_PINS.length > 0);
+  assert.equal(idx.dualFunctionAlias('rst'), 'p4.7');
 });
