@@ -12,6 +12,17 @@
  * are TIMING-INDEPENDENT — configuration reads, register round-trips — where
  * the two must agree byte-for-byte or one of them is wrong.
  *
+ * THE ARBITRATION RULE — read this before trusting a disagreement. v86 is a
+ * 486/Pentium-class PC: its floppy is an 82077-era part, not a µPD765A, and
+ * its DMA is modelled for software that never touched an XT. The two places
+ * our chips are deliberately PERIOD-CORRECT are exactly the places v86 may
+ * legitimately differ — the 8237's 64K page WRAP (concatenate-and-wrap; v86
+ * may not model it because its era's software does not depend on it), and the
+ * FDC's command/result PHASE strictness (a lax controller passes more tests,
+ * not fewer). So: AGREEMENT IS EVIDENCE, DISAGREEMENT IS A QUESTION —
+ * arbitrated by the datasheet and by a real period driver, NEVER by v86 alone.
+ * Do not "fix" our chip to match v86 on a period-correct behaviour.
+ *
  * Two probes today, both framed on COM1 (3F8h):
  *   A. 8254 read-back STATUS. The status byte's low six bits echo the control
  *      word's rw/mode/bcd (datasheet), independent of the count. Our i8254 is
@@ -23,28 +34,61 @@
  *      MUST agree, and it does. This is the positive control that proves the
  *      harness confirms agreement, not just flags difference.
  *
+ * PIN THE ORACLE. An oracle fetched at HEAD silently changes what "agree"
+ * means between runs — the fetch-pinning failure this org has a gate about.
+ * So we pin to a specific v86 build by content hash, and the script PRINTS
+ * the sha it actually compared against and warns if it drifted. The binaries
+ * validated below are v86 commit d96be774e549a83371b038b86e819804c96b921f.
+ *
  * SETUP (out-of-repo, like the SingleStepTests grind's vectors):
  *   mkdir -p ~/code/v86-oracle/bios
- *   # from https://github.com/copy/v86/releases/download/latest/ :
- *   curl -sSL -o ~/code/v86-oracle/libv86.mjs .../libv86.mjs
- *   curl -sSL -o ~/code/v86-oracle/v86.wasm   .../v86.wasm
- *   # BIOS from the v86 repo's bios/ dir:
+ *   # v86's "latest" release is ROLLING — pin by verifying the sha256 below.
+ *   # If GitHub's latest no longer matches, check out commit d96be77 and
+ *   # `make build/libv86.mjs build/v86.wasm`, or fetch the archived binaries.
+ *   curl -sSL -o ~/code/v86-oracle/libv86.mjs \
+ *        https://github.com/copy/v86/releases/download/latest/libv86.mjs
+ *   curl -sSL -o ~/code/v86-oracle/v86.wasm \
+ *        https://github.com/copy/v86/releases/download/latest/v86.wasm
  *   cp v86/bios/seabios.bin v86/bios/vgabios.bin ~/code/v86-oracle/bios/
  * Override the location with V86_ORACLE_DIR. If it is absent the script skips
  * with a note rather than failing, exactly as the grind does without vectors.
  *
  *   node scripts/oracle-v86.mjs
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
+
+// The v86 build these probes were validated against (copy/v86 @ d96be77).
+const PINNED = {
+    commit: 'd96be774e549a83371b038b86e819804c96b921f',
+    'libv86.mjs': '329a9185f889230dfc54c75213e1e6a855b0459d134fe5cbd18cbd402f7cdd30',
+    'v86.wasm': '6121632f6d657d03f2286341ed87edcafd4945fa65ae765b4c7fd0bf2554a9c7',
+};
 
 const DIR = process.env.V86_ORACLE_DIR || join(homedir(), 'code', 'v86-oracle');
 const LIB = join(DIR, 'libv86.mjs');
 if (!existsSync(LIB)) {
     console.log(`v86 not found at ${DIR} — see this file's header for the one-time setup. Skipping.`);
     process.exit(0);
+}
+
+// Report which v86 build we are comparing against, and warn if it has drifted
+// from the pinned one — an oracle that silently changed is worse than none.
+const sha256 = (f) => createHash('sha256').update(readFileSync(join(DIR, f))).digest('hex');
+console.log(`oracle: v86 pinned @ ${PINNED.commit.slice(0, 7)}`);
+let drifted = false;
+for (const f of ['libv86.mjs', 'v86.wasm']) {
+    const got = sha256(f);
+    const ok = got === PINNED[f];
+    if (!ok) drifted = true;
+    console.log(`  ${f}: ${got.slice(0, 16)}… ${ok ? '(matches pin)' : '(!! DRIFTED from pin ' + PINNED[f].slice(0, 16) + '…)'}`);
+}
+if (drifted) {
+    console.log('  WARNING: the v86 build differs from the one these probes were validated against.');
+    console.log('           "agree" now means agreement with a DIFFERENT emulator; re-validate before trusting.');
 }
 
 const CWS = [0x34, 0x36, 0x30, 0x38, 0x3a, 0x14, 0x24, 0x35];
