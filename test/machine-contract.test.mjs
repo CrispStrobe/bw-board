@@ -181,6 +181,38 @@ for (const { name, make } of MACHINES) {
     });
 }
 
+test('no chip in the exemption list has quietly gained persistence', () => {
+    // THE CLAIM THIS EXISTS TO MAKE TRUE. When the coverage test above was
+    // written I said, in its commit message and to the lane that owns these
+    // chips, that giving an exempted chip a getState() would turn this suite
+    // RED so the row had to be deleted. That was FALSE. The assertion above
+    // only fires for a chip with NO snapshot method; a chip that gained one
+    // sails past it into the normal path and passes, leaving a stale
+    // exemption in the list forever — the exact "excuse that has stopped
+    // being true" this repo has a rule about, written by the person writing
+    // the rule.
+    //
+    // So the list is checked in the other direction too. Two other instruments
+    // in this tier already do this and print HEALED; this one goes RED,
+    // because a test cannot print a note nobody reads.
+    const seen = new Map();
+    for (const { make } of MACHINES) {
+        for (const c of Object.values(make().chips || {})) {
+            seen.set(c.constructor.name,
+                typeof c.getState === 'function' || typeof c.saveState === 'function');
+        }
+    }
+    for (const name of NO_PERSISTENCE) {
+        assert.ok(seen.has(name),
+            `NO_PERSISTENCE names "${name}", which no machine's default config builds any `
+            + 'more. An exemption for a chip nobody instantiates protects nothing — delete '
+            + 'the row, or point a config at it.');
+        assert.equal(seen.get(name), false,
+            `HEALED — "${name}" now has a snapshot method, so its NO_PERSISTENCE row has `
+            + 'stopped being true. Delete it. This failure is the row doing its job.');
+    }
+});
+
 test('the three machines expose the same core surface', () => {
     // Named rather than assumed. When a fourth CPU joins the tier this is the
     // list it has to satisfy, and it is short on purpose.
