@@ -235,12 +235,19 @@ FDC_READ    equ 0E6h            ; MT + MFM + SK + READ DATA
 FDC_WRITE   equ 0C5h            ; MT + MFM + WRITE DATA
 
 ; How long the driver waits, and for what.
-;   FD_POLLS is a count of main-status-register reads, not a time. It is
-;   deliberately NOT measured against the tick counter: the tick only
-;   advances if IRQ0 is being delivered, and a driver that waits for a
-;   controller by watching a clock that may not be running turns a dead
-;   controller into a hung machine.
-FD_POLLS    equ 0               ; 0 into CX means 65536 times round a LOOP
+;   FD_POLLS is a count of polls, not a time. It is deliberately NOT
+;   measured against the tick counter: the tick only advances if IRQ0 is
+;   being delivered, and a driver that waits for a controller by watching a
+;   clock that may not be running turns a dead controller into a hung
+;   machine. That is also why it is the bound on the spin-up wait's inner
+;   loop, which DOES watch the clock -- it gives up if the clock is stopped.
+;
+;   16384 is chosen against the two things it has to be between. A uPD765
+;   raises RQM between command bytes in microseconds, so any four-figure
+;   number is generous for the handshake; and one 18.2 Hz tick is a few
+;   hundred times round the spin-up loop, so it has to be comfortably more
+;   than that or a running clock would look stopped.
+FD_POLLS    equ 4000h           ; 16384 times round a LOOP
 FD_BUSY     equ 0FFh            ; motor countdown held here DURING an access,
                                 ; so it cannot expire mid-transfer
 

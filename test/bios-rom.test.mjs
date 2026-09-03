@@ -414,11 +414,20 @@ test('INT 16h AH=00h blocks on an empty buffer and wakes when a key arrives', ()
     m.cpu.ds = 0; m.cpu.es = 0; m.cpu.halted = false; m.cpu.flags |= 0x0200;
 
     for (let i = 0; i < 200_000; i++) m.step();
+    // Then run on to the next HLT rather than sampling wherever step number
+    // 200,000 happened to land. The loop wakes on every timer tick, walks a
+    // few instructions and halts again, so the instant this stops on is a
+    // property of how long POST took -- not of whether INT 16h is blocking.
+    // Asserting the sampled IP made this test fail when the disk driver made
+    // POST longer, which is the wrong thing to have noticed.
+    let guard = 0;
+    while (!m.cpu.halted && guard++ < 200_000) m.step();
     const loop = rom.symbols.get('k16_read').value;
+    assert.equal(m.cpu.halted, true, 'stopped in a HLT, not spinning');
     assert.equal(m.cpu.cs, 0xf000);
     assert.ok(m.cpu.ip >= loop && m.cpu.ip <= loop + 10,
-        `still in the wait loop (IP ${m.cpu.ip.toString(16)}, loop at ${loop.toString(16)})`);
-    assert.equal(m.cpu.halted, true, 'and stopped in the HLT, not spinning');
+        `halted somewhere other than the INT 16h wait loop (IP ${m.cpu.ip.toString(16)}, `
+        + `loop at ${loop.toString(16)})`);
 
     // Now the keyboard interrupts, exactly as IRQ1 would: the scancode is in
     // the 8255's port A latch and the CPU takes vector 9.
@@ -522,24 +531,33 @@ test('INT 1Ah refuses the real-time clock functions instead of inventing a time'
 // INT 13h -- entry points, register conventions, and one named hole.
 // ---------------------------------------------------------------------------
 
-test('INT 13h read reports the FDC hole as a controller failure, in CF and AH', () => {
+// BIOSPC has no floppy controller and no 8237: 3F0h-3F7h and 00h-0Fh are
+// undecoded, so every IN returns the floating bus. That is not a contrived
+// config -- it is every machine in this tier that has not been given a disk
+// -- and what the driver must do there is fail in bounded time and say so.
+// The real controller is driven in test/bios-fdc.test.mjs.
+
+test('with no controller decoded, a read TIMES OUT rather than hanging', () => {
     const m = booted();
     run(m, ` mov ax, 0201h\n mov cx, 0001h\n xor dx, dx\n mov bx, 5000h
-             int 13h\n pushf\n pop si`);
+             int 13h\n pushf\n pop si`, 2_000_000);
     assert.equal(m.cpu.si & 1, 1, 'CF set');
-    assert.equal(m.cpu.ax >> 8, 0x20, 'AH = 20h, controller failure');
-    assert.equal(rd8(m, BDA + 0x41), 0x20, 'and it is left in 0040:0041');
-    // NOT 80h (no disk in the drive), which would invite a retry, and NOT
-    // success with a buffer of zeros, which would make a boot sector out of
-    // nothing.
-    assert.equal(m.mem[0x5000], 0, 'nothing was transferred');
+    assert.equal(m.cpu.ax >> 8, 0x80, 'AH = 80h: the drive never answered');
+    assert.equal(rd8(m, BDA + 0x41), 0x80, 'and it is left in 0040:0041');
+    // The floating bus reads as 0FFh, which is RQM and DIO both set -- a
+    // main status register that says "I have a byte for you" forever. A
+    // driver that polls for RQM alone, without checking DIO, would take that
+    // as ready and push nine command bytes into nothing.
+    assert.equal(m.mem[0x5000], 0, 'and nothing was transferred');
 });
 
 test('INT 13h AH=01h reports the last status without touching a controller', () => {
     const m = booted();
     run(m, ` mov ax, 0201h\n mov cx, 1\n xor dx, dx\n mov bx, 5000h\n int 13h
-             mov ah, 1\n xor dl, dl\n int 13h\n mov si, ax`);
-    assert.equal(m.cpu.si & 0xff, 0x20, 'AL = the status the read left behind');
+             mov ah, 1\n xor dl, dl\n int 13h\n mov si, ax`, 2_000_000);
+    assert.equal(m.cpu.si & 0xff, 0x80, 'AL = the status the read left behind');
+    assert.equal(m.cpu.si >> 8, 0x80,
+        'AH carries it too, which is what makes CF agree with it');
 });
 
 test('INT 13h AH=08h answers the geometry, which is configuration and not traffic', () => {
@@ -655,7 +673,11 @@ test('INT 19h retries, then says the machine has nothing to boot from', () => {
     const m = booted();
     installDiskStub(m, { fail: true });
     stageSector(m);
-    run(m, ` int 19h`);
+    // The budget is larger than the other INT 19h tests' because the failing
+    // path now includes three real AH=00h resets between the three read
+    // attempts, and a reset of a controller that is not there is three
+    // bounded timeouts rather than an immediate return.
+    run(m, ` int 19h`, 4_000_000);
     const screen = Array.from({ length: 25 }, (_, r) => screenRow(m, r)).join('\n');
     assert.match(screen, /No disk controller/);
     assert.match(screen, /No ROM BASIC/, 'INT 18h got its chance, as on a real machine');
