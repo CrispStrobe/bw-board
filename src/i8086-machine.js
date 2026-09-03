@@ -46,6 +46,8 @@ import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
 import { HerculesCard } from './hercules-card.js';
 import { VGACard } from './vga-card.js';
+import { I8237 } from './i8237.js';
+import { UPD765 } from './upd765.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
 const IF = 0x0200;
@@ -86,6 +88,14 @@ const REGS = {
     cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
     hercules: 16,    // the 3B0h-3BFh block (mode 3B8h, status 3BAh, config 3BFh)
     vga: 32,         // the 3C0h-3DFh block (attr/seq/gc/crtc/dac/misc + status)
+    dma: 16,         // the 8237's 00h-0Fh: four channels, then the command block
+    // THE PAGE LATCH IS NOT PART OF THE 8237. The chip counts sixteen bits of
+    // address and the XT needs twenty, so IBM bolted a separate 74LS670 latch
+    // file at 80h-8Fh to supply A16-A19. It is a second decoded window onto the
+    // same chip, which is why it is its own kind rather than a wider span: the
+    // two blocks are 0x70 ports apart and nothing decodes the gap.
+    dmapage: 16,
+    fdc: 8,          // the uPD765 card's 3F0h-3F7h (DOR 3F2h, MSR 3F4h, data 3F5h)
 };
 
 /**
@@ -220,9 +230,13 @@ export class I8086Machine {
         // 8254 counter that ARE, so it is built in a second pass once they
         // exist. Collect its configs here.
         const speakerConfigs = [];
+        // The DMA page latch names the 8237 it extends, which may be declared
+        // after it, so it is built in the same second pass as the speaker.
+        const pageConfigs = [];
 
         for (const c of config.chips || []) {
             if (c.kind === 'pcspeaker') { speakerConfigs.push(c); continue; }
+            if (c.kind === 'dmapage') { pageConfigs.push(c); continue; }
             const regs = REGS[c.kind];
             if (!regs) throw new Error(`machine config: unknown chip kind ${c.kind}`);
             const span = c.span || regs;
@@ -266,6 +280,20 @@ export class I8086Machine {
                 chip = new HerculesCard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
                 });
+            } else if (c.kind === 'dma') {
+                chip = new I8237({
+                    // TC is the pin that tells a peripheral the count ran out;
+                    // the FDC ends its transfer on it. Surfaced as a hook so a
+                    // machine can wire it without the 8237 knowing who listens.
+                    onTerminalCount: (ch) => { if (this.hooks.onDmaComplete) this.hooks.onDmaComplete(c.name, ch); },
+                    onHrq: (active) => { if (this.hooks.onDmaRequest) this.hooks.onDmaRequest(c.name, active); },
+                });
+            } else if (c.kind === 'fdc') {
+                chip = new UPD765({
+                    onMotorChange: (drive, on) => {
+                        if (this.hooks.onMotorChange) this.hooks.onMotorChange(c.name, drive, on);
+                    },
+                }, { seekBeyondEnd: c.seekBeyondEnd });
             } else if (c.kind === 'vga') {
                 chip = new VGACard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
@@ -310,6 +338,28 @@ export class I8086Machine {
                     if (this._pic) this._pic.setIRQ(c.irq, asserted ? 1 : 0);
                 };
             }
+        }
+
+        // The page latch: a second window onto an already-built 8237, reached
+        // through readPage/writePage rather than read/write. It is registered
+        // as a decoded window but NOT added to this.chips -- the page bytes
+        // live inside the 8237 and are already in its getState(), and a second
+        // entry would snapshot them twice and restore them twice.
+        for (const c of pageConfigs) {
+            const dma = this.chips[c.dma];
+            if (!dma) {
+                throw new Error(
+                    `machine config: dmapage '${c.name}' names dma '${c.dma}', which is not a `
+                    + `declared chip. The latch supplies A16-A19 for that 8237 and is inert `
+                    + `without it.`);
+            }
+            const span = c.span || REGS.dmapage;
+            const stride = c.stride || 1;
+            this._io.push({
+                name: c.name, regs: REGS.dmapage, stride,
+                chip: { read: (r) => dma.readPage(r), write: (r, v) => dma.writePage(r, v) },
+                start: c.at, end: c.at + stride * span - 1,
+            });
         }
 
         // Build the PC speaker(s) now that the 8255 and 8254 they observe
