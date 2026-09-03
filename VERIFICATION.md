@@ -217,3 +217,42 @@ What follows in practice:
   catch an exclusion key that matched too much, and in its first version could
   not fire — inside the block that was replacing a key for exactly that
   defect. Only mutating it found that.
+
+## House pattern: an exemption must be able to stop being true
+
+Every instrument in this tier that grades results has an exemption list — a
+place to record "this one disagrees and here is why", so a known, adjudicated
+difference does not have to be re-litigated on every run. Three of them
+arrived independently at the same second half of that idea, which is what
+makes it a pattern rather than three coincidences:
+
+| Instrument | Its list | What it does when a row heals |
+|---|---|---|
+| `scripts/grind-i8086-disasm.mjs` | three vectors where the suite's own `name` contradicts its own `bytes` | prints `HEALED — the suite now agrees, drop this row` |
+| `scripts/run-i8086-corpus.mjs` | `KNOWN_DISAGREEMENTS`, programs whose output differs from the reference simulator for adjudicated reasons | prints `HEALED — <name> now agrees; drop its row` |
+| `test/machine-contract.test.mjs` | `NO_PERSISTENCE`, chips a machine snapshot silently drops | goes **RED** by name — a test cannot print a note nobody reads |
+
+The rule the three share: **a row must be able to fail, and its failure must
+be the row doing its job.** An exemption that cannot notice the thing it
+excuses has been fixed is indistinguishable from one that is still needed, and
+it will outlive the reason it was written by years — which is worse than
+having no exemption at all, because it silently suppresses a real result.
+
+Two practical points, both learned the hard way here:
+
+- **Key the row on the thing being excused, not on a digest of it.** The
+  disassembler's exclusions were keyed on the suite's `test_hash`, which
+  exists in only one of the two encodings the suite ships; on the other
+  encoding the rows excused nothing at all and the vectors would have gone red
+  for the wrong reason. The key is now the instruction BYTES, which is what
+  the excuse is actually about, and the wrong `name` is recorded beside it as
+  data so a re-rendered name still reports HEALED.
+- **Check that the healing detector detects.** `NO_PERSISTENCE` was landed
+  with a commit message and a note to another lane both claiming that a chip
+  gaining a snapshot method would turn the suite red. It would not have: the
+  coverage assertion only fires for a chip with NO such method, so a chip that
+  gained one sailed past into the passing path and left the exemption standing
+  forever. The mechanism offered as the reason it was safe to RECORD a gap
+  rather than fix it was the one part of it that did not exist. It was found
+  only because a second lane asked whether the three instruments should be a
+  house pattern, and writing this section required checking that they were.
