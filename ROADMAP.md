@@ -691,6 +691,78 @@ oracle-only fallback.
 
 ---
 
+## E7 The 8086 in the Circuit Designer — an example that is a MACHINE, not a demo
+
+The goal the owner set: drag an 8086 and its support chips onto the breadboard,
+Build Machine, and get a UART shell exactly like the Z80 and 6502 tiers — with
+keyboard/display widgets and GUI binary-loading — and, because a BIOS ROM of
+our own exists, an 8086 that BOOTS ITSELF into that shell rather than being
+hand-fed a program.
+
+THE WHOLE REMAINING GAP IS WIRING, NOT EMULATION. bw-board already has the
+complete tier — core (646k/646k), machine, adapter, `createDebugTarget('i8086')`,
+`extract8086Machine`, every support chip, the CGA/Hercules/VGA cards, and the
+drawable DIP parts in bw-parts. Nothing here needs a new emulator; it needs the
+UI and the host to consume what exists. Three repos, and (per the owner) no
+dedicated bw-circuit-ui agent — this lane drives the UI work and coordinates
+only the lite vendoring with the DOS/host lane.
+
+Steps, in dependency order. Each names the repo, the concrete files, and who
+lands it.
+
+1. **Engine readiness — bw-board. DONE / in flight.** Machine, adapter
+   (`onSerial`/`sendSerial`), debug target (`regs`/`step`/`video`/`audio`),
+   `extract8086Machine`, chips and cards all exist. The debug target's `video()`
+   → `{width,height,rgba}` and `audio()` → `{hz,on}` wiring to the CGA/VGA
+   renderer and the speaker is the DOS/host lane's in-flight video-surface work;
+   our side (`getVideoState`, `machine.audioTone`) is done. Ship a Circuit-
+   Designer EXAMPLE PRESET: an 8086 that boots the BIOS ROM into a UART shell.
+
+2. **bw-circuit-ui recognises and places the 8086.** Add `i8086` to
+   `src/parts-data/` (JSON + SVG, reuse the bw-parts pinout), register the kind
+   in `src/model/circuit.js` (controller list), `src/model/footprints.js`,
+   `src/model/drc.js`, `src/components/BoardCanvas.jsx`; add an
+   `extract8086Machine` branch to `src/model/machine-extract.js`; extend
+   `hasRetroCpu` and the Machine-Loader in `src/components/CircuitDesigner.jsx`
+   (preset with `romAt: 0xFFFF0`, the reset vector). THIS LANE.
+
+3. **Host wiring — brickwright-lite `debug-runner.js`.** An `i8086` branch that
+   calls `createDebugTarget('i8086', {config, rom, romAt})`, subscribes
+   `adapter.onSerial`, sets `runner.sendSerial`; inject `extract8086Machine` in
+   `circuit-tab.jsx`; extend the CPU-detection regexes. THIS is the first real
+   IMPORTER of the tier — it is what dissolves `no-dead-overlay-modules`.
+   DOS/host lane, on our signal.
+
+4. **Vendor the tier into lite.** `sync:bwboard --dir` pulls the `i8086-*.js` +
+   `i8255/i8259/…` into the vendored bw-board (they are absent today). Triggered
+   by step 3's importer. DOS/host lane.
+
+5. **UART shell — falls out of step 3, no code.** `SerialConsole.jsx` is already
+   machine-agnostic; once the runner subscribes the 8086 adapter's serial, the
+   shell works, newline 0x0d like the others.
+
+6. **Display widget on `video()`.** `VdpScreen.jsx` renders `{width,height,rgba}`
+   unchanged; needs step 1's debug-target `video()` returning the CGA/VGA
+   renderer's frame. DOS/host lane's renderer + this lane's cards.
+
+7. **Keyboard widget.** `VdpScreen` already emits `setKeys`/`setButtons`; route
+   8086 key input through the BIOS INT 16h/09h path (or an 8255 port). Decide
+   the input seam with the BIOS.
+
+8. **GUI binary-loading.** The file-upload path already accepts `.bin`; add the
+   `i8086` loader branch (`romAt: 0xFFFF0`) and an example ROM under
+   `static/roms/` (the BIOS ROM, or a small serial monitor). bw-circuit-ui.
+
+9. **Boot from disk.** The 8237+µPD765 machine integration (this lane's queued
+   one-green-commit — aux windows, transfer pump, TC wire, page-wrap tests) plus
+   a bootable MS-DOS 2.0 image (DOS lane). The "run a real OS" milestone; it
+   sits last because a serial-shell example needs neither.
+
+Ownership: bw-board + bw-parts = this lane (done). bw-circuit-ui = this lane now
+(no separate agent). brickwright-lite host + vendor = DOS/host lane, on our
+importer signal. SerialConsole / VdpScreen / ArchitectureFace / AsmDebugPanel
+are all reusable unchanged.
+
 ---
 
 ## Sequencing
