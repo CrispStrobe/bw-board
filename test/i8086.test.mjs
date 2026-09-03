@@ -157,12 +157,106 @@ test('INT takes its vector from segment zero and clears IF and TF', () => {
     const { cpu, mem } = machine([0xcd, 0x21]);  // INT 21h
     mem[0x21 * 4] = 0x34; mem[0x21 * 4 + 1] = 0x12;         // IP = 1234h
     mem[0x21 * 4 + 2] = 0x00; mem[0x21 * 4 + 3] = 0x90;     // CS = 9000h
-    cpu.flags |= 0x0300;                                     // IF | TF
+    cpu.flags |= 0x0200;                                     // IF only
     run(cpu, 1);
     assert.equal(cpu.cs, 0x9000);
     assert.equal(cpu.ip, 0x1234);
     assert.equal(cpu.flags & 0x0300, 0);
     assert.equal(cpu.sp, 0x00fa, 'FLAGS, CS and IP went on the stack');
+});
+
+// ---- the trap flag ------------------------------------------------------
+// The suite cannot reach any of this: its README says the interrupt and trap
+// flags are not exercised. So these are behavioural, and each one pins a
+// decision that i8086.js records at the sampling site rather than a fact the
+// vectors handed over.
+
+test('TF raises INT 1 after the instruction, and the handler does not step itself', () => {
+    const { cpu, mem } = machine([0x40, 0x40]);       // INC AX; INC AX
+    mem[1 * 4] = 0x00; mem[1 * 4 + 1] = 0x70;         // vector 1 -> 0000:7000
+    cpu.flags |= 0x0100;                              // TF
+    cpu.step();
+
+    assert.equal(cpu.ax, 1, 'the instruction completed BEFORE the trap');
+    assert.equal(cpu.cs, 0, 'and the trap took vector 1');
+    assert.equal(cpu.ip, 0x7000);
+    assert.equal(cpu.flags & 0x0100, 0, 'TF is clear inside the handler');
+
+    // The pushed flags word still has TF set, which is the whole reason an
+    // IRET out of a tracer resumes tracing instead of stopping.
+    const pushedFlags = mem[((cpu.ss << 4) + cpu.sp + 4) & 0xfffff]
+        | (mem[((cpu.ss << 4) + cpu.sp + 5) & 0xfffff] << 8);
+    assert.equal(pushedFlags & 0x0100, 0x0100, 'TF was pushed SET');
+
+    // The handler's own first instruction must not trap again.
+    const sp = cpu.sp;
+    cpu.step();
+    assert.equal(cpu.sp, sp, 'nothing further was pushed');
+});
+
+test('a segment-register load inhibits the trap for one instruction', () => {
+    // MOV SS, AX then MOV SP, imm -- the pair the shadow exists to protect. A
+    // trap taken between them would push three words through a half-built
+    // stack, which is the same hazard as an IRQ there, so the same shadow
+    // covers it. DECIDED, not measured: see the sampling site in i8086.js.
+    const { cpu, mem } = machine([0x8e, 0xd0, 0xbc, 0x00, 0x20]);
+    mem[1 * 4] = 0x00; mem[1 * 4 + 1] = 0x70;
+    cpu.ax = 0x3000;
+    cpu.flags |= 0x0100;
+
+    cpu.step();                                   // MOV SS, AX
+    assert.equal(cpu.ss, 0x3000);
+    assert.equal(cpu.ip, 2, 'no trap: the shadow is up');
+
+    cpu.step();                                   // MOV SP, 2000h
+    assert.equal(cpu.ip, 0x7000, 'and now the trap lands, one instruction late');
+    // SP was loaded with 2000h and the deferred trap then pushed its three
+    // words onto the stack the pair had just finished building — which is
+    // the point of deferring it, and is visible here as the six bytes.
+    assert.equal(cpu.sp, 0x2000 - 6, 'onto the NEW stack, not the half-built one');
+});
+
+test('an INT executed with TF set traces INTO the handler', () => {
+    // This is the ordering DEBUG.COM's `t` is built on, and the reason `p`
+    // exists beside it: tracing an INT 21h steps into DOS rather than over
+    // it. The alternative reading -- require TF to SURVIVE the instruction --
+    // would leave a tracer with no trap at all after an INT, and it would
+    // lose control of the program entirely at the first DOS call.
+    const { cpu, mem } = machine([0xcd, 0x21]);
+    mem[0x21 * 4] = 0x34; mem[0x21 * 4 + 1] = 0x12;
+    mem[0x21 * 4 + 2] = 0x00; mem[0x21 * 4 + 3] = 0x90;   // 21h -> 9000:1234
+    mem[1 * 4] = 0x00; mem[1 * 4 + 1] = 0x70;             //  1h -> 0000:7000
+    cpu.flags |= 0x0100;
+    cpu.step();
+
+    assert.equal(cpu.cs, 0, 'the trace trap won, and it fired after the INT');
+    assert.equal(cpu.ip, 0x7000);
+    assert.equal(cpu.sp, 0x00f4, 'two frames on the stack: the INT 21h, then the trap');
+
+    // The trap's own frame must name where the INT went, so a debugger
+    // reports the handler's entry point rather than the INT instruction.
+    const at = (o) => mem[((cpu.ss << 4) + cpu.sp + o) & 0xfffff]
+        | (mem[((cpu.ss << 4) + cpu.sp + o + 1) & 0xfffff] << 8);
+    assert.equal(at(0), 0x1234, 'the trapped IP is the handler entry');
+    assert.equal(at(2), 0x9000, 'the trapped CS likewise');
+});
+
+test('TF clear costs nothing, and clearing it mid-run stops the tracing', () => {
+    const { cpu, mem } = machine([0x40, 0x9d, 0x40]);  // INC AX; POPF; INC AX
+    mem[1 * 4] = 0x00; mem[1 * 4 + 1] = 0x70;
+    // A flags word with TF clear, ready for POPF to load.
+    cpu.sp = 0x00fe;
+    mem[((cpu.ss << 4) + 0xfe) & 0xfffff] = 0x02;
+    mem[((cpu.ss << 4) + 0xff) & 0xfffff] = 0xf0;
+
+    cpu.step();                                   // INC AX, TF clear
+    assert.equal(cpu.ip, 1, 'no trap when TF is clear');
+
+    cpu.flags |= 0x0100;
+    cpu.step();                                   // POPF loads TF=0
+    // Sampled BEFORE, so this one still traps: a POPF that clears TF is the
+    // last traced instruction, not the first untraced one.
+    assert.equal(cpu.ip, 0x7000, 'the trap uses the flag as it was on entry');
 });
 
 test('a divide that overflows takes INT 0, and IDIV faults on the magnitude', () => {

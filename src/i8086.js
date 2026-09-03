@@ -36,6 +36,24 @@
  * interrupt taken mid-REP loses a segment override on resumption -- with no
  * interrupt delivery there is nothing yet for it to happen to.
  *
+ * MODELLED BUT NOT VECTOR-VERIFIED: the TRAP FLAG. TF sampled at an
+ * instruction boundary raises INT 1 after the instruction, which is what
+ * DEBUG.COM's `t` and every period single-step tracer are built on. It was
+ * absent for the tier's first weeks and, worse, was not on the list above --
+ * so a program that installed its own tracer got silence, and the list that
+ * readers trust said nothing about it. The suite cannot verify this, and that
+ * is MEASURED rather than taken from its README: across all 646,000 vectors
+ * TF is set in the initial flags of exactly ZERO, and IF in exactly zero. The
+ * grind is blind to this code by construction -- 646,000/646,000 with the
+ * trap implemented, and the same without it -- so what holds it up is the
+ * behavioural tests below and period binaries that use it. DEBUG.COM's `t` is
+ * the acceptance, and it is owed rather than done.
+ * Two things about it are decided rather than measured, and are recorded as
+ * such at the sampling site: whether the segment-load shadow inhibits a trap
+ * (taken: yes, on the grounds that the shadow exists to protect an
+ * `mov ss` / `mov sp` pair and a trap between them corrupts the same stack),
+ * and the ordering when an INT instruction executes with TF already set.
+ *
  * @module
  */
 
@@ -652,6 +670,21 @@ export class I8086 {
     step() {
         this._seg = -1;
         this._rep = 0;
+        // SINGLE-STEP IS SAMPLED BEFORE THE INSTRUCTION, NOT AFTER. The 8086
+        // tests TF at an instruction boundary and takes a type-1 interrupt if
+        // it was set; sampling the value the instruction LEAVES would mean a
+        // POPF that sets TF traps immediately on itself, so a debugger's
+        // first `t` would step its own flag-load instead of the program.
+        //
+        // The SHADOW is read at the other end, after the instruction, and
+        // that asymmetry is not an oversight -- it is where the first version
+        // of this was wrong. A segment-register load RAISES the shadow as it
+        // retires, so reading it here would let `mov ss, ax` trap on itself:
+        // exactly the instant SS is new, SP is old, and three words go into
+        // whatever that address happens to be. Reading it after suppresses
+        // that one trap and lets the next instruction take it, which is the
+        // delay the shadow exists to provide.
+        const traceThis = (this.flags & TF) !== 0;
         // The shadow lasts exactly one instruction: clear it on the way in,
         // and any instruction that loads a segment register sets it again
         // before it returns. Same shape as the Z80's EI latch.
@@ -680,6 +713,15 @@ export class I8086 {
 
         const op = this._fetch8();
         n += this._exec(op);
+
+        // The trap fires after the instruction has completed and committed.
+        // _interrupt() clears TF as it enters, so the handler does not step
+        // itself, and pushes the flags word with TF still SET -- which is
+        // what lets a debugger's IRET resume tracing. HLT is left alone: a
+        // halted CPU has not completed an instruction boundary in the sense
+        // this trap is about, and waking it belongs to the machine layer.
+        if (traceThis && !this.halted && this.intShadow === 0) { this._interrupt(1); n += 51; }
+
         this.cycles += n;
         return n;
     }
