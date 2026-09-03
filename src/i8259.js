@@ -48,6 +48,14 @@ export class I8259 {
         this._needICW3 = false;
         this._needICW4 = false;
 
+        // A non-null string while the chip is mid-initialisation, in the
+        // house `modeWarning` shape (see 8255/8251). A correct 8259 waiting
+        // for an init word it will never receive is SILENT — it just never
+        // interrupts — so the diagnostic is the whole point: a learner who
+        // wrote ICW1 as 11h (cascade) but sent no ICW3 can see why nothing
+        // fires. The machine layer can surface this string.
+        this.initWarning = null;
+
         this._intActive = false;
     }
 
@@ -92,19 +100,19 @@ export class I8259 {
         if (this._initPhase === 1) {
             // ICW2: vector base (upper 5 bits)
             this.vectorBase = val & 0xf8;
-            this._initPhase = this._needICW3 ? 2 : (this._needICW4 ? 3 : 0);
+            this._setInitPhase(this._needICW3 ? 2 : (this._needICW4 ? 3 : 0));
             return;
         }
         if (this._initPhase === 2) {
             // ICW3: cascade config (ignored in single mode but consumed)
-            this._initPhase = this._needICW4 ? 3 : 0;
+            this._setInitPhase(this._needICW4 ? 3 : 0);
             return;
         }
         if (this._initPhase === 3) {
             // ICW4: mode
             this.icw4 = val;
             this.autoEOI = !!(val & 0x02);
-            this._initPhase = 0;
+            this._setInitPhase(0);
             return;
         }
         // OCW1: interrupt mask
@@ -120,7 +128,7 @@ export class I8259 {
         this.autoEOI = false;
         this._needICW3 = !(icw1 & 0x02);  // SNGL bit: 1 = single, no ICW3
         this._needICW4 = !!(icw1 & 0x01); // IC4 bit
-        this._initPhase = 1;               // expect ICW2 next
+        this._setInitPhase(1);             // expect ICW2 next
         this._updateInt();
     }
 
@@ -185,8 +193,27 @@ export class I8259 {
     /** True when the INT output is asserted (there's a serviceable interrupt). */
     get intActive() { return this._intActive; }
 
+    /**
+     * 0 when operational; 1/2/3 while the chip is still waiting for ICW2 /
+     * ICW3 / ICW4. Non-zero means the chip is deaf to interrupts until the
+     * init sequence finishes.
+     */
+    get initPhase() { return this._initPhase; }
+
+    /** Set the init phase AND the human-readable warning that mirrors it. */
+    _setInitPhase(n) {
+        this._initPhase = n;
+        this.initWarning = n === 0 ? null
+            : n === 1 ? '8259 still initialising: wrote ICW1, awaiting ICW2 (vector base)'
+                : n === 2 ? '8259 still initialising: awaiting ICW3 (cascade map) — ICW1 selected cascade mode'
+                    : '8259 still initialising: awaiting ICW4 (mode) — no interrupts until it arrives';
+    }
+
     _updateInt() {
-        const pending = this.irr & ~this.imr;
+        // A chip still in its ICW sequence does not drive INT, however its
+        // IRR fills — which is exactly why a PIC stuck mid-init is silent
+        // rather than wrong. IRR still latches; it just cannot be serviced.
+        const pending = this._initPhase !== 0 ? 0 : (this.irr & ~this.imr);
         // Find highest-priority pending
         let hasPending = false;
         for (let i = 0; i < 8; i++) {
@@ -219,8 +246,9 @@ export class I8259 {
         this.irr = s.irr; this.isr = s.isr; this.imr = s.imr;
         this.vectorBase = s.vectorBase; this.icw4 = s.icw4;
         this.autoEOI = s.autoEOI; this.readISR = s.readISR;
-        this._initPhase = s.initPhase; this._needICW3 = s.needICW3;
+        this._needICW3 = s.needICW3;
         this._needICW4 = s.needICW4; this._intActive = s.intActive;
+        this._setInitPhase(s.initPhase);   // restores initWarning to match
     }
 }
 
