@@ -107,6 +107,55 @@ export const BREADBOARD8086 = Object.freeze({
     ],
 });
 
+/**
+ * Tier A reference build in the shape of slador.uk's 8088 machine: an 8088
+ * behind an 8284 clock, its I/O behind a 74LS138 with 74LS244 buffers, an
+ * 8254 for the timer tick, an 8255 driving a text LCD and the switches, and
+ * an 8259 to take the timer interrupt. Flash at the top of the megabyte.
+ *
+ * Reproduced from the published CHIP LIST only — a chip list is not
+ * copyrightable, and nothing of the original's ROM, code or schematic is
+ * here. The 8284 and the 74-series glue carry no registers, so they do not
+ * appear as machine devices; they are wiring, modelled by the decode the
+ * extractor infers, not by the machine. The port map is ours.
+ */
+export const SLADOR8088 = Object.freeze({
+    clockHz: 5_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x1ffff },   // 128K
+        { kind: 'rom', start: 0xe0000, end: 0xfffff },   // 128K flash, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x00 },            // text LCD, LEDs, switches
+        { kind: 'pit', name: 'pit1', at: 0x20, irq: 0 },    // OUT0 -> IRQ0, the timer tick
+        { kind: 'pic', name: 'pic1', at: 0x40 },
+    ],
+});
+
+/**
+ * A reference build in the shape of GREENSHELLRAGE's 8086 breadboard: an
+ * 8086 (the real one runs alongside an 8087 at 10 MHz), 256K of RAM and
+ * 256K of ROM, an 8259, an 8251 UART, and a custom SD-card interface built
+ * from 74-series logic. Reproduced from the README's own SPECS LIST only —
+ * no ROM, no .asm, no schematic copied; that repo carries no licence.
+ *
+ * The SD interface (custom 74-logic) and the 240x128 UCi6963C LCD (which
+ * the original notes is not yet connected) are NOT modelled here — the SPI
+ * side lives in sdcard-spi.js and attaches as a device when a lesson wants
+ * it. The port map is ours, not reverse-engineered from the original.
+ */
+export const GREENSHELLRAGE8086 = Object.freeze({
+    clockHz: 10_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x3ffff },   // 256K
+        { kind: 'rom', start: 0xc0000, end: 0xfffff },   // 256K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x40 },
+        { kind: 'usart8251', name: 'uart1', at: 0x00, irq: 0 },   // 8251 IRQ -> IRQ0
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
