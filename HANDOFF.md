@@ -118,10 +118,24 @@ an AGENT, and the mechanism does not care which kind of worker holds the file.
 Separating only the sessions fixes the instance and leaves the class.
 
 The structural close is per-agent isolation at dispatch, not another tree in the
-table: the Agent tool takes `isolation: "worktree"`, which puts each agent in a
-fresh worktree of its own and removes it again if the agent changed nothing. It
-costs ~200-500 ms of setup and the 8.3 MB above. **From here every dispatched
-agent gets it.** The named trees in the table stay useful for the LANES —
+table. There are two mechanisms and WHICH ONE IS AVAILABLE DEPENDS ON THE
+SESSION, which is worth knowing before relying on either:
+
+- `isolation: "worktree"` on the Agent tool puts each agent in a fresh worktree
+  and removes it again if the agent changed nothing. It requires the DISPATCHING
+  session's working directory to be inside a git repository. A session whose cwd
+  is elsewhere -- the coordinating lane's cwd is `/mnt/volume1/code/lego`, which
+  is not a repo -- gets `Cannot create agent worktree: not in a git repository`,
+  and no amount of intent fixes it.
+- Otherwise the brief must TELL the agent to make its own worktree, as the first
+  instruction, with the `git worktree add` + symlink recipe inline. An agent has
+  a shell; this is not a lesser mechanism, only a manual one, and it has the
+  advantage that the branch name is chosen deliberately rather than generated.
+
+**From here every dispatched agent gets one or the other.** This paragraph was
+first written claiming only the first, by a lane that could not actually use it
+-- recorded because a rule that names an unavailable mechanism reads exactly
+like a rule that is being followed. The named trees in the table stay useful for the LANES —
 somewhere for a lane's work to accumulate across several agent rounds — but they
 are not what keeps two concurrent agents off each other's files.
 
