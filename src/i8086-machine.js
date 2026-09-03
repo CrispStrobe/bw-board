@@ -377,10 +377,16 @@ export class I8086Machine {
             const dmaChannel = c.dmaChannel ?? 2;
             let fromMem = 0xff;
             fdc.hooks.onDmaRequest = (dir, byte) => {
+                // The FDC's request IS the DRQ pulse — assert it around the
+                // single-byte transfer, or transfer()'s pendingChannel() sees
+                // no requesting channel and moves nothing while reporting
+                // success (a silently corrupt read).
+                dma.dreq(dmaChannel, true);
                 const moved = dma.transfer(
                     (a) => (a === null ? byte : this._read(a)),
                     (a, b) => { if (a === null) fromMem = b & 0xff; else this._write(a, b); },
                     1);
+                dma.dreq(dmaChannel, false);
                 if (moved === 0) return false;   // masked or finished: terminal count
                 return dir === 'read' ? fromMem : true;
             };
