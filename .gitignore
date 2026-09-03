@@ -17,3 +17,9 @@ emu8051-stc/
 # defaults here (scripts/build-labwired-wasm.mjs --out), and the artifact is
 # published as a release asset, never committed.
 build/
+
+# Built by scripts/build-bios.mjs. A generated image should never be
+# committed: it would be reviewed as source and diffed as noise, and the
+# next `git add -A` in a shared tree would sweep it in -- which has already
+# happened once here with someone else's in-flight work.
+rom/*.bin
