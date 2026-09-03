@@ -362,6 +362,35 @@ export class I8086Machine {
             });
         }
 
+        // The floppy transfer path. The FDC drives one byte per DMA request
+        // (its onDmaRequest hook); the byte crosses through _read/_write — the
+        // SAME memory decode the CPU uses, so a DMA write into a ROM window is
+        // discarded exactly as a CPU write is, and a bad page register cannot
+        // silently overwrite the BIOS. The 8237's terminal count is chained
+        // back to the FDC's TC pin WITHOUT dropping the existing onDmaComplete
+        // forward a UI observes — the wire that, unmade, hangs a BIOS read.
+        for (const c of config.chips || []) {
+            if (c.kind !== 'fdc' || !c.dma) continue;
+            const fdc = this.chips[c.name];
+            const dma = this.chips[c.dma];
+            if (!fdc || !dma) continue;
+            const dmaChannel = c.dmaChannel ?? 2;
+            let fromMem = 0xff;
+            fdc.hooks.onDmaRequest = (dir, byte) => {
+                const moved = dma.transfer(
+                    (a) => (a === null ? byte : this._read(a)),
+                    (a, b) => { if (a === null) fromMem = b & 0xff; else this._write(a, b); },
+                    1);
+                if (moved === 0) return false;   // masked or finished: terminal count
+                return dir === 'read' ? fromMem : true;
+            };
+            const prevTC = dma.hooks.onTerminalCount;
+            dma.hooks.onTerminalCount = (ch) => {
+                if (ch === dmaChannel) fdc.terminalCount();
+                if (prevTC) prevTC(ch);
+            };
+        }
+
         // Build the PC speaker(s) now that the 8255 and 8254 they observe
         // exist. Each reads its counter's divisor on demand and listens to a
         // named 8255 port (61h = port B on a PC) through _portChange.
