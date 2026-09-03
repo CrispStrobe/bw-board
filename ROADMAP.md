@@ -594,6 +594,30 @@ emu8086's virtual peripherals and RE-IMPLEMENTING its macro library — the
 `.inc` carries no licence we can rely on. Lands after E6.4, and it is the
 tier that makes "traffic light", "stepper", "thermometer" lessons possible.
 
+### E6.7 The ALE-latched address bus — a lesson, not debt
+The drawable 8086/8088 parts (bw-parts `i8086.json`/`i8088.json`) present a
+**de-multiplexed** address bus: a0-a19 as direct terminals, the same clean-
+address simplification the 6502 and Z80 parts make. The real 8086 does not
+have those pins. It multiplexes AD0-AD15 with the low data bus and A16-A19
+with status S3-S6, and the address is valid only while ALE (from the 8284)
+is high; a real build latches it through a **74LS373 per byte lane**, with
+`/BHE` selecting the high lane. `i8086-extract.js` currently reads the CPU's
+a0-a19 directly, so it accepts the simplified part and cannot yet follow an
+address through a '373.
+
+This is deferred deliberately, with the LESSON attached: the multiplexed bus
+is the single most interesting difference between an x86 breadboard and a
+6502 one — a learner who built the 6502 never had to ask why an address
+needs latching, because those chips just hold it. The right lesson starts
+from a WORKING simplified machine and then introduces the latch the real
+chip forces on you, rather than demanding the latch before anything runs.
+
+Scope when taken: a `74ls373` part (transparent latch), and an extractor
+change on the bw-board side to recognise AD0-AD15 + ALE feeding a '373 whose
+outputs drive the address decode. It is an extractor change, not a part
+change. Nothing in the current corpus needs it — a boot sector and a DOS
+program never see the address pins.
+
 ### E6.6 Tier C — PC/XT compatible (the expensive one)
 8237 DMA, 6845/CGA (mc6845.js already exists), µPD765 FDC and disk images,
 plus a BIOS and a DOS. Months, and a different product from "learn the 8086

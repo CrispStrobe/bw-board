@@ -84,7 +84,8 @@ export function extract8086Machine(circuit) {
     };
     for (const w of wires) union(key(w.from, w.fromTerminal), key(w.to, w.toTerminal));
 
-    const cpu = parts.find((p) => p.kind === 'i8086' || p.kind === '8086' || p.kind === '8088');
+    const cpu = parts.find((p) => p.kind === 'i8086' || p.kind === '8086'
+        || p.kind === 'i8088' || p.kind === '8088');
     if (!cpu) return { ok: false, notes, reasons: ['no 8086/8088 on the board'] };
 
     // ---- drivers per net ------------------------------------------------
