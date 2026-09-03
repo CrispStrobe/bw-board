@@ -538,7 +538,7 @@ yousefkotp emu8086 coursework, 10 projects:
 
 Built and green: the core and disassembler (both 646,000/646,000), 8255,
 machine, adapter, debug target, 8259/8254/8251, the bus extractor with named
-refusals, DIP parts in bw-parts (committed, NOT pushed), DOS/BIOS services, an
+refusals, DIP parts in bw-parts (`41706a7`, pushed), DOS/BIOS services, an
 8086/MASM assembler (510/525 accepted), a clean-room emu8086 device layer, a
 CGA/VGA renderer, and `scripts/run-i8086-corpus.mjs`.
 
@@ -547,6 +547,106 @@ implemented the harness's refusal histogram reports unclaimed I/O PORTS, and
 the top entry is **port 97 -- 61h, the PC speaker gate on the XT's PPI port
 B, 24 accesses across the corpus**. Both parts needed to close it (the 8255
 and 8254 channel 2) already exist in this tier.
+
+### E6 REVIEW — independent architecture pass (2026-09-03, session `sim3`)
+
+A reviewer who did not build the tier re-ran the oracles rather than reading
+the claims, and the four headline numbers all reproduce:
+
+| Claim in this document | Re-measured |
+| --- | --- |
+| core 646,000/646,000 vectors | `323 files pass, 0 fail, 646000/646000 (100.000%)` |
+| disassembler 646,000/646,000 on TEXT and length | `646000/646000, 3 excluded` — the three documented in §4b |
+| the i8086 suite is green | `node --test test/i8086*.test.mjs` → 237 pass, 0 fail |
+| 4.0 M instr/sec | 5.17 M on an independent mix; the quoted figure is conservative |
+
+Seven findings. They are ordered by what they cost if left, not by size.
+
+**R1 — CI CHECKS ZERO VECTORS, and a skip reads the same as a pass.** The
+sampled grind in `test/i8086.test.mjs:186` is `{ skip: !existsSync(suite) }`,
+and `~/code/8086-vectors` does not exist on a runner, so `646,000/646,000` is
+a number from one developer's box on one day. The 525-program corpus is not in
+the tree either, so `469 MATCH` decays the same way. This is precisely the
+failure `.github/workflows/ci.yml` already carries a paragraph about, in the
+emu8051-stc checkout: fifteen cross-repo tests skipped silently for weeks.
+
+The fix is cheap and is already this repo's idiom. The suite ships a compact
+binary form beside the JSON: `v1_binary/*.MOO.gz` is **94 MB for all 646,000
+vectors**, against 174 MB for the JSON of a shallow clone. A pinned
+`actions/checkout` of `SingleStepTests/8086` with `sparse-checkout: v1_binary`
+is the same shape as the emu8051-stc step, and needs a MOO reader — the format
+spec and MIT reference parsers (Rust, C++, Python, plus `moo2json.py`) are at
+`dbalsom/moo`.
+
+**R2 — THE TRAP FLAG IS ABSENT AND IS NOT DECLARED ABSENT.** `i8086.js`'s
+header names four deliberate omissions — the prefetch queue and BIU, the 8087
+escape, INTR/NMI delivery, and the REP erratum. TF is not among them.
+`_interrupt()` clears `IF|TF` correctly, but nothing ever raises INT 1 after an
+instruction executed with TF set, so a program that installs its own
+single-step tracer, or any DEBUG-style lesson, gets silence. Either implement
+it or put it in the header: by this project's own rule a non-goal is stated
+where the code is, not in a TODO.
+
+**R3 — `TRAP_SEG = 0xF000` IS WHERE A BIOS HAS TO LIVE, AND TIER C STOPPED
+BEING HYPOTHETICAL WHILE THIS REVIEW WAS BEING WRITTEN.** `i8086-dos.js` maps
+RAM at `0xF0000-0xF03FF` and fills it with `jmp $`. On a real PC/XT that is the
+BIOS ROM. The review filed this as cheap-now-expensive-later; hours afterwards
+the integration lane ran REAL MICROSOFT BINARIES from the MIT MS-DOS release —
+the first third-party code this tier has executed that it did not assemble
+itself — and got correct behaviour out of five of them:
+
+```
+v1.25 CHKDSK.COM   -> "Invalid parameter"            (parsed its command line)
+v1.25 COMP.COM     -> "Cannot compare file to itself"
+v1.25 SETCLOCK.COM -> " resident DATE/TIME processors loaded / Current date is ..."
+v2.0  CHKDSK.COM   -> "Incorrect DOS version"        (it checks; we report 5.00)
+v2.0  DEBUG.COM    -> its "-" prompt, looping on input
+```
+
+So a BIOS ROM at F000 is a near-term need, not a someday. THE CONSTRAINT ON THE
+FIX: `F0000-FFFFF` is entirely spoken for on a PC, so the trap page belongs
+either in the `C0000-EFFFF` option-ROM gap or in a page below 640K that the
+loader reserves — and whichever is chosen, the constant needs a comment saying
+what it must not collide with, because the next reader will not know.
+
+**R4 — THE ASSEMBLER IS THE LARGEST SURFACE WITH NO INDEPENDENT ORACLE.** 2,304
+lines. Round-tripping through a disassembler that is ground against 646,000
+hardware vectors is a strong check on ENCODING — and it says nothing about
+directive SEMANTICS: `.MODEL` and group fixups, `EQU` against `=`, nested
+`DUP`, macro expansion, `OFFSET`/`SEG`. CORRECTED BY THE LANE THAT BUILT IT, and the
+correction is right: those semantics are not wholly unverified, because 470 of
+the 525 corpus programs produce output BYTE-IDENTICAL to an independent
+implementation, and a wrong `.MODEL` or a wrong `DUP` shows up as wrong output.
+That is a semantic check. What it is not is a UNIT check — it covers the
+directive shapes the corpus happens to use, in the combinations it happens to
+use them, and its oracle dispatches on mnemonic strings rather than fetching
+opcode bytes. A differential ENCODER is still worth having, and closes a
+different gap: `nanochess/tinyasm` (BSD-2) is
+an 8086 assembler small enough to read and port, and NASM can be diffed over
+the syntax that overlaps. This matters now rather than later — the in-flight
+`longJumps` promotion rewrites an out-of-range jump into a branch over a near
+jump, which moves byte counts and therefore every later fixup, and that is
+exactly the class a round-trip cannot see and a byte diff can.
+
+**R5 — THREE MACHINE LAYERS HAVE BECOME THREE COPIES.** `m6502`, `z80` and
+`i8086` each carry machine + adapter + debug + extract, about 4,600 lines, and
+the shapes have converged: `saveState()` walks the chip map identically in all
+three, each declares its own `CPU_STATE` array, each has a wake horizon. Three
+instances is where a coincidence stops being one. The recommendation is NOT a
+refactor — it is to widen `test/adapter-contract.test.mjs` into a cross-CPU
+conformance test, so a fix to one machine's save/restore or interrupt gating
+cannot silently miss the other two.
+
+**R6 — `pc-speaker.js` SHOULD STATE ITS ACCURACY TIER.** `i8086-cga.js` opens
+by naming what it is (memory truth) and what is absent (6845 timing, snow,
+composite artefact colour), which is why nobody will file a bug about it.
+The speaker has no such paragraph, and it needs one: peripherals advance at
+instruction granularity, so a `LOOP`-based delay driving PIT channel 2 carries
+jitter a real 8253 does not have.
+
+**R7 — TWO STALE CLAIMS IN THIS DOCUMENT AND ITS SIBLING.** The E6 STATUS block
+above and `brickwright-lite/docs/I8086-CORE-PLAN.md` both say the bw-parts DIP
+packages are "committed, NOT pushed". They are pushed, as `41706a7`.
 
 ### E6.1 8086 core + disassembler — DONE (2026-09-03)
 `src/i8086.js` + `src/i8086-disasm.js`, ground against SingleStepTests/8086
@@ -713,6 +813,60 @@ Consequence for the support chips: the PIT and PIC have a hardware-backed MIT
 oracle; the 8251 has no spec-grade MIT source, so its correctness rests on the
 datasheet, the MIT SIrfanH demo (validated end-to-end), and MAME as an
 oracle-only fallback.
+
+#### Oracles, corpora and references added by the E6 review (2026-09-03)
+
+The tables above were surveyed before the tier was built and missed one vein
+entirely: the author of MartyPC — who also built the rig that GENERATED the
+vector suite this tier is ground against — publishes a dozen further repositories,
+and only two of them were cited. Licences below were read from the GitHub API on
+2026-09-03; `NOASSERTION` means GitHub could not classify the LICENSE file and a
+human must read it before anything is adopted.
+
+**Raising the verification bar**
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| `dbalsom/moo` | MIT | **ADOPT THE FORMAT.** The chunked binary encoding of SingleStepTests, with a published spec and reference parsers in Rust, C++ and Python plus a `moo2json.py`. `SingleStepTests/8086` already ships `v1_binary/*.MOO.gz` — 94 MB for all 646,000 vectors against 174 MB of JSON. This is what makes R1's CI gate affordable. Write our own reader from the spec; nothing is vendored. |
+| `dbalsom/marty_dasm` | NOASSERTION — read the file | A second disassembler for 8086/8088/V20/V30/286/386. An independent cross-check on the one surface where this tier already holds the highest standard in the tree. Reference only. |
+| `dbalsom/arduinoX86` | NOASSERTION — read the file | **THE RIG THAT MADE OUR ORACLE**, covering 8088/8086/V20/V30/186/286. Relevant for exactly one open thing: the ELEVEN opcodes the suite does not ship (`0F` POP CS, the five prefixes, `9B` WAIT, `F4` HLT), which `i8086.js` honestly marks "implemented but unverified; there is nothing to verify them against". There is — this is it. Hardware, not a download; scope accordingly. |
+| `SingleStepTests/8088`, `SingleStepTests/v20` | MIT (confirmed) | Already noted as available; recorded here with the consequence. 8088 ships BUS data. v20 matters to a live decision: `i8086-asm.js` expands `SHL AX, 4` because `C1` is `RET imm16` on an 8086 — on a V20 or 186 it is the real instruction, so any future V20 mode must switch that expansion OFF. |
+| `dbalsom/XTCE-Blue` | MIT wrapper; **microcode is Intel's** | **ORACLE ONLY — the z8086 ruling applies unchanged.** A cycle-accurate microcode-based 8088 (fork of reenigne's XTCE, whose author first decoded the 8086 microcode). Its `microcode/` directory is that decode. The C++ is MIT and readable; the microcode content is Intel's copyrighted work. Do not vendor it, and do not let the MIT badge on the repository be mistaken for a grant over the ROM contents. |
+| `dbalsom/x86_microcode` | Unlicense wrapper; **content is Intel's** | Listed **so nobody adopts it on the strength of the wrapper.** Same trap as z8086 and XTCE-Blue's microcode directory. |
+| `copy/v86` | BSD-2 | **A WHOLE-PROGRAM DIFFERENTIAL ORACLE, which this tier does not otherwise have.** Unlike the two implementations §1 dismissed, v86 fetches opcode bytes, and it runs headless in Node. Per-instruction vectors cannot reach interrupt interaction or REP across a segment wrap; a trace diff can. It disagrees BY DESIGN on the undocumented behaviours our vectors pinned — masked shift counts, no SETMO, 386-era DAA — so it needs a written divergence list before it is trusted, and it is a second opinion on PROGRAMS, never on instructions. **ALREADY EXERCISED** by the support-chip lane, which stood it up headless in Node (prebuilt `libv86.mjs` + `v86.wasm`, its bochs/seabios BIOS) and diffed it against our chips on timing-independent behaviour: the 16550 scratch-register round-trip agrees byte for byte, and our `i8254` read-back STATUS matches the datasheet where **v86 does not implement read-back at all** (`src/pit.js:285`). So the first thing this oracle established is where OURS is more complete — which is the right way round to learn it, and the reason a divergence list is mandatory rather than tidy. |
+
+**Closing gaps our own module headers declare open**
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| `dbalsom/cga_artifact_color` | MIT | `i8086-cga.js` names "NO COMPOSITE ARTEFACT COLOUR" as absent. This is that, in Rust, permissively licensed, decoding NTSC artefact colour from CGA output. Adapt WITH ATTRIBUTION when a mode-6 lesson wants it. |
+| `dbalsom/CGACompatibilityTester` | **no LICENSE** | **RUN IT, DO NOT COPY IT.** A register-level CGA conformance tester (Turbo Pascal + asm). It is a PROGRAM THAT RUNS ON THE EMULATED MACHINE, so executing it distributes nothing — which makes it the oracle `cga-card.js` currently lacks. All rights reserved for any other purpose. |
+| `dbalsom/fluxfox` + `fluxfox_fat` | MIT | Floppy image handling and a FAT implementation, in Rust. The missing piece for Tier C's µPD765 and disk images, and permissive. Port or reference; not a dependency. |
+| `dbalsom/8087_zoom` | Unlicense | Only if the 8087 escape (`D8`-`DF`, currently reads its operand and stops) ever becomes real. |
+
+**Material for the circuit side, which is what this project actually is**
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| `dbalsom/cga_sim` | NOASSERTION — read the file | A **gate-level digital-logic simulation of the IBM CGA card**. This is the entry that fits Brickwright rather than merely its emulator tier: a CGA as a netlist is a LESSON the existing digital engine could host, not something to emulate. Evaluate before adopting anything. |
+| `dbalsom/CGA_Schematics` | none stated | IBM CGA redrawn in KiCad. Reference for a drawable card. |
+| `dbalsom/graphics-gremlin` | CC-BY-SA-4.0 | Open-source retro ISA video card (FPGA CGA/MDA). Share-alike — reference and inspiration; do not mix into BSD-3 source. |
+| `dbalsom/micro_8088` | GPL-3.0 | An XT-compatible processor board. REFUSED as source, same as GLaBIOS. The ARCHITECTURE may inspire a Tier A drawing; nothing may be copied. |
+
+**Testing ground**
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| `nanochess/bootOS`, `nanochess/tinyasm` | BSD-2 (confirmed) | **Shippable WITH ATTRIBUTION.** `tinyasm` is an 8086 assembler small enough to read and port — R4's differential encoder. `bootOS` is a boot-sector operating system, direct material for `loadBoot()`. |
+| `nanochess/Invaders`, `Pillman`, `fbird`, `bootle`, `Toledo-Atomchess`, `book8088` | **no LICENSE file** | **RUN LOCALLY, DO NOT VENDOR** — all rights reserved by this project's own standing rule, whatever the READMEs imply. They are 512-byte programs exercising INT 10h/16h/1Ah and direct B800h writes, and `loadBoot()` already exists, so they are the cheapest Tier A/C exercise available. `book8088` is the companion to Toledo's *Programming Boot Sector Games* — a ready-made lesson sequence. **THE CHEAPEST HIGH-VALUE ACTION IN THIS LANE IS TO ASK HIM FOR AN EXPLICIT GRANT**: he already licenses `bootOS` and `tinyasm` BSD-2, so an emailed yes converts the best small-program corpus in existence from "run it" to "ship it". |
+| 8088 MPH, Area 5150 | demo scene, not licensed for reuse | **NAME THE CEILING RATHER THAN AIM AT IT.** These are the recognised gauntlet, and they need cycle-exact bus and DRAM-refresh behaviour that an instruction-stepped core does not model and should not. Writing down that this architecture deliberately cannot reach them is worth more than treating them as a goal. |
+
+**Learning from**
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| `dbalsom/pc-emulation-book` | CC-BY-4.0 | An mdbook guide to emulating the IBM PC/XT, by the author of the most accurate one. If Tier C is ever started, start here. Quotable with attribution. |
+
 
 ---
 
