@@ -16,6 +16,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { assemble, assembleRaw, AsmError } from '../src/i8086-asm.js';
 import { disasmI8086 } from '../src/i8086-disasm.js';
+import { EMU8086_INC } from '../src/i8086-emu8086.js';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086 } from '../src/i8086-dos.js';
 
@@ -462,7 +463,15 @@ test('DB, DW and DD, with strings, DUP, ? and nesting', () => {
     // reference to it a byte operand rather than a word one.
     assert.equal(com('V DB 0\nMOV AL, V'), '00 a0 00 00');
     assert.equal(com('V DW 0\nMOV AX, V'), '00 00 a1 00 00');
-    assert.equal(refusal(() => assembleRaw("DW 'ABC'")).what, 'string too long');
+    // A string too long for its item is laid out as BYTES, as DB would, and
+    // the deviation is recorded rather than refused. Three coursework
+    // programs write `DW "a long string"` and emu8086 assembled all three.
+    const long = assemble(`ORG 0\nDW 'ABC'\nEND\n`, { format: 'com' });
+    assert.equal(hexOf(long.bytes), '41 42 43', 'every character, in the order written');
+    assert.equal(long.warnings.length, 1, 'and it says so');
+    assert.match(long.warnings[0].message, /laid out as bytes/);
+    assert.equal(com("DW 'AB'"), '42 41', "but 'AB' that FITS is still the word 4142h");
+    assert.equal(com("DW 'A'"), '41 00', 'and a single character is still a word');
 });
 
 test('EQU, `=`, and the $-minus-label idiom', () => {
@@ -526,9 +535,22 @@ test('BYTE PTR and WORD PTR settle a size nothing else can', () => {
     assert.equal(com('MOV WORD PTR [SI], 1'), 'c7 04 01 00');
     assert.equal(com('CMP BYTE PTR [SI], 0'), '80 3c 00');
     assert.equal(com('V DW 0\nMOV AL, BYTE PTR V'), '00 00 a0 00 00', 'a PTR overrides the declared type');
-    const e = refusal(() => assembleRaw('MOV [SI], 1'));
-    assert.equal(e.what, 'operand size unknown');
-    assert.match(e.message, /BYTE PTR or WORD PTR/, 'and the refusal says what to write');
+    // A sizeless memory operand against an immediate takes the width the
+    // IMMEDIATE fits, and says so. MASM and NASM both refuse this form, so
+    // no program that ever assembled anywhere was written expecting a word
+    // store from it; every dialect that accepts it makes it a byte.
+    const guessed = assemble('ORG 0\nMOV [SI], 1\nEND\n', { format: 'com' });
+    assert.equal(hexOf(guessed.bytes), 'c6 04 01', 'a value that fits a byte is stored as one');
+    assert.equal(guessed.warnings.length, 1, 'and the guess is recorded, not silent');
+    assert.equal(com('MOV [SI], 300'), 'c7 04 2c 01', 'a value that does not fit must be a word');
+    // A character literal overrules the guess entirely, because it carries
+    // its own width -- MASM's own rule makes 'AB' a word for that reason.
+    assert.equal(com("MOV [SI], '$'"), 'c6 04 24');
+    assert.equal(com("MOV [SI], 'AB'"), 'c7 04 42 41');
+    assert.equal(assemble("ORG 0\nMOV [SI], '$'\nEND\n", { format: 'com' }).warnings.length, 0,
+        'and a character literal needs no warning, because nothing was guessed');
+    // Two sizeless operands still cannot be resolved and are still refused.
+    assert.equal(refusal(() => assembleRaw('MOV [SI], [DI]')).what, 'memory to memory');
 });
 
 test('labels, forward references and label-shares-a-line-with-code', () => {
@@ -565,7 +587,14 @@ test('PROC/ENDP, CALL and RET make a working subroutine', () => {
     const r = assemble('ORG 0\nCALL P\nRET\nP PROC\nNOP\nRET\nP ENDP\nEND\n', { format: 'com' });
     assert.equal(hexOf(r.bytes), 'e8 01 00 c3 90 c3');
     assert.equal(refusal(() => assembleRaw('P PROC\nRET\nQ ENDP')).what, 'mismatched ENDP');
-    assert.equal(refusal(() => assembleRaw('P PROC\nRET')).what, 'unclosed PROC');
+    // A NEAR procedure left open at END is closed, with a note: there is no
+    // code after it for the missing ENDP to have changed, and a coursework
+    // program writes `MAIN PROC ... END MAIN` with no ENDP at all.
+    const open = assemble('ORG 0\nP PROC\nRET\nEND\n', { format: 'com' });
+    assert.equal(hexOf(open.bytes), 'c3');
+    assert.match(open.warnings[0].message, /never closed by ENDP/);
+    // A FAR one is still refused, because it WOULD change every later RET.
+    assert.equal(refusal(() => assembleRaw('P PROC FAR\nRET')).what, 'unclosed PROC');
 });
 
 test('MACRO/ENDM substitutes parameters on whole tokens only', () => {
@@ -1120,6 +1149,174 @@ END MAIN
 });
 
 // ---------------------------------------------------------------------------
+// The emu8086 dialect. A second corpus (yousefkotp/8086-Assembly-Projects,
+// MIT) targets emu8086 rather than DOS, and every one of these is a place
+// this assembler was stricter than the tool its authors actually used.
+// ---------------------------------------------------------------------------
+
+test('ASSUME entries may be separated by spaces as well as commas', () => {
+    // `ASSUME DS:DATA CS:CODE` -- two coursework programs write it, and
+    // splitting on commas alone hands the whole line to the pair matcher.
+    const spaced = assemble(`DATA SEGMENT
+    V DW 1234h
+DATA ENDS
+CODE SEGMENT
+    ASSUME DS:DATA CS:CODE
+S:  MOV AX, V
+CODE ENDS
+END S
+`);
+    const commas = assemble(spaced === null ? '' : `DATA SEGMENT
+    V DW 1234h
+DATA ENDS
+CODE SEGMENT
+    ASSUME DS:DATA, CS:CODE
+S:  MOV AX, V
+CODE ENDS
+END S
+`);
+    assert.deepEqual([...spaced.bytes], [...commas.bytes], 'spaces and commas mean the same thing');
+    assert.equal(refusal(() => assemble('C SEGMENT\nASSUME DS\nC ENDS\nEND')).what, 'bad ASSUME',
+        'and something that is not a register:segment pair is still named');
+});
+
+test('a MISSING ASSUME means do not synthesise and do not refuse', () => {
+    // The regression that cost an entire coursework program. `ensureSegment`
+    // used to write the flat-.COM assumption (all four registers hold the
+    // one segment) into the table, which is true for a .COM and a lie for a
+    // program that opens real segments LATER -- and every later reference to
+    // its own DATA segment was then refused as unreachable. Not knowing must
+    // stay distinct from knowing-wrong.
+    const r = assemble(`DATA SEGMENT
+    IDINPUT DW 0
+DATA ENDS
+CODE SEGMENT
+S:  MOV AX, DATA
+    MOV DS, AX
+    MOV IDINPUT, CX
+    MOV AX, 4C00H
+    INT 21H
+CODE ENDS
+END S
+`);
+    const header = (r.bytes[8] | (r.bytes[9] << 8)) * 16;
+    const code = r.segments.find((sg) => sg.para === r.entry.para);
+    const img = r.bytes.subarray(header + code.para * 16, header + code.para * 16 + code.size);
+    const texts = [];
+    for (let a = 0; a < img.length;) {
+        const d = disasmI8086((x) => img[x] ?? 0, a, { ip: a });
+        texts.push(d.text);
+        a += d.length;
+    }
+    assert.ok(texts.includes('mov word [ds:0h], cx'), 'no prefix invented where nothing was assumed');
+    assert.deepEqual(r.warnings, [], 'and nothing to warn about either');
+});
+
+test('a segment no ASSUME reaches is a warning, not a refusal', () => {
+    // Refusing would be over-reach: this model of what the registers hold is
+    // a static approximation, and a program that loads DS itself at run time
+    // is entitled to reach a segment no ASSUME mentions.
+    const r = assemble(`DATA SEGMENT
+    V DW 0
+DATA ENDS
+OTHER SEGMENT
+    W DW 0
+OTHER ENDS
+CODE SEGMENT
+    ASSUME CS:CODE, DS:DATA
+S:  MOV AX, W
+    MOV AX, 4C00H
+    INT 21H
+CODE ENDS
+END S
+`);
+    assert.equal(r.warnings.length, 1);
+    assert.match(r.warnings[0].message, /which no ASSUME reaches/);
+    assert.match(r.warnings[0].message, /whatever DS holds at the time/, 'and says what it did instead');
+});
+
+test('ORG with .DATA and .CODE is one flat .COM image, code first', () => {
+    // A coursework program writes `org 100h`, then `.data`, then `.code`.
+    // Forcing that to .EXE breaks the ORG; refusing it costs a working
+    // program. The sections go into one segment -- and the CODE section has
+    // to go FIRST, because a .COM enters at its ORG and a source that
+    // declares data first would otherwise execute its own strings.
+    const r = assemble(`org 100h
+.data
+    MSG DB 'hi$'
+.code
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV DX, OFFSET MSG
+    MOV AH, 09H
+    INT 21H
+    MOV AX, 4C00H
+    INT 21H
+`);
+    assert.equal(r.format, 'com', 'an ORG says .COM however many sections there are');
+    assert.equal(r.org, 0x100);
+    // @DATA in a one-segment image is CS by definition, and `MOV AX, CS` is
+    // the only encoding that can say so.
+    assert.equal(hexOf(r.bytes.subarray(0, 2)), '8c c8');
+    const msg = r.symbols.get('msg');
+    assert.ok(msg.value > 0x100, 'the data landed AFTER the code, not before it');
+    assert.equal(String.fromCharCode(...r.bytes.subarray(msg.value - 0x100, msg.value - 0x100 + 3)), 'hi$');
+    // And it runs.
+    const { dos, run } = runIt(`org 100h
+.data
+    MSG DB 'flat sections$'
+.code
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV DX, OFFSET MSG
+    MOV AH, 09H
+    INT 21H
+    MOV AX, 4C00H
+    INT 21H
+`);
+    assert.ok(run.terminated);
+    assert.equal(dos.stdout, 'flat sections');
+});
+
+test('.DATA and .CODE without an ORG want a real data segment, so an .EXE', () => {
+    const r = assemble(`.data
+    V DW 7
+.code
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV AX, 4C00H
+    INT 21H
+`);
+    assert.equal(r.format, 'exe', 'no ORG, two sections: it needs a relocatable @DATA');
+    assert.equal(r.bytes[6] | (r.bytes[7] << 8), 1, 'and @DATA became a relocation');
+});
+
+test('LEA of a bare address register reads as LEA of that register', () => {
+    // `LEA DX, SI` has no other possible reading, and the program that
+    // writes it goes straight on to `MOV AH,9 / INT 21H` -- it wants DX = SI.
+    const r = assemble('ORG 0\nLEA DX, SI\nEND\n', { format: 'com' });
+    assert.equal(hexOf(r.bytes), '8d 14', 'which is LEA DX, [SI]');
+    assert.equal(one('LEA DX, [SI]'), 'lea dx, [ds:si]', 'the same instruction, written properly');
+    assert.equal(r.warnings.length, 1, 'and the reading is recorded');
+    assert.match(r.warnings[0].message, /bare register SI was read as \[SI\]/);
+    // Only registers that CAN be an address. AX is not one of them.
+    assert.equal(refusal(() => assembleRaw('LEA DX, AX')).what, 'lea of non-address');
+    assert.equal(refusal(() => assembleRaw('LEA DX, 5')).what, 'lea of non-address');
+});
+
+test('an unknown mnemonic is named before its operands get to fail first', () => {
+    // A truncated coursework file calls `PRINT 'GREEN LED IS TURNED ON'`
+    // with no library included. Parsing operands first reported "the string
+    // is too long to be a number", which sends the reader after the string
+    // instead of after the missing include.
+    const e = refusal(() => assembleRaw("PRINT 'GREEN LED IS TURNED ON'"));
+    assert.equal(e.what, 'unknown mnemonic PRINT');
+    assert.match(e.message, /not an instruction, directive or macro/);
+    // A macro of that name is of course still a macro.
+    assert.equal(com("PRINT MACRO T\nDB T\nENDM\nPRINT 'ok'"), '6f 6b');
+});
+
+// ---------------------------------------------------------------------------
 // The corpus, when it is there. This is the measurement in the report, kept
 // as a test so it cannot rot: the same 525 files, the same accept count.
 // ---------------------------------------------------------------------------
@@ -1164,16 +1361,15 @@ test('the Amey-Thakur corpus assembles, where it is present', { skip: !existsSyn
         try { assemble(readFileSync(f, 'latin1')); accepted++; }
         catch (e) { reasons.set(e.what, (reasons.get(e.what) || 0) + 1); }
     }
-    // Measured 2026-09-03. The 17 refusals are all honest: 14 programs
-    // contain a relative jump further than an 8086 can reach (MASM refuses
-    // them too), 2 write `CMP [SI], '$'` with nothing to say whether that is
-    // a byte or a word, and 1 wants .FARDATA.
-    assert.ok(accepted >= 508, `at least 508 of 525 assemble (got ${accepted})`);
+    // Measured 2026-09-03. The 15 refusals are all honest: 14 programs
+    // contain a relative jump further than an 8086 can reach -- MASM refuses
+    // them too, and none of the 14 is within 4 bytes of reaching -- and 1
+    // wants .FARDATA, which this assembler does not model.
+    assert.ok(accepted >= 510, `at least 510 of 525 assemble (got ${accepted})`);
     assert.deepEqual([...reasons].sort(), [
         ['jump out of range', 14],
-        ['operand size unknown', 2],
         ['unsupported directive .FARDATA', 1],
-    ].sort(), 'and the refusals are the same three kinds, in the same numbers');
+    ].sort(), 'and the refusals are the same two kinds, in the same numbers');
 });
 
 test('a sample of the corpus runs to completion and produces output', { skip: !existsSync(CORPUS) }, () => {
@@ -1240,7 +1436,7 @@ test('every INT the corpus emits is one its source asked for', { skip: !existsSy
     }
     assert.ok(decoded > 3000, `the sweep actually decoded the corpus's INTs (got ${decoded})`);
     assert.deepEqual(wrong, [], 'no INT was emitted with an operand the source never wrote');
-    assert.ok(segments >= 508, `every accepted program's code segment was swept (got ${segments})`);
+    assert.ok(segments >= 510, `every accepted program's code segment was swept (got ${segments})`);
 });
 
 test('no corpus program asks for an interrupt its source never wrote', { skip: !existsSync(CORPUS) }, () => {
@@ -1280,9 +1476,72 @@ test('no corpus program asks for an interrupt its source never wrote', { skip: !
             }
         }
     }
-    assert.equal(ran, 508, 'all 508 accepted programs loaded');
+    assert.equal(ran, 510, 'all 510 accepted programs loaded');
     assert.deepEqual(fabricated, [], 'no program reached an interrupt vector its source never named');
-    assert.ok(terminated >= 496, `at least 496 of them run to their own exit (got ${terminated})`);
+    assert.ok(terminated >= 498, `at least 498 of them run to their own exit (got ${terminated})`);
+});
+
+// ---------------------------------------------------------------------------
+// The second corpus: yousefkotp/8086-Assembly-Projects (MIT), 10 coursework
+// programs written for emu8086 rather than DOS. It is the reason for
+// everything in the section above.
+// ---------------------------------------------------------------------------
+
+const CORPUS2 = '/tmp/yk';
+
+test('the emu8086 coursework corpus assembles, where it is present', { skip: !existsSync(CORPUS2) }, () => {
+    const files = corpusFiles(CORPUS2);
+    assert.equal(files.length, 10, 'ten coursework programs');
+    const reasons = new Map();
+    let accepted = 0, ints = 0;
+    for (const f of files) {
+        // The library is substituted in rather than taught to the assembler,
+        // which has no business owning a file-system search path.
+        const src = readFileSync(f, 'utf8')
+            .replace(/^[ \t]*include[ \t]+["']?emu8086\.inc["']?[ \t]*$/gim, EMU8086_INC);
+        let r;
+        try { r = assemble(src); accepted++; }
+        catch (e) { reasons.set(e.what, (reasons.get(e.what) || 0) + 1); continue; }
+        // Same guard as the other corpus: nothing may emit an INT the
+        // source did not write.
+        const want = sourceInterrupts(src);
+        const header = r.format === 'exe' ? (r.bytes[8] | (r.bytes[9] << 8)) * 16 : 0;
+        const code = r.format === 'exe'
+            ? r.segments.filter((sg) => sg.para === r.entry.para)
+            : [{ para: 0, size: r.bytes.length }];
+        for (const sg of code) {
+            const at = header + sg.para * 16;
+            const img = r.bytes.subarray(at, at + sg.size);
+            for (let a = 0; a < img.length;) {
+                const d = disasmI8086((x) => img[x] ?? 0, a, { ip: a });
+                const m = /^int ([0-9A-F]+)h$/.exec(d.text);
+                const n = m ? parseInt(m[1], 16) : (d.text === 'int3' ? 3 : null);
+                if (n !== null) {
+                    ints++;
+                    assert.ok(want.has(n), `${f.split('/').pop()} emits int ${n.toString(16)}h, which its source writes`);
+                }
+                a += d.length;
+            }
+        }
+    }
+    assert.equal(accepted, 8, 'eight of the ten assemble');
+    assert.ok(ints >= 90, `and their INTs were swept too (got ${ints})`);
+    // THE TWO THAT DO NOT ARE THE CORPUS'S OWN DEFECTS, not this
+    // assembler's, and they are recorded here so that a later change which
+    // "fixes" them by accident gets looked at rather than celebrated:
+    //
+    //   Project #7 is TRUNCATED IN THE REPOSITORY. It begins mid-program at
+    //   `JMP DONE`, has no include line, and jumps to an undefined START, so
+    //   PRINT and PRINTN are undefined names rather than macros.
+    //
+    //   Project #9 holds a stray word, `bzbt?`, sitting on its own line
+    //   between two DB declarations with no semicolon in front of it -- and
+    //   two lines later a string literal that is opened and never closed
+    //   before the line ends.
+    assert.deepEqual([...reasons].sort(), [
+        ['unknown mnemonic BZBT?', 1],
+        ['unknown mnemonic PRINT', 1],
+    ].sort(), 'and the two failures are the two files the repository ships broken');
 });
 
 // ---------------------------------------------------------------------------

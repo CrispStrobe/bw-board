@@ -22,14 +22,26 @@
  * hardware at one remove. test/i8086-asm.test.mjs does that for every
  * mnemonic and every addressing mode here.
  *
- * WHERE IT STANDS, measured 2026-09-03 over the same 525 files: 508 are
- * accepted, 17 refused, and of the 508 loaded into Tier B and run, 500 exit
- * through INT 21h/4Ch and 502 print something. The 17 refusals are honest:
- * 14 programs contain a relative jump further than an 8086 can reach (MASM
- * refuses them too), 2 write `CMP [SI], '$'` with nothing to say whether
- * that is a byte or a word, 1 wants .FARDATA. The eight that do not exit
- * are the External Devices programs, which are deliberate infinite control
- * loops around ports Tier B does not decode.
+ * WHERE IT STANDS, measured 2026-09-03 over two corpora.
+ *
+ *   Amey-Thakur (525 DOS programs): 510 accepted, 15 refused. Run under
+ *   Tier B, 498 exit through INT 21h/4Ch having printed, 12 are deliberate
+ *   infinite control loops around device ports, none is silent and none
+ *   hangs. The 15 refusals are honest: 14 contain a relative jump further
+ *   than an 8086 can reach -- MASM refuses those too, and none is within 4
+ *   bytes of reaching -- and 1 wants .FARDATA.
+ *
+ *   yousefkotp (10 emu8086 coursework programs): 8 accepted and running,
+ *   2 refused. Both refusals are defects in the repository rather than
+ *   gaps here: one file is truncated and begins mid-program with no
+ *   include line, the other carries a stray word on a line of its own and
+ *   an unterminated string literal.
+ *
+ * SECOND DIALECT, SAME ASSEMBLER. The coursework corpus targets emu8086,
+ * which is looser than MASM in specific and knowable ways. Each place this
+ * gave ground is listed below with the evidence; none of them is a silent
+ * change, every one records a warning, and the rule in every case is that a
+ * reading which cannot lose or invent a byte beats a refusal.
  *
  * SIX THINGS LOOK LIKE BUGS AND ARE NOT:
  *
@@ -48,6 +60,22 @@
  *     contents; `MOV AX, OFFSET VAL16` loads the address. That is MASM's
  *     rule and it is the one thing a naive implementation always gets
  *     backwards.
+ *   - A string too long for its item (`MSG DW "Enter a number: ",0`) is
+ *     laid out as BYTES, as DB would. Refuse, truncate, pad, or lay down
+ *     what was written: only the last can neither lose nor invent a byte.
+ *     `DW 'AB'`, which FITS, is still the word 4142h.
+ *   - A sizeless memory operand against an immediate (`MOV [SI], cret`)
+ *     takes the width the immediate fits. MASM and NASM both refuse the
+ *     form, so no program that ever assembled anywhere expects a WORD from
+ *     it, and every dialect that accepts it makes it a byte; a character
+ *     literal overrules, since it carries its own width. Two sizeless
+ *     operands are still refused -- there is nothing there to read.
+ *   - `LEA DX, SI` is read as `LEA DX, [SI]`. LEA's source is an address, a
+ *     bare register is not one, and the only address it could name is
+ *     [SI]. Only for SI/DI/BX/BP; `LEA DX, AX` is still refused.
+ *   - A NEAR procedure left open at END is closed. There is no code after
+ *     it for the missing ENDP to have changed. A FAR one is still refused,
+ *     because it would make every later RET far without saying so.
  *   - A segment override IS inserted on the assembler's own initiative,
  *     from ASSUME, when a label lives somewhere the default segment
  *     register is not assumed to reach. Five corpus files declare `DW`
@@ -57,7 +85,9 @@
  *     module refused to synthesise overrides on the belief that every
  *     program here reaches its data through DS. Four of them do not, and
  *     the belief cost a print-string that turned into an NMI. See
- *     `autoOverride`.
+ *     `autoOverride`. A segment NO assume reaches is a warning and not a
+ *     refusal, and a MISSING assume synthesises nothing at all: not knowing
+ *     what a register holds is not the same as knowing it is wrong.
  *   - `MOV r16, SEG x` in a .COM image assembles as `MOV r16, CS`. A .COM
  *     has one segment and no relocation table, and at entry
  *     CS = DS = ES = SS = that segment, so this is the only encoding that
@@ -70,11 +100,15 @@
  *     refuses that; the intent is not ambiguous, and dropping the bytes
  *     silently would be worse than either.
  *
- * OUTPUT. `.MODEL SMALL` and the older `SEGMENT`/`ENDS` form become an MZ
- * .EXE with a real relocation table, because `MOV AX, @DATA` cannot be
- * expressed any other way -- the data segment's paragraph is not known until
- * load time. A source with no segment directives becomes a flat .COM at
- * ORG 100h. `createDos8086(...).loadExe` / `.loadCom` take either.
+ * OUTPUT. `.MODEL SMALL`, the older `SEGMENT`/`ENDS` form, and `.DATA` with
+ * `.CODE` and no ORG all become an MZ .EXE with a real relocation table,
+ * because `MOV AX, @DATA` cannot be expressed any other way -- the data
+ * segment's paragraph is not known until load time. Anything else becomes a
+ * flat .COM at ORG 100h, INCLUDING `.DATA` and `.CODE` under an explicit
+ * `ORG`, where they are section markers inside one image: the code section
+ * is laid down first, because a .COM enters at its ORG and a source that
+ * declares its data first would otherwise execute its own strings.
+ * `createDos8086(...).loadExe` / `.loadCom` take either.
  *
  * NOT SUPPORTED, deliberately, each of which raises a named error rather
  * than encoding something plausible:
@@ -346,7 +380,10 @@ class Assembler {
     /** @returns {{name:string, bytes:number[], org:number, para:number, kind:string}} */
     segment(name, kind) {
         let s = this.segs.get(name);
-        if (!s) { s = { name, bytes: [], org: 0, para: 0, kind }; this.segs.set(name, s); }
+        if (!s) {
+            s = { name, bytes: [], org: this.origins.get(name) ?? 0, para: 0, kind };
+            this.segs.set(name, s);
+        }
         if (!this.segOrder.includes(name)) this.segOrder.push(name);
         return s;
     }
@@ -375,9 +412,14 @@ class Assembler {
         }
         this.cur = this.segment('_TEXT', 'code');
         this.codeSegName = '_TEXT';
-        // A .COM has one segment and every register points at it on entry,
-        // so nothing here ever needs an override.
-        for (const r of ['cs', 'ds', 'es', 'ss']) this.assume[r] = '_TEXT';
+        // NOTHING is assumed here. An earlier version wrote the flat-.COM
+        // assumption (all four registers hold the one segment) into the
+        // table at this point, which is true for a .COM and a lie for a
+        // program that opens real segments LATER: an emu8086 coursework
+        // file whose macro library lands outside a segment picked up
+        // `DS:_TEXT`, and every later reference to its own DATA segment was
+        // then refused as unreachable. Flatness is decided in
+        // `autoOverride`, from what the program turned out to be.
         if (!this.cur.bytes.length && !this.sawOrg) this.cur.org = 0x100;
         return this.cur;
     }
@@ -564,7 +606,12 @@ class Assembler {
                 { ...this.ctx, what: 'string too long' });
             let v = 0;
             for (const ch of t.v) v = (v << 8) | (ch.charCodeAt(0) & 0xff);
-            return { val: newVal(v), next: pos + 1 };
+            // A character literal knows its own width, and that is the one
+            // case where an otherwise sizeless operand settles without a
+            // guess -- see `agreeWidth`.
+            const out = newVal(v);
+            out.chars = t.v.length;
+            return { val: out, next: pos + 1 };
         }
         if (t.k !== 'id') throw new AsmError(`"${t.v}" cannot start a value`,
             { ...this.ctx, what: 'bad expression' });
@@ -734,7 +781,7 @@ class Assembler {
         if (segOverride) throw new AsmError('a segment override needs a memory operand',
             { ...this.ctx, what: 'override without memory' });
         return {
-            k: 'i', v: v.v, reloc: v.reloc, size: v.forced, known: v.known,
+            k: 'i', v: v.v, reloc: v.reloc, size: v.forced, known: v.known, chars: v.chars || 0,
             segRel: v.segRel, segName: v.segName, distance: distance || v.distance || null, text,
         };
     }
@@ -770,16 +817,26 @@ class Assembler {
         if (o.seg) return null;                       // written explicitly; leave it alone
         const want = o.ref && o.ref.seg ? o.ref.seg.name : null;
         if (!want) return null;                       // no label: nothing to check against
+        // A program with one segment reaches everything through every
+        // register, so there is nothing to override and nothing to warn
+        // about. This is asked at USE time rather than recorded at segment
+        // time because a source is not known to be flat until it ends.
+        if (this.flatOutput()) return null;
         const dflt = o.base === 'bp' ? 'ss' : 'ds';
         // Not knowing what a register holds is not the same as knowing it is
-        // wrong. Without an ASSUME (the bare SEGMENT dialect) this says
-        // nothing rather than guessing.
+        // wrong. Without an ASSUME (the bare SEGMENT dialect, which two
+        // coursework programs use) this says nothing rather than guessing.
         if (!this.assume[dflt]) return null;
         if (this.assume[dflt] === want) return null;
         for (const r of ['ds', 'cs', 'es', 'ss']) if (this.assume[r] === want) return r;
-        throw new AsmError(
-            `"${o.ref.name}" is in segment ${want}, and no segment register is assumed to hold it`,
-            { ...this.ctx, what: 'unreachable segment' });
+        // Nothing reaches it. REFUSING here would be over-reach: the
+        // assembler's model of what the registers hold is a static
+        // approximation, and a program that loads DS itself at run time is
+        // perfectly entitled to reach a segment no ASSUME mentions. Say so
+        // and emit what was written.
+        this.note(`"${o.ref.name}" is in segment ${want}, which no ASSUME reaches:`
+            + ' no override was added, so this reaches whatever DS holds at the time');
+        return null;
     }
 
     /** Bytes for the ModR/M and its displacement, plus any segment prefix.
@@ -911,7 +968,7 @@ class Assembler {
         if (wa && wb && wa !== wb) throw new AsmError(
             `${mn.toUpperCase()} has a ${wa}-byte and a ${wb}-byte operand`,
             { ...this.ctx, what: 'operand size mismatch' });
-        const w = wa || wb;
+        const w = wa || wb || this.impliedWidth(mn, a, b);
         if (!w) throw new AsmError(
             `${mn.toUpperCase()} cannot tell whether this is a byte or a word -- say BYTE PTR or WORD PTR`,
             { ...this.ctx, what: 'operand size unknown' });
@@ -919,6 +976,37 @@ class Assembler {
             `${mn.toUpperCase()} cannot take a ${w}-byte operand on an 8086`,
             { ...this.ctx, what: 'operand size' });
         return w;
+    }
+
+    /**
+     * The width of `MOV [SI], 'x'` and `MOV [SI-1], cret`, where neither
+     * operand carries one.
+     *
+     * MASM refuses this outright and an earlier version here did too, on the
+     * grounds that guessing is the silent wrongness this assembler exists to
+     * avoid. That was too strict, and the argument that changed it is this:
+     * MASM and NASM BOTH refuse the form, so no program that ever assembled
+     * anywhere was written expecting a WORD store from it. Every dialect
+     * that accepts it -- emu8086, which these corpora target -- makes it a
+     * byte. A word default would contradict every existing program; a byte
+     * default contradicts none.
+     *
+     * The immediate still gets a vote and it overrules: a character literal
+     * says its own width (`'AB'` is a word by MASM's own rule), and a value
+     * that will not fit in a byte must be a word. So this narrows to a
+     * guess only where every reading agrees, and it says so out loud.
+     */
+    impliedWidth(mn, a, b) {
+        const imm = a.k === 'i' ? a : b.k === 'i' ? b : null;
+        const mem = a.k === 'm' ? a : b.k === 'm' ? b : null;
+        if (!imm || !mem) return 0;
+        if (imm.chars === 1) return 1;
+        if (imm.chars === 2) return 2;
+        if (!imm.known) return 2;                 // unresolved: take the wide form
+        const fitsByte = imm.v >= -128 && imm.v <= 255;
+        this.note(`${mn.toUpperCase()} has no declared size; ${imm.text.trim()} fits`
+            + ` a ${fitsByte ? 'byte' : 'word'}, so that is what was stored`);
+        return fitsByte ? 1 : 2;
     }
 
     aluOp(code, ops) {
@@ -1011,7 +1099,7 @@ class Assembler {
                 // therefore CS by definition, and `MOV r, CS` is the only
                 // encoding that can express it -- `MOV r, imm` would need a
                 // fixup the format cannot carry. Recorded, not silent.
-                if (s.reloc && !this.model && !this.explicitSegments) {
+                if (s.reloc && this.flatOutput()) {
                     this.note(`SEG resolves to CS here: a .COM image is one segment and carries no relocations`);
                     return this.emit(0x8c, 0xc0 | (SREG.cs << 3) | d.n);
                 }
@@ -1019,7 +1107,7 @@ class Assembler {
                 return this.emitImm16(s);
             }
             this.expect(d.k === 'm', 'MOV needs a register or memory destination');
-            const w = this.width(d) || (s.size || 0);
+            const w = this.width(d) || s.size || this.impliedWidth('mov', d, s);
             if (!w) throw new AsmError(
                 'MOV cannot tell whether this stores a byte or a word -- say BYTE PTR or WORD PTR',
                 { ...this.ctx, what: 'operand size unknown' });
@@ -1129,6 +1217,21 @@ class Assembler {
     leaOp(ops) {
         this.expect(ops.length === 2, 'LEA takes a register and an address');
         this.expect(ops[0].k === 'r16', 'LEA loads a word register');
+        if (ops[1].k === 'r16' && RM_CODE[`,${R16_NAME[ops[1].n]}`] !== undefined) {
+            // `LEA DX, SI` has no other possible reading: LEA's source is an
+            // address, a bare register is not one, and the only address that
+            // register could name is [SI]. The coursework program that
+            // writes it goes straight on to `MOV AH,9 / INT 21H`, so it
+            // wants DX = SI -- exactly what this produces. Recorded, not
+            // assumed, and only for SI/DI/BX/BP, the only registers that can
+            // BE an address on an 8086.
+            const name = R16_NAME[ops[1].n];
+            this.note(`LEA of the bare register ${name.toUpperCase()} was read as [${name.toUpperCase()}]`);
+            ops[1] = {
+                k: 'm', base: null, index: name, disp: 0, seg: null, size: 0,
+                known: true, segRel: 0, ref: null, text: ops[1].text,
+            };
+        }
         if (ops[1].k !== 'm') throw new AsmError('LEA needs an address, not a register or a number',
             { ...this.ctx, what: 'lea of non-address' });
         return this.emitRM([0x8d], ops[0].n, ops[1], [], false);
@@ -1282,10 +1385,32 @@ class Assembler {
             // A string longer than the unit lays out as characters, which is
             // how `DB 'Hello$'` works -- and is NOT how `DW 'AB'` works.
             const toks = lex(item, this.ctx);
-            if (toks.length === 1 && toks[0].k === 'str' && (unit === 1 ? toks[0].v.length !== 1 : toks[0].v.length > 2)) {
-                if (unit !== 1) throw new AsmError(
-                    `the string ${JSON.stringify(toks[0].v)} is too long for a ${unit}-byte item`,
-                    { ...this.ctx, what: 'string too long' });
+            if (toks.length === 1 && toks[0].k === 'str' && toks[0].v.length > unit) {
+                // A string that does not fit its item is laid out as BYTES,
+                // exactly as DB would, and the fact is recorded.
+                //
+                // THE ALTERNATIVE WAS TO REFUSE, and it was rejected on the
+                // evidence. Three coursework programs write
+                // `MSG DW "Enter number of packets: ",0` and
+                // `ID DW 'A150','B255',...`; emu8086 assembled all three, so
+                // the authors never saw an error. Of the readings available
+                // -- refuse, truncate to the low two characters, pad each
+                // character out to a word, or lay the characters down as
+                // written -- only the last can neither lose nor invent a
+                // byte, and it is what DB does with the same text.
+                // Truncation in particular would silently drop half of
+                // every ID in the security-lock table.
+                //
+                // Only the OVER-LONG case moves. `DW 'AB'` is still the word
+                // 4142h, which is MASM's rule and what programs rely on.
+                if (unit !== 1) {
+                    this.note(`the string ${JSON.stringify(toks[0].v)} does not fit a ${unit}-byte item`
+                        + ' and was laid out as bytes, as DB would');
+                }
+                for (const ch of toks[0].v) { this.emit(ch.charCodeAt(0) & 0xff); count++; }
+                continue;
+            }
+            if (toks.length === 1 && toks[0].k === 'str' && unit === 1 && toks[0].v.length !== 1) {
                 for (const ch of toks[0].v) { this.emit(ch.charCodeAt(0) & 0xff); count++; }
                 continue;
             }
@@ -1380,9 +1505,21 @@ class Assembler {
         }
         if (this.ifStack.length) throw new AsmError('an IF is never closed by an ENDIF',
             { ...this.ctx, what: 'unclosed IF' });
-        if (this.procStack.length) throw new AsmError(
-            `the procedure "${this.procStack[this.procStack.length - 1].name}" is never closed by ENDP`,
-            { ...this.ctx, what: 'unclosed PROC' });
+        // A PROC left open at the end of the module is CLOSED, not refused.
+        // MASM objects; emu8086 does not, and a coursework program writing
+        // `MAIN PROC ... END MAIN` with no ENDP is unambiguous -- there is
+        // no code after it for the missing ENDP to have changed. The only
+        // thing PROC decides here is whether RET is near or far, so a NEAR
+        // procedure left open costs exactly nothing. A FAR one would make
+        // later RETs far without saying so, and that is still refused.
+        for (const open of this.procStack) {
+            if (open.far) {
+                throw new AsmError(`the FAR procedure "${open.name}" is never closed by ENDP`,
+                    { ...this.ctx, what: 'unclosed PROC' });
+            }
+            this.note(`the procedure "${open.name}" is never closed by ENDP; END closed it`);
+        }
+        this.procStack = [];
         return this;
     }
 
@@ -1612,7 +1749,11 @@ class Assembler {
                 return;
             }
             case 'assume': {
-                for (const part of splitTop(rest, ',')) {
+                // `ASSUME DS:DATA CS:CODE` -- entries separated by SPACES,
+                // which two coursework programs write and emu8086 accepts.
+                // Splitting on commas alone hands the whole line to the
+                // pair matcher and the directive is refused wholesale.
+                for (const part of splitTop(rest.replace(/\s+(?=(cs|ds|es|ss)\s*:)/gi, ','), ',')) {
                     const m = /^\s*(cs|ds|es|ss)\s*:\s*(\S+)\s*$/i.exec(part);
                     if (!m) {
                         if (/^\s*nothing\s*$/i.test(part)) { for (const r of ['cs', 'ds', 'es', 'ss'])
@@ -1810,6 +1951,18 @@ class Assembler {
                     [[0x26, 0x2e, 0x36, 0x3e][SREG[mn]], ...prefixes]);
             }
         }
+        // THE MNEMONIC IS CHECKED FIRST, and the order is the whole point.
+        // Parsing operands first means an undefined macro is reported by
+        // whatever its arguments happen to trip over: a truncated coursework
+        // file calling `PRINT 'GREEN LED IS TURNED ON'` with no library
+        // included was refused for "the string is too long to be a number",
+        // which sends the reader after the string instead of after the
+        // missing include.
+        if (!KNOWN_MNEMONICS.has(mn) && !this.macros.has(mn)) {
+            throw new AsmError(
+                `"${mn.toUpperCase()}" is not an instruction, directive or macro this assembler knows`,
+                { ...this.ctx, what: `unknown mnemonic ${mn.toUpperCase()}` });
+        }
         const ops = text ? splitTop(text, ',').map((s) => this.operand(s)) : [];
         return this.encode(mn, ops, prefixes);
     }
@@ -1835,6 +1988,48 @@ class Assembler {
      */
     segParaOf(name) {
         return this.paras.get(name) ?? this.paras.get(String(name).toUpperCase()) ?? 0;
+    }
+
+    /**
+     * Is this program one flat segment -- a .COM -- or several?
+     *
+     * `.MODEL SMALL` and an explicit `SEGMENT` both mean several. So does
+     * `.DATA` alongside `.CODE` with no ORG: a program that wants a data
+     * segment it reaches through DS wants an .EXE. But `.DATA` and `.CODE`
+     * UNDER an `ORG 100h` are section markers inside one .COM image -- a
+     * coursework program writes exactly that, and forcing it to .EXE would
+     * break the ORG while refusing it outright costs a working program.
+     */
+    flatOutput() {
+        if (this.model && this.model !== 'tiny') return false;
+        if (this.explicitSegments) return false;
+        if (this.segs.has('STACK')) return false;
+        return this.sawOrg || this.segOrder.filter((n) => this.segs.has(n)).length <= 1;
+    }
+
+    /**
+     * Where each section starts inside a flat image.
+     *
+     * The CODE section goes first, because a .COM enters at its ORG and
+     * everything else has to come after the first instruction -- a source
+     * that writes `.data` before `.code` (as the coursework one does) would
+     * otherwise start executing its own strings. Sizes come from the
+     * PREVIOUS pass, the same way paragraph numbers do, and the fixpoint
+     * settles them.
+     * @returns {Map<string,number>}
+     */
+    computeOrigins() {
+        const out = new Map();
+        if (!this.flatOutput()) return out;
+        const codeName = this.codeSegName || '_TEXT';
+        const code = this.segs.get(codeName);
+        let at = code ? code.org + code.bytes.length : 0x100;
+        for (const name of this.segOrder) {
+            if (name === codeName || !this.segs.has(name)) continue;
+            out.set(name, at);
+            at += this.segs.get(name).bytes.length;
+        }
+        return out;
     }
 
     /**
@@ -1864,6 +2059,19 @@ class Assembler {
         return this.segOrder.filter((n) => this.segs.has(n));
     }
 }
+
+/** Word for word the mnemonics `encode` can handle, so an unknown one is
+ *  named before its operands get a chance to fail for another reason. */
+const KNOWN_MNEMONICS = new Set([
+    ...Object.keys(NO_OPERAND), ...Object.keys(STRING_OPS), ...Object.keys(ALU),
+    ...Object.keys(SHIFT), ...Object.keys(GRP3), ...Object.keys(JCC), ...Object.keys(REP_PREFIX),
+    'mov', 'xchg', 'test', 'push', 'pop', 'inc', 'dec', 'lea', 'lds', 'les',
+    'int', 'in', 'out', 'jmp', 'call', 'ret', 'retn', 'retf',
+    'loop', 'loope', 'loopz', 'loopne', 'loopnz', 'jcxz', 'aam', 'aad',
+]);
+
+/** R16 the other way round, for naming a register in a message. */
+const R16_NAME = Object.keys(R16);
 
 /** Directives that stand alone at the start of a line. */
 const DIRECTIVES = new Set([
@@ -1903,15 +2111,34 @@ function substitute(text, map) {
 // ---------------------------------------------------------------------------
 
 function buildCom(asm, order) {
-    const segs = order.map((n) => asm.segs.get(n)).filter((s) => s.bytes.length || s.org);
-    if (segs.length > 1) throw new AsmError('a .COM image can only hold one segment', { what: 'com with many segments' });
-    const s = segs[0] || { bytes: [], org: 0x100 };
+    const segs = order.map((n) => asm.segs.get(n)).filter((s) => s.bytes.length);
     if (asm.relocs.length) {
         throw new AsmError('this program needs a segment value (@DATA or SEG) at load time, '
             + 'which a .COM image cannot carry -- give it .MODEL SMALL so it can be an .EXE',
             { what: 'reloc in com' });
     }
-    return { bytes: Uint8Array.from(s.bytes), org: s.org };
+    if (!segs.length) return { bytes: new Uint8Array(0), org: 0x100 };
+    // Several SECTIONS, one segment. `computeOrigins` has already laid them
+    // end to end with the code first; all that is left is to paint them into
+    // one image and check that none of them landed on another, which would
+    // silently overwrite code with data.
+    const origin = Math.min(...segs.map((s) => s.org));
+    const end = Math.max(...segs.map((s) => s.org + s.bytes.length));
+    const bytes = new Uint8Array(end - origin);
+    const claimed = new Uint8Array(end - origin);
+    for (const s of segs) {
+        for (let i = 0; i < s.bytes.length; i++) {
+            const at = s.org - origin + i;
+            if (claimed[at]) {
+                throw new AsmError(`the sections "${s.name}" and another both claim offset `
+                    + `${(origin + at).toString(16).toUpperCase()}h of the .COM image`,
+                    { what: 'overlapping sections' });
+            }
+            claimed[at] = 1;
+            bytes[at] = s.bytes[i] & 0xff;
+        }
+    }
+    return { bytes, org: origin };
 }
 
 function buildExe(asm, order) {
@@ -1973,6 +2200,7 @@ export function assemble(source, opts = {}) {
     const maxPasses = opts.maxPasses ?? 12;
     let prev = null, passes = 0;
     asm.paras = new Map();
+    asm.origins = new Map();
 
     // The pass loop. Pass one sizes everything pessimistically -- an unknown
     // symbol is 7FFFh, so every jump is near and every displacement is wide
@@ -1986,6 +2214,7 @@ export function assemble(source, opts = {}) {
         // and comparing them alongside the sizes makes the fixpoint cover
         // the relocated words as well as the code length.
         asm.paras = asm.computeParas();
+        asm.origins = asm.computeOrigins();
         const shape = asm.segOrder.map((n) => [n, asm.segs.get(n).org, asm.segs.get(n).bytes.length]);
         // THE SYMBOL VALUES ARE PART OF THE FIXPOINT, and leaving them out
         // is a bug that hides for a long time. A pass can be the same SIZE
@@ -2002,7 +2231,7 @@ export function assemble(source, opts = {}) {
         const syms = [...asm.symbols]
             .map(([k, v]) => [k, v.kind, v.value ?? 0, v.seg ? v.seg.name : ''])
             .sort();
-        const sig = JSON.stringify([shape, [...asm.paras], syms]);
+        const sig = JSON.stringify([shape, [...asm.paras], [...asm.origins], syms]);
         if (sig === prev) break;
         if (passes >= maxPasses) {
             throw new AsmError(`the code size did not settle after ${passes} passes`, { what: 'no convergence' });
@@ -2022,7 +2251,7 @@ export function assemble(source, opts = {}) {
 
     const order = asm.layout();
     let format = opts.format ?? 'auto';
-    if (format === 'auto') format = (asm.model && asm.model !== 'tiny') || asm.explicitSegments ? 'exe' : 'com';
+    if (format === 'auto') format = asm.flatOutput() ? 'com' : 'exe';
 
     const segments = order.map((n) => ({ name: n, para: asm.segs.get(n).para, size: asm.segs.get(n).bytes.length }));
     if (format === 'com') {
