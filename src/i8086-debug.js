@@ -380,10 +380,21 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             // is the point of the seam -- the card holds raw latches and the
             // renderer takes named options, and only this file knows both.
             const vo = { ...(opts.videoOpts || {}) };
-            // A programmed DAC goes straight through: the card holds six-bit
-            // values indexed 3*colour+component, which is exactly what the
-            // renderer expects, because both store what the hardware stores.
-            if (card && card.dac && vo.dac === undefined) vo.dac = card.dac;
+            // A PROGRAMMED DAC goes straight through -- the card holds six-bit
+            // values indexed 3*colour+component, exactly what the renderer
+            // expects, because both store what the hardware stores.
+            //
+            // "Programmed" is load-bearing. A card's DAC powers up ALL ZEROES,
+            // and passing that renders every pixel black: a mode-13h program
+            // that never touched the palette would come out as a blank screen
+            // that looks exactly like a bug in the emulator. On real hardware
+            // the BIOS loads the default table at mode set; we have no BIOS
+            // ROM, so the renderer's generated default stands in until a
+            // program says otherwise. Same discriminator as everywhere else in
+            // this file: has anyone actually written it.
+            if (card && card.dac && vo.dac === undefined && card.dac.some((b) => b !== 0)) {
+                vo.dac = card.dac;
+            }
             if (card && card.color !== undefined) {
                 if (vo.background === undefined) vo.background = card.color & 0x0f;
                 if (vo.intensity === undefined) vo.intensity = (card.color & 0x10) !== 0;

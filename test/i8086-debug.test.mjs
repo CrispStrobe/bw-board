@@ -322,3 +322,49 @@ test('Hercules is refused by name rather than drawn at the wrong address', async
     assert.ok(r.unsupported);
     assert.match(r.unsupported, /B0000h/, 'and says why: it is a different address, not just a different size');
 });
+
+test('a program that reaches mode 13h through the BUS renders, registers and all', async () => {
+    // The corpus's own vga_mode_13h_pixels.asm gets there through INT 10h, so
+    // it never touches the card. This probe takes the other road -- OUT to the
+    // real ports -- which is what a game does, and it exercises the card's
+    // decode, the index/data pairs and the attribute flip-flop as well as the
+    // identification.
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const { createDos8086 } = await import('../src/i8086-dos.js');
+    const m = new M({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        chips: [{ kind: 'vga', name: 'vga1', at: 0x3c0 }],
+    });
+    // NOTE THE DX FORM THROUGHOUT. `out imm8, al` can only address ports
+    // 0-255, so `E6 C2` is port C2h and not 3C2h -- the first draft of this
+    // probe did exactly that and programmed nothing, which is the same
+    // mistake a learner makes once and never again.
+    const outDx = (port, val) => [0xba, port & 0xff, (port >> 8) & 0xff,   // mov dx, port
+        0xb0, val, 0xee];                                                   // mov al, val / out dx, al
+    const prog = [
+        ...outDx(0x3c2, 0x63),                      // misc: programmed
+        ...outDx(0x3c4, 0x04), ...outDx(0x3c5, 0x0e),   // seq[4] = chain-4
+        ...outDx(0x3ce, 0x06), ...outDx(0x3cf, 0x05),   // gc[6] = alpha disable
+        0xba, 0xda, 0x03, 0xec,                     // mov dx,3DAh / in al,dx -- reset the flip-flop
+        ...outDx(0x3c0, 0x10), ...outDx(0x3c0, 0x41),   // attr[10h] = 8-bit colour
+        0xb8, 0x00, 0xa0, 0x8e, 0xc0,               // mov ax,A000h / mov es,ax
+        0xbf, 0x00, 0x00,                           // mov di, 0
+        0xb0, 0x0f, 0x26, 0x88, 0x05,               // mov al,15 / mov [es:di], al
+        0xb8, 0x00, 0x4c, 0xcd, 0x21,
+    ];
+    // 3DAh belongs to the CGA block; a VGA card answers it too, so the read
+    // above is the real hardware idiom for resetting the flip-flop.
+    const dos = createDos8086(m).install().loadCom(Uint8Array.from(prog));
+    dos.run(50_000);
+
+    const st = m.chips.vga1.getVideoState();
+    assert.ok(st.misc, 'the card was programmed through the bus');
+    assert.ok(st.seq[0x04] & 0x08, 'chain-4 arrived through the index/data pair');
+    assert.ok(st.attr[0x10] & 0x40, '8-bit colour arrived through the flip-flop');
+
+    const f = createI8086DebugTarget({ machine: m }).video();
+    assert.equal(f.mode, 0x13, 'identified from the registers, with no INT 10h anywhere');
+    assert.deepEqual([f.rgba[0], f.rgba[1], f.rgba[2]], [255, 255, 255],
+        'and the pixel the program wrote to A000:0000 is in the frame');
+});
