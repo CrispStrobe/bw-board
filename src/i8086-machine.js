@@ -212,6 +212,10 @@ export class I8086Machine {
             write: (a, v) => this._write(a, v),
             in: (p) => this._in(p),
             out: (p, v) => this._out(p, v),
+            // Asked between REP iterations, so a long block move does not
+            // starve the timer -- and so the 8086's mid-REP segment-override
+            // erratum has something to happen to.
+            intPending: () => !!(this._pic && this._pic.intActive),
         });
     }
 
@@ -368,7 +372,11 @@ export class I8086Machine {
             return true;
         }
         if (!this._pic || !this._pic.intActive) return false;
-        if (!(this.cpu.flags & IF)) return false;
+        // NOT a bare IF test: the core also holds a one-instruction shadow
+        // after a segment-register load, so that `mov ss,ax` / `mov sp,imm`
+        // cannot be interrupted between the two. canTakeInterrupt() is both
+        // halves.
+        if (!this.cpu.canTakeInterrupt()) return false;
         const vector = this._pic.acknowledge();
         this.cpu.interrupt(vector);   // pushes flags/cs/ip, clears halted
         return true;

@@ -75,6 +75,11 @@ export class I8086 {
         this.write = bus.write;
         this.inPort = bus.in || (() => 0xff);
         this.outPort = bus.out || (() => {});
+        // Asked between REP iterations: is an interrupt waiting? The machine
+        // layer owns the answer (PIC line AND the interrupt flag); a bare
+        // core with no machine says no and REP runs to completion, which is
+        // what every vector in the suite expects.
+        this.intPending = bus.intPending || (() => false);
         this.reset();
     }
 
@@ -89,6 +94,13 @@ export class I8086 {
         this.cycles = 0;
         this._seg = -1;          // active segment override VALUE, -1 for none
         this._rep = 0;           // 0, 0xf2 (REPNE) or 0xf3 (REP/REPE)
+        // Set by an instruction that loads a segment register; blocks one
+        // interrupt. See canTakeInterrupt().
+        this.intShadow = 0;
+        this._repIp = 0;
+        /** How many times a REP has been cut short by an interrupt. Counted
+         *  because the erratum it triggers is otherwise invisible. */
+        this.repInterrupted = 0;
         this.mod = 0; this.reg = 0; this.rm = 0;
         this.ea = 0; this.eaSeg = 0;
     }
@@ -113,6 +125,30 @@ export class I8086 {
 
     /** The flat address CS:IP names — what a debugger anchors on. */
     get pc() { return ((this.cs << 4) + this.ip) & 0xfffff; }
+
+    /**
+     * May a maskable interrupt be delivered right now? The machine layer
+     * asks this instead of testing IF itself, because IF is only half of it.
+     *
+     * THE OTHER HALF IS THE SEGMENT-LOAD SHADOW, and it exists so that
+     *
+     *     mov ss, ax
+     *     mov sp, 400h
+     *
+     * cannot be interrupted BETWEEN those two instructions. There is an
+     * instant there where SS is new and SP is old — the stack points into
+     * nowhere — and an interrupt taken in that instant pushes three words
+     * into whatever that address happens to be. So the 8086 inhibits the
+     * interrupt for one instruction after ANY segment-register load, which
+     * is exactly long enough for the pair to complete. (The 286 narrowed
+     * this to SS alone; on an 8086 it is all four.)
+     *
+     * The vector suite cannot test this — its own README says the interrupt
+     * and trap flags are not exercised — so it is verified behaviourally
+     * instead, by delivering an IRQ and requiring it to arrive one
+     * instruction later than it otherwise would.
+     */
+    canTakeInterrupt() { return (this.flags & IF) !== 0 && this.intShadow === 0; }
 
     // ---- memory ---------------------------------------------------------
     /** seg:off to a physical address. Both halves wrap: the offset at 16
@@ -567,9 +603,30 @@ export class I8086 {
         this.di = (this.di + d) & 0xffff;
     }
 
-    /** REP runs to completion inside one step(). With interrupt delivery
-     *  unmodelled there is nothing that could preempt it, and the debug
-     *  layer wants one instruction to mean one instruction. */
+    /**
+     * A REP'd string instruction, run iteration by iteration with the
+     * interrupt window open between them.
+     *
+     * WHY NOT JUST LOOP. A REP with CX=65535 is not one atomic act on real
+     * silicon: the 8086 checks for an interrupt between iterations, which is
+     * how a timer keeps ticking through a long block move. Modelling it as
+     * uninterruptible loses that, and loses the erratum below with it.
+     *
+     * THE ERRATUM, which is the interesting part. When the interrupt is
+     * taken, the 8086 saves the address of the REP PREFIX rather than the
+     * address of the first prefix byte. So on resumption only the prefixes
+     * from the REP onward are re-fetched, and A SEGMENT OVERRIDE THAT CAME
+     * BEFORE THE REP IS LOST -- `2e f3 a4` resumes as `f3 a4` and the rest
+     * of the copy reads from DS instead of CS. Prefix ORDER decides it:
+     * `f3 2e a4` survives, because the override is after the rewind point.
+     * That is not a bug in this code, it is a bug in the chip, and it is
+     * reproduced rather than smoothed over.
+     *
+     * With no machine attached, intPending() answers false, the loop runs to
+     * completion, and all 646,000 vectors behave exactly as before -- the
+     * suite does not exercise interrupts, so there is nothing here it can
+     * see.
+     */
     _repeat(fn, checksZF) {
         if (!this._rep) { fn(); return; }
         const repe = this._rep === 0xf3;
@@ -579,6 +636,11 @@ export class I8086 {
             if (checksZF) {
                 const z = (this.flags & ZF) !== 0;
                 if (repe !== z) break;
+            }
+            if (this.cx !== 0 && this.canTakeInterrupt() && this.intPending()) {
+                this.ip = this._repIp & 0xffff;   // rewind to the REP, not past it
+                this.repInterrupted = (this.repInterrupted || 0) + 1;
+                return;
             }
         }
     }
@@ -590,6 +652,10 @@ export class I8086 {
     step() {
         this._seg = -1;
         this._rep = 0;
+        // The shadow lasts exactly one instruction: clear it on the way in,
+        // and any instruction that loads a segment register sets it again
+        // before it returns. Same shape as the Z80's EI latch.
+        this.intShadow = 0;
         let n = 0;
 
         // Prefixes. There is no length limit on real silicon and the last
@@ -601,6 +667,10 @@ export class I8086 {
                 this._seg = b === 0x26 ? this.es : b === 0x2e ? this.cs
                     : b === 0x36 ? this.ss : this.ds;
             } else if (b === 0xf2 || b === 0xf3) {
+                // Remember WHERE the REP prefix is, not just that there is
+                // one: an interrupt taken mid-REP resumes from here, and
+                // anything in front of it is lost. See _repeat().
+                this._repIp = this.ip;
                 this.ip = (this.ip + 1) & 0xffff; n += 2;
                 this._rep = b;
             } else if (b === 0xf0 || b === 0xf1) {
@@ -643,15 +713,15 @@ export class I8086 {
         switch (op) {
             // ---- segment register push/pop and the BCD adjusts -----------
             case 0x06: this._push(this.es); return 10;
-            case 0x07: this.es = this._pop(); return 8;
+            case 0x07: this.es = this._pop(); this.intShadow = 1; return 8;
             case 0x0e: this._push(this.cs); return 10;
             // POP CS is real on the 8086: there are no two-byte opcodes for
             // 0x0f to introduce, so it decodes as the pop nobody wanted.
-            case 0x0f: this.cs = this._pop(); return 8;
+            case 0x0f: this.cs = this._pop(); this.intShadow = 1; return 8;
             case 0x16: this._push(this.ss); return 10;
-            case 0x17: this.ss = this._pop(); return 8;
+            case 0x17: this.ss = this._pop(); this.intShadow = 1; return 8;
             case 0x1e: this._push(this.ds); return 10;
-            case 0x1f: this.ds = this._pop(); return 8;
+            case 0x1f: this.ds = this._pop(); this.intShadow = 1; return 8;
             case 0x27: this._daa(); return 4;
             case 0x2f: this._das(); return 4;
             case 0x37: this._aaa(); return 4;
@@ -721,7 +791,13 @@ export class I8086 {
             case 0x8b: { const c = this._modrm(); this._r16set(this.reg, this._rm16()); return this.mod === 3 ? 2 : 8 + c; }
             case 0x8c: { const c = this._modrm(); this._rm16set(this._sreg(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
             case 0x8d: { const c = this._modrm(); this._r16set(this.reg, this.ea); return 2 + c; }
-            case 0x8e: { const c = this._modrm(); this._sregSet(this.reg, this._rm16()); return this.mod === 3 ? 2 : 8 + c; }
+            // MOV to a segment register and POP of one arm the interrupt
+            // shadow; LES and LDS (C4/C5) deliberately do NOT. The shadow
+            // exists so `mov ss,ax` / `mov sp,imm` cannot be split, and
+            // LES/LDS load DS or ES, which can never be half of that pair —
+            // so there is no behaviour to protect and no evidence they are
+            // shadowed. Absent evidence, the narrower answer.
+            case 0x8e: { const c = this._modrm(); this._sregSet(this.reg, this._rm16()); this.intShadow = 1; return this.mod === 3 ? 2 : 8 + c; }
             case 0x8f: { const c = this._modrm(); this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
 
             // ---- 0x90-0x9f ----------------------------------------------
