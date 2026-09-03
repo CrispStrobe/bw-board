@@ -150,6 +150,61 @@ export function createDos8086(machine, io = {}) {
         }
         while (cursor >= ROWS * COLS) scroll();
     };
+    /**
+     * INT 10h/06h and /07h -- scroll a RECTANGLE, not the screen.
+     *
+     * This was a clear() for a while, on the grounds that clearing is the
+     * honest subset. It is not: a program that scrolls a five-line window in
+     * the middle of a full screen and one that wipes the display are doing
+     * visibly different things, and the corpus has a program written to show
+     * exactly that difference. Comparing our output against an independent
+     * implementation's is what made it visible.
+     *
+     * AL is the number of lines to move; AL=0 means BLANK THE WHOLE WINDOW,
+     * which is the special case worth stating, because a caller asking for
+     * "scroll by nothing" would otherwise get nothing. BH is the attribute
+     * the vacated lines are filled with -- not the current one.
+     *
+     * @param {boolean} up true for 06h (text moves up, blanks at the bottom)
+     */
+    const scrollWindow = (up) => {
+        const lines = cpu.al;
+        const top = Math.min(cpu.ch, ROWS - 1), left = Math.min(cpu.cl, COLS - 1);
+        const bot = Math.min(cpu.dh, ROWS - 1), right = Math.min(cpu.dl, COLS - 1);
+        if (bot < top || right < left) return;
+        const fill = cpu.bh;
+        const height = bot - top + 1;
+        const blank = (row) => {
+            for (let c = left; c <= right; c++) {
+                machine._write(cellAt(row * COLS + c), 0x20);
+                machine._write(cellAt(row * COLS + c) + 1, fill);
+            }
+        };
+        if (lines === 0 || lines >= height) {
+            for (let r = top; r <= bot; r++) blank(r);
+            return;
+        }
+        if (up) {
+            for (let r = top; r <= bot - lines; r++) {
+                for (let c = left; c <= right; c++) {
+                    const from = (r + lines) * COLS + c, to = r * COLS + c;
+                    machine._write(cellAt(to), machine._read(cellAt(from)));
+                    machine._write(cellAt(to) + 1, machine._read(cellAt(from) + 1));
+                }
+            }
+            for (let r = bot - lines + 1; r <= bot; r++) blank(r);
+        } else {
+            for (let r = bot; r >= top + lines; r--) {
+                for (let c = left; c <= right; c++) {
+                    const from = (r - lines) * COLS + c, to = r * COLS + c;
+                    machine._write(cellAt(to), machine._read(cellAt(from)));
+                    machine._write(cellAt(to) + 1, machine._read(cellAt(from) + 1));
+                }
+            }
+            for (let r = top; r < top + lines; r++) blank(r);
+        }
+    };
+
     const clearScreen = () => {
         for (let i = 0; i < ROWS * COLS; i++) {
             machine._write(cellAt(i), 0x20);
@@ -338,7 +393,7 @@ export function createDos8086(machine, io = {}) {
             case 0x02: cursor = cpu.dh * COLS + cpu.dl; return;
             case 0x03: cpu.dh = Math.floor(cursor / COLS); cpu.dl = cursor % COLS; cpu.cx = 0x0607; return;
             case 0x05: return;                            // page select: one page here
-            case 0x06: case 0x07: clearScreen(); return;  // scroll a window: clear is the honest subset
+            case 0x06: case 0x07: scrollWindow(cpu.ah === 0x06); return;
             case 0x08:
                 cpu.al = machine._read(cellAt(cursor));
                 cpu.ah = machine._read(cellAt(cursor) + 1);

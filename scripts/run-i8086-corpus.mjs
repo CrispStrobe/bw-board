@@ -98,6 +98,11 @@ let expected = null;
 const expectPath = value('--expect', null);
 if (expectPath) expected = JSON.parse(readFileSync(expectPath, 'utf8'));
 
+/** Fold text onto an 80-column screen, the way the cursor does. */
+const wrap80 = (t) => String(t).split('\n')
+    .flatMap((l) => (l.length <= 80 ? [l] : (l.match(/.{1,80}/g) || [l])))
+    .join('\n');
+
 /** Line endings and trailing space are not the thing under test. */
 const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
@@ -241,6 +246,15 @@ function runOne(name, raw, key) {
         const screen = norm(dos.screenText().join('\n'));
         if (want === stream) return { name, kind, steps, report, verdict: 'MATCH', via: 'stream' };
         if (want === screen) return { name, kind, steps, report, verdict: 'MATCH', via: 'screen' };
+        // A SCREEN IS EIGHTY COLUMNS AND A STREAM IS NOT. Their oracle records
+        // a stream, so a 111-character line stays on one line there and wraps
+        // onto two here -- identical text, different shape. Wrapping THEIR
+        // output at 80 before comparing applies our screen model to their
+        // data rather than loosening the test: content that actually differs
+        // still fails.
+        if (norm(wrap80(want)) === screen) {
+            return { name, kind, steps, report, verdict: 'MATCH', via: 'screen (wrapped)' };
+        }
         // A program that asked for a key and got none cannot be expected to
         // agree with a run that had one. Ours types nothing, so that is a
         // difference in the HARNESS, not in the emulation, and it is

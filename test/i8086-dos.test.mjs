@@ -468,3 +468,54 @@ test('a file service that cannot do the thing says so in carry', () => {
     assert.equal(at2(0xfffa) & 1, 0, 'deleting a real file is still success');
     assert.equal(ok2.dos.files.has('YES.TXT'), false, 'and it is gone');
 });
+
+test('INT 10h/06h scrolls a WINDOW, and AL=0 blanks it', () => {
+    // This was a clearScreen() for a while, which is a different thing: a
+    // program that scrolls five lines in the middle of a full screen and one
+    // that wipes the display are visibly different, and the corpus contains a
+    // program written to show exactly that.
+    const { m, dos } = dosWith(com([[0x100, [0xb8, 0x00, 0x4c, 0xcd, 0x21]]]));
+    const cell = (r, c) => 0xb8000 + (r * 80 + c) * 2;
+    const put = (r, text) => {
+        for (let i = 0; i < text.length; i++) {
+            m._write(cell(r, i), text.charCodeAt(i));
+            m._write(cell(r, i) + 1, 0x07);
+        }
+    };
+    for (let r = 0; r < 6; r++) put(r, `row${r}`);
+
+    // Scroll rows 2..4 up by one. Rows 0, 1 and 5 must not move.
+    m.cpu.ah = 0x06; m.cpu.al = 1; m.cpu.bh = 0x07;
+    m.cpu.ch = 2; m.cpu.cl = 0; m.cpu.dh = 4; m.cpu.dl = 79;
+    m.cpu.cs = 0xf000; m.cpu.ip = 0x10 * 4;      // stand on the INT 10h trap
+    m.cpu.ss = 0x0800; m.cpu.sp = 0xfff8;
+    dos.service();
+
+    const line = (r) => dos.screenText()[r];
+    assert.equal(line(0), 'row0', 'above the window: untouched');
+    assert.equal(line(1), 'row1');
+    assert.equal(line(2), 'row3', 'inside: moved up by one');
+    assert.equal(line(3), 'row4');
+    assert.equal(line(4), '', 'the vacated line is blank');
+    assert.equal(line(5), 'row5', 'below the window: untouched');
+});
+
+test('INT 10h/07h scrolls the other way', () => {
+    const { m, dos } = dosWith(com([[0x100, [0xb8, 0x00, 0x4c, 0xcd, 0x21]]]));
+    const cell = (r, c) => 0xb8000 + (r * 80 + c) * 2;
+    for (let r = 0; r < 4; r++) {
+        const t = `row${r}`;
+        for (let i = 0; i < t.length; i++) {
+            m._write(cell(r, i), t.charCodeAt(i));
+            m._write(cell(r, i) + 1, 0x07);
+        }
+    }
+    m.cpu.ah = 0x07; m.cpu.al = 1; m.cpu.bh = 0x07;
+    m.cpu.ch = 0; m.cpu.cl = 0; m.cpu.dh = 3; m.cpu.dl = 79;
+    m.cpu.cs = 0xf000; m.cpu.ip = 0x10 * 4;
+    m.cpu.ss = 0x0800; m.cpu.sp = 0xfff8;
+    dos.service();
+    assert.equal(dos.screenText()[0], '', 'blank appears at the TOP');
+    assert.equal(dos.screenText()[1], 'row0', 'and everything moved down');
+    assert.equal(dos.screenText()[3], 'row2');
+});
