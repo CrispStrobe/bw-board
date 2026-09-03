@@ -30,6 +30,14 @@
  * mode 0, and `modeWarning` says so in words the machine layer can surface.
  * Pretending to implement them would be worse than refusing.
  *
+ * ACCURACY TIER: THE LATCH AND THE DIRECTION, NOT THE HANDSHAKE. Mode 0 is
+ * exact — the per-port output latch, the per-nibble direction on port C, the
+ * mode-set word clearing the latches, and bit set/reset on port C. Modes 1
+ * and 2 (strobed and bidirectional handshake — OBF/ACK/STB/IBF and the port-C
+ * interrupt path) are accepted with a warning and run as mode 0: there is no
+ * handshake sequencing and no interrupt generation. Pin edges cross at
+ * instruction granularity, like every peripheral here.
+ *
  * @module
  */
 

@@ -309,6 +309,33 @@ test('an i8088 CPU is recognised the same as an i8086', () => {
     assert.ok(r.regions.some((x) => x.kind === 'rom'), 'the 8088 build still extracts a ROM');
 });
 
+test('a PIT OUT0 wired to PIC IR0 extracts as irq:0 (the timer interrupt)', () => {
+    const c = decode138Circuit();
+    c.parts.push({ id: 'pit1', kind: 'i8254' }, { id: 'pic1', kind: 'i8259' });
+    const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    w('dec2', 'y1', 'pit1', 'csb'); w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
+    w('dec2', 'y2', 'pic1', 'csb'); w('cpu1', 'a0', 'pic1', 'a0');
+    w('pit1', 'out0', 'pic1', 'ir0');   // the 18.2 Hz timer wire
+    const r = extract8086Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    const pit = r.chips.find((x) => x.kind === 'pit');
+    assert.equal(pit.irq, 0, 'the timer interrupt is wired to IR0');
+    assert.ok(r.notes.some((n) => /counter 0 OUT drives pic1 IR0/.test(n)), r.notes.join('; '));
+});
+
+test('a PIT with no IRQ wire extracts without irq — a miswired board simply shows no tick', () => {
+    const c = decode138Circuit();
+    c.parts.push({ id: 'pit1', kind: 'i8254' }, { id: 'pic1', kind: 'i8259' });
+    const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    w('dec2', 'y1', 'pit1', 'csb'); w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
+    w('dec2', 'y2', 'pic1', 'csb'); w('cpu1', 'a0', 'pic1', 'a0');
+    // deliberately NO out0 -> ir0 wire
+    const r = extract8086Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    const pit = r.chips.find((x) => x.kind === 'pit');
+    assert.equal(pit.irq, undefined, 'no timer wire = no irq = no tick, which is the honest result');
+});
+
 test('a PIT whose A1 line is misrouted refuses with the pin named', () => {
     const c = decode138Circuit();
     c.parts.push({ id: 'pit1', kind: 'i8254' });

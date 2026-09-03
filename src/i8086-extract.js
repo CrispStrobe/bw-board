@@ -313,6 +313,43 @@ export function extract8086Machine(circuit) {
     }
     if (reasons.length) return { ok: false, notes, reasons };
 
+    // ---- IRQ wiring: an interrupt output sharing a net with a PIC input ---
+    // The PIT's timer OUT (counter 0 is the 18.2 Hz tick), or a serial chip's
+    // interrupt pin, wired to one of the 8259's IR lines becomes irq:n on that
+    // chip so the machine actually delivers it. Without this a drawn PIT+PIC
+    // has no timer interrupt — and a board that forgets or miswires that wire
+    // correctly shows no tick rather than being papered over.
+    const pic = ioChips.find((c) => c.kind === 'pic');
+    if (pic) {
+        const irOf = new Map();
+        for (let i = 0; i < 8; i++) irOf.set(find(key(pic.part.id, `ir${i}`)), i);
+        const IRQ_PIN = { acia6850: ['irqb'], uart16550: ['intr'], usart8251: ['rxrdy'] };
+        for (const c of chips) {
+            const ioc = ioChips.find((x) => x.part.id === c.name);
+            if (!ioc) continue;
+            if (ioc.kind === 'pit') {
+                for (let ch = 0; ch < 3; ch++) {
+                    const i = irOf.get(find(key(ioc.part.id, `out${ch}`)));
+                    if (i !== undefined) {
+                        c.irq = i;
+                        if (ch !== 0) c.irqChannel = ch;
+                        notes.push(`${c.name} counter ${ch} OUT drives ${pic.part.id} IR${i} (the timer interrupt)`);
+                        break;
+                    }
+                }
+            } else if (IRQ_PIN[ioc.kind]) {
+                for (const pin of IRQ_PIN[ioc.kind]) {
+                    const i = irOf.get(find(key(ioc.part.id, pin)));
+                    if (i !== undefined) {
+                        c.irq = i;
+                        notes.push(`${c.name} ${pin.toUpperCase()} drives ${pic.part.id} IR${i}`);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     // ---- the reset vector must live somewhere ---------------------------
     const rom = regions.find((r) => r.kind === 'rom' && r.start <= 0xffff0 && r.end >= 0xfffff);
     if (!rom) {

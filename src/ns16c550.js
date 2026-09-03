@@ -184,6 +184,28 @@ export class NS16C550 {
             default: this.scr = val; break;
         }
     }
+
+    // ---- persistence ----------------------------------------------------
+    // A machine snapshot must carry the UART's FIFO, its divisor latch and
+    // its interrupt-enable state, or a restored machine loses in-flight
+    // serial. (The _dlab/_fifoEnabled/_loop getters derive from lcr/fcr/mcr,
+    // so they need not be stored.)
+    getState() {
+        return {
+            rxFifo: this.rxFifo.slice(),
+            divisor: this.divisor, ier: this.ier, lcr: this.lcr,
+            mcr: this.mcr, fcr: this.fcr, scr: this.scr,
+            overrun: this.overrun, thrEvent: this._thrEvent, irq: this._irq,
+        };
+    }
+
+    setState(s) {
+        this.rxFifo = (s.rxFifo || []).slice();
+        this.divisor = s.divisor; this.ier = s.ier; this.lcr = s.lcr;
+        this.mcr = s.mcr; this.fcr = s.fcr; this.scr = s.scr;
+        this.overrun = s.overrun; this._thrEvent = s.thrEvent ?? false;
+        this._irq = s.irq ?? false;
+    }
 }
 
 export default NS16C550;

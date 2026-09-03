@@ -22,6 +22,21 @@
  * lower-priority interrupts are blocked until EOI clears it. The
  * fixed-priority model is the only one modelled.
  *
+ * ACCURACY TIER: FIXED PRIORITY, ONE CONTROLLER. The ICW1-4 initialisation
+ * sequence, OCW1 masking, OCW2 specific and non-specific EOI, OCW3 read-
+ * register selection, the ISR/IRR bookkeeping, auto-EOI, and the init-phase
+ * gating (a chip mid-ICW-sequence does not interrupt) are all exact. What is
+ * NOT here, named rather than left to be discovered:
+ *
+ *   - NO PRIORITY ROTATION. OCW2's rotate commands are accepted and ignored;
+ *     priority is always fixed with IR0 highest, which is what an XT programs.
+ *   - NO POLL MODE (OCW3 bit 2) and no special mask mode.
+ *   - ONE CONTROLLER. ICW3 is consumed but no cascaded slave is modelled —
+ *     an XT's second PIC, and the buffered / special-fully-nested modes, are
+ *     absent.
+ *   - LEVEL-SENSED. A request is taken from its IRR bit; the edge-vs-level
+ *     (LTIM) trigger distinction is not modelled.
+ *
  * @module
  */
 

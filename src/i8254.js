@@ -20,6 +20,21 @@
  * latched copy). The reload happens on the next clock after a mode-set or
  * after the CE reaches zero (in modes 2/3).
  *
+ * ACCURACY TIER: THE COUNT, AT INSTRUCTION GRANULARITY. The control word,
+ * modes 0/2/3/4, the reload divisor, the count latch, the read-back status
+ * command and the OUT-pin transitions relative to the count are all exact.
+ * What is NOT here, named rather than left to be discovered:
+ *
+ *   - NO SUB-INSTRUCTION TIME. The counter advances by each instruction's
+ *     cycle budget, not per 1.193 MHz PIT tick, so a count READ between two
+ *     instructions is quantised to instruction boundaries — exact at that
+ *     granularity, but not to the individual clock.
+ *   - NO MODES 1 OR 5. The two GATE-triggered forms (hardware-retriggerable
+ *     one-shot and strobe) are not modelled; the gate is assumed asserted and
+ *     a counter simply counts.
+ *   - NO BCD. The BCD bit is stored and read back in the status byte, but the
+ *     counter counts in binary regardless.
+ *
  * @module
  */
 

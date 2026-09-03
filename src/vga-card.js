@@ -38,6 +38,17 @@
  *     component. The six-bit width is the hardware's, and it is also what the
  *     renderer's DAC table wants, so the latch is passed through raw.
  *
+ * ACCURACY TIER: THE REGISTERS, NOT THE RASTER. Every register bank (misc,
+ * sequencer, graphics controller, CRTC, attribute) is LATCHED faithfully,
+ * the attribute-controller flip-flop and its 3DAh-read reset are exact, and
+ * the six-bit DAC RGB sequence is exact — so a renderer can read the true
+ * configuration and identify the mode. What is NOT here: this card does not
+ * INTERPRET the registers (it latches them; the renderer decides what mode
+ * they mean and refuses what it cannot draw); NO PIXELS; and the retrace is
+ * a fixed 70 Hz FRAME from machine time, NOT computed from the CRTC total
+ * registers — reprogramming the CRTC to a tweaked mode does not change the
+ * retrace rhythm, which is a cadence, not scanline-exact timing.
+ *
  * @module
  */
 
