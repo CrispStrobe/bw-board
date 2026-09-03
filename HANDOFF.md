@@ -79,6 +79,42 @@ encodeTextMessage("Hi") → 90504 PCM samples → ATtiny88 ADC6 → firmware dem
 | tron-on-128K full run | 48.ROM + tron TAP required — test skips |
 | vsource PCM via board solver | Adapter readAnalog is stale between advanceTo calls — direct readAnalog stub works; board-level vsource needs adapter-side ADC timing reform |
 
+## Worktree topology — one worker, one tree (2026-09-03)
+
+Set up after a directory-scoped revert in a SHARED worktree destroyed an
+agent's uncommitted work. The tree was shared by four workers; the incident
+was not bad luck, it was the topology.
+
+| Worker | Tree | Branch |
+|---|---|---|
+| support chips, cards, presets | `/mnt/volume1/code/bw-board` (main checkout) | `feat/i8086-support-chips` |
+| 8086 integration + DOS/debug/corpus | `/mnt/volume1/code/wt/bw-board-i8086` | `feat/i8086-tier` |
+| assembler + MASM oracle | `/mnt/volume1/code/wt/bw-i8086-asm` | `feat/i8086-asm` |
+| BIOS ROM + DOS image | `/mnt/volume1/code/wt/bw-i8086-bios` | `feat/i8086-bios` |
+| review / verification | `/mnt/volume1/code/wt/bw-i8086-sim3` | `feat/i8086-review` |
+
+A worktree is **8.3 MB** here — `node_modules` is a symlink to the main
+checkout's, not a copy — so there is no cost argument for sharing one. To add:
+
+```bash
+cd /mnt/volume1/code/bw-board
+git worktree add -b <branch> /mnt/volume1/code/wt/<dir> <base>
+ln -s /mnt/volume1/code/bw-board/node_modules /mnt/volume1/code/wt/<dir>/node_modules
+```
+
+**THE CONSEQUENCE TO PLAN FOR, not to discover: git refuses to check out one
+branch in two worktrees.** Separate trees therefore FORCE separate branches,
+which turns integration from "we are all already on it" into an explicit merge
+by whoever owns `feat/i8086-tier`. That is the cost, and it buys the property
+that no lane's uncommitted work is reachable from another lane's `git checkout`,
+`git stash` or `git add -A`.
+
+**Migrating live work: do not move files.** `git diff > /tmp/x.patch` in the old
+tree, `git apply` in the new one, and leave untracked files to a plain `cp`.
+Better still, let an agent COMMIT what it has before it moves — the hazard being
+fixed here is uncommitted work in a shared tree, and carrying uncommitted work
+between trees by hand is the same hazard with extra steps.
+
 ## Standing rules
 
 - Push both branches (master + main) at every checkpoint
