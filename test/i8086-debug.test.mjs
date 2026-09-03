@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
 import { createDebugTarget } from '../src/debug-target-factory.js';
+import { trapRegion } from '../src/i8086-dos.js';
 
 /** A ROM image with `code` at F800:0000 and the reset jump in its last page. */
 function rom(code) {
@@ -231,7 +232,7 @@ test('a programmed CGA card outranks the INT 10h log', async () => {
     const { I8086Machine: M } = await import('../src/i8086-machine.js');
     const m = new M({
         clockHz: 5_000_000,
-        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, trapRegion()],
         chips: [{ kind: 'cga', name: 'cga1', at: 0x3d0 }],
     });
     // Nothing programmed yet: the card holds zero, video disabled, so the
@@ -259,7 +260,7 @@ test('a VGA card identifies mode 13h positively, and refuses planar by name', as
     const { I8086Machine: M } = await import('../src/i8086-machine.js');
     const mk = () => new M({
         clockHz: 5_000_000,
-        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, trapRegion()],
         chips: [{ kind: 'vga', name: 'vga1', at: 0x3c0 }],
     });
 
@@ -295,7 +296,7 @@ test('a programmed DAC reaches the renderer unchanged', async () => {
     const { I8086Machine: M } = await import('../src/i8086-machine.js');
     const m = new M({
         clockHz: 5_000_000,
-        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, trapRegion()],
         chips: [{ kind: 'vga', name: 'vga1', at: 0x3c0 }],
     });
     const vga = m.chips.vga1;
@@ -314,7 +315,7 @@ test('Hercules is refused by name rather than drawn at the wrong address', async
     const { I8086Machine: M } = await import('../src/i8086-machine.js');
     const m = new M({
         clockHz: 5_000_000,
-        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, trapRegion()],
         chips: [{ kind: 'hercules', name: 'herc1', at: 0x3b0 }],
     });
     m._out(0x3b8, 0x0a);                        // video on, graphics
@@ -333,7 +334,7 @@ test('a program that reaches mode 13h through the BUS renders, registers and all
     const { createDos8086 } = await import('../src/i8086-dos.js');
     const m = new M({
         clockHz: 5_000_000,
-        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, trapRegion()],
         chips: [{ kind: 'vga', name: 'vga1', at: 0x3c0 }],
     });
     // NOTE THE DX FORM THROUGHOUT. `out imm8, al` can only address ports

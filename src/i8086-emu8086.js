@@ -89,6 +89,7 @@
  *
  * @module
  */
+import { trapRegion } from './i8086-dos.js';
 
 /**
  * Every port number this layer answers to.
@@ -1034,7 +1035,7 @@ export const EMU8086BOX = Object.freeze({
         { kind: 'ram', start: 0x00000, end: 0xbffff },
         // The DOS layer's trap page. See i8086-dos.js: the vectors are real
         // and each slot holds `jmp $`, so this page must be WRITABLE.
-        { kind: 'ram', start: 0xf0000, end: 0xf03ff },
+        trapRegion(),
     ],
     chips: [],
 });

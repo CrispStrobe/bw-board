@@ -17,7 +17,8 @@
  * far jump, not an INT, and a watcher on the instruction never sees it.
  *
  * So the vectors are made real instead. Every entry in the interrupt vector
- * table points at TRAP_SEG:n, a segment that is deliberately not mapped.
+ * table points at the trap segment, which is deliberately not where any real
+ * PC puts anything (see DEFAULT_TRAP_SEG).
  * The CPU takes the interrupt itself — pushing FLAGS, CS and IP exactly as
  * the silicon does — and lands on the trap address, where this layer
  * recognises where it is, services the call, and performs the IRET by hand.
@@ -62,11 +63,52 @@
  * stepped. The stride of four leaves room for the instruction and keeps the
  * arithmetic obvious.
  */
-export const TRAP_SEG = 0xf000;
+/**
+ * WHERE THE TRAP PAGE GOES, and why it is no longer F000.
+ *
+ * It was `0xf000` — one paragraph up, this file called that "this tier's
+ * BIOS", which was true while there was no other. There is now: a real BIOS
+ * ROM is being written for Tier C, real Microsoft binaries from the MIT
+ * MS-DOS release already run here, and `F0000-FFFFF` is the system BIOS on
+ * every PC ever built. Two owners of one address is not a bug you find, it is
+ * a bug you inherit, so the trap moved and the ROM did not.
+ *
+ * THE CONSTRAINT, written down because the next person will not know it. The
+ * page needs 1K of WRITABLE memory at a segment boundary, somewhere no real
+ * PC puts anything:
+ *
+ *     00000-9FFFF  conventional RAM — programs live here
+ *     A0000-AFFFF  EGA/VGA graphics
+ *     B0000-B7FFF  MDA / Hercules      B8000-BFFFF  CGA
+ *     C0000-C7FFF  video option ROM    C8000-CBFFF  hard disk controller ROM
+ *     D0000-DFFFF  the gap  <-- here
+ *     E0000-EFFFF  option ROMs on some machines; BIOS on an AT
+ *     F0000-FFFFF  system BIOS, and ROM BASIC on an IBM
+ *
+ * `D000` is the one 64K window an XT leaves alone. It is not guaranteed
+ * forever — EMS page frames were conventionally placed there — so this is a
+ * DEFAULT and not a law: pass `trapSeg` to `createDos8086` and a machine that
+ * populates D000 can put the trap somewhere else. What must never happen
+ * again is a hardcoded address that something real also wants.
+ */
+export const DEFAULT_TRAP_SEG = 0xd000;
+/** The default, kept under its old name so importers need not care. */
+export const TRAP_SEG = DEFAULT_TRAP_SEG;
 /** Bytes per trap slot: enough for `jmp $` with room to read. */
 export const TRAP_STRIDE = 4;
 /** Where the trap page must be writable, since it now holds real code. */
 export const TRAP_BASE = TRAP_SEG << 4;
+/** Bytes of RAM the trap page needs: 256 vectors at TRAP_STRIDE each. */
+export const TRAP_SIZE = 256 * TRAP_STRIDE;
+
+/**
+ * The memory region a machine must map for a given trap segment. Presets and
+ * tests call this instead of writing the pair of addresses out, so moving the
+ * trap again is one constant and not a grep.
+ */
+export const trapRegion = (seg = DEFAULT_TRAP_SEG) => ({
+    kind: 'ram', start: seg << 4, end: ((seg << 4) + TRAP_SIZE - 1),
+});
 
 /** Text mode 3: 80x25, two bytes per cell, at the CGA colour address. */
 export const VRAM = 0xb8000;
@@ -84,6 +126,9 @@ const STATUS_FLAGS = 0x0001 | 0x0004 | 0x0010 | 0x0040 | 0x0080 | 0x0800;
  */
 export function createDos8086(machine, io = {}) {
     const cpu = machine.cpu;
+    /** This instance's trap page. See DEFAULT_TRAP_SEG for the constraint. */
+    const trapSeg = io.trapSeg ?? DEFAULT_TRAP_SEG;
+    const trapBase = trapSeg << 4;
     const onChar = io.onChar || null;
     /** Pending keystrokes, as ASCII bytes. INT 16h and INT 21h both drink here. */
     const keys = io.keys ? [...io.keys] : [];
@@ -774,6 +819,9 @@ export function createDos8086(machine, io = {}) {
 
     return {
         machine,
+        /** Where this instance put its trap page. Tests and the debug layer
+         *  read it rather than assuming the default. */
+        trapSeg,
 
         /**
          * Point every vector at its trap slot, fill the slots with `jmp $`,
@@ -789,14 +837,15 @@ export function createDos8086(machine, io = {}) {
             for (let n = 0; n < 256; n++) {
                 const off = n * TRAP_STRIDE;
                 wr16(0, n * 4, off);
-                wr16(0, n * 4 + 2, TRAP_SEG);
-                wr8(TRAP_SEG, off, 0xeb);       // jmp $
-                wr8(TRAP_SEG, off + 1, 0xfe);
+                wr16(0, n * 4 + 2, trapSeg);
+                wr8(trapSeg, off, 0xeb);       // jmp $
+                wr8(trapSeg, off + 1, 0xfe);
             }
-            if (rd8(TRAP_SEG, 0) !== 0xeb || rd8(TRAP_SEG, 1) !== 0xfe) {
+            if (rd8(trapSeg, 0) !== 0xeb || rd8(trapSeg, 1) !== 0xfe) {
                 throw new Error(
-                    `the trap page at ${TRAP_BASE.toString(16)}h is not writable: this machine `
-                    + 'must map at least 1K of RAM there (DOSBOX8086 does). Without it every '
+                    `the trap page at ${trapBase.toString(16)}h is not writable: this machine `
+                    + `must map ${TRAP_SIZE} bytes of RAM there — trapRegion(0x${trapSeg.toString(16)}) `
+                    + 'gives the region, and DOSBOX8086 already has it. Without it every '
                     + 'interrupt executes open bus.');
             }
             clearScreen();
@@ -904,7 +953,7 @@ export function createDos8086(machine, io = {}) {
          * @returns {number|null} the interrupt number serviced, or null
          */
         service() {
-            if (cpu.cs !== TRAP_SEG) return null;
+            if (cpu.cs !== trapSeg) return null;
             if (cpu.ip % TRAP_STRIDE !== 0 || cpu.ip / TRAP_STRIDE > 0xff) return null;
             const n = cpu.ip / TRAP_STRIDE;
             const h = HANDLERS[n];
@@ -1016,7 +1065,7 @@ export const DOSBOX8086_XT = Object.freeze({
     clockHz: 5_000_000,
     regions: [
         { kind: 'ram', start: 0x00000, end: 0xbffff },
-        { kind: 'ram', start: 0xf0000, end: 0xf03ff },
+        trapRegion(),
     ],
     chips: [
         { kind: 'ppi', name: 'ppi1', at: 0x60 },
@@ -1029,9 +1078,10 @@ export const DOSBOX8086 = Object.freeze({
     clockHz: 5_000_000,
     regions: [
         { kind: 'ram', start: 0x00000, end: 0xbffff },
-        // The trap page. A real machine has its BIOS ROM here; this one has
-        // 1K of RAM holding 256 `jmp $` slots, which is this tier's BIOS.
-        { kind: 'ram', start: 0xf0000, end: 0xf03ff },
+        // The trap page: 1K of RAM holding 256 `jmp $` slots. It used to sit
+        // at F000 and be described as this tier's BIOS. F000 is where a real
+        // BIOS goes, and there is one now, so it moved. See DEFAULT_TRAP_SEG.
+        trapRegion(),
     ],
     chips: [],
 });

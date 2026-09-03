@@ -6,14 +6,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { I8086Machine } from '../src/i8086-machine.js';
-import { createDos8086, TRAP_SEG } from '../src/i8086-dos.js';
+import { createDos8086, TRAP_SEG, trapRegion } from '../src/i8086-dos.js';
 
 /** A machine with both: 768K of RAM for DOS, and a PIC + PIT wired IRQ0. */
 const BOTH = Object.freeze({
     clockHz: 5_000_000,
     regions: [
         { kind: 'ram', start: 0x00000, end: 0xbffff },
-        { kind: 'ram', start: 0xf0000, end: 0xf03ff },   // the trap page — install() needs it
+        trapRegion(),   // the trap page — install() needs it
     ],
     chips: [
         { kind: 'pic', name: 'pic1', at: 0x20 },
@@ -107,7 +107,7 @@ test('a Tier B machine with no PIC at all is unharmed by the acknowledge path', 
         clockHz: 5_000_000,
         regions: [
             { kind: 'ram', start: 0, end: 0xbffff },
-            { kind: 'ram', start: 0xf0000, end: 0xf03ff },
+            trapRegion(),
         ],
         chips: [],
     });

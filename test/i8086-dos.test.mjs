@@ -235,9 +235,28 @@ test('the machine underneath is untouched by any of this', () => {
     // this tier's entire BIOS. If a chip ever appears in this list, the tier
     // has grown hardware it does not need.
     assert.equal(DOSBOX8086.regions.length, 2);
-    assert.equal(DOSBOX8086.regions[1].start, 0xf0000);
+    assert.equal(DOSBOX8086.regions[1].start, TRAP_SEG << 4);
     assert.equal(DOSBOX8086.regions[1].end - DOSBOX8086.regions[1].start + 1, 1024);
     assert.equal(VRAM, 0xb8000);
+
+    // THE TRAP MUST NOT SIT WHERE REAL HARDWARE DOES, and this is the
+    // assertion rather than a comment because the address it used to hold —
+    // F000 — is the system BIOS on every PC ever built, and a real BIOS ROM
+    // is now being written for this tier. Naming the forbidden windows means
+    // a future move cannot quietly land back on top of something.
+    const base = TRAP_SEG << 4;
+    const FORBIDDEN = [
+        ['conventional RAM, where programs load', 0x00000, 0x9ffff],
+        ['EGA/VGA graphics', 0xa0000, 0xaffff],
+        ['MDA/Hercules and CGA text', 0xb0000, 0xbffff],
+        ['video option ROM', 0xc0000, 0xc7fff],
+        ['hard disk controller ROM', 0xc8000, 0xcbfff],
+        ['system BIOS and ROM BASIC', 0xf0000, 0xfffff],
+    ];
+    for (const [what, lo, hi] of FORBIDDEN) {
+        assert.ok(base + 1023 < lo || base > hi,
+            `the trap page at ${base.toString(16)}h overlaps ${what} (${lo.toString(16)}h-${hi.toString(16)}h)`);
+    }
 });
 
 test('the video mode a program sets is recorded, and the renderer can read it', async () => {
@@ -487,7 +506,7 @@ test('INT 10h/06h scrolls a WINDOW, and AL=0 blanks it', () => {
     // Scroll rows 2..4 up by one. Rows 0, 1 and 5 must not move.
     m.cpu.ah = 0x06; m.cpu.al = 1; m.cpu.bh = 0x07;
     m.cpu.ch = 2; m.cpu.cl = 0; m.cpu.dh = 4; m.cpu.dl = 79;
-    m.cpu.cs = 0xf000; m.cpu.ip = 0x10 * 4;      // stand on the INT 10h trap
+    m.cpu.cs = TRAP_SEG; m.cpu.ip = 0x10 * 4;    // stand on the INT 10h trap
     m.cpu.ss = 0x0800; m.cpu.sp = 0xfff8;
     dos.service();
 
@@ -512,7 +531,7 @@ test('INT 10h/07h scrolls the other way', () => {
     }
     m.cpu.ah = 0x07; m.cpu.al = 1; m.cpu.bh = 0x07;
     m.cpu.ch = 0; m.cpu.cl = 0; m.cpu.dh = 3; m.cpu.dl = 79;
-    m.cpu.cs = 0xf000; m.cpu.ip = 0x10 * 4;
+    m.cpu.cs = TRAP_SEG; m.cpu.ip = 0x10 * 4;
     m.cpu.ss = 0x0800; m.cpu.sp = 0xfff8;
     dos.service();
     assert.equal(dos.screenText()[0], '', 'blank appears at the TOP');
