@@ -15,8 +15,14 @@
 //   * behind it are src/upd765.js and src/i8237.js on the bus at 3F0h and
 //     00h, moving sectors over DMA channel 2,
 //   * INT 10h, INT 16h, INT 1Ah, INT 08h and INT 09h are the ROM's,
-//   * and src/i8086-dos.js IS NOT INSTALLED AT ALL. Not a reduced vector
-//     set: the module is not imported and nothing it provides is present.
+//   * and src/i8086-dos.js IS NOT INSTALLED ON THAT MACHINE AT ALL. Not a
+//     reduced vector set: nothing it provides is present on the hardware
+//     machine, and every vector the boot uses was installed by the ROM's own
+//     POST. The module IS imported by this file -- run 2 below builds the
+//     comparison boot with it -- so the independence claim is about the
+//     machine under test, not about the file. Said precisely because the
+//     whole value of this test rests on that claim, and a claim stated
+//     loosely enough to be false is one nobody can check.
 //
 // WHY THAT IS A DIFFERENT TEST AND NOT A LONGER ONE. Two independent
 // implementations of "read sector N" now have to produce the same nine
