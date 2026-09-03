@@ -600,7 +600,7 @@ plus a BIOS and a DOS. Months, and a different product from "learn the 8086
 on a breadboard" — it should be started only when tiers A and B are shipped
 and a lesson actually needs it.
 
-### Licence rulings for the 8086 tier (verified 2026-09-03)
+### Licence rulings for the 8086 tier (verified 2026-09-03, expanded 2026-09-03, support-chip oracles added 2026-09-03)
 
 | Source | Licence | Ruling |
 | --- | --- | --- |
@@ -612,9 +612,58 @@ and a lesson actually needs it.
 | GREENSHELLRAGE/8086-breadboard-computer | **no LICENSE file** | All rights reserved. The ARCHITECTURE may inspire (not copyrightable); the ROM binaries and .asm may not be copied. |
 | emu8086.inc | unclear | REFUSED. Re-implement the macros. |
 | MartyPC, PCjs | MIT | Readable as reference implementations; not vendored. Reading an MIT implementation ships no third-party code. |
+| jasaldivara/retro-dos-graphics | MIT | Shippable WITH ATTRIBUTION. 180 KB NASM across 28 files — CGA, joystick I/O, PC speaker, scrolling. Richest single corpus for Tier C peripheral testing. |
+| FaizanAli7005/typing-balloon-game-asm | MIT | Shippable WITH ATTRIBUTION. 41 KB NASM, broad BIOS interrupt coverage (timer, keyboard, video, speaker). |
+| milyas-io/Assembly-Breakout-Game | MIT | Shippable WITH ATTRIBUTION. 20 KB MASM/TASM, mode 13h graphics, collision, speaker. |
+| Fahad1110136/Maze_Runner_Go | MIT | Shippable WITH ATTRIBUTION. Custom ISRs for INT 08h/09h, direct B800h video, timer chaining. |
+| Azdahah/Snake-Game-8086-Assembly | MIT | Shippable WITH ATTRIBUTION. Clean, self-contained, keyboard + speaker + video memory. |
+| rvalles/optromloader | MIT | Shippable WITH ATTRIBUTION. Pure 8086 fasm bootblock, no post-8086 instructions. Tier A material. |
+| rsanguini/jogo-da-velha-assembly | MIT | Shippable WITH ATTRIBUTION. MODEL SMALL MASM, 30+ procedures, AI. Tier B material (text I/O only). |
+| mirkonikic/boot_from_the_pdf | MIT | Shippable WITH ATTRIBUTION. Boot sector programs, decent opcode exercisers. |
+| paramendula/playground | MIT | Shippable WITH ATTRIBUTION. NASM bootloader/kernel, archived/incomplete. |
+| abdi219/COAL_MultiDigitArrayInputOutput | MIT | Shippable WITH ATTRIBUTION. Small, INT 21h only. Tier B material. |
+| Gudhein3/mybios | MIT | Shippable WITH ATTRIBUTION. Trivially small (573 B skeleton). |
+| jesus966/libcassette | MIT | C90 library for IBM 5150 cassette port, not assembly. Useful only for compiled output testing. |
+| DOS-History/Paterson-Listings | MIT (names Microsoft Corp.) | **USE WITH CAUTION.** LICENSE names Microsoft as copyright holder and Scott Hanselman brokered the release, but no public Microsoft announcement found covering 86-DOS 1.00 specifically (MS-DOS 1.25+ is a different codebase). **REFUSE Bundles 9-10 (BASIC-86 Compiler runtime)** — a separate Microsoft product with no visible license grant. Usable as test corpus with attribution; do not vendor. |
+| jeffreypalermo/Paterson-Listings-DOS | MIT (names Microsoft Corp.) | Fork of DOS-History/Paterson-Listings; same caveats. Added analysis docs are validly Palermo's. |
+| ptsource/X86-DOS-OS-Builder | MIT (PTSource + Microsoft Corp.) | **SOUND for the MS-DOS 4.0 portions** — built on the officially MIT-released Microsoft codebase. PTSource's own tooling is validly theirs. |
+| vgrichina/dos10 | MIT | **The JS assembler (scpasm.js) is CLEAN** — a reimplementation, no historical IP. The 86-DOS .asm source it builds inherits the Paterson-Listings caveat. |
+| nand2mario/z8086 | Apache 2.0 (SystemVerilog); **microcode ROM is Intel's** | REFUSED as oracle. Ships `ucode.hex` — 512×21-bit words of Intel's original 8086 microcode extracted from a decapped chip. The SystemVerilog is Apache 2.0 but the microcode content is Intel's copyrighted work. Do not vendor, do not reference. SingleStepTests is the better oracle and is already in use. |
+| Intel 8086 ISA (the instruction set itself) | n/a | **NO BARRIER.** Functional behavior is not copyrightable (*Lotus v. Borland* 1995, *Google v. Oracle* 2021). All 8086-era patents expired by the late 1990s. Intel's manual text is copyrighted but reading it and implementing behavior is standard practice. Precedent: QEMU, Bochs, DOSBox, 86Box, v86, MartyPC — decades of open-source 8086 emulators with zero Intel legal challenges. Do not copy Intel microcode ROM contents or paste manual text into source. |
 
 Consequence: **every ROM in this tier is ours**, at every tier. That is a
 cost, and it is also the reason the tier can ship at all.
+
+#### Support-chip oracles: 8254 PIT, 8259 PIC, 8251 USART (added 2026-09-03)
+
+The support chips (`i8254.js`, `i8259.js`, `i8251.js`) were written clean-room
+from the Intel datasheets. What follows are the references used to CROSS-CHECK
+them. The headline: the same author who produced our CPU oracle
+(SingleStepTests) also covers the peripherals, and it is **MIT** — so for the
+PIT and PIC we are not confined to the oracle-only carve-out; the structure may
+be read and adapted with attribution.
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| dbalsom/arduino_8253 | MIT | **BEST PIT ORACLE.** Real-8253 Arduino interface **plus a reference emulator developed against the physical chip**; datasheet says the 8254 is investigable with the same rig (pin/function compatible). Diffing `i8254.js` against it is close to diffing against silicon. Read + adapt with attribution. |
+| dbalsom/martypc — `crates/lib/marty_core/src/devices/{pit,pic,serial}.rs` | MIT | PIT "highly accurate"; PIC "mostly complete, **missing priority rotation and nested modes**" — exactly the scope `i8259.js` built and skipped. `serial.rs` is an **INS8250, not an 8251** — not a USART reference. Read as reference; not vendored. |
+| hotkeysoft/emulators — `8086/Hardware/Device8254`, `Device8259`, `Device8250` | MIT | Additional MIT PIT/PIC cross-check (C++). Has an 8250 UART, no 8251. |
+| ajokela/retro-z80-emulator — `src/serial.rs` | MIT | **First MIT 8251 reference (Rust)** — but LOWER FIDELITY than ours: mode and command share one field, no mode→command sequence, no internal-reset rewind, no TxEN gating. It would mishandle the soft-reset init dance. Confirms our sequence model is necessary, not gold-plating. Sanity reference only. |
+| SIrfanH/8086-mp-8251-usart-auto-complete-demo | MIT | **Shippable 8251 test material WITH ATTRIBUTION.** 8086 asm + Proteus circuit. Its init sequence (mode → 0x40 soft-reset → mode → enable) validated `i8251.js`, and its serial protocol is wired up as an end-to-end test (`test/i8086-devices.test.mjs`). |
+| MAME (current upstream) — `src/devices/machine/{i8251,pit8253,pic8259}.cpp` | **BSD-3-Clause** (per each file's `// license:` header; MAME-the-project is GPL-2.0 but these device files are individually BSD-3) | **PERMISSIVE — the spec-grade 8251 reference we were missing.** Readable and adaptable WITH the BSD-3 notice. Also permissive PIT/PIC cross-checks. Verify the header on the exact revision you read; the relicensing landed ~2015-16. |
+| MAMEHub (MisterTea) — `Sources/Emulator/.../i8251.h` | GPL-2.0 (2014 snapshot, PRE-relicense) | ORACLE-ONLY. This old fork predates MAME's BSD-3 relicensing, so THIS copy is GPL. Use current upstream mamedev/mame for the BSD-3 grant, not this. |
+| geo-tp/Cardputer-Game-Station-Emulators (fMSX subtree) | wrapper says MIT; **upstream fMSX is Marat Fayzullin's non-commercial licence** | **REFUSED — licence-laundering trap.** The repo's MIT LICENSE does NOT override fMSX's upstream terms (free for non-commercial use only, no redistribution for profit). fMSX-derived 8251/8255 code is not usable regardless of the wrapper. |
+| andrewthecodertx/rust-imsai-emulator | MIT | 8080/IMSAI, Rust. Permissive but peripheral to the 8086 support chips; note only if it grows an 8251. |
+| leon-anavi/xmame-arm (`einstein.c`), johnsonjh/com-cpm, HardenedBSD vt100 port | GPL (xmame) / custom / n/a | ORACLE-ONLY or DOCUMENTATION. Tatung Einstein uses an 8251 but the source is GPL; the CP/M and vt100 items are behavioural/doc references, not adoptable. |
+| QEMU `hw/intc/i8259.c` + `hw/timer/i8254.c`; Bochs (LGPL) | GPL-2.0 / LGPL | ORACLE-ONLY. Reach for only to resolve a behaviour the MIT sources leave ambiguous. |
+| ecodolphin/i8254-Emulator | **no LICENSE** | ORACLE-ONLY, low value. All rights reserved: no copy, no ship, avoid reading structure. A UI applet, hard to automate; `arduino_8253` is strictly better. |
+| doguknY/8086_Proteus_Simulations | **no LICENSE** | REFERENCE-FOR-WIRING-IDEAS ONLY. Binary Proteus `.pdsprj` for 8251/8254/8255/8259 — can't ship, can't load into the engine. Circuit topology isn't copyrightable, so independently redrawing a decode for `i8086-extract.js` test cases is fine; the files are not. |
+| Hades USART 8251 web demo (tams.informatik.uni-hamburg.de) | courseware, unclear | DOCUMENTATION / BEHAVIOURAL reference only. Java applet; do not copy. |
+
+Consequence for the support chips: the PIT and PIC have a hardware-backed MIT
+oracle; the 8251 has no spec-grade MIT source, so its correctness rests on the
+datasheet, the MIT SIrfanH demo (validated end-to-end), and MAME as an
+oracle-only fallback.
 
 ---
 

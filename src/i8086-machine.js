@@ -20,11 +20,16 @@
  * cycle count, and only pin-level effects cross the boundary, in the same
  * {tMs, pin, level} shape every other device emits.
  *
- * INTERRUPT DELIVERY IS NOT HERE YET. The core deliberately does not
- * deliver INTR or NMI on its own; that is this layer's job, and it arrives
- * with the 8259 (ROADMAP E6.3) together with the IF check and the
- * one-instruction inhibition after a segment-register load. Until then a
- * HLT parks the machine and only time passes.
+ * INTERRUPT DELIVERY LIVES HERE. The core deliberately does not deliver
+ * INTR on its own; this layer does it (ROADMAP E6.3). When an 8259 is on
+ * the machine, step() checks its INTR output before each instruction: if
+ * the line is asserted AND the CPU's interrupt flag is set, the machine
+ * runs the acknowledge cycle (pic.acknowledge() → vector), delivers it
+ * through cpu.interrupt(vector), and a HLT waiting on a timer tick wakes.
+ * A peripheral reaches the PIC by declaring `irq: n` in its config; a
+ * PIT counter's OUT and a UART's IRQ pin are wired the same way. The
+ * one-instruction inhibition after a segment-register load is the core's
+ * concern and is not modelled at this resolution.
  *
  * @module
  */
@@ -32,23 +37,47 @@ import { I8086 } from './i8086.js';
 import { I8255 } from './i8255.js';
 import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
+import { I8254 } from './i8254.js';
+import { I8259 } from './i8259.js';
+import { I8251 } from './i8251.js';
+
+/** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
+const IF = 0x0200;
+
+/**
+ * Which register of a decoded window an address hits, honouring the
+ * window's stride (address step per register) and mirroring past the
+ * register count the way an under-decoded window does on the bench.
+ */
+function regOf(w, addr) {
+    return Math.floor((addr - w.start) / w.stride) % w.regs;
+}
 
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz CPU clock
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions
  *   inclusive PHYSICAL address ranges in the 1 MB space
- * @property {Array<{kind: 'ppi'|'uart16550'|'acia6850', name: string, at: number,
- *   bus?: 'io'|'mem', span?: number, xtal?: number, inputs?: object}>} chips
+ * @property {Array<{kind: 'ppi'|'uart16550'|'acia6850'|'pit'|'pic'|'usart8251',
+ *   name: string, at: number, bus?: 'io'|'mem', span?: number, xtal?: number,
+ *   inputs?: object, irq?: number, irqChannel?: number}>} chips
  *   `at` is a port address when bus is 'io' (the default) and a physical
  *   address when it is 'mem'. `span` widens the decoded window past the
  *   chip's register count — PARTIAL DECODE, the breadboard normal, where
  *   registers mirror through the window because the high address lines
- *   were never wired to the comparator.
+ *   were never wired to the comparator. `irq` names the PIC input line a
+ *   chip's interrupt output is wired to (a serial chip's IRQ pin, or a
+ *   PIT counter's OUT); `irqChannel` picks which PIT counter drives it
+ *   (default 0, the way OUT0 feeds IRQ0 on a PC).
  */
 
 /** Registers each chip kind answers to; the window mirrors past it. */
-const REGS = { ppi: 4, uart16550: 8, acia6850: 2 };
+const REGS = {
+    ppi: 4, uart16550: 8, acia6850: 2,
+    pit: 4,          // counters 0/1/2 and the control word
+    pic: 2,          // A0 selects command/status vs data/mask
+    usart8251: 2,    // C/D selects data vs control/status
+};
 
 /**
  * The canonical 8086 breadboard preset — OURS, not a copy of anyone's.
@@ -119,14 +148,60 @@ export class I8086Machine {
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
                     clockHz: c.xtal || config.clockHz,
                 });
+            } else if (c.kind === 'pit') {
+                chip = new I8254({
+                    onOutput: (channel, level) => this._pitOutput(c, channel, level),
+                });
+            } else if (c.kind === 'pic') {
+                // The INTR output is polled in step(); the hook is only a
+                // convenience for a test or UI that wants the edge.
+                chip = new I8259({
+                    onInterrupt: (active) => { if (this.hooks.onIntr) this.hooks.onIntr(c.name, active); },
+                });
+            } else if (c.kind === 'usart8251') {
+                chip = new I8251({
+                    onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
             } else {
                 chip = new MC6850({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
                 });
             }
             this.chips[c.name] = chip;
-            const win = { name: c.name, chip, regs, start: c.at, end: c.at + span - 1 };
+            // `stride` is the address step between consecutive registers. It
+            // is 1 for a chip whose register select rides A0, and 2 for the
+            // "even addresses only" wiring an 8086's 16-bit bus gives a
+            // byte-wide device — data at the base, the next register two
+            // ports up, the odd address in between mirroring the register
+            // below it (A0 unwired).
+            const stride = c.stride || 1;
+            const win = {
+                name: c.name, chip, regs, stride,
+                start: c.at, end: c.at + stride * span - 1,
+            };
             ((c.bus ?? 'io') === 'io' ? this._io : this._mmio).push(win);
+        }
+
+        // The master PIC — the one step() polls to deliver INTR. A breadboard
+        // has at most one; if there are several, the first declared wins.
+        this._pic = Object.values(this.chips).find((c) => c instanceof I8259) || null;
+
+        // Wire each interrupting peripheral's output to its PIC line. The PIT
+        // routes through _pitOutput (it has three outputs, only one of which
+        // is the IRQ source); a serial chip drives onIrqChange directly. The
+        // wiring is a second pass so a peripheral declared before the PIC in
+        // config order still finds it.
+        this._irqLines = {};
+        for (const c of config.chips || []) {
+            if (c.irq == null) continue;
+            const chip = this.chips[c.name];
+            if (chip instanceof I8254) {
+                this._irqLines[c.name] = { irq: c.irq, channel: c.irqChannel ?? 0 };
+            } else if (chip && chip.hooks) {
+                chip.hooks.onIrqChange = (asserted) => {
+                    if (this._pic) this._pic.setIRQ(c.irq, asserted ? 1 : 0);
+                };
+            }
         }
 
         this.cpu = new I8086({
@@ -143,7 +218,7 @@ export class I8086Machine {
     // ---- the memory bus -------------------------------------------------
     _read(addr) {
         for (const w of this._mmio) {
-            if (addr >= w.start && addr <= w.end) return w.chip.read((addr - w.start) % w.regs);
+            if (addr >= w.start && addr <= w.end) return w.chip.read(regOf(w, addr));
         }
         for (const r of this._mem) if (addr >= r.start && addr <= r.end) return this.mem[addr];
         return 0xff;   // open bus reads high, like the undriven data lines
@@ -151,7 +226,7 @@ export class I8086Machine {
 
     _write(addr, val) {
         for (const w of this._mmio) {
-            if (addr >= w.start && addr <= w.end) { w.chip.write((addr - w.start) % w.regs, val); return; }
+            if (addr >= w.start && addr <= w.end) { w.chip.write(regOf(w, addr), val); return; }
         }
         for (const r of this._mem) {
             if (addr < r.start || addr > r.end) continue;
@@ -165,14 +240,14 @@ export class I8086Machine {
     // ---- the port bus ---------------------------------------------------
     _in(port) {
         for (const w of this._io) {
-            if (port >= w.start && port <= w.end) return w.chip.read((port - w.start) % w.regs);
+            if (port >= w.start && port <= w.end) return w.chip.read(regOf(w, port));
         }
         return 0xff;
     }
 
     _out(port, val) {
         for (const w of this._io) {
-            if (port >= w.start && port <= w.end) { w.chip.write((port - w.start) % w.regs, val); return; }
+            if (port >= w.start && port <= w.end) { w.chip.write(regOf(w, port), val); return; }
         }
     }
 
@@ -190,6 +265,15 @@ export class I8086Machine {
                 this.hooks.onPinChange(pin, level, this.tMs);
             }
         }
+    }
+
+    /** A PIT counter's OUT changed. If it is the wired IRQ source, drive the PIC. */
+    _pitOutput(config, channel, level) {
+        const wiring = this._irqLines[config.name];
+        if (wiring && wiring.channel === channel && this._pic) {
+            this._pic.setIRQ(wiring.irq, level ? 1 : 0);
+        }
+        if (this.hooks.onPitOutput) this.hooks.onPitOutput(config.name, channel, level);
     }
 
     // ---- loading and running --------------------------------------------
@@ -260,8 +344,25 @@ export class I8086Machine {
         return Math.max(1, Math.min(h, Math.round(this.clockHz / 1000)));
     }
 
+    /**
+     * Deliver a pending hardware interrupt if the PIC's INTR line is
+     * asserted and the CPU will take it (IF set). The acknowledge cycle
+     * reads the vector from the PIC and wakes a halted CPU. Returns true
+     * if an interrupt was taken.
+     */
+    _serviceInterrupts() {
+        if (!this._pic || !this._pic.intActive) return false;
+        if (!(this.cpu.flags & IF)) return false;
+        const vector = this._pic.acknowledge();
+        this.cpu.interrupt(vector);   // pushes flags/cs/ip, clears halted
+        return true;
+    }
+
     /** Execute one instruction (or, while halted, let time pass). */
     step() {
+        // A hardware interrupt is checked before the next instruction; it
+        // also wakes a HLT that was waiting for the timer or the UART.
+        this._serviceInterrupts();
         if (this.cpu.halted) {
             const n = this._wakeHorizon();
             this.cycles += n;
