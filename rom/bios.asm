@@ -2582,10 +2582,15 @@ fdx_begin:
     mov  dx, ax
     mov  cl, 4
     shl  ax, cl                 ; the low sixteen bits of ES*16
-    shr  dx, 1
-    shr  dx, 1
-    shr  dx, 1
-    shr  dx, 1                  ; ...and its top four: the page
+    mov  cl, 12
+    shr  dx, cl                 ; ...and its top four: bits 16-19 of ES*16 are
+                                ; bits 12-15 of ES, which is TWELVE places
+                                ; right and not four. Four is the shift that
+                                ; makes the address, not the shift that
+                                ; extracts the page out of it, and getting it
+                                ; wrong puts a page number of ES>>4 in the
+                                ; latch -- pointing the transfer at a random
+                                ; megabyte while the offset stays right.
     add  ax, [bp+F_BX]
     adc  dx, 0                  ; the carry BX makes belongs to the PAGE, and
                                 ; this is the only place it is ever allowed to
@@ -2653,6 +2658,41 @@ fdx_begin:
     out  PORT_DMA_MASK, al
 
     ;-- the drive ---------------------------------------------------------
+    mov  dl, [bp+F_DL]
+    and  dl, 3
+    mov  cl, dl
+    mov  bl, 1
+    shl  bl, cl                 ; this drive's bit in 0040:003E
+
+    ; A DRIVE THAT IS NOT MARKED HOMED MEANS THE CONTROLLER IS NOT KNOWN
+    ; EITHER, and the reset here is for the controller, not the head.
+    ;
+    ; The chip powers up held in reset by a DOR of zero. The FIRST write that
+    ; raises bit 2 takes it out, and a uPD765 leaving reset raises IRQ6 once
+    ; and then queues FOUR ready-change statuses -- one per drive -- waiting
+    ; to be collected. Until they are collected the interrupt request stays
+    ; asserted, and an asserted line produces no further EDGE: the 8259 is
+    ; edge triggered, so the recalibrate that follows completes, raises
+    ; nothing the PIC can see, and the driver waits for an interrupt that has
+    ; in a real sense already happened. One timeout, on the first access, on
+    ; a machine where everything is wired correctly.
+    ;
+    ; So the recovery for "I do not know where the head is" is a full reset,
+    ; which drains those four and reissues SPECIFY, and not a bare
+    ; RECALIBRATE. It is done BEFORE the motor starts so that the reset's own
+    ; clearing of 0040:003F does not throw away a spin-up that has just been
+    ; paid for.
+    test [BDA_SEEKSTAT], bl
+    jnz  fdx_awake
+    call fd_reset
+    jnc  fdx_awake
+fdx_giveup:
+    ; fd_reset, fd_recal and fd_seek have already put their status in AL. The
+    ; near JMP is the jump-range fix again; the countdown is restarted on the
+    ; way out so a failed access leaves the motor on a timer, not on for ever.
+    jmp  fdx_fail
+fdx_awake:
+
     ; The motor countdown is pinned at its maximum for the duration. INT 08h
     ; decrements it every tick and switches the motor OFF at zero, and a
     ; countdown left over from the previous access can expire in the middle
@@ -2664,22 +2704,18 @@ fdx_begin:
     call fd_select
     call fd_spinup
 
-    ; A drive whose head has not been homed since the last reset has it
-    ; wherever it was left, and SEEK is relative to the chip's count of steps
-    ; it has issued -- not to anything it can measure. Homing once is what
-    ; makes every seek after it mean something.
+    ; And now the head. SEEK is relative to the chip's count of the steps it
+    ; has issued, not to anything it can measure, so until the head has been
+    ; driven onto the track-0 sensor once the chip's count means nothing.
+    mov  dl, [bp+F_DL]
+    and  dl, 3
     mov  cl, dl
     mov  bl, 1
     shl  bl, cl
     test [BDA_SEEKSTAT], bl
     jnz  fdx_homed
     call fd_recal
-    jnc  fdx_homed
-fdx_giveup:
-    ; fd_recal and fd_seek have already put their status in AL. The near JMP
-    ; is the range fix again; the countdown is restarted on the way out so a
-    ; failed access leaves the motor on a timer rather than on for ever.
-    jmp  fdx_fail
+    jc   fdx_giveup
 fdx_homed:
 
     mov  ch, [bp+F_CH]          ; cylinder
