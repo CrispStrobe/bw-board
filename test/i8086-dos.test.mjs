@@ -602,3 +602,36 @@ test('a program gets a real command tail and the two FCBs DOS builds from it', (
     for (let i = 0; i < 8; i++) n2 += String.fromCharCode(at(0x6d + i));
     assert.equal(n2, 'OUT     ');
 });
+
+test('a machine with a real BIOS keeps its ROM services; DOS takes only its own', async () => {
+    // Two implementations of INT 13h with the later loader winning is not a
+    // layering, it is a race. When a real BIOS ROM has filled the vector
+    // table, install() must not overwrite the vectors the ROM answers.
+    const { DOS_VECTORS } = await import('../src/i8086-dos.js');
+    const m = new I8086Machine(DOSBOX8086);
+
+    // Stand in for a POST: point INT 13h at a handler of the ROM's own.
+    m._write(0x13 * 4, 0x00); m._write(0x13 * 4 + 1, 0xf1);
+    m._write(0x13 * 4 + 2, 0x00); m._write(0x13 * 4 + 3, 0xf0);
+
+    const dos = createDos8086(m).install({ vectors: DOS_VECTORS });
+    // Segment and offset separately: `seg << 16 | off` overflows a signed
+    // 32-bit bitwise op in JS and compares as a negative number, which is
+    // how the first version of this test failed while the code was right.
+    const off = (n) => m._read(n * 4) | (m._read(n * 4 + 1) << 8);
+    const seg = (n) => m._read(n * 4 + 2) | (m._read(n * 4 + 3) << 8);
+
+    assert.equal(seg(0x13), 0xf000, 'INT 13h still points at the ROM');
+    assert.equal(off(0x13), 0xf100);
+    assert.equal(seg(0x21), 0xd000, 'but INT 21h is ours');
+    assert.equal(seg(0x10), 0x0000, 'and INT 10h was left untouched for the ROM to claim');
+
+    // And the service layer refuses to answer a vector it did not claim, even
+    // if execution somehow reaches its trap page there.
+    m.cpu.cs = 0xd000; m.cpu.ip = 0x10 * 4;
+    assert.equal(dos.service(), null, 'an unclaimed vector is not quietly serviced');
+
+    // The default is unchanged: with no ROM, DOS answers everything.
+    const bare = createDos8086(new I8086Machine(DOSBOX8086)).install();
+    assert.notEqual(bare.service, undefined);
+});

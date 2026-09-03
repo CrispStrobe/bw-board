@@ -142,6 +142,8 @@ export function createDos8086(machine, io = {}) {
     /** Every INT 03h the program executed, in order. */
     const breakpoints = [];
     let rebooted = 0;
+    /** Which interrupt numbers this layer answers. See install(). */
+    let claimed = null;
     /** Next free paragraph for INT 21h/48h. Above a .COM's 64K arena. */
     let allocTop = 0x1800;
     /** How many times the program asked for a keystroke. A run with no input
@@ -880,15 +882,40 @@ export function createDos8086(machine, io = {}) {
          * interrupt — so it is verified by read-back and refused by name
          * rather than discovered later as a mystery crash.
          */
-        install() {
-            for (let n = 0; n < 256; n++) {
+        install(opts = {}) {
+            // WHICH VECTORS TO CLAIM, and the default is "all of them"
+            // because on a machine with no BIOS ROM there is nothing else to
+            // answer them.
+            //
+            // THAT DEFAULT IS WRONG THE MOMENT A REAL BIOS EXISTS, and one
+            // now does (`rom/bios.asm` boots itself from the reset fetch and
+            // serves INT 10h/13h/16h/08h/09h/11h/12h/1Ah/19h). POST fills the
+            // vector table; install() would then overwrite it, and the ROM's
+            // services -- the ones a booted DOS is entitled to call -- would
+            // silently stop being reachable. Two implementations of INT 13h
+            // with the later loader winning is not a layering, it is a race.
+            //
+            // So a machine that boots a ROM passes the DOS set and leaves the
+            // BIOS interrupts alone, which is exactly the division real DOS
+            // keeps: DOS owns INT 20h-2Fh, the BIOS owns the rest.
+            //
+            //     dos.install({ vectors: DOS_VECTORS })
+            //
+            // `vectors` is an iterable of interrupt numbers; omit it for the
+            // no-ROM machine and nothing changes.
+            const claim = opts.vectors
+                ? [...opts.vectors].map((n) => n & 0xff)
+                : Array.from({ length: 256 }, (_, n) => n);
+            claimed = new Set(claim);
+            for (const n of claim) {
                 const off = n * TRAP_STRIDE;
                 wr16(0, n * 4, off);
                 wr16(0, n * 4 + 2, trapSeg);
                 wr8(trapSeg, off, 0xeb);       // jmp $
                 wr8(trapSeg, off + 1, 0xfe);
             }
-            if (rd8(trapSeg, 0) !== 0xeb || rd8(trapSeg, 1) !== 0xfe) {
+            const probe = claim[0] * TRAP_STRIDE;
+            if (rd8(trapSeg, probe) !== 0xeb || rd8(trapSeg, probe + 1) !== 0xfe) {
                 throw new Error(
                     `the trap page at ${trapBase.toString(16)}h is not writable: this machine `
                     + `must map ${TRAP_SIZE} bytes of RAM there — trapRegion(0x${trapSeg.toString(16)}) `
@@ -1008,6 +1035,10 @@ export function createDos8086(machine, io = {}) {
             if (cpu.cs !== trapSeg) return null;
             if (cpu.ip % TRAP_STRIDE !== 0 || cpu.ip / TRAP_STRIDE > 0xff) return null;
             const n = cpu.ip / TRAP_STRIDE;
+            // Only answer what we claimed. A vector left to the BIOS ROM
+            // whose handler happens to land here is a bug worth seeing, not
+            // one worth quietly servicing.
+            if (claimed && !claimed.has(n)) return null;
             const h = HANDLERS[n];
             controlTransferred = false;
             if (h) h();
@@ -1113,6 +1144,22 @@ export function createDos8086(machine, io = {}) {
  * make a beep audible. Three chips, because twenty-four programs ask for
  * them, and nothing else.
  */
+/**
+ * The vectors DOS owns when a real BIOS is present.
+ *
+ * INT 20h-2Fh is the DOS range, and it is the whole of it: 20h terminate,
+ * 21h the service call, 22h-24h the terminate/break/error handler ADDRESSES
+ * (which are pointers DOS stores in the PSP, not handlers), 25h/26h absolute
+ * disk read and write, 27h terminate-and-stay-resident, and the rest
+ * reserved. Everything below 20h belongs to the BIOS and the hardware, and
+ * a DOS that claimed INT 13h would be taking the disk away from the ROM
+ * that owns the controller.
+ */
+export const DOS_VECTORS = Object.freeze([
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29,
+    0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+]);
+
 export const DOSBOX8086_XT = Object.freeze({
     clockHz: 5_000_000,
     regions: [
