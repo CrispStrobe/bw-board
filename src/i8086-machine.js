@@ -44,6 +44,8 @@ import { I8259 } from './i8259.js';
 import { I8251 } from './i8251.js';
 import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
+import { HerculesCard } from './hercules-card.js';
+import { VGACard } from './vga-card.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
 const IF = 0x0200;
@@ -82,6 +84,8 @@ const REGS = {
     pic: 2,          // A0 selects command/status vs data/mask
     usart8251: 2,    // C/D selects data vs control/status
     cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
+    hercules: 16,    // the 3B0h-3BFh block (mode 3B8h, status 3BAh, config 3BFh)
+    vga: 32,         // the 3C0h-3DFh block (attr/seq/gc/crtc/dac/misc + status)
 };
 
 /**
@@ -256,6 +260,14 @@ export class I8086Machine {
                 });
             } else if (c.kind === 'cga') {
                 chip = new CGACard(config.clockHz, {
+                    onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
+                });
+            } else if (c.kind === 'hercules') {
+                chip = new HerculesCard(config.clockHz, {
+                    onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
+                });
+            } else if (c.kind === 'vga') {
+                chip = new VGACard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
                 });
             } else {
