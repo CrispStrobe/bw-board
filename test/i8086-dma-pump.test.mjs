@@ -77,6 +77,20 @@ test('terminal count reaches the FDC TC pin AND still forwards onDmaComplete', (
     assert.equal(m._read(0x3000), 0xa5, 'and the bytes actually moved');
 });
 
+test('a DISABLED controller makes the pump report no move — the TC/failure signal', () => {
+    // The paranoid BIOS reads 8237 status after a "successful" read to catch
+    // exactly this: the controller said done, the transfer never happened. Use
+    // the command-register DISABLE bit, NOT the channel mask — a real BIOS
+    // unmasks the channel itself while programming, so a mask would be gone by
+    // the time the read starts and the test would pass for the wrong reason.
+    const m = fdcMachine();
+    programCh2(m, 0x5000, 0x00, 3);
+    m._out(0x08, 0x04);                               // command register: disable the controller
+    const r = m.chips.fdc1.hooks.onDmaRequest('write', 0x33);
+    assert.equal(r, false, 'a disabled 8237 moves nothing and the pump says so');
+    assert.equal(m._read(0x5000), 0x00, 'and no byte landed');
+});
+
 test('a read transfer (memory->device) returns the memory byte through the pump', () => {
     const m = fdcMachine();
     m._write(0x4000, 0x7e);
