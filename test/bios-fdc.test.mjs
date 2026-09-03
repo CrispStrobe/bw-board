@@ -485,6 +485,109 @@ test('a zero sector count is refused rather than being read as 65,536 bytes', ()
     assert.equal(m.mem[0x5000], 0xee);
 });
 
+test('a request that runs off the end of the cylinder is not a disk error', () => {
+    // A uPD765 stops at the last sector of a cylinder. It will not step to
+    // the next one, and asked for more it sets ST1 bit 7 (end of cylinder)
+    // and terminates abnormally. Twenty sectors from head 1 sector 5 leaves
+    // it five short.
+    //
+    // This is why our boot sector and our IO.SYS both read ONE sector per
+    // INT 13h call. It is also the shape a driver bug takes when the DMA
+    // byte count and the sector count disagree, which is why the status is
+    // "controller failure" and not something that points at the medium.
+    const m = ready();
+    run(m, CALL13(' mov ax, 0214h\n mov cx, 0005h\n mov dx, 0100h\n mov bx, 5000h'),
+        4_000_000);
+    const r = result(m);
+    assert.equal(r.cf, 1);
+    assert.equal(r.ah, 0x20, 'AH = 20h, controller failure');
+    assert.equal(m.mem[BDA + 0x43] & 0x80, 0x80,
+        'ST1 bit 7 (end of cylinder) is what it was decoded from');
+    // The five sectors that WERE on the cylinder still arrived, which is
+    // what makes this a partial transfer rather than a refusal.
+    const want = sectorBytes(m.image, 0, 1, 5);
+    assert.equal(m.mem[0x5000], want[0], 'the sectors that existed were still read');
+});
+
+// ---------------------------------------------------------------------------
+// The status decode, driven directly.
+//
+// Two of its branches CANNOT be reached through this controller: src/upd765.js
+// computes no CRC, so ST1's data-error bit never sets, and it only ever sets
+// the missing-address-mark bit together with ST0's not-ready bit, which is
+// caught earlier. A branch nothing can reach is a branch nothing tests, and
+// deleting it is not the answer -- a real uPD765 sets both, and folding them
+// into "controller failure" would report a scratched disk as broken hardware.
+//
+// So the routine is called directly with the result bytes staged in
+// 0040:0042, which is exactly the interface it reads. Every branch, driven.
+// ---------------------------------------------------------------------------
+
+/**
+ * Call a near procedure in the ROM with DS = 0040h, and a return address
+ * that lands on the ROM's own halt loop so the CPU stops when it returns.
+ */
+function callRomProc(m, name) {
+    const at = rom.symbols.get(name).value;
+    const back = rom.symbols.get('post_dead').value;
+    m.cpu.ss = 0; m.cpu.sp = 0x6ffe;
+    m.mem[0x6ffe] = back & 0xff;
+    m.mem[0x6fff] = (back >> 8) & 0xff;
+    m.cpu.cs = 0xf000; m.cpu.ip = at;
+    m.cpu.ds = 0x0040;
+    m.cpu.flags &= ~0x0201;             // interrupts off, carry clear
+    m.cpu.halted = false;
+    let n = 0;
+    while (n < 100_000 && !m.cpu.halted) { m.step(); n++; }
+    assert.ok(m.cpu.halted, `${name} never returned`);
+    return { al: m.cpu.ax & 0xff, cf: m.cpu.flags & 1 };
+}
+
+test('every branch of the ST0/ST1 decode produces its documented status', () => {
+    const m = ready();
+    const CASES = [
+        { st0: 0x00, st1: 0x00, st2: 0x00, ah: 0x00, why: 'IC=00, a normal termination' },
+        { st0: 0x48, st1: 0x01, st2: 0x00, ah: 0x80, why: 'ST0 NR: no disk in the drive' },
+        { st0: 0x40, st1: 0x02, st2: 0x00, ah: 0x03, why: 'ST1 NW: write protected' },
+        { st0: 0x40, st1: 0x20, st2: 0x20, ah: 0x10, why: 'ST1 DE: a CRC error in the data field' },
+        { st0: 0x40, st1: 0x10, st2: 0x00, ah: 0x08, why: 'ST1 OR: the transfer overran' },
+        { st0: 0x40, st1: 0x04, st2: 0x10, ah: 0x04, why: 'ST1 ND: the sector was not there' },
+        { st0: 0x40, st1: 0x01, st2: 0x00, ah: 0x02, why: 'ST1 MA: no address mark at all' },
+        { st0: 0x40, st1: 0x80, st2: 0x00, ah: 0x20, why: 'ST1 EN: past the end of the cylinder' },
+        { st0: 0x80, st1: 0x00, st2: 0x00, ah: 0x20, why: 'ST0 IC=invalid: no such command' },
+        { st0: 0x40, st1: 0x00, st2: 0x00, ah: 0x20, why: 'abnormal with nothing in ST1 to say why' },
+    ];
+    for (const c of CASES) {
+        m.mem[BDA + 0x42] = c.st0;
+        m.mem[BDA + 0x43] = c.st1;
+        m.mem[BDA + 0x44] = c.st2;
+        const r = callRomProc(m, 'fd_status');
+        assert.equal(r.al, c.ah,
+            `ST0=${c.st0.toString(16)}h ST1=${c.st1.toString(16)}h (${c.why}) should decode `
+            + `to AH=${c.ah.toString(16).padStart(2, '0')}h, not ${r.al.toString(16)}h`);
+        assert.equal(r.cf, c.ah === 0 ? 0 : 1, `and CF must agree with it for ${c.why}`);
+    }
+});
+
+test('the decode is by SPECIFICITY: ST1 is read before ST0 is believed', () => {
+    // Every failure has ST0's abnormal bits set, so a decode that looked at
+    // ST0 first would report a write-protected disk, a missing sector and a
+    // CRC error as the same thing and the caller would retry all three.
+    const m = ready();
+    const same = { st0: 0x40 };
+    const seen = new Set();
+    for (const st1 of [0x02, 0x20, 0x10, 0x04, 0x01, 0x80]) {
+        m.mem[BDA + 0x42] = same.st0;
+        m.mem[BDA + 0x43] = st1;
+        m.mem[BDA + 0x44] = 0;
+        seen.add(callRomProc(m, 'fd_status').al);
+    }
+    assert.equal(seen.size, 6,
+        `six different ST1 values collapsed to ${seen.size} statuses. They must stay six: `
+        + 'write-protected, CRC, overrun, not-found, no-address-mark and end-of-cylinder are '
+        + 'six different things to do about a failed read.');
+});
+
 // ---------------------------------------------------------------------------
 // The motor, and the countdown that has been in this ROM since before there
 // was anything to spin.

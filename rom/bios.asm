@@ -2483,6 +2483,16 @@ fd_status proc near
     mov  al, [BDA_FDCRESULT+1]  ; ST1
     test al, 02h                ; NW, not writable
     jnz  fdst_wrprot
+    ; DE and MA below are decoded from the DATASHEET, not from what
+    ; src/upd765.js can produce. That model computes no CRC, so it can never
+    ; set DE, and it only sets MA together with ST0's not-ready bit, which is
+    ; caught above -- so on THIS machine neither branch is reachable through
+    ; the controller. They are still here, and they are still tested (by
+    ; staging result bytes and calling this routine directly), because the
+    ; driver is written against the chip: a model that grows a CRC layer, or
+    ; a real uPD765, sets both, and a driver that folded them into
+    ; "controller failure" would then report a scratched disk as broken
+    ; hardware.
     test al, 20h                ; DE, CRC error in an ID or data field
     jnz  fdst_crc
     test al, 10h                ; OR, the host or the 8237 did not keep up
@@ -2491,16 +2501,20 @@ fd_status proc near
     jnz  fdst_notfound
     test al, 01h                ; MA, no address mark at all
     jnz  fdst_badmark
-    ; ST1 bit 7, EN: the controller read past the last sector of the
-    ; cylinder without ever being told to stop. That is not a fault of the
-    ; medium -- it means the DMA byte count and the sector count disagreed,
-    ; so terminal count never arrived. It is OUR bug, and reporting it as a
-    ; disk error would send the caller looking at the disk.
+    ; ST1 bit 7, EN: the controller ran off the end of the cylinder without
+    ; ever being told to stop. It is not a fault of the medium, and it has
+    ; exactly two causes. Either the caller asked for more sectors than
+    ; remain on the cylinder -- a uPD765 stops at the last sector of a
+    ; cylinder and will not step to the next one, which is why every DOS
+    ; block driver, ours included, splits its requests -- or the DMA byte
+    ; count and the sector count disagreed so terminal count never arrived,
+    ; which is a bug in this file. Neither is a disk error, and reporting one
+    ; would send the caller to look at the disk.
     test al, 80h
     jnz  fdst_ctrl
-    ; ST2 has nothing this model can set that ST1 has not already covered
-    ; (no CRC, no deleted-data marks), so anything left is unaccounted for
-    ; and says so rather than picking the nearest plausible code.
+    ; ST2 holds nothing ST1 has not already covered for the commands issued
+    ; here, so anything still set is unaccounted for and says so rather than
+    ; being given the nearest plausible code.
 fdst_ctrl:
     mov  al, DSK_CTRLFAIL
     jmp  fdst_bad
