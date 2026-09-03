@@ -530,6 +530,96 @@ test('a bare data label is a memory operand; OFFSET makes it a number', () => {
     assert.equal(com('A DB 0\nMOV AL, [A+SI]'), '00 8a 04', 'and it is the same address');
 });
 
+test('a label DIFFERENCE is a number, not an address', () => {
+    // The bug the corpus's own simulator caught, and the one no test here
+    // could have: `MOV AX, TABLE_END - TABLE` assembled as a LOAD FROM
+    // ADDRESS 20 instead of the constant 20, so a macro-built table reported
+    // its size as whatever happened to be stored there. It printed a
+    // confident zero, threw nothing, and every existing assertion passed.
+    //
+    // The cause was where memory-ness was decided. A bare label IS a memory
+    // reference, but that cannot be settled on the label -- only on the
+    // whole expression, because subtraction cancels it. `segRel` going to
+    // zero is what says so.
+    assert.equal(com('T DW 1,2\nE LABEL WORD\nMOV AX, E - T'), '01 00 02 00 b8 04 00',
+        'the difference is an immediate');
+    assert.equal(com('T DW 1,2\nE LABEL WORD\nMOV AX, T'), '01 00 02 00 a1 00 00',
+        'but a bare label is still a load -- the fix must not invert MASM\'s rule');
+    assert.equal(com('T DW 1,2\nE LABEL WORD\nMOV AX, [E - T]'), '01 00 02 00 a1 04 00',
+        'and written brackets still mean a load, from the difference');
+    assert.equal(com('T DW 1,2\nE LABEL WORD\nMOV AX, (E - T) / 2'), '01 00 02 00 b8 02 00',
+        'a difference that is then divided is a number too');
+    assert.equal(com('T DW 1,2\nE LABEL WORD\nMOV AX, T + 2'), '01 00 02 00 a1 02 00',
+        'a label plus a constant is still an address');
+    // The EQU path never had the bug, because it asks `segRel && ref`
+    // rather than reading a flag. Both spellings must now agree.
+    assert.equal(com('T DW 1,2\nE LABEL WORD\nN EQU E - T\nMOV AX, N'),
+        com('T DW 1,2\nE LABEL WORD\nMOV AX, E - T'),
+        'through an EQU or written straight into the instruction: the same bytes');
+});
+
+test('a macro-built table reports the size it really is', () => {
+    // End to end, because the failure was a WRONG NUMBER rather than a
+    // crash: the only thing that shows it is the number the program prints.
+    const { dos, run } = runIt(`.MODEL SMALL
+.STACK 100H
+ITEM MACRO CODE_NO, PRICE
+    DW CODE_NO
+    DW PRICE
+ENDM
+.DATA
+    TABLE   LABEL WORD
+    ITEM 101, 250
+    ITEM 102, 175
+    ITEM 103, 990
+    ITEM 104, 45
+    ITEM 105, 1200
+    TABLE_END LABEL WORD
+    M_BYTES DB 'Bytes in the table: $'
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+    LEA DX, M_BYTES
+    MOV AH, 09H
+    INT 21H
+    MOV AX, TABLE_END - TABLE
+    CALL PRINT_DECIMAL
+    MOV AX, 4C00H
+    INT 21H
+MAIN ENDP
+PRINT_DECIMAL PROC
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    XOR CX, CX
+    MOV BX, 10
+PD_SPLIT:
+    XOR DX, DX
+    DIV BX
+    PUSH DX
+    INC CX
+    OR AX, AX
+    JNZ PD_SPLIT
+PD_EMIT:
+    POP DX
+    ADD DL, '0'
+    MOV AH, 02H
+    INT 21H
+    LOOP PD_EMIT
+    POP DX
+    POP CX
+    POP BX
+    RET
+PRINT_DECIMAL ENDP
+END MAIN
+`);
+    assert.ok(run.terminated);
+    // Five rows of two words. Twenty bytes -- not zero, and not whatever the
+    // twentieth byte of the data segment happens to hold.
+    assert.equal(dos.stdout, 'Bytes in the table: 20');
+});
+
 test('BYTE PTR and WORD PTR settle a size nothing else can', () => {
     assert.equal(com('MOV BYTE PTR [SI], 1'), 'c6 04 01');
     assert.equal(com('MOV WORD PTR [SI], 1'), 'c7 04 01 00');
@@ -794,8 +884,8 @@ test('nothing undocumented can be asked for by name', () => {
 // ---------------------------------------------------------------------------
 
 /** Assemble, load into a Tier B machine, run. */
-function runIt(src, typed = '') {
-    const r = assemble(src);
+function runIt(src, typed = '', opts = {}) {
+    const r = assemble(src, opts);
     const m = new I8086Machine(DOSBOX8086);
     const dos = createDos8086(m).install();
     if (r.format === 'exe') dos.loadExe(r.bytes); else dos.loadCom(r.bytes);
@@ -1314,6 +1404,170 @@ test('an unknown mnemonic is named before its operands get to fail first', () =>
     assert.match(e.message, /not an instruction, directive or macro/);
     // A macro of that name is of course still a macro.
     assert.equal(com("PRINT MACRO T\nDB T\nENDM\nPRINT 'ok'"), '6f 6b');
+});
+
+// ---------------------------------------------------------------------------
+// Long-jump promotion. OFF BY DEFAULT, and the default is the point: these
+// programs cannot assemble under MASM either, so promoting silently would
+// hand a learner a program that works here and nowhere else, with nothing
+// to tell them why. The refusal at least names the line.
+// ---------------------------------------------------------------------------
+
+/** A body too long for any 8-bit displacement to span. */
+const TOO_FAR = 'NOP\n'.repeat(200);
+
+/** Disassemble a raw image from `at`, returning `n` instruction texts. */
+function decodeFrom(bytes, at, n) {
+    const out = [];
+    for (let a = at; out.length < n && a < bytes.length;) {
+        const d = disasmI8086((x) => bytes[x] ?? 0, a, { ip: a });
+        VERIFIED.add(opcodeKey(d.bytes));
+        out.push(d.text);
+        a += d.length;
+    }
+    return out;
+}
+
+test('an out-of-range jump is refused by default, and the refusal offers the option', () => {
+    const e = refusal(() => assembleRaw(`BACK: ${TOO_FAR}JNZ BACK`));
+    assert.equal(e.what, 'jump out of range');
+    assert.match(e.message, /-20[0-9] bytes away/, 'it says how far away the target is');
+    assert.match(e.message, /longJumps: true/, 'and names the option that would promote it');
+    assert.match(e.message, /no longer assembles anywhere else/, 'and what that costs');
+    // Every family, still refused with nothing passed.
+    for (const mn of ['JNZ', 'JC', 'JG', 'LOOP', 'LOOPE', 'JCXZ']) {
+        assert.equal(refusal(() => assembleRaw(`BACK: ${TOO_FAR}${mn} BACK`)).what, 'jump out of range',
+            `${mn} is refused by default`);
+    }
+});
+
+test('the option changes nothing for a program that already fits', () => {
+    // The assertion that matters more than the new number: with the flag on,
+    // anything that did not need promoting must come out byte for byte the
+    // same.
+    for (const src of [
+        'HERE: JNZ HERE',
+        'HERE: LOOP HERE',
+        'JMP SHORT ON\nNOP\nON: NOP',
+        "V DW 1234h\nMOV AX, V\nCMP AX, 5\nJE OUT\nNOP\nOUT: RET",
+    ]) {
+        assert.equal(hexOf(assembleRaw(src)),
+            hexOf(assemble(`ORG 0\n${src}\nEND\n`, { format: 'com', longJumps: true }).bytes),
+            `"${src.split('\n')[0]}" is unaffected by the option`);
+    }
+});
+
+test('a promoted conditional inverts its condition and jumps over a near jump', () => {
+    const r = assemble(`ORG 0\nBACK: ${TOO_FAR}JNZ BACK\nEND\n`, { format: 'com', longJumps: true });
+    const at = 200;                       // straight after the NOPs
+    // The round trip is the check: not "five bytes that fit" but exactly the
+    // sequence meant, read back by a disassembler ground against hardware.
+    assert.deepEqual(decodeFrom(r.bytes, at, 2), ['jz 00CDh', 'jmp 0000h']);
+    assert.equal(hexOf(r.bytes.subarray(at, at + 5)), '74 03 e9 33 ff');
+    // 00CDh is the byte after the near jump, so the not-taken path falls
+    // straight through -- if it landed anywhere else the condition would be
+    // jumping into the middle of the jump it is supposed to skip.
+    assert.equal(at + 5, 0xcd, 'the inverted branch lands exactly past the near jump');
+    assert.equal(r.warnings.length, 1, 'and the promotion is recorded');
+    assert.match(r.warnings[0].message, /promoted to a branch over a near jump/);
+    assert.match(r.warnings[0].message, /no longer assemble under MASM/, 'saying what it costs');
+});
+
+test('all sixteen conditions invert to the right opposite', () => {
+    // The promotion claims that bit 0 of a conditional opcode is the sense of
+    // its condition, so XOR 1 is the inverse. That is a claim about the whole
+    // table, so the whole table is checked -- a single wrong pairing would
+    // send a program down the branch it meant to skip.
+    const PAIRS = [
+        ['JO', 'jno'], ['JNO', 'jo'], ['JB', 'jnb'], ['JNB', 'jb'],
+        ['JE', 'jnz'], ['JNE', 'jz'], ['JBE', 'jnbe'], ['JA', 'jbe'],
+        ['JS', 'jns'], ['JNS', 'js'], ['JP', 'jnp'], ['JNP', 'jp'],
+        ['JL', 'jnl'], ['JGE', 'jl'], ['JLE', 'jnle'], ['JG', 'jle'],
+    ];
+    const seen = new Set();
+    for (const [mn, inverted] of PAIRS) {
+        const r = assemble(`ORG 0\nBACK: ${TOO_FAR}${mn} BACK\nEND\n`, { format: 'com', longJumps: true });
+        const [first, second] = decodeFrom(r.bytes, 200, 2);
+        assert.equal(first, `${inverted} 00CDh`, `${mn} promotes through ${inverted.toUpperCase()}`);
+        assert.equal(second, 'jmp 0000h', `${mn} still reaches its target`);
+        seen.add(r.bytes[200]);
+    }
+    assert.equal(seen.size, 16, 'sixteen distinct inverted opcodes, so no two conditions collided');
+});
+
+test('LOOP and JCXZ promote by jumping OVER a jump, because they have neither an inverse nor a near form', () => {
+    for (const mn of ['LOOP', 'LOOPE', 'LOOPNE', 'JCXZ']) {
+        const r = assemble(`ORG 0\nBACK: ${TOO_FAR}${mn} BACK\nEND\n`, { format: 'com', longJumps: true });
+        const printed = { LOOP: 'loop', LOOPE: 'loope', LOOPNE: 'loopne', JCXZ: 'jcxz' }[mn];
+        assert.deepEqual(decodeFrom(r.bytes, 200, 3), [
+            `${printed} 00CCh`,   // taken -> the near jump at 00CCh
+            'jmp 00CFh',          // not taken -> past it
+            'jmp 0000h',          // and the near jump reaches the target
+        ], `${mn} promotes to a jump over a jump`);
+        assert.equal(hexOf(r.bytes.subarray(201, 207)), '02 eb 03 e9 31 ff',
+            `${mn} keeps the two displacements that make the shape work`);
+    }
+});
+
+test('a promoted LOOP still runs its body exactly as many times as CX said', () => {
+    // The failure the shape is designed against: get the inversion wrong here
+    // and the loop runs once, or forever, rather than failing loudly. Only
+    // running it can tell, so it is run -- with a body too long for a plain
+    // LOOP to span, which is the whole reason for the promotion.
+    const { r, dos, run } = runIt(`.MODEL SMALL
+.STACK 100H
+.DATA
+    M_TICK DB '.$'
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV CX, 5
+SPIN:
+    LEA DX, M_TICK
+    MOV AH, 09H
+    INT 21H
+    ${'NOP\n    '.repeat(200)}
+    LOOP SPIN
+    MOV AX, 4C00H
+    INT 21H
+MAIN ENDP
+END MAIN
+`, '', { longJumps: true });
+    assert.ok(run.terminated, 'it exits rather than spinning');
+    assert.equal(dos.stdout, '.....', 'five times, once per count in CX -- not once and not forever');
+    assert.ok(r.warnings.some((w) => /promoted/.test(w.message)), 'and it really was promoted');
+});
+
+test('a promoted forward conditional reaches, and the fall-through still falls through', () => {
+    const { dos, run } = runIt(`.MODEL SMALL
+.STACK 100H
+.DATA
+    M_YES DB 'taken$'
+    M_NO  DB 'fell through$'
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+    XOR AX, AX
+    JZ FAR_AWAY
+    LEA DX, M_NO
+    MOV AH, 09H
+    INT 21H
+    MOV AX, 4C00H
+    INT 21H
+    ${'NOP\n    '.repeat(100)}
+FAR_AWAY:
+    LEA DX, M_YES
+    MOV AH, 09H
+    INT 21H
+    MOV AX, 4C00H
+    INT 21H
+MAIN ENDP
+END MAIN
+`, '', { longJumps: true });
+    assert.ok(run.terminated);
+    assert.equal(dos.stdout, 'taken', 'the promoted branch went where the source said');
 });
 
 // ---------------------------------------------------------------------------

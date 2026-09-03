@@ -110,6 +110,21 @@
  * declares its data first would otherwise execute its own strings.
  * `createDos8086(...).loadExe` / `.loadCom` take either.
  *
+ * ONE THING IS OPT-IN, AND THE DEFAULT IS THE POINT. `{ longJumps: true }`
+ * promotes a conditional jump or LOOP that cannot reach into a sequence
+ * that can -- `Jcc far` into `Jncc over; JMP near far; over:`, and the LOOP
+ * family, which has neither an inverse opcode nor a near form, into a jump
+ * over a jump. It is off by default and stays off, because the fourteen
+ * corpus programs it rescues CANNOT ASSEMBLE ANYWHERE: MASM refuses them
+ * too. Promoting silently would hand a learner a program that works here
+ * and fails on the lab machine with nothing to say why, which is worse than
+ * a refusal that names the line. Faithfulness to the tool the corpus was
+ * written for is the default; reach is a choice made with the eyes open,
+ * and every promotion records a warning saying the program will no longer
+ * assemble under MASM. With the flag on, Amey goes from 510 accepted and
+ * 498 running to 524 and 512, and ten of the fourteen rescued programs are
+ * byte-identical to the corpus's own independent simulator.
+ *
  * NOT SUPPORTED, deliberately, each of which raises a named error rather
  * than encoding something plausible:
  *
@@ -372,6 +387,11 @@ class Assembler {
          *  Once a jump is known to reach in 8 bits it stays short, which is
          *  what makes the pass loop terminate instead of oscillating. */
         this.shortJump = [];
+        /** Sticky promotion decisions, filed under the same pass-stable
+         *  counter. Promotion GROWS an instruction while the short-jump
+         *  logic SHRINKS others, and a scheme that can do both without
+         *  remembering can oscillate between two layouts forever. */
+        this.promoted = [];
         this.localSeq = 0;
     }
 
@@ -1305,12 +1325,67 @@ class Assembler {
         const target = o.k === 'm' ? o.disp : o.v;
         const from = this.here + 1 + width;
         const d = (target - from) | 0;
-        if (o.known && (d < -128 || d > 127)) {
-            throw new AsmError(
-                `${mn.toUpperCase()} to ${o.text.trim()} is ${d} bytes away and this instruction only reaches 127`,
-                { ...this.ctx, what: 'jump out of range' });
+        // The slot is claimed UNCONDITIONALLY. It indexes a sticky decision
+        // and the index has to mean the same thing on every pass; claiming
+        // it inside the branch below would shift every later jump's slot the
+        // moment one of them changed its mind.
+        const slot = this.jumpSlot();
+        const reaches = !o.known || (d >= -128 && d <= 127);
+        if (!reaches || this.promoted[slot]) {
+            // JMP is not promoted here: it HAS a near form, and `branch`
+            // widens it on its own. An explicit `JMP SHORT` is the
+            // programmer saying which encoding they want, so it is not
+            // second-guessed either.
+            const promotable = opcode !== 0xeb;
+            if (promotable && (this.opts.longJumps || this.promoted[slot])) {
+                this.promoted[slot] = true;
+                this.note(`${mn.toUpperCase()} to ${o.text.trim()} is ${d} bytes away, which this`
+                    + ' instruction cannot reach; promoted to a branch over a near jump.'
+                    + ' This program will no longer assemble under MASM');
+                return this.promote(opcode, target);
+            }
+            if (!reaches) {
+                throw new AsmError(
+                    `${mn.toUpperCase()} to ${o.text.trim()} is ${d} bytes away and this instruction`
+                    + ' only reaches 127 -- pass { longJumps: true } to promote it, at the cost of a'
+                    + ' program that no longer assembles anywhere else',
+                    { ...this.ctx, what: 'jump out of range' });
+            }
         }
         return this.emit(opcode, d & 0xff);
+    }
+
+    /**
+     * Rewrite an out-of-range relative jump into a sequence that reaches.
+     * OFF BY DEFAULT -- see `longJumps` in the module header, and the reason
+     * the default is faithfulness rather than reach.
+     *
+     * Two shapes, because the 8086 gives the two families different tools:
+     *
+     *   Jcc far      ->  Jncc over ; JMP near far ; over:
+     *   LOOP far     ->  LOOP take ; JMP SHORT over ; take: JMP near far ; over:
+     *
+     * The second shape is the one to be careful with. LOOP, LOOPE, LOOPNE
+     * and JCXZ have no inverted opcode to branch the other way with and no
+     * near form to widen into, so the jump has to be jumped OVER instead --
+     * and CX must still be decremented exactly once, which it is, because
+     * the LOOP itself still executes exactly once. Inverting that one by
+     * hand instead would give a loop that runs once or forever rather than
+     * one that fails loudly.
+     */
+    promote(opcode, target) {
+        if (opcode >= 0x70 && opcode <= 0x7f) {
+            // Bit 0 of a conditional opcode IS the sense of its condition on
+            // this machine, so XOR 1 is the exact inverse for all sixteen:
+            // 74/75 is JZ/JNZ, 7C/7D is JL/JNL, and so on through the table.
+            this.emit(opcode ^ 1, 0x03);       // skip the three-byte JMP
+            this.emit(0xe9);
+            return this.emitWord((target - (this.here + 2)) & 0xffff);
+        }
+        this.emit(opcode, 0x02);               // taken -> the near JMP
+        this.emit(0xeb, 0x03);                 // not taken -> past it
+        this.emit(0xe9);
+        return this.emitWord((target - (this.here + 2)) & 0xffff);
     }
 
     /** The pass-stable index a jump's shrink decision is filed under. */
@@ -2215,7 +2290,10 @@ function buildExe(asm, order) {
  * Assemble MASM-dialect 8086 source.
  *
  * @param {string} source
- * @param {{ format?: 'auto'|'com'|'exe', org?: number, maxPasses?: number }} [opts]
+ * @param {{ format?: 'auto'|'com'|'exe', maxPasses?: number,
+ *           longJumps?: boolean }} [opts] -- `longJumps` promotes a
+ *   conditional jump or LOOP that cannot reach; OFF by default, and see the
+ *   module header for why the default is the interesting part.
  * @returns {{ bytes: Uint8Array, format: 'com'|'exe', org?: number,
  *             entry?: {para:number, off:number}, symbols: Map<string,object>,
  *             warnings: {line:number, message:string}[], passes: number,
