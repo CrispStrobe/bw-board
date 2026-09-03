@@ -523,6 +523,31 @@ breadboard computer in the shape this engine already builds. Tier B is a
 service layer with no hardware in it at all. Tier C is a PC/XT. Each is
 independently useful and only Tier C is expensive.
 
+### E6 STATUS, measured 2026-09-03 (integration branch `feat/i8086-tier`)
+
+```
+Amey textbook corpus, 525 programs:
+  498  EXITED    terminated cleanly AND produced output
+   12  LOOPING   still running at the budget, and driving something
+   15  THREW     assembly refused (MASM refuses 14 of them too)
+    0  HUNG      0 SILENT      refused services: none
+
+yousefkotp emu8086 coursework, 10 projects:
+    8  LOOPING     2  THREW  (both are defects in that repo)
+```
+
+Built and green: the core and disassembler (both 646,000/646,000), 8255,
+machine, adapter, debug target, 8259/8254/8251, the bus extractor with named
+refusals, DIP parts in bw-parts (committed, NOT pushed), DOS/BIOS services, an
+8086/MASM assembler (510/525 accepted), a clean-room emu8086 device layer, a
+CGA/VGA renderer, and `scripts/run-i8086-corpus.mjs`.
+
+NEXT, and it is measured rather than chosen: with every DOS/BIOS service
+implemented the harness's refusal histogram reports unclaimed I/O PORTS, and
+the top entry is **port 97 -- 61h, the PC speaker gate on the XT's PPI port
+B, 24 accesses across the corpus**. Both parts needed to close it (the 8255
+and 8254 channel 2) already exist in this tier.
+
 ### E6.1 8086 core + disassembler — DONE (2026-09-03)
 `src/i8086.js` + `src/i8086-disasm.js`, ground against SingleStepTests/8086
 (MIT, hardware-generated on an Intel P80C86A-2): **646,000/646,000 vectors
