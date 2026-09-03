@@ -254,3 +254,71 @@ test('a programmed CGA card outranks the INT 10h log', async () => {
     assert.equal(g.mode, 0x04);
     assert.equal(g.width, 320);
 });
+
+test('a VGA card identifies mode 13h positively, and refuses planar by name', async () => {
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const mk = () => new M({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        chips: [{ kind: 'vga', name: 'vga1', at: 0x3c0 }],
+    });
+
+    // Unprogrammed: misc is zero, so the card says nothing and the log wins.
+    const idle = mk();
+    const t0 = createI8086DebugTarget({ machine: idle }, { videoModeLog: () => [0x03] });
+    assert.equal(t0.video().mode, 0x03);
+
+    // Mode 13h is a CONFIGURATION, not a register value: graphics, chain-4,
+    // and 8-bit colour together.
+    const m = mk();
+    const vga = m.chips.vga1;
+    m._out(0x3c2, 0x63);                       // misc: the card has been programmed
+    vga.gc[0x06] |= 0x01;                      // alpha disable -> graphics
+    vga.seq[0x04] |= 0x08;                     // chain-4
+    vga.attr[0x10] |= 0x40;                    // 8-bit colour
+    const t = createI8086DebugTarget({ machine: m });
+    const f = t.video();
+    assert.equal(f.mode, 0x13);
+    assert.equal(f.width, 320);
+    assert.equal(f.height, 200);
+    assert.match(f.why, /chain-4/);
+
+    // Graphics WITHOUT chain-4 is planar. Refuse it by name: a wrong picture
+    // looks like a bug in the program, which is worse than an empty pane.
+    vga.seq[0x04] &= ~0x08;
+    const r = t.video();
+    assert.ok(r.unsupported, 'refused');
+    assert.match(r.unsupported, /four bit planes/);
+});
+
+test('a programmed DAC reaches the renderer unchanged', async () => {
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const m = new M({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        chips: [{ kind: 'vga', name: 'vga1', at: 0x3c0 }],
+    });
+    const vga = m.chips.vga1;
+    m._out(0x3c2, 0x63);
+    vga.gc[0x06] |= 0x01; vga.seq[0x04] |= 0x08; vga.attr[0x10] |= 0x40;
+    // Repaint palette entry 1 as full red, in the DAC's own six-bit units.
+    vga.dac[3] = 63; vga.dac[4] = 0; vga.dac[5] = 0;
+    m._write(0xa0000, 1);                       // one pixel of colour 1
+
+    const f = createI8086DebugTarget({ machine: m }).video();
+    assert.deepEqual([f.rgba[0], f.rgba[1], f.rgba[2]], [255, 0, 0],
+        'the card stores what the hardware stores and the renderer reads the same units');
+});
+
+test('Hercules is refused by name rather than drawn at the wrong address', async () => {
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const m = new M({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        chips: [{ kind: 'hercules', name: 'herc1', at: 0x3b0 }],
+    });
+    m._out(0x3b8, 0x0a);                        // video on, graphics
+    const r = createI8086DebugTarget({ machine: m }).video();
+    assert.ok(r.unsupported);
+    assert.match(r.unsupported, /B0000h/, 'and says why: it is a different address, not just a different size');
+});

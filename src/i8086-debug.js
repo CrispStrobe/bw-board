@@ -48,6 +48,60 @@ import { renderMode, likelyMode } from './i8086-cga.js';
  * Mode 13h is deliberately unreachable here -- it is VGA, it has no 3D8h
  * encoding, and a card asked to express it would have to lie.
  */
+/**
+ * A VGA card's register banks read as a BIOS mode number.
+ *
+ * There is no single "mode register" on a VGA -- a mode is a CONFIGURATION,
+ * so this asks the three questions that separate the one mode the renderer
+ * supports from the ones it must refuse:
+ *
+ *   gc[6] bit 0    alpha disable: graphics rather than text
+ *   seq[4] bit 3   chain-4: one byte per pixel across four planes, which is
+ *                  what makes 13h a linear framebuffer instead of a planar one
+ *   attr[10h] bit 6  8-bit colour: the packed-pixel attribute path
+ *
+ * Chain-4 AND 8-bit colour together IS mode 13h. Graphics without them is
+ * one of 0Dh-12h -- four bit planes behind the sequencer's latches, a
+ * different machine, and the renderer's header says so. Those are REFUSED BY
+ * NAME rather than drawn: a wrong picture is worse than an honest empty pane,
+ * because a wrong picture looks like a bug in the program.
+ *
+ * `misc` is the programmed test, as 3D8h bit 3 is for CGA: the misc output
+ * register is written by every mode set and a card nobody has touched holds
+ * zero.
+ */
+function modeFromVga(v) {
+    if (!v || !v.misc) return null;                       // never programmed
+    const graphics = (v.gc[0x06] & 0x01) !== 0;
+    if (!graphics) return { mode: 0x03, supported: true, reason: 'VGA registers: alphanumeric' };
+    const chain4 = (v.seq[0x04] & 0x08) !== 0;
+    const eightBit = (v.attr[0x10] & 0x40) !== 0;
+    if (chain4 && eightBit) {
+        return { mode: 0x13, supported: true, reason: 'VGA registers: chain-4 + 8-bit colour' };
+    }
+    return {
+        mode: 0x0d, supported: false,
+        reason: 'VGA registers say graphics but not chain-4 with 8-bit colour, so this is one of '
+            + '0Dh-12h: four bit planes behind the sequencer, which this renderer does not draw',
+    };
+}
+
+/**
+ * Hercules is 720x348 monochrome at B0000h, which the renderer does not do.
+ * Its text mode is MDA's 80x25 at B0000h -- also not modelled, because the
+ * renderer's text path reads B8000h. Both are refused by name; pretending
+ * otherwise would render the wrong address.
+ */
+function modeFromHercules(h) {
+    if (!h || !h.mode) return null;
+    return {
+        mode: h.graphics ? 0x06 : 0x07, supported: false,
+        reason: h.graphics
+            ? 'Hercules graphics is 720x348 mono at B0000h, which this renderer does not draw'
+            : 'Hercules text is MDA 80x25 at B0000h; the renderer reads B8000h',
+    };
+}
+
 function modeFromCga(mode) {
     if (!(mode & 0x08)) return null;                 // video disabled: never programmed
     if (mode & 0x02) {                               // graphics
@@ -301,15 +355,24 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             // A programmed CGA card outranks the INT 10h log, because the
             // games that matter here write its registers and never call the
             // BIOS at all.
-            let card = null;
+            // Ask whichever display card the machine has. A machine has ONE
+            // display -- a CGA and a VGA in the same config would both claim
+            // 3DAh -- so the first card that answers is the card.
+            let card = null, from = null;
             for (const c of Object.values(machine.chips || {})) {
-                if (typeof c.getVideoState === 'function') { card = c.getVideoState(); break; }
+                if (typeof c.getVideoState !== 'function') continue;
+                const st = c.getVideoState();
+                const answer = st.seq ? modeFromVga(st)
+                    : st.config !== undefined ? modeFromHercules(st)
+                        : (st.mode !== undefined && modeFromCga(st.mode) !== null
+                            ? { mode: modeFromCga(st.mode), supported: true,
+                                reason: `3D8h = ${st.mode.toString(16)}h` }
+                            : null);
+                if (answer) { card = st; from = answer; break; }
+                if (!card) card = st;                 // keep its latches for opts
             }
-            const fromCard = card ? modeFromCga(card.mode) : null;
             const seen = typeof opts.videoModeLog === 'function' ? opts.videoModeLog() : [];
-            const guess = fromCard !== null
-                ? { mode: fromCard, supported: true, reason: `3D8h = ${card.mode.toString(16)}h` }
-                : likelyMode(seen);
+            const guess = from || likelyMode(seen);
             if (!guess.supported) return { unsupported: `mode ${guess.mode.toString(16)}h: ${guess.reason}` };
             // 3D9h carries the colour select: low nibble is the border and, in
             // the 320x200 modes, the background; bit 4 is intensity and bit 5
@@ -317,7 +380,11 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             // is the point of the seam -- the card holds raw latches and the
             // renderer takes named options, and only this file knows both.
             const vo = { ...(opts.videoOpts || {}) };
-            if (card) {
+            // A programmed DAC goes straight through: the card holds six-bit
+            // values indexed 3*colour+component, which is exactly what the
+            // renderer expects, because both store what the hardware stores.
+            if (card && card.dac && vo.dac === undefined) vo.dac = card.dac;
+            if (card && card.color !== undefined) {
                 if (vo.background === undefined) vo.background = card.color & 0x0f;
                 if (vo.intensity === undefined) vo.intensity = (card.color & 0x10) !== 0;
                 if (vo.cgaPalette === undefined) vo.cgaPalette = (card.color & 0x20) !== 0;
