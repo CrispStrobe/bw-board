@@ -716,7 +716,8 @@ lands it.
    → `{width,height,rgba}` and `audio()` → `{hz,on}` wiring to the CGA/VGA
    renderer and the speaker is the DOS/host lane's in-flight video-surface work;
    our side (`getVideoState`, `machine.audioTone`) is done. Ship a Circuit-
-   Designer EXAMPLE PRESET: an 8086 that boots the BIOS ROM into a UART shell.
+   Designer EXAMPLE PRESET (see the CORRECTIONS block below — the BIOS ROM is
+   a SCREEN-AND-KEYBOARD machine, not serial).
 
 2. **bw-circuit-ui recognises and places the 8086.** Add `i8086` to
    `src/parts-data/` (JSON + SVG, reuse the bw-parts pinout), register the kind
@@ -724,7 +725,7 @@ lands it.
    `src/model/drc.js`, `src/components/BoardCanvas.jsx`; add an
    `extract8086Machine` branch to `src/model/machine-extract.js`; extend
    `hasRetroCpu` and the Machine-Loader in `src/components/CircuitDesigner.jsx`
-   (preset with `romAt: 0xFFFF0`, the reset vector). THIS LANE.
+   (preset with `romAt: 0xF0000` load address; see CORRECTIONS). THIS LANE.
 
 3. **Host wiring — brickwright-lite `debug-runner.js`.** An `i8086` branch that
    calls `createDebugTarget('i8086', {config, rom, romAt})`, subscribes
@@ -750,7 +751,7 @@ lands it.
    the input seam with the BIOS.
 
 8. **GUI binary-loading.** The file-upload path already accepts `.bin`; add the
-   `i8086` loader branch (`romAt: 0xFFFF0`) and an example ROM under
+   `i8086` loader branch (`romAt: 0xF0000` load address) and an example ROM under
    `static/roms/` (the BIOS ROM, or a small serial monitor). bw-circuit-ui.
 
 9. **Boot from disk.** The 8237+µPD765 machine integration (this lane's queued
@@ -762,6 +763,31 @@ Ownership: bw-board + bw-parts = this lane (done). bw-circuit-ui = this lane now
 (no separate agent). brickwright-lite host + vendor = DOS/host lane, on our
 importer signal. SerialConsole / VdpScreen / ArchitectureFace / AsmDebugPanel
 are all reusable unchanged.
+
+CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
+"UART shell"; the ROM changed the picture and these supersede it:
+
+- TWO EXAMPLES, not one. The self-booting BIOS ROM (`rom/bios.bin`, 64K) has
+  NO UART on purpose ("no 8250 in the XT config"): it is a SCREEN-AND-KEYBOARD
+  machine — output via the debug target's `video()` (CGA text at B800:0000),
+  input via the 8255 scancode port and INT 09h/16h. So its example board wants
+  a CGA card + 8259 + 8254 + 8255 (all this lane's chips) and uses VdpScreen,
+  not SerialConsole. The "UART shell like the other MCUs" the owner asked for
+  becomes a SECOND, simpler example: a small serial-monitor ROM + a UART
+  (ns16c550 or 8251) driving SerialConsole.
+- ROM PLACEMENT is a LOAD address, not the entry. The BIOS loads at 0xF0000
+  (segment F000h); 0xFFFF0 is the reset vector INSIDE that image, not where it
+  goes. `loadRom(bytes, at)` takes the load address, so `romAt: 0xF0000` with a
+  rom region F0000-FFFFF. A 64K-high load looks identical to a dead machine.
+- THE TRAP-PAGE DIVERGENCE. A drawn/BIOS machine is a HARDWARE machine (real
+  8259/IVT, no trap page); only the no-hardware DOSBOX8086 gets the DOS
+  trap region. The host's `createDebugTarget('i8086')` must NOT inject the trap
+  page for a config that carries a ROM at F0000, or the BIOS fights it.
+- EXTRACTOR IRQ GAP (this lane, new sub-task). `extract8086Machine` emits chips
+  without `irq`, so a drawn PIT+PIC has no OUT0->IR0 and the BIOS's 18.2 Hz
+  tick never fires. Fix: trace the PIT-OUT0 net to a PIC IR pin and emit
+  `irq:n` (the honest fix, with a named refusal when miswired), rather than
+  canning the wiring into the preset.
 
 ---
 
