@@ -88,7 +88,7 @@ was not bad luck, it was the topology.
 | Worker | Tree | Branch |
 |---|---|---|
 | support chips, cards, presets | `/mnt/volume1/code/bw-board` (main checkout) | `feat/i8086-support-chips` |
-| 8086 integration + DOS/debug/corpus | `/mnt/volume1/code/wt/bw-board-i8086` | `feat/i8086-tier` |
+| 8086 integration + DOS/debug/corpus (+ its dispatched agents, each in its own throwaway tree — see below) | `/mnt/volume1/code/wt/bw-board-i8086` | `feat/i8086-tier` |
 | assembler + MASM oracle | `/mnt/volume1/code/wt/bw-i8086-asm` | `feat/i8086-asm` |
 | BIOS ROM + DOS image | `/mnt/volume1/code/wt/bw-i8086-bios` | `feat/i8086-bios` |
 | review / verification | `/mnt/volume1/code/wt/bw-i8086-sim3` | `feat/i8086-review` |
@@ -108,6 +108,28 @@ which turns integration from "we are all already on it" into an explicit merge
 by whoever owns `feat/i8086-tier`. That is the cost, and it buys the property
 that no lane's uncommitted work is reachable from another lane's `git checkout`,
 `git stash` or `git add -A`.
+
+### The rule is one WORKER, not one session — and an agent is a worker
+
+At the moment this table was written `wt/bw-board-i8086` held FOUR workers, not
+one: this session and three agents mid-write. Sessions were separated because
+sessions were what collided visibly, but the work that was destroyed belonged to
+an AGENT, and the mechanism does not care which kind of worker holds the file.
+Separating only the sessions fixes the instance and leaves the class.
+
+The structural close is per-agent isolation at dispatch, not another tree in the
+table: the Agent tool takes `isolation: "worktree"`, which puts each agent in a
+fresh worktree of its own and removes it again if the agent changed nothing. It
+costs ~200-500 ms of setup and the 8.3 MB above. **From here every dispatched
+agent gets it.** The named trees in the table stay useful for the LANES —
+somewhere for a lane's work to accumulate across several agent rounds — but they
+are not what keeps two concurrent agents off each other's files.
+
+The three agents in flight when this was written were left in place rather than
+moved: an agent mid-write is exactly what must not be moved, and that is the same
+reasoning as the migration rule below. They were committed by path the moment
+each reported. That is the transition, and it is a one-time exception with an end
+condition, not a standing carve-out.
 
 **Migrating live work: do not move files.** `git diff > /tmp/x.patch` in the old
 tree, `git apply` in the new one, and leave untracked files to a plain `cp`.
