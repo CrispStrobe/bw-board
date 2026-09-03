@@ -324,6 +324,29 @@ export function createDos8086(machine, io = {}) {
                 }
                 return;
             }
+            case 0x0c: {                                  // write pixel
+                const at = pixelAt(cpu.cx, cpu.dx);
+                if (!at) { note(0x10, 0x0c); return fail(1); }
+                if (at.bits === 8) machine._write(at.addr, cpu.al);
+                else {
+                    // XOR when AL bit 7 is set -- how a game draws and erases
+                    // a sprite with the same call.
+                    const v = machine._read(at.addr);
+                    const val = cpu.al & ((1 << at.bits) - 1);
+                    const next = (cpu.al & 0x80)
+                        ? v ^ (val << at.shift)
+                        : (v & ~(at.mask << at.shift)) | (val << at.shift);
+                    machine._write(at.addr, next);
+                }
+                return;
+            }
+            case 0x0d: {                                  // read pixel
+                const at = pixelAt(cpu.cx, cpu.dx);
+                if (!at) { note(0x10, 0x0d); return fail(1); }
+                const v = machine._read(at.addr);
+                cpu.al = at.bits === 8 ? v : (v >> at.shift) & at.mask;
+                return;
+            }
             case 0x0e: attr = cpu.bl || attr; putChar(cpu.al); return;     // teletype
             case 0x0f: cpu.al = 0x03; cpu.ah = COLS; cpu.bh = 0; return;   // mode 3
             case 0x13: {                                  // write string (AT+, common anyway)
@@ -331,6 +354,85 @@ export function createDos8086(machine, io = {}) {
                 return;
             }
             default: note(0x10, cpu.ah); return fail(1);
+        }
+    }
+
+    /**
+     * Where pixel (x, y) lives, in the mode the program last selected.
+     *
+     * THE LAYOUT IS DUPLICATED HERE ON PURPOSE. i8086-cga.js knows it too,
+     * and importing it would couple the service layer to the renderer -- the
+     * independence that let the two be written at the same time. Instead the
+     * two implementations are CROSS-CHECKED: a test plots through this
+     * service and then renders with the other module, and requires the pixel
+     * to appear where it was put. Two independent implementations agreeing is
+     * worth more than one shared one.
+     *
+     * Returns null for a text mode, because a pixel there is meaningless and
+     * a service that pretended otherwise would corrupt the screen silently.
+     */
+    function pixelAt(x, y) {
+        const mode = modeLog.length ? (modeLog[modeLog.length - 1] & 0x7f) : 0x03;
+        if (mode === 0x13) {
+            if (x >= 320 || y >= 200) return null;
+            return { addr: 0xa0000 + y * 320 + x, bits: 8, shift: 0, mask: 0xff };
+        }
+        // The CGA graphics modes interleave: even rows at +0000h, odd at
+        // +2000h. A plot that walks straight down memory lands on the wrong
+        // half of the screen for every second row.
+        if (mode === 0x04 || mode === 0x05) {
+            if (x >= 320 || y >= 200) return null;
+            const bank = (y & 1) ? 0x2000 : 0;
+            const addr = 0xb8000 + bank + (y >> 1) * 80 + (x >> 2);
+            return { addr, bits: 2, shift: (3 - (x & 3)) * 2, mask: 3 };
+        }
+        if (mode === 0x06) {
+            if (x >= 640 || y >= 200) return null;
+            const bank = (y & 1) ? 0x2000 : 0;
+            const addr = 0xb8000 + bank + (y >> 1) * 80 + (x >> 3);
+            return { addr, bits: 1, shift: 7 - (x & 7), mask: 1 };
+        }
+        return null;
+    }
+
+    // ---- INT 13h (BIOS disk) --------------------------------------------
+    /**
+     * Enough of the disk BIOS for a boot sector to load the thing it exists
+     * to load. CHS is converted with the geometry the caller declared, and a
+     * request outside the image FAILS WITH CARRY rather than reading zeros --
+     * a boot loader that silently gets a sector of nothing is the hardest
+     * kind of bug to see.
+     */
+    function int13() {
+        const g = io.geometry || { sectors: 18, heads: 2 };
+        const disk = io.disk || null;
+        const lba = (c, h, sec) => (c * g.heads + h) * g.sectors + (sec - 1);
+        switch (cpu.ah) {
+            case 0x00: cpu.ah = 0; return ok();          // reset
+            case 0x02: case 0x03: {
+                if (!disk) { cpu.ah = 0x80; return fail(0x8000); }   // no media
+                const count = cpu.al, sec = cpu.cl & 0x3f;
+                const cyl = cpu.ch | ((cpu.cl & 0xc0) << 2);
+                const start = lba(cyl, cpu.dh, sec) * 512;
+                if (sec === 0 || start < 0 || start + count * 512 > disk.length) {
+                    cpu.ah = 0x04; cpu.al = 0; return fail(0x0400);  // sector not found
+                }
+                for (let i = 0; i < count * 512; i++) {
+                    if (cpu.ah === 0x02) wr8(cpu.es, (cpu.bx + i) & 0xffff, disk[start + i]);
+                    else disk[start + i] = rd8(cpu.es, (cpu.bx + i) & 0xffff);
+                }
+                cpu.ah = 0; cpu.al = count; return ok();
+            }
+            case 0x08: {                                  // drive parameters
+                if (!disk) { cpu.ah = 0x07; return fail(0x0700); }
+                const cyls = Math.max(1, Math.floor(disk.length / (512 * g.sectors * g.heads)));
+                cpu.ch = (cyls - 1) & 0xff;
+                cpu.cl = g.sectors & 0x3f;
+                cpu.dh = (g.heads - 1) & 0xff;
+                cpu.dl = 1; cpu.ah = 0;
+                return ok();
+            }
+            default: note(0x13, cpu.ah); cpu.ah = 0x01; return fail(0x0100);
         }
     }
 
@@ -418,7 +520,7 @@ export function createDos8086(machine, io = {}) {
 
     const HANDLERS = {
         0x08: int08, 0x09: int09,
-        0x10: int10, 0x15: int15, 0x16: int16, 0x1a: int1a,
+        0x10: int10, 0x13: int13, 0x15: int15, 0x16: int16, 0x1a: int1a,
         // INT 1Ch is the user timer hook a real BIOS calls from INT 08h.
         // Nothing calls it here — a nested dispatch through the trap would
         // need its own frame — so a program that hooks 1Ch and expects to be
@@ -513,6 +615,37 @@ export function createDos8086(machine, io = {}) {
             cpu.ss = (loadSeg + u16(0x0e)) & 0xffff;
             cpu.sp = u16(0x10);
             cpu.ds = psp; cpu.es = psp;
+            cpu.flags |= 0x0200;
+            terminated = false; exitCode = 0;
+            return this;
+        },
+
+        /**
+         * Load a 512-byte boot sector the way the BIOS does: at 0000:7C00,
+         * with DL naming the drive, and jump there.
+         *
+         * This is a THIRD loader beside .COM and .EXE, and it needs neither
+         * DOS nor an assembler: a boot sector is already a binary. It is what
+         * makes the boot-sector corpus runnable today, and it is also the
+         * shape a real machine starts in, so a lesson can show the same
+         * 512 bytes the hardware would have read.
+         *
+         * The signature is checked and REFUSED if absent, because a boot
+         * sector without AA55h at the end is one the BIOS would not have
+         * executed either -- running it anyway would teach the wrong thing.
+         */
+        loadBoot(bytes, drive = 0x00) {
+            if (bytes.length < 512) throw new Error(`a boot sector is 512 bytes, not ${bytes.length}`);
+            if (bytes[510] !== 0x55 || bytes[511] !== 0xaa) {
+                throw new Error(
+                    'no AA55h boot signature at offset 1FEh: the BIOS would have refused this '
+                    + 'sector too, so running it would teach the wrong thing');
+            }
+            for (let i = 0; i < 512; i++) machine._write(0x7c00 + i, bytes[i]);
+            cpu.cs = 0; cpu.ip = 0x7c00;
+            cpu.ss = 0; cpu.sp = 0x7c00;          // the stack grows down away from the code
+            cpu.ds = 0; cpu.es = 0;
+            cpu.dl = drive & 0xff;                 // which drive it came from
             cpu.flags |= 0x0200;
             terminated = false; exitCode = 0;
             return this;

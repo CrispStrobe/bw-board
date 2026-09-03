@@ -284,3 +284,103 @@ test('AL bit 7 means the mode set does NOT clear the screen', () => {
     cleared.dos.run(10_000);
     assert.equal(cleared.dos.screenText()[0], '', 'bit 7 clear: it did not');
 });
+
+test('a pixel plotted through INT 10h/0Ch lands where the RENDERER finds it', async () => {
+    // The layout is implemented twice on purpose — once here, once in
+    // i8086-cga.js — so that importing the renderer does not couple the
+    // service layer to it. This test is what makes that safe: two
+    // independent implementations of the same addressing, cross-checked.
+    const { renderMode } = await import('../src/i8086-cga.js');
+
+    // NOTE the colour choices: VGA palette entries 248-255 are BLACK, so a
+    // plot in colour FFh is invisible and would read as a failed write. The
+    // first run of this test asserted exactly that and was wrong about the
+    // palette, not about the plot.
+    for (const [mode, x, y, colour] of [[0x13, 17, 3, 0x2a], [0x13, 319, 199, 0x0f],
+        [0x04, 5, 1, 2], [0x04, 318, 199, 3], [0x06, 9, 1, 1]]) {
+        const { m, dos } = dosWith(com([
+            [0x100, [0xb4, 0x00, 0xb0, mode, 0xcd, 0x10]],                  // set mode
+            [0x106, [0xb4, 0x0c, 0xb0, colour]],                            // ah=0Ch al=colour
+            [0x10a, [0xb9, x & 0xff, (x >> 8) & 0xff]],                     // cx = x
+            [0x10d, [0xba, y & 0xff, (y >> 8) & 0xff]],                     // dx = y
+            [0x110, [0xcd, 0x10]],
+            [0x112, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        ]));
+        dos.run(10_000);
+        assert.deepEqual(dos.report().unsupported, [], `mode ${mode.toString(16)}h plot accepted`);
+
+        const f = renderMode(mode, (a) => m._read(a), { background: 0 });
+        const i = (y * f.width + x) * 4;
+        const px = [f.rgba[i], f.rgba[i + 1], f.rgba[i + 2]];
+        assert.notDeepEqual(px, [0, 0, 0],
+            `mode ${mode.toString(16)}h: the renderer sees the pixel at (${x},${y})`);
+        // ...and its neighbour is untouched, which is what catches an
+        // off-by-one in the bit shift or the scanline interleave.
+        const j = (y * f.width + (x + 1 < f.width ? x + 1 : x - 1)) * 4;
+        assert.deepEqual([f.rgba[j], f.rgba[j + 1], f.rgba[j + 2]], [0, 0, 0],
+            `mode ${mode.toString(16)}h: the neighbour is not`);
+    }
+});
+
+test('a pixel in a TEXT mode is refused, not silently written', () => {
+    const { dos } = dosWith(com([
+        [0x100, [0xb4, 0x0c, 0xb0, 0x01, 0xb9, 0x05, 0x00, 0xba, 0x05, 0x00, 0xcd, 0x10]],
+        [0x10c, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+    ]));
+    dos.run(10_000);
+    assert.deepEqual(dos.report().unsupported, [{ int: 0x10, ah: 0x0c, count: 1 }],
+        'a pixel in mode 3 is meaningless and says so');
+});
+
+test('a boot sector loads at 0000:7C00 and runs with no DOS at all', () => {
+    const boot = new Uint8Array(512);
+    // mov ax,0B800h; mov es,ax; mov byte [es:0],'B'; jmp $
+    boot.set([0xb8, 0x00, 0xb8, 0x8e, 0xc0, 0x26, 0xc6, 0x06, 0x00, 0x00, 0x42, 0xeb, 0xfe], 0);
+    boot[510] = 0x55; boot[511] = 0xaa;
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m).install().loadBoot(boot, 0x00);
+    assert.equal(m.cpu.ip, 0x7c00, 'the BIOS entry point, not a PSP');
+    assert.equal(m.cpu.dl, 0x00, 'DL names the drive it came from');
+    for (let i = 0; i < 50; i++) dos.step();
+    assert.equal(dos.screenText()[0], 'B');
+});
+
+test('a sector without the AA55h signature is refused, as the BIOS would', () => {
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m).install();
+    assert.throws(() => dos.loadBoot(new Uint8Array(512)), /no AA55h boot signature/);
+    assert.throws(() => dos.loadBoot(new Uint8Array(100)), /a boot sector is 512 bytes/);
+});
+
+test('INT 13h reads sectors, and refuses to read past the image', () => {
+    const disk = new Uint8Array(512 * 4);
+    for (let i = 0; i < disk.length; i++) disk[i] = (i >> 9) + 1;   // sector n holds n+1
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m, { disk, geometry: { sectors: 4, heads: 1 } })
+        .install()
+        .loadCom(Uint8Array.from([
+            0xb4, 0x02, 0xb0, 0x02,                 // ah=02h read, al=2 sectors
+            0xb5, 0x00, 0xb1, 0x02,                 // ch=0 cyl, cl=2 -> sector 2
+            0xb6, 0x00,                             // dh=0 head
+            0xbb, 0x00, 0x30,                       // bx=3000h
+            0xcd, 0x13,
+            0xb8, 0x00, 0x4c, 0xcd, 0x21,
+        ]));
+    dos.run(10_000);
+    const psp = 0x0800;
+    assert.equal(m._read((psp << 4) + 0x3000), 2, 'sector 2 arrived at ES:BX');
+    assert.equal(m._read((psp << 4) + 0x3200), 3, 'and sector 3 right behind it');
+
+    // Past the end: carry set and AH=04h, not a buffer full of zeros.
+    const m2 = new I8086Machine(DOSBOX8086);
+    const d2 = createDos8086(m2, { disk, geometry: { sectors: 4, heads: 1 } })
+        .install()
+        .loadCom(Uint8Array.from([
+            0xb4, 0x02, 0xb0, 0x01, 0xb5, 0x00, 0xb1, 0x04, 0xb6, 0x01,
+            0xbb, 0x00, 0x30, 0xcd, 0x13, 0x9c,     // pushf
+            0xb8, 0x00, 0x4c, 0xcd, 0x21,
+        ]));
+    d2.run(10_000);
+    const flags = m2._read((0x0800 << 4) + 0xfffc) | (m2._read((0x0800 << 4) + 0xfffd) << 8);
+    assert.ok(flags & 1, 'carry set: a boot loader that got zeros instead would be unfindable');
+});
