@@ -158,8 +158,18 @@ between trees by hand is the same hazard with extra steps.
   - Diagnosing this: `git checkout` does NOT rewrite a file whose content
     already matches the index, so a clean file's mtime does not move. A file
     whose mtime lands inside the checkout's window is therefore one git WROTE,
-    which means it was dirty. Verified by experiment, twice, independently —
-    reasoning about the timestamps got it backwards both times.
+    which means it was dirty. Verified by experiment, twice, independently.
+  - **The transferable habit, and it is narrower than it first looked: when a
+    timestamp is your evidence, establish what the tool does to an UNTOUCHED
+    file before you read anything into the timestamp.** The first account of
+    this incident said the reasoning had been "backwards"; that was
+    self-reproach rather than a finding, and the other lane corrected it.
+    "Inside the window" and "outside the window" are BOTH consistent with
+    innocence until you know that git leaves a clean file alone — so the
+    reasoning was UNDERDETERMINED, not inverted, and no amount of care would
+    have fixed it. One command would. The general form is a habit you can
+    follow; "do not argue where you can measure" is only a mood, because it
+    does not tell you what to measure.
 - **Commit an agent's work the moment it reports, by path.** The work above was
   exposed only because it was being allowed to accumulate while its agent
   finished. `git add -A` is the other half of the same hazard: it swept one
