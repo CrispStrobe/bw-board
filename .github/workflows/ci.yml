@@ -44,6 +44,87 @@ jobs:
       - name: Install
         run: npm install --no-audit --no-fund
       - name: Test
-        # The vector-suite tests (65x02/z80 SingleStepTests) skip cleanly
-        # when the suites are not cloned — CI proves everything else.
+        # The 65x02 and z80 vector-suite tests skip cleanly when their suites
+        # are not cloned, and so does test/moo.test.mjs. That is a real hole
+        # and it is not papered over here — the `vectors` job below closes it
+        # for the 8086 by checking the suite out and grinding all 646,000. The
+        # other two CPUs still have no such job; when one is added it belongs
+        # beside it, not in this comment.
         run: npm test
+
+  # ---------------------------------------------------------------------
+  # The 8086 vector grind, which until now ran nowhere but a developer's box.
+  #
+  # `npm test` above says the vector-suite tests "skip cleanly when the suites
+  # are not cloned". That is true and it is the problem: the 8086 core and
+  # disassembler are each claimed at 646,000/646,000, the sampled grind in
+  # test/i8086.test.mjs is the only thing in the suite that would notice
+  # otherwise, and it skips on every runner. A skip reads the same as a pass in
+  # a summary line — which is the exact failure the emu8051-stc checkout above
+  # was added to fix, and it was sitting one job away the whole time.
+  #
+  # WHY THIS IS AFFORDABLE. The suite ships the same 646,000 vectors twice:
+  # `v1/` as gzipped JSON and `v1_binary/` as gzipped MOO. Checking out the
+  # binary form is 94 MB against 174 MB and parses without materialising
+  # 646,000 objects. `v1/metadata.json` comes with it because the undefined-
+  # flag masks live there, and three `v1/*.json.gz` because the reader itself
+  # has to be proved: test/moo.test.mjs requires the two encodings to agree
+  # field for field, which is what stops a reader that silently returns empty
+  # vectors from reporting 646,000/646,000 while examining nothing.
+  #
+  # A separate job, because it is slower than the unit suite and its verdict
+  # is about the CORE rather than about the board. Pinned, so this repo's
+  # verdict does not float with another repo's HEAD.
+  vectors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: SingleStepTests/8086
+          ref: e71c68d215a6bb8c356bd4cb3842de3bef345ca9
+          path: 8086-vectors
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /v1_binary/
+            /v1/metadata.json
+            /v1/00.json.gz
+            /v1/8F.json.gz
+            /v1/D0.6.json.gz
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      # Prove the checkout BEFORE trusting anything that reads it. A sparse
+      # pattern that matched nothing produces an empty directory, and every
+      # step after it would then be measuring absence.
+      - name: The vectors are actually here
+        env:
+          I8086_VECTORS: ${{ github.workspace }}/8086-vectors
+        run: |
+          set -euo pipefail
+          n=$(ls "$I8086_VECTORS/v1_binary" | grep -c '\.MOO\.gz$')
+          echo "$n MOO files"
+          test "$n" -eq 323
+          test -f "$I8086_VECTORS/v1/metadata.json"
+          du -sh "$I8086_VECTORS"
+
+      # The reader, against the encoding it replaces. This must run BEFORE the
+      # grinds: they consume its output, so a grind that passes on a broken
+      # reader proves only that the reader agrees with itself.
+      - name: MOO reader agrees with the JSON encoding
+        env:
+          I8086_VECTORS: ${{ github.workspace }}/8086-vectors
+        run: node --test test/moo.test.mjs
+
+      - name: 8086 core — all 646,000 vectors
+        env:
+          I8086_VECTORS: ${{ github.workspace }}/8086-vectors
+        run: node scripts/grind-i8086.mjs
+
+      - name: 8086 disassembler — all 646,000, on text and length
+        env:
+          I8086_VECTORS: ${{ github.workspace }}/8086-vectors
+        run: node scripts/grind-i8086-disasm.mjs
