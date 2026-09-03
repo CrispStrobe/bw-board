@@ -88,3 +88,21 @@ encodeTextMessage("Hi") → 90504 PCM samples → ATtiny88 ADC6 → firmware dem
 - Assert the property, not the symptom
 - Do NOT deploy Vercel (rate-limited ~24h); GH Pages is the deploy path
 - ATtiny85/88: PC masks modulo flash size (d242855) — any 8K-or-smaller part
+- **Revert by explicit PATH, never by directory, in a shared worktree.**
+  `git checkout -- src/` took an agent's uncommitted assembler work on
+  2026-09-03: five workers share this tree, and a directory-scoped revert from
+  an unrelated lane is enough to destroy anything uncommitted in it. Git keeps
+  no copy. The precaution that had been holding was checking
+  `git status --short src/` was clean before each mutation, and it was dropped
+  once the mutations became routine — so the rule is the explicit file list,
+  not the reminder to be careful.
+  - Restore a mutated file by copying a backup over it, not by asking git.
+  - Diagnosing this: `git checkout` does NOT rewrite a file whose content
+    already matches the index, so a clean file's mtime does not move. A file
+    whose mtime lands inside the checkout's window is therefore one git WROTE,
+    which means it was dirty. Verified by experiment, twice, independently —
+    reasoning about the timestamps got it backwards both times.
+- **Commit an agent's work the moment it reports, by path.** The work above was
+  exposed only because it was being allowed to accumulate while its agent
+  finished. `git add -A` is the other half of the same hazard: it swept one
+  agent's work into another's commit message earlier the same day.

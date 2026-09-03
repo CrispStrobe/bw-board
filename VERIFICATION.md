@@ -184,8 +184,9 @@ the right property over a code path nothing exercised is indistinguishable
 from a passing test. It is green, it is specific, its name says what it
 checks, and it checks nothing.
 
-Four instances landed in one day, from three different hands, and it is the
-spread that makes it worth a section rather than a note:
+Five instances landed in one day, from three different hands, and it is the
+spread — and where the fifth one was — that makes it worth a section rather
+than a note:
 
 | Where | What it looked like | What it was |
 |---|---|---|
@@ -193,11 +194,20 @@ spread that makes it worth a section rather than a note:
 | Two INT 10h scroll tests | Assertions about a scrolled window, passing for weeks | They stood on the trap page by writing `cpu.cs = 0xf000` by hand. Once the page moved they were asserting against a `service()` that had correctly declined to run — and only then went red. |
 | Two DOS services | `INT 21h/3Eh` and `/41h` returning success | They returned success *unconditionally*, so closing a handle never opened and deleting a file that was not there both looked like they worked. |
 | A µPD765 draft | Imported cleanly, exported its whole surface, answered invalid commands correctly | Its dispatch refused EVERY implemented command, because `undefined` is falsy. A smoke test would have passed it. |
+| `NO_PERSISTENCE`, the exemption list in the machine contract | Shipped with a commit message and a note to another lane both stating that a chip gaining `getState()` would turn the suite red, so the row would have to be deleted | It would not have. The coverage assertion only fires for a chip with NO snapshot method; one that GAINED a method sailed past into the passing path, leaving the exemption standing forever. |
+
+The fifth is the one to read twice. It is in the instrument built to catch
+this pattern, it was found by that instrument's own author, and the part that
+did not exist was precisely the mechanism offered as the reason it was safe to
+RECORD a gap rather than fix it. It was not found by review: it was found
+because a second lane asked whether three instruments doing the same thing
+constituted a house pattern, and answering required checking that they did.
+
 
 The shape is the same each time: **something that looks right because nothing
-ever asked it to prove otherwise.** Note that three of the four were found by
-a change from an unrelated direction — moving an address, deleting a branch to
-see what noticed — and not by reading the tests.
+ever asked it to prove otherwise.** Note that four of the five were found by a
+change from an unrelated direction — moving an address, deleting a branch to
+see what noticed, being asked to generalise — and none by reading the tests.
 
 What follows in practice:
 
