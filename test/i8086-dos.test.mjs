@@ -519,3 +519,35 @@ test('INT 10h/07h scrolls the other way', () => {
     assert.equal(dos.screenText()[1], 'row0', 'and everything moved down');
     assert.equal(dos.screenText()[3], 'row2');
 });
+
+test('DOSBOX8086_XT makes a corpus beep audible, and buys nothing else', async () => {
+    const { DOSBOX8086_XT } = await import('../src/i8086-dos.js');
+    const { createI8086DebugTarget } = await import('../src/i8086-debug.js');
+    // Three chips, and no PIC: a timer on an interrupt line would mean a
+    // program that does STI and programs the counter starts taking INT 8 --
+    // a whole interrupt surface bought to make a beep audible.
+    assert.deepEqual(DOSBOX8086_XT.chips.map((c) => c.kind), ['ppi', 'pit', 'pcspeaker']);
+    assert.ok(!DOSBOX8086_XT.chips.some((c) => c.kind === 'pic' || c.irq !== undefined));
+
+    const m = new I8086Machine(DOSBOX8086_XT);
+    // The canonical beep: counter 2 to square-wave with a divisor for ~1 kHz,
+    // then the two gate bits in port B.
+    const div = Math.round(1193182 / 1000);
+    const dos = createDos8086(m).install().loadCom(Uint8Array.from([
+        0xb0, 0xb6, 0xe6, 0x43,                       // out 43h, B6h  (counter 2, mode 3)
+        0xb0, div & 0xff, 0xe6, 0x42,                 // out 42h, lo
+        0xb0, (div >> 8) & 0xff, 0xe6, 0x42,          // out 42h, hi
+        0xb0, 0x80, 0xe6, 0x63,                       // out 63h, 80h  (PPI: all ports out)
+        0xb0, 0x03, 0xe6, 0x61,                       // out 61h, 03h  (gate + data)
+        0xeb, 0xfe,
+    ]));
+    for (let i = 0; i < 200; i++) dos.step();
+
+    const tone = m.audioTone();
+    assert.ok(tone.on, 'the speaker is sounding');
+    assert.ok(Math.abs(tone.hz - 1000) < 5, `about a kilohertz, got ${tone.hz}`);
+
+    // ...and the debug target reports it in the SAME shape the Z80 tier uses.
+    const t = createI8086DebugTarget({ machine: m });
+    assert.deepEqual(Object.keys(t.audio()).sort(), ['hz', 'on']);
+});

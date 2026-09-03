@@ -326,7 +326,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             return { ...frame, mode: guess.mode, why: guess.reason };
         },
 
-        audio() { return null; },
+        /**
+         * The tone the machine is producing, as {hz, on} -- the SAME shape
+         * z80-debug.js answers with for the ZX beeper. Matching it exactly is
+         * the point: a UI that can already show one CPU family's audio needs
+         * no new concept for a second. Null on a machine with no speaker.
+         */
+        audio() {
+            if (typeof machine.audioTone === 'function') return machine.audioTone();
+            return null;
+        },
 
         readMem(space, addr, len) {
             if (space === 'io') {

@@ -894,6 +894,34 @@ export function createDos8086(machine, io = {}) {
 
 /** A machine shaped for Tier B: 768K of RAM, no ROM, nothing decoded. The
  *  services are the hardware. */
+/**
+ * Tier B with just enough hardware to be AUDIBLE, and not one chip more.
+ *
+ * Twenty-four accesses to port 61h across the 525-program corpus are real
+ * programs written for a real PC, poking the speaker gate on a machine that
+ * has none. This config gives them somewhere to land: an 8255 at 60h, an
+ * 8254 at 40h, and the speaker that reads the gate from one and the divisor
+ * from the other.
+ *
+ * DELIBERATELY NO PIC, AND THE PIT IS NOT WIRED TO AN IRQ. A timer on an
+ * interrupt line means a program that enables interrupts and programs the
+ * counter starts taking INT 8, which is a whole interrupt surface bought to
+ * make a beep audible. Three chips, because twenty-four programs ask for
+ * them, and nothing else.
+ */
+export const DOSBOX8086_XT = Object.freeze({
+    clockHz: 5_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0xbffff },
+        { kind: 'ram', start: 0xf0000, end: 0xf03ff },
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },
+        { kind: 'pit', name: 'pit1', at: 0x40 },
+        { kind: 'pcspeaker', name: 'spk', ppi: 'ppi1', pit: 'pit1' },
+    ],
+});
+
 export const DOSBOX8086 = Object.freeze({
     clockHz: 5_000_000,
     regions: [

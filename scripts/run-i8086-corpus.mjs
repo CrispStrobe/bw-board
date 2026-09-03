@@ -92,7 +92,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, extname, basename } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
-import { createDos8086, DOSBOX8086 } from '../src/i8086-dos.js';
+import { createDos8086, DOSBOX8086, DOSBOX8086_XT } from '../src/i8086-dos.js';
 import { Unimplemented } from '../src/i8086.js';
 import { createEmu8086, EMU8086_INC } from '../src/i8086-emu8086.js';
 
@@ -105,6 +105,11 @@ const value = (name, dflt) => {
 const BUDGET = Number(value('--budget', 5_000_000));
 const VERBOSE = flag('--verbose');
 const EMU = flag('--emu8086');
+// --xt swaps in the three chips that make a beep audible (8255, 8254,
+// speaker). The emu8086 port handler installs AFTER the config chips and the
+// machine checks its windows in order, so those three keep their ports and
+// emu8086 keeps the rest -- the two can be used together.
+const XT = flag('--xt');
 // Keystrokes handed to any program that asks. `\r` and `\n` are the two
 // escapes worth having; everything else is literal.
 const TYPE = (value('--type', '') || '').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
@@ -198,7 +203,7 @@ function runOne(name, raw, key) {
         }
     }
 
-    const m = new I8086Machine(DOSBOX8086);
+    const m = new I8086Machine(XT ? DOSBOX8086_XT : DOSBOX8086);
     let emu = null;
     let dos;
     try {
@@ -228,7 +233,9 @@ function runOne(name, raw, key) {
     // silent, which is how a harness lies about the tier it is measuring.
     const devs = emu ? emu.report() : null;
     const touched = devs ? devs.writes + devs.reads : 0;
-    const printed = report.stdout.length > 0 || screen > 0 || touched > 0;
+    // A program whose whole output is a beep has produced output.
+    const beeped = typeof m.audioTone === 'function' && m.audioTone() && m.audioTone().on;
+    const printed = report.stdout.length > 0 || screen > 0 || touched > 0 || beeped;
     if (devs) report.devices = devs;
     // A boot sector never "exits" -- it has nowhere to exit to. Reaching the
     // budget having drawn something is the success case for one, so it is
