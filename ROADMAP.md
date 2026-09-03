@@ -507,6 +507,117 @@ For anyone touching E1.1/E2.1, the licence map:
 
 Every adapted-code landing updates `THIRD-PARTY.md` in the same commit.
 
+## E6 — The 8086 tier (scoped 2026-09-03, owner-requested)
+
+Context: the retro tier gains an x86 beside the W65C02 and the Z80. The
+survey that preceded it is in brickwright-lite `docs/I8086-CORE-PLAN.md`
+and its conclusion is load-bearing, so it is repeated here in one line:
+nothing permissively licensed was adoptable as a CORE — MartyPC (MIT) and
+PCjs (MIT) are whole machines, the two projects that look like the right
+shape interpret assembly TEXT and never fetch an opcode byte, and the rest
+of the field is GPL. What WAS adoptable is the oracle, and it turned out to
+be a better one than either of the other two CPUs got.
+
+**This is three machines, not one, and they are separable.** Tier A is a
+breadboard computer in the shape this engine already builds. Tier B is a
+service layer with no hardware in it at all. Tier C is a PC/XT. Each is
+independently useful and only Tier C is expensive.
+
+### E6.1 8086 core + disassembler — DONE (2026-09-03)
+`src/i8086.js` + `src/i8086-disasm.js`, ground against SingleStepTests/8086
+(MIT, hardware-generated on an Intel P80C86A-2): **646,000/646,000 vectors
+for the core, and 646,000/646,000 for the disassembler's TEXT as well as its
+length** — the suite ships a disassembly string with every vector, which is a
+higher standard than z80-disasm and w65c02-disasm are held to (their formats
+are spot-checked by hand). Grinders: `scripts/grind-i8086.mjs`,
+`scripts/grind-i8086-disasm.mjs`. Three behaviours contradict Intel's
+published pseudocode and are documented where they are implemented.
+
+**8088 comes free.** The ISA is identical; the differences are bus width, a
+four-byte prefetch queue instead of six, and cycle timings — none of which an
+instruction-stepped core models. `I8086` IS an 8088 except for cycle counts.
+SingleStepTests/8088 (with bus data) and /v20 are also MIT if the tier ever
+wants NEC V20 or cycle work.
+
+**Measured speed: 4.0 M instructions/sec** on a representative mix (reg ALU,
+memory read/write, taken branch, call/ret) — 12x a 5 MHz 8086, ~16x a
+4.77 MHz XT. The CPU will not be the bottleneck at any tier; video timing
+will be. Re-measure in the browser bundle before quoting it there.
+
+### E6.2 Tier A — the breadboard machine (NEXT)
+The direct analogue of EATER6502, chip for chip. slador.uk's 8088 breadboard
+computer is exactly this shape (8088 + 8284 + 8254 + 8255 + 8259 + 74244 +
+74138 + flash + text LCD), and the Proteus tutorials are its first lesson:
+an 8255 port blinking an LED.
+
+- `i8255.js` — 8255 PPI. Ports A/B/C, control word, mode 0, and the BSR
+  bit-set/reset path. Modes 1 and 2 (strobed/bidirectional) are a stated
+  non-goal until a lesson needs them, in the header, not in a TODO.
+- `i8086-machine.js` — `{clockHz, regions, chips}` over a TWENTY-BIT space,
+  the m6502-machine.js shape with the address width changed. Ports are a
+  second decode space, which the 6502 does not have and the 8051 does.
+- `i8086-adapter.js` — boundary-A pin bus, as m6502-adapter.js.
+- `i8086-debug.js` — boundary-D target. Code breakpoints compare on the
+  LINEAR address: two seg:off pairs can name one instruction and only the
+  linear form cannot be fooled.
+- `i8086-extract.js` + extractor SELECT entries (8255, 8251, 62256, 28C256)
+  so a hand-wired 8086 on the drawn breadboard becomes a machine, or a named
+  refusal, exactly as the 6502 does.
+- Our own monitor ROM. Nobody else's: see the licence rulings below.
+
+### E6.3 Tier A completion — interrupts and time
+`i8259.js` (PIC) and `i8254.js` (PIT), plus INTR/NMI delivery in the machine
+layer with the IF check and the one-instruction inhibition after a segment
+register load. The core deliberately does not deliver interrupts itself.
+Only after this does the 8086 erratum where an interrupt taken mid-REP loses
+a segment override have anything to happen to.
+
+### E6.4 Tier B — the DOS-program tier (no hardware at all)
+The 8086 textbook corpus does not want a PC. Measured across the 525
+programs of Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS:
+
+    int 21h  3109   of which AH=02h 1347, AH=09h 1064, AH=4Ch 451
+                    -> 2862 of 3109 in three services
+    int 10h    79   int 16h 26   int 1Ah 10   int 15h 8   int 33h 6
+    502 of 525 files use .MODEL / PROC / MACRO
+
+So the service layer is a few hundred lines and covers ~92% of the corpus
+with three functions. **The gate is the ASSEMBLER, not the emulator**: these
+are MASM sources and bw-asm does not speak those directives yet. Scope the
+assembler honestly before promising the corpus.
+
+### E6.5 emu8086 compatibility — a separate, smaller lane
+yousefkotp/8086-Assembly-Projects is not DOS software. It is emu8086:
+`#start=Traffic_Lights.exe#`, `out 4, ax` to a built-in traffic-light device,
+`int 15h/AH=86h` delays, `include 'emu8086.inc'`. Running it means emulating
+emu8086's virtual peripherals and RE-IMPLEMENTING its macro library — the
+`.inc` carries no licence we can rely on. Lands after E6.4, and it is the
+tier that makes "traffic light", "stepper", "thermometer" lessons possible.
+
+### E6.6 Tier C — PC/XT compatible (the expensive one)
+8237 DMA, 6845/CGA (mc6845.js already exists), µPD765 FDC and disk images,
+plus a BIOS and a DOS. Months, and a different product from "learn the 8086
+on a breadboard" — it should be started only when tiers A and B are shipped
+and a lesson actually needs it.
+
+### Licence rulings for the 8086 tier (verified 2026-09-03)
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| SingleStepTests 8086 / 8088 / v20 | MIT | ORACLE ONLY, never shipped. Same role as the 65x02 and Z80 suites. |
+| microsoft/MS-DOS 1.25, 2.0, 4.0 | MIT | Usable. A genuine DOS is available if Tier C ever wants one. |
+| Amey-Thakur asm corpus (the .asm files) | MIT, per file header | Shippable as examples WITH ATTRIBUTION. Note the same repo's simulator sources say `CC BY 4.0` in every header while its LICENSE says MIT — an unresolved conflict; take the .asm files, not the simulator. |
+| GLaBIOS | GPL-3.0 | REFUSED. The best open BIOS is out of reach. |
+| skiselev/8088_bios | GPL-3.0 | REFUSED. |
+| GREENSHELLRAGE/8086-breadboard-computer | **no LICENSE file** | All rights reserved. The ARCHITECTURE may inspire (not copyrightable); the ROM binaries and .asm may not be copied. |
+| emu8086.inc | unclear | REFUSED. Re-implement the macros. |
+| MartyPC, PCjs | MIT | Readable as reference implementations; not vendored. Reading an MIT implementation ships no third-party code. |
+
+Consequence: **every ROM in this tier is ours**, at every tier. That is a
+cost, and it is also the reason the tier can ship at all.
+
+---
+
 ---
 
 ## Sequencing
@@ -518,6 +629,9 @@ Every adapted-code landing updates `THIRD-PARTY.md` in the same commit.
 4. **E3.1** op-amp macromodel (pairs with E2.1), then E3.4 transformer, E3.5
    controlled sources (unblocks the SPICE importer), E3.2/E3.3/E3.6 as lessons demand.
 5. **E4** when the retro/TTL tier needs real timing.
+6. **E6.2 → E6.3** — the 8086 breadboard machine, then its interrupts. E6.4/E6.5
+   are independent of both and gated on assembler scope, not on engine work; E6.6
+   waits for a lesson that needs it.
 
 Cross-repo dependencies: bw-circuit-ui X1.1 (SPICE import) wants E3.5; X2.x runners
 want E1.5; the AC UI wants E2.1. brickwright-lite re-vendors via `sync:bwboard` after
