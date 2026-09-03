@@ -28,6 +28,20 @@
  * so the 6850's polling idiom (spin on the ready bit, then write) works
  * unchanged. RxRDY is set when a received byte is waiting.
  *
+ * ACCURACY TIER: THE PROTOCOL, NOT THE WIRE. The mode->command sequence and
+ * its internal-reset rewind, the TxEN/RxEN gating, the RxRDY and overrun
+ * status, and byte-level transmit and receive are all exact. What is NOT
+ * here, named rather than left to be discovered:
+ *
+ *   - NO BIT TIMING. Transmit is instantaneous; the baud-rate factor and the
+ *     character-length and stop-bit fields are stored but not enforced — a
+ *     byte crosses in zero machine time regardless of the programmed rate.
+ *   - NO PARITY OR FRAMING. The parity configuration is stored and never
+ *     checked; parity and framing errors never arise on the clean model wire.
+ *   - NO SYNC. A synchronous mode word is accepted and its sync characters
+ *     consumed to keep the sequence aligned, but the data path runs as async
+ *     (modeWarning says so).
+ *
  * @module
  */
 

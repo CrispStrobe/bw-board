@@ -20,6 +20,12 @@
  * display is active — so a "wait for bit 7 to change" loop terminates and a
  * "wait for vsync" loop syncs once a frame rather than spinning or tearing.
  *
+ * ACCURACY TIER: THE PORTS AND THE RHYTHM, NOT THE PICTURE. The 3B8h/3BFh
+ * latches (raw through getVideoState) and 3BAh with bit 7 vsync as a real
+ * ~50 Hz frame are exact. NO PIXELS — the mono framebuffer is a separate
+ * renderer; the retrace is a machine-time FRAME, not scanline-exact; and NO
+ * 6845 CRTC programming (start address, cursor, timings) is modelled.
+ *
  * @module
  */
 

@@ -27,6 +27,16 @@
  * high during horizontal blank of each active line AND all of vertical
  * blank — some code polls it instead of bit 3, so it moves at the line rate.
  *
+ * ACCURACY TIER: THE PORTS AND THE RHYTHM, NOT THE PICTURE. The 3D8h/3D9h
+ * latches (exposed raw through getVideoState) and the 3DAh status as a real
+ * 60 Hz frame with the right active/blank proportion are what this provides.
+ * What is NOT here: NO PIXELS — the framebuffer-to-image path is a separate
+ * pure renderer; the retrace is a machine-time-derived FRAME, not cycle-exact
+ * scanline timing, so a poll sees the right rhythm (once per frame, low most
+ * of the frame) but not the precise horizontal count a real 6845 clocks; and
+ * NO 6845 CRTC — start address, cursor and custom timings are not modelled,
+ * and there is no light pen.
+ *
  * @module
  */
 
