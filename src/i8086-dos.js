@@ -99,6 +99,9 @@ export function createDos8086(machine, io = {}) {
     let psp = 0;
     let cursor = 0;                     // linear cell index into the text page
     let attr = 0x07;
+    /** Every AL passed to INT 10h/AH=00h, oldest first. The only record of
+     *  which video mode a program believes it is in. */
+    const modeLog = [];
 
     // ---- memory helpers (physical, through the machine's own bus) --------
     const phys = (seg, off) => (((seg & 0xffff) << 4) + (off & 0xffff)) & 0xfffff;
@@ -289,7 +292,21 @@ export function createDos8086(machine, io = {}) {
     // ---- INT 10h (BIOS video) -------------------------------------------
     function int10() {
         switch (cpu.ah) {
-            case 0x00: clearScreen(); return;             // set mode: text 3 either way
+            case 0x00:
+                // RECORD THE MODE, then behave as text either way. This
+                // layer draws characters and nothing else, but a graphics
+                // program's mode set is the only evidence anywhere of which
+                // mode it thinks it is in -- and `likelyMode()` in
+                // i8086-cga.js needs exactly this log to decide how to
+                // render the bytes the program is about to write. Without
+                // it a mode-13h game paints A0000h and no one knows.
+                //
+                // AL bit 7 ("do not clear the display") is kept AS WRITTEN:
+                // the renderer masks it, and throwing information away here
+                // would make the log lie about what the program asked for.
+                modeLog.push(cpu.al);
+                if (!(cpu.al & 0x80)) clearScreen();
+                return;
             case 0x01: return;                            // cursor shape: nothing to show
             case 0x02: cursor = cpu.dh * COLS + cpu.dl; return;
             case 0x03: cpu.dh = Math.floor(cursor / COLS); cpu.dl = cursor % COLS; cpu.cx = 0x0607; return;
@@ -559,6 +576,15 @@ export function createDos8086(machine, io = {}) {
         get exitCode() { return exitCode; },
         get stdout() { return stdout; },
         get files() { return files; },
+
+        /**
+         * The video modes this program set, oldest first, exactly as the AL
+         * bytes it passed. Hand this to `likelyMode()` in i8086-cga.js to
+         * find out how to render memory; this layer deliberately does not
+         * import the renderer, so the two stay independent and either can be
+         * used without the other.
+         */
+        videoModeLog() { return [...modeLog]; },
 
         /** The text page as 25 lines, read from the CPU-visible buffer —
          *  so a program that wrote B800:0000 directly appears here too. */

@@ -239,3 +239,48 @@ test('the machine underneath is untouched by any of this', () => {
     assert.equal(DOSBOX8086.regions[1].end - DOSBOX8086.regions[1].start + 1, 1024);
     assert.equal(VRAM, 0xb8000);
 });
+
+test('the video mode a program sets is recorded, and the renderer can read it', async () => {
+    // The seam between Tier B and the framebuffer renderer: this layer draws
+    // characters and nothing else, so a graphics program's mode set is the
+    // ONLY evidence anywhere of which mode it believes it is in. Without the
+    // log, a mode-13h game paints A0000h and nobody knows how to read it.
+    const { dos } = dosWith(com([
+        [0x100, [0xb4, 0x00, 0xb0, 0x13, 0xcd, 0x10]],  // ah=0 al=13h int 10h
+        [0x106, [0xb4, 0x00, 0xb0, 0x83, 0xcd, 0x10]],  // ah=0 al=83h (mode 3, no clear)
+        [0x10c, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+    ]));
+    dos.run(10_000);
+    assert.deepEqual(dos.videoModeLog(), [0x13, 0x83],
+        'recorded AS WRITTEN, bit 7 included — masking it here would make the log lie');
+
+    const { likelyMode } = await import('../src/i8086-cga.js');
+    const verdict = likelyMode(dos.videoModeLog());
+    assert.equal(verdict.mode, 0x03, 'the renderer masks bit 7: 83h IS mode 3');
+    assert.ok(verdict.supported);
+    // And with no mode set at all, the power-on text mode is the right guess.
+    const fresh = dosWith(com([[0x100, [0xb8, 0x00, 0x4c, 0xcd, 0x21]]]));
+    fresh.dos.run(1000);
+    assert.deepEqual(fresh.dos.videoModeLog(), []);
+    assert.equal(likelyMode(fresh.dos.videoModeLog()).mode, 0x03);
+});
+
+test('AL bit 7 means the mode set does NOT clear the screen', () => {
+    const { dos } = dosWith(com([
+        [0x100, [0xba, 0x20, 0x01, 0xb4, 0x09, 0xcd, 0x21]],   // print "hi$"
+        [0x107, [0xb4, 0x00, 0xb0, 0x83, 0xcd, 0x10]],          // mode 3, no clear
+        [0x10d, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        [0x120, [0x68, 0x69, 0x24]],
+    ]));
+    dos.run(10_000);
+    assert.equal(dos.screenText()[0], 'hi', 'bit 7 set: the text survived the mode set');
+
+    const cleared = dosWith(com([
+        [0x100, [0xba, 0x20, 0x01, 0xb4, 0x09, 0xcd, 0x21]],
+        [0x107, [0xb4, 0x00, 0xb0, 0x03, 0xcd, 0x10]],          // mode 3, clearing
+        [0x10d, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        [0x120, [0x68, 0x69, 0x24]],
+    ]));
+    cleared.dos.run(10_000);
+    assert.equal(cleared.dos.screenText()[0], '', 'bit 7 clear: it did not');
+});
