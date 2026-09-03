@@ -160,6 +160,44 @@ test('cascade mode expects ICW3', () => {
     assert.equal(p._initPhase, 0, 'initialization complete');
 });
 
+test('initPhase and initWarning expose why a mid-init PIC stays silent', () => {
+    const p = pic();
+    assert.equal(p.initPhase, 0);
+    assert.equal(p.initWarning, null, 'operational chip has no warning');
+
+    // The trap lego-47 hit: ICW1 = 11h selects CASCADE (SNGL clear), so the
+    // chip needs an ICW3 that a single-PIC init never sends. It then eats the
+    // intended ICW2 and ICW4 as ICW3/ICW2 and never leaves initialisation.
+    p.write(0, 0x11);              // ICW1, cascade + ICW4
+    assert.equal(p.initPhase, 1);
+    assert.match(p.initWarning, /awaiting ICW2/);
+    p.write(1, 0x08);             // meant as ICW2 — consumed as ICW2, phase -> ICW3
+    assert.equal(p.initPhase, 2);
+    assert.match(p.initWarning, /awaiting ICW3/);
+    p.write(1, 0x01);             // meant as ICW4 — consumed as ICW3, phase -> ICW4
+    assert.equal(p.initPhase, 3);
+    assert.match(p.initWarning, /awaiting ICW4/);
+
+    // Still deaf: an IRQ raises nothing because init never finished.
+    p.setIRQ(0, 1);
+    assert.equal(p.intActive, false, 'a chip stuck in init does not interrupt');
+
+    // The correct single-PIC init (ICW1 = 13h) clears the warning.
+    p.write(0, 0x13); p.write(1, 0x08); p.write(1, 0x01);
+    assert.equal(p.initPhase, 0);
+    assert.equal(p.initWarning, null);
+});
+
+test('initWarning round-trips through save/load', () => {
+    const p = pic();
+    p.write(0, 0x11);             // leave it mid-init
+    const snap = p.getState();
+    const q = pic();
+    q.setState(snap);
+    assert.equal(q.initPhase, 1);
+    assert.match(q.initWarning, /awaiting ICW2/);
+});
+
 test('state round-trips', () => {
     const p = pic();
     initPIC(p, 0x30);
