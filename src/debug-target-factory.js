@@ -83,6 +83,9 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'eater6502') {
     return createEater6502Target(opts);
   }
+  if (kind === 'i8086') {
+    return createI8086Target(opts);
+  }
   if (kind === 'rp2040js') {
     return createRp2040jsTarget(opts);
   }
@@ -96,7 +99,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'z80', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'z80', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
   );
 }
 
@@ -282,6 +285,28 @@ async function createZ80Target(opts) {
     const mod = await import('./z80-debug.js');
     if (mod.createZ80DebugTarget) {
       target = mod.createZ80DebugTarget({ machine: adapter.machine });
+    }
+  } catch { /* adapter-only mode */ }
+  return { target, adapter };
+}
+
+/**
+ * The 8086 breadboard. Like the z80 and 6502 targets, a board is optional:
+ * a machine whose only observable surface is the serial console has no pins
+ * to publish, so a time-sync stub suffices. The 8255's pins are the reason
+ * to pass a real one.
+ */
+async function createI8086Target(opts) {
+  const { board, rom, config } = opts;
+  const { createI8086Adapter } = await import('./i8086-adapter.js');
+  const adapter = createI8086Adapter({ config, rom, romAt: opts.romAt });
+  adapter.attachBoard(board ?? { advanceTo() {} });
+
+  let target = null;
+  try {
+    const mod = await import('./i8086-debug.js');
+    if (mod.createI8086DebugTarget) {
+      target = mod.createI8086DebugTarget({ machine: adapter.machine });
     }
   } catch { /* adapter-only mode */ }
   return { target, adapter };
