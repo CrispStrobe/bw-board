@@ -384,3 +384,52 @@ test('INT 13h reads sectors, and refuses to read past the image', () => {
     const flags = m2._read((0x0800 << 4) + 0xfffc) | (m2._read((0x0800 << 4) + 0xfffd) << 8);
     assert.ok(flags & 1, 'carry set: a boot loader that got zeros instead would be unfindable');
 });
+
+test('INT 03h is answered as a breakpoint, not counted as a missing service', () => {
+    // Three textbook programs execute INT 03h under a comment reading
+    // "Debugging Breakpoint". They are asking for a debugger; reporting them
+    // as an unsupported service said we lacked something we had merely not
+    // connected.
+    const hits = [];
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m, { onBreakpoint: (at) => hits.push(at) })
+        .install()
+        .loadCom(Uint8Array.from([
+            0xcc,                                   // int 3
+            0xb4, 0x02, 0xb2, 0x41, 0xcd, 0x21,     // and carry on printing
+            0xb8, 0x00, 0x4c, 0xcd, 0x21,
+        ]));
+    const r = dos.run(10_000);
+    assert.ok(r.terminated);
+    assert.equal(dos.stdout, 'A', 'with no debugger attached the program continues, as on DOS');
+    assert.equal(hits.length, 1, 'but a debugger that IS watching is told');
+    assert.equal(hits[0].at, 0x0100, 'and told WHERE -- the INT 3 byte, not the trap slot');
+    assert.equal(hits[0].ip, 0x0101, 'with the return address beside it');
+    assert.deepEqual(dos.report().unsupported, [], 'and it is not a gap any more');
+    assert.equal(dos.report().breakpoints, 1);
+});
+
+test('INT 19h reboots into the boot sector, or ends the program if there is none', () => {
+    // With a disk: control really goes back to 0000:7C00 by the same path
+    // loadBoot uses, because a reboot that did something different from
+    // booting would be the lie.
+    const disk = new Uint8Array(512 * 2);
+    disk.set([0xb4, 0x02, 0xb2, 0x5a, 0xcd, 0x21, 0xeb, 0xfe], 0);   // print 'Z', park
+    disk[510] = 0x55; disk[511] = 0xaa;
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m, { disk }).install()
+        .loadCom(Uint8Array.from([0xcd, 0x19]));
+    for (let i = 0; i < 200; i++) dos.step();
+    assert.equal(m.cpu.cs, 0, 'CS:IP is the BIOS entry point again');
+    assert.equal(dos.stdout, 'Z', 'and the boot sector really ran');
+    assert.equal(dos.report().rebooted, 1);
+
+    // Without one: the program ends, and the report says a reboot was asked
+    // for rather than pretending one happened.
+    const m2 = new I8086Machine(DOSBOX8086);
+    const d2 = createDos8086(m2).install().loadCom(Uint8Array.from([0xcd, 0x19]));
+    const r = d2.run(10_000);
+    assert.ok(r.terminated);
+    assert.equal(d2.report().rebooted, 1);
+    assert.deepEqual(d2.report().unsupported, []);
+});

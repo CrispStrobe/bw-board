@@ -94,6 +94,12 @@ export function createDos8086(machine, io = {}) {
 
     const unsupported = new Map();      // "int:ah" → count
     let stdout = '';
+    /** Every INT 03h the program executed, in order. */
+    const breakpoints = [];
+    let rebooted = 0;
+    /** Set by a handler that has taken CS:IP (and the stack) for itself, so
+     *  the generic IRET below must not run and undo it. */
+    let controlTransferred = false;
     let terminated = false;
     let exitCode = 0;
     let psp = 0;
@@ -512,6 +518,61 @@ export function createDos8086(machine, io = {}) {
         }
     }
 
+    /**
+     * INT 03h -- the one-byte breakpoint, and the corpus really does use it.
+     * Three textbook programs execute it under a comment reading "Debugging
+     * Breakpoint": the program is ASKING for a debugger.
+     *
+     * So the service is to answer as DOS does. With no debugger installed the
+     * handler returns and the program continues -- which is why those three
+     * still print their results -- and the event is recorded either way, so a
+     * debugger that IS watching can stop on it. Counting it as an unsupported
+     * service, which is what happened before, told the user we lacked
+     * something we merely had not connected.
+     */
+    function int03() {
+        // WHERE the breakpoint was is on the STACK, not in CS:IP. By the time
+        // a handler runs, the CPU has already taken the interrupt and CS:IP
+        // is the trap slot -- reporting that would tell a debugger the
+        // address of the trap table, which is useless and looks plausible.
+        // The pushed IP is the byte AFTER the one-byte INT 3, so `at` backs
+        // up over it to name the instruction the user actually wrote.
+        const ip = rd16(cpu.ss, cpu.sp);
+        const cs = rd16(cpu.ss, (cpu.sp + 2) & 0xffff);
+        const where = { cs, ip, at: (ip - 1) & 0xffff, cycles: machine.cycles };
+        breakpoints.push(where);
+        if (io.onBreakpoint) io.onBreakpoint(where);
+    }
+
+    /**
+     * INT 19h -- bootstrap. A program that calls it wants the machine
+     * restarted, and one corpus program ends that way on purpose.
+     *
+     * A real BIOS re-reads the boot sector. There is no disk here unless the
+     * caller supplied one, so this resets the CPU and ends the program, and
+     * says which it did in the report rather than pretending a reboot
+     * happened. If a disk IS present, the boot sector is re-loaded and
+     * control really does go back to 0000:7C00 -- the same path loadBoot()
+     * uses, because a reboot that did something DIFFERENT from booting would
+     * be the lie.
+     */
+    function int19() {
+        rebooted++;
+        const disk = io.disk;
+        if (disk && disk.length >= 512 && disk[510] === 0x55 && disk[511] === 0xaa) {
+            for (let i = 0; i < 512; i++) machine._write(0x7c00 + i, disk[i]);
+            cpu.cs = 0; cpu.ip = 0x7c00; cpu.ss = 0; cpu.sp = 0x7c00;
+            cpu.ds = 0; cpu.es = 0; cpu.dl = 0;
+            // A REBOOT MUST NOT IRET. The generic return below pops the CS:IP
+            // the INT pushed, which would drop the machine straight back into
+            // the program that just asked to be restarted -- the same shape
+            // as a handler setting a flag and having the IRET restore it.
+            controlTransferred = true;
+            return;
+        }
+        terminated = true;
+    }
+
     /** INT 33h: the mouse driver nobody installed. Saying so is the service. */
     function int33() {
         if (cpu.ax === 0) { cpu.ax = 0; cpu.bx = 0; return; }   // 0 = no driver
@@ -519,8 +580,8 @@ export function createDos8086(machine, io = {}) {
     }
 
     const HANDLERS = {
-        0x08: int08, 0x09: int09,
-        0x10: int10, 0x13: int13, 0x15: int15, 0x16: int16, 0x1a: int1a,
+        0x03: int03, 0x08: int08, 0x09: int09,
+        0x10: int10, 0x13: int13, 0x15: int15, 0x16: int16, 0x19: int19, 0x1a: int1a,
         // INT 1Ch is the user timer hook a real BIOS calls from INT 08h.
         // Nothing calls it here — a nested dispatch through the trap would
         // need its own frame — so a program that hooks 1Ch and expects to be
@@ -666,8 +727,10 @@ export function createDos8086(machine, io = {}) {
             if (cpu.ip % TRAP_STRIDE !== 0 || cpu.ip / TRAP_STRIDE > 0xff) return null;
             const n = cpu.ip / TRAP_STRIDE;
             const h = HANDLERS[n];
+            controlTransferred = false;
             if (h) h();
             else { note(n, cpu.ah); fail(1); }
+            if (controlTransferred) return n;   // the handler owns CS:IP now
             // IRET by hand, with the one subtlety that makes status returns
             // work at all: a plain IRET restores the FLAGS the INT pushed,
             // which would WIPE the carry a DOS error just set and the zero
@@ -743,6 +806,8 @@ export function createDos8086(machine, io = {}) {
                 stdout,
                 terminated,
                 exitCode,
+                breakpoints: breakpoints.length,
+                rebooted,
             };
         },
     };
