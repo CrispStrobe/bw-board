@@ -6,7 +6,7 @@
 // Tier A, USART->PIC for the SD-card build) actually connects.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { I8086Machine, TIERA8088, SDCARD8086 } from '../src/i8086-machine.js';
+import { I8086Machine, TIERA8088, SDCARD8086, PCXT8086 } from '../src/i8086-machine.js';
 
 /**
  * Build a ROM image sized to a preset's ROM region, with the code at
@@ -65,6 +65,24 @@ test('SDCARD8086: 256K RAM + 256K ROM, and the reset vector is in ROM', () => {
     m.reset();
     m.step();
     assert.equal(m.cpu.cs, 0xf800, 'booted');
+});
+
+test('PCXT8086: the XT map wires the speaker off 61h and answers CGA retrace at 3DAh', () => {
+    const m = new I8086Machine(PCXT8086);
+    const rom = PCXT8086.regions.find((r) => r.kind === 'rom');
+    assert.ok(rom.start <= 0xffff0 && rom.end >= 0xfffff, 'BIOS ROM covers the reset vector');
+    assert.ok(m.chips.pic1 && m.chips.pit1 && m.chips.ppi1 && m.chips.spk && m.chips.cga1, 'full XT chip set');
+
+    // The speaker: program counter 2 for a tone, configure the PPI, sound it.
+    m._out(0x63, 0x80);                        // 8255 all output
+    m._out(0x43, 0xb6);                        // counter 2, mode 3
+    m._out(0x42, 1193 & 0xff); m._out(0x42, (1193 >> 8) & 0xff);
+    m._out(0x61, 0x03);                        // gate + data
+    assert.deepEqual(m.audioTone(), { hz: 1000, on: true }, 'the XT speaker sounds ~1 kHz');
+
+    // The CGA status port answers with a real frame at 3DAh.
+    const s = m._in(0x3da);
+    assert.equal(s & ~0x09, 0, 'only display-enable and vretrace bits are live');
 });
 
 test('SDCARD8086: the 8251 transmits, and its receive IRQ reaches the PIC', () => {

@@ -77,10 +77,13 @@ export class CGACard {
     /** @param {number} reg offset within the 3D0h-3DFh window (port & 0x0F) */
     read(reg) {
         const r = reg & 0x0f;
-        if (r === 0x0a) return this._status();       // 3DAh
-        if (r === 0x08) return this.mode;            // 3D8h (readback)
-        if (r === 0x09) return this.color;           // 3D9h (readback)
-        return 0xff;                                  // 6845 index/data etc: open bus
+        if (r === 0x0a) return this._status();       // 3DAh — the only readable reg
+        // 3D8h mode and 3D9h colour are WRITE-ONLY on a real CGA: a read
+        // floats, it does NOT return the latch. Handing back the written byte
+        // would invent a readable register the hardware lacks (the same
+        // mistake as an 8255 control register that reads back). The renderer
+        // sees the latch through getVideoState(), never through the bus.
+        return 0xff;                                  // 3D8h/3D9h/6845/etc: open bus
     }
 
     /** @param {number} reg @param {number} val */
