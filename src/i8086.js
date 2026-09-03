@@ -1,0 +1,910 @@
+/**
+ * 8086 core — the retro tier's third CPU, our own, built the W65C02 and Z80
+ * way: bus-agnostic (read/write callbacks), instruction-stepped, ground
+ * against the SingleStepTests 8086 suite (MIT; 324 opcode files × 2,000
+ * vectors, generated on an Intel P80C86A-2 by ArduinoX86, UNDOCUMENTED
+ * behavior included: SETMO/SETMOC, SALC, the 0x60-0x6F and 0xC0/C1/C8/C9
+ * decode aliases, POP CS, the F6/F7 reg=1 TEST alias).
+ *
+ * STATUS: VECTOR-COMPLETE — 323/323 files, 646,000 vectors, every opcode
+ * the suite ships. The eleven it does not ship (0x0f POP CS, the five
+ * prefixes, 0x9b WAIT, 0xf4 HLT) are implemented but unverified; there is
+ * nothing to verify them against.
+ *
+ * THREE THINGS DIFFER FROM EVERY OTHER CORE HERE, and each one is a bug
+ * waiting to happen in code that assumes the Z80 shape:
+ *
+ *   - Addresses are TWENTY bits. The bus sees a physical address, not a
+ *     16-bit one: (seg << 4) + off, wrapped at 1 MB. There is no A20 gate.
+ *   - Offsets wrap at SIXTEEN bits INSIDE the segment. A word read at
+ *     offset 0xffff reads offset 0x0000 of the SAME segment for its high
+ *     byte -- it does not spill into the next paragraph.
+ *   - There is no single program counter. CS:IP is the pair; the debug
+ *     layer derives a flat pc from it and must never write one back.
+ *
+ * Accuracy tier: architectural state, verified opcode by opcode against the
+ * vector suite via scripts/grind-i8086.mjs. Cycle counts are the published
+ * 8086 timings plus the EA cost, NOT vector-verified -- the suite's cycle
+ * arrays are prefetch-queue-inclusive bus traces and mean nothing for an
+ * instruction-stepped core, so the grinder does not compare them. The
+ * machine layer advances peripherals at instruction granularity, which at
+ * millisecond trace resolution is indistinguishable.
+ *
+ * NOT modeled, deliberately: the prefetch queue and the BIU; the 8087 escape
+ * (0xd8-0xdf reads its operand and does nothing else); INTR/NMI delivery,
+ * which belongs to the machine layer; and the 8086 erratum where an
+ * interrupt taken mid-REP loses a segment override on resumption -- with no
+ * interrupt delivery there is nothing yet for it to happen to.
+ *
+ * @module
+ */
+
+// Flag bits in FLAGS.
+const CF = 0x0001, PF = 0x0004, AF = 0x0010, ZF = 0x0040, SF = 0x0080;
+const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800;
+
+// The 8086 reads bit 1 and bits 12-15 as 1 and bits 3 and 5 as 0, always,
+// whatever POPF or IRET was handed. PUSHF hands those bits straight back
+// out, so the vectors compare them and a core that stores a "clean" 16-bit
+// flags word fails every test that touches the stack.
+const F_ON = 0xf002, F_OFF = 0x0028;
+const fixFlags = (f) => (f | F_ON) & ~F_OFF;
+
+const PARITY = new Uint8Array(256);
+for (let i = 0; i < 256; i++) {
+    let b = i, c = 0;
+    while (b) { c ^= b & 1; b >>= 1; }
+    PARITY[i] = c ? 0 : PF;      // even parity sets PF
+}
+
+/** Thrown by step() for an opcode this core does not implement yet. The
+ *  grinder scores these NOT-YET; nothing may score them as pass. */
+export class Unimplemented extends Error {
+    constructor(op) {
+        super(`8086: opcode ${op.toString(16).padStart(2, '0')} not implemented`);
+        this.name = 'Unimplemented';
+        this.opcode = op;
+    }
+}
+
+export class I8086 {
+    /** @param {{ read: (a:number)=>number, write:(a:number,v:number)=>void,
+     *            in?:(port:number)=>number, out?:(port:number,v:number)=>void }} bus */
+    constructor(bus) {
+        this.read = bus.read;
+        this.write = bus.write;
+        this.inPort = bus.in || (() => 0xff);
+        this.outPort = bus.out || (() => {});
+        this.reset();
+    }
+
+    reset() {
+        this.ax = 0; this.bx = 0; this.cx = 0; this.dx = 0;
+        this.sp = 0; this.bp = 0; this.si = 0; this.di = 0;
+        this.ip = 0;
+        // Power-on vector: FFFF:0000, the top sixteen bytes of the space.
+        this.cs = 0xffff; this.ds = 0; this.es = 0; this.ss = 0;
+        this.flags = fixFlags(0);
+        this.halted = false;
+        this.cycles = 0;
+        this._seg = -1;          // active segment override VALUE, -1 for none
+        this._rep = 0;           // 0, 0xf2 (REPNE) or 0xf3 (REP/REPE)
+        this.mod = 0; this.reg = 0; this.rm = 0;
+        this.ea = 0; this.eaSeg = 0;
+    }
+
+    // ---- byte views over the word registers -----------------------------
+    get al() { return this.ax & 0xff; }
+    set al(v) { this.ax = (this.ax & 0xff00) | (v & 0xff); }
+    get ah() { return (this.ax >> 8) & 0xff; }
+    set ah(v) { this.ax = (this.ax & 0x00ff) | ((v & 0xff) << 8); }
+    get bl() { return this.bx & 0xff; }
+    set bl(v) { this.bx = (this.bx & 0xff00) | (v & 0xff); }
+    get bh() { return (this.bx >> 8) & 0xff; }
+    set bh(v) { this.bx = (this.bx & 0x00ff) | ((v & 0xff) << 8); }
+    get cl() { return this.cx & 0xff; }
+    set cl(v) { this.cx = (this.cx & 0xff00) | (v & 0xff); }
+    get ch() { return (this.cx >> 8) & 0xff; }
+    set ch(v) { this.cx = (this.cx & 0x00ff) | ((v & 0xff) << 8); }
+    get dl() { return this.dx & 0xff; }
+    set dl(v) { this.dx = (this.dx & 0xff00) | (v & 0xff); }
+    get dh() { return (this.dx >> 8) & 0xff; }
+    set dh(v) { this.dx = (this.dx & 0x00ff) | ((v & 0xff) << 8); }
+
+    /** The flat address CS:IP names — what a debugger anchors on. */
+    get pc() { return ((this.cs << 4) + this.ip) & 0xfffff; }
+
+    // ---- memory ---------------------------------------------------------
+    /** seg:off to a physical address. Both halves wrap: the offset at 16
+     *  bits, the sum at 20 (the 8086 has no A20 gate to hold it open). */
+    static phys(seg, off) { return (((seg & 0xffff) << 4) + (off & 0xffff)) & 0xfffff; }
+
+    _rd8(seg, off) { return this.read(I8086.phys(seg, off)) & 0xff; }
+    _wr8(seg, off, v) { this.write(I8086.phys(seg, off), v & 0xff); }
+    _rd16(seg, off) {
+        return this._rd8(seg, off) | (this._rd8(seg, (off + 1) & 0xffff) << 8);
+    }
+    _wr16(seg, off, v) {
+        this._wr8(seg, off, v & 0xff);
+        this._wr8(seg, (off + 1) & 0xffff, (v >> 8) & 0xff);
+    }
+
+    // ---- instruction fetch ----------------------------------------------
+    _fetch8() { const b = this._rd8(this.cs, this.ip); this.ip = (this.ip + 1) & 0xffff; return b; }
+    _fetchS8() { const b = this._fetch8(); return b & 0x80 ? b - 256 : b; }
+    _fetch16() { return this._fetch8() | (this._fetch8() << 8); }
+
+    // ---- stack ----------------------------------------------------------
+    _push(v) { this.sp = (this.sp - 2) & 0xffff; this._wr16(this.ss, this.sp, v); }
+    _pop() { const v = this._rd16(this.ss, this.sp); this.sp = (this.sp + 2) & 0xffff; return v; }
+
+    /** PUSH of a register reads it AFTER the decrement, so `push sp` stores
+     *  SP-2 and not SP. The 286 changed this, and detecting the difference
+     *  is how period software tells an 8086 from its successors, so it is
+     *  not a rough edge to smooth off. */
+    _pushR16(i) {
+        this.sp = (this.sp - 2) & 0xffff;
+        this._wr16(this.ss, this.sp, i === 4 ? this.sp : this._r16(i));
+    }
+
+    // ---- ModR/M ---------------------------------------------------------
+    /** Decode the ModR/M byte and, for a memory form, the effective address
+     *  and its segment. The default-segment rule lives HERE and nowhere else:
+     *  anything reached through BP belongs to SS, everything else to DS, and
+     *  an override replaces that choice -- except for a string destination,
+     *  which is always ES:DI and never asks this function. */
+    _modrm() {
+        const m = this._fetch8();
+        this.mod = m >> 6; this.reg = (m >> 3) & 7; this.rm = m & 7;
+        if (this.mod === 3) { this.ea = 0; this.eaSeg = 0; return 0; }
+        let base = 0, seg = this.ds, cost;
+        switch (this.rm) {
+            case 0: base = this.bx + this.si; cost = 7; break;
+            case 1: base = this.bx + this.di; cost = 8; break;
+            case 2: base = this.bp + this.si; seg = this.ss; cost = 8; break;
+            case 3: base = this.bp + this.di; seg = this.ss; cost = 7; break;
+            case 4: base = this.si; cost = 5; break;
+            case 5: base = this.di; cost = 5; break;
+            case 6:
+                if (this.mod === 0) { base = this._fetch16(); cost = 6; }
+                else { base = this.bp; seg = this.ss; cost = 5; }
+                break;
+            default: base = this.bx; cost = 5; break;
+        }
+        if (this.mod === 1) { base += this._fetchS8(); cost += 4; }
+        else if (this.mod === 2) { base += this._fetch16(); cost += 4; }
+        this.ea = base & 0xffff;
+        this.eaSeg = this._seg >= 0 ? this._seg : seg;
+        return cost;
+    }
+
+    // ---- register files -------------------------------------------------
+    _r8(i) {
+        switch (i) {
+            case 0: return this.al; case 1: return this.cl;
+            case 2: return this.dl; case 3: return this.bl;
+            case 4: return this.ah; case 5: return this.ch;
+            case 6: return this.dh; default: return this.bh;
+        }
+    }
+    _r8set(i, v) {
+        switch (i) {
+            case 0: this.al = v; break; case 1: this.cl = v; break;
+            case 2: this.dl = v; break; case 3: this.bl = v; break;
+            case 4: this.ah = v; break; case 5: this.ch = v; break;
+            case 6: this.dh = v; break; default: this.bh = v; break;
+        }
+    }
+    _r16(i) {
+        switch (i) {
+            case 0: return this.ax; case 1: return this.cx;
+            case 2: return this.dx; case 3: return this.bx;
+            case 4: return this.sp; case 5: return this.bp;
+            case 6: return this.si; default: return this.di;
+        }
+    }
+    _r16set(i, v) {
+        v &= 0xffff;
+        switch (i) {
+            case 0: this.ax = v; break; case 1: this.cx = v; break;
+            case 2: this.dx = v; break; case 3: this.bx = v; break;
+            case 4: this.sp = v; break; case 5: this.bp = v; break;
+            case 6: this.si = v; break; default: this.di = v; break;
+        }
+    }
+    /** Only two bits of the ModR/M reg field select a segment register:
+     *  8C/8E with reg 4-7 alias to 0-3 rather than faulting, and the suite
+     *  puts random values there precisely to catch a core that masks with 7. */
+    _sreg(i) {
+        switch (i & 3) {
+            case 0: return this.es; case 1: return this.cs;
+            case 2: return this.ss; default: return this.ds;
+        }
+    }
+    _sregSet(i, v) {
+        v &= 0xffff;
+        switch (i & 3) {
+            case 0: this.es = v; break; case 1: this.cs = v; break;
+            case 2: this.ss = v; break; default: this.ds = v; break;
+        }
+    }
+
+    // ---- r/m operands ---------------------------------------------------
+    _rm8() { return this.mod === 3 ? this._r8(this.rm) : this._rd8(this.eaSeg, this.ea); }
+    _rm8set(v) {
+        if (this.mod === 3) this._r8set(this.rm, v); else this._wr8(this.eaSeg, this.ea, v);
+    }
+    _rm16() { return this.mod === 3 ? this._r16(this.rm) : this._rd16(this.eaSeg, this.ea); }
+    _rm16set(v) {
+        if (this.mod === 3) this._r16set(this.rm, v); else this._wr16(this.eaSeg, this.ea, v);
+    }
+
+    // ---- flag primitives ------------------------------------------------
+    _add(a, b, cin, w) {
+        const mask = w ? 0xffff : 0xff, sign = w ? 0x8000 : 0x80;
+        const raw = a + b + cin, res = raw & mask;
+        let f = this.flags & ~(CF | PF | AF | ZF | SF | OF);
+        if (raw > mask) f |= CF;
+        if ((a ^ b ^ res) & 0x10) f |= AF;
+        if ((res ^ a) & (res ^ b) & sign) f |= OF;
+        if (!res) f |= ZF;
+        if (res & sign) f |= SF;
+        this.flags = f | PARITY[res & 0xff];
+        return res;
+    }
+    _sub(a, b, cin, w) {
+        const mask = w ? 0xffff : 0xff, sign = w ? 0x8000 : 0x80;
+        const raw = a - b - cin, res = raw & mask;
+        let f = this.flags & ~(CF | PF | AF | ZF | SF | OF);
+        if (raw < 0) f |= CF;
+        if ((a ^ b ^ res) & 0x10) f |= AF;
+        if ((a ^ b) & (a ^ res) & sign) f |= OF;
+        if (!res) f |= ZF;
+        if (res & sign) f |= SF;
+        this.flags = f | PARITY[res & 0xff];
+        return res;
+    }
+    /** AND/OR/XOR/TEST: CF and OF cleared, AF undefined (left clear). */
+    _logic(res, w) {
+        const sign = w ? 0x8000 : 0x80;
+        let f = this.flags & ~(CF | PF | AF | ZF | SF | OF);
+        if (!res) f |= ZF;
+        if (res & sign) f |= SF;
+        this.flags = f | PARITY[res & 0xff];
+        return res;
+    }
+    /** INC/DEC touch every arithmetic flag EXCEPT carry. */
+    _inc(v, w) { const c = this.flags & CF; const r = this._add(v, 1, 0, w); this.flags = (this.flags & ~CF) | c; return r; }
+    _dec(v, w) { const c = this.flags & CF; const r = this._sub(v, 1, 0, w); this.flags = (this.flags & ~CF) | c; return r; }
+
+    /** ALU op by ModR/M reg field: ADD OR ADC SBB AND SUB XOR CMP.
+     *  Returns the result; CMP (7) is the caller's cue to discard it. */
+    _alu(op, a, b, w) {
+        const c = this.flags & CF ? 1 : 0;
+        switch (op) {
+            case 0: return this._add(a, b, 0, w);
+            case 1: return this._logic((a | b) & (w ? 0xffff : 0xff), w);
+            case 2: return this._add(a, b, c, w);
+            case 3: return this._sub(a, b, c, w);
+            case 4: return this._logic(a & b, w);
+            case 5: return this._sub(a, b, 0, w);
+            case 6: return this._logic((a ^ b) & (w ? 0xffff : 0xff), w);
+            default: return this._sub(a, b, 0, w);
+        }
+    }
+
+    // ---- shifts and rotates ---------------------------------------------
+    /** D0-D3 group. Rotates touch ONLY CF and OF -- SZP and AF survive them,
+     *  which is the difference the vectors catch first. OF is defined for a
+     *  count of one and undefined above it. A count of zero changes nothing
+     *  at all, flags included. */
+    _shift(op, val, cnt, w) {
+        const mask = w ? 0xffff : 0xff, sign = w ? 0x8000 : 0x80;
+        if (op === 6) return this._setmo(cnt, w);       // undocumented, below
+        if (cnt === 0) return val & mask;
+        let v = val & mask, cf = this.flags & CF ? 1 : 0;
+        const orig = v;
+        for (let i = 0; i < cnt; i++) {
+            switch (op) {
+                case 0: { const b = (v & sign) ? 1 : 0; v = ((v << 1) | b) & mask; cf = b; break; }
+                case 1: { const b = v & 1; v = (v >>> 1) | (b ? sign : 0); cf = b; break; }
+                case 2: { const b = (v & sign) ? 1 : 0; v = ((v << 1) | cf) & mask; cf = b; break; }
+                case 3: { const b = v & 1; v = (v >>> 1) | (cf ? sign : 0); cf = b; break; }
+                case 4: { cf = (v & sign) ? 1 : 0; v = (v << 1) & mask; break; }
+                case 5: { cf = v & 1; v = v >>> 1; break; }
+                default: { cf = v & 1; v = ((v >>> 1) | (v & sign)) & mask; break; }
+            }
+        }
+        let f = this.flags & ~(CF | OF);
+        if (cf) f |= CF;
+        if (cnt === 1) {
+            const msb = (v & sign) ? 1 : 0;
+            let of = 0;
+            switch (op) {
+                case 0: case 2: case 4: of = msb ^ cf; break;
+                case 1: case 3: of = msb ^ ((v & (sign >>> 1)) ? 1 : 0); break;
+                case 5: of = (orig & sign) ? 1 : 0; break;
+                default: of = 0; break;                 // SAR never overflows
+            }
+            if (of) f |= OF;
+        }
+        this.flags = f;
+        if (op >= 4) {                                  // SHL/SHR/SAR set SZP
+            let g = this.flags & ~(PF | ZF | SF);
+            if (!v) g |= ZF;
+            if (v & sign) g |= SF;
+            this.flags = g | PARITY[v & 0xff];
+        }
+        return v;
+    }
+
+    /** SETMO / SETMOC (D0-D3 reg=6) -- undocumented, and real: the operand
+     *  becomes all ones and the flags follow from that, unconditionally for
+     *  the D0/D1 forms and only when CL is non-zero for D2/D3. */
+    _setmo(cnt, w) {
+        const mask = w ? 0xffff : 0xff;
+        if (cnt === 0) return 0;                        // caller keeps the operand
+        const v = mask;
+        let f = this.flags & ~(CF | PF | AF | ZF | SF | OF);
+        if (v & (w ? 0x8000 : 0x80)) f |= SF;
+        this.flags = f | PARITY[v & 0xff];
+        return v;
+    }
+
+    // ---- multiply and divide --------------------------------------------
+    _mul8(src) {
+        const r = this.al * src;
+        this.ax = r & 0xffff;
+        let f = this.flags & ~(CF | OF);
+        if (this.ah) f |= CF | OF;
+        this.flags = f;
+    }
+    _mul16(src) {
+        const r = this.ax * src;
+        this.ax = r & 0xffff; this.dx = (r >>> 16) & 0xffff;
+        let f = this.flags & ~(CF | OF);
+        if (this.dx) f |= CF | OF;
+        this.flags = f;
+    }
+    _imul8(src) {
+        const a = this.al & 0x80 ? this.al - 256 : this.al;
+        const b = src & 0x80 ? src - 256 : src;
+        const r = a * b;
+        this.ax = r & 0xffff;
+        let f = this.flags & ~(CF | OF);
+        if (r < -128 || r > 127) f |= CF | OF;
+        this.flags = f;
+    }
+    _imul16(src) {
+        const a = this.ax & 0x8000 ? this.ax - 65536 : this.ax;
+        const b = src & 0x8000 ? src - 65536 : src;
+        const r = a * b;
+        this.ax = r & 0xffff; this.dx = (r >>> 16) & 0xffff;
+        let f = this.flags & ~(CF | OF);
+        if (r < -32768 || r > 32767) f |= CF | OF;
+        this.flags = f;
+    }
+    /** Divide overflow raises INT 0. On the 8086 the address pushed is the
+     *  one AFTER the failing instruction (the 286 changed this), which falls
+     *  out naturally here because IP has already advanced. */
+    _div8(src) {
+        if (src === 0) { this._interrupt(0); return; }
+        const q = Math.floor(this.ax / src), r = this.ax % src;
+        if (q > 0xff) { this._interrupt(0); return; }
+        this.al = q; this.ah = r;
+    }
+    _div16(src) {
+        if (src === 0) { this._interrupt(0); return; }
+        const n = this.dx * 65536 + this.ax;
+        const q = Math.floor(n / src), r = n % src;
+        if (q > 0xffff) { this._interrupt(0); return; }
+        this.ax = q & 0xffff; this.dx = r & 0xffff;
+    }
+    /** A REP prefix on IDIV NEGATES THE QUOTIENT. It is not a decode quirk
+     *  and not a no-op prefix being ignored: the microcode's sign-correction
+     *  step runs an extra time, and period code that put a stray REP in
+     *  front of a divide got a sign-flipped answer from the silicon. The
+     *  suite prepends REP to a share of every string-capable opcode, which
+     *  is how it surfaces here at all. Range is checked on the magnitude
+     *  BEFORE the flip -- that is the order the vectors show. */
+    _idiv8(src) {
+        const d = src & 0x80 ? src - 256 : src;
+        if (d === 0) { this._interrupt(0); return; }
+        const n = this.ax & 0x8000 ? this.ax - 65536 : this.ax;
+        let q = Math.trunc(n / d);
+        const r = n % d;
+        // The range check is on the MAGNITUDE, so a quotient of exactly
+        // -128 faults where -127..127 does not: the microcode compares an
+        // absolute value against 0x7f and never sees the sign.
+        if (Math.abs(q) > 127) { this._interrupt(0); return; }
+        if (this._rep) q = -q;
+        this.al = q & 0xff; this.ah = r & 0xff;
+    }
+    _idiv16(src) {
+        const d = src & 0x8000 ? src - 65536 : src;
+        if (d === 0) { this._interrupt(0); return; }
+        let n = this.dx * 65536 + this.ax;
+        if (n >= 0x80000000) n -= 0x100000000;
+        let q = Math.trunc(n / d);
+        const r = n % d;
+        if (Math.abs(q) > 32767) { this._interrupt(0); return; }   // magnitude, as above
+        if (this._rep) q = -q;
+        this.ax = q & 0xffff; this.dx = r & 0xffff;
+    }
+
+    // ---- BCD ------------------------------------------------------------
+    /** DAA and DAS differ only in the sign of the two corrections, and both
+     *  diverge from Intel's published pseudocode in the same place.
+     *
+     *  The manual says the high correction happens when the ORIGINAL AL was
+     *  above 0x99 or carry was set. The silicon does something narrower: for
+     *  an AL of 0x9a-0x9f it applies the correction only when AF was CLEAR,
+     *  so `daa` on AL=0x9a leaves 0xa0 with AL=0x9a,AF=1 and 0x00 with
+     *  AL=0x9a,AF=0 -- the same AL, the same low correction, two different
+     *  answers. Carry out is then exactly "the high correction happened":
+     *  a borrow out of the low correction does NOT set it, which is what
+     *  `das` on AL=0x00,AF=1 proves (0xfa with carry CLEAR).
+     *
+     *  This rule is fitted to the vectors and exact over all 2,000 of each,
+     *  where the published one misses 17 and 37 respectively. It is
+     *  behavior, not documentation, and it is deliberately written to look
+     *  odd so nobody "corrects" it back. */
+    _bcdAdjust(sub) {
+        const oldAl = this.al, oldCf = this.flags & CF ? 1 : 0, oldAf = this.flags & AF;
+        let f = this.flags & ~(CF | AF | PF | ZF | SF);
+        if ((oldAl & 0x0f) > 9 || oldAf) {
+            this.al = sub ? this.al - 6 : this.al + 6;
+            f |= AF;
+        }
+        if (oldCf || oldAl >= 0xa0 || (oldAl >= 0x9a && !oldAf)) {
+            this.al = sub ? this.al - 0x60 : this.al + 0x60;
+            f |= CF;
+        }
+        if (!this.al) f |= ZF;
+        if (this.al & 0x80) f |= SF;
+        this.flags = f | PARITY[this.al];
+    }
+    _daa() { this._bcdAdjust(false); }
+    _das() { this._bcdAdjust(true); }
+    _aaa() {
+        let f = this.flags & ~(CF | AF);
+        if ((this.al & 0x0f) > 9 || (this.flags & AF)) {
+            this.al = this.al + 6;
+            this.ah = this.ah + 1;
+            f |= AF | CF;
+        }
+        this.al = this.al & 0x0f;
+        this.flags = f;
+    }
+    _aas() {
+        let f = this.flags & ~(CF | AF);
+        if ((this.al & 0x0f) > 9 || (this.flags & AF)) {
+            this.al = this.al - 6;
+            this.ah = this.ah - 1;
+            f |= AF | CF;
+        }
+        this.al = this.al & 0x0f;
+        this.flags = f;
+    }
+    /** The immediate byte is a real operand, not a hardwired ten -- AAM 0
+     *  divides by zero and takes INT 0 like any other. */
+    _aam(base) {
+        if (base === 0) {
+            // AAM 0 divides by zero. Before it faults it leaves the flags of
+            // a ZERO result -- ZF and PF set, SF, AF and CF clear -- while AX
+            // itself is untouched, and INT 0 then pushes exactly that.
+            this.flags = (this.flags & ~(CF | AF | OF | SF | PF)) | ZF | PARITY[0];
+            this._interrupt(0);
+            return;
+        }
+        const al = this.al;
+        this.ah = Math.floor(al / base) & 0xff;
+        this.al = (al % base) & 0xff;
+        this._szpAl();
+    }
+    _aad(base) {
+        this.al = (this.al + this.ah * base) & 0xff;
+        this.ah = 0;
+        this._szpAl();
+    }
+    _szpAl() {
+        let f = this.flags & ~(PF | ZF | SF);
+        if (!this.al) f |= ZF;
+        if (this.al & 0x80) f |= SF;
+        this.flags = f | PARITY[this.al];
+    }
+
+    // ---- interrupts -----------------------------------------------------
+    /** Software or internal interrupt: FLAGS, CS, IP go on the stack, the
+     *  trap and interrupt flags clear, and the vector comes from segment 0.
+     *  Hardware delivery (INTR/NMI) is the machine layer's call, not ours. */
+    _interrupt(n) {
+        this._push(this.flags);
+        this.flags &= ~(IF | TF);
+        this._push(this.cs);
+        this._push(this.ip);
+        this.ip = this._rd16(0, (n * 4) & 0xffff);
+        this.cs = this._rd16(0, (n * 4 + 2) & 0xffff);
+    }
+
+    /** Public entry for a machine-layer interrupt request. The caller owns
+     *  the IF check and the acknowledge cycle; this just takes the vector. */
+    interrupt(n) { this.halted = false; this._interrupt(n); }
+
+    // ---- string primitives ----------------------------------------------
+    /** The source of a string op takes a segment override; the destination
+     *  is ES:DI and takes none. That asymmetry is the whole trap. */
+    _srcSeg() { return this._seg >= 0 ? this._seg : this.ds; }
+    _delta(w) { return (this.flags & DF ? -1 : 1) * (w ? 2 : 1); }
+
+    _movs(w) {
+        const d = this._delta(w), s = this._srcSeg();
+        if (w) this._wr16(this.es, this.di, this._rd16(s, this.si));
+        else this._wr8(this.es, this.di, this._rd8(s, this.si));
+        this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
+    }
+    _cmps(w) {
+        const d = this._delta(w), s = this._srcSeg();
+        const a = w ? this._rd16(s, this.si) : this._rd8(s, this.si);
+        const b = w ? this._rd16(this.es, this.di) : this._rd8(this.es, this.di);
+        this._sub(a, b, 0, w);
+        this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
+    }
+    _stos(w) {
+        const d = this._delta(w);
+        if (w) this._wr16(this.es, this.di, this.ax); else this._wr8(this.es, this.di, this.al);
+        this.di = (this.di + d) & 0xffff;
+    }
+    _lods(w) {
+        const d = this._delta(w), s = this._srcSeg();
+        if (w) this.ax = this._rd16(s, this.si); else this.al = this._rd8(s, this.si);
+        this.si = (this.si + d) & 0xffff;
+    }
+    _scas(w) {
+        const d = this._delta(w);
+        const b = w ? this._rd16(this.es, this.di) : this._rd8(this.es, this.di);
+        this._sub(w ? this.ax : this.al, b, 0, w);
+        this.di = (this.di + d) & 0xffff;
+    }
+
+    /** REP runs to completion inside one step(). With interrupt delivery
+     *  unmodelled there is nothing that could preempt it, and the debug
+     *  layer wants one instruction to mean one instruction. */
+    _repeat(fn, checksZF) {
+        if (!this._rep) { fn(); return; }
+        const repe = this._rep === 0xf3;
+        while (this.cx !== 0) {
+            fn();
+            this.cx = (this.cx - 1) & 0xffff;
+            if (checksZF) {
+                const z = (this.flags & ZF) !== 0;
+                if (repe !== z) break;
+            }
+        }
+    }
+
+    // ---- one instruction ------------------------------------------------
+    /** Execute one instruction; returns its cycle cost. Throws Unimplemented
+     *  for opcodes this core has not reached, so the grinder counts those as
+     *  NOT-YET and never as pass. */
+    step() {
+        this._seg = -1;
+        this._rep = 0;
+        let n = 0;
+
+        // Prefixes. There is no length limit on real silicon and the last
+        // segment override wins, so this is a loop and not an if.
+        for (;;) {
+            const b = this._rd8(this.cs, this.ip);
+            if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e) {
+                this.ip = (this.ip + 1) & 0xffff; n += 2;
+                this._seg = b === 0x26 ? this.es : b === 0x2e ? this.cs
+                    : b === 0x36 ? this.ss : this.ds;
+            } else if (b === 0xf2 || b === 0xf3) {
+                this.ip = (this.ip + 1) & 0xffff; n += 2;
+                this._rep = b;
+            } else if (b === 0xf0 || b === 0xf1) {
+                this.ip = (this.ip + 1) & 0xffff; n += 2;   // LOCK, and its alias
+            } else break;
+        }
+
+        const op = this._fetch8();
+        n += this._exec(op);
+        this.cycles += n;
+        return n;
+    }
+
+    _exec(op) {
+        // ---- 0x00-0x3f: the eight ALU ops, six forms each ----------------
+        if (op < 0x40 && (op & 7) < 6) {
+            const kind = op >> 3, form = op & 7, w = form & 1;
+            if (form < 2) {                              // r/m, reg
+                const c = this._modrm();
+                const a = w ? this._rm16() : this._rm8();
+                const b = w ? this._r16(this.reg) : this._r8(this.reg);
+                const r = this._alu(kind, a, b, w);
+                if (kind !== 7) { if (w) this._rm16set(r); else this._rm8set(r); }
+                return (this.mod === 3 ? 3 : 16 + c);
+            }
+            if (form < 4) {                              // reg, r/m
+                const c = this._modrm();
+                const a = w ? this._r16(this.reg) : this._r8(this.reg);
+                const b = w ? this._rm16() : this._rm8();
+                const r = this._alu(kind, a, b, w);
+                if (kind !== 7) { if (w) this._r16set(this.reg, r); else this._r8set(this.reg, r); }
+                return (this.mod === 3 ? 3 : 9 + c);
+            }
+            const b = w ? this._fetch16() : this._fetch8();   // acc, imm
+            const r = this._alu(kind, w ? this.ax : this.al, b, w);
+            if (kind !== 7) { if (w) this.ax = r; else this.al = r; }
+            return 4;
+        }
+
+        switch (op) {
+            // ---- segment register push/pop and the BCD adjusts -----------
+            case 0x06: this._push(this.es); return 10;
+            case 0x07: this.es = this._pop(); return 8;
+            case 0x0e: this._push(this.cs); return 10;
+            // POP CS is real on the 8086: there are no two-byte opcodes for
+            // 0x0f to introduce, so it decodes as the pop nobody wanted.
+            case 0x0f: this.cs = this._pop(); return 8;
+            case 0x16: this._push(this.ss); return 10;
+            case 0x17: this.ss = this._pop(); return 8;
+            case 0x1e: this._push(this.ds); return 10;
+            case 0x1f: this.ds = this._pop(); return 8;
+            case 0x27: this._daa(); return 4;
+            case 0x2f: this._das(); return 4;
+            case 0x37: this._aaa(); return 4;
+            case 0x3f: this._aas(); return 4;
+
+            // ---- 0x40-0x5f: INC/DEC and PUSH/POP of the word registers ---
+            case 0x40: case 0x41: case 0x42: case 0x43:
+            case 0x44: case 0x45: case 0x46: case 0x47:
+                this._r16set(op & 7, this._inc(this._r16(op & 7), 1)); return 3;
+            case 0x48: case 0x49: case 0x4a: case 0x4b:
+            case 0x4c: case 0x4d: case 0x4e: case 0x4f:
+                this._r16set(op & 7, this._dec(this._r16(op & 7), 1)); return 3;
+            // PUSH SP pushes the ALREADY DECREMENTED value on the 8086. The
+            // 286 changed it, and the difference is how software tells the
+            // two apart, so it is not a detail to normalise away.
+            case 0x50: case 0x51: case 0x52: case 0x53:
+            case 0x54: case 0x55: case 0x56: case 0x57:
+                this._pushR16(op & 7); return 11;
+            case 0x58: case 0x59: case 0x5a: case 0x5b:
+            case 0x5c: case 0x5d: case 0x5e: case 0x5f:
+                this._r16set(op & 7, this._pop()); return 8;
+
+            // ---- 0x70-0x7f: Jcc. 0x60-0x6f alias onto them, because the
+            // decoder ignores bit 4 -- these are NOT the 80186 opcodes. ----
+            case 0x60: case 0x70: return this._jcc(this.flags & OF);
+            case 0x61: case 0x71: return this._jcc(!(this.flags & OF));
+            case 0x62: case 0x72: return this._jcc(this.flags & CF);
+            case 0x63: case 0x73: return this._jcc(!(this.flags & CF));
+            case 0x64: case 0x74: return this._jcc(this.flags & ZF);
+            case 0x65: case 0x75: return this._jcc(!(this.flags & ZF));
+            case 0x66: case 0x76: return this._jcc((this.flags & CF) || (this.flags & ZF));
+            case 0x67: case 0x77: return this._jcc(!((this.flags & CF) || (this.flags & ZF)));
+            case 0x68: case 0x78: return this._jcc(this.flags & SF);
+            case 0x69: case 0x79: return this._jcc(!(this.flags & SF));
+            case 0x6a: case 0x7a: return this._jcc(this.flags & PF);
+            case 0x6b: case 0x7b: return this._jcc(!(this.flags & PF));
+            case 0x6c: case 0x7c: return this._jcc(!!(this.flags & SF) !== !!(this.flags & OF));
+            case 0x6d: case 0x7d: return this._jcc(!!(this.flags & SF) === !!(this.flags & OF));
+            case 0x6e: case 0x7e: return this._jcc((this.flags & ZF) || (!!(this.flags & SF) !== !!(this.flags & OF)));
+            case 0x6f: case 0x7f: return this._jcc(!(this.flags & ZF) && (!!(this.flags & SF) === !!(this.flags & OF)));
+
+            // ---- 0x80-0x83: ALU with an immediate. 0x82 aliases 0x80. ----
+            case 0x80: case 0x82: {
+                const c = this._modrm();
+                const a = this._rm8(), b = this._fetch8();
+                const r = this._alu(this.reg, a, b, 0);
+                if (this.reg !== 7) this._rm8set(r);
+                return this.mod === 3 ? 4 : 17 + c;
+            }
+            case 0x81: case 0x83: {
+                const c = this._modrm();
+                const a = this._rm16();
+                const b = op === 0x81 ? this._fetch16() : (this._fetchS8() & 0xffff);
+                const r = this._alu(this.reg, a, b, 1);
+                if (this.reg !== 7) this._rm16set(r);
+                return this.mod === 3 ? 4 : 17 + c;
+            }
+
+            // ---- 0x84-0x8f: TEST, XCHG, MOV, LEA, POP r/m ----------------
+            case 0x84: { const c = this._modrm(); this._logic(this._rm8() & this._r8(this.reg), 0); return this.mod === 3 ? 3 : 9 + c; }
+            case 0x85: { const c = this._modrm(); this._logic(this._rm16() & this._r16(this.reg), 1); return this.mod === 3 ? 3 : 9 + c; }
+            case 0x86: { const c = this._modrm(); const a = this._rm8(), b = this._r8(this.reg); this._rm8set(b); this._r8set(this.reg, a); return this.mod === 3 ? 4 : 17 + c; }
+            case 0x87: { const c = this._modrm(); const a = this._rm16(), b = this._r16(this.reg); this._rm16set(b); this._r16set(this.reg, a); return this.mod === 3 ? 4 : 17 + c; }
+            case 0x88: { const c = this._modrm(); this._rm8set(this._r8(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
+            case 0x89: { const c = this._modrm(); this._rm16set(this._r16(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
+            case 0x8a: { const c = this._modrm(); this._r8set(this.reg, this._rm8()); return this.mod === 3 ? 2 : 8 + c; }
+            case 0x8b: { const c = this._modrm(); this._r16set(this.reg, this._rm16()); return this.mod === 3 ? 2 : 8 + c; }
+            case 0x8c: { const c = this._modrm(); this._rm16set(this._sreg(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
+            case 0x8d: { const c = this._modrm(); this._r16set(this.reg, this.ea); return 2 + c; }
+            case 0x8e: { const c = this._modrm(); this._sregSet(this.reg, this._rm16()); return this.mod === 3 ? 2 : 8 + c; }
+            case 0x8f: { const c = this._modrm(); this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
+
+            // ---- 0x90-0x9f ----------------------------------------------
+            case 0x90: return 3;                              // NOP = XCHG AX,AX
+            case 0x91: case 0x92: case 0x93:
+            case 0x94: case 0x95: case 0x96: case 0x97: {
+                const i = op & 7, t = this.ax; this.ax = this._r16(i); this._r16set(i, t); return 3;
+            }
+            case 0x98: this.ax = (this.al & 0x80 ? 0xff00 : 0) | this.al; return 2;
+            case 0x99: this.dx = this.ax & 0x8000 ? 0xffff : 0; return 5;
+            case 0x9a: { const ip = this._fetch16(), cs = this._fetch16(); this._push(this.cs); this._push(this.ip); this.cs = cs; this.ip = ip; return 28; }
+            case 0x9b: return 4;                              // WAIT, with no 8087 to wait for
+            case 0x9c: this._push(this.flags); return 10;
+            case 0x9d: this.flags = fixFlags(this._pop()); return 8;
+            case 0x9e: this.flags = fixFlags((this.flags & 0xff00) | this.ah); return 4;
+            case 0x9f: this.ah = this.flags & 0xff; return 4;
+
+            // ---- 0xa0-0xaf: accumulator moves, TEST imm, string ops ------
+            case 0xa0: { const a = this._fetch16(); this.al = this._rd8(this._srcSeg(), a); return 10; }
+            case 0xa1: { const a = this._fetch16(); this.ax = this._rd16(this._srcSeg(), a); return 10; }
+            case 0xa2: { const a = this._fetch16(); this._wr8(this._srcSeg(), a, this.al); return 10; }
+            case 0xa3: { const a = this._fetch16(); this._wr16(this._srcSeg(), a, this.ax); return 10; }
+            case 0xa4: case 0xa5: this._repeat(() => this._movs(op & 1), false); return 18;
+            case 0xa6: case 0xa7: this._repeat(() => this._cmps(op & 1), true); return 22;
+            case 0xa8: this._logic(this.al & this._fetch8(), 0); return 4;
+            case 0xa9: this._logic(this.ax & this._fetch16(), 1); return 4;
+            case 0xaa: case 0xab: this._repeat(() => this._stos(op & 1), false); return 11;
+            case 0xac: case 0xad: this._repeat(() => this._lods(op & 1), false); return 12;
+            case 0xae: case 0xaf: this._repeat(() => this._scas(op & 1), true); return 15;
+
+            // ---- 0xb0-0xbf: MOV register, immediate ----------------------
+            case 0xb0: case 0xb1: case 0xb2: case 0xb3:
+            case 0xb4: case 0xb5: case 0xb6: case 0xb7:
+                this._r8set(op & 7, this._fetch8()); return 4;
+            case 0xb8: case 0xb9: case 0xba: case 0xbb:
+            case 0xbc: case 0xbd: case 0xbe: case 0xbf:
+                this._r16set(op & 7, this._fetch16()); return 4;
+
+            // ---- 0xc0-0xcf: returns, LES/LDS, MOV imm, interrupts --------
+            // C0/C1 and C8/C9 are not 80186 shift-by-immediate here: they
+            // decode as the returns two bits along.
+            case 0xc0: case 0xc2: { const k = this._fetch16(); this.ip = this._pop(); this.sp = (this.sp + k) & 0xffff; return 20; }
+            case 0xc1: case 0xc3: this.ip = this._pop(); return 16;
+            case 0xc4: { const c = this._modrm(); this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.es = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
+            case 0xc5: { const c = this._modrm(); this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.ds = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
+            case 0xc6: { const c = this._modrm(); this._rm8set(this._fetch8()); return this.mod === 3 ? 4 : 10 + c; }
+            case 0xc7: { const c = this._modrm(); this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
+            case 0xc8: case 0xca: { const k = this._fetch16(); this.ip = this._pop(); this.cs = this._pop(); this.sp = (this.sp + k) & 0xffff; return 25; }
+            case 0xc9: case 0xcb: this.ip = this._pop(); this.cs = this._pop(); return 26;
+            case 0xcc: this._interrupt(3); return 52;
+            case 0xcd: { const v = this._fetch8(); this._interrupt(v); return 51; }
+            case 0xce: if (this.flags & OF) { this._interrupt(4); return 53; } return 4;
+            case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = fixFlags(this._pop()); return 24;
+
+            // ---- 0xd0-0xd7: shift group, BCD by immediate, SALC, XLAT ----
+            case 0xd0: case 0xd1: case 0xd2: case 0xd3: {
+                const c = this._modrm();
+                const w = op & 1, byCl = op & 2;
+                const cnt = byCl ? this.cl : 1;
+                const v = w ? this._rm16() : this._rm8();
+                const r = this._shift(this.reg, v, cnt, w);
+                if (!(this.reg === 6 && cnt === 0)) { if (w) this._rm16set(r); else this._rm8set(r); }
+                return (this.mod === 3 ? 2 : 15 + c) + (byCl ? 4 * cnt : 0);
+            }
+            case 0xd4: this._aam(this._fetch8()); return 83;
+            case 0xd5: this._aad(this._fetch8()); return 60;
+            case 0xd6: this.al = this.flags & CF ? 0xff : 0x00; return 4;   // SALC
+            case 0xd7: this.al = this._rd8(this._srcSeg(), (this.bx + this.al) & 0xffff); return 11;
+
+            // ---- 0xd8-0xdf: the 8087 escape. The operand is read and
+            // nothing else happens, which is what a machine with no
+            // coprocessor does. ------------------------------------------
+            case 0xd8: case 0xd9: case 0xda: case 0xdb:
+            case 0xdc: case 0xdd: case 0xde: case 0xdf: {
+                const c = this._modrm();
+                if (this.mod !== 3) this._rd16(this.eaSeg, this.ea);
+                return 2 + c;
+            }
+
+            // ---- 0xe0-0xef: loops, port I/O, near and far transfers ------
+            case 0xe0: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0 && !(this.flags & ZF)) { this.ip = (this.ip + d) & 0xffff; return 19; } return 5; }
+            case 0xe1: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0 && (this.flags & ZF)) { this.ip = (this.ip + d) & 0xffff; return 18; } return 6; }
+            case 0xe2: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0) { this.ip = (this.ip + d) & 0xffff; return 17; } return 5; }
+            case 0xe3: { const d = this._fetchS8(); if (this.cx === 0) { this.ip = (this.ip + d) & 0xffff; return 18; } return 6; }
+            case 0xe4: this.al = this.inPort(this._fetch8()) & 0xff; return 10;
+            case 0xe5: { const p = this._fetch8(); this.ax = (this.inPort(p) & 0xff) | ((this.inPort((p + 1) & 0xffff) & 0xff) << 8); return 10; }
+            case 0xe6: this.outPort(this._fetch8(), this.al); return 10;
+            case 0xe7: { const p = this._fetch8(); this.outPort(p, this.al); this.outPort((p + 1) & 0xffff, this.ah); return 10; }
+            case 0xe8: { const d = this._fetch16(); this._push(this.ip); this.ip = (this.ip + (d << 16 >> 16)) & 0xffff; return 19; }
+            case 0xe9: { const d = this._fetch16(); this.ip = (this.ip + (d << 16 >> 16)) & 0xffff; return 15; }
+            case 0xea: { const ip = this._fetch16(), cs = this._fetch16(); this.ip = ip; this.cs = cs; return 15; }
+            case 0xeb: { const d = this._fetchS8(); this.ip = (this.ip + d) & 0xffff; return 15; }
+            case 0xec: this.al = this.inPort(this.dx) & 0xff; return 8;
+            case 0xed: this.ax = (this.inPort(this.dx) & 0xff) | ((this.inPort((this.dx + 1) & 0xffff) & 0xff) << 8); return 8;
+            case 0xee: this.outPort(this.dx, this.al); return 8;
+            case 0xef: this.outPort(this.dx, this.al); this.outPort((this.dx + 1) & 0xffff, this.ah); return 8;
+
+            // ---- 0xf4-0xff: halt, flags, and the two ModR/M groups -------
+            case 0xf4: this.halted = true; return 2;
+            case 0xf5: this.flags ^= CF; return 2;
+            case 0xf6: case 0xf7: return this._group3(op & 1);
+            case 0xf8: this.flags &= ~CF; return 2;
+            case 0xf9: this.flags |= CF; return 2;
+            case 0xfa: this.flags &= ~IF; return 2;
+            case 0xfb: this.flags |= IF; return 2;
+            case 0xfc: this.flags &= ~DF; return 2;
+            case 0xfd: this.flags |= DF; return 2;
+            case 0xfe: case 0xff: return this._group45(op & 1);
+
+            default: throw new Unimplemented(op);
+        }
+    }
+
+    _jcc(take) {
+        const d = this._fetchS8();
+        if (take) { this.ip = (this.ip + d) & 0xffff; return 16; }
+        return 4;
+    }
+
+    /** F6/F7. reg=1 is an alias of reg=0 (TEST), not an invalid form. */
+    _group3(w) {
+        const c = this._modrm();
+        const mem = this.mod !== 3;
+        switch (this.reg) {
+            case 0: case 1: {
+                const a = w ? this._rm16() : this._rm8();
+                const b = w ? this._fetch16() : this._fetch8();
+                this._logic(a & b, w);
+                return mem ? 11 + c : 5;
+            }
+            case 2: {                                     // NOT: no flags at all
+                const a = w ? this._rm16() : this._rm8();
+                if (w) this._rm16set(~a & 0xffff); else this._rm8set(~a & 0xff);
+                return mem ? 16 + c : 3;
+            }
+            case 3: {                                     // NEG
+                const a = w ? this._rm16() : this._rm8();
+                const r = this._sub(0, a, 0, w);
+                if (w) this._rm16set(r); else this._rm8set(r);
+                return mem ? 16 + c : 3;
+            }
+            case 4: if (w) this._mul16(this._rm16()); else this._mul8(this._rm8()); return mem ? 76 + c : 70;
+            case 5: if (w) this._imul16(this._rm16()); else this._imul8(this._rm8()); return mem ? 104 + c : 98;
+            case 6: if (w) this._div16(this._rm16()); else this._div8(this._rm8()); return mem ? 155 + c : 90;
+            default: if (w) this._idiv16(this._rm16()); else this._idiv8(this._rm8()); return mem ? 177 + c : 112;
+        }
+    }
+
+    /** FE (byte: INC/DEC only) and FF. FF reg=7 aliases reg=6 (PUSH). */
+    _group45(w) {
+        const c = this._modrm();
+        const mem = this.mod !== 3;
+        if (!w) {
+            switch (this.reg) {
+                case 0: this._rm8set(this._inc(this._rm8(), 0)); return mem ? 15 + c : 3;
+                case 1: this._rm8set(this._dec(this._rm8(), 0)); return mem ? 15 + c : 3;
+                default: throw new Unimplemented(0xfe);
+            }
+        }
+        switch (this.reg) {
+            case 0: this._rm16set(this._inc(this._rm16(), 1)); return mem ? 15 + c : 3;
+            case 1: this._rm16set(this._dec(this._rm16(), 1)); return mem ? 15 + c : 3;
+            case 2: { const t = this._rm16(); this._push(this.ip); this.ip = t; return mem ? 21 + c : 16; }
+            case 3: {
+                const ip = this._rd16(this.eaSeg, this.ea);
+                const cs = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff);
+                this._push(this.cs); this._push(this.ip);
+                this.ip = ip; this.cs = cs;
+                return 37 + c;
+            }
+            case 4: this.ip = this._rm16(); return mem ? 18 + c : 11;
+            case 5: {
+                const ip = this._rd16(this.eaSeg, this.ea);
+                const cs = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff);
+                this.ip = ip; this.cs = cs;
+                return 24 + c;
+            }
+            default:
+                if (mem) this._push(this._rd16(this.eaSeg, this.ea));
+                else this._pushR16(this.rm);          // `push sp` again
+                return mem ? 16 + c : 11;
+        }
+    }
+}
+
+export default I8086;
