@@ -110,6 +110,16 @@
  * declares its data first would otherwise execute its own strings.
  * `createDos8086(...).loadExe` / `.loadCom` take either.
  *
+ * A LITERAL FAR POINTER, `JMP 0F000h:005Ch` and `CALL seg:off`, is the only
+ * syntax that reaches EA and 9A without a relocation, and it is what makes a
+ * ROM possible here. `JMP FAR PTR label` needs a label in a named segment
+ * and emits a fixup, which a flat image has nowhere to put -- so a BIOS
+ * written against this assembler had to hand-encode its reset vector and its
+ * jump to the boot sector as `db 0EAh / dw off / dw seg`. Both halves of a
+ * literal pair are known at assembly time, so there is nothing to relocate.
+ * A segment-valued expression on the left (`SEG x`, `@DATA`) still gets its
+ * fixup, and is therefore still .EXE-only.
+ *
  * ONE THING IS OPT-IN, AND THE DEFAULT IS THE POINT. `{ longJumps: true }`
  * promotes a conditional jump or LOOP that cannot reach into a sequence
  * that can -- `Jcc far` into `Jncc over; JMP near far; over:`, and the LOOP
@@ -788,6 +798,40 @@ class Assembler {
             break;
         }
 
+        // A LITERAL FAR POINTER, `0F000h:005Ch`.
+        //
+        // This is the only syntax that reaches EA and 9A without a
+        // relocation, and without it a ROM cannot express a far jump at all:
+        // `JMP FAR PTR label` needs a label in a named segment and emits a
+        // fixup, which a flat image has nowhere to put. A reset vector and a
+        // jump to a boot sector are both literal seg:off pairs known at
+        // assembly time, and a BIOS written here had to hand-encode both as
+        // `db 0EAh / dw off / dw seg`.
+        //
+        // A segment-register override was already eaten above, and a `:`
+        // inside brackets is at depth one, so what is left at depth zero can
+        // only be this.
+        const halves = splitTop(t, ':');
+        if (halves.length > 1) {
+            if (halves.length > 2) {
+                throw new AsmError(`"${text.trim()}" has more than one ":" in it`,
+                    { ...this.ctx, what: 'bad far pointer' });
+            }
+            if (segOverride) {
+                throw new AsmError('a segment override and a far pointer cannot both apply here',
+                    { ...this.ctx, what: 'bad far pointer' });
+            }
+            const seg = this.evalText(halves[0]);
+            const off = this.evalText(halves[1]);
+            for (const [half, which] of [[seg, 'segment'], [off, 'offset']]) {
+                if (half.base || half.index) {
+                    throw new AsmError(`the ${which} half of a far pointer cannot hold a register`,
+                        { ...this.ctx, what: 'bad far pointer' });
+                }
+            }
+            return { k: 'far', seg, off, distance: distance || 'far', text };
+        }
+
         const low = t.toLowerCase();
         if (R8[low] !== undefined) return { k: 'r8', n: R8[low], text };
         if (R16[low] !== undefined) return { k: 'r16', n: R16[low], text };
@@ -953,6 +997,13 @@ class Assembler {
     /** Encode one instruction. `ops` are already-parsed operands. */
     encode(mn, ops, prefixes) {
         this.mn = mn;
+        // Caught here rather than left to whatever the operand happens to
+        // trip over further down, so that `MOV AX, 1:2` says what is wrong
+        // with it instead of complaining about an operand size.
+        if (ops.some((o) => o.k === 'far') && mn !== 'jmp' && mn !== 'call') {
+            throw new AsmError(`a seg:off pair is a target for JMP or CALL, not for ${mn.toUpperCase()}`,
+                { ...this.ctx, what: 'far pointer operand' });
+        }
         for (const p of prefixes) this.emit(p);
 
         if (NO_OPERAND[mn]) {
@@ -1410,6 +1461,19 @@ class Assembler {
     branch(mn, ops, regNear, regFar, relOpcode, farOpcode) {
         this.expect(ops.length === 1, `${mn.toUpperCase()} takes one target`);
         const o = ops[0];
+        if (o.k === 'far') {
+            // Both halves are known here, so unlike `FAR PTR label` this
+            // needs no relocation -- which is what makes it usable in a flat
+            // ROM image. A segment-valued expression (`SEG x`, `@DATA`) in
+            // the left half still gets its fixup.
+            this.emit(farOpcode);
+            this.emitWord(o.off.v);
+            if (o.seg.reloc) {
+                this.reloc(o.seg.reloc);
+                return this.emitWord(this.segParaOf(o.seg.reloc));
+            }
+            return this.emitWord(o.seg.v);
+        }
         if (o.k === 'r16') return this.emitRM([0xff], regNear, o);
         if (o.k === 'm') {
             if (o.size === 1) throw new AsmError(`${mn.toUpperCase()} cannot go through a byte`,
@@ -1551,9 +1615,19 @@ class Assembler {
         // A redefinition inside the same pass is a real duplicate; the same
         // symbol arriving again on a LATER pass is just the pass loop.
         if (prev && prev.pass === this.pass) {
-            throw new AsmError(`"${name}" is defined twice`, { ...this.ctx, what: 'duplicate symbol' });
+            // NAME BOTH SITES. The first definition can be hundreds of lines
+            // away, and because symbols are case-insensitive (as in MASM)
+            // the two spellings need not even look alike -- `SC_FILL equ 6`
+            // and a later `sc_fill:` are the same symbol, and a message that
+            // names only the second sends the reader hunting for a
+            // definition that is not spelled the way they are searching.
+            const where = prev.line ? ` at line ${prev.line}` : '';
+            const spelling = prev.name === name ? ''
+                : ` as "${prev.name}" -- symbol names are case-insensitive, as in MASM`;
+            throw new AsmError(`"${name}" is defined twice: first${where}${spelling}`,
+                { ...this.ctx, what: 'duplicate symbol' });
         }
-        this.symbols.set(key, { ...sym, name, pass: this.pass, known: true });
+        this.symbols.set(key, { ...sym, name, pass: this.pass, known: true, line: this.ctx.line });
         return this.symbols.get(key);
     }
 

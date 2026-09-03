@@ -1571,6 +1571,129 @@ END MAIN
 });
 
 // ---------------------------------------------------------------------------
+// The literal far pointer. The only syntax that reaches EA and 9A without a
+// relocation, and the thing that stood between this assembler and a ROM: a
+// reset vector and a jump to a boot sector are both seg:off pairs known at
+// assembly time, and a flat image has nowhere to put a fixup.
+// ---------------------------------------------------------------------------
+
+test('JMP and CALL take a literal seg:off pair, and it needs no relocation', () => {
+    trip('JMP 0F000h:005Ch', 'jmpf F000h:005Ch');
+    trip('CALL 1234h:5678h', 'callf 1234h:5678h');
+    trip('JMP FAR PTR 0F000h:0100h', 'jmpf F000h:0100h', 'FAR PTR is accepted and redundant');
+    // Offset first, then segment -- the order the 8086 stores them in, which
+    // is the reverse of the order they are written.
+    assert.equal(hexOf(assembleRaw('JMP 0F000h:005Ch')), 'ea 5c 00 00 f0');
+    assert.equal(hexOf(assembleRaw('CALL 1234h:5678h')), '9a 78 56 34 12');
+    // Both halves are expressions, and either may be a symbol.
+    assert.equal(hexOf(assembleRaw('ROM EQU 0F000h\nENTRY EQU 5Ch\nJMP ROM:ENTRY')), 'ea 5c 00 00 f0');
+    assert.equal(hexOf(assembleRaw('JMP 0F000h:(40h*2)')), 'ea 80 00 00 f0');
+    // And -- the whole point -- it survives being put in a flat .COM image,
+    // which a relocation cannot.
+    const flat = assemble('ORG 100h\nJMP 0F000h:005Ch\nEND\n');
+    assert.equal(flat.format, 'com');
+    assert.deepEqual(flat.warnings, [], 'no fixup, so nothing to warn about');
+});
+
+test('a literal far jump and call really transfer control', () => {
+    // The bytes looking right is not the claim; the CPU going there is. A
+    // draft device in this tree once refused every command it implemented
+    // and answered every invalid one perfectly -- a check that only ever
+    // exercises the refusal path passes such a thing without blinking.
+    const RAM = { clockHz: 5_000_000, regions: [{ kind: 'ram', start: 0, end: 0xfffff }], chips: [] };
+    for (const [mn, wantSeg, wantOff, len] of [['JMP', 0x2000, 0x0010, 5], ['CALL', 0x2000, 0x0010, 5]]) {
+        const bytes = assembleRaw(`${mn} 2000h:0010h`);
+        const m = new I8086Machine(RAM);
+        const at = 0x1000 << 4;
+        for (let i = 0; i < bytes.length; i++) m._write(at + i, bytes[i]);
+        const cpu = m.cpu;
+        cpu.cs = 0x1000; cpu.ip = 0; cpu.ss = 0x0800; cpu.sp = 0x100;
+        m.step();
+        assert.equal(cpu.cs, wantSeg, `${mn} loaded CS from the left half`);
+        assert.equal(cpu.ip, wantOff, `${mn} loaded IP from the right half`);
+        if (mn === 'CALL') {
+            const rd = (o) => m._read((0x0800 << 4) + o) | (m._read((0x0800 << 4) + o + 1) << 8);
+            assert.equal(cpu.sp, 0xfc, 'a far call pushes two words');
+            assert.equal(rd(0xfc), len, 'and the return offset is the instruction after it');
+            assert.equal(rd(0xfe), 0x1000, 'along with the segment it came from');
+        }
+    }
+});
+
+test('a ROM image can hold its own reset vector', () => {
+    // The shape that was blocked: ORG padding out to FFF0h, a far jump at
+    // the reset address, and the whole thing flat with no relocation. This
+    // is assembled, placed at F0000h, entered the way the 8086 enters at
+    // power-on, and stepped.
+    const r = assemble(`ORG 100h
+START:
+    MOV AX, 1234h
+    HLT
+ORG 0FFF0h
+    JMP 0F000h:0100h
+END
+`);
+    assert.equal(r.format, 'com', 'flat, because a ROM is one segment');
+    assert.deepEqual(r.warnings, []);
+    assert.equal(r.org, 0x100);
+    assert.equal(r.org + r.bytes.length, 0xfff5, 'ORG padded forward to the reset vector');
+    const RAM = { clockHz: 5_000_000, regions: [{ kind: 'ram', start: 0, end: 0xfffff }], chips: [] };
+    const m = new I8086Machine(RAM);
+    for (let i = 0; i < r.bytes.length; i++) m._write(0xf0000 + r.org + i, r.bytes[i]);
+    const cpu = m.cpu;
+    cpu.cs = 0xf000; cpu.ip = 0xfff0;          // where an 8086 starts
+    m.step();
+    assert.equal(cpu.cs, 0xf000);
+    assert.equal(cpu.ip, 0x0100, 'the reset vector reached the entry point');
+    m.step();
+    assert.equal(cpu.ax, 0x1234, 'and the entry point is really the code that was assembled there');
+});
+
+test('a segment override is still an override, not a far pointer', () => {
+    // The regression the far-pointer split could cause: `ES:[DI]` and
+    // `cs:table[bx]` also contain a colon, and reading either as a seg:off
+    // pair would turn an addressing mode into a jump target.
+    trip('MOV AL, ES:[DI]', 'mov al, byte [es:di]');
+    // T sits at offset 1, so the displacement is real -- at offset 0 the
+    // encoding would carry none and the override would be the only thing
+    // this checked.
+    assert.equal(hexOf(assembleRaw('NOP\nT DB 0\nMOV AL, CS:T[BX]')), '90 00 2e 8a 47 01');
+    assert.equal(hexOf(assembleRaw('JMP WORD PTR CS:[BX+1]')), '2e ff 67 01');
+    assert.equal(hexOf(assembleRaw('MOV BYTE PTR ES:[DI], 5')), '26 c6 05 05');
+});
+
+test('a far pointer that is not a branch target, or is malformed, is refused by name', () => {
+    for (const [src, what] of [
+        ['MOV AX, 1:2', 'far pointer operand'],
+        ['PUSH 1:2', 'far pointer operand'],
+        ['JMP 1:2:3', 'bad far pointer'],
+        ['JMP BX:2', 'bad far pointer'],
+        ['JMP ES:1234h:2', 'bad far pointer'],
+    ]) {
+        const e = refusal(() => assembleRaw(src));
+        assert.ok(e instanceof AsmError, `${src} raises an AsmError`);
+        assert.equal(e.what, what, `${src} is refused as ${what}`);
+    }
+});
+
+test('a duplicate symbol names both places, and both spellings', () => {
+    // The first definition can be a hundred lines away, and because names
+    // are case-insensitive the two spellings need not look alike -- so a
+    // message naming only the second sends the reader hunting for a
+    // definition spelled the way they are not searching.
+    const e = refusal(() => assembleRaw('SC_FILL EQU 6\nNOP\nsc_fill: NOP'));
+    assert.equal(e.what, 'duplicate symbol');
+    assert.equal(e.line, 4, 'the line of the SECOND definition, where assembly stopped');
+    assert.match(e.message, /first at line 2/, 'and the line of the first');
+    assert.match(e.message, /as "SC_FILL"/, 'spelled the way it was written there');
+    assert.match(e.message, /case-insensitive, as in MASM/, 'saying why they collide at all');
+    // Same spelling twice: no need to explain case, but still both lines.
+    const same = refusal(() => assembleRaw('V DB 0\nV DB 0'));
+    assert.match(same.message, /first at line 2/);
+    assert.doesNotMatch(same.message, /case-insensitive/, 'nothing to explain when they match');
+});
+
+// ---------------------------------------------------------------------------
 // The corpus, when it is there. This is the measurement in the report, kept
 // as a test so it cannot rot: the same 525 files, the same accept count.
 // ---------------------------------------------------------------------------
