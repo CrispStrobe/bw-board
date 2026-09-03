@@ -621,8 +621,19 @@ quoted.** The suite's README says the interrupt and trap flags are not
 exercised; across all 646,000 vectors TF is set in the initial flags of exactly
 zero and IF in exactly zero. The grind reads 646,000/646,000 with the trap
 implemented and read 646,000/646,000 without it. Five behavioural tests carry
-it instead. **DEBUG.COM's `t` on a real MS-DOS binary is the acceptance and is
-OWED, not done** — it is the only oracle for this that is not our own opinion.
+it instead.
+
+**THE ACCEPTANCE RAN, AND ALL THREE PREDICTIONS HELD** — stated before they
+were measured, and settled by a 1983 Microsoft binary rather than by our own
+tests. `t` stops after exactly one instruction and displays registers. `t`
+over an `INT 21h` steps INTO the handler, and the proof is better than a yes:
+DEBUG reports `CS=D000 IP=0084` and disassembles `EBFE JMP 0084` — the trap
+page after the move, slot `0x21 * 4`, with a period debugger drawing us a
+picture of our own `jmp $` self-loop. And `t` across a `MOV SS` / `MOV SP`
+pair executes BOTH and stops after the second, so the pair completed
+atomically; without the deferral it would have stopped between them with SS
+new and SP stale, showing a stack pointing into nowhere. The three ordering
+decisions are vindicated by the software they were written for.
 
 **R3 — `TRAP_SEG = 0xF000` IS WHERE A BIOS HAS TO LIVE, AND TIER C STOPPED
 BEING HYPOTHETICAL WHILE THIS REVIEW WAS BEING WRITTEN.** `i8086-dos.js` maps

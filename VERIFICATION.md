@@ -175,3 +175,45 @@ pass a sidecar with every pin shifted by one, or P0 ascending, or `rxd`
 where `P3.0` belongs. Asserting "pin 32 IS P0.7 and P0 runs descending"
 catches all of those. Three agents found this rule independently in the
 same evening; it is a property of good tests, not a style preference.
+
+## Rule: a property nothing drives is a property nothing tests
+
+The rule above is about what a test ASSERTS. This one is about what a test
+REACHES, and it is the more dangerous of the two, because a test that asserts
+the right property over a code path nothing exercised is indistinguishable
+from a passing test. It is green, it is specific, its name says what it
+checks, and it checks nothing.
+
+Four instances landed in one day, from three different hands, and it is the
+spread that makes it worth a section rather than a note:
+
+| Where | What it looked like | What it was |
+|---|---|---|
+| Cross-CPU machine contract | A snapshot/restore lockstep test, green on the first run, its comment claiming it caught "a snapshot missing one chip's internal counter" | Deleting BOTH snapshot branches from `i8086-machine.js` left it green. The CPU executes whatever memory reads as and never touches a port, so no chip state ever reached the trace. |
+| Two INT 10h scroll tests | Assertions about a scrolled window, passing for weeks | They stood on the trap page by writing `cpu.cs = 0xf000` by hand. Once the page moved they were asserting against a `service()` that had correctly declined to run — and only then went red. |
+| Two DOS services | `INT 21h/3Eh` and `/41h` returning success | They returned success *unconditionally*, so closing a handle never opened and deleting a file that was not there both looked like they worked. |
+| A µPD765 draft | Imported cleanly, exported its whole surface, answered invalid commands correctly | Its dispatch refused EVERY implemented command, because `undefined` is falsy. A smoke test would have passed it. |
+
+The shape is the same each time: **something that looks right because nothing
+ever asked it to prove otherwise.** Note that three of the four were found by
+a change from an unrelated direction — moving an address, deleting a branch to
+see what noticed — and not by reading the tests.
+
+What follows in practice:
+
+- **Prefer structural coverage to hoping execution drives it.** The machine
+  contract now asserts that every chip on a machine either round-trips or is
+  NAMED as one that cannot, instead of hoping the instruction stream touches a
+  port. That assertion found two chips — `NS16C550` and `W65C51` — whose state
+  is silently dropped from every snapshot, which the lockstep test could never
+  have reached however long it ran.
+- **Delete the thing the test depends on and check it goes red.** Not the
+  behaviour under test — the *path to it*. A test that survives having its
+  subject removed did not have one.
+- **A gate that has been green for a long time is where to look**, for the
+  same reason a long-red one is: nobody re-reads either.
+- **The pass that audits claims is itself where claims get made.** The
+  over-matching guard in `grind-i8086-disasm.mjs` was written specifically to
+  catch an exclusion key that matched too much, and in its first version could
+  not fire — inside the block that was replacing a key for exactly that
+  defect. Only mutating it found that.
