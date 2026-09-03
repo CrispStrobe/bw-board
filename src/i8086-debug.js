@@ -31,6 +31,34 @@ import { disasmI8086 } from './i8086-disasm.js';
 import { renderMode, likelyMode } from './i8086-cga.js';
 
 /**
+ * A CGA mode-control byte (3D8h) read back as a BIOS mode number, or null if
+ * the card was never programmed.
+ *
+ * BIT 3 IS THE DISCRIMINATOR, and it is a real one rather than a flag we
+ * invented: it is VIDEO ENABLE, and a card nobody has written holds zero,
+ * which means video off -- a state no working program leaves it in. So "bit 3
+ * set" means "somebody programmed this card", which is exactly the question
+ * that decides whether the card or the INT 10h log is the better authority.
+ *
+ * It matters because our INT 10h/AH=00h does NOT program the card: a DOS
+ * program's mode reaches the log and nothing else, while a game's mode reaches
+ * the card and nothing else. The two populations are disjoint, so the answer
+ * is "whichever one spoke", not a priority rule.
+ *
+ * Mode 13h is deliberately unreachable here -- it is VGA, it has no 3D8h
+ * encoding, and a card asked to express it would have to lie.
+ */
+function modeFromCga(mode) {
+    if (!(mode & 0x08)) return null;                 // video disabled: never programmed
+    if (mode & 0x02) {                               // graphics
+        if (mode & 0x10) return 0x06;                // 640x200, one bit per pixel
+        return (mode & 0x04) ? 0x05 : 0x04;          // 320x200, the mono-signal palette
+    }
+    const wide = (mode & 0x01) !== 0, mono = (mode & 0x04) !== 0;
+    return wide ? (mono ? 0x02 : 0x03) : (mono ? 0x00 : 0x01);
+}
+
+/**
  * @param {{ machine: import('./i8086-machine.js').I8086Machine }} adapter
  * @param {{ videoModeLog?: () => number[], videoOpts?: object }} [opts]
  *   `videoModeLog` is the INT 10h/AH=00h history -- the DOS layer's
@@ -270,10 +298,31 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             for (const chip of Object.values(machine.chips || {})) {
                 if (typeof chip.videoFrame === 'function') return chip.videoFrame();
             }
+            // A programmed CGA card outranks the INT 10h log, because the
+            // games that matter here write its registers and never call the
+            // BIOS at all.
+            let card = null;
+            for (const c of Object.values(machine.chips || {})) {
+                if (typeof c.getVideoState === 'function') { card = c.getVideoState(); break; }
+            }
+            const fromCard = card ? modeFromCga(card.mode) : null;
             const seen = typeof opts.videoModeLog === 'function' ? opts.videoModeLog() : [];
-            const guess = likelyMode(seen);
+            const guess = fromCard !== null
+                ? { mode: fromCard, supported: true, reason: `3D8h = ${card.mode.toString(16)}h` }
+                : likelyMode(seen);
             if (!guess.supported) return { unsupported: `mode ${guess.mode.toString(16)}h: ${guess.reason}` };
-            const frame = renderMode(guess.mode, (a) => machine._read(a & 0xfffff), opts.videoOpts || {});
+            // 3D9h carries the colour select: low nibble is the border and, in
+            // the 320x200 modes, the background; bit 4 is intensity and bit 5
+            // picks between the two four-colour palettes. Translating it here
+            // is the point of the seam -- the card holds raw latches and the
+            // renderer takes named options, and only this file knows both.
+            const vo = { ...(opts.videoOpts || {}) };
+            if (card) {
+                if (vo.background === undefined) vo.background = card.color & 0x0f;
+                if (vo.intensity === undefined) vo.intensity = (card.color & 0x10) !== 0;
+                if (vo.cgaPalette === undefined) vo.cgaPalette = (card.color & 0x20) !== 0;
+            }
+            const frame = renderMode(guess.mode, (a) => machine._read(a & 0xfffff), vo);
             return { ...frame, mode: guess.mode, why: guess.reason };
         },
 

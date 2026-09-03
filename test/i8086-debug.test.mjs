@@ -226,3 +226,31 @@ test('video() explains an unsupported mode instead of throwing', async () => {
     assert.ok(r.unsupported, 'refused');
     assert.match(r.unsupported, /12h/);
 });
+
+test('a programmed CGA card outranks the INT 10h log', async () => {
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const m = new M({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xbffff }, { kind: 'ram', start: 0xf0000, end: 0xf03ff }],
+        chips: [{ kind: 'cga', name: 'cga1', at: 0x3d0 }],
+    });
+    // Nothing programmed yet: the card holds zero, video disabled, so the
+    // log is the authority -- and with no log, the power-on text mode.
+    const t = createI8086DebugTarget({ machine: m }, { videoModeLog: () => [0x03] });
+    assert.equal(t.video().mode, 0x03, 'unprogrammed card defers to the log');
+
+    // Now a game programs the card directly and never calls the BIOS:
+    // 1Ah = video enable + graphics + high-res mono = mode 6.
+    m._out(0x3d8, 0x1a);
+    const f = t.video();
+    assert.equal(f.mode, 0x06, 'the card wins, because a game writes it and skips INT 10h');
+    assert.equal(f.width, 640);
+    assert.match(f.why, /3D8h/);
+
+    // 0Ah = enable + graphics, low-res: mode 4, and 3D9h picks the palette.
+    m._out(0x3d8, 0x0a);
+    m._out(0x3d9, 0x20 | 0x04);          // palette 1, background blue
+    const g = t.video();
+    assert.equal(g.mode, 0x04);
+    assert.equal(g.width, 320);
+});
