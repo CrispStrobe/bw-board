@@ -48,10 +48,16 @@
  *     contents; `MOV AX, OFFSET VAL16` loads the address. That is MASM's
  *     rule and it is the one thing a naive implementation always gets
  *     backwards.
- *   - No segment override is ever inserted on the assembler's own
- *     initiative, ASSUME notwithstanding. Every program in the corpus
- *     reaches its data through DS, and a prefix invented from an ASSUME the
- *     assembler only half-models is a worse failure than no prefix at all.
+ *   - A segment override IS inserted on the assembler's own initiative,
+ *     from ASSUME, when a label lives somewhere the default segment
+ *     register is not assumed to reach. Five corpus files declare `DW`
+ *     after `.CODE` and then store to it through DS; without the override
+ *     that store lands in the data segment at the code segment's offset
+ *     and quietly corrupts an instruction. An earlier version of this
+ *     module refused to synthesise overrides on the belief that every
+ *     program here reaches its data through DS. Four of them do not, and
+ *     the belief cost a print-string that turned into an NMI. See
+ *     `autoOverride`.
  *   - `MOV r16, SEG x` in a .COM image assembles as `MOV r16, CS`. A .COM
  *     has one segment and no relocation table, and at entry
  *     CS = DS = ES = SS = that segment, so this is the only encoding that
@@ -87,6 +93,15 @@
  *     the first, and segment-register-relative ASSUME tracking.
  *   - A listing file, a symbol map, and any object output: this assembles
  *     straight to a loadable image, so there is nothing to link.
+ *
+ * THE FIXPOINT INCLUDES THE SYMBOL VALUES, not just the segment sizes. A
+ * pass can be the same size as its predecessor and lay out differently --
+ * four bytes of new segment override against a jump that shrank by four --
+ * and a loop that only watches sizes stops one pass early with every label
+ * after the reshuffle holding a stale address. That is not a theoretical
+ * hazard: it put a `CALL` four bytes inside the previous instruction, so a
+ * procedure pushed one register where it meant to push three and returned
+ * into its own entry point.
  *
  * Accuracy tier: encodings are round-trip-verified against a
  * vector-verified disassembler, so the byte level is as trustworthy as the
@@ -360,6 +375,9 @@ class Assembler {
         }
         this.cur = this.segment('_TEXT', 'code');
         this.codeSegName = '_TEXT';
+        // A .COM has one segment and every register points at it on entry,
+        // so nothing here ever needs an override.
+        for (const r of ['cs', 'ds', 'es', 'ss']) this.assume[r] = '_TEXT';
         if (!this.cur.bytes.length && !this.sawOrg) this.cur.org = 0x100;
         return this.cur;
     }
@@ -723,10 +741,54 @@ class Assembler {
 
     // -- ModR/M -----------------------------------------------------------
 
-    /** Bytes for the ModR/M and its displacement, plus any segment prefix. */
-    modrm(regField, o) {
+    /**
+     * The segment override a labelled address NEEDS but did not write.
+     *
+     * THIS IS THE BUG THAT COST THE MOST TO FIND, and it is silent by
+     * construction. A memory operand reaches DS by default (SS when BP is
+     * the base). If the label it names lives in a segment that register is
+     * not assumed to hold, the instruction reads or writes the wrong
+     * segment and NOTHING says so: the program runs, prints plausible
+     * output, and exits.
+     *
+     * Five corpus files declare `DW` after `.CODE`, which puts the variable
+     * in _TEXT while `MOV FIRST_AT, AX` still reaches through DS. With
+     * _DATA at paragraph 0 and _TEXT at paragraph 6 of the same image,
+     * DS:00B9h aliases _TEXT:0059h -- the operand byte of an `INT 21H` --
+     * so the store turned `cd 21` into `cd 02` and a print became an NMI.
+     * The EMITTED BYTES WERE CORRECT; only the running program was wrong,
+     * which is why no amount of disassembling the output could have found
+     * it and only running the program did.
+     *
+     * MASM does exactly this from its own ASSUME, and an earlier version of
+     * this module deliberately did not, on the belief that every program in
+     * the corpus reaches its data through DS. Four of them do not.
+     *
+     * @returns {string|null} the register to override with
+     */
+    autoOverride(o) {
+        if (o.seg) return null;                       // written explicitly; leave it alone
+        const want = o.ref && o.ref.seg ? o.ref.seg.name : null;
+        if (!want) return null;                       // no label: nothing to check against
+        const dflt = o.base === 'bp' ? 'ss' : 'ds';
+        // Not knowing what a register holds is not the same as knowing it is
+        // wrong. Without an ASSUME (the bare SEGMENT dialect) this says
+        // nothing rather than guessing.
+        if (!this.assume[dflt]) return null;
+        if (this.assume[dflt] === want) return null;
+        for (const r of ['ds', 'cs', 'es', 'ss']) if (this.assume[r] === want) return r;
+        throw new AsmError(
+            `"${o.ref.name}" is in segment ${want}, and no segment register is assumed to hold it`,
+            { ...this.ctx, what: 'unreachable segment' });
+    }
+
+    /** Bytes for the ModR/M and its displacement, plus any segment prefix.
+     *  `auto` is false for LEA, which computes an address and reaches no
+     *  segment at all, so an override there would be a wasted byte. */
+    modrm(regField, o, auto = true) {
         if (o.k === 'r8' || o.k === 'r16' || o.k === 'sr') return { prefix: [], bytes: [0xc0 | (regField << 3) | o.n] };
-        const prefix = o.seg ? [[0x26, 0x2e, 0x36, 0x3e][SREG[o.seg]]] : [];
+        const over = o.seg || (auto ? this.autoOverride(o) : null);
+        const prefix = over ? [[0x26, 0x2e, 0x36, 0x3e][SREG[over]]] : [];
         if (!o.base && !o.index) {
             // The direct form. Always a 16-bit displacement; there is no
             // shorter encoding for an absolute address on this machine.
@@ -747,8 +809,8 @@ class Assembler {
     }
 
     /** Emit `opcode, modrm...` with the segment prefix in front. */
-    emitRM(opcodes, regField, rm, tail = []) {
-        const { prefix, bytes } = this.modrm(regField, rm);
+    emitRM(opcodes, regField, rm, tail = [], auto = true) {
+        const { prefix, bytes } = this.modrm(regField, rm, auto);
         this.emit(...prefix, ...opcodes, ...bytes, ...tail);
     }
 
@@ -987,7 +1049,8 @@ class Assembler {
     }
 
     emitAcc(opcode, m) {
-        const prefix = m.seg ? [[0x26, 0x2e, 0x36, 0x3e][SREG[m.seg]]] : [];
+        const over = m.seg || this.autoOverride(m);
+        const prefix = over ? [[0x26, 0x2e, 0x36, 0x3e][SREG[over]]] : [];
         this.emit(...prefix, opcode, m.disp & 0xff, (m.disp >> 8) & 0xff);
     }
 
@@ -1068,7 +1131,7 @@ class Assembler {
         this.expect(ops[0].k === 'r16', 'LEA loads a word register');
         if (ops[1].k !== 'm') throw new AsmError('LEA needs an address, not a register or a number',
             { ...this.ctx, what: 'lea of non-address' });
-        return this.emitRM([0x8d], ops[0].n, ops[1]);
+        return this.emitRM([0x8d], ops[0].n, ops[1], [], false);
     }
 
     loadFar(mn, ops) {
@@ -1168,7 +1231,13 @@ class Assembler {
             // decision is STICKY, which is what stops the pass loop
             // oscillating between two byte counts forever.
             const d = (target - (this.here + 2)) | 0;
-            if (this.shortJump[slot] || (o.known && o.distance !== 'near' && d >= -128 && d <= 127)) {
+            // NOT on pass one. Pass one is the only pass that can be too
+            // SMALL -- a forward label has no segment yet, so the automatic
+            // override it will need has not been counted. Making a sticky
+            // shrink decision against those sizes can strand a jump out of
+            // range once the prefixes appear.
+            const fits = this.pass > 1 && o.known && o.distance !== 'near' && d >= -128 && d <= 127;
+            if (this.shortJump[slot] || fits) {
                 this.shortJump[slot] = true;
                 return this.relJump(0xeb, [o], 1, 'jmp');
             }
@@ -1285,6 +1354,12 @@ class Assembler {
         this.ended = false;
         this.ctx = {};
         this.warnings = [];
+        // What each segment register is ASSUMED to hold, by segment name.
+        // null means "not known", and not knowing is not the same as knowing
+        // it is wrong: an unknown register produces no override and no
+        // refusal, which is what keeps the SEGMENT dialect without an
+        // ASSUME working exactly as it did.
+        this.assume = { cs: null, ds: null, es: null, ss: null };
         this.explicitSegments = false;
         // Reset per pass, because a LOCAL name must be THE SAME on every
         // pass. Counting on from the last pass renames the label between
@@ -1509,6 +1584,14 @@ class Assembler {
                 // resolves even in a program whose .DATA is empty.
                 this.dataSegName = '_DATA';
                 this.segment('_DATA', 'data');
+                // .MODEL carries an implicit ASSUME. Note SS: MASM puts the
+                // stack INSIDE DGROUP, so SS and DS name the same thing
+                // there; this assembler lays the stack out as its own
+                // segment, which means a BP-based address reaching a .DATA
+                // label genuinely needs a DS: override here where MASM
+                // needs none.
+                this.assume.ds = '_DATA';
+                this.assume.ss = 'STACK';
                 return;
             }
             case '.stack': {
@@ -1525,12 +1608,23 @@ class Assembler {
             case '.code': {
                 this.codeSegName = '_TEXT';
                 this.cur = this.lastSeg = this.segment('_TEXT', 'code');
+                this.assume.cs = '_TEXT';
                 return;
             }
-            case 'assume':
-                // Recorded and otherwise ignored -- see the module header on
-                // why no override is ever invented from it.
+            case 'assume': {
+                for (const part of splitTop(rest, ',')) {
+                    const m = /^\s*(cs|ds|es|ss)\s*:\s*(\S+)\s*$/i.exec(part);
+                    if (!m) {
+                        if (/^\s*nothing\s*$/i.test(part)) { for (const r of ['cs', 'ds', 'es', 'ss'])
+                            this.assume[r] = null; continue; }
+                        if (!part.trim()) continue;
+                        throw new AsmError(`cannot read the ASSUME "${part.trim()}"`, { ...this.ctx, what: 'bad ASSUME' });
+                    }
+                    const reg = m[1].toLowerCase(), name = m[2].replace(/,$/, '');
+                    this.assume[reg] = /^nothing$/i.test(name) ? null : name;
+                }
                 return;
+            }
             case 'name': return;                     // an emu8086 module name
             case 'org': {
                 const v = this.evalText(rest);
@@ -1893,7 +1987,22 @@ export function assemble(source, opts = {}) {
         // the relocated words as well as the code length.
         asm.paras = asm.computeParas();
         const shape = asm.segOrder.map((n) => [n, asm.segs.get(n).org, asm.segs.get(n).bytes.length]);
-        const sig = JSON.stringify([shape, [...asm.paras]]);
+        // THE SYMBOL VALUES ARE PART OF THE FIXPOINT, and leaving them out
+        // is a bug that hides for a long time. A pass can be the same SIZE
+        // as the one before it and lay out differently: here, four bytes of
+        // segment override appeared while a jump four bytes away shrank to
+        // its short form. The totals matched, the loop declared victory, and
+        // the emitted `CALL` still held the address the label had had one
+        // pass earlier -- four bytes short of the procedure, landing inside
+        // the previous instruction. The program pushed one register where
+        // it meant to push three and returned into its own entry point.
+        //
+        // Comparing sizes alone only asks "did the segment stop moving";
+        // this asks "did anything move", which is the question.
+        const syms = [...asm.symbols]
+            .map(([k, v]) => [k, v.kind, v.value ?? 0, v.seg ? v.seg.name : ''])
+            .sort();
+        const sig = JSON.stringify([shape, [...asm.paras], syms]);
         if (sig === prev) break;
         if (passes >= maxPasses) {
             throw new AsmError(`the code size did not settle after ${passes} passes`, { what: 'no convergence' });

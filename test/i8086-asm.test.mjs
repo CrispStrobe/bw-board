@@ -943,22 +943,219 @@ test('an out-of-range jump is refused instead of wrapping around', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Regressions. Both of these were found by RUNNING the corpus, not by
+// disassembling it: the bytes were correct in the first case and internally
+// consistent in the second, so no amount of reading the output would have
+// shown either. The tests are written the way the bugs were found.
+// ---------------------------------------------------------------------------
+
+test('a label the default segment register cannot reach gets an override', () => {
+    // THE `INT 21H` -> `CD 02` BUG. `FIRST_AT DW 0` after `.CODE` puts the
+    // variable in _TEXT, but `MOV FIRST_AT, AX` still reaches through DS.
+    // With _DATA at paragraph 0 and _TEXT at paragraph 6 of one image,
+    // DS:00B9h aliases _TEXT:0059h, and the store landed on the operand
+    // byte of an `INT 21H` further down the code. Nothing threw; the
+    // program ran, printed most of its answer, and took an NMI.
+    const inCode = assemble(`.MODEL SMALL
+.STACK 100H
+.DATA
+    IN_DATA DW 0
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV IN_DATA, AX
+    MOV IN_CODE, AX
+    MOV BX, IN_CODE
+    MOV AX, 4C00H
+    INT 21H
+MAIN ENDP
+IN_CODE DW 0
+END MAIN
+`);
+    const header = (inCode.bytes[8] | (inCode.bytes[9] << 8)) * 16;
+    const text = inCode.segments.find((s) => s.name === '_TEXT');
+    const img = inCode.bytes.subarray(header + text.para * 16, header + text.para * 16 + text.size);
+    const seen = [];
+    for (let a = 0; a < img.length;) {
+        const d = disasmI8086((x) => img[x] ?? 0, a, { ip: a });
+        if (/mov (word|bx)/.test(d.text)) seen.push(d.text);
+        a += d.length;
+    }
+    assert.deepEqual(seen, [
+        'mov word [ds:0h], ax',      // in .DATA: DS is assumed to hold it
+        'mov word [cs:16h], ax',     // in .CODE: only CS reaches it
+        'mov bx, word [cs:16h]',
+    ], 'the segment a label lives in decides which register reaches it');
+});
+
+test('the .COM and no-ASSUME dialects gain no overrides from any of that', () => {
+    // A flat .COM has one segment and every register points at it, so the
+    // override logic must stay completely out of the way -- this is the
+    // regression that catches it over-firing.
+    assert.equal(hexOf(assembleRaw('V DW 0\nMOV V, AX\nMOV AX, V')), '00 00 a3 00 00 a1 00 00');
+    // The bare SEGMENT dialect says nothing about DS, and not knowing is not
+    // the same as knowing it is wrong: no override, no refusal.
+    const bare = assemble('D SEGMENT\nV DW 0\nD ENDS\nC SEGMENT\nS: MOV AX, V\nC ENDS\nEND S\n');
+    const h = (bare.bytes[8] | (bare.bytes[9] << 8)) * 16;
+    const c = bare.segments.find((s) => s.name === 'C');
+    assert.equal(bare.bytes[h + c.para * 16], 0xa1, 'no prefix invented where nothing was assumed');
+});
+
+test('a store into a code-segment variable does not corrupt the code, and the answer is right', () => {
+    // The runtime half of the same bug, and the shape of check that found
+    // it: run the program and require it to reach the right answer rather
+    // than merely to exit.
+    const { dos, run } = runIt(`.MODEL SMALL
+.STACK 100H
+.DATA
+    NUMS DW 2, 4, 8, 8, 11
+    M_AT DB 'at $'
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV CX, 5
+    XOR SI, SI
+SCAN:
+    MOV AX, NUMS[SI]
+    CMP AX, 8
+    JNE NEXT
+    MOV WHERE, SI
+NEXT:
+    ADD SI, 2
+    LOOP SCAN
+    LEA DX, M_AT
+    MOV AH, 09H
+    INT 21H
+    MOV AX, WHERE
+    CALL PRINT_DECIMAL
+    MOV AX, 4C00H
+    INT 21H
+MAIN ENDP
+
+WHERE DW 0
+
+PRINT_DECIMAL PROC
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    XOR CX, CX
+    MOV BX, 10
+PD_SPLIT:
+    XOR DX, DX
+    DIV BX
+    PUSH DX
+    INC CX
+    OR AX, AX
+    JNZ PD_SPLIT
+PD_EMIT:
+    POP DX
+    ADD DL, '0'
+    MOV AH, 02H
+    INT 21H
+    LOOP PD_EMIT
+    POP DX
+    POP CX
+    POP BX
+    RET
+PRINT_DECIMAL ENDP
+END MAIN
+`);
+    assert.ok(run.terminated, 'it exits');
+    assert.deepEqual(dos.report().unsupported, [],
+        'and asks for no service it did not write -- a fabricated INT shows up here');
+    assert.equal(dos.stdout, 'at 6', 'the last 8 is at byte offset 6, and the code still ran');
+});
+
+test('a size-preserving reshuffle does not end the pass loop early', () => {
+    // THE STALE-CALL BUG. Four bytes of new segment override appeared in the
+    // same pass as a jump shrinking by four, the segment size did not move,
+    // and a fixpoint watching only sizes declared victory one pass early --
+    // leaving every CALL after the reshuffle pointing four bytes short of
+    // its procedure, inside the previous instruction.
+    //
+    // The invariant, stated directly: every relative CALL in the image must
+    // land exactly on the offset the symbol table gives for its target.
+    const r = assemble(`.MODEL SMALL
+.STACK 100H
+.DATA
+    V DW 0
+.CODE
+MAIN PROC
+    MOV AX, @DATA
+    MOV DS, AX
+    MOV V, AX
+    MOV LATE, AX
+    CALL HELPER
+    JMP FINISH
+FINISH:
+    MOV AX, 4C00H
+    INT 21H
+MAIN ENDP
+LATE DW 0
+HELPER PROC
+    PUSH BX
+    POP BX
+    RET
+HELPER ENDP
+END MAIN
+`);
+    const header = (r.bytes[8] | (r.bytes[9] << 8)) * 16;
+    const text = r.segments.find((s) => s.name === '_TEXT');
+    const base = header + text.para * 16;
+    const img = r.bytes.subarray(base, base + text.size);
+    const helper = r.symbols.get('helper');
+    assert.ok(helper, 'the procedure is in the symbol table');
+    let found = null;
+    for (let a = 0; a < img.length;) {
+        const d = disasmI8086((x) => img[x] ?? 0, a, { ip: a });
+        if (d.bytes[0] === 0xe8) found = (a + d.length + ((d.bytes[1] | (d.bytes[2] << 8)) << 16 >> 16)) & 0xffff;
+        a += d.length;
+    }
+    assert.equal(found, helper.value,
+        'the CALL lands on the procedure\'s first byte, not near it');
+    // And the first byte of HELPER really is its first instruction.
+    assert.equal(img[helper.value], 0x53, 'which is PUSH BX');
+});
+
+// ---------------------------------------------------------------------------
 // The corpus, when it is there. This is the measurement in the report, kept
 // as a test so it cannot rot: the same 525 files, the same accept count.
 // ---------------------------------------------------------------------------
 
 const CORPUS = '/tmp/amey/Source Code';
 
-test('the Amey-Thakur corpus assembles, where it is present', { skip: !existsSync(CORPUS) }, () => {
-    const files = [];
-    const walk = (d) => {
-        for (const name of readdirSync(d)) {
-            const p = join(d, name);
-            if (statSync(p).isDirectory()) walk(p);
-            else if (name.endsWith('.asm')) files.push(p);
+/** Every .asm under the corpus, sorted so a failure names the same file twice. */
+function corpusFiles(dir = CORPUS, out = []) {
+    for (const name of readdirSync(dir).sort()) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) corpusFiles(p, out);
+        else if (name.endsWith('.asm')) out.push(p);
+    }
+    return out;
+}
+
+/** The INT operands a source asks for, comments and quoted text excluded. */
+function sourceInterrupts(src) {
+    const out = new Set();
+    for (const raw of src.split(/\r?\n/)) {
+        let quote = null, cut = raw.length;
+        for (let i = 0; i < raw.length; i++) {
+            const c = raw[i];
+            if (quote) { if (c === quote) quote = null; }
+            else if (c === "'" || c === '"') quote = c;
+            else if (c === ';') { cut = i; break; }
         }
-    };
-    walk(CORPUS);
+        for (const m of raw.slice(0, cut).matchAll(/\bINT\s+([0-9][0-9A-Fa-f]*)(H)?\b/gi)) {
+            out.add(parseInt(m[1], m[2] ? 16 : 10));
+        }
+    }
+    return out;
+}
+
+test('the Amey-Thakur corpus assembles, where it is present', { skip: !existsSync(CORPUS) }, () => {
+    const files = corpusFiles();
     assert.equal(files.length, 525, 'the corpus is the 525 programs the scope was measured against');
 
     const reasons = new Map();
@@ -1001,6 +1198,91 @@ test('a sample of the corpus runs to completion and produces output', { skip: !e
         assert.deepEqual(dos.report().unsupported, [], `${p} needs no service Tier B lacks`);
         assert.match(dos.stdout, /\S/, `${p} printed its answer`);
     }
+});
+
+test('every INT the corpus emits is one its source asked for', { skip: !existsSync(CORPUS) }, () => {
+    // The static half of the guard the `CD 02` bug earned. Assemble all 525,
+    // linear-decode each CODE segment, and require every INT operand to be
+    // one the source wrote. This would NOT have caught that bug -- the bytes
+    // were right and a store corrupted them at run time -- but it is the
+    // check for the whole family the bug was first mistaken for: an operand
+    // that assembles to the wrong number.
+    //
+    // Only the segment holding the entry point is decoded. Linear-decoding
+    // a DATA segment is meaningless, and three corpus files hold byte pairs
+    // there that read as `int ABh`, `int EFh` and `int3`.
+    let decoded = 0, segments = 0;
+    const wrong = [];
+    for (const f of corpusFiles()) {
+        const src = readFileSync(f, 'latin1');
+        let r;
+        try { r = assemble(src); } catch { continue; }
+        const want = sourceInterrupts(src);
+        const header = r.format === 'exe' ? (r.bytes[8] | (r.bytes[9] << 8)) * 16 : 0;
+        const code = r.format === 'exe'
+            ? r.segments.filter((s) => s.para === r.entry.para)
+            : [{ name: 'com', para: 0, size: r.bytes.length }];
+        for (const sg of code) {
+            const at = header + sg.para * 16;
+            const img = r.bytes.subarray(at, at + sg.size);
+            segments++;
+            for (let a = 0; a < img.length;) {
+                const d = disasmI8086((x) => img[x] ?? 0, a, { ip: a });
+                const m = /^int ([0-9A-F]+)h$/.exec(d.text);
+                const n = m ? parseInt(m[1], 16) : (d.text === 'int3' ? 3 : null);
+                if (n !== null) {
+                    decoded++;
+                    if (!want.has(n)) wrong.push(`${f.split('/').pop()} +${a.toString(16)}: int ${n.toString(16)}h`);
+                }
+                a += d.length;
+            }
+        }
+    }
+    assert.ok(decoded > 3000, `the sweep actually decoded the corpus's INTs (got ${decoded})`);
+    assert.deepEqual(wrong, [], 'no INT was emitted with an operand the source never wrote');
+    assert.ok(segments >= 508, `every accepted program's code segment was swept (got ${segments})`);
+});
+
+test('no corpus program asks for an interrupt its source never wrote', { skip: !existsSync(CORPUS) }, () => {
+    // THE TEST THAT WOULD HAVE CAUGHT THE `CD 02` BUG, and the only shape
+    // that could: run every program and compare the interrupts it actually
+    // TOOK against the ones its source asks for. The corrupted byte was
+    // written at run time, so the emitted image was innocent and only the
+    // running machine knew. Verified against the defect: with the automatic
+    // segment override removed this reports exactly one fabricated
+    // interrupt, `find_first_and_last_occurrence.asm asked for int 2h`.
+    //
+    // The termination floor is the second half. A stale CALL address from a
+    // pass loop that stopped early does not fabricate an interrupt -- it
+    // returns into the program's own entry point and spins -- so it shows
+    // up here as one fewer program reaching its exit. Verified the same
+    // way: with the symbol values removed from the fixpoint this reads 495.
+    let ran = 0, terminated = 0;
+    const fabricated = [];
+    for (const f of corpusFiles()) {
+        const src = readFileSync(f, 'latin1');
+        let r;
+        try { r = assemble(src); } catch { continue; }
+        const want = sourceInterrupts(src);
+        const m = new I8086Machine(DOSBOX8086);
+        const dos = createDos8086(m).install();
+        try { if (r.format === 'exe') dos.loadExe(r.bytes); else dos.loadCom(r.bytes); }
+        catch { continue; }
+        ran++;
+        let steps = 0;
+        // A core refusal is not this sweep's business; the DOS report is.
+        try { while (!dos.terminated && steps < 50_000) { dos.step(); steps++; } } catch { /* noted below */ }
+        if (dos.terminated) terminated++;
+        for (const u of dos.report().unsupported) {
+            if (!want.has(u.int)) {
+                fabricated.push(`${f.split('/').pop()} took int ${u.int.toString(16)}h
+                    (AH=${u.ah.toString(16)}h), which its source never writes`);
+            }
+        }
+    }
+    assert.equal(ran, 508, 'all 508 accepted programs loaded');
+    assert.deepEqual(fabricated, [], 'no program reached an interrupt vector its source never named');
+    assert.ok(terminated >= 496, `at least 496 of them run to their own exit (got ${terminated})`);
 });
 
 // ---------------------------------------------------------------------------
