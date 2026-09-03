@@ -294,10 +294,23 @@ test('the head is recalibrated ONCE per drive, not before every access', () => {
     assert.equal(m.chips.fdc1.drives[0].track, 20);
     assert.equal(m.mem[BDA + 0x3e] & 1, 1, 'still calibrated: the flag is not cleared by a read');
 
-    // ...and a reset DOES clear it, because a reset is the one thing that
-    // makes the chip's idea of the head position untrustworthy again.
+    // A reset DOES clear it, because a reset is the one thing that makes the
+    // chip's idea of a head position untrustworthy again. It does NOT move
+    // the head: a reset starts no motor, and a stopped spindle cannot step
+    // anywhere. The homing is deferred to the next access, which is where
+    // the motor and the wait for it already are.
     run(m, ` xor ax, ax\n xor dx, dx\n int 13h`);
-    assert.equal(m.chips.fdc1.drives[0].track, 0, 'AH=00h brought the head home');
+    assert.equal(m.mem[BDA + 0x3e] & 1, 0, 'AH=00h says the head position is unknown again');
+    assert.equal(m.mem[BDA + 0x3e] & 0x10, 0x10,
+        '...but the CONTROLLER is initialised, and that is a separate bit -- conflating them '
+        + 'makes an explicit reset cause a second one on the very next read');
+    assert.equal(m.chips.fdc1.drives[0].track, 20, 'and the head has not moved');
+
+    // ...and the next read homes it, with the motor running.
+    run(m, CALL13(' mov ax, 0201h\n mov cx, 0501h\n xor dx, dx\n mov bx, 5000h'));
+    assert.equal(result(m).cf, 0);
+    assert.equal(m.mem[BDA + 0x3e] & 1, 1, 'homed again on the next access');
+    assert.equal(m.chips.fdc1.drives[0].track, 5);
 });
 
 // ---------------------------------------------------------------------------

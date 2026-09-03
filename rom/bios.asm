@@ -268,7 +268,14 @@ BDA_KBHEAD   equ 001Ah          ; ring buffer head: the next key to be READ
 BDA_KBTAIL   equ 001Ch          ; ring buffer tail: where the next key is WRITTEN
 BDA_KBBUF    equ 001Eh          ; 32 bytes = 16 entries of (ascii, scancode)
 BDA_SEEKSTAT equ 003Eh          ; bit 7 = the FDC has interrupted; bits 0-3 =
-                                ; that drive's head has been recalibrated
+                                ; that drive's head has been recalibrated;
+                                ; bit 4 = the controller has been reset and
+                                ; SPECIFYed. Bits 0-3 and 7 are the documented
+                                ; layout; bit 4 is in the three bits nothing
+                                ; else uses, and it is what lets AH=00h leave
+                                ; the controller initialised without also
+                                ; claiming to know where any head is.
+SEEK_READY  equ 10h             ; ...that bit, by name
 BDA_MOTORSTAT equ 003Fh         ; bits 0-3 = that drive's motor is running
 BDA_MOTORCNT equ 0040h          ; floppy motor-off countdown, in ticks
 BDA_DISKSTAT equ 0041h          ; last INT 13h status, what AH=01h returns
@@ -1905,19 +1912,24 @@ d_verify endp
 ; AH=00h -- reset the disk system.
 ;
 ; The real thing: a pulse on the controller's reset line, the four
-; ready-change statuses it owes the host afterwards drained, SPECIFY reloaded
-; (a reset clears it, INCLUDING the non-DMA bit), and the head brought home.
-; It is the only function allowed to move a head without being asked to.
+; ready-change statuses it owes the host afterwards drained, and SPECIFY
+; reloaded -- a reset clears the timings AND the non-DMA bit.
+;
+; IT DOES NOT RECALIBRATE, and the reason is the motor. A drive whose spindle
+; is stopped cannot step its head anywhere, and a reset is not an access:
+; nothing here has started a motor or waited for one to come up to speed. So
+; the reset records that every head's position is now unknown -- fd_reset
+; clears the per-drive bits in 0040:003E -- and the next transfer homes them
+; with the motor running, which is where the wait for it already lives.
+;
+; That is also what the real BIOS does, for the same reason, and it is why
+; 0040:003E has one bit per drive rather than a single flag.
 ;-----------------------------------------------------------------------------
 d_reset proc near
     mov  dl, [bp+F_DL]
     test dl, 80h
     jnz  dr_nohd
     call fd_reset
-    jc   dr_out
-    mov  dl, [bp+F_DL]
-    and  dl, 3
-    call fd_recal
     jc   dr_out
     xor  al, al
 dr_out:
@@ -2326,6 +2338,10 @@ fdrst_sense:
     jc   fdrst_dead             ; the 8237 instead of on the CPU
     ; SPECIFY has NO result phase and raises NO interrupt. Draining one here
     ; would take the first byte of whatever command comes next.
+    ;
+    ; The controller is now initialised, and that is recorded separately from
+    ; where the heads are -- which is still unknown, and deliberately so.
+    or   byte ptr [BDA_SEEKSTAT], SEEK_READY
     clc
     jmp  fdrst_out
 fdrst_dead:
@@ -2691,12 +2707,15 @@ fdx_begin:
     ; in a real sense already happened. One timeout, on the first access, on
     ; a machine where everything is wired correctly.
     ;
-    ; So the recovery for "I do not know where the head is" is a full reset,
-    ; which drains those four and reissues SPECIFY, and not a bare
-    ; RECALIBRATE. It is done BEFORE the motor starts so that the reset's own
-    ; clearing of 0040:003F does not throw away a spin-up that has just been
-    ; paid for.
-    test [BDA_SEEKSTAT], bl
+    ; So the controller gets its own bit, and this is the check on it. It is
+    ; separate from the per-drive homed bits because the two facts are
+    ; separate: AH=00h leaves the controller initialised and every head's
+    ; position unknown, and conflating them would make an explicit reset
+    ; cause a second one on the very next read.
+    ;
+    ; The reset is done BEFORE the motor starts, so that its own clearing of
+    ; 0040:003F cannot throw away a spin-up that has just been paid for.
+    test byte ptr [BDA_SEEKSTAT], SEEK_READY
     jnz  fdx_awake
     call fd_reset
     jnc  fdx_awake
