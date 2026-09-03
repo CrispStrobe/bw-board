@@ -12,9 +12,12 @@
  *
  *   EXITED     terminated through int 21h/4Ch or int 20h, WITH output
  *   SILENT     terminated cleanly and produced nothing -- suspicious
- *   BUDGET     still running when the step budget ran out. Either an
- *              interactive program waiting for a key, or a hang. The
- *              report says which by whether stdin was ever asked for.
+ *   LOOPING    still running at the budget, and DOING something -- it
+ *              printed, or it drove a device. A traffic-light controller
+ *              never exits and never should; calling that a failure would
+ *              slander a working program.
+ *   HUNG       still running at the budget having done nothing observable.
+ *              This is the one that means something is wrong.
  *   THREW      the core hit an opcode it does not implement, or the loader
  *              refused the file. The message names it.
  *   NOASM      an .asm source with no assembler wired in yet.
@@ -24,6 +27,11 @@
  * sorted. That is the to-do list, measured rather than guessed -- the same
  * method that showed 2,862 of 3,109 int 21h calls in the textbook corpus are
  * three services.
+ *
+ * --emu8086 installs the virtual devices over the whole port space and
+ * substitutes the clean-room macro library for `include 'emu8086.inc'`,
+ * which is what the coursework corpus targets rather than DOS. It shadows
+ * any decoded chip, so it is opt-in: a machine with a PIC would lose it.
  *
  *   node scripts/run-i8086-corpus.mjs --selftest
  *   node scripts/run-i8086-corpus.mjs path/to/dir [more...]
@@ -40,6 +48,7 @@ import { join, extname, basename } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086 } from '../src/i8086-dos.js';
 import { Unimplemented } from '../src/i8086.js';
+import { createEmu8086, EMU8086_INC } from '../src/i8086-emu8086.js';
 
 const argv = process.argv.slice(2);
 const flag = (name) => argv.includes(name);
@@ -49,6 +58,7 @@ const value = (name, dflt) => {
 };
 const BUDGET = Number(value('--budget', 5_000_000));
 const VERBOSE = flag('--verbose');
+const EMU = flag('--emu8086');
 const paths = argv.filter((a, i) => !a.startsWith('--')
     && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler');
 
@@ -83,7 +93,7 @@ const SELFTEST = [
     {
         name: 'selftest-spin.com',
         bytes: Uint8Array.from([0xeb, 0xfe]),
-        expect: 'BUDGET',
+        expect: 'HUNG',
     },
     {
         name: 'selftest-refused.com',
@@ -109,7 +119,16 @@ function runOne(name, raw) {
     if (kind === 'asm') {
         if (!assembler) return { name, verdict: 'NOASM', note: 'no assembler wired in' };
         try {
-            const out = assembler(Buffer.from(bytes).toString('utf8'), { name });
+            let source = Buffer.from(bytes).toString('utf8');
+            if (EMU) {
+                // The corpus writes the include three ways. Substituting the
+                // text here rather than teaching the assembler INCLUDE keeps
+                // a file-system search path out of an assembler that has no
+                // business having one.
+                source = source.replace(
+                    /^[ \t]*include[ \t]+["']?emu8086\.inc["']?[ \t]*$/gim, EMU8086_INC);
+            }
+            const out = assembler(source, { name });
             bytes = out.bytes;
             kind = out.format || 'com';
         } catch (e) {
@@ -118,8 +137,10 @@ function runOne(name, raw) {
     }
 
     const m = new I8086Machine(DOSBOX8086);
+    let emu = null;
     let dos;
     try {
+        if (EMU) emu = createEmu8086(m).install();
         dos = createDos8086(m).install();
         if (kind === 'exe') dos.loadExe(bytes);
         else if (kind === 'boot') dos.loadBoot(bytes);
@@ -138,17 +159,29 @@ function runOne(name, raw) {
 
     const report = dos.report();
     const screen = dos.screenText().filter((l) => l.length).length;
-    const printed = report.stdout.length > 0 || screen > 0;
+    // A device program's output is what it did to the DEVICES, not what it
+    // printed -- the traffic-light program prints nothing and is still
+    // working. Counting only stdout would report every one of them as
+    // silent, which is how a harness lies about the tier it is measuring.
+    const devs = emu ? emu.report() : null;
+    const touched = devs ? devs.writes + devs.reads : 0;
+    const printed = report.stdout.length > 0 || screen > 0 || touched > 0;
+    if (devs) report.devices = devs;
     // A boot sector never "exits" -- it has nowhere to exit to. Reaching the
     // budget having drawn something is the success case for one, so it is
     // classified on OUTPUT rather than on termination.
     if (kind === 'boot') {
         return {
             name, kind, steps, report,
-            verdict: printed ? 'EXITED' : (steps >= BUDGET ? 'BUDGET' : 'SILENT'),
+            verdict: printed ? 'EXITED' : (steps >= BUDGET ? 'HUNG' : 'SILENT'),
         };
     }
-    if (!dos.terminated) return { name, kind, steps, report, verdict: 'BUDGET' };
+    // NOT terminating is not the same as not working. An infinite control
+    // loop is what a traffic-light controller IS, so the split is on whether
+    // anything observable happened, not on whether the program exited.
+    if (!dos.terminated) {
+        return { name, kind, steps, report, verdict: printed ? 'LOOPING' : 'HUNG' };
+    }
     return { name, kind, steps, report, verdict: printed ? 'EXITED' : 'SILENT' };
 }
 
@@ -193,14 +226,22 @@ for (const r of results) {
         const k = `int ${u.int.toString(16).padStart(2, '0')}h AH=${u.ah.toString(16).padStart(2, '0')}h`;
         refusals.set(k, (refusals.get(k) || 0) + u.count);
     }
+    for (const u of r.report?.devices?.unclaimed || []) {
+        const k = `port ${u.port} (no device claims it)`;
+        refusals.set(k, (refusals.get(k) || 0) + u.count);
+    }
     if (VERBOSE || r.verdict === 'THREW') {
+        const d = r.report?.devices;
         console.log(`${r.verdict.padEnd(6)} ${r.name}${r.note ? ` -- ${r.note}` : ''}`
-            + (r.report?.stdout ? `  out: ${JSON.stringify(r.report.stdout.slice(0, 60))}` : ''));
+            + (r.report?.stdout ? `  out: ${JSON.stringify(r.report.stdout.slice(0, 60))}` : '')
+            + (d && (d.reads + d.writes) ? `  devices: ${d.writes}w/${d.reads}r`
+                + (d.traffic.word ? ` traffic=${d.traffic.groups.map((g) => g.lamps).join(',')}` : '')
+                + (d.led.value !== undefined && d.led.value !== 0 ? ` led=${d.led.value}` : '') : ''));
     }
 }
 
 console.log(`\n${results.length} programs:`);
-for (const k of ['EXITED', 'SILENT', 'BUDGET', 'THREW', 'NOASM']) {
+for (const k of ['EXITED', 'LOOPING', 'SILENT', 'HUNG', 'THREW', 'NOASM']) {
     if (tally[k]) console.log(`  ${String(tally[k]).padStart(5)}  ${k}`);
 }
 if (refusals.size) {
