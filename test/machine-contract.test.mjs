@@ -38,30 +38,34 @@ import { I8086Machine } from '../src/i8086-machine.js';
  *
  * `saveState()` on all three machines walks the chip map and takes
  * `getState()` or `saveState()` from each — and SKIPS, without comment, any
- * chip that has neither. Two currently do:
+ * chip that has neither. One currently does:
  *
- *   NS16C550  the 16550 UART, on the i8086's default breadboard config, so
- *             any snapshot of that machine loses the UART's FIFOs, divisor
- *             latch and interrupt-enable state.
- *   W65C51    the 6551 ACIA, on the 6502's default config, and the same loss.
- *             Note that its neighbour W65C22 (the VIA) DOES have saveState,
- *             so this is one chip missed rather than a decision about serial.
+ *   W65C51    the 6551 ACIA, on the 6502's default config: a snapshot of that
+ *             machine loses its serial state entirely. Its neighbour W65C22
+ *             (the VIA) DOES have saveState, so this is one chip missed rather
+ *             than a decision about serial. It stays listed because the 6502
+ *             tier has no owner in this fleet, and a mechanical fix by someone
+ *             who does not own the file is how a boundary erodes.
  *
- * The second name is one this test corrected. The list was first written from
- * a guess -- MC6850, the ACIA the Z80 tier uses -- and the run named W65C51
+ * That name is one this test corrected. The list was first written from a
+ * guess -- MC6850, the ACIA the Z80 tier uses -- and the run named W65C51
  * instead. Both are "the serial chip"; only one of them is on that machine.
+ *
+ * NS16C550 WAS THE OTHER ROW AND IS GONE, which is the mechanism working
+ * end to end rather than a tidy-up. It was listed on 2026-09-03; the
+ * support-chip lane gave it getState/setState the same evening; the merge
+ * turned this file RED, by name, unprompted, saying the row had stopped being
+ * true; and the row was deleted. The whole point of an exemption that can
+ * fail is that nobody has to remember to come back.
  *
  * This is an INVENTORY, not an acceptance. It is here so the gap has a name
  * and a size instead of being a silent `else` in three files, and so that
- * adding a fifth chip without persistence goes red rather than joining them.
- * When one gains a snapshot method this test fails and the row should be
- * DELETED — a closed gap left in an exemption list is the "excuse that has
- * stopped being true" this repo has a rule about.
+ * adding another chip without persistence goes red rather than joining it.
  *
  * The chips are owned by the support-chip lane; this file reports, it does
  * not fix.
  */
-const NO_PERSISTENCE = new Set(['NS16C550', 'W65C51']);
+const NO_PERSISTENCE = new Set(['W65C51']);
 
 /** Each machine at its default config. No program is loaded: these are
  *  properties of the TIME AND STATE machinery, which must hold whatever the

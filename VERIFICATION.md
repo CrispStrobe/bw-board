@@ -228,6 +228,55 @@ What follows in practice:
   not fire — inside the block that was replacing a key for exactly that
   defect. Only mutating it found that.
 
+### The near relative: a test that supplies what production forgets
+
+The rule above catches a property with NO driver. This one has a driver — the
+test is it — and that is why it needs a section of its own rather than a sixth
+row in the table.
+
+**The case.** The floppy DMA pump moves zero bytes and reports complete
+success: normal termination, `CF=0`, `AH=00h`, a full result phase, an
+interrupt raised, and the destination buffer untouched. `I8237.transfer()`
+serves only a channel whose `requesting()` is true; that needs `dreqLevel`;
+`dreqLevel` is written in exactly one place, `dreq()` (`src/i8237.js:260`,
+`:458`); and no production path calls it — `grep dreq src/*.js` outside the
+chip returns nothing. Reproduced against the chip alone, programming a channel
+exactly as a floppy read programs it — flip-flop cleared, mode `46h`, address,
+count 511, unmasked:
+
+    WITHOUT dreq: moved = 0   bytes landed = 0
+    WITH    dreq: moved = 1   bytes landed = 1
+
+**The tell, and the reason it is a different species.** All three tests in
+`test/i8086-dma-pump.test.mjs` call `dma.dreq(n, true)` FROM THE TEST. The
+suite is green, and it is green because the setup block performs the step the
+production caller omits. The test is not failing to exercise the code; **it is
+standing in for the missing part of it**, which is exactly why it reads as
+exemplary rather than as thin.
+
+Every check in the section above fails to catch this. Delete the feature and
+the test goes red, as it should — so mutation passes it. Ask "does anything
+drive this property?" and the answer is yes. The pump would survive every one
+of those questions while being pure ceremony, as it currently is.
+
+**The question that does catch it: does anything OUTSIDE the test establish
+this precondition?** A test that sets up a state no production caller ever sets
+up is a test of a machine that does not exist. In practice:
+
+- For each line of a test's SETUP, name the production code that performs the
+  same step. If there is none, the test has invented the machine it is testing.
+- The setup block is the half nobody re-reads. Both this and the µPD765 draft
+  arrived from there rather than from an assertion, and reviewers' attention
+  goes to assertions.
+- A green test around a feature that has never been exercised END TO END is
+  worth less than it looks. This one was found by asking what the caller does,
+  not by reading either the test or the chip.
+
+Credit where it is due: this was found and diagnosed by the support-chip lane,
+who also insisted it be written as a separate species rather than folded in.
+It was reproduced independently here before being recorded, per the section
+above — reading got two things wrong on the day this file was written.
+
 ## House pattern: an exemption must be able to stop being true
 
 Every instrument in this tier that grades results has an exemption list — a
