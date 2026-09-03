@@ -458,6 +458,53 @@ export function createDos8086(machine, io = {}) {
     }
 
     /**
+     * Write a command tail and the two default FCBs into a PSP.
+     *
+     * THE TAIL IS NOT THE COMMAND LINE. DOS puts a LENGTH BYTE at 80h, the
+     * arguments at 81h -- INCLUDING the leading space that separated them
+     * from the program name -- and a carriage return after them, and it does
+     * NOT include the program's own name. A program that reads 81h and finds
+     * its own name there, or finds no leading space, mis-parses its first
+     * argument. That is why CHKDSK answered "Invalid parameter" to everything
+     * before this existed: it was reading an empty tail.
+     *
+     * The two FCBs at 5Ch and 6Ch are parsed from the first two arguments.
+     * Real utilities of the DOS 1.x era read those rather than the tail --
+     * that is the whole reason DOS builds them -- so a loader that writes the
+     * tail and leaves the FCBs zeroed only half-works.
+     */
+    function writeCommandTail(seg, args) {
+        const tail = args ? ` ${String(args).trim()}` : '';
+        const n = Math.min(tail.length, 126);
+        wr8(seg, 0x80, n);
+        for (let i = 0; i < n; i++) wr8(seg, 0x81 + i, tail.charCodeAt(i) & 0xff);
+        wr8(seg, 0x81 + n, 0x0d);
+        // FCB 1 at 5Ch, FCB 2 at 6Ch, from the first two arguments.
+        const words = tail.trim().length ? tail.trim().split(/\s+/) : [];
+        for (let k = 0; k < 2; k++) {
+            const base = k === 0 ? 0x5c : 0x6c;
+            for (let i = 0; i < 16; i++) wr8(seg, base + i, 0);
+            for (let i = 1; i <= 11; i++) wr8(seg, base + i, 0x20);
+            const w = words[k];
+            if (!w) continue;
+            let t = w, drive = 0;
+            if (t.length > 1 && t[1] === ':') {
+                const c = t.toUpperCase().charCodeAt(0);
+                if (c >= 65 && c <= 90) drive = c - 64;
+                t = t.slice(2);
+            }
+            wr8(seg, base, drive);
+            const [name, ext = ''] = t.split('.');
+            for (let i = 0; i < 8 && i < name.length; i++) {
+                wr8(seg, base + 1 + i, name.toUpperCase().charCodeAt(i));
+            }
+            for (let i = 0; i < 3 && i < ext.length; i++) {
+                wr8(seg, base + 9 + i, ext.toUpperCase().charCodeAt(i));
+            }
+        }
+    }
+
+    /**
      * INT 21h/29h -- parse a filename from DS:SI into the FCB at ES:DI.
      *
      * Real utilities call this before they touch a command line, so a stub
@@ -857,11 +904,13 @@ export function createDos8086(machine, io = {}) {
          * A RET with nothing pushed lands on PSP:0000, which holds INT 20h,
          * which terminates: the same trapdoor DOS itself provides.
          */
-        loadCom(bytes, at = 0x0800) {
+        loadCom(bytes, opts = {}) {
+            const at = typeof opts === 'number' ? opts : (opts.at ?? 0x0800);
+            const args = typeof opts === 'number' ? '' : (opts.args ?? '');
             psp = at;
             for (let i = 0; i < 0x100; i++) wr8(psp, i, 0);
             wr8(psp, 0, 0xcd); wr8(psp, 1, 0x20);       // int 20h
-            wr8(psp, 0x80, 0);                          // empty command tail
+            writeCommandTail(psp, args);
             for (let i = 0; i < bytes.length; i++) wr8(psp, 0x100 + i, bytes[i]);
             cpu.cs = psp; cpu.ds = psp; cpu.es = psp; cpu.ss = psp;
             cpu.ip = 0x100; cpu.sp = 0xfffe;
@@ -876,7 +925,9 @@ export function createDos8086(machine, io = {}) {
          * the header names. This is what MASM's .MODEL SMALL produces, so
          * it is the form most of the corpus actually ships.
          */
-        loadExe(bytes, at = 0x0800) {
+        loadExe(bytes, opts = {}) {
+            const at = typeof opts === 'number' ? opts : (opts.at ?? 0x0800);
+            const args = typeof opts === 'number' ? '' : (opts.args ?? '');
             if (bytes[0] !== 0x4d || bytes[1] !== 0x5a) throw new Error('not an MZ executable');
             const u16 = (o) => bytes[o] | (bytes[o + 1] << 8);
             const headerParas = u16(0x08);
@@ -887,6 +938,7 @@ export function createDos8086(machine, io = {}) {
             const loadSeg = psp + 0x10;                 // the image sits above the PSP
             for (let i = 0; i < 0x100; i++) wr8(psp, i, 0);
             wr8(psp, 0, 0xcd); wr8(psp, 1, 0x20);
+            writeCommandTail(psp, args);
             const image = bytes.subarray(imageStart, imageEnd);
             for (let i = 0; i < image.length; i++) {
                 machine._write((phys(loadSeg, 0) + i) & 0xfffff, image[i]);

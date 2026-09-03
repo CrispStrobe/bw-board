@@ -570,3 +570,35 @@ test('DOSBOX8086_XT makes a corpus beep audible, and buys nothing else', async (
     const t = createI8086DebugTarget({ machine: m });
     assert.deepEqual(Object.keys(t.audio()).sort(), ['hz', 'on']);
 });
+
+test('a program gets a real command tail and the two FCBs DOS builds from it', () => {
+    // The tail is not the command line: DOS writes a LENGTH byte at 80h, the
+    // arguments at 81h INCLUDING the leading space, and a CR after them, and
+    // it does not include the program's own name. Real utilities of the DOS
+    // 1.x era read the FCBs at 5Ch/6Ch rather than the tail, which is why
+    // building the tail alone only half-works.
+    const { m, dos } = dosWith(com([[0x100, [0xb8, 0x00, 0x4c, 0xcd, 0x21]]]));
+    dos.loadCom(Uint8Array.from([0xb8, 0x00, 0x4c, 0xcd, 0x21]), { args: 'A:HELLO.TXT OUT.DAT' });
+    const psp = 0x0800, at = (o) => m._read((psp << 4) + o);
+
+    assert.equal(at(0x80), 20, 'length counts the leading space');
+    let tail = '';
+    for (let i = 0; i < at(0x80); i++) tail += String.fromCharCode(at(0x81 + i));
+    assert.equal(tail, ' A:HELLO.TXT OUT.DAT');
+    assert.equal(at(0x81 + at(0x80)), 0x0d, 'and a carriage return closes it');
+
+    // FCB 1: drive A (1), name padded to eight, extension padded to three.
+    assert.equal(at(0x5c), 1, 'drive letter became a drive NUMBER, A: = 1');
+    let name = '';
+    for (let i = 0; i < 8; i++) name += String.fromCharCode(at(0x5d + i));
+    assert.equal(name, 'HELLO   ');
+    let ext = '';
+    for (let i = 0; i < 3; i++) ext += String.fromCharCode(at(0x65 + i));
+    assert.equal(ext, 'TXT');
+
+    // FCB 2 takes the second argument, with no drive given.
+    assert.equal(at(0x6c), 0, 'no drive letter means drive 0, the default');
+    let n2 = '';
+    for (let i = 0; i < 8; i++) n2 += String.fromCharCode(at(0x6d + i));
+    assert.equal(n2, 'OUT     ');
+});
