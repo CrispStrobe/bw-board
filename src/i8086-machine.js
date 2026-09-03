@@ -42,6 +42,7 @@ import { MC6850 } from './mc6850.js';
 import { I8254 } from './i8254.js';
 import { I8259 } from './i8259.js';
 import { I8251 } from './i8251.js';
+import { CGACard } from './cga-card.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
 const IF = 0x0200;
@@ -79,6 +80,7 @@ const REGS = {
     pit: 4,          // counters 0/1/2 and the control word
     pic: 2,          // A0 selects command/status vs data/mask
     usart8251: 2,    // C/D selects data vs control/status
+    cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
 };
 
 /**
@@ -218,6 +220,10 @@ export class I8086Machine {
             } else if (c.kind === 'usart8251') {
                 chip = new I8251({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            } else if (c.kind === 'cga') {
+                chip = new CGACard(config.clockHz, {
+                    onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
                 });
             } else {
                 chip = new MC6850({
