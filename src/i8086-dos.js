@@ -247,7 +247,14 @@ export function createDos8086(machine, io = {}) {
                 handles.set(h, { name, pos: 0, write: (cpu.al & 3) !== 0 });
                 cpu.ax = h; return ok();
             }
-            case 0x3e: handles.delete(cpu.bx); return ok();
+            case 0x3e:                                    // close
+                // DOS reports an invalid handle; answering ok() unconditionally
+                // made "close a handle that was never open" look like success,
+                // and a program written to TEST that convention printed the
+                // wrong answer while appearing to work.
+                if (!handles.has(cpu.bx)) return fail(6);
+                handles.delete(cpu.bx);
+                return ok();
             case 0x3f: {                                  // read from handle
                 const h = handles.get(cpu.bx);
                 if (cpu.bx === 0) {                       // stdin
@@ -278,7 +285,12 @@ export function createDos8086(machine, io = {}) {
                 files.set(h.name, next);
                 cpu.ax = cpu.cx; return ok();
             }
-            case 0x41: files.delete(zstr(cpu.ds, cpu.dx)); return ok();
+            case 0x41: {                                  // delete file
+                const name = zstr(cpu.ds, cpu.dx);
+                if (!files.has(name)) return fail(2);     // file not found
+                files.delete(name);
+                return ok();
+            }
             case 0x42: {                                  // seek
                 const h = handles.get(cpu.bx);
                 if (!h) return fail(6);

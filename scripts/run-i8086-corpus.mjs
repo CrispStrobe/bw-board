@@ -54,6 +54,24 @@
  * Agreement across hundreds of programs is still strong evidence, because
  * two unrelated implementations rarely make the same mistake.
  *
+ * WHAT THE DISAGREEMENTS TURNED OUT TO BE, classified over the whole 525 so
+ * the next reader does not re-derive it:
+ *
+ *   13  the ORACLE printed 5-190 KB of raw memory. Those are runaway
+ *       $-terminated prints in their simulator -- one dumps the interrupt
+ *       vector table verbatim, which means their SEG returned 0 and INT 21h/09h
+ *       scanned from 0000:0000 until it found a $. Ours prints the program's
+ *       actual report. Their bug, not ours.
+ *    9  environment: clock and date (theirs seeded from wall-clock, ours
+ *       deterministic), and load addresses -- DS, SS, SP and BP differ because
+ *       two loaders place a program differently. Neither is wrong.
+ *    2  OURS, found here and fixed: INT 21h/3Eh and /41h reported success
+ *       unconditionally, so "close a handle never opened" and "delete a file
+ *       that is not there" looked like they worked.
+ *    3  known simplifications of ours, stated in i8086-dos.js: INT 10h/06h
+ *       clears rather than scrolling a window, and two port reads land on
+ *       device defaults.
+ *
  * ASSEMBLER HOOK. `--assembler <module>` loads an ES module that must export
  * `assemble(source, {name}) -> { bytes: Uint8Array, format: 'com'|'exe'|'boot' }`
  * and throw on failure. Nothing is wired in yet; until then .asm files count

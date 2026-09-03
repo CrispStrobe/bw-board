@@ -433,3 +433,38 @@ test('INT 19h reboots into the boot sector, or ends the program if there is none
     assert.equal(d2.report().rebooted, 1);
     assert.deepEqual(d2.report().unsupported, []);
 });
+
+test('a file service that cannot do the thing says so in carry', () => {
+    // Both of these once returned success unconditionally, and the corpus
+    // caught it: a program written to demonstrate DOS's error conventions
+    // printed "carry clear" where every real DOS prints "carry set", and
+    // looked like it was working.
+    const { m, dos } = dosWith(com([
+        [0x100, [0xb4, 0x3e, 0xbb, 0x07, 0x00, 0xcd, 0x21]],   // close handle 7, never opened
+        [0x107, [0x9c]],                                        // pushf
+        [0x108, [0xb4, 0x41, 0xba, 0x40, 0x01, 0xcd, 0x21]],    // delete "NOPE.TXT"
+        [0x10f, [0x9c]],                                        // pushf
+        [0x110, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        [0x140, [0x4e, 0x4f, 0x50, 0x45, 0x2e, 0x54, 0x58, 0x54, 0x00]],
+    ]));
+    dos.run(10_000);
+    const at = (sp) => m._read((0x0800 << 4) + sp) | (m._read((0x0800 << 4) + sp + 1) << 8);
+    assert.ok(at(0xfffc) & 1, 'closing a handle that was never open sets carry');
+    assert.ok(at(0xfffa) & 1, 'deleting a file that does not exist sets carry');
+
+    // ...and the success paths still succeed.
+    const ok2 = dosWith(com([
+        [0x100, [0xb4, 0x3c, 0xb9, 0x00, 0x00, 0xba, 0x40, 0x01, 0xcd, 0x21]],  // create
+        [0x10a, [0x89, 0xc3, 0xb4, 0x3e, 0xcd, 0x21]],                           // close it
+        [0x110, [0x9c]],
+        [0x111, [0xb4, 0x41, 0xba, 0x40, 0x01, 0xcd, 0x21]],                     // delete it
+        [0x118, [0x9c]],
+        [0x119, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        [0x140, [0x59, 0x45, 0x53, 0x2e, 0x54, 0x58, 0x54, 0x00]],
+    ]));
+    ok2.dos.run(10_000);
+    const at2 = (sp) => ok2.m._read((0x0800 << 4) + sp) | (ok2.m._read((0x0800 << 4) + sp + 1) << 8);
+    assert.equal(at2(0xfffc) & 1, 0, 'closing a real handle is still success');
+    assert.equal(at2(0xfffa) & 1, 0, 'deleting a real file is still success');
+    assert.equal(ok2.dos.files.has('YES.TXT'), false, 'and it is gone');
+});
