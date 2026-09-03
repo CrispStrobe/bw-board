@@ -13,7 +13,9 @@
  * addresses at every chip is the expensive case; the I/O pass is 65,536.
  *
  * SELECT entries: 62256 (RAM, CSB low), 28C256 (ROM, CEB low),
- * 8255/i8255 (PPI, CSB low), MC6850 / NS16C550 (serial).
+ * i8255 (PPI), MC6850 / NS16C550 (serial), and the Intel support chips
+ * i8254 (PIT), i8259 (PIC) and i8251 (USART) — each a single active-low
+ * /CS decoded in the port space, register-selected off the low A-lines.
  *
  * Refusals: contention (two chips at one address in one space), open
  * reset vector (no ROM at FFFF0h-FFFFFh), floating selects, non-
@@ -31,16 +33,27 @@ const IO_SELECT = {
     i8255: { kind: 'ppi', low: ['csb'] },
     mc6850: { kind: 'acia6850', high: ['cs0', 'cs1'], low: ['cs2b'] },
     ns16c550: { kind: 'uart16550', high: ['cs0', 'cs1'], low: ['cs2b'] },
+    // The Intel-family support chips: each has a single active-low /CS and
+    // selects its registers off the low address lines. The PIT and PIC are
+    // wired the same way the PPI is; the 8251's one register-select line is
+    // its C/D pin.
+    i8254: { kind: 'pit', low: ['csb'] },
+    i8259: { kind: 'pic', low: ['csb'] },
+    i8251: { kind: 'usart8251', low: ['csb'] },
 };
 
 const RS_PINS = {
     ppi: ['a0', 'a1'],
     acia6850: ['rs'],
     uart16550: ['a0', 'a1', 'a2'],
+    pit: ['a0', 'a1'],      // A0/A1 pick counter 0/1/2 or the control word
+    pic: ['a0'],            // A0 picks command/status vs data/mask
+    usart8251: ['cd'],      // C/D picks data vs control/status
 };
 
 const CHIP_DECL = {
     ppi: 'I8255', acia6850: 'MC6850', uart16550: 'NS16C550',
+    pit: 'I8254', pic: 'I8259', usart8251: 'I8251',
 };
 
 /**

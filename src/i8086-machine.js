@@ -27,7 +27,9 @@
  * runs the acknowledge cycle (pic.acknowledge() → vector), delivers it
  * through cpu.interrupt(vector), and a HLT waiting on a timer tick wakes.
  * A peripheral reaches the PIC by declaring `irq: n` in its config; a
- * PIT counter's OUT and a UART's IRQ pin are wired the same way. The
+ * PIT counter's OUT and a UART's IRQ pin are wired the same way. NMI is
+ * separate: machine.nmi() latches an edge that is delivered ahead of any
+ * INTR, ignores the interrupt flag, and always takes vector 2. The
  * one-instruction inhibition after a segment-register load is the core's
  * concern and is not modelled at this resolution.
  *
@@ -120,6 +122,7 @@ export class I8086Machine {
         this.chips = {};
         this.cycles = 0;
         this._pinLevels = {};
+        this._nmiPending = false;
         /** Regions of the memory space, in declaration order. */
         this._mem = config.regions.map((r) => ({ ...r }));
         /** Decoded windows, split by which bus they answer on. */
@@ -345,12 +348,25 @@ export class I8086Machine {
     }
 
     /**
-     * Deliver a pending hardware interrupt if the PIC's INTR line is
-     * asserted and the CPU will take it (IF set). The acknowledge cycle
-     * reads the vector from the PIC and wakes a halted CPU. Returns true
-     * if an interrupt was taken.
+     * Request a non-maskable interrupt. NMI is edge-triggered, ignores the
+     * interrupt flag, and always takes vector 2 — the parity-error / power-
+     * fail / coprocessor line, or on a breadboard just a button. Latched
+     * here and delivered before the next instruction; multiple calls before
+     * delivery collapse to one edge.
+     */
+    nmi() { this._nmiPending = true; }
+
+    /**
+     * Deliver a pending hardware interrupt. NMI wins over INTR and ignores
+     * IF; a maskable INTR is taken only when the PIC's line is asserted and
+     * IF is set. Either wakes a halted CPU. Returns true if one was taken.
      */
     _serviceInterrupts() {
+        if (this._nmiPending) {
+            this._nmiPending = false;
+            this.cpu.interrupt(2);        // NMI is vector 2, unconditional
+            return true;
+        }
         if (!this._pic || !this._pic.intActive) return false;
         if (!(this.cpu.flags & IF)) return false;
         const vector = this._pic.acknowledge();

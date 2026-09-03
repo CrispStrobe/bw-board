@@ -154,6 +154,66 @@ test('a masked IRQ is not delivered', () => {
 });
 
 // ---------------------------------------------------------------------------
+test('NMI is delivered even with interrupts disabled (IF clear)', () => {
+    // ROM sets up a stack and DS but never executes STI, so IF stays clear.
+    const romCode = [
+        0xb8, 0x00, 0x00, 0x8e, 0xd0, 0x8e, 0xd8, 0xbc, 0x00, 0x08,   // ax=0; ss=ax; ds=ax; sp=0800
+        0xeb, 0xfe,                                                    // jmp $
+    ];
+    const isr = [0xfe, 0x06, 0x10, 0x02, 0xcf];   // inc byte [0210]; iret
+    const m = machine({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xffff }, { kind: 'rom', start: 0xf8000, end: 0xfffff }],
+        chips: [],
+    });
+    m.loadRom(rom(romCode));
+    m.reset();
+    m.mem.set(isr, 0x0100);
+    m.mem[0x08] = 0x00; m.mem[0x09] = 0x01;   // vector 2 offset -> 0x0100
+    m.mem[0x0a] = 0x00; m.mem[0x0b] = 0x00;   // vector 2 segment -> 0x0000
+
+    for (let i = 0; i < 10; i++) m.step();
+    assert.equal(m.cpu.flags & 0x0200, 0, 'IF is clear — a maskable INTR could not get in');
+    assert.equal(m.mem[0x0210], 0, 'ISR has not run');
+
+    m.nmi();
+    for (let i = 0; i < 10; i++) m.step();
+    assert.equal(m.mem[0x0210], 1, 'NMI ran the vector-2 handler despite IF being clear');
+});
+
+test('NMI takes priority over a pending maskable INTR, and the INTR is not lost', () => {
+    const romCode = [0xb8, 0x00, 0x00, 0x8e, 0xd0, 0x8e, 0xd8, 0xbc, 0x00, 0x08, 0xfb, 0xeb, 0xfe];
+    const m = machine({
+        clockHz: 5_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xffff }, { kind: 'rom', start: 0xf8000, end: 0xfffff }],
+        chips: [{ kind: 'pic', name: 'pic1', at: 0x20 }],
+    });
+    m.loadRom(rom(romCode));
+    m.reset();
+    // Vector 2 (NMI) -> 0000:0100, vector 8 (INTR base) -> 0000:0200.
+    m.mem[0x08] = 0x00; m.mem[0x09] = 0x01;
+    m.mem[0x20] = 0x00; m.mem[0x21] = 0x02;
+    m._out(0x20, 0x13); m._out(0x21, 0x08); m._out(0x21, 0x01); m._out(0x21, 0xfe);
+    for (let i = 0; i < 12; i++) m.step();     // run init, including STI
+    assert.ok(m.cpu.flags & 0x0200, 'IF set by STI');
+
+    m.chips.pic1.setIRQ(0, 1);                 // a maskable interrupt is now pending
+    m.nmi();                                   // and an NMI arrives at the same moment
+    assert.ok(m.chips.pic1.intActive, 'INTR pending before delivery');
+
+    m._serviceInterrupts();
+    assert.equal(m.cpu.cs, 0x0000);
+    assert.equal(m.cpu.ip, 0x0100, 'the NMI vector wins, not the INTR vector');
+    assert.equal(m._nmiPending, false, 'NMI edge consumed');
+    assert.ok(m.chips.pic1.intActive, 'the INTR is still pending — not dropped');
+    // NMI cleared IF, so the INTR waits; once IF is restored (as IRET would),
+    // the very same INTR is delivered.
+    m.cpu.flags |= 0x0200;
+    m._serviceInterrupts();
+    assert.equal(m.cpu.ip, 0x0200, 'the maskable INTR is taken once IF returns');
+});
+
+// ---------------------------------------------------------------------------
 // The SIrfanH MIT 8086/8251 demo's serial protocol, hand-assembled and run
 // end to end: the exact init dance, the RxRDY/TxRDY poll idioms, and the
 // name string transmitted. Ports match the demo — control 0x020A, data
