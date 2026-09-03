@@ -97,6 +97,10 @@ export function createDos8086(machine, io = {}) {
     /** Every INT 03h the program executed, in order. */
     const breakpoints = [];
     let rebooted = 0;
+    /** How many times the program asked for a keystroke. A run with no input
+     *  cannot be compared against one that had some, and this is how a
+     *  consumer tells those apart from a real disagreement. */
+    let keyRequests = 0;
     /** Set by a handler that has taken CS:IP (and the stack) for itself, so
      *  the generic IRET below must not run and undo it. */
     let controlTransferred = false;
@@ -168,17 +172,20 @@ export function createDos8086(machine, io = {}) {
         switch (ah) {
             case 0x00: terminated = true; exitCode = 0; return;
             case 0x01: {                                  // input with echo
+                keyRequests++;
                 const c = keys.length ? keys.shift() : 0;
                 cpu.al = c; putChar(c); return;
             }
             case 0x02: putChar(cpu.dl); return;           // 1347 of 3109 calls
             case 0x06:                                    // direct console I/O
                 if (cpu.dl === 0xff) {
+                    keyRequests++;
                     if (!keys.length) { cpu.flags |= ZF; cpu.al = 0; return; }
                     cpu.flags &= ~ZF; cpu.al = keys.shift(); return;
                 }
                 putChar(cpu.dl); return;
             case 0x07: case 0x08:                         // input, no echo
+                keyRequests++;
                 cpu.al = keys.length ? keys.shift() : 0; return;
             case 0x09: {                                  // 1064 of 3109 calls
                 let off = cpu.dx;
@@ -190,6 +197,7 @@ export function createDos8086(machine, io = {}) {
                 cpu.al = 0x24; return;
             }
             case 0x0a: {                                  // buffered input
+                keyRequests++;
                 const base = cpu.dx, max = rd8(cpu.ds, base);
                 let n = 0;
                 while (n < max - 1 && keys.length) {
@@ -201,7 +209,7 @@ export function createDos8086(machine, io = {}) {
                 wr8(cpu.ds, base + 2 + n, 0x0d);
                 putChar(0x0d); return;
             }
-            case 0x0b: cpu.al = keys.length ? 0xff : 0x00; return;
+            case 0x0b: keyRequests++; cpu.al = keys.length ? 0xff : 0x00; return;
             case 0x0c: keys.length = 0; cpu.ah = cpu.al; return int21();
             case 0x25: {                                  // set interrupt vector
                 wr16(0, cpu.al * 4, cpu.dx);
@@ -243,6 +251,7 @@ export function createDos8086(machine, io = {}) {
             case 0x3f: {                                  // read from handle
                 const h = handles.get(cpu.bx);
                 if (cpu.bx === 0) {                       // stdin
+                    keyRequests++;
                     let n = 0;
                     while (n < cpu.cx && keys.length) wr8(cpu.ds, cpu.dx + n++, keys.shift());
                     cpu.ax = n; return ok();
@@ -446,10 +455,12 @@ export function createDos8086(machine, io = {}) {
     function int16() {
         switch (cpu.ah) {
             case 0x00: case 0x10: {
+                keyRequests++;
                 const c = keys.length ? keys.shift() : 0;
                 cpu.al = c; cpu.ah = 0; return;           // scan code unmodelled: AH = 0
             }
             case 0x01: case 0x11:
+                keyRequests++;
                 if (!keys.length) { cpu.flags |= ZF; return; }
                 cpu.flags &= ~ZF; cpu.al = keys[0]; cpu.ah = 0; return;
             case 0x02: case 0x12: cpu.al = 0; return;     // no shift state modelled
@@ -808,6 +819,7 @@ export function createDos8086(machine, io = {}) {
                 exitCode,
                 breakpoints: breakpoints.length,
                 rebooted,
+                keyRequests,
             };
         },
     };

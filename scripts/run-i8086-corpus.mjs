@@ -10,6 +10,10 @@
  * took an error branch straight to the exit. Those are counted separately
  * from programs that actually produced output.
  *
+ *   MATCH      exited, and its output equals a recorded expected output
+ *   NOINPUT    output differs, and the program ASKED FOR A KEY it did not
+ *              get -- a difference in this harness, not in the emulation
+ *   DIFFER     exited, and its output does NOT match. A real lead.
  *   EXITED     terminated through int 21h/4Ch or int 20h, WITH output
  *   SILENT     terminated cleanly and produced nothing -- suspicious
  *   LOOPING    still running at the budget, and DOING something -- it
@@ -37,6 +41,19 @@
  *   node scripts/run-i8086-corpus.mjs path/to/dir [more...]
  *   node scripts/run-i8086-corpus.mjs --budget 20000000 --verbose file.com
  *
+ * --expect <json> turns "it printed something" into "it printed the RIGHT
+ * thing". The file maps a program's path to the output it should produce.
+ * The Amey corpus ships one, recorded from ITS OWN simulator.
+ *
+ * THAT ORACLE IS NOT HARDWARE-GROUNDED and the verdict must not pretend it
+ * is. That simulator dispatches on mnemonic strings over its assembler's
+ * operand objects -- it never fetches an opcode byte -- so it is an
+ * INDEPENDENT SECOND OPINION, not an authority. A DIFFER is a lead worth
+ * chasing from both ends, and when the two disagree the tie-breaker is the
+ * core, which is verified against 646,000 hardware-generated vectors.
+ * Agreement across hundreds of programs is still strong evidence, because
+ * two unrelated implementations rarely make the same mistake.
+ *
  * ASSEMBLER HOOK. `--assembler <module>` loads an ES module that must export
  * `assemble(source, {name}) -> { bytes: Uint8Array, format: 'com'|'exe'|'boot' }`
  * and throw on failure. Nothing is wired in yet; until then .asm files count
@@ -59,8 +76,16 @@ const value = (name, dflt) => {
 const BUDGET = Number(value('--budget', 5_000_000));
 const VERBOSE = flag('--verbose');
 const EMU = flag('--emu8086');
+let expected = null;
+const expectPath = value('--expect', null);
+if (expectPath) expected = JSON.parse(readFileSync(expectPath, 'utf8'));
+
+/** Line endings and trailing space are not the thing under test. */
+const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
 const paths = argv.filter((a, i) => !a.startsWith('--')
-    && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler');
+    && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler'
+    && argv[i - 1] !== '--expect');
 
 let assembler = null;
 const asmPath = value('--assembler', null);
@@ -112,7 +137,7 @@ function classify(bytes, name) {
     return 'com';
 }
 
-function runOne(name, raw) {
+function runOne(name, raw, key) {
     let bytes = raw;
     let kind = classify(bytes, name);
 
@@ -182,7 +207,33 @@ function runOne(name, raw) {
     if (!dos.terminated) {
         return { name, kind, steps, report, verdict: printed ? 'LOOPING' : 'HUNG' };
     }
-    return { name, kind, steps, report, verdict: printed ? 'EXITED' : 'SILENT' };
+    if (!printed) return { name, kind, steps, report, verdict: 'SILENT' };
+    const golden = expected && key && expected[key];
+    if (golden && typeof golden.output === 'string') {
+        const want = norm(golden.output);
+        // TWO READINGS OF "OUTPUT", and the corpus's own oracle models the
+        // SCREEN. Our stdout is the character STREAM -- everything ever
+        // written -- so the two agree until a program clears the display,
+        // after which the stream still holds the text the screen no longer
+        // shows. bios_clear_screen.asm is exactly that: the oracle records
+        // one line, the stream holds two. Neither is wrong; they are
+        // different quantities, and comparing the wrong one manufactures a
+        // disagreement out of a modelling difference.
+        const stream = norm(report.stdout);
+        const screen = norm(dos.screenText().join('\n'));
+        if (want === stream) return { name, kind, steps, report, verdict: 'MATCH', via: 'stream' };
+        if (want === screen) return { name, kind, steps, report, verdict: 'MATCH', via: 'screen' };
+        // A program that asked for a key and got none cannot be expected to
+        // agree with a run that had one. Ours types nothing, so that is a
+        // difference in the HARNESS, not in the emulation, and it is
+        // reported apart rather than counted against the tier.
+        const asked = report.keyRequests > 0;
+        return {
+            name, kind, steps, report, want, got: stream,
+            verdict: asked ? 'NOINPUT' : 'DIFFER',
+        };
+    }
+    return { name, kind, steps, report, verdict: 'EXITED' };
 }
 
 function collect(p) {
@@ -213,7 +264,10 @@ if (flag('--selftest')) {
     for (const p of paths) {
         if (!existsSync(p)) { console.error(`no such path: ${p}`); process.exit(2); }
         for (const f of collect(p)) {
-            results.push(runOne(basename(f), new Uint8Array(readFileSync(f))));
+            // The expected-output file keys on the path below its own root,
+            // so the key is whatever follows the directory we were given.
+            const key = f.startsWith(p) ? f.slice(p.length).replace(/^[/\\]/, '') : basename(f);
+            results.push(runOne(basename(f), new Uint8Array(readFileSync(f)), key));
         }
     }
 }
@@ -230,6 +284,13 @@ for (const r of results) {
         const k = `port ${u.port} (no device claims it)`;
         refusals.set(k, (refusals.get(k) || 0) + u.count);
     }
+    if (r.verdict === 'DIFFER' && (VERBOSE || tally.DIFFER <= 8)) {
+        const w = r.want.split('\n'), g = r.got.split('\n');
+        const at = w.findIndex((l, i) => l !== g[i]);
+        console.log(`DIFFER ${r.name}  first difference on line ${at + 1}:`);
+        console.log(`   want ${JSON.stringify(w[at])}`);
+        console.log(`   got  ${JSON.stringify(g[at])}`);
+    }
     if (VERBOSE || r.verdict === 'THREW') {
         const d = r.report?.devices;
         console.log(`${r.verdict.padEnd(6)} ${r.name}${r.note ? ` -- ${r.note}` : ''}`
@@ -241,7 +302,7 @@ for (const r of results) {
 }
 
 console.log(`\n${results.length} programs:`);
-for (const k of ['EXITED', 'LOOPING', 'SILENT', 'HUNG', 'THREW', 'NOASM']) {
+for (const k of ['MATCH', 'NOINPUT', 'DIFFER', 'EXITED', 'LOOPING', 'SILENT', 'HUNG', 'THREW', 'NOASM']) {
     if (tally[k]) console.log(`  ${String(tally[k]).padStart(5)}  ${k}`);
 }
 if (refusals.size) {
