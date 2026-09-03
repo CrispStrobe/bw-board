@@ -41,9 +41,32 @@
  * @module
  */
 
-/** Where every interrupt vector points. Unmapped on purpose: nothing runs
- *  there, this layer intercepts before the first fetch. */
+/**
+ * Where every interrupt vector points. Vector n lands on TRAP_SEG:(n*4),
+ * and each slot holds `jmp $` — a two-byte jump to itself.
+ *
+ * THE SELF-LOOP IS THE WHOLE TRICK, and the first design here got it wrong.
+ * The obvious arrangement is an UNMAPPED trap segment with the offset equal
+ * to the vector number, intercepted before the CPU can fetch. That works for
+ * software INTs, where this layer gets to look between instructions — and
+ * fails the moment a HARDWARE interrupt exists, because the machine layer
+ * delivers a pending IRQ and executes the next instruction in the SAME
+ * step() call. There is no "between" to intercept in: the CPU lands on the
+ * trap and runs whatever unmapped memory reads as, which is 0FFh, which is
+ * a ModR/M group opcode, which is garbage. The symptom was a timer that
+ * ticked zero times and said nothing.
+ *
+ * With `jmp $` in a MAPPED slot, the CPU can execute at the trap as often as
+ * it likes and IP does not move, so servicing is idempotent and completely
+ * independent of whether this layer looks before or after the machine
+ * stepped. The stride of four leaves room for the instruction and keeps the
+ * arithmetic obvious.
+ */
 export const TRAP_SEG = 0xf000;
+/** Bytes per trap slot: enough for `jmp $` with room to read. */
+export const TRAP_STRIDE = 4;
+/** Where the trap page must be writable, since it now holds real code. */
+export const TRAP_BASE = TRAP_SEG << 4;
 
 /** Text mode 3: 80x25, two bytes per cell, at the CGA colour address. */
 export const VRAM = 0xb8000;
@@ -335,6 +358,41 @@ export function createDos8086(machine, io = {}) {
         note(0x15, cpu.ah); return fail(1);
     }
 
+    /**
+     * INT 08h — the BIOS timer tick, and the reason this exists at all.
+     *
+     * install() claims all 256 vectors, hardware ones included. On a machine
+     * that also has a PIC and a PIT (E6.3), IRQ0 therefore lands here. If
+     * nothing serviced it the interrupt would be counted as an unsupported
+     * call and IRET'd — and, far worse, the PIC would never receive its
+     * end-of-interrupt, so IRQ0 would stay in service and NO FURTHER TIMER
+     * INTERRUPT WOULD EVER BE DELIVERED. One tick, then silence, and the
+     * symptom is a program that runs but never advances.
+     *
+     * So this is a real BIOS tick: bump the count at 0040:006Ch where every
+     * DOS program expects to find it, and acknowledge the PIC.
+     */
+    function int08() {
+        const lo = rd16(0x40, 0x6c), hi = rd16(0x40, 0x6e);
+        const next = ((hi << 16) | lo) + 1;
+        wr16(0x40, 0x6c, next & 0xffff);
+        wr16(0x40, 0x6e, (next >>> 16) & 0xffff);
+        eoi();
+    }
+
+    /** INT 09h — the keyboard IRQ. Nothing to fetch (keys arrive through
+     *  type()), but the PIC still has to be told the interrupt is over. */
+    function int09() { eoi(); }
+
+    /** Acknowledge whichever PIC the machine has, if it has one. Written as
+     *  a lookup rather than a constant because Tier B machines have no PIC at
+     *  all and a breadboard is free to decode one anywhere. */
+    function eoi() {
+        for (const c of machine.config.chips || []) {
+            if (c.kind === 'pic') { machine._out(c.at, 0x20); return; }
+        }
+    }
+
     /** INT 33h: the mouse driver nobody installed. Saying so is the service. */
     function int33() {
         if (cpu.ax === 0) { cpu.ax = 0; cpu.bx = 0; return; }   // 0 = no driver
@@ -342,7 +400,13 @@ export function createDos8086(machine, io = {}) {
     }
 
     const HANDLERS = {
+        0x08: int08, 0x09: int09,
         0x10: int10, 0x15: int15, 0x16: int16, 0x1a: int1a,
+        // INT 1Ch is the user timer hook a real BIOS calls from INT 08h.
+        // Nothing calls it here — a nested dispatch through the trap would
+        // need its own frame — so a program that hooks 1Ch and expects to be
+        // called is NOT served, and hooks 08h instead. Stated, not hidden.
+        0x1c: () => {},
         0x20: () => { terminated = true; exitCode = 0; },
         0x21: int21, 0x33: int33,
     };
@@ -350,11 +414,29 @@ export function createDos8086(machine, io = {}) {
     return {
         machine,
 
-        /** Point every vector at the trap segment and clear the screen. */
+        /**
+         * Point every vector at its trap slot, fill the slots with `jmp $`,
+         * and clear the screen.
+         *
+         * The trap page has to be WRITABLE, because it holds instructions
+         * now. A machine that has not mapped it would take the writes into
+         * open bus, read 0FFh back, and execute garbage on the first
+         * interrupt — so it is verified by read-back and refused by name
+         * rather than discovered later as a mystery crash.
+         */
         install() {
             for (let n = 0; n < 256; n++) {
-                wr16(0, n * 4, n);              // offset = the vector number
+                const off = n * TRAP_STRIDE;
+                wr16(0, n * 4, off);
                 wr16(0, n * 4 + 2, TRAP_SEG);
+                wr8(TRAP_SEG, off, 0xeb);       // jmp $
+                wr8(TRAP_SEG, off + 1, 0xfe);
+            }
+            if (rd8(TRAP_SEG, 0) !== 0xeb || rd8(TRAP_SEG, 1) !== 0xfe) {
+                throw new Error(
+                    `the trap page at ${TRAP_BASE.toString(16)}h is not writable: this machine `
+                    + 'must map at least 1K of RAM there (DOSBOX8086 does). Without it every '
+                    + 'interrupt executes open bus.');
             }
             clearScreen();
             return this;
@@ -430,8 +512,9 @@ export function createDos8086(machine, io = {}) {
          * @returns {number|null} the interrupt number serviced, or null
          */
         service() {
-            if (cpu.cs !== TRAP_SEG || cpu.ip > 0xff) return null;
-            const n = cpu.ip;
+            if (cpu.cs !== TRAP_SEG) return null;
+            if (cpu.ip % TRAP_STRIDE !== 0 || cpu.ip / TRAP_STRIDE > 0xff) return null;
+            const n = cpu.ip / TRAP_STRIDE;
             const h = HANDLERS[n];
             if (h) h();
             else { note(n, cpu.ah); fail(1); }
@@ -510,7 +593,12 @@ export function createDos8086(machine, io = {}) {
  *  services are the hardware. */
 export const DOSBOX8086 = Object.freeze({
     clockHz: 5_000_000,
-    regions: [{ kind: 'ram', start: 0x00000, end: 0xbffff }],
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0xbffff },
+        // The trap page. A real machine has its BIOS ROM here; this one has
+        // 1K of RAM holding 256 `jmp $` slots, which is this tier's BIOS.
+        { kind: 'ram', start: 0xf0000, end: 0xf03ff },
+    ],
     chips: [],
 });
 

@@ -88,7 +88,7 @@ test('a program that HOOKS int 21h and chains is still serviced', () => {
     const savedSeg = m._read((psp << 4) + 0x142) | (m._read((psp << 4) + 0x143) << 8);
     const savedOff = m._read((psp << 4) + 0x140) | (m._read((psp << 4) + 0x141) << 8);
     assert.equal(savedSeg, TRAP_SEG);
-    assert.equal(savedOff, 0x21, 'the trap offset IS the vector number, by construction');
+    assert.equal(savedOff, 0x21 * 4, 'the slot is the vector number times the stride');
 });
 
 test('buffered input AH=0Ah takes typed keys and terminates the line', () => {
@@ -229,8 +229,13 @@ test('the machine underneath is untouched by any of this', () => {
     // Tier B adds no chips, decodes no ports, and needs no ROM: the config
     // is 768K of RAM and nothing else. If this ever stops being true, the
     // tier has grown hardware it does not need.
-    assert.deepEqual(DOSBOX8086.chips, []);
-    assert.equal(DOSBOX8086.regions.length, 1);
-    assert.equal(DOSBOX8086.regions[0].kind, 'ram');
+    assert.deepEqual(DOSBOX8086.chips, [], 'no chips at all: the services ARE the hardware');
+    assert.ok(DOSBOX8086.regions.every((r) => r.kind === 'ram'), 'and no ROM either');
+    // The only thing resembling hardware is 1K holding the trap slots —
+    // this tier's entire BIOS. If a chip ever appears in this list, the tier
+    // has grown hardware it does not need.
+    assert.equal(DOSBOX8086.regions.length, 2);
+    assert.equal(DOSBOX8086.regions[1].start, 0xf0000);
+    assert.equal(DOSBOX8086.regions[1].end - DOSBOX8086.regions[1].start + 1, 1024);
     assert.equal(VRAM, 0xb8000);
 });
