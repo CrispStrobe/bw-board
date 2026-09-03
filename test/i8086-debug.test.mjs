@@ -180,3 +180,49 @@ test('the factory builds one by kind', async () => {
     target.runFor(1e5);
     assert.ok(target.regs().cycles > 0, 'it ran');
 });
+
+test('video() renders straight out of memory, with the mode log deciding how', async () => {
+    const { createDos8086, DOSBOX8086 } = await import('../src/i8086-dos.js');
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+
+    // A program that selects mode 13h and plots one pixel, then parks.
+    const m = new M(DOSBOX8086);
+    const prog = Uint8Array.from([
+        0xb4, 0x00, 0xb0, 0x13, 0xcd, 0x10,          // mode 13h
+        0xb4, 0x0c, 0xb0, 0x2a,                      // ah=0Ch al=2Ah
+        0xb9, 0x0a, 0x00, 0xba, 0x05, 0x00,          // cx=10 dx=5
+        0xcd, 0x10,
+        0xeb, 0xfe,
+    ]);
+    const dos = createDos8086(m).install().loadCom(prog);
+    for (let i = 0; i < 200; i++) dos.step();
+
+    // The target is where the renderer and the service layer meet: neither
+    // imports the other, and this is the consumer that holds both.
+    const t = createI8086DebugTarget({ machine: m }, { videoModeLog: () => dos.videoModeLog() });
+    const f = t.video();
+    assert.equal(f.mode, 0x13, 'the log said mode 13h');
+    assert.equal(f.width, 320);
+    assert.equal(f.height, 200);
+    const i = (5 * 320 + 10) * 4;
+    assert.notDeepEqual([f.rgba[i], f.rgba[i + 1], f.rgba[i + 2]], [0, 0, 0],
+        'the pixel the program plotted is in the frame the debugger would show');
+
+    // With no log at all, the power-on text mode is the right assumption.
+    const bare = createI8086DebugTarget({ machine: m });
+    assert.equal(bare.video().mode, 0x03);
+});
+
+test('video() explains an unsupported mode instead of throwing', async () => {
+    const { createDos8086, DOSBOX8086 } = await import('../src/i8086-dos.js');
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const m = new M(DOSBOX8086);
+    createDos8086(m).install();
+    // Mode 12h is EGA/VGA planar: four bit planes behind a sequencer, a
+    // different machine entirely. A pane that crashed the session over it
+    // would be worse than one that says why it is empty.
+    const t = createI8086DebugTarget({ machine: m }, { videoModeLog: () => [0x12] });
+    const r = t.video();
+    assert.ok(r.unsupported, 'refused');
+    assert.match(r.unsupported, /12h/);
+});

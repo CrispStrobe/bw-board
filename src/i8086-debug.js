@@ -28,9 +28,19 @@
  * @module
  */
 import { disasmI8086 } from './i8086-disasm.js';
+import { renderMode, likelyMode } from './i8086-cga.js';
 
-/** @param {{ machine: import('./i8086-machine.js').I8086Machine }} adapter */
-export function createI8086DebugTarget(adapter) {
+/**
+ * @param {{ machine: import('./i8086-machine.js').I8086Machine }} adapter
+ * @param {{ videoModeLog?: () => number[], videoOpts?: object }} [opts]
+ *   `videoModeLog` is the INT 10h/AH=00h history -- the DOS layer's
+ *   `videoModeLog()` is exactly this shape. Without it the target assumes
+ *   the power-on text mode, which is right for every machine that has not
+ *   set one, and wrong only for a graphics program whose mode sets nobody
+ *   recorded. `videoOpts` passes the mode-control latches (palette,
+ *   background, DAC) through to the renderer.
+ */
+export function createI8086DebugTarget(adapter, opts = {}) {
     const machine = adapter.machine;
     const cpu = machine.cpu;
 
@@ -239,11 +249,32 @@ export function createI8086DebugTarget(adapter) {
 
         timeNs() { return BigInt(Math.round(machine.tMs * 1e6)); },
 
+        /**
+         * A frame the debugger can show. A video CHIP answers first if the
+         * machine has one; otherwise the frame is rendered straight out of
+         * memory, which is the whole reason i8086-cga.js is a pure function.
+         *
+         * THE TARGET IS THE RIGHT PLACE TO JOIN THEM. The renderer does not
+         * import the service layer and the service layer does not import the
+         * renderer -- that independence is deliberate and lets either be used
+         * alone. Something has to hold both, and a debug target consuming a
+         * machine plus a mode log is exactly that something.
+         *
+         * With no mode log the assumption is text mode 3, which renders
+         * correctly for every machine that never set one. An unsupported mode
+         * says so rather than throwing, because a debugger pane that crashes
+         * the session because a program selected mode 12h is worse than a
+         * pane that says why it is empty.
+         */
         video() {
             for (const chip of Object.values(machine.chips || {})) {
                 if (typeof chip.videoFrame === 'function') return chip.videoFrame();
             }
-            return null;
+            const seen = typeof opts.videoModeLog === 'function' ? opts.videoModeLog() : [];
+            const guess = likelyMode(seen);
+            if (!guess.supported) return { unsupported: `mode ${guess.mode.toString(16)}h: ${guess.reason}` };
+            const frame = renderMode(guess.mode, (a) => machine._read(a & 0xfffff), opts.videoOpts || {});
+            return { ...frame, mode: guess.mode, why: guess.reason };
         },
 
         audio() { return null; },
