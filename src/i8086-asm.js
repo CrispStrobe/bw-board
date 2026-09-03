@@ -344,7 +344,7 @@ function newVal(v = 0) {
         v,                  // the numeric part
         base: null,         // bx | bp
         index: null,        // si | di
-        mem: false,         // a bracket was seen, or a bare data label was
+        mem: false,         // brackets were WRITTEN -- see `operand`
         ref: null,          // the symbol record behind a bare label
         reloc: null,        // a segment name whose paragraph must be patched
         segRel: 0,          // net count of relocatable label terms
@@ -710,13 +710,19 @@ class Assembler {
         return { val: this.labelValue(sym), next: pos + 1 };
     }
 
-    /** A data or code label: an offset in its segment, and -- crucially --
-     *  a MEMORY reference when written bare. */
+    /**
+     * A data or code label: an offset in its segment.
+     *
+     * It does NOT set `mem`. A bare label is a memory reference and an
+     * OFFSET is a number, but which one this is cannot be decided here --
+     * only after the whole expression is known, because `TABLE_END - TABLE`
+     * is a plain count of bytes while `TABLE_END` alone is an address. What
+     * marks it is `segRel`, which subtraction cancels. See `operand`.
+     */
     labelValue(sym) {
         const o = newVal(sym.value);
         o.segRel = 1;
         o.segName = sym.seg ? sym.seg.name : null;
-        o.mem = true;
         o.ref = sym;
         o.known = sym.known !== false;
         return o;
@@ -769,7 +775,27 @@ class Assembler {
 
         const v = this.evalText(t);
         if (forced) v.forced = forced;
-        const isMem = v.mem || v.base || v.index;
+        // WHAT MAKES AN OPERAND A MEMORY REFERENCE, and the one place a
+        // label difference used to go wrong.
+        //
+        // Brackets make one. A base or index register makes one. And a bare
+        // label makes one -- `MOV AX, TABLE` loads the contents, which is
+        // MASM's rule and the thing a naive implementation inverts.
+        //
+        // But a label DIFFERENCE is not a label: `MOV AX, TABLE_END - TABLE`
+        // is the number of bytes between them, and `segRel` going to zero is
+        // exactly what says so. Carrying the memory flag through the
+        // subtraction instead -- which an earlier version did, by setting it
+        // on the label itself -- turned that into a LOAD FROM ADDRESS 20 and
+        // a table that reported its size as whatever happened to be stored
+        // there. It printed a confident zero, threw nothing, and no test
+        // failed; the corpus's own simulator caught it.
+        //
+        // The `EQU` path never had the bug, because it asks `segRel && ref`
+        // rather than reading the flag -- which is why 84 files using
+        // `LEN EQU $-MSG` were right and the four that write the difference
+        // straight into an instruction were not.
+        const isMem = v.mem || v.base || v.index || (v.segRel !== 0 && v.ref);
         if (isMem) {
             return {
                 k: 'm', base: v.base, index: v.index, disp: v.v,

@@ -72,6 +72,17 @@
  *       clears rather than scrolling a window, and two port reads land on
  *       device defaults.
  *
+ * --type <keys> hands the same keystrokes to every program that asks for
+ * input. To compare against a recorded oracle you must reproduce the
+ * CONDITIONS it recorded under, not guess at them: the Amey corpus states
+ * its own stream in `js/test/output.test.mjs` --
+ *
+ *     --type '5\r3\rAMEY\rAAAA...\r'   (40 A's)
+ *
+ * Without it, 28 programs that read the keyboard cannot agree with a run
+ * that had one, and they are reported NOINPUT rather than counted against
+ * the tier.
+ *
  * ASSEMBLER HOOK. `--assembler <module>` loads an ES module that must export
  * `assemble(source, {name}) -> { bytes: Uint8Array, format: 'com'|'exe'|'boot' }`
  * and throw on failure. Nothing is wired in yet; until then .asm files count
@@ -94,6 +105,9 @@ const value = (name, dflt) => {
 const BUDGET = Number(value('--budget', 5_000_000));
 const VERBOSE = flag('--verbose');
 const EMU = flag('--emu8086');
+// Keystrokes handed to any program that asks. `\r` and `\n` are the two
+// escapes worth having; everything else is literal.
+const TYPE = (value('--type', '') || '').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
 let expected = null;
 const expectPath = value('--expect', null);
 if (expectPath) expected = JSON.parse(readFileSync(expectPath, 'utf8'));
@@ -108,7 +122,7 @@ const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
 const paths = argv.filter((a, i) => !a.startsWith('--')
     && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler'
-    && argv[i - 1] !== '--expect');
+    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type');
 
 let assembler = null;
 const asmPath = value('--assembler', null);
@@ -190,6 +204,7 @@ function runOne(name, raw, key) {
     try {
         if (EMU) emu = createEmu8086(m).install();
         dos = createDos8086(m).install();
+        if (TYPE) dos.type(TYPE);
         if (kind === 'exe') dos.loadExe(bytes);
         else if (kind === 'boot') dos.loadBoot(bytes);
         else dos.loadCom(bytes);
