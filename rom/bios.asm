@@ -63,22 +63,34 @@
 ;             layout translation, ring-buffer insert, Ctrl-Alt-Del.
 ;   INT 08h   timer IRQ: 0040:006C tick count, 24-hour rollover, INT 1Ch.
 ;   INT 1Ah   00 read ticks, 01 set ticks.
-;   INT 13h   ENTRY POINTS and register conventions only -- see HOLE: FDC.
-;             01 last status, 08 drive parameters and 15h drive type are
-;             answered (they are configuration, not controller traffic).
+;   INT 13h   00 reset, 02 read, 03 write, 04 verify -- driven through a
+;             real uPD765 at 3F0h-3F7h with an 8237 moving the bytes on DMA
+;             channel 2. 01 last status, 08 drive parameters and 15h drive
+;             type are answered from configuration.
+;   INT 0Eh   IRQ6, the floppy controller: sets bit 7 of 0040:003E and issues
+;             the end-of-interrupt. The disk driver waits on that bit.
 ;   INT 19h   bootstrap: read cylinder 0 head 0 sector 1 to 0000:7C00 through
 ;             INT 13h, check the 55AAh signature, and jump there.
 ;   INT 05h/15h/17h/18h/1Bh/1Ch  present, and each says what it does not do.
 ;
 ; WHAT IS NOT IMPLEMENTED, stated rather than left to be discovered
 ;
-;   * THE FLOPPY CONTROLLER. src/upd765.js and src/i8237.js both exist now,
-;     but src/i8086-machine.js has no chip kind for either, so no machine
-;     config can decode 3F0h-3F7h to a controller and an OUT there would
-;     vanish into open bus. Every INT 13h path that would move a sector
-;     lands on `fdc_hole` below, which returns CF=1 and AH=20h (controller
-;     failure). That is the ONE named hole, and it is a wiring hole; the
-;     comment there says exactly what fills it.
+;   * FORMAT (INT 13h AH=05h). The controller models FORMAT TRACK and the
+;     diskette parameter table already carries the two bytes it needs, but
+;     nothing in this tier formats a disk -- the images are built by
+;     scripts/build-dos-image.mjs -- so the service is absent rather than
+;     written and never exercised.
+;   * A second floppy drive, and any drive that is not 360K. The equipment
+;     word declares one, AH=08h answers for one, and AH=02h on DL=1 returns
+;     "timed out" rather than pretending. The geometry comes from the
+;     diskette parameter table, so a different format is a table away -- but
+;     the table is not chosen by probing the medium, and this ROM never
+;     writes the data-rate register at 3F7h, which a 1.2M drive needs.
+;   * Multi-track reads ACROSS A CYLINDER. The command sets MT, so a
+;     transfer runs on from head 0 to head 1 of the same cylinder; the
+;     controller stops at the end of that cylinder and the caller has to ask
+;     again for the next one. That is what the hardware does and every DOS
+;     block driver already splits its requests this way.
 ;   * Graphics. Modes 4/5/6 set the mode byte and the CGA mode register and
 ;     nothing else; INT 10h AH=0Ch/0Dh (write/read pixel) are absent, so a
 ;     program that draws gets the do-nothing default return.
@@ -114,6 +126,23 @@
 ;      That is what a linker would have emitted anyway.
 ;   2. `PUSH imm` is an 80186 instruction and is correctly refused, so
 ;      constants reach the stack through a register.
+;   3. CONDITIONAL JUMPS REACH 127 BYTES and the assembler diagnoses an
+;      out-of-range one precisely. The fix used throughout is to invert the
+;      condition around a near JMP, or -- in INT 13h, where a chain of them
+;      all pointed into code that then grew -- to dispatch with CALL, which
+;      is three bytes and reaches the whole segment.
+;   4. A PLAIN `JMP` IS NOT ALWAYS NEAR, AND `NEAR PTR` DOES NOT RELIABLY
+;      MAKE IT SO. The assembler shrinks a JMP to the two-byte form on the
+;      first pass that finds its target within 127 bytes and the decision is
+;      sticky, so a jump that fitted before a routine grew is stranded by
+;      the routine growing -- and the error names the jump rather than what
+;      moved. `JMP NEAR PTR label` is the documented cure and works in
+;      isolation, but not here: the shrink decisions are filed under a
+;      counter that a shrunk JMP advances twice and an unshrunk one advances
+;      once, so once any JMP changes its mind the later decisions are read
+;      out of the wrong slots. Reported to the assembler lane. Until it is
+;      fixed, the way to be sure is not to need the long jump: the exits in
+;      INT 13h are reached by RET and the driver's own branches are local.
 ;
 ; Built by scripts/build-bios.mjs, which refuses an image that does not end
 ; in a valid reset vector.
@@ -146,6 +175,75 @@ PORT_CRTC   equ 3D4h            ; 6845 index register (data at 3D5h)
 PORT_CGAMOD equ 3D8h            ; CGA mode control
 PORT_CGACOL equ 3D9h            ; CGA colour select
 
+; The uPD765 floppy card. The window is 3F0h-3F7h and only four of the eight
+; addresses are decoded on an XT card: 3F0h, 3F1h, 3F3h and 3F6h answer
+; nothing and float high, so a driver that probes them reads 0FFh and must
+; not believe it. The DOR is WRITE ONLY here -- the AT can read it back, this
+; card cannot -- which is why every DOR value in this file is composed from
+; scratch instead of read-modify-written.
+PORT_FDC_DOR  equ 3F2h          ; drive select, motor enables, /RESET, DMA gate
+PORT_FDC_MSR  equ 3F4h          ; main status register (read only)
+PORT_FDC_DATA equ 3F5h          ; the command/result FIFO, both directions
+PORT_FDC_DIR  equ 3F7h          ; read: disk change in bit 7; write: data rate
+
+; The 8237 DMA controller at 00h-0Fh, and the channel the floppy owns.
+; Channel 2 is not a choice: it is which DRQ/DACK pair the XT's floppy card
+; is wired to.
+PORT_DMA_ADDR equ 04h           ; channel 2 current address (two halves)
+PORT_DMA_CNT  equ 05h           ; channel 2 word count   (two halves)
+PORT_DMA_STATUS equ 08h         ; read: terminal count in bits 0-3, DREQ in 4-7.
+                                ; READING IT CLEARS THE TC BITS, so exactly
+                                ; one place in this ROM may touch it.
+PORT_DMA_MASK equ 0Ah           ; single mask bit: bits 0-1 channel, bit 2 set
+PORT_DMA_MODE equ 0Bh           ; mode register
+PORT_DMA_FF   equ 0Ch           ; clear the first/last flip-flop
+; A16-A19 do NOT come from the 8237. They come from a separate four-bit latch
+; whose ports follow the XT's wiring rather than the channel numbers:
+; 87h = channel 0, 83h = channel 1, 81h = channel 2, 82h = channel 3.
+PORT_DMA_PAGE equ 81h           ; channel 2's page latch
+
+; Digital output register bits, 3F2h.
+DOR_NRESET  equ 04h             ; ACTIVE LOW: 0 holds the controller in reset
+DOR_DMAEN   equ 08h             ; gates DRQ and IRQ onto the bus
+DOR_MOTOR0  equ 10h             ; drive 0's motor; one bit per drive upwards
+
+; Main status register bits, 3F4h. RQM and DIO are the whole handshake.
+MSR_RQM     equ 80h             ; the data register is ready for a transfer
+MSR_DIO     equ 40h             ; 1 = controller -> host, 0 = host -> controller
+MSR_NDM     equ 20h             ; a non-DMA execution phase is under way
+MSR_CB      equ 10h             ; a command is under way
+
+; 8237 mode bytes for channel 2. Bits 6-7 select SINGLE (the floppy's mode:
+; the bus is released after every byte), bit 5 clear increments the address,
+; bit 4 clear disables autoinitialise, bits 2-3 are the direction and bits
+; 0-1 the channel. The direction words are the DMA controller's, not the
+; disk's: they say what the 8237 does to MEMORY.
+DMA_TO_MEM  equ 46h             ; write to memory -- a disk READ
+DMA_FROM_MEM equ 4Ah            ; read from memory -- a disk WRITE
+DMA_VERIFY  equ 42h             ; neither: the counters run, no bus cycle
+DMA_MASK2   equ 06h             ; mask channel 2   (channel 2, bit 2 set)
+DMA_UNMASK2 equ 02h             ; unmask channel 2 (channel 2, bit 2 clear)
+
+; uPD765 commands. Bit 6 (MFM) says double density, which every PC format is;
+; bit 7 (MT, multi-track) lets a transfer run on from head 0 to head 1 of the
+; same cylinder, and bit 5 (SK) skips deleted-data marks.
+FDC_SPECIFY equ 03h
+FDC_SENSEI  equ 08h             ; SENSE INTERRUPT STATUS
+FDC_RECAL   equ 07h             ; RECALIBRATE
+FDC_SEEK    equ 0Fh
+FDC_READ    equ 0E6h            ; MT + MFM + SK + READ DATA
+FDC_WRITE   equ 0C5h            ; MT + MFM + WRITE DATA
+
+; How long the driver waits, and for what.
+;   FD_POLLS is a count of main-status-register reads, not a time. It is
+;   deliberately NOT measured against the tick counter: the tick only
+;   advances if IRQ0 is being delivered, and a driver that waits for a
+;   controller by watching a clock that may not be running turns a dead
+;   controller into a hung machine.
+FD_POLLS    equ 0               ; 0 into CX means 65536 times round a LOOP
+FD_BUSY     equ 0FFh            ; motor countdown held here DURING an access,
+                                ; so it cannot expire mid-transfer
+
 EOI         equ 20h             ; the 8259's non-specific end-of-interrupt
 
 ;-----------------------------------------------------------------------------
@@ -162,8 +260,13 @@ BDA_KBFLAG2  equ 0018h          ; the "key is physically down" half
 BDA_KBHEAD   equ 001Ah          ; ring buffer head: the next key to be READ
 BDA_KBTAIL   equ 001Ch          ; ring buffer tail: where the next key is WRITTEN
 BDA_KBBUF    equ 001Eh          ; 32 bytes = 16 entries of (ascii, scancode)
+BDA_SEEKSTAT equ 003Eh          ; bit 7 = the FDC has interrupted; bits 0-3 =
+                                ; that drive's head has been recalibrated
+BDA_MOTORSTAT equ 003Fh         ; bits 0-3 = that drive's motor is running
 BDA_MOTORCNT equ 0040h          ; floppy motor-off countdown, in ticks
 BDA_DISKSTAT equ 0041h          ; last INT 13h status, what AH=01h returns
+BDA_FDCRESULT equ 0042h         ; the seven result-phase bytes of the last
+                                ; controller command, ST0 first
 BDA_MODE     equ 0049h          ; current video mode
 BDA_COLS     equ 004Ah          ; text columns on screen (word)
 BDA_PAGELEN  equ 004Ch          ; bytes per display page (word)
@@ -205,11 +308,21 @@ FL_ZF       equ 0040h
 FL_NOT_CF   equ 0FFFEh
 FL_NOT_ZF   equ 0FFBFh
 
-; INT 13h status codes, the subset this ROM can actually produce.
+; INT 13h status codes, the subset this ROM can actually produce. Each one is
+; reachable: the driver below decodes ST0/ST1/ST2 into them and every branch
+; names the controller bit it came from.
 DSK_OK      equ 00h
-DSK_BADCMD  equ 01h             ; function not supported
-DSK_CTRLFAIL equ 20h            ; controller failure -- what the hole returns
-DSK_TIMEOUT equ 80h             ; drive did not respond
+DSK_BADCMD  equ 01h             ; function not supported, or a nonsense request
+DSK_BADMARK equ 02h             ; no address mark: ST1 bit 0
+DSK_WRPROT  equ 03h             ; write protected: ST1 bit 1
+DSK_NOTFOUND equ 04h            ; sector not found: ST1 bit 2
+DSK_DMAOVER equ 08h             ; the transfer overran: ST1 bit 4
+DSK_BOUNDARY equ 09h            ; the transfer would cross a 64K DMA page
+DSK_BADCRC  equ 10h             ; CRC error in the data field: ST1 bit 5
+DSK_CTRLFAIL equ 20h            ; controller failure -- it said something this
+                                ; driver cannot account for
+DSK_SEEKFAIL equ 40h            ; the head is not where it was told to go
+DSK_TIMEOUT equ 80h             ; drive did not respond at all
 
 ;-----------------------------------------------------------------------------
 ; THE INTERRUPT FRAME.
@@ -386,11 +499,18 @@ post_ivt3:
     out  PORT_PICMSK, al
     mov  al, 09h
     out  PORT_PICMSK, al
-    ; Unmask the timer and the keyboard, mask everything with no handler. A
-    ; masked line is not a dropped one: it stays asserted and is taken as soon
-    ; as it is unmasked, which is why leaving unused lines unmasked with no
-    ; EOI-issuing handler wedges the controller on the first spurious edge.
-    mov  al, 0FCh
+    ; Unmask the timer, the keyboard and the floppy controller; mask
+    ; everything with no handler. A masked line is not a dropped one: it
+    ; stays asserted and is taken as soon as it is unmasked, which is why
+    ; leaving unused lines unmasked with no EOI-issuing handler wedges the
+    ; controller on the first spurious edge.
+    ;   0BCh = 1011_1100: bits 0, 1 and 6 clear -> IRQ0, IRQ1 and IRQ6 open.
+    ; IRQ6 is the floppy's, and it is unmasked at POST rather than around
+    ; each access on purpose: the disk driver waits on an interrupt, and a
+    ; line unmasked only while somebody is waiting drops the interrupt that
+    ; arrives a moment early -- which a controller whose commands complete
+    ; fast does constantly.
+    mov  al, 0BCh
     out  PORT_PICMSK, al
 
     ;-- the 8254 timer -------------------------------------------------------
@@ -460,13 +580,30 @@ int08_midnight:
     mov  byte ptr [BDA_TICKOVF], 1
 int08_notmid:
 
-    ; The floppy motor timeout counts down here. Reaching zero is where a
-    ; BIOS turns the motor off through the controller's digital output
-    ; register -- see HOLE: FDC. The countdown is kept anyway so that the
-    ; behaviour is already correct when the controller arrives.
+    ; The floppy motor timeout. The disk driver loads 0040:0040 with the
+    ; diskette parameter table's motor-off delay when it finishes an access;
+    ; this counts it down and, at zero, actually STOPS THE MOTOR through the
+    ; digital output register.
+    ;
+    ; The switch-off is the half that is easy to leave out, and leaving it
+    ; out is invisible: the countdown expires, nothing happens, the motor
+    ; runs for ever -- and because 0040:003F then still says the motor is
+    ; up, the spin-up wait on every later access is skipped too. Two
+    ; behaviours lost to one missing OUT, neither of which reports anything.
+    ;
+    ; The DOR value written here keeps the controller out of reset and the
+    ; DMA gate open, because a motor timeout is not a reset: the next
+    ; command must not have to re-SPECIFY.
     cmp  byte ptr [BDA_MOTORCNT], 0
     je   int08_nomotor
     dec  byte ptr [BDA_MOTORCNT]
+    jnz  int08_nomotor
+    push dx
+    mov  byte ptr [BDA_MOTORSTAT], 0
+    mov  al, DOR_NRESET+DOR_DMAEN
+    mov  dx, PORT_FDC_DOR
+    out  dx, al
+    pop  dx
 int08_nomotor:
 
     ; EOI BEFORE the user hook, not after. INT 1Ch belongs to whoever hooked
@@ -487,6 +624,35 @@ int08_nomotor:
 ; it does not have to know about the PIC.
 ;=============================================================================
 int1c:
+    iret
+
+;=============================================================================
+; INT 0Eh -- IRQ6, the floppy disk controller.
+;
+; ALL IT DOES IS SAY THAT IT HAPPENED, and that is the whole design. The
+; uPD765 interrupts at the end of a seek, a recalibrate and every data
+; command, and the driver that issued the command is the only code that
+; knows what to do about it -- so the handler sets one bit and gets out of
+; the way. Bit 7 of 0040:003E is that bit, and `fd_waitint` below is the
+; other end of it.
+;
+; THE END-OF-INTERRUPT IS NOT OPTIONAL AND IT IS NOT COSMETIC. Without it
+; IRQ6 stays in service at the 8259, which blocks IRQ6 and everything below
+; it -- including nothing, since IRQ6 is nearly the lowest, but the in-service
+; bit never clears and the SECOND disk access never gets its interrupt. One
+; read works, every read after it times out, and the first read is what a
+; test would have checked.
+;=============================================================================
+int0e:
+    push ax
+    push ds
+    mov  ax, BDA_SEG
+    mov  ds, ax
+    or   byte ptr [BDA_SEEKSTAT], 80h
+    mov  al, EOI
+    out  PORT_PIC, al
+    pop  ds
+    pop  ax
     iret
 
 ;=============================================================================
@@ -1571,138 +1737,1074 @@ int13:
     mov  ax, BDA_SEG
     mov  ds, ax
     mov  ax, [bp+F_AX]
-    and  word ptr [bp+F_FL], FL_NOT_CF      ; assume success
+    ; The default answer, set before the dispatch so that a function which
+    ; succeeds need say nothing at all and a function with its OWN return
+    ; value in AH (AH=15h) can simply overwrite it.
     mov  byte ptr [bp+F_AH], DSK_OK
 
+    ; EVERY FUNCTION IS A NEAR CALL AND EVERY FUNCTION RETURNS ITS STATUS IN
+    ; AL, so there is exactly one exit, exactly one place that writes
+    ; 0040:0041, and exactly one place that decides the caller's carry.
+    ;
+    ; It is written this way for a second reason as well. The dispatch used
+    ; to be a chain of conditional jumps straight into the handlers, and an
+    ; 8086 conditional jump reaches 127 bytes: adding the floppy driver put
+    ; every one of those targets out of range at once, and the assembler's
+    ; JMP-shrinking is sticky enough that widening them back is not reliable
+    ; (see ASSEMBLER NOTES at the top of this file). A CALL is three bytes
+    ; and reaches the whole segment, always. So the layout of this file
+    ; cannot strand its own control flow again.
+    call d_dispatch
+    call d_setstat
+    POPALL
+    iret
+
+;-----------------------------------------------------------------------------
+; d_dispatch -- AH selects; AL comes back holding the status byte.
+;-----------------------------------------------------------------------------
+d_dispatch proc near
     cmp  ah, 00h
-    je   d_reset
+    jne  dd_01
+    call d_reset
+    ret
+dd_01:
     cmp  ah, 01h
-    je   d_status
+    jne  dd_02
+    call d_status
+    ret
+dd_02:
     cmp  ah, 02h
-    je   d_needs_fdc
+    jne  dd_03
+    call d_read
+    ret
+dd_03:
     cmp  ah, 03h
-    je   d_needs_fdc
+    jne  dd_04
+    call d_write
+    ret
+dd_04:
     cmp  ah, 04h
-    je   d_needs_fdc
+    jne  dd_08
+    call d_verify
+    ret
+dd_08:
     cmp  ah, 08h
-    je   d_params
+    jne  dd_15
+    call d_params
+    ret
+dd_15:
     cmp  ah, 15h
-    je   d_type
+    jne  dd_none
+    call d_type
+    ret
+dd_none:
     mov  al, DSK_BADCMD
-    jmp  d_fail
+    ret
+d_dispatch endp
 
-d_reset:
-    ; A reset is controller traffic -- it is a Specify and a Recalibrate down
-    ; the FDC's data register -- so it belongs in the hole with the rest.
-d_needs_fdc:
-    ; Read, write, verify and reset all end here. It is a separate label only
-    ; because an 8086 conditional jump reaches 127 bytes and the hole is
-    ; further away than that.
-    jmp  fdc_hole
+;-----------------------------------------------------------------------------
+; d_setstat -- AL = the status the function produced.
+;
+; 0040:0041 IS WRITTEN ON EVERY COMPLETION, success included. AH=01h returns
+; that byte and nothing else, so a driver that only records failures leaves
+; the previous failure standing after a successful read and the caller that
+; asks "did that work?" is told about an operation two calls ago. Recording
+; the zero is the whole reason the field can be believed.
+;
+; AH is written only on a FAILURE. On success it holds whatever the function
+; put there -- AH=15h's drive type, and DSK_OK for everything else, which the
+; entry code above has already stored.
+;-----------------------------------------------------------------------------
+d_setstat proc near
+    mov  [BDA_DISKSTAT], al
+    or   al, al
+    jz   d_ss_ok
+    mov  [bp+F_AH], al
+    or   word ptr [bp+F_FL], FL_CF
+    ret
+d_ss_ok:
+    ; AH is NOT touched here. It already holds DSK_OK from the entry code,
+    ; or the drive type AH=15h put there, and overwriting it would take that
+    ; answer away from the one function whose answer it is.
+    and  word ptr [bp+F_FL], FL_NOT_CF
+    ret
+d_setstat endp
 
-d_status:
-    ; Answerable without hardware: it is the byte the last call left behind.
+;-----------------------------------------------------------------------------
+; AH=01h -- the status of the last operation.
+;
+; Answerable without touching hardware: it is the byte the last call left
+; behind. Writing it straight back through d_setstat is deliberate and is not
+; a no-op -- it is what makes the carry flag agree with the byte, so
+; `int 13h` with AH=01h answers in CF the way every other function does.
+;-----------------------------------------------------------------------------
+d_status proc near
     mov  al, [BDA_DISKSTAT]
     mov  [bp+F_AL], al
-    jmp  d_exit
+    ret
+d_status endp
 
-d_params:
-    ; Configuration, not controller traffic, so this one is answered. The
-    ; geometry is the 360K five-and-a-quarter format the equipment word
-    ; implies: 40 cylinders, 2 heads, 9 sectors per track.
-    ;   CH = last cylinder number (39)
-    ;   CL = sectors per track in bits 0-5, cylinder bits 8-9 in bits 6-7
-    ;   DH = last head number (1)
-    ;   DL = number of drives attached
-    ;   ES:DI -> the diskette parameter table
+;-----------------------------------------------------------------------------
+; AH=02h/03h/04h -- read, write and verify.
+;
+; Each loads SI with the pair of command bytes that distinguishes it: the
+; uPD765 opcode in the high half, the 8237 mode byte in the low half. Those
+; two bytes are the ONLY difference between the three, because the only thing
+; that differs between reading, writing and verifying a sector is which way
+; the DMA controller points.
+;
+; AL comes back from fd_xfer holding the status; the caller's own AL, the
+; sector count, is left in the frame untouched, which is what AL means on
+; return. On a FAILURE this driver does not reduce it to a partial count:
+; working one out means differencing the result phase's CHS against the
+; request across head and cylinder boundaries, and every caller in sight
+; retries the whole request rather than resuming it.
+;-----------------------------------------------------------------------------
+d_read proc near
+    mov  ah, FDC_READ
+    mov  al, DMA_TO_MEM
+    mov  si, ax
+    call fd_xfer
+    ret
+d_read endp
+
+d_write proc near
+    mov  ah, FDC_WRITE
+    mov  al, DMA_FROM_MEM
+    mov  si, ax
+    call fd_xfer
+    ret
+d_write endp
+
+d_verify proc near
+    ; The controller really does READ the sectors; the 8237 is put in verify
+    ; mode, where it runs its counters and drives no bus cycle at all, so
+    ; ES:BX is never written and never even read. What that proves is that
+    ; the sectors EXIST and are addressable at the CHS given.
+    ;
+    ; It does not prove they are intact. A real controller checks each data
+    ; field's CRC and reports it in ST1; src/upd765.js computes no CRC and
+    ; says so, so ST1's data-error bit can never set here and a verify of a
+    ; corrupt sector passes. fd_status still tests for that bit: this driver
+    ; is written against the chip, not against the model of it.
+    mov  ah, FDC_READ
+    mov  al, DMA_VERIFY
+    mov  si, ax
+    call fd_xfer
+    ret
+d_verify endp
+
+;-----------------------------------------------------------------------------
+; AH=00h -- reset the disk system.
+;
+; The real thing: a pulse on the controller's reset line, the four
+; ready-change statuses it owes the host afterwards drained, SPECIFY reloaded
+; (a reset clears it, INCLUDING the non-DMA bit), and the head brought home.
+; It is the only function allowed to move a head without being asked to.
+;-----------------------------------------------------------------------------
+d_reset proc near
+    mov  dl, [bp+F_DL]
+    test dl, 80h
+    jnz  dr_nohd
+    call fd_reset
+    jc   dr_out
+    mov  dl, [bp+F_DL]
+    and  dl, 3
+    call fd_recal
+    jc   dr_out
+    xor  al, al
+dr_out:
+    ret
+dr_nohd:
+    mov  al, DSK_BADCMD
+    ret
+d_reset endp
+
+;-----------------------------------------------------------------------------
+; AH=08h -- drive parameters. Configuration, not controller traffic, so it is
+; answered from the diskette parameter table rather than from the drive. The
+; geometry is the 360K five-and-a-quarter format the equipment word implies:
+; 40 cylinders, 2 heads, 9 sectors per track.
+;   CH = last cylinder number (39)
+;   CL = sectors per track in bits 0-5, cylinder bits 8-9 in bits 6-7
+;   DH = last head number (1)
+;   DL = number of drives attached
+;   ES:DI -> the diskette parameter table
+;-----------------------------------------------------------------------------
+d_params proc near
     cmp  byte ptr [bp+F_DL], 80h
-    jae  d_nohd
+    jae  dp_nohd
     mov  byte ptr [bp+F_CH], 39
-    mov  byte ptr [bp+F_CL], 9
+    mov  al, cs:[dpt+4]                 ; the same EOT the driver sends the
+    mov  [bp+F_CL], al                  ; controller, so they cannot drift
     mov  byte ptr [bp+F_DH], 1
     mov  byte ptr [bp+F_DL], 1
     mov  word ptr [bp+F_ES], ROM_SEG
     mov  word ptr [bp+F_DI], offset dpt
-    jmp  d_exit
-d_nohd:
+    xor  al, al
+    ret
+dp_nohd:
     ; A hard disk was asked about. There is no fixed disk of any kind, and
     ; saying so is a service: a program that gets a plausible geometry back
     ; goes on to read a disk that does not exist.
     mov  byte ptr [bp+F_DL], 0
     mov  al, DSK_BADCMD
-    jmp  d_fail
+    ret
+d_params endp
 
-d_type:
-    ; 00h no drive, 01h floppy without change-line, 02h floppy with,
-    ; 03h fixed disk. One drive at DL=0, nothing else.
+;-----------------------------------------------------------------------------
+; AH=15h -- drive type. 00h no drive, 01h floppy without a change line, 02h
+; floppy with one, 03h fixed disk. One drive at DL=0, nothing else.
+;
+; 01h and not 02h, even though 3F7h answers the change line here: the XT card
+; this ROM is written for does not decode 3F7h at all (src/upd765.js models
+; the AT behaviour and says so), so claiming a change line would promise a
+; caller something the card cannot deliver.
+;-----------------------------------------------------------------------------
+d_type proc near
     cmp  byte ptr [bp+F_DL], 0
-    jne  d_type_none
+    jne  dt_none
     mov  byte ptr [bp+F_AH], 01h
-    jmp  d_exit
-d_type_none:
+    xor  al, al
+    ret
+dt_none:
     mov  byte ptr [bp+F_AH], 00h
-    jmp  d_exit
+    xor  al, al
+    ret
+d_type endp
 
-;;;===========================================================================
-;;;
-;;;   H O L E :   F D C
-;;;
-;;;   The uPD765 floppy disk controller is not driven here. This is the one
-;;;   named, documented hole in this ROM, and it is a WIRING hole rather than
-;;;   an unwritten-chip one:
-;;;
-;;;     * src/upd765.js EXISTS and is a real model -- the phase machine, the
-;;;       main status register's RQM/DIO bits, ST0-ST3, and a register window
-;;;       at 3F0h-3F7h (3F2h DOR, 3F4h MSR, 3F5h data, 3F7h DIR/CCR).
-;;;     * src/i8237.js EXISTS and is the DMA half.
-;;;     * src/i8086-machine.js KNOWS NEITHER. Its REGS table has no chip kind
-;;;       for either one, so no machine config can decode 3F0h-3F7h to the
-;;;       controller and an OUT to the data register here would go into the
-;;;       same open bus as an OUT to any other undecoded port -- silently.
-;;;
-;;;   So the ports are deliberately not touched. Poking at addresses nothing
-;;;   answers, and then reading FFh back as a status byte, produces a driver
-;;;   that hangs in a poll loop with nothing to say why. Refusing by name is
-;;;   the better failure until the machine layer can carry the chips.
-;;;
-;;;   WHAT GOES HERE when it can. Firmware never "calls" this controller; it
-;;;   watches two bits of the main status register and lets them say what to
-;;;   do next -- RQM that the data register is ready, DIO which way it faces
-;;;   -- and hands command bytes through 3F5h one at a time. The sequence is:
-;;;   motor on and drive select through the DOR (the 0040:0040 countdown this
-;;;   ROM already maintains is the motor-off timer for it), SPECIFY once,
-;;;   RECALIBRATE and SEEK, program the DMA channel, then READ DATA, wait for
-;;;   IRQ6, and turn the seven result bytes' ST0/ST1/ST2 into the AH status
-;;;   this interface returns.
-;;;
-;;;   TWO THINGS TO GET RIGHT BEFORE ANY OF THAT, both of which fail as a
-;;;   hang rather than as an error:
-;;;
-;;;     1. The 8237's terminal-count output has to reach the uPD765's TC
-;;;        input. Without it the controller is never told the transfer is
-;;;        over, and it waits for a byte the DMA channel will not send.
-;;;     2. The DMA physical address is ES*16+BX and it CAN CROSS A 64K
-;;;        BOUNDARY. The 8237 does not carry between its address register and
-;;;        its page register, so a transfer that would cross one wraps to the
-;;;        bottom of the same 64K and quietly writes over something else. The
-;;;        documented answer is to refuse it with AH=09h, and that refusal is
-;;;        the classic omission in this routine.
-;;;
-;;;   Until then: AH=20h, controller failure, CF set. Not "no disk" (AH=80h),
-;;;   which would say the drive is empty and invite a retry, and not success
-;;;   with a buffer full of zeros, which would make a boot sector out of
-;;;   nothing.
-;;;
-;;;===========================================================================
-fdc_hole:
+;=============================================================================
+;
+;   T H E   F L O P P Y   D R I V E R
+;
+; A uPD765 on an XT card at 3F0h-3F7h, an 8237 at 00h-0Fh with its page latch
+; at 80h-8Fh, and DMA channel 2 between them. This is the code the header of
+; this file used to call HOLE: FDC.
+;
+;-----------------------------------------------------------------------------
+; THE HANDSHAKE IS THE DRIVER. Everything else here is bookkeeping.
+;
+; Firmware never "calls" this controller. It watches two bits of the main
+; status register at 3F4h and lets them say what to do next: RQM means the
+; data register is ready for one byte, DIO means which way that byte goes --
+; set is controller-to-host, clear is host-to-controller. BOTH have to agree
+; with the access about to be made, BEFORE it is made.
+;
+; Getting it wrong does not fault. Writing 3F5h while the controller is
+; talking is dropped on the floor by the silicon; reading it while the
+; controller is listening returns the bus pull-ups, 0FFh, and advances
+; nothing. Neither reports anything anywhere. The command that comes out
+; wrong is the NEXT one, whose first byte was swallowed as the tail of this
+; one -- which is why a floppy driver that skips the poll works until it
+; doesn't, and why the failure never points at the place that caused it.
+;
+; So every single byte in either direction goes through fd_send or fd_recv,
+; and the result phase is drained to the end through fd_results.
+;
+;-----------------------------------------------------------------------------
+; WHY THIS IS A DMA DRIVER AND NOT A PIO ONE.
+;
+; The chip supports both. The non-DMA mode selected by the ND bit of SPECIFY
+; raises RQM in the execution phase and lets the CPU move all 512 bytes
+; through 3F5h itself, which needs no 8237 at all -- and an XT does not do
+; that, because the CPU cannot keep up with a 250 kbit/s data stream while
+; also servicing the timer. The 8237 exists for exactly this transfer.
+;
+; So SPECIFY here sends ND=0 (from the diskette parameter table's second
+; byte), the 8237's channel 2 is programmed before the command goes out, and
+; the CPU does nothing during the execution phase except wait for IRQ6.
+;
+; THE MACHINE MUST HAVE BOTH CHIPS WIRED TOGETHER. On a machine whose FDC
+; config does not name an 8237, src/upd765.js falls back to non-DMA mode on
+; its own: the execution phase then raises RQM and waits for a host that is
+; not coming, no interrupt is ever generated, and this driver times out and
+; resets the controller. That is the correct failure -- it is visible, it is
+; bounded, and it names itself as a timeout rather than hanging the machine.
+;
+;-----------------------------------------------------------------------------
+; ALL OF THESE ROUTINES ASSUME DS = 0040h, the BIOS data area, because they
+; are only ever reached from INT 13h and INT 13h sets it. They clobber AX
+; freely and return their status in AL with CF; INT 13h's own frame holds
+; everything the caller gave us.
+;=============================================================================
+
+;-----------------------------------------------------------------------------
+; fd_send -- hand one byte to the controller. AL = the byte.
+; Returns CF=1 if the controller never became ready to take it.
+;-----------------------------------------------------------------------------
+fd_send proc near
+    push ax
+    push cx
+    push dx
+    mov  ah, al                 ; the byte, out of the way of the poll
+    mov  dx, PORT_FDC_MSR
+    mov  cx, FD_POLLS
+fdsnd_poll:
+    in   al, dx
+    and  al, MSR_RQM+MSR_DIO
+    cmp  al, MSR_RQM            ; ready, AND facing host -> controller
+    je   fdsnd_go
+    loop fdsnd_poll
+    stc
+    jmp  fdsnd_out
+fdsnd_go:
+    mov  al, ah
+    mov  dx, PORT_FDC_DATA
+    out  dx, al
+    clc
+fdsnd_out:
+    ; POP does not touch the flags, so the carry set above survives this.
+    pop  dx
+    pop  cx
+    pop  ax
+    ret
+fd_send endp
+
+;-----------------------------------------------------------------------------
+; fd_results -- drain the result phase into 0040:0042.
+;
+; EVERY RESULT BYTE MUST BE READ. The controller stays busy -- CB set, no new
+; command accepted -- until the host has taken the last one. A driver that
+; reads the three status registers and walks away does not break the command
+; it just issued; it breaks the NEXT one, whose first byte is consumed as the
+; tail of this result phase. The symptom appears one operation later, in a
+; different function, and looks like anything but this.
+;
+; The length is not assumed. Bytes are taken for as long as the main status
+; register says the controller is still talking, and NDM is included in the
+; test so that a non-DMA execution phase -- which also shows RQM and DIO --
+; cannot be mistaken for a result phase and read as status. Seven is the
+; longest result any command used here has, and it is the cap.
+;
+; Returns CF=1 if the controller is STILL busy afterwards, which means it is
+; holding bytes nobody asked for.
+;-----------------------------------------------------------------------------
+fd_results proc near
+    push ax
+    push bx
+    push cx
+    push dx
+    ; Zero the block first. A short result phase would otherwise leave the
+    ; PREVIOUS command's bytes in place, and a caller decoding ST1 would be
+    ; decoding a status that belongs to something else -- most likely a
+    ; success, since the last thing to run was probably fine.
+    mov  bx, BDA_FDCRESULT
+    mov  cx, 7
+    xor  al, al
+fdres_clear:
+    mov  [bx], al
+    inc  bx
+    loop fdres_clear
+
+    mov  bx, BDA_FDCRESULT
+    mov  cx, 7
+fdres_loop:
+    mov  dx, PORT_FDC_MSR
+    in   al, dx
+    and  al, MSR_CB+MSR_NDM+MSR_RQM+MSR_DIO
+    cmp  al, MSR_CB+MSR_RQM+MSR_DIO
+    jne  fdres_drained
+    mov  dx, PORT_FDC_DATA
+    in   al, dx
+    mov  [bx], al
+    inc  bx
+    loop fdres_loop
+fdres_drained:
+    mov  dx, PORT_FDC_MSR
+    in   al, dx
+    test al, MSR_CB
+    jnz  fdres_stuck
+    clc
+    jmp  fdres_out
+fdres_stuck:
+    stc
+fdres_out:
+    pop  dx
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
+fd_results endp
+
+;-----------------------------------------------------------------------------
+; fd_armint / fd_waitint -- the two halves of waiting for IRQ6.
+;
+; The flag is cleared BEFORE the command is issued, not after it completes.
+; Clearing it on arrival would be a race with a controller that answered
+; before the driver got back to look, which -- since a command here finishes
+; inside the OUT that delivers its last byte -- is every single time.
+;
+; fd_waitint returns CF=1 if the interrupt never came. It counts polls, not
+; ticks: the tick only advances if IRQ0 is being delivered, and waiting for a
+; dead controller by watching a clock that may also be dead turns a bounded
+; failure into a hung machine.
+;-----------------------------------------------------------------------------
+fd_armint proc near
+    and  byte ptr [BDA_SEEKSTAT], 7Fh
+    ret
+fd_armint endp
+
+fd_waitint proc near
+    push cx
+    mov  cx, FD_POLLS
+fdwi_poll:
+    test byte ptr [BDA_SEEKSTAT], 80h
+    jnz  fdwi_got
+    loop fdwi_poll
+    stc
+    jmp  fdwi_out
+fdwi_got:
+    and  byte ptr [BDA_SEEKSTAT], 7Fh
+    clc
+fdwi_out:
+    pop  cx
+    ret
+fd_waitint endp
+
+;-----------------------------------------------------------------------------
+; fd_select -- drive select, motor on, controller awake, DMA and IRQ gated.
+; DL = drive.
+;
+; The digital output register is WRITE ONLY on an XT card: reading 3F2h gets
+; the floating bus, 0FFh. So the byte is composed from scratch every time.
+; A driver that reads it, sets one bit and writes it back turns on all four
+; motors, selects drive 3 and holds the controller in reset -- and does it
+; without a single error anywhere.
+;
+; BIT 3 IS THE ONE THAT IS FORGOTTEN. It gates both DRQ and the interrupt
+; onto the bus. With it clear the 8237 never sees a request, the transfer
+; overruns, and IRQ6 never arrives.
+;-----------------------------------------------------------------------------
+fd_select proc near
+    push ax
+    push cx
+    push dx
+    mov  cl, dl
+    and  cl, 3
+    mov  al, DOR_MOTOR0
+    shl  al, cl                 ; this drive's motor enable
+    or   al, cl                 ; ...and the select lines pointing at it
+    or   al, DOR_NRESET+DOR_DMAEN
+    mov  dx, PORT_FDC_DOR
+    out  dx, al
+    pop  dx
+    pop  cx
+    pop  ax
+    ret
+fd_select endp
+
+;-----------------------------------------------------------------------------
+; fd_spinup -- wait for the motor to reach speed. DL = drive.
+;
+; The delay comes from the diskette parameter table's motor-start byte, which
+; is in EIGHTHS OF A SECOND. The only clock here is the 18.2065 Hz tick, so
+; ticks = eighths * 18.2065 / 8, near enough eighths*2 + 1.
+;
+; WHY WAIT AT ALL. src/upd765.js models no spin-up, no rotational latency and
+; no index pulse: a read from a drive whose motor is off SUCCEEDS there. So
+; the only thing this wait can do on this machine is cost time. It is here
+; because a driver that works only because the model is instant documents
+; nothing about the hardware it claims to drive -- and because the motor-off
+; countdown in INT 08h is one half of a pair whose other half is this. Remove
+; the wait and the countdown is decoration.
+;
+; It is SKIPPED when the motor was already running, which is the same test
+; real hardware makes and is why a run of reads pays for it once.
+;
+; THE CLOCK MIGHT NOT BE RUNNING. The loop gives up if the tick count does
+; not change at all within a bounded number of polls, rather than waiting
+; forever on a machine whose only fault is having no 8254.
+;-----------------------------------------------------------------------------
+fd_spinup proc near
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    mov  cl, dl
+    and  cl, 3
+    mov  bh, 1
+    shl  bh, cl                 ; this drive's bit in 0040:003F
+    test [BDA_MOTORSTAT], bh
+    jnz  fdsu_out               ; already up to speed
+    or   [BDA_MOTORSTAT], bh
+
+    mov  al, cs:[dpt+10]        ; motor start time, in eighths of a second
+    xor  ah, ah
+    shl  ax, 1
+    inc  ax
+    add  ax, [BDA_TICKS]
+    mov  bx, ax                 ; the tick to stop at
+fdsu_wait:
+    mov  si, [BDA_TICKS]
+    mov  cx, FD_POLLS
+fdsu_poll:
+    mov  ax, [BDA_TICKS]
+    cmp  ax, si
+    jne  fdsu_moved
+    loop fdsu_poll
+    jmp  fdsu_out               ; the clock is stopped: do not hang on it
+fdsu_moved:
+    sub  ax, bx                 ; signed, because the counts are close
+    js   fdsu_wait
+fdsu_out:
+    pop  si
+    pop  dx
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
+fd_spinup endp
+
+;-----------------------------------------------------------------------------
+; fd_reset -- pulse the controller's reset line and put it back to work.
+; DL = drive. Returns CF=1 with a status in AL.
+;
+; COMING OUT OF RESET THE CHIP OWES THE HOST FOUR ANSWERS. It raises its
+; interrupt once and then queues a ready-change status per drive -- C0h, C1h,
+; C2h, C3h -- to be collected by four SENSE INTERRUPT STATUS commands. Sense
+; it once and three stay queued; the next command's SENSE INTERRUPT then
+; reports a stale drive's status instead of its own, and the seek that
+; follows is validated against the wrong answer.
+;
+; SPECIFY HAS TO FOLLOW. A reset clears the step-rate and head timings and,
+; more importantly, the ND bit -- so a controller that has just been reset
+; would run its next execution phase in non-DMA mode with nobody moving the
+; bytes. The values come from the diskette parameter table so that INT 1Eh
+; and the controller cannot drift apart.
+;-----------------------------------------------------------------------------
+fd_reset proc near
+    push bx
+    push cx
+    push dx
+    mov  bl, dl
+    and  bl, 3
+
+    ; Everything drops: motors, select lines and the DMA gate. Nothing that
+    ; was true about the controller is true afterwards, so the software's
+    ; idea of it is cleared to match rather than left to be discovered wrong.
+    mov  byte ptr [BDA_MOTORSTAT], 0
+    mov  byte ptr [BDA_SEEKSTAT], 0
+    mov  byte ptr [BDA_MOTORCNT], 0
+    call fd_armint
+    mov  dx, PORT_FDC_DOR
+    xor  al, al
+    out  dx, al
+    ; ...and back out of reset, drive selected, DRQ and IRQ gated on. The
+    ; chip raises IRQ6 as it comes out. Motors stay off: a reset is not an
+    ; access, and 0040:003F above now agrees.
+    mov  al, bl
+    or   al, DOR_NRESET+DOR_DMAEN
+    out  dx, al
+    call fd_waitint
+    jc   fdrst_dead
+
+    mov  cx, 4
+fdrst_sense:
+    mov  al, FDC_SENSEI
+    call fd_send
+    jc   fdrst_dead
+    call fd_results             ; two bytes: ST0 and the present cylinder
+    jc   fdrst_dead
+    loop fdrst_sense
+
+    mov  al, FDC_SPECIFY
+    call fd_send
+    jc   fdrst_dead
+    mov  al, cs:[dpt]           ; step rate and head unload time
+    call fd_send
+    jc   fdrst_dead
+    mov  al, cs:[dpt+1]         ; head load time, and ND in bit 0 -- CLEAR,
+    call fd_send                ; which is what puts the execution phase on
+    jc   fdrst_dead             ; the 8237 instead of on the CPU
+    ; SPECIFY has NO result phase and raises NO interrupt. Draining one here
+    ; would take the first byte of whatever command comes next.
+    clc
+    jmp  fdrst_out
+fdrst_dead:
+    mov  al, DSK_TIMEOUT
+    stc
+fdrst_out:
+    pop  dx
+    pop  cx
+    pop  bx
+    ret
+fd_reset endp
+
+;-----------------------------------------------------------------------------
+; fd_recal -- step the head to track 0. DL = drive. CF=1 with AL = status.
+;
+; RECALIBRATE gives up after 77 step pulses. That is a fact about the chip
+; and not about the drive: a head parked past cylinder 77 comes only part of
+; the way home and reports EQUIPMENT CHECK. Forty-cylinder media cannot get
+; there, so one pass is enough here -- an 80-track drive needs two, and that
+; is the whole reason BIOSes for those issue it twice.
+;
+; THERE IS NO RESULT PHASE. The host has to ask with SENSE INTERRUPT STATUS,
+; and that ask is also what clears the drive's seek-mode bit in the main
+; status register. Skip it and MSR bit 0 stays set for the rest of time.
+;-----------------------------------------------------------------------------
+fd_recal proc near
+    push bx
+    push cx
+    call fd_armint
+    mov  al, FDC_RECAL
+    call fd_send
+    jc   fdrc_dead
+    mov  al, dl
+    and  al, 3
+    call fd_send
+    jc   fdrc_dead
+    call fd_waitint
+    jc   fdrc_dead
+    mov  al, FDC_SENSEI
+    call fd_send
+    jc   fdrc_dead
+    call fd_results
+    jc   fdrc_dead
+
+    mov  al, [BDA_FDCRESULT]    ; ST0
+    test al, 0C0h               ; interrupt code: 00 is a normal completion
+    jnz  fdrc_bad
+    test al, 20h                ; SE, seek end -- set by any completed seek
+    jz   fdrc_bad
+    ; The head is now known to be at cylinder 0, which is the only thing that
+    ; makes the SEEK after it mean anything.
+    mov  cl, dl
+    and  cl, 3
+    mov  bl, 1
+    shl  bl, cl
+    or   [BDA_SEEKSTAT], bl
+    clc
+    jmp  fdrc_out
+fdrc_bad:
+    mov  al, DSK_SEEKFAIL
+    stc
+    jmp  fdrc_out
+fdrc_dead:
+    mov  al, DSK_TIMEOUT
+    stc
+fdrc_out:
+    pop  cx
+    pop  bx
+    ret
+fd_recal endp
+
+;-----------------------------------------------------------------------------
+; fd_seek -- move the head. DL = drive, DH = head, CH = cylinder.
+; CF=1 with AL = status.
+;
+; THE CONTROLLER DOES NOT SEEK FOR A READ. READ DATA compares the C in its
+; command against the ID field under the head and fails with no-data plus
+; wrong-cylinder if they differ; it does not helpfully step there. So this
+; is not an optimisation that can be skipped when the cylinder "looks right".
+;
+; PCN IS CHECKED. The second result byte of SENSE INTERRUPT STATUS is the
+; chip's own step counter. If it does not agree with the cylinder that was
+; asked for, the head is not where this driver thinks it is -- and the read
+; that follows would come off the wrong track and report a perfectly normal
+; status, because from the controller's point of view nothing went wrong.
+;-----------------------------------------------------------------------------
+fd_seek proc near
+    push cx
+    call fd_armint
+    mov  al, FDC_SEEK
+    call fd_send
+    jc   fdsk_dead
+    ; HDS: head in bit 2, drive in bits 0-1.
+    mov  al, dh
+    and  al, 1
+    shl  al, 1
+    shl  al, 1
+    mov  ah, dl
+    and  ah, 3
+    or   al, ah
+    call fd_send
+    jc   fdsk_dead
+    mov  al, ch                 ; NCN, the cylinder to step to
+    call fd_send
+    jc   fdsk_dead
+    call fd_waitint
+    jc   fdsk_dead
+    mov  al, FDC_SENSEI
+    call fd_send
+    jc   fdsk_dead
+    call fd_results
+    jc   fdsk_dead
+
+    mov  al, [BDA_FDCRESULT]    ; ST0
+    test al, 0C0h
+    jnz  fdsk_bad
+    test al, 20h                ; SE
+    jz   fdsk_bad
+    mov  al, [BDA_FDCRESULT+1]  ; PCN
+    cmp  al, ch
+    jne  fdsk_bad
+    clc
+    jmp  fdsk_out
+fdsk_bad:
+    mov  al, DSK_SEEKFAIL
+    stc
+    jmp  fdsk_out
+fdsk_dead:
+    mov  al, DSK_TIMEOUT
+    stc
+fdsk_out:
+    pop  cx
+    ret
+fd_seek endp
+
+;-----------------------------------------------------------------------------
+; fd_status -- decode ST0/ST1/ST2 into the status byte INT 13h returns.
+; CF=0 and AL=0 on a normal completion, else CF=1 and AL = the code.
+;
+; THE ORDER OF THE TESTS IS THE ORDER OF SPECIFICITY. ST0 only says THAT the
+; command ended abnormally; ST1 and ST2 say what happened. Decoding ST0 first
+; would report a write-protected disk, a missing sector and a CRC error as
+; the same failure, and the caller would retry all three.
+;-----------------------------------------------------------------------------
+fd_status proc near
+    mov  al, [BDA_FDCRESULT]    ; ST0
+    test al, 0C0h
+    jz   fdst_ok
+    ; ST0 bit 3: the drive never came ready. On this machine that means the
+    ; drive is empty -- see the note in src/upd765.js about the XT strapping
+    ; READY permanently active, which this model deliberately does not do.
+    test al, 08h
+    jnz  fdst_timeout
+
+    mov  al, [BDA_FDCRESULT+1]  ; ST1
+    test al, 02h                ; NW, not writable
+    jnz  fdst_wrprot
+    test al, 20h                ; DE, CRC error in an ID or data field
+    jnz  fdst_crc
+    test al, 10h                ; OR, the host or the 8237 did not keep up
+    jnz  fdst_overrun
+    test al, 04h                ; ND, the sector was not on the track
+    jnz  fdst_notfound
+    test al, 01h                ; MA, no address mark at all
+    jnz  fdst_badmark
+    ; ST1 bit 7, EN: the controller read past the last sector of the
+    ; cylinder without ever being told to stop. That is not a fault of the
+    ; medium -- it means the DMA byte count and the sector count disagreed,
+    ; so terminal count never arrived. It is OUR bug, and reporting it as a
+    ; disk error would send the caller looking at the disk.
+    test al, 80h
+    jnz  fdst_ctrl
+    ; ST2 has nothing this model can set that ST1 has not already covered
+    ; (no CRC, no deleted-data marks), so anything left is unaccounted for
+    ; and says so rather than picking the nearest plausible code.
+fdst_ctrl:
     mov  al, DSK_CTRLFAIL
-d_fail:
-    mov  [bp+F_AH], al
-    mov  [BDA_DISKSTAT], al
-    or   word ptr [bp+F_FL], FL_CF
-d_exit:
-    POPALL
-    iret
+    jmp  fdst_bad
+fdst_timeout:
+    mov  al, DSK_TIMEOUT
+    jmp  fdst_bad
+fdst_wrprot:
+    mov  al, DSK_WRPROT
+    jmp  fdst_bad
+fdst_crc:
+    mov  al, DSK_BADCRC
+    jmp  fdst_bad
+fdst_overrun:
+    mov  al, DSK_DMAOVER
+    jmp  fdst_bad
+fdst_notfound:
+    mov  al, DSK_NOTFOUND
+    jmp  fdst_bad
+fdst_badmark:
+    mov  al, DSK_BADMARK
+fdst_bad:
+    stc
+    ret
+fdst_ok:
+    mov  al, DSK_OK
+    clc
+    ret
+fd_status endp
+
+;-----------------------------------------------------------------------------
+; fd_xfer -- read, write or verify sectors. The whole of INT 13h AH=02h/03h/04h.
+;
+; ENTRY  SI  = the uPD765 opcode in the high half, the 8237 mode byte in the
+;              low half. Those two bytes are the ONLY difference between the
+;              three functions.
+;        BP  = INT 13h's frame, holding the caller's AL/CH/CL/DH/DL/ES/BX.
+;        DS  = 0040h.
+; EXIT   CF=0, or CF=1 with the status in AL.
+;-----------------------------------------------------------------------------
+fd_xfer proc near
+    jmp  fdx_begin
+
+    ; The three refusals that happen BEFORE anything is touched -- no port
+    ; written, no motor started, no controller state disturbed. They sit at
+    ; the top of the routine because that is where their callers are and an
+    ; 8086 conditional jump reaches 127 bytes.
+fdx_badcmd:
+    mov  al, DSK_BADCMD
+    stc
+    ret
+fdx_notready:
+    mov  al, DSK_TIMEOUT
+    stc
+    ret
+fdx_boundary:
+    mov  al, DSK_BOUNDARY
+    stc
+    ret
+
+fdx_begin:
+    ;-- what the controller cannot be asked -------------------------------
+    mov  al, [bp+F_DL]
+    test al, 80h
+    jnz  fdx_badcmd             ; a fixed disk. There is not one, and AH=08h
+                                ; already said so; inventing a geometry here
+                                ; would send the caller off to read it.
+    and  al, 3
+    jnz  fdx_notready           ; drive 1-3: the equipment word says one drive
+    mov  al, [bp+F_AL]
+    or   al, al
+    jz   fdx_badcmd             ; a transfer of no sectors is not a transfer
+
+    ;-- the physical address the 8237 will drive --------------------------
+    ; It is ES*16+BX, twenty bits split across two chips that CANNOT CARRY
+    ; INTO ONE ANOTHER: sixteen in the 8237's own counter and four in a
+    ; separate latch. So it is worked out here the way the hardware puts it
+    ; together -- a page and an offset, concatenated, never added.
+    mov  ax, [bp+F_ES]
+    mov  dx, ax
+    mov  cl, 4
+    shl  ax, cl                 ; the low sixteen bits of ES*16
+    shr  dx, 1
+    shr  dx, 1
+    shr  dx, 1
+    shr  dx, 1                  ; ...and its top four: the page
+    add  ax, [bp+F_BX]
+    adc  dx, 0                  ; the carry BX makes belongs to the PAGE, and
+                                ; this is the only place it is ever allowed to
+                                ; cross between them
+
+    ;-- the byte count, and the 64K boundary ------------------------------
+    ; The 8237's word count register is N-1: programming 511 moves 512 bytes.
+    mov  bl, [bp+F_AL]
+    xor  bh, bh
+    cmp  bx, 128
+    ja   fdx_boundary           ; over 64K cannot be one transfer at all
+    mov  cl, 9
+    shl  bx, cl                 ; sectors * 512. 128 sectors wraps to 0...
+    dec  bx                     ; ...and 0-1 is FFFFh, which is right: 65536
+
+    ; THE ERRATUM THIS REFUSES. The 8237 increments SIXTEEN bits and stops.
+    ; FFFFh+1 is 0000h in the SAME page, because there is no wire from the
+    ; counter to the page latch to carry on. A transfer that runs off the end
+    ; of a page therefore wraps to the BOTTOM of that page and overwrites
+    ; what it has just put there -- with no error from the 8237, no error
+    ; from the controller, and a normal-looking result phase. The caller gets
+    ; a buffer holding the tail of its read where the head should be.
+    ;
+    ; Refusing is the documented answer and it is the only one available: the
+    ; hardware cannot be told to do anything else. AH=09h means exactly this
+    ; and nothing else, so a caller that wants the transfer splits it and
+    ; asks again.
+    mov  di, ax
+    add  di, bx
+    jc   fdx_boundary
+
+    ;-- arm the 8237 BEFORE the controller is told to start ---------------
+    ; The uPD765 starts asserting DRQ inside the OUT that delivers the last
+    ; byte of READ DATA. If the channel is not armed by then, the first byte
+    ; of the sector is requested from a masked channel, the request is
+    ; refused, and the controller takes the refusal for terminal count and
+    ; ends the command normally having moved nothing at all.
+    ;
+    ; The channel is MASKED while it is reprogrammed, and that is not
+    ; tidiness either: the address and the count are each written as two
+    ; halves sequenced by ONE flip-flop shared by the entire chip, so a
+    ; request serviced between the halves would run at half an address.
+    mov  di, ax                 ; the offset, out of the way of the port writes
+    mov  al, DMA_MASK2
+    out  PORT_DMA_MASK, al
+    xor  al, al
+    out  PORT_DMA_FF, al        ; resynchronise the shared flip-flop. Every
+                                ; real driver does this and it is why: the
+                                ; flip-flop is chip-wide, and whatever touched
+                                ; a 16-bit register last may have left it
+                                ; pointing at the high half.
+    mov  ax, si
+    out  PORT_DMA_MODE, al      ; the mode byte -- SI's low half
+    mov  ax, di
+    out  PORT_DMA_ADDR, al      ; address, low half...
+    mov  al, ah
+    out  PORT_DMA_ADDR, al      ; ...then high, sequenced by the flip-flop
+    mov  al, dl
+    out  PORT_DMA_PAGE, al      ; A16-A19, in the latch with no carry in
+    mov  ax, bx
+    out  PORT_DMA_CNT, al
+    mov  al, ah
+    out  PORT_DMA_CNT, al
+    mov  al, DMA_UNMASK2
+    out  PORT_DMA_MASK, al
+
+    ;-- the drive ---------------------------------------------------------
+    ; The motor countdown is pinned at its maximum for the duration. INT 08h
+    ; decrements it every tick and switches the motor OFF at zero, and a
+    ; countdown left over from the previous access can expire in the middle
+    ; of this one -- stopping the spindle mid-transfer, for no reason a
+    ; single line of this routine would show.
+    mov  byte ptr [BDA_MOTORCNT], FD_BUSY
+    mov  dl, [bp+F_DL]
+    and  dl, 3
+    call fd_select
+    call fd_spinup
+
+    ; A drive whose head has not been homed since the last reset has it
+    ; wherever it was left, and SEEK is relative to the chip's count of steps
+    ; it has issued -- not to anything it can measure. Homing once is what
+    ; makes every seek after it mean something.
+    mov  cl, dl
+    mov  bl, 1
+    shl  bl, cl
+    test [BDA_SEEKSTAT], bl
+    jnz  fdx_homed
+    call fd_recal
+    jnc  fdx_homed
+fdx_giveup:
+    ; fd_recal and fd_seek have already put their status in AL. The near JMP
+    ; is the range fix again; the countdown is restarted on the way out so a
+    ; failed access leaves the motor on a timer rather than on for ever.
+    jmp  fdx_fail
+fdx_homed:
+
+    mov  ch, [bp+F_CH]          ; cylinder
+    mov  dh, [bp+F_DH]          ; head
+    mov  dl, [bp+F_DL]
+    and  dl, 3
+    call fd_seek
+    jc   fdx_giveup
+
+    ;-- the command -------------------------------------------------------
+    ; Nine bytes, every one of them through the RQM/DIO handshake. A
+    ; controller that stops answering part way through leaves the FIFO
+    ; holding half a command, so every send is checked -- and they all land
+    ; here first, because eleven checks spread over sixty bytes of code
+    ; cannot all reach one exit that is further than 127 bytes away.
+    call fd_armint
+    jmp  fdx_cmd
+fdx_lost:
+    jmp  fdx_dead
+fdx_cmd:
+    mov  ax, si
+    mov  al, ah                 ; the uPD765 opcode -- SI's high half
+    call fd_send
+    jc   fdx_lost
+    mov  al, [bp+F_DH]          ; HDS: head in bit 2, drive in bits 0-1
+    and  al, 1
+    shl  al, 1
+    shl  al, 1
+    mov  ah, [bp+F_DL]
+    and  ah, 3
+    or   al, ah
+    call fd_send
+    jc   fdx_lost
+    mov  al, [bp+F_CH]          ; C -- the cylinder in the ID field
+    call fd_send
+    jc   fdx_lost
+    mov  al, [bp+F_DH]          ; H -- and it must agree with HDS above, or
+    and  al, 1                  ; the ID field will not match
+    call fd_send
+    jc   fdx_lost
+    mov  al, [bp+F_CL]          ; R -- SECTORS ARE 1-BASED. Bits 6-7 of CL are
+    and  al, 3Fh                ; the cylinder's high bits on a hard disk;
+    call fd_send                ; a forty-cylinder floppy cannot reach them.
+    jc   fdx_lost
+    mov  al, cs:[dpt+3]         ; N -- the size code, 2 = 512 bytes
+    call fd_send
+    jc   fdx_lost
+    mov  al, cs:[dpt+4]         ; EOT -- the last sector number on a track.
+    call fd_send                ; The controller stops here if terminal count
+    jc   fdx_lost               ; never arrives, and says so with ST1 bit 7.
+    mov  al, cs:[dpt+5]         ; GPL -- the gap between sectors
+    call fd_send
+    jc   fdx_lost
+    mov  al, cs:[dpt+6]         ; DTL -- only meaningful when N is zero
+    call fd_send
+    jc   fdx_lost
+
+    ;-- the execution phase -----------------------------------------------
+    ; Nothing to do. The controller asserts DRQ, the 8237 moves each byte
+    ; between the disk and memory, and terminal count -- the borrow out of
+    ; the word counter -- reaches the controller's TC pin and ends the
+    ; command. The CPU's only job is to wait for IRQ6 and then read the
+    ; result phase, which is the entire argument for using DMA.
+    call fd_waitint
+    jc   fdx_lost
+    call fd_results
+    jc   fdx_lost
+
+    ;-- and afterwards ----------------------------------------------------
+    ; The countdown starts NOW, not before: it measures how long the motor
+    ; keeps spinning after the drive goes idle. A second access inside the
+    ; window finds the motor already up and skips the spin-up wait.
+    mov  al, cs:[dpt+2]
+    mov  [BDA_MOTORCNT], al
+    call fd_status
+    jc   fdx_ret                ; the controller has already named a failure
+
+    ;-- and the check no IBM BIOS makes -----------------------------------
+    ; THE CONTROLLER CAN REPORT A PERFECTLY NORMAL COMPLETION FOR A TRANSFER
+    ; IN WHICH NOTHING MOVED. It happens whenever the DMA channel is not
+    ; really armed -- masked, mis-programmed, or wired to nothing: the first
+    ; DRQ is refused, the uPD765 takes that refusal for terminal count, and
+    ; ends the command normally. ST0, ST1 and ST2 are all zero. The only
+    ; trace in the result phase is the sector number it would have done
+    ; NEXT, which is the one it started on rather than the one after it --
+    ; and no driver anywhere reads that byte.
+    ;
+    ; So the caller would get CF=0, AH=00h, and a buffer still holding
+    ; whatever was in it before. A boot sector made of stale RAM. This is
+    ; the worst failure mode a disk driver has, because every layer above
+    ; it has been told the read worked.
+    ;
+    ; THE 8237 KNOWS. Bit 2 of its status register is channel 2's
+    ; terminal-count latch: set by the borrow out of the word counter, which
+    ; only happens if the counter actually ran. A transfer that moved
+    ; nothing leaves it clear.
+    ;
+    ; The read CLEARS the latch, which is why this is the only place in the
+    ; ROM that touches port 08h. AH=08h is the documented "DMA overrun"
+    ; status and this is one: the transfer did not complete.
+    in   al, PORT_DMA_STATUS
+    test al, 04h
+    jz   fdx_nomove
+    xor  al, al
+fdx_ret:
+    ret
+fdx_nomove:
+    mov  al, DSK_DMAOVER
+    stc
+    ret
+
+fdx_dead:
+    ; The controller stopped answering part way through a command. It is now
+    ; holding an unknown number of bytes of a command or a result phase, and
+    ; the NEXT call would be read as their continuation. So the reset here is
+    ; not housekeeping: it is what makes the next call mean anything at all.
+    mov  al, cs:[dpt+2]
+    mov  [BDA_MOTORCNT], al
+    mov  dl, [bp+F_DL]
+    call fd_reset
+    mov  al, DSK_TIMEOUT
+    stc
+    ret
+fdx_fail:
+    ; fd_recal and fd_seek have already put their status in AL.
+    mov  ah, al
+    mov  al, cs:[dpt+2]
+    mov  [BDA_MOTORCNT], al
+    mov  al, ah
+    stc
+    ret
+fd_xfer endp
 
 ;=============================================================================
 ; INT 19h -- bootstrap. The point of the whole exercise.
@@ -1844,6 +2946,8 @@ ivt_table:
     dw int08
     dw 09h
     dw int09
+    dw 0Eh
+    dw int0e
     dw 10h
     dw int10
     dw 11h
@@ -1884,21 +2988,39 @@ cga_modes:
     db 2Ch, 28h, 2Dh, 29h, 0Ah, 0Eh, 1Eh
 
 ; The diskette parameter table INT 1Eh points at. These are uPD765 timing
-; parameters and a geometry, and they are OURS -- placeholders chosen to be
-; sane for a 360K drive, not copied. Nothing reads them yet; the floppy
-; driver that will is behind HOLE: FDC, and it should revisit every byte.
+; parameters and a geometry, and they are OURS -- chosen to be right for a
+; 360K drive, not copied from anybody.
+;
+; THE DRIVER READS THIS TABLE; IT DOES NOT CARRY ITS OWN COPY. Bytes 0 and 1
+; are sent verbatim as SPECIFY's two parameter bytes, and bytes 3, 4, 5 and 6
+; are sent verbatim as READ DATA's N, EOT, GPL and DTL. AH=08h answers with
+; byte 4 as its sectors-per-track. So the table is not documentation of what
+; the driver does -- it is the thing the driver does it with, and a program
+; that hooks INT 1Eh to point at its own table (which is how software has
+; always changed the step rate) really does change what the controller is
+; told. The one number NOT taken from here is the cylinder count in AH=08h,
+; because the table has no field for it.
+;
+; BYTE 1 BIT 0 IS THE NON-DMA BIT AND IT MUST STAY CLEAR. Setting it puts the
+; execution phase on the CPU, and nothing in this ROM moves data bytes
+; through 3F5h -- a transfer would raise RQM and wait for a host that never
+; comes. The value 02h is head-load-time 1 with ND clear.
 dpt:
     db 0DFh                     ; step rate 3ms, head unload 240ms
-    db 002h                     ; head load 4ms, non-DMA off
-    db 025h                     ; motor-off delay, in ticks
+    db 002h                     ; head load 4ms, and ND CLEAR: DMA execution
+    db 025h                     ; motor-off delay, in ticks (37 = about 2s)
     db 002h                     ; bytes per sector code: 2 = 512
-    db 9                        ; last sector on a track
+    db 9                        ; EOT: last sector on a track
     db 02Ah                     ; gap length between sectors
     db 0FFh                     ; data transfer length when the size code is 0
     db 050h                     ; gap length used when formatting
     db 0F6h                     ; the byte a format writes into the data field
     db 15                       ; head settling time, in milliseconds
-    db 8                        ; motor spin-up time, in eighths of a second
+    db 8                        ; motor spin-up time, in eighths of a second.
+                                ; A 5.25-inch spindle really does need about
+                                ; a second, and fd_spinup really does wait
+                                ; for it -- see the note there about why a
+                                ; wait the model does not need is here.
 
 ;-----------------------------------------------------------------------------
 ; Keyboard translation, US layout, scancodes 01h through 39h.
@@ -1938,7 +3060,7 @@ msg_banner:
     db 'bw-board 8086 BIOS v0.1', 0Dh, 0Ah
     db '640K OK', 0Dh, 0Ah, 0
 msg_nodisk:
-    db 0Dh, 0Ah, 'No disk controller: INT 13h is a stub (see HOLE: FDC)', 0Dh, 0Ah, 0
+    db 0Dh, 0Ah, 'No disk controller: drive A did not answer', 0Dh, 0Ah, 0
 msg_nosig:
     db 0Dh, 0Ah, 'Not a boot disk: no 55AA signature', 0Dh, 0Ah, 0
 msg_nobasic:
