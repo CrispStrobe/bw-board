@@ -301,6 +301,14 @@ test('the Intel support chips (8254 PIT, 8259 PIC, 8251 USART) extract on the IO
     assert.ok(r.lines.some((l) => /usart1 = I8251 AT PORT/.test(l)), r.lines.join('; '));
 });
 
+test('an i8088 CPU is recognised the same as an i8086', () => {
+    const c = decode138Circuit();
+    c.parts = c.parts.map((p) => (p.id === 'cpu1' ? { ...p, kind: 'i8088' } : p));
+    const r = extract8086Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    assert.ok(r.regions.some((x) => x.kind === 'rom'), 'the 8088 build still extracts a ROM');
+});
+
 test('a PIT whose A1 line is misrouted refuses with the pin named', () => {
     const c = decode138Circuit();
     c.parts.push({ id: 'pit1', kind: 'i8254' });
