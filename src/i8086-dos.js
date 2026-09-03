@@ -97,6 +97,8 @@ export function createDos8086(machine, io = {}) {
     /** Every INT 03h the program executed, in order. */
     const breakpoints = [];
     let rebooted = 0;
+    /** Next free paragraph for INT 21h/48h. Above a .COM's 64K arena. */
+    let allocTop = 0x1800;
     /** How many times the program asked for a keystroke. A run with no input
      *  cannot be compared against one that had some, and this is how a
      *  consumer tells those apart from a real disagreement. */
@@ -282,7 +284,56 @@ export function createDos8086(machine, io = {}) {
                 cpu.dh = Math.floor(ms / 1000) % 60; cpu.dl = Math.floor(ms / 10) % 100;
                 return;
             }
-            case 0x30: cpu.ax = 0x0005; cpu.bx = 0; cpu.cx = 0; return;   // version 5.00
+            case 0x19: cpu.al = 0; return;                // current drive: A:
+            case 0x29: return parseFilename();
+            case 0x2d:                                    // set time: accepted, not kept
+                cpu.al = 0; return;
+            case 0x30:
+                // THE VERSION IS CONFIGURABLE, and it has to be. MS-DOS 2.0's
+                // own CHKDSK.COM refuses to run against anything else --
+                // "Incorrect DOS version" -- so a fixed 5.00 makes genuine
+                // period binaries unrunnable for no reason. Default stays 5.00
+                // because that is what the textbook corpus expects.
+                cpu.ax = ((io.dosVersion && io.dosVersion.minor) || 0) << 8
+                    | ((io.dosVersion && io.dosVersion.major) || 5);
+                cpu.bx = 0; cpu.cx = 0; return;
+            case 0x37:                                    // switch character
+                // Undocumented, and real utilities call it before parsing a
+                // command line. AL=0 gets it; anything else is a set we accept
+                // and ignore.
+                if (cpu.al === 0) { cpu.dl = 0x2f; cpu.al = 0; return; }
+                cpu.al = 0; return;
+            case 0x45: {                                  // duplicate handle
+                const h = handles.get(cpu.bx);
+                if (!h && cpu.bx > 4) return fail(6);
+                const n = nextHandle++;
+                handles.set(n, h ? { ...h } : { name: null, pos: 0, write: true, std: cpu.bx });
+                cpu.ax = n; return ok();
+            }
+            case 0x46: {                                  // force duplicate handle
+                const h = handles.get(cpu.bx);
+                if (!h && cpu.bx > 4) return fail(6);
+                handles.set(cpu.cx, h ? { ...h } : { name: null, pos: 0, write: true, std: cpu.bx });
+                return ok();
+            }
+            case 0x48: {                                  // allocate memory
+                // A bump allocator over the space above the program. DOS
+                // answers a FAILED request with the LARGEST BLOCK AVAILABLE in
+                // BX, and a program that asks for everything to find out how
+                // much there is depends on that -- returning only carry makes
+                // it conclude there is no memory at all.
+                const want = cpu.bx;
+                const avail = (0xa000 - allocTop) & 0xffff;
+                if (want > avail) { cpu.bx = avail; return fail(8); }
+                cpu.ax = allocTop; allocTop += want; return ok();
+            }
+            case 0x49: return ok();                       // free: this allocator never reuses
+            case 0x4a: {                                  // resize a block
+                const want = cpu.bx;
+                const avail = (0xa000 - allocTop) & 0xffff;
+                if (want > avail + 0x1000) { cpu.bx = avail; return fail(8); }
+                return ok();
+            }
             case 0x35: {                                  // get interrupt vector
                 cpu.bx = rd16(0, cpu.al * 4);
                 cpu.es = rd16(0, cpu.al * 4 + 2);
@@ -359,6 +410,52 @@ export function createDos8086(machine, io = {}) {
             case 0x4d: cpu.ax = exitCode; return;
             default: note(0x21, ah); return fail(1);      // function not supported
         }
+    }
+
+    /**
+     * INT 21h/29h -- parse a filename from DS:SI into the FCB at ES:DI.
+     *
+     * Real utilities call this before they touch a command line, so a stub
+     * that only returned carry stopped CHKDSK and COMP before they started.
+     * The subset here is what those actually use: an optional `d:` drive
+     * letter, the name padded to eight with spaces, the extension padded to
+     * three, wildcards allowed. AL answers 0 for a clean parse, 1 if a
+     * wildcard appeared, FFh for an invalid drive.
+     */
+    function parseFilename() {
+        let si = cpu.si;
+        const at = (i) => rd8(cpu.ds, (si + i) & 0xffff);
+        let i = 0;
+        while (at(i) === 0x20 || at(i) === 0x09) i++;      // leading blanks
+        let drive = 0, wild = 0;
+        if (at(i + 1) === 0x3a) {                          // "d:"
+            const c = at(i) & 0xdf;
+            if (c < 0x41 || c > 0x5a) { cpu.al = 0xff; return; }
+            drive = c - 0x40; i += 2;
+        }
+        wr8(cpu.es, cpu.di, drive);
+        const field = (len, off, stop) => {
+            let n = 0;
+            for (let k = 0; k < len; k++) wr8(cpu.es, (cpu.di + off + k) & 0xffff, 0x20);
+            while (n < len) {
+                const c = at(i);
+                if (c === 0 || c === 0x20 || c === 0x0d || c === stop) break;
+                if (c === 0x2a) {                          // '*' fills the rest
+                    wild = 1;
+                    for (let k = n; k < len; k++) wr8(cpu.es, (cpu.di + off + k) & 0xffff, 0x3f);
+                    i++; n = len; break;
+                }
+                if (c === 0x3f) wild = 1;
+                wr8(cpu.es, (cpu.di + off + n) & 0xffff, c & 0xdf === 0 ? c : c);
+                i++; n++;
+            }
+            while (at(i) !== 0 && at(i) !== 0x20 && at(i) !== 0x0d && at(i) !== stop) i++;
+        };
+        field(8, 1, 0x2e);
+        if (at(i) === 0x2e) { i++; field(3, 9, -1); }
+        else for (let k = 0; k < 3; k++) wr8(cpu.es, (cpu.di + 9 + k) & 0xffff, 0x20);
+        cpu.si = (si + i) & 0xffff;
+        cpu.al = wild;
     }
 
     const zstr = (seg, off) => {
@@ -657,8 +754,14 @@ export function createDos8086(machine, io = {}) {
         note(0x33, cpu.ah); return fail(1);
     }
 
+    /** INT 11h -- the equipment word. One floppy, 80x25 colour, no printer. */
+    function int11() { cpu.ax = io.equipment !== undefined ? io.equipment : 0x0021; }
+    /** INT 12h -- conventional memory in KB, which for this tier is 640. */
+    function int12() { cpu.ax = io.memoryKb !== undefined ? io.memoryKb : 640; }
+
     const HANDLERS = {
         0x03: int03, 0x08: int08, 0x09: int09,
+        0x11: int11, 0x12: int12,
         0x10: int10, 0x13: int13, 0x15: int15, 0x16: int16, 0x19: int19, 0x1a: int1a,
         // INT 1Ch is the user timer hook a real BIOS calls from INT 08h.
         // Nothing calls it here — a nested dispatch through the trap would
