@@ -562,7 +562,7 @@ the claims, and the four headline numbers all reproduce:
 
 Seven findings. They are ordered by what they cost if left, not by size.
 
-**R1 — CI CHECKS ZERO VECTORS, and a skip reads the same as a pass.** The
+**R1 — CI CHECKS ZERO VECTORS, and a skip reads the same as a pass.** CLOSED `c5fabd5`. The
 sampled grind in `test/i8086.test.mjs:186` is `{ skip: !existsSync(suite) }`,
 and `~/code/8086-vectors` does not exist on a runner, so `646,000/646,000` is
 a number from one developer's box on one day. The 525-program corpus is not in
@@ -578,7 +578,26 @@ is the same shape as the emu8051-stc step, and needs a MOO reader — the format
 spec and MIT reference parsers (Rust, C++, Python, plus `moo2json.py`) are at
 `dbalsom/moo`.
 
-**R2 — THE TRAP FLAG IS ABSENT AND IS NOT DECLARED ABSENT.** `i8086.js`'s
+DONE, and three things came out of it worth keeping. The reader is proved
+against the encoding it replaces — `test/moo.test.mjs` with `MOO_ALL=1` reports
+*323 files, 646000 vectors agree*, field for field — because a reader that
+quietly returned empty vectors would make the grind report 646,000/646,000
+while examining nothing, which is the same bug as the skip one level down.
+Both grinders now count out loud and exit non-zero, with zero vectors a named
+failure, proved by mutation rather than by reading: one corrupted register in
+one vector out of 646,000 gives 1999/2000 and exit 1. And the disassembler's
+exclusion key had to be rewritten (RULE 5) — it was the suite's `test_hash`,
+which exists only in the JSON, so a binary run would have excused nothing and
+all three vectors would have gone red. An exclusion that evaporates when the
+input format changes is not an exclusion; the key is now the BYTES, which is
+what the excuse is about. **My first version of that rewrite was itself a gate
+that could not fail**, and only the mutation found it: checking the name before
+the bytes made a key that matched everything report HEALED for every vector,
+because "the name is not the recorded one and our text matches it" is true of
+every correctly disassembled instruction in the suite. Recorded because it
+happened inside the block that was replacing a key for exactly that defect.
+
+**R2 — THE TRAP FLAG IS ABSENT AND IS NOT DECLARED ABSENT.** CLOSED `8617b0d`. `i8086.js`'s
 header names four deliberate omissions — the prefetch queue and BIU, the 8087
 escape, INTR/NMI delivery, and the REP erratum. TF is not among them.
 `_interrupt()` clears `IF|TF` correctly, but nothing ever raises INT 1 after an
@@ -586,6 +605,24 @@ instruction executed with TF set, so a program that installs its own
 single-step tracer, or any DEBUG-style lesson, gets silence. Either implement
 it or put it in the header: by this project's own rule a non-goal is stated
 where the code is, not in a TODO.
+
+IMPLEMENTED, with three ordering decisions that each change what a debugger
+sees, and one of them was got wrong first. TF is sampled BEFORE the instruction
+— sampling what it leaves would make a `POPF` that sets TF trap on itself, so a
+tracer's first `t` steps its own flag-load. The segment-load shadow is read
+AFTER: reading it at the sampling point let `mov ss, ax` trap on itself, at the
+one instant SS is new and SP is old, which is the instant the shadow exists to
+protect. And an `INT` executed with TF set traces INTO the handler, because the
+alternative leaves a tracer with no trap after an INT at all and it loses the
+program at its first DOS call — which is why `p` exists beside `t`.
+
+**THE VECTORS ARE BLIND TO ALL OF IT, and that is now measured rather than
+quoted.** The suite's README says the interrupt and trap flags are not
+exercised; across all 646,000 vectors TF is set in the initial flags of exactly
+zero and IF in exactly zero. The grind reads 646,000/646,000 with the trap
+implemented and read 646,000/646,000 without it. Five behavioural tests carry
+it instead. **DEBUG.COM's `t` on a real MS-DOS binary is the acceptance and is
+OWED, not done** — it is the only oracle for this that is not our own opinion.
 
 **R3 — `TRAP_SEG = 0xF000` IS WHERE A BIOS HAS TO LIVE, AND TIER C STOPPED
 BEING HYPOTHETICAL WHILE THIS REVIEW WAS BEING WRITTEN.** `i8086-dos.js` maps
@@ -603,11 +640,38 @@ v2.0  CHKDSK.COM   -> "Incorrect DOS version"        (it checks; we report 5.00)
 v2.0  DEBUG.COM    -> its "-" prompt, looping on input
 ```
 
+That set moved again within the hour, once the services the refusal histogram
+named were implemented and the reported DOS version became configurable — MS-DOS
+2.0's own CHKDSK refuses anything but 2.x, so a hardcoded 5.00 had made genuine
+period binaries unrunnable for no reason. The stable set is now:
+
+```
+v1.25 CHKDSK.COM   parses its command line, reports "Invalid parameter"
+v1.25 COMP.COM     refuses to compare a file to itself, prompts to continue
+v1.25 SETCLOCK.COM loads its resident date/time processors and prints the date
+v2.0  CHKDSK.COM   gets past the version check, reaches "Cannot CHDIR to root"
+v2.0  DEBUG.COM    reaches its prompt, accepts `q`, terminates cleanly
+```
+
 So a BIOS ROM at F000 is a near-term need, not a someday. THE CONSTRAINT ON THE
 FIX: `F0000-FFFFF` is entirely spoken for on a PC, so the trap page belongs
 either in the `C0000-EFFFF` option-ROM gap or in a page below 640K that the
 loader reserves — and whichever is chosen, the constant needs a comment saying
 what it must not collide with, because the next reader will not know.
+
+CLOSED `5f17c34`: `DEFAULT_TRAP_SEG = 0xd000`, the one 64K window an XT leaves
+alone, with the memory map in the constant's comment and `trapSeg` as an
+override for a machine that populates it. Nothing hardcodes the page any more —
+`trapRegion(seg)` hands back the region and both DOS presets, `EMU8086BOX` and
+five test machines call it. **The move found its own regression, which is the
+argument for making it rather than parameterising around it:** two INT 10h
+scroll tests stood on the trap by writing `cpu.cs = 0xf000` by hand, so once the
+page moved they were asserting against a `service()` that had correctly declined
+to run — green-looking assertions over a call that did nothing, the same species
+as the two DOS services that once reported success unconditionally. The corpus
+was re-run either side of the move and is identical verdict for verdict, which
+was predicted before it was measured: no program knows where the trap is,
+because they reach it through the vector table `install()` rewrites.
 
 **R4 — THE ASSEMBLER IS THE LARGEST SURFACE WITH NO INDEPENDENT ORACLE.** 2,304
 lines. Round-tripping through a disassembler that is ground against 646,000
@@ -839,8 +903,8 @@ human must read it before anything is adopted.
 
 | Source | Licence | Ruling |
 | --- | --- | --- |
-| `dbalsom/cga_artifact_color` | MIT | `i8086-cga.js` names "NO COMPOSITE ARTEFACT COLOUR" as absent. This is that, in Rust, permissively licensed, decoding NTSC artefact colour from CGA output. Adapt WITH ATTRIBUTION when a mode-6 lesson wants it. |
-| `dbalsom/CGACompatibilityTester` | **no LICENSE** | **RUN IT, DO NOT COPY IT.** A register-level CGA conformance tester (Turbo Pascal + asm). It is a PROGRAM THAT RUNS ON THE EMULATED MACHINE, so executing it distributes nothing — which makes it the oracle `cga-card.js` currently lacks. All rights reserved for any other purpose. |
+| `dbalsom/cga_artifact_color` | MIT | THE RENDERER'S, not the card's — the card is port-only by design. `i8086-cga.js` names "NO COMPOSITE ARTEFACT COLOUR" as absent. This is that, in Rust, permissively licensed, decoding NTSC artefact colour from CGA output. Adapt WITH ATTRIBUTION when a mode-6 lesson wants it. |
+| `dbalsom/CGACompatibilityTester` | **no LICENSE** | **RUN IT, DO NOT COPY IT.** A register + VISUAL conformance tester (Turbo Pascal + asm). It is a PROGRAM THAT RUNS ON THE EMULATED MACHINE, so executing it distributes nothing. It is a JOINT oracle and splits across the seam: the register and 3DAh-timing checks land on `cga-card.js`, the artefact and visual checks need the renderer, so it is only fully runnable once the pixel path is wired to the card. Schedule it accordingly rather than as a card-only gate. All rights reserved for any other purpose. |
 | `dbalsom/fluxfox` + `fluxfox_fat` | MIT | Floppy image handling and a FAT implementation, in Rust. The missing piece for Tier C's µPD765 and disk images, and permissive. Port or reference; not a dependency. |
 | `dbalsom/8087_zoom` | Unlicense | Only if the 8087 escape (`D8`-`DF`, currently reads its operand and stops) ever becomes real. |
 
@@ -848,7 +912,7 @@ human must read it before anything is adopted.
 
 | Source | Licence | Ruling |
 | --- | --- | --- |
-| `dbalsom/cga_sim` | NOASSERTION — read the file | A **gate-level digital-logic simulation of the IBM CGA card**. This is the entry that fits Brickwright rather than merely its emulator tier: a CGA as a netlist is a LESSON the existing digital engine could host, not something to emulate. Evaluate before adopting anything. |
+| `dbalsom/cga_sim` | NOASSERTION — read the file | A **gate-level digital-logic simulation of the IBM CGA card**. NOT an emulator item at all, and it should not be routed to this repo: a CGA as a netlist is a Brickwright CIRCUIT LESSON, the same category as the extractor's teaching refusals — a learner wires the actual card. Route it to whoever owns the lessons, and read the licence before it is adopted anywhere. |
 | `dbalsom/CGA_Schematics` | none stated | IBM CGA redrawn in KiCad. Reference for a drawable card. |
 | `dbalsom/graphics-gremlin` | CC-BY-SA-4.0 | Open-source retro ISA video card (FPGA CGA/MDA). Share-alike — reference and inspiration; do not mix into BSD-3 source. |
 | `dbalsom/micro_8088` | GPL-3.0 | An XT-compatible processor board. REFUSED as source, same as GLaBIOS. The ARCHITECTURE may inspire a Tier A drawing; nothing may be copied. |
