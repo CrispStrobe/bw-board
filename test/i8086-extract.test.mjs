@@ -270,3 +270,45 @@ test('MC6850 on the IO bus extracts with register-select check', () => {
     assert.ok(acia, 'ACIA extracted');
     assert.equal(acia.at, 0x20);
 });
+
+test('the Intel support chips (8254 PIT, 8259 PIC, 8251 USART) extract on the IO bus', () => {
+    const c = decode138Circuit();
+    c.parts.push({ id: 'pit1', kind: 'i8254' });
+    c.parts.push({ id: 'pic1', kind: 'i8259' });
+    c.parts.push({ id: 'usart1', kind: 'i8251' });
+    const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    // PIT on dec2.Y1 (ports 0x20-0x3F); A0/A1 pick the register.
+    w('dec2', 'y1', 'pit1', 'csb');
+    w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
+    // PIC on dec2.Y2 (0x40-0x5F); A0 picks command/data.
+    w('dec2', 'y2', 'pic1', 'csb');
+    w('cpu1', 'a0', 'pic1', 'a0');
+    // USART on dec2.Y3 (0x60-0x7F); C/D picks data/control.
+    w('dec2', 'y3', 'usart1', 'csb');
+    w('cpu1', 'a0', 'usart1', 'cd');
+
+    const r = extract8086Machine(c);
+    assert.ok(r.ok, r.reasons.join('; '));
+    const pit = r.chips.find((x) => x.kind === 'pit');
+    const pic = r.chips.find((x) => x.kind === 'pic');
+    const usart = r.chips.find((x) => x.kind === 'usart8251');
+    assert.ok(pit && pic && usart, 'all three extracted');
+    assert.equal(pit.at, 0x20);
+    assert.equal(pic.at, 0x40);
+    assert.equal(usart.at, 0x60);
+    assert.ok(r.lines.some((l) => /pit1 = I8254 AT PORT/.test(l)), r.lines.join('; '));
+    assert.ok(r.lines.some((l) => /pic1 = I8259 AT PORT/.test(l)), r.lines.join('; '));
+    assert.ok(r.lines.some((l) => /usart1 = I8251 AT PORT/.test(l)), r.lines.join('; '));
+});
+
+test('a PIT whose A1 line is misrouted refuses with the pin named', () => {
+    const c = decode138Circuit();
+    c.parts.push({ id: 'pit1', kind: 'i8254' });
+    const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
+    w('dec2', 'y1', 'pit1', 'csb');
+    w('cpu1', 'a0', 'pit1', 'a0');
+    w('cpu1', 'a3', 'pit1', 'a1');   // A3, not A1 — a wiring slip
+    const r = extract8086Machine(c);
+    assert.equal(r.ok, false);
+    assert.match(r.reasons.join(';'), /a1 must ride A1/);
+});
