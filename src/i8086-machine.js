@@ -108,18 +108,19 @@ export const BREADBOARD8086 = Object.freeze({
 });
 
 /**
- * Tier A reference build in the shape of slador.uk's 8088 machine: an 8088
- * behind an 8284 clock, its I/O behind a 74LS138 with 74LS244 buffers, an
- * 8254 for the timer tick, an 8255 driving a text LCD and the switches, and
- * an 8259 to take the timer interrupt. Flash at the top of the megabyte.
+ * The Tier A reference build: an 8088 behind an 8284 clock, its I/O behind a
+ * 74LS138 with 74LS244 buffers, an 8254 for the timer tick, an 8255 driving
+ * a text LCD and the switches, and an 8259 to take the timer interrupt.
+ * Flash at the top of the megabyte.
  *
- * Reproduced from the published CHIP LIST only — a chip list is not
- * copyrightable, and nothing of the original's ROM, code or schematic is
- * here. The 8284 and the 74-series glue carry no registers, so they do not
- * appear as machine devices; they are wiring, modelled by the decode the
- * extractor infers, not by the machine. The port map is ours.
+ * Named for its ROLE, not its source. It is modelled on the CHIP LIST of a
+ * published hobbyist 8088 breadboard writeup (slador.uk) — a list of which
+ * parts sit on a board is not copyrightable, and nothing of that build's
+ * ROM, code or schematic is here. The 8284 and the 74-series glue carry no
+ * registers, so they are not machine devices; they are wiring the extractor
+ * infers. The port map is ours.
  */
-export const SLADOR8088 = Object.freeze({
+export const TIERA8088 = Object.freeze({
     clockHz: 5_000_000,
     regions: [
         { kind: 'ram', start: 0x00000, end: 0x1ffff },   // 128K
@@ -133,18 +134,22 @@ export const SLADOR8088 = Object.freeze({
 });
 
 /**
- * A reference build in the shape of GREENSHELLRAGE's 8086 breadboard: an
- * 8086 (the real one runs alongside an 8087 at 10 MHz), 256K of RAM and
- * 256K of ROM, an 8259, an 8251 UART, and a custom SD-card interface built
- * from 74-series logic. Reproduced from the README's own SPECS LIST only —
- * no ROM, no .asm, no schematic copied; that repo carries no licence.
+ * A serial + SD-card 8086 reference build: an 8086, 256K of RAM and 256K of
+ * ROM, an 8259, an 8251 UART, and an SD-card interface.
  *
- * The SD interface (custom 74-logic) and the 240x128 UCi6963C LCD (which
- * the original notes is not yet connected) are NOT modelled here — the SPI
- * side lives in sdcard-spi.js and attaches as a device when a lesson wants
- * it. The port map is ours, not reverse-engineered from the original.
+ * Named for its SHAPE, not its source — deliberately, because the build it
+ * is modelled on is a personal project that carries NO LICENCE (all rights
+ * reserved). Only the non-copyrightable facts were used: the list of chips
+ * from its public README and nothing else — no ROM, no .asm, no schematic,
+ * and its author's handle is not embedded in our shipped API. A chip roster
+ * this generic (8086 + PIC + UART + SD + 256K/256K) is a natural
+ * configuration, not that project's intellectual property.
+ *
+ * The SD interface and an unconnected graphic LCD are NOT modelled here; the
+ * SPI side lives in sdcard-spi.js and attaches as a device when a lesson
+ * wants it. The port map is ours.
  */
-export const GREENSHELLRAGE8086 = Object.freeze({
+export const SDCARD8086 = Object.freeze({
     clockHz: 10_000_000,
     regions: [
         { kind: 'ram', start: 0x00000, end: 0x3ffff },   // 256K

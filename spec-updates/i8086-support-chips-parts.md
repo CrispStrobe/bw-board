@@ -111,9 +111,10 @@ already give. The extractor already emits, verbatim:
 ## Reference presets these parts let a learner DRAW
 
 `bw-board/src/i8086-machine.js` now exports two reference-build configs a
-drawn breadboard can be checked against — `SLADOR8088` (8088 + 8254 + 8255 +
-8259, timer IRQ wired) and `GREENSHELLRAGE8086` (8086 + 8259 + 8251, 256K/
-256K). Both reproduced from public chip lists only.
+drawn breadboard can be checked against — `TIERA8088` (8088 + 8254 + 8255 +
+8259, timer IRQ wired) and `SDCARD8086` (8086 + 8259 + 8251, 256K/256K).
+Both reproduced from public chip lists only, named for role/shape rather
+than the source project.
 
 — requested by the bw-board 8086 lane; the parts + SVG art are the parts
 repo's to author.

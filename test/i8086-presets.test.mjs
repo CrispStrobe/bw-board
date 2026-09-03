@@ -1,11 +1,12 @@
-// The two reference-build presets. These are machine CONFIGS reproduced from
-// public chip lists (slador.uk's 8088, GREENSHELLRAGE's 8086) — nothing of
-// either original's ROM, code or schematic is here. The tests prove each one
-// boots, its chips answer on their ports, and its declared interrupt wiring
-// (PIT->PIC for Tier A, USART->PIC for the SD-card build) actually connects.
+// The two reference-build presets, named for their role/shape rather than
+// their source: TIERA8088 (a published hobbyist 8088 writeup's chip list)
+// and SDCARD8086 (a no-licence personal 8086 build's public chip roster —
+// facts only, nothing copied). The tests prove each one boots, its chips
+// answer on their ports, and its declared interrupt wiring (PIT->PIC for
+// Tier A, USART->PIC for the SD-card build) actually connects.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { I8086Machine, SLADOR8088, GREENSHELLRAGE8086 } from '../src/i8086-machine.js';
+import { I8086Machine, TIERA8088, SDCARD8086 } from '../src/i8086-machine.js';
 
 /**
  * Build a ROM image sized to a preset's ROM region, with the code at
@@ -20,12 +21,12 @@ function bootRom(config, code, codeSeg = 0xf800) {
     return img;
 }
 
-test('SLADOR8088: boots from the reset vector and exposes PPI/PIT/PIC on its ports', () => {
-    const m = new I8086Machine(SLADOR8088);
-    const romReg = SLADOR8088.regions.find((r) => r.kind === 'rom');
+test('TIERA8088: boots from the reset vector and exposes PPI/PIT/PIC on its ports', () => {
+    const m = new I8086Machine(TIERA8088);
+    const romReg = TIERA8088.regions.find((r) => r.kind === 'rom');
     assert.ok(romReg.start <= 0xffff0 && romReg.end >= 0xfffff, 'ROM covers the reset vector');
 
-    m.loadRom(bootRom(SLADOR8088, [0xeb, 0xfe]));   // jmp $  (IF stays clear)
+    m.loadRom(bootRom(TIERA8088, [0xeb, 0xfe]));   // jmp $  (IF stays clear)
     m.reset();
     m.step();                                        // the far jump
     assert.equal(m.cpu.cs, 0xf800);
@@ -36,9 +37,9 @@ test('SLADOR8088: boots from the reset vector and exposes PPI/PIT/PIC on its por
     assert.equal(m.chips.ppi1.read(0), 0x5a);
 });
 
-test('SLADOR8088: the 8254 tick reaches the 8259 through the declared irq wiring', () => {
-    const m = new I8086Machine(SLADOR8088);
-    m.loadRom(bootRom(SLADOR8088, [0xeb, 0xfe]));    // spin, IF clear so the IRQ latches but is not taken
+test('TIERA8088: the 8254 tick reaches the 8259 through the declared irq wiring', () => {
+    const m = new I8086Machine(TIERA8088);
+    m.loadRom(bootRom(TIERA8088, [0xeb, 0xfe]));    // spin, IF clear so the IRQ latches but is not taken
     m.reset();
     m.step();
 
@@ -52,24 +53,24 @@ test('SLADOR8088: the 8254 tick reaches the 8259 through the declared irq wiring
     assert.equal(m.chips.pic1.intActive, true, 'OUT0 -> IRQ0 asserted the PIC line');
 });
 
-test('GREENSHELLRAGE8086: 256K RAM + 256K ROM, and the reset vector is in ROM', () => {
-    const m = new I8086Machine(GREENSHELLRAGE8086);
-    const ram = GREENSHELLRAGE8086.regions.find((r) => r.kind === 'ram');
-    const rom = GREENSHELLRAGE8086.regions.find((r) => r.kind === 'rom');
+test('SDCARD8086: 256K RAM + 256K ROM, and the reset vector is in ROM', () => {
+    const m = new I8086Machine(SDCARD8086);
+    const ram = SDCARD8086.regions.find((r) => r.kind === 'ram');
+    const rom = SDCARD8086.regions.find((r) => r.kind === 'rom');
     assert.equal(ram.end - ram.start + 1, 0x40000, '256K RAM');
     assert.equal(rom.end - rom.start + 1, 0x40000, '256K ROM');
     assert.ok(rom.start <= 0xffff0 && rom.end >= 0xfffff, 'ROM covers the reset vector');
 
-    m.loadRom(bootRom(GREENSHELLRAGE8086, [0xeb, 0xfe]));
+    m.loadRom(bootRom(SDCARD8086, [0xeb, 0xfe]));
     m.reset();
     m.step();
     assert.equal(m.cpu.cs, 0xf800, 'booted');
 });
 
-test('GREENSHELLRAGE8086: the 8251 transmits, and its receive IRQ reaches the PIC', () => {
+test('SDCARD8086: the 8251 transmits, and its receive IRQ reaches the PIC', () => {
     const out = [];
-    const m = new I8086Machine(GREENSHELLRAGE8086, { onSerial: (b) => out.push(b) });
-    m.loadRom(bootRom(GREENSHELLRAGE8086, [0xeb, 0xfe]));
+    const m = new I8086Machine(SDCARD8086, { onSerial: (b) => out.push(b) });
+    m.loadRom(bootRom(SDCARD8086, [0xeb, 0xfe]));
     m.reset();
     m.step();
 
