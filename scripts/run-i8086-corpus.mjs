@@ -13,6 +13,8 @@
  *   MATCH      exited, and its output equals a recorded expected output
  *   NOINPUT    output differs, and the program ASKED FOR A KEY it did not
  *              get -- a difference in this harness, not in the emulation
+ *   ORACLE     the RECORDED output is a memory image, not a result: their
+ *              simulator's $-terminated print ran away. Not comparable.
  *   DIFFER     exited, and its output does NOT match. A real lead.
  *   EXITED     terminated through int 21h/4Ch or int 20h, WITH output
  *   SILENT     terminated cleanly and produced nothing -- suspicious
@@ -140,6 +142,36 @@ if (asmPath) {
     }
     assembler = mod.assemble;
 }
+
+/**
+ * Disagreements with the Amey oracle that have been READ and explained, so a
+ * NEW one stands out instead of hiding among them.
+ *
+ * Same pattern as the disassembly grinder's exclusion table and for the same
+ * reason: twenty-five unexplained differences and twenty-six unexplained
+ * differences look identical in a summary line, so a regression introduced
+ * today would be invisible. Keyed by file name, with the reason, and the run
+ * reports NEW ones separately and says HEALED when one starts agreeing.
+ *
+ * Note what is NOT here: nothing is excluded from the count. A known
+ * disagreement is still a DIFFER. This table only says which ones have been
+ * looked at.
+ */
+const KNOWN_DISAGREEMENTS = {
+    // Environment: neither implementation is wrong.
+    'bios_timer_ticks.asm': 'their clock is seeded from wall-clock; ours starts at zero, deterministically',
+    'bios_system_time.asm': 'same: wall-clock seed',
+    'display_system_time.asm': 'same: wall-clock seed',
+    'dos_get_date_and_time.asm': 'their date is the recording day; ours is the epoch',
+    'display_date.asm': 'same: recording-day date',
+    'mov_segment_registers.asm': 'two loaders place a program differently, so DS differs',
+    'inspect_stack_registers.asm': 'loader difference: SS',
+    'stack_frame_anatomy.asm': 'loader difference: BP',
+    'stack_pointer_movement.asm': 'loader difference: initial SP',
+    'interrupt_vector_table.asm': 'our IVT points at our own trap slots, theirs at a BIOS image',
+    'in_out_port_transfer.asm': 'a port read lands on a device default rather than a flat byte',
+    'adc_read_and_scale.asm': 'a port read lands on the thermometer default',
+};
 
 /** Two synthetic programs, so the harness can prove itself with no corpus. */
 const SELFTEST = [
@@ -281,10 +313,24 @@ function runOne(name, raw, key) {
         // agree with a run that had one. Ours types nothing, so that is a
         // difference in the HARNESS, not in the emulation, and it is
         // reported apart rather than counted against the tier.
+        // THE ORACLE'S OWN RUNAWAY PRINT, detected by evidence rather than
+        // listed by name. Their INT 21h/09h scans until it finds a '$', and
+        // when their SEG returns 0 it starts at 0000:0000 and prints the
+        // interrupt vector table -- ~190 KB of `53 FF 00 F0` repeating. A
+        // recorded output that is a memory image is not a specification, and
+        // no amount of work on this side can agree with one. Named by the
+        // property that identifies it, so a NEW one is caught for free
+        // instead of needing a row added.
+        const printable = [...want.slice(0, 400)]
+            .filter((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) < 127).length;
+        if (want.length > 5000 || (want.length > 40 && printable < want.slice(0, 400).length / 2)) {
+            return { name, kind, steps, report, want, got: stream, verdict: 'ORACLE' };
+        }
         const asked = report.keyRequests > 0;
         return {
             name, kind, steps, report, want, got: stream,
             verdict: asked ? 'NOINPUT' : 'DIFFER',
+            known: KNOWN_DISAGREEMENTS[name],
         };
     }
     return { name, kind, steps, report, verdict: 'EXITED' };
@@ -356,7 +402,7 @@ for (const r of results) {
 }
 
 console.log(`\n${results.length} programs:`);
-for (const k of ['MATCH', 'NOINPUT', 'DIFFER', 'EXITED', 'LOOPING', 'SILENT', 'HUNG', 'THREW', 'NOASM']) {
+for (const k of ['MATCH', 'NOINPUT', 'ORACLE', 'DIFFER', 'EXITED', 'LOOPING', 'SILENT', 'HUNG', 'THREW', 'NOASM']) {
     if (tally[k]) console.log(`  ${String(tally[k]).padStart(5)}  ${k}`);
 }
 if (refusals.size) {
@@ -364,6 +410,20 @@ if (refusals.size) {
     for (const [k, n] of [...refusals].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
         console.log(`  ${String(n).padStart(5)}  ${k}`);
     }
+}
+
+const differs = results.filter((r) => r.verdict === 'DIFFER');
+const fresh = differs.filter((r) => !r.known);
+const healed = results.filter((r) => r.verdict === 'MATCH' && KNOWN_DISAGREEMENTS[r.name]);
+if (differs.length) {
+    console.log(`\n${differs.length - fresh.length} of ${differs.length} disagreements are known and explained.`);
+    if (fresh.length) {
+        console.log('NEW disagreements -- these are the ones to look at:');
+        for (const r of fresh) console.log(`  ${r.name}`);
+    }
+}
+for (const r of healed) {
+    console.log(`HEALED -- ${r.name} now agrees; drop its row: ${KNOWN_DISAGREEMENTS[r.name]}`);
 }
 
 let exit = 0;
