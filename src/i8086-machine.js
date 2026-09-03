@@ -43,6 +43,7 @@ import { I8254 } from './i8254.js';
 import { I8259 } from './i8259.js';
 import { I8251 } from './i8251.js';
 import { CGACard } from './cga-card.js';
+import { PCSpeaker } from './pc-speaker.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
 const IF = 0x0200;
@@ -163,6 +164,32 @@ export const SDCARD8086 = Object.freeze({
     ],
 });
 
+/**
+ * A PC/XT-shaped machine: the real IBM XT I/O map, so a corpus program
+ * written for a PC finds its hardware where it expects. 8259 at 20h, 8254 at
+ * 40h, 8255 at 60h, the PC speaker gated off port 61h, and the CGA card at
+ * 3D0h. 640K of RAM, a small BIOS ROM at the top holding the reset vector.
+ *
+ * This is where the speaker and the CGA status card actually live in this
+ * lane — the ports are the ones the 24 corpus writes to 61h and the retrace
+ * polls on 3DAh are aimed at. A DOS-service tier that carries no hardware can
+ * name these same chip kinds in its own config to make a beep audible.
+ */
+export const PCXT8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x9ffff },   // 640K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K BIOS, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },                       // XT: 8259 at 20-21h
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 },               // XT: 8254 at 40-43h, OUT0 -> IRQ0
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },                       // XT: 8255 at 60-63h
+        { kind: 'pcspeaker', name: 'spk', ppi: 'ppi1', pit: 'pit1' },  // 61h bits 0/1 gate counter 2
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },                      // CGA at 3D0-3DFh
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
@@ -185,7 +212,13 @@ export class I8086Machine {
         this._io = [];
         this._mmio = [];
 
+        // The PC speaker is not a bus chip — it observes an 8255 port and an
+        // 8254 counter that ARE, so it is built in a second pass once they
+        // exist. Collect its configs here.
+        const speakerConfigs = [];
+
         for (const c of config.chips || []) {
+            if (c.kind === 'pcspeaker') { speakerConfigs.push(c); continue; }
             const regs = REGS[c.kind];
             if (!regs) throw new Error(`machine config: unknown chip kind ${c.kind}`);
             const span = c.span || regs;
@@ -267,6 +300,24 @@ export class I8086Machine {
             }
         }
 
+        // Build the PC speaker(s) now that the 8255 and 8254 they observe
+        // exist. Each reads its counter's divisor on demand and listens to a
+        // named 8255 port (61h = port B on a PC) through _portChange.
+        this._speakers = [];
+        for (const c of speakerConfigs) {
+            const pitName = c.pit;
+            const channel = c.channel ?? 2;
+            const spk = new PCSpeaker({
+                readDivisor: () => {
+                    const pit = this.chips[pitName];
+                    const cnt = pit && pit.counters && pit.counters[channel];
+                    return cnt ? cnt.reload : 0;
+                },
+            });
+            this.chips[c.name] = spk;
+            this._speakers.push({ spk, ppi: c.ppi, port: c.port ?? 'b' });
+        }
+
         this.cpu = new I8086({
             read: (a) => this._read(a),
             write: (a, v) => this._write(a, v),
@@ -277,6 +328,16 @@ export class I8086Machine {
             // erratum has something to happen to.
             intPending: () => !!(this._pic && this._pic.intActive),
         });
+    }
+
+    /** The tone the speaker is producing, if any. {hz, on} or null. */
+    audioTone() {
+        for (const { spk } of this._speakers || []) {
+            if (spk.on) return spk.audioTone();
+        }
+        // Nothing sounding: report the first speaker's silent tone, or null.
+        if (this._speakers && this._speakers.length) return this._speakers[0].spk.audioTone();
+        return null;
     }
 
     /** Machine time in (fractional) milliseconds. */
@@ -321,6 +382,13 @@ export class I8086Machine {
     // ---- pins -----------------------------------------------------------
     /** @param {string} chipName @param {'a'|'b'|'c'} port @param {number} value @param {number} out */
     _portChange(chipName, port, value, out) {
+        // The speaker sits on a PPI port (61h = port B): the low two bits gate
+        // the timer into the cone. Route the written latch to it.
+        if (this._speakers) {
+            for (const s of this._speakers) {
+                if (s.ppi === chipName && s.port === port) s.spk.setControl(value);
+            }
+        }
         if (!this.hooks.onPinChange) return;
         for (let bit = 0; bit < 8; bit++) {
             const mask = 1 << bit;

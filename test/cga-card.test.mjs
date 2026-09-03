@@ -7,15 +7,17 @@ import assert from 'node:assert/strict';
 import { CGACard } from '../src/cga-card.js';
 import { I8086Machine } from '../src/i8086-machine.js';
 
-test('3D8h and 3D9h latch the exact byte written, unmodelled bits included', () => {
+test('3D8h/3D9h latch the exact byte written but are WRITE-ONLY on the bus', () => {
     const c = new CGACard(5_000_000);
     c.write(0x08, 0xa7);      // 3D8h mode — includes bits we do not decode
     c.write(0x09, 0x3f);      // 3D9h colour
     assert.equal(c.mode, 0xa7, 'mode latch holds every bit');
     assert.equal(c.color, 0x3f);
-    assert.equal(c.read(0x08), 0xa7, 'and reads back');
-    assert.equal(c.read(0x09), 0x3f);
-    // getVideoState hands the renderer RAW latches, not a translation.
+    // A real CGA cannot read these back — the bus floats high. Returning the
+    // latch would invent a register the hardware does not have.
+    assert.equal(c.read(0x08), 0xff, '3D8h is write-only on the bus');
+    assert.equal(c.read(0x09), 0xff, '3D9h is write-only on the bus');
+    // The renderer sees the latch through getVideoState, RAW, not translated.
     const v = c.getVideoState();
     assert.equal(v.mode, 0xa7);
     assert.equal(v.color, 0x3f);
