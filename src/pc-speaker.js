@@ -17,6 +17,27 @@
  * the hardware is producing, derived from the divisor and the two gate bits.
  * No samples, no synthesis.
  *
+ * ACCURACY TIER: THE DIVISOR, NOT THE WAVEFORM. `audioTone()` answers what
+ * the hardware is CONFIGURED to produce — the counter's reload and the two
+ * gate bits — and that is exact. What it is not is a signal: there are no
+ * samples, no edges, and no phase, so nothing here can be summed, mixed or
+ * played back directly.
+ *
+ * What follows from that, named rather than left to be discovered:
+ *
+ *   - NO SUB-INSTRUCTION TIMING. The machine advances peripherals by each
+ *     instruction's cycle count, so a program that shapes a tone by BUSY
+ *     LOOPING between writes to 61h is quantised to instruction boundaries.
+ *     A program that sets the divisor and lets counter 2 run is exact; one
+ *     that bit-bangs the speaker data bit to make a waveform is not, and the
+ *     difference is audible in exactly the software that does it.
+ *   - NO AMPLITUDE, and no envelope: a PC speaker is one bit driving a cone.
+ *     `on` is that bit, and how loud it is was never the computer's business.
+ *   - NO PIT MODE BEYOND 3. Counter 2 in square-wave mode is what a PC uses
+ *     for sound; `hz` is read from the divisor and does NOT check the mode,
+ *     so a program that puts counter 2 in mode 0 or 2 and reads the speaker
+ *     gets the divisor back as if it were a tone.
+ *
  * @module
  */
 
