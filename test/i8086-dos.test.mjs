@@ -1,0 +1,236 @@
+// The DOS/BIOS service layer. Tier B: no hardware at all, and the tier the
+// 8086 teaching corpus actually wants — measured across 525 programs, 2,862
+// of 3,109 int 21h calls are AH=02h/09h/4Ch. These tests are those three
+// services, the trap mechanism that makes vector HOOKING work, and the
+// screen that a program bypassing DOS entirely still reaches.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { I8086Machine } from '../src/i8086-machine.js';
+import { createDos8086, DOSBOX8086, TRAP_SEG, VRAM } from '../src/i8086-dos.js';
+
+/** A Tier B machine with the services installed and a .COM loaded. */
+function dosWith(bytes) {
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m).install().loadCom(Uint8Array.from(bytes));
+    return { m, dos };
+}
+
+/** Assemble at .COM offset 100h: pairs of [offset, bytes]. */
+function com(chunks) {
+    const out = new Uint8Array(0x200);
+    for (const [off, bytes] of chunks) out.set(bytes, off - 0x100);
+    return out.subarray(0, Math.max(...chunks.map(([o, b]) => o - 0x100 + b.length)));
+}
+
+test('print a string with AH=09h and exit with AH=4Ch — 2,862 of 3,109 calls', () => {
+    const { dos } = dosWith(com([
+        [0x100, [0xba, 0x10, 0x01]],        // mov dx, 0110h
+        [0x103, [0xb4, 0x09]],              // mov ah, 9
+        [0x105, [0xcd, 0x21]],              // int 21h
+        [0x107, [0xb8, 0x07, 0x4c]],        // mov ax, 4C07h
+        [0x10a, [0xcd, 0x21]],              // int 21h
+        [0x110, [0x48, 0x69, 0x21, 0x24]],  // 'Hi!$'
+    ]));
+    const r = dos.run(10_000);
+    assert.ok(r.terminated, 'the program exited');
+    assert.equal(r.exitCode, 7, 'AL is the exit code');
+    assert.equal(dos.stdout, 'Hi!');
+    assert.equal(dos.screenText()[0], 'Hi!', 'and it landed on the text page, not just a string');
+});
+
+test('AH=02h writes a character, and the cursor and scrolling are real', () => {
+    const chunks = [];
+    let off = 0x100;
+    for (const ch of 'ab\r\ncd') {
+        chunks.push([off, [0xb4, 0x02, 0xb2, ch.charCodeAt(0), 0xcd, 0x21]]);
+        off += 6;
+    }
+    chunks.push([off, [0xb8, 0x00, 0x4c, 0xcd, 0x21]]);
+    const { dos } = dosWith(com(chunks));
+    dos.run(10_000);
+    assert.equal(dos.stdout, 'ab\r\ncd');
+    assert.equal(dos.screenText()[0], 'ab');
+    assert.equal(dos.screenText()[1], 'cd', 'CR went to column zero, LF to the next row');
+});
+
+test('a program that HOOKS int 21h and chains is still serviced', () => {
+    // This is the whole reason the vectors are real rather than the INT
+    // instruction being watched: after the hook, `int 21h` reaches DOS by a
+    // far jump through the saved vector, and an instruction watcher would
+    // never see it.
+    const { m, dos } = dosWith(com([
+        [0x100, [0xb4, 0x35, 0xb0, 0x21, 0xcd, 0x21]],        // ah=35 al=21 int21 -> ES:BX
+        [0x106, [0x89, 0x1e, 0x40, 0x01]],                    // mov [0140], bx
+        [0x10a, [0x8c, 0x06, 0x42, 0x01]],                    // mov [0142], es
+        [0x10e, [0xb4, 0x25, 0xb0, 0x21]],                    // ah=25 al=21
+        [0x112, [0xba, 0x30, 0x01]],                          // mov dx, 0130h (our handler)
+        [0x115, [0xcd, 0x21]],                                // int 21h -> vector replaced
+        [0x117, [0xb4, 0x02, 0xb2, 0x41]],                    // ah=2 dl='A'
+        [0x11b, [0xcd, 0x21]],                                // int 21h -> OUR handler
+        [0x11d, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],              // exit
+        [0x130, [0xff, 0x06, 0x44, 0x01]],                    // inc word [0144]
+        [0x134, [0xff, 0x2e, 0x40, 0x01]],                    // jmp far [0140] — chain
+    ]));
+    const r = dos.run(10_000);
+    assert.ok(r.terminated);
+    assert.equal(dos.stdout, 'A', 'the chained call printed');
+    const psp = 0x0800;
+    const count = m._read((psp << 4) + 0x144) | (m._read((psp << 4) + 0x145) << 8);
+    // TWO, not one: the exit call goes through the hook as well, which is
+    // the proof the hook stayed installed rather than being serviced once.
+    assert.equal(count, 2, 'and it really went through the program\'s own handler');
+    // The IVT now holds the PROGRAM's handler — it replaced DOS — and the
+    // copy the program saved holds the trap address it chains to. Both
+    // halves matter: the first says the hook took, the second says what it
+    // is chaining into is us.
+    assert.equal(m._read(0x21 * 4 + 2) | (m._read(0x21 * 4 + 3) << 8), psp);
+    assert.equal(m._read(0x21 * 4) | (m._read(0x21 * 4 + 1) << 8), 0x0130);
+    const savedSeg = m._read((psp << 4) + 0x142) | (m._read((psp << 4) + 0x143) << 8);
+    const savedOff = m._read((psp << 4) + 0x140) | (m._read((psp << 4) + 0x141) << 8);
+    assert.equal(savedSeg, TRAP_SEG);
+    assert.equal(savedOff, 0x21, 'the trap offset IS the vector number, by construction');
+});
+
+test('buffered input AH=0Ah takes typed keys and terminates the line', () => {
+    const { m, dos } = dosWith(com([
+        [0x100, [0xba, 0x20, 0x01]],        // mov dx, 0120h  (the buffer)
+        [0x103, [0xb4, 0x0a]],              // mov ah, 0Ah
+        [0x105, [0xcd, 0x21]],
+        [0x107, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        [0x120, [0x10]],                    // max length 16
+    ]));
+    dos.type('brick\r');
+    dos.run(10_000);
+    const psp = 0x0800, base = (psp << 4) + 0x120;
+    assert.equal(m._read(base + 1), 5, 'five characters before the CR');
+    let s = '';
+    for (let i = 0; i < 5; i++) s += String.fromCharCode(m._read(base + 2 + i));
+    assert.equal(s, 'brick');
+    assert.equal(m._read(base + 2 + 5), 0x0d, 'the buffer is CR-terminated, as DOS leaves it');
+    assert.equal(dos.stdout, 'brick\r', 'and AH=0Ah echoes');
+});
+
+test('int 16h reports an empty keyboard through the zero flag', () => {
+    const { m, dos } = dosWith(com([
+        [0x100, [0xb4, 0x01, 0xcd, 0x16]],  // ah=1 int 16h — check for a key
+        [0x104, [0x9c]],                     // pushf  (so the test can read ZF)
+        [0x105, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+    ]));
+    dos.run(10_000);
+    const sp = 0xfffe - 2;
+    const flags = m._read((0x0800 << 4) + sp) | (m._read((0x0800 << 4) + sp + 1) << 8);
+    assert.ok(flags & 0x0040, 'ZF set: no key waiting');
+});
+
+test('a program that writes B800h directly still shows on the screen', () => {
+    const { dos } = dosWith(com([
+        [0x100, [0xb8, 0x00, 0xb8]],                    // mov ax, B800h
+        [0x103, [0x8e, 0xc0]],                          // mov es, ax
+        [0x105, [0x26, 0xc6, 0x06, 0x00, 0x00, 0x58]],  // mov byte [es:0000], 'X'
+        [0x10b, [0x26, 0xc6, 0x06, 0x02, 0x00, 0x59]],  // mov byte [es:0002], 'Y'
+        [0x111, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+    ]));
+    dos.run(10_000);
+    assert.equal(dos.screenText()[0], 'XY',
+        'the screen is the CPU-visible buffer, so bypassing DOS is not bypassing us');
+    assert.equal(dos.stdout, '', 'and nothing went through the service path');
+});
+
+test('files round-trip through the virtual filesystem', () => {
+    const { dos } = dosWith(com([
+        [0x100, [0xb4, 0x3c, 0xb9, 0x00, 0x00, 0xba, 0x40, 0x01]],   // create "OUT.TXT"
+        [0x108, [0xcd, 0x21]],
+        [0x10a, [0x89, 0xc3]],                                        // mov bx, ax (handle)
+        [0x10c, [0xb4, 0x40, 0xb9, 0x03, 0x00, 0xba, 0x50, 0x01]],   // write 3 bytes
+        [0x114, [0xcd, 0x21]],
+        [0x116, [0xb4, 0x3e, 0xcd, 0x21]],                            // close
+        [0x11a, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+        [0x140, [0x4f, 0x55, 0x54, 0x2e, 0x54, 0x58, 0x54, 0x00]],   // "OUT.TXT\0"
+        [0x150, [0x61, 0x62, 0x63]],                                  // "abc"
+    ]));
+    dos.run(10_000);
+    const f = dos.files.get('OUT.TXT');
+    assert.ok(f, 'the file exists');
+    assert.equal(String.fromCharCode(...f), 'abc');
+});
+
+test('int 15h/86h spends MACHINE time, not wall-clock time', () => {
+    const { m, dos } = dosWith(com([
+        [0x100, [0xb4, 0x86]],                          // ah = 86h
+        [0x102, [0xb9, 0x0f, 0x00]],                    // cx = 000Fh
+        [0x105, [0xba, 0x42, 0x40]],                    // dx = 4042h -> 0F4042h us = ~1.0 s
+        [0x108, [0xcd, 0x15]],
+        [0x10a, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+    ]));
+    const t0 = Date.now();
+    dos.run(10_000);
+    const wall = Date.now() - t0;
+    assert.ok(m.tMs > 999 && m.tMs < 1002, `a second of simulated time passed (${m.tMs.toFixed(1)} ms)`);
+    assert.ok(wall < 200, `and none of it was real (${wall} ms)`);
+    // yousefkotp's traffic-light project is built entirely on this service,
+    // waiting sixty seconds at a time.
+});
+
+test('an unsupported service fails visibly and names itself', () => {
+    const { dos } = dosWith(com([
+        [0x100, [0xb4, 0x99, 0xcd, 0x21]],              // ah = 99h — no such function
+        [0x104, [0x9c]],                                 // pushf
+        [0x105, [0xb8, 0x00, 0x4c, 0xcd, 0x21]],
+    ]));
+    dos.run(10_000);
+    const r = dos.report();
+    assert.deepEqual(r.unsupported, [{ int: 0x21, ah: 0x99, count: 1 }],
+        'the refusal is counted and named, not swallowed');
+});
+
+test('a RET with an empty stack terminates through the PSP, as it does on DOS', () => {
+    const { dos } = dosWith(com([[0x100, [0xc3]]]));    // ret
+    const r = dos.run(10_000);
+    assert.ok(r.terminated, 'PSP:0000 holds INT 20h and that is the trapdoor');
+    assert.equal(r.exitCode, 0);
+});
+
+test('an MZ .EXE loads, relocates, and runs — what MASM actually emits', () => {
+    const code = [
+        0xb8, 0x00, 0x00,     // mov ax, 0000h   <- the word at image offset 1 is relocated
+        0x8e, 0xd8,           // mov ds, ax
+        0xb4, 0x02,           // mov ah, 2
+        0xb2, 0x45,           // mov dl, 'E'
+        0xcd, 0x21,
+        0xb8, 0x00, 0x4c,
+        0xcd, 0x21,
+    ];
+    const exe = new Uint8Array(32 + code.length);
+    const w16 = (o, v) => { exe[o] = v & 0xff; exe[o + 1] = (v >> 8) & 0xff; };
+    exe[0] = 0x4d; exe[1] = 0x5a;         // 'MZ'
+    w16(0x02, 32 + code.length);          // bytes in the last page
+    w16(0x04, 1);                         // one page
+    w16(0x06, 1);                         // one relocation
+    w16(0x08, 2);                         // header is two paragraphs
+    w16(0x0e, 0x0000);                    // SS (relative)
+    w16(0x10, 0xfffe);                    // SP
+    w16(0x14, 0x0000);                    // IP
+    w16(0x16, 0x0000);                    // CS (relative)
+    w16(0x18, 0x001c);                    // relocation table
+    w16(0x1c, 0x0001); w16(0x1e, 0x0000); // the entry: seg 0, offset 1
+    exe.set(code, 32);
+
+    const m = new I8086Machine(DOSBOX8086);
+    const dos = createDos8086(m).install().loadExe(exe, 0x0800);
+    const loadSeg = 0x0810;
+    const patched = m._read((loadSeg << 4) + 1) | (m._read((loadSeg << 4) + 2) << 8);
+    assert.equal(patched, loadSeg, 'the relocation biased the segment word by where we loaded');
+    const r = dos.run(10_000);
+    assert.ok(r.terminated);
+    assert.equal(dos.stdout, 'E');
+});
+
+test('the machine underneath is untouched by any of this', () => {
+    // Tier B adds no chips, decodes no ports, and needs no ROM: the config
+    // is 768K of RAM and nothing else. If this ever stops being true, the
+    // tier has grown hardware it does not need.
+    assert.deepEqual(DOSBOX8086.chips, []);
+    assert.equal(DOSBOX8086.regions.length, 1);
+    assert.equal(DOSBOX8086.regions[0].kind, 'ram');
+    assert.equal(VRAM, 0xb8000);
+});
