@@ -498,11 +498,30 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             // read the whole block in one WASM call. Feature-detect: the
             // vendored build in brickwright-lite may be older and lack these.
             if (wasm.HEAPU8 && wasm._emu_dbg_read_mem && space !== 'bit') {
-                const ptr = wasm._emu_dbg_read_mem(SPACE[space], addr, len);
-                if (ptr) {
-                    return new Uint8Array(wasm.HEAPU8.buffer, ptr, len).slice();
+                // The C side answers out of a fixed 256-byte scratch buffer and
+                // does NOT clamp the length it was asked for: request more and
+                // it hands back a pointer to 256 good bytes followed by
+                // whatever the heap happens to hold, with no error and no short
+                // count to notice. A 64 KB code read therefore came back as 256
+                // bytes of program and 65280 bytes of nothing, which reads as
+                // an erased chip — the disassembler and hex view both ask for
+                // far more than 256 bytes. So the bulk read is issued one
+                // bufferful at a time, advancing the ADDRESS as well as the
+                // output offset. Pinned by test/emu8051-readmem-length.test.mjs,
+                // which reads ACROSS the 256-byte seam — a test that only read
+                // 256 bytes passes against the broken version.
+                const CHUNK = 256;
+                const out = new Uint8Array(len);
+                let done = 0;
+                while (done < len) {
+                    const n = Math.min(CHUNK, len - done);
+                    const ptr = wasm._emu_dbg_read_mem(SPACE[space], (addr + done) & 0xFFFF, n);
+                    if (!ptr) break;
+                    out.set(new Uint8Array(wasm.HEAPU8.buffer, ptr, n), done);
+                    done += n;
                 }
-                // fall through to byte-at-a-time if pointer is null
+                if (done === len) return out;
+                // a null pointer part-way through falls through to byte-at-a-time
             }
 
             // Slow path: one value-returning call per byte (always works)
