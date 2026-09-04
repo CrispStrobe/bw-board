@@ -723,13 +723,38 @@ export class I8086 {
     /** Software or internal interrupt: FLAGS, CS, IP go on the stack, the
      *  trap and interrupt flags clear, and the vector comes from segment 0.
      *  Hardware delivery (INTR/NMI) is the machine layer's call, not ours. */
+    /**
+     * THE VECTOR IS READ BEFORE ANYTHING IS PUSHED, and this used to be the
+     * other way round (E6.8.4c).
+     *
+     * The 646,000-vector suite could never see it: it compares FINAL state,
+     * and in ordinary RAM the end state is identical whichever order the six
+     * writes and four reads happen in. The 8088 BUS TRACES can, and do --
+     * `int C6h` reads 0318h-031Bh, the IVT entry, and only then writes the six
+     * stack bytes. We produced `wwwwwwrrrr` where the silicon produces
+     * `rrrrwwwwww`, on all ten thousand vectors of that file.
+     *
+     * IT IS NOT COSMETIC. The two orders differ whenever the pushes and the
+     * vector fetch touch the same bytes -- a stack placed over the interrupt
+     * vector table, which is a real thing in tight embedded code and exactly
+     * the kind of machine this tier is for -- and whenever the IVT sits in a
+     * memory-mapped window where a read has side effects. Push-first would
+     * have the CPU fetch a vector it had just overwritten.
+     *
+     * Found by the bus-sequence score on its first meaningful run, and it is
+     * one of the three divergences lego-47 predicted from the design alone:
+     * writes-before-reads on read-modify-write, the push order on interrupt
+     * entry, and operand order on the string ops.
+     */
     _interrupt(n) {
+        const newIp = this._rd16(0, (n * 4) & 0xffff);
+        const newCs = this._rd16(0, (n * 4 + 2) & 0xffff);
         this._push(this.flags);
         this.flags &= ~(IF | TF);
         this._push(this.cs);
         this._push(this.ip);
-        this.ip = this._rd16(0, (n * 4) & 0xffff);
-        this.cs = this._rd16(0, (n * 4 + 2) & 0xffff);
+        this.ip = newIp;
+        this.cs = newCs;
     }
 
     /** Public entry for a machine-layer interrupt request. The caller owns

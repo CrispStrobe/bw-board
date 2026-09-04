@@ -126,8 +126,52 @@ function suiteCycles(t) {
     return c.length || null;
 }
 
-let run = 0, exact = 0, notYet = 0, ungradeable = 0;
+
+/**
+ * The suite's DATA-access sequence for one test: the EU-driven bus cycles, in
+ * order, as 'r' (MEMR), 'w' (MEMW), 'i' (IOR) or 'o' (IOW).
+ *
+ * CODE CYCLES ARE DELIBERATELY EXCLUDED, and that is what makes this score
+ * gradeable today. A CODE cycle is the BIU prefetching, so how many appear and
+ * where depends entirely on queue state -- reproducing them IS the BIU's job
+ * and cannot be done from an access trace. Data cycles are the opposite: the
+ * EU asks for them, in an order the instruction decides, and that order is a
+ * property of our decoder rather than of any timing model.
+ *
+ * So this asks the one question a transaction-level trace can answer
+ * completely: DOES OUR CORE TOUCH MEMORY IN THE SAME ORDER THE SILICON DID?
+ * lego-47's list of where that plausibly diverges is the target -- writes
+ * before reads on read-modify-write, the push order on interrupt entry, the
+ * operand order on string ops -- and each is a trace bug fixable without any
+ * scheduler at all.
+ *
+ * Each m-cycle is a T1..T4 run and the status is valid from T1, so the
+ * sequence is read at the T1s.
+ */
+function suiteDataSeq(t) {
+    const out = [];
+    for (const r of t.cycles || []) {
+        if (r[8] !== 'T1') continue;
+        const st = r[7];
+        if (st === 'MEMR') out.push('r');
+        else if (st === 'MEMW') out.push('w');
+        else if (st === 'IOR') out.push('i');
+        else if (st === 'IOW') out.push('o');
+    }
+    return out.join('');
+}
+
+/** The same sequence from our own bus trace. Kinds: 0 fetch, 1 r, 2 w, 3 i, 4 o. */
+function ourDataSeq(trace) {
+    const K = ['', 'r', 'w', 'i', 'o'];
+    let out = '';
+    for (let i = 0; i < trace.length; i += 2) if (trace[i] !== 0) out += K[trace[i]];
+    return out;
+}
+
+let run = 0, exact = 0, notYet = 0, ungradeable = 0, busOk = 0, busRun = 0;
 const diffs = [];
+const busDiffs = [];
 const perFile = [];
 
 for (const file of files) {
@@ -143,6 +187,7 @@ for (const file of files) {
         for (const r of REGS) cpu[r] = t.initial.regs[r];
         cpu.flags = t.initial.regs.flags;
         cpu.halted = false;
+        cpu.busTrace = [];
         let got;
         try { got = cpu.step(); } catch (e) {
             if (e instanceof Unimplemented) { threw = e.message; break; }
@@ -152,6 +197,12 @@ for (const file of files) {
         for (const [addr] of t.final.ram) mem[addr] = 0;
         run++; fileRun++;
         if (got === want) { exact++; fileExact++; } else diffs.push(got - want);
+        busRun++;
+        const wantSeq = suiteDataSeq(t);
+        const gotSeq = ourDataSeq(cpu.busTrace);
+        if (wantSeq === gotSeq) busOk++;
+        else if (busDiffs.length < 6) busDiffs.push(`${base} "${t.name}" want ${wantSeq || '(none)'} got ${gotSeq || '(none)'}`);
+        cpu.busTrace = null;
     }
     if (threw) { notYet++; continue; }
     perFile.push([base, fileExact, fileRun, tests[0] && tests[0].name]);
@@ -177,7 +228,9 @@ if (diffs.length) {
 console.log(`\n  ungradeable:  ${ungradeable} vectors whose trace ends before the next`);
 console.log(`                instruction begins, so the suite never states their length.`);
 console.log(`                Counted, not skipped: a skip nobody reports reads like a pass.`);
-console.log(`\n  bus sequence:  NOT YET — needs a BIU`);
+console.log(`\n  bus sequence:  ${busOk}/${busRun} (${(100 * busOk / (busRun || 1)).toFixed(1)}%) `
+    + `— DATA accesses in order; CODE excluded, that IS the BIU's job`);
+for (const d of busDiffs) console.log(`      ${d}`);
 console.log(`  queue ops:     NOT YET — needs a BIU`);
 console.log(`  T-state align: NOT YET — needs a BIU`);
 if (notYet) console.log(`\n  ${notYet} file(s) the core has not reached`);
