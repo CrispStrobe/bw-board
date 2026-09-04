@@ -38,7 +38,7 @@
 // because that is the only way in: there is no service layer to type into.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { I8086Machine } from '../src/i8086-machine.js';
+import { I8086Machine, PCXT8086 } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086 } from '../src/i8086-dos.js';
 import { buildBios } from '../scripts/build-bios.mjs';
 import { findMsdosFiles, build, GEOM, MEM } from '../scripts/build-dos-image.mjs';
@@ -52,27 +52,28 @@ const HIGH = 0x9000;                       // where SYSINIT relocates itself
 const VRAM = 0xb8000, COLS = 80, ROWS = 25;
 
 /** The XT with disk hardware and a text page, and no service layer anywhere. */
-const XTPC = Object.freeze({
-    clockHz: 4_772_727,
-    regions: [
-        { kind: 'ram', start: 0x00000, end: 0x9ffff },
-        { kind: 'ram', start: 0xb8000, end: 0xbffff },
-        { kind: 'rom', start: 0xf0000, end: 0xfffff },
-    ],
-    chips: [
-        { kind: 'pic', name: 'pic1', at: 0x20 },
-        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 },
-        { kind: 'ppi', name: 'ppi1', at: 0x60 },
-        { kind: 'dma', name: 'dma1', at: 0x00 },
-        { kind: 'dmapage', name: 'page', at: 0x80, dma: 'dma1' },
-        // `dma: 'dma1'` is the wire. Without it the machine builds both chips
-        // and connects neither, and src/upd765.js quietly falls back to
-        // non-DMA execution -- where it raises RQM and waits for a host that
-        // is not coming.
-        { kind: 'fdc', name: 'fdc1', at: 0x3f0, irq: 6, dma: 'dma1' },
-        { kind: 'cga', name: 'cga1', at: 0x3d0 },
-    ],
-});
+/**
+ * THE MACHINE IS THE SHIPPED BOARD PRESET, NOT A COPY OF IT. `PCXT8086` comes
+ * from src/i8086-machine.js and is what a user gets from the Circuit
+ * Designer's "load an 8086 board" list. This file, test/bios-fdc.test.mjs and
+ * that preset were THREE separate descriptions of one computer.
+ *
+ * They had already drifted: the preset's RAM stopped at 0x9FFFF, so writes to
+ * the CGA text page at B800:0000 fell into unmapped space, while both test
+ * copies mapped it. A program would have run here and shown a blank screen in
+ * the app, and nothing would have failed -- each of us only ran our own copy.
+ *
+ * An assertion that the copies are equal was offered and declined. One
+ * definition is better than two that are checked: an equality test still
+ * leaves both copies, and it can only fire after the second one is already
+ * wrong.
+ *
+ * The knowledge the local copy carried, kept because it is not obvious from
+ * the preset: the FDC's `dma: 'dma1'` field IS the wire. Without it the
+ * machine builds both chips and connects neither, and src/upd765.js quietly
+ * falls back to non-DMA execution -- where it raises RQM and waits for a host
+ * that is never coming. The failure is a hang with no error.
+ */
 
 /**
  * NO DREQ SHIM. There was one here: the pump did not assert the channel's
@@ -138,7 +139,7 @@ function bootOnHardware() {
     const built = build(found.files);
     const io = built.iosys;
 
-    const m = new I8086Machine(XTPC);
+    const m = new I8086Machine(PCXT8086);
     m.loadRom(rom.bytes);
     m.chips.fdc1.insert(0, built.image, {
         cylinders: GEOM.totalSectors / (GEOM.sectorsPerTrack * GEOM.heads),
