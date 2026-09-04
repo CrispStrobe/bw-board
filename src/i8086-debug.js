@@ -94,11 +94,18 @@ function modeFromVga(v) {
  */
 function modeFromHercules(h) {
     if (!h || !h.mode) return null;
+    if (h.graphics) {
+        // 0x100, not 0x06. Hercules graphics has no INT 10h mode number --
+        // it is selected by writing 3BFh and 3B8h directly. The earlier draft
+        // returned 06h, which is CGA 640x200: same resolution class, but
+        // B8000h instead of B0000h and a two-bank parity interleave instead of
+        // four banks on `y mod 4`. It would have drawn the wrong address with
+        // the wrong arithmetic and produced a picture.
+        return { mode: 0x100, supported: true, reason: '3B8h: Hercules graphics, 720x348 mono' };
+    }
     return {
-        mode: h.graphics ? 0x06 : 0x07, supported: false,
-        reason: h.graphics
-            ? 'Hercules graphics is 720x348 mono at B0000h, which this renderer does not draw'
-            : 'Hercules text is MDA 80x25 at B0000h; the renderer reads B8000h',
+        mode: 0x07, supported: false,
+        reason: 'Hercules text is MDA 80x25 at B0000h; the renderer reads B8000h',
     };
 }
 
