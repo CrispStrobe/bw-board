@@ -1639,7 +1639,16 @@ the contract rather than migrated onto it.
    that after two implementations rather than after four.
 3. **The AY.** Multi-voice, plus the array migration below — the hardest, and
    it benefits from two prior users.
-4. **The SB DSP** (E6.8.11: our 8237 and 8259 already do the work).
+4. **The SB DSP — DONE 2026-09-04** (`src/sb-dsp.js`). It was nearly free
+   exactly as predicted: the DSP pulls one byte per sample period through the
+   SAME 8237 the floppy uses and raises a real 8259 line at end-of-block, and
+   both were already proven by `dos-boot-fdc`. Reset handshake, time
+   constant, speaker gate, direct DAC, single-cycle and auto-init transfer,
+   pause/continue, version. **It is also the first producer with NO TONE** —
+   `audioTone()` returns `[]`, because a PCM device has a sample RATE and not
+   a pitch, which is the case the arity rule was sharpened for and the proof
+   that the two contracts are genuinely independent rather than one being
+   derived from the other.
 5. **The OPL**, and only then is the ymfm/DMXOPL/LittleMUS chain vendored.
 
 #### E6.8.12 MicroCoreLabs — not a feature diff, a set of directions

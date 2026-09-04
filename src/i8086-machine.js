@@ -49,6 +49,8 @@ import { VGACard } from './vga-card.js';
 import { EGACard } from './ega-card.js';
 import { I8237 } from './i8237.js';
 import { UPD765 } from './upd765.js';
+import { SBDSP } from './sb-dsp.js';
+import { AudioBus } from './audio-bus.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
 const IF = 0x0200;
@@ -104,6 +106,10 @@ const REGS = {
     // two blocks are 0x70 ports apart and nothing decodes the gap.
     dmapage: 16,
     fdc: 8,          // the uPD765 card's 3F0h-3F7h (DOR 3F2h, MSR 3F4h, data 3F5h)
+    // The Sound Blaster's 2x0h-2xFh block: reset 2x6h, read 2xAh, write 2xCh,
+    // read-status 2xEh. The OPL at 388h is a SEPARATE chip and a separate
+    // decode, not part of this window.
+    sb: 16,
 };
 
 /**
@@ -474,6 +480,11 @@ export class I8086Machine {
                     onTerminalCount: (ch) => { if (this.hooks.onDmaComplete) this.hooks.onDmaComplete(c.name, ch); },
                     onHrq: (active) => { if (this.hooks.onDmaRequest) this.hooks.onDmaRequest(c.name, active); },
                 });
+            } else if (c.kind === 'sb') {
+                // The DSP counts MACHINE cycles, so it is told which clock it
+                // is counting rather than guessing -- the lesson the AY's own
+                // crystal taught this tier (see m6502-machine.js's ayRatio).
+                chip = new SBDSP({ clockHz: config.clockHz });
             } else if (c.kind === 'fdc') {
                 chip = new UPD765({
                     onMotorChange: (drive, on) => {
@@ -571,6 +582,44 @@ export class I8086Machine {
                 chip: { read: (o) => ega.memRead(o), write: (o, v) => ega.memWrite(o, v) },
                 start: 0xa0000, end: 0xaffff,
             });
+        }
+
+        // The Sound Blaster's transfer path: the same 8237 the floppy uses, on
+        // its own channel (1 by convention), and an 8259 line for the
+        // end-of-block interrupt. Everything hard here was already built --
+        // which is why E6.8.11 calls the digital half of audio nearly free.
+        for (const c of config.chips || []) {
+            if (c.kind !== 'sb') continue;
+            const sb = this.chips[c.name];
+            const dma = c.dma ? this.chips[c.dma] : null;
+            const ch = c.dmaChannel ?? 1;
+            if (sb && dma) {
+                sb.hooks.onDmaRequest = () => {
+                    let got = null;
+                    // The request IS the DRQ pulse, asserted around the single
+                    // byte -- without it transfer() sees no requesting channel
+                    // and moves nothing while reporting success, which is the
+                    // silently-corrupt-read the FDC path documents above.
+                    dma.dreq(ch, true);
+                    const moved = dma.transfer(
+                        (a) => (a === null ? 0x80 : this._read(a)),
+                        (a, b) => { if (a === null) got = b & 0xff; },
+                        1);
+                    dma.dreq(ch, false);
+                    return moved === 0 ? false : (got === null ? false : got);
+                };
+            }
+            if (sb && c.irq != null && this._pic) {
+                // A LEVEL, NOT AN EVENT. setIRQ takes a line state, and the
+                // DSP's end-of-block is an edge, so it is raised here and
+                // dropped when the driver acknowledges by reading 2xEh --
+                // which is the same port read that clears `sb.irq`. A line
+                // left asserted would re-enter the handler forever.
+                sb.hooks.onIrq = () => this._pic.setIRQ(c.irq, 1);
+                const drop = () => { if (!sb.irq) this._pic.setIRQ(c.irq, 0); };
+                const origRead = sb.read.bind(sb);
+                sb.read = (reg) => { const v = origRead(reg); drop(); return v; };
+            }
         }
 
         this._buildPageTable();
@@ -674,9 +723,47 @@ export class I8086Machine {
      * anything useful.
      */
     audioTone() {
+        // DE-DUPLICATED, because a speaker is in BOTH lists: `_speakers` holds
+        // it for the 61h wiring and `chips` holds it under its config name.
+        // Collecting from both without a Set reports one speaker as two
+        // voices -- which the preset test caught immediately, and which would
+        // have been a UI showing a phantom oscillator otherwise.
+        const seen = new Set();
         const out = [];
-        for (const { spk } of this._speakers || []) out.push(...spk.audioTone());
+        const take = (c) => {
+            if (!c || seen.has(c) || typeof c.audioTone !== 'function') return;
+            seen.add(c);
+            out.push(...c.audioTone());
+        };
+        for (const { spk } of this._speakers || []) take(spk);
+        for (const c of Object.values(this.chips || {})) take(c);
         return out;
+    }
+
+    /**
+     * The shared mixer and ring (E6.8.11a), built on first use so a machine
+     * nobody listens to never allocates one.
+     */
+    get audio() {
+        if (!this._audioBus) {
+            this._audioBus = new AudioBus({ sampleRate: this.audioSampleRate || 48000 });
+            for (const src of this._audioSources()) this._audioBus.addSource(src);
+        }
+        return this._audioBus;
+    }
+
+    _audioSources() {
+        // Same de-duplication as audioTone(), and it matters more here: a
+        // source added to the bus twice would be MIXED twice, which is a
+        // doubled amplitude and a clip counter that blames the wrong thing.
+        const seen = new Set();
+        for (const { spk } of this._speakers || []) {
+            if (spk && typeof spk.renderAudio === 'function') seen.add(spk);
+        }
+        for (const c of Object.values(this.chips || {})) {
+            if (c && typeof c.renderAudio === 'function') seen.add(c);
+        }
+        return [...seen];
     }
 
     /** Machine time in (fractional) milliseconds. */
