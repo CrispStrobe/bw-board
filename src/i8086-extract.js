@@ -127,14 +127,18 @@ export function extract8086Machine(circuit) {
             }
         }
         if (p.kind === '74hc138' || p.kind === '74ls138') {
+            // Terminal names are the datasheet's, which is what the drawable
+            // part exposes: G1 (active-high enable), G2A/G2B (active-low,
+            // suffixed 'b' → g2ab/g2bb), outputs Y0-Y7 active-low (y0b..y7b).
+            // The eval below keeps generic e1b/e2b/e3 field names for the logic.
             for (let out = 0; out < 8; out++) {
-                setDriver(find(key(p.id, `y${out}`)), {
+                setDriver(find(key(p.id, `y${out}b`)), {
                     type: '138', gate: `${p.id}`,
-                    e1b: find(key(p.id, 'e1b')), e2b: find(key(p.id, 'e2b')),
-                    e3: find(key(p.id, 'e3')),
+                    e1b: find(key(p.id, 'g2ab')), e2b: find(key(p.id, 'g2bb')),
+                    e3: find(key(p.id, 'g1')),
                     a: find(key(p.id, 'a')), b: find(key(p.id, 'b')), c: find(key(p.id, 'c')),
                     out,
-                }, `${p.id}.y${out}`);
+                }, `${p.id}.y${out}b`);
             }
         }
     }
