@@ -1,0 +1,86 @@
+# 8086 corpus coverage — sweep of 2026-09-04
+
+What the `retro-corpus-8086` sweep says about the merged 8086 tier, and where
+the real gaps are. This is the coverage lane's record; the raw per-category
+verdicts it summarises were produced by `scripts/run-i8086-corpus.mjs` on the
+integration tree (my display/keyboard/CRTC work + the DOS INT 10h graphics + the
+186 instruction set + lego-ef's `MAX_STDOUT` fix, all merged).
+
+## Method
+
+- Corpus: `8086-ASSEMBLY-LANGUAGE-PROGRAMS/Source Code`, 40 categories, ~525
+  programs, assembled by `i8086-asm.js` and run on `DOSBOX8086` (a RAM box +
+  the DOS/BIOS software layer; INT 10h graphics write A0000/B8000 as RAM).
+- Run per-category rather than as one process, because a single long run was
+  repeatedly starved by a second corpus run sharing the box. No `--expect`
+  oracle was supplied, so a program that runs to completion reports **EXITED**
+  (where an oracle run would say MATCH/DIFFER); the failure verdicts —
+  **THREW / HUNG / LOOPING** — need no oracle and are the point of this pass.
+- Baseline, from before the display work (lego-47): `467 MATCH · 4 NOINPUT ·
+  16 ORACLE · 15 DIFFER · 2 LOOPING · 6 HUNG · 15 THREW`.
+
+## Result: the failure counts are essentially unchanged from baseline
+
+`THREW 14 · HUNG 6 · LOOPING 3+` (three categories with interactive programs
+were not fully counted — see below). The merged tier did **not** clear the
+baseline's HUNG/THREW, and reading *why* is the whole value:
+
+### THREW — 14, and all 14 are ONE assembler limitation (not hardware)
+
+Every THREW is `i8086-asm.js` refusing a conditional jump or `LOOP` whose target
+is beyond the 8086's ±127 short-jump range — e.g. *"JC to FINISHED is 272 bytes
+away and this instruction only reaches 127 -- pass { longJumps: true }"*. The
+8086 has no near/far `Jcc`; a real assembler auto-promotes an out-of-range
+conditional to **inverted-condition + a near `JMP`** (and `LOOP` to `DEC CX` /
+`JNZ` near, or flags it). Ours errors instead, and the `longJumps:true` escape
+hatch is global rather than per-instruction. **One assembler feature — automatic
+per-instruction promotion — clears all 14 at once.** This is the single
+highest-leverage coverage fix in the corpus, and it is the assembler lane's file.
+
+The 14 (all fail to ASSEMBLE, so they never run):
+
+| category | program |
+| --- | --- |
+| File Operations | copy_file_contents, file_error_handling, file_size_by_seek, open_existing_file, read_file_in_chunks, rename_and_delete_file |
+| Control Flow | computed_jump_into_a_table |
+| Conversion | string_copy_using_movsb_instruction |
+| Patterns | spiral_matrix_print |
+| Procedures | register_versus_stack_arguments |
+| Sorting | merge_sort_bottom_up |
+| Utilities | hex_dump_of_a_block, unit_converter_table |
+| External Devices | thermometer_sampling_and_average |
+
+### HUNG — 6, all External Devices polling peripherals nobody models
+
+`led_display_test, robot, stepper_motor, thermometer, traffic_lights,
+traffic_lights_advanced` — embedded-style programs that wait on an LED panel, a
+motor, a sensor, a traffic-light controller on ports the machine does not decode,
+so the wait never ends. These need device models nobody has built, and "no lesson
+wants them" is a legitimate answer (the project's own rule).
+
+### LOOPING / not-counted — interactive programs starved of input
+
+`Input Output` and `Utilities` each carry one, and three categories were left
+uncounted because their interactive programs run to the step budget: `DOS
+Services/dos_menu_driven_program`, `Expression/calculator`, and `8086
+Microprocessor Simulator`. They print a menu and reprint forever because the
+unattended harness types nothing — not defects (lego-ef's diagnosis); with
+`--type` they complete.
+
+### Everything else — 30+ categories — EXITS clean
+
+Addressing Modes, Arithmetic, Array Ops, BIOS Services, Bit/Bitwise, Conditional
+Jumps, Data Structures/Transfer, Flags, **Graphics**, **Interrupts**, Loops,
+Macros, Mathematics, Matrix, Memory Ops, Number Theory, **Port Programming**,
+Recursion, Searching, Shift/Rotate, Signed Arithmetic, Simulation, Stack Ops,
+String Instructions/Operations, Introduction — all clean.
+
+## What this means for the display work
+
+**The display cards did not move corpus verdicts — by design, and confirmed.**
+Every graphics program draws through BIOS INT 10h, which writes A0000/B8000 as
+RAM and verifies by reading the pixel back — a software path that was already
+passing (the whole Graphics category EXITS clean). The cards are the interactive
+*renderer* half of that feature (VdpScreen), which a headless corpus never
+exercises. So the coverage opportunity the sweep surfaces is an **assembler**
+fix, not a hardware one — handed to the assembler lane with the program list.
