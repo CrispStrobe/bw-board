@@ -211,6 +211,51 @@ function classify(bytes, name) {
     return 'com';
 }
 
+/**
+ * WHAT SURVIVES A PROGRAM, and why it is not the whole report.
+ *
+ * `results` holds one entry per program and the corpus is 525 of them. Every
+ * verdict is decided INSIDE runOne -- the stream/screen comparison, the
+ * printed test, the oracle match -- so nothing after the loop needs a
+ * program's full output. Keeping it anyway cost ~0.46 MB per program
+ * (measured: 71 MB at 50 programs, 117 MB at 150) and the full run died at
+ * V8's 900 MB heap limit after 12m31s ON AN IDLE BOX WITH 3 GB FREE. That is
+ * the harness, not the machine: an OOM that only happens at full scale is
+ * indistinguishable from a box under pressure, and it was blamed on the box
+ * twice before it was measured.
+ *
+ * THIS FIX IS PARTIAL AND THE MEASUREMENT SAYS SO. Slimming saved ~5%:
+ * 71.0 -> 67.5 MB at 50 programs, 116.9 -> 112.0 MB at 150. The baseline is
+ * ~0.45 MB per program and it is NOT the report -- something else retains it,
+ * and I have not found what. Recorded as an open defect with numbers rather
+ * than closed with a plausible story, because "we slimmed the reports" reads
+ * like a fix and the full run may still die. Whoever picks this up: the
+ * remaining term is per-program and roughly constant, so it is a retained
+ * object graph rather than a runaway string.
+ *
+ * stdout is the one term that runs away. `putChar` appends per character with no
+ * cap, and a LOOPING program printing inside a 5,000,000-instruction budget
+ * produces ~1 MB of it. The summary prints at most a couple of lines, so the
+ * tail is what a reader wants; the head is kept too, because a program's first
+ * output says what it was doing before it went wrong.
+ */
+const KEEP = 2048;
+function slimReport(report) {
+    const out = report.stdout || '';
+    return {
+        unsupported: report.unsupported,
+        terminated: report.terminated,
+        exitCode: report.exitCode,
+        breakpoints: report.breakpoints,
+        rebooted: report.rebooted,
+        keyRequests: report.keyRequests,
+        stdoutLength: out.length,
+        stdout: out.length <= KEEP * 2 ? out
+            : `${out.slice(0, KEEP)}\n...[${out.length - KEEP * 2} chars elided]...\n${out.slice(-KEEP)}`,
+        devices: report.devices,
+    };
+}
+
 function runOne(name, raw, key) {
     let bytes = raw;
     let kind = classify(bytes, name);
@@ -254,7 +299,7 @@ function runOne(name, raw, key) {
         while (!dos.terminated && steps < BUDGET) { dos.step(); steps++; }
     } catch (e) {
         const what = e instanceof Unimplemented ? e.message : `${e.name}: ${e.message}`;
-        return { name, kind, verdict: 'THREW', note: what, steps, report: dos.report() };
+        return { name, kind, verdict: 'THREW', note: what, steps, report: slimReport(dos.report()) };
     }
 
     const report = dos.report();
@@ -282,9 +327,9 @@ function runOne(name, raw, key) {
     // loop is what a traffic-light controller IS, so the split is on whether
     // anything observable happened, not on whether the program exited.
     if (!dos.terminated) {
-        return { name, kind, steps, report, verdict: printed ? 'LOOPING' : 'HUNG' };
+        return { name, kind, steps, report: slimReport(report), verdict: printed ? 'LOOPING' : 'HUNG' };
     }
-    if (!printed) return { name, kind, steps, report, verdict: 'SILENT' };
+    if (!printed) return { name, kind, steps, report: slimReport(report), verdict: 'SILENT' };
     const golden = expected && key && expected[key];
     if (golden && typeof golden.output === 'string') {
         const want = norm(golden.output);
@@ -298,8 +343,8 @@ function runOne(name, raw, key) {
         // disagreement out of a modelling difference.
         const stream = norm(report.stdout);
         const screen = norm(dos.screenText().join('\n'));
-        if (want === stream) return { name, kind, steps, report, verdict: 'MATCH', via: 'stream' };
-        if (want === screen) return { name, kind, steps, report, verdict: 'MATCH', via: 'screen' };
+        if (want === stream) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'stream' };
+        if (want === screen) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'screen' };
         // A SCREEN IS EIGHTY COLUMNS AND A STREAM IS NOT. Their oracle records
         // a stream, so a 111-character line stays on one line there and wraps
         // onto two here -- identical text, different shape. Wrapping THEIR
@@ -307,7 +352,7 @@ function runOne(name, raw, key) {
         // data rather than loosening the test: content that actually differs
         // still fails.
         if (norm(wrap80(want)) === screen) {
-            return { name, kind, steps, report, verdict: 'MATCH', via: 'screen (wrapped)' };
+            return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'screen (wrapped)' };
         }
         // A program that asked for a key and got none cannot be expected to
         // agree with a run that had one. Ours types nothing, so that is a
@@ -333,7 +378,7 @@ function runOne(name, raw, key) {
             known: KNOWN_DISAGREEMENTS[name],
         };
     }
-    return { name, kind, steps, report, verdict: 'EXITED' };
+    return { name, kind, steps, report: slimReport(report), verdict: 'EXITED' };
 }
 
 function collect(p) {
