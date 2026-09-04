@@ -42,6 +42,13 @@ clears all 14 at once, byte-safe (promotion only rewrites jumps that overflow).*
 The single highest-leverage coverage fix, and it is the assembler/harness lane's
 call (a documented dialect decision in their file).
 
+**FIXED (2026-09-04, `cb5e992` on `sweep/i8086-corpus`):** the coverage harness
+now passes `longJumps: true`, clearing **13 of the 14** — File Operations (6),
+Control Flow, Patterns, Procedures, Sorting, Utilities (2), External Devices all
+now EXIT. The 14th (`Conversion/string_copy_using_movsb_instruction`) is a
+DIFFERENT gap: the assembler does not support the `.FARDATA` directive — a
+separate, single-program item, not a jump-range issue.
+
 The 14 (all fail to ASSEMBLE, so they never run):
 
 | category | program |
