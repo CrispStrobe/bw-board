@@ -985,6 +985,13 @@ lands it.
    `extract8086Machine` branch to `src/model/machine-extract.js`; extend
    `hasRetroCpu` and the Machine-Loader in `src/components/CircuitDesigner.jsx`
    (preset with `romAt: 0xF0000` load address; see CORRECTIONS). THIS LANE.
+   **DONE (2026-09-04, feat/i8086-ui): recognition landed at 9bff4d3 (parts-
+   data JSON+SVG, circuit/footprints/machine-extract branches, BoardCanvas),
+   and the Machine-Loader now offers the three 8086 board firmwares (afee1de).
+   The one 8086-specific rule: an image maps to the TOP of the 1M space, so
+   the loader carries `romAt = 0x100000 - length` on the bw-machine-media-load
+   event (32K -> F8000h, a 64K BIOS -> F0000h) — step 3's host consumes it as
+   the loadRom address.** Build green.
 
 3. **Host wiring — brickwright-lite `debug-runner.js`.** An `i8086` branch that
    calls `createDebugTarget('i8086', {config, rom, romAt})`, subscribes
@@ -1047,11 +1054,16 @@ CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
   8259/IVT, no trap page); only the no-hardware DOSBOX8086 gets the DOS
   trap region. The host's `createDebugTarget('i8086')` must NOT inject the trap
   page for a config that carries a ROM at F0000, or the BIOS fights it.
-- EXTRACTOR IRQ GAP (this lane, new sub-task). `extract8086Machine` emits chips
-  without `irq`, so a drawn PIT+PIC has no OUT0->IR0 and the BIOS's 18.2 Hz
-  tick never fires. Fix: trace the PIT-OUT0 net to a PIC IR pin and emit
-  `irq:n` (the honest fix, with a named refusal when miswired), rather than
-  canning the wiring into the preset.
+- EXTRACTOR IRQ GAP — DONE (this lane, 2026-09-04). `extract8086Machine` now
+  traces the interrupt wiring: it finds the 8259, maps its ir0-ir7 nets, and
+  follows a PIT OUT (counter 0/1/2), a serial chip's interrupt pin
+  (acia6850 irqb / uart16550 intr / usart8251 rxrdy), or an FDC IRQ to an IR
+  line, emitting `irq:n` (+ `irqChannel` for the PIT counter) with a note. A
+  board with no such wire extracts WITHOUT irq — the honest result, a machine
+  whose tick never fires because the user never drew the wire, not a canned
+  preset that hides the omission. Verified: test/i8086-extract.test.mjs
+  ('a PIT OUT0 wired to PIC IR0 extracts as irq:0', and the miswired-board
+  companion). So a drawn PIT+PIC now boots the BIOS's 18.2 Hz tick.
 
 ---
 
