@@ -699,6 +699,40 @@ So:
   nobody happened to write. They are not substitutes, and the defect above was
   found by the probe.
 
+### Rule: a large improvement is not evidence of the right model
+
+Measured on the 8088 cycle model, 2026-09-04. Shift/rotate-by-CL scored 3%.
+Keying the model on CL took it to **57%** — a nineteen-fold improvement, and
+exactly the kind of number that ends an investigation.
+
+It was the wrong model. CL is a *linear* term (the datasheet gives shift-by-CL
+as `8+4n`, and measurement confirms 4 cycles per count exactly), but keying on
+it treats it as *categorical*, fragmenting the table across 64 CL values until
+each key holds a handful of samples. Subtracting `4*CL` before fitting and
+adding it back at prediction gives **99.4%**. The 19× improvement was
+concealing a further 42 points.
+
+The same shape appeared twice more the same day:
+
+- Keying a branch on the flag word `flags & 0x8d5` scored **worse than using no
+  flag feature at all**, for the same reason: it fragments until every key is
+  unique. One bit — did control transfer — was correct. **One bit beat thirteen.**
+- MUL keyed on the popcount of the *source* operand scored 15.7%, i.e. nothing,
+  which read as "this feature does not exist". The microcode loops over the
+  *implicit* operand: `popcount(AX)` scores 97%.
+
+**So: an improvement confirms that a term matters. It does not confirm the term
+has the right SHAPE, and it does not bound what a better shape would give.**
+Before accepting a large gain as the answer, ask what the datasheet says the
+relationship *is* — proportional, categorical, or conditional — and check that
+the model expresses that shape. A fitted lookup will absorb a linear
+relationship badly rather than fail loudly.
+
+The sibling failure is a fit that is *too* good: per-opcode calibration scored
+95.5% on held-out vectors and **34.2%** when held out by opcode. Neither number
+is wrong; they answer different questions. Always state which split a score
+came from.
+
 ## House pattern: an exemption must be able to stop being true
 
 Every instrument in this tier that grades results has an exemption list — a
