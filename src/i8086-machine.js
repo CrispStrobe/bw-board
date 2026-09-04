@@ -831,6 +831,13 @@ export class I8086Machine {
      * ack (port B bit 7), handled in _out. Host widgets map key events to set-1
      * scancodes and call this; it is machine-agnostic, needing only a PPI + PIC.
      */
+    /**
+     * Can this machine take a key at all? A board with no 8255 has nowhere to
+     * latch a scancode and one with no 8259 has no wire to raise IRQ1 on.
+     * Asked BEFORE a host offers a keyboard, so the offer matches the board.
+     */
+    canTakeKeys() { return !!(this._kbdPpi && this._pic); }
+
     keyIn(scancode) {
         if (!this._kbdPpi || !this._pic) return false;
         this._kbdPpi.setInputPort('a', scancode & 0xff);   // scancode latched at port A (0x60)

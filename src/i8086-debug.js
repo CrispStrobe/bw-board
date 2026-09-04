@@ -194,7 +194,29 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 breakpoints: ['code', 'write'],
                 timeFreezes: true,
                 consumes: [],
+                // Declared only when the machine can actually take a key. A
+                // board with no PPI and no PIC has nowhere to latch a scancode
+                // and no wire to raise IRQ1 on, and a host that offered a
+                // keyboard for it would be offering one that silently does
+                // nothing -- the same reason `steps` does not list 'cycle'.
+                keys: machine.canTakeKeys && machine.canTakeKeys() ? ['scancode'] : [],
             };
+        },
+
+        /**
+         * A key, as a set-1 scancode. This is the HARDWARE path -- port A of
+         * the 8255 plus IRQ1 -- so it works on a bare-metal board and on one
+         * running our BIOS, which is why the widget uses it rather than the
+         * BIOS's INT 16h buffer. A machine that cannot take keys returns
+         * false rather than pretending, so a caller can tell the difference
+         * between "delivered" and "there was nobody to deliver it to".
+         *
+         * Break codes are the caller's business: a real keyboard sends make
+         * on press and make|0x80 on release, and a host that sends only makes
+         * leaves every modifier stuck down.
+         */
+        keyIn(scancode) {
+            return typeof machine.keyIn === 'function' ? machine.keyIn(scancode) : false;
         },
 
         state() { return runState; },
