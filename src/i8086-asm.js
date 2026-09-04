@@ -2499,6 +2499,18 @@ class Assembler {
                 this.cur = this.lastSeg = this.segment('_DATA', 'data');
                 return;
             }
+            case '.fardata': case '.fardata?': {
+                // A FAR data segment: its own segment OUTSIDE DGROUP, reached
+                // only through a segment register (`MOV AX, SEG label ; MOV ES,
+                // AX`) rather than the assumed DS. That is the whole point of
+                // the directive — a destination for string primitives (ES:DI)
+                // that lives somewhere other than DS. The generic layout gives
+                // it a paragraph and SEG resolves to it as a relocation, the
+                // same as any named segment; nothing is assumed to it, so a
+                // label here is unreachable without the explicit MOV ES.
+                this.cur = this.lastSeg = this.segment('FAR_DATA', 'data');
+                return;
+            }
             case '.code': {
                 this.codeSegName = '_TEXT';
                 this.cur = this.lastSeg = this.segment('_TEXT', 'code');
@@ -2597,7 +2609,7 @@ class Assembler {
                 return;
             case 'public': case 'extrn': case 'extern': case 'global': case 'include':
             case 'includelib': case 'dosseg': case 'option': case 'group': case 'comment':
-            case '.startup': case '.exit': case '.fardata': case '.fardata?': case '.286':
+            case '.startup': case '.exit': case '.286':
             case '.386': case '.486': case '.586': case '.8087': case '.287': case '.387':
             case 'struc': case 'struct': case 'union': case 'record': case 'textequ':
             case 'irp': case 'irpc': case 'while': case 'for': case 'forc': case 'repeat':

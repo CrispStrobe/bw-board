@@ -834,7 +834,7 @@ test('a refusal always names the line and the construct', () => {
     const cases = [
         ['NOP\nFROB AX, BX', 'unknown mnemonic FROB', 2],
         ['.MODEL LARGE\n.CODE\nNOP\nEND', '.MODEL LARGE', 1],
-        ['.MODEL SMALL\n.CODE\n.FARDATA\nEND', 'unsupported directive .FARDATA', 3],
+        ['.MODEL SMALL\n.CODE\n.EXIT\nEND', 'unsupported directive .EXIT', 3],
         // A word in the opcode field that is neither instruction, directive
         // nor macro is reported as a mnemonic, because that is what it looks
         // like -- naming it a "directive" would send the reader hunting for
@@ -1786,15 +1786,16 @@ test('the Amey-Thakur corpus assembles, where it is present', { skip: !existsSyn
         try { assemble(readFileSync(f, 'latin1')); accepted++; }
         catch (e) { reasons.set(e.what, (reasons.get(e.what) || 0) + 1); }
     }
-    // Measured 2026-09-03. The 15 refusals are all honest: 14 programs
-    // contain a relative jump further than an 8086 can reach -- MASM refuses
-    // them too, and none of the 14 is within 4 bytes of reaching -- and 1
-    // wants .FARDATA, which this assembler does not model.
-    assert.ok(accepted >= 510, `at least 510 of 525 assemble (got ${accepted})`);
+    // Measured 2026-09-04. The 14 remaining refusals are all honest and of
+    // ONE kind: a relative CONDITIONAL jump further than an 8086 can reach in
+    // the ±127 short form, refused under the default (non-promoting) dialect --
+    // MASM 1.10 refuses them too, and none is within 4 bytes of reaching. The
+    // 15th refusal, .FARDATA, is gone: the far data segment is now modelled
+    // (its own segment outside DGROUP, reached via SEG label / MOV ES).
+    assert.ok(accepted >= 511, `at least 511 of 525 assemble (got ${accepted})`);
     assert.deepEqual([...reasons].sort(), [
         ['jump out of range', 14],
-        ['unsupported directive .FARDATA', 1],
-    ].sort(), 'and the refusals are the same two kinds, in the same numbers');
+    ].sort(), 'and the one remaining refusal kind is the out-of-range conditional jump');
 });
 
 test('a sample of the corpus runs to completion and produces output', { skip: !existsSync(CORPUS) }, () => {
@@ -1901,7 +1902,7 @@ test('no corpus program asks for an interrupt its source never wrote', { skip: !
             }
         }
     }
-    assert.equal(ran, 510, 'all 510 accepted programs loaded');
+    assert.equal(ran, 511, 'all 511 accepted programs loaded (was 510 before .FARDATA was modelled)');
     assert.deepEqual(fabricated, [], 'no program reached an interrupt vector its source never named');
     assert.ok(terminated >= 498, `at least 498 of them run to their own exit (got ${terminated})`);
 });
