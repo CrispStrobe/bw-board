@@ -684,7 +684,7 @@ was re-run either side of the move and is identical verdict for verdict, which
 was predicted before it was measured: no program knows where the trap is,
 because they reach it through the vector table `install()` rewrites.
 
-**R4 — THE ASSEMBLER IS THE LARGEST SURFACE WITH NO INDEPENDENT ORACLE.** 2,304
+**R4 — THE ASSEMBLER IS THE LARGEST SURFACE WITH NO INDEPENDENT ORACLE.** CLOSED `cac105d`, by a better oracle than this finding asked for. 2,304
 lines. Round-tripping through a disassembler that is ground against 646,000
 hardware vectors is a strong check on ENCODING — and it says nothing about
 directive SEMANTICS: `.MODEL` and group fixups, `EQU` against `=`, nested
@@ -702,6 +702,37 @@ the syntax that overlaps. This matters now rather than later — the in-flight
 `longJumps` promotion rewrites an out-of-range jump into a branch over a near
 jump, which moves byte counts and therefore every later fixup, and that is
 exactly the class a round-trip cannot see and a byte diff can.
+
+CLOSED, AND THE ORACLE IS BETTER THAN THE ONE RECOMMENDED HERE. This finding
+asked for `tinyasm` or NASM diffed over the overlapping syntax. What landed is
+**MASM 1.10, LINK 2.00 and EXE2BIN — the actual period toolchain — running to
+completion INSIDE Tier B**, with zero unsupported DOS services.
+`scripts/oracle-masm.mjs` + `test/oracle-masm.test.mjs`.
+
+That deserves stating plainly, because it is a milestone the tier did not set
+out to reach: **the emulator became complete enough to host the oracle that
+grades its own assembler.** Not a reimplementation to diff against, and not a
+modern assembler with a different dialect — the program these sources were
+written for, running on the machine we built.
+
+Evidence: 414 files compared, 404 code segments byte-compared, 403 differing
+only in named benign classes, and **zero cases where MASM accepted a program
+and we refused it**.
+
+AND IT FOUND A REAL DEFECT IN US, which is what separates an oracle from an
+agreement ceremony. Two findings, in opposite directions:
+
+- MASM is WRONG about `NOTHING EQU 0FFFFH` — the reserved word silently wins,
+  and it costs a program its output.
+- WE are wrong about the missing-ASSUME rule. MASM reaches for whichever
+  segment register IS assumed and hard-refuses when none can serve; we did
+  not. Invisible in a `.COM`, a silently wrong load in an `.EXE` — which is
+  exactly the shape of defect a 470-program output comparison can run past
+  forever, because every program in that corpus is a `.COM`.
+
+The second is being fixed. A differential encoder against `tinyasm` stays
+available and drops in priority: it would have caught encoding drift, and this
+catches semantics, which was the actual gap.
 
 **R5 — THREE MACHINE LAYERS HAVE BECOME THREE COPIES.** `m6502`, `z80` and
 `i8086` each carry machine + adapter + debug + extract, about 4,600 lines, and

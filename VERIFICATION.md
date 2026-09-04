@@ -272,6 +272,28 @@ up is a test of a machine that does not exist. In practice:
   worth less than it looks. This one was found by asking what the caller does,
   not by reading either the test or the chip.
 
+**FIXED IN `1c3a145`**, and verified the way this file asks for: not by
+reading, but by breaking it again. With the fix, the FDC suites are 34 pass /
+0 fail; with the two `dreq()` calls removed, 15 pass / 19 FAIL. A species
+entry has no "fixed" state to read, so an entry that began as a live bug says
+where it was closed — otherwise the write-up outlives the defect and the next
+reader files it again.
+
+**AND THE SECOND HALF IS WORSE THAN THE FIRST.** The lane's own FDC tests
+carried DREQ shims — in `test/bios-fdc.test.mjs` and `test/dos-boot-fdc.test.mjs`,
+each documented, deliberate, idempotent, and commented as harmless once the pump
+was fixed. Every word of that was true, and it was exactly the problem: an
+idempotent shim keeps the suite green whether or not production works, so an
+MS-DOS boot test would have gone on booting after a revert of the very code it
+exists to prove. Deleted in `d531056`, and the 19 failures above are the
+evidence they are gone.
+
+**The shim was written by the lane that then found the bug.** That is the
+strongest available form of the point, and it is why "does anything outside
+the test establish this precondition" has to be asked of one's own setup
+blocks first. A helper added in good faith, with a comment explaining why it
+is safe, is indistinguishable at review time from one that is load-bearing.
+
 Credit where it is due: this was found and diagnosed by the support-chip lane,
 who also insisted it be written as a separate species rather than folded in.
 It was reproduced independently here before being recorded, per the section
