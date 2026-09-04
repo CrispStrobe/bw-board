@@ -87,13 +87,22 @@ The 14 (all fail to ASSEMBLE, so they never run):
 | Utilities | hex_dump_of_a_block, unit_converter_table |
 | External Devices | thermometer_sampling_and_average |
 
-### HUNG — 6, all External Devices polling peripherals nobody models
+### HUNG — 6 External Devices, and the label was wrong (corrected 2026-09-04)
 
 `led_display_test, robot, stepper_motor, thermometer, traffic_lights,
-traffic_lights_advanced` — embedded-style programs that wait on an LED panel, a
-motor, a sensor, a traffic-light controller on ports the machine does not decode,
-so the wait never ends. These need device models nobody has built, and "no lesson
-wants them" is a legitimate answer (the project's own rule).
+traffic_lights_advanced` — embedded-style device controllers. This section first
+called them "polling peripherals nobody models"; lego-47's LED-panel work showed
+that is wrong for most of them. They mostly WRITE output ports (traffic lights,
+the stepper, the bargraph drive an 8255 port; `OUT` is right there in the source)
+and CORRECTLY NEVER EXIT, exactly as a real traffic-light controller does not —
+so they are LOOPING by nature, not hung. They only READ as HUNG on the bare
+corpus config (`DOSBOX8086`, no 8255), where the port writes hit open bus and
+produce no stdout, so a program working perfectly is invisible. lite now draws
+them: `capabilities().outputs` / `target.outputs()` report each 8255 port's
+`pins` gated on `dir`, and an LED panel lights from that — so a device program
+that "prints nothing" has somewhere for its result to appear. The genuine
+input-waiters are the minority (a `thermometer` polling a sensor value); those
+would want a device model, and "no lesson wants one yet" is the honest answer.
 
 ### LOOPING / not-counted — interactive programs starved of input
 
