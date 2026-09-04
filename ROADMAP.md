@@ -1177,13 +1177,61 @@ and mean nothing to an instruction-stepped core — which is the same fact read
 from the other end: **model the BIU and those arrays become the grader.**
 No grinder, no landing.
 
-**Measure before defaulting.** Current core: 5.17 M instr/sec measured
-(§E6.1 quotes 4.0 M conservatively). A cycle-stepped core is typically 5-20×
-slower. A 4.77 MHz XT needs ~0.24 M instr/sec, so even 20× leaves headroom on
-a desktop; the risk is a phone and the browser bundle, where §5 of the core
-plan already warns the Node figure does not transfer. So the DEFAULT is
-chosen by measurement on the slowest target we ship to, not by assumption,
-and both numbers go in the table.
+**MEASURED 2026-09-04, AND THE MEASUREMENT OVERTURNS THIS ITEM'S PREMISE.**
+This paragraph used to argue that a cycle-stepped core would be fine: the
+core runs at 5.17 M instr/sec, a 4.77 MHz XT needs 0.24 M, so even a 20×
+slowdown "leaves headroom on a desktop". **That reasoning was wrong, and it
+was wrong in the way this section keeps warning about — it compared the
+BARE CORE against the requirement, when the bare core is not what runs
+anything.** `scripts/bench-i8086.mjs` already existed and already reports the
+right unit, which is emulated cycles per wall second against a real XT's
+clock. Five runs, medians, on this box:
+
+```
+workload     MIPS   × real XT    range
+core         3.16       8.70×    6.6 - 11.1     the decoder and ALU alone
+machine      1.03       2.90×    2.4 -  3.1     + region decode, ports, chips
+boot         0.40       1.00×    0.7 -  1.4     real MS-DOS 2.0 off a real FDC
+```
+
+**The realistic workload is already AT real time, with no headroom at all.**
+Booting a real DOS through the full machine runs at 1.0×. So a cycle-stepped
+core at the usual 5-20× cost gives:
+
+```
+   5× slower  ->  0.20× real time     5× SLOWER than 1981 hardware
+  10× slower  ->  0.10× real time    10× slower
+  20× slower  ->  0.05× real time    20× slower
+```
+
+There is no factor at which this is "a user choice about performance". And
+this is a VPS, not the phone §5 warned about; the browser bundle is still
+unmeasured and will be worse.
+
+**So E6.8.4 is REFRAMED rather than abandoned, and the new shape is better.**
+Cycle accuracy is **a debugging MODE, not a running mode.** Nobody plays Area
+5150 in it. You switch a machine into cycle timing to inspect a few thousand
+instructions where cycle truth is the question — a video trick, a timing
+loop, a race — and you switch back. That makes the owner's "user choice"
+concrete and small instead of a global speed/accuracy slider that would be
+dishonest at every setting: the choice is per-machine and per-session, the
+capability vocabulary already carries it (`capabilities().steps` gains
+`'cycle'` on a cycle machine), and nothing has to pretend a 0.1× machine is
+a machine you can use.
+
+**AND A SIDE FINDING THAT OUTRANKS THE ITEM IT CAME FROM.** `core` is 3.16
+MIPS and `machine` is 1.03: **the machine layer costs about two thirds of all
+execution time**, more than the CPU it wraps. Before making the core slower,
+that is where the time actually is — region decode on every memory access,
+port decode, chip advance and an interrupt poll per instruction. An
+optimisation pass there is cheaper than any part of E6.8.4, benefits every
+workload rather than a debugging mode, and would buy back exactly the
+headroom this item needs. **It should be scoped as its own entry and taken
+first.**
+
+Owed and not done: the same three numbers from the browser bundle. §5 of the
+core plan warns the Node figure does not transfer, and every number above is
+Node.
 
 **LICENCE TRAP, and it is the same one §E6's table already answered.**
 XTCE-Blue is MIT, but it executes **reenigne's decoded 8088 microcode** —
