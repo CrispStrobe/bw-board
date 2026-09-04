@@ -284,6 +284,57 @@ export const TIMERDEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The Hercules display board — the mono-graphics member of the display-demo
+ * set (ROADMAP E7.1). An 8086, 64K RAM, the HGC mono page mapped at B000:0000,
+ * a Hercules card at 3B0-3BFh, and a 32K ROM. Load rom/hercules-demo.bin
+ * (scripts/build-hercules-demo.mjs) and it sets HGC graphics mode and fills the
+ * 720x348 mono framebuffer with vertical bars.
+ *
+ * NOTE (2026-09-04): the firmware and the card STATE are verified, but the
+ * DOS/host renderer does NOT yet decode HGC — its videoFrame() refuses mode 6h
+ * by name ("Hercules graphics is 720x348 mono at B0000h, which this renderer
+ * does not draw"). So this board is not yet wired into the Machine-Loader: it
+ * would show a refusal string, not a picture. It ships as verified state now,
+ * ready for when the renderer's four-bank (y mod 4, 8KB banks) decode lands.
+ */
+export const HERCDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb0000, end: 0xb7fff },   // the HGC mono page (B000:0000) — 32K, four 8K banks
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'hercules', name: 'hgc1', at: 0x3b0 },   // Hercules at 3B0-3BFh (mono page at B000:0000)
+    ],
+});
+
+/**
+ * The VGA display board — the 256-colour member of the display-demo set
+ * (ROADMAP E7.1), and the one the DOS/host renderer already draws today (it
+ * decodes mode 13h / vga8). An 8086, 64K RAM, the mode-13h framebuffer mapped
+ * at A000:0000 (320x200 linear, one byte a pixel), a VGA card at 3C0-3DFh, and
+ * a 32K ROM. Load rom/vga-demo.bin (scripts/build-vga-demo.mjs) and it programs
+ * mode 13h, sets a DAC palette, and writes a picture into A0000 — which
+ * VdpScreen renders in colour, no BIOS.
+ *
+ * This is the first display board besides CGA whose renderer decode ships:
+ * mode 13h is a LINEAR framebuffer with no bank interleave, so it is the
+ * simplest of the graphics modes to fill and the most colourful payoff.
+ */
+export const VGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xa0000, end: 0xaffff },   // the mode-13h framebuffer (A000:0000), 64K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'vga', name: 'vga1', at: 0x3c0 },        // VGA register block at 3C0-3DFh
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
