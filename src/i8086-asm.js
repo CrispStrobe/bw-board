@@ -85,9 +85,20 @@
  *     module refused to synthesise overrides on the belief that every
  *     program here reaches its data through DS. Four of them do not, and
  *     the belief cost a print-string that turned into an NMI. See
- *     `autoOverride`. A segment NO assume reaches is a warning and not a
- *     refusal, and a MISSING assume synthesises nothing at all: not knowing
- *     what a register holds is not the same as knowing it is wrong.
+ *     `autoOverride`. TWO HALVES OF THAT RULE WERE THEMSELVES WRONG, AND
+ *     MASM 1.10 SAID SO -- run as a differential oracle inside our own
+ *     emulator, which is what `scripts/oracle-masm.mjs` is for. A MISSING
+ *     assume used to synthesise nothing at all, on the reasoning that not
+ *     knowing what a register holds is not the same as knowing it is
+ *     wrong. MASM, given only `ASSUME CS:CODE` and a variable in CODE,
+ *     assembles `MOV AX, CVAR` as `2E: A1 0005`: it reaches for whichever
+ *     register IS assumed to the symbol's segment, and does not care that
+ *     DS is unassumed. And a segment NO assume reaches used to be a
+ *     warning; MASM makes it error 68, `Can't reach with segment reg`, and
+ *     error 62 when there is no ASSUME at all. Both now match MASM. What
+ *     the old rule cost was nothing in a .COM, where DS = CS at entry, and
+ *     a silently wrong load in an .EXE that sets DS to @DATA -- which is
+ *     the whole reason the .EXE path exists.
  *   - `MOV r16, SEG x` in a .COM image assembles as `MOV r16, CS`. A .COM
  *     has one segment and no relocation table, and at entry
  *     CS = DS = ES = SS = that segment, so this is the only encoding that
@@ -1049,20 +1060,50 @@ class Assembler {
         // time because a source is not known to be flat until it ends.
         if (this.flatOutput()) return null;
         const dflt = o.base === 'bp' ? 'ss' : 'ds';
-        // Not knowing what a register holds is not the same as knowing it is
-        // wrong. Without an ASSUME (the bare SEGMENT dialect, which two
-        // coursework programs use) this says nothing rather than guessing.
-        if (!this.assume[dflt]) return null;
         if (this.assume[dflt] === want) return null;
+        // WHERE MASM'S AUTHORITY STOPS. A source with NO ASSUME anywhere is
+        // not a source MASM has an opinion about this operand in: asked,
+        // it answers error 62, `No or unreachable CS`, and it answers that
+        // for `MOV AX, BX` too -- for the MODULE, before it looks at any
+        // operand. This assembler deliberately does not make that refusal,
+        // because the whole bare-SEGMENT dialect two coursework programs
+        // are written in would go with it. So where there is no table there
+        // is no ruling: synthesise nothing, refuse nothing. Every rule
+        // below this line is one MASM actually stated.
+        if (!this.assume.cs && !this.assume.ds && !this.assume.es && !this.assume.ss) return null;
+        // A MISSING ASSUME USED TO STOP THE SEARCH HERE, on the reasoning
+        // that not knowing what a register holds is not the same as knowing
+        // it is wrong. MASM 1.10 does not reason that way, and it was asked,
+        // through `scripts/oracle-masm.mjs`, inside our own emulator:
+        //
+        //     CODE SEGMENT / ASSUME CS:CODE / MOV AX, CVAR
+        //     -> 2E: A1 0005          (a CS override)
+        //
+        // DS has no ASSUME there at all, and MASM still reaches for the
+        // register that IS assumed to the symbol's segment. The old rule
+        // emitted A1 0005 bare. In a .COM that is invisible, because
+        // DS = CS at entry; in an .EXE that sets DS to @DATA it is a load
+        // from the wrong segment that runs and prints.
         for (const r of ['ds', 'cs', 'es', 'ss']) if (this.assume[r] === want) return r;
-        // Nothing reaches it. REFUSING here would be over-reach: the
-        // assembler's model of what the registers hold is a static
-        // approximation, and a program that loads DS itself at run time is
-        // perfectly entitled to reach a segment no ASSUME mentions. Say so
-        // and emit what was written.
-        this.note(`"${o.ref.name}" is in segment ${want}, which no ASSUME reaches:`
-            + ' no override was added, so this reaches whatever DS holds at the time');
-        return null;
+        // AND NOTHING REACHING IT IS A REFUSAL, not a warning. Asked the
+        // same way:
+        //
+        //     DSEG SEGMENT / DVAR DW 7 / DSEG ENDS
+        //     CODE SEGMENT / ASSUME CS:CODE / MOV AX, DVAR
+        //     -> error 68, "Can't reach with segment reg"
+        //
+        // and with no ASSUME anywhere, error 62, "No or unreachable CS".
+        // The old rule wrote a warning and emitted the instruction, on the
+        // reasoning that a program may load DS itself at run time. It may --
+        // and if it does it can SAY so, with `ASSUME DS:name`, which is
+        // what the directive is for. A warning nobody reads, on an
+        // instruction that reads the wrong segment, is the worst of the
+        // three outcomes available.
+        throw new AsmError(
+            `"${o.ref.name}" is in segment ${want} and no ASSUME puts any segment register there,`
+            + ` so ${dflt.toUpperCase()} cannot reach it -- add ASSUME ${dflt.toUpperCase()}:${want}`
+            + ' (or an explicit override) to say which register holds it',
+            { ...this.ctx, what: 'unreachable segment' });
     }
 
     /** Bytes for the ModR/M and its displacement, plus any segment prefix.

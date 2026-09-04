@@ -135,6 +135,71 @@ test('MASM synthesises a CS override from ASSUME, exactly as autoOverride does',
     assert.equal(rows[0].bytes[0], 0x2e, 'MASM emitted the CS override itself');
 });
 
+test('a PARTIAL ASSUME: MASM overrides from whichever register has it', { skip }, () => {
+    // THE MEASUREMENT THAT CHANGED THE RULE. i8086-asm.js used to hold that
+    // a MISSING assume synthesises nothing -- "not knowing what a register
+    // holds is not the same as knowing it is wrong" -- and this asks MASM
+    // whether that is how MASM reasons. It is not: with DS unassumed and
+    // only CS:CODE named, MASM reaches for CS.
+    const source = [
+        'CODE    SEGMENT', '        ASSUME CS:CODE', '        ORG 100H',
+        'CVAR    DW 5', 'START:  MOV AX, CVAR', '        INT 20H',
+        'CODE    ENDS', '        END START',
+    ].join('\n') + '\n';
+    const r = masmBuild(source, tools.paths);
+    assert.equal(r.severe, 0);
+    const rows = parseListing(r.lst).filter((x) => /MOV AX, CVAR/.test(x.text));
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].bytes[0], 0x2e, 'MASM emitted a CS override with DS unassumed');
+    // EXE2BIN will not make a .COM of this one -- it has no ASSUME DS -- so
+    // the comparison is against the LISTING, which is where the encoding
+    // actually is.
+    const ours = assemble(source, { format: 'com' });
+    assert.deepEqual([...ours.bytes.subarray(2, 2 + rows[0].bytes.length)], [...rows[0].bytes],
+        'and so do we, byte for byte');
+});
+
+test('a segment NO assume reaches: MASM refuses it, error 68', { skip }, () => {
+    // The other half, and the other thing i8086-asm.js used to get wrong: it
+    // emitted the instruction with a warning. MASM will not emit it at all,
+    // and the number 68 is worth pinning because the message is the only
+    // thing that says this is a REACHABILITY refusal rather than a syntax
+    // one.
+    const source = [
+        'DATA    SEGMENT', 'V1      DW 1', 'DATA    ENDS',
+        'OTHER   SEGMENT', 'W1      DW 2', 'OTHER   ENDS',
+        'CODE    SEGMENT', '        ASSUME CS:CODE,DS:DATA',
+        'START:  MOV AX, W1', '        INT 20H',
+        'CODE    ENDS', '        END START',
+    ].join('\n') + '\n';
+    const r = masmBuild(source, tools.paths);
+    assert.equal(r.ok, false, 'MASM refuses it');
+    assert.match(r.errors.join(' | '), /Can't reach with segment reg/);
+    let ours = null;
+    try { assemble(source); } catch (e) { ours = e; }
+    assert.ok(ours, 'and so do we');
+    assert.equal(ours.what, 'unreachable segment');
+});
+
+test('MASM has no opinion on a source with no ASSUME at all -- it refuses the module', { skip }, () => {
+    // WHERE THE ORACLE'S AUTHORITY STOPS, and why i8086-asm.js does not
+    // follow it here. Error 62 is not about the operand: MASM raises it for
+    // `MOV AX, BX`, with no memory reference anywhere, purely because no
+    // ASSUME CS: was written. Following that would refuse the entire bare
+    // SEGMENT dialect two coursework programs are written in, which is a
+    // much larger change than the reachability rule -- so the no-ASSUME
+    // case stays as it was, and this test is what stops that being a
+    // silent assumption.
+    const bare = ['CODE SEGMENT', 'START:  MOV AX, BX', '        INT 20H',
+        'CODE ENDS', '        END START'].join('\n') + '\n';
+    const r = masmBuild(bare, tools.paths);
+    assert.equal(r.ok, false, 'MASM refuses even this');
+    assert.match(r.errors.join(' | '), /No or unreachable CS/);
+    // And we assemble it, deliberately.
+    const ours = assemble(bare);
+    assert.ok(ours.bytes.length > 0);
+});
+
 test('the simplified-directive shim reaches a .MODEL SMALL program', { skip }, () => {
     const source = [
         '.MODEL SMALL', '.STACK 100H', '.DATA',
