@@ -768,7 +768,18 @@ PCjs loads symbol tables and names its breakpoints. This is the highest
 value-per-line item on the list — an existing producer wired to an existing
 consumer — and it also buys breakpoint-by-name for free.
 
-#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors
+#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors — MACHINE HALF DONE (2026-09-04, `00ed9f9`)
+
+Split by lane. **Machine half (this lane) DONE:** the machine fires
+`hooks.onPortAccess(dir, port, value)` on every IN and OUT, decoded or not
+('in' reports the byte the program read); zero cost when unset;
+test/i8086-port-trap.test.mjs. **Debugger half (DOS/host lane):** extend
+`i8086-debug.js` `breakpoints: ['code','write']` with `'port'`, set the hook,
+match registered watches, break on hit — hook shape handed over. **INT half:**
+proposed to lego-47 — either a one-line `onInterrupt(n)` hook at the core's
+`_interrupt(n)` (i8086.js, core lane; catches software INT n, INT3, INTO and
+exceptions), or debugger-side opcode inspection (CD/CC/CE) for the DOS-debugging
+case; their surface, their call. Original framing follows.
 
 `i8086-debug.js` reports `breakpoints: ['code', 'write']`. For a workbench
 whose entire premise is *you wired this 8255 yourself*, "stop when anything
