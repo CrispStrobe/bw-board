@@ -626,6 +626,14 @@ export class I8086Machine {
             in: (p) => this._in(p),
             out: (p, v) => this._out(p, v),
         });
+        // Interrupt-trap bridge (E6.8.3): a SOFTWARE INT n (INT/INT3/INTO and the
+        // internal exceptions) executes inside the core, so the core emits it via
+        // cpu.onInterrupt; forward it to the machine's single onInterrupt hook so
+        // the debugger sees one stream — 'int' from here, 'irq'/'nmi' from
+        // _serviceInterrupts. The core must emit from the opcode/exception sites,
+        // NOT from its shared _interrupt(n) funnel, which the hardware path also
+        // uses and which would then double-fire against 'irq'/'nmi'.
+        this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
     }
 
     /** The tone the speaker is producing, if any. {hz, on} or null. */
