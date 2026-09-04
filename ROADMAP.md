@@ -1278,6 +1278,45 @@ microcode, and do not build ours by transcribing it.** The BIU/prefetch
 behaviour is derivable from the bus traces in the MIT test suite, which is
 both legally clean and a better oracle. Add to the table on landing.
 
+#### E6.8.4b The prefetch-queue shortcut does not exist — a negative result, measured (2026-09-04)
+
+I proposed a smaller first step towards E6.8.4: model the prefetch QUEUE
+alone, without a BIU, and grade it against the `queue` field the 8086 vectors
+already carry — no new clone, an instrument already in CI, and a behaviour a
+program can SEE (self-modifying code executing the stale byte). `lego-47`
+endorsed it partly on that basis. **It was wrong, and it is wrong in both of
+the two ways it could have been right.**
+
+**1. `final.queue` is not deterministic without cycle modelling.** Grouping 60
+sampled opcode files by initial queue length, only 16 had a single possible
+final length. Controlling properly — for initial queue length, instruction
+byte count, AND whether control flow branched — brings it to 28 of 60. The
+remaining 32 are genuinely cycle-dependent: `xor bp, bx`, from *identical*
+controlled conditions, produces final queue lengths of **1, 3 and 5**. That is
+bus timing, and nothing an instruction-stepped core knows can predict it.
+
+**2. `initial.queue` never disagrees with memory, so it cannot grade a
+stale-byte model either.** Checked across 12,000 vectors from 40 opcode files:
+**zero** cases where the queue holds a byte different from the memory at
+CS:IP. The suite contains no self-modifying-code captures, so the queue field
+is redundant with memory — a core that fetches straight from RAM, as ours
+does, already reproduces it, and grading against it would grade nothing.
+
+**So the shortcut is not a smaller version of E6.8.4; it is the same job.** A
+prefetch queue whose only justification is a behaviour we cannot grade fails
+this tier's standing rule — no grinder, no landing — and it would land as a
+claim rather than a measurement.
+
+**This strengthens rather than weakens the original constraint.** E6.8.4 has
+always said it lands only when `SingleStepTests/8088`'s bus traces can grade
+it. That was right, and the fifteen minutes spent testing the shortcut cost
+much less than the day spent building it would have. **The finding is that
+the 8088 suite is not a preference, it is the prerequisite** — its bus traces
+are the only thing that can adjudicate the 32-of-60 cases above.
+
+Recorded rather than quietly dropped because the idea is attractive enough
+that someone will have it again.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
