@@ -136,33 +136,49 @@ test('STRUC and RECORD are refused rather than silently mis-assembled', () => {
 
 // ---- a defect this file found, pinned until it is fixed -------------------
 
-test('KNOWN DEFECT: `=` is not redefinable, and in MASM that is its whole point', () => {
-    // `EQU` and `=` differ in exactly one way, which is why MASM has both:
-    // a numeric EQU may not be redefined, and `=` may. src/i8086-asm.js:1807
-    // is `case 'equ': case '=':` — one arm for both — so `=` inherits EQU's
-    // rule and a redefinition is refused as "defined twice".
+test('`=` is redefinable and EQU is not, which is why MASM has both', () => {
+    // WAS A KNOWN DEFECT, FIXED BY THE TRIGGER THIS TEST USED TO BE. `EQU`
+    // and `=` differ in exactly one way: a numeric EQU may not be redefined
+    // and `=` may. One switch arm, `case 'equ': case '=':`, served both, so
+    // `=` inherited EQU's rule and the four lines below were REFUSED as
+    // "defined twice" instead of assembled.
     //
-    // The corpus uses `=` in ZERO of 525 files, which is why nothing caught
-    // it and why it belongs in this file rather than in a corpus re-run.
+    // The corpus uses `=` in ZERO of 525 files, which is why 470
+    // byte-identical agreements with NASM and a MASM oracle over 414 files
+    // said nothing about it, and why the check belongs here rather than in
+    // a corpus re-run.
     //
-    // PINNED AS IT STANDS, and deliberately: when the assembler lane fixes
-    // this, the first assertion goes RED and this test must be rewritten to
-    // assert the correct bytes — which are given below so the rewrite is
-    // mechanical. A defect recorded without a trigger is a defect that
-    // outlives its write-up.
-    assert.throws(() => assembleRaw('K = 5\n mov ax, K\nK = 7\n mov bx, K'),
-        /defined twice/,
-        'if this no longer throws, `=` has been made redefinable — good. Replace this '
-        + "test with: assembleRaw('K = 5\\n mov ax, K\\nK = 7\\n mov bx, K') === "
-        + "'b8 05 00 bb 07 00' (mov ax,5 then mov bx,7)");
+    // THE VALUE IS POSITIONAL, which is the part worth asserting rather
+    // than merely "it does not throw": each read takes the assignment above
+    // it, not the last one in the file. AX gets 5 and BX gets 7 — a fix that
+    // made `=` redefinable but resolved every read to the final value would
+    // produce `b8 07 00 bb 07 00` and pass a test that only checked for the
+    // absence of a refusal.
+    assert.equal(hex(assembleRaw('K = 5\n mov ax, K\nK = 7\n mov bx, K')),
+        'b8 05 00 bb 07 00', 'each read takes the value in force at its own line');
 
-    // Not a defect, and asserted so the fix cannot overshoot: a numeric EQU
-    // must STAY non-redefinable. MASM refuses this too.
+    // Asserted so the fix cannot overshoot: a numeric EQU must STAY
+    // non-redefinable. MASM refuses this too.
     assert.throws(() => assembleRaw('K equ 5\n mov ax, K\nK equ 7\n mov bx, K'),
         /defined twice/, 'a numeric EQU must remain non-redefinable');
 
-    // And the single-use case works, so the gap is redefinition alone.
+    // AND MIXING THE TWO IS STILL A DUPLICATE, in both directions. `=` may
+    // reassign a `=`; it may not quietly overwrite a constant, and a
+    // constant may not overwrite a variable. MASM calls that a symbol type
+    // conflict, and the failure mode of allowing it is a real mistake
+    // becoming a silent reassignment.
+    assert.throws(() => assembleRaw('K equ 5\nK = 7'), /defined twice/,
+        '`=` may not overwrite an EQU');
+    assert.throws(() => assembleRaw('K = 5\nK equ 7'), /defined twice/,
+        'EQU may not overwrite a `=`');
+
+    // And the single-use case still works, so nothing was traded for the fix.
     assert.equal(hex(assembleRaw('K = 5\n mov ax, K')), 'b8 05 00');
+
+    // Three assignments, to show the mechanism is the pass loop re-running
+    // the definitions in order and not a special case for exactly two.
+    assert.equal(hex(assembleRaw('N = 1\n mov al, N\nN = 2\n mov al, N\nN = 3\n mov al, N')),
+        'b0 01 b0 02 b0 03');
 });
 
 // ---- the NEAR-zero constructs: 1 to 4 files out of 525 --------------------

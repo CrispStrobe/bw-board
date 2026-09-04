@@ -2089,7 +2089,14 @@ class Assembler {
         const prev = this.symbols.get(key);
         // A redefinition inside the same pass is a real duplicate; the same
         // symbol arriving again on a LATER pass is just the pass loop.
-        if (prev && prev.pass === this.pass) {
+        //
+        // UNLESS BOTH SIDES ARE `=`. MASM's `=` defines a variable that may
+        // be assigned again; EQU defines a constant that may not, and the
+        // check below still refuses `K EQU 5` followed by `K EQU 7`. BOTH
+        // sides have to be `=` on purpose: mixing the two is a type
+        // conflict in MASM as well, and letting `=` overwrite an EQU (or the
+        // reverse) would turn a real mistake into a silent reassignment.
+        if (prev && prev.pass === this.pass && !(prev.variable && sym.variable)) {
             // NAME BOTH SITES. The first definition can be hundreds of lines
             // away, and because symbols are case-insensitive (as in MASM)
             // the two spellings need not even look alike -- `SC_FILL equ 6`
@@ -2283,14 +2290,38 @@ class Assembler {
                 // `LEN EQU $-MSG` is the common shape and needs `$` to mean
                 // the offset here, which is why EQU is evaluated eagerly.
                 const v = this.evalText(rest);
-                if (v.base || v.index) throw new AsmError('EQU cannot hold a register',
+                if (v.base || v.index) throw new AsmError(`${kind === '=' ? '=' : 'EQU'} cannot hold a register`,
                     { ...this.ctx, what: 'equ of register' });
-                if (v.reloc) return void this.define(name, { kind: 'segment', name: v.reloc });
+                // `=` IS REDEFINABLE AND `EQU` IS NOT, AND THAT IS THE WHOLE
+                // REASON MASM HAS BOTH. A numeric EQU names a constant; `=`
+                // names a variable, and a source that writes
+                //
+                //     K = 5 / MOV AX, K / K = 7 / MOV BX, K
+                //
+                // means AX = 5 and BX = 7. One switch arm served both for as
+                // long as this module existed, so `=` inherited EQU's
+                // one-definition rule and the program above was REFUSED --
+                // "K is defined twice" -- rather than assembled.
+                //
+                // THE CORPUS COULD NOT SEE THIS. `=` appears in zero of the
+                // 525 files, so 470 byte-identical agreements with NASM and
+                // a MASM oracle over 414 files all said nothing about it.
+                // Same shape as the ASSUME rule: a corpus is evidence only
+                // about the constructs it contains.
+                //
+                // POSITIONAL VALUES FALL OUT OF THE PASS LOOP for free. Each
+                // pass re-executes the definitions in source order, so a
+                // read between two assignments sees the one above it, not
+                // the last one in the file -- which is exactly MASM's rule.
+                const variable = kind === '=';
+                if (v.reloc) return void this.define(name, { kind: 'segment', name: v.reloc, variable });
                 if (v.segRel && v.ref) {
-                    return void this.define(name,
-                        { kind: 'data', seg: v.ref.seg, value: v.v, type: v.ref.type, count: v.ref.count });
+                    return void this.define(name, {
+                        kind: 'data', seg: v.ref.seg, value: v.v,
+                        type: v.ref.type, count: v.ref.count, variable,
+                    });
                 }
-                return void this.define(name, { kind: 'equ', value: v.v });
+                return void this.define(name, { kind: 'equ', value: v.v, variable });
             }
             case 'proc': {
                 const far = /\bfar\b/i.test(rest);
