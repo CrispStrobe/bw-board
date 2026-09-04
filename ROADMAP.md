@@ -830,18 +830,21 @@ microcode, and do not build ours by transcribing it.** The BIU/prefetch
 behaviour is derivable from the bus traces in the MIT test suite, which is
 both legally clean and a better oracle. Add to the table on landing.
 
-#### E6.8.5 CRTC-driven video timing — the chip is already in the tree
+#### E6.8.5 CRTC-driven video timing — DONE (2026-09-04, `9fe3b9f`)
 
-`cga-card.js:21` states it plainly: *"The 6845 CRTC at 3D4h/3D5h is NOT
-modelled"*, and retrace is derived from machine time (`_vretraceAt`). That is
-enough to unhang a program polling 3DAh and not enough for one that COUNTS
-scanlines — which is the class XTCE-Blue exists to run. `src/mc6845.js`
-already implements R0-R17 clean-room for the Z80 tier.
-
-Scope: drive the CGA card's timing from an `MC6845` instance so retrace,
-hsync, start address and cursor are EMITTED rather than derived. Bounded, and
-it pairs naturally with E6.8.4 — a scanline count is only meaningful once the
-cycles feeding it are.
+The CGA card is now driven by a real `MC6845` (the clean-room chip the Z80 tier
+already ships): 3D4h/3D5h latch and read back, the START ADDRESS (R12:R13) and
+CURSOR (R14:R15, R10, R11) are emitted via getVideoState, and the vertical-
+retrace proportion is derived from the CRTC's own vertical registers
+(total = (R4+1)*charH + R5, active = R6*charH), recomputed on every 3D5h write.
+It powers on with the standard CGA 80x25 text programming, which reproduces the
+262-total / 200-active frame the card used to hardcode — so an unprogrammed card
+is byte-for-byte unchanged and no 3DAh-polling game is disturbed.
+test/cga-crtc.test.mjs (6). Retrace stays FRAME-grained; a cycle-exact scanline
+count is E6.8.4's cycle timing, which this pairs with.
+HANDOVER: startAddr is a NEW renderer input the DOS/host lane must consume for a
+page flip to change the picture (told lego-47; same explicit shape as the DAC
+and the EGA planes). hsync stays derived — meaningful only cycle-exact (E6.8.4).
 
 #### E6.8.6 A disk-image builder, and a DOS that boots — **DONE, and it was done before this section claimed it was not** (corrected 2026-09-04)
 
