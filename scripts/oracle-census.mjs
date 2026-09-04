@@ -64,6 +64,22 @@ export const INPUTS = [
         ci: 'yes — the `vectors` job checks out v1_binary and grinds all 646,000 per push',
     },
     {
+        id: '8088-vectors', kind: 'oracle',
+        what: 'SingleStepTests 8088 v2 — per-CYCLE bus traces: m-cycle type, T-state, '
+            + 'and the queue F/S/E operations with the byte read. The ONLY thing that can '
+            + 'grade timing and access ORDER; the 8086 suite compares final state and is '
+            + 'blind to both (it could not see INT n reading its vector after pushing). '
+            + 'Grounds src/i8088-biu.js and the cycle costs in src/i8086.js.',
+        env: 'I8088_VECTORS',
+        paths: [join(HOME, 'code', '8088-vectors', 'v2')],
+        gates: ['scripts/grind-i8088-cycles.mjs'],
+        obtain: "git clone --filter=blob:none --sparse --depth 1 "
+            + "https://github.com/SingleStepTests/8088 ~/code/8088-vectors "
+            + "&& cd ~/code/8088-vectors && git sparse-checkout set --no-cone '/v2/*.json.gz' "
+            + '(2.0 GB whole; a sparse subset of opcode files is enough to move the score)',
+        ci: 'not yet — the grind is young and its scores are still moving',
+    },
+    {
         id: 'z80-vectors', kind: 'oracle',
         what: 'SingleStepTests z80 — 1,604 opcode files with full undocumented state '
             + '(X/Y flags, Q latch, R per-M1, WZ). Grounds src/z80.js.',
@@ -148,7 +164,22 @@ export const INPUTS = [
         paths: [],
         gates: ['test/zx-tape.test.mjs', 'test/zx-sna.test.mjs', 'test/zx-z80file.test.mjs',
             'test/zx128.test.mjs'],
-        obtain: 'supply 48.ROM / 128.ROM locally; never vendored — see the STECCY provenance note',
+        // NOT A GAP, AND SHOULD NOT BE CLOSED IN-TREE. Surveyed 2026-09-04:
+        // the provenance note in scripts/spectrum-smoke.mjs is right and the
+        // licence is the reason. Amstrad's 1999 permission (Cliff Lawson, on
+        // Usenet) lets emulator authors redistribute the ROM images UNMODIFIED
+        // with the copyright notices intact and forbids charging for the ROM
+        // itself. Copyright stays with Amstrad; it is not an open licence and
+        // does not fit a BSD-3 tree that vendors nothing.
+        //
+        // So the per-user $ZX_ROM fixture is the correct arrangement rather
+        // than an unfinished one, and this line exists so the next person does
+        // not "fix" it. The documented route is to REBUILD the ROM from
+        // z00m128/zxs-rom's annotated disassembly with sjasmplus and md5-check
+        // it, which produces the artefact without redistributing it.
+        obtain: 'supply 48.ROM / 128.ROM locally, or rebuild from z00m128/zxs-rom '
+            + 'with sjasmplus — never vendored; see the STECCY provenance note and '
+            + 'the licence reasoning above',
         ci: 'no — deliberately, the ROMs are not ours to ship',
     },
     {
@@ -156,9 +187,27 @@ export const INPUTS = [
         what: 'The reference Blinkenrocket firmware hex. Without it the sound-becomes-data '
             + 'modem loop is unproven end to end.',
         env: 'BLINKENROCKET_HEX',
-        paths: [join(HOME, 'code', 'blinkenrocket-firmware', 'build', 'main.hex')],
+        // TWO PATHS, because the clone on this fleet's boxes lives on the data
+        // volume rather than under $HOME, and the entry looked in one place
+        // only -- so a firmware that was checked out AND BUILT reported as
+        // ABSENT, and its gate silently did not run. That is the census's own
+        // failure mode happening to the census.
+        paths: [join(HOME, 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
+            '/mnt/volume1/code/blinkenrocket-firmware/build/main.hex'],
         gates: ['test/blinkenrocket-modem-e2e.test.mjs'],
-        obtain: 'build blinkenrocket-firmware at ref 140e2931',
+        obtain: 'build blinkenrocket-firmware; see the REF WARNING below',
+        // REF WARNING, and it is not a detail. This entry said "build at ref
+        // 140e2931". THAT COMMIT COULD NOT BE FOUND: not in the local clone,
+        // and not in CrispStrobe/, ChrisVeigl/ or blinkenrocket/ upstreams via
+        // the GitHub commit API. The artefact actually present was built from
+        // `813e265`.
+        //
+        // The path is widened so the gate RUNS, and the pin is left unresolved
+        // rather than quietly re-pointed at 813e265: substituting a different
+        // build for a named one is how a fixture stops meaning what its
+        // reader thinks it means. Whoever wrote 140e2931 should say what it
+        // was, or the pin should be replaced deliberately with a ref that
+        // exists.
         ci: 'no',
     },
 ];
