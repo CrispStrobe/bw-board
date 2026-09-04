@@ -45,6 +45,7 @@ import { I8251 } from './i8251.js';
 import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
 import { ADC0809 } from './adc0809.js';
+import { DAC0832 } from './dac0832.js';
 import { HerculesCard } from './hercules-card.js';
 import { VGACard } from './vga-card.js';
 import { EGACard } from './ega-card.js';
@@ -99,6 +100,11 @@ const REGS = {
     // End-Of-Conversion, which is the only way to know a result is ready on a
     // bench with no PIC to deliver an interrupt.
     adc0809: 9,
+    // FOUR PORTS FOR A ONE-BYTE CHIP, because the 0832's two latches are its
+    // feature: 310h loads and transfers, 311h stages, 312h is the XFER strobe.
+    // A card that tied XFER low would need one port and could not move two
+    // converters at the same instant.
+    dac0832: 4,
     pic: 2,          // A0 selects command/status vs data/mask
     usart8251: 2,    // C/D selects data vs control/status
     cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
@@ -503,6 +509,8 @@ export class I8086Machine {
                 });
             } else if (c.kind === 'adc0809') {
                 chip = new ADC0809(config.clockHz, {vref: c.vref, adcClockHz: c.adcClockHz});
+            } else if (c.kind === 'dac0832') {
+                chip = new DAC0832({vref: c.vref});
             } else if (c.kind === 'cga') {
                 chip = new CGACard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
@@ -1149,6 +1157,53 @@ export class I8086Machine {
                     pins: chip[`_pins${P}`] ? chip[`_pins${P}`]() & 0xff : 0xff,
                 });
             }
+        }
+        return out;
+    }
+
+    /**
+     * THE ANALOG HALF OF THE SAME PAIR, and a separate reporter rather than an
+     * extra shape inside `outputPoints()`.
+     *
+     * A DAC's output is a VOLTAGE. It has no per-bit direction, no pin latch
+     * and no notion of "driven" -- the three fields that make an 8255 entry
+     * mean something are all absent, and the one field that matters here has
+     * no counterpart there. Returning both shapes from one method would give
+     * callers a contract they had to type-test before using, which is the
+     * thing `audioTone()` already refuses to do by always returning an array.
+     *
+     * `counts` is reported BESIDE `volts` because they are different facts: a
+     * program wrote the code, the card chose the reference, and a learner
+     * debugging "why is it half what I asked for" needs to see which of the
+     * two is the surprise.
+     *
+     * @returns {Array<{chip: string, counts: number, volts: number, vref: number}>}
+     */
+    analogOutputs() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.volts !== 'function') continue;
+            out.push({ chip: name, counts: chip.counts | 0, volts: chip.volts(), vref: chip.vref });
+        }
+        return out;
+    }
+
+    /**
+     * WHAT THE WORLD CAN PUT INTO THE MACHINE AS A VOLTAGE -- the ADC's
+     * channels, so a knob widget can find them without being told a chip name.
+     *
+     * The digital pair splits the same way and for the same reason:
+     * `inputPoints()` reports what EXISTS and leaves the present value to the
+     * write, because a channel's voltage is the world's to state and the
+     * machine has no opinion about it until something says so.
+     *
+     * @returns {Array<{chip: string, channels: number, vref: number}>}
+     */
+    analogInputs() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setChannel !== 'function') continue;
+            out.push({ chip: name, channels: 8, vref: chip.vref });
         }
         return out;
     }

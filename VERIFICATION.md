@@ -457,6 +457,42 @@ And the general practice, which is cheaper than any of the above:
   in this tree from a different direction — `htmlLen=61` was a fact, and "the
   frontend is empty" was an inference laid on top of it.
 
+### Rule: a test value can be too coarse to detect the error it tests for
+
+A green assertion is evidence only if the value it asserts could have come out
+differently. Measured, 2026-09-04, in this tier:
+
+The PC-speaker test asserted that a program requesting **440 Hz** produced
+440 Hz. It did. Then a deliberate off-by-one was planted in the divisor the
+speaker reads from 8254 counter 2 — the exact arithmetic the test exists to
+check — and **the test stayed green**. 1193182/2712, /2713 and /2714 all round
+to 440, so at that frequency the assertion could not distinguish a correct
+divisor from a wrong one. The test was checking that a tone came out, and
+reporting that as checking the pitch.
+
+The fix was not a better assertion on 440 Hz; no assertion on 440 Hz can work.
+It was a **second frequency chosen for sensitivity**: 4000 Hz has divisor 298,
+where one count moves the answer 13 Hz. The planted error now fails it.
+
+What generalises:
+
+- **Sensitivity is a property of the test VALUE, not of the assertion.**
+  `assert.equal` is exact; 440 was not. Picking the value a learner would type
+  is good for a demo and is not automatically good for a test.
+- **Round numbers are the ones most likely to be insensitive**, because they
+  are round in the units the human chose and arbitrary in the units the
+  hardware works in. 440 Hz is a musical fact; 2712 is the machine's.
+- **Mutation is what exposes this, and only if the mutation is confirmed to
+  land.** The first three mutation attempts in this session included one whose
+  `sed` never matched and one that broke the file's syntax — the latter turned
+  every test red, which reads exactly like a successful red-proof. A file that
+  fails to parse is not a mutated file. Assert the edit landed AND that the
+  module still loads.
+
+The near relative already in this document is "a probe that fails to run looks
+exactly like a probe that found nothing". This is its inverse: a probe that
+runs, passes, and was never able to fail.
+
 ### Rule: a corpus is evidence only about the constructs it contains
 
 Three of the strongest numbers in this tier are corpus agreements — 470 of 525

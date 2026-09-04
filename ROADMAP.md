@@ -2175,6 +2175,79 @@ until halt.)
 
 ---
 
+### E7.2 The auto-added chip vocabulary — closing the block gap (2026-09-04, owner-requested)
+
+The goal the owner set: **full circuits control on the 8086, as Nano, Pico and
+STC already have** — plus games and sound. The gap is not emulation. Measured
+against the STC block vocabulary with the parser's own syntax (the first
+measurement used guessed syntax, was silently dropped, and reported a false
+"empty script" — see VERIFICATION.md on probes that fail to run):
+
+| Block | opcode | 8086 before | after |
+|---|---|---|---|
+| `turn on <pin>` / `read` / `toggle` | `stc12_setpin` etc. | lowers (8255) | lowers |
+| `PIN pot = P1.n ANALOG` + `read pot` | `stc12_read` analog | refused | **lowers** — ADC0809 at 300h (`9ed0a5062`, i8086) |
+| `set <pin> to <expr> hz` | `stc12_settone` | refused | **contract proved** (`0c7fb5f`), lowering pending |
+| `set <pin> to <value>` | `stc12_writepin` | refused | **chip landed** — DAC0832 at 310h |
+| `set <pin> to <n> percent` | `stc12_setpwm` | refused | REFUSES, deliberately — see below |
+| `WHEN <pin> pressed` | `stc12_whenpin` | refused | needs the PIC + scheduler |
+| `PART x = SEG7/KEYPAD4X4 on Pn` | parts | refused | KEYPAD4X4 lowers (`6a2afdd97`, i8086) |
+
+**THE CALLERS ALREADY EXISTED.** This lane twice recorded "there is no caller
+for a DAC" and deferred it. That was wrong, and wrong for a measurable reason:
+the probe used `write <expr> to <pin>`, which is not the syntax. It is `set
+<pin> to <value>`. A vocabulary gap asserted from a probe that never matched is
+the same error class as a mutation whose `sed` pattern did not apply.
+
+**A tone needed NO new chip.** `DOSBOX8086_XT` already carries the 8255, the
+8254 and the PC speaker. P2 maps to port B, so **P2.0 and P2.1 literally are
+the timer-2 gate and the speaker data line** — a tone on those pins is the real
+PC mechanism, not a substitution, and a tone on any other pin must refuse by
+name rather than silently ignore the pin the learner declared.
+
+**And a tone shares a byte with the pins, which is a contract and not a
+detail.** An 8255 output port is written whole, so a tone and a lit LED are two
+bits of one latch. Measured, both orders, from assembled programs:
+
+- raw `OUT 61h` then a pin write → **the tone stops** (the pin shadow has the
+  gate bits clear).
+- a pin write then raw `OUT 61h` → the tone survives but **the shadow now
+  disagrees with the port**: the LED is dark and the program believes it is
+  lit. This is the worse failure, because nothing reports it.
+- the tone routed through `BW_PORTB` → both orders give tone **and** LED, and
+  the shadow matches the port.
+
+So `settone` MUST use the same shadow byte as the pin writes.
+
+**`setpwm` REFUSES, and that is the considered answer.** A DAC would give the
+same visible LED brightness by a different mechanism, so a scope, a motor or an
+RC filter would disagree with the lamp — a substitution whose warning a learner
+cannot act on. Genuine PWM on an 8255 pin is software PWM driven from the IRQ0
+tick, which is real work and not yet done. Until it is, a refusal by name is
+honest and a green example bought with a substitution is not. (Ruling: i8086,
+2026-09-04; this lane concurred and dropped its DAC-for-PWM proposal.)
+
+**Ports.** The XT prototype-card block 300h–31Fh is where a learner's board
+goes. 300h–308h is the ADC; **310h–313h is the DAC**; the window is four ports
+rather than one because the 0832's two latches are its actual feature.
+
+**The DAC is write-only and its full scale is Vref × 255/256.** Reading returns
+open bus, not the last value written — a model that echoed the write back would
+teach that a DAC can be read. Code 255 gives 4.980 V and nothing gives 5.000 V.
+
+**A new reporter pair, `analogOutputs()` / `analogInputs()`,** separate from
+`outputPoints()`/`inputPoints()` rather than folded into them: a voltage has no
+per-bit direction and no pin latch, and returning two shapes from one method
+would hand callers a contract they had to type-test — the thing `audioTone()`
+already refuses to do by always returning an array. An empty list means NO
+analog output, which is not the same as an output sitting at zero.
+
+**Still open:** the `settone` and `writepin` lowerings themselves (i8086 owns
+`pseudocode-8086.js`); software PWM from the tick; `whenpin`, which needs a PIC
+`DOSBOX8086_XT` deliberately omits; and the remaining `PART` vocabulary.
+
+---
+
 ## Sequencing
 
 1. **E0** (all) — days; removes shipped wrong answers.
