@@ -1092,15 +1092,26 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    real VGA power-on palette — correct colour for free. No CRTC: 320x200 is a
    constant in the renderer's mode table, not derived from R0-R18.
    test/i8086-vga-demo.test.mjs asserts the discriminator + the linear buffer.
-4. **Hercules graphics — STATE DONE (`830af06`), render pending.** HERCDEMO8086
-   (HGC + the B000:0000 mono page) + rom/hercules-demo.bin (720x348 mono, 4-wide
-   bars) + a state test pinning the FOUR-bank y-mod-4 layout. NOT wired into the
-   loader: lego-47 measured the renderer refuses HGC by name today (mode 6h,
-   "720x348 mono at B0000h, which this renderer does not draw"), so a UI entry
-   would show a refusal string, not a picture. The blocker is on the DOS/host
-   side — the four-bank decode (NOT the CGA scanline-parity one; a CGA-analogy
-   decoder yields a coherent quarter-height wrong image). Ships as verified
-   state, ready to wire the moment that decode lands.
+   **PIXEL-VERIFIED (2026-09-04): lego-47 ran the ROM through video() — 320x200,
+   row 6 = 170,85,0 (the IBM brown fix, which can only come from the renderer's
+   default table since the firmware programs no DAC — so the no-DAC choice held
+   end to end), 198 distinct row colours (200 bands, two genuine palette dupes:
+   entry 16 restarts the gray ramp at black/white). CLOSED.** Note: the ROM
+   spins rather than HLTs (correct for a demo that stays on screen).
+4. **Hercules graphics — STATE DONE (`830af06`); decode landing, then loader
+   entry (this lane) — 2026-09-04.** HERCDEMO8086 (HGC + the B000:0000 mono
+   page) + rom/hercules-demo.bin (720x348 mono, 4-wide bars) + a state test
+   pinning the FOUR-bank y-mod-4 layout. lego-47 has WRITTEN AND VERIFIED the
+   renderer's four-bank decode ((1,1) lit proves bank 1 at +0x2000 and bit6->x=1;
+   (0,4) proves the within-bank +90-byte stride) — landing with tests shortly,
+   as pseudo-mode 0x100 (Hercules graphics has no INT 10h mode number; it is
+   selected only by 3BFh/3B8h, which is why every HGC program is bare-metal).
+   They also fixed a latent trap: modeFromHercules had returned 0x06, which is
+   CGA 640x200 in the mode table — B8000h + two-bank parity — and would have
+   drawn our B0000h/four-bank framebuffer at the wrong address with the wrong
+   arithmetic: a coherent, plausible, entirely wrong picture. Once their decode
+   is pushed, THIS lane wires the HERCDEMO loader entry (the seam holds: my
+   registers, their pixels), and Hercules closes.
 5. **EGA — LAST, and it needs a card first.** No ega-card.js exists yet; EGA's
    planar four-bitplane memory is the hardest of the set. Build the card (this
    lane), then the board + demo, then the renderer's planar decode (DOS/host).
