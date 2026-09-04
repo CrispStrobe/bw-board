@@ -155,8 +155,12 @@ export function disasmI8086(read, addr, opts = {}) {
         // A displacement byte or word that happens to be zero is still
         // PRINTED (`[ss:bp+si+0h]`): mod says whether one was encoded, and
         // the value it holds does not get a vote.
+        // The direct form IS an address, so it takes a label -- and it takes
+        // one at any width. The old regex needed four digits, so a datum at
+        // 0042h could never be named while one at 1042h could, which is a
+        // distinction nothing in the machine makes.
         const inner = mod === 0 && rm === 6
-            ? hx(direct)
+            ? label(direct, hx(direct))
             : RM[rm] + (mod === 0 ? '' : (disp < 0 ? '-' : '+') + hx(Math.abs(disp)));
         return `${size ? size + ' ' : ''}[${s}:${inner}]`;
     };
@@ -168,14 +172,36 @@ export function disasmI8086(read, addr, opts = {}) {
     // is the default; the vector suite's own disassembler measures from the
     // instruction's start instead, and asks for that with targetBase: 0.
     const relBase = (opts.targetBase ?? ip0) & 0xffff;
-    const rel = (d) => hx4((relBase + i + d) & 0xffff);
 
-    const done = (text) => {
-        if (opts.labels) {
-            text = text.replace(/\b([0-9A-F]{4})h\b/g, (m0, hex) => opts.labels.get(parseInt(hex, 16)) ?? m0);
-        }
-        return { text: (lock ? 'lock ' : '') + text, bytes, length: i };
-    };
+    /**
+     * A number that IS AN ADDRESS, rendered as its label when one is known.
+     *
+     * SUBSTITUTION IS BY POSITION, NOT BY PATTERN, and that is the whole
+     * point of this function. The obvious implementation -- and the one this
+     * module shipped, and the one `w65c02-disasm.js` and `z80-disasm.js`
+     * still use -- is a regex over the finished text swapping any four-digit
+     * hex value for a label. That is safe in 6502 syntax, where a 16-bit
+     * value can only BE an address because immediates are eight bits and
+     * carry a `#`. It is not safe here. In 8086 syntax an immediate and an
+     * address look identical, so `mov ax, 1234h` became `mov ax, start` and
+     * `enter 9C4Bh, 1Ah` -- a frame SIZE -- became `enter start, 1Ah`. A
+     * debugger pane that renames a constant after some unrelated label is
+     * not a cosmetic problem: it is the pane inventing a cross-reference
+     * that does not exist.
+     *
+     * So only the operands that are genuinely addresses ask for a label:
+     * relative jump and call targets, and the direct `[seg:addr]` memory
+     * form. Immediates never do.
+     *
+     * NOT LABELLED, deliberately: the far `SSSS:OOOOh` pointer of `callf` and
+     * `jmpf`. Its offset means nothing without its segment, and a map keyed
+     * on sixteen bits cannot say which segment a name belongs to -- labelling
+     * it would be right only when CS happens to match.
+     */
+    const label = (v, rendered) => opts.labels?.get(v & 0xffff) ?? rendered;
+    const rel = (d) => { const t = (relBase + i + d) & 0xffff; return label(t, hx4(t)); };
+
+    const done = (text) => ({ text: (lock ? 'lock ' : '') + text, bytes, length: i });
 
     // ---- the 80186 additions --------------------------------------------
     // Same shape as the core's _exec186: the 186 gets first refusal, because
@@ -297,13 +323,17 @@ export function disasmI8086(read, addr, opts = {}) {
         case 0x9d: return done('popf');
         case 0x9e: return done('sahf');
         case 0x9f: return done('lahf');
+        // The moffs forms render their address inline rather than through
+        // mem(), so they need the label call of their own -- and they are the
+        // most label-worthy operand in the instruction set, being a bare
+        // global variable with nothing else in the brackets.
         case 0xa0: case 0xa1: {
             const a = imm16(), w = op & 1;
-            return done(`mov ${w ? 'ax' : 'al'}, ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${hx(a)}]`);
+            return done(`mov ${w ? 'ax' : 'al'}, ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${label(a, hx(a))}]`);
         }
         case 0xa2: case 0xa3: {
             const a = imm16(), w = op & 1;
-            return done(`mov ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${hx(a)}], ${w ? 'ax' : 'al'}`);
+            return done(`mov ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${label(a, hx(a))}], ${w ? 'ax' : 'al'}`);
         }
         case 0xa8: return done(`test al, ${hx(imm8())}`);
         case 0xa9: return done(`test ax, ${hx(imm16())}`);
