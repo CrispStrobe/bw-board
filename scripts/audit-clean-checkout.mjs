@@ -38,7 +38,7 @@
  * @module
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, symlinkSync, existsSync, readdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, symlinkSync, existsSync, readdirSync, mkdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -59,6 +59,23 @@ if (!files.length) {
     process.exit(2);
 }
 
+/** `packages/<x>/node_modules` and the like — one level of nesting is what
+ *  this monorepo has, and a deeper search would spend its time in the trees
+ *  it is about to symlink. */
+function nestedNodeModules () {
+    const out = [];
+    for (const top of ['packages', 'overlay']) {
+        const dir = join(ROOT, top);
+        if (!existsSync(dir)) continue;
+        for (const e of readdirSync(dir)) {
+            const cand = join(dir, e, 'node_modules');
+            try { if (statSync(cand).isDirectory()) out.push(join(top, e, 'node_modules')); }
+            catch { /* none here */ }
+        }
+    }
+    return out;
+}
+
 const work = mkdtempSync(join(tmpdir(), 'clean-checkout-'));
 try {
     // EXACTLY THE TRACKED TREE. `git archive` cannot include an untracked
@@ -68,8 +85,20 @@ try {
         `git -C ${JSON.stringify(ROOT)} archive HEAD | tar -x -C ${JSON.stringify(work)}`],
     {stdio: 'inherit'});
 
-    const nm = join(ROOT, 'node_modules');
-    if (existsSync(nm)) symlinkSync(nm, join(work, 'node_modules'), 'dir');
+    // EVERY node_modules, not just the root one. This is a monorepo: the
+    // first version symlinked `<root>/node_modules` alone and a test importing
+    // `packages/scratch-gui/src/lib/sb3-creator.js` failed with "Cannot find
+    // package 'jszip'" -- which the audit then reported as a missing FIXTURE.
+    // An absent dependency and an absent fixture are different faults and the
+    // gate must not confuse them, or it names the victim instead of the cause,
+    // which is the shape it exists to stop.
+    for (const rel of ['node_modules', ...nestedNodeModules()]) {
+        const src = join(ROOT, rel);
+        if (!existsSync(src)) continue;
+        const dst = join(work, rel);
+        mkdirSync(dirname(dst), {recursive: true});
+        try { symlinkSync(src, dst, 'dir'); } catch { /* already there */ }
+    }
 
     console.log(`clean checkout at ${work}\n`);
     let failed = 0;
