@@ -89,39 +89,41 @@ const cpu = new I8086({
 const REGS = ['ax', 'bx', 'cx', 'dx', 'cs', 'ss', 'ds', 'es', 'sp', 'bp', 'si', 'di', 'ip'];
 
 /**
- * The suite's cycle count for one test.
+ * The suite's cycle count for one test: `cycles.length`.
  *
- * NOT `cycles.length`. The README is explicit: an instruction's trace begins
- * at the queue-status "First Byte" and ends when the FIRST BYTE OF THE NEXT
- * instruction is read from the queue, so the array carries lead-in Ti cycles
- * and a tail that belongs to the next instruction. Measuring the array's
- * length would be measuring the harness rather than the instruction, and it
- * would be wrong by a different amount for every prefix.
+ * THIS IS THE THIRD VERSION AND THE FIRST CORRECT ONE. The two before it each
+ * produced a full baseline before being caught, which is why the reasoning is
+ * here rather than in a commit message.
+ *
+ *  (1) "first F to end of trace" -- a LOWER BOUND dressed as a measurement.
+ *      Half the traces have no second F and for `inc ax` it is all ten
+ *      thousand, so it graded truncation and reported 10.6% exact.
+ *
+ *  (2) "first F to second F" -- wrong because the README's own sentence
+ *      continues: a First Byte "may be an optional instruction PREFIX, in
+ *      which case there will be multiple First Byte statuses". On `cs nop`
+ *      the two F markers are the prefix and the opcode, two cycles apart, and
+ *      both belong to the SAME instruction. It showed as a span distribution
+ *      of exactly {2, 4} on `nop`: two for the prefixed half of the file.
+ *
+ *  (3) byte-counted -- "the F after this instruction's own bytes" -- which
+ *      made EVERY vector ungradeable, and that was the answer: the traces do
+ *      not contain the next instruction at all. The suite has ALREADY bounded
+ *      each trace to its instruction, so the count is simply the length.
+ *
+ * Checked against documented timings rather than assumed a fourth time:
+ * `inc ax` (2 clocks) measures 2, `nop` (3) measures 3, and one prefix adds 2.
+ *
+ * AND THE COUNT IS BIMODAL, WHICH IS THE POINT. `inc ax` is 2 OR 4; `nop` is
+ * 3 or 4. The README says why: an instruction that ended with the next byte
+ * already in the queue takes the documented BEST CASE, and one that had to
+ * fetch it takes longer. So a fixed cycle table -- which is what this core
+ * has -- can only ever match the best-case half, by construction. That is not
+ * a defect in the table; it is the entire argument for a BIU.
  */
 function suiteCycles(t) {
     const c = t.cycles || [];
-    let first = -1;
-    for (let i = 0; i < c.length; i++) {
-        if (c[i][9] === 'F') { first = i; break; }
-    }
-    if (first < 0) return null;
-    for (let i = first + 1; i < c.length; i++) {
-        if (c[i][9] === 'F') return i - first;       // the next instruction began
-    }
-    // NO SECOND `F` MEANS NO CYCLE COUNT, and returning `c.length - first`
-    // here -- which this did -- returns a LOWER BOUND dressed as a
-    // measurement. The README is the reason: an instruction ends when the
-    // next one's first byte is read from the queue, and "there is no
-    // indication from the CPU when an instruction ends, only when a new one
-    // begins." A trace that stops before that has not said how long the
-    // instruction was.
-    //
-    // It is not a rare case. Measured across the three checked-out files:
-    // HALF the traces have no second F, and for `inc ax` it is ALL TEN
-    // THOUSAND -- so a baseline computed the other way was mostly grading
-    // against truncation, and reported 0.0% exact on 40 for that reason
-    // rather than for any reason about the core.
-    return null;
+    return c.length || null;
 }
 
 let run = 0, exact = 0, notYet = 0, ungradeable = 0;

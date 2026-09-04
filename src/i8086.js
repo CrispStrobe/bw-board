@@ -94,6 +94,7 @@
  */
 
 /** A 16-bit word read as a signed number -- BOUND and IMUL both need it. */
+const NOOP = () => {};
 const sx16 = (v) => ((v & 0xffff) ^ 0x8000) - 0x8000;
 
 // Flag bits in FLAGS.
@@ -144,8 +145,10 @@ export class I8086 {
         this._is186 = this.variant === '80186';
         this.read = bus.read;
         this.write = bus.write;
-        this.inPort = bus.in || (() => 0xff);
-        this.outPort = bus.out || (() => {});
+        this._inPort = bus.in || (() => 0xff);
+        this.inPort = (p) => { if (this.busTrace !== null) this.busTrace.push(3, p & 0xffff); return this._inPort(p); };
+        this._outPort = bus.out || (() => {});
+        this.outPort = (p, v) => { if (this.busTrace !== null) this.busTrace.push(4, p & 0xffff); return this._outPort(p, v); };
         // Asked between REP iterations: is an interrupt waiting? The machine
         // layer owns the answer (PIC line AND the interrupt flag); a bare
         // core with no machine says no and REP runs to completion, which is
@@ -163,6 +166,8 @@ export class I8086 {
         this.flags = fixFlags(0);
         this.halted = false;
         this.cycles = 0;
+        /** null, or an array the bus operations are appended to. See _rd8. */
+        this.busTrace = null;
         this._seg = -1;          // active segment override VALUE, -1 for none
         this._rep = 0;           // 0, 0xf2 (REPNE) or 0xf3 (REP/REPE)
         // Set by an instruction that loads a segment register; blocks one
@@ -226,8 +231,56 @@ export class I8086 {
      *  bits, the sum at 20 (the 8086 has no A20 gate to hold it open). */
     static phys(seg, off) { return (((seg & 0xffff) << 4) + (off & 0xffff)) & 0xfffff; }
 
-    _rd8(seg, off) { return this.read(I8086.phys(seg, off)) & 0xff; }
-    _wr8(seg, off, v) { this.write(I8086.phys(seg, off), v & 0xff); }
+    /**
+     * THE BUS TRACE (E6.8.4c). `cpu.busTrace = []` records the sequence of bus
+     * operations an instruction performs -- fetches, data reads and writes,
+     * port reads and writes, in order, with their physical addresses. Null by
+     * default and one truthiness test per access when off, which is the same
+     * zero-cost rule the write watchpoint and the port hooks follow.
+     *
+     * It exists because the BIU model (src/i8088-biu.js) is fed by it rather
+     * than by making this core cycle-stepped. A cycle-stepped core would touch
+     * the instruction path everything else in the tier depends on -- measured
+     * at 19x real time on the bare core -- to serve a DEBUGGING mode. An
+     * access trace costs nothing when nobody is recording and carries exactly
+     * what a bus scheduler needs: what the EU asked for, and in what order.
+     *
+     * What it deliberately does NOT carry is WHEN within the instruction each
+     * access happened. That is the known boundary of this design and the
+     * reason `tstate` is not among the scores the grinder claims.
+     *
+     * Kinds: 0 fetch, 1 read, 2 write, 3 in, 4 out.
+     */
+    // THE FAST PATH IS THE ORIGINAL ONE-LINER, and that is not style. Writing
+    // the trace check inline turned these from single expressions into
+    // multi-statement bodies, and the bench caught the cost by INVERSION:
+    // machine/core rose from 0.284 to 0.417 and boot/core from 0.176 to 0.218.
+    // Both ratios "improving" meant the CORE had slowed -- `core` is pure core
+    // and takes the full hit, while the other two spend most of their time
+    // elsewhere. Roughly a third of the bare core's speed, to serve a
+    // debugging mode that is off by default, which is exactly what this
+    // design set out to avoid.
+    //
+    // So the traced path is a separate, cold method and the untraced path is
+    // byte-for-byte what it was.
+    _rd8(seg, off) {
+        return this.busTrace === null
+            ? this.read(I8086.phys(seg, off)) & 0xff
+            : this._rd8Traced(seg, off);
+    }
+
+    _rd8Traced(seg, off) {
+        const a = I8086.phys(seg, off);
+        this.busTrace.push(1, a);
+        return this.read(a) & 0xff;
+    }
+
+    _wr8(seg, off, v) {
+        if (this.busTrace === null) { this.write(I8086.phys(seg, off), v & 0xff); return; }
+        const a = I8086.phys(seg, off);
+        this.busTrace.push(2, a);
+        this.write(a, v & 0xff);
+    }
     _rd16(seg, off) {
         return this._rd8(seg, off) | (this._rd8(seg, (off + 1) & 0xffff) << 8);
     }
@@ -237,7 +290,24 @@ export class I8086 {
     }
 
     // ---- instruction fetch ----------------------------------------------
-    _fetch8() { const b = this._rd8(this.cs, this.ip); this.ip = (this.ip + 1) & 0xffff; return b; }
+    /** A FETCH IS NOT A READ, and this no longer goes through _rd8 for that
+     *  reason: routing it there would record every instruction byte twice --
+     *  once as the fetch it is and once as a data read it is not -- and a bus
+     *  scheduler fed that trace would invent a memory cycle per opcode byte. */
+    _fetch8() {
+        if (this.busTrace !== null) return this._fetch8Traced();
+        const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
+        this.ip = (this.ip + 1) & 0xffff;
+        return b;
+    }
+
+    _fetch8Traced() {
+        const a = I8086.phys(this.cs, this.ip);
+        this.busTrace.push(0, a);
+        const b = this.read(a) & 0xff;
+        this.ip = (this.ip + 1) & 0xffff;
+        return b;
+    }
     _fetchS8() { const b = this._fetch8(); return b & 0x80 ? b - 256 : b; }
     _fetch16() { return this._fetch8() | (this._fetch8() << 8); }
 
@@ -980,12 +1050,31 @@ export class I8086 {
         // Prefixes. There is no length limit on real silicon and the last
         // segment override wins, so this is a loop and not an if.
         for (;;) {
-            const b = this._rd8(this.cs, this.ip);
+            // A PEEK, NOT A BUS CYCLE. This looks at the next byte to decide
+            // whether it is a prefix, and if it is not, `_fetch8()` below reads
+            // the same byte again. Real silicon takes it from the queue once.
+            //
+            // Routing the peek through _rd8 therefore recorded TWO accesses per
+            // instruction that hardware never makes -- a spurious data read of
+            // every prefix byte, and a duplicate of every opcode byte -- which
+            // the bus trace exposed the moment it existed. Harmless in RAM,
+            // where a read has no effect; NOT harmless over a memory-mapped
+            // device, where executing from a window with read side effects
+            // would trigger them twice. Recorded in ROADMAP E6.8.4c.
+            //
+            // The peek is now silent and the CONSUMPTION of a prefix records a
+            // fetch, which is what the queue actually sees.
+            const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
+            // Not a closure per instruction: allocating one on every step is
+            // measurable in a loop this hot, and the trace is off by default.
+            const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, I8086.phys(this.cs, this.ip));
             if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e) {
+                eaten();
                 this.ip = (this.ip + 1) & 0xffff; n += 2;
                 this._seg = b === 0x26 ? this.es : b === 0x2e ? this.cs
                     : b === 0x36 ? this.ss : this.ds;
             } else if (b === 0xf2 || b === 0xf3) {
+                eaten();
                 // Remember WHERE the REP prefix is, not just that there is
                 // one: an interrupt taken mid-REP resumes from here, and
                 // anything in front of it is lost. See _repeat().
@@ -993,6 +1082,7 @@ export class I8086 {
                 this.ip = (this.ip + 1) & 0xffff; n += 2;
                 this._rep = b;
             } else if (b === 0xf0 || b === 0xf1) {
+                eaten();
                 this.ip = (this.ip + 1) & 0xffff; n += 2;   // LOCK, and its alias
             } else break;
         }
@@ -1067,12 +1157,19 @@ export class I8086 {
             case 0x3f: this._aas(); return 4;
 
             // ---- 0x40-0x5f: INC/DEC and PUSH/POP of the word registers ---
+            // TWO CLOCKS, NOT THREE, and this was wrong until the 8088 bus
+            // traces could say so (E6.8.4c). Intel's table gives 2 for the
+            // 16-bit REGISTER form and 3 for the 8-bit one; we had 3 for both.
+            // The suite's `40` file is 5000 traces of exactly 2 cycles and
+            // 5000 of exactly 4 -- the best case and the case where the next
+            // byte had to be fetched -- and we matched neither, scoring 0 of
+            // 10,000 on the first correct run of the new grinder.
             case 0x40: case 0x41: case 0x42: case 0x43:
             case 0x44: case 0x45: case 0x46: case 0x47:
-                this._r16set(op & 7, this._inc(this._r16(op & 7), 1)); return 3;
+                this._r16set(op & 7, this._inc(this._r16(op & 7), 1)); return 2;
             case 0x48: case 0x49: case 0x4a: case 0x4b:
             case 0x4c: case 0x4d: case 0x4e: case 0x4f:
-                this._r16set(op & 7, this._dec(this._r16(op & 7), 1)); return 3;
+                this._r16set(op & 7, this._dec(this._r16(op & 7), 1)); return 2;
             // PUSH SP pushes the ALREADY DECREMENTED value on the 8086. The
             // 286 changed it, and the difference is how software tells the
             // two apart, so it is not a detail to normalise away.

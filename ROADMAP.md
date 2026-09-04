@@ -1365,26 +1365,55 @@ baseline read 10.6% exact and was mostly grading truncation; `40` scored 0.0%
 for that reason and not for any reason about the core. Those vectors are now
 excluded and COUNTED.
 
-**THE BASELINE, on 30,000 vectors of which 10,022 are gradeable:**
+**THE MEASUREMENT WAS WRONG THREE TIMES BEFORE IT WAS RIGHT, and each wrong
+version produced a full baseline.** `lego-47` is why it was caught: *"before
+you conclude anything about the model, calibrate the MEASUREMENT against
+instructions whose timing is documented and uncontroversial. All-positive with
+a tight median is exactly the signature of a definitional offset rather than a
+modelling error."* It was.
+
+1. *First F to end of trace* — a lower bound dressed as a measurement. Half
+   the traces have no second F; for `inc ax` it is all ten thousand. Reported
+   10.6% exact while mostly grading truncation.
+2. *First F to second F* — wrong because the README's sentence continues: a
+   First Byte *"may be an optional instruction PREFIX, in which case there
+   will be multiple First Byte statuses"*. On `cs nop` the two F markers are
+   the prefix and the opcode, **two cycles apart, both the same instruction**.
+   The tell was a span distribution of exactly `{2, 4}` on `nop`.
+3. *Byte-counted* — made every vector ungradeable, and that WAS the answer:
+   the traces do not contain the next instruction at all. **The suite has
+   already bounded each trace, so the count is simply `cycles.length`.**
+
+Checked against documented timings rather than assumed a fourth time: `inc ax`
+(2 clocks) measures 2, `nop` (3) measures 3, one prefix adds 2.
+
+**AND THE COUNT IS BIMODAL, WHICH IS THE WHOLE ARGUMENT FOR A BIU.** `inc ax`
+is 2 **or** 4; `nop` is 3 or 4. An instruction that ended with the next byte
+already queued takes the documented best case; one that had to fetch it takes
+longer. **A fixed cycle table can only ever match the best-case half, by
+construction** — and `nop` scores exactly 50.0%, which is that prediction
+landing on the nose.
+
+**THE BASELINE, and the first movement of it:**
 
 ```
-exact           0.0%
-within +/-1    31.6%
-within +/-4    62.2%
-error median     +3      range +1 .. +21
+                    baseline    after the INC/DEC fix
+exact                 20.8%          37.5%
+within +/-1           62.4%          45.7%
+within +/-4           74.1%          74.1%
+error median            -1             -3     range -15 .. -1
 ```
 
-**We OVERCOUNT, always, and that is the opposite of what was predicted.** The
-header of this script expected undercounting: our numbers are published *8086*
-timings and an 8088's eight-bit bus adds four cycles to every word access, so
-the suite's figures should be larger. Every single error is positive.
+We UNDERCOUNT, which is what was predicted all along once the measurement was
+right: an 8088's eight-bit bus adds cycles we do not model.
 
-The likely reason is that the F-to-F span measures execution as the QUEUE sees
-it — the documented best case for a fully-prefetched instruction — while our
-counts add EA calculation the 8088 overlaps with prefetching. **That is a
-hypothesis and is written as one.** Establishing it is the first task of the
-BIU work rather than something to assert here, and it is exactly the kind of
-claim this section has twice had to retract.
+**The instrument found a real defect on its first correct run.** `INC r16` and
+`DEC r16` returned 3 clocks; Intel's table gives 2 for the 16-bit REGISTER
+form and 3 for the 8-bit one, and the suite's `40` file is 5,000 traces of
+exactly 2 and 5,000 of exactly 4. We matched neither and scored 0 of 10,000.
+Fixed, and that file now scores exactly 50.0% — the best-case half, like
+`nop`. 646,000/646,000 unaffected: the 8086 grinder does not compare cycles,
+which is precisely why this one had to exist.
 
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
