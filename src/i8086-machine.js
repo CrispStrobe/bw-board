@@ -1111,6 +1111,41 @@ export class I8086Machine {
      * scancodes and call this; it is machine-agnostic, needing only a PPI + PIC.
      */
     /**
+     * WHAT THE WORLD CAN SEE THE MACHINE DOING — the counterpart to
+     * `inputPoints()`, and the half that makes an LED possible.
+     *
+     * Each entry is one 8255 port: what the chip DRIVES (`value`), which bits
+     * it drives at all (`dir`, 1 = driven by the chip), and what the pins
+     * actually carry (`pins`, the latch where it drives and the input
+     * elsewhere). All three are needed and none substitutes for another --
+     * `value` alone would light an LED on a bit configured as an INPUT, which
+     * is a lamp for a wire the chip is not driving.
+     *
+     * DIRECTION IS REPORTED HERE AND NOT IN `inputPoints()`, and the asymmetry
+     * is deliberate rather than an oversight. A caller writing an input asks
+     * "can I drive this", which only the write can answer. A caller DRAWING an
+     * output must know, this frame, which bits mean anything -- and it is
+     * reading a snapshot it is about to render, so a value that is one
+     * instruction stale is exactly as stale as everything else in the frame.
+     */
+    outputPoints() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setInput !== 'function') continue;   // an 8255-shaped chip
+            for (const port of ['a', 'b', 'c']) {
+                const P = port.toUpperCase();
+                out.push({
+                    chip: name, port, bits: 8,
+                    value: chip[`out${P}`] & 0xff,
+                    dir: chip[`dir${P}`] & 0xff,
+                    pins: chip[`_pins${P}`] ? chip[`_pins${P}`]() & 0xff : 0xff,
+                });
+            }
+        }
+        return out;
+    }
+
+    /**
      * WHAT A WIDGET OR A CODE BLOCK CAN CHANGE ABOUT THE WORLD.
      *
      * Every input point the machine currently has, as `{chip, port, bits}`.

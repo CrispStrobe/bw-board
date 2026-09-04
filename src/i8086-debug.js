@@ -311,6 +311,13 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // same terms as `keys`: an affordance appears exactly when the
                 // machine can honour it.
                 inputs: typeof machine.inputPoints === 'function' ? machine.inputPoints() : [],
+                // What a widget can SHOW. Declared like `inputs` and for the
+                // same reason: an LED panel on a board with no port chip
+                // would be eight lamps that never light, which reads as a
+                // broken program rather than an absent chip.
+                outputs: typeof machine.outputPoints === 'function'
+                    ? machine.outputPoints().map(({ chip, port, bits }) => ({ chip, port, bits }))
+                    : [],
                 // Whether this target can BE GIVEN symbols, not whether it
                 // has any. A host asks this to decide whether the control
                 // exists at all; whether it does anything is setSymbols()'s
@@ -356,6 +363,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          * machine is DOING, and this changes what the machine SEES. A
          * workbench that can only observe is a television.
          */
+        /**
+         * The output ports, READ FRESH. `capabilities()` lists which ports
+         * exist -- a shape that does not change -- and this reports what they
+         * are doing right now, because a renderer asks every frame and a value
+         * captured in a capability would be a photograph.
+         */
+        outputs() {
+            return typeof machine.outputPoints === 'function' ? machine.outputPoints() : [];
+        },
+
         setInput(chip, port, bit, level) {
             return typeof machine.setInput === 'function'
                 ? machine.setInput(chip, port, bit, level) : false;
