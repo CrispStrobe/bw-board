@@ -20,11 +20,26 @@
  * audio-contract.test.mjs proves they fail it.
  */
 
-/** Frequency from zero crossings — a FREQUENCY, not a score. */
+/**
+ * Frequency from crossings of the signal's MEAN — a FREQUENCY, not a score.
+ *
+ * MEAN-RELATIVE AND NOT ZERO-RELATIVE, and the second producer is why. A PC
+ * speaker is one bit driving a cone and renders BIPOLAR, ±1 about zero. The
+ * AY-3-8912 renders UNIPOLAR: its levels run 0..1, because a gated-off
+ * channel contributes zero and there is no negative half. Counting crossings
+ * of zero measures the speaker correctly and finds NOTHING at all in the AY,
+ * which would have read as a broken chip rather than as a broken test.
+ *
+ * Removing the mean is right for both: for a symmetric signal the mean is
+ * already zero and nothing changes.
+ */
 export function freqFromCrossings(buf, sampleRate) {
+    let mean = 0;
+    for (let i = 0; i < buf.length; i++) mean += buf[i];
+    mean /= buf.length || 1;
     let first = -1, last = -1, crossings = 0;
     for (let i = 1; i < buf.length; i++) {
-        if (buf[i - 1] < 0 && buf[i] >= 0) {
+        if (buf[i - 1] < mean && buf[i] >= mean) {
             if (first < 0) first = i; else last = i;
             crossings++;
         }
@@ -40,8 +55,14 @@ export function freqFromCrossings(buf, sampleRate) {
 function goertzel(buf, sampleRate, hz) {
     const w = 2 * Math.PI * hz / sampleRate;
     const coeff = 2 * Math.cos(w);
+    // DC removed for the same reason as above: a unipolar producer's offset
+    // is energy at 0 Hz, and leaving it in flatters every bin equally without
+    // telling us anything about pitch.
+    let mean = 0;
+    for (let i = 0; i < buf.length; i++) mean += buf[i];
+    mean /= buf.length || 1;
     let s0 = 0, s1 = 0, s2 = 0;
-    for (let i = 0; i < buf.length; i++) { s0 = buf[i] + coeff * s1 - s2; s2 = s1; s1 = s0; }
+    for (let i = 0; i < buf.length; i++) { s0 = (buf[i] - mean) + coeff * s1 - s2; s2 = s1; s1 = s0; }
     return s1 * s1 + s2 * s2 - coeff * s1 * s2;
 }
 

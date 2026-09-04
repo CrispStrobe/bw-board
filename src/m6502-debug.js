@@ -63,7 +63,30 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         breakpoints: [...(symbols ? ['code', 'yield'] : ['code']), 'write'],
         timeFreezes: true,
         consumes: [],
+        // Two audio contracts (E6.8.11a). 'tone' is what the hardware is
+        // CONFIGURED to produce and 'samples' is what it SOUNDS like;
+        // 'samples' is advertised only when a chip on this machine can
+        // really render them, for the same reason `steps` does not list
+        // anything the core cannot do.
+        audio: machine.canRenderAudio && machine.canRenderAudio()
+          ? ['tone', 'samples']
+          : ['tone'],
       };
+    },
+
+    /** Per-voice {hz, on, vol}; always an array, empty when nothing sounds. */
+    audio() {
+      return typeof machine.audioTone === 'function' ? machine.audioTone() : [];
+    },
+
+    /**
+     * Drain rendered samples into `dest`. Returns frames of REAL audio; the
+     * rest of `dest` is silence the bus counted as an underrun rather than
+     * stretching what it had.
+     */
+    readAudio(dest, frames) {
+      if (!machine.canRenderAudio || !machine.canRenderAudio()) return 0;
+      return machine.audio.read(dest, frames);
     },
 
     state() { return runState; },

@@ -26,9 +26,34 @@
  *     — but hiding it is not, so `stats.underruns` counts the frames that
  *     were invented. A number somebody can read beats a glitch somebody
  *     notices.
+ *   - STARVED. A source supplied fewer frames than it was asked for. Added
+ *     after the AY proved it was needed: the shortfall used to be padded
+ *     silently, the ring filled normally, `read()` never underran, and the
+ *     only symptom was a frequency that came out wrong for no visible
+ *     reason. Silence mixed INLINE between real samples corrupts the pitch of
+ *     what remains rather than merely thinning it.
  *   - CLIP. Several sources summing past full scale are clamped, and
  *     `stats.clipped` counts the samples. "The mix is distorting" should be
  *     a fact you can assert on, not a thing you hear.
+ *
+ * TWO KINDS OF PRODUCER, AND THE SECOND ONE CHANGED THIS CONTRACT. The first
+ * draft assumed every source could render on demand, which is true of a chip
+ * whose output is DERIVED — `pc-speaker.js` has no counters of its own, it
+ * reads a divisor and computes a square wave, so it can produce any interval
+ * at any time. The AY-3-8912 is the other kind: it is clocked by the machine
+ * at chip rate and its audible output IS its internal counter state, already
+ * being computed and thrown away. Such a chip cannot render on demand,
+ * because by the time the host asks, the waveform has already happened; and
+ * it must not be re-clocked by the renderer either, or it advances twice.
+ *
+ * So a source may implement `prepareAudio(sampleRate)`. The bus calls it on
+ * attach with the rate and on detach with 0, and a chip of the second kind
+ * uses it to arm a decimator that accumulates as it is clocked and to disarm
+ * when nobody is listening. `renderAudio` then DRAINS what was accumulated
+ * rather than generating it. Sources of the first kind do not implement it.
+ *
+ * That distinction was found by writing the second producer, which is exactly
+ * what the second producer was for.
  *
  * NO ATTENUATION IS APPLIED PER SOURCE. A PC speaker is one bit driving a
  * cone and renders at ±1 because that is what it does; a chip that
@@ -66,12 +91,23 @@ export class AudioBus {
         this._filled = 0;        // frames available
         this._carry = 0;         // fractional frames owed from the last advance
         this._lastMs = null;
-        this.stats = { underruns: 0, clipped: 0, rendered: 0, dropped: 0 };
+        this.stats = { underruns: 0, clipped: 0, rendered: 0, dropped: 0, starved: 0 };
     }
 
-    /** Anything with renderAudio(dest, frames, sampleRate). */
+    /**
+     * Anything with renderAudio(dest, frames, sampleRate).
+     *
+     * `prepareAudio(sampleRate)` IS CALLED HERE IF THE SOURCE HAS ONE, and
+     * the reason is a finding rather than a convenience — see the module
+     * header's note on the two kinds of producer. A chip whose output is
+     * PRODUCED BY ITS OWN CLOCK cannot render on demand: by the time the host
+     * asks, the waveform has already happened. Such a chip has to accumulate
+     * as it is clocked, which means it must know the output rate BEFORE the
+     * first clock, not at the first render.
+     */
     addSource(src) {
         if (src && typeof src.renderAudio === 'function' && !this._sources.includes(src)) {
+            src.prepareAudio?.(this.sampleRate);
             this._sources.push(src);
         }
         return this;
@@ -79,7 +115,13 @@ export class AudioBus {
 
     removeSource(src) {
         const i = this._sources.indexOf(src);
-        if (i >= 0) this._sources.splice(i, 1);
+        if (i >= 0) {
+            this._sources.splice(i, 1);
+            // Disarm, so a chip that accumulates while clocked stops paying
+            // for an audience that has left. Same rule as the write trap and
+            // the E6.8.3 hooks: present only while something is watching.
+            src.prepareAudio?.(0);
+        }
         return this;
     }
 
@@ -134,6 +176,16 @@ export class AudioBus {
             const n = src.renderAudio(one, frames, this.sampleRate) | 0;
             const lim = Math.min(n > 0 ? n : frames, frames);
             for (let i = 0; i < lim; i++) mix[i] += one[i];
+            // A SOURCE THAT SUPPLIED LESS THAN IT WAS ASKED FOR IS COUNTED,
+            // and this counter was added after a second producer proved it
+            // was needed. Without it the shortfall was padded with silence
+            // right here and vanished: the ring filled normally, `read()`
+            // never underran, and the only symptom was a frequency that came
+            // out wrong for no visible reason. Silence mixed INLINE between
+            // real samples does not merely lose audio, it corrupts the pitch
+            // of what remains — so this is the difference between a defect
+            // that announces itself and one that sounds like a broken chip.
+            if (lim < frames) this.stats.starved += frames - lim;
         }
 
         const h = this.headroom;

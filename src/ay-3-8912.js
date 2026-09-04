@@ -33,6 +33,18 @@
 
 const NUM_REGS = 16;
 
+/**
+ * The AY's 16 volume steps are LOGARITHMIC, roughly 3 dB apart, not a linear
+ * ramp. Normalised to [0,1] from the ratios in the datasheet's amplitude
+ * table. This matters for how it sounds and not at all for the agreement
+ * test, which measures frequency -- so it is the kind of thing that would
+ * silently stay wrong if the only check were the frequency one.
+ */
+const LEVELS = new Float32Array([
+    0.0000, 0.0137, 0.0205, 0.0291, 0.0423, 0.0618, 0.0847, 0.1369,
+    0.1691, 0.2647, 0.3527, 0.4499, 0.5541, 0.7034, 0.8534, 1.0000,
+]);
+
 export class AY38912 {
     /**
      * @param {{ clockHz?: number }} [opts] AY clock input — on the 128K
@@ -43,6 +55,19 @@ export class AY38912 {
         /** @type {Uint8Array} the 16 registers */
         this.regs = new Uint8Array(NUM_REGS);
         this.regs[7] = 0x3f; // mixer: all disabled at reset
+        // Audio decimator (E6.8.11a). Disarmed: a chip nobody is listening to
+        // must not pay for the accumulation, which is the same rule the write
+        // trap and the port hooks follow.
+        this._auRate = 0;
+        this._auAcc = 0;
+        this._auStep = 0;
+        this._auBuf = null;
+        this._auHead = 0;
+        this._auTail = 0;
+        this._auFilled = 0;
+        this._auLost = 0;
+        this._auSum = 0;
+        this._auN = 0;
         this._selected = 0;
         // Tone counters: 12-bit period down-counters, output flip-flops
         this._toneCount = [0, 0, 0];
@@ -113,6 +138,78 @@ export class AY38912 {
         }
     }
 
+    /**
+     * One output sample from the CURRENT mixer state: the three channels
+     * summed, each gated by its tone and noise enables and scaled by its own
+     * volume.
+     *
+     * A CHANNEL WITH TONE DISABLED AND NOISE ENABLED IS NOISE, and it has no
+     * frequency. `audioTone()` reports `on` for it -- correctly, it IS
+     * audible -- alongside an `hz` read from a tone period that is not being
+     * used. That is fine as a face summary and would be a lie as a claim
+     * about pitch, which is why the agreement test only checks channels whose
+     * TONE is enabled. Writing this function is what made that visible.
+     */
+    _mixSample() {
+        let sum = 0;
+        for (let ch = 0; ch < 3; ch++) {
+            // REUSES _channelOn RATHER THAN RE-DERIVING THE GATE, and that is
+            // deliberate against this tier's usual "write it twice" habit.
+            // The independence that the agreement test needs is between the
+            // FREQUENCY CLAIM (audioTone, from the divisor) and the MEASURED
+            // WAVEFORM (here, from the counters). The gate is the same fact
+            // in both, not an independent one, and a second copy of it would
+            // only be a second place for a gating bug to live.
+            sum += this._channelOn(ch) ? LEVELS[this._channelVol(ch)] : 0;
+        }
+        return sum / 3;
+    }
+
+    /**
+     * Arm or disarm the decimator (E6.8.11a). Called by the audio bus on
+     * attach with the host rate and on detach with 0.
+     *
+     * THIS CHIP CANNOT RENDER ON DEMAND, and that is why the contract has
+     * this method at all. Its audible output is its internal counter state,
+     * clocked by the machine at chip rate; by the time a host asks for a
+     * buffer the waveform has already happened, and re-clocking it in the
+     * renderer would advance it twice. So it accumulates while it is clocked
+     * and `renderAudio()` drains.
+     */
+    prepareAudio(sampleRate) {
+        this._auRate = sampleRate > 0 ? sampleRate : 0;
+        this._auAcc = 0;
+        this._auHead = this._auTail = this._auFilled = 0;
+        this._auLost = 0;
+        this._auSum = 0;
+        this._auN = 0;
+        if (!this._auRate) { this._auBuf = null; this._auStep = 0; return; }
+        // One AY tick is clock/16 seconds. Output samples per tick:
+        this._auStep = this._auRate / (this.clockHz / 16);
+        // A quarter second of slack: far more than a host will ever be behind
+        // by, and small enough that overrun is a real signal rather than a
+        // slow leak.
+        this._auBuf = new Float32Array(Math.max(256, Math.ceil(this._auRate / 4)));
+    }
+
+    /**
+     * Drain accumulated samples (E6.8.11a). Short reads are honest: the
+     * return value says how many were real, and the bus fills the rest with
+     * silence and COUNTS it rather than stretching what it has.
+     */
+    renderAudio(dest, frames, sampleRate) {
+        if (!this._auRate) { dest.fill(0, 0, frames); return 0; }
+        if (sampleRate && sampleRate !== this._auRate) this.prepareAudio(sampleRate);
+        const have = Math.min(frames, this._auFilled);
+        for (let i = 0; i < have; i++) {
+            dest[i] = this._auBuf[this._auTail];
+            this._auTail = (this._auTail + 1) % this._auBuf.length;
+        }
+        this._auFilled -= have;
+        if (have < frames) dest.fill(0, have, frames);
+        return have;
+    }
+
     /** One AY internal clock tick (clock/16). */
     _tick() {
         // Tone counters
@@ -143,6 +240,32 @@ export class AY38912 {
                     if (!cont) { this._envStep = 0; this._envHolding = true; }
                     else if (hold) { this._envStep = 15; this._envHolding = true; }
                     else { this._envStep = 0; } // cycling
+                }
+            }
+        }
+
+        // ACCUMULATE ONE OUTPUT SAMPLE'S WORTH, only while armed. This is the
+        // decimator: the chip ticks at clock/16 and the host wants far fewer
+        // samples than that, so ticks are averaged rather than picked -- point
+        // sampling a square wave at a lower rate aliases, and the alias is a
+        // WRONG FREQUENCY, which is precisely what the agreement test is
+        // there to catch. Averaging is the cheapest thing that does not lie.
+        if (this._auRate) {
+            this._auSum += this._mixSample();
+            this._auN++;
+            this._auAcc += this._auStep;
+            while (this._auAcc >= 1) {
+                this._auAcc -= 1;
+                const v = this._auN ? this._auSum / this._auN : 0;
+                this._auSum = 0; this._auN = 0;
+                if (this._auFilled < this._auBuf.length) {
+                    this._auBuf[this._auHead] = v;
+                    this._auHead = (this._auHead + 1) % this._auBuf.length;
+                    this._auFilled++;
+                } else {
+                    // Nobody drained. Dropping the NEWEST keeps the buffer a
+                    // contiguous run of older audio rather than a splice.
+                    this._auLost++;
                 }
             }
         }
