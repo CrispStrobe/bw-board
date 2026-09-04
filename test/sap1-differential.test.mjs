@@ -19,8 +19,11 @@ import { join } from 'node:path';
 
 const WMV_DIR = '/mnt/volume1/code/8bit';
 const WMV_AVAILABLE = existsSync(join(WMV_DIR, 'simulator.py'));
-/** Generous for this simulator on an idle box; reachable under contention. */
-const PY_TIMEOUT_MS = 10000;
+/** 60s, for the same reason as TIMEOUT_MS in sap1-digital-parity.test.mjs:
+ *  10s was a margin measured against an idle box, and `node --test` runs one
+ *  worker per core against neighbours that saturate one. Still a hang
+ *  detector — this simulator finishes in well under a second. */
+const PY_TIMEOUT_MS = 60000;
 
 /**
  * Run a program on the wmvanvliet simulator and return the register
