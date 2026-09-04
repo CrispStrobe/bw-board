@@ -438,6 +438,32 @@ export const DESKDEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The BLINK board — the smallest 8086 that is about PINS, and the one the Z80
+ * and 6502 tiers have while the 8086 did not. An 8086, 64K RAM, an 8255 at 60h,
+ * a 32K ROM, and nothing else: no CGA, no floppy, nothing that is not the
+ * lesson, so a learner's first 8086 board is the one where a pin means an LED.
+ * It is what lite's LED panel (draws 8255 port pins gated on direction) and
+ * switch panel (setInput drives a bit) and pseudocode pin I/O (P1/P2/P3 ->
+ * ports A/B/C) point at.
+ *
+ * Load rom/blink-demo.bin (scripts/build-blink-demo.mjs) and it walks a pattern
+ * across the LEDs on PORT B and mirrors a switch read from PORT C. LEDs live on
+ * port B, not port A, deliberately: on a PC the keyboard scancode latches into
+ * this same 8255's port A, so a board that drove LEDs there would ask a question
+ * about two owners of one port that a first board should never raise.
+ */
+export const BLINK8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 GPIO: LEDs on port B (61h), switches on port C (62h)
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]

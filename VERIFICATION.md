@@ -71,6 +71,62 @@ One model, no cross-check. Honest and weakest.
 |-------|----------|
 | Boundary A conformance: 10/10 against real emu8051-stc WASM | `test/conformance-real-wasm.test.js` — tests that the adapter satisfies the contract, not that the contract matches hardware |
 
+## 2d. The 8086/8088 tier, claim by claim (added 2026-09-04)
+
+The tier is young and its evidence is unusually uneven — some of the strongest
+in this repo beside some of the weakest — so it is tabulated in one place
+rather than inferred from which grinder happens to exist.
+
+**Read the TIER column, not the percentage.** A 100% at tier 2c is one
+implementation agreeing with itself.
+
+| Claim | Tier | Evidence | What would raise it |
+|---|---|---|---|
+| `i8086.js` architectural state | **2a** | 646,000/646,000, SingleStepTests 8086, hardware-generated on an Intel P80C86A-2 | nothing — this is the ceiling |
+| `i8086-disasm.js` text **and** length | **2a** | 646,000/646,000 against the suite's own disassembly strings, 3 documented exclusions | — |
+| 80186 added opcodes | **2a** | 132,532/132,532, SingleStepTests **v20** | a real 80186 suite, which does not exist |
+| 80186 shift-count masking | **2c → 2b available** | `test/i8086-186.test.mjs` | **AN ORACLE EXISTS AFTER ALL, and I asserted twice that none could.** `borris84/dectalk-dtc03` — an NVDA screen-reader driver that runs original DECtalk firmware — carries `native/i8018x.c`, a from-scratch **MIT** 80186 core. Verified by reading it: `count &= 0x1F;  /* 80186 masks the count; the 8086 does not */`, and `case 4: /* SHL */ case 6:` for the reg=6 aliasing. Its header records validation against SingleStepTests 8088 at 2,752,117 pass / 0 fail / 91,883 skip, itemised — including **28,113 masking** and **28,000 reg=6** skips, the same two divergences we exclude from the v20 suite. Different suite, same reasoning, independent author. That is category **2b** (both read Intel's documentation) and possibly stronger. Not yet run: their numbers are a comment claim, not CI-enforced |
+| 80186 reg=6 as SHL | **2b** | v20 agrees, and period 186 docs call the field reserved | an 80186 suite |
+| Trap flag (TF) | **3** | behavioural tests + period binaries | **no vector in 646,000 sets TF.** DEBUG.COM's `t` is the acceptance and is owed |
+| Cycle counts | **2a, 36.5%** | SingleStepTests 8088 v2 bus traces | the remaining error is in T-states invisible to the m-cycle count — see ROADMAP E6.8.4d |
+| Bus access **order** | **2a** | 152,000/152,000 | — |
+| Queue ops F/S/E | **2a** | 152,000/152,000 | — |
+| 8254 PIT | **2a (partial)** | v86 differential: ours is datasheet-complete where v86 lacks read-back | **NOT `arduino_8253`** — surveyed 2026-09-04 and it does not do what the roadmap claimed: no captured data, read-back unimplemented, targets the 8253, and its emulator is GPL-3 despite an MIT repo licence. A hardware-backed PIT oracle means BUILDING THE RIG. MAME's `pit8253.cpp` (BSD-3, confirmed) is the realistic next step |
+| NS16C550 UART | **2a** | v86 differential, scratch register byte-for-byte | broaden the probe set |
+| 8259 PIC, 8237 DMA | **2b** | datasheet + our own tests; MartyPC read as reference | MAME's BSD-3 device files |
+| 8251 USART | **2b** | datasheet + one MIT demo's init sequence | MAME `i8251.cpp` — **BSD-3 confirmed on the current revision** (`// license:BSD-3-Clause`, copyright smf/Robbbert). The only permissive spec-grade 8251 reference, and it is real |
+| uPD765 FDC + DMA | **2a** | MS-DOS 2.0 boots down TWO independent paths (INT 13h service layer vs real FDC over DMA) with byte-identical screens — that differential found the DMA pump moving zero bytes while reporting success | — |
+| CGA renderer | **2b** | pixel layout written twice and cross-checked | — |
+| Audio: tone vs samples | **2b** | the two contracts must agree; caught an octave error in the OPL on its first run | ymfm as a second oracle for the OPL |
+| `i8086-asm.js` | **2a** | 510/525 MASM corpus; MASM refuses 14 of the 15 rejects | — |
+| Extractor refusals | **2c** | our own tests | — |
+
+**TWO 80186 DIVERGENCES WE DO NOT MODEL AT ALL, found by reading that second
+implementation's SKIP LIST rather than its code.** This is what a second
+implementation buys that a test suite does not — it had to enumerate every
+place the 186 differs from the 8088 in order to explain its own skips, and two
+of them are news:
+
+| Divergence | Their count | Ours |
+|---|---|---|
+| A divide exception pushes the address **of** the faulting instruction; the 8086 pushes the address after it | 25,453 | **not modelled** — `_fault(0)` pushes the post-instruction address |
+| `FF /7` aliases PUSH on the 8088; the 80186 **traps it as illegal** | 10,000 | **not modelled** — our `GRP5` table has `'push', 'push'` |
+
+Both are gradeable against the 8088 suite we already have (as *deliberate*
+failures on those opcodes, which is how their runner treats them). Neither is
+in the ROADMAP as work because neither was known until 2026-09-04.
+
+**The two gaps worth naming as gaps — with one correction to how the first was
+stated.** The 186 masking is at 2c because no oracle has been FOUND, not
+because none can exist. Writing "cannot be raised by any existing artefact"
+was an assertion where a search was called for: `emu86` was sitting in our own
+licence table described as the reference for exactly these instructions, and
+checking it took four minutes. It turned out not to mask either — so the
+conclusion survives this test — but the difference between "checked and no"
+and "asserted no" is the whole subject of this document.
+The trap flag sits at tier 3 with a named acceptance test that has not been
+run. Everything else in the table has a path.
+
 ## 3. Asserted but unverified (engineering assumptions)
 
 These numbers are plausible and internally consistent, but no source is cited.

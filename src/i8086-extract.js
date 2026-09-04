@@ -38,6 +38,10 @@ const IO_SELECT = {
     // wired the same way the PPI is; the 8251's one register-select line is
     // its C/D pin.
     i8254: { kind: 'pit', low: ['csb'] },
+    // The 8253 is the earlier, pin-identical PIT the original PC/XT used; it
+    // lacks the 8254's read-back command. `variant` rides into the machine
+    // config so a drawn 8253 refuses read-back like the real part.
+    i8253: { kind: 'pit', low: ['csb'], variant: '8253' },
     i8259: { kind: 'pic', low: ['csb'] },
     i8251: { kind: 'usart8251', low: ['csb'] },
 };
@@ -127,14 +131,18 @@ export function extract8086Machine(circuit) {
             }
         }
         if (p.kind === '74hc138' || p.kind === '74ls138') {
+            // Terminal names are the datasheet's, which is what the drawable
+            // part exposes: G1 (active-high enable), G2A/G2B (active-low,
+            // suffixed 'b' → g2ab/g2bb), outputs Y0-Y7 active-low (y0b..y7b).
+            // The eval below keeps generic e1b/e2b/e3 field names for the logic.
             for (let out = 0; out < 8; out++) {
-                setDriver(find(key(p.id, `y${out}`)), {
+                setDriver(find(key(p.id, `y${out}b`)), {
                     type: '138', gate: `${p.id}`,
-                    e1b: find(key(p.id, 'e1b')), e2b: find(key(p.id, 'e2b')),
-                    e3: find(key(p.id, 'e3')),
+                    e1b: find(key(p.id, 'g2ab')), e2b: find(key(p.id, 'g2bb')),
+                    e3: find(key(p.id, 'g1')),
                     a: find(key(p.id, 'a')), b: find(key(p.id, 'b')), c: find(key(p.id, 'c')),
                     out,
-                }, `${p.id}.y${out}`);
+                }, `${p.id}.y${out}b`);
             }
         }
     }
@@ -204,7 +212,7 @@ export function extract8086Machine(circuit) {
             for (const pin of pins) {
                 if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
             }
-            ioChips.push({ part: p, kind: ioSpec.kind, pins, selected: new Uint8Array(65536) });
+            ioChips.push({ part: p, kind: ioSpec.kind, variant: ioSpec.variant, pins, selected: new Uint8Array(65536) });
         }
     }
     if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM, PPI or serial chip on the board');
@@ -309,7 +317,7 @@ export function extract8086Machine(circuit) {
         if (count > (rs ? (1 << rs.length) : 1)) {
             notes.push(`${c.part.id} mirrors through ports ${hx16(lo)}-${hx16(hi)}; its registers sit at ${hx16(lo)}`);
         }
-        chips.push({ kind: c.kind, name: c.part.id, at: lo, span: count });
+        chips.push({ kind: c.kind, name: c.part.id, at: lo, span: count, ...(c.variant ? { variant: c.variant } : {}) });
     }
     if (reasons.length) return { ok: false, notes, reasons };
 

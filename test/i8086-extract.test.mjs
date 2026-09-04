@@ -128,27 +128,27 @@ function decode138Circuit() {
     // ROM CEB = Y7 → ROM at $E0000-$FFFFF (only 32K used but selected over 128K)
     // The ROM covers the reset vector at FFFF0h. ✓
 
-    w('gnd1', 'gnd', 'dec1', 'e1b');
-    w('gnd1', 'gnd', 'dec1', 'e2b');
-    w('cpu1', 'mio', 'dec1', 'e3');
+    w('gnd1', 'gnd', 'dec1', 'g2ab');
+    w('gnd1', 'gnd', 'dec1', 'g2bb');
+    w('cpu1', 'mio', 'dec1', 'g1');
     w('cpu1', 'a17', 'dec1', 'a');
     w('cpu1', 'a18', 'dec1', 'b');
     w('cpu1', 'a19', 'dec1', 'c');
-    w('dec1', 'y0', 'ram1', 'csb');    // RAM at $00000-$1FFFF
-    w('dec1', 'y7', 'rom1', 'ceb');    // ROM at $E0000-$FFFFF
+    w('dec1', 'y0b', 'ram1', 'csb');    // RAM at $00000-$1FFFF
+    w('dec1', 'y7b', 'rom1', 'ceb');    // ROM at $E0000-$FFFFF
 
     // I/O decoder (dec2): decodes A5-A7 with ~M/IO as enable.
     // E1B = GND, E2B = GND, E3 = inv1.1y (~M/IO → active during IO cycles).
     // A = A5, B = A6, C = A7.
     // Y0: A7=0, A6=0, A5=0 → ports $00-$1F → PPI
     w('cpu1', 'mio', 'inv1', '1a');
-    w('inv1', '1y', 'dec2', 'e3');
-    w('gnd1', 'gnd', 'dec2', 'e1b');
-    w('gnd1', 'gnd', 'dec2', 'e2b');
+    w('inv1', '1y', 'dec2', 'g1');
+    w('gnd1', 'gnd', 'dec2', 'g2ab');
+    w('gnd1', 'gnd', 'dec2', 'g2bb');
     w('cpu1', 'a5', 'dec2', 'a');
     w('cpu1', 'a6', 'dec2', 'b');
     w('cpu1', 'a7', 'dec2', 'c');
-    w('dec2', 'y0', 'ppi1', 'csb');    // PPI at ports $00-$1F
+    w('dec2', 'y0b', 'ppi1', 'csb');    // PPI at ports $00-$1F
 
     return { parts, wires };
 }
@@ -180,8 +180,8 @@ test('no ROM at the reset vector refuses', () => {
     const c = decode138Circuit();
     // Rewire ROM to Y0 (same as RAM, but that will cause contention).
     // Instead, swap ROM to Y1 which is $20000-$3FFFF — below the reset vector.
-    c.wires = c.wires.filter((w) => !(w.from === 'dec1' && w.fromTerminal === 'y7'));
-    c.wires.push({ from: 'dec1', fromTerminal: 'y1', to: 'rom1', toTerminal: 'ceb' });
+    c.wires = c.wires.filter((w) => !(w.from === 'dec1' && w.fromTerminal === 'y7b'));
+    c.wires.push({ from: 'dec1', fromTerminal: 'y1b', to: 'rom1', toTerminal: 'ceb' });
     const r = extract8086Machine(c);
     assert.equal(r.ok, false);
     assert.match(r.reasons[0], /FFFF0h/);
@@ -190,8 +190,8 @@ test('no ROM at the reset vector refuses', () => {
 test('memory-space contention refuses with the address', () => {
     const c = decode138Circuit();
     // Wire both RAM and ROM to Y0 — overlap at $00000
-    c.wires = c.wires.filter((w) => !(w.from === 'dec1' && w.fromTerminal === 'y7'));
-    c.wires.push({ from: 'dec1', fromTerminal: 'y0', to: 'rom1', toTerminal: 'ceb' });
+    c.wires = c.wires.filter((w) => !(w.from === 'dec1' && w.fromTerminal === 'y7b'));
+    c.wires.push({ from: 'dec1', fromTerminal: 'y0b', to: 'rom1', toTerminal: 'ceb' });
     const r = extract8086Machine(c);
     assert.equal(r.ok, false);
     assert.match(r.reasons[0], /memory-space contention/);
@@ -222,7 +222,7 @@ function fullCircuit() {
     // Add UART at ports $20-$3F via dec2.Y1
     c.parts.push({ id: 'uart1', kind: 'ns16c550' });
     const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
-    w('dec2', 'y1', 'uart1', 'cs2b');   // CS2B = Y1 (active low)
+    w('dec2', 'y1b', 'uart1', 'cs2b');   // CS2B = Y1 (active low)
     w('cpu1', 'a0', 'uart1', 'a0');
     w('cpu1', 'a1', 'uart1', 'a1');
     w('cpu1', 'a2', 'uart1', 'a2');
@@ -247,7 +247,7 @@ test('port-space contention refuses when two IO chips share an address', () => {
     const c = fullCircuit();
     // Wire UART's CS2B to the same decoder output as PPI (Y0)
     c.wires = c.wires.filter((w) => !(w.to === 'uart1' && w.toTerminal === 'cs2b'));
-    c.wires.push({ from: 'dec2', fromTerminal: 'y0', to: 'uart1', toTerminal: 'cs2b' });
+    c.wires.push({ from: 'dec2', fromTerminal: 'y0b', to: 'uart1', toTerminal: 'cs2b' });
     const r = extract8086Machine(c);
     assert.equal(r.ok, false);
     assert.match(r.reasons[0], /port-space contention/);
@@ -260,7 +260,7 @@ test('MC6850 on the IO bus extracts with register-select check', () => {
     const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
     // ACIA: CS0 = dec2.Y1 inverted? No — CS0 and CS1 are active-high, CS2B active-low.
     // Use dec2.Y1 (active-low) → CS2B. CS0 = VCC, CS1 = VCC.
-    w('dec2', 'y1', 'acia1', 'cs2b');
+    w('dec2', 'y1b', 'acia1', 'cs2b');
     w('vcc1', 'vcc', 'acia1', 'cs0');
     w('vcc1', 'vcc', 'acia1', 'cs1');
     w('cpu1', 'a0', 'acia1', 'rs');
@@ -278,13 +278,13 @@ test('the Intel support chips (8254 PIT, 8259 PIC, 8251 USART) extract on the IO
     c.parts.push({ id: 'usart1', kind: 'i8251' });
     const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
     // PIT on dec2.Y1 (ports 0x20-0x3F); A0/A1 pick the register.
-    w('dec2', 'y1', 'pit1', 'csb');
+    w('dec2', 'y1b', 'pit1', 'csb');
     w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
     // PIC on dec2.Y2 (0x40-0x5F); A0 picks command/data.
-    w('dec2', 'y2', 'pic1', 'csb');
+    w('dec2', 'y2b', 'pic1', 'csb');
     w('cpu1', 'a0', 'pic1', 'a0');
     // USART on dec2.Y3 (0x60-0x7F); C/D picks data/control.
-    w('dec2', 'y3', 'usart1', 'csb');
+    w('dec2', 'y3b', 'usart1', 'csb');
     w('cpu1', 'a0', 'usart1', 'cd');
 
     const r = extract8086Machine(c);
@@ -301,6 +301,25 @@ test('the Intel support chips (8254 PIT, 8259 PIC, 8251 USART) extract on the IO
     assert.ok(r.lines.some((l) => /usart1 = I8251 AT PORT/.test(l)), r.lines.join('; '));
 });
 
+test('a drawn 8253 extracts to a PIT carrying variant:8253 (no read-back); the 8254 does not', () => {
+    const build = (pitKind) => {
+        const c = decode138Circuit();
+        c.parts.push({ id: 'pit1', kind: pitKind });
+        c.wires.push({ from: 'dec2', fromTerminal: 'y1b', to: 'pit1', toTerminal: 'csb' });
+        c.wires.push({ from: 'cpu1', fromTerminal: 'a0', to: 'pit1', toTerminal: 'a0' });
+        c.wires.push({ from: 'cpu1', fromTerminal: 'a1', to: 'pit1', toTerminal: 'a1' });
+        return extract8086Machine(c);
+    };
+    const r53 = build('i8253');
+    assert.ok(r53.ok, r53.reasons.join('; '));
+    const pit53 = r53.chips.find((x) => x.kind === 'pit');
+    assert.equal(pit53.variant, '8253', 'the 8253 rides its variant into the machine config');
+
+    const r54 = build('i8254');
+    const pit54 = r54.chips.find((x) => x.kind === 'pit');
+    assert.equal(pit54.variant, undefined, 'the 8254 carries no variant (full read-back part)');
+});
+
 test('an i8088 CPU is recognised the same as an i8086', () => {
     const c = decode138Circuit();
     c.parts = c.parts.map((p) => (p.id === 'cpu1' ? { ...p, kind: 'i8088' } : p));
@@ -313,8 +332,8 @@ test('a PIT OUT0 wired to PIC IR0 extracts as irq:0 (the timer interrupt)', () =
     const c = decode138Circuit();
     c.parts.push({ id: 'pit1', kind: 'i8254' }, { id: 'pic1', kind: 'i8259' });
     const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
-    w('dec2', 'y1', 'pit1', 'csb'); w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
-    w('dec2', 'y2', 'pic1', 'csb'); w('cpu1', 'a0', 'pic1', 'a0');
+    w('dec2', 'y1b', 'pit1', 'csb'); w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
+    w('dec2', 'y2b', 'pic1', 'csb'); w('cpu1', 'a0', 'pic1', 'a0');
     w('pit1', 'out0', 'pic1', 'ir0');   // the 18.2 Hz timer wire
     const r = extract8086Machine(c);
     assert.ok(r.ok, r.reasons.join('; '));
@@ -327,8 +346,8 @@ test('a PIT with no IRQ wire extracts without irq — a miswired board simply sh
     const c = decode138Circuit();
     c.parts.push({ id: 'pit1', kind: 'i8254' }, { id: 'pic1', kind: 'i8259' });
     const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
-    w('dec2', 'y1', 'pit1', 'csb'); w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
-    w('dec2', 'y2', 'pic1', 'csb'); w('cpu1', 'a0', 'pic1', 'a0');
+    w('dec2', 'y1b', 'pit1', 'csb'); w('cpu1', 'a0', 'pit1', 'a0'); w('cpu1', 'a1', 'pit1', 'a1');
+    w('dec2', 'y2b', 'pic1', 'csb'); w('cpu1', 'a0', 'pic1', 'a0');
     // deliberately NO out0 -> ir0 wire
     const r = extract8086Machine(c);
     assert.ok(r.ok, r.reasons.join('; '));
@@ -340,7 +359,7 @@ test('a PIT whose A1 line is misrouted refuses with the pin named', () => {
     const c = decode138Circuit();
     c.parts.push({ id: 'pit1', kind: 'i8254' });
     const w = (f, ft, t, tt) => c.wires.push({ from: f, fromTerminal: ft, to: t, toTerminal: tt });
-    w('dec2', 'y1', 'pit1', 'csb');
+    w('dec2', 'y1b', 'pit1', 'csb');
     w('cpu1', 'a0', 'pit1', 'a0');
     w('cpu1', 'a3', 'pit1', 'a1');   // A3, not A1 — a wiring slip
     const r = extract8086Machine(c);

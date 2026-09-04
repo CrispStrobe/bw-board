@@ -959,7 +959,7 @@ be read and adapted with attribution.
 
 | Source | Licence | Ruling |
 | --- | --- | --- |
-| dbalsom/arduino_8253 | MIT | **BEST PIT ORACLE.** Real-8253 Arduino interface **plus a reference emulator developed against the physical chip**; datasheet says the 8254 is investigable with the same rig (pin/function compatible). Diffing `i8254.js` against it is close to diffing against silicon. Read + adapt with attribution. |
+| `dbalsom/arduino_8253` | **CONFLICTED — repo LICENSE says MIT; EVERY source file says GPL-3.0-or-later** (verified 2026-09-04, including `pit_emulator.h` itself; GitHub's own detector reports `NOASSERTION`) | **RULING REVERSED. Was "MIT — read + adapt with attribution", which was wrong and would have walked GPL-3 code into a BSD-3 bundle.** The more specific statement is the one attached to the code, so treat the emulator as GPL-3: ORACLE-ONLY, never adapted, never ported. **And it is not the oracle we thought.** It ships NO CAPTURED DATA — no traces, no fixtures, nothing diffable offline; the "corpus" is C++ that executes live against a real chip on the author's own bench and prints PASS/FAIL to a serial monitor. Its emulator does NOT implement the read-back command (a bare `// Do readback command` with no body), which is the one 8254-specific behaviour we would most want graded. It targets the **8253** (`PIT_8254 false`, `kModel8253`), and gate behaviour is wired to channel 2 only, so channels 0 and 1 were never checked against silicon. Getting a hardware-backed PIT oracle from this means BUILDING THE RIG. See E6.8.4e. |
 | dbalsom/martypc — `crates/lib/marty_core/src/devices/{pit,pic,serial}.rs` | MIT | PIT "highly accurate"; PIC "mostly complete, **missing priority rotation and nested modes**" — exactly the scope `i8259.js` built and skipped. `serial.rs` is an **INS8250, not an 8251** — not a USART reference. Read as reference; not vendored. |
 | `hotkeysoft/emulators` | MIT (confirmed 2026-09-04) | **This row was too narrow and is widened.** First listed only as an MIT cross-check for `Device8254`/`Device8259`/`Device8250` (it has an 8250, no 8251). It is a multi-machine C++ suite: 8086/8088/**80186/80286**, PC/XT, PC/AT, PCjr, Tandy 1000, **EGA on the real IBM EGA BIOS ROM**, four sound devices, and a **snapshot GUI**. Readable throughout; nothing vendorable (C++). See E6.8.14. |
 | `folkertvanheusden/DotXT` | **NO FORMAL LICENCE.** README says "Released in the public domain"; there is no LICENSE file and the API reports `license: null` (verified 2026-09-04) | **READ ONLY, DO NOT VENDOR, DO NOT PARAPHRASE CLOSELY.** A bare sentence is not a dedication — CC0 and the Unlicense exist because unilateral public-domain release is unrecognised in much of the EU. Has MDA, XT-IDE and an RTC we lack; its own `todo` records DIV/IDIV and disassembler defects, so it is not the route to them. |
@@ -972,7 +972,7 @@ be read and adapted with attribution.
 | `DynartInteractive/DOS-Game-Engine` | MIT **at the top level only** — `UNITS/SBDSP.PAS`, `UNITS/PLAYHSC.PAS` and `UNITS/XMS.PAS` retain other authors' "all rights reserved" / "not to be distributed modified" / NEO-Software-permission notices verbatim, and `DATA/*.PCX` is carved out non-commercial | REFUSED for those files regardless of the LICENSE, and Turbo Pascal throughout, so our assembler could not ingest it anyway. Its inline `asm` fragments are LESSON TOPIC ideas only. See E6.8.15. |
 | ajokela/retro-z80-emulator — `src/serial.rs` | MIT | **First MIT 8251 reference (Rust)** — but LOWER FIDELITY than ours: mode and command share one field, no mode→command sequence, no internal-reset rewind, no TxEN gating. It would mishandle the soft-reset init dance. Confirms our sequence model is necessary, not gold-plating. Sanity reference only. |
 | SIrfanH/8086-mp-8251-usart-auto-complete-demo | MIT | **Shippable 8251 test material WITH ATTRIBUTION.** 8086 asm + Proteus circuit. Its init sequence (mode → 0x40 soft-reset → mode → enable) validated `i8251.js`, and its serial protocol is wired up as an end-to-end test (`test/i8086-devices.test.mjs`). |
-| MAME (current upstream) — `src/devices/machine/{i8251,pit8253,pic8259}.cpp` | **BSD-3-Clause** (per each file's `// license:` header; MAME-the-project is GPL-2.0 but these device files are individually BSD-3) | **PERMISSIVE — the spec-grade 8251 reference we were missing.** Readable and adaptable WITH the BSD-3 notice. Also permissive PIT/PIC cross-checks. Verify the header on the exact revision you read; the relicensing landed ~2015-16. |
+| MAME (current upstream) — `src/devices/machine/{i8251,pit8253,pic8259}.cpp` | **BSD-3-Clause — CONFIRMED on the current revision 2026-09-04**: `i8251.cpp` opens `// license:BSD-3-Clause` / `// copyright-holders:smf, Robbbert` (MAME-the-project is GPL-2.0; these device files are individually BSD-3) | **PERMISSIVE — the spec-grade 8251 reference we were missing.** Readable and adaptable WITH the BSD-3 notice. Also permissive PIT/PIC cross-checks. Verify the header on the exact revision you read; the relicensing landed ~2015-16. |
 | MAMEHub (MisterTea) — `Sources/Emulator/.../i8251.h` | GPL-2.0 (2014 snapshot, PRE-relicense) | ORACLE-ONLY. This old fork predates MAME's BSD-3 relicensing, so THIS copy is GPL. Use current upstream mamedev/mame for the BSD-3 grant, not this. |
 | geo-tp/Cardputer-Game-Station-Emulators (fMSX subtree) | wrapper says MIT; **upstream fMSX is Marat Fayzullin's non-commercial licence** | **REFUSED — licence-laundering trap.** The repo's MIT LICENSE does NOT override fMSX's upstream terms (free for non-commercial use only, no redistribution for profit). fMSX-derived 8251/8255 code is not usable regardless of the wrapper. |
 | andrewthecodertx/rust-imsai-emulator | MIT | 8080/IMSAI, Rust. Permissive but peripheral to the 8086 support chips; note only if it grows an 8251. |
@@ -1247,9 +1247,24 @@ which is the box getting quieter, not the emulator getting better.
 Normalised against it:
 
 ```
-machine/core   0.333 -> 0.303    -9%
-boot/core      0.115 -> 0.103   -10%
+machine/core   0.333 -> 0.303 -> 0.284    still falling
+boot/core      0.115 -> 0.103 -> 0.176    recovered, and then some
 ```
+
+**A third measurement point (2026-09-04, after `setInput`, `outputPoints` and
+the pin lowering) splits what looked like one trend into two.** The machine
+layer keeps ratcheting down relative to the CPU it wraps — 0.333, 0.303,
+0.284 — which is E6.8.4a's standing concern behaving exactly as predicted.
+But `boot/core` went the other way and is now better than it has ever been.
+Something in the boot path got substantially faster while the general machine
+path got slower, and the absolutes would have shown neither: on this run the
+box was quiet enough that every raw figure rose. **The `vs core` column
+earned itself on its first use.**
+
+In real-time terms the boot workload is now **3.4x** rather than 1.0x, so a
+cycle-stepped core at 5x costs lands at 0.68x — slow but arguably usable —
+and at 20x lands at 0.17x. The debugging-mode framing still holds; the margin
+is less stark than when it was chosen.
 
 **So relative to the CPU, the machine layer got about 10% WORSE, not better —
 even with the page table in.** The new per-step work (timer tick, input
@@ -1277,6 +1292,355 @@ a reference implementation of cycle-interruptible STRUCTURE; do not adopt its
 microcode, and do not build ours by transcribing it.** The BIU/prefetch
 behaviour is derivable from the bus traces in the MIT test suite, which is
 both legally clean and a better oracle. Add to the table on landing.
+
+#### E6.8.4b The prefetch-queue shortcut does not exist — a negative result, measured (2026-09-04)
+
+I proposed a smaller first step towards E6.8.4: model the prefetch QUEUE
+alone, without a BIU, and grade it against the `queue` field the 8086 vectors
+already carry — no new clone, an instrument already in CI, and a behaviour a
+program can SEE (self-modifying code executing the stale byte). `lego-47`
+endorsed it partly on that basis. **It was wrong, and it is wrong in both of
+the two ways it could have been right.**
+
+**1. `final.queue` is not deterministic without cycle modelling.** Grouping 60
+sampled opcode files by initial queue length, only 16 had a single possible
+final length. Controlling properly — for initial queue length, instruction
+byte count, AND whether control flow branched — brings it to 28 of 60. The
+remaining 32 are genuinely cycle-dependent: `xor bp, bx`, from *identical*
+controlled conditions, produces final queue lengths of **1, 3 and 5**. That is
+bus timing, and nothing an instruction-stepped core knows can predict it.
+
+**2. `initial.queue` never disagrees with memory, so it cannot grade a
+stale-byte model either.** Checked across 12,000 vectors from 40 opcode files:
+**zero** cases where the queue holds a byte different from the memory at
+CS:IP. The suite contains no self-modifying-code captures, so the queue field
+is redundant with memory — a core that fetches straight from RAM, as ours
+does, already reproduces it, and grading against it would grade nothing.
+
+**So the shortcut is not a smaller version of E6.8.4; it is the same job.** A
+prefetch queue whose only justification is a behaviour we cannot grade fails
+this tier's standing rule — no grinder, no landing — and it would land as a
+claim rather than a measurement.
+
+**This strengthens rather than weakens the original constraint.** E6.8.4 has
+always said it lands only when `SingleStepTests/8088`'s bus traces can grade
+it. That was right, and the fifteen minutes spent testing the shortcut cost
+much less than the day spent building it would have. **The finding is that
+the 8088 suite is not a preference, it is the prerequisite** — its bus traces
+are the only thing that can adjudicate the 32-of-60 cases above.
+
+Recorded rather than quietly dropped because the idea is attractive enough
+that someone will have it again.
+
+#### E6.8.4c The oracle is in and the baseline is measured (2026-09-04, owner-chose (a))
+
+The owner overruled `lego-47`'s recommendation to leave cycle work alone, on
+the grounds that **(a) is the only route ending in a graded model, and this
+tier's whole standing is that it does not ship ungraded claims.** So the
+constraint stands unrelaxed: *no grinder, no landing*, and the grinder came
+first.
+
+**The oracle.** `SingleStepTests/8088` (MIT), 2.0 GB whole, taken with the
+same blobless-sparse idiom `ci.yml` already uses. Its **v2** format carries,
+per CPU cycle: the ALE pin, the address latch, segment status, the i8288's
+memory and I/O status lines, the data bus, the bus m-cycle type, the T-state,
+and — the field that makes a BIU gradeable at all — the **queue operation**,
+F (first byte of an instruction or prefix), S (subsequent), E (flushed), with
+the byte read out. That is ground truth for exactly the 32-of-60 cases
+E6.8.4b showed nothing else can adjudicate.
+
+**`scripts/grind-i8088-cycles.mjs` scores four things, not one**, so progress
+is measurable per session the way `grind-i8086.mjs`'s was: `count`, `bus`,
+`queue`, `tstate`. Only `count` is implemented; the other three print NOT-YET
+rather than being omitted, because an absent score reads like a passing one.
+
+**A METHODOLOGY TRAP, FALLEN INTO AND FIXED BEFORE IT BECAME A NUMBER.** The
+first version measured an instruction as "first `F` to end of trace" when no
+second `F` appeared. That is a LOWER BOUND dressed as a measurement — the
+README is explicit that an instruction ends when the *next* one's first byte
+leaves the queue, and "there is no indication from the CPU when an instruction
+ends, only when a new one begins." It is not a rare case: **half the traces
+have no second F, and for `inc ax` it is all ten thousand.** The first
+baseline read 10.6% exact and was mostly grading truncation; `40` scored 0.0%
+for that reason and not for any reason about the core. Those vectors are now
+excluded and COUNTED.
+
+**THE MEASUREMENT WAS WRONG THREE TIMES BEFORE IT WAS RIGHT, and each wrong
+version produced a full baseline.** `lego-47` is why it was caught: *"before
+you conclude anything about the model, calibrate the MEASUREMENT against
+instructions whose timing is documented and uncontroversial. All-positive with
+a tight median is exactly the signature of a definitional offset rather than a
+modelling error."* It was.
+
+1. *First F to end of trace* — a lower bound dressed as a measurement. Half
+   the traces have no second F; for `inc ax` it is all ten thousand. Reported
+   10.6% exact while mostly grading truncation.
+2. *First F to second F* — wrong because the README's sentence continues: a
+   First Byte *"may be an optional instruction PREFIX, in which case there
+   will be multiple First Byte statuses"*. On `cs nop` the two F markers are
+   the prefix and the opcode, **two cycles apart, both the same instruction**.
+   The tell was a span distribution of exactly `{2, 4}` on `nop`.
+3. *Byte-counted* — made every vector ungradeable, and that WAS the answer:
+   the traces do not contain the next instruction at all. **The suite has
+   already bounded each trace, so the count is simply `cycles.length`.**
+
+Checked against documented timings rather than assumed a fourth time: `inc ax`
+(2 clocks) measures 2, `nop` (3) measures 3, one prefix adds 2.
+
+**AND THE COUNT IS BIMODAL, WHICH IS THE WHOLE ARGUMENT FOR A BIU.** `inc ax`
+is 2 **or** 4; `nop` is 3 or 4. An instruction that ended with the next byte
+already queued takes the documented best case; one that had to fetch it takes
+longer. **A fixed cycle table can only ever match the best-case half, by
+construction** — and `nop` scores exactly 50.0%, which is that prediction
+landing on the nose.
+
+**THE BASELINE, and the first movement of it:**
+
+```
+                    baseline    after the INC/DEC fix
+exact                 20.8%          37.5%
+within +/-1           62.4%          45.7%
+within +/-4           74.1%          74.1%
+error median            -1             -3     range -15 .. -1
+```
+
+We UNDERCOUNT, which is what was predicted all along once the measurement was
+right: an 8088's eight-bit bus adds cycles we do not model.
+
+**The instrument found a real defect on its first correct run.** `INC r16` and
+`DEC r16` returned 3 clocks; Intel's table gives 2 for the 16-bit REGISTER
+form and 3 for the 8-bit one, and the suite's `40` file is 5,000 traces of
+exactly 2 and 5,000 of exactly 4. We matched neither and scored 0 of 10,000.
+Fixed, and that file now scores exactly 50.0% — the best-case half, like
+`nop`. 646,000/646,000 unaffected: the 8086 grinder does not compare cycles,
+which is precisely why this one had to exist.
+
+#### E6.8.4d Three of four scores, and where the fourth stops (2026-09-04)
+
+`src/i8088-biu.js` — the BIU as a SCHEDULER rather than a second CPU. The core
+stays instruction-stepped and records what it asked the bus for; this turns
+that ORDER into TIME. Cycle mode therefore never forks the instruction path.
+
+```
+bus sequence   152,000/152,000   100.0%   data accesses in order
+queue ops      152,000/152,000   100.0%   F, S and E, 55,015 with a flush
+cycle count     55,455/152,000    36.5%   was 17.2% from the raw table
+T-state align                     NOT YET
+```
+
+Sixteen opcode files: read-modify-write, `xchg` with memory, `pop` to memory,
+`movsw`, `mul`, indirect `call`, `ret`, `INT`, conditional and unconditional
+branches, port I/O. 646,000/646,000 unchanged throughout.
+
+**THE MODEL WAS MEASURED, NOT DERIVED.** Fitting the residual against queue
+depth, instruction length and access count on 4,000 vectors of
+`add r/m16, r16`:
+
+```
+queue 4, no data      residual 0        the EU table is exactly right
+queue 0, len 2        residual 5        = max(EU, 8) - EU
+queue 0, len 3        residual 7        = max(EU, 12) - EU
+queue 4, 4 accesses   residual 8 or 9   not overlapped AT ALL
+```
+
+**Fetches overlap with execution; data accesses do not.** That asymmetry is
+the finding, and the reason is that Intel's published timings already assume
+the 8086's SIXTEEN-bit bus — on an 8088 every word costs an extra bus cycle
+the EU sits through, because it is waiting for the datum it asked for.
+
+```
+cycles = max(euCycles, fetchBytes * 4) + dataAccesses * 2
+```
+
+**THE "BIMODALITY" WAS NOT BIMODAL, AND I WAS WRONG ABOUT WHY.** This entry
+first concluded that the 8-or-9 residual needed queue occupancy over time,
+because no function of (queue depth, length, access count) separated the two.
+Holding those three fixed and varying only the EU time shows it is EXACTLY
+determined:
+
+```
+eu 23 -> +9   eu 25 -> +9   eu 26 -> +8   eu 27 -> +9   eu 28 -> +8
+totals   32          34          34          36          36
+```
+
+**Every total is even.** The odd sums round up; the even ones do not move. It
+was a parity effect — the CPU landing on a bus-cycle boundary rather than
+between one — and the variable I had not held fixed was the one that mattered.
+Applying it unconditionally *dropped* the score to 26.1%, because a
+register-only instruction keeps its odd length: there is no transfer for it to
+synchronise to.
+
+Three refinements, each measured against the last rather than argued:
+
+```
+max(eu, fetches*4)                                   31.2%
+   + data accesses ADD rather than overlap           34.5%
+   + parity, gated on there being a transfer         34.3%
+   + one bus cycle when the queue could not refill   35.9%
+   + bus-as-bottleneck instead of a flat penalty     36.5%
+```
+
+**WHAT IS STILL OPEN, measured down to the cycle rather than guessed at.**
+Grouping every vector of `add r/m16, r16` by (queue depth, length, data
+accesses, EU time), **38 of 40 groups are fully determined** — one total
+cycle count each. So the model's inputs are almost sufficient and the gap is
+in the formula, not in missing state.
+
+The largest failing group is `q 0, len 5, 4 accesses`, which is **44 cycles
+regardless of EU time** (24, 27, 29 and 30 all give 44): the bus binds, not
+the EU. Counting its trace directly:
+
+```
+CODE 6   MEMR 2   MEMW 2   = 10 bus m-cycles = 40 cycles, and 44 total
+```
+
+**Six CODE cycles for a five-byte instruction.** The sixth is the refill the
+model already knows about — but it belongs INSIDE the bus-cycle count rather
+than being added after it, which is why the arithmetic came out four short.
+The last four cycles are idle T-states the model does not represent at all.
+
+**BOTH WERE TRIED AND ONE MADE IT WORSE.** Moving the refill INSIDE the
+bus-cycle count — which the m-cycle count says is where it belongs — dropped
+the score from 36.5% to **31.9%**, because it is right for the five-byte case
+and wrong for the three-byte one. Reverted. The post-hoc form stays until
+something explains both.
+
+The idle cycles were then measured rather than guessed. Tabulating
+(m-cycles, Ti, total) by queue depth and length:
+
+```
+(q 0, len 5)   m=10  Ti=2  total=44     4*m = 40, slack 4
+(q 0, len 3)   m= 9  Ti=2  total=40     slack 4
+(q 4, len 2)   m= 1  Ti=2  total= 3     slack -1
+(q 4, len 3)   m= 7  Ti=7  total=34     slack 6
+```
+
+**`total` is not `4 × m-cycles + Ti`** — (q 0, len 5) gives 40 + 2 = 42
+against an actual 44 — so there are T-states the m-cycle count does not
+explain, most likely wait states inside a transfer. **The slack is not
+constant and not a function of the four variables already in the model**,
+which is the first residual in this entry that has genuinely resisted being
+held fixed.
+
+So this is where the transaction-level model stops, and the stopping point is
+now evidenced rather than asserted: **36.5% exact, with the remaining error
+concentrated in T-states that are not visible in the m-cycle count at all.**
+Anything further needs the trace's own T-state column, which is to say a
+cycle-by-cycle simulation. That conclusion has been premature twice in this
+entry; it is offered a third time with the table above as the reason rather
+than an inability to find one.
+
+**What this bought that is not a fidelity claim:** the `INT n` ordering defect
+(E6.8.4c) and the `INC/DEC r16` timing error, neither of which the
+646,000-vector suite can see, because it compares final state and both are
+invisible there.
+
+#### E6.8.4e The ceiling of the closed-form model is 83.4%, and 95% needs the simulator (measured 2026-09-04)
+
+The owner asked why the cycle score stalls at 36.5% and whether it can reach
+95%. Both halves now have a number instead of an opinion.
+
+**Group every vector by the five things the model actually knows** — queue
+depth, instruction length, data-access count, EU cycles, and whether the
+instruction flushed — across 24,000 vectors and sixteen opcode files:
+
+```
+451 groups        383 fully determined (one cycle count each)     84.9%
+                  20,020 of 24,000 vectors sit in those groups    83.4%
+```
+
+**So 83.4% is the INFORMATION CEILING of any closed-form model over those five
+inputs**, and the current 36.5% is roughly 47 points below its own ceiling.
+That gap is a formula problem and needs no new state — which is a much better
+position than "needs a simulator", and it is the first time this entry has
+been able to say which of the two it is.
+
+Adding the OPCODE to the key raises determinism only to 90.4%, and that route
+is declined: a per-opcode table is a lookup rather than a model, it would
+score well on the sixteen files it was fitted to and say nothing about the
+three hundred it was not, and this tier's whole argument is that its numbers
+generalise.
+
+**Above 83.4% the five inputs are provably insufficient** — two vectors with
+identical (q, len, data, eu, flush) genuinely take different numbers of
+cycles, because the difference is where the BIU happened to fit a prefetch.
+That is the cycle-by-cycle simulation, and it is now a measured requirement
+rather than a third assertion.
+
+**Route to >95%, in order:** close the 47 points to the ceiling with a better
+closed form (no new machinery), then build the cycle-stepped BIU for the rest.
+`dbalsom/martypc` (MIT) is the reference implementation to read for the second
+half — its author wrote the very suite being graded against, and it is the
+only permissive cycle-accurate 8088 in existence.
+
+#### E6.8.4f What a correct cycle model needs, read off MartyPC (2026-09-04)
+
+`dbalsom/martypc` is MIT and our licence table already clears it as *readable
+as a reference implementation, not vendored*. Read for STRUCTURE — what state
+the hardware requires — rather than transcribed. Its author also wrote the
+8088 suite being graded against, which makes it the closest thing to a
+specification that exists.
+
+**IT CONFIRMS E6.8.4e STRUCTURALLY.** Its prefetch decision is taken *per
+T-state* and turns on whether the EU has claimed the bus **at that moment**
+(`bus_pending != EuEarly`). That is exactly the occupancy-over-time an access
+trace cannot carry, so the 83.4% ceiling is not a limitation of our fitting —
+it is the information boundary of the input, confirmed from the reference.
+
+**THE MECHANISM I WAS MISSING: QUEUE POLICY LENGTH.** The BIU does not simply
+fetch whenever there is room. It *delays* a fetch by three cycles when the
+queue is at a "policy length" during a code fetch. On an 8088 — one-byte
+fetches, four-byte queue — that length is `size - 1`, i.e. **3 bytes**.
+
+That is the bimodality. Whether a given instruction ended up one cycle longer
+depends on whether the queue happened to sit at 3 when the BIU looked, and no
+function of (queue-at-start, length, data count, EU cycles) can recover it
+because the queue depth *changes during the instruction*.
+
+**The state a correct model needs, in full:**
+
+| State | What it carries |
+|---|---|
+| queue length, per T-state | the policy-length test |
+| fetch state | Idle / **Delayed(n)** / PausedFull / Suspended / Halted |
+| address-cycle sub-state | Ta / Tr / Td — a fetch can only *begin* at Td |
+| bus pending | whether the EU has claimed the bus this m-cycle |
+| bus status latch | whether the current transfer is a code fetch |
+
+Five pieces of state and one delay rule. **That is a specification, not a
+research problem**, and it is a much smaller thing than "write a
+cycle-accurate CPU" — the EU timing we already have, graded at 646,000
+vectors; only the bus scheduler is missing.
+
+**AND THE FIVE STATES ARE NECESSARY BUT NOT SUFFICIENT — corrected before it
+became a plan.** The paragraph here first said "nothing about this needs
+microcode-level emulation". Checking rather than asserting: MartyPC advances
+time with `cycles_i(cycles, instr)` — a MICROCODE INSTRUCTION LIST — and its
+BIU comments describe SUSP and FLUSH as *microcode routines*. Its EU yields
+the bus at microcode-defined points, which is how the scheduler knows WHEN the
+EU claims it.
+
+Ours does not have that. **Our EU timing is a single integer per instruction**
+(`return 25;`), graded at 646,000 vectors for its total but carrying no
+schedule of when within those 25 cycles each access is issued. The measured
+consequence is visible directly: the CODE-fetch count is NOT determined by
+(queue, length, data) — `q 4, len 2, no data` yields **1, 2 or 3** code
+fetches for identical inputs — because how many prefetches fit depends on
+where the EU's own bus claims fall.
+
+So the honest decomposition of the owner's ">95%" is:
+
+```
+36.5% -> 83.4%   a better closed form            no new machinery
+83.4% -> >95%    BIU state machine (5 states)
+                 PLUS per-opcode EU micro-timing  <- the real cost
+```
+
+The second line is not "write a bus scheduler". It is "give every opcode a
+cycle SCHEDULE rather than a cycle COUNT", which is the microcode-level work
+this entry has twice said was not needed. It is a real and legitimate project;
+it is not a refinement of what exists, and saying so now is cheaper than
+discovering it three days in.
 
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
