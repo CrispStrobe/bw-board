@@ -665,10 +665,16 @@ export class I8086Machine {
 
     // ---- the port bus ---------------------------------------------------
     _in(port) {
+        let val = 0xff;
         for (const w of this._io) {
-            if (port >= w.start && port <= w.end) return w.chip.read(regOf(w, port));
+            if (port >= w.start && port <= w.end) { val = w.chip.read(regOf(w, port)); break; }
         }
-        return 0xff;
+        // Port-access trap (E6.8.3): the value handed back is the one the program
+        // sees, so a watch can break on a read AND report what was read. This does
+        // not reopen the refusal to DUMP the port space (i8086-debug.js:22): that
+        // refuses a debugger-initiated read; this observes the PROGRAM's read.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess('in', port, val & 0xff);
+        return val;
     }
 
     _out(port, val) {
@@ -685,9 +691,13 @@ export class I8086Machine {
                     if (hi && !this._kbdStrobe) this._pic.setIRQ(1, 0);
                     this._kbdStrobe = hi;
                 }
-                return;
+                break;
             }
         }
+        // Port-access trap (E6.8.3): fires on EVERY OUT, decoded or not — a debug
+        // watch on "anything touches port 61h" wants the access the program made,
+        // not only the ones that hit a chip. Zero cost when no watch is set.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess('out', port, val & 0xff);
     }
 
     // ---- pins -----------------------------------------------------------
