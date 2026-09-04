@@ -130,6 +130,43 @@ export function createDos8086(machine, io = {}) {
     const trapSeg = io.trapSeg ?? DEFAULT_TRAP_SEG;
     const trapBase = trapSeg << 4;
     const onChar = io.onChar || null;
+    /**
+     * WAIT FOR A KEY, or answer NUL and run on?
+     *
+     * DOS blocks. This layer does not, by default, and that default is right
+     * for the corpus harness: 525 programs run unattended, and a blocking
+     * read turns "this program wanted input nobody gave it" -- a NOINPUT
+     * verdict, useful -- into a hang indistinguishable from a broken emulator.
+     *
+     * It is wrong for a person at a keyboard. A program that asks for a key
+     * and is handed NUL immediately never sees what they type, and the tab
+     * shows a program that ran and ignored them.
+     *
+     * So it is an option, and blocking is implemented by DECLINING TO
+     * SERVICE: the trap page holds `jmp $`, so an unserviced INT leaves the
+     * CPU spinning in place and the next step asks again. No new mechanism,
+     * and time still passes -- which matters, because a program blocked on a
+     * key must still see the timer tick.
+     */
+    const blockOnKey = io.blockOnKey === true;
+
+    /**
+     * Is this call one that a real DOS would block on, with nothing to give
+     * it? INT 21h's echoing and non-echoing single-character reads and its
+     * buffered line read; INT 16h's blocking read (AH=00h/10h).
+     *
+     * The POLLS are deliberately absent: INT 21h/AH=06h with DL=FFh, AH=0Bh
+     * ("is a key ready"), and INT 16h/AH=01h/11h all EXIST to answer "no" --
+     * blocking them would hang every program that politely checks before
+     * reading, which is the well-written half of the corpus.
+     */
+    const waitingForKey = (n) => {
+        if (keys.length) return false;
+        if (n === 0x21) return cpu.ah === 0x01 || cpu.ah === 0x07
+            || cpu.ah === 0x08 || cpu.ah === 0x0a;
+        if (n === 0x16) return cpu.ah === 0x00 || cpu.ah === 0x10;
+        return false;
+    };
     /** Pending keystrokes, as ASCII bytes. INT 16h and INT 21h both drink here. */
     const keys = io.keys ? [...io.keys] : [];
     /** The virtual filesystem. A teaching sandbox has no business touching a real one. */
@@ -1074,6 +1111,16 @@ export function createDos8086(machine, io = {}) {
             // whose handler happens to land here is a bug worth seeing, not
             // one worth quietly servicing.
             if (claimed && !claimed.has(n)) return null;
+            // A BLOCKING READ WITH NOTHING TO READ IS DECLINED HERE, not
+            // inside the handler, and the difference is time. Returning a
+            // serviced verdict makes a caller's step yield ZERO cycles, so a
+            // `while (tMs < deadline)` loop spins without the clock moving --
+            // the hazard this bench's own header warns about. Declining lets
+            // the real instruction run: the trap page holds `jmp $`, so the
+            // CPU spins in place, burns cycles, the timer ticks, and the next
+            // step asks again. Nothing is half-performed, because the handler
+            // never ran.
+            if (blockOnKey && waitingForKey(n)) return null;
             const h = HANDLERS[n];
             controlTransferred = false;
             if (h) h();
