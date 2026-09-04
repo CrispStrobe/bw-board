@@ -26,6 +26,30 @@ function machineWith(code, config) {
     return { m, t: createI8086DebugTarget({ machine: m }) };
 }
 
+test('runFor uses an injected boundary step and preserves sub-cycle budgets', () => {
+    const m = new I8086Machine({
+        clockHz: 5_000_000,
+        regions: [{kind: 'ram', start: 0, end: 0xfffff}],
+        chips: [],
+    });
+    m.cpu.cs = 0;
+    m.cpu.ip = 0x100;
+    m.mem[0x100] = 0x90;                 // NOP
+    const hardwareStep = m.step.bind(m);
+    let injectedSteps = 0;
+    m.step = () => assert.fail('runFor bypassed the adapter boundary step');
+    const t = createI8086DebugTarget({
+        machine: m,
+        step: () => { injectedSteps++; return hardwareStep(); },
+    });
+
+    t.run();
+    assert.equal(t.runFor(1), 'budget');  // 1 ns = 0.005 cycle at 5 MHz
+    assert.equal(injectedSteps, 1,
+        'a positive sub-cycle budget still retires one whole instruction');
+    assert.ok(m.cycles > 0);
+});
+
 //   0000  B8 34 12   mov ax, 1234h
 //   0003  E8 05 00   call 000Bh
 //   0006  90         nop

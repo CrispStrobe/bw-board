@@ -190,6 +190,14 @@ export function labelsFromAssembly(result, opts = {}) {
 export function createI8086DebugTarget(adapter, opts = {}) {
     const machine = adapter.machine;
     const cpu = machine.cpu;
+    // A service layer may need to do work at an instruction boundary before
+    // the hardware machine steps. Keep that one replaceable operation on the
+    // adapter instead of wrapping the whole machine in a Proxy: runFor reads
+    // machine time every instruction, and proxying all of those reads makes
+    // an otherwise direct execution loop pay for service dispatch repeatedly.
+    const executeStep = typeof adapter.step === 'function'
+        ? adapter.step
+        : () => machine.step();
 
     let runState = 'halted';
     let pendingStep = null;
@@ -581,8 +589,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         /** Spend up to budgetNs of simulated time. Returns 'halted' or 'budget'. */
         runFor(budgetNs) {
             if (runState !== 'running') return 'halted';
-            const deadline = machine.tMs + budgetNs / 1e6;
-            while (machine.tMs < deadline) {
+            // This is exactly the old `tMs < tMs + budgetNs / 1e6` test with
+            // the common factors cancelled. Do not round: even a sub-cycle
+            // positive budget must execute one whole instruction, just as the
+            // strict floating-point time comparison did.
+            const deadlineCycles = machine.cycles + budgetNs * machine.clockHz / 1e9;
+            while (machine.cycles < deadlineCycles) {
                 // The overwhelmingly common run has no code breakpoint. Do
                 // not construct/advance a Map iterator for every instruction
                 // in that case; watch/event traps retain their own zero-cost
@@ -604,7 +616,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                         halt({ cause: 'step' }); return 'halted';
                     }
                 }
-                machine.step();
+                executeStep();
                 // Checked BEFORE the write watch, and the order is arbitrary
                 // only in appearance: a port write that trips both is one
                 // event, and reporting the port — the thing the user asked
