@@ -873,6 +873,14 @@ export function createDos8086(machine, io = {}) {
         wr16(0x40, 0x6c, next & 0xffff);
         wr16(0x40, 0x6e, (next >>> 16) & 0xffff);
         eoi();
+        // ORDER IS LOAD-BEARING: the EOI goes out BEFORE the tail-call. A real
+        // BIOS calls 1Ch NESTED and regains control afterwards precisely so it
+        // can send the EOI last; a tail-call skips that, so on a PIC machine
+        // IRQ0 would stay in service and exactly ONE tick would ever fire.
+        // Acknowledging first inverts real BIOS's ordering in the SAFE
+        // direction -- an early EOI risks re-entrancy (bounded at 18.2 Hz), a
+        // late one risks a missed tick, and the former is the recoverable one.
+        //
         // Chain to the user's INT 1Ch handler, as a real BIOS int08 does on
         // every tick. Only when it has been hooked away from our trap page --
         // otherwise it is our own no-op and there is nothing to run. Tail-call
@@ -1198,6 +1206,14 @@ export function createDos8086(machine, io = {}) {
             // on real hardware. INT 8 goes through the CPU so the frame and the
             // IVT vector are the real ones; int08 runs on the next step and,
             // when it is still ours, chains to the hooked 1Ch.
+            //
+            // THIS IS A SERVICE-LAYER CONVENIENCE, NOT HARDWARE. It is machine
+            // time at 18.2 Hz on a machine with no PIT, so a program that reads
+            // the 8254 directly still sees nothing, and a lesson about HOW a
+            // timer interrupt is generated wants the real PIC+PIT chain -- which
+            // is what PCXT8086 carries. Both should exist: this answers "run the
+            // music", the chain answers "show me the interrupt". Requiring a
+            // schematic to hear a tune would be the wrong tradeoff for Tier B.
             if (this._timerTickDue()) { cpu.interrupt(8); return 0; }
             return machine.step();
         },
