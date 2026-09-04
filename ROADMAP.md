@@ -1814,9 +1814,56 @@ exactly 100%   217        >=90%     3
 two named things rather than an open question:** the BIU state machine of
 E6.8.4f (worth ~4%), and a divide microcode loop (worth ~1%).
 
-**Next, gated on the merge consolidation:** emit a calibrated table per opcode
-into `src/`. Mechanical and delegable. The MIT notice must travel with the
-generated tables, not merely with the checkout.
+**DONE (2026-09-04): `src/i8088-cycles.js`, 323 opcodes, 738 KB.**
+`scripts/gen-i8088-cycle-tables.mjs` emits it; `scripts/check-i8088-cycles.mjs`
+scores it back against the oracle; `test/i8088-cycles.test.mjs` checks what can
+be checked WITHOUT the oracle.
+
+```
+IN-SAMPLE   95.82%   (2,881,204 / 3,007,000), 0 missing keys
+HELD-OUT    95.6%    (pilot, 70/30 within each opcode)
+```
+
+The in-sample number validates that generation and lookup agree; it is **not**
+evidence the model generalises, since the shipped table is fitted on those same
+vectors. **The 0.2-point gap between the two is the interesting part**: 50,618
+keys fitted on 3M vectors scoring the same held-out as in-sample is not
+overfitting.
+
+**Named `i8088`, deliberately breaking the tier's `i8086` convention** — the
+vectors are from an AMD D8088 (8-bit bus, 4-byte queue), and the 8086's 16-bit
+bus and 6-byte queue will differ with no oracle to say by how much.
+`i8088-cycles.js` existing while `i8086-cycles.js` does not is a gap marker
+readable at a glance.
+
+**Three things this had to get right, none of them the table itself:**
+
+1. **The absent-oracle path refuses rather than passes.** Both scripts exit 2
+   with *"nothing was regenerated / nothing was checked — this is NOT a pass"*,
+   kept distinct from exit 1 for real drift. A 677 MB dependency that quietly
+   no-ops is the shape that turned bw-board master red today.
+2. **A check that runs in CI at all.** The regeneration check cannot, so
+   `test/i8088-cycles.test.mjs` asserts the hermetic properties instead: shape,
+   every anchor key having the span/tail key that completes it (14k+
+   cross-checks — a missing one mispredicts silently at run time rather than
+   erroring), a real 40-character vector sha rather than `unknown`, and the MIT
+   notice present and untruncated. It asserts nothing about accuracy, because
+   accuracy needs the oracle.
+3. **The MIT notice lives IN THE GENERATED FILE.** The obligation is on the
+   artefact, not the checkout: a derived table shipped in a BSD-3 bundle with
+   its notice left behind in a repo nobody distributes is how attribution gets
+   lost.
+
+**A size reduction is measured and available but NOT taken.** A factored
+encoding — shared EA table + `base(q,len,n)` + an exception list — is **0.29x
+the size with no accuracy loss** (463 stored entries against 1600, on 16
+opcodes). The per-mode EA offsets are *identical* across `01`, `33` and `87`,
+so the term genuinely is shared; factoring it *without* the exception list
+costs 100.0% → 80.9%, which is why the naive version looks attractive and is
+not. Shipping the simple full table first beats landing a cleverer encoding
+before anything works, and the exception count doubles as a legible measure of
+how much of the timing the structure explains (81.6%).
+
 
 **And one process note worth keeping.** The full-suite run was nearly reported
 as having produced nothing: the background task reported "completed" while
