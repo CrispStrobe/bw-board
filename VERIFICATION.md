@@ -401,6 +401,62 @@ measurement: forcing GC every 25 programs and printing post-GC `heapUsed`,
 which stayed flat at 5.4 → 6.3 MB while RSS climbed 60 → 83 MB. Nothing was
 retained at all.
 
+### Rule: a probe that fails to run looks exactly like a probe that found nothing
+
+Seven measurements in one day produced a confident wrong answer, all from
+different tools, and every one of them either **read a plausible number out of
+the wrong field** or **returned a green from a check that never executed**:
+
+| The probe | What it reported | What was true |
+|---|---|---|
+| `cmd \| tail; rc=$?` | exit 0 | `$?` was `tail`'s status, not the command's |
+| `find -newermt '-3 hours'` | zero files changed anywhere | that syntax misparses and matches nothing |
+| `awk '{print $NF}'` over `git worktree list` | a duplicate branch in all three repos | it was counting `HEAD)` from detached worktrees |
+| `ps -eo pid,etime,rss \| awk '{print $1/1024}'` | 3142 MB resident | a PID divided by 1024 |
+| assembling `lock` and `byte [bx]` | two encoder defects | a prefix disassembled alone, and NASM syntax where MASM wants `byte ptr` |
+| `sed 's/old/new/'` used as a mutation | mutation caught, control green | the pattern never matched; the edit never landed |
+| `bash -c '... $IN ...' IN=value` | a 20-minute run with an input stream | `IN=value` set `$0`, so `--type` got an empty string |
+
+**The shape is always the same: the failed measurement and the successful one
+render identically.** That is the same defect this file catalogues in code —
+the broken thing and the working thing looking alike — arriving through the
+instruments instead.
+
+**A MUTATION PROOF NEEDS ITS EDIT ASSERTED, and this is the important
+consequence.** Mutating a source file with `sed` and then observing the suite
+is only evidence if the mutation applied — and `sed` silently no-ops on a
+pattern that does not match. The addressing-mode sweep in
+`test/i8086-asm-encoder-sweep.test.mjs` was "proved" that way and the proof was
+void: the table is keyed `'bx,di'` and the pattern said `'bx+di'`.
+
+So, two-sided:
+
+- **Assert that the edit landed. Never infer it from the suite.** An anchor
+  assertion is one line and cannot silently pass:
+
+      old = "...the exact text..."
+      assert old in s                  # throws before anything is written
+      s = s.replace(old, new, 1)
+
+  `grep -c` on the mutated text, or a checked non-zero `sed` exit, do the same
+  job. (Adopted here from the other lane, which had been using the anchor form
+  to avoid mangling files with regex and found it guards this as well.)
+- **A mutation proof that ends in a GREEN proves nothing without that check.**
+  One that ends in a RED is self-proving: a red is only reachable if the
+  mutation applied. Preferring the red-ending shape is a free habit, and it is
+  why "mutate, expect the test to still pass, confirm the check is not
+  over-tight" is the dangerous variant to write.
+
+And the general practice, which is cheaper than any of the above:
+
+- **Give a probe a positive control**, something whose answer you already know.
+  The `find` bug survived until a directory known to have changed reported
+  zero. The PID-as-RSS bug survived seconds because 3 GB was not absurd.
+- **Prefer a probe that quotes to one that counts.** A count can be produced by
+  the wrong field; a quoted fragment names what it read. That lesson is already
+  in this tree from a different direction — `htmlLen=61` was a fact, and "the
+  frontend is empty" was an inference laid on top of it.
+
 ### Rule: a corpus is evidence only about the constructs it contains
 
 Three of the strongest numbers in this tier are corpus agreements — 470 of 525
