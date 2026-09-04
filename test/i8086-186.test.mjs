@@ -226,3 +226,65 @@ test('on an 8086 every one of these is still its alias', () => {
     b.step();
     assert.equal(b.sp, 0x1004, 'C9 is RETF on an 8086: four bytes off the stack');
 });
+
+// ---------------------------------------------------------------------------
+// The disassembler half. grind-i8086-v20-disasm.mjs takes 172,430/172,430 on
+// TEXT and LENGTH and is the real gate; these cover the three places this
+// module deliberately does NOT match its oracle, plus the variant split.
+// ---------------------------------------------------------------------------
+import { disasmI8086 } from '../src/i8086-disasm.js';
+
+const dis = (bytes, opts = {}) =>
+    disasmI8086((a) => bytes[a] ?? 0x90, 0, { ip: 0, ...opts });
+
+test('disasm: the same bytes read as two different instructions', () => {
+    // If a future edit makes any of these unconditional, this is what catches
+    // it -- and it is the same guard the core has, because a debugger pane
+    // that renders `pusha` as `jo` is a confident lie rather than a gap.
+    const cases = [
+        [[0x60, 0x02], 'jo 0004h', 'pusha'],
+        [[0x61, 0x02], 'jno 0004h', 'popa'],
+        [[0xc9], 'retf', 'leave'],
+        [[0xc8, 0x15, 0x00, 0x0a], 'retf 15h', 'enter 15h, Ah'],
+        [[0xd0, 0xf0], 'setmo al', 'shl al'],
+        [[0xd2, 0xf0], 'setmoc al, cl', 'shl al, cl'],
+    ];
+    for (const [bytes, on8086, on186] of cases) {
+        assert.equal(dis(bytes).text, on8086, `8086: ${bytes.map((b) => b.toString(16))}`);
+        assert.equal(dis(bytes, { variant: '80186' }).text, on186, `186: ${bytes.map((b) => b.toString(16))}`);
+    }
+});
+
+test('disasm: the immediate IMUL prints its immediate, and v20Syntax drops it', () => {
+    // The suite's own disassembler renders these bytes as `imul cx, word
+    // [ds:si]` with DA86h nowhere in the text. Matching that by default would
+    // put a lossy rendering in front of a person reading a debugger pane.
+    const bytes = [0x69, 0x0c, 0x86, 0xda];
+    assert.equal(dis(bytes, { variant: '80186' }).text, 'imul cx, word [ds:si], DA86h');
+    assert.equal(dis(bytes, { variant: '80186', v20Syntax: true }).text, 'imul cx, word [ds:si]');
+    assert.equal(dis(bytes, { variant: '80186' }).length, 4, 'four bytes either way');
+});
+
+test('disasm: an override is shown when it does something', () => {
+    // INS writes ES:DI and no override can change that, so the prefix byte is
+    // inert and is not printed. OUTS reads DS:SI and the override applies, so
+    // it is -- except under the suite's convention, which hides it.
+    assert.equal(dis([0x2e, 0x6c], { variant: '80186' }).text, 'insb');
+    assert.equal(dis([0x2e, 0x6e], { variant: '80186' }).text, 'cs outsb');
+    assert.equal(dis([0x2e, 0x6e], { variant: '80186', v20Syntax: true }).text, 'outsb');
+    // Neither reads ZF, so F2 and F3 both spell `rep` -- unlike cmps/scas.
+    assert.equal(dis([0xf2, 0x6c], { variant: '80186' }).text, 'rep insb');
+    assert.equal(dis([0xf3, 0x6c], { variant: '80186' }).text, 'rep insb');
+});
+
+test('disasm: the word shift form pads its count and the byte form does not', () => {
+    // No principle in it; it is what the oracle emits, and 800 vectors
+    // disagreed in one leading zero until this matched.
+    assert.equal(dis([0xc0, 0xe0, 0x03], { variant: '80186' }).text, 'shl al, 3h');
+    assert.equal(dis([0xc1, 0xe0, 0x03], { variant: '80186' }).text, 'shl ax, 03h');
+});
+
+test('disasm: an unknown variant is refused, not silently downgraded', () => {
+    assert.throws(() => dis([0x90], { variant: '186' }), /unknown variant/);
+    assert.equal(dis([0x90]).text, 'nop', 'and the default is still an 8086');
+});
