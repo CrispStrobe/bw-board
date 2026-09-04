@@ -71,6 +71,41 @@ One model, no cross-check. Honest and weakest.
 |-------|----------|
 | Boundary A conformance: 10/10 against real emu8051-stc WASM | `test/conformance-real-wasm.test.js` — tests that the adapter satisfies the contract, not that the contract matches hardware |
 
+## 2d. The 8086/8088 tier, claim by claim (added 2026-09-04)
+
+The tier is young and its evidence is unusually uneven — some of the strongest
+in this repo beside some of the weakest — so it is tabulated in one place
+rather than inferred from which grinder happens to exist.
+
+**Read the TIER column, not the percentage.** A 100% at tier 2c is one
+implementation agreeing with itself.
+
+| Claim | Tier | Evidence | What would raise it |
+|---|---|---|---|
+| `i8086.js` architectural state | **2a** | 646,000/646,000, SingleStepTests 8086, hardware-generated on an Intel P80C86A-2 | nothing — this is the ceiling |
+| `i8086-disasm.js` text **and** length | **2a** | 646,000/646,000 against the suite's own disassembly strings, 3 documented exclusions | — |
+| 80186 added opcodes | **2a** | 132,532/132,532, SingleStepTests **v20** | a real 80186 suite, which does not exist |
+| 80186 shift-count masking | **2c** | `test/i8086-186.test.mjs` only | **nothing can raise this.** The V20 does NOT mask, so the oracle actively disagrees; 39,898 vectors are excluded by name |
+| 80186 reg=6 as SHL | **2b** | v20 agrees, and period 186 docs call the field reserved | an 80186 suite |
+| Trap flag (TF) | **3** | behavioural tests + period binaries | **no vector in 646,000 sets TF.** DEBUG.COM's `t` is the acceptance and is owed |
+| Cycle counts | **2a, 36.5%** | SingleStepTests 8088 v2 bus traces | the remaining error is in T-states invisible to the m-cycle count — see ROADMAP E6.8.4d |
+| Bus access **order** | **2a** | 152,000/152,000 | — |
+| Queue ops F/S/E | **2a** | 152,000/152,000 | — |
+| 8254 PIT | **2a (partial)** | v86 differential: ours is datasheet-complete where v86 lacks read-back | `dbalsom/arduino_8253` — a reference emulator built against a REAL chip, MIT, and unused |
+| NS16C550 UART | **2a** | v86 differential, scratch register byte-for-byte | broaden the probe set |
+| 8259 PIC, 8237 DMA | **2b** | datasheet + our own tests; MartyPC read as reference | MAME's BSD-3 device files |
+| 8251 USART | **2b** | datasheet + one MIT demo's init sequence | MAME `i8251.cpp`, the only permissive spec-grade reference |
+| uPD765 FDC + DMA | **2a** | MS-DOS 2.0 boots down TWO independent paths (INT 13h service layer vs real FDC over DMA) with byte-identical screens — that differential found the DMA pump moving zero bytes while reporting success | — |
+| CGA renderer | **2b** | pixel layout written twice and cross-checked | — |
+| Audio: tone vs samples | **2b** | the two contracts must agree; caught an octave error in the OPL on its first run | ymfm as a second oracle for the OPL |
+| `i8086-asm.js` | **2a** | 510/525 MASM corpus; MASM refuses 14 of the 15 rejects | — |
+| Extractor refusals | **2c** | our own tests | — |
+
+**The two gaps worth naming as gaps.** The 186 masking cannot be raised above
+2c by any existing artefact — that is a property of the world, not a to-do.
+The trap flag sits at tier 3 with a named acceptance test that has not been
+run. Everything else in the table has a path.
+
 ## 3. Asserted but unverified (engineering assumptions)
 
 These numbers are plausible and internally consistent, but no source is cited.
