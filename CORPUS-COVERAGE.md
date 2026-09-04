@@ -25,17 +25,22 @@ integration tree (my display/keyboard/CRTC work + the DOS INT 10h graphics + the
 were not fully counted — see below). The merged tier did **not** clear the
 baseline's HUNG/THREW, and reading *why* is the whole value:
 
-### THREW — 14, and all 14 are ONE assembler limitation (not hardware)
+### THREW — 14, and all 14 are ONE assembler-config gap (not hardware)
 
 Every THREW is `i8086-asm.js` refusing a conditional jump or `LOOP` whose target
 is beyond the 8086's ±127 short-jump range — e.g. *"JC to FINISHED is 272 bytes
 away and this instruction only reaches 127 -- pass { longJumps: true }"*. The
-8086 has no near/far `Jcc`; a real assembler auto-promotes an out-of-range
-conditional to **inverted-condition + a near `JMP`** (and `LOOP` to `DEC CX` /
-`JNZ` near, or flags it). Ours errors instead, and the `longJumps:true` escape
-hatch is global rather than per-instruction. **One assembler feature — automatic
-per-instruction promotion — clears all 14 at once.** This is the single
-highest-leverage coverage fix in the corpus, and it is the assembler lane's file.
+8086 has no near/far `Jcc`; the promotion to **inverted-condition + a near
+`JMP`** ALREADY EXISTS in the assembler (`promote()` + the `longJumps` option).
+It just is not enabled for this run: the harness calls `assemble(source, {...})`
+without `longJumps`, and MASM dialect defaults it off (`opts.longJumps ??
+this.nasm`), while the corpus is MASM (`.MODEL`). Verified: assembling
+`copy_file_contents.asm` with `longJumps:false` THREW, with `longJumps:true`
+produced 1168 bytes. **So one flag — pass `longJumps:true` in the corpus
+harness's assemble() call, or default MASM to promote as real MASM/TASM do —
+clears all 14 at once, byte-safe (promotion only rewrites jumps that overflow).**
+The single highest-leverage coverage fix, and it is the assembler/harness lane's
+call (a documented dialect decision in their file).
 
 The 14 (all fail to ASSEMBLE, so they never run):
 
