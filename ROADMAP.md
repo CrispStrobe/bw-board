@@ -1567,35 +1567,68 @@ rather than from convention:
    sink is attached — the same rule `syncWriteTrap` and the E6.8.3 hooks
    follow, and the same lesson E6.8.4a just taught about per-instruction cost.
 
-**HOW IT GETS GRADED, which is the part that makes this ours rather than
-generic. THE TWO CONTRACTS MUST AGREE.** If `audioTone()` says 440 Hz, the
-stream from `renderAudio()` must measure 440 Hz — count zero crossings, or run
-a Goertzel filter at the claimed frequency. That is a cross-check between two
-independently written paths inside one chip, which is the discipline §8 of the
-core plan already records for the CGA pixel layout: *"the pixel layout is
-written twice and cross-checked… sharing the code would have been less work
-and would have caught nothing."* It catches the exact failure mode a sample
-path invites — the tone math and the synthesis math drifting apart — and it
-needs no external oracle. For an OPL specifically, `ymfm` (BSD-3) is available
-as a second one.
+**HOW IT GETS GRADED. THE TWO CONTRACTS MUST AGREE** — if `audioTone()` says
+440 Hz, the stream from `renderAudio()` must measure 440 Hz. That is a
+cross-check between two independently written paths inside one chip, the
+discipline §8 of the core plan already records for the CGA pixel layout:
+*"written twice and cross-checked… sharing the code would have been less work
+and would have caught nothing."* No external oracle needed.
 
-**KNOWN WART, and it should be fixed under this rather than inherited by it:**
-`audioTone()` returns an OBJECT from the speaker and the ULA and an ARRAY from
-the AY, so every consumer already has to discriminate and the one that exists
-does not. The fix is for the contract to be an array always, with a
-single-voice device returning one element — but that breaks
-`updateBuzzerAudio(id, tone)`, so it is a named migration and not a silent
-change.
+**AND THE FIRST DRAFT OF THAT TEST COULD NOT FAIL, which is worth recording
+because the idea survived and the method did not.** It said "count zero
+crossings, or run a Goertzel filter at the claimed frequency". `lego-47`
+caught the second half: **a Goertzel AT the claimed frequency reports energy
+at 440 Hz for any signal containing a 440 Hz component** — including one that
+is mostly 880 Hz with a weak fundamental, one where 440 is buried in noise,
+or a square wave whose third harmonic dominates. It answers *is there some 440
+here*, when the question is *is 440 what this IS*. A check that reports
+presence where the claim is identity.
 
-**ORDER.** The contract and the mixer first, with the speaker and the AY as
-its first two producers and the tone/sample agreement test as its gate —
-those are chips we already have, so the contract gets exercised before
-anything new is built on it. The SB DSP next (E6.8.11: our 8237 and 8259 do
-the work). The OPL after that, and only then does the ymfm/DMXOPL/LittleMUS
-chain from E6.8.11 get vendored. **A 6502-tier producer is the proof the
-contract is not 8086-shaped** — that tier has none today, so whatever is
-added there is written against this contract from the start rather than
-migrated onto it.
+That matters because of the drift that actually happens: **off by an octave,
+from a divisor counted per-edge instead of per-cycle.** A bare Goertzel at 440
+passes that silently. So the method is two things, and both are required:
+
+- **Zero crossings over a whole number of periods**, which yields a
+  FREQUENCY rather than a score and disagrees loudly at 880.
+- **Goertzel at the claimed frequency AND at its neighbours** — 2f, f/2, and
+  a couple of unrelated bins — with the claimed bin required to be the
+  STRONGEST, not merely present. That is the difference between a detector
+  and a confirmation.
+
+For an OPL specifically, `ymfm` (BSD-3) is available as a second oracle on
+top of both.
+
+**KNOWN WART, FIXED UNDER THIS AND NOT INHERITED BY IT.** `audioTone()`
+returns an OBJECT from the speaker and the ULA and an ARRAY from the AY. **A
+contract with two shapes is not a contract**: every future producer has to
+guess which one it may return, and the guess will be wrong about half the
+time. This is also the cheapest moment it will ever be — there is exactly one
+consumer, `updateBuzzerAudio(id, tone)`, and it is being touched anyway.
+
+An array always, with a single-voice device returning one element. Named
+migration, not a silent change. **And ASSERT THE ARITY, not just the shape**
+(`lego-47`): a device declaring one voice must return exactly one element,
+because "an array" is satisfied by an empty one, and an empty array is how a
+silent chip and a broken chip look identical.
+
+**ORDER — revised on `lego-47`'s argument, which is better than the one it
+replaced.** The first draft put the speaker and the AY first, because they
+exist and would exercise the contract immediately, and left the 6502 tier
+last. That is right for the speaker and wrong as a plan: **a contract
+validated only against producers that already exist is shaped by them.** The
+6502 tier having nothing is not a reason to defer it — it is the only honest
+shape test available, because whatever is written there is written *against*
+the contract rather than migrated onto it.
+
+1. **The speaker.** Simplest possible producer: one voice, a square wave from
+   a divisor, and it proves the tone half and the agreement test together.
+2. **A 6502-tier producer — the shape test.** Built from the contract
+   outward, by a tier with no audio history. If it forces a change, we learn
+   that after two implementations rather than after four.
+3. **The AY.** Multi-voice, plus the array migration below — the hardest, and
+   it benefits from two prior users.
+4. **The SB DSP** (E6.8.11: our 8237 and 8259 already do the work).
+5. **The OPL**, and only then is the ymfm/DMXOPL/LittleMUS chain vendored.
 
 #### E6.8.12 MicroCoreLabs — not a feature diff, a set of directions
 
