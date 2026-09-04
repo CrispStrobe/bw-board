@@ -139,15 +139,46 @@ const out = rows.map(([name, r]) => ({
     xRealXT: +(r.cycles / r.secs / XT_HZ).toFixed(1),
 }));
 
+// ---------------------------------------------------------------------------
+// vs CORE: THE ONLY COLUMN THAT SURVIVES A DIFFERENT DAY.
+//
+// `core` runs the bare I8086 over flat memory and touches NO machine code at
+// all, so it is a pure BOX-LOAD PROXY. That makes machine/core and boot/core
+// the only figures here that mean anything across runs.
+//
+// This column exists because its absence produced a wrong answer. Two sets of
+// measurements a few hours apart showed core 8.70x -> 14.50x, machine
+// 2.90 -> 4.40 and boot 1.00 -> 1.50, which reads as "everything got 1.5x
+// faster" and is not what happened: the BOX got 1.67x quieter, and normalised
+// against it the machine layer had got about 10% WORSE -- with a 2x page-table
+// optimisation already in. Reporting the absolutes alone would have claimed an
+// improvement and been wrong about the DIRECTION.
+//
+// So the ratio is printed beside the absolutes rather than left for the reader
+// to compute, because the reader will not, and the two numbers they compare
+// will come from two different days.
+// ---------------------------------------------------------------------------
+const coreRow = out.find((r) => r.workload === 'core');
+for (const r of out) {
+    r.vsCore = coreRow && coreRow.xRealXT > 0
+        ? +(r.xRealXT / coreRow.xRealXT).toFixed(3)
+        : null;
+}
+
 if (json) { console.log(JSON.stringify(out, null, 2)); }
 else {
     console.log(`\nAgainst a 4.772727 MHz IBM XT. 1.0x = real time.\n`);
-    console.log('workload    instructions      MIPS   emulated cycles/s     vs real XT');
+    console.log('workload    instructions      MIPS   emulated cycles/s     vs real XT   vs core');
     for (const r of out) {
         console.log(
             `${r.workload.padEnd(11)} ${String(r.instructions).padStart(11)}  ${String(r.mips).padStart(8)}   `
-            + `${String(r.cyclesPerSec).padStart(17)}   ${String(r.xRealXT + 'x').padStart(12)}`);
+            + `${String(r.cyclesPerSec).padStart(17)}   ${String(r.xRealXT + 'x').padStart(12)}`
+            + `   ${String(r.vsCore ?? '-').padStart(7)}`);
     }
+    console.log(
+        '\nCOMPARE THE LAST COLUMN, NOT THE OTHERS. `core` touches no machine code,\n'
+        + 'so it is a load proxy: on a busier box every absolute here falls together.\n'
+        + 'machine/core and boot/core are the only figures that survive a different day.');
     if (!boot) console.log(`\nboot: NOT MEASURED — ${found.reason}`);
     console.log();
 }
