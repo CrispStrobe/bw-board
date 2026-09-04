@@ -298,6 +298,16 @@ function runOne(name, raw, key, from = null) {
             const dir = from ? dirname(from) : '.';
             const out = assembler(source, {
                 name,
+                // A COVERAGE run asks "does this program RUN", not "is it
+                // byte-identical". The 8086 has no near/far Jcc, so a real MASM
+                // (and TASM, and NASM) promotes an out-of-range conditional to
+                // inverted-condition + near JMP; the assembler's MASM dialect
+                // defaults that OFF, which turned 14 corpus programs whose only
+                // sin is a jump target past 127 bytes into THREW instead of a
+                // real verdict. Promotion only rewrites jumps that actually
+                // overflow, so programs that fit are byte-identical either way,
+                // and the byte-strict NASM differential is a separate run.
+                longJumps: true,
                 readInclude: (p2) => {
                     const at = join(dir, p2);
                     return existsSync(at) ? readFileSync(at, 'utf8') : undefined;
