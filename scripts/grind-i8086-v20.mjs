@@ -144,6 +144,38 @@ const wipe = (t) => {
     for (const [addr] of t.final.ram) mem[addr] = 0;
 };
 
+/** The leading prefix bytes of an encoding, in order. Prefixes precede the
+ *  opcode, so this stops at the first byte that is not one. 0x64/0x65 are in
+ *  the list because on an NEC part they ARE prefixes (REPNC/REPC) -- which is
+ *  the whole question this function exists to answer. */
+const PREFIXES = new Set([0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf1, 0xf2, 0xf3, 0x64, 0x65]);
+const leadingPrefixes = (bytes) => {
+    const out = [];
+    for (const b of bytes) { if (!PREFIXES.has(b & 0xff)) break; out.push(b & 0xff); }
+    return out;
+};
+
+/** Is this vector NEC-prefixed -- REPC (0x65) or REPNC (0x64)?
+ *
+ *  IDENTIFIED BY THE BYTES, NOT BY THE NAME, and then cross-checked against
+ *  the name. lego-47's point about its own exclusion rows applies here: the
+ *  bytes are the stable identity and the text is the thing under
+ *  adjudication, so an exclusion keyed on text can quietly widen to cover
+ *  vectors it does not describe and look identical to a clean run. If the two
+ *  ever disagree the run FAILS rather than picking one, because a
+ *  disagreement means this function has drifted from what it claims. */
+const necPrefixed = (t, base) => {
+    const byBytes = leadingPrefixes(t.bytes || []).some((b) => b === 0x64 || b === 0x65);
+    const byName = /^rep[cn]/.test(t.name || '');
+    if (byBytes !== byName) {
+        console.error(`FAILED: ${base} "${t.name}" [${(t.bytes || []).join(' ')}] -- the bytes say `
+            + `${byBytes ? '' : 'no '}NEC prefix and the name says ${byName ? '' : 'no '}NEC prefix. `
+            + 'The exclusion test has drifted from what it excludes.');
+        process.exit(1);
+    }
+    return byBytes;
+};
+
 let pass = 0, fail = 0, notYet = 0, skippedPrefix = 0, skippedCount = 0;
 const failFiles = [], notYetFiles = [];
 let vectorsRun = 0, vectorsPassed = 0;
@@ -172,7 +204,7 @@ for (const file of files) {
         //     C0.4+C1.4 and off scores 579/600 -- the difference IS this
         //     exclusion, and pretending otherwise would either grade the
         //     wrong chip or delete a real 186 behaviour to make a number.
-        if (/^rep[cn]/.test(t.name || '')) { skippedPrefix++; continue; }
+        if (necPrefixed(t, base)) { skippedPrefix++; continue; }
         if ((base.startsWith('C0') || base.startsWith('C1'))
             && (t.bytes[t.bytes.length - 1] & 0xff) > 31) { skippedCount++; continue; }
         load(t);

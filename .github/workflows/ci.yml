@@ -147,6 +147,102 @@ jobs:
         run: node scripts/grind-i8086-disasm.mjs
 
   # ---------------------------------------------------------------------
+  # The 80186 variant, graded against a DIFFERENT CHIP -- and that is the
+  # point of this job rather than a caveat on it.
+  #
+  # There is no hardware-generated 80186 test suite and there is unlikely ever
+  # to be one. The NEC V20 implements the 186's additions with the same
+  # encodings, so SingleStepTests/v20 grades those and nothing else. Where the
+  # V20 stops being a 186 the grinders EXCLUDE and PRINT the count rather than
+  # scoring the wrong chip: 39,898 vectors whose shift count exceeds 31 (the
+  # V20 does not mask and a 186 does -- measured, not assumed) and 3,570
+  # REPC/REPNC vectors (NEC prefixes with no 186 equivalent, identified by
+  # their BYTES and cross-checked against their names, so an exclusion that
+  # quietly widens fails the run instead of looking like a pass).
+  #
+  # WHY THIS IS AFFORDABLE. The full suite is 851 MB. Fifteen opcodes are 156,
+  # so only those files are checked out -- the same pinned-sparse idiom the
+  # `vectors` job above uses, at the same kind of cost.
+  #
+  # What this job does NOT prove is stated so nobody reads it as more: the
+  # shift-count masking and reg=6-as-SHL are the two places a 186 differs from
+  # an 8086 on an instruction BOTH have, and the V20 sides with the 8086 on
+  # both. Those rest on test/i8086-186.test.mjs, which runs in the main suite.
+  vectors186:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: SingleStepTests/v20
+          ref: 9efbd02b8ec1a3aad347c2b59672ad25f3bcdb21
+          path: v20-vectors
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /v1_native/metadata.json
+            /v1_native/60.json.gz
+            /v1_native/61.json.gz
+            /v1_native/62.json.gz
+            /v1_native/68.json.gz
+            /v1_native/69.json.gz
+            /v1_native/6A.json.gz
+            /v1_native/6B.json.gz
+            /v1_native/6C.json.gz
+            /v1_native/6D.json.gz
+            /v1_native/6E.json.gz
+            /v1_native/6F.json.gz
+            /v1_native/C8.json.gz
+            /v1_native/C9.json.gz
+            /v1_native/C0.0.json.gz
+            /v1_native/C0.1.json.gz
+            /v1_native/C0.2.json.gz
+            /v1_native/C0.3.json.gz
+            /v1_native/C0.4.json.gz
+            /v1_native/C0.5.json.gz
+            /v1_native/C0.6.json.gz
+            /v1_native/C0.7.json.gz
+            /v1_native/C1.0.json.gz
+            /v1_native/C1.1.json.gz
+            /v1_native/C1.2.json.gz
+            /v1_native/C1.3.json.gz
+            /v1_native/C1.4.json.gz
+            /v1_native/C1.5.json.gz
+            /v1_native/C1.6.json.gz
+            /v1_native/C1.7.json.gz
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      # Prove the checkout BEFORE trusting anything that reads it. A sparse
+      # pattern that matched nothing produces an empty directory, and both
+      # grinds below would then report a perfect score for examining nothing.
+      # Their own zero-vectors assertion catches that too; this catches it
+      # earlier and says which half is missing.
+      - name: The v20 vectors are actually here
+        env:
+          V20_VECTORS: ${{ github.workspace }}/v20-vectors
+        run: |
+          set -euo pipefail
+          n=$(ls "$V20_VECTORS/v1_native" | grep -c '\.json\.gz$')
+          echo "$n opcode files"
+          test "$n" -eq 29
+          test -f "$V20_VECTORS/v1_native/metadata.json"
+          du -sh "$V20_VECTORS"
+
+      - name: 80186 core — the fifteen added opcodes
+        env:
+          V20_VECTORS: ${{ github.workspace }}/v20-vectors
+        run: node scripts/grind-i8086-v20.mjs
+
+      - name: 80186 disassembler — on text and length
+        env:
+          V20_VECTORS: ${{ github.workspace }}/v20-vectors
+        run: node scripts/grind-i8086-v20-disasm.mjs
+
+
+  # ---------------------------------------------------------------------
   # The OTHER two CPU cores' vectors, which until now ran nowhere at all.
   #
   # The `vectors` job above closed this for the 8086 and its own comment said
