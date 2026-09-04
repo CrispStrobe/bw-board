@@ -38,6 +38,10 @@ const IO_SELECT = {
     // wired the same way the PPI is; the 8251's one register-select line is
     // its C/D pin.
     i8254: { kind: 'pit', low: ['csb'] },
+    // The 8253 is the earlier, pin-identical PIT the original PC/XT used; it
+    // lacks the 8254's read-back command. `variant` rides into the machine
+    // config so a drawn 8253 refuses read-back like the real part.
+    i8253: { kind: 'pit', low: ['csb'], variant: '8253' },
     i8259: { kind: 'pic', low: ['csb'] },
     i8251: { kind: 'usart8251', low: ['csb'] },
 };
@@ -208,7 +212,7 @@ export function extract8086Machine(circuit) {
             for (const pin of pins) {
                 if (!netDriver.has(pin.net)) reasons.push(`${p.id}.${pin.t} is undriven — a floating chip select is not a decode`);
             }
-            ioChips.push({ part: p, kind: ioSpec.kind, pins, selected: new Uint8Array(65536) });
+            ioChips.push({ part: p, kind: ioSpec.kind, variant: ioSpec.variant, pins, selected: new Uint8Array(65536) });
         }
     }
     if (!memChips.length && !ioChips.length) reasons.push('no RAM, ROM, PPI or serial chip on the board');
@@ -313,7 +317,7 @@ export function extract8086Machine(circuit) {
         if (count > (rs ? (1 << rs.length) : 1)) {
             notes.push(`${c.part.id} mirrors through ports ${hx16(lo)}-${hx16(hi)}; its registers sit at ${hx16(lo)}`);
         }
-        chips.push({ kind: c.kind, name: c.part.id, at: lo, span: count });
+        chips.push({ kind: c.kind, name: c.part.id, at: lo, span: count, ...(c.variant ? { variant: c.variant } : {}) });
     }
     if (reasons.length) return { ok: false, notes, reasons };
 

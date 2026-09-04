@@ -301,6 +301,25 @@ test('the Intel support chips (8254 PIT, 8259 PIC, 8251 USART) extract on the IO
     assert.ok(r.lines.some((l) => /usart1 = I8251 AT PORT/.test(l)), r.lines.join('; '));
 });
 
+test('a drawn 8253 extracts to a PIT carrying variant:8253 (no read-back); the 8254 does not', () => {
+    const build = (pitKind) => {
+        const c = decode138Circuit();
+        c.parts.push({ id: 'pit1', kind: pitKind });
+        c.wires.push({ from: 'dec2', fromTerminal: 'y1b', to: 'pit1', toTerminal: 'csb' });
+        c.wires.push({ from: 'cpu1', fromTerminal: 'a0', to: 'pit1', toTerminal: 'a0' });
+        c.wires.push({ from: 'cpu1', fromTerminal: 'a1', to: 'pit1', toTerminal: 'a1' });
+        return extract8086Machine(c);
+    };
+    const r53 = build('i8253');
+    assert.ok(r53.ok, r53.reasons.join('; '));
+    const pit53 = r53.chips.find((x) => x.kind === 'pit');
+    assert.equal(pit53.variant, '8253', 'the 8253 rides its variant into the machine config');
+
+    const r54 = build('i8254');
+    const pit54 = r54.chips.find((x) => x.kind === 'pit');
+    assert.equal(pit54.variant, undefined, 'the 8254 carries no variant (full read-back part)');
+});
+
 test('an i8088 CPU is recognised the same as an i8086', () => {
     const c = decode138Circuit();
     c.parts = c.parts.map((p) => (p.id === 'cpu1' ? { ...p, kind: 'i8088' } : p));

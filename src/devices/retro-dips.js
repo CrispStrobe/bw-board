@@ -201,6 +201,7 @@ export function registerRetroDips() {
     registerDevice('i8088', dipSurface(I8086_CPU, 5.0));
     registerDevice('i8255', dipSurface(I8255, 5.0));
     registerDevice('i8254', dipSurface(I8254, 5.0));
+    registerDevice('i8253', dipSurface(I8254, 5.0));   // pin-identical earlier PIT
     registerDevice('i8259', dipSurface(I8259, 5.0));
     registerDevice('i8251', dipSurface(I8251, 5.0));
     registerDevice('i8284', dipSurface(I8284, 5.0));
