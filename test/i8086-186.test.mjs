@@ -288,3 +288,124 @@ test('disasm: an unknown variant is refused, not silently downgraded', () => {
     assert.throws(() => dis([0x90], { variant: '186' }), /unknown variant/);
     assert.equal(dis([0x90]).text, 'nop', 'and the default is still an 8086');
 });
+
+// ---------------------------------------------------------------------------
+// Labels. Substitution is BY POSITION, not by pattern -- see the comment on
+// `label()` in i8086-disasm.js. These are the cases that made the difference
+// visible; the old regex over the finished text failed four of the six.
+// ---------------------------------------------------------------------------
+
+test('labels: an address takes one, an immediate never does', () => {
+    const labels = new Map([[0x1234, 'start'], [0x002b, 'loop_top'], [0x0042, 'counter']]);
+    const d = (bytes, opts = {}) =>
+        disasmI8086((a) => bytes[a] ?? 0x90, 0, { ip: 0, labels, ...opts }).text;
+
+    // Addresses: labelled.
+    assert.equal(d([0x7e, 0x29]), 'jle loop_top', 'relative jump target');
+    assert.equal(d([0x8b, 0x06, 0x34, 0x12]), 'mov ax, word [ds:start]', 'direct memory');
+    assert.equal(d([0xa1, 0x42, 0x00]), 'mov ax, word [ds:counter]', 'moffs load');
+    assert.equal(d([0xa3, 0x34, 0x12]), 'mov word [ds:start], ax', 'moffs store');
+
+    // Immediates: never. THIS IS THE BUG THE OLD IMPLEMENTATION HAD -- a
+    // regex over the finished text cannot tell 1234h-the-constant from
+    // 1234h-the-address, so a pane silently invented a cross-reference.
+    assert.equal(d([0xb8, 0x34, 0x12]), 'mov ax, 1234h', 'a 16-bit immediate');
+    assert.equal(d([0xc8, 0x34, 0x12, 0x02], { variant: '80186' }), 'enter 1234h, 2h',
+        "ENTER's frame size is a size, not an address");
+
+    // A displacement is part of an effective address computed at run time,
+    // not an address known now, so it is left alone too.
+    assert.equal(d([0x8b, 0x87, 0x34, 0x12]), 'mov ax, word [ds:bx+1234h]', 'a displacement');
+});
+
+test('labels: width does not decide, and an absent map changes nothing', () => {
+    // The old regex required four hex digits, so a datum at 0042h could never
+    // be named while one at 1042h could -- a distinction nothing in the
+    // machine makes. Both are labelled now.
+    const labels = new Map([[0x0042, 'lo'], [0x1042, 'hi']]);
+    const d = (bytes) => disasmI8086((a) => bytes[a] ?? 0x90, 0, { ip: 0, labels }).text;
+    assert.equal(d([0xa1, 0x42, 0x00]), 'mov ax, word [ds:lo]');
+    assert.equal(d([0xa1, 0x42, 0x10]), 'mov ax, word [ds:hi]');
+
+    // And with no map at all the rendering is byte-identical to what the
+    // 646,000-vector grind verifies.
+    const bare = disasmI8086((a) => [0x7e, 0x29][a] ?? 0x90, 0, { ip: 0 });
+    assert.equal(bare.text, 'jle 002Bh');
+});
+
+test('labels: a far pointer is NOT labelled, because it cannot be', () => {
+    // `jmpf 5678:1234` -- the offset means nothing without its segment, and a
+    // map keyed on sixteen bits cannot say which segment a name belongs to.
+    // Labelling it would be right only when CS happened to match.
+    const labels = new Map([[0x1234, 'start']]);
+    const text = disasmI8086((a) => [0xea, 0x34, 0x12, 0x78, 0x56][a] ?? 0x90, 0,
+        { ip: 0, labels }).text;
+    assert.ok(!text.includes('start'), `far pointer left alone, got: ${text}`);
+});
+
+// ---------------------------------------------------------------------------
+// The variant is reachable through the MACHINE, not only through the core --
+// which is the half that makes a breadboard 80188 a config key rather than a
+// fork, and the half I originally plumbed without testing.
+// ---------------------------------------------------------------------------
+import { I8086Machine } from '../src/i8086-machine.js';
+
+/** The smallest machine that will run: RAM over the whole space. */
+const machineCfg = (variant) => ({
+    clockHz: 5_000_000,
+    regions: [{ kind: 'ram', start: 0, end: 0xfffff }],
+    chips: [],
+    ...(variant ? { variant } : {}),
+});
+
+test('machine: the variant reaches the core, and defaults to 8086', () => {
+    assert.equal(new I8086Machine(machineCfg()).cpu.variant, '8086');
+    assert.equal(new I8086Machine(machineCfg('8086')).cpu.variant, '8086');
+    assert.equal(new I8086Machine(machineCfg('80186')).cpu.variant, '80186');
+    assert.throws(() => new I8086Machine(machineCfg('80188')), /unknown variant/,
+        'an 80188 is an 80186 core on an 8-bit bus; the ISA name is what this key takes');
+});
+
+test('machine: the same byte runs as two instructions on the two variants', () => {
+    // End to end through the machine rather than the bare core: 60h at the
+    // reset-adjacent address, PUSHA on one and JO on the other.
+    const run = (variant) => {
+        const m = new I8086Machine(machineCfg(variant));
+        m.cpu.cs = 0; m.cpu.ip = 0; m.cpu.ss = 0; m.cpu.sp = 0x1000;
+        m.mem[0] = 0x60; m.mem[1] = 0x02;
+        m.cpu.flags &= ~0x0800;                        // OF clear, so JO is NOT taken
+        m.step();
+        return m.cpu.sp;
+    };
+    assert.equal(run('8086'), 0x1000, 'JO not taken: the stack is untouched');
+    assert.equal(run('80186'), 0x1000 - 16, 'PUSHA: sixteen bytes of stack');
+});
+
+test('machine: a snapshot carries its variant and refuses a mismatched restore', () => {
+    const a = new I8086Machine(machineCfg('80186'));
+    a.cpu.ax = 0x1234;
+    const snap = a.saveState();
+    assert.equal(snap.variant, '80186', 'the variant is IN the snapshot');
+
+    // Onto an identical machine: fine.
+    const b = new I8086Machine(machineCfg('80186'));
+    b.loadState(snap);
+    assert.equal(b.cpu.ax, 0x1234);
+
+    // Onto the other chip: REFUSED BY NAME. Loading it silently would give a
+    // machine that runs the restored program correctly right up to the first
+    // 186 opcode and then quietly takes a conditional jump instead.
+    const c = new I8086Machine(machineCfg('8086'));
+    assert.throws(() => c.loadState(snap), /snapshot is from a 80186 machine/);
+
+    // A snapshot written before the variant existed has no key at all. Those
+    // were all 8086s, so an absent key reads as '8086' -- old snapshots stay
+    // loadable, and one of them still cannot be put on a 186.
+    const legacy = { ...a.saveState() };
+    delete legacy.variant;
+    const d = new I8086Machine(machineCfg('8086'));
+    d.loadState(legacy);
+    assert.equal(d.cpu.ax, 0x1234, 'a pre-variant snapshot still loads on an 8086');
+    const e = new I8086Machine(machineCfg('80186'));
+    assert.throws(() => e.loadState(legacy), /snapshot is from a 8086 machine/);
+});

@@ -919,6 +919,12 @@ the MIT game corpora, and it is in progress.
 | MartyPC, PCjs | MIT | Readable as reference implementations; not vendored. Reading an MIT implementation ships no third-party code. |
 | `mfld-fr/emu86` | **MIT** (2019-2025 MFLD.fr, verified 2026-09-04) | Readable and ADAPTABLE with attribution. An IA16 emulator covering 8086/8088/**80186/80188**, so it is the permissive reference for the 186 instructions of E6.8.1 — but `SingleStepTests/v20` is the ORACLE for them, and a suite beats a source. Also has three console backends (stdio/PTY/SDL2), which is the shape of a headless serial harness. |
 | `dbalsom/XTCE-Blue` (fork of reenigne's XTCE) | MIT **wrapper**; the executed 8088 **microcode is Intel's** | **STRUCTURE readable, MICROCODE refused** — the identical trap to `nand2mario/z8086` below. A cycle-interruptible core is derivable from `SingleStepTests/8088`'s bus traces, which is both clean and a better oracle than transcription. Its CGA (ported from MartyPC, MIT) is an overscan-aware reference for E6.8.5. See E6.8.4. |
+| `morphx666/x8086NetEmu` | MIT **wrapper**; its own README states the Adlib/SoundBlaster/CGA/VGA code is adapted from **fake86 (GPL-2.0)** and the group-2/MUL/DIV flags from **PCE (GPL)** | **STRUCTURE readable; THE AUDIO AND VIDEO ARE NOT.** Third instance of the rule below, and the clearest: a LICENSE cannot relicense what its author vendored. The 80186 gating, the save-state serialisation and the CRTC start-address wiring are the author's own and may be read. Do not read its audio — `ymfm` is licensed for that. |
+| **`aaronsgiles/ymfm`** | **BSD-3-Clause** (verified 2026-09-04) | **USABLE OUTRIGHT — read, adapt, or VENDOR with its notice.** From-scratch Yamaha FM cores covering OPL/OPL2/OPL3, 252 KB, same licence as this bundle. The only clean door to Adlib; see E6.8.11. |
+| `nukeykt/Nuked-OPL3` | LGPL-2.1 (verified 2026-09-04) | REFUSED. The most accurate OPL3 there is, and an LGPL core inside one bundled JS artefact carries relink obligations a BSD-3 distribution does not discharge. |
+| `fake86` (Mike Chambers), DOSBox `dbopl`, PCE | GPL-2.0 (verified 2026-09-04) | REFUSED, including **through any MIT wrapper that vendored them**. |
+| `MicroCoreLabs/Projects` | **NO LICENCE ANYWHERE** — no LICENSE at the root or in any 8086 subfolder; the API reports `license: null` (verified 2026-09-04) | All rights reserved. **Inspiration only, never a code source.** Its MCL86 microcode carries the same unestablished-provenance refusal as z8086 and XTCE-Blue. See E6.8.12. |
+| `moesay/Elegant86` | GPL-3.0 | REFUSED, and not wanted — an ~8-instruction teaching assembler with no oracle. See E6.8.13. |
 | jasaldivara/retro-dos-graphics | MIT | Shippable WITH ATTRIBUTION. 180 KB NASM across 28 files — CGA, joystick I/O, PC speaker, scrolling. Richest single corpus for Tier C peripheral testing. |
 | FaizanAli7005/typing-balloon-game-asm | MIT | Shippable WITH ATTRIBUTION. 41 KB NASM, broad BIOS interrupt coverage (timer, keyboard, video, speaker). |
 | milyas-io/Assembly-Breakout-Game | MIT | Shippable WITH ATTRIBUTION. 20 KB MASM/TASM, collision, speaker — but it uses **mode 13h, which is the one graphics mode this tier does NOT run today**, because no shipped config declares `kind: 'vga'`. CGA modes 4/5/6 do work, proven bare-metal without a BIOS (3D8h plus raw B800 writes render a 320x200 bitmap with correct bank interleave), so a mode-4/5/6 corpus is runnable now and this one is not. Do not schedule it as an early graphics example. |
@@ -1029,14 +1035,18 @@ human must read it before anything is adopted.
 
 ---
 
-### E6.8 What three finished 8086 emulators do that we cannot (surveyed 2026-09-04, owner-requested)
+### E6.8 What other 8086 projects do that we cannot (surveyed 2026-09-04, owner-requested)
 
 §E6's survey asked one question — *is anything adoptable as a CORE* — and
 answered no. This asks a different one: **what do the finished projects DO
 that this tier cannot**, regardless of whether their code is adoptable. Three
-were read: `mfld-fr/emu86` (**MIT**, verified 2026-09-04 — 2019-2025 MFLD.fr),
-`jeffpar/pcjs` (MIT, already in the table), `dbalsom/XTCE-Blue` (MIT, a fork
-of reenigne's XTCE by MartyPC's author).
+were read first: `mfld-fr/emu86` (**MIT**, verified 2026-09-04 — 2019-2025
+MFLD.fr), `jeffpar/pcjs` (MIT, already in the table), `dbalsom/XTCE-Blue`
+(MIT, a fork of reenigne's XTCE by MartyPC's author). Three more were added
+the same day at the owner's request and are §§E6.8.10-.12:
+`morphx666/x8086NetEmu` (MIT wrapper, GPL-derived subsystems),
+`moesay/Elegant86` (GPL-3.0, refused and not wanted) and
+`MicroCoreLabs/Projects` (**no licence at all**).
 
 **Read this as a gap list, not a verdict.** On core correctness we are ahead
 of two of the three: 646,000/646,000 on architectural state AND on
@@ -1179,6 +1189,27 @@ hsync, start address and cursor are EMITTED rather than derived. Bounded, and
 it pairs naturally with E6.8.4 — a scanline count is only meaningful once the
 cycles feeding it are.
 
+**REFINED 2026-09-04 by reading x8086NetEmu (§E6.8.10), and the refinement
+splits this item in two.** Their `CGAAdapter.vb` wires the CRTC's **start-
+address registers (0Ch/0Dh) and the cursor shape/position registers** into
+rendering, so register-driven scrolling and custom cursors work — and their
+**retrace bits are still computed from a time modulus**, exactly as ours are.
+So the two halves of this item have very different prices:
+
+- **Start address and cursor: cheap, and independently useful.** They are
+  latched register values the renderer reads; no timing model is needed at
+  all. A program that scrolls by moving the start address rather than by
+  copying characters is common period code, and today we draw it not
+  scrolling. **Take this half first** — it does not wait on E6.8.4.
+- **Retrace and scanline counts: the expensive half**, and the one that
+  actually needs cycles under it. Nobody in the survey has it except the
+  cycle-accurate projects.
+
+That an independently-written emulator landed on the same time-modulus
+retrace we did is worth recording as evidence rather than coincidence: it is
+the natural stopping point for an instruction-stepped design, and passing it
+requires the BIU work, not more effort on the video side.
+
 #### E6.8.6 A disk-image builder, and a DOS that boots — **DONE, and it was done before this section claimed it was not** (corrected 2026-09-04)
 
 As first written this item said the four finished devices — `upd765.js`,
@@ -1207,9 +1238,14 @@ media; not a blocker for anything.
 
 #### E6.8.7 Save/restore, surfaced
 
-`I8086Machine.saveState()` exists (`i8086-machine.js:693`) and the chips
-implement their halves. PCjs persists machine state across a page reload. Ours
-is an engine method the UI does not offer. Engine-complete; a host-lane item.
+`I8086Machine.saveState()` and `loadState()` exist (`i8086-machine.js:783`)
+and the chips implement their halves. PCjs persists machine state across a
+page reload; x8086NetEmu XML-serialises registers, flags, all of RAM, the
+video mode and the mounted disk list. Ours is an engine method the UI does
+not offer. **Engine-complete; a host-lane item** — and worth stating plainly
+because a survey of x8086NetEmu initially recorded this as "we lack it
+entirely", which is what happens when a gap list is written from the other
+project's feature page rather than from our own tree. Rule 5 again.
 
 #### E6.8.8 A real OS as the acceptance target
 
@@ -1228,6 +1264,134 @@ E6.8.6 (it wants an image).
   graded against the suite's string; a second syntax would be graded against
   nothing, which is a downgrade disguised as a feature.
 - **The 80186 on-chip peripherals and the R8810.** See E6.8.1.
+
+#### E6.8.10 x8086NetEmu — the closest thing to a peer, and where it stops
+
+`morphx666/x8086NetEmu` (MIT wrapper, VB.NET, single author, actively
+maintained) is the only project in this survey that is doing roughly what we
+are doing: an 8088/8086/**80186** emulator with a `v20` flag gating the same
+fifteen opcodes E6.8.1 just landed, validated against **the same TomHarte
+suite we use**.
+
+**Its harness is the interesting part, and it substantiates a claim §E6.8
+made about ourselves.** `RunTests2` does not run clean: it SKIPS opcode `0F`
+(POP CS), `F6.7`/`F7.7` (IDIV, "these opcodes seem to have bugs"), and all of
+`60`-`6F` and `C0`/`C1`/`C8`/`C9` as "we do not support these opcodes" — the
+undocumented aliases. It also IGNORES the flag results for the whole shift
+group and for MUL/IMUL/DIV/IDIV. No pass rate is published. So the
+undocumented-behaviour lead this section claims is not a matter of taste
+between two projects that made different choices: it is the difference
+between grinding those vectors and excluding them. Their prefetch queue
+(`Helpers/Prefetch.vb`) is entirely commented out, so they do not model the
+BIU either.
+
+What they have that we do not, after checking each against our own tree
+rather than against their feature list:
+
+| | Verdict |
+|---|---|
+| **CRTC start-address + cursor registers wired to rendering** | **TAKE IT.** Folded into E6.8.5, which it splits into a cheap half and an expensive one. |
+| **Save-state, serialised to a file** | Already ours at the engine level (`saveState`/`loadState`); the gap is the UI. See E6.8.7. |
+| **Adlib / SoundBlaster** | Wanted, and **their copy is not the way in** — see E6.8.11. |
+| **CMOS RTC (MC146818, ports 70h/71h)** | Not now. A PC/XT has no CMOS RTC; this is AT-class scope. |
+| Host-folder-as-disk | Nothing to take: their own class throws `NotImplementedException`. |
+| Serial | **We are ahead.** They special-case a bit-banged serial mouse; we have a real NS16C550 and an 8251. |
+| Hard disk | **Parity.** No register-level HDC; it is an INT 13h hook over a disk image, which is what ours is. |
+| Debugger | **Parity.** Step in/over/run and address breakpoints. No symbols, no port breakpoints, no cycle step — so E6.8.2 and E6.8.3 would put us ahead of it rather than level. |
+
+#### E6.8.11 Adlib and SoundBlaster inside a BSD-3 bundle — how, specifically
+
+The owner asked how this can be done at all under our licence regime. It
+divides cleanly into two problems with two very different answers, and the
+usual assumption — that FM synthesis is the licensed part and digital audio
+is the free part — is **backwards for us**.
+
+**The digital half is nearly free, because we already built its hard part.**
+A Sound Blaster's DSP is a port/command state machine at 2x0h driven by
+**8237 DMA channel 1 and an 8259 IRQ**, both of which exist here, are
+vector-adjacent tested, and already move real bytes — `test/dos-boot-fdc.test.mjs`
+proves the DMA pump against an independent path. The command set (time
+constant, 8-bit single-cycle and auto-init playback, the DSP reset
+handshake) is documented in Creative's own *Sound Blaster Hardware
+Programming Guide*, which is a specification to implement from, not code to
+copy. This is an `sb-dsp.js` in the shape of `upd765.js`: a register/command
+state machine that hands blocks to the DMA controller.
+
+**The FM half is where the licences bite, and there is exactly one clean
+door.** Every widely-used OPL2/OPL3 core descends from a short list, and most
+of that list is out of reach:
+
+| Source | Licence | Ruling |
+| --- | --- | --- |
+| **`aaronsgiles/ymfm`** | **BSD-3-Clause** (verified 2026-09-04) | **THE ANSWER.** From-scratch BSD-licensed Yamaha FM cores — OPL/OPL2/OPL3 (YM3812, YMF262) among others, 252 KB. Same licence as this bundle. It may be **read, adapted, or vendored outright** with its notice, which is a thing almost nothing else in this table permits. |
+| `nukeykt/Nuked-OPL3` | **LGPL-2.1** | REFUSED. The most accurate OPL3 emulation there is, and it cannot ship here: an LGPL core inside a single bundled JS artefact carries relink obligations a BSD-3 distribution does not discharge. |
+| DOSBox `dbopl` | GPL-2.0 | REFUSED. |
+| `fake86` (Mike Chambers) | **GPL-2.0** (verified 2026-09-04) | REFUSED — and see the note below, because this one is a trap that has already caught someone. |
+| MAME `src/devices/sound/*` | per-file `// license:` headers, many **BSD-3** | Readable, and a cross-check on ymfm. Verify the header on the exact revision read. |
+
+**The trap, and it is the rule of §"A licence covers what its author wrote"
+in its purest form.** x8086NetEmu is MIT, and its own README states its
+Adlib/SoundBlaster (and CGA/VGA) code is "adapted or inspired from" **fake86**,
+which is GPL-2.0, and its group-2/MUL/DIV flag handling from **PCE**, also
+GPL. So the audio code in an MIT repository is GPL-derived, the MIT LICENSE
+does not and cannot relicense it, and reading it as our reference would import
+exactly the obligation we refuse. **Do not read x8086NetEmu's audio.** Read
+ymfm, which is licensed for it.
+
+Ordering, if this is ever taken: **the DSP first, the FM second.** The digital
+half needs no new licence decision and reuses two chips already in the tree;
+the FM half is a bigger piece of work whose value is unlocked by it.
+
+**The real cost is neither of the above, and it is architectural.** Our audio
+contract is `audioTone() -> {hz, on}` — `pc-speaker.js` says so in its own
+header: *"No samples, no synthesis."* Every audio path in the retro tier
+answers with a TONE DESCRIPTOR, not a sample stream, and that is why a UI
+needs no new concept for a second CPU family. An OPL or a DSP cannot answer
+in that shape; both produce samples. So this item is really "give the engine a
+second audio contract, a sample-buffer one, alongside the tone one" — and
+that decision affects the Z80 and 6502 tiers too, which is why it belongs in
+the roadmap rather than in a commit. **Scope it as an engine-wide audio
+change, not as a sound card.**
+
+#### E6.8.12 MicroCoreLabs — not a feature diff, a set of directions
+
+`MicroCoreLabs/Projects` (Ted Fried) has **no LICENSE file anywhere** — not at
+the root, not in any 8086-adjacent subfolder, and the GitHub API reports
+`license: null` (verified 2026-09-04). **All rights reserved: inspiration
+only, never a code source, and nothing quoted from it.** With that stated,
+four things in it are worth recording:
+
+- **MCL86** is a microsequencer 8086/8088 with a genuinely separated
+  `biu_max.v` / `biu_min.v` (Maximum and Minimum mode bus signalling — the
+  real MN/MX pin distinction) and `eu.v`, driven by a ~417 KB microcode table.
+  It is the most detailed available picture of **what a true BIU model has to
+  track** — ALE, bus-cycle T-states, queue status — if E6.8.4 is ever taken.
+  **Same caution as XTCE-Blue and z8086:** whether that microcode is
+  Intel-derived could not be established, and under this tier's rules an
+  unestablished provenance is a refusal, not a maybe.
+- **MCL86jr / MCL86+ / MCLV20_Max** are FPGA boards that physically replace
+  the 8088 in a real PC/XT or PCjr. Their README notes bug fixes found via
+  the **MiSTer PCXT** core — which is a pointer worth following: a second
+  independent cycle-accurate implementation is exactly the kind of
+  cross-check that produced our own best findings.
+- **XTMax** emulates RAM, ROM and peripherals live on a real ISA bus from a
+  Teensy. Conceptually the hardware twin of our own bus extractor, and an
+  argument that the extractor idea generalises past the breadboard.
+- **Lockstep_QMR** runs redundant cores in continuous lockstep with automatic
+  divergence detection. Not 8086 and not adoptable — but as a METHOD it is
+  the natural step past a vector grinder: **run our core in lockstep against
+  a second implementation and flag divergence live**, rather than only at
+  vector time. That is the same instrument that found the DMA pump moving
+  zero bytes, generalised. Worth its own item if the tier ever wants one.
+
+#### E6.8.13 Elegant86 — checked, and correctly nothing
+
+`moesay/Elegant86` (**GPL-3.0**, ~44 KB, C++/Qt5, self-declared WIP) is a
+teaching assembler and execution visualiser whose assembler implements about
+eight instructions — ADD, AND, JMP, MOV, POP, PUSH, SUB and a no-op group —
+with no oracle of any kind. The owner's read of it as a completeness item was
+right. Refused on licence regardless, and there is nothing in its scope this
+tier does not already do more completely. Recorded so nobody surveys it twice.
 
 #### A licence rule this survey forced, and it belongs above the table
 
@@ -1248,13 +1412,22 @@ or third-party tree as unlicensed until separately established.
 Revised 2026-09-04 after the two corrections above. The prerequisite is met
 and E6.8.6 is done, so both leave the queue:
 
-**E6.8.2** (hours; both ends exist — `labels` is still zero hits in
-`src/i8086-debug.js` on `feat/i8086-tier`) → **E6.8.3** (still
-`breakpoints: ['code','write']`) → **E6.8.1** (graded by the MIT v20 suite,
-which is now *why* it is early rather than why it is blocked) → **E6.8.5**
-(retrace becomes real) → **E6.8.4** (cycle timing, once its perf numbers
-exist) → **E6.8.8** (the harsh oracle, last because it needs E6.8.1 for the
-186 instructions and E6.8.6's image path, which it now has).
+**E6.8.1 is DONE** (2026-09-04): core 132,532/132,532 and disassembler
+172,430/172,430 against SingleStepTests/v20, 8086 unchanged at 646,000/646,000
+on both grinders, `vectors186:` in CI. The disassembler's `labels` support was
+rebuilt from a text regex to positional substitution on the way, which is
+E6.8.2's substrate rather than E6.8.2 itself.
+
+**E6.8.2** (the join: `i8086-asm.js` builds `symbols`, `i8086-disasm.js` now
+takes `labels` correctly, and the debug target passes nothing) → **E6.8.3**
+(still `breakpoints: ['code','write']`) → **E6.8.5a**, the CRTC start-address
+and cursor half, which E6.8.10 showed is independent of any timing work →
+**E6.8.11's DSP half**, if audio is wanted, because it reuses the 8237 and
+8259 and needs no licence decision → **E6.8.5b** (retrace, which needs cycles
+under it) → **E6.8.4** (cycle timing, once its perf numbers exist) →
+**E6.8.8** (the harsh oracle, last because it needs E6.8.1 and E6.8.6, and
+now has both). E6.8.11's FM half and E6.8.12's lockstep idea are unscheduled:
+both are engine-wide changes rather than 8086 items.
 
 Until E6.8.4 lands, `i8086-debug.js`'s `step('cycle')` refusal should say what
 it would TAKE, not only that it cannot — that refusal is currently the only
