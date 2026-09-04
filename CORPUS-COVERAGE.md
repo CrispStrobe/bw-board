@@ -37,17 +37,27 @@ without `longJumps`, and MASM dialect defaults it off (`opts.longJumps ??
 this.nasm`), while the corpus is MASM (`.MODEL`). Verified: assembling
 `copy_file_contents.asm` with `longJumps:false` THREW, with `longJumps:true`
 produced 1168 bytes. **So one flag — pass `longJumps:true` in the corpus
-harness's assemble() call, or default MASM to promote as real MASM/TASM do —
-clears all 14 at once, byte-safe (promotion only rewrites jumps that overflow).**
+harness's assemble() call — clears all 14 at once, byte-safe (promotion only
+rewrites jumps that overflow).** (Only the HARNESS, not the assembler default:
+MASM 1.10 — measured against the real binary — does NOT promote; later MASM and
+TASM do, NASM does and matches our `promote()` byte-for-byte. The MASM-dialect
+default stays OFF so byte-fidelity against the MASM oracle holds and a learner is
+never handed a program that runs here and fails on the lab machine. The coverage
+harness is the one place whose question is "does it run" rather than "is it
+byte-identical".)
 The single highest-leverage coverage fix, and it is the assembler/harness lane's
 call (a documented dialect decision in their file).
 
-**FIXED (2026-09-04, `cb5e992` on `sweep/i8086-corpus`):** the coverage harness
-now passes `longJumps: true`, clearing **13 of the 14** — File Operations (6),
-Control Flow, Patterns, Procedures, Sorting, Utilities (2), External Devices all
-now EXIT. The 14th (`Conversion/string_copy_using_movsb_instruction`) is a
-DIFFERENT gap: the assembler does not support the `.FARDATA` directive — a
-separate, single-program item, not a jump-range issue.
+**FIXED (2026-09-04, `5303924` on `feat/i8086-tier`, lego-47):** the coverage
+harness now passes `longJumps: true` — and counts and prints the promotions,
+with the "no longer assembles under MASM" cost beside them — clearing **13 of
+the 14**: THREW 14→1, EXITED 502→516. File Operations (6), Control Flow,
+Patterns, Procedures, Sorting, Utilities (2), External Devices all EXIT now.
+(This session made the same one-line change independently at `cb5e992`; lego-47's
+is canonical.) The 14th (`Conversion/string_copy_using_movsb_instruction`) is a
+DIFFERENT gap: the assembler does not support `.FARDATA` — a genuine directive
+gap (a second data segment reached via `MOV AX, SEG VAL_DEST; MOV ES, AX`), being
+implemented next.
 
 The 14 (all fail to ASSEMBLE, so they never run):
 
