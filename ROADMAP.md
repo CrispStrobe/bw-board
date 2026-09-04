@@ -1415,6 +1415,58 @@ Fixed, and that file now scores exactly 50.0% — the best-case half, like
 `nop`. 646,000/646,000 unaffected: the 8086 grinder does not compare cycles,
 which is precisely why this one had to exist.
 
+#### E6.8.4d Three of four scores, and where the fourth stops (2026-09-04)
+
+`src/i8088-biu.js` — the BIU as a SCHEDULER rather than a second CPU. The core
+stays instruction-stepped and records what it asked the bus for; this turns
+that ORDER into TIME. Cycle mode therefore never forks the instruction path.
+
+```
+bus sequence   152,000/152,000   100.0%   data accesses in order
+queue ops      152,000/152,000   100.0%   F, S and E, 55,015 with a flush
+cycle count     52,395/152,000    34.5%   was 17.2% from the raw table
+T-state align                     NOT YET
+```
+
+Sixteen opcode files: read-modify-write, `xchg` with memory, `pop` to memory,
+`movsw`, `mul`, indirect `call`, `ret`, `INT`, conditional and unconditional
+branches, port I/O. 646,000/646,000 unchanged throughout.
+
+**THE MODEL WAS MEASURED, NOT DERIVED.** Fitting the residual against queue
+depth, instruction length and access count on 4,000 vectors of
+`add r/m16, r16`:
+
+```
+queue 4, no data      residual 0        the EU table is exactly right
+queue 0, len 2        residual 5        = max(EU, 8) - EU
+queue 0, len 3        residual 7        = max(EU, 12) - EU
+queue 4, 4 accesses   residual 8 or 9   not overlapped AT ALL
+```
+
+**Fetches overlap with execution; data accesses do not.** That asymmetry is
+the finding, and the reason is that Intel's published timings already assume
+the 8086's SIXTEEN-bit bus — on an 8088 every word costs an extra bus cycle
+the EU sits through, because it is waiting for the datum it asked for.
+
+```
+cycles = max(euCycles, fetchBytes * 4) + dataAccesses * 2
+```
+
+**WHERE THE FOURTH SCORE STOPS, and it is the boundary predicted at the
+start.** The residual above is bimodal — 8 *or* 9 — and no function of
+(queue depth, length, access count) separates them, because the difference is
+whether a prefetch happened to fit in a gap between data cycles. That is
+queue occupancy OVER TIME, which is exactly what an access trace does not
+carry: it records order, not when. Closing the last ±1 and reaching T-state
+alignment needs a genuine cycle-by-cycle simulation of the bus, and that is a
+separate decision with the numbers above in front of it rather than a
+continuation of this one.
+
+**What this bought that is not a fidelity claim:** the `INT n` ordering defect
+(E6.8.4c) and the `INC/DEC r16` timing error, neither of which the
+646,000-vector suite can see, because it compares final state and both are
+invisible there.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it

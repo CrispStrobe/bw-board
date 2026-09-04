@@ -58,6 +58,7 @@ import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { I8086, Unimplemented } from '../src/i8086.js';
+import { predictCycles } from '../src/i8088-biu.js';
 
 const root = process.env.I8088_VECTORS || join(homedir(), 'code', '8088-vectors');
 const dir = existsSync(join(root, 'v2')) ? join(root, 'v2') : root;
@@ -203,6 +204,8 @@ function ourQueueSeq(trace) {
     return out;
 }
 
+let predOk = 0, predRun = 0;
+const predDiffs = [];
 let run = 0, exact = 0, notYet = 0, ungradeable = 0, busOk = 0, busRun = 0, qOk = 0, qRun = 0, qFlush = 0;
 const diffs = [];
 const busDiffs = [];
@@ -230,6 +233,23 @@ for (const file of files) {
         }
         for (const [addr] of t.initial.ram) mem[addr] = 0;
         for (const [addr] of t.final.ram) mem[addr] = 0;
+        // THE SCHEDULER'S PREDICTION, beside the raw table value. `got` is what
+        // the core's fixed timing table says and can only ever match the
+        // best case; `pred` is that number put through the BIU model with the
+        // queue state and the bus traffic this vector actually had.
+        let dataAcc = 0;
+        for (let k = 0; k < cpu.busTrace.length; k += 2) {
+            if (cpu.busTrace[k] >= 1 && cpu.busTrace[k] <= 4) dataAcc++;
+        }
+        const pred = predictCycles({
+            euCycles: got,
+            length: (t.bytes || []).length,
+            queueStart: (t.initial.queue || []).length,
+            dataAccesses: dataAcc,
+        });
+        predRun++;
+        if (pred === want) predOk++;
+        else if (predDiffs.length < 6) predDiffs.push(`${base} "${t.name}" want ${want} pred ${pred} (eu ${got}, len ${(t.bytes||[]).length}, q ${(t.initial.queue||[]).length}, data ${dataAcc})`);
         run++; fileRun++;
         if (got === want) { exact++; fileExact++; } else diffs.push(got - want);
         busRun++;
@@ -273,6 +293,9 @@ if (diffs.length) {
 console.log(`\n  ungradeable:  ${ungradeable} vectors whose trace ends before the next`);
 console.log(`                instruction begins, so the suite never states their length.`);
 console.log(`                Counted, not skipped: a skip nobody reports reads like a pass.`);
+console.log(`\n  cycle count, SCHEDULED: ${predOk}/${predRun} `
+    + `(${(100 * predOk / (predRun || 1)).toFixed(1)}%)   was ${(100 * exact / (run || 1)).toFixed(1)}% from the raw table`);
+for (const d of predDiffs) console.log(`      ${d}`);
 console.log(`\n  bus sequence:  ${busOk}/${busRun} (${(100 * busOk / (busRun || 1)).toFixed(1)}%) `
     + `— DATA accesses in order; CODE excluded, that IS the BIU's job`);
 for (const d of busDiffs) console.log(`      ${d}`);
