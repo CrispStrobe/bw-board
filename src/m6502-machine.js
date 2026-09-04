@@ -216,6 +216,23 @@ export class M6502Machine {
                 // The adapter speaks the machine's read(reg)/write(reg)
                 // contract over the core's select/write/read protocol.
                 const ay = new AY38912({ clockHz: c.xtal || config.clockHz });
+                // THE AY RUNS ON ITS OWN CRYSTAL, so its cycles are not the
+                // CPU's. Every chip here is advanced with MACHINE cycles,
+                // and the AY derives its frequency from the clock it was
+                // CONSTRUCTED with -- so without this ratio it is ticked at
+                // one rate and reports another, and `xtal` is an option that
+                // looks honoured and is not.
+                //
+                // Found by the sample contract (E6.8.11a), not by a test of
+                // the tone one: a claim of 440 Hz measured 9382 Hz once there
+                // was a waveform to disagree with it. The tone path reads a
+                // register and does arithmetic; it is self-consistent, and
+                // nothing could ever have contradicted it.
+                //
+                // The fractional cycles are safe: AY38912.advance accumulates
+                // into a float before dividing by 16, so a ratio of 1.7734
+                // neither rounds away nor drifts.
+                const ayRatio = (c.xtal || config.clockHz) / config.clockHz;
                 // readMask (from the extractor) says which offsets the
                 // read decode actually reaches; elsewhere the chip is off
                 // the bus and the CPU sees open bus, like the silicon.
@@ -224,7 +241,7 @@ export class M6502Machine {
                     ay,
                     read: (reg) => (((readMask >> reg) & 1) ? ay.read() : 0xff),
                     write: (reg, v) => { if (reg === 0) ay.select(v); else ay.write(v); },
-                    advance: (n) => ay.advance(n),
+                    advance: (n) => ay.advance(n * ayRatio),
                 };
             } else if (c.kind === 'um245r') {
                 // USB FIFO at one address: a read takes the next queued

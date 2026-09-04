@@ -211,10 +211,26 @@ test('factory: memory read/write on 6502', async () => {
   assert.ok(target.readMem('xram', 0, 1).unsupported);
 });
 
-test('getTargetKinds includes eater6502', () => {
-  const kinds = getTargetKinds();
-  assert.ok(kinds.find(k => k.kind === 'eater6502'));
-  assert.equal(kinds.length, 10);
+test('getTargetKinds is exactly the list we mean, and says which one moved', () => {
+  // WAS `assert.equal(kinds.length, 10)`, and it was stale: an eleventh kind
+  // arrived and this went red saying "11 !== 10" — which does not name the
+  // new kind, does not say whether it was added on purpose, and fails for
+  // whoever adds the twelfth as well. Asserting a COUNT of a growing list is
+  // brittle by construction.
+  //
+  // A set difference instead. Adding a kind still fails this test — which is
+  // right, the list is a contract — but now the failure says WHICH, so the
+  // fix is one word rather than an investigation.
+  const EXPECTED = [
+    'emulator', 'avr8js', 'atmega2560', 'attiny85', 'z80', 'i8086',
+    'attiny88', 'eater6502', 'rp2040js', 'stm32f0', 'serial',
+  ];
+  const kinds = getTargetKinds().map(k => k.kind);
+  assert.ok(kinds.includes('eater6502'), 'the breadboard 6502 is the one this file is about');
+  const added = kinds.filter(k => !EXPECTED.includes(k));
+  const gone = EXPECTED.filter(k => !kinds.includes(k));
+  assert.deepEqual(added, [], `unexpected kind(s): ${added.join(', ')} — add to EXPECTED if intended`);
+  assert.deepEqual(gone, [], `missing kind(s): ${gone.join(', ')} — a target disappeared`);
 });
 
 test('factory: a custom config reaches the machine — the wired-extractor path', async () => {

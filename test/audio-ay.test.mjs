@@ -248,43 +248,45 @@ test('6502 END TO END: a program writes AY registers and the tier makes a sound'
         `the 6502 tier plays 440 Hz; measured ${measured.toFixed(1)}`);
 });
 
-test('PRE-EXISTING DEFECT, found by the sample path: a separate AY crystal is ignored', () => {
-    // `psg8912` accepts an `xtal` so an AY can run on its own crystal rather
-    // than the CPU's — the normal hookup, and the ZX Spectrum's. But the
-    // machine advances every chip with MACHINE cycles
-    // (`advance: (n) => ay.advance(n)`) while `audioTone()` derives its
-    // frequency from the chip's OWN clockHz. Ticked at one rate, reported at
-    // another.
+test('a separate AY crystal is honoured — the defect the sample path found, now fixed', () => {
+    // `psg8912` accepts an `xtal` so the AY can run on its own crystal rather
+    // than the CPU's, which is the normal hookup and the ZX Spectrum's. It
+    // used to be IGNORED: every chip is advanced with MACHINE cycles while
+    // audioTone() derives frequency from the chip's OWN clockHz, so the chip
+    // was ticked at one rate and reported at another. Claim 440, measure 9382.
     //
-    // THE TONE CONTRACT ALONE COULD NEVER HAVE SHOWN THIS. It reads a
-    // register and does arithmetic; it is self-consistent, and there was
-    // nothing for it to disagree with. Rendering samples gave it something to
-    // disagree with, which is what a second contract is FOR.
+    // THE TONE CONTRACT COULD NEVER HAVE CAUGHT THIS. It reads a register and
+    // does arithmetic; it is self-consistent, and there was nothing for it to
+    // disagree with. Rendering samples gave it something to disagree with,
+    // which is the whole argument for having two contracts — arriving from a
+    // direction nobody planned, in a chip nobody was auditing.
     //
-    // Recorded as a passing test rather than filed as a bug, because the fix
-    // is a DECISION that belongs to whoever owns the AY hookup — scale
-    // `advance` to the chip's crystal, or drop `xtal` and admit the AY is
-    // clocked from the CPU — and because a test that pins the current
-    // behaviour will go red the moment somebody chooses.
-    const matched = psgMachine();                      // xtal === clockHz
+    // This test was written RED, pinning the broken behaviour, and flipped
+    // when lego-47 chose the fix: scale `advance` to the crystal rather than
+    // drop `xtal`, because a config option that looks honoured and is not is
+    // the exact defect this repo keeps finding.
     const per = Math.round(CLK / (16 * 2 * 440));
-    const poke = (m) => (reg, val) => { m._write(0x6000, reg); m._write(0x6001, val); };
-    for (const [m, p] of [[matched, poke(matched)]]) {
-        p(0, per & 0xff); p(1, (per >> 8) & 0x0f); p(7, 0x3e); p(8, 15);
-    }
+    const program = (m) => {
+        const poke = (reg, val) => { m._write(0x6000, reg); m._write(0x6001, val); };
+        poke(0, per & 0xff); poke(1, (per >> 8) & 0x0f); poke(7, 0x3e); poke(8, 15);
+    };
+
+    // One clock: agreed before the fix and still does.
+    const matched = psgMachine();
+    program(matched);
     const okFreq = freqFromCrossings(runDraining(matched, 200), matched.audio.sampleRate);
     assert.ok(Math.abs(okFreq - 440) / 440 < 0.03,
-        `with one clock the contracts agree: ${okFreq.toFixed(0)} Hz`);
+        `one clock: claimed 440, measured ${okFreq.toFixed(0)}`);
 
+    // Two clocks: the case that used to be wrong by the ratio of them.
     const split = new M6502Machine({
         clockHz: 1_000_000,                            // CPU at 1 MHz
         regions: [{ kind: 'ram', start: 0, end: 0x5fff }, { kind: 'rom', start: 0x8000, end: 0xffff }],
         chips: [{ kind: 'psg8912', name: 'psg', at: 0x6000, xtal: CLK }],   // AY at 1.7734 MHz
     });
-    const q = poke(split);
-    q(0, per & 0xff); q(1, (per >> 8) & 0x0f); q(7, 0x3e); q(8, 15);
-    assert.equal(split.audioTone()[0].hz, 440, 'the claim is still 440');
-    const badFreq = freqFromCrossings(runDraining(split, 200), split.audio.sampleRate);
-    assert.ok(Math.abs(badFreq - 440) / 440 > 0.2,
-        `with two clocks they disagree, which is the finding: claimed 440, measured ${badFreq.toFixed(0)}`);
+    program(split);
+    assert.equal(split.audioTone()[0].hz, 440, 'the claim is 440');
+    const splitFreq = freqFromCrossings(runDraining(split, 200), split.audio.sampleRate);
+    assert.ok(Math.abs(splitFreq - 440) / 440 < 0.05,
+        `two clocks must now agree too: claimed 440, measured ${splitFreq.toFixed(0)}`);
 });
