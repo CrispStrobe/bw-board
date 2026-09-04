@@ -55,9 +55,24 @@ the 14**: THREW 14→1, EXITED 502→516. File Operations (6), Control Flow,
 Patterns, Procedures, Sorting, Utilities (2), External Devices all EXIT now.
 (This session made the same one-line change independently at `cb5e992`; lego-47's
 is canonical.) The 14th (`Conversion/string_copy_using_movsb_instruction`) is a
-DIFFERENT gap: the assembler does not support `.FARDATA` — a genuine directive
-gap (a second data segment reached via `MOV AX, SEG VAL_DEST; MOV ES, AX`), being
-implemented next.
+DIFFERENT gap: the assembler did not support `.FARDATA` — a genuine directive
+gap (a second data segment reached via `MOV AX, SEG VAL_DEST; MOV ES, AX`).
+
+**`.FARDATA` FIXED (2026-09-04, `fardata-i8086` branch):** it now opens a
+FAR_DATA segment (its own segment outside DGROUP; the generic layout and
+SEG-as-relocation already handle any named segment, so it was a two-line
+addition). The program assembles and RUNS to its exit. **So the corpus's last
+assembler THREW is gone — with the harness's longJumps and this, all 15
+previously-refused programs assemble.** 77/77 assembler tests green (the three
+that asserted `.FARDATA`'s absence / the old counts were updated).
+
+**THE INTERESTING QUESTION — do the 15 newly-running programs hit runtime
+service gaps assembly was hiding? Answer: no.** Spot-checked and swept: the
+File Operations programs do real DOS file I/O ("Copying a file sixteen bytes at
+a time / Source written, 55 b..."), the `.FARDATA` program's cross-segment MOVSB
+works, and the interrupt-fidelity test confirms none takes an interrupt its
+source never wrote. The assembler default was the only thing hiding them; the
+machine behind it was already ready.
 
 The 14 (all fail to ASSEMBLE, so they never run):
 
