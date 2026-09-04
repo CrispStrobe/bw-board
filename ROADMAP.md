@@ -961,7 +961,15 @@ be read and adapted with attribution.
 | --- | --- | --- |
 | dbalsom/arduino_8253 | MIT | **BEST PIT ORACLE.** Real-8253 Arduino interface **plus a reference emulator developed against the physical chip**; datasheet says the 8254 is investigable with the same rig (pin/function compatible). Diffing `i8254.js` against it is close to diffing against silicon. Read + adapt with attribution. |
 | dbalsom/martypc — `crates/lib/marty_core/src/devices/{pit,pic,serial}.rs` | MIT | PIT "highly accurate"; PIC "mostly complete, **missing priority rotation and nested modes**" — exactly the scope `i8259.js` built and skipped. `serial.rs` is an **INS8250, not an 8251** — not a USART reference. Read as reference; not vendored. |
-| hotkeysoft/emulators — `8086/Hardware/Device8254`, `Device8259`, `Device8250` | MIT | Additional MIT PIT/PIC cross-check (C++). Has an 8250 UART, no 8251. |
+| `hotkeysoft/emulators` | MIT (confirmed 2026-09-04) | **This row was too narrow and is widened.** First listed only as an MIT cross-check for `Device8254`/`Device8259`/`Device8250` (it has an 8250, no 8251). It is a multi-machine C++ suite: 8086/8088/**80186/80286**, PC/XT, PC/AT, PCjr, Tandy 1000, **EGA on the real IBM EGA BIOS ROM**, four sound devices, and a **snapshot GUI**. Readable throughout; nothing vendorable (C++). See E6.8.14. |
+| `folkertvanheusden/DotXT` | **NO FORMAL LICENCE.** README says "Released in the public domain"; there is no LICENSE file and the API reports `license: null` (verified 2026-09-04) | **READ ONLY, DO NOT VENDOR, DO NOT PARAPHRASE CLOSELY.** A bare sentence is not a dedication — CC0 and the Unlicense exist because unilateral public-domain release is unrecognised in much of the EU. Has MDA, XT-IDE and an RTC we lack; its own `todo` records DIV/IDIV and disassembler defects, so it is not the route to them. |
+| `MichalPleban/cbm2-pc-emulator` | Apache-2.0 | Not an emulator at all — firmware bridging a REAL 8088 card to a REAL CBM-II. Nothing to take; recorded so it is not surveyed twice. See E6.8.14. |
+| **`sneakernets/DMXOPL`** | **MIT** (verified via API 2026-09-04) | **USABLE AS DATA.** An OPL patch set in `.op2`/`.wopl`, no code. Answers E6.8.11's third problem — an OPL with no instruments makes no sound. Ship with the MIT notice and credit. **Owed diligence before shipping:** nobody has diffed its FM parameters against id's original GENMIDI lump; the author's "original work" statement is a self-report. |
+| **`raffecat/LittleMUS`** | **MIT** (Andrew Towers, 2025) | **USABLE.** `musplayer.c/.h` is a MUS sequencer that is core-AGNOSTIC — it calls an externally supplied `adlib_write(reg, val)` and reads DMXOPL's `.op2` layout directly. `musdriver.c/.h` is written against Nuked-OPL3's struct names and would be rewritten against ymfm: an API mismatch, not a licence one. |
+| `Raffaello/hyper-sonic-drivers` | Apache-2.0 **wrapper**; the tree vendors Nuked-OPL3 (LGPL-2.1), MAME `ymf262` (GPL-2.0-or-later), DOSBox `dbopl` (GPL-2.0), woody, ScummVM (GPL-3.0), MUNT (LGPL-2.1 via `vcpkg.json`), plus a Miles Design proprietary EULA doc | **REFUSED — the specimen instance of the rule below.** Four copyleft licences vendored verbatim under one permissive LICENSE, each still carrying its own SPDX header. The only clean thing in it is `hardware/opl/mame/ymfm/`, which IS `aaronsgiles/ymfm`. See E6.8.16. |
+| `kawaii-Code/as88v2` | **Unlicense (public domain)** | Vendorable and still declined: a THIRD assembler dialect (Tanenbaum `as88` — `.SECT`, `!` comments, `(x)` dereference, a fake `SYS` opcode), self-described as an unstable subset, tested by asserting exit code zero. See E6.8.15. |
+| `ccodere/instrcvt` | **No LICENSE**; custom 1995 freeware header forbidding re-release of modified source | REFUSED, and not needed. Not an instruction converter — a Sound Blaster/AdLib **instrument** format converter (`.SBI`/`.INS`). DMXOPL supplies the same need under MIT. |
+| `DynartInteractive/DOS-Game-Engine` | MIT **at the top level only** — `UNITS/SBDSP.PAS`, `UNITS/PLAYHSC.PAS` and `UNITS/XMS.PAS` retain other authors' "all rights reserved" / "not to be distributed modified" / NEO-Software-permission notices verbatim, and `DATA/*.PCX` is carved out non-commercial | REFUSED for those files regardless of the LICENSE, and Turbo Pascal throughout, so our assembler could not ingest it anyway. Its inline `asm` fragments are LESSON TOPIC ideas only. See E6.8.15. |
 | ajokela/retro-z80-emulator — `src/serial.rs` | MIT | **First MIT 8251 reference (Rust)** — but LOWER FIDELITY than ours: mode and command share one field, no mode→command sequence, no internal-reset rewind, no TxEN gating. It would mishandle the soft-reset init dance. Confirms our sequence model is necessary, not gold-plating. Sanity reference only. |
 | SIrfanH/8086-mp-8251-usart-auto-complete-demo | MIT | **Shippable 8251 test material WITH ATTRIBUTION.** 8086 asm + Proteus circuit. Its init sequence (mode → 0x40 soft-reset → mode → enable) validated `i8251.js`, and its serial protocol is wired up as an end-to-end test (`test/i8086-devices.test.mjs`). |
 | MAME (current upstream) — `src/devices/machine/{i8251,pit8253,pic8259}.cpp` | **BSD-3-Clause** (per each file's `// license:` header; MAME-the-project is GPL-2.0 but these device files are individually BSD-3) | **PERMISSIVE — the spec-grade 8251 reference we were missing.** Readable and adaptable WITH the BSD-3 notice. Also permissive PIT/PIC cross-checks. Verify the header on the exact revision you read; the relicensing landed ~2015-16. |
@@ -1338,9 +1346,37 @@ does not and cannot relicense it, and reading it as our reference would import
 exactly the obligation we refuse. **Do not read x8086NetEmu's audio.** Read
 ymfm, which is licensed for it.
 
-Ordering, if this is ever taken: **the DSP first, the FM second.** The digital
-half needs no new licence decision and reuses two chips already in the tree;
-the FM half is a bigger piece of work whose value is unlocked by it.
+**AND AN OPL WITH NO PATCH SET MAKES NO SOUND** — which is a third problem,
+separate from the core and from the DSP, and it is the one that usually gets
+discovered last. A YM3812 is a bank of operators with no opinions; the
+instruments live in data, and period data (id's GENMIDI lump, Creative's
+`.SBI`/`.INS` files) is not ours to ship.
+
+**A second sweep on 2026-09-04 closed all three, and the chain is complete:**
+
+| Piece | Source | Licence | |
+| --- | --- | --- | --- |
+| the FM core | `aaronsgiles/ymfm` | **BSD-3-Clause** | vendorable with notice |
+| the patch set | `sneakernets/DMXOPL` | **MIT** (verified via API) | data-only `.op2`/`.wopl`; README grants reuse for credit |
+| a MUS sequencer | `raffecat/LittleMUS` | **MIT** | `musplayer.c/.h` is core-agnostic — it calls an externally supplied `adlib_write(reg, val)` and nothing else, and it eats exactly DMXOPL's `.op2` layout |
+| the digital side | Creative's own programming guide | a specification | over our existing 8237 + 8259 |
+
+So there IS a licence-clean path from a `.MUS` file to a speaker, assembled
+from four independently permissive pieces, and none of it requires reading a
+GPL source. `LittleMUS`'s other half (`musdriver.c/.h`) is written against
+Nuked-OPL3's struct names and would be rewritten against ymfm — an API
+mismatch, not a licence one, since MIT permits exactly that.
+
+**One caveat recorded rather than smoothed over:** DMXOPL's author states the
+patches are original work using the old ones "as a base for your own
+derivative", and that is a self-report. Nobody has diffed the FM parameter
+values against id Software's original GENMIDI lump, and nobody in this survey
+could. If this is ever shipped, that diff is the due diligence, not the
+author's sentence.
+
+Ordering, if this is ever taken: **the DSP first, the FM second, the patch set
+third.** The digital half needs no new licence decision and reuses two chips
+already in the tree; the FM half is the bigger build; the patch set is a file.
 
 **The real cost is neither of the above, and it is architectural.** Our audio
 contract is `audioTone() -> {hz, on}` — `pc-speaker.js` says so in its own
@@ -1392,6 +1428,113 @@ eight instructions — ADD, AND, JMP, MOV, POP, PUSH, SUB and a no-op group —
 with no oracle of any kind. The owner's read of it as a completeness item was
 right. Refused on licence regardless, and there is nothing in its scope this
 tier does not already do more completely. Recorded so nobody surveys it twice.
+
+#### E6.8.14 The second emulator sweep — hotkeysoft, DotXT, cbm2-pc (2026-09-04)
+
+**`hotkeysoft/emulators` (MIT, C++) was already in the table and the entry was
+far too narrow.** It was listed only as an MIT cross-check for its
+`Device8254`/`Device8259`/`Device8250`. It is actually a multi-machine suite
+covering 8086/8088/**80186/80286** across PC/XT, PC/AT, PCjr and Tandy 1000,
+validated against the same TomHarte lineage we use (no published pass rate).
+Four things in it we do not have:
+
+- **EGA**, running the real IBM EGA BIOS ROM. A reference for the register
+  model, not code and not a ROM we could ship. Roadmap only.
+- **80286 far enough for POST, plus LOADALL.** Out of scope by §2, but the
+  best available sighting of what "far enough" means.
+- **A snapshot GUI** — browse, restore and annotate save states. This is
+  precisely the layer E6.8.7 says we are missing on top of an engine that
+  already has `saveState`/`loadState`. **Take the interaction pattern**, not
+  the code; different stack entirely.
+- **Sound: PC Speaker, SN76489, CMS/Game Blaster, Disney Sound Source.** More
+  breadth than the Adlib/SB axis E6.8.11 scopes, and the same second-audio-
+  contract problem gates all of it.
+
+**`folkertvanheusden/DotXT` — read the licence before anything else.** The
+README says *"This software is © Folkert van Heusden. Released in the public
+domain."* There is **no LICENSE file, and the GitHub API reports
+`license: null`** (verified 2026-09-04). A bare sentence is not a formal
+dedication: CC0 and the Unlicense exist precisely because unilateral
+public-domain release is not recognised in much of the EU. **Treat as
+author-stated, unformalised — read only, do not vendor, do not paraphrase
+closely.** On the merits it is behind us anyway: its own `todo` records ESC/FPU
+unimplemented, DIV/IDIV interrupt and flag edge cases wrong, and disassembler
+bugs, against our 646,000 + 132,532 with the undocumented behaviour included.
+What it has that we lack — **MDA** (cheap, a port-mapped text card), **XT-IDE**
+(medium, and it is what gets a machine past a floppy), an **RTC** (cheap),
+and Adlib/MIDI (see E6.8.11) — is worth having; its implementation is not the
+route to any of it.
+
+**`MichalPleban/cbm2-pc-emulator` (Apache-2.0) is not an emulator and can be
+dropped.** It is firmware for a *real, physical* 8088 expansion card in a
+Commodore CBM-II, bridging two pieces of genuine silicon: the 8088 side
+intercepts about forty INT 10h/13h/16h BIOS calls and hands them to a 6509
+that drives real Commodore hardware — MDA text copied into CBM-II video RAM,
+INT 08h/1Ch off real CIA timers, PC speaker tones synthesised on a SID. The
+one conceptual parallel — translate INT-based BIOS calls into host-native
+services — is what `i8086-dos.js` already does, in software and more directly.
+Recorded so nobody surveys it twice.
+
+#### E6.8.15 Tooling checked, and correctly declined (2026-09-04)
+
+- **`kawaii-Code/as88v2`** — **Unlicense (public domain)**, Zig, a
+  reimplementation of Tanenbaum's `as88` from *Structured Computer
+  Organization*. Fully vendorable, and we still should not: the dialect is a
+  THIRD one, neither MASM nor NASM (`.SECT .TEXT`, `!` comments, `(x)` for
+  dereference, and a fake `SYS` instruction that is not an 8086 opcode at
+  all), and its own README calls it "highly unstable... only a small subset of
+  instructions". Its test suite asserts exit code zero. Ours is 510/525 of a
+  MASM corpus plus 646,000 graded on text. **Take nothing.** The one idea worth
+  noting is its `t88` tracer — registers, stack, source and command input in
+  one view — which is a layout argument for E6.8.2/E6.8.3, not code.
+- **`ccodere/instrcvt`** — **the hypothesis was wrong and the correction is
+  useful.** It is not an instruction converter. It is a 1995 Turbo Pascal
+  **instrument** converter, moving between `.SBI` (Sound Blaster Instrument),
+  `.INS` (AdLib, 54-byte) and AdLib Sound Tracker patch formats — so it
+  belongs to E6.8.11's third problem, not to the assembler at all. **No
+  LICENSE file**; the source header carries a custom 1995 freeware notice that
+  forbids re-release of modified source. **Refused**, and unnecessary: DMXOPL
+  ships `.op2`/`.wopl` under MIT and LittleMUS reads `.op2` directly, so the
+  `.SBI` path is not one we need.
+- **`DynartInteractive/DOS-Game-Engine`** — MIT at the top level, and **the
+  MIT does not reach three of its own files.** `UNITS/SBDSP.PAS`,
+  `UNITS/PLAYHSC.PAS` and `UNITS/XMS.PAS` are near-identical to the copies in
+  its own `VENDOR/` tree and **retain the original authors' notices verbatim**
+  — "all rights reserved", "NOT to be distributed modified", and a NEO
+  Software clause requiring written permission for commercial use — inside
+  files a blanket MIT LICENSE claims. The `DATA/*.PCX` art is separately
+  carved out as non-commercial. It is Turbo Pascal in any case, so our
+  assembler could not ingest a line of it. **Take nothing**, and note the
+  inline `asm` fragments (mode 13h set, INT 33h mouse polling, DMA critical
+  sections) only as LESSON TOPICS — the Sound Blaster ones live in the tainted
+  units specifically.
+
+#### E6.8.16 The vendored-licence rule is not an occasional trap. It is the norm in this field's audio code.
+
+When this rule was written (below) it had one instance. As of 2026-09-04 it
+has four, and **three of them are audio**:
+
+| Repo | Says | Actually contains |
+| --- | --- | --- |
+| `morphx666/x8086NetEmu` | MIT | Adlib/SB from **fake86 (GPL-2.0)**, group-2 flags from **PCE (GPL)** |
+| `Raffaello/hyper-sonic-drivers` | Apache-2.0 | **Nuked-OPL3 (LGPL-2.1)**, **MAME `ymf262` (GPL-2.0-or-later)**, **DOSBox `dbopl` (GPL-2.0)**, woody (same DOSBox lineage), **ScummVM (GPL-3.0)**, **MUNT (LGPL-2.1)**, and a **Miles Design proprietary EULA** doc |
+| `DynartInteractive/DOS-Game-Engine` | MIT | three units under 1995 freeware "all rights reserved / not to be distributed modified" terms |
+| `dbalsom/XTCE-Blue` | MIT | reenigne's decoded **Intel microcode** |
+
+`hyper-sonic-drivers` is the specimen worth keeping, because it is the trap at
+full size: an Apache-2.0 LICENSE over a directory tree in which *four
+different copyleft licences* are vendored verbatim, each still carrying its own
+SPDX header. Nothing about the repository page shows it. **And the one clean
+thing inside it is `hardware/opl/mame/ymfm/` — which is `aaronsgiles/ymfm`,
+BSD-3, exactly the door E6.8.11 already found.** An independent search
+arriving at the same single answer is the strongest evidence we have that the
+answer is right.
+
+Practical consequence, and it is a change of default: **for audio, assume a
+permissive top-level licence is wrong until the tree is walked.** Read the
+per-file SPDX headers, not the LICENSE file, and check the dependency
+manifest — `hyper-sonic-drivers` pulls LGPL MUNT through `vcpkg.json`, where
+no file header would ever show it.
 
 #### A licence rule this survey forced, and it belongs above the table
 
