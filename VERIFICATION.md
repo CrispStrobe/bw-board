@@ -364,6 +364,43 @@ The rule:
   the disassembler's exclusion key learned, in a different file, from a
   different direction.
 
+### Rule: an average over a skewed distribution hides a cliff
+
+The corpus harness died at V8's 900 MB heap limit and the diagnosis went
+astray for a day on one measurement that was CORRECT.
+
+Peak RSS was sampled at N=50 (71 MB) and N=150 (117 MB), giving ~0.45 MB per
+program — from which "roughly constant per program, therefore a retained
+object graph" was written into a commit message. The arithmetic was right. The
+inference was wrong, and it was wrong because **the sample stopped one program
+short of the cliff**: the runaway sits between n=150 and n=175.
+
+What the distribution actually looks like, measured across all 525: total
+captured output **6.9 MB**, of which **two programs produce 98.4%** — 3.95 MB
+and 2.84 MB — and every other program contributes a few KB.
+
+**`525 × 0.45 MB` and `2 × 40 MB` produce the same average and want completely
+different fixes.** One says hunt a referrer; the other says cap a string. A day
+went into the first.
+
+- **A per-unit average asserts that the units are alike.** When they are not,
+  it reports a gentle slope and hides a cliff, and it does so most convincingly
+  when the sample happens to miss the outliers.
+- **Look at the distribution before dividing.** A max and a top-few list cost
+  nothing and would have shown this immediately; the mean cost a day.
+- **A confident mechanism inferred from a linear fit is a sampling artefact
+  until the tail is checked.** "Roughly constant per program" was the whole
+  basis for "retained object graph", and it was an artefact of where the
+  sampling stopped.
+- The corroborating detail is worth keeping: slimming the retained reports
+  recovered 5%, which read as "close, keep going" and was really "reports are
+  genuine garbage, and garbage was never the problem".
+
+The proof that settled it was not a better average but a different
+measurement: forcing GC every 25 programs and printing post-GC `heapUsed`,
+which stayed flat at 5.4 → 6.3 MB while RSS climbed 60 → 83 MB. Nothing was
+retained at all.
+
 ### Rule: a corpus is evidence only about the constructs it contains
 
 Three of the strongest numbers in this tier are corpus agreements — 470 of 525

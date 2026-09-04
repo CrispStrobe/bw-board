@@ -377,6 +377,32 @@ function runOne(name, raw, key, from = null) {
         // disagreement out of a modelling difference.
         const stream = norm(report.stdout);
         const screen = norm(dos.screenText().join('\n'));
+        // A TRUNCATED STREAM IS A PREFIX, NOT AN OUTPUT. The DOS layer caps
+        // what it retains at 1 MB (see MAX_STDOUT — two corpus programs
+        // otherwise retain ~40 MB each at the default budget). A comparison
+        // that ignored the cap could report MATCH the moment an expected
+        // output happened to be shorter than the prefix, which would be a
+        // false agreement produced by our own memory limit. Anything that
+        // hits the cap is a runaway program and belongs in LOOPING.
+        if (report.stdoutTruncated) {
+            // WHY it ran away matters as much as that it did. Both corpus
+            // programs that hit this cap -- dos_menu_driven_program.asm and
+            // calculator.asm -- are INTERACTIVE: they print a menu, wait for a
+            // key, get none because this harness types nothing by default, and
+            // reprint forever. Their output is ordinary printable text, not the
+            // ORACLE pattern where a runaway INT 21h/09h scans memory for a `$`.
+            // So the cause is a missing input, which is a limit of the harness
+            // rather than a defect in the program or the emulation -- the same
+            // distinction NOINPUT already exists to draw.
+            const asked = report.keyRequests > 0;
+            return {
+                name, kind, steps, report: slimReport(report), verdict: 'LOOPING',
+                note: `printed ${report.stdoutChars.toLocaleString()} characters; output capped `
+                    + `at 1 MB and not compared`
+                    + (asked ? ` — it asked for input ${report.keyRequests} time(s) and got none,`
+                        + ' so it reprinted its prompt; try --type' : ''),
+            };
+        }
         if (want === stream) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'stream' };
         if (want === screen) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'screen' };
         // A SCREEN IS EIGHTY COLUMNS AND A STREAM IS NOT. Their oracle records

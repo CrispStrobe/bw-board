@@ -19,9 +19,32 @@ const DIGITAL_JAR = '/mnt/volume1/code/digital-sim/Digital/Digital.jar';
 const LIB = '/mnt/volume1/code/digital-sim/Digital/lib/DIL Chips/74xx';
 const AVAILABLE = existsSync(DIGITAL_JAR);
 const SKIP = !AVAILABLE && 'Digital.jar not found';
-/** Six times the ~5s a bare invocation takes here. Generous on an idle box,
- *  and reachable on a loaded one — see the catch below. */
-const TIMEOUT_MS = 30000;
+/**
+ * WHY THIS IS 120s AND NOT 30s.
+ *
+ * A bare invocation takes about 5s on this box, so 30s looked like a 6x
+ * margin. It is not, because the margin is spent on WALL CLOCK and the load
+ * is structural rather than incidental: `node --test` runs one worker per
+ * core (four here), several of the neighbours in this suite are emulator or
+ * vector-grinding tests that saturate a core, and a 5s CPU job sharing four
+ * cores with three of those can exceed 30s of wall clock without anything
+ * being wrong.
+ *
+ * That was not a theory. Four tests failed at almost exactly their caps in a
+ * run on a loaded box; three passed on a clear one; and the survivor still
+ * failed WITH 2 GB FREE, which is what ruled out memory and pointed at CPU
+ * contention from the suite's own parallelism. Raising the cap is the fix
+ * that addresses that cause. Pruning idle sessions does not.
+ *
+ * 120s is a 24x margin on the measured bare time. It is still a HANG
+ * detector, which is the only thing a timeout here is for: a Digital
+ * invocation that has not finished in two minutes is stuck, not busy.
+ *
+ * A retry would have been the wrong shape. It hides the very condition this
+ * file has just been taught to report, and a flaky gate that passes on the
+ * second attempt teaches people to re-run rather than to look.
+ */
+const TIMEOUT_MS = 120000;
 
 function runDigitalChipTest(digPath, testData) {
     if (!existsSync(digPath)) return { pass: false, output: `${digPath} not found` };
