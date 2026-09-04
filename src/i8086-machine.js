@@ -335,6 +335,34 @@ export const VGADEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The keyboard board — the INPUT counterpart to the display set, proving the
+ * XT keyboard hardware path end to end. An 8086, 64K RAM, the CGA text page, an
+ * 8259 PIC at 20h, an 8255 PPI at 60h (the keyboard port), a CGA card, and a
+ * 32K ROM. Call machine.keyIn(scancode) and it latches the byte at port A and
+ * raises IRQ1; rom/keyboard-demo.bin (scripts/build-keyboard-demo.mjs) hooks
+ * INT 09h, reads 0x60, acknowledges via the port-B strobe, translates set-1
+ * scancodes to ASCII, echoes to the text page, and issues its own EOI.
+ *
+ * This is the first thing in the tier to drive the 8259's IRQ1 path for real —
+ * setIRQ, priority, acknowledge, EOI — rather than calling cpu.interrupt(9)
+ * directly. The demo must EOI itself (bare-metal, no BIOS) or exactly one key
+ * ever arrives, the same failure the timer demo's EOI guards against.
+ */
+export const KBDDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional (IVT, stack, cursor)
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259 at 20-21h (IR1 -> INT 9)
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 at 60-63h (keyboard: scancode at 60h, ack at 61h)
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (echo shows at B800:0000)
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
@@ -452,6 +480,12 @@ export class I8086Machine {
         // The master PIC — the one step() polls to deliver INTR. A breadboard
         // has at most one; if there are several, the first declared wins.
         this._pic = Object.values(this.chips).find((c) => c instanceof I8259) || null;
+
+        // The XT keyboard sits on the first 8255: its scancode is read at port A
+        // and its acknowledge is the port-B bit-7 strobe. keyIn() latches a byte
+        // and raises IRQ1; the strobe (bit 7 rising, seen in _out) clears it.
+        this._kbdPpi = Object.values(this.chips).find((c) => c instanceof I8255) || null;
+        this._kbdStrobe = false;
 
         // Wire each interrupting peripheral's output to its PIC line. The PIT
         // routes through _pitOutput (it has three outputs, only one of which
@@ -604,7 +638,20 @@ export class I8086Machine {
 
     _out(port, val) {
         for (const w of this._io) {
-            if (port >= w.start && port <= w.end) { w.chip.write(regOf(w, port), val); return; }
+            if (port >= w.start && port <= w.end) {
+                const reg = regOf(w, port);
+                w.chip.write(reg, val);
+                // XT keyboard acknowledge: a write to the keyboard 8255's port B
+                // (reg 1) with bit 7 HIGH strobes the latch clear and drops IRQ1.
+                // The clear happens on the RISING edge — a program that sets bit 7
+                // and leaves it there has still acknowledged — so edge, not level.
+                if (w.chip === this._kbdPpi && reg === 1 && this._pic) {
+                    const hi = (val & 0x80) !== 0;
+                    if (hi && !this._kbdStrobe) this._pic.setIRQ(1, 0);
+                    this._kbdStrobe = hi;
+                }
+                return;
+            }
         }
     }
 
@@ -774,6 +821,21 @@ export class I8086Machine {
             if (typeof c.rxByte === 'function') { c.rxByte(byte & 0xff); return true; }
         }
         return false;
+    }
+
+    /**
+     * Press a key: the XT keyboard hardware path, the counterpart to serialIn.
+     * The scancode appears at the keyboard 8255's port A (read at 0x60) and the
+     * keyboard raises IRQ1 on the PIC — exactly what a bare-metal INT 09h reader
+     * or a BIOS both sit on. The interrupt clears when the program strobes the
+     * ack (port B bit 7), handled in _out. Host widgets map key events to set-1
+     * scancodes and call this; it is machine-agnostic, needing only a PPI + PIC.
+     */
+    keyIn(scancode) {
+        if (!this._kbdPpi || !this._pic) return false;
+        this._kbdPpi.setInputPort('a', scancode & 0xff);   // scancode latched at port A (0x60)
+        this._pic.setIRQ(1, 1);                             // the keyboard's IRQ1
+        return true;
     }
 
     /** CPU state keys to snapshot (same pattern as M6502Machine.CPU_STATE). */
