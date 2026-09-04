@@ -1243,6 +1243,38 @@ microcode, and do not build ours by transcribing it.** The BIU/prefetch
 behaviour is derivable from the bus traces in the MIT test suite, which is
 both legally clean and a better oracle. Add to the table on landing.
 
+#### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
+
+Fell out of E6.8.4's benchmark rather than being looked for, which is why it
+is worth its own entry: nobody had put the two workloads side by side.
+
+```
+core     3.16 MIPS    the decoder and the ALU, over flat memory
+machine  1.03 MIPS    the same instructions through I8086Machine
+```
+
+**Roughly two thirds of execution time is spent outside the CPU.** Per
+instruction the machine layer does region decode on every memory access (a
+scan of the region list, for a 20-bit address), port decode on every IN/OUT,
+a chip advance, and an interrupt poll. None of that is wrong; none of it has
+ever been measured either.
+
+Why it outranks the item it came from: it benefits **every** workload rather
+than a debugging mode, it is ordinary optimisation rather than a new accuracy
+tier, and it buys back precisely the headroom E6.8.4 needs. A machine layer
+at half its cost turns the boot workload from 1.0× real time into something
+with room to spend — and only then is "make the core 5× slower" a
+conversation worth having.
+
+Candidates, listed as guesses rather than findings: the region scan on every
+access (a flat dispatch table, or a 4 KB page table, trades memory for a
+branch); the per-instruction chip advance (batch to a deadline instead); and
+the interrupt poll, which asks the PIC a question whose answer rarely changes.
+
+**Do not start by optimising — start by profiling.** This entry exists
+because one unmeasured number overturned an item everyone believed, and that
+lesson applies to its own candidate list above.
+
 #### E6.8.5 CRTC-driven video timing — DONE (2026-09-04, `9fe3b9f`)
 
 The CGA card is now driven by a real `MC6845` (the clean-room chip the Z80 tier
