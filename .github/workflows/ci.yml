@@ -163,24 +163,64 @@ jobs:
   # fix -- which is why it can be trusted as a baseline rather than as a
   # snapshot of a moving target.
   #
-  # TWO PINS, AND BOTH ARE LOAD-BEARING. The corpus commit, obviously. And the
-  # --type INPUT STREAM, much less obviously: without it six interactive
-  # programs block before printing anything and land in HUNG instead of
-  # LOOPING. A job that pinned the commit and not the input would chase a
-  # phantom regression the first time someone changed the default.
+  # THREE PINS, AND ALL THREE ARE LOAD-BEARING. Measured, not assumed:
+  #
+  #   corpus commit                  new programs change the distribution
+  #   --emu8086                      6 HUNG -> 0. Six programs in External
+  #                                  Devices/ drive emu8086's virtual device
+  #                                  ports; without that layer they write into
+  #                                  unclaimed ports, produce nothing
+  #                                  observable, and are CORRECTLY classified
+  #                                  HUNG. With it they drive their devices and
+  #                                  become LOOPING -- which is right: a
+  #                                  traffic-light controller never exits.
+  #   --type                         moves four LOOPING to EXITED, and costs
+  #                                  25 MINUTES of wall clock (25m43s without,
+  #                                  38s with) because the interactive programs
+  #                                  stop running to the budget. If this job is
+  #                                  ever slow, that is the lever.
+  #
+  # A job pinning the commit and not the flags would chase a phantom regression
+  # the first time someone changed a default, and the flags are not
+  # independent: the documented 12 LOOPING / 0 HUNG pair is --emu8086 WITHOUT
+  # --type, while the 467 MATCH figure came from a --type run. Two numbers in
+  # one document, from two configurations. That is exactly the trap this
+  # comment exists to stop.
   #
   # BUDGET 26 MINUTES. Peak RSS is 238 MB against a 900 MB cap, so memory is a
   # non-issue -- but two interactive programs alone account for 344 s and 860 s
   # of it. The runner's TIME limit is the constraint to check, not its RAM.
   #
-  # ONE NUMBER HERE IS DOCUMENTED RATHER THAN RE-MEASURED, and it is flagged
-  # rather than smuggled. A run WITHOUT --type gives 6 HUNG and 6 LOOPING; the
-  # figures below (0 HUNG, 12 LOOPING) are the documented ones for a run WITH
-  # it, and 6+6=12 is good arithmetic for "the same twelve programs, six of
-  # which block before printing when nobody types". A confirming run is in
-  # flight. If it disagrees, THE COUNTS BELOW ARE WRONG AND THE EMULATOR IS
-  # NOT -- fix them here, and do not go looking for a regression that a
-  # first-run gate invented.
+  # THE FIRST VERSION OF THIS JOB WAS WRONG IN THREE WAYS AND ALL THREE WERE
+  # FOUND BY RUNNING IT, which is the only reason to write down what follows.
+  #
+  #  1. `--assembler ./src/i8086-asm.js` — the path resolves relative to the
+  #     SCRIPT, not the working directory, so the job died with a
+  #     module-not-found before assembling anything. `../src/` is correct.
+  #  2. It pinned MATCH=467 and friends. MATCH requires an --expect ORACLE and
+  #     this job passes none, so every program that runs is EXITED. The
+  #     verdict VOCABULARY depends on the flags, not only the counts.
+  #  3. It pinned the wrong flag set (see the pins above).
+  #
+  # The distribution below is now MEASURED in this exact configuration rather
+  # than copied from a document: 502 EXITED, 8 LOOPING, 0 HUNG, 15 THREW,
+  # independently reproduced by the review lane. A stronger version of this
+  # gate would add --expect and compare OUTPUT rather than termination; that is
+  # worth doing and is not done here.
+  #
+  # THE FIRST VERSION GOT IT WRONG, and the way it was caught is worth more
+  # than the fix. It pinned the commit and --type only, on a
+  # hypothesis that 6 HUNG + 6 LOOPING = 12 meant --type was the variable. The
+  # arithmetic was right and the MECHANISM was wrong: --type moves four LOOPING
+  # to EXITED and leaves HUNG at 6, and it is --emu8086 that takes HUNG to
+  # zero. The review lane measured all three configurations rather than
+  # accepting the arithmetic.
+  #
+  # The comment that version carried -- "if the confirming run disagrees, the
+  # counts are wrong and the emulator is not" -- is the reason this was a
+  # ten-minute correction instead of an afternoon hunting a regression that a
+  # first-run gate invented. Keep that sentence in any gate landed on numbers
+  # measured once.
   corpus:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -217,9 +257,10 @@ jobs:
       - name: 525 programs, assembled and run
         run: |
           node --max-old-space-size=900 scripts/run-i8086-corpus.mjs \
-            --assembler ./src/i8086-asm.js \
+            --assembler ../src/i8086-asm.js \
+            --emu8086 \
             --type '5\r3\rAMEY\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r' \
-            --expect-counts 'MATCH=467,NOINPUT=4,ORACLE=16,DIFFER=15,LOOPING=12,HUNG=0,THREW=15' \
+            --expect-counts 'EXITED=502,LOOPING=8,HUNG=0,THREW=15' \
             "corpus/Source Code"
 
   # ---------------------------------------------------------------------
