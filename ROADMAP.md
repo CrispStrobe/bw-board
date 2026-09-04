@@ -1480,13 +1480,31 @@ max(eu, fetches*4)                                   31.2%
    + bus-as-bottleneck instead of a flat penalty     36.5%
 ```
 
-**What is still open is smaller and better understood than "needs a
-simulator".** The remaining failures are concentrated in long instructions
-(five bytes) starting from an empty queue, off by exactly one bus cycle, and
-they are the case where the fetch and data traffic genuinely interleave. That
-may well need occupancy over time — but the earlier claim that the whole
-residual did was wrong, and it was wrong because I stopped varying things too
-early.
+**WHAT IS STILL OPEN, measured down to the cycle rather than guessed at.**
+Grouping every vector of `add r/m16, r16` by (queue depth, length, data
+accesses, EU time), **38 of 40 groups are fully determined** — one total
+cycle count each. So the model's inputs are almost sufficient and the gap is
+in the formula, not in missing state.
+
+The largest failing group is `q 0, len 5, 4 accesses`, which is **44 cycles
+regardless of EU time** (24, 27, 29 and 30 all give 44): the bus binds, not
+the EU. Counting its trace directly:
+
+```
+CODE 6   MEMR 2   MEMW 2   = 10 bus m-cycles = 40 cycles, and 44 total
+```
+
+**Six CODE cycles for a five-byte instruction.** The sixth is the refill the
+model already knows about — but it belongs INSIDE the bus-cycle count rather
+than being added after it, which is why the arithmetic came out four short.
+The last four cycles are idle T-states the model does not represent at all.
+
+So the remaining work is: count the refill as a bus cycle, and account for
+idle cycles. Both are concrete and neither needs a general occupancy
+simulation — which is the second time this entry's "that needs a simulator"
+has turned out to be premature. Recorded that way deliberately: the pattern in
+this section has been that a residual looks like noise until one more variable
+is held fixed.
 
 **What this bought that is not a fidelity claim:** the `INT n` ordering defect
 (E6.8.4c) and the `INC/DEC r16` timing error, neither of which the
