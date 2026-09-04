@@ -991,6 +991,12 @@ lands it.
      region map. This is the "boot the real BIOS" board, not a minimal demo.
    These are the machines step 2's Machine-Loader offers; the minimal two are
    pickable and demonstrable today, PCXT8086 once the host wires video/keyboard.
+   **The example set grew to NINE self-booting firmwares (2026-09-04):** the
+   UART shell, the five display cards (CGA text/graphics, VGA, Hercules, EGA —
+   all rendering), the timer, the keyboard, and **DESKDEMO8086** — the capstone,
+   which runs the timer (IRQ0) and keyboard (IRQ1) at once and is the first thing
+   to exercise the 8259 with two live IRQ lines composed (priority + two EOIs),
+   the same path the DOS boot depends on.
 
 2. **bw-circuit-ui recognises and places the 8086.** Add `i8086` to
    `src/parts-data/` (JSON + SVG, reuse the bw-parts pinout), register the kind
