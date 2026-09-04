@@ -44,12 +44,18 @@ const FRAME_NS = 16_666_667;
  * @param {object} [opts]
  * @param {number} [opts.sliceNs] program time per pump (default: one 60 Hz frame)
  * @param {number} [opts.speed] 1 = real time, 0.25 = quarter speed, 4 = fast
+ * @param {number} [opts.wallBudgetMs] optional wall-time allowance for one pump
+ * @param {number} [opts.maxQuantumNs] largest runFor call while wall-capped
+ * @param {() => number} [opts.now] monotonic milliseconds (injectable for tests)
  * @param {(state: object) => void} [opts.onChange] called whenever the UI state changes
  */
 export function createDebugSession(target, opts = {}) {
     const sliceNs = opts.sliceNs ?? FRAME_NS;
     let speed = opts.speed ?? 1;
     const onChange = opts.onChange || (() => {});
+    const wallBudgetMs = Number(opts.wallBudgetMs) > 0 ? Number(opts.wallBudgetMs) : null;
+    const maxQuantumNs = Math.max(1, Math.round(opts.maxQuantumNs ?? Math.min(sliceNs, 1_000_000)));
+    const now = opts.now || (() => typeof performance !== 'undefined' ? performance.now() : Date.now());
 
     /**
      * What the USER believes is happening, which is not always what the target
@@ -61,6 +67,8 @@ export function createDebugSession(target, opts = {}) {
     let lastHalt = null;
     let stepping = false;
     let pumps = 0;
+    let debtNs = 0;
+    let rateNsPerMs = null;
 
     const unsubscribe = target.onHalt((why) => {
         // A halt that reaches here is real: the budget one never leaves the
@@ -68,6 +76,7 @@ export function createDebugSession(target, opts = {}) {
         // (breakpoint), the session is now paused and the UI should say so.
         lastHalt = why;
         stepping = false;
+        debtNs = 0;
         if (intent !== 'stopped') intent = 'paused';
         emit();
     });
@@ -84,7 +93,8 @@ export function createDebugSession(target, opts = {}) {
             /** A step is in flight. Running, but not the same thing to a user. */
             stepping,
             speed,
-            pumps
+            pumps,
+            debtNs
         };
     }
 
@@ -103,6 +113,7 @@ export function createDebugSession(target, opts = {}) {
             // "reset state" (pc $0100) is not the CPU's. Absence means
             // "start from the state the machine is in".
             if (intent === 'stopped' && typeof target.reset === 'function') target.reset();
+            debtNs = 0;
             lastHalt = null;
             intent = 'running';
             target.run();
@@ -118,6 +129,7 @@ export function createDebugSession(target, opts = {}) {
         /** ▶ after a ⏸ */
         resume() {
             if (intent !== 'paused') return;
+            debtNs = 0;
             lastHalt = null;
             intent = 'running';
             target.run();
@@ -133,6 +145,7 @@ export function createDebugSession(target, opts = {}) {
                 if (typeof target.reset === 'function') target.reset();
                 intent = 'paused';
             }
+            debtNs = 0;
             const refusal = target.step(kind, count);
             if (refusal) return refusal;   // {unsupported}, passed straight through
             stepping = true;
@@ -152,11 +165,12 @@ export function createDebugSession(target, opts = {}) {
             intent = 'stopped';
             lastHalt = null;
             stepping = false;
+            debtNs = 0;
             emit();
         },
 
         /** 1 = real time. Applies from the next pump. */
-        setSpeed(x) { speed = Math.max(0, Number(x) || 0); emit(); },
+        setSpeed(x) { speed = Math.max(0, Number(x) || 0); debtNs = 0; emit(); },
 
         /**
          * Advance one frame's worth. Call from requestAnimationFrame.
@@ -169,7 +183,50 @@ export function createDebugSession(target, opts = {}) {
             if (intent !== 'running') return 'idle';
             const budget = Math.round(sliceNs * speed);
             if (budget <= 0) return 'idle';      // paused by speed 0, legitimately
-            const outcome = target.runFor(budget);
+            if (wallBudgetMs === null) {
+                const outcome = target.runFor(budget);
+                if (outcome === 'halted') return 'halted';
+                if (outcome === 'idle') {
+                    intent = 'paused';
+                    emit();
+                    return 'idle';
+                }
+                return 'ran';
+            }
+            debtNs += budget;
+            const deadline = now() + wallBudgetMs;
+            let outcome = 'budget';
+            let calls = 0;
+            while (debtNs > 0) {
+                const remainingMs = deadline - now();
+                if (calls && remainingMs <= 0.25) break;
+                let quantum = maxQuantumNs;
+                if (rateNsPerMs !== null) {
+                    quantum = Math.max(1, Math.min(maxQuantumNs,
+                        Math.floor(rateNsPerMs * remainingMs * 0.8)));
+                }
+                quantum = Math.min(quantum, debtNs);
+                const sim0 = typeof target.timeNs === 'function' ? target.timeNs() : null;
+                const wall0 = now();
+                outcome = target.runFor(quantum);
+                const elapsed = now() - wall0;
+                const sim1 = typeof target.timeNs === 'function' ? target.timeNs() : null;
+                let advanced = sim0 !== null && sim1 !== null ? Number(sim1 - sim0) : quantum;
+                if (!(advanced > 0) && outcome === 'budget') advanced = quantum;
+                debtNs = Math.max(0, debtNs - Math.max(0, advanced));
+                if (elapsed > 0 && advanced > 0) {
+                    const sample = advanced / elapsed;
+                    rateNsPerMs = rateNsPerMs === null ? sample : rateNsPerMs * 0.7 + sample * 0.3;
+                }
+                calls++;
+                if (outcome === 'halted') { debtNs = 0; return 'halted'; }
+                if (outcome === 'idle') {
+                    debtNs = 0;
+                    intent = 'paused';
+                    emit();
+                    return 'idle';
+                }
+            }
             if (outcome === 'halted') return 'halted';   // onHalt already fired
             if (outcome === 'idle') {
                 // The target stopped without telling us — it was never running,

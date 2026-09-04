@@ -91,7 +91,7 @@
  * as NOASM rather than being silently skipped, because a skip reads the same
  * as a pass in a summary line.
  */
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { join, extname, basename, dirname } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086, DOSBOX8086_XT } from '../src/i8086-dos.js';
@@ -119,6 +119,7 @@ const XT = flag('--xt');
 // corpus before anyone decides to make it, rather than discovered afterwards.
 // The observable difference to a program is that 20h-21h stop being open bus.
 const PIC = flag('--pic');
+const REPORT_JSON = value('--report-json', null);
 const XT_WITH_PIC = Object.freeze({
     ...DOSBOX8086_XT,
     chips: [
@@ -146,7 +147,7 @@ const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 const paths = argv.filter((a, i) => !a.startsWith('--')
     && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler'
     && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type'
-    && argv[i - 1] !== '--expect-counts');
+    && argv[i - 1] !== '--expect-counts' && argv[i - 1] !== '--report-json');
 
 let assembler = null;
 const asmPath = value('--assembler', null);
@@ -597,6 +598,28 @@ if (promotedPrograms.length) {
         console.log(`  ${p2.name} (${p2.n})`);
     }
     console.log('  These no longer assemble under real MASM. That is the cost of running them.');
+}
+
+// A console histogram is useful to a person reading one run; a versioned JSON
+// receipt is useful to comparisons, dashboards and release artefacts. Keep it
+// deterministic so two runs at the same pins can be diffed byte for byte.
+if (REPORT_JSON) {
+    const orderedTally = {};
+    for (const k of ['MATCH', 'NOINPUT', 'ORACLE', 'DIFFER', 'EXITED', 'LOOPING',
+        'SILENT', 'HUNG', 'THREW', 'NOASM']) orderedTally[k] = tally[k] || 0;
+    const receipt = {
+        schema: 'bw-board/i8086-corpus-report/v1',
+        programs: results.length,
+        options: {budget: BUDGET, emu8086: EMU, xt: XT, pic: PIC},
+        tally: orderedTally,
+        refusals: [...refusals].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+            .map(([service, count]) => ({service, count})),
+        freshDifferences: fresh.map((r) => r.name).sort(),
+        promotedPrograms: promotedPrograms.map((p) => ({name: p.name, jumps: p.n}))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+    };
+    writeFileSync(REPORT_JSON, `${JSON.stringify(receipt, null, 2)}\n`);
+    console.log(`\nwrote machine-readable telemetry to ${REPORT_JSON}`);
 }
 
 let exit = 0;

@@ -214,6 +214,26 @@ test('video() renders straight out of memory, with the mode log deciding how', a
     assert.equal(bare.video().mode, 0x03);
 });
 
+test('video() caches static pixels and advances its frame after visible writes', async () => {
+    const {DOSBOX8086} = await import('../src/i8086-dos.js');
+    const {I8086Machine: M} = await import('../src/i8086-machine.js');
+    const m = new M(DOSBOX8086);
+    const t = createI8086DebugTarget({machine: m});
+    const first = t.video();
+    const again = t.video();
+    assert.equal(again, first, 'an unchanged screen reuses the decoded RGBA frame');
+    m._write(0xb8000, 0x41);
+    const changed = t.video();
+    assert.notEqual(changed, first, 'a visible write invalidates the cached frame');
+    assert.notEqual(changed.frame, first.frame, 'the UI receives a new frame revision');
+    assert.equal(t.video(), changed, 'the new static frame is cached in turn');
+
+    const beforeRam = changed.frame;
+    m._write(0x2000, 0x5a);
+    assert.equal(t.video(), changed, 'ordinary RAM writes do not trigger a full redraw');
+    assert.equal(changed.frame, beforeRam);
+});
+
 test('video() explains an unsupported mode instead of throwing', async () => {
     const { createDos8086, DOSBOX8086 } = await import('../src/i8086-dos.js');
     const { I8086Machine: M } = await import('../src/i8086-machine.js');

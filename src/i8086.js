@@ -94,7 +94,6 @@
  */
 
 /** A 16-bit word read as a signed number -- BOUND and IMUL both need it. */
-const NOOP = () => {};
 const sx16 = (v) => ((v & 0xffff) ^ 0x8000) - 0x8000;
 
 // Flag bits in FLAGS.
@@ -1092,45 +1091,32 @@ export class I8086 {
 
         // Prefixes. There is no length limit on real silicon and the last
         // segment override wins, so this is a loop and not an if.
+        let op;
         for (;;) {
-            // A PEEK, NOT A BUS CYCLE. This looks at the next byte to decide
-            // whether it is a prefix, and if it is not, `_fetch8()` below reads
-            // the same byte again. Real silicon takes it from the queue once.
-            //
-            // Routing the peek through _rd8 therefore recorded TWO accesses per
-            // instruction that hardware never makes -- a spurious data read of
-            // every prefix byte, and a duplicate of every opcode byte -- which
-            // the bus trace exposed the moment it existed. Harmless in RAM,
-            // where a read has no effect; NOT harmless over a memory-mapped
-            // device, where executing from a window with read side effects
-            // would trigger them twice. Recorded in ROADMAP E6.8.4c.
-            //
-            // The peek is now silent and the CONSUMPTION of a prefix records a
-            // fetch, which is what the queue actually sees.
-            const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
-            // Not a closure per instruction: allocating one on every step is
-            // measurable in a loop this hot, and the trace is off by default.
-            const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, I8086.phys(this.cs, this.ip));
+            // Consume the candidate ONCE. The old prefix peek called read()
+            // here and _fetch8() again for the opcode. Besides wasting a bus
+            // access per instruction, executing from side-effecting MMIO then
+            // triggered the device twice. A prefix is reported as F on the
+            // 8088 QS lines and starts a fresh F/S sequence for the following
+            // prefix/opcode, hence the reset after each consumed prefix.
+            const b = this._fetch8();
             if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e) {
-                eaten();
-                this.ip = (this.ip + 1) & 0xffff; n += 2;
+                n += 2;
                 this._seg = b === 0x26 ? this.es : b === 0x2e ? this.cs
                     : b === 0x36 ? this.ss : this.ds;
             } else if (b === 0xf2 || b === 0xf3) {
-                eaten();
                 // Remember WHERE the REP prefix is, not just that there is
                 // one: an interrupt taken mid-REP resumes from here, and
                 // anything in front of it is lost. See _repeat().
-                this._repIp = this.ip;
-                this.ip = (this.ip + 1) & 0xffff; n += 2;
+                this._repIp = (this.ip - 1) & 0xffff;
+                n += 2;
                 this._rep = b;
             } else if (b === 0xf0 || b === 0xf1) {
-                eaten();
-                this.ip = (this.ip + 1) & 0xffff; n += 2;   // LOCK, and its alias
-            } else break;
+                n += 2;                                    // LOCK, and its alias
+            } else { op = b; break; }
+            this._fsOpcodeSeen = false;
         }
 
-        const op = this._fetch8();
         n += this._exec(op);
 
         // THE QUEUE FLUSH (E). The 8088 throws the prefetch queue away when

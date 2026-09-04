@@ -6,7 +6,7 @@ servo angles, motor speeds, and relay states — from pin-level physics, not
 shortcuts.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
-1357 tests, 0 failures. 129+ part kinds. Two vector-verified CPU cores.
+129+ part kinds. Three vector-verified CPU cores.
 
 ## What is in this repo
 
@@ -46,7 +46,7 @@ service-side objdump listings for toolchain targets).
 
 ## The retro tier (2026-08)
 
-**Two CPU cores, ours, verified end to end against ground truth:**
+**Three CPU cores, ours, verified end to end against ground truth:**
 - `src/w65c02.js` — W65C02, 2,540,000/2,540,000 SingleStepTests vectors,
   both Klaus Dormann suites (52M instructions), 52.6M instructions in
   lockstep with vrEmu6502 (three documented, vector-adjudicated
@@ -55,6 +55,12 @@ service-side objdump listings for toolchain targets).
   the undocumented machinery: X/Y flags, the Q latch, MEMPTR, R per M1,
   interrupted-repeat block-op rules derived from the vectors themselves.
   Grinder: `scripts/grind-z80.mjs`.
+- `src/i8086.js` — 8086, 323/323 files and 646,000/646,000 hardware-generated
+  SingleStepTests vectors; selectable 80186 additions pass 132,532/132,532
+  usable NEC V20 vectors. `src/i8086-disasm.js` passes all 646,000 8086 and
+  172,430 V20 text/length cases, with its documented syntax exclusions.
+  The pinned 525-program teaching corpus is 480 MATCH, 4 NOINPUT, 17 ORACLE,
+  16 DIFFER, 8 LOOPING and 0 THREW.
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
@@ -68,6 +74,9 @@ extractors):
   IM 1 delivery in the machine layer. Presets: SEARLE, CPM64K.
   Extractor: `src/z80-extract.js` (MREQ/IORQ-aware, per-space
   contention).
+- `src/i8086-machine.js` — 20-bit memory plus a separate I/O-port map,
+  8086/80186 selection, PC/XT and breadboard presets, DOS/BIOS services,
+  video, storage, interrupt, timer and debug integration.
 - `src/vdu-decoder.js` — the BBC VDU byte protocol as typed events
   (graphics without video hardware); `src/devices/hd44780.js` — the
   parallel character LCD as a board part.
@@ -95,7 +104,10 @@ STC12 datasheet §4.1 for the first four; AVR datasheet for input-pullup.
 Evidence categories per `stc/docs/EVIDENCE-CATEGORIES.md`. Full ledger at
 `stc/docs/VERIFICATION-LEDGER.md`.
 
-**Nothing in this repo has been validated against real silicon.**
+The board's electrical models have not been validated against real silicon.
+The 8086 CPU exception is explicit: its architectural end states are checked
+against vectors generated on an Intel P80C86A-2. That does not validate the
+board solver, peripheral waveforms or instruction timing.
 
 Key results (all category 2b unless noted):
 - Servo: 1500.0 µs at 90° (emu8051), 1499.6 µs (ucsim), 0.4 µs spread
@@ -106,6 +118,11 @@ Key results (all category 2b unless noted):
 - Serial DebugTarget: HELLO/REGS/READ round-tripped against real firmware
   UART with no mock. Baud accuracy not modelled (emu8051 §9 trap).
 - NeoPixel: all four WS2812B timing windows pass (T0H=362 ns, T1H=814 ns)
+- Real MS-DOS 2.0 acceptance: a staged FAT12 boot reaches IO.SYS, relocated
+  SYSINIT, MSDOS.SYS and COMMAND.COM, then executes `DIR`; unmodified DEBUG.COM
+  traces one deposited instruction and exits, and CHKDSK.COM passes its DOS
+  version gate. CI also runs separate `vectors`, `corpus`, and `vectors186`
+  jobs, so absent large oracles cannot masquerade as an ordinary unit-test pass.
 
 16 defects found and fixed during verification. See `CLOSE-OUT.md`.
 
@@ -123,7 +140,7 @@ Key results (all category 2b unless noted):
 ## How to run
 
 ```bash
-npm test                    # node --test (1357 tests)
+npm test                    # full Node test suite
 node bench/perf.js          # performance benchmark
 ```
 
@@ -157,6 +174,20 @@ Copy `src/` into the consuming project. `src/index.js` is the single entry
 point. All imports are relative within `src/`. No build step, no dependencies.
 
 ## Performance
+
+For the 8086 path, the source-level hot-path pass removed the duplicate opcode
+fetch, caches device advancement, skips empty breakpoint scans and reuses
+unchanged video frames. In the consuming Lite production-browser benchmark,
+adaptive 8 ms pump budgeting and 250 ms progress snapshots moved desktop from
+3.12x to 10.39x XT real time and mobile from 2.69x to 10.27x; runtime long-task
+counts fell 90→17 and 91→21 respectively. Those are same-runner receipts, not
+portable guarantees.
+
+The CPU remains instruction-stepped. Its cycle return values use published
+8086 instruction and effective-address costs, but do not model the prefetch
+queue, BIU bus schedule, wait states or transfer T-states and are not verified
+against the suite's cycle traces. Use architectural-state mode for software;
+do not treat it as cycle-exact 8086/8088 hardware.
 
 Measured on a single core (Node 20, Linux), 11-part netlist:
 

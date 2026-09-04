@@ -23,6 +23,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Real-software acceptance must not silently become a skip on a clean
+      # runner. Microsoft publishes these MS-DOS 2.0 binaries under MIT; pin
+      # the immutable source commit and fetch only the directory exercised by
+      # the boot and period-utility tests.
+      - uses: actions/checkout@v4
+        with:
+          repository: microsoft/MS-DOS
+          ref: 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          path: microsoft-msdos
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /v2.0/bin/
+      - name: The MS-DOS 2.0 acceptance binaries are actually here
+        run: |
+          set -euo pipefail
+          test -s microsoft-msdos/v2.0/bin/MSDOS.SYS
+          test -s microsoft-msdos/v2.0/bin/COMMAND.COM
+          test -s microsoft-msdos/v2.0/bin/SYSINIT.OBJ
+          test -s microsoft-msdos/v2.0/bin/DEBUG.COM
+          test -s microsoft-msdos/v2.0/bin/CHKDSK.COM
       # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
       # needs its built WASM. Checking it out is the difference between that
       # gate RUNNING and it skipping on every CI run — the failure mode this
@@ -58,6 +77,8 @@ jobs:
         # for the 8086 by checking the suite out and grinding all 646,000. The
         # other two CPUs still have no such job; when one is added it belongs
         # beside it, not in this comment.
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/microsoft-msdos/v2.0/bin
         run: npm test
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in
@@ -163,7 +184,7 @@ jobs:
   # fix -- which is why it can be trusted as a baseline rather than as a
   # snapshot of a moving target.
   #
-  # THREE PINS, AND ALL THREE ARE LOAD-BEARING. Measured, not assumed:
+  # FOUR PINS, AND ALL FOUR ARE LOAD-BEARING. Measured, not assumed:
   #
   #   corpus commit                  new programs change the distribution
   #   --emu8086                      6 HUNG -> 0. Six programs in External
@@ -174,6 +195,11 @@ jobs:
   #                                  HUNG. With it they drive their devices and
   #                                  become LOOPING -- which is right: a
   #                                  traffic-light controller never exits.
+  #   --xt                           claims the PC/XT PPI and speaker path.
+  #                                  Measured against the same 525 programs it
+  #                                  leaves every verdict identical and removes
+  #                                  all 24 false "unclaimed port 61h" events,
+  #                                  so the refusal list describes real gaps.
   #   --type                         moves four LOOPING to EXITED, and costs
   #                                  25 MINUTES of wall clock (25m43s without,
   #                                  38s with) because the interactive programs
@@ -271,12 +297,22 @@ jobs:
 
       - name: 525 programs, assembled and run
         run: |
+          mkdir -p artifacts/i8086-corpus
           node --max-old-space-size=900 scripts/run-i8086-corpus.mjs \
             --assembler ../src/i8086-asm.js \
             --emu8086 \
+            --xt \
             --type '5\r3\rAMEY\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r' \
-            --expect-counts 'EXITED=517,LOOPING=8,HUNG=0,THREW=0' \
+            --expect 'corpus/Source Code/8086 Microprocessor Simulator/js/test/expected-output.json' \
+            --expect-counts 'MATCH=480,NOINPUT=4,ORACLE=17,DIFFER=16,LOOPING=8,HUNG=0,THREW=0' \
+            --report-json artifacts/i8086-corpus/report.json \
             "corpus/Source Code"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: i8086-corpus-telemetry
+          path: artifacts/i8086-corpus/report.json
+          if-no-files-found: error
 
   # ---------------------------------------------------------------------
   # The 80186 variant, graded against a DIFFERENT CHIP -- and that is the

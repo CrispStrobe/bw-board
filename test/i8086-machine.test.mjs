@@ -65,6 +65,27 @@ test('ports are a separate decode space from memory', () => {
     assert.equal(m.mem[0], 0x99);
 });
 
+test('display revision changes only on paths that can change visible output', () => {
+    const m = new I8086Machine();
+    const initial = m.displayRevision;
+
+    m._write(0x0100, 0x42);
+    assert.equal(m.displayRevision, initial, 'ordinary RAM does not dirty the display');
+
+    m._write(0xb8000, 0x41);
+    assert.equal(m.displayRevision, initial + 1, 'video RAM dirties the display');
+
+    m._out(0x3d8, 0x09);
+    assert.equal(m.displayRevision, initial + 2, 'display control ports dirty the display');
+
+    m.loadRom(Uint8Array.of(0xaa), 0xa0000);
+    assert.equal(m.displayRevision, initial + 3, 'bulk loads overlapping video RAM dirty it');
+
+    const snapshot = m.saveState();
+    m.loadState(snapshot);
+    assert.equal(m.displayRevision, initial + 4, 'restoring memory dirties the display');
+});
+
 test('a partial-decode window mirrors the registers through it', () => {
     const m = new I8086Machine({
         clockHz: 5_000_000,

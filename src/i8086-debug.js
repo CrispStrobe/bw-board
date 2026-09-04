@@ -197,6 +197,8 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const breakpoints = new Map();
     /** Linear address -> symbol name, or null. See setSymbols(). */
     let labels = null;
+    let cachedVideoKey = null;
+    let cachedVideoFrame = null;
     let nextBpId = 1;
     const halt = (info) => { runState = 'halted'; for (const cb of haltListeners) cb(info); };
 
@@ -581,8 +583,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             if (runState !== 'running') return 'halted';
             const deadline = machine.tMs + budgetNs / 1e6;
             while (machine.tMs < deadline) {
-                for (const [id, bp] of breakpoints) {
-                    if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
+                // The overwhelmingly common run has no code breakpoint. Do
+                // not construct/advance a Map iterator for every instruction
+                // in that case; watch/event traps retain their own zero-cost
+                // installation paths below.
+                if (breakpoints.size) {
+                    for (const [id, bp] of breakpoints) {
+                        if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
+                    }
                 }
                 if (pendingStep) {
                     if (pendingStep.kind === 'insn' && pendingStep.remaining <= 0) { halt({ cause: 'step' }); return 'halted'; }
@@ -697,8 +705,20 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 if (vo.intensity === undefined) vo.intensity = (card.color & 0x10) !== 0;
                 if (vo.cgaPalette === undefined) vo.cgaPalette = (card.color & 0x20) !== 0;
             }
+            // Rendering text mode alone costs about 8 ms on the measured Node
+            // path. Cache by the machine's display revision so a static DOS
+            // prompt is a cheap object return, while VdpScreen gets a real
+            // frame number and no longer freezes after its first paint.
+            const videoKey = `${machine.displayRevision || 0}:${guess.mode}:`
+                + `${seen.join(',')}:${vo.blinkPhase ?? ''}`;
+            if (videoKey === cachedVideoKey && cachedVideoFrame) return cachedVideoFrame;
             const frame = renderMode(guess.mode, (a) => machine._read(a & 0xfffff), vo);
-            return { ...frame, mode: guess.mode, why: guess.reason };
+            cachedVideoKey = videoKey;
+            cachedVideoFrame = {
+                ...frame, frame: machine.displayRevision || 0,
+                mode: guess.mode, why: guess.reason,
+            };
+            return cachedVideoFrame;
         },
 
         /**

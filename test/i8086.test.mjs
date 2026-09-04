@@ -29,6 +29,29 @@ function machine(bytes, { cs = 0x1000, ds = 0x2000, es = 0x3000, ss = 0x4000, sp
 }
 const run = (cpu, n) => { for (let i = 0; i < n; i++) cpu.step(); };
 
+test('instruction fetch reads each physical byte once, including prefixes', () => {
+    const bytes = [0x26, 0x2e, 0x90]; // ES:, CS:, NOP
+    const reads = [];
+    const base = 0x10000;
+    const cpu = new I8086({
+        // Model side-effecting executable MMIO by counting physical reads.
+        read: (a) => { reads.push(a); return bytes[a - base] ?? 0; },
+        write: () => {},
+    });
+    cpu.cs = 0x1000;
+    cpu.ip = 0;
+    cpu.step();
+    assert.deepEqual(reads, [base, base + 1, base + 2]);
+    assert.equal(cpu.ip, 3);
+});
+
+test('prefixes and their opcode are each first-in-sequence bus fetches', () => {
+    const {cpu} = machine([0x26, 0x2e, 0x90]);
+    cpu.busTrace = [];
+    cpu.step();
+    assert.deepEqual(cpu.busTrace, [0, 0x10000, 0, 0x10001, 0, 0x10002]);
+});
+
 test('a physical address is (seg << 4) + off, and the segment is the ModR/M default', () => {
     const { cpu, mem } = machine([
         0xbb, 0x34, 0x12,       // MOV BX, 1234h

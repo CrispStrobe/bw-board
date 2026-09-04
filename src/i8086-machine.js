@@ -477,6 +477,12 @@ export class I8086Machine {
         this.mem = new Uint8Array(1 << 20);
         /** @type {Record<string, I8255|NS16C550|MC6850>} */
         this.chips = {};
+        // Flattened advance schedule, built on first use. null means stale.
+        // Avoid allocating Object.keys(this.chips) for every instruction.
+        this._advList = null;
+        // Monotonic invalidation token for the host renderer. It changes on
+        // visible VRAM/register writes, not on every CPU instruction.
+        this.displayRevision = 0;
         this.cycles = 0;
         this._pinLevels = {};
         this._nmiPending = false;
@@ -906,6 +912,9 @@ export class I8086Machine {
     }
 
     _write(addr, val) {
+        if (addr >= 0xa0000 && addr <= 0xbffff) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         const k = this._page[addr >>> 12];
         if (k === 1) { this.mem[addr] = val & 0xff; return; }
         if (k === 2 || k === 0) return;              // ROM swallows it; unmapped goes nowhere
@@ -941,6 +950,9 @@ export class I8086Machine {
     }
 
     _out(port, val) {
+        if (port >= 0x3b0 && port <= 0x3df) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         for (const w of this._io) {
             if (port >= w.start && port <= w.end) {
                 const reg = regOf(w, port);
@@ -1035,6 +1047,9 @@ export class I8086Machine {
         const rom = this.config.regions.find((r) => r.kind === 'rom');
         const base = at ?? (rom ? rom.start : 0xf8000);
         this.mem.set(bytes, base);
+        if (base <= 0xbffff && base + bytes.length > 0xa0000) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         return base;
     }
 
@@ -1057,26 +1072,41 @@ export class I8086Machine {
     attachDevice(name, dev) {
         this.devices = this.devices || {};
         this.devices[name] = dev;
+        this._advList = null;
         return dev;
     }
 
+    _buildAdvanceList() {
+        const list = [];
+        let anyMs = false;
+        for (const name of Object.keys(this.chips)) {
+            const chip = this.chips[name];
+            if (chip.advanceMs) { list.push(chip, 1); anyMs = true; }
+            else if (chip.advance) list.push(chip, 0);
+        }
+        if (this.devices) {
+            for (const name of Object.keys(this.devices)) {
+                const dev = this.devices[name];
+                if (dev.advance) list.push(dev, 0);
+            }
+        }
+        this._anyMs = anyMs;
+        this._advList = list;
+        return list;
+    }
+
     _advanceChips(n) {
+        const list = this._advList !== null ? this._advList : this._buildAdvanceList();
+        if (list.length === 0) return;
         // The OPL runs on its OWN 3.58 MHz crystal and generates at
         // clock/72, so it is advanced in MILLISECONDS of emulated time rather
         // than in machine cycles -- the same distinction the AY's crystal
         // taught this fleet, expressed as a different method name so the two
         // cannot be confused at a call site.
-        const ms = n * 1000 / this.clockHz;
-        for (const name of Object.keys(this.chips)) {
-            const chip = this.chips[name];
-            if (chip.advanceMs) chip.advanceMs(ms);
-            else if (chip.advance) chip.advance(n);
-        }
-        if (this.devices) {
-            for (const name of Object.keys(this.devices)) {
-                const dev = this.devices[name];
-                if (dev.advance) dev.advance(n);
-            }
+        const ms = this._anyMs ? n * 1000 / this.clockHz : 0;
+        for (let i = 0; i < list.length; i += 2) {
+            if (list[i + 1] === 1) list[i].advanceMs(ms);
+            else list[i].advance(n);
         }
     }
 
@@ -1373,6 +1403,7 @@ export class I8086Machine {
         for (const k of I8086Machine.CPU_STATE) if (k in s.cpu) this.cpu[k] = s.cpu[k];
         this.cycles = s.cycles;
         this.mem.set(s.mem);
+        this.displayRevision = (this.displayRevision + 1) >>> 0;
         for (const [name, cs] of Object.entries(s.chips || {})) {
             const c = this.chips[name];
             if (!c) continue;
