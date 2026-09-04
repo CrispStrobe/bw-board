@@ -300,7 +300,14 @@ async function createI8086Target(opts) {
   const { board, rom, config } = opts;
   const { createI8086Adapter } = await import('./i8086-adapter.js');
   const adapter = createI8086Adapter({ config, rom, romAt: opts.romAt });
-  adapter.attachBoard(board ?? { advanceTo() {} });
+  // setPin() is NOT optional in this stub, and its absence was a real trap.
+  // The adapter's onPinChange hook calls board.setPin() on the first 8255
+  // output edge, and POST triggers one the moment it writes the PPI control
+  // word -- so `createDebugTarget('i8086', {rom})` with no board threw
+  // `board.setPin is not a function` before the machine executed anything.
+  // A caller who just wants a machine has no reason to know that a null board
+  // needs two methods rather than one.
+  adapter.attachBoard(board ?? { advanceTo() {}, setPin() {} });
 
   let target = null;
   try {

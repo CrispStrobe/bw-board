@@ -157,6 +157,36 @@ export function createDos8086(machine, io = {}) {
     let exitCode = 0;
     let psp = 0;
     let cursor = 0;                     // linear cell index into the text page
+
+    /**
+     * WHOSE CURSOR IS IT? When this layer claims INT 10h, the variable above
+     * is the only cursor there is. When a real BIOS ROM owns INT 10h -- the
+     * whole point of `install({vectors: DOS_VECTORS})` -- the ROM keeps the
+     * cursor in the BDA at 0040:0050 and a program that calls INT 10h/AH=02h
+     * moves THAT one. This layer never sees the call.
+     *
+     * The bug that motivated this: DOS's `putChar` used its private variable
+     * regardless, so on a real-BIOS machine every INT 21h string printed from
+     * (0,0) no matter where the program had put the cursor. Breakout's HUD
+     * landed in the top-left corner while its playfield was drawn correctly,
+     * because the playfield used INT 10h and the HUD used INT 21h.
+     *
+     * Real DOS does not have this problem because it does not write to video
+     * memory at all -- it calls INT 10h/AH=0Eh and lets the BIOS place the
+     * character. Reaching the ROM's handler from here would mean executing
+     * 8086 code in the middle of a JS service call. Sharing the BDA cell the
+     * ROM uses gets the same observable result: one cursor, whoever moved it.
+     */
+    const BDA_CURSOR = 0x400 + 0x50;    // 0040:0050 -- column, then row, page 0
+    const ownsVideo = () => !claimed || claimed.has(0x10);
+    const getCursor = () => (ownsVideo() ? cursor
+        : machine._read(BDA_CURSOR + 1) * COLS + machine._read(BDA_CURSOR));
+    const setCursor = (v) => {
+        if (ownsVideo()) { cursor = v; return; }
+        const row = Math.floor(v / COLS), col = v % COLS;
+        machine._write(BDA_CURSOR, col & 0xff);
+        machine._write(BDA_CURSOR + 1, row & 0xff);
+    };
     let attr = 0x07;
     /** Every AL passed to INT 10h/AH=00h, oldest first. The only record of
      *  which video mode a program believes it is in. */
@@ -181,23 +211,28 @@ export function createDos8086(machine, io = {}) {
             machine._write(cellAt(i), 0x20);
             machine._write(cellAt(i) + 1, attr);
         }
-        cursor -= COLS;
+        // Same ownership question as putChar: on a real-BIOS machine the
+        // cursor lives in the BDA, and scrolling has to move THAT one back a
+        // row or the next character lands off the bottom of the screen.
+        setCursor(getCursor() - COLS);
     };
     /** One character through the BIOS teletype path: the shared write. */
     const putChar = (code) => {
         const ch = String.fromCharCode(code);
         stdout += ch;
         if (onChar) onChar(ch);
-        if (code === 0x0d) { cursor -= cursor % COLS; }
-        else if (code === 0x0a) { cursor += COLS; }
-        else if (code === 0x08) { if (cursor % COLS) cursor--; }
+        let c = getCursor();
+        if (code === 0x0d) { c -= c % COLS; }
+        else if (code === 0x0a) { c += COLS; }
+        else if (code === 0x08) { if (c % COLS) c--; }
         else if (code === 0x07) { /* bell: audible, not visible */ }
         else {
-            machine._write(cellAt(cursor), code);
-            machine._write(cellAt(cursor) + 1, attr);
-            cursor++;
+            machine._write(cellAt(c), code);
+            machine._write(cellAt(c) + 1, attr);
+            c++;
         }
-        while (cursor >= ROWS * COLS) scroll();
+        while (c >= ROWS * COLS) { setCursor(c); scroll(); c = getCursor(); }
+        setCursor(c);
     };
     /**
      * INT 10h/06h and /07h -- scroll a RECTANGLE, not the screen.
@@ -259,7 +294,7 @@ export function createDos8086(machine, io = {}) {
             machine._write(cellAt(i), 0x20);
             machine._write(cellAt(i) + 1, attr);
         }
-        cursor = 0;
+        setCursor(0);
     };
 
     // ---- flag helpers: DOS reports failure in carry ---------------------
@@ -581,19 +616,19 @@ export function createDos8086(machine, io = {}) {
                 if (!(cpu.al & 0x80)) clearScreen();
                 return;
             case 0x01: return;                            // cursor shape: nothing to show
-            case 0x02: cursor = cpu.dh * COLS + cpu.dl; return;
-            case 0x03: cpu.dh = Math.floor(cursor / COLS); cpu.dl = cursor % COLS; cpu.cx = 0x0607; return;
+            case 0x02: setCursor(cpu.dh * COLS + cpu.dl); return;
+            case 0x03: { const c = getCursor(); cpu.dh = Math.floor(c / COLS); cpu.dl = c % COLS; cpu.cx = 0x0607; return; }
             case 0x05: return;                            // page select: one page here
             case 0x06: case 0x07: scrollWindow(cpu.ah === 0x06); return;
             case 0x08:
-                cpu.al = machine._read(cellAt(cursor));
-                cpu.ah = machine._read(cellAt(cursor) + 1);
+                cpu.al = machine._read(cellAt(getCursor()));
+                cpu.ah = machine._read(cellAt(getCursor()) + 1);
                 return;
             case 0x09: case 0x0a: {                       // write char (+attr), no cursor move
                 const a = cpu.ah === 0x09 ? cpu.bl : attr;
                 for (let i = 0; i < Math.max(1, cpu.cx); i++) {
-                    machine._write(cellAt(cursor + i), cpu.al);
-                    machine._write(cellAt(cursor + i) + 1, a);
+                    machine._write(cellAt(getCursor() + i), cpu.al);
+                    machine._write(cellAt(getCursor() + i) + 1, a);
                 }
                 return;
             }
