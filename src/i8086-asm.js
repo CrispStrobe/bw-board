@@ -1,6 +1,14 @@
 /**
  * 8086 assembler -- Tier C of the 8086 stack, and the piece that was missing.
  *
+ * TWO DIALECTS, ONE ENCODER. MASM is the one this module was written for and
+ * the one everything below `operand()` speaks; NASM arrives through a
+ * source-to-source front end (see "The NASM front end" further down) plus a
+ * short list of named parse-level rules, and reaches exactly the same
+ * encoder by exactly the same path. `assemble()` reads the dialect off the
+ * source and REFUSES rather than guesses when the evidence points both ways,
+ * because the two disagree about what `MOV AX, VAR` means.
+ *
  * The core, the disassembler, the machine and the DOS/BIOS layer could all
  * run 8086 code; nothing could PRODUCE any. Measured across the 525 programs
  * of the Amey-Thakur corpus, 502 use `.MODEL` / `PROC` / `MACRO`, so a raw
@@ -30,6 +38,15 @@
  *   hangs. The 15 refusals are honest: 14 contain a relative jump further
  *   than an 8086 can reach -- MASM refuses those too, and none is within 4
  *   bytes of reaching -- and 1 wants .FARDATA.
+ *
+ *   The four NASM repositories (31 sources): 21 assemble BYTE-IDENTICALLY
+ *   to NASM 2.16 under `--before "cpu 8086"`, which is the strongest check
+ *   anything in this module has. Of the ten that do not: seven are
+ *   `%include` fragments that were never standalone programs and NASM
+ *   refuses them too, and three are not 8086 programs -- Snake.asm's `inc
+ *   dword`, MazeRunnercode.asm's `pusha`, and ega.asm's immediate-count
+ *   `shr`, which this module expands rather than refuses and so runs where
+ *   NASM's own output would not.
  *
  *   yousefkotp (10 emu8086 coursework programs): 8 accepted and running,
  *   2 refused. Both refusals are defects in the repository rather than
@@ -131,20 +148,37 @@
  * A segment-valued expression on the left (`SEG x`, `@DATA`) still gets its
  * fixup, and is therefore still .EXE-only.
  *
- * ONE THING IS OPT-IN, AND THE DEFAULT IS THE POINT. `{ longJumps: true }`
- * promotes a conditional jump or LOOP that cannot reach into a sequence
- * that can -- `Jcc far` into `Jncc over; JMP near far; over:`, and the LOOP
- * family, which has neither an inverse opcode nor a near form, into a jump
- * over a jump. It is off by default and stays off, because the fourteen
- * corpus programs it rescues CANNOT ASSEMBLE ANYWHERE: MASM refuses them
- * too. Promoting silently would hand a learner a program that works here
- * and fails on the lab machine with nothing to say why, which is worse than
- * a refusal that names the line. Faithfulness to the tool the corpus was
- * written for is the default; reach is a choice made with the eyes open,
- * and every promotion records a warning saying the program will no longer
- * assemble under MASM. With the flag on, Amey goes from 510 accepted and
- * 498 running to 524 and 512, and ten of the fourteen rescued programs are
- * byte-identical to the corpus's own independent simulator.
+ * ONE THING IS OPT-IN, AND WHOSE DEFAULT IT IS DEPENDS ON THE DIALECT.
+ * `{ longJumps: true }` promotes a conditional jump or LOOP that cannot
+ * reach into a sequence that can -- `Jcc far` into `Jncc over; JMP near
+ * far; over:`, and the LOOP family, which has neither an inverse opcode nor
+ * a near form, into a jump over a jump.
+ *
+ * IT IS NOT A MATTER OF TASTE. It is a question about the source's own
+ * assembler, and the two answer it differently, so the default follows the
+ * dialect and the flag overrides it either way:
+ *
+ *   MASM 1.10 REFUSES, so this refuses. The fourteen Amey programs the flag
+ *   rescues CANNOT ASSEMBLE ANYWHERE. Promoting silently would hand a
+ *   learner a program that works here and fails on the lab machine with
+ *   nothing to say why, which is worse than a refusal that names the line.
+ *   With the flag on, Amey goes from 510 accepted and 498 running to 524
+ *   and 512, and ten of the fourteen rescued programs are byte-identical to
+ *   the corpus's own independent simulator.
+ *
+ *   NASM PROMOTES, and emits the same bytes this does, so this promotes.
+ *   Told `CPU 8086` it rewrites an out-of-range `JGE` as `7C 03 E9 rel16`
+ *   -- `Jncc over ; JMP near` -- which is `promote()` exactly; left alone it
+ *   reaches for the 80386's `0F 8D rel16`, which on an 8086 decodes as POP
+ *   CS and two bytes of rubbish. Three of the four NASM corpora contain a
+ *   conditional jump further than 127 bytes, so refusing them would be
+ *   refusing what NASM itself assembles. `scripts/oracle-nasm.mjs` checks
+ *   that claim the only way worth checking it, byte for byte.
+ *
+ * The principle is the same one in both halves and it is the one the MASM
+ * default was always about: FAITHFULNESS TO THE TOOL THE SOURCE WAS WRITTEN
+ * FOR. It just does not point the same way twice. Every promotion records a
+ * warning either way, saying which assembler agrees with it.
  *
  * NOT SUPPORTED, deliberately, each of which raises a named error rather
  * than encoding something plausible:
@@ -1609,7 +1643,7 @@ class Assembler {
         // not in MASM because a NASM image is flat -- `flatOutput()` is
         // true by construction -- so no automatic segment override can
         // appear on a later pass and make something bigger again.
-        if (this.nasm && opcode !== 0xeb) {
+        if (this.nasm && this.longJumps && opcode !== 0xeb) {
             if (this.pass === 1) this.promoted[slot] = true;
             else if (this.promoted[slot] && o.known && d >= -128 && d <= 127) this.promoted[slot] = false;
             if (this.promoted[slot]) {
