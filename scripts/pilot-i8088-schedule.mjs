@@ -45,12 +45,30 @@ const PREFIX = new Set([0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf2, 0xf3]);
 // that is the popcount of AX (the microcode shifts AX and adds on each 1 bit),
 // which lifts F7.4 from 15.5% to 63.4% on held-out vectors.
 const popcount = (v) => { let n = 0; while (v) { n += v & 1; v >>>= 1; } return n; };
+// CATEGORICAL features: the operand value selects a different constant.
+const absw = (v) => ((v & 0x8000) ? (-v & 0xffff) : v);
 const VARIABLE_LATENCY = {
-    'F7.4': (regs) => popcount(regs.ax),   // MUL r/m16
-    'F7.5': (regs) => popcount(regs.ax),   // IMUL r/m16
-    'F6.4': (regs) => popcount(regs.ax & 0xff),
-    'F6.5': (regs) => popcount(regs.ax & 0xff),
+    'F7.4': (r) => popcount(r.ax),                              // MUL r/m16
+    'F6.4': (r) => popcount(r.ax & 0xff),                       // MUL r/m8
+    // Signed forms negate to magnitude first, then run the unsigned loop, so
+    // the feature is popcount of |AX| *plus* the sign (the negate costs time).
+    'F7.5': (r) => `${popcount(absw(r.ax))}_${(r.ax >> 15) & 1}`, // IMUL r/m16
+    'F6.5': (r) => popcount(r.ax & 0xff),                        // IMUL r/m8
+    '99':   (r) => (r.ax >> 15) & 1,                             // CWD
 };
+
+// LINEAR features: the operand adds a PROPORTIONAL number of cycles, so a
+// categorical key is the wrong shape -- it fragments the table across 64 CL
+// values and scores ~57%. The datasheet gives shift/rotate by CL as 8+4n
+// (register) / 20+EA+4n (memory); measured directly, cl=0 -> 8 and every
+// +2 of CL adds +8, i.e. exactly 4 cycles per count. Subtracting 4*CL before
+// fitting and adding it back when predicting takes these from ~3% to ~99.4%.
+const SHIFT_BY_CL = (r) => 4 * (r.cx & 0xff);
+const LINEAR_LATENCY = {};
+for (let ext = 0; ext < 8; ext++) {
+    LINEAR_LATENCY[`D2.${ext}`] = SHIFT_BY_CL;   // shift/rotate r/m8, CL
+    LINEAR_LATENCY[`D3.${ext}`] = SHIFT_BY_CL;   // shift/rotate r/m16, CL
+}
 
 function modrmKey(bytes) {
     let p = 0;
@@ -62,6 +80,7 @@ function modrmKey(bytes) {
 function load(file, opcode) {
     const t = JSON.parse(gunzipSync(readFileSync(DIR + file)).toString());
     const vl = VARIABLE_LATENCY[opcode] || null;
+    const ll = LINEAR_LATENCY[opcode] || null;
     const out = [];
     for (const x of t) {
         const idx = [];
@@ -76,6 +95,7 @@ function load(file, opcode) {
             n: idx.length,
             m: modrmKey(x.bytes),
             v: vl ? vl(x.initial.regs) : 0,
+            L: ll ? ll(x.initial.regs) : 0,
             // One bit: did control transfer? Derived here from the vector, but
             // at predict time our core already knows it (_tookBranch). Using the
             // raw flag word instead fragments the key and scores far worse.
@@ -112,10 +132,12 @@ const sKey = (r) => `${r.n}|${r.m}|${r.v}`;
 function train(rows) {
     const a = new Map(), d = new Map(), sp = new Map(), tl = new Map();
     for (const r of rows) {
-        if (r.anchor === null) { push(d, dKey(r), r.tot); continue; }
+        if (r.anchor === null) { push(d, dKey(r), r.tot - r.L); continue; }
         push(a, aKey(r), r.anchor);
-        push(sp, sKey(r), r.span);
-        push(tl, sKey(r), r.tail);
+        // The shift loop runs BETWEEN the read and the write, so for a
+        // read-modify-write form the linear term lands in span, not tail.
+        if (r.n >= 2) { push(sp, sKey(r), r.span - r.L); push(tl, sKey(r), r.tail); }
+        else { push(sp, sKey(r), r.span); push(tl, sKey(r), r.tail - r.L); }
     }
     return { a: modalMap(a), d: modalMap(d), sp: modalMap(sp), tl: modalMap(tl) };
 }
@@ -124,44 +146,55 @@ function score(rows, mAnchor, mShape) {
     let hit = 0, n = 0;
     for (const r of rows) {
         n++;
-        if (r.anchor === null) { if (mAnchor.d.get(dKey(r)) === r.tot) hit++; continue; }
+        if (r.anchor === null) {
+            if (mAnchor.d.get(dKey(r)) + r.L === r.tot) hit++;
+            continue;
+        }
         const a = mAnchor.a.get(aKey(r));
         const span = mShape.sp.get(sKey(r)), tail = mShape.tl.get(sKey(r));
         if (a !== undefined && span !== undefined && tail !== undefined
-            && a + span + tail === r.tot) hit++;
+            && a + span + tail + r.L === r.tot) hit++;
     }
     return { hit, n, pct: n ? (100 * hit / n) : 0 };
 }
 
 const files = readdirSync(DIR).filter((f) => f.endsWith('.json.gz')).sort();
-const data = new Map();
-for (const f of files) {
-    const op = f.replace('.json.gz', '');
-    data.set(op, load(f, op));
-}
-
 const pct = (h, n) => `${(100 * h / n).toFixed(1)}%`.padStart(7);
+const ALL = process.argv.includes('--all');
 
+// SPLIT A streams: only one opcode's vectors are resident at a time, so this
+// runs over the full 302-opcode suite (677 MB gzipped) without holding it all.
 console.log('=== SPLIT A: held-out vectors (70/30 within each opcode) ===');
 let aH = 0, aN = 0;
-for (const [op, rows] of data) {
+const worst = [];
+for (const f of files) {
+    const op = f.replace('.json.gz', '');
+    let rows;
+    try { rows = load(f, op); } catch { continue; }
+    if (!rows.length) continue;
     const cut = Math.floor(rows.length * 0.7);
     const m = train(rows.slice(0, cut));
     const s = score(rows.slice(cut), m, m);
     aH += s.hit; aN += s.n;
-    console.log(op.padEnd(7), pct(s.hit, s.n), `(${s.hit}/${s.n})`);
+    worst.push({ op, pct: s.pct, n: s.n });
+    if (!ALL) console.log(op.padEnd(7), pct(s.hit, s.n), `(${s.hit}/${s.n})`);
+    rows = null;
 }
-console.log('OVERALL'.padEnd(7), pct(aH, aN), `(${aH}/${aN})`);
+console.log('OVERALL'.padEnd(7), pct(aH, aN), `(${aH}/${aN})`, `over ${worst.length} opcodes`);
 
-console.log('\n=== SPLIT B: held-out OPCODES (leave-one-out) ===');
-let bH = 0, bN = 0;
-for (const [op, rows] of data) {
-    const other = [];
-    for (const [o2, r2] of data) if (o2 !== op) other.push(...r2);
-    // anchor/no-data tables from OTHER opcodes; span+tail are the held-out
-    // opcode's own constants (a datasheet or one calibration run supplies them).
-    const s = score(rows, train(other), train(rows));
-    bH += s.hit; bN += s.n;
-    console.log(op.padEnd(7), pct(s.hit, s.n), `(${s.hit}/${s.n})`);
+if (ALL) {
+    const hist = { '100%': 0, '>=99': 0, '>=95': 0, '>=90': 0, '>=75': 0, '<75': 0 };
+    for (const w of worst) {
+        if (w.pct === 100) hist['100%']++;
+        else if (w.pct >= 99) hist['>=99']++;
+        else if (w.pct >= 95) hist['>=95']++;
+        else if (w.pct >= 90) hist['>=90']++;
+        else if (w.pct >= 75) hist['>=75']++;
+        else hist['<75']++;
+    }
+    console.log('\nper-opcode distribution:', JSON.stringify(hist));
+    console.log('\nworst 25 opcodes (these are where the BIU model is needed):');
+    for (const w of worst.sort((a, b) => a.pct - b.pct).slice(0, 25)) {
+        console.log('  ', w.op.padEnd(7), pct(w.pct * w.n / 100, w.n), `(n=${w.n})`);
+    }
 }
-console.log('OVERALL'.padEnd(7), pct(bH, bN), `(${bH}/${bN})`);
