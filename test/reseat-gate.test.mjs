@@ -13,7 +13,7 @@
 // ARE, derived from the schematic — so a wrong reseat is CAUGHT, not assumed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { reseatGate, captureObservable } from '../src/reseat-gate.js';
@@ -23,7 +23,20 @@ import { I8086Machine } from '../src/i8086-machine.js';
 import { extract8086Machine } from '../src/i8086-extract.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const galleryDir = join(here, '..', '..', 'wt', 'i8086-ui-cui', 'gallery');
+// The reseated circuits live in the sibling bw-circuit-ui worktree. Resolve it
+// by walking up from here rather than assuming this repo's exact depth — the
+// same tree gets checked out at /code/bw-board AND in nested integration
+// worktrees (/code/wt/<name>), and a fixed '../../wt/...' doubles to wt/wt there.
+function findGalleryDir() {
+    let dir = here;
+    for (let i = 0; i < 6; i++) {
+        const cand = join(dir, 'wt', 'i8086-ui-cui', 'gallery');
+        try { if (statSync(cand).isDirectory()) return cand; } catch { /* keep walking */ }
+        dir = dirname(dir);
+    }
+    return join(here, '..', '..', 'wt', 'i8086-ui-cui', 'gallery'); // fall back to the canonical layout
+}
+const galleryDir = findGalleryDir();
 const GALLERY = join(galleryDir, 'e4-via-blink.json');
 const RESEATED = join(galleryDir, 'e4-reseated-8086.json');
 const RESEATED_WRONG = join(galleryDir, 'e4-reseated-8086-wrongport.json');
