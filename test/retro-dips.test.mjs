@@ -23,7 +23,8 @@ describe('the unregistered-kind failure this fixes', () => {
     });
 
     it('...and the ones this module registers now load instead', () => {
-        for (const kind of ['w65c02', 'w65c22', 'w65c51', 'z80', 'mc6850', 'tms9918', 'crystal']) {
+        for (const kind of ['w65c02', 'w65c22', 'w65c51', 'z80', 'mc6850', 'tms9918', 'i8255',
+            'i8086', 'i8088', 'i8254', 'i8259', 'i8251', 'i8284', 'crystal']) {
             const model = getDevice(kind);
             assert.ok(model, `${kind} is registered`);
             const board = new BoardImpl(5.0);
@@ -81,7 +82,7 @@ describe('DIP pin surfaces drive and read', () => {
     });
 
     it('these are BARE chips: they stamp no supply of their own', () => {
-        for (const kind of ['w65c02', 'w65c22', 'w65c51', 'z80', 'mc6850', 'tms9918']) {
+        for (const kind of ['w65c02', 'w65c22', 'w65c51', 'z80', 'mc6850', 'tms9918', 'i8255']) {
             const m = getDevice(kind);
             assert.equal(m.gpioFollowsPinStates, true, `${kind} GPIO follows pin states`);
             const st = m.init({ id: 'U1', kind, params: {}, terminals: [] });
@@ -116,6 +117,86 @@ describe('w65c02 is NOT the same part as eater6502', () => {
         for (const t of ['via1.pa0', 'via1.pb7', '5v']) {
             assert.ok(machine.includes(t), `machine surface has ${t}`);
             assert.ok(!cpu.includes(t), `CPU has no ${t}`);
+        }
+    });
+});
+
+describe('i8255 PPI — the 8086 tier\'s GPIO chip, the reseat gate needs it drawable', () => {
+    it('is a DIP-40 with the register + port pins the extractor and the LED wiring use', () => {
+        const t = getDevice('i8255').terminals;
+        assert.equal(t.length, 40, 'DIP-40');
+        // The extractor selects and register-addresses via these:
+        for (const p of ['csb', 'a0', 'a1']) assert.ok(t.includes(p), `has ${p} (extractor)`);
+        // The LED nets re-terminate onto these (flat pb0..pb7, W65C22 convention):
+        for (let i = 0; i < 8; i++) assert.ok(t.includes(`pb${i}`), `has pb${i}`);
+        for (const p of ['pa0', 'pa7', 'pc0', 'pc7']) assert.ok(t.includes(p), `has ${p}`);
+        for (let i = 0; i < 8; i++) assert.ok(t.includes(`d${i}`), `has d${i} (data bus)`);
+    });
+
+    it('RESET is active HIGH — `reset`, not `resb` (the trap on an 8255 beside 6502 parts)', () => {
+        const t = getDevice('i8255').terminals;
+        assert.ok(t.includes('reset'), 'reset present');
+        assert.ok(!t.includes('resb'), 'NOT resb — tying it low is run, not hold-in-reset');
+    });
+
+    it('the DIP-40 layout is the real 8255A, NOT tidied into sequential order', () => {
+        // Port A is split across both ends of the package; port C is upper
+        // nibble (pc7..pc4) THEN lower (pc0..pc3). A "cleaned up" pa0..pc7 would
+        // read more reasonably and be wrong — this guards the true layout.
+        const t = getDevice('i8255').terminals;
+        assert.deepEqual(t.slice(0, 4), ['pa3', 'pa2', 'pa1', 'pa0'], 'pins 1-4: pa3..pa0 (port A high end)');
+        assert.deepEqual(t.slice(36, 40), ['pa7', 'pa6', 'pa5', 'pa4'], 'pins 37-40: pa7..pa4 (port A split to the far end)');
+        assert.deepEqual(t.slice(9, 17), ['pc7', 'pc6', 'pc5', 'pc4', 'pc0', 'pc1', 'pc2', 'pc3'],
+            'port C: upper nibble descending, then lower ascending — not sequential');
+    });
+
+    it('a port-B pin drives a loaded net (it can light an LED)', () => {
+        const board = new BoardImpl(5.0);
+        board.setNetlist([
+            V, G,
+            { id: 'U1', kind: 'i8255', params: {}, terminals: ['vcc', 'gnd', 'pb0'] },
+            { id: 'R1', kind: 'resistor', params: { ohms: 10000 }, terminals: ['a', 'b'] },
+        ], [
+            net('nv', ['VCC', 'vcc'], ['U1', 'vcc']),
+            net('ng', ['GND', 'gnd'], ['U1', 'gnd'], ['R1', 'b']),
+            net('npb0', ['U1', 'pb0'], ['R1', 'a']),
+        ]);
+        board.setPin('pb0', 'pushpull', true);
+        board.advanceTo(10_000n);
+        assert.ok(board.readAnalog('pb0') > 4.5, `pb0 drives the LED net high (got ${board.readAnalog('pb0')})`);
+    });
+});
+
+describe('the 8086 family is drawable: CPU + PIT/PIC/USART/clock-gen', () => {
+    it('the 8086/8088 CPU is a DIP-40 with the address bus and M/IO the extractor reads', () => {
+        for (const cpu of ['i8086', 'i8088']) {
+            const t = getDevice(cpu).terminals;
+            assert.equal(t.length, 40, `${cpu} is a DIP-40`);
+            for (let i = 0; i < 20; i++) assert.ok(t.includes(`a${i}`), `${cpu} has a${i}`);
+            assert.ok(t.includes('mio'), `${cpu} has mio (the extractor's M/IO cycle line)`);
+        }
+    });
+
+    it('the support chips carry the register/chip selects the extractor decodes', () => {
+        // Extractor: PIT & PPI select on a0/a1; PIC on a0; all on csb.
+        assert.ok(['csb', 'a0', 'a1'].every((p) => getDevice('i8254').terminals.includes(p)), 'PIT: csb/a0/a1');
+        assert.ok(['csb', 'a0'].every((p) => getDevice('i8259').terminals.includes(p)), 'PIC: csb/a0');
+        assert.ok(getDevice('i8251').terminals.includes('csb'), 'USART: csb');
+        assert.equal(getDevice('i8254').terminals.length, 24, 'PIT DIP-24');
+        assert.equal(getDevice('i8259').terminals.length, 28, 'PIC DIP-28');
+        assert.equal(getDevice('i8251').terminals.length, 28, 'USART DIP-28');
+    });
+
+    it('the 8284 clock generator is drawable glue (DIP-18) — the extractor ignores it, by design', () => {
+        const t = getDevice('i8284').terminals;
+        assert.equal(t.length, 18, 'DIP-18');
+        assert.ok(['x1', 'x2', 'clk', 'reset'].every((p) => t.includes(p)), 'crystal in, clk + reset out');
+        assert.ok(!t.includes('csb'), 'no chip select: it is clock glue, not a bus device');
+    });
+
+    it('these are bare surfaces — the behaviour is the I8086Machine, not the board solver', () => {
+        for (const kind of ['i8086', 'i8088', 'i8254', 'i8259', 'i8251', 'i8284']) {
+            assert.equal(getDevice(kind).gpioFollowsPinStates, true, `${kind} follows pin states`);
         }
     });
 });
