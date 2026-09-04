@@ -23,32 +23,24 @@ import { I8086Machine } from '../src/i8086-machine.js';
 import { extract8086Machine } from '../src/i8086-extract.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-// The reseated circuits live in the sibling bw-circuit-ui worktree. Resolve it
-// by walking up from here rather than assuming this repo's exact depth — the
-// same tree gets checked out at /code/bw-board AND in nested integration
-// worktrees (/code/wt/<name>), and a fixed '../../wt/...' doubles to wt/wt there.
-function findGalleryDir() {
-    let dir = here;
-    for (let i = 0; i < 6; i++) {
-        const cand = join(dir, 'wt', 'i8086-ui-cui', 'gallery');
-        try { if (statSync(cand).isDirectory()) return cand; } catch { /* keep walking */ }
-        dir = dirname(dir);
-    }
-    return join(here, '..', '..', 'wt', 'i8086-ui-cui', 'gallery'); // fall back to the canonical layout
+// HERMETIC fixtures, committed into this repo — NOT read from the sibling
+// bw-circuit-ui worktree. The reseated circuits are produced by that repo's
+// substitution (reseatOnto8086, which has its own golden test there); this repo
+// carries a committed snapshot so the gate runs on CI and any checkout, not only
+// on a box that happens to have wt/i8086-ui-cui on disk. A cross-repo path made
+// this test green here and red everywhere else — the fixture below is the fix.
+const FIXTURES = join(here, 'fixtures', 'reseat');
+const GALLERY = join(FIXTURES, 'e4-via-blink.json');
+const RESEATED = join(FIXTURES, 'e4-reseated-8086.json');
+const RESEATED_WRONG = join(FIXTURES, 'e4-reseated-8086-wrongport.json');
+
+// A missing fixture must fail as "the fixture is not here", naming the path —
+// NOT as "the reseat behaves differently". The GREEN and RED cases both read
+// these files, so an absent fixture moves both verdicts at once and would
+// otherwise read as a behaviour change (it once did, costing three tests).
+for (const f of [GALLERY, RESEATED, RESEATED_WRONG]) {
+    try { statSync(f); } catch { throw new Error(`reseat-gate fixture missing: ${f} — regenerate via bw-circuit-ui scripts/gen-reseated-8086.mjs and copy into test/fixtures/reseat/`); }
 }
-const galleryDir = findGalleryDir();
-const GALLERY = join(galleryDir, 'e4-via-blink.json');
-// The reseated circuits live in a gallery/reseat/ subdir (kept out of the flat
-// gallery so the 6502 stage/corpus discovery there doesn't pick up these 8086
-// boards). Resolve from the subdir OR the flat gallery, since which one a given
-// bw-circuit-ui checkout has depends on whether it carries the subdir move yet.
-const reseatedFixture = (name) => {
-    const sub = join(galleryDir, 'reseat', name);
-    try { if (statSync(sub).isFile()) return sub; } catch { /* fall back to flat */ }
-    return join(galleryDir, name);
-};
-const RESEATED = reseatedFixture('e4-reseated-8086.json');
-const RESEATED_WRONG = reseatedFixture('e4-reseated-8086-wrongport.json');
 const BLINK_ROM = new Uint8Array(readFileSync(join(here, '..', 'rom', 'blink-demo.bin')));
 
 // ---- the original: e4-via-blink (6502), paired with the baseline program ----
