@@ -43,6 +43,21 @@ const SLOTS = {
         { id: 'rom', label: 'ROM image', accept: BIN_EXT, at: 0x8000,
           hint: 'defaults to the vendored G-Pascal ROM; replace to run your own' },
     ],
+    i8086: [
+        // `at` is a LOAD address, and for a ROM it is not a constant: the reset
+        // vector is at FFFF0h, so an image has to end at FFFFFh and a 64K BIOS
+        // therefore starts at F0000h while a 32K monitor starts at F8000h. The
+        // host computes `0x100000 - length`; the value here is the 64K case,
+        // which is the only one a fixed number can describe.
+        { id: 'rom', label: 'ROM image', accept: BIN_EXT, at: 0xf0000,
+          hint: 'loaded so it ENDS at FFFFFh — the reset vector at FFFF0h must fall inside it' },
+        { id: 'com', label: 'DOS program (.com)', accept: ['.com'], at: 0x0100,
+          hint: 'runs on the DOS service layer, which is a different machine from a BIOS board' },
+        { id: 'exe', label: 'DOS program (.exe)', accept: ['.exe'],
+          hint: 'MZ header, relocated on load' },
+        { id: 'floppy', label: 'Floppy image (360K)', accept: ['.img', '.ima', '.dsk'],
+          hint: 'boots through the µPD765 and the 8237 when the board has them' },
+    ],
     z80: [
         { id: 'rom', label: 'ROM image', accept: BIN_EXT, at: 0x0000 },
         { id: 'com', label: 'CP/M program (.com)', accept: ['.com'], at: 0x0100,

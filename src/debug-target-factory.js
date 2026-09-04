@@ -514,6 +514,15 @@ export function getTargetKinds() {
       description: 'Composable Z80 machine — Searle bench, CP/M, ZX Spectrum configs.',
     },
     {
+      // MISSING SINCE THE KIND SHIPPED, and the failure was not "no entry" --
+      // a <select> whose value matches no option renders the FIRST option, so
+      // the picker read "Simulated (STC12 / 8051)" while running 8086 code.
+      // A host cannot tell that from a user who chose 8051.
+      kind: 'i8086',
+      label: 'Simulated (8086 / 8088)',
+      description: 'Composable 8086 machine — breadboard, XT board with CGA and floppy, or DOS programs.',
+    },
+    {
       kind: 'attiny88',
       label: 'Simulated (ATtiny88)',
       description: 'AVR instruction-level emulation. ATtiny88 (blinkenrocket-class boards).',
