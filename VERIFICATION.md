@@ -320,6 +320,50 @@ who also insisted it be written as a separate species rather than folded in.
 It was reproduced independently here before being recorded, per the section
 above — reading got two things wrong on the day this file was written.
 
+### Rule: a verdict rests on a count and an artefact, never on words
+
+Two lanes arrived at this from opposite directions on the same day, which is
+why it is a rule rather than a preference.
+
+**From the failure side.** `test/sap1-digital-parity.test.mjs` decided whether
+an external simulator agreed with a truth table by asking
+`out.includes('passed')`. Measured, with one correct row and one wrong row in
+the same element, that simulator prints:
+
+    unnamed: passed
+    unnamed: failed (50%)
+    ... Tests have failed.
+
+so the substring is present for a run that FAILED. What had been protecting the
+gate was the tool exiting non-zero — an undocumented coupling the check was
+silently riding on. Harmless until the tool exits 0 with a mixed result, and
+invisible until someone reads the helper.
+
+**From the success side.** `scripts/oracle-masm.mjs` decides whether MASM
+succeeded from two independent signals, neither of them a word: **a number the
+tool itself prints** (the severe-error tally) **and the existence of the output
+artefact** (`T.OBJ`). Its regex for pulling diagnostics out of the transcript is
+used only for the REPORT — if MASM changed its error format tomorrow the report
+would go quiet and the verdict would not move. And the unreadable case falls
+safe by construction: no tally means `severe = -1`, and `-1 !== 0` is a
+failure, so a transcript the code cannot parse is treated as a refusal rather
+than a pass.
+
+The rule:
+
+- **Words are the report. A count and an artefact are the verdict.** A tool's
+  prose is a UI that changes between versions; the number it prints and the
+  file it produces are the things it is actually claiming.
+- **Never let one expression be both.** `out.includes('passed')` was doing
+  double duty, which is exactly what hid the problem: it read like a verdict
+  and behaved like a report.
+- **Make the unparseable case fail.** If the verdict cannot be extracted, that
+  is a refusal, not a pass. `severe = -1` on a missing tally is the shape.
+- Substring matching cannot tell a partial success from a total one, any more
+  than it can tell an escaped quote from a live one — which is the same lesson
+  the disassembler's exclusion key learned, in a different file, from a
+  different direction.
+
 ### Rule: a corpus is evidence only about the constructs it contains
 
 Three of the strongest numbers in this tier are corpus agreements — 470 of 525
