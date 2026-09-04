@@ -164,3 +164,47 @@ test('KNOWN DEFECT: `=` is not redefinable, and in MASM that is its whole point'
     // And the single-use case works, so the gap is redefinition alone.
     assert.equal(hex(assembleRaw('K = 5\n mov ax, K')), 'b8 05 00');
 });
+
+// ---- the NEAR-zero constructs: 1 to 4 files out of 525 --------------------
+//
+// A construct exercised by two files is barely better evidence than one
+// exercised by none — the corpus rule is about coverage, not about a
+// threshold at exactly zero. These carry 0.2%-3.2% and are asserted here for
+// the same reason as the sevens above.
+
+test('all four segment override prefixes encode correctly', () => {
+    // CS is 0% of the corpus, SS 0.4%, ES 2.5%, and an explicit DS is rare
+    // enough not to register. Getting one of these wrong points a load at the
+    // wrong 64K and is invisible in a program that never overrides.
+    assert.equal(roundTrip('mov ax, es:[bx]').hex, '26 8b 07', 'ES prefix is 26h');
+    assert.equal(roundTrip('mov ax, cs:[bx]').hex, '2e 8b 07', 'CS prefix is 2Eh');
+    assert.equal(roundTrip('mov ax, ss:[bx]').hex, '36 8b 07', 'SS prefix is 36h');
+    assert.equal(roundTrip('mov ax, ds:[bx]').hex, '3e 8b 07', 'DS prefix is 3Eh');
+    // And each reads back naming the segment it actually encoded.
+    for (const [seg, pfx] of [['es', '26'], ['cs', '2e'], ['ss', '36'], ['ds', '3e']]) {
+        const r = roundTrip(`mov ax, ${seg}:[bx]`);
+        assert.ok(r.text.includes(`${seg}:`), `${pfx} should disassemble naming ${seg}:`);
+    }
+});
+
+test('REPT repeats its body, and IF/ELSE assembles exactly one branch', () => {
+    // REPT is in 0.4% of the corpus and IF/ELSE in 0.4% — two files each.
+    assert.equal(hex(assembleRaw('rept 3\n nop\nendm\n')), '90 90 90');
+    // The taken branch and ONLY the taken branch: a conditional that emitted
+    // both would still "work" for any program whose else-branch is harmless.
+    assert.equal(hex(assembleRaw('X equ 1\nif X\n nop\nelse\n hlt\nendif\n')), '90');
+    assert.equal(hex(assembleRaw('X equ 0\nif X\n nop\nelse\n hlt\nendif\n')), 'f4');
+});
+
+test('GROUP and .FARDATA are refused, and .FARDATA is refused by name', () => {
+    // .FARDATA is wanted by exactly ONE corpus file, which is the reason the
+    // ROADMAP lists it among the honest refusals rather than as a gap.
+    assert.throws(() => assemble('.model small\n.fardata\nv dw 1\n.code\ns:\n int 20h\nend s\n',
+        { name: 'x' }), /not supported/, '.FARDATA must be refused by name');
+    // GROUP falls through to the generic message, like STRUC and RECORD.
+    // Pinned so that silently accepting it — and quietly getting segment
+    // arithmetic wrong — would be caught.
+    assert.throws(() => assemble('.model small\ndgroup group _data\n_data segment\nv dw 1\n'
+        + '_data ends\n.code\ns:\n int 20h\nend s\n', { name: 'x' }),
+    /not an instruction|not supported/i);
+});
