@@ -2250,6 +2250,54 @@ needs no hardware. No shipped example uses `stc12_setpwm` at all. The reseat
 gate's row for it had been wrong twice over: it quoted the non-existent syntax
 AND diagnosed missing hardware.
 
+**MEASURED 2026-09-04: a scheduled PWM task resolves ~20 levels, and the limit
+is QUANTISATION, not jitter.** With the preemptive scheduler landed, this
+stopped being an estimate. A PWM script (`turn on / wait / turn off / wait`)
+alongside a second script that never waits, sampled cycle-weighted:
+
+| asked | measured | | adjacent steps |
+|---|---|---|---|
+| 5 % | 9.06 % | 20 levels, 9/20 | 45.43 % |
+| 25 % | 27.25 % | 10/20 | 49.97 % |
+| 50 % | 49.97 % | 11/20 | 54.53 % |
+| 75 % | 72.71 % | 12/20 | 59.98 % |
+| 95 % | 90.88 % | | monotonic, ~5 pt steps |
+
+**At 100 levels adjacent steps collapse.** Asking 50 %, 51 %, 52 %, 53 % all
+produce **49.97 %** — four levels, one value. Every measured period is a
+multiple of ~0.477 ms, which is the scheduler's tick: a 0.1 ms difference
+rounds away, a 0.5 ms difference does not. So ~21 ticks fit in a 10 ms period
+and that is the resolution, arrived at by the clock rather than by choice.
+
+**Jitter is NOT the limit, which is the surprising half.** The prediction was
+that preemption inside the on-phase would smear the duty. Measured over 655
+periods: **sd = 0.002 ms, range 10.486-10.492 ms.** Six microseconds. The
+scheduler is far steadier than either lane expected, and the ceiling is
+deterministic quantisation — which means the resolution can be STATED exactly
+rather than hedged.
+
+**The error is a linear compression toward 50 %, not noise**: gain ~0.91,
+symmetric about mid-scale, so a fade stays monotonic and loses a little travel
+at both ends. Combined with the eye's roughly logarithmic response, that argues
+for spacing the 20 levels non-linearly, which costs nothing.
+
+**Conclusion: `setpwm` can have an honest lowering at ~20 levels, and nobody
+needs the PIC for smoothness.** The PIC remains priced and available
+(byte-identical over 525 corpus programs) for a lesson that genuinely wants an
+ISR.
+
+**THE DAC0832 STAYS WITHOUT A PSEUDOCODE CALLER, BY DECISION (i8086,
+2026-09-04).** `ANALOG` could be made bidirectional — read gives the ADC, write
+gives the DAC — with no grammar change. It is refused because **on an 8051
+`ANALOG` is input-only**: P1 has ADC channels and the part has no DAC. A
+bidirectional `ANALOG` here would reseat onto an STC and silently lose half its
+meaning, which is the class this tier exists to refuse. So the DAC is reachable
+from the ASM tab and not from pseudocode, and that is a legitimate home rather
+than a waste: a learner writing `OUT 310h, AL` by hand is doing the lesson the
+chip is for. A pseudocode caller would need a new direction token that every
+other back end refuses by name — a real language change, to be made deliberately
+and not to justify a chip that already exists.
+
 **`setpwm` REFUSES, and that is the considered answer.** A DAC would give the
 same visible LED brightness by a different mechanism, so a scope, a motor or an
 RC filter would disagree with the lamp — a substitution whose warning a learner
