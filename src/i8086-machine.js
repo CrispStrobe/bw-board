@@ -390,6 +390,31 @@ export const EGADEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The capstone board — TWO interrupt sources at once. An 8086, 64K RAM, the CGA
+ * text page, an 8259 PIC, an 8254 PIT wired OUT0->IR0, an 8255 keyboard port,
+ * and a CGA card. Load rom/desk-demo.bin (scripts/build-desk-demo.mjs) and the
+ * 8259 arbitrates both live IRQ lines: IRQ0 (the timer) updates a hex clock at
+ * the top-right every tick, and IRQ1 (the keyboard) echoes what you type onto a
+ * line below — concurrently, each interrupt acknowledged and EOI'd on its own.
+ * The timer and keyboard demos each drive one source; this proves they compose
+ * through the PIC's priority and two independent EOIs.
+ */
+export const DESKDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259: IR0 -> INT 8, IR1 -> INT 9
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 }, // 8254 OUT0 -> IR0 (the clock)
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 keyboard: scancode at 60h, ack at 61h
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA text page at B800:0000
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
@@ -447,6 +472,7 @@ export class I8086Machine {
             } else if (c.kind === 'pit') {
                 chip = new I8254({
                     onOutput: (channel, level) => this._pitOutput(c, channel, level),
+                    variant: c.variant,   // '8253' for the original PC/XT part (no read-back)
                 });
             } else if (c.kind === 'pic') {
                 // The INTR output is polled in step(); the hook is only a
