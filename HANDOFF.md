@@ -182,11 +182,21 @@ between trees by hand is the same hazard with extra steps.
     survivable BECAUSE the idle sessions had been swapped out, into the one
     resource with no second line of defence. Prune detached sessions before
     concluding the box is simply too small.
+    - **State that the other way round, because it is the useful direction:
+      RAM looking healthy can be EVIDENCE that swap is being consumed.** The
+      reassuring number and the dangerous condition had the same cause. A
+      comfortable `free -m` with a full swap line is not a box that is coping;
+      it is a box that has already spent its reserve to produce that comfort.
   - **`screen -X quit` is not enough.** It removes the screen and ORPHANS the
     `claude` process, which is reparented to init and keeps its memory. All
     three survived it here, and one was still holding a Dart analysis server
     that had been running 5 days 14 hours. Check the PIDs afterwards and
     SIGTERM what remains.
+    - **This is the operationally dangerous half.** Anyone who prunes sessions
+      and stops at `screen -X quit` will believe they freed memory, read
+      `free -m`, see no improvement, and conclude the idle sessions were not
+      the problem after all — having in fact freed nothing. The wrong lesson
+      is then learned from a correct measurement of an incomplete action.
   - **It causes FALSE TEST FAILURES, so check the box before believing a red.**
     `sap1-differential` and `sap1-digital-parity` shell out to
     `java -cp Digital.jar` with a hard `timeout: 30000`. Under load all four
