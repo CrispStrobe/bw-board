@@ -2188,16 +2188,41 @@ measurement used guessed syntax, was silently dropped, and reported a false
 | `turn on <pin>` / `read` / `toggle` | `stc12_setpin` etc. | lowers (8255) | lowers |
 | `PIN pot = P1.n ANALOG` + `read pot` | `stc12_read` analog | refused | **lowers** — ADC0809 at 300h (`9ed0a5062`, i8086) |
 | `set <pin> to <expr> hz` | `stc12_settone` | refused | **contract proved** (`0c7fb5f`), lowering pending |
-| `set <pin> to <value>` | `stc12_writepin` | refused | **chip landed** — DAC0832 at 310h |
+| `set <pin> to <value>` | `stc12_writepin` | refused | **lowers as a digital LEVEL** — not a DAC. See below. |
+| `wait until <cond>` | `control_wait_until` | refused | **lowers** to a poll on the pin (`a5a658c37`, i8086) |
 | `set <pin> to <n> percent` | `stc12_setpwm` | refused | REFUSES, deliberately — see below |
 | `WHEN <pin> pressed` | `stc12_whenpin` | refused | needs the PIC + scheduler |
 | `PART x = SEG7/KEYPAD4X4 on Pn` | parts | refused | KEYPAD4X4 lowers (`6a2afdd97`, i8086) |
 
-**THE CALLERS ALREADY EXISTED.** This lane twice recorded "there is no caller
-for a DAC" and deferred it. That was wrong, and wrong for a measurable reason:
-the probe used `write <expr> to <pin>`, which is not the syntax. It is `set
-<pin> to <value>`. A vocabulary gap asserted from a probe that never matched is
-the same error class as a mutation whose `sed` pattern did not apply.
+**THE DAC HAS NO CALLER, AND THIS ENTRY HAS BEEN WRONG IN BOTH DIRECTIONS.**
+Recorded here because the shape of the error matters more than the conclusion:
+
+1. This lane first said "no caller for a DAC" and deferred it. Correct, but
+   held for a bad reason — the probe used `write <expr> to <pin>`, which is not
+   the syntax and matched nothing. A gap asserted from a probe that never ran.
+2. On finding the real spelling, `set <pin> to <value>`, both this lane and
+   i8086 concluded it was the DAC's caller, and the DAC0832 was built.
+3. **It is not.** `set <pin> to <expr>` writes a computed *level*, not a
+   voltage. The parser says so (*"a level is a level, exactly like `set
+   high`"*), and `trace-oracle.js` — the reference semantics every back end is
+   measured against — lowers it as `num(VALUE) ? 1 : 0`. Every other back end
+   emits `if (VALUE) high else low` and none scales anything. Lowering it to a
+   DAC would put 128/255 of Vref on a pin the program asked to be driven HIGH:
+   it would run, look plausible, and mean something else.
+
+So `writepin` lowers as a digital level (i8086, `a5a658c37`), and **the
+DAC0832 at 310h has no pseudocode caller today.** The chip is correct and
+`analogInputs()`/`analogOutputs()` are used by the ADC regardless, but wiring
+the DAC to anything needs a *declaration* that means "this pin carries an
+output voltage" — `ANALOG` currently means the input side. That is a language
+decision to be made deliberately, not retrofitted to justify a chip that
+already exists.
+
+The lesson, and it is a verification one: **a corrected error is not
+automatically a corrected conclusion.** The correction here (finding the real
+syntax) was right, and the inference drawn from it was wrong, and the second
+error was harder to see than the first because it arrived wearing the
+credibility of a fix. Two sessions agreed on it within one exchange.
 
 **A tone needed NO new chip.** `DOSBOX8086_XT` already carries the 8255, the
 8254 and the PC speaker. P2 maps to port B, so **P2.0 and P2.1 literally are
@@ -2218,6 +2243,12 @@ bits of one latch. Measured, both orders, from assembled programs:
   the shadow matches the port.
 
 So `settone` MUST use the same shadow byte as the pin writes.
+
+**`stc_pwm_fade` is not a `setpwm` example.** It is hand-rolled PWM — `set led
+to 0` / `set led to 1` in a tight loop — so it runs on the level lowering and
+needs no hardware. No shipped example uses `stc12_setpwm` at all. The reseat
+gate's row for it had been wrong twice over: it quoted the non-existent syntax
+AND diagnosed missing hardware.
 
 **`setpwm` REFUSES, and that is the considered answer.** A DAC would give the
 same visible LED brightness by a different mechanism, so a scope, a motor or an
