@@ -64,6 +64,22 @@ export const INPUTS = [
         ci: 'yes — the `vectors` job checks out v1_binary and grinds all 646,000 per push',
     },
     {
+        id: '8088-vectors', kind: 'oracle',
+        what: 'SingleStepTests 8088 v2 — per-CYCLE bus traces: m-cycle type, T-state, '
+            + 'and the queue F/S/E operations with the byte read. The ONLY thing that can '
+            + 'grade timing and access ORDER; the 8086 suite compares final state and is '
+            + 'blind to both (it could not see INT n reading its vector after pushing). '
+            + 'Grounds src/i8088-biu.js and the cycle costs in src/i8086.js.',
+        env: 'I8088_VECTORS',
+        paths: [join(HOME, 'code', '8088-vectors', 'v2')],
+        gates: ['scripts/grind-i8088-cycles.mjs'],
+        obtain: "git clone --filter=blob:none --sparse --depth 1 "
+            + "https://github.com/SingleStepTests/8088 ~/code/8088-vectors "
+            + "&& cd ~/code/8088-vectors && git sparse-checkout set --no-cone '/v2/*.json.gz' "
+            + '(2.0 GB whole; a sparse subset of opcode files is enough to move the score)',
+        ci: 'not yet — the grind is young and its scores are still moving',
+    },
+    {
         id: 'z80-vectors', kind: 'oracle',
         what: 'SingleStepTests z80 — 1,604 opcode files with full undocumented state '
             + '(X/Y flags, Q latch, R per-M1, WZ). Grounds src/z80.js.',
