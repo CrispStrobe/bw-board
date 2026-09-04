@@ -168,6 +168,8 @@ export class I8086 {
         this.cycles = 0;
         /** null, or an array the bus operations are appended to. See _rd8. */
         this.busTrace = null;
+        this._fsOpcodeSeen = false;
+        this._tookBranch = false;
         this._seg = -1;          // active segment override VALUE, -1 for none
         this._rep = 0;           // 0, 0xf2 (REPNE) or 0xf3 (REP/REPE)
         // Set by an instruction that loads a segment register; blocks one
@@ -303,7 +305,21 @@ export class I8086 {
 
     _fetch8Traced() {
         const a = I8086.phys(this.cs, this.ip);
-        this.busTrace.push(0, a);
+        // KIND 0 IS AN 'F' AND KIND 5 IS AN 'S', which is the queue-status
+        // distinction the 8088 puts on its QS0/QS1 lines: F for the first byte
+        // of an instruction OR of a prefix, S for every subsequent byte -- a
+        // ModR/M, a displacement, an immediate.
+        //
+        // The core already knows which is which without a queue model, because
+        // prefixes are eaten in step()'s prefix loop and the opcode is the
+        // first fetch after it. `_fsOpcodeSeen` is cleared per instruction and
+        // set by that first fetch, so everything after it is an operand.
+        this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, a);
+        this._fsOpcodeSeen = true;
+        // Where the queue WOULD continue if this instruction did not branch.
+        // Compared after execution to decide whether the queue was flushed.
+        this._seqIp = (this.ip + 1) & 0xffff;
+        this._seqCs = this.cs;
         const b = this.read(a) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
@@ -1065,6 +1081,8 @@ export class I8086 {
         // whatever that address happens to be. Reading it after suppresses
         // that one trap and lets the next instruction take it, which is the
         // delay the shadow exists to provide.
+        this._fsOpcodeSeen = false;
+        this._tookBranch = false;
         const traceThis = (this.flags & TF) !== 0;
         // The shadow lasts exactly one instruction: clear it on the way in,
         // and any instruction that loads a segment register sets it again
@@ -1114,6 +1132,23 @@ export class I8086 {
 
         const op = this._fetch8();
         n += this._exec(op);
+
+        // THE QUEUE FLUSH (E). The 8088 throws the prefetch queue away when
+        // control goes somewhere the queue was not already reading, and its
+        // QS lines report that as an `E`. The core knows it without a queue:
+        // if CS:IP after execution is not where the last fetch left off, the
+        // bytes the BIU had queued are wrong and are discarded.
+        //
+        // A NOT-TAKEN CONDITIONAL DOES NOT FLUSH, and this gets that right for
+        // free rather than by special-casing branch opcodes: a jump that was
+        // not taken continues sequentially, so the comparison is equal and no
+        // E is emitted. The same test covers INT, RET, CALL, the far forms and
+        // any future opcode that moves control, which is the reason it is a
+        // comparison rather than a list.
+        if (this.busTrace !== null
+            && (this._tookBranch || this.ip !== this._seqIp || this.cs !== this._seqCs)) {
+            this.busTrace.push(6, I8086.phys(this.cs, this.ip));
+        }
 
         // The trap fires after the instruction has completed and committed.
         // _interrupt() clears TF as it enters, so the handler does not step
@@ -1345,18 +1380,18 @@ export class I8086 {
             }
 
             // ---- 0xe0-0xef: loops, port I/O, near and far transfers ------
-            case 0xe0: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0 && !(this.flags & ZF)) { this.ip = (this.ip + d) & 0xffff; return 19; } return 5; }
-            case 0xe1: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0 && (this.flags & ZF)) { this.ip = (this.ip + d) & 0xffff; return 18; } return 6; }
-            case 0xe2: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0) { this.ip = (this.ip + d) & 0xffff; return 17; } return 5; }
-            case 0xe3: { const d = this._fetchS8(); if (this.cx === 0) { this.ip = (this.ip + d) & 0xffff; return 18; } return 6; }
+            case 0xe0: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0 && !(this.flags & ZF)) { this._tookBranch = true; this.ip = (this.ip + d) & 0xffff; return 19; } return 5; }
+            case 0xe1: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0 && (this.flags & ZF)) { this._tookBranch = true; this.ip = (this.ip + d) & 0xffff; return 18; } return 6; }
+            case 0xe2: { const d = this._fetchS8(); this.cx = (this.cx - 1) & 0xffff; if (this.cx !== 0) { this._tookBranch = true; this.ip = (this.ip + d) & 0xffff; return 17; } return 5; }
+            case 0xe3: { const d = this._fetchS8(); if (this.cx === 0) { this._tookBranch = true; this.ip = (this.ip + d) & 0xffff; return 18; } return 6; }
             case 0xe4: this.al = this.inPort(this._fetch8()) & 0xff; return 10;
             case 0xe5: { const p = this._fetch8(); this.ax = (this.inPort(p) & 0xff) | ((this.inPort((p + 1) & 0xffff) & 0xff) << 8); return 10; }
             case 0xe6: this.outPort(this._fetch8(), this.al); return 10;
             case 0xe7: { const p = this._fetch8(); this.outPort(p, this.al); this.outPort((p + 1) & 0xffff, this.ah); return 10; }
-            case 0xe8: { const d = this._fetch16(); this._push(this.ip); this.ip = (this.ip + (d << 16 >> 16)) & 0xffff; return 19; }
-            case 0xe9: { const d = this._fetch16(); this.ip = (this.ip + (d << 16 >> 16)) & 0xffff; return 15; }
+            case 0xe8: { const d = this._fetch16(); this._push(this.ip); this._tookBranch = true; this.ip = (this.ip + (d << 16 >> 16)) & 0xffff; return 19; }
+            case 0xe9: { const d = this._fetch16(); this._tookBranch = true; this.ip = (this.ip + (d << 16 >> 16)) & 0xffff; return 15; }
             case 0xea: { const ip = this._fetch16(), cs = this._fetch16(); this.ip = ip; this.cs = cs; return 15; }
-            case 0xeb: { const d = this._fetchS8(); this.ip = (this.ip + d) & 0xffff; return 15; }
+            case 0xeb: { const d = this._fetchS8(); this._tookBranch = true; this.ip = (this.ip + d) & 0xffff; return 15; }
             case 0xec: this.al = this.inPort(this.dx) & 0xff; return 8;
             case 0xed: this.ax = (this.inPort(this.dx) & 0xff) | ((this.inPort((this.dx + 1) & 0xffff) & 0xff) << 8); return 8;
             case 0xee: this.outPort(this.dx, this.al); return 8;
@@ -1380,7 +1415,18 @@ export class I8086 {
 
     _jcc(take) {
         const d = this._fetchS8();
-        if (take) { this.ip = (this.ip + d) & 0xffff; return 16; }
+        // A TAKEN BRANCH FLUSHES EVEN WHEN THE TARGET IS WHERE IT WAS GOING
+        // ANYWAY. `jz` with a displacement of zero lands on the next
+        // instruction, so comparing CS:IP against the sequential continuation
+        // cannot see it -- they are equal -- but the 8088 still throws the
+        // queue away, because the microcode's branch path reloads
+        // unconditionally rather than checking whether it needed to.
+        //
+        // 53 vectors in 152,000 say so, all of them `jz` with a zero
+        // displacement. The comparison in step() is right for every other
+        // transfer; this is the one case that has to be TOLD rather than
+        // inferred, so it is set here where the decision is made.
+        if (take) { this._tookBranch = true; this.ip = (this.ip + d) & 0xffff; return 16; }
         return 4;
     }
 
