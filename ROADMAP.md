@@ -1642,6 +1642,119 @@ this entry has twice said was not needed. It is a real and legitimate project;
 it is not a refinement of what exists, and saying so now is cheaper than
 discovering it three days in.
 
+#### E6.8.4g The schedule is DERIVABLE from the oracle — 95.5% measured, and the ">95%" is reached (2026-09-04)
+
+E6.8.4f closed by saying the last leg needs "per-opcode EU micro-timing", and
+called that the real cost. **That was right about the requirement and wrong
+about the price.** The schedules do not have to be authored from microcode
+listings — they can be *read off the oracle*, because they are far more
+regular than the raw cycle totals suggest.
+
+`scripts/pilot-i8088-schedule.mjs`. Every instruction that touches memory or
+I/O decomposes into three parts:
+
+```
+total = anchor + span + tail
+```
+
+| Part | What it is | How it behaves |
+|---|---|---|
+| `anchor` | T-state at which the FIRST data access begins | queue **and addressing mode** |
+| `span`   | offset of the last access relative to the first | per (opcode, mode) |
+| `tail`   | T-states after the last access begins | **per-opcode CONSTANT** |
+
+**`tail` is a constant, not a distribution.** Measured across all 10,000
+vectors of every opcode where it is defined: `01`→3, `33`→7, `87`→3, `8F`→3,
+`FF.2`→3. Not "usually 3". Every single vector.
+
+**And the anchor is the documented EA table, not BIU noise.** Keying it on the
+modrm `mod`/`rm` field alone moves anchor accuracy from ~55% to **100.0%** on
+held-out vectors, for every modrm opcode tried:
+
+```
+        anchor key (q,len,n)   + modrm mod/rm
+01               55.6%            100.0%
+33               56.5%            100.0%
+87               55.3%            100.0%
+8F               49.9%            100.0%
+FF.2             67.5%            100.0%
+```
+
+That is the 8086 effective-address table from the datasheet — disp-only 6,
+base-or-index 5, base+index 7/8, +disp 9/11/12 — showing up in silicon
+measurements. **Tier-1 evidence explaining a term I had been treating as
+unpredictable scheduler behaviour.**
+
+**Result, on held-out vectors (70/30 within each opcode):**
+
+```
+01    73.9%   40   100.0%   90   100.0%   C3   100.0%   EC   100.0%
+33   100.0%   74    99.9%   A5    66.3%   CD   100.0%   F7.4  97.0%
+87   100.0%   8F    73.3%   E9   100.0%   E6   100.0%   EB   100.0%
+                                                        FF.2  93.7%
+OVERALL  95.5%   (43,533 / 45,600)      <- from 36.5%
+```
+
+Three findings made the difference, in order of size:
+
+1. **modrm in the anchor key** (the EA table). The single biggest term.
+2. **Branch-taken as ONE BIT, not the flag word.** Keying on
+   `flags & 0x8d5` scored *worse* than not keying on flags at all — it
+   fragments the table until every key is unique. One bit (did control
+   transfer — our core already tracks it as `_tookBranch`) took `74` to
+   99.9% and `E9`/`EB` to 100%.
+3. **Operand-dependent latency, declared per opcode.** `F7.4` (MUL) sat at
+   17.4% because the datasheet states it as a *range* (118–133 clocks), so no
+   per-opcode constant can fit it. The microcode loops over **AX**, adding on
+   each 1 bit: keying on `popcount(ax)` took MUL to **97.0%**. Note it is
+   popcount of `AX`, the implicit operand — popcount of the *source* operand
+   scores 15.7%, i.e. nothing. Same family: `F7.5`, `F6.4`, `F6.5`.
+
+**What still misses, and why — mechanism confirmed, not guessed.** `01`
+(73.9%) and `8F` (73.3%) miss by exactly ±1 cycle. It is not address parity
+(both spans occur equally at both parities). It is the prefetch:
+
+```
+01:  span=20  <->  2 code fetches, 0 idle
+     span=19  <->  1 code fetch + 3 Ti,  or  0 fetches + 7 Ti
+8F:  span=18  <->  1 code fetch + 2 Ti
+     span=17  <->  0 fetches + 5 Ti
+```
+
+Whether the BIU squeezes one more prefetch into the EU's gap — E6.8.4f's
+policy-length rule, exactly. That residual **is** the BIU state machine, and
+it is now quantified at ~4.5% rather than assumed.
+
+**THE HONEST CAVEAT, because this number is easy to over-read.** 95.5% is
+held-out *vectors*, with per-opcode calibration. Leave-one-out on *opcodes*
+scores **34.2%** — and that is the finding, not a failure. The per-opcode EU
+prologue cannot be inferred from other opcodes: `C3`, `CD`, `E6`, `EC` each
+score 100% calibrated and 0% held-out. **So E6.8.4f's conclusion survives —
+per-opcode data is required — but the cost collapses**, because the data is
+derived by script from vectors we can download, not authored by hand from
+microcode listings.
+
+**Revised decomposition of the owner's ">95%":**
+
+```
+36.5% -> 95.5%   derive schedules from the oracle    DONE, measured
+95.5% -> ~100%   BIU state machine (E6.8.4f's five states)  the last 4.5%
+```
+
+**Licence: clear, and checked before relying on it.** `SingleStepTests/8088`
+is **MIT** (verified 2026-09-04 by reading `HEAD:LICENSE` — the local sparse
+clone had not fetched it, so its absence on disk meant nothing). Tables
+derived from it may ship in a BSD-3 bundle **provided the MIT copyright
+notice travels with them**. That is an attribution obligation on the derived
+tables, not just on the checkout, and it must be honoured at the point the
+tables land in `src/`.
+
+**Next, and deliberately NOT started yet:** only 16 of ~300 opcode files are
+present locally. Generating production tables means fetching the rest
+(~1.5 GB decompressed — see the disk constraint in E6.8.4e) and emitting a
+calibrated table per opcode. That is mechanical and delegable; it is also
+gated on the merge consolidation landing, since it adds a new `src/` artefact.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
