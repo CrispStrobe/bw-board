@@ -647,6 +647,22 @@ export class I8086Machine {
         this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
     }
 
+    /**
+     * Can anything on this machine render samples (E6.8.11a)? Asked by the
+     * debug target so `capabilities().audio` advertises 'samples' only when
+     * a chip can actually produce them — the same rule that keeps 'cycle' out
+     * of `steps`.
+     */
+    canRenderAudio() {
+        for (const { spk } of this._speakers || []) {
+            if (spk && typeof spk.renderAudio === 'function') return true;
+        }
+        for (const c of Object.values(this.chips || {})) {
+            if (c && typeof c.renderAudio === 'function') return true;
+        }
+        return false;
+    }
+
     /** The tone the speaker is producing, if any. {hz, on} or null. */
     audioTone() {
         for (const { spk } of this._speakers || []) {
