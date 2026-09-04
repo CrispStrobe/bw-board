@@ -173,6 +173,20 @@ between trees by hand is the same hazard with extra steps.
   - Do not start a second `node --max-old-space-size=...`, a JVM-backed test
     run, a full `npm test` alongside someone else's, a large clone, or a
     Rust/Tauri build while the swap line is near full.
+  - **A LONG-DETACHED SESSION IS A SWAP LEAK, NOT A RAM COST.** Ending three
+    sessions idle since Aug 29 - Sep 2 moved the headroom from 1628 MB to
+    3137 MB — and the term that moved was SWAP, 309 MB free to 1549 MB. Their
+    combined RSS was only ~450 MB: the kernel had paged them out days earlier,
+    so they were occupying the cushion rather than the RAM. That is why
+    `free -m` looked survivable while the box was in trouble — it looked
+    survivable BECAUSE the idle sessions had been swapped out, into the one
+    resource with no second line of defence. Prune detached sessions before
+    concluding the box is simply too small.
+  - **`screen -X quit` is not enough.** It removes the screen and ORPHANS the
+    `claude` process, which is reparented to init and keeps its memory. All
+    three survived it here, and one was still holding a Dart analysis server
+    that had been running 5 days 14 hours. Check the PIDs afterwards and
+    SIGTERM what remains.
   - **It causes FALSE TEST FAILURES, so check the box before believing a red.**
     `sap1-differential` and `sap1-digital-parity` shell out to
     `java -cp Digital.jar` with a hard `timeout: 30000`. Under load all four
