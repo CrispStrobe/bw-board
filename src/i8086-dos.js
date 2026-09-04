@@ -216,6 +216,7 @@ export function createDos8086(machine, io = {}) {
      *  the generic IRET below must not run and undo it. */
     let controlTransferred = false;
     let terminated = false;
+    let lastTickMs = 0;         // machine time of the last delivered BIOS timer tick
     let exitCode = 0;
     let psp = 0;
     let cursor = 0;                     // linear cell index into the text page
@@ -872,6 +873,16 @@ export function createDos8086(machine, io = {}) {
         wr16(0x40, 0x6c, next & 0xffff);
         wr16(0x40, 0x6e, (next >>> 16) & 0xffff);
         eoi();
+        // Chain to the user's INT 1Ch handler, as a real BIOS int08 does on
+        // every tick. Only when it has been hooked away from our trap page --
+        // otherwise it is our own no-op and there is nothing to run. Tail-call
+        // it: the INT 8 frame already on the stack becomes the 1Ch return frame,
+        // so its IRET lands back on the interrupted instruction with the
+        // interrupted flags (IF included) -- exactly a 1Ch handler's contract.
+        // Without this a program that hooks 1Ch and waits for it -- music,
+        // animation -- installs a handler that is never called and spins.
+        const off = rd16(0, 0x1c * 4), seg = rd16(0, 0x1c * 4 + 2);
+        if (seg !== trapSeg) { cpu.cs = seg; cpu.ip = off; controlTransferred = true; }
     }
 
     /** INT 09h — the keyboard IRQ. Nothing to fetch (keys arrive through
@@ -1177,7 +1188,28 @@ export function createDos8086(machine, io = {}) {
         /** One unit of progress: service a pending trap, else run an instruction. */
         step() {
             if (this.service() !== null) return 0;
+            // Synthetic BIOS timer tick. A real PC's PIT raises IRQ0 at ~18.2 Hz
+            // and the BIOS int08 turns it into the 0040:006C count and a call to
+            // INT 1Ch. A DOS machine here need not carry a PIC + PIT for that to
+            // matter, so deliver it from machine time -- but ONLY to a program
+            // that actually listens: one that has hooked INT 8 or INT 1Ch away
+            // from our trap page. The ~500 corpus programs that ignore timers
+            // see no change at all. Masked (IF=0) ticks are dropped, as they are
+            // on real hardware. INT 8 goes through the CPU so the frame and the
+            // IVT vector are the real ones; int08 runs on the next step and,
+            // when it is still ours, chains to the hooked 1Ch.
+            if (this._timerTickDue()) { cpu.interrupt(8); return 0; }
             return machine.step();
+        },
+
+        /** Whether a BIOS timer tick is due for a program that listens for one. */
+        _timerTickDue() {
+            if (!(cpu.flags & 0x200)) return false;             // interrupts masked
+            const seg8 = rd16(0, 0x08 * 4 + 2), seg1c = rd16(0, 0x1c * 4 + 2);
+            if (seg8 === trapSeg && seg1c === trapSeg) return false;   // nobody listens
+            if (machine.tMs - lastTickMs < 1000 / 18.2065) return false;
+            lastTickMs = machine.tMs;
+            return true;
         },
 
         /**
