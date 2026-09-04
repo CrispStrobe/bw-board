@@ -1229,8 +1229,43 @@ workload rather than a debugging mode, and would buy back exactly the
 headroom this item needs. **It should be scoped as its own entry and taken
 first.**
 
+**RE-MEASURED THE SAME DAY, at `lego-47`'s challenge — the machine had grown
+under the number this whole reframing rests on.** A DOS-layer timer tick,
+`setInput`, `keyIn` and the CRTC all landed after the figures above, and
+E6.8.4a's page table landed too. Five fresh runs:
+
+```
+workload     MIPS   × real XT   range        was
+core         5.21      14.50×   11.6-15.2    8.70×
+machine      1.59       4.40×    3.3- 5.5    2.90×
+boot         0.60       1.50×    1.4- 2.1    1.00×
+```
+
+Everything looks faster and almost none of it is us. **`core` touches no
+machine code at all, so it is a pure box-load proxy** — and it moved 1.67×,
+which is the box getting quieter, not the emulator getting better.
+Normalised against it:
+
+```
+machine/core   0.333 -> 0.303    -9%
+boot/core      0.115 -> 0.103   -10%
+```
+
+**So relative to the CPU, the machine layer got about 10% WORSE, not better —
+even with the page table in.** The new per-step work (timer tick, input
+polling, CRTC) ate the 1.65× that E6.8.4a bought on `_read` and a little more
+besides. That is not an argument against the page table; it is the clearest
+possible argument FOR E6.8.4a as a standing concern rather than a one-off
+task, because the machine layer grows every time somebody adds a device and
+nobody is watching the total.
+
+**The reframing survives, on the new numbers.** A real DOS boot at 1.5× real
+time still leaves a 5× cycle-stepped core at 0.3×, and a 20× one at 0.075×.
+Cycle accuracy is still a debugging mode rather than a running mode, and the
+conclusion does not depend on which day the box was quiet.
+
 Owed and not done: the same three numbers from the browser bundle. §5 of the
-core plan warns the Node figure does not transfer, and every number above is
+core plan warns the Node figure does not transfer, and every number here is
 Node.
 
 **LICENCE TRAP, and it is the same one §E6's table already answered.**
@@ -1503,6 +1538,163 @@ second audio contract, a sample-buffer one, alongside the tone one" — and
 that decision affects the Z80 and 6502 tiers too, which is why it belongs in
 the roadmap rather than in a commit. **Scope it as an engine-wide audio
 change, not as a sound card.**
+
+#### E6.8.11a The second audio contract — a design for all three tiers (owner-assigned 2026-09-04)
+
+E6.8.11 said audio was blocked on a decision nobody owned. The owner has
+settled that: **we own audio across all three tiers**, so this is the design.
+
+**WHAT EXISTS TODAY, surveyed rather than remembered.** One contract,
+`audioTone()`, with three producers and one consumer:
+
+| | shape | |
+| --- | --- | --- |
+| `pc-speaker.js` | `{hz, on}` | 8254 counter 2 through 8255 port B |
+| `zx-ula.js` | `{hz, on}` | the ZX beeper |
+| `ay-3-8912.js` | `[{hz, on, vol}, …]` | three channels — **an array, not an object** |
+| 6502 tier | *nothing* | no audio producer at all |
+
+The consumer is `CircuitDesigner.jsx`: a `requestAnimationFrame` poll of
+`debugState.audio()` into `updateBuzzerAudio()`, which drives a Web Audio
+oscillator. So the installed base is **one oscillator polled at frame rate**,
+and that is worth knowing before designing, because it means we are far less
+constrained than "an existing audio system" would suggest.
+
+**THE TWO CONTRACTS ANSWER DIFFERENT QUESTIONS, and that is the whole design.**
+The instinct is to replace the tone contract with samples. That would be
+wrong. `audioTone()` answers *what is the hardware CONFIGURED to produce* —
+it is exact, it costs nothing, and it is what a teaching UI wants to show
+("this counter is set to 440 Hz"). A sample stream answers *what does it
+SOUND like*. Deriving the first from the second would make a breadboard
+buzzer expensive and would lose the exactness. **Both stay, declared through
+the same capability vocabulary `steps` and `breakpoints` already use:**
+
+```
+capabilities().audio -> ['tone']              a buzzer, a beeper
+capabilities().audio -> ['tone', 'samples']   an OPL, an SB, an AY, a SID
+```
+
+**THE SAMPLE CONTRACT.** Pull-based, at the chip:
+
+```js
+/** Fill `dest` with `frames` mono samples in [-1,1] for the emulated time
+ *  they represent. Returns frames written. The CHIP owns the rate
+ *  conversion, because only it knows its own clock. */
+renderAudio(dest /* Float32Array */, frames, sampleRate) -> number
+```
+
+Three decisions in that signature, each with a reason from this codebase
+rather than from convention:
+
+1. **PULL, NOT PUSH, AND EMULATED TIME, NOT WALL TIME — and E6.8.4's
+   benchmark is why.** We measured this engine at **0.7×–1.4× real time on a
+   real DOS boot**, jittering run to run. Any audio design that assumes
+   emulated time tracks wall time will underrun and overrun audibly, on our
+   own measured numbers. So a chip renders the audio for the emulated time it
+   has actually executed, a ring buffer at the machine level absorbs the
+   jitter, and the host drains it. This is a constraint we measured, not one
+   we inherited.
+2. **Mono `Float32Array` in [-1,1] as the lingua franca.** A PC has a speaker
+   AND possibly an OPL AND an SB at once; a ZX has a beeper AND an AY. The
+   mixer sums at the machine level. Stereo is a channel count added later, not
+   now.
+3. **Zero cost when nobody is listening.** `renderAudio` is called only when a
+   sink is attached — the same rule `syncWriteTrap` and the E6.8.3 hooks
+   follow, and the same lesson E6.8.4a just taught about per-instruction cost.
+
+**HOW IT GETS GRADED. THE TWO CONTRACTS MUST AGREE** — if `audioTone()` says
+440 Hz, the stream from `renderAudio()` must measure 440 Hz. That is a
+cross-check between two independently written paths inside one chip, the
+discipline §8 of the core plan already records for the CGA pixel layout:
+*"written twice and cross-checked… sharing the code would have been less work
+and would have caught nothing."* No external oracle needed.
+
+**AND THE FIRST DRAFT OF THAT TEST COULD NOT FAIL, which is worth recording
+because the idea survived and the method did not.** It said "count zero
+crossings, or run a Goertzel filter at the claimed frequency". `lego-47`
+caught the second half: **a Goertzel AT the claimed frequency reports energy
+at 440 Hz for any signal containing a 440 Hz component** — including one that
+is mostly 880 Hz with a weak fundamental, one where 440 is buried in noise,
+or a square wave whose third harmonic dominates. It answers *is there some 440
+here*, when the question is *is 440 what this IS*. A check that reports
+presence where the claim is identity.
+
+That matters because of the drift that actually happens: **off by an octave,
+from a divisor counted per-edge instead of per-cycle.** A bare Goertzel at 440
+passes that silently. So the method is two things, and both are required:
+
+- **Zero crossings over a whole number of periods**, which yields a
+  FREQUENCY rather than a score and disagrees loudly at 880.
+- **Goertzel at the claimed frequency AND at its neighbours** — 2f, f/2, and
+  a couple of unrelated bins — with the claimed bin required to be the
+  STRONGEST, not merely present. That is the difference between a detector
+  and a confirmation.
+
+For an OPL specifically, `ymfm` (BSD-3) is available as a second oracle on
+top of both.
+
+**KNOWN WART, FIXED UNDER THIS AND NOT INHERITED BY IT.** `audioTone()`
+returns an OBJECT from the speaker and the ULA and an ARRAY from the AY. **A
+contract with two shapes is not a contract**: every future producer has to
+guess which one it may return, and the guess will be wrong about half the
+time. This is also the cheapest moment it will ever be — there is exactly one
+consumer, `updateBuzzerAudio(id, tone)`, and it is being touched anyway.
+
+An array always, with a single-voice device returning one element. Named
+migration, not a silent change. **And ASSERT THE ARITY, not just the shape**
+(`lego-47`): a device declaring one voice must return exactly one element,
+because "an array" is satisfied by an empty one, and an empty array is how a
+silent chip and a broken chip look identical.
+
+**ORDER — revised on `lego-47`'s argument, which is better than the one it
+replaced.** The first draft put the speaker and the AY first, because they
+exist and would exercise the contract immediately, and left the 6502 tier
+last. That is right for the speaker and wrong as a plan: **a contract
+validated only against producers that already exist is shaped by them.** The
+6502 tier having nothing is not a reason to defer it — it is the only honest
+shape test available, because whatever is written there is written *against*
+the contract rather than migrated onto it.
+
+0. **The bus itself — `src/audio-bus.js`, DONE 2026-09-04.** One mixer and one
+   ring for all three tiers, because three copies would diverge and a
+   contract is only worth having if the thing consuming it is one thing.
+   Nothing in it knows what a CPU is. Two behaviours are COUNTED rather than
+   swallowed, in the style of the DOS layer's refusal histogram: an
+   **underrun** pads with silence and counts the frames it invented (padding
+   is unavoidable, hiding it is not), and a **clip** is clamped and counted,
+   so "the mix is distorting" is a number to assert on rather than a noise to
+   notice. A third case is a decision rather than a count: an emulator
+   running AHEAD of the host **drops** the excess rather than overwriting
+   unread audio, because sound nobody will hear in time is worse played late.
+1. **The speaker — DONE 2026-09-04.** Simplest possible producer: one voice, a
+   square wave from a divisor, and it proves the tone half and the agreement
+   test together.
+2. **A 6502-tier producer — the shape test.** Built from the contract
+   outward, by a tier with no audio history. If it forces a change, we learn
+   that after two implementations rather than after four.
+3. **The AY.** Multi-voice, plus the array migration below — the hardest, and
+   it benefits from two prior users.
+4. **The SB DSP — DONE 2026-09-04** (`src/sb-dsp.js`). It was nearly free
+   exactly as predicted: the DSP pulls one byte per sample period through the
+   SAME 8237 the floppy uses and raises a real 8259 line at end-of-block, and
+   both were already proven by `dos-boot-fdc`. Reset handshake, time
+   constant, speaker gate, direct DAC, single-cycle and auto-init transfer,
+   pause/continue, version. **It is also the first producer with NO TONE** —
+   `audioTone()` returns `[]`, because a PCM device has a sample RATE and not
+   a pitch, which is the case the arity rule was sharpened for and the proof
+   that the two contracts are genuinely independent rather than one being
+   derived from the other.
+5. **The OPL — DONE 2026-09-04** (`src/ym3812.js`), **and the ymfm chain is
+   NOT vendored after all.** The decision is recorded in that file's header
+   and it reverses this entry's assumption: ymfm is C++ and this engine is
+   JavaScript, so a "vendoring" would be a TRANSLATION — a derivative work
+   just as a copy is. The property §E6's table calls *the only reason the tier
+   can ship inside a BSD-3 bundle* is lost either way, and a careful
+   translation costs about what writing it costs. So the OPL2 is clean-room
+   from the YM3812 datasheet and **ymfm stays an ORACLE rather than a source**,
+   which is the role this tier has always preferred and the more valuable of
+   the two. DMXOPL's patch set and LittleMUS's sequencer are unaffected: both
+   are data and MIT, and neither is a translation of anything.
 
 #### E6.8.12 MicroCoreLabs — not a feature diff, a set of directions
 

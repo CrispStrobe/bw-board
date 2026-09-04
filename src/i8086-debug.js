@@ -317,6 +317,18 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // answer, and that is a different question with a different
                 // right time to ask it.
                 symbols: true,
+                // TWO AUDIO CONTRACTS, declared separately because they answer
+                // different questions (E6.8.11a): 'tone' is what the hardware
+                // is CONFIGURED to produce — exact, free, and what a teaching
+                // UI shows beside a buzzer — and 'samples' is what it SOUNDS
+                // like, which is the only one that can be mixed. A machine
+                // whose chips have no renderAudio() must not advertise
+                // 'samples', for the same reason `steps` does not list
+                // 'cycle': a control that silently does nothing is worse than
+                // an absent one.
+                audio: machine.canRenderAudio && machine.canRenderAudio()
+                    ? ['tone', 'samples']
+                    : ['tone'],
             };
         },
 

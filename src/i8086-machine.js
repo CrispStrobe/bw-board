@@ -49,6 +49,9 @@ import { VGACard } from './vga-card.js';
 import { EGACard } from './ega-card.js';
 import { I8237 } from './i8237.js';
 import { UPD765 } from './upd765.js';
+import { SBDSP } from './sb-dsp.js';
+import { YM3812 } from './ym3812.js';
+import { AudioBus } from './audio-bus.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
 const IF = 0x0200;
@@ -104,6 +107,14 @@ const REGS = {
     // two blocks are 0x70 ports apart and nothing decodes the gap.
     dmapage: 16,
     fdc: 8,          // the uPD765 card's 3F0h-3F7h (DOR 3F2h, MSR 3F4h, data 3F5h)
+    // The Sound Blaster's 2x0h-2xFh block: reset 2x6h, read 2xAh, write 2xCh,
+    // read-status 2xEh. The OPL at 388h is a SEPARATE chip and a separate
+    // decode, not part of this window.
+    sb: 16,
+    // The OPL2 is TWO ports at 388h/389h, and it is a SEPARATE chip from the
+    // Sound Blaster's 2x0h block even on a card that carries both -- which is
+    // why it is its own kind and its own decode rather than a wider `sb`.
+    opl2: 2,
 };
 
 /**
@@ -500,6 +511,13 @@ export class I8086Machine {
                     onTerminalCount: (ch) => { if (this.hooks.onDmaComplete) this.hooks.onDmaComplete(c.name, ch); },
                     onHrq: (active) => { if (this.hooks.onDmaRequest) this.hooks.onDmaRequest(c.name, active); },
                 });
+            } else if (c.kind === 'opl2') {
+                chip = new YM3812();
+            } else if (c.kind === 'sb') {
+                // The DSP counts MACHINE cycles, so it is told which clock it
+                // is counting rather than guessing -- the lesson the AY's own
+                // crystal taught this tier (see m6502-machine.js's ayRatio).
+                chip = new SBDSP({ clockHz: config.clockHz });
             } else if (c.kind === 'fdc') {
                 chip = new UPD765({
                     onMotorChange: (drive, on) => {
@@ -599,6 +617,46 @@ export class I8086Machine {
             });
         }
 
+        // The Sound Blaster's transfer path: the same 8237 the floppy uses, on
+        // its own channel (1 by convention), and an 8259 line for the
+        // end-of-block interrupt. Everything hard here was already built --
+        // which is why E6.8.11 calls the digital half of audio nearly free.
+        for (const c of config.chips || []) {
+            if (c.kind !== 'sb') continue;
+            const sb = this.chips[c.name];
+            const dma = c.dma ? this.chips[c.dma] : null;
+            const ch = c.dmaChannel ?? 1;
+            if (sb && dma) {
+                sb.hooks.onDmaRequest = () => {
+                    let got = null;
+                    // The request IS the DRQ pulse, asserted around the single
+                    // byte -- without it transfer() sees no requesting channel
+                    // and moves nothing while reporting success, which is the
+                    // silently-corrupt-read the FDC path documents above.
+                    dma.dreq(ch, true);
+                    const moved = dma.transfer(
+                        (a) => (a === null ? 0x80 : this._read(a)),
+                        (a, b) => { if (a === null) got = b & 0xff; },
+                        1);
+                    dma.dreq(ch, false);
+                    return moved === 0 ? false : (got === null ? false : got);
+                };
+            }
+            if (sb && c.irq != null && this._pic) {
+                // A LEVEL, NOT AN EVENT. setIRQ takes a line state, and the
+                // DSP's end-of-block is an edge, so it is raised here and
+                // dropped when the driver acknowledges by reading 2xEh --
+                // which is the same port read that clears `sb.irq`. A line
+                // left asserted would re-enter the handler forever.
+                sb.hooks.onIrq = () => this._pic.setIRQ(c.irq, 1);
+                const drop = () => { if (!sb.irq) this._pic.setIRQ(c.irq, 0); };
+                const origRead = sb.read.bind(sb);
+                sb.read = (reg) => { const v = origRead(reg); drop(); return v; };
+            }
+        }
+
+        this._buildPageTable();
+
         // The floppy transfer path. The FDC drives one byte per DMA request
         // (its onDmaRequest hook); the byte crosses through _read/_write — the
         // SAME memory decode the CPU uses, so a DMA write into a ROM window is
@@ -673,21 +731,131 @@ export class I8086Machine {
         this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
     }
 
-    /** The tone the speaker is producing, if any. {hz, on} or null. */
-    audioTone() {
+    /**
+     * Can anything on this machine render samples (E6.8.11a)? Asked by the
+     * debug target so `capabilities().audio` advertises 'samples' only when
+     * a chip can actually produce them — the same rule that keeps 'cycle' out
+     * of `steps`.
+     */
+    canRenderAudio() {
         for (const { spk } of this._speakers || []) {
-            if (spk.on) return spk.audioTone();
+            if (spk && typeof spk.renderAudio === 'function') return true;
         }
-        // Nothing sounding: report the first speaker's silent tone, or null.
-        if (this._speakers && this._speakers.length) return this._speakers[0].spk.audioTone();
-        return null;
+        for (const c of Object.values(this.chips || {})) {
+            if (c && typeof c.renderAudio === 'function') return true;
+        }
+        return false;
+    }
+
+    /**
+     * Per-voice {hz, on}, ALWAYS AN ARRAY (E6.8.11a) -- and EMPTY when this
+     * machine has no speaker at all. That distinction is the reason the
+     * arity matters: an empty array is "no voices", a one-element array with
+     * `on: false` is "a speaker that is silent", and the old `null` conflated
+     * them into a value every caller had to null-check before it could ask
+     * anything useful.
+     */
+    audioTone() {
+        // DE-DUPLICATED, because a speaker is in BOTH lists: `_speakers` holds
+        // it for the 61h wiring and `chips` holds it under its config name.
+        // Collecting from both without a Set reports one speaker as two
+        // voices -- which the preset test caught immediately, and which would
+        // have been a UI showing a phantom oscillator otherwise.
+        const seen = new Set();
+        const out = [];
+        const take = (c) => {
+            if (!c || seen.has(c) || typeof c.audioTone !== 'function') return;
+            seen.add(c);
+            out.push(...c.audioTone());
+        };
+        for (const { spk } of this._speakers || []) take(spk);
+        for (const c of Object.values(this.chips || {})) take(c);
+        return out;
+    }
+
+    /**
+     * The shared mixer and ring (E6.8.11a), built on first use so a machine
+     * nobody listens to never allocates one.
+     */
+    get audio() {
+        if (!this._audioBus) {
+            this._audioBus = new AudioBus({ sampleRate: this.audioSampleRate || 48000 });
+            for (const src of this._audioSources()) this._audioBus.addSource(src);
+        }
+        return this._audioBus;
+    }
+
+    _audioSources() {
+        // Same de-duplication as audioTone(), and it matters more here: a
+        // source added to the bus twice would be MIXED twice, which is a
+        // doubled amplitude and a clip counter that blames the wrong thing.
+        const seen = new Set();
+        for (const { spk } of this._speakers || []) {
+            if (spk && typeof spk.renderAudio === 'function') seen.add(spk);
+        }
+        for (const c of Object.values(this.chips || {})) {
+            if (c && typeof c.renderAudio === 'function') seen.add(c);
+        }
+        return [...seen];
     }
 
     /** Machine time in (fractional) milliseconds. */
     get tMs() { return this.cycles * 1000 / this.clockHz; }
 
     // ---- the memory bus -------------------------------------------------
+    /**
+     * A 4 KB page table over the 1 MB space, so the common case is one array
+     * index instead of two linear scans (E6.8.4a).
+     *
+     * MEASURED, NOT ASSUMED. `_read()` was two `for...of` scans per BYTE, and
+     * a profile of a realistic XT config over 20 M accesses said: as shipped
+     * 31.9 M ops/s, with indexed loops and an empty-MMIO guard 36.2 (1.13x,
+     * not worth doing), with this table 65.2 (2.04x). A raw `mem[addr]` is
+     * ~201, so this recovers about half the gap and the rest is the call
+     * itself. The reason it matters at all is the other half of that
+     * profile: the machine layer costs about two thirds of total execution
+     * time, MORE than the CPU it wraps.
+     *
+     * A PAGE IS FAST ONLY IF IT IS ENTIRELY ONE THING. Any page touched by an
+     * MMIO window, or straddling a region boundary, or covered by more than
+     * one region, is marked SLOW and falls through to the original scans —
+     * which are still there, unchanged, and are still the definition of
+     * correct. This is a cache in front of the decode, not a replacement for
+     * it, and that is deliberate: a fast path that had to reimplement the
+     * mirroring and priority rules would be a second place for them to be
+     * wrong.
+     */
+    _buildPageTable() {
+        const PAGES = 1 << 8;                        // 1 MB / 4 KB
+        const t = new Uint8Array(PAGES);             // 0 unmapped, 1 ram, 2 rom, 3 slow
+        for (let p = 0; p < PAGES; p++) {
+            const lo = p << 12, hi = lo + 0xfff;
+            let kind = 0, slow = false;
+            for (const w of this._mmio) {
+                if (hi >= w.start && lo <= w.end) { slow = true; break; }
+            }
+            if (!slow) {
+                for (const r of this._mem) {
+                    if (hi < r.start || lo > r.end) continue;
+                    // Partial cover, or a second region: the scan decides.
+                    if (lo < r.start || hi > r.end || kind !== 0) { slow = true; break; }
+                    kind = r.kind === 'rom' ? 2 : 1;
+                }
+            }
+            t[p] = slow ? 3 : kind;
+        }
+        this._page = t;
+    }
+
     _read(addr) {
+        const k = this._page[addr >>> 12];
+        if (k === 1 || k === 2) return this.mem[addr];
+        if (k === 0) return 0xff;                    // open bus reads high
+        return this._readSlow(addr);
+    }
+
+    /** The original decode, unchanged, and still the definition of correct. */
+    _readSlow(addr) {
         for (const w of this._mmio) {
             if (addr >= w.start && addr <= w.end) return w.chip.read(regOf(w, addr));
         }
@@ -696,6 +864,13 @@ export class I8086Machine {
     }
 
     _write(addr, val) {
+        const k = this._page[addr >>> 12];
+        if (k === 1) { this.mem[addr] = val & 0xff; return; }
+        if (k === 2 || k === 0) return;              // ROM swallows it; unmapped goes nowhere
+        this._writeSlow(addr, val);
+    }
+
+    _writeSlow(addr, val) {
         for (const w of this._mmio) {
             if (addr >= w.start && addr <= w.end) { w.chip.write(regOf(w, addr), val); return; }
         }
@@ -810,9 +985,16 @@ export class I8086Machine {
     }
 
     _advanceChips(n) {
+        // The OPL runs on its OWN 3.58 MHz crystal and generates at
+        // clock/72, so it is advanced in MILLISECONDS of emulated time rather
+        // than in machine cycles -- the same distinction the AY's crystal
+        // taught this fleet, expressed as a different method name so the two
+        // cannot be confused at a call site.
+        const ms = n * 1000 / this.clockHz;
         for (const name of Object.keys(this.chips)) {
             const chip = this.chips[name];
-            if (chip.advance) chip.advance(n);
+            if (chip.advanceMs) chip.advanceMs(ms);
+            else if (chip.advance) chip.advance(n);
         }
         if (this.devices) {
             for (const name of Object.keys(this.devices)) {

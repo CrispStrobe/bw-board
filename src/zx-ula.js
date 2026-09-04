@@ -89,11 +89,19 @@ export class ZXULA {
     }
 
     /**
-     * The audio-face contract, shaped like the buzzer's {hz, on}: the
+     * The audio-face contract, an ARRAY of one {hz, on} (E6.8.11a): the
      * dominant beeper frequency over the recent window, estimated from
      * speaker edges. Fewer than 4 edges in the window = silence — a
      * lone level change is a click, not a tone.
      * @param {number} [windowTs] look-back in T-states (default 50 ms)
+     *
+     * ALWAYS AN ARRAY, one element per voice (E6.8.11a). A single-voice
+     * device returns a one-element array rather than a bare object: a
+     * contract with two shapes is not a contract, and every producer added
+     * after this one would otherwise have to guess which it was allowed to
+     * return. The arity is meaningful — an empty array means NO VOICES, which
+     * is how a machine with no sound chip differs from a silent one.
+     * @returns {Array<{ hz: number, on: boolean }>} exactly one element
      */
     audioTone(windowTs = 175_000) {
         const since = this.tStates - windowTs;
@@ -101,12 +109,12 @@ export class ZXULA {
         let first = e.length;
         while (first > 0 && e[first - 1][0] >= since) first--;
         const n = e.length - first;
-        if (n < 4) return { hz: 0, on: false };
+        if (n < 4) return [{ hz: 0, on: false }];
         const span = e[e.length - 1][0] - e[first][0];
-        if (span <= 0) return { hz: 0, on: false };
+        if (span <= 0) return [{ hz: 0, on: false }];
         // n edges bound n-1 half-periods; a full period is two of them.
         const hz = CLOCK_HZ / (2 * (span / (n - 1)));
-        return { hz: Math.round(hz), on: true };
+        return [{ hz: Math.round(hz), on: true }];
     }
 
     /** Machine-snapshot hooks. Held keys and recorded speaker edges

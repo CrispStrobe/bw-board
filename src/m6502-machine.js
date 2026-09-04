@@ -17,6 +17,7 @@
  * @module
  */
 import { W65C02 } from './w65c02.js';
+import { AudioBus } from './audio-bus.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
 import { TMS9918 } from './tms9918.js';
@@ -215,6 +216,23 @@ export class M6502Machine {
                 // The adapter speaks the machine's read(reg)/write(reg)
                 // contract over the core's select/write/read protocol.
                 const ay = new AY38912({ clockHz: c.xtal || config.clockHz });
+                // THE AY RUNS ON ITS OWN CRYSTAL, so its cycles are not the
+                // CPU's. Every chip here is advanced with MACHINE cycles,
+                // and the AY derives its frequency from the clock it was
+                // CONSTRUCTED with -- so without this ratio it is ticked at
+                // one rate and reports another, and `xtal` is an option that
+                // looks honoured and is not.
+                //
+                // Found by the sample contract (E6.8.11a), not by a test of
+                // the tone one: a claim of 440 Hz measured 9382 Hz once there
+                // was a waveform to disagree with it. The tone path reads a
+                // register and does arithmetic; it is self-consistent, and
+                // nothing could ever have contradicted it.
+                //
+                // The fractional cycles are safe: AY38912.advance accumulates
+                // into a float before dividing by 16, so a ratio of 1.7734
+                // neither rounds away nor drifts.
+                const ayRatio = (c.xtal || config.clockHz) / config.clockHz;
                 // readMask (from the extractor) says which offsets the
                 // read decode actually reaches; elsewhere the chip is off
                 // the bus and the CPU sees open bus, like the silicon.
@@ -223,7 +241,7 @@ export class M6502Machine {
                     ay,
                     read: (reg) => (((readMask >> reg) & 1) ? ay.read() : 0xff),
                     write: (reg, v) => { if (reg === 0) ay.select(v); else ay.write(v); },
-                    advance: (n) => ay.advance(n),
+                    advance: (n) => ay.advance(n * ayRatio),
                 };
             } else if (c.kind === 'um245r') {
                 // USB FIFO at one address: a read takes the next queued
@@ -574,6 +592,61 @@ export class M6502Machine {
         return true;
     }
 
+    // ---- audio (E6.8.11a) -----------------------------------------------
+    /**
+     * THE 6502 TIER HAD A REAL AUDIO CHIP AND NO WAY TO HEAR IT. `psg8912`
+     * has been an attachable kind for as long as this file has existed — an
+     * AY-3-8912, three voices, noise and envelopes, clocked correctly every
+     * step — and neither this machine nor its debug target ever surfaced a
+     * single sample or a single tone. The chip was there; the wire was not.
+     *
+     * It is wired here as the SHAPE TEST for the audio contract (E6.8.11a):
+     * the contract was designed against the 8086's PC speaker, and a tier
+     * with no audio history is the only honest check that it is not
+     * 8086-shaped. It bent once, and the bend is real — see
+     * `prepareAudio` in audio-bus.js.
+     */
+    get audio() {
+        if (!this._audioBus) {
+            this._audioBus = new AudioBus({ sampleRate: this.audioSampleRate || 48000 });
+            for (const src of this._audioSources()) this._audioBus.addSource(src);
+        }
+        return this._audioBus;
+    }
+
+    /** Every chip on this machine that can render samples. */
+    _audioSources() {
+        const out = [];
+        for (const c of Object.values(this.chips || {})) {
+            // The psg8912 entry wraps the AY in a bus adapter; the chip
+            // itself is the thing that makes sound.
+            const cand = c && c.ay ? c.ay : c;
+            if (cand && typeof cand.renderAudio === 'function') out.push(cand);
+        }
+        return out;
+    }
+
+    /** Whether `capabilities().audio` may advertise 'samples'. */
+    canRenderAudio() { return this._audioSources().length > 0; }
+
+    /**
+     * Per-voice `{hz, on, vol}`, ALWAYS AN ARRAY — a single-voice device
+     * returns one element. The 8086 speaker and the ZX ULA still return a
+     * bare object and are the named migration; this tier is array-native from
+     * the start because it is being written now, against the contract, rather
+     * than migrated onto it.
+     */
+    audioTone() {
+        const out = [];
+        for (const c of Object.values(this.chips || {})) {
+            const cand = c && c.ay ? c.ay : c;
+            if (!cand || typeof cand.audioTone !== 'function') continue;
+            const t = cand.audioTone();
+            if (Array.isArray(t)) out.push(...t); else if (t) out.push(t);
+        }
+        return out;
+    }
+
     step() {
         let n = this.cpu.step();
         if (n === 0) {
@@ -587,6 +660,12 @@ export class M6502Machine {
         }
         this.cycles += n;
         this._advanceChips(n);
+        // The bus renders EMULATED time, so it is told where emulated time
+        // has reached — and only when something is attached, which is the
+        // same zero-cost rule the write trap and the port hooks follow.
+        if (this._audioBus && this._audioBus.active) {
+            this._audioBus.advance(this.cycles * 1000 / this.clockHz);
+        }
         // With a simplevga card present, its frame pulse reaches the
         // first VIA's PA4 (the canonical snake hookup: "VGA_V to the
         // 6522's PA4") — a 60 Hz square derived from machine time, so
