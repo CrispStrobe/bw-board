@@ -961,20 +961,37 @@ export class I8086Machine {
     }
 
     /**
-     * Does this machine generate a REAL timer interrupt in hardware?
+     * Does this machine deliver a real timer interrupt TO INT 8?
      *
-     * True only when both halves of the chain exist: an 8254 whose OUT is
-     * wired to an IRQ (`_irqLines` is populated for I8254 instances alone, so
-     * this is an exact test, not a guess) AND a PIC to deliver it.
+     * The DOS layer asks because it SYNTHESISES a BIOS tick for benches with
+     * no chips, and the two must never both fire on the same vector: a
+     * program would then receive INT 8 from hardware and from machine time,
+     * at rates with no relationship, and nothing would say so.
      *
-     * The DOS layer asks because it SYNTHESISES a BIOS tick for benches that
-     * have no chips, and the two must never both fire: a program would then
-     * receive INT 8 from hardware and from machine time, at rates with no
-     * relationship to each other, and nothing would say so.
+     * THE VECTOR IS THE QUESTION, NOT THE WIRING, and asking the wrong one
+     * cost a real regression. This used to return true whenever a PIT was
+     * wired to a PIC at all. But a program may reprogram the 8259's ICW2 to
+     * deliver IRQ0 somewhere else — the preemptive scheduler in the
+     * pseudocode back end maps it to vector 70h precisely so that INT 8 and
+     * INT 1Ch stay free for the BIOS tick. On that machine the old test said
+     * "hardware makes its own tick", the synthetic one stood down, and
+     * nothing fired INT 8 at all: measured, 163 ticks before the change and
+     * ZERO after, for a program hooking INT 1Ch under the scheduler.
+     *
+     * So it asks what the hardware would actually deliver. `vectorBase | irq`
+     * is what the 8259 hands the CPU on acknowledge; only if that is 8 does
+     * the synthetic tick have a collision to avoid. This is READ LIVE rather
+     * than cached, because ICW2 is written by the program at run time and a
+     * value computed at construction would describe the machine before its
+     * own startup code had configured it.
      */
     hasHardwareTimerIrq() {
         if (!this._pic) return false;
-        return Object.keys(this._irqLines || {}).some((n) => this.chips[n] instanceof I8254);
+        for (const [name, w] of Object.entries(this._irqLines || {})) {
+            if (!(this.chips[name] instanceof I8254)) continue;
+            if (((this._pic.vectorBase | w.irq) & 0xff) === 8) return true;
+        }
+        return false;
     }
 
     /** A PIT counter's OUT changed. If it is the wired IRQ source, drive the PIC. */

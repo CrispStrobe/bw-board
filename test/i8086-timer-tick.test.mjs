@@ -135,9 +135,21 @@ const withChips = (chips) => new I8086Machine({
     chips,
 });
 
-test('a machine knows whether it makes a REAL timer interrupt', () => {
-    // Both halves are required, and the test is exact rather than a guess:
-    // _irqLines is populated for I8254 instances alone.
+/** Bring the 8259 up and point IRQ0 at `base | 0`. ICW2 is a RUN-TIME write. */
+const initPic = (m, base) => {
+    m._out(0x20, 0x11);      // ICW1: edge, cascade off, ICW4 to follow
+    m._out(0x21, base);      // ICW2: vector base
+    m._out(0x21, 0x00);      // ICW3
+    m._out(0x21, 0x01);      // ICW4: 8086 mode
+    return m;
+};
+
+test('the question is which VECTOR the hardware delivers, not whether it is wired', () => {
+    // Asking "is a PIT wired to a PIC" was the wrong question and it cost a
+    // regression: a scheduler that remaps IRQ0 to vector 70h leaves INT 8 and
+    // INT 1Ch free ON PURPOSE, and the synthetic tick must keep serving them.
+    // Measured on that configuration: 163 INT 1Ch ticks over 9 simulated
+    // seconds with the vector-aware test, ZERO with the wiring-only one.
     assert.equal(withChips([]).hasHardwareTimerIrq(), false, 'no chips at all');
     assert.equal(withChips([
         {kind: 'pit', name: 'pit1', at: 0x40, irq: 0},
@@ -146,10 +158,26 @@ test('a machine knows whether it makes a REAL timer interrupt', () => {
         {kind: 'pic', name: 'pic1', at: 0x20},
         {kind: 'pit', name: 'pit1', at: 0x40},
     ]).hasHardwareTimerIrq(), false, 'a PIC and a PIT with no irq key are not wired to each other');
-    assert.equal(withChips([
+
+    const wired = () => withChips([
         {kind: 'pic', name: 'pic1', at: 0x20},
         {kind: 'pit', name: 'pit1', at: 0x40, irq: 0},
-    ]).hasHardwareTimerIrq(), true, 'both halves present');
+    ]);
+
+    // UNCONFIGURED IS NOT INT 8. Before ICW2 the vector base is 0, so IRQ0
+    // would land on vector 0 — and a machine whose 8259 has never been
+    // initialised is not competing with the synthetic tick.
+    assert.equal(wired().hasHardwareTimerIrq(), false,
+        'wired but never initialised: ICW2 has not chosen a vector yet');
+
+    // The PC mapping: IRQ0 -> INT 8. THIS is the collision the synthetic tick
+    // must stand down for.
+    assert.equal(initPic(wired(), 0x08).hasHardwareTimerIrq(), true,
+        'IRQ0 mapped to vector 8 — hardware owns the BIOS tick');
+
+    // The scheduler's mapping: IRQ0 -> 70h, INT 8 deliberately left free.
+    assert.equal(initPic(wired(), 0x70).hasHardwareTimerIrq(), false,
+        'IRQ0 remapped to 70h — nothing reaches INT 8, so the synthetic tick must still serve it');
 
     // The shipped DOS bench is the case the synthetic tick exists for.
     assert.equal(new I8086Machine(DOSBOX8086_XT).hasHardwareTimerIrq(), false,
