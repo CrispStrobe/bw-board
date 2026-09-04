@@ -12,8 +12,8 @@
  * constant here and the divisor is whatever the program loaded into counter
  * 2.
  *
- * The readout is `audioTone() -> { hz, on }`, the same shape the ZX tier's
- * ULA answers with, so a debug target or UI needs no new concept: the tone
+ * The readout is `audioTone() -> [{ hz, on }]` -- an ARRAY of one, the same
+ * shape the ZX tier's ULA and the AY answer with (E6.8.11a), so a debug target or UI needs no new concept: the tone
  * the hardware is producing, derived from the divisor and the two gate bits.
  * No samples, no synthesis.
  *
@@ -75,13 +75,20 @@ export class PCSpeaker {
 
     /**
      * The tone the hardware is producing right now.
-     * @returns {{ hz: number, on: boolean }}
+     *
+     * ALWAYS AN ARRAY, one element per voice (E6.8.11a). A single-voice
+     * device returns a one-element array rather than a bare object: a
+     * contract with two shapes is not a contract, and every producer added
+     * after this one would otherwise have to guess which it was allowed to
+     * return. The arity is meaningful — an empty array means NO VOICES, which
+     * is how a machine with no sound chip differs from a silent one.
+     * @returns {Array<{ hz: number, on: boolean }>} exactly one element
      */
     audioTone() {
-        if (!this.on) return { hz: 0, on: false };
+        if (!this.on) return [{ hz: 0, on: false }];
         const raw = this._readDivisor() | 0;
         const divisor = raw === 0 ? 0x10000 : raw;
-        return { hz: Math.round(PIT_CLOCK_HZ / divisor), on: true };
+        return [{ hz: Math.round(PIT_CLOCK_HZ / divisor), on: true }];
     }
 
     /**
@@ -109,7 +116,7 @@ export class PCSpeaker {
      * @returns {number} frames written
      */
     renderAudio(dest, frames, sampleRate) {
-        const { hz, on } = this.audioTone();
+        const { hz, on } = this.audioTone()[0];
         // A silent speaker still advances nothing and writes zeros: silence
         // is a signal, and leaving the buffer untouched would replay whatever
         // the previous producer left in it.

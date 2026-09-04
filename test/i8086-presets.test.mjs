@@ -78,7 +78,7 @@ test('PCXT8086: the XT map wires the speaker off 61h and answers CGA retrace at 
     m._out(0x43, 0xb6);                        // counter 2, mode 3
     m._out(0x42, 1193 & 0xff); m._out(0x42, (1193 >> 8) & 0xff);
     m._out(0x61, 0x03);                        // gate + data
-    assert.deepEqual(m.audioTone(), { hz: 1000, on: true }, 'the XT speaker sounds ~1 kHz');
+    assert.deepEqual(m.audioTone(), [{ hz: 1000, on: true }], 'the XT speaker sounds ~1 kHz');
 
     // The CGA status port answers with a real frame at 3DAh.
     const s = m._in(0x3da);

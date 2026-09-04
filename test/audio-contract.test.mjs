@@ -90,13 +90,13 @@ test('MUTATION: the octave error is caught — this is why the Goertzel alone wa
     // audioTone() still claims f. This is the real drift, and a bare Goertzel
     // at f passes it because the octave contains f's bin energy.
     const s = speaker(2712);
-    const claimed = s.audioTone().hz;                  // 440
+    const claimed = s.audioTone()[0].hz;               // 440
     const buf = new Float32Array(48000);
     // Render the WRONG thing: double frequency, same claim.
     const wrong = new PCSpeaker({ readDivisor: () => 1356 });   // half the divisor
     wrong.setControl(3);
     wrong.renderAudio(buf, 48000, 48000);
-    assert.equal(wrong.audioTone().hz, 880, 'the mutant really is an octave up');
+    assert.equal(wrong.audioTone()[0].hz, 880, 'the mutant really is an octave up');
 
     const measured = freqFromCrossings(buf, 48000);
     assert.ok(Math.abs(measured - claimed) / claimed > 0.5,

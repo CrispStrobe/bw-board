@@ -562,13 +562,22 @@ test('DOSBOX8086_XT makes a corpus beep audible, and buys nothing else', async (
     ]));
     for (let i = 0; i < 200; i++) dos.step();
 
-    const tone = m.audioTone();
+    const [tone] = m.audioTone();
     assert.ok(tone.on, 'the speaker is sounding');
     assert.ok(Math.abs(tone.hz - 1000) < 5, `about a kilohertz, got ${tone.hz}`);
 
-    // ...and the debug target reports it in the SAME shape the Z80 tier uses.
+    // ...and the debug target reports it in the SAME shape every tier uses.
+    // That shape is now an ARRAY of voices (E6.8.11a) rather than a bare
+    // object -- a contract with two shapes is not a contract, and this
+    // assertion is the one that used to enforce the old one. The ARITY is
+    // asserted too, not just the keys: "an array" is satisfied by an empty
+    // one, and an empty array is how a machine with no speaker differs from
+    // a speaker that is silent.
     const t = createI8086DebugTarget({ machine: m });
-    assert.deepEqual(Object.keys(t.audio()).sort(), ['hz', 'on']);
+    const voices = t.audio();
+    assert.ok(Array.isArray(voices), 'always an array');
+    assert.equal(voices.length, 1, 'one speaker, one voice');
+    assert.deepEqual(Object.keys(voices[0]).sort(), ['hz', 'on']);
 });
 
 test('a program gets a real command tail and the two FCBs DOS builds from it', () => {

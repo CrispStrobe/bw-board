@@ -663,14 +663,18 @@ export class I8086Machine {
         return false;
     }
 
-    /** The tone the speaker is producing, if any. {hz, on} or null. */
+    /**
+     * Per-voice {hz, on}, ALWAYS AN ARRAY (E6.8.11a) -- and EMPTY when this
+     * machine has no speaker at all. That distinction is the reason the
+     * arity matters: an empty array is "no voices", a one-element array with
+     * `on: false` is "a speaker that is silent", and the old `null` conflated
+     * them into a value every caller had to null-check before it could ask
+     * anything useful.
+     */
     audioTone() {
-        for (const { spk } of this._speakers || []) {
-            if (spk.on) return spk.audioTone();
-        }
-        // Nothing sounding: report the first speaker's silent tone, or null.
-        if (this._speakers && this._speakers.length) return this._speakers[0].spk.audioTone();
-        return null;
+        const out = [];
+        for (const { spk } of this._speakers || []) out.push(...spk.audioTone());
+        return out;
     }
 
     /** Machine time in (fractional) milliseconds. */
