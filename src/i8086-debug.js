@@ -79,10 +79,18 @@ function modeFromVga(v) {
     if (chain4 && eightBit) {
         return { mode: 0x13, supported: true, reason: 'VGA registers: chain-4 + 8-bit colour' };
     }
+    // Graphics, not chain-4, not 8-bit colour: the planar family. 0Dh is the
+    // one this renderer draws, and it draws it only when the card actually
+    // hands over four planes -- a VGA in a planar mode has them too, but this
+    // path is written against the EGA card's state and says so rather than
+    // guessing at a superset.
+    if (v.planes && v.planes.length === 4) {
+        return { mode: 0x0d, supported: true, reason: 'registers: planar graphics, four planes' };
+    }
     return {
         mode: 0x0d, supported: false,
         reason: 'VGA registers say graphics but not chain-4 with 8-bit colour, so this is one of '
-            + '0Dh-12h: four bit planes behind the sequencer, which this renderer does not draw',
+            + '0Dh-12h: four bit planes behind the sequencer, and this card exposes no planes',
     };
 }
 
@@ -194,7 +202,29 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 breakpoints: ['code', 'write'],
                 timeFreezes: true,
                 consumes: [],
+                // Declared only when the machine can actually take a key. A
+                // board with no PPI and no PIC has nowhere to latch a scancode
+                // and no wire to raise IRQ1 on, and a host that offered a
+                // keyboard for it would be offering one that silently does
+                // nothing -- the same reason `steps` does not list 'cycle'.
+                keys: machine.canTakeKeys && machine.canTakeKeys() ? ['scancode'] : [],
             };
+        },
+
+        /**
+         * A key, as a set-1 scancode. This is the HARDWARE path -- port A of
+         * the 8255 plus IRQ1 -- so it works on a bare-metal board and on one
+         * running our BIOS, which is why the widget uses it rather than the
+         * BIOS's INT 16h buffer. A machine that cannot take keys returns
+         * false rather than pretending, so a caller can tell the difference
+         * between "delivered" and "there was nobody to deliver it to".
+         *
+         * Break codes are the caller's business: a real keyboard sends make
+         * on press and make|0x80 on release, and a host that sends only makes
+         * leaves every modifier stuck down.
+         */
+        keyIn(scancode) {
+            return typeof machine.keyIn === 'function' ? machine.keyIn(scancode) : false;
         },
 
         state() { return runState; },
@@ -399,6 +429,13 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             // ROM, so the renderer's generated default stands in until a
             // program says otherwise. Same discriminator as everywhere else in
             // this file: has anyone actually written it.
+            // EGA planes and its attribute palette, same stance as the DAC
+            // below: handed over only when the card actually has them, so a
+            // machine without an EGA is unaffected.
+            if (card && card.planes && card.planes.length === 4) {
+                vo.planes = card.planes;
+                if (card.attr) vo.attr = card.attr;
+            }
             if (card && card.dac && vo.dac === undefined && card.dac.some((b) => b !== 0)) {
                 vo.dac = card.dac;
             }

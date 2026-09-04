@@ -1701,6 +1701,18 @@ lands it.
 7. **Keyboard widget.** `VdpScreen` already emits `setKeys`/`setButtons`; route
    8086 key input through the BIOS INT 16h/09h path (or an 8255 port). Decide
    the input seam with the BIOS.
+   **SEAM DECIDED + HARDWARE LAYER DONE (2026-09-04, `81630bd`).** Decided WITH
+   the BIOS lane: the HARDWARE path, not an INT 16h buffer — the widget then
+   works on any board with a PPI + PIC (like SerialConsole works without a BIOS),
+   and the BIOS's own INT 09h sits on the same hardware. `machine.keyIn(scancode)`
+   latches the byte at the keyboard 8255's port A (0x60) and raises IRQ1; the
+   ack is the port-B bit-7 strobe (rising edge drops IRQ1), matching the BIOS's
+   int09 (bios.asm:734). KBDDEMO8086 + rom/keyboard-demo.bin prove it bare-metal
+   (INT 09h -> read 0x60 -> ack -> set-1->ASCII -> echo -> own EOI); it is the
+   first thing to drive the 8259 IRQ1 path for real (the DOS boot test had been
+   using cpu.interrupt(9) direct). REMAINING (host lane): debug-runner maps
+   VdpScreen key events -> set-1 scancodes -> `runner.keyIn`. The UI loader entry
+   is HELD until that lands — a board you cannot type into is not an example.
 
 8. **GUI binary-loading.** The file-upload path already accepts `.bin`; add the
    `i8086` loader branch (`romAt: 0xF0000` load address) and an example ROM under
@@ -1778,25 +1790,64 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    real VGA power-on palette — correct colour for free. No CRTC: 320x200 is a
    constant in the renderer's mode table, not derived from R0-R18.
    test/i8086-vga-demo.test.mjs asserts the discriminator + the linear buffer.
-4. **Hercules graphics — STATE DONE (`830af06`), render pending.** HERCDEMO8086
-   (HGC + the B000:0000 mono page) + rom/hercules-demo.bin (720x348 mono, 4-wide
-   bars) + a state test pinning the FOUR-bank y-mod-4 layout. NOT wired into the
-   loader: lego-47 measured the renderer refuses HGC by name today (mode 6h,
-   "720x348 mono at B0000h, which this renderer does not draw"), so a UI entry
-   would show a refusal string, not a picture. The blocker is on the DOS/host
-   side — the four-bank decode (NOT the CGA scanline-parity one; a CGA-analogy
-   decoder yields a coherent quarter-height wrong image). Ships as verified
-   state, ready to wire the moment that decode lands.
-5. **EGA — LAST, and it needs a card first.** No ega-card.js exists yet; EGA's
-   planar four-bitplane memory is the hardest of the set. Build the card (this
-   lane), then the board + demo, then the renderer's planar decode (DOS/host).
-   Gated on a lesson actually wanting EGA — CGA+VGA cover the span for now.
+   **PIXEL-VERIFIED (2026-09-04): lego-47 ran the ROM through video() — 320x200,
+   row 6 = 170,85,0 (the IBM brown fix, which can only come from the renderer's
+   default table since the firmware programs no DAC — so the no-DAC choice held
+   end to end), 198 distinct row colours (200 bands, two genuine palette dupes:
+   entry 16 restarts the gray ramp at black/white). CLOSED.** Note: the ROM
+   spins rather than HLTs (correct for a demo that stays on screen).
+4. **Hercules graphics — STATE DONE (`830af06`); decode landing, then loader
+   entry (this lane) — 2026-09-04.** HERCDEMO8086 (HGC + the B000:0000 mono
+   page) + rom/hercules-demo.bin (720x348 mono, 4-wide bars) + a state test
+   pinning the FOUR-bank y-mod-4 layout. lego-47 has WRITTEN AND VERIFIED the
+   renderer's four-bank decode ((1,1) lit proves bank 1 at +0x2000 and bit6->x=1;
+   (0,4) proves the within-bank +90-byte stride) — landing with tests shortly,
+   as pseudo-mode 0x100 (Hercules graphics has no INT 10h mode number; it is
+   selected only by 3BFh/3B8h, which is why every HGC program is bare-metal).
+   They also fixed a latent trap: modeFromHercules had returned 0x06, which is
+   CGA 640x200 in the mode table — B8000h + two-bank parity — and would have
+   drawn our B0000h/four-bank framebuffer at the wrong address with the wrong
+   arithmetic: a coherent, plausible, entirely wrong picture.
+   **CLOSED (2026-09-04, renders).** Decode pushed (feat/i8086-tier `0c08cf1`,
+   pseudo-mode 0x100, 7 tests incl. the bottom scanline pinning bank size AND
+   stride together); loader entry wired (bw-circuit-ui `5359b85`). lego-47 ran
+   rom/hercules-demo.bin through the decode — my state test and their pixels met
+   with nothing to reconcile. GRAPHICS ONLY: MDA text (80x25 at B0000h, non-CGA
+   attributes) is still refused by name, so the firmware must not write text.
+   Two fallback facts to know: an UNPROGRAMMED HGC card renders a plausible grey
+   720x400 (the renderer falls back to 80x25 text at B8000h, which a Hercules-
+   only machine does not map — open-bus reads), so the ROM must reach its
+   3BFh/3B8h writes before the first frame (ours does, immediately).
+5. **EGA — STATE DONE (`40c17af`), render pending.** The hardest: a PLANAR
+   framebuffer, not linear RAM. `src/ega-card.js` models the register banks
+   (no DAC — EGA colour is the attribute palette) plus four bit planes, with
+   map-mask write routing (SR2) and read-map-select (GR4). The machine gives an
+   `ega` chip its 3C0-3DF register window AND a second mem-bus window at A0000
+   forwarding to memRead/memWrite (the dmapage two-window pattern), so A0000 is
+   NOT plain RAM — a write is routed by the map mask into the selected planes.
+   EGADEMO8086 + rom/ega-demo.bin fill the four planes FF/AA/CC/F0 through the
+   map mask; test/i8086-ega-demo.test.mjs pins the planar discriminator, the
+   plane routing, the composed pixels, and that a map-mask-0 write reaches no
+   plane. **DECODE CONTRACT for the DOS/host lane** (their half, not written
+   yet): identify by graphics + NOT chain-4 (SR4 bit3 clear) + NOT 8-bit (AR10h
+   bit6 clear); read `getVideoState().planes[0..3]` (each Uint8Array, plane p);
+   for mode 0Dh (320x200x16) pixel (x,y) colour = for p in 0..3, bit (7 - x%8)
+   of `planes[p][y*40 + (x>>3)]` as colour bit p; map that 4-bit colour through
+   `getVideoState().attr[colour]` (6-bit RGBrgb). UI loader entry HELD until
+   that decode lands — same discipline as Hercules. NOT gated on a lesson any
+   more: the owner asked for the full set, so the card is built and waiting.
 
 Each step ships a LOADER ENTRY only once its renderer decode is confirmed,
 because a board that renders a cleared screen (or a refusal string) is not an
 example. Firmware + card-state tests can land earlier — they verify this lane's
-half of the seam and are ready to wire the moment the renderer catches up
-(Hercules is exactly that state today).
+half of the seam and are ready to wire the moment the renderer catches up.
+
+CONVENTION — the display demos SPIN after painting (they want to stay on
+screen), so `cpu.halted` never becomes true for them; only the timer demo HLTs,
+because it wants to be woken by the tick. A harness that waits for HLT will read
+a display demo as a hang — step a fixed count instead. (This is why every
+display-demo test steps a bounded number of instructions rather than looping
+until halt.)
 
 ---
 

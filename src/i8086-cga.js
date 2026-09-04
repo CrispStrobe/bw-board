@@ -265,6 +265,11 @@ const MODE_TABLE = {
     // renderer would have drawn B8000h for a card whose framebuffer is at
     // B0000h.
     0x100: { kind: 'hgc', width: 720, height: 348, base: 0xb0000 },
+    // EGA 320x200x16 planar. The framebuffer is NOT in the address space the
+    // way the others are: A0000 is a window the card routes by its map mask,
+    // so the pixels come from card state (opts.planes) rather than through
+    // `read`. 40 bytes per row per plane -- 320 pixels at one bit each.
+    0x0d: { kind: 'ega4', width: 320, height: 200, base: 0xa0000, rowBytes: 40 },
 };
 
 /** BIOS modes this file knows about but cannot draw, with the reason. */
@@ -590,6 +595,40 @@ export function renderMode(mode, read, opts = {}) {
                     const v = (b >> (6 - k * 2)) & 3;
                     px(o, v === 0 ? bg : set[v - 1]);
                 }
+            }
+        }
+        return { width, height, rgba };
+    }
+    if (info.kind === 'ega4') {
+        // FOUR PLANES, ONE BIT EACH, SAME OFFSET. A pixel's colour is bit
+        // (7 - (x & 7)) of the same byte in each of the four planes, assembled
+        // low plane to high: plane 0 is bit 0 of the colour. Getting the plane
+        // ORDER wrong still produces a picture -- in the wrong colours -- which
+        // is why the demo fills FF/AA/CC/F0 and expects a descending ramp
+        // 15,13,11,9,7,5,3,1 across the first byte: any transposition changes
+        // that sequence visibly rather than subtly.
+        const planes = opts.planes;
+        if (!planes || planes.length !== 4) {
+            throw new Error('i8086-cga: mode 0Dh needs opts.planes, four Uint8Arrays from the EGA card');
+        }
+        // EGA has no DAC. Colour goes through the ATTRIBUTE palette, six bits
+        // per entry as RGBrgb: bits 5-3 are the secondary (intensity) R, G, B
+        // and bits 2-0 the primary. Each channel is therefore two bits, which
+        // is why a 16-colour EGA is not a subset of a 256-colour VGA ramp.
+        const pal = opts.attr || null;
+        const chan = (prim, sec) => prim * 0xaa + sec * 0x55;
+        for (let y = 0; y < height; y++) {
+            let o = y * width * 4;
+            for (let x = 0; x < width; x++, o += 4) {
+                const byte = y * info.rowBytes + (x >> 3);
+                const bit = 7 - (x & 7);
+                let c = 0;
+                for (let pl = 0; pl < 4; pl++) c |= ((planes[pl][byte] >> bit) & 1) << pl;
+                const v = pal ? (pal[c] & 0x3f) : c;
+                rgba[o] = chan((v >> 2) & 1, (v >> 5) & 1);
+                rgba[o + 1] = chan((v >> 1) & 1, (v >> 4) & 1);
+                rgba[o + 2] = chan(v & 1, (v >> 3) & 1);
+                rgba[o + 3] = 255;
             }
         }
         return { width, height, rgba };
