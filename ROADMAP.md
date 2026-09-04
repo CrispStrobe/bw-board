@@ -1132,7 +1132,14 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    720x400 (the renderer falls back to 80x25 text at B8000h, which a Hercules-
    only machine does not map — open-bus reads), so the ROM must reach its
    3BFh/3B8h writes before the first frame (ours does, immediately).
-5. **EGA — STATE DONE (`40c17af`), render pending.** The hardest: a PLANAR
+5. **EGA — CLOSED (2026-09-04, renders).** Decode landed (feat/i8086-tier
+   `381fc5b`); loader entry wired (bw-circuit-ui `0b1216b`). lego-47 verified
+   rom/ega-demo.bin's ramp composes to 15,13,11,9,7,5,3,1 — plane order and bit
+   order both right; mode 0Dh WITHOUT planes throws rather than drawing zeros
+   (a black frame is indistinguishable from a program that drew nothing). The
+   hardest of the set, and the whole display family (CGA text/graphics, VGA,
+   Hercules, EGA) now renders. Details below.
+   The hardest: a PLANAR
    framebuffer, not linear RAM. `src/ega-card.js` models the register banks
    (no DAC — EGA colour is the attribute palette) plus four bit planes, with
    map-mask write routing (SR2) and read-map-select (GR4). The machine gives an
