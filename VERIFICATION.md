@@ -416,6 +416,21 @@ the wrong field** or **returned a green from a check that never executed**:
 | assembling `lock` and `byte [bx]` | two encoder defects | a prefix disassembled alone, and NASM syntax where MASM wants `byte ptr` |
 | `sed 's/old/new/'` used as a mutation | mutation caught, control green | the pattern never matched; the edit never landed |
 | `bash -c '... $IN ...' IN=value` | a 20-minute run with an input stream | `IN=value` set `$0`, so `--type` got an empty string |
+| `node --test test/…` in a sparse worktree | `# pass 123 # fail 0` | six tests never ran; the files they import were not checked out |
+
+The last one is worth its own paragraph, because it is the only one on this
+list that reports a **passing** result. A `git sparse-checkout` in a worktree
+excluded `src/components/`, so a test file importing from it could not load.
+Node reported `1..47` and `# fail 0` — a clean suite — while the true count was
+53. **A test that cannot load does not fail; it is absent, and absent tests do
+not appear in a pass count.** It surfaced only because one of the six left an
+async handle open and Node complained after the test ended; had it failed
+tidily, the suite would have been green and six tests would have been silently
+gone. Two of the worktrees in this tree are sparse.
+
+The countermeasure is to know the expected count. `# pass 130` means something
+only against a number you had before; a suite that reports only "0 failures" is
+reporting on the tests it managed to find.
 
 **The shape is always the same: the failed measurement and the successful one
 render identically.** That is the same defect this file catalogues in code —
