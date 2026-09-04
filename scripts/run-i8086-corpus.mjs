@@ -537,7 +537,14 @@ for (const r of results) {
         refusals.set(k, (refusals.get(k) || 0) + u.count);
     }
     for (const u of r.report?.devices?.unclaimed || []) {
-        const k = `port ${u.port} (no device claims it)`;
+        // HEX, LIKE THE LINE ABOVE IT. This printed decimal while the `int`
+        // entry two lines up printed hex with an `h` suffix, in the SAME list
+        // -- so "port 97" and "int 21h AH=56h" sat together in a report headed
+        // "this is the to-do list", in two bases, with only one of them
+        // marked. On a PC an I/O port is always written in hex, so a reader
+        // resolves `port 61` as the speaker gate when it means 3Dh, and the
+        // to-do list quietly describes different hardware than it means.
+        const k = `port ${u.port.toString(16).padStart(2, '0')}h (no device claims it)`;
         refusals.set(k, (refusals.get(k) || 0) + u.count);
     }
     if (r.verdict === 'DIFFER' && (VERBOSE || tally.DIFFER <= 8)) {
