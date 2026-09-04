@@ -472,6 +472,36 @@ the wrong field** or **returned a green from a check that never executed**:
 | assembling `lock` and `byte [bx]` | two encoder defects | a prefix disassembled alone, and NASM syntax where MASM wants `byte ptr` |
 | `sed 's/old/new/'` used as a mutation | mutation caught, control green | the pattern never matched; the edit never landed |
 | `bash -c '... $IN ...' IN=value` | a 20-minute run with an input stream | `IN=value` set `$0`, so `--type` got an empty string |
+| `node --test test/…` in a sparse worktree | `# pass 123 # fail 0` | six tests never ran; the files they import were not checked out |
+| `npm test \| tail -15` reported by its exit code | "suite green, exit 0" | `tail`'s status. The suite had a failing test throughout. **This is row 1 of this same table, recurring.** |
+
+The last one is worth its own paragraph, because it is the only one on this
+list that reports a **passing** result. A `git sparse-checkout` in a worktree
+excluded `src/components/`, so a test file importing from it could not load.
+Node reported `1..47` and `# fail 0` — a clean suite — while the true count was
+53. **A test that cannot load does not fail; it is absent, and absent tests do
+not appear in a pass count.** It surfaced only because one of the six left an
+async handle open and Node complained after the test ended; had it failed
+tidily, the suite would have been green and six tests would have been silently
+gone. Two of the worktrees in this tree are sparse.
+
+**The pipe row is on this table twice, and the second time was the author of
+the first.** `timeout 900 npm test 2>&1 | tail -15` was run three times in one
+session and reported green each time; the exit code belonged to `tail`.
+`(exit 7) | tail -1` returns 0 — it takes one line to demonstrate and it was
+already written down. Knowing a trap is not the same as being immune to it,
+because the trap is invisible at the call site: the pipe was added to keep the
+output short, which is a formatting decision, and it silently became a
+correctness one. Redirect to a file and check `$?` on the bare command, or set
+`pipefail`; do not read an exit status through a pipe.
+
+What it hid: `getTargetKinds` returned 11 kinds against a test expecting 10,
+because a merged commit made the 8086 pickable without updating the count.
+Small, and it had been reported as green three times.
+
+The countermeasure is to know the expected count. `# pass 130` means something
+only against a number you had before; a suite that reports only "0 failures" is
+reporting on the tests it managed to find.
 
 **The shape is always the same: the failed measurement and the successful one
 render identically.** That is the same defect this file catalogues in code —
@@ -512,6 +542,94 @@ And the general practice, which is cheaper than any of the above:
   the wrong field; a quoted fragment names what it read. That lesson is already
   in this tree from a different direction — `htmlLen=61` was a fact, and "the
   frontend is empty" was an inference laid on top of it.
+
+### Rule: presence and ordering tests cannot see a rate
+
+`test/i8086-timer-tick.test.mjs` is a whole file about the timer interrupt.
+Its three assertions are `ticks > 0`, `ticks >= 3` and `ticks === 0`. Every one
+passes while **the 18.2 Hz BIOS tick runs at 76.35 Hz** — measured, over 9.0
+simulated seconds, 4.193× fast.
+
+The cause is one line: `_advanceChips` calls `chip.advance(n)` with `n` in CPU
+cycles, and `src/i8254.js` has no clock of its own, so a PIT that should run
+from a 1.193 MHz crystal runs at the CPU's 5 MHz. The fix pattern was already
+three lines above it in the same function, written for the OPL: *"runs on its
+OWN 3.58 MHz crystal … advanced in MILLISECONDS of emulated time rather than in
+machine cycles"*.
+
+**Why no test caught it, and this is the general point: ORDER DOES NOT CHANGE
+WHEN EVERY DELAY SCALES BY THE SAME FACTOR.** A suite that asserts *that* an
+event happened, *that* it happened more than once, and *that* it did not happen
+when unhooked, is invariant under a uniform time-base error. It is not a weak
+suite; it is a suite about a different axis. No amount of re-reading it would
+have revealed the defect — only a second, independent measurement did, and it
+came from another lane hitting it from the inside on an unrelated feature.
+
+The audit that followed is the reassuring half, and it was made exhaustive
+rather than left at a spot check. Of the nine time-driven chips an
+`I8086Machine` can construct, **the 8254 was the only one** that mistook
+machine cycles for its own clock:
+
+| chip | how it gets its time base |
+|---|---|
+| CGA, EGA, Hercules, VGA | take `clockHz` and derive the frame period (`clockHz / FRAME_HZ`) |
+| SB DSP | takes `clockHz`, `perSample = clockHz / rate` |
+| YM3812 (OPL) | `advanceMs` — its own 3.58 MHz crystal |
+| ADC0809 | converts its 640 kHz conversion time to CPU cycles at construction |
+| µPD765 | `advance(_cycles) { }` — **no time model, and the header says so** |
+| **8254** | **counted machine cycles as 1.193 MHz ticks** |
+
+The µPD765 row is worth its own note: a chip that models no time at all is not
+a defect, because it is declared. The defect is a chip that models time
+*implicitly*, in the wrong units, while nothing in its documentation names a
+clock — which was exactly the 8254's state, and a reliable tell across all
+nine.
+
+What to take from it:
+
+- **An assertion about a count is not an assertion about a rate.** If a
+  quantity has units, pin the units.
+- **A uniform scaling error is invisible to every relative check.** Ratios,
+  orderings and interleavings all survive it. Only an absolute measurement
+  against an independent reference finds it.
+- **Suspect the chip whose documentation does not mention its own clock.** Here
+  that was a reliable tell across eleven peripherals.
+
+### Rule: a test value can be too coarse to detect the error it tests for
+
+A green assertion is evidence only if the value it asserts could have come out
+differently. Measured, 2026-09-04, in this tier:
+
+The PC-speaker test asserted that a program requesting **440 Hz** produced
+440 Hz. It did. Then a deliberate off-by-one was planted in the divisor the
+speaker reads from 8254 counter 2 — the exact arithmetic the test exists to
+check — and **the test stayed green**. 1193182/2712, /2713 and /2714 all round
+to 440, so at that frequency the assertion could not distinguish a correct
+divisor from a wrong one. The test was checking that a tone came out, and
+reporting that as checking the pitch.
+
+The fix was not a better assertion on 440 Hz; no assertion on 440 Hz can work.
+It was a **second frequency chosen for sensitivity**: 4000 Hz has divisor 298,
+where one count moves the answer 13 Hz. The planted error now fails it.
+
+What generalises:
+
+- **Sensitivity is a property of the test VALUE, not of the assertion.**
+  `assert.equal` is exact; 440 was not. Picking the value a learner would type
+  is good for a demo and is not automatically good for a test.
+- **Round numbers are the ones most likely to be insensitive**, because they
+  are round in the units the human chose and arbitrary in the units the
+  hardware works in. 440 Hz is a musical fact; 2712 is the machine's.
+- **Mutation is what exposes this, and only if the mutation is confirmed to
+  land.** The first three mutation attempts in this session included one whose
+  `sed` never matched and one that broke the file's syntax — the latter turned
+  every test red, which reads exactly like a successful red-proof. A file that
+  fails to parse is not a mutated file. Assert the edit landed AND that the
+  module still loads.
+
+The near relative already in this document is "a probe that fails to run looks
+exactly like a probe that found nothing". This is its inverse: a probe that
+runs, passes, and was never able to fail.
 
 ### Rule: a corpus is evidence only about the constructs it contains
 

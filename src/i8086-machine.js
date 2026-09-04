@@ -44,6 +44,8 @@ import { I8259 } from './i8259.js';
 import { I8251 } from './i8251.js';
 import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
+import { ADC0809 } from './adc0809.js';
+import { DAC0832 } from './dac0832.js';
 import { HerculesCard } from './hercules-card.js';
 import { VGACard } from './vga-card.js';
 import { EGACard } from './ega-card.js';
@@ -93,6 +95,16 @@ function regOf(w, addr) {
 const REGS = {
     ppi: 4, uart16550: 8, acia6850: 2,
     pit: 4,          // counters 0/1/2 and the control word
+    // THE CHANNEL IS AN ADDRESS, NOT A DATA BYTE. A0-A2 drive the 0809's mux
+    // select lines, so eight ports select eight channels; the ninth reads
+    // End-Of-Conversion, which is the only way to know a result is ready on a
+    // bench with no PIC to deliver an interrupt.
+    adc0809: 9,
+    // FOUR PORTS FOR A ONE-BYTE CHIP, because the 0832's two latches are its
+    // feature: 310h loads and transfers, 311h stages, 312h is the XFER strobe.
+    // A card that tied XFER low would need one port and could not move two
+    // converters at the same instant.
+    dac0832: 4,
     pic: 2,          // A0 selects command/status vs data/mask
     usart8251: 2,    // C/D selects data vs control/status
     cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
@@ -521,6 +533,10 @@ export class I8086Machine {
                 chip = new I8251({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
                 });
+            } else if (c.kind === 'adc0809') {
+                chip = new ADC0809(config.clockHz, {vref: c.vref, adcClockHz: c.adcClockHz});
+            } else if (c.kind === 'dac0832') {
+                chip = new DAC0832({vref: c.vref});
             } else if (c.kind === 'cga') {
                 chip = new CGACard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
@@ -970,6 +986,23 @@ export class I8086Machine {
         }
     }
 
+    /**
+     * Does this machine generate a REAL timer interrupt in hardware?
+     *
+     * True only when both halves of the chain exist: an 8254 whose OUT is
+     * wired to an IRQ (`_irqLines` is populated for I8254 instances alone, so
+     * this is an exact test, not a guess) AND a PIC to deliver it.
+     *
+     * The DOS layer asks because it SYNTHESISES a BIOS tick for benches that
+     * have no chips, and the two must never both fire: a program would then
+     * receive INT 8 from hardware and from machine time, at rates with no
+     * relationship to each other, and nothing would say so.
+     */
+    hasHardwareTimerIrq() {
+        if (!this._pic) return false;
+        return Object.keys(this._irqLines || {}).some((n) => this.chips[n] instanceof I8254);
+    }
+
     /** A PIT counter's OUT changed. If it is the wired IRQ source, drive the PIC. */
     _pitOutput(config, channel, level) {
         const wiring = this._irqLines[config.name];
@@ -1167,6 +1200,53 @@ export class I8086Machine {
                     pins: chip[`_pins${P}`] ? chip[`_pins${P}`]() & 0xff : 0xff,
                 });
             }
+        }
+        return out;
+    }
+
+    /**
+     * THE ANALOG HALF OF THE SAME PAIR, and a separate reporter rather than an
+     * extra shape inside `outputPoints()`.
+     *
+     * A DAC's output is a VOLTAGE. It has no per-bit direction, no pin latch
+     * and no notion of "driven" -- the three fields that make an 8255 entry
+     * mean something are all absent, and the one field that matters here has
+     * no counterpart there. Returning both shapes from one method would give
+     * callers a contract they had to type-test before using, which is the
+     * thing `audioTone()` already refuses to do by always returning an array.
+     *
+     * `counts` is reported BESIDE `volts` because they are different facts: a
+     * program wrote the code, the card chose the reference, and a learner
+     * debugging "why is it half what I asked for" needs to see which of the
+     * two is the surprise.
+     *
+     * @returns {Array<{chip: string, counts: number, volts: number, vref: number}>}
+     */
+    analogOutputs() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.volts !== 'function') continue;
+            out.push({ chip: name, counts: chip.counts | 0, volts: chip.volts(), vref: chip.vref });
+        }
+        return out;
+    }
+
+    /**
+     * WHAT THE WORLD CAN PUT INTO THE MACHINE AS A VOLTAGE -- the ADC's
+     * channels, so a knob widget can find them without being told a chip name.
+     *
+     * The digital pair splits the same way and for the same reason:
+     * `inputPoints()` reports what EXISTS and leaves the present value to the
+     * write, because a channel's voltage is the world's to state and the
+     * machine has no opinion about it until something says so.
+     *
+     * @returns {Array<{chip: string, channels: number, vref: number}>}
+     */
+    analogInputs() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setChannel !== 'function') continue;
+            out.push({ chip: name, channels: 8, vref: chip.vref });
         }
         return out;
     }

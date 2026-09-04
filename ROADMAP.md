@@ -2539,6 +2539,140 @@ until halt.)
 
 ---
 
+### E7.2 The auto-added chip vocabulary — closing the block gap (2026-09-04, owner-requested)
+
+The goal the owner set: **full circuits control on the 8086, as Nano, Pico and
+STC already have** — plus games and sound. The gap is not emulation. Measured
+against the STC block vocabulary with the parser's own syntax (the first
+measurement used guessed syntax, was silently dropped, and reported a false
+"empty script" — see VERIFICATION.md on probes that fail to run):
+
+| Block | opcode | 8086 before | after |
+|---|---|---|---|
+| `turn on <pin>` / `read` / `toggle` | `stc12_setpin` etc. | lowers (8255) | lowers |
+| `PIN pot = P1.n ANALOG` + `read pot` | `stc12_read` analog | refused | **lowers** — ADC0809 at 300h (`9ed0a5062`, i8086) |
+| `set <pin> to <expr> hz` | `stc12_settone` | refused | **contract proved** (`0c7fb5f`), lowering pending |
+| `set <pin> to <value>` | `stc12_writepin` | refused | **lowers as a digital LEVEL** — not a DAC. See below. |
+| `wait until <cond>` | `control_wait_until` | refused | **lowers** to a poll on the pin (`a5a658c37`, i8086) |
+| `set <pin> to <n> percent` | `stc12_setpwm` | refused | REFUSES, deliberately — see below |
+| `WHEN <pin> pressed` | `stc12_whenpin` | refused | needs the PIC + scheduler |
+| `PART x = SEG7/KEYPAD4X4 on Pn` | parts | refused | KEYPAD4X4 lowers (`6a2afdd97`, i8086) |
+
+**THE DAC HAS NO CALLER, AND THIS ENTRY HAS BEEN WRONG IN BOTH DIRECTIONS.**
+Recorded here because the shape of the error matters more than the conclusion:
+
+1. This lane first said "no caller for a DAC" and deferred it. Correct, but
+   held for a bad reason — the probe used `write <expr> to <pin>`, which is not
+   the syntax and matched nothing. A gap asserted from a probe that never ran.
+2. On finding the real spelling, `set <pin> to <value>`, both this lane and
+   i8086 concluded it was the DAC's caller, and the DAC0832 was built.
+3. **It is not.** `set <pin> to <expr>` writes a computed *level*, not a
+   voltage. The parser says so (*"a level is a level, exactly like `set
+   high`"*), and `trace-oracle.js` — the reference semantics every back end is
+   measured against — lowers it as `num(VALUE) ? 1 : 0`. Every other back end
+   emits `if (VALUE) high else low` and none scales anything. Lowering it to a
+   DAC would put 128/255 of Vref on a pin the program asked to be driven HIGH:
+   it would run, look plausible, and mean something else.
+
+So `writepin` lowers as a digital level (i8086, `a5a658c37`), and **the
+DAC0832 at 310h has no pseudocode caller today.** The chip is correct and
+`analogInputs()`/`analogOutputs()` are used by the ADC regardless, but wiring
+the DAC to anything needs a *declaration* that means "this pin carries an
+output voltage" — `ANALOG` currently means the input side. That is a language
+decision to be made deliberately, not retrofitted to justify a chip that
+already exists.
+
+The lesson, and it is a verification one: **a corrected error is not
+automatically a corrected conclusion.** The correction here (finding the real
+syntax) was right, and the inference drawn from it was wrong, and the second
+error was harder to see than the first because it arrived wearing the
+credibility of a fix. Two sessions agreed on it within one exchange.
+
+**A tone needed NO new chip.** `DOSBOX8086_XT` already carries the 8255, the
+8254 and the PC speaker. P2 maps to port B, so **P2.0 and P2.1 literally are
+the timer-2 gate and the speaker data line** — a tone on those pins is the real
+PC mechanism, not a substitution, and a tone on any other pin must refuse by
+name rather than silently ignore the pin the learner declared.
+
+**And a tone shares a byte with the pins, which is a contract and not a
+detail.** An 8255 output port is written whole, so a tone and a lit LED are two
+bits of one latch. Measured, both orders, from assembled programs:
+
+- raw `OUT 61h` then a pin write → **the tone stops** (the pin shadow has the
+  gate bits clear).
+- a pin write then raw `OUT 61h` → the tone survives but **the shadow now
+  disagrees with the port**: the LED is dark and the program believes it is
+  lit. This is the worse failure, because nothing reports it.
+- the tone routed through `BW_PORTB` → both orders give tone **and** LED, and
+  the shadow matches the port.
+
+So `settone` MUST use the same shadow byte as the pin writes.
+
+**`stc_pwm_fade` is not a `setpwm` example.** It is hand-rolled PWM — `set led
+to 0` / `set led to 1` in a tight loop — so it runs on the level lowering and
+needs no hardware. No shipped example uses `stc12_setpwm` at all. The reseat
+gate's row for it had been wrong twice over: it quoted the non-existent syntax
+AND diagnosed missing hardware.
+
+**`setpwm` REFUSES, and that is the considered answer.** A DAC would give the
+same visible LED brightness by a different mechanism, so a scope, a motor or an
+RC filter would disagree with the lamp — a substitution whose warning a learner
+cannot act on. Genuine PWM on an 8255 pin is software PWM driven from the IRQ0
+tick, which is real work and not yet done. Until it is, a refusal by name is
+honest and a green example bought with a substitution is not. (Ruling: i8086,
+2026-09-04; this lane concurred and dropped its DAC-for-PWM proposal.)
+
+**Ports.** The XT prototype-card block 300h–31Fh is where a learner's board
+goes. 300h–308h is the ADC; **310h–313h is the DAC**; the window is four ports
+rather than one because the 0832's two latches are its actual feature.
+
+**The DAC is write-only and its full scale is Vref × 255/256.** Reading returns
+open bus, not the last value written — a model that echoed the write back would
+teach that a DAC can be read. Code 255 gives 4.980 V and nothing gives 5.000 V.
+
+**A new reporter pair, `analogOutputs()` / `analogInputs()`,** separate from
+`outputPoints()`/`inputPoints()` rather than folded into them: a voltage has no
+per-bit direction and no pin latch, and returning two shapes from one method
+would hand callers a contract they had to type-test — the thing `audioTone()`
+already refuses to do by always returning an array. An empty list means NO
+analog output, which is not the same as an output sitting at zero.
+
+**THE PIC, PRICED (2026-09-04).** `setpwm` done honestly and `WHEN <pin>
+pressed` both want interrupt delivery, and `DOSBOX8086_XT` has no 8259 and no
+`irq` key on its PIT. The machine already implements the whole path — 8259,
+PIT OUT0, IVT, IF, EOI — so what is missing is two lines of config, not an
+implementation, and `test/i8086-isr-pwm.test.mjs` proves it: IRQ0 arrives,
+PWM from the tick hits 0/25/50/75/100 % within one point, and the main loop
+keeps running (~13 800 iterations at every duty), which is the property a busy
+loop cannot have.
+
+The cost was MEASURED before proposing the change, not after. `--pic` on
+`run-i8086-corpus.mjs` builds the candidate preset; both arms over the 525
+programs:
+
+    baseline (--xt)        517 EXITED, 8 LOOPING, peak RSS 179 MB
+    candidate (--xt --pic) 517 EXITED, 8 LOOPING, peak RSS 179 MB
+    diff of the two reports: IDENTICAL
+
+So the only observable difference is the one predicted from the port map: 20h-21h
+stop being open bus, `IN 20h` goes `0xFF` -> `0x00`, and **no corpus program
+depends on it**. The `--pic` flag stays an experiment and the shipped preset is
+unchanged; the decision is now evidenced rather than argued, and i8086 has a
+third option in flight (a scheduled coroutine task, no PIC) that may make it
+unnecessary.
+
+MEASURE DUTY BY TIME, NOT BY INSTRUCTIONS. The ISR runs the same instruction
+count every tick whatever the duty and the pin holds its previous value while
+it does, so an instruction-weighted average is biased low: 25/50/75 read as
+24.0/48.6/74.1 by instruction and 24.7/49.5/74.9 by cycle. An LED integrates
+over time.
+
+**Still open:** the `settone` and `writepin` lowerings themselves (i8086 owns
+`pseudocode-8086.js`); software PWM from the tick; `whenpin`, which needs a PIC
+`DOSBOX8086_XT` deliberately omits; and the remaining `PART` vocabulary.
+
+---
+
 ## Sequencing
 
 1. **E0** (all) — days; removes shipped wrong answers.
