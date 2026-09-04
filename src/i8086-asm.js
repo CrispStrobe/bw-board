@@ -62,13 +62,16 @@
  *
  * SIX THINGS LOOK LIKE BUGS AND ARE NOT:
  *
- *   - `SHL AX, 4` IS EXPANDED into four `SHL AX, 1`. The immediate-count
- *     shift is an 80186 instruction; on an 8086 its opcode C1 decodes as
- *     `RET imm16`, so emitting it would not be a slightly-wrong program, it
- *     would be a program that returns instead of shifting. 52 corpus files
- *     write it anyway. The expansion is semantically identical for CF, ZF,
- *     SF and PF, differs only in OF -- which the 8086 leaves undefined for
- *     counts above one -- and is RECORDED in `warnings`, never silent.
+ *   - `SHL AX, 4` IS EXPANDED into four `SHL AX, 1` ON AN 8086. The
+ *     immediate-count shift is an 80186 instruction; on an 8086 its opcode
+ *     C1 decodes as a near RET, so emitting it would not be a
+ *     slightly-wrong program, it would be a program that returns instead of
+ *     shifting. 52 corpus files write it anyway. The expansion is
+ *     semantically identical for CF, ZF, SF and PF, differs only in OF --
+ *     which the 8086 leaves undefined for counts above one -- and is
+ *     RECORDED in `warnings`, never silent. On a 186 (see below) the real
+ *     one-instruction form is emitted and there is no warning, because
+ *     nothing was substituted.
  *   - LOW, HIGH, LENGTH, SIZE, MASK and TYPE lose to a defined symbol of the
  *     same name. MASM reserves them; the corpus writes `HIGH EQU 5` and
  *     `LENGTH EQU 16` and then reads them back, so a symbol that exists wins
@@ -148,6 +151,44 @@
  * A segment-valued expression on the left (`SEG x`, `@DATA`) still gets its
  * fixup, and is therefore still .EXE-only.
  *
+ * THE 80186 VARIANT. `assemble(src, {variant: '80186'})` encodes the fifteen
+ * instructions the 80186 adds; the default is an 8086 and an unknown variant
+ * is REFUSED rather than quietly becoming one.
+ *
+ * THE OPTION IS SPELLED THE WAY THE REST OF THE CHAIN SPELLS IT, and that is
+ * worth more than a shorter name. `new I8086(bus, {variant: '80186'})`, `new
+ * I8086Machine({variant: '80186'})` and `disasmI8086(read, at, {variant:
+ * '80186'})` all existed first; a fourth module in the same pipeline calling
+ * the same chip something else is a bug waiting to be typed by whoever wires
+ * the four together.
+ *
+ * The fifteen: 60/61 PUSHA POPA, 62 BOUND, 68/6A PUSH imm16/imm8, 69/6B the
+ * non-widening IMUL r16,r/m16,imm, 6C-6F INSB INSW OUTSB OUTSW, C0/C1 the
+ * immediate-count shifts, C8 ENTER, C9 LEAVE.
+ *
+ * THE 8086 REFUSAL IS DELIBERATELY UNTOUCHED. `LATER_THAN_8086` and the
+ * message it raises are what stop `pusha` alone on a line from being read as
+ * a LABEL under NASM's colon-optional rule -- Maze Runner's pusha/popa pair
+ * vanished exactly that way and the program assembled, ran, and returned
+ * through a stack it had never balanced. So the variant is an extra way IN
+ * at `instruction`, not a change to the way out.
+ *
+ * WHY IT EXISTS, WHICH IS NOT "for completeness". SmallerC (BSD-2) compiles
+ * C to NASM 16-bit assembly, and the only non-8086 instructions in its
+ * output are LEAVE, PUSH imm and the three-operand IMUL. With this option a
+ * C program compiles, assembles here and RUNS on `I8086Machine({variant:
+ * '80186'})` -- test/i8086-asm-186.test.mjs runs one and checks the number
+ * it computes. `Maze_Runner_Go/MazeRunnercode.asm` needed it too, and is now
+ * 6,088 bytes identical to NASM's own image.
+ *
+ * The encodings are checked twice and by nothing this module says itself:
+ * round trip through the vector-graded disassembler, and 2,448 generated
+ * forms diffed byte for byte against NASM 2.16 (`scripts/oracle-nasm.mjs
+ * --sweep186`). The second caught a real difference the first cannot see --
+ * `PUSH 65535` and `PUSH -1` push the same word, so both take the two-byte
+ * 6A, and sizing the first at three bytes round-trips perfectly while
+ * disagreeing with NASM.
+ *
  * ONE THING IS OPT-IN, AND WHOSE DEFAULT IT IS DEPENDS ON THE DIALECT.
  * `{ longJumps: true }` promotes a conditional jump or LOOP that cannot
  * reach into a sequence that can -- `Jcc far` into `Jncc over; JMP near
@@ -183,8 +224,19 @@
  * NOT SUPPORTED, deliberately, each of which raises a named error rather
  * than encoding something plausible:
  *
- *   - 80186 and later instructions: PUSH imm, ENTER/LEAVE, INS/OUTS, BOUND,
- *     the immediate-count shifts (see the expansion above), IMUL r,r/m,imm.
+ *   - 80286 and later instructions. The 80186's fifteen are supported, but
+ *     only when asked for; see THE 80186 VARIANT below.
+ *   - INS and OUTS in MASM's explicit-operand spelling (`INS ES:[DI], DX`),
+ *     even on a 186. The operands are fixed by the opcode, so INSB/INSW and
+ *     OUTSB/OUTSW say the same thing, and guessing a width from an operand
+ *     this module does not parse is the one way to get INSB where INSW was
+ *     meant. Refused by name, with the mnemonic to write instead.
+ *   - `BOUND r16, r16`. mod 3 is not an instruction: an 80186 raises INT 6
+ *     on it, so emitting it would be emitting a trap.
+ *   - A source-level `.186` (MASM) that turns the variant on by itself.
+ *     NASM's `CPU 186` is ACCEPTED when the caller already asked for a 186
+ *     and refused otherwise; see the directive for why a source that can
+ *     silently raise the target defeats the point of the default.
  *   - 8087 floating point (the ESC group is not assembled at all).
  *   - The undocumented 8086 opcodes the disassembler names -- SETMO,
  *     SETMOC, SALC, POP CS, the 0x60-0x6F jump aliases. They decode; they
@@ -1208,6 +1260,30 @@ class Assembler {
         return [o.v & 0xff, (o.v >> 8) & 0xff];
     }
 
+    /**
+     * Does this immediate fit the sign-extended BYTE form -- PUSH's 6A and
+     * IMUL's 6B -- as opposed to the word form?
+     *
+     * THE TEST IS ON THE SIXTEEN-BIT VALUE, NOT ON WHAT WAS TYPED, and that
+     * is the whole subtlety. `PUSH 65535` and `PUSH -1` push the identical
+     * word FFFFh, so both take 6A FF; testing `o.v >= -128` on the written
+     * number instead makes the first three bytes and the second two, which
+     * is one byte of disagreement with NASM 2.16 over an instruction that
+     * does exactly the same thing. Found by the differential, not by
+     * reading.
+     *
+     * A value not yet known says NO, so the wide form is chosen. That is not
+     * caution about the value: the pass loop terminates because instructions
+     * only ever SHRINK, and one that started narrow and grew when its symbol
+     * resolved could oscillate between two layouts forever.
+     */
+    fitsSignedByte(o) {
+        if (!o.known || o.reloc) return false;
+        const w = o.v & 0xffff;
+        const signed = w >= 0x8000 ? w - 0x10000 : w;
+        return signed >= -128 && signed <= 127;
+    }
+
     /** Emit a 16-bit immediate that may need a relocation entry. */
     emitImm16(o) {
         if (o.reloc) { this.reloc(o.reloc); this.emitWord(this.segParaOf(o.reloc)); }
@@ -1527,9 +1603,7 @@ class Assembler {
      * accepted here as the same instruction, because it is.
      *
      * 6B sign-extends its byte, so it is chosen only for a value that fits a
-     * SIGNED byte; the same rule and the same reason as PUSH's 6A. An
-     * unknown value takes the wide form so that the pass loop only ever
-     * shrinks.
+     * SIGNED byte; the same rule, and the same `fitsSignedByte`, as PUSH's 6A.
      */
     imul186(ops) {
         this.expect(ops.length === 2 || ops.length === 3,
@@ -1545,9 +1619,7 @@ class Assembler {
         if (a.k === 'm' && a.size && a.size !== 2) throw new AsmError(
             'the three-operand IMUL is a word multiply',
             { ...this.ctx, what: 'operand size' });
-        if (b.known && !b.reloc && b.v >= -128 && b.v <= 127) {
-            return this.emitRM([0x6b], d.n, a, [b.v & 0xff]);
-        }
+        if (this.fitsSignedByte(b)) return this.emitRM([0x6b], d.n, a, [b.v & 0xff]);
         const imm = this.immBytes(b, 2);
         if (!imm) throw new AsmError('IMUL cannot multiply by a segment value',
             { ...this.ctx, what: 'segment in imul' });
@@ -1686,15 +1758,9 @@ class Assembler {
             // byte to the word it pushes, so it says the same thing as 68
             // in two bytes instead of three -- but only for a value that
             // fits a SIGNED byte, since 6A FF pushes FFFFh and not 00FFh.
-            //
-            // A value not yet known takes the wide form. That is not just
-            // caution about the value: the pass loop terminates because
-            // instructions only ever SHRINK, and a push that started narrow
-            // and grew when its symbol resolved could oscillate forever.
-            // Starting wide can only shrink.
-            if (o.known && !o.reloc && o.v >= -128 && o.v <= 127) {
-                return this.emit(0x6a, o.v & 0xff);
-            }
+            // See `fitsSignedByte` for why the test is on the word and not
+            // on what was typed.
+            if (this.fitsSignedByte(o)) return this.emit(0x6a, o.v & 0xff);
             this.emit(0x68);
             return this.emitImm16(o);
         }

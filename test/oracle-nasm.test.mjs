@@ -22,9 +22,10 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
+import { readdirSync, statSync, existsSync, writeFileSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, extname } from 'node:path';
-import { findNasm, nasmBuild, compareOne } from '../scripts/oracle-nasm.mjs';
+import { tmpdir } from 'node:os';
+import { findNasm, nasmBuild, compareOne, sweep186Source } from '../scripts/oracle-nasm.mjs';
 
 const nasm = findNasm();
 const skip = nasm ? false
@@ -104,5 +105,82 @@ test('the two dangerous silent readings are the ones NASM would have caught', { 
         assert.equal(strict.ok, false, `NASM refuses ${body.trim()} at CPU 8086`);
         assert.equal(loose.ok, true, 'and accepts it for a later machine');
         assert.match(strict.err, /no instruction for this cpu level|parser/);
+    }
+});
+
+// ---------------------------------------------------------------------------
+// The 80186 variant. `{variant: '80186'}` is checked for TEXT by round trip
+// through the graded disassembler in test/i8086-asm-186.test.mjs; this is
+// where it is checked for BYTES against the real assembler.
+//
+// Both sides move together: NASM is restricted to `cpu 186` rather than
+// `cpu 8086`, because a 186 source under `cpu 8086` is refused by NASM and
+// the diff would read as our failure, while an unrestricted NASM assembles
+// for a 386 and the diff would be about a different chip.
+// ---------------------------------------------------------------------------
+
+test('every 186 form this module encodes is NASM 2.16 byte for byte', { skip }, () => {
+    // GENERATED, NOT WRITTEN OUT, and that is the point. A round trip proves
+    // the bytes read back as the right text; it cannot see the cases where
+    // two encodings are both legal and only one is the one NASM picks. PUSH
+    // 6A against 68 and IMUL 6B against 69 are exactly those cases, and the
+    // sweep walks every immediate on the signed-byte boundary in both
+    // spellings -- which is how `push 65535` was caught being sized as three
+    // bytes when NASM makes it two, since FFFFh and -1 push the same word.
+    const { source, count } = sweep186Source();
+    const dir = mkdtempSync(join(tmpdir(), 'oracle-186-'));
+    try {
+        const f = join(dir, 'sweep186.asm');
+        writeFileSync(f, source);
+        const r = compareOne(nasm, f, null, '80186');
+        assert.equal(r.verdict, 'MATCH', `${count} generated 186 forms: ${r.note}`);
+        assert.ok(count > 2000, `and a real number of them (${count})`);
+        console.log(`  nasm 186 sweep: ${count} forms, ${r.note}`);
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
+
+test('Maze Runner is byte-identical to NASM once PUSHA can be assembled', {
+    skip: skip || (has(`${CORPUS}/Maze_Runner_Go/MazeRunnercode.asm`)
+        ? false : 'the MIT NASM corpus is not present'),
+}, () => {
+    // The program whose `pusha` used to become a LABEL. It was the ONE file
+    // in the four NASM corpora that this module could not match for a
+    // reason that was ours rather than the repository's, and it is now
+    // 6,088 bytes identical to NASM's own image.
+    const f = `${CORPUS}/Maze_Runner_Go/MazeRunnercode.asm`;
+    const as186 = compareOne(nasm, f, null, '80186');
+    assert.equal(as186.verdict, 'MATCH', as186.note);
+    assert.equal(as186.ours.length, 6088);
+
+    // AND IT IS STILL NOT AN 8086 PROGRAM. Both assemblers say so, which is
+    // what makes the variant a real distinction rather than a switch that
+    // only relaxes ours.
+    assert.equal(nasmBuild(nasm, f, true, null, '8086').ok, false,
+        'NASM refuses it at CPU 8086');
+    assert.equal(compareOne(nasm, f, null, '8086').verdict, 'NOT8086',
+        'and so does this module, for the same instruction');
+});
+
+test("a C compiler's output is NASM's image too", { skip }, () => {
+    // The chain the variant exists for: C -> SmallerC -> NASM assembly ->
+    // this assembler. test/fixtures/smallerc/acc.asm is verbatim `smlrc
+    // -seg16` output; test/i8086-asm-186.test.mjs assembles it and RUNS it
+    // and checks the number. This asserts the other half -- that the image
+    // is the one the real assembler would have written -- so that "it runs"
+    // and "it is right" are two separate claims with two separate oracles.
+    const startup = 'bits 16\norg 100h\nsection .text\n    call _main\n    mov ah, 4Ch\n    int 21h\n';
+    const body = readFileSync(join('test', 'fixtures', 'smallerc', 'acc.asm'), 'utf8')
+        .split('\n').slice(1).join('\n');
+    const dir = mkdtempSync(join(tmpdir(), 'oracle-smlrc-'));
+    try {
+        const f = join(dir, 'acc.asm');
+        writeFileSync(f, startup + body);
+        const r = compareOne(nasm, f, null, '80186');
+        assert.equal(r.verdict, 'MATCH', r.note);
+        assert.equal(r.ours.length, 171, 'a 171-byte .COM, both ways');
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
     }
 });
