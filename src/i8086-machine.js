@@ -64,6 +64,12 @@ function regOf(w, addr) {
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz CPU clock
+ * @property {'8086'|'80186'} [variant] which chip the core is. Default
+ *   '8086'. '80186' adds the fifteen opcodes the 186 put in the holes the
+ *   8086 left as decode aliases and masks shift counts to five bits, which
+ *   is the one difference a program can SEE on an instruction both parts
+ *   have. A breadboard 80188 is the reason this exists: same ISA, eight-bit
+ *   bus, and nothing else in this file changes.
  * @property {Array<{kind: 'ram'|'rom', start: number, end: number}>} regions
  *   inclusive PHYSICAL address ranges in the 1 MB space
  * @property {Array<{kind: 'ppi'|'uart16550'|'acia6850'|'pit'|'pic'|'usart8251',
@@ -489,6 +495,7 @@ export class I8086Machine {
             this._speakers.push({ spk, ppi: c.ppi, port: c.port ?? 'b' });
         }
 
+        this.variant = config.variant || '8086';
         this.cpu = new I8086({
             read: (a) => this._read(a),
             write: (a, v) => this._write(a, v),
@@ -498,7 +505,7 @@ export class I8086Machine {
             // starve the timer -- and so the 8086's mid-REP segment-override
             // erratum has something to happen to.
             intPending: () => !!(this._pic && this._pic.intActive),
-        });
+        }, { variant: this.variant });
     }
 
     /** The tone the speaker is producing, if any. {hz, on} or null. */
