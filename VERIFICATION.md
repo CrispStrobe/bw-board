@@ -158,6 +158,21 @@ Testing for the absence of the specific wrong thing catches only the wrong
 thing you already thought of. Asserting what something IS catches the whole
 class of errors, including the one nobody imagined.
 
+**A constant measured at one operating point is a symptom.** Found 2026-09-04,
+in a test written the same morning by the person writing this rule:
+`test/adc0809.test.mjs` asserted `convCycles === 500`, with a comment directly
+above it explaining the derivation — *"64 clocks; at 640 kHz against a 5 MHz
+CPU that is 500 cycles"*. The **source** was right and scales properly. The
+**test** pinned the arithmetic's answer at one CPU clock and never the
+arithmetic, so replacing the whole derivation with a literal `500` left it
+green: a 10 MHz machine then converted in 50 µs, where a real ADC0809 takes
+100 µs whatever processor sits beside it.
+
+The invariant is *"a conversion takes ~100 µs"*, and it is now asserted at
+three clocks including the XT's awkward 4.772727 MHz. The tell was in plain
+sight: **a comment that explains where a number came from is describing an
+invariant the test next to it is not checking.**
+
 In this engine:
 - `getWarnings()` documents all five warning types it can emit. The UI
   asserts against the published list, not against the absence of a specific

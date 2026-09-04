@@ -45,6 +45,18 @@ test('a conversion takes real time, and reading early gives the PREVIOUS result'
     const adc = new ADC0809(5_000_000);
     assert.equal(adc.convCycles, 500);
 
+    // 500 IS A SYMPTOM; THE INVARIANT IS 100 us. Pinning the constant at one
+    // CPU clock cannot see a regression that hardcodes it -- a 10 MHz machine
+    // would then convert in 50 us, and a real 0809 takes 64 clocks of its OWN
+    // 640 kHz oscillator whatever processor sits beside it. So assert the
+    // relationship the comment above describes, at three clocks including the
+    // XT's awkward 4.772727 MHz.
+    for (const hz of [5_000_000, 10_000_000, 4_772_727]) {
+        const us = new ADC0809(hz).convCycles / hz * 1e6;
+        assert.ok(Math.abs(us - 100) < 0.5,
+            `at ${hz} Hz a conversion takes ${us.toFixed(1)} us, not ~100`);
+    }
+
     adc.setChannel(0, 5.0);
     adc.write(0);
     adc.advance(adc.convCycles);
