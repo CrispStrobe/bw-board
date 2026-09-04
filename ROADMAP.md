@@ -1649,7 +1649,17 @@ the contract rather than migrated onto it.
    a pitch, which is the case the arity rule was sharpened for and the proof
    that the two contracts are genuinely independent rather than one being
    derived from the other.
-5. **The OPL**, and only then is the ymfm/DMXOPL/LittleMUS chain vendored.
+5. **The OPL — DONE 2026-09-04** (`src/ym3812.js`), **and the ymfm chain is
+   NOT vendored after all.** The decision is recorded in that file's header
+   and it reverses this entry's assumption: ymfm is C++ and this engine is
+   JavaScript, so a "vendoring" would be a TRANSLATION — a derivative work
+   just as a copy is. The property §E6's table calls *the only reason the tier
+   can ship inside a BSD-3 bundle* is lost either way, and a careful
+   translation costs about what writing it costs. So the OPL2 is clean-room
+   from the YM3812 datasheet and **ymfm stays an ORACLE rather than a source**,
+   which is the role this tier has always preferred and the more valuable of
+   the two. DMXOPL's patch set and LittleMUS's sequencer are unaffected: both
+   are data and MIT, and neither is a translation of anything.
 
 #### E6.8.12 MicroCoreLabs — not a feature diff, a set of directions
 

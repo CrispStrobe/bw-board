@@ -50,6 +50,7 @@ import { EGACard } from './ega-card.js';
 import { I8237 } from './i8237.js';
 import { UPD765 } from './upd765.js';
 import { SBDSP } from './sb-dsp.js';
+import { YM3812 } from './ym3812.js';
 import { AudioBus } from './audio-bus.js';
 
 /** The interrupt flag bit in FLAGS — the machine's gate on INTR delivery. */
@@ -110,6 +111,10 @@ const REGS = {
     // read-status 2xEh. The OPL at 388h is a SEPARATE chip and a separate
     // decode, not part of this window.
     sb: 16,
+    // The OPL2 is TWO ports at 388h/389h, and it is a SEPARATE chip from the
+    // Sound Blaster's 2x0h block even on a card that carries both -- which is
+    // why it is its own kind and its own decode rather than a wider `sb`.
+    opl2: 2,
 };
 
 /**
@@ -480,6 +485,8 @@ export class I8086Machine {
                     onTerminalCount: (ch) => { if (this.hooks.onDmaComplete) this.hooks.onDmaComplete(c.name, ch); },
                     onHrq: (active) => { if (this.hooks.onDmaRequest) this.hooks.onDmaRequest(c.name, active); },
                 });
+            } else if (c.kind === 'opl2') {
+                chip = new YM3812();
             } else if (c.kind === 'sb') {
                 // The DSP counts MACHINE cycles, so it is told which clock it
                 // is counting rather than guessing -- the lesson the AY's own
@@ -952,9 +959,16 @@ export class I8086Machine {
     }
 
     _advanceChips(n) {
+        // The OPL runs on its OWN 3.58 MHz crystal and generates at
+        // clock/72, so it is advanced in MILLISECONDS of emulated time rather
+        // than in machine cycles -- the same distinction the AY's crystal
+        // taught this fleet, expressed as a different method name so the two
+        // cannot be confused at a call site.
+        const ms = n * 1000 / this.clockHz;
         for (const name of Object.keys(this.chips)) {
             const chip = this.chips[name];
-            if (chip.advance) chip.advance(n);
+            if (chip.advanceMs) chip.advanceMs(ms);
+            else if (chip.advance) chip.advance(n);
         }
         if (this.devices) {
             for (const name of Object.keys(this.devices)) {
