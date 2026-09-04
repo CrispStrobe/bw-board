@@ -93,3 +93,65 @@ test('inputs are per-BIT, so one switch does not disturb its neighbours', () => 
     t.setInput('ppi1', 'a', 2, 1);
     assert.equal(m._in(0x60), 0xdf, 'releasing one leaves the other held');
 });
+
+// ---------------------------------------------------------------------------
+// The other direction: what the world can SEE
+// ---------------------------------------------------------------------------
+
+test('an output port reports value, direction AND pins, and all three are needed', () => {
+    // `value` is what the chip DRIVES. `dir` is which bits it drives at all.
+    // `pins` is what the wires actually carry -- the latch where the chip
+    // drives, the input elsewhere.
+    //
+    // Value alone would light an LED on a bit configured as an INPUT, which is
+    // a lamp for a wire the chip is not driving. That is not a rendering
+    // nicety: a program that reconfigures a port mid-run would leave lamps lit
+    // for bits it no longer controls.
+    const m = new I8086Machine(PCXT8086);
+    const t = createI8086DebugTarget({ machine: m });
+
+    m._out(0x63, 0x80);                       // mode 0, every port an OUTPUT
+    m._out(0x60, 0b10100101);
+    const a = t.outputs().find((o) => o.port === 'a');
+    assert.equal(a.value, 0b10100101, 'the latch holds what was written');
+    assert.equal(a.dir, 0xff, 'and the chip drives all eight');
+    assert.equal(a.pins, 0b10100101, 'so the pins carry the latch');
+
+    // Now make port A an INPUT. The latch is CLEARED by the mode word -- a
+    // real 8255 does that, and it is why an LED goes dark for the instant
+    // between configuring a chip and writing to it.
+    m._out(0x63, 0x90);                       // mode 0, port A now an input
+    const b = t.outputs().find((o) => o.port === 'a');
+    assert.equal(b.dir, 0x00, 'the chip drives nothing on port A now');
+    assert.equal(b.pins, 0xff, 'and the pins read the undriven bus, not the old latch');
+});
+
+test('a machine with no port chip declares no outputs either', () => {
+    const bare = new I8086Machine({
+        clockHz: 4_772_727,
+        regions: [{ kind: 'ram', start: 0, end: 0x9ffff }],
+        chips: [{ kind: 'cga', name: 'cga1', at: 0x3d0 }],
+    });
+    const t = createI8086DebugTarget({ machine: bare });
+    assert.deepEqual(t.capabilities().outputs, [], 'nothing to show');
+    assert.deepEqual(t.outputs(), [], 'and nothing to read');
+});
+
+test('capabilities lists the SHAPE and outputs() reports the STATE', () => {
+    // The distinction that stops a renderer reading a photograph: which ports
+    // exist does not change, so it belongs in capabilities; what they are
+    // doing changes every instruction, so it must be asked for per frame.
+    const m = new I8086Machine(PCXT8086);
+    const t = createI8086DebugTarget({ machine: m });
+    const caps = t.capabilities().outputs;
+    assert.ok(caps.length > 0);
+    for (const c of caps) {
+        assert.deepEqual(Object.keys(c).sort(), ['bits', 'chip', 'port'],
+            'a capability carries no VALUE -- one captured there would be stale by the '
+            + 'time anything rendered it');
+    }
+    m._out(0x63, 0x80);
+    m._out(0x61, 0x42);
+    assert.equal(t.outputs().find((o) => o.port === 'b').value, 0x42,
+        'while outputs() reflects the write immediately');
+});
