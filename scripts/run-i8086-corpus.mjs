@@ -112,6 +112,22 @@ const EMU = flag('--emu8086');
 // machine checks its windows in order, so those three keep their ports and
 // emu8086 keeps the rest -- the two can be used together.
 const XT = flag('--xt');
+// --pic is an EXPERIMENT, not a bench change: it adds an 8259 at 20h and wires
+// the PIT's OUT0 to IRQ0, which is what an ISR-driven feature (software PWM,
+// `WHEN <pin> pressed`) would need and what DOSBOX8086_XT deliberately has
+// not got. It exists so the cost of that change can be MEASURED against the
+// corpus before anyone decides to make it, rather than discovered afterwards.
+// The observable difference to a program is that 20h-21h stop being open bus.
+const PIC = flag('--pic');
+const XT_WITH_PIC = Object.freeze({
+    ...DOSBOX8086_XT,
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 },
+        { kind: 'pcspeaker', name: 'spk', ppi: 'ppi1', pit: 'pit1' },
+    ],
+});
 // Keystrokes handed to any program that asks. `\r` and `\n` are the two
 // escapes worth having; everything else is literal.
 const TYPE = (value('--type', '') || '').replace(/\\r/g, '\r').replace(/\\n/g, '\n');
@@ -341,7 +357,7 @@ function runOne(name, raw, key, from = null) {
         }
     }
 
-    const m = new I8086Machine(XT ? DOSBOX8086_XT : DOSBOX8086);
+    const m = new I8086Machine(XT ? (PIC ? XT_WITH_PIC : DOSBOX8086_XT) : DOSBOX8086);
     let emu = null;
     let dos;
     try {

@@ -2273,6 +2273,36 @@ would hand callers a contract they had to type-test — the thing `audioTone()`
 already refuses to do by always returning an array. An empty list means NO
 analog output, which is not the same as an output sitting at zero.
 
+**THE PIC, PRICED (2026-09-04).** `setpwm` done honestly and `WHEN <pin>
+pressed` both want interrupt delivery, and `DOSBOX8086_XT` has no 8259 and no
+`irq` key on its PIT. The machine already implements the whole path — 8259,
+PIT OUT0, IVT, IF, EOI — so what is missing is two lines of config, not an
+implementation, and `test/i8086-isr-pwm.test.mjs` proves it: IRQ0 arrives,
+PWM from the tick hits 0/25/50/75/100 % within one point, and the main loop
+keeps running (~13 800 iterations at every duty), which is the property a busy
+loop cannot have.
+
+The cost was MEASURED before proposing the change, not after. `--pic` on
+`run-i8086-corpus.mjs` builds the candidate preset; both arms over the 525
+programs:
+
+    baseline (--xt)        517 EXITED, 8 LOOPING, peak RSS 179 MB
+    candidate (--xt --pic) 517 EXITED, 8 LOOPING, peak RSS 179 MB
+    diff of the two reports: IDENTICAL
+
+So the only observable difference is the one predicted from the port map: 20h-21h
+stop being open bus, `IN 20h` goes `0xFF` -> `0x00`, and **no corpus program
+depends on it**. The `--pic` flag stays an experiment and the shipped preset is
+unchanged; the decision is now evidenced rather than argued, and i8086 has a
+third option in flight (a scheduled coroutine task, no PIC) that may make it
+unnecessary.
+
+MEASURE DUTY BY TIME, NOT BY INSTRUCTIONS. The ISR runs the same instruction
+count every tick whatever the duty and the pin holds its previous value while
+it does, so an instruction-weighted average is biased low: 25/50/75 read as
+24.0/48.6/74.1 by instruction and 24.7/49.5/74.9 by cycle. An LED integrates
+over time.
+
 **Still open:** the `settone` and `writepin` lowerings themselves (i8086 owns
 `pseudocode-8086.js`); software PWM from the tick; `whenpin`, which needs a PIC
 `DOSBOX8086_XT` deliberately omits; and the remaining `PART` vocabulary.
