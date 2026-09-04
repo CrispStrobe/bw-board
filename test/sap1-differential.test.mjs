@@ -19,6 +19,8 @@ import { join } from 'node:path';
 
 const WMV_DIR = '/mnt/volume1/code/8bit';
 const WMV_AVAILABLE = existsSync(join(WMV_DIR, 'simulator.py'));
+/** Generous for this simulator on an idle box; reachable under contention. */
+const PY_TIMEOUT_MS = 10000;
 
 /**
  * Run a program on the wmvanvliet simulator and return the register
@@ -56,10 +58,34 @@ for instr in range(${numInstructions}):
 
 print(json.dumps(trace))
 `;
-    const result = execFileSync('python3', ['-c', script], {
-        encoding: 'utf8',
-        timeout: 10000,
-    });
+    // A KILLED ORACLE IS NOT A DISAGREEING ONE. Uncaught, a timeout here
+    // surfaces as `Command failed: python3 -c ...` with no indication whether
+    // the reference simulator crashed, raised, or simply ran out of wall
+    // clock on a loaded box — and this test DID fail that way on 2026-09-04,
+    // alongside three JVM-backed ones, during a run on a machine whose swap
+    // was exhausted. Ten seconds is generous for this simulator and reachable
+    // when four `node --test` workers share four cores.
+    //
+    // Still a FAIL and not a skip: a check that could not run has not passed.
+    // What changes is that it names which failure it is. Same treatment as
+    // test/sap1-digital-parity.test.mjs.
+    let result;
+    try {
+        result = execFileSync('python3', ['-c', script], {
+            encoding: 'utf8',
+            timeout: PY_TIMEOUT_MS,
+        });
+    } catch (e) {
+        const killed = e.killed === true || e.signal === 'SIGTERM' || e.code === 'ETIMEDOUT';
+        if (killed) {
+            throw new Error(
+                `ENVIRONMENT, NOT THE SIMULATOR — the wmvanvliet reference was killed after `
+                + `${PY_TIMEOUT_MS / 1000}s. That is a loaded machine, not a disagreement. `
+                + 'Check `free -m` AND `swapon --show`, then re-run this file alone.');
+        }
+        throw new Error(`the wmvanvliet reference failed to run: `
+            + `${((e.stderr || '') || e.message).toString().trim().slice(0, 400)}`);
+    }
     return JSON.parse(result.trim());
 }
 
