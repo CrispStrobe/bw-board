@@ -278,6 +278,32 @@ export const TIMERDEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The Hercules display board — the mono-graphics member of the display-demo
+ * set (ROADMAP E7.1). An 8086, 64K RAM, the HGC mono page mapped at B000:0000,
+ * a Hercules card at 3B0-3BFh, and a 32K ROM. Load rom/hercules-demo.bin
+ * (scripts/build-hercules-demo.mjs) and it sets HGC graphics mode and fills the
+ * 720x348 mono framebuffer with vertical bars.
+ *
+ * NOTE (2026-09-04): the firmware and the card STATE are verified, but the
+ * DOS/host renderer does NOT yet decode HGC — its videoFrame() refuses mode 6h
+ * by name ("Hercules graphics is 720x348 mono at B0000h, which this renderer
+ * does not draw"). So this board is not yet wired into the Machine-Loader: it
+ * would show a refusal string, not a picture. It ships as verified state now,
+ * ready for when the renderer's four-bank (y mod 4, 8KB banks) decode lands.
+ */
+export const HERCDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb0000, end: 0xb7fff },   // the HGC mono page (B000:0000) — 32K, four 8K banks
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'hercules', name: 'hgc1', at: 0x3b0 },   // Hercules at 3B0-3BFh (mono page at B000:0000)
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
