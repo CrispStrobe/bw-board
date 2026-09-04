@@ -38,8 +38,17 @@ function findGalleryDir() {
 }
 const galleryDir = findGalleryDir();
 const GALLERY = join(galleryDir, 'e4-via-blink.json');
-const RESEATED = join(galleryDir, 'e4-reseated-8086.json');
-const RESEATED_WRONG = join(galleryDir, 'e4-reseated-8086-wrongport.json');
+// The reseated circuits live in a gallery/reseat/ subdir (kept out of the flat
+// gallery so the 6502 stage/corpus discovery there doesn't pick up these 8086
+// boards). Resolve from the subdir OR the flat gallery, since which one a given
+// bw-circuit-ui checkout has depends on whether it carries the subdir move yet.
+const reseatedFixture = (name) => {
+    const sub = join(galleryDir, 'reseat', name);
+    try { if (statSync(sub).isFile()) return sub; } catch { /* fall back to flat */ }
+    return join(galleryDir, name);
+};
+const RESEATED = reseatedFixture('e4-reseated-8086.json');
+const RESEATED_WRONG = reseatedFixture('e4-reseated-8086-wrongport.json');
 const BLINK_ROM = new Uint8Array(readFileSync(join(here, '..', 'rom', 'blink-demo.bin')));
 
 // ---- the original: e4-via-blink (6502), paired with the baseline program ----
