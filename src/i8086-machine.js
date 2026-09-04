@@ -304,6 +304,31 @@ export const HERCDEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The VGA display board — the 256-colour member of the display-demo set
+ * (ROADMAP E7.1), and the one the DOS/host renderer already draws today (it
+ * decodes mode 13h / vga8). An 8086, 64K RAM, the mode-13h framebuffer mapped
+ * at A000:0000 (320x200 linear, one byte a pixel), a VGA card at 3C0-3DFh, and
+ * a 32K ROM. Load rom/vga-demo.bin (scripts/build-vga-demo.mjs) and it programs
+ * mode 13h, sets a DAC palette, and writes a picture into A0000 — which
+ * VdpScreen renders in colour, no BIOS.
+ *
+ * This is the first display board besides CGA whose renderer decode ships:
+ * mode 13h is a LINEAR framebuffer with no bank interleave, so it is the
+ * simplest of the graphics modes to fill and the most colourful payoff.
+ */
+export const VGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xa0000, end: 0xaffff },   // the mode-13h framebuffer (A000:0000), 64K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'vga', name: 'vga1', at: 0x3c0 },        // VGA register block at 3C0-3DFh
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
