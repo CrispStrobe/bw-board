@@ -1612,10 +1612,35 @@ research problem**, and it is a much smaller thing than "write a
 cycle-accurate CPU" — the EU timing we already have, graded at 646,000
 vectors; only the bus scheduler is missing.
 
-**Route, restated with the cost known:** close the 47 points to the 83.4%
-ceiling with the closed form (no new machinery), then implement the five
-states above to pass it. Nothing about this needs microcode-level emulation,
-which is the part of MartyPC that would be a genuine rewrite.
+**AND THE FIVE STATES ARE NECESSARY BUT NOT SUFFICIENT — corrected before it
+became a plan.** The paragraph here first said "nothing about this needs
+microcode-level emulation". Checking rather than asserting: MartyPC advances
+time with `cycles_i(cycles, instr)` — a MICROCODE INSTRUCTION LIST — and its
+BIU comments describe SUSP and FLUSH as *microcode routines*. Its EU yields
+the bus at microcode-defined points, which is how the scheduler knows WHEN the
+EU claims it.
+
+Ours does not have that. **Our EU timing is a single integer per instruction**
+(`return 25;`), graded at 646,000 vectors for its total but carrying no
+schedule of when within those 25 cycles each access is issued. The measured
+consequence is visible directly: the CODE-fetch count is NOT determined by
+(queue, length, data) — `q 4, len 2, no data` yields **1, 2 or 3** code
+fetches for identical inputs — because how many prefetches fit depends on
+where the EU's own bus claims fall.
+
+So the honest decomposition of the owner's ">95%" is:
+
+```
+36.5% -> 83.4%   a better closed form            no new machinery
+83.4% -> >95%    BIU state machine (5 states)
+                 PLUS per-opcode EU micro-timing  <- the real cost
+```
+
+The second line is not "write a bus scheduler". It is "give every opcode a
+cycle SCHEDULE rather than a cycle COUNT", which is the microcode-level work
+this entry has twice said was not needed. It is a real and legitimate project;
+it is not a refinement of what exists, and saying so now is cheaper than
+discovering it three days in.
 
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
