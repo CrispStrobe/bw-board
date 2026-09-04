@@ -1504,6 +1504,99 @@ that decision affects the Z80 and 6502 tiers too, which is why it belongs in
 the roadmap rather than in a commit. **Scope it as an engine-wide audio
 change, not as a sound card.**
 
+#### E6.8.11a The second audio contract — a design for all three tiers (owner-assigned 2026-09-04)
+
+E6.8.11 said audio was blocked on a decision nobody owned. The owner has
+settled that: **we own audio across all three tiers**, so this is the design.
+
+**WHAT EXISTS TODAY, surveyed rather than remembered.** One contract,
+`audioTone()`, with three producers and one consumer:
+
+| | shape | |
+| --- | --- | --- |
+| `pc-speaker.js` | `{hz, on}` | 8254 counter 2 through 8255 port B |
+| `zx-ula.js` | `{hz, on}` | the ZX beeper |
+| `ay-3-8912.js` | `[{hz, on, vol}, …]` | three channels — **an array, not an object** |
+| 6502 tier | *nothing* | no audio producer at all |
+
+The consumer is `CircuitDesigner.jsx`: a `requestAnimationFrame` poll of
+`debugState.audio()` into `updateBuzzerAudio()`, which drives a Web Audio
+oscillator. So the installed base is **one oscillator polled at frame rate**,
+and that is worth knowing before designing, because it means we are far less
+constrained than "an existing audio system" would suggest.
+
+**THE TWO CONTRACTS ANSWER DIFFERENT QUESTIONS, and that is the whole design.**
+The instinct is to replace the tone contract with samples. That would be
+wrong. `audioTone()` answers *what is the hardware CONFIGURED to produce* —
+it is exact, it costs nothing, and it is what a teaching UI wants to show
+("this counter is set to 440 Hz"). A sample stream answers *what does it
+SOUND like*. Deriving the first from the second would make a breadboard
+buzzer expensive and would lose the exactness. **Both stay, declared through
+the same capability vocabulary `steps` and `breakpoints` already use:**
+
+```
+capabilities().audio -> ['tone']              a buzzer, a beeper
+capabilities().audio -> ['tone', 'samples']   an OPL, an SB, an AY, a SID
+```
+
+**THE SAMPLE CONTRACT.** Pull-based, at the chip:
+
+```js
+/** Fill `dest` with `frames` mono samples in [-1,1] for the emulated time
+ *  they represent. Returns frames written. The CHIP owns the rate
+ *  conversion, because only it knows its own clock. */
+renderAudio(dest /* Float32Array */, frames, sampleRate) -> number
+```
+
+Three decisions in that signature, each with a reason from this codebase
+rather than from convention:
+
+1. **PULL, NOT PUSH, AND EMULATED TIME, NOT WALL TIME — and E6.8.4's
+   benchmark is why.** We measured this engine at **0.7×–1.4× real time on a
+   real DOS boot**, jittering run to run. Any audio design that assumes
+   emulated time tracks wall time will underrun and overrun audibly, on our
+   own measured numbers. So a chip renders the audio for the emulated time it
+   has actually executed, a ring buffer at the machine level absorbs the
+   jitter, and the host drains it. This is a constraint we measured, not one
+   we inherited.
+2. **Mono `Float32Array` in [-1,1] as the lingua franca.** A PC has a speaker
+   AND possibly an OPL AND an SB at once; a ZX has a beeper AND an AY. The
+   mixer sums at the machine level. Stereo is a channel count added later, not
+   now.
+3. **Zero cost when nobody is listening.** `renderAudio` is called only when a
+   sink is attached — the same rule `syncWriteTrap` and the E6.8.3 hooks
+   follow, and the same lesson E6.8.4a just taught about per-instruction cost.
+
+**HOW IT GETS GRADED, which is the part that makes this ours rather than
+generic. THE TWO CONTRACTS MUST AGREE.** If `audioTone()` says 440 Hz, the
+stream from `renderAudio()` must measure 440 Hz — count zero crossings, or run
+a Goertzel filter at the claimed frequency. That is a cross-check between two
+independently written paths inside one chip, which is the discipline §8 of the
+core plan already records for the CGA pixel layout: *"the pixel layout is
+written twice and cross-checked… sharing the code would have been less work
+and would have caught nothing."* It catches the exact failure mode a sample
+path invites — the tone math and the synthesis math drifting apart — and it
+needs no external oracle. For an OPL specifically, `ymfm` (BSD-3) is available
+as a second one.
+
+**KNOWN WART, and it should be fixed under this rather than inherited by it:**
+`audioTone()` returns an OBJECT from the speaker and the ULA and an ARRAY from
+the AY, so every consumer already has to discriminate and the one that exists
+does not. The fix is for the contract to be an array always, with a
+single-voice device returning one element — but that breaks
+`updateBuzzerAudio(id, tone)`, so it is a named migration and not a silent
+change.
+
+**ORDER.** The contract and the mixer first, with the speaker and the AY as
+its first two producers and the tone/sample agreement test as its gate —
+those are chips we already have, so the contract gets exercised before
+anything new is built on it. The SB DSP next (E6.8.11: our 8237 and 8259 do
+the work). The OPL after that, and only then does the ymfm/DMXOPL/LittleMUS
+chain from E6.8.11 get vendored. **A 6502-tier producer is the proof the
+contract is not 8086-shaped** — that tier has none today, so whatever is
+added there is written against this contract from the start rather than
+migrated onto it.
+
 #### E6.8.12 MicroCoreLabs — not a feature diff, a set of directions
 
 `MicroCoreLabs/Projects` (Ted Fried) has **no LICENSE file anywhere** — not at
