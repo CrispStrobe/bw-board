@@ -187,6 +187,17 @@ between trees by hand is the same hazard with extra steps.
       reassuring number and the dangerous condition had the same cause. A
       comfortable `free -m` with a full swap line is not a box that is coping;
       it is a box that has already spent its reserve to produce that comfort.
+    - **THE RATIO IS THE POINT, and a second sweep made it quantitative.** Six
+      sessions holding about 180 MB of RESIDENT memory released **1926 MB** of
+      headroom when ended — roughly ten to one, because nearly all of what they
+      held had been paged out over four to nine days detached:
+
+          sweep 1 (3 sessions, ~450 MB RSS):  1628 -> 3137 MB headroom
+          sweep 2 (6 sessions, ~180 MB RSS):  2088 -> 4014 MB headroom
+
+      So estimating the value of pruning from `ps` RSS understates it by about
+      an order of magnitude, which is exactly the arithmetic that makes an idle
+      session look too small to bother ending.
   - **`screen -X quit` is not enough.** It removes the screen and ORPHANS the
     `claude` process, which is reparented to init and keeps its memory. All
     three survived it here, and one was still holding a Dart analysis server
