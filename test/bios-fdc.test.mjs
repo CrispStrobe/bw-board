@@ -77,30 +77,17 @@ const sectorBytes = (img, c, h, r) =>
 
 /**
  * SHIM -- and it is a shim for a defect in src/i8086-machine.js, not for
- * anything in this lane. See the test immediately below, which pins the
- * defect: the machine's DMA pump calls dma.transfer() without ever asserting
- * the channel's DREQ, and I8237.transfer() serves only a channel that is
- * requesting, so the pump moves zero bytes.
+ * anything in this lane.
  *
- * The uPD765's call to onDmaRequest IS the DRQ pulse, so translating it into
- * dma.dreq() is what the pump should do. Asserting it here as well is
- * harmless the moment the pump does it itself -- dreq() is idempotent -- so
- * this helper keeps working across the fix and does not have to be removed
- * in a hurry.
+ * THERE WAS A DREQ SHIM HERE AND IT IS GONE. The machine's DMA pump called
+ * dma.transfer() without ever asserting the channel's DREQ, so it moved zero
+ * bytes; this file wired the DREQ itself and everything passed. The shim was
+ * documented and deliberate, and it still made every test below a test of a
+ * machine that did not exist. The pump now asserts DREQ (i8086-machine.js),
+ * so the shim is deleted rather than kept as a harmless idempotent helper --
+ * because "harmless" was exactly what let it hide the defect it was working
+ * around.
  */
-function wireDreq(m, { fdc = 'fdc1', dma = 'dma1', channel = 2 } = {}) {
-    const chip = m.chips[fdc], ctrl = m.chips[dma];
-    const inner = chip.hooks.onDmaRequest;
-    assert.equal(typeof inner, 'function',
-        `the machine did not wire ${fdc}'s DMA request at all -- the fdc config needs dma: '${dma}'`);
-    chip.hooks.onDmaRequest = (dir, byte) => {
-        ctrl.dreq(channel, true);
-        const r = inner(dir, byte);
-        ctrl.dreq(channel, false);
-        return r;
-    };
-    return m;
-}
 
 /**
  * A machine that has run POST and is sitting at the top of INT 19h -- the
@@ -108,10 +95,9 @@ function wireDreq(m, { fdc = 'fdc1', dma = 'dma1', channel = 2 } = {}) {
  * and nothing booted yet. Stopping there rather than letting it boot is what
  * makes the machine reusable for injected programs.
  */
-function ready({ image = testImage(), dreq = true, writeProtect = false } = {}) {
+function ready({ image = testImage(), writeProtect = false } = {}) {
     const m = new I8086Machine(XTDISK);
     m.loadRom(rom.bytes);
-    if (dreq) wireDreq(m);
     if (image) m.chips.fdc1.insert(0, image, GEOM);
     m.chips.fdc1.setWriteProtect(0, writeProtect);
     m.reset();
@@ -159,43 +145,64 @@ function handshakeWasClean(m, what) {
 }
 
 // ---------------------------------------------------------------------------
-// The defect this file has to work around, pinned so it is not mistaken for
-// something in the BIOS.
+// The defect that was here, now inverted into the regression test for its fix.
 // ---------------------------------------------------------------------------
 
-test('MACHINE DEFECT: the DMA pump never asserts DREQ, so it moves nothing', () => {
-    // src/i8086-machine.js wires fdc.hooks.onDmaRequest -> dma.transfer(),
-    // but I8237.transfer() runs pendingChannel(), and a channel is pending
-    // only when `swRequest || (dreqLevel && !masked)`. Nothing sets
-    // dreqLevel: the pump never calls dma.dreq(). So transfer() returns 0,
-    // the pump returns false, and the uPD765 reads that as terminal count.
+test('the machine AS IT SHIPS moves bytes: the pump asserts DREQ itself', () => {
+    // This test used to assert the opposite, and it passed. The pump wired
+    // fdc.hooks.onDmaRequest -> dma.transfer(), but I8237.transfer() serves
+    // only pendingChannel(), and a channel is pending only when
+    // `swRequest || (dreqLevel && !masked)`. Nothing set dreqLevel, because
+    // nothing outside i8237.js ever called dma.dreq(). transfer() returned 0,
+    // the pump returned false, and the uPD765 read that as terminal count.
     //
-    // The result is the WORST shape a disk bug has: READ DATA reports a
+    // The result was the WORST shape a disk bug has: READ DATA reporting a
     // completely normal termination -- ST0/ST1/ST2 all zero, an interrupt
-    // raised, a full result phase -- having moved zero bytes.
-    const m = ready({ dreq: false });                  // the machine as it ships
+    // raised, a full result phase -- having moved nothing. The single trace in
+    // the entire result was byte 5, the sector it would do NEXT, still sitting
+    // on the one it started from. No BIOS reads that byte.
+    //
+    // NO SHIM. The machine is built from XTDISK and nothing here touches the
+    // FDC's hook, so the DREQ that makes this pass can only have come from the
+    // pump. That is the whole point: if the pump stops driving it, this fails.
+    const m = ready();
     m.mem.fill(0xee, 0x5000, 0x5200);
     run(m, CALL13(' mov ax, 0201h\n mov cx, 0001h\n xor dx, dx\n mov bx, 5000h'));
 
-    assert.equal(m.chips.dma1.channels[2].curCount, 0x01ff,
-        'the 8237 word counter never moved: not one byte was transferred');
-    assert.equal(m.mem[0x5001], 0xee, 'and the buffer still holds what was in it');
-    // The controller's own result phase says the command went fine. Byte 5
-    // is the sector it would do NEXT, and it is still the one it started on
-    // -- the single trace in the whole result, and no BIOS reads it.
-    assert.equal(m.mem[BDA + 0x42], 0x00, 'ST0 says normal termination');
-    assert.equal(m.mem[BDA + 0x42 + 5], 0x01, 'and R never advanced past sector 1');
+    assert.notEqual(m.chips.dma1.channels[2].curCount, 0x01ff,
+        'the 8237 word counter moved: the transfer actually ran');
+    assert.notEqual(m.mem[0x5001], 0xee,
+        'and the buffer no longer holds what was in it before the read');
 
-    // The BIOS catches it anyway, by asking the 8237 whether its terminal
-    // count ever fired. Without that check this read returns CF=0, AH=00h.
     const r = result(m);
-    assert.equal(r.cf, 1, 'the BIOS refused the transfer');
-    assert.equal(r.ah, 0x08, 'AH=08h, DMA overrun: the transfer did not complete');
+    assert.equal(r.cf, 0, 'the read succeeded');
+    assert.equal(r.ah, 0x00);
+});
 
-    // WHEN THIS TEST FAILS, the pump has been fixed. The fix is one line in
-    // the pump -- dma.dreq(dmaChannel, true) before transfer() -- and when
-    // it lands this test should be replaced by its opposite and wireDreq()
-    // above becomes a no-op that can be deleted.
+test('the BIOS still refuses a transfer whose terminal count never fired', () => {
+    // The paranoid check stays after the bug that motivated it, and this is
+    // what keeps it honest. No IBM BIOS reads the 8237's status to confirm
+    // TC; ours does, because this lane has now watched a result phase lie --
+    // a normal termination over zero bytes moved. A check nothing drives is
+    // the defect this repo keeps finding, so it needs a real way to fail.
+    //
+    // DISABLING THE CONTROLLER, not masking the channel. Masking was the
+    // obvious choice and it does not work: the BIOS unmasks channel 2 itself
+    // as part of programming the transfer, so the mask is gone before the
+    // read begins. The controller-disable bit in the command register
+    // survives, because the BIOS only ever READS port 08h (to check TC) and
+    // never writes it. That is also a scenario worth having: a disabled 8237
+    // is precisely "the transfer did not happen while the controller said it
+    // did".
+    const m = ready();
+    m.mem.fill(0xee, 0x5000, 0x5200);
+    m._out(0x08, 0x04);                       // command register: controller disable
+    run(m, CALL13(' mov ax, 0201h\n mov cx, 0001h\n xor dx, dx\n mov bx, 5000h'));
+
+    assert.equal(m.mem[0x5001], 0xee, 'nothing was transferred');
+    const r = result(m);
+    assert.equal(r.cf, 1, 'and the BIOS refused it rather than reporting success');
+    assert.equal(r.ah, 0x08, 'AH=08h, DMA overrun: the transfer did not complete');
 });
 
 // ---------------------------------------------------------------------------
@@ -717,7 +724,6 @@ test('INT 19h boots the machine off the real controller', () => {
 
     const m = new I8086Machine(XTDISK);
     m.loadRom(rom.bytes);
-    wireDreq(m);
     m.chips.fdc1.insert(0, image, GEOM);
     m.reset();
     let n = 0;

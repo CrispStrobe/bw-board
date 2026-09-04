@@ -818,11 +818,40 @@ outputs drive the address decode. It is an extractor change, not a part
 change. Nothing in the current corpus needs it — a boot sector and a DOS
 program never see the address pins.
 
-### E6.6 Tier C — PC/XT compatible (the expensive one)
-8237 DMA, 6845/CGA (mc6845.js already exists), µPD765 FDC and disk images,
-plus a BIOS and a DOS. Months, and a different product from "learn the 8086
-on a breadboard" — it should be started only when tiers A and B are shipped
-and a lesson actually needs it.
+### E6.6 Tier C — PC/XT compatible — LARGELY DONE (2026-09-04)
+
+**This entry said "months, and a different product ... start only when tiers A
+and B are shipped and a lesson actually needs it." It is left above in the git
+history rather than quietly rewritten, because the estimate being wrong is the
+interesting part: every piece it named as expensive turned out to be reachable
+once the ORACLES were in place.** The 646,000-vector suite, MASM 1.10 running
+inside our own emulator, and a genuine MS-DOS boot each removed a class of
+"is this right?" question that would otherwise have been answered by argument.
+
+Built, with evidence:
+
+| Piece | State |
+|---|---|
+| 8237 DMA + XT page latch | `src/i8237.js`, chip kinds `dma`/`dmapage`, transfer pump, 64K wrap erratum modelled |
+| µPD765 FDC | `src/upd765.js`, chip kind `fdc`, IRQ6 to the PIC, DMA channel 2 |
+| 6845/CGA, Hercules, VGA | `src/cga-card.js`, `hercules-card.js`, `vga-card.js` |
+| A BIOS | `rom/bios.asm` — ours, clean-room. POST, INT 10h/13h/16h/1Ah, a real DMA floppy driver |
+| A DOS | MS-DOS 2.0 boots to `A>` and runs `DIR`. Boot sector, IO.SYS and FAT12 all built by us; only MSDOS.SYS/COMMAND.COM/SYSINIT.OBJ are Microsoft's (MIT) |
+
+**Two independent disk paths reach the same nine boot landmarks with
+byte-identical screens** — the emulator's INT 13h service layer, and the BIOS
+driving a real µPD765 over the 8237. That differential immediately found a
+defect neither path's own tests could: the DMA pump moved zero bytes while
+reporting complete success.
+
+Speed, measured rather than claimed (`scripts/bench-i8086.mjs`): a real
+MS-DOS boot runs at **2.3x a 4.77 MHz IBM XT**, so real time has better than
+half the budget spare.
+
+STILL OPEN in Tier C: INT 10h graphics. Modes 4/5/6 set the mode byte and the
+CGA mode register and nothing else, and AH=0Ch/0Dh (write/read pixel) do not
+exist, so no program can draw. That is the one thing between here and running
+the MIT game corpora, and it is in progress.
 
 ### Licence rulings for the 8086 tier (verified 2026-09-03, expanded 2026-09-03, support-chip oracles added 2026-09-03)
 
@@ -946,6 +975,40 @@ human must read it before anything is adopted.
 ---
 
 ## E7 The 8086 in the Circuit Designer — an example that is a MACHINE, not a demo
+
+**STATUS 2026-09-04 — steps 1-4 and 9 are DONE; the numbered plan below is left
+intact because its dependency ORDER turned out to be the load-bearing part.**
+
+| Step | State |
+|---|---|
+| 1 engine readiness | DONE |
+| 2 bw-circuit-ui recognises the 8086 | DONE — support-chip lane, part + footprint + `extract8086Machine` |
+| 3 host wiring in `debug-runner.js` | DONE — `attachI8086()`, kind normaliser, lite `b1c69eeb1` |
+| 4 vendor the tier into lite | DONE — 20 modules, all imports resolve |
+| 5 UART shell | DONE for a machine that HAS a UART; the XT BIOS deliberately has none (see below) |
+| 6 display widget on `video()` | wired; **blocked on BIOS graphics** — nothing can draw a pixel yet |
+| 7 keyboard widget | scancodes reach the 8255 through IRQ1; exercised by the FDC boot test |
+| 8 GUI binary loading | in flight (program-list lane) |
+| 9 boot from disk | DONE — MS-DOS 2.0 boots two independent ways, byte-identical |
+
+**THE ORDER MATTERED AND IS WORTH KEEPING.** Step 3 before step 4 was not
+bookkeeping: lite's `no-dead-overlay-modules` gate refuses modules nothing
+imports, so vendoring first means arguing with the gate that exists to catch
+exactly this. Doing it in the stated order meant the gate had a real question to
+answer — and it answered one nobody had asked, naming `i8237.js` and `upd765.js`
+as unreachable. They were unreachable EVERYWHERE: the machine's chip factory had
+no `dma` or `fdc` kind, so no config in any repo could instantiate either, while
+both chips' own suites stayed green.
+
+**ONE ASSUMPTION IN THE ORIGINAL PLAN WAS WRONG.** It promised "a UART shell
+exactly like the Z80 and 6502 tiers". Our XT BIOS has no UART — deliberately:
+INT 14h is a stub and the equipment word reports no COM port, because the XT
+config has no 8250. Output is the CGA text page at B800:0000. So the BIOS
+example is a SCREEN-AND-KEYBOARD machine and `SerialConsole` does not attach to
+it; a UART shell is a separate board example with its own monitor ROM
+(SERIALSHELL8086, support-chip lane). Recorded because the plan's own wording
+would otherwise have someone wiring a console to a machine that cannot speak.
+
 
 The goal the owner set: drag an 8086 and its support chips onto the breadboard,
 Build Machine, and get a UART shell exactly like the Z80 and 6502 tiers — with

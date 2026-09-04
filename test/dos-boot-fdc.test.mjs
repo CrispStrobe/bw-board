@@ -75,23 +75,13 @@ const XTPC = Object.freeze({
 });
 
 /**
- * The DREQ the machine's DMA pump does not assert. See the pinned defect in
- * test/bios-fdc.test.mjs: I8237.transfer() serves only a channel that is
- * requesting, and the pump never calls dreq(), so unaided it moves zero
- * bytes while the controller still reports a normal completion. Asserting
- * DREQ here is what the pump should do and is idempotent if it starts doing
- * it, so this survives the fix.
+ * NO DREQ SHIM. There was one here: the pump did not assert the channel's
+ * DREQ, so this test asserted it instead and the boot worked. That made this
+ * file a test of a machine that did not exist -- it would have gone on passing
+ * if the pump had never moved a byte. The pump now drives DREQ itself
+ * (i8086-machine.js), the shim is deleted, and every sector below crosses the
+ * production path. If the pump regresses, this boot stops booting.
  */
-function wireDreq(m) {
-    const fdc = m.chips.fdc1, dma = m.chips.dma1;
-    const inner = fdc.hooks.onDmaRequest;
-    fdc.hooks.onDmaRequest = (dir, byte) => {
-        dma.dreq(2, true);
-        const r = inner(dir, byte);
-        dma.dreq(2, false);
-        return r;
-    };
-}
 
 /** US XT make codes for the keys this test presses. */
 const SCANCODE = { '\r': 0x1c, d: 0x20, i: 0x17, r: 0x13 };
@@ -150,7 +140,6 @@ function bootOnHardware() {
 
     const m = new I8086Machine(XTPC);
     m.loadRom(rom.bytes);
-    wireDreq(m);
     m.chips.fdc1.insert(0, built.image, {
         cylinders: GEOM.totalSectors / (GEOM.sectorsPerTrack * GEOM.heads),
         heads: GEOM.heads,
