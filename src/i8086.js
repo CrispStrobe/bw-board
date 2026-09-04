@@ -523,16 +523,16 @@ export class I8086 {
      *  one AFTER the failing instruction (the 286 changed this), which falls
      *  out naturally here because IP has already advanced. */
     _div8(src) {
-        if (src === 0) { this._interrupt(0); return; }
+        if (src === 0) { this._fault(0); return; }
         const q = Math.floor(this.ax / src), r = this.ax % src;
-        if (q > 0xff) { this._interrupt(0); return; }
+        if (q > 0xff) { this._fault(0); return; }
         this.al = q; this.ah = r;
     }
     _div16(src) {
-        if (src === 0) { this._interrupt(0); return; }
+        if (src === 0) { this._fault(0); return; }
         const n = this.dx * 65536 + this.ax;
         const q = Math.floor(n / src), r = n % src;
-        if (q > 0xffff) { this._interrupt(0); return; }
+        if (q > 0xffff) { this._fault(0); return; }
         this.ax = q & 0xffff; this.dx = r & 0xffff;
     }
     /** A REP prefix on IDIV NEGATES THE QUOTIENT. It is not a decode quirk
@@ -544,25 +544,25 @@ export class I8086 {
      *  BEFORE the flip -- that is the order the vectors show. */
     _idiv8(src) {
         const d = src & 0x80 ? src - 256 : src;
-        if (d === 0) { this._interrupt(0); return; }
+        if (d === 0) { this._fault(0); return; }
         const n = this.ax & 0x8000 ? this.ax - 65536 : this.ax;
         let q = Math.trunc(n / d);
         const r = n % d;
         // The range check is on the MAGNITUDE, so a quotient of exactly
         // -128 faults where -127..127 does not: the microcode compares an
         // absolute value against 0x7f and never sees the sign.
-        if (Math.abs(q) > 127) { this._interrupt(0); return; }
+        if (Math.abs(q) > 127) { this._fault(0); return; }
         if (this._rep) q = -q;
         this.al = q & 0xff; this.ah = r & 0xff;
     }
     _idiv16(src) {
         const d = src & 0x8000 ? src - 65536 : src;
-        if (d === 0) { this._interrupt(0); return; }
+        if (d === 0) { this._fault(0); return; }
         let n = this.dx * 65536 + this.ax;
         if (n >= 0x80000000) n -= 0x100000000;
         let q = Math.trunc(n / d);
         const r = n % d;
-        if (Math.abs(q) > 32767) { this._interrupt(0); return; }   // magnitude, as above
+        if (Math.abs(q) > 32767) { this._fault(0); return; }   // magnitude, as above
         if (this._rep) q = -q;
         this.ax = q & 0xffff; this.dx = r & 0xffff;
     }
@@ -629,7 +629,7 @@ export class I8086 {
             // a ZERO result -- ZF and PF set, SF, AF and CF clear -- while AX
             // itself is untouched, and INT 0 then pushes exactly that.
             this.flags = (this.flags & ~(CF | AF | OF | SF | PF)) | ZF | PARITY[0];
-            this._interrupt(0);
+            this._fault(0);
             return;
         }
         const al = this.al;
@@ -665,6 +665,42 @@ export class I8086 {
     /** Public entry for a machine-layer interrupt request. The caller owns
      *  the IF check and the acknowledge cycle; this just takes the vector. */
     interrupt(n) { this.halted = false; this._interrupt(n); }
+
+    /**
+     * A PROGRAM-INITIATED interrupt: INT n, INT3, INTO. Emits before taking
+     * it, so a debugger that breaks here sees the machine as the instruction
+     * left it rather than as the handler found it.
+     *
+     * WHY THIS IS NOT IN `_interrupt(n)`, which is where it obviously belongs
+     * and where it would be wrong. `_interrupt` is the SHARED funnel: the
+     * public `interrupt(n)` above routes hardware delivery through it too, so
+     * an emit there fires a second time for every IRQ and NMI the machine has
+     * already reported, and "break on INT 21h" starts tripping on the timer
+     * tick. The opcode handlers are the only sites a program's INT passes and
+     * a delivered IRQ does not. Verified rather than assumed — read
+     * `interrupt(n)` directly above and follow it down.
+     */
+    _swInt(n) {
+        this.onInterrupt?.({ vector: n, source: 'int' });
+        this._interrupt(n);
+    }
+
+    /**
+     * A FAULT the CPU raises on its own: divide overflow (0), the single-step
+     * trap (1), BOUND out of range (5, 186 only).
+     *
+     * Reported as `source: 'exception'` rather than folded into 'int',
+     * because "break when this divides by zero" and "break when the program
+     * calls INT 21h" are different questions asked for different reasons —
+     * the same argument that separates 'int' from 'irq'. A caller that wants
+     * them together can watch the vector and ignore the source; a caller that
+     * wants them apart cannot recover the distinction if we throw it away
+     * here.
+     */
+    _fault(n) {
+        this.onInterrupt?.({ vector: n, source: 'exception' });
+        this._interrupt(n);
+    }
 
     // ---- string primitives ----------------------------------------------
     /** The source of a string op takes a segment override; the destination
@@ -795,7 +831,7 @@ export class I8086 {
                 const idx = sx16(this._r16(this.reg));
                 const lo = sx16(this._rd16(this.eaSeg, this.ea));
                 const hi = sx16(this._rd16(this.eaSeg, (this.ea + 2) & 0xffff));
-                if (idx < lo || idx > hi) { this._interrupt(5); return 33 + c; }
+                if (idx < lo || idx > hi) { this._fault(5); return 33 + c; }
                 return 33 + c;
             }
 
@@ -970,7 +1006,7 @@ export class I8086 {
         // what lets a debugger's IRET resume tracing. HLT is left alone: a
         // halted CPU has not completed an instruction boundary in the sense
         // this trap is about, and waking it belongs to the machine layer.
-        if (traceThis && !this.halted && this.intShadow === 0) { this._interrupt(1); n += 51; }
+        if (traceThis && !this.halted && this.intShadow === 0) { this._fault(1); n += 51; }
 
         this.cycles += n;
         return n;
@@ -1150,9 +1186,9 @@ export class I8086 {
             case 0xc7: { const c = this._modrm(); this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
             case 0xc8: case 0xca: { const k = this._fetch16(); this.ip = this._pop(); this.cs = this._pop(); this.sp = (this.sp + k) & 0xffff; return 25; }
             case 0xc9: case 0xcb: this.ip = this._pop(); this.cs = this._pop(); return 26;
-            case 0xcc: this._interrupt(3); return 52;
-            case 0xcd: { const v = this._fetch8(); this._interrupt(v); return 51; }
-            case 0xce: if (this.flags & OF) { this._interrupt(4); return 53; } return 4;
+            case 0xcc: this._swInt(3); return 52;
+            case 0xcd: { const v = this._fetch8(); this._swInt(v); return 51; }
+            case 0xce: if (this.flags & OF) { this._swInt(4); return 53; } return 4;
             case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = fixFlags(this._pop()); return 24;
 
             // ---- 0xd0-0xd7: shift group, BCD by immediate, SALC, XLAT ----

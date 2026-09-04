@@ -137,6 +137,56 @@ function modeFromCga(mode) {
  *   recorded. `videoOpts` passes the mode-control latches (palette,
  *   background, DAC) through to the renderer.
  */
+/**
+ * Turn an `assemble()` result into the LINEAR-address label map the
+ * disassembler and the breakpoint layer both speak.
+ *
+ * This is a separate function rather than something the target does, because
+ * the target cannot do it alone: a symbol table records offsets within
+ * SEGMENTS, and a segment does not know where it was loaded. The load
+ * paragraph is the caller's fact — it comes from the loader, not the
+ * assembler — so the arithmetic lives in one testable place instead of being
+ * half-done in two.
+ *
+ * TWO KINDS ARE EXCLUDED, and the first is the same distinction the
+ * disassembler had to make on the same day:
+ *
+ *   - `equ` is a CONSTANT, not an address. `BUFSIZE equ 1234h` names a
+ *     number, and admitting it would put `BUFSIZE` in front of whatever
+ *     happens to live at 1234h. That is the `mov ax, 1234h` bug wearing a
+ *     different hat: a map built from constants invents cross-references,
+ *     and a reader cannot tell an invented one from a real one.
+ *   - `segment` names a paragraph, which is not an address in a
+ *     byte-addressed map at all.
+ *
+ * `code` and `data` are both kept — a data label in front of
+ * `mov ax, [counter]` is as useful as a code label in front of a `jmp`, and
+ * the disassembler already labels the direct memory forms.
+ *
+ * WHERE TWO NAMES LAND ON ONE ADDRESS the first in sorted order wins, so the
+ * map is deterministic across runs rather than dependent on insertion order.
+ * That collision is legitimate — a procedure label and the first datum of the
+ * next segment can coincide — so it is resolved, not treated as an error.
+ *
+ * @param {{ symbols?: Map<string, object> }} result — an `assemble()` return
+ * @param {{ loadSeg?: number }} [opts] — the paragraph the image was loaded at
+ *   (a .COM's PSP segment, an .EXE's load segment). Default 0.
+ * @returns {Map<number, string>} linear address → the symbol's own spelling
+ */
+export function labelsFromAssembly(result, opts = {}) {
+    const loadSeg = (opts.loadSeg ?? 0) & 0xffff;
+    const out = new Map();
+    const rows = [...(result?.symbols ?? new Map()).values()]
+        .filter((sym) => sym && (sym.kind === 'code' || sym.kind === 'data'))
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    for (const sym of rows) {
+        const para = (loadSeg + (sym.seg?.para ?? 0)) & 0xffff;
+        const addr = ((para << 4) + ((sym.value ?? 0) & 0xffff)) & 0xfffff;
+        if (!out.has(addr)) out.set(addr, String(sym.name));
+    }
+    return out;
+}
+
 export function createI8086DebugTarget(adapter, opts = {}) {
     const machine = adapter.machine;
     const cpu = machine.cpu;
@@ -145,6 +195,8 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     let pendingStep = null;
     const haltListeners = [];
     const breakpoints = new Map();
+    /** Linear address -> symbol name, or null. See setSymbols(). */
+    let labels = null;
     let nextBpId = 1;
     const halt = (info) => { runState = 'halted'; for (const cb of haltListeners) cb(info); };
 
@@ -155,6 +207,45 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const writeWatches = new Map();     // id → { addr, len }
     let watchHit = null;
     let origWrite = null;
+    /** Port and interrupt breakpoints, and the pending hit either can leave. */
+    const portWatches = new Map();
+    const intWatches = new Map();
+    let eventHit = null;
+
+    /**
+     * Attach or detach the machine's observation hooks, exactly as
+     * syncWriteTrap does for cpu.write: present only while something is
+     * watching, so an unwatched machine pays one null check per IN/OUT and
+     * nothing per instruction.
+     *
+     * A PORT READ IS DESTRUCTIVE, which is why readMem() refuses the I/O
+     * space outright (see the module header). These hooks observe the access
+     * the PROGRAM makes and never perform one — the machine hands us the
+     * value it already returned to the program, and on an `in` it does so
+     * AFTER the read, so what a watcher sees is what the device actually
+     * gave up rather than what it was about to.
+     */
+    const syncEventHooks = () => {
+        machine.hooks.onPortAccess = portWatches.size
+            ? (ev) => {
+                for (const [id, w] of portWatches) {
+                    if (w.port !== (ev.port & 0xffff)) continue;
+                    if (w.dir && w.dir !== ev.dir) continue;
+                    eventHit = { cause: 'port', bp: id, ...ev };
+                }
+            }
+            : null;
+        machine.hooks.onInterrupt = intWatches.size
+            ? (ev) => {
+                for (const [id, w] of intWatches) {
+                    if (w.vector != null && w.vector !== ev.vector) continue;
+                    if (w.source && w.source !== ev.source) continue;
+                    eventHit = { cause: 'interrupt', bp: id, ...ev };
+                }
+            }
+            : null;
+    };
+
     const syncWriteTrap = () => {
         if (writeWatches.size && !origWrite) {
             origWrite = cpu.write;
@@ -199,7 +290,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         capabilities() {
             return {
                 steps: ['insn', 'over', 'out'],
-                breakpoints: ['code', 'write'],
+                // 'port' and 'int' are declared only because the machine can
+                // actually observe them. They rest on machine.hooks, which the
+                // machine layer owns; a target wired to a machine without them
+                // would be advertising a control that silently never fires,
+                // which is the same reason `steps` does not list 'cycle'.
+                breakpoints: machine.hooks
+                    ? ['code', 'write', 'port', 'int']
+                    : ['code', 'write'],
                 timeFreezes: true,
                 consumes: [],
                 // Declared only when the machine can actually take a key. A
@@ -208,6 +306,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // keyboard for it would be offering one that silently does
                 // nothing -- the same reason `steps` does not list 'cycle'.
                 keys: machine.canTakeKeys && machine.canTakeKeys() ? ['scancode'] : [],
+                // Whether this target can BE GIVEN symbols, not whether it
+                // has any. A host asks this to decide whether the control
+                // exists at all; whether it does anything is setSymbols()'s
+                // answer, and that is a different question with a different
+                // right time to ask it.
+                symbols: true,
             };
         },
 
@@ -251,11 +355,47 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          * Outside it, the low sixteen bits are the best guess available and
          * only jump targets can be wrong.
          */
+        /**
+         * Hand the target a linear-address label map, or null to forget one.
+         * Build it with labelsFromAssembly(); a caller whose symbols come
+         * from somewhere else — a map file, a monitor ROM's known entry
+         * points — passes its own, which is why this takes a Map rather than
+         * an assembler result.
+         *
+         * Returns how many labels are now in force, because "I set symbols
+         * and the pane looks the same" is otherwise indistinguishable from
+         * "the map was empty" — and an empty map is exactly what a caller
+         * gets from a file whose names are all EQUs.
+         */
+        setSymbols(map) {
+            labels = map instanceof Map && map.size ? map : null;
+            return labels ? labels.size : 0;
+        },
+
+        /** The name at a linear address, or null. */
+        symbolAt(addr) { return labels?.get(addr & 0xfffff) ?? null; },
+
         disasm(addr) {
             const a = addr & 0xfffff;
             const csBase = (cpu.cs << 4) & 0xfffff;
             const ip = (a >= csBase && a <= csBase + 0xffff) ? (a - csBase) & 0xffff : a & 0xffff;
-            return disasmI8086((x) => machine._read(x & 0xfffff), a, { ip });
+            // THE MAP IS LINEAR AND THE DISASSEMBLER'S IS NOT, and this is the
+            // join that is easy to get silently wrong. The disassembler labels
+            // a 16-BIT operand — a jump target, or the address inside
+            // [seg:addr] — which is an offset in the segment the instruction
+            // was read from. Passing the linear map straight through would
+            // label nothing on any machine whose code does not sit at segment
+            // zero, which is every real one, and it would fail by showing
+            // plain hex rather than by raising anything.
+            let inSeg = null;
+            if (labels) {
+                inSeg = new Map();
+                for (const [lin, name] of labels) {
+                    if (lin >= csBase && lin <= csBase + 0xffff) inSeg.set((lin - csBase) & 0xffff, name);
+                }
+            }
+            return disasmI8086((x) => machine._read(x & 0xfffff), a,
+                inSeg && inSeg.size ? { ip, labels: inSeg } : { ip });
         },
 
         onHalt(cb) {
@@ -277,8 +417,63 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 syncWriteTrap();
                 return id;
             }
+            if (spec.kind === 'port') {
+                if (!machine.hooks) return { unsupported: 'this machine has no observation hooks' };
+                if (spec.port == null) return { unsupported: 'port required' };
+                if (spec.dir != null && spec.dir !== 'in' && spec.dir !== 'out') {
+                    return { unsupported: `dir must be 'in', 'out', or absent for either` };
+                }
+                const id = nextBpId++;
+                portWatches.set(id, { port: spec.port & 0xffff, dir: spec.dir ?? null });
+                syncEventHooks();
+                return id;
+            }
+            if (spec.kind === 'int') {
+                if (!machine.hooks) return { unsupported: 'this machine has no observation hooks' };
+                // An ABSENT vector means every vector, which is the useful
+                // default for "what is this program asking the BIOS for" and
+                // is why it is not an error. An absent source likewise means
+                // any: 'int' (a program's INT n), 'irq' (a PIC line), 'nmi',
+                // or 'exception' (a divide fault, BOUND, the single-step
+                // trap). Keeping them separable matters because "break on
+                // INT 21h" and "break on the timer tick" are different
+                // questions that a vector number alone stops being able to
+                // tell apart the moment anything remaps a vector.
+                const SOURCES = ['int', 'irq', 'nmi', 'exception'];
+                if (spec.source != null && !SOURCES.includes(spec.source)) {
+                    return { unsupported: `source must be one of ${SOURCES.join(', ')}, or absent for any` };
+                }
+                const id = nextBpId++;
+                intWatches.set(id, {
+                    vector: spec.vector == null ? null : spec.vector & 0xff,
+                    source: spec.source ?? null,
+                });
+                syncEventHooks();
+                return id;
+            }
             if (spec.kind !== 'code') return { unsupported: `unknown breakpoint kind: ${spec.kind}` };
-            if (spec.addr == null) return { unsupported: 'addr required' };
+            // BY NAME, which is the point of having symbols at all. Resolved
+            // HERE and once, so what is STORED is still a linear address and
+            // the compare in runFor() does not grow a second shape.
+            //
+            // A name that is not in the map is a REFUSAL, never a silent
+            // no-op. "Break at delay_loop" quietly doing nothing is the worst
+            // answer available: the program runs to completion and the
+            // evidence says it never reached the label, which is a different
+            // and much more interesting claim than the truth.
+            if (spec.symbol != null) {
+                if (!labels) return { unsupported: 'no symbols are loaded — call setSymbols() first' };
+                const want = String(spec.symbol).toLowerCase();
+                let found = null;
+                for (const [lin, name] of labels) {
+                    if (String(name).toLowerCase() === want) { found = lin; break; }
+                }
+                if (found === null) return { unsupported: `no symbol named ${JSON.stringify(spec.symbol)}` };
+                const id = nextBpId++;
+                breakpoints.set(id, { kind: 'code', addr: found, symbol: spec.symbol });
+                return id;
+            }
+            if (spec.addr == null) return { unsupported: 'addr or symbol required' };
             const id = nextBpId++;
             // seg:off is accepted and resolved here, once, so the compare
             // stays linear. A caller that already has a physical address
@@ -291,6 +486,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         },
 
         clearBreakpoint(id) {
+            if (portWatches.delete(id) || intWatches.delete(id)) { syncEventHooks(); return; }
             breakpoints.delete(id);
             if (writeWatches.delete(id)) syncWriteTrap();
         },
@@ -354,6 +550,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     }
                 }
                 machine.step();
+                // Checked BEFORE the write watch, and the order is arbitrary
+                // only in appearance: a port write that trips both is one
+                // event, and reporting the port — the thing the user asked
+                // about by name — is the more specific answer.
+                if (eventHit) {
+                    const hit = eventHit;
+                    eventHit = null;
+                    halt(hit);
+                    return 'halted';
+                }
                 if (watchHit) {
                     const hit = watchHit;
                     watchHit = null;
