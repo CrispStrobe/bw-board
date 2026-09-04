@@ -342,3 +342,70 @@ test('labels: a far pointer is NOT labelled, because it cannot be', () => {
         { ip: 0, labels }).text;
     assert.ok(!text.includes('start'), `far pointer left alone, got: ${text}`);
 });
+
+// ---------------------------------------------------------------------------
+// The variant is reachable through the MACHINE, not only through the core --
+// which is the half that makes a breadboard 80188 a config key rather than a
+// fork, and the half I originally plumbed without testing.
+// ---------------------------------------------------------------------------
+import { I8086Machine } from '../src/i8086-machine.js';
+
+/** The smallest machine that will run: RAM over the whole space. */
+const machineCfg = (variant) => ({
+    clockHz: 5_000_000,
+    regions: [{ kind: 'ram', start: 0, end: 0xfffff }],
+    chips: [],
+    ...(variant ? { variant } : {}),
+});
+
+test('machine: the variant reaches the core, and defaults to 8086', () => {
+    assert.equal(new I8086Machine(machineCfg()).cpu.variant, '8086');
+    assert.equal(new I8086Machine(machineCfg('8086')).cpu.variant, '8086');
+    assert.equal(new I8086Machine(machineCfg('80186')).cpu.variant, '80186');
+    assert.throws(() => new I8086Machine(machineCfg('80188')), /unknown variant/,
+        'an 80188 is an 80186 core on an 8-bit bus; the ISA name is what this key takes');
+});
+
+test('machine: the same byte runs as two instructions on the two variants', () => {
+    // End to end through the machine rather than the bare core: 60h at the
+    // reset-adjacent address, PUSHA on one and JO on the other.
+    const run = (variant) => {
+        const m = new I8086Machine(machineCfg(variant));
+        m.cpu.cs = 0; m.cpu.ip = 0; m.cpu.ss = 0; m.cpu.sp = 0x1000;
+        m.mem[0] = 0x60; m.mem[1] = 0x02;
+        m.cpu.flags &= ~0x0800;                        // OF clear, so JO is NOT taken
+        m.step();
+        return m.cpu.sp;
+    };
+    assert.equal(run('8086'), 0x1000, 'JO not taken: the stack is untouched');
+    assert.equal(run('80186'), 0x1000 - 16, 'PUSHA: sixteen bytes of stack');
+});
+
+test('machine: a snapshot carries its variant and refuses a mismatched restore', () => {
+    const a = new I8086Machine(machineCfg('80186'));
+    a.cpu.ax = 0x1234;
+    const snap = a.saveState();
+    assert.equal(snap.variant, '80186', 'the variant is IN the snapshot');
+
+    // Onto an identical machine: fine.
+    const b = new I8086Machine(machineCfg('80186'));
+    b.loadState(snap);
+    assert.equal(b.cpu.ax, 0x1234);
+
+    // Onto the other chip: REFUSED BY NAME. Loading it silently would give a
+    // machine that runs the restored program correctly right up to the first
+    // 186 opcode and then quietly takes a conditional jump instead.
+    const c = new I8086Machine(machineCfg('8086'));
+    assert.throws(() => c.loadState(snap), /snapshot is from a 80186 machine/);
+
+    // A snapshot written before the variant existed has no key at all. Those
+    // were all 8086s, so an absent key reads as '8086' -- old snapshots stay
+    // loadable, and one of them still cannot be put on a 186.
+    const legacy = { ...a.saveState() };
+    delete legacy.variant;
+    const d = new I8086Machine(machineCfg('8086'));
+    d.loadState(legacy);
+    assert.equal(d.cpu.ax, 0x1234, 'a pre-variant snapshot still loads on an 8086');
+    const e = new I8086Machine(machineCfg('80186'));
+    assert.throws(() => e.loadState(legacy), /snapshot is from a 8086 machine/);
+});

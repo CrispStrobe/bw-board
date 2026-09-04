@@ -788,10 +788,36 @@ export class I8086Machine {
             if (typeof c.getState === 'function') chips[name] = c.getState();
             else if (typeof c.saveState === 'function') chips[name] = c.saveState();
         }
-        return { v: 1, cpu, cycles: this.cycles, mem: this.mem.slice(), chips };
+        // THE VARIANT IS PART OF THE SNAPSHOT even though it is not CPU state,
+        // because restoring without it fails SILENTLY and in the worst way:
+        // the same bytes execute as different instructions. 60h is PUSHA on
+        // one machine and JO on the other, and nothing about the restored
+        // registers or memory would look wrong. See loadState().
+        return { v: 1, variant: this.variant, cpu, cycles: this.cycles,
+            mem: this.mem.slice(), chips };
     }
 
     loadState(s) {
+        if (s.v !== 1) throw new Error(`unknown machine state version ${s.v}`);
+        // A MISMATCHED RESTORE IS REFUSED BY NAME, following z80-machine.js:370
+        // (a snapshot with a tape position and no tape inserted). A snapshot
+        // is restored onto an identically-BUILT machine; the variant is a
+        // construction choice, not state, so a difference here means the
+        // caller built the wrong machine rather than that the state is stale.
+        // Silently loading it would produce a machine that runs the restored
+        // program correctly right up to the first 186 opcode and then quietly
+        // takes a conditional jump instead.
+        //
+        // A snapshot written before the variant existed carries no `variant`
+        // key at all, and those were all 8086s -- so an absent key reads as
+        // '8086' rather than as "any", which keeps the old snapshots loadable
+        // and still refuses to put one on a 186.
+        const want = s.variant ?? '8086';
+        if (want !== this.variant) {
+            throw new Error(`snapshot is from a ${want} machine and this is a ${this.variant}: `
+                + 'the same bytes decode differently on the two, so this would run '
+                + 'silently wrong rather than fail');
+        }
         for (const k of I8086Machine.CPU_STATE) if (k in s.cpu) this.cpu[k] = s.cpu[k];
         this.cycles = s.cycles;
         this.mem.set(s.mem);
