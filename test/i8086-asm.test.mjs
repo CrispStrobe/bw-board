@@ -874,7 +874,7 @@ test('nothing undocumented can be asked for by name', () => {
     for (const mn of ['SETMO', 'SETMOC', 'SALC', 'ESC', 'ENTER', 'LEAVE', 'BOUND', 'PUSHA', 'INSB']) {
         const e = refusal(() => assembleRaw(`${mn} AX`));
         assert.ok(e, `${mn} is not assembled`);
-        assert.match(e.what, /unknown mnemonic|i186|operand/, `${mn} is refused, not encoded`);
+        assert.match(e.what, /unknown mnemonic|i186|instruction|operand/, `${mn} is refused, not encoded`);
     }
 });
 

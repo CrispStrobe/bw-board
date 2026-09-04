@@ -175,11 +175,14 @@
 export class AsmError extends Error {
     /** @param {string} message @param {{line?:number, text?:string, what?:string}} [ctx] */
     constructor(message, ctx = {}) {
-        const where = ctx.line ? ` (line ${ctx.line})` : '';
+        const where = ctx.line ? ` (${ctx.file ? `${ctx.file} ` : ''}line ${ctx.line})` : '';
         super(`8086 asm${where}: ${message}`);
         this.name = 'AsmError';
         this.line = ctx.line ?? 0;
         this.text = ctx.text ?? '';
+        /** Which file the line came from, once %include can bring in more
+         *  than one. Empty for a single-file source. */
+        this.file = ctx.file ?? '';
         /** A short, stable tag for the construct refused -- what the corpus
          *  histogram is bucketed by. */
         this.what = ctx.what ?? 'error';
@@ -239,6 +242,21 @@ const NO_OPERAND = {
 const NAME_DEFINING = new Set(['db', 'dw', 'dd', 'dq', 'dt', 'equ', '=',
     'proc', 'endp', 'macro', 'segment', 'ends', 'label']);
 
+/**
+ * NASM's precedence, lowest first, which is C's and not MASM's: `|` binds
+ * looser than `^`, `^` looser than `&`, and the shifts sit BETWEEN `&` and
+ * `+` rather than alongside `*`. Keeping MASM's table for both would read
+ * `A | B << 2` the other way round, and nothing would say so.
+ */
+const NASM_LEVELS = [
+    ['or'],
+    ['xor'],
+    ['and'],
+    ['shl', 'shr'],
+    ['+', '-'],
+    ['*', '/', 'mod'],
+];
+
 /** Word operators in expressions, lowest precedence first. */
 const BINARY_LEVELS = [
     ['or', 'xor'],
@@ -291,9 +309,16 @@ function splitTop(text, sep) {
 
 /**
  * @param {string} text
+ * @param {object} ctx
+ * @param {boolean} [nasm] -- accept `0x`/`0b`/`0o`/`0d` PREFIXES as well as
+ *   MASM's trailing radix letter. Gated on the dialect rather than always
+ *   on, so that a MASM source lexes byte-identically to the way it did
+ *   before this front end existed: `0x` is not valid MASM, and a dialect
+ *   this module guessed wrong about must not quietly start reading numbers
+ *   the other tool's way.
  * @returns {{k:string, v:any}[]} k is 'num' | 'str' | 'id' | 'op'
  */
-function lex(text, ctx) {
+function lex(text, ctx, nasm = false) {
     const toks = [];
     let i = 0;
     while (i < text.length) {
@@ -320,6 +345,23 @@ function lex(text, ctx) {
             continue;
         }
         if (/[0-9]/.test(c)) {
+            // `0x` AND NOTHING ELSE. NASM also spells hex `0hFF`, binary
+            // `0b1010`, octal `0o17` and decimal `0d99` -- and every one of
+            // those prefixes collides with a constant this lexer ALREADY
+            // reads the other way: `0B800h` is CGA's segment under the
+            // suffix rule and 5 under a binary-prefix rule, `0D15h` is 3349
+            // or 15. Two readings of the same text that differ by a factor
+            // of five hundred are not a thing to guess at, the four corpora
+            // write `0x` and the suffix form and nothing else, so the other
+            // four prefixes are not implemented rather than half-implemented.
+            if (nasm && c === '0' && (text[i + 1] === 'x' || text[i + 1] === 'X')
+                && /[0-9a-fA-F]/.test(text[i + 2] || '')) {
+                let j = i + 2;
+                while (j < text.length && /[0-9a-fA-F_]/.test(text[j])) j++;
+                toks.push({ k: 'num', v: parseInt(text.slice(i + 2, j).replace(/_/g, ''), 16) });
+                i = j;
+                continue;
+            }
             // The radix is a SUFFIX here (0FFh, 1010b, 777o, 12d, 99), and
             // B and D are both radix letters AND hex digits. A greedy run of
             // [0-9a-fA-F] therefore swallows the marker: `1010b` lexes as the
@@ -331,7 +373,11 @@ function lex(text, ctx) {
             while (text[j - 1] === '_') j--;
             let run = text.slice(i, j).replace(/_/g, ''), radix = null;
             const suffix = (text[j] || '').toLowerCase();
-            if (suffix === 'h') { radix = 16; j++; }
+            // NASM spells hex with a trailing `x` as well as a trailing
+            // `h` -- `mov ah, 0Bx` is written four times in
+            // retro-dos-graphics -- and nothing else can end a number that
+            // way, so there is nothing for it to collide with.
+            if (suffix === 'h' || (nasm && suffix === 'x')) { radix = 16; j++; }
             else if (suffix === 'o' || suffix === 'q') { radix = 8; j++; }
             else if (suffix === 'y') { radix = 2; j++; }
             else {
@@ -355,6 +401,16 @@ function lex(text, ctx) {
             toks.push({ k: 'id', v: text.slice(i, j) });
             i = j;
             continue;
+        }
+        // NASM spells the bit operators the way C does. They are the SAME
+        // operators this module already has under MASM's names, so they are
+        // translated here rather than given a second evaluator -- and
+        // `NASM_LEVELS` gives them NASM's precedence, which is not MASM's.
+        if (nasm) {
+            const two = text.slice(i, i + 2);
+            if (two === '<<' || two === '>>') { toks.push({ k: 'id', v: two === '<<' ? 'shl' : 'shr' }); i += 2; continue; }
+            const one = { '|': 'or', '^': 'xor', '&': 'and', '~': 'not', '%': 'mod' }[c];
+            if (one) { toks.push({ k: 'id', v: one }); i++; continue; }
         }
         if ('+-*/()[]:,'.includes(c)) { toks.push({ k: 'op', v: c }); i++; continue; }
         throw new AsmError(`unexpected character ${JSON.stringify(c)}`, { ...ctx, what: 'unexpected character' });
@@ -385,8 +441,43 @@ function newVal(v = 0) {
 
 class Assembler {
     constructor(source, opts) {
-        this.source = String(source).split(/\r?\n/);
+        // A NASM source arrives as ENTRIES rather than text, because the
+        // front end has already expanded macros and pulled in includes: the
+        // line number and file name an error names must be the ones the
+        // author wrote, not the ones the expansion produced.
+        this.source = Array.isArray(source)
+            ? source.map((e) => ({ text: e.text, line: e.line, file: e.file }))
+            : String(source).split(/\r?\n/).map((text, i) => ({ text, line: i + 1 }));
         this.opts = opts;
+        /** NASM dialect. Everything it changes is listed in the front end's
+         *  header; there are seven rules and no others. */
+        this.nasm = opts.dialect === 'nasm';
+        /** WHOSE DEFAULT THIS IS, AND WHY IT IS NOT ONE DEFAULT.
+         *
+         *  Promoting an unreachable conditional jump is not a question of
+         *  taste, it is a question of what the source's own assembler does,
+         *  and the two assemblers answer it differently:
+         *
+         *    MASM 1.10 REFUSES. Fourteen Amey programs are refused here for
+         *    exactly the reason MASM refuses them, none is within four bytes
+         *    of reaching, and promoting silently would hand a learner a
+         *    program that works here and fails on the lab machine.
+         *
+         *    NASM PROMOTES, and emits the same bytes this does. Told `CPU
+         *    8086` it rewrites `JGE far` as `7C 03 E9 rel16` -- `Jncc over ;
+         *    JMP near` -- which is `promote()` exactly. Left alone it
+         *    reaches for the 80386's `0F 8D rel16` instead, which on an 8086
+         *    decodes as POP CS and two bytes of rubbish.
+         *
+         *  So the default is per dialect and `longJumps` still overrides it
+         *  either way. Three of the four NASM corpora contain a conditional
+         *  jump further than 127 bytes -- Snake, Maze Runner and the balloon
+         *  game all do -- and refusing them would be refusing what NASM
+         *  itself assembles, which is the opposite of the faithfulness the
+         *  MASM default is there to protect. `scripts/oracle-nasm.mjs`
+         *  checks the claim the only way worth checking it: byte for byte
+         *  against NASM 2.16 under `--before "cpu 8086"`. */
+        this.longJumps = opts.longJumps ?? this.nasm;
         /** Symbols persist ACROSS passes on purpose: pass 1 needs to know
          *  that `HIGH` is a name and not the HIGH operator, and forward
          *  references need a value to size against. */
@@ -411,7 +502,11 @@ class Assembler {
     segment(name, kind) {
         let s = this.segs.get(name);
         if (!s) {
-            s = { name, bytes: [], org: this.origins.get(name) ?? 0, para: 0, kind };
+            // `align` is what the SECTION needs, not what one item does:
+            // NASM's bin writer raises a section's own alignment to the
+            // largest ALIGN inside it, so `align 8` in .data moves where
+            // .data starts and therefore every label in it.
+            s = { name, bytes: [], org: this.origins.get(name) ?? 0, para: 0, kind, align: 1 };
             this.segs.set(name, s);
         }
         if (!this.segOrder.includes(name)) this.segOrder.push(name);
@@ -498,7 +593,8 @@ class Assembler {
      * @returns {{val:object, next:number}}
      */
     parseExpr(toks, pos = 0, level = 0) {
-        if (level >= BINARY_LEVELS.length) return this.parseUnary(toks, pos);
+        const levels = this.nasm ? NASM_LEVELS : BINARY_LEVELS;
+        if (level >= levels.length) return this.parseUnary(toks, pos);
         let { val, next } = this.parseExpr(toks, pos, level + 1);
         for (;;) {
             const t = toks[next];
@@ -508,7 +604,7 @@ class Assembler {
             // module header. `AND`/`OR`/`SHL` are never symbol names here
             // because they are also mnemonics, so only the value-like ones
             // (LOW, HIGH, ...) can collide, and those are unary.
-            if (!op || !BINARY_LEVELS[level].includes(op)) break;
+            if (!op || !levels[level].includes(op)) break;
             if (t.k === 'id' && this.symbols.has(op)) break;
             const rhs = this.parseExpr(toks, next + 1, level + 1);
             val = this.combine(op, val, rhs.val);
@@ -649,6 +745,13 @@ class Assembler {
         const name = t.v.toLowerCase();
         // `$` is the offset of the instruction or item being assembled.
         if (name === '$') return { val: this.labelValue({ kind: 'code', seg: this.cur, value: this.here }), next: pos + 1 };
+        // `$$` is the start of the current section, which is what makes
+        // `times 510-($-$$) db 0` a boot sector. In a flat image there is
+        // one section and its start is its ORG.
+        if (name === '$$' && this.nasm) {
+            this.ensureSegment();
+            return { val: this.labelValue({ kind: 'code', seg: this.cur, value: this.cur.org }), next: pos + 1 };
+        }
         if (name === '@data') {
             if (!this.dataSegName) throw new AsmError(
                 '@DATA needs a data segment (.DATA or a SEGMENT), and this source has none',
@@ -669,6 +772,18 @@ class Assembler {
         // Unary word operators, each of which loses to a symbol of the same
         // name -- see the module header.
         if (!this.symbols.has(name)) {
+            // `mov cx, (ilog2e(ALTOTILE) - 1)` -- NASM's `ifunc` package is
+            // not only a preprocessor thing; engine/graphics.asm calls it in
+            // an ordinary operand too. Same function, same table, evaluated
+            // here because here is where the symbol values are.
+            if (this.nasm && IFUNCS[name] && toks[pos + 1] && toks[pos + 1].v === '(') {
+                const r = this.parseExpr(toks, pos + 2, 0);
+                if (!toks[r.next] || toks[r.next].v !== ')') throw new AsmError(`${name} is not closed`,
+                    { ...this.ctx, what: 'bad expression' });
+                if (!r.val.known) throw new AsmError(`${name} needs a value known when it is reached`,
+                    { ...this.ctx, what: 'forward ifunc' });
+                return { val: newVal(IFUNCS[name](r.val.v, this.ctx)), next: r.next + 1 };
+            }
             if (name === 'offset' || name === 'seg') {
                 const r = this.parseUnary(toks, pos + 1);
                 if (!r.val.ref && !r.val.segRel) throw new AsmError(`${name.toUpperCase()} needs a label`,
@@ -723,7 +838,10 @@ class Assembler {
             o.known = false;
             o.segRel = 1;
             o.segName = this.cur ? this.cur.name : null;
-            o.mem = true;
+            // MASM's placeholder is a MEMORY reference, because a bare label
+            // is one there. NASM's is not, and setting it would make every
+            // forward jump indirect on pass one and refuse the program.
+            o.mem = !this.nasm;
             this.unresolved.add(t.v);
             return { val: o, next: pos + 1 };
         }
@@ -760,7 +878,7 @@ class Assembler {
 
     /** Evaluate a whole expression string, insisting nothing is left over. */
     evalText(text) {
-        const toks = lex(text, this.ctx);
+        const toks = lex(text, this.ctx, this.nasm);
         if (!toks.length) throw new AsmError('an operand is empty', { ...this.ctx, what: 'empty operand' });
         const r = this.parseExpr(toks, 0, 0);
         if (r.next !== toks.length) throw new AsmError(`cannot read the operand "${text.trim()}"`,
@@ -781,7 +899,15 @@ class Assembler {
         // A size keyword and a segment override are prefixes, and both can
         // appear: `BYTE PTR ES:[DI]`.
         for (;;) {
-            let m = /^(byte|word|dword|qword|tbyte)\s+ptr\b/i.exec(t);
+            // NASM writes `mov byte [bx], 1` and MASM writes
+            // `mov byte ptr [bx], 1`. The keyword means the same thing in
+            // both; only the noise word differs.
+            // `word[es:di]` with no space at all is written in the Maze
+            // corpus, so the separator is only required when what follows
+            // could otherwise run into the keyword.
+            let m = this.nasm
+                ? /^(byte|word|dword|qword|tbyte)(?:\s*(?:ptr\s+)?(?=\[)|\s+(?:ptr\s+)?(?=[A-Za-z_@?$]))/i.exec(t)
+                : /^(byte|word|dword|qword|tbyte)\s+ptr\b/i.exec(t);
             if (m && !this.symbols.has(m[1].toLowerCase())) {
                 forced = SIZE_OF[m[1].toLowerCase()];
                 t = t.slice(m[0].length).trim();
@@ -859,7 +985,17 @@ class Assembler {
         // rather than reading the flag -- which is why 84 files using
         // `LEN EQU $-MSG` were right and the four that write the difference
         // straight into an instruction were not.
-        const isMem = v.mem || v.base || v.index || (v.segRel !== 0 && v.ref);
+        //
+        // AND NASM MEANS THE OPPOSITE. `MOV AX, VAR` is the ADDRESS there
+        // and `MOV AX, [VAR]` is the contents -- exactly inverted -- which
+        // is the single most dangerous difference between the two dialects,
+        // because reading a NASM source MASM's way assembles cleanly, runs,
+        // and computes with the wrong number. Nothing throws. So in NASM a
+        // bare label falls through to the immediate branch below, which is
+        // precisely what `OFFSET label` produces on the MASM side: same
+        // encoder, same relocation, one clause different. Both directions
+        // are tested, in both dialects, in test/i8086-asm-nasm.test.mjs.
+        const isMem = v.mem || v.base || v.index || (!this.nasm && v.segRel !== 0 && v.ref);
         if (isMem) {
             return {
                 k: 'm', base: v.base, index: v.index, disp: v.v,
@@ -1004,6 +1140,20 @@ class Assembler {
             throw new AsmError(`a seg:off pair is a target for JMP or CALL, not for ${mn.toUpperCase()}`,
                 { ...this.ctx, what: 'far pointer operand' });
         }
+        // A DWORD OPERAND IS AN 80386 OPERAND, except in the four places
+        // the 8086 genuinely reads four bytes: an indirect far JMP or CALL
+        // and LDS/LES. `inc dword [score]` in Snake.asm reached `incDec`,
+        // whose width test asks only "is it two", and came out as
+        // `inc byte [score]` -- three quarters of a counter that never
+        // incremented, with nothing said.
+        for (const o of ops) {
+            if (o.k === 'm' && o.size > 2 && mn !== 'jmp' && mn !== 'call' && mn !== 'lds' && mn !== 'les') {
+                throw new AsmError(
+                    `${mn.toUpperCase()} on a ${o.size}-byte operand needs an 80386; the 8086 has`
+                    + ' byte and word only',
+                    { ...this.ctx, what: 'operand too wide' });
+            }
+        }
         for (const p of prefixes) this.emit(p);
 
         if (NO_OPERAND[mn]) {
@@ -1112,7 +1262,18 @@ class Assembler {
         if (s.k === 'i') {
             const ww = this.agreeWidth(this.mn, d, s);
             // The accumulator has a short form with no ModR/M at all.
-            if ((d.k === 'r8' && d.n === 0) || (d.k === 'r16' && d.n === 0)) {
+            //
+            // MASM TAKES IT ALWAYS AND NASM DOES NOT. For a WORD accumulator
+            // and an immediate that fits a signed byte the two encodings are
+            // the SAME LENGTH -- `3D 10 00` against `83 F8 10` -- so this
+            // changes no address and no layout, only which of two equal
+            // spellings comes out. It is the last difference between this
+            // module and NASM 2.16 over the retro-dos-graphics corpus, and
+            // it is gated on the dialect so that MASM's own choice, which
+            // oracle-masm.mjs checks against the 1982 binaries, is untouched.
+            const nasmPrefers83 = this.nasm && d.k === 'r16' && !s.reloc && s.known
+                && s.v >= -128 && s.v <= 127;
+            if (!nasmPrefers83 && ((d.k === 'r8' && d.n === 0) || (d.k === 'r16' && d.n === 0))) {
                 const bytes = this.immBytes(s, ww);
                 this.emit((code << 3) | 0x04 | (ww === 2 ? 1 : 0));
                 if (bytes) this.emit(...bytes); else this.emitImm16(s);
@@ -1363,36 +1524,78 @@ class Assembler {
         return this.emit((mn === 'in' ? 0xe4 : 0xe6) | w, b.v & 0xff);
     }
 
-    /** A relative jump. `width` 1 is the only form the conditionals have. */
-    relJump(opcode, ops, width, mn) {
+    /**
+     * A relative jump. `width` 1 is the only form the conditionals have.
+     *
+     * `slot` IS PASSED IN BY `branch`, and that is a fix and not a
+     * convenience. See `jumpSlot`.
+     */
+    relJump(opcode, ops, width, mn, slot = this.jumpSlot()) {
         this.expect(ops.length === 1, `${mn.toUpperCase()} takes one target`);
         const o = ops[0];
         if (o.k !== 'i' && o.k !== 'm') throw new AsmError(`${mn.toUpperCase()} needs a label`,
             { ...this.ctx, what: 'bad jump target' });
         // `JE [BX]` has no encoding: the conditionals and LOOP are relative
         // only. Taking o.disp anyway would jump to the displacement.
-        if (o.k === 'm' && (o.base || o.index)) throw new AsmError(`${mn.toUpperCase()} cannot be indirect`,
+        if (o.k === 'm' && (o.base || o.index || this.nasm)) throw new AsmError(
+            `${mn.toUpperCase()} cannot be indirect`,
             { ...this.ctx, what: 'indirect conditional jump' });
         const target = o.k === 'm' ? o.disp : o.v;
         const from = this.here + 1 + width;
         const d = (target - from) | 0;
-        // The slot is claimed UNCONDITIONALLY. It indexes a sticky decision
-        // and the index has to mean the same thing on every pass; claiming
-        // it inside the branch below would shift every later jump's slot the
-        // moment one of them changed its mind.
-        const slot = this.jumpSlot();
         const reaches = !o.known || (d >= -128 && d <= 127);
+        // TWO SCHEMES, BECAUSE THE TWO DIALECTS CAN PROMISE DIFFERENT
+        // THINGS ABOUT THE PASS LOOP.
+        //
+        // Promotion GROWS an instruction from two bytes to five while the
+        // short-jump logic SHRINKS others, and a loop that can do both
+        // without remembering oscillates forever. The MASM scheme therefore
+        // makes promotion STICKY: once promoted, always promoted. That
+        // terminates, and it costs three bytes per jump that would have
+        // reached after everything else shrank -- which nothing in the MASM
+        // corpus notices, because promotion there is opt-in and rare.
+        //
+        // In NASM it is neither. Every NASM program here has out-of-range
+        // conditional jumps, and the sticky scheme left five of them three
+        // to six bytes larger than NASM's own output -- correct programs,
+        // but not the same image, and "same image" is the check.
+        //
+        // So NASM gets the opposite monotonicity: pass one promotes
+        // EVERYTHING promotable, which is the largest layout there is, and
+        // every later pass may only ever UN-promote. Sizes then only fall,
+        // which terminates for the same reason the sticky scheme does, and
+        // it settles on the same image NASM writes. This is safe here and
+        // not in MASM because a NASM image is flat -- `flatOutput()` is
+        // true by construction -- so no automatic segment override can
+        // appear on a later pass and make something bigger again.
+        if (this.nasm && opcode !== 0xeb) {
+            if (this.pass === 1) this.promoted[slot] = true;
+            else if (this.promoted[slot] && o.known && d >= -128 && d <= 127) this.promoted[slot] = false;
+            if (this.promoted[slot]) {
+                this.note(`${mn.toUpperCase()} to ${o.text.trim()} is ${d} bytes away, which this`
+                    + ' instruction cannot reach; promoted to a branch over a near jump,'
+                    + ' which is byte for byte what NASM emits under CPU 8086');
+                return this.promote(opcode, target);
+            }
+            if (!reaches) {
+                throw new AsmError(
+                    `${mn.toUpperCase()} to ${o.text.trim()} is ${d} bytes away and this instruction`
+                    + ' only reaches 127', { ...this.ctx, what: 'jump out of range' });
+            }
+            return this.emit(opcode, d & 0xff);
+        }
         if (!reaches || this.promoted[slot]) {
             // JMP is not promoted here: it HAS a near form, and `branch`
             // widens it on its own. An explicit `JMP SHORT` is the
             // programmer saying which encoding they want, so it is not
             // second-guessed either.
             const promotable = opcode !== 0xeb;
-            if (promotable && (this.opts.longJumps || this.promoted[slot])) {
+            if (promotable && (this.longJumps || this.promoted[slot])) {
                 this.promoted[slot] = true;
                 this.note(`${mn.toUpperCase()} to ${o.text.trim()} is ${d} bytes away, which this`
                     + ' instruction cannot reach; promoted to a branch over a near jump.'
-                    + ' This program will no longer assemble under MASM');
+                    + (this.nasm ? ' This is byte for byte what NASM emits under CPU 8086.'
+                        : ' This program will no longer assemble under MASM'));
                 return this.promote(opcode, target);
             }
             if (!reaches) {
@@ -1439,7 +1642,30 @@ class Assembler {
         return this.emitWord((target - (this.here + 2)) & 0xffff);
     }
 
-    /** The pass-stable index a jump's shrink decision is filed under. */
+    /**
+     * The pass-stable index a jump's shrink decision is filed under.
+     *
+     * "PASS-STABLE" WAS A CLAIM AND NOT A FACT, and this is the bug it hid.
+     * `relJump` claimed a slot of its own, and `branch` claimed one too and
+     * then CALLED `relJump` for the short form -- so a `JMP` consumed one
+     * slot while it was near and TWO once it shrank to short. The first
+     * time any JMP in a module changed its mind, every jump after it moved
+     * up one slot and inherited a decision belonging to its neighbour.
+     *
+     * It is mostly loud: a jump handed someone else's "this one is short"
+     * that cannot reach 127 raises `jump out of range` on a line that is
+     * perfectly in range, which is a confusing refusal rather than a wrong
+     * program. Two of the fourteen retro-dos-graphics programs
+     * (`primitiv/jstick3.asm` at line 1000, `primitiv/p16doble.asm` at line
+     * 432) refused for exactly that reason, and both assemble byte-for-byte
+     * with NASM once the slot is claimed once per jump instead of once per
+     * ENCODING of a jump. `test/i8086-asm-nasm.test.mjs` carries a
+     * five-line MASM-dialect reduction that fails the same way.
+     *
+     * The rule now, and it is the one the old comment stated: ONE JUMP, ONE
+     * SLOT, whichever form it ends up in. `branch` claims it and hands it
+     * down rather than letting `relJump` claim a second.
+     */
     jumpSlot() { return this.jumpCount++; }
 
     /**
@@ -1479,7 +1705,12 @@ class Assembler {
             if (o.size === 1) throw new AsmError(`${mn.toUpperCase()} cannot go through a byte`,
                 { ...this.ctx, what: 'branch through byte' });
             if (o.size === 4) return this.emitRM([0xff], regFar, o);
-            if (o.size === 2 || o.base || o.index) return this.emitRM([0xff], regNear, o);
+            // In MASM `JMP TARGET` and `JMP [TARGET]` are the same thing
+            // and the DECLARED TYPE decides between relative and indirect.
+            // In NASM the BRACKETS decide, and a bare label never reaches
+            // here at all -- it is an immediate -- so anything that does is
+            // an address to jump THROUGH.
+            if (o.size === 2 || o.base || o.index || this.nasm) return this.emitRM([0xff], regNear, o);
         }
         if (o.k !== 'i' && o.k !== 'm') throw new AsmError(`${mn.toUpperCase()} needs a label`,
             { ...this.ctx, what: 'bad jump target' });
@@ -1494,7 +1725,7 @@ class Assembler {
         }
         if (mn === 'jmp') {
             const slot = this.jumpSlot();
-            if (o.distance === 'short') return this.relJump(0xeb, [o], 1, 'jmp');
+            if (o.distance === 'short') return this.relJump(0xeb, [o], 1, 'jmp', slot);
             // Optimistically near on the first pass, then shrunk -- and the
             // decision is STICKY, which is what stops the pass loop
             // oscillating between two byte counts forever.
@@ -1507,7 +1738,7 @@ class Assembler {
             const fits = this.pass > 1 && o.known && o.distance !== 'near' && d >= -128 && d <= 127;
             if (this.shortJump[slot] || fits) {
                 this.shortJump[slot] = true;
-                return this.relJump(0xeb, [o], 1, 'jmp');
+                return this.relJump(0xeb, [o], 1, 'jmp', slot);
             }
         }
         this.emit(relOpcode);
@@ -1549,7 +1780,7 @@ class Assembler {
             }
             // A string longer than the unit lays out as characters, which is
             // how `DB 'Hello$'` works -- and is NOT how `DW 'AB'` works.
-            const toks = lex(item, this.ctx);
+            const toks = lex(item, this.ctx, this.nasm);
             if (toks.length === 1 && toks[0].k === 'str' && toks[0].v.length > unit) {
                 // A string that does not fit its item is laid out as BYTES,
                 // exactly as DB would, and the fact is recorded.
@@ -1638,7 +1869,7 @@ class Assembler {
         this.segs = new Map();
         this.segOrder = [];
         this.relocs = [];
-        this.stack = [{ lines: this.source.map((text, i) => ({ text, line: i + 1 })), i: 0, name: 'source' }];
+        this.stack = [{ lines: this.source, i: 0, name: 'source' }];
         this.lineBudget = 0;
         this.jumpCount = 0;
         this.unresolved = new Set();
@@ -1672,7 +1903,7 @@ class Assembler {
         for (;;) {
             const entry = this.nextLine();
             if (entry === null) break;
-            this.ctx = { line: entry.line, text: entry.text };
+            this.ctx = { line: entry.line, text: entry.text, file: entry.file };
             const line = stripComment(entry.text);
             if (!line) continue;
             if (this.ended) continue;
@@ -1912,6 +2143,16 @@ class Assembler {
                 this.segment('STACK', 'stack');
                 return;
             }
+            case '.bss': {
+                // NASM's .bss is NOBITS: the labels get addresses and the
+                // bytes never reach the file. Laying it down as zeros the
+                // way `?` is laid down would have made mapedit.asm 459
+                // bytes longer than NASM's own image and Snake.asm 2000 --
+                // a difference no test that only reads symbols would see.
+                this.dataSegName = this.dataSegName || '_BSS';
+                this.cur = this.lastSeg = this.segment('_BSS', 'bss');
+                return;
+            }
             case '.data': case '.data?': case '.const': {
                 this.dataSegName = '_DATA';
                 this.cur = this.lastSeg = this.segment('_DATA', 'data');
@@ -1964,10 +2205,22 @@ class Assembler {
                 return;
             }
             case 'even': case 'align': {
-                const n = w0 === 'even' ? 2 : (rest.trim() ? this.evalText(rest).v : 2);
+                // NASM writes `align 8, db 0` -- the second half names what
+                // to pad WITH, and every use of ALIGN in retro-dos-graphics
+                // is in front of data, where a run of NOPs would be five
+                // corpus programs' worth of wrong bytes.
+                let expr = rest, pad = 0x90;
+                const am = this.nasm && /^([^,]*),\s*db\s+([\s\S]*)$/i.exec(rest);
+                if (am) { expr = am[1]; pad = this.evalText(am[2]).v & 0xff; }
+                else if (this.nasm && /,/.test(rest)) {
+                    throw new AsmError(`ALIGN ${rest.trim()} -- only a DB filler is supported`,
+                        { ...this.ctx, what: 'ALIGN filler' });
+                }
+                const n = w0 === 'even' ? 2 : (expr.trim() ? this.evalText(expr).v : 2);
                 if (n < 1 || (n & (n - 1))) throw new AsmError(`ALIGN ${n} is not a power of two`,
                     { ...this.ctx, what: 'bad ALIGN' });
-                while (this.here % n) this.emit(0x90);
+                this.cur.align = Math.max(this.cur.align || 1, n);
+                while (this.here % n) this.emit(pad);
                 return;
             }
             case 'end': {
@@ -2134,6 +2387,11 @@ class Assembler {
         // which sends the reader after the string instead of after the
         // missing include.
         if (!KNOWN_MNEMONICS.has(mn) && !this.macros.has(mn)) {
+            if (LATER_THAN_8086.has(mn)) {
+                throw new AsmError(
+                    `"${mn.toUpperCase()}" is ${LATER_THAN_8086.get(mn)} instruction and this is an 8086`,
+                    { ...this.ctx, what: `${LATER_THAN_8086.get(mn)} instruction` });
+            }
             throw new AsmError(
                 `"${mn.toUpperCase()}" is not an instruction, directive or macro this assembler knows`,
                 { ...this.ctx, what: `unknown mnemonic ${mn.toUpperCase()}` });
@@ -2176,6 +2434,11 @@ class Assembler {
      * break the ORG while refusing it outright costs a working program.
      */
     flatOutput() {
+        // NASM's `bin` format has no relocation table, no `@DATA` and no
+        // segment registers to assume anything about: it is one image and
+        // the sections are places inside it. Nothing here can produce an
+        // .EXE from a NASM source, so this is not a guess.
+        if (this.nasm) return true;
         if (this.model && this.model !== 'tiny') return false;
         if (this.explicitSegments) return false;
         if (this.segs.has('STACK')) return false;
@@ -2201,6 +2464,17 @@ class Assembler {
         let at = code ? code.org + code.bytes.length : 0x100;
         for (const name of this.segOrder) {
             if (name === codeName || !this.segs.has(name)) continue;
+            // NASM's `bin` writer starts every section on a four-byte
+            // boundary unless the source says otherwise. Three zero bytes
+            // between .text and .data is not a rounding error: it moves
+            // every label in .data.
+            // Four bytes is NASM's default; an ALIGN inside the section
+            // raises it, and rebota.asm's `align 8, db 0` moves .data by
+            // four bytes when it does.
+            if (this.nasm) {
+                const a = Math.max(4, this.segs.get(name).align || 1);
+                at = (at + a - 1) & ~(a - 1);
+            }
             out.set(name, at);
             at += this.segs.get(name).bytes.length;
         }
@@ -2245,6 +2519,51 @@ const KNOWN_MNEMONICS = new Set([
     'loop', 'loope', 'loopz', 'loopne', 'loopnz', 'jcxz', 'aam', 'aad',
 ]);
 
+/**
+ * Instructions this assembler KNOWS ABOUT AND WILL NOT ENCODE, each with
+ * the machine that introduced it.
+ *
+ * These were named in the NOT SUPPORTED list from the start; what they did
+ * not have was a NAME AT THE POINT OF REFUSAL, and in NASM that turned out
+ * to matter enormously. NASM lets a label go without its colon, so any word
+ * this module does not recognise, alone on a line, reads as a label -- and
+ * `pusha` in Maze Runner and `popa` after it did exactly that. The
+ * instructions VANISHED. The program assembled, ran, and returned through a
+ * stack it had never balanced. Nothing threw and no byte was obviously
+ * wrong; only a diff against NASM's own image found it.
+ *
+ * So the list is a data structure now rather than a paragraph, and it is
+ * consulted in two places: here, so the refusal names the machine, and in
+ * the NASM front end, so a word on this list can never be mistaken for a
+ * label.
+ */
+const LATER_THAN_8086 = new Map([
+    ...['pusha', 'popa', 'pushad', 'popad', 'enter', 'leave', 'bound',
+        'ins', 'insb', 'insw', 'outs', 'outsb', 'outsw']
+        .map((m) => [m, 'an 80186']),
+    ...['arpl', 'clts', 'lar', 'lsl', 'lgdt', 'lidt', 'lldt', 'lmsw', 'ltr',
+        'sgdt', 'sidt', 'sldt', 'smsw', 'str', 'verr', 'verw', 'loadall']
+        .map((m) => [m, 'an 80286']),
+    ...['movsx', 'movzx', 'bt', 'bts', 'btr', 'btc', 'bsf', 'bsr', 'shld', 'shrd',
+        'cdq', 'cwde', 'lfs', 'lgs', 'lss', 'jecxz', 'pushfd', 'popfd', 'iretd',
+        'movsd', 'cmpsd', 'stosd', 'lodsd', 'scasd', 'insd', 'outsd', 'pushad', 'popad',
+        'seto', 'setno', 'setb', 'setnb', 'setz', 'setnz', 'setbe', 'setnbe',
+        'sets', 'setns', 'setp', 'setnp', 'setl', 'setnl', 'setle', 'setnle',
+        'sete', 'setne', 'seta', 'setae', 'setg', 'setge', 'setc', 'setnc']
+        .map((m) => [m, 'an 80386']),
+    ...['cmpxchg', 'xadd', 'bswap', 'invd', 'wbinvd', 'invlpg'].map((m) => [m, 'an 80486']),
+    ...['cpuid', 'rdtsc', 'rdmsr', 'wrmsr', 'cmov', 'rsm'].map((m) => [m, 'a Pentium']),
+    ...['fadd', 'faddp', 'fiadd', 'fsub', 'fsubp', 'fsubr', 'fsubrp', 'fisub',
+        'fmul', 'fmulp', 'fimul', 'fdiv', 'fdivp', 'fdivr', 'fdivrp', 'fidiv',
+        'fld', 'fld1', 'fldz', 'fldpi', 'fldcw', 'fldenv', 'fild', 'fst', 'fstp',
+        'fstcw', 'fstenv', 'fstsw', 'fist', 'fistp', 'fcom', 'fcomp', 'fcompp',
+        'ficom', 'ficomp', 'ftst', 'fxam', 'fchs', 'fabs', 'fsqrt', 'fscale',
+        'fprem', 'frndint', 'fxtract', 'fptan', 'fpatan', 'f2xm1', 'fyl2x',
+        'fyl2xp1', 'finit', 'fninit', 'fclex', 'fnclex', 'fsave', 'fnsave',
+        'frstor', 'fincstp', 'fdecstp', 'ffree', 'fnop', 'fxch']
+        .map((m) => [m, 'an 8087']),
+]);
+
 /** R16 the other way round, for naming a register in a message. */
 const R16_NAME = Object.keys(R16);
 
@@ -2282,11 +2601,879 @@ function substitute(text, map) {
 }
 
 // ---------------------------------------------------------------------------
+// The NASM front end.
+//
+// FOUR MIT-LICENSED CORPORA ARE NASM AND THIS MODULE REFUSED ALL OF THEM.
+// The encoder is not the problem -- it is ground against a vector-verified
+// disassembler and, through `scripts/oracle-masm.mjs`, against MASM 1.10
+// itself -- so the LAST thing to do was put a second encoder beside it.
+//
+// WHAT THIS IS INSTEAD: a source-to-source normaliser that turns NASM text
+// into the text the existing assembler already reads, plus a SHORT, NAMED
+// list of parse-level rules that flip when the dialect is NASM. Nothing
+// below `operand()` knows which dialect it came from; the ModR/M builder,
+// every `encode` path and the pass loop are the same code on both. The
+// flipped rules are exactly these, and there are no others:
+//
+//   1. A BARE LABEL IS ITS ADDRESS, not its contents. `MOV AX, VAR` loads
+//      the address in NASM and the contents in MASM, and this is the single
+//      most dangerous difference in the whole dialect: reading it MASM's way
+//      assembles cleanly, runs, and computes with the wrong number. It is
+//      one clause in `operand()` and it is tested BOTH WAYS.
+//   2. `BYTE [BX]` -- the size keyword without MASM's `PTR`.
+//   3. `0x`, `0b`, `0o`, `0d` prefixes alongside MASM's trailing `h`/`b`.
+//   4. `$$`, the start of the current section.
+//   5. Brackets on a JMP/CALL target mean INDIRECT. In MASM `JMP TARGET`
+//      and `JMP [TARGET]` are the same thing and the declared type decides;
+//      in NASM the brackets decide, so a bracketed conditional jump is a
+//      refusal rather than a silently-relative one.
+//   6. The output is one flat image. NASM's `bin` format has no relocation
+//      table and no `@DATA`, so `flatOutput()` is true by construction --
+//      which also means no ASSUME machinery runs, because there is only one
+//      segment to reach.
+//   7. `ALIGN n, db x` -- NASM names its own padding.
+//
+// Everything else -- local labels, `RESB`, `TIMES`, `SECTION`, `STRUC`, the
+// whole `%`-preprocessor -- is text, and text is where it belongs: it can be
+// printed, diffed and read, and it cannot introduce an encoding.
+//
+// SCOPE WAS MEASURED, NOT GUESSED, the same way the MASM side was. The 31
+// NASM files of the four corpora were surveyed before a line was written:
+//
+//   Snake-Game-8086-Assembly/Snake.asm        `bits 16`, `org 100h`, local
+//                                             labels, `section .bss`, RESB/RESW
+//   typing-balloon-game-asm/                  `[org 0x0100]`, EQU, 2271 lines
+//   Maze_Runner_Go/MazeRunnercode.asm         `[org 0x0100]`, `dw` grids
+//   retro-dos-graphics/ (28 files)            the whole `%`-preprocessor:
+//                                             %define/%assign/%macro/%rep/
+//                                             %include/%push/%pop/%use ifunc,
+//                                             STRUC/ISTRUC/AT, INCBIN, CPU,
+//                                             `align n, db 0`, `[ds:bp+X]`
+//
+// GROUND TRUTH IS NASM ITSELF. `scripts/oracle-nasm.mjs` runs NASM 2.16 over
+// the same sources and compares the images BYTE FOR BYTE; that is a stronger
+// check than the MASM side has, and it is what every claim below rests on.
+// NASM is not vendored, so `test/oracle-nasm.test.mjs` SKIPS AND SAYS SO
+// when it is absent -- a silent skip reads exactly like a pass.
+//
+// NOT SUPPORTED, deliberately, each raising an error that NAMES the
+// construct rather than encoding something plausible:
+//
+//   - %if/%ifdef/%elif/%else/%endif and the whole conditional preprocessor,
+//     %error/%warning/%fatal, %rotate, %strlen/%substr, %defstr, %idefine
+//     and the case-insensitive macro forms, %imacro, %unmacro, %exitrep,
+//     %local, %arg, %stacksize, %line, %clear, %pathsearch, %depend.
+//   - `%use` of anything but `ifunc`; `%$$` outer-context names.
+//   - GLOBAL, EXTERN, COMMON, ABSOLUTE, DEFAULT, GROUP, and multi-module
+//     linking of any kind: this assembles straight to a loadable image.
+//   - Output formats other than `bin`: no `-f obj`, `-f elf`, `-f coff`.
+//   - SECTION names other than .text, .data, .rodata and .bss, and section
+//     attributes (`align=`, `nobits`, `progbits`, `vstart=`, `start=`).
+//   - WRT, SEG, STRICT, the `$`-prefixed hex and float literals, and the
+//     80186-and-later instructions the MASM side already refuses.
+//   - `.bss` written BEFORE `.data`. NASM's `bin` writer orders sections
+//     .text, .data, .bss whatever order the source declares them in; this
+//     lays them out in the order they first appear, so the one arrangement
+//     where the two would differ is refused rather than mis-ordered.
+//
+// TWO THINGS ARE IMPLEMENTED THAT THE CORPUS DOES NOT USE, and saying so is
+// the point: `TIMES` and `$$`. They are named in the brief, they are the
+// idiom every boot sector is padded with (`times 510-($-$$) db 0`), and they
+// cost ten lines between them -- but nothing in the four corpora drives
+// them, so their only evidence is `test/i8086-asm-nasm.test.mjs` and the
+// NASM differential. That is a weaker guarantee than everything else here
+// and it should be read as one.
+//
+// CASE. NASM is case-SENSITIVE and this assembler's symbol table is not.
+// The preprocessor is therefore case-sensitive -- it has to be, because
+// retro-dos-graphics defines `%macro EsperaTiempo 0` whose body is
+// `call esperatiempo`, and folding the two together turns a call into
+// unbounded recursion -- while symbols that reach the assembler are folded
+// as they always were. Two NASM symbols differing only in case therefore
+// collide, and collide LOUDLY: `define()` refuses a duplicate by name.
+// ---------------------------------------------------------------------------
+
+/** What says a source is NASM. Each carries the name it is reported under. */
+const NASM_SIGNALS = [
+    [/^[ \t]*\[?[ \t]*bits[ \t]+\d+/im, 'BITS'],
+    [/^[ \t]*\[[ \t]*org\b/im, '[ORG'],
+    [/^[ \t]*\[?[ \t]*section[ \t]+\.[a-z]/im, 'SECTION .name'],
+    [/^[ \t]*%[a-z]/im, 'a %-directive'],
+    [/^[ \t]*[A-Za-z_.$][\w.$#@~?]*[ \t]+res[bwdqt][ \t]+\S/im, 'RESB/RESW'],
+    [/^[ \t]*cpu[ \t]+\d/im, 'CPU'],
+    [/^[ \t]*incbin\b/im, 'INCBIN'],
+    // NOT `TIMES`. `TIMES EQU 5` is a perfectly ordinary MASM constant and
+    // two Amey programs declare one; a signal that fires on a plain
+    // identifier is not a signal.
+    [/\$\$/, '$$'],
+];
+
+/** What says it is MASM. Both lists firing at once is a REFUSAL, not a
+ *  vote: a source this module guessed wrong about would assemble cleanly
+ *  and compute with addresses where it meant contents. */
+const MASM_SIGNALS = [
+    [/^[ \t]*\.model\b/im, '.MODEL'],
+    [/^[ \t]*[A-Za-z_@?$][\w@?$]*[ \t]+segment\b/im, 'SEGMENT'],
+    [/^[ \t]*assume\b/im, 'ASSUME'],
+    [/^[ \t]*[A-Za-z_@?$][\w@?$]*[ \t]+proc\b/im, 'PROC'],
+    [/\bdup[ \t]*\(/i, 'DUP'],
+    [/\b(byte|word|dword)[ \t]+ptr\b/i, 'PTR'],
+    [/^[ \t]*\.(code|data|stack|const)\b/im, '.CODE/.DATA/.STACK'],
+    [/^[ \t]*[A-Za-z_@?$][\w@?$]*[ \t]+macro\b/im, 'MACRO'],
+    [/\boffset[ \t]+[A-Za-z_@?$]/i, 'OFFSET'],
+];
+
+/**
+ * Which dialect a source is written in.
+ *
+ * AUTODETECTION THAT GUESSES WRONG MUST FAIL LOUDLY. A NASM source read as
+ * MASM turns every `MOV AX, VAR` into a load where an address was meant --
+ * it assembles, it runs, and it is wrong -- so a source carrying evidence of
+ * both is refused with both lists named rather than resolved by counting.
+ * No evidence at all is MASM, which is what every existing caller means.
+ *
+ * @param {string} source
+ * @returns {'nasm'|'masm'}
+ */
+export function detectDialect(source) {
+    const text = String(source);
+    const nasm = NASM_SIGNALS.filter(([re]) => re.test(text)).map(([, n]) => n);
+    const masm = MASM_SIGNALS.filter(([re]) => re.test(text)).map(([, n]) => n);
+    if (nasm.length && masm.length) {
+        throw new AsmError(
+            `this source reads as BOTH dialects -- ${nasm.join(', ')} say NASM and `
+            + `${masm.join(', ')} say MASM. They mean opposite things by "MOV AX, VAR", so `
+            + "guessing here would assemble a wrong program silently: pass { dialect: 'nasm' } "
+            + "or { dialect: 'masm' } to settle it",
+            { what: 'ambiguous dialect' });
+    }
+    return nasm.length ? 'nasm' : 'masm';
+}
+
+/** The prefix every name this front end INVENTS carries -- `%%` macro
+ *  labels, `%$` context labels and ISTRUC anchors. It is what tells the
+ *  local-label scope which labels are the author's and which are not. */
+const NASM_GENERATED = '__n';
+
+/** NASM's identifier, which is wider than MASM's: `#`, `~` and `.` are all
+ *  in it, and `_C#` really is one name in retro-dos-graphics/speaker.asm. */
+const NASM_ID = /^[A-Za-z_?][A-Za-z0-9_$#@~?.]*/;
+
+/** Words that may open a line WITHOUT being a label. Anything else in that
+ *  position IS one -- that is NASM's rule, and it is what makes the
+ *  colon optional. */
+let NASM_HEAD = null;
+function nasmHeadWords() {
+    if (NASM_HEAD) return NASM_HEAD;
+    NASM_HEAD = new Set([...KNOWN_MNEMONICS,
+        'db', 'dw', 'dd', 'dq', 'dt', 'resb', 'resw', 'resd', 'resq', 'rest',
+        'times', 'equ', 'incbin', 'section', 'segment', 'org', 'bits', 'cpu',
+        'align', 'alignb', 'struc', 'endstruc', 'istruc', 'at', 'iend',
+        'global', 'extern', 'common', 'absolute', 'default', 'group',
+        'use16', 'use32', 'end',
+        // Not a label. See LATER_THAN_8086: `pusha` alone on a line reads
+        // as a label under NASM's colon-optional rule, and the instruction
+        // then disappears without a word.
+        ...LATER_THAN_8086.keys(),
+    ]);
+    return NASM_HEAD;
+}
+
+/** The `ifunc` package, which engine/header.asm asks for by name. `%rep
+ *  ilog2e(ALTOTILE)` turns a multiply into a run of shifts, so the count has
+ *  to be a number HERE, in the preprocessor, and not an expression the
+ *  assembler evaluates later. */
+const IFUNCS = {
+    ilog2e: (x, ctx) => {
+        if (x <= 0 || (x & (x - 1))) throw new AsmError(`ilog2e(${x}) -- not a power of two`,
+            { ...ctx, what: 'ilog2e of non-power-of-two' });
+        return Math.log2(x);
+    },
+    ilog2f: (x) => (x <= 0 ? 0 : Math.floor(Math.log2(x))),
+    ilog2c: (x) => (x <= 0 ? 0 : Math.ceil(Math.log2(x))),
+    ilog2w: (x) => (x <= 0 ? 0 : Math.round(Math.log2(x))),
+};
+
+/**
+ * A constant the PREPROCESSOR must know, as opposed to one the assembler
+ * evaluates. Only `%rep`, `%assign` and INCBIN's skip/length need this;
+ * everything else is handed to `evalText` where the symbol table is.
+ */
+function nasmConst(text, ctx) {
+    const toks = lex(text, ctx, true);
+    let pos = 0;
+    const primary = () => {
+        const t = toks[pos];
+        if (!t) throw new AsmError(`"${text.trim()}" ends where a number was expected`,
+            { ...ctx, what: 'bad preprocessor expression' });
+        if (t.k === 'op' && (t.v === '-' || t.v === '+')) { pos++; const v = primary(); return t.v === '-' ? -v : v; }
+        if (t.k === 'op' && t.v === '(') { pos++; const v = sum(); if (!toks[pos] || toks[pos].v !== ')')
+            throw new AsmError('a "(" is not closed', { ...ctx, what: 'bad preprocessor expression' });
+            pos++; return v; }
+        if (t.k === 'num') { pos++; return t.v; }
+        if (t.k === 'str') { pos++; let v = 0; for (const c of t.v) v = (v << 8) | (c.charCodeAt(0) & 0xff); return v; }
+        if (t.k === 'id' && IFUNCS[t.v.toLowerCase()]) {
+            pos++;
+            if (!toks[pos] || toks[pos].v !== '(') throw new AsmError(`${t.v} needs a "(" after it`,
+                { ...ctx, what: 'bad preprocessor expression' });
+            pos++;
+            const arg = sum();
+            if (!toks[pos] || toks[pos].v !== ')') throw new AsmError(`${t.v} is not closed`,
+                { ...ctx, what: 'bad preprocessor expression' });
+            pos++;
+            return IFUNCS[t.v.toLowerCase()](arg, ctx);
+        }
+        throw new AsmError(
+            `"${t.v}" has no value in the preprocessor -- %rep, %assign and INCBIN counts must be`
+            + ' numbers by the time they are read, not symbols the assembler resolves later',
+            { ...ctx, what: 'symbol in preprocessor expression' });
+    };
+    const product = () => {
+        let v = primary();
+        for (;;) {
+            const t = toks[pos];
+            const op = t && (t.k === 'op' ? t.v : t.k === 'id' ? t.v.toLowerCase() : null);
+            if (op !== '*' && op !== '/' && op !== 'mod' && op !== 'shl' && op !== 'shr') break;
+            pos++;
+            const r = primary();
+            if ((op === '/' || op === 'mod') && r === 0) throw new AsmError('division by zero',
+                { ...ctx, what: 'division by zero' });
+            v = op === '*' ? v * r : op === '/' ? Math.trunc(v / r) : op === 'mod' ? v % r
+                : op === 'shl' ? v << r : v >> r;
+        }
+        return v;
+    };
+    const sum = () => {
+        let v = product();
+        for (;;) {
+            const t = toks[pos];
+            if (!t || t.k !== 'op' || (t.v !== '+' && t.v !== '-')) break;
+            pos++;
+            const r = product();
+            v = t.v === '+' ? v + r : v - r;
+        }
+        return v;
+    };
+    const v = sum();
+    if (pos !== toks.length) throw new AsmError(`cannot read the preprocessor expression "${text.trim()}"`,
+        { ...ctx, what: 'bad preprocessor expression' });
+    return v | 0;
+}
+
+/** Rewrite outside string literals, so `db ';.'` and `db "[es:di]"` survive. */
+function outsideStrings(text, fn) {
+    let out = '', i = 0, run = 0;
+    while (i < text.length) {
+        const c = text[i];
+        if (c === "'" || c === '"' || c === '`') {
+            out += fn(text.slice(run, i));
+            let j = i + 1;
+            while (j < text.length && text[j] !== c) j++;
+            out += text.slice(i, Math.min(j + 1, text.length));
+            i = j + 1; run = i;
+            continue;
+        }
+        i++;
+    }
+    return out + fn(text.slice(run));
+}
+
+/**
+ * NASM source in, MASM-dialect line entries out.
+ *
+ * Two stages, in NASM's own order: the `%`-preprocessor is purely textual
+ * and knows nothing about instructions, and the normaliser is purely
+ * syntactic and knows nothing about macros. Line numbers and file names
+ * travel with every line all the way to an error message, which is the
+ * whole reason this hands back entries rather than a string.
+ */
+class NasmFrontEnd {
+    constructor(source, opts) {
+        this.opts = opts || {};
+        this.name = this.opts.name || 'source';
+        // CASE SENSITIVE, unlike the symbol table -- see the header.
+        this.defines = new Map();
+        this.macros = new Map();
+        this.contexts = [];
+        this.seq = 0;
+        this.budget = 0;
+        this.warnings = [];
+        this.pre = [];
+        this.here = { line: 0, text: '', file: this.name };
+        this.stack = [{ lines: NasmFrontEnd.split(source, this.name), i: 0, name: this.name }];
+    }
+
+    static split(source, file) {
+        return String(source).split(/\r?\n/).map((text, i) => ({ text, line: i + 1, file }));
+    }
+
+    note(message) {
+        if (!this.warnings.some((w) => w.line === this.here.line && w.message === message)) {
+            this.warnings.push({ line: this.here.line, file: this.here.file, message });
+        }
+    }
+
+    push(lines, what) {
+        if (this.stack.length > 64) throw new AsmError(`${what} nests more than 64 deep`,
+            { ...this.here, what: 'preprocessor recursion' });
+        this.stack.push({ lines, i: 0, name: what });
+    }
+
+    next() {
+        while (this.stack.length) {
+            const top = this.stack[this.stack.length - 1];
+            if (top.i >= top.lines.length) { this.stack.pop(); continue; }
+            if (++this.budget > 400_000) throw new AsmError(
+                'the preprocessor produced more than 400,000 lines',
+                { ...this.here, what: 'preprocessor runaway' });
+            return top.lines[top.i++];
+        }
+        return null;
+    }
+
+    // -- stage one: the % preprocessor -------------------------------------
+
+    run() {
+        for (;;) {
+            const e = this.next();
+            if (e === null) break;
+            this.here = { line: e.line, text: e.text, file: e.file };
+            const line = stripComment(e.text);
+            if (!line) continue;
+            // `%$label:` and `%%label:` OPEN A LINE and are not directives:
+            // a context-local label is the one thing that starts with `%`
+            // and has to be expanded rather than obeyed.
+            if (line[0] === '%' && !/^%[$%]/.test(line)) { this.preDirective(line); continue; }
+            const text = this.expand(line);
+            // A macro can follow a label on the same line, so the label is
+            // split off before the first word is tested.
+            let head = '', rest = text;
+            const lm = /^([A-Za-z_?.$][\w$#@~?.]*)\s*:\s*/.exec(text);
+            if (lm) { head = lm[0]; rest = text.slice(lm[0].length); }
+            const w = NASM_ID.exec(rest.trim());
+            if (w && this.macros.has(w[0])) {
+                if (head.trim()) this.emit(head.trim(), e);
+                this.invoke(w[0], rest.trim().slice(w[0].length).trim(), e);
+                continue;
+            }
+            this.emit(text, e);
+        }
+        if (this.contexts.length) throw new AsmError(
+            `the %push context "${this.contexts[this.contexts.length - 1].name}" is never %popped`,
+            { ...this.here, what: 'unclosed %push' });
+        return this.normalise();
+    }
+
+    emit(text, e) { this.pre.push({ text, line: e.line, file: e.file }); }
+
+    preDirective(line) {
+        const m = /^%\s*([A-Za-z_]+)\s*(.*)$/s.exec(line);
+        if (!m) throw new AsmError(`cannot read the preprocessor line "${line}"`,
+            { ...this.here, what: 'bad %-directive' });
+        const d = m[1].toLowerCase(), rest = m[2].trim();
+        switch (d) {
+            case 'define': case 'assign': case 'xdefine': return this.define(d, rest);
+            case 'undef': this.defines.delete(rest.split(/\s+/)[0]); return;
+            case 'macro': return this.collectMacro(rest);
+            case 'endmacro': case 'endm':
+                throw new AsmError('%endmacro with no %macro', { ...this.here, what: 'stray %endmacro' });
+            case 'rep': return this.collectRep(rest);
+            case 'endrep':
+                throw new AsmError('%endrep with no %rep', { ...this.here, what: 'stray %endrep' });
+            case 'include': return this.include(rest);
+            case 'push':
+                this.contexts.push({ name: rest || 'ctx', tag: `${NASM_GENERATED}c${this.seq++}` });
+                return;
+            case 'pop': {
+                const top = this.contexts.pop();
+                if (!top) throw new AsmError('%pop with no %push', { ...this.here, what: 'stray %pop' });
+                if (rest && rest !== top.name) throw new AsmError(
+                    `%pop names "${rest}" but the open context is "${top.name}"`,
+                    { ...this.here, what: 'mismatched %pop' });
+                return;
+            }
+            case 'use':
+                if (rest.replace(/^['"]|['"]$/g, '').toLowerCase() !== 'ifunc') {
+                    throw new AsmError(`%use ${rest} -- only the "ifunc" package is supported`,
+                        { ...this.here, what: `%use ${rest}` });
+                }
+                return;                          // ifunc is always available here
+            default:
+                throw new AsmError(
+                    `"%${m[1]}" is not a preprocessor directive this assembler knows -- see the`
+                    + ' NOT SUPPORTED list in the NASM front end of src/i8086-asm.js',
+                    { ...this.here, what: `unsupported %${m[1].toLowerCase()}` });
+        }
+    }
+
+    define(kind, rest) {
+        // The `(` must TOUCH the name. `%assign BYTESPERSCAN (WIDTHPX / PXB)`
+        // is a plain value whose body happens to be parenthesised, and
+        // reading that as a parameter list makes the body empty.
+        const m = /^([A-Za-z_?][\w$#@~?.]*)(\(([^)]*)\))?\s*([\s\S]*)$/.exec(rest);
+        if (!m) throw new AsmError(`cannot read the %${kind} "${rest}"`,
+            { ...this.here, what: `bad %${kind}` });
+        const name = m[1];
+        const params = m[2] ? m[3].split(',').map((s) => s.trim()).filter(Boolean) : null;
+        let body = (m[4] || '').trim();
+        // %assign and %xdefine are EAGER: the body is expanded once, now,
+        // against what is defined at this point. %define is lazy and is
+        // expanded every time it is used, which is why a %define may name a
+        // symbol that does not exist yet and a %assign may not.
+        if (kind === 'assign') body = String(nasmConst(this.expand(body), this.here));
+        else if (kind === 'xdefine') body = this.expand(body);
+        this.defines.set(name, { params, body });
+    }
+
+    /** One round of name substitution, outside string literals. */
+    expandOnce(text) {
+        let out = '', i = 0;
+        while (i < text.length) {
+            const c = text[i];
+            if (c === "'" || c === '"' || c === '`') {
+                let j = i + 1;
+                while (j < text.length && text[j] !== c) j++;
+                out += text.slice(i, Math.min(j + 1, text.length));
+                i = j + 1;
+                continue;
+            }
+            // A number is never a macro name, and scanning it as one would
+            // let `%define d 4` rewrite the middle of `160d`.
+            if (/[0-9]/.test(c)) {
+                let j = i;
+                while (j < text.length && /[\w.]/.test(text[j])) j++;
+                out += text.slice(i, j); i = j;
+                continue;
+            }
+            if (c === '%' && text[i + 1] === '$') {
+                const cm = /^%\$(\$?)([A-Za-z0-9_$#@~?.]+)/.exec(text.slice(i));
+                if (cm) {
+                    if (cm[1]) throw new AsmError('%$$ (an outer context) is not supported',
+                        { ...this.here, what: '%$$ context' });
+                    if (!this.contexts.length) throw new AsmError(
+                        `%$${cm[2]} needs a %push context and none is open`,
+                        { ...this.here, what: '%$ without %push' });
+                    out += `${this.contexts[this.contexts.length - 1].tag}_${cm[2]}`;
+                    i += cm[0].length;
+                    continue;
+                }
+            }
+            const im = NASM_ID.exec(text.slice(i));
+            if (im) {
+                const name = im[0];
+                let j = i + name.length;
+                const d = this.defines.get(name);
+                if (d && d.params) {
+                    let k = j;
+                    while (k < text.length && /\s/.test(text[k])) k++;
+                    if (text[k] !== '(') { out += name; i = j; continue; }
+                    let depth = 0, end = k;
+                    for (; end < text.length; end++) {
+                        if (text[end] === '(') depth++;
+                        else if (text[end] === ')' && --depth === 0) break;
+                    }
+                    if (depth !== 0) throw new AsmError(`the call to ${name} is not closed`,
+                        { ...this.here, what: 'bad %define call' });
+                    const args = splitTop(text.slice(k + 1, end), ',').map((s) => s.trim());
+                    let body = d.body;
+                    d.params.forEach((p, n) => {
+                        body = body.replace(new RegExp(`(^|[^\\w$#@~?.])${p}(?![\\w$#@~?.])`, 'g'),
+                            (m0, pre) => `${pre}(${args[n] ?? ''})`);
+                    });
+                    out += body;
+                    i = end + 1;
+                    continue;
+                }
+                out += d ? d.body : name;
+                i = j;
+                continue;
+            }
+            out += c;
+            i++;
+        }
+        return out;
+    }
+
+    expand(text) {
+        for (let round = 0; round < 64; round++) {
+            const next = this.expandOnce(text);
+            if (next === text) return text;
+            text = next;
+        }
+        throw new AsmError(`"${text.slice(0, 40)}" expands into itself`,
+            { ...this.here, what: '%define recursion' });
+    }
+
+    /** Read a `%macro`/`%rep` body, counting nesting so an inner `%endrep`
+     *  is not mistaken for the outer terminator. */
+    collectBody(opener, closer, what) {
+        const body = [];
+        let depth = 1;
+        for (;;) {
+            const e = this.next();
+            if (e === null) throw new AsmError(`a ${what} is never closed by %${closer}`,
+                { ...this.here, what: `unclosed %${opener}` });
+            const line = stripComment(e.text).trim().toLowerCase();
+            if (line.startsWith(`%${closer}`)) { if (--depth === 0) return body; }
+            else if (new RegExp(`^%${opener}\\b`).test(line)) depth++;
+            body.push(e);
+        }
+    }
+
+    collectMacro(rest) {
+        // `%macro NAME 1-2 0` -- one required parameter, one optional, and
+        // `0` is what the optional one is when it is left out. mapedit.asm
+        // writes exactly that, which is why the range is read rather than
+        // refused.
+        const m = /^([A-Za-z_?][\w$#@~?.]*)\s+(\d+)(?:\s*-\s*(\d+|\*))?\s*([\s\S]*)$/.exec(rest);
+        if (!m) throw new AsmError(`cannot read the %macro "${rest}"`,
+            { ...this.here, what: 'bad %macro' });
+        if (m[3] === '*') throw new AsmError(
+            `%macro ${m[1]} takes any number of parameters (${m[2]}-*), which is not supported`,
+            { ...this.here, what: '%macro greedy parameters' });
+        const min = Number(m[2]);
+        const max = m[3] === undefined ? min : Number(m[3]);
+        const defaults = m[4].trim() ? splitTop(m[4].trim().replace(/\s+/g, ','), ',').map((x) => x.trim()).filter(Boolean) : [];
+        this.macros.set(m[1], {
+            name: m[1], min, max, defaults,
+            body: this.collectBody('macro', 'endmacro', 'MACRO'),
+        });
+    }
+
+    collectRep(rest) {
+        const n = nasmConst(this.expand(rest), this.here);
+        if (n < 0 || n > 65535) throw new AsmError(`a %rep count of ${n} is not meaningful`,
+            { ...this.here, what: 'bad %rep count' });
+        const body = this.collectBody('rep', 'endrep', 'REP');
+        const out = [];
+        for (let i = 0; i < n; i++) out.push(...body);
+        this.push(out, '%rep');
+    }
+
+    invoke(name, argText, e) {
+        const mac = this.macros.get(name);
+        const args = argText ? splitTop(argText, ',').map((s) => s.trim().replace(/^\{([\s\S]*)\}$/, '$1')) : [];
+        if (args.length < mac.min || args.length > mac.max) {
+            throw new AsmError(
+                `${mac.name} takes ${mac.min === mac.max ? mac.min : `${mac.min} to ${mac.max}`}`
+                + ` parameter(s) and was given ${args.length}`,
+                { ...this.here, what: 'macro arity' });
+        }
+        for (let i = args.length; i < mac.max; i++) args.push(mac.defaults[i - mac.min] ?? '');
+        // `%%label` is unique PER INVOCATION -- a macro used twice would
+        // otherwise define the same label twice -- and it is spelled without
+        // a dot on purpose, so that it is a global label and does not become
+        // a member of whatever local-label scope is open at the call site.
+        const tag = `${NASM_GENERATED}l${this.seq++}`;
+        const body = mac.body.map((b) => ({
+            file: b.file,
+            line: b.line,
+            text: b.text
+                .replace(/%%([A-Za-z0-9_$#@~?.]+)/g, (m0, l) => `${tag}_${l}`)
+                .replace(/%(\d)/g, (m0, d) => (d === '0' ? String(args.length) : (args[Number(d) - 1] ?? ''))),
+        }));
+        void e;
+        this.push(body, `macro ${mac.name}`);
+    }
+
+    include(rest) {
+        const path = rest.trim().replace(/^['"<]|['">]$/g, '');
+        const read = this.opts.readInclude;
+        if (typeof read !== 'function') {
+            throw new AsmError(
+                `%include '${path}' -- this assembler has no file system of its own; pass`
+                + ' { readInclude(path) -> string } to resolve includes',
+                { ...this.here, what: '%include without readInclude' });
+        }
+        const text = read(path);
+        if (typeof text !== 'string') throw new AsmError(`%include '${path}' -- the file was not found`,
+            { ...this.here, what: '%include not found' });
+        this.push(NasmFrontEnd.split(text, path), `include ${path}`);
+    }
+
+    // -- stage two: syntax --------------------------------------------------
+
+    /** The primitive directives NASM also accepts wrapped in brackets. */
+    static BRACKETED = /^(org|bits|section|segment|cpu|absolute|global|extern|warning|map)\b/i;
+
+    normalise() {
+        const out = [];
+        const push = (text, e) => out.push({ text, line: e.line, file: e.file });
+        /** The last non-local label: what a leading `.` is scoped to. */
+        let parent = '';
+        let struc = null, istruc = null, sections = [];
+        for (const e of this.pre) {
+            this.here = { line: e.line, text: e.text, file: e.file };
+            let text = e.text.trim();
+            if (!text) continue;
+            const br = /^\[\s*([^\]]*?)\s*\]$/.exec(text);
+            if (br && NasmFrontEnd.BRACKETED.test(br[1])) text = br[1];
+
+            // A label is the first word unless the first word is something
+            // that cannot be one. NASM lets the colon go, and every one of
+            // the four corpora uses both spellings.
+            let label = null, rest = text;
+            const lm = /^([A-Za-z_?.$][\w$#@~?.]*)\s*(:)?\s*/.exec(text);
+            if (lm && (lm[2] || !nasmHeadWords().has(lm[1].toLowerCase()))) {
+                label = lm[1];
+                rest = text.slice(lm[0].length).trim();
+            }
+            if (label && !lm[2] && !rest) {
+                // NASM warns on exactly this shape and so does this: a word
+                // alone on a line with no colon is a label, and it is also
+                // what a misspelled or unsupported instruction looks like.
+                this.note(`"${label}" is a label on a line of its own with no colon`);
+            }
+            if (label) {
+                if (label[0] === '.') {
+                    if (!parent) throw new AsmError(
+                        `the local label "${label}" has no label above it to belong to`,
+                        { ...this.here, what: 'orphan local label' });
+                    label = parent + label;
+                    // A `%%` or `%$` label does NOT become the local-label
+                    // scope. NASM spells those `..@N.name`, and names
+                    // beginning `..@` are exempt from the local-label
+                    // mechanism there for exactly this reason: a macro that
+                    // defines `%%Retrace1` in the middle of a procedure must
+                    // not capture the `.mainloop` written after it.
+                } else if (!label.startsWith(NASM_GENERATED)) parent = label;
+            }
+
+            // STRUC is an offset table, not bytes: every member becomes an
+            // EQU of the running total, so `resb SPRITE_size` inside another
+            // STRUC is the assembler's arithmetic and not a second evaluator
+            // here.
+            if (struc) {
+                if (/^endstruc\b/i.test(rest)) {
+                    push(`${struc.name}_size equ ${struc.expr}`, e);
+                    struc = null; parent = '';
+                    continue;
+                }
+                const rm = /^(res[bwdqt])\s+([\s\S]*)$/i.exec(rest);
+                if (!rm) {
+                    if (!rest && label) { push(`${label} equ ${struc.expr}`, e); continue; }
+                    throw new AsmError(
+                        `"${rest}" inside STRUC ${struc.name} -- only RESB/RESW/RESD members and`
+                        + ' ENDSTRUC are supported',
+                        { ...this.here, what: 'STRUC member' });
+                }
+                const unit = { resb: 1, resw: 2, resd: 4, resq: 8, rest: 10 }[rm[1].toLowerCase()];
+                if (label) push(`${label} equ ${struc.expr}`, e);
+                struc.expr = `(${struc.expr})+(${unit})*(${this.fix(rm[2], parent)})`;
+                continue;
+            }
+            const sm = /^struc\s+([A-Za-z_?][\w$#@~?.]*)\s*$/i.exec(rest);
+            if (sm) { struc = { name: sm[1], expr: '0' }; parent = sm[1]; continue; }
+            if (/^endstruc\b/i.test(rest)) throw new AsmError('ENDSTRUC with no STRUC',
+                { ...this.here, what: 'stray ENDSTRUC' });
+
+            // `NAME equ expr` keeps its MASM shape: a colon here would make
+            // NAME a code label AND leave `equ 5` on a line of its own.
+            const em = label && /^equ\s+([\s\S]*)$/i.exec(rest);
+            if (em) { push(`${label} equ ${this.fix(em[1], parent)}`, e); continue; }
+            if (label) push(`${label}:`, e);
+
+            // ISTRUC lays an instance down at the offsets STRUC computed.
+            // `ORG` inside a segment already pads forward and already
+            // refuses to go backwards, which is exactly what AT needs.
+            const im = /^istruc\s+([A-Za-z_?][\w$#@~?.]*)\s*$/i.exec(rest);
+            if (im) {
+                if (istruc) push(`org ${istruc.tag}+${istruc.name}_size`, e);
+                istruc = { name: im[1], tag: `${NASM_GENERATED}i${this.seq++}` };
+                push(`${istruc.tag}:`, e);
+                continue;
+            }
+            if (istruc) {
+                const am = /^at\s+([\s\S]*)$/i.exec(rest);
+                if (am) {
+                    const parts = splitTop(am[1], ',');
+                    push(`org ${istruc.tag}+(${this.fix(parts[0], parent)})`, e);
+                    const body = parts.slice(1).join(',').trim();
+                    if (body) push(this.fix(body, parent), e);
+                    continue;
+                }
+                // NASM 2.16 accepts an ISTRUC that is never closed by IEND
+                // -- games/platform.asm has six of them and assembles -- so
+                // closing it here rather than refusing is what matches the
+                // tool the corpus was written for.
+                push(`org ${istruc.tag}+${istruc.name}_size`, e);
+                const wasIend = /^iend\b/i.test(rest);
+                istruc = null;
+                if (wasIend) continue;
+            }
+            if (/^iend\b/i.test(rest)) throw new AsmError('IEND with no ISTRUC',
+                { ...this.here, what: 'stray IEND' });
+            if (!rest) continue;
+
+            const word = (/^([A-Za-z_?.$][\w$#@~?.]*)/.exec(rest) || [, ''])[1].toLowerCase();
+            switch (word) {
+                case 'bits': {
+                    const n = rest.slice(4).trim();
+                    if (n !== '16') throw new AsmError(`BITS ${n} -- this is an 8086`,
+                        { ...this.here, what: `BITS ${n}` });
+                    continue;
+                }
+                case 'cpu': {
+                    const c = rest.slice(3).trim().toLowerCase();
+                    if (c !== '8086') throw new AsmError(
+                        `CPU ${rest.slice(3).trim()} -- this assembler only encodes 8086 instructions`,
+                        { ...this.here, what: `CPU ${c}` });
+                    continue;
+                }
+                case 'section': case 'segment': {
+                    const s = rest.slice(word.length).trim().split(/[\s]+/)[0].toLowerCase();
+                    const map = { '.text': '.CODE', '.code': '.CODE', '.data': '.DATA', '.rodata': '.DATA', '.bss': '.BSS' };
+                    if (!map[s]) throw new AsmError(
+                        `SECTION ${rest.slice(word.length).trim()} -- only .text, .data, .rodata and`
+                        + ' .bss are supported, with no attributes',
+                        { ...this.here, what: `SECTION ${s}` });
+                    if (rest.slice(word.length).trim().split(/\s+/).length > 1) {
+                        throw new AsmError(
+                            `SECTION ${rest.slice(word.length).trim()} -- section attributes`
+                            + ' (align=, vstart=, nobits) are not supported',
+                            { ...this.here, what: 'SECTION attributes' });
+                    }
+                    // NASM's bin writer emits .text, then .data, then .bss,
+                    // whatever order they are declared in; this lays them
+                    // out in declaration order. The one arrangement where
+                    // the two disagree is refused rather than mis-ordered.
+                    sections.push(s);
+                    if (s === '.bss' && !sections.includes('.data')
+                        && this.pre.some((p) => /^\s*\[?\s*section\s+\.data\b/i.test(p.text))) {
+                        throw new AsmError(
+                            'SECTION .bss is declared before SECTION .data, and NASM would still write'
+                            + ' .data first; that reordering is not supported',
+                            { ...this.here, what: '.bss before .data' });
+                    }
+                    push(map[s], e);
+                    continue;
+                }
+                case 'global': case 'extern': case 'common': case 'absolute':
+                case 'default': case 'group': case 'use16': case 'use32':
+                    throw new AsmError(
+                        `"${word.toUpperCase()}" is not supported -- this assembles straight to a`
+                        + ' loadable image, so there is nothing to link',
+                        { ...this.here, what: `unsupported ${word.toUpperCase()}` });
+                case 'resb': case 'resw': case 'resd': case 'resq': case 'rest': {
+                    const unit = { resb: 1, resw: 2, resd: 4, resq: 8, rest: 10 }[word];
+                    if (unit > 4) throw new AsmError(`${word.toUpperCase()} is not supported (no 8087 here)`,
+                        { ...this.here, what: `${word} unsupported` });
+                    // There is no BSS here: reserved space is zeros, which
+                    // is what DOS hands an image anyway. It costs file size
+                    // and nothing else.
+                    push(`${['', 'db', 'dw', '', 'dd'][unit]} (${this.fix(rest.slice(word.length), parent)}) dup (0)`, e);
+                    continue;
+                }
+                case 'incbin': {
+                    push(this.incbin(rest.slice(6), parent), e);
+                    continue;
+                }
+                case 'times': {
+                    // REPT already exists and already evaluates its count
+                    // with the symbol table open, so `times 510-($-$$) db 0`
+                    // needs no arithmetic here.
+                    const t = /^times\s+([\s\S]*)$/i.exec(rest);
+                    const split = this.splitTimes(t[1]);
+                    push(`REPT ${this.fix(split.count, parent)}`, e);
+                    push(this.fix(split.body, parent), e);
+                    push('ENDM', e);
+                    continue;
+                }
+                default:
+                    push(this.fix(rest, parent), e);
+            }
+        }
+        if (struc) throw new AsmError(`STRUC ${struc.name} is never closed by ENDSTRUC`,
+            { ...this.here, what: 'unclosed STRUC' });
+        if (istruc) out.push({ text: `org ${istruc.tag}+${istruc.name}_size`, line: this.here.line, file: this.here.file });
+        return out;
+    }
+
+    /**
+     * `TIMES <count> <instruction>` -- the count ends where the instruction
+     * begins, and nothing in the grammar marks the join. The first word that
+     * can OPEN a line is the instruction; everything before it is the count.
+     */
+    splitTimes(text) {
+        const toks = [...text.matchAll(/[A-Za-z_?.$][\w$#@~?.]*/g)];
+        for (const m of toks) {
+            if (!nasmHeadWords().has(m[0].toLowerCase())) continue;
+            return { count: text.slice(0, m.index).trim(), body: text.slice(m.index).trim() };
+        }
+        throw new AsmError(`TIMES ${text.trim()} -- nothing here looks like the instruction to repeat`,
+            { ...this.here, what: 'bad TIMES' });
+    }
+
+    incbin(rest, parent) {
+        const parts = splitTop(rest, ',');
+        const path = parts[0].trim().replace(/^['"]|['"]$/g, '');
+        const read = this.opts.readBinary;
+        if (typeof read !== 'function') {
+            throw new AsmError(
+                `INCBIN "${path}" -- this assembler has no file system of its own; pass`
+                + ' { readBinary(path) -> Uint8Array } to resolve it',
+                { ...this.here, what: 'INCBIN without readBinary' });
+        }
+        const data = read(path);
+        if (!data) throw new AsmError(`INCBIN "${path}" -- the file was not found`,
+            { ...this.here, what: 'INCBIN not found' });
+        const all = Array.from(data);
+        const skip = parts[1] ? nasmConst(parts[1], this.here) : 0;
+        const len = parts[2] ? nasmConst(parts[2], this.here) : all.length - skip;
+        if (skip < 0 || skip > all.length) throw new AsmError(
+            `INCBIN "${path}" skips ${skip} bytes of a ${all.length}-byte file`,
+            { ...this.here, what: 'INCBIN skip past end' });
+        const bytes = all.slice(skip, skip + len);
+        if (bytes.length < len) throw new AsmError(
+            `INCBIN "${path}" wants ${len} bytes from offset ${skip} and the file holds ${all.length}`,
+            { ...this.here, what: 'INCBIN short file' });
+        void parent;
+        return bytes.length ? `db ${bytes.map((b) => `0${(b & 0xff).toString(16)}h`).join(',')}` : 'db ';
+    }
+
+    /**
+     * The two operand rewrites, both outside string literals.
+     *
+     * A LEADING DOT IS A LOCAL LABEL, scoped to the last global one, and
+     * spelling it `parent.child` is not a workaround -- it is what NASM
+     * itself does, which is why `SPRITE.x` and `.x` inside `struc SPRITE`
+     * name the same symbol here as they do there.
+     *
+     * A SEGMENT OVERRIDE INSIDE THE BRACKETS, `[ds:bp+8]`, is NASM's
+     * spelling of MASM's `ds:[bp+8]`. They are the same prefix byte.
+     */
+    fix(text, parent) {
+        return outsideStrings(text, (s) => s
+            // The SPACE is load-bearing: `mov word[es:di],0` is written
+            // without one, and moving the prefix out without putting one in
+            // spells `wordes:[di]`.
+            .replace(/\[\s*(cs|ds|es|ss)\s*:/gi, (m0, r) => ` ${r}:[`)
+            .replace(/(^|[^\w$#@~?.])\.([A-Za-z_?][\w$#@~?.]*)/g, (m0, pre, name) => {
+                if (!parent) throw new AsmError(`the local label ".${name}" has no label above it to belong to`,
+                    { ...this.here, what: 'orphan local label' });
+                return `${pre}${parent}.${name}`;
+            }));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Output.
 // ---------------------------------------------------------------------------
 
 function buildCom(asm, order) {
-    const segs = order.map((n) => asm.segs.get(n)).filter((s) => s.bytes.length);
+    // A NOBITS section is placed but not written: its labels are real
+    // addresses past the end of the file, which is what a .COM gets for
+    // free because DOS hands the program the rest of the segment.
+    for (const s of order.map((n) => asm.segs.get(n))) {
+        if (s.kind !== 'bss') continue;
+        if (s.bytes.some((b) => (b & 0xff) !== 0)) {
+            throw new AsmError(
+                `the section "${s.name}" is uninitialised (.bss) and something in it emitted real`
+                + ' bytes; those would not reach the image',
+                { what: 'bytes in bss' });
+        }
+    }
+    const segs = order.map((n) => asm.segs.get(n)).filter((s) => s.bytes.length && s.kind !== 'bss');
     if (asm.relocs.length) {
         throw new AsmError('this program needs a segment value (@DATA or SEG) at load time, '
             + 'which a .COM image cannot carry -- give it .MODEL SMALL so it can be an .EXE',
@@ -2361,20 +3548,37 @@ function buildExe(asm, order) {
 }
 
 /**
- * Assemble MASM-dialect 8086 source.
+ * Assemble 8086 source, in either dialect.
  *
  * @param {string} source
  * @param {{ format?: 'auto'|'com'|'exe', maxPasses?: number,
- *           longJumps?: boolean }} [opts] -- `longJumps` promotes a
- *   conditional jump or LOOP that cannot reach; OFF by default, and see the
- *   module header for why the default is the interesting part.
+ *           longJumps?: boolean, dialect?: 'auto'|'masm'|'nasm', name?: string,
+ *           readInclude?: (path:string) => string,
+ *           readBinary?: (path:string) => Uint8Array }} [opts]
+ *   `longJumps` promotes a conditional jump or LOOP that cannot reach; OFF
+ *   by default, and see the module header for why the default is the
+ *   interesting part. `dialect` defaults to 'auto', which reads the source
+ *   for the signals listed in the NASM front end and REFUSES rather than
+ *   guesses when both dialects' signals are present. `readInclude` and
+ *   `readBinary` are what `%include` and `INCBIN` reach the file system
+ *   through; this module has none of its own.
  * @returns {{ bytes: Uint8Array, format: 'com'|'exe', org?: number,
  *             entry?: {para:number, off:number}, symbols: Map<string,object>,
  *             warnings: {line:number, message:string}[], passes: number,
  *             segments: {name:string, para:number, size:number}[] }}
  */
 export function assemble(source, opts = {}) {
-    const asm = new Assembler(source, opts);
+    const dialect = !opts.dialect || opts.dialect === 'auto' ? detectDialect(source) : opts.dialect;
+    if (dialect !== 'masm' && dialect !== 'nasm') {
+        throw new AsmError(`dialect "${dialect}" -- only 'masm', 'nasm' and 'auto' exist here`,
+            { what: 'unknown dialect' });
+    }
+    let front = null;
+    if (dialect === 'nasm') {
+        front = new NasmFrontEnd(source, opts);
+        source = front.run();
+    }
+    const asm = new Assembler(source, { ...opts, dialect });
     const maxPasses = opts.maxPasses ?? 12;
     let prev = null, passes = 0;
     asm.paras = new Map();
@@ -2432,12 +3636,16 @@ export function assemble(source, opts = {}) {
     if (format === 'auto') format = asm.flatOutput() ? 'com' : 'exe';
 
     const segments = order.map((n) => ({ name: n, para: asm.segs.get(n).para, size: asm.segs.get(n).bytes.length }));
+    // The front end's own notes belong in the same list. They come FIRST
+    // because they happened first, and because a preprocessor warning
+    // usually explains the assembler warning under it.
+    const warnings = front ? [...front.warnings, ...asm.warnings] : asm.warnings;
     if (format === 'com') {
         const { bytes, org } = buildCom(asm, order);
-        return { bytes, format, org, symbols: asm.symbols, warnings: asm.warnings, passes, segments };
+        return { bytes, format, org, dialect, symbols: asm.symbols, warnings, passes, segments };
     }
     const { bytes, entry } = buildExe(asm, order);
-    return { bytes, format, entry, symbols: asm.symbols, warnings: asm.warnings, passes, segments };
+    return { bytes, format, entry, dialect, symbols: asm.symbols, warnings, passes, segments };
 }
 
 /**
