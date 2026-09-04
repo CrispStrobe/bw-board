@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { reseatGate, compareObservables } from '../src/reseat-gate.js';
+import { reseatGate, captureObservable } from '../src/reseat-gate.js';
 import { extract6502Machine } from '../src/m6502-extract.js';
 import { M6502Machine } from '../src/m6502-machine.js';
 import { I8086Machine, BLINK8086 } from '../src/i8086-machine.js';
@@ -47,7 +47,7 @@ function build6502Original() {
     m.reset();
     return m;
 }
-const read6502PortB = (m) => m.chips.via1._pbOut() & m.chips.via1.ddrb;
+const read6502PortB = (m) => ({ out: m.chips.via1._pbOut(), dir: m.chips.via1.ddrb });
 
 // ---- the reseat: BLINK8086 (8086 / 8255), LEDs on port B --------------------
 function build8086Reseat() {
@@ -57,10 +57,10 @@ function build8086Reseat() {
     m.chips.ppi1.setInputPort('c', 0xff); // switches open -> LEDs = the walking bit
     return m;
 }
-const read8086PortB = (m) => m.chips.ppi1.outB & m.chips.ppi1.dirB;
+const read8086PortB = (m) => ({ out: m.chips.ppi1.outB, dir: m.chips.ppi1.dirB });
 // A WRONG reseat wires the LEDs to port A while the program drives port B: the
 // program runs and nothing lights. The gate reads where the LEDs ARE (port A).
-const read8086PortA = (m) => m.chips.ppi1.outA & m.chips.ppi1.dirA;
+const read8086PortA = (m) => ({ out: m.chips.ppi1.outA, dir: m.chips.ppi1.dirA });
 
 // Step budgets: enough for a full 8-position walk on each board (6502 ~3.6k to
 // reach 0x80, 8086 ~58k; both measured, headroom added).
@@ -88,12 +88,39 @@ test('RED: LEDs mis-wired to port A (program drives B) — the gate FAILS', () =
     assert.match(r.reason, /NO edges|drives a port/);
 });
 
-test('the gate drops a leading all-dark settle edge by default, keeps it on demand', () => {
-    // Configuring a port as output before the first data write is one all-dark
-    // edge — an equivalent, not a mismatch.
-    const withSettle = [{ step: 1, value: 0x00 }, { step: 5, value: 0x01 }, { step: 9, value: 0x02 }];
-    const without = [{ step: 3, value: 0x01 }, { step: 7, value: 0x02 }];
-    assert.equal(compareObservables(withSettle, without).match, true, 'settle edge ignored by default');
-    assert.equal(compareObservables(withSettle, without, { keepLeadingSettle: true }).match, false,
-        'timing-strict keeps the settle edge and they differ');
+test('the settle edge is tied to the direction write, not to a leading zero', () => {
+    // A fake board: dir goes 0 -> 0xff at step 3 (the "direction write"); the
+    // data latch (out) is 0 until step 6, then walks. The all-dark window
+    // between direction and first data must NOT appear as an edge — but a
+    // genuine data write of 0x00 LATER must.
+    const script = {
+        //  step: { out, dir }
+        2: { out: 0x00, dir: 0x00 }, // input: not observable
+        3: { out: 0x00, dir: 0xff }, // direction write: port live, latch 0 -> baseline, no edge
+        6: { out: 0x01, dir: 0xff }, // first data
+        9: { out: 0x00, dir: 0xff }, // a GENUINE zero data write -> this IS an edge
+        11: { out: 0x02, dir: 0xff },
+    };
+    let cur = { out: 0x00, dir: 0x00 };
+    const build = () => {
+        let step = 0;
+        return { step: () => { step += 1; if (script[step]) cur = script[step]; } };
+    };
+    const trace = captureObservable(build, { read: () => cur, steps: 12 });
+    // No leading 0x00 (the settle), but the genuine 0x00 at step 9 survives.
+    assert.deepEqual(trace.map((e) => e.value), [0x01, 0x00, 0x02],
+        'settle dropped by direction, but a real zero data write is kept');
+    assert.equal(trace[0].step, 6, 'first edge is the first DATA write, not the direction write');
+});
+
+test('cadence is reported so rate is visible even though shape ignores it', () => {
+    const r = reseatGate(
+        { build: build6502Original, read: read6502PortB, steps: STEPS_6502 },
+        { build: build8086Reseat, read: read8086PortB, steps: STEPS_8086 },
+    );
+    assert.ok(r.cadence.original.meanInterval > 0, '6502 cadence measured');
+    assert.ok(r.cadence.reseated.meanInterval > 0, '8086 cadence measured');
+    // The families do NOT share a cycle budget: the 8086 walk is many times
+    // slower per step. Shape still MATCHes; rate is merely reported.
+    assert.notEqual(Math.round(r.cadence.original.meanInterval), Math.round(r.cadence.reseated.meanInterval));
 });
