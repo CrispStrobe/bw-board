@@ -36,36 +36,51 @@ import { I8086Machine } from '../src/i8086-machine.js';
 /**
  * CHIPS THAT CANNOT BE SNAPSHOTTED, AND THE DEFECT THIS RECORDS.
  *
+ * READ THE MACHINE DEFECT FIRST, because it is the one that GENERATES the
+ * others: for most of this tier's life the three machines disagreed about how
+ * to find a chip's state. I8086Machine accepted getState/setState OR
+ * saveState/loadState; M6502Machine and Z80Machine accepted only the latter.
+ * So every chip using the newer convention -- I8255, I8254, I8259, NS16C550,
+ * the display cards -- was invisible to two machines out of three, silently,
+ * because the discovery loop has no `else`. One chip missing a method is a
+ * gap. Three machines disagreeing about the convention is the thing that
+ * manufactures gaps, and it was found by the assertion below rather than by
+ * reading any of the three files.
+ *
  * `saveState()` on all three machines walks the chip map and takes
  * `getState()` or `saveState()` from each — and SKIPS, without comment, any
- * chip that has neither. One currently does:
+ * chip that has neither.
  *
- *   W65C51    the 6551 ACIA, on the 6502's default config: a snapshot of that
- *             machine loses its serial state entirely. Its neighbour W65C22
- *             (the VIA) DOES have saveState, so this is one chip missed rather
- *             than a decision about serial. It stays listed because the 6502
- *             tier has no owner in this fleet, and a mechanical fix by someone
- *             who does not own the file is how a boundary erodes.
+ * THE LIST IS EMPTY, and both rows were closed by this test rather than by
+ * anyone remembering to come back, which is the whole argument for an
+ * exemption that can fail:
  *
- * That name is one this test corrected. The list was first written from a
- * guess -- MC6850, the ACIA the Z80 tier uses -- and the run named W65C51
- * instead. Both are "the serial chip"; only one of them is on that machine.
+ *   NS16C550  listed 2026-09-03; the support-chip lane gave it
+ *             getState/setState the same evening; the merge turned this file
+ *             RED, by name, unprompted; the row was deleted.
+ *   W65C51    listed the same day and deliberately LEFT listed, because the
+ *             6502 tier has no owner in this fleet and a mechanical fix by
+ *             someone who does not own the file is how a boundary erodes.
+ *             Closed 2026-09-04 on the owner's explicit instruction to close
+ *             all gaps — the boundary was crossed deliberately, not forgotten.
  *
- * NS16C550 WAS THE OTHER ROW AND IS GONE, which is the mechanism working
- * end to end rather than a tidy-up. It was listed on 2026-09-03; the
- * support-chip lane gave it getState/setState the same evening; the merge
- * turned this file RED, by name, unprompted, saying the row had stopped being
- * true; and the row was deleted. The whole point of an exemption that can
- * fail is that nobody has to remember to come back.
+ * That second name is one this test corrected. The list was first written
+ * from a guess -- MC6850, the ACIA the Z80 tier uses -- and the run named
+ * W65C51 instead. Both are "the serial chip"; only one is on that machine.
  *
- * This is an INVENTORY, not an acceptance. It is here so the gap has a name
- * and a size instead of being a silent `else` in three files, and so that
- * adding another chip without persistence goes red rather than joining it.
+ * Closing W65C51 is what exposed the machine defect described at the top:
+ * giving the chip its methods was not enough, because the machine still
+ * dropped it. Both machines now accept both conventions, and the assertion
+ * below pins that behaviourally.
+ *
+ * The set stays, empty, rather than being deleted with the last row: an empty
+ * exemption list is a working mechanism with nothing to excuse, and the next
+ * chip without persistence should meet a guard rather than a blank page.
  *
  * The chips are owned by the support-chip lane; this file reports, it does
  * not fix.
  */
-const NO_PERSISTENCE = new Set(['W65C51']);
+const NO_PERSISTENCE = new Set([]);
 
 /** Each machine at its default config. No program is loaded: these are
  *  properties of the TIME AND STATE machinery, which must hold whatever the
@@ -215,6 +230,65 @@ test('no chip in the exemption list has quietly gained persistence', () => {
             `HEALED — "${name}" now has a snapshot method, so its NO_PERSISTENCE row has `
             + 'stopped being true. Delete it. This failure is the row doing its job.');
     }
+});
+
+test('all three machines discover chip state the same way', () => {
+    // THE DIVERGENCE THAT HID THE 6551, asserted so it cannot come back. Two
+    // conventions exist in this tree -- getState/setState and
+    // saveState/loadState -- and a machine that honours only one drops every
+    // chip using the other, silently, because the discovery loop has no
+    // `else`. That is not a style difference; it is a snapshot that looks
+    // complete and is not.
+    //
+    // Asserted BEHAVIOURALLY rather than by reading the source, because the
+    // property is "does the machine pick this chip up", not "does the file
+    // contain a getState branch".
+    for (const { name, make } of MACHINES) {
+        const m = make();
+        const probe = { getState: () => ({ marker: `${name}-getState` }), setState() {} };
+        const legacy = { saveState: () => ({ marker: `${name}-saveState` }), loadState() {} };
+        m.chips.__probeNew = probe;
+        m.chips.__probeOld = legacy;
+        const snap = m.saveState();
+        assert.equal(snap.chips.__probeNew?.marker, `${name}-getState`,
+            `${name} does not honour getState() — every chip using that convention is `
+            + 'dropped from its snapshots without comment');
+        assert.equal(snap.chips.__probeOld?.marker, `${name}-saveState`,
+            `${name} does not honour saveState() — every chip using that convention is dropped`);
+    }
+});
+
+test('the 6551 ACIA survives a machine snapshot with its queue intact', () => {
+    // The end-to-end version of the row that was just deleted: not "the chip
+    // has a method" but "the machine carries its state across a round trip".
+    const m = new M6502Machine();
+    const acia = m.chips.acia1;
+    acia.rxByte?.(0x41) ?? acia.rx.push(0x41, 0x42);
+    acia.overrun = true;
+    acia.cmd = 0x0b;
+
+    const snap = JSON.parse(JSON.stringify(m.saveState()));
+    assert.ok(snap.chips.acia1, 'the ACIA reached the snapshot at all');
+
+    const restored = new M6502Machine();
+    restored.loadState(snap);
+    const back = restored.chips.acia1;
+    assert.deepEqual(back.rx, acia.rx, 'the receive queue came back');
+    assert.equal(back.overrun, acia.overrun, 'and the overrun flag');
+    assert.equal(back.cmd, acia.cmd, 'and the command register');
+
+    // The queue must be a COPY, and this is asserted AT THE CHIP rather than
+    // through the machine snapshot, because the machine path serialises via
+    // JSON and JSON copies everything — an assertion about sharing placed
+    // after a round trip through JSON.stringify cannot fail no matter how the
+    // chip behaves. Mutation proved that: replacing `this.rx.slice()` with
+    // `this.rx` left the machine-level version green.
+    const direct = acia.getState();
+    assert.notEqual(direct.rx, acia.rx,
+        'getState() handed back the live queue rather than a copy — a caller that does not '
+        + 'serialise would share the array with the running chip');
+    direct.rx.push(0x99);
+    assert.equal(acia.rx.length, 2, 'and mutating the snapshot did not reach the chip');
 });
 
 test('the three machines expose the same core surface', () => {

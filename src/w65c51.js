@@ -36,6 +36,49 @@ export class W65C51 {
         this._rxByte = 0;
     }
 
+    /**
+     * Snapshot the whole programmer-visible state, in the shape the machine
+     * layer's saveState() takes (`getState`/`setState`, as NS16C550 and I8255
+     * do). Written 2026-09-04 on the OWNER'S EXPLICIT INSTRUCTION to close all
+     * gaps -- the boundary was crossed deliberately, not forgotten.
+     *
+     * Until now this chip had NEITHER method, and `M6502Machine.saveState()`
+     * walks its chip map taking whichever of the two exists and SKIPS, without
+     * comment, any chip that has neither. So every snapshot of the 6502
+     * machine silently lost its serial state: the receive queue, the latched
+     * byte, RDRF, overrun, the command and control registers and the interrupt
+     * line. Its neighbour W65C22 has had saveState all along, which is why
+     * this read as a decision about serial rather than as one chip missed.
+     *
+     * Found by `test/machine-contract.test.mjs`, which asserts that every chip
+     * on a machine either round-trips or is NAMED as one that cannot. It
+     * cannot be found by a lockstep test: the CPU has to touch the chip for
+     * its state to reach a trace, and nothing in a default config does.
+     *
+     * `rx` is copied rather than shared, or a restored machine would hand
+     * bytes back to the snapshot it came from.
+     */
+    getState() {
+        return {
+            rx: this.rx.slice(), rxByte: this._rxByte,
+            rdrf: this.rdrf, overrun: this.overrun,
+            cmd: this.cmd, ctrl: this.ctrl, irq: this._irq,
+        };
+    }
+
+    /** Restore a getState() snapshot. The IRQ line is restored as a VALUE and
+     *  not re-derived: _syncIrq() would recompute it from cmd and rdrf, which
+     *  is right at every other moment and wrong here, because a status read
+     *  clears the line without changing either of them. Re-deriving would
+     *  resurrect an interrupt the program had already acknowledged. */
+    setState(s) {
+        this.rx = (s.rx || []).slice();
+        this._rxByte = s.rxByte ?? 0;
+        this.rdrf = !!s.rdrf; this.overrun = !!s.overrun;
+        this.cmd = s.cmd ?? 0; this.ctrl = s.ctrl ?? 0;
+        this._irq = !!s.irq;
+    }
+
     _syncIrq() {
         // DTR must be active (cmd bit 0) for the receiver/transmitter to run.
         const rxIrqEnabled = (this.cmd & 0x01) && !(this.cmd & 0x02);

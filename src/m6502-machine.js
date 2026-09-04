@@ -679,7 +679,16 @@ export class M6502Machine {
         for (const k of M6502Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
         const chips = {};
         for (const [name, c] of Object.entries(this.chips)) {
-            if (typeof c.saveState === 'function') chips[name] = c.saveState();
+            // BOTH CONVENTIONS, as I8086Machine does. Chips in this tree
+            // implement one or the other -- getState/setState is the newer
+            // pair (I8255, I8254, I8259, NS16C550, W65C51, the display cards)
+            // and saveState/loadState the older (W65C22, MC6850, I8251).
+            // Accepting only one silently DROPS every chip using the other,
+            // because the loop below has no `else`: a chip it does not
+            // recognise is skipped without comment. That is how the 6551's
+            // serial state was absent from every 6502 snapshot.
+            if (typeof c.getState === 'function') chips[name] = c.getState();
+            else if (typeof c.saveState === 'function') chips[name] = c.saveState();
         }
         return {
             v: 1,
@@ -699,7 +708,9 @@ export class M6502Machine {
         this.mem.set(s.mem);
         for (const [name, cs] of Object.entries(s.chips ?? {})) {
             const c = this.chips[name];
-            if (c && typeof c.loadState === 'function') c.loadState(cs);
+            if (!c) continue;
+            if (typeof c.setState === 'function') c.setState(cs);
+            else if (typeof c.loadState === 'function') c.loadState(cs);
         }
     }
 

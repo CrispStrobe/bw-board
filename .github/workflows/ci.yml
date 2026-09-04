@@ -9,6 +9,14 @@ on:
     # be re-derived.
     branches: [master, main, 'fable/**', 'wip/**']
   pull_request:
+  # The heavy vector suites are ground nightly rather than per push: the
+  # z80 suite unpacks to 1.6 GB and the 65x02 to a comparable size, which is
+  # a real download on every feature-branch commit for evidence that changes
+  # only when a CPU core does. Nightly plus on-demand, and the census step in
+  # the fast job means nobody can mistake "not run today" for "passing".
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
 
 jobs:
   test:
@@ -51,6 +59,15 @@ jobs:
         # other two CPUs still have no such job; when one is added it belongs
         # beside it, not in this comment.
         run: npm test
+
+      # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in
+      # that list "a CPU core's hardware-generated vectors did not run" looks
+      # exactly like "no Playwright". This names them, so an absent oracle is
+      # a line a reader sees rather than one of forty-two skips. Informational
+      # here by design — most of these inputs are not obtainable on a runner
+      # and their absence is a stated limit, not a failure.
+      - name: Which oracles are present
+        run: node scripts/oracle-census.mjs
 
   # ---------------------------------------------------------------------
   # The 8086 vector grind, which until now ran nowhere but a developer's box.
@@ -128,3 +145,60 @@ jobs:
         env:
           I8086_VECTORS: ${{ github.workspace }}/8086-vectors
         run: node scripts/grind-i8086-disasm.mjs
+
+  # ---------------------------------------------------------------------
+  # The OTHER two CPU cores' vectors, which until now ran nowhere at all.
+  #
+  # The `vectors` job above closed this for the 8086 and its own comment said
+  # the other two still had no job. It was worse than that: `grind-z80.mjs`
+  # and `grind-w65c02.mjs` had no evidence behind them ANYWHERE — not in CI,
+  # and not on the developer box either, because neither suite was cloned. The
+  # dependent tests all said `t.skip('vector suite not cloned')` and had done
+  # for as long as they had existed.
+  #
+  # Both suites are MIT. Measured locally before this job was written, because
+  # a job nobody has run is not a gate:
+  #
+  #     z80    1604/1604 files, 0 fail             1m41s
+  #     65c02  2540000/2540000 vectors, 256 opcodes  1m19s
+  #
+  # Three minutes of grinding, so the CLONES are the cost here, not the work.
+  #
+  # Nightly and on demand rather than per push — see the note on `schedule`.
+  vectors-full:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      - name: Fetch the z80 suite
+        run: git clone --depth 1 --filter=blob:none
+             https://github.com/SingleStepTests/z80 "$HOME/code/z80-vectors"
+      - name: Fetch the 65x02 suite (WDC variant only)
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/SingleStepTests/65x02 "$HOME/code/65x02-vectors"
+          cd "$HOME/code/65x02-vectors" && git sparse-checkout set wdc65c02/v1
+
+      # Assert the suites arrived BEFORE grinding them. Without this, a clone
+      # that fetched nothing produces a grinder that finds no files, and the
+      # grinder's own "no test files matched" exit is the only thing standing
+      # between that and a green run.
+      - name: The suites are actually here
+        run: node scripts/oracle-census.mjs --require z80-vectors,65c02-vectors
+
+      - name: Z80 — all 1,604 opcode files
+        run: node scripts/grind-z80.mjs
+      - name: 65C02 — all 256 opcodes
+        run: node scripts/grind-w65c02.mjs
+
+      # With both suites present these stop skipping, which is the point: the
+      # per-push run reports them as skips and this run is where they execute.
+      - name: The suite-gated unit tests, no longer skipping
+        run: node --test test/z80-disasm.test.mjs test/w65c02.test.mjs test/w65c02-disasm.test.mjs

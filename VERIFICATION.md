@@ -184,8 +184,8 @@ the right property over a code path nothing exercised is indistinguishable
 from a passing test. It is green, it is specific, its name says what it
 checks, and it checks nothing.
 
-Five instances landed in one day, from three different hands, and it is the
-spread — and where the fifth one was — that makes it worth a section rather
+Six instances landed in a day, from three different hands, and it is the
+spread — and where the last two were — that makes it worth a section rather
 than a note:
 
 | Where | What it looked like | What it was |
@@ -195,6 +195,7 @@ than a note:
 | Two DOS services | `INT 21h/3Eh` and `/41h` returning success | They returned success *unconditionally*, so closing a handle never opened and deleting a file that was not there both looked like they worked. |
 | A µPD765 draft | Imported cleanly, exported its whole surface, answered invalid commands correctly | Its dispatch refused EVERY implemented command, because `undefined` is falsy. A smoke test would have passed it. |
 | `NO_PERSISTENCE`, the exemption list in the machine contract | Shipped with a commit message and a note to another lane both stating that a chip gaining `getState()` would turn the suite red, so the row would have to be deleted | It would not have. The coverage assertion only fires for a chip with NO snapshot method; one that GAINED a method sailed past into the passing path, leaving the exemption standing forever. |
+| The 6551's "the snapshot COPIES the queue rather than sharing it" assertion | A specific claim about aliasing, in a test written to close a real gap | It ran through the machine's snapshot, which serialises via `JSON.stringify` — and JSON copies everything, so the assertion could not fail however the chip behaved. Mutation proved it: replacing `this.rx.slice()` with `this.rx` left it green. |
 
 The fifth is the one to read twice. It is in the instrument built to catch
 this pattern, it was found by that instrument's own author, and the part that
@@ -205,9 +206,20 @@ constituted a house pattern, and answering required checking that they did.
 
 
 The shape is the same each time: **something that looks right because nothing
-ever asked it to prove otherwise.** Note that four of the five were found by a
+ever asked it to prove otherwise.** Note that five of the six were found by a
 change from an unrelated direction — moving an address, deleting a branch to
-see what noticed, being asked to generalise — and none by reading the tests.
+see what noticed, being asked to generalise, mutating a chip to check that an
+assertion could fire — and none by reading the tests.
+
+The last two are worth reading together. Both are assertions that were CORRECT
+about their property and placed where the property could not vary: the
+exemption check ran only on the branch where nothing had healed, and the
+aliasing check ran only downstream of a serialiser that copies
+unconditionally. Neither is a wrong assertion; both are right assertions on a
+dead path. **Counting across both lanes, two of the eight instances seen so
+far are "the test supplied, or neutralised, the very thing it was checking"** —
+which is the most useful number on this page, because it says where to look
+first.
 
 What follows in practice:
 
@@ -271,11 +283,76 @@ up is a test of a machine that does not exist. In practice:
 - A green test around a feature that has never been exercised END TO END is
   worth less than it looks. This one was found by asking what the caller does,
   not by reading either the test or the chip.
+- **For duplicated CONFIG, import beats asserting equality.** Three copies of
+  one XT machine config existed across tests and the shipped preset, and had
+  drifted far enough that CGA writes to `B800:0000` landed in unmapped space on
+  the board users actually load. The fix was to delete the copies and import
+  the shipped one: an equality assertion would have left two hand-maintained
+  copies in place and fired only once the second was already wrong. Contrast
+  the machine-layer case, where a contract TEST is right because the three
+  implementations are genuinely different code that must agree on behaviour —
+  not one value that should exist once.
+
+**FIXED IN `1c3a145`**, and verified the way this file asks for: not by
+reading, but by breaking it again. With the fix, the FDC suites are 34 pass /
+0 fail; with the two `dreq()` calls removed, 15 pass / 19 FAIL. A species
+entry has no "fixed" state to read, so an entry that began as a live bug says
+where it was closed — otherwise the write-up outlives the defect and the next
+reader files it again.
+
+**AND THE SECOND HALF IS WORSE THAN THE FIRST.** The lane's own FDC tests
+carried DREQ shims — in `test/bios-fdc.test.mjs` and `test/dos-boot-fdc.test.mjs`,
+each documented, deliberate, idempotent, and commented as harmless once the pump
+was fixed. Every word of that was true, and it was exactly the problem: an
+idempotent shim keeps the suite green whether or not production works, so an
+MS-DOS boot test would have gone on booting after a revert of the very code it
+exists to prove. Deleted in `d531056`, and the 19 failures above are the
+evidence they are gone.
+
+**The shim was written by the lane that then found the bug.** That is the
+strongest available form of the point, and it is why "does anything outside
+the test establish this precondition" has to be asked of one's own setup
+blocks first. A helper added in good faith, with a comment explaining why it
+is safe, is indistinguishable at review time from one that is load-bearing.
 
 Credit where it is due: this was found and diagnosed by the support-chip lane,
 who also insisted it be written as a separate species rather than folded in.
 It was reproduced independently here before being recorded, per the section
 above — reading got two things wrong on the day this file was written.
+
+### Rule: a corpus is evidence only about the constructs it contains
+
+Three of the strongest numbers in this tier are corpus agreements — 470 of 525
+programs byte-identical against an independent implementation, 414 files
+compared against MASM with zero cases where it accepted and we refused. They
+are real evidence and they are narrower than they sound.
+
+The MASM oracle found a defect in our missing-ASSUME rule that the 470 could
+never have found. Not because the comparison was weak, but because **the
+corpus never writes the construct**: the defect needs a variable in the CODE
+segment of a program whose DS points elsewhere, and a `.model small` textbook
+program puts its variables in `.data` and points DS at `@data`. Every program
+in that corpus does the ordinary thing, so every one of them is silent about
+the case that breaks.
+
+Note also how easy the WRONG explanation was to reach. The first write-up said
+the corpus misses it "because every program in it is a `.COM`" — plausible,
+and false: 498 of the 525 use `.model` and only 12 have `ORG 100h`. A wrong
+reason for a right conclusion survives review comfortably, because the
+conclusion checks out.
+
+So:
+
+- **A large corpus that is UNIFORM is uniformly silent.** Size is not
+  coverage; variety is. 525 programs written to one textbook's house style are
+  closer to one test than to 525.
+- **State what a corpus agreement is evidence FOR**, which is the slice of the
+  language or the hardware those inputs actually exercise — never the whole
+  surface.
+- **Keep a probe suite beside the corpus.** The corpus tells you the common
+  path works; hand-written probes are the only way to reach the constructs
+  nobody happened to write. They are not substitutes, and the defect above was
+  found by the probe.
 
 ## House pattern: an exemption must be able to stop being true
 

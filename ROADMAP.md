@@ -684,7 +684,7 @@ was re-run either side of the move and is identical verdict for verdict, which
 was predicted before it was measured: no program knows where the trap is,
 because they reach it through the vector table `install()` rewrites.
 
-**R4 — THE ASSEMBLER IS THE LARGEST SURFACE WITH NO INDEPENDENT ORACLE.** 2,304
+**R4 — THE ASSEMBLER IS THE LARGEST SURFACE WITH NO INDEPENDENT ORACLE.** CLOSED `cac105d`, by a better oracle than this finding asked for. 2,304
 lines. Round-tripping through a disassembler that is ground against 646,000
 hardware vectors is a strong check on ENCODING — and it says nothing about
 directive SEMANTICS: `.MODEL` and group fixups, `EQU` against `=`, nested
@@ -702,6 +702,58 @@ the syntax that overlaps. This matters now rather than later — the in-flight
 `longJumps` promotion rewrites an out-of-range jump into a branch over a near
 jump, which moves byte counts and therefore every later fixup, and that is
 exactly the class a round-trip cannot see and a byte diff can.
+
+CLOSED, AND THE ORACLE IS BETTER THAN THE ONE RECOMMENDED HERE. This finding
+asked for `tinyasm` or NASM diffed over the overlapping syntax. What landed is
+**MASM 1.10, LINK 2.00 and EXE2BIN — the actual period toolchain — running to
+completion INSIDE Tier B**, with zero unsupported DOS services.
+`scripts/oracle-masm.mjs` + `test/oracle-masm.test.mjs`.
+
+That deserves stating plainly, because it is a milestone the tier did not set
+out to reach: **the emulator became complete enough to host the oracle that
+grades its own assembler.** Not a reimplementation to diff against, and not a
+modern assembler with a different dialect — the program these sources were
+written for, running on the machine we built.
+
+Evidence: 414 files compared, 404 code segments byte-compared, 403 differing
+only in named benign classes, and **zero cases where MASM accepted a program
+and we refused it**.
+
+AND IT FOUND A REAL DEFECT IN US, which is what separates an oracle from an
+agreement ceremony. Two findings, in opposite directions:
+
+- MASM is WRONG about `NOTHING EQU 0FFFFH` — the reserved word silently wins,
+  and it costs a program its output.
+- WE are wrong about the missing-ASSUME rule. MASM reaches for whichever
+  segment register IS assumed and hard-refuses when none can serve; we did
+  not. It is invisible wherever DS already reaches the symbol's segment — which
+  is every program in this corpus.
+
+**AND THE REASON FOR THAT IS THE INTERESTING PART, because the obvious
+explanation is wrong.** The first version of this entry said the corpus runs
+past the defect "because every program in it is a `.COM`". Measured, that is
+false in both halves: of 525 sources, **498 use `.model`** and only **12 have
+`ORG 100h`**, and `run-i8086-corpus.mjs` has a real `loadExe` path rather than
+loading everything flat.
+
+The corpus runs past the defect because **it never writes the construct**. A
+`.model small` textbook program puts its variables in `.data` and points DS at
+`@data`; the defect needs a variable in the CODE segment of a program whose DS
+points elsewhere. So 470 byte-identical agreements are 470 pieces of evidence
+about a case the defect cannot touch, and the defect was found by a
+hand-written probe instead.
+
+**That generalises, and it is the caution this entry most needs: a corpus is
+evidence only about the constructs it CONTAINS, and a uniform corpus is
+uniformly silent about everything else.** "414 files compared, zero refusals"
+must not be read as "the encoder is correct over 414 files' worth of the
+language" — it is correct over the slice of the language those files use. The
+argument for keeping a probe suite beside the corpus is exactly this, and it
+is why the corpus and the oracle are not substitutes for each other.
+
+The second is being fixed. A differential encoder against `tinyasm` stays
+available and drops in priority: it would have caught encoding drift, and this
+catches semantics, which was the actual gap.
 
 **R5 — THREE MACHINE LAYERS HAVE BECOME THREE COPIES.** `m6502`, `z80` and
 `i8086` each carry machine + adapter + debug + extract, about 4,600 lines, and
@@ -870,7 +922,8 @@ the MIT game corpora, and it is in progress.
 | jasaldivara/retro-dos-graphics | MIT | Shippable WITH ATTRIBUTION. 180 KB NASM across 28 files — CGA, joystick I/O, PC speaker, scrolling. Richest single corpus for Tier C peripheral testing. |
 | FaizanAli7005/typing-balloon-game-asm | MIT | Shippable WITH ATTRIBUTION. 41 KB NASM, broad BIOS interrupt coverage (timer, keyboard, video, speaker). |
 | milyas-io/Assembly-Breakout-Game | MIT | Shippable WITH ATTRIBUTION. 20 KB MASM/TASM, mode 13h graphics, collision, speaker. |
-| Fahad1110136/Maze_Runner_Go | MIT | Shippable WITH ATTRIBUTION. Custom ISRs for INT 08h/09h, direct B800h video, timer chaining. |
+| Fahad1110136/Maze_Runner_Go | MIT **at the root only** | Shippable WITH ATTRIBUTION — **BUT NOT THE WHOLE REPOSITORY.** Custom ISRs for INT 08h/09h, direct B800h video, timer chaining, and the `.asm` is fine. `Github Assembly Compiler/` BUNDLES DOSBOX AND NOTEPAD++, both GPL, inside the MIT tree. A root LICENSE does not relicense vendored third-party binaries, and this is the shape that is easiest to get wrong: the repository badge says MIT, the file you clone says MIT, and the subdirectory is copyleft. **Take the assembly sources; do not clone, vendor, redistribute or read that subdirectory.** Found by the integration lane while surveying corpora for the graphics work. |
+| **The general form of that hazard** | n/a | A permissive LICENSE at a repository root says what the AUTHOR grants over THEIR work. It says nothing about code they vendored. Three entries in these tables are now instances of it — `Cardputer-Game-Station-Emulators` (MIT wrapper over non-commercial fMSX), `nand2mario/z8086` and `dbalsom/XTCE-Blue` and `dbalsom/x86_microcode` (permissive code over Intel's microcode), and this one (MIT over bundled GPL tools). **Before adopting from any repository, look at what is IN it, not only at what its LICENSE file says.** A vendored subdirectory is the usual carrier. |
 | Azdahah/Snake-Game-8086-Assembly | MIT | Shippable WITH ATTRIBUTION. Clean, self-contained, keyboard + speaker + video memory. |
 | rvalles/optromloader | MIT | Shippable WITH ATTRIBUTION. Pure 8086 fasm bootblock, no post-8086 instructions. Tier A material. |
 | rsanguini/jogo-da-velha-assembly | MIT | Shippable WITH ATTRIBUTION. MODEL SMALL MASM, 30+ procedures, AI. Tier B material (text I/O only). |
