@@ -46,6 +46,7 @@ import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
 import { HerculesCard } from './hercules-card.js';
 import { VGACard } from './vga-card.js';
+import { EGACard } from './ega-card.js';
 import { I8237 } from './i8237.js';
 import { UPD765 } from './upd765.js';
 
@@ -94,6 +95,7 @@ const REGS = {
     cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
     hercules: 16,    // the 3B0h-3BFh block (mode 3B8h, status 3BAh, config 3BFh)
     vga: 32,         // the 3C0h-3DFh block (attr/seq/gc/crtc/dac/misc + status)
+    ega: 32,         // the 3C0h-3DFh register block (framebuffer at A0000 is a second, mem window)
     dma: 16,         // the 8237's 00h-0Fh: four channels, then the command block
     // THE PAGE LATCH IS NOT PART OF THE 8237. The chip counts sixteen bits of
     // address and the XT needs twenty, so IBM bolted a separate 74LS670 latch
@@ -363,6 +365,31 @@ export const KBDDEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The EGA display board — the 16-colour PLANAR member of the display-demo set
+ * (ROADMAP E7.1), and the hardest. An 8086, 64K RAM, an EGA card at 3C0-3DFh,
+ * and a 32K ROM. There is deliberately NO RAM region at A0000: the EGA card
+ * mediates that window (a write is routed by the sequencer map mask into one or
+ * more of the four bit planes, not stored linearly). Load rom/ega-demo.bin
+ * (scripts/build-ega-demo.mjs) and it selects a planar graphics mode, sets the
+ * 16-entry attribute palette, and fills the four planes with distinct patterns.
+ *
+ * NOTE (2026-09-04): firmware + card STATE (registers + planes) are verified,
+ * but the DOS/host renderer's planar decode is the other lane's half and is not
+ * written yet, so this board is NOT wired into the Machine-Loader — same
+ * discipline as Hercules before its decode landed. Ships as verified state.
+ */
+export const EGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional (NO RAM at A0000 — the EGA card owns it)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'ega', name: 'ega1', at: 0x3c0 },        // EGA register block at 3C0-3DFh; framebuffer at A0000
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
@@ -457,6 +484,8 @@ export class I8086Machine {
                 chip = new VGACard(config.clockHz, {
                     onVSync: () => { if (this.hooks.onVSync) this.hooks.onVSync(); },
                 });
+            } else if (c.kind === 'ega') {
+                chip = new EGACard(config.clockHz);
             } else {
                 chip = new MC6850({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
@@ -524,6 +553,23 @@ export class I8086Machine {
                 name: c.name, regs: REGS.dmapage, stride,
                 chip: { read: (r) => dma.readPage(r), write: (r, v) => dma.writePage(r, v) },
                 start: c.at, end: c.at + stride * span - 1,
+            });
+        }
+
+        // The EGA framebuffer: a SECOND, memory-bus window onto the already-built
+        // EGA card at A0000-AFFFF, reached through memRead/memWrite (the planar
+        // path) rather than read/write (the registers). Registered as an mmio
+        // window but NOT added to this.chips -- the planes live inside the card
+        // and are already in its getState(). This is why EGA memory is not a plain
+        // RAM region: a write there is routed by the sequencer map mask into the
+        // selected planes, not stored linearly.
+        for (const c of config.chips) {
+            if (c.kind !== 'ega') continue;
+            const ega = this.chips[c.name];
+            this._mmio.push({
+                name: c.name + '.fb', regs: 0x10000, stride: 1,
+                chip: { read: (o) => ega.memRead(o), write: (o, v) => ega.memWrite(o, v) },
+                start: 0xa0000, end: 0xaffff,
             });
         }
 
