@@ -1247,9 +1247,24 @@ which is the box getting quieter, not the emulator getting better.
 Normalised against it:
 
 ```
-machine/core   0.333 -> 0.303    -9%
-boot/core      0.115 -> 0.103   -10%
+machine/core   0.333 -> 0.303 -> 0.284    still falling
+boot/core      0.115 -> 0.103 -> 0.176    recovered, and then some
 ```
+
+**A third measurement point (2026-09-04, after `setInput`, `outputPoints` and
+the pin lowering) splits what looked like one trend into two.** The machine
+layer keeps ratcheting down relative to the CPU it wraps — 0.333, 0.303,
+0.284 — which is E6.8.4a's standing concern behaving exactly as predicted.
+But `boot/core` went the other way and is now better than it has ever been.
+Something in the boot path got substantially faster while the general machine
+path got slower, and the absolutes would have shown neither: on this run the
+box was quiet enough that every raw figure rose. **The `vs core` column
+earned itself on its first use.**
+
+In real-time terms the boot workload is now **3.4x** rather than 1.0x, so a
+cycle-stepped core at 5x costs lands at 0.68x — slow but arguably usable —
+and at 20x lands at 0.17x. The debugging-mode framing still holds; the margin
+is less stark than when it was chosen.
 
 **So relative to the CPU, the machine layer got about 10% WORSE, not better —
 even with the page table in.** The new per-step work (timer tick, input
@@ -1316,6 +1331,60 @@ are the only thing that can adjudicate the 32-of-60 cases above.
 
 Recorded rather than quietly dropped because the idea is attractive enough
 that someone will have it again.
+
+#### E6.8.4c The oracle is in and the baseline is measured (2026-09-04, owner-chose (a))
+
+The owner overruled `lego-47`'s recommendation to leave cycle work alone, on
+the grounds that **(a) is the only route ending in a graded model, and this
+tier's whole standing is that it does not ship ungraded claims.** So the
+constraint stands unrelaxed: *no grinder, no landing*, and the grinder came
+first.
+
+**The oracle.** `SingleStepTests/8088` (MIT), 2.0 GB whole, taken with the
+same blobless-sparse idiom `ci.yml` already uses. Its **v2** format carries,
+per CPU cycle: the ALE pin, the address latch, segment status, the i8288's
+memory and I/O status lines, the data bus, the bus m-cycle type, the T-state,
+and — the field that makes a BIU gradeable at all — the **queue operation**,
+F (first byte of an instruction or prefix), S (subsequent), E (flushed), with
+the byte read out. That is ground truth for exactly the 32-of-60 cases
+E6.8.4b showed nothing else can adjudicate.
+
+**`scripts/grind-i8088-cycles.mjs` scores four things, not one**, so progress
+is measurable per session the way `grind-i8086.mjs`'s was: `count`, `bus`,
+`queue`, `tstate`. Only `count` is implemented; the other three print NOT-YET
+rather than being omitted, because an absent score reads like a passing one.
+
+**A METHODOLOGY TRAP, FALLEN INTO AND FIXED BEFORE IT BECAME A NUMBER.** The
+first version measured an instruction as "first `F` to end of trace" when no
+second `F` appeared. That is a LOWER BOUND dressed as a measurement — the
+README is explicit that an instruction ends when the *next* one's first byte
+leaves the queue, and "there is no indication from the CPU when an instruction
+ends, only when a new one begins." It is not a rare case: **half the traces
+have no second F, and for `inc ax` it is all ten thousand.** The first
+baseline read 10.6% exact and was mostly grading truncation; `40` scored 0.0%
+for that reason and not for any reason about the core. Those vectors are now
+excluded and COUNTED.
+
+**THE BASELINE, on 30,000 vectors of which 10,022 are gradeable:**
+
+```
+exact           0.0%
+within +/-1    31.6%
+within +/-4    62.2%
+error median     +3      range +1 .. +21
+```
+
+**We OVERCOUNT, always, and that is the opposite of what was predicted.** The
+header of this script expected undercounting: our numbers are published *8086*
+timings and an 8088's eight-bit bus adds four cycles to every word access, so
+the suite's figures should be larger. Every single error is positive.
+
+The likely reason is that the F-to-F span measures execution as the QUEUE sees
+it — the documented best case for a fully-prefetched instruction — while our
+counts add EA calculation the 8088 overlaps with prefetching. **That is a
+hypothesis and is written as one.** Establishing it is the first task of the
+BIU work rather than something to assert here, and it is exactly the kind of
+claim this section has twice had to retract.
 
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
