@@ -23,7 +23,8 @@ describe('the unregistered-kind failure this fixes', () => {
     });
 
     it('...and the ones this module registers now load instead', () => {
-        for (const kind of ['w65c02', 'w65c22', 'w65c51', 'z80', 'mc6850', 'tms9918', 'i8255', 'crystal']) {
+        for (const kind of ['w65c02', 'w65c22', 'w65c51', 'z80', 'mc6850', 'tms9918', 'i8255',
+            'i8086', 'i8088', 'i8254', 'i8259', 'i8251', 'i8284', 'crystal']) {
             const model = getDevice(kind);
             assert.ok(model, `${kind} is registered`);
             const board = new BoardImpl(5.0);
@@ -163,6 +164,40 @@ describe('i8255 PPI — the 8086 tier\'s GPIO chip, the reseat gate needs it dra
         board.setPin('pb0', 'pushpull', true);
         board.advanceTo(10_000n);
         assert.ok(board.readAnalog('pb0') > 4.5, `pb0 drives the LED net high (got ${board.readAnalog('pb0')})`);
+    });
+});
+
+describe('the 8086 family is drawable: CPU + PIT/PIC/USART/clock-gen', () => {
+    it('the 8086/8088 CPU is a DIP-40 with the address bus and M/IO the extractor reads', () => {
+        for (const cpu of ['i8086', 'i8088']) {
+            const t = getDevice(cpu).terminals;
+            assert.equal(t.length, 40, `${cpu} is a DIP-40`);
+            for (let i = 0; i < 20; i++) assert.ok(t.includes(`a${i}`), `${cpu} has a${i}`);
+            assert.ok(t.includes('mio'), `${cpu} has mio (the extractor's M/IO cycle line)`);
+        }
+    });
+
+    it('the support chips carry the register/chip selects the extractor decodes', () => {
+        // Extractor: PIT & PPI select on a0/a1; PIC on a0; all on csb.
+        assert.ok(['csb', 'a0', 'a1'].every((p) => getDevice('i8254').terminals.includes(p)), 'PIT: csb/a0/a1');
+        assert.ok(['csb', 'a0'].every((p) => getDevice('i8259').terminals.includes(p)), 'PIC: csb/a0');
+        assert.ok(getDevice('i8251').terminals.includes('csb'), 'USART: csb');
+        assert.equal(getDevice('i8254').terminals.length, 24, 'PIT DIP-24');
+        assert.equal(getDevice('i8259').terminals.length, 28, 'PIC DIP-28');
+        assert.equal(getDevice('i8251').terminals.length, 28, 'USART DIP-28');
+    });
+
+    it('the 8284 clock generator is drawable glue (DIP-18) — the extractor ignores it, by design', () => {
+        const t = getDevice('i8284').terminals;
+        assert.equal(t.length, 18, 'DIP-18');
+        assert.ok(['x1', 'x2', 'clk', 'reset'].every((p) => t.includes(p)), 'crystal in, clk + reset out');
+        assert.ok(!t.includes('csb'), 'no chip select: it is clock glue, not a bus device');
+    });
+
+    it('these are bare surfaces — the behaviour is the I8086Machine, not the board solver', () => {
+        for (const kind of ['i8086', 'i8088', 'i8254', 'i8259', 'i8251', 'i8284']) {
+            assert.equal(getDevice(kind).gpioFollowsPinStates, true, `${kind} follows pin states`);
+        }
     });
 });
 

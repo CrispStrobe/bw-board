@@ -146,6 +146,36 @@ const I8255 = [   // DIP-40 (Intel 8255A PPI) — NOT sequential: port A is spli
     'pb7', 'vcc', 'd7', 'd6', 'd5', 'd4', 'd3', 'd2',
     'd1', 'd0', 'reset', 'wrb', 'pa7', 'pa6', 'pa5', 'pa4',
 ];
+// The 8086 family CPU (DIP-40) and its Intel support chips. Pinouts mirror the
+// bw-parts sidecars (the drawable-art source of truth); like the 6502-family
+// surfaces above, these are BARE pin surfaces — the real behaviour is the
+// I8086Machine / support-chip cores, not the board solver. Register-select and
+// chip-select names (a0/a1/csb, cd for the USART) match the 8086 extractor.
+const I8086_CPU = [   // DIP-40 (8086/8088 — identical bond-out here)
+    'a0', 'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'a9',
+    'a10', 'a11', 'a12', 'a13', 'a14', 'a15', 'a16', 'a17', 'a18', 'a19',
+    'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'mio', 'rdb',
+    'wrb', 'ale', 'clk', 'reset', 'ready', 'intr', 'nmi', 'intab', 'gnd', 'vcc',
+];
+const I8254 = [   // DIP-24 (Intel 8254 PIT)
+    'd7', 'd6', 'd5', 'd4', 'd3', 'd2', 'd1', 'd0', 'clk0', 'out0',
+    'gate0', 'gnd', 'out1', 'gate1', 'clk1', 'gate2', 'out2', 'clk2', 'a0', 'a1',
+    'csb', 'rdb', 'wrb', 'vcc',
+];
+const I8259 = [   // DIP-28 (Intel 8259 PIC)
+    'csb', 'wrb', 'rdb', 'd7', 'd6', 'd5', 'd4', 'd3', 'd2', 'd1',
+    'd0', 'cas0', 'cas1', 'cas2', 'gnd', 'sp_enb', 'intr', 'ir7', 'ir6', 'ir5',
+    'ir4', 'ir3', 'ir2', 'ir1', 'ir0', 'a0', 'intab', 'vcc',
+];
+const I8251 = [   // DIP-28 (Intel 8251 USART) — 'cd' is the control/data select
+    'd2', 'd3', 'rxd', 'gnd', 'd4', 'd5', 'd6', 'd7', 'txc', 'wrb',
+    'csb', 'cd', 'rdb', 'rxrdy', 'txrdy', 'syndet', 'ctsb', 'txempty', 'txd', 'clk',
+    'reset', 'dsrb', 'rtsb', 'dtrb', 'rxc', 'vcc', 'd0', 'd1',
+];
+const I8284 = [   // DIP-18 (Intel 8284 clock generator — clock glue, not decoded)
+    'csync', 'pclk', 'aen1b', 'rdy1', 'ready', 'rdy2', 'aen2b', 'clk', 'gnd', 'fcb',
+    'efi', 'asyncb', 'resb', 'reset', 'osc', 'x2', 'x1', 'vcc',
+];
 const MC6850 = [   // DIP-24
     'vss', 'rxd', 'rxclk', 'txclk', 'rtsb', 'txd', 'irqb', 'cs0',
     'cs2b', 'cs1', 'rs', 'vcc', 'ctsb', 'dcdb', 'd0', 'd1',
@@ -167,7 +197,13 @@ export function registerRetroDips() {
     registerDevice('m6532', dipSurface(M6532, 5.0));
     registerDevice('ay8912', dipSurface(AY8912, 5.0));
     registerDevice('z80', dipSurface(Z80, 5.0));
+    registerDevice('i8086', dipSurface(I8086_CPU, 5.0));
+    registerDevice('i8088', dipSurface(I8086_CPU, 5.0));
     registerDevice('i8255', dipSurface(I8255, 5.0));
+    registerDevice('i8254', dipSurface(I8254, 5.0));
+    registerDevice('i8259', dipSurface(I8259, 5.0));
+    registerDevice('i8251', dipSurface(I8251, 5.0));
+    registerDevice('i8284', dipSurface(I8284, 5.0));
     registerDevice('mc6850', dipSurface(MC6850, 5.0));
     registerDevice('tms9918', dipSurface(TMS9918, 5.0));
 
