@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { assemble } from '../src/i8086-asm.js';
 import { I8086Machine } from '../src/i8086-machine.js';
-import { createDos8086, DOSBOX8086 } from '../src/i8086-dos.js';
+import { createDos8086, DOSBOX8086, DOSBOX8086_XT } from '../src/i8086-dos.js';
 
 // A COM that hooks INT 1Ch to a handler bumping a counter at 0000:0500, then
 // enables interrupts and spins in HLT waiting for the tick.
@@ -118,4 +118,40 @@ test('the fractional carry is load-bearing: 4-cycle advances must not vanish', (
     for (let i = 0; i < calls; i++) pit.advanceMs(msPerCall);
     assert.ok(Math.abs(edges - 18.2) < 1,
         `${edges} edges from ${calls} sub-tick advances — the remainder is being dropped`);
+});
+
+// ---------------------------------------------------------------------------
+// ONE TICK SOURCE, NOT TWO.
+//
+// The DOS layer synthesises a BIOS tick from machine time for a bench that has
+// no chips. A machine with an 8254 wired to a PIC makes its own. If both fired,
+// a program that hooks INT 8 -- which is precisely what a scheduler does --
+// would receive a hardware IRQ0 at the divisor's rate AND an 18.2 Hz phantom
+// from an unrelated clock, and nothing would report the collision.
+// ---------------------------------------------------------------------------
+const withChips = (chips) => new I8086Machine({
+    clockHz: 5_000_000,
+    regions: [{kind: 'ram', start: 0, end: 0xbffff}],
+    chips,
+});
+
+test('a machine knows whether it makes a REAL timer interrupt', () => {
+    // Both halves are required, and the test is exact rather than a guess:
+    // _irqLines is populated for I8254 instances alone.
+    assert.equal(withChips([]).hasHardwareTimerIrq(), false, 'no chips at all');
+    assert.equal(withChips([
+        {kind: 'pit', name: 'pit1', at: 0x40, irq: 0},
+    ]).hasHardwareTimerIrq(), false, 'a wired PIT with no PIC cannot deliver');
+    assert.equal(withChips([
+        {kind: 'pic', name: 'pic1', at: 0x20},
+        {kind: 'pit', name: 'pit1', at: 0x40},
+    ]).hasHardwareTimerIrq(), false, 'a PIC and a PIT with no irq key are not wired to each other');
+    assert.equal(withChips([
+        {kind: 'pic', name: 'pic1', at: 0x20},
+        {kind: 'pit', name: 'pit1', at: 0x40, irq: 0},
+    ]).hasHardwareTimerIrq(), true, 'both halves present');
+
+    // The shipped DOS bench is the case the synthetic tick exists for.
+    assert.equal(new I8086Machine(DOSBOX8086_XT).hasHardwareTimerIrq(), false,
+        'DOSBOX8086_XT carries a PIT but no PIC — it cannot make its own tick');
 });

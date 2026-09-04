@@ -1233,6 +1233,20 @@ export function createDos8086(machine, io = {}) {
 
         /** Whether a BIOS timer tick is due for a program that listens for one. */
         _timerTickDue() {
+            // REAL HARDWARE WINS. This synthetic tick exists for a bench with
+            // no chips (see step()); a machine with an 8254 wired to a PIC
+            // generates INT 8 for itself. If both fired, a program that hooks
+            // INT 8 -- which is exactly what a scheduler does -- would receive
+            // a hardware IRQ0 at the divisor's rate AND an 18.2 Hz phantom
+            // from machine time, two clocks with no relationship, and nothing
+            // would report the collision. Its quantum accounting would drift
+            // with no visible cause.
+            //
+            // `io.syntheticTick: false` forces it off for a caller that owns
+            // the machine config and would rather say so than rely on the
+            // inference.
+            if (io.syntheticTick === false) return false;
+            if (machine.hasHardwareTimerIrq && machine.hasHardwareTimerIrq()) return false;
             if (!(cpu.flags & 0x200)) return false;             // interrupts masked
             const seg8 = rd16(0, 0x08 * 4 + 2), seg1c = rd16(0, 0x1c * 4 + 2);
             if (seg8 === trapSeg && seg1c === trapSeg) return false;   // nobody listens
