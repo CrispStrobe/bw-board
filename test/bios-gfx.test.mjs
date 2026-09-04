@@ -180,10 +180,33 @@ test('mode 6 is 640 wide and says so in the BDA and at 3D8h', async () => {
 
 test('mode 5 is a distinct mode and not mode 4 with a different number', async () => {
     const { target, m } = await booted();
-    run(m, ' mov ax, 0005h\n int 10h\n');
+    run(m, ' mov ax, 0005h\n int 10h\n'
+        + ' mov ax, 0C02h\n mov cx, 4\n mov dx, 0\n int 10h\n');
     // 3D8h bit 2 is the bit that tells them apart on the wire.
     assert.equal(m.chips.cga1.getVideoState().mode & 0x1e, 0x0e, '3D8h bit 2 set: mode 5');
     assert.equal(target.video().mode, 0x05);
+    // And they really look different. "Colour burst off" is not monochrome on
+    // an RGBI monitor: it selects a THIRD four-colour palette, cyan/red/white,
+    // so colour 2 is red here where mode 4 would have made it magenta.
+    assert.deepEqual(px(target.video(), 4, 0), rgbi(12), 'mode 5 colour 2 is bright red');
+    run(m, ' mov ax, 0004h\n int 10h\n'
+        + ' mov ax, 0C02h\n mov cx, 4\n mov dx, 0\n int 10h\n');
+    assert.deepEqual(px(target.video(), 4, 0), rgbi(13), 'mode 4 colour 2 is bright magenta');
+});
+
+test('each mode gets the colour-select value its own bits mean', async () => {
+    const { m } = await booted();
+    // 3D9h is write-only on the card, so the latch is the only evidence --
+    // and the two families read the low nibble differently, which is why one
+    // constant for all of them would be wrong for one of them.
+    run(m, ' mov ax, 0004h\n int 10h\n');
+    assert.equal(m.chips.cga1.getVideoState().color, 0x30,
+        '320x200: black background, bright cyan/magenta/white');
+    assert.equal(m.mem[BDA + 0x66], 0x30, 'and 40:66h agrees with the port');
+    run(m, ' mov ax, 0006h\n int 10h\n');
+    assert.equal(m.chips.cga1.getVideoState().color, 0x3f,
+        '640x200: the low nibble is the FOREGROUND, so white on black');
+    assert.equal(m.mem[BDA + 0x66], 0x3f);
 });
 
 test('AL bit 7 keeps the picture; without it a mode set wipes it', async () => {
@@ -468,7 +491,8 @@ test('mode 13h programs the three registers that make it mode 13h', async () => 
     assert.equal(v.crtc[0x09] & 0x1f, 1, 'CRTC 09h: two scan lines per row, 200 into 400');
     assert.equal(v.crtc[0x13], 40, 'CRTC 13h: the offset chain-4 turns into 320 bytes');
     assert.equal(rd8(m, BDA + 0x49), 0x13);
-    assert.equal(rd16(m, BDA + 0x4a), 40);
+    assert.equal(rd16(m, BDA + 0x4a), 40, '320 pixels is 40 columns here too');
+    assert.equal(rd16(m, BDA + 0x4c), 0, 'mode 13h has one page, so no page length');
     const f = target.video();
     assert.equal(f.mode, 0x13);
     assert.equal(f.width, 320);
