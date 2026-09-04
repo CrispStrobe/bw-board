@@ -359,8 +359,10 @@ test('every unsupported NASM construct is refused by a name, not by a symptom', 
         ['cpu 386\n', 'CPU 386'],
         ['section .weird\n', 'SECTION .weird'],
         ['section .data align=16\n', 'SECTION attributes'],
-        ['global start\n', 'unsupported GLOBAL'],
-        ['extern printf\n', 'unsupported EXTERN'],
+        // EXTERN's `what` changed when GLOBAL stopped being refused with it.
+        // They were one case and are now two different facts: GLOBAL is a
+        // no-op in a flat image, EXTERN is genuinely unresolvable.
+        ['extern printf\n', 'unresolvable EXTERN'],
         ['%macro M 1-*\n%endmacro\n', '%macro greedy parameters'],
     ];
     for (const [body, what] of cases) {
@@ -446,4 +448,54 @@ test('promotion is on by default for NASM and off by default for MASM', () => {
     // The flag still overrides the default in both directions.
     assert.equal(hex(masm(far('masm'), { longJumps: true }).bytes.slice(0, 5)), '7c 03 e9 c8 00');
     assert.equal(refusal(() => nasm(far('nasm'), { longJumps: false })).what, 'jump out of range');
+});
+
+
+// ---------------------------------------------------------------------------
+// What a C COMPILER'S output is made of
+// ---------------------------------------------------------------------------
+//
+// SmallerC (BSD-2) emits NASM `bits 16` for DOS, and its output met this
+// assembler at exactly two directives -- both of which it emits before the
+// first instruction of any program, so refusing either refused every C program
+// outright. Verified against real compiler output, not a guess at its shape.
+
+const asm = (src) => { const r = assemble(src, {}); return [...(r.bytes || r)]; };
+
+test('GLOBAL is accepted and ignored, because a flat image has no other module', () => {
+    // GLOBAL says "let other modules see this name". In a single-module flat
+    // image there ARE none, and the label is defined right here -- so honouring
+    // it means doing nothing. SmallerC marks every function and every
+    // file-scope variable GLOBAL, so this was the first thing every C program
+    // hit.
+    assert.deepEqual(asm('bits 16\nsection .text\n global _main\n_main:\n mov ax, 1\n ret\n'),
+        [0xb8, 0x01, 0x00, 0xc3],
+        'the GLOBAL emitted nothing and the code is unchanged by it');
+});
+
+test('EXTERN is still refused, and the message names the SYMBOL', () => {
+    // The distinction: EXTERN names something NOT in this file and there is no
+    // second file. Naming the directive sends someone to look at the directive;
+    // naming the symbol tells them what is missing -- usually a libc function,
+    // which tells them what to do next.
+    assert.throws(() => assemble('bits 16\n extern _printf\n call _printf\n', {}),
+        /EXTERN "_printf" cannot be resolved/);
+});
+
+test('ALIGNB pads with ZERO, not with NOP, and that is not cosmetic', () => {
+    // ALIGNB is ALIGN's .bss twin. .bss holds VARIABLES, so padding with 90h
+    // gives every aligned variable a neighbour holding 0x9090 instead of 0.
+    assert.deepEqual(asm('bits 16\n db 1\n alignb 4\n db 2\n'), [1, 0, 0, 0, 2]);
+    assert.deepEqual(asm('bits 16\n db 1\n align 4\n db 2\n'), [1, 0x90, 0x90, 0x90, 2],
+        'while ALIGN still pads with NOP, which is right in front of CODE');
+});
+
+test('a compiler-shaped module assembles: sections, globals, bss, a frame', () => {
+    const b = asm([
+        'bits 16', 'section .bss', ' alignb 2', ' global _count', '_count:', ' resb 2',
+        'section .text', ' global _bump', '_bump:',
+        ' push bp', ' mov bp, sp', ' mov ax, [_count]', ' add ax, [bp+4]',
+        ' mov [_count], ax', ' pop bp', ' ret',
+    ].join('\n'));
+    assert.ok(b.length > 10, `assembled ${b.length} bytes`);
 });

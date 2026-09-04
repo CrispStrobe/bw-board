@@ -2279,12 +2279,19 @@ class Assembler {
                 this.sawOrg = true;
                 return;
             }
-            case 'even': case 'align': {
+            case 'even': case 'align': case 'alignb': {
                 // NASM writes `align 8, db 0` -- the second half names what
                 // to pad WITH, and every use of ALIGN in retro-dos-graphics
                 // is in front of data, where a run of NOPs would be five
                 // corpus programs' worth of wrong bytes.
-                let expr = rest, pad = 0x90;
+                //
+                // ALIGNB is ALIGN's .bss twin and its default filler is ZERO,
+                // not NOP. That difference is not cosmetic: .bss holds
+                // variables, and padding them with 90h gives every aligned
+                // variable a neighbour holding 0x9090 instead of 0. SmallerC
+                // emits `alignb 2` in front of every file-scope variable, so
+                // this is the second thing a C program meets after GLOBAL.
+                let expr = rest, pad = w0 === 'alignb' ? 0x00 : 0x90;
                 const am = this.nasm && /^([^,]*),\s*db\s+([\s\S]*)$/i.exec(rest);
                 if (am) { expr = am[1]; pad = this.evalText(am[2]).v & 0xff; }
                 else if (this.nasm && /,/.test(rest)) {
@@ -2644,7 +2651,7 @@ const R16_NAME = Object.keys(R16);
 
 /** Directives that stand alone at the start of a line. */
 const DIRECTIVES = new Set([
-    'assume', 'end', 'org', 'even', 'align', 'rept', 'endm', 'local', 'name',
+    'assume', 'end', 'org', 'even', 'align', 'alignb', 'rept', 'endm', 'local', 'name',
     'public', 'extrn', 'extern', 'global', 'include', 'includelib', 'dosseg',
     'option', 'group', 'comment', 'struc', 'struct', 'union', 'record',
     'textequ', 'irp', 'irpc', 'while', 'for', 'forc', 'repeat', 'page',
@@ -3435,7 +3442,34 @@ class NasmFrontEnd {
                     push(map[s], e);
                     continue;
                 }
-                case 'global': case 'extern': case 'common': case 'absolute':
+                case 'global':
+                    // ACCEPTED AND IGNORED, and the distinction from EXTERN
+                    // below is the whole point. GLOBAL says "let other modules
+                    // see this name". In a single-module flat image there ARE
+                    // no other modules, and the label it names is defined right
+                    // here -- so honouring it means doing nothing, and refusing
+                    // it rejects a program that is completely well-formed.
+                    //
+                    // This is what a C compiler's output is made of: SmallerC
+                    // marks every function and every file-scope variable GLOBAL,
+                    // so refusing it refused every C program before it reached
+                    // the first instruction.
+                    continue;
+                case 'extern':
+                    // STILL REFUSED, because it is genuinely unresolvable: it
+                    // names something that is NOT in this file and there is no
+                    // second file to find it in. Named in the message, because
+                    // "extern is unsupported" sends someone to look at the
+                    // directive when what they need is the missing symbol --
+                    // usually a libc function, which tells them what to do next.
+                    throw new AsmError(
+                        `EXTERN "${(String(rest || '').trim().replace(/^extern\s+/i, '')
+                            .split(/[\s,]+/)[0]) || '?'}" cannot be`
+                        + ' resolved: this assembles straight to a loadable image, so there is no'
+                        + ' second module to find it in. Define it in this file, or link it in'
+                        + ' before assembling.',
+                        { ...this.here, what: 'unresolvable EXTERN' });
+                case 'common': case 'absolute':
                 case 'default': case 'group': case 'use16': case 'use32':
                     throw new AsmError(
                         `"${word.toUpperCase()}" is not supported -- this assembles straight to a`
