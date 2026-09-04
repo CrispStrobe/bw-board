@@ -417,6 +417,7 @@ the wrong field** or **returned a green from a check that never executed**:
 | `sed 's/old/new/'` used as a mutation | mutation caught, control green | the pattern never matched; the edit never landed |
 | `bash -c '... $IN ...' IN=value` | a 20-minute run with an input stream | `IN=value` set `$0`, so `--type` got an empty string |
 | `node --test test/…` in a sparse worktree | `# pass 123 # fail 0` | six tests never ran; the files they import were not checked out |
+| `npm test \| tail -15` reported by its exit code | "suite green, exit 0" | `tail`'s status. The suite had a failing test throughout. **This is row 1 of this same table, recurring.** |
 
 The last one is worth its own paragraph, because it is the only one on this
 list that reports a **passing** result. A `git sparse-checkout` in a worktree
@@ -427,6 +428,20 @@ not appear in a pass count.** It surfaced only because one of the six left an
 async handle open and Node complained after the test ended; had it failed
 tidily, the suite would have been green and six tests would have been silently
 gone. Two of the worktrees in this tree are sparse.
+
+**The pipe row is on this table twice, and the second time was the author of
+the first.** `timeout 900 npm test 2>&1 | tail -15` was run three times in one
+session and reported green each time; the exit code belonged to `tail`.
+`(exit 7) | tail -1` returns 0 — it takes one line to demonstrate and it was
+already written down. Knowing a trap is not the same as being immune to it,
+because the trap is invisible at the call site: the pipe was added to keep the
+output short, which is a formatting decision, and it silently became a
+correctness one. Redirect to a file and check `$?` on the bare command, or set
+`pipefail`; do not read an exit status through a pipe.
+
+What it hid: `getTargetKinds` returned 11 kinds against a test expecting 10,
+because a merged commit made the 8086 pickable without updating the count.
+Small, and it had been reported as green three times.
 
 The countermeasure is to know the expected count. `# pass 130` means something
 only against a number you had before; a suite that reports only "0 failures" is
@@ -494,11 +509,25 @@ suite; it is a suite about a different axis. No amount of re-reading it would
 have revealed the defect — only a second, independent measurement did, and it
 came from another lane hitting it from the inside on an unrelated feature.
 
-The audit that followed is the reassuring half: the 8254 is the **only** chip
-with this defect. The CGA (`this.clockHz / FRAME_HZ`), the SB DSP
-(`this.clockHz / rate`), the OPL (`advanceMs`) and the ADC0809 all take the
-machine clock explicitly and convert. The chip that got it wrong is the one
-whose module doc never names a crystal at all.
+The audit that followed is the reassuring half, and it was made exhaustive
+rather than left at a spot check. Of the nine time-driven chips an
+`I8086Machine` can construct, **the 8254 was the only one** that mistook
+machine cycles for its own clock:
+
+| chip | how it gets its time base |
+|---|---|
+| CGA, EGA, Hercules, VGA | take `clockHz` and derive the frame period (`clockHz / FRAME_HZ`) |
+| SB DSP | takes `clockHz`, `perSample = clockHz / rate` |
+| YM3812 (OPL) | `advanceMs` — its own 3.58 MHz crystal |
+| ADC0809 | converts its 640 kHz conversion time to CPU cycles at construction |
+| µPD765 | `advance(_cycles) { }` — **no time model, and the header says so** |
+| **8254** | **counted machine cycles as 1.193 MHz ticks** |
+
+The µPD765 row is worth its own note: a chip that models no time at all is not
+a defect, because it is declared. The defect is a chip that models time
+*implicitly*, in the wrong units, while nothing in its documentation names a
+clock — which was exactly the 8254's state, and a reliable tell across all
+nine.
 
 What to take from it:
 

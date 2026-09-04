@@ -167,7 +167,12 @@ describe('createDebugTarget: missing options', () => {
 describe('getTargetKinds', () => {
   it('returns all target kinds', () => {
     const kinds = getTargetKinds();
-    assert.equal(kinds.length, 10);
+    // 11 SINCE THE 8086 BECAME PICKABLE (66691e1). This count is the reason
+    // the test exists -- a kind added without a row here is a target the
+    // factory can build and the picker never offers -- so it is updated with
+    // the assertion below rather than loosened to `>=`.
+    assert.equal(kinds.length, 11);
+    assert.ok(kinds.find(k => k.kind === 'i8086'));
     assert.ok(kinds.find(k => k.kind === 'emulator'));
     assert.ok(kinds.find(k => k.kind === 'avr8js'));
     assert.ok(kinds.find(k => k.kind === 'atmega2560'));

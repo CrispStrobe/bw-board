@@ -32,6 +32,21 @@
  *     cycle budget, not per 1.193 MHz PIT tick, so a count READ between two
  *     instructions is quantised to instruction boundaries — exact at that
  *     granularity, but not to the individual clock.
+ *
+ * THE CRYSTAL IS THE CHIP'S OWN, AND IT IS NOT THE CPU'S. A PIT on a PC runs
+ * from a 1.193182 MHz oscillator — a third of the 3.579545 MHz colour burst —
+ * whatever the processor beside it is clocked at. This chip used to be handed
+ * MACHINE CYCLES and count them as its own ticks, which made a 5 MHz bench run
+ * the timer 4.19x fast: the "18.2 Hz" BIOS tick measured 76.35 Hz. It is
+ * advanced in MILLISECONDS of emulated time now, the same way the OPL and the
+ * AY are, because a chip with its own oscillator has to convert from the
+ * machine's time base rather than borrow it.
+ *
+ * THE FRACTIONAL CARRY IS LOAD-BEARING. `_advanceChips` is called per
+ * instruction — n=4 cycles for a short one, which at 5 MHz is 0.8 us and
+ * therefore LESS THAN ONE 1.193 MHz count. Truncating each call to whole ticks
+ * would round almost every one of them to zero and stop the clock nearly dead.
+ * The remainder is accumulated across calls.
  *   - NO MODES 1 OR 5. The two GATE-triggered forms (hardware-retriggerable
  *     one-shot and strobe) are not modelled; the gate is assumed asserted and
  *     a counter simply counts.
@@ -47,6 +62,11 @@ export class I8254 {
      */
     constructor(hooks = {}) {
         this.hooks = hooks;
+        /** The 8254's own oscillator: 1.193182 MHz on a PC, a third of the
+         *  colour burst. A board with a different crystal says so. */
+        this.clockHz = hooks.clockHz || 1_193_182;
+        /** Ticks owed but not yet whole. See THE FRACTIONAL CARRY above. */
+        this._frac = 0;
         // '8253' is the earlier part (original IBM PC/XT): it has NO read-back
         // command. The read-back (SC field = 11b) is an 8254 extension; on an
         // 8253 that control word selects a non-existent counter 3 and is ignored.
@@ -85,8 +105,22 @@ export class I8254 {
         this.counters[sc].writeControl(val);
     }
 
-    advance(cycles) {
-        for (const c of this.counters) c.advance(cycles);
+    /**
+     * ADVANCE BY EMULATED TIME, not by machine cycles. The machine layer
+     * prefers this method over `advance()` when a chip offers it, which is how
+     * the OPL and this chip both get their own time base.
+     * @param {number} ms milliseconds of emulated time
+     */
+    advanceMs(ms) {
+        const exact = (ms * this.clockHz / 1000) + this._frac;
+        const whole = Math.floor(exact);
+        this._frac = exact - whole;      // carried, never dropped
+        if (whole > 0) for (const c of this.counters) c.advance(whole);
+    }
+
+    /** Raw tick advance, for a caller that already counts in PIT ticks. */
+    advance(ticks) {
+        for (const c of this.counters) c.advance(ticks);
     }
 
     /** Ticks until the nearest counter output edge. */

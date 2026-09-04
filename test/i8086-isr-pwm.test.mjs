@@ -171,3 +171,26 @@ DRIVE:
     assert.equal(measured[0].pct, 0, '0% must be fully off');
     assert.equal(measured[4].pct, 100, '100% must be fully on');
 });
+
+test('the PWM carrier stays above flicker fusion, which duty alone cannot show', () => {
+    // ASSERTING THE DUTY IS NOT ASSERTING THE FADE. The test above pins
+    // 0/25/50/75/100 % and would pass just as well at a 5 Hz carrier, where a
+    // learner sees a visible strobe rather than a dimmed lamp -- the exact
+    // "presence and ordering cannot see a rate" trap this tier hit with the
+    // BIOS tick, reproduced in a test written after that lesson.
+    //
+    // It is not hypothetical here: correcting the 8254's crystal from the CPU
+    // clock to 1.193182 MHz moved this carrier from 1 kHz to 239 Hz, a 4.19x
+    // drop that every duty assertion above absorbed silently.
+    const PIT_HZ = 1_193_182;
+    const DIVISOR = 50;          // counter 0 reload, as SETUP() programs it
+    const PHASE_STEPS = 100;     // the ISR's phase wraps at 100
+    const carrier = PIT_HZ / DIVISOR / PHASE_STEPS;
+
+    assert.ok(Math.abs(carrier - 238.6) < 1, `carrier is ${carrier.toFixed(1)} Hz`);
+    // Flicker fusion is roughly 60-90 Hz for a small steady source; below that
+    // a "fade" is a strobe. 239 Hz has real margin, and the margin is the
+    // point -- a future change that costs another 4x still lands above 60.
+    assert.ok(carrier > 90,
+        `a ${carrier.toFixed(1)} Hz carrier would be seen as flicker, not brightness`);
+});

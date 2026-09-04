@@ -75,3 +75,47 @@ test('a program that hooks nothing gets NO ticks -- the gate holds', () => {
     const biosTicks = m._read(0x46c) | (m._read(0x46d) << 8);
     assert.equal(biosTicks, 0, 'no timer interrupt was delivered to a program that hooks none');
 });
+
+// ---------------------------------------------------------------------------
+// THE ASSERTION THIS FILE WAS MISSING.
+//
+// Every test above asserts PRESENCE or ORDERING -- `ticks > 0`, `ticks >= 3`,
+// `ticks === 0`. All three passed while the 18.2 Hz BIOS tick ran at 76.35 Hz,
+// because ORDER DOES NOT CHANGE WHEN EVERY DELAY SCALES BY THE SAME FACTOR.
+// The 8254 was being handed machine cycles and counting them as its own ticks,
+// so a 1.193182 MHz part ran at the CPU's 5 MHz: 4.19x fast, and invisible to
+// every relative check in this file.
+//
+// A quantity with units gets its units pinned.
+// ---------------------------------------------------------------------------
+import { I8254 } from '../src/i8254.js';
+
+test('the PIT runs from ITS OWN 1.193182 MHz crystal, not the CPU clock', () => {
+    // Directly, so the arithmetic is checked without a machine around it.
+    let edges = 0;
+    const pit = new I8254({ onOutput: (ch, level) => { if (ch === 0 && level === 1) edges++; } });
+    pit.write(3, 0x36);              // counter 0, mode 3, lobyte/hibyte
+    pit.write(0, 0xff); pit.write(0, 0xff);   // divisor 65535 -> the BIOS tick
+    // One full second of emulated time, handed over in 1 ms slices.
+    for (let i = 0; i < 1000; i++) pit.advanceMs(1);
+    // Mode 3 toggles OUT twice per period; count rising edges only.
+    assert.ok(Math.abs(edges - 18.2) < 1,
+        `expected ~18.2 Hz from 1193182/65535, measured ${edges} Hz — `
+        + 'a PIT fed the CPU clock reads 76 here');
+});
+
+test('the fractional carry is load-bearing: 4-cycle advances must not vanish', () => {
+    // _advanceChips is called PER INSTRUCTION. A short instruction is 4 cycles,
+    // which at 5 MHz is 0.8 us -- LESS THAN ONE 1.193 MHz count. Truncating
+    // each call to whole ticks would round nearly all of them to zero and stop
+    // the clock. This drives the chip exactly the way the machine does.
+    let edges = 0;
+    const pit = new I8254({ onOutput: (ch, level) => { if (ch === 0 && level === 1) edges++; } });
+    pit.write(3, 0x36);
+    pit.write(0, 0xff); pit.write(0, 0xff);
+    const msPerCall = 4 * 1000 / 5_000_000;         // 4 CPU cycles at 5 MHz
+    const calls = Math.round(1000 / msPerCall);     // one second of them
+    for (let i = 0; i < calls; i++) pit.advanceMs(msPerCall);
+    assert.ok(Math.abs(edges - 18.2) < 1,
+        `${edges} edges from ${calls} sub-tick advances — the remainder is being dropped`);
+});
