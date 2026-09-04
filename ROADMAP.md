@@ -1229,8 +1229,43 @@ workload rather than a debugging mode, and would buy back exactly the
 headroom this item needs. **It should be scoped as its own entry and taken
 first.**
 
+**RE-MEASURED THE SAME DAY, at `lego-47`'s challenge — the machine had grown
+under the number this whole reframing rests on.** A DOS-layer timer tick,
+`setInput`, `keyIn` and the CRTC all landed after the figures above, and
+E6.8.4a's page table landed too. Five fresh runs:
+
+```
+workload     MIPS   × real XT   range        was
+core         5.21      14.50×   11.6-15.2    8.70×
+machine      1.59       4.40×    3.3- 5.5    2.90×
+boot         0.60       1.50×    1.4- 2.1    1.00×
+```
+
+Everything looks faster and almost none of it is us. **`core` touches no
+machine code at all, so it is a pure box-load proxy** — and it moved 1.67×,
+which is the box getting quieter, not the emulator getting better.
+Normalised against it:
+
+```
+machine/core   0.333 -> 0.303    -9%
+boot/core      0.115 -> 0.103   -10%
+```
+
+**So relative to the CPU, the machine layer got about 10% WORSE, not better —
+even with the page table in.** The new per-step work (timer tick, input
+polling, CRTC) ate the 1.65× that E6.8.4a bought on `_read` and a little more
+besides. That is not an argument against the page table; it is the clearest
+possible argument FOR E6.8.4a as a standing concern rather than a one-off
+task, because the machine layer grows every time somebody adds a device and
+nobody is watching the total.
+
+**The reframing survives, on the new numbers.** A real DOS boot at 1.5× real
+time still leaves a 5× cycle-stepped core at 0.3×, and a 20× one at 0.075×.
+Cycle accuracy is still a debugging mode rather than a running mode, and the
+conclusion does not depend on which day the box was quiet.
+
 Owed and not done: the same three numbers from the browser bundle. §5 of the
-core plan warns the Node figure does not transfer, and every number above is
+core plan warns the Node figure does not transfer, and every number here is
 Node.
 
 **LICENCE TRAP, and it is the same one §E6's table already answered.**
