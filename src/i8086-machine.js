@@ -203,7 +203,13 @@ export const PCXT8086 = Object.freeze({
         { kind: 'pcspeaker', name: 'spk', ppi: 'ppi1', pit: 'pit1' },  // 61h bits 0/1 gate counter 2
         { kind: 'dma', name: 'dma1', at: 0x00 },                       // XT: 8237 at 00-0Fh
         { kind: 'dmapage', name: 'dmapg', at: 0x80, dma: 'dma1' },     // the 74LS670 page latch at 80-8Fh
-        { kind: 'fdc', name: 'fdc1', at: 0x3f0, irq: 6, dma: 'dma1' }, // uPD765 at 3F0-3F7h, IRQ6, DMA ch 2
+        // uPD765 at 3F0-3F7h, IRQ6, DMA ch 2. The `dma: 'dma1'` field IS the
+        // wire, not a label: without it the machine builds both chips and
+        // connects neither, the FDC falls back to non-DMA execution, raises
+        // RQM and waits forever for a host byte that never comes. The failure
+        // is a silent hang with no error — anyone hand-writing this config
+        // must not omit it.
+        { kind: 'fdc', name: 'fdc1', at: 0x3f0, irq: 6, dma: 'dma1' },
         { kind: 'cga', name: 'cga1', at: 0x3d0 },                      // CGA at 3D0-3DFh (text page at B800:0000)
     ],
 });
@@ -244,6 +250,30 @@ export const CGADEMO8086 = Object.freeze({
         { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
     ],
     chips: [
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (text page at B800:0000)
+    ],
+});
+
+/**
+ * The interrupt example — the third self-booting board, and the one that proves
+ * the tier's interrupt path from a program's point of view. An 8086, 64K RAM,
+ * the CGA text page, an 8259 PIC at 20h, an 8254 PIT at 40h wired OUT0->IR0,
+ * and a 32K ROM. Load rom/timer-demo.bin (scripts/build-timer-demo.mjs) and it
+ * hooks INT 8, programs the PIT to tick, and paints a live counter into the
+ * text page every timer interrupt: 8254 OUT0 -> 8259 IR0 -> CPU INT 8 -> ISR ->
+ * B800 -> EOI, the whole chain, driven only by the running program. The screen
+ * shows a climbing hex counter with no BIOS and no DOS.
+ */
+export const TIMERDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional (IVT, stack, the counter)
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259 at 20-21h (IR0 -> INT 8)
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 }, // 8254 at 40-43h, OUT0 -> IR0
         { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (text page at B800:0000)
     ],
 });

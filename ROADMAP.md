@@ -865,6 +865,8 @@ the MIT game corpora, and it is in progress.
 | GREENSHELLRAGE/8086-breadboard-computer | **no LICENSE file** | All rights reserved. The ARCHITECTURE may inspire (not copyrightable); the ROM binaries and .asm may not be copied. |
 | emu8086.inc | unclear | REFUSED. Re-implement the macros. |
 | MartyPC, PCjs | MIT | Readable as reference implementations; not vendored. Reading an MIT implementation ships no third-party code. |
+| `mfld-fr/emu86` | **MIT** (2019-2025 MFLD.fr, verified 2026-09-04) | Readable and ADAPTABLE with attribution. An IA16 emulator covering 8086/8088/**80186/80188**, so it is the permissive reference for the 186 instructions of E6.8.1 — but `SingleStepTests/v20` is the ORACLE for them, and a suite beats a source. Also has three console backends (stdio/PTY/SDL2), which is the shape of a headless serial harness. |
+| `dbalsom/XTCE-Blue` (fork of reenigne's XTCE) | MIT **wrapper**; the executed 8088 **microcode is Intel's** | **STRUCTURE readable, MICROCODE refused** — the identical trap to `nand2mario/z8086` below. A cycle-interruptible core is derivable from `SingleStepTests/8088`'s bus traces, which is both clean and a better oracle than transcription. Its CGA (ported from MartyPC, MIT) is an overscan-aware reference for E6.8.5. See E6.8.4. |
 | jasaldivara/retro-dos-graphics | MIT | Shippable WITH ATTRIBUTION. 180 KB NASM across 28 files — CGA, joystick I/O, PC speaker, scrolling. Richest single corpus for Tier C peripheral testing. |
 | FaizanAli7005/typing-balloon-game-asm | MIT | Shippable WITH ATTRIBUTION. 41 KB NASM, broad BIOS interrupt coverage (timer, keyboard, video, speaker). |
 | milyas-io/Assembly-Breakout-Game | MIT | Shippable WITH ATTRIBUTION. 20 KB MASM/TASM, mode 13h graphics, collision, speaker. |
@@ -974,6 +976,189 @@ human must read it before anything is adopted.
 
 ---
 
+### E6.8 What three finished 8086 emulators do that we cannot (surveyed 2026-09-04, owner-requested)
+
+§E6's survey asked one question — *is anything adoptable as a CORE* — and
+answered no. This asks a different one: **what do the finished projects DO
+that this tier cannot**, regardless of whether their code is adoptable. Three
+were read: `mfld-fr/emu86` (**MIT**, verified 2026-09-04 — 2019-2025 MFLD.fr),
+`jeffpar/pcjs` (MIT, already in the table), `dbalsom/XTCE-Blue` (MIT, a fork
+of reenigne's XTCE by MartyPC's author).
+
+**Read this as a gap list, not a verdict.** On core correctness we are ahead
+of two of the three: 646,000/646,000 on architectural state AND on
+disassembly text, with the undocumented behaviours (SETMO/SETMOC, SALC,
+POP CS, the fitted DAA/DAS rule, `REP IDIV` negating the quotient), is a
+standard neither emu86 nor PCjs is held to — neither has a vector oracle at
+all. Only XTCE-Blue beats us, on the one axis §E6.1 deliberately declined.
+Nothing below says the core is wrong. And nothing below is matched by the
+three things only we have: the extractor that turns a hand-wired breadboard
+into a machine or a NAMED refusal, the counted refusal histogram, and an
+assembler in-tree.
+
+**PREREQUISITE, and it outranks every item here.** `docs/I8086-CORE-PLAN.md`
+records that the 646,000-vector grind and the 525-program corpus **do not run
+in CI** — "read every number in this file as measured, not as maintained."
+Items E6.8.1 and E6.8.4 are both graded BY those instruments. Adding features
+whose only grader is decaying is the wrong order: the `v1_binary/*.MOO.gz`
+sparse-checkout plan lands first, or the 186 work is graded by nothing.
+
+---
+
+#### E6.8.1 The 80186/80188 instruction set — cheapest real win, and it has an oracle
+
+`i8086.js:679` decodes `0x60` as a `Jcc` alias. That is correct 8086 and is
+exactly what a 186 is not. Missing: `PUSHA`/`POPA`, `PUSH imm`,
+`IMUL r,rm,imm`, `INS`/`OUTS`, `BOUND`, `ENTER`/`LEAVE`, and `&31` shift-count
+masking — which §3 note 8 of the core plan already documents as an 8086-vs-later
+FACT, it simply is not selectable.
+
+What makes this worth doing rather than deferring: **`SingleStepTests/v20` is
+MIT and covers these**, because the NEC V20 implements the 186 set. The same
+grinder that reached 646,000 grades the extension. Roughly fifteen opcodes
+behind a machine-config `variant: '8086' | '80186'`, and it unlocks emu86's
+entire target class (ELKS, the 80188 SBCs).
+
+Not taken: the R8810 MCU, and the 80186's on-chip peripheral block (timers,
+interrupt controller, chip-select unit). No lesson wants them.
+
+#### E6.8.2 Symbols in the debugger — a producer and a consumer that were never connected
+
+`i8086-asm.js:393` builds `this.symbols`, a Map. `i8086-disasm.js` accepts
+`{ labels: Map<number,string> }`. **Nothing joins them** — `labels` appears
+zero times in `i8086-debug.js` and zero times in the host's
+`debug-runner.js`. So a learner who wrote `delay_loop:` reads `jmp 002Bh`.
+
+PCjs loads symbol tables and names its breakpoints. This is the highest
+value-per-line item on the list — an existing producer wired to an existing
+consumer — and it also buys breakpoint-by-name for free.
+
+#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors
+
+`i8086-debug.js` reports `breakpoints: ['code', 'write']`. For a workbench
+whose entire premise is *you wired this 8255 yourself*, "stop when anything
+touches port 61h" is the breakpoint people actually want, and the second
+decode space to hang it on already exists in `i8086-machine.js`.
+
+This does NOT contradict the deliberate refusal at `i8086-debug.js:22`. That
+refuses *dumping* the port space, because a port read is destructive and a
+debugger that dumps it changes the machine it claims to observe. Trapping an
+access the PROGRAM makes reads nothing extra. Same argument, opposite answer.
+
+Add `'int'` alongside: break on `INT n` for a chosen n, which is how a DOS
+program is debugged and what our trap page (`i8086-dos.js`) is already
+positioned to see.
+
+#### E6.8.4 Cycle-level execution — OWNER WANTS THIS (2026-09-04), as a user choice if it costs speed
+
+The honest big gap, and our own framework already admits it: `i8086-debug.js`
+refuses `step('cycle')` with a reason, while `m6502-debug.js`, `z80-debug.js`,
+`avr8js-debug.js` and `rp2040js-debug.js` all support it. **The 8086 is the
+one CPU in this tree where the cycle-step button is dark.** XTCE-Blue runs
+8088 MPH and Area 5150 because its core is cycle-interruptible; we do not
+model the prefetch queue or the BIU, and `i8086.js`'s header says so.
+
+The owner's framing, recorded as given: *we want cycle level in the end if we
+can — maybe as a user choice if it affects perf.* Four decisions follow.
+
+**It is a machine CONFIG, not a second core and not a global switch.**
+`timing: 'instruction' | 'cycle'` on the machine. The cycle machine's debug
+target then reports `steps: [..., 'cycle']` and the instruction machine's does
+not — so the dark button lights up exactly when the machine can honour it,
+through the capability vocabulary that already exists rather than a new one.
+A user choice that silently changes what a breakpoint means would be worse
+than no choice.
+
+**Build it only when it can be GRADED.** `SingleStepTests/8088` ships bus
+traces per vector; that is the whole reason this is buildable to this tier's
+standard instead of guessed at. §E6.1's cycle counts are explicitly NOT
+vector-verified today because the 8086 suite's arrays are prefetch-inclusive
+and mean nothing to an instruction-stepped core — which is the same fact read
+from the other end: **model the BIU and those arrays become the grader.**
+No grinder, no landing.
+
+**Measure before defaulting.** Current core: 5.17 M instr/sec measured
+(§E6.1 quotes 4.0 M conservatively). A cycle-stepped core is typically 5-20×
+slower. A 4.77 MHz XT needs ~0.24 M instr/sec, so even 20× leaves headroom on
+a desktop; the risk is a phone and the browser bundle, where §5 of the core
+plan already warns the Node figure does not transfer. So the DEFAULT is
+chosen by measurement on the slowest target we ship to, not by assumption,
+and both numbers go in the table.
+
+**LICENCE TRAP, and it is the same one §E6's table already answered.**
+XTCE-Blue is MIT, but it executes **reenigne's decoded 8088 microcode** —
+Intel's copyrighted ROM content, exactly the reason `nand2mario/z8086` is
+REFUSED above for shipping `ucode.hex`. The MIT wrapper does not launder the
+microcode any more than the fMSX wrapper laundered fMSX. **Read XTCE-Blue as
+a reference implementation of cycle-interruptible STRUCTURE; do not adopt its
+microcode, and do not build ours by transcribing it.** The BIU/prefetch
+behaviour is derivable from the bus traces in the MIT test suite, which is
+both legally clean and a better oracle. Add to the table on landing.
+
+#### E6.8.5 CRTC-driven video timing — the chip is already in the tree
+
+`cga-card.js:21` states it plainly: *"The 6845 CRTC at 3D4h/3D5h is NOT
+modelled"*, and retrace is derived from machine time (`_vretraceAt`). That is
+enough to unhang a program polling 3DAh and not enough for one that COUNTS
+scanlines — which is the class XTCE-Blue exists to run. `src/mc6845.js`
+already implements R0-R17 clean-room for the Z80 tier.
+
+Scope: drive the CGA card's timing from an `MC6845` instance so retrace,
+hsync, start address and cursor are EMITTED rather than derived. Bounded, and
+it pairs naturally with E6.8.4 — a scanline count is only meaningful once the
+cycles feeding it are.
+
+#### E6.8.6 A disk-image builder, and a DOS that boots
+
+PCjs ships `/tools/diskimage`, which builds a bootable image from a directory
+of files. We have `upd765.js`, `i8237.js`, INT 13h and `loadBoot()` — four
+finished devices and **no image to feed them**. §E6.6 names this as the
+remaining Tier C gap, and the licence table has already cleared
+`microsoft/MS-DOS` 1.25/2.0 as MIT.
+
+So this is not "write a DOS". It is a builder plus a boot floppy, and it
+turns work that is already done into a machine that starts.
+
+#### E6.8.7 Save/restore, surfaced
+
+`I8086Machine.saveState()` exists (`i8086-machine.js:693`) and the chips
+implement their halves. PCjs persists machine state across a page reload. Ours
+is an engine method the UI does not offer. Engine-complete; a host-lane item.
+
+#### E6.8.8 A real OS as the acceptance target
+
+emu86 boots ELKS and runs MS-DOS 6.22. Our high-water mark is CHKDSK, COMP
+and DEBUG from the MIT MS-DOS release — genuinely the first third-party code
+this tier ran that it did not assemble itself, and still one service at a
+time. ELKS under load exercises interrupts, the timer and the FDC together in
+a way 525 textbook programs never will. Gated on E6.8.1 (it wants 186) and
+E6.8.6 (it wants an image).
+
+#### E6.8.9 Declined, with reasons
+
+- **EGA, HDC, mouse, LPT** (PCjs). Real breadth; no lesson wants them. CGA +
+  Hercules + VGA-13h covers the corpus.
+- **A second disassembly syntax** (emu86 ships Intel AND AT&T). Our text is
+  graded against the suite's string; a second syntax would be graded against
+  nothing, which is a downgrade disguised as a feature.
+- **The 80186 on-chip peripherals and the R8810.** See E6.8.1.
+
+#### Order
+
+`v1_binary` in CI (the prerequisite) → **E6.8.2** (hours; both ends exist) →
+**E6.8.3** (fits the product thesis; the decode space is there) → **E6.8.1**
+(graded by the MIT v20 suite) → **E6.8.6** (four devices become a machine) →
+**E6.8.5** (retrace becomes real) → **E6.8.4** (cycle timing, once its grader
+and its perf numbers exist) → **E6.8.8** (the harsh oracle, last because it
+needs three of the above).
+
+Until E6.8.4 lands, `i8086-debug.js`'s `step('cycle')` refusal should say what
+it would TAKE, not only that it cannot — that refusal is currently the only
+place a user meets the omission, and this tier's standard is that a refusal
+teaches.
+
+---
+
 ## E7 The 8086 in the Circuit Designer — an example that is a MACHINE, not a demo
 
 **STATUS 2026-09-04 — steps 1-4 and 9 are DONE; the numbered plan below is left
@@ -1035,6 +1220,29 @@ lands it.
    our side (`getVideoState`, `machine.audioTone`) is done. Ship a Circuit-
    Designer EXAMPLE PRESET (see the CORRECTIONS block below — the BIOS ROM is
    a SCREEN-AND-KEYBOARD machine, not serial).
+   **DONE (2026-09-04): both self-booting example presets shipped in
+   `src/i8086-machine.js`, each with a ROM builder and an end-to-end test:**
+   - **`SERIALSHELL8086`** — the UART-shell example (the Z80/6502 serial-
+     monitor counterpart). `rom/serial-monitor.bin` (scripts/build-serial-
+     monitor.mjs): 16550 at port 10h, banner + echo. Drives SerialConsole.
+     test/i8086-serial-shell.test.mjs.
+   - **`CGADEMO8086`** — the screen example. `rom/cga-demo.bin` (scripts/
+     build-cga-demo.mjs): CGA text mode, writes a message into B800:0000.
+     Drives VdpScreen. TEXT mode only (clear of the INT 10h graphics hole
+     the DOS lane is filling). test/i8086-cga-demo.test.mjs.
+   - **`TIMERDEMO8086`** — the interrupt example. `rom/timer-demo.bin`
+     (scripts/build-timer-demo.mjs): hooks INT 8, programs PIC+PIT, paints a
+     live counter into B800 on every tick. Exercises the WHOLE interrupt path
+     (8254 OUT0 -> 8259 IR0 -> CPU INT 8 -> ISR -> B800 -> EOI) — the first
+     end-to-end proof a running program takes and services a hardware
+     interrupt here. Own-authored, adopting only the CONCEPT of the MIT
+     "Learn Assembly the Hard Way" timer.asm (that repo is a student's
+     mixed-provenance course dump — not vendored). test/i8086-timer-demo.test.mjs.
+   - **`PCXT8086`** — the full XT board the BIOS ROM + MIT games run on;
+     now maps the CGA text page (B8000-BFFFF) to match the DOS lane's XTDISK
+     region map. This is the "boot the real BIOS" board, not a minimal demo.
+   These are the machines step 2's Machine-Loader offers; the minimal two are
+   pickable and demonstrable today, PCXT8086 once the host wires video/keyboard.
 
 2. **bw-circuit-ui recognises and places the 8086.** Add `i8086` to
    `src/parts-data/` (JSON + SVG, reuse the bw-parts pinout), register the kind
@@ -1092,6 +1300,11 @@ CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
   not SerialConsole. The "UART shell like the other MCUs" the owner asked for
   becomes a SECOND, simpler example: a small serial-monitor ROM + a UART
   (ns16c550 or 8251) driving SerialConsole.
+  **RESOLVED (2026-09-04): both example presets are built (see step 1). The
+  serial example is `SERIALSHELL8086`; the screen example ships as the minimal
+  `CGADEMO8086` (self-contained CGA-text demo, no BIOS) alongside the full
+  `PCXT8086` board that the real BIOS ROM boots. So there are in fact THREE
+  presets: two minimal self-booting demos (one per widget) and the full XT.**
 - ROM PLACEMENT is a LOAD address, not the entry. The BIOS loads at 0xF0000
   (segment F000h); 0xFFFF0 is the reset vector INSIDE that image, not where it
   goes. `loadRom(bytes, at)` takes the load address, so `romAt: 0xF0000` with a
@@ -1120,6 +1333,10 @@ CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
 6. **E6.2 → E6.3** — the 8086 breadboard machine, then its interrupts. E6.4/E6.5
    are independent of both and gated on assembler scope, not on engine work; E6.6
    waits for a lesson that needs it.
+7. **E6.8** — the comparative gap list (surveyed against emu86, PCjs and XTCE-Blue).
+   Its own order is inside the section, and its PREREQUISITE is the vector suite
+   running in CI: two of its items are graded by instruments that currently do not.
+   E6.8.4 (cycle-level execution) is owner-requested and lands last of the eight.
 
 Cross-repo dependencies: bw-circuit-ui X1.1 (SPICE import) wants E3.5; X2.x runners
 want E1.5; the AC UI wants E2.1. brickwright-lite re-vendors via `sync:bwboard` after
