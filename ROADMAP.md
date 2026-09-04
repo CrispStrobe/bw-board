@@ -1081,24 +1081,35 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    SAME CGADEMO8086 board: mode 4 (320x200x4) colour bars, both interleaved
    banks. Renderer `cga4` decode confirmed in-process by lego-47.
    test/i8086-cga-gfx-demo.test.mjs. Loader entry: bw-circuit-ui `f7bd2f2`.
-3. **Hercules graphics — NEXT.** hercules-card.js exists (port-only, 3B0-3BFh).
-   A HERCDEMO8086 board (HGC + the B000:0000 mono page + ROM) and a ROM that
-   sets HGC graphics mode and writes the 720x348 mono bitmap. GATE: the
-   renderer must decode the HGC framebuffer (mono, its own 4-bank interleave) —
-   confirm with the DOS/host lane before shipping a loader entry, same as CGA.
-4. **VGA mode 13h — AFTER Hercules.** vga-card.js exists. Needs (a) a machine
-   config that declares `kind: 'vga'` — none does today, so 13h currently
-   programs open bus and is a recorded no-op — this lane adds a VGADEMO8086
-   board; (b) the renderer's mode-13h (320x200x256, linear at A000:0000) decode,
-   DOS/host lane. A 256-colour linear framebuffer is the simplest to fill and
-   the most recognisable payoff.
+3. **VGA mode 13h — NEXT (promoted, 2026-09-04).** lego-47 measured the renderer
+   ALREADY decodes 13h (vga8, 320x200x256 LINEAR at A000:0000, no interleave)
+   and the BIOS programs it — so the only blocker was a `kind: 'vga'` machine
+   config, which is this lane, not renderer work. **Config DONE (`141dda6`):**
+   VGADEMO8086 (VGA block at 3C0h + the 64K framebuffer at A0000) + a board test.
+   REMAINING: a bare-metal demo ROM that programs mode 13h, sets a DAC palette,
+   and paints A0000. GATE (asked): the exact register signature `modeFromVga`
+   keys off, so the firmware is minimal-and-correct rather than a guessed
+   ~40-register table. The cheapest VISIBLE win of the set — linear framebuffer,
+   256 colours, and it renders today.
+4. **Hercules graphics — STATE DONE (`830af06`), render pending.** HERCDEMO8086
+   (HGC + the B000:0000 mono page) + rom/hercules-demo.bin (720x348 mono, 4-wide
+   bars) + a state test pinning the FOUR-bank y-mod-4 layout. NOT wired into the
+   loader: lego-47 measured the renderer refuses HGC by name today (mode 6h,
+   "720x348 mono at B0000h, which this renderer does not draw"), so a UI entry
+   would show a refusal string, not a picture. The blocker is on the DOS/host
+   side — the four-bank decode (NOT the CGA scanline-parity one; a CGA-analogy
+   decoder yields a coherent quarter-height wrong image). Ships as verified
+   state, ready to wire the moment that decode lands.
 5. **EGA — LAST, and it needs a card first.** No ega-card.js exists yet; EGA's
    planar four-bitplane memory is the hardest of the set. Build the card (this
    lane), then the board + demo, then the renderer's planar decode (DOS/host).
    Gated on a lesson actually wanting EGA — CGA+VGA cover the span for now.
 
-Each step ships only once its renderer decode is confirmed, because a board
-that renders a cleared screen is not an example.
+Each step ships a LOADER ENTRY only once its renderer decode is confirmed,
+because a board that renders a cleared screen (or a refusal string) is not an
+example. Firmware + card-state tests can land earlier — they verify this lane's
+half of the seam and are ready to wire the moment the renderer catches up
+(Hercules is exactly that state today).
 
 ---
 
