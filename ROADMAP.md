@@ -961,7 +961,15 @@ be read and adapted with attribution.
 | --- | --- | --- |
 | dbalsom/arduino_8253 | MIT | **BEST PIT ORACLE.** Real-8253 Arduino interface **plus a reference emulator developed against the physical chip**; datasheet says the 8254 is investigable with the same rig (pin/function compatible). Diffing `i8254.js` against it is close to diffing against silicon. Read + adapt with attribution. |
 | dbalsom/martypc — `crates/lib/marty_core/src/devices/{pit,pic,serial}.rs` | MIT | PIT "highly accurate"; PIC "mostly complete, **missing priority rotation and nested modes**" — exactly the scope `i8259.js` built and skipped. `serial.rs` is an **INS8250, not an 8251** — not a USART reference. Read as reference; not vendored. |
-| hotkeysoft/emulators — `8086/Hardware/Device8254`, `Device8259`, `Device8250` | MIT | Additional MIT PIT/PIC cross-check (C++). Has an 8250 UART, no 8251. |
+| `hotkeysoft/emulators` | MIT (confirmed 2026-09-04) | **This row was too narrow and is widened.** First listed only as an MIT cross-check for `Device8254`/`Device8259`/`Device8250` (it has an 8250, no 8251). It is a multi-machine C++ suite: 8086/8088/**80186/80286**, PC/XT, PC/AT, PCjr, Tandy 1000, **EGA on the real IBM EGA BIOS ROM**, four sound devices, and a **snapshot GUI**. Readable throughout; nothing vendorable (C++). See E6.8.14. |
+| `folkertvanheusden/DotXT` | **NO FORMAL LICENCE.** README says "Released in the public domain"; there is no LICENSE file and the API reports `license: null` (verified 2026-09-04) | **READ ONLY, DO NOT VENDOR, DO NOT PARAPHRASE CLOSELY.** A bare sentence is not a dedication — CC0 and the Unlicense exist because unilateral public-domain release is unrecognised in much of the EU. Has MDA, XT-IDE and an RTC we lack; its own `todo` records DIV/IDIV and disassembler defects, so it is not the route to them. |
+| `MichalPleban/cbm2-pc-emulator` | Apache-2.0 | Not an emulator at all — firmware bridging a REAL 8088 card to a REAL CBM-II. Nothing to take; recorded so it is not surveyed twice. See E6.8.14. |
+| **`sneakernets/DMXOPL`** | **MIT** (verified via API 2026-09-04) | **USABLE AS DATA.** An OPL patch set in `.op2`/`.wopl`, no code. Answers E6.8.11's third problem — an OPL with no instruments makes no sound. Ship with the MIT notice and credit. **Owed diligence before shipping:** nobody has diffed its FM parameters against id's original GENMIDI lump; the author's "original work" statement is a self-report. |
+| **`raffecat/LittleMUS`** | **MIT** (Andrew Towers, 2025) | **USABLE.** `musplayer.c/.h` is a MUS sequencer that is core-AGNOSTIC — it calls an externally supplied `adlib_write(reg, val)` and reads DMXOPL's `.op2` layout directly. `musdriver.c/.h` is written against Nuked-OPL3's struct names and would be rewritten against ymfm: an API mismatch, not a licence one. |
+| `Raffaello/hyper-sonic-drivers` | Apache-2.0 **wrapper**; the tree vendors Nuked-OPL3 (LGPL-2.1), MAME `ymf262` (GPL-2.0-or-later), DOSBox `dbopl` (GPL-2.0), woody, ScummVM (GPL-3.0), MUNT (LGPL-2.1 via `vcpkg.json`), plus a Miles Design proprietary EULA doc | **REFUSED — the specimen instance of the rule below.** Four copyleft licences vendored verbatim under one permissive LICENSE, each still carrying its own SPDX header. The only clean thing in it is `hardware/opl/mame/ymfm/`, which IS `aaronsgiles/ymfm`. See E6.8.16. |
+| `kawaii-Code/as88v2` | **Unlicense (public domain)** | Vendorable and still declined: a THIRD assembler dialect (Tanenbaum `as88` — `.SECT`, `!` comments, `(x)` dereference, a fake `SYS` opcode), self-described as an unstable subset, tested by asserting exit code zero. See E6.8.15. |
+| `ccodere/instrcvt` | **No LICENSE**; custom 1995 freeware header forbidding re-release of modified source | REFUSED, and not needed. Not an instruction converter — a Sound Blaster/AdLib **instrument** format converter (`.SBI`/`.INS`). DMXOPL supplies the same need under MIT. |
+| `DynartInteractive/DOS-Game-Engine` | MIT **at the top level only** — `UNITS/SBDSP.PAS`, `UNITS/PLAYHSC.PAS` and `UNITS/XMS.PAS` retain other authors' "all rights reserved" / "not to be distributed modified" / NEO-Software-permission notices verbatim, and `DATA/*.PCX` is carved out non-commercial | REFUSED for those files regardless of the LICENSE, and Turbo Pascal throughout, so our assembler could not ingest it anyway. Its inline `asm` fragments are LESSON TOPIC ideas only. See E6.8.15. |
 | ajokela/retro-z80-emulator — `src/serial.rs` | MIT | **First MIT 8251 reference (Rust)** — but LOWER FIDELITY than ours: mode and command share one field, no mode→command sequence, no internal-reset rewind, no TxEN gating. It would mishandle the soft-reset init dance. Confirms our sequence model is necessary, not gold-plating. Sanity reference only. |
 | SIrfanH/8086-mp-8251-usart-auto-complete-demo | MIT | **Shippable 8251 test material WITH ATTRIBUTION.** 8086 asm + Proteus circuit. Its init sequence (mode → 0x40 soft-reset → mode → enable) validated `i8251.js`, and its serial protocol is wired up as an end-to-end test (`test/i8086-devices.test.mjs`). |
 | MAME (current upstream) — `src/devices/machine/{i8251,pit8253,pic8259}.cpp` | **BSD-3-Clause** (per each file's `// license:` header; MAME-the-project is GPL-2.0 but these device files are individually BSD-3) | **PERMISSIVE — the spec-grade 8251 reference we were missing.** Readable and adaptable WITH the BSD-3 notice. Also permissive PIT/PIC cross-checks. Verify the header on the exact revision you read; the relicensing landed ~2015-16. |
@@ -1114,7 +1122,18 @@ PCjs loads symbol tables and names its breakpoints. This is the highest
 value-per-line item on the list — an existing producer wired to an existing
 consumer — and it also buys breakpoint-by-name for free.
 
-#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors
+#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors — MACHINE HALF DONE (2026-09-04, `00ed9f9`)
+
+Split by lane. **Machine half (this lane) DONE:** the machine fires
+`hooks.onPortAccess(dir, port, value)` on every IN and OUT, decoded or not
+('in' reports the byte the program read); zero cost when unset;
+test/i8086-port-trap.test.mjs. **Debugger half (DOS/host lane):** extend
+`i8086-debug.js` `breakpoints: ['code','write']` with `'port'`, set the hook,
+match registered watches, break on hit — hook shape handed over. **INT half:**
+proposed to lego-47 — either a one-line `onInterrupt(n)` hook at the core's
+`_interrupt(n)` (i8086.js, core lane; catches software INT n, INT3, INTO and
+exceptions), or debugger-side opcode inspection (CD/CC/CE) for the DOS-debugging
+case; their surface, their call. Original framing follows.
 
 `i8086-debug.js` reports `breakpoints: ['code', 'write']`. For a workbench
 whose entire premise is *you wired this 8255 yourself*, "stop when anything
@@ -1158,13 +1177,61 @@ and mean nothing to an instruction-stepped core — which is the same fact read
 from the other end: **model the BIU and those arrays become the grader.**
 No grinder, no landing.
 
-**Measure before defaulting.** Current core: 5.17 M instr/sec measured
-(§E6.1 quotes 4.0 M conservatively). A cycle-stepped core is typically 5-20×
-slower. A 4.77 MHz XT needs ~0.24 M instr/sec, so even 20× leaves headroom on
-a desktop; the risk is a phone and the browser bundle, where §5 of the core
-plan already warns the Node figure does not transfer. So the DEFAULT is
-chosen by measurement on the slowest target we ship to, not by assumption,
-and both numbers go in the table.
+**MEASURED 2026-09-04, AND THE MEASUREMENT OVERTURNS THIS ITEM'S PREMISE.**
+This paragraph used to argue that a cycle-stepped core would be fine: the
+core runs at 5.17 M instr/sec, a 4.77 MHz XT needs 0.24 M, so even a 20×
+slowdown "leaves headroom on a desktop". **That reasoning was wrong, and it
+was wrong in the way this section keeps warning about — it compared the
+BARE CORE against the requirement, when the bare core is not what runs
+anything.** `scripts/bench-i8086.mjs` already existed and already reports the
+right unit, which is emulated cycles per wall second against a real XT's
+clock. Five runs, medians, on this box:
+
+```
+workload     MIPS   × real XT    range
+core         3.16       8.70×    6.6 - 11.1     the decoder and ALU alone
+machine      1.03       2.90×    2.4 -  3.1     + region decode, ports, chips
+boot         0.40       1.00×    0.7 -  1.4     real MS-DOS 2.0 off a real FDC
+```
+
+**The realistic workload is already AT real time, with no headroom at all.**
+Booting a real DOS through the full machine runs at 1.0×. So a cycle-stepped
+core at the usual 5-20× cost gives:
+
+```
+   5× slower  ->  0.20× real time     5× SLOWER than 1981 hardware
+  10× slower  ->  0.10× real time    10× slower
+  20× slower  ->  0.05× real time    20× slower
+```
+
+There is no factor at which this is "a user choice about performance". And
+this is a VPS, not the phone §5 warned about; the browser bundle is still
+unmeasured and will be worse.
+
+**So E6.8.4 is REFRAMED rather than abandoned, and the new shape is better.**
+Cycle accuracy is **a debugging MODE, not a running mode.** Nobody plays Area
+5150 in it. You switch a machine into cycle timing to inspect a few thousand
+instructions where cycle truth is the question — a video trick, a timing
+loop, a race — and you switch back. That makes the owner's "user choice"
+concrete and small instead of a global speed/accuracy slider that would be
+dishonest at every setting: the choice is per-machine and per-session, the
+capability vocabulary already carries it (`capabilities().steps` gains
+`'cycle'` on a cycle machine), and nothing has to pretend a 0.1× machine is
+a machine you can use.
+
+**AND A SIDE FINDING THAT OUTRANKS THE ITEM IT CAME FROM.** `core` is 3.16
+MIPS and `machine` is 1.03: **the machine layer costs about two thirds of all
+execution time**, more than the CPU it wraps. Before making the core slower,
+that is where the time actually is — region decode on every memory access,
+port decode, chip advance and an interrupt poll per instruction. An
+optimisation pass there is cheaper than any part of E6.8.4, benefits every
+workload rather than a debugging mode, and would buy back exactly the
+headroom this item needs. **It should be scoped as its own entry and taken
+first.**
+
+Owed and not done: the same three numbers from the browser bundle. §5 of the
+core plan warns the Node figure does not transfer, and every number above is
+Node.
 
 **LICENCE TRAP, and it is the same one §E6's table already answered.**
 XTCE-Blue is MIT, but it executes **reenigne's decoded 8088 microcode** —
@@ -1176,18 +1243,74 @@ microcode, and do not build ours by transcribing it.** The BIU/prefetch
 behaviour is derivable from the bus traces in the MIT test suite, which is
 both legally clean and a better oracle. Add to the table on landing.
 
-#### E6.8.5 CRTC-driven video timing — the chip is already in the tree
+#### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
-`cga-card.js:21` states it plainly: *"The 6845 CRTC at 3D4h/3D5h is NOT
-modelled"*, and retrace is derived from machine time (`_vretraceAt`). That is
-enough to unhang a program polling 3DAh and not enough for one that COUNTS
-scanlines — which is the class XTCE-Blue exists to run. `src/mc6845.js`
-already implements R0-R17 clean-room for the Z80 tier.
+Fell out of E6.8.4's benchmark rather than being looked for, which is why it
+is worth its own entry: nobody had put the two workloads side by side.
 
-Scope: drive the CGA card's timing from an `MC6845` instance so retrace,
-hsync, start address and cursor are EMITTED rather than derived. Bounded, and
-it pairs naturally with E6.8.4 — a scanline count is only meaningful once the
-cycles feeding it are.
+```
+core     3.16 MIPS    the decoder and the ALU, over flat memory
+machine  1.03 MIPS    the same instructions through I8086Machine
+```
+
+**Roughly two thirds of execution time is spent outside the CPU.** Per
+instruction the machine layer does region decode on every memory access (a
+scan of the region list, for a 20-bit address), port decode on every IN/OUT,
+a chip advance, and an interrupt poll. None of that is wrong; none of it has
+ever been measured either.
+
+Why it outranks the item it came from: it benefits **every** workload rather
+than a debugging mode, it is ordinary optimisation rather than a new accuracy
+tier, and it buys back precisely the headroom E6.8.4 needs. A machine layer
+at half its cost turns the boot workload from 1.0× real time into something
+with room to spend — and only then is "make the core 5× slower" a
+conversation worth having.
+
+**PROFILED 2026-09-04, and it refuted one of this entry's own candidates.**
+`_read()` against a realistic XT config (two memory regions, no MMIO windows,
+three I/O chips), 20 M accesses, measured against a raw `Uint8Array` index as
+the ceiling:
+
+```
+machine._read()   as shipped              31.9 M ops/s     1.00x
+  + length guard and indexed for-loops    36.2 M ops/s     1.13x
+  + a 256-entry 4 KB page table           65.2 M ops/s     2.04x
+raw mem[addr]     the ceiling            201   M ops/s     ~5x
+```
+
+**The loop MECHANICS are not the problem; the linear SCAN is.** Replacing
+`for...of` with indexed loops and short-circuiting the empty-MMIO case — the
+obvious cheap fix, and the one a reader of the candidate list would have
+reached for first — buys 13%. A page table buys 2x. So the cheap fix is not
+worth doing at all, and that is a finding rather than an opinion: it was
+measured in the same harness in the same run, which is the only way the two
+are comparable given the 30% run-to-run spread this box shows.
+
+`_read` costs about 5x a raw array index, and a page table recovers about
+half of that gap. The remaining half is the call itself and the bounds work,
+which is the floor for anything that stays a method.
+
+Still guesses, still unmeasured: the per-instruction chip advance (batch to a
+deadline rather than every step) and the interrupt poll, which asks the PIC a
+question whose answer rarely changes. **Profile those before touching them
+too** — this entry exists because an unmeasured number overturned an item
+everyone believed, and it has now overturned one of its own.
+
+#### E6.8.5 CRTC-driven video timing — DONE (2026-09-04, `9fe3b9f`)
+
+The CGA card is now driven by a real `MC6845` (the clean-room chip the Z80 tier
+already ships): 3D4h/3D5h latch and read back, the START ADDRESS (R12:R13) and
+CURSOR (R14:R15, R10, R11) are emitted via getVideoState, and the vertical-
+retrace proportion is derived from the CRTC's own vertical registers
+(total = (R4+1)*charH + R5, active = R6*charH), recomputed on every 3D5h write.
+It powers on with the standard CGA 80x25 text programming, which reproduces the
+262-total / 200-active frame the card used to hardcode — so an unprogrammed card
+is byte-for-byte unchanged and no 3DAh-polling game is disturbed.
+test/cga-crtc.test.mjs (6). Retrace stays FRAME-grained; a cycle-exact scanline
+count is E6.8.4's cycle timing, which this pairs with.
+HANDOVER: startAddr is a NEW renderer input the DOS/host lane must consume for a
+page flip to change the picture (told lego-47; same explicit shape as the DAC
+and the EGA planes). hsync stays derived — meaningful only cycle-exact (E6.8.4).
 
 **REFINED 2026-09-04 by reading x8086NetEmu (§E6.8.10), and the refinement
 splits this item in two.** Their `CGAAdapter.vb` wires the CRTC's **start-
@@ -1338,9 +1461,37 @@ does not and cannot relicense it, and reading it as our reference would import
 exactly the obligation we refuse. **Do not read x8086NetEmu's audio.** Read
 ymfm, which is licensed for it.
 
-Ordering, if this is ever taken: **the DSP first, the FM second.** The digital
-half needs no new licence decision and reuses two chips already in the tree;
-the FM half is a bigger piece of work whose value is unlocked by it.
+**AND AN OPL WITH NO PATCH SET MAKES NO SOUND** — which is a third problem,
+separate from the core and from the DSP, and it is the one that usually gets
+discovered last. A YM3812 is a bank of operators with no opinions; the
+instruments live in data, and period data (id's GENMIDI lump, Creative's
+`.SBI`/`.INS` files) is not ours to ship.
+
+**A second sweep on 2026-09-04 closed all three, and the chain is complete:**
+
+| Piece | Source | Licence | |
+| --- | --- | --- | --- |
+| the FM core | `aaronsgiles/ymfm` | **BSD-3-Clause** | vendorable with notice |
+| the patch set | `sneakernets/DMXOPL` | **MIT** (verified via API) | data-only `.op2`/`.wopl`; README grants reuse for credit |
+| a MUS sequencer | `raffecat/LittleMUS` | **MIT** | `musplayer.c/.h` is core-agnostic — it calls an externally supplied `adlib_write(reg, val)` and nothing else, and it eats exactly DMXOPL's `.op2` layout |
+| the digital side | Creative's own programming guide | a specification | over our existing 8237 + 8259 |
+
+So there IS a licence-clean path from a `.MUS` file to a speaker, assembled
+from four independently permissive pieces, and none of it requires reading a
+GPL source. `LittleMUS`'s other half (`musdriver.c/.h`) is written against
+Nuked-OPL3's struct names and would be rewritten against ymfm — an API
+mismatch, not a licence one, since MIT permits exactly that.
+
+**One caveat recorded rather than smoothed over:** DMXOPL's author states the
+patches are original work using the old ones "as a base for your own
+derivative", and that is a self-report. Nobody has diffed the FM parameter
+values against id Software's original GENMIDI lump, and nobody in this survey
+could. If this is ever shipped, that diff is the due diligence, not the
+author's sentence.
+
+Ordering, if this is ever taken: **the DSP first, the FM second, the patch set
+third.** The digital half needs no new licence decision and reuses two chips
+already in the tree; the FM half is the bigger build; the patch set is a file.
 
 **The real cost is neither of the above, and it is architectural.** Our audio
 contract is `audioTone() -> {hz, on}` — `pc-speaker.js` says so in its own
@@ -1392,6 +1543,113 @@ eight instructions — ADD, AND, JMP, MOV, POP, PUSH, SUB and a no-op group —
 with no oracle of any kind. The owner's read of it as a completeness item was
 right. Refused on licence regardless, and there is nothing in its scope this
 tier does not already do more completely. Recorded so nobody surveys it twice.
+
+#### E6.8.14 The second emulator sweep — hotkeysoft, DotXT, cbm2-pc (2026-09-04)
+
+**`hotkeysoft/emulators` (MIT, C++) was already in the table and the entry was
+far too narrow.** It was listed only as an MIT cross-check for its
+`Device8254`/`Device8259`/`Device8250`. It is actually a multi-machine suite
+covering 8086/8088/**80186/80286** across PC/XT, PC/AT, PCjr and Tandy 1000,
+validated against the same TomHarte lineage we use (no published pass rate).
+Four things in it we do not have:
+
+- **EGA**, running the real IBM EGA BIOS ROM. A reference for the register
+  model, not code and not a ROM we could ship. Roadmap only.
+- **80286 far enough for POST, plus LOADALL.** Out of scope by §2, but the
+  best available sighting of what "far enough" means.
+- **A snapshot GUI** — browse, restore and annotate save states. This is
+  precisely the layer E6.8.7 says we are missing on top of an engine that
+  already has `saveState`/`loadState`. **Take the interaction pattern**, not
+  the code; different stack entirely.
+- **Sound: PC Speaker, SN76489, CMS/Game Blaster, Disney Sound Source.** More
+  breadth than the Adlib/SB axis E6.8.11 scopes, and the same second-audio-
+  contract problem gates all of it.
+
+**`folkertvanheusden/DotXT` — read the licence before anything else.** The
+README says *"This software is © Folkert van Heusden. Released in the public
+domain."* There is **no LICENSE file, and the GitHub API reports
+`license: null`** (verified 2026-09-04). A bare sentence is not a formal
+dedication: CC0 and the Unlicense exist precisely because unilateral
+public-domain release is not recognised in much of the EU. **Treat as
+author-stated, unformalised — read only, do not vendor, do not paraphrase
+closely.** On the merits it is behind us anyway: its own `todo` records ESC/FPU
+unimplemented, DIV/IDIV interrupt and flag edge cases wrong, and disassembler
+bugs, against our 646,000 + 132,532 with the undocumented behaviour included.
+What it has that we lack — **MDA** (cheap, a port-mapped text card), **XT-IDE**
+(medium, and it is what gets a machine past a floppy), an **RTC** (cheap),
+and Adlib/MIDI (see E6.8.11) — is worth having; its implementation is not the
+route to any of it.
+
+**`MichalPleban/cbm2-pc-emulator` (Apache-2.0) is not an emulator and can be
+dropped.** It is firmware for a *real, physical* 8088 expansion card in a
+Commodore CBM-II, bridging two pieces of genuine silicon: the 8088 side
+intercepts about forty INT 10h/13h/16h BIOS calls and hands them to a 6509
+that drives real Commodore hardware — MDA text copied into CBM-II video RAM,
+INT 08h/1Ch off real CIA timers, PC speaker tones synthesised on a SID. The
+one conceptual parallel — translate INT-based BIOS calls into host-native
+services — is what `i8086-dos.js` already does, in software and more directly.
+Recorded so nobody surveys it twice.
+
+#### E6.8.15 Tooling checked, and correctly declined (2026-09-04)
+
+- **`kawaii-Code/as88v2`** — **Unlicense (public domain)**, Zig, a
+  reimplementation of Tanenbaum's `as88` from *Structured Computer
+  Organization*. Fully vendorable, and we still should not: the dialect is a
+  THIRD one, neither MASM nor NASM (`.SECT .TEXT`, `!` comments, `(x)` for
+  dereference, and a fake `SYS` instruction that is not an 8086 opcode at
+  all), and its own README calls it "highly unstable... only a small subset of
+  instructions". Its test suite asserts exit code zero. Ours is 510/525 of a
+  MASM corpus plus 646,000 graded on text. **Take nothing.** The one idea worth
+  noting is its `t88` tracer — registers, stack, source and command input in
+  one view — which is a layout argument for E6.8.2/E6.8.3, not code.
+- **`ccodere/instrcvt`** — **the hypothesis was wrong and the correction is
+  useful.** It is not an instruction converter. It is a 1995 Turbo Pascal
+  **instrument** converter, moving between `.SBI` (Sound Blaster Instrument),
+  `.INS` (AdLib, 54-byte) and AdLib Sound Tracker patch formats — so it
+  belongs to E6.8.11's third problem, not to the assembler at all. **No
+  LICENSE file**; the source header carries a custom 1995 freeware notice that
+  forbids re-release of modified source. **Refused**, and unnecessary: DMXOPL
+  ships `.op2`/`.wopl` under MIT and LittleMUS reads `.op2` directly, so the
+  `.SBI` path is not one we need.
+- **`DynartInteractive/DOS-Game-Engine`** — MIT at the top level, and **the
+  MIT does not reach three of its own files.** `UNITS/SBDSP.PAS`,
+  `UNITS/PLAYHSC.PAS` and `UNITS/XMS.PAS` are near-identical to the copies in
+  its own `VENDOR/` tree and **retain the original authors' notices verbatim**
+  — "all rights reserved", "NOT to be distributed modified", and a NEO
+  Software clause requiring written permission for commercial use — inside
+  files a blanket MIT LICENSE claims. The `DATA/*.PCX` art is separately
+  carved out as non-commercial. It is Turbo Pascal in any case, so our
+  assembler could not ingest a line of it. **Take nothing**, and note the
+  inline `asm` fragments (mode 13h set, INT 33h mouse polling, DMA critical
+  sections) only as LESSON TOPICS — the Sound Blaster ones live in the tainted
+  units specifically.
+
+#### E6.8.16 The vendored-licence rule is not an occasional trap. It is the norm in this field's audio code.
+
+When this rule was written (below) it had one instance. As of 2026-09-04 it
+has four, and **three of them are audio**:
+
+| Repo | Says | Actually contains |
+| --- | --- | --- |
+| `morphx666/x8086NetEmu` | MIT | Adlib/SB from **fake86 (GPL-2.0)**, group-2 flags from **PCE (GPL)** |
+| `Raffaello/hyper-sonic-drivers` | Apache-2.0 | **Nuked-OPL3 (LGPL-2.1)**, **MAME `ymf262` (GPL-2.0-or-later)**, **DOSBox `dbopl` (GPL-2.0)**, woody (same DOSBox lineage), **ScummVM (GPL-3.0)**, **MUNT (LGPL-2.1)**, and a **Miles Design proprietary EULA** doc |
+| `DynartInteractive/DOS-Game-Engine` | MIT | three units under 1995 freeware "all rights reserved / not to be distributed modified" terms |
+| `dbalsom/XTCE-Blue` | MIT | reenigne's decoded **Intel microcode** |
+
+`hyper-sonic-drivers` is the specimen worth keeping, because it is the trap at
+full size: an Apache-2.0 LICENSE over a directory tree in which *four
+different copyleft licences* are vendored verbatim, each still carrying its own
+SPDX header. Nothing about the repository page shows it. **And the one clean
+thing inside it is `hardware/opl/mame/ymfm/` — which is `aaronsgiles/ymfm`,
+BSD-3, exactly the door E6.8.11 already found.** An independent search
+arriving at the same single answer is the strongest evidence we have that the
+answer is right.
+
+Practical consequence, and it is a change of default: **for audio, assume a
+permissive top-level licence is wrong until the tree is walked.** Read the
+per-file SPDX headers, not the LICENSE file, and check the dependency
+manifest — `hyper-sonic-drivers` pulls LGPL MUNT through `vcpkg.json`, where
+no file header would ever show it.
 
 #### A licence rule this survey forced, and it belongs above the table
 
@@ -1567,9 +1825,13 @@ lands it.
    int09 (bios.asm:734). KBDDEMO8086 + rom/keyboard-demo.bin prove it bare-metal
    (INT 09h -> read 0x60 -> ack -> set-1->ASCII -> echo -> own EOI); it is the
    first thing to drive the 8259 IRQ1 path for real (the DOS boot test had been
-   using cpu.interrupt(9) direct). REMAINING (host lane): debug-runner maps
-   VdpScreen key events -> set-1 scancodes -> `runner.keyIn`. The UI loader entry
-   is HELD until that lands — a board you cannot type into is not an example.
+   using cpu.interrupt(9) direct). **CLOSED (2026-09-04): host mapping landed
+   (lego-47) — browser key -> set-1 scancode -> keyIn -> 8255 -> IRQ1 on hardware
+   boards, ASCII into the DOS key queue on the PIC-less ASM bench; the KBDDEMO
+   loader entry is wired (bw-circuit-ui `13bbd54`).** The Circuit Designer 8086
+   example now has both widgets live — the display cards (five, all rendering)
+   for output and the keyboard for input — plus the UART shell, the timer, and
+   GUI binary-loading. Eight example firmwares.
 
 8. **GUI binary-loading.** The file-upload path already accepts `.bin`; add the
    `i8086` loader branch (`romAt: 0xF0000` load address) and an example ROM under
@@ -1675,7 +1937,14 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    720x400 (the renderer falls back to 80x25 text at B8000h, which a Hercules-
    only machine does not map — open-bus reads), so the ROM must reach its
    3BFh/3B8h writes before the first frame (ours does, immediately).
-5. **EGA — STATE DONE (`40c17af`), render pending.** The hardest: a PLANAR
+5. **EGA — CLOSED (2026-09-04, renders).** Decode landed (feat/i8086-tier
+   `381fc5b`); loader entry wired (bw-circuit-ui `0b1216b`). lego-47 verified
+   rom/ega-demo.bin's ramp composes to 15,13,11,9,7,5,3,1 — plane order and bit
+   order both right; mode 0Dh WITHOUT planes throws rather than drawing zeros
+   (a black frame is indistinguishable from a program that drew nothing). The
+   hardest of the set, and the whole display family (CGA text/graphics, VGA,
+   Hercules, EGA) now renders. Details below.
+   The hardest: a PLANAR
    framebuffer, not linear RAM. `src/ega-card.js` models the register banks
    (no DAC — EGA colour is the attribute palette) plus four bit planes, with
    map-mask write routing (SR2) and read-map-select (GR4). The machine gives an

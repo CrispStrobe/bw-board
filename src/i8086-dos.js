@@ -175,7 +175,32 @@ export function createDos8086(machine, io = {}) {
     let nextHandle = 5;                 // 0-4 are the standard handles
 
     const unsupported = new Map();      // "int:ah" → count
+    /**
+     * CAPTURED OUTPUT IS BOUNDED, and the bound is the whole point.
+     *
+     * `stdout` used to grow without limit, one character at a time, for as
+     * long as a program kept printing. That is fine for a program that ends
+     * and catastrophic for one that does not: measured on the textbook
+     * corpus, a looping program emits about **10 MB per million steps**, and
+     * the harness's default budget is five million — so a single
+     * non-terminating program retains roughly 40 MB, and the comparison path
+     * then copies it again.
+     *
+     * WHAT MADE THIS HARD TO SEE is that the cost is not spread. Across all
+     * 525 programs the total captured output is 6.9 MB, and **two programs
+     * account for 98.4% of it**. Per-program averaging says 13 KB each and
+     * hides two 3-4 MB outliers completely; the average was the reason this
+     * looked like a slow leak rather than two runaway programs.
+     *
+     * A megabyte is far past the point where more output tells anyone
+     * anything: it is 13,000 lines. Past the cap the characters are COUNTED
+     * and dropped, `truncated` says so in the report, and nothing pretends
+     * the program printed less than it did.
+     */
+    const MAX_STDOUT = 1 << 20;
     let stdout = '';
+    /** Characters the program actually emitted, including those past the cap. */
+    let stdoutChars = 0;
     /** Every INT 03h the program executed, in order. */
     const breakpoints = [];
     let rebooted = 0;
@@ -256,7 +281,10 @@ export function createDos8086(machine, io = {}) {
     /** One character through the BIOS teletype path: the shared write. */
     const putChar = (code) => {
         const ch = String.fromCharCode(code);
-        stdout += ch;
+        stdoutChars++;
+        // The cap bounds what is RETAINED, not what is observed: onChar still
+        // sees every character, so a caller streaming output loses nothing.
+        if (stdout.length < MAX_STDOUT) stdout += ch;
         if (onChar) onChar(ch);
         let c = getCursor();
         if (code === 0x0d) { c -= c % COLS; }
@@ -1166,6 +1194,8 @@ export function createDos8086(machine, io = {}) {
         get terminated() { return terminated; },
         get exitCode() { return exitCode; },
         get stdout() { return stdout; },
+        /** Every character emitted, including any dropped past MAX_STDOUT. */
+        get stdoutChars() { return stdoutChars; },
         get files() { return files; },
 
         /**
@@ -1199,6 +1229,12 @@ export function createDos8086(machine, io = {}) {
                     return { int: parseInt(int, 16), ah: parseInt(ah, 16), count };
                 }),
                 stdout,
+            // Load-bearing for any caller that compares output: a truncated
+            // stream is not the program's output, it is a prefix of it, and a
+            // comparison that ignores this would report a false MATCH the
+            // moment an expected output happened to be shorter than the cap.
+            stdoutChars,
+            stdoutTruncated: stdoutChars > stdout.length,
                 terminated,
                 exitCode,
                 breakpoints: breakpoints.length,
