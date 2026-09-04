@@ -37,7 +37,19 @@ function runDigitalTest(digXml) {
         });
         return { pass: true, output: out.trim() };
     } catch (e) {
-        return { pass: false, output: (e.stdout || '') + '\n' + (e.stderr || '') };
+        // Same distinction as test/sap1-digital-parity.test.mjs: a JVM killed
+        // at the cap is the machine, not the circuit, and reporting the two
+        // identically sent a real investigation after the wrong cause once.
+        const killed = e.killed === true || e.signal === 'SIGTERM' || e.code === 'ETIMEDOUT';
+        const partial = ((e.stdout || '') + '\n' + (e.stderr || '')).trim();
+        return {
+            pass: false,
+            output: killed
+                ? `ENVIRONMENT, NOT THE CIRCUIT — Digital's JVM was killed after 30s. A bare `
+                  + `invocation takes about 5s here, so this means the box was loaded. Check `
+                  + `\`free -m\` AND \`swapon --show\`, then re-run alone. Partial: ${partial || '(none)'}`
+                : partial,
+        };
     } finally {
         try { unlinkSync(tmpFile); } catch {}
     }
