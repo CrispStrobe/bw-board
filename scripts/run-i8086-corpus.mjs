@@ -129,7 +129,8 @@ const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
 const paths = argv.filter((a, i) => !a.startsWith('--')
     && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler'
-    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type');
+    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type'
+    && argv[i - 1] !== '--expect-counts');
 
 let assembler = null;
 const asmPath = value('--assembler', null);
@@ -532,6 +533,55 @@ for (const r of healed) {
 }
 
 let exit = 0;
+
+// ---- the CI gate ----------------------------------------------------------
+//
+// `--expect-counts MATCH=467,HUNG=0,...` fails unless the verdict distribution
+// is exactly what is named. This is what makes the corpus a GATE rather than a
+// report, and the counts are the right thing to assert: a text diff over 525
+// programs is 525 ways to be flaky, while a count that moves is a signal with
+// one cause to find.
+//
+// TWO THINGS THE COUNTS DEPEND ON, and a job that pins one and not the other
+// will chase a phantom regression:
+//
+//   the CORPUS COMMIT -- new programs change the distribution, and
+//   the --type INPUT STREAM -- without it six interactive programs block
+//     before printing anything and land in HUNG rather than LOOPING.
+//
+// Measured either side of the output cap, unchanged: 498 EXITED, 6 LOOPING,
+// 6 HUNG, 15 THREW without --type. A memory fix that quietly moved a verdict
+// would be worse than the OOM it fixed, so that equality is the reason this
+// gate can be trusted at all.
+//
+// Only the named verdicts are checked. Naming none is not a gate.
+const expectCounts = value('--expect-counts', null);
+if (expectCounts) {
+    const got = {};
+    for (const r of results) got[r.verdict] = (got[r.verdict] || 0) + 1;
+    const want = Object.fromEntries(expectCounts.split(',').filter(Boolean).map((kv) => {
+        const [k, v] = kv.split('=');
+        return [k.trim().toUpperCase(), Number(v)];
+    }));
+    const wrong = [];
+    for (const [k, n] of Object.entries(want)) {
+        if ((got[k] || 0) !== n) wrong.push(`${k}: want ${n}, got ${got[k] || 0}`);
+    }
+    console.log(`
+expected distribution over ${results.length} programs:`);
+    for (const [k, n] of Object.entries(want)) {
+        console.log(`  ${k.padEnd(8)} want ${String(n).padStart(4)}  got ${String(got[k] || 0).padStart(4)}`
+            + ((got[k] || 0) === n ? '' : '   <-- MOVED'));
+    }
+    if (wrong.length) {
+        console.error('VERDICT DISTRIBUTION MOVED. Either the emulator changed, the corpus '
+            + 'commit changed, or --type changed. Check the last two BEFORE assuming the first.');
+        exit = 1;
+    } else {
+        console.log('distribution matches.');
+    }
+}
+
 if (flag('--selftest')) {
     const wrong = results.filter((r) => r.verdict !== r.expected);
     for (const r of wrong) console.log(`SELFTEST MISMATCH ${r.name}: want ${r.expected}, got ${r.verdict}`);
