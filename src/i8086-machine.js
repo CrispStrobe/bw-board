@@ -441,6 +441,7 @@ export class I8086Machine {
             } else if (c.kind === 'pit') {
                 chip = new I8254({
                     onOutput: (channel, level) => this._pitOutput(c, channel, level),
+                    variant: c.variant,   // '8253' for the original PC/XT part (no read-back)
                 });
             } else if (c.kind === 'pic') {
                 // The INTR output is polled in step(); the hook is only a
