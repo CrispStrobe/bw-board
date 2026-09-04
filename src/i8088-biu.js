@@ -82,6 +82,17 @@ export function predictCycles({ euCycles, length, queueStart = QUEUE_BYTES, data
     // Measured against the alternative rather than argued: expressing it as
     // `max(eu, fetches*4) + data*2` scores 35.9% and this scores 36.5% on the
     // same 152,000 vectors.
+    // THE REFILL IS A BUS CYCLE, NOT AN ADDITION AFTER ONE. Counting the trace
+    // of `add word [cs:si+103h], dx` -- five bytes, empty queue, four data
+    // accesses -- gives CODE 6, MEMR 2, MEMW 2: TEN m-cycles for a five-byte
+    // instruction. The sixth CODE is the post-instruction refill, because the
+    // trace ends when the next instruction's first byte is read. Adding it
+    // afterwards instead of inside the count is why the arithmetic came out
+    // four short.
+    //
+    // It only happens when the bus was BUSY: with no data accesses the BIU has
+    // the bus to itself and refills during execution, which is why
+    // `q 0, len 2, no data` is eight cycles and not twelve.
     const raw = Math.max(euCycles + dataAccesses * DATA_PENALTY,
         (fromBus + dataAccesses) * BUS_CYCLE);
     // AND THE RESULT IS QUANTISED TO AN EVEN NUMBER OF CYCLES, which is the

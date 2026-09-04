@@ -1499,12 +1499,36 @@ model already knows about — but it belongs INSIDE the bus-cycle count rather
 than being added after it, which is why the arithmetic came out four short.
 The last four cycles are idle T-states the model does not represent at all.
 
-So the remaining work is: count the refill as a bus cycle, and account for
-idle cycles. Both are concrete and neither needs a general occupancy
-simulation — which is the second time this entry's "that needs a simulator"
-has turned out to be premature. Recorded that way deliberately: the pattern in
-this section has been that a residual looks like noise until one more variable
-is held fixed.
+**BOTH WERE TRIED AND ONE MADE IT WORSE.** Moving the refill INSIDE the
+bus-cycle count — which the m-cycle count says is where it belongs — dropped
+the score from 36.5% to **31.9%**, because it is right for the five-byte case
+and wrong for the three-byte one. Reverted. The post-hoc form stays until
+something explains both.
+
+The idle cycles were then measured rather than guessed. Tabulating
+(m-cycles, Ti, total) by queue depth and length:
+
+```
+(q 0, len 5)   m=10  Ti=2  total=44     4*m = 40, slack 4
+(q 0, len 3)   m= 9  Ti=2  total=40     slack 4
+(q 4, len 2)   m= 1  Ti=2  total= 3     slack -1
+(q 4, len 3)   m= 7  Ti=7  total=34     slack 6
+```
+
+**`total` is not `4 × m-cycles + Ti`** — (q 0, len 5) gives 40 + 2 = 42
+against an actual 44 — so there are T-states the m-cycle count does not
+explain, most likely wait states inside a transfer. **The slack is not
+constant and not a function of the four variables already in the model**,
+which is the first residual in this entry that has genuinely resisted being
+held fixed.
+
+So this is where the transaction-level model stops, and the stopping point is
+now evidenced rather than asserted: **36.5% exact, with the remaining error
+concentrated in T-states that are not visible in the m-cycle count at all.**
+Anything further needs the trace's own T-state column, which is to say a
+cycle-by-cycle simulation. That conclusion has been premature twice in this
+entry; it is offered a third time with the table above as the reason rather
+than an inability to find one.
 
 **What this bought that is not a fidelity claim:** the `INT n` ordering defect
 (E6.8.4c) and the `INC/DEC r16` timing error, neither of which the
