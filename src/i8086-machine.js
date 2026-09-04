@@ -192,7 +192,8 @@ export const SDCARD8086 = Object.freeze({
 export const PCXT8086 = Object.freeze({
     clockHz: 4_772_727,
     regions: [
-        { kind: 'ram', start: 0x00000, end: 0x9ffff },   // 640K
+        { kind: 'ram', start: 0x00000, end: 0x9ffff },   // 640K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000) — the renderer reads it
         { kind: 'rom', start: 0xf0000, end: 0xfffff },   // 64K BIOS, holds the reset vector at FFFF0h
     ],
     chips: [
@@ -223,6 +224,27 @@ export const SERIALSHELL8086 = Object.freeze({
     ],
     chips: [
         { kind: 'uart16550', name: 'uart1', at: 0x10 },  // the terminal
+    ],
+});
+
+/**
+ * The display-shell example — the screen counterpart to SERIALSHELL8086. An
+ * 8086, 64K of RAM, the CGA text page mapped at B800:0000, a CGA card at
+ * 3D0-3DFh, and a 32K ROM holding the reset vector. Load rom/cga-demo.bin
+ * (built by scripts/build-cga-demo.mjs) and it boots itself: it selects CGA
+ * text mode and writes a message straight into the text page, which the
+ * VdpScreen widget renders — a board that "boots into a screen" with no BIOS,
+ * no disk, nothing to configure.
+ */
+export const CGADEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000) — the renderer reads it
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA at 3D0-3DFh (text page at B800:0000)
     ],
 });
 
