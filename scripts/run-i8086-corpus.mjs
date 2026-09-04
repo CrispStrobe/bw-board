@@ -229,9 +229,27 @@ function classify(bytes, name) {
  * ~0.45 MB per program and it is NOT the report -- something else retains it,
  * and I have not found what. Recorded as an open defect with numbers rather
  * than closed with a plausible story, because "we slimmed the reports" reads
- * like a fix and the full run may still die. Whoever picks this up: the
- * remaining term is per-program and roughly constant, so it is a retained
- * object graph rather than a runaway string.
+ * like a fix and the full run may still die.
+ *
+ * AND THE GUESS IN THAT LAST SENTENCE WAS WRONG. It read "a retained object
+ * graph rather than a runaway string". The review lane instrumented this
+ * harness to force GC every 25 programs and print post-GC heapUsed:
+ *
+ *     n=25  heap 5.4MB  rss 60.2MB      n=100  heap 5.8MB  rss 78.9MB
+ *     n=50  heap 6.0MB  rss 73.3MB      n=150  heap 6.1MB  rss 82.6MB
+ *
+ * HEAP FLAT AT ~6 MB WHILE RSS CLIMBS. Nothing is retained. The RSS growth is
+ * the allocator: every runOne allocates a fresh 1 MB Uint8Array for the 20-bit
+ * space, and 525 of those allocated and freed is exactly what glibc does not
+ * return to the OS. That explains the RSS curve and explains NOTHING about a
+ * V8 heap OOM -- so the crash at 900 MB is a different event, most likely one
+ * pathological program rather than accumulation. This file already documents
+ * the class: the ORACLE verdict exists because a runaway INT 21h/09h scans
+ * memory for a `$` and prints ~190 KB, and a scan that starts somewhere worse
+ * prints far more.
+ *
+ * Left in full rather than edited down, because the wrong reading was
+ * confident and specific and I had already committed it.
  *
  * stdout is the one term that runs away. `putChar` appends per character with no
  * cap, and a LOOPING program printing inside a 5,000,000-instruction budget
