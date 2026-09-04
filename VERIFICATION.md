@@ -91,10 +91,10 @@ implementation agreeing with itself.
 | Cycle counts | **2a, 36.5%** | SingleStepTests 8088 v2 bus traces | the remaining error is in T-states invisible to the m-cycle count — see ROADMAP E6.8.4d |
 | Bus access **order** | **2a** | 152,000/152,000 | — |
 | Queue ops F/S/E | **2a** | 152,000/152,000 | — |
-| 8254 PIT | **2a (partial)** | v86 differential: ours is datasheet-complete where v86 lacks read-back | `dbalsom/arduino_8253` — a reference emulator built against a REAL chip, MIT, and unused |
+| 8254 PIT | **2a (partial)** | v86 differential: ours is datasheet-complete where v86 lacks read-back | **NOT `arduino_8253`** — surveyed 2026-09-04 and it does not do what the roadmap claimed: no captured data, read-back unimplemented, targets the 8253, and its emulator is GPL-3 despite an MIT repo licence. A hardware-backed PIT oracle means BUILDING THE RIG. MAME's `pit8253.cpp` (BSD-3, confirmed) is the realistic next step |
 | NS16C550 UART | **2a** | v86 differential, scratch register byte-for-byte | broaden the probe set |
 | 8259 PIC, 8237 DMA | **2b** | datasheet + our own tests; MartyPC read as reference | MAME's BSD-3 device files |
-| 8251 USART | **2b** | datasheet + one MIT demo's init sequence | MAME `i8251.cpp`, the only permissive spec-grade reference |
+| 8251 USART | **2b** | datasheet + one MIT demo's init sequence | MAME `i8251.cpp` — **BSD-3 confirmed on the current revision** (`// license:BSD-3-Clause`, copyright smf/Robbbert). The only permissive spec-grade 8251 reference, and it is real |
 | uPD765 FDC + DMA | **2a** | MS-DOS 2.0 boots down TWO independent paths (INT 13h service layer vs real FDC over DMA) with byte-identical screens — that differential found the DMA pump moving zero bytes while reporting success | — |
 | CGA renderer | **2b** | pixel layout written twice and cross-checked | — |
 | Audio: tone vs samples | **2b** | the two contracts must agree; caught an octave error in the OPL on its first run | ymfm as a second oracle for the OPL |
