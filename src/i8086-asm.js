@@ -575,6 +575,13 @@ class Assembler {
          *  checks the claim the only way worth checking it: byte for byte
          *  against NASM 2.16 under `--before "cpu 8086"`. */
         this.longJumps = opts.longJumps ?? this.nasm;
+        /** SYNTHESISE SETcc FROM 8086 INSTRUCTIONS. Off by default, and the
+         *  default is the point -- see `synthSetcc()` for the whole argument.
+         *  A learner who hand-writes `setge al` for an 8086 must still be
+         *  refused by name; a COMPILER that emitted it on their behalf is a
+         *  different case, because nobody carries its output to a lab
+         *  machine. The C route turns this on; nothing else does. */
+        this.setcc = opts.setcc ?? false;
         /** WHICH CHIP THIS ASSEMBLES FOR. The name and the spelling are the
          *  core's -- `new I8086(bus, {variant: '80186'})`, `new
          *  I8086Machine({variant: '80186'})`, `disasmI8086(..., {variant:
@@ -1937,6 +1944,65 @@ class Assembler {
      * hand instead would give a loop that runs once or forever rather than
      * one that fails loudly.
      */
+    /**
+     * SETcc on a chip that does not have it.
+     *
+     * WHY THIS EXISTS AT ALL. SmallerC lowers a comparison used as a VALUE --
+     * `return a >= 1;`, `int b = (a > 1);`, any ternary -- to `SETcc`, which
+     * is an 80386 instruction. The same comparison in a CONTROL position
+     * becomes a conditional jump and assembles on an 8086 without complaint.
+     * So `if (a >= 1)` worked and `return a >= 1;` did not build at all, which
+     * is a distinction no learner can be expected to make, reported by naming
+     * an instruction they never wrote. SmallerC cannot be asked not to: its
+     * codegen emits SETcc unconditionally and has no 8086 mode.
+     *
+     * WHY IT IS OFF BY DEFAULT, which is the same argument `longJumps` makes.
+     * A learner who hand-writes `setge al` for an 8086 must still be refused
+     * BY NAME: the instruction genuinely does not exist on that chip, and
+     * quietly emitting three others would hand them a program that works here
+     * and fails on the lab machine. COMPILER OUTPUT IS A DIFFERENT CASE and
+     * the difference is real -- nobody carries it to a lab machine, and the
+     * learner did not write `setge`, they wrote `a >= 1`. Refusing on their
+     * behalf for fidelity to an assembler they will never use is fidelity to
+     * nothing.
+     *
+     * WHY HERE AND NOT IN THE C ROUTE. Rewriting the compiler's text would
+     * mean inventing labels and getting branch offsets right without the pass
+     * loop -- which is this file's job, and where `promote()` already lives.
+     *
+     *     setge al   ->   mov al, 0
+     *                     jl  +2        ; the INVERSE condition, over the next
+     *                     mov al, 1
+     *
+     * NOT `xor al, al` FOR THE ZERO, and this is the detail that matters:
+     * SETcc does not touch flags and XOR does. A caller reading flags after
+     * the sequence would see them changed by an instruction that on real
+     * hardware changes nothing -- invisible until one program depends on it.
+     * `MOV r8, imm8` leaves flags alone, which is what SETcc promises.
+     *
+     * Six bytes, three instructions, and the condition's inverse comes from
+     * the same XOR 1 that `promote()` uses: bit 0 of a conditional opcode IS
+     * the sense of its condition.
+     */
+    synthSetcc(mn, text) {
+        const ops = text ? splitTop(text, ',').map((s) => this.operand(s)) : [];
+        if (ops.length !== 1 || ops[0].k !== 'r8') {
+            throw new AsmError(
+                `"${mn.toUpperCase()}" can only be synthesised into an 8-bit REGISTER on an 8086`
+                + ' -- a memory destination would need a scratch register this assembler must'
+                + ' not pick on the caller\'s behalf',
+                { ...this.ctx, what: `${mn.toUpperCase()} without a register destination` });
+        }
+        const reg = ops[0].n & 7;
+        const jcc = SETCC_TO_JCC.get(mn);
+        this.note(`${mn.toUpperCase()} is an 80386 instruction; synthesised from MOV/Jcc/MOV for`
+            + ' the 8086. This program will no longer assemble under an assembler targeting a'
+            + ' real 8086.');
+        this.emit(0xb0 | reg, 0x00);      // mov r8, 0   -- does not touch flags
+        this.emit(jcc ^ 1, 0x02);         // the INVERSE condition, over the next two bytes
+        return this.emit(0xb0 | reg, 0x01);
+    }
+
     promote(opcode, target) {
         if (opcode >= 0x70 && opcode <= 0x7f) {
             // Bit 0 of a conditional opcode IS the sense of its condition on
@@ -2755,6 +2821,10 @@ class Assembler {
         // own comment for the incident.
         if (!KNOWN_MNEMONICS.has(mn) && !(this.is186 && I186_MNEMONICS.has(mn))
             && !this.macros.has(mn)) {
+            // SETcc, when the caller has asked for it and only then.
+            if (this.setcc && SETCC_TO_JCC.has(mn)) {
+                return this.synthSetcc(mn, text);
+            }
             if (LATER_THAN_8086.has(mn)) {
                 throw new AsmError(
                     `"${mn.toUpperCase()}" is ${LATER_THAN_8086.get(mn)} instruction and this is an 8086`,
@@ -2932,6 +3002,28 @@ const I186_STRING_OPS = { insb: 0x6c, insw: 0x6d, outsb: 0x6e, outsw: 0x6f };
  * the NASM front end, so a word on this list can never be mistaken for a
  * label.
  */
+/**
+ * Each SETcc mnemonic to the Jcc opcode carrying the SAME condition. The
+ * inverse used by `synthSetcc()` is that opcode XOR 1, exactly as in
+ * `promote()`: 7C/7D is JL/JGE, 74/75 is JZ/JNZ, and so on for all sixteen.
+ */
+const SETCC_TO_JCC = new Map([
+    ['seto', 0x70], ['setno', 0x71],
+    ['setb', 0x72], ['setc', 0x72], ['setnae', 0x72],
+    ['setnb', 0x73], ['setae', 0x73], ['setnc', 0x73],
+    ['setz', 0x74], ['sete', 0x74],
+    ['setnz', 0x75], ['setne', 0x75],
+    ['setbe', 0x76], ['setna', 0x76],
+    ['seta', 0x77], ['setnbe', 0x77],
+    ['sets', 0x78], ['setns', 0x79],
+    ['setp', 0x7a], ['setpe', 0x7a],
+    ['setnp', 0x7b], ['setpo', 0x7b],
+    ['setl', 0x7c], ['setnge', 0x7c],
+    ['setge', 0x7d], ['setnl', 0x7d],
+    ['setle', 0x7e], ['setng', 0x7e],
+    ['setg', 0x7f], ['setnle', 0x7f],
+]);
+
 const LATER_THAN_8086 = new Map([
     ...['pusha', 'popa', 'pushad', 'popad', 'enter', 'leave', 'bound',
         'ins', 'insb', 'insw', 'outs', 'outsb', 'outsw']

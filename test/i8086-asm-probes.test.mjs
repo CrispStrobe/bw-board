@@ -234,3 +234,87 @@ test('.FARDATA now ASSEMBLES, and GROUP is still refused', () => {
         + '_data ends\n.code\ns:\n int 20h\nend s\n', { name: 'x' }),
     /not an instruction|not supported/i);
 });
+
+// ---- SETcc synthesis: off by default, and the default is the argument -----
+
+test('SETcc is refused BY NAME by default, on an 8086 and on a 186', () => {
+    // The refusal is the important half. A learner who hand-writes `setge al`
+    // for an 8086 is writing an instruction that chip does not have, and
+    // quietly emitting three others would hand them a program that works here
+    // and fails on the lab machine. Same argument as longJumps.
+    for (const opts of [{}, {variant: '80186'}]) {
+        assert.throws(() => assemble('setge al', opts),
+            /"SETGE" is an 80386 instruction and this is an 8086/);
+    }
+});
+
+test('with { setcc: true } it becomes MOV/Jcc/MOV, and the Jcc is the INVERSE', () => {
+    // setge -> jl, setl -> jnl, sete -> jnz: bit 0 of a conditional opcode is
+    // the sense of its condition, so the inverse is XOR 1 — the same trick
+    // promote() uses.
+    const bytes = (src) => [...assemble(src, {setcc: true}).bytes]
+        .map((x) => x.toString(16).padStart(2, '0')).join(' ');
+    assert.equal(bytes('setge al'), 'b0 00 7c 02 b0 01', 'mov al,0 / JL +2 / mov al,1');
+    assert.equal(bytes('setl bl'), 'b3 00 7d 02 b3 01', 'the inverse of JL is JNL');
+    assert.equal(bytes('sete dh'), 'b6 00 75 02 b6 01', 'the inverse of JZ is JNZ');
+    assert.equal(bytes('seta cl'), 'b1 00 76 02 b1 01', 'the inverse of JA is JBE');
+
+    // MOV imm8 rather than XOR for the zero, and this is the detail that
+    // matters: SETcc does not touch flags and XOR does. A byte sequence
+    // starting 30 or 32 would be an XOR and would be wrong.
+    assert.ok(!bytes('setge al').startsWith('30') && !bytes('setge al').startsWith('32'),
+        'the zero must come from MOV imm8, which leaves flags alone');
+});
+
+test('every synthesis warns, and says the program is no longer 8086-portable', () => {
+    const r = assemble('setge al\nsetl bl\n', {setcc: true});
+    assert.equal(r.warnings.length, 2, 'one warning per synthesis, not one per program');
+    for (const w of r.warnings) {
+        assert.match(w.message, /80386 instruction; synthesised/);
+        assert.match(w.message, /no longer assemble under an assembler targeting a real 8086/);
+    }
+});
+
+test('a destination it cannot synthesise into is refused, not guessed at', () => {
+    // A memory or 16-bit destination would need a scratch register, and
+    // picking one on the caller's behalf is exactly the kind of silent
+    // decision this file refuses to make elsewhere.
+    for (const src of ['setge [bx]', 'setge ax']) {
+        assert.throws(() => assemble(src, {setcc: true}),
+            /can only be synthesised into an 8-bit REGISTER/);
+    }
+});
+
+test('the synthesised sequence computes the right boolean and leaves flags alone', async () => {
+    // Run it. The bytes being plausible is not the claim; the claim is that a
+    // program using it gets the answer SETcc would have given.
+    const {I8086} = await import('../src/i8086.js');
+    const run = (src) => {
+        const bytes = assemble(src, {setcc: true}).bytes;
+        const mem = new Uint8Array(1 << 20);
+        mem.set(bytes, 0x100);
+        const cpu = new I8086({read: (a) => mem[a & 0xfffff],
+            write: (a, v) => { mem[a & 0xfffff] = v & 0xff; }, in: () => 0, out: () => {}});
+        cpu.cs = 0; cpu.ip = 0x100; cpu.ss = 0; cpu.sp = 0xfffe;
+        for (let i = 0; i < 40 && cpu.ip < 0x100 + bytes.length; i++) cpu.step();
+        return cpu;
+    };
+    const cmp = (a, b, mn) => run(`mov ax, ${a}\n mov bx, ${b}\n cmp ax, bx\n ${mn} al\n`).al;
+    assert.equal(cmp(5, 1, 'setge'), 1);
+    assert.equal(cmp(1, 5, 'setge'), 0);
+    assert.equal(cmp(5, 5, 'setge'), 1, 'GE includes equal');
+    assert.equal(cmp(5, 1, 'setl'), 0);
+    assert.equal(cmp(1, 5, 'setl'), 1);
+    assert.equal(cmp(5, 5, 'sete'), 1);
+    assert.equal(cmp(5, 1, 'setne'), 1);
+    assert.equal(cmp(1, 5, 'setb'), 1, 'unsigned below');
+    assert.equal(cmp(5, 1, 'setb'), 0);
+
+    // AND THE FLAGS SURVIVE. Real SETcc does not touch them; this must not
+    // either, which is why the zero is a MOV. Compared against a NOP in the
+    // same position rather than against a remembered constant.
+    const withSetcc = run('mov ax, 5\n mov bx, 1\n cmp ax, bx\n setge al\n').flags;
+    const withNop = run('mov ax, 5\n mov bx, 1\n cmp ax, bx\n nop\n').flags;
+    assert.equal(withSetcc, withNop,
+        'the synthesis changed flags that a real SETcc would have left alone');
+});
