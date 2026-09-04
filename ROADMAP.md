@@ -1424,7 +1424,7 @@ that ORDER into TIME. Cycle mode therefore never forks the instruction path.
 ```
 bus sequence   152,000/152,000   100.0%   data accesses in order
 queue ops      152,000/152,000   100.0%   F, S and E, 55,015 with a flush
-cycle count     52,395/152,000    34.5%   was 17.2% from the raw table
+cycle count     55,455/152,000    36.5%   was 17.2% from the raw table
 T-state align                     NOT YET
 ```
 
@@ -1452,15 +1452,41 @@ the EU sits through, because it is waiting for the datum it asked for.
 cycles = max(euCycles, fetchBytes * 4) + dataAccesses * 2
 ```
 
-**WHERE THE FOURTH SCORE STOPS, and it is the boundary predicted at the
-start.** The residual above is bimodal — 8 *or* 9 — and no function of
-(queue depth, length, access count) separates them, because the difference is
-whether a prefetch happened to fit in a gap between data cycles. That is
-queue occupancy OVER TIME, which is exactly what an access trace does not
-carry: it records order, not when. Closing the last ±1 and reaching T-state
-alignment needs a genuine cycle-by-cycle simulation of the bus, and that is a
-separate decision with the numbers above in front of it rather than a
-continuation of this one.
+**THE "BIMODALITY" WAS NOT BIMODAL, AND I WAS WRONG ABOUT WHY.** This entry
+first concluded that the 8-or-9 residual needed queue occupancy over time,
+because no function of (queue depth, length, access count) separated the two.
+Holding those three fixed and varying only the EU time shows it is EXACTLY
+determined:
+
+```
+eu 23 -> +9   eu 25 -> +9   eu 26 -> +8   eu 27 -> +9   eu 28 -> +8
+totals   32          34          34          36          36
+```
+
+**Every total is even.** The odd sums round up; the even ones do not move. It
+was a parity effect — the CPU landing on a bus-cycle boundary rather than
+between one — and the variable I had not held fixed was the one that mattered.
+Applying it unconditionally *dropped* the score to 26.1%, because a
+register-only instruction keeps its odd length: there is no transfer for it to
+synchronise to.
+
+Three refinements, each measured against the last rather than argued:
+
+```
+max(eu, fetches*4)                                   31.2%
+   + data accesses ADD rather than overlap           34.5%
+   + parity, gated on there being a transfer         34.3%
+   + one bus cycle when the queue could not refill   35.9%
+   + bus-as-bottleneck instead of a flat penalty     36.5%
+```
+
+**What is still open is smaller and better understood than "needs a
+simulator".** The remaining failures are concentrated in long instructions
+(five bytes) starting from an empty queue, off by exactly one bus cycle, and
+they are the case where the fetch and data traffic genuinely interleave. That
+may well need occupancy over time — but the earlier claim that the whole
+residual did was wrong, and it was wrong because I stopped varying things too
+early.
 
 **What this bought that is not a fidelity claim:** the `INT n` ordering defect
 (E6.8.4c) and the `INC/DEC r16` timing error, neither of which the

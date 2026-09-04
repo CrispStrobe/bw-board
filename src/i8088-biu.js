@@ -19,7 +19,7 @@
  * longer. The two overlap -- that is what a prefetch queue is FOR -- so they
  * do not add.
  *
- *     cycles = max(euCycles, fetchBytes * 4) + dataAccesses * 2
+ *     cycles = max(euCycles, fetchBytes * 4) + dataAccesses * 2, rounded up to even
  *
  * The asymmetry is the finding: instruction fetches OVERLAP with execution and
  * data accesses do NOT. See predictCycles for the residuals that say so.
@@ -74,7 +74,53 @@ export function predictCycles({ euCycles, length, queueStart = QUEUE_BYTES, data
     // because it is waiting for the datum it asked for.
     const fromBus = Math.max(0, length - Math.min(queueStart, QUEUE_BYTES));
     const DATA_PENALTY = 2;      // per byte-wide access; a word costs two
-    return Math.max(euCycles, fromBus * BUS_CYCLE) + dataAccesses * DATA_PENALTY;
+    // TWO BOTTLENECKS, WHICHEVER BINDS. The EU needs its execution time plus
+    // the extra bus cycle each byte-wide data access costs on an eight-bit
+    // bus; the BUS needs four T-states for every transfer it must perform,
+    // fetches and data alike. An instruction takes the longer of the two.
+    //
+    // Measured against the alternative rather than argued: expressing it as
+    // `max(eu, fetches*4) + data*2` scores 35.9% and this scores 36.5% on the
+    // same 152,000 vectors.
+    const raw = Math.max(euCycles + dataAccesses * DATA_PENALTY,
+        (fromBus + dataAccesses) * BUS_CYCLE);
+    // AND THE RESULT IS QUANTISED TO AN EVEN NUMBER OF CYCLES, which is the
+    // last thing the residuals gave up and the one that looked like noise
+    // until it did not.
+    //
+    // Holding queue depth, length and access count fixed and varying only the
+    // EU time, the residual is not bimodal at all -- it is EXACTLY determined:
+    //
+    //     eu 23 -> +9      eu 25 -> +9      eu 26 -> +8
+    //     eu 27 -> +9      eu 28 -> +8
+    //
+    // and every total is 32, 34, 34, 36, 36. The odd sums round UP; the even
+    // ones do not move. The "8 or 9" that no function of the other three
+    // variables could separate was a parity effect all along, and the earlier
+    // conclusion -- that it needed queue occupancy over time -- was wrong.
+    //
+    // Physically it is the CPU synchronising to bus-cycle boundaries: bus
+    // cycles are four T-states and the CPU cannot resume mid-transfer, so an
+    // instruction's length lands on the grain rather than between it.
+    // ONLY WHEN THERE IS A TRANSFER TO SYNCHRONISE TO. Applying the rounding
+    // unconditionally dropped the score from 34.5% to 26.1%, because a
+    // register-only instruction keeps its odd length: `add dx, sp` is three
+    // cycles and stays three. There is no bus cycle for it to land on.
+    const quantised = dataAccesses > 0 ? raw + (raw & 1) : raw;
+
+    // ONE MORE BUS CYCLE WHEN THE QUEUE COULD NOT BE REFILLED. Every remaining
+    // failure was off by exactly four -- one bus cycle -- and all of them had
+    // an empty starting queue AND data traffic:
+    //
+    //     q 0, len 3, 4 accesses    want 40, predicted 36
+    //
+    // The trace ends when the NEXT instruction's first byte is read, so an
+    // instruction that finishes with nothing queued pays for that fetch. It
+    // only happens when the bus was BUSY: with no data accesses the BIU has
+    // the bus to itself and refills during execution, which is why
+    // `q 0, len 2, no data` is 8 cycles and not 12.
+    const couldNotRefill = queueStart < length && dataAccesses > 0;
+    return couldNotRefill ? quantised + BUS_CYCLE : quantised;
 }
 
 export default predictCycles;
