@@ -472,6 +472,44 @@ And the general practice, which is cheaper than any of the above:
   in this tree from a different direction — `htmlLen=61` was a fact, and "the
   frontend is empty" was an inference laid on top of it.
 
+### Rule: presence and ordering tests cannot see a rate
+
+`test/i8086-timer-tick.test.mjs` is a whole file about the timer interrupt.
+Its three assertions are `ticks > 0`, `ticks >= 3` and `ticks === 0`. Every one
+passes while **the 18.2 Hz BIOS tick runs at 76.35 Hz** — measured, over 9.0
+simulated seconds, 4.193× fast.
+
+The cause is one line: `_advanceChips` calls `chip.advance(n)` with `n` in CPU
+cycles, and `src/i8254.js` has no clock of its own, so a PIT that should run
+from a 1.193 MHz crystal runs at the CPU's 5 MHz. The fix pattern was already
+three lines above it in the same function, written for the OPL: *"runs on its
+OWN 3.58 MHz crystal … advanced in MILLISECONDS of emulated time rather than in
+machine cycles"*.
+
+**Why no test caught it, and this is the general point: ORDER DOES NOT CHANGE
+WHEN EVERY DELAY SCALES BY THE SAME FACTOR.** A suite that asserts *that* an
+event happened, *that* it happened more than once, and *that* it did not happen
+when unhooked, is invariant under a uniform time-base error. It is not a weak
+suite; it is a suite about a different axis. No amount of re-reading it would
+have revealed the defect — only a second, independent measurement did, and it
+came from another lane hitting it from the inside on an unrelated feature.
+
+The audit that followed is the reassuring half: the 8254 is the **only** chip
+with this defect. The CGA (`this.clockHz / FRAME_HZ`), the SB DSP
+(`this.clockHz / rate`), the OPL (`advanceMs`) and the ADC0809 all take the
+machine clock explicitly and convert. The chip that got it wrong is the one
+whose module doc never names a crystal at all.
+
+What to take from it:
+
+- **An assertion about a count is not an assertion about a rate.** If a
+  quantity has units, pin the units.
+- **A uniform scaling error is invisible to every relative check.** Ratios,
+  orderings and interleavings all survive it. Only an absolute measurement
+  against an independent reference finds it.
+- **Suspect the chip whose documentation does not mention its own clock.** Here
+  that was a reliable tell across eleven peripherals.
+
 ### Rule: a test value can be too coarse to detect the error it tests for
 
 A green assertion is evidence only if the value it asserts could have come out
