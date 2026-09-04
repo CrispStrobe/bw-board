@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { I8086Machine } from '../src/i8086-machine.js';
-import { createDos8086, DOSBOX8086, TRAP_SEG, VRAM } from '../src/i8086-dos.js';
+import { createDos8086, DOSBOX8086, DOSBOX8086_XT, TRAP_SEG, VRAM } from '../src/i8086-dos.js';
 
 /** A Tier B machine with the services installed and a .COM loaded. */
 function dosWith(bytes) {
@@ -562,13 +562,22 @@ test('DOSBOX8086_XT makes a corpus beep audible, and buys nothing else', async (
     ]));
     for (let i = 0; i < 200; i++) dos.step();
 
-    const tone = m.audioTone();
+    const [tone] = m.audioTone();
     assert.ok(tone.on, 'the speaker is sounding');
     assert.ok(Math.abs(tone.hz - 1000) < 5, `about a kilohertz, got ${tone.hz}`);
 
-    // ...and the debug target reports it in the SAME shape the Z80 tier uses.
+    // ...and the debug target reports it in the SAME shape every tier uses.
+    // That shape is now an ARRAY of voices (E6.8.11a) rather than a bare
+    // object -- a contract with two shapes is not a contract, and this
+    // assertion is the one that used to enforce the old one. The ARITY is
+    // asserted too, not just the keys: "an array" is satisfied by an empty
+    // one, and an empty array is how a machine with no speaker differs from
+    // a speaker that is silent.
     const t = createI8086DebugTarget({ machine: m });
-    assert.deepEqual(Object.keys(t.audio()).sort(), ['hz', 'on']);
+    const voices = t.audio();
+    assert.ok(Array.isArray(voices), 'always an array');
+    assert.equal(voices.length, 1, 'one speaker, one voice');
+    assert.deepEqual(Object.keys(voices[0]).sort(), ['hz', 'on']);
 });
 
 test('a program gets a real command tail and the two FCBs DOS builds from it', () => {
@@ -634,4 +643,69 @@ test('a machine with a real BIOS keeps its ROM services; DOS takes only its own'
     // The default is unchanged: with no ROM, DOS answers everything.
     const bare = createDos8086(new I8086Machine(DOSBOX8086)).install();
     assert.notEqual(bare.service, undefined);
+});
+
+
+// ---------------------------------------------------------------------------
+// blockOnKey: waiting for a person, without stopping the clock
+// ---------------------------------------------------------------------------
+
+test('by default a key request with an empty queue answers NUL and runs on', async () => {
+    // The corpus default, and the right one for 525 unattended programs: "this
+    // program wanted input nobody gave it" is a NOINPUT verdict, which is
+    // useful, where a blocking read would be a hang indistinguishable from a
+    // broken emulator.
+    const { assembleRaw } = await import('../src/i8086-asm.js');
+    const m = new I8086Machine(DOSBOX8086_XT);
+    const dos = createDos8086(m).install();
+    dos.loadCom(assembleRaw(' mov ah,01h\n int 21h\n mov ax,4c00h\n int 21h\n', 0x100));
+    for (let i = 0; i < 30000 && !dos.terminated; i++) dos.step();
+    assert.ok(dos.terminated, 'it ran to the end rather than waiting');
+});
+
+test('blockOnKey waits, and the program resumes when someone types', async () => {
+    const { assembleRaw } = await import('../src/i8086-asm.js');
+    const m = new I8086Machine(DOSBOX8086_XT);
+    let out = '';
+    const dos = createDos8086(m, { onChar: (c) => { out += c; }, blockOnKey: true }).install();
+    // Read with echo, print it again, exit. Two Zs is the proof it got the key.
+    dos.loadCom(assembleRaw(
+        ' mov ah,01h\n int 21h\n mov dl,al\n mov ah,02h\n int 21h\n mov ax,4c00h\n int 21h\n', 0x100));
+
+    for (let i = 0; i < 30000 && !dos.terminated; i++) dos.step();
+    assert.ok(!dos.terminated, 'it is WAITING, not finished');
+    assert.equal(out, '', 'and has printed nothing');
+
+    dos.type('Z');
+    for (let i = 0; i < 30000 && !dos.terminated; i++) dos.step();
+    assert.ok(dos.terminated);
+    assert.equal(out, 'ZZ', "the echo from AH=01h and the program's own AH=02h");
+});
+
+test('a blocked program still lets TIME pass, which is why it declines rather than answers', async () => {
+    // The subtlety that decides where the check lives. Reporting "serviced"
+    // makes a caller's step yield ZERO cycles, so a `while (t < deadline)` loop
+    // spins with the clock frozen. Declining lets the trap page's `jmp $` run:
+    // real cycles, timer ticking, and the next step asks again.
+    const { assembleRaw } = await import('../src/i8086-asm.js');
+    const m = new I8086Machine(DOSBOX8086_XT);
+    const dos = createDos8086(m, { blockOnKey: true }).install();
+    dos.loadCom(assembleRaw(' mov ah,08h\n int 21h\n mov ax,4c00h\n int 21h\n', 0x100));
+    const before = m.cycles;
+    for (let i = 0; i < 5000; i++) dos.step();
+    assert.ok(!dos.terminated, 'still waiting');
+    assert.ok(m.cycles > before + 1000,
+        `the machine burned cycles while waiting (${m.cycles - before}) -- a blocked `
+        + 'program that freezes the clock hangs every deadline loop above it');
+});
+
+test('the POLLS never block, because answering "no" is what they are for', async () => {
+    // INT 21h/AH=0Bh asks "is a key ready". Blocking it would hang every
+    // program that politely checks before reading -- the well-written half.
+    const { assembleRaw } = await import('../src/i8086-asm.js');
+    const m = new I8086Machine(DOSBOX8086_XT);
+    const dos = createDos8086(m, { blockOnKey: true }).install();
+    dos.loadCom(assembleRaw(' mov ah,0bh\n int 21h\n mov ax,4c00h\n int 21h\n', 0x100));
+    for (let i = 0; i < 30000 && !dos.terminated; i++) dos.step();
+    assert.ok(dos.terminated, 'the poll answered and the program ran on');
 });

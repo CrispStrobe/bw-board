@@ -63,17 +63,17 @@ test('audioTone(): 440 Hz square on the beeper reads back as ~440 Hz', async () 
         u.advance(3977);
         u.out(0xfe, ((i & 1) << 4), u.tStates);
     }
-    const tone = u.audioTone();
+    const [tone] = u.audioTone();
     assert.ok(tone.on, 'a sustained square is a tone');
     assert.ok(Math.abs(tone.hz - 440) < 5, `estimated ${tone.hz} Hz`);
     // Silence after: the window slides past the last edge.
     u.advance(400_000);
-    assert.deepEqual(u.audioTone(), { hz: 0, on: false });
+    assert.deepEqual(u.audioTone(), [{ hz: 0, on: false }]);
     // A lone click is not a tone.
     const u2 = new ZXULA(new Uint8Array(65536));
     u2.advance(1000); u2.out(0xfe, 0x10, u2.tStates);
     u2.advance(1000);
-    assert.equal(u2.audioTone().on, false);
+    assert.equal(u2.audioTone()[0].on, false);
 });
 
 test('FLASH: attribute bit 7 swaps ink/paper on the 16-frame phase', async () => {

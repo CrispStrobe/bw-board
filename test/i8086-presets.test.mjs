@@ -78,11 +78,30 @@ test('PCXT8086: the XT map wires the speaker off 61h and answers CGA retrace at 
     m._out(0x43, 0xb6);                        // counter 2, mode 3
     m._out(0x42, 1193 & 0xff); m._out(0x42, (1193 >> 8) & 0xff);
     m._out(0x61, 0x03);                        // gate + data
-    assert.deepEqual(m.audioTone(), { hz: 1000, on: true }, 'the XT speaker sounds ~1 kHz');
+    assert.deepEqual(m.audioTone(), [{ hz: 1000, on: true }], 'the XT speaker sounds ~1 kHz');
 
     // The CGA status port answers with a real frame at 3DAh.
     const s = m._in(0x3da);
     assert.equal(s & ~0x09, 0, 'only display-enable and vretrace bits are live');
+});
+
+test('PCXT8086: the full XT board — 64K BIOS ROM, the disk path, and it is the machine the BIOS runs on', () => {
+    const m = new I8086Machine(PCXT8086);
+    const rom = PCXT8086.regions.find((r) => r.kind === 'rom');
+    assert.equal(rom.start, 0xf0000, '64K BIOS window at F0000 (not the 32K monitor window)');
+    assert.equal(rom.end, 0xfffff);
+    // The whole XT chip set is present, including the disk path.
+    for (const name of ['pic1', 'pit1', 'ppi1', 'spk', 'dma1', 'fdc1', 'cga1']) {
+        assert.ok(m.chips[name], `${name} is on the board`);
+    }
+    // The disk path is wired: the FDC drives a byte through the 8237 into RAM.
+    m._out(0x0c, 0); m._out(0x0b, 0x46);          // ch2, write, single
+    m._out(0x04, 0x00); m._out(0x04, 0x60);       // address 0x6000
+    m._out(0x05, 0x00); m._out(0x05, 0x00);       // count 0 -> 1 byte
+    m._out(0x81, 0x00); m._out(0x0a, 0x02);       // ch2 page 0, unmask ch2
+    const r = m.chips.fdc1.hooks.onDmaRequest('write', 0x7c);
+    assert.notEqual(r, false, 'the FDC->8237 pump moved the byte');
+    assert.equal(m._read(0x6000), 0x7c, 'and it landed in RAM — the disk path is live on this board');
 });
 
 test('SDCARD8086: the 8251 transmits, and its receive IRQ reaches the PIC', () => {

@@ -12,8 +12,8 @@
  * constant here and the divisor is whatever the program loaded into counter
  * 2.
  *
- * The readout is `audioTone() -> { hz, on }`, the same shape the ZX tier's
- * ULA answers with, so a debug target or UI needs no new concept: the tone
+ * The readout is `audioTone() -> [{ hz, on }]` -- an ARRAY of one, the same
+ * shape the ZX tier's ULA and the AY answer with (E6.8.11a), so a debug target or UI needs no new concept: the tone
  * the hardware is producing, derived from the divisor and the two gate bits.
  * No samples, no synthesis.
  *
@@ -58,6 +58,10 @@ export class PCSpeaker {
     reset() {
         this.gate = 0;   // 61h bit 0
         this.data = 0;   // 61h bit 1
+        // Square-wave phase in [0,1), kept across renderAudio() calls. Not
+        // machine state: it is where the cone happens to be, which no program
+        // can observe and no snapshot needs.
+        this._phase = 0;
     }
 
     /** A write to port 61h (8255 port B): the low two bits are ours. */
@@ -71,13 +75,64 @@ export class PCSpeaker {
 
     /**
      * The tone the hardware is producing right now.
-     * @returns {{ hz: number, on: boolean }}
+     *
+     * ALWAYS AN ARRAY, one element per voice (E6.8.11a). A single-voice
+     * device returns a one-element array rather than a bare object: a
+     * contract with two shapes is not a contract, and every producer added
+     * after this one would otherwise have to guess which it was allowed to
+     * return. The arity is meaningful — an empty array means NO VOICES, which
+     * is how a machine with no sound chip differs from a silent one.
+     * @returns {Array<{ hz: number, on: boolean }>} exactly one element
      */
     audioTone() {
-        if (!this.on) return { hz: 0, on: false };
+        if (!this.on) return [{ hz: 0, on: false }];
         const raw = this._readDivisor() | 0;
         const divisor = raw === 0 ? 0x10000 : raw;
-        return { hz: Math.round(PIT_CLOCK_HZ / divisor), on: true };
+        return [{ hz: Math.round(PIT_CLOCK_HZ / divisor), on: true }];
+    }
+
+    /**
+     * The SECOND audio contract (E6.8.11a): what it SOUNDS like, as samples,
+     * beside `audioTone()`'s what it is CONFIGURED to produce. Both stay,
+     * because they answer different questions — the tone is exact and free
+     * and is what a teaching UI shows next to a buzzer; only samples can be
+     * mixed with an OPL, or capture a program bit-banging the data bit.
+     *
+     * A PC speaker is ONE BIT DRIVING A CONE, so the waveform is a square at
+     * the divisor's frequency and the amplitude is ±1 — not a choice, and not
+     * a level to be tuned here. A mixer summing several sources applies its
+     * own headroom; a chip that pre-attenuated itself would be guessing at
+     * how many other chips exist.
+     *
+     * PHASE IS KEPT ACROSS CALLS. The host asks for a few hundred samples at
+     * a time and the buffers must join without a discontinuity; restarting
+     * the phase at zero each call is inaudible in a test that renders once
+     * and a click every buffer in the app that renders forever.
+     *
+     * @param {Float32Array} dest
+     * @param {number} frames how many samples to write
+     * @param {number} sampleRate the HOST's rate; the chip converts from its
+     *   own clock, because only the chip knows what its own clock is
+     * @returns {number} frames written
+     */
+    renderAudio(dest, frames, sampleRate) {
+        const { hz, on } = this.audioTone()[0];
+        // A silent speaker still advances nothing and writes zeros: silence
+        // is a signal, and leaving the buffer untouched would replay whatever
+        // the previous producer left in it.
+        if (!on || hz <= 0 || !(sampleRate > 0)) {
+            for (let i = 0; i < frames; i++) dest[i] = 0;
+            return frames;
+        }
+        const step = hz / sampleRate;
+        let ph = this._phase;
+        for (let i = 0; i < frames; i++) {
+            dest[i] = ph < 0.5 ? 1 : -1;
+            ph += step;
+            if (ph >= 1) ph -= 1;
+        }
+        this._phase = ph;
+        return frames;
     }
 
     getState() { return { gate: this.gate, data: this.data }; }

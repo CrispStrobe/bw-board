@@ -130,6 +130,43 @@ export function createDos8086(machine, io = {}) {
     const trapSeg = io.trapSeg ?? DEFAULT_TRAP_SEG;
     const trapBase = trapSeg << 4;
     const onChar = io.onChar || null;
+    /**
+     * WAIT FOR A KEY, or answer NUL and run on?
+     *
+     * DOS blocks. This layer does not, by default, and that default is right
+     * for the corpus harness: 525 programs run unattended, and a blocking
+     * read turns "this program wanted input nobody gave it" -- a NOINPUT
+     * verdict, useful -- into a hang indistinguishable from a broken emulator.
+     *
+     * It is wrong for a person at a keyboard. A program that asks for a key
+     * and is handed NUL immediately never sees what they type, and the tab
+     * shows a program that ran and ignored them.
+     *
+     * So it is an option, and blocking is implemented by DECLINING TO
+     * SERVICE: the trap page holds `jmp $`, so an unserviced INT leaves the
+     * CPU spinning in place and the next step asks again. No new mechanism,
+     * and time still passes -- which matters, because a program blocked on a
+     * key must still see the timer tick.
+     */
+    const blockOnKey = io.blockOnKey === true;
+
+    /**
+     * Is this call one that a real DOS would block on, with nothing to give
+     * it? INT 21h's echoing and non-echoing single-character reads and its
+     * buffered line read; INT 16h's blocking read (AH=00h/10h).
+     *
+     * The POLLS are deliberately absent: INT 21h/AH=06h with DL=FFh, AH=0Bh
+     * ("is a key ready"), and INT 16h/AH=01h/11h all EXIST to answer "no" --
+     * blocking them would hang every program that politely checks before
+     * reading, which is the well-written half of the corpus.
+     */
+    const waitingForKey = (n) => {
+        if (keys.length) return false;
+        if (n === 0x21) return cpu.ah === 0x01 || cpu.ah === 0x07
+            || cpu.ah === 0x08 || cpu.ah === 0x0a;
+        if (n === 0x16) return cpu.ah === 0x00 || cpu.ah === 0x10;
+        return false;
+    };
     /** Pending keystrokes, as ASCII bytes. INT 16h and INT 21h both drink here. */
     const keys = io.keys ? [...io.keys] : [];
     /** The virtual filesystem. A teaching sandbox has no business touching a real one. */
@@ -179,9 +216,40 @@ export function createDos8086(machine, io = {}) {
      *  the generic IRET below must not run and undo it. */
     let controlTransferred = false;
     let terminated = false;
+    let lastTickMs = 0;         // machine time of the last delivered BIOS timer tick
     let exitCode = 0;
     let psp = 0;
     let cursor = 0;                     // linear cell index into the text page
+
+    /**
+     * WHOSE CURSOR IS IT? When this layer claims INT 10h, the variable above
+     * is the only cursor there is. When a real BIOS ROM owns INT 10h -- the
+     * whole point of `install({vectors: DOS_VECTORS})` -- the ROM keeps the
+     * cursor in the BDA at 0040:0050 and a program that calls INT 10h/AH=02h
+     * moves THAT one. This layer never sees the call.
+     *
+     * The bug that motivated this: DOS's `putChar` used its private variable
+     * regardless, so on a real-BIOS machine every INT 21h string printed from
+     * (0,0) no matter where the program had put the cursor. Breakout's HUD
+     * landed in the top-left corner while its playfield was drawn correctly,
+     * because the playfield used INT 10h and the HUD used INT 21h.
+     *
+     * Real DOS does not have this problem because it does not write to video
+     * memory at all -- it calls INT 10h/AH=0Eh and lets the BIOS place the
+     * character. Reaching the ROM's handler from here would mean executing
+     * 8086 code in the middle of a JS service call. Sharing the BDA cell the
+     * ROM uses gets the same observable result: one cursor, whoever moved it.
+     */
+    const BDA_CURSOR = 0x400 + 0x50;    // 0040:0050 -- column, then row, page 0
+    const ownsVideo = () => !claimed || claimed.has(0x10);
+    const getCursor = () => (ownsVideo() ? cursor
+        : machine._read(BDA_CURSOR + 1) * COLS + machine._read(BDA_CURSOR));
+    const setCursor = (v) => {
+        if (ownsVideo()) { cursor = v; return; }
+        const row = Math.floor(v / COLS), col = v % COLS;
+        machine._write(BDA_CURSOR, col & 0xff);
+        machine._write(BDA_CURSOR + 1, row & 0xff);
+    };
     let attr = 0x07;
     /** Every AL passed to INT 10h/AH=00h, oldest first. The only record of
      *  which video mode a program believes it is in. */
@@ -206,7 +274,10 @@ export function createDos8086(machine, io = {}) {
             machine._write(cellAt(i), 0x20);
             machine._write(cellAt(i) + 1, attr);
         }
-        cursor -= COLS;
+        // Same ownership question as putChar: on a real-BIOS machine the
+        // cursor lives in the BDA, and scrolling has to move THAT one back a
+        // row or the next character lands off the bottom of the screen.
+        setCursor(getCursor() - COLS);
     };
     /** One character through the BIOS teletype path: the shared write. */
     const putChar = (code) => {
@@ -216,16 +287,18 @@ export function createDos8086(machine, io = {}) {
         // sees every character, so a caller streaming output loses nothing.
         if (stdout.length < MAX_STDOUT) stdout += ch;
         if (onChar) onChar(ch);
-        if (code === 0x0d) { cursor -= cursor % COLS; }
-        else if (code === 0x0a) { cursor += COLS; }
-        else if (code === 0x08) { if (cursor % COLS) cursor--; }
+        let c = getCursor();
+        if (code === 0x0d) { c -= c % COLS; }
+        else if (code === 0x0a) { c += COLS; }
+        else if (code === 0x08) { if (c % COLS) c--; }
         else if (code === 0x07) { /* bell: audible, not visible */ }
         else {
-            machine._write(cellAt(cursor), code);
-            machine._write(cellAt(cursor) + 1, attr);
-            cursor++;
+            machine._write(cellAt(c), code);
+            machine._write(cellAt(c) + 1, attr);
+            c++;
         }
-        while (cursor >= ROWS * COLS) scroll();
+        while (c >= ROWS * COLS) { setCursor(c); scroll(); c = getCursor(); }
+        setCursor(c);
     };
     /**
      * INT 10h/06h and /07h -- scroll a RECTANGLE, not the screen.
@@ -287,7 +360,7 @@ export function createDos8086(machine, io = {}) {
             machine._write(cellAt(i), 0x20);
             machine._write(cellAt(i) + 1, attr);
         }
-        cursor = 0;
+        setCursor(0);
     };
 
     // ---- flag helpers: DOS reports failure in carry ---------------------
@@ -609,19 +682,19 @@ export function createDos8086(machine, io = {}) {
                 if (!(cpu.al & 0x80)) clearScreen();
                 return;
             case 0x01: return;                            // cursor shape: nothing to show
-            case 0x02: cursor = cpu.dh * COLS + cpu.dl; return;
-            case 0x03: cpu.dh = Math.floor(cursor / COLS); cpu.dl = cursor % COLS; cpu.cx = 0x0607; return;
+            case 0x02: setCursor(cpu.dh * COLS + cpu.dl); return;
+            case 0x03: { const c = getCursor(); cpu.dh = Math.floor(c / COLS); cpu.dl = c % COLS; cpu.cx = 0x0607; return; }
             case 0x05: return;                            // page select: one page here
             case 0x06: case 0x07: scrollWindow(cpu.ah === 0x06); return;
             case 0x08:
-                cpu.al = machine._read(cellAt(cursor));
-                cpu.ah = machine._read(cellAt(cursor) + 1);
+                cpu.al = machine._read(cellAt(getCursor()));
+                cpu.ah = machine._read(cellAt(getCursor()) + 1);
                 return;
             case 0x09: case 0x0a: {                       // write char (+attr), no cursor move
                 const a = cpu.ah === 0x09 ? cpu.bl : attr;
                 for (let i = 0; i < Math.max(1, cpu.cx); i++) {
-                    machine._write(cellAt(cursor + i), cpu.al);
-                    machine._write(cellAt(cursor + i) + 1, a);
+                    machine._write(cellAt(getCursor() + i), cpu.al);
+                    machine._write(cellAt(getCursor() + i) + 1, a);
                 }
                 return;
             }
@@ -800,6 +873,24 @@ export function createDos8086(machine, io = {}) {
         wr16(0x40, 0x6c, next & 0xffff);
         wr16(0x40, 0x6e, (next >>> 16) & 0xffff);
         eoi();
+        // ORDER IS LOAD-BEARING: the EOI goes out BEFORE the tail-call. A real
+        // BIOS calls 1Ch NESTED and regains control afterwards precisely so it
+        // can send the EOI last; a tail-call skips that, so on a PIC machine
+        // IRQ0 would stay in service and exactly ONE tick would ever fire.
+        // Acknowledging first inverts real BIOS's ordering in the SAFE
+        // direction -- an early EOI risks re-entrancy (bounded at 18.2 Hz), a
+        // late one risks a missed tick, and the former is the recoverable one.
+        //
+        // Chain to the user's INT 1Ch handler, as a real BIOS int08 does on
+        // every tick. Only when it has been hooked away from our trap page --
+        // otherwise it is our own no-op and there is nothing to run. Tail-call
+        // it: the INT 8 frame already on the stack becomes the 1Ch return frame,
+        // so its IRET lands back on the interrupted instruction with the
+        // interrupted flags (IF included) -- exactly a 1Ch handler's contract.
+        // Without this a program that hooks 1Ch and waits for it -- music,
+        // animation -- installs a handler that is never called and spins.
+        const off = rd16(0, 0x1c * 4), seg = rd16(0, 0x1c * 4 + 2);
+        if (seg !== trapSeg) { cpu.cs = seg; cpu.ip = off; controlTransferred = true; }
     }
 
     /** INT 09h — the keyboard IRQ. Nothing to fetch (keys arrive through
@@ -1067,6 +1158,16 @@ export function createDos8086(machine, io = {}) {
             // whose handler happens to land here is a bug worth seeing, not
             // one worth quietly servicing.
             if (claimed && !claimed.has(n)) return null;
+            // A BLOCKING READ WITH NOTHING TO READ IS DECLINED HERE, not
+            // inside the handler, and the difference is time. Returning a
+            // serviced verdict makes a caller's step yield ZERO cycles, so a
+            // `while (tMs < deadline)` loop spins without the clock moving --
+            // the hazard this bench's own header warns about. Declining lets
+            // the real instruction run: the trap page holds `jmp $`, so the
+            // CPU spins in place, burns cycles, the timer ticks, and the next
+            // step asks again. Nothing is half-performed, because the handler
+            // never ran.
+            if (blockOnKey && waitingForKey(n)) return null;
             const h = HANDLERS[n];
             controlTransferred = false;
             if (h) h();
@@ -1095,7 +1196,36 @@ export function createDos8086(machine, io = {}) {
         /** One unit of progress: service a pending trap, else run an instruction. */
         step() {
             if (this.service() !== null) return 0;
+            // Synthetic BIOS timer tick. A real PC's PIT raises IRQ0 at ~18.2 Hz
+            // and the BIOS int08 turns it into the 0040:006C count and a call to
+            // INT 1Ch. A DOS machine here need not carry a PIC + PIT for that to
+            // matter, so deliver it from machine time -- but ONLY to a program
+            // that actually listens: one that has hooked INT 8 or INT 1Ch away
+            // from our trap page. The ~500 corpus programs that ignore timers
+            // see no change at all. Masked (IF=0) ticks are dropped, as they are
+            // on real hardware. INT 8 goes through the CPU so the frame and the
+            // IVT vector are the real ones; int08 runs on the next step and,
+            // when it is still ours, chains to the hooked 1Ch.
+            //
+            // THIS IS A SERVICE-LAYER CONVENIENCE, NOT HARDWARE. It is machine
+            // time at 18.2 Hz on a machine with no PIT, so a program that reads
+            // the 8254 directly still sees nothing, and a lesson about HOW a
+            // timer interrupt is generated wants the real PIC+PIT chain -- which
+            // is what PCXT8086 carries. Both should exist: this answers "run the
+            // music", the chain answers "show me the interrupt". Requiring a
+            // schematic to hear a tune would be the wrong tradeoff for Tier B.
+            if (this._timerTickDue()) { cpu.interrupt(8); return 0; }
             return machine.step();
+        },
+
+        /** Whether a BIOS timer tick is due for a program that listens for one. */
+        _timerTickDue() {
+            if (!(cpu.flags & 0x200)) return false;             // interrupts masked
+            const seg8 = rd16(0, 0x08 * 4 + 2), seg1c = rd16(0, 0x1c * 4 + 2);
+            if (seg8 === trapSeg && seg1c === trapSeg) return false;   // nobody listens
+            if (machine.tMs - lastTickMs < 1000 / 18.2065) return false;
+            lastTickMs = machine.tMs;
+            return true;
         },
 
         /**

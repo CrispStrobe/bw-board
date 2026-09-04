@@ -834,7 +834,7 @@ test('a refusal always names the line and the construct', () => {
     const cases = [
         ['NOP\nFROB AX, BX', 'unknown mnemonic FROB', 2],
         ['.MODEL LARGE\n.CODE\nNOP\nEND', '.MODEL LARGE', 1],
-        ['.MODEL SMALL\n.CODE\n.FARDATA\nEND', 'unsupported directive .FARDATA', 3],
+        ['.MODEL SMALL\n.CODE\n.EXIT\nEND', 'unsupported directive .EXIT', 3],
         // A word in the opcode field that is neither instruction, directive
         // nor macro is reported as a mnemonic, because that is what it looks
         // like -- naming it a "directive" would send the reader hunting for
@@ -874,7 +874,7 @@ test('nothing undocumented can be asked for by name', () => {
     for (const mn of ['SETMO', 'SETMOC', 'SALC', 'ESC', 'ENTER', 'LEAVE', 'BOUND', 'PUSHA', 'INSB']) {
         const e = refusal(() => assembleRaw(`${mn} AX`));
         assert.ok(e, `${mn} is not assembled`);
-        assert.match(e.what, /unknown mnemonic|i186|operand/, `${mn} is refused, not encoded`);
+        assert.match(e.what, /unknown mnemonic|i186|instruction|operand/, `${mn} is refused, not encoded`);
     }
 });
 
@@ -1302,27 +1302,75 @@ END S
     assert.deepEqual(r.warnings, [], 'and nothing to warn about either');
 });
 
-test('a segment no ASSUME reaches is a warning, not a refusal', () => {
-    // Refusing would be over-reach: this model of what the registers hold is
-    // a static approximation, and a program that loads DS itself at run time
-    // is entitled to reach a segment no ASSUME mentions.
-    const r = assemble(`DATA SEGMENT
+test('a segment no ASSUME reaches is a refusal, which is what MASM makes it', () => {
+    // THIS TEST USED TO ASSERT THE OPPOSITE, and MASM 1.10 settled it. Given
+    // the same shape -- a variable in a segment that CS:CODE and DS:DATA
+    // between them do not cover -- the 1982 assembler, run under
+    // scripts/oracle-masm.mjs, answers
+    //
+    //     E r r o r --- 68: Can't reach with segment reg
+    //
+    // and emits nothing. What this module used to do was emit `A1 0000`
+    // with a warning attached, on the reasoning that a program which loads
+    // DS itself at run time is entitled to reach a segment no ASSUME
+    // mentions. It is -- and it can SAY so with `ASSUME DS:OTHER`, which is
+    // what the directive exists for. Reading the wrong segment is invisible
+    // in a .COM, where DS = CS at entry, and a silently wrong load in the
+    // .EXE this source becomes.
+    const src = (assume) => `DATA SEGMENT
     V DW 0
 DATA ENDS
 OTHER SEGMENT
     W DW 0
 OTHER ENDS
 CODE SEGMENT
-    ASSUME CS:CODE, DS:DATA
+    ASSUME ${assume}
 S:  MOV AX, W
     MOV AX, 4C00H
     INT 21H
 CODE ENDS
 END S
+`;
+    const e = refusal(() => assemble(src('CS:CODE, DS:DATA')));
+    assert.ok(e, 'unreachable is refused, not warned about');
+    assert.equal(e.what, 'unreachable segment');
+    assert.match(e.message, /"W" is in segment OTHER/, 'and it names the symbol and the segment');
+    assert.match(e.message, /ASSUME DS:OTHER/, 'and the one line that would fix it');
+    // THE OTHER HALF OF THE SAME RULE: naming the segment in ANY register is
+    // enough, and the override comes out of that register rather than the
+    // default one. Without this half the refusal above would just be a
+    // stricter version of the old bug.
+    const ok = assemble(src('CS:CODE, DS:DATA, ES:OTHER'));
+    assert.deepEqual(ok.warnings, [], 'and nothing to warn about when a register does reach it');
+});
+
+test('a PARTIAL ASSUME still reaches for whichever register has the segment', () => {
+    // MASM 1.10, asked directly:
+    //
+    //     CODE SEGMENT / ASSUME CS:CODE / START: MOV AX, CVAR   (CVAR in CODE)
+    //     ->  2E: A1 0005
+    //
+    // DS is unassumed there. The rule this module used to hold -- that a
+    // MISSING assume synthesises nothing, because not knowing what a
+    // register holds is not the same as knowing it is wrong -- produced
+    // `A1 0005` with no prefix, which in the .EXE this becomes is a load
+    // through whatever DS was set to. MASM does not treat "unassumed" as
+    // "leave it alone"; it treats it as "this one does not reach, find the
+    // one that does".
+    const r = assemble(`CODE SEGMENT
+    ASSUME CS:CODE
+START:  MOV AX, CVAR
+    MOV AX, 4C00H
+    INT 21H
+CVAR    DW 1
+CODE ENDS
+END START
 `);
-    assert.equal(r.warnings.length, 1);
-    assert.match(r.warnings[0].message, /which no ASSUME reaches/);
-    assert.match(r.warnings[0].message, /whatever DS holds at the time/, 'and says what it did instead');
+    const header = (r.bytes[8] | (r.bytes[9] << 8)) * 16;
+    const code = r.segments.find((sg) => sg.para === r.entry.para);
+    const img = r.bytes.subarray(header + code.para * 16, header + code.para * 16 + code.size);
+    assert.equal(img[0], 0x2e, 'the CS override MASM emits is there');
+    assert.equal(img[1], 0xa1, 'and the instruction under it is the same one');
 });
 
 test('ORG with .DATA and .CODE is one flat .COM image, code first', () => {
@@ -1738,15 +1786,16 @@ test('the Amey-Thakur corpus assembles, where it is present', { skip: !existsSyn
         try { assemble(readFileSync(f, 'latin1')); accepted++; }
         catch (e) { reasons.set(e.what, (reasons.get(e.what) || 0) + 1); }
     }
-    // Measured 2026-09-03. The 15 refusals are all honest: 14 programs
-    // contain a relative jump further than an 8086 can reach -- MASM refuses
-    // them too, and none of the 14 is within 4 bytes of reaching -- and 1
-    // wants .FARDATA, which this assembler does not model.
-    assert.ok(accepted >= 510, `at least 510 of 525 assemble (got ${accepted})`);
+    // Measured 2026-09-04. The 14 remaining refusals are all honest and of
+    // ONE kind: a relative CONDITIONAL jump further than an 8086 can reach in
+    // the ±127 short form, refused under the default (non-promoting) dialect --
+    // MASM 1.10 refuses them too, and none is within 4 bytes of reaching. The
+    // 15th refusal, .FARDATA, is gone: the far data segment is now modelled
+    // (its own segment outside DGROUP, reached via SEG label / MOV ES).
+    assert.ok(accepted >= 511, `at least 511 of 525 assemble (got ${accepted})`);
     assert.deepEqual([...reasons].sort(), [
         ['jump out of range', 14],
-        ['unsupported directive .FARDATA', 1],
-    ].sort(), 'and the refusals are the same two kinds, in the same numbers');
+    ].sort(), 'and the one remaining refusal kind is the out-of-range conditional jump');
 });
 
 test('a sample of the corpus runs to completion and produces output', { skip: !existsSync(CORPUS) }, () => {
@@ -1853,7 +1902,7 @@ test('no corpus program asks for an interrupt its source never wrote', { skip: !
             }
         }
     }
-    assert.equal(ran, 510, 'all 510 accepted programs loaded');
+    assert.equal(ran, 511, 'all 511 accepted programs loaded (was 510 before .FARDATA was modelled)');
     assert.deepEqual(fabricated, [], 'no program reached an interrupt vector its source never named');
     assert.ok(terminated >= 498, `at least 498 of them run to their own exit (got ${terminated})`);
 });

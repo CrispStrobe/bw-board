@@ -300,7 +300,14 @@ async function createI8086Target(opts) {
   const { board, rom, config } = opts;
   const { createI8086Adapter } = await import('./i8086-adapter.js');
   const adapter = createI8086Adapter({ config, rom, romAt: opts.romAt });
-  adapter.attachBoard(board ?? { advanceTo() {} });
+  // setPin() is NOT optional in this stub, and its absence was a real trap.
+  // The adapter's onPinChange hook calls board.setPin() on the first 8255
+  // output edge, and POST triggers one the moment it writes the PPI control
+  // word -- so `createDebugTarget('i8086', {rom})` with no board threw
+  // `board.setPin is not a function` before the machine executed anything.
+  // A caller who just wants a machine has no reason to know that a null board
+  // needs two methods rather than one.
+  adapter.attachBoard(board ?? { advanceTo() {}, setPin() {} });
 
   let target = null;
   try {
@@ -505,6 +512,15 @@ export function getTargetKinds() {
       kind: 'z80',
       label: 'Simulated (Z80)',
       description: 'Composable Z80 machine — Searle bench, CP/M, ZX Spectrum configs.',
+    },
+    {
+      // MISSING SINCE THE KIND SHIPPED, and the failure was not "no entry" --
+      // a <select> whose value matches no option renders the FIRST option, so
+      // the picker read "Simulated (STC12 / 8051)" while running 8086 code.
+      // A host cannot tell that from a user who chose 8051.
+      kind: 'i8086',
+      label: 'Simulated (8086 / 8088)',
+      description: 'Composable 8086 machine — breadboard, XT board with CGA and floppy, or DOS programs.',
     },
     {
       kind: 'attiny88',

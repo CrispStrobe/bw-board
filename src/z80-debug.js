@@ -208,8 +208,10 @@ export function createZ80DebugTarget(adapter) {
 
     /** Audio-face contract: the beeper's current {hz, on}, or null. */
     audio() {
+      // Per-voice, always an array (E6.8.11a); empty when this machine has
+      // no ULA rather than null, so a caller can iterate without a guard.
       if (machine.ula && typeof machine.ula.audioTone === 'function') return machine.ula.audioTone();
-      return null;
+      return [];
     },
 
     /** Insert a .TAP for the ROM fast-load trap; false without support. */

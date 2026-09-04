@@ -311,17 +311,57 @@ test('a programmed DAC reaches the renderer unchanged', async () => {
         'the card stores what the hardware stores and the renderer reads the same units');
 });
 
-test('Hercules is refused by name rather than drawn at the wrong address', async () => {
+test('Hercules GRAPHICS now draws, at its own address and its own interleave', async () => {
+    // This test asserted a REFUSAL until 2026-09-04, and the refusal was the
+    // right answer for as long as there was no decoder: "720x348 mono at
+    // B0000h, which this renderer does not draw". Refusing by name is what
+    // let another lane build a Hercules board and correctly decline to ship a
+    // UI entry for it, instead of shipping one that rendered a blank screen.
+    //
+    // The decoder exists now (i8086-cga.js, kind 'hgc'), so the honest
+    // assertion inverts. The detail worth keeping is the address: mode 06h is
+    // CGA 640x200 at B8000h with two-bank parity, and Hercules is 720x348 at
+    // B0000h with four banks on `y mod 4`. modeFromHercules used to return
+    // 06h, so making it "supported" without also giving it its own mode number
+    // would have drawn the right card from the wrong address with the wrong
+    // arithmetic -- and produced a picture. It is pseudo-mode 100h for that
+    // reason. test/i8086-hercules-render.test.mjs holds the interleave itself.
+    const { I8086Machine: M } = await import('../src/i8086-machine.js');
+    const m = new M({
+        clockHz: 5_000_000,
+        regions: [
+            { kind: 'ram', start: 0, end: 0x9ffff },
+            { kind: 'ram', start: 0xb0000, end: 0xb7fff },
+            trapRegion(),
+        ],
+        chips: [{ kind: 'hercules', name: 'herc1', at: 0x3b0 }],
+    });
+    m._out(0x3bf, 0x03);                        // config: graphics permitted
+    m._out(0x3b8, 0x0a);                        // video on, graphics
+    m._write(0xb0000, 0x80);                    // one pixel at (0,0)
+    const r = createI8086DebugTarget({ machine: m }).video();
+    assert.ok(!r.unsupported, `refused: ${r.unsupported}`);
+    assert.equal(r.width, 720);
+    assert.equal(r.height, 348, 'the 348-line raster, not CGA mode 6\'s 200');
+    assert.ok(r.rgba[0] > 128, 'and the byte at B0000h is scanline 0');
+});
+
+test('Hercules TEXT is still refused by name, and says why', async () => {
+    // The half that did NOT land. MDA text is 80x25 at B0000h with attribute
+    // semantics that are not CGA's -- no colour, but intensity, underline and
+    // reverse. Drawing it with the CGA text path would read the right address
+    // and the wrong attributes. Refusing keeps a board honest until someone
+    // writes it.
     const { I8086Machine: M } = await import('../src/i8086-machine.js');
     const m = new M({
         clockHz: 5_000_000,
         regions: [{ kind: 'ram', start: 0, end: 0xbffff }, trapRegion()],
         chips: [{ kind: 'hercules', name: 'herc1', at: 0x3b0 }],
     });
-    m._out(0x3b8, 0x0a);                        // video on, graphics
+    m._out(0x3b8, 0x08);                        // video on, TEXT
     const r = createI8086DebugTarget({ machine: m }).video();
-    assert.ok(r.unsupported);
-    assert.match(r.unsupported, /B0000h/, 'and says why: it is a different address, not just a different size');
+    assert.ok(r.unsupported, 'MDA text has no decoder');
+    assert.match(r.unsupported, /B0000h/, 'and says why: a different address, not just a different size');
 });
 
 test('a program that reaches mode 13h through the BUS renders, registers and all', async () => {

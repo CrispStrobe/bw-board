@@ -238,6 +238,16 @@ const CGA_STRIDE = 80;
 /** Distance to the odd-scanline bank. Trap 1. */
 const CGA_BANK = 0x2000;
 
+// Hercules graphics is 720x348 mono at B0000h, and its interleave is NOT the
+// CGA one. The CGA has TWO banks 0x2000 apart chosen by scanline parity; the
+// HGC has FOUR banks of 8 KB chosen by `y mod 4`, each holding every fourth
+// scanline. A decoder written by analogy to the CGA produces a picture that is
+// coherent, quarter-height and wrong -- which reads as a plausible rendering
+// bug rather than as the wrong address arithmetic it is.
+const HGC_BANK = 0x2000;          // 8 KB per bank, four of them
+const HGC_BANKS = 4;
+const HGC_STRIDE = 90;            // 720 pixels at 1bpp = 90 bytes per scanline
+
 const MODE_TABLE = {
     0x00: { kind: 'text', cols: 40, rows: 25, base: 0xb8000 },
     0x01: { kind: 'text', cols: 40, rows: 25, base: 0xb8000 },
@@ -247,6 +257,19 @@ const MODE_TABLE = {
     0x05: { kind: 'cga4', width: 320, height: 200, base: 0xb8000, burst: false },
     0x06: { kind: 'cga2', width: 640, height: 200, base: 0xb8000 },
     0x13: { kind: 'vga8', width: 320, height: 200, base: 0xa0000 },
+    // PSEUDO-MODES, deliberately outside the BIOS byte range. Hercules
+    // graphics has no INT 10h mode number -- it is selected by writing 3BFh
+    // and 3B8h directly, which is why every HGC program is bare-metal. Giving
+    // it 06h (as an earlier draft did) collides with CGA 640x200: same
+    // resolution class, different base address, different interleave, and the
+    // renderer would have drawn B8000h for a card whose framebuffer is at
+    // B0000h.
+    0x100: { kind: 'hgc', width: 720, height: 348, base: 0xb0000 },
+    // EGA 320x200x16 planar. The framebuffer is NOT in the address space the
+    // way the others are: A0000 is a window the card routes by its map mask,
+    // so the pixels come from card state (opts.planes) rather than through
+    // `read`. 40 bytes per row per plane -- 320 pixels at one bit each.
+    0x0d: { kind: 'ega4', width: 320, height: 200, base: 0xa0000, rowBytes: 40 },
 };
 
 /** BIOS modes this file knows about but cannot draw, with the reason. */
@@ -269,7 +292,9 @@ const KNOWN_UNSUPPORTED = {
  *             cols?: number, rows?: number, cellW?: number, cellH?: number }}
  */
 export function modeInfo(mode, opts = {}) {
-    const m = MODE_TABLE[mode & 0xff];
+    // Exact first so a pseudo-mode (>= 0x100) resolves, then the byte, which
+    // is what a BIOS mode number needs.
+    const m = MODE_TABLE[mode] || MODE_TABLE[mode & 0xff];
     if (!m) return null;
     const base = opts.base !== undefined ? opts.base : m.base;
     if (m.kind !== 'text') return { ...m, base };
@@ -570,6 +595,56 @@ export function renderMode(mode, read, opts = {}) {
                     const v = (b >> (6 - k * 2)) & 3;
                     px(o, v === 0 ? bg : set[v - 1]);
                 }
+            }
+        }
+        return { width, height, rgba };
+    }
+    if (info.kind === 'ega4') {
+        // FOUR PLANES, ONE BIT EACH, SAME OFFSET. A pixel's colour is bit
+        // (7 - (x & 7)) of the same byte in each of the four planes, assembled
+        // low plane to high: plane 0 is bit 0 of the colour. Getting the plane
+        // ORDER wrong still produces a picture -- in the wrong colours -- which
+        // is why the demo fills FF/AA/CC/F0 and expects a descending ramp
+        // 15,13,11,9,7,5,3,1 across the first byte: any transposition changes
+        // that sequence visibly rather than subtly.
+        const planes = opts.planes;
+        if (!planes || planes.length !== 4) {
+            throw new Error('i8086-cga: mode 0Dh needs opts.planes, four Uint8Arrays from the EGA card');
+        }
+        // EGA has no DAC. Colour goes through the ATTRIBUTE palette, six bits
+        // per entry as RGBrgb: bits 5-3 are the secondary (intensity) R, G, B
+        // and bits 2-0 the primary. Each channel is therefore two bits, which
+        // is why a 16-colour EGA is not a subset of a 256-colour VGA ramp.
+        const pal = opts.attr || null;
+        const chan = (prim, sec) => prim * 0xaa + sec * 0x55;
+        for (let y = 0; y < height; y++) {
+            let o = y * width * 4;
+            for (let x = 0; x < width; x++, o += 4) {
+                const byte = y * info.rowBytes + (x >> 3);
+                const bit = 7 - (x & 7);
+                let c = 0;
+                for (let pl = 0; pl < 4; pl++) c |= ((planes[pl][byte] >> bit) & 1) << pl;
+                const v = pal ? (pal[c] & 0x3f) : c;
+                rgba[o] = chan((v >> 2) & 1, (v >> 5) & 1);
+                rgba[o + 1] = chan((v >> 1) & 1, (v >> 4) & 1);
+                rgba[o + 2] = chan(v & 1, (v >> 3) & 1);
+                rgba[o + 3] = 255;
+            }
+        }
+        return { width, height, rgba };
+    }
+    if (info.kind === 'hgc') {
+        // Monochrome: one bit per pixel, bit 7 leftmost, foreground is the
+        // card's single phosphor. `y % 4` picks the bank and `y >> 2` the row
+        // WITHIN it -- both halves matter, and getting only one right still
+        // draws something.
+        const fgH = opts.foreground === undefined ? 15 : opts.foreground & 0x0f;
+        for (let y = 0; y < height; y++) {
+            const row = base + (y % HGC_BANKS) * HGC_BANK + (y >> 2) * HGC_STRIDE;
+            let o = y * width * 4;
+            for (let x = 0; x < width; x += 8) {
+                const b = rd(row + (x >> 3));
+                for (let k = 7; k >= 0; k--, o += 4) px(o, (b >> k) & 1 ? fgH : 0);
             }
         }
         return { width, height, rgba };

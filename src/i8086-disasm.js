@@ -26,10 +26,44 @@
  * breakpoints, because two seg:off pairs can name one instruction and only
  * the linear form cannot be fooled.
  *
+ * THE 80186 VARIANT (added 2026-09-04, E6.8.1). `{variant: '80186'}` renders
+ * the fifteen opcodes the 186 put in holes the 8086 leaves as aliases, and
+ * `scripts/grind-i8086-v20-disasm.mjs` holds it to the SAME standard as the
+ * 8086 half -- **172,430/172,430 on text and length** against the disassembly
+ * strings the SingleStepTests v20 suite ships with every vector. That matters
+ * more here than in the core: a core that renders an opcode wrong computes a
+ * wrong answer and something eventually notices, but a disassembler that does
+ * is read by a person who then believes it. `pusha` shown as `jo` is not a
+ * missing feature, it is a confident lie.
+ *
+ * THREE PLACES THIS DELIBERATELY DISAGREES WITH THAT ORACLE, each behind
+ * `v20Syntax: true` so the grinder can ask for the test convention without
+ * the product inheriting it -- the bargain `targetBase` already strikes:
+ *
+ *   - The suite DROPS the three-operand IMUL's immediate (`imul cx, word
+ *     [ds:si]` for 69 0C 86 DA, with DA86h nowhere in the text). Lossy in
+ *     exactly the way a debugger pane must not be.
+ *   - The suite hides a segment override on OUTS, where it APPLIES. It also
+ *     hides one on INS, where it does not -- and there we agree, because an
+ *     override on a write to ES:DI is inert. "Print it when it does
+ *     something" is one rule that happens to match the suite for half of a
+ *     pair and not the other half.
+ *   - REPC/REPNC (0x64/0x65) are NEC prefixes with no 186 meaning; the
+ *     grinder excludes those 3,570 vectors by name and prints the count.
+ *
+ * And one place it matches the oracle against all instinct: the WORD shift
+ * form pads its count to two digits and the BYTE form does not -- `shl word
+ * [ss:bp+di], 03h` beside `shl ah, 0h`. 800 vectors disagreed in one leading
+ * zero until that matched.
+ *
+ * NOT HANDLED, stated rather than left to be found: 0x63-0x67 are UNDEFINED
+ * on an 80186 and are still rendered as their 8086 aliases.
+ *
  * @module
  */
 
 const hx = (v) => v.toString(16).toUpperCase() + 'h';
+const hx2 = (v) => v.toString(16).toUpperCase().padStart(2, '0') + 'h';
 const hx4 = (v) => v.toString(16).toUpperCase().padStart(4, '0') + 'h';
 
 const R8 = ['al', 'cl', 'dl', 'bl', 'ah', 'ch', 'dh', 'bh'];
@@ -71,6 +105,11 @@ export function disasmI8086(read, addr, opts = {}) {
     // OFFSET, which a linear address does not carry. The caller that
     // resolved CS:IP into `addr` still knows the IP and passes it back;
     // without it the fallback is only right when CS is zero.
+    if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186') {
+        throw new Error(`8086 disasm: unknown variant ${JSON.stringify(opts.variant)} `
+            + "-- expected '8086' or '80186'");
+    }
+    const is186 = opts.variant === '80186';
     const ip0 = (opts.ip ?? addr) & 0xffff;
     // Fetch wraps at the SEGMENT boundary, not the linear one. An
     // instruction beginning at offset FFFCh takes its fifth byte from
@@ -116,8 +155,12 @@ export function disasmI8086(read, addr, opts = {}) {
         // A displacement byte or word that happens to be zero is still
         // PRINTED (`[ss:bp+si+0h]`): mod says whether one was encoded, and
         // the value it holds does not get a vote.
+        // The direct form IS an address, so it takes a label -- and it takes
+        // one at any width. The old regex needed four digits, so a datum at
+        // 0042h could never be named while one at 1042h could, which is a
+        // distinction nothing in the machine makes.
         const inner = mod === 0 && rm === 6
-            ? hx(direct)
+            ? label(direct, hx(direct))
             : RM[rm] + (mod === 0 ? '' : (disp < 0 ? '-' : '+') + hx(Math.abs(disp)));
         return `${size ? size + ' ' : ''}[${s}:${inner}]`;
     };
@@ -129,14 +172,111 @@ export function disasmI8086(read, addr, opts = {}) {
     // is the default; the vector suite's own disassembler measures from the
     // instruction's start instead, and asks for that with targetBase: 0.
     const relBase = (opts.targetBase ?? ip0) & 0xffff;
-    const rel = (d) => hx4((relBase + i + d) & 0xffff);
 
-    const done = (text) => {
-        if (opts.labels) {
-            text = text.replace(/\b([0-9A-F]{4})h\b/g, (m0, hex) => opts.labels.get(parseInt(hex, 16)) ?? m0);
+    /**
+     * A number that IS AN ADDRESS, rendered as its label when one is known.
+     *
+     * SUBSTITUTION IS BY POSITION, NOT BY PATTERN, and that is the whole
+     * point of this function. The obvious implementation -- and the one this
+     * module shipped, and the one `w65c02-disasm.js` and `z80-disasm.js`
+     * still use -- is a regex over the finished text swapping any four-digit
+     * hex value for a label. That is safe in 6502 syntax, where a 16-bit
+     * value can only BE an address because immediates are eight bits and
+     * carry a `#`. It is not safe here. In 8086 syntax an immediate and an
+     * address look identical, so `mov ax, 1234h` became `mov ax, start` and
+     * `enter 9C4Bh, 1Ah` -- a frame SIZE -- became `enter start, 1Ah`. A
+     * debugger pane that renames a constant after some unrelated label is
+     * not a cosmetic problem: it is the pane inventing a cross-reference
+     * that does not exist.
+     *
+     * So only the operands that are genuinely addresses ask for a label:
+     * relative jump and call targets, and the direct `[seg:addr]` memory
+     * form. Immediates never do.
+     *
+     * NOT LABELLED, deliberately: the far `SSSS:OOOOh` pointer of `callf` and
+     * `jmpf`. Its offset means nothing without its segment, and a map keyed
+     * on sixteen bits cannot say which segment a name belongs to -- labelling
+     * it would be right only when CS happens to match.
+     */
+    const label = (v, rendered) => opts.labels?.get(v & 0xffff) ?? rendered;
+    const rel = (d) => { const t = (relBase + i + d) & 0xffff; return label(t, hx4(t)); };
+
+    const done = (text) => ({ text: (lock ? 'lock ' : '') + text, bytes, length: i });
+
+    // ---- the 80186 additions --------------------------------------------
+    // Same shape as the core's _exec186: the 186 gets first refusal, because
+    // on an 8086 every one of these encodings is an ALIAS -- 60-6F are the
+    // conditional jumps a second time and C0/C1/C8/C9 are the returns -- and
+    // an alias cannot be made conditional where it is written.
+    //
+    // NOT HANDLED, and stated rather than left to be found: 63-67 are
+    // UNDEFINED on an 80186 (it raises INT 6) and are still rendered here as
+    // their 8086 aliases. The v20 suite cannot grade them either -- on an NEC
+    // part 64/65 are the REPNC/REPC prefixes, which is a third meaning again.
+    if (is186) {
+        switch (op) {
+            case 0x60: return done('pusha');
+            case 0x61: return done('popa');
+            // BOUND's operand is a PAIR of words and the suite still spells it
+            // `word`, not `dword` -- unlike les/lds, which say dword for the
+            // same two-word read. Matching a real disassembler beats being
+            // consistent with ourselves.
+            case 0x62: modrm(); return done(`bound ${R16[reg]}, ${rmOp(1)}`);
+            case 0x68: return done(`push ${hx(imm16())}`);
+            case 0x6a: return done(`push ${hx(imm8())}`);
+            // The three-operand IMUL, and the one place this module
+            // DELIBERATELY DISAGREES with its oracle. The v20 suite's own
+            // disassembler drops the immediate -- `imul cx, word [ds:si]` for
+            // bytes 69 0C 86 DA, with DA86h nowhere in the text -- which is
+            // lossy in the exact way a debugger pane must not be. So the
+            // default prints all three operands and `v20Syntax: true` asks
+            // for the suite's two, the same bargain `targetBase: 0` already
+            // strikes for relative targets: do the useful thing by default,
+            // and let the grinder ask for the test convention.
+            case 0x69: case 0x6b: {
+                modrm();
+                const dst = `imul ${R16[reg]}, ${rmOp(1)}`;
+                const imm = op === 0x69 ? hx(imm16()) : hx(imm8());
+                return done(opts.v20Syntax ? dst : `${dst}, ${imm}`);
+            }
+            case 0x6c: case 0x6d: case 0x6e: case 0x6f: {
+                // A SEGMENT OVERRIDE IS PRINTED WHEN IT DOES SOMETHING, which
+                // for once splits a pair of string primitives. INS writes
+                // ES:DI and an override cannot change that, so the prefix
+                // byte is inert and the suite does not show it -- agreed.
+                // OUTS reads DS:SI and the override DOES apply, so hiding it
+                // would lose the operand; the suite hides it anyway, which is
+                // the same lossiness as the dropped IMUL immediate, so the
+                // default shows it and v20Syntax asks for the suite's form.
+                // CMPS and SCAS spell out repe/repne because they read ZF;
+                // these do not, so F2 and F3 both read `rep`.
+                const outs = op >= 0x6e;
+                const parts = [];
+                if (seg && outs && !opts.v20Syntax) parts.push(seg);
+                if (rep) parts.push('rep');
+                parts.push(['insb', 'insw', 'outsb', 'outsw'][op - 0x6c]);
+                return done(parts.join(' '));
+            }
+            // Shift by immediate. reg=6 is `shl` here and `setmo` on an 8086:
+            // the 186 reclaimed the encoding, and the suite's own text agrees
+            // (`shl ah, 0h`, not `setmo`).
+            case 0xc0: case 0xc1: {
+                modrm();
+                // THE WORD FORM PADS ITS COUNT TO TWO DIGITS AND THE BYTE FORM
+                // DOES NOT -- `shl word [ss:bp+di], 03h` beside `shl ah, 0h`,
+                // from the same suite and the same immediate width. There is
+                // no principle in it; it is what the oracle emits, and this
+                // module matches a real disassembler rather than inventing a
+                // house style. Discovered by 800 vectors disagreeing in one
+                // leading zero.
+                const count = op === 0xc1 ? hx2(imm8()) : hx(imm8());
+                return done(`${reg === 6 ? 'shl' : SHIFT[reg]} ${rmOp(op & 1)}, ${count}`);
+            }
+            case 0xc8: return done(`enter ${hx(imm16())}, ${hx(imm8())}`);
+            case 0xc9: return done('leave');
+            default: break;                              // not a 186 opcode
         }
-        return { text: (lock ? 'lock ' : '') + text, bytes, length: i };
-    };
+    }
 
     // ---- 00-3F: the ALU block and the segment/BCD singles ---------------
     if (op < 0x40 && (op & 7) < 6) {
@@ -183,13 +323,17 @@ export function disasmI8086(read, addr, opts = {}) {
         case 0x9d: return done('popf');
         case 0x9e: return done('sahf');
         case 0x9f: return done('lahf');
+        // The moffs forms render their address inline rather than through
+        // mem(), so they need the label call of their own -- and they are the
+        // most label-worthy operand in the instruction set, being a bare
+        // global variable with nothing else in the brackets.
         case 0xa0: case 0xa1: {
             const a = imm16(), w = op & 1;
-            return done(`mov ${w ? 'ax' : 'al'}, ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${hx(a)}]`);
+            return done(`mov ${w ? 'ax' : 'al'}, ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${label(a, hx(a))}]`);
         }
         case 0xa2: case 0xa3: {
             const a = imm16(), w = op & 1;
-            return done(`mov ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${hx(a)}], ${w ? 'ax' : 'al'}`);
+            return done(`mov ${w ? 'word' : 'byte'} [${seg ?? 'ds'}:${label(a, hx(a))}], ${w ? 'ax' : 'al'}`);
         }
         case 0xa8: return done(`test al, ${hx(imm8())}`);
         case 0xa9: return done(`test ax, ${hx(imm16())}`);
@@ -211,12 +355,14 @@ export function disasmI8086(read, addr, opts = {}) {
         case 0xcd: return done(`int ${hx(imm8())}`);
         case 0xce: return done('into');
         case 0xcf: return done('iret');
-        case 0xd0: case 0xd1: modrm(); return done(`${SHIFT[reg]} ${rmOp(op & 1)}`);
+        case 0xd0: case 0xd1:
+            modrm();
+            return done(`${is186 && reg === 6 ? 'shl' : SHIFT[reg]} ${rmOp(op & 1)}`);
         // The CL-counted form of the undocumented reg=6 has its own name,
         // because it is conditional: SETMOC does nothing when CL is zero.
         case 0xd2: case 0xd3:
             modrm();
-            return done(`${reg === 6 ? 'setmoc' : SHIFT[reg]} ${rmOp(op & 1)}, cl`);
+            return done(`${reg === 6 ? (is186 ? 'shl' : 'setmoc') : SHIFT[reg]} ${rmOp(op & 1)}, cl`);
         case 0xd4: return done(`aam ${hx(imm8())}`);
         case 0xd5: return done(`aad ${hx(imm8())}`);
         case 0xd6: return done('salc');

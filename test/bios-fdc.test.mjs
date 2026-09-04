@@ -15,36 +15,27 @@
 // most load-bearing assertion in it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { I8086Machine } from '../src/i8086-machine.js';
+import { I8086Machine, PCXT8086 } from '../src/i8086-machine.js';
 import { assembleRaw } from '../src/i8086-asm.js';
 import { buildBios } from '../scripts/build-bios.mjs';
 
 /**
- * The XT with its disk hardware: 8237 at 00h, its page latch at 80h, the
- * uPD765 at 3F0h on IRQ6.
+ * THE MACHINE IS NOT DEFINED HERE, ON PURPOSE. `PCXT8086` is the board preset
+ * exported by src/i8086-machine.js and shipped to users in the Circuit
+ * Designer's "load an 8086 board" list. This file used to carry its own copy
+ * called PCXT8086, and the two were separate descriptions of one machine.
  *
- * `dma: 'dma1'` ON THE FDC IS THE WIRE, and leaving it out is the easiest
- * way to get a mystery. Without it the machine builds both chips and
- * connects neither, src/upd765.js falls back to non-DMA execution on its
- * own, and the controller raises RQM waiting for a host that never comes.
+ * They had already drifted: the preset's RAM stopped at 0x9FFFF, so writes to
+ * the CGA text page at B800:0000 vanished into unmapped space, while this
+ * file's copy mapped it. A user's board and this suite's board were different
+ * computers, and each of us only ran one of them -- so a program would have
+ * worked here and shown a blank screen in the app, with nothing failing.
+ *
+ * The offer on the table was an assertion that the two configs are equal. This
+ * is better: there is one config, so there is nothing to keep equal. An
+ * equality check between two hand-maintained copies still leaves two copies,
+ * and it only fires after someone has already written the second one wrong.
  */
-const XTDISK = Object.freeze({
-    clockHz: 4_772_727,
-    regions: [
-        { kind: 'ram', start: 0x00000, end: 0x9ffff },
-        { kind: 'ram', start: 0xb8000, end: 0xbffff },
-        { kind: 'rom', start: 0xf0000, end: 0xfffff },
-    ],
-    chips: [
-        { kind: 'pic', name: 'pic1', at: 0x20 },
-        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 },
-        { kind: 'ppi', name: 'ppi1', at: 0x60 },
-        { kind: 'dma', name: 'dma1', at: 0x00 },
-        { kind: 'dmapage', name: 'page', at: 0x80, dma: 'dma1' },
-        { kind: 'fdc', name: 'fdc1', at: 0x3f0, irq: 6, dma: 'dma1' },
-        { kind: 'cga', name: 'cga1', at: 0x3d0 },
-    ],
-});
 
 /** The 360K format the BIOS's diskette parameter table describes. */
 const GEOM = { cylinders: 40, heads: 2, sectors: 9, bytesPerSector: 512 };
@@ -96,7 +87,7 @@ const sectorBytes = (img, c, h, r) =>
  * makes the machine reusable for injected programs.
  */
 function ready({ image = testImage(), writeProtect = false } = {}) {
-    const m = new I8086Machine(XTDISK);
+    const m = new I8086Machine(PCXT8086);
     m.loadRom(rom.bytes);
     if (image) m.chips.fdc1.insert(0, image, GEOM);
     m.chips.fdc1.setWriteProtect(0, writeProtect);
@@ -162,7 +153,7 @@ test('the machine AS IT SHIPS moves bytes: the pump asserts DREQ itself', () => 
     // the entire result was byte 5, the sector it would do NEXT, still sitting
     // on the one it started from. No BIOS reads that byte.
     //
-    // NO SHIM. The machine is built from XTDISK and nothing here touches the
+    // NO SHIM. The machine is built from PCXT8086 and nothing here touches the
     // FDC's hook, so the DREQ that makes this pass can only have come from the
     // pump. That is the whole point: if the pump stops driving it, this fails.
     const m = ready();
@@ -722,7 +713,7 @@ test('INT 19h boots the machine off the real controller', () => {
     image.set(sector, 0);
     image[510] = 0x55; image[511] = 0xaa;
 
-    const m = new I8086Machine(XTDISK);
+    const m = new I8086Machine(PCXT8086);
     m.loadRom(rom.bytes);
     m.chips.fdc1.insert(0, image, GEOM);
     m.reset();

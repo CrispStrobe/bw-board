@@ -92,7 +92,7 @@
  * as a pass in a summary line.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join, extname, basename } from 'node:path';
+import { join, extname, basename, dirname } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086, DOSBOX8086_XT } from '../src/i8086-dos.js';
 import { Unimplemented } from '../src/i8086.js';
@@ -129,7 +129,8 @@ const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
 const paths = argv.filter((a, i) => !a.startsWith('--')
     && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler'
-    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type');
+    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type'
+    && argv[i - 1] !== '--expect-counts');
 
 let assembler = null;
 const asmPath = value('--assembler', null);
@@ -211,7 +212,70 @@ function classify(bytes, name) {
     return 'com';
 }
 
-function runOne(name, raw, key) {
+/**
+ * WHAT SURVIVES A PROGRAM, and why it is not the whole report.
+ *
+ * `results` holds one entry per program and the corpus is 525 of them. Every
+ * verdict is decided INSIDE runOne -- the stream/screen comparison, the
+ * printed test, the oracle match -- so nothing after the loop needs a
+ * program's full output. Keeping it anyway cost ~0.46 MB per program
+ * (measured: 71 MB at 50 programs, 117 MB at 150) and the full run died at
+ * V8's 900 MB heap limit after 12m31s ON AN IDLE BOX WITH 3 GB FREE. That is
+ * the harness, not the machine: an OOM that only happens at full scale is
+ * indistinguishable from a box under pressure, and it was blamed on the box
+ * twice before it was measured.
+ *
+ * THIS FIX IS PARTIAL AND THE MEASUREMENT SAYS SO. Slimming saved ~5%:
+ * 71.0 -> 67.5 MB at 50 programs, 116.9 -> 112.0 MB at 150. The baseline is
+ * ~0.45 MB per program and it is NOT the report -- something else retains it,
+ * and I have not found what. Recorded as an open defect with numbers rather
+ * than closed with a plausible story, because "we slimmed the reports" reads
+ * like a fix and the full run may still die.
+ *
+ * AND THE GUESS IN THAT LAST SENTENCE WAS WRONG. It read "a retained object
+ * graph rather than a runaway string". The review lane instrumented this
+ * harness to force GC every 25 programs and print post-GC heapUsed:
+ *
+ *     n=25  heap 5.4MB  rss 60.2MB      n=100  heap 5.8MB  rss 78.9MB
+ *     n=50  heap 6.0MB  rss 73.3MB      n=150  heap 6.1MB  rss 82.6MB
+ *
+ * HEAP FLAT AT ~6 MB WHILE RSS CLIMBS. Nothing is retained. The RSS growth is
+ * the allocator: every runOne allocates a fresh 1 MB Uint8Array for the 20-bit
+ * space, and 525 of those allocated and freed is exactly what glibc does not
+ * return to the OS. That explains the RSS curve and explains NOTHING about a
+ * V8 heap OOM -- so the crash at 900 MB is a different event, most likely one
+ * pathological program rather than accumulation. This file already documents
+ * the class: the ORACLE verdict exists because a runaway INT 21h/09h scans
+ * memory for a `$` and prints ~190 KB, and a scan that starts somewhere worse
+ * prints far more.
+ *
+ * Left in full rather than edited down, because the wrong reading was
+ * confident and specific and I had already committed it.
+ *
+ * stdout is the one term that runs away. `putChar` appends per character with no
+ * cap, and a LOOPING program printing inside a 5,000,000-instruction budget
+ * produces ~1 MB of it. The summary prints at most a couple of lines, so the
+ * tail is what a reader wants; the head is kept too, because a program's first
+ * output says what it was doing before it went wrong.
+ */
+const KEEP = 2048;
+function slimReport(report) {
+    const out = report.stdout || '';
+    return {
+        unsupported: report.unsupported,
+        terminated: report.terminated,
+        exitCode: report.exitCode,
+        breakpoints: report.breakpoints,
+        rebooted: report.rebooted,
+        keyRequests: report.keyRequests,
+        stdoutLength: out.length,
+        stdout: out.length <= KEEP * 2 ? out
+            : `${out.slice(0, KEEP)}\n...[${out.length - KEEP * 2} chars elided]...\n${out.slice(-KEEP)}`,
+        devices: report.devices,
+    };
+}
+
+function runOne(name, raw, key, from = null) {
     let bytes = raw;
     let kind = classify(bytes, name);
 
@@ -227,7 +291,49 @@ function runOne(name, raw, key) {
                 source = source.replace(
                     /^[ \t]*include[ \t]+["']?emu8086\.inc["']?[ \t]*$/gim, EMU8086_INC);
             }
-            const out = assembler(source, { name });
+            // NASM's `%include` and `INCBIN` resolve against the directory
+            // the source lives in. The assembler has no file system of its
+            // own -- deliberately, it runs in a browser -- so the harness is
+            // where the path search belongs, exactly as the emu8086 include
+            // substitution above is.
+            const dir = from ? dirname(from) : '.';
+            let out;
+            out = assembler(source, {
+                name,
+                // PROMOTE OUT-OF-RANGE CONDITIONALS, and COUNT the programs
+                // that needed it rather than letting the flag be invisible.
+                //
+                // The assembler's MASM dialect refuses a Jcc or LOOP whose
+                // target is beyond +-127, and that default is measured rather
+                // than arbitrary: MASM 1.10 refuses them too, and promoting
+                // silently would hand a learner a program that works here and
+                // fails on the lab machine. Byte-fidelity against the MASM
+                // oracle depends on it.
+                //
+                // A COVERAGE HARNESS WANTS A DIFFERENT THING. Its question is
+                // "does this program run", and 14 of 525 never reached the
+                // machine because they were refused at assembly -- so the
+                // corpus was reporting an ASSEMBLER default as though it were
+                // a fact about the programs. Promotion only rewrites jumps
+                // that actually overflow, so every program that does not
+                // overflow is byte-identical either way and the differential
+                // oracles are untouched.
+                //
+                // Counted and printed, because a flag that changes 14 verdicts
+                // and leaves no trace is the same defect in a new place.
+                longJumps: true,
+                readInclude: (p2) => {
+                    const at = join(dir, p2);
+                    return existsSync(at) ? readFileSync(at, 'utf8') : undefined;
+                },
+                readBinary: (p2) => {
+                    const at = join(dir, p2);
+                    return existsSync(at) ? new Uint8Array(readFileSync(at)) : undefined;
+                },
+            });
+            const promotions = (out.warnings || []).filter(
+                (w) => /promoted to a branch over a near jump/.test(w.message || ''));
+            if (promotions.length) promotedPrograms.push({ name, n: promotions.length });
             bytes = out.bytes;
             kind = out.format || 'com';
         } catch (e) {
@@ -254,7 +360,7 @@ function runOne(name, raw, key) {
         while (!dos.terminated && steps < BUDGET) { dos.step(); steps++; }
     } catch (e) {
         const what = e instanceof Unimplemented ? e.message : `${e.name}: ${e.message}`;
-        return { name, kind, verdict: 'THREW', note: what, steps, report: dos.report() };
+        return { name, kind, verdict: 'THREW', note: what, steps, report: slimReport(dos.report()) };
     }
 
     const report = dos.report();
@@ -274,7 +380,7 @@ function runOne(name, raw, key) {
     // classified on OUTPUT rather than on termination.
     if (kind === 'boot') {
         return {
-            name, kind, steps, report,
+            name, kind, steps, report: slimReport(report),
             verdict: printed ? 'EXITED' : (steps >= BUDGET ? 'HUNG' : 'SILENT'),
         };
     }
@@ -282,9 +388,9 @@ function runOne(name, raw, key) {
     // loop is what a traffic-light controller IS, so the split is on whether
     // anything observable happened, not on whether the program exited.
     if (!dos.terminated) {
-        return { name, kind, steps, report, verdict: printed ? 'LOOPING' : 'HUNG' };
+        return { name, kind, steps, report: slimReport(report), verdict: printed ? 'LOOPING' : 'HUNG' };
     }
-    if (!printed) return { name, kind, steps, report, verdict: 'SILENT' };
+    if (!printed) return { name, kind, steps, report: slimReport(report), verdict: 'SILENT' };
     const golden = expected && key && expected[key];
     if (golden && typeof golden.output === 'string') {
         const want = norm(golden.output);
@@ -317,15 +423,15 @@ function runOne(name, raw, key) {
             // distinction NOINPUT already exists to draw.
             const asked = report.keyRequests > 0;
             return {
-                name, kind, steps, report, verdict: 'LOOPING',
+                name, kind, steps, report: slimReport(report), verdict: 'LOOPING',
                 note: `printed ${report.stdoutChars.toLocaleString()} characters; output capped `
                     + `at 1 MB and not compared`
                     + (asked ? ` — it asked for input ${report.keyRequests} time(s) and got none,`
                         + ' so it reprinted its prompt; try --type' : ''),
             };
         }
-        if (want === stream) return { name, kind, steps, report, verdict: 'MATCH', via: 'stream' };
-        if (want === screen) return { name, kind, steps, report, verdict: 'MATCH', via: 'screen' };
+        if (want === stream) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'stream' };
+        if (want === screen) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'screen' };
         // A SCREEN IS EIGHTY COLUMNS AND A STREAM IS NOT. Their oracle records
         // a stream, so a 111-character line stays on one line there and wraps
         // onto two here -- identical text, different shape. Wrapping THEIR
@@ -333,7 +439,7 @@ function runOne(name, raw, key) {
         // data rather than loosening the test: content that actually differs
         // still fails.
         if (norm(wrap80(want)) === screen) {
-            return { name, kind, steps, report, verdict: 'MATCH', via: 'screen (wrapped)' };
+            return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'screen (wrapped)' };
         }
         // A program that asked for a key and got none cannot be expected to
         // agree with a run that had one. Ours types nothing, so that is a
@@ -350,16 +456,16 @@ function runOne(name, raw, key) {
         const printable = [...want.slice(0, 400)]
             .filter((c) => c.charCodeAt(0) >= 32 && c.charCodeAt(0) < 127).length;
         if (want.length > 5000 || (want.length > 40 && printable < want.slice(0, 400).length / 2)) {
-            return { name, kind, steps, report, want, got: stream, verdict: 'ORACLE' };
+            return { name, kind, steps, report: slimReport(report), want, got: stream, verdict: 'ORACLE' };
         }
         const asked = report.keyRequests > 0;
         return {
-            name, kind, steps, report, want, got: stream,
+            name, kind, steps, report: slimReport(report), want, got: stream,
             verdict: asked ? 'NOINPUT' : 'DIFFER',
             known: KNOWN_DISAGREEMENTS[name],
         };
     }
-    return { name, kind, steps, report, verdict: 'EXITED' };
+    return { name, kind, steps, report: slimReport(report), verdict: 'EXITED' };
 }
 
 function collect(p) {
@@ -375,6 +481,14 @@ function collect(p) {
 }
 
 // ---- run ------------------------------------------------------------------
+/** Programs whose out-of-range conditionals had to be promoted, with how
+ *  many. Reported in the summary because `longJumps: true` changes 14
+ *  verdicts, and a flag that changes verdicts and leaves no trace is the
+ *  same defect this harness exists to find. Each promotion also carries the
+ *  assembler's own warning: "this program will no longer assemble under
+ *  MASM", which is the fact a reader needs. */
+const promotedPrograms = [];
+
 const results = [];
 if (flag('--selftest')) {
     for (const t of SELFTEST) {
@@ -393,7 +507,7 @@ if (flag('--selftest')) {
             // The expected-output file keys on the path below its own root,
             // so the key is whatever follows the directory we were given.
             const key = f.startsWith(p) ? f.slice(p.length).replace(/^[/\\]/, '') : basename(f);
-            results.push(runOne(basename(f), new Uint8Array(readFileSync(f)), key));
+            results.push(runOne(basename(f), new Uint8Array(readFileSync(f)), key, f));
         }
     }
 }
@@ -452,7 +566,66 @@ for (const r of healed) {
     console.log(`HEALED -- ${r.name} now agrees; drop its row: ${KNOWN_DISAGREEMENTS[r.name]}`);
 }
 
+if (promotedPrograms.length) {
+    const total = promotedPrograms.reduce((a, p) => a + p.n, 0);
+    console.log(`\n${promotedPrograms.length} program(s) needed OUT-OF-RANGE CONDITIONALS PROMOTED `
+        + `(${total} jump${total === 1 ? '' : 's'}), and would be refused without --longJumps:`);
+    for (const p2 of promotedPrograms.sort((a, b) => b.n - a.n)) {
+        console.log(`  ${p2.name} (${p2.n})`);
+    }
+    console.log('  These no longer assemble under real MASM. That is the cost of running them.');
+}
+
 let exit = 0;
+
+// ---- the CI gate ----------------------------------------------------------
+//
+// `--expect-counts MATCH=467,HUNG=0,...` fails unless the verdict distribution
+// is exactly what is named. This is what makes the corpus a GATE rather than a
+// report, and the counts are the right thing to assert: a text diff over 525
+// programs is 525 ways to be flaky, while a count that moves is a signal with
+// one cause to find.
+//
+// TWO THINGS THE COUNTS DEPEND ON, and a job that pins one and not the other
+// will chase a phantom regression:
+//
+//   the CORPUS COMMIT -- new programs change the distribution, and
+//   the --type INPUT STREAM -- without it six interactive programs block
+//     before printing anything and land in HUNG rather than LOOPING.
+//
+// Measured either side of the output cap, unchanged: 498 EXITED, 6 LOOPING,
+// 6 HUNG, 15 THREW without --type. A memory fix that quietly moved a verdict
+// would be worse than the OOM it fixed, so that equality is the reason this
+// gate can be trusted at all.
+//
+// Only the named verdicts are checked. Naming none is not a gate.
+const expectCounts = value('--expect-counts', null);
+if (expectCounts) {
+    const got = {};
+    for (const r of results) got[r.verdict] = (got[r.verdict] || 0) + 1;
+    const want = Object.fromEntries(expectCounts.split(',').filter(Boolean).map((kv) => {
+        const [k, v] = kv.split('=');
+        return [k.trim().toUpperCase(), Number(v)];
+    }));
+    const wrong = [];
+    for (const [k, n] of Object.entries(want)) {
+        if ((got[k] || 0) !== n) wrong.push(`${k}: want ${n}, got ${got[k] || 0}`);
+    }
+    console.log(`
+expected distribution over ${results.length} programs:`);
+    for (const [k, n] of Object.entries(want)) {
+        console.log(`  ${k.padEnd(8)} want ${String(n).padStart(4)}  got ${String(got[k] || 0).padStart(4)}`
+            + ((got[k] || 0) === n ? '' : '   <-- MOVED'));
+    }
+    if (wrong.length) {
+        console.error('VERDICT DISTRIBUTION MOVED. Either the emulator changed, the corpus '
+            + 'commit changed, or --type changed. Check the last two BEFORE assuming the first.');
+        exit = 1;
+    } else {
+        console.log('distribution matches.');
+    }
+}
+
 if (flag('--selftest')) {
     const wrong = results.filter((r) => r.verdict !== r.expected);
     for (const r of wrong) console.log(`SELFTEST MISMATCH ${r.name}: want ${r.expected}, got ${r.verdict}`);

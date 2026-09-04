@@ -54,8 +54,47 @@
  * `mov ss` / `mov sp` pair and a trap between them corrupts the same stack),
  * and the ordering when an INT instruction executes with TF already set.
  *
+ * THE 80186 VARIANT (added 2026-09-04, E6.8.1). `new I8086(bus, {variant:
+ * '80186'})` is the same core with the fifteen opcodes the 186 put in holes
+ * the 8086 leaves as decode aliases -- PUSHA, POPA, BOUND, PUSH imm8/imm16,
+ * the three-operand IMUL, INS/OUTS, shift-by-immediate, ENTER, LEAVE -- plus
+ * the two changes to instructions BOTH parts have: shift counts mask to five
+ * bits, and D0-D3/C0-C1 reg=6 is a second SHL rather than SETMO. One class
+ * answers for both; the variant is read at dispatch and never cached into a
+ * table, so there is no second core to drift.
+ *
+ * GRADED BY A DIFFERENT CHIP, and the gap is the interesting part.
+ * `scripts/grind-i8086-v20.mjs` runs 132,532/132,532 vectors from the
+ * SingleStepTests **v20** suite (MIT), because there is no hardware-generated
+ * 80186 suite and there is unlikely ever to be one. The NEC V20 implements
+ * the 186's additions with the same encodings, so it grades those. It does
+ * NOT grade the two shared-instruction changes, because the V20 sides with
+ * the 8086 on both:
+ *
+ *   - The V20 does not mask shift counts. MEASURED, not assumed: with masking
+ *     on, C0.4+C1.4 score 470/600; with it off, 579/600. So the grinder
+ *     EXCLUDES the 39,898 vectors whose count exceeds 31 and says so in its
+ *     summary, and `test/i8086-186.test.mjs` is what actually holds the
+ *     masking up.
+ *   - REPC/REPNC (0x64/0x65) are NEC prefixes with no 186 equivalent; 3,570
+ *     vectors use them and are excluded by name.
+ *
+ * What the V20 suite DID teach, which no reading of a manual would have:
+ * **OF is defined for every shift count on the later part, not only for a
+ * count of one** -- and the rule is the count-of-one rule applied to the LAST
+ * iteration rather than a new rule. Six C0 files failed on bit 0x800 alone
+ * until that landed. The 8086 path is bit-identical either way, because at a
+ * count of one the pre-final value IS the original.
+ *
+ * A pass here is evidence the 186 additions are right. It is NOT a claim of
+ * V20 compatibility: the V20's own instructions (the 0x0F bit-manipulation
+ * group, 8080 emulation mode) are not implemented and are not pretended to be.
+ *
  * @module
  */
+
+/** A 16-bit word read as a signed number -- BOUND and IMUL both need it. */
+const sx16 = (v) => ((v & 0xffff) ^ 0x8000) - 0x8000;
 
 // Flag bits in FLAGS.
 const CF = 0x0001, PF = 0x0004, AF = 0x0010, ZF = 0x0040, SF = 0x0080;
@@ -88,7 +127,21 @@ export class Unimplemented extends Error {
 export class I8086 {
     /** @param {{ read: (a:number)=>number, write:(a:number,v:number)=>void,
      *            in?:(port:number)=>number, out?:(port:number,v:number)=>void }} bus */
-    constructor(bus) {
+    constructor(bus, opts = {}) {
+        // WHICH CHIP. '8086' is the default and is what 646,000 vectors
+        // verify; '80186' adds the fifteen opcodes the 186 put in the holes
+        // the 8086 left as decode aliases, and masks shift counts to five
+        // bits. The flag is read at DISPATCH, never cached into a table, so
+        // one core class answers for both and there is no second core to
+        // drift. Anything that reads this must treat '8086' as the fallback:
+        // an unknown string is a caller error and is rejected here rather
+        // than silently becoming a 186.
+        if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186') {
+            throw new Error(`8086: unknown variant ${JSON.stringify(opts.variant)} `
+                + "-- expected '8086' or '80186'");
+        }
+        this.variant = opts.variant || '8086';
+        this._is186 = this.variant === '80186';
         this.read = bus.read;
         this.write = bus.write;
         this.inPort = bus.in || (() => 0xff);
@@ -354,11 +407,26 @@ export class I8086 {
      *  at all, flags included. */
     _shift(op, val, cnt, w) {
         const mask = w ? 0xffff : 0xff, sign = w ? 0x8000 : 0x80;
+        // REG=6 IS TWO DIFFERENT INSTRUCTIONS ON THE TWO PARTS. On the 8086
+        // it is SETMO/SETMOC -- undocumented, real, and verified by 646,000
+        // vectors. On the 186 the encoding was reclaimed as a second SHL,
+        // which is what the v20 suite's own disassembly calls it (`shl`, not
+        // `setmo`) and what period 186 documentation implies by listing the
+        // field as reserved rather than as an operation. Two sources agreeing
+        // is why this is a decision and not a guess; it is graded here for
+        // the V20 and ungraded for an Intel 186, which is stated in the
+        // grinder rather than left to be discovered.
+        if (op === 6 && this._is186) op = 4;
         if (op === 6) return this._setmo(cnt, w);       // undocumented, below
         if (cnt === 0) return val & mask;
         let v = val & mask, cf = this.flags & CF ? 1 : 0;
-        const orig = v;
+        // The value as it stood BEFORE THE LAST iteration. For a count of one
+        // this is the original operand, so the 8086 path below is unchanged
+        // to the bit; for a longer count it is what the 186's OF is computed
+        // from. See the OF block.
+        let orig = v;
         for (let i = 0; i < cnt; i++) {
+            orig = v;
             switch (op) {
                 case 0: { const b = (v & sign) ? 1 : 0; v = ((v << 1) | b) & mask; cf = b; break; }
                 case 1: { const b = v & 1; v = (v >>> 1) | (b ? sign : 0); cf = b; break; }
@@ -371,7 +439,20 @@ export class I8086 {
         }
         let f = this.flags & ~(CF | OF);
         if (cf) f |= CF;
-        if (cnt === 1) {
+        // OVERFLOW IS DEFINED FOR ONE COUNT ON AN 8086 AND FOR EVERY COUNT ON
+        // A 186, and the second rule is the first one applied to the LAST
+        // iteration rather than a different rule. Measured, not assumed: with
+        // OF computed only at cnt===1 the v20 suite fails six C0 files purely
+        // on bit 0x800; computing it every time fixes five of them, and
+        // taking SHR's operand from the pre-final value rather than the
+        // original fixes the sixth. That last one is the tell -- SHR's OF is
+        // "the MSB of what was shifted", and after two or more byte shifts
+        // there is nothing left up there, which is exactly the zero the
+        // hardware reports.
+        //
+        // The 8086 is untouched: at cnt===1 the pre-final value IS the
+        // original, so this is the same arithmetic it was verified with.
+        if (cnt === 1 || this._is186) {
             const msb = (v & sign) ? 1 : 0;
             let of = 0;
             switch (op) {
@@ -442,16 +523,16 @@ export class I8086 {
      *  one AFTER the failing instruction (the 286 changed this), which falls
      *  out naturally here because IP has already advanced. */
     _div8(src) {
-        if (src === 0) { this._interrupt(0); return; }
+        if (src === 0) { this._fault(0); return; }
         const q = Math.floor(this.ax / src), r = this.ax % src;
-        if (q > 0xff) { this._interrupt(0); return; }
+        if (q > 0xff) { this._fault(0); return; }
         this.al = q; this.ah = r;
     }
     _div16(src) {
-        if (src === 0) { this._interrupt(0); return; }
+        if (src === 0) { this._fault(0); return; }
         const n = this.dx * 65536 + this.ax;
         const q = Math.floor(n / src), r = n % src;
-        if (q > 0xffff) { this._interrupt(0); return; }
+        if (q > 0xffff) { this._fault(0); return; }
         this.ax = q & 0xffff; this.dx = r & 0xffff;
     }
     /** A REP prefix on IDIV NEGATES THE QUOTIENT. It is not a decode quirk
@@ -463,25 +544,25 @@ export class I8086 {
      *  BEFORE the flip -- that is the order the vectors show. */
     _idiv8(src) {
         const d = src & 0x80 ? src - 256 : src;
-        if (d === 0) { this._interrupt(0); return; }
+        if (d === 0) { this._fault(0); return; }
         const n = this.ax & 0x8000 ? this.ax - 65536 : this.ax;
         let q = Math.trunc(n / d);
         const r = n % d;
         // The range check is on the MAGNITUDE, so a quotient of exactly
         // -128 faults where -127..127 does not: the microcode compares an
         // absolute value against 0x7f and never sees the sign.
-        if (Math.abs(q) > 127) { this._interrupt(0); return; }
+        if (Math.abs(q) > 127) { this._fault(0); return; }
         if (this._rep) q = -q;
         this.al = q & 0xff; this.ah = r & 0xff;
     }
     _idiv16(src) {
         const d = src & 0x8000 ? src - 65536 : src;
-        if (d === 0) { this._interrupt(0); return; }
+        if (d === 0) { this._fault(0); return; }
         let n = this.dx * 65536 + this.ax;
         if (n >= 0x80000000) n -= 0x100000000;
         let q = Math.trunc(n / d);
         const r = n % d;
-        if (Math.abs(q) > 32767) { this._interrupt(0); return; }   // magnitude, as above
+        if (Math.abs(q) > 32767) { this._fault(0); return; }   // magnitude, as above
         if (this._rep) q = -q;
         this.ax = q & 0xffff; this.dx = r & 0xffff;
     }
@@ -548,7 +629,7 @@ export class I8086 {
             // a ZERO result -- ZF and PF set, SF, AF and CF clear -- while AX
             // itself is untouched, and INT 0 then pushes exactly that.
             this.flags = (this.flags & ~(CF | AF | OF | SF | PF)) | ZF | PARITY[0];
-            this._interrupt(0);
+            this._fault(0);
             return;
         }
         const al = this.al;
@@ -584,6 +665,42 @@ export class I8086 {
     /** Public entry for a machine-layer interrupt request. The caller owns
      *  the IF check and the acknowledge cycle; this just takes the vector. */
     interrupt(n) { this.halted = false; this._interrupt(n); }
+
+    /**
+     * A PROGRAM-INITIATED interrupt: INT n, INT3, INTO. Emits before taking
+     * it, so a debugger that breaks here sees the machine as the instruction
+     * left it rather than as the handler found it.
+     *
+     * WHY THIS IS NOT IN `_interrupt(n)`, which is where it obviously belongs
+     * and where it would be wrong. `_interrupt` is the SHARED funnel: the
+     * public `interrupt(n)` above routes hardware delivery through it too, so
+     * an emit there fires a second time for every IRQ and NMI the machine has
+     * already reported, and "break on INT 21h" starts tripping on the timer
+     * tick. The opcode handlers are the only sites a program's INT passes and
+     * a delivered IRQ does not. Verified rather than assumed — read
+     * `interrupt(n)` directly above and follow it down.
+     */
+    _swInt(n) {
+        this.onInterrupt?.({ vector: n, source: 'int' });
+        this._interrupt(n);
+    }
+
+    /**
+     * A FAULT the CPU raises on its own: divide overflow (0), the single-step
+     * trap (1), BOUND out of range (5, 186 only).
+     *
+     * Reported as `source: 'exception'` rather than folded into 'int',
+     * because "break when this divides by zero" and "break when the program
+     * calls INT 21h" are different questions asked for different reasons —
+     * the same argument that separates 'int' from 'irq'. A caller that wants
+     * them together can watch the vector and ignore the source; a caller that
+     * wants them apart cannot recover the distinction if we throw it away
+     * here.
+     */
+    _fault(n) {
+        this.onInterrupt?.({ vector: n, source: 'exception' });
+        this._interrupt(n);
+    }
 
     // ---- string primitives ----------------------------------------------
     /** The source of a string op takes a segment override; the destination
@@ -663,6 +780,175 @@ export class I8086 {
         }
     }
 
+    // ---- the 80186 additions --------------------------------------------
+    /**
+     * The fifteen opcodes an 80186 has and an 8086 does not, plus nothing
+     * else: `undefined` means "not mine", and the 8086 alias table below
+     * answers instead. Every one of these is an opcode the 8086 leaves as an
+     * alias, so nothing here can shadow a real 8086 instruction.
+     *
+     * Cycle counts are the published 186 timings. They are NOT vector-graded
+     * -- the v20 suite's arrays are bus traces from an NEC part with its own
+     * prefetch queue, which an instruction-stepped core cannot reproduce and
+     * which would not be a 186's numbers even if it could. Same standard the
+     * 8086 core states for its own counts, and for the same reason.
+     */
+    _exec186(op) {
+        switch (op) {
+            // PUSHA / POPA. The pushed SP is the value from BEFORE the
+            // instruction, unlike `push sp` on this same chip -- the 186
+            // latches it first and pushes the latch, which is why POPA can
+            // discard the slot rather than having to undo a decrement.
+            case 0x60: {
+                const sp0 = this.sp;
+                this._push(this.ax); this._push(this.cx);
+                this._push(this.dx); this._push(this.bx);
+                this._push(sp0);
+                this._push(this.bp); this._push(this.si); this._push(this.di);
+                return 36;
+            }
+            case 0x61: {
+                this.di = this._pop(); this.si = this._pop(); this.bp = this._pop();
+                // The SP slot is READ AND DISCARDED, not skipped: SP must end
+                // up where the pops left it, and a POPA that restored the
+                // stacked SP would undo its own unwinding.
+                this._pop();
+                this.bx = this._pop(); this.dx = this._pop();
+                this.cx = this._pop(); this.ax = this._pop();
+                return 51;
+            }
+
+            // BOUND r16, m32 -- the array-index check, and the only 186
+            // addition that can FAULT. Both bounds are inclusive and the
+            // comparison is SIGNED, so a negative index against a negative
+            // lower bound passes. INT 5 on failure, which on a PC is the
+            // print-screen vector: a 186 program that BOUNDs on a PC and
+            // faults prints the screen, which is a real historical hazard
+            // and not something to smooth over.
+            case 0x62: {
+                const c = this._modrm();
+                if (this.mod === 3) throw new Unimplemented(op);  // no register form
+                const idx = sx16(this._r16(this.reg));
+                const lo = sx16(this._rd16(this.eaSeg, this.ea));
+                const hi = sx16(this._rd16(this.eaSeg, (this.ea + 2) & 0xffff));
+                if (idx < lo || idx > hi) { this._fault(5); return 33 + c; }
+                return 33 + c;
+            }
+
+            // PUSH imm16 / PUSH imm8. The byte form SIGN-EXTENDS to a word
+            // before pushing -- `push -1` stores FFFFh, not 00FFh.
+            case 0x68: this._push(this._fetch16()); return 10;
+            case 0x6a: this._push(this._fetchS8() & 0xffff); return 10;
+
+            // IMUL r16, r/m16, imm -- the three-operand multiply, and the
+            // first x86 instruction with three operands at all. The result
+            // is the LOW word; CF and OF say whether the discarded high word
+            // was a real sign extension of it. SZAP are undefined and the
+            // suite masks them, so they are left alone rather than invented.
+            case 0x69: case 0x6b: {
+                const c = this._modrm();
+                const a = sx16(this._rm16());
+                const b = op === 0x69 ? sx16(this._fetch16()) : this._fetchS8();
+                const full = a * b;
+                const low = full & 0xffff;
+                this._r16set(this.reg, low);
+                const fits = full === sx16(low);
+                this.flags = fits ? (this.flags & ~(CF | OF)) : (this.flags | CF | OF);
+                return (this.mod === 3 ? 22 : 29 + c);
+            }
+
+            // INS / OUTS. INS writes ES:DI and takes NO segment override --
+            // the destination of a string primitive is always ES:DI, exactly
+            // as with STOS and MOVS. OUTS reads DS:SI and DOES honour one.
+            case 0x6c: case 0x6d: this._repeat(() => this._ins(op & 1), false); return 14;
+            case 0x6e: case 0x6f: this._repeat(() => this._outs(op & 1), false); return 14;
+
+            // Shift/rotate by an immediate count. The 8086 could only shift
+            // by 1 or by CL; this is the same shift unit with a third count
+            // source, and the count is masked to five bits like CL's.
+            case 0xc0: case 0xc1: {
+                const c = this._modrm();
+                const w = op & 1;
+                const v = w ? this._rm16() : this._rm8();
+                // MASKED, AND THE ORACLE DISAGREES -- read this before "fixing" it.
+                // The v20 suite says an NEC V20 does NOT mask this count: with
+                // masking on, C0.4/C1.4 score 470/600, and with it off, 579/600.
+                // That is not evidence the 186 does not mask. It is evidence
+                // the V20 does not, and the V20 is 8086-compatible here while
+                // the 186 is the part that introduced the `& 31`. So the
+                // masking STAYS -- it is the defining behaviour of this
+                // variant -- and the grinder excludes the counts above 31 BY
+                // NAME rather than pretending the suite graded them. Nothing
+                // grades this line; the tests below assert it directly.
+                const cnt = this._fetch8() & 31;
+                const r = this._shift(this.reg, v, cnt, w);
+                if (!(this.reg === 6 && cnt === 0)) { if (w) this._rm16set(r); else this._rm8set(r); }
+                return (this.mod === 3 ? 5 + cnt : 17 + c + cnt);
+            }
+
+            // ENTER imm16, imm8 -- build a stack frame, optionally copying
+            // `level-1` enclosing frame pointers so a nested procedure can
+            // reach its parents' locals. The display copy is the whole point
+            // of the instruction and the part that is usually got wrong:
+            // BP walks DOWN through the caller's display copying each entry,
+            // and then the NEW frame pointer is pushed last.
+            case 0xc8: {
+                const size = this._fetch16();
+                const level = this._fetch8() & 31;
+                this._push(this.bp);
+                const frame = this.sp;
+                if (level > 0) {
+                    for (let i = 1; i < level; i++) {
+                        this.bp = (this.bp - 2) & 0xffff;
+                        this._push(this._rd16(this.ss, this.bp));
+                    }
+                    this._push(frame);
+                }
+                this.bp = frame;
+                this.sp = (this.sp - size) & 0xffff;
+                return level === 0 ? 15 : level === 1 ? 25 : 22 + 16 * (level - 1);
+            }
+
+            // LEAVE -- discard the frame ENTER built. `mov sp, bp` then
+            // `pop bp`, in one opcode and with no flags touched.
+            case 0xc9:
+                this.sp = this.bp;
+                this.bp = this._pop();
+                return 8;
+
+            default: return undefined;                   // not a 186 opcode
+        }
+    }
+
+    /** INS: read the port in DX into ES:DI. No segment override applies to a
+     *  string DESTINATION, so this does not consult _srcSeg(). */
+    _ins(w) {
+        const d = this._delta(w);
+        // A WORD PORT ACCESS IS TWO BYTE ACCESSES, at DX and DX+1 -- the same
+        // convention `in ax, dx` follows two hundred lines below, and the one
+        // the suite's "reads return 0xFF" note is written against. Calling the
+        // bus once and using the result as a word gives 00FFh where the
+        // hardware gives FFFFh, which is a whole high byte of nothing.
+        const p = this.dx;
+        if (w) {
+            this._wr8(this.es, this.di, this.inPort(p) & 0xff);
+            this._wr8(this.es, (this.di + 1) & 0xffff, this.inPort((p + 1) & 0xffff) & 0xff);
+        } else this._wr8(this.es, this.di, this.inPort(p) & 0xff);
+        this.di = (this.di + d) & 0xffff;
+    }
+
+    /** OUTS: write DS:SI (override-able) to the port in DX. */
+    _outs(w) {
+        const seg = this._srcSeg();
+        const d = this._delta(w);
+        const p = this.dx;
+        if (w) {
+            this.outPort(p, this._rd8(seg, this.si));
+            this.outPort((p + 1) & 0xffff, this._rd8(seg, (this.si + 1) & 0xffff));
+        } else this.outPort(p, this._rd8(seg, this.si));
+        this.si = (this.si + d) & 0xffff;
+    }
+
     // ---- one instruction ------------------------------------------------
     /** Execute one instruction; returns its cycle cost. Throws Unimplemented
      *  for opcodes this core has not reached, so the grinder counts those as
@@ -720,13 +1006,24 @@ export class I8086 {
         // what lets a debugger's IRET resume tracing. HLT is left alone: a
         // halted CPU has not completed an instruction boundary in the sense
         // this trap is about, and waking it belongs to the machine layer.
-        if (traceThis && !this.halted && this.intShadow === 0) { this._interrupt(1); n += 51; }
+        if (traceThis && !this.halted && this.intShadow === 0) { this._fault(1); n += 51; }
 
         this.cycles += n;
         return n;
     }
 
     _exec(op) {
+        // THE 186 GETS FIRST REFUSAL, and this is deliberately here rather
+        // than threaded through the switch below. On an 8086 the fifteen
+        // opcodes the 186 later claimed are DECODE ALIASES -- 0x60-0x6f land
+        // on Jcc, C0/C1/C8/C9 land on the returns -- and a `case` label
+        // cannot be conditional. Asking the variant before the alias table
+        // is reached keeps both answers in one core with no table to drift.
+        // Cost on the 8086 path is one boolean test per instruction.
+        if (this._is186) {
+            const r = this._exec186(op);
+            if (r !== undefined) return r;
+        }
         // ---- 0x00-0x3f: the eight ALU ops, six forms each ----------------
         if (op < 0x40 && (op & 7) < 6) {
             const kind = op >> 3, form = op & 7, w = form & 1;
@@ -889,16 +1186,22 @@ export class I8086 {
             case 0xc7: { const c = this._modrm(); this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
             case 0xc8: case 0xca: { const k = this._fetch16(); this.ip = this._pop(); this.cs = this._pop(); this.sp = (this.sp + k) & 0xffff; return 25; }
             case 0xc9: case 0xcb: this.ip = this._pop(); this.cs = this._pop(); return 26;
-            case 0xcc: this._interrupt(3); return 52;
-            case 0xcd: { const v = this._fetch8(); this._interrupt(v); return 51; }
-            case 0xce: if (this.flags & OF) { this._interrupt(4); return 53; } return 4;
+            case 0xcc: this._swInt(3); return 52;
+            case 0xcd: { const v = this._fetch8(); this._swInt(v); return 51; }
+            case 0xce: if (this.flags & OF) { this._swInt(4); return 53; } return 4;
             case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = fixFlags(this._pop()); return 24;
 
             // ---- 0xd0-0xd7: shift group, BCD by immediate, SALC, XLAT ----
             case 0xd0: case 0xd1: case 0xd2: case 0xd3: {
                 const c = this._modrm();
                 const w = op & 1, byCl = op & 2;
-                const cnt = byCl ? this.cl : 1;
+                // SHIFT COUNTS ARE NOT MASKED ON AN 8086. `shl ax, cl` with
+                // CL=33 really shifts thirty-three times and leaves zero;
+                // the `& 31` that every later x86 applies arrived with the
+                // 186. This is the one variant difference that changes an
+                // EXISTING opcode rather than filling an empty one, so it is
+                // also the one a program can use to tell the two apart.
+                const cnt = byCl ? (this._is186 ? this.cl & 31 : this.cl) : 1;
                 const v = w ? this._rm16() : this._rm8();
                 const r = this._shift(this.reg, v, cnt, w);
                 if (!(this.reg === 6 && cnt === 0)) { if (w) this._rm16set(r); else this._rm8set(r); }
