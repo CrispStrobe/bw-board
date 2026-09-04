@@ -481,6 +481,10 @@ export class I8086Machine {
         this.mem = new Uint8Array(1 << 20);
         /** @type {Record<string, I8255|NS16C550|MC6850>} */
         this.chips = {};
+        // Flattened advance schedule, built on first use. null = needs rebuild.
+        // See _advanceChips: this exists because Object.keys() in that loop
+        // allocated an array per INSTRUCTION.
+        this._advList = null;
         this.cycles = 0;
         this._pinLevels = {};
         this._nmiPending = false;
@@ -1097,26 +1101,54 @@ export class I8086Machine {
     attachDevice(name, dev) {
         this.devices = this.devices || {};
         this.devices[name] = dev;
+        this._advList = null;   // schedule is stale
         return dev;
     }
 
-    _advanceChips(n) {
-        // The OPL runs on its OWN 3.58 MHz crystal and generates at
-        // clock/72, so it is advanced in MILLISECONDS of emulated time rather
-        // than in machine cycles -- the same distinction the AY's crystal
-        // taught this fleet, expressed as a different method name so the two
-        // cannot be confused at a call site.
-        const ms = n * 1000 / this.clockHz;
+    /**
+     * Build the flattened advance schedule: [target, isMs, target, isMs, ...].
+     *
+     * Interleaved in ONE array rather than an array of {target, isMs} pairs so
+     * that rebuilding allocates once instead of once per chip, and so the hot
+     * loop below does no property lookups on a wrapper object.
+     */
+    _buildAdvanceList() {
+        const list = [];
+        let anyMs = false;
         for (const name of Object.keys(this.chips)) {
             const chip = this.chips[name];
-            if (chip.advanceMs) chip.advanceMs(ms);
-            else if (chip.advance) chip.advance(n);
+            if (chip.advanceMs) { list.push(chip, 1); anyMs = true; }
+            else if (chip.advance) list.push(chip, 0);
         }
         if (this.devices) {
             for (const name of Object.keys(this.devices)) {
                 const dev = this.devices[name];
-                if (dev.advance) dev.advance(n);
+                if (dev.advance) list.push(dev, 0);
             }
+        }
+        this._anyMs = anyMs;
+        this._advList = list;
+        return list;
+    }
+
+    _advanceChips(n) {
+        // HOT: called once per instruction, and on a 7-chip PCXT8086 it was
+        // measured at 1079 ns/step against the CPU core's own 87 ns -- 89% of
+        // machine.step(). Roughly 400 ns of that was Object.keys() allocating
+        // a fresh array of chip names EVERY INSTRUCTION. Hence the cached
+        // schedule; do not reintroduce an iteration that allocates.
+        const list = this._advList !== null ? this._advList : this._buildAdvanceList();
+        if (list.length === 0) return;
+        // The OPL runs on its OWN 3.58 MHz crystal and generates at
+        // clock/72, so it is advanced in MILLISECONDS of emulated time rather
+        // than in machine cycles -- the same distinction the AY's crystal
+        // taught this fleet, expressed as a different method name so the two
+        // cannot be confused at a call site. Skipped entirely when no attached
+        // chip wants ms, which is the common case.
+        const ms = this._anyMs ? n * 1000 / this.clockHz : 0;
+        for (let i = 0; i < list.length; i += 2) {
+            if (list[i + 1] === 1) list[i].advanceMs(ms);
+            else list[i].advance(n);
         }
     }
 
