@@ -7,6 +7,9 @@
  * FOUR ADDRESSES: 0=counter 0, 1=counter 1, 2=counter 2, 3=control word.
  * The control word selects which counter to configure and never reads back
  * (the read-back command is an 8254 extension over the 8253 and IS handled).
+ * A machine may declare `variant: '8253'` for the earlier part the original
+ * IBM PC/XT used: identical but for the read-back command, which the 8253 does
+ * not have and ignores as an illegal (counter-3) control word.
  *
  * MODES: only 0, 2 and 3 are modelled because that is what the teaching
  * corpus runs. Mode 0 is "interrupt on terminal count" — OUT goes high
@@ -44,6 +47,10 @@ export class I8254 {
      */
     constructor(hooks = {}) {
         this.hooks = hooks;
+        // '8253' is the earlier part (original IBM PC/XT): it has NO read-back
+        // command. The read-back (SC field = 11b) is an 8254 extension; on an
+        // 8253 that control word selects a non-existent counter 3 and is ignored.
+        this.variant = hooks.variant === '8253' ? '8253' : '8254';
         this.counters = [new Counter(0, hooks), new Counter(1, hooks), new Counter(2, hooks)];
     }
 
@@ -60,7 +67,9 @@ export class I8254 {
 
         const sc = (val >> 6) & 3;
         if (sc === 3) {
-            // Read-back command (8254 only): latch count and/or status
+            // Read-back command (8254 only): latch count and/or status. On the
+            // 8253 this control word is illegal (counter 3) and does nothing.
+            if (this.variant === '8253') return;
             for (let ch = 0; ch < 3; ch++) {
                 if (!(val & (2 << ch))) continue;
                 if (!(val & 0x20)) this.counters[ch].latchCount();

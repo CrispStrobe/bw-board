@@ -306,6 +306,18 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // keyboard for it would be offering one that silently does
                 // nothing -- the same reason `steps` does not list 'cycle'.
                 keys: machine.canTakeKeys && machine.canTakeKeys() ? ['scancode'] : [],
+                // The world a widget or a code block can CHANGE, not just
+                // watch. Empty when the machine has no input hardware, on the
+                // same terms as `keys`: an affordance appears exactly when the
+                // machine can honour it.
+                inputs: typeof machine.inputPoints === 'function' ? machine.inputPoints() : [],
+                // What a widget can SHOW. Declared like `inputs` and for the
+                // same reason: an LED panel on a board with no port chip
+                // would be eight lamps that never light, which reads as a
+                // broken program rather than an absent chip.
+                outputs: typeof machine.outputPoints === 'function'
+                    ? machine.outputPoints().map(({ chip, port, bits }) => ({ chip, port, bits }))
+                    : [],
                 // Whether this target can BE GIVEN symbols, not whether it
                 // has any. A host asks this to decide whether the control
                 // exists at all; whether it does anything is setSymbols()'s
@@ -341,6 +353,29 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          */
         keyIn(scancode) {
             return typeof machine.keyIn === 'function' ? machine.keyIn(scancode) : false;
+        },
+
+        /**
+         * Drive one input bit -- a switch, a sensor, a button. Returns false
+         * rather than pretending when there is nothing to drive.
+         *
+         * The counterpart to video() and audioTone(): those report what the
+         * machine is DOING, and this changes what the machine SEES. A
+         * workbench that can only observe is a television.
+         */
+        /**
+         * The output ports, READ FRESH. `capabilities()` lists which ports
+         * exist -- a shape that does not change -- and this reports what they
+         * are doing right now, because a renderer asks every frame and a value
+         * captured in a capability would be a photograph.
+         */
+        outputs() {
+            return typeof machine.outputPoints === 'function' ? machine.outputPoints() : [];
+        },
+
+        setInput(chip, port, bit, level) {
+            return typeof machine.setInput === 'function'
+                ? machine.setInput(chip, port, bit, level) : false;
         },
 
         state() { return runState; },

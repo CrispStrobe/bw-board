@@ -401,6 +401,31 @@ export const EGADEMO8086 = Object.freeze({
     ],
 });
 
+/**
+ * The capstone board — TWO interrupt sources at once. An 8086, 64K RAM, the CGA
+ * text page, an 8259 PIC, an 8254 PIT wired OUT0->IR0, an 8255 keyboard port,
+ * and a CGA card. Load rom/desk-demo.bin (scripts/build-desk-demo.mjs) and the
+ * 8259 arbitrates both live IRQ lines: IRQ0 (the timer) updates a hex clock at
+ * the top-right every tick, and IRQ1 (the keyboard) echoes what you type onto a
+ * line below — concurrently, each interrupt acknowledged and EOI'd on its own.
+ * The timer and keyboard demos each drive one source; this proves they compose
+ * through the PIC's priority and two independent EOIs.
+ */
+export const DESKDEMO8086 = Object.freeze({
+    clockHz: 4_772_727,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K conventional
+        { kind: 'ram', start: 0xb8000, end: 0xbffff },   // the CGA text page (B800:0000)
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'pic', name: 'pic1', at: 0x20 },         // 8259: IR0 -> INT 8, IR1 -> INT 9
+        { kind: 'pit', name: 'pit1', at: 0x40, irq: 0 }, // 8254 OUT0 -> IR0 (the clock)
+        { kind: 'ppi', name: 'ppi1', at: 0x60 },         // 8255 keyboard: scancode at 60h, ack at 61h
+        { kind: 'cga', name: 'cga1', at: 0x3d0 },        // CGA text page at B800:0000
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
@@ -458,6 +483,7 @@ export class I8086Machine {
             } else if (c.kind === 'pit') {
                 chip = new I8254({
                     onOutput: (channel, level) => this._pitOutput(c, channel, level),
+                    variant: c.variant,   // '8253' for the original PC/XT part (no read-back)
                 });
             } else if (c.kind === 'pic') {
                 // The INTR output is polled in step(); the hook is only a
@@ -1084,6 +1110,87 @@ export class I8086Machine {
      * ack (port B bit 7), handled in _out. Host widgets map key events to set-1
      * scancodes and call this; it is machine-agnostic, needing only a PPI + PIC.
      */
+    /**
+     * WHAT THE WORLD CAN SEE THE MACHINE DOING — the counterpart to
+     * `inputPoints()`, and the half that makes an LED possible.
+     *
+     * Each entry is one 8255 port: what the chip DRIVES (`value`), which bits
+     * it drives at all (`dir`, 1 = driven by the chip), and what the pins
+     * actually carry (`pins`, the latch where it drives and the input
+     * elsewhere). All three are needed and none substitutes for another --
+     * `value` alone would light an LED on a bit configured as an INPUT, which
+     * is a lamp for a wire the chip is not driving.
+     *
+     * DIRECTION IS REPORTED HERE AND NOT IN `inputPoints()`, and the asymmetry
+     * is deliberate rather than an oversight. A caller writing an input asks
+     * "can I drive this", which only the write can answer. A caller DRAWING an
+     * output must know, this frame, which bits mean anything -- and it is
+     * reading a snapshot it is about to render, so a value that is one
+     * instruction stale is exactly as stale as everything else in the frame.
+     */
+    outputPoints() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setInput !== 'function') continue;   // an 8255-shaped chip
+            for (const port of ['a', 'b', 'c']) {
+                const P = port.toUpperCase();
+                out.push({
+                    chip: name, port, bits: 8,
+                    value: chip[`out${P}`] & 0xff,
+                    dir: chip[`dir${P}`] & 0xff,
+                    pins: chip[`_pins${P}`] ? chip[`_pins${P}`]() & 0xff : 0xff,
+                });
+            }
+        }
+        return out;
+    }
+
+    /**
+     * WHAT A WIDGET OR A CODE BLOCK CAN CHANGE ABOUT THE WORLD.
+     *
+     * Every input point the machine currently has, as `{chip, port, bits}`.
+     * Today that is the 8255's ports, which is where a breadboard hangs its
+     * switches -- the same ports `setInput` drives from a drawn board.
+     *
+     * DIRECTION IS NOT REPORTED HERE, DELIBERATELY. A port's direction is a
+     * mode word the PROGRAM writes and can rewrite at any instruction, so a
+     * list computed once would be stale by the time anyone read it. What is
+     * stable is which ports EXIST; whether a given bit is an input right now
+     * is `setInput`'s answer, not this one's.
+     */
+    inputPoints() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setInput !== 'function') continue;
+            for (const port of ['a', 'b', 'c']) out.push({ chip: name, port, bits: 8 });
+        }
+        return out;
+    }
+
+    /**
+     * Drive one input bit, as a switch or a sensor would.
+     *
+     * @returns {boolean} false when there is nothing to drive, rather than
+     *   silently succeeding -- a widget offered for a machine with no 8255
+     *   would otherwise look connected and do nothing.
+     *
+     * THE HONEST LIMIT, and it is the one a caller must know: a machine
+     * ATTACHED TO A DRAWN BOARD re-reads every input pin from that board on
+     * each advance (`i8086-adapter.js`), so a value set here is overwritten
+     * on the next step. The board is the world for such a machine, and it
+     * should be -- flipping a switch in a widget while the schematic says
+     * otherwise is a contradiction, not an input. Callers that want both
+     * should drive the board.
+     */
+    setInput(chipName, port, bit, level) {
+        const chip = (this.chips || {})[chipName];
+        if (!chip || typeof chip.setInput !== 'function') return false;
+        if (!['a', 'b', 'c'].includes(port)) return false;
+        if (!(bit >= 0 && bit < 8)) return false;
+        chip.setInput(port, bit, level ? 1 : 0);
+        return true;
+    }
+
     /**
      * Can this machine take a key at all? A board with no 8255 has nowhere to
      * latch a scancode and one with no 8259 has no wire to raise IRQ1 on.

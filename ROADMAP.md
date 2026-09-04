@@ -2009,6 +2009,12 @@ lands it.
      region map. This is the "boot the real BIOS" board, not a minimal demo.
    These are the machines step 2's Machine-Loader offers; the minimal two are
    pickable and demonstrable today, PCXT8086 once the host wires video/keyboard.
+   **The example set grew to NINE self-booting firmwares (2026-09-04):** the
+   UART shell, the five display cards (CGA text/graphics, VGA, Hercules, EGA —
+   all rendering), the timer, the keyboard, and **DESKDEMO8086** — the capstone,
+   which runs the timer (IRQ0) and keyboard (IRQ1) at once and is the first thing
+   to exercise the 8259 with two live IRQ lines composed (priority + two EOIs),
+   the same path the DOS boot depends on.
 
 2. **bw-circuit-ui recognises and places the 8086.** Add `i8086` to
    `src/parts-data/` (JSON + SVG, reuse the bw-parts pinout), register the kind
@@ -2056,9 +2062,13 @@ lands it.
    int09 (bios.asm:734). KBDDEMO8086 + rom/keyboard-demo.bin prove it bare-metal
    (INT 09h -> read 0x60 -> ack -> set-1->ASCII -> echo -> own EOI); it is the
    first thing to drive the 8259 IRQ1 path for real (the DOS boot test had been
-   using cpu.interrupt(9) direct). REMAINING (host lane): debug-runner maps
-   VdpScreen key events -> set-1 scancodes -> `runner.keyIn`. The UI loader entry
-   is HELD until that lands — a board you cannot type into is not an example.
+   using cpu.interrupt(9) direct). **CLOSED (2026-09-04): host mapping landed
+   (lego-47) — browser key -> set-1 scancode -> keyIn -> 8255 -> IRQ1 on hardware
+   boards, ASCII into the DOS key queue on the PIC-less ASM bench; the KBDDEMO
+   loader entry is wired (bw-circuit-ui `13bbd54`).** The Circuit Designer 8086
+   example now has both widgets live — the display cards (five, all rendering)
+   for output and the keyboard for input — plus the UART shell, the timer, and
+   GUI binary-loading. Eight example firmwares.
 
 8. **GUI binary-loading.** The file-upload path already accepts `.bin`; add the
    `i8086` loader branch (`romAt: 0xF0000` load address) and an example ROM under

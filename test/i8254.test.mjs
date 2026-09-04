@@ -117,6 +117,38 @@ test('read-back command latches count and status', () => {
     assert.equal(lo | (hi << 8), 90);
 });
 
+test('8254 is the default variant', () => {
+    assert.equal(pit().variant, '8254');
+    assert.equal(new I8254({ variant: '8253' }).variant, '8253');
+    assert.equal(new I8254({ variant: 'nonsense' }).variant, '8254', 'unknown falls back to 8254');
+});
+
+test('8253 variant: the read-back command is ignored (no 8254 extension)', () => {
+    const t = new I8254({ variant: '8253' });
+    t.write(3, 0x34);   // counter 0, rw=3, mode 2
+    t.write(0, 100); t.write(0, 0);
+    t.advance(10);
+    // On an 8254, 0xC2 latches status+count and the FIRST read returns the
+    // status byte (0xB4 here: OUT high, rw=3, mode 2). On the 8253 the command
+    // is illegal (counter 3) and ignored, so the counter is NOT latched and the
+    // reads return the LIVE count (90) directly — no status byte in front.
+    t.write(3, 0xc2);
+    const lo = t.read(0);
+    const hi = t.read(0);
+    assert.equal(lo | (hi << 8), 90, 'reads returned the live count, not a latched status');
+});
+
+test('8253 vs 8254: same read-back word, different first read', () => {
+    const setup = (v) => {
+        const t = new I8254({ variant: v });
+        t.write(3, 0x34); t.write(0, 100); t.write(0, 0); t.advance(10);
+        t.write(3, 0xc2);
+        return t.read(0);          // the first read after the read-back word
+    };
+    assert.equal(setup('8254') & 0x80, 0x80, '8254: first read is the status byte (OUT bit set)');
+    assert.equal(setup('8253'), 90, '8253: first read is the live count LSB');
+});
+
 test('control register reads as 0xFF', () => {
     const t = pit();
     assert.equal(t.read(3), 0xff);

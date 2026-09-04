@@ -147,6 +147,138 @@ jobs:
         run: node scripts/grind-i8086-disasm.mjs
 
   # ---------------------------------------------------------------------
+  # The 525-program teaching corpus, which until now ran nowhere but a
+  # developer's box -- and for most of today could not run to completion
+  # anywhere, because the harness exhausted V8's heap at 12m31s.
+  #
+  # WHY IT IS A GATE AT ALL. The vector jobs above prove the CORE against
+  # hardware-generated truth. They say nothing about whether a real program
+  # written by a person assembles, loads, runs and prints what it printed
+  # yesterday -- which is a different claim and the one a learner cares about.
+  #
+  # WHAT IS ASSERTED: the VERDICT COUNTS, not the text. A text diff over 525
+  # programs is 525 ways to be flaky; a count that moves is one signal with one
+  # cause to find. The distribution below was measured on this corpus commit
+  # with this input stream, and it held identical either side of the output-cap
+  # fix -- which is why it can be trusted as a baseline rather than as a
+  # snapshot of a moving target.
+  #
+  # THREE PINS, AND ALL THREE ARE LOAD-BEARING. Measured, not assumed:
+  #
+  #   corpus commit                  new programs change the distribution
+  #   --emu8086                      6 HUNG -> 0. Six programs in External
+  #                                  Devices/ drive emu8086's virtual device
+  #                                  ports; without that layer they write into
+  #                                  unclaimed ports, produce nothing
+  #                                  observable, and are CORRECTLY classified
+  #                                  HUNG. With it they drive their devices and
+  #                                  become LOOPING -- which is right: a
+  #                                  traffic-light controller never exits.
+  #   --type                         moves four LOOPING to EXITED, and costs
+  #                                  25 MINUTES of wall clock (25m43s without,
+  #                                  38s with) because the interactive programs
+  #                                  stop running to the budget. If this job is
+  #                                  ever slow, that is the lever.
+  #
+  # A job pinning the commit and not the flags would chase a phantom regression
+  # the first time someone changed a default, and the flags are not
+  # independent: the documented 12 LOOPING / 0 HUNG pair is --emu8086 WITHOUT
+  # --type, while the 467 MATCH figure came from a --type run. Two numbers in
+  # one document, from two configurations. That is exactly the trap this
+  # comment exists to stop.
+  #
+  # BUDGET 26 MINUTES. Peak RSS is 238 MB against a 900 MB cap, so memory is a
+  # non-issue -- but two interactive programs alone account for 344 s and 860 s
+  # of it. The runner's TIME limit is the constraint to check, not its RAM.
+  #
+  # THE FIRST VERSION OF THIS JOB WAS WRONG IN THREE WAYS AND ALL THREE WERE
+  # FOUND BY RUNNING IT, which is the only reason to write down what follows.
+  #
+  #  1. `--assembler ./src/i8086-asm.js` — the path resolves relative to the
+  #     SCRIPT, not the working directory, so the job died with a
+  #     module-not-found before assembling anything. `../src/` is correct.
+  #  2. It pinned MATCH=467 and friends. MATCH requires an --expect ORACLE and
+  #     this job passes none, so every program that runs is EXITED. The
+  #     verdict VOCABULARY depends on the flags, not only the counts.
+  #  3. It pinned the wrong flag set (see the pins above).
+  #
+  # The distribution below is MEASURED in this exact configuration rather than
+  # copied from a document: 517 EXITED, 8 LOOPING, 0 HUNG, 0 THREW.
+  #
+  # THREW IS NOW ZERO: every one of the 525 programs assembles. It was 15 this
+  # morning, and none of the difference was an emulator change -- fourteen were
+  # an assembler DEFAULT the harness never overrode, and the fifteenth was
+  # .FARDATA, a two-line directive gap. The corpus was reporting facts about
+  # the assembler's configuration as though they were facts about the programs.
+  #
+  # The eight LOOPING are correct rather than outstanding: interactive programs
+  # and device controllers that never exit and never should.
+  #
+  # THREW WAS 15 AND IS NOW 1, and none of that was an emulator change. The
+  # harness was calling assemble() without `longJumps`, so fourteen programs
+  # were REFUSED AT ASSEMBLY for an out-of-range conditional jump and never
+  # reached the machine at all. The corpus was reporting an assembler DEFAULT
+  # as though it were a fact about the programs. The remaining one is a real
+  # gap: `.FARDATA`, which the assembler lists as unsupported. A stronger version of this
+  # gate would add --expect and compare OUTPUT rather than termination; that is
+  # worth doing and is not done here.
+  #
+  # THE FIRST VERSION GOT IT WRONG, and the way it was caught is worth more
+  # than the fix. It pinned the commit and --type only, on a
+  # hypothesis that 6 HUNG + 6 LOOPING = 12 meant --type was the variable. The
+  # arithmetic was right and the MECHANISM was wrong: --type moves four LOOPING
+  # to EXITED and leaves HUNG at 6, and it is --emu8086 that takes HUNG to
+  # zero. The review lane measured all three configurations rather than
+  # accepting the arithmetic.
+  #
+  # The comment that version carried -- "if the confirming run disagrees, the
+  # counts are wrong and the emulator is not" -- is the reason this was a
+  # ten-minute correction instead of an afternoon hunting a regression that a
+  # first-run gate invented. Keep that sentence in any gate landed on numbers
+  # measured once.
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS
+          ref: aa8f32aee87c68db1fb9b1f6005b494884df8935
+          path: corpus
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+
+      # Prove the checkout BEFORE trusting anything that reads it, exactly as
+      # the vectors job does. A harness handed an empty directory reports a
+      # clean run over nothing.
+      - name: The corpus is actually here
+        run: |
+          set -euo pipefail
+          n=$(find corpus -iname '*.asm' | wc -l)
+          echo "$n .asm files"
+          test "$n" -eq 525
+
+      # The harness's own selftest first. It runs known programs with known
+      # verdicts, so a harness that cannot tell a working program from a silent
+      # one -- or a hang from an exit -- fails HERE rather than reporting a
+      # green corpus made of nothing.
+      - name: The harness can tell the verdicts apart
+        run: node scripts/run-i8086-corpus.mjs --selftest
+
+      - name: 525 programs, assembled and run
+        run: |
+          node --max-old-space-size=900 scripts/run-i8086-corpus.mjs \
+            --assembler ../src/i8086-asm.js \
+            --emu8086 \
+            --type '5\r3\rAMEY\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r' \
+            --expect-counts 'EXITED=517,LOOPING=8,HUNG=0,THREW=0' \
+            "corpus/Source Code"
+
+  # ---------------------------------------------------------------------
   # The 80186 variant, graded against a DIFFERENT CHIP -- and that is the
   # point of this job rather than a caveat on it.
   #

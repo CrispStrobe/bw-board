@@ -130,6 +130,43 @@ export function createDos8086(machine, io = {}) {
     const trapSeg = io.trapSeg ?? DEFAULT_TRAP_SEG;
     const trapBase = trapSeg << 4;
     const onChar = io.onChar || null;
+    /**
+     * WAIT FOR A KEY, or answer NUL and run on?
+     *
+     * DOS blocks. This layer does not, by default, and that default is right
+     * for the corpus harness: 525 programs run unattended, and a blocking
+     * read turns "this program wanted input nobody gave it" -- a NOINPUT
+     * verdict, useful -- into a hang indistinguishable from a broken emulator.
+     *
+     * It is wrong for a person at a keyboard. A program that asks for a key
+     * and is handed NUL immediately never sees what they type, and the tab
+     * shows a program that ran and ignored them.
+     *
+     * So it is an option, and blocking is implemented by DECLINING TO
+     * SERVICE: the trap page holds `jmp $`, so an unserviced INT leaves the
+     * CPU spinning in place and the next step asks again. No new mechanism,
+     * and time still passes -- which matters, because a program blocked on a
+     * key must still see the timer tick.
+     */
+    const blockOnKey = io.blockOnKey === true;
+
+    /**
+     * Is this call one that a real DOS would block on, with nothing to give
+     * it? INT 21h's echoing and non-echoing single-character reads and its
+     * buffered line read; INT 16h's blocking read (AH=00h/10h).
+     *
+     * The POLLS are deliberately absent: INT 21h/AH=06h with DL=FFh, AH=0Bh
+     * ("is a key ready"), and INT 16h/AH=01h/11h all EXIST to answer "no" --
+     * blocking them would hang every program that politely checks before
+     * reading, which is the well-written half of the corpus.
+     */
+    const waitingForKey = (n) => {
+        if (keys.length) return false;
+        if (n === 0x21) return cpu.ah === 0x01 || cpu.ah === 0x07
+            || cpu.ah === 0x08 || cpu.ah === 0x0a;
+        if (n === 0x16) return cpu.ah === 0x00 || cpu.ah === 0x10;
+        return false;
+    };
     /** Pending keystrokes, as ASCII bytes. INT 16h and INT 21h both drink here. */
     const keys = io.keys ? [...io.keys] : [];
     /** The virtual filesystem. A teaching sandbox has no business touching a real one. */
@@ -138,7 +175,32 @@ export function createDos8086(machine, io = {}) {
     let nextHandle = 5;                 // 0-4 are the standard handles
 
     const unsupported = new Map();      // "int:ah" → count
+    /**
+     * CAPTURED OUTPUT IS BOUNDED, and the bound is the whole point.
+     *
+     * `stdout` used to grow without limit, one character at a time, for as
+     * long as a program kept printing. That is fine for a program that ends
+     * and catastrophic for one that does not: measured on the textbook
+     * corpus, a looping program emits about **10 MB per million steps**, and
+     * the harness's default budget is five million — so a single
+     * non-terminating program retains roughly 40 MB, and the comparison path
+     * then copies it again.
+     *
+     * WHAT MADE THIS HARD TO SEE is that the cost is not spread. Across all
+     * 525 programs the total captured output is 6.9 MB, and **two programs
+     * account for 98.4% of it**. Per-program averaging says 13 KB each and
+     * hides two 3-4 MB outliers completely; the average was the reason this
+     * looked like a slow leak rather than two runaway programs.
+     *
+     * A megabyte is far past the point where more output tells anyone
+     * anything: it is 13,000 lines. Past the cap the characters are COUNTED
+     * and dropped, `truncated` says so in the report, and nothing pretends
+     * the program printed less than it did.
+     */
+    const MAX_STDOUT = 1 << 20;
     let stdout = '';
+    /** Characters the program actually emitted, including those past the cap. */
+    let stdoutChars = 0;
     /** Every INT 03h the program executed, in order. */
     const breakpoints = [];
     let rebooted = 0;
@@ -154,6 +216,7 @@ export function createDos8086(machine, io = {}) {
      *  the generic IRET below must not run and undo it. */
     let controlTransferred = false;
     let terminated = false;
+    let lastTickMs = 0;         // machine time of the last delivered BIOS timer tick
     let exitCode = 0;
     let psp = 0;
     let cursor = 0;                     // linear cell index into the text page
@@ -219,7 +282,10 @@ export function createDos8086(machine, io = {}) {
     /** One character through the BIOS teletype path: the shared write. */
     const putChar = (code) => {
         const ch = String.fromCharCode(code);
-        stdout += ch;
+        stdoutChars++;
+        // The cap bounds what is RETAINED, not what is observed: onChar still
+        // sees every character, so a caller streaming output loses nothing.
+        if (stdout.length < MAX_STDOUT) stdout += ch;
         if (onChar) onChar(ch);
         let c = getCursor();
         if (code === 0x0d) { c -= c % COLS; }
@@ -807,6 +873,37 @@ export function createDos8086(machine, io = {}) {
         wr16(0x40, 0x6c, next & 0xffff);
         wr16(0x40, 0x6e, (next >>> 16) & 0xffff);
         eoi();
+        // THIS COMMENT PREVIOUSLY CLAIMED THE ORDER WAS LOAD-BEARING. IT IS
+        // NOT, and the claim was mine. Moving this eoi() below the tail-call
+        // and re-running test/i8086-timer-tick.test.mjs passes 3/3 --
+        // mutation applied and verified, not assumed.
+        //
+        // WHY it cannot matter here: the "tail-call" sets cpu.cs/cpu.ip and a
+        // flag. It does not transfer control. Both statements run to
+        // completion in the SAME synchronous call before service() returns and
+        // the CPU takes another step, so the EOI reaches the PIC before the
+        // handler executes its first instruction either way. There is no
+        // ordering to get wrong between two lines that both finish first.
+        //
+        // THE REAL HAZARD IS A DIFFERENT CHANGE, and it is worth naming
+        // because the wrong comment would have guarded against the wrong
+        // thing: if someone makes the 1Ch dispatch genuinely NESTED -- pushing
+        // a second frame so int08 regains control afterwards, as a real BIOS
+        // does -- then an EOI written last WOULD be skipped by a handler that
+        // never returns, and IRQ0 would stay in service for exactly one tick.
+        // The guard for that is the tick-keeps-coming assertion in the test,
+        // which survives this reordering and would not survive that one.
+        //
+        // Chain to the user's INT 1Ch handler, as a real BIOS int08 does on
+        // every tick. Only when it has been hooked away from our trap page --
+        // otherwise it is our own no-op and there is nothing to run. Tail-call
+        // it: the INT 8 frame already on the stack becomes the 1Ch return frame,
+        // so its IRET lands back on the interrupted instruction with the
+        // interrupted flags (IF included) -- exactly a 1Ch handler's contract.
+        // Without this a program that hooks 1Ch and waits for it -- music,
+        // animation -- installs a handler that is never called and spins.
+        const off = rd16(0, 0x1c * 4), seg = rd16(0, 0x1c * 4 + 2);
+        if (seg !== trapSeg) { cpu.cs = seg; cpu.ip = off; controlTransferred = true; }
     }
 
     /** INT 09h — the keyboard IRQ. Nothing to fetch (keys arrive through
@@ -1074,6 +1171,16 @@ export function createDos8086(machine, io = {}) {
             // whose handler happens to land here is a bug worth seeing, not
             // one worth quietly servicing.
             if (claimed && !claimed.has(n)) return null;
+            // A BLOCKING READ WITH NOTHING TO READ IS DECLINED HERE, not
+            // inside the handler, and the difference is time. Returning a
+            // serviced verdict makes a caller's step yield ZERO cycles, so a
+            // `while (tMs < deadline)` loop spins without the clock moving --
+            // the hazard this bench's own header warns about. Declining lets
+            // the real instruction run: the trap page holds `jmp $`, so the
+            // CPU spins in place, burns cycles, the timer ticks, and the next
+            // step asks again. Nothing is half-performed, because the handler
+            // never ran.
+            if (blockOnKey && waitingForKey(n)) return null;
             const h = HANDLERS[n];
             controlTransferred = false;
             if (h) h();
@@ -1102,7 +1209,36 @@ export function createDos8086(machine, io = {}) {
         /** One unit of progress: service a pending trap, else run an instruction. */
         step() {
             if (this.service() !== null) return 0;
+            // Synthetic BIOS timer tick. A real PC's PIT raises IRQ0 at ~18.2 Hz
+            // and the BIOS int08 turns it into the 0040:006C count and a call to
+            // INT 1Ch. A DOS machine here need not carry a PIC + PIT for that to
+            // matter, so deliver it from machine time -- but ONLY to a program
+            // that actually listens: one that has hooked INT 8 or INT 1Ch away
+            // from our trap page. The ~500 corpus programs that ignore timers
+            // see no change at all. Masked (IF=0) ticks are dropped, as they are
+            // on real hardware. INT 8 goes through the CPU so the frame and the
+            // IVT vector are the real ones; int08 runs on the next step and,
+            // when it is still ours, chains to the hooked 1Ch.
+            //
+            // THIS IS A SERVICE-LAYER CONVENIENCE, NOT HARDWARE. It is machine
+            // time at 18.2 Hz on a machine with no PIT, so a program that reads
+            // the 8254 directly still sees nothing, and a lesson about HOW a
+            // timer interrupt is generated wants the real PIC+PIT chain -- which
+            // is what PCXT8086 carries. Both should exist: this answers "run the
+            // music", the chain answers "show me the interrupt". Requiring a
+            // schematic to hear a tune would be the wrong tradeoff for Tier B.
+            if (this._timerTickDue()) { cpu.interrupt(8); return 0; }
             return machine.step();
+        },
+
+        /** Whether a BIOS timer tick is due for a program that listens for one. */
+        _timerTickDue() {
+            if (!(cpu.flags & 0x200)) return false;             // interrupts masked
+            const seg8 = rd16(0, 0x08 * 4 + 2), seg1c = rd16(0, 0x1c * 4 + 2);
+            if (seg8 === trapSeg && seg1c === trapSeg) return false;   // nobody listens
+            if (machine.tMs - lastTickMs < 1000 / 18.2065) return false;
+            lastTickMs = machine.tMs;
+            return true;
         },
 
         /**
@@ -1119,6 +1255,8 @@ export function createDos8086(machine, io = {}) {
         get terminated() { return terminated; },
         get exitCode() { return exitCode; },
         get stdout() { return stdout; },
+        /** Every character emitted, including any dropped past MAX_STDOUT. */
+        get stdoutChars() { return stdoutChars; },
         get files() { return files; },
 
         /**
@@ -1152,6 +1290,12 @@ export function createDos8086(machine, io = {}) {
                     return { int: parseInt(int, 16), ah: parseInt(ah, 16), count };
                 }),
                 stdout,
+            // Load-bearing for any caller that compares output: a truncated
+            // stream is not the program's output, it is a prefix of it, and a
+            // comparison that ignores this would report a false MATCH the
+            // moment an expected output happened to be shorter than the cap.
+            stdoutChars,
+            stdoutTruncated: stdoutChars > stdout.length,
                 terminated,
                 exitCode,
                 breakpoints: breakpoints.length,

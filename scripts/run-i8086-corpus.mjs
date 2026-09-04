@@ -129,7 +129,8 @@ const norm = (t) => String(t).replace(/\r\n/g, '\n').replace(/\r/g, '\n')
     .split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
 const paths = argv.filter((a, i) => !a.startsWith('--')
     && argv[i - 1] !== '--budget' && argv[i - 1] !== '--assembler'
-    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type');
+    && argv[i - 1] !== '--expect' && argv[i - 1] !== '--type'
+    && argv[i - 1] !== '--expect-counts');
 
 let assembler = null;
 const asmPath = value('--assembler', null);
@@ -296,8 +297,31 @@ function runOne(name, raw, key, from = null) {
             // where the path search belongs, exactly as the emu8086 include
             // substitution above is.
             const dir = from ? dirname(from) : '.';
-            const out = assembler(source, {
+            let out;
+            out = assembler(source, {
                 name,
+                // PROMOTE OUT-OF-RANGE CONDITIONALS, and COUNT the programs
+                // that needed it rather than letting the flag be invisible.
+                //
+                // The assembler's MASM dialect refuses a Jcc or LOOP whose
+                // target is beyond +-127, and that default is measured rather
+                // than arbitrary: MASM 1.10 refuses them too, and promoting
+                // silently would hand a learner a program that works here and
+                // fails on the lab machine. Byte-fidelity against the MASM
+                // oracle depends on it.
+                //
+                // A COVERAGE HARNESS WANTS A DIFFERENT THING. Its question is
+                // "does this program run", and 14 of 525 never reached the
+                // machine because they were refused at assembly -- so the
+                // corpus was reporting an ASSEMBLER default as though it were
+                // a fact about the programs. Promotion only rewrites jumps
+                // that actually overflow, so every program that does not
+                // overflow is byte-identical either way and the differential
+                // oracles are untouched.
+                //
+                // Counted and printed, because a flag that changes 14 verdicts
+                // and leaves no trace is the same defect in a new place.
+                longJumps: true,
                 readInclude: (p2) => {
                     const at = join(dir, p2);
                     return existsSync(at) ? readFileSync(at, 'utf8') : undefined;
@@ -307,6 +331,9 @@ function runOne(name, raw, key, from = null) {
                     return existsSync(at) ? new Uint8Array(readFileSync(at)) : undefined;
                 },
             });
+            const promotions = (out.warnings || []).filter(
+                (w) => /promoted to a branch over a near jump/.test(w.message || ''));
+            if (promotions.length) promotedPrograms.push({ name, n: promotions.length });
             bytes = out.bytes;
             kind = out.format || 'com';
         } catch (e) {
@@ -377,6 +404,32 @@ function runOne(name, raw, key, from = null) {
         // disagreement out of a modelling difference.
         const stream = norm(report.stdout);
         const screen = norm(dos.screenText().join('\n'));
+        // A TRUNCATED STREAM IS A PREFIX, NOT AN OUTPUT. The DOS layer caps
+        // what it retains at 1 MB (see MAX_STDOUT — two corpus programs
+        // otherwise retain ~40 MB each at the default budget). A comparison
+        // that ignored the cap could report MATCH the moment an expected
+        // output happened to be shorter than the prefix, which would be a
+        // false agreement produced by our own memory limit. Anything that
+        // hits the cap is a runaway program and belongs in LOOPING.
+        if (report.stdoutTruncated) {
+            // WHY it ran away matters as much as that it did. Both corpus
+            // programs that hit this cap -- dos_menu_driven_program.asm and
+            // calculator.asm -- are INTERACTIVE: they print a menu, wait for a
+            // key, get none because this harness types nothing by default, and
+            // reprint forever. Their output is ordinary printable text, not the
+            // ORACLE pattern where a runaway INT 21h/09h scans memory for a `$`.
+            // So the cause is a missing input, which is a limit of the harness
+            // rather than a defect in the program or the emulation -- the same
+            // distinction NOINPUT already exists to draw.
+            const asked = report.keyRequests > 0;
+            return {
+                name, kind, steps, report: slimReport(report), verdict: 'LOOPING',
+                note: `printed ${report.stdoutChars.toLocaleString()} characters; output capped `
+                    + `at 1 MB and not compared`
+                    + (asked ? ` — it asked for input ${report.keyRequests} time(s) and got none,`
+                        + ' so it reprinted its prompt; try --type' : ''),
+            };
+        }
         if (want === stream) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'stream' };
         if (want === screen) return { name, kind, steps, report: slimReport(report), verdict: 'MATCH', via: 'screen' };
         // A SCREEN IS EIGHTY COLUMNS AND A STREAM IS NOT. Their oracle records
@@ -428,6 +481,14 @@ function collect(p) {
 }
 
 // ---- run ------------------------------------------------------------------
+/** Programs whose out-of-range conditionals had to be promoted, with how
+ *  many. Reported in the summary because `longJumps: true` changes 14
+ *  verdicts, and a flag that changes verdicts and leaves no trace is the
+ *  same defect this harness exists to find. Each promotion also carries the
+ *  assembler's own warning: "this program will no longer assemble under
+ *  MASM", which is the fact a reader needs. */
+const promotedPrograms = [];
+
 const results = [];
 if (flag('--selftest')) {
     for (const t of SELFTEST) {
@@ -505,7 +566,66 @@ for (const r of healed) {
     console.log(`HEALED -- ${r.name} now agrees; drop its row: ${KNOWN_DISAGREEMENTS[r.name]}`);
 }
 
+if (promotedPrograms.length) {
+    const total = promotedPrograms.reduce((a, p) => a + p.n, 0);
+    console.log(`\n${promotedPrograms.length} program(s) needed OUT-OF-RANGE CONDITIONALS PROMOTED `
+        + `(${total} jump${total === 1 ? '' : 's'}), and would be refused without --longJumps:`);
+    for (const p2 of promotedPrograms.sort((a, b) => b.n - a.n)) {
+        console.log(`  ${p2.name} (${p2.n})`);
+    }
+    console.log('  These no longer assemble under real MASM. That is the cost of running them.');
+}
+
 let exit = 0;
+
+// ---- the CI gate ----------------------------------------------------------
+//
+// `--expect-counts MATCH=467,HUNG=0,...` fails unless the verdict distribution
+// is exactly what is named. This is what makes the corpus a GATE rather than a
+// report, and the counts are the right thing to assert: a text diff over 525
+// programs is 525 ways to be flaky, while a count that moves is a signal with
+// one cause to find.
+//
+// TWO THINGS THE COUNTS DEPEND ON, and a job that pins one and not the other
+// will chase a phantom regression:
+//
+//   the CORPUS COMMIT -- new programs change the distribution, and
+//   the --type INPUT STREAM -- without it six interactive programs block
+//     before printing anything and land in HUNG rather than LOOPING.
+//
+// Measured either side of the output cap, unchanged: 498 EXITED, 6 LOOPING,
+// 6 HUNG, 15 THREW without --type. A memory fix that quietly moved a verdict
+// would be worse than the OOM it fixed, so that equality is the reason this
+// gate can be trusted at all.
+//
+// Only the named verdicts are checked. Naming none is not a gate.
+const expectCounts = value('--expect-counts', null);
+if (expectCounts) {
+    const got = {};
+    for (const r of results) got[r.verdict] = (got[r.verdict] || 0) + 1;
+    const want = Object.fromEntries(expectCounts.split(',').filter(Boolean).map((kv) => {
+        const [k, v] = kv.split('=');
+        return [k.trim().toUpperCase(), Number(v)];
+    }));
+    const wrong = [];
+    for (const [k, n] of Object.entries(want)) {
+        if ((got[k] || 0) !== n) wrong.push(`${k}: want ${n}, got ${got[k] || 0}`);
+    }
+    console.log(`
+expected distribution over ${results.length} programs:`);
+    for (const [k, n] of Object.entries(want)) {
+        console.log(`  ${k.padEnd(8)} want ${String(n).padStart(4)}  got ${String(got[k] || 0).padStart(4)}`
+            + ((got[k] || 0) === n ? '' : '   <-- MOVED'));
+    }
+    if (wrong.length) {
+        console.error('VERDICT DISTRIBUTION MOVED. Either the emulator changed, the corpus '
+            + 'commit changed, or --type changed. Check the last two BEFORE assuming the first.');
+        exit = 1;
+    } else {
+        console.log('distribution matches.');
+    }
+}
+
 if (flag('--selftest')) {
     const wrong = results.filter((r) => r.verdict !== r.expected);
     for (const r of wrong) console.log(`SELFTEST MISMATCH ${r.name}: want ${r.expected}, got ${r.verdict}`);

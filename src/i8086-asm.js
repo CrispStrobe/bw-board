@@ -62,13 +62,16 @@
  *
  * SIX THINGS LOOK LIKE BUGS AND ARE NOT:
  *
- *   - `SHL AX, 4` IS EXPANDED into four `SHL AX, 1`. The immediate-count
- *     shift is an 80186 instruction; on an 8086 its opcode C1 decodes as
- *     `RET imm16`, so emitting it would not be a slightly-wrong program, it
- *     would be a program that returns instead of shifting. 52 corpus files
- *     write it anyway. The expansion is semantically identical for CF, ZF,
- *     SF and PF, differs only in OF -- which the 8086 leaves undefined for
- *     counts above one -- and is RECORDED in `warnings`, never silent.
+ *   - `SHL AX, 4` IS EXPANDED into four `SHL AX, 1` ON AN 8086. The
+ *     immediate-count shift is an 80186 instruction; on an 8086 its opcode
+ *     C1 decodes as a near RET, so emitting it would not be a
+ *     slightly-wrong program, it would be a program that returns instead of
+ *     shifting. 52 corpus files write it anyway. The expansion is
+ *     semantically identical for CF, ZF, SF and PF, differs only in OF --
+ *     which the 8086 leaves undefined for counts above one -- and is
+ *     RECORDED in `warnings`, never silent. On a 186 (see below) the real
+ *     one-instruction form is emitted and there is no warning, because
+ *     nothing was substituted.
  *   - LOW, HIGH, LENGTH, SIZE, MASK and TYPE lose to a defined symbol of the
  *     same name. MASM reserves them; the corpus writes `HIGH EQU 5` and
  *     `LENGTH EQU 16` and then reads them back, so a symbol that exists wins
@@ -148,6 +151,44 @@
  * A segment-valued expression on the left (`SEG x`, `@DATA`) still gets its
  * fixup, and is therefore still .EXE-only.
  *
+ * THE 80186 VARIANT. `assemble(src, {variant: '80186'})` encodes the fifteen
+ * instructions the 80186 adds; the default is an 8086 and an unknown variant
+ * is REFUSED rather than quietly becoming one.
+ *
+ * THE OPTION IS SPELLED THE WAY THE REST OF THE CHAIN SPELLS IT, and that is
+ * worth more than a shorter name. `new I8086(bus, {variant: '80186'})`, `new
+ * I8086Machine({variant: '80186'})` and `disasmI8086(read, at, {variant:
+ * '80186'})` all existed first; a fourth module in the same pipeline calling
+ * the same chip something else is a bug waiting to be typed by whoever wires
+ * the four together.
+ *
+ * The fifteen: 60/61 PUSHA POPA, 62 BOUND, 68/6A PUSH imm16/imm8, 69/6B the
+ * non-widening IMUL r16,r/m16,imm, 6C-6F INSB INSW OUTSB OUTSW, C0/C1 the
+ * immediate-count shifts, C8 ENTER, C9 LEAVE.
+ *
+ * THE 8086 REFUSAL IS DELIBERATELY UNTOUCHED. `LATER_THAN_8086` and the
+ * message it raises are what stop `pusha` alone on a line from being read as
+ * a LABEL under NASM's colon-optional rule -- Maze Runner's pusha/popa pair
+ * vanished exactly that way and the program assembled, ran, and returned
+ * through a stack it had never balanced. So the variant is an extra way IN
+ * at `instruction`, not a change to the way out.
+ *
+ * WHY IT EXISTS, WHICH IS NOT "for completeness". SmallerC (BSD-2) compiles
+ * C to NASM 16-bit assembly, and the only non-8086 instructions in its
+ * output are LEAVE, PUSH imm and the three-operand IMUL. With this option a
+ * C program compiles, assembles here and RUNS on `I8086Machine({variant:
+ * '80186'})` -- test/i8086-asm-186.test.mjs runs one and checks the number
+ * it computes. `Maze_Runner_Go/MazeRunnercode.asm` needed it too, and is now
+ * 6,088 bytes identical to NASM's own image.
+ *
+ * The encodings are checked twice and by nothing this module says itself:
+ * round trip through the vector-graded disassembler, and 2,448 generated
+ * forms diffed byte for byte against NASM 2.16 (`scripts/oracle-nasm.mjs
+ * --sweep186`). The second caught a real difference the first cannot see --
+ * `PUSH 65535` and `PUSH -1` push the same word, so both take the two-byte
+ * 6A, and sizing the first at three bytes round-trips perfectly while
+ * disagreeing with NASM.
+ *
  * ONE THING IS OPT-IN, AND WHOSE DEFAULT IT IS DEPENDS ON THE DIALECT.
  * `{ longJumps: true }` promotes a conditional jump or LOOP that cannot
  * reach into a sequence that can -- `Jcc far` into `Jncc over; JMP near
@@ -183,8 +224,19 @@
  * NOT SUPPORTED, deliberately, each of which raises a named error rather
  * than encoding something plausible:
  *
- *   - 80186 and later instructions: PUSH imm, ENTER/LEAVE, INS/OUTS, BOUND,
- *     the immediate-count shifts (see the expansion above), IMUL r,r/m,imm.
+ *   - 80286 and later instructions. The 80186's fifteen are supported, but
+ *     only when asked for; see THE 80186 VARIANT below.
+ *   - INS and OUTS in MASM's explicit-operand spelling (`INS ES:[DI], DX`),
+ *     even on a 186. The operands are fixed by the opcode, so INSB/INSW and
+ *     OUTSB/OUTSW say the same thing, and guessing a width from an operand
+ *     this module does not parse is the one way to get INSB where INSW was
+ *     meant. Refused by name, with the mnemonic to write instead.
+ *   - `BOUND r16, r16`. mod 3 is not an instruction: an 80186 raises INT 6
+ *     on it, so emitting it would be emitting a trap.
+ *   - A source-level `.186` (MASM) that turns the variant on by itself.
+ *     NASM's `CPU 186` is ACCEPTED when the caller already asked for a 186
+ *     and refused otherwise; see the directive for why a source that can
+ *     silently raise the target defeats the point of the default.
  *   - 8087 floating point (the ESC group is not assembled at all).
  *   - The undocumented 8086 opcodes the disassembler names -- SETMO,
  *     SETMOC, SALC, POP CS, the 0x60-0x6F jump aliases. They decode; they
@@ -523,6 +575,22 @@ class Assembler {
          *  checks the claim the only way worth checking it: byte for byte
          *  against NASM 2.16 under `--before "cpu 8086"`. */
         this.longJumps = opts.longJumps ?? this.nasm;
+        /** SYNTHESISE SETcc FROM 8086 INSTRUCTIONS. Off by default, and the
+         *  default is the point -- see `synthSetcc()` for the whole argument.
+         *  A learner who hand-writes `setge al` for an 8086 must still be
+         *  refused by name; a COMPILER that emitted it on their behalf is a
+         *  different case, because nobody carries its output to a lab
+         *  machine. The C route turns this on; nothing else does. */
+        this.setcc = opts.setcc ?? false;
+        /** WHICH CHIP THIS ASSEMBLES FOR. The name and the spelling are the
+         *  core's -- `new I8086(bus, {variant: '80186'})`, `new
+         *  I8086Machine({variant: '80186'})`, `disasmI8086(..., {variant:
+         *  '80186'})` -- because an assembler, a core and a disassembler
+         *  disagreeing about what to call the same chip is a bug waiting to
+         *  be typed. `assemble()` has already refused anything but the two
+         *  known spellings by the time this runs, so a truthy test here is
+         *  never a typo silently becoming an 8086. */
+        this.is186 = opts.variant === '80186';
         /** Symbols persist ACROSS passes on purpose: pass 1 needs to know
          *  that `HIGH` is a name and not the HIGH operator, and forward
          *  references need a value to size against. */
@@ -1199,6 +1267,30 @@ class Assembler {
         return [o.v & 0xff, (o.v >> 8) & 0xff];
     }
 
+    /**
+     * Does this immediate fit the sign-extended BYTE form -- PUSH's 6A and
+     * IMUL's 6B -- as opposed to the word form?
+     *
+     * THE TEST IS ON THE SIXTEEN-BIT VALUE, NOT ON WHAT WAS TYPED, and that
+     * is the whole subtlety. `PUSH 65535` and `PUSH -1` push the identical
+     * word FFFFh, so both take 6A FF; testing `o.v >= -128` on the written
+     * number instead makes the first three bytes and the second two, which
+     * is one byte of disagreement with NASM 2.16 over an instruction that
+     * does exactly the same thing. Found by the differential, not by
+     * reading.
+     *
+     * A value not yet known says NO, so the wide form is chosen. That is not
+     * caution about the value: the pass loop terminates because instructions
+     * only ever SHRINK, and one that started narrow and grew when its symbol
+     * resolved could oscillate between two layouts forever.
+     */
+    fitsSignedByte(o) {
+        if (!o.known || o.reloc) return false;
+        const w = o.v & 0xffff;
+        const signed = w >= 0x8000 ? w - 0x10000 : w;
+        return signed >= -128 && signed <= 127;
+    }
+
     /** Emit a 16-bit immediate that may need a relocation entry. */
     emitImm16(o) {
         if (o.reloc) { this.reloc(o.reloc); this.emitWord(this.segParaOf(o.reloc)); }
@@ -1241,6 +1333,37 @@ class Assembler {
                 `${mn.toUpperCase()} takes no operands here -- the explicit-operand string forms are not supported`,
                 { ...this.ctx, what: 'string op with operands' });
             return this.emit(STRING_OPS[mn]);
+        }
+        // THE 186 BLOCK GETS FIRST REFUSAL, the same order the core's
+        // `_exec186` and the disassembler both use, and for the same
+        // reason: nothing below can claim these mnemonics, and putting the
+        // test here keeps all three modules readable side by side. It is
+        // reached only when `instruction` has already let the mnemonic
+        // through, so `this.is186` is the only guard needed.
+        if (this.is186) {
+            if (I186_NO_OPERAND[mn]) {
+                if (ops.length) throw new AsmError(`${mn.toUpperCase()} takes no operands`,
+                    { ...this.ctx, what: 'operand count' });
+                return this.emit(...I186_NO_OPERAND[mn]);
+            }
+            if (I186_STRING_OPS[mn] !== undefined) {
+                if (ops.length) throw new AsmError(
+                    `${mn.toUpperCase()} takes no operands here -- the explicit-operand`
+                    + ' string forms are not supported',
+                    { ...this.ctx, what: 'string op with operands' });
+                return this.emit(I186_STRING_OPS[mn]);
+            }
+            // MASM spells these `INS ES:[DI], DX`. The operands are fixed by
+            // the opcode -- there is nothing to choose -- so the sized forms
+            // say the same thing in a syntax this module does not parse, and
+            // guessing the width from a memory operand it has not read would
+            // be the one way to get INSB where INSW was meant.
+            if (mn === 'ins' || mn === 'outs') throw new AsmError(
+                `${mn.toUpperCase()} needs its width in the mnemonic here --`
+                + ` write ${mn.toUpperCase()}B or ${mn.toUpperCase()}W`,
+                { ...this.ctx, what: `${mn} without width` });
+            if (mn === 'bound') return this.boundOp(ops);
+            if (mn === 'enter') return this.enterOp(ops);
         }
         if (ALU[mn] !== undefined) return this.aluOp(ALU[mn], ops);
         if (SHIFT[mn] !== undefined) return this.shiftOp(mn, SHIFT[mn], ops);
@@ -1386,10 +1509,29 @@ class Assembler {
             { ...this.ctx, what: 'bad shift count' });
         if (!c.known) throw new AsmError(`${mn.toUpperCase()} needs a count known at assembly time`,
             { ...this.ctx, what: 'bad shift count' });
+        // A COUNT OF ONE IS D0/D1 ON BOTH CHIPS. The 186 could encode it as
+        // `C0 /code 01` and NASM does not; D0 is a byte shorter and the two
+        // are the same instruction, so there is no variant question here.
         if (c.v === 1) return this.emitRM([0xd0 | (w === 2 ? 1 : 0)], code, d);
-        // See the module header: C1 is not a shift on an 8086, it is
-        // `RET imm16`. Repeating the single-count form is the only correct
-        // encoding of what the programmer wrote.
+        // THE FORK. On a 186 the immediate-count shift is a real
+        // instruction and this emits it -- one instruction, the count in a
+        // byte, and NO WARNING, because there is nothing to warn about.
+        //
+        // On an 8086 C1 is not a shift at all, it is `RET imm16`, so
+        // repeating the single-count form is the only correct encoding of
+        // what the programmer wrote, and the expansion is RECORDED. 52
+        // corpus files write the immediate form on an 8086; see the module
+        // header for what the expansion does and does not preserve.
+        if (this.is186) {
+            // The hardware masks the count to five bits, so 32 and 0 are the
+            // same instruction. A count out of the 0..31 range is still
+            // refused rather than masked here: the source that wrote it
+            // meant something else, and silently shifting by count & 31
+            // would encode a shift nobody asked for.
+            if (c.v < 0 || c.v > 31) throw new AsmError(`a shift count of ${c.v} is not meaningful`,
+                { ...this.ctx, what: 'bad shift count' });
+            return this.emitRM([0xc0 | (w === 2 ? 1 : 0)], code, d, [c.v & 0xff]);
+        }
         if (c.v < 0 || c.v > 31) throw new AsmError(`a shift count of ${c.v} is not meaningful`,
             { ...this.ctx, what: 'bad shift count' });
         this.note(`${mn.toUpperCase()} by ${c.v} expanded into ${c.v} single shifts:`
@@ -1397,9 +1539,55 @@ class Assembler {
         for (let i = 0; i < c.v; i++) this.emitRM([0xd0 | (w === 2 ? 1 : 0)], code, d);
     }
 
+    /**
+     * BOUND r16, m -- the 186's array-index check. 62 /r.
+     *
+     * The memory operand is a PAIR of words (lower bound then upper) and
+     * the disassembler still spells it `word`, matching the vector suite;
+     * this accepts a sizeless operand or an explicit WORD and refuses BYTE,
+     * because a byte pair is not a form the instruction has.
+     *
+     * A REGISTER second operand is refused rather than encoded. mod 3 makes
+     * the encoding `BOUND r16, r16`, which is not an instruction: the
+     * 80186 raises INT 6 on it. Emitting it would be emitting a trap.
+     */
+    boundOp(ops) {
+        this.expect(ops.length === 2, 'BOUND takes a register and a pair of bounds in memory');
+        const [r, m] = ops;
+        this.expect(r.k === 'r16', 'BOUND checks a word register');
+        if (m.k !== 'm') throw new AsmError('BOUND reads its two bounds from memory',
+            { ...this.ctx, what: 'bound operand kind' });
+        if (m.size && m.size !== 2) throw new AsmError(
+            'BOUND reads a pair of words; say WORD PTR or leave the size out',
+            { ...this.ctx, what: 'operand size' });
+        return this.emitRM([0x62], r.n, m);
+    }
+
+    /**
+     * ENTER imm16, imm8 -- the 186's stack frame. C8 iw ib.
+     *
+     * The second operand is the LEXICAL NESTING LEVEL, not a byte count,
+     * and the hardware takes it modulo 32. It is checked as a plain byte
+     * here: a level above 31 is what a source that meant something else
+     * writes, and `immBytes` already names an immediate that does not fit.
+     */
+    enterOp(ops) {
+        this.expect(ops.length === 2, 'ENTER takes a frame size and a nesting level');
+        const [size, level] = ops;
+        this.expect(size.k === 'i' && level.k === 'i', 'ENTER takes two immediates', 'operand kind');
+        if (!size.known || !level.known) throw new AsmError(
+            'ENTER needs a frame size and a level known at assembly time',
+            { ...this.ctx, what: 'enter operand unknown' });
+        const lo = this.immBytes(size, 2), hi = this.immBytes(level, 1);
+        if (!lo) throw new AsmError('ENTER cannot take a segment value as its frame size',
+            { ...this.ctx, what: 'segment in enter' });
+        return this.emit(0xc8, ...lo, ...hi);
+    }
+
     grp3Op(mn, code, ops) {
         // IMUL and MUL take one operand on an 8086; the three-operand form
         // is 80186 and is refused rather than guessed at.
+        if (this.is186 && mn === 'imul' && ops.length > 1) return this.imul186(ops);
         this.expect(ops.length === 1,
             `${mn.toUpperCase()} takes one operand on an 8086`, ops.length > 1 ? 'i186 form' : 'operand count');
         const w = this.width(ops[0]);
@@ -1407,6 +1595,42 @@ class Assembler {
             `${mn.toUpperCase()} cannot tell whether this is a byte or a word -- say BYTE PTR or WORD PTR`,
             { ...this.ctx, what: 'operand size unknown' });
         return this.emitRM([0xf6 | (w === 2 ? 1 : 0)], code, ops[0]);
+    }
+
+    /**
+     * The 186's IMUL with an immediate: 69 /r iw and 6B /r ib.
+     *
+     * UNLIKE F7 /5 THIS ONE IS NOT WIDENING. Destination, source and result
+     * are all sixteen bits and the high half is discarded, which is what
+     * makes it the multiply a C compiler emits for `int * constant`; the
+     * 8086 form's DX:AX result is the reason it cannot be used for that.
+     *
+     * The two-operand spelling `IMUL AX, 10` is NASM's and MASM's shorthand
+     * for `IMUL AX, AX, 10` -- the destination is also the source -- and is
+     * accepted here as the same instruction, because it is.
+     *
+     * 6B sign-extends its byte, so it is chosen only for a value that fits a
+     * SIGNED byte; the same rule, and the same `fitsSignedByte`, as PUSH's 6A.
+     */
+    imul186(ops) {
+        this.expect(ops.length === 2 || ops.length === 3,
+            'IMUL takes one operand, or a destination and a source and an immediate');
+        const [d, a, b] = ops.length === 3 ? ops : [ops[0], ops[0], ops[1]];
+        this.expect(d.k === 'r16', 'the IMUL with an immediate writes a word register');
+        if (b.k !== 'i') throw new AsmError(
+            'the three-operand IMUL multiplies by an immediate',
+            { ...this.ctx, what: 'operand kind' });
+        if (a.k !== 'r16' && a.k !== 'm') throw new AsmError(
+            'the three-operand IMUL reads a word register or memory',
+            { ...this.ctx, what: 'operand kind' });
+        if (a.k === 'm' && a.size && a.size !== 2) throw new AsmError(
+            'the three-operand IMUL is a word multiply',
+            { ...this.ctx, what: 'operand size' });
+        if (this.fitsSignedByte(b)) return this.emitRM([0x6b], d.n, a, [b.v & 0xff]);
+        const imm = this.immBytes(b, 2);
+        if (!imm) throw new AsmError('IMUL cannot multiply by a segment value',
+            { ...this.ctx, what: 'segment in imul' });
+        return this.emitRM([0x69], d.n, a, imm);
     }
 
     movOp(ops) {
@@ -1527,8 +1751,26 @@ class Assembler {
                 { ...this.ctx, what: 'pop cs' });
             return this.emit((o.n << 3) | (mn === 'push' ? 0x06 : 0x07));
         }
-        if (o.k === 'i') throw new AsmError(`${mn.toUpperCase()} of an immediate is an 80186 instruction`,
-            { ...this.ctx, what: 'i186 push imm' });
+        if (o.k === 'i') {
+            if (!this.is186 || mn === 'pop') {
+                // POP of an immediate is not an instruction on ANY chip, so
+                // the 186 does not rescue it; the message names the 186 only
+                // for PUSH, where the 186 is genuinely the answer.
+                throw new AsmError(mn === 'pop'
+                    ? 'POP needs somewhere to pop TO; an immediate is not a place'
+                    : 'PUSH of an immediate is an 80186 instruction',
+                    { ...this.ctx, what: mn === 'pop' ? 'pop immediate' : 'i186 push imm' });
+            }
+            // TWO ENCODINGS, AND THE CHOICE IS NASM'S. 6A sign-extends a
+            // byte to the word it pushes, so it says the same thing as 68
+            // in two bytes instead of three -- but only for a value that
+            // fits a SIGNED byte, since 6A FF pushes FFFFh and not 00FFh.
+            // See `fitsSignedByte` for why the test is on the word and not
+            // on what was typed.
+            if (this.fitsSignedByte(o)) return this.emit(0x6a, o.v & 0xff);
+            this.emit(0x68);
+            return this.emitImm16(o);
+        }
         if (o.k === 'r8') throw new AsmError(`${mn.toUpperCase()} works on words, not on ${o.text.trim()}`,
             { ...this.ctx, what: 'operand size' });
         if (o.size && o.size !== 2) throw new AsmError(`${mn.toUpperCase()} works on words`,
@@ -1702,6 +1944,65 @@ class Assembler {
      * hand instead would give a loop that runs once or forever rather than
      * one that fails loudly.
      */
+    /**
+     * SETcc on a chip that does not have it.
+     *
+     * WHY THIS EXISTS AT ALL. SmallerC lowers a comparison used as a VALUE --
+     * `return a >= 1;`, `int b = (a > 1);`, any ternary -- to `SETcc`, which
+     * is an 80386 instruction. The same comparison in a CONTROL position
+     * becomes a conditional jump and assembles on an 8086 without complaint.
+     * So `if (a >= 1)` worked and `return a >= 1;` did not build at all, which
+     * is a distinction no learner can be expected to make, reported by naming
+     * an instruction they never wrote. SmallerC cannot be asked not to: its
+     * codegen emits SETcc unconditionally and has no 8086 mode.
+     *
+     * WHY IT IS OFF BY DEFAULT, which is the same argument `longJumps` makes.
+     * A learner who hand-writes `setge al` for an 8086 must still be refused
+     * BY NAME: the instruction genuinely does not exist on that chip, and
+     * quietly emitting three others would hand them a program that works here
+     * and fails on the lab machine. COMPILER OUTPUT IS A DIFFERENT CASE and
+     * the difference is real -- nobody carries it to a lab machine, and the
+     * learner did not write `setge`, they wrote `a >= 1`. Refusing on their
+     * behalf for fidelity to an assembler they will never use is fidelity to
+     * nothing.
+     *
+     * WHY HERE AND NOT IN THE C ROUTE. Rewriting the compiler's text would
+     * mean inventing labels and getting branch offsets right without the pass
+     * loop -- which is this file's job, and where `promote()` already lives.
+     *
+     *     setge al   ->   mov al, 0
+     *                     jl  +2        ; the INVERSE condition, over the next
+     *                     mov al, 1
+     *
+     * NOT `xor al, al` FOR THE ZERO, and this is the detail that matters:
+     * SETcc does not touch flags and XOR does. A caller reading flags after
+     * the sequence would see them changed by an instruction that on real
+     * hardware changes nothing -- invisible until one program depends on it.
+     * `MOV r8, imm8` leaves flags alone, which is what SETcc promises.
+     *
+     * Six bytes, three instructions, and the condition's inverse comes from
+     * the same XOR 1 that `promote()` uses: bit 0 of a conditional opcode IS
+     * the sense of its condition.
+     */
+    synthSetcc(mn, text) {
+        const ops = text ? splitTop(text, ',').map((s) => this.operand(s)) : [];
+        if (ops.length !== 1 || ops[0].k !== 'r8') {
+            throw new AsmError(
+                `"${mn.toUpperCase()}" can only be synthesised into an 8-bit REGISTER on an 8086`
+                + ' -- a memory destination would need a scratch register this assembler must'
+                + ' not pick on the caller\'s behalf',
+                { ...this.ctx, what: `${mn.toUpperCase()} without a register destination` });
+        }
+        const reg = ops[0].n & 7;
+        const jcc = SETCC_TO_JCC.get(mn);
+        this.note(`${mn.toUpperCase()} is an 80386 instruction; synthesised from MOV/Jcc/MOV for`
+            + ' the 8086. This program will no longer assemble under an assembler targeting a'
+            + ' real 8086.');
+        this.emit(0xb0 | reg, 0x00);      // mov r8, 0   -- does not touch flags
+        this.emit(jcc ^ 1, 0x02);         // the INVERSE condition, over the next two bytes
+        return this.emit(0xb0 | reg, 0x01);
+    }
+
     promote(opcode, target) {
         if (opcode >= 0x70 && opcode <= 0x7f) {
             // Bit 0 of a conditional opcode IS the sense of its condition on
@@ -1920,7 +2221,14 @@ class Assembler {
         const prev = this.symbols.get(key);
         // A redefinition inside the same pass is a real duplicate; the same
         // symbol arriving again on a LATER pass is just the pass loop.
-        if (prev && prev.pass === this.pass) {
+        //
+        // UNLESS BOTH SIDES ARE `=`. MASM's `=` defines a variable that may
+        // be assigned again; EQU defines a constant that may not, and the
+        // check below still refuses `K EQU 5` followed by `K EQU 7`. BOTH
+        // sides have to be `=` on purpose: mixing the two is a type
+        // conflict in MASM as well, and letting `=` overwrite an EQU (or the
+        // reverse) would turn a real mistake into a silent reassignment.
+        if (prev && prev.pass === this.pass && !(prev.variable && sym.variable)) {
             // NAME BOTH SITES. The first definition can be hundreds of lines
             // away, and because symbols are case-insensitive (as in MASM)
             // the two spellings need not even look alike -- `SC_FILL equ 6`
@@ -2114,14 +2422,38 @@ class Assembler {
                 // `LEN EQU $-MSG` is the common shape and needs `$` to mean
                 // the offset here, which is why EQU is evaluated eagerly.
                 const v = this.evalText(rest);
-                if (v.base || v.index) throw new AsmError('EQU cannot hold a register',
+                if (v.base || v.index) throw new AsmError(`${kind === '=' ? '=' : 'EQU'} cannot hold a register`,
                     { ...this.ctx, what: 'equ of register' });
-                if (v.reloc) return void this.define(name, { kind: 'segment', name: v.reloc });
+                // `=` IS REDEFINABLE AND `EQU` IS NOT, AND THAT IS THE WHOLE
+                // REASON MASM HAS BOTH. A numeric EQU names a constant; `=`
+                // names a variable, and a source that writes
+                //
+                //     K = 5 / MOV AX, K / K = 7 / MOV BX, K
+                //
+                // means AX = 5 and BX = 7. One switch arm served both for as
+                // long as this module existed, so `=` inherited EQU's
+                // one-definition rule and the program above was REFUSED --
+                // "K is defined twice" -- rather than assembled.
+                //
+                // THE CORPUS COULD NOT SEE THIS. `=` appears in zero of the
+                // 525 files, so 470 byte-identical agreements with NASM and
+                // a MASM oracle over 414 files all said nothing about it.
+                // Same shape as the ASSUME rule: a corpus is evidence only
+                // about the constructs it contains.
+                //
+                // POSITIONAL VALUES FALL OUT OF THE PASS LOOP for free. Each
+                // pass re-executes the definitions in source order, so a
+                // read between two assignments sees the one above it, not
+                // the last one in the file -- which is exactly MASM's rule.
+                const variable = kind === '=';
+                if (v.reloc) return void this.define(name, { kind: 'segment', name: v.reloc, variable });
                 if (v.segRel && v.ref) {
-                    return void this.define(name,
-                        { kind: 'data', seg: v.ref.seg, value: v.v, type: v.ref.type, count: v.ref.count });
+                    return void this.define(name, {
+                        kind: 'data', seg: v.ref.seg, value: v.v,
+                        type: v.ref.type, count: v.ref.count, variable,
+                    });
                 }
-                return void this.define(name, { kind: 'equ', value: v.v });
+                return void this.define(name, { kind: 'equ', value: v.v, variable });
             }
             case 'proc': {
                 const far = /\bfar\b/i.test(rest);
@@ -2233,6 +2565,18 @@ class Assembler {
                 this.cur = this.lastSeg = this.segment('_DATA', 'data');
                 return;
             }
+            case '.fardata': case '.fardata?': {
+                // A FAR data segment: its own segment OUTSIDE DGROUP, reached
+                // only through a segment register (`MOV AX, SEG label ; MOV ES,
+                // AX`) rather than the assumed DS. That is the whole point of
+                // the directive — a destination for string primitives (ES:DI)
+                // that lives somewhere other than DS. The generic layout gives
+                // it a paragraph and SEG resolves to it as a relocation, the
+                // same as any named segment; nothing is assumed to it, so a
+                // label here is unreachable without the explicit MOV ES.
+                this.cur = this.lastSeg = this.segment('FAR_DATA', 'data');
+                return;
+            }
             case '.code': {
                 this.codeSegName = '_TEXT';
                 this.cur = this.lastSeg = this.segment('_TEXT', 'code');
@@ -2279,12 +2623,19 @@ class Assembler {
                 this.sawOrg = true;
                 return;
             }
-            case 'even': case 'align': {
+            case 'even': case 'align': case 'alignb': {
                 // NASM writes `align 8, db 0` -- the second half names what
                 // to pad WITH, and every use of ALIGN in retro-dos-graphics
                 // is in front of data, where a run of NOPs would be five
                 // corpus programs' worth of wrong bytes.
-                let expr = rest, pad = 0x90;
+                //
+                // ALIGNB is ALIGN's .bss twin and its default filler is ZERO,
+                // not NOP. That difference is not cosmetic: .bss holds
+                // variables, and padding them with 90h gives every aligned
+                // variable a neighbour holding 0x9090 instead of 0. SmallerC
+                // emits `alignb 2` in front of every file-scope variable, so
+                // this is the second thing a C program meets after GLOBAL.
+                let expr = rest, pad = w0 === 'alignb' ? 0x00 : 0x90;
                 const am = this.nasm && /^([^,]*),\s*db\s+([\s\S]*)$/i.exec(rest);
                 if (am) { expr = am[1]; pad = this.evalText(am[2]).v & 0xff; }
                 else if (this.nasm && /,/.test(rest)) {
@@ -2324,7 +2675,7 @@ class Assembler {
                 return;
             case 'public': case 'extrn': case 'extern': case 'global': case 'include':
             case 'includelib': case 'dosseg': case 'option': case 'group': case 'comment':
-            case '.startup': case '.exit': case '.fardata': case '.fardata?': case '.286':
+            case '.startup': case '.exit': case '.286':
             case '.386': case '.486': case '.586': case '.8087': case '.287': case '.387':
             case 'struc': case 'struct': case 'union': case 'record': case 'textequ':
             case 'irp': case 'irpc': case 'while': case 'for': case 'forc': case 'repeat':
@@ -2449,7 +2800,8 @@ class Assembler {
             const bare = text.replace(/^:\s*/, '');
             const parts = bare.split(/\s+/);
             const head = parts[0].toLowerCase();
-            if (STRING_OPS[head] !== undefined || REP_PREFIX[head] !== undefined) {
+            if (STRING_OPS[head] !== undefined || REP_PREFIX[head] !== undefined
+                || (this.is186 && I186_STRING_OPS[head] !== undefined)) {
                 return this.instruction(head, bare.slice(parts[0].length).trim(),
                     [[0x26, 0x2e, 0x36, 0x3e][SREG[mn]], ...prefixes]);
             }
@@ -2461,7 +2813,18 @@ class Assembler {
         // included was refused for "the string is too long to be a number",
         // which sends the reader after the string instead of after the
         // missing include.
-        if (!KNOWN_MNEMONICS.has(mn) && !this.macros.has(mn)) {
+        // THE 186 GATE IS AN EXTRA WAY IN, NOT A CHANGE TO THE WAY OUT.
+        // `LATER_THAN_8086` and the message it raises are untouched on an
+        // 8086, deliberately: that refusal is what stops `pusha` alone on a
+        // line from being read as a LABEL under NASM's colon-optional rule,
+        // and the instruction disappearing without a word. See the Map's
+        // own comment for the incident.
+        if (!KNOWN_MNEMONICS.has(mn) && !(this.is186 && I186_MNEMONICS.has(mn))
+            && !this.macros.has(mn)) {
+            // SETcc, when the caller has asked for it and only then.
+            if (this.setcc && SETCC_TO_JCC.has(mn)) {
+                return this.synthSetcc(mn, text);
+            }
             if (LATER_THAN_8086.has(mn)) {
                 throw new AsmError(
                     `"${mn.toUpperCase()}" is ${LATER_THAN_8086.get(mn)} instruction and this is an 8086`,
@@ -2595,6 +2958,33 @@ const KNOWN_MNEMONICS = new Set([
 ]);
 
 /**
+ * The mnemonics the 80186 ADDS -- the ones that do not exist at all on an
+ * 8086, as opposed to the ones that gain a new operand form there.
+ *
+ * `{variant: '80186'}` lets these through `instruction`'s gate; without it
+ * they fall to `LATER_THAN_8086` and are refused exactly as before. The
+ * three 186 additions that are NOT here are `PUSH imm`, `IMUL r,r/m,imm`
+ * and the immediate-count shifts, because their mnemonics already exist on
+ * an 8086 -- they are handled at their own encoders, where the variant
+ * decides between a new encoding and the old refusal or expansion.
+ *
+ * `ins` and `outs` are on this list even though this module will not encode
+ * either: on a 186 they must reach `encode`, where the refusal can say to
+ * write INSB or INSW, rather than being told they need a 186 on a machine
+ * that IS one.
+ */
+const I186_MNEMONICS = new Set([
+    'pusha', 'popa', 'bound', 'enter', 'leave',
+    'ins', 'insb', 'insw', 'outs', 'outsb', 'outsw',
+]);
+
+/** The 186's no-operand additions, in the same shape as NO_OPERAND. */
+const I186_NO_OPERAND = { pusha: [0x60], popa: [0x61], leave: [0xc9] };
+
+/** The 186's string primitives, in the same shape as STRING_OPS. */
+const I186_STRING_OPS = { insb: 0x6c, insw: 0x6d, outsb: 0x6e, outsw: 0x6f };
+
+/**
  * Instructions this assembler KNOWS ABOUT AND WILL NOT ENCODE, each with
  * the machine that introduced it.
  *
@@ -2612,6 +3002,28 @@ const KNOWN_MNEMONICS = new Set([
  * the NASM front end, so a word on this list can never be mistaken for a
  * label.
  */
+/**
+ * Each SETcc mnemonic to the Jcc opcode carrying the SAME condition. The
+ * inverse used by `synthSetcc()` is that opcode XOR 1, exactly as in
+ * `promote()`: 7C/7D is JL/JGE, 74/75 is JZ/JNZ, and so on for all sixteen.
+ */
+const SETCC_TO_JCC = new Map([
+    ['seto', 0x70], ['setno', 0x71],
+    ['setb', 0x72], ['setc', 0x72], ['setnae', 0x72],
+    ['setnb', 0x73], ['setae', 0x73], ['setnc', 0x73],
+    ['setz', 0x74], ['sete', 0x74],
+    ['setnz', 0x75], ['setne', 0x75],
+    ['setbe', 0x76], ['setna', 0x76],
+    ['seta', 0x77], ['setnbe', 0x77],
+    ['sets', 0x78], ['setns', 0x79],
+    ['setp', 0x7a], ['setpe', 0x7a],
+    ['setnp', 0x7b], ['setpo', 0x7b],
+    ['setl', 0x7c], ['setnge', 0x7c],
+    ['setge', 0x7d], ['setnl', 0x7d],
+    ['setle', 0x7e], ['setng', 0x7e],
+    ['setg', 0x7f], ['setnle', 0x7f],
+]);
+
 const LATER_THAN_8086 = new Map([
     ...['pusha', 'popa', 'pushad', 'popad', 'enter', 'leave', 'bound',
         'ins', 'insb', 'insw', 'outs', 'outsb', 'outsw']
@@ -2644,7 +3056,7 @@ const R16_NAME = Object.keys(R16);
 
 /** Directives that stand alone at the start of a line. */
 const DIRECTIVES = new Set([
-    'assume', 'end', 'org', 'even', 'align', 'rept', 'endm', 'local', 'name',
+    'assume', 'end', 'org', 'even', 'align', 'alignb', 'rept', 'endm', 'local', 'name',
     'public', 'extrn', 'extern', 'global', 'include', 'includelib', 'dosseg',
     'option', 'group', 'comment', 'struc', 'struct', 'union', 'record',
     'textequ', 'irp', 'irpc', 'while', 'for', 'forc', 'repeat', 'page',
@@ -3402,8 +3814,21 @@ class NasmFrontEnd {
                 }
                 case 'cpu': {
                     const c = rest.slice(3).trim().toLowerCase();
-                    if (c !== '8086') throw new AsmError(
-                        `CPU ${rest.slice(3).trim()} -- this assembler only encodes 8086 instructions`,
+                    // `CPU 186` IS ACCEPTED ONLY WHEN THE CALLER ASKED FOR A
+                    // 186, and does not itself turn one on. NASM's directive
+                    // is positional and this front end runs once over the
+                    // whole file, so honouring it would mean honouring it
+                    // for lines above where it appears -- and a source that
+                    // can silently raise the target defeats the point of the
+                    // default being 8086. It is accepted so that a genuine
+                    // 186 source assembles, and refused otherwise so that
+                    // the mismatch is named at the directive rather than
+                    // fifty lines later at the first PUSHA.
+                    const ok = c === '8086'
+                        || ((c === '186' || c === '80186') && this.opts.variant === '80186');
+                    if (!ok) throw new AsmError(
+                        `CPU ${rest.slice(3).trim()} -- this assembler encodes 8086 instructions,`
+                        + " and 80186 ones with {variant: '80186'}",
                         { ...this.here, what: `CPU ${c}` });
                     continue;
                 }
@@ -3435,7 +3860,34 @@ class NasmFrontEnd {
                     push(map[s], e);
                     continue;
                 }
-                case 'global': case 'extern': case 'common': case 'absolute':
+                case 'global':
+                    // ACCEPTED AND IGNORED, and the distinction from EXTERN
+                    // below is the whole point. GLOBAL says "let other modules
+                    // see this name". In a single-module flat image there ARE
+                    // no other modules, and the label it names is defined right
+                    // here -- so honouring it means doing nothing, and refusing
+                    // it rejects a program that is completely well-formed.
+                    //
+                    // This is what a C compiler's output is made of: SmallerC
+                    // marks every function and every file-scope variable GLOBAL,
+                    // so refusing it refused every C program before it reached
+                    // the first instruction.
+                    continue;
+                case 'extern':
+                    // STILL REFUSED, because it is genuinely unresolvable: it
+                    // names something that is NOT in this file and there is no
+                    // second file to find it in. Named in the message, because
+                    // "extern is unsupported" sends someone to look at the
+                    // directive when what they need is the missing symbol --
+                    // usually a libc function, which tells them what to do next.
+                    throw new AsmError(
+                        `EXTERN "${(String(rest || '').trim().replace(/^extern\s+/i, '')
+                            .split(/[\s,]+/)[0]) || '?'}" cannot be`
+                        + ' resolved: this assembles straight to a loadable image, so there is no'
+                        + ' second module to find it in. Define it in this file, or link it in'
+                        + ' before assembling.',
+                        { ...this.here, what: 'unresolvable EXTERN' });
+                case 'common': case 'absolute':
                 case 'default': case 'group': case 'use16': case 'use32':
                     throw new AsmError(
                         `"${word.toUpperCase()}" is not supported -- this assembles straight to a`
@@ -3639,8 +4091,13 @@ function buildExe(asm, order) {
  * @param {string} source
  * @param {{ format?: 'auto'|'com'|'exe', maxPasses?: number,
  *           longJumps?: boolean, dialect?: 'auto'|'masm'|'nasm', name?: string,
+ *           variant?: '8086'|'80186',
  *           readInclude?: (path:string) => string,
  *           readBinary?: (path:string) => Uint8Array }} [opts]
+ *   `variant` is which chip to assemble FOR, spelled as the core and the
+ *   disassembler spell it. It defaults to '8086' and an unknown value is
+ *   refused rather than quietly becoming one; see the module header for
+ *   what '80186' adds and what it does not.
  *   `longJumps` promotes a conditional jump or LOOP that cannot reach; OFF
  *   by default, and see the module header for why the default is the
  *   interesting part. `dialect` defaults to 'auto', which reads the source
@@ -3654,6 +4111,15 @@ function buildExe(asm, order) {
  *             segments: {name:string, para:number, size:number}[] }}
  */
 export function assemble(source, opts = {}) {
+    // REFUSED, NOT DEFAULTED. `{variant: '186'}` and `{variant: 'V20'}` are
+    // the two spellings a caller reaches for first, and both are wrong;
+    // falling back to '8086' would hand them an assembler that silently
+    // refuses the fifteen instructions they asked for. The core and the
+    // disassembler refuse the same two strings with the same message shape.
+    if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186') {
+        throw new AsmError(`unknown variant ${JSON.stringify(opts.variant)} `
+            + "-- expected '8086' or '80186'", { what: 'unknown variant' });
+    }
     const dialect = !opts.dialect || opts.dialect === 'auto' ? detectDialect(source) : opts.dialect;
     if (dialect !== 'masm' && dialect !== 'nasm') {
         throw new AsmError(`dialect "${dialect}" -- only 'masm', 'nasm' and 'auto' exist here`,
@@ -3740,10 +4206,12 @@ export function assemble(source, opts = {}) {
  * the encoder.
  *
  * @param {string} source @param {number} [org]
+ * @param {{ variant?: '8086'|'80186' }} [opts] passed straight through, so
+ *   the round-trip test can drive a 186 the same way it drives an 8086.
  * @returns {Uint8Array}
  */
-export function assembleRaw(source, org = 0) {
-    const r = assemble(`ORG ${org}\n${source}\nEND\n`, { format: 'com' });
+export function assembleRaw(source, org = 0, opts = {}) {
+    const r = assemble(`ORG ${org}\n${source}\nEND\n`, { ...opts, format: 'com' });
     return r.bytes;
 }
 

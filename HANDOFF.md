@@ -173,6 +173,41 @@ between trees by hand is the same hazard with extra steps.
   - Do not start a second `node --max-old-space-size=...`, a JVM-backed test
     run, a full `npm test` alongside someone else's, a large clone, or a
     Rust/Tauri build while the swap line is near full.
+  - **A LONG-DETACHED SESSION IS A SWAP LEAK, NOT A RAM COST.** Ending three
+    sessions idle since Aug 29 - Sep 2 moved the headroom from 1628 MB to
+    3137 MB — and the term that moved was SWAP, 309 MB free to 1549 MB. Their
+    combined RSS was only ~450 MB: the kernel had paged them out days earlier,
+    so they were occupying the cushion rather than the RAM. That is why
+    `free -m` looked survivable while the box was in trouble — it looked
+    survivable BECAUSE the idle sessions had been swapped out, into the one
+    resource with no second line of defence. Prune detached sessions before
+    concluding the box is simply too small.
+    - **State that the other way round, because it is the useful direction:
+      RAM looking healthy can be EVIDENCE that swap is being consumed.** The
+      reassuring number and the dangerous condition had the same cause. A
+      comfortable `free -m` with a full swap line is not a box that is coping;
+      it is a box that has already spent its reserve to produce that comfort.
+    - **THE RATIO IS THE POINT, and a second sweep made it quantitative.** Six
+      sessions holding about 180 MB of RESIDENT memory released **1926 MB** of
+      headroom when ended — roughly ten to one, because nearly all of what they
+      held had been paged out over four to nine days detached:
+
+          sweep 1 (3 sessions, ~450 MB RSS):  1628 -> 3137 MB headroom
+          sweep 2 (6 sessions, ~180 MB RSS):  2088 -> 4014 MB headroom
+
+      So estimating the value of pruning from `ps` RSS understates it by about
+      an order of magnitude, which is exactly the arithmetic that makes an idle
+      session look too small to bother ending.
+  - **`screen -X quit` is not enough.** It removes the screen and ORPHANS the
+    `claude` process, which is reparented to init and keeps its memory. All
+    three survived it here, and one was still holding a Dart analysis server
+    that had been running 5 days 14 hours. Check the PIDs afterwards and
+    SIGTERM what remains.
+    - **This is the operationally dangerous half.** Anyone who prunes sessions
+      and stops at `screen -X quit` will believe they freed memory, read
+      `free -m`, see no improvement, and conclude the idle sessions were not
+      the problem after all — having in fact freed nothing. The wrong lesson
+      is then learned from a correct measurement of an incomplete action.
   - **It causes FALSE TEST FAILURES, so check the box before believing a red.**
     `sap1-differential` and `sap1-digital-parity` shell out to
     `java -cp Digital.jar` with a hard `timeout: 30000`. Under load all four
