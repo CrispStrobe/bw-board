@@ -433,6 +433,7 @@ the wrong field** or **returned a green from a check that never executed**:
 | `bash -c '... $IN ...' IN=value` | a 20-minute run with an input stream | `IN=value` set `$0`, so `--type` got an empty string |
 | `node --test test/…` in a sparse worktree | `# pass 123 # fail 0` | six tests never ran; the files they import were not checked out |
 | `npm test \| tail -15` reported by its exit code | "suite green, exit 0" | `tail`'s status. The suite had a failing test throughout. **This is row 1 of this same table, recurring.** |
+| the corpus report read through `tail -12` | "four programs no longer assemble under MASM" | **fourteen** programs, and the list is the `--longJumps` PROMOTION list — the MASM line is its footnote. The `tail` cut the header that says so. |
 
 The last one is worth its own paragraph, because it is the only one on this
 list that reports a **passing** result. A `git sparse-checkout` in a worktree
@@ -457,6 +458,24 @@ correctness one. Redirect to a file and check `$?` on the bare command, or set
 What it hid: `getTargetKinds` returned 11 kinds against a test expecting 10,
 because a merged commit made the 8086 pickable without updating the count.
 Small, and it had been reported as green three times.
+
+**The last row is the worst of them, because it propagated a wrong MEANING and
+not just a wrong count.** The block is fifteen lines and opens with
+
+    14 program(s) needed OUT-OF-RANGE CONDITIONALS PROMOTED (21 jumps),
+    and would be refused without --longJumps:
+
+`tail -12` removes exactly that header and leaves the last four entries plus
+the closing sentence *"These no longer assemble under real MASM"* — which reads
+perfectly as a complete four-item list with an explanation. Nothing looks
+truncated. It was reported onward to another session in that form, who read the
+same block at a different tail depth, got five, and asked why the counts
+differed; only then did anyone read the header.
+
+**When a report begins with a count, read the count.** `14 program(s) ... (21
+jumps)` was in the output the whole time, and `tail` is precisely the tool that
+removes a header. A truncation that lands mid-list is obvious; one that lands
+just after a header is invisible, because what remains is well-formed.
 
 The countermeasure is to know the expected count. `# pass 130` means something
 only against a number you had before; a suite that reports only "0 failures" is
