@@ -637,6 +637,14 @@ export class I8086Machine {
             // erratum has something to happen to.
             intPending: () => !!(this._pic && this._pic.intActive),
         }, { variant: this.variant });
+        // Interrupt-trap bridge (E6.8.3): a SOFTWARE INT n (INT/INT3/INTO and the
+        // internal exceptions) executes inside the core, so the core emits it via
+        // cpu.onInterrupt; forward it to the machine's single onInterrupt hook so
+        // the debugger sees one stream — 'int' from here, 'irq'/'nmi' from
+        // _serviceInterrupts. The core must emit from the opcode/exception sites,
+        // NOT from its shared _interrupt(n) funnel, which the hardware path also
+        // uses and which would then double-fire against 'irq'/'nmi'.
+        this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
     }
 
     /** The tone the speaker is producing, if any. {hz, on} or null. */
@@ -676,10 +684,17 @@ export class I8086Machine {
 
     // ---- the port bus ---------------------------------------------------
     _in(port) {
+        let val = 0xff;
         for (const w of this._io) {
-            if (port >= w.start && port <= w.end) return w.chip.read(regOf(w, port));
+            if (port >= w.start && port <= w.end) { val = w.chip.read(regOf(w, port)); break; }
         }
-        return 0xff;
+        // Port-access trap (E6.8.3): the value handed back is the one the program
+        // sees, so the hook fires AFTER the read and reports what was read. This
+        // does not reopen the refusal to DUMP the port space (i8086-debug.js:22):
+        // that refuses a debugger-initiated read; this observes the PROGRAM's read
+        // and never performs one of its own.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess({ dir: 'in', port, value: val & 0xff });
+        return val;
     }
 
     _out(port, val) {
@@ -696,9 +711,13 @@ export class I8086Machine {
                     if (hi && !this._kbdStrobe) this._pic.setIRQ(1, 0);
                     this._kbdStrobe = hi;
                 }
-                return;
+                break;
             }
         }
+        // Port-access trap (E6.8.3): fires on EVERY OUT, decoded or not — a debug
+        // watch on "anything touches port 61h" wants the access the program made,
+        // not only the ones that hit a chip. Zero cost when no watch is set.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess({ dir: 'out', port, value: val & 0xff });
     }
 
     // ---- pins -----------------------------------------------------------
@@ -818,6 +837,11 @@ export class I8086Machine {
     _serviceInterrupts() {
         if (this._nmiPending) {
             this._nmiPending = false;
+            // Interrupt trap (E6.8.3): source distinguishes the delivered lines
+            // the machine drives — 'nmi' here, 'irq' below — from a software INT n
+            // (source 'int'), which executes inside the core and is emitted there.
+            // "break on IRQ0" and "break on INT 21h" are different questions.
+            if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector: 2, source: 'nmi' });
             this.cpu.interrupt(2);        // NMI is vector 2, unconditional
             return true;
         }
@@ -828,6 +852,7 @@ export class I8086Machine {
         // halves.
         if (!this.cpu.canTakeInterrupt()) return false;
         const vector = this._pic.acknowledge();
+        if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector, source: 'irq' });
         this.cpu.interrupt(vector);   // pushes flags/cs/ip, clears halted
         return true;
     }
