@@ -28,7 +28,9 @@ import { extract6502Machine } from '../src/m6502-extract.js';
 import { M6502Machine } from '../src/m6502-machine.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const GALLERY = join(here, '..', '..', 'wt', 'i8086-ui-cui', 'gallery', 'e4-via-blink.json');
+// Hermetic: the committed fixture snapshot, not the sibling bw-circuit-ui
+// worktree (which need not be on disk). Same file, shipped in this repo.
+const GALLERY = join(here, '..', 'test', 'fixtures', 'reseat', 'e4-via-blink.json');
 
 // ---- 1+2: the circuit, extracted -----------------------------------------
 const circuit = JSON.parse(readFileSync(GALLERY, 'utf8'));
