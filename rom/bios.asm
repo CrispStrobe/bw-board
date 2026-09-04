@@ -156,8 +156,18 @@ BOOT_SEG    equ 0000h           ; the boot sector's segment
 BOOT_OFF    equ 7C00h           ; ...and its offset. Also the BIOS stack top:
                                 ; the stack grows DOWN from here and the boot
                                 ; sector grows UP, so they never meet.
-VID_COLOR   equ 0B800h          ; CGA text page
+VID_COLOR   equ 0B800h          ; CGA text page, and the graphics aperture of
+                                ; modes 4/5/6 -- the same 16K seen two ways
 VID_MONO    equ 0B000h          ; MDA/Hercules text page (mode 7)
+VID_VGA     equ 0A000h          ; the 64K VGA aperture mode 13h is linear in
+
+; The CGA graphics geometry, named once so the plot routine and the mode
+; setter cannot disagree about it.
+CGA_BANK    equ 2000h           ; distance from the even-scanline bank to the
+                                ; odd one. THE INTERLEAVE: row y is NOT at
+                                ; y*80, it is at (y >> 1)*80 + (y & 1)*2000h.
+CGA_STRIDE  equ 80              ; bytes per scan line -- 320 pixels at two bits
+                                ; and 640 at one bit both land on eighty
 
 ;-----------------------------------------------------------------------------
 ; The XT port map. Ports, not memory: IN/OUT decode on a separate bus.
@@ -174,6 +184,21 @@ PORT_PPICTL equ 63h             ; 8255 control word
 PORT_CRTC   equ 3D4h            ; 6845 index register (data at 3D5h)
 PORT_CGAMOD equ 3D8h            ; CGA mode control
 PORT_CGACOL equ 3D9h            ; CGA colour select
+PORT_CGASTAT equ 3DAh           ; CGA/VGA input status 1. Reading it also
+                                ; resets the VGA attribute controller's
+                                ; index/data flip-flop, which is the ONLY
+                                ; documented way to re-synchronise it.
+
+; The VGA register file, for mode 13h. Everything below 3D0h belongs to it
+; alone; 3D4h/3D5h are shared with the 6845's index/data pair by design, and
+; the misc output register's bit 0 is what puts them at 3Dxh rather than 3Bxh.
+PORT_VGA_ATTR equ 3C0h          ; attribute controller: ONE port, index and
+                                ; data alternating under a flip-flop
+PORT_VGA_MISC equ 3C2h          ; miscellaneous output (write; 3CCh reads)
+PORT_VGA_SEQI equ 3C4h          ; sequencer index (data at 3C5h)
+PORT_VGA_DACW equ 3C8h          ; DAC write index (data at 3C9h, R-G-B each)
+PORT_VGA_DACD equ 3C9h          ; DAC data: three SIX-BIT values per entry
+PORT_VGA_GCI  equ 3CEh          ; graphics controller index (data at 3CFh)
 
 ; The uPD765 floppy card. The window is 3F0h-3F7h and only four of the eight
 ; addresses are decoded on an XT card: 3F0h, 3F1h, 3F3h and 3F6h answer
@@ -1119,6 +1144,12 @@ v_table:
     dw v_writecell
     db 0Ah
     dw v_writechar
+    db 0Bh
+    dw v_setpalette
+    db 0Ch
+    dw v_writepix
+    db 0Dh
+    dw v_readpix
     db 0Eh
     dw v_teletype
     db 0Fh
@@ -1138,17 +1169,37 @@ v_setmode:
     and  al, 7Fh
     mov  [BDA_MODE], al
 
-    ; 40-column text is modes 0 and 1; everything else here is 80 columns
-    ; wide, including the graphics modes measured in character cells.
-    mov  cx, 80
-    mov  bx, 1000h              ; 4K per page: 4000 bytes rounded to a boundary
-    cmp  al, 2
-    jae  vsm_wide
-    mov  cx, 40
-    mov  bx, 0800h
-vsm_wide:
-    mov  [BDA_COLS], cx
-    mov  [BDA_PAGELEN], bx
+    ; THE GEOMETRY IS THE SAME QUANTITY IN BOTH KINDS OF MODE, which is why
+    ; one table covers them. A CGA graphics mode is still measured in
+    ; character cells eight pixels wide -- 320 pixels IS forty columns and
+    ; 640 IS eighty -- and DOS-era code reads 0040:004Ah expecting exactly
+    ; that, because it is what positions text on a graphics screen.
+    ;
+    ; The page length is the aperture a mode occupies, rounded up to a
+    ; paragraph-friendly boundary: 40x25x2 = 2000 bytes -> 800h, 80x25x2 =
+    ; 4000 -> 1000h, and every CGA graphics mode is the whole 16K aperture
+    ; (two banks of 8192) -> 4000h. Mode 13h's 64000 bytes are not a "page"
+    ; at all -- there is only one -- so it declares zero, and code that
+    ; multiplies by it to find page n lands on page 0, which is the only
+    ; page there is.
+    mov  bl, al
+    mov  bh, 0
+    cmp  bl, 13h
+    jne  vsm_g1
+    mov  bl, 8                  ; mode 13h rides the ninth slot of the table
+vsm_g1:
+    cmp  bl, 8
+    jbe  vsm_known
+    mov  bl, 3                  ; a mode this ROM does not know: 80x25 text
+vsm_known:
+    push ax
+    mov  al, cs:vid_cols[bx]
+    mov  ah, 0
+    mov  [BDA_COLS], ax
+    shl  bx, 1
+    mov  ax, cs:vid_pagelen[bx]
+    mov  [BDA_PAGELEN], ax
+    pop  ax
     mov  word ptr [BDA_PAGEOFF], 0
     mov  byte ptr [BDA_ACTPAGE], 0
 
@@ -1167,6 +1218,11 @@ vsm_wide:
     pop  di
     pop  ax
 
+    ; Mode 13h is not a CGA mode and none of what follows applies to it: a
+    ; different card, a different register file, a different aperture.
+    cmp  al, 13h
+    je   vsm_vga
+
     ; The CGA mode-control register at 3D8h, built from the bit meanings in
     ; the chip's data sheet rather than copied from anyone's table:
     ;   bit 0  80x25 text     bit 1  graphics      bit 2  monochrome signal
@@ -1184,30 +1240,70 @@ vsm_setreg:
     mov  al, bl
     mov  dx, PORT_CGAMOD
     out  dx, al
-    mov  al, 30h                ; a plain palette; the colour register is a
-    mov  [BDA_PALETTE], al      ; graphics-mode control and text ignores it
+
+    ; The colour-select register at 3D9h. Its bits mean different things in
+    ; the two graphics families, so the value is chosen per mode rather than
+    ; being one constant:
+    ;   bits 0-3  in 320x200, the BACKGROUND and border colour; in 640x200,
+    ;             the FOREGROUND -- the colour a set bit is drawn in
+    ;   bit 4     intensity, applied to the four-colour palette
+    ;   bit 5     which four-colour palette: 0 = green/red/brown,
+    ;             1 = cyan/magenta/white
+    ; 30h is therefore "black background, bright cyan/magenta/white" for the
+    ; 320x200 modes and for text, which ignores the register entirely. Mode 6
+    ; wants its foreground nibble set instead, so it gets 3Fh: white on black.
+    mov  al, 30h
+    cmp  byte ptr [BDA_MODE], 6
+    jne  vsm_col
+    mov  al, 3Fh
+vsm_col:
+    mov  [BDA_PALETTE], al
     mov  dx, PORT_CGACOL
     out  dx, al
 
+    ; The 6845 itself. Setting 3D8h alone changes how the card INTERPRETS
+    ; what it fetches; it does not change the raster, the number of rows, or
+    ; how many scan lines a character row is. See crtc_program.
+    call crtc_program
+    jmp  vsm_cls
+
+vsm_vga:
+    call vga_mode13
+
+vsm_cls:
     or   ah, ah
     jnz  vsm_nocls
     ; Clear the whole buffer, not just one page: switching modes leaves the
-    ; other pages holding characters in the previous mode's geometry.
+    ; other pages holding characters in the previous mode's geometry, and a
+    ; graphics mode inherits text as a field of confetti.
+    ;
+    ; BX carries the fill and CX the count, so the three cases differ only in
+    ; their three values and the code that stores is written once.
     mov  ax, VID_COLOR
+    mov  cx, 8192               ; 16K in words: the whole CGA aperture, which
+                                ; in modes 4/5/6 is both interleaved banks
+    mov  bx, 0720h              ; blank, light grey on black
     cmp  byte ptr [BDA_MODE], 7
     jne  vsm_c1
     mov  ax, VID_MONO
+    jmp  vsm_c3
 vsm_c1:
+    cmp  byte ptr [BDA_MODE], 13h
+    jne  vsm_c2
+    mov  ax, VID_VGA
+    mov  cx, 32000              ; 320*200 bytes, one per pixel, as words
+    xor  bx, bx
+    jmp  vsm_c3
+vsm_c2:
+    cmp  byte ptr [BDA_MODE], 4
+    jb   vsm_c3
+    cmp  byte ptr [BDA_MODE], 6
+    ja   vsm_c3
+    xor  bx, bx                 ; a graphics mode: all bits off, not blanks
+vsm_c3:
     mov  es, ax
     xor  di, di
-    mov  cx, 8192               ; 16K: the whole text aperture
-    mov  ax, 0720h              ; blank, light grey on black
-    cmp  byte ptr [BDA_MODE], 4
-    jb   vsm_c2
-    cmp  byte ptr [BDA_MODE], 6
-    ja   vsm_c2
-    xor  ax, ax                 ; a graphics mode: all bits off, not blanks
-vsm_c2:
+    mov  ax, bx
     rep  stosw
 vsm_nocls:
     xor  dx, dx
@@ -1590,6 +1686,729 @@ sc_blank_loop:
     pop  bp                     ; the interrupt frame pointer, back where it was
     ret
 scroll_common endp
+
+;=============================================================================
+; GRAPHICS.
+;
+; Three services and four helpers, and the whole thing turns on ONE fact
+; about how a CGA stores a picture, stated here once and relied on below.
+;
+; THE SCAN LINES ARE INTERLEAVED. Video memory in modes 4, 5 and 6 is not a
+; picture read top to bottom. EVEN scan lines live in the 8K at B800:0000 and
+; ODD ones in the 8K at B800:2000, each bank holding 100 rows of 80 bytes. So
+;
+;     row y starts at (y >> 1) * 80 + (y & 1) * 2000h
+;
+; and NOT at y * 80. This is the mistake worth naming, because the wrong
+; version still draws: the picture comes out in half-height stripes with half
+; of it landing in the 192 unused bytes at the end of each bank, which reads
+; as a rendering fault rather than as an addressing one. The layout exists
+; because the 6845 in graphics mode scans two lines per character row, and
+; IBM wired the row counter's low bit to address line 13 instead of adding an
+; adder.
+;
+; THE BIT PACKING is the second fact. In 320x200 four pixels share a byte at
+; two bits each; in 640x200 eight share it at one bit each; in both, the
+; LEFTMOST pixel is in the HIGH bits. One pixel is therefore a
+; read-modify-write of one byte, never a store.
+;
+; Mode 13h is neither: 320x200, one byte per pixel, linear from A000:0000, no
+; banks and no packing. That is why every game that can choose chooses it.
+;=============================================================================
+
+;-----------------------------------------------------------------------------
+; gfx_addr -- where a pixel lives.
+;
+;   in    CX = x, DX = y, DS = the BIOS data area
+;   out   CF=0, ES:DI = the byte holding it, CL = how far LEFT a colour must
+;         be shifted to reach that pixel's bits, CH = the field's mask at
+;         bit 0 (3 in mode 4/5, 1 in mode 6, 0FFh in mode 13h)
+;         CF=1 and nothing else disturbed: off screen, or not a mode this
+;         ROM plots in
+;
+; AX, BX and DX come back as they went in, so a caller keeps its colour in AL
+; and its coordinates across the call. CH = 0FFh is also how the two plotting
+; routines tell a packed pixel from a whole-byte one without asking the mode
+; a second time.
+;-----------------------------------------------------------------------------
+gfx_addr proc near
+    push ax
+    push bx
+    push dx
+
+    ; MODE 13h FIRST, and not for tidiness: it is the short case, and putting
+    ; the long CGA one first would put its own tail out of reach of a
+    ; conditional jump. One byte per pixel, no banks, so the address is the
+    ; plain arithmetic the interleave exists to complicate: y * 320 + x.
+    mov  al, [BDA_MODE]
+    cmp  al, 13h
+    jne  ga_packed
+    cmp  dx, 200
+    jae  ga_bad
+    cmp  cx, 320
+    jae  ga_bad
+    mov  ax, dx
+    mov  bx, 320
+    mul  bx                     ; 199*320 + 319 = 63999: still one word
+    add  ax, cx
+    mov  di, ax
+    mov  cl, 0                  ; no shift...
+    mov  ch, 0FFh               ; ...and the whole byte is the pixel
+    mov  ax, VID_VGA
+    jmp  ga_ok
+
+    ; The refusal sits BETWEEN the two paths so that every bounds check in
+    ; both of them can reach it with an ordinary conditional jump. Putting it
+    ; at the end, where it reads better, puts it 158 bytes from the first
+    ; check that needs it -- and an 8086 conditional jump reaches 127.
+ga_bad:
+    pop  dx
+    pop  bx
+    pop  ax
+    stc
+    ret
+
+ga_packed:
+    cmp  al, 4
+    jb   ga_bad
+    cmp  al, 6
+    ja   ga_bad
+    cmp  dx, 200
+    jae  ga_bad
+
+    mov  bx, cx                 ; x, kept whole while DI is built out of y
+
+    ; The row, and THE INTERLEAVE. The bank is bit 0 of y scaled to 2000h;
+    ; inside a bank the rows ARE consecutive, so the row number is y >> 1.
+    mov  di, dx
+    and  di, 1
+    mov  cl, 13                 ; 2000h is 1 shifted left thirteen
+    shl  di, cl
+    shr  dx, 1
+    mov  ax, dx
+    mov  dl, CGA_STRIDE
+    mul  dl                     ; AX = (y >> 1) * 80; 99*80 fits a word easily
+    add  di, ax
+
+    mov  ax, bx                 ; x again, about to be divided by the packing
+    cmp  byte ptr [BDA_MODE], 6
+    je   ga_hires
+
+    ; 320x200: four pixels to a byte, two bits each. Pixel 0 of a byte is
+    ; bits 7-6 and pixel 3 is bits 1-0, so the shift counts DOWN: 6, 4, 2, 0.
+    cmp  bx, 320
+    jae  ga_bad
+    shr  ax, 1
+    shr  ax, 1
+    add  di, ax
+    and  bl, 3
+    mov  cl, 3
+    sub  cl, bl
+    shl  cl, 1                  ; (3 - (x & 3)) * 2
+    mov  ch, 3
+    jmp  ga_cga
+
+ga_hires:
+    ; 640x200: eight pixels to a byte, one bit each, leftmost in bit 7.
+    cmp  bx, 640
+    jae  ga_bad
+    mov  cl, 3
+    shr  ax, cl
+    add  di, ax
+    and  bl, 7
+    mov  cl, 7
+    sub  cl, bl                 ; 7 - (x & 7)
+    mov  ch, 1
+
+ga_cga:
+    mov  ax, VID_COLOR
+ga_ok:
+    mov  es, ax
+    pop  dx
+    pop  bx
+    pop  ax
+    clc
+    ret
+gfx_addr endp
+
+;-----------------------------------------------------------------------------
+; AH=0Ch -- write a pixel. AL = colour, CX = x, DX = y, BH = page.
+;
+; BH IS ACCEPTED AND IGNORED, which is the truth rather than a shortcut: a
+; CGA in a graphics mode has exactly one page, because one screen IS the 16K
+; aperture. Failing the call when BH is not zero would break every program
+; that leaves whatever was in BH there -- which is most of them -- and
+; honouring it would need memory the card does not have.
+;
+; BIT 7 OF AL IS THE XOR FLAG, and it is why this service gets used at all
+; instead of a program writing its own bytes. Draw a sprite with XOR, draw it
+; again in the same place, and exactly what was underneath comes back; that
+; is how everything moved on a CGA. It is not decoration.
+;-----------------------------------------------------------------------------
+v_writepix:
+    call gfx_addr
+    jc   v_wp_done
+    mov  al, [bp+F_AL]
+    ; A 256-COLOUR PIXEL HAS NO ROOM FOR A FLAG. Bit 7 of AL is the XOR flag
+    ; in every mode whose pixel is narrower than a byte; in mode 13h it is
+    ; colour bit 7, and reading it as a flag would put half the palette out
+    ; of reach of this call.
+    cmp  ch, 0FFh
+    jne  v_wp_field
+    mov  es:[di], al
+    jmp  v_wp_done
+v_wp_field:
+    mov  ah, al                 ; the flag rides along in the copy
+    and  al, ch                 ; the colour, clipped to the field's width
+    shl  al, cl                 ; ...and moved onto this pixel's bits
+    test ah, 80h
+    jnz  v_wp_xor
+    mov  ah, ch
+    shl  ah, cl
+    not  ah                     ; every bit of the byte EXCEPT this pixel's
+    and  ah, es:[di]
+    or   al, ah
+    mov  es:[di], al
+    jmp  v_wp_done
+v_wp_xor:
+    xor  al, es:[di]
+    mov  es:[di], al
+v_wp_done:
+    jmp  v_exit
+
+;-----------------------------------------------------------------------------
+; AH=0Dh -- read a pixel. CX = x, DX = y, BH = page; the colour in AL.
+;
+; Not here for symmetry. Collision detection on a CGA is reading the pixel a
+; sprite is about to move onto and seeing whether anything is already there,
+; and a game that cannot do it either does not detect collisions or keeps a
+; shadow copy of the screen in memory it has not got. An off-screen
+; coordinate reads as 0 rather than failing: the caller asked "is anything
+; there", and off the screen there is not.
+;-----------------------------------------------------------------------------
+v_readpix:
+    xor  al, al
+    call gfx_addr
+    jc   v_rp_done
+    mov  al, es:[di]
+    shr  al, cl
+    and  al, ch
+v_rp_done:
+    mov  [bp+F_AL], al
+    jmp  v_exit
+
+;-----------------------------------------------------------------------------
+; AH=0Bh -- set the palette. BH says which half of the colour-select register
+; at 3D9h is being written and BL is the value.
+;
+;   BH=0   BL = the border colour, and in the 320x200 modes the BACKGROUND
+;          as well -- they are the same four bits of the same register. Bit 4
+;          is the intensity that turns eight colours into sixteen, so a
+;          five-bit value passes straight through.
+;   BH=1   BL bit 0 chooses between the two four-colour palettes:
+;          0 = green/red/brown, 1 = cyan/magenta/white. That is bit 5.
+;
+; THE OTHER BITS MUST SURVIVE. A program sets the background and then the
+; palette, or the other way about, and a service that wrote a whole byte each
+; time would undo whichever call came first. So the last value is kept at
+; 0040:0066h and edited -- which is also where a program that wants to know
+; is entitled to read it, since 3D9h is write-only on the card and a read
+; floats.
+;-----------------------------------------------------------------------------
+v_setpalette:
+    mov  al, [BDA_PALETTE]
+    or   bh, bh
+    jnz  v_sp_palette
+    and  al, 0E0h               ; keep bits 5-7, replace the colour field
+    mov  ah, bl
+    and  ah, 1Fh
+    or   al, ah
+    jmp  v_sp_out
+v_sp_palette:
+    and  al, 0DFh               ; clear bit 5...
+    test bl, 1
+    jz   v_sp_out
+    or   al, 20h                ; ...and set it only for palette 1
+v_sp_out:
+    mov  [BDA_PALETTE], al
+    mov  dx, PORT_CGACOL
+    out  dx, al
+    jmp  v_exit
+
+;-----------------------------------------------------------------------------
+; crtc_program -- load the 6845 with the timings the mode in the BDA needs.
+;
+; WHY THIS IS NOT OPTIONAL even though 3D8h already said "graphics". The
+; mode-control register only tells the card how to INTERPRET the bytes it
+; fetches. How many character rows there are, how many scan lines each one
+; is, and where the sync pulses fall are the CRTC's, and a 6845 still holding
+; the previous mode's numbers displays the new mode's memory through the old
+; mode's raster. Going from 80x25 text to 320x200 without this leaves the
+; card fetching 25 rows of 8 scan lines out of a buffer that is 100 rows
+; of 2.
+;
+; THE VALUES ARE ARITHMETIC, not a table anyone wrote down. The dot clock is
+; 14.318 MHz and every mode has to come out at the same 15.7 kHz line rate
+; and 60 Hz frame rate, which fixes them:
+;
+;   80-column text  8 dots per character at the full dot clock = 1.79 MHz,
+;                   and 1.79 MHz / 15.7 kHz = 114 character times to a line,
+;                   80 of them displayed. R0 holds total-1, so 113.
+;   40-column text  the dot clock is halved first, so a character time is
+;                   twice as long and 57 of them fill a line. R0 = 56.
+;   graphics        320 pixels is 40 character times of that same halved
+;                   clock, so the horizontal half of the graphics row IS the
+;                   40-column half. 640x200 uses the SAME timings and fetches
+;                   two bytes per character time rather than one, which is
+;                   exactly what 3D8h bit 4 switches -- which is why there is
+;                   no fourth row in the table.
+;
+;   vertically      262 scan lines at 15.7 kHz gives 59.9 Hz. Text spends
+;                   them as 32 rows of 8 lines (R4=31, R9=7) plus a six-line
+;                   adjust (R5=6); graphics as 128 rows of 2 (R4=127, R9=1)
+;                   plus the same six. Of those, 25 rows and 100 rows are
+;                   displayed (R6) -- 200 scan lines either way.
+;
+;   R1 = displayed characters, R2/R3 = where the horizontal sync starts and
+;   how wide it is, R7 = where the vertical sync starts, R8 = interlace (off),
+;   R10/R11 = the cursor's scan lines.
+;
+; R12 and R13 are the display start address and are zeroed here, because a
+; mode set puts the screen back at the beginning of the aperture. R14 and R15
+; are the cursor address and belong to cur_set, which runs a moment later.
+;
+; On THIS machine CGACard decodes 3D8h and 3D9h and discards everything else,
+; so these twenty-eight OUTs land in a decoded window that ignores them. They
+; are here because they are what the hardware needs, and because a ROM that
+; writes only the registers its emulator happens to model is a ROM that stops
+; working on the next emulator.
+;-----------------------------------------------------------------------------
+crtc_program proc near
+    push ax
+    push bx
+    push dx
+    push si
+    mov  al, [BDA_MODE]
+    mov  si, offset crtc_gfx
+    cmp  al, 4
+    jb   cp_text
+    cmp  al, 6
+    jbe  cp_go
+cp_text:
+    mov  si, offset crtc_text40
+    cmp  al, 2
+    jb   cp_go                  ; modes 0 and 1 are the 40-column raster
+    mov  si, offset crtc_text80 ; 2, 3, 7 and anything unknown: 80 columns
+cp_go:
+    mov  dx, [BDA_CRTCPORT]
+    xor  bx, bx
+cp_loop:
+    mov  al, bl
+    out  dx, al                 ; the index register at 3D4h...
+    inc  dx
+    mov  al, cs:[si+bx]
+    out  dx, al                 ; ...and the data register at 3D5h
+    dec  dx
+    inc  bl
+    cmp  bl, 14
+    jb   cp_loop
+    pop  si
+    pop  dx
+    pop  bx
+    pop  ax
+    ret
+crtc_program endp
+
+;-----------------------------------------------------------------------------
+; vga_mode13 -- put a VGA into 320x200 with 256 colours.
+;
+; A VGA is not a CGA with more colours; it is a different card with five
+; register files behind index/data port pairs, and mode 13h is a particular
+; setting of four of them. THREE BITS do the actual work and everything else
+; is timing:
+;
+;   sequencer 04h bit 3   CHAIN-4. Video memory is four byte-wide planes and
+;                         normally the CPU sees all four at one address.
+;                         Chain-4 routes address bits 0-1 to the plane select
+;                         instead, so consecutive addresses land in
+;                         consecutive planes and 64000 bytes read back as one
+;                         flat array. THIS is what makes mode 13h linear.
+;   graphics  06h bit 0   graphics rather than alphanumeric; bits 3-2 = 01
+;                         put the aperture at A0000h for 64K.
+;   attribute 10h bit 6   8-bit colour: one byte IS one DAC index, instead of
+;                         four planes contributing one bit each to a
+;                         four-bit attribute.
+;
+; Chain-4 without 8-bit colour is a sixteen-colour planar mode; 8-bit colour
+; without chain-4 is what Mode X was built out of. Only both together are 13h.
+;
+; THE ATTRIBUTE CONTROLLER IS ONE PORT DOING TWO JOBS and an internal
+; flip-flop decides which. Reading the status register at 3DAh forces it back
+; to the index phase, and that read is not a formality: the flip-flop cannot
+; be read, so it is the only way to know which phase the port is in. Skip it
+; and every index is written as data and every value as an index.
+;
+; ON A MACHINE WITH NO VGA all of this lands in open bus and mode 13h is a
+; no-op that leaves BDA_MODE saying 13h. That is the honest outcome -- this
+; ROM does not probe for the card, and pretending 13h worked on a CGA would
+; be worse than a mode set that quietly did nothing.
+;-----------------------------------------------------------------------------
+vga_mode13 proc near
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+
+    ; Miscellaneous output. Bit 0 puts the CRTC at 3D4h (colour) rather than
+    ; 3B4h (mono), bit 1 lets the CPU reach display memory at all, bits 3-2
+    ; select the 25.175 MHz dot clock, bit 5 picks the high 64K page for
+    ; odd/even addressing, and bits 7-6 set the sync polarities that tell a
+    ; monitor this is the 400-line timing.
+    mov  dx, PORT_VGA_MISC
+    mov  al, 63h
+    out  dx, al
+
+    mov  si, offset vga13_seq
+    mov  dx, PORT_VGA_SEQI
+    mov  cx, 5
+    call vga_regs
+
+    mov  si, offset vga13_gc
+    mov  dx, PORT_VGA_GCI
+    mov  cx, 9
+    call vga_regs
+
+    ; The CRTC. Its index/data pair is at 3D4h/3D5h -- the same ports the
+    ; 6845 answers on, and deliberately so: an EGA and a VGA had to look
+    ; enough like a CGA for software that was already written to find them.
+    ;
+    ; REGISTER 11h HAS TO BE UNLOCKED FIRST. Its bit 7 write-protects
+    ; registers 0-7, and the value the table loads into it SETS that bit --
+    ; so the second call to this routine would silently fail to change the
+    ; horizontal timings if the lock were not cleared before the pass.
+    mov  dx, [BDA_CRTCPORT]
+    mov  al, 11h
+    out  dx, al
+    inc  dx
+    xor  al, al
+    out  dx, al
+    dec  dx
+    mov  si, offset vga13_crtc
+    mov  cx, 25
+    call vga_regs
+
+    ; The attribute controller: read 3DAh to force the index phase, then
+    ; index and data alternate through the SINGLE port at 3C0h.
+    mov  dx, PORT_CGASTAT
+    in   al, dx
+    mov  si, offset vga13_attr
+    mov  dx, PORT_VGA_ATTR
+    xor  bx, bx
+vm13_attr:
+    mov  al, bl
+    out  dx, al                 ; the index...
+    mov  al, cs:[si+bx]
+    out  dx, al                 ; ...and its data, same port, next phase
+    inc  bl
+    cmp  bl, 21                 ; 00h-0Fh the palette, then 10h-14h
+    jb   vm13_attr
+
+    ; Now let the screen come on. Bit 5 of a 3C0h INDEX write is the
+    ; palette-address-source bit: clear, the CPU owns the palette and the
+    ; display is blanked; set, the display owns it. Every attribute write
+    ; above ran with it clear, which is why they had to come first.
+    mov  al, 20h
+    out  dx, al
+
+    call vga_dac
+
+    pop  si
+    pop  dx
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
+vga_mode13 endp
+
+;-----------------------------------------------------------------------------
+; vga_regs -- CS:SI is CX bytes for the index/data pair at DX and DX+1,
+; written as registers 0, 1, 2, ... in order. Preserves everything.
+;-----------------------------------------------------------------------------
+vga_regs proc near
+    push ax
+    push bx
+    push cx
+    push dx
+    xor  bx, bx
+vr_loop:
+    mov  al, bl
+    out  dx, al
+    inc  dx
+    mov  al, cs:[si+bx]
+    out  dx, al
+    dec  dx
+    inc  bx
+    loop vr_loop
+    pop  dx
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
+vga_regs endp
+
+;-----------------------------------------------------------------------------
+; vga_dac -- load the 256-entry palette that mode 13h starts with.
+;
+; WHY THE ROM HAS TO DO THIS AT ALL. A VGA's DAC powers up holding zeros, and
+; zero is black. A mode-13h program that draws its picture and never touches
+; 3C8h -- which is most of them, because the default table is the one the
+; artwork was drawn against -- gets a black screen on a card nobody
+; initialised. The default palette is not a nicety; it is part of what
+; setting the mode MEANS.
+;
+; THE TABLE IS GENERATED, NOT STORED, and that is the honest way round: 768
+; bytes of listed numbers would be somebody's table copied, whereas the
+; structure is three plain descriptions that reproduce every entry exactly.
+;
+;   00h-0Fh  the sixteen CGA colours, straight out of the RGBI bits. Red is
+;            bit 2, green bit 1, blue bit 0, and bit 3 is intensity: a
+;            channel is 42 when its own bit is set, plus 21 when intensity
+;            is, so the four combinations are 0, 21, 42 and 63. Entry 6 ALONE
+;            is the exception -- its green is pulled down to 21 to make brown
+;            instead of olive, a correction IBM's monitor made in hardware
+;            and the DAC table bakes in. Entry 0Eh is plain yellow and must
+;            NOT get it.
+;   10h-1Fh  sixteen greys. The steps widen towards white because the ramp is
+;            perceptual rather than linear, so there is no formula and the
+;            levels are listed. Sixteen numbers are a measurement.
+;   20h-F7h  216 colours = 3 brightness levels x 3 saturations x a walk round
+;            the hue wheel in 6 sextants of 4 steps. Inside a sextant one
+;            channel sits at the high value, one at the low, and the third
+;            ramps between them in quarters -- rising in three of the six and
+;            falling in the other three, which is what closes the circle.
+;   F8h-FFh  black: the eight entries nobody ever defined.
+;
+; Values are SIX BITS WIDE because that is a DAC register's width. The card
+; stores what the hardware stores, so nothing here is scaled.
+;-----------------------------------------------------------------------------
+vga_dac proc near
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    mov  dx, PORT_VGA_DACW
+    xor  al, al
+    out  dx, al                 ; start at entry 0; the index self-increments
+    mov  dx, PORT_VGA_DACD      ; ...after every third byte, so from here on
+                                ; the palette is just a stream of bytes
+
+    ; ---- 00h-0Fh: the sixteen RGBI colours -------------------------------
+    xor  bx, bx
+vd_cga:
+    mov  al, 0
+    test bl, 4
+    jz   vd_r1
+    mov  al, 42
+vd_r1:
+    test bl, 8
+    jz   vd_r2
+    add  al, 21
+vd_r2:
+    out  dx, al                 ; red
+
+    mov  al, 0
+    test bl, 2
+    jz   vd_g1
+    mov  al, 42
+vd_g1:
+    test bl, 8
+    jz   vd_g2
+    add  al, 21
+vd_g2:
+    cmp  bl, 6
+    jne  vd_g3
+    mov  al, 21                 ; THE BROWN FIX, and entry 6 only
+vd_g3:
+    out  dx, al                 ; green
+
+    mov  al, 0
+    test bl, 1
+    jz   vd_b1
+    mov  al, 42
+vd_b1:
+    test bl, 8
+    jz   vd_b2
+    add  al, 21
+vd_b2:
+    out  dx, al                 ; blue
+
+    inc  bl
+    cmp  bl, 16
+    jb   vd_cga
+
+    ; ---- 10h-1Fh: the sixteen greys --------------------------------------
+    mov  si, offset vga_greys
+    xor  bx, bx
+vd_grey:
+    mov  al, cs:[si+bx]
+    out  dx, al
+    out  dx, al
+    out  dx, al                 ; a grey is the same value three times
+    inc  bl
+    cmp  bl, 16
+    jb   vd_grey
+
+    ; ---- 20h-F7h: three brightness levels of the hue wheel ----------------
+    mov  bl, 63
+    call vga_block
+    mov  bl, 28
+    call vga_block
+    mov  bl, 16
+    call vga_block
+
+    ; ---- F8h-FFh: the eight entries nobody defined ------------------------
+    mov  cx, 24
+    xor  al, al
+vd_black:
+    out  dx, al
+    loop vd_black
+
+    pop  di
+    pop  si
+    pop  dx
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
+vga_dac endp
+
+;-----------------------------------------------------------------------------
+; vga_block -- the 72 entries of one brightness level. BL = the high value,
+; DX = 3C9h. Three saturations, six sextants, four steps.
+;
+; The three saturations are the high value with the low one at 0, at a half,
+; and at five sevenths. That last looks arbitrary and is not: 63*5/7 is
+; exactly 45, 28*5/7 exactly 20, and 16*5/7 floors to 11, which are the three
+; levels' pale variants.
+;-----------------------------------------------------------------------------
+vga_block proc near
+    push ax
+    push bx
+    push cx
+    push si
+    push di
+    xor  di, di                 ; which of the three saturations
+vb_sat:
+    or   di, di
+    jz   vb_lo0
+    cmp  di, 1
+    je   vb_lo1
+    mov  al, bl                 ; five sevenths of the high value
+    mov  ah, 0
+    mov  cl, 5
+    mul  cl
+    mov  cl, 7
+    div  cl                     ; AL = quotient, AH = remainder: a floor
+    mov  bh, al
+    jmp  vb_have
+vb_lo1:
+    mov  bh, bl
+    shr  bh, 1                  ; half
+    jmp  vb_have
+vb_lo0:
+    mov  bh, 0                  ; fully saturated
+vb_have:
+    xor  cx, cx                 ; CL = sextant, CH = the step within it
+vb_sx:
+    mov  ch, 0
+vb_k:
+    mov  si, offset vga_sextants
+    mov  al, cl
+    mov  ah, 3                  ; three channel specs per sextant
+    mul  ah
+    add  si, ax
+    mov  al, cs:[si]
+    call vga_chan
+    out  dx, al                 ; red
+    mov  al, cs:[si+1]
+    call vga_chan
+    out  dx, al                 ; green
+    mov  al, cs:[si+2]
+    call vga_chan
+    out  dx, al                 ; blue
+    inc  ch
+    cmp  ch, 4
+    jb   vb_k
+    inc  cl
+    cmp  cl, 6
+    jb   vb_sx
+    inc  di
+    cmp  di, 3
+    jb   vb_sat
+    pop  di
+    pop  si
+    pop  cx
+    pop  bx
+    pop  ax
+    ret
+vga_block endp
+
+;-----------------------------------------------------------------------------
+; vga_chan -- one channel of one hue-wheel entry. AL = the spec (0 = sit at
+; the low value, 1 = sit at the high one, 2 = rise, 3 = fall), BL = high,
+; BH = low, CH = the step 0-3. Returns the six-bit value in AL.
+;
+; THE ROUNDING IS HALF-DOWN and that is not an aesthetic choice: it is what
+; makes the 0-to-63 ramp come out 0, 16, 31, 47, 63 and the 45-to-63 one 45,
+; 49, 54, 58, 63. Ordinary round-half-up gets the second wrong and
+; round-half-to-even gets the first; adding 3 before shifting right by 3 gets
+; both, because it rounds .5 down and everything above it up.
+;-----------------------------------------------------------------------------
+vga_chan proc near
+    push bx
+    push cx
+    push dx
+    or   al, al
+    jnz  vc_hi
+    mov  al, bh                 ; spec 0: sit at the low value
+    jmp  vc_done
+vc_hi:
+    cmp  al, 1
+    jne  vc_ramp
+    mov  al, bl                 ; spec 1: sit at the high value
+    jmp  vc_done
+vc_ramp:
+    push ax                     ; the spec, 2 or 3, wanted again below
+    mov  al, bl
+    sub  al, bh
+    mov  ah, 0                  ; AX = hi - lo, at most 63
+    mov  cl, ch
+    mov  ch, 0                  ; CX = the step, 0-3
+    mul  cx                     ; AX = (hi - lo) * k, at most 189
+    shl  ax, 1
+    add  ax, 3
+    mov  cl, 3
+    shr  ax, cl                 ; ((hi - lo) * k * 2 + 3) >> 3
+    add  al, bh                 ; ...+ lo: the rising ramp
+    pop  cx                     ; the spec, back in CL
+    cmp  cl, 2
+    je   vc_done
+    ; Falling is the same walk mirrored: hi - (ramp - lo), which is
+    ; hi + lo - ramp and cannot overflow a byte at these values.
+    mov  ah, al
+    mov  al, bl
+    add  al, bh
+    sub  al, ah
+vc_done:
+    pop  dx
+    pop  cx
+    pop  bx
+    ret
+vga_chan endp
 
 ;-----------------------------------------------------------------------------
 ; cur_get -- BH = page in, DH = row / DL = column out. DS must be the BDA.
@@ -3062,6 +3881,103 @@ ivt_table:
 ;   6  640x200 mono    : enable + graphics + hi-res + mono    = 0E+10    = 1Eh
 cga_modes:
     db 2Ch, 28h, 2Dh, 29h, 0Ah, 0Eh, 1Eh
+
+; The geometry of each mode, indexed by mode number, with mode 13h folded
+; into the ninth slot because it is the only mode above 7 this ROM sets.
+; See v_setmode for where the numbers come from; they are the same quantity
+; in a text mode and a graphics one, because a CGA graphics screen is still
+; measured in eight-pixel character cells.
+vid_cols:
+    db 40, 40, 80, 80, 40, 40, 80, 80, 40
+vid_pagelen:
+    dw 0800h, 0800h, 1000h, 1000h, 4000h, 4000h, 4000h, 1000h, 0000h
+
+; The 6845's registers R0-R13 for the three rasters this ROM produces. The
+; derivation of every number is in the crtc_program header; the shape is
+;   R0 h total-1   R1 h displayed   R2 h sync pos   R3 h sync width
+;   R4 v total-1   R5 v adjust      R6 v displayed  R7 v sync pos
+;   R8 interlace   R9 max scan line R10/R11 cursor start/end
+;   R12/R13 display start address, high then low
+crtc_text40:
+    db 56, 40, 45, 10
+    db 31, 6, 25, 28
+    db 2, 7, 6, 7
+    db 0, 0
+crtc_text80:
+    db 113, 80, 90, 10
+    db 31, 6, 25, 28
+    db 2, 7, 6, 7
+    db 0, 0
+crtc_gfx:
+    db 56, 40, 45, 10
+    db 127, 6, 100, 112         ; 128 rows of TWO scan lines, 100 displayed
+    db 2, 1, 6, 7               ; R9 = 1: a character row is two lines, which
+    db 0, 0                     ; is the whole reason the banks interleave
+
+; ---- mode 13h, the VGA register file ---------------------------------------
+;
+; Sequencer SR0-SR4. SR0 = 3 releases both reset bits; SR1 = 1 is the 8-dot
+; character clock; SR2 = 0Fh enables writes to all four planes, which chain-4
+; needs because consecutive bytes land in different ones; SR3 selects a
+; character map and is meaningless in graphics; SR4 = 0Eh is bit 1 (more than
+; 64K of memory), bit 2 (odd/even addressing OFF) and bit 3 (CHAIN-4 ON).
+vga13_seq:
+    db 03h, 01h, 0Fh, 00h, 0Eh
+
+; Graphics controller GR0-GR8. The set/reset, colour-compare, rotate and
+; read-map registers (0-4) all mean "do nothing to the byte on its way
+; through", which is what a linear mode wants. GR5 = 40h is bit 6, the
+; 256-colour shift; GR6 = 05h is bit 0 (graphics, not alphanumeric) with
+; bits 3-2 = 01 putting the aperture at A0000h for 64K; GR7 = 0Fh compares
+; all four planes and GR8 = 0FFh writes every bit of the byte.
+vga13_gc:
+    db 00h, 00h, 00h, 00h, 00h, 40h, 05h, 0Fh, 0FFh
+
+; CRTC R0-R18h. The dot clock is 25.175 MHz and the raster is the 720x400
+; text raster reused: 100 character times of 8 dots to a line (R0 holds
+; total-5, so 5Fh) of which 80 are displayed (R1 holds displayed-1, 4Fh),
+; giving 31.5 kHz; 449 lines to a frame (R6 holds total-2 = 447 = 1BFh, whose
+; ninth bit is in the overflow register R7) giving 70 Hz. R9 = 41h makes a
+; character row TWO scan lines, which is how 200 rows of pixels fill 400
+; lines. R13h = 28h is the offset: 40 words, and chain-4 multiplies that by
+; the four planes to make the 320 bytes of one row. R11h's bit 7
+; write-protects R0-R7, which is why vga_mode13 clears it before this pass.
+; The rest are the blanking and retrace edges of that same raster.
+vga13_crtc:
+    db 5Fh, 4Fh, 50h, 82h, 54h, 80h, 0BFh, 1Fh
+    db 00h, 41h, 00h, 00h, 00h, 00h, 00h, 00h
+    db 9Ch, 8Eh, 8Fh, 28h, 40h, 96h, 0B9h, 0A3h
+    db 0FFh
+
+; Attribute controller AR0-AR14h. The sixteen palette entries are the
+; identity, because in 8-bit colour they are bypassed entirely and leaving
+; them meaningful costs nothing. AR10h = 41h is bit 0 (graphics) and bit 6
+; (8-BIT COLOUR) -- the second of the three bits that make this mode 13h.
+; AR11h is the overscan colour, AR12h enables all four planes for display,
+; AR13h is horizontal pixel panning and AR14h the colour-select high bits.
+vga13_attr:
+    db 00h, 01h, 02h, 03h, 04h, 05h, 06h, 07h
+    db 08h, 09h, 0Ah, 0Bh, 0Ch, 0Dh, 0Eh, 0Fh
+    db 41h, 00h, 0Fh, 00h, 00h
+
+; The sixteen grey levels of DAC entries 10h-1Fh, six bits each. Perceptual,
+; not linear -- the steps widen from 5 to 7 as they approach white -- so
+; there is no expression to derive them from and they are listed.
+vga_greys:
+    db 0, 5, 8, 11, 14, 17, 20, 24
+    db 28, 32, 36, 40, 45, 50, 56, 63
+
+; The six sextants of the hue wheel, as three channel specifications each:
+; 0 = sit at the low value, 1 = sit at the high one, 2 = rise across the four
+; steps, 3 = fall. Exactly one channel moves in each sextant, which is what
+; makes the walk a circle and not a zigzag.
+vga_sextants:
+    db 2, 0, 1                  ; blue    -> magenta: red rising
+    db 1, 0, 3                  ; magenta -> red:     blue falling
+    db 1, 2, 0                  ; red     -> yellow:  green rising
+    db 3, 1, 0                  ; yellow  -> green:   red falling
+    db 0, 1, 2                  ; green   -> cyan:    blue rising
+    db 0, 3, 1                  ; cyan    -> blue:    green falling
 
 ; The diskette parameter table INT 1Eh points at. These are uPD765 timing
 ; parameters and a geometry, and they are OURS -- chosen to be right for a
