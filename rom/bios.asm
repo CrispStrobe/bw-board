@@ -53,10 +53,14 @@
 ;
 ;   POST      IVT, BIOS data area at 0040:0000, stack, 8259/8254/8255/CGA
 ;             init, banner, then INT 19h.
-;   INT 10h   00 set mode (text 0-3 and 7; 4-6 recorded only), 01 cursor
-;             shape, 02 set cursor, 03 get cursor, 05 set active page,
-;             06/07 scroll a window, 08 read char+attr, 09 write char+attr,
-;             0A write char, 0E teletype, 0F get mode.
+;   INT 10h   00 set mode -- text 0-3 and 7, CGA graphics 4/5/6, and VGA 13h
+;             on a machine that has a VGA: each one programs its card's
+;             registers and its CRTC, sets the BDA geometry and clears the
+;             aperture. 01 cursor shape, 02 set cursor, 03 get cursor,
+;             05 set active page, 06/07 scroll a window, 08 read char+attr,
+;             09 write char+attr, 0A write char, 0B set palette/background,
+;             0C write pixel (with the XOR flag), 0D read pixel, 0E teletype,
+;             0F get mode.
 ;   INT 11h   equipment word.        INT 12h   memory size.
 ;   INT 16h   00 read key, 01 peek, 02 shift flags (10/11/12 aliased).
 ;   INT 09h   keyboard IRQ: XT acknowledge strobe, shift/lock state, US
@@ -91,14 +95,30 @@
 ;     controller stops at the end of that cylinder and the caller has to ask
 ;     again for the next one. That is what the hardware does and every DOS
 ;     block driver already splits its requests this way.
-;   * Graphics. Modes 4/5/6 set the mode byte and the CGA mode register and
-;     nothing else; INT 10h AH=0Ch/0Dh (write/read pixel) are absent, so a
-;     program that draws gets the do-nothing default return.
-;   * The 6845 CRTC is written but not modelled. The cursor registers 0Ah/0Bh
-;     and 0Eh/0Fh are programmed exactly as the hardware wants; CGACard
-;     ignores every register but 3D8h/3D9h, so on THIS machine the hardware
-;     cursor is invisible. The BIOS-data-area cursor is the real one and it
-;     is correct.
+;   * CHARACTERS IN A GRAPHICS MODE. AH=09h, 0Ah and 0Eh write two-byte text
+;     cells to B8000h whatever the mode is. In modes 4/5/6 those bytes are
+;     pixels, so text drawn on a graphics screen comes out as noise instead
+;     of as glyphs. A real BIOS rasterises an 8x8 font into the bitmap, and
+;     that font is the missing piece: there is no character generator in this
+;     ROM, and INT 1Fh (the pointer to the high 128 characters' bitmaps) is
+;     not installed either. Graphics programs that draw their own text -- the
+;     usual case -- are unaffected.
+;   * AH=13h write string, AH=10h palette registers, and the EGA/VGA modes
+;     0Dh-12h. Those four are bit planes behind the sequencer's latches,
+;     which is a different machine from either card here.
+;   * ADAPTER DETECTION. Mode 13h writes the VGA register file whether or not
+;     there is a VGA in the machine; on a CGA-only box those writes land in
+;     open bus and the mode set is a no-op that still records 13h at 40:49h.
+;     Nothing probes for the card, and no config this repository ships
+;     declares one -- `kind: 'vga'` exists in src/i8086-machine.js and only
+;     tests use it.
+;   * The 6845 CRTC is written but not modelled. R0-R13 are programmed for
+;     each of the three rasters and the cursor registers 0Ah/0Bh and 0Eh/0Fh
+;     exactly as the hardware wants; CGACard ignores every register but
+;     3D8h/3D9h, so on THIS machine the hardware cursor is invisible and the
+;     timings go nowhere. (VGACard does latch 3D4h/3D5h, which is what makes
+;     the CRTC programming testable at all.) The BIOS-data-area cursor is the
+;     real one and it is correct.
 ;   * The speaker. BEL (07h) through the teletype call is swallowed, not
 ;     sounded; the PIT counter-2 / port-61h gate is wired on the machine but
 ;     no BIOS service exposes it.
