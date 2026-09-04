@@ -1109,9 +1109,17 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    They also fixed a latent trap: modeFromHercules had returned 0x06, which is
    CGA 640x200 in the mode table — B8000h + two-bank parity — and would have
    drawn our B0000h/four-bank framebuffer at the wrong address with the wrong
-   arithmetic: a coherent, plausible, entirely wrong picture. Once their decode
-   is pushed, THIS lane wires the HERCDEMO loader entry (the seam holds: my
-   registers, their pixels), and Hercules closes.
+   arithmetic: a coherent, plausible, entirely wrong picture.
+   **CLOSED (2026-09-04, renders).** Decode pushed (feat/i8086-tier `0c08cf1`,
+   pseudo-mode 0x100, 7 tests incl. the bottom scanline pinning bank size AND
+   stride together); loader entry wired (bw-circuit-ui `5359b85`). lego-47 ran
+   rom/hercules-demo.bin through the decode — my state test and their pixels met
+   with nothing to reconcile. GRAPHICS ONLY: MDA text (80x25 at B0000h, non-CGA
+   attributes) is still refused by name, so the firmware must not write text.
+   Two fallback facts to know: an UNPROGRAMMED HGC card renders a plausible grey
+   720x400 (the renderer falls back to 80x25 text at B8000h, which a Hercules-
+   only machine does not map — open-bus reads), so the ROM must reach its
+   3BFh/3B8h writes before the first frame (ours does, immediately).
 5. **EGA — LAST, and it needs a card first.** No ega-card.js exists yet; EGA's
    planar four-bitplane memory is the hardest of the set. Build the card (this
    lane), then the board + demo, then the renderer's planar decode (DOS/host).
@@ -1120,8 +1128,14 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
 Each step ships a LOADER ENTRY only once its renderer decode is confirmed,
 because a board that renders a cleared screen (or a refusal string) is not an
 example. Firmware + card-state tests can land earlier — they verify this lane's
-half of the seam and are ready to wire the moment the renderer catches up
-(Hercules is exactly that state today).
+half of the seam and are ready to wire the moment the renderer catches up.
+
+CONVENTION — the display demos SPIN after painting (they want to stay on
+screen), so `cpu.halted` never becomes true for them; only the timer demo HLTs,
+because it wants to be woken by the tick. A harness that waits for HLT will read
+a display demo as a hang — step a fixed count instead. (This is why every
+display-demo test steps a bounded number of instructions rather than looping
+until halt.)
 
 ---
 
