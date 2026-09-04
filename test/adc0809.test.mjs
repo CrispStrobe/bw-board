@@ -135,3 +135,64 @@ test('state round-trips, so a machine snapshot keeps a conversion in flight', ()
     b.setChannel(2, 0);
     assert.equal(a.volts[2], 4.0, 'the restored chip must not share the volts array');
 });
+
+// ---- the acceptance: a real program, not the chip's API --------------------
+
+test('a real 8086 program starts, polls EOC and reads the right value', async () => {
+    // EVERY TEST ABOVE DRIVES THE CHIP OR THE MACHINE DIRECTLY, which proves
+    // the model and proves nothing about the path a program takes. This
+    // assembles the sequence a lowering has to emit, runs it as machine code,
+    // and reads the answer out of AL — assembler, port decode, chip and bus,
+    // in the order a learner's program uses them.
+    //
+    // It doubles as the reference sequence: this is what `read pot` must
+    // become.
+    const {assemble} = await import('../src/i8086-asm.js');
+    const program = `
+    MOV DX, 303h      ; port 300h + channel 3 -- the ADDRESS selects the mux
+    OUT DX, AL        ; any write is ALE + START
+POLL:
+    MOV DX, 308h      ; the status port
+    IN AL, DX
+    TEST AL, 1        ; bit 0 is EOC
+    JZ POLL           ; no PIC on this bench, so polling is the only way
+    MOV DX, 300h
+    IN AL, DX         ; OE -- the converted byte
+    MOV AH, 4Ch
+    INT 21h
+`;
+    const img = assemble(program, {variant: '80186'});
+    const m = machine();
+    m.chips.adc1.setChannel(3, 3.75);
+    m.mem.set(img.bytes, 0x100);
+    m.cpu.cs = 0; m.cpu.ip = 0x100; m.cpu.ss = 0; m.cpu.sp = 0xfffe;
+
+    let steps = 0;
+    while (steps++ < 200000 && m.mem[m.cpu.pc] !== 0xcd) m.step();
+    assert.ok(steps < 200000, 'the program never reached its exit — the poll never finished');
+    assert.equal(m.cpu.al, 192, '3.75V of 5V is 192 counts');
+    assert.ok(steps > 20,
+        `${steps} instructions is too few to have polled — an instant conversion would `
+        + 'let a program with no poll loop at all appear to work');
+});
+
+test('and a program that does NOT poll reads a stale value, which is the point', () => {
+    // The teaching case. START does not clear the output latch, so a program
+    // that reads straight after starting gets the PREVIOUS conversion. If the
+    // model answered instantly this would silently pass, and a learner whose
+    // poll loop was wrong would never find out.
+    const m = machine();
+    const adc = m.chips.adc1;
+
+    adc.setChannel(0, 5.0);
+    m._out(0x300, 0);
+    m._advanceChips(adc.convCycles);
+    assert.equal(m._in(0x300), 255, 'first conversion completed');
+
+    // Now start a second on a very different voltage and read immediately.
+    adc.setChannel(1, 0.0);
+    m._out(0x301, 0);
+    assert.equal(m._in(0x300), 255,
+        'reading without polling returns the PREVIOUS result, not the new one');
+    assert.equal(m._in(0x308) & 1, 0, 'and EOC says so, for a program that asks');
+});
