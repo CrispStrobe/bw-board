@@ -713,12 +713,30 @@ three things only we have: the extractor that turns a hand-wired breadboard
 into a machine or a NAMED refusal, the counted refusal histogram, and an
 assembler in-tree.
 
-**PREREQUISITE, and it outranks every item here.** `docs/I8086-CORE-PLAN.md`
-records that the 646,000-vector grind and the 525-program corpus **do not run
-in CI** — "read every number in this file as measured, not as maintained."
-Items E6.8.1 and E6.8.4 are both graded BY those instruments. Adding features
-whose only grader is decaying is the wrong order: the `v1_binary/*.MOO.gz`
-sparse-checkout plan lands first, or the 186 work is graded by nothing.
+**THE PREREQUISITE IS SATISFIED — this paragraph replaces the one that said
+otherwise (corrected 2026-09-04, same day, by `lego-47`).** As first written,
+this section opened by insisting that nothing here should start until the
+646,000-vector grind ran in CI, because `docs/I8086-CORE-PLAN.md` says the
+numbers are "measured, not maintained". **That was already false when it was
+written.** `.github/workflows/ci.yml` carries a `vectors:` job that
+sparse-checks out `SingleStepTests/8086` pinned at
+`e71c68d215a6bb8c356bd4cb3842de3bef345ca9`, proves the checkout is really
+there BEFORE trusting anything that reads it, and grinds all 646,000 — closed
+by `sim3` as R1, its own comment opening *"which until now ran nowhere but a
+developer's box."* Within the same hour sim3 closed the same hole for the
+other two CPUs (G1): `1604/1604` for the Z80 and `2,540,000/2,540,000` for the
+65c02, both as first-ever results, before writing the job. `scripts/
+oracle-census.mjs` (branch `feat/i8086-review`) then makes "did this oracle
+actually run" a gate rather than a hope.
+
+So the ordering argument INVERTS. E6.8.1 is not blocked on a grader; it is
+attractive *because* the grader now exists and `SingleStepTests/v20` is MIT
+and covers the 186 set. **The lesson is the one this tier keeps relearning:
+a roadmap item asserting a gap must be re-checked against the tree on the day
+it is acted on, not on the day it was written.** Two of this section's nine
+items were stale within twenty-four hours of drafting; the other six were
+re-verified against `feat/i8086-tier` on 2026-09-04 and hold (evidence cited
+in each).
 
 ---
 
@@ -825,16 +843,31 @@ hsync, start address and cursor are EMITTED rather than derived. Bounded, and
 it pairs naturally with E6.8.4 — a scanline count is only meaningful once the
 cycles feeding it are.
 
-#### E6.8.6 A disk-image builder, and a DOS that boots
+#### E6.8.6 A disk-image builder, and a DOS that boots — **DONE, and it was done before this section claimed it was not** (corrected 2026-09-04)
 
-PCjs ships `/tools/diskimage`, which builds a bootable image from a directory
-of files. We have `upd765.js`, `i8237.js`, INT 13h and `loadBoot()` — four
-finished devices and **no image to feed them**. §E6.6 names this as the
-remaining Tier C gap, and the licence table has already cleared
-`microsoft/MS-DOS` 1.25/2.0 as MIT.
+As first written this item said the four finished devices — `upd765.js`,
+`i8237.js`, INT 13h, `loadBoot()` — had **no image to feed them**, with PCjs's
+`/tools/diskimage` as the model. **They have one.**
+`scripts/build-dos-image.mjs` builds a bootable MS-DOS 2.0 floppy: OUR boot
+sector, OUR `dos/iosys.asm` (the full CON/AUX/PRN/CLOCK plus block driver
+set), OUR FAT12, and a ~200-line Intel OMF linker written because SYSINIT
+ships as a `.OBJ`. Only MSDOS.SYS, COMMAND.COM and SYSINIT.OBJ are
+Microsoft's, from the MIT release the licence table already cleared. It boots
+to `A>` and runs `DIR`.
 
-So this is not "write a DOS". It is a builder plus a boot floppy, and it
-turns work that is already done into a machine that starts.
+**And it boots twice, down two independent paths** — through the emulator's
+INT 13h service layer, and through the BIOS's own DMA floppy driver on a real
+µPD765 + 8237 — with byte-identical screens. `test/dos-boot.test.mjs` and
+`test/dos-boot-fdc.test.mjs`. That differential found a defect neither path's
+own tests could reach: **the DMA pump moved zero bytes while reporting
+complete success.** Which is the third time in this tier that two independent
+implementations caught what one shared one could not (see §8 of the core plan,
+and the CGA pixel-layout cross-check).
+
+What genuinely remains from PCjs here is narrower than the original item
+claimed: a builder that assembles an image from an arbitrary DIRECTORY of
+files, rather than the one curated boot floppy. Useful for shipping lesson
+media; not a blocker for anything.
 
 #### E6.8.7 Save/restore, surfaced
 
@@ -860,14 +893,32 @@ E6.8.6 (it wants an image).
   nothing, which is a downgrade disguised as a feature.
 - **The 80186 on-chip peripherals and the R8810.** See E6.8.1.
 
+#### A licence rule this survey forced, and it belongs above the table
+
+**A repository's LICENSE covers what its author WROTE, not what they
+VENDORED.** Three separate traps in this tier now share one shape: the fMSX
+subtree under an MIT wrapper (refused above); XTCE-Blue's MIT wrapper over
+Intel's microcode (E6.8.4); and `Maze_Runner_Go`, MIT and already listed as
+shippable-with-attribution — whose `Github Assembly Compiler/` directory
+bundles **DOSBox and Notepad++, both GPL**. The LICENSE does not cover them
+and could not. Take the `.asm`, never the vendored tool directory.
+
+The check is mechanical and should be run before any row is added: list the
+repo's directories before reading its LICENSE, and treat any bundled binary
+or third-party tree as unlicensed until separately established.
+
 #### Order
 
-`v1_binary` in CI (the prerequisite) → **E6.8.2** (hours; both ends exist) →
-**E6.8.3** (fits the product thesis; the decode space is there) → **E6.8.1**
-(graded by the MIT v20 suite) → **E6.8.6** (four devices become a machine) →
-**E6.8.5** (retrace becomes real) → **E6.8.4** (cycle timing, once its grader
-and its perf numbers exist) → **E6.8.8** (the harsh oracle, last because it
-needs three of the above).
+Revised 2026-09-04 after the two corrections above. The prerequisite is met
+and E6.8.6 is done, so both leave the queue:
+
+**E6.8.2** (hours; both ends exist — `labels` is still zero hits in
+`src/i8086-debug.js` on `feat/i8086-tier`) → **E6.8.3** (still
+`breakpoints: ['code','write']`) → **E6.8.1** (graded by the MIT v20 suite,
+which is now *why* it is early rather than why it is blocked) → **E6.8.5**
+(retrace becomes real) → **E6.8.4** (cycle timing, once its perf numbers
+exist) → **E6.8.8** (the harsh oracle, last because it needs E6.8.1 for the
+186 instructions and E6.8.6's image path, which it now has).
 
 Until E6.8.4 lands, `i8086-debug.js`'s `step('cycle')` refusal should say what
 it would TAKE, not only that it cannot — that refusal is currently the only
@@ -1017,8 +1068,10 @@ CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
    are independent of both and gated on assembler scope, not on engine work; E6.6
    waits for a lesson that needs it.
 7. **E6.8** — the comparative gap list (surveyed against emu86, PCjs and XTCE-Blue).
-   Its own order is inside the section, and its PREREQUISITE is the vector suite
-   running in CI: two of its items are graded by instruments that currently do not.
+   Its own order is inside the section. Its original prerequisite — the vector
+   suite running in CI — was ALREADY MET when the section was drafted (sim3's R1
+   and G1), and E6.8.6 was already done; both corrections are recorded in place
+   rather than quietly edited out. Remaining order: E6.8.2 → .3 → .1 → .5 → .4 → .8.
    E6.8.4 (cycle-level execution) is owner-requested and lands last of the eight.
 
 Cross-repo dependencies: bw-circuit-ui X1.1 (SPICE import) wants E3.5; X2.x runners
