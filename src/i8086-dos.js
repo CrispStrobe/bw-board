@@ -873,13 +873,26 @@ export function createDos8086(machine, io = {}) {
         wr16(0x40, 0x6c, next & 0xffff);
         wr16(0x40, 0x6e, (next >>> 16) & 0xffff);
         eoi();
-        // ORDER IS LOAD-BEARING: the EOI goes out BEFORE the tail-call. A real
-        // BIOS calls 1Ch NESTED and regains control afterwards precisely so it
-        // can send the EOI last; a tail-call skips that, so on a PIC machine
-        // IRQ0 would stay in service and exactly ONE tick would ever fire.
-        // Acknowledging first inverts real BIOS's ordering in the SAFE
-        // direction -- an early EOI risks re-entrancy (bounded at 18.2 Hz), a
-        // late one risks a missed tick, and the former is the recoverable one.
+        // THIS COMMENT PREVIOUSLY CLAIMED THE ORDER WAS LOAD-BEARING. IT IS
+        // NOT, and the claim was mine. Moving this eoi() below the tail-call
+        // and re-running test/i8086-timer-tick.test.mjs passes 3/3 --
+        // mutation applied and verified, not assumed.
+        //
+        // WHY it cannot matter here: the "tail-call" sets cpu.cs/cpu.ip and a
+        // flag. It does not transfer control. Both statements run to
+        // completion in the SAME synchronous call before service() returns and
+        // the CPU takes another step, so the EOI reaches the PIC before the
+        // handler executes its first instruction either way. There is no
+        // ordering to get wrong between two lines that both finish first.
+        //
+        // THE REAL HAZARD IS A DIFFERENT CHANGE, and it is worth naming
+        // because the wrong comment would have guarded against the wrong
+        // thing: if someone makes the 1Ch dispatch genuinely NESTED -- pushing
+        // a second frame so int08 regains control afterwards, as a real BIOS
+        // does -- then an EOI written last WOULD be skipped by a handler that
+        // never returns, and IRQ0 would stay in service for exactly one tick.
+        // The guard for that is the tick-keeps-coming assertion in the test,
+        // which survives this reordering and would not survive that one.
         //
         // Chain to the user's INT 1Ch handler, as a real BIOS int08 does on
         // every tick. Only when it has been hooked away from our trap page --
