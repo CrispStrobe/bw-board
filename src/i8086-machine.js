@@ -670,10 +670,11 @@ export class I8086Machine {
             if (port >= w.start && port <= w.end) { val = w.chip.read(regOf(w, port)); break; }
         }
         // Port-access trap (E6.8.3): the value handed back is the one the program
-        // sees, so a watch can break on a read AND report what was read. This does
-        // not reopen the refusal to DUMP the port space (i8086-debug.js:22): that
-        // refuses a debugger-initiated read; this observes the PROGRAM's read.
-        if (this.hooks.onPortAccess) this.hooks.onPortAccess('in', port, val & 0xff);
+        // sees, so the hook fires AFTER the read and reports what was read. This
+        // does not reopen the refusal to DUMP the port space (i8086-debug.js:22):
+        // that refuses a debugger-initiated read; this observes the PROGRAM's read
+        // and never performs one of its own.
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess({ dir: 'in', port, value: val & 0xff });
         return val;
     }
 
@@ -697,7 +698,7 @@ export class I8086Machine {
         // Port-access trap (E6.8.3): fires on EVERY OUT, decoded or not — a debug
         // watch on "anything touches port 61h" wants the access the program made,
         // not only the ones that hit a chip. Zero cost when no watch is set.
-        if (this.hooks.onPortAccess) this.hooks.onPortAccess('out', port, val & 0xff);
+        if (this.hooks.onPortAccess) this.hooks.onPortAccess({ dir: 'out', port, value: val & 0xff });
     }
 
     // ---- pins -----------------------------------------------------------
@@ -817,12 +818,18 @@ export class I8086Machine {
     _serviceInterrupts() {
         if (this._nmiPending) {
             this._nmiPending = false;
+            // Interrupt trap (E6.8.3): source distinguishes the delivered lines
+            // the machine drives — 'nmi' here, 'irq' below — from a software INT n
+            // (source 'int'), which executes inside the core and is emitted there.
+            // "break on IRQ0" and "break on INT 21h" are different questions.
+            if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector: 2, source: 'nmi' });
             this.cpu.interrupt(2);        // NMI is vector 2, unconditional
             return true;
         }
         if (!this._pic || !this._pic.intActive) return false;
         if (!(this.cpu.flags & IF)) return false;
         const vector = this._pic.acknowledge();
+        if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector, source: 'irq' });
         this.cpu.interrupt(vector);   // pushes flags/cs/ip, clears halted
         return true;
     }
