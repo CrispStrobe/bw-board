@@ -36,6 +36,17 @@ import { I8086Machine } from '../src/i8086-machine.js';
 /**
  * CHIPS THAT CANNOT BE SNAPSHOTTED, AND THE DEFECT THIS RECORDS.
  *
+ * READ THE MACHINE DEFECT FIRST, because it is the one that GENERATES the
+ * others: for most of this tier's life the three machines disagreed about how
+ * to find a chip's state. I8086Machine accepted getState/setState OR
+ * saveState/loadState; M6502Machine and Z80Machine accepted only the latter.
+ * So every chip using the newer convention -- I8255, I8254, I8259, NS16C550,
+ * the display cards -- was invisible to two machines out of three, silently,
+ * because the discovery loop has no `else`. One chip missing a method is a
+ * gap. Three machines disagreeing about the convention is the thing that
+ * manufactures gaps, and it was found by the assertion below rather than by
+ * reading any of the three files.
+ *
  * `saveState()` on all three machines walks the chip map and takes
  * `getState()` or `saveState()` from each — and SKIPS, without comment, any
  * chip that has neither.
@@ -57,13 +68,10 @@ import { I8086Machine } from '../src/i8086-machine.js';
  * from a guess -- MC6850, the ACIA the Z80 tier uses -- and the run named
  * W65C51 instead. Both are "the serial chip"; only one is on that machine.
  *
- * AND CLOSING IT EXPOSED THE REAL DEFECT UNDERNEATH. Giving the 6551
- * getState/setState was not enough: the chip round-tripped and the machine
- * still dropped it, because M6502Machine and Z80Machine looked for
- * saveState/loadState ONLY, while I8086Machine accepted either pair. So every
- * chip using the newer convention was invisible to two of the three machines
- * -- exactly the three-copies drift this file was written to catch, found by
- * the assertion below rather than by reading. Both machines now accept both.
+ * Closing W65C51 is what exposed the machine defect described at the top:
+ * giving the chip its methods was not enough, because the machine still
+ * dropped it. Both machines now accept both conventions, and the assertion
+ * below pins that behaviourally.
  *
  * The set stays, empty, rather than being deleted with the last row: an empty
  * exemption list is a working mechanism with nothing to excuse, and the next
