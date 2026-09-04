@@ -2805,7 +2805,16 @@ const MASM_SIGNALS = [
  * MASM turns every `MOV AX, VAR` into a load where an address was meant --
  * it assembles, it runs, and it is wrong -- so a source carrying evidence of
  * both is refused with both lists named rather than resolved by counting.
- * No evidence at all is MASM, which is what every existing caller means.
+ * No evidence at all is MASM, which is what every existing caller means --
+ * AND THAT IS THE ONE GAP LEFT. A NASM source that writes no `org`, no
+ * `bits`, no `section`, no `%`-directive, no `RESB`, no `CPU` and no
+ * `INCBIN` carries nothing to detect, and would be read as MASM with its
+ * memory references inverted. Nothing in the four corpora is that file --
+ * every one of the 31 announces itself in its first three lines, because a
+ * NASM program has to say where it starts -- but a caller who has a source
+ * and knows what it is should say so rather than rely on this. That is what
+ * `{ dialect: 'nasm' }` is for, and it is why the option exists alongside
+ * the detector rather than behind it.
  *
  * @param {string} source
  * @returns {'nasm'|'masm'}
@@ -2846,6 +2855,10 @@ function nasmHeadWords() {
         'align', 'alignb', 'struc', 'endstruc', 'istruc', 'at', 'iend',
         'global', 'extern', 'common', 'absolute', 'default', 'group',
         'use16', 'use32', 'end',
+        // A bare segment-register prefix -- `ES: MOVSB` -- and the operand
+        // and address size overrides. None of them is a label either, and
+        // `es` read as one would silently drop the override.
+        'cs', 'ds', 'es', 'ss', 'o16', 'o32', 'a16', 'a32',
         // Not a label. See LATER_THAN_8086: `pusha` alone on a line reads
         // as a label under NASM's colon-optional rule, and the instruction
         // then disappears without a word.
@@ -3028,7 +3041,7 @@ class NasmFrontEnd {
             const w = NASM_ID.exec(rest.trim());
             if (w && this.macros.has(w[0])) {
                 if (head.trim()) this.emit(head.trim(), e);
-                this.invoke(w[0], rest.trim().slice(w[0].length).trim(), e);
+                this.invoke(w[0], rest.trim().slice(w[0].length).trim());
                 continue;
             }
             this.emit(text, e);
@@ -3225,7 +3238,7 @@ class NasmFrontEnd {
         this.push(out, '%rep');
     }
 
-    invoke(name, argText, e) {
+    invoke(name, argText) {
         const mac = this.macros.get(name);
         const args = argText ? splitTop(argText, ',').map((s) => s.trim().replace(/^\{([\s\S]*)\}$/, '$1')) : [];
         if (args.length < mac.min || args.length > mac.max) {
@@ -3247,7 +3260,6 @@ class NasmFrontEnd {
                 .replace(/%%([A-Za-z0-9_$#@~?.]+)/g, (m0, l) => `${tag}_${l}`)
                 .replace(/%(\d)/g, (m0, d) => (d === '0' ? String(args.length) : (args[Number(d) - 1] ?? ''))),
         }));
-        void e;
         this.push(body, `macro ${mac.name}`);
     }
 
@@ -3440,7 +3452,7 @@ class NasmFrontEnd {
                     continue;
                 }
                 case 'incbin': {
-                    push(this.incbin(rest.slice(6), parent), e);
+                    push(this.incbin(rest.slice(6)), e);
                     continue;
                 }
                 case 'times': {
@@ -3479,7 +3491,7 @@ class NasmFrontEnd {
             { ...this.here, what: 'bad TIMES' });
     }
 
-    incbin(rest, parent) {
+    incbin(rest) {
         const parts = splitTop(rest, ',');
         const path = parts[0].trim().replace(/^['"]|['"]$/g, '');
         const read = this.opts.readBinary;
@@ -3502,7 +3514,6 @@ class NasmFrontEnd {
         if (bytes.length < len) throw new AsmError(
             `INCBIN "${path}" wants ${len} bytes from offset ${skip} and the file holds ${all.length}`,
             { ...this.here, what: 'INCBIN short file' });
-        void parent;
         return bytes.length ? `db ${bytes.map((b) => `0${(b & 0xff).toString(16)}h`).join(',')}` : 'db ';
     }
 
