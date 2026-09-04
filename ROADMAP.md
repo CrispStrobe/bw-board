@@ -1573,6 +1573,50 @@ closed form (no new machinery), then build the cycle-stepped BIU for the rest.
 half — its author wrote the very suite being graded against, and it is the
 only permissive cycle-accurate 8088 in existence.
 
+#### E6.8.4f What a correct cycle model needs, read off MartyPC (2026-09-04)
+
+`dbalsom/martypc` is MIT and our licence table already clears it as *readable
+as a reference implementation, not vendored*. Read for STRUCTURE — what state
+the hardware requires — rather than transcribed. Its author also wrote the
+8088 suite being graded against, which makes it the closest thing to a
+specification that exists.
+
+**IT CONFIRMS E6.8.4e STRUCTURALLY.** Its prefetch decision is taken *per
+T-state* and turns on whether the EU has claimed the bus **at that moment**
+(`bus_pending != EuEarly`). That is exactly the occupancy-over-time an access
+trace cannot carry, so the 83.4% ceiling is not a limitation of our fitting —
+it is the information boundary of the input, confirmed from the reference.
+
+**THE MECHANISM I WAS MISSING: QUEUE POLICY LENGTH.** The BIU does not simply
+fetch whenever there is room. It *delays* a fetch by three cycles when the
+queue is at a "policy length" during a code fetch. On an 8088 — one-byte
+fetches, four-byte queue — that length is `size - 1`, i.e. **3 bytes**.
+
+That is the bimodality. Whether a given instruction ended up one cycle longer
+depends on whether the queue happened to sit at 3 when the BIU looked, and no
+function of (queue-at-start, length, data count, EU cycles) can recover it
+because the queue depth *changes during the instruction*.
+
+**The state a correct model needs, in full:**
+
+| State | What it carries |
+|---|---|
+| queue length, per T-state | the policy-length test |
+| fetch state | Idle / **Delayed(n)** / PausedFull / Suspended / Halted |
+| address-cycle sub-state | Ta / Tr / Td — a fetch can only *begin* at Td |
+| bus pending | whether the EU has claimed the bus this m-cycle |
+| bus status latch | whether the current transfer is a code fetch |
+
+Five pieces of state and one delay rule. **That is a specification, not a
+research problem**, and it is a much smaller thing than "write a
+cycle-accurate CPU" — the EU timing we already have, graded at 646,000
+vectors; only the bus scheduler is missing.
+
+**Route, restated with the cost known:** close the 47 points to the 83.4%
+ceiling with the closed form (no new machinery), then implement the five
+states above to pass it. Nothing about this needs microcode-level emulation,
+which is the part of MartyPC that would be a genuine rewrite.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
