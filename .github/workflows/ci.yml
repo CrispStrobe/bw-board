@@ -202,9 +202,15 @@ jobs:
   #     verdict VOCABULARY depends on the flags, not only the counts.
   #  3. It pinned the wrong flag set (see the pins above).
   #
-  # The distribution below is now MEASURED in this exact configuration rather
-  # than copied from a document: 502 EXITED, 8 LOOPING, 0 HUNG, 15 THREW,
-  # independently reproduced by the review lane. A stronger version of this
+  # The distribution below is MEASURED in this exact configuration rather than
+  # copied from a document: 516 EXITED, 8 LOOPING, 0 HUNG, 1 THREW.
+  #
+  # THREW WAS 15 AND IS NOW 1, and none of that was an emulator change. The
+  # harness was calling assemble() without `longJumps`, so fourteen programs
+  # were REFUSED AT ASSEMBLY for an out-of-range conditional jump and never
+  # reached the machine at all. The corpus was reporting an assembler DEFAULT
+  # as though it were a fact about the programs. The remaining one is a real
+  # gap: `.FARDATA`, which the assembler lists as unsupported. A stronger version of this
   # gate would add --expect and compare OUTPUT rather than termination; that is
   # worth doing and is not done here.
   #
@@ -260,7 +266,7 @@ jobs:
             --assembler ../src/i8086-asm.js \
             --emu8086 \
             --type '5\r3\rAMEY\rAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r' \
-            --expect-counts 'EXITED=502,LOOPING=8,HUNG=0,THREW=15' \
+            --expect-counts 'EXITED=516,LOOPING=8,HUNG=0,THREW=1' \
             "corpus/Source Code"
 
   # ---------------------------------------------------------------------

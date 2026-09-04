@@ -297,8 +297,31 @@ function runOne(name, raw, key, from = null) {
             // where the path search belongs, exactly as the emu8086 include
             // substitution above is.
             const dir = from ? dirname(from) : '.';
-            const out = assembler(source, {
+            let out;
+            out = assembler(source, {
                 name,
+                // PROMOTE OUT-OF-RANGE CONDITIONALS, and COUNT the programs
+                // that needed it rather than letting the flag be invisible.
+                //
+                // The assembler's MASM dialect refuses a Jcc or LOOP whose
+                // target is beyond +-127, and that default is measured rather
+                // than arbitrary: MASM 1.10 refuses them too, and promoting
+                // silently would hand a learner a program that works here and
+                // fails on the lab machine. Byte-fidelity against the MASM
+                // oracle depends on it.
+                //
+                // A COVERAGE HARNESS WANTS A DIFFERENT THING. Its question is
+                // "does this program run", and 14 of 525 never reached the
+                // machine because they were refused at assembly -- so the
+                // corpus was reporting an ASSEMBLER default as though it were
+                // a fact about the programs. Promotion only rewrites jumps
+                // that actually overflow, so every program that does not
+                // overflow is byte-identical either way and the differential
+                // oracles are untouched.
+                //
+                // Counted and printed, because a flag that changes 14 verdicts
+                // and leaves no trace is the same defect in a new place.
+                longJumps: true,
                 readInclude: (p2) => {
                     const at = join(dir, p2);
                     return existsSync(at) ? readFileSync(at, 'utf8') : undefined;
@@ -308,6 +331,9 @@ function runOne(name, raw, key, from = null) {
                     return existsSync(at) ? new Uint8Array(readFileSync(at)) : undefined;
                 },
             });
+            const promotions = (out.warnings || []).filter(
+                (w) => /promoted to a branch over a near jump/.test(w.message || ''));
+            if (promotions.length) promotedPrograms.push({ name, n: promotions.length });
             bytes = out.bytes;
             kind = out.format || 'com';
         } catch (e) {
@@ -455,6 +481,14 @@ function collect(p) {
 }
 
 // ---- run ------------------------------------------------------------------
+/** Programs whose out-of-range conditionals had to be promoted, with how
+ *  many. Reported in the summary because `longJumps: true` changes 14
+ *  verdicts, and a flag that changes verdicts and leaves no trace is the
+ *  same defect this harness exists to find. Each promotion also carries the
+ *  assembler's own warning: "this program will no longer assemble under
+ *  MASM", which is the fact a reader needs. */
+const promotedPrograms = [];
+
 const results = [];
 if (flag('--selftest')) {
     for (const t of SELFTEST) {
@@ -530,6 +564,16 @@ if (differs.length) {
 }
 for (const r of healed) {
     console.log(`HEALED -- ${r.name} now agrees; drop its row: ${KNOWN_DISAGREEMENTS[r.name]}`);
+}
+
+if (promotedPrograms.length) {
+    const total = promotedPrograms.reduce((a, p) => a + p.n, 0);
+    console.log(`\n${promotedPrograms.length} program(s) needed OUT-OF-RANGE CONDITIONALS PROMOTED `
+        + `(${total} jump${total === 1 ? '' : 's'}), and would be refused without --longJumps:`);
+    for (const p2 of promotedPrograms.sort((a, b) => b.n - a.n)) {
+        console.log(`  ${p2.name} (${p2.n})`);
+    }
+    console.log('  These no longer assemble under real MASM. That is the cost of running them.');
 }
 
 let exit = 0;
