@@ -85,7 +85,7 @@ implementation agreeing with itself.
 | `i8086.js` architectural state | **2a** | 646,000/646,000, SingleStepTests 8086, hardware-generated on an Intel P80C86A-2 | nothing — this is the ceiling |
 | `i8086-disasm.js` text **and** length | **2a** | 646,000/646,000 against the suite's own disassembly strings, 3 documented exclusions | — |
 | 80186 added opcodes | **2a** | 132,532/132,532, SingleStepTests **v20** | a real 80186 suite, which does not exist |
-| 80186 shift-count masking | **2c** | `test/i8086-186.test.mjs` only | **nothing can raise this.** The V20 does NOT mask, so the oracle actively disagrees; 39,898 vectors are excluded by name |
+| 80186 shift-count masking | **2c** | `test/i8086-186.test.mjs` only | **I wrote "nothing can raise this" without checking, which was a process error even though the check so far agrees.** The V20 does not mask, so that oracle actively disagrees and 39,898 vectors are excluded by name. `mfld-fr/emu86` is named in our own licence table as "the permissive reference for the 186 instructions" — so it was the obvious second implementation to try, and I asserted the gap closed instead of trying it. **Checked 2026-09-04: emu86 does NOT mask either.** Its `op_shift_rot` takes the count straight (`word_t t = b; while (t--)`) with no `& 31` anywhere in the tree, and there is no CPU-type switch at all — no `cpu_type`, no `is_186`. Its 80186 support is the added OPCODES (PUSHA/POPA and friends), not the changed semantics of existing ones. So emu86 can differential the 186 ADDITIONS — where we are already 2a from the v20 suite — and cannot grade this. Other 186 implementations are being surveyed; the honest status is **2c, no oracle found yet**, not 2c-and-unclosable |
 | 80186 reg=6 as SHL | **2b** | v20 agrees, and period 186 docs call the field reserved | an 80186 suite |
 | Trap flag (TF) | **3** | behavioural tests + period binaries | **no vector in 646,000 sets TF.** DEBUG.COM's `t` is the acceptance and is owed |
 | Cycle counts | **2a, 36.5%** | SingleStepTests 8088 v2 bus traces | the remaining error is in T-states invisible to the m-cycle count — see ROADMAP E6.8.4d |
@@ -101,8 +101,14 @@ implementation agreeing with itself.
 | `i8086-asm.js` | **2a** | 510/525 MASM corpus; MASM refuses 14 of the 15 rejects | — |
 | Extractor refusals | **2c** | our own tests | — |
 
-**The two gaps worth naming as gaps.** The 186 masking cannot be raised above
-2c by any existing artefact — that is a property of the world, not a to-do.
+**The two gaps worth naming as gaps — with one correction to how the first was
+stated.** The 186 masking is at 2c because no oracle has been FOUND, not
+because none can exist. Writing "cannot be raised by any existing artefact"
+was an assertion where a search was called for: `emu86` was sitting in our own
+licence table described as the reference for exactly these instructions, and
+checking it took four minutes. It turned out not to mask either — so the
+conclusion survives this test — but the difference between "checked and no"
+and "asserted no" is the whole subject of this document.
 The trap flag sits at tier 3 with a named acceptance test that has not been
 run. Everything else in the table has a path.
 
