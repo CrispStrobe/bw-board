@@ -1132,10 +1132,24 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    720x400 (the renderer falls back to 80x25 text at B8000h, which a Hercules-
    only machine does not map — open-bus reads), so the ROM must reach its
    3BFh/3B8h writes before the first frame (ours does, immediately).
-5. **EGA — LAST, and it needs a card first.** No ega-card.js exists yet; EGA's
-   planar four-bitplane memory is the hardest of the set. Build the card (this
-   lane), then the board + demo, then the renderer's planar decode (DOS/host).
-   Gated on a lesson actually wanting EGA — CGA+VGA cover the span for now.
+5. **EGA — STATE DONE (`40c17af`), render pending.** The hardest: a PLANAR
+   framebuffer, not linear RAM. `src/ega-card.js` models the register banks
+   (no DAC — EGA colour is the attribute palette) plus four bit planes, with
+   map-mask write routing (SR2) and read-map-select (GR4). The machine gives an
+   `ega` chip its 3C0-3DF register window AND a second mem-bus window at A0000
+   forwarding to memRead/memWrite (the dmapage two-window pattern), so A0000 is
+   NOT plain RAM — a write is routed by the map mask into the selected planes.
+   EGADEMO8086 + rom/ega-demo.bin fill the four planes FF/AA/CC/F0 through the
+   map mask; test/i8086-ega-demo.test.mjs pins the planar discriminator, the
+   plane routing, the composed pixels, and that a map-mask-0 write reaches no
+   plane. **DECODE CONTRACT for the DOS/host lane** (their half, not written
+   yet): identify by graphics + NOT chain-4 (SR4 bit3 clear) + NOT 8-bit (AR10h
+   bit6 clear); read `getVideoState().planes[0..3]` (each Uint8Array, plane p);
+   for mode 0Dh (320x200x16) pixel (x,y) colour = for p in 0..3, bit (7 - x%8)
+   of `planes[p][y*40 + (x>>3)]` as colour bit p; map that 4-bit colour through
+   `getVideoState().attr[colour]` (6-bit RGBrgb). UI loader entry HELD until
+   that decode lands — same discipline as Hercules. NOT gated on a lesson any
+   more: the owner asked for the full set, so the card is built and waiting.
 
 Each step ships a LOADER ENTRY only once its renderer decode is confirmed,
 because a board that renders a cleared screen (or a refusal string) is not an
