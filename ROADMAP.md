@@ -1266,14 +1266,35 @@ at half its cost turns the boot workload from 1.0× real time into something
 with room to spend — and only then is "make the core 5× slower" a
 conversation worth having.
 
-Candidates, listed as guesses rather than findings: the region scan on every
-access (a flat dispatch table, or a 4 KB page table, trades memory for a
-branch); the per-instruction chip advance (batch to a deadline instead); and
-the interrupt poll, which asks the PIC a question whose answer rarely changes.
+**PROFILED 2026-09-04, and it refuted one of this entry's own candidates.**
+`_read()` against a realistic XT config (two memory regions, no MMIO windows,
+three I/O chips), 20 M accesses, measured against a raw `Uint8Array` index as
+the ceiling:
 
-**Do not start by optimising — start by profiling.** This entry exists
-because one unmeasured number overturned an item everyone believed, and that
-lesson applies to its own candidate list above.
+```
+machine._read()   as shipped              31.9 M ops/s     1.00x
+  + length guard and indexed for-loops    36.2 M ops/s     1.13x
+  + a 256-entry 4 KB page table           65.2 M ops/s     2.04x
+raw mem[addr]     the ceiling            201   M ops/s     ~5x
+```
+
+**The loop MECHANICS are not the problem; the linear SCAN is.** Replacing
+`for...of` with indexed loops and short-circuiting the empty-MMIO case — the
+obvious cheap fix, and the one a reader of the candidate list would have
+reached for first — buys 13%. A page table buys 2x. So the cheap fix is not
+worth doing at all, and that is a finding rather than an opinion: it was
+measured in the same harness in the same run, which is the only way the two
+are comparable given the 30% run-to-run spread this box shows.
+
+`_read` costs about 5x a raw array index, and a page table recovers about
+half of that gap. The remaining half is the call itself and the bounds work,
+which is the floor for anything that stays a method.
+
+Still guesses, still unmeasured: the per-instruction chip advance (batch to a
+deadline rather than every step) and the interrupt poll, which asks the PIC a
+question whose answer rarely changes. **Profile those before touching them
+too** — this entry exists because an unmeasured number overturned an item
+everyone believed, and it has now overturned one of its own.
 
 #### E6.8.5 CRTC-driven video timing — DONE (2026-09-04, `9fe3b9f`)
 
