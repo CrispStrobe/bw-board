@@ -718,6 +718,21 @@ lands it.
    our side (`getVideoState`, `machine.audioTone`) is done. Ship a Circuit-
    Designer EXAMPLE PRESET (see the CORRECTIONS block below — the BIOS ROM is
    a SCREEN-AND-KEYBOARD machine, not serial).
+   **DONE (2026-09-04): both self-booting example presets shipped in
+   `src/i8086-machine.js`, each with a ROM builder and an end-to-end test:**
+   - **`SERIALSHELL8086`** — the UART-shell example (the Z80/6502 serial-
+     monitor counterpart). `rom/serial-monitor.bin` (scripts/build-serial-
+     monitor.mjs): 16550 at port 10h, banner + echo. Drives SerialConsole.
+     test/i8086-serial-shell.test.mjs.
+   - **`CGADEMO8086`** — the screen example. `rom/cga-demo.bin` (scripts/
+     build-cga-demo.mjs): CGA text mode, writes a message into B800:0000.
+     Drives VdpScreen. TEXT mode only (clear of the INT 10h graphics hole
+     the DOS lane is filling). test/i8086-cga-demo.test.mjs.
+   - **`PCXT8086`** — the full XT board the BIOS ROM + MIT games run on;
+     now maps the CGA text page (B8000-BFFFF) to match the DOS lane's XTDISK
+     region map. This is the "boot the real BIOS" board, not a minimal demo.
+   These are the machines step 2's Machine-Loader offers; the minimal two are
+   pickable and demonstrable today, PCXT8086 once the host wires video/keyboard.
 
 2. **bw-circuit-ui recognises and places the 8086.** Add `i8086` to
    `src/parts-data/` (JSON + SVG, reuse the bw-parts pinout), register the kind
@@ -775,6 +790,11 @@ CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
   not SerialConsole. The "UART shell like the other MCUs" the owner asked for
   becomes a SECOND, simpler example: a small serial-monitor ROM + a UART
   (ns16c550 or 8251) driving SerialConsole.
+  **RESOLVED (2026-09-04): both example presets are built (see step 1). The
+  serial example is `SERIALSHELL8086`; the screen example ships as the minimal
+  `CGADEMO8086` (self-contained CGA-text demo, no BIOS) alongside the full
+  `PCXT8086` board that the real BIOS ROM boots. So there are in fact THREE
+  presets: two minimal self-booting demos (one per widget) and the full XT.**
 - ROM PLACEMENT is a LOAD address, not the entry. The BIOS loads at 0xF0000
   (segment F000h); 0xFFFF0 is the reset vector INSIDE that image, not where it
   goes. `loadRom(bytes, at)` takes the load address, so `romAt: 0xF0000` with a
