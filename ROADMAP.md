@@ -1081,16 +1081,17 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    SAME CGADEMO8086 board: mode 4 (320x200x4) colour bars, both interleaved
    banks. Renderer `cga4` decode confirmed in-process by lego-47.
    test/i8086-cga-gfx-demo.test.mjs. Loader entry: bw-circuit-ui `f7bd2f2`.
-3. **VGA mode 13h — NEXT (promoted, 2026-09-04).** lego-47 measured the renderer
-   ALREADY decodes 13h (vga8, 320x200x256 LINEAR at A000:0000, no interleave)
-   and the BIOS programs it — so the only blocker was a `kind: 'vga'` machine
-   config, which is this lane, not renderer work. **Config DONE (`141dda6`):**
-   VGADEMO8086 (VGA block at 3C0h + the 64K framebuffer at A0000) + a board test.
-   REMAINING: a bare-metal demo ROM that programs mode 13h, sets a DAC palette,
-   and paints A0000. GATE (asked): the exact register signature `modeFromVga`
-   keys off, so the firmware is minimal-and-correct rather than a guessed
-   ~40-register table. The cheapest VISIBLE win of the set — linear framebuffer,
-   256 colours, and it renders today.
+3. **VGA mode 13h — DONE (2026-09-04, renders).** The second display board that
+   actually draws. VGADEMO8086 (VGA block at 3C0h + the 64K framebuffer at
+   A0000) `141dda6`; rom/vga-demo.bin `d837a15`; loader entry bw-circuit-ui
+   `b27e102`. The firmware is MINIMAL-and-correct: it sets exactly the four bits
+   lego-47's `modeFromVga` keys off — misc!=0, GR6 bit0 (graphics), SR4 bit3
+   (chain-4), AR10h bit6 (8-bit colour) — ~6 writes and one 3C0h flip-flop
+   sequence, then paints A0000 linearly (offset = y*320+x, no interleave) with
+   200 colour bands. No DAC writes: an all-zero DAC makes the renderer use the
+   real VGA power-on palette — correct colour for free. No CRTC: 320x200 is a
+   constant in the renderer's mode table, not derived from R0-R18.
+   test/i8086-vga-demo.test.mjs asserts the discriminator + the linear buffer.
 4. **Hercules graphics — STATE DONE (`830af06`), render pending.** HERCDEMO8086
    (HGC + the B000:0000 mono page) + rom/hercules-demo.bin (720x348 mono, 4-wide
    bars) + a state test pinning the FOUR-bank y-mod-4 layout. NOT wired into the
