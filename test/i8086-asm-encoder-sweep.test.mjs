@@ -127,3 +127,40 @@ test('the sweep covers the instruction set rather than a sample of it', () => {
             `the sweep no longer covers the ${family[0]} family`);
     }
 });
+
+test('all 24 ModR/M memory forms encode, and the two special cases are right', () => {
+    // Eight base/index combinations x three displacement widths. This is the
+    // whole 8086 memory addressing space, and it is where an off-by-one in a
+    // ModR/M table lives: every form is three bytes or fewer, so a wrong rm
+    // field produces a valid instruction against the wrong address.
+    const BASES = ['bx+si', 'bx+di', 'bp+si', 'bp+di', 'si', 'di', 'bp', 'bx'];
+    const wrong = [];
+    let checked = 0;
+    for (const b of BASES) {
+        for (const d of ['', '+5', '+1234h']) {
+            // [bp] with no displacement has no encoding: mod=00 rm=110 is the
+            // direct-address form, so an assembler must emit mod=01 disp8=0.
+            const operand = (d === '' && b === 'bp') ? 'bp+0' : b + d;
+            const src = `mov ax, [${operand}]`;
+            const r = roundTrip(src);
+            checked++;
+            if (r.consumed !== r.bytes.length) wrong.push(`${src}: length`);
+            // The segment the form DEFAULTS to is part of the encoding's
+            // meaning: anything based on BP addresses the stack segment, and
+            // everything else the data segment. Getting this wrong reads the
+            // right offset in the wrong 64K.
+            const wantSeg = b.startsWith('bp') || b === 'bp' ? 'ss:' : 'ds:';
+            if (!r.texts[0].includes(wantSeg)) {
+                wrong.push(`${src}: expected default ${wantSeg}, got "${r.texts[0]}"`);
+            }
+        }
+    }
+    assert.equal(checked, 24, 'the sweep must cover all 24 forms');
+    assert.deepEqual(wrong, [], `addressing mode problems:\n  ${wrong.join('\n  ')}`);
+
+    // The two special cases, asserted by their bytes rather than by property.
+    assert.equal([...assembleRaw('mov ax, [bp+0]')].map((x) => x.toString(16).padStart(2, '0'))
+        .join(' '), '8b 46 00', '[bp] must become mod=01 with an explicit zero displacement');
+    assert.equal([...assembleRaw('mov ax, [1234h]')].map((x) => x.toString(16).padStart(2, '0'))
+        .join(' '), 'a1 34 12', 'a bare address uses the MOV accumulator form, not ModR/M');
+});
