@@ -212,11 +212,21 @@ test('REPT repeats its body, and IF/ELSE assembles exactly one branch', () => {
     assert.equal(hex(assembleRaw('X equ 0\nif X\n nop\nelse\n hlt\nendif\n')), 'f4');
 });
 
-test('GROUP and .FARDATA are refused, and .FARDATA is refused by name', () => {
-    // .FARDATA is wanted by exactly ONE corpus file, which is the reason the
-    // ROADMAP lists it among the honest refusals rather than as a gap.
-    assert.throws(() => assemble('.model small\n.fardata\nv dw 1\n.code\ns:\n int 20h\nend s\n',
-        { name: 'x' }), /not supported/, '.FARDATA must be refused by name');
+test('.FARDATA now ASSEMBLES, and GROUP is still refused', () => {
+    // THIS PROBE ASSERTED A REFUSAL AND IS NOW INVERTED, which is what a
+    // trigger is for. .FARDATA was wanted by exactly one corpus file and was
+    // listed among the honest refusals; the coverage lane implemented it in
+    // two lines once the harness's longJumps default stopped hiding fourteen
+    // other programs and left it as the last one refused at assembly.
+    //
+    // The implementation is small for a reason worth keeping: the generic
+    // paragraph layout and SEG-as-relocation already handled any named
+    // segment, so .FARDATA needed only a directive case opening a FAR_DATA
+    // segment outside DGROUP with nothing assumed to it -- reached solely via
+    // `SEG label` into a segment register, which is what "far data" means.
+    const r = assemble('.model small\n.fardata\nv dw 1\n.code\ns:\n int 20h\nend s\n',
+        { name: 'x' });
+    assert.ok((r.bytes || r).length > 0, '.FARDATA assembles rather than being refused');
     // GROUP falls through to the generic message, like STRUC and RECORD.
     // Pinned so that silently accepting it — and quietly getting segment
     // arithmetic wrong — would be caught.
