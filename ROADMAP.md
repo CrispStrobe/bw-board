@@ -1122,7 +1122,18 @@ PCjs loads symbol tables and names its breakpoints. This is the highest
 value-per-line item on the list — an existing producer wired to an existing
 consumer — and it also buys breakpoint-by-name for free.
 
-#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors
+#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors — MACHINE HALF DONE (2026-09-04, `00ed9f9`)
+
+Split by lane. **Machine half (this lane) DONE:** the machine fires
+`hooks.onPortAccess(dir, port, value)` on every IN and OUT, decoded or not
+('in' reports the byte the program read); zero cost when unset;
+test/i8086-port-trap.test.mjs. **Debugger half (DOS/host lane):** extend
+`i8086-debug.js` `breakpoints: ['code','write']` with `'port'`, set the hook,
+match registered watches, break on hit — hook shape handed over. **INT half:**
+proposed to lego-47 — either a one-line `onInterrupt(n)` hook at the core's
+`_interrupt(n)` (i8086.js, core lane; catches software INT n, INT3, INTO and
+exceptions), or debugger-side opcode inspection (CD/CC/CE) for the DOS-debugging
+case; their surface, their call. Original framing follows.
 
 `i8086-debug.js` reports `breakpoints: ['code', 'write']`. For a workbench
 whose entire premise is *you wired this 8255 yourself*, "stop when anything
@@ -1184,18 +1195,21 @@ microcode, and do not build ours by transcribing it.** The BIU/prefetch
 behaviour is derivable from the bus traces in the MIT test suite, which is
 both legally clean and a better oracle. Add to the table on landing.
 
-#### E6.8.5 CRTC-driven video timing — the chip is already in the tree
+#### E6.8.5 CRTC-driven video timing — DONE (2026-09-04, `9fe3b9f`)
 
-`cga-card.js:21` states it plainly: *"The 6845 CRTC at 3D4h/3D5h is NOT
-modelled"*, and retrace is derived from machine time (`_vretraceAt`). That is
-enough to unhang a program polling 3DAh and not enough for one that COUNTS
-scanlines — which is the class XTCE-Blue exists to run. `src/mc6845.js`
-already implements R0-R17 clean-room for the Z80 tier.
-
-Scope: drive the CGA card's timing from an `MC6845` instance so retrace,
-hsync, start address and cursor are EMITTED rather than derived. Bounded, and
-it pairs naturally with E6.8.4 — a scanline count is only meaningful once the
-cycles feeding it are.
+The CGA card is now driven by a real `MC6845` (the clean-room chip the Z80 tier
+already ships): 3D4h/3D5h latch and read back, the START ADDRESS (R12:R13) and
+CURSOR (R14:R15, R10, R11) are emitted via getVideoState, and the vertical-
+retrace proportion is derived from the CRTC's own vertical registers
+(total = (R4+1)*charH + R5, active = R6*charH), recomputed on every 3D5h write.
+It powers on with the standard CGA 80x25 text programming, which reproduces the
+262-total / 200-active frame the card used to hardcode — so an unprogrammed card
+is byte-for-byte unchanged and no 3DAh-polling game is disturbed.
+test/cga-crtc.test.mjs (6). Retrace stays FRAME-grained; a cycle-exact scanline
+count is E6.8.4's cycle timing, which this pairs with.
+HANDOVER: startAddr is a NEW renderer input the DOS/host lane must consume for a
+page flip to change the picture (told lego-47; same explicit shape as the DAC
+and the EGA planes). hsync stays derived — meaningful only cycle-exact (E6.8.4).
 
 **REFINED 2026-09-04 by reading x8086NetEmu (§E6.8.10), and the refinement
 splits this item in two.** Their `CGAAdapter.vb` wires the CRTC's **start-
@@ -1818,7 +1832,14 @@ STATE and its test; the DOS/host renderer owns turning that state into pixels
    720x400 (the renderer falls back to 80x25 text at B8000h, which a Hercules-
    only machine does not map — open-bus reads), so the ROM must reach its
    3BFh/3B8h writes before the first frame (ours does, immediately).
-5. **EGA — STATE DONE (`40c17af`), render pending.** The hardest: a PLANAR
+5. **EGA — CLOSED (2026-09-04, renders).** Decode landed (feat/i8086-tier
+   `381fc5b`); loader entry wired (bw-circuit-ui `0b1216b`). lego-47 verified
+   rom/ega-demo.bin's ramp composes to 15,13,11,9,7,5,3,1 — plane order and bit
+   order both right; mode 0Dh WITHOUT planes throws rather than drawing zeros
+   (a black frame is indistinguishable from a program that drew nothing). The
+   hardest of the set, and the whole display family (CGA text/graphics, VGA,
+   Hercules, EGA) now renders. Details below.
+   The hardest: a PLANAR
    framebuffer, not linear RAM. `src/ega-card.js` models the register banks
    (no DAC — EGA colour is the attribute palette) plus four bit planes, with
    map-mask write routing (SR2) and read-map-select (GR4). The machine gives an

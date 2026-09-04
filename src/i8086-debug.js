@@ -207,6 +207,45 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const writeWatches = new Map();     // id → { addr, len }
     let watchHit = null;
     let origWrite = null;
+    /** Port and interrupt breakpoints, and the pending hit either can leave. */
+    const portWatches = new Map();
+    const intWatches = new Map();
+    let eventHit = null;
+
+    /**
+     * Attach or detach the machine's observation hooks, exactly as
+     * syncWriteTrap does for cpu.write: present only while something is
+     * watching, so an unwatched machine pays one null check per IN/OUT and
+     * nothing per instruction.
+     *
+     * A PORT READ IS DESTRUCTIVE, which is why readMem() refuses the I/O
+     * space outright (see the module header). These hooks observe the access
+     * the PROGRAM makes and never perform one — the machine hands us the
+     * value it already returned to the program, and on an `in` it does so
+     * AFTER the read, so what a watcher sees is what the device actually
+     * gave up rather than what it was about to.
+     */
+    const syncEventHooks = () => {
+        machine.hooks.onPortAccess = portWatches.size
+            ? (ev) => {
+                for (const [id, w] of portWatches) {
+                    if (w.port !== (ev.port & 0xffff)) continue;
+                    if (w.dir && w.dir !== ev.dir) continue;
+                    eventHit = { cause: 'port', bp: id, ...ev };
+                }
+            }
+            : null;
+        machine.hooks.onInterrupt = intWatches.size
+            ? (ev) => {
+                for (const [id, w] of intWatches) {
+                    if (w.vector != null && w.vector !== ev.vector) continue;
+                    if (w.source && w.source !== ev.source) continue;
+                    eventHit = { cause: 'interrupt', bp: id, ...ev };
+                }
+            }
+            : null;
+    };
+
     const syncWriteTrap = () => {
         if (writeWatches.size && !origWrite) {
             origWrite = cpu.write;
@@ -251,7 +290,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         capabilities() {
             return {
                 steps: ['insn', 'over', 'out'],
-                breakpoints: ['code', 'write'],
+                // 'port' and 'int' are declared only because the machine can
+                // actually observe them. They rest on machine.hooks, which the
+                // machine layer owns; a target wired to a machine without them
+                // would be advertising a control that silently never fires,
+                // which is the same reason `steps` does not list 'cycle'.
+                breakpoints: machine.hooks
+                    ? ['code', 'write', 'port', 'int']
+                    : ['code', 'write'],
                 timeFreezes: true,
                 consumes: [],
                 // Declared only when the machine can actually take a key. A
@@ -371,6 +417,40 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 syncWriteTrap();
                 return id;
             }
+            if (spec.kind === 'port') {
+                if (!machine.hooks) return { unsupported: 'this machine has no observation hooks' };
+                if (spec.port == null) return { unsupported: 'port required' };
+                if (spec.dir != null && spec.dir !== 'in' && spec.dir !== 'out') {
+                    return { unsupported: `dir must be 'in', 'out', or absent for either` };
+                }
+                const id = nextBpId++;
+                portWatches.set(id, { port: spec.port & 0xffff, dir: spec.dir ?? null });
+                syncEventHooks();
+                return id;
+            }
+            if (spec.kind === 'int') {
+                if (!machine.hooks) return { unsupported: 'this machine has no observation hooks' };
+                // An ABSENT vector means every vector, which is the useful
+                // default for "what is this program asking the BIOS for" and
+                // is why it is not an error. An absent source likewise means
+                // any: 'int' (a program's INT n), 'irq' (a PIC line), 'nmi',
+                // or 'exception' (a divide fault, BOUND, the single-step
+                // trap). Keeping them separable matters because "break on
+                // INT 21h" and "break on the timer tick" are different
+                // questions that a vector number alone stops being able to
+                // tell apart the moment anything remaps a vector.
+                const SOURCES = ['int', 'irq', 'nmi', 'exception'];
+                if (spec.source != null && !SOURCES.includes(spec.source)) {
+                    return { unsupported: `source must be one of ${SOURCES.join(', ')}, or absent for any` };
+                }
+                const id = nextBpId++;
+                intWatches.set(id, {
+                    vector: spec.vector == null ? null : spec.vector & 0xff,
+                    source: spec.source ?? null,
+                });
+                syncEventHooks();
+                return id;
+            }
             if (spec.kind !== 'code') return { unsupported: `unknown breakpoint kind: ${spec.kind}` };
             // BY NAME, which is the point of having symbols at all. Resolved
             // HERE and once, so what is STORED is still a linear address and
@@ -406,6 +486,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         },
 
         clearBreakpoint(id) {
+            if (portWatches.delete(id) || intWatches.delete(id)) { syncEventHooks(); return; }
             breakpoints.delete(id);
             if (writeWatches.delete(id)) syncWriteTrap();
         },
@@ -469,6 +550,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     }
                 }
                 machine.step();
+                // Checked BEFORE the write watch, and the order is arbitrary
+                // only in appearance: a port write that trips both is one
+                // event, and reporting the port — the thing the user asked
+                // about by name — is the more specific answer.
+                if (eventHit) {
+                    const hit = eventHit;
+                    eventHit = null;
+                    halt(hit);
+                    return 'halted';
+                }
                 if (watchHit) {
                     const hit = watchHit;
                     watchHit = null;
