@@ -92,7 +92,7 @@
  * as a pass in a summary line.
  */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
-import { join, extname, basename } from 'node:path';
+import { join, extname, basename, dirname } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086, DOSBOX8086_XT } from '../src/i8086-dos.js';
 import { Unimplemented } from '../src/i8086.js';
@@ -211,7 +211,7 @@ function classify(bytes, name) {
     return 'com';
 }
 
-function runOne(name, raw, key) {
+function runOne(name, raw, key, from = null) {
     let bytes = raw;
     let kind = classify(bytes, name);
 
@@ -227,7 +227,23 @@ function runOne(name, raw, key) {
                 source = source.replace(
                     /^[ \t]*include[ \t]+["']?emu8086\.inc["']?[ \t]*$/gim, EMU8086_INC);
             }
-            const out = assembler(source, { name });
+            // NASM's `%include` and `INCBIN` resolve against the directory
+            // the source lives in. The assembler has no file system of its
+            // own -- deliberately, it runs in a browser -- so the harness is
+            // where the path search belongs, exactly as the emu8086 include
+            // substitution above is.
+            const dir = from ? dirname(from) : '.';
+            const out = assembler(source, {
+                name,
+                readInclude: (p2) => {
+                    const at = join(dir, p2);
+                    return existsSync(at) ? readFileSync(at, 'utf8') : undefined;
+                },
+                readBinary: (p2) => {
+                    const at = join(dir, p2);
+                    return existsSync(at) ? new Uint8Array(readFileSync(at)) : undefined;
+                },
+            });
             bytes = out.bytes;
             kind = out.format || 'com';
         } catch (e) {
@@ -367,7 +383,7 @@ if (flag('--selftest')) {
             // The expected-output file keys on the path below its own root,
             // so the key is whatever follows the directory we were given.
             const key = f.startsWith(p) ? f.slice(p.length).replace(/^[/\\]/, '') : basename(f);
-            results.push(runOne(basename(f), new Uint8Array(readFileSync(f)), key));
+            results.push(runOne(basename(f), new Uint8Array(readFileSync(f)), key, f));
         }
     }
 }
