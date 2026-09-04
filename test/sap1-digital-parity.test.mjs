@@ -19,6 +19,9 @@ const DIGITAL_JAR = '/mnt/volume1/code/digital-sim/Digital/Digital.jar';
 const LIB = '/mnt/volume1/code/digital-sim/Digital/lib/DIL Chips/74xx';
 const AVAILABLE = existsSync(DIGITAL_JAR);
 const SKIP = !AVAILABLE && 'Digital.jar not found';
+/** Six times the ~5s a bare invocation takes here. Generous on an idle box,
+ *  and reachable on a loaded one — see the catch below. */
+const TIMEOUT_MS = 30000;
 
 function runDigitalChipTest(digPath, testData) {
     if (!existsSync(digPath)) return { pass: false, output: `${digPath} not found` };
@@ -29,10 +32,54 @@ function runDigitalChipTest(digPath, testData) {
     writeFileSync(tmp, injected);
     try {
         const out = execFileSync('java', ['-cp', DIGITAL_JAR, 'CLI', 'test', '-circ', tmp, '-verbose'],
-            { encoding: 'utf8', timeout: 30000 });
-        return { pass: out.includes('passed'), output: out.trim() };
+            { encoding: 'utf8', timeout: TIMEOUT_MS });
+        // THE EXIT CODE IS DOING THE WORK, AND NOTHING SAID SO. Measured:
+        // given one correct row and one wrong row in the same element, Digital
+        // prints
+        //
+        //     unnamed: passed
+        //     unnamed: failed (50%)
+        //     ... Tests have failed.
+        //
+        // so `out.includes('passed')` is TRUE for a run that failed. What
+        // actually protects this gate is that Digital exits non-zero, sending
+        // the mixed case to the catch branch — an undocumented coupling the
+        // substring check was quietly relying on. Harmless today; a hole the
+        // moment Digital exits 0 with a mixed result, or a circuit carries a
+        // passing element beside a failing one.
+        //
+        // So the verdict is now explicit on both halves: something passed, and
+        // NOTHING failed. Substring matching cannot tell a partial success
+        // from a total one — the same lesson the disassembler's exclusion key
+        // learned when it matched an escaped quote.
+        const failed = /failed|Tests have failed/i.test(out);
+        return { pass: out.includes('passed') && !failed, output: out.trim() };
     } catch (e) {
-        return { pass: false, output: ((e.stdout || '') + '\n' + (e.stderr || '')).trim() };
+        // A KILLED JVM IS NOT A DISAGREEING CHIP, and until now it reported as
+        // one: every failure path returned `pass: false` with whatever partial
+        // stdout had arrived, so a machine under memory pressure produced a
+        // message that read exactly like a truth-table mismatch. That cost a
+        // real investigation on 2026-09-04 — four of these went red in a full
+        // suite run, were reported upstream as a possible defect, and turned
+        // out to be a JVM killed at the cap on a box whose swap was 11.9 GB of
+        // 12 GB used. The same file passed 7/7 alone minutes later.
+        //
+        // The verdict is deliberately still FAIL rather than skip: a check that
+        // could not run has not passed, and a skip reads the same as a pass in
+        // a summary line. What changes is that it now says WHICH failure it is.
+        const killed = e.killed === true || e.signal === 'SIGTERM' || e.code === 'ETIMEDOUT';
+        const partial = ((e.stdout || '') + '\n' + (e.stderr || '')).trim();
+        if (killed) {
+            return {
+                pass: false,
+                output: `ENVIRONMENT, NOT THE CIRCUIT — the Digital JVM was killed after `
+                    + `${TIMEOUT_MS / 1000}s. A bare invocation on this box takes about 5s, so a `
+                    + `failure at the cap means the machine was loaded, not that the truth table `
+                    + `disagreed. Check \`free -m\` AND \`swapon --show\` before chasing this, `
+                    + `and re-run the file alone. Partial output: ${partial || '(none)'}`,
+            };
+        }
+        return { pass: false, output: partial };
     } finally { try { unlinkSync(tmp); } catch {} }
 }
 

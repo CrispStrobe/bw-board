@@ -155,7 +155,29 @@ between trees by hand is the same hazard with extra steps.
 
 - Push both branches (master + main) at every checkpoint
 - No positioning in committed content
-- `free -m` before anything heavy
+- **`free -m` AND `swapon --show` before anything heavy.** The RAM figure alone
+  has been the misleading one on this box for some time. Measured 2026-09-04
+  with five agent sessions running:
+
+      Mem:   7751 total,  181 free,  557 available
+      Swap: 12287 total,   91 free      <-- 11.9 GB of 12 GB already used
+
+  `free -m`'s "available" column said 557 MB, which reads as tight but
+  survivable. It was not: the number assumes a swap cushion, and there was
+  none, so the real headroom before the OOM killer was about 648 MB. The
+  original rule was written when swap was the slack; check the Swap line, not
+  just the Mem line.
+  - The kernel kills the LARGEST RSS, which on this fleet is either a long
+    corpus/grind run or an entire agent session's context. The cost of an OOM
+    is not a slow run, it is a lost one.
+  - Do not start a second `node --max-old-space-size=...`, a JVM-backed test
+    run, a full `npm test` alongside someone else's, a large clone, or a
+    Rust/Tauri build while the swap line is near full.
+  - **It causes FALSE TEST FAILURES, so check the box before believing a red.**
+    `sap1-differential` and `sap1-digital-parity` shell out to
+    `java -cp Digital.jar` with a hard `timeout: 30000`. Under load all four
+    failed at `duration_ms ~= 30190` with truncated stdout — killed, not
+    disagreeing. A bare invocation takes 4.8s and the file passes 7/7 alone.
 - mna.js/board.js core paths are coordinator-only
 - Assert the property, not the symptom
 - Do NOT deploy Vercel (rate-limited ~24h); GH Pages is the deploy path
