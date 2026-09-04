@@ -1065,6 +1065,41 @@ CORRECTIONS (from the DOS lane's BIOS ROM, 2026-09-03) — the plan above said
   ('a PIT OUT0 wired to PIC IR0 extracts as irq:0', and the miswired-board
   companion). So a drawn PIT+PIC now boots the BIOS's 18.2 Hz tick.
 
+### E7.1 The display-demo set — one bare-metal example per display card (owner-requested, 2026-09-04)
+
+The owner wants the Display widget shown across the card family, not just CGA
+text: "hercules ega and vga demos etc in the end." Each is a small, self-
+booting, BIOS-free ROM that programs the card's mode register and writes its
+framebuffer directly, so the widget shows a real picture from hardware alone —
+the same shape as CGADEMO8086. Delivered one after another, in dependency
+order. THIS LANE owns the firmware + preset + the card's mode/framebuffer
+STATE and its test; the DOS/host renderer owns turning that state into pixels
+(the seam is `videoFrame()` / `renderMode`, on `feat/i8086-tier`).
+
+1. **CGA text — DONE.** CGADEMO8086 + rom/cga-demo.bin. 80x25 text at B800.
+2. **CGA graphics — DONE (2026-09-04, `f70e5f3`).** rom/cga-gfx-demo.bin on the
+   SAME CGADEMO8086 board: mode 4 (320x200x4) colour bars, both interleaved
+   banks. Renderer `cga4` decode confirmed in-process by lego-47.
+   test/i8086-cga-gfx-demo.test.mjs. Loader entry: bw-circuit-ui `f7bd2f2`.
+3. **Hercules graphics — NEXT.** hercules-card.js exists (port-only, 3B0-3BFh).
+   A HERCDEMO8086 board (HGC + the B000:0000 mono page + ROM) and a ROM that
+   sets HGC graphics mode and writes the 720x348 mono bitmap. GATE: the
+   renderer must decode the HGC framebuffer (mono, its own 4-bank interleave) —
+   confirm with the DOS/host lane before shipping a loader entry, same as CGA.
+4. **VGA mode 13h — AFTER Hercules.** vga-card.js exists. Needs (a) a machine
+   config that declares `kind: 'vga'` — none does today, so 13h currently
+   programs open bus and is a recorded no-op — this lane adds a VGADEMO8086
+   board; (b) the renderer's mode-13h (320x200x256, linear at A000:0000) decode,
+   DOS/host lane. A 256-colour linear framebuffer is the simplest to fill and
+   the most recognisable payoff.
+5. **EGA — LAST, and it needs a card first.** No ega-card.js exists yet; EGA's
+   planar four-bitplane memory is the hardest of the set. Build the card (this
+   lane), then the board + demo, then the renderer's planar decode (DOS/host).
+   Gated on a lesson actually wanting EGA — CGA+VGA cover the span for now.
+
+Each step ships only once its renderer decode is confirmed, because a board
+that renders a cleared screen is not an example.
+
 ---
 
 ## Sequencing
