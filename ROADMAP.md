@@ -1620,8 +1620,20 @@ validated only against producers that already exist is shaped by them.** The
 shape test available, because whatever is written there is written *against*
 the contract rather than migrated onto it.
 
-1. **The speaker.** Simplest possible producer: one voice, a square wave from
-   a divisor, and it proves the tone half and the agreement test together.
+0. **The bus itself — `src/audio-bus.js`, DONE 2026-09-04.** One mixer and one
+   ring for all three tiers, because three copies would diverge and a
+   contract is only worth having if the thing consuming it is one thing.
+   Nothing in it knows what a CPU is. Two behaviours are COUNTED rather than
+   swallowed, in the style of the DOS layer's refusal histogram: an
+   **underrun** pads with silence and counts the frames it invented (padding
+   is unavoidable, hiding it is not), and a **clip** is clamped and counted,
+   so "the mix is distorting" is a number to assert on rather than a noise to
+   notice. A third case is a decision rather than a count: an emulator
+   running AHEAD of the host **drops** the excess rather than overwriting
+   unread audio, because sound nobody will hear in time is worse played late.
+1. **The speaker — DONE 2026-09-04.** Simplest possible producer: one voice, a
+   square wave from a divisor, and it proves the tone half and the agreement
+   test together.
 2. **A 6502-tier producer — the shape test.** Built from the contract
    outward, by a tier with no audio history. If it forces a change, we learn
    that after two implementations rather than after four.
