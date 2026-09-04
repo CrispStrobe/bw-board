@@ -6,8 +6,11 @@
 // case is written FIRST-class here, not as an afterthought.
 //
 // The pair: e4-via-blink (6502 / W65C22 port B, the shipped original) against
-// BLINK8086 (8086 / 8255 port B, the minimal-GPIO 8086). Both walk a single bit
-// across eight LEDs; the gate compares the EDGE SEQUENCE, family-agnostic.
+// its OWN reseat — the SAME board run through the circuit substitution
+// (bw-circuit-ui reseatOnto8086), which lifts the 6502 subsystem and drops in an
+// 8086/8255. The gate extracts that reseated circuit, runs the program, and
+// compares the EDGE SEQUENCE, family-agnostic. The observable is WHERE THE LEDS
+// ARE, derived from the schematic — so a wrong reseat is CAUGHT, not assumed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -16,10 +19,14 @@ import { dirname, join } from 'node:path';
 import { reseatGate, captureObservable } from '../src/reseat-gate.js';
 import { extract6502Machine } from '../src/m6502-extract.js';
 import { M6502Machine } from '../src/m6502-machine.js';
-import { I8086Machine, BLINK8086 } from '../src/i8086-machine.js';
+import { I8086Machine } from '../src/i8086-machine.js';
+import { extract8086Machine } from '../src/i8086-extract.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const GALLERY = join(here, '..', '..', 'wt', 'i8086-ui-cui', 'gallery', 'e4-via-blink.json');
+const galleryDir = join(here, '..', '..', 'wt', 'i8086-ui-cui', 'gallery');
+const GALLERY = join(galleryDir, 'e4-via-blink.json');
+const RESEATED = join(galleryDir, 'e4-reseated-8086.json');
+const RESEATED_WRONG = join(galleryDir, 'e4-reseated-8086-wrongport.json');
 const BLINK_ROM = new Uint8Array(readFileSync(join(here, '..', 'rom', 'blink-demo.bin')));
 
 // ---- the original: e4-via-blink (6502), paired with the baseline program ----
@@ -49,28 +56,61 @@ function build6502Original() {
 }
 const read6502PortB = (m) => ({ out: m.chips.via1._pbOut(), dir: m.chips.via1.ddrb });
 
-// ---- the reseat: BLINK8086 (8086 / 8255), LEDs on port B --------------------
-function build8086Reseat() {
-    const m = new I8086Machine(BLINK8086);
-    m.loadRom(BLINK_ROM);
-    m.reset();
-    m.chips.ppi1.setInputPort('c', 0xff); // switches open -> LEDs = the walking bit
-    return m;
+// ---- the reseat: e4-via-blink run through reseatOnto8086 --------------------
+// The gate consumes the reseated circuit as DATA (like the original), extracts a
+// machine from it, and runs the blink program on it. The 8086 program is held
+// constant here (option 2 scope, see RESEAT-GATE.md); the circuit is what the
+// substitution produced.
+
+// The observable is WHERE THE LEDS ARE. Trace the 8255 port pins in the reseated
+// schematic that drive an LED chain (a resistor), and read THAT port from the
+// machine. A wrong reseat (LEDs on port A while the program drives B) is caught
+// by this, not assumed away.
+function ledPortFromSchematic(circuit, ppiName) {
+    const ports = new Set();
+    for (const w of circuit.wires) {
+        const ends = [[w.from, w.fromTerminal, w.to], [w.to, w.toTerminal, w.from]];
+        for (const [part, term, other] of ends) {
+            const m = /^p([abc])\d$/.exec(term);
+            if (part === ppiName && m && /^rl\d+$/.test(other)) ports.add(m[1]);
+        }
+    }
+    assert.equal(ports.size, 1, `LEDs land on exactly one 8255 port (got [${[...ports]}])`);
+    return [...ports][0];
 }
-const read8086PortB = (m) => ({ out: m.chips.ppi1.outB, dir: m.chips.ppi1.dirB });
-// A WRONG reseat wires the LEDs to port A while the program drives port B: the
-// program runs and nothing lights. The gate reads where the LEDs ARE (port A).
-const read8086PortA = (m) => ({ out: m.chips.ppi1.outA, dir: m.chips.ppi1.dirA });
+
+// Build the 8086 gate-end from a reseated circuit file: extract it, run the
+// blink ROM (loaded HIGH, the i8086 convention), and read the port the LEDs are
+// wired to.
+function reseated8086End(circuitPath) {
+    const circuit = JSON.parse(readFileSync(circuitPath, 'utf8'));
+    const cfg = extract8086Machine(circuit);
+    assert.ok(cfg.ok, `reseated circuit extracts: ${(cfg.reasons || []).join('; ')}`);
+    const ppiName = cfg.chips.find((c) => c.kind === 'ppi').name;
+    const P = ledPortFromSchematic(circuit, ppiName).toUpperCase();
+    const build = () => {
+        const m = new I8086Machine(cfg);
+        m.loadRom(BLINK_ROM, 0x100000 - BLINK_ROM.length);
+        m.reset();
+        const ppi = m.chips[ppiName];
+        if (ppi.setInputPort) ppi.setInputPort('c', 0xff);
+        return m;
+    };
+    const read = (m) => ({ out: m.chips[ppiName][`out${P}`], dir: m.chips[ppiName][`dir${P}`] });
+    return { build, read, steps: STEPS_8086, port: P };
+}
 
 // Step budgets: enough for a full 8-position walk on each board (6502 ~3.6k to
 // reach 0x80, 8086 ~58k; both measured, headroom added).
 const STEPS_6502 = 6000;
 const STEPS_8086 = 72000;
 
-test('GREEN: e4-via-blink (6502) and BLINK8086 (8086) walk the SAME port-B sequence', () => {
+test('GREEN: e4-via-blink reseated onto 8086 walks the SAME sequence as the original', () => {
+    const reseat = reseated8086End(RESEATED);
+    assert.equal(reseat.port, 'B', 'the reseat wired the LEDs to port B (the port the program drives)');
     const r = reseatGate(
         { build: build6502Original, read: read6502PortB, steps: STEPS_6502 },
-        { build: build8086Reseat, read: read8086PortB, steps: STEPS_8086 },
+        reseat,
     );
     assert.equal(r.verdict, 'MATCH', r.reason);
     assert.deepEqual(r.expected, [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
@@ -78,10 +118,12 @@ test('GREEN: e4-via-blink (6502) and BLINK8086 (8086) walk the SAME port-B seque
     assert.deepEqual(r.actual, r.expected);
 });
 
-test('RED: LEDs mis-wired to port A (program drives B) — the gate FAILS', () => {
+test('RED: the wrong-port reseat (LEDs on port A, program drives B) — the gate FAILS', () => {
+    const reseat = reseated8086End(RESEATED_WRONG);
+    assert.equal(reseat.port, 'A', 'the wrong reseat put the LEDs on port A');
     const r = reseatGate(
         { build: build6502Original, read: read6502PortB, steps: STEPS_6502 },
-        { build: build8086Reseat, read: read8086PortA, steps: STEPS_8086 }, // wrong port
+        reseat,
     );
     assert.equal(r.verdict, 'DIFFER', 'a port mismatch MUST fail the gate (§ the one invariant)');
     assert.equal(r.actual.length, 0, 'nothing lights on the mis-wired port');
@@ -116,7 +158,7 @@ test('the settle edge is tied to the direction write, not to a leading zero', ()
 test('cadence is reported so rate is visible even though shape ignores it', () => {
     const r = reseatGate(
         { build: build6502Original, read: read6502PortB, steps: STEPS_6502 },
-        { build: build8086Reseat, read: read8086PortB, steps: STEPS_8086 },
+        reseated8086End(RESEATED),
     );
     assert.ok(r.cadence.original.meanInterval > 0, '6502 cadence measured');
     assert.ok(r.cadence.reseated.meanInterval > 0, '8086 cadence measured');
