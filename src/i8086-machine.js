@@ -903,6 +903,52 @@ export class I8086Machine {
      * scancodes and call this; it is machine-agnostic, needing only a PPI + PIC.
      */
     /**
+     * WHAT A WIDGET OR A CODE BLOCK CAN CHANGE ABOUT THE WORLD.
+     *
+     * Every input point the machine currently has, as `{chip, port, bits}`.
+     * Today that is the 8255's ports, which is where a breadboard hangs its
+     * switches -- the same ports `setInput` drives from a drawn board.
+     *
+     * DIRECTION IS NOT REPORTED HERE, DELIBERATELY. A port's direction is a
+     * mode word the PROGRAM writes and can rewrite at any instruction, so a
+     * list computed once would be stale by the time anyone read it. What is
+     * stable is which ports EXIST; whether a given bit is an input right now
+     * is `setInput`'s answer, not this one's.
+     */
+    inputPoints() {
+        const out = [];
+        for (const [name, chip] of Object.entries(this.chips || {})) {
+            if (typeof chip.setInput !== 'function') continue;
+            for (const port of ['a', 'b', 'c']) out.push({ chip: name, port, bits: 8 });
+        }
+        return out;
+    }
+
+    /**
+     * Drive one input bit, as a switch or a sensor would.
+     *
+     * @returns {boolean} false when there is nothing to drive, rather than
+     *   silently succeeding -- a widget offered for a machine with no 8255
+     *   would otherwise look connected and do nothing.
+     *
+     * THE HONEST LIMIT, and it is the one a caller must know: a machine
+     * ATTACHED TO A DRAWN BOARD re-reads every input pin from that board on
+     * each advance (`i8086-adapter.js`), so a value set here is overwritten
+     * on the next step. The board is the world for such a machine, and it
+     * should be -- flipping a switch in a widget while the schematic says
+     * otherwise is a contradiction, not an input. Callers that want both
+     * should drive the board.
+     */
+    setInput(chipName, port, bit, level) {
+        const chip = (this.chips || {})[chipName];
+        if (!chip || typeof chip.setInput !== 'function') return false;
+        if (!['a', 'b', 'c'].includes(port)) return false;
+        if (!(bit >= 0 && bit < 8)) return false;
+        chip.setInput(port, bit, level ? 1 : 0);
+        return true;
+    }
+
+    /**
      * Can this machine take a key at all? A board with no 8255 has nowhere to
      * latch a scancode and one with no 8259 has no wire to raise IRQ1 on.
      * Asked BEFORE a host offers a keyboard, so the offer matches the board.

@@ -306,6 +306,11 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // keyboard for it would be offering one that silently does
                 // nothing -- the same reason `steps` does not list 'cycle'.
                 keys: machine.canTakeKeys && machine.canTakeKeys() ? ['scancode'] : [],
+                // The world a widget or a code block can CHANGE, not just
+                // watch. Empty when the machine has no input hardware, on the
+                // same terms as `keys`: an affordance appears exactly when the
+                // machine can honour it.
+                inputs: typeof machine.inputPoints === 'function' ? machine.inputPoints() : [],
                 // Whether this target can BE GIVEN symbols, not whether it
                 // has any. A host asks this to decide whether the control
                 // exists at all; whether it does anything is setSymbols()'s
@@ -329,6 +334,19 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          */
         keyIn(scancode) {
             return typeof machine.keyIn === 'function' ? machine.keyIn(scancode) : false;
+        },
+
+        /**
+         * Drive one input bit -- a switch, a sensor, a button. Returns false
+         * rather than pretending when there is nothing to drive.
+         *
+         * The counterpart to video() and audioTone(): those report what the
+         * machine is DOING, and this changes what the machine SEES. A
+         * workbench that can only observe is a television.
+         */
+        setInput(chip, port, bit, level) {
+            return typeof machine.setInput === 'function'
+                ? machine.setInput(chip, port, bit, level) : false;
         },
 
         state() { return runState; },
