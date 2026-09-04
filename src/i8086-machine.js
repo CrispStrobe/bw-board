@@ -204,6 +204,25 @@ export const PCXT8086 = Object.freeze({
     ],
 });
 
+/**
+ * The UART-shell example — the 8086's counterpart to the Z80 and 6502 serial
+ * monitors. An 8086, 64K of RAM, a 32K ROM holding the reset vector, and a
+ * single 16550 UART at port 10h. Load rom/serial-monitor.bin (built by
+ * scripts/build-serial-monitor.mjs) and it boots itself into a shell that
+ * prints a banner and echoes what you type, driving the same SerialConsole
+ * the other MCUs use — no BIOS, no disk, nothing to configure.
+ */
+export const SERIALSHELL8086 = Object.freeze({
+    clockHz: 5_000_000,
+    regions: [
+        { kind: 'ram', start: 0x00000, end: 0x0ffff },   // 64K
+        { kind: 'rom', start: 0xf8000, end: 0xfffff },   // 32K, holds the reset vector
+    ],
+    chips: [
+        { kind: 'uart16550', name: 'uart1', at: 0x10 },  // the terminal
+    ],
+});
+
 export class I8086Machine {
     /**
      * @param {MachineConfig} [config]
