@@ -1015,6 +1015,18 @@ lands it.
 7. **Keyboard widget.** `VdpScreen` already emits `setKeys`/`setButtons`; route
    8086 key input through the BIOS INT 16h/09h path (or an 8255 port). Decide
    the input seam with the BIOS.
+   **SEAM DECIDED + HARDWARE LAYER DONE (2026-09-04, `81630bd`).** Decided WITH
+   the BIOS lane: the HARDWARE path, not an INT 16h buffer — the widget then
+   works on any board with a PPI + PIC (like SerialConsole works without a BIOS),
+   and the BIOS's own INT 09h sits on the same hardware. `machine.keyIn(scancode)`
+   latches the byte at the keyboard 8255's port A (0x60) and raises IRQ1; the
+   ack is the port-B bit-7 strobe (rising edge drops IRQ1), matching the BIOS's
+   int09 (bios.asm:734). KBDDEMO8086 + rom/keyboard-demo.bin prove it bare-metal
+   (INT 09h -> read 0x60 -> ack -> set-1->ASCII -> echo -> own EOI); it is the
+   first thing to drive the 8259 IRQ1 path for real (the DOS boot test had been
+   using cpu.interrupt(9) direct). REMAINING (host lane): debug-runner maps
+   VdpScreen key events -> set-1 scancodes -> `runner.keyIn`. The UI loader entry
+   is HELD until that lands — a board you cannot type into is not an example.
 
 8. **GUI binary-loading.** The file-upload path already accepts `.bin`; add the
    `i8086` loader branch (`romAt: 0xF0000` load address) and an example ROM under
