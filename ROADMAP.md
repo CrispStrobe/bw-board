@@ -1535,6 +1535,44 @@ than an inability to find one.
 646,000-vector suite can see, because it compares final state and both are
 invisible there.
 
+#### E6.8.4e The ceiling of the closed-form model is 83.4%, and 95% needs the simulator (measured 2026-09-04)
+
+The owner asked why the cycle score stalls at 36.5% and whether it can reach
+95%. Both halves now have a number instead of an opinion.
+
+**Group every vector by the five things the model actually knows** — queue
+depth, instruction length, data-access count, EU cycles, and whether the
+instruction flushed — across 24,000 vectors and sixteen opcode files:
+
+```
+451 groups        383 fully determined (one cycle count each)     84.9%
+                  20,020 of 24,000 vectors sit in those groups    83.4%
+```
+
+**So 83.4% is the INFORMATION CEILING of any closed-form model over those five
+inputs**, and the current 36.5% is roughly 47 points below its own ceiling.
+That gap is a formula problem and needs no new state — which is a much better
+position than "needs a simulator", and it is the first time this entry has
+been able to say which of the two it is.
+
+Adding the OPCODE to the key raises determinism only to 90.4%, and that route
+is declined: a per-opcode table is a lookup rather than a model, it would
+score well on the sixteen files it was fitted to and say nothing about the
+three hundred it was not, and this tier's whole argument is that its numbers
+generalise.
+
+**Above 83.4% the five inputs are provably insufficient** — two vectors with
+identical (q, len, data, eu, flush) genuinely take different numbers of
+cycles, because the difference is where the BIU happened to fit a prefetch.
+That is the cycle-by-cycle simulation, and it is now a measured requirement
+rather than a third assertion.
+
+**Route to >95%, in order:** close the 47 points to the ceiling with a better
+closed form (no new machinery), then build the cycle-stepped BIU for the rest.
+`dbalsom/martypc` (MIT) is the reference implementation to read for the second
+half — its author wrote the very suite being graded against, and it is the
+only permissive cycle-accurate 8088 in existence.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
