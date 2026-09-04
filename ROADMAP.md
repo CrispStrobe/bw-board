@@ -1749,11 +1749,82 @@ notice travels with them**. That is an attribution obligation on the derived
 tables, not just on the checkout, and it must be honoured at the point the
 tables land in `src/`.
 
-**Next, and deliberately NOT started yet:** only 16 of ~300 opcode files are
-present locally. Generating production tables means fetching the rest
-(~1.5 GB decompressed — see the disk constraint in E6.8.4e) and emitting a
-calibrated table per opcode. That is mechanical and delegable; it is also
-gated on the merge consolidation landing, since it adds a new `src/` artefact.
+**VALIDATED ON THE FULL SUITE — 95.6% over 323 opcodes (2026-09-04).** The
+95.5% above was sixteen opcodes that happened to be on disk, which is a
+selection nobody chose. Fetched the rest (302 files, **677 MB** — the
+"~1.5 GB" estimate was high) and re-ran streaming, one opcode resident at a
+time.
+
+**First honest result: 92.8%**, not 95.5%. The sixteen were the easy ones, as
+predicted before the run. Two mechanical fixes brought it back:
+
+```
+                                   before   after
+D2.x / D3.x  shift/rotate by CL      ~3%    ~99.4%    (16 opcodes)
+99           CWD                     49.3%  100.0%
+                                   -------  -------
+FULL SUITE                           92.8%   95.6%   (862,304 / 902,100)
+```
+
+**The shift fix is the interesting one, because the first attempt was the
+wrong SHAPE, not the wrong feature.** Keying on CL categorically scores 57% —
+better than 3%, so it looks like progress — because it fragments the table
+across 64 CL values until each key holds a handful of vectors. The datasheet
+gives shift-by-CL as `8+4n`, and measurement confirms it exactly (cl=0 → 8,
+every +2 of CL adds +8). It needs a **linear correction**: subtract `4*CL`
+before fitting, add it back when predicting. 3% → 99.4%.
+
+**Two kinds of operand dependence, and conflating them costs 40 points:**
+
+| Kind | Shape | Example |
+|---|---|---|
+| categorical | operand selects a different constant | MUL: `popcount(ax)` |
+| **linear** | operand adds proportional cycles | **shift by CL: `4*CL`** |
+
+The linear term also lands in **`span`**, not `tail`, for a read-modify-write
+form — the shift loop runs *between* the read and the write.
+
+**Per-opcode distribution over the full suite:**
+
+```
+exactly 100%   217        >=90%     3
+      >=99%     50        >=75%    11
+      >=95%      6         <75%    36
+```
+
+**267 of 323 opcodes are at or above 99%.**
+
+**Where the remaining 36 sit, and they are two distinct problems:**
+
+1. **Division is a genuine boundary, not a missing feature.** `F7.7`/`F6.7`
+   (IDIV) 16%, `F7.6`/`F6.6` (DIV) 60–64%, `D4`/`D5` (AAM/AAD) 38–54%. Ten
+   candidate features were searched — sign, bit-length, popcount, magnitude of
+   `DX:AX`, quotient bit-length — and **none beats ~60%**. The 8086 divide
+   microcode loops on the quotient as it is computed bit by bit; that is a
+   simulation, not a closed form. Recorded as searched-and-refused so the next
+   person does not repeat the search. IMUL is partly tractable
+   (`popcount(|AX|)` plus sign: 9.8% → 47.5%) because the signed forms negate
+   to magnitude and then run the unsigned loop.
+2. **The 72–73% cluster is the BIU, and it is the SAME ~4.5% as before.**
+   `00`, `08`, `10`, `21`, `28`, `8F`, `FF.3`, `FF.6` — all read-modify-write
+   forms, all missing by exactly ±1, all the prefetch-in-the-gap question.
+   String ops (`A4`–`A7`, `AE`, `AF`, 61–71%) are the same plus REP counts.
+
+**So the target is met on the full instruction set, and the remaining work is
+two named things rather than an open question:** the BIU state machine of
+E6.8.4f (worth ~4%), and a divide microcode loop (worth ~1%).
+
+**Next, gated on the merge consolidation:** emit a calibrated table per opcode
+into `src/`. Mechanical and delegable. The MIT notice must travel with the
+generated tables, not merely with the checkout.
+
+**And one process note worth keeping.** The full-suite run was nearly reported
+as having produced nothing: the background task reported "completed" while
+`node` was still running, because the completion signal belonged to the
+wrapper shell that had exited after its `sleep`, not to the job. Same shape as
+the licence trap in this entry and the sparse-checkout trap in E6.8.4e:
+**a check reports on what it watched, never on what you meant it to watch.**
+
 
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
