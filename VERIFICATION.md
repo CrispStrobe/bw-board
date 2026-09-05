@@ -749,6 +749,45 @@ against the very file it was written to catch**, because the target does
 `import { statSync } from 'node:fs'` and an ESM named import binds the function
 directly — patching the module object intercepts nothing.
 
+### Rule: every well-designed fallback is a place where a feature can die silently
+
+lego-47's generalisation of a failure of mine, 2026-09-05, and it is the only
+entry in this file that is not about a test.
+
+`machine.enableI8088CycleTiming()` charges instructions from measured silicon
+tables and falls back to the core's own cycle count when a case was never
+measured. The fallback is correct and deliberate. The first integration scored
+**0% coverage** — the run-time lookup passed `null` for every non-group opcode
+and missed every single time — and **nothing reported it**. No exception, no
+wrong value, plausible cycle counts, a green suite, because the fallback did
+exactly its job.
+
+**The primary path was completely dead and every output was correct.**
+
+Every other rule here is about an assertion that stopped asserting. This is a
+**feature** that stopped working while the system kept producing right answers.
+No test can see it, because there is nothing wrong to assert against. The only
+thing that can is a counter asking *"did the thing I built actually run?"*
+
+> **Graceful degradation and undetectable failure are the same mechanism seen
+> from two sides.**
+
+**So: any component with a fallback needs a coverage counter, and the test must
+assert the counter — not that a plausible value came back.** A number arriving
+proves the fallback works. It says nothing about the feature.
+
+A second instance the same day, partial rather than total, shows the counter
+also has to be read against a REALISTIC workload. Coverage measured on a
+five-instruction loop: **100%**. On a real MS-DOS boot: **54.39%** — the loop
+never left the one queue state it started in, so its figure described the
+workload, not the tables. A counter that is only ever exercised by a toy is a
+counter that has not been read.
+
+**And the same discipline applies to what a disabled feature reports.**
+`cycleTimingStats()` returns `null` when timing is off, never a zeroed record:
+a record of zeroes reads as *"measured, and nothing happened"*, which is a lie
+that looks like data — the same error as a skip that reads as a pass.
+
 ### Rule: going green is not evidence that a widened assertion still asserts anything
 
 lego-47's, 2026-09-05, and it is the counterpart to the rule below.
