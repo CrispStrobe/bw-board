@@ -699,6 +699,45 @@ So:
   nobody happened to write. They are not substitutes, and the defect above was
   found by the probe.
 
+### Rule: a tool can fail in the mode it was built to detect
+
+The sharpest instance this project has produced, found 2026-09-04 by the
+coverage lane and recorded here at their request.
+
+`scripts/audit-clean-checkout.mjs` exists because a test read a fixture from a
+sibling git worktree that exists only on one machine: it passed for its author,
+passed for its reviewer, and could never have passed in CI. The audit reproduces
+CI's condition by `git archive HEAD`ing into a temp directory, so anything the
+tracked tree does not contain is simply absent.
+
+**Its first version symlinked only the root `node_modules`.** Nested ones were
+missing in the archive, so tests that resolved a dependency through them failed
+there and passed at home — **which is the exact signature the audit reports as
+"this test depends on files git does not have".** A tool built to catch
+environment-dependent failures was producing them, and reporting its own defect
+in the vocabulary of the defect it was hunting. Fixed by symlinking every
+`node_modules` (bw-board `463590f`); the false positives cleared.
+
+**Two habits follow, and the second is the one that generalises:**
+
+1. **Re-run a failure before believing its diagnosis.** That alone separated the
+   real case from the false ones here, and separately caught a 1000 ms
+   wall-clock budget test failing under load being reported as a missing
+   fixture.
+2. **A fixed explanation attached to a variable outcome is not a diagnosis.**
+   The audit prints *"they depend on files git does not have, or on paths
+   outside the repository"* for **every** failure, while establishing only
+   *that* a test failed in the archive — never *why*. It is a category
+   presented as a finding. A tool should either establish its stated cause or
+   describe the observation and name the likely cause as likely.
+
+The same shape, one level down, is the reason a detector must be tried against
+a known-bad input before its "0 findings" is believed: an earlier attempt at
+this audit wrapped `fs` to record resolved paths and reported **0 findings
+against the very file it was written to catch**, because the target does
+`import { statSync } from 'node:fs'` and an ESM named import binds the function
+directly — patching the module object intercepts nothing.
+
 ### Rule: a large improvement is not evidence of the right model
 
 Measured on the 8088 cycle model, 2026-09-04. Shift/rotate-by-CL scored 3%.
