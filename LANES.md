@@ -162,6 +162,24 @@ Passing on a second-hand report as fact makes you the next link in a chain
 nobody has confirmed — which is exactly how a phantom "40,584 deletions"
 (rule 6) nearly travelled to three sessions.
 
+**AMENDED 2026-09-05: A FAILED-SEND REPORT CAN BE A FALSE NEGATIVE.** A send
+to lego-ac returned `Failed to send to lego-ac` -- an explicit failure, not a
+timeout -- and the message had already arrived. Retrying on the strength of
+the rule above then delivered it twice. So the report is evidence the message
+MAY not have arrived, not that it did not, and the two failure modes need
+different handling:
+
+- treat the peer as possibly uninformed, so retry rather than assume silence
+- but SAY IT IS A RETRY in the first line, because the cost of a duplicate is
+  paid by the reader, and one sentence turns "read this whole thing again to
+  find out if it is new" into a glance
+
+The underlying error is the day's error at one more remove: trusting a report
+ABOUT the send instead of the send. There is no way to observe the peer's
+inbox from here, so this one cannot be resolved by measuring the right thing
+-- which is exactly why the retry has to be labelled rather than reasoned
+about.
+
 **11. THE MACHINE LAYER IS VENDORED INTO `brickwright-lite` AND ALL THREE FILES
 ARE DIVERGED IN BOTH DIRECTIONS.** Your change here does not reach lite, and
 lite has changes that do not reach here.
