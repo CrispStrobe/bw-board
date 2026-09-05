@@ -40,6 +40,13 @@ import { buildBootrom } from './rp2040-bootrom.js';
 
 export const RAM_START = 0x20000000;
 
+/** Flash (XIP) base — where a Pico image begins and where stage 2 runs. */
+export const FLASH_BASE = 0x10000000;
+
+/** The stack pointer stage 2 runs on before the image installs its own
+ *  (the SDK boot2's SP). */
+export const BOOT_SP = 0x20042000;
+
 /** Pico header pins: GP0–GP28 (GP23/24/25/29 exist on the chip; only
  *  GP25 = onboard LED is meaningful to users, so it stays in the map). */
 export const RP2040_PINS = {};
@@ -181,6 +188,30 @@ export function createRp2040jsAdapter(opts = {}) {
     core.PC = entryPC;
     core.SP = entrySP;
   }
+
+  /**
+   * Boot a flat FLASH image the way silicon does, instead of dropping code
+   * into SRAM. loadProgram() writes halfwords to RAM and jumps straight in;
+   * that cannot run a real Pico image (MicroPython), which begins with an SDK
+   * stage-2 boot at flash base that sets up XIP and then relocates its vector
+   * table into SRAM. bootFromFlash places the image at FLASH_BASE and enters
+   * stage 2 there with the boot stack pointer, so boot2 runs first and the
+   * image ends up with VTOR at RAM_START on its own — no hand-set PC.
+   *
+   * Proven end to end by lite's scripts/probe-pico-micropython.mjs: with this
+   * entry, MicroPython v1.22.2 boots to a REPL and os.statvfs('/') reports a
+   * live flash filesystem (4096-byte blocks); the hand-rolled boot that probe
+   * used before — set rp2040.flash, PC = 0x10000000 by hand — is now this call.
+   *
+   * @param {Uint8Array} image  flat flash image, byte 0 at FLASH_BASE
+   */
+  function bootFromFlash(image) {
+    rp2040.flash.set(image, 0);
+    entryPC = FLASH_BASE;   // stage 2 first, what real silicon does
+    entrySP = BOOT_SP;
+    core.PC = entryPC;
+    core.SP = entrySP;
+  }
   if (opts.program) loadProgram(opts.program);
 
   /** Reset the core AND return to the loaded program's entry point. */
@@ -196,6 +227,7 @@ export function createRp2040jsAdapter(opts = {}) {
     clockHz,
 
     loadProgram,
+    bootFromFlash,
     resetToProgram,
 
     /** Receive every byte the program transmits on UART0 (print output). */
