@@ -1587,7 +1587,10 @@ each destination against the raw image:
 ```
 
 Every data failure is at byte 512 or 513 -- the START OF THE SECOND SECTOR --
-and every failing request has AL=2 with an ODD starting sector:
+and every failing request is AL=2 for a pair that REACHES SECTOR 9. (This
+entry first said "an odd starting sector", which fitted the sample -- s9, s11,
+s13, s15, s17 -- and was a coincidence of it: s1, s3, s5 and s7 are odd too
+and read correctly. The predicate is the track end, not parity.)
 
 ```
   c0 h0 s9  n2   DATA WRONG at byte 513: got 41 want 81
