@@ -153,6 +153,18 @@ test('--snapshot rows are EXACTLY --json rows, and the sha is real', () => {
             + 'matrix is merely old rather than detectable');
         assert.match(snap.source.read, /^\d{4}-\d{2}-\d{2}$/);
         assert.equal(snap.source.repo, 'https://github.com/CrispStrobe/bw-board');
+        // A consumer pinned to an older bw-board gets an older SHAPE. It must
+        // be able to detect that rather than read a missing field as a value:
+        // pre-be0e881 snapshots have no ciAvailable, and undefined is falsy,
+        // so every claim would read as "recorded" including the standing ones.
+        assert.equal(typeof snap.schema, 'number',
+            'the envelope carries no schema version, so a consumer cannot tell an '
+            + 'old snapshot from one missing a field it needs');
+        assert.ok(snap.schema >= 1);
+        for (const r of snap.rows) {
+            assert.equal(typeof r.ciAvailable, 'boolean',
+                `schema ${snap.schema} promises ciAvailable on every row; ${r.id} has none`);
+        }
     } finally {
         rmSync(dir, { recursive: true, force: true });
     }

@@ -386,6 +386,22 @@ function snapshot(rows) {
     const read = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
         + `-${String(d.getDate()).padStart(2, '0')}`;
     return {
+        // SCHEMA VERSION, AND IT IS NOT CEREMONY. brickwright-lite's T6 checks
+        // bw-board out AT THE SHA ITS PIN NAMES and runs THAT tree's
+        // generator, which is the right choice -- the snapshot then describes
+        // the census as it stood for the tree lite ships.
+        //
+        // But it means old pins produce old shapes. `ciAvailable` did not
+        // exist before be0e881; a snapshot from an earlier sha has no such
+        // field, a consumer reads `undefined`, and `undefined` is falsy -- so
+        // EVERY claim reads as "recorded", including the standing ones. That
+        // is exactly the inversion fixed in 57874c4, reintroduced by TIME
+        // rather than by choosing the wrong field, and nothing in the data
+        // would say so.
+        //
+        // So the consumer's check is `schema >= 1`, not "does the field look
+        // present". Bump this on any change to row shape or field meaning.
+        schema: 1,
         source: { repo: 'https://github.com/CrispStrobe/bw-board', sha, read },
         rows,
     };
