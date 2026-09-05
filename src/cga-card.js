@@ -87,6 +87,27 @@ export class CGACard {
         const active = Math.min(total, this.crtc.regs[6] * charH);
         this._active = Math.round(this._frame * active / total);
         this._line = Math.max(1, Math.round(this._frame / total));
+
+        // HORIZONTAL, FROM THE CRTC'S OWN REGISTERS — the other half of
+        // E6.8.5b, and it needed no cycle model at all.
+        //
+        // This was `linePos >= this._line * 0.75`: a hardcoded guess sitting
+        // beside a vertical split that was already derived. On the standard
+        // CGA text programming R0=113 (114 chars total) and R1=80 displayed,
+        // so display-enable actually ends at 80/114 = 0.702 — the constant was
+        // about 7% of a scanline late.
+        //
+        // That window is not decorative. A CGA writes snow if the CPU touches
+        // video RAM while the card is fetching, so period code polls 3DAh bit 0
+        // for the blanking gap and writes inside it. Reporting the gap late by
+        // 7% of a line hands a program a window the hardware does not have.
+        //
+        // R0 is total-minus-one and R1 is displayed, both in CHARACTERS, so the
+        // active proportion is R1/(R0+1) and it moves when a program
+        // reprograms the card — the same property the vertical half already had.
+        const hTotal = Math.max(1, this.crtc.regs[0] + 1);
+        const hDisplayed = Math.min(hTotal, this.crtc.regs[1]);
+        this._hActive = Math.max(1, Math.round(this._line * hDisplayed / hTotal));
     }
 
     /** Machine time passes; watch for the vertical-retrace rising edge. */
@@ -134,9 +155,11 @@ export class CGACard {
     _status() {
         const pos = this._framePos(this.cycles);
         const vretrace = pos >= this._active ? 1 : 0;
-        // Horizontal blank: the tail of each active scanline.
+        // Horizontal blank: the tail of each scanline, its start derived from
+        // the CRTC's horizontal registers rather than assumed. See
+        // _recomputeGeom.
         const linePos = pos % this._line;
-        const hblank = linePos >= this._line * 0.75 ? 1 : 0;
+        const hblank = linePos >= this._hActive ? 1 : 0;
         const displayDisable = (vretrace || hblank) ? 1 : 0;
         // Bits 4-7 read high on a real card's open upper bits; keep 1s the way
         // hardware does so a `test al,08h` is unaffected but a raw compare is
