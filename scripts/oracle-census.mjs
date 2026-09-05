@@ -33,6 +33,26 @@
  *            image, a tape. Its absence means the check did not happen; the
  *            claims it would have made are simply unmade.
  *
+ * TWO FIELDS SAY LESS THAN THEY LOOK LIKE THEY SAY, and a cross-repo consumer
+ * reads them wrong before anyone notices (raised by lego-ac, 2026-09-05, while
+ * joining a snapshot of this census to brickwright-lite's capability matrix):
+ *
+ *   `ci`    is THIS REPO'S CI and does not say so. `labwired-wasm` reads
+ *           ci:'no', which is true of bw-board and false as a general claim --
+ *           lite's own CI fetches that engine and gates on it executing. The
+ *           agreed fix is to word the field so it names whose CI it is; it
+ *           moves the VALUE of a field that lite's `--check` compares as
+ *           stable, so it rides a re-pin rather than landing under a pinned
+ *           consumer. NOT YET DONE, and written here because an agreement held
+ *           in two chat sessions is an agreement that evaporates.
+ *   `what`  is a stable string, not a re-measured fact. The v86 row's `what`
+ *           contains "ABSENT ON THIS BOX as of 2026-09-04", a dated claim
+ *           frozen inside a field compared for equality: `--check` will never
+ *           flag it, because the literal has not changed. It will go on
+ *           agreeing with itself long after the sentence stops being true.
+ *           This file's own lesson, turned inward -- a census reports what it
+ *           FOUND, and a field authored once reports what WAS.
+ *
  * THE LIST MUST NOT DRIFT FROM THE TESTS, which is the failure mode a census
  * has: it would go on cheerfully reporting PRESENT for an env var nothing
  * reads any more. `test/oracle-census.test.mjs` requires every `gates` entry
