@@ -41,7 +41,8 @@
  *
  * @module
  */
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -361,7 +362,49 @@ const required = (argv.find((a) => a.startsWith('--require'))?.split('=')[1]
 
 const rows = INPUTS.map((i) => ({ ...i, ...resolve(i) }));
 
-if (argv.includes('--json')) {
+/**
+ * `--snapshot <path>` writes the envelope brickwright-lite consumes, so that
+ * lite's copy is a COPY plus a pin check rather than a second implementation
+ * of this file's semantics.
+ *
+ * The envelope exists for one reason: a matrix cell needs DATED evidence.
+ * "standing" alone rots the moment CI changes; "standing as of sha X" stays
+ * checkable. So the sha is this repository's own HEAD at the moment of
+ * writing, and a consumer can compare it against the bw-board pin it ships.
+ *
+ * `rows` is EXACTLY the `--json` output, not a reduction of it. A snapshot
+ * that summarised would be a second set of semantics to keep in step, which is
+ * the failure the whole arrangement is meant to avoid.
+ */
+function snapshot(rows) {
+    let sha = 'unknown';
+    try {
+        sha = execFileSync('git', ['rev-parse', 'HEAD'],
+            { cwd: new URL('..', import.meta.url).pathname, encoding: 'utf8' }).trim();
+    } catch { /* a tarball with no git is a legitimate way to run this */ }
+    const d = new Date();
+    const read = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        + `-${String(d.getDate()).padStart(2, '0')}`;
+    return {
+        source: { repo: 'https://github.com/CrispStrobe/bw-board', sha, read },
+        rows,
+    };
+}
+
+const jsonRows = (rs) => rs.map(
+    ({ id, kind, present, via, gates, ci, ciAvailable, what }) =>
+        ({ id, kind, present, ciAvailable, ci, via, gates, what }));
+
+const snapAt = argv.indexOf('--snapshot');
+if (snapAt >= 0) {
+    const out = argv[snapAt + 1];
+    if (!out || out.startsWith('--')) {
+        console.error('--snapshot needs a path: --snapshot docs/generated/oracle-census.json');
+        process.exit(2);
+    }
+    writeFileSync(out, JSON.stringify(snapshot(jsonRows(rows)), null, 2) + '\n');
+    console.log(`wrote ${out} (${rows.length} rows)`);
+} else if (argv.includes('--json')) {
     // `ci` AND `what` ARE EMITTED BECAUSE `present` ALONE INVERTS THE ANSWER
     // ANY CONSUMER ACTUALLY WANTS.
     //
@@ -377,9 +420,7 @@ if (argv.includes('--json')) {
     // Added when the language-device matrix lane was about to do exactly that,
     // in good faith, because `present` is the only field that looked relevant.
     // A field's NAME is not its meaning, and an exported shape is a contract.
-    console.log(JSON.stringify(rows.map(
-        ({ id, kind, present, via, gates, ci, ciAvailable, what }) =>
-            ({ id, kind, present, ciAvailable, ci, via, gates, what })), null, 2));
+    console.log(JSON.stringify(jsonRows(rows), null, 2));
 } else {
     const pad = (s, n) => String(s).padEnd(n);
     console.log(`${pad('INPUT', 18)}${pad('KIND', 9)}${pad('STATE', 9)}GATES  DETECTED VIA`);

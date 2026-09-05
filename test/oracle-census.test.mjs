@@ -13,7 +13,8 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { existsSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
@@ -121,5 +122,38 @@ test('every input declares ciAvailable, so a consumer never sees undefined', () 
         assert.equal(typeof i.ciAvailable, 'boolean',
             `${i.id} has no ciAvailable; a consumer would read undefined as false `
             + 'and record a standing claim as merely recorded');
+    }
+});
+
+test('--snapshot rows are EXACTLY --json rows, and the sha is real', () => {
+    // THE SNAPSHOT MUST NOT BE A SECOND IMPLEMENTATION. brickwright-lite ships
+    // docs/generated/oracle-census.json and derives a standing-versus-recorded
+    // column from it. If --snapshot ever summarised, reduced or reordered
+    // relative to --json, lite would be reasoning from semantics that exist
+    // nowhere else and no test would cover -- the exact arrangement this whole
+    // exchange was meant to avoid.
+    //
+    // So: identical rows, and a real HEAD sha, because "standing" alone rots
+    // the moment CI changes while "standing as of sha X" stays checkable.
+    const dir = mkdtempSync(join(tmpdir(), 'census-snap-'));
+    try {
+        const out = join(dir, 'snap.json');
+        const run = (args) => execFileSync(process.execPath,
+            [fileURLToPath(new URL('../scripts/oracle-census.mjs', import.meta.url)), ...args],
+            { encoding: 'utf8' });
+        run(['--snapshot', out]);
+        const snap = JSON.parse(readFileSync(out, 'utf8'));
+        const plain = JSON.parse(run(['--json']));
+
+        assert.deepEqual(snap.rows, plain,
+            '--snapshot rows differ from --json rows; lite would derive its matrix '
+            + 'from a shape nothing else produces');
+        assert.match(snap.source.sha, /^[0-9a-f]{40}$/,
+            `snapshot sha is "${snap.source.sha}" -- without a real sha a stale `
+            + 'matrix is merely old rather than detectable');
+        assert.match(snap.source.read, /^\d{4}-\d{2}-\d{2}$/);
+        assert.equal(snap.source.repo, 'https://github.com/CrispStrobe/bw-board');
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
     }
 });
