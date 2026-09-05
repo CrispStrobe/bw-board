@@ -85,6 +85,34 @@ test('WAI parks the CPU until irq(); I-flag decides vectoring', () => {
     assert.equal(cpu.a, 0x77);
 });
 
+test('STP (DB) stops the CPU dead until reset — the opcode the WDC suite cannot vector', () => {
+    // EVIDENCE TIER 2c, NOT 1. STP and WAI are the TWO opcodes whose files in
+    // the WDC 65C02 vector suite are EMPTY (cb.json, db.json — 0 bytes): a
+    // single-step oracle cannot capture an instruction whose whole effect is to
+    // stop stepping. So 254 of 256 opcodes here are ground against silicon and
+    // these two are not — they rest on the datasheet plus our reading, and would
+    // not catch a shared misreading of either. WAI has its test above; this is
+    // STP's, so both untestable-by-grind opcodes now say so in the file rather
+    // than only one. (A coverage sweep sees DB "fire" when a NOP-slide reaches
+    // it, but firing is not asserting and corpus-execution is not an oracle.)
+    const { cpu } = machine([
+        0xdb,             // STP
+        0xa9, 0x42,       // LDA #$42  — must NEVER execute; the CPU is stopped
+    ]);
+    const cyc = cpu.step();             // STP
+    assert.equal(cyc, 3, 'STP is a 3-cycle instruction');
+    assert.equal(cpu.stopped, true, 'STP stops the CPU');
+    assert.equal(cpu.step(), 0, 'a stopped CPU makes no progress — step() is a no-op');
+    assert.equal(cpu.a, 0x00, 'the instruction after STP never runs');
+    // What distinguishes STP from WAI: WAI wakes on IRQ/NMI (asserted above),
+    // STP does not — only the RES pin revives a stopped 65C02. So an interrupt
+    // must leave it stopped, and reset must clear it.
+    assert.equal(cpu.irq(), false, 'STP ignores IRQ — no interrupt is taken');
+    assert.equal(cpu.stopped, true, 'and the CPU stays stopped through the IRQ');
+    cpu.reset();
+    assert.equal(cpu.stopped, false, 'reset is the only thing that clears STP');
+});
+
 test('sampled vector grind when the suite is present locally', (t) => {
     const dir = process.env.VECTORS_DIR
         || join(homedir(), 'code', '65x02-vectors', 'wdc65c02', 'v1');
