@@ -201,3 +201,130 @@ test('state round-trips', () => {
     t.advance(10); t2.advance(10);
     assert.equal(t2.counters[0].ce, t.counters[0].ce);
 });
+
+// ---------------------------------------------------------------------------
+// MODES 1 AND 5, AND BCD (2026-09-05)
+//
+// The header used to say, honestly: "NO MODES 1 OR 5 ... the gate is assumed
+// asserted and a counter simply counts" and "NO BCD. The BCD bit is stored and
+// read back in the status byte, but the counter counts in binary regardless."
+//
+// Both were real accuracy gaps with observable consequences, and the second is
+// the more interesting one: the BCD bit ROUND-TRIPPED. A program could set it,
+// read the status byte back, and see it set -- the one check a program is
+// likely to make agreed with the datasheet while the counting did not.
+// ---------------------------------------------------------------------------
+
+test('mode 1: a GATE EDGE starts the one-shot, and OUT is low for exactly the count', () => {
+    const t = pit({});
+    t.write(3, 0x32);               // counter 0, rw=3, mode 1, binary
+    t.write(0, 4); t.write(0, 0);   // count = 4
+    // A count write does NOT start mode 1 -- only a gate edge does. This is
+    // the whole difference from mode 4, and the reason the old level-only
+    // model could never fire it.
+    assert.equal(t.counters[0].out, 1, 'OUT idles high before the trigger');
+    t.advance(10);
+    assert.equal(t.counters[0].out, 1, 'no gate edge, so nothing has started');
+
+    t.counters[0].setGate(0);
+    t.counters[0].setGate(1);       // rising edge: trigger
+    assert.equal(t.counters[0].out, 0, 'OUT goes low on the trigger');
+    t.advance(3);
+    assert.equal(t.counters[0].out, 0, 'still low three counts in');
+    t.advance(1);
+    assert.equal(t.counters[0].out, 1, 'high at terminal count');
+});
+
+test('mode 1 is RETRIGGERABLE: an edge mid-count restarts the full period', () => {
+    const t = pit({});
+    t.write(3, 0x32);
+    t.write(0, 6); t.write(0, 0);
+    t.counters[0].setGate(0); t.counters[0].setGate(1);
+    t.advance(4);                    // 2 counts left
+    assert.equal(t.counters[0].out, 0);
+    t.counters[0].setGate(0); t.counters[0].setGate(1);   // retrigger
+    t.advance(4);
+    assert.equal(t.counters[0].out, 0, 'the retrigger restarted the whole 6, not the remaining 2');
+    t.advance(2);
+    assert.equal(t.counters[0].out, 1, 'and it ends 6 counts after the LAST edge');
+});
+
+test('mode 1 keeps counting while the gate is LOW (it is edge-triggered, not level-gated)', () => {
+    const t = pit({});
+    t.write(3, 0x32);
+    t.write(0, 3); t.write(0, 0);
+    t.counters[0].setGate(0); t.counters[0].setGate(1);
+    t.counters[0].setGate(0);        // drop the gate immediately after triggering
+    t.advance(3);
+    assert.equal(t.counters[0].out, 1,
+        'a low gate must not freeze a one-shot the edge already armed');
+});
+
+test('mode 5: OUT stays HIGH through the count and strobes low for one tick', () => {
+    const edges = [];
+    const t = pit({ onOutput: (ch, lv) => edges.push(lv) });
+    t.write(3, 0x3a);               // counter 0, rw=3, mode 5, binary
+    t.write(0, 3); t.write(0, 0);
+    t.counters[0].setGate(0); t.counters[0].setGate(1);
+    assert.equal(t.counters[0].out, 1, 'mode 5 does NOT drop OUT on the trigger (mode 1 does)');
+    t.advance(2);
+    assert.equal(t.counters[0].out, 1, 'still high mid-count');
+    t.advance(1);
+    assert.equal(t.counters[0].out, 1, 'back high after a one-tick strobe');
+    assert.ok(edges.includes(0), 'and the strobe was visible as a low edge');
+});
+
+test('BCD: the counter counts in DECADES, so 0x20 decrements to 0x19', () => {
+    const t = pit({});
+    t.write(3, 0x31);               // counter 0, rw=3, mode 0, BCD
+    t.write(0, 0x20); t.write(0, 0x00);   // count = 20 (decimal), 0x20 in BCD
+    t.advance(1);
+    assert.equal(t.counters[0].ce, 0x19,
+        'a binary decrement would give 0x1f; BCD borrows a decade');
+});
+
+test('BCD: terminal count arrives after the DECIMAL count, not the hex one', () => {
+    const t = pit({});
+    t.write(3, 0x31);
+    t.write(0, 0x20); t.write(0, 0x00);   // 20 decimal
+    t.advance(19);
+    assert.equal(t.counters[0].out, 0, 'not yet at 19');
+    t.advance(1);
+    assert.equal(t.counters[0].out, 1, 'terminal count at exactly 20 ticks');
+});
+
+test('BCD: a reload of 0 is ten thousand, not sixty-five thousand', () => {
+    const t = pit({});
+    t.write(3, 0x31);
+    t.write(0, 0); t.write(0, 0);
+    assert.equal(t.counters[0]._fullCount(), 10000, 'four decades, not sixteen bits');
+});
+
+test('gate: a LOW level suspends mode 0, and mode 2 is forced OUT high', () => {
+    const t = pit({});
+    t.write(3, 0x30);               // mode 0
+    t.write(0, 5); t.write(0, 0);
+    t.counters[0].setGate(0);
+    t.advance(10);
+    assert.equal(t.counters[0].out, 0, 'mode 0 is level-gated: a low gate stops the count');
+    t.counters[0].setGate(1);
+    t.advance(5);
+    assert.equal(t.counters[0].out, 1, 'and it resumes when the gate returns');
+
+    const u = pit({});
+    u.write(3, 0x34);               // mode 2
+    u.write(0, 4); u.write(0, 0);
+    u.counters[0].setGate(0);
+    assert.equal(u.counters[0].out, 1, 'a falling gate FORCES mode 2 OUT high, not merely pauses it');
+});
+
+test('ticksToEdge schedules modes 1, 4 and 5 instead of reporting Infinity', () => {
+    const t = pit({});
+    t.write(3, 0x32);               // mode 1
+    t.write(0, 7); t.write(0, 0);
+    t.counters[0].setGate(0); t.counters[0].setGate(1);
+    assert.equal(t.counters[0].ticksToEdge(), 7,
+        'Infinity here lets the pump step straight past the pulse');
+    t.advance(3);
+    assert.equal(t.counters[0].ticksToEdge(), 4);
+});

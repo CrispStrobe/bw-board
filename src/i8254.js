@@ -47,11 +47,21 @@
  * therefore LESS THAN ONE 1.193 MHz count. Truncating each call to whole ticks
  * would round almost every one of them to zero and stop the clock nearly dead.
  * The remainder is accumulated across calls.
- *   - NO MODES 1 OR 5. The two GATE-triggered forms (hardware-retriggerable
- *     one-shot and strobe) are not modelled; the gate is assumed asserted and
- *     a counter simply counts.
- *   - NO BCD. The BCD bit is stored and read back in the status byte, but the
- *     counter counts in binary regardless.
+ *   - MODES 0-5 ALL MODELLED (1 and 5 added 2026-09-05). The two GATE-triggered
+ *     forms need a real gate INPUT, not an assumed level: `setGate` handles the
+ *     edge, because a one-shot armed by an edge that never reaches the counter
+ *     can never fire. Modes 0 and 4 are level-gated, 1 and 5 are edge-triggered
+ *     and then indifferent to the level, and 2 and 3 are both -- a low gate
+ *     forces OUT high rather than merely pausing.
+ *   - BCD COUNTS IN DECADES (added 2026-09-05). It previously did not, and the
+ *     shape of that bug is worth keeping: the BCD bit ROUND-TRIPPED. A program
+ *     could set it, read the status byte back, and see it set. The one check a
+ *     program is likely to make agreed with the datasheet while the counting
+ *     did not -- an instrument confirming its own setting rather than its
+ *     effect. 0x20 - 1 is 0x19, and a reload of 0 is ten thousand, not 65536.
+ *   - STILL NO SUB-INSTRUCTION TIMING. Counts advance in whole ticks converted
+ *     from emulated milliseconds; a program that reads the counter twice within
+ *     one instruction sees one value.
  *
  * @module
  */
@@ -199,8 +209,74 @@ class Counter {
         if (this.armed) this._loadOnArm();
     }
 
+    /**
+     * The reload value as a COUNT. 0 means the maximum, which differs by base:
+     * 65536 in binary, 10000 in BCD -- the 8254 counts four decades, so a full
+     * cycle is ten thousand, not sixty-five thousand.
+     */
+    _fullCount() {
+        if (this.reload === 0) return this.bcd ? 10000 : 0x10000;
+        return this.reload;
+    }
+
+    /** BCD nibbles to an integer, for scheduling arithmetic. */
+    _bcdToInt(v) {
+        let n = 0, mul = 1;
+        for (let d = 0; d < 4; d++) { n += ((v >> (d * 4)) & 0xf) * mul; mul *= 10; }
+        return n;
+    }
+
+    /**
+     * Decrement by one in the counter's own base. BCD is not "binary with a
+     * different display": each nibble is a decade, so 0x20 - 1 is 0x19, not
+     * 0x1f. A binary decrement is what the old header comment admitted to --
+     * the BCD bit was stored, read back in the status byte, and then ignored.
+     */
+    _dec(v, by = 1) {
+        if (!this.bcd) return v - by;
+        let n = this._bcdToInt(v) - by;
+        if (n < 0) n += 10000;
+        let out = 0;
+        for (let d = 0; d < 4; d++) out |= (Math.floor(n / 10 ** d) % 10) << (d * 4);
+        return out;
+    }
+
+    /** True when the counting element has reached terminal count. */
+    _atZero() { return this.bcd ? (this.ce & 0xffff) === 0 : this.ce <= 0; }
+
+    /**
+     * GATE input. The level alone is not the whole story: modes 1 and 5 are
+     * EDGE triggered and ignore the level afterwards, while 0 and 4 are level
+     * gated, and 2 and 3 are both -- a low level forces OUT high and a rising
+     * edge reloads. Modelling only the level (the previous behaviour, a bare
+     * `if (!this.gate) return` in advance) makes a one-shot that can never
+     * fire, because the edge that should arm it never reaches the counter.
+     *
+     * @param {0|1} level
+     */
+    setGate(level) {
+        const lv = level ? 1 : 0;
+        const rising = lv === 1 && this.gate === 0;
+        const falling = lv === 0 && this.gate === 1;
+        this.gate = lv;
+
+        if (rising && (this.mode === 1 || this.mode === 5)) {
+            // Retrigger: reload NOW, even mid-count. That is what makes mode 1
+            // "hardware RETRIGGERABLE" -- each edge restarts the full period.
+            this.ce = this._fullCount();
+            this.nullCount = false;
+            if (this.mode === 1) this._setOut(0);
+        } else if (rising && (this.mode === 2 || this.mode === 3)) {
+            this.ce = this._fullCount();
+            this.phase = 'hi';
+        } else if (falling && (this.mode === 2 || this.mode === 3)) {
+            // A low gate does not merely pause these: OUT is forced high.
+            this._setOut(1);
+        }
+    }
+
     _loadOnArm() {
-        const count = this.reload === 0 ? 0x10000 : this.reload;
+        const count = this._fullCount();
         this.ce = count;
         this.nullCount = false;
         this.phase = 'hi';
@@ -255,7 +331,11 @@ class Counter {
     }
 
     advance(ticks) {
-        if (this.nullCount || !this.gate) return;
+        if (this.nullCount) return;
+        // Only modes 0, 2, 3 and 4 are LEVEL-gated. Modes 1 and 5 are started
+        // by a gate EDGE and then count regardless of the level -- returning
+        // early on a low gate froze the one-shot the edge had just armed.
+        if (!this.gate && this.mode !== 1 && this.mode !== 5) return;
 
         for (let t = 0; t < ticks; t++) {
             this._tick();
@@ -265,31 +345,54 @@ class Counter {
     _tick() {
         const m = this.mode;
         if (m === 0) {
-            if (this.ce > 0) {
-                this.ce--;
-                if (this.ce === 0) this._setOut(1);
+            if (!this._atZero()) {
+                this.ce = this._dec(this.ce);
+                if (this._atZero()) this._setOut(1);
+            }
+        } else if (m === 1) {
+            // MODE 1 -- hardware retriggerable one-shot. The gate EDGE started
+            // it (see setGate) and drove OUT low; it stays low for the whole
+            // count and returns high at terminal count. Writing a new count
+            // mid-shot does NOT shorten the current pulse -- it takes effect on
+            // the next trigger, which is why this reads `ce` and never `reload`.
+            if (!this._atZero()) {
+                this.ce = this._dec(this.ce);
+                if (this._atZero()) this._setOut(1);
             }
         } else if (m === 2) {
             // Rate generator: OUT high for (N-1), low for 1, reload.
-            this.ce--;
-            if (this.ce <= 1) {
+            this.ce = this._dec(this.ce);
+            if (this.bcd ? this._bcdToInt(this.ce) <= 1 : this.ce <= 1) {
                 this._setOut(0);
-                this.ce = this.reload === 0 ? 0x10000 : this.reload;
+                this.ce = this._fullCount();
                 this._setOut(1);
             }
         } else if (m === 3) {
             // Square wave: toggle every (N/2) ticks.
-            this.ce -= 2;
-            if (this.ce <= 0) {
-                this.ce = this.reload === 0 ? 0x10000 : this.reload;
+            this.ce = this._dec(this.ce, 2);
+            if (this.bcd ? this._bcdToInt(this.ce) <= 1 : this.ce <= 0) {
+                this.ce = this._fullCount();
                 this.out ^= 1;
                 if (this.hooks.onOutput) this.hooks.onOutput(this.channel, this.out);
             }
         } else if (m === 4) {
-            // Software triggered strobe
-            if (this.ce > 0) {
-                this.ce--;
-                if (this.ce === 0) {
+            // Software triggered strobe: the COUNT WRITE starts it.
+            if (!this._atZero()) {
+                this.ce = this._dec(this.ce);
+                if (this._atZero()) {
+                    this._setOut(0);
+                    this._setOut(1);
+                }
+            }
+        } else if (m === 5) {
+            // MODE 5 -- hardware triggered strobe. Same trigger as mode 1, but
+            // OUT stays HIGH through the count and pulses low for exactly one
+            // clock at terminal count. The difference from mode 1 is the SHAPE
+            // of the pulse; the difference from mode 4 is that a gate edge
+            // starts it rather than a count write.
+            if (!this._atZero()) {
+                this.ce = this._dec(this.ce);
+                if (this._atZero()) {
                     this._setOut(0);
                     this._setOut(1);
                 }
@@ -302,8 +405,16 @@ class Counter {
         if (this.mode === 0) return this.ce > 0 ? this.ce : Infinity;
         if (this.mode === 2) return this.ce > 1 ? this.ce - 1 : 1;
         if (this.mode === 3) {
-            const half = Math.ceil((this.reload === 0 ? 0x10000 : this.reload) / 2);
+            const half = Math.ceil(this._fullCount() / 2);
             return this.ce > 0 ? Math.ceil(this.ce / 2) : half;
+        }
+        // Modes 1, 4 and 5 all end at terminal count. Reporting Infinity for
+        // them -- which is what happened before, for 4 because it was written
+        // that way and for 1 and 5 because they did not exist -- lets the pump
+        // step straight past the pulse and notice it afterwards, if at all.
+        if (this.mode === 1 || this.mode === 4 || this.mode === 5) {
+            if (this._atZero()) return Infinity;
+            return this.bcd ? this._bcdToInt(this.ce) : this.ce;
         }
         return Infinity;
     }
