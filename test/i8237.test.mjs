@@ -495,3 +495,107 @@ test('getState/setState round-trips a mid-transfer controller', () => {
     assert.equal(e.channels[2].page, 0x07, 'page latch restored');
     assert.equal(e.channels[2].transferType, d.channels[2].transferType, 'mode restored');
 });
+
+// ---------------------------------------------------------------------------
+// ROTATING PRIORITY (command bit 4), added 2026-09-05.
+//
+// The module header said: "Rotating priority (command bit 4). Stored, ignored:
+// priority is always fixed with channel 0 highest, which is what an XT
+// programs." Accepted-and-ignored is the dangerous half of that sentence — a
+// program that asks for rotation gets no error and a controller that keeps
+// serving in the old order, so a busy channel starves the others exactly as it
+// would have without the request. The same shape the 8259's rotate commands
+// had until this morning.
+// ---------------------------------------------------------------------------
+
+/** Arm a channel for a verify transfer (counters only, no bus callbacks). */
+function armVerify(d, ch, count = 0) {   // the 8237 transfers count+1 bytes
+    d.write(P_CLEARFF, 0);
+    d.write(P_ADDR[ch], 0x00); d.write(P_ADDR[ch], 0x00);
+    d.write(P_CLEARFF, 0);
+    d.write(P_COUNT[ch], count & 0xff); d.write(P_COUNT[ch], count >> 8);
+    d.write(P_MODE, 0x40 | ch);          // single mode, verify
+    d.write(P_MASK1, ch);                // unmask this channel
+}
+
+// THE FIRST VERSION OF THESE THREE PASSED AGAINST THE OLD CHIP, which is to
+// say they proved nothing. Serving a channel with count 0 hits terminal count,
+// and terminal count MASKS a non-autoinit channel -- so the next channel won
+// whether priority had rotated or not. The right answer for the wrong reason,
+// found by mutation-proving rather than by reading.
+//
+// A count of 1 (two transfers) with `limit: 1` leaves the served channel
+// unmasked and still requesting, so the ONLY thing that can change which
+// channel comes next is the rotation.
+test('without rotation the same channel keeps the bus while it still requests', () => {
+    const d = new I8237();
+    for (const ch of [1, 3]) armVerify(d, ch, 1);
+    d.dreq(3, true); d.dreq(1, true);
+    assert.equal(d.pendingChannel().n, 1, 'fixed priority: channel 1 outranks 3');
+    d.transfer(() => 0, () => {}, 1);
+    assert.equal(d.pendingChannel().n, 1,
+        'still 1 — unrotated, a channel that keeps asking keeps winning');
+});
+
+test('with rotation armed, the channel just served drops to lowest priority', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x10);            // rotating priority
+    for (const ch of [1, 2]) armVerify(d, ch, 1);
+    d.dreq(1, true); d.dreq(2, true);
+    assert.equal(d.pendingChannel().n, 1, 'channel 1 is still highest to begin with');
+    d.transfer(() => 0, () => {}, 1);
+    // 1 is now LOWEST, so the order is 2, 3, 0, 1 — and 1 is STILL REQUESTING,
+    // which is what makes this discriminate: unrotated it would win again.
+    assert.equal(d.pendingChannel().n, 2,
+        'after serving 1 the order rotates — this is what "stored, ignored" got wrong');
+});
+
+test('rotation stops a busy low channel starving a high one', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x10);
+    for (const ch of [0, 1]) armVerify(d, ch, 1);
+    d.dreq(0, true); d.dreq(1, true);
+    assert.equal(d.pendingChannel().n, 0);
+    d.transfer(() => 0, () => {}, 1);     // serves 0, which becomes lowest
+    assert.equal(d.pendingChannel().n, 1,
+        'channel 1 gets the bus even though 0 is still asking — the starvation case');
+});
+
+test('rotation is off by default and the XT default order is unchanged', () => {
+    const d = new I8237();
+    assert.equal(d.lowestPriority, 3, 'channel 0 highest after reset');
+    assert.deepEqual(d._priorityOrder().map((c) => c.n), [0, 1, 2, 3]);
+    for (const ch of [0, 2]) armVerify(d, ch, 0);
+    d.dreq(0, true); d.dreq(2, true);
+    d.transfer(() => 0, () => {});
+    assert.equal(d.pendingChannel().n, 2, 'no rotation: 0 ran, 2 is simply the only one left');
+    // Terminal count MASKS a non-autoinit channel, so channel 0 has to be
+    // re-armed before it can request again. Learned by this assertion failing:
+    // I re-asserted DREQ on a masked channel and expected it to win.
+    armVerify(d, 0, 0);
+    d.dreq(0, true);
+    assert.equal(d.pendingChannel().n, 0, 'and 0 outranks 2 again once it is armed');
+});
+
+test('a checkpoint carries the priority order, and an old one restores to fixed', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x10);
+    armVerify(d, 2, 0); d.dreq(2, true);
+    d.transfer(() => 0, () => {});
+    const saved = d.getState();
+    assert.equal(saved.lowestPriority, 2, 'the order is part of the state');
+
+    const e = new I8237();
+    e.setState(saved);
+    assert.deepEqual(e._priorityOrder().map((c) => c.n), [3, 0, 1, 2],
+        'a restored controller serves in the order it saved');
+
+    // A checkpoint written before rotation existed must come back FIXED, not
+    // undefined — which would index channels[NaN] and serve nothing at all.
+    const old = new I8237().getState();
+    delete old.lowestPriority;
+    const f = new I8237();
+    f.setState(old);
+    assert.equal(f.lowestPriority, 3);
+    assert.deepEqual(f._priorityOrder().map((c) => c.n), [0, 1, 2, 3]);
+});

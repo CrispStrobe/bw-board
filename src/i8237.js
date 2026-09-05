@@ -102,6 +102,7 @@ const MODE_CASCADE = 3;
  * and ignored -- see the module header.
  */
 const CMD_DISABLE = 0x04;
+const CMD_ROTATE = 0x10;   // bit 4: rotating priority
 
 /**
  * XT page-latch decode, indexed by port & 7 (so 80h-87h).
@@ -264,10 +265,24 @@ export class I8237 {
     /** True while some channel wants the bus -- the HRQ output. */
     get hrq() { return this._hrq; }
 
-    /** The channel that would be served next, or null. Fixed priority. */
+    /**
+     * The four channels in CURRENT priority order, highest first.
+     *
+     * `lowestPriority` is the channel that currently holds lowest priority;
+     * service runs from the next one upward, wrapping. 3 gives the fixed
+     * default of channel 0 highest, which is what an XT programs, so the
+     * rotating machinery costs nothing until a program asks for it.
+     */
+    _priorityOrder() {
+        const out = [];
+        for (let n = 1; n <= 4; n++) out.push(this.channels[(this.lowestPriority + n) & 3]);
+        return out;
+    }
+
+    /** The channel that would be served next, or null. */
     pendingChannel() {
         if (this.command & CMD_DISABLE) return null;
-        for (const c of this.channels) {
+        for (const c of this._priorityOrder()) {
             if (!c.requesting()) continue;
             // Cascade channels request the bus for a downstream controller we
             // do not have, so they can request forever and never transfer.
@@ -331,6 +346,12 @@ export class I8237 {
             if (ch.mode === MODE_DEMAND && !ch.requesting()) break;
             if (ch.mode !== MODE_DEMAND && ch.mode !== MODE_BLOCK) break;
         }
+        // ROTATING PRIORITY (command bit 4). The channel just serviced drops to
+        // lowest priority, so a busy channel cannot starve the others. Applied
+        // after the burst rather than per cycle: the 8237 rotates when it
+        // RELEASES the bus, and a demand or block transfer holds it for the
+        // whole burst.
+        if (moved > 0 && (this.command & CMD_ROTATE)) this.lowestPriority = ch.n & 3;
         this._updateHrq();
         return moved;
     }
@@ -388,6 +409,8 @@ export class I8237 {
     // --------------------------------------------------------------- state
 
     _masterClear() {
+        // Fixed priority is channel 0 highest, which the XT programs.
+        this.lowestPriority = 3;
         this.command = 0;
         this.status = 0;
         this.temp = 0;
@@ -408,6 +431,12 @@ export class I8237 {
         return {
             command: this.command, status: this.status, temp: this.temp,
             ff: this._ff, hrq: this._hrq, pageScratch: this.pageScratch,
+            // Added with rotating priority 2026-09-05. A checkpoint that omits
+            // this restores a controller whose PRIORITY ORDER is wrong while
+            // every register reads right -- the machine runs and services
+            // channels in a different order than it saved. Silent, and exactly
+            // the corruption the checkpoint refusal exists to prevent.
+            lowestPriority: this.lowestPriority,
             channels: this.channels.map((c) => c.getState()),
         };
     }
@@ -415,6 +444,11 @@ export class I8237 {
     setState(s) {
         this.command = s.command; this.status = s.status; this.temp = s.temp;
         this._ff = s.ff; this._hrq = s.hrq; this.pageScratch = s.pageScratch;
+        // `?? 3` rather than a bare assignment: a checkpoint written before
+        // rotation existed must restore to FIXED priority, not to undefined --
+        // which would make _priorityOrder index channels[NaN] and serve
+        // nothing at all.
+        this.lowestPriority = s.lowestPriority ?? 3;
         for (let i = 0; i < 4; i++) this.channels[i].setState(s.channels[i]);
     }
 }
