@@ -46,6 +46,64 @@ the day it was written down. **At this fleet's current rate a gap claim has a
 shelf life measured in hours**, so the check is not diligence, it is the only
 thing standing between a claim and a day spent re-doing finished work.
 
+**6. A CONCLUSION FROM A REMOTE-TRACKING REF MUST BE RE-DERIVED, OR PINNED TO
+AN EXPLICIT SHA, BEFORE IT IS ACTED ON — AND ABOVE ALL BEFORE IT IS BROADCAST.**
+
+We are **sixteen worktrees of one `.git`**. One object store, one set of
+`origin/*` refs. A peer's `fetch` or `push` in their worktree rewrites *your*
+remote-tracking refs, with no action of yours.
+
+Measured, 2026-09-04. `git diff --stat origin/master origin/feat/i8086-support-chips`
+reported **40,584 deletions across 106 files** — `rom/bios.asm`, `i8086-asm.js`,
+`VERIFICATION.md`, all apparently destroyed by a peer's branch. It was a clean
+`master+5`: **848 insertions, 1 deletion.** The branch ref had moved six times
+(`13dc7f3 <- 5e8e313 <- cfd7317 <- 2925f23 <- 3233b1b <- c293a5c`) and had been
+replaced *between two of the reader's own commands*, with no fetch in between.
+
+**The diff was not wrong. It was true when made and false when used.**
+
+That makes it a distinct failure family from the others in this file, and worse
+in two ways:
+
+- **The wrong answer is confident and alarming.** "Your branch deletes 40,584
+  lines" is not a subtle miscount; it is the kind of claim that gets acted on
+  within a minute of being received.
+- **It has no symptom.** Every other trap here leaves something visibly odd — a
+  suspiciously round count, a green case and a red case failing together, a
+  suite that finishes too fast. A stale remote ref simply answers, promptly and
+  wrongly.
+
+The check that dissolved it took one command:
+
+    git merge-base --is-ancestor origin/master origin/their-branch
+
+Use it, or `git rev-parse` the sha and diff against that, before you believe a
+cross-branch diff — and never send one you have not re-derived.
+
+---
+
+**7. "I cannot reach them" is not "they are absent."** Cross-session sends can
+fail in ONE DIRECTION. On 2026-09-04 two sessions independently concluded
+`lego-47` was gone after repeated `Failed to send`, while `ListAgents` showed
+them `interactive · idle` and they were receiving everything — including the
+messages saying they were unreachable. Both senders then coordinated *around*
+them, and one nearly wrote "an unanswered heads-up went unanswered" into a PR.
+
+Neither end can detect this alone: the sender sees failures, the receiver sees
+nothing missing. So: **treat a send failure as unreceived, never as consent,
+never as absence** — and if `ListAgents` says a peer is alive, that is
+disconfirming evidence, not noise to explain away. Route through a third
+session to confirm before acting on a peer's silence.
+
+---
+
+**8. PUBLISHING TO `master` IS THE OWNER'S CALL, NOT A PEER'S.** A peer can
+review, verify, clear a merge order, and say a branch is ready. None of that is
+authorisation to push to `master`. The boundary is about **who authorises
+publishing, not whether the change is good** — a change can be correct,
+reviewed, and green, and still not be yours to publish. Stated by `lego-ef`,
+upheld by `lego-47` in both directions on 2026-09-04.
+
 ## CLAIMS — work in progress
 
 | lane | who | started | what |
