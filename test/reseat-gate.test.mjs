@@ -96,10 +96,15 @@ function ledPortFromSchematic(circuit, ppiName) {
 // Build the 8086 gate-end from a reseated circuit file: extract it, run the
 // blink ROM (loaded HIGH, the i8086 convention), and read the port the LEDs are
 // wired to.
-function reseated8086End(circuitPath) {
+function reseated8086End(circuitPath, { clockDiv = 1, steps = STEPS_8086 } = {}) {
     const circuit = JSON.parse(readFileSync(circuitPath, 'utf8'));
     const cfg = extract8086Machine(circuit);
     assert.ok(cfg.ok, `reseated circuit extracts: ${(cfg.reasons || []).join('; ')}`);
+    // A real clock so the machine's tMs is defined (the timing gate needs a
+    // shared time base). clockDiv models a wrong crystal: /4 walks the same
+    // LEDs at a quarter the real-time rate. Shape is clock-independent, so the
+    // default-clockDiv path is unchanged for the shape-only GREEN/RED tests.
+    cfg.clockHz = 4_772_727 / clockDiv;
     const ppiName = cfg.chips.find((c) => c.kind === 'ppi').name;
     const P = ledPortFromSchematic(circuit, ppiName).toUpperCase();
     const build = () => {
@@ -111,7 +116,7 @@ function reseated8086End(circuitPath) {
         return m;
     };
     const read = (m) => ({ out: m.chips[ppiName][`out${P}`], dir: m.chips[ppiName][`dir${P}`] });
-    return { build, read, steps: STEPS_8086, port: P };
+    return { build, read, steps, port: P };
 }
 
 // Step budgets: enough for a full 8-position walk on each board (6502 ~3.6k to
@@ -142,6 +147,35 @@ test('RED: the wrong-port reseat (LEDs on port A, program drives B) — the gate
     assert.equal(r.verdict, 'DIFFER', 'a port mismatch MUST fail the gate (§ the one invariant)');
     assert.equal(r.actual.length, 0, 'nothing lights on the mis-wired port');
     assert.match(r.reason, /NO edges|drives a port/);
+});
+
+test('BEHAVIOURAL RED: right LEDs, wrong RATE — shape stays GREEN, the timing gate goes RED', () => {
+    // The wrong-port case fails on WIRING. This is the case the gate had never
+    // been shown to catch: a reseat that lights the RIGHT LEDs in the RIGHT
+    // order but at a quarter the speed (a wrong crystal). Shape cannot see it.
+    // Compared against the SAME reseated board as reference so the rate ratio is
+    // exactly 4 — no cross-family clock model needed to make the point.
+    // A few edges is enough for a stable cadence, so a shorter budget than the
+    // full-walk GREEN/RED tests — the rate ratio doesn't need all eight LEDs.
+    const STEPS = 26_000; // ~4 edges (0x01..0x08); clock-independent, same on both
+    const correct = reseated8086End(RESEATED, { steps: STEPS });                    // real clock
+    const quarterRate = reseated8086End(RESEATED, { clockDiv: 4, steps: STEPS });   // 4× too slow
+
+    // Shape-only (the default) is GREEN — the walk is byte-for-byte identical.
+    const shape = reseatGate(correct, quarterRate);
+    assert.equal(shape.verdict, 'MATCH', 'shape alone cannot see the rate: the LED walk is the same');
+
+    // The timing gate catches the quarter-rate walk.
+    const timed = reseatGate(correct, quarterRate, { timing: { tolerance: 0.25 } });
+    assert.equal(timed.verdict, 'DIFFER', 'a reseat at a quarter the rate MUST fail the behavioural gate');
+    assert.ok(timed.timing.ratio > 3.5 && timed.timing.ratio < 4.5,
+        `the reseat walks ~4× slower (ratio ${timed.timing.ratio?.toFixed(2)})`);
+    assert.match(timed.reason, /RATE differs/);
+
+    // And the gate is not just always-red under timing: an equal-rate reseat passes.
+    const sameRate = reseatGate(correct, reseated8086End(RESEATED, { steps: STEPS }), { timing: { tolerance: 0.25 } });
+    assert.equal(sameRate.verdict, 'MATCH', 'a reseat at the same rate passes the timing gate');
+    assert.ok(sameRate.timing.ok, `same-rate ratio within tolerance (${sameRate.timing.ratio?.toFixed(2)})`);
 });
 
 test('the settle edge is tied to the direction write, not to a leading zero', () => {
