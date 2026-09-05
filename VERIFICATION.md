@@ -699,6 +699,53 @@ So:
   nobody happened to write. They are not substitutes, and the defect above was
   found by the probe.
 
+### Rule: a success message quantifies over a set — check it is the right one
+
+The coverage lane's generalisation, 2026-09-05, and it subsumes several rules
+below. Stated in their form:
+
+> **A success message quantifies over some SET, and is trustworthy only when
+> that set equals the set the GOAL cares about.**
+
+That is more useful than "the check was wrong", because it says what to
+inspect: not the verdict, but the *range* of the quantifier. Four instances in
+one day, from three sessions, at four different layers:
+
+| tool | quantified over | the goal cared about |
+|---|---|---|
+| a sync | files it **wrote** | files with local **content** |
+| `oracle-census.mjs` | inputs someone **listed** | inputs that **exist** |
+| a cycle-coverage counter | instructions in a **toy loop** | instructions in **real code** |
+| a wait loop | a PID it **found** | the job it was **meant** to watch |
+
+The sync printed *"wrote 15 files, exit 0"* while fifteen OTHER files silently
+lost 950 lines. The census claimed to list *"every external input that gates a
+check"* while missing sixteen of twenty-three — including two files with the
+word *oracle* in their names. The counter read 100% off a five-instruction loop
+where a real boot gives 82%. Each verdict was true of its own set and useless
+for the question asked.
+
+**The fix is the same in every case: derive the set from the world rather than
+from a list, and let the check fail when the two disagree.** A curated
+membership list rots silently; a derived one cannot be satisfied by forgetting.
+
+**AND THE COROLLARY THAT COST THE MOST.** Two instances the same day were
+tools *failing in the mode they were built to detect*, which is what makes this
+family expensive rather than merely embarrassing:
+
+- A **shape detector** for cross-repo reads went from 3 hits to 12 and left
+  `main` red on a commit that had done nothing wrong. All nine new hits were
+  module specifiers used as **search needles** — a test that reads one file in
+  its own repo and asserts which specifiers appear in its text. The rule keyed
+  on the *shape* of the string and called it a read. **A false red is how a
+  detector gets deleted**, so this is not the milder failure.
+- A **vendor gate** asserting that two copies of a file exist passed only
+  because of untracked files on one box. `packages/` is gitignored with
+  *partial* tracking: 150 files there are tracked, the one being asserted is
+  not. `git archive HEAD` into a temp dir fails all four subtests. **Partial
+  tracking under a gitignore is invisible to `git status`** — the file looks
+  present, is not tracked, and nothing local distinguishes the two.
+
 ### Rule: a wait that cannot find its job reports success
 
 Four instances in one day, each in a different disguise, every one producing a
