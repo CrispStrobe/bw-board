@@ -68,7 +68,26 @@ test('ids are unique and every input declares its CI status', () => {
     const ids = INPUTS.map((i) => i.id);
     assert.equal(new Set(ids).size, ids.length, 'duplicate id in the census');
     for (const i of INPUTS) {
-        assert.ok(['oracle', 'fixture'].includes(i.kind), `${i.id}: kind must be oracle or fixture`);
+        // THREE KINDS, AND THE LIST IS ENUMERATED SO ADDING ONE IS DELIBERATE.
+        // This guard refused `service` when it was first added, which is the
+        // behaviour wanted: a new kind changes what `present` MEANS for the
+        // rows carrying it, and that is not a thing to slip in.
+        //
+        //   oracle   an independent source of truth; absent = a claim rests on
+        //            our own opinion
+        //   fixture  data a check needs to run at all; absent = the check did
+        //            not happen
+        //   service  reachability, not a file. `present` is ALWAYS false: the
+        //            census refuses to probe the network, so it never
+        //            establishes one locally. `ciAvailable` carries the real
+        //            answer. See resolve().
+        assert.ok(['oracle', 'fixture', 'service'].includes(i.kind),
+            `${i.id}: kind must be oracle, fixture or service`);
+        if (i.kind === 'service') {
+            assert.equal(resolve(i).present, false,
+                `${i.id} is a service, so present must be false — the census does not `
+                + 'probe reachability, and a true here would claim something it never checked');
+        }
         assert.ok(i.what && i.obtain && i.ci,
             `${i.id} must say what it proves, how to obtain it, and whether CI has it — `
             + 'an entry without those is a name, not a census row');

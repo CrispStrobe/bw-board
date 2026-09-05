@@ -41,8 +41,6 @@ const UNTRIAGED_2026_09_05 = new Set([
     'arduino-drivers.test.mjs',
     'avr-attiny88.test.js',        // gates on BLINKENROCKET_HEX; the row exists, the gates list omits it
     'avr-cross-check.test.js',
-    'avr-e2e.test.js',             // AVR_COMPILE_URL — an external SERVICE, not a file
-    'i8086-asm-186.test.mjs',      // SMLRC
     'i8086-asm.test.mjs',
     'media-bundle.test.mjs',
     'multimeter-chain.test.mjs',
@@ -101,7 +99,7 @@ test('the debt list is not a way to exempt the whole tree', () => {
     // become decorative. A ratchet, so this can only improve.
     const total = derived().length;
     const exempt = derived().filter((f) => UNTRIAGED_2026_09_05.has(f)).length;
-    assert.ok(exempt <= 14,
+    assert.ok(exempt <= 12,
         `${exempt} of ${total} guard-then-skip files are exempted; the frozen debt was `
         + '16 on 2026-09-05, dropped to 14 when masm and nasm were promoted to census '
         + 'rows, and must only shrink. Write a census row instead of extending the list.');

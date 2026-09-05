@@ -290,6 +290,36 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'smlrc', kind: 'oracle',
+        what: 'SmallerC (smlrc) — a small INDEPENDENT C compiler. Its verbatim '
+            + '`smlrc -seg16` output is the fixture test/fixtures/smallerc/acc.asm '
+            + 'that the 186 assembler round-trips, so re-running smlrc proves the '
+            + 'fixture still reflects the compiler rather than a snapshot of it. '
+            + 'Independent tool, not our own opinion; it drives LEAVE, PUSH imm and '
+            + 'three-operand IMUL.',
+        env: 'SMLRC',
+        paths: [],
+        gates: ['test/i8086-asm-186.test.mjs'],
+        obtain: 'gcc -w -o smlrc <SmallerC>/v0100/smlrc.c, then point $SMLRC at it',
+        ciAvailable: false,
+        ci: 'no — not vendored or built in CI; $SMLRC is a local build, so the 186 '
+            + 'driver skips there',
+    },
+    {
+        id: 'avr-compile-service', kind: 'service',
+        what: 'An HTTP AVR-compile endpoint (avr-gcc behind a service) that '
+            + 'test/avr-e2e.test.js POSTs to. A SERVICE, not a file: its presence is '
+            + 'reachability, which this census deliberately does not probe — see '
+            + 'resolve().',
+        env: 'AVR_COMPILE_URL',
+        paths: [],
+        gates: ['test/avr-e2e.test.js'],
+        obtain: 'run the avr-compile service and point $AVR_COMPILE_URL at it '
+            + '(default http://localhost:8321/compile)',
+        ciAvailable: false,
+        ci: 'no — no avr-compile service in CI, so the e2e skips there',
+    },
+    {
         id: 'nasm', kind: 'oracle',
         what: 'NASM (BSD-2), an independent assembler. The differential oracle for the '
             + 'NASM side of src/i8086-asm.js — its own header says "the whole strength of '
@@ -345,6 +375,31 @@ export const INPUTS = [
  *  PRESENT line can be checked rather than trusted. */
 export function resolve(input) {
     const fromEnv = input.env ? process.env[input.env] : null;
+    // A SERVICE IS NOT A FILE, AND THE CENSUS DELIBERATELY DOES NOT PROBE IT.
+    //
+    // `existsSync` on "https://host/compile" is false, so without this the
+    // census would print "set, but does not exist" about a service that may be
+    // perfectly reachable -- not a missing feature, a WRONG SENTENCE.
+    //
+    // The fix is not to probe. A census that does network I/O is
+    // non-deterministic and slow, and an ABSENT caused by a transient blip is
+    // worse than an honest "not established": it is a flaky oracle-of-oracles,
+    // and a red that fires for environmental reasons teaches everyone to skim
+    // past that whole category. The load-sensitive digital-parity failures
+    // taught that lesson the same day this was written.
+    //
+    // `present` therefore keeps EXACTLY the meaning it has for files -- "this
+    // run established the input is here" -- which is simply never true for a
+    // service. Same meaning, different reason for false, so no schema bump and
+    // lite's pinned consumer is unaffected. `ciAvailable` carries the answer
+    // that matters.
+    if (input.kind === 'service') {
+        return fromEnv
+            ? { present: false, via: `$${input.env} set; reachability NOT probed `
+                + '— a census that does network I/O is non-deterministic, so this '
+                + 'run did not establish it' }
+            : { present: false, via: `tried $${input.env}` };
+    }
     if (fromEnv) {
         return existsSync(fromEnv)
             ? { present: true, via: `$${input.env}=${fromEnv}` }
@@ -439,9 +494,9 @@ if (snapAt >= 0) {
     console.log(JSON.stringify(jsonRows(rows), null, 2));
 } else {
     const pad = (s, n) => String(s).padEnd(n);
-    console.log(`${pad('INPUT', 18)}${pad('KIND', 9)}${pad('STATE', 9)}GATES  DETECTED VIA`);
+    console.log(`${pad('INPUT', 20)}${pad('KIND', 9)}${pad('STATE', 9)}GATES  DETECTED VIA`);
     for (const r of rows) {
-        console.log(`${pad(r.id, 18)}${pad(r.kind, 9)}${pad(r.present ? 'present' : 'ABSENT', 9)}`
+        console.log(`${pad(r.id, 20)}${pad(r.kind, 9)}${pad(r.present ? 'present' : 'ABSENT', 9)}`
             + `${pad(r.gates.length, 7)}${r.via}`);
     }
     const absent = rows.filter((r) => !r.present);
