@@ -285,6 +285,32 @@ clustering", "no leak") from an instrument built by the same work that would
 have caused the positive. A negative from a proxy is the weakest evidence
 there is, and it is the one we keep believing.
 
+**THE SAME RULE WITH THE SAMPLE IN PLACE OF THE INSTRUMENT**, added
+2026-09-05 after two more instances in one hour. A check cannot contradict you
+when you chose what it looks at:
+
+```
+  general claim written              what it was checked against       verdict
+  "EOT=18, 360K unaffected"          47 tests I picked myself          WRONG
+  "failures have an ODD start"       only the cases that failed        WRONG
+```
+
+The first: 47 disk tests passed, so the claim went into the ROM and the
+roadmap. The full suite failed three, and they were the tests that PIN the
+behaviour being changed -- `test/bios-fdc.test.mjs:245` requires the head
+switch at EOT=9 on a 9-sector medium. A subset chosen by the person changing
+the behaviour is selected, however honestly, for not containing the objection.
+
+The second: every failing read had an odd start sector (s9, s11, s13, s15,
+s17), so "odd" went in as the predicate. s1, s3, s5 and s7 are odd too and
+read correctly -- the predicate was "reaches sector 9", the declared EOT. A
+pattern read off the failures alone has nothing to disagree with it.
+
+**Both fixes are the same move:** run the cases that could refute you before
+writing the general claim -- the tests that pin the behaviour you are
+changing, and the cases that PASSED. If you cannot name what would have
+falsified the sentence, it is not a finding yet.
+
 **Corollary for tests:** a test guarding a proxy-invisible property must not
 use the proxy. `test/i8086-prefix-fetch.test.mjs` deliberately does not look
 at `busTrace` and counts `read()` invocations instead, and its injection reach
