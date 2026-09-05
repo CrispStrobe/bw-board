@@ -344,6 +344,23 @@ BDA_RESETFLG equ 0072h          ; 1234h = warm boot, skip the memory test
 BDA_KBSTART  equ 0080h          ; ring buffer start offset (1Eh)
 BDA_KBEND    equ 0082h          ; ring buffer end offset, EXCLUSIVE (3Eh)
 
+; DRIVE 0'S MEDIA TYPE, as d_media probed it -- 0090h is the byte a real BIOS
+; uses for drive 0's media state, and this is the same idea with fewer bits.
+; AH=00h clears it, so a reset is how software asks for a fresh probe.
+BDA_MEDIA    equ 0090h
+MEDIA_UNKNOWN equ 0             ; not probed yet, or a reset asked for another
+MEDIA_PROBING equ 0FFh          ; d_media is running RIGHT NOW. It calls the
+                                ; transfer path and the transfer path calls
+                                ; it, so this is what stops the recursion: the
+                                ; nested call sees a type that is not UNKNOWN
+                                ; and returns without probing.
+MEDIA_360K   equ 1              ; 9 sectors, 40 cylinders
+MEDIA_12M    equ 2              ; 15 sectors, 80 cylinders -- DECLARED, NOT
+                                ; MEASURED: no image in this tier is 1.2M, so
+                                ; the table exists and the detection branch is
+                                ; written, and neither has ever read a disk.
+MEDIA_144M   equ 3              ; 18 sectors, 80 cylinders
+
 ; The equipment word, bit by bit, since it is assembled here and not probed:
 ;   bit 0    a diskette drive is present
 ;   bits 4-5 initial video mode: 10b = 80x25 colour
@@ -2713,6 +2730,145 @@ d_status endp
 ; request across head and cylinder boundaries, and every caller in sight
 ; retries the whole request rather than resuming it.
 ;-----------------------------------------------------------------------------
+; dpt_byte -- read one field of the diskette parameter table THROUGH INT 1Eh.
+;
+; AL = the field index on entry, that field's value on exit. EVERYTHING ELSE
+; IS PRESERVED, because the callers need it: the motor-start read sits next to
+; a live BH, and the one in fdx_fail sits between `mov ah, al` and `mov al,
+; ah` with the status parked in AH. Flags are not preserved and no caller
+; carries any across the read the way it used to be written.
+;
+; WHY THIS EXISTS. The driver read cs:[dpt+N] -- the ROM's OWN copy -- at
+; eleven sites, while the table header claimed that a program hooking INT 1Eh
+; "really does change what the controller is told". THAT WAS FALSE: POST wrote
+; the vector once and nothing ever read it back, so an operating system that
+; hooked it was ignored. Now the claim is true, which is what lets d_media
+; publish a table for the medium actually in the drive -- and lets a guest
+; overrule that choice, which is the whole point of the vector.
+;-----------------------------------------------------------------------------
+dpt_byte proc near
+    push ds
+    push si
+    push bx
+    xor  bh, bh
+    mov  bl, al                 ; BX = the field index
+    xor  si, si
+    mov  ds, si                 ; DS = 0000, the interrupt vector table
+    mov  si, [0078h]            ; 1Eh*4: the table's offset...
+    add  si, bx
+    mov  bx, [007Ah]            ; ...and its segment, read while DS is STILL 0
+    mov  ds, bx
+    mov  al, [si]
+    pop  bx
+    pop  si
+    pop  ds
+    ret
+dpt_byte endp
+
+;-----------------------------------------------------------------------------
+; dpt_set -- point INT 1Eh at one of this ROM's tables. AX = its offset.
+; Written with STOSW because that is how POST installs the vector and it is
+; the addressing this assembler is known to take.
+;-----------------------------------------------------------------------------
+dpt_set proc near
+    push es
+    push di
+    push ax
+    xor  di, di
+    mov  es, di
+    mov  di, 78h
+    stosw                       ; the offset, already in AX
+    mov  ax, ROM_SEG
+    stosw
+    pop  ax
+    pop  di
+    pop  es
+    ret
+dpt_set endp
+
+;-----------------------------------------------------------------------------
+; d_media -- work out what is in the drive, once, and publish its table.
+;
+; THE BUG THIS FIXES. The ROM had ONE table and it described a 360K disk, so
+; EOT was 9. EOT is the last sector the controller will transfer before it
+; decides the track has ended, and the driver sets MT, so at EOT the chip
+; switches to the other head. On a 1.44M floppy a two-sector read at sector 9
+; therefore returned sector 9 and then HEAD 1'S SECTOR 1, with CF clear and
+; AH=00 -- the controller did exactly what it was told. ELKS's kernel loaded
+; with every second sector wrong. See ROADMAP E6.8.8b.
+;
+; IT PROBES WITH VERIFY, NOT READ. The 8237 runs in verify mode, drives no bus
+; cycle, and never writes ES:BX -- so this needs no scratch buffer anywhere in
+; low memory and cannot corrupt anything if the guess is wrong. All three
+; attempts are made with the 1.44M table published, because EOT has to be high
+; enough to NAME sector 18 before the controller will look for it.
+;
+; NINE SECTORS IS REPORTED AS 360K AND MAY BE A 720K DISK. Telling them apart
+; needs a seek to cylinder 40, which on a 40-cylinder drive is a seek to a
+; track that is not there; the only thing it would buy is AH=08h's cylinder
+; count, and every transfer is already correct without it.
+;
+; PRECEDENCE: this runs ONCE, and software that hooks INT 1Eh afterwards wins,
+; because dpt_byte reads through the vector. The BIOS does not re-point behind
+; a guest's back. AH=00h clears BDA_MEDIA, so a reset is how to ask again.
+;-----------------------------------------------------------------------------
+d_media proc near
+    ; Both refusals RETURN where they stand rather than jumping to a shared
+    ; exit at the bottom: the probe below is longer than the 127 bytes a
+    ; conditional jump reaches, and the assembler says so precisely. See
+    ; ASSEMBLER NOTES 3 at the top of this file.
+    cmp  byte ptr [BDA_MEDIA], MEDIA_UNKNOWN
+    je   dmed_probe
+    ret
+dmed_probe:
+    mov  al, [bp+F_DL]
+    test al, 80h
+    jz   dmed_go
+    ret                         ; a fixed disk has no diskette table
+dmed_go:
+    mov  byte ptr [BDA_MEDIA], MEDIA_PROBING  ; before the first nested call
+
+    mov  ax, [bp+F_AX]          ; the caller's request, put back before return
+    push ax
+    mov  ax, [bp+F_CX]
+    push ax
+    mov  ax, [bp+F_DX]
+    push ax
+
+    mov  ax, offset dpt144
+    call dpt_set
+    mov  byte ptr [bp+F_AL], 1  ; one sector, cylinder 0, head 0
+    mov  byte ptr [bp+F_CH], 0
+    mov  byte ptr [bp+F_DH], 0
+    mov  byte ptr [bp+F_CL], 18
+    call d_verify
+    jnc  dmed_144
+    mov  byte ptr [bp+F_CL], 15
+    call d_verify
+    jnc  dmed_12m
+
+    mov  ax, offset dpt         ; nine sectors, or nothing readable at all
+    call dpt_set
+    mov  byte ptr [BDA_MEDIA], MEDIA_360K
+    jmp  dmed_done
+dmed_12m:
+    mov  ax, offset dpt12m
+    call dpt_set
+    mov  byte ptr [BDA_MEDIA], MEDIA_12M
+    jmp  dmed_done
+dmed_144:
+    mov  byte ptr [BDA_MEDIA], MEDIA_144M
+dmed_done:
+    pop  ax
+    mov  [bp+F_DX], ax
+    pop  ax
+    mov  [bp+F_CX], ax
+    pop  ax
+    mov  [bp+F_AX], ax
+    ret
+d_media endp
+
+;-----------------------------------------------------------------------------
 d_read proc near
     mov  ah, FDC_READ
     mov  al, DMA_TO_MEM
@@ -2768,6 +2924,7 @@ d_reset proc near
     mov  dl, [bp+F_DL]
     test dl, 80h
     jnz  dr_nohd
+    mov  byte ptr [BDA_MEDIA], MEDIA_UNKNOWN    ; probe the medium again
     call fd_reset
     jc   dr_out
     xor  al, al
@@ -2792,8 +2949,18 @@ d_reset endp
 d_params proc near
     cmp  byte ptr [bp+F_DL], 80h
     jae  dp_nohd
-    mov  byte ptr [bp+F_CH], 39
-    mov  al, cs:[dpt+4]                 ; the same EOT the driver sends the
+    ; The cylinder count is the one number the table has no field for, so it
+    ; comes from the detected type. AH=08h does NOT probe: it stays
+    ; configuration rather than controller traffic, and answers what the BIOS
+    ; currently believes -- 360K until a transfer has looked.
+    mov  al, 39
+    cmp  byte ptr [BDA_MEDIA], MEDIA_360K
+    jbe  dp_cyl
+    mov  al, 79
+dp_cyl:
+    mov  [bp+F_CH], al
+    mov  al, 4
+    call dpt_byte           ; the same EOT the driver sends the
     mov  [bp+F_CL], al                  ; controller, so they cannot drift
     mov  byte ptr [bp+F_DH], 1
     mov  byte ptr [bp+F_DL], 1
@@ -3087,7 +3254,8 @@ fd_spinup proc near
     jnz  fdsu_out               ; already up to speed
     or   [BDA_MOTORSTAT], bh
 
-    mov  al, cs:[dpt+10]        ; motor start time, in eighths of a second
+    mov  al, 10
+    call dpt_byte           ; motor start time, in eighths of a second
     xor  ah, ah
     shl  ax, 1
     inc  ax
@@ -3169,10 +3337,12 @@ fdrst_sense:
     mov  al, FDC_SPECIFY
     call fd_send
     jc   fdrst_dead
-    mov  al, cs:[dpt]           ; step rate and head unload time
+    mov  al, 0
+    call dpt_byte           ; step rate and head unload time
     call fd_send
     jc   fdrst_dead
-    mov  al, cs:[dpt+1]         ; head load time, and ND in bit 0 -- CLEAR,
+    mov  al, 1
+    call dpt_byte           ; head load time, and ND in bit 0 -- CLEAR,
     call fd_send                ; which is what puts the execution phase on
     jc   fdrst_dead             ; the 8237 instead of on the CPU
     ; SPECIFY has NO result phase and raises NO interrupt. Draining one here
@@ -3491,6 +3661,27 @@ fdx_begin:
     add  di, bx
     jc   fdx_boundary
 
+    ;-- only NOW is the medium worth probing ------------------------------
+    ; d_media runs a transfer of its own, so it cannot go any earlier: every
+    ; refusal above this line is documented to cost nothing to undo, and
+    ; test/bios-fdc.test.mjs proves it by watching the 8237's count register
+    ; across a request that straddles a page. Probing from the dispatcher
+    ; programmed the channel before the boundary refusal and broke exactly
+    ; that assertion -- which is the test doing its job.
+    ;
+    ; The nested transfer clobbers the address, the count and the command
+    ; bytes in SI, all of which are already worked out, so they go on the
+    ; stack around it.
+    push ax
+    push bx
+    push dx
+    push si
+    call d_media
+    pop  si
+    pop  dx
+    pop  bx
+    pop  ax
+
     ;-- arm the 8237 BEFORE the controller is told to start ---------------
     ; The uPD765 starts asserting DRQ inside the OUT that delivers the last
     ; byte of READ DATA. If the channel is not armed by then, the first byte
@@ -3632,16 +3823,20 @@ fdx_cmd:
     and  al, 3Fh                ; the cylinder's high bits on a hard disk;
     call fd_send                ; a forty-cylinder floppy cannot reach them.
     jc   fdx_lost
-    mov  al, cs:[dpt+3]         ; N -- the size code, 2 = 512 bytes
+    mov  al, 3
+    call dpt_byte           ; N -- the size code, 2 = 512 bytes
     call fd_send
     jc   fdx_lost
-    mov  al, cs:[dpt+4]         ; EOT -- the last sector number on a track.
+    mov  al, 4
+    call dpt_byte           ; EOT -- the last sector number on a track.
     call fd_send                ; The controller stops here if terminal count
     jc   fdx_lost               ; never arrives, and says so with ST1 bit 7.
-    mov  al, cs:[dpt+5]         ; GPL -- the gap between sectors
+    mov  al, 5
+    call dpt_byte           ; GPL -- the gap between sectors
     call fd_send
     jc   fdx_lost
-    mov  al, cs:[dpt+6]         ; DTL -- only meaningful when N is zero
+    mov  al, 6
+    call dpt_byte           ; DTL -- only meaningful when N is zero
     call fd_send
     jc   fdx_lost
 
@@ -3660,7 +3855,8 @@ fdx_cmd:
     ; The countdown starts NOW, not before: it measures how long the motor
     ; keeps spinning after the drive goes idle. A second access inside the
     ; window finds the motor already up and skips the spin-up wait.
-    mov  al, cs:[dpt+2]
+    mov  al, 2
+    call dpt_byte
     mov  [BDA_MOTORCNT], al
     call fd_status
     jc   fdx_ret                ; the controller has already named a failure
@@ -3704,7 +3900,8 @@ fdx_dead:
     ; holding an unknown number of bytes of a command or a result phase, and
     ; the NEXT call would be read as their continuation. So the reset here is
     ; not housekeeping: it is what makes the next call mean anything at all.
-    mov  al, cs:[dpt+2]
+    mov  al, 2
+    call dpt_byte
     mov  [BDA_MOTORCNT], al
     mov  dl, [bp+F_DL]
     call fd_reset
@@ -3714,7 +3911,8 @@ fdx_dead:
 fdx_fail:
     ; fd_recal and fd_seek have already put their status in AL.
     mov  ah, al
-    mov  al, cs:[dpt+2]
+    mov  al, 2
+    call dpt_byte
     mov  [BDA_MOTORCNT], al
     mov  al, ah
     stc
@@ -3999,11 +4197,18 @@ vga_sextants:
     db 0, 1, 2                  ; green   -> cyan:    blue rising
     db 0, 3, 1                  ; cyan    -> blue:    green falling
 
-; The diskette parameter table INT 1Eh points at. These are uPD765 timing
-; parameters and a geometry, and they are OURS -- chosen to be right for a
-; 360K drive, not copied from anybody.
+; The DEFAULT diskette parameter table, and the one INT 1Eh points at until a
+; transfer has looked at the disk. These are uPD765 timing parameters and a
+; geometry, and they are OURS -- chosen to be right for a 360K drive, not
+; copied from anybody. Two more tables follow it for 1.2M and 1.44M, and
+; d_media publishes whichever matches the medium; see its header for why one
+; hardcoded EOT was a bug rather than a limitation.
 ;
-; THE DRIVER READS THIS TABLE; IT DOES NOT CARRY ITS OWN COPY. Bytes 0 and 1
+; THE DRIVER READS THIS TABLE; IT DOES NOT CARRY ITS OWN COPY -- and that was
+; not true when this paragraph was first written. The driver read cs:[dpt+N]
+; at eleven sites, so the sentence below about hooking INT 1Eh described a
+; contract the code did not implement. It reads through the vector now
+; (dpt_byte), which is what makes the rest of this true. Bytes 0 and 1
 ; are sent verbatim as SPECIFY's two parameter bytes, and bytes 3, 4, 5 and 6
 ; are sent verbatim as READ DATA's N, EOT, GPL and DTL. AH=08h answers with
 ; byte 4 as its sectors-per-track. So the table is not documentation of what
@@ -4033,6 +4238,25 @@ dpt:
                                 ; a second, and fd_spinup really does wait
                                 ; for it -- see the note there about why a
                                 ; wait the model does not need is here.
+
+; 1.2M and 1.44M. They differ from the 360K table above in EOT -- the whole
+; point -- and in the two gap lengths, which are shorter because fifteen or
+; eighteen sectors have to fit on the same circumference. The timing bytes are
+; the same, and byte 1 keeps ND clear for the reason the header gives.
+dpt12m:
+    db 0DFh, 002h, 025h, 002h
+    db 15                       ; EOT: fifteen sectors on a 1.2M track
+    db 01Bh                     ; GPL for a read
+    db 0FFh
+    db 054h                     ; GPL for a format
+    db 0F6h, 15, 8
+dpt144:
+    db 0DFh, 002h, 025h, 002h
+    db 18                       ; EOT: eighteen. This byte is the bug fix.
+    db 01Bh                     ; GPL for a read
+    db 0FFh
+    db 06Ch                     ; GPL for a format
+    db 0F6h, 15, 8
 
 ;-----------------------------------------------------------------------------
 ; Keyboard translation, US layout, scancodes 01h through 39h.

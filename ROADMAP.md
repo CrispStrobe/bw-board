@@ -1649,52 +1649,80 @@ that is not 360K ... the geometry comes from the diskette parameter table, so
 a different format is a table away -- but the table is not chosen by probing
 the medium". A documented limitation met an undocumented consequence.
 
-**NOT FIXED, AND THE OBVIOUS FIX IS WRONG.** Setting EOT to 18 in the table
-makes the MINIX image boot -- measured:
+**FIXED, MEDIA-AWARE (2026-09-05).** The constant was the wrong fix and the
+suite said so: EOT=18 everywhere makes the MINIX image boot AND breaks 360K,
+because `test/bios-fdc.test.mjs:245` reads nine sectors from head 0 sector 6
+of a 360K disk and REQUIRES the run past the end of the track and the head
+switch at EOT=9. Three tests failed on the constant. EOT is a property of the
+inserted medium, not a number that happened to be too small.
+
+So the ROM now probes and publishes a table per disk. Four parts:
+
+1. **The driver reads the table THROUGH INT 1Eh** rather than `cs:[dpt+N]`.
+   It read the ROM's own copy at ELEVEN sites while the table header claimed
+   that a program hooking INT 1Eh "really does change what the controller is
+   told" -- POST wrote the vector once and nothing ever read it back, so that
+   documented contract was false. It is true now, and that is a fix in its own
+   right: a guest can correct us.
+2. **Three tables** -- 360K, 1.2M, 1.44M -- differing in EOT and the two gap
+   lengths.
+3. **`d_media` probes once**, with VERIFY rather than READ: the 8237 runs in
+   verify mode and drives no bus cycle, so no scratch buffer is named anywhere
+   in low memory and a wrong guess cannot corrupt one. Sector 18, then 15,
+   then 9, all attempted with the 1.44M table published, because EOT must be
+   high enough to NAME sector 18 before the controller will look for it.
+   AH=00h clears the detected type, so a reset is how software asks again.
+4. **AH=08h answers the detected geometry and does NOT probe** -- it stays
+   configuration rather than controller traffic, and reports what the BIOS
+   currently believes, which is 360K until a transfer has looked.
+
+**WHERE THE PROBE HAD TO GO, which the suite decided rather than I did.** It
+was first called from the dispatcher, before `d_read`. That programmed the
+8237 for a request `fd_xfer` was about to refuse for crossing a 64K page, and
+the boundary test in `test/bios-fdc.test.mjs` watches the channel's count
+register precisely to pin that a refusal costs nothing to undo. So the probe
+sits after the LAST refusal, inside `fd_xfer`, behind a `MEDIA_PROBING`
+sentinel that stops the recursion -- `d_media` calls the transfer path and the
+transfer path now calls `d_media`.
 
 ```
-  EOT=9    121 reads   23 wrong status   21 wrong DATA   no kernel, ever
-  EOT=18   127 reads    2 wrong status    0 wrong DATA   ELKS 0.9.1 boots
+  measured on both ELKS images, scripts/probe-int13-reads.mjs
+    before   MINIX 121 reads / 21 wrong DATA     FAT 230 reads / 1 wrong DATA
+    after    MINIX 127 reads /  0 wrong DATA     FAT 230 reads / 0 wrong DATA
 ```
 
-(the two remaining are `c0 h0 s36 n1 -> AH=4`, which is CORRECT: sector 36
-does not exist on an 18-sector track and the loader is probing geometry.)
+The remaining non-zero statuses are `c0 h0 s36 n1 -> AH=4`, which is CORRECT:
+sector 36 does not exist on an 18-sector track and the loader is probing.
 
-**But it breaks 360K, and the suite says so.** The claim written here first --
-"EOT is a ceiling, so a request that stays inside a 9-sector track never
-reaches it and 360K media are unaffected" -- is FALSE, and
-`test/bios-fdc.test.mjs:245` is the counter-example. It reads NINE sectors
-from head 0 sector 6 of a 360K disk and requires the controller to run past
-the end of the track and switch heads, landing sectors 6..9 on head 0 and
-1..5 on head 1. That is correct MT behaviour and it depends on EOT being 9 on
-a 9-sector medium. Three tests fail with the constant changed:
+`test/bios-media-detect.test.mjs` pins it, and its reach was verified rather
+than assumed: against the single-table ROM it fails 5 of 7, including the
+regression case -- two sectors from sector 9 come back as 9 and 10, not 9 and
+head 1 sector 1 -- and the INT 1Eh contract. The two that pass are the two
+whose behaviour is deliberately unchanged. **The 1.2M table is DECLARED, NOT
+MEASURED:** no image in this tier is 1.2M, so that detection branch has never
+read a disk, and the test says so in its own name.
+
+**WHAT THE MINIX IMAGE DOES NOW.** The kernel boots and probes correctly:
 
 ```
-  bios-fdc: a multi-sector read crosses from head 0 to head 1 of the same cylinder
-  bios-fdc: a request that runs off the end of the cylinder is not a disk error
-  bios-rom: INT 13h AH=08h answers the geometry
+  ELKS 0.9.1 (61520 text, 31856 ftext, 10240 data, 8112 bss, 47182 heap)
+  fd0: probed, probably has 80 cylinders, 2 heads, and 18 sectors
+  FAT: Unsupported format
+  VFS: Insert root floppy and press ENTER
 ```
 
-EOT is not a constant that happens to be too small. **It is a property of the
-inserted medium**, and the ROM has exactly one hardcoded value for it. So the
-real fix is a DIskette parameter table that describes the disk actually in the
-drive -- which is the limitation the ROM header already states ("the table is
-not chosen by probing the medium") now that it has a cost attached.
+It does NOT mount root, and that is a different problem: the kernel tries its
+FAT driver on a MINIX filesystem and rejects it. Nothing above claims MINIX
+boots to a root mount -- it claims the read path is correct, which is what was
+measured.
 
-That change is deliberately NOT made here: it decides what this ROM IS, it
-moves AH=08h's answer and the CMOS drive type with it, and the three tests
-above pin the current contract on purpose rather than by accident. It wants
-its own cycle, with those tests rewritten coherently rather than in the same
-hour the bug was found.
+**STILL WRONG, and deliberately not changed:** the CMOS drive type still says
+360K, which is why ELKS prints `df0 is 360k/PC (1)` and `fd0: 233G CHS
+17482,-31870,-32384` from its own `df` driver while its probe correctly finds
+80/2/18. That is the equipment word, the CMOS byte and the data-rate register
+at 3F7h this ROM never writes -- a separate change, and not one that was
+breaking a read.
 
-**STILL WRONG, and deliberately not changed here:** the ROM still DESCRIBES a
-360K drive everywhere else. AH=08h answers 40 cylinders and 9 sectors from the
-same table, and the CMOS drive type says 360K -- which is why ELKS prints
-`df0 is 360k/PC (1)` and `fd0: 233G CHS 17482,-31870,-32384` from its own
-`df` driver while its probe correctly finds 80/2/18. Those are a separate
-change with a wider blast radius (equipment word, AH=08h, CMOS type, and the
-data-rate register at 3F7h this ROM never writes) and they are not what was
-breaking the boot.
 
 #### E6.8.4l The BIU is not blocked — it is UNWANTED, on the record (2026-09-05)
 
