@@ -16,6 +16,7 @@ import {
     Robot, ROBOT_CMD, ROBOT_DATA, UNESTABLISHED, INC_MACROS, INC_PROCEDURES,
     parseDirectives, deviceForStart,
 } from '../src/i8086-emu8086.js';
+import { perfHint } from './helpers/perf-hint.mjs';
 
 /** Assemble at .COM offset 100h: pairs of [offset, bytes]. */
 function com(chunks) {
@@ -196,8 +197,12 @@ test('an int 15h/86h delay costs MACHINE time, not wall-clock time', () => {
     const wallMs = Date.now() - wallStart;
 
     assert.ok(Math.abs(m.tMs - 120_000) < 1, `machine time advanced 120 s, got ${m.tMs} ms`);
-    assert.ok(wallMs < 1_000, `and it took no real time: ${wallMs} ms of wall clock`);
-    assert.ok(m.tMs > wallMs * 10, 'simulated time outruns real time by orders of magnitude');
+    assert.ok(wallMs < 1_000, `and it took no real time: ${wallMs} ms of wall clock` +
+        perfHint('Wall-clock cost of 120 s of simulated time'));
+    assert.ok(m.tMs > wallMs * 10,
+        `simulated time outruns real time by orders of magnitude ` +
+        `(${m.tMs} ms simulated vs ${wallMs} ms wall)` +
+        perfHint('Simulated-to-real time ratio'));
 });
 
 test('the traffic-light project end to end: pattern, delay, pattern', () => {

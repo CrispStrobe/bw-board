@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086, DOSBOX8086_XT, TRAP_SEG, VRAM } from '../src/i8086-dos.js';
+import { perfHint } from './helpers/perf-hint.mjs';
 
 /** A Tier B machine with the services installed and a .COM loaded. */
 function dosWith(bytes) {
@@ -166,7 +167,8 @@ test('int 15h/86h spends MACHINE time, not wall-clock time', () => {
     dos.run(10_000);
     const wall = Date.now() - t0;
     assert.ok(m.tMs > 999 && m.tMs < 1002, `a second of simulated time passed (${m.tMs.toFixed(1)} ms)`);
-    assert.ok(wall < 200, `and none of it was real (${wall} ms)`);
+    assert.ok(wall < 200, `and none of it was real (${wall} ms)` +
+        perfHint('Wall-clock cost of a simulated second'));
     // yousefkotp's traffic-light project is built entirely on this service,
     // waiting sixty seconds at a time.
 });
