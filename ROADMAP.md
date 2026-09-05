@@ -2539,6 +2539,87 @@ until halt.)
 
 ---
 
+### E7.3 NE2000 Ethernet — LANDED 2026-09-04 (owner-asked)
+
+`src/ne2000.js` + `test/ne2000.test.mjs`, machine kind `ne2000`, 32 ports.
+
+**Clean-room from the DP8390D datasheet.** Every readable implementation is
+GPL or LGPL — QEMU, Bochs, DOSBox-X, PCem, 86Box, VirtualBox. The one
+permissive implementation is v86's (BSD-2) and this fleet has designated v86
+**oracle-only**: run it, diff against it, never read it into our own code.
+Same rule that produced `ym3812.js` and `sb-dsp.js`, and the same rule that
+made `arduino_8253` an oracle after its GPL-3 headers were found.
+
+**THE DESIGN DECISION IS WHAT IT IS ATTACHED TO, not the register file.** A
+browser has no raw sockets and this bench must run offline, so the card is not
+on a network — it is on a LINK. Two ship:
+
+- `LoopbackLink` — the card hears its own transmissions, which is what a real
+  card's self-test does, and is enough to bring a driver up and prove the ring,
+  the filter and the interrupt path with one machine.
+- `HubLink` — joins two or more emulated machines. **A repeater, not a switch,
+  deliberately**: everyone hears everything and the MAC filter is what makes a
+  frame yours. A switch would do the filtering in the wire and hide the lesson.
+
+**A bridge to a real network is NOT built and should not be added casually.**
+It is a product decision with safety questions attached — what a learner's
+machine can reach, and what can reach it — and it belongs to the owner rather
+than to whoever next opens this file.
+
+**Modelled:** the command register and its paging; the receive ring (PSTART,
+PSTOP, BNRY, CURR, and the four-byte header the NIC writes itself); remote DMA
+both ways with RDC; the interrupt status and mask; the MAC and multicast
+filters; promiscuous mode; and the PROM that identifies a 16-bit card.
+
+**NOT modelled, said rather than faked:** collisions, carrier sense, FIFO
+thresholds, TCR loopback modes 1–3, and the tally counters, which return zero
+because nothing here can lose a packet on a wire. If a lesson ever needs a
+lossy link, that is the place to add it — a link that drops a configurable
+fraction would make the counters mean something and is a good exercise.
+
+**A full ring DROPS and sets OVW rather than overwriting.** Overwriting a
+frame the host has not read is a corruption a driver cannot diagnose; a
+dropped frame with a flag is something it can see.
+
+#### What is NOT done, and what I would do next
+
+1. **No pseudocode verb.** A learner reaches the card from the ASM tab, by
+   writing to its registers — which is the lesson for a NIC in a way it is not
+   for an LED. A `send`/`on receive` pair in pseudocode would need a decision
+   about what a "message" is that does not exist yet.
+2. **No driver ships, and none can.** The DOS networking stack anyone would
+   reach for — Crynwr packet drivers, mTCP — is GPL. Writing to the NIC
+   directly is the intended path.
+3. **PORT CONFLICTS ARE NOT DETECTED.** The ADC0809 sits at 300h and an
+   NE2000's first jumper setting is also 300h. A board declaring both gets no
+   warning, and the symptom would be two chips answering one address. Presets
+   should use **320h** for the card. Worth a machine-level check that two chips
+   do not claim overlapping blocks — it is cheap and it is exactly the class of
+   silent wrongness this tier keeps finding.
+4. **v86 has an NE2000 and we have not diffed against it.** It is already
+   obtained and running as an oracle for the CPU; pointing it at this card
+   would be tier-2a evidence for a chip that currently has only the datasheet
+   behind it.
+
+#### Three bugs found by running it, two of them in the TEST
+
+Recorded because they are the kind that read as chip faults:
+
+- **PSTART and PSTOP are WRITE-ONLY on page 0** — reading register 1 gives
+  CLDA0, not the ring bottom. The harness read them back, got zero, and
+  computed a negative frame length. A real driver keeps its own copy.
+- **CR `0x21` and `0x22` both abort a remote DMA, but `0x21` carries CR_STOP.**
+  The harness used the tidy-looking one between accesses and the card went
+  deaf between frames with nothing to show why.
+- **Remote DMA moved two bytes per access in word mode.** DCR bit 0 says the
+  HOST moves 16 bits per instruction, and on an 8086 `IN AX, DX` is two byte
+  reads — so the width belongs in the CPU, not the chip. A four-byte header
+  came back as bytes 0, 2, 4, 6.
+
+Verified with `audit-clean-checkout`, which caught the test file before it was
+tracked — the tool working on its first real use by someone other than its
+author.
+
 ### E7.2 The auto-added chip vocabulary — closing the block gap (2026-09-04, owner-requested)
 
 The goal the owner set: **full circuits control on the 8086, as Nano, Pico and
