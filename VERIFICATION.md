@@ -749,6 +749,46 @@ against the very file it was written to catch**, because the target does
 `import { statSync } from 'node:fs'` and an ESM named import binds the function
 directly — patching the module object intercepts nothing.
 
+### Rule: going green is not evidence that a widened assertion still asserts anything
+
+lego-47's, 2026-09-05, and it is the counterpart to the rule below.
+
+A source-text assertion pinned an exact one-liner. A refactor inserted a log
+call, splitting the line, and the gate went red **while the behaviour was
+unchanged** — the replay still replayed. Another required a specific
+`useCallback` signature and failed when a parameter gained a default. Two false
+reds from one commit, neither tracking anything real.
+
+**A false red is worse than a false green, not milder.** A false green hides a
+defect that already exists. A false red **manufactures** one, teaches everyone
+the gate cries wolf, and the next real failure gets the same shrug that was
+correct twice before. *A red everyone has learned to dismiss is how a real one
+hides.*
+
+**And the repair produced the failure it was repairing.** The fix widened the
+assertion to "the condition, then the `setState`, within 200 characters". It
+went green — and **stayed green after the line it exists to protect was
+deleted**, because the file has four `machineBooted: true` sites and the window
+matched a different pair. For a few minutes a false red had been replaced by a
+vacuous pass, in a commit about vacuous passes.
+
+**The only check that separates a loosened assertion from a hollow one is to
+delete what it protects and confirm it goes red.** Going green proves the
+assertion no longer objects; it proves nothing about whether it can. The
+correct shape here was structural — same block, `if (…) {` with no closing
+brace before the assertion — rather than any character window.
+
+**This is why every widening in this repository is red-proved**, and why the
+same discipline is applied to the widening itself and not only to the original
+gate. Three instances the same week, all caught only by injection:
+
+- a `< 400` cycle bound that failed on 1,979 legitimate `REP` entries — the
+  bound was invented, not derived;
+- a null-guarded comparison (`if (a !== null && b !== null)`) where **both were
+  null**, so the test passed having compared nothing;
+- a detector wrapping `fs` that reported 0 findings against the very file it
+  was written to catch, because an ESM named import binds the function directly.
+
 ### Rule: a large improvement is not evidence of the right model
 
 Measured on the 8088 cycle model, 2026-09-04. Shift/rotate-by-CL scored 3%.
