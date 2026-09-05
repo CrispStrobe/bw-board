@@ -142,3 +142,35 @@ test('every chip source that keeps a ledger uses a name the collector reaches', 
         '\n  A chip keeps a refusal ledger the machine collector cannot reach:\n    ' +
         orphaned.join('\n    ') + '\n');
 });
+
+test('a refusal carries the address the program touched', () => {
+    // lego-ac's ask, and the argument is the whole point: the debugger's line
+    // wants to point at the instruction and the P-lane table wants to join to
+    // the part's port map. A SYMPTOM SENTENCE CANNOT BE CLICKED.
+    const m = new I8086Machine(BREADBOARD8086);
+    const dma = new I8237();
+    dma.write(0x08, 0x01);                         // command port
+    m.chips.dma = dma;
+    const ppi = new I8255();
+    ppi.write(3, 0xa0);                            // control port
+    m.chips.ppi = ppi;
+
+    const d = m.chipRefusals().find((r) => r.part === 'dma');
+    assert.equal(d.at, 0x08, 'the 8237 refusal points at the command port it arrived on');
+
+    const p = m.chipRefusals().find((r) => r.part === 'ppi');
+    assert.equal(p.at, 3,
+        'and a STRING ledger reaches its address through the sibling `<field>At`, ' +
+        'so a sentence-shaped warning is clickable too');
+});
+
+test('a refusal with no recorded address reports null, not a guess', () => {
+    // A refusal without an address is still worth reporting. Inventing one
+    // would make the debugger point somewhere the program never touched, which
+    // is worse than pointing nowhere.
+    const m = new I8086Machine(BREADBOARD8086);
+    m.chips.noAddr = {unmodelled: new Map([['a feature', {count: 1, symptom: 'something'}]])};
+    const row = m.chipRefusals().find((r) => r.part === 'noAddr');
+    assert.equal(row.at, null);
+    assert.equal(row.symptom, 'something', 'the rest of the row is unaffected');
+});

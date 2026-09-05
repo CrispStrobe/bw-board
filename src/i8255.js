@@ -90,6 +90,15 @@ export class I8255 {
     _applyControl(val, notify = true) {
         this.control = val & 0xff;
         const groupA = (val >> 5) & 3, groupB = (val >> 2) & 1;
+        // The control port the mode word arrived on, so a consumer can point at
+
+        // the instruction rather than only describe the effect. See
+
+        // I8086Machine.chipRefusals(): a string ledger carries its address in
+
+        // a sibling `<field>At`.
+
+        this.modeWarningAt = (groupA !== 0 || groupB !== 0) ? 3 : null;
         this.modeWarning = (groupA !== 0 || groupB !== 0)
             ? `8255 control ${val.toString(16)}h selects mode ${groupA !== 0 ? `${groupA} on group A` : ''}`
                 + `${groupA !== 0 && groupB !== 0 ? ' and ' : ''}${groupB !== 0 ? 'mode 1 on group B' : ''}`

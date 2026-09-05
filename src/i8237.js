@@ -191,7 +191,7 @@ export class I8237 {
         switch (reg) {
             case 0x08:
                 this.command = val;
-                this._noteUnmodelled(val);
+                this._noteUnmodelled(val, reg);
                 this._updateHrq();
                 break;
             case 0x09: {
@@ -470,11 +470,13 @@ export class I8237 {
             'a device expecting an active-high DACK is never acknowledged'],
     ];
 
-    _noteUnmodelled(val) {
+    _noteUnmodelled(val, at) {
         for (const [bit, feature, symptom] of I8237.UNMODELLED_COMMAND_BITS) {
             if (!(val & bit)) continue;
             const prev = (this.unmodelled ||= new Map()).get(feature);
-            this.unmodelled.set(feature, {count: (prev?.count || 0) + 1, symptom});
+            // `at` is the port the program wrote to reach this. The debugger
+            // points at the instruction with it; a sentence cannot be clicked.
+            this.unmodelled.set(feature, {count: (prev?.count || 0) + 1, symptom, at});
         }
     }
 

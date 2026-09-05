@@ -1620,8 +1620,17 @@ export class I8086Machine {
 
     chipRefusals() {
         const rows = [];
-        const push = (part, kind, feature, symptom, count) =>
-            rows.push({part, kind, feature, symptom: symptom ?? null, count: count ?? 1});
+        // `at` is the address the program touched to trigger the refusal -- a
+        // port number, or a register offset. lego-ac's ask, and the argument
+        // is right: the debugger's line wants to point at the instruction and
+        // the P-lane table wants to join to the part's port map. A SYMPTOM
+        // SENTENCE CANNOT BE CLICKED.
+        //
+        // null when the chip does not record one. A refusal with no address is
+        // still worth reporting; inventing an address for it would not be.
+        const push = (part, kind, feature, symptom, count, at) =>
+            rows.push({part, kind, feature, symptom: symptom ?? null,
+                count: count ?? 1, at: at ?? null});
 
         const sources = [
             ...Object.entries(this.chips || {}).map(([n, c]) => ['chip', n, c]),
@@ -1636,10 +1645,12 @@ export class I8086Machine {
                 try { reported = part.report(); } catch { /* a report must not break a read */ }
             }
             for (const e of reported?.unsupported ?? []) {
-                push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count);
+                push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count, e.at);
             }
 
-            if (part.lastRefusal) push(name, kind, part.lastRefusal, null, part.refusals || 1);
+            if (part.lastRefusal) {
+                push(name, kind, part.lastRefusal, null, part.refusals || 1, part.lastRefusalAt);
+            }
 
             // DERIVED, NOT ENUMERATED. The first version listed the field names
             // it knew -- modeWarning, lastRefusal, unsupported, unmodelled --
@@ -1655,12 +1666,20 @@ export class I8086Machine {
             for (const field of Object.keys(part)) {
                 if (!I8086Machine.LEDGER_FIELD.test(field)) continue;
                 const v = part[field];
-                if (typeof v === 'string' && v) { push(name, kind, v, null, 1); continue; }
+                // A STRING LEDGER carries its address in a sibling `<field>At`,
+                // because a sentence has nowhere to put one. Convention rather
+                // than restructuring every chip: the 8255's modeWarning stays
+                // a sentence and gains modeWarningAt beside it.
+                if (typeof v === 'string' && v) {
+                    push(name, kind, v, null, 1, part[`${field}At`]);
+                    continue;
+                }
                 if (!(v instanceof Map)) continue;
                 for (const [feature, entry] of v) {
-                    // Two shapes in the wild: a bare count, and {count, symptom}.
+                    // Two shapes in the wild: a bare count, and {count, symptom, at}.
                     if (typeof entry === 'number') push(name, kind, String(feature), null, entry);
-                    else push(name, kind, String(feature), entry?.symptom ?? null, entry?.count ?? 1);
+                    else push(name, kind, String(feature), entry?.symptom ?? null,
+                        entry?.count ?? 1, entry?.at);
                 }
             }
         }
