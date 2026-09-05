@@ -59,8 +59,42 @@ const walk = (p) => (statSync(p).isDirectory()
     : (extname(p).toLowerCase() === '.asm' ? [p] : []));
 
 test('nasm itself answers, so an absent oracle cannot look like a passing one', { skip }, () => {
-    const r = nasmBuild(nasm, `${CORPUS}/Snake-Game-8086-Assembly/Snake.asm`, false);
-    assert.ok(r.ok || r.err, 'the oracle ran and said something');
+    // THE LIVENESS PROBE MUST NOT DEPEND ON THE CORPUS IT VOUCHES FOR.
+    //
+    // It used to assemble a file from CORPUS -- a 191 MB tree at an absolute
+    // path outside this repository -- and assert `r.ok || r.err`. Since
+    // 0d9f984 CI installs nasm but has no such tree, so that probe would have
+    // FAILED there and taken the build red: `nasmBuild` runs with
+    // `cwd: dirname(file)`, the directory does not exist, the spawn cannot
+    // start, and both streams come back empty, so neither `ok` nor `err` is
+    // truthy.
+    //
+    // (I first wrote this comment claiming the opposite -- that it would pass
+    // falsely on nasm's "unable to open input file". Measured: stderr is
+    // EMPTY, because the failure is the cwd rather than the input. The fix is
+    // the same either way, but the reason in a comment has to be the true one.)
+    //
+    // So the probe now assembles a source it CARRIES and checks bytes it knows
+    // the answer to. It is meaningful with the corpus absent, which is the
+    // configuration CI actually runs, and it cannot be satisfied by an error
+    // message. A probe that needs the thing it is probing for is not a probe.
+    const dir = mkdtempSync(join(tmpdir(), 'nasm-live-'));
+    try {
+        const src = join(dir, 'live.asm');
+        // NOP, INC AX, RET -- three encodings NASM cannot get wrong, and which
+        // pin that we invoked a real assembler rather than something that
+        // exits 0.
+        writeFileSync(src, 'bits 16\nnop\ninc ax\nret\n');
+        const r = nasmBuild(nasm, src, true);
+        assert.ok(r.ok,
+            `nasm failed on a three-instruction program, so the oracle is not `
+            + `usable at all: ${r.err}`);
+        assert.deepEqual(Array.from(r.bytes), [0x90, 0x40, 0xc3],
+            'nasm assembled, but not to the bytes 8086 NOP/INC AX/RET must produce '
+            + '-- the binary answering is not the binary we think it is');
+    } finally {
+        rmSync(dir, { recursive: true, force: true });
+    }
 });
 
 test('the whole NASM corpus is byte-identical, or classified as not-8086', { skip }, (t) => {

@@ -161,6 +161,32 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'retro-corpus-8086', kind: 'fixture',
+        what: 'Four real DOS assembly programs (Snake, typing-balloon, Maze Runner, '
+            + 'retro-dos-graphics) that the NASM oracle assembles with both nasm and '
+            + 'src/i8086-asm.js and compares BYTE FOR BYTE. Without it the nasm '
+            + 'oracle still proves the assembler binary works, and proves nothing '
+            + 'about our assembler.',
+        paths: ['/mnt/volume1/code/retro-corpus-8086'],
+        gates: ['test/oracle-nasm.test.mjs'],
+        // FOUND BECAUSE THE CI STEP AT 0d9f984 WAS HALF A GATE. That step
+        // installs nasm and asserts it arrived, which made the oracle
+        // "standing" -- but the comparison also needs 191 MB at an ABSOLUTE
+        // path outside the repository, which no runner has. The success
+        // quantified over "the assembler binary is present"; the goal is "the
+        // comparison ran". Same shape as everything else in VERIFICATION.md,
+        // in the step built to enforce it.
+        //
+        // Also invisible to audit-clean-checkout, which archives HEAD and
+        // cannot strip an absolute path -- the third fixture in that blind
+        // spot after the ehBASIC ROM and the MS-DOS toolchain.
+        obtain: 'clone the four upstream repositories into '
+            + '/mnt/volume1/code/retro-corpus-8086; see test/oracle-nasm.test.mjs CORPORA',
+        ci: 'no — 191 MB of third-party game sources, not vendored. nasm itself IS '
+            + 'installed in CI (0d9f984), so the liveness probe and the encoder '
+            + 'comparisons run there; the corpus comparisons skip and say so.',
+    },
+    {
         id: 'ehbasic-rom', kind: 'fixture',
         what: 'mike42 ehBASIC ROM for the HB6502 preset. The only realistic 6502 '
             + 'PROGRAM workload in the tree — every other 6502 check is a unit test '
