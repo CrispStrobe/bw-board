@@ -217,6 +217,7 @@ export const INPUTS = [
             + 'src/i8086-asm.js and compares BYTE FOR BYTE. Without it the nasm '
             + 'oracle still proves the assembler binary works, and proves nothing '
             + 'about our assembler.',
+        env: 'RETRO_CORPUS_8086',
         paths: ['/mnt/volume1/code/retro-corpus-8086'],
         gates: ['test/oracle-nasm.test.mjs'],
         // FOUND BECAUSE THE CI STEP AT 0d9f984 WAS HALF A GATE. That step

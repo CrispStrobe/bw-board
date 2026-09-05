@@ -33,7 +33,9 @@ const skip = nasm ? false
     + 'assembler and has nothing to compare to. `apt-get download nasm` and point $NASM at it.';
 if (skip) console.log(skip);
 
-const CORPUS = '/mnt/volume1/code/retro-corpus-8086';
+// Overridable so the ABSENT case is testable and the corpus is relocatable —
+// it is 191 MB at an absolute path outside the repository, which no runner has.
+const CORPUS = process.env.RETRO_CORPUS_8086 || '/mnt/volume1/code/retro-corpus-8086';
 const has = (p) => existsSync(p);
 
 /**
@@ -54,7 +56,20 @@ const CORPORA = [
     { dir: `${CORPUS}/retro-dos-graphics`, rootFor: `${CORPUS}/retro-dos-graphics/games/` },
 ];
 
-const walk = (p) => (statSync(p).isDirectory()
+// TOLERATES A MISSING PATH, AND THAT IS THE WHOLE BUG THIS FIXES.
+//
+// `statSync` THROWS on a path that does not exist, so with the corpus absent
+// this threw before the `.filter(has)` two lines down could reject anything —
+// the test FAILED where it was written to skip. Invisible until 0d9f984
+// installed nasm in CI: before that `skip` was already true because the
+// assembler was missing, and the corpus was never reached. Making one input
+// present exposed that the guard for the OTHER input had never run.
+//
+// bw-board CI failed eight consecutive times on this, and lite's
+// `verify:bwboard-ci` fails closed on a pinned sha with no green upstream run,
+// so it blocked another repository's pin bump.
+const walk = (p) => (!existsSync(p) ? []
+    : statSync(p).isDirectory()
     ? readdirSync(p).flatMap((n) => walk(join(p, n)))
     : (extname(p).toLowerCase() === '.asm' ? [p] : []));
 
