@@ -161,6 +161,41 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'ehbasic-rom', kind: 'fixture',
+        what: 'mike42 ehBASIC ROM for the HB6502 preset. The only realistic 6502 '
+            + 'PROGRAM workload in the tree — every other 6502 check is a unit test '
+            + 'or a vector grind, so without it the w65c02 core is proven '
+            + 'instruction-by-instruction and never as something that runs software.',
+        // NO ENV VAR, DELIBERATELY. The first version of this row declared
+        // EHBASIC_ROM and the census's own drift guard rejected it: the gated
+        // file reads `process.argv[2]` or the literal default path and has never
+        // read an env var. Inventing a detection key the code does not use is
+        // exactly the fiction test/oracle-census.test.mjs exists to prevent.
+        paths: ['/tmp/mike42-6502/rom/basic/basic.bin'],
+        gates: ['test/hb6502-ehbasic-boot.mjs'],
+        // WHY IT IS HERE RATHER THAN IN THE CI GLOB. The obvious fix, when this
+        // was found reporting `ok 1` on an absent ROM, was to add the file to
+        // the test glob so its skip shows up in CI. That is the wrong shelf:
+        // this census exists BECAUSE a skip among forty-odd others is not
+        // legible (see the header). Adding a forty-seventh would hide the fact
+        // in the same pile the census was built to empty.
+        //
+        // AND THE ABSENCE IS PERMANENT BY LICENCE, not by effort. The ehBASIC
+        // ROM is non-commercial; the surrounding hardware is CC-BY-4.0 but the
+        // ROM is not redistributable here, so this can never become a standing
+        // CI gate. Any w65c02 coverage number is therefore structurally thinner
+        // than the 8086's, and must SAY so — otherwise it reads as "the 6502 is
+        // less covered" when it means "the 6502's best program is unshippable".
+        //
+        // It also sat outside audit-clean-checkout's reach: that tool archives
+        // HEAD to strip untracked REPOSITORY files, and cannot strip an
+        // absolute /tmp path. A cross-repo dependency outside the repo tree is
+        // invisible to the tool built for cross-repo dependencies.
+        obtain: 'git clone https://github.com/mike42/6502-computer /tmp/mike42-6502 '
+            + '&& cd /tmp/mike42-6502/rom/basic && make',
+        ci: 'no — non-commercial licence, and permanently so',
+    },
+    {
         id: 'zx-roms', kind: 'fixture',
         what: 'Spectrum 48K/128K ROMs. Without them the ZX tier boots nothing and '
             + 'its snapshot, tape and banking gates do not run.',
