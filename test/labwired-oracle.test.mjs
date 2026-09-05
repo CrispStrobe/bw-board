@@ -224,7 +224,7 @@ describe('labwired differential oracle: STM32F030', { skip }, () => {
             `; result keys: ${lw.result ? Object.keys(lw.result).join(',') : '-'}`);
     });
 
-    it('pin-edge timeline: the BSRR write sequence agrees (forked VCD)', () => {
+    it('pin-edge timeline: the BSRR write sequence agrees (forked VCD)', tc => {
         // 5 ms phases: --vcd costs ~100x (a pc record per step), so the
         // blink is shrunk until six phases fit in ~1.5M steps.
         const dir = build(5);
@@ -271,10 +271,19 @@ describe('labwired differential oracle: STM32F030', { skip }, () => {
         const low = events.filter((e) => e.addr === GPIOA_BSRR_ADDR);      // byte 0
         const b2 = events.filter((e) => e.addr === GPIOA_BSRR_ADDR + 2);   // byte 2 (BR0)
         if (low.length === 0) {
-            // A binary built before the observer fix landed upstream — the
-            // first test already covered UART equivalence; say why this skips.
-            console.log('pin-edge timeline SKIPPED: this labwired binary does not ' +
-                'trace MMIO writes (build from labwired-core main, >= 41119903c)');
+            // A binary built before the observer fix landed upstream. The first
+            // test already covered UART equivalence, so this is not "nothing
+            // verified" — but an early return REGISTERS AS A PASS, and a reader
+            // with an old binary would see this test green and believe the
+            // pin-edge timeline had been checked. It had not been reached.
+            //
+            // t.skip records it as skipped instead. It is also the census's gate
+            // for labwired-cli, so a real skip keeps the census honest too.
+            // Routed here by the coverage lane; the rule is the one I have been
+            // applying to absent hardware all week — a check reports on what it
+            // FOUND, never on what exists.
+            tc.skip('this labwired binary does not trace MMIO writes ' +
+                '(build from labwired-core main, >= 41119903c)');
             return;
         }
         // Reassemble edges: at each BSRR word write, set if byte0 bit0,
