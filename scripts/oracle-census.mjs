@@ -255,20 +255,24 @@ export const INPUTS = [
             + 'NASM side of src/i8086-asm.js — its own header says "the whole strength of '
             + 'the NASM side rests on this comparison". Byte-for-byte agreement with a real '
             + 'assembler, the strongest evidence tier there is. VERIFIED GREEN 2026-09-05 '
-            + 'with NASM 2.16 (6/6), so the claim STANDS — but nasm is not installed here '
-            + 'by default, so it runs DARK (all three tests skip) until $NASM or PATH '
-            + 'provides it. Its absence had no census row, which is exactly why the '
-            + "assembler's strongest claim could be merely recorded rather than standing "
-            + 'and nobody could tell which.',
+            + 'with NASM 2.16 (6/6), so the claim STANDS. Runs dark on a fresh developer '
+            + 'box (nasm not installed → all three tests skip) until $NASM or PATH provides '
+            + 'it, but CI installs it — see ci. Its absence had no census row, which is '
+            + "exactly why the assembler's strongest claim could be merely recorded rather "
+            + 'than standing and nobody could tell which.',
         env: 'NASM',
         paths: ['/usr/bin/nasm'],
         gates: ['test/oracle-nasm.test.mjs'],
         obtain: 'no root needed: apt-get download nasm && dpkg-deb -x nasm_*.deb DIR, then '
             + 'NASM=DIR/usr/bin/nasm; or apt-get install nasm',
-        ci: 'no — NOT in ci.yml, and absent by ACCIDENT not by licence (unlike the ehBASIC '
-            + 'ROM or the MASM binaries). So of every dark oracle here this is the one worth '
-            + 'taking standing: one apt-get in the test job re-verifies the byte-for-byte '
-            + 'assembler claim on every run, at no licence cost.',
+        ci: 'YES — standing since 0d9f984: ci.yml installs nasm (`apt-get install -y nasm`) '
+            + 'AND then asserts it is present (`oracle-census.mjs --require nasm`), so a '
+            + 'failed or skipped install fails the build at the install rather than passing '
+            + 'green with six tests silently skipped. It was the one dark oracle absent by '
+            + 'ACCIDENT not licence (unlike the ehBASIC ROM or the MASM binaries), which is '
+            + 'why it was the one worth taking live — now the byte-for-byte assembler claim '
+            + 'is re-verified on every push. Dark only on a fresh developer box until they '
+            + 'install nasm.',
     },
     {
         id: 'masm', kind: 'oracle',
