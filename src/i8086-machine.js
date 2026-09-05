@@ -1182,9 +1182,34 @@ export class I8086Machine {
             this._advanceChips(n);
             return n;
         }
+        // Observation membership is sampled at the instruction boundary.
+        // Installing or removing a hook while the CPU is inside this step
+        // affects the NEXT instruction, never a half-observed current one.
+        // Keep the overwhelmingly common unobserved path free of pc reads,
+        // before-state capture and retire-payload allocation.
+        const onInstruction = this.hooks.onInstruction;
+        if (!onInstruction) {
+            const n = this.cpu.step();
+            this.cycles += n;
+            this._advanceChips(n);
+            return n;
+        }
+        // The instruction observer is deliberately at the machine boundary,
+        // after interrupt arbitration and around the one core call which
+        // retires an instruction. A debugger observing outside step() cannot
+        // identify the true pcBefore when a pending IRQ redirects execution.
+        const pcBefore = this.cpu.pc;
+        const cyclesBefore = this.cycles;
         const n = this.cpu.step();
         this.cycles += n;
         this._advanceChips(n);
+        onInstruction({
+            pcBefore,
+            pcAfter: this.cpu.pc,
+            cycles: n,
+            cyclesBefore,
+            cyclesAfter: this.cycles
+        });
         return n;
     }
 

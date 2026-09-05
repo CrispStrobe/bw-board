@@ -31,6 +31,56 @@ function blinkRom() {
     return rom;
 }
 
+test('instruction observation reports the exact retire boundary', () => {
+    const events = [];
+    const m = new I8086Machine({
+        clockHz: 5_000_000,
+        regions: [{kind: 'ram', start: 0, end: 0xfffff}],
+        chips: [],
+    }, {onInstruction: event => events.push(event)});
+    m.cpu.cs = 0;
+    m.cpu.ip = 0x100;
+    m.mem[0x100] = 0x90;                 // NOP
+    const cyclesBefore = m.cycles;
+    const cost = m.step();
+
+    assert.deepEqual(events, [{
+        pcBefore: 0x100,
+        pcAfter: 0x101,
+        cycles: cost,
+        cyclesBefore,
+        cyclesAfter: cyclesBefore + cost,
+    }]);
+});
+
+test('an instruction hook installed during execution starts at the next boundary', () => {
+    const events = [];
+    const m = new I8086Machine({
+        clockHz: 5_000_000,
+        regions: [{kind: 'ram', start: 0, end: 0xfffff}],
+        chips: [],
+    });
+    m.cpu.cs = 0;
+    m.cpu.ip = 0x100;
+    m.mem.set([0x90, 0x90, 0x90], 0x100);
+    const read = m.cpu.read;
+    m.cpu.read = address => {
+        m.hooks.onInstruction = event => events.push(event);
+        return read(address);
+    };
+
+    m.step();
+    assert.deepEqual(events, [], 'the instruction already in flight is not half-observed');
+    m.step();
+    assert.equal(events.length, 1);
+    assert.equal(events[0].pcBefore, 0x101);
+
+    m.cpu.read = read;
+    m.hooks.onInstruction = null;         // unsubscribe at a boundary
+    m.step();
+    assert.equal(events.length, 1, 'an unsubscribed observer receives no later retire');
+});
+
 test('reset fetches from FFFF:0000, which is why the vector lives at the top', () => {
     const m = new I8086Machine();
     m.loadRom(blinkRom());
