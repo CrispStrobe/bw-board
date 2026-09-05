@@ -2341,14 +2341,50 @@ because a survey of x8086NetEmu initially recorded this as "we lack it
 entirely", which is what happens when a gap list is written from the other
 project's feature page rather than from our own tree. Rule 5 again.
 
-#### E6.8.8 A real OS as the acceptance target
+#### E6.8.8 A real OS as the acceptance target — ELKS BOOTS (2026-09-05)
 
-emu86 boots ELKS and runs MS-DOS 6.22. Our high-water mark is CHKDSK, COMP
-and DEBUG from the MIT MS-DOS release — genuinely the first third-party code
-this tier ran that it did not assemble itself, and still one service at a
-time. ELKS under load exercises interrupts, the timer and the FDC together in
-a way 525 textbook programs never will. Gated on E6.8.1 (it wants 186) and
-E6.8.6 (it wants an image).
+Both gates are satisfied: E6.8.1 landed the 186, E6.8.6 built the image
+plumbing. **ELKS v0.9.1 now boots on this machine.**
+
+```
+ELKS Setup ....L07A8C36H00S11 Ht0330 f1235 d19FC INT f006 START
+```
+
+Setup runs, probes the hardware, reports what it found, and hands off. Walking
+the boot in 500,000-instruction windows shows the whole shape:
+
+```
+to  0.5M    74 pages   segment 1235   setup
+to  1.0M    25 pages   segment 1235   narrowing
+to  1.5M   342 pages   segment 4300   THE KERNEL TAKES OVER
+to 12.0M  ~263 pages   segment 4300   steady
+```
+
+**The kernel is doing real work, not spinning.** 263 distinct code pages,
+evenly spread, no halt. That is the distinction between *booting* an OS and
+*stopping* one, and it is what `test/i8086-elks-boot.test.mjs` asserts.
+
+**WHAT IS NOT CLAIMED.** No kernel banner and no shell prompt appear within
+twelve million instructions. The kernel is alive and busy; where it goes next
+is open. Asserting a prompt nobody has seen would be a test written against a
+hope, so the test stops where the evidence does.
+
+**A test of mine was wrong first, in the way this file keeps recording.** It
+asserted "263 code pages" while sampling instructions 200,000–600,000 — a
+figure taken from the *second half* of a twelve-million-instruction run. In
+that early window ELKS touches ONE page, because it is still in setup. A score
+quoted from one condition and asserted in another; corrected by measuring the
+handoff rather than assuming it.
+
+**Licence: GPL-2, so it is RUN and never vendored** — the same standing as the
+ehBASIC ROM. Registered as `elks-image` in the census with
+`ciAvailable: false`, so this claim is recorded rather than standing, and the
+test skips loudly when the image is absent.
+
+**Next, and now answerable rather than speculative:** find what the kernel is
+waiting on between the handoff and its first console output. It has the timer,
+the FDC and the 8259 under it; the 500k-window walk is the tool that will
+localise it.
 
 #### E6.8.9 Declined, with reasons
 

@@ -171,6 +171,27 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'elks-image', kind: 'fixture',
+        what: 'An ELKS 1.44 MB boot floppy (fd1440-fat.img). The FIRST third-party '
+            + 'OS this tier runs — not a program we assembled, not a service answered '
+            + 'one call at a time, but a kernel that boots itself, probes the hardware '
+            + 'and takes over the machine. Exercises interrupts, the timer and the FDC '
+            + 'together in a way 525 textbook programs never will (E6.8.8).',
+        env: 'ELKS_IMAGE',
+        paths: ['/mnt/volume1/code/elks-images/fd1440-fat.img'],
+        gates: ['test/i8086-elks-boot.test.mjs'],
+        // GPL-2, SO IT IS RUN AND NEVER VENDORED. The licence regime permits a
+        // GPL work as a black-box oracle or workload — execute it, compare
+        // behaviour, never read its source into ours and never ship it in a
+        // BSD-3 bundle. Same standing as the ehBASIC ROM: permanently
+        // unavailable to CI for licence reasons rather than for effort.
+        obtain: 'download fd1440-fat.img from github.com/ghaerr/elks/releases '
+            + '(v0.9.1 verified) and point $ELKS_IMAGE at it',
+        ciAvailable: false,
+        ci: 'no — GPL-2, run as a workload but never vendored, so the OS acceptance '
+            + 'test skips in CI and its claim is recorded rather than standing',
+    },
+    {
         id: 'amey-corpus', kind: 'fixture',
         what: 'The Amey-Thakur corpus — 525 real DOS assembly programs '
             + '(github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS). The single '
