@@ -599,3 +599,61 @@ test('a checkpoint carries the priority order, and an old one restores to fixed'
     assert.equal(f.lowestPriority, 3);
     assert.deepEqual(f._priorityOrder().map((c) => c.n), [0, 1, 2, 3]);
 });
+
+// ---------------------------------------------------------------------------
+// UNMODELLED COMMAND BITS ARE RECORDED, NOT SWALLOWED (2026-09-05).
+//
+// Every other chip here says so when a program asks for something it does not
+// implement: the 8255 and 8251 set `modeWarning`, the SB DSP counts unknown
+// commands, the uPD765 returns IC=invalid and names itself in `lastRefusal`.
+// The 8237 was the one that stayed silent — it stored these bits and behaved
+// as though they were clear, which is indistinguishable from a chip that
+// honoured them and had nothing to do.
+// ---------------------------------------------------------------------------
+
+test('an unmodelled command bit is recorded by name', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x01);                       // memory-to-memory
+    const names = [...(d.unmodelled ?? new Map())].map(([k]) => k);
+    assert.equal(names.length, 1);
+    assert.match(names[0], /memory-to-memory/,
+        'a driver programming mem-to-mem must be visible as a name, not as silence');
+});
+
+test('it counts, so once and in a loop are distinguishable', () => {
+    const d = new I8237();
+    for (let i = 0; i < 3; i++) d.write(P_COMMAND, 0x01);
+    const [[, entry]] = [...d.unmodelled];
+    assert.equal(entry.count, 3,
+        'a flag would lose the difference between a setup write and a hot loop');
+    assert.match(entry.symptom, /moves nothing/,
+        'and the entry carries the PROGRAM-VISIBLE symptom, not just a name');
+});
+
+test('a MODELLED bit is not reported — the list shrinks as things are built', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x10);                       // rotating priority: modelled since today
+    assert.equal(d.unmodelled, null,
+        'naming a feature that IS modelled is a false report in the other direction');
+    d.write(P_COMMAND, 0x04);                       // controller disable: also modelled
+    assert.equal(d.unmodelled, null);
+});
+
+test('several bits in one write are each named', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x01 | 0x40 | 0x80);         // mem-to-mem + both sense inversions
+    assert.equal(d.unmodelled.size, 3);
+    for (const pat of [/memory-to-memory/, /DREQ sense/, /DACK sense/]) {
+        assert.ok([...d.unmodelled.keys()].some((k) => pat.test(k)), `missing ${pat}`);
+    }
+});
+
+test('a quiet chip stays quiet — nothing is invented', () => {
+    const d = new I8237();
+    d.write(P_COMMAND, 0x00);
+    assert.equal(d.unmodelled, null, 'an all-clear command word records nothing');
+    // And the table itself must be non-empty, or every assertion above is a
+    // sweep over nothing: species 1, in the gate rather than the chip.
+    assert.ok(I8237.UNMODELLED_COMMAND_BITS.length >= 4,
+        'the unmodelled table is empty — the tests above would pass vacuously');
+});

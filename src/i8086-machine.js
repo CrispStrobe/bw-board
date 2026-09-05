@@ -1580,6 +1580,93 @@ export class I8086Machine {
     static CPU_STATE = ['ax', 'bx', 'cx', 'dx', 'sp', 'bp', 'si', 'di',
         'ip', 'cs', 'ds', 'es', 'ss', 'flags', 'halted'];
 
+    /**
+     * EVERYTHING THE CHIPS REFUSED, in one place, because until 2026-09-05
+     * nothing read any of it.
+     *
+     * Every chip here announces when a program asks for something it does not
+     * model -- the 8255 and 8251 set `modeWarning`, the uPD765 returns
+     * IC=invalid and names itself in `lastRefusal`, the SB DSP and YM3812
+     * count unknown commands, the 8237 records unmodelled command bits. All of
+     * it was correct, individually well-designed, and UNREACHABLE: a grep for
+     * any of those names across this file returned nothing, so a driver
+     * programming memory-to-memory or an 8255 handshake left a precise record
+     * in a field no consumer ever asked for.
+     *
+     * That is the week's failure with the halves swapped. Usually a check
+     * reports on something it never looked at; here the chips looked carefully
+     * and nobody read the report. An announcement with no reader is the same
+     * silence it was meant to replace, arrived at more expensively.
+     *
+     * I added the 8237's ledger an hour before writing this and gave it
+     * exactly the same unreachable shape, which is the reason to state the
+     * rule rather than the instance: A LEDGER IS ONLY WORTH THE CONSUMER THAT
+     * READS IT.
+     *
+     * Shape-driven rather than a list of chips, so a chip added later is
+     * collected without editing this: anything exposing `report()`, or any of
+     * the four field names below, is picked up. `test/chip-refusals.test.mjs`
+     * asserts every chip that HAS a ledger is reachable through here, so the
+     * next private field fails rather than joins them.
+     *
+     * @returns {Array<{name: string, kind: 'chip'|'device', refusals: object}>}
+     */
+    /**
+     * What makes a field a refusal ledger. Exported so the gate that checks
+     * every chip is reachable uses THE SAME pattern rather than a copy of it --
+     * two lists that must agree is the shape that let two ledgers go unread.
+     */
+    static LEDGER_FIELD = /refus|unsupport|unmodel|warning|invalid/i;
+
+    chipRefusals() {
+        const rows = [];
+        const push = (part, kind, feature, symptom, count) =>
+            rows.push({part, kind, feature, symptom: symptom ?? null, count: count ?? 1});
+
+        const sources = [
+            ...Object.entries(this.chips || {}).map(([n, c]) => ['chip', n, c]),
+            ...Object.entries(this.devices || {}).map(([n, d]) => ['device', n, d]),
+        ];
+        for (const [kind, name, part] of sources) {
+            if (!part || typeof part !== 'object') continue;
+
+            // A chip may shape its own report; ym3812 already does.
+            let reported = null;
+            if (typeof part.report === 'function') {
+                try { reported = part.report(); } catch { /* a report must not break a read */ }
+            }
+            for (const e of reported?.unsupported ?? []) {
+                push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count);
+            }
+
+            if (part.lastRefusal) push(name, kind, part.lastRefusal, null, part.refusals || 1);
+
+            // DERIVED, NOT ENUMERATED. The first version listed the field names
+            // it knew -- modeWarning, lastRefusal, unsupported, unmodelled --
+            // and the reachability gate immediately found two ledgers it did
+            // not reach: the 8259's `initWarning` and the board's
+            // `_refusedControls`. Adding those two by name would have fixed the
+            // instances and left the class, which is how the list got short in
+            // the first place.
+            //
+            // So: any own field whose NAME says it records a refusal, holding
+            // either a Map of features or a non-empty string. A chip that
+            // invents a new name is collected the moment it exists.
+            for (const field of Object.keys(part)) {
+                if (!I8086Machine.LEDGER_FIELD.test(field)) continue;
+                const v = part[field];
+                if (typeof v === 'string' && v) { push(name, kind, v, null, 1); continue; }
+                if (!(v instanceof Map)) continue;
+                for (const [feature, entry] of v) {
+                    // Two shapes in the wild: a bare count, and {count, symptom}.
+                    if (typeof entry === 'number') push(name, kind, String(feature), null, entry);
+                    else push(name, kind, String(feature), entry?.symptom ?? null, entry?.count ?? 1);
+                }
+            }
+        }
+        return rows;
+    }
+
     saveState() {
         const cpu = {};
         for (const k of I8086Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
