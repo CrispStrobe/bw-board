@@ -22,6 +22,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { TABLES, PROVENANCE } from '../src/i8088-cycles.js';
 
+// MOVS / CMPS / STOS / LODS / SCAS, byte and word. Only these can carry a REP
+// prefix, and so only these can legitimately run into the thousands of cycles.
+const REP_OPCODES = new Set([
+    'A4', 'A5', 'A6', 'A7', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF',
+]);
+
 test('the table covers the whole measured opcode set', () => {
     const ops = Object.keys(TABLES);
     assert.equal(ops.length, PROVENANCE.opcodes,
@@ -36,32 +42,54 @@ test('the table covers the whole measured opcode set', () => {
     }
 });
 
-test('every opcode entry has the four sub-tables the lookup needs', () => {
+test('every opcode entry has both sub-tables the recurrence needs', () => {
     for (const [op, t] of Object.entries(TABLES)) {
-        for (const k of ['a', 'd', 's', 't']) {
+        for (const k of ['t', 'q']) {
             assert.ok(t[k] && typeof t[k] === 'object', `${op} is missing sub-table ${k}`);
         }
-        // An opcode with neither an anchor nor a no-data entry can predict
-        // nothing at all, which is a generation bug rather than a sparse table.
-        assert.ok(Object.keys(t.a).length + Object.keys(t.d).length > 0,
-            `${op} has no predictable entries at all`);
+        assert.ok(Object.keys(t.t).length > 0, `${op} has no cycle entries at all`);
+        // Without a queue entry the recurrence stops dead at this opcode and
+        // every LATER prediction is computed from a stale queue -- so an empty
+        // q table is not a sparse table, it is a desync generator.
+        assert.ok(Object.keys(t.q).length > 0, `${op} has no queue entries at all`);
     }
 });
 
-test('anchor entries agree with the shape entries that complete them', () => {
-    // Every anchor key (q,len,n,m,v) needs a shape key (n,m,v) or the lookup
-    // returns undefined at run time and silently mispredicts.
+test('keys are well formed and values are plausible cycle counts', () => {
     let checked = 0;
     for (const [op, t] of Object.entries(TABLES)) {
-        for (const key of Object.keys(t.a)) {
-            const [, , n, m, v] = key.split(',');
-            const sk = `${n},${m},${v}`;
-            assert.ok(t.s[sk] !== undefined && t.t[sk] !== undefined,
-                `${op}: anchor ${key} has no matching span/tail ${sk}`);
+        for (const [key, val] of Object.entries(t.t)) {
+            const parts = key.split(',');
+            assert.equal(parts.length, 6,
+                `${op}: cycle key ${key} has ${parts.length} fields, expected 6`);
+            // The bound is DERIVED, not invented. A first attempt asserted
+            // `< 400` and failed on 1,979 entries -- all of them string
+            // opcodes, because the suite masks CX to 7 bits and a REP CMPSW
+            // at CX=127 legitimately costs ~3,800 cycles. The test was wrong,
+            // not the data.
+            //
+            // So assert the STRUCTURE instead of a loose ceiling: only the
+            // REP-capable string opcodes may exceed 400. That still catches
+            // the generator bug a wide bound would miss -- a non-string opcode
+            // emitting four-digit cycle counts.
+            const repCapable = REP_OPCODES.has(op);
+            const ceiling = repCapable ? 4096 : 400;
+            assert.ok(Number.isInteger(val) && val > 0 && val < ceiling,
+                `${op}: ${key} -> ${val} exceeds ${ceiling}`
+                + (repCapable ? '' : ' and ${op} is not a REP-capable string opcode'));
+            checked++;
+        }
+        for (const [key, val] of Object.entries(t.q)) {
+            assert.equal(key.split(',').length, 4,
+                `${op}: queue key ${key} has the wrong field count`);
+            // The 8088 prefetch queue is four bytes. A value outside 0..4 means
+            // the generator captured something that is not a queue length.
+            assert.ok(Number.isInteger(val) && val >= 0 && val <= 4,
+                `${op}: queue key ${key} -> ${val}, outside the 8088's 4-byte queue`);
             checked++;
         }
     }
-    assert.ok(checked > 10000, `only ${checked} anchor keys cross-checked`);
+    assert.ok(checked > 40000, `only ${checked} keys cross-checked`);
 });
 
 test('provenance is populated, not a placeholder', () => {

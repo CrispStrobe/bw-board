@@ -51,6 +51,7 @@ if (!existsSync(DIR)) {
 }
 
 let hit = 0, miss = 0, nokey = 0;
+let qHit = 0, qMiss = 0;
 const worst = [];
 for (const f of readdirSync(DIR).filter((x) => x.endsWith('.json.gz')).sort()) {
     const op = f.replace('.json.gz', '');
@@ -60,10 +61,10 @@ for (const f of readdirSync(DIR).filter((x) => x.endsWith('.json.gz')).sort()) {
     const lin = LINEAR[op] || null;
     let h = 0, n = 0;
     for (const x of JSON.parse(gunzipSync(readFileSync(DIR + f)).toString())) {
-        const idx = [];
+        let accesses = 0;
         for (let i = 0; i < x.cycles.length; i++) {
             const r = x.cycles[i];
-            if (r[8] === 'T1' && DATA_BUS.has(r[7])) idx.push(i);
+            if (r[8] === 'T1' && DATA_BUS.has(r[7])) accesses++;
         }
         const g = x.initial.regs;
         const q = (x.initial.queue || []).length;
@@ -73,28 +74,25 @@ for (const f of readdirSync(DIR).filter((x) => x.endsWith('.json.gz')).sort()) {
         const L = lin ? lin(g) : 0;
         const fl = ((g.ip + len) & 0xffff) === x.final.regs.ip ? 0 : 1;
         n++;
-        let pred;
-        if (!idx.length) {
-            pred = T.d[`${q},${len},${m},${fl},${v}`];
-            if (pred === undefined) { nokey++; miss++; continue; }
-            pred += L;
-        } else {
-            const a = T.a[`${q},${len},${idx.length},${m},${v}`];
-            const sk = `${idx.length},${m},${v}`;
-            const sp = T.s[sk], tl = T.t[sk];
-            if (a === undefined || sp === undefined || tl === undefined) { nokey++; miss++; continue; }
-            pred = a + sp + tl + L;
-        }
-        if (pred === x.cycles.length) { hit++; h++; } else miss++;
+        const base = T.t[`${q},${len},${accesses},${m},${fl},${v}`];
+        if (base === undefined) { nokey++; miss++; }
+        else if (base + L === x.cycles.length) { hit++; h++; }
+        else miss++;
+        // The queue recurrence, scored with the TRUE cycle count so the two
+        // failures do not mask one another.
+        const nq = T.q[`${q},${len},${x.cycles.length},${fl}`];
+        if (nq !== undefined && nq === (x.final.queue || []).length) qHit++; else qMiss++;
     }
     worst.push({ op, pct: n ? 100 * h / n : 0, n });
 }
 const total = hit + miss;
-console.log(`table: ${PROVENANCE.opcodes} opcodes, vectors @ ${PROVENANCE.vectors.slice(0, 12)}`);
-console.log(`IN-SAMPLE (fitted on these same vectors -- validates the lookup, not the model):`);
-console.log(`  ${(100 * hit / total).toFixed(2)}%  (${hit}/${total}), missing keys: ${nokey}`);
-console.log(`held-out estimate is 95.6% -- see scripts/pilot-i8088-schedule.mjs`);
-console.log('\nworst 12 opcodes:');
+const qTotal = qHit + qMiss;
+console.log(`table: ${PROVENANCE.opcodes} opcodes, generator ${PROVENANCE.generator}, vectors @ ${PROVENANCE.vectors.slice(0, 12)}`);
+console.log('IN-SAMPLE (fitted on these same vectors -- validates the lookup, not the model):');
+console.log(`  cycles     ${(100 * hit / total).toFixed(2)}%  (${hit}/${total}), missing keys: ${nokey}`);
+console.log(`  next queue ${(100 * qHit / qTotal).toFixed(2)}%  (${qHit}/${qTotal})`);
+console.log('held-out estimates are 98.00% and 99.81% -- see ROADMAP E6.8.4h');
+console.log('\nworst 12 opcodes (cycles):');
 for (const w of worst.sort((a, b) => a.pct - b.pct).slice(0, 12)) {
     console.log('  ', w.op.padEnd(7), `${w.pct.toFixed(1)}%`.padStart(7), `(n=${w.n})`);
 }

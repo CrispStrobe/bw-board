@@ -1873,6 +1873,86 @@ the licence trap in this entry and the sparse-checkout trap in E6.8.4e:
 **a check reports on what it watched, never on what you meant it to watch.**
 
 
+#### E6.8.4h The shipped format was the wrong one, and the queue loop closes (2026-09-05)
+
+Two measurements, one uncomfortable and one that changes what is buildable.
+
+**1. THE ANCHOR+SPAN+TAIL DECOMPOSITION OF E6.8.4g SHOULD NOT HAVE SHIPPED.**
+Controlled comparison, identical data and identical 70/30 splits, 902,100
+held-out vectors:
+
+```
+A) anchor + span + tail   (shipped)   95.59%   49,962 keys
+B) direct total lookup                98.00%   38,136 keys
+```
+
+**Better and 24% smaller.** The reason is plain in hindsight: the decomposition
+makes THREE modal estimates and needs all three correct; the direct form makes
+one.
+
+The decomposition was not wasted — it is what REVEALED the structure. The
+per-opcode constant tail, the datasheet EA table turning up in silicon traces,
+the categorical/linear distinction: all of that came from taking the timing
+apart, and it is why the feature set is right. **But an analysis tool and a
+shipped artefact are different jobs, and the first was mistakenly shipped as
+the second.** Regenerated as `i8088-cycles/2`.
+
+**2. THE QUEUE RECURRENCE IS GRADEABLE, WHICH I HAD WRITTEN OFF.** E6.8.4g
+closed by noting the tables are keyed on prefetch queue length while our core
+models no queue (`i8086.js` says so explicitly). Measured, that gap is not
+marginal:
+
+```
+cycle table WITH queue      98.0%
+cycle table WITHOUT queue   50.0%     <- supplying a constant
+```
+
+**48 points.** So the queue must be carried, and I had assumed carrying it was
+unverifiable without a sequential oracle we do not have.
+
+**Wrong: `final.queue` is recorded in every one of the 3,007,000 vectors.** The
+recurrence STEP is therefore directly gradeable, and it is nearly free:
+
+```
+q,len,tot,flush             99.81%    <- next queue length
+q,len,n,m,tot,flush         98.62%    <- MORE features, WORSE
+naive q-len+floor(tot/4)    33.22%    <- the obvious closed form
+```
+
+So the loop closes: **predict cycles from the queue (98.00%), predict the next
+queue from the cycles (99.81%), carry forward.** Both tables derive from the
+oracle. Cycle-accurate timing is now reachable from inside a running machine
+rather than only from the grading harness.
+
+Two details worth keeping. The **naive arithmetic model scores 33%**, so this
+had to be a table for the same reason the cycle model did. And the **richer key
+scored worse** — the fragmentation trap that cost 40 points on shift-by-CL,
+caught this time by measurement rather than by luck.
+
+**DESYNCHRONISATION IS THE REAL HAZARD**, and `src/i8088-timing.js` handles it
+explicitly. A missed prediction does not cost one instruction: the queue stops
+being known, so every LATER prediction is computed from a wrong queue and is
+**silently wrong rather than absent** — strictly worse than a miss. So
+`CycleEstimator` marks itself desynced and returns `null` until it can recover,
+and there is exactly one event after which the queue is known regardless of
+history: **a taken branch flushes it.** Not a heuristic — it is what the
+hardware does. The estimator also STARTS desynced rather than assuming an
+initial queue, because guessing there would make every early prediction quietly
+wrong.
+
+**One test bound was wrong and the test caught its author.** The new structural
+test first asserted cycle values `< 400` and failed on 1,979 entries — all
+string opcodes, because the suite masks CX to 7 bits and a `REP CMPSW` at
+CX=127 legitimately costs ~3,800 cycles. The bound was invented rather than
+derived. It now asserts the STRUCTURE — only the ten REP-capable opcodes
+(`A4`-`A7`, `AA`-`AF`) may exceed 400 — which still catches the generator bug a
+merely wider bound would miss, and is verified by planting a 1,000-cycle value
+on `NOP` and watching it go red.
+
+**The generator-version drift check fired on its own author, as designed.**
+`i8088-cycles/1` -> `/2` forced the regeneration rather than allowing a stale
+table to sit beside an edited generator.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it

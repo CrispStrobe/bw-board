@@ -80,12 +80,13 @@ function modrmIndex(bytes) {
 function tablesFor(opcode, tests) {
     const cat = CATEGORICAL[opcode] || null;
     const lin = LINEAR[opcode] || null;
-    const A = new Map(), D = new Map(), S = new Map(), T = new Map();
+    const T = new Map();
+    const Q = new Map();
     for (const x of tests) {
-        const idx = [];
+        let accesses = 0;
         for (let i = 0; i < x.cycles.length; i++) {
             const r = x.cycles[i];
-            if (r[8] === 'T1' && DATA_BUS.has(r[7])) idx.push(i);
+            if (r[8] === 'T1' && DATA_BUS.has(r[7])) accesses++;
         }
         const g = x.initial.regs;
         const q = (x.initial.queue || []).length;
@@ -94,15 +95,26 @@ function tablesFor(opcode, tests) {
         const v = cat ? cat(g) : 0;
         const L = lin ? lin(g) : 0;
         const fl = ((g.ip + len) & 0xffff) === x.final.regs.ip ? 0 : 1;
-        if (!idx.length) { push(D, `${q},${len},${m},${fl},${v}`, x.cycles.length - L); continue; }
-        const last = idx[idx.length - 1];
-        push(A, `${q},${len},${idx.length},${m},${v}`, idx[0]);
-        const span = last - idx[0], tail = x.cycles.length - last;
-        if (idx.length >= 2) { push(S, `${idx.length},${m},${v}`, span - L); push(T, `${idx.length},${m},${v}`, tail); }
-        else { push(S, `${idx.length},${m},${v}`, span); push(T, `${idx.length},${m},${v}`, tail - L); }
+        // The LINEAR term is subtracted before fitting and added back at
+        // prediction, so one key covers every CL value rather than 64 of them.
+        push(T, `${q},${len},${accesses},${m},${fl},${v}`, x.cycles.length - L);
+        // QUEUE EVOLUTION, the table that makes all of this reachable from a
+        // RUNNING emulator rather than only from this harness. The cycle table
+        // is keyed on prefetch queue length, and our core models no queue --
+        // supplying zero for it costs 48 points (98.0% -> 50.0%, measured).
+        //
+        // final.queue is recorded in every vector, so the recurrence STEP is
+        // directly gradeable: 99.81% from (queue, length, total, flush) on
+        // held-out vectors. The obvious closed form -- q - len + floor(tot/4),
+        // clamped, zeroed on a taken branch -- scores 33.22%, so this is a
+        // table for the same reason the cycle model is.
+        push(Q, `${q},${len},${x.cycles.length},${fl}`, (x.final.queue || []).length);
     }
-    const flat = (m) => { const o = {}; for (const [k, v] of modal(m)) o[k] = v; return o; };
-    return { a: flat(A), d: flat(D), s: flat(S), t: flat(T) };
+    const t = {};
+    for (const [k, v] of modal(T)) t[k] = v;
+    const q2 = {};
+    for (const [k, v] of modal(Q)) q2[k] = v;
+    return { t, q: q2 };
 }
 
 function vectorsSha() {
@@ -146,7 +158,7 @@ function render({ opcodes, count }) {
     // The failure it CANNOT see is forgetting to bump, which is why this sits
     // at the emit rather than in a config file: whoever changes the shape is
     // looking at this line.
-    const gen = 'i8088-cycles/1';
+    const gen = 'i8088-cycles/2';
     return `// GENERATED FILE -- do not edit by hand.
 // Regenerate: node scripts/gen-i8088-cycle-tables.mjs
 // Verify:     node scripts/gen-i8088-cycle-tables.mjs --check
