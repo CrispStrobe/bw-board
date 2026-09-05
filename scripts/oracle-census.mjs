@@ -199,7 +199,7 @@ export const INPUTS = [
             + 'source rather than crafted tests: all 525 assemble now, 15 refused '
             + 'earlier the same day. 191 MB, unvendored.',
         paths: ['/tmp/amey/Source Code'],
-        gates: ['test/i8086-asm.test.mjs'],
+        gates: ['test/i8086-asm.test.mjs', 'scripts/cov-i8086-opcodes.mjs'],
         obtain: 'git clone https://github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS '
             + 'and point the test CORPUS at its "Source Code" directory '
             + '(default /tmp/amey/Source Code)',

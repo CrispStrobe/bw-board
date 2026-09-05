@@ -95,20 +95,29 @@ jobs:
       - name: Which oracles are present
         run: node scripts/oracle-census.mjs
 
-      # OPCODE COVERAGE, AND IT BELONGS HERE RATHER THAN IN THE GRIND JOB.
-      # The grind job only runs when the vector suite is checked out; this gate
-      # needs no vectors, because it reasons about what the grind covers from
-      # the suite's own documented omissions (0x0F and 0x9B) and then runs the
-      # always-on corpus. Putting it beside the grind would make it silently
-      # not run on every job that lacks the suite -- an absent gate that reads
-      # as a passing one, which is the failure this repository keeps finding.
+      # OPCODE COVERAGE IS NOT RUN HERE, AND THE REASON IS A CORRECTION.
       #
-      # It emits ONE number and fails when that number is not zero: opcodes
-      # exercised by neither the corpus nor the grind. It also refuses a corpus
-      # that fired too few opcodes, rather than calling a truncated run an
-      # improvement.
-      - name: 8086 opcodes covered by neither the corpus nor the grind
-        run: npm run cov:i8086
+      # It was added to this job (2f9884b's parent) with the reasoning "this
+      # gate needs no vectors, so it belongs in the job that always runs". That
+      # was right about the vectors and wrong about everything else: the gate
+      # measures which opcodes the ALWAYS-ON TEST CORPUS fires, and several of
+      # those test files skip their heavy paths in CI because THEIR fixtures
+      # are absent -- the 191 MB Amey corpus, the MS-DOS toolchain. So 101
+      # opcodes fire here against 203 locally, and the gate's own floor check
+      # correctly refuses to read that as improved coverage:
+      #
+      #     cov: only 101 opcodes fired; the corpus looks truncated,
+      #          not the coverage improved.
+      #
+      # That refusal is the gate working. Reasoning about one input (vectors)
+      # and missing another (the corpus tests' fixtures) is the same mistake
+      # twice in one file, and the fix is not to lower the floor -- a gate that
+      # accepts a truncated corpus is worse than no gate.
+      #
+      # It runs locally and on demand as `npm run cov:i8086`, where the
+      # fixtures exist and it measured 203 opcodes / 0 uncovered. Making it
+      # STAND in CI means giving this job the fixtures the corpus needs, which
+      # is a real piece of work rather than a line here.
 
   # ---------------------------------------------------------------------
   # The 8086 vector grind, which until now ran nowhere but a developer's box.
