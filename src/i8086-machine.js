@@ -41,6 +41,35 @@ import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
 import { I8254 } from './i8254.js';
 import { I8259 } from './i8259.js';
+import { CycleEstimator } from './i8088-timing.js';
+
+/**
+ * Opcodes whose cycle-table key carries the modrm reg field: 80-83, D0-D3,
+ * F6, F7, FE, FF. Derived from the generated tables rather than asserted --
+ * those are exactly the keys that contain a '.'.
+ */
+const CYCLE_GROUP_OPCODES = new Set([
+    0x80, 0x81, 0x82, 0x83, 0xd0, 0xd1, 0xd2, 0xd3, 0xf6, 0xf7, 0xfe, 0xff,
+]);
+
+/**
+ * Every table key, precomputed. `CYCLE_KEY[op]` is the plain key and
+ * `CYCLE_GROUP_KEY[op * 8 + reg]` the extended one.
+ *
+ * Built once because the alternative -- `b.toString(16).toUpperCase()
+ * .padStart(2, '0')` -- allocates three strings on the hot path of the
+ * cycle-timing mode, once per instruction. 256 + 2048 strings is nothing to
+ * build and nothing to hold.
+ */
+const CYCLE_KEY = new Array(256);
+const CYCLE_GROUP_KEY = new Array(256 * 8);
+for (let b = 0; b < 256; b++) {
+    const hex = b.toString(16).toUpperCase().padStart(2, '0');
+    CYCLE_KEY[b] = hex;
+    if (CYCLE_GROUP_OPCODES.has(b)) {
+        for (let r = 0; r < 8; r++) CYCLE_GROUP_KEY[b * 8 + r] = `${hex}.${r}`;
+    }
+}
 import { I8251 } from './i8251.js';
 import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
@@ -492,6 +521,7 @@ export class I8086Machine {
         // moved it: the throw still happens, the cache is simply garbage that
         // is never read. The hazard is silent, which is why it is written at
         // the site rather than left in a review comment.
+        this._cycleEst = null;   // opt-in; see enableI8088CycleTiming()
         this._advList = null;
         this.cycles = 0;
         this._pinLevels = {};
@@ -1222,6 +1252,93 @@ export class I8086Machine {
     }
 
     /** Execute one instruction (or, while halted, let time pass). */
+    /**
+     * Charge instructions from the measured 8088 cycle tables instead of the
+     * core's per-instruction estimate.
+     *
+     * OPT-IN, AND IT COSTS SOMETHING. Feeding the tables needs the data-access
+     * count, which means running the CPU's bus trace on every instruction. The
+     * default path is untouched; nothing here executes unless this is called.
+     *
+     * IT REFUSES ON THE 80186. The tables were captured from an AMD D8088 and
+     * the 186 changed both instruction timings and the queue, so applying them
+     * there would be claiming coverage that was never measured. Refusing is
+     * the honest answer; a silent fallback would read as support.
+     *
+     * THE 8086 CAVEAT IS REAL AND NOT REFUSED. An 8086 has a 16-bit bus and a
+     * six-byte queue against the 8088's 8-bit bus and four-byte queue, so its
+     * true timings differ by an amount NOBODY HAS MEASURED -- there is no 8086
+     * oracle. Enabling this on an 8086 config gives 8088 timings, which are
+     * closer than the core's flat estimate and are not the same thing as
+     * correct. `cycleTimingStats()` reports coverage so the difference between
+     * "predicted" and "fell back" is never invisible.
+     */
+    enableI8088CycleTiming(on = true) {
+        if (on && this.variant === '80186') {
+            throw new Error(
+                'i8088 cycle tables do not cover the 80186: the 186 changed both '
+                + 'instruction timings and the prefetch queue, and no oracle for it '
+                + 'exists. Refusing rather than reporting 8088 numbers as 186 ones.');
+        }
+        if (!on) { this._cycleEst = null; return false; }
+        this._cycleEst = new CycleEstimator();
+        this._traceBuf = [];
+        return true;
+    }
+
+    /**
+     * Coverage of the cycle tables since they were enabled. `fellBack` is the
+     * count of instructions charged from the core's estimate instead -- an
+     * unmeasured case, or an interval where the queue was desynchronised.
+     */
+    cycleTimingStats() {
+        const e = this._cycleEst;
+        if (!e) return null;
+        const total = e.hits + e.misses;
+        return {
+            predicted: e.hits,
+            fellBack: e.misses,
+            resyncs: e.resyncs,
+            coverage: total ? e.hits / total : 0,
+            desynced: e.desynced,
+        };
+    }
+
+    /**
+     * Table key and second-byte slot for the instruction at seg:off.
+     *
+     * THE SECOND BYTE IS NOT ALWAYS A MODRM, AND THE TABLE DOES NOT CARE.
+     * The generator keys on `bytes[p+1]` -- the byte after any prefixes and
+     * the opcode -- for EVERY opcode, so for `33 C0` it is a real modrm and
+     * for `B8 00 00` it is half an immediate. That is what was measured and
+     * validated at 98%, so the run-time lookup must reproduce it exactly.
+     * Passing null for non-group opcodes instead (the first attempt here)
+     * silently missed on every one of them: 0% coverage, no error.
+     *
+     * The byte only exists when the instruction is longer than the prefixes
+     * plus the opcode; a one-byte instruction gets slot 32, the generator's
+     * "no second byte" value. Reading memory past a one-byte instruction
+     * would take the NEXT instruction's opcode, which is a different bug with
+     * the same silent shape.
+     */
+    _cycleKey(seg, off, length) {
+        let p = off, b = 0, prefixes = 0;
+        for (let i = 0; i < 8; i++) {
+            b = this.mem[I8086.phys(seg, p)] & 0xff;
+            if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e
+                || b === 0xf0 || b === 0xf1 || b === 0xf2 || b === 0xf3) {
+                p = (p + 1) & 0xffff; prefixes++;
+            } else break;
+        }
+        const hasSecond = length > prefixes + 1;
+        const second = hasSecond ? this.mem[I8086.phys(seg, (p + 1) & 0xffff)] & 0xff : -1;
+        const slot = second < 0 ? 32 : ((second >> 6) << 3) | (second & 7);
+        const key = second >= 0 && CYCLE_GROUP_OPCODES.has(b)
+            ? CYCLE_GROUP_KEY[b * 8 + ((second >> 3) & 7)]
+            : CYCLE_KEY[b];
+        return { key, slot };
+    }
+
     step() {
         // A hardware interrupt is checked before the next instruction; it
         // also wakes a HLT that was waiting for the timer or the UART.
@@ -1232,10 +1349,53 @@ export class I8086Machine {
             this._advanceChips(n);
             return n;
         }
-        const n = this.cpu.step();
+        const n = this._cycleEst === null ? this.cpu.step() : this._stepTimed();
         this.cycles += n;
         this._advanceChips(n);
         return n;
+    }
+
+    /**
+     * COLD PATH, deliberately a separate method. Keeping this out of step()
+     * leaves the default hot path exactly as it was -- the same split the
+     * core uses for its bus trace, and for the same measured reason.
+     */
+    _stepTimed() {
+        const cs = this.cpu.cs, ip = this.cpu.ip;
+        const buf = this._traceBuf;
+        buf.length = 0;
+        this.cpu.busTrace = buf;
+        const n = this.cpu.step();
+        this.cpu.busTrace = null;
+
+        let accesses = 0;
+        for (let i = 0; i < buf.length; i += 2) {
+            const k = buf[i];
+            if (k >= 1 && k <= 4) accesses++;
+        }
+        // Length is where the queue would have continued, NOT where IP ended:
+        // a taken branch moves IP somewhere unrelated to the instruction size.
+        const length = (this.cpu._seqIp - ip) & 0xffff;
+        const taken = this.cpu._tookBranch
+            || this.cpu.ip !== this.cpu._seqIp || this.cpu.cs !== this.cpu._seqCs;
+
+        let predicted = null;
+        if (length > 0 && length < 16) {
+            // Read the key from the ORIGINAL address: an instruction that
+            // wrote to its own following bytes would otherwise be keyed on
+            // what it produced rather than what executed.
+            const { key, slot } = this._cycleKey(cs, ip, length);
+            // Primitives, no options object: the allocation cost 8 microseconds
+            // per instruction against 0.8 for the lookups it wrapped.
+            predicted = this._cycleEst.step(
+                key, length, accesses, slot, taken, this.cpu.ax, this.cpu.cx);
+        } else {
+            this._cycleEst.desynced = true;
+            this._cycleEst.misses++;
+        }
+        // A null is "not measured" or "queue unknown" -- fall back to the
+        // core's own count. Never substitute a guess for an absent measurement.
+        return predicted === null ? n : predicted;
     }
 
     /** Run until machine time reaches targetMs — the adapter's verb. */

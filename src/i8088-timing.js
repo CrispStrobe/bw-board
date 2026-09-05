@@ -47,11 +47,11 @@ const absw = (v) => ((v & 0x8000) ? (-v & 0xffff) : v);
  * exist".
  */
 const CATEGORICAL = {
-    'F7.4': (r) => popcount(r.ax),
-    'F6.4': (r) => popcount(r.ax & 0xff),
-    'F7.5': (r) => popcount(absw(r.ax)) * 2 + ((r.ax >> 15) & 1),
-    'F6.5': (r) => popcount(r.ax & 0xff),
-    '99':   (r) => (r.ax >> 15) & 1,
+    'F7.4': (ax) => popcount(ax),
+    'F6.4': (ax) => popcount(ax & 0xff),
+    'F7.5': (ax) => popcount(absw(ax)) * 2 + ((ax >> 15) & 1),
+    'F6.5': (ax) => popcount(ax & 0xff),
+    '99':   (ax) => (ax >> 15) & 1,
 };
 
 /**
@@ -62,7 +62,7 @@ const CATEGORICAL = {
  * across 64 CL values. See VERIFICATION.md, "a large improvement is not
  * evidence of the right model".
  */
-const SHIFT_BY_CL = (r) => 4 * (r.cx & 0xff);
+const SHIFT_BY_CL = (ax, cx) => 4 * (cx & 0xff);
 const LINEAR = {};
 for (let ext = 0; ext < 8; ext++) {
     LINEAR[`D2.${ext}`] = SHIFT_BY_CL;
@@ -72,38 +72,50 @@ for (let ext = 0; ext < 8; ext++) {
 /** True when the tables cover this opcode key at all. */
 export const covered = (opcode) => Object.hasOwn(TABLES, opcode);
 
-/** 32 is the "no modrm byte" slot, matching the generator. */
-const modrmSlot = (b) =>
+/**
+ * The generator keys on the instruction's SECOND BYTE -- after prefixes and
+ * the opcode -- for every opcode, not only those with a real modrm. For
+ * `33 C0` that byte is a modrm; for `B8 00 00` it is half an immediate. The
+ * table encodes whichever it was, so callers pass the packed `slot` directly
+ * and 32 means "the instruction had no second byte".
+ */
+const packSlot = (b) =>
     (b === undefined || b === null) ? 32 : ((b >> 6) << 3) | (b & 7);
 
 /**
  * Cycles for one instruction, given the queue length before it.
- * Returns null when this case was never measured -- callers MUST handle that
- * rather than coerce, since a missing key means "not measured" and turning it
- * into a plausible number is how an unmeasured case becomes an asserted one.
+ *
+ * PRIMITIVE ARGUMENTS, NOT AN OPTIONS OBJECT, AND THE REASON IS MEASURED.
+ * The first version took `{queue, length, accesses, slot, taken, regs}` and
+ * CycleEstimator called it as `predictCycles(op, {...s, queue: this.queue})`.
+ * That spread cost **8,016 ns per call** against 791 ns for the two table
+ * lookups it wrapped -- ten times more than the work it was arranging. An
+ * options object allocated per instruction, with a nested `regs` object and a
+ * shape that varies by call site, is not free in a loop this hot.
+ *
+ * Returns null when this case was never measured. Callers MUST handle that
+ * rather than coerce: a missing key means "not measured", and turning it into
+ * a plausible number is how an unmeasured case becomes an asserted one.
  */
-export function predictCycles(opcode, s) {
+export function predictCycles(opcode, queue, length, accesses, slot, taken, ax, cx) {
     const T = TABLES[opcode];
-    if (!T) return null;
-    const regs = s.regs || { ax: 0, cx: 0 };
+    if (T === undefined) return null;
     const cat = CATEGORICAL[opcode];
     const lin = LINEAR[opcode];
-    const v = cat ? cat(regs) : 0;
-    const L = lin ? lin(regs) : 0;
-    const key = `${s.queue},${s.length},${s.accesses},${modrmSlot(s.modrm)},`
-        + `${s.taken ? 1 : 0},${v}`;
-    const base = T.t[key];
+    const v = cat === undefined ? 0 : cat(ax, cx);
+    const L = lin === undefined ? 0 : lin(ax, cx);
+    const base = T.t[`${queue},${length},${accesses},${slot},${taken ? 1 : 0},${v}`];
     return base === undefined ? null : base + L;
 }
 
 /**
- * Queue length after an instruction, given the length before it and the
- * cycles it actually took. Returns null when unmeasured.
+ * Queue length after an instruction, given the length before it and the cycles
+ * it actually took. Returns null when unmeasured.
  */
-export function predictNextQueue(opcode, s) {
+export function predictNextQueue(opcode, queue, length, cycles, taken) {
     const T = TABLES[opcode];
-    if (!T || !T.q) return null;
-    const n = T.q[`${s.queue},${s.length},${s.cycles},${s.taken ? 1 : 0}`];
+    if (T === undefined || T.q === undefined) return null;
+    const n = T.q[`${queue},${length},${cycles},${taken ? 1 : 0}`];
     return n === undefined ? null : n;
 }
 
@@ -111,9 +123,9 @@ export function predictNextQueue(opcode, s) {
  * Carries the prefetch queue across instructions so the cycle table can be
  * used by a running machine.
  *
- * Start state: `desynced`. The queue is genuinely unknown before the first
- * flush, and guessing an initial value would make every early prediction
- * quietly wrong. `reset()` after a jump, or the first taken branch, syncs it.
+ * Starts DESYNCED. The queue is genuinely unknown before the first flush, and
+ * assuming an initial value would make every early prediction quietly wrong.
+ * `reset()` after a jump, or the first taken branch, synchronises it.
  */
 export class CycleEstimator {
     constructor() {
@@ -133,11 +145,10 @@ export class CycleEstimator {
 
     /**
      * @returns {number|null} cycles, or null when unmeasured OR desynced.
-     * A null here is a signal to fall back to the core's own cycle count --
-     * never to substitute a guess.
+     * A null is a signal to fall back to the core's own count -- never to
+     * substitute a guess.
      */
-    step(opcode, s) {
-        const taken = !!s.taken;
+    step(opcode, length, accesses, slot, taken, ax, cx) {
         if (this.desynced) {
             // Nothing can be predicted from an unknown queue. A taken branch
             // still restores the state for NEXT time, which is the only way
@@ -146,23 +157,21 @@ export class CycleEstimator {
             if (taken) this.reset();
             return null;
         }
-        const cycles = predictCycles(opcode, { ...s, queue: this.queue });
+        const cycles = predictCycles(
+            opcode, this.queue, length, accesses, slot, taken, ax, cx);
         if (cycles === null) {
             this.misses++;
             // The queue can no longer be advanced, so it is no longer known.
             if (taken) this.reset(); else this.desynced = true;
             return null;
         }
-        const next = predictNextQueue(opcode, {
-            queue: this.queue, length: s.length, cycles, taken,
-        });
-        if (next === null) {
-            this.hits++;
-            if (taken) this.reset(); else this.desynced = true;
-            return cycles;
-        }
-        this.queue = next;
+        const next = predictNextQueue(opcode, this.queue, length, cycles, taken);
         this.hits++;
+        if (next === null) {
+            if (taken) this.reset(); else this.desynced = true;
+        } else {
+            this.queue = next;
+        }
         return cycles;
     }
 }

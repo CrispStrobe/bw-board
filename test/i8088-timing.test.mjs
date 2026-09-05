@@ -15,16 +15,17 @@ import assert from 'node:assert/strict';
 import { predictCycles, covered, PROVENANCE } from '../src/i8088-timing.js';
 
 test('an unmeasured case returns null, never a number', () => {
+    //                        opcode, queue, length, accesses, slot, taken, ax, cx
     // Unknown opcode.
-    assert.equal(predictCycles('ZZ', { queue: 4, length: 1, accesses: 0 }), null);
+    assert.equal(predictCycles('ZZ', 4, 1, 0, 32, false, 0, 0), null);
     // Known opcode, impossible state: a 9-byte instruction with 9 accesses.
-    assert.equal(predictCycles('01', { queue: 9, length: 9, accesses: 9, modrm: 0 }), null);
+    assert.equal(predictCycles('01', 9, 9, 9, 0, false, 0, 0), null);
     // Known opcode, plausible-but-absent key.
-    assert.equal(predictCycles('90', { queue: 4, length: 1, accesses: 7 }), null);
+    assert.equal(predictCycles('90', 4, 1, 7, 32, false, 0, 0), null);
 });
 
 test('a measured case returns a positive integer', () => {
-    const n = predictCycles('90', { queue: 4, length: 1, accesses: 0 });
+    const n = predictCycles('90', 4, 1, 0, 32, false, 0, 0);
     assert.ok(Number.isInteger(n) && n > 0, `NOP predicted ${n}`);
 });
 
@@ -34,14 +35,13 @@ test('covered() agrees with what predictCycles can answer', () => {
     // If covered() says yes, an unknown-opcode null must not be the reason a
     // prediction failed -- otherwise callers cannot tell "bad opcode" from
     // "state never measured", which are different bugs.
-    assert.equal(predictCycles('ZZ', { queue: 0, length: 1, accesses: 0 }), null);
+    assert.equal(predictCycles('ZZ', 0, 1, 0, 32, false, 0, 0), null);
 });
 
 test('MUL is CATEGORICAL in popcount(AX), and the feature reaches the lookup', () => {
     // table key m=25 is mod=3/rm=1; F7 /4 means reg=4, so modrm = 0b11_100_001.
-    const at = (ax) => predictCycles('F7.4', {
-        queue: 4, length: 3, accesses: 0, modrm: 0xE1, regs: { ax, cx: 0 },
-    });
+    // slot for modrm 0xE1: (3 << 3) | 1 = 25
+    const at = (ax) => predictCycles('F7.4', 4, 3, 0, 25, false, ax, 0);
     // ASSERT THE CASE IS EXERCISABLE FIRST. An earlier version of this test
     // guarded the comparison with `if (a !== null && b !== null)`, and both
     // WERE null -- so it passed while asserting nothing at all. A check that
@@ -57,9 +57,8 @@ test('MUL is CATEGORICAL in popcount(AX), and the feature reaches the lookup', (
 });
 
 test('shift by CL is LINEAR at 4 cycles per count', () => {
-    const sh = (cl) => predictCycles('D3.0', {
-        queue: 4, length: 2, accesses: 0, modrm: 0xe0, regs: { ax: 0, cx: cl },
-    });
+    // slot for modrm 0xE0: (3 << 3) | 0 = 24
+    const sh = (cl) => predictCycles('D3.0', 4, 2, 0, 24, false, 0, cl);
     const one = sh(1), five = sh(5);
     assert.notEqual(one, null, 'cl=1 is not in the table -- this test is asserting nothing');
     assert.notEqual(five, null, 'cl=5 is not in the table -- this test is asserting nothing');

@@ -1953,6 +1953,63 @@ on `NOP` and watching it go red.
 `i8088-cycles/1` -> `/2` forced the regeneration rather than allowing a stale
 table to sit beside an edited generator.
 
+#### E6.8.4i Cycle-accurate timing is wired into the machine, opt-in, ~6x (2026-09-05)
+
+`machine.enableI8088CycleTiming()`. Charges instructions from the measured
+tables instead of the core's flat per-instruction estimate.
+
+```
+default          ~330 ns/step
+cycle-accurate  ~1774 ns/step      5.3x quiet, 6.0-6.1x at load 19
+coverage         100% on a branching loop
+```
+
+**IT STARTED AT 100x AND THE CAUSE WAS NOT WHERE IT LOOKED.** Profiling rather
+than guessing:
+
+```
+TABLES[op] property access        33 ns
+T.t[key] direct lookup            27 ns
+predictCycles()                  557 ns
+predictNextQueue()               234 ns
+CycleEstimator.step()          8,016 ns   <- ten times its own contents
+```
+
+The estimator called `predictCycles(op, {...s, queue: this.queue})`. **An
+options object spread per instruction, with a nested `regs` object and a shape
+varying by call site, cost 8 microseconds against 0.8 for the two lookups it
+was arranging.** Replacing the options object with primitive arguments took
+100x to 16x; precomputing the 256 + 2048 opcode key strings (the old code ran
+`toString(16).toUpperCase().padStart()` per instruction) took 16x to ~6x.
+
+**THE FIRST INTEGRATION SCORED 0% COVERAGE AND RAISED NO ERROR**, which is the
+finding worth keeping. The generator keys on `bytes[p+1]` -- the byte after
+prefixes and opcode -- for EVERY opcode, so for `33 C0` it is a genuine modrm
+and for `B8 00 00` it is half an immediate. The run-time lookup passed `null`
+for every non-group opcode, missed on all of them, and fell back silently.
+Everything "worked": no exception, plausible cycle counts, a green suite. Only
+the coverage counter showed it. **A fallback path that is correct makes a total
+failure of the primary path invisible** -- which is exactly why
+`cycleTimingStats()` exists and why the tests assert coverage rather than
+merely that a number came back.
+
+**Three refusals, all deliberate:**
+
+1. **The 80186 throws.** The tables are from an AMD D8088; the 186 changed
+   instruction timings and the queue and has no oracle. A silent fallback
+   would read as support for a variant never measured.
+2. **A machine that never branches predicts NOTHING.** With no taken branch
+   the queue is never known, so coverage is 0% and `desynced` stays true.
+   Correct: a plausible number from an assumed queue would be worse than none.
+3. **`cycleTimingStats()` returns `null` when disabled**, not a zeroed record
+   that reads as "measured, and nothing happened".
+
+**The 8086 caveat is not refused and must not be forgotten.** An 8086 has a
+16-bit bus and a six-byte queue against the 8088's 8-bit bus and four-byte
+queue. Enabling this on an 8086 config gives 8088 timings: closer than the flat
+estimate, and not the same thing as correct. No 8086 oracle exists to say by
+how much.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
