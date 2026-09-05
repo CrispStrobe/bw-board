@@ -1573,6 +1573,27 @@ closed form (no new machinery), then build the cycle-stepped BIU for the rest.
 half — its author wrote the very suite being graded against, and it is the
 only permissive cycle-accurate 8088 in existence.
 
+#### E6.8.4l The BIU is not blocked — it is UNWANTED, on the record (2026-09-05)
+
+The BIU has been "the next step" in two roadmaps. E6.8.4j established that it
+does not lift the q=1,2,3 ceiling (the oracle samples only q=0 and q=4, so no
+amount of machinery invents the intermediate depths). What was still missing
+was a reason to build it anyway — a consumer needing intermediate queue depths.
+
+**Asked, and answered: there is none.** brickwright-lite (lego-ac), the only
+downstream consumer of this table, on 2026-09-05:
+
+> No use in lite needs q=1,2,3. The matrix's 8086 cells are sim-only and their
+> tier rests on the corpus oracles and now ELKS; the cycle table at q=0 and
+> q=4 with 98.0 percent held-out is already more than the Code tab exposes to
+> a learner. Do not start the BIU work for our sake.
+
+So the position is not "hard, deferred" but **"no demand, not started"** — a
+different claim, and a stronger reason to leave it alone. 98.0% held-out with
+queue / 50.0% without is where this stops until someone names a use. If it is
+ever started it must be for bw-board's own reasons, stated at the time; lego-ac
+asked to be told if that happens, because lite's tier note would then follow.
+
 #### E6.8.4f What a correct cycle model needs, read off MartyPC (2026-09-04)
 
 > **READ E6.8.4j BEFORE STARTING ANY OF THIS.** The five-state BIU machine

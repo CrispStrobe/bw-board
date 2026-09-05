@@ -1140,6 +1140,7 @@ export class I8086 {
         // before it returns. Same shape as the Z80's EI latch.
         this.intShadow = 0;
         let n = 0;
+        let op = 0;
 
         // Prefixes. There is no length limit on real silicon and the last
         // segment override wins, so this is a loop and not an if.
@@ -1156,8 +1157,22 @@ export class I8086 {
             // device, where executing from a window with read side effects
             // would trigger them twice. Recorded in ROADMAP E6.8.4c.
             //
-            // The peek is now silent and the CONSUMPTION of a prefix records a
-            // fetch, which is what the queue actually sees.
+            // AND THE PEEK WAS NOT SILENT ENOUGH -- corrected 2026-09-05 after
+            // lego-be bisected a duplicate read to the commit that wrote the
+            // paragraph above. `this.read()` IS the bus. The peek was silent
+            // with respect to `busTrace` and fully audible to the callback, so
+            // a NON-prefix byte was read here and read AGAIN by the `_fetch8()`
+            // that followed the loop:
+            //
+            //     26 2E 90 (ES: CS: NOP) -> reads 65536, 65537, 65538, 65538
+            //
+            // One bus access per prefixed instruction, over a memory-mapped
+            // window that is one spurious device trigger -- exactly the cost
+            // this loop was rewritten to remove, half-removed.
+            //
+            // So the loop no longer peeks at all: it CONSUMES each byte once,
+            // and when the byte turns out not to be a prefix it IS the opcode
+            // and is used as such. Every byte reaches `read()` exactly once.
             const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
             // Not a closure per instruction: allocating one on every step is
             // measurable in a loop this hot, and the trace is off by default.
@@ -1178,10 +1193,22 @@ export class I8086 {
             } else if (b === 0xf0 || b === 0xf1) {
                 eaten();
                 this.ip = (this.ip + 1) & 0xffff; n += 2;   // LOCK, and its alias
-            } else break;
+            } else {
+                // NOT A PREFIX: this byte is the opcode, already read above.
+                // Do exactly what _fetch8Traced would have done -- minus the
+                // second read, which was the defect.
+                if (this.busTrace !== null) {
+                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, I8086.phys(this.cs, this.ip));
+                    this._fsOpcodeSeen = true;
+                    this._seqIp = (this.ip + 1) & 0xffff;
+                    this._seqCs = this.cs;
+                }
+                this.ip = (this.ip + 1) & 0xffff;
+                op = b;
+                break;
+            }
         }
 
-        const op = this._fetch8();
         n += this._exec(op);
 
         // THE QUEUE FLUSH (E). The 8088 throws the prefetch queue away when

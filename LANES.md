@@ -249,6 +249,48 @@ and violated twice by the person who wrote it, the fault is in the mechanism.
 successful push in the same output block. If a commit and a test result appear
 in one command's output, the commit did not depend on the test.
 
+**13. A VERIFICATION MEASURES SOMETHING ADJACENT TO THE QUESTION UNLESS YOU
+SAY WHICH THING IT MEASURES.** Three times on 2026-09-05, across two sessions,
+a check was run whose number was real, honestly obtained, and about something
+next to what was being asked:
+
+```
+  question                        what got measured            verdict
+  does the core double-fetch?     busTrace entries             "no"      WRONG
+  do jobs cluster at the cap?     run duration                 "no"      WRONG
+  does the vendor gate hold?      the INCOMING file            "yes"     WRONG
+```
+
+Every one of these passed its own local checks. The method was sound, the
+tool worked, the output was accurate. The error is entirely in the gap between
+the quantity and the question, and **that gap is invisible from inside the
+check** — nothing about counting trace entries announces that the bus is a
+different thing from the trace.
+
+**The prefix case is the clean specimen.** `busTrace` is a MODEL of the bus;
+`read()` is the bus. A bare `this.read()` pushes no trace entry, so the peek
+was silent in the trace BY CONSTRUCTION. Verifying the fix through the trace
+could not have failed, whatever the code did. The verification was not weak,
+it was structurally incapable of detecting the defect — and it was written by
+the same commit that introduced it, which is how it crossed a pin before a
+downstream test caught it.
+
+**The rule:** before a check counts as verification, state the substitution
+out loud — "I am measuring X to answer about Y" — and then ask what would make
+X and Y disagree. If X is a model, a proxy, a log, a cache, or a summary of Y,
+measure Y. If you cannot measure Y, say the result is about X.
+
+**The tell:** you are about to report a NEGATIVE result ("no duplicate", "no
+clustering", "no leak") from an instrument built by the same work that would
+have caused the positive. A negative from a proxy is the weakest evidence
+there is, and it is the one we keep believing.
+
+**Corollary for tests:** a test guarding a proxy-invisible property must not
+use the proxy. `test/i8086-prefix-fetch.test.mjs` deliberately does not look
+at `busTrace` and counts `read()` invocations instead, and its injection reach
+was verified by running it against the unfixed core (3 of 4 fail, with the
+addresses printed) rather than assumed from its passing.
+
 ## OPERATIONAL — archiving to /mnt/storage, 2026-09-05
 
 **THE CIFS SHARE CANNOT STORE SYMLINKS, AND A PLAIN COPY DROPS THEM SILENTLY.**
