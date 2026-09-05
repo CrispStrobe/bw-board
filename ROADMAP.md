@@ -2596,10 +2596,25 @@ dropped frame with a flag is something it can see.
    should use **320h** for the card. Worth a machine-level check that two chips
    do not claim overlapping blocks — it is cheap and it is exactly the class of
    silent wrongness this tier keeps finding.
-4. **v86 has an NE2000 and we have not diffed against it.** It is already
-   obtained and running as an oracle for the CPU; pointing it at this card
-   would be tier-2a evidence for a chip that currently has only the datasheet
-   behind it.
+4. **v86 has an NE2000 and we CANNOT currently diff against it — an absence,
+   not a skip.** `V86_ORACLE_DIR` is unset and the libv86/wasm binaries are
+   not on this box, so `scripts/oracle-v86.mjs` has nothing to run. **This
+   card therefore rests on the datasheet and nothing else** — tier 3 by the
+   VERIFICATION.md ladder, where the 8254 and 16550 are tier 2a because a
+   second implementation agreed with them.
+
+   Recorded this way round on purpose. "We have not got to it yet" and "the
+   oracle is not installed" read the same in a plan and are different in a
+   review: the second is a dependency somebody can satisfy in ten minutes,
+   and the first invites the reader to assume it was considered and deferred.
+   `oracle-census.mjs` already lists v86 with `obtain:` instructions; running
+   them is all that stands between this chip and a second opinion.
+
+5. **NO PORT-CONFLICT CHECK EXISTED, AND NOW ONE DOES.** Two chips claiming
+   one I/O window used to resolve silently to whichever was declared last —
+   a board that ran and read the wrong device. `I8086Machine` now refuses,
+   naming both chips and both decoded windows. Checked per bus, since an I/O
+   window and a memory window at the same number are different places.
 
 #### Three bugs found by running it, two of them in the TEST
 
