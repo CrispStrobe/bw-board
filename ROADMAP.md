@@ -1961,7 +1961,10 @@ tables instead of the core's flat per-instruction estimate.
 ```
 default          ~330 ns/step
 cycle-accurate  ~1774 ns/step      5.3x quiet, 6.0-6.1x at load 19
-coverage         100% on a branching loop
+coverage         100% on a branching loop   <- SEE E6.8.4j: this figure is
+                                               a property of that workload,
+                                               not of the tables. A real DOS
+                                               boot gives 54.39%.
 ```
 
 **IT STARTED AT 100x AND THE CAUSE WAS NOT WHERE IT LOOKED.** Profiling rather
@@ -2009,6 +2012,74 @@ merely that a number came back.
 queue. Enabling this on an 8086 config gives 8088 timings: closer than the flat
 estimate, and not the same thing as correct. No 8086 oracle exists to say by
 how much.
+
+#### E6.8.4j The oracle samples only TWO queue states, and that caps the whole approach (2026-09-05)
+
+**Correcting E6.8.4i, which reported "100% coverage" from a workload that could
+not have shown otherwise.**
+
+E6.8.4i measured coverage on a five-instruction loop and got 100%. On a **real
+MS-DOS 2.0 boot** — 400,000 instructions, string moves, far calls, disk through
+the service layer, a timer interrupt throughout — it is **54.39%**.
+
+The toy loop sat at **queue = 0 for all 600 steps measured**. It never left the
+single state it happened to start in, so its coverage figure was a property of
+the workload rather than of the tables. *A score without its split is not a
+claim*, applied to my own new feature and caught only because the real workload
+was run.
+
+**THE CAUSE IS IN THE ORACLE, NOT THE CODE, AND IT IS A HARD LIMIT.**
+
+```
+queue values the cycle table accepts as INPUT:   q=0 (19,340 keys)   q=4 (19,350 keys)
+queue values the recurrence PRODUCES as OUTPUT:  0, 1, 2, 3
+```
+
+The SingleStepTests 8088 suite states it plainly: *"Half of provided
+instructions will execute from a full instruction queue."* Half at empty, half
+at full, and **nothing in between**. So the queue recurrence — 99.81% accurate
+at predicting the next queue length — produces `1`, `2` and `3`, for which
+**no cycle entry exists at all**. Most instructions output `q=3`, and the very
+next lookup misses.
+
+**So the two tables have inconsistent domains: the recurrence's outputs are not
+valid inputs to the cycle table.** That is not a bug in either table. Each is
+accurate over what was measured; the composition is what steps outside it.
+
+**THE DESYNC CASCADE MULTIPLIES IT 265x:**
+
+```
+primary misses     685    <- the table genuinely had no entry
+desync misses  181,739    <- consequence: the queue is unknown until the next taken branch
+amplification    265.3x
+```
+
+**685 unmeasured instructions cost 181,739.** One miss makes the queue unknown,
+and recovery needs a taken branch — on this workload, 265 instructions later on
+average. The tables cover **99.83%** of instructions actually looked up; the
+coverage number is almost entirely an amplification artefact, and reporting a
+single `fellBack` total hid which of the two problems this was. `cycleTimingStats()`
+now splits them.
+
+**WHAT WOULD ACTUALLY RAISE IT, and what would not:**
+
+- **A BIU state machine (E6.8.4f) would NOT be enough.** It computes the queue
+  directly rather than by table, which removes the recurrence — but the cycle
+  table still has no entries at `q=1,2,3`, so the lookup misses just the same.
+  This is worth stating because the five-state model has been the assumed next
+  step twice, and it does not clear this.
+- **An oracle sampling intermediate queue states would.** `dbalsom/martypc` is
+  MIT and generates the suite; extending it to emit vectors at every queue depth
+  is the actual unblock, and it is a real project rather than a refinement.
+- **Snapping `q=1,2,3` to the nearest measured state would not be an answer.**
+  It converts an absent measurement into a plausible number, which is the exact
+  thing the null contract exists to prevent. Refused.
+
+**Current behaviour is honest and stays:** an unmeasured state falls back to the
+core's own cycle count, `cycleTimingStats()` reports true coverage split by
+cause, and nothing guesses. On a real boot that means **54% of instructions
+timed from silicon measurements and 46% from the core's estimate**, with the
+tables charging 1.148x the core's total cycles.
 
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 

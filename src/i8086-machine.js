@@ -1298,6 +1298,13 @@ export class I8086Machine {
         return {
             predicted: e.hits,
             fellBack: e.misses,
+            // Split, because the two need different fixes: a primary miss is
+            // an opcode or state the tables never measured, while a desync
+            // miss is the CONSEQUENCE of an earlier one -- a single unmeasured
+            // instruction costs every instruction after it until the next
+            // taken branch. A combined total hides which problem you have.
+            primaryMisses: e.primaryMisses,
+            desyncMisses: e.desyncMisses,
             resyncs: e.resyncs,
             coverage: total ? e.hits / total : 0,
             desynced: e.desynced,
@@ -1392,6 +1399,7 @@ export class I8086Machine {
         } else {
             this._cycleEst.desynced = true;
             this._cycleEst.misses++;
+            this._cycleEst.primaryMisses++;
         }
         // A null is "not measured" or "queue unknown" -- fall back to the
         // core's own count. Never substitute a guess for an absent measurement.

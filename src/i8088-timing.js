@@ -134,6 +134,15 @@ export class CycleEstimator {
         this.hits = 0;
         this.misses = 0;
         this.resyncs = 0;
+        // A miss comes in two kinds and they need different fixes, so they are
+        // counted separately. PRIMARY: the table had no entry for this
+        // instruction. DESYNC: the queue was unknown, so nothing could be
+        // looked up at all -- these are CONSEQUENCES of an earlier primary
+        // miss, and one primary miss produces a run of them until the next
+        // taken branch. Reporting a single "misses" total conflates a coverage
+        // problem with an amplification problem.
+        this.primaryMisses = 0;
+        this.desyncMisses = 0;
     }
 
     /** A taken branch flushes the queue, so the state is known again. */
@@ -154,6 +163,7 @@ export class CycleEstimator {
             // still restores the state for NEXT time, which is the only way
             // out short of an explicit reset().
             this.misses++;
+            this.desyncMisses++;
             if (taken) this.reset();
             return null;
         }
@@ -161,6 +171,7 @@ export class CycleEstimator {
             opcode, this.queue, length, accesses, slot, taken, ax, cx);
         if (cycles === null) {
             this.misses++;
+            this.primaryMisses++;
             // The queue can no longer be advanced, so it is no longer known.
             if (taken) this.reset(); else this.desynced = true;
             return null;
