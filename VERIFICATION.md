@@ -718,7 +718,18 @@ environment-dependent failures was producing them, and reporting its own defect
 in the vocabulary of the defect it was hunting. Fixed by symlinking every
 `node_modules` (bw-board `463590f`); the false positives cleared.
 
-**Two habits follow, and the second is the one that generalises:**
+**THE TELL THAT SEPARATES THE TWO KINDS, and it costs nothing** (lego-47,
+2026-09-04, sharper than the re-run habit below):
+
+> **A missing fixture fails the green case and the red mutation case
+> together; a real change moves one.**
+
+Re-running only tells you a failure was unstable. Mutating tells you which
+*kind* it was, in one shot: break the thing the test is supposed to catch and
+see whether the result changes. If red and green give the same failure, the
+test never reached your code and the failure is environmental.
+
+**Two further habits, and the second is the one that generalises:**
 
 1. **Re-run a failure before believing its diagnosis.** That alone separated the
    real case from the false ones here, and separately caught a 1000 ms
