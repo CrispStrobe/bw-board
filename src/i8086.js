@@ -873,11 +873,25 @@ export class I8086 {
      * suite does not exercise interrupts, so there is nothing here it can
      * see.
      */
+    /**
+     * @returns {number} iterations actually performed — 1 without a REP prefix,
+     * 0 when REP was entered with CX already zero.
+     *
+     * THE COUNT IS RETURNED BECAUSE THE CALLERS MUST CHARGE FOR IT. Until
+     * 2026-09-05 every string opcode ran its whole REP loop here and then
+     * returned a FLAT cycle count: `REP MOVSW` with CX=127 performed 127 copies
+     * and charged 18 cycles. Measured against the 8088 vectors, that one bug
+     * produced 69% of the core's total cycle error while touching 4.3% of
+     * instructions -- mean |error| 19.43 cycles falls to 5.99 with these ten
+     * opcodes excluded. See _repCost().
+     */
     _repeat(fn, checksZF) {
-        if (!this._rep) { fn(); return; }
+        if (!this._rep) { fn(); return 1; }
         const repe = this._rep === 0xf3;
+        let iters = 0;
         while (this.cx !== 0) {
             fn();
+            iters++;
             this.cx = (this.cx - 1) & 0xffff;
             if (checksZF) {
                 const z = (this.flags & ZF) !== 0;
@@ -886,9 +900,37 @@ export class I8086 {
             if (this.cx !== 0 && this.canTakeInterrupt() && this.intPending()) {
                 this.ip = this._repIp & 0xffff;   // rewind to the REP, not past it
                 this.repInterrupted = (this.repInterrupted || 0) + 1;
-                return;
+                return iters;
             }
         }
+        return iters;
+    }
+
+    /**
+     * Cycles for a string instruction that ran `iters` times.
+     *
+     * `single` is the unrepeated cost (8086 datasheet, unchanged from before);
+     * `per` is the published 8086 REP per-iteration cost, and REP adds a fixed
+     * 9-cycle setup.
+     *
+     * EVIDENCE TIER 2a — independent-source agreement, the strongest kind
+     * available here. The per-iteration figures were FITTED from the 8088
+     * vectors (cycles = base + per * iterations, two widely separated points)
+     * and then compared with the datasheet:
+     *
+     *     measured on 8088   MOVSB 17  CMPSB 22  STOSB 10  LODSB 13  SCASB 15
+     *     8086 datasheet     MOVSB 17  CMPSB 22  STOSB 10  LODSB 13  SCASB 15
+     *
+     * Every byte form agrees exactly. Every WORD form measured higher --
+     * MOVSW 25, CMPSW 30, STOSW 14, LODSW 17, SCASW 19 -- and each is its
+     * 8086 value plus 4 cycles per EXTRA BUS CYCLE: +8 where the instruction
+     * touches two memory operands, +4 where it touches one. That is precisely
+     * the documented 8088 8-bit-bus penalty, reproduced from measurement
+     * rather than assumed, which is why this core (an 8086) uses the 8086
+     * column and an 8088 would not.
+     */
+    _repCost(iters, single, per) {
+        return this._rep ? 9 + per * iters : single;
     }
 
     // ---- the 80186 additions --------------------------------------------
@@ -971,8 +1013,8 @@ export class I8086 {
             // INS / OUTS. INS writes ES:DI and takes NO segment override --
             // the destination of a string primitive is always ES:DI, exactly
             // as with STOS and MOVS. OUTS reads DS:SI and DOES honour one.
-            case 0x6c: case 0x6d: this._repeat(() => this._ins(op & 1), false); return 14;
-            case 0x6e: case 0x6f: this._repeat(() => this._outs(op & 1), false); return 14;
+            case 0x6c: case 0x6d: return this._repCost(this._repeat(() => this._ins(op & 1), false), 14, 8);
+            case 0x6e: case 0x6f: return this._repCost(this._repeat(() => this._outs(op & 1), false), 14, 8);
 
             // Shift/rotate by an immediate count. The 8086 could only shift
             // by 1 or by CL; this is the same shift unit with a third count
@@ -1316,13 +1358,13 @@ export class I8086 {
             case 0xa1: { const a = this._fetch16(); this.ax = this._rd16(this._srcSeg(), a); return 10; }
             case 0xa2: { const a = this._fetch16(); this._wr8(this._srcSeg(), a, this.al); return 10; }
             case 0xa3: { const a = this._fetch16(); this._wr16(this._srcSeg(), a, this.ax); return 10; }
-            case 0xa4: case 0xa5: this._repeat(() => this._movs(op & 1), false); return 18;
-            case 0xa6: case 0xa7: this._repeat(() => this._cmps(op & 1), true); return 22;
+            case 0xa4: case 0xa5: return this._repCost(this._repeat(() => this._movs(op & 1), false), 18, 17);
+            case 0xa6: case 0xa7: return this._repCost(this._repeat(() => this._cmps(op & 1), true), 22, 22);
             case 0xa8: this._logic(this.al & this._fetch8(), 0); return 4;
             case 0xa9: this._logic(this.ax & this._fetch16(), 1); return 4;
-            case 0xaa: case 0xab: this._repeat(() => this._stos(op & 1), false); return 11;
-            case 0xac: case 0xad: this._repeat(() => this._lods(op & 1), false); return 12;
-            case 0xae: case 0xaf: this._repeat(() => this._scas(op & 1), true); return 15;
+            case 0xaa: case 0xab: return this._repCost(this._repeat(() => this._stos(op & 1), false), 11, 10);
+            case 0xac: case 0xad: return this._repCost(this._repeat(() => this._lods(op & 1), false), 12, 13);
+            case 0xae: case 0xaf: return this._repCost(this._repeat(() => this._scas(op & 1), true), 15, 15);
 
             // ---- 0xb0-0xbf: MOV register, immediate ----------------------
             case 0xb0: case 0xb1: case 0xb2: case 0xb3:

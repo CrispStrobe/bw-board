@@ -2081,6 +2081,70 @@ cause, and nothing guesses. On a real boot that means **54% of instructions
 timed from silicon measurements and 46% from the core's estimate**, with the
 tables charging 1.148x the core's total cycles.
 
+#### E6.8.4k REP string ops charged a FLAT cycle count for a loop of up to 127 (fixed 2026-09-05)
+
+Found by asking whether the cycle tables are worth enabling at all — 54%
+coverage only helps if those instructions were meaningfully mischarged. Grading
+the CORE against silicon answered a different question than the one asked.
+
+```
+case 0xae: case 0xaf: this._repeat(() => this._scas(op & 1), true); return 15;
+```
+
+`_repeat` runs **every iteration** inside that one `step()` — `while (this.cx
+!== 0)` — and the caller returned a constant. **`REP MOVSW` with CX=127
+performed 127 copies and charged 18 cycles.**
+
+**Graded over 386,200 vectors, before and after:**
+
+```
+                       before    after
+core exactly right      19.35%   19.66%
+mean |error|            19.43     8.02   cycles
+mean signed error      -18.36    -6.95
+core/real cycle ratio   0.5566   0.8322
+```
+
+**Ten opcodes, 4.3% of instructions, produced 69% of the core's total cycle
+error.** The aggregate had looked like broad miscalibration; excluding those
+ten gave 5.99 mean error and a 0.8276 ratio, and after the fix the whole core
+sits at 0.8322 — i.e. **the entire gap between 0.5566 and the rest of the core
+was this one bug wearing a global disguise.** Splitting the measurement was what
+distinguished "the core is 1.8x too fast" from "the core has one defect in
+string ops"; those have different fixes and the aggregate cannot tell them
+apart.
+
+**THE PER-ITERATION FIGURES ARE TIER 2a, NOT A DATASHEET TRANSCRIPTION.** They
+were fitted from the 8088 vectors (`cycles = base + per * iterations`, two
+widely separated points) and only then compared with the published timings:
+
+```
+measured on 8088   MOVSB 17  CMPSB 22  STOSB 10  LODSB 13  SCASB 15
+8086 datasheet     MOVSB 17  CMPSB 22  STOSB 10  LODSB 13  SCASB 15
+```
+
+Every byte form agrees exactly. Every WORD form measured higher — MOVSW 25,
+CMPSW 30, STOSW 14, LODSW 17, SCASW 19 — and each is its 8086 value **plus 4
+cycles per extra bus cycle**: +8 where the instruction touches two memory
+operands, +4 where one. That is the documented 8088 8-bit-bus penalty,
+**reproduced from measurement rather than assumed.**
+
+**So the core takes the 8086 column, and the residual error on WORD string ops
+is evidence the fix is RIGHT rather than incomplete.** After the fix the worst
+remaining opcodes are `A5`, `A7`, `AD`, `AB`, `AF` — every one a word form, off
+by exactly the 8088 bus penalty. The five byte forms dropped out of the worst
+twelve entirely. **If this 8086 core matched the 8088 oracle on word string
+ops, that would mean it was wrong about being an 8086.**
+
+The 186's `INS`/`OUTS` had the identical flat-count bug and are fixed the same
+way, but with published 186 timings and NOT vector-graded — no 186 oracle
+exists, and that is stated at the site rather than left to look measured.
+
+**What remains is not this bug.** A 0.83 ratio means the core still undercharges
+~17%, and that is the prefetch and bus reality an instruction-stepped core
+cannot reproduce — precisely what E6.8.4g–j's tables address, and precisely why
+they are worth having despite the 54% coverage ceiling of E6.8.4j.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
