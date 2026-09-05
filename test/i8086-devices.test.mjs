@@ -19,6 +19,126 @@ function machine(config, hooks) {
     return new I8086Machine(config, hooks);
 }
 
+function interruptMachine(hooks = {}) {
+    const m = machine({
+        clockHz: 5_000_000,
+        regions: [{kind: 'ram', start: 0, end: 0xfffff}],
+        chips: [{kind: 'pic', name: 'pic1', at: 0x20}],
+    }, hooks);
+    m.cpu.cs = 0;
+    m.cpu.ip = 0x100;
+    m.cpu.ss = 0;
+    m.cpu.sp = 0x800;
+    m.mem.set([0x90, 0x90, 0x90], 0x100);
+    // NMI -> 0000:0200, PIC IRQ0 -> 0000:0300; both handlers begin NOP.
+    m.mem[0x08] = 0x00; m.mem[0x09] = 0x02;
+    m.mem[0x20] = 0x00; m.mem[0x21] = 0x03;
+    m.mem[0x200] = 0x90;
+    m.mem[0x300] = 0x90;
+    m._out(0x20, 0x13);            // ICW1: single, ICW4 follows
+    m._out(0x21, 0x08);            // ICW2: vector base 8
+    m._out(0x21, 0x01);            // ICW4: 8086 mode
+    m._out(0x21, 0xfe);            // unmask IRQ0 only
+    return m;
+}
+
+test('an idle boundary skips interrupt arbitration with or without an inactive PIC', () => {
+    for (const m of [
+        machine({clockHz: 5_000_000,
+            regions: [{kind: 'ram', start: 0, end: 0xfffff}], chips: []}),
+        interruptMachine(),
+    ]) {
+        m.cpu.cs = 0; m.cpu.ip = 0x100; m.mem[0x100] = 0x90;
+        const service = m._serviceInterrupts.bind(m);
+        let calls = 0;
+        m._serviceInterrupts = () => { calls++; return service(); };
+        m.step();
+        assert.equal(calls, 0);
+        assert.equal(m.cpu.ip, 0x101);
+    }
+});
+
+test('a pending NMI ignores IF and is serviced before the handler instruction', () => {
+    const order = [];
+    const m = interruptMachine({onInterrupt: event => order.push(event.source)});
+    const read = m.cpu.read;
+    m.cpu.read = address => {
+        if (address === 0x200) order.push('handler-fetch');
+        return read(address);
+    };
+    m.cpu.flags &= ~0x0200;
+    m.nmi();
+    m.step();
+    assert.equal(m._nmiPending, false);
+    assert.equal(m.cpu.ip, 0x201, 'the first vector-2 instruction retired in the same step');
+    assert.deepEqual(order, ['nmi', 'handler-fetch'],
+        'the accepted-interrupt hook precedes execution in its handler');
+});
+
+test('an active PIC waits for IF, then acknowledges exactly once before executing its handler', () => {
+    const m = interruptMachine();
+    const service = m._serviceInterrupts.bind(m);
+    let serviceCalls = 0;
+    m._serviceInterrupts = () => { serviceCalls++; return service(); };
+    const acknowledge = m.chips.pic1.acknowledge.bind(m.chips.pic1);
+    let acknowledgements = 0;
+    m.chips.pic1.acknowledge = () => { acknowledgements++; return acknowledge(); };
+    m.chips.pic1.setIRQ(0, 1);
+    m.cpu.flags &= ~0x0200;
+
+    m.step();
+    assert.equal(m.cpu.ip, 0x101, 'IF-clear execution continues outside the handler');
+    assert.equal(serviceCalls, 1, 'the active line still reaches the CPU eligibility authority');
+    assert.equal(acknowledgements, 0);
+    assert.ok(m.chips.pic1.intActive, 'the refused request remains pending');
+
+    m.cpu.flags |= 0x0200;
+    m.step();
+    assert.equal(serviceCalls, 2);
+    assert.equal(acknowledgements, 1);
+    assert.equal(m.cpu.ip, 0x301, 'IRQ0 was acknowledged and its first instruction retired');
+    assert.equal(m.chips.pic1.irr & 1, 0, 'acknowledge removed IRQ0 from IRR');
+    assert.equal(m.chips.pic1.isr & 1, 1, 'IRQ0 entered the in-service register');
+});
+
+test('a blocked halted CPU advances time, while an eligible IRQ wakes it at the same boundary', () => {
+    const m = interruptMachine();
+    m.cpu.halted = true;
+    m.cpu.flags &= ~0x0200;
+    m.chips.pic1.setIRQ(0, 1);
+    const before = m.cycles;
+    m.step();
+    assert.equal(m.cpu.halted, true);
+    assert.equal(m.cpu.ip, 0x100);
+    assert.ok(m.cycles > before, 'an IF-blocked HLT still advances machine time');
+    assert.ok(m.chips.pic1.intActive);
+
+    m.cpu.flags |= 0x0200;
+    m.step();
+    assert.equal(m.cpu.halted, false, 'interrupt entry wakes HLT before the halt-time path');
+    assert.equal(m.cpu.ip, 0x301);
+    assert.equal(m.chips.pic1.irr & 1, 0);
+});
+
+test('simultaneous NMI and PIC boundaries preserve NMI priority and the PIC request', () => {
+    const sources = [];
+    const m = interruptMachine({onInterrupt: event => sources.push(event.source)});
+    m.cpu.flags |= 0x0200;
+    m.chips.pic1.setIRQ(0, 1);
+    m.nmi();
+
+    m.step();
+    assert.equal(m.cpu.ip, 0x201, 'NMI handler executes first');
+    assert.deepEqual(sources, ['nmi']);
+    assert.ok(m.chips.pic1.intActive, 'the simultaneous PIC request was not acknowledged or lost');
+    assert.equal(m.chips.pic1.isr & 1, 0);
+
+    m.cpu.flags |= 0x0200;         // stand in for the NMI handler's IRET
+    m.step();
+    assert.equal(m.cpu.ip, 0x301);
+    assert.deepEqual(sources, ['nmi', 'irq']);
+});
+
 // ---------------------------------------------------------------------------
 test('the PIT, PIC and USART register and answer on the port bus', () => {
     const out = [];

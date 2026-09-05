@@ -1175,7 +1175,11 @@ export class I8086Machine {
     step() {
         // A hardware interrupt is checked before the next instruction; it
         // also wakes a HLT that was waiting for the timer or the UART.
-        this._serviceInterrupts();
+        // IF and the segment-load shadow stay inside _serviceInterrupts(): an
+        // active PIC line is real pending work even when the CPU refuses it.
+        if (this._nmiPending || (this._pic && this._pic.intActive)) {
+            this._serviceInterrupts();
+        }
         if (this.cpu.halted) {
             const n = this._wakeHorizon();
             this.cycles += n;
