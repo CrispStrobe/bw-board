@@ -23,3 +23,15 @@ build/
 # next `git add -A` in a shared tree would sweep it in -- which has already
 # happened once here with someone else's in-flight work.
 rom/*.bin
+
+# Generated census snapshots. `npm run census:json` writes here, but the
+# snapshot's HOME IS brickwright-lite, which commits it as
+# docs/generated/oracle-census.json and derives its language-device matrix
+# from it. bw-board owns the GENERATOR; lite owns the artefact.
+#
+# Committing it here too would create a second copy that drifts the moment
+# either repo moves, and the whole arrangement exists to avoid a second set of
+# semantics. Left untracked-and-unignored it is worse still: a generated file
+# nobody declared, which is the shape that lets an untracked artefact make a
+# check pass.
+docs/generated/
