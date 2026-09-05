@@ -173,6 +173,40 @@ test('RED: right port, WRONG sequence — the gate diverges at the exact edge, n
     assert.match(r.reason, /diverge at edge 2/, 'the gate names the exact edge the walk went wrong');
 });
 
+test('an ABSENT board cannot fake the walk — FFh open bus is a constant, not a sequence', () => {
+    // lego-be's rule (test/i8086-absent-hardware.test.mjs): a feature that asks
+    // for hardware must probe for a state the ABSENT hardware cannot produce.
+    // Two Ethernet examples once printed success on a board with no card at all,
+    // because open bus reads FFh and FFh has every status bit set. This gate
+    // observes the LED WALK, not a termination string, and the walk is exactly
+    // such a state — an absent 8255 fails it two different ways, neither a MATCH.
+    const scripted = (vals, dir = 0xff) => () => {
+        let i = 0, out = 0;
+        return { step() { out = vals[Math.min(i, vals.length - 1)]; i += 1; }, get out() { return out; }, get dir() { return dir; } };
+    };
+    const readBus = (m) => ({ out: m.out, dir: m.dir });
+    const walk = {
+        build: scripted([0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80]),
+        read: (m) => ({ out: m.out, dir: 0xff }),
+        steps: 8,
+    };
+
+    // (a) The 8255 is gone: every read is open-bus FFh, dir included. FFh is a
+    // CONSTANT — it cannot be the walking sequence, so the gate diverges at the
+    // very first edge (0x01 expected, 0xFF seen) rather than ever matching.
+    const openBus = reseatGate(walk, { build: scripted([0xff]), read: readBus, steps: 8 });
+    assert.equal(openBus.verdict, 'DIFFER', 'open-bus FFh must not pass as the walk');
+    assert.match(openBus.reason, /diverge at edge 0/, 'a constant diverges at the first edge, it does not walk');
+
+    // (b) The port was never configured as an output: dir stays 0 (all inputs),
+    // so the observable never goes live and NO edges are recorded — the settle
+    // logic ties the walk to the direction write, which an absent board never
+    // performs. Silence, not a walk.
+    const unconfigured = reseatGate(walk, { build: scripted([0x00], 0x00), read: readBus, steps: 8 });
+    assert.equal(unconfigured.verdict, 'DIFFER', 'an unconfigured port produces no walk');
+    assert.match(unconfigured.reason, /NO edges/, 'dir=0 records nothing — the port is not an output');
+});
+
 test('BEHAVIOURAL RED: right LEDs, wrong RATE — shape stays GREEN, the timing gate goes RED', () => {
     // The wrong-port case fails on WIRING. This is the case the gate had never
     // been shown to catch: a reseat that lights the RIGHT LEDs in the RIGHT
