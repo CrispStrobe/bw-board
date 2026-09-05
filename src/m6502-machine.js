@@ -169,6 +169,10 @@ export class M6502Machine {
         this.mem = new Uint8Array(65536);
         /** @type {Record<string, W65C22|W65C51>} */
         this.chips = {};
+        // Built on first use, NOT here: config validation later in this
+        // constructor can throw, and a schedule built now would describe a
+        // board that is about to be rejected. See i8086-machine.js for the
+        // full note; the hazard is silent, so it is recorded at both sites.
         this._advList = null;   // hot-loop cache; see _buildAdvanceList
         this._decode = [];
         for (const r of config.regions) {

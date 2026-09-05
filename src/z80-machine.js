@@ -70,6 +70,10 @@ export class Z80Machine {
         this.cycles = 0;
         /** @type {Record<string, MC6850>} */
         this.chips = {};
+        // Built on first use, NOT here: config validation later in this
+        // constructor can throw, and a schedule built now would describe a
+        // board that is about to be rejected. See i8086-machine.js for the
+        // full note; the hazard is silent, so it is recorded at both sites.
         this._advList = null;   // hot-loop caches; see _buildHotLists
         this._irqList = null;
         this._portMap = new Map();
