@@ -31,7 +31,7 @@
   "scripts": {
     "test": "node --test test/*.test.js test/*.test.mjs test/74ls193.test.mjs test/74hc75.test.mjs test/pcf8574-address.test.mjs test/bmp280-address.test.mjs test/stepper-bipolar.test.mjs test/gas-sensor-module.test.mjs test/lcapy-oracle.test.mjs test/rail-duplicate-symbols.test.mjs test/dangling-terminal.test.mjs",
     "cov:i8086": "node scripts/cov-i8086-opcodes.mjs",
-    "census:json": "node scripts/oracle-census.mjs --snapshot docs/generated/oracle-census.json"
+    "census:json": "node -e \"const s=require('fs').readFileSync('scripts/oracle-census.mjs','utf8');if(!s.includes('--snapshot')){console.error('census:json REFUSED: oracle-census.mjs in this tree has no --snapshot flag. It was added in a9fea52; a checkout pinned before that cannot produce a snapshot. Pin bw-board >= a9fea52.');process.exit(2)}\" && node scripts/oracle-census.mjs --snapshot docs/generated/oracle-census.json"
   },
   "license": "MIT",
   "author": "CrispStrobe <cze+github@mailbox.org>",
