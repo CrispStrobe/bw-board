@@ -347,8 +347,23 @@ const required = (argv.find((a) => a.startsWith('--require'))?.split('=')[1]
 const rows = INPUTS.map((i) => ({ ...i, ...resolve(i) }));
 
 if (argv.includes('--json')) {
-    console.log(JSON.stringify(rows.map(({ id, kind, present, via, gates }) =>
-        ({ id, kind, present, via, gates })), null, 2));
+    // `ci` AND `what` ARE EMITTED BECAUSE `present` ALONE INVERTS THE ANSWER
+    // ANY CONSUMER ACTUALLY WANTS.
+    //
+    // `present` means "on the box running this command". A consumer asking
+    // "is this claim STANDING?" means "does CI have it", and the two disagree
+    // in both directions:
+    //
+    //   nasm               present=false, ci=yes  -> standing   (installed by ci.yml)
+    //   retro-corpus-8086  present=true,  ci=no   -> recorded   (191 MB, unvendored)
+    //   ehbasic-rom        present=true,  ci=no   -> recorded   (NC licence, permanent)
+    //
+    // Deriving standing-versus-recorded from `present` gets all three wrong.
+    // Added when the language-device matrix lane was about to do exactly that,
+    // in good faith, because `present` is the only field that looked relevant.
+    // A field's NAME is not its meaning, and an exported shape is a contract.
+    console.log(JSON.stringify(rows.map(({ id, kind, present, via, gates, ci, what }) =>
+        ({ id, kind, present, ci, via, gates, what })), null, 2));
 } else {
     const pad = (s, n) => String(s).padEnd(n);
     console.log(`${pad('INPUT', 18)}${pad('KIND', 9)}${pad('STATE', 9)}GATES  DETECTED VIA`);
