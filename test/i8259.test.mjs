@@ -213,3 +213,172 @@ test('state round-trips', () => {
     assert.equal(p2.intActive, true);
     assert.equal(p2.acknowledge(), 0x30 + 5);
 });
+
+// ---------------------------------------------------------------------------
+// ROTATION, POLL AND SPECIAL MASK MODE (2026-09-05)
+//
+// The header used to say: "OCW2's rotate commands are accepted and ignored",
+// "NO POLL MODE (OCW3 bit 2) and no special mask mode". Accepted-and-ignored
+// is the dangerous half: a program that rotates priority got NO error and a
+// chip that kept servicing in the old order.
+// ---------------------------------------------------------------------------
+
+/** Bring a PIC up: ICW1 (single, ICW4), ICW2 base, ICW4, then unmask all. */
+function ready(hooks) {
+    const p = new I8259(hooks);
+    p.write(0, 0x13);       // ICW1: ICW4 needed, single
+    p.write(1, 0x08);       // ICW2: vector base 08h
+    p.write(1, 0x01);       // ICW4: 8086 mode
+    p.write(1, 0x00);       // OCW1: unmask everything
+    return p;
+}
+
+test('OCW2 set-priority (cmd 110) makes the named level LOWEST', () => {
+    const p = ready();
+    // Default order is IR0 highest. Raise 2 and 5: 2 wins.
+    p.setIRQ(5, 1); p.setIRQ(2, 1);
+    assert.equal(p.acknowledge() & 7, 2, 'fixed priority: the lower number wins');
+
+    const q = ready();
+    q.write(0, 0xc0 | 3);   // set priority: level 3 becomes LOWEST -> order 4,5,6,7,0,1,2,3
+    q.setIRQ(5, 1); q.setIRQ(2, 1);
+    assert.equal(q.acknowledge() & 7, 5,
+        'after rotation 5 outranks 2 — this is what "accepted and ignored" silently got wrong');
+});
+
+test('rotate on non-specific EOI drops the serviced level to lowest priority', () => {
+    const p = ready();
+    p.setIRQ(1, 1);
+    assert.equal(p.acknowledge() & 7, 1);
+    p.write(0, 0xa0);        // cmd 101: rotate on non-specific EOI
+    assert.equal(p.isr, 0, 'the EOI still dismissed it');
+    // 1 is now lowest, so order is 2,3,4,5,6,7,0,1 and 2 beats 0.
+    p.setIRQ(0, 1); p.setIRQ(2, 1);
+    assert.equal(p.acknowledge() & 7, 2, '0 is no longer top after the rotation');
+});
+
+test('rotate on SPECIFIC EOI rotates to the named level', () => {
+    const p = ready();
+    p.setIRQ(4, 1);
+    p.acknowledge();
+    p.write(0, 0xe0 | 4);    // cmd 111: specific EOI level 4, and rotate to it
+    assert.equal(p.isr, 0);
+    p.setIRQ(0, 1); p.setIRQ(5, 1);
+    assert.equal(p.acknowledge() & 7, 5, 'order is now 5,6,7,0,...');
+});
+
+test('non-specific EOI clears the highest-priority in-service level, not the lowest-NUMBERED', () => {
+    const p = ready();
+    p.write(0, 0xc0 | 1);    // level 1 lowest -> order 2,3,4,5,6,7,0,1
+    p.setIRQ(0, 1);
+    p.acknowledge();         // 0 is in service (it is 7th in priority now)
+    p.setIRQ(3, 1);
+    p.acknowledge();         // 3 outranks 0 in this rotation, so it is serviced too
+    assert.equal(p.isr, (1 << 0) | (1 << 3));
+    p.write(0, 0x20);        // non-specific EOI
+    assert.equal(p.isr, 1 << 0,
+        'it must clear 3 (highest priority here), not 0 (lowest number)');
+});
+
+test('rotate-in-auto-EOI is an armed MODE, and rotates as each level is dismissed', () => {
+    const p = new I8259();
+    p.write(0, 0x13); p.write(1, 0x08); p.write(1, 0x03); p.write(1, 0x00);  // ICW4 auto-EOI
+    p.write(0, 0x80);        // cmd 100: rotate in auto-EOI — SET
+    p.setIRQ(1, 1);
+    assert.equal(p.acknowledge() & 7, 1);
+    assert.equal(p.isr, 0, 'auto-EOI dismisses immediately');
+    p.setIRQ(0, 1); p.setIRQ(2, 1);
+    assert.equal(p.acknowledge() & 7, 2, 'level 1 became lowest as it was dismissed');
+
+    const q = new I8259();
+    q.write(0, 0x13); q.write(1, 0x08); q.write(1, 0x03); q.write(1, 0x00);
+    q.write(0, 0x00);        // cmd 000: rotate in auto-EOI — CLEAR
+    q.setIRQ(1, 1); q.acknowledge();
+    q.setIRQ(0, 1); q.setIRQ(2, 1);
+    assert.equal(q.acknowledge() & 7, 0, 'unarmed, priority does not move');
+});
+
+test('POLL MODE: the read IS the acknowledge', () => {
+    const p = ready();
+    p.setIRQ(3, 1);
+    p.write(0, 0x0c);        // OCW3 with P set
+    const word = p.read(0);
+    assert.equal(word & 0x80, 0x80, 'bit 7 says something was pending');
+    assert.equal(word & 7, 3, 'and bits 2-0 name the level');
+    assert.equal(p.isr, 1 << 3, 'the poll read set ISR exactly as an INTA would');
+    assert.equal(p.irr & (1 << 3), 0, 'and cleared the request');
+});
+
+test('POLL MODE with nothing SERVICEABLE answers bit 7 clear, and does not acknowledge', () => {
+    // WRITTEN THE OBVIOUS WAY FIRST, AND IT PASSED ON THE OLD IMPLEMENTATION.
+    // With an empty IRR the old code's `read(0)` returned irr === 0, which is
+    // the same 0x00 a correct poll returns, so the test agreed with a chip
+    // that had no poll mode at all. Mutation-proving the whole file is the
+    // only reason I know: ten of eleven failed and this one did not.
+    //
+    // A MASKED request discriminates. IRR is non-zero, so the old read returns
+    // 0x08; nothing is SERVICEABLE, so a real poll returns 0x00.
+    const p = ready();
+    p.write(1, 0xff);                // mask everything
+    p.setIRQ(3, 1);                  // pending in IRR, but not serviceable
+    p.write(0, 0x0c);
+    assert.equal(p.read(0), 0x00,
+        'a poll reports what is SERVICEABLE, not what is merely latched in IRR');
+    assert.equal(p.isr, 0, 'and it acknowledged nothing');
+    assert.equal(p.irr, 1 << 3, 'the request is still latched, waiting for the mask to lift');
+});
+
+test('POLL is one-shot: the read after it is an ordinary IRR read', () => {
+    const p = ready();
+    p.setIRQ(2, 1);
+    p.write(0, 0x0c);
+    p.read(0);                       // consumes the poll
+    p.setIRQ(6, 1);
+    assert.equal(p.read(0), 1 << 6,
+        'a sticky poll flag would turn this IRR read into an unintended acknowledge');
+    assert.equal(p.isr, 1 << 2, 'so ISR must be unchanged by it');
+});
+
+test('SPECIAL MASK MODE lets a MASKED in-service level stop blocking lower priorities', () => {
+    const p = ready();
+    p.setIRQ(1, 1);
+    p.acknowledge();                 // 1 in service, blocks 2..7
+    p.setIRQ(4, 1);
+    assert.equal(p.intActive, false, 'normally an in-service level blocks everything below it');
+
+    p.write(1, 1 << 1);              // mask level 1
+    p.write(0, 0x68);                // OCW3: ESMM|SMM — special mask ON
+    assert.equal(p.intActive, true, 'the masked in-service level no longer blocks 4');
+
+    p.write(0, 0x48);                // OCW3: ESMM set, SMM clear — special mask OFF
+    assert.equal(p.intActive, false, 'and it blocks again when the mode is cleared');
+});
+
+test('SMM without ESMM changes nothing', () => {
+    const p = ready();
+    p.write(0, 0x28);                // SMM set, ESMM clear
+    assert.equal(p.specialMask, false,
+        'the enable bit guards the write — a stray OCW3 must not toggle the mode');
+});
+
+test('a checkpoint carries the priority order, and an OLD one restores to fixed', () => {
+    const p = ready();
+    p.write(0, 0xc0 | 3);            // rotate: 3 lowest
+    const saved = p.getState();
+    assert.equal(saved.lowestPriority, 3, 'the order is part of the state');
+
+    const q = ready();
+    q.setState(saved);
+    q.setIRQ(5, 1); q.setIRQ(2, 1);
+    assert.equal(q.acknowledge() & 7, 5, 'and the restored chip services in the saved order');
+
+    // A checkpoint written before these fields existed must come back FIXED,
+    // not undefined — which would make the priority walk produce NaN levels.
+    const old = ready().getState();
+    delete old.lowestPriority; delete old.specialMask;
+    delete old.pollPending; delete old.rotateOnAutoEOI;
+    const r = ready();
+    r.setState(old);
+    r.setIRQ(5, 1); r.setIRQ(2, 1);
+    assert.equal(r.acknowledge() & 7, 2, 'an old checkpoint restores to IR0-highest');
+});

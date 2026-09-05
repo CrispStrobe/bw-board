@@ -28,9 +28,16 @@
  * gating (a chip mid-ICW-sequence does not interrupt) are all exact. What is
  * NOT here, named rather than left to be discovered:
  *
- *   - NO PRIORITY ROTATION. OCW2's rotate commands are accepted and ignored;
- *     priority is always fixed with IR0 highest, which is what an XT programs.
- *   - NO POLL MODE (OCW3 bit 2) and no special mask mode.
+ *   - ROTATION, POLL AND SPECIAL MASK MODE ADDED 2026-09-05. All eight OCW2
+ *     commands act: both rotate-on-EOI forms, set-priority, and rotate-in-
+ *     auto-EOI as an armed MODE rather than an action. Every priority decision
+ *     goes through one `_priorityOrder()`, because `acknowledge()` and
+ *     `_updateInt` previously walked 0..7 in two separate hardcoded loops that
+ *     agreed only by coincidence -- rotation would have made them disagree,
+ *     with the INT line and the vector it delivered naming different levels.
+ *     A poll READ acknowledges, exactly as an INTA does.
+ *   - The default is still IR0-highest, which is what an XT programs, so the
+ *     rotating machinery costs nothing until a program asks for it.
  *   - ONE CONTROLLER. ICW3 is consumed but no cascaded slave is modelled —
  *     an XT's second PIC, and the buffered / special-fully-nested modes, are
  *     absent.
@@ -72,10 +79,85 @@ export class I8259 {
         this.initWarning = null;
 
         this._intActive = false;
+        // ROTATION. The level that currently holds LOWEST priority; service
+        // order runs from (lowestPriority + 1) upward, wrapping. 7 gives the
+        // fixed default of IR0-highest, which is what an XT programs, so the
+        // rotating machinery costs nothing until a program asks for it.
+        this.lowestPriority = 7;
+        // AUTO-ROTATE in auto-EOI mode (OCW2 cmd 4 sets, cmd 0 clears).
+        this.rotateOnAutoEOI = false;
+        // POLL MODE. Set by OCW3 bit 2 and consumed by the NEXT read, which
+        // returns a poll word instead of IRR/ISR and acknowledges as an INTA
+        // would. It is one-shot: the datasheet's P bit applies to the next
+        // read only, and a sticky flag would turn every later read into an
+        // unintended acknowledge.
+        this.pollPending = false;
+        // SPECIAL MASK MODE (OCW3 bits 6-5). While set, a masked level stops
+        // blocking LOWER priorities -- the mechanism a handler uses to let
+        // less urgent interrupts in while it is still in service.
+        this.specialMask = false;
+    }
+
+    /**
+     * The eight levels in CURRENT priority order, highest first. Every
+     * priority decision goes through this, so rotation is one variable rather
+     * than a second code path.
+     *
+     * `acknowledge()` used to walk 0..7 directly while `_updateInt` walked
+     * 0..7 with an ISR-blocking check -- two orders that agreed only because
+     * both were hardcoded. Rotation would have made them disagree.
+     */
+    _priorityOrder() {
+        const out = [];
+        for (let n = 1; n <= 8; n++) out.push((this.lowestPriority + n) & 7);
+        return out;
+    }
+
+    /** The highest-priority level that is pending and not blocked, or -1. */
+    _serviceable() {
+        if (this._initPhase !== 0) return -1;
+        const pending = this.irr & ~this.imr;
+        for (const i of this._priorityOrder()) {
+            if (!(pending & (1 << i))) continue;
+            // Anything of higher-or-equal priority already in service blocks
+            // this one. In SPECIAL MASK MODE a MASKED in-service level does
+            // not block, which is the whole point of the mode.
+            let blocked = false;
+            for (const j of this._priorityOrder()) {
+                if (j === i) break;
+                if (!(this.isr & (1 << j))) continue;
+                if (this.specialMask && (this.imr & (1 << j))) continue;
+                blocked = true; break;
+            }
+            if (this.isr & (1 << i)) blocked = true;
+            if (!blocked) return i;
+        }
+        return -1;
     }
 
     /** @param {number} reg A0 line: 0 or 1 */
     read(reg) {
+        // A POLL READ IS AN ACKNOWLEDGE, and that is the whole point of the
+        // mode: bit 7 says whether anything is pending, bits 2-0 name the
+        // level, and the chip sets ISR exactly as an INTA cycle would. A
+        // program polling this way never enables INTR at all.
+        //
+        // It answers on EITHER address. The poll word replaces whatever that
+        // read would have returned, so an armed poll consumes the next read
+        // wherever it lands rather than waiting for the "right" port.
+        if (this.pollPending) {
+            this.pollPending = false;
+            const i = this._serviceable();
+            if (i === -1) return 0x00;               // bit 7 clear: nothing pending
+            this.irr &= ~(1 << i);
+            if (this.autoEOI) {
+                if (this.rotateOnAutoEOI) this.lowestPriority = i;
+            } else {
+                this.isr |= (1 << i);
+            }
+            this._updateInt();
+            return 0x80 | i;
+        }
         if (reg & 1) return this.imr;
         return this.readISR ? this.isr : this.irr;
     }
@@ -99,11 +181,27 @@ export class I8259 {
         if (this._initPhase) return;
 
         if (val & 0x08) {
-            // OCW3: bit 3 set
+            // OCW3: bit 3 set.
+            // SPECIAL MASK MODE: bit 6 (ESMM) enables the write, bit 5 (SMM)
+            // is the value. Writing SMM without ESMM changes nothing, which is
+            // the datasheet's own guard against a stray OCW3 toggling it.
+            if (val & 0x40) this.specialMask = !!(val & 0x20);
             if (val & 0x02) {
                 this.readISR = !!(val & 0x01);
             }
-            // Poll mode (bit 2) not modelled
+            // POLL (bit 2). Arms the NEXT read to return a poll word and
+            // acknowledge, which is how a program services interrupts with
+            // INTR masked off entirely. One-shot on purpose: the P bit applies
+            // to the next read, and a sticky flag would turn every subsequent
+            // IRR/ISR read into an unintended acknowledge.
+            if (val & 0x04) this.pollPending = true;
+            // SPECIAL MASK MODE CHANGES WHAT IS SERVICEABLE, so INT has to be
+            // re-evaluated here. The OCW3 branch used to return without it,
+            // which was harmless while the only thing OCW3 did was select
+            // which register a read returns -- and became a stale INT line the
+            // moment OCW3 could change priority. Caught by the test asserting
+            // intActive rather than asserting the flag.
+            this._updateInt();
             return;
         }
 
@@ -147,27 +245,60 @@ export class I8259 {
         this._updateInt();
     }
 
+    /**
+     * OCW2, all eight commands. Bits 7-5 are R, SL and EOI:
+     *
+     *   000  rotate in auto-EOI mode -- CLEAR
+     *   001  non-specific EOI
+     *   010  no operation
+     *   011  specific EOI            (level in bits 2-0)
+     *   100  rotate in auto-EOI mode -- SET
+     *   101  rotate on non-specific EOI
+     *   110  set priority            (named level becomes LOWEST)
+     *   111  rotate on specific EOI  (level in bits 2-0)
+     *
+     * "Non-specific" means the chip clears the highest-priority bit currently
+     * in service, which is not the lowest-numbered one once priority has
+     * rotated -- so it walks _priorityOrder(), not 0..7.
+     */
     _ocw2(val) {
         const cmd = (val >> 5) & 7;
         const level = val & 7;
 
-        if (cmd === 1 || cmd === 3) {
-            // Non-specific EOI (cmd=1) or specific EOI (cmd=3)
-            if (cmd === 1) {
-                // Clear the highest-priority in-service bit
-                for (let i = 0; i < 8; i++) {
-                    if (this.isr & (1 << i)) {
-                        this.isr &= ~(1 << i);
-                        break;
-                    }
-                }
-            } else {
-                // Specific EOI: clear the named level
-                this.isr &= ~(1 << level);
-            }
-            this._updateInt();
+        // The highest-priority level currently IN SERVICE, in the current
+        // rotation. -1 when nothing is.
+        const topInService = () => {
+            for (const i of this._priorityOrder()) if (this.isr & (1 << i)) return i;
+            return -1;
+        };
+
+        if (cmd === 0 || cmd === 4) {
+            // Rotate-in-auto-EOI is a MODE, not an action: it arms rotation
+            // for future auto-EOI dismissals and dismisses nothing now.
+            this.rotateOnAutoEOI = cmd === 4;
+            return;
         }
-        // Rotation commands (cmd 5,6,7) not modelled
+        if (cmd === 2) return;                       // explicit no-op
+        if (cmd === 6) {                             // set priority
+            this.lowestPriority = level;
+            this._updateInt();
+            return;
+        }
+
+        if (cmd === 1 || cmd === 5) {                // non-specific EOI
+            const i = topInService();
+            if (i !== -1) {
+                this.isr &= ~(1 << i);
+                if (cmd === 5) this.lowestPriority = i;
+            }
+        } else if (cmd === 3 || cmd === 7) {         // specific EOI
+            this.isr &= ~(1 << level);
+            // Rotate on SPECIFIC EOI rotates to the NAMED level whether or not
+            // it was in service -- the command carries the level, so there is
+            // nothing to look up and nothing to fail silently.
+            if (cmd === 7) this.lowestPriority = level;
+        }
+        this._updateInt();
     }
 
     /**
@@ -189,20 +320,21 @@ export class I8259 {
      * @returns {number} vector number (0-255)
      */
     acknowledge() {
-        const pending = this.irr & ~this.imr;
-        for (let i = 0; i < 8; i++) {
-            if (pending & (1 << i)) {
-                // Block this in IRR only if it was edge-triggered
-                // (in level mode the device keeps it asserted). For
-                // simplicity, clear it — the device can reassert.
-                this.irr &= ~(1 << i);
-                if (!this.autoEOI) this.isr |= (1 << i);
-                this._updateInt();
-                return this.vectorBase | i;
-            }
+        const i = this._serviceable();
+        if (i === -1) return this.vectorBase | 7;   // spurious
+        // Block this in IRR only if it was edge-triggered (in level mode the
+        // device keeps it asserted). For simplicity, clear it — the device
+        // can reassert.
+        this.irr &= ~(1 << i);
+        if (this.autoEOI) {
+            // AUTO-ROTATE: in auto-EOI mode with rotation armed, the level
+            // just serviced drops to lowest priority as it is dismissed.
+            if (this.rotateOnAutoEOI) this.lowestPriority = i;
+        } else {
+            this.isr |= (1 << i);
         }
-        // Spurious — no pending interrupt
-        return this.vectorBase | 7;
+        this._updateInt();
+        return this.vectorBase | i;
     }
 
     /** True when the INT output is asserted (there's a serviceable interrupt). */
@@ -228,19 +360,7 @@ export class I8259 {
         // A chip still in its ICW sequence does not drive INT, however its
         // IRR fills — which is exactly why a PIC stuck mid-init is silent
         // rather than wrong. IRR still latches; it just cannot be serviced.
-        const pending = this._initPhase !== 0 ? 0 : (this.irr & ~this.imr);
-        // Find highest-priority pending
-        let hasPending = false;
-        for (let i = 0; i < 8; i++) {
-            if (pending & (1 << i)) {
-                // Is there a higher-or-equal priority interrupt in service?
-                let blocked = false;
-                for (let j = 0; j <= i; j++) {
-                    if (this.isr & (1 << j)) { blocked = true; break; }
-                }
-                if (!blocked) { hasPending = true; break; }
-            }
-        }
+        const hasPending = this._serviceable() !== -1;
         if (hasPending !== this._intActive) {
             this._intActive = hasPending;
             if (this.hooks.onInterrupt) this.hooks.onInterrupt(hasPending);
@@ -254,6 +374,15 @@ export class I8259 {
             autoEOI: this.autoEOI, readISR: this.readISR,
             initPhase: this._initPhase, needICW3: this._needICW3,
             needICW4: this._needICW4, intActive: this._intActive,
+            // Added with rotation/poll/special-mask 2026-09-05. A checkpoint
+            // that omits these restores a chip whose PRIORITY ORDER is wrong
+            // and whose registers all look right -- the machine runs and
+            // services interrupts in a different order than it saved. Silent,
+            // and exactly the corruption the checkpoint refusal exists to stop.
+            lowestPriority: this.lowestPriority,
+            rotateOnAutoEOI: this.rotateOnAutoEOI,
+            pollPending: this.pollPending,
+            specialMask: this.specialMask,
         };
     }
 
@@ -263,6 +392,14 @@ export class I8259 {
         this.autoEOI = s.autoEOI; this.readISR = s.readISR;
         this._needICW3 = s.needICW3;
         this._needICW4 = s.needICW4; this._intActive = s.intActive;
+        // `?? default` rather than a bare assignment: an OLD checkpoint,
+        // written before these fields existed, must restore to the FIXED
+        // priority it was saved under, not to `undefined` -- which would make
+        // _priorityOrder produce NaN levels and the chip service nothing.
+        this.lowestPriority = s.lowestPriority ?? 7;
+        this.rotateOnAutoEOI = s.rotateOnAutoEOI ?? false;
+        this.pollPending = s.pollPending ?? false;
+        this.specialMask = s.specialMask ?? false;
         this._setInitPhase(s.initPhase);   // restores initWarning to match
     }
 }
