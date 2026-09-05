@@ -22,7 +22,16 @@
  * lower-priority interrupts are blocked until EOI clears it. The
  * fixed-priority model is the only one modelled.
  *
- * ACCURACY TIER: FIXED PRIORITY, ONE CONTROLLER. The ICW1-4 initialisation
+ * ACCURACY TIER: SINGLE PIC, NO TRIGGER-MODE DISTINCTION. This line claimed
+ * fixed priority for the first hours of 2026-09-05 -- after the same commit
+ * implemented rotation. A summary that outlived the code it summarised, in a
+ * header I had just rewritten, hours after a peer warned me headers do that.
+ *
+ * It is worded to AVOID repeating the phrases below, because a capability
+ * gate anchors on those and an anchor that matches twice survives deletion of
+ * the line it exists to pin. My first correction here restated both of them
+ * and took each from two matches to three, which is the same mistake with
+ * more words. The ICW1-4 initialisation
  * sequence, OCW1 masking, OCW2 specific and non-specific EOI, OCW3 read-
  * register selection, the ISR/IRR bookkeeping, auto-EOI, and the init-phase
  * gating (a chip mid-ICW-sequence does not interrupt) are all exact. What is
