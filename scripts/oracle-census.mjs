@@ -44,7 +44,7 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 
 const HOME = homedir();
 
@@ -424,7 +424,30 @@ export function resolve(input) {
             ? { present: true, via: `$${input.env}=${fromEnv}` }
             : { present: false, via: `$${input.env}=${fromEnv} (set, but does not exist)` };
     }
-    for (const p of input.paths) if (existsSync(p)) return { present: true, via: p };
+    for (const p of input.paths) {
+        if (!existsSync(p)) continue;
+        // A HIT UNDER THE SYSTEM TEMP DIR IS WEAKER EVIDENCE, AND SAYS SO.
+        //
+        // /tmp is shared, world-writable and cleared on reboot. "present"
+        // there means "something exists at this path right now", not "the
+        // input is installed" -- another process can create the same name, and
+        // one already has: /tmp/bw-board on this box is a SYMLINK to the live
+        // repository, made weeks ago by someone else, which let a deliberately
+        // isolated reproduction reach straight back out to the host checkout
+        // (lego-47, 2026-09-05).
+        //
+        // The census does not refuse these -- for masm, the amey corpus and the
+        // ehBASIC ROM, /tmp genuinely is where they live, and refusing would
+        // report absent about inputs that are present. It annotates instead, so
+        // a reader can tell a stable location from a volatile one without
+        // having to know which is which.
+        const tmp = tmpdir();
+        const volatile_ = p === tmp || p.startsWith(tmp.endsWith('/') ? tmp : tmp + '/');
+        return {
+            present: true,
+            via: volatile_ ? `${p} (under ${tmp}: shared and cleared on reboot)` : p,
+        };
+    }
     const tried = [input.env ? `$${input.env}` : null, ...input.paths].filter(Boolean);
     return { present: false, via: `tried ${tried.join(', ') || '(no default path)'}` };
 }

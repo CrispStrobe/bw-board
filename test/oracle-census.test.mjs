@@ -188,3 +188,25 @@ test('--snapshot rows are EXACTLY --json rows, and the sha is real', () => {
         rmSync(dir, { recursive: true, force: true });
     }
 });
+
+test('a hit under the system temp dir is annotated as volatile', () => {
+    // /tmp is shared, world-writable and cleared on reboot, so "present" there
+    // means "something exists at this path right now" rather than "the input is
+    // installed". Not hypothetical: /tmp/bw-board on this box is a SYMLINK to
+    // the live repository, made weeks ago by another session, which let a
+    // deliberately isolated reproduction reach back out to the host checkout.
+    //
+    // The census annotates rather than refuses -- for masm, the amey corpus and
+    // the ehBASIC ROM, /tmp genuinely is where they live, and refusing would
+    // report ABSENT about inputs that are present.
+    const tmp = tmpdir();
+    for (const i of INPUTS) {
+        const r = resolve(i);
+        if (!r.present) continue;
+        const hit = r.via.split(' (')[0];
+        if (!hit.startsWith(tmp.endsWith('/') ? tmp : tmp + '/')) continue;
+        assert.match(r.via, /shared and cleared on reboot/,
+            `${i.id} resolved to ${hit}, under the shared temp dir, without saying so — `
+            + 'a reader cannot tell a stable location from a volatile one');
+    }
+});
