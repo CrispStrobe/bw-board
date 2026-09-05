@@ -2539,7 +2539,12 @@ until halt.)
 
 ---
 
-### E7.3 NE2000 Ethernet — LANDED 2026-09-04 (owner-asked)
+### E7.3 NE2000 Ethernet — ON MASTER 2026-09-04 (owner-asked)
+
+**Merged to `origin/master` at `1f35c09`.** Fast-forward, verified before the
+push rather than after: 64 tests green, `audit-clean-checkout` clean on the
+NE2000 test, and both ancestry links confirmed by sha rather than by reading a
+remote ref twice — that ref moved under two sessions twice in the same hour.
 
 `src/ne2000.js` + `test/ne2000.test.mjs`, machine kind `ne2000`, 32 ports.
 
@@ -2610,7 +2615,19 @@ dropped frame with a flag is something it can see.
    `oracle-census.mjs` already lists v86 with `obtain:` instructions; running
    them is all that stands between this chip and a second opinion.
 
-5. **NO PORT-CONFLICT CHECK EXISTED, AND NOW ONE DOES.** Two chips claiming
+5. **THE FULL SUITE EXITS 1 ON MASTER, and it is not this chip.**
+   `ac-small-signal` ("AC: honesty and speed") fails under load and passes in
+   isolation — 3832 tests, 3799 pass, 1 fail. It has been patched twice for
+   exactly this symptom and the ruling is to QUARANTINE it rather than raise
+   the budget a third time, with the cost written beside it: a quarantined
+   test means a real numerics regression lands silently. Assigned, not done.
+
+   Recorded here rather than left implicit because **a red master for a known
+   reason is still a red master** — it degrades the signal for every repo that
+   vendors this one, and "we know about that one" is exactly how a second
+   failure hides behind the first.
+
+6. **NO PORT-CONFLICT CHECK EXISTED, AND NOW ONE DOES.** Two chips claiming
    one I/O window used to resolve silently to whichever was declared last —
    a board that ran and read the wrong device. `I8086Machine` now refuses,
    naming both chips and both decoded windows. Checked per bus, since an I/O
