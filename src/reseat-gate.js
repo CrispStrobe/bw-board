@@ -70,25 +70,37 @@ export function captureObservable(buildMachine, { read, steps }) {
         const { out, dir } = read(m);
         if (!dir) continue;              // port still all-input: not observable yet
         const value = out & dir & 0xff;
+        const tMs = typeof m.tMs === 'number' ? m.tMs : null; // real-time base, if the machine has a clock
         if (!live) {                     // port just became an output: baseline
             live = true;
             last = value;
-            if (value !== 0) trace.push({ step, value }); // data already present
+            if (value !== 0) trace.push({ step, value, tMs }); // data already present
             continue;
         }
         if (value !== last) {
-            trace.push({ step, value });
+            trace.push({ step, value, tMs });
             last = value;
         }
     }
     return trace;
 }
 
-/** Cadence of a trace: edge count and mean inter-edge interval, in steps. */
+/**
+ * Cadence of a trace: edge count, mean inter-edge interval in STEPS, and — when
+ * the machine carries a clock — the mean interval in real TIME (ms). The step
+ * interval is not comparable across CPU families; the time interval IS, which is
+ * what the optional timing gate compares.
+ */
 function cadence(trace) {
-    if (trace.length < 2) return { edges: trace.length, meanInterval: null };
-    const span = trace[trace.length - 1].step - trace[0].step;
-    return { edges: trace.length, meanInterval: span / (trace.length - 1) };
+    if (trace.length < 2) return { edges: trace.length, meanInterval: null, meanTimeMs: null };
+    const stepSpan = trace[trace.length - 1].step - trace[0].step;
+    const t0 = trace[0].tMs, t1 = trace[trace.length - 1].tMs;
+    const timeSpan = (typeof t0 === 'number' && typeof t1 === 'number') ? t1 - t0 : null;
+    return {
+        edges: trace.length,
+        meanInterval: stepSpan / (trace.length - 1),
+        meanTimeMs: timeSpan == null ? null : timeSpan / (trace.length - 1),
+    };
 }
 
 /** The ordered distinct values of a trace — its shape ("edge alphabet"). */
@@ -142,24 +154,49 @@ export function compareObservables(original, reseated) {
  *
  * @param {object} original  { build, read, steps }  read: (m) => {out, dir}
  * @param {object} reseated  { build, read, steps? }  (steps defaults to original's)
+ * @param {object} [opts]
+ * @param {object} [opts.timing]  enable the BEHAVIOURAL rate gate (off by
+ *        default). `{ tolerance = 0.25, expectedRatio = 1 }`: shape alone cannot
+ *        see a reseat that lights the right LEDs at the wrong SPEED, so with a
+ *        shared time base (both boards' edges timestamped in real ms) this
+ *        additionally requires the reseat's real-time cadence to be
+ *        expectedRatio× the original's, within tolerance. A reseat that walks
+ *        the right sequence at a quarter the rate then goes RED, where shape
+ *        alone stays green. Cross-family the boards do not share a clock, so
+ *        `expectedRatio` is the caller's model of what "same speed" means; same
+ *        board at a wrong clock uses the default 1.
  * @returns {{ verdict: 'MATCH'|'DIFFER', reason: string,
  *             expected: number[], actual: number[], cadence: object,
- *             originalTrace: object[], reseatedTrace: object[] }}
+ *             timing: object|null, originalTrace: object[], reseatedTrace: object[] }}
  */
-export function reseatGate(original, reseated) {
+export function reseatGate(original, reseated, opts = {}) {
     const originalTrace = captureObservable(original.build, { read: original.read, steps: original.steps });
     const reseatedTrace = captureObservable(reseated.build, { read: reseated.read, steps: reseated.steps ?? original.steps });
     const cmp = compareObservables(originalTrace, reseatedTrace);
-    return {
-        verdict: cmp.match ? 'MATCH' : 'DIFFER',
-        reason: cmp.reason,
-        expected: cmp.expected,
-        actual: cmp.actual,
-        // Rate is not part of the verdict (families don't share a cycle budget),
-        // but it is REPORTED so a caller with a shared time base can assert on
-        // it and so a wildly-off cadence is at least visible.
-        cadence: { original: cadence(originalTrace), reseated: cadence(reseatedTrace) },
-        originalTrace,
-        reseatedTrace,
-    };
+    const cad = { original: cadence(originalTrace), reseated: cadence(reseatedTrace) };
+
+    let verdict = cmp.match ? 'MATCH' : 'DIFFER';
+    let reason = cmp.reason;
+
+    // Behavioural (rate) gate — opt-in, and only meaningful once the shape
+    // already matches (a rate check on a wrong sequence is noise).
+    let timing = null;
+    if (opts.timing && cmp.match) {
+        const tolerance = opts.timing.tolerance ?? 0.25;
+        const expectedRatio = opts.timing.expectedRatio ?? 1;
+        const o = cad.original.meanTimeMs, r = cad.reseated.meanTimeMs;
+        if (o == null || r == null || o === 0) {
+            timing = { ok: null, reason: 'no shared time base — a machine has no clock (meanTimeMs null)' };
+        } else {
+            const ratio = r / o;
+            const ok = ratio >= expectedRatio * (1 - tolerance) && ratio <= expectedRatio * (1 + tolerance);
+            timing = { ok, ratio, expectedRatio, tolerance, originalMs: o, reseatedMs: r };
+            if (!ok) {
+                verdict = 'DIFFER';
+                reason = `shape matches but RATE differs: reseat walks at ${ratio.toFixed(2)}× the original's `
+                    + `real-time cadence (${r.toFixed(3)}ms vs ${o.toFixed(3)}ms per edge; expected ${expectedRatio}× ±${Math.round(tolerance * 100)}%)`;
+            }
+        }
+    }
+    return { verdict, reason, expected: cmp.expected, actual: cmp.actual, cadence: cad, timing, originalTrace, reseatedTrace };
 }

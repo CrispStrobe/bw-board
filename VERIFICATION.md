@@ -699,6 +699,240 @@ So:
   nobody happened to write. They are not substitutes, and the defect above was
   found by the probe.
 
+### Rule: a wait that cannot find its job reports success
+
+Four instances in one day, each in a different disguise, every one producing a
+confident "DONE" beside a zero-byte log. Recorded as a rule rather than a
+caution because vigilance demonstrably did not fix it: the fourth happened
+after the first three had been written up.
+
+```
+1. nohup node job & ; sleep 45 ; tail log     the WRAPPER exits after sleep;
+                                              the harness reports the wrapper
+2. P=$(pgrep -f job); sleep 3                 pgrep matched a transient shell,
+                                              not the node process
+3. pkill -f "node --test test/"               the pattern matched the WAITER's
+                                              own command line, killing the
+                                              chain that was watching
+4. P=$(cat pidfile)  # never written          `while kill -0 "" ; do` exits
+   while kill -0 $P; do sleep; done           immediately: an empty PID is a
+                                              satisfied loop, not an error
+```
+
+**The shared mechanism: a waiter that cannot locate its target concludes the
+target has finished.** Absence of the job is indistinguishable from completion
+of the job, and every one of these failed in the direction that says "done".
+
+**Structural fixes, because the rule alone did not hold:**
+
+- **Never derive a PID from a pattern that can match the deriving process.**
+  `pgrep -f` matches the shell running `pgrep -f`. Filter out `bash -c`/`eval`,
+  or match on the interpreter and script path together.
+- **Treat an empty PID as an error, not a loop condition.** `kill -0 ""` fails,
+  so `while kill -0 "$P"` with an unset `P` runs zero times and looks like
+  instant success. Guard with `[ -n "$P" ] || exit 1` first.
+- **Never widen a kill pattern past the job**, or it takes the watcher with it.
+- **Read the artefact, not the exit.** A zero-byte output file next to a
+  "finished" message was the only reliable tell in all four cases, and it is
+  cheaper to check than any of the above.
+
+Same family as the audit that printed one cause for every failure, and as the
+cancelled CI run that reads as "somebody chose to stop it": **a status that
+carries an implied cause it never established.**
+
+### Rule: a tool can fail in the mode it was built to detect
+
+The sharpest instance this project has produced, found 2026-09-04 by the
+coverage lane and recorded here at their request.
+
+`scripts/audit-clean-checkout.mjs` exists because a test read a fixture from a
+sibling git worktree that exists only on one machine: it passed for its author,
+passed for its reviewer, and could never have passed in CI. The audit reproduces
+CI's condition by `git archive HEAD`ing into a temp directory, so anything the
+tracked tree does not contain is simply absent.
+
+**Its first version symlinked only the root `node_modules`.** Nested ones were
+missing in the archive, so tests that resolved a dependency through them failed
+there and passed at home — **which is the exact signature the audit reports as
+"this test depends on files git does not have".** A tool built to catch
+environment-dependent failures was producing them, and reporting its own defect
+in the vocabulary of the defect it was hunting. Fixed by symlinking every
+`node_modules` (bw-board `463590f`); the false positives cleared.
+
+**THE TELL THAT SEPARATES THE TWO KINDS, and it costs nothing** (lego-47,
+2026-09-04, sharper than the re-run habit below):
+
+> **A missing fixture fails the green case and the red mutation case
+> together; a real change moves one.**
+
+Re-running only tells you a failure was unstable. Mutating tells you which
+*kind* it was, in one shot: break the thing the test is supposed to catch and
+see whether the result changes. If red and green give the same failure, the
+test never reached your code and the failure is environmental.
+
+**Two further habits, and the second is the one that generalises:**
+
+1. **Re-run a failure before believing its diagnosis.** That alone separated the
+   real case from the false ones here, and separately caught a 1000 ms
+   wall-clock budget test failing under load being reported as a missing
+   fixture.
+2. **A fixed explanation attached to a variable outcome is not a diagnosis.**
+   The audit prints *"they depend on files git does not have, or on paths
+   outside the repository"* for **every** failure, while establishing only
+   *that* a test failed in the archive — never *why*. It is a category
+   presented as a finding. A tool should either establish its stated cause or
+   describe the observation and name the likely cause as likely.
+
+The same shape, one level down, is the reason a detector must be tried against
+a known-bad input before its "0 findings" is believed: an earlier attempt at
+this audit wrapped `fs` to record resolved paths and reported **0 findings
+against the very file it was written to catch**, because the target does
+`import { statSync } from 'node:fs'` and an ESM named import binds the function
+directly — patching the module object intercepts nothing.
+
+### Rule: every well-designed fallback is a place where a feature can die silently
+
+lego-47's generalisation of a failure of mine, 2026-09-05, and it is the only
+entry in this file that is not about a test.
+
+`machine.enableI8088CycleTiming()` charges instructions from measured silicon
+tables and falls back to the core's own cycle count when a case was never
+measured. The fallback is correct and deliberate. The first integration scored
+**0% coverage** — the run-time lookup passed `null` for every non-group opcode
+and missed every single time — and **nothing reported it**. No exception, no
+wrong value, plausible cycle counts, a green suite, because the fallback did
+exactly its job.
+
+**The primary path was completely dead and every output was correct.**
+
+Every other rule here is about an assertion that stopped asserting. This is a
+**feature** that stopped working while the system kept producing right answers.
+No test can see it, because there is nothing wrong to assert against. The only
+thing that can is a counter asking *"did the thing I built actually run?"*
+
+> **Graceful degradation and undetectable failure are the same mechanism seen
+> from two sides.**
+
+**So: any component with a fallback needs a coverage counter, and the test must
+assert the counter — not that a plausible value came back.** A number arriving
+proves the fallback works. It says nothing about the feature.
+
+A second instance the same day, partial rather than total, shows the counter
+also has to be read against a REALISTIC workload. Coverage measured on a
+five-instruction loop: **100%**. On a real MS-DOS boot: **54.39%** — the loop
+never left the one queue state it started in, so its figure described the
+workload, not the tables. A counter that is only ever exercised by a toy is a
+counter that has not been read.
+
+**WHEN IS A FALLBACK DETECTABLE AT ALL? Only where the real thing has a state
+the fallback cannot produce.** lego-47's form, from a live instance:
+
+An `ANALOG` pin on a board with no converter reads open bus, `FFh`, on every
+port in the ADC's block. The end-of-conversion poll then succeeds INSTANTLY,
+because bit 0 of `FFh` is set, and the data read returns `FFh` — which scales
+to **1020 of 1023**. A program that should read 0 printed 1020: no error, no
+warning, a plausible number, and a learner would conclude their potentiometer
+was at maximum.
+
+The fix works because a real ADC0809 pulls EOC **LOW while converting**, and
+open bus can only ever read high. **Open bus can fake *ready*; it cannot fake
+*busy*.** So the probe starts one conversion at startup and requires EOC to
+read zero at least once, and the test asserts specifically that **1020 does not
+appear** — a plausible number being worse than a refusal.
+
+**Where no such state exists, the feature genuinely cannot be distinguished
+from its own absence at run time, and a coverage counter is the only remaining
+answer.**
+
+**Checked in the 8086 tier, and the analogue is NOT a defect there** — recorded
+because a negative result found by looking is worth more than one assumed. Six
+presets without a CGA read `FFh` at port `3DAh`, which sets the vertical-retrace
+bit, so a retrace poll succeeds instantly. That is **faithful**: a real PC/XT
+with no CGA card reads open bus too. The dangerous shape is not "absent hardware
+reads high", it is **"the configuration promised a device and the machine did
+not map it"** — and that cannot happen here, because an unknown chip kind
+throws at construction (`machine config: unknown chip kind …`) rather than
+silently mapping nothing.
+
+**And the same discipline applies to what a disabled feature reports.**
+`cycleTimingStats()` returns `null` when timing is off, never a zeroed record:
+a record of zeroes reads as *"measured, and nothing happened"*, which is a lie
+that looks like data — the same error as a skip that reads as a pass.
+
+### Rule: going green is not evidence that a widened assertion still asserts anything
+
+lego-47's, 2026-09-05, and it is the counterpart to the rule below.
+
+A source-text assertion pinned an exact one-liner. A refactor inserted a log
+call, splitting the line, and the gate went red **while the behaviour was
+unchanged** — the replay still replayed. Another required a specific
+`useCallback` signature and failed when a parameter gained a default. Two false
+reds from one commit, neither tracking anything real.
+
+**A false red is worse than a false green, not milder.** A false green hides a
+defect that already exists. A false red **manufactures** one, teaches everyone
+the gate cries wolf, and the next real failure gets the same shrug that was
+correct twice before. *A red everyone has learned to dismiss is how a real one
+hides.*
+
+**And the repair produced the failure it was repairing.** The fix widened the
+assertion to "the condition, then the `setState`, within 200 characters". It
+went green — and **stayed green after the line it exists to protect was
+deleted**, because the file has four `machineBooted: true` sites and the window
+matched a different pair. For a few minutes a false red had been replaced by a
+vacuous pass, in a commit about vacuous passes.
+
+**The only check that separates a loosened assertion from a hollow one is to
+delete what it protects and confirm it goes red.** Going green proves the
+assertion no longer objects; it proves nothing about whether it can. The
+correct shape here was structural — same block, `if (…) {` with no closing
+brace before the assertion — rather than any character window.
+
+**This is why every widening in this repository is red-proved**, and why the
+same discipline is applied to the widening itself and not only to the original
+gate. Three instances the same week, all caught only by injection:
+
+- a `< 400` cycle bound that failed on 1,979 legitimate `REP` entries — the
+  bound was invented, not derived;
+- a null-guarded comparison (`if (a !== null && b !== null)`) where **both were
+  null**, so the test passed having compared nothing;
+- a detector wrapping `fs` that reported 0 findings against the very file it
+  was written to catch, because an ESM named import binds the function directly.
+
+### Rule: a large improvement is not evidence of the right model
+
+Measured on the 8088 cycle model, 2026-09-04. Shift/rotate-by-CL scored 3%.
+Keying the model on CL took it to **57%** — a nineteen-fold improvement, and
+exactly the kind of number that ends an investigation.
+
+It was the wrong model. CL is a *linear* term (the datasheet gives shift-by-CL
+as `8+4n`, and measurement confirms 4 cycles per count exactly), but keying on
+it treats it as *categorical*, fragmenting the table across 64 CL values until
+each key holds a handful of samples. Subtracting `4*CL` before fitting and
+adding it back at prediction gives **99.4%**. The 19× improvement was
+concealing a further 42 points.
+
+The same shape appeared twice more the same day:
+
+- Keying a branch on the flag word `flags & 0x8d5` scored **worse than using no
+  flag feature at all**, for the same reason: it fragments until every key is
+  unique. One bit — did control transfer — was correct. **One bit beat thirteen.**
+- MUL keyed on the popcount of the *source* operand scored 15.7%, i.e. nothing,
+  which read as "this feature does not exist". The microcode loops over the
+  *implicit* operand: `popcount(AX)` scores 97%.
+
+**So: an improvement confirms that a term matters. It does not confirm the term
+has the right SHAPE, and it does not bound what a better shape would give.**
+Before accepting a large gain as the answer, ask what the datasheet says the
+relationship *is* — proportional, categorical, or conditional — and check that
+the model expresses that shape. A fitted lookup will absorb a linear
+relationship badly rather than fail loudly.
+
+The sibling failure is a fit that is *too* good: per-opcode calibration scored
+95.5% on held-out vectors and **34.2%** when held out by opcode. Neither number
+is wrong; they answer different questions. Always state which split a score
+came from.
+
 ## House pattern: an exemption must be able to stop being true
 
 Every instrument in this tier that grades results has an exemption list — a

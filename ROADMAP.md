@@ -1642,6 +1642,445 @@ this entry has twice said was not needed. It is a real and legitimate project;
 it is not a refinement of what exists, and saying so now is cheaper than
 discovering it three days in.
 
+#### E6.8.4g The schedule is DERIVABLE from the oracle — 95.5% measured, and the ">95%" is reached (2026-09-04)
+
+E6.8.4f closed by saying the last leg needs "per-opcode EU micro-timing", and
+called that the real cost. **That was right about the requirement and wrong
+about the price.** The schedules do not have to be authored from microcode
+listings — they can be *read off the oracle*, because they are far more
+regular than the raw cycle totals suggest.
+
+`scripts/pilot-i8088-schedule.mjs`. Every instruction that touches memory or
+I/O decomposes into three parts:
+
+```
+total = anchor + span + tail
+```
+
+| Part | What it is | How it behaves |
+|---|---|---|
+| `anchor` | T-state at which the FIRST data access begins | queue **and addressing mode** |
+| `span`   | offset of the last access relative to the first | per (opcode, mode) |
+| `tail`   | T-states after the last access begins | **per-opcode CONSTANT** |
+
+**`tail` is a constant, not a distribution.** Measured across all 10,000
+vectors of every opcode where it is defined: `01`→3, `33`→7, `87`→3, `8F`→3,
+`FF.2`→3. Not "usually 3". Every single vector.
+
+**And the anchor is the documented EA table, not BIU noise.** Keying it on the
+modrm `mod`/`rm` field alone moves anchor accuracy from ~55% to **100.0%** on
+held-out vectors, for every modrm opcode tried:
+
+```
+        anchor key (q,len,n)   + modrm mod/rm
+01               55.6%            100.0%
+33               56.5%            100.0%
+87               55.3%            100.0%
+8F               49.9%            100.0%
+FF.2             67.5%            100.0%
+```
+
+That is the 8086 effective-address table from the datasheet — disp-only 6,
+base-or-index 5, base+index 7/8, +disp 9/11/12 — showing up in silicon
+measurements. **Tier-1 evidence explaining a term I had been treating as
+unpredictable scheduler behaviour.**
+
+**Result, on held-out vectors (70/30 within each opcode):**
+
+```
+01    73.9%   40   100.0%   90   100.0%   C3   100.0%   EC   100.0%
+33   100.0%   74    99.9%   A5    66.3%   CD   100.0%   F7.4  97.0%
+87   100.0%   8F    73.3%   E9   100.0%   E6   100.0%   EB   100.0%
+                                                        FF.2  93.7%
+OVERALL  95.5%   (43,533 / 45,600)      <- from 36.5%
+```
+
+Three findings made the difference, in order of size:
+
+1. **modrm in the anchor key** (the EA table). The single biggest term.
+2. **Branch-taken as ONE BIT, not the flag word.** Keying on
+   `flags & 0x8d5` scored *worse* than not keying on flags at all — it
+   fragments the table until every key is unique. One bit (did control
+   transfer — our core already tracks it as `_tookBranch`) took `74` to
+   99.9% and `E9`/`EB` to 100%.
+3. **Operand-dependent latency, declared per opcode.** `F7.4` (MUL) sat at
+   17.4% because the datasheet states it as a *range* (118–133 clocks), so no
+   per-opcode constant can fit it. The microcode loops over **AX**, adding on
+   each 1 bit: keying on `popcount(ax)` took MUL to **97.0%**. Note it is
+   popcount of `AX`, the implicit operand — popcount of the *source* operand
+   scores 15.7%, i.e. nothing. Same family: `F7.5`, `F6.4`, `F6.5`.
+
+**What still misses, and why — mechanism confirmed, not guessed.** `01`
+(73.9%) and `8F` (73.3%) miss by exactly ±1 cycle. It is not address parity
+(both spans occur equally at both parities). It is the prefetch:
+
+```
+01:  span=20  <->  2 code fetches, 0 idle
+     span=19  <->  1 code fetch + 3 Ti,  or  0 fetches + 7 Ti
+8F:  span=18  <->  1 code fetch + 2 Ti
+     span=17  <->  0 fetches + 5 Ti
+```
+
+Whether the BIU squeezes one more prefetch into the EU's gap — E6.8.4f's
+policy-length rule, exactly. That residual **is** the BIU state machine, and
+it is now quantified at ~4.5% rather than assumed.
+
+**THE HONEST CAVEAT, because this number is easy to over-read.** 95.5% is
+held-out *vectors*, with per-opcode calibration. Leave-one-out on *opcodes*
+scores **34.2%** — and that is the finding, not a failure. The per-opcode EU
+prologue cannot be inferred from other opcodes: `C3`, `CD`, `E6`, `EC` each
+score 100% calibrated and 0% held-out. **So E6.8.4f's conclusion survives —
+per-opcode data is required — but the cost collapses**, because the data is
+derived by script from vectors we can download, not authored by hand from
+microcode listings.
+
+**Revised decomposition of the owner's ">95%":**
+
+```
+36.5% -> 95.5%   derive schedules from the oracle    DONE, measured
+95.5% -> ~100%   BIU state machine (E6.8.4f's five states)  the last 4.5%
+```
+
+**Licence: clear, and checked before relying on it.** `SingleStepTests/8088`
+is **MIT** (verified 2026-09-04 by reading `HEAD:LICENSE` — the local sparse
+clone had not fetched it, so its absence on disk meant nothing). Tables
+derived from it may ship in a BSD-3 bundle **provided the MIT copyright
+notice travels with them**. That is an attribution obligation on the derived
+tables, not just on the checkout, and it must be honoured at the point the
+tables land in `src/`.
+
+**VALIDATED ON THE FULL SUITE — 95.6% over 323 opcodes (2026-09-04).** The
+95.5% above was sixteen opcodes that happened to be on disk, which is a
+selection nobody chose. Fetched the rest (302 files, **677 MB** — the
+"~1.5 GB" estimate was high) and re-ran streaming, one opcode resident at a
+time.
+
+**First honest result: 92.8%**, not 95.5%. The sixteen were the easy ones, as
+predicted before the run. Two mechanical fixes brought it back:
+
+```
+                                   before   after
+D2.x / D3.x  shift/rotate by CL      ~3%    ~99.4%    (16 opcodes)
+99           CWD                     49.3%  100.0%
+                                   -------  -------
+FULL SUITE                           92.8%   95.6%   (862,304 / 902,100)
+```
+
+**The shift fix is the interesting one, because the first attempt was the
+wrong SHAPE, not the wrong feature.** Keying on CL categorically scores 57% —
+better than 3%, so it looks like progress — because it fragments the table
+across 64 CL values until each key holds a handful of vectors. The datasheet
+gives shift-by-CL as `8+4n`, and measurement confirms it exactly (cl=0 → 8,
+every +2 of CL adds +8). It needs a **linear correction**: subtract `4*CL`
+before fitting, add it back when predicting. 3% → 99.4%.
+
+**Two kinds of operand dependence, and conflating them costs 40 points:**
+
+| Kind | Shape | Example |
+|---|---|---|
+| categorical | operand selects a different constant | MUL: `popcount(ax)` |
+| **linear** | operand adds proportional cycles | **shift by CL: `4*CL`** |
+
+The linear term also lands in **`span`**, not `tail`, for a read-modify-write
+form — the shift loop runs *between* the read and the write.
+
+**Per-opcode distribution over the full suite:**
+
+```
+exactly 100%   217        >=90%     3
+      >=99%     50        >=75%    11
+      >=95%      6         <75%    36
+```
+
+**267 of 323 opcodes are at or above 99%.**
+
+**Where the remaining 36 sit, and they are two distinct problems:**
+
+1. **Division is a genuine boundary, not a missing feature.** `F7.7`/`F6.7`
+   (IDIV) 16%, `F7.6`/`F6.6` (DIV) 60–64%, `D4`/`D5` (AAM/AAD) 38–54%. Ten
+   candidate features were searched — sign, bit-length, popcount, magnitude of
+   `DX:AX`, quotient bit-length — and **none beats ~60%**. The 8086 divide
+   microcode loops on the quotient as it is computed bit by bit; that is a
+   simulation, not a closed form. Recorded as searched-and-refused so the next
+   person does not repeat the search. IMUL is partly tractable
+   (`popcount(|AX|)` plus sign: 9.8% → 47.5%) because the signed forms negate
+   to magnitude and then run the unsigned loop.
+2. **The 72–73% cluster is the BIU, and it is the SAME ~4.5% as before.**
+   `00`, `08`, `10`, `21`, `28`, `8F`, `FF.3`, `FF.6` — all read-modify-write
+   forms, all missing by exactly ±1, all the prefetch-in-the-gap question.
+   String ops (`A4`–`A7`, `AE`, `AF`, 61–71%) are the same plus REP counts.
+
+**So the target is met on the full instruction set, and the remaining work is
+two named things rather than an open question:** the BIU state machine of
+E6.8.4f (worth ~4%), and a divide microcode loop (worth ~1%).
+
+**DONE (2026-09-04): `src/i8088-cycles.js`, 323 opcodes, 738 KB.**
+`scripts/gen-i8088-cycle-tables.mjs` emits it; `scripts/check-i8088-cycles.mjs`
+scores it back against the oracle; `test/i8088-cycles.test.mjs` checks what can
+be checked WITHOUT the oracle.
+
+```
+IN-SAMPLE   95.82%   (2,881,204 / 3,007,000), 0 missing keys
+HELD-OUT    95.6%    (pilot, 70/30 within each opcode)
+```
+
+The in-sample number validates that generation and lookup agree; it is **not**
+evidence the model generalises, since the shipped table is fitted on those same
+vectors. **The 0.2-point gap between the two is the interesting part**: 50,618
+keys fitted on 3M vectors scoring the same held-out as in-sample is not
+overfitting.
+
+**Named `i8088`, deliberately breaking the tier's `i8086` convention** — the
+vectors are from an AMD D8088 (8-bit bus, 4-byte queue), and the 8086's 16-bit
+bus and 6-byte queue will differ with no oracle to say by how much.
+`i8088-cycles.js` existing while `i8086-cycles.js` does not is a gap marker
+readable at a glance.
+
+**Three things this had to get right, none of them the table itself:**
+
+1. **The absent-oracle path refuses rather than passes.** Both scripts exit 2
+   with *"nothing was regenerated / nothing was checked — this is NOT a pass"*,
+   kept distinct from exit 1 for real drift. A 677 MB dependency that quietly
+   no-ops is the shape that turned bw-board master red today.
+2. **A check that runs in CI at all.** The regeneration check cannot, so
+   `test/i8088-cycles.test.mjs` asserts the hermetic properties instead: shape,
+   every anchor key having the span/tail key that completes it (14k+
+   cross-checks — a missing one mispredicts silently at run time rather than
+   erroring), a real 40-character vector sha rather than `unknown`, and the MIT
+   notice present and untruncated. It asserts nothing about accuracy, because
+   accuracy needs the oracle.
+3. **The MIT notice lives IN THE GENERATED FILE.** The obligation is on the
+   artefact, not the checkout: a derived table shipped in a BSD-3 bundle with
+   its notice left behind in a repo nobody distributes is how attribution gets
+   lost.
+
+**A size reduction is measured and available but NOT taken.** A factored
+encoding — shared EA table + `base(q,len,n)` + an exception list — is **0.29x
+the size with no accuracy loss** (463 stored entries against 1600, on 16
+opcodes). The per-mode EA offsets are *identical* across `01`, `33` and `87`,
+so the term genuinely is shared; factoring it *without* the exception list
+costs 100.0% → 80.9%, which is why the naive version looks attractive and is
+not. Shipping the simple full table first beats landing a cleverer encoding
+before anything works, and the exception count doubles as a legible measure of
+how much of the timing the structure explains (81.6%).
+
+
+**And one process note worth keeping.** The full-suite run was nearly reported
+as having produced nothing: the background task reported "completed" while
+`node` was still running, because the completion signal belonged to the
+wrapper shell that had exited after its `sleep`, not to the job. Same shape as
+the licence trap in this entry and the sparse-checkout trap in E6.8.4e:
+**a check reports on what it watched, never on what you meant it to watch.**
+
+
+#### E6.8.4h The shipped format was the wrong one, and the queue loop closes (2026-09-05)
+
+Two measurements, one uncomfortable and one that changes what is buildable.
+
+**1. THE ANCHOR+SPAN+TAIL DECOMPOSITION OF E6.8.4g SHOULD NOT HAVE SHIPPED.**
+Controlled comparison, identical data and identical 70/30 splits, 902,100
+held-out vectors:
+
+```
+A) anchor + span + tail   (shipped)   95.59%   49,962 keys
+B) direct total lookup                98.00%   38,136 keys
+```
+
+**Better and 24% smaller.** The reason is plain in hindsight: the decomposition
+makes THREE modal estimates and needs all three correct; the direct form makes
+one.
+
+The decomposition was not wasted — it is what REVEALED the structure. The
+per-opcode constant tail, the datasheet EA table turning up in silicon traces,
+the categorical/linear distinction: all of that came from taking the timing
+apart, and it is why the feature set is right. **But an analysis tool and a
+shipped artefact are different jobs, and the first was mistakenly shipped as
+the second.** Regenerated as `i8088-cycles/2`.
+
+**2. THE QUEUE RECURRENCE IS GRADEABLE, WHICH I HAD WRITTEN OFF.** E6.8.4g
+closed by noting the tables are keyed on prefetch queue length while our core
+models no queue (`i8086.js` says so explicitly). Measured, that gap is not
+marginal:
+
+```
+cycle table WITH queue      98.0%
+cycle table WITHOUT queue   50.0%     <- supplying a constant
+```
+
+**48 points.** So the queue must be carried, and I had assumed carrying it was
+unverifiable without a sequential oracle we do not have.
+
+**Wrong: `final.queue` is recorded in every one of the 3,007,000 vectors.** The
+recurrence STEP is therefore directly gradeable, and it is nearly free:
+
+```
+q,len,tot,flush             99.81%    <- next queue length
+q,len,n,m,tot,flush         98.62%    <- MORE features, WORSE
+naive q-len+floor(tot/4)    33.22%    <- the obvious closed form
+```
+
+So the loop closes: **predict cycles from the queue (98.00%), predict the next
+queue from the cycles (99.81%), carry forward.** Both tables derive from the
+oracle. Cycle-accurate timing is now reachable from inside a running machine
+rather than only from the grading harness.
+
+Two details worth keeping. The **naive arithmetic model scores 33%**, so this
+had to be a table for the same reason the cycle model did. And the **richer key
+scored worse** — the fragmentation trap that cost 40 points on shift-by-CL,
+caught this time by measurement rather than by luck.
+
+**DESYNCHRONISATION IS THE REAL HAZARD**, and `src/i8088-timing.js` handles it
+explicitly. A missed prediction does not cost one instruction: the queue stops
+being known, so every LATER prediction is computed from a wrong queue and is
+**silently wrong rather than absent** — strictly worse than a miss. So
+`CycleEstimator` marks itself desynced and returns `null` until it can recover,
+and there is exactly one event after which the queue is known regardless of
+history: **a taken branch flushes it.** Not a heuristic — it is what the
+hardware does. The estimator also STARTS desynced rather than assuming an
+initial queue, because guessing there would make every early prediction quietly
+wrong.
+
+**One test bound was wrong and the test caught its author.** The new structural
+test first asserted cycle values `< 400` and failed on 1,979 entries — all
+string opcodes, because the suite masks CX to 7 bits and a `REP CMPSW` at
+CX=127 legitimately costs ~3,800 cycles. The bound was invented rather than
+derived. It now asserts the STRUCTURE — only the ten REP-capable opcodes
+(`A4`-`A7`, `AA`-`AF`) may exceed 400 — which still catches the generator bug a
+merely wider bound would miss, and is verified by planting a 1,000-cycle value
+on `NOP` and watching it go red.
+
+**The generator-version drift check fired on its own author, as designed.**
+`i8088-cycles/1` -> `/2` forced the regeneration rather than allowing a stale
+table to sit beside an edited generator.
+
+#### E6.8.4i Cycle-accurate timing is wired into the machine, opt-in, ~6x (2026-09-05)
+
+`machine.enableI8088CycleTiming()`. Charges instructions from the measured
+tables instead of the core's flat per-instruction estimate.
+
+```
+default          ~330 ns/step
+cycle-accurate  ~1774 ns/step      5.3x quiet, 6.0-6.1x at load 19
+coverage         100% on a branching loop   <- SEE E6.8.4j: this figure is
+                                               a property of that workload,
+                                               not of the tables. A real DOS
+                                               boot gives 54.39%.
+```
+
+**IT STARTED AT 100x AND THE CAUSE WAS NOT WHERE IT LOOKED.** Profiling rather
+than guessing:
+
+```
+TABLES[op] property access        33 ns
+T.t[key] direct lookup            27 ns
+predictCycles()                  557 ns
+predictNextQueue()               234 ns
+CycleEstimator.step()          8,016 ns   <- ten times its own contents
+```
+
+The estimator called `predictCycles(op, {...s, queue: this.queue})`. **An
+options object spread per instruction, with a nested `regs` object and a shape
+varying by call site, cost 8 microseconds against 0.8 for the two lookups it
+was arranging.** Replacing the options object with primitive arguments took
+100x to 16x; precomputing the 256 + 2048 opcode key strings (the old code ran
+`toString(16).toUpperCase().padStart()` per instruction) took 16x to ~6x.
+
+**THE FIRST INTEGRATION SCORED 0% COVERAGE AND RAISED NO ERROR**, which is the
+finding worth keeping. The generator keys on `bytes[p+1]` -- the byte after
+prefixes and opcode -- for EVERY opcode, so for `33 C0` it is a genuine modrm
+and for `B8 00 00` it is half an immediate. The run-time lookup passed `null`
+for every non-group opcode, missed on all of them, and fell back silently.
+Everything "worked": no exception, plausible cycle counts, a green suite. Only
+the coverage counter showed it. **A fallback path that is correct makes a total
+failure of the primary path invisible** -- which is exactly why
+`cycleTimingStats()` exists and why the tests assert coverage rather than
+merely that a number came back.
+
+**Three refusals, all deliberate:**
+
+1. **The 80186 throws.** The tables are from an AMD D8088; the 186 changed
+   instruction timings and the queue and has no oracle. A silent fallback
+   would read as support for a variant never measured.
+2. **A machine that never branches predicts NOTHING.** With no taken branch
+   the queue is never known, so coverage is 0% and `desynced` stays true.
+   Correct: a plausible number from an assumed queue would be worse than none.
+3. **`cycleTimingStats()` returns `null` when disabled**, not a zeroed record
+   that reads as "measured, and nothing happened".
+
+**The 8086 caveat is not refused and must not be forgotten.** An 8086 has a
+16-bit bus and a six-byte queue against the 8088's 8-bit bus and four-byte
+queue. Enabling this on an 8086 config gives 8088 timings: closer than the flat
+estimate, and not the same thing as correct. No 8086 oracle exists to say by
+how much.
+
+#### E6.8.4j The oracle samples only TWO queue states, and that caps the whole approach (2026-09-05)
+
+**Correcting E6.8.4i, which reported "100% coverage" from a workload that could
+not have shown otherwise.**
+
+E6.8.4i measured coverage on a five-instruction loop and got 100%. On a **real
+MS-DOS 2.0 boot** — 400,000 instructions, string moves, far calls, disk through
+the service layer, a timer interrupt throughout — it is **54.39%**.
+
+The toy loop sat at **queue = 0 for all 600 steps measured**. It never left the
+single state it happened to start in, so its coverage figure was a property of
+the workload rather than of the tables. *A score without its split is not a
+claim*, applied to my own new feature and caught only because the real workload
+was run.
+
+**THE CAUSE IS IN THE ORACLE, NOT THE CODE, AND IT IS A HARD LIMIT.**
+
+```
+queue values the cycle table accepts as INPUT:   q=0 (19,340 keys)   q=4 (19,350 keys)
+queue values the recurrence PRODUCES as OUTPUT:  0, 1, 2, 3
+```
+
+The SingleStepTests 8088 suite states it plainly: *"Half of provided
+instructions will execute from a full instruction queue."* Half at empty, half
+at full, and **nothing in between**. So the queue recurrence — 99.81% accurate
+at predicting the next queue length — produces `1`, `2` and `3`, for which
+**no cycle entry exists at all**. Most instructions output `q=3`, and the very
+next lookup misses.
+
+**So the two tables have inconsistent domains: the recurrence's outputs are not
+valid inputs to the cycle table.** That is not a bug in either table. Each is
+accurate over what was measured; the composition is what steps outside it.
+
+**THE DESYNC CASCADE MULTIPLIES IT 265x:**
+
+```
+primary misses     685    <- the table genuinely had no entry
+desync misses  181,739    <- consequence: the queue is unknown until the next taken branch
+amplification    265.3x
+```
+
+**685 unmeasured instructions cost 181,739.** One miss makes the queue unknown,
+and recovery needs a taken branch — on this workload, 265 instructions later on
+average. The tables cover **99.83%** of instructions actually looked up; the
+coverage number is almost entirely an amplification artefact, and reporting a
+single `fellBack` total hid which of the two problems this was. `cycleTimingStats()`
+now splits them.
+
+**WHAT WOULD ACTUALLY RAISE IT, and what would not:**
+
+- **A BIU state machine (E6.8.4f) would NOT be enough.** It computes the queue
+  directly rather than by table, which removes the recurrence — but the cycle
+  table still has no entries at `q=1,2,3`, so the lookup misses just the same.
+  This is worth stating because the five-state model has been the assumed next
+  step twice, and it does not clear this.
+- **An oracle sampling intermediate queue states would.** `dbalsom/martypc` is
+  MIT and generates the suite; extending it to emit vectors at every queue depth
+  is the actual unblock, and it is a real project rather than a refinement.
+- **Snapping `q=1,2,3` to the nearest measured state would not be an answer.**
+  It converts an absent measurement into a plausible number, which is the exact
+  thing the null contract exists to prevent. Refused.
+
+**Current behaviour is honest and stays:** an unmeasured state falls back to the
+core's own cycle count, `cycleTimingStats()` reports true coverage split by
+cause, and nothing guesses. On a real boot that means **54% of instructions
+timed from silicon measurements and 46% from the core's estimate**, with the
+tables charging 1.148x the core's total cycles.
+
 #### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
@@ -2538,6 +2977,119 @@ display-demo test steps a bounded number of instructions rather than looping
 until halt.)
 
 ---
+
+### E7.3 NE2000 Ethernet — ON MASTER 2026-09-04 (owner-asked)
+
+**Merged to `origin/master` at `1f35c09`.** Fast-forward, verified before the
+push rather than after: 64 tests green, `audit-clean-checkout` clean on the
+NE2000 test, and both ancestry links confirmed by sha rather than by reading a
+remote ref twice — that ref moved under two sessions twice in the same hour.
+
+`src/ne2000.js` + `test/ne2000.test.mjs`, machine kind `ne2000`, 32 ports.
+
+**Clean-room from the DP8390D datasheet.** Every readable implementation is
+GPL or LGPL — QEMU, Bochs, DOSBox-X, PCem, 86Box, VirtualBox. The one
+permissive implementation is v86's (BSD-2) and this fleet has designated v86
+**oracle-only**: run it, diff against it, never read it into our own code.
+Same rule that produced `ym3812.js` and `sb-dsp.js`, and the same rule that
+made `arduino_8253` an oracle after its GPL-3 headers were found.
+
+**THE DESIGN DECISION IS WHAT IT IS ATTACHED TO, not the register file.** A
+browser has no raw sockets and this bench must run offline, so the card is not
+on a network — it is on a LINK. Two ship:
+
+- `LoopbackLink` — the card hears its own transmissions, which is what a real
+  card's self-test does, and is enough to bring a driver up and prove the ring,
+  the filter and the interrupt path with one machine.
+- `HubLink` — joins two or more emulated machines. **A repeater, not a switch,
+  deliberately**: everyone hears everything and the MAC filter is what makes a
+  frame yours. A switch would do the filtering in the wire and hide the lesson.
+
+**A bridge to a real network is NOT built and should not be added casually.**
+It is a product decision with safety questions attached — what a learner's
+machine can reach, and what can reach it — and it belongs to the owner rather
+than to whoever next opens this file.
+
+**Modelled:** the command register and its paging; the receive ring (PSTART,
+PSTOP, BNRY, CURR, and the four-byte header the NIC writes itself); remote DMA
+both ways with RDC; the interrupt status and mask; the MAC and multicast
+filters; promiscuous mode; and the PROM that identifies a 16-bit card.
+
+**NOT modelled, said rather than faked:** collisions, carrier sense, FIFO
+thresholds, TCR loopback modes 1–3, and the tally counters, which return zero
+because nothing here can lose a packet on a wire. If a lesson ever needs a
+lossy link, that is the place to add it — a link that drops a configurable
+fraction would make the counters mean something and is a good exercise.
+
+**A full ring DROPS and sets OVW rather than overwriting.** Overwriting a
+frame the host has not read is a corruption a driver cannot diagnose; a
+dropped frame with a flag is something it can see.
+
+#### What is NOT done, and what I would do next
+
+1. **No pseudocode verb.** A learner reaches the card from the ASM tab, by
+   writing to its registers — which is the lesson for a NIC in a way it is not
+   for an LED. A `send`/`on receive` pair in pseudocode would need a decision
+   about what a "message" is that does not exist yet.
+2. **No driver ships, and none can.** The DOS networking stack anyone would
+   reach for — Crynwr packet drivers, mTCP — is GPL. Writing to the NIC
+   directly is the intended path.
+3. **PORT CONFLICTS ARE NOT DETECTED.** The ADC0809 sits at 300h and an
+   NE2000's first jumper setting is also 300h. A board declaring both gets no
+   warning, and the symptom would be two chips answering one address. Presets
+   should use **320h** for the card. Worth a machine-level check that two chips
+   do not claim overlapping blocks — it is cheap and it is exactly the class of
+   silent wrongness this tier keeps finding.
+4. **v86 has an NE2000 and we CANNOT currently diff against it — an absence,
+   not a skip.** `V86_ORACLE_DIR` is unset and the libv86/wasm binaries are
+   not on this box, so `scripts/oracle-v86.mjs` has nothing to run. **This
+   card therefore rests on the datasheet and nothing else** — tier 3 by the
+   VERIFICATION.md ladder, where the 8254 and 16550 are tier 2a because a
+   second implementation agreed with them.
+
+   Recorded this way round on purpose. "We have not got to it yet" and "the
+   oracle is not installed" read the same in a plan and are different in a
+   review: the second is a dependency somebody can satisfy in ten minutes,
+   and the first invites the reader to assume it was considered and deferred.
+   `oracle-census.mjs` already lists v86 with `obtain:` instructions; running
+   them is all that stands between this chip and a second opinion.
+
+5. **THE FULL SUITE EXITS 1 ON MASTER, and it is not this chip.**
+   `ac-small-signal` ("AC: honesty and speed") fails under load and passes in
+   isolation — 3832 tests, 3799 pass, 1 fail. It has been patched twice for
+   exactly this symptom and the ruling is to QUARANTINE it rather than raise
+   the budget a third time, with the cost written beside it: a quarantined
+   test means a real numerics regression lands silently. Assigned, not done.
+
+   Recorded here rather than left implicit because **a red master for a known
+   reason is still a red master** — it degrades the signal for every repo that
+   vendors this one, and "we know about that one" is exactly how a second
+   failure hides behind the first.
+
+6. **NO PORT-CONFLICT CHECK EXISTED, AND NOW ONE DOES.** Two chips claiming
+   one I/O window used to resolve silently to whichever was declared last —
+   a board that ran and read the wrong device. `I8086Machine` now refuses,
+   naming both chips and both decoded windows. Checked per bus, since an I/O
+   window and a memory window at the same number are different places.
+
+#### Three bugs found by running it, two of them in the TEST
+
+Recorded because they are the kind that read as chip faults:
+
+- **PSTART and PSTOP are WRITE-ONLY on page 0** — reading register 1 gives
+  CLDA0, not the ring bottom. The harness read them back, got zero, and
+  computed a negative frame length. A real driver keeps its own copy.
+- **CR `0x21` and `0x22` both abort a remote DMA, but `0x21` carries CR_STOP.**
+  The harness used the tidy-looking one between accesses and the card went
+  deaf between frames with nothing to show why.
+- **Remote DMA moved two bytes per access in word mode.** DCR bit 0 says the
+  HOST moves 16 bits per instruction, and on an 8086 `IN AX, DX` is two byte
+  reads — so the width belongs in the CPU, not the chip. A four-byte header
+  came back as bytes 0, 2, 4, 6.
+
+Verified with `audit-clean-checkout`, which caught the test file before it was
+tracked — the tool working on its first real use by someone other than its
+author.
 
 ### E7.2 The auto-added chip vocabulary — closing the block gap (2026-09-04, owner-requested)
 

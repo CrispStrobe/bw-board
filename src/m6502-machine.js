@@ -169,6 +169,11 @@ export class M6502Machine {
         this.mem = new Uint8Array(65536);
         /** @type {Record<string, W65C22|W65C51>} */
         this.chips = {};
+        // Built on first use, NOT here: config validation later in this
+        // constructor can throw, and a schedule built now would describe a
+        // board that is about to be rejected. See i8086-machine.js for the
+        // full note; the hazard is silent, so it is recorded at both sites.
+        this._advList = null;   // hot-loop cache; see _buildAdvanceList
         this._decode = [];
         for (const r of config.regions) {
             this._decode.push({ ...r, chip: null });
@@ -517,20 +522,35 @@ export class M6502Machine {
     attachDevice(name, dev) {
         this.devices = this.devices || {};
         this.devices[name] = dev;
+        this._advList = null;   // schedule is stale
         return dev;
     }
 
-    _advanceChips(n) {
+    /**
+     * Flat list of the targets _advanceChips actually calls, built on first
+     * use and invalidated in attachDevice. That loop runs once per
+     * instruction, and Object.keys() allocated a fresh name array each time --
+     * on the 8086 tier the identical pattern was 89% of machine.step().
+     */
+    _buildAdvanceList() {
+        const list = [];
         for (const name of Object.keys(this.chips)) {
             const chip = this.chips[name];
-            if (chip.advance) chip.advance(n);
+            if (chip.advance) list.push(chip);
         }
         if (this.devices) {
             for (const name of Object.keys(this.devices)) {
                 const dev = this.devices[name];
-                if (dev.advance) dev.advance(n);
+                if (dev.advance) list.push(dev);
             }
         }
+        this._advList = list;
+        return list;
+    }
+
+    _advanceChips(n) {
+        const list = this._advList !== null ? this._advList : this._buildAdvanceList();
+        for (let i = 0; i < list.length; i++) list[i].advance(n);
     }
 
     /**

@@ -149,7 +149,11 @@ export const INPUTS = [
     {
         id: 'v86', kind: 'oracle',
         what: 'v86 (BSD-2) run headless — a whole-program second opinion on the support chips. '
-            + 'Established that our i8254 read-back is more complete than its.',
+            + 'Established that our i8254 read-back is more complete than its. '
+            + 'ABSENT ON THIS BOX as of 2026-09-04 (V86_ORACLE_DIR unset), which is why '
+            + 'src/ne2000.js rests on the DP8390D datasheet and nothing else — tier 3, '
+            + 'where the 8254 and 16550 are 2a. v86 HAS an NE2000; the diff is one '
+            + 'download away and has simply never been run.',
         env: 'V86_ORACLE_DIR',
         paths: [],
         gates: ['scripts/oracle-v86.mjs'],

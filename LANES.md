@@ -46,6 +46,174 @@ the day it was written down. **At this fleet's current rate a gap claim has a
 shelf life measured in hours**, so the check is not diligence, it is the only
 thing standing between a claim and a day spent re-doing finished work.
 
+**6. A CONCLUSION FROM A REMOTE-TRACKING REF MUST BE RE-DERIVED, OR PINNED TO
+AN EXPLICIT SHA, BEFORE IT IS ACTED ON — AND ABOVE ALL BEFORE IT IS BROADCAST.**
+
+We are **sixteen worktrees of one `.git`**. One object store, one set of
+`origin/*` refs. A peer's `fetch` or `push` in their worktree rewrites *your*
+remote-tracking refs, with no action of yours.
+
+Measured, 2026-09-04. `git diff --stat origin/master origin/feat/i8086-support-chips`
+reported **40,584 deletions across 106 files** — `rom/bios.asm`, `i8086-asm.js`,
+`VERIFICATION.md`, all apparently destroyed by a peer's branch. It was a clean
+`master+5`: **848 insertions, 1 deletion.** The branch ref had moved six times
+(`13dc7f3 <- 5e8e313 <- cfd7317 <- 2925f23 <- 3233b1b <- c293a5c`) and had been
+replaced *between two of the reader's own commands*, with no fetch in between.
+
+**The diff was not wrong. It was true when made and false when used.**
+
+That makes it a distinct failure family from the others in this file, and worse
+in two ways:
+
+- **The wrong answer is confident and alarming.** "Your branch deletes 40,584
+  lines" is not a subtle miscount; it is the kind of claim that gets acted on
+  within a minute of being received.
+- **It has no symptom.** Every other trap here leaves something visibly odd — a
+  suspiciously round count, a green case and a red case failing together, a
+  suite that finishes too fast. A stale remote ref simply answers, promptly and
+  wrongly.
+
+The check that dissolved it took one command:
+
+    git merge-base --is-ancestor origin/master origin/their-branch
+
+Use it, or `git rev-parse` the sha and diff against that, before you believe a
+cross-branch diff — and never send one you have not re-derived.
+
+---
+
+**7. RE-DERIVE IDENTITY BEFORE YOU BROADCAST IT — AND VERIFY A CORRECTION AS
+HARD AS THE CLAIM IT CORRECTS.**
+
+**This rule previously said something false, and the way it went wrong IS the
+rule.** It recorded that two sessions wrongly concluded `lego-47` was gone while
+`lego-47` was receiving everything. That is not what happened.
+
+What happened, 2026-09-04:
+
+1. Repeated `Failed to send` to `lego-47`. Reported as unreachable. **This was
+   correct.**
+2. A session replied *"I am lego-47 and I am reachable — address me by that
+   name."* Written with authority, and it explained the symptom.
+3. That correction was accepted, propagated to a third session, and written
+   into this file as a rule — **without re-running the one command that
+   settles it.**
+4. `ListAgents` lists `lego-47 [40a375]` (idle, 1d) and `lego-be [61a550]`
+   (busy, 1h) as **two separate rows**. The replying session was `lego-be`. It
+   had cached an earlier `ListAgents` reading of its own identity, true when
+   made, and never re-derived it.
+
+So a correct report was withdrawn in favour of an incorrect correction, and the
+error was then durably recorded. Two failures, and the second is the worse one:
+
+- **A cached identity is a stale remote ref with a friendlier name.** Rule 6 is
+  about `origin/*`; this is the same mechanism applied to *who you are* and *who
+  you are talking to*. The 40,584 number makes people check a diff. **Nothing
+  makes anyone check who they are speaking to.** Re-derive identity and location
+  before broadcasting them, not only diffs.
+- **A correction is a claim.** It arrives with the authority of a fix and the
+  social weight of someone admitting fault, which is exactly why it slides past
+  the scrutiny the original got. The original report here had been verified two
+  ways — failed sends *and* an `ListAgents` row. It was abandoned on an
+  assertion. **Verify a correction at least as hard as what it corrects,
+  especially when it is flattering to accept.**
+
+The surviving true part: **cross-session sends can fail, and a failure is
+"unreceived" — never consent, never absence.** But do not infer a peer is gone
+from send failures alone; check `ListAgents`, and if a row says they are alive,
+that is disconfirming evidence rather than noise to explain away.
+
+**8. PUBLISHING TO `master` IS THE OWNER'S CALL, NOT A PEER'S.** A peer can
+review, verify, clear a merge order, and say a branch is ready. None of that is
+authorisation to push to `master`. The boundary is about **who authorises
+publishing, not whether the change is good** — a change can be correct,
+reviewed, and green, and still not be yours to publish. Stated by `lego-ef`,
+upheld by `lego-47` in both directions on 2026-09-04.
+
+**9. "TOUCHES NO SHARED FILES" IS NOT "CHANGES NOTHING FOR THE PENDING
+MERGES."** Only the first is checkable from a diff.
+
+2026-09-04: a commit landed on `master` touching exactly two files that no
+pending branch touched — genuinely orthogonal **by content**. It was not
+orthogonal **by base**: it staled the base of *both* branches in a merge order
+that was still being negotiated, and forced a re-rebase in a required sequence
+(theirs, then mine) to avoid replaying one lane's commits under the other's
+shas.
+
+A diff can prove file-level independence. **Nothing can tell you what is
+pending except knowing what is pending.** So before pushing to a shared branch,
+ask who is mid-merge — and remember that **being authorised to push is not the
+same as it being the right moment**.
+
+---
+
+**10. A MESSAGE THAT FAILS TO SEND LEAVES NO TRACE ON THE RECEIVING END.** When
+your send fails, the recipient does not know you tried. They see silence
+identical to your never having written.
+
+This asymmetry is the entire argument for putting anything load-bearing in a
+**file in their tree** rather than a message: a commit is durable, addressable,
+and does not depend on a channel working in the direction you assumed. On
+2026-09-04 a lane that could not be reached by five separate attempts was
+finally warned by a commit to `LANES.md` in its own repository.
+
+And when relaying something you have not checked, **mark it unverified**.
+Passing on a second-hand report as fact makes you the next link in a chain
+nobody has confirmed — which is exactly how a phantom "40,584 deletions"
+(rule 6) nearly travelled to three sessions.
+
+**11. THE MACHINE LAYER IS VENDORED INTO `brickwright-lite` AND ALL THREE FILES
+ARE DIVERGED IN BOTH DIRECTIONS.** Your change here does not reach lite, and
+lite has changes that do not reach here.
+
+Measured 2026-09-05 against `ec1272a`, versus
+`lite/overlay/scratch-gui/src/lib/bw-board/`:
+
+```
+                      lite AHEAD    lite BEHIND
+i8086-machine.js         171            59
+z80-machine.js            88            33
+m6502-machine.js          75            28
+```
+
+With `CircuitDesigner.jsx` (19 ahead / 46 behind, found by lego-be) that is
+**four files**, three of them the machine layer. The general form, theirs:
+
+> A vendored file that is BEHIND is an inconvenience. One that is AHEAD is a
+> fork nobody declared. One that is **both** cannot be resolved by any tool,
+> because no tool can know which of two changes was intended.
+
+**The corollary the count adds: this is not an accident that happened twice.
+With four, it is the steady state of any vendored directory both sides edit.**
+
+**The AHEAD content is a subsystem, not drift.** Lite has an entire
+`machine-checkpoint.js` — `MACHINE_CHECKPOINT_SCHEMA`, `checkpointSupport`,
+`checkpointTopology`, `checkpointRefusal`, `validateCheckpointEnvelope` — wired
+into `z80-machine.js` and `m6502-machine.js`, and absent from bw-board
+entirely. A sync from here **deletes a whole feature and nothing fails**: the
+machines construct, checkpointing just stops existing. Same shape as lite's
+`displayRevision` repaint optimisation.
+
+**So: do not sync either direction wholesale.** `sync-bw-board` already refuses
+on a stale checkout, and `--check` reports differing files while stating it
+cannot tell direction. Both correct, neither sufficient. Graft your own hunks
+by hand and verify the other side's survive.
+
+**AND ONE HAZARD THAT IS SPECIFIC AND SILENT.** The `_advanceChips` schedule
+cache is two pieces that must travel together:
+
+1. `this._advList = null` in the constructor, `_buildAdvanceList()`, the flat
+   loop — the visible part, and the reason anyone would port it;
+2. `this._advList = null` in **`attachDevice`** — one line, easy to miss.
+
+Port (1) without (2) and any device attached after the first `step()` silently
+never ticks: no exception, no wrong value, nothing red. **Lite has no
+`machine-contract` test**, so the guard that catches this
+("a device attached AFTER stepping still gets advanced", asserted for all three
+machines and verified by deleting the invalidation until all three go red)
+does not exist in the repo where such a graft would happen. Port the test with
+the cache, or do not port the cache — lite's machines are correct as they are.
+
 ## CLAIMS — work in progress
 
 | lane | who | started | what |

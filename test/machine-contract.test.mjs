@@ -93,6 +93,35 @@ const MACHINES = [
 ];
 
 for (const { name, make } of MACHINES) {
+    test(`${name}: a device attached AFTER stepping still gets advanced`, () => {
+        // REGRESSION GUARD FOR A CACHE WITH NO SYMPTOM.
+        //
+        // All three machines cache a flattened advance schedule, because
+        // `for (const k of Object.keys(this.chips))` in _advanceChips was
+        // allocating a fresh name array every instruction -- measured at 89%
+        // of machine.step() on a 7-chip 8086.
+        //
+        // A cache built on first use and never invalidated would drop any
+        // device attached after that first step. Nothing would go red: the
+        // device simply never ticks. No exception, no wrong value, no failing
+        // assertion anywhere -- the defect has no symptom at the layer it
+        // lives in, which is exactly why it needs a test that provokes the
+        // ORDER rather than the behaviour.
+        //
+        // Attach-then-step is covered incidentally by every other test in the
+        // tier. Step-then-attach is covered by nothing, so it goes here.
+        const m = make();
+        for (let i = 0; i < 50; i++) m.step();      // force the schedule to build
+
+        let ticks = 0;
+        m.attachDevice('probe', { advance: () => { ticks++; } });
+        for (let i = 0; i < 50; i++) m.step();
+
+        assert.ok(ticks > 0,
+            `${name}: a device attached after the first step() was never advanced `
+            + '(stale _advanceChips schedule -- attachDevice must invalidate it)');
+    });
+
     test(`${name}: step() returns the cycles it charged`, () => {
         const m = make();
         for (let i = 0; i < 200; i++) {
