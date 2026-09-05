@@ -61,6 +61,7 @@ export const INPUTS = [
         gates: ['test/i8086.test.mjs', 'test/i8086-disasm.test.mjs', 'test/moo.test.mjs',
             'scripts/grind-i8086.mjs', 'scripts/grind-i8086-disasm.mjs'],
         obtain: 'git clone --depth 1 https://github.com/SingleStepTests/8086 ~/code/8086-vectors',
+        ciAvailable: true,
         ci: 'yes — the `vectors` job checks out v1_binary and grinds all 646,000 per push',
     },
     {
@@ -77,6 +78,7 @@ export const INPUTS = [
             + "https://github.com/SingleStepTests/8088 ~/code/8088-vectors "
             + "&& cd ~/code/8088-vectors && git sparse-checkout set --no-cone '/v2/*.json.gz' "
             + '(2.0 GB whole; a sparse subset of opcode files is enough to move the score)',
+        ciAvailable: false,
         ci: 'not yet — the grind is young and its scores are still moving',
     },
     {
@@ -87,6 +89,7 @@ export const INPUTS = [
         paths: [join(HOME, 'code', 'z80-vectors', 'v1')],
         gates: ['test/z80-disasm.test.mjs', 'scripts/grind-z80.mjs'],
         obtain: 'git clone --depth 1 --filter=blob:none https://github.com/SingleStepTests/z80 ~/code/z80-vectors',
+        ciAvailable: true,
         ci: 'yes — the `vectors-full` job, on a schedule rather than per push (1.6 GB unpacked)',
     },
     {
@@ -99,6 +102,7 @@ export const INPUTS = [
         obtain: 'git clone --depth 1 --filter=blob:none --sparse '
             + 'https://github.com/SingleStepTests/65x02 ~/code/65x02-vectors '
             + '&& cd ~/code/65x02-vectors && git sparse-checkout set wdc65c02/v1',
+        ciAvailable: true,
         ci: 'yes — the `vectors-full` job, on a schedule rather than per push',
     },
     {
@@ -108,6 +112,7 @@ export const INPUTS = [
         paths: [join(HOME, '.local/pipx/venvs/lcapy/bin/python')],
         gates: ['test/lcapy-oracle.test.mjs'],
         obtain: 'pipx install lcapy',
+        ciAvailable: false,
         ci: 'no',
     },
     {
@@ -125,6 +130,7 @@ export const INPUTS = [
         gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
             'test/emu8051-debug.test.js'],
         obtain: 'git clone https://github.com/CrispStrobe/emu8051-stc and build its WASM',
+        ciAvailable: true,
         ci: 'yes — checked out at a pinned ref by the `test` job',
     },
     {
@@ -135,6 +141,7 @@ export const INPUTS = [
         gates: ['test/labwired-adapter.test.mjs', 'test/labwired-roundtrip.test.mjs',
             'test/pad-drive-parity.test.mjs'],
         obtain: 'point LABWIRED_WASM at a wasm-bindgen NODEJS out-dir (the web target will not load under node)',
+        ciAvailable: false,
         ci: 'no',
     },
     {
@@ -144,6 +151,7 @@ export const INPUTS = [
         paths: [],
         gates: ['test/labwired-oracle.test.mjs'],
         obtain: 'build labwired and point LABWIRED_CLI at it',
+        ciAvailable: false,
         ci: 'no',
     },
     {
@@ -158,6 +166,7 @@ export const INPUTS = [
         paths: [],
         gates: ['scripts/oracle-v86.mjs'],
         obtain: 'download libv86.mjs + v86.wasm from a v86 release and point V86_ORACLE_DIR at them',
+        ciAvailable: false,
         ci: 'no',
     },
     {
@@ -182,6 +191,7 @@ export const INPUTS = [
         // spot after the ehBASIC ROM and the MS-DOS toolchain.
         obtain: 'clone the four upstream repositories into '
             + '/mnt/volume1/code/retro-corpus-8086; see test/oracle-nasm.test.mjs CORPORA',
+        ciAvailable: false,
         ci: 'no — 191 MB of third-party game sources, not vendored. nasm itself IS '
             + 'installed in CI (0d9f984), so the liveness probe and the encoder '
             + 'comparisons run there; the corpus comparisons skip and say so.',
@@ -219,6 +229,7 @@ export const INPUTS = [
         // invisible to the tool built for cross-repo dependencies.
         obtain: 'git clone https://github.com/mike42/6502-computer /tmp/mike42-6502 '
             + '&& cd /tmp/mike42-6502/rom/basic && make',
+        ciAvailable: false,
         ci: 'no — non-commercial licence, and permanently so',
     },
     {
@@ -245,6 +256,7 @@ export const INPUTS = [
         obtain: 'supply 48.ROM / 128.ROM locally, or rebuild from z00m128/zxs-rom '
             + 'with sjasmplus — never vendored; see the STECCY provenance note and '
             + 'the licence reasoning above',
+        ciAvailable: false,
         ci: 'no — deliberately, the ROMs are not ours to ship',
     },
     {
@@ -273,6 +285,7 @@ export const INPUTS = [
         // reader thinks it means. Whoever wrote 140e2931 should say what it
         // was, or the pin should be replaced deliberately with a ref that
         // exists.
+        ciAvailable: false,
         ci: 'no',
     },
     {
@@ -291,6 +304,7 @@ export const INPUTS = [
         gates: ['test/oracle-nasm.test.mjs'],
         obtain: 'no root needed: apt-get download nasm && dpkg-deb -x nasm_*.deb DIR, then '
             + 'NASM=DIR/usr/bin/nasm; or apt-get install nasm',
+        ciAvailable: true,
         ci: 'YES — standing since 0d9f984: ci.yml installs nasm (`apt-get install -y nasm`) '
             + 'AND then asserts it is present (`oracle-census.mjs --require nasm`), so a '
             + 'failed or skipped install fails the build at the install rather than passing '
@@ -318,6 +332,7 @@ export const INPUTS = [
         gates: ['test/oracle-masm.test.mjs', 'scripts/oracle-masm.mjs'],
         obtain: 'fetch MASM.EXE, LINK.EXE, EXE2BIN.EXE (MIT-licensed MS 1982 binaries) into '
             + '/tmp/msdosbin, or point $MSDOS_BIN_DIR at them',
+        ciAvailable: false,
         ci: 'no — the binaries live at an absolute /tmp path, the same blind spot as the '
             + 'ehBASIC ROM: audit-clean-checkout strips untracked REPO files by archiving '
             + 'HEAD and cannot reach /tmp, so their absence in a fresh checkout is invisible '
@@ -362,8 +377,9 @@ if (argv.includes('--json')) {
     // Added when the language-device matrix lane was about to do exactly that,
     // in good faith, because `present` is the only field that looked relevant.
     // A field's NAME is not its meaning, and an exported shape is a contract.
-    console.log(JSON.stringify(rows.map(({ id, kind, present, via, gates, ci, what }) =>
-        ({ id, kind, present, ci, via, gates, what })), null, 2));
+    console.log(JSON.stringify(rows.map(
+        ({ id, kind, present, via, gates, ci, ciAvailable, what }) =>
+            ({ id, kind, present, ciAvailable, ci, via, gates, what })), null, 2));
 } else {
     const pad = (s, n) => String(s).padEnd(n);
     console.log(`${pad('INPUT', 18)}${pad('KIND', 9)}${pad('STATE', 9)}GATES  DETECTED VIA`);

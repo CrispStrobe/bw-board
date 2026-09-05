@@ -94,3 +94,32 @@ test('--require fails on an absent input and passes on a present one', () => {
         `--require ${absent.id} should EXIT 1: it is absent, and that is the whole point`);
     assert.equal(run(['--require', 'no-such-input']), 2, 'an unknown id is a usage error');
 });
+
+test('ciAvailable agrees with the reason it sits beside', () => {
+    // THE BOOLEAN IS EXPLICIT DATA, NOT PARSED PROSE -- and that is exactly why
+    // it can drift from the sentence next to it. A consumer reading
+    // `ciAvailable` while a human reads `ci` is two sources of truth, which is
+    // the shape this whole file exists to refuse.
+    //
+    // Added when the language-device-matrix lane asked for a boolean rather
+    // than regex my English. Giving them one moves the parsing into this tool,
+    // where it can be guarded; leaving it prose-only would have moved a
+    // fragile parse into theirs.
+    for (const i of INPUTS) {
+        const saysYes = /^yes\b/i.test(i.ci.trim());
+        assert.equal(i.ciAvailable, saysYes,
+            `${i.id}: ciAvailable=${i.ciAvailable} but the reason begins `
+            + `"${i.ci.trim().slice(0, 40)}". A consumer reading the boolean and a `
+            + 'human reading the sentence would disagree about whether this claim stands.');
+    }
+});
+
+test('every input declares ciAvailable, so a consumer never sees undefined', () => {
+    // A missing boolean is falsy, so a new row without one silently reads as
+    // "not in CI" -- an omission that looks like an answer.
+    for (const i of INPUTS) {
+        assert.equal(typeof i.ciAvailable, 'boolean',
+            `${i.id} has no ciAvailable; a consumer would read undefined as false `
+            + 'and record a standing claim as merely recorded');
+    }
+});
