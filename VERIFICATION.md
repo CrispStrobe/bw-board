@@ -775,10 +775,11 @@ family expensive rather than merely embarrassing:
 
 ### Rule: a wait that cannot find its job reports success
 
-Four instances in one day, each in a different disguise, every one producing a
-confident "DONE" beside a zero-byte log. Recorded as a rule rather than a
-caution because vigilance demonstrably did not fix it: the fourth happened
-after the first three had been written up.
+Six instances in one day, each in a different disguise, every one producing a
+confident "DONE" beside a truncated or empty log. Recorded as a rule rather
+than a caution because vigilance demonstrably did not fix it: the fourth
+happened after the first three were written up, **and the fifth and sixth
+defeated the guards written in response to them.**
 
 ```
 1. nohup node job & ; sleep 45 ; tail log     the WRAPPER exits after sleep;
@@ -791,7 +792,20 @@ after the first three had been written up.
 4. P=$(cat pidfile)  # never written          `while kill -0 "" ; do` exits
    while kill -0 $P; do sleep; done           immediately: an empty PID is a
                                               satisfied loop, not an error
+5. the harness "completed" notification       fired for the wrapper shell while
+                                              the job ran on for 20 more minutes
+6. P=$(pgrep ...); [ -n "$P" ] || exit 1      the guard from (4) PASSED -- a PID
+   while kill -0 "$P"; do sleep; done         was found, just the wrong one, so
+                                              kill -0 said "gone" and the suite
+                                              was reported complete at 9 KB of
+                                              a 780 KB log
 ```
+
+**Instance 6 is the important one: the empty-PID guard added after instance 4
+did not help, because the PID was not empty — it was WRONG.** `pgrep -f`
+matched a transient shell whose command line contained the pattern. Every
+process-level guard has this failure available to it, and each new guard only
+narrows which wrong process gets matched.
 
 **The shared mechanism: a waiter that cannot locate its target concludes the
 target has finished.** Absence of the job is indistinguishable from completion
@@ -806,9 +820,18 @@ of the job, and every one of these failed in the direction that says "done".
   so `while kill -0 "$P"` with an unset `P` runs zero times and looks like
   instant success. Guard with `[ -n "$P" ] || exit 1` first.
 - **Never widen a kill pattern past the job**, or it takes the watcher with it.
-- **Read the artefact, not the exit.** A zero-byte output file next to a
-  "finished" message was the only reliable tell in all four cases, and it is
-  cheaper to check than any of the above.
+- **READ THE ARTEFACT, NOT THE PROCESS. This is the one that has never failed,
+  and after six instances it should be the first check rather than the last.**
+  A job's output has an expected *shape*; a wait has only an expected *verdict*.
+  The verdict has now been wrong in the direction of "done" for six distinct
+  reasons; the artefact has been right every time. A zero-byte log, or 9 KB
+  where a complete run produces 780 KB, settled every case in one command —
+  including the two where the process-level guards themselves were the thing
+  that failed.
+
+  Concretely: print `wc -c` of the output beside the result, and know roughly
+  what a complete run weighs. "Done" plus a plausible byte count is evidence;
+  "done" alone is not.
 
 Same family as the audit that printed one cause for every failure, and as the
 cancelled CI run that reads as "somebody chose to stop it": **a status that
