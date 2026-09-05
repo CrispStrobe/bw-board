@@ -2081,9 +2081,47 @@ now splits them.
   table still has no entries at `q=1,2,3`, so the lookup misses just the same.
   This is worth stating because the five-state model has been the assumed next
   step twice, and it does not clear this.
-- **An oracle sampling intermediate queue states would.** `dbalsom/martypc` is
-  MIT and generates the suite; extending it to emit vectors at every queue depth
-  is the actual unblock, and it is a real project rather than a refinement.
+- **An oracle sampling intermediate queue states would — and READING martypc
+  changed what that costs and who can do it (2026-09-05).** The earlier text
+  here said extending it is "a real project rather than a refinement". Half
+  right, and wrong about which half is hard.
+
+  **The software change is small.** Sources read (MIT, reference only, not
+  vendored):
+
+  ```
+  crates/bin/martypc_headless/src/cpu_test/gen_tests.rs         :393
+  crates/lib/marty_core/src/arduino8088_validator/remote_cpu.rs :50, :1090
+  ```
+
+  The two-state limitation is *a boolean*: `let prefetch =
+  config.tests.test_gen_prefetch;`, with the older per-test alternation still
+  visible one line above as `//let prefetch = (test_num - 1) & 0x01 == 0;`.
+  When set, the generator pads the instruction bytes with NOPs up to
+  `cpu.get_type().queue_size()` and calls `set_queue_contents` — i.e. it
+  targets **exactly full**, and the truncation logic for shorter targets is
+  already in the same block.
+
+  Priming is **already data-driven**, not hard-coded logic:
+  `prefetch_pgm_bytes(cpu_type)` returns a `&'static [u8]`, and for Intel it is
+  `[0xAA, 0xAA, 0xAA, 0xAA]` — four `STOSB`, one-byte instructions slow enough
+  that the BIU fills the queue while they run. Selecting that array by *target
+  depth* instead of by CPU type is a signature change plus three new byte
+  sequences.
+
+  **THE BLOCKER IS HARDWARE, NOT CODE, AND THAT IS THE FINDING.** The generator
+  drives a REAL 8088 through the Arduino8088 rig over a serial port —
+  `ArduinoValidator::new(cpu_type, trace, port: Option<String>, baud)`. Vector
+  generation is hardware-in-the-loop; it is not a simulation that can be
+  re-run with different settings on this box. **No rig, no vectors, however
+  small the diff.**
+
+  So the honest options are: **ask upstream to generate a queue-depth-swept
+  suite** (the change is small enough to be a reasonable request, and the
+  commented-out alternation shows the author has already thought in these
+  terms), or **build the rig**, or **accept the ceiling**. What is NOT
+  available is "we extend martypc ourselves", which is what the previous
+  wording implied.
 - **Snapping `q=1,2,3` to the nearest measured state would not be an answer.**
   It converts an absent measurement into a plausible number, which is the exact
   thing the null contract exists to prevent. Refused.
