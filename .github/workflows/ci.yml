@@ -51,6 +51,32 @@ jobs:
           node-version: 22
       - name: Install
         run: npm install --no-audit --no-fund
+
+      # THE NASM ORACLE, TAKEN LIVE. `test/oracle-nasm.test.mjs` compares our
+      # assembler's output against the real NASM byte for byte, and its own
+      # header says "the whole strength of the NASM side of src/i8086-asm.js
+      # rests on this comparison". Until 2026-09-05 nasm was on no runner and
+      # on no developer box, so all six of its tests skipped -- loudly, with a
+      # correct message, and unnoticed for want of a census row.
+      #
+      # It is the ONE dark oracle here that is absent by ACCIDENT rather than
+      # by licence: no NC clause, no hardware rig, no 677 MB download. One
+      # apt-get turns the assembler's strongest claim from recorded into
+      # standing, which is why this step exists and why no other absent oracle
+      # gets one.
+      - name: Install nasm (the differential assembler oracle)
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      # AND ASSERT IT ARRIVED. Without this, a failed or silently-skipped
+      # install leaves nasm absent, oracle-nasm skips all six tests, and the
+      # job goes green having verified nothing -- which is precisely the
+      # failure the census exists to make visible, reintroduced by the step
+      # meant to fix it. `--require` exits non-zero when a named input is
+      # missing, so the build fails at the install rather than passing at the
+      # test.
+      - name: The oracle is actually present
+        run: node scripts/oracle-census.mjs --require nasm
+
       - name: Test
         # The 65x02 and z80 vector-suite tests skip cleanly when their suites
         # are not cloned, and so does test/moo.test.mjs. That is a real hole
