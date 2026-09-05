@@ -245,3 +245,69 @@ test('the interrupt line follows ISR & IMR, both ways', () => {
     c.write(ISR, 0xff);
     assert.equal(level, 0, 'and acknowledging it drops the line');
 });
+
+// ── THE BOARD, NOT THE CHIP ─────────────────────────────────────────────
+
+import {I8086Machine} from '../src/i8086-machine.js';
+
+const NET_BASE = 0x320;   // 300h is the ADC's; see ROADMAP E7.3
+
+test('two chips claiming one address is refused, not silently resolved', () => {
+    // THE PLAUSIBLE MISTAKE: an ADC0809 sits at 300h and an NE2000's FIRST
+    // jumper setting is also 300h. Without this the later chip wins every
+    // read, the earlier one answers nothing, and the board runs while a
+    // program gets believable bytes from the wrong device.
+    assert.throws(() => new I8086Machine({
+        clockHz: 5e6,
+        regions: [{kind: 'ram', start: 0, end: 0xffff}],
+        chips: [{kind: 'adc0809', name: 'adc1', at: 0x300},
+            {kind: 'ne2000', name: 'eth0', at: 0x300}],
+    }), /both claim I\/O address 300h/);
+});
+
+test('the same numbers on DIFFERENT buses do not collide', () => {
+    // An I/O window and a memory window at the same number are different
+    // places. A check that conflated them would refuse working boards.
+    assert.doesNotThrow(() => new I8086Machine({
+        clockHz: 5e6,
+        regions: [{kind: 'ram', start: 0, end: 0xffff}],
+        chips: [{kind: 'ne2000', name: 'eth0', at: NET_BASE},
+            {kind: 'ne2000', name: 'eth1', at: NET_BASE, bus: 'mem'}],
+    }));
+});
+
+test('a card reached through the machine, at 320h, over IN and OUT', () => {
+    // The chip tests above drive read()/write() directly. This one goes
+    // through the machine's own I/O decode, which is the path a program
+    // takes -- and the only one that proves the wiring.
+    const hub = new HubLink();
+    const mk = (mac) => {
+        const m = new I8086Machine({
+            clockHz: 5e6,
+            regions: [{kind: 'ram', start: 0, end: 0xbffff}],
+            chips: [{kind: 'ne2000', name: 'eth0', at: NET_BASE, mac, link: hub}],
+        });
+        hub.attach(m.chips.eth0);
+        return m;
+    };
+    const a = mk(MAC_A), b = mk(MAC_B);
+
+    // Read the PROM the way a driver does: remote DMA through the data port.
+    a._out(NET_BASE + CR, 0x22);
+    a._out(NET_BASE + RSAR0, 0); a._out(NET_BASE + RSAR1, 0);
+    a._out(NET_BASE + RBCR0, 12); a._out(NET_BASE + RBCR1, 0);
+    a._out(NET_BASE + CR, 0x0a);
+    const prom = [];
+    for (let i = 0; i < 12; i++) prom.push(a._in(NET_BASE + DATA));
+    assert.deepEqual(prom.filter((_, i) => i % 2 === 0), MAC_A,
+        'the MAC comes back through IN, doubled as the PROM stores it');
+
+    // And a frame crosses between the two machines over the same path.
+    boot(a.chips.eth0, {mac: MAC_A});
+    boot(b.chips.eth0, {mac: MAC_B});
+    loadTx(a.chips.eth0, mkFrame(MAC_B, MAC_A, [0x42]));
+    a._out(NET_BASE + CR, 0x26);
+    const got = readRx(b.chips.eth0);
+    assert.ok(got, 'B received it');
+    assert.equal(got.frame[14], 0x42, 'payload intact across the wire');
+});

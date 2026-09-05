@@ -604,6 +604,34 @@ export class I8086Machine {
             ((c.bus ?? 'io') === 'io' ? this._io : this._mmio).push(win);
         }
 
+        // TWO CHIPS MUST NOT CLAIM ONE ADDRESS, and until now nothing said so.
+        //
+        // An ADC0809 sits at 300h and an NE2000's first jumper setting is also
+        // 300h, so a board that declares both is a plausible mistake rather
+        // than a contrived one. Without this the later chip simply wins every
+        // read and the earlier one answers nothing — a machine that runs, a
+        // program that gets plausible bytes from the wrong device, and no
+        // diagnostic anywhere. That is the failure class this tier keeps
+        // finding, and it is cheap to make impossible.
+        //
+        // Checked per bus: an I/O window and a memory window at the same
+        // number are different places and do not collide.
+        for (const [busName, wins] of [['I/O', this._io], ['memory', this._mmio]]) {
+            const sorted = [...wins].sort((a, b) => a.start - b.start);
+            for (let i = 1; i < sorted.length; i++) {
+                const prev = sorted[i - 1], cur = sorted[i];
+                if (cur.start <= prev.end) {
+                    const hex = (n) => n.toString(16).toUpperCase().padStart(3, '0');
+                    throw new Error(
+                        `machine config: "${prev.name}" and "${cur.name}" both claim ${busName} `
+                        + `address ${hex(cur.start)}h. "${prev.name}" decodes ${hex(prev.start)}h-`
+                        + `${hex(prev.end)}h and "${cur.name}" decodes ${hex(cur.start)}h-`
+                        + `${hex(cur.end)}h. Move one of them: two chips answering one address `
+                        + 'is a board that runs and reads the wrong device.');
+                }
+            }
+        }
+
         // The master PIC — the one step() polls to deliver INTR. A breadboard
         // has at most one; if there are several, the first declared wins.
         this._pic = Object.values(this.chips).find((c) => c instanceof I8259) || null;
