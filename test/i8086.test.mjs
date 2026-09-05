@@ -317,3 +317,43 @@ test('sampled vectors from the SingleStepTests 8086 suite', { skip: !existsSync(
     }
     assert.ok(checked > 200, `sampled ${checked} vectors`);
 });
+
+test('WAIT (9B) with no coprocessor is a transparent 4-cycle NOP, not a halt', () => {
+    // WAIT samples the 8087's TEST# pin; with no coprocessor there is nothing to
+    // wait for, so it must fall straight through — advance IP past its one byte,
+    // touch no register or flag, not halt (it is not HLT), and leave execution
+    // to flow into the next instruction.
+    //
+    // EVIDENCE TIER 2c/3, NOT 1 (VERIFICATION.md). No oracle covers 0x9b — the
+    // SingleStepTests 8086 suite excludes WAIT ("The WAIT instruction is not
+    // included"), and no hand-assembled program above reaches it. Every other
+    // assertion in this file that names an opcode ultimately rests on the 646k
+    // grind; this one does not. It asserts the datasheet contract and our
+    // implementation of it, and would NOT catch a shared misreading of either.
+    // It is the reason WAIT was the one opcode the core executed that nothing
+    // exercised; it does not make WAIT better-verified than the 45 the grind
+    // checks, only no longer unexercised.
+    const { cpu } = machine([
+        0x9b,                   // WAIT
+        0xb8, 0x34, 0x12,       // MOV AX, 1234h
+    ]);
+    cpu.ax = 0xdead;
+    cpu.flags |= CF | ZF;       // arbitrary live flags that must survive it
+    const flags0 = cpu.flags, ax0 = cpu.ax;
+
+    const cycles = cpu.step();  // WAIT
+    assert.equal(cycles, 4, 'WAIT is a 4-cycle instruction');
+    assert.equal(cpu.ip, 1, 'WAIT advances IP past its single opcode byte');
+    assert.equal(cpu.ax, ax0, 'WAIT changes no register');
+    assert.equal(cpu.flags, flags0, 'WAIT changes no flag');
+    assert.equal(cpu.halted, false, 'WAIT is not HLT — the CPU keeps running');
+    // The interrupt shadow is where a wrongly-"transparent" instruction does
+    // the damage IP+1 will not show: a segment-register load raises it to delay
+    // interrupts by one instruction (MOV SS,AX -> intShadow 1). WAIT must raise
+    // no such shadow — it leaves the pending-interrupt boundary exactly as it
+    // found it.
+    assert.equal(cpu.intShadow, 0, 'WAIT raises no interrupt shadow');
+
+    cpu.step();                 // MOV AX, 1234h
+    assert.equal(cpu.ax, 0x1234, 'execution flows through WAIT into the next instruction');
+});
