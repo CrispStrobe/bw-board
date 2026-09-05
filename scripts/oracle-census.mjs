@@ -171,6 +171,25 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'amey-corpus', kind: 'fixture',
+        what: 'The Amey-Thakur corpus — 525 real DOS assembly programs '
+            + '(github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS). The single '
+            + 'largest evidence that src/i8086-asm.js handles real-world MASM/NASM '
+            + 'source rather than crafted tests: all 525 assemble now, 15 refused '
+            + 'earlier the same day. 191 MB, unvendored.',
+        paths: ['/tmp/amey/Source Code'],
+        gates: ['test/i8086-asm.test.mjs'],
+        obtain: 'git clone https://github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS '
+            + 'and point the test CORPUS at its "Source Code" directory '
+            + '(default /tmp/amey/Source Code)',
+        ciAvailable: true,
+        ci: 'yes — the `corpus` job (ci.yml:287) checks out Amey-Thakur/…, asserts '
+            + 'all 525 are present (ci.yml:304), and assembles and runs each per push '
+            + 'on VERDICT COUNTS rather than a text diff. The unit test reads a local '
+            + '/tmp/amey copy and its corpus subtests skip without it, but the claim '
+            + 'is standing via that job.',
+    },
+    {
         id: 'retro-corpus-8086', kind: 'fixture',
         what: 'Four real DOS assembly programs (Snake, typing-balloon, Maze Runner, '
             + 'retro-dos-graphics) that the NASM oracle assembles with both nasm and '
