@@ -45,6 +45,7 @@ import { I8251 } from './i8251.js';
 import { CGACard } from './cga-card.js';
 import { PCSpeaker } from './pc-speaker.js';
 import { ADC0809 } from './adc0809.js';
+import { NE2000 } from './ne2000.js';
 import { DAC0832 } from './dac0832.js';
 import { HerculesCard } from './hercules-card.js';
 import { VGACard } from './vga-card.js';
@@ -100,6 +101,9 @@ const REGS = {
     // End-Of-Conversion, which is the only way to know a result is ready on a
     // bench with no PIC to deliver an interrupt.
     adc0809: 9,
+    // The NE2000 decodes a 32-port block: the NIC's sixteen registers, the
+    // remote-DMA data window, and the reset port.
+    ne2000: 32,
     // FOUR PORTS FOR A ONE-BYTE CHIP, because the 0832's two latches are its
     // feature: 310h loads and transfers, 311h stages, 312h is the XFER strobe.
     // A card that tied XFER low would need one port and could not move two
@@ -532,6 +536,14 @@ export class I8086Machine {
             } else if (c.kind === 'usart8251') {
                 chip = new I8251({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
+                });
+            } else if (c.kind === 'ne2000') {
+                // 32 ports: 00-0F the DP8390 registers, 10-17 the remote DMA
+                // data port, 18-1F the card reset. `link` is supplied by the
+                // board -- a loopback, or a hub joining two machines.
+                chip = new NE2000({
+                    mac: c.mac, link: c.link || null,
+                    onIRQ: (level) => { if (this.hooks.onIntr) this.hooks.onIntr(c.name, !!level); },
                 });
             } else if (c.kind === 'adc0809') {
                 chip = new ADC0809(config.clockHz, {vref: c.vref, adcClockHz: c.adcClockHz});
