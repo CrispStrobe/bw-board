@@ -162,6 +162,58 @@ Passing on a second-hand report as fact makes you the next link in a chain
 nobody has confirmed — which is exactly how a phantom "40,584 deletions"
 (rule 6) nearly travelled to three sessions.
 
+**11. THE MACHINE LAYER IS VENDORED INTO `brickwright-lite` AND ALL THREE FILES
+ARE DIVERGED IN BOTH DIRECTIONS.** Your change here does not reach lite, and
+lite has changes that do not reach here.
+
+Measured 2026-09-05 against `ec1272a`, versus
+`lite/overlay/scratch-gui/src/lib/bw-board/`:
+
+```
+                      lite AHEAD    lite BEHIND
+i8086-machine.js         171            59
+z80-machine.js            88            33
+m6502-machine.js          75            28
+```
+
+With `CircuitDesigner.jsx` (19 ahead / 46 behind, found by lego-be) that is
+**four files**, three of them the machine layer. The general form, theirs:
+
+> A vendored file that is BEHIND is an inconvenience. One that is AHEAD is a
+> fork nobody declared. One that is **both** cannot be resolved by any tool,
+> because no tool can know which of two changes was intended.
+
+**The corollary the count adds: this is not an accident that happened twice.
+With four, it is the steady state of any vendored directory both sides edit.**
+
+**The AHEAD content is a subsystem, not drift.** Lite has an entire
+`machine-checkpoint.js` — `MACHINE_CHECKPOINT_SCHEMA`, `checkpointSupport`,
+`checkpointTopology`, `checkpointRefusal`, `validateCheckpointEnvelope` — wired
+into `z80-machine.js` and `m6502-machine.js`, and absent from bw-board
+entirely. A sync from here **deletes a whole feature and nothing fails**: the
+machines construct, checkpointing just stops existing. Same shape as lite's
+`displayRevision` repaint optimisation.
+
+**So: do not sync either direction wholesale.** `sync-bw-board` already refuses
+on a stale checkout, and `--check` reports differing files while stating it
+cannot tell direction. Both correct, neither sufficient. Graft your own hunks
+by hand and verify the other side's survive.
+
+**AND ONE HAZARD THAT IS SPECIFIC AND SILENT.** The `_advanceChips` schedule
+cache is two pieces that must travel together:
+
+1. `this._advList = null` in the constructor, `_buildAdvanceList()`, the flat
+   loop — the visible part, and the reason anyone would port it;
+2. `this._advList = null` in **`attachDevice`** — one line, easy to miss.
+
+Port (1) without (2) and any device attached after the first `step()` silently
+never ticks: no exception, no wrong value, nothing red. **Lite has no
+`machine-contract` test**, so the guard that catches this
+("a device attached AFTER stepping still gets advanced", asserted for all three
+machines and verified by deleting the invalidation until all three go red)
+does not exist in the repo where such a graft would happen. Port the test with
+the cache, or do not port the cache — lite's machines are correct as they are.
+
 ## CLAIMS — work in progress
 
 | lane | who | started | what |
