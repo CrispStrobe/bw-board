@@ -130,6 +130,38 @@ publishing, not whether the change is good** — a change can be correct,
 reviewed, and green, and still not be yours to publish. Stated by `lego-ef`,
 upheld by `lego-47` in both directions on 2026-09-04.
 
+**9. "TOUCHES NO SHARED FILES" IS NOT "CHANGES NOTHING FOR THE PENDING
+MERGES."** Only the first is checkable from a diff.
+
+2026-09-04: a commit landed on `master` touching exactly two files that no
+pending branch touched — genuinely orthogonal **by content**. It was not
+orthogonal **by base**: it staled the base of *both* branches in a merge order
+that was still being negotiated, and forced a re-rebase in a required sequence
+(theirs, then mine) to avoid replaying one lane's commits under the other's
+shas.
+
+A diff can prove file-level independence. **Nothing can tell you what is
+pending except knowing what is pending.** So before pushing to a shared branch,
+ask who is mid-merge — and remember that **being authorised to push is not the
+same as it being the right moment**.
+
+---
+
+**10. A MESSAGE THAT FAILS TO SEND LEAVES NO TRACE ON THE RECEIVING END.** When
+your send fails, the recipient does not know you tried. They see silence
+identical to your never having written.
+
+This asymmetry is the entire argument for putting anything load-bearing in a
+**file in their tree** rather than a message: a commit is durable, addressable,
+and does not depend on a channel working in the direction you assumed. On
+2026-09-04 a lane that could not be reached by five separate attempts was
+finally warned by a commit to `LANES.md` in its own repository.
+
+And when relaying something you have not checked, **mark it unverified**.
+Passing on a second-hand report as fact makes you the next link in a chain
+nobody has confirmed — which is exactly how a phantom "40,584 deletions"
+(rule 6) nearly travelled to three sessions.
+
 ## CLAIMS — work in progress
 
 | lane | who | started | what |
