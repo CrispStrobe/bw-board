@@ -269,6 +269,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| rp2040 bootrom: flash ROM functions (`src/rp2040-bootrom.js`, `test/rp2040-bootrom.test.mjs`) | lego-ac (lite matrix lane; diagnosis by an N3 delegate) | 2026-09-05 | **ON BRANCH `lane/rp2040-bootrom-flash-funcs`, ready for review/merge.** MicroPython v1.22.2 boots to a REPL in rp2040js; the header's recorded panic was a probe artefact. The real gap: six flash ROM table entries missing, SDK calls address 0, filesystem ENODEV. Added as `bx lr` nops plus memset/memcpy against 0x10000000 + offset; 15/15 in the bootrom test file, one mutation proven red. Touches nothing else. Lite consumes it by pin bump once merged (plan task N3a there). |
 | _(none)_ | | | |
 
 ## DONE
