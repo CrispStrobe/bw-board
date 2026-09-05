@@ -783,6 +783,36 @@ never left the one queue state it started in, so its figure described the
 workload, not the tables. A counter that is only ever exercised by a toy is a
 counter that has not been read.
 
+**WHEN IS A FALLBACK DETECTABLE AT ALL? Only where the real thing has a state
+the fallback cannot produce.** lego-47's form, from a live instance:
+
+An `ANALOG` pin on a board with no converter reads open bus, `FFh`, on every
+port in the ADC's block. The end-of-conversion poll then succeeds INSTANTLY,
+because bit 0 of `FFh` is set, and the data read returns `FFh` — which scales
+to **1020 of 1023**. A program that should read 0 printed 1020: no error, no
+warning, a plausible number, and a learner would conclude their potentiometer
+was at maximum.
+
+The fix works because a real ADC0809 pulls EOC **LOW while converting**, and
+open bus can only ever read high. **Open bus can fake *ready*; it cannot fake
+*busy*.** So the probe starts one conversion at startup and requires EOC to
+read zero at least once, and the test asserts specifically that **1020 does not
+appear** — a plausible number being worse than a refusal.
+
+**Where no such state exists, the feature genuinely cannot be distinguished
+from its own absence at run time, and a coverage counter is the only remaining
+answer.**
+
+**Checked in the 8086 tier, and the analogue is NOT a defect there** — recorded
+because a negative result found by looking is worth more than one assumed. Six
+presets without a CGA read `FFh` at port `3DAh`, which sets the vertical-retrace
+bit, so a retrace poll succeeds instantly. That is **faithful**: a real PC/XT
+with no CGA card reads open bus too. The dangerous shape is not "absent hardware
+reads high", it is **"the configuration promised a device and the machine did
+not map it"** — and that cannot happen here, because an unknown chip kind
+throws at construction (`machine config: unknown chip kind …`) rather than
+silently mapping nothing.
+
 **And the same discipline applies to what a disabled feature reports.**
 `cycleTimingStats()` returns `null` when timing is off, never a zeroed record:
 a record of zeroes reads as *"measured, and nothing happened"*, which is a lie
