@@ -149,6 +149,30 @@ test('RED: the wrong-port reseat (LEDs on port A, program drives B) — the gate
     assert.match(r.reason, /NO edges|drives a port/);
 });
 
+test('RED: right port, WRONG sequence — the gate diverges at the exact edge, not just on silence', () => {
+    // The wrong-port case above is the crude failure: nothing lights, so the
+    // reseated trace is empty. The failure the gate most needs to catch is the
+    // SUBTLE one — the LEDs light, on the right port, but walk the WRONG order.
+    // That takes the third branch of compareObservables (diverge at edge N),
+    // which the two real-board cases never reach. The gate is family-agnostic —
+    // it consumes any {build, read, steps} — so this drives it with two scripted
+    // observables directly, which is both the tightest way to hit that branch
+    // and a demonstration that the gate never assumes a 6502 or an 8086.
+    const scripted = (vals) => () => {
+        let i = 0, out = 0;
+        return { step() { out = vals[Math.min(i, vals.length - 1)]; i += 1; }, get out() { return out; } };
+    };
+    const readToy = (m) => ({ out: m.out, dir: 0xff });
+    const original = { build: scripted([0x01, 0x02, 0x04, 0x04]), read: readToy, steps: 4 };
+    const wrongWalk = { build: scripted([0x01, 0x02, 0x08, 0x08]), read: readToy, steps: 4 };
+
+    const r = reseatGate(original, wrongWalk);
+    assert.equal(r.verdict, 'DIFFER', 'a right-port wrong-order walk MUST fail the gate');
+    assert.deepEqual(r.expected, [0x01, 0x02, 0x04], 'the original walk is captured whole');
+    assert.deepEqual(r.actual, [0x01, 0x02, 0x08], 'so is the divergent one — it is not empty');
+    assert.match(r.reason, /diverge at edge 2/, 'the gate names the exact edge the walk went wrong');
+});
+
 test('BEHAVIOURAL RED: right LEDs, wrong RATE — shape stays GREEN, the timing gate goes RED', () => {
     // The wrong-port case fails on WIRING. This is the case the gate had never
     // been shown to catch: a reseat that lights the RIGHT LEDs in the RIGHT
