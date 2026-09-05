@@ -357,3 +357,40 @@ test('WAIT (9B) with no coprocessor is a transparent 4-cycle NOP, not a halt', (
     cpu.step();                 // MOV AX, 1234h
     assert.equal(cpu.ax, 0x1234, 'execution flows through WAIT into the next instruction');
 });
+
+test('POP CS (0F) loads CS from the stack and delays interrupts one instruction', () => {
+    // 0x0F is POP CS on the 8086 — there are no two-byte opcodes for it to
+    // introduce, so it decodes as the pop nobody wanted. Like every other
+    // segment-register load it raises the interrupt shadow, so an interrupt
+    // pending at this boundary waits one more instruction (the window that lets
+    // a POP SS / MOV SP pair finish before a stack switch is interrupted).
+    //
+    // EVIDENCE TIER 2c, NOT 1 — the SAME footing as WAIT above, and the reason
+    // this is spelled out: the SingleStepTests suite omits 0F wholesale (POP CS
+    // is "currently omitted"), so nothing measured backs this; it is the
+    // datasheet plus our reading of the core. The gate reads 0 because the
+    // corpus EXECUTES 0F, but corpus-exercised is not ground — a covered-by-
+    // corpus opcode with no oracle is weaker than one the grind checks, and
+    // without this note 0F would look as solid as its neighbours when it is not.
+    //
+    // AND ONE DIVERGENCE WAIT DOES NOT HAVE: on silicon POP CS replaces CS
+    // WITHOUT flushing the prefetch queue, so the bytes already queued from the
+    // old CS:IP execute next — "the unintended opcodes". This core has no
+    // physical queue to leave stale, so it continues cleanly from the new
+    // CS:IP. This test asserts the architectural state change (CS, SP, the
+    // shadow); the queue-content quirk is a known, unmodelled difference, not a
+    // thing to assert as correct.
+    const { cpu, mem } = machine([0x0f]);   // POP CS
+    // put 0x2000 on the stack for it to pop into CS
+    const sp0 = 0x00fe;
+    mem[(0x4000 << 4) + sp0] = 0x00;
+    mem[(0x4000 << 4) + sp0 + 1] = 0x20;
+    cpu.sp = sp0;
+
+    const cycles = cpu.step();
+    assert.equal(cycles, 8, 'POP CS is an 8-cycle segment pop');
+    assert.equal(cpu.cs, 0x2000, 'CS is loaded from the top of the stack');
+    assert.equal(cpu.sp, sp0 + 2, 'the stack pointer moves up by one word');
+    assert.equal(cpu.ip, 1, 'IP advances past the one opcode byte');
+    assert.equal(cpu.intShadow, 1, 'POP CS raises the interrupt shadow, like every segment load');
+});
