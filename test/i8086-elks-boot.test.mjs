@@ -24,8 +24,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { I8086Machine } from '../src/i8086-machine.js';
-import { createDos8086, DOSBOX8086 } from '../src/i8086-dos.js';
+import { I8086Machine, PCXT8086 } from '../src/i8086-machine.js';
+import { buildBios } from '../scripts/build-bios.mjs';
 
 const IMAGE = process.env.ELKS_IMAGE || '/mnt/volume1/code/elks-images/fd1440-fat.img';
 const skip = existsSync(IMAGE) ? false
@@ -44,12 +44,30 @@ function screenText(m) {
     return t;
 }
 
+/**
+ * ELKS ON REAL EMULATED HARDWARE — and the machine choice is the whole story.
+ *
+ * The first version of this file booted ELKS on DOSBOX8086 through the DOS
+ * service layer, and concluded the kernel "executes across 263 code pages
+ * without producing console output" with where it goes next left open. That
+ * conclusion was an artefact of the machine: **DOSBOX8086 HAS NO 8259**, so
+ * `_serviceInterrupts` returns at `if (!this._pic)` and no hardware interrupt
+ * can ever be delivered. Measured: zero IRQs across eight million
+ * instructions while IF stayed set — a kernel waiting for a timer tick that
+ * could not arrive, which looks exactly like a kernel doing mysterious work.
+ *
+ * On PCXT8086 with our own BIOS ROM and the uPD765, ELKS boots completely:
+ * probes the hardware, sizes the floppy, mounts its root filesystem, and
+ * panics only because this image carries no userland.
+ */
 function bootElks(steps) {
     const img = readFileSync(IMAGE);
-    const m = new I8086Machine(DOSBOX8086);
-    const dos = createDos8086(m, { disk: img }).install();
-    dos.loadBoot(img.subarray(0, 512), 0x00);
-    for (let i = 0; i < steps; i++) dos.step();
+    const m = new I8086Machine(PCXT8086);
+    m.loadRom(buildBios().bytes);
+    m.chips.fdc1.insert(0, img,
+        { cylinders: 80, heads: 2, sectors: 18, bytesPerSector: 512 });
+    m.reset();
+    for (let i = 0; i < steps; i++) m.step();
     return m;
 }
 
@@ -63,45 +81,42 @@ test('the image is a real ELKS floppy, so an absent oracle cannot look like a pa
     assert.equal(img[511], 0xaa, 'no boot signature');
 });
 
-test('ELKS boots: setup runs, probes the hardware and reaches its handoff', { skip }, () => {
-    // 200k instructions; measured, all three markers appear by 65,536.
-    const m = bootElks(200_000);
-    const s = screenText(m);
-    assert.ok(s.includes('ELKS'), `no ELKS banner on screen. Got: ${JSON.stringify(s.trim().slice(0, 120))}`);
-    assert.ok(s.includes('Setup'), 'setup did not identify itself');
-    assert.ok(s.includes('START'),
-        'setup never reached START — it did not finish probing and hand off to the kernel');
+test('ELKS boots: kernel initialises, sizes the disk and MOUNTS ITS ROOT', { skip }, () => {
+    // Measured: banner at 1.31M instructions, root mounted at 2.36M, panic at
+    // 2.62M. 4M is comfortable headroom and runs in about 12 seconds.
+    const s = screenText(bootElks(4_000_000));
+    assert.ok(s.includes('ELKS 0.9.1'),
+        `no ELKS kernel banner. Screen: ${JSON.stringify(s.trim().slice(0, 200))}`);
+    assert.ok(/fd0: probed/.test(s), 'the kernel never probed the floppy geometry');
+    assert.ok(s.includes('Mounted root device'),
+        'the kernel did not mount a root filesystem — the strongest single claim '
+        + 'this test makes, since it needs the FDC, the DMA controller, the 8259 '
+        + 'and the BIOS to have all worked together');
 });
 
-test('the kernel takes over and runs, rather than halting or spinning', { skip }, () => {
-    // MEASURED, AND THE FIRST VERSION OF THIS TEST WAS WRONG BECAUSE IT WAS NOT.
-    // It sampled 200k-600k instructions and asserted "263 code pages" — a
-    // number taken from the SECOND HALF of a twelve-million-instruction run.
-    // In that early window ELKS touches ONE page, so the test failed against a
-    // figure quoted from a different condition entirely. A score without its
-    // split, applied to a test rather than a claim.
-    //
-    // Walking the boot in 500k windows shows the real shape:
-    //
-    //     to 0.5M   74 pages   in segment 1235   setup
-    //     to 1.0M   25 pages   in segment 1235   narrowing
-    //     to 1.5M  342 pages   in segment 4300   the KERNEL takes over
-    //     to 12M   ~263 pages  in segment 4300   steady
-    //
-    // So the handoff completes around 1.5M instructions, and everything before
-    // that is setup. This asserts after it.
-    const m = bootElks(1_600_000);
-    assert.equal(m.cpu.halted, false, 'the CPU halted after ELKS setup handed off');
-    assert.equal(m.cpu.cs, 0x4300,
-        `CS is ${m.cpu.cs.toString(16)}, expected 4300 — execution never left setup's `
-        + 'segment, so the kernel did not take over');
+test('the hardware the kernel needs is actually driving it', { skip }, () => {
+    // The FIRST version of this file asserted a page count and concluded
+    // "the kernel is doing work". It was waiting on an interrupt that could
+    // never arrive, because the machine had no PIC. So assert the CAUSE
+    // rather than a symptom: both interrupt sources must fire.
+    const irqs = new Map();
+    const img = readFileSync(IMAGE);
+    const m = new I8086Machine(PCXT8086, {
+        onInterrupt: ({ vector, source }) => {
+            if (source === 'irq') irqs.set(vector, (irqs.get(vector) || 0) + 1);
+        },
+    });
+    m.loadRom(buildBios().bytes);
+    m.chips.fdc1.insert(0, img,
+        { cylinders: 80, heads: 2, sectors: 18, bytesPerSector: 512 });
+    m.reset();
+    for (let i = 0; i < 4_000_000; i++) m.step();
 
-    const pages = new Set();
-    for (let i = 0; i < 300_000; i++) {
-        m.step();
-        if ((i & 0x3f) === 0) pages.add(`${m.cpu.cs.toString(16)}:${(m.cpu.ip & 0xff00).toString(16)}`);
-    }
-    assert.ok(pages.size > 50,
-        `the kernel touched only ${pages.size} code pages, which is a spin rather than `
-        + 'work — a steady ~263 was measured across the whole post-handoff run');
+    assert.ok(m._pic, 'PCXT8086 has no PIC — no hardware interrupt can be delivered at all');
+    assert.ok((irqs.get(8) || 0) > 10,
+        `only ${irqs.get(8) || 0} timer interrupts (vector 8) in 4M instructions; `
+        + 'ELKS schedules on the tick and a kernel without one merely spins');
+    assert.ok((irqs.get(0x0e) || 0) > 0,
+        `no FDC interrupts (vector 0x0e); the root mount above cannot have come `
+        + 'from real disk hardware');
 });

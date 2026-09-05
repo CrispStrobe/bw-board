@@ -2341,50 +2341,60 @@ because a survey of x8086NetEmu initially recorded this as "we lack it
 entirely", which is what happens when a gap list is written from the other
 project's feature page rather than from our own tree. Rule 5 again.
 
-#### E6.8.8 A real OS as the acceptance target — ELKS BOOTS (2026-09-05)
+#### E6.8.8 A real OS as the acceptance target — ELKS BOOTS AND MOUNTS ITS ROOT (2026-09-05)
 
-Both gates are satisfied: E6.8.1 landed the 186, E6.8.6 built the image
-plumbing. **ELKS v0.9.1 now boots on this machine.**
-
-```
-ELKS Setup ....L07A8C36H00S11 Ht0330 f1235 d19FC INT f006 START
-```
-
-Setup runs, probes the hardware, reports what it found, and hands off. Walking
-the boot in 500,000-instruction windows shows the whole shape:
+**ELKS v0.9.1 boots on this machine, probes the hardware, and mounts its root
+filesystem.**
 
 ```
-to  0.5M    74 pages   segment 1235   setup
-to  1.0M    25 pages   segment 1235   narrowing
-to  1.5M   342 pages   segment 4300   THE KERNEL TAKES OVER
-to 12.0M  ~263 pages   segment 4300   steady
+bw-board 8086 BIOS v0.1
+640K OK
+df: CMOS df0 is unknown (15)df0 is 360k/PC (1)
+boot: BIOS drive 0, root device /dev/fd0 (0320)
+PC/XT class cpu 2, syscaps 0, 640K base ram, 16 tasks, 64 files, 96 inodes
+ELKS 0.9.1 (61520 text, 31856 ftext, 10240 data, 8112 bss, 47182 heap)
+fd0: probed, probably has 80 cylinders, 2 heads, and 18 sectors
+FAT: total 1440k, fat12 format
+VFS: Mounted root device /dev/fd0 (0320) msdos filesystem.
+Unable to open /dev/console (error -2)
+panic: No init or sh found
 ```
 
-**The kernel is doing real work, not spinning.** 263 distinct code pages,
-evenly spread, no halt. That is the distinction between *booting* an OS and
-*stopping* one, and it is what `test/i8086-elks-boot.test.mjs` asserts.
+It panics on a missing userland — `fd1440-fat.img` is a boot disk with no
+`/bin/init` — and everything before that line is a real OS driving real
+emulated hardware: our BIOS ROM, the uPD765 FDC, the 8237 DMA controller and
+the 8259 all working together. Timings: banner at 1.31M instructions, root
+mounted at 2.36M, panic at 2.62M, about eight seconds.
 
-**WHAT IS NOT CLAIMED.** No kernel banner and no shell prompt appear within
-twelve million instructions. The kernel is alive and busy; where it goes next
-is open. Asserting a prompt nobody has seen would be a test written against a
-hope, so the test stops where the evidence does.
+**THE FIRST VERSION OF THIS ENTRY WAS WRONG, AND THE WAY IT WAS WRONG IS THE
+LESSON.** It reported that the kernel "executes across 263 distinct code pages
+without producing console output" and left "where it goes next" open, as a
+characterised mystery. It was not a mystery. **I booted it on `DOSBOX8086`,
+which has no 8259** — `_serviceInterrupts` returns immediately at
+`if (!this._pic)`, so no hardware interrupt can ever be delivered. Measured:
+**zero IRQs across eight million instructions with IF set the whole time.**
 
-**A test of mine was wrong first, in the way this file keeps recording.** It
-asserted "263 code pages" while sampling instructions 200,000–600,000 — a
-figure taken from the *second half* of a twelve-million-instruction run. In
-that early window ELKS touches ONE page, because it is still in setup. A score
-quoted from one condition and asserted in another; corrected by measuring the
-handoff rather than assuming it.
+A kernel waiting for a timer tick that cannot arrive looks exactly like a
+kernel doing steady work: 263 pages, evenly spread, never halting. Every
+diagnostic I ran described the spin accurately and none of them asked whether
+the machine could interrupt at all. **The page-count evidence was real and the
+conclusion drawn from it was an artefact of the board.**
 
-**Licence: GPL-2, so it is RUN and never vendored** — the same standing as the
-ehBASIC ROM. Registered as `elks-image` in the census with
-`ciAvailable: false`, so this claim is recorded rather than standing, and the
-test skips loudly when the image is absent.
+On `PCXT8086` — `pic1, pit1, ppi1, dma1, fdc1, cga1, spk` — it simply boots.
 
-**Next, and now answerable rather than speculative:** find what the kernel is
-waiting on between the handoff and its first console output. It has the timer,
-the FDC and the 8259 under it; the 500k-window walk is the tool that will
-localise it.
+**What the test asserts now is the CAUSE rather than the symptom:** the root
+mount (which needs FDC, DMA, PIC and BIOS to have all worked), plus that both
+interrupt sources actually fire — >10 timer interrupts on vector 8 and at
+least one FDC interrupt on 0x0e. A page count cannot distinguish work from
+waiting; an interrupt count can.
+
+**Still open, and now a narrower question.** `fd1440-minix.img` loads `/linux`
+from the MINIX filesystem, enters ELKS Setup, and stalls there with timer
+interrupts still arriving and no further FDC activity — while the FAT image
+gets all the way to a root mount. Two images, one board, different failure
+points: the MINIX loader path is doing something the FAT path does not.
+
+**Licence unchanged: GPL-2, run and never vendored**, `ciAvailable: false`.
 
 #### E6.8.9 Declined, with reasons
 
