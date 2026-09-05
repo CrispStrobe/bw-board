@@ -15,6 +15,7 @@
     "./builder": "./src/builder.js",
     "./serial-debug": "./src/serial-debug.js",
     "./debug-target-factory": "./src/debug-target-factory.js",
+    "./target-kinds": "./src/target-kinds.js",
     "./devices": "./src/devices.js",
     "./devices/logic-gates": "./src/devices/logic-gates.js",
     "./devices/relay": "./src/devices/relay.js",
