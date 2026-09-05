@@ -249,6 +249,50 @@ export const INPUTS = [
         // exists.
         ci: 'no',
     },
+    {
+        id: 'nasm', kind: 'oracle',
+        what: 'NASM (BSD-2), an independent assembler. The differential oracle for the '
+            + 'NASM side of src/i8086-asm.js — its own header says "the whole strength of '
+            + 'the NASM side rests on this comparison". Byte-for-byte agreement with a real '
+            + 'assembler, the strongest evidence tier there is. VERIFIED GREEN 2026-09-05 '
+            + 'with NASM 2.16 (6/6), so the claim STANDS — but nasm is not installed here '
+            + 'by default, so it runs DARK (all three tests skip) until $NASM or PATH '
+            + 'provides it. Its absence had no census row, which is exactly why the '
+            + "assembler's strongest claim could be merely recorded rather than standing "
+            + 'and nobody could tell which.',
+        env: 'NASM',
+        paths: ['/usr/bin/nasm'],
+        gates: ['test/oracle-nasm.test.mjs'],
+        obtain: 'no root needed: apt-get download nasm && dpkg-deb -x nasm_*.deb DIR, then '
+            + 'NASM=DIR/usr/bin/nasm; or apt-get install nasm',
+        ci: 'no — NOT in ci.yml, and absent by ACCIDENT not by licence (unlike the ehBASIC '
+            + 'ROM or the MASM binaries). So of every dark oracle here this is the one worth '
+            + 'taking standing: one apt-get in the test job re-verifies the byte-for-byte '
+            + 'assembler claim on every run, at no licence cost.',
+    },
+    {
+        id: 'masm', kind: 'oracle',
+        what: 'MASM 1.10 + LINK + EXE2BIN (Microsoft, MIT-relicensed 1982 binaries), an '
+            + 'independent assembler toolchain. The differential oracle for MASM '
+            + 'compatibility in src/i8086-asm.js — that our .COM is byte-identical to '
+            + "MASM's and that our ASSUME/segment-override and simplified-directive "
+            + 'handling matches a real MASM. VERIFIED GREEN 2026-09-05 (10/10). Present on '
+            + 'this box at /tmp/msdosbin.',
+        env: 'MSDOS_BIN_DIR',
+        // Present detection is the default dir /tmp/msdosbin; the parent-basename key
+        // ('tmp') is a generic one, so scripts/oracle-masm.mjs — which defines
+        // DEFAULT_MSDOS_DIR = '/tmp/msdosbin' — is listed alongside the test so the
+        // census's own anti-drift check finds a gate that mentions the path, not only
+        // the env var. Both files genuinely gate on this input.
+        paths: ['/tmp/msdosbin'],
+        gates: ['test/oracle-masm.test.mjs', 'scripts/oracle-masm.mjs'],
+        obtain: 'fetch MASM.EXE, LINK.EXE, EXE2BIN.EXE (MIT-licensed MS 1982 binaries) into '
+            + '/tmp/msdosbin, or point $MSDOS_BIN_DIR at them',
+        ci: 'no — the binaries live at an absolute /tmp path, the same blind spot as the '
+            + 'ehBASIC ROM: audit-clean-checkout strips untracked REPO files by archiving '
+            + 'HEAD and cannot reach /tmp, so their absence in a fresh checkout is invisible '
+            + 'to it. Can only stand in CI if the job fetches them explicitly.',
+    },
 ];
 
 /** Resolve one input to {present, via}. `via` names WHAT was found, so a

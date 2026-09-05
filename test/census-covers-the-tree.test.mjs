@@ -46,8 +46,10 @@ const UNTRIAGED_2026_09_05 = new Set([
     'i8086-asm.test.mjs',
     'media-bundle.test.mjs',
     'multimeter-chain.test.mjs',
-    'oracle-masm.test.mjs',        // MSDOS_BIN_DIR — an oracle, absent from the oracle census
-    'oracle-nasm.test.mjs',        // nasm on PATH — likewise
+    // oracle-masm.test.mjs and oracle-nasm.test.mjs PROMOTED to census rows
+    // (2026-09-05, id 'masm' and 'nasm'). The ratchet below drops 16 -> 14 in
+    // the same change, so removing them can only be made green by the rows, not
+    // by forgetting.
     'sap1-differential.test.mjs',
     'sap1-digital-parity.test.mjs',
     'serial-debug-e2e.test.js',
@@ -99,8 +101,8 @@ test('the debt list is not a way to exempt the whole tree', () => {
     // become decorative. A ratchet, so this can only improve.
     const total = derived().length;
     const exempt = derived().filter((f) => UNTRIAGED_2026_09_05.has(f)).length;
-    assert.ok(exempt <= 16,
+    assert.ok(exempt <= 14,
         `${exempt} of ${total} guard-then-skip files are exempted; the frozen debt was `
-        + '16 on 2026-09-05 and must only shrink. Write a census row instead of '
-        + 'extending the list.');
+        + '16 on 2026-09-05, dropped to 14 when masm and nasm were promoted to census '
+        + 'rows, and must only shrink. Write a census row instead of extending the list.');
 });
