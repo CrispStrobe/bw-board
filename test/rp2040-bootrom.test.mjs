@@ -219,3 +219,82 @@ test('the adapter installs the ROM where the core reads it', {skip: SKIP}, async
     assert.notEqual(rp2040.readUint32(lookup & ~3), 0,
         'the lookup routine reads as zeros: the ROM was not installed');
 });
+
+// ---- the flash-programming functions -----------------------------------------
+//
+// MicroPython's rp2 block device reaches flash through the ROM table:
+// connect_internal_flash / flash_exit_xip / flash_range_erase /
+// flash_range_program / flash_flush_cache / flash_enter_cmd_xip. Before these
+// entries existed `rom_table_lookup` returned 0 on each and the SDK CALLED the
+// null result — eleven jumps to address 0 per boot, `os.statvfs('/')` all
+// zeros, `open(f, 'w')` → ENODEV, so `deployMainPy()` could not land a file.
+// Measured against MicroPython v1.22.2 (brickwright-lite
+// docs/PICO-MICROPYTHON-BOOT.md).
+
+const FLASH_CODES = ['CONNECT_INTERNAL_FLASH', 'FLASH_EXIT_XIP', 'FLASH_RANGE_ERASE',
+    'FLASH_RANGE_PROGRAM', 'FLASH_FLUSH_CACHE', 'FLASH_ENTER_CMD_XIP'];
+
+test('every flash ROM function the SDK looks up is in the table and carries the Thumb bit', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const table = view.getUint16(0x14, true);
+    const lookup = view.getUint16(0x18, true);
+    for (const name of FLASH_CODES) {
+        assert.ok(run(lookup, {0: table, 1: ROM_FUNC[name]}) >= 0, `${name}: lookup never returned`);
+        const found = mcu.core.registers[0] >>> 0;
+        assert.ok(found > 0x100 && (found & 1) === 1, `${name}: lookup gave 0x${found.toString(16)}`);
+    }
+});
+
+test('the four sequencing functions return immediately: an emulated flash has no QSPI pads to drive', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const lookup = view.getUint16(0x18, true);
+    for (const name of ['CONNECT_INTERNAL_FLASH', 'FLASH_EXIT_XIP', 'FLASH_FLUSH_CACHE', 'FLASH_ENTER_CMD_XIP']) {
+        run(lookup, {0: view.getUint16(0x14, true), 1: ROM_FUNC[name]});
+        const fn = mcu.core.registers[0];
+        const steps = run(fn, {});
+        assert.ok(steps >= 0 && steps <= 2, `${name}: took ${steps} steps, expected a bare return`);
+    }
+});
+
+test('flash_range_erase takes an OFFSET from the start of flash and leaves 0xff behind', {skip: SKIP}, async () => {
+    // Datasheet §2.8.3.1.3: `addr` is an offset, not an XIP address. A caller
+    // passing 0x100000 means 0x10100000; getting that wrong erases the wrong
+    // sector while every byte still reads back plausibly.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const lookup = view.getUint16(0x18, true);
+    run(lookup, {0: view.getUint16(0x14, true), 1: ROM_FUNC.FLASH_RANGE_ERASE});
+    const erase = mcu.core.registers[0];
+    const offset = 0x100000;
+    const xip = 0x10000000 + offset;
+    for (let i = 0; i < 32; i++) mcu.writeUint8(xip + i, i);
+    mcu.writeUint8(xip - 1, 0x55);
+    mcu.writeUint8(xip + 32, 0x55);
+    const steps = run(erase, {0: offset, 1: 32, 2: 4096, 3: 0x20}, 20000);
+    assert.ok(steps >= 0, 'flash_range_erase never returned');
+    for (let i = 0; i < 32; i++) assert.equal(mcu.readUint8(xip + i), 0xff, `byte ${i} not erased`);
+    assert.equal(mcu.readUint8(xip - 1), 0x55, 'erased below the range');
+    assert.equal(mcu.readUint8(xip + 32), 0x55, 'erased above the range');
+});
+
+test('flash_range_program copies from SRAM into flash at the offset, and only there', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const lookup = view.getUint16(0x18, true);
+    run(lookup, {0: view.getUint16(0x14, true), 1: ROM_FUNC.FLASH_RANGE_PROGRAM});
+    const program = mcu.core.registers[0];
+    const offset = 0x101000;
+    const xip = 0x10000000 + offset;
+    const src = 0x20003000;
+    for (let i = 0; i < 24; i++) mcu.writeUint8(src + i, 0x80 + i);
+    mcu.writeUint8(xip + 24, 0x33);
+    const steps = run(program, {0: offset, 1: src, 2: 24}, 20000);
+    assert.ok(steps >= 0, 'flash_range_program never returned');
+    for (let i = 0; i < 24; i++) assert.equal(mcu.readUint8(xip + i), 0x80 + i, `byte ${i} not programmed`);
+    assert.equal(mcu.readUint8(xip + 24), 0x33, 'programmed past the count');
+    // a zero-length program must return without touching anything
+    assert.ok(run(program, {0: offset, 1: src, 2: 0}, 100) >= 0, 'zero-length program never returned');
+    assert.equal(mcu.readUint8(xip), 0x80);
+});

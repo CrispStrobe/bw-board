@@ -25,70 +25,48 @@
  * SOFT-FLOAT TABLE. mufplib is exactly the part that is not free, so the
  * `'SF'` lookup misses and returns 0.
  *
- * HOW FAR THAT GETS, measured against MicroPython 1.22.2 for the Pico:
- * the image loads, boots from its vector table, runs in flash, copies
- * itself into RAM through the memcpy here and runs there too, and asks
- * this ROM for nine different functions — memcpy, memcpy44, memset,
- * memset4, popcount32, clz32 (eighteen times), ctz32, reverse32, and
- * `'SF'`. Eight are answered. It then panics at step ~26,600, parked in
- * the SDK's `bkpt #0; b .` loop, entered from 0x10030efa.
+ * HOW FAR THAT GETS, measured against MicroPython 1.22.2 for the Pico
+ * (RPI_PICO-20240222-v1.22.2.uf2, reproducible with
+ * `node scripts/probe-pico-micropython.mjs --repl` in brickwright-lite):
+ * **all the way to the REPL.** The image runs stage 2 out of flash, the
+ * SDK's runtime_init completes, MicroPython starts, the USB device
+ * enumerates, and a raw-REPL `print(1+1)` comes back as `2`. USB is
+ * enumerated by instruction 638,821 and the `>>> ` prompt arrives at
+ * 848,420. Booting asks this table for FOURTEEN distinct codes; with the
+ * flash block below, thirteen are answered and zero calls land at address
+ * 0. The fourteenth is `'SF'`.
  *
- * THE PANIC IS NOT THE FLOAT TABLE, which is worth knowing because it is
- * the obvious suspect and it is wrong. Answering `'SF'` with a non-null
- * pointer moves the panic by TWO steps — the cost of the extra table
- * walk — and nothing else. So the licence-blocked piece is not what stops
- * MicroPython here, and a clean-room soft-float library would not fix it.
+ * THE PANIC THIS HEADER USED TO DESCRIBE WAS A PROBE ARTEFACT, and the
+ * detail is kept because it cost a session and would cost another. The
+ * earlier probe entered the image at its own vector table (0x10000100)
+ * instead of at 0x10000000. That skips BOOT STAGE 2 — and stage 2's exit
+ * path is what writes `M0PLUS_VTOR`. With VTOR left at 0, the SDK's
+ * `runtime_init` copies `ram_vector_table` out of address 0, i.e. out of
+ * THIS ROM image, so every IRQ slot holds bootrom bytes instead of
+ * `__unhandled_user_irq`. `irq_set_exclusive_handler` then fails its
+ * `hard_assert(current == __unhandled_user_irq || current == handler)`.
+ * Resolved against the v1.22.2 image, the chain in the old note reads:
  *
- * What the firmware reads immediately before panicking is CLOCKS
- * (0x40008048/4c/6c/70), RESETS' RESET_DONE (0x4000c008), and then the
- * timer's TIMERAWH/TIMERAWL. Advancing the SimulationClock per
- * instruction — which the raw probe was not doing, and which
- * rp2040js-adapter.js does — does not move the panic either. That points
- * at clock-tree configuration rather than at anything in this file: the
- * SDK asks how fast clk_sys is running and does not like the answer.
+ *     0x1002e198  alarm_pool_post_alloc_init   (pico_time/time.c)
+ *     0x1002e838  hardware_alarm_set_callback  (hardware_timer/timer.c)
+ *     0x1002dcbc  irq_get_vtable_handler       (hardware_irq/irq.c)
+ *     0x1002dccc  irq_set_exclusive_handler    (hardware_irq/irq.c)
+ *     0x1002dcf4  the failing hard_assert
+ *     0x10030f04  hard_assertion_failure
+ *     0x10030ed4  panic
  *
- * NAMED, so the next session starts where this one stopped. The SDK's
- * panic takes its message in a register, and the string is sitting in
- * flash, so it can simply be read at the moment the panic region is
- * entered (step ~26,270):
+ * The `0xd0000150` (spinlock 20) in the old note was read AFTER the
+ * assert, by panic()'s own printf taking the stdio mutex — a striped
+ * spinlock. It was never the cause. Neither was the missing soft-float
+ * table, and neither was the clock tree. Boot from 0x10000000, or set
+ * VTOR yourself, and none of it happens. See
+ * docs/PICO-MICROPYTHON-BOOT.md in brickwright-lite for the measurements.
  *
- *     r0 = 0xf   r1 = 0   r2 = 0xd0000150   r3 -> "Hard assert"
- *
- * `0xd0000150` is SIO + 0x150, which is **spinlock 20**. So a
- * `hard_assert` involving a hardware spinlock, not a clock read — the
- * CLOCKS and TIMER accesses just before it are what any SDK init does on
- * the way past.
- *
- * THE CALL CHAIN, walked by recording every BL/BLX taken. This is the
- * handoff: the assert has an address, and an address survives being
- * looked up in a symbol table where a generic string does not.
- *
- *     0x1002e1a8 -> 0x1002e838
- *     0x1002e864 -> 0x1002dcbc      ; called before the assert
- *     0x1002e872 -> 0x1002dccc      ; the function that asserts
- *     0x1002dce6 -> 0x1002dcbc      ; same helper again
- *     0x1002dcf4 -> 0x10030f04      ; hard_assertion_failure
- *     0x10030f08 -> 0x10030ed4      ; panic
- *
- * So the failing `hard_assert` is the call at **0x1002dcf4**, inside the
- * function beginning at or before **0x1002dccc**, reached from
- * **0x1002e838**. Registers there: r0 = 0xf, r2 = 0xd0000150 (SIO
- * spinlock 20). Anyone with a MicroPython build carrying symbols can
- * resolve those three addresses in one `addr2line`.
- *
- * And one thing NOT to chase: `"Hard assert"` is the SDK's GENERIC
- * message. `hard_assertion_failure()` in pico/assert.h calls
- * `panic("Hard assert")` for every failed `hard_assert()` in the tree, so
- * the string identifies the mechanism and not the site. Searching for it
- * finds the handler and nothing else. The next step is a call-stack walk
- * from the LR chain, not more message reading — and r0 = 0xf is worth a
- * look, because PICO_SPINLOCK_ID_OS2 is 15.
- *
- * Checked and excluded, so nobody re-checks them: rp2040js's spinlock
- * model is correct (reading an unlocked lock acquires it and returns the
- * mask, reading a locked one returns 0), `RESET_DONE` reports every
- * peripheral out of reset (0x1ffffff), `CPUID` correctly reports core 0,
- * and CLOCKS is fully modelled. None of those is the fault.
+ * WHAT IS STILL MISSING is the soft-float table. `'SF'` returns 0 and the
+ * lookup path tolerates it. Worth knowing: a MISSED lookup returns 0 and
+ * the SDK calls it — there is no null check at most call sites — so
+ * address 0 gets executed as Thumb. That is why the flash functions below
+ * had to be real rather than absent.
  *
  * @module
  */
@@ -113,7 +91,19 @@ export const ROM_FUNC = {
     POPCOUNT32: code('P', '3'),
     CLZ32: code('L', '3'),
     CTZ32: code('T', '3'),
-    REVERSE32: code('R', '3')
+    REVERSE32: code('R', '3'),
+    // Flash programming, datasheet §2.8.3.1.3. The SDK's hardware_flash
+    // has NO fallback for these: `flash_range_program` is a rom_func_lookup
+    // and a call, so a table that does not answer sends the firmware to
+    // address 0. MicroPython's filesystem lives on flash, so without these
+    // `os.listdir()` returns [] and every open-for-write is ENODEV — which
+    // is exactly what deployMainPy() needs to work.
+    CONNECT_INTERNAL_FLASH: code('I', 'F'),
+    FLASH_EXIT_XIP: code('E', 'X'),
+    FLASH_RANGE_ERASE: code('R', 'E'),
+    FLASH_RANGE_PROGRAM: code('R', 'P'),
+    FLASH_FLUSH_CACHE: code('F', 'C'),
+    FLASH_ENTER_CMD_XIP: code('C', 'X')
 };
 
 /** Assemble 16-bit Thumb halfwords into the image at a byte offset. */
@@ -269,6 +259,59 @@ export function buildBootrom () {
         0x4770              // bx   lr
     ]);
 
+    // ── flash programming ───────────────────────────────────────────────
+    //
+    // On silicon these drive the QSPI pads: leave XIP, talk to the flash
+    // chip, come back. Here there is no chip — rp2040js's flash is a plain
+    // byte array behind the XIP window and stores to it land — so the
+    // sequencing routines are `bx lr` and the two that move data are a
+    // memset and a memcpy against 0x10000000 + offset. That is the
+    // documented CONTRACT (datasheet §2.8.3.1.3: `addr` is an offset from
+    // the start of flash, not an XIP address), which is all an emulator
+    // owes a caller.
+    //
+    // NAND semantics are deliberately not emulated: a real program can only
+    // clear bits, so writing without erasing first corrupts. Storing the
+    // byte outright is a superset of that, and a filesystem that erases
+    // correctly cannot tell the difference.
+    const flashNop = pc;
+    pc = emit(view, pc, [0x4770]);          // bx lr
+
+    // ── flash_range_erase(r0 = offset, r1 = count, r2, r3) ──────────────
+    const flashRangeErase = pc;
+    pc = emit(view, pc, [
+        0xb510,             // push {r4, lr}
+        0x2410,             // movs r4, #16
+        0x0624,             // lsls r4, r4, #24      ; r4 = 0x10000000
+        0x1900,             // adds r0, r0, r4       ; offset -> XIP address
+        0x24ff,             // movs r4, #255         ; erased flash reads 0xff
+        0x2900,             // .loop: cmp r1, #0
+        0xd003,             // beq  .done            ; +3, counted from PC+4
+        0x7004,             // strb r4, [r0, #0]
+        0x3001,             // adds r0, #1
+        0x3901,             // subs r1, #1
+        0xe7f9,             // b    .loop
+        0xbd10              // .done: pop {r4, pc}
+    ]);
+
+    // ── flash_range_program(r0 = offset, r1 = src, r2 = count) ──────────
+    const flashRangeProgram = pc;
+    pc = emit(view, pc, [
+        0xb510,             // push {r4, lr}
+        0x2410,             // movs r4, #16
+        0x0624,             // lsls r4, r4, #24
+        0x1900,             // adds r0, r0, r4
+        0x2a00,             // .loop: cmp r2, #0
+        0xd005,             // beq  .done
+        0x780c,             // ldrb r4, [r1, #0]
+        0x7004,             // strb r4, [r0, #0]
+        0x3001,             // adds r0, #1
+        0x3101,             // adds r1, #1
+        0x3a01,             // subs r2, #1
+        0xe7f7,             // b    .loop
+        0xbd10              // .done: pop {r4, pc}
+    ]);
+
     // A reset handler that goes nowhere: we boot from flash, and this
     // exists so the vector table is not a pointer to zero.
     const spin = pc;
@@ -288,7 +331,13 @@ export function buildBootrom () {
         [ROM_FUNC.POPCOUNT32, thumb(popcount32)],
         [ROM_FUNC.CLZ32, thumb(clz32)],
         [ROM_FUNC.CTZ32, thumb(ctz32)],
-        [ROM_FUNC.REVERSE32, thumb(reverse32)]
+        [ROM_FUNC.REVERSE32, thumb(reverse32)],
+        [ROM_FUNC.CONNECT_INTERNAL_FLASH, thumb(flashNop)],
+        [ROM_FUNC.FLASH_EXIT_XIP, thumb(flashNop)],
+        [ROM_FUNC.FLASH_FLUSH_CACHE, thumb(flashNop)],
+        [ROM_FUNC.FLASH_ENTER_CMD_XIP, thumb(flashNop)],
+        [ROM_FUNC.FLASH_RANGE_ERASE, thumb(flashRangeErase)],
+        [ROM_FUNC.FLASH_RANGE_PROGRAM, thumb(flashRangeProgram)]
     ];
     let at = table;
     for (const [c, addr] of entries) {
