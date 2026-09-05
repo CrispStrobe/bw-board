@@ -1573,6 +1573,62 @@ closed form (no new machinery), then build the cycle-stepped BIU for the rest.
 half — its author wrote the very suite being graded against, and it is the
 only permissive cycle-accurate 8088 in existence.
 
+#### E6.8.8b The MINIX floppy does not boot because a 2-sector read returns a bad SECOND sector (2026-09-05)
+
+`fd1440-minix.img` never reaches a kernel banner. Root cause, measured:
+
+**A 2-sector INT 13h read (AL=2) returns a corrupt or failed second sector.**
+`scripts/probe-int13-reads.mjs` watches the loader's own calls and compares
+each destination against the raw image:
+
+```
+  fd1440-minix.img   121 calls   23 wrong status   21 wrong DATA
+  fd1440-fat.img     230 calls    1 wrong status    1 wrong DATA
+```
+
+Every data failure is at byte 512 or 513 -- the START OF THE SECOND SECTOR --
+and every failing request has AL=2 with an ODD starting sector:
+
+```
+  c0 h0 s9  n2   DATA WRONG at byte 513: got 41 want 81
+  c5 h0 s11 n2   DATA WRONG at byte 512: got c7 want 75
+  c5 h0 s13 n2   DATA WRONG at byte 512: got c7 want 00
+  c4 h1 s11 n2   AH=20  (DSK_CTRLFAIL -- the controller said something
+                         `fd_xfer` did not expect)
+```
+
+The first sector of each pair is always correct. `got c7` recurring is fill,
+not disk content. NOTE the one benign entry: `c0 h0 s36 n1 -> AH=4` on the FAT
+image is CORRECT -- sector 36 does not exist on an 18-sector track and the
+loader is probing geometry.
+
+**WHY IT KILLS THIS IMAGE AND NOT THE OTHER.** Both are affected; the FAT
+image trips it once and survives, the MINIX image trips it 21 times while
+loading `/linux`. The kernel therefore lands in memory with every second
+sector wrong, execution runs off the end of the real code into a zero-filled
+region and slides through it as `ADD [BX+SI],AL` (opcode 00 00 -- the exact
+failure `scripts/build-bios.mjs`'s own header warns about), those stores smear
+the data segment, and the stack descends unbounded: sp falls 61d3 -> 5a05 ->
+... -> 1df9 -> 0 and wraps. cs, ds and ss are all 19fc by then.
+
+**THE VISIBLE SYMPTOM IS 16 MILLION INSTRUCTIONS DOWNSTREAM AND IS A DECOY.**
+What is easy to find is a walk at cs=685:054e..059e (`cmp bx,3D04` / `mov
+bx,[bx+2]` / loop) that never reaches its sentinel because its head cell at
+ds:3D04 was overwritten. Two hours went into that loop and its "corrupt free
+list" before the read path was checked. Recorded because the next person will
+find the same loop first: the cheap question is not where it stalls, it is
+whether the bytes being executed are the bytes on the disk.
+
+**WHERE THE DEFECT IS NOT.** `rom/bios.asm`'s `d_read`/`fd_xfer` is a
+plausible suspect and is probably not it -- `AH=20` means the DRIVER rejected
+the controller's result phase. `src/upd765.js` multi-sector handling and the
+8237 count/address setup are the two places to look. The FDC's own counters
+report nothing: `badReads 0, overruns 0`, so it does not think it failed.
+
+**NOT YET DONE:** isolating this to a device-level unit test independent of a
+boot. That is the next step and it should come before any fix, so the fix has
+something to fail against first.
+
 #### E6.8.4l The BIU is not blocked — it is UNWANTED, on the record (2026-09-05)
 
 The BIU has been "the next step" in two roadmaps. E6.8.4j established that it
