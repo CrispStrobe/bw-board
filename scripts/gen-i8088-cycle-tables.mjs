@@ -138,6 +138,14 @@ function generate() {
 }
 
 function render({ opcodes, count }) {
+    // BUMP THIS on any change to the table's SHAPE or the features that key
+    // it. test/i8088-cycles.test.mjs asserts the committed table carries this
+    // exact string, so a bump is what forces a regeneration -- it is the only
+    // drift check that can run without the 677 MB of vectors.
+    //
+    // The failure it CANNOT see is forgetting to bump, which is why this sits
+    // at the emit rather than in a config file: whoever changes the shape is
+    // looking at this line.
     const gen = 'i8088-cycles/1';
     return `// GENERATED FILE -- do not edit by hand.
 // Regenerate: node scripts/gen-i8088-cycle-tables.mjs

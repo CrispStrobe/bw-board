@@ -73,6 +73,28 @@ test('provenance is populated, not a placeholder', () => {
     assert.match(PROVENANCE.license, /MIT/);
 });
 
+test('the table was built by the generator now in the tree', () => {
+    // THE ONLY DRIFT CHECK THAT CAN RUN IN CI. The real one -- regenerate and
+    // diff -- needs 677 MB of vectors that are not in the repository, so it
+    // cannot run here. That leaves one realistic drift undetected: someone
+    // edits the generator and does not regenerate the table, and every other
+    // check keeps passing because the committed table is still internally
+    // consistent with itself.
+    //
+    // So: the generator stamps a version into PROVENANCE, and this asserts the
+    // stamp matches the generator's own declaration. Bumping the version is
+    // then the thing that forces a regeneration, and forgetting to bump is the
+    // failure mode this cannot see -- which is why the version lives next to
+    // the emit and is documented as needing a bump on any table-shape change.
+    const gen = readFileSync(
+        new URL('../scripts/gen-i8088-cycle-tables.mjs', import.meta.url), 'utf8');
+    const m = gen.match(/const gen = '([^']+)'/);
+    assert.ok(m, 'the generator no longer declares a version string the table can be matched against');
+    assert.equal(PROVENANCE.generator, m[1],
+        `src/i8088-cycles.js was built by ${PROVENANCE.generator} but the generator `
+        + `in the tree is ${m[1]} -- regenerate: node scripts/gen-i8088-cycle-tables.mjs`);
+});
+
 test('the MIT notice travels with the derived table', () => {
     // The obligation is on the ARTEFACT, not the checkout. A table shipped in a
     // BSD-3 bundle with its notice left behind in a repo nobody distributes is
