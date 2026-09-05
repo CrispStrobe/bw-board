@@ -739,12 +739,39 @@ family expensive rather than merely embarrassing:
   its own repo and asserts which specifiers appear in its text. The rule keyed
   on the *shape* of the string and called it a read. **A false red is how a
   detector gets deleted**, so this is not the milder failure.
-- A **vendor gate** asserting that two copies of a file exist passed only
-  because of untracked files on one box. `packages/` is gitignored with
-  *partial* tracking: 150 files there are tracked, the one being asserted is
-  not. `git archive HEAD` into a temp dir fails all four subtests. **Partial
-  tracking under a gitignore is invisible to `git status`** — the file looks
-  present, is not tracked, and nothing local distinguishes the two.
+- **AMENDED 2026-09-05 — THIS ENTRY WAS WRONG, AND HOW IT GOT HERE IS THE
+  BETTER LESSON.** It originally read that a vendor gate "passed only because
+  of untracked files on one box" and "could never pass in CI". Neither is true.
+  `brickwright-lite`'s `.gitignore` says in as many words that `packages/` is
+  *populated, not tracked* — *"Vendored permissive sources (populated by `npm
+  run vendor`)"* — and `build.yml:88–90` runs `npm run vendor` then
+  `scripts/integrate.mjs` before the suite. The untracked files are correct to
+  be untracked, and the gate passes in CI.
+
+  **The author read a tar listing instead of the `.gitignore` two lines above
+  the answer. I then wrote their conclusion into THIS file without checking
+  it** — a second-hand claim, about a different repository, recorded as fact in
+  a document whose whole subject is unverified claims. Verifying it took two
+  commands and I ran them only after being corrected.
+
+  **What survives is about the TOOL, and it is worth more than the original
+  entry.** `audit-clean-checkout.mjs` reproduces `git archive HEAD` with **no
+  populate step**, so for any test that reads `packages/` it manufactures a
+  failure out of a condition that exists nowhere — not in the tracked tree, not
+  in CI. It reported two such files and **both were false**; re-run with the
+  populate step, 3 files, 0 failed.
+
+  > **A tool that reproduces the wrong condition is as misleading as a detector
+  > that models the wrong signal** — and this one exists precisely to replace
+  > the modelling kind.
+
+  Fixed there with an `--integrate` mode that runs the populate step inside the
+  temporary tree and **refuses to report at all if that step fails**, rather
+  than judging a tree that is neither the tracked one nor CI's.
+
+  And the error has the week's shape once more: the verdict quantified over
+  *files git has*, the goal over *files present when the suite runs*. Those
+  differ by exactly one build step.
 
 ### Rule: a wait that cannot find its job reports success
 
