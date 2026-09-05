@@ -1619,15 +1619,79 @@ list" before the read path was checked. Recorded because the next person will
 find the same loop first: the cheap question is not where it stalls, it is
 whether the bytes being executed are the bytes on the disk.
 
-**WHERE THE DEFECT IS NOT.** `rom/bios.asm`'s `d_read`/`fd_xfer` is a
-plausible suspect and is probably not it -- `AH=20` means the DRIVER rejected
-the controller's result phase. `src/upd765.js` multi-sector handling and the
-8237 count/address setup are the two places to look. The FDC's own counters
-report nothing: `badReads 0, overruns 0`, so it does not think it failed.
+**FOUND, AND IT WAS IN THE PLACE THIS ENTRY FIRST RULED OUT.** The paragraph
+that stood here said `rom/bios.asm` was "a plausible suspect and is probably
+not it", and named `src/upd765.js` and the 8237 as the two candidates. That
+was wrong. The FDC and the DMA controller are both behaving correctly.
 
-**NOT YET DONE:** isolating this to a device-level unit test independent of a
-boot. That is the next step and it should come before any fix, so the fix has
-something to fail against first.
+**`rom/bios.asm`'s diskette parameter table declared EOT=9 -- a 360K table --
+and the media are 1.44M with eighteen sectors per track.** EOT is the last
+sector the controller will transfer before it decides the track has ended;
+the driver sets MT, so at EOT it switches to the other head. Hence, exactly:
+
+```
+  requested  c5 h0 s9 + s10
+  delivered  c5 h0 s9, then c5 h1 s1   <- first sector of the NEXT HEAD
+             CF clear, AH=00: the controller did what it was told
+```
+
+and a request starting past sector 9 on head 1 has no head left to switch to,
+so it terminates abnormally: `AH=20`, 512 of 1024 bytes moved, TC never
+asserted. Every observation fits, including why sectors 1..7 were fine and 9
+and up were not, and why the FDC's own counters reported nothing -- there was
+nothing to report.
+
+The ROM's own limitations list said so all along, in the header: "any drive
+that is not 360K ... the geometry comes from the diskette parameter table, so
+a different format is a table away -- but the table is not chosen by probing
+the medium". A documented limitation met an undocumented consequence.
+
+**NOT FIXED, AND THE OBVIOUS FIX IS WRONG.** Setting EOT to 18 in the table
+makes the MINIX image boot -- measured:
+
+```
+  EOT=9    121 reads   23 wrong status   21 wrong DATA   no kernel, ever
+  EOT=18   127 reads    2 wrong status    0 wrong DATA   ELKS 0.9.1 boots
+```
+
+(the two remaining are `c0 h0 s36 n1 -> AH=4`, which is CORRECT: sector 36
+does not exist on an 18-sector track and the loader is probing geometry.)
+
+**But it breaks 360K, and the suite says so.** The claim written here first --
+"EOT is a ceiling, so a request that stays inside a 9-sector track never
+reaches it and 360K media are unaffected" -- is FALSE, and
+`test/bios-fdc.test.mjs:245` is the counter-example. It reads NINE sectors
+from head 0 sector 6 of a 360K disk and requires the controller to run past
+the end of the track and switch heads, landing sectors 6..9 on head 0 and
+1..5 on head 1. That is correct MT behaviour and it depends on EOT being 9 on
+a 9-sector medium. Three tests fail with the constant changed:
+
+```
+  bios-fdc: a multi-sector read crosses from head 0 to head 1 of the same cylinder
+  bios-fdc: a request that runs off the end of the cylinder is not a disk error
+  bios-rom: INT 13h AH=08h answers the geometry
+```
+
+EOT is not a constant that happens to be too small. **It is a property of the
+inserted medium**, and the ROM has exactly one hardcoded value for it. So the
+real fix is a DIskette parameter table that describes the disk actually in the
+drive -- which is the limitation the ROM header already states ("the table is
+not chosen by probing the medium") now that it has a cost attached.
+
+That change is deliberately NOT made here: it decides what this ROM IS, it
+moves AH=08h's answer and the CMOS drive type with it, and the three tests
+above pin the current contract on purpose rather than by accident. It wants
+its own cycle, with those tests rewritten coherently rather than in the same
+hour the bug was found.
+
+**STILL WRONG, and deliberately not changed here:** the ROM still DESCRIBES a
+360K drive everywhere else. AH=08h answers 40 cylinders and 9 sectors from the
+same table, and the CMOS drive type says 360K -- which is why ELKS prints
+`df0 is 360k/PC (1)` and `fd0: 233G CHS 17482,-31870,-32384` from its own
+`df` driver while its probe correctly finds 80/2/18. Those are a separate
+change with a wider blast radius (equipment word, AH=08h, CMOS type, and the
+data-rate register at 3F7h this ROM never writes) and they are not what was
+breaking the boot.
 
 #### E6.8.4l The BIU is not blocked — it is UNWANTED, on the record (2026-09-05)
 
