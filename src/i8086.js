@@ -928,6 +928,15 @@ export class I8086 {
      * the documented 8088 8-bit-bus penalty, reproduced from measurement
      * rather than assumed, which is why this core (an 8086) uses the 8086
      * column and an 8088 would not.
+     *
+     * SO DO NOT "FIX" THE WORD FORMS TO MATCH THE ORACLE. Grading this core
+     * against the 8088 vectors leaves A5, A7, AB, AD and AF as the worst
+     * remaining string opcodes, off by exactly the bus penalty above, while
+     * all five BYTE forms drop out of the error table entirely. **That
+     * residual is the measurement working, not a defect left behind.** An
+     * 8086 core that matched an 8088 oracle on word string operations would
+     * be wrong about being an 8086 -- and the change that "fixed" it would be
+     * indistinguishable, in the score, from a real improvement.
      */
     _repCost(iters, single, per) {
         return this._rep ? 9 + per * iters : single;

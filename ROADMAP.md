@@ -1575,6 +1575,19 @@ only permissive cycle-accurate 8088 in existence.
 
 #### E6.8.4f What a correct cycle model needs, read off MartyPC (2026-09-04)
 
+> **READ E6.8.4j BEFORE STARTING ANY OF THIS.** The five-state BIU machine
+> described below has been the assumed next step in two roadmaps, including
+> this one, and **it does not lift the ceiling that currently limits cycle
+> accuracy.** It replaces the queue *recurrence* by computing the queue
+> directly — but the cycle tables contain no entries at queue depths 1, 2 or 3
+> (the oracle samples only 0 and 4), so the lookup misses exactly as often
+> afterwards. Building it first buys nothing measurable. The unblock is an
+> oracle that samples intermediate queue depths; see E6.8.4j.
+>
+> This entry remains correct about WHAT a cycle-exact model needs. It is wrong
+> only about the order, and that is the expensive half.
+
+
 `dbalsom/martypc` is MIT and our licence table already clears it as *readable
 as a reference implementation, not vendored*. Read for STRUCTURE — what state
 the hardware requires — rather than transcribed. Its author also wrote the
