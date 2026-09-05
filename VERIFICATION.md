@@ -1012,6 +1012,28 @@ assertion no longer objects; it proves nothing about whether it can. The
 correct shape here was structural — same block, `if (…) {` with no closing
 brace before the assertion — rather than any character window.
 
+**AND THE RED-PROOF ITSELF CAN BE VACUOUS: THE INJECTION MUST REACH THE CASE,
+NOT MERELY RESEMBLE IT.** Four instances, 2026-09-05, every one a fault I
+injected that failed to exercise the assertion I was proving:
+
+| what I broke | why it proved nothing |
+|---|---|
+| `sed 's/^\/\/   MIT License$//'` | the real line reads `MIT License. Copyright (c) …`, so the pattern never matched and the "passing" licence test was never challenged |
+| disabled a service branch in `resolve()` | `existsSync` on a URL is false anyway, so `present` stayed false and the guard passed under a broken implementation |
+| pointed `$NASM` at a stub exiting 0 | the *old* assertion also failed on that, so it did not distinguish old from new — the discriminating case was a missing corpus, not a broken binary |
+| a null-guarded comparison | **both** sides were null, so the test passed having compared nothing, and no injection was involved at all |
+
+In three of the four the injected fault produced a red — and it was **the wrong
+red**, or a red the unfixed code would also have produced. A red-proof is only
+evidence when the fault it injects is the one the assertion exists to catch.
+
+**The check on the check: after injecting, confirm the failure MESSAGE names
+the thing you broke.** A generic assertion failure, or a red from a different
+assertion in the same file, means the injection missed. In the licence case the
+tell was that nothing went red at all; in the `resolve()` case it was that the
+guard stayed green; in the nasm case it was that both versions behaved
+identically.
+
 **This is why every widening in this repository is red-proved**, and why the
 same discipline is applied to the widening itself and not only to the original
 gate. Three instances the same week, all caught only by injection:
