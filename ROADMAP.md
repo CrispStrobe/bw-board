@@ -2077,9 +2077,27 @@ now splits them.
 
 **Current behaviour is honest and stays:** an unmeasured state falls back to the
 core's own cycle count, `cycleTimingStats()` reports true coverage split by
-cause, and nothing guesses. On a real boot that means **54% of instructions
-timed from silicon measurements and 46% from the core's estimate**, with the
-tables charging 1.148x the core's total cycles.
+cause, and nothing guesses.
+
+**UPDATED after the REP fix of E6.8.4k: coverage on a real boot is 82.34%**
+(329,294 predicted, 70,647 fallen back), with the desync amplification halved
+from 265x to 105x.
+
+**That is NOT a controlled before/after, and saying so matters more than the
+number.** The two runs do not execute the same instructions. Evidence from the
+runs themselves: the same 400,000 steps charged **5,470,583** core cycles before
+the fix and **3,840,132** after — *fewer* cycles from a change that makes string
+operations cost *more*, which is only possible if fewer string operations ran.
+The trace diverged.
+
+**The plausible mechanism, stated as a hypothesis rather than a finding:**
+correct cycle accounting paces the timer interrupt correctly, more interrupts
+mean more control transfers, more transfers mean more queue flushes, and a
+flush is the only event that resynchronises the estimator. If that is right,
+**table coverage depends on interrupt cadence, which depended on the cycle
+accounting being right** — a feedback loop between the thing being measured and
+the measurement. It has not been isolated and should not be quoted as
+established.
 
 #### E6.8.4k REP string ops charged a FLAT cycle count for a loop of up to 127 (fixed 2026-09-05)
 
