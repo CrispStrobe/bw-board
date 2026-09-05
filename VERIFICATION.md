@@ -844,6 +844,33 @@ appear** — a plausible number being worse than a refusal.
 from its own absence at run time, and a coverage counter is the only remaining
 answer.**
 
+**AND THE TWO CASES ARE NOT THE SAME DEFECT, which matters because the cheaper
+one is often available by construction.** Compare an absent chip with an absent
+table entry:
+
+| | can the read/lookup tell? | what it needs |
+|---|---|---|
+| absent ADC | **No.** `FFh` is a legal reading | an unforgeable-state probe |
+| absent table entry | **Yes.** `undefined` is not a cycle count | a counter, and the null contract |
+
+Open bus can forge *ready*. A missing key **cannot forge a value** — JavaScript
+hands back `undefined`, which no legitimate answer collides with. So a table
+lookup already has the unforgeable state that hardware has to be probed for.
+
+**The consequence is a design rule, not just bookkeeping.** The 8088 cycle
+tables cover only queue states `0` and `4`, while the recurrence that feeds them
+emits `1`, `2` and `3`. Snapping those to the nearest measured state would take
+coverage from 54% to ~100% and cost nothing visible. It was refused, and the
+reason is sharper than honesty: **it would convert an unforgeable absence into a
+forgeable one.** `undefined` says "never measured" and cannot be mistaken for
+data; the nearest measured value is a plausible number that no downstream check
+could ever distinguish from a real one.
+
+**So: a fallback that substitutes a plausible value destroys the only signal the
+layer had.** Preserve the distinguishable absence — return the null, count the
+miss — and a counter suffices. Discard it and you are back to needing a probe
+for a state that no longer exists.
+
 **Checked in the 8086 tier, and the analogue is NOT a defect there** — recorded
 because a negative result found by looking is worth more than one assumed. Six
 presets without a CGA read `FFh` at port `3DAh`, which sets the vertical-retrace
