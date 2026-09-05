@@ -82,20 +82,46 @@ cross-branch diff — and never send one you have not re-derived.
 
 ---
 
-**7. "I cannot reach them" is not "they are absent."** Cross-session sends can
-fail in ONE DIRECTION. On 2026-09-04 two sessions independently concluded
-`lego-47` was gone after repeated `Failed to send`, while `ListAgents` showed
-them `interactive · idle` and they were receiving everything — including the
-messages saying they were unreachable. Both senders then coordinated *around*
-them, and one nearly wrote "an unanswered heads-up went unanswered" into a PR.
+**7. RE-DERIVE IDENTITY BEFORE YOU BROADCAST IT — AND VERIFY A CORRECTION AS
+HARD AS THE CLAIM IT CORRECTS.**
 
-Neither end can detect this alone: the sender sees failures, the receiver sees
-nothing missing. So: **treat a send failure as unreceived, never as consent,
-never as absence** — and if `ListAgents` says a peer is alive, that is
-disconfirming evidence, not noise to explain away. Route through a third
-session to confirm before acting on a peer's silence.
+**This rule previously said something false, and the way it went wrong IS the
+rule.** It recorded that two sessions wrongly concluded `lego-47` was gone while
+`lego-47` was receiving everything. That is not what happened.
 
----
+What happened, 2026-09-04:
+
+1. Repeated `Failed to send` to `lego-47`. Reported as unreachable. **This was
+   correct.**
+2. A session replied *"I am lego-47 and I am reachable — address me by that
+   name."* Written with authority, and it explained the symptom.
+3. That correction was accepted, propagated to a third session, and written
+   into this file as a rule — **without re-running the one command that
+   settles it.**
+4. `ListAgents` lists `lego-47 [40a375]` (idle, 1d) and `lego-be [61a550]`
+   (busy, 1h) as **two separate rows**. The replying session was `lego-be`. It
+   had cached an earlier `ListAgents` reading of its own identity, true when
+   made, and never re-derived it.
+
+So a correct report was withdrawn in favour of an incorrect correction, and the
+error was then durably recorded. Two failures, and the second is the worse one:
+
+- **A cached identity is a stale remote ref with a friendlier name.** Rule 6 is
+  about `origin/*`; this is the same mechanism applied to *who you are* and *who
+  you are talking to*. The 40,584 number makes people check a diff. **Nothing
+  makes anyone check who they are speaking to.** Re-derive identity and location
+  before broadcasting them, not only diffs.
+- **A correction is a claim.** It arrives with the authority of a fix and the
+  social weight of someone admitting fault, which is exactly why it slides past
+  the scrutiny the original got. The original report here had been verified two
+  ways — failed sends *and* an `ListAgents` row. It was abandoned on an
+  assertion. **Verify a correction at least as hard as what it corrects,
+  especially when it is flattering to accept.**
+
+The surviving true part: **cross-session sends can fail, and a failure is
+"unreceived" — never consent, never absence.** But do not infer a peer is gone
+from send failures alone; check `ListAgents`, and if a row says they are alive,
+that is disconfirming evidence rather than noise to explain away.
 
 **8. PUBLISHING TO `master` IS THE OWNER'S CALL, NOT A PEER'S.** A peer can
 review, verify, clear a merge order, and say a branch is ready. None of that is
