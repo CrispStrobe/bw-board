@@ -699,6 +699,47 @@ So:
   nobody happened to write. They are not substitutes, and the defect above was
   found by the probe.
 
+### Rule: a wait that cannot find its job reports success
+
+Four instances in one day, each in a different disguise, every one producing a
+confident "DONE" beside a zero-byte log. Recorded as a rule rather than a
+caution because vigilance demonstrably did not fix it: the fourth happened
+after the first three had been written up.
+
+```
+1. nohup node job & ; sleep 45 ; tail log     the WRAPPER exits after sleep;
+                                              the harness reports the wrapper
+2. P=$(pgrep -f job); sleep 3                 pgrep matched a transient shell,
+                                              not the node process
+3. pkill -f "node --test test/"               the pattern matched the WAITER's
+                                              own command line, killing the
+                                              chain that was watching
+4. P=$(cat pidfile)  # never written          `while kill -0 "" ; do` exits
+   while kill -0 $P; do sleep; done           immediately: an empty PID is a
+                                              satisfied loop, not an error
+```
+
+**The shared mechanism: a waiter that cannot locate its target concludes the
+target has finished.** Absence of the job is indistinguishable from completion
+of the job, and every one of these failed in the direction that says "done".
+
+**Structural fixes, because the rule alone did not hold:**
+
+- **Never derive a PID from a pattern that can match the deriving process.**
+  `pgrep -f` matches the shell running `pgrep -f`. Filter out `bash -c`/`eval`,
+  or match on the interpreter and script path together.
+- **Treat an empty PID as an error, not a loop condition.** `kill -0 ""` fails,
+  so `while kill -0 "$P"` with an unset `P` runs zero times and looks like
+  instant success. Guard with `[ -n "$P" ] || exit 1` first.
+- **Never widen a kill pattern past the job**, or it takes the watcher with it.
+- **Read the artefact, not the exit.** A zero-byte output file next to a
+  "finished" message was the only reliable tell in all four cases, and it is
+  cheaper to check than any of the above.
+
+Same family as the audit that printed one cause for every failure, and as the
+cancelled CI run that reads as "somebody chose to stop it": **a status that
+carries an implied cause it never established.**
+
 ### Rule: a tool can fail in the mode it was built to detect
 
 The sharpest instance this project has produced, found 2026-09-04 by the
