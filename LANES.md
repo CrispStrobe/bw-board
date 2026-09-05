@@ -214,6 +214,41 @@ machines and verified by deleting the invalidation until all three go red)
 does not exist in the repo where such a graft would happen. Port the test with
 the cache, or do not port the cache — lite's machines are correct as they are.
 
+**12. `cmd | grep` REPORTS GREP'S STATUS, SO `&& git commit` COMMITS ON A RED
+SUITE.** This is a shell mechanism, not a lapse in attention.
+
+Every test run in this repo gets filtered — `node --test test/ | grep -E "^# (pass|fail)"`
+— because the raw TAP output is thousands of lines. A pipeline's exit status is
+its **last** command's, so the chain gates on whether *grep matched*, never on
+whether the *tests passed*:
+
+```
+  (echo "# pass 5"; exit 1) | grep -E "^# pass"          -> exit 0
+  set -o pipefail; same                                   -> exit 1
+```
+
+The left side failed. Without `pipefail` the chain proceeds and commits.
+
+**Written as a rule about shell rather than about care, because the discipline
+version demonstrably does not work.** It is in this file already as "a failed
+patch step does not stop a commit unless you chain it" (rule 3's neighbour),
+and the author of that line then pushed a red test twice in the same day. Two
+sessions hit it today; one caught it once. When a rule has been written twice
+and violated twice by the person who wrote it, the fault is in the mechanism.
+
+**The fixes, cheapest first:**
+
+- `set -o pipefail` at the top of any command that chains on a filtered result.
+- Or drop the pipe when the result gates something: run the suite unfiltered
+  into a file, `grep` the file for display, and chain on the run's own status.
+- Or simply do not chain. Run the gate, LOOK at it, then commit as a separate
+  command — which is what "verify, then act" means when the verification is
+  a program rather than a claim.
+
+**The tell, when it has already happened:** a red line scrolled above a
+successful push in the same output block. If a commit and a test result appear
+in one command's output, the commit did not depend on the test.
+
 ## OPERATIONAL — the box, 2026-09-05
 
 **Written here because cross-session sends are FAILING.** Three warnings to
