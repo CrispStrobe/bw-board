@@ -69,6 +69,21 @@ jobs:
       - name: Which oracles are present
         run: node scripts/oracle-census.mjs
 
+      # OPCODE COVERAGE, AND IT BELONGS HERE RATHER THAN IN THE GRIND JOB.
+      # The grind job only runs when the vector suite is checked out; this gate
+      # needs no vectors, because it reasons about what the grind covers from
+      # the suite's own documented omissions (0x0F and 0x9B) and then runs the
+      # always-on corpus. Putting it beside the grind would make it silently
+      # not run on every job that lacks the suite -- an absent gate that reads
+      # as a passing one, which is the failure this repository keeps finding.
+      #
+      # It emits ONE number and fails when that number is not zero: opcodes
+      # exercised by neither the corpus nor the grind. It also refuses a corpus
+      # that fired too few opcodes, rather than calling a truncated run an
+      # improvement.
+      - name: 8086 opcodes covered by neither the corpus nor the grind
+        run: npm run cov:i8086
+
   # ---------------------------------------------------------------------
   # The 8086 vector grind, which until now ran nowhere but a developer's box.
   #
