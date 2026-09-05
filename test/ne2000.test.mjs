@@ -311,3 +311,22 @@ test('a card reached through the machine, at 320h, over IN and OUT', () => {
     assert.ok(got, 'B received it');
     assert.equal(got.frame[14], 0x42, 'payload intact across the wire');
 });
+
+test('TSR does not report a transmission that never happened', () => {
+    // DO NOT MANUFACTURE FORGEABILITY. This read was `this.txStatus || 0x01`,
+    // and 0x01 is exactly what a real successful send reports -- so a driver
+    // polling TSR at startup saw a completed transmission it never made, and
+    // nothing could have told it otherwise.
+    //
+    // Zero is the honest answer: no status bits set means nothing completed.
+    const c = new NE2000();
+    assert.equal(c.read(0x04), 0, 'TSR is clear before anything is sent');
+    assert.equal(c.read(0x0c), 0, 'and RSR before anything arrives');
+
+    // And it still reports success once a send really happens.
+    const looped = boot(new NE2000({mac: MAC_A, link: new LoopbackLink()}), {mac: MAC_A});
+    assert.equal(looped.read(0x04), 0, 'still clear after configuration alone');
+    loadTx(looped, mkFrame(MAC_A, MAC_A, [1]));
+    looped.write(CR, 0x26);
+    assert.equal(looped.read(0x04) & 0x01, 0x01, 'PTX set after a real transmission');
+});

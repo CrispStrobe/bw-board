@@ -95,6 +95,20 @@ export class NE2000 {
         this.rsar = 0; this.rbcr = 0;
         this.par = this.rom.slice();
         this.mar = new Uint8Array(8);
+        // INITIALISED, NOT DEFAULTED AT THE READ. These were `this.txStatus ||
+        // 0x01` and `this.rsr || 0` in the register read, and the first of
+        // those INVENTED A SUCCESS: TSR answered "transmitted OK" before any
+        // transmission had happened, because the field was undefined and the
+        // fallback supplied the plausible value.
+        //
+        // A driver polling TSR at startup would have seen a completed send it
+        // never made -- and nothing could have told it otherwise, because
+        // 0x01 is exactly what a real successful transmission reports.
+        //
+        // Zero is the honest answer: no status bits set means nothing has
+        // completed. Do not manufacture forgeability (lego-a4).
+        this.txStatus = 0;
+        this.rsr = 0;
         this.txPending = false;
         this.overflow = false;
         this._irq = 0;
@@ -170,11 +184,11 @@ export class NE2000 {
     _readPage0(r) {
         switch (r) {
         case 0x03: return this.bnry;
-        case 0x04: return this.txStatus || 0x01;         // TSR: transmitted OK
+        case 0x04: return this.txStatus;                 // TSR; 0 until a send completes
         case 0x07: return this.isr;
         case 0x08: return this.rsar & 0xff;
         case 0x09: return (this.rsar >> 8) & 0xff;
-        case 0x0c: return this.rsr || 0;
+        case 0x0c: return this.rsr;                      // RSR; 0 until a frame arrives
         // THE TALLY COUNTERS ARE ZERO AND THAT IS HONEST: they count frame
         // alignment errors, CRC errors and missed packets, none of which can
         // happen on a link that cannot corrupt or drop anything.
