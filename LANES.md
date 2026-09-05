@@ -249,6 +249,59 @@ and violated twice by the person who wrote it, the fault is in the mechanism.
 successful push in the same output block. If a commit and a test result appear
 in one command's output, the commit did not depend on the test.
 
+## OPERATIONAL — archiving to /mnt/storage, 2026-09-05
+
+**THE CIFS SHARE CANNOT STORE SYMLINKS, AND A PLAIN COPY DROPS THEM SILENTLY.**
+
+`/mnt/storage` is a symlink to `/mnt/akademie_storage`: one CIFS share, 5 TB,
+mounted `nounix` **without `mfsymlinks`**. Creating a symlink there fails:
+
+```
+ln -s /tmp /mnt/storage/probe
+  -> ln: failed to create symbolic link: Input/output error
+```
+
+So `cp -a` of a tree containing symlinks **succeeds overall** while omitting
+every link, and reports only a line per failure in stderr that is easy to lose
+in a long run. Measured:
+
+```
+mbit-fw-src            117 symlinks   bytes DIFFER after copy
+mbit-fw-build          175
+bw-bundle              171
+wt-spike-fw-firmware    10
+brickwright-sdcc-o2      1
+bw-pages, sdcc-git       0            bytes MATCH — safe to copy plainly
+```
+
+**This is not cosmetic.** The lost links in `mbit-fw-src` and
+`wt-spike-fw-firmware` include `nuttx/include/arch` and `nuttx/Make.defs` —
+load-bearing build symlinks. The archive looked successful; the restored tree
+would not build, and nobody would find out until they tried.
+
+**So: choose the method by whether the tree contains symlinks.**
+
+```
+find TREE -type l | wc -l
+  > 0   ->  tar -czf on CIFS, symlink the original path at the .tgz
+  = 0   ->  rsync -a to CIFS, symlink the original path at the directory
+```
+
+**And verify BYTES, not file counts, before deleting anything.** `mbit-fw-src`
+copied 79,114 files against 79,114 in the source — a perfect count match — and
+was still wrong by two symlinks. The byte total is what caught it.
+
+**Two more things that bit during this cleanup:**
+
+- **Check `lsof` at the moment you act, not when you plan.** `crisp-flutter-sdk`
+  showed 0 open handles in the survey and 25 when the copy reached it, and was
+  skipped automatically. `clean-checkout-1XQqF8` had 14 handles despite being
+  the same age as five idle siblings that were safe to delete — age alone would
+  have destroyed a live tree under another session.
+- **mtime recency misreads a fresh clone as hot.** `retro-corpus-8086` reported
+  1,348 files modified in 7 days; it was cloned on the 3rd, so *every* file is
+  recent. Cloning is not editing.
+
 ## OPERATIONAL — the box, 2026-09-05
 
 **Written here because cross-session sends are FAILING.** Three warnings to
