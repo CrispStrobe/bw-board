@@ -199,7 +199,14 @@ export const INPUTS = [
             + 'source rather than crafted tests: all 525 assemble now, 15 refused '
             + 'earlier the same day. 191 MB, unvendored.',
         paths: ['/tmp/amey/Source Code'],
-        gates: ['test/i8086-asm.test.mjs', 'scripts/cov-i8086-opcodes.mjs'],
+        // `gates` lists files that REFERENCE this input directly; the census's
+        // own drift guard enforces that, and it rejected an attempt to add
+        // scripts/cov-i8086-opcodes.mjs here. That script never names the
+        // corpus — it runs the test files that do, so its dependency is real
+        // but INDIRECT, and listing it would have made the guard assert
+        // something untrue. The indirection is recorded in ci.yml instead,
+        // where it caused a failure.
+        gates: ['test/i8086-asm.test.mjs'],
         obtain: 'git clone https://github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS '
             + 'and point the test CORPUS at its "Source Code" directory '
             + '(default /tmp/amey/Source Code)',
