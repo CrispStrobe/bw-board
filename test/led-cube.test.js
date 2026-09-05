@@ -12,6 +12,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
+import { perfHint } from './helpers/perf-hint.mjs';
 
 function makeCube(opts = {}) {
   const scanLines = opts.scanLines ?? 8;
@@ -210,7 +211,15 @@ describe('LED cube: performance', () => {
     const e2 = performance.now() - s2;
     console.log(`# cubeBrightness: 60 frames in ${e2.toFixed(0)}ms = ${(60/(e2/1000)).toFixed(0)} fps`);
 
-    assert.ok(e1 < 2000);
-    assert.ok(e2 < 500);
+    // These were bare `assert.ok(e1 < 2000)` with NO message: a failure read
+    // "The expression evaluated to a falsy value" and said neither what was
+    // measured nor what it came out as. The budget is wall-clock, so the most
+    // likely cause is the machine, and the reader was told nothing at all.
+    assert.ok(e1 < 2000,
+      `cube scan: ${SCANS * 8} line changes took ${e1.toFixed(0)}ms (budget 2000ms)` +
+      perfHint('Cube scan throughput'));
+    assert.ok(e2 < 500,
+      `cubeBrightness: 60 frames took ${e2.toFixed(0)}ms (budget 500ms) = ` +
+      `${(60 / (e2 / 1000)).toFixed(0)} fps` + perfHint('cubeBrightness frame rate'));
   });
 });

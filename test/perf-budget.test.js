@@ -12,32 +12,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
+import { perfHint } from './helpers/perf-hint.mjs';
 
-/**
- * WHAT A PERF FAILURE MOST LIKELY MEANS, in the failure message rather than
- * only in this file's header.
- *
- * The header above already explains that wall-clock here is a hostage to
- * whatever else the machine runs -- a sibling repo's suite co-running dropped
- * a measurement to 4.5K with the engine untouched. But a reader meets this
- * test through its FAILURE, in a CI log or a terminal, and the header is only
- * read by someone who has already decided to open the file. Knowledge that
- * exists beside the code and not in the assertion is knowledge that arrives
- * after the hunt instead of instead of it.
- *
- * Measured 2026-09-05: the full suite at load 20 failed this; the same test
- * run alone at load 11 passed. That is the discriminator, so it is now what
- * the message says.
- *
- * Modelled on test/digital-parity's environment note, which stopped lego-a4
- * chasing a cross-lane regression that was a loaded box.
- */
-const perfHint = (what) =>
-    `\n\n  BEFORE CHASING A REGRESSION, CHECK THE MACHINE. ${what} is wall-clock, and` +
-    '\n  a loaded box produces exactly this failure with the engine untouched.' +
-    '\n  Discriminator: run THIS FILE ALONE. A real regression is slow solo too;' +
-    '\n  a noisy neighbour is not. `uptime` and `free -m` settle it in one line.' +
-    '\n  Measured 2026-09-05: full suite at load 20 red, same test solo at load 11 green.';
 
 function makeLedCircuit() {
   const parts = [

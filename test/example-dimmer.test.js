@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { validateNetlist } from '../src/validate.js';
+import { perfHint } from './helpers/perf-hint.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const EXAMPLES_DIR = path.resolve(here, '../../stc/examples');
@@ -154,7 +155,8 @@ describe('06-dimmer: performance at PCA rate', () => {
 
     // Should complete in under 2 seconds (conservative)
     assert.ok(elapsed < 2000,
-      `${TOTAL_CALLS} calls took ${elapsed.toFixed(0)}ms — too slow`);
+      `${TOTAL_CALLS} calls took ${elapsed.toFixed(0)}ms — too slow` +
+      perfHint('PCA PWM call throughput'));
 
     // Brightness should be correct
     const b = board.ledBrightness('LED_lamp');
