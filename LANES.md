@@ -214,6 +214,57 @@ machines and verified by deleting the invalidation until all three go red)
 does not exist in the repo where such a graft would happen. Port the test with
 the cache, or do not port the cache — lite's machines are correct as they are.
 
+## OPERATIONAL — the box, 2026-09-05
+
+**Written here because cross-session sends are FAILING.** Three warnings to
+three lanes were refused within a minute of each other, after hours of working
+sends. A failed send leaves no trace on the receiving end (rule 10), so this is
+the channel that still works.
+
+**Measured 11:27, nine sessions busy at once:**
+
+```
+load average    71.72          (18 an hour earlier)
+memory          172 MB free, 646 MB available
+swap            12,285 of 12,287 MB used  ->  2 MB FREE
+disk /          97%, 2.4 GB free
+node processes  16
+```
+
+**Swap is exhausted.** At 2 MB the next sizeable allocation OOM-kills
+something, and not necessarily the process that asked for it.
+
+**Hold, until this clears:** a full `npm test`, the 646,000-vector grind, and
+`audit-clean-checkout --all` — the last archives the whole tree per invocation,
+and `--integrate` adds a populate step on top of that. Single test files are
+fine. `free -m` before anything expensive; abort below ~600 MB available, which
+is roughly where we are now.
+
+**AND IF YOU SEE THESE FOUR FAILURES, THEY ARE THE BOX, NOT YOUR CHANGE:**
+
+```
+Digital parity: 74LS157   74LS107   74HC138   74HC283
+```
+
+`test/sap1-digital-parity.test.mjs` says so in its own assertion, and it is the
+best-behaved failure message in this repository:
+
+> *"74157: ENVIRONMENT, NOT THE CIRCUIT — the Digital JVM was killed after
+> 120s. A bare invocation on this box takes about 5s, so a failure at the cap
+> means the machine was loaded, not that the truth table disagreed. Check
+> `free -m` AND `swapon --show` before chasing this, and re-run the file
+> alone."*
+
+It names its likeliest cause **without asserting it**, gives the discriminator
+(5 s against a 120 s cap), and says what evidence settles it. Checked: it was
+right. Do not chase them.
+
+**Combined master at `d95d597` is otherwise green:** 3,846 tests, 3,796 pass,
+46 skipped, 4 environment-limited. That is the whole fleet's work today — the
+8086 REP cycle fix, the census derivation guard, the NE2000 and port-conflict
+check, the WAIT/STP tests and the two new census rows — verified together
+rather than each against the master it branched from.
+
 ## CLAIMS — work in progress
 
 | lane | who | started | what |
