@@ -3684,32 +3684,61 @@ is started.
 
 ### R2 The tracked demo ROMs are executed but never checked against their generators
 
-**Measured here, 2026-09-06. NOT A CURRENT BUG — every one is in sync today.**
+**Measured here, 2026-09-06. NOT A CURRENT BUG — all ten are in sync today.**
 
-Prompted by lego-be finding, from lite's side, that the BIOS image lite shipped
-could not read a disk at all (`AH=20h`) and nothing ever executed it — the
-twenty-third species in their GATES-THAT-CANNOT-FAIL list. The obvious question
-is whether this repo ships the same shape.
+**PROMPTED BY brickwright-lite-ea's FINDING, not lego-be's.** This entry first
+credited the relay instead of the measurement, which is the same error one
+level up from the one it describes, and lego-be corrected it. ea's provenance
+gate established that lite's shipped `i8086-bios.bin` had been assembled from
+`bios.asm` at bw-board **5584c3f — the FIRST BIOS commit** — while SEVEN
+further `bios.asm` commits had landed inside the pinned sha. lite shipped a
+BIOS from before the floppy stack existed, for two days, with every gate green.
+ea then measured three points in lite's vendored machine — 5584c3f, 88bbdcf78,
+9a770c8 — taking INT 13h from `AH=20h` to `cf=0` and EOT from 9 to 18 on a
+1.44M medium. That is E6.8.8b's bug reproduced from the far side of a pin this
+repo never touched.
 
-**For the BIOS: no.** `rom/bios.bin` is gitignored and untracked, so there is no
-shipped binary to go stale; every consumer builds from `rom/bios.asm` through
-`buildBios()`, and the tests execute what they built. That is why lite could
-rebuild the media-aware ROM from source at a pinned sha at all.
+**THE SPECIES, framed as lego-be argues and they are right:** this is not a
+weaker cousin of "nothing executes it". It is the SUBSTITUTION species with a
+build artefact as the proxy, which makes it a different family.
 
-**For the ten demo ROMs: a weaker version, and it is real.** `rom/blink-demo.bin`
-and its nine siblings ARE tracked, and their tests DO execute them — e.g.
-`test/i8086-blink-demo.test.mjs` reads the file and boots it. So they are not
-dead artefacts. But no test regenerates one and compares: a change to
-`scripts/build-blink-demo.mjs` with the regenerate step forgotten leaves the
-test passing on the OLD bytes, and the edit is never exercised.
+```
+  the test's set   {the tracked bytes}
+  the goal's set   {what the generator produces today}
+```
 
-Measured rather than assumed: all ten generators were re-run on 2026-09-06 and
-every output was byte-identical to the tracked file, so nothing is stale now.
+Those coincide only while nobody edits the generator, and they coincide BY
+ACCIDENT rather than by construction. Edit `scripts/build-blink-demo.mjs` and
+the test stays green, because it never touched the generator: it measured the
+artefact and reported on the source. That is "I measured the model instead of
+the thing it models" with `.bin` where `busTrace` was — LANES 13, again.
 
-**The cheap guard**, when someone wants it: give the builders an `--out` option
-(only `build-bios.mjs` has one) and add a test that regenerates each into a
-temp path and compares. It must not write into `rom/` — a test that mutates the
-working tree to check it is a test that hides the drift on the second run.
+**AND IT HAS NO SURFACE.** "Nothing executes it" is findable by grep, and a
+greppable failure eventually gets grepped. This one presents as a passing test
+on a real artefact that really is executed — `test/i8086-blink-demo.test.mjs`
+reads `rom/blink-demo.bin` and boots it. It looks exactly like coverage until a
+generator changes, and on that day it presents as THE CHANGE NOT WORKING rather
+than as the check being wrong, which sends the reader to the wrong file.
+
+**For the BIOS itself: clean, structurally rather than by luck.** `rom/bios.bin`
+is gitignored and untracked, so there is no shipped binary that can go stale;
+every consumer builds from `rom/bios.asm` through `buildBios()` and the tests
+execute what they just built. That is why lite could rebuild the media-aware
+ROM from source at a pinned sha at all — and it is the fix ea's finding implies
+for a vendored artefact generally.
+
+**THE GUARD, AND THE TRAP IN FRONT OF IT.** A test that writes into `rom/` to
+check `rom/` passes on its second run no matter what: it overwrites the
+evidence with the thing it was supposed to compare against, so the first run is
+the only real one and every run after is self-confirming. Someone will write
+exactly that, because it is the shortest thing that appears to work. The shape
+that works: give the builders an `--out` option (only `build-bios.mjs` has one),
+build each into a temp dir, compare against the tracked file, and fail naming
+BOTH the artefact and the generator that no longer produces it.
+
+**And state its limit in the same breath:** it proves the tracked bytes are the
+CURRENT build. It never proves the generator is right. A wrong generator
+faithfully reproduced still passes.
 
 ## Sequencing
 
