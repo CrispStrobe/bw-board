@@ -3762,6 +3762,63 @@ vendored inputs, the guard proves correspondence but NOT WHICH INPUT BROKE IT.
 A bare "bytes differ" sends the reader to the ROM source when the assembler is
 what moved, and the failure message is the only place that distinction can live.
 
+### R3 The `'SF'` soft-float table is empty, and it is what stops Kaluma
+
+**Reported by lego-ac (brickwright-lite N5), 2026-09-06. THE CAUSE IS
+CONFIRMED HERE by reading `src/rp2040-bootrom.js`, which already documents it;
+the Kaluma measurements are theirs and have not been re-run in this repo.**
+
+Kaluma 1.2.1 — the Apache-2.0 JavaScript runtime for the RP2040 — boots behind
+the clean-room bootrom to a REPL in 1,175,086 instructions and runs JS live,
+and its first GPIO call hangs. Named cause: the only data-table lookup during
+boot is `rom_table_lookup(table=0x20c, code=0x4653 'SF')`, the single-precision
+soft-float table (datasheet §2.8.3.1.2). Kaluma routes JS Numbers through
+`pico_float`, caches a null-derived operator pointer at `0x2003163c`, and calls
+it via `blx r3` at `0x10020760`; the `rom_table_lookup` spin an earlier finding
+saw is DOWNSTREAM of that call.
+
+**The proof needs no disassembler and is the part to keep:** `2.5+1.0`
+evaluates to **0** in Kaluma's REPL, while `1+1` and `40+2` are right. Integer
+arithmetic never enters the float path; the moment it does, the answer is the
+null pointer's.
+
+**What this repo already says, and why it corroborates rather than merely
+agrees.** `src/rp2040-bootrom.js` has documented `'SF'` as the one unanswered
+code since it was written: booting asks for FOURTEEN distinct codes, thirteen
+are answered, the fourteenth is `'SF'`. It also records the trap — *a MISSED
+lookup returns 0 and the SDK calls it, because there is no null check at most
+call sites, so address 0 gets executed as Thumb.* That is why an empty or
+all-zero table only MOVES the crash: a clean miss becomes a jump to 0.
+MicroPython reaches its REPL regardless because it never asks.
+
+**LICENCE, and it is the reason this is work rather than a patch.** The header
+already states it: *mufplib is exactly the part that is not free.* So the table
+cannot be adopted from Raspberry Pi's ROM or from any GPL implementation. The
+datasheet describes an INTERFACE — a table of function pointers with defined
+signatures — and satisfying it with our own IEEE-754 single-precision
+arithmetic is the same standard the rest of this file already meets. This is a
+real implementation task, not a stub: it is the largest item in this section.
+
+**DEFINITION OF DONE**, from lego-ac, recorded as given:
+
+- a real clean-room single-precision soft-float table behind `'SF'`, covering
+  at least the operators Kaluma's number path calls — an empty or zero table
+  only moves the crash
+- the datasheet section cited at the implementation
+- tests that each implemented operator agrees with JavaScript's `Math` on a
+  vector set including the IEEE edge cases we choose to support, and that
+  REFUSES BY NAME on the ones we do not
+- then lite's `node scripts/probe-pico-kaluma.mjs --eval` shows `3.5` and
+  `--blink` drives GP25 high, and the JS-on-Pico matrix cell flips
+
+The third bullet is the one that keeps this honest: partial IEEE support is
+fine and pretending to total support is not, so the refusal list is part of the
+deliverable rather than an omission from it.
+
+**Evidence:** `docs/PICO-KALUMA-BOOT.md` on brickwright-lite main, probe
+`scripts/probe-pico-kaluma.mjs`, UF2 pinned by sha256. Nothing in lite waits
+on it.
+
 ## Sequencing
 
 1. **E0** (all) — days; removes shipped wrong answers.
