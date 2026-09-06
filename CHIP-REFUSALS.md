@@ -246,6 +246,42 @@ that — thinner rows are what this whole change removes.
 
 Nothing else changed key or shape.
 
+## A row does not mean the same thing for every part
+
+**Some refusals are RETRACTED and some are permanent, and the row does not say
+which.** This is the sharpest limit in the document and it was found by a
+consumer, not by me: brickwright-lite-ea spent two CI runs trying to observe a
+refusal that had already been withdrawn.
+
+    RETRACTED — the field returns to null when the condition passes
+      pic    8259.initWarning     cleared the moment the ICW sequence completes
+      usart  8251.modeWarning     cleared when a later mode word selects async
+      ppi    8255.modeWarning     cleared by a mode-0 control word
+
+    PERMANENT — nothing removes the entry short of a reset
+      dma    8237.unmodelled      Map entries are only ever added
+      opl    YM3812.unsupported   same
+      dsp    SB DSP.unsupported   same
+      fdc    uPD765.lastRefusal   overwritten by the next refusal, never cleared
+
+Both behaviours are correct where they are. The 8259's refusal is TRUE while
+its init sequence is incomplete and FALSE afterwards; recording it as a
+retraction is right, and making it permanent would mean a chip that was
+correctly programmed still reported a fault. Equally, a driver that asked for
+memory-to-memory once should stay on the record.
+
+**The consequence for a consumer that polls** — and the debugger polls. On a
+real boot ea measured the `pic1` refusal appearing at step 1513 and gone by
+1517: four steps out of 1,579,840. A poller will see the permanent four
+reliably and the retracted three only by luck.
+
+So: `chipRefusals()` answers **"what is refused now"**. It does not answer
+**"what was ever refused"**, and for four of the seven parts it happens to
+answer both because nothing ever clears them. If a consumer needs the second
+question — and it is a reasonable question, "did this program ever program the
+PIC wrongly" — that wants a different mechanism, not a longer poll. A poll
+cannot see a window it was not inside.
+
 ## The limits, stated rather than discovered
 
 **Collection is by NAME.** A ledger called `notes` or `caveats` is not collected

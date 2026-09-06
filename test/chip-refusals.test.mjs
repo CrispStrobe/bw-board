@@ -487,3 +487,76 @@ test('a string ledger can name its space too, in the sibling', async () => {
     assert.equal(row.space, 'register');
     assert.equal(row.at, 7);
 });
+
+test('the document names exactly the parts whose refusal is retracted', async () => {
+    // brickwright-lite-ea spent two CI runs trying to observe a refusal that
+    // had already been withdrawn: on a real boot the pic1 row appears at step
+    // 1513 and is gone by 1517, four steps out of 1,579,840.
+    //
+    // Both behaviours are correct where they are -- the 8259's refusal is TRUE
+    // while its init sequence is incomplete and FALSE afterwards. What was
+    // wrong was that the row did not say which kind it was, so a consumer that
+    // polls could not know it was hunting a window.
+    //
+    // This asserts the DOCUMENT against the CODE, in the direction that rots:
+    // a chip that gains or loses a retraction path while CHIP-REFUSALS.md
+    // still lists the old set goes red here. It reads the source rather than
+    // driving the chips, because "can this field become null again" is a
+    // static property and driving each chip to its retraction needs seven
+    // different correct write sequences -- I got three of them wrong trying.
+    const doc = readFileSync(join(SRC, '..', 'CHIP-REFUSALS.md'), 'utf8');
+    const section = doc.split('## A row does not mean the same thing')[1] ?? '';
+    assert.ok(section, 'the retraction section is gone from the document');
+
+    // KEYED BY PART, NOT BY FIELD NAME. The first version of this test
+    // asserted `section.includes(field)`, and i8251 and i8255 BOTH call theirs
+    // `modeWarning` -- so deleting the usart line from the document left the
+    // ppi line satisfying the check, and the mutation that should have gone
+    // red passed. A membership test over field names quantifies over a smaller
+    // set than the document does. Caught by mutation-proving; it would never
+    // have been caught by reading.
+    const RETRACTS = [
+        ['pic', 'i8259.js', 'initWarning'],
+        ['usart', 'i8251.js', 'modeWarning'],
+        ['ppi', 'i8255.js', 'modeWarning'],
+    ];
+    const PERMANENT = [
+        ['i8237.js', 'unmodelled'],
+        ['ym3812.js', 'unsupported'],
+        ['sb-dsp.js', 'unsupported'],
+        ['upd765.js', 'lastRefusal'],
+    ];
+
+    for (const [part, file, field] of RETRACTS) {
+        const src = readFileSync(join(SRC, file), 'utf8');
+        // A retraction is an assignment that can put null back, outside the
+        // constructor's initialisation: either `= null` on a live path or a
+        // ternary whose true arm is null.
+        assert.match(src, new RegExp(`this\\.${field} =[^;]*\\bnull\\b`, 's'),
+            `${file}: ${field} is documented as retracted but nothing clears it`);
+        const line = section.split('\n').find(
+            (l) => l.trim().startsWith(`${part} `) && l.includes(field));
+        assert.ok(line,
+            `${file}'s ${field} retracts and the document has no line for part "${part}"`);
+    }
+
+    for (const [file, field] of PERMANENT) {
+        const src = readFileSync(join(SRC, file), 'utf8');
+        const clears = [...src.matchAll(new RegExp(`this\\.${field}\\s*=\\s*null`, 'g'))].length;
+        const deletes = [...src.matchAll(/\.(delete|clear)\(/g)].length;
+        assert.ok(clears <= 1 && deletes === 0,
+            `${file}: ${field} is documented as permanent but has ${clears} null-assignment(s) `
+            + `and ${deletes} delete/clear call(s) -- if it can now be withdrawn, the document is wrong`);
+    }
+});
+
+test('chipRefusals answers "what is refused now", and the document says so', () => {
+    // The honest scope of the collector, asserted so it cannot be quietly
+    // widened in prose. A consumer needing "what was EVER refused" needs a
+    // different mechanism; a poll cannot see a window it was not inside.
+    const doc = readFileSync(join(SRC, '..', 'CHIP-REFUSALS.md'), 'utf8');
+    assert.match(doc, /what is refused now/i);
+    assert.match(doc, /what was ever refused/i,
+        'the question the collector does NOT answer must be named, or a reader '
+        + 'assumes it answers both');
+});
