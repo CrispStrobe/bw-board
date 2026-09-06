@@ -3624,6 +3624,41 @@ over time.
 
 ---
 
+## Reported gaps, not yet triaged
+
+Findings measured in a DOWNSTREAM repo against code this one owns. They are
+recorded here at the moment they are reported, because a gap that lives only
+in a chat session and a branch note is a gap that evaporates when both end.
+Each says who measured it and whether anyone here has reproduced it.
+
+### R1 `machine.reset()` freezes the rp2040 adapter instead of rebooting
+
+**Reported by lego-ac (brickwright-lite, N3c), 2026-09-06. NOT REPRODUCED IN
+THIS REPO — the measurement is theirs and nothing below has been re-run here.**
+
+On lite's vendored copy of `src/rp2040js-adapter.js` at bw-board 88bbdcf78,
+MicroPython's `machine.reset()` after `deployMainPy` freezes rp2040js at
+**2,191,927 steps** across eight drive slices rather than rebooting. `main.py`
+therefore never runs and GP25 is never driven. The same program's body, run
+live through the raw REPL, toggles GP25 as expected — so the program is fine
+and the reset path is not.
+
+Their reading is that the watchdog or SIO reset path is unmodelled in the
+adapter. That is a hypothesis, not a measurement, and it is the first thing to
+check rather than to assume.
+
+**Why it matters here rather than there:** `src/rp2040js-adapter.js` is this
+repo's file; lite vendors it. A learner program that calls `machine.reset()`
+would freeze the simulator. lite currently uses live exec for its sim Run and
+refuses by name if the program text calls `machine.reset()`, which is a
+containment, not a fix.
+
+**Where the evidence is:** branch `lane/n3c-pico-micropython-run` in
+brickwright-lite, with the probe and the step count in the worker's notes.
+Start by reproducing it against this repo's own adapter before touching
+anything — the step count is precise enough to be a real anchor, and a
+reproduction here is what turns a reported gap into a triaged one.
+
 ## Sequencing
 
 1. **E0** (all) — days; removes shipped wrong answers.
