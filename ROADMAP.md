@@ -3633,8 +3633,8 @@ and whether anyone here has reproduced it.
 
 ### R1 `machine.reset()` freezes the rp2040 adapter instead of rebooting
 
-**Reported by lego-ac (brickwright-lite, N3c), 2026-09-06. NOT REPRODUCED IN
-THIS REPO — the measurement is theirs and nothing below has been re-run here.**
+**Reported by lego-ac (brickwright-lite, N3c), 2026-09-06. REPRODUCED AND
+TRIAGED HERE 2026-09-06; whole-SoC adoption remains open.**
 
 On lite's vendored copy of `src/rp2040js-adapter.js` at bw-board 88bbdcf78,
 MicroPython's `machine.reset()` after `deployMainPy` freezes rp2040js at
@@ -3646,6 +3646,24 @@ and the reset path is not.
 Their reading is that the watchdog or SIO reset path is unmodelled in the
 adapter. That is a hypothesis, not a measurement, and it is the first thing to
 check rather than to assume.
+
+**Triage result.** The independent deploy replay reaches 2,184,488 instructions
+and then returns idle for eight successive 1.5M-instruction budgets, with no
+GP25 drive. A direct write of `TRIGGER` to `WATCHDOG.CTRL` is red before the
+adapter change: rp2040js invokes its default warning callback and leaves the
+host to perform the reset. Installing a narrow callback that clears WFE/core
+state and jumps back through boot2 does produce a second MicroPython banner,
+but `main.py` does not run because peripheral/controller state survives. A
+fresh adapter booted from the exact post-deploy flash drives GP25 high at
+instruction 853,283. That isolates the remaining work to whole-SoC replacement
+and host USB/GPIO rebinding; flash persistence, file deployment and boot2 are
+already proven.
+
+The first upstream seam is now explicit: `onResetRequest` and
+`takeResetRequest()` surface one named watchdog request and stop the old SoC at
+the instruction boundary. The consuming runner must construct a new adapter
+from the preserved flash and reconnect USB/GPIO. This avoids pretending that a
+partial list of rp2040js private fields is a hardware reset.
 
 **Why it matters here rather than there:** `src/rp2040js-adapter.js` is this
 repo's file; lite vendors it. A learner program that calls `machine.reset()`

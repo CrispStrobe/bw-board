@@ -47,7 +47,13 @@
 //   0x14  0x4004c000                     ; literal pool
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRp2040jsAdapter, RP2040_PINS, RAM_START } from '../src/rp2040js-adapter.js';
+import {
+  BOOT_SP,
+  createRp2040jsAdapter,
+  FLASH_BASE,
+  RP2040_PINS,
+  RAM_START,
+} from '../src/rp2040js-adapter.js';
 import { BoardImpl as BoardImplRef } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
 registerAllDevices();
@@ -174,6 +180,21 @@ test('loadProgram resets PC to the origin and runs from SRAM', () => {
   a.advanceNs(10_000);
   assert.ok(b.calls.some(c => c.name === 'GP25' && c.mode === 'pushpull'),
     'the loaded program drives GP25');
+});
+
+test('watchdog force trigger surfaces one whole-SoC reset request', () => {
+  let observed = null;
+  const a = createRp2040jsAdapter({ onResetRequest: request => { observed = request; } });
+  a.bootFromFlash(new Uint8Array([0x00, 0xbf]));
+
+  // Pico MicroPython's machine.reset() force-triggers WATCHDOG.CTRL. rp2040js
+  // delegates the resulting chip replacement to its host.
+  a.rp2040.writeUint32(0x40058000, 1 << 31);
+
+  const expected = {cause: 'watchdog', entryPC: FLASH_BASE, entrySP: BOOT_SP};
+  assert.deepEqual(observed, expected, 'the immediate host hook names the reset');
+  assert.deepEqual(a.takeResetRequest(), expected, 'a polling runner sees the same request');
+  assert.equal(a.takeResetRequest(), null, 'the request is consumed exactly once');
 });
 
 // FOLLOWER — the digital-input leg, hand-assembled: GP25 mirrors GP2,

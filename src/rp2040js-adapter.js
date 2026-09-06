@@ -69,6 +69,7 @@ for (let ch = 0; ch <= 2; ch++) RP2040_PINS[`GP${26 + ch}`].adcChannel = ch;
  *   advanceNs(deltaNs: number): void,
  *   timeNs(): bigint,
  *   onSerial(cb: (byte: number) => void): void,
+ *   takeResetRequest(): ({cause: string, entryPC: number, entrySP: number}|null),
  *   stats: object,
  * }}
  */
@@ -179,6 +180,7 @@ export function createRp2040jsAdapter(opts = {}) {
   // in the test that found this).
   let entryPC = RAM_START;
   let entrySP = opts.sp ?? RAM_START + rp2040.sram.length;
+  let resetRequest = null;
 
   function loadProgram(halfwords, origin = RAM_START) {
     for (let i = 0; i < halfwords.length; i++) {
@@ -221,6 +223,19 @@ export function createRp2040jsAdapter(opts = {}) {
     core.SP = entrySP;
   }
 
+  // rp2040js models the watchdog register and timer, but intentionally leaves
+  // the chip-reset action to its host. A full reboot must replace the SoC so
+  // USB, GPIO, DMA, alarms and core state all return to power-on values while
+  // flash survives. Surface that event explicitly; a browser or runner can
+  // construct the replacement and reconnect its host-side USB/GPIO bindings.
+  const watchdog = rp2040.peripherals[0x40058];
+  watchdog.onWatchdogTrigger = () => {
+    watchdog.writeUint32(0, 0);
+    resetRequest = {cause: 'watchdog', entryPC, entrySP};
+    core.waiting = true;
+    if (opts.onResetRequest) opts.onResetRequest(resetRequest);
+  };
+
   return {
     rp2040,
     core,
@@ -229,6 +244,11 @@ export function createRp2040jsAdapter(opts = {}) {
     loadProgram,
     bootFromFlash,
     resetToProgram,
+    takeResetRequest() {
+      const request = resetRequest;
+      resetRequest = null;
+      return request;
+    },
 
     /** Receive every byte the program transmits on UART0 (print output). */
     onSerial(cb) { serialListener = cb; },
@@ -250,6 +270,7 @@ export function createRp2040jsAdapter(opts = {}) {
       syncInputs();
       const target = clock.nanos + deltaNs;
       while (clock.nanos < target) {
+        if (resetRequest) break;
         if (core.waiting) {
           // Asleep (WFI/WFE): jump to the next alarm, or — if nothing is
           // scheduled (nanosToNextAlarm is 0 then) — to the budget's end.
