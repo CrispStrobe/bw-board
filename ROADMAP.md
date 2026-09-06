@@ -3626,10 +3626,10 @@ over time.
 
 ## Reported gaps, not yet triaged
 
-Findings measured in a DOWNSTREAM repo against code this one owns. They are
-recorded here at the moment they are reported, because a gap that lives only
-in a chat session and a branch note is a gap that evaporates when both end.
-Each says who measured it and whether anyone here has reproduced it.
+Gaps recorded at the moment they are found — some measured in a DOWNSTREAM
+repo against code this one owns, some here. A gap that lives only in a chat
+session and a branch note evaporates when both end. Each says who measured it
+and whether anyone here has reproduced it.
 
 ### R1 `machine.reset()` freezes the rp2040 adapter instead of rebooting
 
@@ -3681,6 +3681,35 @@ failed before it. Reproduce the freeze here FIRST.
 /3F7h geometry work stays ahead of it if the owner says so. That ordering is
 the owner's call, not a peer's and not this file's; both are queued and neither
 is started.
+
+### R2 The tracked demo ROMs are executed but never checked against their generators
+
+**Measured here, 2026-09-06. NOT A CURRENT BUG — every one is in sync today.**
+
+Prompted by lego-be finding, from lite's side, that the BIOS image lite shipped
+could not read a disk at all (`AH=20h`) and nothing ever executed it — the
+twenty-third species in their GATES-THAT-CANNOT-FAIL list. The obvious question
+is whether this repo ships the same shape.
+
+**For the BIOS: no.** `rom/bios.bin` is gitignored and untracked, so there is no
+shipped binary to go stale; every consumer builds from `rom/bios.asm` through
+`buildBios()`, and the tests execute what they built. That is why lite could
+rebuild the media-aware ROM from source at a pinned sha at all.
+
+**For the ten demo ROMs: a weaker version, and it is real.** `rom/blink-demo.bin`
+and its nine siblings ARE tracked, and their tests DO execute them — e.g.
+`test/i8086-blink-demo.test.mjs` reads the file and boots it. So they are not
+dead artefacts. But no test regenerates one and compares: a change to
+`scripts/build-blink-demo.mjs` with the regenerate step forgotten leaves the
+test passing on the OLD bytes, and the edit is never exercised.
+
+Measured rather than assumed: all ten generators were re-run on 2026-09-06 and
+every output was byte-identical to the tracked file, so nothing is stale now.
+
+**The cheap guard**, when someone wants it: give the builders an `--out` option
+(only `build-bios.mjs` has one) and add a test that regenerates each into a
+temp path and compares. It must not write into `rom/` — a test that mutates the
+working tree to check it is a test that hides the drift on the second run.
 
 ## Sequencing
 
