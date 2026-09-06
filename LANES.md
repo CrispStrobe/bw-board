@@ -174,11 +174,43 @@ different handling:
   paid by the reader, and one sentence turns "read this whole thing again to
   find out if it is new" into a glance
 
+**MECHANISM FOUND, later the same day, and it makes the retry advice WORSE
+than useless in one common case.** A `Failed to send to X` is what this tool
+reports when the message was actually **HELD FOR THE RECIPIENT USER'S
+APPROVAL**. It is not a failure at all; it is a queue. Three sends to the
+kerotakis sessions reported failure, and the delivery notices then arrived:
+
+```
+  held for the recipient user's approval ... not delivered yet
+  approved and released to that session
+```
+
+So the first copy was never lost, and the retry did not recover a dropped
+message -- **it added a second copy to a queue that already held the first.**
+Retrying on a failure report does not merely RISK duplication when the peer's
+user gates inbound messages: it GUARANTEES it. I did this to kerotakis-59
+within ten minutes of writing the paragraph above.
+
+**The corrected rule:**
+
+- A `Failed to send` means UNKNOWN, and the most likely cause is a held
+  message rather than a lost one. Say the thing once.
+- Do not retry on that report alone. Wait for a delivery notice, which does
+  arrive and does distinguish held / approved / released.
+- If you retry anyway -- because the content is time-critical and a duplicate
+  is cheaper than silence -- label it, and say plainly that it may be a
+  duplicate rather than a correction. Mine said "discard if you already have
+  it", which is the only reason the duplicate cost the reader one line.
+- NEVER escalate to a third channel on two failure reports. I relayed a
+  decline through a sibling session on the strength of two "failures", both of
+  which had already been delivered; that relay is now a third copy of a message
+  its recipient did not need.
+
 The underlying error is the day's error at one more remove: trusting a report
-ABOUT the send instead of the send. There is no way to observe the peer's
-inbox from here, so this one cannot be resolved by measuring the right thing
--- which is exactly why the retry has to be labelled rather than reasoned
-about.
+ABOUT the send instead of the send. Here the report was not merely unreliable,
+it was WRONG IN A SPECIFIC DIRECTION -- it named as failure the one outcome
+that most needed patience -- and acting on it produced exactly the harm the
+first version of this rule was written to avoid.
 
 **11. THE MACHINE LAYER IS VENDORED INTO `brickwright-lite` AND ALL THREE FILES
 ARE DIVERGED IN BOTH DIRECTIONS.** Your change here does not reach lite, and
