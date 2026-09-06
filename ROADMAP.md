@@ -3653,11 +3653,34 @@ would freeze the simulator. lite currently uses live exec for its sim Run and
 refuses by name if the program text calls `machine.reset()`, which is a
 containment, not a fix.
 
-**Where the evidence is:** branch `lane/n3c-pico-micropython-run` in
-brickwright-lite, with the probe and the step count in the worker's notes.
-Start by reproducing it against this repo's own adapter before touching
-anything — the step count is precise enough to be a real anchor, and a
-reproduction here is what turns a reported gap into a triaged one.
+**Where the evidence is:** `docs/PICO-SIM-RUN-FINDINGS.md` on branch
+`lane/n3c-pico-micropython-run` in brickwright-lite, with the probe and the
+step count. Start by reproducing it against this repo's own adapter before
+touching anything — the step count is precise enough to be a real anchor, and
+a reproduction here is what turns a reported gap into a triaged one.
+
+**DEFINITION OF DONE**, agreed with lego-ac 2026-09-06, because they move
+lite's Pico Run seam to install-and-reboot the moment this lands and the
+sim/silicon difference collapses. Their criteria, recorded as given:
+
+- a bw-board test that boots the MicroPython UF2 via `bootFromFlash`, deploys
+  a `main.py` driving GP25 through the raw REPL's `deployMainPy` path, calls
+  `machine.reset()`, and asserts the machine REBOOTS — PC back through the
+  bootrom, banner again — and that `main.py` then runs, so GP25 toggles
+- the frozen-step probe reproduces RED before the fix and green after, with
+  the reset path NAMED (watchdog or SIO reset in the adapter, whichever it
+  turns out to be) rather than fixed by coincidence
+- a census or VERIFICATION row saying what oracle the reboot claim rests on
+- suite green
+
+The second bullet is the one that matters and it is the shape this tier keeps
+relearning: a test that passes after a change proves nothing until it has
+failed before it. Reproduce the freeze here FIRST.
+
+**Priority:** lego-ac states this is not urgent and that the CMOS/equipment-word
+/3F7h geometry work stays ahead of it if the owner says so. That ordering is
+the owner's call, not a peer's and not this file's; both are queued and neither
+is started.
 
 ## Sequencing
 
