@@ -1649,12 +1649,19 @@ export class I8086Machine {
         // under a reader while the program runs. `atsMore` is true when the
         // per-feature cap dropped addresses, because a bounded list that does
         // not say it is bounded reads as a complete one.
-        const push = (part, kind, feature, symptom, count, at, ats, atsMore) => {
+        //
+        // `space` says what `at` is an address IN -- 'port' or 'register'.
+        // Without it a consumer holding a bare integer cannot tell "port 08h"
+        // from "register 08h", and the only alternative is a part-to-space
+        // table on the reading side: a second list that must agree with these
+        // chips. 'port' is the default because it is true of every chip but
+        // the YM3812, which says so at its own call site.
+        const push = (part, kind, feature, symptom, count, at, ats, atsMore, space) => {
             const set = (ats && ats.length) ? [...ats]
                 : (at !== null && at !== undefined) ? [at] : [];
             rows.push({part, kind, feature, symptom: symptom ?? null,
                 count: count ?? 1, at: set.length ? set[0] : null,
-                ats: set, atsMore: !!atsMore});
+                ats: set, atsMore: !!atsMore, space: space ?? 'port'});
         };
 
         const sources = [
@@ -1680,12 +1687,13 @@ export class I8086Machine {
             for (const e of reported?.unsupported ?? []) {
                 consumed.add('unsupported');
                 push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count,
-                    e.at, e.ats, e.atsMore);
+                    e.at, e.ats, e.atsMore, e.space);
             }
 
             if (part.lastRefusal) {
                 push(name, kind, part.lastRefusal, part.lastRefusalSymptom ?? null,
-                    part.refusals || 1, part.lastRefusalAt);
+                    part.refusals || 1, part.lastRefusalAt, null, false,
+                    part.lastRefusalSpace);
             }
 
             // DERIVED, NOT ENUMERATED. The first version listed the field names
@@ -1721,7 +1729,7 @@ export class I8086Machine {
                 // one rather than a thinner one.
                 if (typeof v === 'string' && v) {
                     push(name, kind, v, part[`${field}Symptom`] ?? null, 1,
-                        part[`${field}At`]);
+                        part[`${field}At`], null, false, part[`${field}Space`]);
                     continue;
                 }
                 if (!(v instanceof Map)) continue;
@@ -1730,7 +1738,8 @@ export class I8086Machine {
                     // {count, symptom, ats, atsMore} that chip-ledger.js keeps.
                     if (typeof entry === 'number') push(name, kind, String(feature), null, entry);
                     else push(name, kind, String(feature), entry?.symptom ?? null,
-                        entry?.count ?? 1, entry?.at, entry?.ats, entry?.atsMore);
+                        entry?.count ?? 1, entry?.at, entry?.ats, entry?.atsMore,
+                        entry?.space);
                 }
             }
         }

@@ -47,8 +47,28 @@
  * than retype it. Three readers, one list.
  */
 export const ROW_FIELDS = Object.freeze([
-    'part', 'kind', 'feature', 'symptom', 'count', 'at', 'ats', 'atsMore',
+    'part', 'kind', 'feature', 'symptom', 'count', 'at', 'ats', 'atsMore', 'space',
 ]);
+
+/**
+ * What `at` is an address IN.
+ *
+ * Asked for by brickwright-lite-ea, the first consumer, and the argument is
+ * the one that decides it: a panel line holding a bare integer cannot tell
+ * "port 08h" from "register 08h", so it must either say the weaker thing or
+ * keep a part-to-space table on its own side -- a second list that has to
+ * agree with these chips, which is what ROW_FIELDS exists to stop.
+ *
+ * 'port' is the default because it is true of every chip but one: the address
+ * is the I/O port the write arrived on. The YM3812 passes 'register' at its
+ * call site, where the exception was already commented, because its port pair
+ * is two wide and joins to nothing while the OPL register index is what the
+ * part's map is keyed by.
+ *
+ * DERIVABLE AT THE WRITING END, where the chip knows the answer, rather than
+ * guessable at the reading end, where nobody does.
+ */
+export const SPACES = Object.freeze(['port', 'register']);
 
 /** Addresses kept per feature before `atsMore` takes over. */
 export const AT_CAP = 8;
@@ -62,10 +82,11 @@ export const AT_CAP = 8;
  *        `symptom`: what the program sees. `at`: the address it touched, in
  *        the PART'S OWN space -- a port number or a register offset, never a
  *        machine-bus address. The board's decode is the board's business, and
- *        a chip that baked one in would be wrong on the next board.
+ *        a chip that baked one in would be wrong on the next board. `space`:
+ *        which of the two `at` is, so a consumer never has to guess.
  * @returns {Map} the same map, for chaining
  */
-export function noteRefusal(map, feature, {symptom = null, at = null} = {}) {
+export function noteRefusal(map, feature, {symptom = null, at = null, space = 'port'} = {}) {
     const prev = map.get(feature);
     const ats = prev?.ats ? [...prev.ats] : [];
     let atsMore = prev?.atsMore ?? false;
@@ -74,6 +95,7 @@ export function noteRefusal(map, feature, {symptom = null, at = null} = {}) {
         else atsMore = true;
     }
     map.set(feature, {
+        space: prev?.space ?? space,
         count: (prev?.count ?? 0) + 1,
         // An entry keeps the symptom it was first given. A caller that passes
         // none is adding a count, not erasing an explanation.

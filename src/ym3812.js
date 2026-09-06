@@ -173,7 +173,7 @@ export class YM3812 {
      * named, and the one the part's own map is keyed by. lego-ac sanctioned
      * either ("port, or register offset"); this is the one that can be joined.
      */
-    _refuse(what, symptom, at) { noteRefusal(this.unsupported, what, {symptom, at}); }
+    _refuse(what, symptom, at) { noteRefusal(this.unsupported, what, {symptom, at, space: 'register'}); }
 
     /** A key-on restarts BOTH operators' envelopes from attack. */
     _key(chIdx, on) {
@@ -338,6 +338,7 @@ export class YM3812 {
             unsupported: [...this.unsupported].map(([what, e]) => ({
                 what, count: e.count, symptom: e.symptom,
                 at: e.ats?.[0] ?? null, ats: e.ats ?? [], atsMore: !!e.atsMore,
+                space: e.space ?? 'register',
             })),
         };
     }

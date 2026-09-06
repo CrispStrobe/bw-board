@@ -421,3 +421,69 @@ test('the contract a downstream vendor can import says the same thing', async ()
     assert.deepEqual(Object.keys(m.chipRefusals()[0]), [...ROW_FIELDS],
         'the exported contract and the collector disagree');
 });
+
+test('a row says what its address is an address IN', async () => {
+    // brickwright-lite-ea, building the first consumer: a panel line holding a
+    // bare integer cannot tell "port 08h" from "register 08h", so it must
+    // either say the weaker thing or keep a part-to-space table on the reading
+    // side -- a second list that has to agree with these chips, which is what
+    // ROW_FIELDS exists to stop.
+    const { default: YM3812 } = await import('../src/ym3812.js');
+    const m = new I8086Machine(BREADBOARD8086);
+    const dma = new I8237(); dma.write(0x08, 0x01);
+    const opl = new YM3812(); opl.write(0, 0xbd); opl.write(1, 0x20);
+    Object.assign(m.chips, { dma, opl });
+
+    const rows = m.chipRefusals();
+    const d = rows.find((r) => r.part === 'dma');
+    const o = rows.find((r) => r.part === 'opl');
+    assert.equal(d.space, 'port', 'the 8237 refusal arrived on an I/O port');
+    assert.equal(o.space, 'register',
+        'and the OPL reports its REGISTER index -- the one exception, and the '
+        + 'reason this field has to exist rather than be assumed');
+    assert.equal(o.at, 0xbd, 'precondition: it really is the register, not the port');
+});
+
+test('space defaults to port, so a chip that says nothing is not guessed about', async () => {
+    // The default is not a convenience: it is true of every chip but one. A
+    // chip that records no space wrote to an I/O port, because that is what an
+    // 8086-board chip does. The YM3812 overrides it where its exception is
+    // already commented -- at the writing end, which knows, rather than at the
+    // reading end, which does not.
+    const { noteRefusal, SPACES } = await import('../src/chip-ledger.js');
+    const led = new Map();
+    noteRefusal(led, 'something', { at: 3 });
+    const m = new I8086Machine(BREADBOARD8086);
+    m.chips.quiet = { unmodelled: led };
+    assert.equal(m.chipRefusals()[0].space, 'port');
+
+    // And every space a row can carry is one the contract names.
+    for (const r of m.chipRefusals()) {
+        assert.ok(SPACES.includes(r.space), `"${r.space}" is not a declared space`);
+    }
+});
+
+test('a ledger keeps the space it was first given', async () => {
+    // Same rule as symptom: a later refusal that carries no space is adding a
+    // count, not silently relabelling where the first one happened.
+    const { noteRefusal } = await import('../src/chip-ledger.js');
+    const led = new Map();
+    noteRefusal(led, 'f', { at: 0xbd, space: 'register' });
+    noteRefusal(led, 'f', { at: 0x08 });
+    assert.equal(led.get('f').space, 'register');
+    assert.equal(led.get('f').count, 2);
+});
+
+test('a string ledger can name its space too, in the sibling', async () => {
+    // The sentence-shaped ledgers use <field>At and <field>Symptom; a space
+    // rides the same convention rather than inventing a third.
+    const m = new I8086Machine(BREADBOARD8086);
+    m.chips.odd = {
+        modeWarning: 'a sentence-shaped refusal',
+        modeWarningAt: 7,
+        modeWarningSpace: 'register',
+    };
+    const [row] = m.chipRefusals();
+    assert.equal(row.space, 'register');
+    assert.equal(row.at, 7);
+});

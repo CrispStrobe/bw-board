@@ -28,7 +28,7 @@ the row it produces.
 
 Every row, from every chip, has exactly these eight fields:
 
-    {part, kind, feature, symptom, count, at, ats, atsMore}
+    {part, kind, feature, symptom, count, at, ats, atsMore, space}
 
 **A downstream vendor should import the contract, not retype it.** The same
 list is exported as `ROW_FIELDS` from `src/chip-ledger.js`, which is part of
@@ -48,6 +48,7 @@ actually builds. Any two of them drifting is red.
     at:      0x08,         // the first address it was refused at, or null
     ats:     [0x08],       // every address, first-seen, bounded
     atsMore: false,        // true when the bound dropped one
+    space:   'port',       // what `at` is an address IN: 'port' | 'register'
 }
 ```
 
@@ -67,6 +68,15 @@ One deliberate exception, commented at its call site: the **YM3812 reports the
 OPL register index**, not the ISA port. Its port pair is two wide, so the port
 is identical for every OPL refusal and joins to nothing, while the register is
 what the part's map is keyed by and what the program actually named.
+
+**`space` says which of the two `at` is** — `'port'` or `'register'`. It exists
+because brickwright-lite-ea, building the first consumer, could not tell them
+apart: a panel line holding a bare integer must either say the weaker thing
+("at 08h") or keep a part-to-space table on the reading side, and that table is
+a second list that has to agree with these chips — the thing `ROW_FIELDS`
+exists to stop. `'port'` is the default, true of every chip but the one above,
+and it is set where the chip writes the refusal rather than guessed where a
+consumer reads it. The writing end knows the answer; the reading end does not.
 
 **`at` is the first address, not the last, and it is `ats[0]`** — derived, not a
 second claim, with a gate asserting they cannot disagree. First rather than last
