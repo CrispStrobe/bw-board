@@ -3740,6 +3740,28 @@ BOTH the artefact and the generator that no longer produces it.
 CURRENT build. It never proves the generator is right. A wrong generator
 faithfully reproduced still passes.
 
+**RECORDED DOWNSTREAM as the twenty-fourth species in brickwright-lite's
+`docs/GATES-THAT-CANNOT-FAIL.md` (lego-ac, 2026-09-06), and lite has the same
+latent instance:** its `i8086-bios.bin` is executed by the boot gate and hashed
+by the provenance gate, but correspondence to `rom/bios.asm` is checked only
+when `BW_BOARD_DIR` names a checkout — which CI does not have, because the
+SOURCE is not vendored. Their cure is to vendor `rom/bios.asm` as text beside
+the assembler they already vendor, and let CI assemble and compare, so the
+manifest's source sha becomes something CI re-derives rather than records.
+
+That cure works against this repo without any change here, and the reason is
+worth stating because it constrains what this builder may do later:
+`build-bios.mjs` returns `assemble(source, {format:'com'}).bytes` UNCHANGED —
+`verifyRom()` only checks the reset vector and the 64K size, and the source
+pads itself. **So the image is a pure function of `rom/bios.asm` and
+`src/i8086-asm.js`.** Any post-processing added here would silently break a
+downstream reproduction that has no way to know it was added.
+
+One consequence generalises past this file: when an artefact is a function of N
+vendored inputs, the guard proves correspondence but NOT WHICH INPUT BROKE IT.
+A bare "bytes differ" sends the reader to the ROM source when the assembler is
+what moved, and the failure message is the only place that distinction can live.
+
 ## Sequencing
 
 1. **E0** (all) — days; removes shipped wrong answers.
