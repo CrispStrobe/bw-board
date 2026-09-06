@@ -31,6 +31,8 @@
  * @module
  */
 
+import {noteRefusal} from './chip-ledger.js';
+
 /** Ports, as offsets from the base (220h on a stock card). */
 const R_RESET = 0x6;
 const R_READ = 0xa;
@@ -161,7 +163,14 @@ export class SBDSP {
             // AN UNKNOWN COMMAND IS RECORDED, NOT SWALLOWED -- the DOS layer's
             // refusal histogram habit. A driver using an SB16 command on a
             // 2.0 card should be visible as a name, not as silence.
-            (this.unsupported ||= new Map()).set(cmd, (this.unsupported?.get(cmd) || 0) + 1);
+            noteRefusal(this.unsupported ||= new Map(),
+                `DSP command ${cmd.toString(16).padStart(2, '0')}h`, {
+                    symptom: 'the byte was consumed and nothing was produced: no '
+                        + 'sample plays and no status comes back, so a driver '
+                        + 'polling the read port sees whatever the last real '
+                        + 'command left there',
+                    at: R_WRITE,
+                });
             return;
         }
         if (n === 0) { this._exec(cmd, []); return; }

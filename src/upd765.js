@@ -393,6 +393,8 @@ export class UPD765 {
         this.nonDma = false;        // ND bit of SPECIFY: true = PIO execution
         this.refusals = 0;
         this.lastRefusal = null;
+        this.lastRefusalSymptom = null;
+        this.lastRefusalAt = null;
         this.lastFault = null;
         this.stats = {
             badReads: 0,      // read of 3F5h while the chip was not talking
@@ -610,7 +612,8 @@ export class UPD765 {
                 // consumes nothing -- the bytes the host writes next are read
                 // as a fresh command, which is exactly how a desynchronised
                 // driver ends up here in the first place.
-                this._refuse(`opcode ${hex(val & 0x1f)}h is not a uPD765 command`);
+                this._refuse(`opcode ${hex(val & 0x1f)}h is not a uPD765 command`,
+                    'the controller returns ST0=80h in a one-byte result phase and raises NO interrupt, so a driver that waits on IRQ6 after issuing it waits for ever -- as it would on the silicon' );
                 return;
             }
             this.cmdLen = def.params + 1;
@@ -623,7 +626,11 @@ export class UPD765 {
         const cmd = this.cmdBuf[0];
         const def = COMMANDS[cmd & 0x1f];
         if (def.modelled === false) {
-            this._refuse(`${def.name} (${hex(cmd & 0x1f)}h) is not modelled`);
+            this._refuse(`${def.name} (${hex(cmd & 0x1f)}h) is not modelled`,
+                'the command EXISTS on a real uPD765 and this model does not '
+                + 'implement it; the driver gets the same invalid-command result '
+                + 'as for a nonsense opcode and cannot tell a gap in the model '
+                + 'from a bug in itself');
             return;
         }
         switch (cmd & 0x1f) {
@@ -636,7 +643,16 @@ export class UPD765 {
             case 0x0a: this._readId(); return;
             case 0x0d: this._format(); return;
             case 0x0f: this._seek(); return;
-            default: this._refuse(`${def.name} reached dispatch unimplemented`); return;
+            default:
+                // NOT a fault the silicon would produce. A command this model
+                // claims to support arrived with no handler behind it, which
+                // is a bug here -- said plainly, because the driver sees the
+                // same ST0 either way and cannot distinguish them.
+                this._refuse(`${def.name} reached dispatch unimplemented`,
+                    'this is a defect in the model, not a refusal the hardware '
+                    + 'would make: the command is listed as supported and has no '
+                    + 'implementation behind it');
+                return;
         }
     }
 
@@ -646,9 +662,14 @@ export class UPD765 {
      * generated -- a driver waiting on IRQ6 after an invalid command waits
      * for ever on real hardware too.
      */
-    _refuse(why) {
+    _refuse(why, symptom = null) {
         this.refusals++;
         this.lastRefusal = why;
+        this.lastRefusalSymptom = symptom;
+        // The data register, 3F5h on a PC's decode: the only port a command
+        // byte can arrive on, and so the only place the refusal can point.
+        // A register offset, not a bus address -- the board owns the decode.
+        this.lastRefusalAt = 5;
         this._result([ST0.IC_INVALID], false);
     }
 
@@ -1092,6 +1113,8 @@ export class UPD765 {
             intPending: this.intPending, irq: this.irq, driveBusy: this.driveBusy,
             srt: this.srt, hut: this.hut, hlt: this.hlt, nonDma: this.nonDma,
             refusals: this.refusals, lastRefusal: this.lastRefusal,
+            lastRefusalSymptom: this.lastRefusalSymptom,
+            lastRefusalAt: this.lastRefusalAt,
             lastFault: this.lastFault,
             stats: { ...this.stats },
             drives: this.drives.map((d) => ({
@@ -1110,6 +1133,8 @@ export class UPD765 {
             intPending: s.intPending, driveBusy: s.driveBusy,
             srt: s.srt, hut: s.hut, hlt: s.hlt, nonDma: s.nonDma,
             refusals: s.refusals, lastRefusal: s.lastRefusal,
+            lastRefusalSymptom: s.lastRefusalSymptom ?? null,
+            lastRefusalAt: s.lastRefusalAt ?? null,
             lastFault: s.lastFault ?? null,
             stats: { ...s.stats },
         });

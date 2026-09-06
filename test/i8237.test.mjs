@@ -628,6 +628,10 @@ test('it counts, so once and in a loop are distinguishable', () => {
         'a flag would lose the difference between a setup write and a hot loop');
     assert.match(entry.symptom, /moves nothing/,
         'and the entry carries the PROGRAM-VISIBLE symptom, not just a name');
+    assert.deepEqual(entry.ats, [P_COMMAND],
+        'three writes to one port is one address, not three: the address set '
+        + 'is distinct places, while count is every time');
+    assert.equal(entry.atsMore, false);
 });
 
 test('a MODELLED bit is not reported — the list shrinks as things are built', () => {

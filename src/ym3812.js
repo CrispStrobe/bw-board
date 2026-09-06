@@ -37,6 +37,8 @@
  * @module
  */
 
+import {noteRefusal} from './chip-ledger.js';
+
 /** The part's own clock, and the sample rate it divides down to. */
 const MASTER_HZ = 3_579_545;
 const OPL_RATE = MASTER_HZ / 72;                 // 49716 Hz
@@ -116,10 +118,18 @@ export class YM3812 {
     _poke(a, v) {
         this.regs[a] = v;
         if (a === 0xbd) {
-            if (v & 0x20) this._refuse('rhythm mode (BDh bit 5)');
+            if (v & 0x20) this._refuse('rhythm mode (BDh bit 5)',
+                'the five percussion voices are silent and channels 6-8 keep '
+                + 'playing their melodic patches, so a track scored for drums '
+                + 'plays thin rather than obviously broken', a);
             return;
         }
-        if (a === 0x08 && (v & 0x80)) { this._refuse('CSM (08h bit 7)'); return; }
+        if (a === 0x08 && (v & 0x80)) {
+            this._refuse('CSM (08h bit 7)',
+                'composite sine mode\'s timer-driven key-on never fires, so a '
+                + 'patch that relies on it produces no note at all', a);
+            return;
+        }
         if (a >= 0x20 && a <= 0x35) return this._opReg(a - 0x20, (o) => {
             o.mult = (v & 0x0f) || 0.5;              // multiple 0 means x1/2
             o.ksr = (v >> 4) & 1; o.egType = (v >> 5) & 1;
@@ -156,7 +166,14 @@ export class YM3812 {
 
     _opReg(off, fn) { const i = OP_AT[off]; if (i >= 0) fn(this.ops[i]); }
 
-    _refuse(what) { this.unsupported.set(what, (this.unsupported.get(what) || 0) + 1); }
+    /**
+     * `at` is the OPL REGISTER INDEX, not the ISA port. The port pair is only
+     * two wide -- address and data -- so it is the same for every refusal here
+     * and joins to nothing. The register is the address the program actually
+     * named, and the one the part's own map is keyed by. lego-ac sanctioned
+     * either ("port, or register offset"); this is the one that can be joined.
+     */
+    _refuse(what, symptom, at) { noteRefusal(this.unsupported, what, {symptom, at}); }
 
     /** A key-on restarts BOTH operators' envelopes from attack. */
     _key(chIdx, on) {
@@ -316,10 +333,30 @@ export class YM3812 {
     }
 
     /** What was asked for and refused, in the DOS layer's histogram style. */
-    report() { return { unsupported: [...this.unsupported].map(([what, count]) => ({ what, count })) }; }
+    report() {
+        return {
+            unsupported: [...this.unsupported].map(([what, e]) => ({
+                what, count: e.count, symptom: e.symptom,
+                at: e.ats?.[0] ?? null, ats: e.ats ?? [], atsMore: !!e.atsMore,
+            })),
+        };
+    }
 
     getState() { return { regs: Array.from(this.regs), addr: this._addr }; }
-    setState(s) { this.regs.set(s.regs); this._addr = s.addr | 0; for (let a = 0; a < 256; a++) this._poke(a, this.regs[a]); }
+    setState(s) {
+        this.regs.set(s.regs);
+        this._addr = s.addr | 0;
+        // Replaying every register through _poke is how the derived operator
+        // state is rebuilt -- but _poke also REFUSES, so a restore used to add
+        // a refusal for every unsupported bit that happened to be set, and the
+        // count then said "the program asked N times" when the program had
+        // asked once and been restored N-1 times. The ledger is not part of
+        // the audio state being rebuilt, so it is put back as it was.
+        const ledger = this.unsupported;
+        this.unsupported = new Map();
+        for (let a = 0; a < 256; a++) this._poke(a, this.regs[a]);
+        this.unsupported = ledger;
+    }
 }
 
 export default YM3812;

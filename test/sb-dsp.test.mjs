@@ -154,8 +154,18 @@ test('the speaker gate is real, and an unknown command is COUNTED not swallowed'
         'a driver that forgets D1h hears nothing here, exactly as on hardware');
 
     // An SB16 command on a 2.0 card is a name in a report, not silence.
+    // The key used to be the raw command byte, 0xb6, and this assertion read
+    // `.has(0xb6)`. It is now the NAME the sentence above asks for -- the
+    // ledger feeds I8086Machine.chipRefusals(), where a row keyed 182 says
+    // nothing to a reader. The stronger form of the same check: the command
+    // must still be identifiable from the entry, and the entry must explain
+    // what the program gets instead.
     dsp.write(at(0x22c), 0xb6);
-    assert.ok(dsp.unsupported && dsp.unsupported.has(0xb6), 'the refusal is recorded');
+    const entry = [...(dsp.unsupported || [])].find(([k]) => /b6h/i.test(k));
+    assert.ok(entry, `the refusal is recorded: ${[...(dsp.unsupported || []).keys()]}`);
+    assert.equal(entry[1].count, 1);
+    assert.match(entry[1].symptom, /nothing|no status|no sample/i,
+        'and it says what the driver sees, not only that something was refused');
 });
 
 // ---------------------------------------------------------------------------

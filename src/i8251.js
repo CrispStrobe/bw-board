@@ -81,6 +81,8 @@ export class I8251 {
         this.mode = 0;
         this.command = 0;
         this.modeWarning = null;
+        this.modeWarningAt = null;
+        this.modeWarningSymptom = null;
 
         // Sequence state: after a reset the control port expects a mode word.
         this._expect = 'mode';       // 'mode' | 'sync1' | 'sync2' | 'command'
@@ -175,14 +177,41 @@ export class I8251 {
             this._sync = true;
             this._sync2Needed = !(v & 0x80);   // double sync char if bit7=0
             this._expect = 'sync1';
-            this.modeWarning =
-                `8251 mode ${v.toString(16)}h selects synchronous mode`
-                + ' — sync/hunt is not modelled; the data path runs as async';
+            this._setModeWarning(v);
         } else {
             this._sync = false;
             this._expect = 'command';
-            this.modeWarning = null;
+            this._setModeWarning(null);
         }
+    }
+
+    /**
+     * The synchronous-mode refusal, in one place, because it is set from two:
+     * a live mode word and a restored checkpoint.
+     *
+     * A RESTORE USED TO DROP IT. loadState cleared modeWarning, so a machine
+     * saved in synchronous mode came back running as async with nothing saying
+     * so -- the refusal was correct, the chip still could not do the thing, and
+     * the only record of it had been erased by an unrelated operation. Nothing
+     * is invented here: `mode` and `_sync` are both in the checkpoint, so the
+     * warning is DERIVED from restored state rather than remembered.
+     */
+    _setModeWarning(v) {
+        if (v === null || v === undefined) {
+            this.modeWarning = null;
+            this.modeWarningAt = null;
+            this.modeWarningSymptom = null;
+            return;
+        }
+        this.modeWarning =
+            `8251 mode ${v.toString(16)}h selects synchronous mode`
+            + ' — sync/hunt is not modelled; the data path runs as async';
+        // The control port, because the mode word can arrive nowhere else.
+        this.modeWarningAt = 1;
+        this.modeWarningSymptom =
+            'the receiver never enters hunt and never reports SYNDET, so a '
+            + 'program waiting to acquire sync waits for ever; characters that '
+            + 'do arrive are framed as if asynchronous';
     }
 
     _applyCommand(v) {
@@ -231,7 +260,7 @@ export class I8251 {
         this._sync = s._sync;
         this._sync2Needed = s._sync2Needed;
         this._irq = s._irq ?? false;
-        this.modeWarning = null;
+        this._setModeWarning(this._sync ? this.mode : null);
     }
 }
 

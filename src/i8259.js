@@ -86,6 +86,8 @@ export class I8259 {
         // wrote ICW1 as 11h (cascade) but sent no ICW3 can see why nothing
         // fires. The machine layer can surface this string.
         this.initWarning = null;
+        this.initWarningAt = null;
+        this.initWarningSymptom = null;
 
         this._intActive = false;
         // ROTATION. The level that currently holds LOWEST priority; service
@@ -222,12 +224,12 @@ export class I8259 {
         if (this._initPhase === 1) {
             // ICW2: vector base (upper 5 bits)
             this.vectorBase = val & 0xf8;
-            this._setInitPhase(this._needICW3 ? 2 : (this._needICW4 ? 3 : 0));
+            this._setInitPhase(this._needICW3 ? 2 : (this._needICW4 ? 3 : 0), 1);
             return;
         }
         if (this._initPhase === 2) {
             // ICW3: cascade config (ignored in single mode but consumed)
-            this._setInitPhase(this._needICW4 ? 3 : 0);
+            this._setInitPhase(this._needICW4 ? 3 : 0, 1);
             return;
         }
         if (this._initPhase === 3) {
@@ -250,7 +252,7 @@ export class I8259 {
         this.autoEOI = false;
         this._needICW3 = !(icw1 & 0x02);  // SNGL bit: 1 = single, no ICW3
         this._needICW4 = !!(icw1 & 0x01); // IC4 bit
-        this._setInitPhase(1);             // expect ICW2 next
+        this._setInitPhase(1, 0);          // expect ICW2 next
         this._updateInt();
     }
 
@@ -357,8 +359,16 @@ export class I8259 {
     get initPhase() { return this._initPhase; }
 
     /** Set the init phase AND the human-readable warning that mirrors it. */
-    _setInitPhase(n) {
+    _setInitPhase(n, at = null) {
         this._initPhase = n;
+        // The port the ICW arrived on: ICW1 is the command port, every later
+        // ICW the data port. A debugger's line points at the write that left
+        // the chip mid-sequence, which is the one worth looking at.
+        this.initWarningAt = n === 0 ? null : at;
+        this.initWarningSymptom = n === 0 ? null
+            : 'the chip drives no INT at all while the sequence is incomplete, '
+            + 'however full its IRR gets -- so a device that looks correctly '
+            + 'programmed and is raising IRQs produces silence, not a wrong vector';
         this.initWarning = n === 0 ? null
             : n === 1 ? '8259 still initialising: wrote ICW1, awaiting ICW2 (vector base)'
                 : n === 2 ? '8259 still initialising: awaiting ICW3 (cascade map) — ICW1 selected cascade mode'
@@ -382,6 +392,12 @@ export class I8259 {
             vectorBase: this.vectorBase, icw4: this.icw4,
             autoEOI: this.autoEOI, readISR: this.readISR,
             initPhase: this._initPhase, needICW3: this._needICW3,
+            // The anchor travels with the phase. Without it a chip restored
+            // mid-init reports the refusal with nowhere to point, so the row
+            // a debugger renders is thinner after a checkpoint than before --
+            // a diagnostic degraded by an operation that has nothing to do
+            // with it.
+            initWarningAt: this.initWarningAt,
             needICW4: this._needICW4, intActive: this._intActive,
             // Added with rotation/poll/special-mask 2026-09-05. A checkpoint
             // that omits these restores a chip whose PRIORITY ORDER is wrong
@@ -409,7 +425,10 @@ export class I8259 {
         this.rotateOnAutoEOI = s.rotateOnAutoEOI ?? false;
         this.pollPending = s.pollPending ?? false;
         this.specialMask = s.specialMask ?? false;
-        this._setInitPhase(s.initPhase);   // restores initWarning to match
+        // `?? null` and not `?? 0`: an OLD checkpoint did not record the
+        // address, and null says so. Zero would be the command port, an
+        // address the saved program may never have touched.
+        this._setInitPhase(s.initPhase, s.initWarningAt ?? null);
     }
 }
 

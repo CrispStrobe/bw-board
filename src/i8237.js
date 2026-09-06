@@ -83,6 +83,8 @@
  * @module
  */
 
+import {noteRefusal} from './chip-ledger.js';
+
 /** Mode register bits 2-3: what a transfer cycle actually does. */
 const XFER_VERIFY = 0;   // run the counters, drive no bus cycle
 const XFER_WRITE = 1;    // WRITE TO MEMORY: device -> memory (a floppy READ)
@@ -473,10 +475,11 @@ export class I8237 {
     _noteUnmodelled(val, at) {
         for (const [bit, feature, symptom] of I8237.UNMODELLED_COMMAND_BITS) {
             if (!(val & bit)) continue;
-            const prev = (this.unmodelled ||= new Map()).get(feature);
             // `at` is the port the program wrote to reach this. The debugger
             // points at the instruction with it; a sentence cannot be clicked.
-            this.unmodelled.set(feature, {count: (prev?.count || 0) + 1, symptom, at});
+            // The ledger keeps EVERY address the feature was refused at, not
+            // the last -- see chip-ledger.js.
+            noteRefusal(this.unmodelled ||= new Map(), feature, {symptom, at});
         }
     }
 

@@ -569,9 +569,22 @@ for (const k of ['MATCH', 'NOINPUT', 'ORACLE', 'DIFFER', 'EXITED', 'LOOPING', 'S
     if (tally[k]) console.log(`  ${String(tally[k]).padStart(5)}  ${k}`);
 }
 if (refusals.size) {
+    // NO SILENT CAP. A list headed "this is the to-do list" that shows the
+    // top 20 and stops is a complete-looking list of an incomplete set --
+    // whoever works down it finishes and believes they are done. Twenty is
+    // still the right number to PRINT; it just has to say it is twenty.
+    const ranked = [...refusals].sort((a, b) => b[1] - a[1]);
+    const shown = ranked.slice(0, 20);
     console.log('\nrefused services, most wanted first -- this is the to-do list:');
-    for (const [k, n] of [...refusals].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
+    for (const [k, n] of shown) {
         console.log(`  ${String(n).padStart(5)}  ${k}`);
+    }
+    if (ranked.length > shown.length) {
+        const rest = ranked.slice(shown.length);
+        console.log(`  ... and ${rest.length} more distinct services, `
+            + `${rest.reduce((t, [, n]) => t + n, 0)} refusals between them `
+            + '(--verbose for all)');
+        if (VERBOSE) for (const [k, n] of rest) console.log(`  ${String(n).padStart(5)}  ${k}`);
     }
 }
 

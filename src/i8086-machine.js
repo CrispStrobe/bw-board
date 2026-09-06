@@ -1618,6 +1618,9 @@ export class I8086Machine {
      */
     static LEDGER_FIELD = /refus|unsupport|unmodel|warning|invalid/i;
 
+    /** Suffixes that mark a field as a ledger's companion, not a ledger. */
+    static LEDGER_SIBLING = /(At|Symptom)$/;
+
     chipRefusals() {
         const rows = [];
         // `at` is the address the program touched to trigger the refusal -- a
@@ -1628,9 +1631,20 @@ export class I8086Machine {
         //
         // null when the chip does not record one. A refusal with no address is
         // still worth reporting; inventing an address for it would not be.
-        const push = (part, kind, feature, symptom, count, at) =>
+        //
+        // `ats` IS THE SET, `at` IS THE ANCHOR. A feature refused at more than
+        // one address reports all of them, first-seen; `at` is the first, and
+        // it is the first rather than the last so a row's anchor does not move
+        // under a reader while the program runs. `atsMore` is true when the
+        // per-feature cap dropped addresses, because a bounded list that does
+        // not say it is bounded reads as a complete one.
+        const push = (part, kind, feature, symptom, count, at, ats, atsMore) => {
+            const set = (ats && ats.length) ? [...ats]
+                : (at !== null && at !== undefined) ? [at] : [];
             rows.push({part, kind, feature, symptom: symptom ?? null,
-                count: count ?? 1, at: at ?? null});
+                count: count ?? 1, at: set.length ? set[0] : null,
+                ats: set, atsMore: !!atsMore});
+        };
 
         const sources = [
             ...Object.entries(this.chips || {}).map(([n, c]) => ['chip', n, c]),
@@ -1644,12 +1658,23 @@ export class I8086Machine {
             if (typeof part.report === 'function') {
                 try { reported = part.report(); } catch { /* a report must not break a read */ }
             }
+            // A FIELD READ ONCE. Both paths below reach real fields, and the
+            // name-derived scan further down would reach them AGAIN -- the
+            // first smoke of the finished vocabulary printed the YM3812's
+            // rhythm-mode refusal twice and the FDC's bad opcode twice, once
+            // through the chip's own report() and once through the field the
+            // report was built from. Two rows for one refusal is a count that
+            // quantifies over views instead of over events.
+            const consumed = new Set(['lastRefusal']);
             for (const e of reported?.unsupported ?? []) {
-                push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count, e.at);
+                consumed.add('unsupported');
+                push(name, kind, e.what ?? String(e), e.symptom ?? null, e.count,
+                    e.at, e.ats, e.atsMore);
             }
 
             if (part.lastRefusal) {
-                push(name, kind, part.lastRefusal, null, part.refusals || 1, part.lastRefusalAt);
+                push(name, kind, part.lastRefusal, part.lastRefusalSymptom ?? null,
+                    part.refusals || 1, part.lastRefusalAt);
             }
 
             // DERIVED, NOT ENUMERATED. The first version listed the field names
@@ -1665,21 +1690,36 @@ export class I8086Machine {
             // invents a new name is collected the moment it exists.
             for (const field of Object.keys(part)) {
                 if (!I8086Machine.LEDGER_FIELD.test(field)) continue;
+                if (consumed.has(field)) continue;
+                // A SIBLING IS NOT A LEDGER. `modeWarningAt` and
+                // `modeWarningSymptom` both contain a word the pattern looks
+                // for, so the scan collected each of them as a refusal of its
+                // own -- a row whose feature was the symptom sentence and
+                // whose symptom was null. The suffix is only ignored when the
+                // field it belongs to actually exists, so a chip that genuinely
+                // names a ledger `resetAt` is still collected.
+                if (I8086Machine.LEDGER_SIBLING.test(field)
+                    && part[field.replace(I8086Machine.LEDGER_SIBLING, '')] !== undefined) continue;
                 const v = part[field];
                 // A STRING LEDGER carries its address in a sibling `<field>At`,
                 // because a sentence has nowhere to put one. Convention rather
                 // than restructuring every chip: the 8255's modeWarning stays
                 // a sentence and gains modeWarningAt beside it.
+                // and its symptom in `<field>Symptom`, for the same reason:
+                // so a sentence-shaped ledger produces the same row as a Map
+                // one rather than a thinner one.
                 if (typeof v === 'string' && v) {
-                    push(name, kind, v, null, 1, part[`${field}At`]);
+                    push(name, kind, v, part[`${field}Symptom`] ?? null, 1,
+                        part[`${field}At`]);
                     continue;
                 }
                 if (!(v instanceof Map)) continue;
                 for (const [feature, entry] of v) {
-                    // Two shapes in the wild: a bare count, and {count, symptom, at}.
+                    // Two shapes in the wild: a bare count, and the
+                    // {count, symptom, ats, atsMore} that chip-ledger.js keeps.
                     if (typeof entry === 'number') push(name, kind, String(feature), null, entry);
                     else push(name, kind, String(feature), entry?.symptom ?? null,
-                        entry?.count ?? 1, entry?.at);
+                        entry?.count ?? 1, entry?.at, entry?.ats, entry?.atsMore);
                 }
             }
         }

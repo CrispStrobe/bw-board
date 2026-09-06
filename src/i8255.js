@@ -99,6 +99,10 @@ export class I8255 {
         // a sibling `<field>At`.
 
         this.modeWarningAt = (groupA !== 0 || groupB !== 0) ? 3 : null;
+        this.modeWarningSymptom = this.modeWarningAt === null ? null
+            : 'the port keeps behaving as mode 0: a write appears immediately '
+            + 'with no OBF/STB handshake, and a program waiting on the strobe '
+            + 'acknowledgement in the status byte waits on a bit that never moves';
         this.modeWarning = (groupA !== 0 || groupB !== 0)
             ? `8255 control ${val.toString(16)}h selects mode ${groupA !== 0 ? `${groupA} on group A` : ''}`
                 + `${groupA !== 0 && groupB !== 0 ? ' and ' : ''}${groupB !== 0 ? 'mode 1 on group B' : ''}`
