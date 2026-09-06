@@ -32,6 +32,24 @@
  * than it counted.
  */
 
+/**
+ * THE ROW CONTRACT, in the one place every reader can reach.
+ *
+ * It lives HERE rather than only in CHIP-REFUSALS.md because that document is
+ * bw-board's and a downstream vendor does not take it. brickwright-lite
+ * merged this ledger and then had to RESTATE the row shape in its own gate --
+ * a second list that must agree with a first one, which is the shape this
+ * whole file exists to stop. A doc is the right place to explain the contract
+ * and the wrong place to be its only machine-readable copy.
+ *
+ * So: this array is the contract. CHIP-REFUSALS.md is gated against it, the
+ * collector is gated against it, and a downstream gate should import it rather
+ * than retype it. Three readers, one list.
+ */
+export const ROW_FIELDS = Object.freeze([
+    'part', 'kind', 'feature', 'symptom', 'count', 'at', 'ats', 'atsMore',
+]);
+
 /** Addresses kept per feature before `atsMore` takes over. */
 export const AT_CAP = 8;
 

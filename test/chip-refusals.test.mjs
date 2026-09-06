@@ -394,3 +394,30 @@ test('the row contract in CHIP-REFUSALS.md is the row the code produces', () => 
         'the collector and the document disagree about the row -- whichever is '
         + 'right, a consumer reading the other one is being lied to');
 });
+
+test('the contract a downstream vendor can import says the same thing', async () => {
+    // brickwright-lite-ea merged this ledger and had to RESTATE the row shape
+    // in lite's own gate, because CHIP-REFUSALS.md is bw-board's and a vendor
+    // does not take it. That is a second list that must agree with a first --
+    // the shape this whole file exists to stop, arrived at by documenting the
+    // contract only in prose.
+    //
+    // ROW_FIELDS is in chip-ledger.js, which IS vendored. This test binds the
+    // three readers together: the document a human reads, the array a
+    // downstream gate imports, and the row the collector actually builds. Any
+    // two of them drifting is red here.
+    const { ROW_FIELDS } = await import('../src/chip-ledger.js');
+    const doc = readFileSync(join(SRC, '..', 'CHIP-REFUSALS.md'), 'utf8');
+    const documented = doc.match(/^\s*\{(part,[^}]*)\}\s*$/m)[1]
+        .split(',').map((f) => f.trim());
+
+    assert.deepEqual([...ROW_FIELDS], documented,
+        'the exported contract and the document disagree');
+
+    const m = new I8086Machine(BREADBOARD8086);
+    const dma = new I8237();
+    dma.write(0x08, 0x01);
+    m.chips.dma = dma;
+    assert.deepEqual(Object.keys(m.chipRefusals()[0]), [...ROW_FIELDS],
+        'the exported contract and the collector disagree');
+});

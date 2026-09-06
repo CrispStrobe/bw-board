@@ -30,6 +30,13 @@ Every row, from every chip, has exactly these eight fields:
 
     {part, kind, feature, symptom, count, at, ats, atsMore}
 
+**A downstream vendor should import the contract, not retype it.** The same
+list is exported as `ROW_FIELDS` from `src/chip-ledger.js`, which is part of
+the merge set — this document is bw-board's and a vendor does not take it, so
+prose alone would force a second list that has to agree with this one. A gate
+binds all three: the list here, the exported array, and the row the collector
+actually builds. Any two of them drifting is red.
+
 ```js
 {
     part:    'dma',        // the key it is filed under in machine.chips/devices

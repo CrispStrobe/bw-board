@@ -1621,6 +1621,17 @@ export class I8086Machine {
     /** Suffixes that mark a field as a ledger's companion, not a ledger. */
     static LEDGER_SIBLING = /(At|Symptom)$/;
 
+    /**
+     * Every chip's refusal ledger, as rows of `ROW_FIELDS` shape.
+     *
+     * MERGING THIS METHOD BY HAND: it needs BOTH static fields declared above
+     * -- `LEDGER_FIELD` and `LEDGER_SIBLING` -- and neither is adjacent to it.
+     * brickwright-lite's first merge extracted the block by walking backwards
+     * over doc comments, stopped at the `LEDGER_FIELD` declaration because a
+     * field between two comments is not a comment, and produced a file that
+     * parses, imports and constructs perfectly and throws on the first call.
+     * A partial merge of this method looks exactly like a whole one.
+     */
     chipRefusals() {
         const rows = [];
         // `at` is the address the program touched to trigger the refusal -- a
