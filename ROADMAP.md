@@ -3928,6 +3928,34 @@ timing that instead of the stub it is named for. Repointed at index 2. A test
 that silently changes what it measures is this session's recurring failure in
 miniature.
 
+**MEASURED 2026-09-07 AGAINST KALUMA'S OWN UF2, and it corrects two written
+claims.** The probe boots `kaluma-rp2-pico-1.2.1.uf2` on this repo's bootrom
+and watches `rom_table_lookup` directly:
+
+```
+  'SF' asked once, at step 155,382  ->  answered 0x3a0
+  0x3a0 IS the table we publish. Non-null, correct, delivered.
+  [0x2003163c] = 0x143  -- the 'L3' lookup's answer, not an SF entry, not null
+```
+
+**THE TABLE IS FOUND.** The earlier reasoning here — that an unconditional-NaN
+stub cannot produce 0, therefore the table is never reached — had a true
+premise and a false conclusion, and it was argued from the stub's behaviour to
+a path nobody had observed. LANES 13 again, committed while writing about it.
+
+**And the "null-derived operator pointer cached at 0x2003163c" step of the N5
+chain does not survive measurement**: that word holds the answer to a
+DIFFERENT ROM lookup ('L3'), and it is not null. Whatever produces 0, it is
+not that.
+
+**NOT ESTABLISHED, and stated so nobody builds on it:** no SF entry is entered
+in 2.5M instructions — but the probe never drives the REPL, so that is a fact
+about BOOT. `2.5+1.0` is only evaluated when JS runs. Reading it as "the
+arithmetic never calls the table" would repeat the same error one step out.
+The decisive run drives the REPL against this sha, where three outcomes are
+now distinguishable: 3.5 (works), NaN (a still-stubbed operator), 0
+(delivered and still wrong, with much less left to hide).
+
 **REMAINING, AND WHY IT IS THE HARD HALF.** `fmul` needs a 24×24→48-bit product
 on a core whose multiply is 32×32→32 low only: four 12-bit partial products
 reassembled across two registers with an explicit carry, and register pressure
