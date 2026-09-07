@@ -79,6 +79,14 @@ export const BOOTROM_SIZE = 0x4000;
  * characters packed little-endian, so 'M','C' is `rom_func_lookup('MC')`.
  */
 const code = (a, b) => a.charCodeAt(0) | (b.charCodeAt(0) << 8);
+/**
+ * Data-table codes, as `rom_data_lookup` takes them. Two ASCII characters,
+ * low byte first, exactly like ROM_FUNC.
+ */
+export const ROM_DATA = {
+    SOFT_FLOAT: 0x4653,          // 'SF' — the single-precision float table
+};
+
 export const ROM_FUNC = {
     MEMCPY: code('M', 'C'),
     MEMCPY44: code('C', '4'),
@@ -312,6 +320,37 @@ export function buildBootrom () {
         0xbd10              // .done: pop {r4, pc}
     ]);
 
+    // ── the single-precision soft-float stub ───────────────────────────
+    //
+    // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
+    // That is the whole of the current implementation and it is deliberate;
+    // see SF_TABLE below for why a table of these beats no table at all.
+    //
+    // It returns a QUIET NaN, 7FC00000h. That is the correct IEEE answer for
+    // an undefined result, it is what a caller can recognise (any NaN out of
+    // an operation on finite inputs came from here), and — the part that
+    // matters — IT RETURNS. A stub that hung, or one the caller fell through,
+    // would trade a null-pointer hang for a subtler one.
+    //
+    // The BKPT is for a host that watches: rp2040js surfaces it through
+    // `onBreak`, whose default is a no-op, so execution continues into the
+    // NaN either way. It is a signal, not a trap, and nothing here depends
+    // on anyone listening.
+    //
+    // The constant is built with shifts rather than loaded from a literal
+    // pool, because a pool needs PC-relative alignment this emitter does not
+    // manage and the arithmetic is three instructions.
+    const sfUnimplemented = pc;
+    pc = emit(view, pc, [
+        0xbe00,             // bkpt #0                ; for a host that watches
+        0x20ff,             // movs r0, #0xff
+        0x05c0,             // lsls r0, r0, #23       ; 7F800000h — infinity
+        0x2101,             // movs r1, #1
+        0x0589,             // lsls r1, r1, #22       ; 00400000h — the quiet bit
+        0x4308,             // orrs r0, r1            ; 7FC00000h — a quiet NaN
+        0x4770              // bx   lr
+    ]);
+
     // A reset handler that goes nowhere: we boot from flash, and this
     // exists so the vector table is not a pointer to zero.
     const spin = pc;
@@ -346,13 +385,52 @@ export function buildBootrom () {
         at += 4;
     }
     view.setUint32(at, 0, true);            // terminator
-    const dataTable = at + 4;
-    // Empty, and deliberately so. The one data entry a firmware asks for
-    // is 'SF', mufplib's jump table, and answering it with a pointer to
-    // zeros would turn a clean lookup miss into a jump to address 0.
-    // Measured: answering it moves the panic by TWO steps, so the float
-    // table is not what stops MicroPython here.
-    view.setUint32(dataTable, 0, true);
+
+    // ── the 'SF' single-precision float table ──────────────────────────
+    //
+    // WHAT CHANGED AND WHY. This used to be empty, on the reasoning that
+    // answering 'SF' with a pointer to zeros would turn a clean lookup miss
+    // into a jump to address 0. That reasoning was right about ZEROS and
+    // wrong about the conclusion: the fix is a table of entries that are not
+    // zero. Missing it entirely is not neutral — lego-ac measured Kaluma
+    // 1.2.1 caching a null-derived operator pointer and calling it, so
+    // `2.5+1.0` evaluated to 0 and the first GPIO call hung (ROADMAP R3).
+    // MicroPython never asks, which is why it reached its REPL regardless.
+    //
+    // THE LAYOUT IS THE DATASHEET'S, §2.8.3 (the RP2040 bootrom's float
+    // table), cross-checked against two independent sources that agree on
+    // indices 0..16. Entries 21 and beyond are RP2350/V2 only and are not
+    // emitted here. Order, one 32-bit function pointer each:
+    //
+    //   0 fadd        1 fsub        2 fmul        3 fdiv
+    //   4 deprecated  5 deprecated  6 fsqrt       7 float2int
+    //   8 float2fix   9 float2uint 10 float2ufix 11 int2float
+    //  12 fix2float  13 uint2float 14 ufix2float 15 fcos
+    //  16 fsin       17 ftan       18 deprecated 19 fexp
+    //  20 fln
+    //
+    // NAMED STOP: EVERY ENTRY IS `sfUnimplemented`. NO ARITHMETIC IS
+    // IMPLEMENTED HERE. What this buys is not a working float unit — it is
+    // that a caller now reaches a routine that returns a quiet NaN instead of
+    // dereferencing null. A hang becomes a defined, recognisable wrong
+    // answer, which is a diagnosis rather than a mystery.
+    //
+    // Doing it properly means IEEE-754 single-precision add, multiply and
+    // divide hand-written in Thumb-1 on a core with no FPU, no divide and no
+    // CLZ, each agreeing with an oracle at the rounding edge. Implementing it
+    // in the host and calling out through a breakpoint would be easier and
+    // WORSE: the DoD's test is agreement with JavaScript's Math, and a JS
+    // implementation tested against JS Math measures itself. See LANES 13.
+    const SF_TABLE_ENTRIES = 21;
+    const sfTable = (at + 4 + 3) & ~3;
+    for (let i = 0; i < SF_TABLE_ENTRIES; i++) {
+        view.setUint32(sfTable + i * 4, thumb(sfUnimplemented), true);
+    }
+
+    const dataTable = sfTable + SF_TABLE_ENTRIES * 4;
+    view.setUint16(dataTable, ROM_DATA.SOFT_FLOAT, true);
+    view.setUint16(dataTable + 2, sfTable, true);
+    view.setUint32(dataTable + 4, 0, true);          // terminator
 
     // ── the fixed header ───────────────────────────────────────────────
     view.setUint32(0x00, 0x20042000, true);         // initial SP: top of SRAM

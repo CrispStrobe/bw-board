@@ -23,7 +23,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    buildBootrom, BOOTROM_SIZE, ROM_FUNC
+    buildBootrom, BOOTROM_SIZE, ROM_FUNC, ROM_DATA
 } from '../src/rp2040-bootrom.js';
 
 let rp2040Available = true;
@@ -297,4 +297,89 @@ test('flash_range_program copies from SRAM into flash at the offset, and only th
     // a zero-length program must return without touching anything
     assert.ok(run(program, {0: offset, 1: src, 2: 0}, 100) >= 0, 'zero-length program never returned');
     assert.equal(mcu.readUint8(xip), 0x80);
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// The 'SF' single-precision float table.
+//
+// It used to be absent, on the reasoning that answering with a pointer to
+// zeros would turn a clean lookup miss into a jump to address 0. That was
+// right about zeros and wrong about the conclusion: a table of entries that
+// are NOT zero is the fix. lego-ac measured Kaluma 1.2.1 caching a
+// null-derived operator pointer and calling it, so 2.5+1.0 came out as 0 and
+// the first GPIO call hung (ROADMAP R3).
+//
+// THESE TESTS PIN A NAMED STOP. No arithmetic is implemented; every entry
+// returns a quiet NaN. The last test asserts that ON PURPOSE, so that
+// implementing an operator BREAKS it and the person doing so has to come
+// here and say which one now works. A stop nobody can walk past by accident.
+// ─────────────────────────────────────────────────────────────────────────
+
+const F32 = (x) => {
+    const b = new ArrayBuffer(4);
+    new DataView(b).setFloat32(0, x, true);
+    return new DataView(b).getUint32(0, true);
+};
+const QNAN = 0x7fc00000;
+
+test('rom_data_lookup finds the SF table, and it is not a null pointer', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const dataTable = view.getUint16(0x16, true);
+    const lookup = view.getUint16(0x18, true);
+
+    assert.ok(run(lookup, {0: dataTable, 1: ROM_DATA.SOFT_FLOAT}) >= 0, 'lookup never returned');
+    const sf = mcu.core.registers[0] >>> 0;
+    assert.ok(sf > 0x100,
+        `'SF' resolved to 0x${sf.toString(16)}. Zero is the failure this exists to prevent: `
+        + 'the SDK does not null-check most lookups, so the caller executes address 0 as Thumb.');
+});
+
+test('every SF entry is a real Thumb address, because a zero one is executed', {skip: SKIP}, async () => {
+    const rom = buildBootrom();
+    const view = new DataView(rom.buffer);
+    const dataTable = view.getUint16(0x16, true);
+    const sf = view.getUint16(dataTable + 2, true);
+    for (let i = 0; i < 21; i++) {
+        const e = view.getUint32(sf + i * 4, true) >>> 0;
+        assert.ok(e > 0x100, `SF entry ${i} is 0x${e.toString(16)} — a jump to it is a jump to nowhere`);
+        assert.equal(e & 1, 1, `SF entry ${i} lacks the Thumb bit; blx to an even address faults`);
+    }
+});
+
+test('an SF entry RETURNS rather than hanging, which is the whole point', {skip: SKIP}, async () => {
+    // The failure being replaced is a hang. A stub that hung, or that the
+    // caller fell through, would trade one hang for a subtler one.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const dataTable = view.getUint16(0x16, true);
+    const sf = view.getUint16(dataTable + 2, true);
+    const fadd = view.getUint32(sf, true);              // index 0
+
+    const steps = run(fadd, {0: F32(2.5), 1: F32(1.0)});
+    assert.ok(steps >= 0, 'the SF stub never returned — it hung, which is the bug it replaces');
+    assert.ok(steps < 50, `the stub took ${steps} steps; it should be a handful`);
+});
+
+test('NAMED STOP: no SF operator is implemented, and 2.5+1.0 is NOT 3.5', {skip: SKIP}, async () => {
+    // Deliberately asserting the CURRENT, INCOMPLETE state. Implementing fadd
+    // must break this test, so that whoever does it comes here and records
+    // which operator now works rather than leaving a stale claim behind.
+    //
+    // What IS fixed: the answer is a defined quiet NaN from a routine that
+    // returns, instead of a hang on a null pointer. A recognisable wrong
+    // answer is a diagnosis; a hang is a mystery.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const dataTable = view.getUint16(0x16, true);
+    const sf = view.getUint16(dataTable + 2, true);
+
+    for (const [i, name] of [[0, 'fadd'], [1, 'fsub'], [2, 'fmul'], [3, 'fdiv']]) {
+        const fn = view.getUint32(sf + i * 4, true);
+        assert.ok(run(fn, {0: F32(2.5), 1: F32(1.0)}) >= 0, `${name} never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, QNAN,
+            `${name} returned something other than the quiet NaN this stop promises. `
+            + 'If you have implemented it, update this test to assert the real result.');
+    }
+    assert.notEqual(QNAN, F32(3.5), 'sanity: the stop value is not the answer');
 });

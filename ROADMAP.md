@@ -3878,6 +3878,42 @@ signatures — and satisfying it with our own IEEE-754 single-precision
 arithmetic is the same standard the rest of this file already meets. This is a
 real implementation task, not a stub: it is the largest item in this section.
 
+**PARTIAL, 2026-09-07: THE TABLE EXISTS AND NO ARITHMETIC IS IMPLEMENTED.**
+A NAMED STOP, not a claim of progress toward one.
+
+What landed: `'SF'` now resolves to a real 21-entry table at the datasheet's
+layout (§2.8.3, indices 0..16 cross-checked against two independent sources
+that agree; 21+ are V2/RP2350 and are not emitted). Every entry points at one
+stub that returns a quiet NaN, `7FC00000h`, and RETURNS. `ROM_DATA.SOFT_FLOAT`
+is exported so callers and tests name the code rather than `0x4653`.
+
+What that buys is NOT a float unit. It is that a caller reaches a routine
+instead of dereferencing null: **a hang becomes a defined, recognisable wrong
+answer**, and any NaN out of an operation on finite inputs came from here. The
+previous reasoning — that answering `'SF'` with zeros would turn a clean miss
+into a jump to 0 — was right about ZEROS and wrong about the conclusion. The
+fix is a table whose entries are not zero.
+
+`test/rp2040-bootrom.test.mjs` pins it, including one test that asserts
+**2.5+1.0 is NOT 3.5**. That is deliberate: implementing `fadd` must BREAK that
+test, so whoever does it has to come and record which operator now works rather
+than leave a stale claim standing. Reach verified by zeroing the entries — 3 of
+the 4 new tests go red naming the defect.
+
+**WHY IT STOPS HERE, stated so the next person does not rediscover it.** The
+remaining work is IEEE-754 single-precision add, multiply and divide
+hand-written in Thumb-1, on a core with no FPU, no divide instruction and no
+CLZ, each agreeing with an oracle at the rounding edge. That is the real task
+and it is a large one.
+
+**AND THE EASY ROUTE IS A TRAP.** `rp2040js` exposes `onBreak`, so the
+operators could be implemented in the host and called out to through a
+breakpoint. That would be far less work and much worse, because the DoD's test
+is agreement with JavaScript's `Math` — and a JavaScript implementation tested
+against JavaScript's `Math` measures itself. It would pass completely and prove
+nothing. LANES 13, in the one place where taking the shortcut would also
+destroy the evidence that the shortcut was taken.
+
 **DEFINITION OF DONE**, from lego-ac, recorded as given:
 
 - a real clean-room single-precision soft-float table behind `'SF'`, covering
