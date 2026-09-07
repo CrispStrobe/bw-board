@@ -3837,6 +3837,52 @@ deliverable rather than an omission from it.
 `scripts/probe-pico-kaluma.mjs`, UF2 pinned by sha256. Nothing in lite waits
 on it.
 
+### R4 The ROM stamps `BSD-3` into its own image, and this repo is MIT
+
+**Found here, 2026-09-07, while verifying lite's gates. NOT FIXED — the
+resolution is the owner's call and it changes ROM BYTES, so it must ride with
+the next geometry change rather than land alone.**
+
+```
+  bw-board          LICENSE + package.json   MIT
+  brickwright-lite  LICENSE + package.json   BSD-3-Clause
+```
+
+Two places in `rom/bios.asm` say BSD-3 about this repo:
+
+- line 14, in the licence rationale: *"every open-source PC BIOS is GPL-3
+  (GLaBIOS, skiselev/8088_bios); **this project ships under BSD-3**, so
+  adopting one is not available"*
+- line 477, `rom_note`: a string **inside the assembled image** reading
+  *"BSD-3, written from the documented interface. No BIOS code copied."*
+
+The ARGUMENT is unaffected — GPL-3 is incompatible with MIT and BSD-3 alike,
+so "adopting one is not available" holds either way, and the clean-room claim
+stands. What is wrong is the licence NAMED, and the second instance is a
+licence notice compiled into a distributed binary rather than a comment.
+
+The likely history is that both sentences describe the downstream product:
+lite IS BSD-3, and the ROM is vendored into its bundle. But MIT code included
+in a BSD-3 bundle stays MIT; it does not become BSD-3 by being shipped there,
+so stamping BSD-3 on an artefact this repo produces is inaccurate wherever it
+ends up.
+
+**Two resolutions, and choosing is the owner's, not this file's:** correct the
+text to MIT, or deliberately license the ROM BSD-3 with a per-file header
+saying so. They are different decisions with different consequences and both
+are defensible; what is not defensible is the current state, where the repo
+LICENSE and the artefact disagree.
+
+**WHY IT WAITS.** Changing `rom_note` changes the assembled bytes, and lite now
+RUNS the shipped ROM in two gates (verified against lite `origin/main`,
+2026-09-07): `test/i8086-bios-boots.test.mjs` asserts the no-media screen text
+and EOT 9 / 18 through INT 1Eh, and `test/i8086-bios-source-provenance.test.mjs`
+re-assembles the vendored `rom/bios.asm` with lite's own assembler and compares
+bytes — and asserts the manifest's source licence is `MIT`, which is CORRECT
+and is the check that makes the discrepancy visible. Any byte change forces a
+re-vendor, so this should land in the same commit as the CMOS/equipment-word
+/3F7h work rather than costing lite a second pin bump for a string.
+
 ## Sequencing
 
 1. **E0** (all) — days; removes shipped wrong answers.
