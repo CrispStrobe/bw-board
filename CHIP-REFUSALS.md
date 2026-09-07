@@ -28,7 +28,7 @@ the row it produces.
 
 Every row, from every chip, has exactly these eight fields:
 
-    {part, kind, feature, symptom, count, at, ats, atsMore, space}
+    {part, kind, feature, symptom, count, at, ats, atsMore, space, atOffset}
 
 **A downstream vendor should import the contract, not retype it.** The same
 list is exported as `ROW_FIELDS` from `src/chip-ledger.js`, which is part of
@@ -49,6 +49,7 @@ actually builds. Any two of them drifting is red.
     ats:     [0x08],       // every address, first-seen, bounded
     atsMore: false,        // true when the bound dropped one
     space:   'port',       // what `at` is an address IN: 'port' | 'register'
+    atOffset: 8,           // the same address CHIP-RELATIVE, before the base
 }
 ```
 
@@ -68,6 +69,33 @@ One deliberate exception, commented at its call site: the **YM3812 reports the
 OPL register index**, not the ISA port. Its port pair is two wide, so the port
 is identical for every OPL refusal and joins to nothing, while the register is
 what the part's map is keyed by and what the program actually named.
+
+**`space: 'port'` MEANS THE BUS PORT**, and it did not until 2026-09-07. The
+worked example is the one that found it:
+
+    board            PPI base   at      atOffset   space
+    BREADBOARD8086   0x00       0x03    3          port
+    PCXT8086         0x60       0x63    3          port
+
+Same chip, same refusal — the 8255 control register written with a mode-1 word.
+Before the fix both rows said `at: 3, space: 'port'`, which is TRUE on the
+breadboard and FALSE on the PC/XT, whose bus port is 0x63. The breadboard case
+is the dangerous one: it is right, so checking one board validates the wrong
+rule. brickwright-lite-ea measured it on the DOS bench, where their earlier
+probes were aimed at 03h on a board whose 8255 answers at 60h.
+
+**The chip is not where this was fixed.** `write(reg, val)` never sees a base,
+and a chip that knew one would carry the board's decode inside the part — wrong
+on the next board, and against the rule stated above. The MACHINE knows: its
+config names each chip's base. So the chip keeps reporting the offset and the
+collector resolves it, with `atOffset` preserving the chip-relative number that
+joins to the part's own register map.
+
+**A base the collector cannot resolve is not treated as zero.** Zero is a real
+base, so defaulting to it would emit a number that looks like a port and is not
+— the same defect, re-introduced by its own fix. Such a row reports `space:
+'register'` and the offset the chip knew. That includes a chip attached under a
+name the board's config does not place.
 
 **`space` says which of the two `at` is** — `'port'` or `'register'`. It exists
 because brickwright-lite-ea, building the first consumer, could not tell them

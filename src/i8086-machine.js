@@ -1656,12 +1656,39 @@ export class I8086Machine {
         // table on the reading side: a second list that must agree with these
         // chips. 'port' is the default because it is true of every chip but
         // the YM3812, which says so at its own call site.
+        //
+        // `at` IS THE BUS PORT, `atOffset` IS THE CHIP-RELATIVE ONE.
+        //
+        // A chip records the offset it was written at -- the 8255's control
+        // register is 3 -- because `write(reg, val)` never sees a base. That
+        // made `at: 3, space: 'port'` TRUE on a breadboard (PPI at 0x00) and
+        // FALSE on a PC/XT (PPI at 0x60, so the bus port is 0x63): same row,
+        // two meanings, and right on the board where being right teaches the
+        // wrong rule.
+        //
+        // The chip cannot fix this without carrying the board's decode. THIS
+        // layer knows it -- `this.config` names each chip's base -- so the
+        // resolution belongs here, and `atOffset` keeps the number that joins
+        // to the part's own register map.
+        const baseOf = (name) => {
+            const c = (this.config?.chips || []).find((x) => x.name === name);
+            return typeof c?.at === 'number' ? c.at : null;
+        };
         const push = (part, kind, feature, symptom, count, at, ats, atsMore, space) => {
             const set = (ats && ats.length) ? [...ats]
                 : (at !== null && at !== undefined) ? [at] : [];
+            const wantPort = (space ?? 'port') === 'port';
+            const base = wantPort ? baseOf(part) : null;
+            // A base this layer cannot resolve is NOT quietly treated as zero.
+            // Zero is a real base, so defaulting to it would emit a number that
+            // looks like a port and is not -- the exact defect being fixed. The
+            // row says 'register' instead and reports what the chip knew.
+            const resolved = (wantPort && base !== null) ? set.map((n) => n + base) : set;
             rows.push({part, kind, feature, symptom: symptom ?? null,
-                count: count ?? 1, at: set.length ? set[0] : null,
-                ats: set, atsMore: !!atsMore, space: space ?? 'port'});
+                count: count ?? 1, at: resolved.length ? resolved[0] : null,
+                ats: resolved, atsMore: !!atsMore,
+                space: wantPort ? (base === null ? 'register' : 'port') : (space ?? 'port'),
+                atOffset: set.length ? set[0] : null});
         };
 
         const sources = [

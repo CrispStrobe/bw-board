@@ -48,6 +48,7 @@
  */
 export const ROW_FIELDS = Object.freeze([
     'part', 'kind', 'feature', 'symptom', 'count', 'at', 'ats', 'atsMore', 'space',
+    'atOffset',
 ]);
 
 /**
@@ -69,6 +70,28 @@ export const ROW_FIELDS = Object.freeze([
  * guessable at the reading end, where nobody does.
  */
 export const SPACES = Object.freeze(['port', 'register']);
+
+/**
+ * `space: 'port'` MEANS THE BUS PORT, and it did not until 2026-09-07.
+ *
+ * The 8255 records the register offset it was written at -- 3 for the control
+ * register -- because that is all a chip can know: `write(reg, val)` never sees
+ * a base. The row then said `at: 3, space: 'port'`, which is TRUE on
+ * BREADBOARD8086 (the PPI sits at 0x00, so offset and port coincide) and FALSE
+ * on PCXT8086 (it sits at 0x60, so the bus port is 0x63). Same chip, same
+ * refusal, same row, two different meanings -- and the breadboard case is the
+ * dangerous one, because being right there validates the wrong rule.
+ *
+ * Measured by brickwright-lite-ea on the DOS bench, where their earlier probes
+ * were aimed at port 03h on a board whose 8255 answers at 60h.
+ *
+ * THE FIX IS NOT IN THE CHIP. A chip that knew its base would carry the board's
+ * decode inside the part and be wrong on the next board -- the rule this file
+ * already states. The MACHINE knows: its config names each chip's base. So the
+ * chip keeps reporting the offset, and the collector -- the board layer, which
+ * owns the decode -- resolves base + offset into `at` and preserves the
+ * chip-relative number in `atOffset`.
+ */
 
 /** Addresses kept per feature before `atsMore` takes over. */
 export const AT_CAP = 8;

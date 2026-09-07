@@ -437,7 +437,13 @@ test('a row says what its address is an address IN', async () => {
     const rows = m.chipRefusals();
     const d = rows.find((r) => r.part === 'dma');
     const o = rows.find((r) => r.part === 'opl');
-    assert.equal(d.space, 'port', 'the 8237 refusal arrived on an I/O port');
+    // `dma` is not a name this board's config places, so the collector cannot
+    // resolve a base and the row says 'register' -- it reports the offset the
+    // chip knew rather than a number that would look like a port and not be
+    // one. That is the fix for the 8255 `at` defect seen from the other side.
+    assert.equal(d.space, 'register',
+        'a chip attached under a name the board does not place has no resolvable port');
+    assert.equal(d.atOffset, 8, 'and the chip-relative number is preserved');
     assert.equal(o.space, 'register',
         'and the OPL reports its REGISTER index -- the one exception, and the '
         + 'reason this field has to exist rather than be assumed');
@@ -455,7 +461,10 @@ test('space defaults to port, so a chip that says nothing is not guessed about',
     noteRefusal(led, 'something', { at: 3 });
     const m = new I8086Machine(BREADBOARD8086);
     m.chips.quiet = { unmodelled: led };
-    assert.equal(m.chipRefusals()[0].space, 'port');
+    // Same reason as above: `quiet` is not placed by this board, so there is no
+    // base and the row will not claim a port it cannot compute.
+    assert.equal(m.chipRefusals()[0].space, 'register');
+    assert.equal(m.chipRefusals()[0].atOffset, 3);
 
     // And every space a row can carry is one the contract names.
     for (const r of m.chipRefusals()) {
@@ -559,4 +568,94 @@ test('chipRefusals answers "what is refused now", and the document says so', () 
     assert.match(doc, /what was ever refused/i,
         'the question the collector does NOT answer must be named, or a reader '
         + 'assumes it answers both');
+});
+
+test('the same refusal on two boards reports two different ports and one offset', async () => {
+    // THE DEFECT, as measured by brickwright-lite-ea on the DOS bench. The 8255
+    // records the register offset it was written at -- 3 for the control
+    // register -- because write(reg, val) never sees a base. The row said
+    // `at: 3, space: 'port'`, which is TRUE on a breadboard (PPI at 0x00) and
+    // FALSE on a PC/XT (PPI at 0x60, bus port 0x63).
+    //
+    // Same chip, same refusal, same row, two meanings. And the breadboard case
+    // is the dangerous one: it is correct, so checking one board validates the
+    // wrong rule.
+    //
+    // This test names BOTH boards, which is why it could not have passed before
+    // and cannot pass again by coincidence.
+    const { PCXT8086 } = await import('../src/i8086-machine.js');
+
+    const bread = new I8086Machine(BREADBOARD8086);
+    bread.chips.ppi1.write(3, 0xa0);
+    const b = bread.chipRefusals().find((r) => r.part === 'ppi1');
+
+    const xt = new I8086Machine(PCXT8086);
+    xt.chips.ppi1.write(3, 0xa0);
+    const x = xt.chipRefusals().find((r) => r.part === 'ppi1');
+
+    assert.equal(b.at, 0x03, 'breadboard: PPI at base 0x00, control register 3 -> port 03h');
+    assert.equal(x.at, 0x63, 'PC/XT: PPI at base 0x60, control register 3 -> port 63h');
+    assert.notEqual(b.at, x.at,
+        'the same refusal on two boards must NOT report the same number -- that was the bug');
+    assert.equal(b.atOffset, 3, 'the chip-relative number is the same on both');
+    assert.equal(x.atOffset, 3);
+    assert.equal(b.space, 'port');
+    assert.equal(x.space, 'port');
+});
+
+test('a base this layer cannot resolve reports the offset as a REGISTER, never as a port', async () => {
+    // lego-ac's addition, and the right one: the fallback has to be EXERCISED,
+    // or the comment describing it is a sentence about the code rather than
+    // about the gate.
+    //
+    // A real config whose chips list does not name this part. Zero is a real
+    // base, so defaulting to it would emit a number that looks like a port and
+    // is not -- which is the defect, re-introduced by the fix for it.
+    const { default: I8255 } = await import('../src/i8255.js');
+    const orphanBoard = { ...BREADBOARD8086, chips: [] };
+    const m = new I8086Machine(orphanBoard);
+    const ppi = new I8255();
+    ppi.write(3, 0xa0);
+    m.chips.unplaced = ppi;
+
+    const row = m.chipRefusals().find((r) => r.part === 'unplaced');
+    assert.ok(row, 'the refusal still arrives; only its address space changes');
+    assert.equal(row.space, 'register',
+        'with no base to resolve, the row must not claim "port"');
+    assert.equal(row.at, 3, 'and it reports what the chip actually knew');
+    assert.equal(row.atOffset, 3);
+});
+
+test("a port breakpoint set at the row's `at` fires on the program's OUT", async () => {
+    // THE ACCEPTANCE, and lego-ac is right that the test should DO it: if `at`
+    // is the clickable number, click it. A learner reads the line, sets a
+    // breakpoint on the port it names, and runs. Before this fix that number
+    // was 3 on a PC/XT, so the breakpoint sat on a port the program never
+    // touches while the write went to 0x63 -- silence that reads as a broken
+    // debugger.
+    //
+    // `hooks.onPortAccess` is the seam a port breakpoint watches: it reports
+    // the address the CPU named on the bus. My first draft of this test faked
+    // it with `assert.ok(x || true)`, which is the gate-that-cannot-fail
+    // species inside the test written to prove the acceptance.
+    const { PCXT8086 } = await import('../src/i8086-machine.js');
+
+    const hits = [];
+    const m = new I8086Machine(PCXT8086);
+    m.hooks.onPortAccess = ({ dir, port }) => { if (dir === 'out') hits.push(port); };
+
+    // A program writing the 8255 control register on THIS board: OUT 63h, AL.
+    m._out(0x63, 0xa0);   // the bus write an `OUT 63h, AL` performs
+
+    const row = m.chipRefusals().find((r) => r.part === 'ppi1');
+    assert.ok(row, 'the write produced no refusal row -- the mode word did not reach the chip');
+
+    assert.ok(hits.includes(row.at),
+        `a breakpoint set at the row's at (0x${row.at.toString(16)}) must fire on the bus port `
+        + `the program named; the OUTs seen were [${hits.map((h) => `0x${h.toString(16)}`).join(', ')}]`);
+    assert.ok(!hits.includes(row.atOffset) || row.atOffset === row.at,
+        `the register offset (${row.atOffset}) is NOT a bus port on this board -- a line printing `
+        + 'it sends a learner to set a breakpoint that never fires');
+    assert.equal(row.at, 0x63);
+    assert.equal(row.atOffset, 3);
 });
