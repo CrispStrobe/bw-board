@@ -194,6 +194,24 @@ export class ControllerPanel {
   getWidget(name) { return this._widgets.get(name) ?? null; }
 
   /**
+   * Whether widget cards hide the "-> part.param" binding line.
+   *
+   * PANEL-LEVEL, not per widget. The per-widget flags (hideLabel, hideValue,
+   * hideText, hideMaxOut) each describe one widget's own face; a binding line
+   * is the same kind of information on every card, and someone who wants it
+   * gone wants it gone everywhere rather than twenty times. `mode` is the
+   * precedent for a panel-level field, and it is serialised.
+   */
+  get hideBindings() { return !!this._hideBindings; }
+
+  setHideBindings(on) {
+    const next = !!on;
+    if (next === !!this._hideBindings) return;
+    this._hideBindings = next;
+    this._emit('layout', { hideBindings: next });
+  }
+
+  /**
    * Merge layout fields (placement/size/rotation + visual styling). Emits
    * 'layout' so views re-render and hosts persist.
    *
@@ -785,7 +803,14 @@ export class ControllerPanel {
     // faceplate into a dead one on the next load. It was dropped here for a
     // year: four shipped example layouts opened dead, and a host that fixed
     // them by hand lost the fix on the first save.
-    return { version: 1, mode: this._mode, widgets };
+    // hideBindings is PANEL-LEVEL and it is serialised here for the same
+    // reason `mode` is, recorded in the comment above: a panel-level field
+    // that toJSON forgets is a setting the user sets and loses on the next
+    // load, silently, and that one went unnoticed for a year. Emitted only
+    // when true, so panels that never set it serialise byte-identically.
+    const out = { version: 1, mode: this._mode, widgets };
+    if (this._hideBindings) out.hideBindings = true;
+    return out;
   }
 
   /** Restore from a previously serialized object. */
@@ -794,6 +819,7 @@ export class ControllerPanel {
       throw new Error('Invalid controller panel data');
     }
     const panel = new ControllerPanel();
+    if (data.hideBindings) panel._hideBindings = true;
     for (const entry of data.widgets) {
       const w = panel.addWidget(entry.name, entry.type, entry.config, entry.layout);
       if (entry.binding) w.binding = { ...entry.binding };
