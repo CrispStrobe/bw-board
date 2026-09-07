@@ -3747,7 +3747,23 @@ is started.
 
 ### R2 The tracked demo ROMs are executed but never checked against their generators
 
-**Measured here, 2026-09-06. NOT A CURRENT BUG — all ten are in sync today.**
+**GUARDED 2026-09-07 by `test/rom-demos-match-generators.test.mjs`.** Each of
+the ten generators is rebuilt into a THROWAWAY temp directory and compared
+against the tracked file; a mismatch names the byte, the generator and the
+command to run. `--out <dir>` was added to all ten builders for exactly this,
+and the header says why: a gate that regenerated into `rom/` would overwrite
+the evidence with the thing it was comparing against and pass from its second
+run onward. An eleventh test asserts the generator list has not drifted from
+`rom/*.bin`, so a demo added without a line there is caught rather than
+silently unguarded.
+
+Reach verified rather than assumed: perturbing one opcode in
+`build-blink-demo.mjs` without regenerating turns it red at byte 9 naming both
+files, and dropping a demo from the list turns the drift test red. Both green
+again when restored.
+
+**Original finding, 2026-09-06 — all ten were in sync when it was written, so
+this was closed before anything broke rather than after.**
 
 **PROMPTED BY brickwright-lite-ea's FINDING, not lego-be's.** This entry first
 credited the relay instead of the measurement, which is the same error one

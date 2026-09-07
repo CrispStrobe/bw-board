@@ -26,7 +26,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const romDir = join(here, '..', 'rom');
+// `--out <dir>` writes the image somewhere other than rom/. It exists for the
+// freshness gate in test/rom-demos-match-generators.test.mjs, which rebuilds
+// each demo into a temp directory and compares it against the tracked file.
+// That test MUST NOT regenerate into rom/: it would overwrite the evidence
+// with the thing it was supposed to compare against, and pass from its second
+// run onward no matter what the generator did.
+const outIdx = process.argv.indexOf('--out');
+const romDir = outIdx >= 0 && process.argv[outIdx + 1]
+    ? process.argv[outIdx + 1]
+    : join(here, '..', 'rom');
 
 const code = [];
 const e = (...b) => code.push(...b);
