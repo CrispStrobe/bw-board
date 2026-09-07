@@ -1716,13 +1716,46 @@ FAT driver on a MINIX filesystem and rejects it. Nothing above claims MINIX
 boots to a root mount -- it claims the read path is correct, which is what was
 measured.
 
-**STILL WRONG, and deliberately not changed:** the CMOS drive type still says
-360K, which is why ELKS prints `df0 is 360k/PC (1)` and `fd0: 233G CHS
-17482,-31870,-32384` from its own `df` driver while its probe correctly finds
-80/2/18. That is the equipment word, the CMOS byte and the data-rate register
-at 3F7h this ROM never writes -- a separate change, and not one that was
-breaking a read.
+**STILL WRONG — AND THE OBVIOUS DESCRIPTION OF IT IS FALSE, checked
+2026-09-07 before starting the work.** This entry, and my own messages to
+lego-ac, said "the CMOS drive type still says 360K". **There is no CMOS.**
 
+```
+  RTC / CMOS chip in src/i8086-machine.js   none — no such chip kind exists
+  in the PCXT8086 preset                    pic, pit, ppi, spk, dma, fdc, cga
+  ROM references to ports 70h/71h           none
+```
+
+An IBM PC/XT had no CMOS at all; it arrived with the AT. So ELKS's line reads
+the way it does for a different reason than the one recorded here:
+
+```
+  df: CMOS df0 is unknown (15)df0 is 360k/PC (1), df1 is unknown (15)
+```
+
+`unknown (15)` is ELKS reading an ABSENT CMOS and getting 0Fh, and
+`360k/PC (1)` is its own FALLBACK when the CMOS says nothing. There is no byte
+in this machine saying 360K, so there is no byte to correct.
+
+**The equipment word cannot say it either.** `EQUIP_WORD equ 0021h` encodes
+"a diskette drive is present", the video mode, and the drive COUNT in bits
+6-7. It has no drive-TYPE field. That half of the task is not small, it is
+impossible as stated.
+
+**And 3F7h is the same shape.** The ROM already documents it at `d_type`: the
+XT card this ROM is written for does not decode 3F7h at all, and `src/upd765.js`
+models the AT behaviour and says so.
+
+**So the remaining ELKS mismatch is not three bugs; it is one decision.** All
+three items are AT-class features on a machine that is deliberately an XT. To
+make ELKS see 1.44M from configuration rather than from its own probe, this
+tier would have to gain a CMOS/RTC (MC146818 at 70h/71h) with a drive-type
+byte, and decode 3F7h — that is, become an AT, or grow a second preset that is
+one. **That is a machine-definition decision and it belongs to the owner**, not
+to a bug-fix commit. Note what is NOT at stake: transfers are already correct,
+because E6.8.8b made the driver probe the medium instead of trusting a table.
+ELKS's own probe already finds 80/2/18. What is wrong is only what the machine
+DECLARES about itself before anyone looks.
 
 #### E6.8.4l The BIU is not blocked — it is UNWANTED, on the record (2026-09-05)
 
