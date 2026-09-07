@@ -354,10 +354,13 @@ test('an SF entry RETURNS rather than hanging, which is the whole point', {skip:
     const view = new DataView(buildBootrom().buffer);
     const dataTable = view.getUint16(0x16, true);
     const sf = view.getUint16(dataTable + 2, true);
-    // Index 2 (fmul), which is still the stub. Index 0 was used here until
-    // fadd became a real routine and this quietly started timing THAT — the
-    // test must keep measuring the stub it is named for.
-    const stub = view.getUint32(sf + 2 * 4, true);
+    // Index 6 (fsqrt), still the stub. This has now moved three times — off
+    // index 0, 2 and 3 as fadd, fmul and fdiv landed. Each time it silently
+    // began timing a REAL routine instead of the stub it is named for, which
+    // is why every move is recorded instead of quietly made. If it ever runs
+    // out of stubs to point at, the operator set is complete and this test
+    // should be deleted rather than repointed again.
+    const stub = view.getUint32(sf + 6 * 4, true);
 
     const steps = run(stub, {0: F32(2.5), 1: F32(1.0)});
     assert.ok(steps >= 0, 'the SF stub never returned — it hung, which is the bug it replaces');
@@ -431,6 +434,54 @@ test('fsub agrees with JavaScript, and is fadd with one bit flipped', {skip: SKI
     assert.ok(n > 9000, `only ${n} pairs checked`);
 });
 
+test('fmul agrees with JavaScript on every non-subnormal pair', {skip: SKIP}, async () => {
+    // The 24x24 product is assembled from four 12-bit partial products, so the
+    // failure mode is a dropped carry rather than a wrong exponent — and a
+    // dropped carry is invisible on small integers. The sweep below is what
+    // catches it: the first version treated ah*bh as the high word instead of
+    // the coefficient of 2^24 and returned exactly twice the right answer,
+    // which 1*1 shows and 3*5 does not.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fmul = view.getUint32(sf + 2 * 4, true);
+    let n = 0;
+    const vs = vectors();
+    for (const a of vs) for (const b of vs) {
+        const x = R(a), y = R(b), want = Math.fround(x * y);
+        if (SUBNORMAL(x) || SUBNORMAL(y) || SUBNORMAL(want)) continue;
+        assert.ok(run(fmul, {0: F32(x), 1: F32(y)}) >= 0, `fmul(${x}, ${y}) never returned`);
+        const got = mcu.core.registers[0] >>> 0;
+        if (Number.isNaN(want)) assert.ok(Number.isNaN(F(got)), `fmul(${x}, ${y}) = ${F(got)}, want NaN`);
+        else assert.equal(got, F32(want), `fmul(${x}, ${y}) = ${F(got)}, want ${want}`);
+        n++;
+    }
+    assert.ok(n > 9000, `only ${n} pairs checked`);
+});
+
+test('fdiv agrees with JavaScript on every non-subnormal pair', {skip: SKIP}, async () => {
+    // Long division, one bit per iteration, because this core has no divide.
+    // The tie cases are the point: a quotient that terminates exactly and one
+    // that does not must round differently on the same guard bit, and the
+    // final remainder is the only thing that distinguishes them.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fdiv = view.getUint32(sf + 3 * 4, true);
+    let n = 0;
+    const vs = vectors();
+    for (const a of vs) for (const b of vs) {
+        const x = R(a), y = R(b), want = Math.fround(x / y);
+        if (SUBNORMAL(x) || SUBNORMAL(y) || SUBNORMAL(want)) continue;
+        assert.ok(run(fdiv, {0: F32(x), 1: F32(y)}, 4000) >= 0, `fdiv(${x}, ${y}) never returned`);
+        const got = mcu.core.registers[0] >>> 0;
+        if (Number.isNaN(want)) assert.ok(Number.isNaN(F(got)), `fdiv(${x}, ${y}) = ${F(got)}, want NaN`);
+        else assert.equal(got, F32(want), `fdiv(${x}, ${y}) = ${F(got)}, want ${want}`);
+        n++;
+    }
+    assert.ok(n > 9000, `only ${n} pairs checked`);
+});
+
 test('int2float agrees with JavaScript, ties included', {skip: SKIP}, async () => {
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
@@ -467,14 +518,14 @@ test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an ora
         'a subnormal operand is treated as zero — JavaScript would give 2.8e-45');
 });
 
-test('NAMED STOP: fmul, fdiv and the rest are still the quiet-NaN stub', {skip: SKIP}, async () => {
+test('NAMED STOP: fsqrt, the conversions and the transcendentals are still the stub', {skip: SKIP}, async () => {
     // fadd, fsub and int2float have left this list. Implementing another
     // operator must BREAK this test, so whoever does it comes here and records
     // which one now works rather than leaving a stale claim standing.
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
     const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
-    const stubbed = [[2, 'fmul'], [3, 'fdiv'], [6, 'fsqrt'], [7, 'float2int'],
+    const stubbed = [[6, 'fsqrt'], [7, 'float2int'],
         [9, 'float2uint'], [12, 'fix2float'], [13, 'uint2float'], [15, 'fcos'],
         [16, 'fsin'], [19, 'fexp'], [20, 'fln']];
     for (const [i, name] of stubbed) {

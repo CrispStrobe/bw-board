@@ -658,6 +658,292 @@ export function buildBootrom () {
         0xbd10                      // pop  {r4, pc}
     ]);
 
+    // ── fmul(r0 = a, r1 = b) → r0 = a * b ──────────────────────────────
+    //
+    // SF table index 2. The difficulty is not the floating point, it is that
+    // this core's multiply is 32x32 KEEPING ONLY THE LOW 32 BITS, and two
+    // 24-bit significands make a 48-bit product. So it is done in 12-bit
+    // halves — four partial products reassembled with an explicit carry,
+    // because there is no wire between the two halves either:
+    //
+    //   a*b = (ah*bh)<<24 + (ah*bl + al*bh)<<12 + al*bl
+    //
+    // The middle term reaches 2^25, so shifting it left by 12 overflows 32
+    // bits: its low half goes into the bottom word and its top five bits into
+    // the high one, with ADCS carrying between them. The zero that ADCS adds
+    // is loaded BEFORE the ADDS that sets the carry, because MOVS would clear
+    // it again.
+    //
+    // A product of two values in [1,2) lands in [1,4), so the leading bit is
+    // at 47 or at 46 and there are exactly two normalisation cases.
+    const fmul = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x0002, // movs r2, r0
+        0x404a, // eors r2, r1
+        0x0fd7, // lsrs r7, r2, #31       ; r7 = sign = sa XOR sb
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24       ; r2 = exponent of a
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9        ; r3 = mantissa of a
+        0x004c, // lsls r4, r1, #1
+        0x0e24, // lsrs r4, r4, #24       ; r4 = exponent of b
+        0x024d, // lsls r5, r1, #9
+        0x0a6d, // lsrs r5, r5, #9        ; r5 = mantissa of b
+        0x2aff, // cmp  r2, #255
+        ['bne', 'fm_b_chk'],
+        0x2b00, // cmp  r3, #0
+        ['bne', 'fm_nan'],                      // a is NaN
+        0x2cff, // cmp  r4, #255
+        ['bne', 'fm_a_inf_bfin'],
+        0x2d00, // cmp  r5, #0
+        ['bne', 'fm_nan'],                      // Inf * NaN
+        ['b', 'fm_inf'],                        // Inf * Inf
+        ['label', 'fm_a_inf_bfin'],
+        0x2c00, // cmp  r4, #0
+        ['bne', 'fm_inf'],                      // Inf * finite
+        ['b', 'fm_nan'],                        // Inf * 0
+        ['label', 'fm_b_chk'],
+        0x2cff, // cmp  r4, #255
+        ['bne', 'fm_finite'],
+        0x2d00, // cmp  r5, #0
+        ['bne', 'fm_nan'],                      // b is NaN
+        0x2a00, // cmp  r2, #0
+        ['bne', 'fm_inf'],
+        0x2b00, // cmp  r3, #0
+        ['beq', 'fm_nan'],                      // 0 * Inf
+        ['label', 'fm_inf'],
+        0x20ff, // movs r0, #255
+        0x05c0, // lsls r0, r0, #23
+        ['b', 'fm_signit'],
+        ['label', 'fm_nan'],
+        0x20ff, // movs r0, #255
+        0x05c0, // lsls r0, r0, #23
+        0x2101, // movs r1, #1
+        0x0589, // lsls r1, r1, #22
+        0x4308, // orrs r0, r1            ; 7FC00000h
+        0xbdf0, // pop  {r4-r7, pc}       ; a NaN keeps no sign here
+        ['label', 'fm_zero'],
+        0x2000, // movs r0, #0
+        ['label', 'fm_signit'],
+        0x07ff, // lsls r7, r7, #31
+        0x4338, // orrs r0, r7
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'fm_finite'],
+        0x2a00, // cmp  r2, #0
+        ['beq', 'fm_zero'],                     // a is zero or subnormal
+        0x2c00, // cmp  r4, #0
+        ['beq', 'fm_zero'],                     // b is zero or subnormal
+        0x1916, // adds r6, r2, r4
+        0x3e7f, // subs r6, #127          ; r6 = ea + eb - 127
+        0x2001, // movs r0, #1
+        0x05c0, // lsls r0, r0, #23
+        0x4303, // orrs r3, r0            ; a = 1.ma, 24 bits
+        0x4305, // orrs r5, r0            ; b = 1.mb
+        0x20ff, // movs r0, #255
+        0x0100, // lsls r0, r0, #4
+        0x300f, // adds r0, #15           ; r0 = 0FFFh
+        0x001a, // movs r2, r3
+        0x4002, // ands r2, r0            ; r2 = al
+        0x0b1b, // lsrs r3, r3, #12       ; r3 = ah
+        0x002c, // movs r4, r5
+        0x4004, // ands r4, r0            ; r4 = bl
+        0x0b2d, // lsrs r5, r5, #12       ; r5 = bh
+        0x0010, // movs r0, r2
+        0x4360, // muls r0, r4            ; r0 = al*bl
+        0x0019, // movs r1, r3
+        0x4369, // muls r1, r5            ; r1 = ah*bh
+        0x436a, // muls r2, r5            ; r2 = al*bh
+        0x4363, // muls r3, r4            ; r3 = ah*bl
+        0x18d2, // adds r2, r2, r3        ; r2 = the middle term, < 2^25
+        0x2500, // movs r5, #0            ; zeroed before any ADDS, which sets C
+        0x0013, // movs r3, r2
+        0x031b, // lsls r3, r3, #12       ; M << 12, low half
+        0x0014, // movs r4, r2
+        0x0d24, // lsrs r4, r4, #20       ; M >> 20, the part above bit 31
+        0x18c0, // adds r0, r0, r3        ; lo += M<<12
+        0x416c, // adcs r4, r5            ; ...carrying into M>>20
+        0x000b, // movs r3, r1
+        0x061b, // lsls r3, r3, #24       ; A << 24, low half
+        0x0a09, // lsrs r1, r1, #8        ; A >> 8, the part above bit 31
+        0x18c0, // adds r0, r0, r3        ; lo += A<<24
+        0x4169, // adcs r1, r5            ; ...carrying into A>>8
+        0x1909, // adds r1, r1, r4        ; r1 = the high 16 bits of the product
+        0x0bca, // lsrs r2, r1, #15       ; bit 47 of the product
+        0x2a00, // cmp  r2, #0
+        ['beq', 'fm_lead46'],
+        0x000a, // movs r2, r1
+        0x0212, // lsls r2, r2, #8
+        0x0003, // movs r3, r0
+        0x0e1b, // lsrs r3, r3, #24
+        0x431a, // orrs r2, r3            ; r2 = 24-bit significand
+        0x0003, // movs r3, r0
+        0x021b, // lsls r3, r3, #8        ; guard in bit 31, sticky below
+        0x3601, // adds r6, #1            ; ...and the exponent grows by one
+        ['b', 'fm_round'],
+        ['label', 'fm_lead46'],
+        0x000a, // movs r2, r1
+        0x0252, // lsls r2, r2, #9
+        0x0003, // movs r3, r0
+        0x0ddb, // lsrs r3, r3, #23
+        0x431a, // orrs r2, r3            ; r2 = 24-bit significand
+        0x0003, // movs r3, r0
+        0x025b, // lsls r3, r3, #9        ; guard in bit 31, sticky below
+        ['label', 'fm_round'],
+        0x2b00, // cmp  r3, #0
+        ['beq', 'fm_pack'],                     // nothing below the significand
+        0x001c, // movs r4, r3            ; N = the guard bit
+        ['bpl', 'fm_pack'],                     // guard clear: round down
+        0x005c, // lsls r4, r3, #1        ; anything under the guard is sticky
+        ['bne', 'fm_up'],
+        0x0014, // movs r4, r2
+        0x07e4, // lsls r4, r4, #31       ; an exact tie: round to even
+        ['beq', 'fm_pack'],
+        ['label', 'fm_up'],
+        0x3201, // adds r2, #1
+        0x0e14, // lsrs r4, r2, #24       ; did it carry out of 24 bits?
+        0x2c00, // cmp  r4, #0
+        ['beq', 'fm_pack'],
+        0x0852, // lsrs r2, r2, #1
+        0x3601, // adds r6, #1
+        ['label', 'fm_pack'],
+        0x2eff, // cmp  r6, #255
+        ['blt', 'fm_inrange'],
+        ['b', 'fm_inf'],                        // overflowed to infinity
+        ['label', 'fm_inrange'],
+        0x2e00, // cmp  r6, #0
+        ['ble', 'fm_zero'],                     // underflowed: flushed to zero
+        0x0252, // lsls r2, r2, #9
+        0x0a52, // lsrs r2, r2, #9        ; drop the implicit 1
+        0x05f6, // lsls r6, r6, #23
+        0x0010, // movs r0, r2
+        0x4330, // orrs r0, r6
+        ['b', 'fm_signit'],
+    ]);
+
+    // ── fdiv(r0 = a, r1 = b) → r0 = a / b ──────────────────────────────
+    //
+    // SF table index 3. This core has no divide instruction, so the quotient
+    // is produced one bit at a time: shift, compare, subtract if it fits —
+    // long division, and the loop below is that and nothing else.
+    //
+    // The numerator is doubled once first if it is smaller than the
+    // denominator, so the quotient always lands in [1, 2) and there is one
+    // normalisation case instead of two. Twenty-five bits are produced: 24
+    // for the significand and one guard bit. THE FINAL REMAINDER IS THE
+    // STICKY BIT — non-zero means the division did not terminate, which is
+    // exactly what breaks a tie.
+    const fdiv = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x0002, // movs r2, r0
+        0x404a, // eors r2, r1
+        0x0fd7, // lsrs r7, r2, #31       ; sign = sa XOR sb
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24       ; r2 = ea
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9        ; r3 = ma
+        0x004c, // lsls r4, r1, #1
+        0x0e24, // lsrs r4, r4, #24       ; r4 = eb
+        0x024d, // lsls r5, r1, #9
+        0x0a6d, // lsrs r5, r5, #9        ; r5 = mb
+        0x2aff, // cmp  r2, #255
+        ['bne', 'fd_b_chk'],
+        0x2b00, // cmp  r3, #0
+        ['bne', 'fd_nan'],                      // a is NaN
+        0x2cff, // cmp  r4, #255
+        ['beq', 'fd_nan'],                      // Inf / Inf, or Inf / NaN
+        ['b', 'fd_inf'],                        // Inf / finite
+        ['label', 'fd_b_chk'],
+        0x2cff, // cmp  r4, #255
+        ['bne', 'fd_finite'],
+        0x2d00, // cmp  r5, #0
+        ['bne', 'fd_nan'],                      // b is NaN
+        ['b', 'fd_zero'],                       // finite / Inf
+        ['label', 'fd_inf'],
+        0x20ff, // movs r0, #255
+        0x05c0, // lsls r0, r0, #23
+        ['b', 'fd_signit'],
+        ['label', 'fd_nan'],
+        0x20ff, // movs r0, #255
+        0x05c0, // lsls r0, r0, #23
+        0x2101, // movs r1, #1
+        0x0589, // lsls r1, r1, #22
+        0x4308, // orrs r0, r1
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'fd_zero'],
+        0x2000, // movs r0, #0
+        ['label', 'fd_signit'],
+        0x07ff, // lsls r7, r7, #31
+        0x4338, // orrs r0, r7
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'fd_finite'],
+        0x2c00, // cmp  r4, #0
+        ['bne', 'fd_bnz'],
+        0x2a00, // cmp  r2, #0
+        ['beq', 'fd_nan'],                      // 0 / 0
+        ['b', 'fd_inf'],                        // x / 0
+        ['label', 'fd_bnz'],
+        0x2a00, // cmp  r2, #0
+        ['beq', 'fd_zero'],                     // 0 / x
+        0x1b16, // subs r6, r2, r4
+        0x367f, // adds r6, #127          ; r6 = ea - eb + 127
+        0x2001, // movs r0, #1
+        0x05c0, // lsls r0, r0, #23
+        0x4303, // orrs r3, r0            ; numerator   = 1.ma
+        0x4305, // orrs r5, r0            ; denominator = 1.mb
+        0x42ab, // cmp  r3, r5
+        ['bhs', 'fd_ready'],
+        0x005b, // lsls r3, r3, #1        ; ma < mb: one doubling makes it so
+        0x3e01, // subs r6, #1
+        ['label', 'fd_ready'],
+        0x2100, // movs r1, #0            ; quotient
+        0x2219, // movs r2, #25           ; bits to produce
+        ['label', 'fd_loop'],
+        0x0049, // lsls r1, r1, #1
+        0x42ab, // cmp  r3, r5
+        ['blo', 'fd_nobit'],
+        0x1b5b, // subs r3, r3, r5        ; it fits: take it
+        0x3101, // adds r1, #1
+        ['label', 'fd_nobit'],
+        0x005b, // lsls r3, r3, #1        ; bring down the next place
+        0x3a01, // subs r2, #1
+        0x2a00, // cmp  r2, #0
+        ['bne', 'fd_loop'],
+        0x000a, // movs r2, r1
+        0x0852, // lsrs r2, r2, #1        ; r2 = 24-bit significand
+        0x2401, // movs r4, #1
+        0x400c, // ands r4, r1            ; r4 = the guard bit
+        ['label', 'fd_round'],
+        0x2c00, // cmp  r4, #0
+        ['beq', 'fd_pack'],                     // guard clear: round down
+        0x2b00, // cmp  r3, #0
+        ['bne', 'fd_up'],                       // a remainder is sticky: round up
+        0x0014, // movs r4, r2
+        0x07e4, // lsls r4, r4, #31       ; an exact tie: round to even
+        ['beq', 'fd_pack'],
+        ['label', 'fd_up'],
+        0x3201, // adds r2, #1
+        0x0e14, // lsrs r4, r2, #24
+        0x2c00, // cmp  r4, #0
+        ['beq', 'fd_pack'],
+        0x0852, // lsrs r2, r2, #1
+        0x3601, // adds r6, #1
+        ['label', 'fd_pack'],
+        0x2eff, // cmp  r6, #255
+        ['blt', 'fd_inrange'],
+        ['b', 'fd_inf'],
+        ['label', 'fd_inrange'],
+        0x2e00, // cmp  r6, #0
+        ['ble', 'fd_zero'],                     // underflow: flushed
+        0x0252, // lsls r2, r2, #9
+        0x0a52, // lsrs r2, r2, #9
+        0x05f6, // lsls r6, r6, #23
+        0x0010, // movs r0, r2
+        0x4330, // orrs r0, r6
+        ['b', 'fd_signit'],
+    ]);
+
     // ── the single-precision soft-float stub ───────────────────────────
     //
     // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
@@ -769,6 +1055,8 @@ export function buildBootrom () {
     // UNimplemented ones still return the quiet NaN.
     view.setUint32(sfTable + 0 * 4, thumb(fadd), true);
     view.setUint32(sfTable + 1 * 4, thumb(fsub), true);
+    view.setUint32(sfTable + 2 * 4, thumb(fmul), true);
+    view.setUint32(sfTable + 3 * 4, thumb(fdiv), true);
     view.setUint32(sfTable + 11 * 4, thumb(int2float), true);
 
     const dataTable = sfTable + SF_TABLE_ENTRIES * 4;

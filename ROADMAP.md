@@ -3878,16 +3878,18 @@ signatures — and satisfying it with our own IEEE-754 single-precision
 arithmetic is the same standard the rest of this file already meets. This is a
 real implementation task, not a stub: it is the largest item in this section.
 
-**PARTIAL, 2026-09-07: `fadd`, `fsub` AND `int2float` ARE IMPLEMENTED AND
-GRADED; `fmul`, `fdiv` AND THE REST ARE STILL THE STUB.** The stop moved; it
+**THE FOUR ARITHMETIC OPERATORS ARE IMPLEMENTED AND GRADED, 2026-09-07.**
+`fadd`, `fsub`, `fmul`, `fdiv` and `int2float`. The stop moved four times; it
 did not disappear.
 
 ```
   index  operator     status
-  0      fadd         implemented, 6,435 vectors agree with JavaScript
-  1      fsub         implemented, 6,421 vectors agree
-  11     int2float    implemented, 4,025 vectors agree
-  rest   fmul, fdiv, fsqrt, the conversions, fcos/fsin/fexp/fln
+  0      fadd         6,435 vector pairs agree with Math.fround
+  1      fsub         6,455 agree
+  2      fmul         6,213 agree
+  3      fdiv         6,159 agree
+  11     int2float    4,025 agree
+  rest   fsqrt, the conversions, fcos/fsin/ftan/fexp/fln
                       quiet-NaN stub, unimplemented, named in the test
 ```
 
@@ -3956,11 +3958,19 @@ The decisive run drives the REPL against this sha, where three outcomes are
 now distinguishable: 3.5 (works), NaN (a still-stubbed operator), 0
 (delivered and still wrong, with much less left to hide).
 
-**REMAINING, AND WHY IT IS THE HARD HALF.** `fmul` needs a 24×24→48-bit product
-on a core whose multiply is 32×32→32 low only: four 12-bit partial products
-reassembled across two registers with an explicit carry, and register pressure
-already forces spills. `fdiv` needs restoring division. Neither is conceptually
-hard and both are long, and the shortcut remains a trap for the reason below.
+**HOW THE TWO HARD ONES WERE DONE.** `fmul` needs a 24×24→48-bit product on a
+core whose multiply keeps only the low 32 bits, so it is four 12-bit partial
+products reassembled with an explicit carry — and the first version treated
+`ah*bh` as the HIGH WORD rather than the coefficient of 2^24, which returned
+exactly twice the right answer. `1*1 = 2` showed it; `3*5` would not have.
+`fdiv` has no divide instruction to use, so the quotient is produced one bit
+per iteration by shift-compare-subtract, with the FINAL REMAINDER as the sticky
+bit — that remainder is the only thing distinguishing a quotient that
+terminates exactly from one that does not, and it is what breaks the tie.
+
+**REMAINING:** `fsqrt`, the float↔fix/uint conversions, and the
+transcendentals (`fcos`, `fsin`, `ftan`, `fexp`, `fln`). None is needed for
+ordinary arithmetic; all are still the stub and still named in the test.
 
 What landed: `'SF'` now resolves to a real 21-entry table at the datasheet's
 layout (§2.8.3, indices 0..16 cross-checked against two independent sources
