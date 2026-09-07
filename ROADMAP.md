@@ -3968,6 +3968,40 @@ per iteration by shift-compare-subtract, with the FINAL REMAINDER as the sticky
 bit — that remainder is the only thing distinguishing a quotient that
 terminates exactly from one that does not, and it is what breaks the tie.
 
+**THE SF TABLE IS ELIMINATED AS THE CAUSE OF KALUMA'S ZERO (2026-09-07).**
+lego-be re-ran the REPL probe on a tree carrying all four operators (the
+vendored bootrom grew 22,009 → 50,440 bytes) and `2.5+1.0` STILL answers 0.
+Under the three-way key that is decisive: **not NaN**, so not a stubbed entry;
+the table is found, graded and reachable; the answer is unchanged. Whatever
+produces the zero, it is not this table.
+
+The chain is worth keeping as a shape, because every step was wrong in a
+different way and each was retired by measurement rather than argument:
+
+```
+  lego-be   0 and not NaN                     right, and the useful fact
+  me        "therefore not reached"           wrong -- inference from a
+                                              component to a path
+  me        direct lookup read: 'SF' -> 0x3a0 retires "not reached"
+  lego-be   all four operators, still 0       retires the table itself
+```
+
+**WHERE TO LOOK NEXT, from this repo's own boot trace.** Kaluma makes fourteen
+`rom_table_lookup` calls and they are exactly the SDK's standard startup set —
+`P3` popcount32, `L3` clz32, `T3` ctz32, `R3` reverse32, `MS`/`MC`/`S4`/`C4`
+the memory routines, `IF`/`EX`/`FC` the flash routines, and `SF`. **`SD`, the
+soft-DOUBLE table, is never asked for.** So the double routines are not coming
+from ROM, and the single-precision table we supply is the only float path this
+build takes from us.
+
+That makes the next measurement specific rather than exploratory: instrument
+the SF entry-hit counter DURING a REPL evaluation, not during boot. If `fadd`
+is never entered while `2.5+1.0` is evaluated, the expression is not reaching
+the ROM float path at all and the zero belongs to the interpreter or the
+formatter — and `1.5+1.5` printing `3` while `2.5+1.0` prints `0` would
+separate those two in one line. This repo's probe boots and stops; the harness
+that drives the REPL is lite's.
+
 **REMAINING:** `fsqrt`, the float↔fix/uint conversions, and the
 transcendentals (`fcos`, `fsin`, `ftan`, `fexp`, `fln`). None is needed for
 ordinary arithmetic; all are still the stub and still named in the test.
