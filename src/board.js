@@ -286,13 +286,13 @@ export class BoardImpl {
    * @returns {{nets: import('./types.js').Net[], merges: Array<{terminal: string, into: string, from: string}>}}
    */
   static _coalesceSharedTerminals(nets) {
-    const owner = new Map(); // "part terminal" → index of first net seen
+    const owner = new Map(); // "part\0terminal" → index of first net seen
     const parent = nets.map((_, i) => i);
     const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
     const merges = [];
     nets.forEach((net, i) => {
       for (const t of net.terminals) {
-        const key = `${t.part} ${t.terminal}`;
+        const key = `${t.part}\0${t.terminal}`;
         const first = owner.get(key);
         if (first === undefined) { owner.set(key, i); continue; }
         const a = find(first);
@@ -322,7 +322,7 @@ export class BoardImpl {
       return {
         ...n,
         terminals: n.terminals.filter(t => {
-          const k = `${t.part} ${t.terminal}`;
+          const k = `${t.part}\0${t.terminal}`;
           if (seen.has(k)) return false;
           seen.add(k);
           return true;
@@ -1774,7 +1774,7 @@ export class BoardImpl {
   /** @param {string} partId @param {string} verb @param {string} why */
   _recordRefusedControl(partId, verb, why) {
     if (!this._refusedControls) this._refusedControls = new Map();
-    const key = `${partId} ${verb}`;
+    const key = `${partId}\0${verb}`;
     const cur = this._refusedControls.get(key);
     if (cur) { cur.count++; return; }
     if (this._refusedControls.size >= 20) return; // bounded; first 20 shapes
