@@ -1746,16 +1746,28 @@ impossible as stated.
 XT card this ROM is written for does not decode 3F7h at all, and `src/upd765.js`
 models the AT behaviour and says so.
 
-**So the remaining ELKS mismatch is not three bugs; it is one decision.** All
-three items are AT-class features on a machine that is deliberately an XT. To
-make ELKS see 1.44M from configuration rather than from its own probe, this
-tier would have to gain a CMOS/RTC (MC146818 at 70h/71h) with a drive-type
-byte, and decode 3F7h — that is, become an AT, or grow a second preset that is
-one. **That is a machine-definition decision and it belongs to the owner**, not
-to a bug-fix commit. Note what is NOT at stake: transfers are already correct,
-because E6.8.8b made the driver probe the medium instead of trusting a table.
-ELKS's own probe already finds 80/2/18. What is wrong is only what the machine
-DECLARES about itself before anyone looks.
+**DECIDED 2026-09-07: THIS TIER STAYS AN XT, AND THE ITEM IS CLOSED.** The
+remaining mismatch was never three bugs; it was one machine-definition
+question, and the owner has answered it. All three items — a CMOS drive-type
+byte, a drive-type field in the equipment word, a decoded 3F7h — are AT-class
+features, and this preset is deliberately a PC/XT. **The ROM already declares
+that correctly**: the model byte at FFFF:000E is `0FEh`, "PC/XT class", which
+is what the machine is.
+
+The precedent is E6.8.4l's, and the reasoning is the same one word for word:
+this is not *hard, deferred*, it is **no demand, not started**. Nothing is
+broken. Transfers are correct because E6.8.8b made the driver PROBE the medium
+rather than trust a table; ELKS's own probe finds 80 cylinders, 2 heads and 18
+sectors; brickwright-lite's two ROM gates pin exactly that. The only thing that
+would change is a diagnostic line ELKS prints from a fallback, and lego-ac has
+dropped the acceptance line that rested on it.
+
+**If it is ever reopened, the route is a SECOND PRESET and not this one.**
+Adding a CMOS/RTC at 70h/71h and decoding 3F7h inside `PCXT8086` would make a
+preset named for an XT stop being one, and every consumer of it would silently
+change machine. A `PCAT8086` alongside it is the honest shape, and it wants a
+workload that needs AT hardware before anyone builds it — the same bar the BIU
+failed to clear.
 
 #### E6.8.4l The BIU is not blocked — it is UNWANTED, on the record (2026-09-05)
 

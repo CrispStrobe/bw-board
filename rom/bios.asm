@@ -10,8 +10,9 @@
 ; a disk itself, and everything between those two points is this file.
 ;
 ; It is OURS, from the documented interface outward, and it had to be. Every
-; open-source PC BIOS is GPL-3 (GLaBIOS, skiselev/8088_bios); this project
-; ships under BSD-3, so adopting one is not available. What IS available is
+; open-source PC BIOS is GPL-3 (GLaBIOS, skiselev/8088_bios); this repository
+; is MIT and the bundle it feeds ships under BSD-3, so adopting one is not
+; available under either. What IS available is
 ; the interface: the interrupt numbers, the AH function codes, the register
 ; conventions and the BIOS-data-area layout are facts about a published
 ; interface, not anybody's expression of it. No code, no table and no string
@@ -474,7 +475,15 @@ ENDM
 ;=============================================================================
 rom_id      db 'bw-board 8086 BIOS', 0
 rom_ver     db 'v0.1', 0
-rom_note    db 'BSD-3, written from the documented interface. No BIOS code copied.', 0
+; MIT AND NOT BSD-3, corrected 2026-09-07. This string is compiled INTO the
+; image, so it is a licence notice in a distributed binary rather than a
+; comment, and it named the wrong licence: this repository's LICENSE and
+; package.json are both MIT. BSD-3 is what the bundle downstream of it ships
+; under, and MIT code included in a BSD-3 bundle stays MIT -- it does not
+; become BSD-3 by being shipped there. brickwright-lite's provenance gate
+; asserts the vendored source licence is MIT and was right all along; that
+; assertion is what made this visible. See ROADMAP R4.
+rom_note    db 'MIT, written from the documented interface. No BIOS code copied.', 0
             db 0
 
 ;=============================================================================
