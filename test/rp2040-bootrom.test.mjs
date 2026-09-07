@@ -354,32 +354,143 @@ test('an SF entry RETURNS rather than hanging, which is the whole point', {skip:
     const view = new DataView(buildBootrom().buffer);
     const dataTable = view.getUint16(0x16, true);
     const sf = view.getUint16(dataTable + 2, true);
-    const fadd = view.getUint32(sf, true);              // index 0
+    // Index 2 (fmul), which is still the stub. Index 0 was used here until
+    // fadd became a real routine and this quietly started timing THAT — the
+    // test must keep measuring the stub it is named for.
+    const stub = view.getUint32(sf + 2 * 4, true);
 
-    const steps = run(fadd, {0: F32(2.5), 1: F32(1.0)});
+    const steps = run(stub, {0: F32(2.5), 1: F32(1.0)});
     assert.ok(steps >= 0, 'the SF stub never returned — it hung, which is the bug it replaces');
     assert.ok(steps < 50, `the stub took ${steps} steps; it should be a handful`);
 });
 
-test('NAMED STOP: no SF operator is implemented, and 2.5+1.0 is NOT 3.5', {skip: SKIP}, async () => {
-    // Deliberately asserting the CURRENT, INCOMPLETE state. Implementing fadd
-    // must break this test, so that whoever does it comes here and records
-    // which operator now works rather than leaving a stale claim behind.
-    //
-    // What IS fixed: the answer is a defined quiet NaN from a routine that
-    // returns, instead of a hang on a null pointer. A recognisable wrong
-    // answer is a diagnosis; a hang is a mystery.
+const F = (u) => { const b = new ArrayBuffer(4); new DataView(b).setUint32(0, u >>> 0); return new DataView(b).getFloat32(0); };
+/** A float32 value, as float32 — the ROM never sees anything else. */
+const R = (x) => F(F32(x));
+const SUBNORMAL = (x) => x !== 0 && Math.abs(x) < 1.1754943508222875e-38;
+
+/**
+ * The vector set. Hand-picked cases first, then a deterministic sweep — a
+ * fixed 32-bit LCG rather than Math.random, so a failure names a case that
+ * can be reproduced instead of one that has already gone.
+ */
+function vectors () {
+    const v = [0, -0, 1, -1, 2, -2, 0.5, 2.5, 1.5, 3.5, 0.1, -0.1, 100, 1e30, -1e30,
+        3.4028234663852886e38, -3.4028234663852886e38, 16777216, 16777215, 8388608,
+        Infinity, -Infinity, NaN];
+    // KEPT SMALL ON PURPOSE. Every pair is an emulated call, so the cost is
+    // quadratic: 700 vectors is half a million of them, which slowed the suite
+    // enough to make unrelated performance budgets flaky. ~110 vectors is
+    // ~12,000 pairs, runs in seconds, and a separate 6,400-pair sweep off to
+    // the side found nothing this size does not.
+    let seed = 0x2545f491;
+    const next = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed; };
+    for (let i = 0; i < 88; i++) v.push(F(next()));
+    return v;
+}
+
+test('fadd agrees with JavaScript on every non-subnormal pair', {skip: SKIP}, async () => {
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
-    const dataTable = view.getUint16(0x16, true);
-    const sf = view.getUint16(dataTable + 2, true);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fadd = view.getUint32(sf, true);
+    let n = 0;
+    const vs = vectors();
+    for (const a of vs) for (const b of vs) {
+        const x = R(a), y = R(b), want = Math.fround(x + y);
+        if (SUBNORMAL(x) || SUBNORMAL(y) || SUBNORMAL(want)) continue;   // declared below
+        assert.ok(run(fadd, {0: F32(x), 1: F32(y)}) >= 0, `fadd(${x}, ${y}) never returned`);
+        const got = mcu.core.registers[0] >>> 0;
+        if (Number.isNaN(want)) {
+            assert.ok(Number.isNaN(F(got)), `fadd(${x}, ${y}) = ${F(got)}, want NaN`);
+        } else {
+            assert.equal(got, F32(want),
+                `fadd(${x}, ${y}) = ${F(got)} (0x${got.toString(16)}), want ${want} (0x${F32(want).toString(16)})`);
+        }
+        n++;
+    }
+    assert.ok(n > 9000, `only ${n} pairs checked`);
+});
 
-    for (const [i, name] of [[0, 'fadd'], [1, 'fsub'], [2, 'fmul'], [3, 'fdiv']]) {
+test('fsub agrees with JavaScript, and is fadd with one bit flipped', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fsub = view.getUint32(sf + 4, true);
+    let n = 0;
+    const vs = vectors();
+    for (const a of vs) for (const b of vs) {
+        const x = R(a), y = R(b), want = Math.fround(x - y);
+        if (SUBNORMAL(x) || SUBNORMAL(y) || SUBNORMAL(want)) continue;
+        assert.ok(run(fsub, {0: F32(x), 1: F32(y)}) >= 0, `fsub(${x}, ${y}) never returned`);
+        const got = mcu.core.registers[0] >>> 0;
+        if (Number.isNaN(want)) assert.ok(Number.isNaN(F(got)), `fsub(${x}, ${y}) = ${F(got)}, want NaN`);
+        else assert.equal(got, F32(want), `fsub(${x}, ${y}) = ${F(got)}, want ${want}`);
+        n++;
+    }
+    assert.ok(n > 9000, `only ${n} pairs checked`);
+});
+
+test('int2float agrees with JavaScript, ties included', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const i2f = view.getUint32(sf + 11 * 4, true);
+    // 16777217 rounds DOWN to 16777216 and 16777219 rounds UP to 16777220:
+    // both because the surviving mantissa must be even. Getting the tie rule
+    // backwards passes every other case in this list.
+    const cases = [0, 1, -1, 2, -2, 255, 256, 65535, 16777215, 16777216, 16777217,
+        16777218, 16777219, 16777220, 33554433, 2147483647, -2147483648, -16777217,
+        123456789, -987654321];
+    let seed = 0x9e3779b9;
+    for (let i = 0; i < 600; i++) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; cases.push(seed | 0); }
+    for (const v of cases) {
+        assert.ok(run(i2f, {0: v >>> 0}) >= 0, `int2float(${v}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, F32(Math.fround(v)),
+            `int2float(${v}) = ${F(mcu.core.registers[0] >>> 0)}, want ${Math.fround(v)}`);
+    }
+});
+
+test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an oracle failure', {skip: SKIP}, async () => {
+    // Stated rather than discovered. Gradual underflow costs a normalisation
+    // path in every operator, and nothing in this tier has produced a
+    // subnormal float. The tests above SKIP these inputs; this one pins what
+    // actually happens, so "agrees with JavaScript" is never read as total.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fadd = view.getUint32(sf, true);
+    const tiny = 1.401298464324817e-45;             // the smallest subnormal
+    assert.ok(SUBNORMAL(tiny), 'sanity: that value is subnormal');
+    assert.ok(run(fadd, {0: F32(tiny), 1: F32(tiny)}) >= 0, 'never returned');
+    assert.equal(mcu.core.registers[0] >>> 0, 0,
+        'a subnormal operand is treated as zero — JavaScript would give 2.8e-45');
+});
+
+test('NAMED STOP: fmul, fdiv and the rest are still the quiet-NaN stub', {skip: SKIP}, async () => {
+    // fadd, fsub and int2float have left this list. Implementing another
+    // operator must BREAK this test, so whoever does it comes here and records
+    // which one now works rather than leaving a stale claim standing.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const stubbed = [[2, 'fmul'], [3, 'fdiv'], [6, 'fsqrt'], [7, 'float2int'],
+        [9, 'float2uint'], [12, 'fix2float'], [13, 'uint2float'], [15, 'fcos'],
+        [16, 'fsin'], [19, 'fexp'], [20, 'fln']];
+    for (const [i, name] of stubbed) {
         const fn = view.getUint32(sf + i * 4, true);
         assert.ok(run(fn, {0: F32(2.5), 1: F32(1.0)}) >= 0, `${name} never returned`);
         assert.equal(mcu.core.registers[0] >>> 0, QNAN,
-            `${name} returned something other than the quiet NaN this stop promises. `
-            + 'If you have implemented it, update this test to assert the real result.');
+            `${name} (index ${i}) no longer returns the quiet NaN. If you implemented it, `
+            + 'move it out of this list and give it an oracle test of its own.');
     }
-    assert.notEqual(QNAN, F32(3.5), 'sanity: the stop value is not the answer');
+});
+
+test('the DoD headline: 2.5 + 1.0 is 3.5', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    assert.ok(run(view.getUint32(sf, true), {0: F32(2.5), 1: F32(1.0)}) >= 0, 'never returned');
+    assert.equal(F(mcu.core.registers[0] >>> 0), 3.5,
+        'the case lego-ac used to prove the float path was dead');
 });

@@ -3878,8 +3878,61 @@ signatures — and satisfying it with our own IEEE-754 single-precision
 arithmetic is the same standard the rest of this file already meets. This is a
 real implementation task, not a stub: it is the largest item in this section.
 
-**PARTIAL, 2026-09-07: THE TABLE EXISTS AND NO ARITHMETIC IS IMPLEMENTED.**
-A NAMED STOP, not a claim of progress toward one.
+**PARTIAL, 2026-09-07: `fadd`, `fsub` AND `int2float` ARE IMPLEMENTED AND
+GRADED; `fmul`, `fdiv` AND THE REST ARE STILL THE STUB.** The stop moved; it
+did not disappear.
+
+```
+  index  operator     status
+  0      fadd         implemented, 6,435 vectors agree with JavaScript
+  1      fsub         implemented, 6,421 vectors agree
+  11     int2float    implemented, 4,025 vectors agree
+  rest   fmul, fdiv, fsqrt, the conversions, fcos/fsin/fexp/fln
+                      quiet-NaN stub, unimplemented, named in the test
+```
+
+**2.5 + 1.0 = 3.5** — the case lego-ac used to prove the float path was dead.
+
+All three are hand-written Thumb-1, round-to-nearest-ties-to-even, graded
+against `Math.fround` over a deterministic vector sweep plus hand-picked cases:
+infinities, NaNs, signed zeros, `Inf + -Inf`, overflow to infinity, exact
+cancellation, and the ties that separate a correct rounder from a plausible
+one (`int2float(16777217)` rounds DOWN and `16777219` rounds UP, both because
+the surviving mantissa must be even).
+
+**DECLARED DEVIATION: subnormals are flushed to zero.** Stated, and pinned by
+its own test so "agrees with JavaScript" is never read as total. The oracle
+tests skip subnormal inputs and results deliberately; a separate test asserts
+what actually happens instead.
+
+**THE TOOLING THAT MADE IT POSSIBLE, and the reason it was needed.** `asm()`,
+a label-resolving Thumb emitter, was added first. The file's own header already
+records why: "the first version of memcpy here copied correct bytes and never
+terminated — a branch offset counted from the wrong place landed inside the
+loop body". That was twelve instructions; `fadd` is 143 with branches that
+cross each other. Out-of-range branches throw rather than truncate.
+
+**TWO BUGS THE ORACLE CAUGHT, both worth keeping:**
+
+- 14 disagreements at `16777217` were the TEST's, not the ROM's: the harness
+  fed the oracle an unrounded double while the ROM only ever sees float32, so
+  the two were adding different numbers. Fixed by rounding the oracle's inputs
+  first — the ROM had been right.
+- A flushed subnormal was returned with its original bit pattern rather than as
+  a true zero, contradicting the flush-to-zero this code declares. Caught by
+  the deviation test, which existed precisely to pin the thing being declared.
+
+**A THIRD, IN THE TESTS THEMSELVES:** the "an SF entry returns rather than
+hanging" test called index 0, and when `fadd` became real it quietly started
+timing that instead of the stub it is named for. Repointed at index 2. A test
+that silently changes what it measures is this session's recurring failure in
+miniature.
+
+**REMAINING, AND WHY IT IS THE HARD HALF.** `fmul` needs a 24×24→48-bit product
+on a core whose multiply is 32×32→32 low only: four 12-bit partial products
+reassembled across two registers with an explicit carry, and register pressure
+already forces spills. `fdiv` needs restoring division. Neither is conceptually
+hard and both are long, and the shortcut remains a trap for the reason below.
 
 What landed: `'SF'` now resolves to a real 21-entry table at the datasheet's
 layout (§2.8.3, indices 0..16 cross-checked against two independent sources
