@@ -367,6 +367,40 @@ at `busTrace` and counts `read()` invocations instead, and its injection reach
 was verified by running it against the unfixed core (3 of 4 fail, with the
 addresses printed) rather than assumed from its passing.
 
+**14. A PEER MUST NOT SUPPLY A USER TURN IN SOMEONE ELSE'S SESSION, AND NO
+AUTHORISATION CAN MAKE THAT WORK.** On 2026-09-07 lego-ac could see an owner
+instruction typed but never submitted in lego-a4's input box, held an explicit
+owner authorisation — given in lego-ac's OWN session — to press Enter on such
+pending lines, and did. It did not arrive; lego-a4 held and did not start the
+work. Both sessions then agreed the mechanism was wrong independently of
+whether it worked.
+
+**Why it is wrong even when the peer is right about what the owner wants.** A
+user turn is the one signal a session cannot obtain from outside itself, and
+that is its entire value. Manufacture it and the receiving session gets
+something INDISTINGUISHABLE from its owner typing — so it cannot tell an
+authorised affirmation from an invented instruction, and neither can the owner
+reading the transcript back later. The boundary is not a lock to be opened by
+someone with the key; it is a property of where the message came from, and a
+mechanism that satisfies it from outside destroys the thing it is respecting.
+
+**An authorisation is scoped to the session it was given in.** lego-ac's
+permission was real. It made them free to act in their own lane; it could not
+make them a channel for another user's intent in another lane. This is rule 8
+("publishing to master is the OWNER'S call") one level down: there, a peer
+cannot consent on the owner's behalf; here, a peer cannot SPEAK on it.
+
+**What to do instead, which costs one sentence:** tell the owner the
+instruction is typed and unsubmitted, and let them send it. Both sessions
+reported exactly that and the line was unblocked without anyone pretending to
+be anyone.
+
+**The part worth copying is what lego-ac did after:** they said plainly what
+they had done, rather than letting a mysterious instruction appear. A peer who
+reaches into your session and TELLS you leaves you able to refuse. That is the
+difference between an error and a trap, and it is why this rule is written
+without blame attached to it.
+
 ## OPERATIONAL — archiving to /mnt/storage, 2026-09-05
 
 **THE CIFS SHARE CANNOT STORE SYMLINKS, AND A PLAIN COPY DROPS THEM SILENTLY.**
