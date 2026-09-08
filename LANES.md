@@ -560,9 +560,19 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 system-state prerequisites | Codex /root | 2026-09-08 | Real-mode descriptor-table/MSW instructions and owned wired tests; fail closed at protected-mode transition; no app pin, merge or deployment. |
 
 ## DONE
+
+286 system-state prerequisites: source `c38e0d6` on `feat/x86-backend-lab`,
+2026-09-08. Real-mode LGDT/LIDT/SGDT/SIDT/SMSW/LMSW(non-PE)/CLTS, protected-only
+real-mode faults, IDTR-based INT/IRET and debugger register inspection. Twelve
+new owned tests; final targeted run 146/146, no skips. Full pinned SST286 rerun
+1,477,997 pass, 3 upstream revoked, zero fail/unsupported/budget, exit 0;
+new hashed receipt in `docs/SST286-SYSTEM-STATE-REPORT.json`. System forms lack
+SST silicon vectors: cited Intel manual + owned wired/semantic tests only.
+PE=1, nested-fault delivery failure, LOADALL and external INTR/NMI stay explicit
+limitations. Default-off, no app pins, full CI/browser, merge/deploy or media
+hosting changes. Claim released; next gates in HARRIS-286-SYSTEM-STATE.md.
 
 286 real-mode expansion: source `aff6a67` on `feat/x86-backend-lab`, 2026-09-08.
 All 326 pinned SST286 files selected: 1,477,997 executed/pass, 3 upstream
