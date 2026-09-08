@@ -560,9 +560,20 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 external NMI foundation | Codex /root | 2026-09-08 | Opt-in resolved NMI sampling, instruction-boundary delivery, SS shadow/IRET blocking and halted wake; INTR/controller acknowledgement remains a separate gate. |
 
 ## DONE
+
+286 NMI foundation: source `bbf7cdd` on `feat/x86-backend-lab`, 2026-09-08.
+Explicit `nmiEnabled:true` board option samples resolved NMI, qualifies edges,
+delivers wired vector 2, supports HLT wake, SS shadow, IRET blocking/coalescing
+and REP element-boundary restart. Thirteen new tests; final targeted run
+159/159, no skips. Full pinned SST286 remains 1,477,997 pass, 3 revoked,
+zero fail/unsupported/budget, exit 0; hashed receipt SST286-NMI-REPORT.json.
+SST supplies no NMI inputs: asynchronous evidence is owned wired tests plus
+cited manuals, not silicon timing. INTR/INTA, controller, debug/trap priority,
+full reset/halt/shutdown and protected mode remain gates. No application
+pin/default changes, full CI/browser, merge/deploy or media hosting. Claim
+released; next INTR acknowledgement gate in docs/HARRIS-286-NMI.md.
 
 286 system-state prerequisites: source `c38e0d6` on `feat/x86-backend-lab`,
 2026-09-08. Real-mode LGDT/LIDT/SGDT/SIDT/SMSW/LMSW(non-PE)/CLTS, protected-only
