@@ -507,6 +507,8 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
+8086 fastpaths phase 2: active on `fable/i8086-fastpaths` in `wt/i8086-optimized-pinned`; user-authorized deadline, decode/REP/RAM and bounded Wasm experiments, with phase-1 interpreter as oracle and Lite Chromium comparisons. No default-branch changes; only measured wins will be integrated.
+
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
