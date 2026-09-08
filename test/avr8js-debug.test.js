@@ -22,6 +22,7 @@ import { createAvr8jsDebugTarget } from '../src/avr8js-debug.js';
 
 const BLINK = new Uint16Array([0x9A25, 0x9A1D, 0xEF8F, 0x958A, 0xF7F1, 0xCFFB]);
 const SCHED = new Uint16Array([0xE001, 0x9300, 0x0100, 0x9A25, 0x9A1D, 0xCFFE]);
+const AVR_CODE_MAX = 0x7FFE;
 
 const SCHED_SYMBOLS = {
   scheduler: {
@@ -49,6 +50,33 @@ test('capabilities: declares what it has, not what it wishes', () => {
   assert.equal(caps.timeFreezes, true);
   assert.deepEqual(caps.consumes, []);
 });
+
+test('AVR code breakpoint only: run-to advertises its exact range and accepts the highest even address', () => {
+  const { target } = make(BLINK);
+  assert.deepEqual(target.capabilities().runTo, [{
+    kind: 'address',
+    space: 'code',
+    addressMin: 0,
+    addressMax: AVR_CODE_MAX,
+    stopSides: ['before'],
+    installation: 'sync',
+  }]);
+  assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: AVR_CODE_MAX }), 'number');
+});
+
+for (const [name, addr] of [
+  ['negative address', -2],
+  ['fractional address', 2.5],
+  ['non-finite address', Number.NaN],
+  ['out-of-range address above AVR flash', AVR_CODE_MAX + 2],
+]) {
+  test(`AVR code breakpoint only: refuses ${name}`, () => {
+    const { target } = make(BLINK);
+    assert.deepEqual(target.setBreakpoint({ kind: 'code', addr }), {
+      unsupported: 'code breakpoint addr must be in 0x0000..0x7ffe',
+    });
+  });
+}
 
 test('code breakpoint: halts AT the address, before executing it', () => {
   const { target, halts } = make(BLINK);

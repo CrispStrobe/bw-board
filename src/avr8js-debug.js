@@ -326,6 +326,8 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       return {
         steps: ['insn', 'block', 'over', 'out'],
         breakpoints: ['code', 'yield', 'write'],
+        runTo: [{kind: 'address', space: 'code', addressMin: 0,
+          addressMax: cpu.progMem.length * 2 - 2, stopSides: ['before'], installation: 'sync'}],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped', // AVR I/O registers live in the data space
@@ -416,7 +418,10 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
     setBreakpoint(bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
       if (bp.kind === 'code') {
-        if (typeof bp.addr !== 'number') return { unsupported: 'code breakpoint needs addr' };
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > cpu.progMem.length * 2 - 2) {
+          return { unsupported: `code breakpoint addr must be in 0x0000..0x${
+            (cpu.progMem.length * 2 - 2).toString(16)}` };
+        }
         if ((bp.addr & 1) !== 0) {
           return { unsupported:
             `AVR code addresses are even (byte address of a word): ${bp.addr}` };
