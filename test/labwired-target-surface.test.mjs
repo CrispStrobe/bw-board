@@ -27,7 +27,13 @@ const REQUIRED = [
 /** Enough of the boundary-A adapter to build a target; no engine needed. */
 /** A stub whose PC and disassembly are distinguishable sentinels. */
 const stubAdapterAt = pc => ({
-    sim: { get_pc: () => pc, get_disassembly: () => 'Branch { offset: -4 }', step: () => {} },
+    sim: {
+        get_pc: () => pc,
+        get_disassembly: () => 'Branch { offset: -4 }',
+        step: () => {},
+        step_single: () => {},
+        step_batch: () => {},
+    },
     clockHz: 48_000_000,
     timeNs: () => 12_345n,
     attachBoard() {}, syncInputs() {}, advanceNs() {}, resetToProgram() {},
@@ -92,5 +98,51 @@ describe('labwired disassembly', () => {
     it('is listed as a method the runner may call', () => {
         const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0x0800_0008) });
         assert.equal(typeof target.disasm, 'function');
+    });
+});
+
+const CODE_ADDRESS_MAX = 0xfffffffe;
+const CODE_ADDRESS_REFUSAL = {
+    unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe',
+};
+const ARCHITECTURAL_WIDTH_ONLY =
+    'this bounds the 32-bit Thumb PC width; mapped execution is deliberately not constrained';
+
+describe('labwired code breakpoint only', () => {
+    for (const [name, addr] of [
+        ['negative address', -2],
+        ['fractional address', 2.5],
+        ['NaN address', Number.NaN],
+        ['infinite address', Number.POSITIVE_INFINITY],
+        ['address wider than the 32-bit PC', 0x100000000],
+    ]) {
+        it(`refuses ${name}`, () => {
+            const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0) });
+            assert.deepEqual(target.setBreakpoint({ kind: 'code', addr }), CODE_ADDRESS_REFUSAL,
+                ARCHITECTURAL_WIDTH_ONLY);
+        });
+    }
+
+    it('accepts the highest even 32-bit address', () => {
+        const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0) });
+        assert.equal(target.setBreakpoint({ kind: 'code', addr: CODE_ADDRESS_MAX }), undefined,
+            ARCHITECTURAL_WIDTH_ONLY);
+    });
+
+    it('still refuses the Thumb-state bit', () => {
+        const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0) });
+        assert.deepEqual(target.setBreakpoint({ kind: 'code', addr: 1 }), {
+            unsupported: 'Thumb code address 1 is odd. Bit 0 is the execution-state flag, ' +
+                'not part of the address — a breakpoint set on it could never match.',
+        });
+    });
+
+    it('a malformed clear cannot alias and remove the breakpoint at address zero', () => {
+        const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0) });
+        assert.equal(target.setBreakpoint({ kind: 'code', addr: 0 }), undefined);
+        target.clearBreakpoint({ kind: 'code', addr: Number.NaN });
+        target.run();
+        assert.equal(target.runFor(1_000n), 'halted',
+            'NaN must not coerce to zero and clear a legitimate breakpoint');
     });
 });
