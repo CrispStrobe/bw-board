@@ -558,6 +558,8 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
+8086 device advancement: active on `perf/i8086-device-advance`; user-authorized per-device attribution, per-instruction optimization and explicit event-scheduling observability contract. Preserve callback order, live counter fields, fractional clocks and attachment invalidation. Ship only measured correctness-preserving wins.
+
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
