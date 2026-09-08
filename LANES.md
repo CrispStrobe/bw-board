@@ -560,9 +560,11 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 latched memory bridge | Codex, feat/x86-backend-lab | 2026-09-08 | Integrate phase sequencer with external latch/controller subset and existing electrical RAM/ROM update models; edge-commit and wiring regressions. No CPU or production promotion. |
+| _(none)_ | | | |
 
 ## DONE
+
+286 latched memory bridge: source `5e5c71a` on `feat/x86-backend-lab`; external phase controller and address/control latch feed existing 62256/28C256 update models through an ideal-digital adapter. Write storage changes on command trailing edges, not CPU callbacks; late-bank preflight is staged before commit. 16 new integration tests; final targeted run 79/79, no skips; demo verifies `0x68ac`, zero/one writes before/after edge, `cpuExecuted:false`. No full 82C288, analog solver, instruction CPU, editor integration, production defaults/pin changes, merge or deployment. Full CI/browser/hardware traces not run. Claim released; resumable instruction subset is the next execution gate.
 
 286 bus contract and phase sequencer: source `610a1e3` on `feat/x86-backend-lab`; pinned Harris August 1996 PDF checksum, PLCC/status/lane metadata, reset qualification, active-low READY, waits, split words and write-data hold. 22 new tests; final targeted foundation/electrical memory/8086 machine run 63/63, zero skips. Owned ROM fetch through nets checked without executing instructions. Explicitly non-pipelined system-clock phases, not edge-accurate timing or an instruction CPU; no controller/editor/pin promotion. Full CI/hardware traces/browser not run. Claim released at this incremental handoff; next gates in `docs/HARRIS-80C286-BUS-CONTRACT.md`.
 
