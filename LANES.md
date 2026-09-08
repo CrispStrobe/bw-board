@@ -560,9 +560,20 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-timer | Codex | 2026-09-08 | Default-off programmable PIT/clock nets to PIC IRQ0; guest periodic interrupts and READY tests; no app pins/deploy. |
 
 ## DONE
+
+286 wired programmable timer: source `1d9ab7c` on `feat/x86-backend-lab`,
+2026-09-08. Default-off counter-0 binary modes 0/2/even-3 subset with independent
+ideal divider, resolved CLK/GATE/OUT0-to-PIC-IR0 and port/lane wiring. Separate
+pin-clocked counter preserves visible pulses; production I8254 unchanged.
+Sixteen owned tests cover waveform/count/load/latch/gate/guards and actual
+guest periodic IRQ0/EOI/IRET/HLT, READY stalls, mask/unmask and disconnected nets.
+Targeted suite including production PIC/PIT tests: 264/264 pass, zero skips.
+CPU/SST adapter/runner hashes unchanged from SST286-INTR-REPORT.json; no new
+full-vector run, hardware oracle, full CI/browser or wired DOS boot claim.
+No app pin/default changes, merge/deploy or media hosting. Claim released;
+storage/BIOS/memory-map boot prerequisites next in docs/HARRIS-286-TIMER.md.
 
 286 wired programmable PIC: source `25d39dd` on `feat/x86-backend-lab`,
 2026-09-08. Explicit I/O/controller gate and PIC+decoder/byte-lane adapter
