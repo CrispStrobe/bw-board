@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-post-next | Codex | 2026-09-08 | Continue POST to next fault; remove unnecessary resolved-net read copying if verified equivalent; no firmware shortcuts/app pins/deploy/media. |
 
 ## DONE
 
