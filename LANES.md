@@ -560,9 +560,21 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| Expand 286 real-mode coverage | Codex /root | 2026-09-08 | Carry/groups/control/string/I/O and exception milestones against pinned SST286; wired regressions; keep default-off, no production pin or deployment. |
 
 ## DONE
+
+286 real-mode expansion: source `aff6a67` on `feat/x86-backend-lab`, 2026-09-08.
+All 326 pinned SST286 files selected: 1,477,997 executed/pass, 3 upstream
+revocations, zero fail/unsupported/budget, exit 0; hashed per-file receipt in
+`docs/SST286-REAL-MODE-REPORT.json`. Local targeted regression 134/134, no skips,
+including wired fault/INT/REP/READY tests, Paterson on 8086/80186/wired 286 and
+DOS file persistence on 8086/80186. Semantic vector coverage is not physical
+bus/timing or full 80286 acceptance; protected mode, external interrupts,
+system instructions outside the suite, devices and wired DOS boot remain.
+LOCK bypass and inactive-coprocessor profile are explicit test conditions,
+not physical protocol support. Default-off; application pins unchanged; no
+full CI/browser acceptance, merge, deployment or new media hosting. Claim
+released at this incremental handoff; remaining gates in SST286-RUNNER.md.
 
 286 vectors/private media increment: engine `7b7f92f`, paired Lite docs `15be58905`. Pinned SST286 inventory traversed all 326 files / 1,478,000 vectors: 675,501 matched, 802,496 unsupported (42,341 exception/interrupt cases refused before execution), three revoked, no completed-state mismatches or budget exhaustion; exit 1, NOT full acceptance. Test-only 16 MiB semantic memory drives unchanged boot decoder; no physical-board/timing/protected-mode claim. Added external-only reviewed/hash-checked private media admission, no game downloads/uploads or private repository creation. Fourteen new harness tests and 30 existing Paterson/prerequisite tests passed locally (42 combined before two additional parser/CLI tests, final 14 harness tests green). No app runtime/vendor/production pin change, merge/deploy or full hosted CI. Claim released at incremental handoff; CPU expansion and guest milestones remain pending.
 
