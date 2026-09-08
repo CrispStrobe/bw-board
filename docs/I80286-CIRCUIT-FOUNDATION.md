@@ -2,6 +2,11 @@
 
 2026-09-08. Experimental engine milestone; not a shipped 80286 CPU.
 
+Follow-up: the [Harris bus contract and sequencer subset](HARRIS-80C286-BUS-CONTRACT.md)
+adds sourced PLCC/status/byte-lane metadata and non-pipelined system-clock-phase
+sequencing. It is separate from the synthetic master described below. It does
+not yet supply instruction execution, an 82C288 bridge or editor integration.
+
 Verification: implementation commit `90467ee`; 20 new tests pass on final
 source. The targeted run with `test/bus-memory.test.mjs`,
 `test/i8086-extract.test.mjs` and `test/i8086-machine.test.mjs` passed 56 tests,
