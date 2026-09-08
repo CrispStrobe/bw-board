@@ -22,7 +22,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
       # needs its built WASM. Checking it out is the difference between that
       # gate RUNNING and it skipping on every CI run — the failure mode this
@@ -30,7 +30,7 @@ jobs:
       # skipped silently for weeks and a skip reads the same as a pass in the
       # summary line. Pinned, so this repo's verdict does not float with
       # another repo's HEAD.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: CrispStrobe/emu8051-stc
           ref: e473e906c1a8db9a50e5b70ef42171e79a0de372
@@ -46,7 +46,7 @@ jobs:
       # layouts equivalent.
       - name: Mark the emulator build as CommonJS
         run: echo '{"type":"commonjs"}' > emu8051-stc/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -145,8 +145,8 @@ jobs:
   vectors:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: SingleStepTests/8086
           ref: e71c68d215a6bb8c356bd4cb3842de3bef345ca9
@@ -158,7 +158,7 @@ jobs:
             /v1/00.json.gz
             /v1/8F.json.gz
             /v1/D0.6.json.gz
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -290,13 +290,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS
           ref: aa8f32aee87c68db1fb9b1f6005b494884df8935
           path: corpus
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -353,8 +353,8 @@ jobs:
   vectors186:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: SingleStepTests/v20
           ref: 9efbd02b8ec1a3aad347c2b59672ad25f3bcdb21
@@ -391,7 +391,7 @@ jobs:
             /v1_native/C1.5.json.gz
             /v1_native/C1.6.json.gz
             /v1_native/C1.7.json.gz
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -447,8 +447,8 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install

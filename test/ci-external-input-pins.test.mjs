@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync, readdirSync} from 'node:fs';
-import {join, resolve} from 'node:path';
+import {join, relative, resolve} from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const FULL_SHA = /^[0-9a-f]{40}$/i;
@@ -137,6 +137,35 @@ export const auditExternalInputs = ({workflows, scripts}) => {
     return {errors, sites, invoked: [...invoked].sort()};
 };
 
+export const auditLiteralActionPins = files => {
+    const errors = [];
+    const sites = [];
+    for (const [file, source] of files) {
+        for (const [index, line] of source.split('\n').entries()) {
+            const match = line.match(/^\s*(?:-\s*)?uses:\s*(?:"([^"]+)"|'([^']+)'|([^\s#]+))/);
+            if (!match) continue;
+            const action = match[1] || match[2] || match[3];
+            // This audit is deliberately limited to literal action references. Matrix/expression
+            // construction has no stable owner/repository value for a source-text pin check.
+            if (action.startsWith('./') || action.includes('${{')) continue;
+            const site = {file, line: index + 1, action};
+            sites.push(site);
+            const at = action.lastIndexOf('@');
+            if (at < 0) errors.push(`${file}:${index + 1} ${action}: literal third-party action has no revision`);
+            else if (!FULL_SHA.test(action.slice(at + 1))) {
+                errors.push(`${file}:${index + 1} ${action}: literal third-party action revision is not a full 40-hex commit`);
+            }
+        }
+    }
+    return {errors, sites};
+};
+
+const yamlFilesRecursively = directory => readdirSync(directory, {withFileTypes: true}).flatMap(entry => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return yamlFilesRecursively(path);
+    return /\.ya?ml$/.test(entry.name) ? [path] : [];
+});
+
 const liveCorpus = () => {
     const workflowDir = join(ROOT, '.github', 'workflows');
     const workflows = new Map(readdirSync(workflowDir)
@@ -146,6 +175,9 @@ const liveCorpus = () => {
     const scripts = new Map([...invoked].map(file => [file, readFileSync(join(ROOT, file), 'utf8')]));
     return {workflows, scripts};
 };
+
+const liveGithubYaml = () => new Map(yamlFilesRecursively(join(ROOT, '.github'))
+    .map(file => [relative(ROOT, file), readFileSync(file, 'utf8')]));
 
 test('every executable external repository input used by CI resolves to a full commit', () => {
     const result = auditExternalInputs(liveCorpus());
@@ -158,6 +190,14 @@ test('every executable external repository input used by CI resolves to a full c
     assert.equal(result.sites.filter(site => site.file === 'scripts/build-labwired-wasm.mjs').length, 1,
         'labwired build must have exactly one audited source clone');
     console.log(`# audited ${result.sites.length} external repository sites across workflows and invoked scripts`);
+});
+
+test('every literal third-party uses in YAML recursively under .github has a full commit', () => {
+    const result = auditLiteralActionPins(liveGithubYaml());
+    const scope = 'literal third-party uses: in YAML recursively under .github must use a full 40-hex commit; '
+        + 'local ./ actions are exempt and constructed/expression uses are outside this literal source-text gate';
+    assert.deepEqual(result.errors, [], `${scope}\n${result.errors.join('\n')}`);
+    console.log(`# audited ${result.sites.length} literal third-party action sites recursively under .github`);
 });
 
 test('pin audit mutations fail by dependency and execution site', () => {
@@ -178,4 +218,19 @@ test('pin audit mutations fail by dependency and execution site', () => {
     /labwired build must have exactly one audited source clone; found 2/);
     assert.match(fixture(baseWorkflow, baseScript.replace(/0123456789abcdef0123456789abcdef01234567/, 'main')),
         /labwired-core PIN main is not a full 40-hex commit/);
+});
+
+test('literal action pin mutations fail by workflow and execution site', () => {
+    const fixture = action => auditLiteralActionPins(new Map([
+        ['.github/workflows/nested/fixture.yml', `steps:\n  - uses: ${action}\n`]
+    ])).errors.join('\n');
+
+    assert.match(fixture('actions/checkout@v4'),
+        /.github\/workflows\/nested\/fixture.yml:2 actions\/checkout@v4: .*not a full 40-hex commit/);
+    assert.match(fixture('actions/checkout'),
+        /.github\/workflows\/nested\/fixture.yml:2 actions\/checkout: .*has no revision/);
+    assert.match(fixture('actions/checkout@0123456'),
+        /.github\/workflows\/nested\/fixture.yml:2 actions\/checkout@0123456: .*not a full 40-hex commit/);
+    assert.deepEqual(auditLiteralActionPins(new Map([['.github/workflows/local.yml',
+        'steps:\n  - uses: ./local-action\n  - uses: ${{ matrix.action }}\n']])).errors, []);
 });
