@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 saved profile and debugger session | Codex | 2026-09-08 | Strict serializable experimental board configuration, clock/instruction stepping and physical code breakpoints; no production integration. |
 
 ## DONE
 
