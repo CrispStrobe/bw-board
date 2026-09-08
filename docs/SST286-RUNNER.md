@@ -1,5 +1,14 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Wired timer follow-up, 2026-09-08
+
+The [pin-clocked timer subset](HARRIS-286-TIMER.md) connects a guest-programmed
+counter 0 to PIC IRQ0, with sixteen owned tests. The targeted command in that
+document includes production PIC/PIT regressions: **264/264 pass**, zero skips.
+CPU, SST adapter and runner hashes still match `SST286-INTR-REPORT.json`;
+no new full-vector run is claimed. Timer/PIC/wiring evidence is separate from
+the real-mode vector receipt. Actual wired DOS boot and full 286 remain pending.
+
 ## Wired PIC follow-up, 2026-09-08
 
 The [PIC/port bridge](HARRIS-286-PIC.md) adds a default-off, programmable

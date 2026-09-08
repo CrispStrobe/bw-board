@@ -112,8 +112,8 @@ must not be confused with every mode described by that datasheet.
 
 ## Next gate
 
-Wire a programmable timer output into PIC IR0 and run a guest-programmed,
-periodic timer/EOI/HLT regression, including masking and READY interference.
-Then address storage, BIOS services and the memory map needed by actual wired
+The [pin-clocked timer subset](HARRIS-286-TIMER.md) now wires OUT0 to PIC IR0
+and adds guest-programmed periodic timer/EOI/HLT tests, masking and READY
+interference. Next address storage, BIOS services and the memory map needed by actual wired
 DOS guests. Full 286 coverage still needs protected mode, additional faults,
 debug/shutdown behavior, timing validation and broader board acceptance.

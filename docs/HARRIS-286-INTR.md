@@ -89,6 +89,7 @@ protected mode and analog/edge timing remain unvalidated or unsupported.
 ## Next
 
 Port strobes and the [programmable PIC subset](HARRIS-286-PIC.md) have landed
-with guest tests. Next add timer-driven guest tests. Connect storage/BIOS/memory-map prerequisites before claiming a wired
+with guest tests. The [timer subset](HARRIS-286-TIMER.md) now adds timer-driven
+guest tests. Connect storage/BIOS/memory-map prerequisites before claiming a wired
 286 DOS boot. No merge, deployment, GUI promotion or new guest-media hosting
 is included in this increment.

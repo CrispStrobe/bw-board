@@ -2,6 +2,7 @@
 import {getDevice} from '../devices.js';
 import {DigitalCircuit, CircuitFault, bitPins, readBits} from './digital-circuit.js';
 import {Harris80C286Bus} from './harris-80c286-bus.js';
+import {HarrisTimerClock} from './harris-8254-adapter.js';
 import {IdealAddressLatch, MemoryPhaseController, DigitalBusMemoryAdapter, settleBusMemories} from './latched-memory-components.js';
 
 const A = bitPins('a', 24);
@@ -10,7 +11,8 @@ const INPUTS = {reset: 0, ready_n: 0, hold: 0, intr: 0, nmi: 0, pereq: 0, busy_n
 const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, toTerminal});
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
-    intrEnabled = false, ioEnabled = false, interruptDevice = null, editWires = wires => wires} = {}) {
+    intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null,
+    timerClockHalfPeriod = 8, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
@@ -21,6 +23,12 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     const controller = new MemoryPhaseController({enabled,intrEnabled,ioEnabled});
     const picIO = interruptDevice?.ioInterface === 'harris-pic-byte-lanes';
     if (picIO && !ioEnabled) throw new TypeError('PIC port adapter requires ioEnabled:true');
+    if (timerDevice && (!picIO || !ioEnabled || timerDevice.ioInterface !== 'harris-pit-byte-lanes' ||
+        typeof timerDevice.part !== 'function' || typeof timerDevice.update !== 'function'))
+        throw new TypeError('timerDevice requires the PIC/I/O path and a PIT byte-lane adapter');
+    if (timerDevice && timerDevice.portBase < interruptDevice.portBase+2 && interruptDevice.portBase < timerDevice.portBase+4)
+        throw new CircuitFault('IO_PORT_CONFLICT','PIC and PIT ranges overlap');
+    const timerClock = timerDevice ? new HarrisTimerClock({enabled,halfPeriod:timerClockHalfPeriod}) : null;
     const latch = new IdealAddressLatch({enabled});
     const memories = [];
     const parts = [bus.part(), controller.part(), latch.part(),
@@ -49,8 +57,18 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             for (const p of ['ior_n','iow_n']) wires.push(wire('controller',p,irqPart.id,p));
             const ir = bitPins('ir',8);
             parts.push({id:'irq_inputs',pins:ir,outputs:ir});
-            for (const p of ir) wires.push(wire('irq_inputs',p,irqPart.id,p));
+            for (const p of ir.filter(p=>!timerDevice||p!=='ir0')) wires.push(wire('irq_inputs',p,irqPart.id,p));
         }
+    }
+    const timerPart = timerDevice?.part();
+    if (timerPart) {
+        parts.push(timerPart,timerClock.part(),{id:'timer_inputs',pins:['gate0'],outputs:['gate0']});
+        wires.push(wire('inputs','reset',timerPart.id,'reset'),wire('inputs','reset','timer_clock','reset'),
+            wire('timer_clock','clk',timerPart.id,'clk0'),wire('timer_inputs','gate0',timerPart.id,'gate0'),
+            wire(timerPart.id,'out0',irqPart.id,'ir0'));
+        for (const p of D) wires.push(wire(timerPart.id,p,'cpu',p));
+        for (const p of [...A,'bhe_n','m_io']) wires.push(wire('latch',`q_${p}`,timerPart.id,p));
+        for (const p of ['ior_n','iow_n']) wires.push(wire('controller',p,timerPart.id,p));
     }
     for (const p of ['s1_n', 's0_n', 'cod_inta_n', 'm_io']) wires.push(wire('cpu', p, 'controller', p));
     for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('cpu', p, 'latch', p));
@@ -79,9 +97,14 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     const circuit = new DigitalCircuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
     circuit.drive('inputs', INPUTS);
     if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
+    if (timerPart) circuit.drive('timer_inputs',{gate0:1});
     const settleInterruptDevice = () => {
         if (!irqPart) return;
         circuit.settle();
+        if (timerPart) {
+            circuit.drive(timerPart.id,timerDevice.update(p=>circuit.require(timerPart.id,p)));
+            circuit.settle();
+        }
         circuit.drive(irqPart.id,interruptDevice.update(p=>circuit.require(irqPart.id,p)));
         circuit.settle();
     };
@@ -90,7 +113,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     return {
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
-            io:ioEnabled, programmablePIC:picIO}),
+            io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart}),
         bus, circuit,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},
@@ -99,7 +122,12 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             if (faulted) throw new CircuitFault('BOARD_FAULTED', 'reconstruct board; no automatic rollback');
             if (periodOpen) throw new CircuitFault('CLOCK_ORDER', 'endClock required');
             try {
-                circuit.drive('inputs', inputs); circuit.settle(); settleInterruptDevice();
+                circuit.drive('inputs', inputs); circuit.settle();
+                if (timerClock) {
+                    circuit.drive('timer_clock',timerClock.advance(p=>circuit.require('timer_clock',p)));
+                    circuit.settle();
+                }
+                settleInterruptDevice();
                 circuit.drive('cpu', bus.beginClock(p => circuit.require('cpu', p))); circuit.settle();
                 circuit.drive('controller', controller.beginClock(p => circuit.require('controller', p))); circuit.settle();
                 settleInterruptDevice();
