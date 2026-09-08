@@ -117,10 +117,12 @@ export class DigitalCircuit {
         return {...state, drivers: state.drivers.map(d => ({...d}))};
     }
 
-    read(part, pin) { return this.inspect(part, pin).value; }
+    // Internal readers need a scalar, not a defensive copy of diagnostics.
+    // Keep inspect() copying for callers that can mutate its returned arrays.
+    read(part, pin) { return this.snapshot.get(this.root(endpoint(part, pin))).value; }
 
     require(part, pin) {
-        const state = this.inspect(part, pin);
+        const state = this.snapshot.get(this.root(endpoint(part, pin)));
         if (state.value === 0 || state.value === 1) return state.value;
         throw new CircuitFault(state.conflict ? 'CONTENTION' : state.value === 'Z' ? 'FLOATING' : 'UNKNOWN',
             `${endpoint(part, pin)} (${state.drivers.map(d => `${d.pin}=${d.value}`).join(', ') || 'no driver'})`);

@@ -102,3 +102,69 @@ CPU/SST adapter/runner hashes remain those of `SST286-INTR-REPORT.json`;
 the prior full real-mode receipt remains 1,477,997 passes, three revocations,
 zero failures/unsupported/budget exits. No new full-vector run, full CI/browser,
 merge, deployment, application pin change or media hosting is claimed.
+
+## Internal net-read optimization
+
+Scalar `DigitalCircuit.read()` and `require()` now read the settled net state
+directly instead of allocating a defensive diagnostic object and copying its
+driver list on every access. `inspect()` still returns defensive copies. Net
+resolution, contention/floating/unknown faults, device updates and physical
+write edges are unchanged; this is not a memory or peripheral bypass.
+
+Three differential tests retain the previous copied-read implementation as an
+oracle. They cover every two-driver logic-level combination, identical fault
+messages, inspection isolation, settled-snapshot semantics, and matching wired
+bus traces/storage across odd addresses, RAM-bank boundaries and READY stalls.
+The probe now also hashes `digital-circuit.js` before execution. Historical
+receipts are preserved with their original provenance. This change has no
+measured end-to-end real-time speed claim.
+
+Follow-up regression: **368/368 passed, zero skips**, using the command above
+with `test/digital-circuit-lab.test.mjs` added. This includes the three new
+net-read tests and 20 existing digital-net tests. CPU/SST source hashes remain
+unchanged; no new full-vector run was performed.
+
+## Longer diagnostic: beyond screen clear
+
+The [65,000-clock receipt](HARRIS-286-BIOS-BANNER-REPORT.json) records a
+**64 KiB reduced-memory** run started before the optimization. The original
+copied-read source hash was captured separately before execution and is
+included explicitly; this receipt is not a post-optimization speed comparison.
+
+At 48,000 clocks, execution remained in REP STOSW with 1,763 instructions
+retired. At 50,000 clocks it had advanced to 1,882 retired instructions and
+the video dispatcher. At the 65,000-clock limit it had retired 3,293, with
+CX=0 and IP=`0447h` inside the video-service exit sequence, during banner
+handling. Recent transfers show actual ROM fetches and stack reads. The PIC
+has no acknowledge pairs yet; PIC/timer programming is retained.
+
+This demonstrates progress beyond the original screen-clear checkpoint, not
+complete banner output, POST completion, a new peripheral fault, or DOS boot.
+The run exited 2 with `budget-exhausted` and `accepted:false`. No guest work
+was skipped, and the earlier full-board receipt remains intact. Next run needs
+a larger budget to reach INT 19h; do not treat an unchanged instruction count
+during REP as a hang or reduce the guest's clear count to hurry the probe.
+
+### Next disk-support acceptance gates
+
+Source inspection of the owned BIOS identifies the order to implement and
+test; it does not establish that this probe has reached these operations:
+
+1. Finish banner output, then enter INT 19h/INT 13h without host traps.
+2. Wire the FDC control ports and IRQ6. `fd_reset` writes DOR at 3F2h with
+   00h then 0Ch and waits for the actual interrupt before polling MSR at
+   3F4h. Its IRQ wait is bounded by 16,384 polls, **not timer ticks**. Missing
+   FDC wiring can therefore produce a long guest wait rather than an immediate
+   floating-port-read fault.
+3. A reset interrupt must pass through the PIC and guest ISR. Then drain all
+   four SENSE INTERRUPT responses and accept SPECIFY through real FIFO reads
+   and writes at 3F5h. A control-only adapter must explicitly refuse unsupported
+   data transfers; the existing non-wired controller's callback/PIO fallback
+   must not stand in for wired DMA.
+4. Implement and test DMA channel 2, physical bus ownership, terminal count,
+   sector transfers and completion IRQs before trying a boot-sector handoff.
+   Motor spin-up uses a separate BIOS timer-based wait and needs working IRQ0.
+
+Keep no-media failure, owned-sector boot and actual DOS/application execution
+as separate acceptance results. The existing non-wired BIOS/FDC tests are
+useful reference cases, not evidence that these wired-board gates are complete.

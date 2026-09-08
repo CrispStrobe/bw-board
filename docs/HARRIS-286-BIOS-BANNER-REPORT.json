@@ -1,0 +1,198 @@
+{
+  "accepted": false,
+  "diagnosticOnly": true,
+  "maxClocks": 65000,
+  "completedClocks": 65000,
+  "outcome": {
+    "status": "budget-exhausted"
+  },
+  "configuration": {
+    "ramBytes": 65536,
+    "textRAM": true,
+    "romLowAlias": true,
+    "picMode": "single-unbuffered",
+    "timerClockHalfPeriod": 8
+  },
+  "romSHA256": "de2af892077af637fc90f5203353382ec1fac60dfd1470db63e9bf098363b5c1",
+  "sourceHashes": {
+    "../rom/bios.asm": "c9cbc1fb86c24d97d7f5c679c85b03df6024d62c33ae6931c2df3ce69fd02a35",
+    "../src/experimental/harris-80c286-boot-cpu.js": "c32d2c9438fb0de5c2ed1506a60aa556c3298bfeb407f66a43f9c421319a6b59",
+    "../src/experimental/harris-80c286-memory-board.js": "9decf6a959c97a3eff80d752b14fc253acafb829d1fa90e44c384974d01b32da",
+    "../src/experimental/harris-8259-adapter.js": "43ebef88cd6843c874c79eb9b4b4d8d573ee3f97790429ce904156ac4cdca934",
+    "../src/experimental/harris-8254-adapter.js": "60b19b100e0e2fc6f4d1612af4212b1c40760cff1efe18037bfbbdba73697878",
+    "./build-bios.mjs": "1b263f1cb3579994b0f5147efcd44ce0c5e5eaf913c372eeae3b5d6a65b08fbb",
+    "./probe-harris-bios.mjs": "e2fd4dff2372ed568763b468e39d743d2f858e9f897be5237812d82d87685f29"
+  },
+  "cs": 61440,
+  "ip": 1095,
+  "retired": 3293,
+  "registers": {
+    "ax": 3698,
+    "cx": 0,
+    "dx": 4284,
+    "bx": 7,
+    "sp": 31720,
+    "bp": 31712,
+    "si": 1159,
+    "di": 13
+  },
+  "pic": {
+    "initialized": true,
+    "initPhase": 0,
+    "irr": 1,
+    "isr": 0,
+    "imr": 188,
+    "vectorBase": 8,
+    "pulse": 0,
+    "vector": null,
+    "writes": 4,
+    "reads": 0,
+    "pairs": 0
+  },
+  "timer": {
+    "configured": true,
+    "mode": 3,
+    "divisor": 65536,
+    "count": 59116,
+    "out": 1,
+    "loaded": true,
+    "loadPending": false,
+    "lowByte": null,
+    "latched": null,
+    "writes": 3,
+    "reads": 0,
+    "ticks": 4065
+  },
+  "recentTransfers": [
+    {
+      "kind": "code-read",
+      "address": 984676,
+      "width": 1,
+      "data": 233,
+      "waits": 0,
+      "last": true,
+      "operand": 233
+    },
+    {
+      "kind": "code-read",
+      "address": 984677,
+      "width": 1,
+      "data": 219,
+      "waits": 0,
+      "last": true,
+      "operand": 219
+    },
+    {
+      "kind": "code-read",
+      "address": 984678,
+      "width": 1,
+      "data": 253,
+      "waits": 0,
+      "last": true,
+      "operand": 253
+    },
+    {
+      "kind": "code-read",
+      "address": 984130,
+      "width": 1,
+      "data": 88,
+      "waits": 0,
+      "last": true,
+      "operand": 88
+    },
+    {
+      "kind": "memory-read",
+      "address": 31712,
+      "width": 2,
+      "data": 3698,
+      "waits": 0,
+      "last": true,
+      "operand": 3698
+    },
+    {
+      "kind": "code-read",
+      "address": 984131,
+      "width": 1,
+      "data": 91,
+      "waits": 0,
+      "last": true,
+      "operand": 91
+    },
+    {
+      "kind": "memory-read",
+      "address": 31714,
+      "width": 2,
+      "data": 7,
+      "waits": 0,
+      "last": true,
+      "operand": 7
+    },
+    {
+      "kind": "code-read",
+      "address": 984132,
+      "width": 1,
+      "data": 89,
+      "waits": 0,
+      "last": true,
+      "operand": 89
+    },
+    {
+      "kind": "memory-read",
+      "address": 31716,
+      "width": 2,
+      "data": 0,
+      "waits": 0,
+      "last": true,
+      "operand": 0
+    },
+    {
+      "kind": "code-read",
+      "address": 984133,
+      "width": 1,
+      "data": 90,
+      "waits": 0,
+      "last": true,
+      "operand": 90
+    },
+    {
+      "kind": "memory-read",
+      "address": 31718,
+      "width": 2,
+      "data": 4284,
+      "waits": 0,
+      "last": true,
+      "operand": 4284
+    },
+    {
+      "kind": "code-read",
+      "address": 984134,
+      "width": 1,
+      "data": 93,
+      "waits": 0,
+      "last": true,
+      "operand": 93
+    }
+  ],
+  "provenanceNote": "Run started before the net-read optimization and before digital-circuit.js was added to the CLI source list. The separately captured pre-run digital-circuit.js SHA-256 below identifies the original copied-read implementation; this is not an optimized-path benchmark. Reduced 64 KiB diagnostic, not full-board or DOS acceptance.",
+  "preRunDigitalCircuitSHA256": "b66a5c820f715927027d3e3b243007d3e2d753365c813e01c3c68963d63d0ef2",
+  "progressCheckpoints": [
+    {
+      "clocks": 48000,
+      "retired": 1763,
+      "cs": 61440,
+      "ip": 1374
+    },
+    {
+      "clocks": 50000,
+      "retired": 1882,
+      "cs": 61440,
+      "ip": 1109
+    },
+    {
+      "clocks": 64000,
+      "retired": 3191,
+      "cs": 61440,
+      "ip": 1111
+    }
+  ]
+}

@@ -28,6 +28,7 @@ if(!['legacy-buffered','single-unbuffered'].includes(picMode)||!/^\d+$/.test(raw
 }
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sources=['../rom/bios.asm','../src/experimental/harris-80c286-boot-cpu.js',
+    '../src/experimental/digital-circuit.js',
     '../src/experimental/harris-80c286-memory-board.js','../src/experimental/harris-8259-adapter.js',
     '../src/experimental/harris-8254-adapter.js','./build-bios.mjs','./probe-harris-bios.mjs'];
 // Capture provenance before the run; later worktree edits cannot relabel it.

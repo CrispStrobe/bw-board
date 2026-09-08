@@ -42,5 +42,5 @@ test('one-clock probe is explicitly not boot acceptance and records configuratio
     assert.equal(report.accepted,false);assert.equal(report.completedClocks,1);
     assert.equal(report.outcome.status,'budget-exhausted');assert.equal(report.pic.writes,0);
     assert.equal(report.configuration.ramBytes,65536);assert.equal(report.configuration.picMode,'single-unbuffered');
-    assert.equal(Object.keys(report.sourceHashes).length,7);
+    assert.equal(Object.keys(report.sourceHashes).length,8);
 });
