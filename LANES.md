@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-bios-probe | Codex | 2026-09-08 | Reproducible extended BIOS POST diagnostic and first verified peripheral/configuration gap; no app pins/deploy/media. |
 
 ## DONE
 
