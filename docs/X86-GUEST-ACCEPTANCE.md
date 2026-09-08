@@ -27,7 +27,12 @@ Editor reference machines, ELKS, then classic MINIX/286 protection, on 8086,
 
 The 80186 row is an instruction variant with external PC-like hardware, not
 the 80186's integrated peripheral subsystem. No 286 alias to that core exists.
-No full SingleStepTests/80286 runner or receipt exists in this branch.
+Follow-up: a pinned SingleStepTests/80286 diagnostic now traverses all 326 files.
+675,501 states match; 802,496 cases remain unsupported and three are revoked.
+This is not full-suite acceptance or wired/timing validation. See
+[runner and baseline](SST286-RUNNER.md). No CPU implementation changed in that
+follow-up. [Private DOS media](PRIVATE-DOS-FIXTURES.md) remains external-only;
+its admission checker does not distribute or execute games.
 
 ## Boot diagnostics (not acceptance)
 
