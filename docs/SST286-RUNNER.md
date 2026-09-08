@@ -1,5 +1,13 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Wired memory-map follow-up, 2026-09-08
+
+[Conventional/text RAM expansion](HARRIS-286-MEMORY-MAP.md) adds configurable
+64–640 KiB conventional RAM, optional B8000h text storage, and ten owned map/
+relocation tests. Targeted regressions including PIC/PIT pass **274/274**,
+zero skips. CPU/SST adapter/runner hashes still match `SST286-INTR-REPORT.json`;
+no new full-vector run or wired DOS-boot result is claimed.
+
 ## Wired timer follow-up, 2026-09-08
 
 The [pin-clocked timer subset](HARRIS-286-TIMER.md) connects a guest-programmed

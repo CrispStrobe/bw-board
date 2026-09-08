@@ -128,7 +128,10 @@ control format, read operations, modes 0/2/3 and gate-operation sections.
 The adapter's unsupported modes and laboratory policies remain limitations,
 even where the reference describes complete hardware behavior.
 
-Next: audit and implement the storage, BIOS-service and memory-map path for a
-minimal wired DOS boot. Broader guest compatibility also needs the guarded
+The [conventional/text RAM increment](HARRIS-286-MEMORY-MAP.md) now removes
+the 64 KiB memory ceiling and records the existing BIOS's remaining peripheral
+requirements. Next probe BIOS POST and implement the verified configuration,
+video/PPI and storage gaps toward a minimal wired DOS boot.
+Broader guest compatibility also needs the guarded
 timer modes/reloads/channels and PIC features; full 286 coverage still needs
 protected mode, faults/debug/shutdown and timing/board acceptance.

@@ -12,10 +12,13 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null,
-    timerClockHalfPeriod = 8, editWires = wires => wires} = {}) {
+    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
+    if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
+        throw new RangeError('ramBytes must be 64 KiB through 640 KiB in 64 KiB increments');
+    if (typeof textRAM !== 'boolean') throw new TypeError('textRAM must be boolean');
     for (const kind of ['62256', '28c256']) if (!getDevice(kind)) throw new CircuitFault('MEMORY_MODELS_REQUIRED', 'registerBusMemory() before construction');
     if (interruptDevice && (!intrEnabled || typeof interruptDevice.part !== 'function' || typeof interruptDevice.update !== 'function'))
         throw new TypeError('interruptDevice requires intrEnabled and part/update methods');
@@ -73,8 +76,20 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     for (const p of ['s1_n', 's0_n', 'cod_inta_n', 'm_io']) wires.push(wire('cpu', p, 'controller', p));
     for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('cpu', p, 'latch', p));
     wires.push(wire('controller', 'ale', 'latch', 'ale'));
-    for (const kind of ['rom', 'ram']) for (let lane = 0; lane < 2; lane++) {
-        const id = `${kind}${lane}`;
+    // Every window is backed by two real registered x8 memory adapters.
+    // Keep default chip IDs/topology stable; extra banks are explicit parts.
+    const regions = [{kind:'rom',id:'rom',start:0xff0000,end:0x1000000},
+        ...Array.from({length:ramBytes/65536},(_,bank)=>({kind:'ram',id:bank ? `ram${bank}_` : 'ram',start:bank*65536,end:(bank+1)*65536})),
+        ...(textRAM ? [{kind:'ram',id:'text',start:0xb8000,end:0xc0000}] : [])];
+    const memoryMap = Object.freeze(regions.map(r=>Object.freeze({...r,
+        aliases:Object.freeze(kindAliases(r)),
+        chips:Object.freeze([`${r.id}0`,`${r.id}1`])})));
+    function kindAliases(region) {
+        return region.kind === 'rom' && romLowAlias ? [Object.freeze({start:0xf0000,end:0x100000})] : [];
+    }
+    for (const region of regions) for (let lane = 0; lane < 2; lane++) {
+        const {kind} = region;
+        const id = `${region.id}${lane}`;
         const modelKind = kind === 'rom' ? '28c256' : '62256';
         const memory = new DigitalBusMemoryAdapter({enabled, id, kind: modelKind, model: getDevice(modelKind),
             contents: kind === 'rom' ? rom.filter((_, i) => i % 2 === lane) : new Uint8Array(), readOnly: kind === 'rom'});
@@ -84,8 +99,9 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             if (read('m_io') === 0 || (lane === 0 ? read('a0') === 1 : read('bhe_n') === 1)) return {ce_n: 1};
             const address = readBits(A, read);
             if (address === null || read('m_io') !== 1 || (lane === 1 && read('bhe_n') !== 0)) return {ce_n: 'X'};
-            const inROM = address >= 0xff0000 || (romLowAlias && address >= 0xf0000 && address < 0x100000);
-            return {ce_n: Number(!(kind === 'rom' ? inROM : address < 0x10000))};
+            const selected = address >= region.start && address < region.end ||
+                kind === 'rom' && romLowAlias && address >= 0xf0000 && address < 0x100000;
+            return {ce_n: Number(!selected)};
         }});
         for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('latch', `q_${p}`, decode, p));
         wires.push(wire(decode, 'ce_n', id, memory.select));
@@ -113,8 +129,9 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     return {
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
-            io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart}),
-        bus, circuit,
+            io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart,
+            ramBytes, textRAM, displayController:false}),
+        bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},
         hasPendingINTR() {return intrEnabled && bus.intrSamples === 4;},
