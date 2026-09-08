@@ -1,7 +1,18 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Wired INTR follow-up, 2026-09-08
+
+The [INTR integration](HARRIS-286-INTR.md) adds an opt-in CPU/controller path
+using an external interrupt-device connector. A [fresh full-suite receipt](SST286-INTR-REPORT.json)
+pins the changed CPU: **1,477,997 passes, zero fail/unsupported/budget,
+three upstream revocations**, exit 0. This suite supplies no INTR inputs;
+asynchronous evidence comes from separate owned wired tests, not this receipt.
+The targeted regression command below now passes **176/176**, no skips,
+including twelve new INTR tests.
+
 The later [INTA sequencer-only increment](HARRIS-286-INTA.md) leaves CPU,
-adapter and runner hashes unchanged from the NMI receipt. It has separate
+adapter and runner hashes unchanged from the NMI receipt (historical, before
+the INTR follow-up above). It has separate
 resolved-net tests and does not claim a new full-vector run.
 
 ## NMI follow-up, 2026-09-08
@@ -151,7 +162,8 @@ board defaults to refusing unwired LOCK and coprocessor protocols.
 Remaining acceptance gates:
 
 1. Remaining system operations outside this inventory (including undocumented
-   LOADALL), external INTR acknowledgement, nested faults/shutdown and debug/trap behavior.
+   LOADALL), complete PIC/cascade integration, nested faults/shutdown and debug/trap behavior.
+   [Wired INTR](HARRIS-286-INTR.md) and
    [Opt-in NMI](HARRIS-286-NMI.md) has separate wired tests, not SST timing coverage.
    The supported real-mode 0F prerequisites are documented in the follow-up above;
    protected execution still fails closed.

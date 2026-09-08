@@ -38,28 +38,35 @@ export class IdealAddressLatch {
  * This deliberately omits 82C288 edge timing, CMDLY, bus arbitration and I/O.
  */
 export class MemoryPhaseController {
-    constructor({enabled = false, id = 'controller'} = {}) {
+    constructor({enabled = false, id = 'controller', intrEnabled = false} = {}) {
         gate(enabled); this.id = id; this.state = 'TI'; this.phase = 1; this.open = false;
+        if (typeof intrEnabled !== 'boolean') throw new TypeError('intrEnabled');
+        this.intrEnabled = intrEnabled; this.tcCount = 0;
         this.kind = null;
     }
     part() {
-        return {id: this.id, pins: ['reset', 'ready_n', 's1_n', 's0_n', 'cod_inta_n', 'm_io', 'ale', 'mrd_n', 'mwr_n'],
-            outputs: ['ale', 'mrd_n', 'mwr_n']};
+        const extra = this.intrEnabled ? ['inta_n','inta_wait'] : [];
+        return {id: this.id, pins: ['reset', 'ready_n', 's1_n', 's0_n', 'cod_inta_n', 'm_io', 'ale', 'mrd_n', 'mwr_n',...extra],
+            outputs: ['ale', 'mrd_n', 'mwr_n',...extra]};
     }
     commands() {
-        return {ale: Number(this.state === 'TS' && this.phase === 2),
-            mrd_n: Number(!(this.state === 'TC' && this.kind !== 'memory-write')),
-            mwr_n: Number(!(this.state === 'TC' && this.kind === 'memory-write'))};
+        const ack = this.kind === 'interrupt-acknowledge';
+        return {ale: Number(this.state === 'TS' && this.phase === 2 && !ack),
+            mrd_n: Number(!(this.state === 'TC' && ['memory-read','code-read'].includes(this.kind))),
+            mwr_n: Number(!(this.state === 'TC' && this.kind === 'memory-write')),
+            ...(this.intrEnabled ? {inta_n:Number(!(ack && this.state === 'TC')),
+                inta_wait:Number(ack && this.state === 'TC' && this.tcCount === 0)} : {})};
     }
     beginClock(read) {
         if (this.open) throw new CircuitFault('CLOCK_ORDER', 'controller clock still open');
-        if (requireLevel(read, 'reset')) { this.state = 'TI'; this.phase = 1; this.kind = null; }
+        if (requireLevel(read, 'reset')) { this.state = 'TI'; this.phase = 1; this.kind = null; this.tcCount = 0; }
         else {
             const signals = Object.fromEntries(['s1_n', 's0_n', 'cod_inta_n', 'm_io'].map(p => [p, requireLevel(read, p)]));
             const kind = decode286Status(signals);
             if (this.state === 'TI' && kind !== 'passive') {
-                if (!['code-read', 'memory-read', 'memory-write'].includes(kind)) throw new CircuitFault('UNSUPPORTED_COMMAND', kind);
+                if (!['code-read', 'memory-read', 'memory-write',...(this.intrEnabled ? ['interrupt-acknowledge'] : [])].includes(kind)) throw new CircuitFault('UNSUPPORTED_COMMAND', kind);
                 this.state = 'TS'; this.phase = 1; this.kind = kind;
+                this.tcCount = 0;
             } else if (this.state === 'TS' && kind !== this.kind || this.state === 'TC' && kind !== 'passive') {
                 throw new CircuitFault('STATUS_SEQUENCE', `${this.state}/${this.phase}: ${kind}`);
             }
@@ -76,13 +83,14 @@ export class MemoryPhaseController {
                 if (this.phase === 1) this.phase = 2;
                 else { this.state = 'TC'; this.phase = 1; }
             } else if (this.state === 'TC') {
+                if (this.phase === 2) this.tcCount++;
                 if (this.phase === 1) this.phase = 2;
                 else if (ready === 0) { this.state = 'TI'; this.phase = 1; }
                 else this.phase = 1;
             }
             // Outputs only change at the command's trailing edge here. A new
             // TS/ALE/TC phase is driven by beginClock on the next period.
-            return this.state === 'TI' ? {ale: 0, mrd_n: 1, mwr_n: 1} : null;
+            return this.state === 'TI' ? this.commands() : null;
         }};
     }
 }

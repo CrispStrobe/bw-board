@@ -37,7 +37,9 @@ real-mode descriptor-table/MSW setup and relocated INT/IRET with twelve owned
 tests; the full pinned SST286 regression remains green. PE=1 still refuses.
 An opt-in [wired NMI foundation](HARRIS-286-NMI.md) now covers NMI entry,
 HLT wake and REP resumption; general external interrupt support is not complete.
-This does not establish protected mode, INTR acknowledgement, physical I/O
+The [wired INTR connector](HARRIS-286-INTR.md) adds opt-in CPU acknowledgement
+and vector delivery, verified with an independent lab peer, not a programmed PIC.
+This does not establish protected mode, programmable PIC/timer integration, physical I/O
 devices or DOS boot on the wired 286. Application engine pins and production
 defaults remain unchanged. [Private DOS media](PRIVATE-DOS-FIXTURES.md) remains external-only;
 its admission checker does not distribute or execute games.

@@ -1,5 +1,10 @@
 # Opt-in 286 interrupt-acknowledge sequencer foundation
 
+Follow-up: [wired CPU/controller integration](HARRIS-286-INTR.md) now uses this
+pair through a separate interrupt-device connector. The original foundation's
+CPU/controller limitations below are historical; full PIC/cascade support
+remains pending, and default construction stays off.
+
 2026-09-08. Bus-only increment. It does **not** yet let the wired instruction
 CPU service INTR. The memory-board controller still refuses acknowledgement
 commands; the CPU's maskable-interrupt selection and PIC wiring remain pending.

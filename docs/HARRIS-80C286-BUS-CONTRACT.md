@@ -8,8 +8,9 @@ Default construction still refuses active NMI, and INTR acknowledgement remains
 unsupported. The original subset limitations below describe that default path.
 
 The subsequent [INTA pair foundation](HARRIS-286-INTA.md) adds a separately
-opted-in bus transaction; CPU interrupt selection and controller/PIC integration
-remain pending. It does not change the memory board's default refusal.
+opted-in bus transaction. [Wired INTR integration](HARRIS-286-INTR.md) connects
+CPU selection, controller and external READY/vector nets; programmable PIC
+integration remains pending. It does not change the memory board's default refusal.
 
 Follow-up: the [latched memory bridge](HARRIS-80C286-LATCHED-MEMORY.md) connects
 this sequencer to external latch/controller components and the existing

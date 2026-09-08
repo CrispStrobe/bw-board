@@ -26,7 +26,7 @@ export class Harris80C286Bus {
         if (typeof nmiEnabled !== 'boolean') throw new TypeError('nmiEnabled');
         this.nmiEnabled = nmiEnabled;
         if (typeof intrEnabled !== 'boolean') throw new TypeError('intrEnabled');
-        this.intrEnabled = intrEnabled; this.intrLevel = 0; this.ackGap = 0;
+        this.intrEnabled = intrEnabled; this.intrLevel = 0; this.intrSamples = 0; this.ackGap = 0;
         this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
         this.traceLimit = traceLimit;
         this.capabilities = Object.freeze({cpu: false, experimental: true,
@@ -76,7 +76,7 @@ export class Harris80C286Bus {
                 if (this.state !== 'RESET' || this.faulted) this.resetClocks = 0;
                 this.state = 'RESET'; this.phase = 1;
                 this.pending = null; this.writeHold = 0;
-                this.intrLevel = 0; this.ackGap = 0;
+                this.intrLevel = 0; this.intrSamples = 0; this.ackGap = 0;
                 this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
                 this.address = 0xffffff;
                 this.control = {bhe_n: 1, s1_n: 1, s0_n: 1, cod_inta_n: 0, m_io: 0};
@@ -95,7 +95,10 @@ export class Harris80C286Bus {
             if (!reset) for (const pin of ['pereq', ...(this.intrEnabled ? [] : ['intr']), ...(this.nmiEnabled ? [] : ['nmi'])]) {
                 if (known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
             }
-            if (!reset && this.intrEnabled) this.intrLevel = known(read,'intr');
+            if (!reset && this.intrEnabled) {
+                this.intrLevel = known(read,'intr');
+                this.intrSamples = this.intrLevel ? Math.min(4,this.intrSamples + 1) : 0;
+            }
             if (!reset && this.nmiEnabled) {
                 // Conservative ideal-digital qualification, not an analog
                 // synchronizer: four complete observed low/high periods.

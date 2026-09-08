@@ -66,12 +66,10 @@ The full SST286 real-mode suite is a regression gate, **not an asynchronous
 interrupt oracle**. It supplies no NMI inputs and cannot establish NMI timing,
 single-step priority, protected-mode interrupt rules or bus arbitration.
 
-The later [INTA sequencer foundation](HARRIS-286-INTA.md) implements an opt-in
-bus transaction for the pair, but the wired CPU/controller still refuse INTR.
-Their next integration gate includes two acknowledgement
-cycles, vector input on D0–D7, cascade/address release, the specified idle gap,
-external READY wait logic and controller tests. Existing memory-only controller
-logic must not silently stand in for that path. Also remaining: debug/trap
+The later [wired INTR integration](HARRIS-286-INTR.md) joins the
+[INTA sequencer foundation](HARRIS-286-INTA.md) to the CPU and an opt-in
+controller/READY circuit. Full programmable PIC/cascade wiring remains pending.
+Also remaining: debug/trap
 priority, general LOCK/HOLD, complete halt/shutdown/reset integration, physical
 devices and actual wired 286 DOS boot. No application pin/default changes,
 merge, deployment or new media distribution accompanies this increment.

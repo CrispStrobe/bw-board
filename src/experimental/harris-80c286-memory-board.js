@@ -9,20 +9,40 @@ const D = bitPins('d', 16);
 const INPUTS = {reset: 0, ready_n: 0, hold: 0, intr: 0, nmi: 0, pereq: 0, busy_n: 1, error_n: 1, vcc: 1, gnd: 0};
 const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, toTerminal});
 
-export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false, editWires = wires => wires} = {}) {
+export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
+    intrEnabled = false, interruptDevice = null, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     for (const kind of ['62256', '28c256']) if (!getDevice(kind)) throw new CircuitFault('MEMORY_MODELS_REQUIRED', 'registerBusMemory() before construction');
-    const bus = new Harris80C286Bus({enabled,nmiEnabled});
-    const controller = new MemoryPhaseController({enabled});
+    if (interruptDevice && (!intrEnabled || typeof interruptDevice.part !== 'function' || typeof interruptDevice.update !== 'function'))
+        throw new TypeError('interruptDevice requires intrEnabled and part/update methods');
+    const bus = new Harris80C286Bus({enabled,nmiEnabled,intrEnabled});
+    const controller = new MemoryPhaseController({enabled,intrEnabled});
     const latch = new IdealAddressLatch({enabled});
     const memories = [];
     const parts = [bus.part(), controller.part(), latch.part(),
         {id: 'inputs', pins: Object.keys(INPUTS), outputs: Object.keys(INPUTS)}];
     const wires = [];
-    for (const p of Object.keys(INPUTS).filter(p => p !== 'vcc' && p !== 'gnd')) wires.push(wire('inputs', p, 'cpu', p));
-    for (const p of ['reset', 'ready_n']) wires.push(wire('inputs', p, 'controller', p));
+    for (const p of Object.keys(INPUTS).filter(p => p !== 'vcc' && p !== 'gnd' && !(intrEnabled && p === 'ready_n') && !(interruptDevice && p === 'intr')))
+        wires.push(wire('inputs', p, 'cpu', p));
+    for (const p of ['reset', ...(intrEnabled ? [] : ['ready_n'])]) wires.push(wire('inputs', p, 'controller', p));
+    if (intrEnabled) {
+        // External ideal-digital wait logic, shared by CPU and controller.
+        // No CPU pending/phase/transaction callback supplies READY.
+        parts.push({id:'irq_ready',pins:['external_n','wait','ready_n'],outputs:['ready_n'],evaluate(read) {
+            const a=read('external_n'),b=read('wait');
+            return {ready_n:[a,b].every(v=>v===0||v===1)?a|b:'X'};
+        }});
+        wires.push(wire('inputs','ready_n','irq_ready','external_n'),wire('controller','inta_wait','irq_ready','wait'),
+            wire('irq_ready','ready_n','cpu','ready_n'),wire('irq_ready','ready_n','controller','ready_n'));
+    }
+    const irqPart = interruptDevice?.part();
+    if (irqPart) {
+        parts.push(irqPart);
+        wires.push(wire('inputs','reset',irqPart.id,'reset'),wire('controller','inta_n',irqPart.id,'inta_n'),wire(irqPart.id,'intr','cpu','intr'));
+        for (const p of bitPins('d',8)) wires.push(wire(irqPart.id,p,'cpu',p));
+    }
     for (const p of ['s1_n', 's0_n', 'cod_inta_n', 'm_io']) wires.push(wire('cpu', p, 'controller', p));
     for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('cpu', p, 'latch', p));
     wires.push(wire('controller', 'ale', 'latch', 'ale'));
@@ -49,21 +69,29 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     }
     const circuit = new DigitalCircuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
     circuit.drive('inputs', INPUTS);
+    const settleInterruptDevice = () => {
+        if (!irqPart) return;
+        circuit.settle();
+        circuit.drive(irqPart.id,interruptDevice.update(p=>circuit.require(irqPart.id,p)));
+        circuit.settle();
+    };
     let faulted = false;
     let periodOpen = false;
     return {
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
-            fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled}),
+            fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled}),
         bus, circuit,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},
+        hasPendingINTR() {return intrEnabled && bus.intrSamples === 4;},
         beginClock(inputs = {}) {
             if (faulted) throw new CircuitFault('BOARD_FAULTED', 'reconstruct board; no automatic rollback');
             if (periodOpen) throw new CircuitFault('CLOCK_ORDER', 'endClock required');
             try {
-                circuit.drive('inputs', inputs); circuit.settle();
+                circuit.drive('inputs', inputs); circuit.settle(); settleInterruptDevice();
                 circuit.drive('cpu', bus.beginClock(p => circuit.require('cpu', p))); circuit.settle();
                 circuit.drive('controller', controller.beginClock(p => circuit.require('controller', p))); circuit.settle();
+                settleInterruptDevice();
                 circuit.drive('latch', latch.update(p => circuit.require('latch', p)));
                 settleBusMemories(circuit, memories);
                 periodOpen = true;
@@ -80,6 +108,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
                 const commands = end.finish();
                 if (commands) {
                     circuit.drive('controller', commands);
+                    settleInterruptDevice();
                     // This command transition, NOT result/callback, makes the
                     // reused memory model commit its pending write.
                     settleBusMemories(circuit, memories);

@@ -72,7 +72,8 @@ a regression gate for the already measured instruction inventory.
 ## Next
 
 The subsequent [NMI foundation](HARRIS-286-NMI.md) adds opt-in NMI sampling,
-SS shadow, IRET blocking, HLT wake and REP resumption. INTR acknowledgement
-still needs controller/pin-level tests, then device wiring and a real 286 DOS boot fixture.
+SS shadow, IRET blocking, HLT wake and REP resumption. The
+[INTR follow-up](HARRIS-286-INTR.md) adds controller/pin-level acknowledgement;
+programmable PIC/device wiring and a real 286 DOS boot fixture remain pending.
 Protected-mode descriptors, gates, privilege rules, tasks and exception delivery
 need their own implementation and acceptance corpus before permitting PE=1.
