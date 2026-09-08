@@ -337,6 +337,19 @@ class Counter {
         // early on a low gate froze the one-shot the edge had just armed.
         if (!this.gate && this.mode !== 1 && this.mode !== 5) return;
 
+        // Between output edges a binary counter only subtracts. Keep the
+        // original tick loop whenever this call could reach an edge (whose
+        // callback may reprogram the counter), and for BCD or fractional
+        // requests. This batches device ticks, never CPU instructions.
+        if (!this.bcd && this.mode <= 5 && Number.isInteger(ticks) && ticks > 0) {
+            const decrement = this.mode === 3 ? ticks * 2 : ticks;
+            const edge = this.mode === 2 ? 1 : 0;
+            if (this.ce > decrement + edge) {
+                this.ce -= decrement;
+                return;
+            }
+        }
+
         for (let t = 0; t < ticks; t++) {
             this._tick();
         }
