@@ -558,13 +558,13 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
-8086 promotion and sandbox: active on `fable/i8086-fastpaths`; reconciling verified fastpaths with current master (tone and W65C51 changes retained), validating the combined engine before promotion. Lite GUI experiments remain isolated from project execution.
-
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
 
 ## DONE
+
+8086 promotion and sandbox: complete; reconciled engine `4c6ab1a7289db121284a2c0e98435598bd3ef24c` retains tone and W65C51 master changes alongside verified prefix/REP/PIT/RAM optimizations. Full engine CI `34235227257` green; consuming Lite build/corpus/both browser suites `34237479071` green, including isolated GUI comparisons and diagnostic reference-word access. This ledger-only handoff accompanies fast-forward promotion to master; source pin remains the verified runtime commit. Claim released.
 
 8086 fastpaths phase 2: complete on `fable/i8086-fastpaths`, engine `6b7761d210698c8f392e28ce85d02c5d94ee676f`. Dedicated REP MOVS/STOS, guarded RAM words (`fastWords: false` reference option), and unit-correct PIT deadlines integrated into Lite feature branch `perf/i8086-execution` at `911d09104`. Upstream CI `34219643631` passed units, all 646,000 8086 vectors, 80186/V20 and 525-program corpus. Lite experiment log records Chromium acceptance and rejected debugger/batching/decoded/Wasm prototypes; those prototypes are not production paths. No default-branch changes or deployment; claim released.
 
