@@ -465,6 +465,9 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                         'write watchpoint range must be safe integers within 20-bit physical space' };
                 }
                 const id = nextBpId++;
+                // The range guard already proves addr <= 0xfffff, so the old
+                // `& 0xfffff` would be an identity here. Store the exact value;
+                // restoring that mask cannot change any accepted input.
                 writeWatches.set(id, { addr: spec.addr, len });
                 syncWriteTrap();
                 return id;
