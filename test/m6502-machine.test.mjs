@@ -86,6 +86,22 @@ test('ACIA: TX bytes reach the hook, RX queue drives RDRF and overrun', () => {
     assert.equal(acia.read(1) & 0x08, 0, 'queue drained');
 });
 
+test('ACIA snapshots expose IRQ as a boolean at the serialization boundary', () => {
+    const acia = new W65C51();
+    assert.strictEqual(acia.getState().irq, false, 'reset snapshot is false');
+
+    acia.write(2, 0x01); // DTR active, receiver IRQ enabled
+    acia.rxPush(0x41);
+    assert.strictEqual(acia.getState().irq, true, 'asserted receiver IRQ snapshots as true');
+
+    // getState() is a serialization boundary, so it must not leak a malformed
+    // backing value even if an embedding or debugger has touched the model.
+    // This also makes reverting the normalization to `irq: this._irq` a
+    // meaningful mutation: the snapshot would expose numeric 1 and fail here.
+    acia._irq = 1;
+    assert.strictEqual(acia.getState().irq, true, 'truthy backing state is normalized');
+});
+
 // LDA/STA setup, then poll IFR6, clear it via T1C-L, toggle PA0. T1 latch
 // 998 -> period 1000 cycles = 1.000 ms at the preset's 1 MHz.
 const BLINK_ROM = [

@@ -123,6 +123,8 @@ export class BoardImpl {
      * @type {Map<string, bigint[]>}
      */
     this.buzzerEdges = new Map();
+    /** partId -> {hz, sinceNs}: a tone the MCU is DRIVING, as a hardware timer would. */
+    this.drivenTones = new Map();
 
     /**
      * Cached node voltages from last solve.
@@ -594,6 +596,7 @@ export class BoardImpl {
     }
     this.ledHistory.clear();
     this.buzzerEdges.clear();
+    this.drivenTones.clear();
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
 
@@ -705,6 +708,15 @@ export class BoardImpl {
     // Update scope channel min/max for voltage changes between sample points
     if (this._scopeChannels.size > 0) {
       this._feedScopeVoltages();
+    }
+
+    // A DIRECT WRITE TAKES THE PIN BACK FROM THE TIMER, whether or not the level
+    // changed: `turn off buzzer` after `set buzzer to 440 hz` must silence it,
+    // and the stored level may already match. Guarded on there being a tone at
+    // all, so the ordinary case costs one map lookup rather than a net walk.
+    if (this.drivenTones.size > 0) {
+      const sounding = this._buzzerOnPin(pin);
+      if (sounding) this.drivenTones.delete(sounding.id);
     }
 
     // Record buzzer edges on state change
@@ -1502,6 +1514,16 @@ export class BoardImpl {
    * @returns {{hz: number, on: boolean}}
    */
   buzzerTone(partId) {
+    // A DRIVEN tone outranks measured edges. Real hardware makes a note with a
+    // timer toggling the pin; the program only advances simulated time when it
+    // waits, so it cannot emit those edges itself — `set <buzzer> to 440 hz`
+    // between two half-second waits would produce two edges, not 440. So
+    // setTone() records the oscillation and this reports it, flagged `driven`
+    // so a consumer can still tell a modelled note from a measured waveform.
+    const driven = this.drivenTones.get(partId);
+    if (driven && driven.hz > 0) {
+      return {hz: driven.hz, on: this.powered !== false, driven: true, sinceNs: driven.sinceNs};
+    }
     const edges = this.buzzerEdges.get(partId);
     if (!edges || edges.length < 2) return this._buzzerDcTone(partId);
 
@@ -2491,6 +2513,7 @@ export class BoardImpl {
     this.capVoltages.clear();
     this.ledHistory.clear();
     this.buzzerEdges.clear();
+    this.drivenTones.clear();
     this.nodeVoltages.clear();
     this.ledCurrents.clear();
     this.inductorCurrents.clear();
@@ -2559,6 +2582,7 @@ export class BoardImpl {
     // Re-initialize LED/buzzer tracking
     this.ledHistory.clear();
     this.buzzerEdges.clear();
+    this.drivenTones.clear();
     for (const p of this.parts) {
       if (p.kind === 'led') this.ledHistory.set(p.id, []);
       if (p.kind === 'buzzer') this.buzzerEdges.set(p.id, []);
@@ -4115,9 +4139,37 @@ export class BoardImpl {
    * @param {PinId} pin
    */
   _recordBuzzerEdges(pin) {
-    // Find buzzers connected to a net that includes this pin.
-    // Must check BOTH terminals — the buzzer may be wired either way
-    // (VCC→a, MCU→b or MCU→a, GND→b).
+    const part = this._buzzerOnPin(pin);
+    if (!part) return;
+    const edges = this.buzzerEdges.get(part.id);
+    if (edges) {
+      edges.push(this.timeNs);
+      while (edges.length > 100) edges.shift();
+    }
+  }
+
+  /**
+   * The buzzer an MCU pin is wired to, either way round (VCC→a, MCU→b or
+   * MCU→a, GND→b), or null.
+   *
+   * THE PIN NAMESPACE DOES NOT LIVE ONLY ON `kind: 'mcu'`. It lives on the
+   * MCU-surface part: the bare body (kind 'mcu') OR any device model that
+   * declares `gpioFollowsPinStates` — the dev boards and bare chips
+   * (`arduino_uno`, `stc15_mcu`, `attiny85`, `stm32f030`, …). Matching only
+   * 'mcu' here made `setTone()` return false and do nothing on every one of
+   * those, so a correct program was silent with no error — which is the same
+   * defect `readPin()` had (see `_pinNetForTerminal`: "Only matching kind 'mcu'
+   * meant readPin() returned 0 for every input on an Arduino body"). Measured
+   * against the shipped corpus before this change: of 17 bench files that
+   * declare a TONE pin and carry a buzzer, `setTone()` reached a buzzer on 8
+   * and found NOTHING on 9, and every one of the 9 drove the buzzer from an
+   * `arduino_uno` or `stc15_mcu` surface.
+   *
+   * @param {PinId} pin
+   * @returns {object|null}
+   */
+  _buzzerOnPin(pin) {
+    const wanted = String(pin).toLowerCase();
     for (const part of this.parts) {
       if (part.kind !== 'buzzer') continue;
       for (const term of ['a', 'b']) {
@@ -4127,17 +4179,44 @@ export class BoardImpl {
         if (!net) continue;
         for (const t of net.terminals) {
           const p = this.partMap.get(t.part);
-          if (p && p.kind === 'mcu' && String(t.terminal).toLowerCase() === pin) {
-            const edges = this.buzzerEdges.get(part.id);
-            if (edges) {
-              edges.push(this.timeNs);
-              while (edges.length > 100) edges.shift();
-            }
-            return; // found — one edge per setPin call
-          }
+          if (!p || String(t.terminal).toLowerCase() !== wanted) continue;
+          if (p.kind === 'mcu') return part;
+          const model = getDevice(p.kind);
+          if (model && model.gpioFollowsPinStates) return part;
         }
       }
     }
+    return null;
+  }
+
+  /**
+   * Drive a TONE pin, the way an MCU's timer does: a standing oscillation on
+   * the pin until it is stopped or the pin is written directly.
+   *
+   * This is the method the generated stc12 driver has always called
+   * (`_board().setTone(pin, hz)`) and that no board implemented, which is why a
+   * two-tone siren was silent with no error while its program was correct. The
+   * audio path was already complete: `buzzerTone()` is read every frame by the
+   * circuit designer and fed to a real oscillator. Only the source was missing.
+   *
+   * @param {PinId} pin the MCU pin the buzzer is wired to
+   * @param {number} hz frequency; 0, negative or non-finite stops the tone
+   * @returns {boolean} whether a buzzer was found on that pin
+   */
+  setTone(pin, hz) {
+    const part = this._buzzerOnPin(pin);
+    if (!part) return false;
+    const frequency = Number(hz);
+    if (!Number.isFinite(frequency) || frequency <= 0) {
+      this.drivenTones.delete(part.id);
+    } else {
+      this.drivenTones.set(part.id, {hz: frequency, sinceNs: this.timeNs});
+    }
+    // A tone is an electrical event like any other: the caches that a pin edge
+    // invalidates are invalidated here too, so a reader in the same instant
+    // does not answer from a stale solve.
+    this._trapValid = false;
+    return true;
   }
 }
 
