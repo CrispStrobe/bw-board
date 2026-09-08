@@ -560,9 +560,11 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| Paterson and 16-bit guest milestones | Codex/root, x86-guest-milestones | 2026-09-08 | Pinned guest sources, CPU-specific acceptance, wired real-mode prerequisites and reference-machine probes on feat/x86-backend-lab. Paired Lite consumes only explicitly pinned experimental updates; no master promotion/deployment. |
+| _(none)_ | | | |
 
 ## DONE
+
+Paterson guest increment: source `f2eeb5964bc1285a6c8f3b1c297d2998833cc56f`, paired Lite `9b5ea89dc55ea0e987591c3db4b6d4d2cf3c7745`. Preserved MIT original/adapted FAT12 routines pass on 8086/80186/wired 286 subset; byte/stack/segment/ALU prerequisites remain experimental. Real DOS shell disk persistence passes on 8086/80186. 71 targeted engine tests passed locally, no skips; Lite preservation/runtime and isolated browser passed. No full 80286 vector run, general 286, accepted ELKS/MINIX boot, games import, DOSBox package support, production pin change, merge or deployment. The five requested milestones remain open in the plans; this bounded implementation/research increment is handed off, claim released.
 
 286 saved profile/debugger session: source `14f2538` on `feat/x86-backend-lab`; strict JSON construction recipe for the fixed latched-memory profile, editable saved wires, fresh-state reload, bank/net inspection, bounded clock/instruction stepping and 24-bit physical code breakpoints. Unsupported parts/backends/live snapshot and mutation operations fail explicitly. 10 new tests; final targeted run 117/117, four suites, no skips. Engine-only, default-off; no full Boundary-D registration, application controls, production defaults/pins, merge or deployment. Full CI/browser/hardware not run. Claim released; application import/export and debugger controls remain next.
 
