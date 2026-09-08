@@ -454,15 +454,30 @@ jobs:
       - name: Install
         run: npm install --no-audit --no-fund
 
-      - name: Fetch the z80 suite
-        run: git clone --depth 1 --filter=blob:none
-             https://github.com/SingleStepTests/z80 "$HOME/code/z80-vectors"
-      - name: Fetch the 65x02 suite (WDC variant only)
+      - name: Fetch the pinned z80 suite
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/z80
+          ref: ebe1875d48f374bcfd4b505d8eb8ee751568b5f7
+          path: z80-vectors
+          filter: blob:none
+      - name: Fetch the pinned 65x02 suite (WDC variant only)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/65x02
+          ref: 2f6980a2d95757486c7bee24355c360e40e2a224
+          path: 65x02-vectors
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /wdc65c02/v1/
+      # Keep the historical on-disk contract. Seven consumers resolve these
+      # paths through homedir(), including two tests with no env override.
+      - name: Move the pinned suites to the existing grinder paths
         run: |
           set -euo pipefail
-          git clone --depth 1 --filter=blob:none --sparse \
-            https://github.com/SingleStepTests/65x02 "$HOME/code/65x02-vectors"
-          cd "$HOME/code/65x02-vectors" && git sparse-checkout set wdc65c02/v1
+          mkdir -p "$HOME/code"
+          mv "$GITHUB_WORKSPACE/z80-vectors" "$HOME/code/z80-vectors"
+          mv "$GITHUB_WORKSPACE/65x02-vectors" "$HOME/code/65x02-vectors"
 
       # Assert the suites arrived BEFORE grinding them. Without this, a clone
       # that fetched nothing produces a grinder that finds no files, and the
