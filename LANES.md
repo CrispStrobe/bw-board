@@ -361,6 +361,14 @@ writing the general claim -- the tests that pin the behaviour you are
 changing, and the cases that PASSED. If you cannot name what would have
 falsified the sentence, it is not a finding yet.
 
+**WHAT NAMING A FAILURE MODE ACTUALLY BUYS YOU**, added 2026-09-08 after
+committing this one four times in a single file, twice AFTER writing it down:
+naming a failure mode buys the ability to CATCH it, not to avoid it
+(lego-ac's phrasing). All four were caught, and two of them by the run's own
+output contradicting itself — which is only possible because the evidence was
+printed beside the conclusion. Print the measurement next to the sentence it
+supports, and a wrong sentence has something to disagree with.
+
 **Corollary for tests:** a test guarding a proxy-invisible property must not
 use the proxy. `test/i8086-prefix-fetch.test.mjs` deliberately does not look
 at `busTrace` and counts `read()` invocations instead, and its injection reach
@@ -400,6 +408,49 @@ they had done, rather than letting a mysterious instruction appear. A peer who
 reaches into your session and TELLS you leaves you able to refuse. That is the
 difference between an error and a trap, and it is why this rule is written
 without blame attached to it.
+
+**15. A STEADY-STATE INVARIANT IS SILENTLY FALSE AT INITIALISATION.** Found
+2026-09-08 in brickwright-lite's stage container, and it is the reason I argued
+twice against the fix that turned out to be the fix.
+
+The measurement was correct: the Scratch stage's size is a pure function of two
+props the component's `shouldComponentUpdate` gates on, so **every size change
+already reaches the resize path** and an observer would guard a case that
+cannot occur. A pane resize confirmed it — the stage moved sideways, x 1285 to
+846, and kept its 240x180.
+
+**All true, of every change AFTER the stage has a size. False of the first
+one.** The 0 -> 480 transition is driven by no gated prop, so nothing in the
+update path can see it, and that transition is the entire defect.
+
+```
+  the rule            "every size change comes through a gated prop"
+  where it holds      once the component is in its working state
+  where it fails      the transition INTO that state
+  what it cost        two wrong fixes and two arguments against the right one
+```
+
+**The general shape: the code that ESTABLISHES a state is exactly the code the
+state's invariants cannot describe.** An invariant is a statement about a
+system that is already running. Initialisation is the interval in which it is
+not yet true, and reasoning that treats the two as one place will be confidently
+wrong about the interval — while being right about everything else, which is
+what makes it persuasive.
+
+**The tell:** an argument of the form "X always happens, therefore we need not
+handle the case where it has not happened yet". The second clause is about a
+time the first clause does not cover.
+
+**And the fixes fail the same way.** Sizing the buffer at mount was a no-op
+because at mount the container has no box — a repair that looks EXACTLY like
+the bug it is meant to fix, and would have shipped as done by anyone who did
+not measure afterwards.
+
+**WHAT SETTLED IT WAS AN EXPERIMENT, NOT AN ARGUMENT** — lego-ac's, who asked
+for the measurement rather than accepting my reasoning, and who says they would
+not have predicted the answer either. That is the method: when two people
+reason to opposite conclusions from the same correct measurement, the
+disagreement is about which regime the rule covers, and only a run tells you.
 
 ## OPERATIONAL — archiving to /mnt/storage, 2026-09-05
 
