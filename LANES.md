@@ -558,6 +558,8 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
+8086 PIT follow-up: active on `perf/i8086-device-advance`; user requests countdown/call-overhead experiments, correct paths retained default-off and genuinely broken paths removed or repaired. Scope includes exact per-instruction regression oracles; no default promotion without full-workload measurements.
+
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
