@@ -167,7 +167,11 @@ test('TWI facts describe the completed transaction without extra device calls', 
 test('capabilities claim only the event evidence this lane produces', () => {
   const { target } = debug(new Uint16Array([0x0000]));
   const caps = target.capabilities();
-  assert.deepEqual(caps.eventKinds, ['instruction', 'device']);
+  assert.deepEqual(caps.events, ['instruction', 'device']);
+  assert.deepEqual(caps.extensions,
+    { eventBreakpointBoundary: 'instruction-retire' });
+  assert.equal(caps.eventKinds, undefined,
+    'there is one canonical source of event capability truth');
   assert.equal(caps.checkpoints, undefined);
   assert.equal(caps.reverse, undefined);
   assert.ok(!caps.steps.includes('cycle'));

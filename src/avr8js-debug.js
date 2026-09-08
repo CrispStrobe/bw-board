@@ -332,7 +332,8 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         haltPolicy: 'freeze-timers',
         timeFreezes: true,
         consumes: [],
-        eventKinds: ['instruction', 'device'],
+        events: ['instruction', 'device'],
+        extensions: { eventBreakpointBoundary: 'instruction-retire' },
       };
     },
 
