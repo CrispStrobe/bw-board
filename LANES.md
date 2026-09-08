@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-timer | Codex | 2026-09-08 | Default-off programmable PIT/clock nets to PIC IRQ0; guest periodic interrupts and READY tests; no app pins/deploy. |
 
 ## DONE
 
