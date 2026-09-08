@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| debug-session wall-budget convergence | bwcx (Codex), root audits/promotes | `converge/debug-session-wall-budget` at base `8deaf1ea6` | Upstream the general opt-in session primitive from Lite: a bounded host-wall-time pump carries simulated-time debt instead of freezing the browser or dropping program time. The default path remains one whole `runFor` call per pump when `wallBudgetMs` is absent; Lite's only current opt-in is the i8086 host. Envelope: `src/debug-session.js`, one focused test, this row. |
 
 ## DONE
 
