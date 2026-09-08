@@ -193,3 +193,18 @@ four alternating-order rounds of 10,000 resolutions of a synthetic 256-part,
 3.0–5.9 times faster resolution, with equal checksums. This is a noisy,
 shared-host **resolver-only** measurement, not an emulator speedup or RT-speed
 claim. CPU, BIOS, PIC, timer and SST sources are unchanged by this optimization.
+
+The [new 110,000-clock probe](HARRIS-286-BIOS-STATIC-NETS-REPORT.json) uses this
+resolver and the configured BIOS on the reduced 64 KiB fixture. Its shared
+48,000/50,000/64,000-clock checkpoints match the earlier copied-read run's
+instruction counts and CS:IP. At the new limit it has retired 7,511 instructions,
+CS:IP=`F000:0453`, AX=`0E30h`, and remains in the video dispatcher during banner
+output. PIC mask BCh, no acknowledge pairs, and timer mode 3/divisor 65536 are
+retained. Exit 2, `budget-exhausted`, `accepted:false`: still no complete POST,
+new peripheral fault or DOS boot. No firmware work was shortened or replaced.
+
+Next functional increment should implement the bounded FDC control/IRQ6 bridge
+with owned microguest tests for the acceptance gates above, then rerun normal
+POST with a larger budget (e.g. 160,000 clocks). Microguest device tests are
+separate from boot acceptance; a control-only bridge must not claim disk-sector
+transfers or use the non-wired core's automatic DMA-to-PIO fallback.
