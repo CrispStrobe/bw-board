@@ -560,9 +560,11 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 addressing and loops | Codex, feat/x86-backend-lab | 2026-09-08 | Extend boot executor with word ModR/M addressing, MOV/ADD/CMP, register INC/DEC and bounded branch/loop tests; owned RAM loop ROM. No production promotion. |
+| _(none)_ | | | |
 
 ## DONE
+
+286 addressing and loops: source `bf83dac` on `feat/x86-backend-lab`; word ModR/M MOV/ADD/CMP in both directions, register INC/DEC, JE/JNE/JMP/LOOP. Owned ROM fills/sums wired RAM and checks the result in guest code (47 instructions, sum 10; deliberate failure branch also verified). 13 new tests include all 256 ModR/M decoder encodings as a unit check, representative wired accesses and delayed RMW flags/retirement. Final targeted run 107/107, no skips; loop demo passed. Still no general 286, timing/prefetch/protection or editor integration; no production defaults/pins/deployment. Full CI/hardware/browser not run. Claim released; saved circuit/debugger integration remains planned.
 
 286 boot instruction subset: source `8e9d684` on `feat/x86-backend-lab`; generator-resumable real-mode subset fetches owned reset/program ROM through the latched board, retires ten instructions and writes `0x68ac` to wired RAM, then halts. Low ROM alias is explicit board decode, default-off. Assembly sources reproduce ROM bytes; shared-subset results agree with separate 8086 decoder. 15 new tests; final targeted run 94/94, zero skips; demo `cpuExecuted:true`. Still no general 286, prefetch/instruction timing/protection/interrupts, physical HLT signalling, snapshots or editor component. Full CI/hardware/browser not run; no production promotion or deployment. Claim released; broader CPU and Circuit Editor integration remain planned.
 
