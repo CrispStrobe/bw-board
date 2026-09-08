@@ -458,9 +458,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
 
         setBreakpoint(spec) {
             if (spec.kind === 'write') {
-                if (spec.addr == null) return { unsupported: 'addr required' };
+                const len = spec.len ?? 1;
+                if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 ||
+                    !Number.isSafeInteger(len) || len < 1 || spec.addr + len > 0x100000) {
+                    return { unsupported:
+                        'write watchpoint range must be safe integers within 20-bit physical space' };
+                }
                 const id = nextBpId++;
-                writeWatches.set(id, { addr: spec.addr & 0xfffff, len: spec.len ?? 1 });
+                writeWatches.set(id, { addr: spec.addr, len });
                 syncWriteTrap();
                 return id;
             }

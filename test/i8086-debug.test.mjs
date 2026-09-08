@@ -140,6 +140,37 @@ test('a write watchpoint is twenty bits wide, not sixteen', () => {
     assert.equal(halted.value, 0x55);
 });
 
+const WRITE_WATCH_REFUSAL = {
+    unsupported: 'write watchpoint range must be safe integers within 20-bit physical space',
+};
+
+for (const [name, spec] of [
+    ['a missing address', { kind: 'write' }],
+    ['a negative address', { kind: 'write', addr: -1 }],
+    ['a fractional address', { kind: 'write', addr: 1.5 }],
+    ['a NaN address', { kind: 'write', addr: Number.NaN }],
+    ['an infinite address', { kind: 'write', addr: Number.POSITIVE_INFINITY }],
+    ['an address beyond physical space', { kind: 'write', addr: 0x100000 }],
+    ['a negative length', { kind: 'write', addr: 0, len: -1 }],
+    ['a zero length', { kind: 'write', addr: 0, len: 0 }],
+    ['a fractional length', { kind: 'write', addr: 0, len: 1.5 }],
+    ['a NaN length', { kind: 'write', addr: 0, len: Number.NaN }],
+    ['an infinite length', { kind: 'write', addr: 0, len: Number.POSITIVE_INFINITY }],
+    ['a range crossing the top of physical space', { kind: 'write', addr: 0xfffff, len: 2 }],
+]) {
+    test(`i8086 write watchpoint only: refuses ${name}`, () => {
+        const { t } = machineWith(CALL_PROGRAM);
+        assert.deepEqual(t.setBreakpoint(spec), WRITE_WATCH_REFUSAL,
+            'an armed-looking watch must not relocate, truncate, or cover only part of its range');
+    });
+}
+
+test('i8086 write watchpoint only: accepts the final physical byte', () => {
+    const { t } = machineWith(CALL_PROGRAM);
+    assert.equal(typeof t.setBreakpoint({ kind: 'write', addr: 0xfffff, len: 1 }), 'number',
+        'the range bound includes the last byte without wrapping to address zero');
+});
+
 test('memory reads and writes reach the whole megabyte, ROM included', () => {
     const { t, m } = machineWith(CALL_PROGRAM);
     const got = t.readMem('mem', 0xf8000, 3);
