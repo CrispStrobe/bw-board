@@ -529,13 +529,21 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 return id;
             }
             if (spec.addr == null) return { unsupported: 'addr or symbol required' };
+            // seg:off is an explicitly different input: each register is
+            // 16-bit hardware and the composed bus address wraps at 20 bits.
+            // A direct address is already physical, so masking it would turn
+            // invalid input into a breakpoint on a different instruction.
+            let addr;
+            if (spec.seg != null) {
+                addr = (((spec.seg & 0xffff) << 4) + (spec.addr & 0xffff)) & 0xfffff;
+            } else {
+                if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xfffff) {
+                    return { unsupported:
+                        'code breakpoint addr must be a safe integer within 20-bit physical space' };
+                }
+                addr = spec.addr;
+            }
             const id = nextBpId++;
-            // seg:off is accepted and resolved here, once, so the compare
-            // stays linear. A caller that already has a physical address
-            // passes only addr.
-            const addr = spec.seg != null
-                ? (((spec.seg & 0xffff) << 4) + (spec.addr & 0xffff)) & 0xfffff
-                : spec.addr & 0xfffff;
             breakpoints.set(id, { kind: 'code', addr });
             return id;
         },

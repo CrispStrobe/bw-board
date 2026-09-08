@@ -55,6 +55,39 @@ test('regs report the pair AND the flat address it names', () => {
     }
 });
 
+const CODE_BREAKPOINT_REFUSAL = {
+    unsupported: 'code breakpoint addr must be a safe integer within 20-bit physical space',
+};
+
+for (const [name, addr] of [
+    ['a negative address', -1],
+    ['a fractional address', 1.5],
+    ['a NaN address', Number.NaN],
+    ['an infinite address', Number.POSITIVE_INFINITY],
+    ['an address beyond physical space', 0x100000],
+]) {
+    test(`i8086 direct code breakpoint refuses ${name}`, () => {
+        const { t } = machineWith(CALL_PROGRAM);
+        assert.deepEqual(t.setBreakpoint({kind: 'code', addr}), CODE_BREAKPOINT_REFUSAL,
+            'a direct physical address must not wrap onto a different instruction');
+    });
+}
+
+test('i8086 direct code breakpoint accepts high memory and the final physical byte', () => {
+    const { t } = machineWith(CALL_PROGRAM);
+    assert.equal(typeof t.setBreakpoint({kind: 'code', addr: 0x1f000}), 'number',
+        'a valid physical address above 64 KiB must not be rejected');
+    assert.equal(typeof t.setBreakpoint({kind: 'code', addr: 0xfffff}), 'number',
+        'the 20-bit bound includes the final physical byte');
+});
+
+test('an unknown symbol keeps its named refusal instead of entering the direct-address guard', () => {
+    const { t } = machineWith(CALL_PROGRAM);
+    t.setSymbols(new Map([[0xf8000, 'start']]));
+    assert.deepEqual(t.setBreakpoint({kind: 'code', symbol: 'missing'}),
+        {unsupported: 'no symbol named "missing"'});
+});
+
 test('a code breakpoint set through a DIFFERENT seg:off pair still fires', () => {
     const { t } = machineWith(CALL_PROGRAM);
     // F800:0006 and F7FF:0016 are the same byte. The program only ever uses
