@@ -78,6 +78,38 @@ for (const [name, addr] of [
   });
 }
 
+const writeWatchpointRefusal = dataSize => ({
+  unsupported:
+    `write watchpoint range must be safe integers within data space (size ${dataSize})`,
+});
+
+for (const [name, breakpointFor] of [
+  ['negative address', () => ({ kind: 'write', addr: -1 })],
+  ['fractional address', () => ({ kind: 'write', addr: 1.5 })],
+  ['non-finite address', () => ({ kind: 'write', addr: Number.NaN })],
+  ['address past the end', dataSize => ({ kind: 'write', addr: dataSize })],
+  ['range whose address is valid but address plus length is past the end', dataSize =>
+    ({ kind: 'write', addr: dataSize - 1, len: 2 })],
+  ['negative length', () => ({ kind: 'write', addr: 0, len: -1 })],
+  ['zero length', () => ({ kind: 'write', addr: 0, len: 0 })],
+  ['fractional length', () => ({ kind: 'write', addr: 0, len: 1.5 })],
+  ['non-finite length', () => ({ kind: 'write', addr: 0, len: Number.NaN })],
+]) {
+  test(`AVR write watchpoint only: refuses ${name}`, () => {
+    const { adapter, target } = make(BLINK);
+    const dataSize = adapter.cpu.data.length;
+    assert.deepEqual(target.setBreakpoint(breakpointFor(dataSize)),
+      writeWatchpointRefusal(dataSize));
+  });
+}
+
+test('AVR write watchpoint only: accepts the highest valid address and length pair', () => {
+  const { adapter, target } = make(BLINK);
+  const dataSize = adapter.cpu.data.length;
+  assert.equal(typeof target.setBreakpoint({ kind: 'write', addr: dataSize - 1, len: 1 }),
+    'number');
+});
+
 test('code breakpoint: halts AT the address, before executing it', () => {
   const { target, halts } = make(BLINK);
   const handle = target.setBreakpoint({ kind: 'code', addr: 2 }); // SBI PINB,5

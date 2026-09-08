@@ -444,10 +444,15 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         return handle;
       }
       if (bp.kind === 'write') {
-        if (typeof bp.addr !== 'number') return { unsupported: 'write watchpoint needs addr' };
+        const len = bp.len ?? 1;
+        if (!Number.isSafeInteger(bp.addr) || !Number.isSafeInteger(len) ||
+            bp.addr < 0 || len < 1 || bp.addr + len > cpu.data.length) {
+          return { unsupported:
+            `write watchpoint range must be safe integers within data space (size ${cpu.data.length})` };
+        }
         const handle = nextHandle++;
         bps.set(handle, { kind: 'write', addr: bp.addr });
-        writeWatches.set(handle, { addr: bp.addr, len: bp.len ?? 1 });
+        writeWatches.set(handle, { addr: bp.addr, len });
         syncWriteHooks();
         return handle;
       }
