@@ -36,6 +36,7 @@
  * @module
  */
 import { I8086 } from './i8086.js';
+import { installI8086RamWordAccess } from './i8086-ram-words.js';
 import { I8255 } from './i8255.js';
 import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
@@ -853,6 +854,7 @@ export class I8086Machine {
         // NOT from its shared _interrupt(n) funnel, which the hardware path also
         // uses and which would then double-fire against 'irq'/'nmi'.
         this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
+        if (config.fastWords !== false) installI8086RamWordAccess(this);
     }
 
     /**
