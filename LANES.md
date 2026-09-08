@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| Paterson and 16-bit guest milestones | Codex/root, x86-guest-milestones | 2026-09-08 | Pinned guest sources, CPU-specific acceptance, wired real-mode prerequisites and reference-machine probes on feat/x86-backend-lab. Paired Lite consumes only explicitly pinned experimental updates; no master promotion/deployment. |
 
 ## DONE
 
