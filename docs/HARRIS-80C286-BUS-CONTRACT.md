@@ -3,6 +3,12 @@
 2026-09-08. Experimental, default-off. This implements bus sequencing, not CPU
 instructions, and does not claim a complete hardware-timed 286 component.
 
+Follow-up: the [latched memory bridge](HARRIS-80C286-LATCHED-MEMORY.md) connects
+this sequencer to external latch/controller components and the existing
+RAM/ROM behavioral models. It adds write-edge integration without claiming a
+full 82C288, electrical edge timing or instruction execution. The original
+sequencer-only scope and verification below remain historical receipts.
+
 ## Primary source and selected device
 
 Selected device: Harris CS80C286-12, PLCC-68, component-side view. Source:
