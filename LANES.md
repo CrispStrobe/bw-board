@@ -558,13 +558,13 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
-8086 device advancement: active on `perf/i8086-device-advance`; user-authorized per-device attribution, per-instruction optimization and explicit event-scheduling observability contract. Preserve callback order, live counter fields, fractional clocks and attachment invalidation. Ship only measured correctness-preserving wins.
-
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
 
 ## DONE
+
+8086 device advancement: complete on `perf/i8086-device-advance`, source/test commit `4f72ff4`. Full CI `34246446550` green (units, vectors, full vectors, 80186 vectors, corpus). Added the instruction-boundary observability contract and differential/negative fixtures. Paired Lite experiments reject all four measured device candidates; no production source changes or general deferred scheduling. Feature-branch handoff only, not merged. Claim released.
 
 8086 promotion and sandbox: complete; reconciled engine `4c6ab1a7289db121284a2c0e98435598bd3ef24c` retains tone and W65C51 master changes alongside verified prefix/REP/PIT/RAM optimizations. Full engine CI `34235227257` green; consuming Lite build/corpus/both browser suites `34237479071` green, including isolated GUI comparisons and diagnostic reference-word access. This ledger-only handoff accompanies fast-forward promotion to master; source pin remains the verified runtime commit. Claim released.
 
