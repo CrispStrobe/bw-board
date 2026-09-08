@@ -62,7 +62,7 @@ export class W65C51 {
         return {
             rx: this.rx.slice(), rxByte: this._rxByte,
             rdrf: this.rdrf, overrun: this.overrun,
-            cmd: this.cmd, ctrl: this.ctrl, irq: this._irq,
+            cmd: this.cmd, ctrl: this.ctrl, irq: !!this._irq,
         };
     }
 
