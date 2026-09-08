@@ -83,3 +83,20 @@ test('an output-edge deadline alone does not authorize deferring public counter 
     assert.notEqual(a.pit.counters[0].ce,b.pit.counters[0].ce);
     assert.notEqual(a.pit._frac,b.pit._frac);
 });
+
+test('clock conversion is fixed before callbacks while PIT clock and counter methods stay live',()=>{
+    const f=fixture(false), seen=[];
+    f.pit._frac=0;
+    const original=f.pit.counters[1].advance;
+    f.machine.chips={clockTap:{advanceMs(ms){
+        seen.push(ms);
+        f.machine.clockHz=4772727;
+        f.pit.clockHz=1193182.125;
+        f.pit.counters[1].advance=function(ticks){seen.push(ticks);return original.call(this,ticks);};
+    }},...f.machine.chips};
+    f.machine._advList=null;
+    f.machine._advanceChips(12);
+    const ms=12*1000/5000000,exact=ms*1193182.125/1000;
+    assert.deepEqual(seen,[ms,Math.floor(exact)]);
+    assert.equal(f.pit._frac,exact-Math.floor(exact));
+});
