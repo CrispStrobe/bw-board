@@ -105,6 +105,74 @@ test('NMI qualification rejects disconnected nets and does not enable INTR',()=>
     assert.throws(()=>g.clock({intr:1}),fault('UNSUPPORTED_INPUT'));
 });
 
+test('INTA planning is an explicit two-cycle, addressless byte transaction',()=>{
+    const plan=plan286Transfers({kind:'interrupt-acknowledge'});
+    assert.deepEqual(plan.map(t=>[t.ackIndex,t.width,t.cod_inta_n,t.m_io,t.s1_n,t.s0_n]),[[0,1,0,0,0,0],[1,1,0,0,0,0]]);
+    for(const bad of [{address:1},{width:2},{value:1}])
+        assert.throws(()=>plan286Transfers({kind:'interrupt-acknowledge',...bad}),RangeError);
+    const f=fixture();f.boot();assert.throws(()=>f.bus.submit({kind:'interrupt-acknowledge'}),fault('EXPERIMENT_DISABLED'));
+});
+
+function acknowledge(f,vector,{extraWaits=1,earlySecond=false,floatVector=false}={}) {
+    const completions=[];
+    for(let count=0;count<100;count++) {
+        const pending=f.bus.pending;
+        if(!pending)return completions;
+        const second=pending.index===1;
+        const ready_n=pending.waits < extraWaits && !(earlySecond&&second) ? 1 : 0;
+        const currentVector=typeof vector==='function'?vector(pending.waits):vector;
+        const data=Object.fromEntries(D.map((p,i)=>[p,second&&!floatVector&&i<8?(currentVector>>i)&1:'Z']));
+        const completion=f.clock({...data,ready_n});if(completion)completions.push(completion);
+    }
+    assert.fail('INTA did not complete within owned budget');
+}
+test('INTA ignores floating first-cycle data, samples second vector, and preserves the idle gap',()=>{
+    const f=fixture({intrEnabled:true,traceLimit:512});f.boot();
+    f.clock({intr:1});assert.equal(f.bus.intrLevel,1);assert.equal(f.bus.pending,null);
+    f.clock({intr:0});assert.equal(f.bus.intrLevel,0);
+    f.bus.submit({kind:'interrupt-acknowledge'});
+    const done=acknowledge(f,0xa5);
+    assert.equal(done.length,2);assert.equal(done[0].ackIndex,0);assert.equal(done[0].last,false);
+    assert.equal(done[1].ackIndex,1);assert.equal(done[1].last,true);assert.equal(done[1].operand,0xa5);
+    const trace=f.bus.getTrace().entries;
+    const firstEnd=trace.findIndex(e=>e.completion?.ackIndex===0);
+    assert.deepEqual(trace.slice(firstEnd+1,firstEnd+7).map(e=>e.state),Array(6).fill('TI'));
+    assert.equal(trace[firstEnd+7].state,'TS');
+    const firstTS=trace.findIndex(e=>e.state==='TS');
+    for(const e of trace.slice(firstTS,firstEnd+7)) {
+        for(const pin of bitPins('a',24))assert.equal(e.drives[pin],'Z');
+    }
+    const second=trace.slice(firstEnd+7);
+    assert.deepEqual(second.map(e=>[e.state,e.phase,e.drives.lock_n]),[
+        ['TS',1,0],['TS',2,0],['TC',1,0],['TC',2,0],['TC',1,1],['TC',2,1]
+    ]);
+    assert.equal(second[3].drives.a0,'Z');assert.equal(second[4].drives.a0,0);
+    assert.equal(second[3].drives.bhe_n,'Z');assert.equal(second[4].drives.bhe_n,1);
+    for(const e of trace.slice(firstTS))for(const pin of D)assert.equal(e.drives[pin],'Z');
+});
+test('INTA second cycle refuses missing external wait and missing vector data',()=>{
+    const f=fixture({intrEnabled:true});f.boot();f.bus.submit({kind:'interrupt-acknowledge'});
+    assert.throws(()=>acknowledge(f,0x40,{earlySecond:true}),fault('INTA_WAIT_REQUIRED'));
+    assert.equal(f.bus.faulted,true);
+    const g=fixture({intrEnabled:true});g.boot();g.bus.submit({kind:'interrupt-acknowledge'});
+    assert.throws(()=>acknowledge(g,0x40,{floatVector:true}),fault('FLOATING'));
+});
+test('INTA LOCK releases after first TC even with extended waits and vector changes',()=>{
+    const f=fixture({intrEnabled:true,traceLimit:512});f.boot();f.bus.submit({kind:'interrupt-acknowledge'});
+    const done=acknowledge(f,waits=>waits<3?0x11:0x7e,{extraWaits:3});
+    assert.equal(done[0].waits,3);assert.equal(done[1].waits,3);assert.equal(done[1].operand,0x7e);
+    const active=f.bus.getTrace().entries.filter(e=>e.state==='TC');
+    assert.deepEqual(active.map(e=>e.drives.lock_n),[0,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1]);
+});
+test('RESET cancels INTA between cycles and removes stale vector/gap state',()=>{
+    const f=fixture({intrEnabled:true});f.boot();f.bus.submit({kind:'interrupt-acknowledge'});
+    let first;
+    for(let i=0;i<20&&!first;i++)first=f.clock({ready_n:0});
+    assert.equal(first.ackIndex,0);assert.equal(f.bus.ackGap,6);
+    f.clock({reset:1});assert.equal(f.bus.pending,null);assert.equal(f.bus.ackGap,0);assert.equal(f.bus.intrLevel,0);
+    f.boot();f.bus.submit({kind:'interrupt-acknowledge'});assert.equal(acknowledge(f,0x31)[1].operand,0x31);
+});
+
 test('reset drives documented logical values and rejects 16-period reset', () => {
     const f = fixture();
     for (let i = 0; i < 16; i++) {

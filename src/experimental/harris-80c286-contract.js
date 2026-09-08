@@ -48,6 +48,12 @@ export function decode286Status({cod_inta_n, m_io, s1_n, s0_n, a1 = 0}) {
  * Odd words split high lane then low lane. Refuse a wrap pending a CPU contract.
  */
 export function plan286Transfers({kind, address, width = 1, value = 0}) {
+    if (kind === 'interrupt-acknowledge') {
+        if ((address !== undefined && address !== 0) || width !== 1 || value !== 0)
+            throw new RangeError('INTA is an addressless, byte-vector transaction');
+        return Object.freeze([0,1].map(ackIndex=>Object.freeze({kind,ackIndex,
+            address:0,width:1,a0:0,bhe_n:1,data:0,...HARRIS_80C286_STATUS[kind]})));
+    }
     if (!['memory-read', 'memory-write', 'code-read', 'io-read', 'io-write'].includes(kind)) {
         throw new RangeError(`unsupported transfer kind ${kind}`);
     }

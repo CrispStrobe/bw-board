@@ -19,17 +19,20 @@ const known = (read, pin) => {
 };
 
 export class Harris80C286Bus {
-    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, nmiEnabled = false} = {}) {
+    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, nmiEnabled = false, intrEnabled = false} = {}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
         for (const v of [maxWaitStates, traceLimit]) if (!Number.isSafeInteger(v) || v < 1) throw new RangeError('limits');
         this.maxWaitStates = maxWaitStates;
         if (typeof nmiEnabled !== 'boolean') throw new TypeError('nmiEnabled');
         this.nmiEnabled = nmiEnabled;
+        if (typeof intrEnabled !== 'boolean') throw new TypeError('intrEnabled');
+        this.intrEnabled = intrEnabled; this.intrLevel = 0; this.ackGap = 0;
         this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
         this.traceLimit = traceLimit;
         this.capabilities = Object.freeze({cpu: false, experimental: true,
             fidelity: 'non-pipelined-system-clock-phases', clockEdges: false,
             systemClockStepping: true, snapshots: false, hold: false, interrupts: false, nmi: nmiEnabled,
+            interruptAcknowledge: intrEnabled,
             pipelinedAddress: false, protectedMode: false});
         this.state = 'RESET_REQUIRED';
         this.phase = 1;
@@ -53,6 +56,8 @@ export class Harris80C286Bus {
         if (this.faulted || this.open || this.pending || this.state !== 'TI') {
             throw new CircuitFault('BUS_UNAVAILABLE', 'reset/init/pending clock or transaction');
         }
+        if (transaction.kind === 'interrupt-acknowledge' && !this.intrEnabled)
+            throw new CircuitFault('EXPERIMENT_DISABLED','INTA requires intrEnabled:true');
         const transfers = plan286Transfers(transaction);
         this.pending = {transfers, index: 0, bytes: [], waits: 0, kind: transaction.kind};
     }
@@ -71,6 +76,7 @@ export class Harris80C286Bus {
                 if (this.state !== 'RESET' || this.faulted) this.resetClocks = 0;
                 this.state = 'RESET'; this.phase = 1;
                 this.pending = null; this.writeHold = 0;
+                this.intrLevel = 0; this.ackGap = 0;
                 this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
                 this.address = 0xffffff;
                 this.control = {bhe_n: 1, s1_n: 1, s0_n: 1, cod_inta_n: 0, m_io: 0};
@@ -86,9 +92,10 @@ export class Harris80C286Bus {
             }
             // Fail closed instead of silently ignoring yet-unimplemented pins.
             if (known(read, 'hold')) throw new CircuitFault('UNSUPPORTED_HOLD', this.state);
-            if (!reset) for (const pin of ['intr', 'pereq', ...(this.nmiEnabled ? [] : ['nmi'])]) {
+            if (!reset) for (const pin of ['pereq', ...(this.intrEnabled ? [] : ['intr']), ...(this.nmiEnabled ? [] : ['nmi'])]) {
                 if (known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
             }
+            if (!reset && this.intrEnabled) this.intrLevel = known(read,'intr');
             if (!reset && this.nmiEnabled) {
                 // Conservative ideal-digital qualification, not an analog
                 // synchronizer: four complete observed low/high periods.
@@ -104,7 +111,7 @@ export class Harris80C286Bus {
             if (!reset) for (const pin of ['busy_n', 'error_n']) {
                 if (!known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
             }
-            if (this.state === 'TI' && this.phase === 1 && this.pending) {
+            if (this.state === 'TI' && this.phase === 1 && this.pending && this.ackGap === 0) {
                 this.state = 'TS';
                 const t = this.pending.transfers[this.pending.index];
                 this.address = t.address;
@@ -121,7 +128,14 @@ export class Harris80C286Bus {
             }
             this.period = {state: this.state, phase: this.phase, held: this.writeHold > 0};
             const status = this.state === 'TS' ? this.control : {...this.control, s1_n: 1, s0_n: 1};
-            this.outputs = {...bitDrives(A, this.address), ...status, ...data, lock_n: 1, hlda: 0, peack_n: 1};
+            const ack = this.pending?.kind === 'interrupt-acknowledge';
+            const floatingAddress = ack && (this.pending.index === 0 || this.pending.waits === 0);
+            const addressDrives = floatingAddress ? Object.fromEntries(A.map(p=>[p,'Z'])) : bitDrives(A,this.address);
+            // INTA LOCK is active in TS and the first TC of EACH cycle,
+            // independent of external wait count. HOLD is still unsupported.
+            const lock_n = Number(!(ack && (this.state === 'TS' || this.state === 'TC' && this.pending.waits === 0)));
+            this.outputs = {...addressDrives, ...status, ...data, lock_n, hlda: 0, peack_n: 1};
+            if (floatingAddress) this.outputs.bhe_n = 'Z';
             this.open = true;
             return {...this.outputs};
         } catch (error) { this.faulted = true; throw error; }
@@ -137,12 +151,15 @@ export class Harris80C286Bus {
         try {
             if (held) this.writeHold--;
             if (state === 'RESET') this.resetClocks++;
+            else if (state === 'TI' && this.ackGap) this.ackGap--;
             else if (state === 'INIT') {
                 if (--this.initClocks === 0) { this.state = 'TI'; this.phase = 2; }
             } else if (state === 'TS' && phase === 2) this.state = 'TC';
             else if (state === 'TC' && phase === 2) {
                 const ready = known(read, 'ready_n');
                 readySample = ready;
+                if (this.pending.kind === 'interrupt-acknowledge' && this.pending.index === 1 && this.pending.waits === 0 && !ready)
+                    throw new CircuitFault('INTA_WAIT_REQUIRED','external READY must extend the second INTA cycle by at least one TC');
                 if (ready) {
                     this.pending.waits++;
                     if (this.pending.waits >= this.maxWaitStates) throw new CircuitFault('WAIT_LIMIT', 'host diagnostic, not hardware timeout');
@@ -150,6 +167,7 @@ export class Harris80C286Bus {
                     const t = this.pending.transfers[this.pending.index];
                     const bytes = [];
                     for (const start of [0, 8]) {
+                        if (t.ackIndex === 0) continue; // First INTA data is ignored, including floating nets.
                         if (start === 0 ? t.a0 !== 0 : t.bhe_n !== 0) continue;
                         let byte = 0;
                         for (let i = 0; i < 8; i++) byte |= known(read, D[start + i]) << i;
@@ -158,6 +176,7 @@ export class Harris80C286Bus {
                     // Only report acceptance. A connected memory/controller owns
                     // writes and their edges; the sequencer has no backing RAM.
                     completion = Object.freeze({kind: t.kind, address: t.address, width: t.width,
+                        ...(t.ackIndex === undefined ? {} : {ackIndex:t.ackIndex}),
                         data: bytes[0] | ((bytes[1] || 0) << 8), waits: this.pending.waits,
                         last: this.pending.index === this.pending.transfers.length - 1});
                     this.pending.bytes.push(...bytes);
@@ -169,7 +188,10 @@ export class Harris80C286Bus {
                         completion = Object.freeze({...completion,
                             operand: this.pending.bytes[0] | ((this.pending.bytes[1] || 0) << 8)});
                         this.pending = null;
-                    } else { this.pending.index++; this.pending.waits = 0; }
+                    } else {
+                        this.pending.index++; this.pending.waits = 0;
+                        if (t.ackIndex === 0) this.ackGap = 6; // Three idle processor clocks.
+                    }
                     this.state = 'TI';
                 }
             }

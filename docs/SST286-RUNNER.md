@@ -1,5 +1,9 @@
 # SingleStepTests/80286 real-mode acceptance
 
+The later [INTA sequencer-only increment](HARRIS-286-INTA.md) leaves CPU,
+adapter and runner hashes unchanged from the NMI receipt. It has separate
+resolved-net tests and does not claim a new full-vector run.
+
 ## NMI follow-up, 2026-09-08
 
 [Opt-in wired NMI](HARRIS-286-NMI.md) adds an independent asynchronous-input
