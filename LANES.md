@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 bus contract | Codex, feat/x86-backend-lab | 2026-09-08 | Harris source-backed status/byte-lane and clocked bus sequencer subset, including reset/wait tests. Experimental only; no CPU/editor/pin promotion. |
 
 ## DONE
 
