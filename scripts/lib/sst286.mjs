@@ -106,14 +106,14 @@ export function parseRevocations(text) {
 // Never use the expected final state to initialize or drive CPU execution.
 export function executeSST286(t, fileMasks = {}, {maxTransfers = 4096} = {}) {
     need(Number.isSafeInteger(maxTransfers) && maxTransfers > 0, 'invalid transfer budget');
-    if (t.exception) return {status: 'unsupported', reason: `exception-${t.exception.number}`, executed: false};
-    const cpu = new HarrisBootCPU({enabled: true, board: {initialize(){}, submit(){}, clock(){}}});
+    const cpu = new HarrisBootCPU({enabled: true, coprocessor:'inactive-lines',
+        board: {semanticTestAdapter:true, initialize(){}, submit(){}, clock(){}}});
     cpu.regs = Object.fromEntries(['ax','bx','cx','dx','sp','bp','si','di'].map(r => [r, t.initial.regs[r]]));
     for (const r of ['cs','ss','ds','es','ip','flags']) cpu[r] = t.initial.regs[r];
-    cpu.csBase = cpu.cs * 16; cpu.status = 'running';
+    cpu.csBase = cpu.cs * 16; cpu.status = 'running'; cpu.msw = 0xfff0;
     const memory = new Map(t.initial.ram), writes = new Set();
     const iterator = cpu._instructions();
-    let response, transfers = 0;
+    let response, transfers = 0, observedInterrupt = null;
     try {
         for (;;) {
             const next = iterator.next(response);
@@ -122,15 +122,18 @@ export function executeSST286(t, fileMasks = {}, {maxTransfers = 4096} = {}) {
             const {kind, address, width, value} = next.value;
             need(Number.isInteger(address) && address >= 0 && address + width <= 0x1000000 && [1,2].includes(width), 'invalid transfer');
             if (kind === 'code-read' && cpu.retired === 1) {
+                observedInterrupt = cpu.lastRetirement.interrupt;
                 // The harness injects HALT after taken flow control, without
                 // changing stored RAM. Sequential HALT comes from initial RAM.
-                const jumped = cpu.cs !== t.initial.regs.cs || cpu.ip !== t.initial.regs.ip + t.bytes.length - 1;
+                const jumped = cpu.lastRetirement.flowTransfer || cpu.cs !== t.initial.regs.cs || cpu.ip !== t.initial.regs.ip + t.bytes.length - 1;
                 response = jumped ? 0xf4 : (memory.get(address) ?? 0);
                 if (response !== 0xf4) return {status:'unsupported',reason:'terminator-not-halt',executed:true};
             } else if (kind === 'code-read' || kind === 'memory-read') {
                 response = memory.get(address) ?? 0;
                 if (width === 2) response |= (memory.get(address + 1) ?? 0) << 8;
-            } else if (kind === 'memory-write') {
+            } else if (kind === 'io-read') response = width === 1 ? 255 : 65535;
+            else if (kind === 'io-write') response = undefined;
+            else if (kind === 'memory-write') {
                 for (let i = 0; i < width; i++) {memory.set(address+i,(value >> (i*8)) & 255); writes.add(address+i);}
                 response = undefined;
             } else throw new Error(`SST286: unsupported transfer ${kind}`);
@@ -143,6 +146,7 @@ export function executeSST286(t, fileMasks = {}, {maxTransfers = 4096} = {}) {
     const want = {...t.initial.regs, ...t.final.regs}, actual = {...cpu.regs};
     for (const r of ['cs','ss','ds','es','ip','flags']) actual[r] = cpu[r];
     const masks = {...fileMasks, ...t.final.masks}, diffs = [];
+    if (observedInterrupt !== (t.exception?.number ?? null)) diffs.push({interrupt:observedInterrupt,expected:t.exception?.number ?? null});
     for (const r of REGISTERS) {
         const mask = masks[r] ?? 65535;
         if ((actual[r] & mask) !== (want[r] & mask)) diffs.push({register:r,actual:actual[r],expected:want[r],mask});
@@ -150,7 +154,10 @@ export function executeSST286(t, fileMasks = {}, {maxTransfers = 4096} = {}) {
     const expectedMemory = new Map([...t.initial.ram, ...t.final.ram]);
     for (const address of new Set([...expectedMemory.keys(), ...writes])) {
         const expected = expectedMemory.get(address) ?? 0, actualByte = memory.get(address) ?? 0;
-        if (actualByte !== expected) diffs.push({address,actual:actualByte,expected});
+        // Exception metadata locates only comparison masks, never input state.
+        const shift = t.exception ? address - t.exception.flagAddress : -1;
+        const mask = shift === 0 || shift === 1 ? ((masks.flags ?? 65535) >> (shift * 8)) & 255 : 255;
+        if ((actualByte & mask) !== (expected & mask)) diffs.push({address,actual:actualByte,expected,mask});
     }
     return {status:diffs.length ? 'fail' : 'pass',executed:true,diffs:diffs.slice(0,12)};
 }

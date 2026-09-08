@@ -1,7 +1,7 @@
 /**
  * Explicitly limited, generator-resumable real-mode boot executor. All byte
  * fetches and memory operations use the external phase board. No prefetch,
- * instruction timing, protection, exception delivery or bus-HLT claim.
+ * instruction timing, protection, external interrupt handshake or bus-HLT claim.
  */
 import {CircuitFault} from './digital-circuit.js';
 
@@ -9,6 +9,25 @@ const REGS = ['ax', 'cx', 'dx', 'bx', 'sp', 'bp', 'si', 'di'];
 const BYTES = ['al', 'cl', 'dl', 'bl', 'ah', 'ch', 'dh', 'bh'];
 const SEGMENTS = ['es', 'cs', 'ss', 'ds'];
 const FLAGS = 0x8d5; // OF SF ZF AF PF CF; other bits preserved
+class RealModeFault extends Error {
+    constructor(vector) {super(`real-mode fault ${vector}`); this.vector = vector;}
+}
+
+// Harris byte-IDIV overflow anomaly, discussed in SingleStepTests/80286#1.
+// Only the exceptional path runs this 8-bit restoring divider. Lost high bits
+// can yield magnitude 128, which this silicon accepts when the sign is negative.
+// This is an operand algorithm, not a list of vector hashes or expected states.
+export function harrisByteDivideOverflow(numerator, divisor) {
+    if (!divisor || (numerator < 0) === (divisor < 0)) return null;
+    let remainder = Math.abs(numerator) >>> 8, quotient = Math.abs(numerator) & 255;
+    const denominator = Math.abs(divisor);
+    for (let bit = 0; bit < 8; bit++) {
+        remainder = ((remainder << 1) | (quotient >>> 7)) & 255;
+        quotient = (quotient << 1) & 255;
+        if (remainder >= denominator) {remainder -= denominator; quotient |= 1;}
+    }
+    return quotient === 128 ? {quotient:-128,remainder:numerator < 0 ? -remainder : remainder} : null;
+}
 
 function logicalFlags(value, width, flags) {
     let parity = 0;
@@ -18,12 +37,13 @@ function logicalFlags(value, width, flags) {
         (value & (width === 1 ? 0x80 : 0x8000) ? 0x80 : 0) | 2;
 }
 
-function arithmetic(a, b, flags, width, subtract) {
-    if (width === 2) return (subtract ? bootSub16 : bootAdd16)(a, b, flags);
-    const result = (subtract ? a - b : a + b) & 255;
-    const carry = subtract ? a < b : a + b > 255;
-    const overflow = (subtract ? (a ^ b) : ~(a ^ b)) & (a ^ result) & 0x80;
-    return {result, flags: (logicalFlags(result, 1, flags) & ~0x10) |
+function arithmetic(a, b, flags, width, subtract, carryIn = 0) {
+    const mask = width === 1 ? 255 : 65535, sign = width === 1 ? 128 : 32768;
+    const raw = subtract ? a - b - carryIn : a + b + carryIn;
+    const result = raw & mask;
+    const carry = subtract ? raw < 0 : raw > mask;
+    const overflow = (subtract ? (a ^ b) : ~(a ^ b)) & (a ^ result) & sign;
+    return {result, flags: (logicalFlags(result, width, flags) & ~0x10) |
         Number(carry) | ((a ^ b ^ result) & 0x10) | (overflow ? 0x800 : 0)};
 }
 
@@ -49,10 +69,12 @@ export function bootSub16(a, b, flags) {
 }
 
 export class HarrisBootCPU {
-    constructor({enabled = false, board, historyLimit = 64} = {}) {
+    constructor({enabled = false, board, historyLimit = 64, coprocessor = 'unsupported'} = {}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
         if (!board?.submit || !board?.clock || !board?.initialize) throw new TypeError('wired phase board required');
         if (!Number.isSafeInteger(historyLimit) || historyLimit < 1) throw new RangeError('historyLimit');
+        if (!['unsupported','inactive-lines'].includes(coprocessor)) throw new RangeError('coprocessor profile');
+        this.coprocessor = coprocessor;
         this.board = board; this.historyLimit = historyLimit;
         this.status = 'uninitialized'; this.retired = 0; this.history = []; this.dropped = 0;
         this.capabilities = Object.freeze({experimental: true, instructionExecution: true,
@@ -83,14 +105,14 @@ export class HarrisBootCPU {
     }
 
     *_byte() {
-        if (this.ip >= 0xffff) throw new CircuitFault('UNSUPPORTED_SEGMENT_WRAP', 'instruction fetch at segment end');
+        if (this.ip > 0xffff || this.instructionBytes >= 10) throw new RealModeFault(13);
         const byte = yield {kind: 'code-read', address: this.csBase + this.ip, width: 1};
-        this.ip++;
+        this.ip++; this.instructionBytes++;
         return byte;
     }
     *_word() { const low = yield* this._byte(); return low | ((yield* this._byte()) << 8); }
     *_memory(offset, write = false, value = 0, segment = this.segmentOverride ?? this.ds, width = 2) {
-        if (offset + width > 0x10000) throw new CircuitFault('UNSUPPORTED_SEGMENT_WRAP', 'operand crosses segment end');
+        if (offset < 0 || offset + width > 0x10000) throw new RealModeFault(13);
         return yield {kind: write ? 'memory-write' : 'memory-read', address: segment * 16 + offset, width, value};
     }
     _get(name) {
@@ -138,8 +160,91 @@ export class HarrisBootCPU {
         this.regs.sp = (this.regs.sp + 2) & 65535;
         return value;
     }
+    *_interrupt(vector, returnIP) {
+        // Harris trace order: FLAGS, CS, IP writes precede the IVT reads.
+        // This matters if a guest places its stack over the IVT.
+        this.interruptTaken = vector;
+        yield* this._push(this.flags);
+        yield* this._push(this.cs);
+        yield* this._push(returnIP);
+        this.flags &= ~0x300;
+        const offset = yield* this._memory(vector * 4,false,0,0);
+        const segment = yield* this._memory(vector * 4 + 2,false,0,0);
+        this.cs = segment; this.csBase = segment * 16; this.ip = offset;
+        this.flowTransfer = true;
+    }
+    *_port(port, width, write = false, value = 0) {
+        // Word accesses at FFFF wrap within the 16-bit I/O space.
+        if (width === 2 && port === 65535) {
+            const low = yield* this._port(port,1,write,value & 255);
+            const high = yield* this._port(0,1,write,value >>> 8);
+            return low | (high << 8);
+        }
+        return yield {kind:write ? 'io-write' : 'io-read',address:port,width,value};
+    }
+    *_string(opcode) {
+        const width = opcode & 1 ? 2 : 1, r = this.regs;
+        const delta = this.flags & 0x400 ? -width : width;
+        const source = this.segmentOverride ?? this.ds;
+        const repeated = !!this.repeatPrefix;
+        let remaining = repeated ? r.cx : 1;
+        const cpu = this;
+        function* access(index, segment, write = false, value = 0) {
+            const offset = r[index];
+            let result;
+            try {result = yield* cpu._memory(offset,write,value,segment,width);}
+            catch (error) {
+                if (!(error instanceof RealModeFault)) throw error;
+                // Measured Harris fault microcode: a failed repeated string
+                // write consumes another count; CMPS's first (ES) read faults
+                // before its count decrement. No successful access uses this.
+                if (repeated && write) r.cx = (r.cx - 1) & 65535;
+                if (repeated && (opcode & 0xfe) === 0xa6 && index === 'di') r.cx = (r.cx + 1) & 65535;
+                r[index] = (offset + delta) & 65535; cpu.restartRegisters = {...r}; throw error;
+            }
+            r[index] = (offset + delta) & 65535; cpu.restartRegisters = {...r};
+            return result;
+        }
+        while (remaining > 0) {
+            let left, right;
+            // Harris decrements REP and advances the applicable index even
+            // when that element raises a segment fault. CMPS reads ES first.
+            if (repeated) r.cx = (r.cx - 1) & 65535;
+            this.restartRegisters = {...r};
+            switch (opcode & 0xfe) {
+            case 0x6c:
+                if (r.di + width > 65536) yield* access('di',this.es,true,0);
+                left = yield* this._port(r.dx,width);
+                yield* access('di',this.es,true,left); break;
+            case 0x6e:
+                left = yield* access('si',source);
+                yield* this._port(r.dx,width,true,left); break;
+            case 0xa4:
+                left = yield* access('si',source);
+                yield* access('di',this.es,true,left); break;
+            case 0xa6:
+                right = yield* access('di',this.es);
+                left = yield* access('si',source);
+                this.flags = arithmetic(left,right,this.flags,width,true).flags;
+                break;
+            case 0xaa:
+                yield* access('di',this.es,true,this._get(width === 1 ? 'al' : 'ax')); break;
+            case 0xac:
+                this._set(width === 1 ? 'al' : 'ax',yield* access('si',source)); break;
+            case 0xae:
+                right = yield* access('di',this.es);
+                this.flags = arithmetic(this._get(width === 1 ? 'al' : 'ax'),right,this.flags,width,true).flags;
+                break;
+            }
+            this.restartRegisters = {...r};
+            remaining--;
+            if (repeated && [0xa6,0xae].includes(opcode & 0xfe) &&
+                (!!(this.flags & 64) !== (this.repeatPrefix === 0xf3))) break;
+        }
+    }
     _alu(kind, a, b, width) {
         if (kind === 0 || kind === 5 || kind === 7) return arithmetic(a, b, this.flags, width, kind !== 0);
+        if (kind === 2 || kind === 3) return arithmetic(a, b, this.flags, width, kind === 3, this.flags & 1);
         let result;
         if (kind === 1) result = a | b;
         else if (kind === 4) result = a & b;
@@ -147,28 +252,62 @@ export class HarrisBootCPU {
         else throw new CircuitFault('UNSUPPORTED_ALU', `group ${kind}`);
         return {result, flags: logicalFlags(result, width, this.flags)};
     }
+    _shift(kind, value, count, width) {
+        count &= 31;
+        if (!count) return {result:value, flags:this.flags};
+        if (kind === 6) kind = 4;
+        const mask = width === 1 ? 255 : 65535, sign = width === 1 ? 128 : 32768;
+        let result = value, carry = this.flags & 1, before = value;
+        for (let i = 0; i < count; i++) {
+            before = result;
+            const high = Number(!!(result & sign)), low = result & 1;
+            switch (kind) {
+            case 0: result = ((result << 1) | high) & mask; carry = high; break;
+            case 1: result = (result >>> 1) | (low ? sign : 0); carry = low; break;
+            case 2: result = ((result << 1) | carry) & mask; carry = high; break;
+            case 3: result = (result >>> 1) | (carry ? sign : 0); carry = low; break;
+            case 4: result = (result << 1) & mask; carry = high; break;
+            case 5: result >>>= 1; carry = low; break;
+            case 7: result = (result >>> 1) | (result & sign); carry = low; break;
+            default: throw new CircuitFault('UNSUPPORTED_SHIFT', `${kind}`);
+            }
+        }
+        const high = Number(!!(result & sign));
+        const overflow = [0,2,4].includes(kind) ? high ^ carry :
+            [1,3].includes(kind) ? high ^ Number(!!(result & (sign >> 1))) :
+                kind === 5 ? Number(!!(before & sign)) : 0;
+        const flags = kind < 4 ? this.flags & ~0x801 : logicalFlags(result,width,this.flags);
+        return {result,flags:flags | carry | (overflow << 11)};
+    }
     _condition(code) {
         const f = this.flags, cf = !!(f & 1), pf = !!(f & 4), zf = !!(f & 64), sf = !!(f & 128), of = !!(f & 2048);
         return [of, !of, cf, !cf, zf, !zf, cf || zf, !cf && !zf,
             sf, !sf, pf, !pf, sf !== of, sf === of, zf || sf !== of, !zf && sf === of][code];
     }
     _branch(displacement) {
-        const target = this.ip + displacement;
-        if (target < 0 || target >= 0xffff) throw new CircuitFault('UNSUPPORTED_SEGMENT_WRAP', 'branch target outside supported fetch range');
-        this.ip = target;
+        this.ip = (this.ip + displacement) & 65535;
+        this.flowTransfer = true;
     }
     *_instructions() {
         while (this.status === 'running') {
             this.instructionBoundary = true;
             const start = {cs: this.cs, ip: this.ip, physical: this.csBase + this.ip};
+            const saved = {...this.regs};
+            this.instructionBytes = 0; this.flowTransfer = false; this.interruptTaken = null;
+            this.restartRegisters = null;
             this.segmentOverride = undefined;
-            let opcode = yield* this._byte();
-            let prefixes = 0;
-            while ([0x26, 0x2e, 0x36, 0x3e].includes(opcode)) {
-                if (++prefixes > 4) throw new CircuitFault('UNSUPPORTED_PREFIX_SEQUENCE', 'more than four segment prefixes');
-                this.segmentOverride = this[SEGMENTS[(opcode >> 3) & 3]];
+            this.repeatPrefix = 0; this.lockPrefix = false;
+            let opcode;
+            try {
+            opcode = yield* this._byte();
+            while ([0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf2, 0xf3].includes(opcode)) {
+                if (opcode === 0xf0) this.lockPrefix = true;
+                else if (opcode >= 0xf2) this.repeatPrefix = opcode;
+                else this.segmentOverride = this[SEGMENTS[(opcode >> 3) & 3]];
                 opcode = yield* this._byte();
             }
+            if (this.lockPrefix && !this.board.semanticTestAdapter)
+                throw new CircuitFault('UNSUPPORTED_LOCK_BUS','physical LOCK signalling not implemented');
             if (opcode >= 0xb0 && opcode <= 0xb7) this._set(BYTES[opcode - 0xb0], yield* this._byte());
             else if (opcode >= 0xb8 && opcode <= 0xbf) this.regs[REGS[opcode - 0xb8]] = yield* this._word();
             else if (opcode >= 0x50 && opcode <= 0x57) yield* this._push(this.regs[REGS[opcode & 7]]);
@@ -203,6 +342,19 @@ export class HarrisBootCPU {
                 this.flags = (result.flags & ~1) | (this.flags & 1); // INC/DEC preserve CF
             }
             else switch (opcode) {
+            case 0x27: case 0x2f: {
+                const old = this._get('al'), cf = this.flags & 1, af = this.flags & 16, sub = opcode === 0x2f;
+                let value = old, carry = 0, adjust = 0;
+                if ((old & 15) > 9 || af) {value = (old + (sub ? -6 : 6)) & 255; adjust = 16; carry = Number(sub ? old < 6 : old > 249) | cf;}
+                if (old > 0x99 || cf) {value = (value + (sub ? -96 : 96)) & 255; carry = 1;}
+                this._set('al',value); this.flags = (logicalFlags(value,1,this.flags) & ~16) | adjust | carry; break;
+            }
+            case 0x37: case 0x3f: {
+                const adjust = (this._get('al') & 15) > 9 || !!(this.flags & 16);
+                if (adjust) this.regs.ax = (this.regs.ax + (opcode === 0x37 ? 0x106 : -0x106)) & 65535;
+                this._set('al',this._get('al') & 15);
+                this.flags = (this.flags & ~17) | (adjust ? 17 : 0); break;
+            }
             case 0x06: case 0x0e: case 0x16: case 0x1e: yield* this._push(this[SEGMENTS[(opcode >> 3) & 3]]); break;
             case 0x07: case 0x17: case 0x1f: this[SEGMENTS[(opcode >> 3) & 3]] = yield* this._pop(); break;
             case 0x88: case 0x8a: {
@@ -213,7 +365,7 @@ export class HarrisBootCPU {
             }
             case 0x8c: case 0x8e: {
                 const {reg, operand} = yield* this._operand(); const index = REGS.indexOf(reg);
-                if (index > 3 || (opcode === 0x8e && index === 1)) throw new CircuitFault('INVALID_SEGMENT_REGISTER', `${index}`);
+                if (index > 3 || (opcode === 0x8e && index === 1)) throw new RealModeFault(6);
                 if (opcode === 0x8c) yield* this._writeOperand(operand, this[SEGMENTS[index]]);
                 else this[SEGMENTS[index]] = yield* this._readOperand(operand);
                 break;
@@ -221,12 +373,12 @@ export class HarrisBootCPU {
             case 0xc6: case 0xc7: {
                 const width = opcode & 1 ? 2 : 1;
                 const {reg, operand} = yield* this._operand(width);
-                if (reg !== (width === 1 ? 'al' : 'ax')) throw new CircuitFault('UNSUPPORTED_OPCODE_EXTENSION', 'MOV immediate requires /0');
+                if (reg !== (width === 1 ? 'al' : 'ax')) throw new RealModeFault(6);
                 const value = width === 1 ? yield* this._byte() : yield* this._word();
                 yield* this._writeOperand(operand, value, width); break;
             }
-            case 0x80: case 0x81: case 0x83: {
-                const width = opcode === 0x80 ? 1 : 2;
+            case 0x80: case 0x81: case 0x82: case 0x83: {
+                const width = opcode === 0x80 || opcode === 0x82 ? 1 : 2;
                 const {reg, operand} = yield* this._operand(width);
                 const kind = (width === 1 ? BYTES : REGS).indexOf(reg);
                 let immediate = opcode === 0x81 ? yield* this._word() : yield* this._byte();
@@ -241,29 +393,61 @@ export class HarrisBootCPU {
             }
             case 0xf6: case 0xf7: {
                 const width = opcode & 1 ? 2 : 1; const {reg, operand} = yield* this._operand(width);
-                if (reg !== (width === 1 ? 'al' : 'ax')) throw new CircuitFault('UNSUPPORTED_OPCODE_EXTENSION', 'only TEST in F6/F7 supported');
-                const immediate = width === 1 ? yield* this._byte() : yield* this._word();
-                this.flags = logicalFlags((yield* this._readOperand(operand, width)) & immediate, width, this.flags); break;
+                const kind = (width === 1 ? BYTES : REGS).indexOf(reg);
+                if (kind <= 1) {
+                    const immediate = width === 1 ? yield* this._byte() : yield* this._word();
+                    this.flags = logicalFlags((yield* this._readOperand(operand, width)) & immediate, width, this.flags);
+                } else {
+                    const value = yield* this._readOperand(operand,width), mask = width === 1 ? 255 : 65535;
+                    if (kind === 2) yield* this._writeOperand(operand,~value & mask,width);
+                    else if (kind === 3) {
+                        const result = arithmetic(0,value,this.flags,width,true);
+                        yield* this._writeOperand(operand,result.result,width); this.flags = result.flags;
+                    } else {
+                        const size = width === 1 ? 256 : 65536, sign = size / 2;
+                        const signed = v => v >= sign ? v - size : v;
+                        const accumulator = width === 1 ? this._get('al') : this.regs.ax;
+                        if (kind <= 5) {
+                            const product = kind === 4 ? accumulator * value : signed(accumulator) * signed(value);
+                            const overflow = kind === 4 ? product >= size : product < -sign || product >= sign;
+                            this.regs.ax = product & 65535;
+                            if (width === 2) this.regs.dx = (product >>> 16) & 65535;
+                            this.flags = (this.flags & ~0x801) | (overflow ? 0x801 : 0);
+                        } else {
+                            let numerator = width === 1 ? this.regs.ax : this.regs.dx * 65536 + this.regs.ax;
+                            if (kind === 7 && numerator >= size * size / 2) numerator -= size * size;
+                            const divisor = kind === 7 ? signed(value) : value;
+                            let quotient = Math.trunc(numerator / divisor), remainder = numerator % divisor;
+                            if (!divisor || quotient < (kind === 7 ? -sign : 0) || quotient >= (kind === 7 ? sign : size)) {
+                                const anomaly = width === 1 && kind === 7 ? harrisByteDivideOverflow(numerator,divisor) : null;
+                                if (!anomaly) throw new RealModeFault(0);
+                                ({quotient,remainder} = anomaly);
+                            }
+                            if (width === 1) this.regs.ax = (quotient & 255) | ((remainder & 255) << 8);
+                            else {this.regs.ax = quotient & 65535; this.regs.dx = remainder & 65535;}
+                        }
+                    }
+                }
+                break;
             }
-            case 0xd0: case 0xd1: {
+            case 0xc0: case 0xc1: case 0xd0: case 0xd1: case 0xd2: case 0xd3: {
                 const width = opcode & 1 ? 2 : 1; const {reg, operand} = yield* this._operand(width);
                 const kind = (width === 1 ? BYTES : REGS).indexOf(reg);
-                if (kind !== 4 && kind !== 5) throw new CircuitFault('UNSUPPORTED_OPCODE_EXTENSION', 'only single-bit SHL/SHR supported');
-                const value = yield* this._readOperand(operand, width), sign = width === 1 ? 128 : 32768;
-                const carry = kind === 4 ? Number(!!(value & sign)) : value & 1;
-                const result = kind === 4 ? (value << 1) & (width === 1 ? 255 : 65535) : value >>> 1;
-                const overflow = kind === 4 ? Number(!!(result & sign)) ^ carry : Number(!!(value & sign));
-                const flags = logicalFlags(result, width, this.flags) | carry | (overflow << 11);
-                yield* this._writeOperand(operand, result, width); this.flags = flags; break;
+                const count = (opcode < 0xd0 ? yield* this._byte() : opcode < 0xd2 ? 1 : this._get('cl')) & 31;
+                const result = this._shift(kind,yield* this._readOperand(operand,width),count,width);
+                if (count) yield* this._writeOperand(operand,result.result,width);
+                this.flags = result.flags; break;
             }
             case 0xe8: {
                 let displacement = yield* this._word(); if (displacement & 32768) displacement -= 65536;
                 const returnIP = this.ip; this._branch(displacement); const target = this.ip; this.ip = returnIP;
                 yield* this._push(returnIP); this.ip = target; break;
             }
-            case 0xc2: case 0xc3: {
-                const adjustment = opcode === 0xc2 ? yield* this._word() : 0;
-                this.ip = yield* this._pop(); this.regs.sp = (this.regs.sp + adjustment) & 65535; break;
+            case 0xc2: case 0xc3: case 0xca: case 0xcb: {
+                const adjustment = opcode === 0xc2 || opcode === 0xca ? yield* this._word() : 0;
+                const ip = yield* this._pop();
+                if (opcode >= 0xca) {this.cs = yield* this._pop(); this.csBase = this.cs * 16;}
+                this.ip = ip; this.flowTransfer = true; this.regs.sp = (this.regs.sp + adjustment) & 65535; break;
             }
             case 0xa0: this._set('al', yield* this._memory(yield* this._word(), false, 0, this.segmentOverride ?? this.ds, 1)); break;
             case 0xa2: yield* this._memory(yield* this._word(), true, this._get('al'), this.segmentOverride ?? this.ds, 1); break;
@@ -281,24 +465,184 @@ export class HarrisBootCPU {
                 else this.regs[reg] = yield* this._readOperand(operand);
                 break;
             }
-            case 0xeb: case 0xe9: case 0xe2: {
+            case 0xeb: case 0xe9: case 0xe0: case 0xe1: case 0xe2: case 0xe3: {
                 let displacement = opcode === 0xe9 ? yield* this._word() : yield* this._byte();
                 const sign = opcode === 0xe9 ? 0x8000 : 0x80;
                 if (displacement & sign) displacement -= sign * 2;
-                if (opcode === 0xe2) {
+                if (opcode >= 0xe0 && opcode <= 0xe2) {
                     const count = (this.regs.cx - 1) & 0xffff;
                     // Validate the taken target before committing CX.
-                    if (count) this._branch(displacement);
+                    if (count && (opcode === 0xe2 || (!!(this.flags & 64) === (opcode === 0xe1)))) this._branch(displacement);
                     this.regs.cx = count;
-                } else this._branch(displacement);
+                } else if (opcode !== 0xe3 || this.regs.cx === 0) this._branch(displacement);
                 break;
             }
+            case 0x60: {
+                const sp = this.regs.sp;
+                for (let i = 1; i <= 8; i++) if (((sp - i*2) & 65535) === 65535) throw new RealModeFault(13);
+                for (const r of REGS) yield* this._push(r === 'sp' ? sp : this.regs[r]);
+                break;
+            }
+            case 0x61:
+                for (const r of [...REGS].reverse()) {const value = yield* this._pop(); if (r !== 'sp') this.regs[r] = value;}
+                break;
+            case 0x68: yield* this._push(yield* this._word()); break;
+            case 0x6a: {const value = yield* this._byte(); yield* this._push(value & 128 ? value | 0xff00 : value); break;}
+            case 0x69: case 0x6b: {
+                const {reg,operand} = yield* this._operand();
+                const immediate = opcode === 0x69 ? (yield* this._word()) << 16 >> 16 : (yield* this._byte()) << 24 >> 24;
+                const value = (yield* this._readOperand(operand)) << 16 >> 16, product = value * immediate;
+                this.regs[reg] = product & 65535;
+                // Harris immediate-IMUL exposes SZP of the high product word.
+                // AF remains masked by upstream metadata.
+                this.flags = logicalFlags((product >>> 16) & 65535,2,this.flags) | (product < -32768 || product > 32767 ? 0x801 : 0); break;
+            }
+            case 0x62: {
+                const {reg,operand} = yield* this._operand();
+                if (operand.register) throw new RealModeFault(6);
+                const lo = (yield* this._readOperand(operand)) << 16 >> 16;
+                const hi = (yield* this._memory((operand.offset + 2) & 65535,false,0,operand.segment)) << 16 >> 16;
+                const value = this.regs[reg] << 16 >> 16;
+                if (value < lo || value > hi) throw new RealModeFault(5);
+                break;
+            }
+            case 0x6c: case 0x6d: case 0x6e: case 0x6f:
+            case 0xa4: case 0xa5: case 0xa6: case 0xa7: case 0xaa: case 0xab: case 0xac: case 0xad: case 0xae: case 0xaf:
+                yield* this._string(opcode); break;
+            case 0x86: case 0x87: {
+                const width = opcode & 1 ? 2 : 1, {reg,operand} = yield* this._operand(width);
+                const value = yield* this._readOperand(operand,width);
+                yield* this._writeOperand(operand,this._get(reg),width); this._set(reg,value); break;
+            }
+            case 0x8d: {
+                const {reg,operand} = yield* this._operand();
+                if (operand.register) throw new RealModeFault(6);
+                this.regs[reg] = operand.offset; break;
+            }
+            case 0x8f: {
+                const {reg,operand} = yield* this._operand();
+                if (reg !== 'ax') throw new RealModeFault(6);
+                const value = yield* this._pop();
+                this.restartRegisters = {...this.regs}; // A destination fault does not undo the stack read.
+                yield* this._writeOperand(operand,value); break;
+            }
             case 0x90: break;
+            case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x96: case 0x97: {
+                const reg = REGS[opcode & 7], value = this.regs[reg];
+                this.regs[reg] = this.regs.ax; this.regs.ax = value; break;
+            }
+            case 0x98: this.regs.ax = this._get('al') & 128 ? this._get('al') | 0xff00 : this._get('al'); break;
+            case 0x99: this.regs.dx = this.regs.ax & 32768 ? 65535 : 0; break;
+            case 0x9b:
+                if (this.coprocessor !== 'inactive-lines') throw new CircuitFault('UNSUPPORTED_COPROCESSOR','WAIT requires explicit coprocessor line profile');
+                if ((this.msw & 10) === 10) throw new RealModeFault(7);
+                break; // Explicit BUSY/ERROR inactive: no wait or pending error.
+            case 0x9a: {
+                const ip = yield* this._word(), cs = yield* this._word();
+                yield* this._push(this.cs); yield* this._push(this.ip);
+                this.cs = cs; this.csBase = cs * 16; this.ip = ip; this.flowTransfer = true; break;
+            }
+            case 0x9c: yield* this._push(this.flags); break;
+            case 0x9d: this.flags = ((yield* this._pop()) & 0x0fd5) | 2; break;
+            case 0x9e: this.flags = (this.flags & ~0xd5) | (this._get('ah') & 0xd5) | 2; break;
+            case 0x9f: this._set('ah',(this.flags & 0xd5) | 2); break;
+            case 0xa8: case 0xa9: {
+                const width = opcode & 1 ? 2 : 1, immediate = width === 1 ? yield* this._byte() : yield* this._word();
+                this.flags = logicalFlags(this._get(width === 1 ? 'al' : 'ax') & immediate,width,this.flags); break;
+            }
+            case 0xcc: yield* this._interrupt(3,this.ip); break;
+            case 0xcd: {const vector = yield* this._byte(); yield* this._interrupt(vector,this.ip); break;}
+            case 0xce: if (this.flags & 0x800) yield* this._interrupt(4,this.ip); break;
+            case 0xcf: {
+                const ip = yield* this._pop(), cs = yield* this._pop(), flags = yield* this._pop();
+                this.ip = ip; this.cs = cs; this.csBase = cs * 16; this.flags = (flags & 0x0fd5) | 2; break;
+            }
+            case 0xc4: case 0xc5: {
+                const {reg,operand} = yield* this._operand();
+                if (operand.register) throw new RealModeFault(6);
+                const value = yield* this._readOperand(operand);
+                const segment = yield* this._memory((operand.offset + 2) & 65535,false,0,operand.segment);
+                this.regs[reg] = value; this[opcode === 0xc4 ? 'es' : 'ds'] = segment; break;
+            }
+            case 0xc8: {
+                const allocation = yield* this._word(), level = (yield* this._byte()) & 31;
+                yield* this._push(this.regs.bp); const frame = this.regs.sp;
+                if (level) {
+                    let bp = this.regs.bp;
+                    for (let i = 1; i < level; i++) {bp = (bp - 2) & 65535; yield* this._push(yield* this._memory(bp,false,0,this.ss));}
+                    yield* this._push(frame);
+                }
+                this.regs.bp = frame; this.regs.sp = (this.regs.sp - allocation) & 65535; break;
+            }
+            case 0xc9: {
+                const value = yield* this._memory(this.regs.bp,false,0,this.ss);
+                this.regs.sp = (this.regs.bp + 2) & 65535; this.regs.bp = value; break;
+            }
+            case 0xd4: case 0xd5: {
+                const base = yield* this._byte();
+                if (opcode === 0xd4) {
+                    // Harris divider leaves flags from the pre-final-shift
+                    // remainder on AAM 0; AX itself remains restartable.
+                    if (!base) {this.flags = logicalFlags(this._get('al') >>> 1,1,this.flags); throw new RealModeFault(0);}
+                    const value = this._get('al'); this._set('ah',Math.floor(value/base)); this._set('al',value%base);
+                } else this.regs.ax = (this._get('al') + this._get('ah') * base) & 255;
+                this.flags = (this.flags & ~0xc4) | (logicalFlags(this._get('al'),1,this.flags) & 0xc4); break;
+            }
+            case 0xd6: this._set('al',this.flags & 1 ? 255 : 0); break;
+            case 0xd7: this._set('al',yield* this._memory((this.regs.bx + this._get('al')) & 65535,false,0,this.segmentOverride ?? this.ds,1)); break;
+            case 0xd8: case 0xd9: case 0xda: case 0xdb: case 0xdc: case 0xdd: case 0xde: case 0xdf: {
+                if (this.coprocessor !== 'inactive-lines') throw new CircuitFault('UNSUPPORTED_COPROCESSOR','ESC protocol not wired');
+                if (this.msw & 12) throw new RealModeFault(7);
+                const {operand} = yield* this._operand();
+                if (!operand.register && operand.offset === 65535) throw new RealModeFault(13);
+                // No PEREQ in this explicitly selected environment: no operand
+                // transfer or floating-point execution. Not a 287 emulator.
+                break;
+            }
+            case 0xe4: case 0xe5: case 0xe6: case 0xe7: case 0xec: case 0xed: case 0xee: case 0xef: {
+                const width = opcode & 1 ? 2 : 1, port = opcode < 0xe8 ? yield* this._byte() : this.regs.dx;
+                const name = width === 1 ? 'al' : 'ax';
+                if (opcode & 2) yield* this._port(port,width,true,this._get(name));
+                else this._set(name,yield* this._port(port,width)); break;
+            }
+            case 0xfe: case 0xff: {
+                const width = opcode & 1 ? 2 : 1, {reg,operand} = yield* this._operand(width);
+                const kind = (width === 1 ? BYTES : REGS).indexOf(reg);
+                if (kind === 7 || (width === 1 && kind > 1)) throw new RealModeFault(6);
+                if ((kind === 3 || kind === 5) && operand.register) throw new RealModeFault(6);
+                const value = yield* this._readOperand(operand,width);
+                if (kind <= 1) {
+                    const result = arithmetic(value,1,this.flags,width,kind === 1);
+                    yield* this._writeOperand(operand,result.result,width);
+                    this.flags = (result.flags & ~1) | (this.flags & 1);
+                } else if (kind === 6) yield* this._push(value);
+                else {
+                    const segment = kind === 3 || kind === 5 ? yield* this._memory((operand.offset + 2) & 65535,false,0,operand.segment) : this.cs;
+                    if (kind === 3) yield* this._push(this.cs);
+                    if (kind === 2 || kind === 3) yield* this._push(this.ip);
+                    this.cs = segment; this.csBase = segment * 16; this.ip = value; this.flowTransfer = true;
+                }
+                break;
+            }
+            case 0xf5: this.flags ^= 1; break;
+            case 0xf8: this.flags &= ~1; break;
+            case 0xf9: this.flags |= 1; break;
             case 0xfa: this.flags &= ~0x200; break;
+            case 0xfb: this.flags |= 0x200; break;
+            case 0xfc: this.flags &= ~0x400; break;
+            case 0xfd: this.flags |= 0x400; break;
             case 0xf4: this.status = 'halted'; break;
             default: throw new CircuitFault('UNSUPPORTED_OPCODE', `0x${opcode.toString(16)} at ${start.cs.toString(16)}:${start.ip.toString(16)}`);
             }
+            } catch (error) {
+                if (!(error instanceof RealModeFault)) throw error;
+                // Faults restart at the first prefix, not the following IP.
+                this.regs = this.restartRegisters ?? saved;
+                this.cs = start.cs; this.csBase = start.physical - start.ip;
+                yield* this._interrupt(error.vector,start.ip);
+            }
             this.retired++;
+            this.lastRetirement = {flowTransfer:this.flowTransfer,interrupt:this.interruptTaken};
             if (this.history.length === this.historyLimit) { this.history.shift(); this.dropped++; }
             this.history.push(Object.freeze({...start, opcode, retired: this.retired}));
         }

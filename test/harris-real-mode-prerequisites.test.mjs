@@ -61,7 +61,7 @@ test('all 256 byte ModR/M fields and high-byte register writes (decoder unit)', 
     const cpu = new HarrisBootCPU({enabled:true,board:{initialize(){},submit(){},clock(){}}}); cpu.initialize();
     const names = ['al','cl','dl','bl','ah','ch','dh','bh'];
     for(let code=0;code<256;code++) {
-        cpu.ip=0x100; const it=cpu._operand(1); let next=it.next();
+        cpu.ip=0x100; cpu.instructionBytes=0; const it=cpu._operand(1); let next=it.next();
         for(const b of [code,0,0]) {if(next.done) break; next=it.next(b);}
         assert.ok(next.done); assert.equal(next.value.reg,names[(code>>3)&7]);
         if(code>=192) assert.equal(next.value.operand.register,names[code&7]);
@@ -101,9 +101,8 @@ test('PUSH waits before committing SP, stack bytes or retirement', () => {
     assert.equal(cpu.regs.sp,0x7fe); assert.equal(byte(board,0x7fe),0x34); assert.equal(byte(board,0x7ff),0x12);
 });
 
-test('invalid MOV CS and unsupported carry ALU fail without retiring them', () => {
-    for(const source of ['DB 08Eh,0C8h','ADC AX,AX']) {
-        const {cpu}=fixture(source); assert.throws(()=>cpu.run(),/INVALID_SEGMENT_REGISTER|UNSUPPORTED_ALU/);
-        assert.equal(cpu.retired,1); assert.equal(cpu.status,'faulted');
-    }
+test('carry input participates in wired ADC/SBB and their output flags', () => {
+    const {cpu}=fixture('MOV AX,0FFFFh\nSTC\nADC AX,0\nMOV BX,AX\nSBB AX,0\nHLT');
+    assert.equal(cpu.run().status,'halted'); assert.equal(cpu.regs.bx,0); assert.equal(cpu.regs.ax,0xffff);
+    assert.equal(cpu.flags & 0x8d5,0x95);
 });

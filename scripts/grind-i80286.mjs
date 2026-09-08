@@ -1,5 +1,5 @@
 // Diagnostic only. All non-passes remain visible; no production CPU/timing claim.
-import {readFileSync} from 'node:fs';
+import {readFileSync, writeFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
@@ -9,12 +9,14 @@ import {SST286_REVISION, parseSST286, parseRevocations, executeSST286} from './l
 try {
     const args = process.argv.slice(2), root = process.env.I80286_VECTORS;
     if (!root) throw new Error('Set I80286_VECTORS to an external SingleStepTests/80286 checkout');
-    let limit = Infinity;
+    let limit = Infinity, reportPath;
     const selected = [];
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--limit') {
             limit = Number(args[++i]);
             if (!Number.isSafeInteger(limit) || limit < 1) throw new Error('invalid --limit');
+        } else if (args[i] === '--report') {
+            reportPath = args[++i]; if (!reportPath || reportPath.startsWith('--')) throw new Error('missing --report path');
         } else if (/^[0-9A-F]{2,4}(\.[0-7])?$/i.test(args[i])) selected.push(args[i].toUpperCase());
         else throw new Error(`unknown argument ${args[i]}`);
     }
@@ -37,6 +39,10 @@ try {
     const report = {suiteRevision:SST286_REVISION, backend:'harris-286-boot-subset / test-only semantic memory',
         fullSuite:files.length === inventory.length && limit === Infinity, timingGraded:false, physicalBoardGraded:false,
         files:files.length, available:0, selected:0, executed:0, pass:0, fail:0, unsupported:0, budget:0, revoked:0, reasons:{}};
+    report.sourceHashes = Object.fromEntries(['../src/experimental/harris-80c286-boot-cpu.js','./lib/sst286.mjs','./grind-i80286.mjs'].map(path =>
+        [path,createHash('sha256').update(readFileSync(new URL(path,import.meta.url))).digest('hex')]));
+    report.coprocessorProfile = 'inactive-lines (no 287 execution or protocol grading)';
+    const fileReports = [];
     for (const path of files) {
         const suite = parseSST286(gunzipSync(verified(path),{maxOutputLength:128*1024*1024}));
         report.available += suite.tests.length;
@@ -51,9 +57,11 @@ try {
             if (result.reason) report.reasons[result.reason] = (report.reasons[result.reason] ?? 0) + 1;
             if (result.status === 'fail' && !firstFailure) firstFailure = {index:t.index,hash:t.hash,name:t.name,diffs:result.diffs};
         }
-        console.log(JSON.stringify({file:path,...counts,...(firstFailure ? {firstFailure} : {})}));
+        const fileReport = {file:path,...counts,...(firstFailure ? {firstFailure} : {})};
+        fileReports.push(fileReport); console.log(JSON.stringify(fileReport));
     }
     report.accepted = report.selected > report.revoked && report.fail === 0 && report.unsupported === 0 && report.budget === 0;
+    if (reportPath) writeFileSync(reportPath,JSON.stringify({summary:report,files:fileReports},null,2)+'\n',{flag:'wx'});
     console.log(JSON.stringify({summary:report}));
     process.exitCode = report.accepted ? 0 : 1;
 } catch (error) { console.error(error.message); process.exitCode = 2; }

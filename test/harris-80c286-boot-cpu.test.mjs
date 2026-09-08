@@ -124,8 +124,8 @@ test('a disconnected RAM data wire stops guest execution rather than using hidde
     assert.throws(() => cpu.initialize(), fault('CPU_FAULTED'));
 });
 
-test('unsupported opcodes and prefixes stop explicitly without retiring the bad instruction', () => {
-    for (const [bytes, code] of [[[0x0f], 'UNSUPPORTED_OPCODE'], [[0x11, 0xc0], 'UNSUPPORTED_ALU'], [[0xf3, 0x90], 'UNSUPPORTED_OPCODE']]) {
+test('unsupported system opcode and unwired LOCK/coprocessor protocols stop explicitly', () => {
+    for (const [bytes, code] of [[[0x0f], 'UNSUPPORTED_OPCODE'], [[0xf0, 0x90], 'UNSUPPORTED_LOCK_BUS'], [[0x9b], 'UNSUPPORTED_COPROCESSOR']]) {
         const {cpu} = fixture({rom: programROM(bytes)});
         assert.throws(() => cpu.run(), fault(code));
         assert.equal(cpu.retired, 1, 'only reset far jump retired');
@@ -164,10 +164,14 @@ test('ADD flags match an arithmetic oracle over boundary and deterministic gener
     }
 });
 
-test('segment-crossing operands are refused before a memory transfer', () => {
-    const {cpu} = fixture({rom: programROM([0xa1, 0xff, 0xff])});
-    assert.throws(() => cpu.run(), fault('UNSUPPORTED_SEGMENT_WRAP'));
-    assert.equal(cpu.retired, 1);
+test('segment-crossing operands deliver wired INT 13 without reading the invalid operand', () => {
+    const bytes = assembleRaw('MOV SP,0800h\nMOV AX,0300h\nMOV [52],AX\nMOV AX,0F000h\nMOV [54],AX\nMOV DI,OFFSET faulting\nfaulting: MOV AX,[0FFFFh]\nHLT',0x100);
+    const rom = programROM(bytes); rom[0x300] = 0xf4;
+    const {cpu,board} = fixture({rom});
+    assert.equal(cpu.run(2000).status,'halted');
+    assert.equal(cpu.regs.sp,0x7fa); assert.equal(ramWord(board,0x7fa),cpu.regs.di);
+    assert.equal(ramWord(board,0x7fc),0xf000); assert.equal(cpu.ip,0x301);
+    assert.ok(!board.bus.getTrace().entries.some(e=>e.completion?.kind==='memory-read' && e.completion.address===0xffff));
 });
 
 test('cancellation stops clock execution and state inspection is a defensive copy', () => {

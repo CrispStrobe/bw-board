@@ -62,7 +62,7 @@ test('all 256 word ModR/M encodings decode register/address/segment fields (deco
     cpu.ds = 0x10; cpu.ss = 0x20;
     const bases = [0x110, 0x120, 0x310, 0x320, 0x10, 0x20, 0x300, 0x100];
     for (let code = 0; code < 256; code++) {
-        cpu.ip = 0x100;
+        cpu.ip = 0x100; cpu.instructionBytes = 0;
         const it = cpu._operand(); const bytes = [code, 0xf0, 0xff];
         let next = it.next(); let reads = 0;
         while (!next.done && reads < bytes.length) next = it.next(bytes[reads++]);
@@ -194,9 +194,10 @@ HLT`);
     assert.equal(board.inspectMemory('ram0').writes, 2);
 });
 
-test('branch wrap remains explicit unsupported behavior and history stays bounded', () => {
+test('near branch wraps within its 16-bit segment and history stays bounded', () => {
     const rom = createHarrisBootROM(); rom.set([0xe9, 0x00, 0xfe], 0x100); // 0103h - 0200h
-    const {cpu} = fixture(rom); assert.throws(() => cpu.run(), fault('UNSUPPORTED_SEGMENT_WRAP'));
+    rom[0xff03] = 0xf4;
+    const {cpu} = fixture(rom); assert.equal(cpu.run().status,'halted'); assert.equal(cpu.ip,0xff04);
     const good = fixture(createHarrisLoopROM(), {historyLimit: 3}); good.cpu.run();
     assert.equal(good.cpu.inspect().history.length, 3); assert.equal(good.cpu.inspect().dropped, 44);
 });

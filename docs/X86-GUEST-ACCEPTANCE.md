@@ -17,8 +17,8 @@ Editor reference machines, ELKS, then classic MINIX/286 protection, on 8086,
 * Extend wired CPU: byte registers/memory, segment overrides and loads, word
   stack/near calls/returns, byte/word ADD/SUB/CMP/AND/OR/XOR, immediate groups,
   TEST, all short Jcc predicates and single-bit SHL/SHR. Every operand uses the
-  wired memory path. ADD-with-carry, strings, software/hardware interrupts, I/O,
-  protection and much else remain unsupported. Segment wrap still refuses.
+  wired memory path. This was the initial subset; the subsequent real-mode
+  expansion described below supersedes its instruction limitations.
 * Prove real Microsoft DOS 2 kernel and COMMAND.COM write a disk file, boot a
   fresh machine, read it, overwrite it, remount again and handle a missing file,
   separately on 8086 and 80186. Exact Microsoft release hashes are checked.
@@ -27,11 +27,14 @@ Editor reference machines, ELKS, then classic MINIX/286 protection, on 8086,
 
 The 80186 row is an instruction variant with external PC-like hardware, not
 the 80186's integrated peripheral subsystem. No 286 alias to that core exists.
-Follow-up: a pinned SingleStepTests/80286 diagnostic now traverses all 326 files.
-675,501 states match; 802,496 cases remain unsupported and three are revoked.
-This is not full-suite acceptance or wired/timing validation. See
-[runner and baseline](SST286-RUNNER.md). No CPU implementation changed in that
-follow-up. [Private DOS media](PRIVATE-DOS-FIXTURES.md) remains external-only;
+Follow-up: carry arithmetic, remaining arithmetic/shift groups, near/far
+transfers, stack frames, REP strings, port transactions, software INT/IRET and
+real-mode faults now execute in the experimental Harris CPU. The historical
+675,501-pass baseline is preserved separately from the expanded-suite receipt.
+See [runner, coverage receipts and remaining gates](SST286-RUNNER.md).
+This does not establish protected mode, external interrupts, physical I/O
+devices or DOS boot on the wired 286. Application engine pins and production
+defaults remain unchanged. [Private DOS media](PRIVATE-DOS-FIXTURES.md) remains external-only;
 its admission checker does not distribute or execute games.
 
 ## Boot diagnostics (not acceptance)
@@ -60,7 +63,7 @@ guest signatures or mask these failures to produce a boot banner.
 ## Next work
 
 Complete whole-utility/editor and named reference-board acceptance; resolve
-the ELKS/MINIX boot diagnostics; implement remaining wired real-mode CPU/I/O;
+the ELKS/MINIX boot diagnostics; implement remaining system CPU operations and wired I/O;
 then execute the same real boot/file/process acceptance on wired profiles.
 Protected mode is 286-only, not a required feature on 8086/80186.
 The Lite plan is `docs/X86-GUEST-MILESTONES.md`; its preservation/package

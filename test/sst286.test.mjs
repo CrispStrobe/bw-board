@@ -41,7 +41,8 @@ test('exception records survive parsing and invalid CPU, mode or declared counts
     const payload=Buffer.concat([Buffer.from([13]),u32(0x123456)]);
     const parsed=parseSST286(encode(vector(),[chunk('EXCP',payload)]));
     assert.deepEqual(parsed.tests[0].exception,{number:13,flagAddress:0x123456});
-    assert.equal(executeSST286(parsed.tests[0]).executed,false);
+    assert.equal(executeSST286(parsed.tests[0]).executed,true);
+    assert.equal(executeSST286(parsed.tests[0]).status,'fail','MOV must not manufacture the exception claimed by metadata');
     const cpu=encode();cpu.write('8086',16);assert.throws(()=>parseSST286(cpu),/C286/);
     const mode=encode();mode[28+27]=1;assert.throws(()=>parseSST286(mode),/mode\/count/);
     const count=encode();count.writeUInt32LE(2,12);assert.throws(()=>parseSST286(count),/mode\/count/);
@@ -85,10 +86,10 @@ test('register masks apply, but defined-bit mismatches remain failures',()=>{
     assert.equal(executeSST286(t).status,'fail');
     t.final.masks.flags=0xffff;assert.equal(executeSST286(t,{flags:0xffef}).status,'fail');
 });
-test('exceptions, unsupported opcodes and exhausted budgets never count as passes',()=>{
+test('false exception expectations, unsupported opcodes and exhausted budgets never count as passes',()=>{
     const t=vector();t.exception={number:13,flagAddress:0};
-    assert.deepEqual(executeSST286(t),{status:'unsupported',reason:'exception-13',executed:false});
-    t.exception=null;t.bytes[0]=0x60;t.initial.ram[0][1]=0x60;
+    assert.equal(executeSST286(t).status,'fail');
+    t.exception=null;t.bytes[0]=0x0f;t.initial.ram[0][1]=0x0f;
     assert.equal(executeSST286(t).status,'unsupported');
     assert.equal(executeSST286(vector(),{},{maxTransfers:1}).status,'budget');
     assert.throws(()=>executeSST286(vector(),{},{maxTransfers:NaN}),/budget/);
