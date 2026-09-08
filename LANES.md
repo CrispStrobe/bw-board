@@ -560,9 +560,11 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 vectors and private guest fixtures | Codex /root | 2026-09-08 | Pinned diagnostic SST286 reader/semantic adapter and external-only private fixture contract; no game redistribution, production pin, merge or deployment. |
+| _(none)_ | | | |
 
 ## DONE
+
+286 vectors/private media increment: engine `7b7f92f`, paired Lite docs `15be58905`. Pinned SST286 inventory traversed all 326 files / 1,478,000 vectors: 675,501 matched, 802,496 unsupported (42,341 exception/interrupt cases refused before execution), three revoked, no completed-state mismatches or budget exhaustion; exit 1, NOT full acceptance. Test-only 16 MiB semantic memory drives unchanged boot decoder; no physical-board/timing/protected-mode claim. Added external-only reviewed/hash-checked private media admission, no game downloads/uploads or private repository creation. Fourteen new harness tests and 30 existing Paterson/prerequisite tests passed locally (42 combined before two additional parser/CLI tests, final 14 harness tests green). No app runtime/vendor/production pin change, merge/deploy or full hosted CI. Claim released at incremental handoff; CPU expansion and guest milestones remain pending.
 
 Paterson guest increment: source `f2eeb5964bc1285a6c8f3b1c297d2998833cc56f`, paired Lite `9b5ea89dc55ea0e987591c3db4b6d4d2cf3c7745`. Preserved MIT original/adapted FAT12 routines pass on 8086/80186/wired 286 subset; byte/stack/segment/ALU prerequisites remain experimental. Real DOS shell disk persistence passes on 8086/80186. 71 targeted engine tests passed locally, no skips; Lite preservation/runtime and isolated browser passed. No full 80286 vector run, general 286, accepted ELKS/MINIX boot, games import, DOSBox package support, production pin change, merge or deployment. The five requested milestones remain open in the plans; this bounded implementation/research increment is handed off, claim released.
 
