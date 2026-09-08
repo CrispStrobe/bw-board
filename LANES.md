@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-pic | Codex | 2026-09-08 | Default-off PIC adapter, I/O strobes and net-driven guest tests; no app pins, merge/deploy or media. |
 
 ## DONE
 
