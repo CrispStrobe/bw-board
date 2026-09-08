@@ -560,9 +560,19 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-pic | Codex | 2026-09-08 | Default-off PIC adapter, I/O strobes and net-driven guest tests; no app pins, merge/deploy or media. |
 
 ## DONE
+
+286 wired programmable PIC: source `25d39dd` on `feat/x86-backend-lab`,
+2026-09-08. Explicit I/O/controller gate and PIC+decoder/byte-lane adapter
+reuse the existing unchanged I8259 core. Guest IN/OUT initialization, masks,
+ISR/IRR, paired INTA vectors, HLT/IRET and EOI; fixed-priority single edge-mode
+subset only. Cascade, auto-EOI, level/rotation/special modes explicitly refused.
+Fifteen new owned tests; targeted run including PIC core tests 218/218, no skips.
+CPU/SST adapter/runner hashes unchanged from SST286-INTR-REPORT.json; prior
+1,477,997-pass receipt retained, no new full-vector run or hardware oracle claim.
+No app pin/default changes, full CI/browser, merge/deploy or media hosting.
+Claim released; timer/IRQ0 guest gate next in docs/HARRIS-286-PIC.md.
 
 286 wired INTR integration: source `14549f0` on `feat/x86-backend-lab`,
 2026-09-08. Opt-in controller INTA outputs and independent READY gate connect
