@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 vectors and private guest fixtures | Codex /root | 2026-09-08 | Pinned diagnostic SST286 reader/semantic adapter and external-only private fixture contract; no game redistribution, production pin, merge or deployment. |
 
 ## DONE
 
