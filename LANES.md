@@ -560,9 +560,21 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-bios-probe | Codex | 2026-09-08 | Reproducible extended BIOS POST diagnostic and first verified peripheral/configuration gap; no app pins/deploy/media. |
 
 ## DONE
+
+286 BIOS POST configuration: source `de39245` on `feat/x86-backend-lab`,
+2026-09-08. Full 640 KiB baseline reaches actual PIC ICW4=09h refusal at
+F000:00F9 after 13,543 completed clocks/1,516 retired. Explicit source-level
+single-unbuffered BIOS build changes only the ICW4 byte; original default ROM
+remains hash-identical and PIC guards unchanged. Configured 640 KiB probe
+initializes PIC/timer, reaches text-memory REP clear, exhausts 20,000 clocks
+with 1,763 retired; accepted:false, no POST/DOS completion or next-fault claim.
+Reusable bounded CLI, profile/provenance tests and two-run hashed receipt in
+docs/HARRIS-286-BIOS-POST*. Five new tests; suite including existing BIOS ROM/
+floppy tests 345/345 pass, no skips. CPU/SST hashes unchanged; no new full-vector
+run, full CI/browser, app pins, default changes, merge/deploy or media hosting.
+Claim released; continue configured POST toward disk/peripheral prerequisites.
 
 286 conventional/text memory map: source `b301310` on `feat/x86-backend-lab`,
 2026-09-08. Explicit 64–640 KiB conventional RAM and optional B8000h text RAM
