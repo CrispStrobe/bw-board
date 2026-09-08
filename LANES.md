@@ -560,9 +560,21 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-memory-map | Codex | 2026-09-08 | Opt-in conventional RAM expansion/text RAM using wired chips; segmented relocation/stack/bank-boundary tests; no app pins/deploy/media. |
 
 ## DONE
+
+286 conventional/text memory map: source `b301310` on `feat/x86-backend-lab`,
+2026-09-08. Explicit 64–640 KiB conventional RAM and optional B8000h text RAM
+use additional registered chip pairs/full latched-address decoders. Defaults
+and saved recipe remain 64 KiB. Ten new tests cover chip isolation, boundaries,
+READY/partial faults, holes and owned code relocation/far call at 9000:0200
+with an upper-memory stack and text-memory write. Targeted run 274/274, no skips.
+Unmodified BIOS probe: 6,000 clocks/747 retired, budget exhausted in IVT setup
+at F000:0073, zero PIC writes; accepted:false, no POST/DOS boot claim.
+CPU/SST hashes unchanged; no new full-vector run, full CI/browser, app pins,
+merge/deploy or media hosting. Claim released; longer BIOS probe/peripheral
+gates in docs/HARRIS-286-MEMORY-MAP.md. BIOS ICW4=09h mismatch is source-audited,
+not yet the observed runtime stop; PPI/video/FDC/DMA wiring remains pending.
 
 286 wired programmable timer: source `1d9ab7c` on `feat/x86-backend-lab`,
 2026-09-08. Default-off counter-0 binary modes 0/2/even-3 subset with independent
