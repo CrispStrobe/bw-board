@@ -1,5 +1,14 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Wired PIC follow-up, 2026-09-08
+
+The [PIC/port bridge](HARRIS-286-PIC.md) adds a default-off, programmable
+single-PIC subset and fifteen owned net/guest tests. Targeted regressions,
+including `test/i8259.test.mjs`, pass **218/218**, zero skips. CPU, SST adapter
+and runner hashes still match `SST286-INTR-REPORT.json`; no new full-vector
+run is claimed. That receipt does not validate PIC, I/O wiring or interrupts.
+Timer wiring, actual wired DOS boot and full 286 support remain pending.
+
 ## Wired INTR follow-up, 2026-09-08
 
 The [INTR integration](HARRIS-286-INTR.md) adds an opt-in CPU/controller path

@@ -35,17 +35,20 @@ export class IdealAddressLatch {
  * Status-driven phase controller. Learns phase from the two status periods;
  * never reads CPU.state, pending, transfers, or acceptance callbacks. ALE is
  * high in TS2; command low in TC; READY low at TC2 releases the command.
- * This deliberately omits 82C288 edge timing, CMDLY, bus arbitration and I/O.
+ * This deliberately omits 82C288 edge timing, CMDLY and bus arbitration.
+ * I/O strobes and INTA are separate, explicit opt-ins.
  */
 export class MemoryPhaseController {
-    constructor({enabled = false, id = 'controller', intrEnabled = false} = {}) {
+    constructor({enabled = false, id = 'controller', intrEnabled = false, ioEnabled = false} = {}) {
         gate(enabled); this.id = id; this.state = 'TI'; this.phase = 1; this.open = false;
         if (typeof intrEnabled !== 'boolean') throw new TypeError('intrEnabled');
+        if (typeof ioEnabled !== 'boolean') throw new TypeError('ioEnabled');
+        this.ioEnabled = ioEnabled;
         this.intrEnabled = intrEnabled; this.tcCount = 0;
         this.kind = null;
     }
     part() {
-        const extra = this.intrEnabled ? ['inta_n','inta_wait'] : [];
+        const extra = [...(this.intrEnabled ? ['inta_n','inta_wait'] : []), ...(this.ioEnabled ? ['ior_n','iow_n'] : [])];
         return {id: this.id, pins: ['reset', 'ready_n', 's1_n', 's0_n', 'cod_inta_n', 'm_io', 'ale', 'mrd_n', 'mwr_n',...extra],
             outputs: ['ale', 'mrd_n', 'mwr_n',...extra]};
     }
@@ -54,6 +57,8 @@ export class MemoryPhaseController {
         return {ale: Number(this.state === 'TS' && this.phase === 2 && !ack),
             mrd_n: Number(!(this.state === 'TC' && ['memory-read','code-read'].includes(this.kind))),
             mwr_n: Number(!(this.state === 'TC' && this.kind === 'memory-write')),
+            ...(this.ioEnabled ? {ior_n:Number(!(this.state === 'TC' && this.kind === 'io-read')),
+                iow_n:Number(!(this.state === 'TC' && this.kind === 'io-write'))} : {}),
             ...(this.intrEnabled ? {inta_n:Number(!(ack && this.state === 'TC')),
                 inta_wait:Number(ack && this.state === 'TC' && this.tcCount === 0)} : {})};
     }
@@ -64,7 +69,8 @@ export class MemoryPhaseController {
             const signals = Object.fromEntries(['s1_n', 's0_n', 'cod_inta_n', 'm_io'].map(p => [p, requireLevel(read, p)]));
             const kind = decode286Status(signals);
             if (this.state === 'TI' && kind !== 'passive') {
-                if (!['code-read', 'memory-read', 'memory-write',...(this.intrEnabled ? ['interrupt-acknowledge'] : [])].includes(kind)) throw new CircuitFault('UNSUPPORTED_COMMAND', kind);
+                if (!['code-read', 'memory-read', 'memory-write',...(this.intrEnabled ? ['interrupt-acknowledge'] : []),
+                    ...(this.ioEnabled ? ['io-read','io-write'] : [])].includes(kind)) throw new CircuitFault('UNSUPPORTED_COMMAND', kind);
                 this.state = 'TS'; this.phase = 1; this.kind = kind;
                 this.tcCount = 0;
             } else if (this.state === 'TS' && kind !== this.kind || this.state === 'TC' && kind !== 'passive') {

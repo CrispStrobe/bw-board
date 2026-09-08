@@ -47,8 +47,9 @@ instruction state, transaction index or acceptance callback.
 
 When supplied, this part replaces the lab `inputs.intr` connection. Without
 it, the lab INTR input remains usable, but no hidden vector provider is added.
-The connector does not yet expose PIC command/data ports, cascade wiring, a
-timer or the existing 8259 implementation.
+The optional [PIC byte-lane extension](HARRIS-286-PIC.md) now adds command/data
+ports and the existing 8259 core behind programming guards. Cascade and timer
+wiring remain pending; the original lab connector itself stays unchanged.
 
 ## Evidence and qualification
 
@@ -87,7 +88,7 @@ protected mode and analog/edge timing remain unvalidated or unsupported.
 
 ## Next
 
-Add port strobes and a real PIC adapter, then programmable PIC/timer guest
-tests. Connect storage/BIOS/memory-map prerequisites before claiming a wired
+Port strobes and the [programmable PIC subset](HARRIS-286-PIC.md) have landed
+with guest tests. Next add timer-driven guest tests. Connect storage/BIOS/memory-map prerequisites before claiming a wired
 286 DOS boot. No merge, deployment, GUI promotion or new guest-media hosting
 is included in this increment.

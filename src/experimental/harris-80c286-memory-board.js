@@ -10,7 +10,7 @@ const INPUTS = {reset: 0, ready_n: 0, hold: 0, intr: 0, nmi: 0, pereq: 0, busy_n
 const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, toTerminal});
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
-    intrEnabled = false, interruptDevice = null, editWires = wires => wires} = {}) {
+    intrEnabled = false, ioEnabled = false, interruptDevice = null, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
@@ -18,7 +18,9 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     if (interruptDevice && (!intrEnabled || typeof interruptDevice.part !== 'function' || typeof interruptDevice.update !== 'function'))
         throw new TypeError('interruptDevice requires intrEnabled and part/update methods');
     const bus = new Harris80C286Bus({enabled,nmiEnabled,intrEnabled});
-    const controller = new MemoryPhaseController({enabled,intrEnabled});
+    const controller = new MemoryPhaseController({enabled,intrEnabled,ioEnabled});
+    const picIO = interruptDevice?.ioInterface === 'harris-pic-byte-lanes';
+    if (picIO && !ioEnabled) throw new TypeError('PIC port adapter requires ioEnabled:true');
     const latch = new IdealAddressLatch({enabled});
     const memories = [];
     const parts = [bus.part(), controller.part(), latch.part(),
@@ -41,7 +43,14 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     if (irqPart) {
         parts.push(irqPart);
         wires.push(wire('inputs','reset',irqPart.id,'reset'),wire('controller','inta_n',irqPart.id,'inta_n'),wire(irqPart.id,'intr','cpu','intr'));
-        for (const p of bitPins('d',8)) wires.push(wire(irqPart.id,p,'cpu',p));
+        for (const p of bitPins('d',picIO ? 16 : 8)) wires.push(wire(irqPart.id,p,'cpu',p));
+        if (picIO) {
+            for (const p of [...A,'bhe_n','m_io']) wires.push(wire('latch',`q_${p}`,irqPart.id,p));
+            for (const p of ['ior_n','iow_n']) wires.push(wire('controller',p,irqPart.id,p));
+            const ir = bitPins('ir',8);
+            parts.push({id:'irq_inputs',pins:ir,outputs:ir});
+            for (const p of ir) wires.push(wire('irq_inputs',p,irqPart.id,p));
+        }
     }
     for (const p of ['s1_n', 's0_n', 'cod_inta_n', 'm_io']) wires.push(wire('cpu', p, 'controller', p));
     for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('cpu', p, 'latch', p));
@@ -69,6 +78,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     }
     const circuit = new DigitalCircuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
     circuit.drive('inputs', INPUTS);
+    if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
     const settleInterruptDevice = () => {
         if (!irqPart) return;
         circuit.settle();
@@ -79,7 +89,8 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     let periodOpen = false;
     return {
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
-            fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled}),
+            fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
+            io:ioEnabled, programmablePIC:picIO}),
         bus, circuit,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},
