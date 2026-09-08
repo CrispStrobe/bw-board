@@ -507,13 +507,13 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
-8086 fastpaths phase 2: active on `fable/i8086-fastpaths` in `wt/i8086-optimized-pinned`; user-authorized deadline, decode/REP/RAM and bounded Wasm experiments, with phase-1 interpreter as oracle and Lite Chromium comparisons. No default-branch changes; only measured wins will be integrated.
-
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
 
 ## DONE
+
+8086 fastpaths phase 2: complete on `fable/i8086-fastpaths`, engine `6b7761d210698c8f392e28ce85d02c5d94ee676f`. Dedicated REP MOVS/STOS, guarded RAM words (`fastWords: false` reference option), and unit-correct PIT deadlines integrated into Lite feature branch `perf/i8086-execution` at `911d09104`. Upstream CI `34219643631` passed units, all 646,000 8086 vectors, 80186/V20 and 525-program corpus. Lite experiment log records Chromium acceptance and rejected debugger/batching/decoded/Wasm prototypes; those prototypes are not production paths. No default-branch changes or deployment; claim released.
 
 | lane | who | landed | sha |
 | --- | --- | --- | --- |
