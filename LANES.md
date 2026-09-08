@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 addressing and loops | Codex, feat/x86-backend-lab | 2026-09-08 | Extend boot executor with word ModR/M addressing, MOV/ADD/CMP, register INC/DEC and bounded branch/loop tests; owned RAM loop ROM. No production promotion. |
 
 ## DONE
 
