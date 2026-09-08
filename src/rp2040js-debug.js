@@ -386,7 +386,9 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
     setBreakpoint(bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
       if (bp.kind === 'code') {
-        if (typeof bp.addr !== 'number') return { unsupported: 'code breakpoint needs addr' };
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > 0xfffffffe) {
+          return { unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe' };
+        }
         if ((bp.addr & 1) !== 0) {
           return { unsupported:
             `Thumb code addresses are halfword-aligned; bit 0 is the ` +
