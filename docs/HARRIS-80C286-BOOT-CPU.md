@@ -32,13 +32,21 @@ READY does not replay register changes or duplicate stores.
 | A1 iw | MOV AX, DS:[moffs16] |
 | A3 iw | MOV DS:[moffs16], AX |
 | 05 iw | ADD AX, immediate16 |
-| 03 06 iw | ADD AX, DS:[disp16]; only this ModR/M encoding |
+| 01 /r, 03 /r | ADD r/m16,reg16 and reg16,r/m16 |
+| 89 /r, 8B /r | MOV r/m16,reg16 and reg16,r/m16 |
+| 39 /r, 3B /r, 3D iw | CMP word operands in both directions; CMP AX,immediate16 |
+| 40-4F | INC/DEC word register; preserve CF |
+| EB cb, E9 cw | Short/near relative JMP |
+| 74 cb, 75 cb | JE/JNE short |
+| E2 cb | LOOP short; decrement CX, preserve flags |
 | 90 | NOP |
 | FA | CLI |
 | F4 | Stop instruction execution (HLT subset) |
 
-ADD updates CF/PF/AF/ZF/SF/OF and preserves other flags. Prefixes, other ModR/M
-forms and opcodes are explicit host diagnostics, not silently accepted NOPs.
+ADD/CMP update CF/PF/AF/ZF/SF/OF and preserve other flags. The listed ModR/M
+instructions support register operands and all 16-bit effective-address forms,
+with signed disp8, disp16 and BP-based default SS selection. Byte forms,
+prefixes and unlisted opcodes are host diagnostics, not silently accepted NOPs.
 No invalid-opcode vector delivery is implied. Unsupported-instruction faults
 can leave IP advanced by fetched bytes; there is no precise exception rollback.
 
@@ -106,6 +114,10 @@ faults require reconstruction. No silent recovery, backend substitution or
 cross-backend snapshot restore is provided.
 
 ## Validation scope and remaining work
+
+The [addressing and loop follow-up](HARRIS-80C286-LOOPS.md) expands the current
+instruction table above. The original 94-test receipt below describes the
+earlier straight-line milestone, not the latest combined test count.
 
 Final local targeted run: 15 new boot tests plus the phase board/sequencer,
 digital foundation, electrical memory and existing 8086 machine tests passed
