@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| Expand 286 real-mode coverage | Codex /root | 2026-09-08 | Carry/groups/control/string/I/O and exception milestones against pinned SST286; wired regressions; keep default-off, no production pin or deployment. |
 
 ## DONE
 
