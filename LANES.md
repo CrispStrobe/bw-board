@@ -560,9 +560,22 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-post-next | Codex | 2026-09-08 | Continue POST to next fault; remove unnecessary resolved-net read copying if verified equivalent; no firmware shortcuts/app pins/deploy/media. |
 
 ## DONE
+
+286 net-read optimization / longer POST diagnostic: source `c658507` on
+`feat/x86-backend-lab`, 2026-09-08. Internal scalar reads avoid defensive
+diagnostic copies; inspection, net resolution and physical bus behavior stay
+unchanged. Three differential tests plus broader regression: 368/368 pass,
+zero skips. Probe provenance now includes digital-circuit.js. Original-code
+64 KiB/65,000-clock run passes screen clear into banner handling, ending at
+F000:0447 with 3,293 retired, budget-exhausted/accepted:false. Historical source
+hashes and new receipt preserved in HARRIS-286-BIOS-BANNER-REPORT.json. No next
+peripheral fault, complete POST, DOS boot or end-to-end speedup claimed. Next:
+larger normal POST budget, then physical FDC reset/IRQ6 and DMA acceptance gates
+documented in HARRIS-286-BIOS-POST.md. CPU/SST hashes unchanged. No new full
+vector run, full CI/browser, app pins/defaults, merge/deploy or media hosting.
+Claim released.
 
 286 BIOS POST configuration: source `de39245` on `feat/x86-backend-lab`,
 2026-09-08. Full 640 KiB baseline reaches actual PIC ICW4=09h refusal at
