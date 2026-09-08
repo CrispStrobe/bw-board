@@ -255,7 +255,11 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
             return 'halted';
           }
         } else if (depthStep.kind === 'out') {
-          if (core.SP > depthStep.sp0) {
+          // The return PC catches leaf BX lr; the SP rise catches a saved-LR
+          // POP {pc} after nested calls have replaced LR. Both are heuristics:
+          // an unrelated branch can reach returnPc, and SP can rise inside the
+          // function. An early stop is preferable to never stopping.
+          if (curPc === depthStep.returnPc || core.SP > depthStep.sp0) {
             running = false; depthStep = null;
             resumeGuard = curPc;
             syncBoard(); announce('step');
@@ -363,11 +367,9 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
         return undefined;
       }
       if (kind === 'out') {
-        // Run until SP rises above its current level (a POP {PC} or
-        // epilogue restoring LR then BX LR). For leaf functions that
-        // never touched SP this waits forever — a stated limitation,
-        // same as the AVR and 6502 targets.
-        depthStep = { kind: 'out', sp0: core.SP };
+        // LR is a leaf function's caller; an SP rise identifies a stacked
+        // return even when a nested BL has replaced LR with a local address.
+        depthStep = { kind: 'out', returnPc: core.LR & ~1, sp0: core.SP };
         insnRemaining = null;
         blockStep = false;
         running = true;
