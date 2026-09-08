@@ -4151,6 +4151,20 @@ export class BoardImpl {
   /**
    * The buzzer an MCU pin is wired to, either way round (VCC→a, MCU→b or
    * MCU→a, GND→b), or null.
+   *
+   * THE PIN NAMESPACE DOES NOT LIVE ONLY ON `kind: 'mcu'`. It lives on the
+   * MCU-surface part: the bare body (kind 'mcu') OR any device model that
+   * declares `gpioFollowsPinStates` — the dev boards and bare chips
+   * (`arduino_uno`, `stc15_mcu`, `attiny85`, `stm32f030`, …). Matching only
+   * 'mcu' here made `setTone()` return false and do nothing on every one of
+   * those, so a correct program was silent with no error — which is the same
+   * defect `readPin()` had (see `_pinNetForTerminal`: "Only matching kind 'mcu'
+   * meant readPin() returned 0 for every input on an Arduino body"). Measured
+   * against the shipped corpus before this change: of 17 bench files that
+   * declare a TONE pin and carry a buzzer, `setTone()` reached a buzzer on 8
+   * and found NOTHING on 9, and every one of the 9 drove the buzzer from an
+   * `arduino_uno` or `stc15_mcu` surface.
+   *
    * @param {PinId} pin
    * @returns {object|null}
    */
@@ -4165,7 +4179,10 @@ export class BoardImpl {
         if (!net) continue;
         for (const t of net.terminals) {
           const p = this.partMap.get(t.part);
-          if (p && p.kind === 'mcu' && String(t.terminal).toLowerCase() === wanted) return part;
+          if (!p || String(t.terminal).toLowerCase() !== wanted) continue;
+          if (p.kind === 'mcu') return part;
+          const model = getDevice(p.kind);
+          if (model && model.gpioFollowsPinStates) return part;
         }
       }
     }
