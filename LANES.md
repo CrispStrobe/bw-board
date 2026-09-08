@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-post-resolver | Codex | 2026-09-08 | Precompute immutable net topology with differential tests; extend normal BIOS POST diagnostics. No app pins/defaults, merge/deploy or media. |
 
 ## DONE
 
