@@ -560,9 +560,19 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 INTA sequencer foundation | Codex /root | 2026-09-08 | Opt-in two-cycle INTA transaction, vector nets, READY contract, address release/idle gap/LOCK tests; CPU/controller/PIC integration remains separate. |
 
 ## DONE
+
+286 INTA sequencer foundation: source `5bfe02e` on `feat/x86-backend-lab`,
+2026-09-08. Bus-only `intrEnabled:true` enables a paired INTA transaction and
+resolved INTR-level observation, not CPU interrupt selection. Five new net-peer
+tests verify ignored first data, second-byte vector, six-system-clock gap,
+address/BHE release, LOCK, external wait enforcement and RESET cancellation.
+Final targeted regressions 164/164, zero skips. CPU/adapter/runner hashes still
+match the previous 1,477,997-pass SST286 receipt; no new full-vector run claimed.
+Controller/PIC wiring and CPU IF/shadow/priority/HLT/REP integration remain
+pending; memory-board INTR remains refused. No app pins/defaults, full CI/browser,
+merge/deploy or media changes. Claim released; next gates in HARRIS-286-INTA.md.
 
 286 NMI foundation: source `bbf7cdd` on `feat/x86-backend-lab`, 2026-09-08.
 Explicit `nmiEnabled:true` board option samples resolved NMI, qualifies edges,
