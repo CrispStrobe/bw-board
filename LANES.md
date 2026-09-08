@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 8086 execution optimization | execution lane | 2026-09-08 | `perf/i8086-execution`: profile shipped Chromium CPU/machine/DOS/debugger costs in Lite; independently measure engine candidates, preserve vectors, IRQs and debugger bus visibility. |
 
 ## DONE
 
