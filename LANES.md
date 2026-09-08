@@ -560,9 +560,20 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 wired INTR integration | Codex /root | 2026-09-08 | Opt-in controller/READY/interrupt-device connector and CPU IF/STI/SS/NMI priority, HLT and REP tests; no full PIC or application promotion. |
 
 ## DONE
+
+286 wired INTR integration: source `14549f0` on `feat/x86-backend-lab`,
+2026-09-08. Opt-in controller INTA outputs and independent READY gate connect
+the CPU's paired acknowledgement to an external part/vector-net connector.
+IF/STI/SS blocking, qualified level requests, NMI priority, HLT wake, IRET and
+REP restart tested with an independent lab peer (not a programmed PIC).
+Twelve new tests; final targeted run 176/176, no skips. Fresh full pinned SST286
+1,477,997 pass, 3 revoked, zero fail/unsupported/budget, exit 0; hashed receipt
+SST286-INTR-REPORT.json. SST is not an asynchronous/bus oracle. PIC ports,
+timer, cascade, timing/protection and actual wired DOS boot remain pending.
+No app pin/default changes, full CI/browser, merge/deploy or media hosting.
+Claim released; next programmable PIC/port gate in docs/HARRIS-286-INTR.md.
 
 286 INTA sequencer foundation: source `5bfe02e` on `feat/x86-backend-lab`,
 2026-09-08. Bus-only `intrEnabled:true` enables a paired INTA transaction and
