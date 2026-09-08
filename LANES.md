@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| 286 wired INTR integration | Codex /root | 2026-09-08 | Opt-in controller/READY/interrupt-device connector and CPU IF/STI/SS/NMI priority, HLT and REP tests; no full PIC or application promotion. |
 
 ## DONE
 
