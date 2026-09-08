@@ -3,6 +3,11 @@
 2026-09-08. Default-off experimental integration; no instruction CPU or editor
 component is shipped. Builds on the [phase sequencer](HARRIS-80C286-BUS-CONTRACT.md).
 
+Follow-up: the [boot instruction subset](HARRIS-80C286-BOOT-CPU.md) now executes
+owned instructions through this board. It opts into a low ROM alias via decode
+logic. The original host-driven bridge demo below remains a separate test and
+is still labeled `cpuExecuted:false`; no editor part or general 286 is shipped.
+
 ## What changed
 
 [Memory board](../src/experimental/harris-80c286-memory-board.js) now connects

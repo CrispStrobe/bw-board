@@ -9,9 +9,10 @@ const D = bitPins('d', 16);
 const INPUTS = {reset: 0, ready_n: 0, hold: 0, intr: 0, nmi: 0, pereq: 0, busy_n: 1, error_n: 1, vcc: 1, gnd: 0};
 const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, toTerminal});
 
-export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), editWires = wires => wires} = {}) {
+export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
+    if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     for (const kind of ['62256', '28c256']) if (!getDevice(kind)) throw new CircuitFault('MEMORY_MODELS_REQUIRED', 'registerBusMemory() before construction');
     const bus = new Harris80C286Bus({enabled});
     const controller = new MemoryPhaseController({enabled});
@@ -36,7 +37,8 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             if (read('m_io') === 0 || (lane === 0 ? read('a0') === 1 : read('bhe_n') === 1)) return {ce_n: 1};
             const address = readBits(A, read);
             if (address === null || read('m_io') !== 1 || (lane === 1 && read('bhe_n') !== 0)) return {ce_n: 'X'};
-            return {ce_n: Number(!(kind === 'rom' ? address >= 0xff0000 : address < 0x10000))};
+            const inROM = address >= 0xff0000 || (romLowAlias && address >= 0xf0000 && address < 0x100000);
+            return {ce_n: Number(!(kind === 'rom' ? inROM : address < 0x10000))};
         }});
         for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('latch', `q_${p}`, decode, p));
         wires.push(wire(decode, 'ce_n', id, memory.select));
