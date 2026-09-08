@@ -1,5 +1,16 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## System-state follow-up, 2026-09-08
+
+The [system-state prerequisite increment](HARRIS-286-SYSTEM-STATE.md) adds
+real-mode GDT/IDT/MSW operations and relocated interrupt-table delivery.
+Its [fresh full-suite receipt](SST286-SYSTEM-STATE-REPORT.json) records the same
+**1,477,997 passes, zero failures/unsupported/budget, three revocations**, exit 0,
+against the new CPU source hash. The older receipts below remain historical.
+The targeted command below now passes **146/146**, zero skips, including twelve
+new system-state tests. The suite does not itself contain those new opcodes;
+their evidence is owned tests plus the cited manual, not new silicon vectors.
+
 ## Expanded result, 2026-09-08
 
 All **326 files / 1,478,000 vectors** selected at revision
@@ -126,8 +137,10 @@ board defaults to refusing unwired LOCK and coprocessor protocols.
 
 Remaining acceptance gates:
 
-1. Real-mode system instructions outside this inventory (including 0F forms),
-   external INTR/NMI, nested faults/shutdown and debug/trap behavior.
+1. Remaining system operations outside this inventory (including undocumented
+   LOADALL), external INTR/NMI, nested faults/shutdown and debug/trap behavior.
+   The supported real-mode 0F prerequisites are documented in the follow-up above;
+   protected execution still fails closed.
 2. Physical I/O devices, controller/LOCK/coprocessor handshakes, larger memory
    maps, actual DOS boot and persistent files on the wired 286 board.
 3. Protected-mode descriptors, privilege checks, gates, tasks and exceptions,

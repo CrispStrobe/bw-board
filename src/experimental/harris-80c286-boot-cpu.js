@@ -76,6 +76,8 @@ export class HarrisBootCPU {
         if (!['unsupported','inactive-lines'].includes(coprocessor)) throw new RangeError('coprocessor profile');
         this.coprocessor = coprocessor;
         this.board = board; this.historyLimit = historyLimit;
+        // GDTR power-on contents are unspecified: zero is model policy.
+        this.gdtr = {base:0,limit:0}; this.idtr = {base:0,limit:0x3ff};
         this.status = 'uninitialized'; this.retired = 0; this.history = []; this.dropped = 0;
         this.capabilities = Object.freeze({experimental: true, instructionExecution: true,
             cpuModel: 'harris-286-boot-subset', general80286: false, protectedMode: false,
@@ -98,6 +100,7 @@ export class HarrisBootCPU {
         this.regs = Object.fromEntries(REGS.map(r => [r, 0]));
         this.cs = 0xf000; this.csBase = 0xff0000; this.ip = 0xfff0;
         this.ds = 0; this.es = 0; this.ss = 0; this.flags = 2; this.msw = 0xfff0;
+        this.gdtr = {base:0,limit:0}; this.idtr = {base:0,limit:0x3ff};
         this.retired = 0; this.history = []; this.dropped = 0; this.fault = null;
         this.status = 'running';
         this.iterator = this._instructions();
@@ -161,6 +164,8 @@ export class HarrisBootCPU {
         return value;
     }
     *_interrupt(vector, returnIP) {
+        const offset = vector * 4;
+        if (offset + 3 > this.idtr.limit) throw new RealModeFault(13);
         // Harris trace order: FLAGS, CS, IP writes precede the IVT reads.
         // This matters if a guest places its stack over the IVT.
         this.interruptTaken = vector;
@@ -168,10 +173,52 @@ export class HarrisBootCPU {
         yield* this._push(this.cs);
         yield* this._push(returnIP);
         this.flags &= ~0x300;
-        const offset = yield* this._memory(vector * 4,false,0,0);
-        const segment = yield* this._memory(vector * 4 + 2,false,0,0);
-        this.cs = segment; this.csBase = segment * 16; this.ip = offset;
+        const ip = yield* this._physicalWord(this.idtr.base + offset);
+        const segment = yield* this._physicalWord(this.idtr.base + offset + 2);
+        this.cs = segment; this.csBase = segment * 16; this.ip = ip;
         this.flowTransfer = true;
+    }
+    *_physicalWord(address) {
+        address &= 0xffffff;
+        if (address !== 0xffffff) return yield {kind:'memory-read',address,width:2};
+        const low = yield {kind:'memory-read',address,width:1};
+        const high = yield {kind:'memory-read',address:0,width:1};
+        return low | (high << 8);
+    }
+    *_systemInstruction() {
+        const opcode = yield* this._byte();
+        // SLDT/STR/LLDT/LTR/VERR/VERW, LAR and LSL are protected-only.
+        if ([0x00,0x02,0x03].includes(opcode)) throw new RealModeFault(6);
+        if (opcode === 0x06) {this.msw &= ~8; return;}
+        if (opcode !== 0x01)
+            throw new CircuitFault('UNSUPPORTED_OPCODE',`0F ${opcode.toString(16)} (including undocumented LOADALL)`);
+        const {reg,operand} = yield* this._operand();
+        const operation = REGS.indexOf(reg);
+        if (operation === 4) {yield* this._writeOperand(operand,this.msw); return;}
+        if (operation === 6) {
+            const value = yield* this._readOperand(operand);
+            if (value & 1) throw new CircuitFault('UNSUPPORTED_PROTECTED_MODE','LMSW PE transition requires protected-mode execution');
+            this.msw = (this.msw & 0xfff1) | (value & 14); return;
+        }
+        if (operation > 3 || operand.register) throw new RealModeFault(6);
+        const table = operation & 1 ? 'idtr' : 'gdtr';
+        const offsets = [0,2,4].map(n=>(operand.offset+n)&65535);
+        // Each transfer is a word; do not turn a final-word segment fault
+        // into a partially committed descriptor-table register.
+        if (offsets.includes(65535)) throw new RealModeFault(13);
+        if (operation & 2) {
+            const limit = yield* this._memory(offsets[0],false,0,operand.segment);
+            const low = yield* this._memory(offsets[1],false,0,operand.segment);
+            const high = yield* this._memory(offsets[2],false,0,operand.segment);
+            this[table] = {limit,base:low | ((high & 255) << 16)};
+        } else {
+            const {base,limit} = this[table];
+            yield* this._memory(offsets[0],true,limit,operand.segment);
+            yield* this._memory(offsets[1],true,base & 65535,operand.segment);
+            // Sixth byte is architecturally undefined on 286; FF is model
+            // policy, not a silicon-verified observation from SST286.
+            yield* this._memory(offsets[2],true,0xff00 | (base >>> 16),operand.segment);
+        }
     }
     *_port(port, width, write = false, value = 0) {
         // Word accesses at FFFF wrap within the 16-bit I/O space.
@@ -290,6 +337,7 @@ export class HarrisBootCPU {
     }
     *_instructions() {
         while (this.status === 'running') {
+            if (this.msw & 1) throw new CircuitFault('UNSUPPORTED_PROTECTED_MODE','protected-mode state cannot execute as real mode');
             this.instructionBoundary = true;
             const start = {cs: this.cs, ip: this.ip, physical: this.csBase + this.ip};
             const saved = {...this.regs};
@@ -342,6 +390,8 @@ export class HarrisBootCPU {
                 this.flags = (result.flags & ~1) | (this.flags & 1); // INC/DEC preserve CF
             }
             else switch (opcode) {
+            case 0x0f: yield* this._systemInstruction(); break;
+            case 0x63: throw new RealModeFault(6); // ARPL is protected-only.
             case 0x27: case 0x2f: {
                 const old = this._get('al'), cf = this.flags & 1, af = this.flags & 16, sub = opcode === 0x2f;
                 let value = old, carry = 0, adjust = 0;
@@ -639,7 +689,11 @@ export class HarrisBootCPU {
                 // Faults restart at the first prefix, not the following IP.
                 this.regs = this.restartRegisters ?? saved;
                 this.cs = start.cs; this.csBase = start.physical - start.ip;
-                yield* this._interrupt(error.vector,start.ip);
+                try {yield* this._interrupt(error.vector,start.ip);}
+                catch (nested) {
+                    if (!(nested instanceof RealModeFault)) throw nested;
+                    throw new CircuitFault('UNSUPPORTED_NESTED_FAULT','fault delivery failed; double-fault/shutdown not implemented');
+                }
             }
             this.retired++;
             this.lastRetirement = {flowTransfer:this.flowTransfer,interrupt:this.interruptTaken};
@@ -675,6 +729,7 @@ export class HarrisBootCPU {
         return {status: this.status, registers: {...this.regs}, cs: this.cs, csBase: this.csBase, ip: this.ip,
             instructionBoundary: this.status === 'running' && this.instructionBoundary === true,
             ds: this.ds, es: this.es, ss: this.ss, flags: this.flags, msw: this.msw,
+            gdtr: {...this.gdtr}, idtr: {...this.idtr},
             retired: this.retired, fault: this.fault ? {...this.fault} : null,
             history: this.history.map(e => ({...e})), dropped: this.dropped};
     }

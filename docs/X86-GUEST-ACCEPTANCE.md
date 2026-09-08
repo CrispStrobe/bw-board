@@ -32,6 +32,9 @@ transfers, stack frames, REP strings, port transactions, software INT/IRET and
 real-mode faults now execute in the experimental Harris CPU. The historical
 675,501-pass baseline is preserved separately from the expanded-suite receipt.
 See [runner, coverage receipts and remaining gates](SST286-RUNNER.md).
+An additional [system-state increment](HARRIS-286-SYSTEM-STATE.md) implements
+real-mode descriptor-table/MSW setup and relocated INT/IRET with twelve owned
+tests; the full pinned SST286 regression remains green. PE=1 still refuses.
 This does not establish protected mode, external interrupts, physical I/O
 devices or DOS boot on the wired 286. Application engine pins and production
 defaults remain unchanged. [Private DOS media](PRIVATE-DOS-FIXTURES.md) remains external-only;
