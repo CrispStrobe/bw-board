@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 8086 execution optimization | execution lane | 2026-09-08 | `perf/i8086-execution`: profile shipped Chromium CPU/machine/DOS/debugger costs in Lite; independently measure engine candidates, preserve vectors, IRQs and debugger bus visibility. |
+| 8086 execution optimization — complete | execution lane | 2026-09-08 | Experiments complete on `perf/i8086-execution`; accepted prefix/PIT changes isolated on `fable/i8086-optimized` at `492e6782ee92f1ad351d64afcf16cfc224a5d508`, based on Lite's original pin. CI `34198916054` green: units, 646,000 8086 vectors, 80186/V20 vectors, 525 programs. Lite combined Chromium run `34199861670` green with matching states. String callback experiment rejected and reverted. No default-branch update; claim released. |
 
 ## DONE
 
