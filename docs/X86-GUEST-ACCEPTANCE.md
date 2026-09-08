@@ -42,6 +42,9 @@ and vector delivery, verified with an independent lab peer, not a programmed PIC
 Subsequent [programmable PIC](HARRIS-286-PIC.md) and [pin-clocked timer](HARRIS-286-TIMER.md)
 subsets add actual port/IRQ0 guest tests. [Conventional/text RAM expansion](HARRIS-286-MEMORY-MAP.md)
 adds up to 640 KiB and an owned high-memory code-relocation/stack test.
+The [BIOS POST diagnostic](HARRIS-286-BIOS-POST.md) now confirms the original
+ROM's PIC-mode mismatch and offers an explicit unbuffered firmware build;
+the default ROM is unchanged and diagnostic stops are not boot acceptance.
 These do not establish protected mode, complete PC peripherals or DOS boot
 on the wired 286. Application engine pins and production
 defaults remain unchanged. [Private DOS media](PRIVATE-DOS-FIXTURES.md) remains external-only;

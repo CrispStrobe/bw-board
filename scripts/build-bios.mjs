@@ -124,11 +124,22 @@ export function verifyRom(bytes, symbols) {
  * Assemble and verify. Returns the image and everything a caller might want
  * to assert against; touches no files but the source.
  *
- * @param {{ source?: string, sourcePath?: string }} [opts]
+ * @param {{ source?: string, sourcePath?: string, picMode?: 'legacy-buffered'|'single-unbuffered' }} [opts]
  */
 export function buildBios(opts = {}) {
     const sourcePath = opts.sourcePath ?? SOURCE_PATH;
-    const source = opts.source ?? readFileSync(sourcePath, 'utf8');
+    let source = opts.source ?? readFileSync(sourcePath, 'utf8');
+    const picMode = opts.picMode ?? 'legacy-buffered';
+    if (!['legacy-buffered','single-unbuffered'].includes(picMode)) throw new RomError('unknown picMode');
+    if (picMode === 'single-unbuffered') {
+        // Explicit source-level hardware configuration, never a compiled-byte
+        // patch or an instruction/port bypass. Refuse absent/duplicate anchors.
+        const definition = /^BIOS_PIC_ICW4[ \t]+equ[ \t]+09h[ \t]*$/gm;
+        if ([...source.matchAll(definition)].length !== 1 ||
+            [...source.matchAll(/^BIOS_PIC_ICW4\b/gm)].length !== 1)
+            throw new RomError('single-unbuffered PIC configuration requires one BIOS_PIC_ICW4 equ 09h');
+        source = source.replace(definition, 'BIOS_PIC_ICW4 equ 01h');
+    }
 
     // 'com' and not 'auto': a flat image at a chosen ORG is exactly what a
     // ROM is, and letting the format be inferred would produce an MZ header
@@ -151,6 +162,7 @@ export function buildBios(opts = {}) {
         symbols: r.symbols,
         passes: r.passes,
         sourcePath,
+        picMode,
     };
 }
 

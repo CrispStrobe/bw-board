@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "diagnosticOnly": true,
+  "accepted": false,
+  "date": "2026-09-08",
+  "baseline": {
+    "ramBytes": 655360,
+    "picMode": "legacy-buffered",
+    "maxClocks": 20000,
+    "completedClocks": 13543,
+    "retired": 1516,
+    "cs": 61440,
+    "ip": 249,
+    "outcome": "UNSUPPORTED_PIC_MODE",
+    "romSHA256": "6f9f5463afa5c30ce25263c0430f741cbb0274e98b00c675ef04c9edfee0aa34",
+    "picInitPhase": 3,
+    "picWrites": 2,
+    "lastTransfer": {"kind": "io-write", "address": 33, "width": 1, "operand": 9},
+    "note": "Original firmware bytes; initial diagnostic version. Also reproduced with a separate 64 KiB fixture."
+  },
+  "configured": {
+    "ramBytes": 655360,
+    "textRAM": true,
+    "romLowAlias": true,
+    "timerClockHalfPeriod": 8,
+    "picMode": "single-unbuffered",
+    "maxClocks": 20000,
+    "completedClocks": 20000,
+    "retired": 1763,
+    "cs": 61440,
+    "ip": 1374,
+    "outcome": "budget-exhausted",
+    "romSHA256": "de2af892077af637fc90f5203353382ec1fac60dfd1470db63e9bf098363b5c1",
+    "sourceHashes": {
+      "../rom/bios.asm": "c9cbc1fb86c24d97d7f5c679c85b03df6024d62c33ae6931c2df3ce69fd02a35",
+      "../src/experimental/harris-80c286-boot-cpu.js": "c32d2c9438fb0de5c2ed1506a60aa556c3298bfeb407f66a43f9c421319a6b59",
+      "../src/experimental/harris-80c286-memory-board.js": "9decf6a959c97a3eff80d752b14fc253acafb829d1fa90e44c384974d01b32da",
+      "../src/experimental/harris-8259-adapter.js": "43ebef88cd6843c874c79eb9b4b4d8d573ee3f97790429ce904156ac4cdca934",
+      "../src/experimental/harris-8254-adapter.js": "60b19b100e0e2fc6f4d1612af4212b1c40760cff1efe18037bfbbdba73697878",
+      "./build-bios.mjs": "1b263f1cb3579994b0f5147efcd44ce0c5e5eaf913c372eeae3b5d6a65b08fbb",
+      "./probe-harris-bios.mjs": "e2fd4dff2372ed568763b468e39d743d2f858e9f897be5237812d82d87685f29"
+    },
+    "registers": {"ax": 1824, "cx": 7192, "dx": 985, "bx": 1824, "sp": 31720, "bp": 31720, "si": 1120, "di": 1998},
+    "pic": {"initialized": true, "initPhase": 0, "irr": 1, "isr": 0, "imr": 188, "vectorBase": 8, "writes": 4, "reads": 0, "pairs": 0},
+    "timer": {"configured": true, "mode": 3, "divisor": 65536, "count": 64740, "out": 1, "loaded": true, "writes": 3, "reads": 0, "ticks": 1253},
+    "lastTransfer": {"kind": "memory-write", "address": 755660, "width": 2, "operand": 1824},
+    "note": "Paused during REP STOSW screen-memory clear, not at a retired instruction boundary. No POST completion or DOS boot."
+  }
+}

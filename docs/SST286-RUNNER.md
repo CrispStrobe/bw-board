@@ -1,5 +1,15 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Wired BIOS diagnostic follow-up, 2026-09-08
+
+The [extended POST probe](HARRIS-286-BIOS-POST.md) confirms the original BIOS's
+PIC configuration stop on the 640 KiB wired board. An explicit unbuffered
+firmware build changes only ICW4, retaining default-ROM byte identity and PIC
+guards. Five new tests; targeted regressions including BIOS ROM/floppy-driver
+tests pass **345/345**, zero skips. CPU/SST adapter/runner hashes are unchanged;
+no new full-vector run or wired DOS boot is claimed. Diagnostic exit 2 and
+`accepted:false` are intentional and separate from passing regression tests.
+
 ## Wired memory-map follow-up, 2026-09-08
 
 [Conventional/text RAM expansion](HARRIS-286-MEMORY-MAP.md) adds configurable

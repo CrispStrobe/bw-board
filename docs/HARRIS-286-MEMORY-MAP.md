@@ -114,22 +114,27 @@ the timer remained unconfigured. Built ROM SHA-256:
 The probe result is **accepted:false**: no POST completion, peripheral fault,
 disk transfer or boot was observed. Increase the execution budget for the next
 probe; do not skip IVT initialization or host-initialize its RAM to shorten it.
+Follow-up: the [extended POST diagnostic](HARRIS-286-BIOS-POST.md) now reaches
+the PIC configuration refusal and supplies an explicit unbuffered firmware
+build option. The 6,000-clock result above remains a historical receipt.
 
 The [PIC](HARRIS-286-PIC.md) and [timer](HARRIS-286-TIMER.md) subsets now exist;
 the old statement that the board has neither is obsolete. They still do not
 make the existing BIOS directly compatible:
 
 - BIOS POST writes PIC ICW4 `09h` (buffered mode); the wired adapter explicitly
-  accepts only `01h`. This is a known configuration mismatch, not an observed
-  full-ROM execution result. Do not silently ignore the requested mode.
+  accepts only `01h`. The [extended probe](HARRIS-286-BIOS-POST.md) subsequently
+  confirmed this runtime stop. An explicitly selected single-unbuffered BIOS
+  build addresses it; the original image still refuses. Do not silently ignore
+  the requested mode.
 - BIOS POST configures PPI/keyboard and video ports. Text RAM alone does not
   implement those devices or their status reads.
 - Its floppy driver uses uPD765 ports, IRQ6 and 8237 DMA channel 2/page-latch
   registers. The wired board has none of that disk/DMA path; CPU HOLD/bus
   arbitration is still unsupported.
 
-Next, extend the bounded owned-BIOS POST probe on this map and implement the first
-verified peripheral/configuration gap. Then wire the disk transfer path and
+Continue the [configured BIOS probe](HARRIS-286-BIOS-POST.md) and implement the
+next verified peripheral gap. Then wire the disk transfer path and
 verify real boot-sector loading before claiming DOS boot. Existing non-wired
 DOS tests are useful references, not substitutes for those gates. Protected
 mode and full 286 conformance remain separate unfinished work.

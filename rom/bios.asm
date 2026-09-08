@@ -195,6 +195,9 @@ CGA_STRIDE  equ 80              ; bytes per scan line -- 320 pixels at two bits
 ;-----------------------------------------------------------------------------
 PORT_PIC    equ 20h             ; 8259 command / status
 PORT_PICMSK equ 21h             ; 8259 data (ICW2/ICW4/OCW1 mask)
+; Legacy image compatibility. buildBios({picMode:'single-unbuffered'})
+; explicitly selects 01h for a board without a buffered/cascaded PIC.
+BIOS_PIC_ICW4 equ 09h
 PORT_PIT0   equ 40h             ; 8254 counter 0 -- the 18.2 Hz tick
 PORT_PIT2   equ 42h             ; 8254 counter 2 -- the speaker tone
 PORT_PITCTL equ 43h             ; 8254 control word
@@ -577,12 +580,14 @@ post_ivt3:
     ; ICW1 13h: bit 4 starts the sequence, bit 1 (SNGL) says there is no
     ; second PIC so no ICW3 follows, bit 0 says an ICW4 does.
     ; ICW2 08h: IRQ0 becomes INT 08h, IRQ1 INT 09h, ... IRQ7 INT 0Fh.
-    ; ICW4 09h: 8086 mode (bit 0) and buffered master (bit 3).
+    ; ICW4 legacy 09h: 8086 mode + buffered SLAVE (BUF=1, M/S=0).
+    ; The former "buffered master" comment was incorrect: that is 0Dh.
+    ; The single-unbuffered firmware build selects 01h explicitly instead.
     mov  al, 13h
     out  PORT_PIC, al
     mov  al, 08h
     out  PORT_PICMSK, al
-    mov  al, 09h
+    mov  al, BIOS_PIC_ICW4
     out  PORT_PICMSK, al
     ; Unmask the timer, the keyboard and the floppy controller; mask
     ; everything with no handler. A masked line is not a dropped one: it
