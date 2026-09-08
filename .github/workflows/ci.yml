@@ -7,7 +7,7 @@ on:
     # setPin budget in test/perf-budget.test.js goes red under a concurrent
     # suite and passes alone, which is the whole reason that budget had to
     # be re-derived.
-    branches: [master, main, 'fable/**', 'wip/**']
+    branches: [master, main, 'fable/**', 'wip/**', 'perf/i8086-execution']
   pull_request:
   # The heavy vector suites are ground nightly rather than per push: the
   # z80 suite unpacks to 1.6 GB and the 65x02 to a comparable size, which is

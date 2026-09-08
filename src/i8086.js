@@ -1174,6 +1174,20 @@ export class I8086 {
             // and when the byte turns out not to be a prefix it IS the opcode
             // and is used as such. Every byte reaches `read()` exactly once.
             const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
+            // Segment prefixes are 26/2E/36/3E; LOCK/REP and their alias
+            // occupy F0-F3. Two masked tests keep ordinary opcodes out of
+            // the prefix dispatch without changing a single bus fetch.
+            if ((b & 0xe7) !== 0x26 && (b & 0xfc) !== 0xf0) {
+                if (this.busTrace !== null) {
+                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, I8086.phys(this.cs, this.ip));
+                    this._fsOpcodeSeen = true;
+                    this._seqIp = (this.ip + 1) & 0xffff;
+                    this._seqCs = this.cs;
+                }
+                this.ip = (this.ip + 1) & 0xffff;
+                op = b;
+                break;
+            }
             // Not a closure per instruction: allocating one on every step is
             // measurable in a loop this hot, and the trace is off by default.
             const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, I8086.phys(this.cs, this.ip));
@@ -1190,22 +1204,9 @@ export class I8086 {
                 this._repIp = this.ip;
                 this.ip = (this.ip + 1) & 0xffff; n += 2;
                 this._rep = b;
-            } else if (b === 0xf0 || b === 0xf1) {
+            } else {
                 eaten();
                 this.ip = (this.ip + 1) & 0xffff; n += 2;   // LOCK, and its alias
-            } else {
-                // NOT A PREFIX: this byte is the opcode, already read above.
-                // Do exactly what _fetch8Traced would have done -- minus the
-                // second read, which was the defect.
-                if (this.busTrace !== null) {
-                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, I8086.phys(this.cs, this.ip));
-                    this._fsOpcodeSeen = true;
-                    this._seqIp = (this.ip + 1) & 0xffff;
-                    this._seqCs = this.cs;
-                }
-                this.ip = (this.ip + 1) & 0xffff;
-                op = b;
-                break;
             }
         }
 

@@ -30,6 +30,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { I8086 } from '../src/i8086.js';
 
+test('every byte is classified as opcode or one of the eight 8086 prefixes', () => {
+    const prefixes = new Set([0x26, 0x2e, 0x36, 0x3e, 0xf0, 0xf1, 0xf2, 0xf3]);
+    for (const variant of ['8086', '80186']) for (const traced of [false, true]) {
+        for (let byte = 0; byte < 256; byte++) {
+            const reads = [];
+            const cpu = new I8086({read: address => {
+                reads.push(address);
+                return address === 0x1ffff ? byte : 0x90;
+            }, write() {}}, {variant});
+            cpu.cs = 0x1000;
+            cpu.ip = 0xffff;
+            cpu.busTrace = traced ? [] : null;
+            let dispatched;
+            cpu._exec = opcode => { dispatched = opcode; return 3; };
+            const prefix = prefixes.has(byte);
+            assert.equal(cpu.step(), prefix ? 5 : 3);
+            assert.equal(dispatched, prefix ? 0x90 : byte);
+            assert.deepEqual(reads, prefix ? [0x1ffff, 0x10000] : [0x1ffff]);
+            assert.equal(cpu.ip, prefix ? 1 : 0);
+            if (traced) assert.deepEqual(cpu.busTrace,
+                prefix ? [0, 0x1ffff, 0, 0x10000] : [0, 0x1ffff]);
+        }
+    }
+});
+
 /** Run one instruction at 0x1000:0000 and return every address read(). */
 function readsFor(bytes, init = {}) {
     const reads = [];
