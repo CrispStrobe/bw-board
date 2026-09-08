@@ -168,3 +168,28 @@ test; it does not establish that this probe has reached these operations:
 Keep no-media failure, owned-sector boot and actual DOS/application execution
 as separate acceptance results. The existing non-wired BIOS/FDC tests are
 useful reference cases, not evidence that these wired-board gates are complete.
+
+## Static net-layout optimization
+
+The immutable circuit topology is now compiled once after wire validation:
+canonical roots are flattened and each net's potential output drivers are
+sorted once. Each subsequent resolution still reads every current drive level
+and creates fresh diagnostic state; it does not cache voltages, suppress
+settling deltas, or bypass device edges. Wire edits still require construction
+of a new circuit, as before. Driving a previously undriven output or releasing
+it to Z remains supported.
+
+Three additional tests compare with the previous resolver: all 64 three-driver
+logic states in both topology orders, undriven/input-only nets, combinational
+settle counts and omitted-output release, and wired bus traces/READY waits/
+storage across odd and bank-boundary accesses. Targeted regression including
+`test/digital-circuit-lab.test.mjs`: **371/371 passed, zero skips**.
+
+`node bench/harris-net-resolve.mjs` compares the current implementation with
+source loaded from the pinned local Git commit `c658507`. Missing history is
+an error, not a silent fallback. It checks equal resolved nets before measuring
+four alternating-order rounds of 10,000 resolutions of a synthetic 256-part,
+514-net circuit. The [recorded run](HARRIS-NET-RESOLVE-BENCH.json) measured about
+3.0–5.9 times faster resolution, with equal checksums. This is a noisy,
+shared-host **resolver-only** measurement, not an emulator speedup or RT-speed
+claim. CPU, BIOS, PIC, timer and SST sources are unchanged by this optimization.

@@ -17,6 +17,7 @@ export class CircuitFault extends Error {
  * outside settle(), which may invoke evaluate more than once.
  */
 export class DigitalCircuit {
+    #netLayout;
     constructor({enabled = false, parts, wires = [], maxDeltas = 32}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'explicit enabled:true required');
         if (!Number.isSafeInteger(maxDeltas) || maxDeltas < 1) throw new RangeError('maxDeltas');
@@ -49,6 +50,17 @@ export class DigitalCircuit {
             // Canonical names make diagnostics independent of wire ordering.
             if (a !== b) this.parent.set(a < b ? b : a, a < b ? a : b);
         }
+        // Topology is fixed after construction. Resolve only changing levels,
+        // not net membership or diagnostic driver ordering, on each delta.
+        const nets = new Map();
+        for (const key of this.parent.keys()) {
+            const root = this.root(key);
+            this.parent.set(key, root);
+            if (!nets.has(root)) nets.set(root, []);
+        }
+        for (const key of this.outputs) nets.get(this.root(key)).push(key);
+        this.#netLayout = [...nets].map(([root, pins]) =>
+            [root, pins.sort((a, b) => a.localeCompare(b))]);
         this.settle();
     }
 
@@ -71,21 +83,21 @@ export class DigitalCircuit {
     }
 
     resolve() {
-        const nets = new Map();
-        for (const key of this.parent.keys()) {
-            const root = this.root(key);
-            if (!nets.has(root)) nets.set(root, []);
+        const resolved = new Map();
+        for (const [root, pins] of this.#netLayout) {
+            const drivers = [];
+            let levels = 0;
+            for (const pin of pins) {
+                const value = this.drives.get(pin);
+                if (value === undefined || value === 'Z') continue;
+                drivers.push({pin, value});
+                levels |= value === 0 ? 1 : value === 1 ? 2 : 4;
+            }
+            const conflict = (levels & 3) === 3;
+            const value = !levels ? 'Z' : conflict || (levels & 4) ? 'X' : drivers[0].value;
+            resolved.set(root, {value, conflict, drivers});
         }
-        for (const [key, value] of this.drives) {
-            if (value !== 'Z') nets.get(this.root(key)).push({pin: key, value});
-        }
-        return new Map([...nets].map(([key, drivers]) => {
-            drivers.sort((a, b) => a.pin.localeCompare(b.pin));
-            const values = new Set(drivers.map(d => d.value));
-            const conflict = values.has(0) && values.has(1);
-            const value = !values.size ? 'Z' : conflict || values.has('X') ? 'X' : drivers[0].value;
-            return [key, {value, conflict, drivers}];
-        }));
+        return resolved;
     }
 
     settle() {
