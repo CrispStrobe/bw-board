@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 circuit foundation | Codex, feat/x86-backend-lab | 2026-09-08 | Isolated default-off digital nets and synthetic bus master/memory tests; first implementation milestone for Lite's circuit-first 286 plan. No CPU support claim, production exports/defaults or consuming pin changes. |
 
 ## DONE
 
