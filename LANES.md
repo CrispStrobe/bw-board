@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| 286 system-state prerequisites | Codex /root | 2026-09-08 | Real-mode descriptor-table/MSW instructions and owned wired tests; fail closed at protected-mode transition; no app pin, merge or deployment. |
 
 ## DONE
 
