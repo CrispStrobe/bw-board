@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 latched memory bridge | Codex, feat/x86-backend-lab | 2026-09-08 | Integrate phase sequencer with external latch/controller subset and existing electrical RAM/ROM update models; edge-commit and wiring regressions. No CPU or production promotion. |
 
 ## DONE
 
