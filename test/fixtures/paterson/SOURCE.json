@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/DOS-History/Paterson-Listings",
+  "commit": "acbfced8a2d9828c6cd2c8ca8f12b35d0572d60b",
+  "license": "MIT",
+  "upstreamPath": "3_source_code/PC-DOS_1.00_dev/CHKDSK_1981-06-15.ASM",
+  "localPath": "CHKDSK_1981-06-15.ASM",
+  "sha256": "d387729a82de1bb782a79b31523ab22a6df1978fe4061bb4caaced173a7cf9a8",
+  "licenseSha256": "b5179f780ec212a434efcc989a2295a140deb0bdb17182d2bf9c5f6f1f1a01c4",
+  "normalization": "CRLF to LF, append one LF; source otherwise unchanged, including CP/M EOF",
+  "scope": "Original source with explicitly translated executable FAT12 routine excerpts; not a whole CHKDSK or DOS boot acceptance"
+}

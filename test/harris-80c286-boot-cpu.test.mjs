@@ -125,7 +125,7 @@ test('a disconnected RAM data wire stops guest execution rather than using hidde
 });
 
 test('unsupported opcodes and prefixes stop explicitly without retiring the bad instruction', () => {
-    for (const [bytes, code] of [[[0x0f], 'UNSUPPORTED_OPCODE'], [[0x11, 0xc0], 'UNSUPPORTED_OPCODE'], [[0xf3, 0x90], 'UNSUPPORTED_OPCODE']]) {
+    for (const [bytes, code] of [[[0x0f], 'UNSUPPORTED_OPCODE'], [[0x11, 0xc0], 'UNSUPPORTED_ALU'], [[0xf3, 0x90], 'UNSUPPORTED_OPCODE']]) {
         const {cpu} = fixture({rom: programROM(bytes)});
         assert.throws(() => cpu.run(), fault(code));
         assert.equal(cpu.retired, 1, 'only reset far jump retired');
