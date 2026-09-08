@@ -558,13 +558,13 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
-8086 PIT follow-up: active on `perf/i8086-device-advance`; user requests countdown/call-overhead experiments, correct paths retained default-off and genuinely broken paths removed or repaired. Scope includes exact per-instruction regression oracles; no default promotion without full-workload measurements.
-
 | lane | who | started | what |
 | --- | --- | --- | --- |
 | _(none)_ | | | |
 
 ## DONE
+
+8086 PIT follow-up: engine half complete at `dedfbc8`, full CI `34249782632` green (units, vectors, full vectors, 80186 vectors, corpus). Added callback-time CPU/PIT clock and counter-method observability assertions. No engine runtime changes. Paired Lite branch retains correct candidates default-off and removes the stale-state scheduler implementation; measurements/retention policy live there. Claim released; feature branch only.
 
 8086 device advancement: complete on `perf/i8086-device-advance`, source/test commit `4f72ff4`. Full CI `34246446550` green (units, vectors, full vectors, 80186 vectors, corpus). Added the instruction-boundary observability contract and differential/negative fixtures. Paired Lite experiments reject all four measured device candidates; no production source changes or general deferred scheduling. Feature-branch handoff only, not merged. Claim released.
 
