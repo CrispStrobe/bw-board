@@ -3,6 +3,10 @@
 2026-09-08. Experimental, default-off. This milestone executes instructions;
 it is not a complete 80286 implementation or an editor-visible CPU part.
 
+Later increments: [real-mode coverage](SST286-RUNNER.md),
+[system state](HARRIS-286-SYSTEM-STATE.md), and
+[opt-in wired NMI](HARRIS-286-NMI.md) extend this original milestone.
+
 ## Result
 
 Owned ROM code now fetches through the high reset mapping, far-jumps into the

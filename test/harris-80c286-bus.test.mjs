@@ -87,6 +87,24 @@ test('gated entry and reset are mandatory; no fabricated boot fetch is emitted',
     assert.equal(f.bus.capabilities.clockEdges, false);
 });
 
+test('opt-in NMI qualifies four low/high periods, latches one edge, and reset clears it',()=>{
+    const f=fixture({nmiEnabled:true});f.boot();
+    for(let i=0;i<3;i++)f.clock({nmi:1});assert.equal(f.bus.nmiPending,false);
+    f.clock({nmi:1});assert.equal(f.bus.takeNMI(),true);
+    for(let i=0;i<10;i++)f.clock({nmi:1});assert.equal(f.bus.takeNMI(),false);
+    for(let i=0;i<3;i++)f.clock({nmi:0});
+    for(let i=0;i<4;i++)f.clock({nmi:1});assert.equal(f.bus.takeNMI(),false);
+    for(let i=0;i<4;i++)f.clock({nmi:0});
+    for(let i=0;i<4;i++)f.clock({nmi:1});assert.equal(f.bus.nmiPending,true);
+    f.clock({reset:1});assert.equal(f.bus.nmiPending,false);
+});
+test('NMI qualification rejects disconnected nets and does not enable INTR',()=>{
+    const f=fixture({nmiEnabled:true});f.boot();
+    assert.throws(()=>f.clock({nmi:'Z'}),fault('FLOATING'));
+    const g=fixture({nmiEnabled:true});g.boot();
+    assert.throws(()=>g.clock({intr:1}),fault('UNSUPPORTED_INPUT'));
+});
+
 test('reset drives documented logical values and rejects 16-period reset', () => {
     const f = fixture();
     for (let i = 0; i < 16; i++) {

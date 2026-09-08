@@ -78,9 +78,11 @@ export class HarrisBootCPU {
         this.board = board; this.historyLimit = historyLimit;
         // GDTR power-on contents are unspecified: zero is model policy.
         this.gdtr = {base:0,limit:0}; this.idtr = {base:0,limit:0x3ff};
+        this.nmiBlocked = false; this.ssShadow = 0; this.nmiCount = 0;
         this.status = 'uninitialized'; this.retired = 0; this.history = []; this.dropped = 0;
         this.capabilities = Object.freeze({experimental: true, instructionExecution: true,
             cpuModel: 'harris-286-boot-subset', general80286: false, protectedMode: false,
+            nmi: board.capabilities?.nmi === true,
             prefetch: false, instructionTiming: false, busHaltSignalling: false, snapshots: false});
     }
 
@@ -101,6 +103,7 @@ export class HarrisBootCPU {
         this.cs = 0xf000; this.csBase = 0xff0000; this.ip = 0xfff0;
         this.ds = 0; this.es = 0; this.ss = 0; this.flags = 2; this.msw = 0xfff0;
         this.gdtr = {base:0,limit:0}; this.idtr = {base:0,limit:0x3ff};
+        this.nmiBlocked = false; this.ssShadow = 0; this.nmiCount = 0;
         this.retired = 0; this.history = []; this.dropped = 0; this.fault = null;
         this.status = 'running';
         this.iterator = this._instructions();
@@ -184,6 +187,17 @@ export class HarrisBootCPU {
         const low = yield {kind:'memory-read',address,width:1};
         const high = yield {kind:'memory-read',address:0,width:1};
         return low | (high << 8);
+    }
+    _nmiReady() {return !this.nmiBlocked && !this.ssShadow && this.board.hasPendingNMI?.();}
+    *_acceptNMI() {
+        if (!this._nmiReady() || !this.board.takeNMI()) return;
+        this.nmiBlocked = true;
+        try {yield* this._interrupt(2,this.ip);}
+        catch (error) {
+            if (!(error instanceof RealModeFault)) throw error;
+            throw new CircuitFault('UNSUPPORTED_NESTED_FAULT','NMI delivery failed; double-fault/shutdown not implemented');
+        }
+        this.nmiCount++;
     }
     *_systemInstruction() {
         const opcode = yield* this._byte();
@@ -287,6 +301,11 @@ export class HarrisBootCPU {
             remaining--;
             if (repeated && [0xa6,0xae].includes(opcode & 0xfe) &&
                 (!!(this.flags & 64) !== (this.repeatPrefix === 0xf3))) break;
+            if (repeated && remaining > 0 && this._nmiReady()) {
+                // The completed element stays committed. IRET re-fetches the
+                // first prefix with the remaining CX and advanced SI/DI.
+                this.ip = this.currentStart.ip; this.suspendedRepeat = true; return;
+            }
         }
     }
     _alu(kind, a, b, width) {
@@ -338,8 +357,10 @@ export class HarrisBootCPU {
     *_instructions() {
         while (this.status === 'running') {
             if (this.msw & 1) throw new CircuitFault('UNSUPPORTED_PROTECTED_MODE','protected-mode state cannot execute as real mode');
+            if (this._nmiReady()) yield* this._acceptNMI();
             this.instructionBoundary = true;
             const start = {cs: this.cs, ip: this.ip, physical: this.csBase + this.ip};
+            this.currentStart = start; this.suspendedRepeat = false;
             const saved = {...this.regs};
             this.instructionBytes = 0; this.flowTransfer = false; this.interruptTaken = null;
             this.restartRegisters = null;
@@ -406,7 +427,10 @@ export class HarrisBootCPU {
                 this.flags = (this.flags & ~17) | (adjust ? 17 : 0); break;
             }
             case 0x06: case 0x0e: case 0x16: case 0x1e: yield* this._push(this[SEGMENTS[(opcode >> 3) & 3]]); break;
-            case 0x07: case 0x17: case 0x1f: this[SEGMENTS[(opcode >> 3) & 3]] = yield* this._pop(); break;
+            case 0x07: case 0x17: case 0x1f:
+                this[SEGMENTS[(opcode >> 3) & 3]] = yield* this._pop();
+                if (opcode === 0x17) this.ssShadow = 2;
+                break;
             case 0x88: case 0x8a: {
                 const {reg, operand} = yield* this._operand(1);
                 if (opcode === 0x88) yield* this._writeOperand(operand, this._get(reg), 1);
@@ -417,7 +441,7 @@ export class HarrisBootCPU {
                 const {reg, operand} = yield* this._operand(); const index = REGS.indexOf(reg);
                 if (index > 3 || (opcode === 0x8e && index === 1)) throw new RealModeFault(6);
                 if (opcode === 0x8c) yield* this._writeOperand(operand, this[SEGMENTS[index]]);
-                else this[SEGMENTS[index]] = yield* this._readOperand(operand);
+                else {this[SEGMENTS[index]] = yield* this._readOperand(operand); if (index === 2) this.ssShadow = 2;}
                 break;
             }
             case 0xc6: case 0xc7: {
@@ -604,6 +628,7 @@ export class HarrisBootCPU {
             case 0xcd: {const vector = yield* this._byte(); yield* this._interrupt(vector,this.ip); break;}
             case 0xce: if (this.flags & 0x800) yield* this._interrupt(4,this.ip); break;
             case 0xcf: {
+                this.nmiBlocked = false; // IRET unblocks NMI even if its operand faults.
                 const ip = yield* this._pop(), cs = yield* this._pop(), flags = yield* this._pop();
                 this.ip = ip; this.cs = cs; this.csBase = cs * 16; this.flags = (flags & 0x0fd5) | 2; break;
             }
@@ -695,6 +720,8 @@ export class HarrisBootCPU {
                     throw new CircuitFault('UNSUPPORTED_NESTED_FAULT','fault delivery failed; double-fault/shutdown not implemented');
                 }
             }
+            if (this.suspendedRepeat) continue;
+            if (this.ssShadow) this.ssShadow--;
             this.retired++;
             this.lastRetirement = {flowTransfer:this.flowTransfer,interrupt:this.interruptTaken};
             if (this.history.length === this.historyLimit) { this.history.shift(); this.dropped++; }
@@ -706,11 +733,14 @@ export class HarrisBootCPU {
         if (!next.done) this.board.submit(next.value);
     }
     stepClock(ready_n = 0) {
-        if (this.status !== 'running') throw new CircuitFault('CPU_NOT_RUNNING', this.status);
+        if (this.status !== 'running' && !(this.status === 'halted' && this.board.capabilities?.nmi))
+            throw new CircuitFault('CPU_NOT_RUNNING', this.status);
         try {
             this.instructionBoundary = false;
             const transfer = this.board.clock({ready_n});
-            if (transfer?.last) this._pump(transfer.operand);
+            if (this.status === 'halted') {
+                if (this._nmiReady()) {this.status = 'running'; this.iterator = this._instructions(); this._pump();}
+            } else if (transfer?.last) this._pump(transfer.operand);
             return transfer;
         } catch (error) {
             this.status = 'faulted';
@@ -730,6 +760,7 @@ export class HarrisBootCPU {
             instructionBoundary: this.status === 'running' && this.instructionBoundary === true,
             ds: this.ds, es: this.es, ss: this.ss, flags: this.flags, msw: this.msw,
             gdtr: {...this.gdtr}, idtr: {...this.idtr},
+            nmi: {blocked:this.nmiBlocked,count:this.nmiCount,ssShadow:this.ssShadow},
             retired: this.retired, fault: this.fault ? {...this.fault} : null,
             history: this.history.map(e => ({...e})), dropped: this.dropped};
     }

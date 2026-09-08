@@ -3,6 +3,10 @@
 2026-09-08. Experimental, default-off. This implements bus sequencing, not CPU
 instructions, and does not claim a complete hardware-timed 286 component.
 
+Later opt-in extension: [NMI qualification and wired delivery](HARRIS-286-NMI.md).
+Default construction still refuses active NMI, and INTR acknowledgement remains
+unsupported. The original subset limitations below describe that default path.
+
 Follow-up: the [latched memory bridge](HARRIS-80C286-LATCHED-MEMORY.md) connects
 this sequencer to external latch/controller components and the existing
 RAM/ROM behavioral models. It adds write-edge integration without claiming a

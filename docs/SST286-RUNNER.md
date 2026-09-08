@@ -1,5 +1,14 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## NMI follow-up, 2026-09-08
+
+[Opt-in wired NMI](HARRIS-286-NMI.md) adds an independent asynchronous-input
+path, with thirteen new owned tests. The targeted regression command below
+now passes **159/159**, no skips. The [fresh full-suite receipt](SST286-NMI-REPORT.json)
+retains **1,477,997 passes, zero fail/unsupported/budget, three revocations**,
+exit 0, with a new CPU hash. This suite sends no NMI inputs; its green result
+is not a silicon/timing oracle for NMI. Earlier receipts remain historical.
+
 ## System-state follow-up, 2026-09-08
 
 The [system-state prerequisite increment](HARRIS-286-SYSTEM-STATE.md) adds
@@ -138,7 +147,8 @@ board defaults to refusing unwired LOCK and coprocessor protocols.
 Remaining acceptance gates:
 
 1. Remaining system operations outside this inventory (including undocumented
-   LOADALL), external INTR/NMI, nested faults/shutdown and debug/trap behavior.
+   LOADALL), external INTR acknowledgement, nested faults/shutdown and debug/trap behavior.
+   [Opt-in NMI](HARRIS-286-NMI.md) has separate wired tests, not SST timing coverage.
    The supported real-mode 0F prerequisites are documented in the follow-up above;
    protected execution still fails closed.
 2. Physical I/O devices, controller/LOCK/coprocessor handshakes, larger memory

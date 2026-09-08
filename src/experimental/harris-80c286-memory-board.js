@@ -9,12 +9,12 @@ const D = bitPins('d', 16);
 const INPUTS = {reset: 0, ready_n: 0, hold: 0, intr: 0, nmi: 0, pereq: 0, busy_n: 1, error_n: 1, vcc: 1, gnd: 0};
 const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, toTerminal});
 
-export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, editWires = wires => wires} = {}) {
+export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     for (const kind of ['62256', '28c256']) if (!getDevice(kind)) throw new CircuitFault('MEMORY_MODELS_REQUIRED', 'registerBusMemory() before construction');
-    const bus = new Harris80C286Bus({enabled});
+    const bus = new Harris80C286Bus({enabled,nmiEnabled});
     const controller = new MemoryPhaseController({enabled});
     const latch = new IdealAddressLatch({enabled});
     const memories = [];
@@ -53,8 +53,10 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     let periodOpen = false;
     return {
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
-            fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false}),
+            fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled}),
         bus, circuit,
+        hasPendingNMI() {return bus.nmiPending;},
+        takeNMI() {return bus.takeNMI();},
         beginClock(inputs = {}) {
             if (faulted) throw new CircuitFault('BOARD_FAULTED', 'reconstruct board; no automatic rollback');
             if (periodOpen) throw new CircuitFault('CLOCK_ORDER', 'endClock required');
