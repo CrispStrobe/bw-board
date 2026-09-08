@@ -73,7 +73,8 @@ prefetch, protected mode, full controller/transceiver timing, snapshots or
 Circuit Editor UI integration. CPU bus phases are modeled, but instruction
 execution costs are not; this is not a speed comparison against real hardware.
 
-Production defaults, exports and application pins remain unchanged. Next work
-should connect this bounded executor to saved circuit configuration/debugger
-interfaces while continuing explicit instruction coverage and fault validation;
-it must not advertise a complete 286 merely because a richer ROM now runs.
+Production defaults, exports and application pins remain unchanged. The subsequent
+[saved profile and debugger session](HARRIS-80C286-CIRCUIT-SESSION.md) adds an
+engine-only integration seam; application controls remain a next gate. Continue
+explicit instruction coverage and fault validation; this is not a complete 286
+merely because a richer ROM now runs.

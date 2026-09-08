@@ -107,6 +107,7 @@ export class HarrisBootCPU {
     }
     *_instructions() {
         while (this.status === 'running') {
+            this.instructionBoundary = true;
             const start = {cs: this.cs, ip: this.ip, physical: this.csBase + this.ip};
             const opcode = yield* this._byte();
             if (opcode >= 0xb8 && opcode <= 0xbf) this.regs[REGS[opcode - 0xb8]] = yield* this._word();
@@ -179,6 +180,7 @@ export class HarrisBootCPU {
     stepClock(ready_n = 0) {
         if (this.status !== 'running') throw new CircuitFault('CPU_NOT_RUNNING', this.status);
         try {
+            this.instructionBoundary = false;
             const transfer = this.board.clock({ready_n});
             if (transfer?.last) this._pump(transfer.operand);
             return transfer;
@@ -197,6 +199,7 @@ export class HarrisBootCPU {
     cancel() { if (this.status === 'running') this.status = 'cancelled'; }
     inspect() {
         return {status: this.status, registers: {...this.regs}, cs: this.cs, csBase: this.csBase, ip: this.ip,
+            instructionBoundary: this.status === 'running' && this.instructionBoundary === true,
             ds: this.ds, es: this.es, ss: this.ss, flags: this.flags, msw: this.msw,
             retired: this.retired, fault: this.fault ? {...this.fault} : null,
             history: this.history.map(e => ({...e})), dropped: this.dropped};
