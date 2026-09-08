@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| 286 external NMI foundation | Codex /root | 2026-09-08 | Opt-in resolved NMI sampling, instruction-boundary delivery, SS shadow/IRET blocking and halted wake; INTR/controller acknowledgement remains a separate gate. |
 
 ## DONE
 
