@@ -560,9 +560,22 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-post-resolver | Codex | 2026-09-08 | Precompute immutable net topology with differential tests; extend normal BIOS POST diagnostics. No app pins/defaults, merge/deploy or media. |
 
 ## DONE
+
+286 static net-layout resolver: source `e6fbc0d`, extended probe receipt/docs
+`aa95abe`, on `feat/x86-backend-lab`, 2026-09-08. Precompute fixed membership,
+canonical roots and driver order; still resolve every current level and settle
+normally. Three differential tests; targeted suite 371/371 pass, zero skips.
+Pinned synthetic benchmark measures 3.0–5.9x resolver-only improvement, not
+overall emulator/RT speed. New configured 64 KiB/110,000-clock probe matches
+old 48k/50k/64k checkpoints and ends at F000:0453, 7,511 retired, still banner
+dispatch. Budget-exhausted/accepted:false, no next fault or POST/DOS completion.
+Historical receipts preserved. Next functional task: FDC control-port/IRQ6
+bridge and owned microguest tests, then larger normal POST probe; reject data
+transfers until physical DMA exists. CPU/SST hashes unchanged. No new full
+vector run, full CI/browser, app defaults/pins, merge/deploy or media hosting.
+Claim released.
 
 286 net-read optimization / longer POST diagnostic: source `c658507` on
 `feat/x86-backend-lab`, 2026-09-08. Internal scalar reads avoid defensive
