@@ -63,6 +63,13 @@ export function createAvr8jsAdapter(opts = {}) {
   }
   if (opts.program) progMem.set(opts.program);
   const cpu = new CPU(progMem, chip.sramBytes);
+  const deviceAccessListeners = new Set();
+  const publishDeviceAccess = (fact) => {
+    for (const listener of [...deviceAccessListeners]) {
+      // Observation cannot perturb the emulated peripheral transaction.
+      try { listener({...fact}); } catch {}
+    }
+  };
 
   // ── Ports ──
   const ioPorts = {};
@@ -107,7 +114,7 @@ export function createAvr8jsAdapter(opts = {}) {
   let twiBridge = null;
   if (chip.twi) {
     twi = new AVRTWI(cpu, chip.twi, clockHz);
-    twiBridge = createTWIBridge(twi);
+    twiBridge = createTWIBridge(twi, { onAccess: publishDeviceAccess });
     twi.eventHandler = twiBridge;
   }
 
@@ -122,7 +129,7 @@ export function createAvr8jsAdapter(opts = {}) {
   let spiBridge = null;
   if (chip.spi) {
     spi = new AVRSPI(cpu, chip.spi, clockHz);
-    spiBridge = createSPIBridge(spi);
+    spiBridge = createSPIBridge(spi, { onAccess: publishDeviceAccess });
     spi.onByte = spiBridge.onByte;
   }
 
@@ -212,6 +219,13 @@ export function createAvr8jsAdapter(opts = {}) {
     /** Receive every byte the program transmits on UART0 (print output).
      *  No-op on chips without USART (ATtiny85). */
     onSerial(cb) { serialListener = cb; },
+
+    /** Observe completed hardware-peripheral accesses without performing one. */
+    onDeviceAccess(cb) {
+      if (typeof cb !== 'function') throw new TypeError('device access listener must be a function');
+      deviceAccessListeners.add(cb);
+      return () => deviceAccessListeners.delete(cb);
+    },
 
     loadProgram(words) {
       progMem.fill(0);

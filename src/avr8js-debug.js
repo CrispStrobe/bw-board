@@ -78,6 +78,23 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
    *  breakpoint would re-fire forever without ever executing. */
   let resumeGuard = null;
   let listeners = [];
+  let debugEventListener = null;
+  let instructionWindow = null;
+  let pendingDeviceFacts = [];
+
+  const debugTime = (cycles = cpu.cycles) => ({
+    ticks: BigInt(cycles), domain: 'avr-cycles', hz: adapter.clockHz ?? 16_000_000,
+  });
+  const publishDebugEvent = (event) => {
+    if (debugEventListener) debugEventListener(event);
+  };
+  const unsubscribeDeviceAccess = adapter.onDeviceAccess?.((device) => {
+    if (!debugEventListener) return;
+    const event = { cpuId: 'main', kind: 'device', phase: 'access',
+      fidelity: 'reconstructed', time: debugTime(instructionWindow?.cyclesBefore), device };
+    if (instructionWindow) pendingDeviceFacts.push(event);
+    else publishDebugEvent(event);
+  });
 
   // ─── write watchpoints ──────────────────────────────────────────────
   // avr8js exposes cpu.writeHooks[addr] — a per-address callback that
@@ -225,8 +242,24 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         }
       }
 
-      avrInstruction(cpu);
-      cpu.tick();
+      const cyclesBefore = cpu.cycles;
+      instructionWindow = { cyclesBefore };
+      try {
+        avrInstruction(cpu);
+        cpu.tick();
+      } finally {
+        instructionWindow = null;
+      }
+      if (debugEventListener) {
+        for (const event of pendingDeviceFacts) publishDebugEvent(event);
+        pendingDeviceFacts = [];
+        publishDebugEvent({ cpuId: 'main', kind: 'instruction', phase: 'retire',
+          fidelity: 'recorded', time: debugTime(), pcBefore: bytePc,
+          pcAfter: cpu.pc * 2, instruction: { address: bytePc },
+          changes: { cycles: cpu.cycles - cyclesBefore } });
+      } else {
+        pendingDeviceFacts = [];
+      }
       resumeGuard = null; // one instruction executed: breakpoints re-arm
 
       // Write watchpoint fired during the instruction
@@ -299,6 +332,7 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         haltPolicy: 'freeze-timers',
         timeFreezes: true,
         consumes: [],
+        eventKinds: ['instruction', 'device'],
       };
     },
 
@@ -463,6 +497,15 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       return () => { listeners = listeners.filter((f) => f !== cb); };
     },
 
+    onDebugEvent(listener) {
+      if (typeof listener !== 'function') throw new TypeError('debug event listener must be a function');
+      if (debugEventListener) throw new Error('the AVR debug event listener is already attached');
+      debugEventListener = listener;
+      return () => {
+        if (debugEventListener === listener) debugEventListener = null;
+      };
+    },
+
     reset() {
       cpu.reset();
       running = false;
@@ -497,8 +540,9 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
 
     timeNs: () => adapter.timeNs(),
 
-    detach() { detached = true; },
-    destroy() { listeners = []; },
+    detach() { detached = true; unsubscribeDeviceAccess?.(); },
+    destroy() { listeners = []; debugEventListener = null; pendingDeviceFacts = [];
+      unsubscribeDeviceAccess?.(); },
   };
 
   return target;
