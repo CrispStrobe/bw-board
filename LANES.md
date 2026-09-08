@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| 286 INTA sequencer foundation | Codex /root | 2026-09-08 | Opt-in two-cycle INTA transaction, vector nets, READY contract, address release/idle gap/LOCK tests; CPU/controller/PIC integration remains separate. |
 
 ## DONE
 
