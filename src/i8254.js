@@ -143,6 +143,12 @@ export class I8254 {
         return min;
     }
 
+    /** Explicit clock-domain boundary, including the fractional tick carry. */
+    nextWakeMs() {
+        const ticks = this.nextWake();
+        return Number.isFinite(ticks) ? Math.max(0, ticks - this._frac) * 1000 / this.clockHz : Infinity;
+    }
+
     getState() { return { counters: this.counters.map((c) => c.getState()) }; }
 
     setState(s) {
@@ -414,20 +420,12 @@ class Counter {
     }
 
     ticksToEdge() {
-        if (this.nullCount || !this.gate) return Infinity;
-        if (this.mode === 0) return this.ce > 0 ? this.ce : Infinity;
-        if (this.mode === 2) return this.ce > 1 ? this.ce - 1 : 1;
-        if (this.mode === 3) {
-            const half = Math.ceil(this._fullCount() / 2);
-            return this.ce > 0 ? Math.ceil(this.ce / 2) : half;
-        }
-        // Modes 1, 4 and 5 all end at terminal count. Reporting Infinity for
-        // them -- which is what happened before, for 4 because it was written
-        // that way and for 1 and 5 because they did not exist -- lets the pump
-        // step straight past the pulse and notice it afterwards, if at all.
-        if (this.mode === 1 || this.mode === 4 || this.mode === 5) {
-            if (this._atZero()) return Infinity;
-            return this.bcd ? this._bcdToInt(this.ce) : this.ce;
+        if (this.nullCount || (!this.gate && this.mode !== 1 && this.mode !== 5)) return Infinity;
+        const remaining = this.bcd ? this._bcdToInt(this.ce) : this.ce;
+        if (this.mode === 2) return Math.max(1, remaining - 1);
+        if (this.mode === 3) return Math.max(1, Math.ceil((remaining - (this.bcd ? 1 : 0)) / 2));
+        if (this.mode === 0 || this.mode === 1 || this.mode === 4 || this.mode === 5) {
+            return this._atZero() ? Infinity : remaining;
         }
         return Infinity;
     }
