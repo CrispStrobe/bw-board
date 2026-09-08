@@ -560,9 +560,11 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 bus contract | Codex, feat/x86-backend-lab | 2026-09-08 | Harris source-backed status/byte-lane and clocked bus sequencer subset, including reset/wait tests. Experimental only; no CPU/editor/pin promotion. |
+| _(none)_ | | | |
 
 ## DONE
+
+286 bus contract and phase sequencer: source `610a1e3` on `feat/x86-backend-lab`; pinned Harris August 1996 PDF checksum, PLCC/status/lane metadata, reset qualification, active-low READY, waits, split words and write-data hold. 22 new tests; final targeted foundation/electrical memory/8086 machine run 63/63, zero skips. Owned ROM fetch through nets checked without executing instructions. Explicitly non-pipelined system-clock phases, not edge-accurate timing or an instruction CPU; no controller/editor/pin promotion. Full CI/hardware traces/browser not run. Claim released at this incremental handoff; next gates in `docs/HARRIS-80C286-BUS-CONTRACT.md`.
 
 286 circuit foundation: initial partial-M1 milestone at `90467ee` on `feat/x86-backend-lab`. Default-off ideal digital nets and synthetic wired ROM/RAM master, 20 new tests passing; targeted run including electrical memory, 8086 extractor and machine passed 56/56, no skips. Demo verifies wired result with `cpuExecuted:false`; no claim of 286 CPU, pin timing or editor integration. No production exports/defaults or consuming pin changes. Full CI not run for this milestone. Claim released; M0 sign-off, remaining M1 and actual CPU implementation remain planned.
 
