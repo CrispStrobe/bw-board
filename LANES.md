@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-memory-map | Codex | 2026-09-08 | Opt-in conventional RAM expansion/text RAM using wired chips; segmented relocation/stack/bank-boundary tests; no app pins/deploy/media. |
 
 ## DONE
 
