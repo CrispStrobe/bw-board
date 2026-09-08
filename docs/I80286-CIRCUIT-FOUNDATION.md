@@ -2,6 +2,13 @@
 
 2026-09-08. Experimental engine milestone; not a shipped 80286 CPU.
 
+Verification: implementation commit `90467ee`; 20 new tests pass on final
+source. The targeted run with `test/bus-memory.test.mjs`,
+`test/i8086-extract.test.mjs` and `test/i8086-machine.test.mjs` passed 56 tests,
+zero failures/skips. The explicit demo passed and running it without the flag
+refused as intended. Syntax and whitespace checks passed. Full engine CI and
+browser/editor integration tests have not been run for this milestone.
+
 ## Implemented
 
 `src/experimental/digital-circuit.js` provides ideal four-state digital net

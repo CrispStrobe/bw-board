@@ -560,9 +560,11 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| 286 circuit foundation | Codex, feat/x86-backend-lab | 2026-09-08 | Isolated default-off digital nets and synthetic bus master/memory tests; first implementation milestone for Lite's circuit-first 286 plan. No CPU support claim, production exports/defaults or consuming pin changes. |
+| _(none)_ | | | |
 
 ## DONE
+
+286 circuit foundation: initial partial-M1 milestone at `90467ee` on `feat/x86-backend-lab`. Default-off ideal digital nets and synthetic wired ROM/RAM master, 20 new tests passing; targeted run including electrical memory, 8086 extractor and machine passed 56/56, no skips. Demo verifies wired result with `cpuExecuted:false`; no claim of 286 CPU, pin timing or editor integration. No production exports/defaults or consuming pin changes. Full CI not run for this milestone. Claim released; M0 sign-off, remaining M1 and actual CPU implementation remain planned.
 
 8086 PIT follow-up: engine half complete at `dedfbc8`, full CI `34249782632` green (units, vectors, full vectors, 80186 vectors, corpus). Added callback-time CPU/PIT clock and counter-method observability assertions. No engine runtime changes. Paired Lite branch retains correct candidates default-off and removes the stale-state scheduler implementation; measurements/retention policy live there. Claim released; feature branch only.
 
