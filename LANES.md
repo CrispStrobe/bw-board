@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| _(none)_ | | | |
+| 286 boot instruction subset | Codex, feat/x86-backend-lab | 2026-09-08 | Resumable limited real-mode instruction executor on the wired memory board; owned reset ROM, store/add/halt and fault/wait tests. Not general 286 or CPU timing support; no production promotion. |
 
 ## DONE
 
