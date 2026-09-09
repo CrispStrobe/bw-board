@@ -16,7 +16,7 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
     timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true,
-    memoryScheduling = false, memoryWriteJournal = false, decoderSpecialization = false, deviceScheduling = false, packedBus = false, editWires = wires => wires} = {}) {
+    memoryScheduling = false, memoryWriteJournal = false, decoderSpecialization = false, deviceScheduling = false, packedBus = false, driveLayouts = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
     if(typeof memoryScheduling!=='boolean'||memoryScheduling&&netBackend!=='compiled')throw new TypeError('memoryScheduling requires compiled backend and boolean opt-in');
@@ -24,6 +24,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     if(typeof decoderSpecialization!=='boolean'||decoderSpecialization&&netBackend!=='compiled')throw new TypeError('decoderSpecialization requires compiled backend and boolean opt-in');
     if(typeof deviceScheduling!=='boolean'||deviceScheduling&&netBackend!=='compiled')throw new TypeError('deviceScheduling requires compiled backend and boolean opt-in');
     if(typeof packedBus!=='boolean'||packedBus&&netBackend!=='compiled')throw new TypeError('packedBus requires compiled backend and boolean opt-in');
+    if(typeof driveLayouts!=='boolean'||driveLayouts&&netBackend!=='compiled')throw new TypeError('driveLayouts requires compiled backend and boolean opt-in');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
@@ -172,7 +173,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         wires.push(wire('inputs', 'vcc', id, 'vcc'), wire('inputs', 'gnd', id, 'gnd'));
     }
     const Circuit=netBackend==='compiled'?CompiledDigitalCircuit:DigitalCircuit;
-    const circuit = new Circuit({enabled, parts, wires: editWires(wires.map(w => ({...w}))),compileEvaluators:decoderSpecialization});
+    const circuit = new Circuit({enabled, parts, wires: editWires(wires.map(w => ({...w}))),compileEvaluators:decoderSpecialization,driveLayouts});
     // Compile bindings once, but keep the reference path dynamically dispatching
     // diagnostic overrides of require/drive. Neither path bypasses resolved nets.
     const bind = id => netBackend === 'compiled' ? circuit.bind(id) : {
@@ -224,7 +225,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal, decoderSpecialization, deviceScheduling, packedBus}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal, decoderSpecialization, deviceScheduling, packedBus, driveLayouts}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},

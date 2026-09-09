@@ -14,7 +14,8 @@ const availableModes={reference:{netBackend:'reference'},compiled:{netBackend:'c
     journal:{netBackend:'compiled',memoryScheduling:true,memoryWriteJournal:true},
     specialized:{netBackend:'compiled',memoryScheduling:true,decoderSpecialization:true},
     events:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true},
-    packed:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true}};
+    packed:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true},
+    layouts:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true,driveLayouts:true}};
 const selectedModes=process.argv[4]?process.argv[4].split(','):Object.keys(availableModes);
 if(selectedModes.some(mode=>!Object.hasOwn(availableModes,mode)))throw new RangeError('workload modes');
 const modes=Object.fromEntries(selectedModes.map(mode=>[mode,availableModes[mode]]));

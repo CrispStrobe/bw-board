@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {createOwnedWorkload,ownedWorkloads} from '../scripts/lib/harris-owned-workloads.mjs';
 for(const name of ownedWorkloads)test(`event-scheduled full board matches reference owned ${name} workload`,()=>{
     const fixtures=[{}, {netBackend:'compiled',memoryScheduling:true,deviceScheduling:true},
-        {netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true}].map(options=>createOwnedWorkload(name,options));
+        {netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true},
+        {netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true,driveLayouts:true}].map(options=>createOwnedWorkload(name,options));
     const counts=[];
     for(const f of fixtures) {
         f.cpu.initialize();let clocks=0;

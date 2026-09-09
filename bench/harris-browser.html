@@ -25,7 +25,7 @@ try {
         }
     }
     const cancelId=++id;
-    const cancelled=new Promise((resolve,reject)=>{pending.set(cancelId,{resolve,reject});worker.postMessage({kind:'run',id:cancelId,name:'memory',options:config.modes.packed});});
+    const cancelled=new Promise((resolve,reject)=>{pending.set(cancelId,{resolve,reject});worker.postMessage({kind:'run',id:cancelId,name:'memory',options:Object.values(config.modes).at(-1)});});
     setTimeout(()=>worker.postMessage({kind:'cancel',id:cancelId}),0);
     const stopped=await cancelled;
     if(stopped.run.status!=='stopped'||!stopped.periodClosed)throw new Error('worker cancellation did not stop at a completed period');

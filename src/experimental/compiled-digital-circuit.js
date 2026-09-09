@@ -14,9 +14,12 @@ export class CompiledDigitalCircuit {
     #levels; #conflicts; #publishedLevels; #publishedConflicts;
     #dirty=new Set(); #evalDirty=new Set(); #snapshotDirty=new Set(); #driverDirty=new Set();
     #evaluators; #netEvaluators; #scheduled; #watchers;
+    #driveLayouts; #layouts=new Map();
     constructor(options = {}) {
         const compileEvaluators=options.compileEvaluators??false;
         if(typeof compileEvaluators!=='boolean')throw new TypeError('compileEvaluators');
+        this.#driveLayouts=options.driveLayouts??false;
+        if(typeof this.#driveLayouts!=='boolean')throw new TypeError('driveLayouts');
         const reference=new DigitalCircuit(options);
         this.parts=reference.parts;this.parent=reference.parent;this.outputs=reference.outputs;
         this.maxDeltas=reference.maxDeltas;
@@ -67,7 +70,7 @@ export class CompiledDigitalCircuit {
         this.#watchers=this.#roots.map(()=>new Set());
         this.#scheduled=new Uint8Array(this.#evaluators.length);
         for(let i=0;i<this.#evaluators.length;i++)for(const net of this.#evaluators[i].roots)this.#netEvaluators[net].push(i);
-        this.capabilities=Object.freeze({experimental:true,indexedConnectivity:true,eventScheduling:false,analog:false,compileEvaluators});
+        this.capabilities=Object.freeze({experimental:true,indexedConnectivity:true,eventScheduling:false,analog:false,compileEvaluators,driveLayouts:this.#driveLayouts});
     }
 
     root(key) {const root=this.parent.get(key);if(root===undefined)throw new Error(`unknown terminal ${key}`);return root;}
@@ -82,6 +85,7 @@ export class CompiledDigitalCircuit {
         }
     }
     #drive(part,bindings,values) {
+        if(this.#driveLayouts)return this.#driveLayout(part,bindings,values);
         const updates=[];
         for(const pin of Object.keys(values)) {
             const info=bindings?.get(pin.toLowerCase()),value=values[pin];
@@ -90,6 +94,39 @@ export class CompiledDigitalCircuit {
             updates.push(info.driver,code);
         }
         for(let i=0;i<updates.length;i+=2)this.#apply(updates[i],updates[i+1]);
+    }
+    #driveLayout(part,bindings,values) {
+        const keys=Object.keys(values);if(!keys.length)return;
+        let layouts=this.#layouts.get(part);
+        let layout=layouts?.find(entry=>entry.keys.length===keys.length&&entry.keys.every((key,i)=>key===keys[i]));
+        if(!layout) {
+            const drivers=new Uint32Array(keys.length),codes=new Uint8Array(keys.length);
+            // Keep the original per-key pin/value validation order on a miss.
+            for(let i=0;i<keys.length;i++) {
+                const info=bindings?.get(keys[i].toLowerCase()),value=values[keys[i]];
+                if(info?.driver===undefined)throw new Error(`not an output ${keyOf(part,keys[i])}`);
+                const code=encode(value);if(code<0)throw new Error(`invalid logic level ${value}`);
+                drivers[i]=info.driver;codes[i]=code;
+            }
+            layout={keys,drivers,codes,active:0};
+            layouts=this.#layouts.get(part); // A getter may have inserted a layout.
+            if(!layouts){layouts=[];this.#layouts.set(part,layouts);}
+            if(layouts.length===8)layouts.shift(); // Bound changing/custom output shapes.
+            layouts.push(layout);
+            for(let i=0;i<keys.length;i++)this.#apply(drivers[i],codes[i]);
+            return;
+        }
+        // Accessors may reenter drive(). Never let a nested call overwrite the
+        // outer batch's already-validated values before it can be committed.
+        const codes=layout.active?new Uint8Array(keys.length):layout.codes;layout.active++;
+        try {
+            for(let i=0;i<keys.length;i++) {
+                const value=values[keys[i]],code=encode(value);
+                if(code<0)throw new Error(`invalid logic level ${value}`);
+                codes[i]=code;
+            }
+            for(let i=0;i<keys.length;i++)this.#apply(layout.drivers[i],codes[i]);
+        }finally{layout.active--;}
     }
     drive(part,values) {this.#drive(part,this.#bindings.get(part),values);}
 

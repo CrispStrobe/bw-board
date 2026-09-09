@@ -16,8 +16,11 @@ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sourceHashes={'bench/harris-browser.mjs':hash(readFileSync(new URL(import.meta.url)))};
 const nodeReceiptBytes=readFileSync(join(root,'docs/HARRIS-OWNED-WORKLOADS-BENCH.json'));
 const nodeReceipt=JSON.parse(nodeReceiptBytes),expectedStateHashes=Object.fromEntries(nodeReceipt.samples.map(s=>[s.name,s.stateSHA256]));
-const config={nonce:randomUUID(),rounds,workloads,expectedStateHashes,modes:{reference:{},
-    packed:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true}}};
+const availableModes={reference:{},packed:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true},
+    layouts:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true,driveLayouts:true}};
+const selectedModes=(process.argv[4]??'reference,packed').split(',');
+if(new Set(selectedModes).size!==selectedModes.length||selectedModes.some(m=>!Object.hasOwn(availableModes,m)))throw new RangeError('browser modes');
+const config={nonce:randomUUID(),rounds,workloads,expectedStateHashes,modes:Object.fromEntries(selectedModes.map(m=>[m,availableModes[m]]))};
 let resolveReport,rejectReport;
 const done=new Promise((resolve,reject)=>{resolveReport=resolve;rejectReport=reject;});
 const server=createServer((req,res)=>{

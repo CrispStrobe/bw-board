@@ -193,3 +193,8 @@ decision rather than silently redefining success.
 - [Whole-kernel evaluation contract](HARRIS-KERNEL-EVALUATION.md) added. Obtain
   an execution-only sampled profile before choosing the next port/rewrite;
   retain actual-netlist and fault semantics, not an unrelated functional board.
+- Profile-guided drive-layout experiment: compiled-only bounded layout cache,
+  typed batch staging, original cold fault order and reentrant accessor safety.
+  All five owned workloads still match state/memory hashes. Per-period trace,
+  READY, peer-bank fault and DMA validation precede repeated measurements.
+  The old uncached path and all default gates remain unchanged.

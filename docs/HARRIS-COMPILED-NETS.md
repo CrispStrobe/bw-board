@@ -184,3 +184,28 @@ process from this lane. All 40 executions agree, including warmup. Median
 ratios are 1.02x memory, 1.00x I/O, 1.35x DMA, 1.29x interrupt and 1.08x idle.
 Shared-host variation remains large. This is a mixed incremental gain, not a
 general throughput breakthrough or evidence to change defaults.
+
+## Cached drive layouts
+
+`driveLayouts:true` (compiled only, default off) caches up to eight validated
+output-key layouts per part and reuses typed value staging for ordinary calls.
+Keys and values are still validated; a changed shape takes the checked cold
+path. The complete batch is staged before any driver changes. Cold misses retain
+the original pin/value fault order. Reentrant accessors get independent active
+staging, and exceptions release that staging for later calls. Partial drives,
+case aliases and four-state resolution retain their original meaning.
+
+This follows the populated-board profile, not a claim that a small cache closes
+the capacity gap. The uncached path remains selectable. The DOS environment
+flag is `HARRIS_DRIVE_LAYOUTS=on`; the Node and browser benchmark mode is
+`layouts` (packed + cached layouts, other gates unchanged). For the browser,
+the optional fourth CLI argument selects mode names, for example:
+
+```sh
+CHROME_BIN=/absolute/path/to/chrome HARRIS_BROWSER_REPORT=/new/receipt.json node bench/harris-browser.mjs 3 memory,io,dma,interrupt,idle packed,layouts
+```
+
+Focused tests cover changing/case-aliased layouts, invalid levels/pins, cold/warm
+reentrant getters, every settled net and bus trace through odd writes/READY,
+peer-bank atomic failure and owned workload state/memory agreement. Repeated
+performance and a full DOS receipt for this new gate remain pending.
