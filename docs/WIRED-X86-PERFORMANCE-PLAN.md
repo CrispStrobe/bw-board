@@ -157,3 +157,8 @@ decision rather than silently redefining success.
   scheduling and external wake revisions; unknown implementations fall back.
   CPU/controller/oscillator/DMA/PIC invocation timing unchanged. **576 targeted
   tests pass, four suites, zero skips**. Repeated performance receipt pending.
+- Peripheral [three-round receipt](HARRIS-DEVICE-SCHEDULING-BENCH.json): about
+  1.38x memory, 1.28x I/O, 1.08x DMA, 1.19x interrupt and 1.68x idle versus
+  memory scheduling alone. All 40 executions (including warmup) agree on
+  reported state and mapped-memory hashes. Concurrent DOS/host noise applies;
+  this remains far below the capacity gate.
