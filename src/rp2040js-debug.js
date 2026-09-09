@@ -34,6 +34,10 @@
  */
 
 const RAM_START = 0x20000000;
+/** Architectural width only; the adapter exposes no mapped-code predicate. */
+const MAX_CODE_ADDRESS = 0xfffffffe;
+const CODE_ADDRESS_REFUSAL =
+  `code breakpoint addr must be in 0x00000000..0x${MAX_CODE_ADDRESS.toString(16)}`;
 
 /** Halt-cause detail passed to onHalt listeners; shape mirrors the siblings. */
 function makeWhy(target, cause, hit) {
@@ -296,6 +300,8 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       return {
         steps: ['insn', 'block', 'over', 'out'],
         breakpoints: ['code', 'yield', 'write'],
+        runTo: [{kind: 'address', space: 'code', addressMin: 0,
+          addressMax: MAX_CODE_ADDRESS, stopSides: ['before'], installation: 'sync'}],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped',
@@ -388,8 +394,8 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
     setBreakpoint(bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
       if (bp.kind === 'code') {
-        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > 0xfffffffe) {
-          return { unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe' };
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > MAX_CODE_ADDRESS) {
+          return { unsupported: CODE_ADDRESS_REFUSAL };
         }
         if ((bp.addr & 1) !== 0) {
           return { unsupported:

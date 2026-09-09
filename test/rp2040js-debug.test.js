@@ -74,7 +74,6 @@ test('capabilities: declares what it has, not what it wishes', () => {
   assert.deepEqual(caps.consumes, []);
 });
 
-const RP2040_CODE_MAX = 0xfffffffe;
 const CODE_ADDRESS_REFUSAL = {
   unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe',
 };
@@ -95,10 +94,21 @@ for (const [name, addr] of [
   });
 }
 
-test('RP2040 code breakpoint only: accepts the highest even 32-bit address', () => {
+test('run-to capability tells a caller whether its highest code address is settable', () => {
   const { target } = make(BLINK);
-  assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: RP2040_CODE_MAX }), 'number',
-    ARCHITECTURAL_WIDTH_ONLY);
+  const [route] = target.capabilities().runTo;
+  const { addressMax, ...shape } = route;
+  assert.deepEqual(shape, {
+    kind: 'address', space: 'code', addressMin: 0,
+    stopSides: ['before'], installation: 'sync',
+  }, 'the descriptor deliberately makes no mapped-memory claim');
+  assert.equal(Number.isSafeInteger(addressMax) && addressMax >= 0 &&
+    (addressMax & 1) === 0, true, 'the published maximum is an even code address');
+  assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: addressMax }), 'number',
+    'a debugger can set the highest code address the capability publishes');
+  assert.deepEqual(target.setBreakpoint({ kind: 'code', addr: addressMax + 2 }),
+    CODE_ADDRESS_REFUSAL,
+    'a debugger can distinguish the first wider even address by the engine refusal');
 });
 
 test('RP2040 code breakpoint only: still refuses the Thumb-state bit', () => {
