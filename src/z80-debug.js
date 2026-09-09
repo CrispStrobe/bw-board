@@ -73,6 +73,15 @@ export function createZ80DebugTarget(adapter) {
       return disasmZ80((a) => rd(a & 0xffff), addr & 0xffff);
     },
 
+    /** Normalise a code address and advance it in the Z80's 16-bit space. */
+    nextCodeAddress(addr, length) {
+      if (!Number.isSafeInteger(addr) || addr < 0 ||
+          !Number.isSafeInteger(length) || length < 0) {
+        return { unsupported: 'code address progression requires non-negative safe integers' };
+      }
+      return ((addr & 0xffff) + (length & 0xffff)) & 0xffff;
+    },
+
     onHalt(cb) {
       haltListeners.push(cb);
       // The session treats the return value as an unsubscribe and

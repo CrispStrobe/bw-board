@@ -200,6 +200,19 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     let nextBpId = 1;
     const halt = (info) => { runState = 'halted'; for (const cb of haltListeners) cb(info); };
 
+    /**
+     * Recover the segment-relative position represented by a linear address.
+     * The modular distance keeps a CS window that crosses 0xfffff in the same
+     * segment. Disassembly and listing progression must share this choice.
+     */
+    const codePosition = addr => {
+        const linear = addr & 0xfffff;
+        const currentSegmentBase = (cpu.cs << 4) & 0xfffff;
+        const currentIp = (linear - currentSegmentBase) & 0xfffff;
+        const ip = currentIp <= 0xffff ? currentIp : linear & 0xffff;
+        return {linear, segmentBase: (linear - ip) & 0xfffff, ip};
+    };
+
     // Write watchpoints trap TRUE writes by wrapping the core's write
     // callback (installed only while a watch exists) — z80/emu8051 parity.
     // The trap sits ABOVE the machine's ROM filter, so a store aimed at ROM
@@ -423,9 +436,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         symbolAt(addr) { return labels?.get(addr & 0xfffff) ?? null; },
 
         disasm(addr) {
-            const a = addr & 0xfffff;
-            const csBase = (cpu.cs << 4) & 0xfffff;
-            const ip = (a >= csBase && a <= csBase + 0xffff) ? (a - csBase) & 0xffff : a & 0xffff;
+            const {linear, segmentBase, ip} = codePosition(addr);
             // THE MAP IS LINEAR AND THE DISASSEMBLER'S IS NOT, and this is the
             // join that is easy to get silently wrong. The disassembler labels
             // a 16-BIT operand — a jump target, or the address inside
@@ -438,11 +449,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             if (labels) {
                 inSeg = new Map();
                 for (const [lin, name] of labels) {
-                    if (lin >= csBase && lin <= csBase + 0xffff) inSeg.set((lin - csBase) & 0xffff, name);
+                    const offset = (lin - segmentBase) & 0xfffff;
+                    if (offset <= 0xffff) inSeg.set(offset, name);
                 }
             }
-            return disasmI8086((x) => machine._read(x & 0xfffff), a,
+            return disasmI8086((x) => machine._read(x & 0xfffff), linear,
                 inSeg && inSeg.size ? { ip, labels: inSeg } : { ip });
+        },
+
+        /** Advance through segmented fetch while retaining a linear address. */
+        nextCodeAddress(addr, length) {
+            if (!Number.isSafeInteger(addr) || addr < 0 || addr > 0xfffff ||
+                !Number.isSafeInteger(length) || length < 0) {
+                return { unsupported: 'code address progression requires safe integers in 20-bit physical space' };
+            }
+            const {segmentBase, ip} = codePosition(addr);
+            return (segmentBase + ((ip + (length & 0xffff)) & 0xffff)) & 0xfffff;
         },
 
         onHalt(cb) {

@@ -595,6 +595,15 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             }
         },
 
+        /** Normalise a code address and advance it in the 8051's 16-bit space. */
+        nextCodeAddress(addr, length) {
+            if (!Number.isSafeInteger(addr) || addr < 0 ||
+                !Number.isSafeInteger(length) || length < 0) {
+                return { unsupported: 'code address progression requires non-negative safe integers' };
+            }
+            return ((addr & 0xFFFF) + (length & 0xFFFF)) & 0xFFFF;
+        },
+
         /**
          * Move the program counter. `g` in the TUI.
          *
