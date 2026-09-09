@@ -42,5 +42,13 @@ test('one-clock probe is explicitly not boot acceptance and records configuratio
     assert.equal(report.accepted,false);assert.equal(report.completedClocks,1);
     assert.equal(report.outcome.status,'budget-exhausted');assert.equal(report.pic.writes,0);
     assert.equal(report.configuration.ramBytes,65536);assert.equal(report.configuration.picMode,'single-unbuffered');
-    assert.equal(Object.keys(report.sourceHashes).length,8);
+    assert.equal(Object.keys(report.sourceHashes).length,10);
+    assert.equal(report.fdc,null);assert.equal(report.configuration.fdcMode,'none');
+});
+test('control-only FDC probe is explicit and remains diagnostic',()=>{
+    assert.equal(cli(['--fdc-mode','automatic']).status,1);
+    const r=cli(['--max-clocks','1','--ram-kib','64','--fdc-mode','control']);
+    assert.equal(r.status,2,r.stderr);const report=JSON.parse(r.stdout);
+    assert.equal(report.accepted,false);assert.equal(report.configuration.fdcMode,'control');
+    assert.equal(report.fdc.writes,0);assert.equal(report.fdc.dor,0);
 });

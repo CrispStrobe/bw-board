@@ -1,5 +1,10 @@
 # Wired BIOS POST diagnostics
 
+Update 2026-09-09: the optional [FDC control/IRQ6 bridge](HARRIS-286-FDC.md)
+now has owned wired-guest integration tests and an explicit `--fdc-mode control`
+probe option. It is off by default and refuses all data transfers. The long
+POST receipts below predate that bridge and do not prove POST with it.
+
 2026-09-08. `scripts/probe-harris-bios.mjs` runs the repository-owned BIOS
 through the Harris CPU and real wired RAM/ROM/PIC/timer adapters. It does not
 install BIOS interrupt traps, initialize the IVT on the host, skip POST, load
