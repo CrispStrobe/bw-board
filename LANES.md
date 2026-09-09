@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-dma-registers | Codex | 2026-09-09 | Channel-2 physical register bridge; refuse transfer requests until HOLD/HLDA exists. No app pins/defaults/deploy/media. |
 
 ## DONE
 
