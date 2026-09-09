@@ -75,6 +75,15 @@ Targeted regression: **500/500 passed, zero skips**:
 node --test --test-reporter=spec test/harris-*.test.mjs test/digital-circuit-lab.test.mjs test/paterson-fat12.test.mjs test/sst286.test.mjs test/private-guest-fixtures.test.mjs test/dos-guest-persistence.test.mjs test/i8259.test.mjs test/i8254*.test.mjs test/i8255.test.mjs test/bios-rom.test.mjs test/bios-fdc.test.mjs test/upd765.test.mjs test/i8237.test.mjs
 ```
 
+An additional BIOS-driver integration test passes separately:
+`node --test test/harris-bios-dma.test.mjs` (**1/1**). An owned microguest
+installs BIOS vectors and programs a faster PIT divisor, then calls the
+unmodified INT 13h routine. It verifies the actual spin-up tick count, DMA
+sector bytes, IRQ6 handling, successful return flags and restored stack.
+Its explicit microguest entry replaces POST, so it is **not** DOS acceptance.
+The existing non-wired DOS/controller differential test also passes **7/7**;
+it validates the local image independently, not the new physical board.
+
 The complete pinned real-mode SingleStepTests corpus has been rerun after the
 CPU's implicit-lock change ([hashed receipt](SST286-HOLD-REPORT.json)): **1,477,997 pass, 3 upstream revocations, zero
 failures/unsupported/budget cases**, across 326 files. This grades instruction
