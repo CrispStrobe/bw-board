@@ -11,7 +11,7 @@ const INPUTS = {reset: 0, ready_n: 0, hold: 0, intr: 0, nmi: 0, pereq: 0, busy_n
 const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, toTerminal});
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
-    intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null,
+    intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null,
     timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
@@ -38,6 +38,13 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     if (fdcDevice) for (const [device,size] of [[interruptDevice,2],[timerDevice,4]])
         if (device && fdcDevice.portBase < device.portBase+size && device.portBase < fdcDevice.portBase+8)
             throw new CircuitFault('IO_PORT_CONFLICT','FDC range overlaps another device');
+    if (dmaDevice && (!picIO || !ioEnabled || dmaDevice.ioInterface !== 'harris-dma-registers' ||
+        typeof dmaDevice.part !== 'function' || typeof dmaDevice.update !== 'function'))
+        throw new TypeError('dmaDevice requires the PIC/I/O path and DMA register adapter');
+    if (dmaDevice) for (const [device,size] of [[interruptDevice,2],[timerDevice,4],[fdcDevice,8]])
+        for (const [start,end] of [[0,16],[0x81,0x82]])
+            if (device && start < device.portBase+size && device.portBase < end)
+                throw new CircuitFault('IO_PORT_CONFLICT','DMA registers overlap another device');
     const latch = new IdealAddressLatch({enabled});
     const memories = [];
     const parts = [bus.part(), controller.part(), latch.part(),
@@ -87,6 +94,14 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         for (const p of [...A,'bhe_n','m_io']) wires.push(wire('latch',`q_${p}`,fdcPart.id,p));
         for (const p of ['ior_n','iow_n']) wires.push(wire('controller',p,fdcPart.id,p));
     }
+    const dmaPart = dmaDevice?.part();
+    if (dmaPart) {
+        parts.push(dmaPart,{id:'dma_inputs',pins:['dreq2'],outputs:['dreq2']});
+        wires.push(wire('inputs','reset',dmaPart.id,'reset'),wire('dma_inputs','dreq2',dmaPart.id,'dreq2'));
+        for (const p of D) wires.push(wire(dmaPart.id,p,'cpu',p));
+        for (const p of [...A,'bhe_n','m_io']) wires.push(wire('latch',`q_${p}`,dmaPart.id,p));
+        for (const p of ['ior_n','iow_n']) wires.push(wire('controller',p,dmaPart.id,p));
+    }
     for (const p of ['s1_n', 's0_n', 'cod_inta_n', 'm_io']) wires.push(wire('cpu', p, 'controller', p));
     for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('cpu', p, 'latch', p));
     wires.push(wire('controller', 'ale', 'latch', 'ale'));
@@ -128,6 +143,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     circuit.drive('inputs', INPUTS);
     if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
     if (timerPart) circuit.drive('timer_inputs',{gate0:1});
+    if (dmaPart) circuit.drive('dma_inputs',{dreq2:0});
     const settleInterruptDevice = () => {
         if (!irqPart) return;
         circuit.settle();
@@ -139,6 +155,10 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             circuit.drive(fdcPart.id,fdcDevice.update(p=>circuit.require(fdcPart.id,p)));
             circuit.settle();
         }
+        if (dmaPart) {
+            circuit.drive(dmaPart.id,dmaDevice.update(p=>circuit.require(dmaPart.id,p)));
+            circuit.settle();
+        }
         circuit.drive(irqPart.id,interruptDevice.update(p=>circuit.require(irqPart.id,p)));
         circuit.settle();
     };
@@ -147,7 +167,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     return {
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
-            io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dma:false,
+            io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:false,
             ramBytes, textRAM, displayController:false}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},

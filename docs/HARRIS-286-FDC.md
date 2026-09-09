@@ -1,5 +1,9 @@
 # Wired FDC control bridge
 
+Follow-up: the optional [DMA register bridge](HARRIS-286-DMA.md) now verifies
+channel-2 programming over the wired bus. It still rejects requests and does
+not enable any FDC data commands or sector transfers.
+
 2026-09-09. `HarrisFDCAdapter` is an explicitly gated ideal-digital address
 decoder/byte-lane bridge around the existing `UPD765` control-command core.
 It is **not** a bare 765 pin model, a floppy-drive simulation, or a DMA bridge.
