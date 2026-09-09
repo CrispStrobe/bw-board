@@ -16,7 +16,7 @@ function fixture({count=4,address=0x501,mode=0x46,roundTrip=false,editWires=w=>w
     fdc.loadMedia(bytes,{cylinders:1,heads:1,sectors:1,bytesPerSector:512});
     const rom=createHarrisBootROM();
     const waitResult=`MOV DX,03F4h\nwaitresult: IN AL,DX\nAND AL,0C0h\nCMP AL,0C0h\nJNE waitresult\n`;
-    const seed=roundTrip?Array.from({length:count},(_,i)=>`MOV BYTE PTR [${address+i}],${bytes[i]}`).join('\n')+'\n':'';
+    const seed=roundTrip?Array.from({length:count},(_,i)=>`MOV BYTE PTR [${address+i}],${bytes[i]^0xa5}`).join('\n')+'\n':'';
     const again=roundTrip?out(0x3f5,[])+`MOV CX,7\ndrain: IN AL,DX\nLOOP drain\n`+
         out(0x0a,[6])+out(0x0c,[0])+out(4,[(address+256)&255,(address+256)>>8])+out(5,[(count-1)&255,(count-1)>>8])+
         out(0x0b,[0x46])+out(0x0a,[2])+out(0x3f5,[0x46,0,0,0,1,2,1,0x2a,0xff])+waitResult.replaceAll('waitresult','waitagain'):'';
@@ -37,7 +37,7 @@ test('physical DMA writes bytes across both lanes and terminates on N-1 count',(
 test('physical RAM-to-disk DMA can be read back through a second bus transfer',()=>{
     const f=fixture({mode:0x4a,roundTrip:true});assert.equal(f.cpu.run(16000).status,'halted');
     assert.equal(f.dma.inspect().transferred,8);assert.equal(f.dma.inspect().tcPulses,2);assert.equal(f.fdc.inspect().dmaBytes,8);
-    for(let i=0;i<4;i++){const a=0x601+i;assert.equal(f.board.inspectMemory(a&1?'ram1':'ram0').bytes[a>>1],f.bytes[i]);}
+    for(let i=0;i<4;i++){const a=0x601+i;assert.equal(f.board.inspectMemory(a&1?'ram1':'ram0').bytes[a>>1],f.bytes[i]^0xa5);}
 });
 test('DMA verify consumes disk bytes and terminal count without writing RAM',()=>{
     const f=fixture({mode:0x42});assert.equal(f.cpu.run(10000).status,'halted');

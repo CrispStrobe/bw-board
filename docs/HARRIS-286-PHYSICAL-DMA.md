@@ -83,6 +83,8 @@ sector bytes, IRQ6 handling, successful return flags and restored stack.
 Its explicit microguest entry replaces POST, so it is **not** DOS acceptance.
 The existing non-wired DOS/controller differential test also passes **7/7**;
 it validates the local image independently, not the new physical board.
+The additional `harris-bios-keyboard` test passes **1/1**, exercising the real
+BIOS's translation, ring buffer and two paced INT 16h reads through IRQ1.
 
 The complete pinned real-mode SingleStepTests corpus has been rerun after the
 CPU's implicit-lock change ([hashed receipt](SST286-HOLD-REPORT.json)): **1,477,997 pass, 3 upstream revocations, zero
