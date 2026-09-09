@@ -45,3 +45,17 @@ Existing local DOS inputs are required; neither command downloads or hosts
 media. The latter command is a reproduction route, not an already-passed run.
 Next: bound device access, explicit trace-off measurements, affected-device
 scheduling, and whole-kernel execution under the [performance plan](WIRED-X86-PERFORMANCE-PLAN.md).
+
+## Bound access and bus trace control
+
+Board construction now caches all device and memory pin bindings. Reference
+bindings still dynamically dispatch diagnostic overrides. `busTraceEnabled:false`
+suppresses bus-record allocation, not resolution, sampling, faults or CPU history.
+It defaults to true; the probe accepts `HARRIS_BUS_TRACE=off` explicitly.
+
+The expanded targeted suite passes **526 tests**. The new
+[four-pair bus-trace-off receipt](HARRIS-BOUND-NETS-BENCH.json) records median
+6,387.5 ms reference / 5,390.5 ms compiled (1.18x), with identical reported state.
+This compares current backends, not the isolated effect of disabling tracing;
+the host load varies substantially. It does not establish a whole-boot result
+or the real-time capacity gate. Stateful device scheduling remains unchanged.

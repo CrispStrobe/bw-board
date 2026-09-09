@@ -379,6 +379,25 @@ test('a new RESET after a qualification fault must itself last 17 periods', () =
     assert.equal(f.bus.resetClocks, 1);
 });
 
+test('bus trace opt-out preserves every period and fault qualification', () => {
+    assert.throws(() => fixture({traceEnabled: 0}), /traceEnabled/);
+    const on = fixture(), off = fixture({traceEnabled: false});
+    for (const f of [on, off]) { f.boot(); f.bus.submit({kind:'memory-write', address:0x101, width:2, value:0x1234}); }
+    for (let i = 0; i < 24; i++) {
+        assert.deepEqual(off.begin(), on.begin());
+        assert.deepEqual(off.end(), on.end());
+        for (const key of ['state','phase','clock','address','resetClocks','intrSamples','nmiPending'])
+            assert.deepEqual(off.bus[key], on.bus[key], key);
+    }
+    assert.ok(on.bus.getTrace().entries.length > 0);
+    assert.deepEqual(off.bus.getTrace(), {dropped:0, entries:[]});
+    for (const traceEnabled of [true, false]) {
+        const f = fixture({traceEnabled});
+        for(let i=0;i<16;i++)f.clock({reset:1});
+        assert.throws(() => f.clock({reset:0}), fault('SHORT_RESET'));
+    }
+});
+
 test('code fetch reaches an owned ROM through explicit nets; disconnects cannot boot invisibly', () => {
     for (const disconnected of [null, 'd0', 'a23']) {
         const bus = new Harris80C286Bus({enabled: true});

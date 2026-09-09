@@ -21,7 +21,7 @@ const known = (read, pin) => {
 };
 
 export class Harris80C286Bus {
-    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, nmiEnabled = false, intrEnabled = false, holdEnabled = false} = {}) {
+    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, traceEnabled = true, nmiEnabled = false, intrEnabled = false, holdEnabled = false} = {}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
         for (const v of [maxWaitStates, traceLimit]) if (!Number.isSafeInteger(v) || v < 1) throw new RangeError('limits');
         this.maxWaitStates = maxWaitStates;
@@ -33,6 +33,8 @@ export class Harris80C286Bus {
         this.intrEnabled = intrEnabled; this.intrLevel = 0; this.intrSamples = 0; this.ackGap = 0;
         this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
         this.traceLimit = traceLimit;
+        if(typeof traceEnabled!=='boolean')throw new TypeError('traceEnabled');
+        this.traceEnabled=traceEnabled;
         this.capabilities = Object.freeze({cpu: false, experimental: true,
             fidelity: 'non-pipelined-system-clock-phases', clockEdges: false,
             systemClockStepping: true, snapshots: false, hold: holdEnabled, interrupts: false, nmi: nmiEnabled,
@@ -212,7 +214,7 @@ export class Harris80C286Bus {
                     this.state = 'TI';
                 }
             }
-            this._record({state, phase, address: this.address,
+            if(this.traceEnabled)this._record({state, phase, address: this.address,
                 s1_n: this.outputs.s1_n, s0_n: this.outputs.s0_n,
                 bhe_n: this.outputs.bhe_n, readySample,
                 drives: Object.freeze({...this.outputs}), completion});
@@ -220,7 +222,7 @@ export class Harris80C286Bus {
             return completion;
         } catch (error) {
             this.faulted = true;
-            this._record({state, phase, fault: error.code || 'ERROR'});
+            if(this.traceEnabled)this._record({state, phase, fault: error.code || 'ERROR'});
             throw error;
         }
     }

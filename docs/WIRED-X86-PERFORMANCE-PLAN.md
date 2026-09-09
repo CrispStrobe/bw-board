@@ -114,3 +114,7 @@ decision rather than silently redefining success.
   525 targeted tests and a 1.15x startup comparison. Stateful scheduling unchanged.
 - Pending: completion of the eight implementation/evidence gates beyond these
   partial milestones; the real-time capacity gate has not been reached.
+- Binding/observation iteration: cached device and memory bindings, explicit
+  bus-trace opt-out, 526 passing targeted tests, and a
+  [1.18x current-backend comparison](HARRIS-BOUND-NETS-BENCH.json). CPU history
+  remains enabled; no full-boot or isolated trace-cost claim.

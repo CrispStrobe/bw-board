@@ -13,7 +13,7 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
-    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', editWires = wires => wires} = {}) {
+    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
@@ -24,7 +24,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     for (const kind of ['62256', '28c256']) if (!getDevice(kind)) throw new CircuitFault('MEMORY_MODELS_REQUIRED', 'registerBusMemory() before construction');
     if (interruptDevice && (!intrEnabled || typeof interruptDevice.part !== 'function' || typeof interruptDevice.update !== 'function'))
         throw new TypeError('interruptDevice requires intrEnabled and part/update methods');
-    const bus = new Harris80C286Bus({enabled,nmiEnabled,intrEnabled,holdEnabled});
+    const bus = new Harris80C286Bus({enabled,nmiEnabled,intrEnabled,holdEnabled,traceEnabled:busTraceEnabled});
     const controller = new MemoryPhaseController({enabled,intrEnabled,ioEnabled});
     const picIO = interruptDevice?.ioInterface === 'harris-pic-byte-lanes';
     if (picIO && !ioEnabled) throw new TypeError('PIC port adapter requires ioEnabled:true');
@@ -172,6 +172,17 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     }
     const Circuit=netBackend==='compiled'?CompiledDigitalCircuit:DigitalCircuit;
     const circuit = new Circuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
+    // Compile bindings once, but keep the reference path dynamically dispatching
+    // diagnostic overrides of require/drive. Neither path bypasses resolved nets.
+    const bind = id => netBackend === 'compiled' ? circuit.bind(id) : {
+        require: pin => circuit.require(id, pin), drive: values => circuit.drive(id, values)
+    };
+    const cpuPins = bind('cpu'), controllerPins = bind('controller'), latchPins = bind('latch'), inputPins = bind('inputs');
+    const irqPins = irqPart && bind(irqPart.id), timerPins = timerPart && bind(timerPart.id);
+    const fdcPins = fdcPart && bind(fdcPart.id), dmaPins = dmaPart && bind(dmaPart.id);
+    const keyboardPins = keyboardPart && bind(keyboardPart.id), clockPins = timerClock && bind('timer_clock');
+    const memoryPins = memories.map(memory => bind(memory.id));
+    const masterRead = dmaPart && (pin => pin === 'ready_n' ? controllerPins.require(pin) : dmaPins.require(pin));
     circuit.drive('inputs', INPUTS);
     if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
     if (timerPart) circuit.drive('timer_inputs',{gate0:1});
@@ -180,19 +191,19 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         if (!irqPart) return;
         circuit.settle();
         if (timerPart) {
-            circuit.drive(timerPart.id,timerDevice.update(p=>circuit.require(timerPart.id,p)));
+            timerPins.drive(timerDevice.update(timerPins.require));
             circuit.settle();
         }
         if (fdcPart) {
-            circuit.drive(fdcPart.id,fdcDevice.update(p=>circuit.require(fdcPart.id,p)));
+            fdcPins.drive(fdcDevice.update(fdcPins.require));
             circuit.settle();
         }
         if (dmaPart) {
-            circuit.drive(dmaPart.id,dmaDevice.update(p=>circuit.require(dmaPart.id,p)));
+            dmaPins.drive(dmaDevice.update(dmaPins.require));
             circuit.settle();
         }
-        if(keyboardPart){circuit.drive(keyboardPart.id,keyboardDevice.update(p=>circuit.require(keyboardPart.id,p)));circuit.settle();}
-        circuit.drive(irqPart.id,interruptDevice.update(p=>circuit.require(irqPart.id,p)));
+        if(keyboardPart){keyboardPins.drive(keyboardDevice.update(keyboardPins.require));circuit.settle();}
+        irqPins.drive(interruptDevice.update(irqPins.require));
         circuit.settle();
     };
     let faulted = false;
@@ -201,7 +212,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},
@@ -210,18 +221,18 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             if (faulted) throw new CircuitFault('BOARD_FAULTED', 'reconstruct board; no automatic rollback');
             if (periodOpen) throw new CircuitFault('CLOCK_ORDER', 'endClock required');
             try {
-                circuit.drive('inputs', inputs); circuit.settle();
+                inputPins.drive(inputs); circuit.settle();
                 if (timerClock) {
-                    circuit.drive('timer_clock',timerClock.advance(p=>circuit.require('timer_clock',p)));
+                    clockPins.drive(timerClock.advance(clockPins.require));
                     circuit.settle();
                 }
                 settleInterruptDevice();
-                circuit.drive('cpu', bus.beginClock(p => circuit.require('cpu', p))); circuit.settle();
-                if(dmaTransfer){circuit.drive(dmaPart.id,dmaDevice.beginMaster(p=>circuit.require(dmaPart.id,p)));circuit.settle();}
-                circuit.drive('controller', controller.beginClock(p => circuit.require('controller', p))); circuit.settle();
+                cpuPins.drive(bus.beginClock(cpuPins.require)); circuit.settle();
+                if(dmaTransfer){dmaPins.drive(dmaDevice.beginMaster(dmaPins.require));circuit.settle();}
+                controllerPins.drive(controller.beginClock(controllerPins.require)); circuit.settle();
                 settleInterruptDevice();
-                circuit.drive('latch', latch.update(p => circuit.require('latch', p)));
-                settleBusMemories(circuit, memories);
+                latchPins.drive(latch.update(latchPins.require));
+                settleBusMemories(circuit, memories, 8, memoryPins);
                 periodOpen = true;
             } catch (error) { faulted = true; throw error; }
         },
@@ -230,20 +241,20 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             if (!periodOpen) throw new CircuitFault('CLOCK_ORDER', 'beginClock required');
             periodOpen = false;
             try {
-                const end = controller.previewEnd(p => circuit.require('controller', p));
-                if (end.ready !== null && end.ready !== circuit.require('cpu', 'ready_n')) throw new CircuitFault('READY_MISMATCH', 'CPU and controller see different READY');
-                const result = bus.endClock(p => circuit.require('cpu', p));
+                const end = controller.previewEnd(controllerPins.require);
+                if (end.ready !== null && end.ready !== cpuPins.require('ready_n')) throw new CircuitFault('READY_MISMATCH', 'CPU and controller see different READY');
+                const result = bus.endClock(cpuPins.require);
                 if(dmaTransfer){
-                    const drives=dmaDevice.endMaster(p=>p==='ready_n'?circuit.require('controller',p):circuit.require(dmaPart.id,p));
-                    if(drives){circuit.drive(dmaPart.id,drives);settleInterruptDevice();}
+                    const drives=dmaDevice.endMaster(masterRead);
+                    if(drives){dmaPins.drive(drives);settleInterruptDevice();}
                 }
                 const commands = end.finish();
                 if (commands) {
-                    circuit.drive('controller', commands);
+                    controllerPins.drive(commands);
                     settleInterruptDevice();
                     // This command transition, NOT result/callback, makes the
                     // reused memory model commit its pending write.
-                    settleBusMemories(circuit, memories);
+                    settleBusMemories(circuit, memories, 8, memoryPins);
                 }
                 return result;
             } catch (error) { faulted = true; throw error; }

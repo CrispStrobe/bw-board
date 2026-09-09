@@ -151,13 +151,17 @@ export class DigitalBusMemoryAdapter {
         pending: this.state._pending ? {...this.state._pending} : null}; }
 }
 
-export function settleBusMemories(circuit, memories, maxPasses = 8) {
+export function settleBusMemories(circuit, memories, maxPasses = 8, bindings = null) {
     if (!Number.isSafeInteger(maxPasses) || maxPasses < 1) throw new RangeError('maxPasses');
     for (let pass = 0; pass < maxPasses; pass++) {
         circuit.settle();
-        const previews = memories.map(memory => memory.preview(p => circuit.require(memory.id, p)));
+        const previews = memories.map((memory, i) => memory.preview(bindings ? bindings[i].require : p => circuit.require(memory.id, p)));
         for (let i = 0; i < memories.length; i++) {
-            previews[i].commit(); if(previews[i].drives)circuit.drive(memories[i].id, previews[i].drives);
+            previews[i].commit();
+            if(previews[i].drives) {
+                if(bindings)bindings[i].drive(previews[i].drives);
+                else circuit.drive(memories[i].id, previews[i].drives);
+            }
         }
         circuit.settle();
         if (!previews.some(p => p.changed)) return;
