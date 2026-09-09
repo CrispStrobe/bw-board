@@ -560,7 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-dos-boot | Codex | 2026-09-09 | Pursue wired DOS boot: bus handoff, physical DMA/FDC, verified guest execution. Keep defaults off; no deploy or media hosting. |
+| wired-286-dos-boot | Codex | 2026-09-09 | Wired DOS boot, pinned oracle harness and iterative compiled-wired performance toward the documented 4.77 MHz-equivalent capacity gate. Keep reference/default gates; no deploy or media hosting. Plans: WIRED-X86-PERFORMANCE-PLAN.md and X86-ORACLE-STRATEGY.md. |
 
 ## DONE
 
