@@ -560,9 +560,22 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-dma-registers | Codex | 2026-09-09 | Channel-2 physical register bridge; refuse transfer requests until HOLD/HLDA exists. No app pins/defaults/deploy/media. |
 
 ## DONE
+
+286 DMA register prerequisite: source `cdbf18a` on `feat/x86-backend-lab`,
+2026-09-09. Optional channel-2 register/XT-style page bridge uses physical
+byte lanes and I/O strobes, private unchanged I8237 register core, no callbacks
+or transfers. Address/count shared pointer, strict modes/masks, page/reset,
+floating undefined reads and DREQ/software-request refusals tested. Owned
+guest programs 7C00h/01FFh/page04h/mode46h and reads registers back with PIC,
+PIT and FDC connected. Seven new tests plus one CLI test; expanded targeted
+suite with I8237 core 475/475 pass, no skips. --dma-mode registers is explicit;
+default none, dma capability remains false, FDC data commands still refuse.
+HOLD/HLDA, bus ownership and terminal count are NOT implemented; those are
+the next functional gate before sectors. Details HARRIS-286-DMA.md. No new
+long POST/DOS boot, full vectors/CI/browser, app pins/defaults, merge/deploy
+or media. CPU/SST hashes unchanged. Claim released.
 
 286 FDC control/IRQ6 bridge: source `6b18924` on `feat/x86-backend-lab`,
 2026-09-09. Explicit optional DOR/MSR/FIFO byte-lane wiring and FDC IRQ6 net
