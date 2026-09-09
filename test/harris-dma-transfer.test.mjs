@@ -40,7 +40,14 @@ test('physical RAM-to-disk DMA can be read back through a second bus transfer',(
     for(let i=0;i<4;i++){const a=0x601+i;assert.equal(f.board.inspectMemory(a&1?'ram1':'ram0').bytes[a>>1],f.bytes[i]^0xa5);}
 });
 test('DMA verify consumes disk bytes and terminal count without writing RAM',()=>{
-    const f=fixture({mode:0x42});assert.equal(f.cpu.run(10000).status,'halted');
+    const f=fixture({mode:0x42});let observed=0;
+    for(let i=0;i<10000&&f.cpu.status==='running';i++){
+        f.cpu.stepClock();
+        if(['TC1','TC2'].includes(f.dma.inspect().master)){
+            observed++;assert.equal(f.board.circuit.require('controller','mrd_n'),1);assert.equal(f.board.circuit.require('controller','mwr_n'),1);
+        }
+    }
+    assert.equal(f.cpu.status,'halted');assert.ok(observed>0);
     assert.equal(f.dma.inspect().transferred,4);assert.equal(f.dma.inspect().tcPulses,1);assert.equal(f.fdc.inspect().dmaBytes,4);
     for(let i=0;i<4;i++){const a=0x501+i;assert.equal(f.board.inspectMemory(a&1?'ram1':'ram0').bytes[a>>1],0);}
 });

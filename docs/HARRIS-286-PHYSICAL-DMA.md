@@ -69,7 +69,8 @@ wrap, reset cancellation, missing DACK wiring, and HOLD during locked operands
 and an INTA pair. Keyboard tests require guest interrupt delivery and
 acknowledgement. Existing control-only/register-only tests remain separate.
 
-Targeted regression: **500/500 passed, zero skips**:
+Targeted regression, rerun including both BIOS integration tests below:
+**503/503 passed, zero skips**:
 
 ```sh
 node --test --test-reporter=spec test/harris-*.test.mjs test/digital-circuit-lab.test.mjs test/paterson-fat12.test.mjs test/sst286.test.mjs test/private-guest-fixtures.test.mjs test/dos-guest-persistence.test.mjs test/i8259.test.mjs test/i8254*.test.mjs test/i8255.test.mjs test/bios-rom.test.mjs test/bios-fdc.test.mjs test/upd765.test.mjs test/i8237.test.mjs
@@ -126,6 +127,11 @@ The previous resolver is retained as an independent test oracle. Tests compare
 resolved conflicts, omitted-output releases, complete wired traces, READY waits,
 and memory contents, and verify that public resolution does not consume pending
 settlement and that failed convergence preserves the last settled snapshot.
+
+A [fresh synthetic resolver benchmark](HARRIS-INCREMENTAL-NETS-BENCH.json)
+records four alternating-order runs against the pinned pre-static-layout
+baseline. It is not a guest-throughput measurement or a comparison against
+the immediately preceding implementation; the long boot ran concurrently.
 
 Remaining limits include protected mode, complete PC/AT hardware, 8042/A20,
 general DMA modes and channels, full FDC/media fidelity, DMA timeout policy,

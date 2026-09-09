@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import {createHarrisMemoryBoard} from '../src/experimental/harris-80c286-memory-board.js';
 import {registerBusMemory} from '../src/devices/bus-memory.js';
 import {bitPins} from '../src/experimental/digital-circuit.js';
+import {HarrisBootCPU} from '../src/experimental/harris-80c286-boot-cpu.js';
+import {createHarrisBootROM} from '../src/experimental/harris-boot-rom.js';
+import {assembleRaw} from '../src/i8086-asm.js';
 registerBusMemory();
 const make=()=>{const b=createHarrisMemoryBoard({enabled:true,holdEnabled:true});b.initialize();return b;};
 test('HOLD remains gated; enabled idle handoff releases bus drivers and resumes queued work',()=>{
@@ -31,4 +34,17 @@ test('locked split transfer cannot yield midway and RESET revokes HLDA',()=>{
     assert.equal(r?.operand,0xbeef);
     for(let i=0;i<4;i++)b.clock();assert.equal(b.circuit.require('cpu','hlda'),1);
     b.clock({reset:1});assert.equal(b.circuit.require('cpu','hlda'),0);assert.equal(b.bus.pending,null);
+});
+test('guest memory XCHG retains ownership through the read and committed write',()=>{
+    const rom=createHarrisBootROM();rom.set(assembleRaw('MOV WORD PTR [501h],1234h\nMOV AX,0BEEFh\nXCHG [501h],AX\nHLT',0x100),0x100);
+    const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,holdEnabled:true});
+    const cpu=new HarrisBootCPU({enabled:true,board});cpu.initialize();
+    for(let i=0;i<6000&&!(cpu.busLocked&&board.bus.pending?.kind==='memory-read');i++)cpu.stepClock();
+    assert.equal(cpu.busLocked,true);assert.equal(board.bus.pending.kind,'memory-read');
+    board.circuit.drive('inputs',{hold:1});
+    const word=()=>board.inspectMemory('ram1').bytes[0x280]|(board.inspectMemory('ram0').bytes[0x281]<<8);
+    for(let i=0;i<200&&word()!==0xbeef;i++){cpu.stepClock();assert.equal(board.circuit.require('cpu','hlda'),0);}
+    assert.equal(word(),0xbeef);assert.equal(cpu.regs.ax,0x1234);
+    for(let i=0;i<12;i++)cpu.stepClock();assert.equal(board.circuit.require('cpu','hlda'),1);
+    board.circuit.drive('inputs',{hold:0});assert.equal(cpu.run(1000).status,'halted');
 });
