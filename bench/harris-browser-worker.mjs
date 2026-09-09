@@ -19,6 +19,10 @@ self.onmessage=async({data})=>{
                 const {runNativeMemoryOracle}=await import('../scripts/lib/harris-native-memory-oracle.mjs');
                 nativeOracle.memory=await runNativeMemoryOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
             }
+            if(data.memoryCircuit) {
+                const {runNativeMemoryCircuitOracle}=await import('../scripts/lib/harris-native-memory-circuit-oracle.mjs');
+                nativeOracle.memoryCircuit=await runNativeMemoryCircuitOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
+            }
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});

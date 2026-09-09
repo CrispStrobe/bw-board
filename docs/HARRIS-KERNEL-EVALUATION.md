@@ -212,3 +212,40 @@ must preserve all-peer preflight and the existing settle/commit order. Validate
 edited wiring, shared data buses, byte lanes, failures and convergence before
 porting the controller/latch, CPU bus sequencer and remaining devices. Only a
 complete chunk runner can support the whole-kernel throughput comparison.
+
+### Coupled memory/net loop checkpoint
+
+The next prototype now keeps net resolution, owned combinational evaluation,
+memory pin gathering, all-peer previews/commits and memory-drive publication in
+one native arena. `settle_memory_circuit` repeats the existing two-settle memory
+pass order without crossing into JavaScript between passes. Explicit owned
+bank descriptors are bound to actual validated terminal/driver IDs; no address
+callback or hidden RAM read substitutes for the wires. The standalone component
+and reference paths remain available.
+
+Eight new focused tests pass, including 1,026 full-net/full-storage comparisons
+each with normal and swapped address wiring, compiled-reference agreement,
+read-only EEPROM, byte-lane selects, contention, a late peer power fault,
+nonconvergence/retry, defensive arrays, rejected live/custom model imports and
+raw malformed-mapping rejection before any state/net mutation. All native
+components plus the existing memory-model tests pass together: **41 tests,
+four suites, zero failures/skips**. The complete combined wired/x86, memory and
+peripheral checkpoint passes **501 tests, four suites, zero failures/skips**.
+The coupled [build](HARRIS-NATIVE-MEMORY-CIRCUIT-BUILD.json) and
+[Chromium receipt](HARRIS-NATIVE-MEMORY-CIRCUIT-BROWSER.json) are preserved.
+Chromium passes 1,026 coupled memory/net comparisons, both earlier component
+oracles, all five JS workload hashes, cancellation and profile cleanup. This
+remains a one-round correctness smoke run, not native execution throughput.
+
+Failure semantics are per pass, not transactional across an entire settling
+call: a failed peer preview commits no peer; a later convergence failure does
+not roll back an earlier successfully committed pass. Published and pending
+net states retain the reference distinction. Mapping/limit admission happens
+before execution. This is still not a clock runner, board backend, live-state
+importer, complete fault-diagnostic replacement or performance result.
+
+Do not stitch this into the JS board by copying just final net levels back:
+doing so could lose intermediate evaluator dependency history and scheduler
+state. The next port must own the controller/latch and the explicit settle
+boundaries, then the bus sequencer and peripheral clock interactions, before
+claiming a complete execution backend.

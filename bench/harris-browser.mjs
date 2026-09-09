@@ -22,7 +22,7 @@ if(nativePath) {
     const verifiedSources=build.sourceHashes??{'src/experimental/wired-kernel/net-resolver.c':build.sourceSHA256};
     assert.ok(Object.hasOwn(verifiedSources,'src/experimental/wired-kernel/net-resolver.c'));
     for(const [path,expected] of Object.entries(verifiedSources)) {
-        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c'].includes(path),'unexpected native source');
+        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c'].includes(path),'unexpected native source');
         assert.equal(hash(readFileSync(join(root,path))),expected,'rebuild native module for this source');sourceHashes[path]=expected;
     }
     assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');
@@ -49,7 +49,7 @@ const server=createServer((req,res)=>{
     try {
         const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
         const allowed=pathname==='/bench/harris-browser.html'||pathname==='/bench/harris-browser-worker.mjs'||
-            ['/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
+            ['/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
         if(req.method!=='GET'||!allowed)throw new Error('not served');
         const path=realpathSync(resolve(root,'.'+pathname));if(!path.startsWith(root+sep))throw new Error('outside source root');
         const bytes=readFileSync(path),key=path.slice(root.length+1),digest=hash(bytes);
@@ -86,6 +86,10 @@ try {
         if(nativeModule.sourceHashes['src/experimental/wired-kernel/memory-banks.c']) {
             assert.equal(report.nativeOracle.memory?.accepted,true);assert.equal(report.nativeOracle.memory?.capacityClaim,false);
             assert.equal(report.nativeOracle.memory?.byteValues,256);assert.equal(report.nativeOracle.memory?.faults,1);
+        }
+        if(nativeModule.sourceHashes['src/experimental/wired-kernel/memory-circuit.c']) {
+            assert.equal(report.nativeOracle.memoryCircuit?.accepted,true);assert.equal(report.nativeOracle.memoryCircuit?.capacityClaim,false);
+            assert.equal(report.nativeOracle.memoryCircuit?.comparisons,1026);assert.equal(report.nativeOracle.memoryCircuit?.faults,1);
         }
         report.nativeBuild=nativeModule;
     }

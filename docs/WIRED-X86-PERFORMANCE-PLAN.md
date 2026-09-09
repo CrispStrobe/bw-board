@@ -14,7 +14,7 @@ guest-media hosting, or automatic backend replacement is authorized here.
 | Compiled connectivity | Implemented and gated; four-state, edited-wire and fault comparisons pass. |
 | Bindings/scheduling | Memory and selected peripherals scheduled; packed drives and cached layouts measured. Not a complete whole-board event kernel. |
 | Bus/board specialization | Partial; actual-net decoder/vector binding exists, complete specialized execution kernel does not. |
-| Whole-kernel Wasm evaluation | Typed-net and owned combinational native prototypes validated, including a browser oracle; isolated memory component passes Node differential tests. Coupled stateful/CPU execution kernel and throughput comparison pending. |
+| Whole-kernel Wasm evaluation | Typed-net/combinational/memory components and coupled net/memory fixed-point prototype validated in Node and Chromium. Controller/CPU/device clock kernel and throughput comparison pending. |
 | Worker boundary | Owned-workload Chromium worker, bounded chunks, heartbeat and cancellation verified; not production GUI integration. |
 | End-to-end capacity | **Failed/unmet**: latest active browser workloads sustain 10,903–26,218 modeled periods/s versus 9,545,454 required. Calibrated full DOS/browser timing remains open. |
 
@@ -256,3 +256,10 @@ decision rather than silently redefining success.
   hashes and passes cancellation/profile cleanup. Build/browser receipts are
   linked in the kernel evaluation document. The combined checkpoint passes
   **493 tests, four suites, zero failures/skips** with the module enabled.
+- Coupled native memory/net fixed-point prototype passes eight new tests;
+  all component and registered memory-model tests pass together (41 total,
+  four suites, zero failures/skips). Actual edited wiring, byte lanes, peer
+  fault atomicity and per-pass convergence/recovery remain observable. There
+  is still no native controller/CPU/device clock runner or capacity claim.
+  The broader checkpoint passes **501 tests, four suites, zero failures/skips**;
+  Chromium also passes the coupled oracle and earlier workload/component checks.
