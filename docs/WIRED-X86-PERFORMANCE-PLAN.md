@@ -5,6 +5,24 @@ it iteratively. This is not a completed-performance claim. Keep the reference
 interpreter and valid experiments; no production pin change, merge, deployment,
 guest-media hosting, or automatic backend replacement is authorized here.
 
+## Current status — not complete
+
+| Gate | Evidence/status |
+| --- | --- |
+| Baseline and wired DOS boot | Reference and compiled/scheduled boots accepted at `A>`; exact source receipts preserved. Newer packed/layout variants still need their own full boot receipt. |
+| Oracles | Full recorded real-mode SST286 run and 125 pinned PCjs comparisons; broader device/interrupt/protected-mode external comparisons remain open. |
+| Compiled connectivity | Implemented and gated; four-state, edited-wire and fault comparisons pass. |
+| Bindings/scheduling | Memory and selected peripherals scheduled; packed drives and cached layouts measured. Not a complete whole-board event kernel. |
+| Bus/board specialization | Partial; actual-net decoder/vector binding exists, complete specialized execution kernel does not. |
+| Whole-kernel Wasm evaluation | Profile and evaluation contract recorded; isolated typed-net/native-resolver prototype started. Full execution kernel and comparison pending. |
+| Worker boundary | Owned-workload Chromium worker, bounded chunks, heartbeat and cancellation verified; not production GUI integration. |
+| End-to-end capacity | **Failed/unmet**: latest active browser workloads sustain 10,903–26,218 modeled periods/s versus 9,545,454 required. Calibrated full DOS/browser timing remains open. |
+
+Latest runtime: `14cd743`; [Node receipt](HARRIS-DRIVE-LAYOUTS-BENCH.json),
+[browser receipt](HARRIS-BROWSER-LAYOUTS-BENCH.json). No defaults, application
+pins, merge or deployment changed. These are reproducible incremental results,
+not a claim that all eight gates or the user's requested final outcome are done.
+
 ## Measurements versus targets
 
 The [startup receipt](HARRIS-WIRED-STARTUP-BENCH.json) measures 10,000 modeled
@@ -30,8 +48,9 @@ The Harris [phase contract](HARRIS-80C286-BUS-CONTRACT.md) models one complete
 system CLK period per board step, with two periods per processor/bus state.
 For a 4,772,727 Hz processor-equivalent target, the capacity gate is therefore
 **9,545,454 modeled system periods per wall second**, not 4.77 million retired
-instructions. Current startup capacity is roughly 1,330 periods/s: about a
-7,200-fold gap. These ratios measure simulation capacity; the existing ideal
+instructions. At the first startup checkpoint capacity was roughly 1,330
+periods/s: about a 7,200-fold gap. Later measurements are in the ledger below.
+These ratios measure simulation capacity; the existing ideal
 phase model does not certify complete silicon instruction/prefetch/AC timing.
 
 ## Non-negotiable execution contract
@@ -198,3 +217,25 @@ decision rather than silently redefining success.
   All five owned workloads still match state/memory hashes. Per-period trace,
   READY, peer-bank fault and DMA validation precede repeated measurements.
   The old uncached path and all default gates remain unchanged.
+- Drive-layout [three-round Node receipt](HARRIS-DRIVE-LAYOUTS-BENCH.json), runtime
+  `14cd743`: all 40 executions match. Relative to packed alone, median ratios
+  are 1.18x memory, 1.12x I/O, 1.13x DMA, 1.13x interrupt and 1.07x idle. Active
+  throughput is 6,018–10,416 modeled periods/s. The capacity gate remains open.
+- Drive-layout [browser repetition](HARRIS-BROWSER-LAYOUTS-BENCH.json), sources
+  verified at `14cd743`: all 40 state/memory comparisons and actual cancellation
+  pass. Active ratios versus packed alone are 1.04–1.19x; throughput is
+  10,903–26,218 modeled periods/s, still about 364–875 times short. No whole-kernel
+  Wasm, calibrated full DOS/browser performance or completed capacity claim.
+- Combined wired/x86, memory-model and peripheral regression at `14cd743`:
+  **471 tests pass, 4 suites, zero skips/failures**. This is the explicitly
+  selected combined command, not the repository-wide suite. The pinned PCjs
+  oracle was rerun: 125/125 pass. CPU hash still matches the recorded complete
+  SST286 run (1,477,997 passed, three upstream revocations); vectors were not
+  rerun because the CPU source is unchanged.
+- Native kernel prerequisite: owned freestanding four-state resolver and typed
+  actual-connectivity image built and passed five explicit tests, no skips
+  when the local module is supplied. Native malformed-input checks preserve
+  output atomicity; populated-board period snapshots match both JS backends.
+  This is an isolated resolver, not a selectable Wasm board or a throughput
+  result. [Build/prototype details](HARRIS-KERNEL-EVALUATION.md). Full kernel
+  implementation and the unchanged capacity gate remain open.

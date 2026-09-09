@@ -54,3 +54,11 @@ not isolate the packed-drive change. Active throughput is 8,257–18,156 modeled
 periods/s, still roughly 526–1,156 times below the capacity target. Browser and
 Node runs used different V8 versions and host-load intervals; these receipts
 do not attribute their difference to a worker or to a single engine feature.
+
+The subsequent [drive-layout browser receipt](HARRIS-BROWSER-LAYOUTS-BENCH.json)
+uses `14cd743`, comparing packed against layouts directly. One warmup plus
+three rounds all match the same Node state/memory hashes. Median ratios are
+1.16x memory, 1.04x I/O, 1.06x DMA, 1.19x interrupt and 1.12x idle. Cancellation
+stops after 96 complete periods. Main-thread heartbeat p95 is 17.8 ms, maximum
+38.4 ms. Active capacity is 10,903–26,218 modeled periods/s; neither the idle
+result nor the responsive heartbeat meets the real-time-capacity gate.

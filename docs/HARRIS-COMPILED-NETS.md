@@ -208,4 +208,12 @@ CHROME_BIN=/absolute/path/to/chrome HARRIS_BROWSER_REPORT=/new/receipt.json node
 Focused tests cover changing/case-aliased layouts, invalid levels/pins, cold/warm
 reentrant getters, every settled net and bus trace through odd writes/READY,
 peer-bank atomic failure and owned workload state/memory agreement. Repeated
-performance and a full DOS receipt for this new gate remain pending.
+Node performance is now [recorded at `14cd743`](HARRIS-DRIVE-LAYOUTS-BENCH.json):
+one warmup and three rounds, all 40 states match. Ratios versus packed alone
+are 1.18x memory, 1.12x I/O, 1.13x DMA, 1.13x interrupt and 1.07x idle.
+The per-period DMA suite passes with the new gate too. The
+[browser repetition](HARRIS-BROWSER-LAYOUTS-BENCH.json), also source-verified at
+`14cd743`, preserves all 40 state hashes and complete-period cancellation.
+Ratios versus packed are 1.16x memory, 1.04x I/O, 1.06x DMA, 1.19x interrupt,
+1.12x idle. Active throughput is 10,903–26,218 modeled periods/s, still far
+below target. A full DOS receipt for this new gate remains pending.

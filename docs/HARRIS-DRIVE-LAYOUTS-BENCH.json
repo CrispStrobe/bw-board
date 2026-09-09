@@ -1,0 +1,464 @@
+{
+  "benchmark": "owned-wired-full-board",
+  "node": "v20.20.2",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCPUs": 4
+  },
+  "revision": "14cd7435f60a08eeeb4bd228a6e3d74245c14d2c",
+  "sourceHashes": {
+    "bench/harris-owned-workloads.mjs": "0d16a2b487a31feccbae8de4d8ef5f08ff4fdedc42592667721f0b86f0c2ab94",
+    "scripts/lib/harris-owned-workloads.mjs": "3a9131d8c7554175057dd7ea0069d85e6a4cdd7634e4a9f5c190d7fdfc557e88",
+    "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+    "src/experimental/harris-80c286-memory-board.js": "24487a70a1daace9166977c331081ee872a0afc3082a665cda77101d3777421e",
+    "src/experimental/harris-80c286-bus.js": "987832faf0b66548dbfce7062b18a9a2abbac0d0ae0ce7fea2976a3416ecf386",
+    "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+    "src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "src/experimental/harris-boot-rom.js": "ecbee5bc5556257acaae231e2b2d153a9a1d04acde67d98342374dc6c2cbd98c",
+    "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "src/experimental/compiled-digital-circuit.js": "69a693b1340ea93240c1caf402665573f6651be0e34fef408bf3a1f42b65a03e",
+    "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+    "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "src/experimental/harris-8254-adapter.js": "eb1643b2be68f21f0e9c319d03a74e305383214b983d720d5b77718890e7f293",
+    "src/experimental/harris-fdc-adapter.js": "b19260367dcb2e9a737ec68fb639a6fb2491c4bfb1c2a93e4881019e1e2a2fe8",
+    "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "src/experimental/harris-keyboard-adapter.js": "acccc5ac0a78c4fe5fada61ee0204f606c7bd2cc7feaa126ac6d2d8fa4475e12",
+    "src/experimental/harris-memory-decoder.js": "19c7892261781d680856deac58384503a4fdd7291943f3692e8bde91d0e2d9ad",
+    "src/experimental/compiled-device-scheduler.js": "b0674f709446a3e1b42f22d2712988a25cdd5e3e4239c841b7ea00d2f6dc66f3",
+    "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+    "src/devices.js": "396ffede2fa30fbf39a16cae97b747d16ee099f7665e8094dab939b48a681151",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874"
+  },
+  "rounds": 3,
+  "warmupRounds": 1,
+  "configurations": {
+    "packed": {
+      "netBackend": "compiled",
+      "memoryScheduling": true,
+      "deviceScheduling": true,
+      "packedBus": true
+    },
+    "layouts": {
+      "netBackend": "compiled",
+      "memoryScheduling": true,
+      "deviceScheduling": true,
+      "packedBus": true,
+      "driveLayouts": true
+    }
+  },
+  "busTraceEnabled": false,
+  "cpuHistoryEnabled": true,
+  "initializationIncluded": true,
+  "constructionIncluded": false,
+  "notes": [
+    "Shared-host scheduling uncontrolled.",
+    "Capacity denominator is 9545454 system periods/s, not certified complete CPU/prefetch timing.",
+    "Owned synthetic sector and assembly only; no DOS boot or browser claim.",
+    "Idle is reported separately and never substituted for useful CPU/memory, I/O, DMA or interrupt work."
+  ],
+  "summaries": [
+    {
+      "name": "memory",
+      "modes": {
+        "packed": {
+          "medianMS": 6424.922760000001,
+          "minMS": 5460.869596999997,
+          "maxMS": 6470.063854,
+          "periodsPerSecond": 5113.213220947732,
+          "xtCapacityFactor": 0.0005356699870899522
+        },
+        "layouts": {
+          "medianMS": 5459.076099000005,
+          "minMS": 4917.2362200000025,
+          "maxMS": 5517.995209000001,
+          "periodsPerSecond": 6017.868116185051,
+          "xtCapacityFactor": 0.0006304433624828165
+        }
+      }
+    },
+    {
+      "name": "io",
+      "modes": {
+        "packed": {
+          "medianMS": 1206.389094000002,
+          "minMS": 1061.5157749999998,
+          "maxMS": 1221.2941859999992,
+          "periodsPerSecond": 5610.130291844291,
+          "xtCapacityFactor": 0.0005877279689205239
+        },
+        "layouts": {
+          "medianMS": 1077.5365640000018,
+          "minMS": 1011.1939149999962,
+          "maxMS": 1167.6858349999966,
+          "periodsPerSecond": 6280.9933566207865,
+          "xtCapacityFactor": 0.00065800886543697
+        }
+      }
+    },
+    {
+      "name": "dma",
+      "modes": {
+        "packed": {
+          "medianMS": 1030.003902000004,
+          "minMS": 962.5896140000041,
+          "maxMS": 1105.897186000002,
+          "periodsPerSecond": 5543.668319035142,
+          "xtCapacityFactor": 0.0005807652856569359
+        },
+        "layouts": {
+          "medianMS": 910.0607549999986,
+          "minMS": 819.3004849999998,
+          "maxMS": 997.1514360000001,
+          "periodsPerSecond": 6274.306378588986,
+          "xtCapacityFactor": 0.0006573083248412266
+        }
+      }
+    },
+    {
+      "name": "interrupt",
+      "modes": {
+        "packed": {
+          "medianMS": 364.6355639999965,
+          "minMS": 321.2016720000029,
+          "maxMS": 439.8953630000033,
+          "periodsPerSecond": 9181.770322326629,
+          "xtCapacityFactor": 0.0009618998030189689
+        },
+        "layouts": {
+          "medianMS": 321.4374850000022,
+          "minMS": 309.9960290000017,
+          "maxMS": 454.6332410000032,
+          "periodsPerSecond": 10415.71116075643,
+          "xtCapacityFactor": 0.0010911698030032337
+        }
+      }
+    },
+    {
+      "name": "idle",
+      "modes": {
+        "packed": {
+          "medianMS": 912.8148729999957,
+          "minMS": 881.1262659999993,
+          "maxMS": 1072.9867249999952,
+          "periodsPerSecond": 10955.12386551577,
+          "xtCapacityFactor": 0.0011476797086357308
+        },
+        "layouts": {
+          "medianMS": 849.5710709999985,
+          "minMS": 767.5036229999969,
+          "maxMS": 853.2956820000036,
+          "periodsPerSecond": 11770.645613237952,
+          "xtCapacityFactor": 0.0012331153251838992
+        }
+      }
+    }
+  ],
+  "samples": [
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "packed",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 6470.063854,
+      "periodsPerSecond": 5077.538760253478,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "layouts",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 4917.2362200000025,
+      "periodsPerSecond": 6680.9887770655005,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "packed",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1206.389094000002,
+      "periodsPerSecond": 5610.130291844291,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "layouts",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1077.5365640000018,
+      "periodsPerSecond": 6280.9933566207865,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "packed",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 962.5896140000041,
+      "periodsPerSecond": 5931.915238802873,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "layouts",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 910.0607549999986,
+      "periodsPerSecond": 6274.306378588986,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "packed",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 439.8953630000033,
+      "periodsPerSecond": 7610.900867804727,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "layouts",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 454.6332410000032,
+      "periodsPerSecond": 7364.177754877313,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "packed",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 912.8148729999957,
+      "periodsPerSecond": 10955.12386551577,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "layouts",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 849.5710709999985,
+      "periodsPerSecond": 11770.645613237952,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "layouts",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 5459.076099000005,
+      "periodsPerSecond": 6017.868116185051,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "packed",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 5460.869596999997,
+      "periodsPerSecond": 6015.8916847323535,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "layouts",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1167.6858349999966,
+      "periodsPerSecond": 5796.079559361975,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "packed",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1061.5157749999998,
+      "periodsPerSecond": 6375.788433290123,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "layouts",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 819.3004849999998,
+      "periodsPerSecond": 6969.359965654117,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "packed",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1030.003902000004,
+      "periodsPerSecond": 5543.668319035142,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "layouts",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 309.9960290000017,
+      "periodsPerSecond": 10800.13834628824,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "packed",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 321.2016720000029,
+      "periodsPerSecond": 10423.357945658421,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "layouts",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 853.2956820000036,
+      "periodsPerSecond": 11719.267085193052,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "packed",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 881.1262659999993,
+      "periodsPerSecond": 11349.11122942283,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "packed",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 6424.922760000001,
+      "periodsPerSecond": 5113.213220947732,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "layouts",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 5517.995209000001,
+      "periodsPerSecond": 5953.611548342321,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "packed",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1221.2941859999992,
+      "periodsPerSecond": 5541.662342769889,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "layouts",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 1011.1939149999962,
+      "periodsPerSecond": 6693.078250970315,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "packed",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1105.897186000002,
+      "periodsPerSecond": 5163.22861861409,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "layouts",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 997.1514360000001,
+      "periodsPerSecond": 5726.311765548116,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "packed",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 364.6355639999965,
+      "periodsPerSecond": 9181.770322326629,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "layouts",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 321.4374850000022,
+      "periodsPerSecond": 10415.71116075643,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "packed",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 1072.9867249999952,
+      "periodsPerSecond": 9319.779795038978,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "layouts",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 767.5036229999969,
+      "periodsPerSecond": 13029.254456040582,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    }
+  ]
+}

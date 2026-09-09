@@ -80,3 +80,44 @@ test invalid levels/pins, partial updates, four-state contention and complete
 owned workload states. Measure against packed, not against the old reference,
 so this iteration's contribution is visible. It still cannot alone close the
 capacity gap; the whole-kernel gates above remain pending.
+
+The first native-kernel component will be an owned freestanding four-state net
+resolver and a typed connectivity image derived from an already validated
+circuit. This deliberately does not claim to port the CPU, phase controller,
+memory or peripherals. It is a serialization/resolution correctness gate for
+the eventual whole loop. Do not install it as a per-period JS/Wasm replacement
+or use its isolated rate as wired emulator throughput. Keep build products in
+an explicit temporary build directory until there is an admitted execution
+kernel; no production Wasm asset or backend default changes.
+
+## Native resolver prototype gate
+
+Implemented `captureWiredNetImage`, an isolated native wrapper and owned C
+resolver. The image captures current driver levels and actual net membership;
+it does **not** settle the circuit or promise a resumable device/CPU snapshot.
+The wrapper checks dimensions and unique/consistent membership. C validates
+offsets, indices and every four-state code before writing any output. Tests
+include direct sentinel checks for late native validation failures.
+
+Build in an existing empty temporary directory with Clang and a WebAssembly
+linker (the linker's executable name must select its Wasm personality):
+
+```sh
+WASM_LD=/absolute/path/to/wasm-ld node scripts/build-wired-net-kernel.mjs /explicit/build/directory
+HARRIS_NET_WASM=/explicit/build/directory/wired-net-kernel.wasm node --test test/harris-native-net-kernel.test.mjs
+```
+
+The build refuses existing outputs and writes a source/compiler/binary hash
+manifest ([recorded build](HARRIS-NATIVE-NET-KERNEL-BUILD.json)). The local run
+used Clang 18.1.3 and the existing Rust LLD via a
+temporary `wasm-ld` symlink; invoking its generic `rust-lld` name initially
+failed before linking. No package installation or new runtime library was
+needed. The resulting module has no imports/WASI/host callbacks.
+
+All five explicit tests pass with the module supplied: typed image independence,
+four-state/edited-wire agreement against reference and compiled backends,
+malformed-image rejection, native output atomicity, and resolution agreement
+through populated-board memory transaction periods. Without `HARRIS_NET_WASM`,
+the four native tests are explicitly skipped, not passed; the image test runs.
+No isolated performance number is promoted to emulator throughput. Porting
+combinational evaluation, stateful devices, CPU and chunk execution remains open.
