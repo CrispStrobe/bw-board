@@ -560,9 +560,23 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
-| wired-286-fdc-control | Codex | 2026-09-09 | Gated FDC control/IRQ6 bridge and owned tests; refuse sector/DMA paths. No app pins/defaults, deploy or media. |
 
 ## DONE
+
+286 FDC control/IRQ6 bridge: source `6b18924` on `feat/x86-backend-lab`,
+2026-09-09. Explicit optional DOR/MSR/FIFO byte-lane wiring and FDC IRQ6 net
+to PIC; private unchanged UPD765 core admits only control commands. Data/DMA/
+PIO commands refuse before core admission, no media API or transfer callback.
+Owned guest programs PIC, pulses DOR, receives vector 0Eh via two physical
+INTA pulses, sends EOI/IRET, drains four reset replies into wired RAM, then
+SPECIFY/HLT. Tests cover gates, port conflicts, control replies, reset, READY,
+missing wires and refusal boundaries. Ten FDC tests plus one probe CLI test;
+targeted suite including unchanged FDC core 431/431 pass, zero skips. Optional
+--fdc-mode control probe metadata/provenance added; default none. No new long
+POST run or DOS boot claim. Next: wired DMA channel 2, bus ownership and TC,
+owned sector transfers before admitting data commands; larger normal POST
+probe separately. Details HARRIS-286-FDC.md. CPU/SST hashes unchanged; no new
+full vectors/CI/browser, app pins/defaults, merge/deploy or media. Claim released.
 
 286 static net-layout resolver: source `e6fbc0d`, extended probe receipt/docs
 `aa95abe`, on `feat/x86-backend-lab`, 2026-09-08. Precompute fixed membership,
