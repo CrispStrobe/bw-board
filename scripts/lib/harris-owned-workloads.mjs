@@ -1,5 +1,4 @@
 /** Owned, media-free programs for full-board performance/correctness workloads. */
-import assert from 'node:assert/strict';
 import {assembleRaw} from '../../src/i8086-asm.js';
 import {createHarrisBootROM} from '../../src/experimental/harris-boot-rom.js';
 import {createHarrisMemoryBoard} from '../../src/experimental/harris-80c286-memory-board.js';
@@ -11,9 +10,13 @@ import {HarrisDMAAdapter} from '../../src/experimental/harris-dma-adapter.js';
 import {HarrisKeyboardAdapter} from '../../src/experimental/harris-keyboard-adapter.js';
 import {registerBusMemory} from '../../src/devices/bus-memory.js';
 
+// Keep the exact same workload verifier usable inside an ordinary browser worker.
+const assert={ok(value){if(!value)throw new Error('owned workload expectation failed');},
+    equal(actual,expected){if(actual!==expected)throw new Error(`owned workload: expected ${expected}, got ${actual}`);}};
+
 export const ownedWorkloads=Object.freeze(['memory','io','dma','interrupt','idle']);
 const out=(port,values)=>`MOV DX,${port}\n`+values.map(v=>`MOV AL,${v}\nOUT DX,AL`).join('\n')+'\n';
-export function createOwnedWorkload(name,{netBackend='reference',memoryScheduling=false,memoryWriteJournal=false,decoderSpecialization=false,deviceScheduling=false,busTraceEnabled=false}={}) {
+export function createOwnedWorkload(name,{netBackend='reference',memoryScheduling=false,memoryWriteJournal=false,decoderSpecialization=false,deviceScheduling=false,packedBus=false,busTraceEnabled=false}={}) {
     if(!ownedWorkloads.includes(name))throw new RangeError('owned workload');
     registerBusMemory();
     const pic=new Harris8259Adapter({enabled:true}),timer=new Harris8254Adapter({enabled:true});
@@ -64,7 +67,7 @@ IRET`;
     const rom=createHarrisBootROM();rom.fill(255,0x100,0xfff0);rom.set(assembleRaw('CLI\n'+program,0x100),0x100);
     const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,ramBytes:640*1024,textRAM:true,
         intrEnabled:true,ioEnabled:true,holdEnabled:true,interruptDevice:pic,timerDevice:timer,timerClockHalfPeriod:4,
-        fdcDevice:fdc,dmaDevice:dma,keyboardDevice:keyboard,netBackend,memoryScheduling,memoryWriteJournal,decoderSpecialization,deviceScheduling,busTraceEnabled});
+        fdcDevice:fdc,dmaDevice:dma,keyboardDevice:keyboard,netBackend,memoryScheduling,memoryWriteJournal,decoderSpecialization,deviceScheduling,packedBus,busTraceEnabled});
     const cpu=new HarrisBootCPU({enabled:true,board});
     const finished=clocks=>cpu.status==='halted'&&(name==='interrupt'?cpu.regs.bx===3&&!(cpu.flags&0x200):name==='idle'?clocks>=10000:true);
     const verify=()=>{

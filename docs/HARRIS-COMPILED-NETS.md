@@ -156,3 +156,24 @@ The probe flag is `HARRIS_DEVICE_SCHEDULING=on`. The benchmark's `events` mode
 uses memory + device scheduling, with decoder specialization and journal off.
 Set `HARRIS_BENCH_REPORT` to a new path to save the JSON receipt without relying
 on terminal scrollback; existing files are never overwritten.
+
+## Packed CPU drives
+
+`packedBus:true` (compiled only, default off) binds CPU address/data driver IDs
+once and applies numeric value/Z masks to those actual nets. It avoids creating
+24 address and 16 data properties on each period. The normal phase machine,
+settling, control pins, bus ownership and physical memory remain unchanged.
+Diagnostic output objects are materialized only when requested; tracing still
+records real period events. The original object-drive path remains selectable.
+
+The vector driver accepts four-state values, validates the complete masks before
+changing any driver, and retains named-net conflict reporting. Tests compare
+complete traces through odd writes, waits, HOLD, INTA, NMI and reset; exercise
+missing READY/write wires and shorted drivers; and compare DMA/BIOS execution
+and every owned workload's CPU/device state and mapped-memory hashes.
+
+The DOS probe accepts `HARRIS_PACKED_BUS=on`; the owned benchmark adds `packed`
+(events + packed bus, without decoder specialization or journal). This path has
+not yet earned a full DOS boot receipt. The source-pinned successful compiled
+DOS boot predates this change. Browser worker validation is described in
+[the worker benchmark note](HARRIS-WORKER-BENCH.md).

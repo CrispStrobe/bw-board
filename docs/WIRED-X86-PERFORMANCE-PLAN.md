@@ -168,3 +168,12 @@ decision rather than silently redefining success.
   memory scheduling alone. All 40 executions (including warmup) agree on
   reported state and mapped-memory hashes. Concurrent DOS/host noise applies;
   this remains far below the capacity gate.
+- Packed CPU drive iteration: default-off numeric address/data vectors bound to
+  actual net drivers, with legacy output/trace compatibility. Complete trace,
+  fault, DMA/BIOS and owned-state comparisons pass; repeated throughput pending.
+- Worker iteration: a portable complete-period chunk runner and fresh-profile
+  Chromium harness run all five owned workloads off the main thread. Smoke
+  comparisons match recorded Node state and all mapped-memory hashes; posted
+  cancellation stops at a complete period. This is a benchmark harness, not
+  application integration or a full DOS browser result. Repeated Node/browser
+  measurements and the capacity gate remain open.

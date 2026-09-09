@@ -124,8 +124,8 @@ test('a missing high-bank write-data pin cannot cause a partial low-bank write',
     assert.equal(b.inspectMemory('ram1').writes, 0);
 });
 
-for(const [memoryScheduling,memoryWriteJournal] of [[false,false],[true,false],[true,true]])test(`a late high-bank preflight fault cannot commit an already-previewed low-bank edge (scheduled=${memoryScheduling},journal=${memoryWriteJournal})`, () => {
-    const b = board({netBackend:memoryScheduling?'compiled':'reference',memoryScheduling,memoryWriteJournal,editWires: wires => wires.map(w => w.to === 'ram1' && w.toTerminal === 'vcc' ?
+for(const [memoryScheduling,memoryWriteJournal,packedBus=false] of [[false,false],[true,false],[true,true],[true,true,true]])test(`a late high-bank preflight fault cannot commit an already-previewed low-bank edge (scheduled=${memoryScheduling},journal=${memoryWriteJournal},packed=${packedBus})`, () => {
+    const b = board({netBackend:memoryScheduling?'compiled':'reference',memoryScheduling,memoryWriteJournal,packedBus,editWires: wires => wires.map(w => w.to === 'ram1' && w.toTerminal === 'vcc' ?
         {...w, fromTerminal: 'busy_n'} : w)});
     b.submit({kind: 'memory-write', address: 0x500, width: 2, value: 0x1234});
     for (let i = 0; i < 3; i++) b.clock();

@@ -173,6 +173,18 @@ export class CompiledDigitalCircuit {
         const lookup=pin=>{const info=bindings.get(String(pin).toLowerCase());if(!info)throw new Error(`unknown terminal ${keyOf(part,pin)}`);return info;};
         const bound=Object.freeze({read:pin=>decode[this.#publishedLevels[lookup(pin).net]],
             require:pin=>this.#require(lookup(pin)),drive:values=>this.#drive(part,bindings,values),
+            vectorDriver:pins=>{
+                if(!Array.isArray(pins)||pins.length>32)throw new RangeError('compiled vector width 0..32');
+                const drivers=Uint32Array.from(pins,pin=>{
+                    const info=lookup(pin);if(info.driver===undefined)throw new Error(`not an output ${info.key}`);return info.driver;
+                });
+                const max=2**pins.length-1;
+                return (value,zMask=0,xMask=0)=>{
+                    for(const v of [value,zMask,xMask])if(!Number.isInteger(v)||v<0||v>max)throw new RangeError('compiled vector value/mask');
+                    if(zMask&xMask)throw new RangeError('overlapping X/Z masks');
+                    for(let i=0;i<drivers.length;i++)this.#apply(drivers[i],zMask&(1<<i)?3:xMask&(1<<i)?2:(value>>>i)&1);
+                };
+            },
             watch:pins=>{
                 const nets=new Set(pins.map(pin=>lookup(pin).net)),watcher={changed:true};
                 for(const net of nets)this.#watchers[net].add(watcher);

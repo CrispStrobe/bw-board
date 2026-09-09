@@ -1,0 +1,82 @@
+/** Fresh-profile, loopback-only Chromium worker benchmark. No npm dependency. */
+import {createServer} from 'node:http';
+import {readFileSync,mkdtempSync,rmSync,realpathSync,writeFileSync} from 'node:fs';
+import {join,resolve,sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {tmpdir,cpus,platform,arch} from 'node:os';
+import {spawn,execFileSync} from 'node:child_process';
+import {createHash,randomUUID} from 'node:crypto';
+import assert from 'node:assert/strict';
+const root=realpathSync(fileURLToPath(new URL('..',import.meta.url)));
+const rounds=Number(process.argv[2]??3),workloads=(process.argv[3]??'memory,io,dma,interrupt,idle').split(',');
+if(!Number.isSafeInteger(rounds)||rounds<1||rounds>10||workloads.some(n=>!['memory','io','dma','interrupt','idle'].includes(n)))throw new RangeError('rounds/workloads');
+const chrome=process.env.CHROME_BIN;
+if(!chrome)throw new Error('Set CHROME_BIN to an existing local Chromium binary');
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const sourceHashes={'bench/harris-browser.mjs':hash(readFileSync(new URL(import.meta.url)))};
+const nodeReceiptBytes=readFileSync(join(root,'docs/HARRIS-OWNED-WORKLOADS-BENCH.json'));
+const nodeReceipt=JSON.parse(nodeReceiptBytes),expectedStateHashes=Object.fromEntries(nodeReceipt.samples.map(s=>[s.name,s.stateSHA256]));
+const config={nonce:randomUUID(),rounds,workloads,expectedStateHashes,modes:{reference:{},
+    packed:{netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true}}};
+let resolveReport,rejectReport;
+const done=new Promise((resolve,reject)=>{resolveReport=resolve;rejectReport=reject;});
+const server=createServer((req,res)=>{
+    if(req.url==='/config'&&req.method==='GET'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(config));return;}
+    if(req.url==='/result'&&req.method==='POST') {
+        let body='',oversize=false;
+        req.on('data',chunk=>{body+=chunk;if(body.length>4*1024*1024){oversize=true;req.destroy();rejectReport(new Error('oversized browser receipt'));}});
+        req.on('end',()=>{if(oversize)return;try{const report=JSON.parse(body);assert.equal(report.nonce,config.nonce);res.end('ok');resolveReport(report);}catch(error){res.statusCode=400;res.end('invalid receipt');rejectReport(error);}});
+        return;
+    }
+    try {
+        const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+        const allowed=pathname==='/bench/harris-browser.html'||pathname==='/bench/harris-browser-worker.mjs'||
+            pathname==='/scripts/lib/harris-owned-workloads.mjs'||pathname.startsWith('/src/')&&pathname.endsWith('.js');
+        if(req.method!=='GET'||!allowed)throw new Error('not served');
+        const path=realpathSync(resolve(root,'.'+pathname));if(!path.startsWith(root+sep))throw new Error('outside source root');
+        const bytes=readFileSync(path),key=path.slice(root.length+1),digest=hash(bytes);
+        if(sourceHashes[key]&&sourceHashes[key]!==digest)throw new Error('source changed during browser run');
+        sourceHashes[key]=digest;res.setHeader('Cache-Control','no-store');
+        res.setHeader('Content-Type',pathname.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8');res.end(bytes);
+    }catch{res.statusCode=404;res.end('not served');}
+});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const profile=mkdtempSync(join(tmpdir(),'harris-browser-'));
+let child,timeout,stderr='';
+try {
+    const browserVersion=execFileSync(chrome,['--version'],{encoding:'utf8'}).trim();
+    child=spawn(chrome,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run',
+        '--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync',
+        `--user-data-dir=${profile}`,`http://127.0.0.1:${server.address().port}/bench/harris-browser.html`],{stdio:['ignore','ignore','pipe']});
+    child.stderr.on('data',bytes=>{stderr=(stderr+bytes.toString()).slice(-16000);});
+    child.on('error',rejectReport);child.on('exit',code=>rejectReport(new Error(`Chromium exited before receipt (${code}): ${stderr}`)));
+    timeout=setTimeout(()=>rejectReport(new Error(`browser benchmark timeout: ${stderr}`)),600000);
+    const report=await done;
+    assert.equal(report.accepted,true,report.error);assert.equal(report.samples.length,rounds*workloads.length*Object.keys(config.modes).length);
+    for(const sample of report.samples)assert.equal(sample.stateSHA256,expectedStateHashes[sample.name]);
+    for(const [path,expected] of Object.entries(sourceHashes))assert.equal(hash(readFileSync(join(root,path))),expected,`${path} changed during run`);
+    const median=values=>{const sorted=[...values].sort((a,b)=>a-b),i=Math.floor(sorted.length/2);return sorted.length%2?sorted[i]:(sorted[i-1]+sorted[i])/2;};
+    report.summaries=workloads.map(name=>({name,modes:Object.fromEntries(Object.keys(config.modes).map(mode=>{
+        const samples=report.samples.filter(s=>s.name===name&&s.mode===mode),times=samples.map(s=>s.elapsedMS),ms=median(times);
+        return [mode,{medianMS:ms,minMS:Math.min(...times),maxMS:Math.max(...times),periodsPerSecond:samples[0].clocks*1000/ms,
+            xtCapacityFactor:samples[0].clocks*1000/ms/9545454}];
+    }))}));
+    delete report.nonce;
+    Object.assign(report,{benchmark:'owned-wired-browser-worker',browserVersion,node:process.version,
+        host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length},sourceHashes,
+        nodeReference:{receipt:'HARRIS-OWNED-WORKLOADS-BENCH.json',sha256:hash(nodeReceiptBytes),revision:nodeReceipt.revision},
+        notes:['Fresh browser profile and loopback-only source server; no guest media.','Capacity factor is not complete silicon timing certification.',
+            'Worker heartbeat is observed responsiveness, not a hard frame deadline or an intrinsic throughput gain.','Shared host load uncontrolled.']});
+    const output=JSON.stringify(report,null,2);
+    if(process.env.HARRIS_BROWSER_REPORT)writeFileSync(process.env.HARRIS_BROWSER_REPORT,output+'\n',{flag:'wx'});
+    console.log(output);
+}finally {
+    clearTimeout(timeout);
+    if(child?.pid&&child.exitCode===null&&child.signalCode===null) {
+        const closed=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGTERM');
+        const force=setTimeout(()=>child.kill('SIGKILL'),2000);await closed;clearTimeout(force);
+    }
+    await new Promise(resolve=>server.close(resolve));
+    // This is only the fresh temporary profile created above, never a user profile.
+    rmSync(profile,{recursive:true,force:true});
+}

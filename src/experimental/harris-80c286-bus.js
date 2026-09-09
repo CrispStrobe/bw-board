@@ -21,7 +21,8 @@ const known = (read, pin) => {
 };
 
 export class Harris80C286Bus {
-    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, traceEnabled = true, nmiEnabled = false, intrEnabled = false, holdEnabled = false} = {}) {
+    #outputs; #packed = null; #heldPacked = {data:0,dataZ:65535};
+    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, traceEnabled = true, nmiEnabled = false, intrEnabled = false, holdEnabled = false, packedDrives = false} = {}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
         for (const v of [maxWaitStates, traceLimit]) if (!Number.isSafeInteger(v) || v < 1) throw new RangeError('limits');
         this.maxWaitStates = maxWaitStates;
@@ -35,10 +36,12 @@ export class Harris80C286Bus {
         this.traceLimit = traceLimit;
         if(typeof traceEnabled!=='boolean')throw new TypeError('traceEnabled');
         this.traceEnabled=traceEnabled;
+        if(typeof packedDrives!=='boolean')throw new TypeError('packedDrives');
+        this.packedDrives=packedDrives;
         this.capabilities = Object.freeze({cpu: false, experimental: true,
             fidelity: 'non-pipelined-system-clock-phases', clockEdges: false,
             systemClockStepping: true, snapshots: false, hold: holdEnabled, interrupts: false, nmi: nmiEnabled,
-            interruptAcknowledge: intrEnabled,
+            interruptAcknowledge: intrEnabled, packedDrives,
             pipelinedAddress: false, protectedMode: false});
         this.state = 'RESET_REQUIRED';
         this.phase = 1;
@@ -58,6 +61,17 @@ export class Harris80C286Bus {
 
     part(id = 'cpu') { return {id, pins: [...INPUTS, ...OUTPUTS], outputs: [...OUTPUTS]}; }
 
+    get outputs() {
+        if(!this.#packed)return this.#outputs;
+        const p=this.#packed;
+        if(p.controls.hlda===1)return {...Object.fromEntries(OUTPUTS.map(pin=>[pin,'Z'])),hlda:1};
+        const data=bitDrives(D,p.data);
+        for(let i=0;i<16;i++)if(p.dataZ&(1<<i))data[D[i]]='Z';
+        const {lock_n,hlda,peack_n,...status}=p.controls;
+        return {...(p.addressZ?RELEASED_ADDRESS:bitDrives(A,p.address)),...status,...data,lock_n,hlda,peack_n};
+    }
+    set outputs(values) {this.#outputs=values;this.#packed=null;}
+
     submit(transaction) {
         if (this.faulted || this.open || this.pending || !['TI','TH'].includes(this.state)) {
             throw new CircuitFault('BUS_UNAVAILABLE', 'reset/init/pending clock or transaction');
@@ -73,7 +87,8 @@ export class Harris80C286Bus {
         this.trace.push(Object.freeze({clock: this.clock, ...event}));
     }
 
-    beginClock(read) {
+    beginClock(read, compact = false) {
+        if(compact&&!this.packedDrives)throw new TypeError('compact outputs require packedDrives');
         if (this.open) throw new CircuitFault('CLOCK_ORDER', 'endClock required');
         if (this.clock >= Number.MAX_SAFE_INTEGER) throw new RangeError('clock overflow');
         try {
@@ -135,28 +150,37 @@ export class Harris80C286Bus {
                 this.control = {bhe_n: t.bhe_n, s1_n: t.s1_n, s0_n: t.s0_n,
                     cod_inta_n: t.cod_inta_n, m_io: t.m_io};
             }
-            let data = this.writeHold ? this.heldData : releaseData();
+            let data = this.packedDrives ? null : this.writeHold ? this.heldData : releaseData();
+            let dataBits=this.writeHold?this.#heldPacked.data:0,dataZ=this.writeHold?this.#heldPacked.dataZ:65535;
             const transfer = this.pending?.transfers[this.pending.index];
             if (transfer?.kind.endsWith('write') && (this.state === 'TC' || this.state === 'TS' && this.phase === 2)) {
-                data = bitDrives(D, transfer.data);
+                if(this.packedDrives){dataBits=transfer.data;dataZ=(transfer.a0===0?0:255)|(transfer.bhe_n===0?0:65280);}
+                else data = bitDrives(D, transfer.data);
                 // Inactive lanes are not used; represent them as high-Z in this
                 // subset, not a claim about the silicon's unused-byte values.
-                for (let i = 0; i < 16; i++) if (i < 8 ? transfer.a0 !== 0 : transfer.bhe_n !== 0) data[D[i]] = 'Z';
+                if(!this.packedDrives)for (let i = 0; i < 16; i++) if (i < 8 ? transfer.a0 !== 0 : transfer.bhe_n !== 0) data[D[i]] = 'Z';
             }
             this.period = {state: this.state, phase: this.phase, held: this.writeHold > 0};
             const status = this.state === 'TS' ? this.control : {...this.control, s1_n: 1, s0_n: 1};
             const ack = this.pending?.kind === 'interrupt-acknowledge';
             const floatingAddress = ack && (this.pending.index === 0 || this.pending.waits === 0);
-            const addressDrives = floatingAddress ? RELEASED_ADDRESS : bitDrives(A,this.address);
             // INTA LOCK is active in TS and the first TC of EACH cycle,
             // independent of external wait count. An explicitly locked operand
             // keeps ownership across all of its physical cycles.
             const lock_n = Number(!(this.pending?.locked || ack && (this.state === 'TS' || this.state === 'TC' && this.pending.waits === 0)));
-            this.outputs = {...addressDrives, ...status, ...data, lock_n, hlda: 0, peack_n: 1};
-            if (floatingAddress) this.outputs.bhe_n = 'Z';
-            if (this.state === 'TH') this.outputs = {...Object.fromEntries(OUTPUTS.map(p=>[p,'Z'])),hlda:1};
+            if(this.packedDrives) {
+                const held=this.state==='TH';
+                const controls=held?{bhe_n:'Z',s1_n:'Z',s0_n:'Z',cod_inta_n:'Z',m_io:'Z',lock_n:'Z',hlda:1,peack_n:'Z'}:
+                    {...status,bhe_n:floatingAddress?'Z':status.bhe_n,lock_n,hlda:0,peack_n:1};
+                this.#packed=Object.freeze({address:this.address,addressZ:floatingAddress||held,data:dataBits,dataZ:held?65535:dataZ,controls:Object.freeze(controls)});
+            } else {
+                const addressDrives = floatingAddress ? RELEASED_ADDRESS : bitDrives(A,this.address);
+                this.outputs = {...addressDrives, ...status, ...data, lock_n, hlda: 0, peack_n: 1};
+                if (floatingAddress) this.outputs.bhe_n = 'Z';
+                if (this.state === 'TH') this.outputs = {...Object.fromEntries(OUTPUTS.map(p=>[p,'Z'])),hlda:1};
+            }
             this.open = true;
-            return {...this.outputs};
+            return compact?this.#packed:{...this.outputs};
         } catch (error) { this.faulted = true; throw error; }
     }
 
@@ -201,7 +225,8 @@ export class Harris80C286Bus {
                     this.pending.bytes.push(...bytes);
                     if (t.kind.endsWith('write')) {
                         this.writeHold = 1;
-                        this.heldData = Object.fromEntries(D.map(p => [p, this.outputs[p]]));
+                        if(this.packedDrives)this.#heldPacked=this.#packed;
+                        else this.heldData = Object.fromEntries(D.map(p => [p, this.outputs[p]]));
                     }
                     if (completion.last) {
                         completion = Object.freeze({...completion,
@@ -214,10 +239,10 @@ export class Harris80C286Bus {
                     this.state = 'TI';
                 }
             }
-            if(this.traceEnabled)this._record({state, phase, address: this.address,
-                s1_n: this.outputs.s1_n, s0_n: this.outputs.s0_n,
-                bhe_n: this.outputs.bhe_n, readySample,
-                drives: Object.freeze({...this.outputs}), completion});
+            if(this.traceEnabled){const outputs=this.outputs;this._record({state, phase, address: this.address,
+                s1_n: outputs.s1_n, s0_n: outputs.s0_n,
+                bhe_n: outputs.bhe_n, readySample,
+                drives: Object.freeze({...outputs}), completion});}
             if (state !== 'RESET') this.phase = this.phase === 1 ? 2 : 1;
             return completion;
         } catch (error) {
