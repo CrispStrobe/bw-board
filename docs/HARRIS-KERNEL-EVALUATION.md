@@ -367,3 +367,20 @@ capacity. Next, profile native schedule execution separately from preparation
 and JS diagnostics. In particular, test the cost of repeated invariant graph
 validation and whole-net scans before choosing the next optimization. Neither
 Wasm alone nor removing host calls has demonstrated the required capacity.
+
+The [native schedule profile](HARRIS-NATIVE-SCHEDULE-PROFILE.json), pinned to
+`061465b`, attributes 451 of 623 schedule-stack samples (72.4%) to `settle_owned`.
+Two JS upload frames account for 75 samples (12.0%). Inlining prevents treating
+the first figure as validation alone: it also includes resolution/evaluation.
+The filter includes warmup and measured schedule calls, excludes setup/other
+modes, and cannot attribute GC samples lacking schedule ancestry. This is one
+sampled profile, not a repeated timing result.
+
+Next measured experiment: preserve the fully checked native entry, but add an
+explicitly gated private-context admission path that validates immutable graph
+tables once. Runtime input codes must still be validated at host/schedule
+boundaries, and every native writer must preserve four-state codes. No caller
+may access or mutate the admitted arena through the returned wrapper. Refuse
+unadmitted fast execution, compare all fault/state/net oracles, and measure
+against the fully checked path before selecting it. Dirty-net/event work may
+still be needed; the profile does not prove which settling substep dominates.
