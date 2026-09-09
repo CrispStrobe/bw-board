@@ -130,3 +130,13 @@ decision rather than silently redefining success.
   memory model, copy fallback retained; **554 tests pass, 4 suites, zero skips**,
   including DMA/BIOS and analog memory regressions. The earlier scheduling-only
   count was 546 tests plus 4 suite markers, not 550 tests; corrected above.
+- Repeated owned workload receipt at `03946c7`: one warmup plus three measured
+  rounds across reference/compiled/scheduled/journal modes, all 80 executions
+  agree on reported state and every mapped memory hash
+  ([receipt](HARRIS-OWNED-WORKLOADS-BENCH.json)). Scheduled/reference speedups are
+  1.58x memory, 1.83x I/O, 1.77x DMA, 1.70x interrupt and 1.56x idle. Scheduled
+  active-workload capacity is only 2,855–4,332 system periods/s. Journal gains
+  are not consistent overall on this noisy VM; keep it gated. Capacity gate
+  remains thousands of times away. No DOS or browser claim from this harness.
+- Expanded PCjs probes: 125/125 pass, with explicit undefined-flag masks and
+  replayable first-difference inputs. Broader oracle scope remains pending.

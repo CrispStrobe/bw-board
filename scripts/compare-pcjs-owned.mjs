@@ -50,11 +50,13 @@ for(const model of ['8086','80186','80286'])for(const probe of OWNED_ORACLE_PROB
     }
     results.push({model,referenceModel,probe:probe.name,status:diffs.length?'fail':'pass',flagsMask:probe.flagsMask,
         maskReason:probe.maskReason??'compare defined 16-bit status/control flags; exclude reserved bits',
+        ...(diffs.length?{reproducer:{bytes:probe.bytes,initial:probeInitial(probe)}}:{}),
         referenceMemorySHA256:hash(expectedMemory),actualMemorySHA256:hash(actual.memory),diffs});
     if(diffs.length)break;
 }
 if(git('rev-parse','HEAD')!==PIN||git('status','--porcelain'))throw new Error('PCjs provenance changed during comparison');
 const failed=results.some(r=>r.status==='fail');
+const planned=OWNED_ORACLE_PROBES.reduce((n,p)=>n+p.models.length,0);
 console.log(JSON.stringify({oracle:'PCjs',revision:PIN,node:process.version,localSourceHashes,scope:'owned single-instruction real-mode architectural probes; no timing/I/O/interrupt/protected-mode claim',
-    counts:{pass:results.filter(r=>r.status==='pass').length,fail:results.filter(r=>r.status==='fail').length},results},null,2));
+    counts:{planned,pass:results.filter(r=>r.status==='pass').length,fail:results.filter(r=>r.status==='fail').length,notRun:planned-results.length},results},null,2));
 process.exitCode=failed?1:0;

@@ -93,4 +93,11 @@ oracle adapters. Re-verify them or record a new pin before executing comparisons
   a physical motherboard. No I/O, interrupt, timing or protected-mode claim.
 - Pending: broader pinned external adapters, normalized fixtures, mismatch minimization,
   and execution receipts. Source inspection is not an oracle-pass claim.
+- Expanded architectural iteration: **125/125 pass, zero not-run**, same clean
+  PCjs pin ([receipt](PCJS-EXPANDED-ORACLE-REPORT.json)). Added multiply/divide,
+  one-bit shifts/rotates, far-pointer loads, sign extension, string directions
+  and flag transfers. Undefined arithmetic flags have explicit masks/reasons;
+  no timing/I/O/interrupt/protected-mode claim was added. Failure receipts now
+  embed initial registers/RAM/opcode bytes and count cases not run after a
+  first divergence. Automatic reduction remains pending.
 - Performance implementation: [wired performance plan](WIRED-X86-PERFORMANCE-PLAN.md).
