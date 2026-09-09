@@ -268,3 +268,11 @@ decision rather than silently redefining success.
   Chromium repeats 360 controller periods and 128 latch observations plus all
   prior oracles/workload hashes. Actual-net phase integration and the CPU/bus/
   peripheral clock kernel remain pending; this is not a capacity improvement.
+- Actual-net latched-memory clock prototype: six new tests, 1,532 begin/end
+  oracle comparisons and Chromium validation pass. The broader checkpoint is
+  **514 tests, four suites, zero failures/skips**. The small two-bank cost probe
+  measures native at about 2.40x compiled JS (31,063 versus 12,968 periods/s),
+  with substantial host noise. This excludes CPU/peripherals and still copies
+  diagnostic/input arrays per boundary; it is not a full-board RT result.
+  Next cost-isolation step is a bounded native fixture schedule, followed by
+  the still-pending CPU bus/device clock runner and real capacity comparison.

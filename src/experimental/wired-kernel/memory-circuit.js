@@ -4,8 +4,9 @@ import {CompiledDigitalCircuit} from '../compiled-digital-circuit.js';
 import {captureKernelEvaluatorImage,EVALUATOR_STRIDE} from './evaluator-image.js';
 import {validateWiredNetImage} from './net-resolver.js';
 import {MEMORY_BANK_PINS} from './memory-banks.js';
+import {preparePhaseCircuit} from './phase-circuit-image.js';
 const SIZE=32768,WORDS=9;
-export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes}={}) {
+export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
     const prototype=circuit instanceof CompiledDigitalCircuit?CompiledDigitalCircuit.prototype:DigitalCircuit.prototype;
     if(circuit.resolve!==prototype.resolve||circuit.settle!==prototype.settle)throw new CircuitFault('UNSUPPORTED_KERNEL_OVERRIDE','custom resolution/settling');
@@ -26,6 +27,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     if(!(wasmBytes instanceof Uint8Array))throw new TypeError('owned Wasm bytes required');
     circuit.settle();
     const image=captureKernelEvaluatorImage({enabled,circuit}),{nets,drivers}=validateWiredNetImage(image);
+    const phaseBinding=phase===null?null:preparePhaseCircuit({circuit,image,phase});
     if(!Number.isInteger(image.maxDeltas)||image.maxDeltas<1||image.maxDeltas>1024)throw new RangeError('native maxDeltas 1..1024');
     const terminals=new Map(image.terminals.map(t=>[t.name,t]));
     const inputNets=Uint32Array.from(descriptors.flatMap(b=>b.pins.map(pin=>terminals.get(`${b.id}.${pin}`).net)));
@@ -41,6 +43,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     reserve('memory',count*SIZE);reserve('states',count*WORDS*4);reserve('memoryStaged',count*WORDS*4);reserve('protected',count);
     reserve('inputs',count*28);reserve('conflicts',count*28);reserve('drives',count*8);reserve('present',count);reserve('memoryChanged',count);
     reserve('memoryFault',12);reserve('fault',16);reserve('context',31*4);
+    phaseBinding?.reserve(reserve);
     if(!Number.isSafeInteger(end)||start<0||end-start>capacity||end>e.memory.buffer.byteLength)throw new RangeError('native memory circuit arena capacity');
     const view=new DataView(e.memory.buffer),bytes=(name,length)=>new Uint8Array(e.memory.buffer,p[name],length);
     const put=(name,array)=>array.forEach((v,i)=>view.setUint32(p[name]+4*i,v,true));
@@ -63,14 +66,14 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
             addr:word(1),out:out===0xffffffff?-1:out,armed:!!word(3),pending:word(4)?{a:word(5),byte:word(6)}:null,
             writes:word(8)*4294967296+word(7)};
     };
-    const settleMemories=(levels,maxPasses=8)=>{
-        if(!Number.isInteger(maxPasses)||maxPasses<1||maxPasses>1024)throw new RangeError('maxPasses 1..1024');
+    const setDriverLevels=levels=>{
         if(levels!==undefined){
             if(!(levels instanceof Uint8Array)||levels.length!==drivers)throw new TypeError('driver dimensions');
             for(const code of levels)if(code>3)throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
             bytes('drivers',drivers).set(levels);
         }
-        const result=e.settle_memory_circuit(p.context,maxPasses,p.fault);
+    };
+    const memoryFault=result=>{
         if(result){
             const code=view.getUint32(p.fault+4,true),bank=view.getUint32(p.fault+8,true),pin=view.getUint32(p.fault+12,true);
             const name=result===1?({1:'INVALID_NET_IMAGE',2:'INVALID_DRIVER_LEVEL',3:'NON_CONVERGENT',4:'INVALID_KERNEL_OPERATION',5:'INVALID_DELTA_LIMIT'}[code]):
@@ -79,8 +82,12 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
             const fault=new CircuitFault(name??'NATIVE_MEMORY_CIRCUIT_ERROR','owned native memory settling failed');
             if(result===2){fault.bank=descriptors[bank]?.id;fault.pin=descriptors[bank]?.pins[pin]??null;}throw fault;
         }
-        return inspect();
     };
+    const settleMemories=(levels,maxPasses=8)=>{
+        if(!Number.isInteger(maxPasses)||maxPasses<1||maxPasses>1024)throw new RangeError('maxPasses 1..1024');
+        setDriverLevels(levels);memoryFault(e.settle_memory_circuit(p.context,maxPasses,p.fault));return inspect();
+    };
+    const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
-        cpu:false,board:false,resumableSnapshot:false}),settleMemories,inspect,inspectMemory});
+        latchedMemoryClocks:!!phaseBinding,cpu:false,board:false,resumableSnapshot:false}),...(phaseMethods??{settleMemories}),inspect,inspectMemory});
 }

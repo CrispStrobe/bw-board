@@ -277,3 +277,53 @@ every begin/preview/end boundary. Keep READY acceptance before trailing-edge
 memory commitment, retain clock-order/fault latching, and validate reset during
 an outstanding write. Only then add the CPU bus sequencer and device clock
 interactions; component-level success does not close the 4.77 MHz gate.
+
+### Actual-net latched-memory clock prototype
+
+An explicit `owned-latched-memory-v1` descriptor now binds the controller and
+latch to the same native arena as the actual-net/memory loop. Each begin/end
+boundary retains pure settling, controller commands, transparent latch sampling
+and memory-settle ordering. Native state owns the intermediate transitions;
+final levels are not copied into a JS execution backend. The standalone
+memory-only API remains available when this descriptor is absent.
+
+Six focused tests pass: 1,532 begin/end comparisons over 128 reads/writes with
+waits; changed host addresses after ALE; compiled-reference reset during an
+armed write; TC2 READY faults without trailing-edge writes; clock-order
+recovery versus latched circuit faults; disconnected latch wiring; and I/O/
+INTA keeping memory deselected. All native components plus registered memory
+tests pass together: **54 tests, four suites, zero failures/skips**.
+The broader wired/x86, memory and peripheral checkpoint passes **514 tests,
+four suites, zero failures/skips**. The [build](HARRIS-NATIVE-PHASE-CIRCUIT-BUILD.json)
+and [Chromium receipt](HARRIS-NATIVE-PHASE-CIRCUIT-BROWSER.json) are preserved;
+Chromium passes all 1,532 phase boundaries plus the prior component oracles,
+five JS workload hashes, cancellation and temporary-profile cleanup.
+
+This clock path deliberately lacks the CPU bus sequencer and peripheral clock
+interactions. It is not selectable as a complete board or application backend.
+Full CPU acceptance, READY cross-checks, DMA ownership and IRQ sequencing must
+be integrated before it can replace the existing board begin/end loop.
+
+Before expanding the port, `bench/harris-native-phase.mjs` measures this small
+two-bank controller/latch/net/memory circuit against reference and compiled JS.
+It excludes construction and final hashes, includes sampled read checks and
+the current native wrapper's input/output copies, alternates modes with warmup,
+and compares final net/driver/storage hashes. This is a component cost probe,
+not full-board throughput, an RT ceiling estimate or the 4.77 MHz acceptance
+test. Its ratio must not be extrapolated to CPU/DMA/peripheral-heavy workloads.
+
+The first [component cost receipt](HARRIS-NATIVE-PHASE-COST.json) passes all
+final hashes and sampled reads over one warmup plus three alternating measured
+rounds. Each run executes 4,098 periods with 1,024 byte-bank writes and 1,024
+read observations. Median periods/s: reference 11,269; compiled JS 12,968;
+native 31,063 (about 2.40x compiled). Native elapsed spread is 85.9–181.7 ms,
+so shared-host noise is substantial. No whole-board performance claim follows.
+
+This is not enough to support the RT target. The current native wrapper still
+validates/copies complete driver images and allocates diagnostic arrays at every
+begin/end boundary. Next cost-isolation step: a bounded, prevalidated native
+schedule runner for this owned fixture, retaining every modeled period and
+actual-net read check inside the module. Compare with the same schedules and
+hashes to separate host-boundary costs from native settling costs before
+assuming that porting more components alone solves throughput. This synthetic
+schedule is test machinery, not a substitute for the eventual CPU/device runner.
