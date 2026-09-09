@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-fdc-control | Codex | 2026-09-09 | Gated FDC control/IRQ6 bridge and owned tests; refuse sector/DMA paths. No app pins/defaults, deploy or media. |
 
 ## DONE
 
