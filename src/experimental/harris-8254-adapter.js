@@ -15,11 +15,13 @@ export class Harris8254Adapter {
         if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
         if(!Number.isInteger(portBase)||portBase<0||portBase>0xfffc||(portBase&3))throw new RangeError('aligned four-port range required');
         this.id=id;this.portBase=portBase;this.ioInterface='harris-pit-byte-lanes';
+        if(new.target===Harris8254Adapter)this.eventDrivenUpdate=Harris8254Adapter.prototype.update;
         this.capabilities=Object.freeze({experimental:true,full8254:false,channels:1,modes:[0,2,3],
             binaryOnly:true,lsbThenMsbOnly:true,evenMode3Only:true,liveReload:false,electricalTiming:false});
         this.reset();
     }
     reset() {
+        this.eventRevision=(this.eventRevision??0)+1;
         this.configured=false;this.mode=0;this.divisor=null;this.count=0;this.out=0;
         this.lowByte=null;this.loadPending=false;this.loaded=false;this.latched=null;this.readPhase=0;
         this.previousClock=0;this.previousGate=1;this.sampledGate=1;

@@ -27,17 +27,19 @@ export class HarrisFDCAdapter {
         if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
         if(!Number.isInteger(portBase)||portBase<0||portBase>0xfff8||(portBase&7))throw new RangeError('8-aligned portBase required');
         this.id=id;this.portBase=portBase;this.ioInterface='harris-fdc-byte-lanes';
+        if(new.target===HarrisFDCAdapter)this.eventDrivenUpdate=HarrisFDCAdapter.prototype.update;
         if(typeof transferEnabled!=='boolean')throw new TypeError('transferEnabled');this.transferEnabled=transferEnabled;
         this.capabilities=Object.freeze({experimental:true,controlOnly:!transferEnabled,irq6:true,
             sectorTransfers:transferEnabled,dma:transferEnabled,pioTransfers:false,media:transferEnabled,electricalTiming:false});
         this.#core=transferEnabled?new PinTransferFDC():new UPD765();this.reset();
     }
-    reset(){this.#core.reset();this.readCycle=null;this.writeCycle=null;this.reads=0;this.writes=0;this.dmaCycle=null;this.dmaBytes=0;}
+    reset(){this.eventRevision=(this.eventRevision??0)+1;this.#core.reset();this.readCycle=null;this.writeCycle=null;this.reads=0;this.writes=0;this.dmaCycle=null;this.dmaBytes=0;}
     loadMedia(bytes,geometry){
         if(!this.transferEnabled)throw new CircuitFault('EXPERIMENT_DISABLED','FDC transfer mode required');
         if(this.#core.phase!=='command'||this.dmaCycle)throw new CircuitFault('FDC_BUSY','media replacement during command');
         if(!(bytes instanceof Uint8Array))throw new TypeError('media bytes');
         this.#core.insert(0,bytes.slice(),geometry);
+        this.eventRevision++;
     }
     part(){return {id:this.id,pins:['reset','ior_n','iow_n','bhe_n','m_io','irq6',...A,...D,
         ...(this.transferEnabled?['dreq2','dack2_n','tc','dma_a0','dma_write_n']:[])],outputs:['irq6',...D,...(this.transferEnabled?['dreq2']:[])]};}

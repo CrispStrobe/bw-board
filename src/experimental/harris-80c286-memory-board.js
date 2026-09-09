@@ -5,6 +5,7 @@ import {CompiledDigitalCircuit} from './compiled-digital-circuit.js';
 import {Harris80C286Bus} from './harris-80c286-bus.js';
 import {HarrisTimerClock} from './harris-8254-adapter.js';
 import {createHarrisMemoryDecoder} from './harris-memory-decoder.js';
+import {createCompiledDeviceScheduler} from './compiled-device-scheduler.js';
 import {IdealAddressLatch, MemoryPhaseController, DigitalBusMemoryAdapter, settleBusMemories} from './latched-memory-components.js';
 
 const A = bitPins('a', 24);
@@ -15,12 +16,13 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
     timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true,
-    memoryScheduling = false, memoryWriteJournal = false, decoderSpecialization = false, editWires = wires => wires} = {}) {
+    memoryScheduling = false, memoryWriteJournal = false, decoderSpecialization = false, deviceScheduling = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
     if(typeof memoryScheduling!=='boolean'||memoryScheduling&&netBackend!=='compiled')throw new TypeError('memoryScheduling requires compiled backend and boolean opt-in');
     if(typeof memoryWriteJournal!=='boolean')throw new TypeError('memoryWriteJournal');
     if(typeof decoderSpecialization!=='boolean'||decoderSpecialization&&netBackend!=='compiled')throw new TypeError('decoderSpecialization requires compiled backend and boolean opt-in');
+    if(typeof deviceScheduling!=='boolean'||deviceScheduling&&netBackend!=='compiled')throw new TypeError('deviceScheduling requires compiled backend and boolean opt-in');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
@@ -181,6 +183,11 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     const keyboardPins = keyboardPart && bind(keyboardPart.id), clockPins = timerClock && bind('timer_clock');
     const memoryPins = memories.map(memory => memoryScheduling ? memory.scheduledBinding(bind(memory.id)) : bind(memory.id));
     const masterRead = dmaPart && (pin => pin === 'ready_n' ? controllerPins.require(pin) : dmaPins.require(pin));
+    const updateDevice=(device,pins)=>deviceScheduling?createCompiledDeviceScheduler(device,pins).update:
+        ()=>pins.drive(device.update(pins.require));
+    const updateTimer=timerPart&&updateDevice(timerDevice,timerPins);
+    const updateFDC=fdcPart&&updateDevice(fdcDevice,fdcPins);
+    const updateKeyboard=keyboardPart&&updateDevice(keyboardDevice,keyboardPins);
     circuit.drive('inputs', INPUTS);
     if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
     if (timerPart) circuit.drive('timer_inputs',{gate0:1});
@@ -189,18 +196,18 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         if (!irqPart) return;
         circuit.settle();
         if (timerPart) {
-            timerPins.drive(timerDevice.update(timerPins.require));
+            updateTimer();
             circuit.settle();
         }
         if (fdcPart) {
-            fdcPins.drive(fdcDevice.update(fdcPins.require));
+            updateFDC();
             circuit.settle();
         }
         if (dmaPart) {
             dmaPins.drive(dmaDevice.update(dmaPins.require));
             circuit.settle();
         }
-        if(keyboardPart){keyboardPins.drive(keyboardDevice.update(keyboardPins.require));circuit.settle();}
+        if(keyboardPart){updateKeyboard();circuit.settle();}
         irqPins.drive(interruptDevice.update(irqPins.require));
         circuit.settle();
     };
@@ -210,7 +217,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal, decoderSpecialization}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal, decoderSpecialization, deviceScheduling}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},

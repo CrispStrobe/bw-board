@@ -9,7 +9,7 @@ import {Harris8259Adapter} from '../src/experimental/harris-8259-adapter.js';
 import {HarrisKeyboardAdapter} from '../src/experimental/harris-keyboard-adapter.js';
 import {registerBusMemory} from '../src/devices/bus-memory.js';
 registerBusMemory();
-for(const [netBackend,memoryScheduling] of [['reference',false],['compiled',false],['compiled',true]])test(`${netBackend}/${memoryScheduling}: BIOS keyboard IRQ translation and two paced INT 16h reads return Enter`,()=>{
+for(const [netBackend,memoryScheduling,deviceScheduling=false] of [['reference',false],['compiled',false],['compiled',true],['compiled',true,true]])test(`${netBackend}/${memoryScheduling}/${deviceScheduling}: BIOS keyboard IRQ translation and two paced INT 16h reads return Enter`,()=>{
     const bios=buildBios({picMode:'single-unbuffered'}),rom=bios.bytes.slice(),sym=n=>bios.symbols.get(n).value;
     const code=assembleRaw(`CLI
 XOR AX,AX
@@ -46,7 +46,7 @@ CLI
 HLT`,0x6000);
     assert.ok(rom.slice(0x6000,0x6000+code.length).every(b=>b===0));rom.set(code,0x6000);rom.set([0xea,0,0x60,0,0xf0],0xfff0);
     const pic=new Harris8259Adapter({enabled:true}),keyboard=new HarrisKeyboardAdapter({enabled:true});
-    const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,intrEnabled:true,ioEnabled:true,interruptDevice:pic,keyboardDevice:keyboard,netBackend,memoryScheduling});
+    const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,intrEnabled:true,ioEnabled:true,interruptDevice:pic,keyboardDevice:keyboard,netBackend,memoryScheduling,deviceScheduling});
     const cpu=new HarrisBootCPU({enabled:true,board});cpu.initialize();let keys=2;
     for(let i=0;i<30000;i++){
         cpu.stepClock();

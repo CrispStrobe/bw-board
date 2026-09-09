@@ -177,6 +177,25 @@ export class CompiledDigitalCircuit {
                 const nets=new Set(pins.map(pin=>lookup(pin).net)),watcher={changed:true};
                 for(const net of nets)this.#watchers[net].add(watcher);
                 return ()=>{const changed=watcher.changed;watcher.changed=false;return changed;};
+            },
+            tracker:()=>{
+                const watcher={changed:true};let dependencies=new Set(),reading=null;
+                const read=pin=>{
+                    if(!reading)throw new Error('dependency read outside evaluation');
+                    const info=lookup(pin);reading.add(info.net);return this.#require(info);
+                };
+                return Object.freeze({changed:()=>watcher.changed,invalidate:()=>{watcher.changed=true;},
+                    invoke:evaluate=>{
+                        if(reading)throw new Error('reentrant dependency evaluation');
+                        watcher.changed=true;reading=new Set();
+                        try {
+                            const result=evaluate(read);
+                            for(const net of dependencies)if(!reading.has(net))this.#watchers[net].delete(watcher);
+                            for(const net of reading)if(!dependencies.has(net))this.#watchers[net].add(watcher);
+                            dependencies=reading;watcher.changed=false;return result;
+                        } finally {reading=null;}
+                    }
+                });
             }});
         this.#bound.set(part,bound);return bound;
     }

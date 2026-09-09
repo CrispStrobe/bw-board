@@ -10,19 +10,22 @@ export class HarrisKeyboardAdapter {
     #core=new I8255();
     constructor({enabled=false,id='keyboard'}={}){
         if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
-        this.id=id;this.portBase=0x60;this.ioInterface='harris-keyboard-byte-lanes';this.reset();
+        this.id=id;this.portBase=0x60;this.ioInterface='harris-keyboard-byte-lanes';
+        if(new.target===HarrisKeyboardAdapter)this.eventDrivenUpdate=HarrisKeyboardAdapter.prototype.update;
+        this.reset();
     }
-    reset(){this.#core.reset();this.scan=null;this.irq=0;this.portB=0;this.configured=false;this.readCycle=null;this.writeCycle=null;this.keys=0;}
+    reset(){this.eventRevision=(this.eventRevision??0)+1;this.#core.reset();this.scan=null;this.irq=0;this.portB=0;this.configured=false;this.readCycle=null;this.writeCycle=null;this.keys=0;}
     press(scan){
         if(!Number.isInteger(scan)||scan<0||scan>255)throw new RangeError('scancode');
         if(this.scan!==null)throw new CircuitFault('KEYBOARD_BUSY','previous scancode not acknowledged');
-        this.scan=scan;this.#core.setInputPort('a',scan);this.irq=1;this.keys++;
+        this.scan=scan;this.#core.setInputPort('a',scan);this.irq=1;this.keys++;this.eventRevision++;
     }
     part(){return {id:this.id,pins:['reset','ior_n','iow_n','bhe_n','m_io','irq1',...A,...D],outputs:['irq1',...D]};}
     write(reg,value){
         if(reg===3){if(value!==0x99)throw new CircuitFault('UNSUPPORTED_PPI_MODE','99h required');this.configured=true;}
         else if(reg!==1||!this.configured)throw new CircuitFault('UNSUPPORTED_PPI_WRITE','configured port B only');
         this.#core.write(reg,value);
+        this.eventRevision++;
         if(reg===1){if(!(this.portB&128)&&(value&128)){this.irq=0;this.scan=null;}this.portB=value;}
     }
     update(read){

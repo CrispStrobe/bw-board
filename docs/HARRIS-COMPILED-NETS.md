@@ -124,3 +124,35 @@ For a focused comparison with no other variant changes:
 ```sh
 node bench/harris-owned-workloads.mjs 3 memory,io,dma,interrupt,idle scheduled,specialized
 ```
+
+The [recorded repeat](HARRIS-DECODER-SPECIALIZATION-BENCH.json) shows mixed
+results: about 1.11x memory, 1.16x I/O, 0.93x DMA, 1.08x interrupt and 1.02x idle.
+All states match; a concurrent DOS run and variable host load limit attribution.
+Do not enable specialization by default on the strength of these results.
+
+## Read-dependent peripheral scheduling
+
+`deviceScheduling:true` (compiled only, default off) tracks the resolved pins
+actually read by owned PIT, FDC and keyboard updates. A change to a subscribed
+net, or an explicit external revision, causes the next scheduled update to run.
+Successful evaluations replace their dependencies; faults remain invalidated,
+not cached as successes. Public reset, media replacement, key press and keyboard
+write actions invalidate the adapter. Internal fields/private helper methods are
+not a supported state-edit API. Host revision counters are scheduling metadata,
+not virtual clocks or serialized guest state.
+
+The opt-in identifies the exact owned update function and exact class; custom
+updates/subclasses fall back to ordinary evaluation. CPU, controller, oscillator,
+DMA master/register updates and PIC evaluation remain on their original call
+schedule. In particular, the PIC exposes a mutable core, so this iteration does
+not assume its inputs alone determine whether evaluation is needed.
+
+Tests cover dynamic dependencies, external actions, custom fallback, retry after
+faults, full owned-workload state/memory agreement, per-period DMA, timer-driven
+HLT and READY waits, and BIOS disk/keyboard execution. The complete targeted
+suite passes 576 tests, four suites, zero skips. No real-time claim follows.
+
+The probe flag is `HARRIS_DEVICE_SCHEDULING=on`. The benchmark's `events` mode
+uses memory + device scheduling, with decoder specialization and journal off.
+Set `HARRIS_BENCH_REPORT` to a new path to save the JSON receipt without relying
+on terminal scrollback; existing files are never overwritten.

@@ -146,3 +146,14 @@ decision rather than silently redefining success.
 - A full compiled/scheduled, bus-trace-off DOS run is in flight using runtime
   `03946c7` (without decoder specialization or write journal). Its result must
   be recorded separately from later runtime revisions; not yet accepted.
+- Decoder [three-round receipt](HARRIS-DECODER-SPECIALIZATION-BENCH.json):
+  approximately 1.11x memory, 1.16x I/O, 0.93x DMA, 1.08x interrupt, 1.02x idle
+  versus scheduled generic decoders. All states match. Concurrent DOS and host
+  noise limit causal claims; specialization is not an across-the-board win.
+- Oracle reducer: bounded register/RAM deletion and bit clearing, fixed opcode
+  and masks, replayable first-field/address mismatch. Synthetic tests pass;
+  integrated PCjs CLI remains 125/125 with no mismatch to reduce.
+- Peripheral scheduling iteration: explicit read-dependent PIT/FDC/keyboard
+  scheduling and external wake revisions; unknown implementations fall back.
+  CPU/controller/oscillator/DMA/PIC invocation timing unchanged. **576 targeted
+  tests pass, four suites, zero skips**. Repeated performance receipt pending.

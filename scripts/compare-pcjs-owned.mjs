@@ -8,6 +8,9 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {OWNED_ORACLE_PROBES,probeInitial} from './lib/x86-owned-oracle-probes.mjs';
 import {localProbe} from './lib/x86-oracle-local.mjs';
+import {minimizeOracleProbe} from './lib/minimize-x86-oracle-probe.mjs';
+if(process.argv.slice(2).some(arg=>arg!=='--minimize'))throw new TypeError('optional --minimize only');
+const minimize=process.argv.includes('--minimize');
 
 const PIN='c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70';
 const root=process.env.PCJS_ROOT;if(!root)throw new Error('Set PCJS_ROOT to the pinned, clean PCjs checkout');
@@ -21,11 +24,9 @@ const {default:Memory}=await import(moduleURL('memory'));
 class QuietBus extends Bus {printf(){return 0;}}
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const localSourceHashes=Object.fromEntries(['./compare-pcjs-owned.mjs','./lib/x86-owned-oracle-probes.mjs',
-    './lib/x86-oracle-local.mjs','../src/i8086.js','../src/experimental/harris-80c286-boot-cpu.js']
+    './lib/x86-oracle-local.mjs','./lib/minimize-x86-oracle-probe.mjs','../src/i8086.js','../src/experimental/harris-80c286-boot-cpu.js']
     .map(path=>[path,hash(readFileSync(new URL(path,import.meta.url)))]));
-const results=[];
-for(const model of ['8086','80186','80286'])for(const probe of OWNED_ORACLE_PROBES) {
-    if(!probe.models.includes(model))continue;
+function compare(model,probe) {
     // PCjs's documented 8088 model shares the architectural subset tested here.
     // This explicitly does not compare 8086/8088 bus width, prefetch or timings.
     const referenceModel=model==='8086'?8088:Number(model),cpu=new CPU({id:'oracle.cpu',model:referenceModel});
@@ -48,15 +49,31 @@ for(const model of ['8086','80186','80286'])for(const probe of OWNED_ORACLE_PROB
     for(let a=0;a<expectedMemory.length;a++)if(expectedMemory[a]!==actual.memory[a]) {
         diffs.push({address:a,reference:expectedMemory[a],actual:actual.memory[a]});if(diffs.length>=12)break;
     }
-    results.push({model,referenceModel,probe:probe.name,status:diffs.length?'fail':'pass',flagsMask:probe.flagsMask,
+    return {model,referenceModel,probe:probe.name,status:diffs.length?'fail':'pass',flagsMask:probe.flagsMask,
         maskReason:probe.maskReason??'compare defined 16-bit status/control flags; exclude reserved bits',
         ...(diffs.length?{reproducer:{bytes:probe.bytes,initial:probeInitial(probe)}}:{}),
-        referenceMemorySHA256:hash(expectedMemory),actualMemorySHA256:hash(actual.memory),diffs});
-    if(diffs.length)break;
+        referenceMemorySHA256:hash(expectedMemory),actualMemorySHA256:hash(actual.memory),diffs};
+}
+const results=[];
+const fingerprint=result=>result.diffs[0]?.register?`register:${result.diffs[0].register}`:
+    result.diffs[0]?`memory:${result.diffs[0].address}`:null;
+for(const model of ['8086','80186','80286'])for(const probe of OWNED_ORACLE_PROBES) {
+    if(!probe.models.includes(model))continue;
+    const result=compare(model,probe);results.push(result);
+    if(result.status==='fail') {
+        if(minimize) {
+            const family=fingerprint(result);
+            result.minimized=await minimizeOracleProbe(probe,candidate=>{
+                try{return fingerprint(compare(model,candidate))===family;}catch{return false;}
+            });
+            result.minimized.failureFingerprint=family;
+        }
+        break;
+    }
 }
 if(git('rev-parse','HEAD')!==PIN||git('status','--porcelain'))throw new Error('PCjs provenance changed during comparison');
 const failed=results.some(r=>r.status==='fail');
 const planned=OWNED_ORACLE_PROBES.reduce((n,p)=>n+p.models.length,0);
-console.log(JSON.stringify({oracle:'PCjs',revision:PIN,node:process.version,localSourceHashes,scope:'owned single-instruction real-mode architectural probes; no timing/I/O/interrupt/protected-mode claim',
+console.log(JSON.stringify({oracle:'PCjs',revision:PIN,node:process.version,localSourceHashes,minimize,scope:'owned single-instruction real-mode architectural probes; no timing/I/O/interrupt/protected-mode claim',
     counts:{planned,pass:results.filter(r=>r.status==='pass').length,fail:results.filter(r=>r.status==='fail').length,notRun:planned-results.length},results},null,2));
 process.exitCode=failed?1:0;

@@ -12,7 +12,7 @@ import {HarrisDMAAdapter} from '../src/experimental/harris-dma-adapter.js';
 import {HarrisFDCAdapter} from '../src/experimental/harris-fdc-adapter.js';
 import {registerBusMemory} from '../src/devices/bus-memory.js';
 registerBusMemory();
-for(const [netBackend,memoryScheduling,memoryWriteJournal=false,decoderSpecialization=false] of [['reference',false],['compiled',false],['compiled',true],['compiled',true,true],['compiled',true,false,true]])test(`${netBackend}/${memoryScheduling}/${memoryWriteJournal}/${decoderSpecialization}: owned guest invokes unmodified BIOS INT 13h and reads a sector through DMA/IRQ6`,()=>{
+for(const [netBackend,memoryScheduling,memoryWriteJournal=false,decoderSpecialization=false,deviceScheduling=false] of [['reference',false],['compiled',false],['compiled',true],['compiled',true,true],['compiled',true,false,true],['compiled',true,false,false,true]])test(`${netBackend}/${memoryScheduling}/${memoryWriteJournal}/${decoderSpecialization}/${deviceScheduling}: owned guest invokes unmodified BIOS INT 13h and reads a sector through DMA/IRQ6`,()=>{
     const bios=buildBios({picMode:'single-unbuffered'}),rom=bios.bytes.slice(),sym=n=>bios.symbols.get(n).value;
     const vectors=[[8,'int08'],[14,'int0e'],[0x13,'int13'],[0x1c,'int1c'],[0x1e,'dpt']];
     const code=assembleRaw(`CLI
@@ -53,7 +53,7 @@ HLT`,0x6000);
     const pic=new Harris8259Adapter({enabled:true}),timer=new Harris8254Adapter({enabled:true}),
         dma=new HarrisDMAAdapter({enabled:true,transferEnabled:true}),fdc=new HarrisFDCAdapter({enabled:true,transferEnabled:true});
     fdc.loadMedia(media,{cylinders:40,heads:2,sectors:9,bytesPerSector:512});
-    const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,intrEnabled:true,ioEnabled:true,holdEnabled:true,netBackend,memoryScheduling,memoryWriteJournal,decoderSpecialization,
+    const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,intrEnabled:true,ioEnabled:true,holdEnabled:true,netBackend,memoryScheduling,memoryWriteJournal,decoderSpecialization,deviceScheduling,
         interruptDevice:pic,timerDevice:timer,timerClockHalfPeriod:1,dmaDevice:dma,fdcDevice:fdc});
     const cpu=new HarrisBootCPU({enabled:true,board});cpu.initialize();assert.equal(cpu.run(200000).status,'halted');
     assert.equal(cpu.regs.si&1,0);assert.equal(cpu.regs.bp,1);assert.equal(cpu.regs.sp,0x7000);

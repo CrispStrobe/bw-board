@@ -91,7 +91,7 @@ oracle adapters. Re-verify them or record a new pin before executing comparisons
   Run `PCJS_ROOT=/path/to/pinned/pcjs node scripts/compare-pcjs-owned.mjs`.
   The local 286 side uses an explicitly architectural generator adapter, not
   a physical motherboard. No I/O, interrupt, timing or protected-mode claim.
-- Pending: broader pinned external adapters, normalized fixtures, mismatch minimization,
+- Pending: broader pinned external adapters, normalized fixtures, device/sequence mismatch minimization,
   and execution receipts. Source inspection is not an oracle-pass claim.
 - Expanded architectural iteration: **125/125 pass, zero not-run**, same clean
   PCjs pin ([receipt](PCJS-EXPANDED-ORACLE-REPORT.json)). Added multiply/divide,
@@ -99,5 +99,12 @@ oracle adapters. Re-verify them or record a new pin before executing comparisons
   and flag transfers. Undefined arithmetic flags have explicit masks/reasons;
   no timing/I/O/interrupt/protected-mode claim was added. Failure receipts now
   embed initial registers/RAM/opcode bytes and count cases not run after a
-  first divergence. Automatic reduction remains pending.
+  first divergence.
+- Optional `--minimize` now reduces owned initial register/RAM state after a
+  mismatch, bounded to 128 evaluations and retaining the first differing field
+  or address. Instruction bytes, CS:IP placement, models and flag masks stay
+  fixed; RAM overriding instruction bytes is refused. This is deterministic
+  simplification, not a globally minimal proof. Synthetic reducer regressions
+  pass, and the integrated CLI still passes all 125 probes (so no real mismatch
+  reduction was needed). Device/interrupt sequence reduction remains pending.
 - Performance implementation: [wired performance plan](WIRED-X86-PERFORMANCE-PLAN.md).

@@ -3,12 +3,14 @@
   "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
   "node": "v20.20.2",
   "localSourceHashes": {
-    "./compare-pcjs-owned.mjs": "750be6b9828cf80656dfca0f0a58e7172db0fa632f5f64d755bd6adfb38ee790",
+    "./compare-pcjs-owned.mjs": "da912b06db0bf6aeccd8420cd110ee96a58c5594f7750a256ee5d60c6a37d958",
     "./lib/x86-owned-oracle-probes.mjs": "4b2ecfc19b8479794e0c84c4fe3d57e0deffa694b472f30914b8c39b0eeedcae",
     "./lib/x86-oracle-local.mjs": "686dde4b318dd709c56db042b59415f0af6be2cfe0fa33ea4d68bd9583229452",
+    "./lib/minimize-x86-oracle-probe.mjs": "d59001f1ebb1fca086883dc95cab4e5c41e08beeab7be2bd5d7ba9893769e361",
     "../src/i8086.js": "beb48a8138cc695b4d8dd16a3a4233befcc8a9d7d74f2d3d8cc81885194ebc17",
     "../src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007"
   },
+  "minimize": true,
   "scope": "owned single-instruction real-mode architectural probes; no timing/I/O/interrupt/protected-mode claim",
   "counts": {
     "planned": 125,

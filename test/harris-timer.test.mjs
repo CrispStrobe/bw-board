@@ -124,13 +124,13 @@ irqhandler: ${handler}`,0x100),0x100);
 }
 function until(cpu,predicate,max=8000){for(let i=0;i<max;i++){if(predicate())return;cpu.stepClock();}assert.fail('condition not reached');}
 const finished=cpu=>cpu.status==='halted'&&cpu.regs.bx===3&&!(cpu.flags&0x200);
-for(const mode of [2,3])test(`guest-programmed timer mode ${mode} repeatedly wakes HLT through PIC and guest EOI`,()=>{
-    const {cpu,pic,timer}=fixture({mode});until(cpu,()=>finished(cpu));
+for(const mode of [2,3])for(const deviceScheduling of [false,true])test(`guest-programmed timer mode ${mode} repeatedly wakes HLT through PIC and guest EOI (events=${deviceScheduling})`,()=>{
+    const {cpu,pic,timer}=fixture({mode,netBackend:deviceScheduling?'compiled':'reference',deviceScheduling});until(cpu,()=>finished(cpu));
     assert.equal(cpu.intrCount,3);assert.equal(pic.inspect().pairs,3);assert.equal(pic.inspect().isr,0);
     assert.equal(cpu.regs.sp,0x800);assert.equal(timer.inspect().divisor,128);
 });
-test('timer counts and changes OUT while CPU waits on READY; interrupts resume after release',()=>{
-    const {cpu,timer,board}=fixture();until(cpu,()=>cpu.status==='halted');
+for(const deviceScheduling of [false,true])test(`timer counts and changes OUT while CPU waits on READY; interrupts resume after release (events=${deviceScheduling})`,()=>{
+    const {cpu,timer,board}=fixture({netBackend:deviceScheduling?'compiled':'reference',deviceScheduling});until(cpu,()=>cpu.status==='halted');
     // HLT itself keeps clocking. Then hold the first interrupt bus request.
     until(cpu,()=>board.bus.pending!==null);
     const retired=cpu.retired,ticks=timer.inspect().ticks;let edges=0,last=timer.inspect().out;
