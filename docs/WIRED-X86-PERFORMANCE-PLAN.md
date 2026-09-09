@@ -263,3 +263,8 @@ decision rather than silently redefining success.
   is still no native controller/CPU/device clock runner or capacity claim.
   The broader checkpoint passes **501 tests, four suites, zero failures/skips**;
   Chromium also passes the coupled oracle and earlier workload/component checks.
+- Owned ideal controller/latch component port: seven focused tests and the
+  combined **508-test/four-suite** checkpoint pass without failures/skips.
+  Chromium repeats 360 controller periods and 128 latch observations plus all
+  prior oracles/workload hashes. Actual-net phase integration and the CPU/bus/
+  peripheral clock kernel remain pending; this is not a capacity improvement.

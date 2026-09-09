@@ -249,3 +249,31 @@ doing so could lose intermediate evaluator dependency history and scheduler
 state. The next port must own the controller/latch and the explicit settle
 boundaries, then the bus sequencer and peripheral clock interactions, before
 claiming a complete execution backend.
+
+### Isolated controller/latch port
+
+The owned ideal address latch and memory-phase controller now have a native
+component prototype. These retain the existing model's limitations: this is
+not a full 82C288, AC-timing model or CPU/bus sequencer. Defaults are unchanged.
+Seven focused Node tests pass, including all 16 binary status encodings under all
+I/O/INTA gate combinations; TS/TC progression, READY waits, first-INTA-cycle
+wait, reset behavior, clock/status faults and preview-before-finish ordering.
+The latch samples only under ALE and validates the complete word before
+changing retained bits. X/Z/contention remain errors on sampled pins.
+
+A portable oracle covers 360 modeled controller periods and 128 latch
+observations against the existing JS components. The [build](HARRIS-NATIVE-PHASE-BUILD.json)
+and [Chromium receipt](HARRIS-NATIVE-PHASE-BROWSER.json) are preserved. Chromium
+passes this oracle, all earlier native oracles, the five JS workload hashes,
+cancellation and profile cleanup. The combined wired/x86, memory and peripheral
+suite passes **508 tests, four suites, zero failures/skips** with this module.
+This is still a correctness checkpoint, not a native board throughput receipt.
+The controller counter uses two words; raw tests verify 32-bit carry and refusal
+of unsafe-integer overflow before state/output mutation.
+No live/custom controller state import or whole-board clock backend is exposed.
+
+Next: bind these components to the existing actual-net/memory arena and compare
+every begin/preview/end boundary. Keep READY acceptance before trailing-edge
+memory commitment, retain clock-order/fault latching, and validate reset during
+an outstanding write. Only then add the CPU bus sequencer and device clock
+interactions; component-level success does not close the 4.77 MHz gate.

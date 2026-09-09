@@ -9,12 +9,14 @@ const directory=realpathSync(process.argv[2]);if(!statSync(directory).isDirector
 const output=join(directory,'wired-net-kernel.wasm'),manifest=join(directory,'wired-net-kernel-build.json');
 if(existsSync(output)||existsSync(manifest))throw new Error('refusing to overwrite existing build');
 const clang=process.env.CLANG??'clang';
-const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c'];
+const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c'];
 const sources=sourceNames.map(p=>fileURLToPath(new URL('../'+p,import.meta.url)));
 const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall','-Wextra',
     ...(process.env.WASM_LD?[`-fuse-ld=${process.env.WASM_LD}`]:[]),
     '-Wl,--no-entry','-Wl,--export=arena_ptr','-Wl,--export=arena_capacity','-Wl,--export=resolve_nets','-Wl,--export=settle_owned','-Wl,--export=owned_kernel_version',
-    '-Wl,--export=memory_kernel_version','-Wl,--export=preview_memory_banks','-Wl,--export=memory_circuit_version','-Wl,--export=settle_memory_circuit','-Wl,--export-memory',...sources,'-o',output];
+    '-Wl,--export=memory_kernel_version','-Wl,--export=preview_memory_banks','-Wl,--export=memory_circuit_version','-Wl,--export=settle_memory_circuit',
+    ...['phase_components_version','read_memory_phase_commands','begin_memory_phase','preview_memory_phase_end','finish_memory_phase','update_address_latch'].map(n=>`-Wl,--export=${n}`),
+    '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
