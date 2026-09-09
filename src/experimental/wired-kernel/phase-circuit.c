@@ -4,7 +4,7 @@ typedef unsigned char u8;
 #define NONE 0xffffffffu
 #define B(i) ((u8*)(unsigned long)p[i])
 #define W(i) ((u32*)(unsigned long)p[i])
-extern u32 settle_owned(u32,u32,const u32*,const u32*,u8*,u8*,u8*,u32,const u32*,u8*,u8*,u8*,u32,const u32*,const u32*,u32,u8*,u8*);
+extern u32 settle_owned_context(const u32*);
 extern u32 settle_memory_circuit(const u32*,u32,u32*);
 extern u32 begin_memory_phase(u32*,u32,u32,const u8*,const u8*,u8*,u32*);
 extern u32 preview_memory_phase_end(const u32*,const u8*,const u8*,u32*,u32*);
@@ -33,7 +33,7 @@ static u32 settle_phase_nets(const u32 *p,u32 *fault) {
     const u32 *c=W(0);
     #define CB(i) ((u8*)(unsigned long)c[i])
     #define CW(i) ((u32*)(unsigned long)c[i])
-    u32 result=settle_owned(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
+    u32 result=settle_owned_context(c);
     return result&0x80000000u?reject_phase(p,1,result&0x7fffffffu,NONE,fault):0;
 }
 static void gather_phase(const u32 *p,u32 mapping,u32 count) {

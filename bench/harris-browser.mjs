@@ -26,7 +26,8 @@ if(nativePath) {
         assert.equal(hash(readFileSync(join(root,path))),expected,'rebuild native module for this source');sourceHashes[path]=expected;
     }
     assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');
-    nativeModule={sha256:build.wasmSHA256,sourceHashes:verifiedSources,compiler:build.compiler};
+    nativeModule={sha256:build.wasmSHA256,sourceHashes:verifiedSources,compiler:build.compiler,
+        admittedGraph:WebAssembly.Module.exports(new WebAssembly.Module(nativeBytes)).some(e=>e.name==='admit_owned_context')};
 }
 const nodeReceiptBytes=readFileSync(join(root,'docs/HARRIS-OWNED-WORKLOADS-BENCH.json'));
 const nodeReceipt=JSON.parse(nodeReceiptBytes),expectedStateHashes=Object.fromEntries(nodeReceipt.samples.map(s=>[s.name,s.stateSHA256]));
@@ -102,6 +103,10 @@ try {
         if(nativeModule.sourceHashes['src/experimental/wired-kernel/phase-schedule.c']) {
             assert.equal(report.nativeOracle.schedule?.accepted,true);assert.equal(report.nativeOracle.schedule?.capacityClaim,false);
             assert.equal(report.nativeOracle.schedule?.periods,258);assert.equal(report.nativeOracle.schedule?.reads,64);
+        }
+        if(nativeModule.admittedGraph) {
+            const admitted=report.nativeOracle.admittedGraph;assert.equal(admitted?.accepted,true);assert.equal(admitted?.capacityClaim,false);
+            assert.equal(admitted?.memory.comparisons,1026);assert.equal(admitted?.phase.comparisons,1532);assert.equal(admitted?.schedule.periods,258);
         }
         report.nativeBuild=nativeModule;
     }

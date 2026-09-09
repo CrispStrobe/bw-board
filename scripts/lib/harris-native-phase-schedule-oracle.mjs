@@ -3,8 +3,8 @@ import {bitDrives} from '../../src/experimental/digital-circuit.js';
 import {HARRIS_80C286_STATUS} from '../../src/experimental/harris-80c286-contract.js';
 import {createPhaseCircuitOracle} from './harris-native-phase-circuit-oracle.mjs';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
-export async function runNativePhaseScheduleOracle({wasmBytes,yieldTask=()=>Promise.resolve(),stopped=()=>false}={}) {
-    const f=await createPhaseCircuitOracle({wasmBytes,schedule:true}),reference=await createPhaseCircuitOracle({wasmBytes});
+export async function runNativePhaseScheduleOracle({wasmBytes,yieldTask=()=>Promise.resolve(),stopped=()=>false,admittedGraph=false}={}) {
+    const f=await createPhaseCircuitOracle({wasmBytes,schedule:true,admittedGraph}),reference=await createPhaseCircuitOracle({wasmBytes});
     const steps=[{values:{...f.passive,reset:1}},{values:f.passive}];
     for(let i=0;i<32;i++)for(const kind of ['memory-write','memory-read']) {
         const value=(i*977+0x1234)&65535,active={...f.passive,...HARRIS_80C286_STATUS[kind],...bitDrives(f.A,i*2),bhe_n:0,

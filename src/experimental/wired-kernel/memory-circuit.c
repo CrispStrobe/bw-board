@@ -1,17 +1,17 @@
 /* Owned net + memory fixed-point loop. No CPU/controller/device clock. */
 typedef unsigned int u32;
 typedef unsigned char u8;
-extern u32 settle_owned(u32,u32,const u32*,const u32*,u8*,u8*,u8*,u32,const u32*,u8*,u8*,u8*,u32,const u32*,const u32*,u32,u8*,u8*);
+extern u32 settle_owned_context(const u32*);
 extern u32 preview_memory_banks(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,u8*,u8*,u8*,u32*);
 /* Private wrapper-owned context; pointer entries are wasm32 arena offsets.
- * net args[0..17], bank args[18..28], input-net IDs[29], output IDs[30]. */
+ * net args[0..17], bank args[18..28], input-net IDs[29], output IDs[30],
+ * private graph-admission gate[31]. */
 #define U8(i) ((u8*)(unsigned long)c[i])
 #define U32(i) ((u32*)(unsigned long)c[i])
 static u32 settle_context(const u32 *c) {
-    return settle_owned(c[0],c[1],U32(2),U32(3),U8(4),U8(5),U8(6),c[7],U32(8),U8(9),U8(10),U8(11),
-                        c[12],U32(13),U32(14),c[15],U8(16),U8(17));
+    return settle_owned_context(c);
 }
-u32 memory_circuit_version(void){return 1;}
+u32 memory_circuit_version(void){return 2;}
 /* fault: category (1 combinational,2 memory,3 limit,4 mapping),code,bank,pin.
  * Per-pass commit matches JS: a later settle failure does not roll back a
  * successfully committed earlier memory pass. A peer preflight failure does. */

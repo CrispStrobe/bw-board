@@ -51,8 +51,8 @@ test('a schedule read mismatch stops at its real boundary without rolling back e
 });
 test('raw native schedule validates its last update before touching any pending drive',native,async()=>{
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
-    const p=base,c=base+64,offsets=base+188,ids=base+200,values=base+204,allowed=base+208,flags=base+212,nets=base+216,expected=base+280,
-        stats=base+288,fault=base+296,drivers=base+312;
+    const p=base,c=base+64,offsets=base+192,ids=base+204,values=base+208,allowed=base+212,flags=base+216,nets=base+220,expected=base+284,
+        stats=base+292,fault=base+300,drivers=base+316;
     v.setUint32(p,c,true);v.setUint32(c,1,true);v.setUint32(c+4,1,true);v.setUint32(c+16,drivers,true);
     [0,0,1].forEach((n,i)=>v.setUint32(offsets+4*i,n,true));v.setUint8(drivers,1);
     for(const kind of ['id','value','permission']) {

@@ -6,8 +6,9 @@ import {validateWiredNetImage} from './net-resolver.js';
 import {MEMORY_BANK_PINS} from './memory-banks.js';
 import {preparePhaseCircuit} from './phase-circuit-image.js';
 const SIZE=32768,WORDS=9;
-export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null}={}) {
+export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,admittedGraph=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
+    if(typeof admittedGraph!=='boolean')throw new TypeError('admittedGraph');
     const prototype=circuit instanceof CompiledDigitalCircuit?CompiledDigitalCircuit.prototype:DigitalCircuit.prototype;
     if(circuit.resolve!==prototype.resolve||circuit.settle!==prototype.settle)throw new CircuitFault('UNSUPPORTED_KERNEL_OVERRIDE','custom resolution/settling');
     if(!Array.isArray(banks)||banks.length<1||banks.length>32)throw new RangeError('native banks 1..32');
@@ -33,7 +34,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const inputNets=Uint32Array.from(descriptors.flatMap(b=>b.pins.map(pin=>terminals.get(`${b.id}.${pin}`).net)));
     const outputIds=Uint32Array.from(descriptors.flatMap(b=>Array.from({length:8},(_,i)=>terminals.get(`${b.id}.d${i}`).driver)));
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
-    if(e.memory_circuit_version?.()!==1||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
+    if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
@@ -42,7 +43,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     for(const name of ['live','liveConflicts','published','publishedConflicts','previous','changed'])reserve(name,nets);
     reserve('memory',count*SIZE);reserve('states',count*WORDS*4);reserve('memoryStaged',count*WORDS*4);reserve('protected',count);
     reserve('inputs',count*28);reserve('conflicts',count*28);reserve('drives',count*8);reserve('present',count);reserve('memoryChanged',count);
-    reserve('memoryFault',12);reserve('fault',16);reserve('context',31*4);
+    reserve('memoryFault',12);reserve('fault',16);reserve('context',32*4);
     phaseBinding?.reserve(reserve);
     if(!Number.isSafeInteger(end)||start<0||end-start>capacity||end>e.memory.buffer.byteLength)throw new RangeError('native memory circuit arena capacity');
     const view=new DataView(e.memory.buffer),bytes=(name,length)=>new Uint8Array(e.memory.buffer,p[name],length);
@@ -57,7 +58,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     });
     put('context',[nets,drivers,p.offsets,p.ids,p.drivers,p.live,p.liveConflicts,image.operations.length/EVALUATOR_STRIDE,p.ops,p.staged,
         p.published,p.publishedConflicts,image.maxDeltas,p.dependencyOffsets,p.dependencies,image.dependencies.length,p.previous,p.changed,
-        count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds]);
+        count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,Number(admittedGraph)]);
+    if(admittedGraph&&(e.admit_owned_context(p.context)>>>0)!==0)throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph admission failed');
     const inspect=()=>({levels:bytes('published',nets).slice(),conflicts:bytes('publishedConflicts',nets).slice(),driverLevels:bytes('drivers',drivers).slice()});
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
@@ -76,7 +78,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const memoryFault=result=>{
         if(result){
             const code=view.getUint32(p.fault+4,true),bank=view.getUint32(p.fault+8,true),pin=view.getUint32(p.fault+12,true);
-            const name=result===1?({1:'INVALID_NET_IMAGE',2:'INVALID_DRIVER_LEVEL',3:'NON_CONVERGENT',4:'INVALID_KERNEL_OPERATION',5:'INVALID_DELTA_LIMIT'}[code]):
+            const name=result===1?({1:'INVALID_NET_IMAGE',2:'INVALID_DRIVER_LEVEL',3:'NON_CONVERGENT',4:'INVALID_KERNEL_OPERATION',5:'INVALID_DELTA_LIMIT',6:'INVALID_KERNEL_ADMISSION'}[code]):
                 result===2?({1:'FLOATING',2:'UNKNOWN',3:'CONTENTION',4:'MEMORY_POWER',5:'INVALID_DRIVER_LEVEL',6:'INVALID_MEMORY_STATE',7:'MEMORY_COUNTER_OVERFLOW'}[code]):
                 result===3?'MEMORY_NON_CONVERGENT':'INVALID_MEMORY_MAPPING';
             const fault=new CircuitFault(name??'NATIVE_MEMORY_CIRCUIT_ERROR','owned native memory settling failed');
@@ -89,5 +91,5 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
-        latchedMemoryClocks:!!phaseBinding,cpu:false,board:false,resumableSnapshot:false}),...(phaseMethods??{settleMemories}),inspect,inspectMemory});
+        latchedMemoryClocks:!!phaseBinding,admittedGraph,cpu:false,board:false,resumableSnapshot:false}),...(phaseMethods??{settleMemories}),inspect,inspectMemory});
 }

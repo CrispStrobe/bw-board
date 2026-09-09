@@ -282,3 +282,11 @@ decision rather than silently redefining success.
   probe measures about 50,682 periods/s batched versus 14,303 per-boundary native
   in the same noisy run (3.54x). This is not a CPU runner or full-board RT claim;
   native settling/profile work and CPU/device integration remain outstanding.
+- Native schedule profile attributes 72.4% of 623 schedule-stack samples to
+  settling (validation/resolution/evaluation combined). Private graph admission
+  now passes the 62-test native-component/memory set and Chromium oracles.
+  Repeated small-circuit medians show only 1.074x admitted/checked-batched with
+  overlapping ranges; retain the default-off experiment without claiming a
+  stable win. A larger 8,194-period smoke verifies capacity-aware schedule
+  chunking. Incremental net resolution and the actual CPU/device runner remain
+  pending; the requested whole-board capacity is still unproven.

@@ -23,9 +23,10 @@ const paths=execFileSync('rg',['--files','src','scripts/lib'],{cwd:root,encoding
 paths.push('bench/harris-native-phase.mjs');
 for(const p of paths)sourceHashes[p]=hash(readFileSync(new URL(p,root)));
 for(const[p,h]of Object.entries(build.sourceHashes))assert.equal(sourceHashes[p],h,'rebuild native sources');
-const samples=[],modes=['reference','compiled','native','native-batched'];let expected;
+const samples=[],modes=['reference','compiled','native','native-batched','native-admitted'];let expected;
 for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].reverse():modes) {
-    const f=await createPhaseCircuitOracle({wasmBytes,Circuit:mode==='compiled'?CompiledDigitalCircuit:DigitalCircuit,schedule:mode==='native-batched'});
+    const batched=mode==='native-batched'||mode==='native-admitted';
+    const f=await createPhaseCircuitOracle({wasmBytes,Circuit:mode==='compiled'?CompiledDigitalCircuit:DigitalCircuit,schedule:batched,admittedGraph:mode==='native-admitted'});
     const image=captureWiredNetImage({enabled:true,circuit:f.circuit}),driverIDs=new Map(image.driverNames.map((n,i)=>[n,i]));
     const dataNets=f.D.map(p=>image.terminals.find(t=>t.name===`host.${p}`).net);
     const steps=[{values:{...f.passive,reset:1}},{values:f.passive}];
@@ -39,10 +40,17 @@ for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].rever
     }
     for(const step of steps)step.updates=Object.entries(step.values).map(([p,v])=>[driverIDs.get(`host.${p}`),v==='Z'?3:v]);
     const handles=[];
-    if(mode==='native-batched')for(let i=0;i<steps.length;i+=8192)handles.push(f.kernel.compileSchedule(steps.slice(i,i+8192)));
+    if(batched) {
+        const {maxPeriods,maxUpdates}=f.kernel.scheduleLimits;let chunk=[],updates=0;
+        for(const step of steps){
+            if(chunk.length===maxPeriods||updates+step.updates.length>maxUpdates){handles.push(f.kernel.compileSchedule(chunk));chunk=[];updates=0;}
+            chunk.push(step);updates+=step.updates.length;
+        }
+        if(chunk.length)handles.push(f.kernel.compileSchedule(chunk));
+    }
     let levels=image.driverLevels,reads=0;
     const start=performance.now();
-    if(mode==='native-batched') {
+    if(batched) {
         for(const handle of handles){const result=f.kernel.runSchedule(handle);assert.equal(result.periods,handle.periods);reads+=result.reads;levels=result.driverLevels;}
     }else for(const step of steps) {
         if(mode==='native') {
@@ -82,6 +90,7 @@ const report={benchmark:'owned-latched-memory-components',accepted:true,capacity
         'Construction, Wasm instantiation and final hashes excluded; sampled read checks included.',
         'Native mode copies typed input and diagnostic output arrays per begin/end boundary. Native-batched uses precompiled bounded fixture schedules; compilation excluded, upload/admission included.',
         'Every native-batched period and actual-net read check still executes; synthetic schedule replay is not a CPU/device runner.',
+        'Native-admitted uses the same bounded schedule with private immutable graph admission; input/schedule validation remains enabled.',
         'One warmup excluded, alternating mode order, shared host load uncontrolled. Do not extrapolate this ratio to a full board.']};
 if(process.env.HARRIS_PHASE_REPORT)writeFileSync(process.env.HARRIS_PHASE_REPORT,JSON.stringify(report,null,2)+'\n',{flag:'wx'});
 console.log(JSON.stringify({accepted:true,capacityClaim:false,summaries},null,2));

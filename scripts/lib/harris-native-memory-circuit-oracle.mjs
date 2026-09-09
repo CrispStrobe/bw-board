@@ -8,7 +8,7 @@ import {captureWiredNetImage} from '../../src/experimental/wired-net-image.js';
 import {createNativeMemoryCircuit} from '../../src/experimental/wired-kernel/memory-circuit.js';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 const wire=(from,fromTerminal,to,toTerminal=fromTerminal)=>({from,fromTerminal,to,toTerminal});
-export async function createMemoryCircuitOracle({wasmBytes,Circuit=DigitalCircuit,swapAddress=false,shortLanes=false,readOnly=false}={}) {
+export async function createMemoryCircuitOracle({wasmBytes,Circuit=DigitalCircuit,swapAddress=false,shortLanes=false,readOnly=false,admittedGraph=false}={}) {
     registerBusMemory();
     const banks=[{id:'low',kind:'62256'},{id:'high',kind:'28c256',readOnly}];
     const refs=banks.map(b=>new DigitalBusMemoryAdapter({enabled:true,...b,model:getDevice(b.kind),writeJournal:true}));
@@ -25,7 +25,7 @@ export async function createMemoryCircuitOracle({wasmBytes,Circuit=DigitalCircui
     if(shortLanes)wires.push(wire('low','d0','high','d0'));
     const circuit=new Circuit({enabled:true,parts,wires});
     circuit.drive('host',{...bitDrives(A,0),...Object.fromEntries(D.map(p=>[p,'Z'])),vcc:1,late_vcc:1,gnd:0,oeb:1,web:1,bhe_n:0,m_io:1});
-    const kernel=await createNativeMemoryCircuit({enabled:true,circuit,banks,wasmBytes});let comparisons=0,faults=0;
+    const kernel=await createNativeMemoryCircuit({enabled:true,circuit,banks,wasmBytes,admittedGraph});let comparisons=0,faults=0;
     const capture=()=>captureWiredNetImage({enabled:true,circuit});
     const check=(ok,detail)=>{if(!ok)throw new Error(`native memory circuit ${detail} at comparison ${comparisons}`);};
     const pass=(values={},maxPasses=8)=>{
@@ -45,8 +45,8 @@ export async function createMemoryCircuitOracle({wasmBytes,Circuit=DigitalCircui
     };
     return {circuit,kernel,refs,pass,A,D,report:()=>({comparisons,faults})};
 }
-export async function runNativeMemoryCircuitOracle({wasmBytes,yieldTask=()=>Promise.resolve(),stopped=()=>false,swapAddress=false}={}) {
-    const f=await createMemoryCircuitOracle({wasmBytes,swapAddress});f.pass();
+export async function runNativeMemoryCircuitOracle({wasmBytes,yieldTask=()=>Promise.resolve(),stopped=()=>false,swapAddress=false,admittedGraph=false}={}) {
+    const f=await createMemoryCircuitOracle({wasmBytes,swapAddress,admittedGraph});f.pass();
     for(let byte=0;byte<256;byte++) {
         if(stopped())throw new Error('native memory circuit oracle cancelled');
         const address=(byte*254)&65534,value=byte|((255-byte)<<8);

@@ -49,7 +49,7 @@ test('native memory circuit refuses model/state imports and invalid inputs witho
 });
 test('raw native memory mapping validation precedes any net/state mutation',native,async()=>{
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
-    const context=base,input=base+124,output=base+236,fault=base+268,sentinel=base+284;
+    const context=base,input=base+128,output=base+240,fault=base+272,sentinel=base+288;
     const set=(i,n)=>v.setUint32(context+4*i,n,true);
     // Mapping failure must happen before even dereferencing deliberately absent net tables.
     set(0,1);set(1,8);set(18,1);set(29,input);set(30,output);set(19,sentinel);set(20,sentinel);

@@ -56,7 +56,7 @@ export function preparePhaseSchedule({circuit,image,phase}) {
                 }
                 return {...progress,...inspect()};
             };
-            return {compileSchedule,runSchedule};
+            return {compileSchedule,runSchedule,scheduleLimits:Object.freeze({maxPeriods,maxUpdates})};
         }
     };
 }

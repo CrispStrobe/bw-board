@@ -82,14 +82,11 @@ static void evaluate_operations(u32 count,const u32 *ops,const u8 *nets,u8 *stag
 /* Success is delta+1. High-bit results are errors; published outputs remain
  * unchanged on every error, including nonconvergence. Live drivers can change
  * during failed settling, matching the separate pending/published contract. */
-u32 settle_owned(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *levels,
+static u32 settle_validated(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *levels,
                  u8 *live,u8 *live_conflicts,u32 count,const u32 *ops,u8 *staged,
                  u8 *published,u8 *published_conflicts,u32 max_deltas,
                  const u32 *dep_offsets,const u32 *deps,u32 dep_count,u8 *previous,u8 *changed_nets) {
-    u32 error=validate_nets(nets,drivers,offsets,ids,levels);
-    if(!error)error=validate_operations(count,ops,nets,drivers,dep_offsets,deps,dep_count);
-    if(error)return 0x80000000u|error;
-    if(!max_deltas||max_deltas>1024)return 0x80000005u;
+    (void)dep_count; /* Immutable dependency bounds already admitted. */
     for(u32 delta=0;delta<max_deltas;delta++) {
         resolve_valid(nets,offsets,ids,levels,live,live_conflicts);
         for(u32 n=0;n<nets;n++){changed_nets[n]=live[n]!=previous[n];previous[n]=live[n];}
@@ -103,4 +100,37 @@ u32 settle_owned(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *leve
         }
     }
     return 0x80000003u;
+}
+u32 settle_owned(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *levels,
+                 u8 *live,u8 *live_conflicts,u32 count,const u32 *ops,u8 *staged,
+                 u8 *published,u8 *published_conflicts,u32 max_deltas,
+                 const u32 *dep_offsets,const u32 *deps,u32 dep_count,u8 *previous,u8 *changed_nets) {
+    u32 error=validate_nets(nets,drivers,offsets,ids,levels);
+    if(!error)error=validate_operations(count,ops,nets,drivers,dep_offsets,deps,dep_count);
+    if(error)return 0x80000000u|error;
+    if(!max_deltas||max_deltas>1024)return 0x80000005u;
+    return settle_validated(nets,drivers,offsets,ids,levels,live,live_conflicts,count,ops,staged,published,published_conflicts,
+                            max_deltas,dep_offsets,deps,dep_count,previous,changed_nets);
+}
+/* One private immutable graph per module instance. Only the wrapper owns this
+ * arena; this is not admission for caller-mutable serialized state. Runtime
+ * host/schedule inputs remain validated, and owned native writers emit 0..3. */
+static const u32 *admitted_context;
+#define CB(i) ((u8*)(unsigned long)c[i])
+#define CW(i) ((u32*)(unsigned long)c[i])
+u32 admit_owned_context(const u32 *c) {
+    admitted_context=0; /* Failed re-admission must not retain an old grant. */
+    u32 error=validate_nets(c[0],c[1],CW(2),CW(3),CB(4));
+    if(!error)error=validate_operations(c[7],CW(8),c[0],c[1],CW(13),CW(14),c[15]);
+    if(error)return 0x80000000u|error;
+    if(!c[12]||c[12]>1024)return 0x80000005u;
+    if(c[31]!=1)return 0x80000006u;
+    admitted_context=c;return 0;
+}
+u32 settle_owned_context(const u32 *c) {
+    if(c[31]) {
+        if(c[31]!=1||admitted_context!=c)return 0x80000006u;
+        return settle_validated(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
+    }
+    return settle_owned(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
 }

@@ -18,6 +18,7 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     ...['phase_components_version','read_memory_phase_commands','begin_memory_phase','preview_memory_phase_end','finish_memory_phase','update_address_latch'].map(n=>`-Wl,--export=${n}`),
     ...['phase_circuit_version','begin_latched_memory_clock','end_latched_memory_clock'].map(n=>`-Wl,--export=${n}`),
     ...['phase_schedule_version','run_latched_memory_schedule'].map(n=>`-Wl,--export=${n}`),
+    ...['admit_owned_context','settle_owned_context'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});

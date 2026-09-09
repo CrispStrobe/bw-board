@@ -384,3 +384,43 @@ may access or mutate the admitted arena through the returned wrapper. Refuse
 unadmitted fast execution, compare all fault/state/net oracles, and measure
 against the fully checked path before selecting it. Dirty-net/event work may
 still be needed; the profile does not prove which settling substep dominates.
+
+### Private immutable graph admission experiment
+
+Implemented default-off `admittedGraph` for the private native memory/phase
+context. It validates graph/dependency/operation tables and limits once, then
+uses the same settling body as the fully checked entry. Dynamic host and
+schedule input-code checks remain enabled; native writers retain four-state
+codes. The wrapper exposes only defensive observations, not module memory or
+mutable context tables. Raw native pointers are still a trusted internal ABI,
+not a sandbox for arbitrary caller-mutated tables.
+
+Admission is bound to the exact context pointer in its private module instance;
+unadmitted execution fails, and a failed re-admission revokes the previous grant.
+Three new tests pass, including memory/phase/schedule oracles, edited wiring,
+contention/nonconvergence, invalid host inputs and raw admission/refusal cases.
+The focused admitted/net/evaluator/memory-circuit set passes **24 tests, no
+failures/skips**.
+All native components and registered memory tests also pass together:
+**62 tests, four suites, zero failures/skips**. The
+[Chromium receipt](HARRIS-NATIVE-ADMITTED-BROWSER.json) passes admitted memory,
+phase and schedule oracles, all earlier oracles/workload hashes, cancellation
+and profile cleanup. The fully checked path remains available and default.
+
+The first [repeated component measurement](HARRIS-NATIVE-ADMITTED-PHASE-COST.json)
+shows only a small median gain:
+68,236 periods/s admitted versus 63,527 fully checked batched (about 1.074x),
+with overlapping elapsed ranges. This is not strong evidence of a stable gain,
+and neither path is selected as a board backend. Retain the valid experiment
+behind its gate. Repeated whole-net scanning/resolution remains the next
+candidate; validation alone did not account for the profiled settling cost.
+
+The cost harness now chunks prepared schedules against both period and update
+capacities, rather than only the period cap. This preserves larger workload
+counts without exceeding the private schedule arena; compilation remains
+outside the timed region and every period/read is still verified.
+The [larger capacity smoke run](HARRIS-NATIVE-SCHEDULE-CAPACITY-SMOKE.json)
+passes 8,194 periods in all five modes, using multiple bounded schedule calls
+with identical final hashes and read counts. It is one smoke round, not another
+repeated performance result. The [native build](HARRIS-NATIVE-ADMITTED-BUILD.json)
+uses memory-context ABI 2 and records source/module hashes.
