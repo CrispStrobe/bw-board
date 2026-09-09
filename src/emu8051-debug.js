@@ -103,6 +103,9 @@ const SPACE_NAME = Object.keys(SPACE);
 
 /** DBG_MAX_BP in debug.h. Exceeding it returns -1, which we turn into a reason. */
 const MAX_BREAKPOINTS = 32;
+const MAX_CODE_ADDRESS = 0xffff;
+const CODE_ADDRESS_REFUSAL =
+    `code breakpoint addr must be in 0x0000..0x${MAX_CODE_ADDRESS.toString(16)}`;
 
 /**
  * @typedef {object} SymbolTable stc_symtab.py's output (format 004)
@@ -365,6 +368,8 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 breakpoints: hasWatchpoints
                     ? ['code', 'yield', 'write']
                     : ['code', 'yield'],
+                runTo: [{kind: 'address', space: 'code', addressMin: 0,
+                    addressMax: MAX_CODE_ADDRESS, stopSides: ['before'], installation: 'sync'}],
                 spaces: ['code', 'iram', 'sfr', 'xram', 'bit'],
                 writable: ['code', 'iram', 'sfr', 'xram', 'bit'],
                 sfrs: 'all',
@@ -441,7 +446,10 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             let handle;
             let pc;                       // where a hit will leave the PC
             if (bp.kind === 'code') {
-                pc = bp.addr & 0xFFFF;
+                if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > MAX_CODE_ADDRESS) {
+                    return { unsupported: CODE_ADDRESS_REFUSAL };
+                }
+                pc = bp.addr;
                 handle = wasm._emu_dbg_set_bp_code(pc);
             } else if (bp.kind === 'yield') {
                 const idx = taskIndex.get(bp.task);
