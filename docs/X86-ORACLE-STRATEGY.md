@@ -1,7 +1,7 @@
 # x86 oracles, architecture references and provenance
 
-2026-09-09. Recommendation and implementation plan; external comparisons listed
-below have not yet been run by this lane. Use multiple references with explicit
+2026-09-09. Recommendation and implementation plan; the initial PCjs probes
+below have now run, but the broader comparisons remain pending. Use multiple references with explicit
 scope, not a single emulator treated as universally correct.
 
 ## Roles
@@ -83,6 +83,14 @@ oracle adapters. Re-verify them or record a new pin before executing comparisons
 ## Tracking
 
 - Existing: hardware-generated real-mode SST and owned physical-board tests.
-- Pending: pinned external adapters, normalized fixtures, mismatch minimization,
+- Initial PCjs adapter: **60/60 owned real-mode single-instruction cases pass**
+  ([receipt](PCJS-OWNED-ORACLE-REPORT.json)), across 8086 shared-8088 ISA, 80186
+  and 80286 configurations. It checks defined registers/flags and the complete
+  1 MiB test memory, requires a clean exact external pin, and preserves first
+  per-model differences. Fixtures and local implementation sources are hashed.
+  Run `PCJS_ROOT=/path/to/pinned/pcjs node scripts/compare-pcjs-owned.mjs`.
+  The local 286 side uses an explicitly architectural generator adapter, not
+  a physical motherboard. No I/O, interrupt, timing or protected-mode claim.
+- Pending: broader pinned external adapters, normalized fixtures, mismatch minimization,
   and execution receipts. Source inspection is not an oracle-pass claim.
 - Performance implementation: [wired performance plan](WIRED-X86-PERFORMANCE-PLAN.md).
