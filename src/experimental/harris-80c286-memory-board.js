@@ -1,6 +1,7 @@
 /** Gated phase-level board: external address latch, controller, and existing RAM/ROM models. */
 import {getDevice} from '../devices.js';
 import {DigitalCircuit, CircuitFault, bitPins, readBits} from './digital-circuit.js';
+import {CompiledDigitalCircuit} from './compiled-digital-circuit.js';
 import {Harris80C286Bus} from './harris-80c286-bus.js';
 import {HarrisTimerClock} from './harris-8254-adapter.js';
 import {IdealAddressLatch, MemoryPhaseController, DigitalBusMemoryAdapter, settleBusMemories} from './latched-memory-components.js';
@@ -12,8 +13,9 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
-    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, editWires = wires => wires} = {}) {
+    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
+    if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
@@ -168,7 +170,8 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         wires.push(wire('controller', 'mrd_n', id, 'oeb'), wire('controller', 'mwr_n', id, 'web'));
         wires.push(wire('inputs', 'vcc', id, 'vcc'), wire('inputs', 'gnd', id, 'gnd'));
     }
-    const circuit = new DigitalCircuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
+    const Circuit=netBackend==='compiled'?CompiledDigitalCircuit:DigitalCircuit;
+    const circuit = new Circuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
     circuit.drive('inputs', INPUTS);
     if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
     if (timerPart) circuit.drive('timer_inputs',{gate0:1});
@@ -198,7 +201,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},

@@ -6,6 +6,15 @@ milestones. Those modes remain available and retain their refusal boundaries.
 All additions remain experimental and explicitly gated. No application pin,
 production default, deployment, or guest-media hosting changes are included.
 
+**Wired DOS boot accepted:** the original reference board reached an actual
+`A>` prompt at 5,930,000 modeled system periods, with matching COMMAND.COM/PSP,
+57,856 physical DMA bytes, 113 terminal-count pulses and two IRQ-delivered Enter
+keys. The [full receipt](HARRIS-286-DOS-BOOT-REPORT.json) pins runtime revision
+`743f99e84242212476c18d4c86c19bd7a979a050`; all recorded source hashes were
+checked against that revision. Elapsed time was 6,330,054 ms (105.5 minutes).
+This uses the explicit laboratory timer ratio below. It does **not** validate
+later compiled backends, stock PC timing, or real-time capacity.
+
 ## What crosses the wires
 
 Enable `holdEnabled:true` on the board and `transferEnabled:true` on **both**
@@ -70,21 +79,21 @@ and an INTA pair. Keyboard tests require guest interrupt delivery and
 acknowledgement. Existing control-only/register-only tests remain separate.
 
 Targeted regression, rerun including both BIOS integration tests below:
-**510/510 passed, zero skips**, including terminal-cache and drive-template regressions:
+**525/525 passed, zero skips**, including both net backends and oracle-adapter regressions:
 
 ```sh
-node --test --test-reporter=spec test/harris-*.test.mjs test/digital-circuit-lab.test.mjs test/paterson-fat12.test.mjs test/sst286.test.mjs test/private-guest-fixtures.test.mjs test/dos-guest-persistence.test.mjs test/i8259.test.mjs test/i8254*.test.mjs test/i8255.test.mjs test/bios-rom.test.mjs test/bios-fdc.test.mjs test/upd765.test.mjs test/i8237.test.mjs
+node --test --test-reporter=spec test/harris-*.test.mjs test/digital-circuit-lab.test.mjs test/paterson-fat12.test.mjs test/sst286.test.mjs test/private-guest-fixtures.test.mjs test/dos-guest-persistence.test.mjs test/i8259.test.mjs test/i8254*.test.mjs test/i8255.test.mjs test/bios-rom.test.mjs test/bios-fdc.test.mjs test/upd765.test.mjs test/i8237.test.mjs test/x86-owned-oracle.test.mjs
 ```
 
 An additional BIOS-driver integration test passes separately:
-`node --test test/harris-bios-dma.test.mjs` (**1/1**). An owned microguest
+`node --test test/harris-bios-dma.test.mjs` (**2/2**, reference and indexed). An owned microguest
 installs BIOS vectors and programs a faster PIT divisor, then calls the
 unmodified INT 13h routine. It verifies the actual spin-up tick count, DMA
 sector bytes, IRQ6 handling, successful return flags and restored stack.
 Its explicit microguest entry replaces POST, so it is **not** DOS acceptance.
 The existing non-wired DOS/controller differential test also passes **7/7**;
 it validates the local image independently, not the new physical board.
-The additional `harris-bios-keyboard` test passes **1/1**, exercising the real
+The additional `harris-bios-keyboard` test passes **2/2**, exercising the real
 BIOS's translation, ring buffer and two paced INT 16h reads through IRQ1.
 
 The complete pinned real-mode SingleStepTests corpus has been rerun after the
@@ -116,8 +125,10 @@ the repository. See the existing DOS-image builder for input provenance.
 
 The optional report is create-only. Missing local inputs and non-acceptance
 are explicit failures; this command does not download, publish, or retain a
-boot image. Long-run acceptance results will be recorded separately from the
-owned component tests; a successful unit suite alone is not a DOS boot claim.
+boot image. The original reference run's acceptance is recorded above separately
+from owned component tests; a successful unit suite alone is not a DOS boot claim.
+The [indexed backend](HARRIS-COMPILED-NETS.md) is a later, separately gated
+optimization and cannot inherit that original run's full-boot acceptance.
 
 ## Simulator overhead
 

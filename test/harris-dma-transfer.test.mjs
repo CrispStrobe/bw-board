@@ -10,7 +10,7 @@ import {registerBusMemory} from '../src/devices/bus-memory.js';
 import {assembleRaw} from '../src/i8086-asm.js';
 registerBusMemory();
 const out=(port,values)=>`MOV DX,${port}\n`+values.map(v=>`MOV AL,${v}\nOUT DX,AL`).join('\n')+'\n';
-function fixture({count=4,address=0x501,mode=0x46,roundTrip=false,editWires=w=>w}={}){
+function fixture({count=4,address=0x501,mode=0x46,roundTrip=false,netBackend='reference',editWires=w=>w}={}){
     const dma=new HarrisDMAAdapter({enabled:true,transferEnabled:true}),fdc=new HarrisFDCAdapter({enabled:true,transferEnabled:true});
     const bytes=Uint8Array.from({length:512},(_,i)=>(i*37+18)&255);
     fdc.loadMedia(bytes,{cylinders:1,heads:1,sectors:1,bytesPerSector:512});
@@ -25,7 +25,7 @@ function fixture({count=4,address=0x501,mode=0x46,roundTrip=false,editWires=w=>w
         out(0x3f2,[0x1c])+out(0x3f5,[roundTrip?0x45:0x46,0,0,0,1,2,1,0x2a,0xff])+waitResult+again+'HLT';
     rom.set(assembleRaw(code,0x100),0x100);
     const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,holdEnabled:true,intrEnabled:true,ioEnabled:true,
-        interruptDevice:new Harris8259Adapter({enabled:true}),fdcDevice:fdc,dmaDevice:dma,editWires});
+        interruptDevice:new Harris8259Adapter({enabled:true}),fdcDevice:fdc,dmaDevice:dma,netBackend,editWires});
     const cpu=new HarrisBootCPU({enabled:true,board});cpu.initialize();return {cpu,board,dma,fdc,bytes};
 }
 test('physical DMA writes bytes across both lanes and terminates on N-1 count',()=>{
@@ -77,4 +77,19 @@ test('RESET during an unaccepted DMA byte releases ownership without inventing t
     assert.equal(f.dma.inspect().master,'TC1');f.board.clock({reset:1});
     assert.equal(f.dma.inspect().master,'IDLE');assert.equal(f.dma.inspect().transferred,0);assert.equal(f.dma.inspect().tcPulses,0);
     assert.equal(f.fdc.inspect().phase,'command');assert.equal(f.board.circuit.require('cpu','hlda'),0);
+});
+test('compiled connectivity matches reference DMA ownership, data and guest outcome each period',()=>{
+    for(const options of [{},{mode:0x4a,roundTrip:true},{mode:0x42}]) {
+        const ref=fixture(options),fast=fixture({...options,netBackend:'compiled'});
+        let clocks=0;
+        while(ref.cpu.status==='running'&&clocks++<16000) {
+            ref.cpu.stepClock();fast.cpu.stepClock();
+            assert.deepEqual(fast.board.bus.outputs,ref.board.bus.outputs);
+            assert.deepEqual(fast.dma.inspect(),ref.dma.inspect());
+            for(const p of ['ale','mrd_n','mwr_n','ior_n','iow_n'])assert.equal(fast.board.circuit.read('controller',p),ref.board.circuit.read('controller',p));
+        }
+        assert.equal(ref.cpu.status,'halted');assert.deepEqual(fast.cpu.inspect(),ref.cpu.inspect());
+        assert.deepEqual(fast.fdc.inspect(),ref.fdc.inspect());
+        for(const id of ['ram0','ram1'])assert.deepEqual(fast.board.inspectMemory(id),ref.board.inspectMemory(id));
+    }
 });

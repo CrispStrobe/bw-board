@@ -105,5 +105,12 @@ decision rather than silently redefining success.
 
 - Complete: first allocation/terminal-cache pass (`19c033d`), 510 targeted tests,
   four-pair startup receipt. This is not completion of the plan above.
-- Running: original wired DOS acceptance probe, on pre-optimization sources.
-- Pending: the eight implementation/evidence gates above beyond existing baselines.
+- Complete: original wired DOS acceptance at `A>`, 5,930,000 modeled periods,
+  with [source-pinned receipt](HARRIS-286-DOS-BOOT-REPORT.json). This is the
+  pre-optimization reference implementation, not the compiled backend.
+- Initial oracle iteration: [60 PCjs comparisons pass](PCJS-OWNED-ORACLE-REPORT.json);
+  broader interrupt/device/protected-mode adapters and minimization remain pending.
+- Initial connectivity iteration: [indexed backend](HARRIS-COMPILED-NETS.md),
+  525 targeted tests and a 1.15x startup comparison. Stateful scheduling unchanged.
+- Pending: completion of the eight implementation/evidence gates beyond these
+  partial milestones; the real-time capacity gate has not been reached.

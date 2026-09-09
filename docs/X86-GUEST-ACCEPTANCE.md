@@ -1,6 +1,9 @@
 # 16-bit guest execution: measured incremental acceptance
 
 Latest wired-board work: [physical DMA, HOLD and keyboard integration](HARRIS-286-PHYSICAL-DMA.md).
+The source-pinned reference board has now reached DOS 2's real `A>` prompt;
+see the [boot receipt](HARRIS-286-DOS-BOOT-REPORT.json). This does not complete
+the broader guest list, compiled-backend acceptance, or the real-time target.
 The older milestones below retain their original scope and measurements.
 
 2026-09-08. User requested DOS utilities, shell/editor persistence, Circuit
