@@ -64,6 +64,9 @@ export function createLabwiredDebugTarget (opts) {
   let detached = false;
   let insnRemaining = null;
   let listeners = [];
+  let nextBreakpointHandle = 1;
+  /** Opaque handle -> code address. Clearing owns an installation, not an address. */
+  const breakpoints = new Map();
   /** Code breakpoints, Thumb bit already masked off. */
   const codeBps = new Set();
 
@@ -124,14 +127,20 @@ export function createLabwiredDebugTarget (opts) {
         return { unsupported: `Thumb code address ${bp.addr.toString(16)} is odd. Bit 0 is the ` +
           'execution-state flag, not part of the address — a breakpoint set on it could never match.' };
       }
-      codeBps.add(bp.addr >>> 0);
-      return undefined;
+      const handle = nextBreakpointHandle++;
+      const addr = bp.addr >>> 0;
+      breakpoints.set(handle, addr);
+      codeBps.add(addr);
+      return handle;
     },
 
-    clearBreakpoint (bp) {
-      // Apply the same width/integer guard as installation: malformed values
-      // must not alias a real breakpoint through JavaScript bitwise coercion.
-      if (bp && isCodeAddress(bp.addr)) codeBps.delete((bp.addr & ~1) >>> 0);
+    clearBreakpoint (handle) {
+      const addr = breakpoints.get(handle);
+      if (addr === undefined) return undefined;
+      breakpoints.delete(handle);
+      // Separate installations at one address have separate identities. Keep
+      // watching until the final owner is cleared.
+      if (![...breakpoints.values()].includes(addr)) codeBps.delete(addr);
       return undefined;
     },
 
@@ -265,7 +274,13 @@ export function createLabwiredDebugTarget (opts) {
 
     detach () { detached = true; running = false; },
 
-    destroy () { detached = true; running = false; listeners = []; codeBps.clear(); },
+    destroy () {
+      detached = true;
+      running = false;
+      listeners = [];
+      breakpoints.clear();
+      codeBps.clear();
+    },
   };
 
   return target;

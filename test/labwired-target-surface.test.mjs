@@ -125,7 +125,7 @@ describe('labwired code breakpoint only', () => {
 
     it('accepts the highest even 32-bit address', () => {
         const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0) });
-        assert.equal(target.setBreakpoint({ kind: 'code', addr: CODE_ADDRESS_MAX }), undefined,
+        assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: CODE_ADDRESS_MAX }), 'number',
             ARCHITECTURAL_WIDTH_ONLY);
     });
 
@@ -137,12 +137,22 @@ describe('labwired code breakpoint only', () => {
         });
     });
 
-    it('a malformed clear cannot alias and remove the breakpoint at address zero', () => {
+    it('a malformed or unknown handle cannot remove the breakpoint at address zero', () => {
         const target = createLabwiredDebugTarget({ adapter: stubAdapterAt(0) });
-        assert.equal(target.setBreakpoint({ kind: 'code', addr: 0 }), undefined);
-        target.clearBreakpoint({ kind: 'code', addr: Number.NaN });
+        const handle = target.setBreakpoint({ kind: 'code', addr: 0 });
+        assert.equal(typeof handle, 'number');
+        target.clearBreakpoint(Number.NaN);
+        target.clearBreakpoint(0);
         target.run();
         assert.equal(target.runFor(1_000n), 'halted',
-            'NaN must not coerce to zero and clear a legitimate breakpoint');
+            'malformed and unknown handles must not clear a legitimate breakpoint');
+
+        // The first opaque handle is odd. That is valid: Thumb alignment
+        // constrains addresses, not identities. Clear the returned identity
+        // exactly, then prove the address is no longer watched.
+        assert.equal(handle & 1, 1);
+        assert.equal(target.clearBreakpoint(handle), undefined);
+        target.run();
+        assert.equal(target.runFor(1_000n), 'running');
     });
 });
