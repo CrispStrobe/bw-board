@@ -560,6 +560,7 @@ rather than each against the master it branched from.
 
 | lane | who | started | what |
 | --- | --- | --- | --- |
+| wired-286-dos-boot | Codex | 2026-09-09 | Pursue wired DOS boot: bus handoff, physical DMA/FDC, verified guest execution. Keep defaults off; no deploy or media hosting. |
 
 ## DONE
 
