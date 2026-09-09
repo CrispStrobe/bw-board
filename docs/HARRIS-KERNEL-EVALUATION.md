@@ -171,3 +171,44 @@ not an emulator correctness failure. Enable the browser oracle explicitly with
 `HARRIS_NET_WASM` pointing to the locally built module; its adjacent build
 manifest and current C source hash must agree. No default browser/backend path
 loads the native module.
+
+### Isolated native memory component
+
+Implemented the owned ideal-digital 62256/28C256 bridge in `memory-banks.c`,
+with an explicitly gated wrapper. This is not a new board backend. The analog
+models, JavaScript adapters, application pin and all default paths are unchanged.
+The build now links both owned C components without WASI/runtime imports; its
+manifest records both source hashes as well as the module hash.
+
+The memory component retains RAM/EEPROM fill differences, one-pass release on
+cycle changes, power-on write arming, latest pending-byte sampling and trailing
+edge writes. Read-only protection applies to EEPROM, not SRAM. Every peer bank
+preflights before actual bank state or storage commits. Inactive address/data
+remain don't-cares; active X/Z/contention and power faults remain errors. Private
+preview buffers are not published on a failed pass. Safe-integer write counts
+carry beyond 32 bits; overflow is explicitly refused before any peer commits.
+
+Nine focused Node tests pass with the native module enabled. They include a
+portable oracle: 1,795 passes against the registered JavaScript adapters, four
+banks, all 256 byte values and a late-peer failure while writes are pending.
+Other tests cover fault pin order, defensive copies and raw native counter
+overflow atomicity. The [build](HARRIS-NATIVE-MEMORY-BUILD.json) and
+[Chromium receipt](HARRIS-NATIVE-MEMORY-BROWSER-ORACLE.json) are preserved:
+both component oracles pass, all five JS workload hashes match, complete-period
+cancellation passes and the temporary profile is removed. This is one warmup
+and one measured correctness smoke round, not a native throughput result.
+The combined wired/x86, memory and peripheral command passes **493 tests,
+four suites, zero failures/skips** with this native module enabled.
+
+Limits: at most 32 initialized owned banks, no arbitrary model admission, no
+live-state import or resumable board snapshot, no analog electrical semantics.
+Detailed net-driver fault diagnostics still belong to the circuit layer.
+Separate per-call oracle bridges are deliberately test machinery, not the
+intended production hot path.
+
+Next integration gate: one private native arena containing actual-net mappings,
+owned combinational operations and memory state; a native memory-settle loop
+must preserve all-peer preflight and the existing settle/commit order. Validate
+edited wiring, shared data buses, byte lanes, failures and convergence before
+porting the controller/latch, CPU bus sequencer and remaining devices. Only a
+complete chunk runner can support the whole-kernel throughput comparison.

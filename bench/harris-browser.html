@@ -27,7 +27,8 @@ try {
     let nativeOracle=null;
     if(config.nativeOracle) {
         const next=++id;
-        const result=await new Promise((resolve,reject)=>{pending.set(next,{resolve,reject});worker.postMessage({kind:'kernel-oracle',id:next,sha256:config.nativeOracle.sha256});});
+        const result=await new Promise((resolve,reject)=>{pending.set(next,{resolve,reject});worker.postMessage({kind:'kernel-oracle',id:next,sha256:config.nativeOracle.sha256,
+            memory:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/memory-banks.c']});});
         nativeOracle=result.nativeOracle;
         if(!nativeOracle.accepted||nativeOracle.capacityClaim!==false)throw new Error('native oracle failed or overclaimed');
     }

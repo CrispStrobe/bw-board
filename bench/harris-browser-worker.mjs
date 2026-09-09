@@ -15,6 +15,10 @@ self.onmessage=async({data})=>{
             if(moduleSHA256!==data.sha256)throw new Error('native oracle module hash mismatch');
             const {runNativeSettleOracle}=await import('../scripts/lib/harris-native-settle-oracle.mjs');
             const nativeOracle=await runNativeSettleOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
+            if(data.memory) {
+                const {runNativeMemoryOracle}=await import('../scripts/lib/harris-native-memory-oracle.mjs');
+                nativeOracle.memory=await runNativeMemoryOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
+            }
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});

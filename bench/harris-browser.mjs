@@ -19,10 +19,14 @@ let nativeBytes=null,nativeModule=null;
 if(nativePath) {
     nativeBytes=readFileSync(nativePath);
     const build=JSON.parse(readFileSync(join(dirname(nativePath),'wired-net-kernel-build.json')));
-    const sourceSHA256=hash(readFileSync(join(root,'src/experimental/wired-kernel/net-resolver.c')));
-    assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');assert.equal(build.sourceSHA256,sourceSHA256,'rebuild native module for this source');
-    nativeModule={sha256:build.wasmSHA256,sourceSHA256,compiler:build.compiler};
-    sourceHashes['src/experimental/wired-kernel/net-resolver.c']=sourceSHA256;
+    const verifiedSources=build.sourceHashes??{'src/experimental/wired-kernel/net-resolver.c':build.sourceSHA256};
+    assert.ok(Object.hasOwn(verifiedSources,'src/experimental/wired-kernel/net-resolver.c'));
+    for(const [path,expected] of Object.entries(verifiedSources)) {
+        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c'].includes(path),'unexpected native source');
+        assert.equal(hash(readFileSync(join(root,path))),expected,'rebuild native module for this source');sourceHashes[path]=expected;
+    }
+    assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');
+    nativeModule={sha256:build.wasmSHA256,sourceHashes:verifiedSources,compiler:build.compiler};
 }
 const nodeReceiptBytes=readFileSync(join(root,'docs/HARRIS-OWNED-WORKLOADS-BENCH.json'));
 const nodeReceipt=JSON.parse(nodeReceiptBytes),expectedStateHashes=Object.fromEntries(nodeReceipt.samples.map(s=>[s.name,s.stateSHA256]));
@@ -45,7 +49,7 @@ const server=createServer((req,res)=>{
     try {
         const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
         const allowed=pathname==='/bench/harris-browser.html'||pathname==='/bench/harris-browser-worker.mjs'||
-            ['/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
+            ['/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
         if(req.method!=='GET'||!allowed)throw new Error('not served');
         const path=realpathSync(resolve(root,'.'+pathname));if(!path.startsWith(root+sep))throw new Error('outside source root');
         const bytes=readFileSync(path),key=path.slice(root.length+1),digest=hash(bytes);
@@ -79,6 +83,10 @@ try {
         assert.equal(hash(readFileSync(nativePath)),nativeModule.sha256,'native module changed during run');
         assert.equal(report.nativeOracle?.accepted,true);assert.equal(report.nativeOracle?.capacityClaim,false);
         assert.equal(report.nativeOracle?.moduleSHA256,nativeModule.sha256);assert.ok(report.nativeOracle.comparisons>200);
+        if(nativeModule.sourceHashes['src/experimental/wired-kernel/memory-banks.c']) {
+            assert.equal(report.nativeOracle.memory?.accepted,true);assert.equal(report.nativeOracle.memory?.capacityClaim,false);
+            assert.equal(report.nativeOracle.memory?.byteValues,256);assert.equal(report.nativeOracle.memory?.faults,1);
+        }
         report.nativeBuild=nativeModule;
     }
     for(const [path,expected] of Object.entries(sourceHashes))assert.equal(hash(readFileSync(join(root,path))),expected,`${path} changed during run`);

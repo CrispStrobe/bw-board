@@ -14,7 +14,7 @@ guest-media hosting, or automatic backend replacement is authorized here.
 | Compiled connectivity | Implemented and gated; four-state, edited-wire and fault comparisons pass. |
 | Bindings/scheduling | Memory and selected peripherals scheduled; packed drives and cached layouts measured. Not a complete whole-board event kernel. |
 | Bus/board specialization | Partial; actual-net decoder/vector binding exists, complete specialized execution kernel does not. |
-| Whole-kernel Wasm evaluation | Typed-net and owned combinational native prototypes validated, including a browser oracle. Stateful/CPU execution kernel and throughput comparison pending. |
+| Whole-kernel Wasm evaluation | Typed-net and owned combinational native prototypes validated, including a browser oracle; isolated memory component passes Node differential tests. Coupled stateful/CPU execution kernel and throughput comparison pending. |
 | Worker boundary | Owned-workload Chromium worker, bounded chunks, heartbeat and cancellation verified; not production GUI integration. |
 | End-to-end capacity | **Failed/unmet**: latest active browser workloads sustain 10,903–26,218 modeled periods/s versus 9,545,454 required. Calibrated full DOS/browser timing remains open. |
 
@@ -246,4 +246,13 @@ decision rather than silently redefining success.
   2,366 settle boundaries and all five historical workload hashes; its clean
   [receipt](HARRIS-NATIVE-BROWSER-ORACLE.json) follows a harness process-group/
   temporary-profile cleanup fix. This is not a full native board or a capacity
-  result. Stateful memory, controller/CPU/device ports remain pending.
+  result. Coupled stateful memory, controller/CPU/device ports remain pending.
+- Isolated native memory component: nine focused tests pass, including 1,795
+  portable differential passes across four banks, all byte values and a late
+  peer fault. Write-edge/arming, read-only EEPROM, X/Z validation, defensive
+  copies and safe-integer write counts are covered. The native net/memory loop
+  is not coupled yet; no board backend or throughput improvement is claimed.
+  Chromium repeats both component oracles, preserves all five owned workload
+  hashes and passes cancellation/profile cleanup. Build/browser receipts are
+  linked in the kernel evaluation document. The combined checkpoint passes
+  **493 tests, four suites, zero failures/skips** with the module enabled.
