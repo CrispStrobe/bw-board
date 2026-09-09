@@ -143,9 +143,15 @@ decision rather than silently redefining success.
 - Decoder iteration: optional pin/vector binding of owned memory decoders;
   **559 tests pass, 4 suites, zero skips**, including changed-wire fault behavior,
   per-period DMA comparisons and BIOS disk execution. Performance receipt pending.
-- A full compiled/scheduled, bus-trace-off DOS run is in flight using runtime
+- A full compiled/scheduled, bus-trace-off DOS run completed using runtime
   `03946c7` (without decoder specialization or write journal). Its result must
-  be recorded separately from later runtime revisions; not yet accepted.
+  be recorded separately from later runtime revisions. Accepted at `A>` after
+  5,930,000 periods and 513,244 retired instructions; every recorded guest/device
+  field and landmark clock matches the original reference receipt. All 21 source
+  hashes match the exact execution revision
+  ([receipt](HARRIS-COMPILED-DOS-BOOT-REPORT.json)). Elapsed time was 1,946,641 ms
+  (~32.4 minutes), versus ~105.5 minutes originally, under different host loads.
+  This remains a lab-clock functional boot, not the real-time-capacity gate.
 - Decoder [three-round receipt](HARRIS-DECODER-SPECIALIZATION-BENCH.json):
   approximately 1.11x memory, 1.16x I/O, 0.93x DMA, 1.08x interrupt, 1.02x idle
   versus scheduled generic decoders. All states match. Concurrent DOS and host
