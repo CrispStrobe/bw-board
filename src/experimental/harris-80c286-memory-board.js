@@ -1,9 +1,10 @@
 /** Gated phase-level board: external address latch, controller, and existing RAM/ROM models. */
 import {getDevice} from '../devices.js';
-import {DigitalCircuit, CircuitFault, bitPins, readBits} from './digital-circuit.js';
+import {DigitalCircuit, CircuitFault, bitPins} from './digital-circuit.js';
 import {CompiledDigitalCircuit} from './compiled-digital-circuit.js';
 import {Harris80C286Bus} from './harris-80c286-bus.js';
 import {HarrisTimerClock} from './harris-8254-adapter.js';
+import {createHarrisMemoryDecoder} from './harris-memory-decoder.js';
 import {IdealAddressLatch, MemoryPhaseController, DigitalBusMemoryAdapter, settleBusMemories} from './latched-memory-components.js';
 
 const A = bitPins('a', 24);
@@ -14,11 +15,12 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
     timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true,
-    memoryScheduling = false, memoryWriteJournal = false, editWires = wires => wires} = {}) {
+    memoryScheduling = false, memoryWriteJournal = false, decoderSpecialization = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
     if(typeof memoryScheduling!=='boolean'||memoryScheduling&&netBackend!=='compiled')throw new TypeError('memoryScheduling requires compiled backend and boolean opt-in');
     if(typeof memoryWriteJournal!=='boolean')throw new TypeError('memoryWriteJournal');
+    if(typeof decoderSpecialization!=='boolean'||decoderSpecialization&&netBackend!=='compiled')throw new TypeError('decoderSpecialization requires compiled backend and boolean opt-in');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
@@ -158,14 +160,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
             contents: kind === 'rom' ? rom.filter((_, i) => i % 2 === lane) : new Uint8Array(), readOnly: kind === 'rom',writeJournal:memoryWriteJournal});
         memories.push(memory); parts.push(memory.part());
         const decode = `${id}_decode`;
-        parts.push({id: decode, pins: [...A, 'bhe_n', 'm_io', 'ce_n'], outputs: ['ce_n'], evaluate(read) {
-            if (read('m_io') === 0 || (lane === 0 ? read('a0') === 1 : read('bhe_n') === 1)) return {ce_n: 1};
-            const address = readBits(A, read);
-            if (address === null || read('m_io') !== 1 || (lane === 1 && read('bhe_n') !== 0)) return {ce_n: 'X'};
-            const selected = address >= region.start && address < region.end ||
-                kind === 'rom' && romLowAlias && address >= 0xf0000 && address < 0x100000;
-            return {ce_n: Number(!selected)};
-        }});
+        parts.push(createHarrisMemoryDecoder({id:decode,lane,start:region.start,end:region.end,romLowAlias:kind==='rom'&&romLowAlias}));
         for (const p of [...A, 'bhe_n', 'm_io']) wires.push(wire('latch', `q_${p}`, decode, p));
         wires.push(wire(decode, 'ce_n', id, memory.select));
         for (let i = 0; i < 15; i++) wires.push(wire('latch', `q_a${i + 1}`, id, `a${i}`));
@@ -174,7 +169,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         wires.push(wire('inputs', 'vcc', id, 'vcc'), wire('inputs', 'gnd', id, 'gnd'));
     }
     const Circuit=netBackend==='compiled'?CompiledDigitalCircuit:DigitalCircuit;
-    const circuit = new Circuit({enabled, parts, wires: editWires(wires.map(w => ({...w})))});
+    const circuit = new Circuit({enabled, parts, wires: editWires(wires.map(w => ({...w}))),compileEvaluators:decoderSpecialization});
     // Compile bindings once, but keep the reference path dynamically dispatching
     // diagnostic overrides of require/drive. Neither path bypasses resolved nets.
     const bind = id => netBackend === 'compiled' ? circuit.bind(id) : {
@@ -215,7 +210,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal, decoderSpecialization}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},

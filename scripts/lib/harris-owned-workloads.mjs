@@ -13,7 +13,7 @@ import {registerBusMemory} from '../../src/devices/bus-memory.js';
 
 export const ownedWorkloads=Object.freeze(['memory','io','dma','interrupt','idle']);
 const out=(port,values)=>`MOV DX,${port}\n`+values.map(v=>`MOV AL,${v}\nOUT DX,AL`).join('\n')+'\n';
-export function createOwnedWorkload(name,{netBackend='reference',memoryScheduling=false,memoryWriteJournal=false,busTraceEnabled=false}={}) {
+export function createOwnedWorkload(name,{netBackend='reference',memoryScheduling=false,memoryWriteJournal=false,decoderSpecialization=false,busTraceEnabled=false}={}) {
     if(!ownedWorkloads.includes(name))throw new RangeError('owned workload');
     registerBusMemory();
     const pic=new Harris8259Adapter({enabled:true}),timer=new Harris8254Adapter({enabled:true});
@@ -64,7 +64,7 @@ IRET`;
     const rom=createHarrisBootROM();rom.fill(255,0x100,0xfff0);rom.set(assembleRaw('CLI\n'+program,0x100),0x100);
     const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,ramBytes:640*1024,textRAM:true,
         intrEnabled:true,ioEnabled:true,holdEnabled:true,interruptDevice:pic,timerDevice:timer,timerClockHalfPeriod:4,
-        fdcDevice:fdc,dmaDevice:dma,keyboardDevice:keyboard,netBackend,memoryScheduling,memoryWriteJournal,busTraceEnabled});
+        fdcDevice:fdc,dmaDevice:dma,keyboardDevice:keyboard,netBackend,memoryScheduling,memoryWriteJournal,decoderSpecialization,busTraceEnabled});
     const cpu=new HarrisBootCPU({enabled:true,board});
     const finished=clocks=>cpu.status==='halted'&&(name==='interrupt'?cpu.regs.bx===3&&!(cpu.flags&0x200):name==='idle'?clocks>=10000:true);
     const verify=()=>{

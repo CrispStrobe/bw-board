@@ -24,6 +24,9 @@ const memoryScheduling=memorySchedule==='on';
 const journal=process.env.HARRIS_MEMORY_JOURNAL??'off';
 if(!['on','off'].includes(journal))throw new TypeError('HARRIS_MEMORY_JOURNAL must be on or off');
 const memoryWriteJournal=journal==='on';
+const specialize=process.env.HARRIS_DECODER_SPECIALIZATION??'off';
+if(!['on','off'].includes(specialize))throw new TypeError('HARRIS_DECODER_SPECIALIZATION must be on or off');
+const decoderSpecialization=specialize==='on';
 // Explicit laboratory clock ratio: PIT input is half the board step rate.
 // This is a functional boot probe, not a stock-PC timing/performance grade.
 const timerClockHalfPeriod=1;
@@ -35,6 +38,7 @@ const sourceHashes=Object.fromEntries(['./probe-harris-dos.mjs','./build-bios.mj
     '../src/experimental/harris-80c286-memory-board.js','../src/experimental/digital-circuit.js',
     '../src/experimental/compiled-digital-circuit.js',
     '../src/devices/bus-memory.js',
+    '../src/experimental/harris-memory-decoder.js',
     '../src/experimental/latched-memory-components.js','../src/experimental/harris-fdc-adapter.js',
     '../src/experimental/harris-dma-adapter.js','../src/experimental/harris-keyboard-adapter.js',
     '../src/experimental/harris-8259-adapter.js','../src/experimental/harris-8254-adapter.js',
@@ -45,7 +49,7 @@ registerBusMemory();
 const pic=new Harris8259Adapter({enabled:true}),timer=new Harris8254Adapter({enabled:true}),
     fdc=new HarrisFDCAdapter({enabled:true,transferEnabled:true}),dma=new HarrisDMAAdapter({enabled:true,transferEnabled:true}),keyboard=new HarrisKeyboardAdapter({enabled:true});
 fdc.loadMedia(built.image,{cylinders:GEOM.totalSectors/(GEOM.sectorsPerTrack*GEOM.heads),heads:GEOM.heads,sectors:GEOM.sectorsPerTrack,bytesPerSector:512});
-const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,ramBytes:640*1024,textRAM:true,netBackend,busTraceEnabled,memoryScheduling,memoryWriteJournal,
+const board=createHarrisMemoryBoard({enabled:true,rom,romLowAlias:true,ramBytes:640*1024,textRAM:true,netBackend,busTraceEnabled,memoryScheduling,memoryWriteJournal,decoderSpecialization,
     intrEnabled:true,ioEnabled:true,holdEnabled:true,interruptDevice:pic,timerDevice:timer,timerClockHalfPeriod,fdcDevice:fdc,dmaDevice:dma,keyboardDevice:keyboard});
 const cpu=new HarrisBootCPU({enabled:true,board});let clocks=0,outcome,screen='',bootSectorEntered=false;
 const textScreen=()=>{const c=board.inspectMemory('text0').bytes;return Array.from({length:25},(_,r)=>String.fromCharCode(...c.slice(0x4000+r*80,0x4000+(r+1)*80))).join('\n');};
@@ -82,7 +86,7 @@ try {
     outcome??={status:'budget-exhausted'};
 }catch(e){outcome={status:'fault',code:e.code??e.name,message:e.message};}
 screen=textScreen();
-const report={accepted:outcome.status==='dos-prompt',maxClocks,clocks,elapsedMS:Date.now()-start,outcome,bootSectorEntered,landmarks,commandMatches,timerClockHalfPeriod,netBackend,busTraceEnabled,memoryScheduling,memoryWriteJournal,
+const report={accepted:outcome.status==='dos-prompt',maxClocks,clocks,elapsedMS:Date.now()-start,outcome,bootSectorEntered,landmarks,commandMatches,timerClockHalfPeriod,netBackend,busTraceEnabled,memoryScheduling,memoryWriteJournal,decoderSpecialization,
     sourceHashes,romSHA256:hash(rom),diskSHA256:hash(built.image),inputHashes:Object.fromEntries(Object.entries(found.files).map(([k,v])=>[k,hash(v)])),
     cpu:cpu.inspect(),pic:pic.inspect(),timer:timer.inspect(),fdc:fdc.inspect(),dma:dma.inspect(),keyboard:keyboard.inspect(),screen};
 if(reportPath)writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n',{flag:'wx'});

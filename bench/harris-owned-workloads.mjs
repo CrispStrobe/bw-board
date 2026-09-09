@@ -10,12 +10,16 @@ import {createOwnedWorkload,ownedWorkloads} from '../scripts/lib/harris-owned-wo
 const rounds=Number(process.argv[2]??3),selected=process.argv[3]?process.argv[3].split(','):ownedWorkloads;
 if(!Number.isSafeInteger(rounds)||rounds<1||rounds>10||selected.some(n=>!ownedWorkloads.includes(n)))throw new RangeError('rounds/workloads');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const modes={reference:{netBackend:'reference'},compiled:{netBackend:'compiled'},scheduled:{netBackend:'compiled',memoryScheduling:true},
-    journal:{netBackend:'compiled',memoryScheduling:true,memoryWriteJournal:true}};
+const availableModes={reference:{netBackend:'reference'},compiled:{netBackend:'compiled'},scheduled:{netBackend:'compiled',memoryScheduling:true},
+    journal:{netBackend:'compiled',memoryScheduling:true,memoryWriteJournal:true},
+    specialized:{netBackend:'compiled',memoryScheduling:true,decoderSpecialization:true}};
+const selectedModes=process.argv[4]?process.argv[4].split(','):Object.keys(availableModes);
+if(selectedModes.some(mode=>!Object.hasOwn(availableModes,mode)))throw new RangeError('workload modes');
+const modes=Object.fromEntries(selectedModes.map(mode=>[mode,availableModes[mode]]));
 const sources=['bench/harris-owned-workloads.mjs','scripts/lib/harris-owned-workloads.mjs','src/i8086-asm.js',
     ...['harris-80c286-memory-board','harris-80c286-bus','harris-80c286-contract','harris-80c286-boot-cpu','harris-boot-rom',
         'digital-circuit','compiled-digital-circuit','latched-memory-components','harris-8259-adapter','harris-8254-adapter',
-        'harris-fdc-adapter','harris-dma-adapter','harris-keyboard-adapter'].map(n=>`src/experimental/${n}.js`),
+        'harris-fdc-adapter','harris-dma-adapter','harris-keyboard-adapter','harris-memory-decoder'].map(n=>`src/experimental/${n}.js`),
     ...['devices/bus-memory','devices','i8259','i8254','i8255','i8237','upd765'].map(n=>`src/${n}.js`)];
 const sourceHashes=()=>Object.fromEntries(sources.map(p=>[p,hash(readFileSync(new URL('../'+p,import.meta.url)))]));
 const before=sourceHashes(),samples=[],expected=new Map();
@@ -47,6 +51,6 @@ const summaries=selected.map(name=>({name,modes:Object.fromEntries(Object.keys(m
 }))}));
 console.log(JSON.stringify({benchmark:'owned-wired-full-board',node:process.version,host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length},
     revision:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',cwd:new URL('..',import.meta.url)}).trim(),sourceHashes:before,
-    rounds,warmupRounds:1,busTraceEnabled:false,cpuHistoryEnabled:true,initializationIncluded:true,constructionIncluded:false,
+    rounds,warmupRounds:1,configurations:modes,busTraceEnabled:false,cpuHistoryEnabled:true,initializationIncluded:true,constructionIncluded:false,
     notes:['Shared-host scheduling uncontrolled.','Capacity denominator is 9545454 system periods/s, not certified complete CPU/prefetch timing.',
         'Owned synthetic sector and assembly only; no DOS boot or browser claim.','Idle is reported separately and never substituted for useful CPU/memory, I/O, DMA or interrupt work.'],summaries,samples},null,2));

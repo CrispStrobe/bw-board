@@ -12,6 +12,7 @@ const pair=options=>[new DigitalCircuit({enabled:true,...options}),new CompiledD
 test('compiled net gate and board backend selection are explicit',()=>{
     assert.throws(()=>new CompiledDigitalCircuit({parts:[]}),{code:'EXPERIMENT_DISABLED'});
     assert.throws(()=>createHarrisMemoryBoard({enabled:true,netBackend:'typo'}),/netBackend/);
+    assert.throws(()=>createHarrisMemoryBoard({enabled:true,decoderSpecialization:true}),/compiled/);
     assert.equal(createHarrisMemoryBoard({enabled:true}).capabilities.netBackend,'reference');
 });
 test('indexed nets match reference for all three-driver logic combinations and wire orderings',()=>{
@@ -57,8 +58,8 @@ test('compiled nonconvergence preserves published state and permits recovery',()
     for(const net of [ref,fast]){net.drive('in',{p:0});net.settle();}
     assert.deepEqual(fast.snapshot,ref.snapshot);
 });
-for(const memoryScheduling of [false,true])test(`compiled wired memory transactions retain every sampled bus output, READY wait and write (scheduled=${memoryScheduling})`,()=>{
-    const [ref,fast]=['reference','compiled'].map(netBackend=>createHarrisMemoryBoard({enabled:true,netBackend,memoryScheduling:netBackend==='compiled'&&memoryScheduling,ramBytes:131072,textRAM:true}));
+for(const [memoryScheduling,decoderSpecialization] of [[false,false],[true,false],[true,true]])test(`compiled wired memory transactions retain every sampled bus output, READY wait and write (scheduled=${memoryScheduling},specialized=${decoderSpecialization})`,()=>{
+    const [ref,fast]=['reference','compiled'].map(netBackend=>createHarrisMemoryBoard({enabled:true,netBackend,memoryScheduling:netBackend==='compiled'&&memoryScheduling,decoderSpecialization:netBackend==='compiled'&&decoderSpecialization,ramBytes:131072,textRAM:true}));
     ref.initialize();fast.initialize();
     for(const address of [0x501,0xffff,0x10000,0xb8001])for(const kind of ['memory-write','memory-read']) {
         const transaction={kind,address,width:2,value:kind==='memory-write'?0xbeef:0};ref.submit(transaction);fast.submit(transaction);

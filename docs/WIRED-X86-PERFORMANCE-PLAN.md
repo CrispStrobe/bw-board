@@ -140,3 +140,9 @@ decision rather than silently redefining success.
   remains thousands of times away. No DOS or browser claim from this harness.
 - Expanded PCjs probes: 125/125 pass, with explicit undefined-flag masks and
   replayable first-difference inputs. Broader oracle scope remains pending.
+- Decoder iteration: optional pin/vector binding of owned memory decoders;
+  **559 tests pass, 4 suites, zero skips**, including changed-wire fault behavior,
+  per-period DMA comparisons and BIOS disk execution. Performance receipt pending.
+- A full compiled/scheduled, bus-trace-off DOS run is in flight using runtime
+  `03946c7` (without decoder specialization or write journal). Its result must
+  be recorded separately from later runtime revisions; not yet accepted.

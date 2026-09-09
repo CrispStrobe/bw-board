@@ -14,7 +14,9 @@ export class CompiledDigitalCircuit {
     #levels; #conflicts; #publishedLevels; #publishedConflicts;
     #dirty=new Set(); #evalDirty=new Set(); #snapshotDirty=new Set(); #driverDirty=new Set();
     #evaluators; #netEvaluators; #scheduled; #watchers;
-    constructor(options) {
+    constructor(options = {}) {
+        const compileEvaluators=options.compileEvaluators??false;
+        if(typeof compileEvaluators!=='boolean')throw new TypeError('compileEvaluators');
         const reference=new DigitalCircuit(options);
         this.parts=reference.parts;this.parent=reference.parent;this.outputs=reference.outputs;
         this.maxDeltas=reference.maxDeltas;
@@ -46,14 +48,26 @@ export class CompiledDigitalCircuit {
             }
             this.#bindings.set(id,bindings);
         }
-        this.#evaluators=[...this.parts].filter(([,part])=>part.evaluate).map(([id,part])=>({id,part,
-            roots:new Set(part.pins.map(pin=>this.#lookup(id,pin).net)),
-            read:pin=>decode[this.#levels[this.#lookup(id,pin).net]]}));
+        this.#evaluators=[...this.parts].filter(([,part])=>part.evaluate).map(([id,part])=>{
+            const read=pin=>decode[this.#levels[this.#lookup(id,pin).net]];
+            const evaluate=compileEvaluators&&part.compileEvaluate?part.compileEvaluate(Object.freeze({
+                pin:pin=>{const net=this.#lookup(id,pin).net;return ()=>decode[this.#levels[net]];},
+                vector:pins=>{
+                    if(!Array.isArray(pins)||pins.length>32)throw new RangeError('compiled vector width 0..32');
+                    const nets=Uint32Array.from(pins,pin=>this.#lookup(id,pin).net);
+                    return ()=>{let value=0;for(let i=0;i<nets.length;i++){
+                        const bit=this.#levels[nets[i]];if(bit>1)return null;value+=bit*2**i;
+                    }return value;};
+                }
+            })):()=>part.evaluate(read);
+            if(typeof evaluate!=='function')throw new TypeError('compiled evaluator must return a function');
+            return {id,part,roots:new Set(part.pins.map(pin=>this.#lookup(id,pin).net)),evaluate};
+        });
         this.#netEvaluators=this.#roots.map(()=>[]);
         this.#watchers=this.#roots.map(()=>new Set());
         this.#scheduled=new Uint8Array(this.#evaluators.length);
         for(let i=0;i<this.#evaluators.length;i++)for(const net of this.#evaluators[i].roots)this.#netEvaluators[net].push(i);
-        this.capabilities=Object.freeze({experimental:true,indexedConnectivity:true,eventScheduling:false,analog:false});
+        this.capabilities=Object.freeze({experimental:true,indexedConnectivity:true,eventScheduling:false,analog:false,compileEvaluators});
     }
 
     root(key) {const root=this.parent.get(key);if(root===undefined)throw new Error(`unknown terminal ${key}`);return root;}
@@ -116,7 +130,7 @@ export class CompiledDigitalCircuit {
             for(const i of scheduled)this.#scheduled[i]=0;
             for(const i of scheduled) {
                 const entry=this.#evaluators[i];
-                const {id,part}=entry,values=part.evaluate(entry.read),updates=[];
+                const {id,part}=entry,values=entry.evaluate(),updates=[];
                 for(const pin of Object.keys(values))if(!part.outputs.includes(pin))throw new Error(`undeclared output ${id}.${pin}`);
                 for(const pin of part.outputs) {
                     const d=this.#lookup(id,pin).driver;

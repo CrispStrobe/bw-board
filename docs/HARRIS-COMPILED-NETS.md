@@ -106,3 +106,21 @@ keep immediate edge writes and their existing timestamp argument.
 The DOS probe exposes `HARRIS_MEMORY_JOURNAL=on`; the owned benchmark reports a
 fourth `journal` mode (compiled + scheduled + journal) separately from the
 other three. This preserves an unscheduled and a non-journal comparison path.
+
+## Net-bound decoder specialization
+
+`decoderSpecialization:true` (compiled backend only, default off) uses scalar
+and address-vector readers bound once to the actual decoder terminal nets.
+No part-name or pin-name lookup occurs inside its address-bit loop. The same
+delta snapshot, byte-lane selection, ROM alias, unknown-state rules and output
+validation apply. Generic evaluators remain the default and the fallback for
+parts without an explicit `compileEvaluate` implementation. Rebuild after
+changing a part's logic or wiring; compiled closures are not a live-edit API.
+
+The DOS probe accepts `HARRIS_DECODER_SPECIALIZATION=on`. The owned benchmark
+adds `specialized` (scheduled + decoder specialization, without write journal).
+For a focused comparison with no other variant changes:
+
+```sh
+node bench/harris-owned-workloads.mjs 3 memory,io,dma,interrupt,idle scheduled,specialized
+```
