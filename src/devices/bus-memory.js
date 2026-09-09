@@ -93,7 +93,7 @@ const DATA = Array.from({ length: DATA_BITS }, (_, i) => `d${i}`);
  * @param {boolean} eeprom  honour params.readOnly.
  */
 function parallelMemory(selPin, terminals, fill, eeprom) {
-    return {
+    const model = {
         terminals,
 
         init(part) {
@@ -183,6 +183,11 @@ function parallelMemory(selPin, terminals, fill, eeprom) {
             return true;
         },
     };
+    // Explicit contract for ideal-digital adapters: update advances only when
+    // an input changes or its previous call requested another solve pass.
+    // Keep the function identity, so replacing update invalidates this opt-in.
+    model.eventDrivenUpdate = model.update;
+    return model;
 }
 
 // JEDEC 28-pin 32Kx8, in PACKAGE order: pins 1-14 down the left, then

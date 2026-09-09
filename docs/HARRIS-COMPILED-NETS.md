@@ -59,3 +59,37 @@ The expanded targeted suite passes **526 tests**. The new
 This compares current backends, not the isolated effect of disabling tracing;
 the host load varies substantially. It does not establish a whole-boot result
 or the real-time capacity gate. Stateful device scheduling remains unchanged.
+
+## Selective scheduling iteration
+
+Pure evaluators now use reverse net-to-evaluator adjacency, deduplicated in
+original part order. They still evaluate against the same delta snapshot, and
+throwing evaluators do not poison the next scheduling attempt.
+
+`memoryScheduling:true` is a separate, default-off option requiring compiled
+connectivity. Published logic/conflict changes wake subscribed memory banks.
+Idle banks watch power, commands and selection; active banks watch every pin.
+A model requesting another solve pass is always evaluated again. All required
+bank previews still precede all commits, including late peer-bank failures.
+Replacing the registered memory update function invalidates its explicit
+event-driven contract and disables skipping for that model. Arbitrary devices
+are not inferred to be pure. Watchers live for the immutable circuit's lifetime.
+
+This is memory scheduling only: CPU, controller, DMA master, oscillator and
+peripheral updates still retain their original invocation order. It is not
+virtual-time fast-forwarding. The original unscheduled compiled path remains
+selectable for differential testing and workloads where subscriptions cost more.
+
+```sh
+HARRIS_BUS_TRACE=off node bench/harris-wired-backends.mjs 10000 4 --scheduled
+HARRIS_NET_BACKEND=compiled HARRIS_MEMORY_SCHEDULING=on HARRIS_BUS_TRACE=off node scripts/probe-harris-dos.mjs 10000000
+node bench/harris-owned-workloads.mjs 3
+```
+
+The owned benchmark needs no DOS files or network access. It grades memory,
+I/O, physical DMA, interrupt-driven HLT and masked idle separately, warms each
+mode, checks full reported state and every mapped memory-bank hash, and reports
+host/build context. It uses the same populated 640 KiB reference board in all
+scenarios. ROM assembly and construction are excluded from throughput; reset
+initialization is included. Its clock ratio is explicit (PIT half-period four);
+that does not certify instruction or silicon timing.

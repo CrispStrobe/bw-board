@@ -121,6 +121,17 @@ export class DigitalBusMemoryAdapter {
         this.state = model.init(this.device); this.writes = 0;
     }
     part() { return {id: this.id, pins: [...this.model.terminals], outputs: bitPins('d', 8)}; }
+    scheduledBinding(binding) {
+        if(!binding.watch)throw new TypeError('compiled pin watchers required');
+        const controls=binding.watch(['vcc','gnd','oeb','web',this.select]);
+        const all=binding.watch(this.model.terminals);
+        let again=true;
+        return {...binding,needsUpdate:()=>{
+            const controlChange=controls(),anyChange=all();
+            return this.model.eventDrivenUpdate!==this.model.update || again ||
+                (this.state._cycle==='idle'?controlChange:anyChange);
+        },didUpdate:changed=>{again=changed;}};
+    }
     preview(read) {
         if (requireLevel(read, 'vcc') !== 1 || requireLevel(read, 'gnd') !== 0) throw new CircuitFault('MEMORY_POWER', this.id);
         const oe = requireLevel(read, 'oeb');
@@ -155,16 +166,21 @@ export function settleBusMemories(circuit, memories, maxPasses = 8, bindings = n
     if (!Number.isSafeInteger(maxPasses) || maxPasses < 1) throw new RangeError('maxPasses');
     for (let pass = 0; pass < maxPasses; pass++) {
         circuit.settle();
-        const previews = memories.map((memory, i) => memory.preview(bindings ? bindings[i].require : p => circuit.require(memory.id, p)));
+        const previews = memories.map((memory, i) => {
+            if(bindings?.[i].needsUpdate&&!bindings[i].needsUpdate())return null;
+            return memory.preview(bindings ? bindings[i].require : p => circuit.require(memory.id, p));
+        });
         for (let i = 0; i < memories.length; i++) {
+            if(!previews[i])continue;
             previews[i].commit();
+            bindings?.[i].didUpdate?.(previews[i].changed);
             if(previews[i].drives) {
                 if(bindings)bindings[i].drive(previews[i].drives);
                 else circuit.drive(memories[i].id, previews[i].drives);
             }
         }
         circuit.settle();
-        if (!previews.some(p => p.changed)) return;
+        if (!previews.some(p => p?.changed)) return;
     }
     throw new CircuitFault('MEMORY_NON_CONVERGENT', `no fixpoint after ${maxPasses} passes`);
 }

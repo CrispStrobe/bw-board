@@ -124,8 +124,8 @@ test('a missing high-bank write-data pin cannot cause a partial low-bank write',
     assert.equal(b.inspectMemory('ram1').writes, 0);
 });
 
-test('a late high-bank preflight fault cannot commit an already-previewed low-bank edge', () => {
-    const b = board({editWires: wires => wires.map(w => w.to === 'ram1' && w.toTerminal === 'vcc' ?
+for(const memoryScheduling of [false,true])test(`a late high-bank preflight fault cannot commit an already-previewed low-bank edge (scheduled=${memoryScheduling})`, () => {
+    const b = board({netBackend:memoryScheduling?'compiled':'reference',memoryScheduling,editWires: wires => wires.map(w => w.to === 'ram1' && w.toTerminal === 'vcc' ?
         {...w, fromTerminal: 'busy_n'} : w)});
     b.submit({kind: 'memory-write', address: 0x500, width: 2, value: 0x1234});
     for (let i = 0; i < 3; i++) b.clock();
@@ -137,8 +137,8 @@ test('a late high-bank preflight fault cannot commit an already-previewed low-ba
     assert.throws(() => b.clock(), fault('BOARD_FAULTED'));
 });
 
-test('missing memory power is not replaced with a hidden 5V supply', () => {
-    assert.throws(() => board({editWires: wires => wires.filter(w => !(w.to === 'rom0' && w.toTerminal === 'vcc'))}), fault('FLOATING'));
+for(const memoryScheduling of [false,true])test(`missing memory power is not replaced with a hidden 5V supply (scheduled=${memoryScheduling})`, () => {
+    assert.throws(() => board({netBackend:memoryScheduling?'compiled':'reference',memoryScheduling,editWires: wires => wires.filter(w => !(w.to === 'rom0' && w.toTerminal === 'vcc'))}), fault('FLOATING'));
 });
 
 test('mismatched CPU/controller READY is rejected before acceptance or write edge', () => {

@@ -4,6 +4,8 @@ import {DigitalCircuit} from '../src/experimental/digital-circuit.js';
 import {CompiledDigitalCircuit} from '../src/experimental/compiled-digital-circuit.js';
 import {createHarrisMemoryBoard} from '../src/experimental/harris-80c286-memory-board.js';
 import {registerBusMemory} from '../src/devices/bus-memory.js';
+import {getDevice} from '../src/devices.js';
+import {DigitalBusMemoryAdapter,settleBusMemories} from '../src/experimental/latched-memory-components.js';
 registerBusMemory();
 const wire=(from,to)=>({from,fromTerminal:'p',to,toTerminal:'p'});
 const pair=options=>[new DigitalCircuit({enabled:true,...options}),new CompiledDigitalCircuit({enabled:true,...options})];
@@ -55,8 +57,8 @@ test('compiled nonconvergence preserves published state and permits recovery',()
     for(const net of [ref,fast]){net.drive('in',{p:0});net.settle();}
     assert.deepEqual(fast.snapshot,ref.snapshot);
 });
-test('compiled wired memory transactions retain every sampled bus output, READY wait and write',()=>{
-    const [ref,fast]=['reference','compiled'].map(netBackend=>createHarrisMemoryBoard({enabled:true,netBackend,ramBytes:131072,textRAM:true}));
+for(const memoryScheduling of [false,true])test(`compiled wired memory transactions retain every sampled bus output, READY wait and write (scheduled=${memoryScheduling})`,()=>{
+    const [ref,fast]=['reference','compiled'].map(netBackend=>createHarrisMemoryBoard({enabled:true,netBackend,memoryScheduling:netBackend==='compiled'&&memoryScheduling,ramBytes:131072,textRAM:true}));
     ref.initialize();fast.initialize();
     for(const address of [0x501,0xffff,0x10000,0xb8001])for(const kind of ['memory-write','memory-read']) {
         const transaction={kind,address,width:2,value:kind==='memory-write'?0xbeef:0};ref.submit(transaction);fast.submit(transaction);
@@ -72,9 +74,54 @@ test('compiled wired memory transactions retain every sampled bus output, READY 
     for(const id of ['ram0','ram1','ram1_0','ram1_1','text0','text1'])assert.deepEqual(fast.inspectMemory(id),ref.inspectMemory(id));
 });
 test('compiled missing READY wiring retains the named floating fault',()=>{
-    for(const netBackend of ['reference','compiled']) {
-        const board=createHarrisMemoryBoard({enabled:true,netBackend,editWires:w=>w.filter(x=>!(x.to==='cpu'&&x.toTerminal==='ready_n'))});
+    for(const netBackend of ['reference','compiled'])for(const memoryScheduling of netBackend==='compiled'?[false,true]:[false]) {
+        const board=createHarrisMemoryBoard({enabled:true,netBackend,memoryScheduling,editWires:w=>w.filter(x=>!(x.to==='cpu'&&x.toTerminal==='ready_n'))});
         board.initialize();board.submit({kind:'memory-read',address:0x500,width:1});
         assert.throws(()=>{for(let i=0;i<20;i++)board.clock();},{code:'FLOATING'});
+    }
+});
+
+test('compiled watchers report only published logic/conflict changes and validate all pins',()=>{
+    const net=new CompiledDigitalCircuit({enabled:true,parts:['a','b'].map(id=>({id,pins:['p','q'],outputs:['p']})),wires:[wire('a','b')]});
+    const watch=net.bind('a').watch(['p']);assert.equal(watch(),true);assert.equal(watch(),false);
+    assert.throws(()=>net.bind('a').watch(['p','bad']),/unknown terminal/);
+    net.drive('a',{p:'X'});net.resolve();assert.equal(watch(),false);net.settle();assert.equal(watch(),true);
+    net.drive('a',{p:0});net.drive('b',{p:1});net.settle();assert.equal(watch(),true); // X -> conflicting X
+    net.drive('a',{p:0});net.settle();assert.equal(watch(),false);
+    assert.throws(()=>createHarrisMemoryBoard({enabled:true,memoryScheduling:true}),/compiled/);
+});
+
+test('scheduled memory skips stable idle, settles write edges, and invalidates custom update replacement',()=>{
+    const model={...getDevice('62256')};
+    const memory=new DigitalBusMemoryAdapter({enabled:true,id:'ram',kind:'62256',model});
+    const pins=memory.part().pins;
+    const net=new CompiledDigitalCircuit({enabled:true,parts:[memory.part(),{id:'source',pins,outputs:pins}],
+        wires:pins.map(pin=>({from:'source',fromTerminal:pin,to:'ram',toTerminal:pin}))});
+    const binding=memory.scheduledBinding(net.bind('ram'));
+    let previews=0;const preview=memory.preview.bind(memory);memory.preview=read=>{previews++;return preview(read);};
+    const drive=values=>{net.drive('source',values);settleBusMemories(net,[memory],8,[binding]);};
+    drive(Object.fromEntries(pins.map(p=>[p,['vcc','csb','oeb','web','d0'].includes(p)?1:0])));
+    const initial=previews;drive({});drive({a0:1});assert.equal(previews,initial);
+    drive({csb:0,web:0});drive({});assert.equal(memory.inspect().writes,0);
+    drive({web:1});assert.equal(memory.inspect().writes,1);assert.equal(memory.inspect().bytes[1],1);
+    const done=previews;drive({});assert.equal(previews,done);
+    model.update=(...args)=>model.eventDrivenUpdate(...args);
+    drive({});assert.equal(previews,done+1);
+    assert.throws(()=>drive({vcc:'Z'}),{code:'FLOATING'}); // idle power still checked
+});
+
+test('reverse evaluator scheduling preserves part order, deduplicates and recovers after a throw',()=>{
+    for(const Circuit of [DigitalCircuit,CompiledDigitalCircuit]) {
+        const calls=[];let fail=false;
+        const net=new Circuit({enabled:true,parts:[{id:'in',pins:['p','q'],outputs:['p','q']},
+            ...['first','second','unrelated'].map(id=>({id,pins:['p','q','out'],outputs:['out'],evaluate:r=>{
+                calls.push(id);if(fail&&id==='first')throw new Error('probe');return {out:r('p')};
+            }}))],wires:['first','second'].flatMap(id=>['p','q'].map(pin=>({from:'in',fromTerminal:pin,to:id,toTerminal:pin})))});
+        net.drive('in',{q:0,p:0});net.settle();calls.length=0;
+        net.drive('in',{q:1,p:1});net.settle();
+        assert.deepEqual(calls,['first','second','first','second']); // output feedback requires the second delta
+        calls.length=0;fail=true;net.drive('in',{p:0});assert.throws(()=>net.settle(),/probe/);
+        fail=false;net.drive('in',{p:1});net.settle();
+        assert.deepEqual(calls,['first','first','second']);
     }
 });

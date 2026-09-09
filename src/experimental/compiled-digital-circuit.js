@@ -13,7 +13,7 @@ export class CompiledDigitalCircuit {
     #drivers; #defined; #publishedDrivers;
     #levels; #conflicts; #publishedLevels; #publishedConflicts;
     #dirty=new Set(); #evalDirty=new Set(); #snapshotDirty=new Set(); #driverDirty=new Set();
-    #evaluators;
+    #evaluators; #netEvaluators; #scheduled; #watchers;
     constructor(options) {
         const reference=new DigitalCircuit(options);
         this.parts=reference.parts;this.parent=reference.parent;this.outputs=reference.outputs;
@@ -49,6 +49,10 @@ export class CompiledDigitalCircuit {
         this.#evaluators=[...this.parts].filter(([,part])=>part.evaluate).map(([id,part])=>({id,part,
             roots:new Set(part.pins.map(pin=>this.#lookup(id,pin).net)),
             read:pin=>decode[this.#levels[this.#lookup(id,pin).net]]}));
+        this.#netEvaluators=this.#roots.map(()=>[]);
+        this.#watchers=this.#roots.map(()=>new Set());
+        this.#scheduled=new Uint8Array(this.#evaluators.length);
+        for(let i=0;i<this.#evaluators.length;i++)for(const net of this.#evaluators[i].roots)this.#netEvaluators[net].push(i);
         this.capabilities=Object.freeze({experimental:true,indexedConnectivity:true,eventScheduling:false,analog:false});
     }
 
@@ -101,10 +105,17 @@ export class CompiledDigitalCircuit {
         for(let delta=0;delta<this.maxDeltas;delta++) {
             this.#resolveDirty();
             const changed=this.#evalDirty;this.#evalDirty=new Set();
-            const staged=[],before=new Map();
-            for(const entry of this.#evaluators) {
-                let affected=false;for(const root of entry.roots)if(changed.has(root)){affected=true;break;}
-                if(!affected)continue;
+            const staged=[],before=new Map(),scheduled=[];
+            // Reverse connectivity visits only affected pure evaluators. Keep
+            // original part order so evaluation/fault ordering stays identical.
+            for(const net of changed)for(const i of this.#netEvaluators[net])if(!this.#scheduled[i]) {
+                this.#scheduled[i]=1;scheduled.push(i);
+            }
+            scheduled.sort((a,b)=>a-b);
+            // Clear before invoking user evaluators, including throwing ones.
+            for(const i of scheduled)this.#scheduled[i]=0;
+            for(const i of scheduled) {
+                const entry=this.#evaluators[i];
                 const {id,part}=entry,values=part.evaluate(entry.read),updates=[];
                 for(const pin of Object.keys(values))if(!part.outputs.includes(pin))throw new Error(`undeclared output ${id}.${pin}`);
                 for(const pin of part.outputs) {
@@ -122,7 +133,11 @@ export class CompiledDigitalCircuit {
             }
             let stable=true;for(const [d,value] of before)if((this.#defined[d]?this.#drivers[d]:4)!==value){stable=false;break;}
             if(stable) {
-                for(const n of this.#snapshotDirty){this.#publishedLevels[n]=this.#levels[n];this.#publishedConflicts[n]=this.#conflicts[n];}
+                for(const n of this.#snapshotDirty){
+                    if(this.#publishedLevels[n]!==this.#levels[n]||this.#publishedConflicts[n]!==this.#conflicts[n])
+                        for(const watcher of this.#watchers[n])watcher.changed=true;
+                    this.#publishedLevels[n]=this.#levels[n];this.#publishedConflicts[n]=this.#conflicts[n];
+                }
                 for(const d of this.#driverDirty)this.#publishedDrivers[d]=this.#drivers[d];
                 this.#snapshotDirty.clear();this.#driverDirty.clear();return delta;
             }
@@ -143,7 +158,12 @@ export class CompiledDigitalCircuit {
         const bindings=this.#bindings.get(part);if(!bindings)throw new Error(`unknown part ${part}`);
         const lookup=pin=>{const info=bindings.get(String(pin).toLowerCase());if(!info)throw new Error(`unknown terminal ${keyOf(part,pin)}`);return info;};
         const bound=Object.freeze({read:pin=>decode[this.#publishedLevels[lookup(pin).net]],
-            require:pin=>this.#require(lookup(pin)),drive:values=>this.#drive(part,bindings,values)});
+            require:pin=>this.#require(lookup(pin)),drive:values=>this.#drive(part,bindings,values),
+            watch:pins=>{
+                const nets=new Set(pins.map(pin=>lookup(pin).net)),watcher={changed:true};
+                for(const net of nets)this.#watchers[net].add(watcher);
+                return ()=>{const changed=watcher.changed;watcher.changed=false;return changed;};
+            }});
         this.#bound.set(part,bound);return bound;
     }
 }

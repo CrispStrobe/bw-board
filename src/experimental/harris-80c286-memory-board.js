@@ -13,9 +13,11 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
-    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true, editWires = wires => wires} = {}) {
+    timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true,
+    memoryScheduling = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
+    if(typeof memoryScheduling!=='boolean'||memoryScheduling&&netBackend!=='compiled')throw new TypeError('memoryScheduling requires compiled backend and boolean opt-in');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
@@ -181,7 +183,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     const irqPins = irqPart && bind(irqPart.id), timerPins = timerPart && bind(timerPart.id);
     const fdcPins = fdcPart && bind(fdcPart.id), dmaPins = dmaPart && bind(dmaPart.id);
     const keyboardPins = keyboardPart && bind(keyboardPart.id), clockPins = timerClock && bind('timer_clock');
-    const memoryPins = memories.map(memory => bind(memory.id));
+    const memoryPins = memories.map(memory => memoryScheduling ? memory.scheduledBinding(bind(memory.id)) : bind(memory.id));
     const masterRead = dmaPart && (pin => pin === 'ready_n' ? controllerPins.require(pin) : dmaPins.require(pin));
     circuit.drive('inputs', INPUTS);
     if (picIO) circuit.drive('irq_inputs',Object.fromEntries(bitPins('ir',8).map(p=>[p,0])));
@@ -212,7 +214,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},

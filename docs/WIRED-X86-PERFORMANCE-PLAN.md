@@ -118,3 +118,11 @@ decision rather than silently redefining success.
   bus-trace opt-out, 526 passing targeted tests, and a
   [1.18x current-backend comparison](HARRIS-BOUND-NETS-BENCH.json). CPU history
   remains enabled; no full-boot or isolated trace-cost claim.
+- Scheduling iteration: reverse pure-evaluator adjacency and separately gated
+  memory-bank subscriptions; 550 targeted tests including analog bus-memory
+  regressions pass. Scheduled BIOS disk/keyboard and late peer-bank fault tests
+  pass. Peripheral/CPU clock scheduling remains unchanged.
+- Owned workload harness added: CPU/memory, I/O, DMA, interrupt-driven HLT,
+  masked idle. One warmup and one measured run per mode/workload all passed
+  state/memory comparisons. Repeated performance receipts remain pending;
+  no real-time-capacity claim follows from this smoke run.
