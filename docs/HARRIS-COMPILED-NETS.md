@@ -93,3 +93,16 @@ host/build context. It uses the same populated 640 KiB reference board in all
 scenarios. ROM assembly and construction are excluded from throughput; reset
 initialization is included. Its clock ratio is explicit (PIT half-period four);
 that does not certify instruction or silicon timing.
+
+## Transactional write journal
+
+`memoryWriteJournal:true` independently opts into one-byte write staging for the
+registered SRAM/EEPROM models. The model's existing update algorithm decides
+the write and its edge; storage is changed only after all peer previews succeed.
+This avoids cloning 32 KiB for a byte write. The copy-based path remains the
+default and the fallback for replaced/custom update functions. Analog callers
+keep immediate edge writes and their existing timestamp argument.
+
+The DOS probe exposes `HARRIS_MEMORY_JOURNAL=on`; the owned benchmark reports a
+fourth `journal` mode (compiled + scheduled + journal) separately from the
+other three. This preserves an unscheduled and a non-journal comparison path.

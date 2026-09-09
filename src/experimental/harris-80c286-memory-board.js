@@ -14,10 +14,11 @@ const wire = (from, fromTerminal, to, toTerminal) => ({from, fromTerminal, to, t
 export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array(), romLowAlias = false, nmiEnabled = false,
     intrEnabled = false, ioEnabled = false, interruptDevice = null, timerDevice = null, fdcDevice = null, dmaDevice = null, keyboardDevice = null,
     timerClockHalfPeriod = 8, ramBytes = 65536, textRAM = false, holdEnabled = false, netBackend = 'reference', busTraceEnabled = true,
-    memoryScheduling = false, editWires = wires => wires} = {}) {
+    memoryScheduling = false, memoryWriteJournal = false, editWires = wires => wires} = {}) {
     if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
     if(!['reference','compiled'].includes(netBackend))throw new TypeError('netBackend must be reference or compiled');
     if(typeof memoryScheduling!=='boolean'||memoryScheduling&&netBackend!=='compiled')throw new TypeError('memoryScheduling requires compiled backend and boolean opt-in');
+    if(typeof memoryWriteJournal!=='boolean')throw new TypeError('memoryWriteJournal');
     if (!(rom instanceof Uint8Array) || rom.length > 65536) throw new RangeError('ROM must be at most 64K');
     if (typeof romLowAlias !== 'boolean') throw new TypeError('romLowAlias must be boolean');
     if (!Number.isInteger(ramBytes) || ramBytes < 65536 || ramBytes > 640*1024 || ramBytes % 65536)
@@ -154,7 +155,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         const id = `${region.id}${lane}`;
         const modelKind = kind === 'rom' ? '28c256' : '62256';
         const memory = new DigitalBusMemoryAdapter({enabled, id, kind: modelKind, model: getDevice(modelKind),
-            contents: kind === 'rom' ? rom.filter((_, i) => i % 2 === lane) : new Uint8Array(), readOnly: kind === 'rom'});
+            contents: kind === 'rom' ? rom.filter((_, i) => i % 2 === lane) : new Uint8Array(), readOnly: kind === 'rom',writeJournal:memoryWriteJournal});
         memories.push(memory); parts.push(memory.part());
         const decode = `${id}_decode`;
         parts.push({id: decode, pins: [...A, 'bhe_n', 'm_io', 'ce_n'], outputs: ['ce_n'], evaluate(read) {
@@ -214,7 +215,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
         capabilities: Object.freeze({experimental: true, cpu: false, snapshots: false,
             fidelity: 'latched-memory-phase-bridge', full82C288: false, analogSolver: false, nmi:nmiEnabled, intr:intrEnabled,
             io:ioEnabled, programmablePIC:picIO, programmableTimer:!!timerPart, fdcControl:!!fdcPart, dmaRegisters:!!dmaPart, dma:dmaTransfer,
-            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling}),
+            ramBytes, textRAM, hold:holdEnabled, displayController:false, netBackend, busTraceEnabled, memoryScheduling, memoryWriteJournal}),
         bus, circuit, memoryMap,
         hasPendingNMI() {return bus.nmiPending;},
         takeNMI() {return bus.takeNMI();},

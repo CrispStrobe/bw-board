@@ -10,7 +10,8 @@ import {createOwnedWorkload,ownedWorkloads} from '../scripts/lib/harris-owned-wo
 const rounds=Number(process.argv[2]??3),selected=process.argv[3]?process.argv[3].split(','):ownedWorkloads;
 if(!Number.isSafeInteger(rounds)||rounds<1||rounds>10||selected.some(n=>!ownedWorkloads.includes(n)))throw new RangeError('rounds/workloads');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const modes={reference:{netBackend:'reference'},compiled:{netBackend:'compiled'},scheduled:{netBackend:'compiled',memoryScheduling:true}};
+const modes={reference:{netBackend:'reference'},compiled:{netBackend:'compiled'},scheduled:{netBackend:'compiled',memoryScheduling:true},
+    journal:{netBackend:'compiled',memoryScheduling:true,memoryWriteJournal:true}};
 const sources=['bench/harris-owned-workloads.mjs','scripts/lib/harris-owned-workloads.mjs','src/i8086-asm.js',
     ...['harris-80c286-memory-board','harris-80c286-bus','harris-80c286-contract','harris-80c286-boot-cpu','harris-boot-rom',
         'digital-circuit','compiled-digital-circuit','latched-memory-components','harris-8259-adapter','harris-8254-adapter',

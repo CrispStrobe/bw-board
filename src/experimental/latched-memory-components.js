@@ -111,10 +111,12 @@ export class MemoryPhaseController {
  * then commit all previews. Writes remain the model's edge-triggered writes.
  */
 export class DigitalBusMemoryAdapter {
-    constructor({enabled = false, id, kind, model, contents = new Uint8Array(), readOnly = false}) {
+    constructor({enabled = false, id, kind, model, contents = new Uint8Array(), readOnly = false, writeJournal = false}) {
         gate(enabled);
         if (!['62256', '28c256'].includes(kind) || !model?.init || !model?.update) throw new TypeError('registered bus-memory model required');
         if (!(contents instanceof Uint8Array) || contents.length > 32768) throw new RangeError('contents');
+        if(typeof writeJournal!=='boolean')throw new TypeError('writeJournal');
+        this.writeJournal=writeJournal;
         this.id = id; this.kind = kind; this.model = model;
         this.select = kind === '62256' ? 'csb' : 'ceb';
         this.device = {id, kind, params: {contents: contents.slice(), readOnly}};
@@ -148,15 +150,18 @@ export class DigitalBusMemoryAdapter {
         const leavingWrite = this.state._cycle === 'write' && cycle !== 'write';
         const protectedROM = this.kind === '28c256' && this.device.params.readOnly;
         const willWrite = leavingWrite && this.state._armed && this.state._pending && !protectedROM;
+        const transactional = this.writeJournal && leavingWrite && this.model.transactionalUpdate === this.model.update && typeof this.model.previewUpdate === 'function';
         const next = {...this.state, drives: {...this.state.drives},
             _pending: this.state._pending ? {...this.state._pending} : null,
             // The reused model can modify storage ONLY on this transition.
-            // Copy then, so a failed peer-bank preflight cannot partially write.
-            mem: leavingWrite ? this.state.mem.slice() : this.state.mem};
-        const changed = this.model.update(this.device, next, p => values[p]);
+            // Known registered models journal the byte; custom models retain
+            // the defensive copy so a failed peer-bank preflight cannot write.
+            mem: leavingWrite && !transactional ? this.state.mem.slice() : this.state.mem};
+        const staged = transactional ? this.model.previewUpdate(this.device,next,p=>values[p]) : null;
+        const changed = staged ? staged.changed : this.model.update(this.device, next, p => values[p]);
         const drives = Object.fromEntries(MEMORY_DATA_PINS.map(p => [p,
             next.drives[p] ? Number(next.drives[p].vTh > 2.5) : 'Z']));
-        return {changed, drives, commit: () => { this.state = next; if (willWrite) this.writes++; }};
+        return {changed, drives, commit: () => { staged?.commit(); this.state = next; if (willWrite) this.writes++; }};
     }
     inspect() { return {bytes: this.state.mem.slice(), writes: this.writes, cycle: this.state._cycle,
         pending: this.state._pending ? {...this.state._pending} : null}; }

@@ -33,5 +33,5 @@ for(let round=0;round<rounds;round++) {
 const median=a=>{a.sort((a,b)=>a-b);const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;};
 const medians=Object.fromEntries(backends.map(b=>[b,median(samples.map(s=>s[b].elapsedMS))]));
 console.log(JSON.stringify({benchmark:'wired-POST-net-backends',node:process.version,clocks,rounds,sourceHashes,
-    busTraceEnabled:expected.busTraceEnabled,initializationIncluded:true,fullBoot:false,medians,throughputRatio:medians.reference/medians.compiled,
+    busTraceEnabled:expected.busTraceEnabled,memoryWriteJournal:expected.memoryWriteJournal,initializationIncluded:true,fullBoot:false,medians,throughputRatio:medians.reference/medians.compiled,
     scheduledThroughputRatio:medians.scheduled?medians.reference/medians.scheduled:undefined,samples},null,2));
