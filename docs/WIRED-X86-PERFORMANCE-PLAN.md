@@ -276,3 +276,9 @@ decision rather than silently redefining success.
   diagnostic/input arrays per boundary; it is not a full-board RT result.
   Next cost-isolation step is a bounded native fixture schedule, followed by
   the still-pending CPU bus/device clock runner and real capacity comparison.
+- Bounded native fixture schedule passes five focused tests and the 59-test
+  native-component/memory set with zero failures/skips. It executes every
+  begin/end period and checks actual-net reads. The repeated component cost
+  probe measures about 50,682 periods/s batched versus 14,303 per-boundary native
+  in the same noisy run (3.54x). This is not a CPU runner or full-board RT claim;
+  native settling/profile work and CPU/device integration remain outstanding.

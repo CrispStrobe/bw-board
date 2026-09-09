@@ -31,6 +31,10 @@ self.onmessage=async({data})=>{
                 const {runNativePhaseCircuitOracle}=await import('../scripts/lib/harris-native-phase-circuit-oracle.mjs');
                 nativeOracle.phaseCircuit=await runNativePhaseCircuitOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
             }
+            if(data.schedule) {
+                const {runNativePhaseScheduleOracle}=await import('../scripts/lib/harris-native-phase-schedule-oracle.mjs');
+                nativeOracle.schedule=await runNativePhaseScheduleOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
+            }
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});

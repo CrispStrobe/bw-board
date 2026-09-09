@@ -327,3 +327,43 @@ actual-net read check inside the module. Compare with the same schedules and
 hashes to separate host-boundary costs from native settling costs before
 assuming that porting more components alone solves throughput. This synthetic
 schedule is test machinery, not a substitute for the eventual CPU/device runner.
+
+### Bounded native fixture schedule
+
+The cost-isolation runner is implemented behind an additional explicit
+`phase.schedule` descriptor. It admits only one named ideal input-driver part,
+actual read-pin nets and bounded capacities (at most 8,192 periods per call).
+Compiled schedules are private, defensive and tied to their native instance;
+callers cannot forge a handle to drive internal controller/latch/memory outputs.
+The native entry validates the entire schedule before modifying pending drives
+or clock state, then executes every begin/end boundary and selected net read.
+No CPU instruction, wait period or memory transition is fast-forwarded.
+
+Five focused tests pass: final net/phase/full-memory agreement with the
+every-period oracle over 258 periods; defensive/instance-owned admission;
+read-mismatch stopping at its real boundary without rolling back earlier writes;
+and raw late-invalid-update rejection before pending-drive mutation. Read-check
+failures deliberately stop and fault the test runner; this diagnostic contract
+is not presented as a guest CPU fault. All native components and registered
+memory tests pass together: **59 tests, four suites, zero failures/skips**.
+The [build](HARRIS-NATIVE-SCHEDULE-BUILD.json) and
+[Chromium receipt](HARRIS-NATIVE-SCHEDULE-BROWSER.json) are preserved. Chromium
+passes the 258-period/64-read schedule oracle, all earlier native oracles, all
+five JS workload hashes, cancellation and profile cleanup. These component
+checks extend the prior 514-test broader checkpoint; they are not a claim of a
+new full DOS run or a newly measured whole-board backend.
+
+The repeated [batched cost receipt](HARRIS-NATIVE-BATCHED-PHASE-COST.json)
+passes all reads and final hashes in every mode. In this run, median periods/s
+are reference 8,280; compiled JS 7,776; per-boundary native 14,303; native-batched
+50,682. Batching is about 3.54x the per-boundary native wrapper in this run,
+including schedule upload/admission but excluding schedule compilation. The
+native-batched elapsed spread is 50.0–81.7 ms for 4,098 periods. Host load is
+uncontrolled; do not compare absolute speeds with the earlier receipt as a
+regression or multiply gains across runs.
+
+Even this CPU-free two-bank circuit is far from the requested full-board
+capacity. Next, profile native schedule execution separately from preparation
+and JS diagnostics. In particular, test the cost of repeated invariant graph
+validation and whole-net scans before choosing the next optimization. Neither
+Wasm alone nor removing host calls has demonstrated the required capacity.

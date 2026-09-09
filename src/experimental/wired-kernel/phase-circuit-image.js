@@ -1,6 +1,7 @@
 /** Private actual-net bindings for the explicit owned latched-memory model. */
 import {CircuitFault} from '../digital-circuit.js';
 import {PHASE_INPUTS,LATCH_INPUTS} from './phase-components.js';
+import {preparePhaseSchedule} from './phase-schedule.js';
 const OUTPUTS=['ale','mrd_n','mwr_n','ior_n','iow_n','inta_n','inta_wait'];
 const KINDS=[null,'memory-read','memory-write','code-read','io-read','io-write','interrupt-acknowledge','shutdown','reserved','passive'];
 export function preparePhaseCircuit({circuit,image,phase}) {
@@ -17,11 +18,13 @@ export function preparePhaseCircuit({circuit,image,phase}) {
     const mapping=(id,pins,field)=>Uint32Array.from(pins,p=>terminals.get(`${id}.${p}`)?.[field]??0xffffffff);
     const maps={phaseInputNets:mapping(controller,PHASE_INPUTS,'net'),phaseOutputIds:mapping(controller,OUTPUTS,'driver'),
         latchInputNets:mapping(latch,LATCH_INPUTS,'net'),latchOutputIds:mapping(latch,latchOutputs,'driver')};
+    const schedule=preparePhaseSchedule({circuit,image,phase});
     return {
         reserve(reserve){
             for(const [name,array] of Object.entries(maps))reserve(name,array.byteLength);
             reserve('phaseState',24);reserve('latchValues',26);reserve('phaseInputs',27);reserve('phaseConflicts',27);reserve('phaseOutputs',27);
             reserve('phaseFault',8);reserve('phaseReady',4);reserve('phasePresent',1);reserve('phaseLifecycle',8);reserve('phaseContext',64);
+            schedule?.reserve(reserve);
         },
         initialize({e,p,put,inspect,setDriverLevels,memoryFault}) {
             if(e.phase_circuit_version?.()!==1||e.phase_components_version?.()!==1)throw new TypeError('rebuild native phase circuit: ABI version mismatch');
@@ -52,7 +55,7 @@ export function preparePhaseCircuit({circuit,image,phase}) {
             const inspectPhase=()=>({state:['TI','TS','TC'][word('phaseState')],phase:word('phaseState',1),open:!!word('phaseState',2),
                 tcCount:word('phaseState',4)*4294967296+word('phaseState',3),kind:KINDS[word('phaseState',5)],
                 periodOpen:!!word('phaseLifecycle'),faulted:!!word('phaseLifecycle',1),latch:new Uint8Array(e.memory.buffer,p.latchValues,26).slice()});
-            return {beginClock,endClock,inspectPhase};
+            return {beginClock,endClock,inspectPhase,...schedule?.initialize({e,p,put,inspect,fault})};
         }
     };
 }
