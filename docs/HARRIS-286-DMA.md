@@ -1,5 +1,9 @@
 # Wired DMA register prerequisite
 
+Historical register-only milestone. The subsequent default-off
+[physical DMA and HOLD path](HARRIS-286-PHYSICAL-DMA.md) supersedes the transfer
+gaps below; register-only mode itself keeps these restrictions.
+
 2026-09-09. `HarrisDMAAdapter` is a default-off **channel-2 register bridge**,
 not a DMA bus master. It reuses the existing `I8237` programmer-register model
 privately, without transfer hooks, requests admitted to the core, or calls to

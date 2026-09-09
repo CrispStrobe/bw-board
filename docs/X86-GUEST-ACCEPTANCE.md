@@ -1,5 +1,8 @@
 # 16-bit guest execution: measured incremental acceptance
 
+Latest wired-board work: [physical DMA, HOLD and keyboard integration](HARRIS-286-PHYSICAL-DMA.md).
+The older milestones below retain their original scope and measurements.
+
 2026-09-08. User requested DOS utilities, shell/editor persistence, Circuit
 Editor reference machines, ELKS, then classic MINIX/286 protection, on 8086,
 80186 and 80286. These five milestones are **not complete**.

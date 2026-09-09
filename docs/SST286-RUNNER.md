@@ -1,5 +1,14 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## HOLD/physical DMA follow-up, 2026-09-09
+
+The [physical DMA increment](HARRIS-286-PHYSICAL-DMA.md) adds an implicit-lock
+request flag to the CPU's memory XCHG path. The [fresh full-suite receipt](SST286-HOLD-REPORT.json)
+pins that CPU and records **1,477,997 passes, zero fail/unsupported/budget,
+three upstream revocations**, exit 0. No masks or exclusions were changed.
+HOLD/arbitration, DMA, keyboard and physical boot evidence comes from separate
+wired tests and diagnostics; this semantic corpus does not grade those nets.
+
 ## Wired BIOS diagnostic follow-up, 2026-09-08
 
 The [extended POST probe](HARRIS-286-BIOS-POST.md) confirms the original BIOS's

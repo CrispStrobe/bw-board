@@ -1,5 +1,8 @@
 # Wired BIOS POST diagnostics
 
+Latest follow-up: [physical DMA/HOLD and keyboard boot work](HARRIS-286-PHYSICAL-DMA.md).
+The diagnostic stops below remain historical measurements of their pinned sources.
+
 Update 2026-09-09: the optional [FDC control/IRQ6 bridge](HARRIS-286-FDC.md)
 now has owned wired-guest integration tests and an explicit `--fdc-mode control`
 probe option. It is off by default and refuses all data transfers. The long

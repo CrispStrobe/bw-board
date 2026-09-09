@@ -7,30 +7,54 @@ const A=bitPins('a',24),D=bitPins('d',16);
 const level=(read,p)=>{const v=read(p);if(v!==0&&v!==1)throw new CircuitFault(v==='Z'?'FLOATING':'UNKNOWN',p);return v;};
 const bits=(pins,read)=>pins.reduce((v,p,i)=>v+level(read,p)*2**i,0);
 const released=()=>Object.fromEntries(D.map(p=>[p,'Z']));
+// This variant never enters the core's synchronous callback pump or automatic
+// PIO fallback. Bytes advance only after the external DACK edge below.
+class PinTransferFDC extends UPD765 {
+    _pio(){return this.nonDma;}
+    _pumpDma(){}
+    acceptPinByte(value,tc){
+        if(this.phase!=='exec')throw new CircuitFault('FDC_DMA_PHASE','DACK without execution');
+        if(tc)this.exec.tc=true;
+        if(this.exec.toHost)this._advanceOut();else this._acceptIn(value);
+        if(this.phase==='exec'&&this.exec.tc)this._endTransferOnTc();
+    }
+}
 export class HarrisFDCAdapter {
     #core;
-    constructor({enabled=false,id='fdc',portBase=0x3f0}={}) {
+    constructor({enabled=false,id='fdc',portBase=0x3f0,transferEnabled=false}={}) {
         if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
         if(!Number.isInteger(portBase)||portBase<0||portBase>0xfff8||(portBase&7))throw new RangeError('8-aligned portBase required');
         this.id=id;this.portBase=portBase;this.ioInterface='harris-fdc-byte-lanes';
-        this.capabilities=Object.freeze({experimental:true,controlOnly:true,irq6:true,
-            sectorTransfers:false,dma:false,pioTransfers:false,media:false,electricalTiming:false});
-        this.#core=new UPD765();this.reset();
+        if(typeof transferEnabled!=='boolean')throw new TypeError('transferEnabled');this.transferEnabled=transferEnabled;
+        this.capabilities=Object.freeze({experimental:true,controlOnly:!transferEnabled,irq6:true,
+            sectorTransfers:transferEnabled,dma:transferEnabled,pioTransfers:false,media:transferEnabled,electricalTiming:false});
+        this.#core=transferEnabled?new PinTransferFDC():new UPD765();this.reset();
     }
-    reset(){this.#core.reset();this.readCycle=null;this.writeCycle=null;this.reads=0;this.writes=0;}
-    part(){return {id:this.id,pins:['reset','ior_n','iow_n','bhe_n','m_io','irq6',...A,...D],outputs:['irq6',...D]};}
+    reset(){this.#core.reset();this.readCycle=null;this.writeCycle=null;this.reads=0;this.writes=0;this.dmaCycle=null;this.dmaBytes=0;}
+    loadMedia(bytes,geometry){
+        if(!this.transferEnabled)throw new CircuitFault('EXPERIMENT_DISABLED','FDC transfer mode required');
+        if(this.#core.phase!=='command'||this.dmaCycle)throw new CircuitFault('FDC_BUSY','media replacement during command');
+        if(!(bytes instanceof Uint8Array))throw new TypeError('media bytes');
+        this.#core.insert(0,bytes.slice(),geometry);
+    }
+    part(){return {id:this.id,pins:['reset','ior_n','iow_n','bhe_n','m_io','irq6',...A,...D,
+        ...(this.transferEnabled?['dreq2','dack2_n','tc','dma_a0','dma_write_n']:[])],outputs:['irq6',...D,...(this.transferEnabled?['dreq2']:[])]};}
     _write(reg,value) {
         if(reg===4)throw new CircuitFault('FDC_READ_ONLY','MSR');
         if(reg===5) {
             if(!(this.#core.dor&4))throw new CircuitFault('FDC_HELD_RESET','FIFO write');
             if(this.#core.phase!=='command')throw new CircuitFault('FDC_FIFO_DIRECTION','drain results before commands');
-            if(!this.#core.cmdBuf.length&&![3,4,7,8,15].includes(value))
+            // Flat sector images have no deleted-data marks. SK has no effect
+            // on these normal sectors, matching the sector core's contract.
+            const data=this.transferEnabled&&[5,6].includes(value&0x1f);
+            if(!this.#core.cmdBuf.length&&data&&this.#core.nonDma)throw new CircuitFault('UNSUPPORTED_FDC_PIO','DMA only');
+            if(!this.#core.cmdBuf.length&&![3,4,7,8,15].includes(value)&&!data)
                 throw new CircuitFault('UNSUPPORTED_FDC_COMMAND','control-only bridge; no sector/DMA/PIO transfers');
         }
         this.#core.write(reg,value);this.writes++;
     }
     update(read) {
-        if(level(read,'reset')){this.reset();return {irq6:0,...released()};}
+        if(level(read,'reset')){this.reset();return {irq6:0,...released(),...(this.transferEnabled?{dreq2:0}:{})};}
         const rd=level(read,'ior_n'),wr=level(read,'iow_n');let access=null;
         if(rd===0||wr===0) {
             if(rd===0&&wr===0)throw new CircuitFault('FDC_COMMAND_OVERLAP','RD and WR');
@@ -57,9 +81,23 @@ export class HarrisFDCAdapter {
         } else if(this.readCycle)throw new CircuitFault('FDC_PORT_CHANGED','select removed during RD');
         const drive=released();
         if(this.readCycle)Object.assign(drive,bitDrives(D.slice(this.readCycle.lane,this.readCycle.lane+8),this.readCycle.value));
-        return {...drive,irq6:Number(this.#core.irq)};
+        if(this.transferEnabled){
+            const ack=level(read,'dack2_n');
+            if(!ack&&!this.dmaCycle){
+                if(this.#core.phase!=='exec')throw new CircuitFault('FDC_DMA_PHASE','DACK without execution');
+                const x=this.#core.exec;this.dmaCycle={lane:level(read,'dma_a0')*8,toHost:x.toHost,byte:x.toHost?x.buf[x.idx]:null,done:false};
+            }
+            if(ack&&this.dmaCycle&&!this.dmaCycle.done){
+                const c=this.dmaCycle;
+                this.#core.acceptPinByte(c.toHost?c.byte:bits(D.slice(c.lane,c.lane+8),read),level(read,'tc'));
+                c.done=true;this.dmaBytes++;
+            }
+            if(this.dmaCycle?.done&&level(read,'dma_write_n'))this.dmaCycle=null;
+            if(this.dmaCycle?.toHost)Object.assign(drive,bitDrives(D.slice(this.dmaCycle.lane,this.dmaCycle.lane+8),this.dmaCycle.byte));
+        }
+        return {...drive,irq6:Number(this.#core.irq),...(this.transferEnabled?{dreq2:Number(this.#core.phase==='exec'&&!!(this.#core.dor&8))}:{})};
     }
     inspect(){const c=this.#core;return {dor:c.dor,irq6:Number(c.irq),phase:c.phase,pendingInterrupts:c.pendingInt.length,
         commandBytes:[...c.cmdBuf],resultRemaining:c.resultBuf.length-c.resultIdx,nonDma:c.nonDma,
-        srt:c.srt,hut:c.hut,hlt:c.hlt,reads:this.reads,writes:this.writes};}
+        srt:c.srt,hut:c.hut,hlt:c.hlt,reads:this.reads,writes:this.writes,...(this.transferEnabled?{dmaBytes:this.dmaBytes}:{})};}
 }

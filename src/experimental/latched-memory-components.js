@@ -125,6 +125,7 @@ export class DigitalBusMemoryAdapter {
         // MUST be valid during an access; no floating input becomes a byte.
         const sel = oe === 1 && we === 1 ? 1 : requireLevel(read, this.select);
         const active = sel === 0;
+        if(!active&&this.state._cycle==='idle')return {changed:false,drives:null,commit:()=>{}};
         const values = {vcc: 5, gnd: 0, oeb: oe * 5, web: we * 5, [this.select]: sel * 5};
         for (const p of bitPins('a', 15)) values[p] = active ? requireLevel(read, p) * 5 : 0;
         for (const p of bitPins('d', 8)) values[p] = active && we === 0 ? requireLevel(read, p) * 5 : 0;
@@ -152,7 +153,7 @@ export function settleBusMemories(circuit, memories, maxPasses = 8) {
         circuit.settle();
         const previews = memories.map(memory => memory.preview(p => circuit.require(memory.id, p)));
         for (let i = 0; i < memories.length; i++) {
-            previews[i].commit(); circuit.drive(memories[i].id, previews[i].drives);
+            previews[i].commit(); if(previews[i].drives)circuit.drive(memories[i].id, previews[i].drives);
         }
         circuit.settle();
         if (!previews.some(p => p.changed)) return;

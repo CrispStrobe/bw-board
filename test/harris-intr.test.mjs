@@ -55,6 +55,15 @@ test('wired INTR wakes STI/HLT, obtains vector from two INTA pulses, stacks and 
     const ack=board.bus.getTrace().entries.flatMap(e=>e.completion?.kind==='interrupt-acknowledge'?[e.completion]:[]);
     assert.deepEqual(ack.map(c=>[c.ackIndex,c.waits,c.last]),[[0,1,false],[1,1,true]]);
 });
+test('HOLD arriving after first INTA waits through the second acknowledge',()=>{
+    const {cpu,board,peer}=fixture(undefined,undefined,{holdEnabled:true});cpu.run(4000);peer.requested=true;
+    until(cpu,()=>board.bus.pending?.kind==='interrupt-acknowledge'&&board.bus.pending.index===1);
+    board.circuit.drive('inputs',{hold:1});
+    for(let i=0;i<80&&peer.pairs===0;i++){cpu.stepClock();assert.equal(board.circuit.require('cpu','hlda'),0);}
+    assert.equal(peer.pairs,1);until(cpu,()=>board.circuit.require('cpu','hlda')===1);
+    const retired=cpu.retired;clocks(cpu,8);assert.equal(cpu.retired,retired);
+    board.circuit.drive('inputs',{hold:0});assert.equal(cpu.run(4000).status,'halted');assert.equal(cpu.regs.bx,1);
+});
 test('IF clear keeps halted CPU masked; deasserted INTR is not an edge latch',()=>{
     const {cpu,peer}=fixture('CLI\nHLT\nHLT');cpu.run(4000);
     peer.requested=true;clocks(cpu,8);assert.equal(cpu.status,'halted');assert.equal(peer.pairs,0);

@@ -7,15 +7,53 @@ const bits=(pins,read)=>pins.reduce((v,p,i)=>v+level(read,p)*2**i,0);
 const released=()=>Object.fromEntries(D.map(p=>[p,'Z']));
 export class HarrisDMAAdapter {
     #core;
-    constructor({enabled=false,id='dma'}={}) {
+    constructor({enabled=false,id='dma',transferEnabled=false}={}) {
         if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
         this.id=id;this.ioInterface='harris-dma-registers';
-        this.capabilities=Object.freeze({experimental:true,channel2Registers:true,transfers:false,
-            hold:false,hlda:false,terminalCount:false,callbacks:false});
+        if(typeof transferEnabled!=='boolean')throw new TypeError('transferEnabled');
+        this.transferEnabled=transferEnabled;
+        this.capabilities=Object.freeze({experimental:true,channel2Registers:true,transfers:transferEnabled,
+            hold:transferEnabled,hlda:transferEnabled,terminalCount:transferEnabled,callbacks:false});
         this.#core=new I8237();this.reset();
     }
-    reset(){this.#core.reset();this.readCycle=null;this.writeCycle=null;this.reads=0;this.writes=0;}
-    part(){return {id:this.id,pins:['reset','ior_n','iow_n','bhe_n','m_io','dreq2',...A,...D],outputs:[...D]};}
+    reset(){this.#core.reset();this.readCycle=null;this.writeCycle=null;this.reads=0;this.writes=0;this.master='IDLE';this.byte=null;this.transferred=0;this.tcPulses=0;}
+    part(){const extra=this.transferEnabled?['hlda','hold','dack2_n','tc','s0_n','s1_n','cod_inta_n',...A.map(p=>`io_${p}`),'io_bhe_n','io_m_io']:[];
+        return {id:this.id,pins:['reset','ior_n','iow_n','bhe_n','m_io','dreq2',...A,...D,...extra],
+            outputs:[...D,...(this.transferEnabled?[...A,'bhe_n','m_io','hold','dack2_n','tc','s0_n','s1_n','cod_inta_n']:[])]};}
+    masterDrives(){
+        const active=this.byte&&['TS1','TS2','TC1','TC2','DONE'].includes(this.master),ts=this.master==='TS1'||this.master==='TS2';
+        return {...Object.fromEntries(A.map(p=>[p,'Z'])),...(active?bitDrives(A,this.byte.address):{}),
+            bhe_n:active?((this.byte.address&1)?0:1):'Z',m_io:active?1:'Z',cod_inta_n:active?0:'Z',
+            s0_n:ts&&!this.byte.verify?(this.byte.write?0:1):1,s1_n:ts&&!this.byte.verify?(this.byte.write?1:0):1,
+            hold:Number(this.master!=='DROP'&&(this.master!=='IDLE'||this.#core.hrq)),
+            dack2_n:Number(!['TC1','TC2'].includes(this.master)),tc:Number(!!this.byte?.last&&['TC1','TC2','DONE'].includes(this.master))};
+    }
+    beginMaster(read){
+        if(level(read,'reset')){this.reset();return this.masterDrives();}
+        const grant=level(read,'hlda');
+        if(this.master==='DONE'){this.master='DROP';this.byte=null;}
+        else if(this.master==='DROP'){if(!grant)this.master='IDLE';}
+        else if(this.master==='IDLE'&&grant&&this.#core.hrq){
+            const c=this.#core.channels[2];
+            this.byte={address:(c.page<<16)|c.curAddr,write:c.transferType===1,verify:c.transferType===0,last:c.curCount===0};this.master='TS1';
+        }
+        return this.masterDrives();
+    }
+    endMaster(read){
+        if(['TS1','TS2','TC1','TC2'].includes(this.master)&&!level(read,'hlda'))throw new CircuitFault('DMA_LOST_GRANT',this.master);
+        if(this.master==='TS1')this.master='TS2';
+        else if(this.master==='TS2')this.master='TC1';
+        else if(this.master==='TC1')this.master='TC2';
+        else if(this.master==='TC2'&&(this.byte.verify||!level(read,'ready_n'))){
+            // Validate the actual byte before advancing counters. No memory callback.
+            if(!this.byte.verify)bits(D.slice((this.byte.address&1)*8,(this.byte.address&1)*8+8),read);
+            const c=this.#core.channels[2];c.curAddr=(c.curAddr+1)&65535;c.curCount=(c.curCount-1)&65535;
+            if(this.byte.last){this.#core.status|=4;c.masked=true;this.tcPulses++;}
+            this.transferred++;this.master='DONE';this.#core.dreq(2,level(read,'dreq2'));
+            return {dack2_n:1};
+        } else if(this.master==='TC2')this.master='TC1';
+        return null;
+    }
     _write(reg,value) {
         if(reg===0x81) {
             if(value>15)throw new CircuitFault('UNSUPPORTED_DMA_PAGE','XT-style 20-bit page subset');
@@ -28,20 +66,23 @@ export class HarrisDMAAdapter {
             if(value&4)throw new CircuitFault('UNSUPPORTED_DMA_TRANSFER','software request requires bus ownership');
         }
         if(reg===10&&![2,6].includes(value))throw new CircuitFault('UNSUPPORTED_DMA_CHANNEL','channel-2 mask only');
-        if(reg===11&&![0x46,0x4a].includes(value))throw new CircuitFault('UNSUPPORTED_DMA_MODE','channel 2, single, increment, no autoinit, read/write only');
+        if(reg===11&&![0x46,0x4a,...(this.transferEnabled?[0x42]:[])].includes(value))throw new CircuitFault('UNSUPPORTED_DMA_MODE','channel 2, single, increment, no autoinit; verify requires transfer gate');
         if(reg===14||reg===15&&![0x0b,0x0f].includes(value))throw new CircuitFault('UNSUPPORTED_DMA_CHANNEL','other channels must stay masked');
         this.#core.write(reg,value);this.writes++;
     }
     update(read) {
-        if(level(read,'reset')){this.reset();return released();}
-        if(level(read,'dreq2'))throw new CircuitFault('UNSUPPORTED_DMA_TRANSFER','DREQ2 requires HOLD/HLDA, ownership and TC');
+        if(level(read,'reset')){this.reset();return {...released(),...(this.transferEnabled?this.masterDrives():{})};}
+        const request=level(read,'dreq2');
+        if(request&&!this.transferEnabled)throw new CircuitFault('UNSUPPORTED_DMA_TRANSFER','DREQ2 requires HOLD/HLDA, ownership and TC');
+        if(this.transferEnabled)this.#core.dreq(2,request);
         const rd=level(read,'ior_n'),wr=level(read,'iow_n');let access=null;
         if(rd===0||wr===0) {
             if(rd===0&&wr===0)throw new CircuitFault('DMA_COMMAND_OVERLAP','RD and WR');
-            if(level(read,'m_io')!==0)throw new CircuitFault('DMA_IO_STATUS','memory status during I/O');
-            const reg=bits(A,read);
+            const ioRead=p=>read(this.transferEnabled?`io_${p}`:p);
+            if(level(ioRead,'m_io')!==0)throw new CircuitFault('DMA_IO_STATUS','memory status during I/O');
+            const reg=bits(A,ioRead);
             if(reg<16||reg===0x81) {
-                if(level(read,'bhe_n')!==((reg&1)?0:1))throw new CircuitFault('UNSUPPORTED_DMA_WORD_IO','byte cycles only');
+                if(level(ioRead,'bhe_n')!==((reg&1)?0:1))throw new CircuitFault('UNSUPPORTED_DMA_WORD_IO','byte cycles only');
                 // Undefined/write-only register reads stay undriven; never clear
                 // the shared byte pointer as a side effect of reading port 0Ch.
                 if(wr===0||[4,5,8].includes(reg))access={reg,lane:(reg&1)*8};
@@ -59,8 +100,9 @@ export class HarrisDMAAdapter {
         } else if(this.readCycle)throw new CircuitFault('DMA_PORT_CHANGED','select removed during RD');
         const drive=released();
         if(this.readCycle)Object.assign(drive,bitDrives(D.slice(this.readCycle.lane,this.readCycle.lane+8),this.readCycle.value));
-        return drive;
+        return {...drive,...(this.transferEnabled?{hold:Number(this.master!=='DROP'&&(this.master!=='IDLE'||this.#core.hrq))}:{})};
     }
     inspect(){const s=this.#core.getState();return {channel2:{...s.channels[2]},command:s.command,
-        status:s.status,byteHigh:s.ff,hrq:s.hrq,reads:this.reads,writes:this.writes};}
+        status:s.status,byteHigh:s.ff,hrq:s.hrq,reads:this.reads,writes:this.writes,
+        ...(this.transferEnabled?{master:this.master,transferred:this.transferred,tcPulses:this.tcPulses}:{})};}
 }

@@ -382,6 +382,7 @@ export class HarrisBootCPU {
             this.restartRegisters = null;
             this.segmentOverride = undefined;
             this.repeatPrefix = 0; this.lockPrefix = false;
+            this.busLocked = false;
             let opcode;
             try {
             opcode = yield* this._byte();
@@ -600,6 +601,7 @@ export class HarrisBootCPU {
             case 0xa4: case 0xa5: case 0xa6: case 0xa7: case 0xaa: case 0xab: case 0xac: case 0xad: case 0xae: case 0xaf:
                 yield* this._string(opcode); break;
             case 0x86: case 0x87: {
+                this.busLocked = true;
                 const width = opcode & 1 ? 2 : 1, {reg,operand} = yield* this._operand(width);
                 const value = yield* this._readOperand(operand,width);
                 yield* this._writeOperand(operand,this._get(reg),width); this._set(reg,value); break;
@@ -749,7 +751,7 @@ export class HarrisBootCPU {
     }
     _pump(value) {
         const next = this.iterator.next(value);
-        if (!next.done) this.board.submit(next.value);
+        if (!next.done) this.board.submit({...next.value,locked:this.busLocked===true});
     }
     stepClock(ready_n = 0) {
         if (this.status !== 'running' && !(this.status === 'halted' && (this.board.capabilities?.nmi || this.board.capabilities?.intr)))

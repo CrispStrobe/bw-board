@@ -1,5 +1,9 @@
 # Wired FDC control bridge
 
+Historical control-only milestone. The subsequent opt-in
+[physical DMA/FDC transfer path](HARRIS-286-PHYSICAL-DMA.md) supersedes the data
+command gaps below; control-only mode itself keeps these restrictions.
+
 Follow-up: the optional [DMA register bridge](HARRIS-286-DMA.md) now verifies
 channel-2 programming over the wired bus. It still rejects requests and does
 not enable any FDC data commands or sector transfers.

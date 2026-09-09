@@ -18,6 +18,12 @@ export class CircuitFault extends Error {
  */
 export class DigitalCircuit {
     #netLayout;
+    #dirty = new Set();
+    #resolved = new Map();
+    #snapshotDirty = new Set();
+    #evalDirty = new Set();
+    #evaluators;
+    #topologyReady=false;
     constructor({enabled = false, parts, wires = [], maxDeltas = 32}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'explicit enabled:true required');
         if (!Number.isSafeInteger(maxDeltas) || maxDeltas < 1) throw new RangeError('maxDeltas');
@@ -61,10 +67,17 @@ export class DigitalCircuit {
         for (const key of this.outputs) nets.get(this.root(key)).push(key);
         this.#netLayout = [...nets].map(([root, pins]) =>
             [root, pins.sort((a, b) => a.localeCompare(b))]);
+        this.#netLayout = new Map(this.#netLayout);
+        this.#dirty = new Set(this.#netLayout.keys());
+        this.#topologyReady=true;
+        this.snapshot = new Map();
+        this.#evaluators=[...this.parts].filter(([,part])=>part.evaluate).map(([id,part])=>
+            ({id,part,first:true,roots:new Set(part.pins.map(p=>this.root(endpoint(id,p))))}));
         this.settle();
     }
 
     root(key) {
+        if(this.#topologyReady){const root=this.parent.get(key);if(root===undefined)throw new Error(`unknown terminal ${key}`);return root;}
         if (!this.parent.has(key)) throw new Error(`unknown terminal ${key}`);
         let root = key;
         while (this.parent.get(root) !== root) root = this.parent.get(root);
@@ -79,12 +92,18 @@ export class DigitalCircuit {
             if (!LEVELS.has(value)) throw new Error(`invalid logic level ${value}`);
             updates.push([key, value]);
         }
-        for (const [key, value] of updates) this.drives.set(key, value);
+        for (const [key, value] of updates) {
+            if(this.drives.get(key)!==value)this.#dirty.add(this.root(key));
+            this.drives.set(key, value);
+        }
     }
 
     resolve() {
-        const resolved = new Map();
-        for (const [root, pins] of this.#netLayout) {
+        return new Map([...this.#resolveLevels()].map(([key,state])=>[key,{...state,drivers:state.drivers.map(d=>({...d}))}]));
+    }
+    #resolveLevels() {
+        for (const root of this.#dirty) {
+            const pins=this.#netLayout.get(root);
             const drivers = [];
             let levels = 0;
             for (const pin of pins) {
@@ -95,18 +114,26 @@ export class DigitalCircuit {
             }
             const conflict = (levels & 3) === 3;
             const value = !levels ? 'Z' : conflict || (levels & 4) ? 'X' : drivers[0].value;
-            resolved.set(root, {value, conflict, drivers});
+            if(this.#resolved.get(root)?.value!==value)this.#evalDirty.add(root);
+            this.#resolved.set(root, {value, conflict, drivers});
+            this.#snapshotDirty.add(root);
         }
-        return resolved;
+        this.#dirty.clear();
+        return this.#resolved;
     }
 
     settle() {
+        const cached=this.resolve===DigitalCircuit.prototype.resolve;
+        if(cached&&!this.#dirty.size&&!this.#evalDirty.size&&!this.#snapshotDirty.size)return 0;
         for (let delta = 0; delta < this.maxDeltas; delta++) {
-            const snapshot = this.resolve();
-            const before = new Map(this.drives);
+            const snapshot = this.resolve===DigitalCircuit.prototype.resolve?this.#resolveLevels():this.resolve();
+            const changed=this.#evalDirty;this.#evalDirty=new Set();
+            const before = new Map();
             const updates = [];
-            for (const [id, part] of this.parts) {
-                if (!part.evaluate) continue;
+            for (const entry of this.#evaluators) {
+                const {id,part}=entry;
+                if(cached&&!entry.first){let affected=false;for(const root of entry.roots)if(changed.has(root)){affected=true;break;}if(!affected)continue;}
+                entry.first=false;
                 const values = part.evaluate(pin => snapshot.get(this.root(endpoint(id, pin))).value);
                 // A combinational part must describe EVERY output each time:
                 // omission releases it, never retains an accidental latch.
@@ -115,9 +142,15 @@ export class DigitalCircuit {
                 }
                 updates.push([id, Object.fromEntries(part.outputs.map(pin => [pin, values[pin] ?? 'Z']))]);
             }
+            for (const [id,values] of updates)for(const pin of Object.keys(values)){
+                const key=endpoint(id,pin);if(!before.has(key))before.set(key,this.drives.get(key));
+            }
             for (const [id, values] of updates) this.drive(id, values);
-            if (this.drives.size === before.size && [...this.drives].every(([k, v]) => before.get(k) === v)) {
-                this.snapshot = snapshot;
+            if ([...before].every(([k, v]) => this.drives.get(k) === v)) {
+                if(this.resolve===DigitalCircuit.prototype.resolve){
+                    for(const root of this.#snapshotDirty)this.snapshot.set(root,snapshot.get(root));
+                    this.#snapshotDirty.clear();
+                }else this.snapshot=new Map(snapshot);
                 return delta;
             }
         }

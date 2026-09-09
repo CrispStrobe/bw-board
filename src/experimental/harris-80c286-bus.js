@@ -19,10 +19,12 @@ const known = (read, pin) => {
 };
 
 export class Harris80C286Bus {
-    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, nmiEnabled = false, intrEnabled = false} = {}) {
+    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, nmiEnabled = false, intrEnabled = false, holdEnabled = false} = {}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
         for (const v of [maxWaitStates, traceLimit]) if (!Number.isSafeInteger(v) || v < 1) throw new RangeError('limits');
         this.maxWaitStates = maxWaitStates;
+        if (typeof holdEnabled !== 'boolean') throw new TypeError('holdEnabled');
+        this.holdEnabled = holdEnabled;
         if (typeof nmiEnabled !== 'boolean') throw new TypeError('nmiEnabled');
         this.nmiEnabled = nmiEnabled;
         if (typeof intrEnabled !== 'boolean') throw new TypeError('intrEnabled');
@@ -31,7 +33,7 @@ export class Harris80C286Bus {
         this.traceLimit = traceLimit;
         this.capabilities = Object.freeze({cpu: false, experimental: true,
             fidelity: 'non-pipelined-system-clock-phases', clockEdges: false,
-            systemClockStepping: true, snapshots: false, hold: false, interrupts: false, nmi: nmiEnabled,
+            systemClockStepping: true, snapshots: false, hold: holdEnabled, interrupts: false, nmi: nmiEnabled,
             interruptAcknowledge: intrEnabled,
             pipelinedAddress: false, protectedMode: false});
         this.state = 'RESET_REQUIRED';
@@ -53,13 +55,13 @@ export class Harris80C286Bus {
     part(id = 'cpu') { return {id, pins: [...INPUTS, ...OUTPUTS], outputs: [...OUTPUTS]}; }
 
     submit(transaction) {
-        if (this.faulted || this.open || this.pending || this.state !== 'TI') {
+        if (this.faulted || this.open || this.pending || !['TI','TH'].includes(this.state)) {
             throw new CircuitFault('BUS_UNAVAILABLE', 'reset/init/pending clock or transaction');
         }
         if (transaction.kind === 'interrupt-acknowledge' && !this.intrEnabled)
             throw new CircuitFault('EXPERIMENT_DISABLED','INTA requires intrEnabled:true');
         const transfers = plan286Transfers(transaction);
-        this.pending = {transfers, index: 0, bytes: [], waits: 0, kind: transaction.kind};
+        this.pending = {transfers, index: 0, bytes: [], waits: 0, kind: transaction.kind, locked:transaction.locked===true};
     }
 
     _record(event) {
@@ -91,7 +93,8 @@ export class Harris80C286Bus {
                 }
             }
             // Fail closed instead of silently ignoring yet-unimplemented pins.
-            if (known(read, 'hold')) throw new CircuitFault('UNSUPPORTED_HOLD', this.state);
+            const hold = known(read, 'hold');
+            if (hold && !this.holdEnabled) throw new CircuitFault('UNSUPPORTED_HOLD', this.state);
             if (!reset) for (const pin of ['pereq', ...(this.intrEnabled ? [] : ['intr']), ...(this.nmiEnabled ? [] : ['nmi'])]) {
                 if (known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
             }
@@ -114,7 +117,14 @@ export class Harris80C286Bus {
             if (!reset) for (const pin of ['busy_n', 'error_n']) {
                 if (!known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
             }
-            if (this.state === 'TI' && this.phase === 1 && this.pending && this.ackGap === 0) {
+            if (this.holdEnabled && !reset && this.phase === 1) {
+                if (this.state === 'TH' && !hold) this.state = 'TI';
+                else if (this.state === 'TI' && hold && !this.writeHold && !this.ackGap &&
+                    !this.pending?.locked && !(this.pending?.kind === 'interrupt-acknowledge' && this.pending.index > 0)) this.state = 'TH';
+            }
+            const grantPending = this.holdEnabled && hold && !this.pending?.locked &&
+                !(this.pending?.kind === 'interrupt-acknowledge' && this.pending.index > 0);
+            if (this.state === 'TI' && this.phase === 1 && this.pending && this.ackGap === 0 && !grantPending) {
                 this.state = 'TS';
                 const t = this.pending.transfers[this.pending.index];
                 this.address = t.address;
@@ -135,10 +145,12 @@ export class Harris80C286Bus {
             const floatingAddress = ack && (this.pending.index === 0 || this.pending.waits === 0);
             const addressDrives = floatingAddress ? Object.fromEntries(A.map(p=>[p,'Z'])) : bitDrives(A,this.address);
             // INTA LOCK is active in TS and the first TC of EACH cycle,
-            // independent of external wait count. HOLD is still unsupported.
-            const lock_n = Number(!(ack && (this.state === 'TS' || this.state === 'TC' && this.pending.waits === 0)));
+            // independent of external wait count. An explicitly locked operand
+            // keeps ownership across all of its physical cycles.
+            const lock_n = Number(!(this.pending?.locked || ack && (this.state === 'TS' || this.state === 'TC' && this.pending.waits === 0)));
             this.outputs = {...addressDrives, ...status, ...data, lock_n, hlda: 0, peack_n: 1};
             if (floatingAddress) this.outputs.bhe_n = 'Z';
+            if (this.state === 'TH') this.outputs = {...Object.fromEntries(OUTPUTS.map(p=>[p,'Z'])),hlda:1};
             this.open = true;
             return {...this.outputs};
         } catch (error) { this.faulted = true; throw error; }

@@ -61,3 +61,17 @@ test('wired bus traces, READY waits and memory contents match old resolver',()=>
     }
     for(const id of ['ram0','ram1','ram1_0','ram1_1','text0','text1'])assert.deepEqual(fast.inspectMemory(id),old.inspectMemory(id));
 });
+test('public resolve does not advance settled reads or swallow pending combinational updates',()=>{
+    const c=new DigitalCircuit({enabled:true,parts:[{id:'in',pins:['p'],outputs:['p']},
+        {id:'gate',pins:['p','q'],outputs:['q'],evaluate:r=>({q:r('p')})}],wires:[wire('in','gate')]});
+    c.drive('in',{p:1});const before=c.inspect('gate','q');const external=c.resolve();
+    assert.deepEqual(c.inspect('gate','q'),before);external.get(c.root('in.p')).drivers[0].value=0;
+    c.settle();assert.equal(c.require('gate','q'),1);assert.equal(c.require('in','p'),1);
+    assert.equal(c.settle(),0);
+});
+test('nonconvergence preserves the last settled snapshot and a changed input can recover',()=>{
+    const c=new DigitalCircuit({enabled:true,maxDeltas:4,parts:[{id:'in',pins:['p'],outputs:['p']},
+        {id:'gate',pins:['p','q'],outputs:['q'],evaluate:r=>({q:r('p')===1?(r('q')===1?0:1):0})}],wires:[wire('in','gate')]});
+    const before=c.inspect('gate','q');c.drive('in',{p:1});assert.throws(()=>c.settle(),{code:'NON_CONVERGENT'});
+    assert.deepEqual(c.inspect('gate','q'),before);c.drive('in',{p:0});c.settle();assert.equal(c.require('gate','q'),0);
+});
