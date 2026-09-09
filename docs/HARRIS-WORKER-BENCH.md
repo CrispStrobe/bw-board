@@ -21,7 +21,9 @@ gated; this harness starts with bus tracing off and CPU history on.
 
 The initial all-five-workload smoke run passes: every state and mapped-memory
 hash matches the committed Node receipt, and a posted cancellation stops at a
-complete period. This is not yet the repeated performance receipt. Run it with:
+complete period. The [repeated browser receipt](HARRIS-BROWSER-WORKER-BENCH.json)
+now records one warmup plus three measured rounds, with all served source hashes
+verified against `eeeffa3`. Run it with:
 
 ```sh
 CHROME_BIN=/absolute/path/to/chrome HARRIS_BROWSER_REPORT=/new/receipt.json node bench/harris-browser.mjs 3
@@ -41,3 +43,14 @@ owned fixture, or a bus-only benchmark does not satisfy the full
 Chromium wrapper fails in this container; a separately installed local Chromium
 binary is available for a fresh, loopback-only test profile. No guest media,
 browser account/profile, remote deployment or new external dependency is needed.
+
+The repeated Chromium 150 run matches every owned Node state/memory hash and
+stops the cancellation probe after 96 complete periods. The main-thread
+heartbeat median is 16 ms, p95 17.3 ms, maximum 29.8 ms. These are observations,
+not hard deadlines. Packed/reference median ratios are 2.19x memory, 2.53x I/O,
+1.89x DMA, 2.41x interrupt and 2.68x idle. This comparison includes compiled
+connectivity and memory/device scheduling as well as packed drives; it does
+not isolate the packed-drive change. Active throughput is 8,257–18,156 modeled
+periods/s, still roughly 526–1,156 times below the capacity target. Browser and
+Node runs used different V8 versions and host-load intervals; these receipts
+do not attribute their difference to a worker or to a single engine feature.

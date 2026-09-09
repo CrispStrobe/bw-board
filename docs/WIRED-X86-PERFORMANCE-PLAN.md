@@ -177,3 +177,19 @@ decision rather than silently redefining success.
   cancellation stops at a complete period. This is a benchmark harness, not
   application integration or a full DOS browser result. Repeated Node/browser
   measurements and the capacity gate remain open.
+- Packed [three-round Node receipt](HARRIS-PACKED-BUS-BENCH.json), exact runtime
+  `eeeffa3`: all states match. Median packed/events ratios are 1.02x memory,
+  1.00x I/O, 1.35x DMA, 1.29x interrupt, 1.08x idle. No other test/benchmark from
+  this lane overlapped measurement; shared-host variation remains uncontrolled.
+  Active packed throughput is 4,709–9,243 system periods/s, still approximately
+  1,000–2,000 times short of the capacity target. More micro-optimizations alone
+  must not be represented as a credible guarantee of closing that gap.
+- Repeated [browser worker receipt](HARRIS-BROWSER-WORKER-BENCH.json), sources
+  verified at `eeeffa3`: all 40 executions match recorded Node CPU/device and
+  mapped-memory hashes. Active packed/reference ratios are 1.89–2.53x. Main
+  heartbeat p95 is 17.3 ms; posted cancellation ends at a complete period.
+  Throughput remains 526–1,156 times below the active-workload capacity gate.
+  No UI/product integration, full browser DOS boot or stock-clock grade claimed.
+- [Whole-kernel evaluation contract](HARRIS-KERNEL-EVALUATION.md) added. Obtain
+  an execution-only sampled profile before choosing the next port/rewrite;
+  retain actual-netlist and fault semantics, not an unrelated functional board.

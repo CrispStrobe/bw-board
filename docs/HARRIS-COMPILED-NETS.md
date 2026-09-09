@@ -177,3 +177,10 @@ The DOS probe accepts `HARRIS_PACKED_BUS=on`; the owned benchmark adds `packed`
 not yet earned a full DOS boot receipt. The source-pinned successful compiled
 DOS boot predates this change. Browser worker validation is described in
 [the worker benchmark note](HARRIS-WORKER-BENCH.md).
+
+The [three-round Node receipt](HARRIS-PACKED-BUS-BENCH.json), source-verified at
+`eeeffa3`, compares events against packed with no overlapping test/benchmark
+process from this lane. All 40 executions agree, including warmup. Median
+ratios are 1.02x memory, 1.00x I/O, 1.35x DMA, 1.29x interrupt and 1.08x idle.
+Shared-host variation remains large. This is a mixed incremental gain, not a
+general throughput breakthrough or evidence to change defaults.
