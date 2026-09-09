@@ -2,6 +2,10 @@
 import {CircuitFault, bitPins} from './digital-circuit.js';
 import {decode286Status} from './harris-80c286-contract.js';
 
+const MEMORY_ADDRESS_PINS = Object.freeze(bitPins('a', 15));
+const MEMORY_DATA_PINS = Object.freeze(bitPins('d', 8));
+const IDLE_MEMORY_PREVIEW = Object.freeze({changed:false,drives:null,commit:()=>{}});
+
 const requireLevel = (read, pin) => {
     const value = read(pin);
     if (value !== 0 && value !== 1) throw new CircuitFault(value === 'Z' ? 'FLOATING' : 'UNKNOWN', pin);
@@ -125,10 +129,10 @@ export class DigitalBusMemoryAdapter {
         // MUST be valid during an access; no floating input becomes a byte.
         const sel = oe === 1 && we === 1 ? 1 : requireLevel(read, this.select);
         const active = sel === 0;
-        if(!active&&this.state._cycle==='idle')return {changed:false,drives:null,commit:()=>{}};
+        if(!active&&this.state._cycle==='idle')return IDLE_MEMORY_PREVIEW;
         const values = {vcc: 5, gnd: 0, oeb: oe * 5, web: we * 5, [this.select]: sel * 5};
-        for (const p of bitPins('a', 15)) values[p] = active ? requireLevel(read, p) * 5 : 0;
-        for (const p of bitPins('d', 8)) values[p] = active && we === 0 ? requireLevel(read, p) * 5 : 0;
+        for (const p of MEMORY_ADDRESS_PINS) values[p] = active ? requireLevel(read, p) * 5 : 0;
+        for (const p of MEMORY_DATA_PINS) values[p] = active && we === 0 ? requireLevel(read, p) * 5 : 0;
         const cycle = !active ? 'idle' : we === 0 ? 'write' : oe === 0 ? 'read' : 'idle';
         const leavingWrite = this.state._cycle === 'write' && cycle !== 'write';
         const protectedROM = this.kind === '28c256' && this.device.params.readOnly;
@@ -139,7 +143,7 @@ export class DigitalBusMemoryAdapter {
             // Copy then, so a failed peer-bank preflight cannot partially write.
             mem: leavingWrite ? this.state.mem.slice() : this.state.mem};
         const changed = this.model.update(this.device, next, p => values[p]);
-        const drives = Object.fromEntries(bitPins('d', 8).map(p => [p,
+        const drives = Object.fromEntries(MEMORY_DATA_PINS.map(p => [p,
             next.drives[p] ? Number(next.drives[p].vTh > 2.5) : 'Z']));
         return {changed, drives, commit: () => { this.state = next; if (willWrite) this.writes++; }};
     }

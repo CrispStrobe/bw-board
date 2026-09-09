@@ -24,6 +24,7 @@ export class DigitalCircuit {
     #evalDirty = new Set();
     #evaluators;
     #topologyReady=false;
+    #terminals = new Map();
     constructor({enabled = false, parts, wires = [], maxDeltas = 32}) {
         if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'explicit enabled:true required');
         if (!Number.isSafeInteger(maxDeltas) || maxDeltas < 1) throw new RangeError('maxDeltas');
@@ -70,6 +71,14 @@ export class DigitalCircuit {
         this.#netLayout = new Map(this.#netLayout);
         this.#dirty = new Set(this.#netLayout.keys());
         this.#topologyReady=true;
+        for (const [id, part] of this.parts) {
+            const terminals = new Map();
+            for (const pin of part.pins) {
+                const key = endpoint(id, pin);
+                terminals.set(pin.toLowerCase(), {key, root:this.parent.get(key), output:this.outputs.has(key)});
+            }
+            this.#terminals.set(id, terminals);
+        }
         this.snapshot = new Map();
         this.#evaluators=[...this.parts].filter(([,part])=>part.evaluate).map(([id,part])=>
             ({id,part,first:true,roots:new Set(part.pins.map(p=>this.root(endpoint(id,p))))}));
@@ -86,16 +95,24 @@ export class DigitalCircuit {
 
     drive(part, values) {
         const updates = [];
-        for (const [pin, value] of Object.entries(values)) {
-            const key = endpoint(part, pin);
-            if (!this.outputs.has(key)) throw new Error(`not an output ${key}`);
+        const terminals = this.#terminals.get(part);
+        for (const pin of Object.keys(values)) {
+            const terminal = terminals?.get(pin.toLowerCase());
+            const value = values[pin];
+            if (!terminal?.output) throw new Error(`not an output ${endpoint(part,pin)}`);
             if (!LEVELS.has(value)) throw new Error(`invalid logic level ${value}`);
-            updates.push([key, value]);
+            updates.push(terminal, value);
         }
-        for (const [key, value] of updates) {
-            if(this.drives.get(key)!==value)this.#dirty.add(this.root(key));
-            this.drives.set(key, value);
+        for (let i=0;i<updates.length;i+=2) {
+            const {key,root}=updates[i], value=updates[i+1];
+            if(this.drives.get(key)!==value){this.#dirty.add(root);this.drives.set(key, value);}
         }
+    }
+
+    #terminal(part, pin) {
+        const terminal=this.#terminals.get(part)?.get(String(pin).toLowerCase());
+        if(!terminal)throw new Error(`unknown terminal ${endpoint(part,pin)}`);
+        return terminal;
     }
 
     resolve() {
@@ -134,7 +151,7 @@ export class DigitalCircuit {
                 const {id,part}=entry;
                 if(cached&&!entry.first){let affected=false;for(const root of entry.roots)if(changed.has(root)){affected=true;break;}if(!affected)continue;}
                 entry.first=false;
-                const values = part.evaluate(pin => snapshot.get(this.root(endpoint(id, pin))).value);
+                const values = part.evaluate(pin => snapshot.get(this.#terminal(id, pin).root).value);
                 // A combinational part must describe EVERY output each time:
                 // omission releases it, never retains an accidental latch.
                 for (const pin of Object.keys(values)) {
@@ -158,16 +175,16 @@ export class DigitalCircuit {
     }
 
     inspect(part, pin) {
-        const state = this.snapshot.get(this.root(endpoint(part, pin)));
+        const state = this.snapshot.get(this.#terminal(part, pin).root);
         return {...state, drivers: state.drivers.map(d => ({...d}))};
     }
 
     // Internal readers need a scalar, not a defensive copy of diagnostics.
     // Keep inspect() copying for callers that can mutate its returned arrays.
-    read(part, pin) { return this.snapshot.get(this.root(endpoint(part, pin))).value; }
+    read(part, pin) { return this.snapshot.get(this.#terminal(part, pin).root).value; }
 
     require(part, pin) {
-        const state = this.snapshot.get(this.root(endpoint(part, pin)));
+        const state = this.snapshot.get(this.#terminal(part, pin).root);
         if (state.value === 0 || state.value === 1) return state.value;
         throw new CircuitFault(state.conflict ? 'CONTENTION' : state.value === 'Z' ? 'FLOATING' : 'UNKNOWN',
             `${endpoint(part, pin)} (${state.drivers.map(d => `${d.pin}=${d.value}`).join(', ') || 'no driver'})`);

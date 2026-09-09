@@ -1,10 +1,12 @@
-/** Channel-2 programmer-register bridge only. No bus mastering or DMA callbacks. */
+/** Channel-2 register bridge with separately gated pin transfers; no DMA memory callbacks. */
 import {I8237} from '../i8237.js';
 import {CircuitFault,bitPins,bitDrives} from './digital-circuit.js';
 const A=bitPins('a',24),D=bitPins('d',16);
 const level=(read,p)=>{const v=read(p);if(v!==0&&v!==1)throw new CircuitFault(v==='Z'?'FLOATING':'UNKNOWN',p);return v;};
 const bits=(pins,read)=>pins.reduce((v,p,i)=>v+level(read,p)*2**i,0);
-const released=()=>Object.fromEntries(D.map(p=>[p,'Z']));
+const RELEASED_DATA=Object.freeze(Object.fromEntries(D.map(p=>[p,'Z'])));
+const released=()=>({...RELEASED_DATA});
+const RELEASED_ADDRESS=Object.freeze(Object.fromEntries(A.map(p=>[p,'Z'])));
 export class HarrisDMAAdapter {
     #core;
     constructor({enabled=false,id='dma',transferEnabled=false}={}) {
@@ -22,7 +24,7 @@ export class HarrisDMAAdapter {
             outputs:[...D,...(this.transferEnabled?[...A,'bhe_n','m_io','hold','dack2_n','tc','s0_n','s1_n','cod_inta_n']:[])]};}
     masterDrives(){
         const active=this.byte&&['TS1','TS2','TC1','TC2','DONE'].includes(this.master),ts=this.master==='TS1'||this.master==='TS2';
-        return {...Object.fromEntries(A.map(p=>[p,'Z'])),...(active?bitDrives(A,this.byte.address):{}),
+        return {...(active?bitDrives(A,this.byte.address):RELEASED_ADDRESS),
             bhe_n:active?((this.byte.address&1)?0:1):'Z',m_io:active?1:'Z',cod_inta_n:active?0:'Z',
             s0_n:ts&&!this.byte.verify?(this.byte.write?0:1):1,s1_n:ts&&!this.byte.verify?(this.byte.write?1:0):1,
             hold:Number(this.master!=='DROP'&&(this.master!=='IDLE'||this.#core.hrq)),

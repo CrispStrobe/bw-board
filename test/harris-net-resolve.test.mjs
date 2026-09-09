@@ -20,6 +20,19 @@ function oldResolve() {
     }));
 }
 const wire=(a,b)=>({from:a,fromTerminal:'p',to:b,toTerminal:'p'});
+test('cached terminals retain case aliases, atomic drive validation and unchanged diagnostics',()=>{
+    const c=new DigitalCircuit({enabled:true,parts:[{id:'a',pins:['P','q','input'],outputs:['P','q']}]});
+    c.drive('a',{P:1,q:0});c.settle();
+    assert.equal(c.require('a','p'),1);
+    assert.throws(()=>c.drive('a',{p:0,q:2}),/invalid logic level/);
+    assert.throws(()=>c.drive('a',{p:0,input:1}),/not an output a.input/);
+    assert.throws(()=>c.drive('missing',{p:0}),/not an output missing.p/);
+    assert.throws(()=>c.read('a','missing'),/unknown terminal a.missing/);
+    c.settle();assert.equal(c.require('a','P'),1);assert.equal(c.require('a','q'),0);
+    c.drive('a',{p:0,P:1});c.settle();assert.equal(c.require('a','p'),1);
+    c.drive('a',{P:1,q:0});assert.equal(c.settle(),0);
+    assert.deepEqual(c.resolve(),oldResolve.call(c));
+});
 test('static layout agrees with old resolver for undriven, input-only and all three-driver states',()=>{
     const ids=['z','A','a_1','input'];
     for(const reverse of [false,true]) {

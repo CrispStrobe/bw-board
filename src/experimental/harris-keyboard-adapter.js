@@ -4,7 +4,8 @@ import {CircuitFault,bitPins,bitDrives} from './digital-circuit.js';
 const A=bitPins('a',24),D=bitPins('d',16);
 const bit=(read,p)=>{const v=read(p);if(v!==0&&v!==1)throw new CircuitFault(v==='Z'?'FLOATING':'UNKNOWN',p);return v;};
 const bits=(pins,read)=>pins.reduce((v,p,i)=>v+bit(read,p)*2**i,0);
-const release=()=>Object.fromEntries(D.map(p=>[p,'Z']));
+const RELEASED_DATA=Object.freeze(Object.fromEntries(D.map(p=>[p,'Z'])));
+const release=()=>({...RELEASED_DATA});
 export class HarrisKeyboardAdapter {
     #core=new I8255();
     constructor({enabled=false,id='keyboard'}={}){

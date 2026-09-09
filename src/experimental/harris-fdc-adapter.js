@@ -1,12 +1,14 @@
 /** Gated ideal digital FDC control/byte-lane bridge, not a bare 765 pin model.
- * Reuses the sector-level core only for control commands. No media or DMA API.
+ * Control-only by default; transfer mode advances the sector core via DACK/TC,
+ * without a DMA memory callback. See HARRIS-286-PHYSICAL-DMA.md for the limits.
  */
 import {UPD765} from '../upd765.js';
 import {CircuitFault,bitPins,bitDrives} from './digital-circuit.js';
 const A=bitPins('a',24),D=bitPins('d',16);
 const level=(read,p)=>{const v=read(p);if(v!==0&&v!==1)throw new CircuitFault(v==='Z'?'FLOATING':'UNKNOWN',p);return v;};
 const bits=(pins,read)=>pins.reduce((v,p,i)=>v+level(read,p)*2**i,0);
-const released=()=>Object.fromEntries(D.map(p=>[p,'Z']));
+const RELEASED_DATA=Object.freeze(Object.fromEntries(D.map(p=>[p,'Z'])));
+const released=()=>({...RELEASED_DATA});
 // This variant never enters the core's synchronous callback pump or automatic
 // PIO fallback. Bytes advance only after the external DACK edge below.
 class PinTransferFDC extends UPD765 {

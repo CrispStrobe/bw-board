@@ -9,7 +9,9 @@ import {plan286Transfers} from './harris-80c286-contract.js';
 
 const A = bitPins('a', 24);
 const D = bitPins('d', 16);
-const releaseData = () => Object.fromEntries(D.map(p => [p, 'Z']));
+const RELEASED_DATA = Object.freeze(Object.fromEntries(D.map(p => [p, 'Z'])));
+const RELEASED_ADDRESS = Object.freeze(Object.fromEntries(A.map(p => [p, 'Z'])));
+const releaseData = () => ({...RELEASED_DATA});
 const OUTPUTS = [...A, ...D, 'bhe_n', 's1_n', 's0_n', 'cod_inta_n', 'm_io', 'lock_n', 'hlda', 'peack_n'];
 const INPUTS = ['reset', 'ready_n', 'hold', 'intr', 'nmi', 'pereq', 'busy_n', 'error_n'];
 const known = (read, pin) => {
@@ -143,7 +145,7 @@ export class Harris80C286Bus {
             const status = this.state === 'TS' ? this.control : {...this.control, s1_n: 1, s0_n: 1};
             const ack = this.pending?.kind === 'interrupt-acknowledge';
             const floatingAddress = ack && (this.pending.index === 0 || this.pending.waits === 0);
-            const addressDrives = floatingAddress ? Object.fromEntries(A.map(p=>[p,'Z'])) : bitDrives(A,this.address);
+            const addressDrives = floatingAddress ? RELEASED_ADDRESS : bitDrives(A,this.address);
             // INTA LOCK is active in TS and the first TC of EACH cycle,
             // independent of external wait count. An explicitly locked operand
             // keeps ownership across all of its physical cycles.

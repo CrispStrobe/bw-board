@@ -70,7 +70,7 @@ and an INTA pair. Keyboard tests require guest interrupt delivery and
 acknowledgement. Existing control-only/register-only tests remain separate.
 
 Targeted regression, rerun including both BIOS integration tests below:
-**503/503 passed, zero skips**:
+**510/510 passed, zero skips**, including terminal-cache and drive-template regressions:
 
 ```sh
 node --test --test-reporter=spec test/harris-*.test.mjs test/digital-circuit-lab.test.mjs test/paterson-fat12.test.mjs test/sst286.test.mjs test/private-guest-fixtures.test.mjs test/dos-guest-persistence.test.mjs test/i8259.test.mjs test/i8254*.test.mjs test/i8255.test.mjs test/bios-rom.test.mjs test/bios-fdc.test.mjs test/upd765.test.mjs test/i8237.test.mjs
@@ -109,6 +109,11 @@ and PSP, disk activity, and an actual `A>` prompt in physical text RAM.
 node scripts/probe-harris-dos.mjs 10000000 /tmp/harris-dos-result.json
 ```
 
+Set `MSDOS_BIN_DIR` to an external directory containing `MSDOS.SYS`,
+`COMMAND.COM` and `SYSINIT.OBJ` to choose the existing local inputs explicitly.
+The receipt records all three input hashes; it does not copy their bytes into
+the repository. See the existing DOS-image builder for input provenance.
+
 The optional report is create-only. Missing local inputs and non-acceptance
 are explicit failures; this command does not download, publish, or retain a
 boot image. Long-run acceptance results will be recorded separately from the
@@ -136,3 +141,38 @@ the immediately preceding implementation; the long boot ran concurrently.
 Remaining limits include protected mode, complete PC/AT hardware, 8042/A20,
 general DMA modes and channels, full FDC/media fidelity, DMA timeout policy,
 browser/editor integration and performance. None is inferred from DOS boot.
+
+### Follow-up overhead reduction
+
+The wired-startup CPU profile found driver processing, terminal/root lookups,
+delta settlement and garbage collection ahead of instruction decoding. The
+follow-up caches canonical terminal descriptors, avoids unchanged driver-map
+writes, reuses immutable memory pin lists/idle previews, and clones prebuilt
+released-bus templates instead of rebuilding their entry arrays every clock.
+Driver batches still validate fully before mutation, case aliases retain their
+ordering, and each returned device-drive object remains independently mutable.
+No device tick, interrupt edge, bus wait, contention check or memory commit is
+skipped. The instruction core is unchanged from the full SST receipt above.
+
+`node bench/harris-wired-startup.mjs` alternates the pinned pre-change modules
+and current modules on the same 10,000-clock POST workload. It compares the
+complete reported CPU/device/screen state, excluding only elapsed time and
+source hashes. This is a startup measurement, not whole-boot acceptance or a
+prediction of steady-state DOS application speed. The long acceptance process
+keeps its original loaded sources; editing files cannot accelerate that process.
+
+The [four-pair receipt](HARRIS-WIRED-STARTUP-BENCH.json) records median elapsed
+times of **12,713 ms before / 7,504 ms after**, about **1.69x throughput** or
+41% less elapsed time. All eight reported-state hashes agree. The original
+boot and unrelated CPU-heavy jobs ran concurrently on a shared host; individual
+samples vary substantially, so this is not an isolated-host or browser result.
+No targeted suite overlapped these four pairs. An earlier exploratory run of
+the terminal/memory changes alone had three clean pairs around 1.3x and one
+test-contaminated pair; that outlier was not used for the performance claim.
+
+Larger gains need a separately verified execution strategy: compiled integer
+net indices and device dependencies, then scheduling only devices affected by
+net changes or explicit clock events. Those changes must preserve delta order,
+write-edge preflight, READY stretching and missing-wire/contention failures.
+The wired model remains the hardware experiment path; functional CPU-emulator
+throughput is a different measurement and must not be inferred from this probe.

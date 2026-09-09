@@ -7,7 +7,8 @@ const level=(read,p)=>{
     return v;
 };
 const bits=(pins,read)=>pins.reduce((v,p,i)=>v+level(read,p)*2**i,0);
-const released=()=>Object.fromEntries(D.map(p=>[p,'Z']));
+const RELEASED_DATA=Object.freeze(Object.fromEntries(D.map(p=>[p,'Z'])));
+const released=()=>({...RELEASED_DATA});
 
 export class Harris8254Adapter {
     constructor({enabled=false,id='pit',portBase=0x40}={}) {
