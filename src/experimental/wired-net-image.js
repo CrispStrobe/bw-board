@@ -5,7 +5,7 @@ const encode=value=>value===0?0:value===1?1:value==='X'?2:value==='Z'?3:-1;
 export function captureWiredNetImage({enabled=false,circuit}={}) {
     if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
     if(!(circuit instanceof DigitalCircuit)&&!(circuit instanceof CompiledDigitalCircuit))throw new TypeError('validated digital circuit required');
-    const netNames=[...circuit.snapshot.keys()],netIds=new Map(netNames.map((name,i)=>[name,i]));
+    const snapshot=circuit.snapshot,netNames=[...snapshot.keys()],netIds=new Map(netNames.map((name,i)=>[name,i]));
     const driverNames=[...circuit.outputs],driverIds=new Map(driverNames.map((name,i)=>[name,i]));
     const groups=netNames.map(()=>[]),driverNets=new Uint32Array(driverNames.length),driverLevels=new Uint8Array(driverNames.length);
     const drives=circuit.drives;
@@ -26,5 +26,7 @@ export function captureWiredNetImage({enabled=false,circuit}={}) {
     const terminals=[...circuit.parent.keys()].map(name=>({name,net:netIds.get(circuit.root(name)),driver:driverIds.get(name)??null}));
     return {schema:'bw-wired-net-image-v1',capabilities:{connectivity:true,fourState:true,
         combinationalEvaluation:false,statefulDevices:false,cpu:false,resumableSnapshot:false},
-        netNames,driverNames,terminals,driverNets,driverLevels,netOffsets,netDriverIds};
+        netNames,driverNames,terminals,driverNets,driverLevels,netOffsets,netDriverIds,
+        resolvedLevels:Uint8Array.from(netNames,name=>encode(snapshot.get(name).value)),
+        resolvedConflicts:Uint8Array.from(netNames,name=>Number(snapshot.get(name).conflict))};
 }

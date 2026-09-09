@@ -14,7 +14,7 @@ guest-media hosting, or automatic backend replacement is authorized here.
 | Compiled connectivity | Implemented and gated; four-state, edited-wire and fault comparisons pass. |
 | Bindings/scheduling | Memory and selected peripherals scheduled; packed drives and cached layouts measured. Not a complete whole-board event kernel. |
 | Bus/board specialization | Partial; actual-net decoder/vector binding exists, complete specialized execution kernel does not. |
-| Whole-kernel Wasm evaluation | Profile and evaluation contract recorded; isolated typed-net/native-resolver prototype started. Full execution kernel and comparison pending. |
+| Whole-kernel Wasm evaluation | Typed-net and owned combinational native prototypes validated, including a browser oracle. Stateful/CPU execution kernel and throughput comparison pending. |
 | Worker boundary | Owned-workload Chromium worker, bounded chunks, heartbeat and cancellation verified; not production GUI integration. |
 | End-to-end capacity | **Failed/unmet**: latest active browser workloads sustain 10,903–26,218 modeled periods/s versus 9,545,454 required. Calibrated full DOS/browser timing remains open. |
 
@@ -239,3 +239,11 @@ decision rather than silently redefining success.
   This is an isolated resolver, not a selectable Wasm board or a throughput
   result. [Build/prototype details](HARRIS-KERNEL-EVALUATION.md). Full kernel
   implementation and the unchanged capacity gate remain open.
+- Native combinational checkpoint: owned evaluator identity admission, typed
+  dependencies, staged deltas, masked-output scheduling, nonconvergence/recovery
+  and malformed-input atomicity pass. Full combined command with the native
+  module enabled: **484 tests, four suites, no failures/skips**. Chromium checks
+  2,366 settle boundaries and all five historical workload hashes; its clean
+  [receipt](HARRIS-NATIVE-BROWSER-ORACLE.json) follows a harness process-group/
+  temporary-profile cleanup fix. This is not a full native board or a capacity
+  result. Stateful memory, controller/CPU/device ports remain pending.

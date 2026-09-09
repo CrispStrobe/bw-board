@@ -1,9 +1,7 @@
 /** Isolated native net-resolution prototype, not an admitted board backend. */
 import {CircuitFault} from '../digital-circuit.js';
-export async function createNativeNetResolver({enabled=false,image,wasmBytes}={}) {
-    if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
+export function validateWiredNetImage(image) {
     if(image?.schema!=='bw-wired-net-image-v1')throw new TypeError('wired net image required');
-    if(!(wasmBytes instanceof Uint8Array))throw new TypeError('owned Wasm bytes required');
     const nets=image.netNames.length,drivers=image.driverNames.length;
     for(const [array,length] of [[image.netOffsets,nets+1],[image.netDriverIds,drivers]])
         if(!(array instanceof Uint32Array)||array.length!==length)throw new TypeError('net index dimensions');
@@ -18,6 +16,12 @@ export async function createNativeNetResolver({enabled=false,image,wasmBytes}={}
             const d=image.netDriverIds[p];if(d>=drivers||seen[d]||image.driverNets[d]!==n)invalid();seen[d]=1;
         }
     }
+    return {nets,drivers};
+}
+export async function createNativeNetResolver({enabled=false,image,wasmBytes}={}) {
+    if(enabled!==true)throw new CircuitFault('EXPERIMENT_DISABLED','enabled:true required');
+    if(!(wasmBytes instanceof Uint8Array))throw new TypeError('owned Wasm bytes required');
+    const {nets,drivers}=validateWiredNetImage(image);
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     const start=e.arena_ptr(),capacity=e.arena_capacity();
     const sizes=[(nets+1)*4,drivers*4,drivers,nets,nets];

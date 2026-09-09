@@ -22,7 +22,7 @@ const modes=Object.fromEntries(selectedModes.map(mode=>[mode,availableModes[mode
 const sources=['bench/harris-owned-workloads.mjs','scripts/lib/harris-owned-workloads.mjs','src/i8086-asm.js',
     ...['harris-80c286-memory-board','harris-80c286-bus','harris-80c286-contract','harris-80c286-boot-cpu','harris-boot-rom',
         'digital-circuit','compiled-digital-circuit','latched-memory-components','harris-8259-adapter','harris-8254-adapter',
-        'harris-fdc-adapter','harris-dma-adapter','harris-keyboard-adapter','harris-memory-decoder','compiled-device-scheduler'].map(n=>`src/experimental/${n}.js`),
+        'harris-fdc-adapter','harris-dma-adapter','harris-keyboard-adapter','harris-memory-decoder','compiled-device-scheduler','wired-kernel/evaluator-contract'].map(n=>`src/experimental/${n}.js`),
     ...['devices/bus-memory','devices','i8259','i8254','i8255','i8237','upd765'].map(n=>`src/${n}.js`)];
 const sourceHashes=()=>Object.fromEntries(sources.map(p=>[p,hash(readFileSync(new URL('../'+p,import.meta.url)))]));
 const before=sourceHashes(),samples=[],expected=new Map();

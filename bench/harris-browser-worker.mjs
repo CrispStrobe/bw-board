@@ -7,9 +7,16 @@ const hash=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SH
 let active=null;
 self.onmessage=async({data})=>{
     if(data.kind==='cancel'){if(active?.id===data.id)active.cancelled=true;return;}
-    if(data.kind!=='run'||active){self.postMessage({id:data.id,error:'worker busy or unsupported command'});return;}
+    if(!['run','kernel-oracle'].includes(data.kind)||active){self.postMessage({id:data.id,error:'worker busy or unsupported command'});return;}
     active={id:data.id,cancelled:false};
     try {
+        if(data.kind==='kernel-oracle') {
+            const wasmBytes=new Uint8Array(await (await fetch('/kernel.wasm')).arrayBuffer()),moduleSHA256=await hash(wasmBytes);
+            if(moduleSHA256!==data.sha256)throw new Error('native oracle module hash mismatch');
+            const {runNativeSettleOracle}=await import('../scripts/lib/harris-native-settle-oracle.mjs');
+            const nativeOracle=await runNativeSettleOracle({wasmBytes,yieldTask,stopped:()=>active.cancelled});
+            self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
+        }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});
         const start=performance.now();f.cpu.initialize();
         const run=await runHarrisChunks({cpu:f.cpu,maxClocks:100000,finished:f.finished,stopped:()=>active.cancelled,yieldTask});

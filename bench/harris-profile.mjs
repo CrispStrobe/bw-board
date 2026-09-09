@@ -13,7 +13,7 @@ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const root=new URL('..',import.meta.url);
 const reference=JSON.parse(readFileSync(new URL('../docs/HARRIS-OWNED-WORKLOADS-BENCH.json',import.meta.url)));
 const sourcePaths=[...new Set(['bench/harris-profile.mjs',...Object.keys(reference.sourceHashes),
-    'src/experimental/compiled-device-scheduler.js','src/experimental/harris-memory-decoder.js'])];
+    'src/experimental/compiled-device-scheduler.js','src/experimental/harris-memory-decoder.js','src/experimental/wired-kernel/evaluator-contract.js'])];
 const hashes=()=>Object.fromEntries(sourcePaths.map(p=>[p,hash(readFileSync(new URL(p,root)))]));
 const sourceHashes=hashes();
 const options={netBackend:'compiled',memoryScheduling:true,deviceScheduling:true,packedBus:true,busTraceEnabled:false};

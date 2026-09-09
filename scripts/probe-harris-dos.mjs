@@ -48,6 +48,7 @@ const sourceHashes=Object.fromEntries(['./probe-harris-dos.mjs','./build-bios.mj
     '../src/experimental/compiled-digital-circuit.js',
     '../src/devices/bus-memory.js',
     '../src/experimental/harris-memory-decoder.js',
+    '../src/experimental/wired-kernel/evaluator-contract.js',
     '../src/experimental/compiled-device-scheduler.js',
     '../src/experimental/latched-memory-components.js','../src/experimental/harris-fdc-adapter.js',
     '../src/experimental/harris-dma-adapter.js','../src/experimental/harris-keyboard-adapter.js',

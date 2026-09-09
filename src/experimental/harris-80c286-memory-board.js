@@ -6,6 +6,7 @@ import {Harris80C286Bus} from './harris-80c286-bus.js';
 import {HarrisTimerClock} from './harris-8254-adapter.js';
 import {createHarrisMemoryDecoder} from './harris-memory-decoder.js';
 import {createCompiledDeviceScheduler} from './compiled-device-scheduler.js';
+import {createHarrisReadyLogic,createHarrisBusOwner} from './wired-kernel/evaluator-contract.js';
 import {IdealAddressLatch, MemoryPhaseController, DigitalBusMemoryAdapter, settleBusMemories} from './latched-memory-components.js';
 
 const A = bitPins('a', 24);
@@ -73,10 +74,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     if (intrEnabled) {
         // External ideal-digital wait logic, shared by CPU and controller.
         // No CPU pending/phase/transaction callback supplies READY.
-        parts.push({id:'irq_ready',pins:['external_n','wait','ready_n'],outputs:['ready_n'],evaluate(read) {
-            const a=read('external_n'),b=read('wait');
-            return {ready_n:[a,b].every(v=>v===0||v===1)?a|b:'X'};
-        }});
+        parts.push(createHarrisReadyLogic());
         wires.push(wire('inputs','ready_n','irq_ready','external_n'),wire('controller','inta_wait','irq_ready','wait'),
             wire('irq_ready','ready_n','cpu','ready_n'),wire('irq_ready','ready_n','controller','ready_n'));
     }
@@ -134,11 +132,7 @@ export function createHarrisMemoryBoard({enabled = false, rom = new Uint8Array()
     }
     if (holdEnabled) {
         const status=['s1_n','s0_n','cod_inta_n','m_io'];
-        parts.push({id:'bus_owner',pins:['hlda',...status,...status.map(p=>`q_${p}`),...(dmaTransfer?status.map(p=>`dma_${p}`):[])],outputs:status.map(p=>`q_${p}`),evaluate(read){
-            const held=read('hlda');
-            const passive=!dmaTransfer||read('dma_s0_n')===1&&read('dma_s1_n')===1;
-            return Object.fromEntries(status.map(p=>[`q_${p}`,held===0?read(p):held===1?(passive?Number(p==='s1_n'||p==='s0_n'):read(`dma_${p}`)):'X']));
-        }});
+        parts.push(createHarrisBusOwner({dmaTransfer}));
         wires.push(wire('cpu','hlda','bus_owner','hlda'));
         for (const p of status) wires.push(wire('cpu',p,'bus_owner',p),wire('bus_owner',`q_${p}`,'controller',p));
         if(dmaTransfer)for(const p of status)wires.push(wire(dmaPart.id,p,'bus_owner',`dma_${p}`));

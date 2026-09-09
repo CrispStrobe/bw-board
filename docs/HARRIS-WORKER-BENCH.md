@@ -62,3 +62,12 @@ three rounds all match the same Node state/memory hashes. Median ratios are
 stops after 96 complete periods. Main-thread heartbeat p95 is 17.8 ms, maximum
 38.4 ms. Active capacity is 10,903–26,218 modeled periods/s; neither the idle
 result nor the responsive heartbeat meets the real-time-capacity gate.
+
+Optional native correctness probe: set `HARRIS_NET_WASM` to an owned local build
+alongside its `wired-net-kernel-build.json` manifest. After the normal workloads,
+the worker checks the native combinational kernel against the JS board at each
+actual settle boundary. The [clean smoke receipt](HARRIS-NATIVE-BROWSER-ORACLE.json)
+records 2,366 comparisons, with `capacityClaim:false`. This test-only oracle
+does not turn normal workload execution into a Wasm backend. Receipt publication
+now waits for the fresh Chrome process group and temporary profile to be cleaned
+up; cleanup failures cannot leave a newly published accepted receipt.

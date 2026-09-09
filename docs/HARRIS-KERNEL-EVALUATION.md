@@ -121,3 +121,53 @@ through populated-board memory transaction periods. Without `HARRIS_NET_WASM`,
 the four native tests are explicitly skipped, not passed; the image test runs.
 No isolated performance number is promoted to emulator throughput. Porting
 combinational evaluation, stateful devices, CPU and chunk execution remains open.
+
+Next prototype step: typed operations for the owned memory decoder, READY OR
+and bus-owner mux. Admission must verify the original evaluator identity, not
+guess semantics from a part name. Changed/custom evaluators refuse native
+admission. All operations read one delta snapshot, stage outputs together, and
+publish only on convergence. Validate edited-wire and X/Z behavior and preserve
+the previous published result on nonconvergence before considering any board
+integration. This still is not the stateful/CPU whole execution loop.
+
+The combinational prototype now has private factory-issued admission
+certificates, typed operation/dependency tables, same-delta output staging and
+published-state preservation on failure. Native construction first admits the
+owned implementations, refuses custom resolve/settle overrides, then settles
+that pure-logic source to a canonical compilation boundary. The separate
+`captureWiredNetImage` function remains non-settling and read-only.
+
+Only changed **resolved values** schedule an evaluator. A driver change hidden
+by another driver must not spuriously reschedule/repair an evaluator output.
+This is tested explicitly, alongside decoder window/lane/alias boundaries,
+every X/Z address bit, READY chains, bus ownership, nonconvergence and recovery.
+The native resolver is not substituted for the full stateful board loop.
+
+Next stateful port: the owned digital SRAM/EEPROM bridge, as an isolated
+component first. Preserve its one-pass bus release on cycle changes, write
+arming, pending-byte sampling and trailing-edge commitment. All banks must
+preflight before any bank state, output or byte write commits. Power, command,
+select, address and data faults must retain their original validation order;
+inactive address/data pins remain don't-cares. Read-only EEPROM and SRAM
+semantics differ deliberately. Compare each preview/commit pass with the
+existing registered models and digital adapters before net-kernel integration.
+Do not import an arbitrary/custom memory update function into this native port
+or claim a full board/CPU snapshot from an isolated bank-state image.
+
+The combinational [build receipt](HARRIS-NATIVE-COMBINATIONAL-BUILD.json) and
+[Chromium oracle receipt](HARRIS-NATIVE-BROWSER-ORACLE.json) are preserved. The
+browser checks 2,366 actual settle boundaries across 118 periods/11 transactions,
+plus all five owned-workload hashes and complete-period cancellation. It is a
+one-round correctness smoke run, not a new repeated native throughput claim.
+The combined suite with that local module enabled passes **484 tests, four
+suites, zero skips/failures**. The native tests include raw malformed-operation,
+dependency and limit checks before published output mutation.
+
+Two initial browser runs passed emulation checks but failed temporary-profile
+cleanup; they are not the recorded clean receipt. Chrome now runs in a fresh
+process group, shutdown covers its own utility children, and an accepted receipt
+is written only after profile removal succeeds. This fixes the harness lifecycle,
+not an emulator correctness failure. Enable the browser oracle explicitly with
+`HARRIS_NET_WASM` pointing to the locally built module; its adjacent build
+manifest and current C source hash must agree. No default browser/backend path
+loads the native module.
