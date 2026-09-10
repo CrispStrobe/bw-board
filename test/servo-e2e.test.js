@@ -48,13 +48,26 @@ const HEX_FILES = {
   180: '/tmp/servo-build/s180.ihx',
 };
 
-const skip = () => {
-  if (!createEmu8051) { console.log('# SKIP: no emu8051 build'); return true; }
-  for (const [angle, path] of Object.entries(HEX_FILES)) {
-    if (!existsSync(path)) { console.log(`# SKIP: ${path} not found (compile /tmp/servo-${angle}.c first)`); return true; }
-  }
-  return false;
-};
+/**
+ * TWO ORACLES, ONE GUARD EACH. `if (skip()) return;` inside a case is an early
+ * return, which the runner counts as a PASS, and it collapsed both inputs into
+ * one answer.
+ *
+ * ci.yml checks the emulator out and `oracle-census.mjs --require nasm,emu8051`
+ * asserts it arrived, so a skip on that one means a developer box. The servo
+ * firmwares are compiled by hand into /tmp and CI never has them — the message
+ * keeps the per-angle recovery step the old one had, and names EVERY angle
+ * missing rather than the first one it tripped over.
+ */
+const missingHex = Object.entries(HEX_FILES)
+  .filter(([, file]) => !existsSync(file))
+  .map(([angle, file]) => `${file} (compile /tmp/servo-${angle}.c)`);
+const SKIP_EMU8051 = createEmu8051 ? false
+  : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this repo '
+    + 'and build its WASM, or set $EMU8051_JS';
+const SKIP_HEX = missingHex.length === 0 ? false
+  : `servo firmware not built: ${missingHex.join(', ')}; CI does not carry these`;
+const SKIP = SKIP_EMU8051 || SKIP_HEX;
 
 function makeServoBoard() {
   const board = new BoardImpl(5.0);
@@ -85,8 +98,7 @@ describe('servo end-to-end: compiled PCA driver through emu8051', () => {
   for (const [angleStr, hexPath] of Object.entries(HEX_FILES)) {
     const expectedAngle = Number(angleStr);
 
-    it(`bw_servo_set(${angleStr}) → emu8051 PCA → board decodes ~${angleStr}°`, async () => {
-      if (skip()) return;
+    it(`bw_servo_set(${angleStr}) → emu8051 PCA → board decodes ~${angleStr}°`, {skip: SKIP}, async () => {
 
       const wasm = await createEmu8051();
       const board = makeServoBoard();

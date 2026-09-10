@@ -49,13 +49,25 @@ const HEX_FILES = {
   '100brk': '/tmp/motor-build/m100brk.ihx',
 };
 
-const skip = () => {
-  if (!createEmu8051) { console.log('# SKIP: no emu8051 build'); return true; }
-  for (const [label, p] of Object.entries(HEX_FILES)) {
-    if (!existsSync(p)) { console.log(`# SKIP: ${p} not found`); return true; }
-  }
-  return false;
-};
+/**
+ * TWO ORACLES, ONE GUARD EACH. `if (skip()) return;` inside a case is an early
+ * return, which the runner counts as a PASS — the `# SKIP` was only a printed
+ * comment — and it collapsed both inputs into one answer, so a reader could not
+ * tell a missing emulator from a missing firmware.
+ *
+ * ci.yml checks the emulator out and `oracle-census.mjs --require nasm,emu8051`
+ * asserts it arrived, so a skip on that one means a developer box. The motor
+ * firmwares are compiled by hand into /tmp and CI never has them.
+ */
+const missingHex = Object.entries(HEX_FILES)
+  .filter(([, file]) => !existsSync(file)).map(([label, file]) => `${label} (${file})`);
+const SKIP_EMU8051 = createEmu8051 ? false
+  : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this repo '
+    + 'and build its WASM, or set $EMU8051_JS';
+const SKIP_HEX = missingHex.length === 0 ? false
+  : `motor firmware not built: ${missingHex.join(', ')} — compile the motor examples with `
+    + 'SDCC into /tmp/motor-build; CI does not carry them';
+const SKIP = SKIP_EMU8051 || SKIP_HEX;
 
 function makeHBridgeBoard() {
   const board = new BoardImpl(5.0);
@@ -88,8 +100,7 @@ describe('motor end-to-end: compiled PCA 8-bit PWM through emu8051 → H-bridge 
   beforeEach(setup);
   afterEach(teardown);
 
-  it('75% forward: direction=FORWARD, PWM active (activity check)', async () => {
-    if (skip()) return;
+  it('75% forward: direction=FORWARD, PWM active (activity check)', {skip: SKIP}, async () => {
     const wasm = await createEmu8051();
     const board = makeHBridgeBoard();
     const adapter = createEmu8051Adapter(wasm, { fosc: 11059200, vcc: 5.0, ports: [1, 3] });
@@ -111,8 +122,7 @@ describe('motor end-to-end: compiled PCA 8-bit PWM through emu8051 → H-bridge 
       `PWM should produce many pin changes, got ${stats.pinChangeCount} (activity check)`);
   });
 
-  it('50% reverse: direction=REVERSE, PWM active (activity check)', async () => {
-    if (skip()) return;
+  it('50% reverse: direction=REVERSE, PWM active (activity check)', {skip: SKIP}, async () => {
     const wasm = await createEmu8051();
     const board = makeHBridgeBoard();
 
@@ -149,8 +159,7 @@ describe('motor end-to-end: compiled PCA 8-bit PWM through emu8051 → H-bridge 
       `PWM should produce pin changes, got ${stats.pinChangeCount} (activity check)`);
   });
 
-  it('100% brake: EN constant HIGH, no PWM edges (boundary case)', async () => {
-    if (skip()) return;
+  it('100% brake: EN constant HIGH, no PWM edges (boundary case)', {skip: SKIP}, async () => {
     const wasm = await createEmu8051();
     const board = makeHBridgeBoard();
     const adapter = createEmu8051Adapter(wasm, { fosc: 11059200, vcc: 5.0, ports: [1, 3] });
