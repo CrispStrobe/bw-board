@@ -26,6 +26,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
 
@@ -254,13 +255,42 @@ async function stm32f0Factory() {
 
 const GPIO_FACTORIES = [avr8jsFactory, rp2040jsFactory, emu8051Factory, stm32f0Factory];
 
+/**
+ * A FACTORY THAT CANNOT BE BUILT IS A SKIP, NOT A PASS.
+ *
+ * This file used to answer a construction failure with
+ * `it('SKIP — factory failed: …', () => assert.ok(true))`. Node counts that as
+ * a PASSING test, so a checkout without `avr8js` and `rp2040js` installed
+ * reported `# pass 10, # skipped 0` while THREE of the four adapters ran zero
+ * contract assertions. You had to read subtest names to find out.
+ *
+ * That is why the tautology in the INPUT READBACK section survived: every
+ * factory with a non-null `inputPin` fails to construct in a bare worktree, so
+ * locally the section did not run and the summary said green. A peer's
+ * mutation against that section came back inert for the same reason and was
+ * nearly reported as a defect in the fix.
+ *
+ * The fleet's rule already covers the shape — SKIP BY NAME, and never let a
+ * skip count as a pass — and the emu8051 suites follow it. This one converted
+ * an absent dependency into a green tick, in the file whose whole job is to
+ * hold four adapters to one contract.
+ *
+ * `built` also lets the suite assert at the end that SOMETHING ran. A green
+ * run over zero executed contracts is the failure this whole file is for.
+ */
+const built = [];
+
 for (const factoryFn of GPIO_FACTORIES) {
-  describe(`adapter contract: ${factoryFn.name.replace('Factory', '')}`, async () => {
+  const label = factoryFn.name.replace('Factory', '');
+  describe(`adapter contract: ${label}`, async () => {
     let factory;
     try {
       factory = await factoryFn();
+      built.push(label);
     } catch (e) {
-      it(`SKIP — factory failed: ${e.message}`, () => { assert.ok(true); });
+      // A real skip: it lands in `# skipped`, and the reason names the adapter
+      // and the cause rather than being a green tick with a message on it.
+      it(`the ${label} contract`, { skip: `factory failed: ${e.message}` }, () => {});
       return;
     }
     const { name, pins, togglePin, inputPin, inputReadback, modes, soakNs } = factory;
@@ -491,7 +521,10 @@ describe('emu8051 u32 boundary soak', async () => {
   try {
     factory = await emu8051Factory();
   } catch (e) {
-    it('SKIP', () => assert.ok(true));
+    // A SECOND passing placeholder, found by the source assertion below rather
+    // than by reading — and worse than the first, because its name was the bare
+    // word 'SKIP' with no adapter and no cause.
+    it('the emu8051 u32 boundary soak', { skip: `factory failed: ${e.message}` }, () => {});
     return;
   }
 
@@ -516,5 +549,51 @@ describe('emu8051 u32 boundary soak', async () => {
       assert.ok(b.times[i] >= b.times[i - 1],
         `time went backward at index ${i}: ${b.times[i-1]} > ${b.times[i]}`);
     }
+  });
+});
+
+describe('the contract ran against something', () => {
+  it('at least one adapter was actually built', () => {
+    // Without this a checkout missing every optional dependency reports a
+    // green adapter contract having checked no adapter at all — which is
+    // exactly the state this file spent a day being in for three of four.
+    assert.ok(built.length > 0,
+      'no adapter factory could be constructed, so this suite checked nothing: '
+      + `${GPIO_FACTORIES.map(f => f.name.replace('Factory', '')).join(', ')}`);
+  });
+
+  it('A FAILED FACTORY IS A SKIP AND NOT A PASSING PLACEHOLDER', () => {
+    // The property has no other holder. If someone restores
+    // `it('SKIP — …', () => assert.ok(true))`, a bare checkout goes back to
+    // reporting `pass 10, skipped 0` over three adapters that ran nothing, and
+    // no assertion anywhere would notice — the summary is the runner's, not
+    // this suite's, so the only thing that can hold it is the source.
+    //
+    // The needle is assembled from fragments so this assertion does not match
+    // itself.
+    // CODE LINES ONLY. The comments above quote the bad pattern on purpose, and
+    // a scan that matched them would be a check that can never pass — the
+    // mirror image of the one being removed.
+    const source = readFileSync(new URL(import.meta.url), 'utf8');
+    const placeholder = 'assert.ok(' + 'true)';
+    const offenders = source.split('\n')
+      .map((line, i) => [i + 1, line])
+      .filter(([, line]) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .filter(([, line]) => line.includes(placeholder));
+    assert.deepEqual(offenders, [],
+      'a test whose body asserts a constant is a green tick standing in for a '
+      + 'check that did not run — use { skip: reason } so the runner counts it');
+    assert.match(source, /\{ skip: `factory failed:/,
+      'the factory-failure path must mark a real skip');
+  });
+
+  it('reports WHICH adapters ran, so a green run is readable', () => {
+    // Printed rather than asserted against a fixed list: which optional
+    // dependencies are installed is a property of the checkout, not of the
+    // contract, and pinning it here would make a bare worktree fail for the
+    // wrong reason.
+    console.log(`# adapter contract ran against: ${built.join(', ') || 'nothing'} `
+      + `(of ${GPIO_FACTORIES.length})`);
+    assert.ok(Array.isArray(built));
   });
 });
