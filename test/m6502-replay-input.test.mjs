@@ -263,13 +263,74 @@ describe('nmi reaches the CPU through the route the machine itself uses', () => 
     assert.ok(machine.cycles > 0);
   });
 
-  it('is NOT recorded, because nothing on this target produces one', () => {
-    // The vsync NMI (m6502-machine.js:705) is a MACHINE event, not host input:
-    // replay regenerates it, so recording it would double it.
+  it('a REPLAYED nmi is not recorded, so a second pass cannot double it', () => {
     const {target} = makeTarget();
     const {facts} = record(target);
     target.applyReplayInput({producer: 'm6502.nmi', payload: {}});
     assert.equal(facts.length, 0);
+  });
+
+  it('a HOST-DRIVEN nmi IS recorded — the record half this producer lacked', () => {
+    // The apply switch could replay an `m6502.nmi` fact and nothing on this
+    // target could produce one. A driver pulsing NMI got no log entry, and the
+    // session then could not be replayed through the interrupt it took.
+    //
+    // The vsync NMI (a `simplevga {nmi: true}` config) is a MACHINE event and
+    // is still not recorded: replay regenerates it, so logging it would double
+    // it. This entry point is the HOST's, which is the distinction.
+    const {target, machine} = makeTarget();
+    const {facts} = record(target);
+    const before = machine.cycles;
+
+    assert.equal(target.nmi(), true);
+
+    assert.equal(facts.length, 1, 'the host pulse is a fact');
+    assert.equal(facts[0].producer, 'm6502.nmi');
+    assert.deepEqual(facts[0].payload, {});
+    assert.equal(machine.cpu.pc, 0x1234, 'and the machine took it');
+    assert.equal(machine.cycles - before, 7, 'charging the interrupt to machine time');
+
+    // Published AFTER the machine took it, so the stamp is on the far side of
+    // the interrupt's seven cycles rather than the near one.
+    assert.equal(facts[0].time.ticks, machine.cycles);
+  });
+
+  it('AN NMI IS AN EVENT: pulsed twice is two facts, not one state', () => {
+    // The events-vs-levels rule, for the one producer that had no record half
+    // until now and therefore no test of it. Routing this through the level
+    // publisher instead passes every other assertion in this file — the second
+    // pulse would be silently deduplicated and the replay would take one
+    // interrupt where the run took two.
+    const {target, machine} = makeTarget();
+    const {facts} = record(target);
+    const before = machine.cycles;
+
+    assert.equal(target.nmi(), true);
+    assert.equal(target.nmi(), true);
+
+    assert.equal(facts.length, 2, 'two interrupts are two facts');
+    assert.deepEqual(facts.map(f => f.producer), ['m6502.nmi', 'm6502.nmi']);
+    assert.equal(machine.cycles - before, 14, 'and the machine took both');
+    assert.ok(facts[1].time.ticks > facts[0].time.ticks, 'stamped apart in time');
+  });
+
+  it('the recorded fact round-trips into a second machine', () => {
+    const live = makeTarget();
+    const {facts} = record(live.target);
+    live.target.nmi();
+
+    const replayed = makeTarget();
+    assert.notEqual(replayed.machine.cpu.pc, 0x1234);
+    assert.equal(replayOutcome(replayed.target.applyReplayInput(facts[0])).accepted, true);
+    assert.equal(replayed.machine.cpu.pc, 0x1234);
+  });
+
+  it('a target with no machine nmi() returns false and records nothing', () => {
+    const target = createM6502DebugTarget({machine: {cpu: {}}});
+    const facts = [];
+    target.onDebugInput(f => facts.push(f));
+    assert.equal(target.nmi(), false);
+    assert.equal(facts.length, 0, 'an interrupt nothing took is not a fact');
   });
 });
 
