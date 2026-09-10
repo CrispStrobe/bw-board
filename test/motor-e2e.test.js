@@ -24,12 +24,18 @@ import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 import { BoardImpl } from '../src/board.js';
 import { registerHBridge } from '../src/devices/h-bridge.js';
 import { unregisterDevice } from '../src/devices.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const WASM_CANDIDATES = [
-  path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper -- and it is not where CI puts it either: Actions refuses a path outside
+// the workspace, so ci.yml lands the checkout INSIDE the repo. The walk's first
+// candidate is that layout and it climbs to the sibling a developer has.
+  resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']),
 ].filter(Boolean);
 
 let createEmu8051 = null;
