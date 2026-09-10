@@ -68,43 +68,107 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     };
   };
 
-  const originalRead = cpu.read;
-  cpu.read = address => {
-    const value = originalRead(address);
-    if (accesses) accesses.push({kind: 'memory', memory: {
-      space: 'mem', address: address & 0xffff, width: 1, direction: 'read', value: value & 0xff
-    }});
-    return value;
-  };
+  /**
+   * THE ACCESSOR WRAPPERS ARE INSTALLED WITH THE FIRST LISTENER AND REMOVED
+   * WITH THE LAST, and the reason is a measured cost rather than tidiness.
+   *
+   * They used to go on at construction and stay on, paying `if (accesses)` for
+   * every data access forever. Measured on a memory-bound program with NO
+   * listener attached — a debugger nobody has opened:
+   *
+   *   6502   400k steps   no target 104ms   target installed 118ms   1.14x
+   *   z80    400k steps   no target  78ms   target installed 112ms   1.43x
+   *
+   * The z80 is worse because it passes `port: true` and therefore wraps four
+   * methods rather than two. The underlying constant is about 45ns per access,
+   * so the ratio is a property of how memory-bound the program is: the same
+   * wrapper on a pin-toggle loop measures 1.06x and looks free. A soak whose
+   * program does 42 accesses per simulated millisecond cannot see this; the one
+   * that does 6000 can.
+   *
+   * THE STEP WRAPPER IS LAZY TOO, and it is here because the measurement said
+   * so rather than for symmetry. With only the accessors made lazy, a target
+   * with no listener still cost 1.44x on a two-access instruction — and the
+   * ratio FELL as accesses per step rose (1.44x at 2, 1.28x at 16, 1.05x at
+   * 128), which is the signature of a per-STEP cost rather than a per-access
+   * one. With eager accessors the ratio rises instead. That is about 25ns per
+   * instruction: a rounding error on a core doing real work per step, and 2.5%
+   * on a 4MHz Z80 retiring a million instructions a second.
+   *
+   * An earlier version of this comment argued the step wrapper should stay,
+   * because its guard is per-instruction rather than per-access. That was true
+   * and it was not a measurement.
+   *
+   * RESTORING IS CONDITIONAL, because we are not the only thing that may wrap
+   * these. If someone wrapped `cpu.read` after us, ours is no longer the
+   * outermost and putting the original back would silently discard theirs. In
+   * that case the wrapper stays and the `accesses` null check keeps it inert —
+   * a cost, but not a corruption.
+   */
+  let hooks = null;
 
-  const originalWrite = cpu.write;
-  cpu.write = (address, value) => {
-    if (accesses) accesses.push({kind: 'memory', memory: {
-      space: 'mem', address: address & 0xffff, width: 1, direction: 'write', value: value & 0xff
-    }});
-    return originalWrite(address, value);
-  };
+  const installHooks = () => {
+    if (hooks) return;
+    hooks = {read: cpu.read, write: cpu.write, inPort: cpu.inPort, outPort: cpu.outPort,
+        step: cpu.step, ours: {}};
 
-  if (port) {
-    const originalIn = cpu.inPort;
-    cpu.inPort = address => {
-      const value = originalIn(address);
-      if (accesses) accesses.push({kind: 'port', port: {
-        address: address & 0xffff, direction: 'read', value: value & 0xff
+    originalStep = hooks.step.bind(cpu);
+    hooks.ours.step = stepWrapper;
+    cpu.step = stepWrapper;
+
+    hooks.ours.read = address => {
+      const value = hooks.read(address);
+      if (accesses) accesses.push({kind: 'memory', memory: {
+        space: 'mem', address: address & 0xffff, width: 1, direction: 'read', value: value & 0xff
       }});
       return value;
     };
-    const originalOut = cpu.outPort;
-    cpu.outPort = (address, value) => {
-      if (accesses) accesses.push({kind: 'port', port: {
-        address: address & 0xffff, direction: 'write', value: value & 0xff
-      }});
-      return originalOut(address, value);
-    };
-  }
+    cpu.read = hooks.ours.read;
 
-  const originalStep = cpu.step.bind(cpu);
-  cpu.step = () => {
+    hooks.ours.write = (address, value) => {
+      if (accesses) accesses.push({kind: 'memory', memory: {
+        space: 'mem', address: address & 0xffff, width: 1, direction: 'write', value: value & 0xff
+      }});
+      return hooks.write(address, value);
+    };
+    cpu.write = hooks.ours.write;
+
+    if (port) {
+      hooks.ours.inPort = address => {
+        const value = hooks.inPort(address);
+        if (accesses) accesses.push({kind: 'port', port: {
+          address: address & 0xffff, direction: 'read', value: value & 0xff
+        }});
+        return value;
+      };
+      cpu.inPort = hooks.ours.inPort;
+
+      hooks.ours.outPort = (address, value) => {
+        if (accesses) accesses.push({kind: 'port', port: {
+          address: address & 0xffff, direction: 'write', value: value & 0xff
+        }});
+        return hooks.outPort(address, value);
+      };
+      cpu.outPort = hooks.ours.outPort;
+    }
+  };
+
+  const removeHooks = () => {
+    if (!hooks) return;
+    // Only put back what is still ours. See the note above.
+    if (cpu.step === hooks.ours.step) cpu.step = hooks.step;
+    originalStep = null;
+    if (cpu.read === hooks.ours.read) cpu.read = hooks.read;
+    if (cpu.write === hooks.ours.write) cpu.write = hooks.write;
+    if (port) {
+      if (cpu.inPort === hooks.ours.inPort) cpu.inPort = hooks.inPort;
+      if (cpu.outPort === hooks.ours.outPort) cpu.outPort = hooks.outPort;
+    }
+    hooks = null;
+  };
+
+  let originalStep = null;
+  const stepWrapper = () => {
     if (!listeners.size) return originalStep();
     const pcBefore = cpu.pc & 0xffff;
     const ticksBefore = machine.cycles;
@@ -153,7 +217,11 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     onDebugEvent(listener) {
       if (typeof listener !== 'function') throw new TypeError('debug event listener must be a function');
       listeners.add(listener);
-      return () => listeners.delete(listener);
+      installHooks();                       // first listener puts them on; later ones are no-ops
+      return () => {
+        listeners.delete(listener);
+        if (!listeners.size) removeHooks();  // last one out takes them off again
+      };
     },
     debugTime() {
       return {
