@@ -627,8 +627,33 @@ export class M6502Machine {
      * gfoot's simplevga snake — ACTIVE-LOW buttons on the first VIA's
      * PA0..PA3 (down, up, right, left). mask bit set = pressed.
      */
+    /**
+     * The VIA a button mask goes to, or null. One `find`, two callers.
+     *
+     * The predicate below and `setButtons` were the same scan written twice;
+     * they cannot disagree now.
+     */
+    _buttonVia() {
+        return Object.values(this.chips).find(
+            (c) => c && typeof c.setInput === 'function' && 'inA' in c) ?? null;
+    }
+
+    /**
+     * Can this machine take a button mask at all?
+     *
+     * Asked BEFORE a host offers buttons, so the offer matches the board — the
+     * shape `I8086Machine.canTakeKeys()` already has, and for the same reason.
+     * Without it a caller can only find out by calling `setButtons` and reading
+     * the answer, which is too late for anything that wants to act on the
+     * capability rather than on the outcome: a face that advertises a control
+     * the board cannot take, or a recorder that logs a press nothing received.
+     *
+     * @returns {boolean}
+     */
+    canTakeButtons() { return this._buttonVia() !== null; }
+
     setButtons(mask) {
-        const via = Object.values(this.chips).find((c) => c && typeof c.setInput === 'function' && 'inA' in c);
+        const via = this._buttonVia();
         if (!via) return false;
         for (let bit = 0; bit < 4; bit++) {
             via.setInput('a', bit, (mask >> bit) & 1 ? 0 : 1);
