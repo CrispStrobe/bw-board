@@ -16,6 +16,8 @@
  */
 import { disasm6502 } from './w65c02-disasm.js';
 
+import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
@@ -53,6 +55,93 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     } else if (!writeWatches.size && origWrite) {
       cpu.write = origWrite;
       origWrite = null;
+    }
+  }
+
+  // ─── The replay surface ─────────────────────────────────────────────
+  // Declared in debug-replay-contract.js. This is the z80 target's mechanism
+  // COPIED rather than re-derived — deliberately, because re-deriving is where a
+  // confident sentence about coverage comes back.
+  //
+  // The stamp is the machine's own clock: {ticks: machine.cycles, domain,
+  // hz: machine.clockHz}, the two operands tMs is divided from.
+  //
+  // A REWIND IS DETECTED, and this machine has exactly one path that causes one:
+  // m6502-machine.js:806 is `this.cycles = s.cycles` inside loadState. Measured
+  // rather than assumed, by grepping `cycles` in the file that DECLARES it: the
+  // only other assignment is `= 0` in the constructor, and reset() at line 510
+  // does `this.cycles += 7` — it ADVANCES by the real 6502 reset sequence's cost
+  // rather than rewinding. So unlike the 8051 no reset trigger is needed here,
+  // and unlike a naive reading a restore still rewinds.
+  //
+  // NOR IS A RESET TRIGGER NEEDED FOR THE DEDUP MAP. m6502-machine.js:510 resets
+  // the CPU and advances the chips; it does not reset them, so a VIA that was
+  // holding a button level still holds it afterwards. The map stays true.
+  //
+  // WHAT DETECTION CANNOT SEE, the same boundary as the z80: a restore followed
+  // by running PAST the old high-water mark with no input in between is
+  // monotonic from this side and indistinguishable from ordinary progress.
+  // Closing that needs a machine-side signal on loadState.
+  const observedInputs = new Map();
+  let inputListeners = [];
+  let inputTimeEpoch = 0;
+  let lastTicks = null;
+
+  /**
+   * Notice a rewind EAGERLY — before the dedup gate, never after it.
+   *
+   * Running this inside the stamp would mean a suppressed input never noticed
+   * the timeline moved, and the dedup map would survive the rewind holding
+   * values from an abandoned timeline — silently dropping the first genuine
+   * change afterwards whose value happens to match. So a rewind clears the map
+   * as well as bumping the epoch.
+   */
+  function noticeRewind() {
+    const ticks = machine.cycles;
+    if (lastTicks !== null && ticks < lastTicks) {
+      inputTimeEpoch++;
+      observedInputs.clear();
+    }
+    lastTicks = ticks;
+  }
+
+  const inputTime = () => ({
+    ticks: machine.cycles,
+    domain: inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles',
+    hz: machine.clockHz
+  });
+
+  /**
+   * Emit a fact, but only when the value has CHANGED.
+   *
+   * For LEVELS only — a button mask that is set twice is one state, so the
+   * second call is not a fact. Events use `publishEvent`.
+   */
+  function publishInput(producer, key, payload) {
+    noticeRewind();
+    const signature = JSON.stringify(payload);
+    if (observedInputs.get(key) === signature) return;
+    observedInputs.set(key, signature);
+    emit(producer, payload);
+  }
+
+  /**
+   * Emit a fact with NO dedup, because some inputs are events rather than
+   * levels: the same serial byte typed twice is two bytes, and suppressing the
+   * second would replay a transcript missing a character. The dedup map does
+   * not apply and must not be consulted — a level's key would collide with it.
+   */
+  function publishEvent(producer, payload) {
+    noticeRewind();
+    emit(producer, payload);
+  }
+
+  function emit(producer, payload) {
+    const fact = {time: inputTime(), producer, payload: {...payload}};
+    // Each listener gets its own copy: a recorder that stored the object and a
+    // listener that mutated it would corrupt the log in place.
+    for (const listener of inputListeners) {
+      listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
     }
   }
 
@@ -295,7 +384,126 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * PA0..3). Returns false when the machine has no VIA to receive it.
      */
     setButtons(mask) {
-      return typeof machine.setButtons === 'function' ? machine.setButtons(mask) : false;
+      if (typeof machine.setButtons !== 'function') return false;
+      const accepted = machine.setButtons(mask);
+      // Recorded at the entry point, which is also the path replay routes
+      // through, so a replayed input and a live one take one route.
+      if (accepted !== false) publishInput('m6502.buttons', 'buttons', {mask});
+      return accepted;
+    },
+
+    /**
+     * The RECORD half: subscribe to host-input facts as they are observed.
+     * Named `onDebugInput` because that is the name the recorder consumes.
+     *
+     * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
+     * @returns {() => void} unsubscribe
+     */
+    onDebugInput(listener) {
+      if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
+      inputListeners.push(listener);
+      return () => { inputListeners = inputListeners.filter(l => l !== listener); };
+    },
+
+    /**
+     * Send a byte to the machine's serial receiver, RECORDING it on the way.
+     *
+     * Delegates to `adapter.sendSerial` — the debug target had no serial entry
+     * point before this, and the record half needs one: a byte that reaches the
+     * machine without passing through here is not in the log. THAT BYPASS IS
+     * REAL AND STATED: a caller holding the adapter can still call
+     * `adapter.sendSerial` directly and will not be recorded. Closing it
+     * properly means recording inside the adapter, which is where the 8051 does
+     * it; this target's record machinery lives here because `onDebugInput` does.
+     *
+     * @param {number} byte
+     * @returns {boolean} whether a receiver took it
+     */
+    sendSerial(byte) {
+      // EVERY REACH OUTSIDE THIS CLOSURE IS GUARDED, not just the ones a test
+      // happened to drive. Callers construct this target over a bare
+      // `{machine}` — `code-address-progression.test.mjs:32` builds
+      // `{machine: {cpu: {}}}` — so `adapter` is frequently an object with
+      // nothing on it.
+      if (typeof adapter?.sendSerial !== 'function') return false;
+      const accepted = adapter.sendSerial(byte & 0xff);
+      if (accepted) publishEvent('m6502.serial', {byte: byte & 0xff});
+      return accepted;
+    },
+
+    /**
+     * The APPLY half. Every failure is a return value, never a throw.
+     *
+     * Three producers, all three with a measured path in a fully built target —
+     * and every one of them GUARDED, because a target built over a bare
+     * `{machine}` has neither an adapter nor a CPU and a refusal is what the
+     * contract requires there, not a TypeError. Measured
+     * rather than assumed, because the first draft of this method refused two of
+     * them by name on the strength of a sentence about what the machine lacks:
+     *
+     *   m6502.buttons  machine.setButtons        m6502-machine.js:606
+     *   m6502.serial   adapter.sendSerial        m6502-adapter.js:156
+     *   m6502.nmi      machine.cpu.nmi()         w65c02.js:64 — the machine has
+     *                  no `nmi()` of its own, but it is not the machine's to
+     *                  have: m6502-machine.js:705 reaches the CPU's directly
+     *                  for the vsync NMI, and this takes the same route.
+     *
+     * A CAVEAT ON REPLAYED NMI, stated rather than guarded. A config with
+     * `simplevga {nmi: true}` generates its own NMIs from vsync. Those are
+     * MACHINE events, not host input, so nothing records them and replay
+     * regenerates them — but a driver that recorded an NMI from somewhere else
+     * and replays it into such a config adds one the original run did not have.
+     *
+     * @param {{producer: string, payload: object}} input a recorded fact
+     * @returns {{accepted: boolean, code?: string, reason?: string}}
+     */
+    applyReplayInput(input) {
+      const payload = input?.payload;
+      switch (input?.producer) {
+        case 'm6502.buttons': {
+          if (!Number.isSafeInteger(payload?.mask)) {
+            return replayRefused('invalid-replay-input', 'm6502.buttons needs a safe-integer mask');
+          }
+          // Passed through UNMASKED. The machine reads bits 0..3 and ignores the
+          // rest (m6502-machine.js:606), so masking here would change nothing the
+          // machine sees while making the seed disagree with the raw value a live
+          // call records — and the next live call with that raw value would then
+          // read as a change that never happened.
+          const mask = payload.mask;
+          // Seeded before applying, so the replay does not come back out of the
+          // recorder as a freshly observed fact.
+          observedInputs.set('buttons', JSON.stringify({mask}));
+          return this.setButtons(mask)
+            ? replayAccepted()
+            : replayRefused('no-input-path', 'this machine has no VIA to receive a button mask');
+        }
+        case 'm6502.serial': {
+          if (!Number.isInteger(payload?.byte) || payload.byte < 0 || payload.byte > 0xff) {
+            return replayRefused('invalid-replay-input', 'm6502.serial needs a byte in 0..255');
+          }
+          if (typeof adapter?.sendSerial !== 'function') {
+            return replayRefused('no-input-path',
+              'this target was built without an adapter, and the serial input path '
+              + 'lives there (m6502-adapter.js:156)');
+          }
+          // NOT routed through this.sendSerial: that one records, and a replayed
+          // byte re-entering the log would double every byte on a second pass.
+          return adapter.sendSerial(payload.byte)
+            ? replayAccepted()
+            : replayRefused('no-input-path',
+              'no chip in this config accepts a received byte');
+        }
+        case 'm6502.nmi':
+          if (typeof cpu?.nmi !== 'function') {
+            return replayRefused('no-input-path',
+              'this machine has no CPU with an NMI entry point');
+          }
+          cpu.nmi();
+          return replayAccepted();
+        default:
+          return replayRefused('unsupported-replay-input',
+            `no replay path for producer ${input?.producer ?? '(none)'}`);
+      }
     },
 
     video() {
