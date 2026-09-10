@@ -47,6 +47,50 @@ export function createZ80DebugTarget(adapter) {
     }
   };
 
+  // ─── The RECORD half of the replay surface ──────────────────────────
+  // Declared in debug-replay-contract.js. Facts are stamped from the machine's
+  // OWN clock: `{ticks: machine.cycles, domain, hz: machine.clockHz}`. Those two
+  // operands are what `z80-machine.js:270` divides into `tMs`, and taking them
+  // undivided keeps the stamp integral — `tMs` is a lossy projection, and reading
+  // it instead of its operands is what once made this look impossible.
+  //
+  // TICK TYPES DIFFER BETWEEN TARGETS AND THAT IS FINE. Here ticks are a Number
+  // of CPU cycles at `machine.clockHz`; the 8051 adapter's are a BigInt of
+  // nanoseconds at 1e9. The recorder accepts both. The DOMAIN string is what
+  // stops two targets' stamps being compared to each other, so a third target
+  // should copy the mechanism and not the units.
+  //
+  // NO EPOCH HERE, UNLIKE THE 8051. That adapter bumps a counter into its domain
+  // on reset, because a reset restarts its clock and facts either side are not
+  // comparable. This machine has no reset — `cycles` is set once in the
+  // constructor — and the snapshot loaders do not touch it, so the domain is
+  // constant. If a reset is ever added, the epoch is what to add with it.
+  const observedInputs = new Map();
+  let inputListeners = [];
+
+  /**
+   * Emit a fact, but only when the value has CHANGED.
+   *
+   * @param {string} producer e.g. 'z80.keys'
+   * @param {string} key the dedup key: what "the same input" means here
+   * @param {object} payload the recorded value
+   */
+  function publishInput(producer, key, payload) {
+    const signature = JSON.stringify(payload);
+    if (observedInputs.get(key) === signature) return;
+    observedInputs.set(key, signature);
+    const fact = {
+      time: {ticks: machine.cycles, domain: 'z80-cycles', hz: machine.clockHz},
+      producer,
+      payload: {...payload}
+    };
+    // Each listener gets its own copy: a recorder that stored the object and a
+    // listener that mutated it would corrupt the log in place.
+    for (const listener of inputListeners) {
+      listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
+    }
+  }
+
   // Call-class opcodes for step-over: CALL nn, CALL cc,nn, and RST n.
   const isCallClass = (op) => op === 0xcd || (op & 0xc7) === 0xc4 || (op & 0xc7) === 0xc7;
 
@@ -190,7 +234,13 @@ export function createZ80DebugTarget(adapter) {
     /** Face-input contract, joystick side: the VdpScreen button mask
      *  onto the Kempston port. False without the interface. */
     setButtons(mask) {
-      return typeof machine.setButtons === 'function' ? machine.setButtons(mask) : false;
+      if (typeof machine.setButtons !== 'function') return false;
+      const accepted = machine.setButtons(mask);
+      // Recorded HERE, at the entry point, rather than inside the machine: this
+      // is the boundary the contract is about, and it is the same method replay
+      // routes through, so a replayed input and a live one take one path.
+      if (accepted !== false) publishInput('z80.buttons', 'buttons', {mask});
+      return accepted;
     },
 
     /**
@@ -202,7 +252,24 @@ export function createZ80DebugTarget(adapter) {
     setKeys(names) {
       if (!machine.ula || typeof machine.ula.setKeys !== 'function') return false;
       machine.ula.setKeys(names);
+      publishInput('z80.keys', 'keys', {names: [...names]});
       return true;
+    },
+
+    /**
+     * The RECORD half: subscribe to host-input facts as they are observed.
+     * Returns an unsubscribe function.
+     *
+     * Named `onDebugInput` because that is the name the recorder consumes —
+     * `subscribeDebugTargetInputs` tests for it and skips a target without one.
+     *
+     * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
+     * @returns {() => void} unsubscribe
+     */
+    onDebugInput(listener) {
+      if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
+      inputListeners.push(listener);
+      return () => { inputListeners = inputListeners.filter(l => l !== listener); };
     },
 
     /**
@@ -233,6 +300,11 @@ export function createZ80DebugTarget(adapter) {
         if (!Number.isSafeInteger(payload?.mask)) {
           return replayRefused('invalid-replay-input', 'z80.buttons needs a safe-integer mask');
         }
+        // SEEDED BEFORE APPLYING, so the replay does not come back out of the
+        // recorder as a freshly observed fact. Without this, replaying a log
+        // while recording produces a second copy of every fact in it, and a
+        // log replayed twice grows.
+        observedInputs.set('buttons', JSON.stringify({mask: payload.mask & 0x1f}));
         return this.setButtons(payload.mask & 0x1f)
           ? replayAccepted()
           : replayRefused('no-input-path',
@@ -248,6 +320,7 @@ export function createZ80DebugTarget(adapter) {
           return replayRefused('invalid-replay-input',
             'z80.keys needs at most 40 key names of at most 16 characters');
         }
+        observedInputs.set('keys', JSON.stringify({names: [...names]}));
         return this.setKeys([...names])
           ? replayAccepted()
           : replayRefused('no-input-path', 'this machine has no ULA to receive key names');

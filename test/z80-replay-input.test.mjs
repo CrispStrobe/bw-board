@@ -44,13 +44,110 @@ const zx = () => {
   return { machine, target: createZ80DebugTarget({ machine }) };
 };
 
-test('the target declares the apply half and not the record half', () => {
+test('the target declares BOTH halves of the surface', () => {
   const { target } = zx();
   assert.equal(canApplyReplayInput(target), true);
-  assert.equal(canRecordDebugInput(target), false,
-    'the record half is not implemented here yet, and must not read as though it were');
-  // And that is enough to replay: the facts come from wherever they were recorded.
+  assert.equal(canRecordDebugInput(target), true);
   assert.deepEqual(replaySupport(target), { supported: true, reasons: [] });
+});
+
+test('a recorded fact is stamped from the machine CLOCK, not from a projection of it', () => {
+  const { machine, target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+  target.setKeys(['a']);
+
+  assert.equal(facts.length, 1, 'setting a key must record exactly one fact');
+  const [fact] = facts;
+  assert.equal(fact.producer, 'z80.keys');
+  assert.deepEqual(fact.payload, { names: ['a'] });
+  // THE STAMP. cycles and clockHz are the two operands tMs is computed from;
+  // taking them undivided keeps it integral.
+  assert.equal(fact.time.domain, 'z80-cycles');
+  assert.equal(fact.time.hz, machine.clockHz);
+  assert.equal(typeof fact.time.ticks, 'number');
+  assert.equal(fact.time.ticks, machine.cycles);
+});
+
+test('THE ROUND TRIP: a fact this target recorded, replayed into a fresh one', () => {
+  // Record on one machine, replay into another — the real shape, and the one
+  // that catches a recorder and an applier agreeing with each other rather than
+  // with the contract.
+  const recorder = zx();
+  const facts = [];
+  const stop = recorder.target.onDebugInput(fact => facts.push(fact));
+  recorder.target.setKeys(['a', 'enter']);
+  recorder.target.setButtons(0x03);
+  stop();
+  assert.ok(facts.length >= 1, 'nothing was recorded, so this proves nothing');
+
+  const player = zx();
+  assert.equal(halfRow(player.machine, 0xfd) & 1, 1, 'the fresh machine starts with the key released');
+
+  for (const fact of facts) {
+    const outcome = replayOutcome(player.target.applyReplayInput(fact));
+    assert.equal(outcome.accepted, true, `${fact.producer} was refused on replay: ${outcome.reason}`);
+  }
+  // Asserted at the PORT: the replayed key is held on a machine that never saw
+  // the original input.
+  assert.equal(halfRow(player.machine, 0xfd) & 1, 0,
+    'the replayed key is not held on the machine it was replayed into');
+});
+
+test('an unchanged input is not recorded twice, and a changed one is', () => {
+  const { target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+  target.setKeys(['a']);
+  target.setKeys(['a']);
+  assert.equal(facts.length, 1, 'the same key set was recorded twice');
+  target.setKeys(['b']);
+  assert.equal(facts.length, 2, 'a CHANGED key set must be recorded');
+});
+
+test('replay records NOTHING — a replayed fact is not a newly observed one', () => {
+  // Replay routes through setKeys and setButtons, which record. The dedup map is
+  // seeded before applying, so the replayed value is already "known" and no fact
+  // is emitted. Without the seed, replaying a log while recording produces a
+  // second copy of every fact in it.
+  //
+  // An earlier version of this test asserted only that the SECOND identical
+  // replay recorded nothing — which the dedup gives for free even without the
+  // seed, so it passed while the first replay was still emitting a fact. The
+  // name claimed more than the assertion checked.
+  const { target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+  target.applyReplayInput({ producer: 'z80.keys', payload: { names: ['a'] } });
+  assert.deepEqual(facts, [], 'the first replay emitted a fact as though it were observed');
+  target.applyReplayInput({ producer: 'z80.buttons', payload: { mask: 0x03 } });
+  assert.deepEqual(facts, [], 'the button replay emitted a fact as though it were observed');
+
+  // And a genuine input after a replay is still recorded: the seed suppresses
+  // the replayed value, not the recorder.
+  target.setKeys(['b']);
+  assert.equal(facts.length, 1, 'a real input after a replay must still be recorded');
+});
+
+test('a listener cannot corrupt the log for the next listener', () => {
+  const { target } = zx();
+  const observed = [];
+  target.onDebugInput(fact => { fact.payload.names = ['mutated']; fact.time.domain = 'mutated'; });
+  target.onDebugInput(fact => observed.push(fact));
+  target.setKeys(['a']);
+  assert.equal(observed.length, 1);
+  assert.equal(observed[0].time.domain, 'z80-cycles');
+  assert.deepEqual(observed[0].payload.names, ['a']);
+});
+
+test('unsubscribing stops the listener', () => {
+  const { target } = zx();
+  const facts = [];
+  const stop = target.onDebugInput(fact => facts.push(fact));
+  target.setKeys(['a']);
+  stop();
+  target.setKeys(['b']);
+  assert.equal(facts.length, 1, 'a fact arrived after unsubscribing');
 });
 
 /**
