@@ -58,7 +58,12 @@ const buttonPins = machine => {
 describe('the 6502 target implements both halves', () => {
   it('reports both capabilities', () => {
     const {target} = makeTarget();
-    assert.deepEqual(replayCapabilities(target), {applies: true, records: true});
+    assert.deepEqual(replayCapabilities(target), {applies: true, records: true, vetoes: false});
+    // `vetoes: false` is the DECLARED half, not an incidental one: this target
+    // publishes a fact AFTER the machine has taken the input, so there is no
+    // moment at which a listener could refuse one. Adopting a veto means moving
+    // to publish-before and accepting that a log can then contain an input the
+    // machine refused — a trade, and this assertion is what makes it deliberate.
   });
 });
 

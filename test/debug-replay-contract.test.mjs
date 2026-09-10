@@ -15,9 +15,12 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createZ80DebugTarget } from '../src/z80-debug.js';
+import { createM6502DebugTarget } from '../src/m6502-debug.js';
+import { createI8086DebugTarget } from '../src/i8086-debug.js';
 import {
   replayAccepted, replayRefused, replayOutcome, canApplyReplayInput,
-  canRecordDebugInput, replayCapabilities, replaySupport, replaySupportRefusal
+  canRecordDebugInput, canVetoDebugInput, replayCapabilities, replaySupport, replaySupportRefusal
 } from '../src/debug-replay-contract.js';
 
 /** A target that records what it is given and can be asked to apply it back. */
@@ -137,7 +140,7 @@ describe('replayOutcome normalises the shapes that already exist', () => {
 describe('support is a list of reasons, not a boolean', () => {
   it('a target implementing both halves is supported', () => {
     const target = makeRecordingTarget();
-    assert.deepEqual(replayCapabilities(target), { applies: true, records: true });
+    assert.deepEqual(replayCapabilities(target), { applies: true, records: true, vetoes: false });
     assert.deepEqual(replaySupport(target), { supported: true, reasons: [] });
   });
 
@@ -146,13 +149,13 @@ describe('support is a list of reasons, not a boolean', () => {
     // driver rather than observed by the target. Requiring both halves would
     // refuse it, and refuse the two targets whose record half has another name.
     const applyOnly = { applyReplayInput: () => replayAccepted() };
-    assert.deepEqual(replayCapabilities(applyOnly), { applies: true, records: false });
+    assert.deepEqual(replayCapabilities(applyOnly), { applies: true, records: false, vetoes: false });
     assert.deepEqual(replaySupport(applyOnly), { supported: true, reasons: [] });
   });
 
   it('recording without applying cannot replay, and says which half is missing', () => {
     const recordOnly = { onDebugInput: () => () => {} };
-    assert.deepEqual(replayCapabilities(recordOnly), { applies: false, records: true });
+    assert.deepEqual(replayCapabilities(recordOnly), { applies: false, records: true, vetoes: false });
     const support = replaySupport(recordOnly);
     assert.equal(support.supported, false);
     assert.match(support.reasons[0], /does not implement applyReplayInput/);
@@ -189,5 +192,96 @@ describe('support is a list of reasons, not a boolean', () => {
     const support = replaySupport(makeRecordingTarget(), ['live board input sampling is not logged']);
     assert.equal(support.supported, false);
     assert.deepEqual(support.reasons, ['live board input sampling is not logged']);
+  });
+});
+
+describe('a listener\u2019s return value is IGNORED unless the target says otherwise', () => {
+  // The hole this closes: the recorder's listener DOES return something --
+  // `input => !status().active || appendInput(input)` -- and it was honoured by
+  // some targets and silently discarded by others, with no way to ask which.
+  const recorder = () => ({ applyReplayInput: () => replayAccepted(), onDebugInput: () => () => {} });
+  const declaring = extensions => ({ ...recorder(), capabilities: () => ({ extensions }) });
+
+  it('a target that declares nothing does NOT veto', () => {
+    assert.equal(canVetoDebugInput(recorder()), false);
+    assert.equal(canVetoDebugInput(declaring({})), false, 'having capabilities() is not declaring');
+    assert.equal(canVetoDebugInput({ ...recorder(), capabilities: () => ({}) }), false);
+  });
+
+  it('a target that declares may-refuse DOES veto', () => {
+    assert.equal(canVetoDebugInput(declaring({ inputAdmission: 'may-refuse' })), true);
+    assert.deepEqual(replayCapabilities(declaring({ inputAdmission: 'may-refuse' })),
+      { applies: true, records: true, vetoes: true });
+  });
+
+  it('only that exact value counts — a truthy string is not a declaration', () => {
+    // Otherwise `inputAdmission: 'always'` would read as a veto, which is the
+    // opposite of what it says.
+    for (const value of ['always', 'may_refuse', true, 1, {}]) {
+      assert.equal(canVetoDebugInput(declaring({ inputAdmission: value })), false,
+        `${JSON.stringify(value)} must not read as a declaration`);
+    }
+  });
+
+  it('a target with no RECORD half cannot veto, whatever it declares', () => {
+    // There is no listener to refuse with. Declaring it would be a capability
+    // about a channel the target does not have.
+    const applyOnly = { applyReplayInput: () => replayAccepted(),
+      capabilities: () => ({ extensions: { inputAdmission: 'may-refuse' } }) };
+    assert.equal(canVetoDebugInput(applyOnly), false);
+  });
+
+  it('A THROWING capabilities() ANSWERS FALSE rather than propagating', () => {
+    // This predicate has to INVOKE the target, unlike its siblings, because the
+    // property is behavioural and inspection cannot see it. A predicate that
+    // threw would break the one rule this module exists to state.
+    const hostile = { ...recorder(), capabilities() { throw new Error('half-built target'); } };
+    assert.doesNotThrow(() => canVetoDebugInput(hostile));
+    assert.equal(canVetoDebugInput(hostile), false);
+    assert.doesNotThrow(() => replayCapabilities(hostile));
+  });
+
+  it('a capabilities() returning nothing at all is not a declaration', () => {
+    for (const value of [undefined, null, 0, 'yes']) {
+      assert.equal(canVetoDebugInput({ ...recorder(), capabilities: () => value }), false);
+    }
+  });
+});
+
+describe('THE ASYMMETRY IS DECLARED, so converting a target has to be deliberate', () => {
+  // This module states, as a measurement, that every target in this tree is
+  // fire-and-forget. A statement in a comment goes stale silently; this is the
+  // same statement as an assertion. Converting a target to veto -- which means
+  // adopting publish-BEFORE, and with it the ability to log an input the
+  // machine then refused -- reddens here, which is the point: it is a trade to
+  // be made deliberately, not a tidy-up.
+  //
+  // The 8051 is absent from this table on purpose and not by omission: it
+  // publishes at the instant the core READS a pin, so it has no "before" at
+  // which to refuse and could not adopt the veto if someone wanted it to.
+  const TARGETS = {
+    z80: () => createZ80DebugTarget({ machine: { cpu: {} } }),
+    m6502: () => createM6502DebugTarget({ machine: { cpu: {} } }),
+    i8086: () => createI8086DebugTarget({ machine: { cpu: {} } })
+  };
+
+  for (const [name, make] of Object.entries(TARGETS)) {
+    it(`${name} records and does NOT veto`, () => {
+      const target = make();
+      assert.equal(canRecordDebugInput(target), true, 'the record half is there to be asked about');
+      assert.equal(canVetoDebugInput(target), false);
+      assert.equal(replayCapabilities(target).vetoes, false);
+    });
+  }
+
+  it('and the predicate is answering about the TARGET, not always false', () => {
+    // Guards the whole table against passing because canVetoDebugInput never
+    // returns true for anything.
+    const declaring = {
+      applyReplayInput: () => replayAccepted(),
+      onDebugInput: () => () => {},
+      capabilities: () => ({ extensions: { inputAdmission: 'may-refuse' } })
+    };
+    assert.equal(canVetoDebugInput(declaring), true);
   });
 });

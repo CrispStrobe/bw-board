@@ -15,6 +15,36 @@ applyReplayInput(fact) -> outcome            // the APPLY half
 onDebugInput(listener) -> unsubscribe        // the RECORD half
 ```
 
+**A listener's return value is IGNORED unless the target declares otherwise.**
+Two answers were already in the wild: the targets here discard it, and two
+targets in a downstream consumer treat `false` or `{accepted: false}` as a VETO
+that stops the input reaching the machine — "if it cannot be recorded, it does
+not happen". The recorder's own listener returns a value, so the same code had
+two meanings with no way to ask which. `canVetoDebugInput(target)` is the
+signal; the declaration is `capabilities().extensions.inputAdmission ===
+'may-refuse'`.
+
+**It is a capability and cannot become a requirement.** A veto needs a moment
+BEFORE the input reaches the machine, and `emu8051-adapter` has none — it
+publishes at the instant the emulated core READS a pin, so its facts are
+observations of a read already in flight. Refusing there would mean declining to
+answer a read the CPU has issued.
+
+**And it is a TRADE for the targets that could adopt it, not a ladder.**
+Publishing before applying is what makes a veto possible, and it is also what
+lets a log contain an input the machine then refused. Measured downstream: a
+button press on a board with no VIA is logged, and replaying that log aborts on
+the refusal — a session's own log failing to replay. The targets here publish
+after and only on acceptance, so only a fact the machine TOOK is a fact. Each
+target asserts its own answer, so converting one is a decision rather than a
+tidy-up.
+
+`canVetoDebugInput` is the one predicate here that INVOKES the target. Its
+siblings ask a structural question — is there a method — that inspection
+answers. Whether a return value is honoured is behavioural, so it has to be
+declared and the declaration read; a `capabilities()` that throws answers false
+rather than propagating.
+
 A target may implement either without the other, and `replaySupport` requires
 only the apply half — a target handed facts produced elsewhere can replay them
 without ever having recorded one. The record half is named `onDebugInput`
