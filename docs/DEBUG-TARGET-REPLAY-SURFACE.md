@@ -36,6 +36,49 @@ supported" from "the emulator broke".
 REFUSAL, deliberately: a method that falls off the end returns `undefined`, and
 treating that as success would accept every input a target forgot to handle.
 
+### The rule is about REACHING, not about returning
+
+The section above is about what `applyReplayInput` returns, and that is not
+where this goes wrong. What goes wrong is that the method never gets as far as
+returning, because it reached for `adapter.sendSerial`, or `machine.chips`, or
+`cpu.nmi`, on an object that has none of them.
+
+**`{machine: {cpu: {}}}` is a construction that exists.**
+`test/code-address-progression.test.mjs:32` builds it literally, and
+`z80-machine.test.mjs:77`, `debug-parity.test.mjs:23` and
+`audio-ay.test.mjs:219` all construct a target over a bare `{machine}`. A
+target is not always handed a full adapter over a full machine, and the
+contract's rule has to hold for the ones that are not.
+
+So: **guard every reach outside the closure**, and check the preflight as well
+as the apply half — the preflight is what a runner calls FIRST. The one-line
+version, which is the same sentence as the reachable-set rule above with the
+second half attached: *grep every file the target can reach, and then guard
+every reach you find.*
+
+This is worth spelling out because it is the lesson that does not transfer on
+its own. Within one hour, three targets each got a partial application of it,
+every one by someone who had just applied it correctly a few lines earlier:
+
+| target | guarded | threw |
+|---|---|---|
+| `z80` | `sendSerial`, after a review asked for it | — |
+| `m6502` | `m6502.buttons` (checks for its VIA) | `m6502.serial`, `m6502.nmi` |
+| `i8086` | `sendSerial`, with a comment explaining why | the preflight beside it, on three producers |
+
+The 8086 row is the sharp one: the method whose whole job is to turn a
+hardware fact into a refusal is the method that threw instead. A rule learned
+about one call site is not yet a rule about the method, and a rule about the
+method is not yet a rule about the file.
+
+**The test shape that holds it**: read the producer list out of the source,
+drive every producer against a hollow target with a VALID payload, and assert
+each returns a refusal. Both halves are load-bearing. Scanning the source means
+a producer added later cannot reintroduce the defect silently. Using a valid
+payload means the refusal comes from the missing hardware and not from a
+validation short-circuit — a table of malformed payloads passes against a
+throwing implementation too, which is the whole reason this was not caught.
+
 ### Three refusal codes, and they mean different things
 
 | code | means | example |
@@ -137,7 +180,7 @@ of writing; the table says which.
 | target | producers | domain | where |
 |---|---|---|---|
 | `emu8051-adapter` | `emu8051.pin`, `emu8051.adc` | `8051-input-ns` | master |
-| `z80-debug` | `z80.buttons`, `z80.keys`, `z80.serial` | `z80-cycles` | master + `fix/z80-serial-replay-path` |
+| `z80-debug` | `z80.buttons`, `z80.keys`, `z80.serial` | `z80-cycles` | master + `fix/z80-hollow-target` |
 | `m6502-debug` | `m6502.buttons`, `m6502.serial`, `m6502.nmi` | `m6502-cycles` | `feat/m6502-replay-input` |
 | `i8086-debug` | `i8086.key`, `.gpio`, `.serial`, `.nmi`, `.rom` | `i8086-cycles` | `feat/i8086-replay-input` |
 
@@ -149,14 +192,30 @@ replayed level is overwritten on the next run slice. The guard is `if (board)`.
 
 ## Open, and deliberately not fixed in passing
 
-- **The domain strings disagree.** `8051-input-ns-reset-N`,
-  `z80-cycles-rewind-N`, `m6502-cycles-rewind-N`, `i8086-cycles-reset-N`. Two of
-  them say "reset" and none of them bumps on a reset: on the 6502 and the 8086,
-  `reset()` ADVANCES the clock by the real reset sequence's cost
-  (`m6502-machine.js:510`, `i8086-machine.js:1130`). The 8086's string is kept
-  as it is on purpose — a log recorded by the existing downstream consumer
-  carries it and equality is what a replayer compares — so the rename is a
-  coordinated change on both sides, not a drive-by.
+- **The domain strings disagree, and the rename is scheduled rather than
+  refused.** `8051-input-ns-reset-N`, `z80-cycles-rewind-N`,
+  `m6502-cycles-rewind-N`, `i8086-cycles-reset-N`. Two of them say "reset" and
+  neither bumps on a reset: on the 6502 and the 8086, `reset()` ADVANCES the
+  clock by the real reset sequence's cost (`m6502-machine.js:510`,
+  `i8086-machine.js:1130`).
+
+  Renaming one side alone breaks replay of existing logs — a log carries the
+  string and a replayer compares by equality — which is why the 8086's is kept
+  for now. But "a wrong name kept because the consumer knows it" is a debt that
+  gets more expensive with every target that copies the pattern, and there are
+  four. **The ruling is: do the rename, as one change across both sides, in the
+  same week as the downstream retirement**, with a note that logs recorded
+  before it are not replayable after it. Not before, and not never.
+
+- **The 8051 is covered by enumeration, not detection.** Its clock lives in the
+  WASM core, so it cannot compare against a last-stamped tick; the epoch bumps
+  at one explicit trigger inside `reset()`. That is complete today — measured:
+  `reset()` takes the clock to zero and `loadHex` leaves it alone — and
+  `test/emu8051-clock-enumeration.test.mjs` is what keeps it complete, by
+  calling every public method and reddening on one that rewinds without a row.
+  Detection alone would not replace it: a reset issued while the clock is
+  already zero moves nothing, so the explicit trigger stays necessary either
+  way.
 - **Recording lives in the debug target, and some input paths do not.** Where a
   target grew a `sendSerial` to have something to record, a caller holding the
   adapter can still reach past it. That bypass is stated in each such method
