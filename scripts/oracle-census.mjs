@@ -340,7 +340,10 @@ export const INPUTS = [
         // failure mode happening to the census.
         paths: [join(HOME, 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
             '/mnt/volume1/code/blinkenrocket-firmware/build/main.hex'],
-        gates: ['test/blinkenrocket-modem-e2e.test.mjs'],
+        gates: ['test/blinkenrocket-modem-e2e.test.mjs',
+            // Same oracle, second gate: the lookup test proves the ancestor walk
+            // REACHES this firmware from a worktree, where a fixed depth cannot.
+            'test/sibling-checkout-lookup.test.mjs'],
         obtain: 'build blinkenrocket-firmware; see the REF WARNING below',
         // REF WARNING, and it is not a detail. This entry said "build at ref
         // 140e2931". THAT COMMIT COULD NOT BE FOUND: not in the local clone,
