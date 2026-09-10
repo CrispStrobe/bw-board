@@ -177,6 +177,46 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     emit(producer, payload, stamp());
   }
 
+  /**
+   * SERIAL IS RECORDED AT THE ADAPTER, which is where the bypass was.
+   *
+   * This target used to record inside its own `sendSerial`, and said so: "a
+   * caller holding the adapter can still call adapter.sendSerial directly and
+   * will not be recorded". A downstream consumer had already closed that by
+   * wrapping the adapter's method at construction, and this is that approach
+   * brought back upstream — the adapter is the one place every caller passes
+   * through.
+   *
+   * ONE DELIBERATE DIFFERENCE FROM THE DOWNSTREAM VERSION. It publishes BEFORE
+   * calling the real method, because its listeners can VETO an input and a veto
+   * has to happen before the byte reaches the machine. This one publishes
+   * AFTER, and only when a chip took the byte, because it has no veto and does
+   * have the rule that only a fact the machine TOOK is a fact — a logged byte
+   * nothing received would replay a character that never arrived.
+   *
+   * TWO TARGETS OVER ONE ADAPTER NEED TWO DIFFERENT FUNCTIONS, and this was
+   * measured rather than reasoned about — the first version of this wrap got it
+   * wrong. `previous` is whatever `adapter.sendSerial` was at construction, so
+   * wrapping CHAINS and each target records a live byte once. `rootSendSerial`
+   * is the adapter'strue original, carried forward on the wrapper, and it is what
+   * REPLAY uses — routing a replay through `previous` would publish the
+   * replayed byte into the other target's log, which is what the first version
+   * did (measured: replaying into the second target added a fact to the first).
+   */
+  const previousSendSerial = typeof adapter?.sendSerial === 'function'
+    ? adapter.sendSerial.bind(adapter) : null;
+  const rawSendSerial = adapter?.sendSerial?.rootDebugSendSerial ?? previousSendSerial;
+  if (previousSendSerial) {
+    const wrapped = byte => {
+      const value = byte & 0xff;
+      const accepted = previousSendSerial(value);
+      if (accepted) publishEvent('m6502.serial', {byte: value});
+      return accepted;
+    };
+    wrapped.rootDebugSendSerial = rawSendSerial;
+    adapter.sendSerial = wrapped;
+  }
+
   function emit(producer, payload, time) {
     const fact = {time, producer, payload: {...payload}};
     // Each listener gets its own copy: a recorder that stored the object and a
@@ -461,15 +501,16 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * @returns {boolean} whether a receiver took it
      */
     sendSerial(byte) {
-      // EVERY REACH OUTSIDE THIS CLOSURE IS GUARDED, not just the ones a test
-      // happened to drive. Callers construct this target over a bare
-      // `{machine}` — `code-address-progression.test.mjs:32` builds
-      // `{machine: {cpu: {}}}` — so `adapter` is frequently an object with
-      // nothing on it.
+      // Delegates to the WRAPPED adapter method, which is what records now.
+      // This method publishes nothing of its own: doing both would log every
+      // byte twice for a caller who came through the target rather than round
+      // it.
+      //
+      // Callers construct this target over a bare `{machine}` —
+      // `code-address-progression.test.mjs:32` builds `{machine: {cpu: {}}}` —
+      // so `adapter` is frequently an object with nothing on it.
       if (typeof adapter?.sendSerial !== 'function') return false;
-      const accepted = adapter.sendSerial(byte & 0xff);
-      if (accepted) publishEvent('m6502.serial', {byte: byte & 0xff});
-      return accepted;
+      return adapter.sendSerial(byte & 0xff);
     },
 
     /**
@@ -531,14 +572,14 @@ export function createM6502DebugTarget(adapter, opts = {}) {
           if (!Number.isInteger(payload?.byte) || payload.byte < 0 || payload.byte > 0xff) {
             return replayRefused('invalid-replay-input', 'm6502.serial needs a byte in 0..255');
           }
-          if (typeof adapter?.sendSerial !== 'function') {
+          if (!rawSendSerial) {
             return replayRefused('no-input-path',
               'this target was built without an adapter, and the serial input path '
               + 'lives there (m6502-adapter.js:156)');
           }
-          // NOT routed through this.sendSerial: that one records, and a replayed
-          // byte re-entering the log would double every byte on a second pass.
-          return adapter.sendSerial(payload.byte)
+          // The UNWRAPPED method: the wrapper records, and a replayed byte
+          // re-entering the log would double every byte on a second pass.
+          return rawSendSerial(payload.byte)
             ? replayAccepted()
             : replayRefused('no-input-path',
               'no chip in this config accepts a received byte');

@@ -319,11 +319,26 @@ replayed level is overwritten on the next run slice. The guard is `if (board)`.
   Detection alone would not replace it: a reset issued while the clock is
   already zero moves nothing, so the explicit trigger stays necessary either
   way.
-- **Recording lives in the debug target, and some input paths do not.** Where a
-  target grew a `sendSerial` to have something to record, a caller holding the
-  adapter can still reach past it. That bypass is stated in each such method
-  rather than claimed closed. Closing it means recording inside the adapter,
-  which is where the 8051 does it.
+- ~~**Recording lives in the debug target, and some input paths do not.**~~
+  **CLOSED, by taking a downstream solution back upstream.** All three JS
+  targets now wrap `adapter.sendSerial` at construction, so a caller reaching
+  past the target is recorded. The approach was already running in a downstream
+  consumer while upstream carried the bypass as a documented limit in three
+  files — worth noting as a direction: a vendored copy is not only a place
+  divergence accumulates, it is sometimes where the answer already is.
+
+  **One deliberate difference from the downstream version.** It publishes
+  BEFORE calling the real method, because its listeners can VETO an input and a
+  veto has to happen before the byte reaches the machine. Upstream publishes
+  AFTER and only on acceptance, because it has no veto and does have the rule
+  that only a fact the machine TOOK is a fact.
+
+  **And two targets over one adapter need two different functions**, which the
+  first version of the wrap got wrong. Each target keeps the method it found at
+  construction — so wrapping CHAINS and both recorders see a live byte — and
+  the adapter's true original carried forward on the wrapper, which is what
+  REPLAY uses. Routing a replay through the previous wrapper publishes the
+  replayed byte into the *other* target's log.
 - **The checkpoint refusal axis is not declared here.** It is a second kind of
   refusal — "this target cannot serialise its in-flight state at all", static
   per target, as against "it can, but this session's wiring makes a restored run

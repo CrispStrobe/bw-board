@@ -310,6 +310,36 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         return time;
     };
 
+    /**
+     * SERIAL IS RECORDED AT THE ADAPTER, which is where the bypass was.
+     *
+     * Same change as the z80 and 6502 targets and for the same reason: a caller
+     * holding the adapter reached the machine without passing anything that
+     * could log it. The adapter is the one place every caller passes through.
+     *
+     * This target keeps its `machine.serialIn` fallback for the many callers
+     * that construct it over a bare `{machine}` — there is no adapter to wrap
+     * there, and no bypass either, because there is no second route in.
+     *
+     * `rawSendSerial` is the adapter's true original and is what REPLAY uses;
+     * `previousSendSerial` is whatever was there at construction, so two
+     * targets over one adapter CHAIN and each records a live byte once without
+     * a replay in one leaking a fact into the other.
+     */
+    const previousSendSerial = typeof adapter?.sendSerial === 'function'
+        ? adapter.sendSerial.bind(adapter) : null;
+    const rawSendSerial = adapter?.sendSerial?.rootDebugSendSerial ?? previousSendSerial;
+    if (previousSendSerial) {
+        const wrapped = byte => {
+            const value = byte & 0xff;
+            const accepted = previousSendSerial(value) === true;
+            if (accepted) publishInputEvent('i8086.serial', {byte: value});
+            return accepted;
+        };
+        wrapped.rootDebugSendSerial = rawSendSerial;
+        adapter.sendSerial = wrapped;
+    }
+
     const emitInput = (producer, payload, time) => {
         const fact = {time, producer, payload: {...payload}};
         // A copy each: a recorder that stores the object and a listener that
@@ -570,16 +600,20 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          * adapter can still call it directly and will not be recorded.
          */
         sendSerial(byte) {
-            // The adapter is optional: several callers construct this target
-            // over a bare {machine}, so reaching for adapter.sendSerial
-            // unconditionally would throw where the machine can take the byte
-            // perfectly well. i8086-adapter.js:74 is itself a one-line
-            // delegation to machine.serialIn.
-            const send = typeof adapter?.sendSerial === 'function' ? b => adapter.sendSerial(b)
-                : typeof machine?.serialIn === 'function' ? b => machine.serialIn(b)
-                : null;
-            if (!send) return false;
-            const accepted = send(byte & 0xff) === true;
+            // With an adapter this delegates to the WRAPPED method, which is
+            // what records; publishing here as well would log a byte twice for
+            // a caller who came through the target rather than round it.
+            //
+            // Without one — several callers construct this target over a bare
+            // {machine} — it goes straight to machine.serialIn and records
+            // here, because there is no adapter to have wrapped and no second
+            // route for a caller to take. i8086-adapter.js:74 is itself a
+            // one-line delegation to the same method.
+            if (typeof adapter?.sendSerial === 'function') {
+                return adapter.sendSerial(byte & 0xff) === true;
+            }
+            if (typeof machine?.serialIn !== 'function') return false;
+            const accepted = machine.serialIn(byte & 0xff) === true;
             if (accepted) publishInputEvent('i8086.serial', {byte: byte & 0xff});
             return accepted;
         },
@@ -755,9 +789,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 return applied ? replayAccepted()
                     : replayRefused('no-input-path', 'the machine did not take the input bit');
             }
-            case 'i8086.serial':
-                return machine.serialIn(p.byte) === true ? replayAccepted()
+            case 'i8086.serial': {
+                // The adapter's UNWRAPPED method when there is one, so a
+                // replayed byte does not come back out of the recorder — or out
+                // of another target's recorder, if two share the adapter.
+                const deliver = rawSendSerial ?? (b => machine.serialIn(b));
+                return deliver(p.byte) === true ? replayAccepted()
                     : replayRefused('no-input-path', 'no chip took the received byte');
+            }
             case 'i8086.nmi':
                 machine.nmi();
                 return replayAccepted();

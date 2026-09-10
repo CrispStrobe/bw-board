@@ -167,6 +167,45 @@ export function createZ80DebugTarget(adapter, opts = {}) {
    * @param {string} key the dedup key: what "the same input" means here
    * @param {object} payload the recorded value
    */
+  /**
+   * SERIAL IS RECORDED AT THE ADAPTER, which is where the bypass was.
+   *
+   * This target used to record inside its own `sendSerial` and said so: "a
+   * caller holding the adapter can still call adapter.sendSerial directly and
+   * will not be recorded. Closing that means recording inside the adapter."
+   * A downstream consumer had already done exactly that, and this is that
+   * approach brought back upstream — the adapter is the one place every caller
+   * passes through.
+   *
+   * ONE DELIBERATE DIFFERENCE FROM THE DOWNSTREAM VERSION. It publishes BEFORE
+   * calling the real method, because its listeners can VETO an input and a veto
+   * must happen before the byte reaches the machine. This one publishes AFTER,
+   * and only when a chip took the byte, because it has no veto and does have
+   * the rule that only a fact the machine TOOK is a fact.
+   *
+   * TWO TARGETS OVER ONE ADAPTER NEED TWO DIFFERENT FUNCTIONS, measured rather
+   * than reasoned about — the first version of this wrap got it wrong.
+   * `previousSendSerial` is whatever `adapter.sendSerial` was at construction,
+   * so wrapping CHAINS and each target records a live byte once.
+   * `rawSendSerial` is the adapter's true original, carried forward on the
+   * wrapper, and it is what REPLAY uses: routing a replay through the previous
+   * wrapper publishes the replayed byte into the OTHER target's log, which is
+   * what the first version did.
+   */
+  const previousSendSerial = typeof adapter?.sendSerial === 'function'
+    ? adapter.sendSerial.bind(adapter) : null;
+  const rawSendSerial = adapter?.sendSerial?.rootDebugSendSerial ?? previousSendSerial;
+  if (previousSendSerial) {
+    const wrapped = byte => {
+      const value = byte & 0xff;
+      const accepted = previousSendSerial(value) === true;
+      if (accepted) publishEvent('z80.serial', {byte: value});
+      return accepted;
+    };
+    wrapped.rootDebugSendSerial = rawSendSerial;
+    adapter.sendSerial = wrapped;
+  }
+
   function publishInput(producer, key, payload) {
     // FIRST, before the dedup gate: a suppressed input must still be able to
     // notice that the era moved under it.
@@ -374,11 +413,11 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * a considered statement that the tier CANNOT do it, which a driver
      * believes.
      *
-     * THE BYPASS IS STATED RATHER THAN CLAIMED CLOSED: a caller holding the
-     * adapter can still call `adapter.sendSerial` directly and will not be
-     * recorded. Closing that means recording inside the adapter, which is where
-     * the 8051 does it; this target's machinery lives here because
-     * `onDebugInput` does.
+     * THE BYPASS IS NOW CLOSED, and this method no longer records. Recording
+     * moved to the adapter wrapper above, so a caller reaching past this target
+     * to `adapter.sendSerial` is logged too. Delegating rather than publishing
+     * here is what stops a caller who DOES come through the target from being
+     * logged twice.
      *
      * @param {number} byte
      * @returns {boolean} whether a chip took it
@@ -389,9 +428,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // which the target has no way to know about — so a missing adapter is a
       // refusal here rather than a chip scan reimplemented badly.
       if (typeof adapter?.sendSerial !== 'function') return false;
-      const accepted = adapter.sendSerial(byte & 0xff) === true;
-      if (accepted) publishEvent('z80.serial', {byte: byte & 0xff});
-      return accepted;
+      return adapter.sendSerial(byte & 0xff) === true;
     },
 
     /**
@@ -482,14 +519,15 @@ export function createZ80DebugTarget(adapter, opts = {}) {
         if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
           return replayRefused('invalid-replay-input', 'z80.serial needs a byte in 0..255');
         }
-        // NOT routed through this.sendSerial, which records: a replayed byte
-        // re-entering the log would double every byte on a second pass.
-        if (typeof adapter?.sendSerial !== 'function') {
+        // The adapter's UNWRAPPED method: the wrapper records, and a replayed
+        // byte re-entering the log would double every byte on a second pass —
+        // and on a second TARGET, if two share the adapter.
+        if (!rawSendSerial) {
           return replayRefused('no-input-path',
             'this target was built without an adapter, and the serial input path '
             + 'lives there (z80-adapter.js:245)');
         }
-        return adapter.sendSerial(byte) === true
+        return rawSendSerial(byte) === true
           ? replayAccepted()
           : replayRefused('no-input-path', 'no chip in this build takes a received byte');
       }
