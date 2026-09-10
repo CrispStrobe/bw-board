@@ -508,6 +508,64 @@ test('fdiv agrees with JavaScript on every non-subnormal pair', {skip: SKIP}, as
     assert.ok(n > 9000, `only ${n} pairs checked`);
 });
 
+test('the fixed-point conversions agree with JavaScript', {skip: SKIP}, async () => {
+    // fix2float(m, n) is m / 2^n and float2fix(v, n) is trunc(v * 2^n). Both
+    // are the integer conversions with the exponent shifted by the
+    // fractional-bit count, so the significand and its rounding are shared —
+    // which is the point of implementing them that way rather than separately.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fx2f = view.getUint32(sf + 12 * 4, true);
+    const ufx2f = view.getUint32(sf + 14 * 4, true);
+    const f2fx = view.getUint32(sf + 8 * 4, true);
+    const f2ufx = view.getUint32(sf + 10 * 4, true);
+    let seed = 0x2545f491;
+    const next = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed; };
+
+    for (const [m, k] of [[1, 0], [1, 1], [1, 8], [-1, 8], [65536, 16], [-65536, 16],
+        [123456, 10], [2147483647, 31], [-2147483648, 31]]) {
+        const want = Math.fround(m / Math.pow(2, k));
+        if (SUBNORMAL(want)) continue;
+        assert.ok(run(fx2f, {0: m >>> 0, 1: k}) >= 0, `fix2float(${m}, ${k}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, F32(want), `fix2float(${m}, ${k})`);
+    }
+    for (let i = 0; i < 250; i++) {
+        const m = next() | 0, k = next() % 32;
+        const want = Math.fround(m / Math.pow(2, k));
+        if (SUBNORMAL(want)) continue;
+        assert.ok(run(fx2f, {0: m >>> 0, 1: k}) >= 0, `fix2float(${m}, ${k}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, F32(want), `fix2float(${m}, ${k})`);
+    }
+    for (let i = 0; i < 250; i++) {
+        const m = next() >>> 0, k = next() % 32;
+        const want = Math.fround(m / Math.pow(2, k));
+        if (SUBNORMAL(want)) continue;
+        assert.ok(run(ufx2f, {0: m, 1: k}) >= 0, `ufix2float(${m}, ${k}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, F32(want), `ufix2float(${m}, ${k})`);
+    }
+    // 2.5 at one fractional bit is 5, and -2.5 is -5: the pair that separates
+    // truncation from rounding once a scale is involved as well.
+    for (const [v, k, want] of [[1.5, 1, 3], [2.5, 1, 5], [-2.5, 1, -5], [0.25, 2, 1], [-0.25, 2, -1]]) {
+        assert.ok(run(f2fx, {0: F32(v), 1: k}) >= 0, `float2fix(${v}, ${k}) never returned`);
+        assert.equal(mcu.core.registers[0] | 0, want, `float2fix(${v}, ${k})`);
+    }
+    for (let i = 0; i < 250; i++) {
+        const v = R(F(next())), k = next() % 16;
+        const scaled = v * Math.pow(2, k);
+        if (!Number.isFinite(v) || Math.abs(scaled) >= 2147483648) continue;
+        assert.ok(run(f2fx, {0: F32(v), 1: k}) >= 0, `float2fix(${v}, ${k}) never returned`);
+        assert.equal(mcu.core.registers[0] | 0, Math.trunc(scaled) | 0, `float2fix(${v}, ${k})`);
+    }
+    for (let i = 0; i < 250; i++) {
+        const v = R(F(next())), k = next() % 16;
+        const scaled = v * Math.pow(2, k);
+        if (!Number.isFinite(v) || v < 0 || scaled >= 4294967296) continue;
+        assert.ok(run(f2ufx, {0: F32(v), 1: k}) >= 0, `float2ufix(${v}, ${k}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, Math.trunc(scaled) >>> 0, `float2ufix(${v}, ${k})`);
+    }
+});
+
 test('int2float agrees with JavaScript, ties included', {skip: SKIP}, async () => {
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
@@ -626,16 +684,14 @@ test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an ora
         'a subnormal operand is treated as zero — JavaScript would give 2.8e-45');
 });
 
-test('NAMED STOP: the fixed-point conversions and the transcendentals are still the stub', {skip: SKIP}, async () => {
+test('NAMED STOP: the five transcendentals are still the stub', {skip: SKIP}, async () => {
     // fadd, fsub and int2float have left this list. Implementing another
     // operator must BREAK this test, so whoever does it comes here and records
     // which one now works rather than leaving a stale claim standing.
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
     const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
-    const stubbed = [[8, 'float2fix'], [10, 'float2ufix'], [12, 'fix2float'],
-        [14, 'ufix2float'], [15, 'fcos'], [16, 'fsin'], [17, 'ftan'],
-        [19, 'fexp'], [20, 'fln']];
+    const stubbed = [[15, 'fcos'], [16, 'fsin'], [17, 'ftan'], [19, 'fexp'], [20, 'fln']];
     for (const [i, name] of stubbed) {
         const fn = view.getUint32(sf + i * 4, true);
         assert.ok(run(fn, {0: F32(2.5), 1: F32(1.0)}) >= 0, `${name} never returned`);

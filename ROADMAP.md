@@ -3892,10 +3892,20 @@ did not disappear.
   7      float2int    2,527 agree            (2026-09-10)
   9      float2uint   1,008 agree            (2026-09-10)
   11     int2float    4,025 agree
+  8      float2fix    1,488 agree            (2026-09-10)
+  10     float2ufix     710 agree            (2026-09-10)
+  12     fix2float    2,514 agree            (2026-09-10)
   13     uint2float   3,013 agree            (2026-09-10)
-  rest   float2fix, float2ufix, fix2float, ufix2float, fcos, fsin, ftan,
-         fexp, fln — quiet-NaN stub, unimplemented, named in the test
+  14     ufix2float   2,507 agree            (2026-09-10)
+  rest   fcos, fsin, ftan, fexp, fln — quiet-NaN stub, named in the test
 ```
+
+**THE FIXED-POINT CONVERSIONS ARE THE INTEGER ONES WITH A SHIFTED EXPONENT.**
+`fix2float(m, n)` is `int2float(m)` with the exponent reduced by n, and
+`float2fix(v, n)` is `float2int` with it raised by n before the range check —
+the significand and its rounding are identical, and only the scale differs.
+Implementing them that way rather than separately is why all four landed
+without a rounding bug: there was no new rounding to get wrong.
 
 **SECOND INCREMENT, 2026-09-10: sqrt and the integer conversions.** `fsqrt` is
 digit-by-digit rather than Newton, and the reason is the same one that made

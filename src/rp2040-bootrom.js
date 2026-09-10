@@ -1250,6 +1250,216 @@ export function buildBootrom () {
         0xbdf0, // pop  {r4-r7, pc}
     ]);
 
+    // ── fix2float(r0 = int32 m, r1 = n) → r0 = m / 2^n as a float ──────
+    //
+    // SF table index 12. This is int2float with the exponent reduced by the
+    // fractional-bit count, which is the whole of fixed-point conversion: the
+    // significand and its rounding are identical, and only the scale differs.
+    // n is parked in r6 at entry because the sign work below needs r1.
+    const fix2float = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n, kept clear of the sign work below
+        0x2800, // cmp  r0, #0
+        ['bne', 'fx2f_nz'],
+        0xbdf0, // pop  {r4-r7, pc}      ; +0.0
+        ['label', 'fx2f_nz'],
+        0x2100, // movs r1, #0           ; sign
+        0x2800, // cmp  r0, #0
+        ['bge', 'fx2f_pos'],
+        0x2101, // movs r1, #1
+        0x4240, // rsbs r0, r0, #0      ; magnitude
+        ['label', 'fx2f_pos'],
+        0x2200, // movs r2, #0           ; shift count
+        ['label', 'fx2f_norm'],
+        0x0003, // movs r3, r0
+        ['bmi', 'fx2f_normed'],
+        0x0040, // lsls r0, r0, #1
+        0x3201, // adds r2, #1
+        ['b', 'fx2f_norm'],
+        ['label', 'fx2f_normed'],
+        0x239e, // movs r3, #158
+        0x1a9b, // subs r3, r3, r2
+        0x1b9b, // subs r3, r3, r6       ; ...less the fractional bits
+        0x0002, // movs r2, r0
+        0x0612, // lsls r2, r2, #24      ; the 8 dropped bits
+        0x0a00, // lsrs r0, r0, #8
+        0x2a00, // cmp  r2, #0
+        ['beq', 'fx2f_range'],
+        0x0014, // movs r4, r2
+        ['bpl', 'fx2f_range'],                 // guard clear
+        0x0054, // lsls r4, r2, #1       ; sticky
+        ['bne', 'fx2f_up'],
+        0x0004, // movs r4, r0
+        0x07e4, // lsls r4, r4, #31      ; tie: to even
+        ['beq', 'fx2f_range'],
+        ['label', 'fx2f_up'],
+        0x3001, // adds r0, #1
+        0x0e04, // lsrs r4, r0, #24
+        0x2c00, // cmp  r4, #0
+        ['beq', 'fx2f_range'],
+        0x0840, // lsrs r0, r0, #1
+        0x3301, // adds r3, #1
+        ['label', 'fx2f_range'],
+        0x2b00, // cmp  r3, #0
+        ['bgt', 'fx2f_pack'],
+        0x2000, // movs r0, #0
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1           ; a signed zero
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'fx2f_pack'],
+        0x0240, // lsls r0, r0, #9
+        0x0a40, // lsrs r0, r0, #9
+        0x05db, // lsls r3, r3, #23
+        0x4318, // orrs r0, r3
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── ufix2float(r0 = uint32 m, r1 = n) → r0 = m / 2^n ──────────────
+    //
+    // SF table index 14. fix2float without the sign step.
+    const ufix2float = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n, kept clear of the sign work below
+        0x2800, // cmp  r0, #0
+        ['bne', 'ufx2f_nz'],
+        0xbdf0, // pop  {r4-r7, pc}      ; +0.0
+        ['label', 'ufx2f_nz'],
+        0x2100, // movs r1, #0           ; sign
+        0x2200, // movs r2, #0           ; shift count
+        ['label', 'ufx2f_norm'],
+        0x0003, // movs r3, r0
+        ['bmi', 'ufx2f_normed'],
+        0x0040, // lsls r0, r0, #1
+        0x3201, // adds r2, #1
+        ['b', 'ufx2f_norm'],
+        ['label', 'ufx2f_normed'],
+        0x239e, // movs r3, #158
+        0x1a9b, // subs r3, r3, r2
+        0x1b9b, // subs r3, r3, r6       ; ...less the fractional bits
+        0x0002, // movs r2, r0
+        0x0612, // lsls r2, r2, #24      ; the 8 dropped bits
+        0x0a00, // lsrs r0, r0, #8
+        0x2a00, // cmp  r2, #0
+        ['beq', 'ufx2f_range'],
+        0x0014, // movs r4, r2
+        ['bpl', 'ufx2f_range'],                 // guard clear
+        0x0054, // lsls r4, r2, #1       ; sticky
+        ['bne', 'ufx2f_up'],
+        0x0004, // movs r4, r0
+        0x07e4, // lsls r4, r4, #31      ; tie: to even
+        ['beq', 'ufx2f_range'],
+        ['label', 'ufx2f_up'],
+        0x3001, // adds r0, #1
+        0x0e04, // lsrs r4, r0, #24
+        0x2c00, // cmp  r4, #0
+        ['beq', 'ufx2f_range'],
+        0x0840, // lsrs r0, r0, #1
+        0x3301, // adds r3, #1
+        ['label', 'ufx2f_range'],
+        0x2b00, // cmp  r3, #0
+        ['bgt', 'ufx2f_pack'],
+        0x2000, // movs r0, #0
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1           ; a signed zero
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'ufx2f_pack'],
+        0x0240, // lsls r0, r0, #9
+        0x0a40, // lsrs r0, r0, #9
+        0x05db, // lsls r3, r3, #23
+        0x4318, // orrs r0, r3
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── float2fix(r0 = float, r1 = n) → r0 = int32, truncating ────────
+    //
+    // SF table index 8. float2int with the exponent RAISED by n before the
+    // range check, so the scaling happens for free inside the shift that was
+    // already there. Truncates toward zero, as C does.
+    const float2fix = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n
+        0x0fc1, // lsrs r1, r0, #31      ; sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24      ; exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9       ; mantissa
+        0x2000, // movs r0, #0           ; the answer for every refused case
+        0x2aff, // cmp  r2, #255
+        ['beq', 'f2fx_out'],                  // NaN and infinity, refused
+        0x1992, // adds r2, r2, r6       ; scale by the fractional bits
+        0x2a7f, // cmp  r2, #127
+        ['blt', 'f2fx_out'],                  // |x| < 1 after scaling
+        0x2a9e, // cmp  r2, #158
+        ['bge', 'f2fx_out'],                  // out of range, refused
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4           ; implicit 1
+        0x0014, // movs r4, r2
+        0x3c96, // subs r4, #150
+        0x2c00, // cmp  r4, #0
+        ['blt', 'f2fx_right'],
+        0x40a3, // lsls r3, r4
+        ['b', 'f2fx_done'],
+        ['label', 'f2fx_right'],
+        0x4264, // rsbs r4, r4, #0
+        0x40e3, // lsrs r3, r4           ; truncate toward zero
+        ['label', 'f2fx_done'],
+        0x0018, // movs r0, r3
+        0x2900, // cmp  r1, #0
+        ['beq', 'f2fx_out'],
+        0x4240, // rsbs r0, r0, #0
+        ['label', 'f2fx_out'],
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── float2ufix(r0 = float, r1 = n) → r0 = uint32, truncating ──────
+    //
+    // SF table index 10. float2fix without the sign, and refusing a negative
+    // input the way float2uint does.
+    const float2ufix = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n
+        0x0fc1, // lsrs r1, r0, #31      ; sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24      ; exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9       ; mantissa
+        0x2000, // movs r0, #0           ; the answer for every refused case
+        0x2900, // cmp  r1, #0
+        ['bne', 'f2ufx_out'],                // negative: undefined in C
+        0x2aff, // cmp  r2, #255
+        ['beq', 'f2ufx_out'],                  // NaN and infinity, refused
+        0x1992, // adds r2, r2, r6       ; scale by the fractional bits
+        0x2a7f, // cmp  r2, #127
+        ['blt', 'f2ufx_out'],                  // |x| < 1 after scaling
+        0x2a9f, // cmp  r2, #159
+        ['bge', 'f2ufx_out'],                  // out of range, refused
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4           ; implicit 1
+        0x0014, // movs r4, r2
+        0x3c96, // subs r4, #150
+        0x2c00, // cmp  r4, #0
+        ['blt', 'f2ufx_right'],
+        0x40a3, // lsls r3, r4
+        ['b', 'f2ufx_done'],
+        ['label', 'f2ufx_right'],
+        0x4264, // rsbs r4, r4, #0
+        0x40e3, // lsrs r3, r4           ; truncate toward zero
+        ['label', 'f2ufx_done'],
+        0x0018, // movs r0, r3
+        ['label', 'f2ufx_out'],
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
     // ── the single-precision soft-float stub ───────────────────────────
     //
     // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
@@ -1363,6 +1573,10 @@ export function buildBootrom () {
     view.setUint32(sfTable + 1 * 4, thumb(fsub), true);
     view.setUint32(sfTable + 2 * 4, thumb(fmul), true);
     view.setUint32(sfTable + 3 * 4, thumb(fdiv), true);
+    view.setUint32(sfTable + 12 * 4, thumb(fix2float), true);
+    view.setUint32(sfTable + 14 * 4, thumb(ufix2float), true);
+    view.setUint32(sfTable + 8 * 4, thumb(float2fix), true);
+    view.setUint32(sfTable + 10 * 4, thumb(float2ufix), true);
     view.setUint32(sfTable + 6 * 4, thumb(fsqrt), true);
     view.setUint32(sfTable + 7 * 4, thumb(float2int), true);
     view.setUint32(sfTable + 9 * 4, thumb(float2uint), true);
