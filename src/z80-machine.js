@@ -54,6 +54,33 @@ export const CPM64K = Object.freeze({
     ],
 });
 
+/**
+ * SAME TICK COUNT, EITHER SPELLING. `debugTime()` returns a BigInt and a machine
+ * counts in Numbers, so a checkpoint whose `time` a debug bridge supplied
+ * carries BigInt ticks while `state.cycles` is a Number — and `!==` between them
+ * is false for identical digits. Landed 2026-09-10, this refused every
+ * debug-target checkpoint restore on m6502 and z80 with
+ * INVALID_CHECKPOINT_TIME while both values printed the same number.
+ *
+ * The consumer layer already had this compensation in five separate places
+ * (run-to.js accepts `Number.isSafeInteger(t) || typeof t === 'bigint'`); the
+ * machines did not, because until the read and the stamp agreed on type nobody
+ * had ever handed them a BigInt.
+ */
+const sameTicks = (a, b) => {
+    if (typeof a === 'bigint' || typeof b === 'bigint') {
+        // The a-side guard is INERT TODAY and is recorded as inert rather than
+        // removed: `state.cycles` is always a Number, so reaching it needs a
+        // BigInt on the b side, which no machine here produces. It exists
+        // because BigInt(1.5) THROWS rather than returning false, so the day a
+        // machine counts in BigInt its absence is a crash and not a refusal.
+        if (!(typeof a === 'bigint' || Number.isSafeInteger(a))) return false;
+        if (!(typeof b === 'bigint' || Number.isSafeInteger(b))) return false;
+        return BigInt(a) === BigInt(b);
+    }
+    return a === b;
+};
+
 export class Z80Machine {
     /** Every scalar the core carries — the snapshot contract. */
     static CPU_STATE = [
@@ -411,7 +438,7 @@ export class Z80Machine {
                     Number.isSafeInteger(state.zx128.bank[key]))))) {
             return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT'};
         }
-        if (!checkpoint.time || checkpoint.time.ticks !== state.cycles ||
+        if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
             checkpoint.time.hz !== this.clockHz ||
             !/^z80-tstates(?:-reset-\d+)?$/.test(checkpoint.time.domain)) {
             return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};

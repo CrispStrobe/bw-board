@@ -201,3 +201,45 @@ for (const { name, make, shapeChecked } of [
         }
     });
 }
+
+// THE TICK COUNT HAS TWO SPELLINGS AND THEY MEAN THE SAME THING. `debugTime()`
+// returns a BigInt; a machine counts in Numbers. A checkpoint whose `time` came
+// from a debug bridge therefore carries BigInt ticks against a Number
+// `state.cycles`, and `!==` between them is false for identical digits. Landed
+// 2026-09-10, that refused EVERY debug-target checkpoint restore on m6502 and
+// z80 — nine cases red in lite, all of them printing two numbers that looked
+// the same. So both machines accept either spelling of the SAME number, and
+// this holds that they still refuse a different one.
+//
+// i8086 is excluded and says why: it validates no time at all, because its
+// checkpoint time is written by the debug layer's event clock rather than
+// derived from the machine, so the machine cannot judge it.
+for (const { name, make, validatesTime } of [
+    { name: 'm6502', make: () => new M6502Machine(), validatesTime: true },
+    { name: 'z80', make: () => new Z80Machine(), validatesTime: true },
+    { name: 'i8086', make: () => new I8086Machine(), validatesTime: false },
+]) {
+    test(`${name}: a BigInt tick count is ${validatesTime ? 'the same time, and a wrong one still refuses' : 'not judged here at all'}`, () => {
+        const source = make();
+        source.step();
+        source.step();
+        const cp = source.captureCheckpoint();
+        assert.equal(typeof cp.time.ticks, 'number', 'a machine stamps its own capture in Numbers');
+
+        const asBigInt = { ...cp, time: { ...cp.time, ticks: BigInt(cp.time.ticks) } };
+        assert.equal(make().restoreCheckpoint(asBigInt), undefined,
+            `${name} refused a checkpoint whose ticks are the same number spelled as a BigInt`);
+
+        if (!validatesTime) return;
+        for (const [label, ticks] of [
+            ['a BigInt one tick off', BigInt(cp.time.ticks) + 1n],
+            ['a Number one tick off', cp.time.ticks + 1],
+            ['a string', 'nope'],
+            ['a fraction', cp.time.ticks + 0.5],
+        ]) {
+            const refusal = make().restoreCheckpoint({ ...cp, time: { ...cp.time, ticks } });
+            assert.equal(refusal?.code, 'INVALID_CHECKPOINT_TIME',
+                `${name} accepted ${label} as the captured time`);
+        }
+    });
+}

@@ -167,6 +167,33 @@ export const GPASCAL = Object.freeze({
     serial: { kind: 'via-bitbang', chip: 'via1', txBit: 1, rxBit: 0, cb2: true, baud: 4800 },
 });
 
+/**
+ * SAME TICK COUNT, EITHER SPELLING. `debugTime()` returns a BigInt and a machine
+ * counts in Numbers, so a checkpoint whose `time` a debug bridge supplied
+ * carries BigInt ticks while `state.cycles` is a Number — and `!==` between them
+ * is false for identical digits. Landed 2026-09-10, this refused every
+ * debug-target checkpoint restore on m6502 and z80 with
+ * INVALID_CHECKPOINT_TIME while both values printed the same number.
+ *
+ * The consumer layer already had this compensation in five separate places
+ * (run-to.js accepts `Number.isSafeInteger(t) || typeof t === 'bigint'`); the
+ * machines did not, because until the read and the stamp agreed on type nobody
+ * had ever handed them a BigInt.
+ */
+const sameTicks = (a, b) => {
+    if (typeof a === 'bigint' || typeof b === 'bigint') {
+        // The a-side guard is INERT TODAY and is recorded as inert rather than
+        // removed: `state.cycles` is always a Number, so reaching it needs a
+        // BigInt on the b side, which no machine here produces. It exists
+        // because BigInt(1.5) THROWS rather than returning false, so the day a
+        // machine counts in BigInt its absence is a crash and not a refusal.
+        if (!(typeof a === 'bigint' || Number.isSafeInteger(a))) return false;
+        if (!(typeof b === 'bigint' || Number.isSafeInteger(b))) return false;
+        return BigInt(a) === BigInt(b);
+    }
+    return a === b;
+};
+
 export class M6502Machine {
     /**
      * @param {MachineConfig} [config]
@@ -877,7 +904,7 @@ export class M6502Machine {
             return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT',
                 details: {reason: 'cycle counter or pin levels are not a restorable shape'}};
         }
-        if (!checkpoint.time || checkpoint.time.ticks !== state.cycles ||
+        if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
             checkpoint.time.hz !== this.clockHz ||
             !/^m6502-cycles(?:-reset-\d+)?$/.test(checkpoint.time.domain)) {
             return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
