@@ -185,6 +185,11 @@ surface from a proposed one, and the next target added here will need it again.
 | `m6502-debug` | `m6502.buttons`, `m6502.serial`, `m6502.nmi` | `m6502-cycles` | master |
 | `i8086-debug` | `i8086.key`, `.gpio`, `.serial`, `.nmi`, `.rom` | `i8086-cycles` | master |
 
+Epoch suffixes: `-rewind-N` on the z80, 6502 and 8086, whose epochs are bumped
+by a DETECTED rewind; `-reset-N` on the 8051, whose epoch is bumped by an
+explicit trigger inside its `reset()`. The suffix names the mechanism, so the
+two spellings are a distinction and not an inconsistency.
+
 The 8051 refuses everything while a board is attached, and the reason is worth
 repeating because the first version of that guard got it wrong: **the hazard is
 the attached board, not the mode.** A live board re-asserts its own pin values
@@ -193,23 +198,43 @@ replayed level is overwritten on the next run slice. The guard is `if (board)`.
 
 ## Open, and deliberately not fixed in passing
 
-- **The domain strings disagree, and the rename is scheduled rather than
-  refused.** `8051-input-ns-reset-N`, `z80-cycles-rewind-N`,
-  `m6502-cycles-rewind-N`, `i8086-cycles-reset-N`. Two of them say "reset" and
-  neither bumps on a reset: on the 6502 and the 8086, `reset()` ADVANCES the
-  clock by the real reset sequence's cost (`m6502-machine.js:510`,
-  `i8086-machine.js:1130`).
+- ~~**The domain strings disagree.**~~ **DONE, 2026-09-10, and the correction
+  matters more than the fix.** The item used to read: *"two of them say reset
+  and neither bumps on a reset"*. That was true of the 8086 and FALSE of the
+  8051 — a claim verified about one member and written about two, which is the
+  species this page already warns about, committed by the page itself.
 
-  Renaming one side alone breaks replay of existing logs — a log carries the
-  string and a replayer compares by equality — which is why the 8086's is kept
-  for now. **The coupling is three call sites here and three in the downstream
-  copy**, measured rather than asserted, which is the whole of the argument: a
-  rename on one side leaves six sites disagreeing about what a timeline is
-  called. But "a wrong name kept because the consumer knows it" is a debt that
-  gets more expensive with every target that copies the pattern, and there are
-  four. **The ruling is: do the rename as one change across both sides**, with
-  a note that logs recorded before it are not replayable after it. Not before,
-  and not never.
+  Measured: the 8051's epoch bumps at exactly one place, inside its `reset()`
+  (`emu8051-adapter.js`), and that reset takes its clock to zero. **Its epoch
+  really is a reset epoch and `8051-input-ns-reset-N` is the correct name.**
+  The 8086's was not: `i8086-machine.js:1130` does `this.cycles += 4`, so a
+  reset ADVANCES that clock, and the only backward move is `loadState:1817`.
+
+  So the fix was one target, not two: `i8086-cycles-reset-N` →
+  `i8086-cycles-rewind-N`, converging with `z80-cycles-rewind-N` and
+  `m6502-cycles-rewind-N`. The goal was never that all four read alike; it is
+  that each name matches its own mechanism, and now all four do. **Do not
+  "converge" the 8051's.**
+
+  **A log recorded before the rename is not replayable, and there is no
+  migration.** A replayer compares `domain` by equality, so a log carrying
+  `i8086-cycles-reset-2` and a live run producing `i8086-cycles-rewind-2`
+  describe the same era and will not match. That note lives in
+  `src/i8086-debug.js` as well as here, because the person who needs it is
+  someone staring at a replay that refuses for no visible reason — and the test
+  that asserts the new string names the old one for the same reason: a rename
+  leaving no trace of the old spelling makes their grep come back empty.
+
+  **The coupling was over-stated when this item was written, and the accurate
+  version is narrower.** The claim was that a one-sided rename breaks replay.
+  It does not: the domain is stamped by the target and compared by the
+  replayer, and for the downstream consumer both of those are downstream, so
+  each repo stays internally consistent on its own. What a one-sided rename
+  actually breaks is CONVERGENCE — the vendored copy would gain a fresh
+  divergence in the same file being grafted to remove one. A real reason to
+  land the two together, and a weaker one than the one first given. Recorded
+  because acting on the stronger sentence would have been acting on something
+  the measurement does not say.
 
   **It is not a deletion, and calling it one sends the next reader to the wrong
   tool.** An earlier version of this page, and the commit that ported the apply

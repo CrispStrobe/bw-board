@@ -204,19 +204,42 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     // ─── The replay surface ─────────────────────────────────────────────
     // Declared in debug-replay-contract.js. The APPLY half is a PORT of the
     // implementation a downstream consumer has been running against this target
-    // for months; it is moved here so the copy can be deleted rather than kept
-    // in step. The RECORD half is new: downstream records at the driver, so a
-    // key delivered straight to the target was never in the log.
+    // for months, moved here so the two stop being maintained separately. (An
+    // earlier version of this comment said "so the copy can be deleted". That
+    // was true of the APPLY HALF and false of the FILE: the downstream copy
+    // holds ~196 lines this tree has nothing for — checkpoint capture, a
+    // video-frame cache, a DOS trap layer, disassembler integration — so it is
+    // a graft, not a deletion.) The RECORD half is new: downstream records at
+    // the driver, so a key delivered straight to the target was never logged.
     //
-    // THE EPOCH MECHANISM IS THE PORTED ONE, INCLUDING ITS NAME. The domain
-    // string stays `i8086-cycles-reset-N` because a log recorded by the existing
-    // consumer carries that string and equality is what a replayer compares.
-    // The name is wrong and the wrongness is recorded rather than fixed here: it
-    // does not bump on a reset. i8086-machine.js:1130 resets the CPU and does
-    // `this.cycles += 4` — it ADVANCES by the reset sequence's cost, exactly as
-    // the 6502's does. The only backward move is `this.cycles = s.cycles` in
-    // loadState (i8086-machine.js:1817); the constructor's `= 0` at :527 is the
-    // only other assignment. Renaming it is a coordinated change on both sides.
+    // THE EPOCH IS A REWIND EPOCH AND IS NOW NAMED ONE. It was
+    // `i8086-cycles-reset-N` until 2026-09-10, ported in under that name from
+    // the downstream copy, and the name was wrong: this epoch does not bump on
+    // a reset. i8086-machine.js:1130 resets the CPU and does `this.cycles += 4`
+    // — it ADVANCES by the reset sequence's cost, exactly as the 6502's does.
+    // The only backward move is `this.cycles = s.cycles` in loadState
+    // (i8086-machine.js:1817); the constructor's `= 0` at :527 is the only
+    // other assignment. So it bumps on a REWIND, which is what the z80 and 6502
+    // targets have always called it, and this target has stopped being the odd
+    // one out.
+    //
+    // A LOG RECORDED BEFORE THAT RENAME IS NOT REPLAYABLE, and there is no
+    // migration. This is written here rather than only in a commit message
+    // because the person who needs it is someone staring at a replay that
+    // refuses for no visible reason. A replayer compares `domain` by EQUALITY
+    // to decide whether two facts came from the same timeline; a log carrying
+    // `i8086-cycles-reset-2` and a live run producing `i8086-cycles-rewind-2`
+    // describe the same era and will not match. Re-record. The alternative was
+    // keeping a name that says "reset" about something that is not a reset, in
+    // a surface four targets now copy from, which gets more expensive with each
+    // one.
+    //
+    // NOT EVERY `-reset-` IN THIS TREE IS WRONG. The 8051 adapter's
+    // `8051-input-ns-reset-N` is CORRECT and must not be "converged" with this:
+    // measured, its epoch bumps at exactly one place, inside its `reset()`
+    // (emu8051-adapter.js), and that reset takes its clock to zero. Its epoch
+    // really is a reset epoch. The name matches the mechanism on both targets
+    // now, which is the point — not that all four should read alike.
     let eventTimeEpoch = 0;
     let lastEventTicks = -1;
     /** Levels only — see publishInputLevel. Events must not consult this. */
@@ -239,7 +262,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         lastEventTicks = ticks;
         return {
             ticks,
-            domain: eventTimeEpoch ? `i8086-cycles-reset-${eventTimeEpoch}` : 'i8086-cycles',
+            domain: eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles',
             hz: machine.clockHz
         };
     };
@@ -537,7 +560,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         debugTime() {
             return {
                 ticks: machine.cycles,
-                domain: eventTimeEpoch ? `i8086-cycles-reset-${eventTimeEpoch}` : 'i8086-cycles',
+                domain: eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles',
                 hz: machine.clockHz
             };
         },

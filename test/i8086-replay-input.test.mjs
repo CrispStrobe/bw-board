@@ -379,8 +379,24 @@ describe('the event clock, and the rewind it can and cannot see', () => {
     target.setInput('ppi1', 'b', 2, 1);          // the SAME level, new timeline
 
     assert.equal(facts.length, 2, 'the cleared map lets the repeat through');
-    assert.equal(facts[1].time.domain, 'i8086-cycles-reset-1');
+    // RENAMED 2026-09-10: this was `i8086-cycles-reset-1`. The old string is
+    // named here on purpose — someone debugging a replay that refuses for no
+    // visible reason will grep for the string in their log, and a rename that
+    // leaves no trace of the old name makes that grep come back empty. A log
+    // recorded before the rename is not replayable and there is no migration;
+    // see the note in src/i8086-debug.js.
+    assert.equal(facts[1].time.domain, 'i8086-cycles-rewind-1');
     assert.ok(facts[1].time.ticks < highTicks);
+
+    // THE TWO SPELLING SITES ARE PINNED TOGETHER. eventTime() stamps facts and
+    // debugTime() reports the clock, and each builds the domain string itself —
+    // so a rename applied to one and not the other leaves a target whose facts
+    // and whose reported time disagree about which timeline they are on, only
+    // once an epoch exists. Every other assertion here runs in epoch 0, where
+    // both spellings are the bare 'i8086-cycles' and the divergence is
+    // invisible. (Found by mutating the rename rather than by reading it.)
+    assert.equal(target.debugTime().domain, facts[1].time.domain,
+      'the reported clock and the stamped facts must name the same era');
   });
 
   it('THE LIMIT, pinned: a rewind that runs past its own high-water mark is invisible', () => {
@@ -403,11 +419,13 @@ describe('the event clock, and the rewind it can and cannot see', () => {
       'monotonic from here: the epoch does not bump, and this is the known limit');
   });
 
-  it('THE DOMAIN SAYS "reset" AND NOTHING RESETS IT: reset ADVANCES the clock', () => {
-    // The name is inherited from the downstream log format and kept for wire
-    // compatibility. i8086-machine.js:1130 does `this.cycles += 4`, so a reset
-    // never bumps the epoch — asserted so the misnomer cannot quietly become a
-    // belief about the behaviour.
+  it('A RESET DOES NOT BUMP THE EPOCH, because a reset ADVANCES this clock', () => {
+    // This test was called 'THE DOMAIN SAYS "reset" AND NOTHING RESETS IT'
+    // while the domain was `i8086-cycles-reset-N`. The domain now says rewind,
+    // which is what the epoch actually tracks, so the test is no longer about a
+    // misnomer — but the assertion is the same one and still worth having:
+    // i8086-machine.js:1130 does `this.cycles += 4`, so a reset moves the clock
+    // FORWARD and nothing about it starts a new era.
     const {target, machine} = makeTarget();
     const {facts} = record(target);
     target.keyIn(0x1e);
@@ -416,6 +434,8 @@ describe('the event clock, and the rewind it can and cannot see', () => {
     assert.ok(machine.cycles > before, 'reset advanced the clock');
     target.keyIn(0x1e);
     assert.equal(facts[1].time.domain, 'i8086-cycles', 'no epoch was bumped');
+    assert.ok(!facts.some(f => /reset/.test(f.time.domain)),
+      'and no fact carries the old -reset- spelling');
   });
 
   it('debugTime is a READ: calling it during a rewind starts no epoch', () => {
