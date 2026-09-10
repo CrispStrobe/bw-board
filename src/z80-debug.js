@@ -333,16 +333,6 @@ export function createZ80DebugTarget(adapter) {
     },
 
     /**
-     * The RECORD half: subscribe to host-input facts as they are observed.
-     * Returns an unsubscribe function.
-     *
-     * Named `onDebugInput` because that is the name the recorder consumes —
-     * `subscribeDebugTargetInputs` tests for it and skips a target without one.
-     *
-     * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
-     * @returns {() => void} unsubscribe
-     */
-    /**
      * A received serial byte, RECORDED on the way in.
      *
      * THIS METHOD IS THE CORRECTION. The first version of this surface refused
@@ -376,6 +366,16 @@ export function createZ80DebugTarget(adapter) {
       return accepted;
     },
 
+    /**
+     * The RECORD half: subscribe to host-input facts as they are observed.
+     * Returns an unsubscribe function.
+     *
+     * Named `onDebugInput` because that is the name the recorder consumes —
+     * `subscribeDebugTargetInputs` tests for it and skips a target without one.
+     *
+     * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
+     * @returns {() => void} unsubscribe
+     */
     onDebugInput(listener) {
       if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
       inputListeners.push(listener);

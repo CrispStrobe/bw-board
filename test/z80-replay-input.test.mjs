@@ -32,6 +32,7 @@ import assert from 'node:assert/strict';
 import { Z80Machine } from '../src/z80-machine.js';
 import { createZ80DebugTarget } from '../src/z80-debug.js';
 import { createZ80Adapter } from '../src/z80-adapter.js';
+import { readFileSync } from 'node:fs';
 import { replayOutcome, canApplyReplayInput, canRecordDebugInput, replaySupport }
   from '../src/debug-replay-contract.js';
 
@@ -437,4 +438,60 @@ test('nothing throws — every failure arrives as a return value', () => {
       `applyReplayInput(${JSON.stringify(input)}) must refuse rather than throw`);
     assert.equal(outcome.accepted, false);
   }
+});
+
+// ─── A HOLLOW TARGET REFUSES, IT DOES NOT THROW ────────────────────────────
+//
+// The contract's central rule: applyReplayInput never throws for an input it
+// merely cannot serve. This target already satisfied it — checked, not assumed
+// — and the enumeration is here anyway, because satisfying it once is not the
+// property worth having. The 6502 and 8086 targets each threw on producers
+// added an hour after the same rule had been applied correctly to a sibling
+// producer in the same file. A rule learned about one call site is not yet a
+// rule about the method, and a rule about the method is not yet a rule about
+// the file.
+//
+// `{machine: {cpu: {}}}` is not a hypothetical construction:
+// `code-address-progression.test.mjs:32` builds it literally, and
+// `z80-machine.test.mjs:77`, `debug-parity.test.mjs:23` and
+// `audio-ay.test.mjs:219` all construct over a bare `{machine}`.
+
+const Z80_SOURCE = readFileSync(new URL('../src/z80-debug.js', import.meta.url), 'utf8');
+const Z80_PRODUCERS = [...new Set(
+  [...Z80_SOURCE.matchAll(/input\?\.producer === '(z80\.[a-z]+)'/g)].map(m => m[1]))];
+
+// A VALID payload per producer. Malformed ones would refuse at the validation
+// step and never reach the hardware, so a table of those would pass against a
+// throwing implementation too.
+const Z80_VALID = {
+  'z80.buttons': { mask: 1 },
+  'z80.keys': { names: ['a'] },
+  'z80.serial': { byte: 0x41 }
+};
+
+test('the payload table covers every producer the source handles', () => {
+  assert.deepEqual(Z80_PRODUCERS.sort(), Object.keys(Z80_VALID).sort(),
+    'a producer with no valid payload here is a producer this test does not check');
+  assert.ok(Z80_PRODUCERS.length >= 3, `the scan found only ${Z80_PRODUCERS.length}`);
+});
+
+test('every producer refuses on a hollow target, with a VALID payload', () => {
+  const target = createZ80DebugTarget({ machine: { cpu: {} } });
+  for (const producer of Z80_PRODUCERS) {
+    const outcome = replayOutcome(
+      target.applyReplayInput({ producer, payload: Z80_VALID[producer] }));
+    assert.equal(outcome.accepted, false, `${producer} must refuse`);
+    assert.equal(outcome.code, 'no-input-path',
+      `${producer} refused for the wrong reason: ${outcome.reason}`);
+  }
+});
+
+test('the record entry points refuse on a hollow target too', () => {
+  const target = createZ80DebugTarget({ machine: { cpu: {} } });
+  assert.equal(target.setButtons(1), false);
+  assert.equal(target.setKeys(['a']), false);
+  assert.equal(target.sendSerial(0x41), false);
+  // And an unknown producer is still told what it was.
+  const outcome = replayOutcome(target.applyReplayInput({ producer: 'z80.paddle', payload: {} }));
+  assert.equal(outcome.code, 'unsupported-replay-input');
 });
