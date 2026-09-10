@@ -156,6 +156,20 @@ export function createZ80DebugTarget(adapter) {
   // Call-class opcodes for step-over: CALL nn, CALL cc,nn, and RST n.
   const isCallClass = (op) => op === 0xcd || (op & 0xc7) === 0xc4 || (op & 0xc7) === 0xc7;
 
+  /**
+   * Emit a fact with NO dedup, because a serial byte is an EVENT and not a
+   * level: the same byte typed twice is two characters, and suppressing the
+   * second would replay a transcript with something missing. The dedup map is
+   * not consulted at all — a level's key could otherwise collide with it.
+   */
+  function publishEvent(producer, payload) {
+    noticeRewind();
+    const fact = {time: inputTime(), producer, payload: {...payload}};
+    for (const listener of inputListeners) {
+      listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
+    }
+  }
+
   return {
     capabilities() {
       return { steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true, consumes: [] };
@@ -328,6 +342,40 @@ export function createZ80DebugTarget(adapter) {
      * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
      * @returns {() => void} unsubscribe
      */
+    /**
+     * A received serial byte, RECORDED on the way in.
+     *
+     * THIS METHOD IS THE CORRECTION. The first version of this surface refused
+     * `z80.serial` by name, saying "this build has no serial input path for the
+     * Z80 target". It has one: `z80-adapter.js:245`, whose own header line 14
+     * calls it "sendSerial like every other serial-bearing adapter". The claim
+     * was written after greping `z80-machine.js` — the file that declares the
+     * clock — and not the adapter the target already holds a reference to. A
+     * refusal naming a gap the build does not have is worse than an absent
+     * method: an absent method is a TypeError somebody fixes, and a refusal is
+     * a considered statement that the tier CANNOT do it, which a driver
+     * believes.
+     *
+     * THE BYPASS IS STATED RATHER THAN CLAIMED CLOSED: a caller holding the
+     * adapter can still call `adapter.sendSerial` directly and will not be
+     * recorded. Closing that means recording inside the adapter, which is where
+     * the 8051 does it; this target's machinery lives here because
+     * `onDebugInput` does.
+     *
+     * @param {number} byte
+     * @returns {boolean} whether a chip took it
+     */
+    sendSerial(byte) {
+      // Several callers build this target over a bare {machine}. The adapter is
+      // where the serial path lives — including the CP/M mode's key queue,
+      // which the target has no way to know about — so a missing adapter is a
+      // refusal here rather than a chip scan reimplemented badly.
+      if (typeof adapter?.sendSerial !== 'function') return false;
+      const accepted = adapter.sendSerial(byte & 0xff) === true;
+      if (accepted) publishEvent('z80.serial', {byte: byte & 0xff});
+      return accepted;
+    },
+
     onDebugInput(listener) {
       if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
       inputListeners.push(listener);
@@ -388,8 +436,20 @@ export function createZ80DebugTarget(adapter) {
           : replayRefused('no-input-path', 'this machine has no ULA to receive key names');
       }
       if (input?.producer === 'z80.serial') {
-        return replayRefused('no-input-path',
-          'this build has no serial input path for the Z80 target');
+        const byte = input?.payload?.byte;
+        if (!Number.isInteger(byte) || byte < 0 || byte > 0xff) {
+          return replayRefused('invalid-replay-input', 'z80.serial needs a byte in 0..255');
+        }
+        // NOT routed through this.sendSerial, which records: a replayed byte
+        // re-entering the log would double every byte on a second pass.
+        if (typeof adapter?.sendSerial !== 'function') {
+          return replayRefused('no-input-path',
+            'this target was built without an adapter, and the serial input path '
+            + 'lives there (z80-adapter.js:245)');
+        }
+        return adapter.sendSerial(byte) === true
+          ? replayAccepted()
+          : replayRefused('no-input-path', 'no chip in this build takes a received byte');
       }
       return replayRefused('unsupported-replay-input',
         `no replay path for producer ${input?.producer ?? '(none)'}`);

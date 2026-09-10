@@ -31,6 +31,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Z80Machine } from '../src/z80-machine.js';
 import { createZ80DebugTarget } from '../src/z80-debug.js';
+import { createZ80Adapter } from '../src/z80-adapter.js';
 import { replayOutcome, canApplyReplayInput, canRecordDebugInput, replaySupport }
   from '../src/debug-replay-contract.js';
 
@@ -318,16 +319,106 @@ test('a malformed button mask is refused before it reaches the machine', () => {
   }
 });
 
-test('serial is refused by name, because this build has no path for it', () => {
-  // A downstream copy routes this through adapter.sendSerial, which is absent
-  // here. Refusing names the gap; accepting would replay nothing and say it
-  // worked.
+// ─── serial: a CORRECTION, and the tests the corrected claim needs ─────────
+//
+// This block replaces a test called "serial is refused by name, because this
+// build has no path for it". It passed, and its subject was false. The build
+// has a serial input path: `z80-adapter.js:245`, whose own header at line 14
+// calls it "sendSerial like every other serial-bearing adapter". What was
+// actually absent was the ADAPTER — `zx()` above builds the target over a bare
+// `{machine}` — and the test could not tell the two apart, because both give
+// `accepted: false`. A refusal reason is a claim about the BUILD, and the test
+// only ever exercised one construction of it.
+//
+// So the fixture is the thing that had to change first: a target over a real
+// adapter is what makes the two answers distinguishable.
+
+/** A target over a REAL adapter — SEARLE, which carries an ACIA. */
+const searle = () => {
+  const adapter = createZ80Adapter({});
+  return { adapter, machine: adapter.machine, target: createZ80DebugTarget(adapter) };
+};
+
+test('serial APPLIES through the adapter, and the byte reaches the ACIA', () => {
+  const { target, machine } = searle();
+  const acia = machine.chips.acia1;
+  assert.equal(acia.rdrf, false, 'idle before replay');
+  const outcome = replayOutcome(
+    target.applyReplayInput({ producer: 'z80.serial', payload: { byte: 0x41 } }));
+  assert.equal(outcome.accepted, true);
+  assert.equal(acia.rdrf, true, 'RDRF raised, as a real UART would');
+  // MC6850: RS=0 is status (bit 0 = RDRF), RS=1 is the data register. The 6502
+  // tier's W65C51 has them the other way round, which is why this is measured
+  // per chip rather than copied across targets.
+  assert.equal(acia.read(0) & 0x01, 1, 'status shows data ready');
+  assert.equal(acia.read(1), 0x41, 'and the data register holds the recorded byte');
+});
+
+test('serial is an EVENT: the same byte twice is two facts and two bytes', () => {
+  // Not a level. Deduplicating it would replay a transcript with a character
+  // missing, and nothing would report an error.
+  const live = searle();
+  const facts = [];
+  live.target.onDebugInput(f => facts.push(f));
+  assert.equal(live.target.sendSerial(0x41), true);
+  assert.equal(live.target.sendSerial(0x41), true);
+  assert.equal(facts.length, 2);
+  assert.deepEqual(facts.map(f => f.payload.byte), [0x41, 0x41]);
+  assert.equal(facts[0].producer, 'z80.serial');
+  assert.equal(facts[0].time.domain, 'z80-cycles');
+
+  const replayed = searle();
+  const echoed = [];
+  replayed.target.onDebugInput(f => echoed.push(f));
+  for (const fact of facts) {
+    assert.equal(replayOutcome(replayed.target.applyReplayInput(fact)).accepted, true);
+  }
+  assert.equal(replayed.machine.chips.acia1.read(1), 0x41, 'the replayed ACIA has it');
+  assert.equal(echoed.length, 0, 'a replayed byte must not re-enter the log');
+});
+
+test('a target built WITHOUT an adapter refuses, and says that is why', () => {
+  // The distinction the old test could not draw. The refusal is still correct
+  // for this construction — it just has to name the right absence.
   const { target } = zx();
   const outcome = replayOutcome(
     target.applyReplayInput({ producer: 'z80.serial', payload: { byte: 0x41 } }));
   assert.equal(outcome.accepted, false);
   assert.equal(outcome.code, 'no-input-path');
-  assert.match(outcome.reason, /serial/);
+  assert.match(outcome.reason, /without an adapter/);
+  assert.equal(target.sendSerial(0x41), false, 'and the record entry point agrees');
+});
+
+test('a build with no serial-capable chip refuses, and that is a different absence', () => {
+  const adapter = createZ80Adapter({ config: {
+    clockHz: 3_500_000,
+    regions: [{ kind: 'ram', start: 0x0000, end: 0xffff }],
+    ports: []
+  } });
+  const target = createZ80DebugTarget(adapter);
+  const outcome = replayOutcome(
+    target.applyReplayInput({ producer: 'z80.serial', payload: { byte: 0x41 } }));
+  assert.equal(outcome.accepted, false);
+  assert.equal(outcome.code, 'no-input-path');
+  assert.match(outcome.reason, /no chip/);
+
+  // And the record half agrees: a byte no chip took is not a fact. Logging it
+  // would replay a character that never arrived, and the log would be longer
+  // than the run — the same defect as the refusal, from the other side.
+  const facts = [];
+  target.onDebugInput(f => facts.push(f));
+  assert.equal(target.sendSerial(0x41), false, 'nothing took it');
+  assert.equal(facts.length, 0, 'so it is not a fact');
+});
+
+test('serial refuses a byte outside 0..255 as a BAD INPUT, not a bad build', () => {
+  const { target } = searle();
+  for (const byte of [-1, 256, 1.5, undefined, '0x41']) {
+    const outcome = replayOutcome(
+      target.applyReplayInput({ producer: 'z80.serial', payload: { byte } }));
+    assert.equal(outcome.accepted, false, `${String(byte)} must be refused`);
+    assert.equal(outcome.code, 'invalid-replay-input');
+  }
 });
 
 test('an unknown producer is refused and names what it was', () => {
