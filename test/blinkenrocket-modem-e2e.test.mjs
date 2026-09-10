@@ -22,6 +22,7 @@ import { parseIntelHex } from '../src/intel-hex.js';
 import { encodeTextMessage, MODEM_RATE } from '../src/blinkenrocket-modem.js';
 
 import path from 'node:path';
+import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
 import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // The blinkenrocket firmware is a SIBLING checkout, not a fixture in this
@@ -32,8 +33,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // build in an unusual place can still be pointed at.
 const HEX_CANDIDATES = [
   process.env.BLINKENROCKET_HEX,
-  path.join(HERE, '..', '..', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
-  path.join(HERE, '..', '..', 'blinkenrocket-firmware', 'build', 'main.hex'),
+  // WALKED UP, NOT A FIXED DEPTH. The firmware sits BESIDE this repo, and
+  // `<repo>/../..` is where that is only from a clone: a git worktree lives
+  // one level deeper, so every lane measured in one lost these cases while
+  // CI kept them. Measured: found from /mnt/volume1/code/bw-board, missed
+  // from all 66 worktrees on this box.
+  ...ancestorCandidates(HERE, ['blinkenrocket-firmware-with-minigame', 'build', 'main.hex']),
+  ...ancestorCandidates(HERE, ['blinkenrocket-firmware', 'build', 'main.hex']),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
 ].filter(Boolean);

@@ -18,6 +18,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
 
 import { createAvr8jsAdapter, CHIPS } from '../src/avr8js-adapter.js';
 import { wirePeripherals } from '../src/avr-peripherals.js';
@@ -47,8 +48,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const REFERENCE_HEX_MD5 = '140e2931';
 const HEX_CANDIDATES = [
   process.env.BLINKENROCKET_HEX,
-  path.join(here, '..', '..', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
-  path.join(here, '..', '..', 'blinkenrocket-firmware', 'build', 'main.hex'),
+  // WALKED UP, NOT A FIXED DEPTH. The firmware sits BESIDE this repo, and
+  // `<repo>/../..` is where that is only from a clone: a git worktree lives
+  // one level deeper, so every lane measured in one lost these cases while
+  // CI kept them. Measured: found from /mnt/volume1/code/bw-board, missed
+  // from all 66 worktrees on this box.
+  ...ancestorCandidates(here, ['blinkenrocket-firmware-with-minigame', 'build', 'main.hex']),
+  ...ancestorCandidates(here, ['blinkenrocket-firmware', 'build', 'main.hex']),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
 ].filter(Boolean);
