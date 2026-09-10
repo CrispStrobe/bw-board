@@ -37,10 +37,32 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
   const EXEMPT = new Set(['sibling-checkout-lookup.test.mjs']);
 
   it('and the scan can see the shape at all', () => {
-    // A census whose pattern matches nothing proves nothing. This asserts the
-    // regex fires on the one file that deliberately contains the shape.
-    const holder = readFileSync(join(TEST_DIR, 'sibling-checkout-lookup.test.mjs'), 'utf8');
-    assert.ok(FIXED_DEPTH.test(holder), 'the pattern no longer matches its own example');
+    // A census whose pattern matches nothing proves nothing — so this fires the
+    // regex at a CONSTRUCTED example, and at a counter-example that must not
+    // match.
+    //
+    // IT USED TO READ THIS FILE, AND THAT MADE IT VACUOUS. The pattern is
+    // DEFINED in this file, so its own source text is in the haystack: any
+    // regex matches the line that declares it. Measured — replacing the pattern
+    // with /NEVERMATCHESANYTHING/ left this green, because the file then
+    // contained the word NEVERMATCHESANYTHING. Only /x{999}/, which cannot
+    // match its own spelling, reddened it. An anti-vacuity check that reads the
+    // file defining the thing it checks is testing the wrong haystack.
+    const example = "const CANDIDATES = [join(HERE, '..', '..', 'emu8051-stc')];";
+    const walked = "const CANDIDATES = ancestorCandidates(HERE, ['emu8051-stc']);";
+    assert.ok(FIXED_DEPTH.test(example), 'the pattern no longer matches the shape it is for');
+    assert.ok(!FIXED_DEPTH.test(walked), 'the pattern matches the shape it is meant to allow');
+  });
+
+  it('the exemption is one named file, not a widening pattern', () => {
+    // Measured: replacing this set with every filename in the directory reds
+    // nothing, because an all-exempt scan has no offenders and `deepEqual([],
+    // [])` passes. An exemption list is the one part of a census that grows
+    // silently, so its SIZE is asserted rather than left to review.
+    assert.deepEqual([...EXEMPT], ['sibling-checkout-lookup.test.mjs'],
+      'this holder builds the old shape on purpose and is the only file that may. '
+      + 'Adding a name here removes a file from the scan — say why in the commit, '
+      + 'and never exempt by pattern.');
   });
 
   it('every other test file uses the walk', () => {
