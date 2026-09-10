@@ -268,7 +268,22 @@ run(null, 30_000_000);
 
 const reply = state.usb.slice(usbBefore);
 console.log('');
-console.log(`reply               ${JSON.stringify(reply)}`);
+// THE ECHO IS NOT THE ANSWER, AND THE RAW REPLY CONTAINS BOTH. A Kaluma REPL
+// echoes the typed expression before evaluating it, so the reply always opens
+// with the expression's own text. Reporting that raw -- or slicing the first
+// forty characters of it -- makes "echoed, then answered 3.5" and "echoed,
+// then answered nothing" look alike, and a reader takes the echo for a result.
+// That cost a morning: an echo with nothing after it was read as a novel
+// third outcome, when it was a truncated view of one of the two known ones.
+// So the two are separated here and the absence of an answer is stated in
+// words rather than left for the reader to notice.
+const clean = reply.replace(/\u001b\[[0-9;]*[A-Za-z]/g, '').replace(/\u001b[78]/g, '');
+const lines = clean.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+const echoAt = lines.indexOf(args.expr);
+const after = (echoAt >= 0 ? lines.slice(echoAt + 1) : lines).filter((l) => l !== '>' && l !== '');
+console.log(`reply raw           ${JSON.stringify(reply)}`);
+console.log(`  echo             ${echoAt >= 0 ? JSON.stringify(args.expr) : '(the expression was not echoed back)'}`);
+console.log(`  ANSWER           ${after.length ? JSON.stringify(after[0]) : 'NONE -- the REPL echoed and produced no value'}`);
 console.log('');
 console.log(`low reads: ${lowReads.length} total, ${lowReads.length - beforeExpr} DURING the expression`);
 if (lowReads.length === 0) {
