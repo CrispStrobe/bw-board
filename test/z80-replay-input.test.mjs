@@ -7,12 +7,25 @@
  * the first place the contract meets a target that exists: a `Z80Machine` with a
  * real ULA, driven through `createZ80DebugTarget`.
  *
- * WHAT IT DELIBERATELY DOES NOT COVER. Only the apply half is here. The record
- * half needs facts stamped `{ticks, domain, hz}` and this build has no debug time
- * source of that shape — `machine.tMs` is milliseconds and is not it. Recording
- * is therefore a named prerequisite rather than a silent omission, and
- * `replaySupport` requires only the apply half precisely so a target in this
- * state is usable rather than refused.
+ * WHAT IT DOES NOT COVER, AND A CORRECTION TO WHY. Only the apply half is here.
+ * The first version of this note said the record half was BLOCKED — that facts
+ * need a `{ticks, domain, hz}` stamp and this build has no time source of that
+ * shape, since `machine.tMs` is milliseconds. **The second half is true and the
+ * conclusion does not follow.** `tMs` is not a time source, it is a lossy
+ * projection of one: `z80-machine.js:270` is
+ * `get tMs() { return this.cycles * 1000 / this.clockHz; }`, and both operands
+ * are public. The stamp is `{ticks: machine.cycles, domain: 'z80-cycles',
+ * hz: machine.clockHz}` — available here, today, and a BETTER source than a
+ * host-derived nanosecond clock because it is the machine's own, integral, with
+ * no floating-point division.
+ *
+ * So recording is unstarted work, not a prerequisite. It was read as blocked
+ * because someone had already divided the exact source into a float and everyone
+ * downstream read the float.
+ *
+ * `replaySupport` requiring only the apply half is still right, for the reason it
+ * always was: a target handed facts from elsewhere can replay them without ever
+ * recording one.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';

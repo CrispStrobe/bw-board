@@ -62,6 +62,8 @@ const MODE_NAMES = ['quasi', 'pushpull', 'input', 'opendrain'];
  * @param {number} [opts.pollIntervalNs] - poll interval in fallback mode (default 1000)
  * @param {'push' | 'poll' | 'auto'} [opts.mode] - force a mode (default 'auto')
  */
+import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+
 export function createEmu8051Adapter(wasm, opts = {}) {
   const fosc = opts.fosc ?? 11059200;
   const vcc = opts.vcc ?? 5.0;
@@ -97,6 +99,48 @@ export function createEmu8051Adapter(wasm, opts = {}) {
 
   /** @type {Map<string, PinSnapshot>} */
   const lastState = new Map();
+
+  // ─── The RECORD half of the replay surface ──────────────────────────
+  // Declared in debug-replay-contract.js. Facts are emitted as the machine
+  // OBSERVES them, which is why the hooks sit at the native boundary rather
+  // than at the board: what matters for replay is the value the MCU actually
+  // received, not the value the circuit was carrying.
+  const observedInputs = new Map();
+  let inputListeners = [];
+  // A reset restarts the clock, so facts from before it are not comparable
+  // with facts after. The domain says which era a fact belongs to; without it
+  // a replay could interleave two runs and look ordered.
+  let inputTimeEpoch = 0;
+  
+  const inputTime = () => ({
+    ticks: getCurrentTimeNs(),
+    domain: inputTimeEpoch ? `8051-input-ns-reset-${inputTimeEpoch}` : '8051-input-ns',
+    hz: 1e9
+  });
+  
+  /**
+   * Emit a fact, but only when the value the machine receives has CHANGED.
+   *
+   * The 8051 core polls its input pins continuously, so an undeduplicated
+   * recorder would emit a fact per poll — a log of the sampling rate rather
+   * than of the inputs. Deduplication belongs to the target because only the
+   * target knows what "the same value" means at its own boundary.
+   */
+  function recordInput(producer, key, payload) {
+    const signature = JSON.stringify(payload);
+    if (observedInputs.get(key) === signature) return;
+    observedInputs.set(key, signature);
+    const fact = {time: inputTime(), producer, payload: {...payload}};
+    // Each listener gets its own copy: a recorder that stored the object and a
+    // listener that mutated it would corrupt the log in place.
+    for (const listener of inputListeners) {
+      listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
+    }
+  }
+  
+  /** Record the volts the MCU receives, which is what the native setter clamps to. */
+  const normalizeVolts = value => Math.max(0, Math.min(vcc,
+    Number.isFinite(Number(value)) ? Number(value) : 0));
 
   const stats = {
     pollCount: 0,
@@ -166,12 +210,16 @@ export function createEmu8051Adapter(wasm, opts = {}) {
 
       readPinCbPtr = wasm.addFunction((port, bit, _ud) => {
         if (!board) return 0;
-        return board.readPin(`P${port}.${bit}`);
+        const level = board.readPin(`P${port}.${bit}`) ? 1 : 0;
+        recordInput('emu8051.pin', `pin:${port}.${bit}`, {port, bit, level});
+        return level;
       }, 'iiii');
 
       readAnalogCbPtr = wasm.addFunction((port, bit, _ud) => {
         if (!board) return 0;
-        return board.readAnalog(`P${port}.${bit}`);
+        const volts = normalizeVolts(board.readAnalog(`P${port}.${bit}`));
+        recordInput('emu8051.adc', `adc:${bit}`, {channel: bit, volts});
+        return volts;
       }, 'diii');
 
       // on_advance: uint64_t is legalized to two i32 args without WASM_BIGINT
@@ -256,8 +304,9 @@ export function createEmu8051Adapter(wasm, opts = {}) {
         // input arrived one run slice late. The core knows the mode throughout.
         const mode = state?.mode ?? MODE_NAMES[wasm._emu_get_pin_mode(port, bit)] ?? 'quasi';
         if (mode === 'input' || mode === 'quasi' || mode === 'opendrain') {
-          const level = board.readPin(pinId);
+          const level = board.readPin(pinId) ? 1 : 0;
           wasm._emu_set_pin_input(port, bit, level);
+          recordInput('emu8051.pin', `pin:${port}.${bit}`, {port, bit, level});
         }
       }
     }
@@ -266,8 +315,9 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   function syncAdcInputs() {
     if (!board) return;
     for (let ch = 0; ch < 8; ch++) {
-      const volts = board.readAnalog(`P1.${ch}`);
+      const volts = normalizeVolts(board.readAnalog(`P1.${ch}`));
       wasm._emu_set_adc_voltage(ch, volts);
+      recordInput('emu8051.adc', `adc:${ch}`, {channel: ch, volts});
     }
   }
 
@@ -281,6 +331,11 @@ export function createEmu8051Adapter(wasm, opts = {}) {
       stats.pinChangeCount = 0;
       stats.advanceToCount = 0;
       stats.pushCallbackCount = 0;
+      // The dedup map remembers values from before the reset; keeping it would
+      // suppress the first post-reset fact for every pin whose level happens to
+      // match. The epoch then marks the new era in every fact's domain.
+      observedInputs.clear();
+      inputTimeEpoch++;
     },
 
     setFosc(hz) { wasm._emu_set_fosc(hz); },
@@ -407,6 +462,75 @@ export function createEmu8051Adapter(wasm, opts = {}) {
     },
 
     getStats() { return { ...stats, sleptClocks: sleptClocks() }; },
+
+    /**
+     * The RECORD half: subscribe to host-input facts as the machine observes
+     * them. Returns an unsubscribe function.
+     *
+     * NAMED `onDebugInput`, NOT `onInput`. A downstream copy of this adapter
+     * calls it `onInput`, and nothing consumes that: the recorder tests for
+     * `onDebugInput` and skips a target without it, so the downstream 8051 has
+     * never actually been recorded. The contract declares the name with a
+     * consumer; the other is a divergence for this move to retire, not a second
+     * spelling to bless.
+     *
+     * @param {(fact: {time: object, producer: string, payload: object}) => void} cb
+     * @returns {() => void} unsubscribe
+     */
+    onDebugInput(cb) {
+      if (typeof cb !== 'function') throw new TypeError('debug input listener must be a function');
+      inputListeners.push(cb);
+      return () => { inputListeners = inputListeners.filter(listener => listener !== cb); };
+    },
+
+    /**
+     * The APPLY half: put a recorded fact back into the core.
+     *
+     * ONLY WHERE NO LIVE BOARD CAN OVERRIDE IT. In push mode the core reads the
+     * attached board directly, so a replayed value would be overwritten by the
+     * next poll and the replay would silently diverge from the recording. That
+     * is refused rather than attempted.
+     *
+     * Every failure is a return value. The payload is validated before it
+     * reaches the native setters, because a recorded fact is untrusted input by
+     * the time it is replayed.
+     *
+     * @param {{producer: string, payload: object}} input a recorded fact
+     * @returns {{accepted: boolean, code?: string, reason?: string}}
+     */
+    applyReplayInput(input) {
+      if (stats.mode === 'push') {
+        return replayRefused('live-board-input-authority',
+          'push mode reads the attached board directly; replay must control that board');
+      }
+      const payload = input?.payload;
+      if (input?.producer === 'emu8051.pin') {
+        if (!Number.isInteger(payload?.port) || payload.port < 0 || payload.port > 5 ||
+            !Number.isInteger(payload?.bit) || payload.bit < 0 || payload.bit > 7 ||
+            (payload.level !== 0 && payload.level !== 1)) {
+          return replayRefused('invalid-replay-input',
+            'emu8051.pin needs port 0-5, bit 0-7 and level 0 or 1');
+        }
+        wasm._emu_set_pin_input(payload.port, payload.bit, payload.level);
+        // Seed the dedup map so a replayed value does not immediately re-record
+        // itself as a freshly observed fact.
+        observedInputs.set(`pin:${payload.port}.${payload.bit}`, JSON.stringify(payload));
+        return replayAccepted();
+      }
+      if (input?.producer === 'emu8051.adc') {
+        if (!Number.isInteger(payload?.channel) || payload.channel < 0 || payload.channel > 7 ||
+            !Number.isFinite(payload?.volts)) {
+          return replayRefused('invalid-replay-input',
+            'emu8051.adc needs channel 0-7 and a finite volts');
+        }
+        const applied = {...payload, volts: normalizeVolts(payload.volts)};
+        wasm._emu_set_adc_voltage(applied.channel, applied.volts);
+        observedInputs.set(`adc:${applied.channel}`, JSON.stringify(applied));
+        return replayAccepted();
+      }
+      return replayRefused('unsupported-replay-input',
+        `no replay path for producer ${input?.producer ?? '(none)'}`);
+    },
 
     /** Is the emulated core parked on PCON.IDL right now? */
     isCoreIdle() { return coreIsIdle(); },
