@@ -22,6 +22,13 @@ const SPI_TX = new Uint16Array([
   ...new Array(40).fill(0x0000),
 ]);
 
+// LDI r16,0x5a; STS 0x0140,r16; LDS r17,0x0140; RJMP .-2 — a write and a read
+// of SRAM, which produced NO facts at all before this target shared the
+// adapter's instrument.
+const SRAM_TOUCH = new Uint16Array([
+  ldiR16(0x5a), STS_R16, 0x0140, 0x9100 | (17 << 4), 0x0140, 0xcfff,
+]);
+
 function debug(program) {
   const adapter = createAvr8jsAdapter({ program });
   const target = createAvr8jsDebugTarget(adapter);
@@ -47,19 +54,38 @@ test('real AVR TWI access is ordered immediately before its owning retire', () =
   target.step('insn', 2);
   assert.equal(target.runFor(10_000), 'halted');
 
+  // THE SEQUENCE GREW BY ONE, AND THAT IS THE POINT OF THE FOLD. The STS that
+  // starts the TWI transaction is a WRITE, and until this target shared the
+  // adapter's instrument nobody reported it: the debugger published retires and
+  // bridge notifications and no data accesses at all. Measured before the fold,
+  // this same fixture produced zero memory facts. The claim this test is NAMED
+  // for — the device access lands immediately before its owning retire — is
+  // asserted positionally below rather than by pinning the whole sequence, so
+  // it keeps meaning what it says as the stream gets richer.
   assert.deepEqual(events.map(event => `${event.kind}/${event.phase}`), [
-    'instruction/retire', 'device/access', 'instruction/retire',
+    'instruction/retire', 'memory/access', 'device/access', 'instruction/retire',
   ]);
+  const deviceAt = events.findIndex(event => event.kind === 'device');
+  assert.equal(events[deviceAt + 1]?.kind, 'instruction', 'device fact is directly before a retire');
+  assert.equal(events[deviceAt + 1]?.phase, 'retire');
   assert.equal(rawSawListenerRan, false,
     'canonical device fact waited until the raw instruction-window callback returned');
-  assert.deepEqual(events[1].device,
+  assert.deepEqual(events[deviceAt].device,
     { id: 'twi0', bus: 'twi', event: 'start' });
-  assert.equal(events[1].fidelity, 'reconstructed');
-  assert.equal(events[2].fidelity, 'recorded');
-  assert.equal(events[2].pcBefore, 2);
-  assert.equal(events[2].pcAfter, 6, 'STS is one two-word AVR instruction');
-  assert.ok(events[1].time.ticks < events[2].time.ticks,
+  // The write the device fact is ABOUT, now visible: TWCR at data 0xbc.
+  const write = events.find(event => event.kind === 'memory');
+  assert.deepEqual([write.memory.direction, write.memory.address, write.memory.value],
+    ['write', 0xbc, 0xa4]);
+  assert.equal(write.cause, 'instruction-access', 'the CPU issued this one');
+  assert.equal(events[deviceAt].cause, 'peripheral-access', 'the bridge contributed that one');
+  assert.equal(events[deviceAt].fidelity, 'reconstructed');
+  assert.equal(events[deviceAt + 1].fidelity, 'recorded');
+  assert.equal(events[deviceAt + 1].pcBefore, 2);
+  assert.equal(events[deviceAt + 1].pcAfter, 6, 'STS is one two-word AVR instruction');
+  assert.ok(events[deviceAt].time.ticks < events[deviceAt + 1].time.ticks,
     'reconstructed access carries the instruction-start time, retire the completion time');
+  assert.equal(write.time.ticks, events[deviceAt].time.ticks,
+    'both accesses of one instruction share its start time, whoever observed them');
 });
 
 test('real AVR SPI completion emits tx/rx fact before the following retire', () => {
@@ -164,10 +190,34 @@ test('TWI facts describe the completed transaction without extra device calls', 
     'a bridge observer cannot perturb the already-completed transaction');
 });
 
-test('capabilities claim only the event evidence this lane produces', () => {
+test('and the declaration is checked against a DRIVEN stream, not against itself', () => {
+  // A capabilities list is a claim about behaviour, and until this test nothing
+  // compared the two. `memory` was missing from the declaration for as long as
+  // this target published no memory facts — correct then, wrong the moment it
+  // shared the adapter's instrument. Comparing the list to a real run is the
+  // only version of this assertion that notices.
+  const adapter = createAvr8jsAdapter({ program: SRAM_TOUCH });
+  const target = createAvr8jsDebugTarget(adapter);
+  const seen = [];
+  target.onDebugEvent(event => seen.push(event));
+  adapter.spiBridge.select({ onByte: () => 0x3c });
+  target.run();
+  target.runFor(50_000);
+
+  const produced = [...new Set(seen.map(event => event.kind))].sort();
+  const declared = [...target.capabilities().events].sort();
+  for (const kind of produced) {
+    assert.ok(declared.includes(kind),
+      `the target published ${kind} facts and does not declare them: ${declared}`);
+  }
+  assert.ok(produced.includes('memory'),
+    'the fixture must actually touch memory, or this proves nothing');
+});
+
+test('capabilities claim exactly the event kinds this target actually produces', () => {
   const { target } = debug(new Uint16Array([0x0000]));
   const caps = target.capabilities();
-  assert.deepEqual(caps.events, ['instruction', 'device']);
+  assert.deepEqual(caps.events, ['instruction', 'device', 'memory']);
   assert.deepEqual(caps.extensions,
     { eventBreakpointBoundary: 'instruction-retire' });
   assert.equal(caps.eventKinds, undefined,

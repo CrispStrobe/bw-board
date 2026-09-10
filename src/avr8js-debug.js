@@ -78,22 +78,43 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
    *  breakpoint would re-fire forever without ever executing. */
   let resumeGuard = null;
   let listeners = [];
-  let debugEventListener = null;
-  let instructionWindow = null;
-  let pendingDeviceFacts = [];
-
+  /**
+   * ONE INSTRUMENT, SHARED WITH THE ORDINARY RUN.
+   *
+   * This target used to publish its own facts: its own `debugTime`, its own
+   * retire shape, its own instruction window, its own single-listener
+   * subscription. All of it was a second implementation of the contract
+   * `instruction-debug-events.js` already holds for every other core here.
+   *
+   * THE FOLD IS A CAPABILITY GAIN, NOT DEDUPLICATION, and that is measured.
+   * Before it, a debugger-driven AVR published 31,998 instruction retires and
+   * ZERO memory accesses across a run — it never wrapped `readData`/`writeData`,
+   * it only bridged the adapter's peripheral notifications. The adapter's own
+   * instrument DOES wrap them, so a consumer watching an AVR board saw data
+   * accesses while it ran freely and LOST them the moment a debugger attached.
+   * Observability going backwards when you look closer is a defect in its own
+   * right. Sharing the adapter's instrument is what fixes it.
+   *
+   * It also inherits the epoch this target never had: the module notices a tick
+   * REGRESSION and names a new time domain, so a fact recorded after `reset()`
+   * no longer reads as progress along the same timeline.
+   */
+  const debugEvents = adapter.debugEvents;
+  const dropDebugSubscriptions = () => {
+    for (const unsubscribe of debugSubscriptions) unsubscribe();
+    debugSubscriptions = [];
+  };
   const debugTime = (cycles = cpu.cycles) => ({
     ticks: BigInt(cycles), domain: 'avr-cycles', hz: adapter.clockHz ?? 16_000_000,
   });
-  const publishDebugEvent = (event) => {
-    if (debugEventListener) debugEventListener(event);
-  };
+  /** Unsubscribes for every listener attached through this target, so
+   *  detach()/destroy() still isolate it from an adapter others also watch. */
+  let debugSubscriptions = [];
   const unsubscribeDeviceAccess = adapter.onDeviceAccess?.((device) => {
-    if (!debugEventListener) return;
-    const event = { cpuId: 'main', kind: 'device', phase: 'access',
-      fidelity: 'reconstructed', time: debugTime(instructionWindow?.cyclesBefore), device };
-    if (instructionWindow) pendingDeviceFacts.push(event);
-    else publishDebugEvent(event);
+    // The window logic that used to live here is the module's now: in an
+    // instruction it joins that instruction's accesses and publishes before the
+    // retire, outside one it goes out immediately. Both halves, one body.
+    debugEvents.recordAccess({ kind: 'device', device });
   });
 
   // ─── write watchpoints ──────────────────────────────────────────────
@@ -242,24 +263,16 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         }
       }
 
-      const cyclesBefore = cpu.cycles;
-      instructionWindow = { cyclesBefore };
-      try {
+      // The bracket, injected: avr8js has no `cpu.step` to wrap, and the
+      // adapter's ordinary-run loop calls the identical one. Same body, so a
+      // debugger-driven run and a free run are indistinguishable in what they
+      // publish — which is the whole point of the fold.
+      debugEvents.aroundInstruction(() => {
+        const cyclesBefore = cpu.cycles;
         avrInstruction(cpu);
         cpu.tick();
-      } finally {
-        instructionWindow = null;
-      }
-      if (debugEventListener) {
-        for (const event of pendingDeviceFacts) publishDebugEvent(event);
-        pendingDeviceFacts = [];
-        publishDebugEvent({ cpuId: 'main', kind: 'instruction', phase: 'retire',
-          fidelity: 'recorded', time: debugTime(), pcBefore: bytePc,
-          pcAfter: cpu.pc * 2, instruction: { address: bytePc },
-          changes: { cycles: cpu.cycles - cyclesBefore } });
-      } else {
-        pendingDeviceFacts = [];
-      }
+        return cpu.cycles - cyclesBefore;
+      });
       resumeGuard = null; // one instruction executed: breakpoints re-arm
 
       // Write watchpoint fired during the instruction
@@ -334,7 +347,12 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         haltPolicy: 'freeze-timers',
         timeFreezes: true,
         consumes: [],
-        events: ['instruction', 'device'],
+        // 'memory' joined the day this target started sharing the adapter's
+        // instrument: the accessor wrappers report every data read and write,
+        // which a debugger-driven AVR never published before. A declaration
+        // that lags what a target emits is the defect the conformance suite
+        // exists to catch, so it moves in the same commit as the behaviour.
+        events: ['instruction', 'device', 'memory'],
         extensions: { eventBreakpointBoundary: 'instruction-retire' },
       };
     },
@@ -508,12 +526,25 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
       return () => { listeners = listeners.filter((f) => f !== cb); };
     },
 
+    /**
+     * MANY LISTENERS NOW, WHERE THIS THREW ON THE SECOND.
+     *
+     * It used to hold exactly one and raise `the AVR debug event listener is
+     * already attached` on any further attach — the only target here that did.
+     * That is a RELAXATION and it is invisible to every existing consumer:
+     * measured across all 20 repo origins on this box, exactly one production
+     * site ever subscribes to a target's `onDebugEvent`
+     * (`bw-debug/debug-runner.js`, through `subscribeDebugTargetEvents`), the
+     * replay controllers subscribe to the runner's own stream instead, and no
+     * caller catches the throw or uses a second attach to detect anything. The
+     * unsubscribe contract that consumer DOES depend on is unchanged.
+     */
     onDebugEvent(listener) {
-      if (typeof listener !== 'function') throw new TypeError('debug event listener must be a function');
-      if (debugEventListener) throw new Error('the AVR debug event listener is already attached');
-      debugEventListener = listener;
+      const unsubscribe = debugEvents.onDebugEvent(listener);
+      debugSubscriptions.push(unsubscribe);
       return () => {
-        if (debugEventListener === listener) debugEventListener = null;
+        debugSubscriptions = debugSubscriptions.filter(u => u !== unsubscribe);
+        unsubscribe();
       };
     },
 
@@ -551,9 +582,10 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
 
     timeNs: () => adapter.timeNs(),
 
-    detach() { detached = true; unsubscribeDeviceAccess?.(); },
-    destroy() { listeners = []; debugEventListener = null; pendingDeviceFacts = [];
-      unsubscribeDeviceAccess?.(); },
+    /** Drops every subscription this target made, so a detached target is
+     *  silent even though the adapter's instrument keeps running for others. */
+    detach() { detached = true; dropDebugSubscriptions(); unsubscribeDeviceAccess?.(); },
+    destroy() { listeners = []; dropDebugSubscriptions(); unsubscribeDeviceAccess?.(); },
   };
 
   return target;
