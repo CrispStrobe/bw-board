@@ -3972,6 +3972,24 @@ chain does not survive measurement**: that word holds the answer to a
 DIFFERENT ROM lookup ('L3'), and it is not null. Whatever produces 0, it is
 not that.
 
+**A SECOND ROM-TABLE FINDING, 2026-09-10, and it is the other half of the
+Kaluma story.** lego-ac reports the `--blink` path busy-looping in
+`rom_table_lookup` itself, at 0x100, entered from 0x1000463f with a garbage
+table and code. Read against the routine: **the scan was unbounded.** It walked
+four bytes at a time until it read a zero halfword, with nothing to stop it —
+so a bad table pointer is not a slow lookup, it is a HANG, and `adds r0, #4`
+wraps r0 around 32 bits rather than terminating.
+
+A function whose contract is "returns 0 when the code is not present" could not
+honour that for a bad table. It is bounded at 255 pairs now — 1020 bytes, far
+past the SDK's largest table at about fifteen entries — so a legitimate call
+cannot reach the bound and a bad one gets the documented miss.
+
+**THIS DOES NOT EXPLAIN WHY THE POINTER IS GARBAGE**, and the caller's bad
+argument is still open. What it does is convert an undiagnosable hang into a
+defined 0, which is exactly where the SF table went: the value of the change is
+that the next person sees a miss instead of a machine that stopped.
+
 **NOT ESTABLISHED, and stated so nobody builds on it:** no SF entry is entered
 in 2.5M instructions — but the probe never drives the REPL, so that is a fact
 about BOOT. `2.5+1.0` is only evaluated when JS runs. Reading it as "the

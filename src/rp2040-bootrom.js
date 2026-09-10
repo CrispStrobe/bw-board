@@ -205,21 +205,46 @@ export function buildBootrom () {
     // The table is (u16 code, u16 value) pairs ending in a zero code. The
     // SDK calls this through the pointer at 0x18, so the ADDRESS matters
     // and the implementation does not.
+    // THE SCAN IS BOUNDED, and it was not. The loop walked four bytes at a
+    // time until it read a zero halfword, with nothing to stop it: given a
+    // garbage table pointer it runs until some address happens to hold a zero,
+    // or forever, wrapping r0 around 32 bits on the way. A function whose
+    // contract is "returns 0 when the code is not present" cannot honour that
+    // for a bad table, and it turns a caller's bad pointer into a HANG, which
+    // is the least diagnosable failure there is.
+    //
+    // Measured downstream (lego-ac, 2026-09-10): Kaluma's first GPIO call busy
+    // loops in this very routine at 0x100, entered from 0x1000463f with a
+    // garbage table and code. 255 pairs is 1020 bytes, far past any real
+    // table — the SDK's largest has about fifteen entries — so the bound
+    // cannot be reached by a legitimate call and a bad one now gets the
+    // documented miss instead of an infinite loop.
+    //
+    // THIS DOES NOT EXPLAIN WHY THE POINTER IS GARBAGE. It converts an
+    // undiagnosable hang into a defined 0, which is where the SF table went
+    // too; the caller's bad argument is still open.
+    //
+    // Written with asm() rather than counted offsets, because this file's own
+    // header records what a branch offset counted from the wrong place did to
+    // memcpy, and this routine had three of them.
     const lookup = pc;
-    pc = emit(view, pc, [
-        0x8802,             // ldrh r2, [r0, #0]     ; entry code
-        0x2a00,             // cmp  r2, #0
-        0xd003,             // beq  .notfound        ; +3: `movs r0,#0`, not the
-                            //                         `bx lr` after it, which
-                            //                         returns the TABLE pointer
-        0x428a,             // cmp  r2, r1
-        0xd003,             // beq  .found
-        0x3004,             // adds r0, #4           ; next pair
-        0xe7f8,             // b    .loop
-        0x2000,             // .notfound: movs r0, #0
-        0x4770,             // bx   lr
-        0x8840,             // .found: ldrh r0, [r0, #2]
-        0x4770              // bx   lr
+    pc = asm(view, pc, [
+        0x23ff,                     // movs r3, #255          ; pairs left to scan
+        ['label', 'lk_loop'],
+        0x8802,                     // ldrh r2, [r0, #0]      ; entry code
+        0x2a00,                     // cmp  r2, #0
+        ['beq', 'lk_notfound'],     //                        ; terminator
+        0x428a,                     // cmp  r2, r1
+        ['beq', 'lk_found'],
+        0x3004,                     // adds r0, #4            ; next pair
+        0x3b01,                     // subs r3, #1
+        ['bne', 'lk_loop'],
+        ['label', 'lk_notfound'],
+        0x2000,                     // movs r0, #0
+        0x4770,                     // bx   lr
+        ['label', 'lk_found'],
+        0x8840,                     // ldrh r0, [r0, #2]
+        0x4770                      // bx   lr
     ]);
 
     // ── memcpy(r0 = dst, r1 = src, r2 = n) → r0 = dst ───────────────────

@@ -322,6 +322,32 @@ const F32 = (x) => {
 };
 const QNAN = 0x7fc00000;
 
+test('rom_table_lookup RETURNS on a garbage table instead of running forever', {skip: SKIP}, async () => {
+    // The scan used to walk four bytes at a time until it read a zero
+    // halfword, with nothing to stop it. Given a bad table pointer that is not
+    // a slow lookup, it is a HANG — and a caller's bad argument becoming an
+    // infinite loop inside the ROM is the least diagnosable failure available.
+    //
+    // Measured downstream (lego-ac, 2026-09-10): Kaluma's first GPIO call busy
+    // loops in this routine, entered with a garbage table and code.
+    //
+    // A region with no zero halfword anywhere is exactly the input that used to
+    // be unbounded, so this test cannot pass against the old routine.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const lookup = view.getUint16(0x18, true);
+
+    const junk = 0x20001000;
+    for (let i = 0; i < 4096; i++) mcu.writeUint8(junk + i, 0xff);
+
+    const steps = run(lookup, {0: junk, 1: 0x4653});
+    assert.ok(steps >= 0,
+        'rom_table_lookup never returned on a table with no terminator — the scan is unbounded '
+        + 'again, and a caller with a bad pointer hangs inside the ROM');
+    assert.equal(mcu.core.registers[0] >>> 0, 0,
+        'a table it could not scan must answer with the documented miss, not with a stray value');
+});
+
 test('rom_data_lookup finds the SF table, and it is not a null pointer', {skip: SKIP}, async () => {
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
