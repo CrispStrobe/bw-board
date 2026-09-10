@@ -21,9 +21,14 @@
  * copied; the datasheet describes an interface and this satisfies it.
  *
  * WHAT IT IS NOT. This is not the real bootrom. There is no USB mass
- * storage, no `reset_usb_boot`, and — the one that currently matters — no
- * SOFT-FLOAT TABLE. mufplib is exactly the part that is not free, so the
- * `'SF'` lookup misses and returns 0.
+ * storage and no `reset_usb_boot`.
+ *
+ * THE SOFT-FLOAT TABLE IS NO LONGER THE GAP, and this paragraph said it was
+ * for two days after it stopped being true — the failure this file keeps
+ * finding in other people's prose, in its own header. mufplib remains the
+ * part of Raspberry Pi's ROM that is not free, so none of it is used; the
+ * table below is written from the datasheet's interface like everything else
+ * here, and nine of its entries are real (see SF_TABLE).
  *
  * HOW FAR THAT GETS, measured against MicroPython 1.22.2 for the Pico
  * (RPI_PICO-20240222-v1.22.2.uf2, reproducible with
@@ -80,11 +85,17 @@
  * VTOR yourself, and none of it happens. See
  * docs/PICO-MICROPYTHON-BOOT.md in brickwright-lite for the measurements.
  *
- * WHAT IS STILL MISSING is the soft-float table. `'SF'` returns 0 and the
- * lookup path tolerates it. Worth knowing: a MISSED lookup returns 0 and
- * the SDK calls it — there is no null check at most call sites — so
- * address 0 gets executed as Thumb. That is why the flash functions below
- * had to be real rather than absent.
+ * WHAT IS STILL MISSING, as of 2026-09-10: USB mass storage,
+ * `reset_usb_boot`, and nine of the twenty-one soft-float entries — the four
+ * fixed-point conversions and the five transcendentals. Those return a quiet
+ * NaN and are named one by one in the test, so the list cannot go stale
+ * quietly the way the paragraph above did.
+ *
+ * Worth knowing, and still true: a MISSED lookup returns 0 and the SDK calls
+ * it — there is no null check at most call sites — so address 0 gets executed
+ * as Thumb. That is why the flash functions below had to be real rather than
+ * absent, and why every soft-float entry points at a routine that RETURNS
+ * rather than at nothing.
  *
  * @module
  */
@@ -169,12 +180,27 @@ function asm (view, start, items) {
     let at = start;
     for (const it of items) {
         if (Array.isArray(it) && it[0] === 'label') { labels.set(it[1], at); continue; }
-        at += 2;
+        at += (Array.isArray(it) && it[0] === 'bl') ? 4 : 2;
     }
     const end = at;
     at = start;
     for (const it of items) {
         if (Array.isArray(it) && it[0] === 'label') continue;
+        if (Array.isArray(it) && it[0] === 'bl') {
+            // BL is the only 32-bit instruction this emitter produces. The
+            // target is an ABSOLUTE address already known — every callee is
+            // emitted before its caller — so there is no label to resolve.
+            // J1 and J2 are both 1 for the short offsets used here, positive or
+            // negative: for a small delta the sign-extension bits I1 and I2 are
+            // equal to S, and J = NOT(I) XOR S is 1 either way.
+            const delta = it[1] - (at + 4);
+            if (delta % 2) throw new Error('asm: misaligned bl');
+            if (delta < -0x400000 || delta > 0x3ffffe) throw new Error('asm: bl out of range');
+            view.setUint16(at, 0xf000 | ((delta < 0 ? 1 : 0) << 10) | ((delta >> 12) & 0x3ff), true);
+            view.setUint16(at + 2, 0xf800 | ((delta >> 1) & 0x7ff), true);
+            at += 4;
+            continue;
+        }
         if (Array.isArray(it)) {
             const [kind, name] = it;
             if (!labels.has(name)) throw new Error(`asm: branch to unknown label '${name}'`);
@@ -204,10 +230,20 @@ function asm (view, start, items) {
  * Layout follows the datasheet's fixed offsets exactly, because the SDK
  * reads them by address and nothing else identifies them:
  *
- *   0x00  initial SP        0x10  'M','u', version, reserved
- *   0x04  reset vector      0x14  u16 → function table
- *   0x08  NMI               0x16  u16 → data table
- *   0x0c  HardFault         0x18  u16 → table lookup routine
+ *   0x00  initial SP        0x10  'M'  ┐
+ *   0x04  reset vector      0x11  'u'  ├ magic, all THREE bytes
+ *   0x08  NMI               0x12  0x01 ┘
+ *   0x0c  HardFault         0x13  bootrom version  <-- read by the SDK
+ *                           0x14  u16 → function table
+ *                           0x16  u16 → data table
+ *                           0x18  u16 → table lookup routine
+ *
+ * 0x12 IS NOT THE VERSION AND 0x13 IS NOT RESERVED. This table said the
+ * opposite until 2026-09-10, and it is the artefact a reader consults instead
+ * of reading the code -- so the wrong version offset survived here even after
+ * the emitter and its test were corrected. pico-sdk reads the version with
+ * *(uint8_t *)0x13; leaving it zero cost ROADMAP R3 (`2.5+1.0` evaluating to
+ * 0). The measurement and both failing legs are at the header emitter below.
  *
  * @returns {Uint8Array} 16 KB, ready to be written at address 0
  */
@@ -1239,6 +1275,744 @@ export function buildBootrom () {
         0xbdf0, // pop  {r4-r7, pc}
     ]);
 
+    // ── fix2float(r0 = int32 m, r1 = n) → r0 = m / 2^n as a float ──────
+    //
+    // SF table index 12. This is int2float with the exponent reduced by the
+    // fractional-bit count, which is the whole of fixed-point conversion: the
+    // significand and its rounding are identical, and only the scale differs.
+    // n is parked in r6 at entry because the sign work below needs r1.
+    const fix2float = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n, kept clear of the sign work below
+        0x2800, // cmp  r0, #0
+        ['bne', 'fx2f_nz'],
+        0xbdf0, // pop  {r4-r7, pc}      ; +0.0
+        ['label', 'fx2f_nz'],
+        0x2100, // movs r1, #0           ; sign
+        0x2800, // cmp  r0, #0
+        ['bge', 'fx2f_pos'],
+        0x2101, // movs r1, #1
+        0x4240, // rsbs r0, r0, #0      ; magnitude
+        ['label', 'fx2f_pos'],
+        0x2200, // movs r2, #0           ; shift count
+        ['label', 'fx2f_norm'],
+        0x0003, // movs r3, r0
+        ['bmi', 'fx2f_normed'],
+        0x0040, // lsls r0, r0, #1
+        0x3201, // adds r2, #1
+        ['b', 'fx2f_norm'],
+        ['label', 'fx2f_normed'],
+        0x239e, // movs r3, #158
+        0x1a9b, // subs r3, r3, r2
+        0x1b9b, // subs r3, r3, r6       ; ...less the fractional bits
+        0x0002, // movs r2, r0
+        0x0612, // lsls r2, r2, #24      ; the 8 dropped bits
+        0x0a00, // lsrs r0, r0, #8
+        0x2a00, // cmp  r2, #0
+        ['beq', 'fx2f_range'],
+        0x0014, // movs r4, r2
+        ['bpl', 'fx2f_range'],                 // guard clear
+        0x0054, // lsls r4, r2, #1       ; sticky
+        ['bne', 'fx2f_up'],
+        0x0004, // movs r4, r0
+        0x07e4, // lsls r4, r4, #31      ; tie: to even
+        ['beq', 'fx2f_range'],
+        ['label', 'fx2f_up'],
+        0x3001, // adds r0, #1
+        0x0e04, // lsrs r4, r0, #24
+        0x2c00, // cmp  r4, #0
+        ['beq', 'fx2f_range'],
+        0x0840, // lsrs r0, r0, #1
+        0x3301, // adds r3, #1
+        ['label', 'fx2f_range'],
+        0x2b00, // cmp  r3, #0
+        ['bgt', 'fx2f_pack'],
+        0x2000, // movs r0, #0
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1           ; a signed zero
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'fx2f_pack'],
+        0x0240, // lsls r0, r0, #9
+        0x0a40, // lsrs r0, r0, #9
+        0x05db, // lsls r3, r3, #23
+        0x4318, // orrs r0, r3
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── ufix2float(r0 = uint32 m, r1 = n) → r0 = m / 2^n ──────────────
+    //
+    // SF table index 14. fix2float without the sign step.
+    const ufix2float = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n, kept clear of the sign work below
+        0x2800, // cmp  r0, #0
+        ['bne', 'ufx2f_nz'],
+        0xbdf0, // pop  {r4-r7, pc}      ; +0.0
+        ['label', 'ufx2f_nz'],
+        0x2100, // movs r1, #0           ; sign
+        0x2200, // movs r2, #0           ; shift count
+        ['label', 'ufx2f_norm'],
+        0x0003, // movs r3, r0
+        ['bmi', 'ufx2f_normed'],
+        0x0040, // lsls r0, r0, #1
+        0x3201, // adds r2, #1
+        ['b', 'ufx2f_norm'],
+        ['label', 'ufx2f_normed'],
+        0x239e, // movs r3, #158
+        0x1a9b, // subs r3, r3, r2
+        0x1b9b, // subs r3, r3, r6       ; ...less the fractional bits
+        0x0002, // movs r2, r0
+        0x0612, // lsls r2, r2, #24      ; the 8 dropped bits
+        0x0a00, // lsrs r0, r0, #8
+        0x2a00, // cmp  r2, #0
+        ['beq', 'ufx2f_range'],
+        0x0014, // movs r4, r2
+        ['bpl', 'ufx2f_range'],                 // guard clear
+        0x0054, // lsls r4, r2, #1       ; sticky
+        ['bne', 'ufx2f_up'],
+        0x0004, // movs r4, r0
+        0x07e4, // lsls r4, r4, #31      ; tie: to even
+        ['beq', 'ufx2f_range'],
+        ['label', 'ufx2f_up'],
+        0x3001, // adds r0, #1
+        0x0e04, // lsrs r4, r0, #24
+        0x2c00, // cmp  r4, #0
+        ['beq', 'ufx2f_range'],
+        0x0840, // lsrs r0, r0, #1
+        0x3301, // adds r3, #1
+        ['label', 'ufx2f_range'],
+        0x2b00, // cmp  r3, #0
+        ['bgt', 'ufx2f_pack'],
+        0x2000, // movs r0, #0
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1           ; a signed zero
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'ufx2f_pack'],
+        0x0240, // lsls r0, r0, #9
+        0x0a40, // lsrs r0, r0, #9
+        0x05db, // lsls r3, r3, #23
+        0x4318, // orrs r0, r3
+        0x07c9, // lsls r1, r1, #31
+        0x4308, // orrs r0, r1
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── float2fix(r0 = float, r1 = n) → r0 = int32, truncating ────────
+    //
+    // SF table index 8. float2int with the exponent RAISED by n before the
+    // range check, so the scaling happens for free inside the shift that was
+    // already there. Truncates toward zero, as C does.
+    const float2fix = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n
+        0x0fc1, // lsrs r1, r0, #31      ; sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24      ; exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9       ; mantissa
+        0x2000, // movs r0, #0           ; the answer for every refused case
+        0x2aff, // cmp  r2, #255
+        ['beq', 'f2fx_out'],                  // NaN and infinity, refused
+        0x1992, // adds r2, r2, r6       ; scale by the fractional bits
+        0x2a7f, // cmp  r2, #127
+        ['blt', 'f2fx_out'],                  // |x| < 1 after scaling
+        0x2a9e, // cmp  r2, #158
+        ['bge', 'f2fx_out'],                  // out of range, refused
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4           ; implicit 1
+        0x0014, // movs r4, r2
+        0x3c96, // subs r4, #150
+        0x2c00, // cmp  r4, #0
+        ['blt', 'f2fx_right'],
+        0x40a3, // lsls r3, r4
+        ['b', 'f2fx_done'],
+        ['label', 'f2fx_right'],
+        0x4264, // rsbs r4, r4, #0
+        0x40e3, // lsrs r3, r4           ; truncate toward zero
+        ['label', 'f2fx_done'],
+        0x0018, // movs r0, r3
+        0x2900, // cmp  r1, #0
+        ['beq', 'f2fx_out'],
+        0x4240, // rsbs r0, r0, #0
+        ['label', 'f2fx_out'],
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── float2ufix(r0 = float, r1 = n) → r0 = uint32, truncating ──────
+    //
+    // SF table index 10. float2fix without the sign, and refusing a negative
+    // input the way float2uint does.
+    const float2ufix = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x000e, // movs r6, r1           ; n
+        0x0fc1, // lsrs r1, r0, #31      ; sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24      ; exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9       ; mantissa
+        0x2000, // movs r0, #0           ; the answer for every refused case
+        0x2900, // cmp  r1, #0
+        ['bne', 'f2ufx_out'],                // negative: undefined in C
+        0x2aff, // cmp  r2, #255
+        ['beq', 'f2ufx_out'],                  // NaN and infinity, refused
+        0x1992, // adds r2, r2, r6       ; scale by the fractional bits
+        0x2a7f, // cmp  r2, #127
+        ['blt', 'f2ufx_out'],                  // |x| < 1 after scaling
+        0x2a9f, // cmp  r2, #159
+        ['bge', 'f2ufx_out'],                  // out of range, refused
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4           ; implicit 1
+        0x0014, // movs r4, r2
+        0x3c96, // subs r4, #150
+        0x2c00, // cmp  r4, #0
+        ['blt', 'f2ufx_right'],
+        0x40a3, // lsls r3, r4
+        ['b', 'f2ufx_done'],
+        ['label', 'f2ufx_right'],
+        0x4264, // rsbs r4, r4, #0
+        0x40e3, // lsrs r3, r4           ; truncate toward zero
+        ['label', 'f2ufx_done'],
+        0x0018, // movs r0, r3
+        ['label', 'f2ufx_out'],
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── the float constant pool ────────────────────────────────────────
+    //
+    // Thumb-1 cannot materialise an arbitrary 32-bit value inline, and this
+    // emitter has no literal pool: a PC-relative LDR needs word alignment it
+    // does not track. So constants live at a FIXED address instead, and a
+    // routine builds that address in two instructions — `movs rN, #16` then
+    // `lsls rN, rN, #8` — and reads a word with LDR's 5-bit offset.
+    //
+    // 0x1000 is chosen because the code ends well below it (0x84b as of
+    // 2026-09-10) and the tables sit below that too, so the pool cannot
+    // collide with anything that grows. The 5-bit offset caps one base at 32
+    // words, which is checked below rather than assumed.
+    const CONST_POOL = 0x1000;
+    const constants = [];
+    /** Register a float constant; returns its word index for LDR. */
+    const k = (value) => {
+        const at = constants.indexOf(value);
+        if (at >= 0) return at;
+        constants.push(value);
+        if (constants.length > 32) {
+            throw new Error('constant pool past 32 words: LDR\'s 5-bit offset cannot reach it');
+        }
+        return constants.length - 1;
+    };
+    /** `movs rN, #16; lsls rN, rN, #8` — the pool's base address, 0x1000. */
+    const poolBase = (reg) => [0x2010 | (reg << 8), 0x0200 | (reg << 3) | reg];
+    /** `ldr rD, [rBase, #index*4]` */
+    const ldrK = (rd, rbase, index) => 0x6800 | (index << 6) | (rbase << 3) | rd;
+
+    // ── fln(r0 = float) → r0 = ln(x) ───────────────────────────────────
+    //
+    // SF table index 20, and the first entry here that APPROXIMATES. Every
+    // operator above has a single correctly-rounded answer and is graded
+    // bit-exact against Math.fround. A transcendental does not: JavaScript
+    // computes it in DOUBLE and rounds down, and a float32 polynomial differs
+    // in the last bit on a fair share of inputs. Grading this bit-exact would
+    // fail a perfectly good implementation, so the test states a ULP bound
+    // instead — and the bound is CHOSEN, not derived.
+    //
+    // ln(x) = ln(m) + e*ln2 for x = m * 2^e, and the reduction is EXACT:
+    // pulling the exponent out costs no accuracy at all, which is why the
+    // series only has to be good on [1, 2).
+    //
+    // ln(m) = 2*atanh(s) with s = (m-1)/(m+1), so s is at most 1/3 and the
+    // series converges fast: the term in s^(2k+1) is bounded by (1/9)^k/(2k+1)
+    // relative to s, which passes 2^-24 by k=7. Hence the coefficients 1/3
+    // through 1/15, evaluated by Horner in s^2.
+    const fln = pc;
+    {
+        const c = [k(1), k(1 / 3), k(1 / 5), k(1 / 7), k(1 / 9), k(1 / 11), k(1 / 13), k(1 / 15)];
+        const LN2 = k(Math.fround(Math.LN2));
+        const SQRT2 = k(Math.fround(Math.SQRT2));
+        pc = asm(view, pc, [
+            0xb5f0,                     // push {r4-r7, lr}
+            0xb081,                     // sub  sp, #4            ; a slot for e
+            // ---- specials -------------------------------------------------
+            0x0002,                     // movs r2, r0
+            0x0fd2,                     // lsrs r2, r2, #31       ; sign
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24       ; exponent
+            0x2b00,                     // cmp  r3, #0
+            ['bne', 'ln_nz'],
+            // +-0 -> -Infinity, which is IEEE's answer and not an error here
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23
+            0x2101,                     // movs r1, #1
+            0x07c9,                     // lsls r1, r1, #31
+            0x4308,                     // orrs r0, r1            ; -Inf
+            ['b', 'ln_out'],
+            ['label', 'ln_nz'],
+            0x2a00,                     // cmp  r2, #0
+            ['bne', 'ln_nan'],          //                        ; ln of a negative
+            0x2bff,                     // cmp  r3, #255
+            ['bne', 'ln_finite'],
+            0x0241,                     // lsls r1, r0, #9
+            0x0a49,                     // lsrs r1, r1, #9        ; mantissa bits
+            0x2900,                     // cmp  r1, #0
+            // ln(+Inf) = +Inf. Inverted around an unconditional branch because
+            // a conditional one reaches 127 halfwords and ln_out is further
+            // than that now — the assembler said so by name rather than
+            // truncating, which is the whole reason it throws.
+            ['bne', 'ln_nan'],
+            ['b', 'ln_out'],
+            ['label', 'ln_nan'],
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23
+            0x2101,                     // movs r1, #1
+            0x0589,                     // lsls r1, r1, #22
+            0x4308,                     // orrs r0, r1            ; qNaN
+            ['b', 'ln_out'],
+            // ---- x = m * 2^e, m in [1,2) ----------------------------------
+            ['label', 'ln_finite'],
+            0x1e5c,                     // subs r4, r3, #1        ; e = exp - 127...
+            0x3c7e,                     // subs r4, #126          ; ...in two steps
+            0x0240,                     // lsls r0, r0, #9
+            0x0a40,                     // lsrs r0, r0, #9        ; mantissa
+            0x217f,                     // movs r1, #127
+            0x05c9,                     // lsls r1, r1, #23       ; 3f800000h = 1.0f.
+                                        //   The exponent FIELD of 1.0 is 127,
+                                        //   not the 63 this first built.
+            0x4308,                     // orrs r0, r1            ; r0 = m, in [1,2)
+            // THE RANGE IS CENTRED ON 1, NOT ON [1,2), and this is the whole
+            // accuracy of the routine near x = 1. With m in [1,2), an x just
+            // below 1 gives m near 2 and e = -1, so the answer is a tiny
+            // DIFFERENCE of ln(m) = +0.693 and e*ln2 = -0.693: measured, the
+            // error at ln(0.99999994) was a factor of two. Folding m into
+            // [1/sqrt2, sqrt2) makes e = 0 there, so there is nothing to
+            // cancel — and it shrinks |s| from 1/3 to 0.172, which the series
+            // is glad of as well.
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, SQRT2),
+            0x4288,                     // cmp  r0, r1            ; both positive: bits compare
+            ['blo', 'ln_centred'],
+            0x2101,                     // movs r1, #1
+            0x05c9,                     // lsls r1, r1, #23
+            0x1a40,                     // subs r0, r0, r1        ; m /= 2, exactly
+            0x3401,                     // adds r4, #1            ; ...and e absorbs it
+            ['label', 'ln_centred'],
+            0x9400,                     // str  r4, [sp, #0]      ; keep e
+            0x0004,                     // movs r4, r0            ; keep m
+            // s = (m - 1) / (m + 1)
+            0x0021,                     // movs r1, r4
+            0x0020,                     // movs r0, r4
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, c[0]),           // ldr  r1, [pool, #1.0]
+            ['bl', fsub],               // m - 1
+            0x0006,                     // movs r6, r0
+            0x0020,                     // movs r0, r4
+            ...poolBase(5),
+            ldrK(1, 5, c[0]),
+            ['bl', fadd],               // m + 1
+            0x0001,                     // movs r1, r0
+            0x0030,                     // movs r0, r6
+            ['bl', fdiv],               // s
+            0x0004,                     // movs r4, r0            ; r4 = s
+            0x0001,                     // movs r1, r0
+            ['bl', fmul],               // u = s*s
+            0x0005,                     // movs r5, r0            ; r5 = u
+            // Horner in u, from 1/15 down to 1
+            0x2600,                     // movs r6, #0
+            ...poolBase(6),
+            ldrK(0, 6, c[7]),           // acc = 1/15
+            ...[[c[6]], [c[5]], [c[4]], [c[3]], [c[2]], [c[1]], [c[0]]].flatMap(([ci]) => [
+                0x0029,                 // movs r1, r5            ; * u
+                ['bl', fmul],
+                0x2600,                 // movs r6, #0
+                ...poolBase(6),
+                ldrK(1, 6, ci),         // + coefficient
+                ['bl', fadd]
+            ]),
+            // ln(m) = 2 * s * acc
+            0x0021,                     // movs r1, r4
+            ['bl', fmul],               // s * acc
+            0x0001,                     // movs r1, r0
+            ['bl', fadd],               // + itself, i.e. * 2
+            0x0006,                     // movs r6, r0            ; r6 = ln(m)
+            // + e * ln2
+            0x9800,                     // ldr  r0, [sp, #0]      ; e
+            ['bl', int2float],
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, LN2),
+            ['bl', fmul],               // e * ln2
+            0x0001,                     // movs r1, r0
+            0x0030,                     // movs r0, r6
+            ['bl', fadd],               // ln(m) + e*ln2
+            ['label', 'ln_out'],
+            0xb001,                     // add  sp, #4
+            0xbdf0                      // pop  {r4-r7, pc}
+        ]);
+    }
+
+    // ── fexp(r0 = float) → r0 = e^x ────────────────────────────────────
+    //
+    // SF table index 19. e^x = 2^k * e^r with k = round(x/ln2), so |r| is at
+    // most ln2/2 and the Taylor series converges in a handful of terms; the
+    // 2^k is then free, because scaling by a power of two is an ADD to the
+    // exponent field.
+    //
+    // ln2 IS SPLIT IN TWO. k*ln2 reaches 88 while r is under 0.35, so
+    // computing r = x - k*ln2 in one step throws away most of r's significant
+    // bits to cancellation. LN2_HI has its low twelve mantissa bits cleared,
+    // which makes k*LN2_HI exact for every k this routine sees, and LN2_LO
+    // carries the remainder — the same trick, and the same reason, as
+    // centring fln's reduction on 1.
+    const fexp = pc;
+    {
+        // ln2 with its low twelve mantissa bits cleared, DERIVED rather than
+        // typed: a constant of this kind copied by hand is a constant nobody
+        // can check.
+        const hiBuf = new DataView(new ArrayBuffer(4));
+        hiBuf.setFloat32(0, Math.fround(Math.LN2));
+        hiBuf.setUint32(0, hiBuf.getUint32(0) & 0xfffff000);
+        const HI = hiBuf.getFloat32(0);
+        const LO = Math.fround(Math.LN2 - HI);
+        const INV = k(Math.fround(1 / Math.LN2));
+        const LN2_HI = k(HI), LN2_LO = k(LO);
+        const HALF = k(0.5), NHALF = k(-0.5), ONE = k(1);
+        const T = [2, 6, 24, 120, 720, 5040, 40320, 362880].map((f) => k(Math.fround(1 / f)));
+        pc = asm(view, pc, [
+            0xb5f0,                     // push {r4-r7, lr}
+            0xb081,                     // sub  sp, #4
+            0x9000,                     // str  r0, [sp, #0]      ; keep x
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24
+            0x2bff,                     // cmp  r3, #255
+            ['bne', 'ex_finite'],
+            0x0241,                     // lsls r1, r0, #9
+            0x0a49,                     // lsrs r1, r1, #9
+            0x2900,                     // cmp  r1, #0
+            ['bne', 'ex_early'],        //                        ; NaN in, NaN out
+            0x0fc1,                     // lsrs r1, r0, #31
+            0x2900,                     // cmp  r1, #0
+            ['beq', 'ex_early'],        //                        ; e^+Inf = +Inf
+            0x2000,                     // movs r0, #0            ; e^-Inf = +0
+            // The specials get their own epilogue rather than branching to the
+            // one at the end: a conditional branch reaches 127 halfwords and
+            // the polynomial between here and there is longer than that.
+            ['label', 'ex_early'],
+            0xb001,                     // add  sp, #4
+            0xbdf0,                     // pop  {r4-r7, pc}
+            ['label', 'ex_finite'],
+            // k = round(x / ln2)
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, INV),
+            ['bl', fmul],               // t = x / ln2
+            0x0006,                     // movs r6, r0
+            0x0fc1,                     // lsrs r1, r0, #31       ; sign of t
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            0x2900,                     // cmp  r1, #0
+            ['bne', 'ex_neg'],
+            ldrK(1, 5, HALF),
+            ['b', 'ex_bias'],
+            ['label', 'ex_neg'],
+            ldrK(1, 5, NHALF),
+            ['label', 'ex_bias'],
+            0x0030,                     // movs r0, r6
+            ['bl', fadd],               // t +- 0.5, so truncation rounds
+            ['bl', float2int],
+            0x0004,                     // movs r4, r0            ; r4 = k
+            ['bl', int2float],
+            0x0006,                     // movs r6, r0            ; r6 = (float)k
+            // r = (x - k*LN2_HI) - k*LN2_LO
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, LN2_HI),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x9800,                     // ldr  r0, [sp, #0]      ; x
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x0030,                     // movs r0, r6
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, LN2_LO),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0006,                     // movs r6, r0            ; r6 = r
+            // e^r by Horner: acc = 1/9!, then acc*r + 1/n! down to + 1
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(0, 5, T[7]),           // 1/9!
+            ...[T[6], T[5], T[4], T[3], T[2], T[1], T[0], ONE, ONE].flatMap((ci) => [
+                0x0031,                 // movs r1, r6            ; * r
+                ['bl', fmul],
+                0x2500,                 // movs r5, #0
+                ...poolBase(5),
+                ldrK(1, 5, ci),
+                ['bl', fadd]
+            ]),
+            // scale by 2^k: an ADD to the exponent field, with both ends checked
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24       ; exponent of e^r
+            0x191b,                     // adds r3, r3, r4        ; + k
+            0x2b00,                     // cmp  r3, #0
+            ['bgt', 'ex_hi'],
+            0x2000,                     // movs r0, #0            ; underflow, flushed
+            ['b', 'ex_out'],
+            ['label', 'ex_hi'],
+            0x2bff,                     // cmp  r3, #255
+            ['blt', 'ex_pack'],
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23       ; overflow to +Inf
+            ['b', 'ex_out'],
+            ['label', 'ex_pack'],
+            0x0240,                     // lsls r0, r0, #9
+            0x0a40,                     // lsrs r0, r0, #9        ; mantissa
+            0x05db,                     // lsls r3, r3, #23
+            0x4318,                     // orrs r0, r3            ; e^r is never negative
+            ['label', 'ex_out'],
+            0xb001,                     // add  sp, #4
+            0xbdf0                      // pop  {r4-r7, pc}
+        ]);
+    }
+
+    // ── sinCore(r0 = x, r1 = quadrant offset) → r0 = sin(x + offset*pi/2) ──
+    //
+    // The shared body of fsin, fcos and ftan. cos(x) is sin at quadrant q+1,
+    // so ONE reduction serves both: adding pi/2 to x before reducing would
+    // lose accuracy for large x, adding 1 to the quadrant afterwards loses
+    // nothing.
+    //
+    // THE REDUCTION IS THE WHOLE PROBLEM, not the series. x = k*(pi/2) + r
+    // with |r| <= pi/4, and the answer comes from a short polynomial in r --
+    // but r is a DIFFERENCE of two nearly equal numbers, so every bit lost
+    // computing k*(pi/2) is a bit lost in the answer. Cody-Waite splits pi/2
+    // into three pieces, each with only eight significant bits, so that
+    // k*HI and k*MID are EXACT float32 products for every k this routine
+    // accepts, and only the tiny k*LO term rounds. All three are DERIVED here
+    // from the double-precision pi/2 rather than typed: a constant of this
+    // kind copied by hand is a constant nobody can check.
+    //
+    // DECLARED DEVIATION -- THE DOMAIN IS BOUNDED, AND IT IS BOUNDED BY THE
+    // EXACTNESS ABOVE, not by taste. Eight significant bits in HI means k*HI
+    // stays exact only while k fits in sixteen, so |x| must stay under 2^16.
+    // Past that the reduction silently stops being exact and the answer
+    // degrades without any signal -- so this returns a quiet NaN instead.
+    // Doing better needs Payne-Hanek, which needs a multi-word table of 2/pi;
+    // that is a real piece of work and it is not done here. A NaN is a
+    // recognisable refusal. A quietly wrong sine is not.
+    const sinCore = pc;
+    {
+        const buf = new DataView(new ArrayBuffer(4));
+        const PI2 = Math.PI / 2;
+        const chop = (value) => {
+            buf.setFloat32(0, Math.fround(value));
+            buf.setUint32(0, buf.getUint32(0) & 0xffff0000);
+            return buf.getFloat32(0);
+        };
+        const P_HI = chop(PI2);
+        const P_MID = chop(PI2 - P_HI);
+        const P_MID2 = chop(PI2 - P_HI - P_MID);
+        const P_LO = Math.fround(PI2 - P_HI - P_MID - P_MID2);
+        const INV = k(Math.fround(2 / Math.PI));
+        const PI2_HI = k(P_HI), PI2_MID = k(P_MID), PI2_MID2 = k(P_MID2), PI2_LO = k(P_LO);
+        const HALF = k(0.5), NHALF = k(-0.5), ONE = k(1);
+        // sin(r)/r and cos(r) as polynomials in z = r*r. Both are the Taylor
+        // series; on |r| <= pi/4 the first omitted term is below a quarter of
+        // an ULP, so there is nothing to gain from a fitted minimax here.
+        const S = [-1 / 6, 1 / 120, -1 / 5040, 1 / 362880].map((c) => k(Math.fround(c)));
+        const C = [-0.5, 1 / 24, -1 / 720, 1 / 40320, -1 / 3628800].map((c) => k(Math.fround(c)));
+        pc = asm(view, pc, [
+            0xb5f0,                     // push {r4-r7, lr}
+            0xb083,                     // sub  sp, #12
+            0x9000,                     // str  r0, [sp, #0]      ; x
+            0x9101,                     // str  r1, [sp, #4]      ; quadrant offset
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24       ; exponent
+            0x2bff,                     // cmp  r3, #255
+            ['beq', 'tr_bad'],          //                        ; NaN and Inf alike
+            0x2b8f,                     // cmp  r3, #143          ; 2^16
+            ['blt', 'tr_ok'],
+            // The refusal gets its own epilogue here rather than a branch to
+            // the one at the end: a conditional branch reaches 127 halfwords
+            // and the two polynomials in between are longer than that.
+            ['label', 'tr_bad'],
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23
+            0x2101,                     // movs r1, #1
+            0x0589,                     // lsls r1, r1, #22
+            0x4308,                     // orrs r0, r1            ; 7FC00000h
+            0xb003,                     // add  sp, #12
+            0xbdf0,                     // pop  {r4-r7, pc}
+            ['label', 'tr_ok'],
+            // k = round(x * 2/pi), by biasing then truncating
+            ...poolBase(5),
+            ldrK(1, 5, INV),
+            ['bl', fmul],
+            0x0006,                     // movs r6, r0
+            0x0fc1,                     // lsrs r1, r0, #31       ; sign of t
+            // THE POOL BASE IS BUILT BEFORE THE COMPARE, NOT BETWEEN IT AND
+            // THE BRANCH. Thumb-1 has no flag-preserving MOV immediate: both
+            // `movs rN, #16` and `lsls rN, rN, #8` write the flags, so a
+            // poolBase() sitting between a CMP and its Bcc silently retargets
+            // the branch at the shift's result. lsls leaves Z clear, so `bne`
+            // was taken unconditionally -- every positive t biased by -0.5
+            // instead of +0.5, k came out one too low, and the reduction
+            // returned x unchanged. fexp has the same two instructions in the
+            // same place and is correct because its CMP comes after them.
+            ...poolBase(5),
+            0x2900,                     // cmp  r1, #0
+            ['bne', 'tr_neg'],
+            ldrK(1, 5, HALF),
+            ['b', 'tr_bias'],
+            ['label', 'tr_neg'],
+            ldrK(1, 5, NHALF),
+            ['label', 'tr_bias'],
+            0x0030,                     // movs r0, r6
+            ['bl', fadd],
+            ['bl', float2int],
+            0x0004,                     // movs r4, r0            ; k, as an integer
+            ['bl', int2float],
+            0x9002,                     // str  r0, [sp, #8]      ; k, as a float
+            // r = ((x - k*HI) - k*MID) - k*LO
+            ...poolBase(5),
+            ldrK(1, 5, PI2_HI),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x9800,                     // ldr  r0, [sp, #0]
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x9802,                     // ldr  r0, [sp, #8]
+            ...poolBase(5),
+            ldrK(1, 5, PI2_MID),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x9802,                     // ldr  r0, [sp, #8]
+            ...poolBase(5),
+            ldrK(1, 5, PI2_MID2),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x9802,                     // ldr  r0, [sp, #8]
+            ...poolBase(5),
+            ldrK(1, 5, PI2_LO),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0006,                     // movs r6, r0            ; r6 = r
+            // q = (k + offset) & 3
+            0x9b01,                     // ldr  r3, [sp, #4]
+            0x18e4,                     // adds r4, r4, r3
+            0x2303,                     // movs r3, #3
+            0x401c,                     // ands r4, r3
+            // z = r*r
+            0x0030,                     // movs r0, r6
+            0x0031,                     // movs r1, r6
+            ['bl', fmul],
+            0x0007,                     // movs r7, r0            ; r7 = z
+            0x2301,                     // movs r3, #1
+            0x4023,                     // ands r3, r4
+            0x2b00,                     // cmp  r3, #0
+            ['bne', 'tr_cos'],
+            // sin(r) = r * (1 + z*(-1/6 + z*(1/120 + ...)))
+            ...poolBase(5),
+            ldrK(0, 5, S[3]),
+            ...[S[2], S[1], S[0], ONE].flatMap((ci) => [
+                0x0039,                 // movs r1, r7            ; * z
+                ['bl', fmul],
+                ...poolBase(5),
+                ldrK(1, 5, ci),
+                ['bl', fadd]
+            ]),
+            0x0031,                     // movs r1, r6
+            ['bl', fmul],               // * r
+            ['b', 'tr_sign'],
+            ['label', 'tr_cos'],
+            // cos(r) = 1 + z*(-1/2 + z*(1/24 + ...))
+            ...poolBase(5),
+            ldrK(0, 5, C[4]),
+            ...[C[3], C[2], C[1], C[0], ONE].flatMap((ci) => [
+                0x0039,                 // movs r1, r7
+                ['bl', fmul],
+                ...poolBase(5),
+                ldrK(1, 5, ci),
+                ['bl', fadd]
+            ]),
+            ['label', 'tr_sign'],
+            // Quadrants 2 and 3 are the negatives of 0 and 1.
+            0x2302,                     // movs r3, #2
+            0x4023,                     // ands r3, r4
+            0x2b00,                     // cmp  r3, #0
+            ['beq', 'tr_out'],
+            0x2101,                     // movs r1, #1
+            0x07c9,                     // lsls r1, r1, #31
+            0x4048,                     // eors r0, r1            ; flip the sign bit
+            ['label', 'tr_out'],
+            0xb003,                     // add  sp, #12
+            0xbdf0                      // pop  {r4-r7, pc}
+        ]);
+    }
+
+    // ── fsin / fcos (r0 = float) → r0 = sin(x) / cos(x) ────────────────
+    //
+    // SF indices 16 and 15. Both are sinCore with a different quadrant
+    // offset, which is the whole of the difference between them.
+    const fsin = pc;
+    pc = asm(view, pc, [
+        0xb500,                         // push {lr}
+        0x2100,                         // movs r1, #0
+        ['bl', sinCore],
+        0xbd00                          // pop  {pc}
+    ]);
+    const fcos = pc;
+    pc = asm(view, pc, [
+        0xb500,                         // push {lr}
+        0x2101,                         // movs r1, #1
+        ['bl', sinCore],
+        0xbd00                          // pop  {pc}
+    ]);
+
+    // ── ftan(r0 = float) → r0 = tan(x) ─────────────────────────────────
+    //
+    // SF index 17, as sin/cos. That looks like it should lose accuracy near
+    // the poles and does not: after reduction the polynomial argument r is
+    // small exactly where tan is large, so cos(x) there is +-sin(r) with r
+    // near zero -- a small value computed to full RELATIVE accuracy, not a
+    // cancellation. The quotient's relative error stays bounded across the
+    // pole. It is the reduction that would fail first, and that is refused
+    // by domain above rather than approximated.
+    const ftan = pc;
+    pc = asm(view, pc, [
+        0xb530,                         // push {r4, r5, lr}
+        0x0004,                         // movs r4, r0            ; keep x
+        0x2100,                         // movs r1, #0
+        ['bl', sinCore],
+        0x0005,                         // movs r5, r0            ; sin(x)
+        0x0020,                         // movs r0, r4
+        0x2101,                         // movs r1, #1
+        ['bl', sinCore],
+        0x0001,                         // movs r1, r0            ; cos(x)
+        0x0028,                         // movs r0, r5
+        ['bl', fdiv],
+        0xbd30                          // pop  {r4, r5, pc}
+    ]);
+
     // ── the single-precision soft-float stub ───────────────────────────
     //
     // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
@@ -1328,18 +2102,25 @@ export function buildBootrom () {
     //  16 fsin       17 ftan       18 deprecated 19 fexp
     //  20 fln
     //
-    // NAMED STOP: EVERY ENTRY IS `sfUnimplemented`. NO ARITHMETIC IS
-    // IMPLEMENTED HERE. What this buys is not a working float unit — it is
-    // that a caller now reaches a routine that returns a quiet NaN instead of
-    // dereferencing null. A hang becomes a defined, recognisable wrong
-    // answer, which is a diagnosis rather than a mystery.
+    // STATUS, 2026-09-10: EIGHTEEN OF THE TWENTY-ONE ENTRIES ARE IMPLEMENTED.
+    // Indices 4, 5 and 18 are the datasheet's deprecated slots and stay the
+    // stub deliberately; every other entry is real code, graded against
+    // Math.fround. This paragraph said "EVERY ENTRY IS `sfUnimplemented`, NO
+    // ARITHMETIC IS IMPLEMENTED HERE" for three days after that stopped being
+    // true, which is the same class of defect as the version byte below: a
+    // comment that a reader consults instead of the code, still teaching the
+    // state the code has left.
     //
-    // Doing it properly means IEEE-754 single-precision add, multiply and
-    // divide hand-written in Thumb-1 on a core with no FPU, no divide and no
-    // CLZ, each agreeing with an oracle at the rounding edge. Implementing it
-    // in the host and calling out through a breakpoint would be easier and
-    // WORSE: the DoD's test is agreement with JavaScript's Math, and a JS
-    // implementation tested against JS Math measures itself. See LANES 13.
+    // What the stub still buys, for the three deprecated slots: a caller
+    // reaches a routine that returns a quiet NaN instead of dereferencing
+    // null. A hang becomes a defined, recognisable wrong answer.
+    //
+    // The arithmetic is IEEE-754 single precision hand-written in Thumb-1 on a
+    // core with no FPU, no divide and no CLZ, each operator agreeing with an
+    // oracle at the rounding edge. Implementing it in the host and calling out
+    // through a breakpoint would be easier and WORSE: the DoD's test is
+    // agreement with JavaScript's Math, and a JS implementation tested against
+    // JS Math measures itself. See LANES 13.
     const SF_TABLE_ENTRIES = 21;
     const sfTable = (at + 4 + 3) & ~3;
     for (let i = 0; i < SF_TABLE_ENTRIES; i++) {
@@ -1352,26 +2133,73 @@ export function buildBootrom () {
     view.setUint32(sfTable + 1 * 4, thumb(fsub), true);
     view.setUint32(sfTable + 2 * 4, thumb(fmul), true);
     view.setUint32(sfTable + 3 * 4, thumb(fdiv), true);
+    view.setUint32(sfTable + 12 * 4, thumb(fix2float), true);
+    view.setUint32(sfTable + 14 * 4, thumb(ufix2float), true);
+    view.setUint32(sfTable + 8 * 4, thumb(float2fix), true);
+    view.setUint32(sfTable + 10 * 4, thumb(float2ufix), true);
+    view.setUint32(sfTable + 19 * 4, thumb(fexp), true);
+    view.setUint32(sfTable + 20 * 4, thumb(fln), true);
     view.setUint32(sfTable + 6 * 4, thumb(fsqrt), true);
     view.setUint32(sfTable + 7 * 4, thumb(float2int), true);
     view.setUint32(sfTable + 9 * 4, thumb(float2uint), true);
     view.setUint32(sfTable + 11 * 4, thumb(int2float), true);
     view.setUint32(sfTable + 13 * 4, thumb(uint2float), true);
+    view.setUint32(sfTable + 15 * 4, thumb(fcos), true);
+    view.setUint32(sfTable + 16 * 4, thumb(fsin), true);
+    view.setUint32(sfTable + 17 * 4, thumb(ftan), true);
 
     const dataTable = sfTable + SF_TABLE_ENTRIES * 4;
     view.setUint16(dataTable, ROM_DATA.SOFT_FLOAT, true);
     view.setUint16(dataTable + 2, sfTable, true);
     view.setUint32(dataTable + 4, 0, true);          // terminator
 
+    // The pool is written once every constant is known.
+    if (CONST_POOL + constants.length * 4 > BOOTROM_SIZE) throw new Error('constant pool past the ROM');
+    constants.forEach((value, index) => view.setFloat32(CONST_POOL + index * 4, value, true));
+
     // ── the fixed header ───────────────────────────────────────────────
     view.setUint32(0x00, 0x20042000, true);         // initial SP: top of SRAM
     view.setUint32(0x04, thumb(spin), true);        // reset
     view.setUint32(0x08, thumb(spin), true);        // NMI
     view.setUint32(0x0c, thumb(spin), true);        // HardFault
-    rom[0x10] = 0x4d;                               // 'M'
-    rom[0x11] = 0x75;                               // 'u'
-    rom[0x12] = 0x01;                               // version 1
-    rom[0x13] = 0x00;
+    // THE MAGIC IS THREE BYTES AND THE VERSION IS A FOURTH. 'M', 'u', 0x01 at
+    // 0x10..0x12 is the whole of the magic -- the 0x01 is a CONSTANT part of
+    // it, not a version number -- and the bootrom version is the separate byte
+    // at 0x13. This comment used to read "version 1" against 0x12, which put
+    // the version in the magic's third byte and left 0x13 at zero.
+    //
+    // A zero there is not a harmless omission. pico-sdk reads the version with
+    // `*(uint8_t *)0x13` and branches on it, and Kaluma 1.2.1 does exactly
+    // that at flash 0x1002096c:
+    //
+    //     movs r3, #0x13
+    //     ldrb r5, [r3]        ; the version byte
+    //     cmp  r5, #1
+    //     beq  fill_all        ; version 1 -> fill all 32 shim slots
+    //     ble  fill_one        ; version < 1 -> fill slot 18 and stop
+    //
+    // Reading 0 took the `ble` leg, so 31 of 32 double-precision operator
+    // pointers stayed NULL, and the first one called branched to address 0.
+    // From 0 the core NOP-slid up through this ROM's zeros into
+    // rom_table_lookup at 0x100 and returned whatever that left in r0. That is
+    // ROADMAP R3: `2.5+1.0` evaluating to 0 while `1+1` gave 2, because
+    // integer arithmetic never goes through the shim table.
+    //
+    // MEASURED, not reasoned: scripts/probe-sf-unaligned.mjs boots Kaluma
+    // 1.2.1 and evaluates the expression. With 0x13 = 0 the REPL answers 0;
+    // with 0x13 = 1 it answers 3.5. Setting 0x12 instead changes nothing,
+    // which is how the two bytes were told apart.
+    //
+    // 1 IS THE HONEST NUMBER, not the one that makes the most callers happy.
+    // Claiming 2 or 3 promises the V2 double-precision table ('DF') and the
+    // larger V2 function table, and this ROM publishes neither. Measured at
+    // 0x13 = 2 and = 3, Kaluma takes its V2 leg, finds no 'DF', and `2.5+1.0`
+    // returns NO value at all -- it echoes. A wrong version trades a wrong
+    // answer for no answer.
+    rom[0x10] = 0x4d;                               // 'M' ┐
+    rom[0x11] = 0x75;                               // 'u' ├ magic, all three bytes
+    rom[0x12] = 0x01;                               //     ┘
+    rom[0x13] = 0x01;                               // bootrom version: V1, what this ROM implements
     view.setUint16(0x14, table, true);
     view.setUint16(0x16, dataTable, true);
     view.setUint16(0x18, thumb(lookup), true);

@@ -90,6 +90,7 @@ function createMockWasm() {
     _emu_get_pin_mode(port, bit) { return getPinMode(port, bit); },
     _emu_get_pin_drive(port, bit) { return getPinDrive(port, bit); },
     _emu_set_pin_input(port, bit, level) { pinInputs[port][bit] = level; },
+    _emu_get_pin_input(port, bit) { return pinInputs[port][bit]; },
     _emu_set_adc_voltage(ch, volts) { adcVoltages[ch] = volts; },
 
     _emu_get_sfr(addr) { return sfr[addr]; },
@@ -574,5 +575,52 @@ describe('emu8051 adapter: push mode', () => {
 
     // Should not throw
     adapter.destroy();
+  });
+});
+
+describe('emu8051 adapter: inputs after a reset', () => {
+  // reset() clears lastState, and syncPinInputs() only seats a pin it has a
+  // remembered mode for. So the first runNs() after a reset used to seat
+  // nothing: an external input sat unread until the slice AFTER the one that
+  // should have seen it. The mode is available from the core the whole time.
+  it('seats an external input on the first slice after a reset', () => {
+    const wasm = createMockWasm();
+    const adapter = createEmu8051Adapter(wasm, { pollIntervalNs: 0 });
+
+    adapter.attachBoard({
+      setPin() {},
+      advanceTo() {},
+      readPin(pin) { return pin === 'P1.3' ? 1 : 0; },
+      readAnalog() { return 0; },
+    });
+
+    adapter.reset();
+    adapter.runNs(1000);
+
+    assert.equal(wasm._emu_get_pin_input(1, 3), 1,
+      'P1.3 was high before the slice ran; the core must see it during that slice, not the next one');
+  });
+
+  it('still refuses to seat a pin the core is actively driving', () => {
+    const wasm = createMockWasm();
+    const adapter = createEmu8051Adapter(wasm, { pollIntervalNs: 0 });
+
+    adapter.attachBoard({
+      setPin() {},
+      advanceTo() {},
+      readPin(pin) { return pin === 'P1.4' ? 1 : 0; },
+      readAnalog() { return 0; },
+    });
+
+    // AFTER the reset, not before: _emu_reset wipes the SFRs, so a mode set
+    // beforehand does not survive into the window this test is about.
+    adapter.reset();
+    // P1.4 push-pull: M1=0, M0=1 at the P1 mode SFRs (0x91 / 0x92).
+    wasm._emu_set_sfr(0x91, 0x00);
+    wasm._emu_set_sfr(0x92, 1 << 4);
+    adapter.runNs(1000);
+
+    assert.equal(wasm._emu_get_pin_input(1, 4), 0,
+      'a push-pull pin is an output; reading the board onto it would fight the core');
   });
 });
