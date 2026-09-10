@@ -9,7 +9,7 @@ import {createNativeMemoryCircuit} from '../../src/experimental/wired-kernel/mem
 import {HARRIS_80C286_STATUS} from '../../src/experimental/harris-80c286-contract.js';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 const wire=(from,fromTerminal,to,toTerminal=fromTerminal)=>({from,fromTerminal,to,toTerminal});
-export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit,editWires=w=>w,schedule=false,admittedGraph=false}={}) {
+export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit,editWires=w=>w,schedule=false,admittedGraph=false,incrementalGraph=false}={}) {
     registerBusMemory();
     const banks=[{id:'low',kind:'62256'},{id:'high',kind:'62256'}];
     const refs=banks.map(b=>new DigitalBusMemoryAdapter({enabled:true,...b,model:getDevice(b.kind),writeJournal:true}));
@@ -31,7 +31,7 @@ export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit
     const passive={reset:0,ready_n:0,s1_n:1,s0_n:1,cod_inta_n:0,m_io:0};
     circuit.drive('host',{...passive,...bitDrives(A,0),...Object.fromEntries(D.map(p=>[p,'Z'])),vcc:1,gnd:0,bhe_n:0});
     circuit.drive('controller',controller.commands());circuit.drive('latch',latch.values);
-    const kernel=await createNativeMemoryCircuit({enabled:true,circuit,banks,wasmBytes,admittedGraph,
+    const kernel=await createNativeMemoryCircuit({enabled:true,circuit,banks,wasmBytes,admittedGraph,incrementalGraph,
         phase:{kind:'owned-latched-memory-v1',controller:'controller',latch:'latch',ioEnabled:true,intrEnabled:true,...(schedule?{schedule:{inputPart:'host'}}:{})}});
     let periodOpen=false,faulted=false,comparisons=0,faults=0;
     const capture=()=>captureWiredNetImage({enabled:true,circuit});
@@ -75,8 +75,8 @@ export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit
     const period=values=>{const error=call('beginClock',values);return error??call('endClock');};
     return {circuit,kernel,controller,latch,refs,A,D,passive,call,period,report:()=>({comparisons,faults})};
 }
-export async function runNativePhaseCircuitOracle({wasmBytes,yieldTask=()=>Promise.resolve(),stopped=()=>false,admittedGraph=false}={}) {
-    const f=await createPhaseCircuitOracle({wasmBytes,admittedGraph});f.period({...f.passive,reset:1});f.period(f.passive);
+export async function runNativePhaseCircuitOracle({wasmBytes,yieldTask=()=>Promise.resolve(),stopped=()=>false,admittedGraph=false,incrementalGraph=false}={}) {
+    const f=await createPhaseCircuitOracle({wasmBytes,admittedGraph,incrementalGraph});f.period({...f.passive,reset:1});f.period(f.passive);
     let transactions=0;
     for(let sample=0;sample<64;sample++) {
         if(stopped())throw new Error('native phase circuit oracle cancelled');

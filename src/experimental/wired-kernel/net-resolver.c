@@ -55,7 +55,7 @@ static u32 validate_operations(u32 count,const u32 *ops,u32 nets,u32 drivers,con
     }
     return 0;
 }
-static void evaluate_operations(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
+void evaluate_owned_operations(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
                                 const u32 *dep_offsets,const u32 *deps,const u8 *changed) {
     for(u32 i=0;i<count;i++) {
         u32 affected=0;
@@ -91,7 +91,7 @@ static u32 settle_validated(u32 nets,u32 drivers,const u32 *offsets,const u32 *i
         resolve_valid(nets,offsets,ids,levels,live,live_conflicts);
         for(u32 n=0;n<nets;n++){changed_nets[n]=live[n]!=previous[n];previous[n]=live[n];}
         for(u32 d=0;d<drivers;d++)staged[d]=levels[d];
-        evaluate_operations(count,ops,live,staged,dep_offsets,deps,changed_nets);
+        evaluate_owned_operations(count,ops,live,staged,dep_offsets,deps,changed_nets);
         u32 changed=0;
         for(u32 d=0;d<drivers;d++){if(staged[d]!=levels[d])changed=1;levels[d]=staged[d];}
         if(!changed) {
@@ -116,20 +116,25 @@ u32 settle_owned(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *leve
  * arena; this is not admission for caller-mutable serialized state. Runtime
  * host/schedule inputs remain validated, and owned native writers emit 0..3. */
 static const u32 *admitted_context;
+static u32 admitted_mode;
+extern u32 admit_incremental_context(const u32*);
+extern u32 settle_incremental_context(const u32*);
 #define CB(i) ((u8*)(unsigned long)c[i])
 #define CW(i) ((u32*)(unsigned long)c[i])
 u32 admit_owned_context(const u32 *c) {
-    admitted_context=0; /* Failed re-admission must not retain an old grant. */
+    admitted_context=0;admitted_mode=0; /* Failed re-admission revokes the old grant. */
     u32 error=validate_nets(c[0],c[1],CW(2),CW(3),CB(4));
     if(!error)error=validate_operations(c[7],CW(8),c[0],c[1],CW(13),CW(14),c[15]);
     if(error)return 0x80000000u|error;
     if(!c[12]||c[12]>1024)return 0x80000005u;
-    if(c[31]!=1)return 0x80000006u;
-    admitted_context=c;return 0;
+    if(c[31]!=1&&c[31]!=2)return 0x80000006u;
+    if(c[31]==2&&(error=admit_incremental_context(c)))return 0x80000000u|error;
+    admitted_context=c;admitted_mode=c[31];return 0;
 }
 u32 settle_owned_context(const u32 *c) {
     if(c[31]) {
-        if(c[31]!=1||admitted_context!=c)return 0x80000006u;
+        if(admitted_context!=c||admitted_mode!=c[31])return 0x80000006u;
+        if(admitted_mode==2)return settle_incremental_context(c);
         return settle_validated(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
     }
     return settle_owned(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));

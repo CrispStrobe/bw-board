@@ -9,7 +9,7 @@ const directory=realpathSync(process.argv[2]);if(!statSync(directory).isDirector
 const output=join(directory,'wired-net-kernel.wasm'),manifest=join(directory,'wired-net-kernel-build.json');
 if(existsSync(output)||existsSync(manifest))throw new Error('refusing to overwrite existing build');
 const clang=process.env.CLANG??'clang';
-const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c'];
+const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c'];
 const sources=sourceNames.map(p=>fileURLToPath(new URL('../'+p,import.meta.url)));
 const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall','-Wextra',
     ...(process.env.WASM_LD?[`-fuse-ld=${process.env.WASM_LD}`]:[]),
@@ -19,6 +19,7 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     ...['phase_circuit_version','begin_latched_memory_clock','end_latched_memory_clock'].map(n=>`-Wl,--export=${n}`),
     ...['phase_schedule_version','run_latched_memory_schedule'].map(n=>`-Wl,--export=${n}`),
     ...['admit_owned_context','settle_owned_context'].map(n=>`-Wl,--export=${n}`),
+    '-Wl,--export=incremental_kernel_version',
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});

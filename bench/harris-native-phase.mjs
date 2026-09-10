@@ -23,10 +23,11 @@ const paths=execFileSync('rg',['--files','src','scripts/lib'],{cwd:root,encoding
 paths.push('bench/harris-native-phase.mjs');
 for(const p of paths)sourceHashes[p]=hash(readFileSync(new URL(p,root)));
 for(const[p,h]of Object.entries(build.sourceHashes))assert.equal(sourceHashes[p],h,'rebuild native sources');
-const samples=[],modes=['reference','compiled','native','native-batched','native-admitted'];let expected;
+const samples=[],modes=['reference','compiled','native','native-batched','native-admitted','native-incremental'];let expected;
 for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].reverse():modes) {
-    const batched=mode==='native-batched'||mode==='native-admitted';
-    const f=await createPhaseCircuitOracle({wasmBytes,Circuit:mode==='compiled'?CompiledDigitalCircuit:DigitalCircuit,schedule:batched,admittedGraph:mode==='native-admitted'});
+    const admitted=mode==='native-admitted'||mode==='native-incremental',batched=mode==='native-batched'||admitted;
+    const f=await createPhaseCircuitOracle({wasmBytes,Circuit:mode==='compiled'?CompiledDigitalCircuit:DigitalCircuit,schedule:batched,
+        admittedGraph:admitted,incrementalGraph:mode==='native-incremental'});
     const image=captureWiredNetImage({enabled:true,circuit:f.circuit}),driverIDs=new Map(image.driverNames.map((n,i)=>[n,i]));
     const dataNets=f.D.map(p=>image.terminals.find(t=>t.name===`host.${p}`).net);
     const steps=[{values:{...f.passive,reset:1}},{values:f.passive}];
@@ -91,6 +92,7 @@ const report={benchmark:'owned-latched-memory-components',accepted:true,capacity
         'Native mode copies typed input and diagnostic output arrays per begin/end boundary. Native-batched uses precompiled bounded fixture schedules; compilation excluded, upload/admission included.',
         'Every native-batched period and actual-net read check still executes; synthetic schedule replay is not a CPU/device runner.',
         'Native-admitted uses the same bounded schedule with private immutable graph admission; input/schedule validation remains enabled.',
+        'Native-incremental additionally caches driver membership/levels and resolves only dirty nets while retaining every period.',
         'One warmup excluded, alternating mode order, shared host load uncontrolled. Do not extrapolate this ratio to a full board.']};
 if(process.env.HARRIS_PHASE_REPORT)writeFileSync(process.env.HARRIS_PHASE_REPORT,JSON.stringify(report,null,2)+'\n',{flag:'wx'});
 console.log(JSON.stringify({accepted:true,capacityClaim:false,summaries},null,2));
