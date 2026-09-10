@@ -24,6 +24,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createM6502Adapter } from '../src/m6502-adapter.js';
 import { createM6502DebugTarget } from '../src/m6502-debug.js';
+import { readFileSync } from 'node:fs';
 import { replayOutcome, replayCapabilities } from '../src/debug-replay-contract.js';
 
 // NOP; JMP $8000 — a program whose only job is to make the clock move.
@@ -330,5 +331,49 @@ describe('the time stamp, and the rewind it can and cannot see', () => {
     target.setButtons(0b0001);
     assert.equal(facts.length, 1, 'so the same mask is still the same state');
     assert.equal(facts[0].time.domain, 'm6502-cycles', 'and no epoch was bumped');
+  });
+});
+
+describe('A HOLLOW TARGET REFUSES, IT DOES NOT THROW', () => {
+  // The contract's central rule: applyReplayInput never throws for an input it
+  // merely cannot serve. A target built over a bare `{machine}` is not
+  // hypothetical — `code-address-progression.test.mjs:32` builds
+  // `{machine: {cpu: {}}}`, and three more suites construct over `{machine}`.
+  //
+  // THIS IS WRITTEN AS AN ENUMERATION rather than three cases, because three
+  // cases is how it got here. The buttons producer checked for its VIA and
+  // refused; serial and nmi reached straight through to an adapter and a CPU
+  // that were not there. One rule, applied where the author was looking rather
+  // than across the surface it governs. A fifth producer added later cannot
+  // reintroduce it without reddening this.
+  const SOURCE = readFileSync(new URL('../src/m6502-debug.js', import.meta.url), 'utf8');
+  const PRODUCERS = [...SOURCE.matchAll(/case '(m6502\.[a-z]+)':/g)].map(m => m[1]);
+
+  it('found the producers to check', () => {
+    assert.ok(PRODUCERS.length >= 3,
+      `only found ${PRODUCERS.join(', ') || 'none'} — the scan must have stopped matching`);
+    assert.ok(PRODUCERS.includes('m6502.serial') && PRODUCERS.includes('m6502.nmi'),
+      'the two that threw must be among them');
+  });
+
+  it('every producer returns a refusal', () => {
+    const target = createM6502DebugTarget({machine: {cpu: {}}});
+    // One payload carrying every field any producer wants, so the refusal comes
+    // from the missing hardware and not from a validation short-circuit.
+    const payload = {mask: 1, byte: 0x41, level: 1};
+    for (const producer of PRODUCERS) {
+      const out = replayOutcome(target.applyReplayInput({producer, payload}));
+      assert.equal(out.accepted, false, `${producer} must refuse`);
+      assert.equal(out.code, 'no-input-path',
+        `${producer} refused for the wrong reason: ${out.reason}`);
+    }
+  });
+
+  it('and so do the record entry points, and an unknown producer', () => {
+    const target = createM6502DebugTarget({machine: {cpu: {}}});
+    assert.equal(target.setButtons(1), false);
+    assert.equal(target.sendSerial(0x41), false);
+    const out = replayOutcome(target.applyReplayInput({producer: 'm6502.paddle', payload: {}}));
+    assert.equal(out.code, 'unsupported-replay-input');
   });
 });

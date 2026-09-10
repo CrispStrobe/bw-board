@@ -420,6 +420,12 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * @returns {boolean} whether a receiver took it
      */
     sendSerial(byte) {
+      // EVERY REACH OUTSIDE THIS CLOSURE IS GUARDED, not just the ones a test
+      // happened to drive. Callers construct this target over a bare
+      // `{machine}` — `code-address-progression.test.mjs:32` builds
+      // `{machine: {cpu: {}}}` — so `adapter` is frequently an object with
+      // nothing on it.
+      if (typeof adapter?.sendSerial !== 'function') return false;
       const accepted = adapter.sendSerial(byte & 0xff);
       if (accepted) publishEvent('m6502.serial', {byte: byte & 0xff});
       return accepted;
@@ -428,7 +434,10 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     /**
      * The APPLY half. Every failure is a return value, never a throw.
      *
-     * Three producers, all three with a measured path in THIS build — measured
+     * Three producers, all three with a measured path in a fully built target —
+     * and every one of them GUARDED, because a target built over a bare
+     * `{machine}` has neither an adapter nor a CPU and a refusal is what the
+     * contract requires there, not a TypeError. Measured
      * rather than assumed, because the first draft of this method refused two of
      * them by name on the strength of a sentence about what the machine lacks:
      *
@@ -472,6 +481,11 @@ export function createM6502DebugTarget(adapter, opts = {}) {
           if (!Number.isInteger(payload?.byte) || payload.byte < 0 || payload.byte > 0xff) {
             return replayRefused('invalid-replay-input', 'm6502.serial needs a byte in 0..255');
           }
+          if (typeof adapter?.sendSerial !== 'function') {
+            return replayRefused('no-input-path',
+              'this target was built without an adapter, and the serial input path '
+              + 'lives there (m6502-adapter.js:156)');
+          }
           // NOT routed through this.sendSerial: that one records, and a replayed
           // byte re-entering the log would double every byte on a second pass.
           return adapter.sendSerial(payload.byte)
@@ -480,6 +494,10 @@ export function createM6502DebugTarget(adapter, opts = {}) {
               'no chip in this config accepts a received byte');
         }
         case 'm6502.nmi':
+          if (typeof cpu?.nmi !== 'function') {
+            return replayRefused('no-input-path',
+              'this machine has no CPU with an NMI entry point');
+          }
           cpu.nmi();
           return replayAccepted();
         default:
