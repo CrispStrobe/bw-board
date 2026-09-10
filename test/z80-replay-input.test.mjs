@@ -69,6 +69,63 @@ test('a recorded fact is stamped from the machine CLOCK, not from a projection o
   assert.equal(fact.time.ticks, machine.cycles);
 });
 
+test('a snapshot RESTORE moves the clock backwards, and the domain says so', () => {
+  // The defect this replaces a false claim about. An earlier version of the
+  // source said this machine has no reset and its snapshot loaders do not touch
+  // `cycles`, so the domain could be constant. `z80-machine.js:373` is
+  // `this.cycles = s.cycles` inside loadState, so a restore rewinds into ticks
+  // the domain has already issued — worse than a reset, which at least restarts
+  // forwards. A downstream recorder refuses exactly that with
+  // INVALID_INPUT_ORDER, in the workflow snapshots exist for.
+  const { machine, target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+
+  target.setKeys(['a']);
+  const snapshot = machine.saveState();
+  machine.cycles = 100_000;
+  target.setKeys(['b']);
+  machine.loadState(snapshot);
+  assert.ok(machine.cycles < 100_000, 'the restore did not rewind the clock; this test is moot');
+  target.setKeys(['c']);
+
+  assert.equal(facts.length, 3);
+  const [before1, before2, after] = facts;
+  assert.equal(before1.time.domain, before2.time.domain, 'facts before the rewind share a domain');
+  assert.notEqual(after.time.domain, before2.time.domain,
+    'the fact after the rewind is in the SAME domain as one with a higher tick count');
+  assert.match(after.time.domain, /rewind-\d+$/);
+
+  // Within each domain, ticks are non-decreasing — which is the property the
+  // recorder checks and the only thing the domain split has to buy.
+  const byDomain = new Map();
+  for (const fact of facts) {
+    const seen = byDomain.get(fact.time.domain) ?? [];
+    seen.push(fact.time.ticks);
+    byDomain.set(fact.time.domain, seen);
+  }
+  for (const [domain, ticks] of byDomain) {
+    const sorted = [...ticks].sort((a, b) => a - b);
+    assert.deepEqual(ticks, sorted, `ticks decreased within domain ${domain}`);
+  }
+});
+
+test('a rewind that does not happen does not split the domain', () => {
+  // The complement: forward-only recording stays in one domain, so the epoch is
+  // not bumped by ordinary use.
+  const { machine, target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+  target.setKeys(['a']);
+  machine.cycles += 1000;
+  target.setKeys(['b']);
+  machine.cycles += 1000;
+  target.setKeys(['c']);
+  assert.equal(new Set(facts.map(f => f.time.domain)).size, 1,
+    'the domain split without the clock ever going backwards');
+  assert.equal(facts[0].time.domain, 'z80-cycles');
+});
+
 test('THE ROUND TRIP: a fact this target recorded, replayed into a fresh one', () => {
   // Record on one machine, replay into another — the real shape, and the one
   // that catches a recorder and an applier agreeing with each other rather than

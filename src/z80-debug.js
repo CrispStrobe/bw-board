@@ -60,13 +60,50 @@ export function createZ80DebugTarget(adapter) {
   // stops two targets' stamps being compared to each other, so a third target
   // should copy the mechanism and not the units.
   //
-  // NO EPOCH HERE, UNLIKE THE 8051. That adapter bumps a counter into its domain
-  // on reset, because a reset restarts its clock and facts either side are not
-  // comparable. This machine has no reset — `cycles` is set once in the
-  // constructor — and the snapshot loaders do not touch it, so the domain is
-  // constant. If a reset is ever added, the epoch is what to add with it.
+  // THE EPOCH IS DETECTED, NOT ANNOUNCED — and an earlier version of this file
+  // claimed no epoch was needed at all. That was false, and it was false because
+  // the claim was checked against `zx-sna.js` and `zx-z80file.js`, the snapshot
+  // FILE parsers, and not against the machine's own `loadState`:
+  // `z80-machine.js:373` is `this.cycles = s.cycles`.
+  //
+  // A restore therefore moves the clock BACKWARDS, which is worse than the
+  // 8051's reset: a reset restarts at zero going forward, a restore rewinds into
+  // ticks this domain has already issued. Measured: facts at ticks 0, then
+  // 100000, then 0 again, all in domain 'z80-cycles'. A downstream recorder
+  // refuses exactly that — `recorder.js:261` raises INVALID_INPUT_ORDER, "Input
+  // time decreased in domain" — and it fires in the workflow snapshots exist
+  // for: record, restore a checkpoint, press a key.
+  //
+  // WHY DETECTION RATHER THAN A HOOK. This target never calls `loadState`; the
+  // restore is driven by the caller, so there is no call site here to bump an
+  // epoch at, the way the 8051 bumps one inside its own `reset()`. Watching the
+  // clock instead needs no cooperation from the machine and covers EVERY rewind
+  // path rather than the one that was found — and the one that was found is not
+  // the only one there will be. `m6502-machine.js:806` is the same assignment,
+  // so this mechanism transfers verbatim rather than being re-derived.
   const observedInputs = new Map();
   let inputListeners = [];
+  let inputTimeEpoch = 0;
+  let lastTicks = null;
+
+  /**
+   * The stamp, with the discontinuity carried in the domain.
+   *
+   * A rewind is detected by comparison rather than by being told: if the clock
+   * is lower than the last tick this domain issued, the era has changed and the
+   * domain says so. Facts either side then belong to different domains and
+   * nothing compares them.
+   */
+  function inputTime() {
+    const ticks = machine.cycles;
+    if (lastTicks !== null && ticks < lastTicks) inputTimeEpoch++;
+    lastTicks = ticks;
+    return {
+      ticks,
+      domain: inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles',
+      hz: machine.clockHz
+    };
+  }
 
   /**
    * Emit a fact, but only when the value has CHANGED.
@@ -79,11 +116,7 @@ export function createZ80DebugTarget(adapter) {
     const signature = JSON.stringify(payload);
     if (observedInputs.get(key) === signature) return;
     observedInputs.set(key, signature);
-    const fact = {
-      time: {ticks: machine.cycles, domain: 'z80-cycles', hz: machine.clockHz},
-      producer,
-      payload: {...payload}
-    };
+    const fact = {time: inputTime(), producer, payload: {...payload}};
     // Each listener gets its own copy: a recorder that stored the object and a
     // listener that mutated it would corrupt the log in place.
     for (const listener of inputListeners) {
