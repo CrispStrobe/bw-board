@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ancestorCandidates, stripComments } from './helpers/sibling-checkout.mjs';
+import { ancestorCandidates, resolveAncestor, stripComments } from './helpers/sibling-checkout.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -238,5 +238,38 @@ describe('stripComments', () => {
     const out = stripComments(src);
     assert.ok(out.includes('../../real'), 'a // inside a template ate the code after it');
     assert.ok(out.includes('../../also'), 'an escaped quote ended the string early');
+  });
+});
+
+describe('resolveAncestor', () => {
+  // Held because eight suites now depend on it and the lookup suite did not
+  // touch it: a mutation replacing the whole body with the fixed-depth
+  // candidate reddened NOTHING here, which is a holder-shaped hole rather than
+  // a passing test.
+  const RELATIVE = ['stc', 'examples'];
+
+  it('returns something that EXISTS when an ancestor has it', {
+    skip: ancestorCandidates(HERE, RELATIVE).some(p => existsSync(p))
+      ? false : 'no stc/examples above ' + HERE
+  }, () => {
+    const found = resolveAncestor(HERE, RELATIVE);
+    assert.ok(existsSync(found), `${found} does not exist`);
+    // And it is NOT the fixed-depth path, or the walk did nothing: from a
+    // worktree that path is `code/wt/stc/examples`, which is absent.
+    const fixed = ancestorCandidates(HERE, RELATIVE)[2];
+    if (!existsSync(fixed)) {
+      assert.notEqual(found, fixed, 'it returned the path a fixed depth would have');
+    }
+  });
+
+  it('falls back to the beside-the-repo candidate when nothing exists', () => {
+    // The absent case must stay byte-identical to what the fixed-depth form
+    // named, so a conversion changes the FOUND case and nothing else.
+    const nowhere = ['definitely-not-a-checkout-' + process.pid, 'x'];
+    assert.equal(resolveAncestor(HERE, nowhere), ancestorCandidates(HERE, nowhere)[2]);
+  });
+
+  it('does not fall over when there are fewer levels than the fallback index', () => {
+    assert.equal(resolveAncestor('/', ['nope'], 0), ancestorCandidates('/', ['nope'], 0)[0]);
   });
 });
