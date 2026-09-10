@@ -222,12 +222,40 @@ describe('serial is an EVENT, and events are not deduplicated', () => {
 });
 
 describe('nmi reaches the CPU through the route the machine itself uses', () => {
-  it('applies through cpu.nmi() and lands on the vector', () => {
+  it('applies through machine.nmi() and ADVANCES MACHINE TIME through it', () => {
+    // Routed through the MACHINE's entry point rather than the CPU's. The
+    // difference is not cosmetic: `cpu.nmi()` charges the seven-cycle interrupt
+    // sequence to the CPU's own counter and to nothing else, so `machine.cycles`
+    // does not move, the peripherals are never advanced through that bus time,
+    // and the stamp on the next recorded fact reads as though the interrupt
+    // were free. Asserted here because the first version of this apply half did
+    // exactly that and the test only checked the PC.
     const {target, machine} = makeTarget();
     spin(machine, 5);
     assert.notEqual(machine.cpu.pc, 0x1234);
+    const before = machine.cycles;
+
     assert.equal(replayOutcome(target.applyReplayInput({producer: 'm6502.nmi', payload: {}})).accepted, true);
+
     assert.equal(machine.cpu.pc, 0x1234, 'PC is at the NMI vector at $FFFA');
+    assert.equal(machine.cycles - before, 7,
+      'the machine clock advanced through the interrupt sequence');
+  });
+
+  it('a replayed NMI moves the clock the RECORDER reads', () => {
+    // The consequence of the above, from the side that matters: an input
+    // recorded after a replayed NMI must be stamped later than one recorded
+    // before it. With cpu.nmi() the two stamps were identical.
+    const {target, machine} = makeTarget();
+    const facts = [];
+    target.onDebugInput(f => facts.push(f));
+    target.setButtons(0b0001);
+    target.applyReplayInput({producer: 'm6502.nmi', payload: {}});
+    target.setButtons(0b0010);
+    assert.equal(facts.length, 2);
+    assert.ok(facts[1].time.ticks > facts[0].time.ticks,
+      'the interrupt took time, and the stamps say so');
+    assert.ok(machine.cycles > 0);
   });
 
   it('is NOT recorded, because nothing on this target produces one', () => {

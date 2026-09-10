@@ -598,6 +598,30 @@ export class M6502Machine {
 
     /** One instruction (or one idle cycle when waiting); returns cycles consumed. */
     /**
+     * Pulse NMI as an external pin event, and ADVANCE MACHINE TIME THROUGH IT.
+     *
+     * The CPU has had `nmi()` since this file existed and nothing surfaced it,
+     * so the debug target reached `machine.cpu.nmi()` directly — which is what
+     * this machine does internally for the vsync NMI at the simplevga branch
+     * below, and which is wrong for an EXTERNAL pulse. `cpu.nmi()` charges the
+     * seven-cycle interrupt sequence to the CPU's own counter and to nothing
+     * else: `this.cycles` does not move, so the peripherals are not advanced
+     * through that bus time and every timestamp taken from the machine clock
+     * reads as though the interrupt were free.
+     *
+     * Ported from a downstream consumer's copy of this file, which has had it
+     * for months. Upstream had the CPU entry point and no machine one.
+     *
+     * @returns {boolean} always true — an NMI is non-maskable and always taken
+     */
+    nmi() {
+        this.cpu.nmi();
+        this.cycles += 7;
+        this._advanceChips(7);
+        return true;
+    }
+
+    /**
      * Face-input contract: press/release the four control buttons a
      * human (or a face capturing arrow keys) drives. Convention from
      * gfoot's simplevga snake — ACTIVE-LOW buttons on the first VIA's
