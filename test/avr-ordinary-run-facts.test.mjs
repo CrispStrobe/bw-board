@@ -110,6 +110,27 @@ describe('an ordinary AVR run publishes', () => {
     assert.ok(adapter.stats.sleptCycles > 0, 'the fixture never actually slept');
   });
 
+  it('a clock JUMP when time advances to a scheduled event, not an elapse', () => {
+    // Two different things happened and they get two different fact kinds: "the
+    // core slept through the slice" and "the clock jumped to a timer callback".
+    // Deleting the jump publish leaves the idle case above green — the plain
+    // sleep fixture never reaches this path — so the pair needs its own case or
+    // half the vocabulary goes unexercised.
+    const TCCR0B_IO = 0x25, TIMSK0 = 0x6e, SEI = 0x9478;
+    const { seen, adapter } = run([
+      ldi24(1), out24(TCCR0B_IO), ldi24(1), STS, TIMSK0, SEI,
+      ldi24(1), out24(SMCR_IO), SLEEP, RJMP_SELF
+    ], 200_000);
+
+    const jumps = seen.filter(e => e.kind === 'clock');
+    assert.ok(jumps.length > 0, 'the clock jumped to timer events and no fact said so');
+    assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+      'a jump to a scheduled event is not an elapse; the two must not collapse');
+    assert.ok(jumps.every(e => e.changes.cycles > 0), 'a jump that advanced nothing');
+    assert.equal(jumps.reduce((n, e) => n + e.changes.cycles, 0), adapter.stats.sleptCycles,
+      'the jumps do not add up to the cycles the adapter counted as slept');
+  });
+
   it('and every slept cycle is claimed by exactly one fact', () => {
     // The accounting claim, stated where it can be checked against a number the
     // adapter keeps for its own reasons: `stats.sleptCycles`. A publish that
