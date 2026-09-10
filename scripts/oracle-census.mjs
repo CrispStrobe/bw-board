@@ -163,11 +163,36 @@ export const INPUTS = [
         // so `<repo>/emu8051-stc` is the only place it can be.
         paths: [join(ROOT, 'emu8051-stc', 'build'), join(HOME, 'code', 'emu8051-stc'),
             '/mnt/volume1/code/emu8051-stc'],
+        // SEVEN MORE GATES ARRIVED WITHOUT MOVING, and that is worth a line. They
+        // always depended on this oracle; they used to skip by printing a comment
+        // and returning, which the runner counts as a PASS -- so
+        // `census-covers-the-tree` could not see them as guard-then-skip tests at
+        // all. Converting them to a real `skip:` made them visible, and the census
+        // immediately said what it says: an external input with no row.
         gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
-            'test/emu8051-debug.test.js'],
+            'test/emu8051-debug.test.js', 'test/conformance-real-wasm.test.js',
+            'test/device-drivers-e2e.test.js', 'test/end-to-end-dimmer.test.js',
+            'test/motor-e2e.test.js', 'test/rung8-serial-reads.test.js',
+            'test/servo-e2e.test.js'],
         obtain: 'git clone https://github.com/CrispStrobe/emu8051-stc and build its WASM',
         ciAvailable: true,
         ci: 'yes — checked out at a pinned ref by the `test` job',
+    },
+    {
+        id: 'stc-examples', kind: 'fixture',
+        what: 'The stc example set — one NN-name directory per example, each with a '
+            + 'pins.json the netlist inference is checked against, plus a manifest.',
+        // NO ENV VAR, and that is a statement rather than an omission: every gate
+        // finds this by walking up from its own directory, and none reads an
+        // override. Listing one would make this row claim a variable nothing
+        // reads — which test/oracle-census.test.mjs checks in both directions.
+        env: null,
+        paths: [join(ROOT, 'stc', 'examples'), join(HOME, 'code', 'stc', 'examples'),
+            '/mnt/volume1/code/stc/examples'],
+        gates: ['test/example-manifest.test.js'],
+        obtain: 'git clone https://github.com/CrispStrobe/stc and build its examples',
+        ciAvailable: false,
+        ci: 'no — the `test` job checks out emu8051-stc only',
     },
     {
         id: 'labwired-wasm', kind: 'oracle',
