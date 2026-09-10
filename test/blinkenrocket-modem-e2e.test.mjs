@@ -49,11 +49,20 @@ const HEX_CANDIDATES = [
   // skipping. Last, so a developer's own build still wins where one exists.
   ...ancestorCandidates(HERE, ['blinkenrocket-firmware', 'releases', 'blinkenrocket_2.1.hex']),
 ].filter(Boolean);
-const HEX_PATH = HEX_CANDIDATES.find(p => existsSync(p)) || HEX_CANDIDATES[HEX_CANDIDATES.length - 1];
+const HEX_PATH = HEX_CANDIDATES.find(p => existsSync(p)) || null;
+// NAME SOMETHING ACTIONABLE WHEN NOTHING IS FOUND. The message used to name
+// the LAST candidate, which after the walk was added is a path at the
+// filesystem root — true, and useless to act on. Say how many places were
+// tried and name the two a person can actually do something about: the env
+// var, and the checkout beside the repo that CI makes.
+const HEX_MISSING = 'blinkenrocket firmware hex not found in '
+  + HEX_CANDIDATES.length + ' places. Set $BLINKENROCKET_HEX, or check out '
+  + 'CrispStrobe/blinkenrocket-firmware beside this repo (its releases/'
+  + 'blinkenrocket_2.1.hex is tracked; build/main.hex is not).';
 
 
 test('modem full loop: encodeTextMessage → firmware ADC → EEPROM pattern', {
-    skip: !existsSync(HEX_PATH) && 'blinkenrocket firmware hex not found at ' + HEX_PATH,
+    skip: HEX_PATH ? false : HEX_MISSING,
     timeout: 120_000,
 }, () => {
     // NAME WHAT WAS MEASURED. Three different hexes exist across the boxes and
