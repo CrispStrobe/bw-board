@@ -1,3 +1,5 @@
+import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+
 /**
  * emu8051-stc adapter — bridges the WASM emulator API to boundary A.
  *
@@ -62,8 +64,6 @@ const MODE_NAMES = ['quasi', 'pushpull', 'input', 'opendrain'];
  * @param {number} [opts.pollIntervalNs] - poll interval in fallback mode (default 1000)
  * @param {'push' | 'poll' | 'auto'} [opts.mode] - force a mode (default 'auto')
  */
-import { replayAccepted, replayRefused } from './debug-replay-contract.js';
-
 export function createEmu8051Adapter(wasm, opts = {}) {
   const fosc = opts.fosc ?? 11059200;
   const vcc = opts.vcc ?? 5.0;
@@ -111,13 +111,13 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   // with facts after. The domain says which era a fact belongs to; without it
   // a replay could interleave two runs and look ordered.
   let inputTimeEpoch = 0;
-  
+
   const inputTime = () => ({
     ticks: getCurrentTimeNs(),
     domain: inputTimeEpoch ? `8051-input-ns-reset-${inputTimeEpoch}` : '8051-input-ns',
     hz: 1e9
   });
-  
+
   /**
    * Emit a fact, but only when the value the machine receives has CHANGED.
    *
@@ -137,7 +137,7 @@ export function createEmu8051Adapter(wasm, opts = {}) {
       listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
     }
   }
-  
+
   /** Record the volts the MCU receives, which is what the native setter clamps to. */
   const normalizeVolts = value => Math.max(0, Math.min(vcc,
     Number.isFinite(Number(value)) ? Number(value) : 0));
@@ -499,9 +499,22 @@ export function createEmu8051Adapter(wasm, opts = {}) {
      * @returns {{accepted: boolean, code?: string, reason?: string}}
      */
     applyReplayInput(input) {
-      if (stats.mode === 'push') {
+      // THE HAZARD IS THE ATTACHED BOARD, NOT THE MODE. An earlier version of
+      // this guard tested `stats.mode === 'push'` while giving the board as its
+      // reason — the right cause named beside the wrong predicate. In POLL mode
+      // `runNs`, `readPort`, `writePort` and `setPortMode` all reach
+      // `syncPinInputs`/`pollPins`, which read the live board and push its
+      // values into the core through the same native setter this method uses.
+      // Measured with a control: with a board pulling P1.0 to ground, replaying
+      // level 1 was ACCEPTED and the board reasserted 0 one run slice later;
+      // with no board attached, nothing contradicted the replayed value.
+      //
+      // So a live board is the authority whenever it is attached, in either
+      // mode, and replay must not pretend otherwise.
+      if (board) {
         return replayRefused('live-board-input-authority',
-          'push mode reads the attached board directly; replay must control that board');
+          'a board is attached and re-asserts its own pin values; detach it before replaying, ' +
+          'or the replayed value is overwritten on the next run slice');
       }
       const payload = input?.payload;
       if (input?.producer === 'emu8051.pin') {

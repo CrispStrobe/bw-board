@@ -47,6 +47,12 @@ const loadFactory = () => {
   return typeof mod === 'function' ? mod : mod?.default;
 };
 
+/** A real adapter with NO board — the only state in which replay is permitted. */
+async function bootBoardless(mode = 'poll') {
+  const Module = await loadFactory()();
+  return createEmu8051Adapter(Module, { mode });
+}
+
 /** A real adapter on a real board, with P1.0 driven by the circuit. */
 async function boot(mode) {
   const Module = await loadFactory()();
@@ -72,14 +78,15 @@ test('the adapter declares BOTH halves of the surface', { skip }, async () => {
   assert.deepEqual(replaySupport(adapter), { supported: true, reasons: [] });
 });
 
-test('a fact the emulator RECORDED is replayed back and accepted', { skip }, async () => {
-  const { adapter } = await boot('poll');
+test('a fact the emulator RECORDED is replayed into a boardless machine', { skip }, async () => {
+  // RECORD on a machine with a board; REPLAY into one without. That is the real
+  // shape — a recording is made from a live session and replayed into a fresh
+  // machine — and it is now the only shape the adapter permits, because a live
+  // board re-asserts its own pin values and would overwrite the replay.
+  const { adapter: recorder } = await boot('poll');
   const recorded = [];
-  const stop = adapter.onDebugInput(fact => recorded.push(fact));
-
-  // Run the core so it polls its inputs. The facts below are whatever the
-  // machine actually observed — nothing here constructs one.
-  adapter.runNs(2_000_000);
+  const stop = recorder.onDebugInput(fact => recorded.push(fact));
+  recorder.runNs(2_000_000);   // the facts below are whatever the machine observed
   stop();
 
   assert.ok(recorded.length > 0, 'the emulator observed no input at all; nothing to round-trip');
@@ -93,23 +100,62 @@ test('a fact the emulator RECORDED is replayed back and accepted', { skip }, asy
   assert.equal(fact.time.hz, 1e9);
   assert.match(fact.time.domain, /^8051-input-ns/);
 
-  // THE ROUND TRIP. Replay the recorded fact, unmodified.
-  const outcome = replayOutcome(adapter.applyReplayInput(fact));
+  const player = await bootBoardless();
+  const outcome = replayOutcome(player.applyReplayInput(fact));
   assert.equal(outcome.accepted, true,
-    `a fact this adapter recorded was refused by the same adapter: ${outcome.reason}`);
+    `a fact a real emulator recorded was refused on replay: ${outcome.reason}`);
+
+  // AND IT IS NOT IMMEDIATELY CONTRADICTED. With no board there is nothing to
+  // re-assert a different value, so a subsequent run emits no fact for that pin.
+  // Measured with a control at review time: with a board attached the same
+  // sequence emits level 0 one slice later, which is how the guard's defect was
+  // found.
+  if (fact.producer === 'emu8051.pin') {
+    const after = [];
+    player.onDebugInput(f => {
+      if (f.producer === 'emu8051.pin' && f.payload.port === fact.payload.port &&
+          f.payload.bit === fact.payload.bit) after.push(f.payload.level);
+    });
+    player.runNs(1_000_000);
+    assert.deepEqual(after, [], 'something overwrote the replayed pin value');
+  }
+
+  // WHAT IS STILL NOT PROVEN, SAID RATHER THAN IMPLIED: that the replayed value
+  // is readable back out of the core. `_emu_set_pin_input` moves no SFR that
+  // this surface exposes — checked at review, with no board attached, and the
+  // probe measured nothing either way. So the assertion above is "nothing
+  // contradicted it", not "the core holds it". Do not re-try the P1 SFR probe;
+  // it is a dead instrument.
 });
 
-test('every recorded fact replays — not just the first', { skip }, async () => {
-  const { adapter } = await boot('poll');
+test('every recorded fact replays into a boardless machine — not just the first', { skip }, async () => {
+  const { adapter: recorder } = await boot('poll');
   const recorded = [];
-  const stop = adapter.onDebugInput(fact => recorded.push(fact));
-  adapter.runNs(2_000_000);
+  const stop = recorder.onDebugInput(fact => recorded.push(fact));
+  recorder.runNs(2_000_000);
   stop();
 
+  const player = await bootBoardless();
   for (const fact of recorded) {
-    const outcome = replayOutcome(adapter.applyReplayInput(fact));
+    const outcome = replayOutcome(player.applyReplayInput(fact));
     assert.equal(outcome.accepted, true,
       `recorded ${fact.producer} was refused on replay: ${outcome.reason}`);
+  }
+});
+
+test('replay is REFUSED while a board is attached, in either mode', { skip }, async () => {
+  // The guard used to test the MODE and give the board as its reason. In poll
+  // mode runNs, readPort, writePort and setPortMode all reach the sync path,
+  // which reads the live board and pushes its values into the core through the
+  // same native setter — so poll mode with a board is the identical authority
+  // conflict, and it used to be accepted silently.
+  for (const mode of ['poll', 'push']) {
+    const { adapter } = await boot(mode);
+    const outcome = replayOutcome(adapter.applyReplayInput(
+      { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } }));
+    assert.equal(outcome.accepted, false, `${mode} mode with a board must refuse replay`);
+    assert.equal(outcome.code, 'live-board-input-authority');
+    assert.match(outcome.reason, /board/);
   }
 });
 
@@ -171,7 +217,10 @@ test('reset clears the dedup and moves the time domain to a new era', { skip }, 
 });
 
 test('a malformed fact is refused before it reaches the native setters', { skip }, async () => {
-  const { adapter } = await boot('poll');
+  // Boardless, so the refusals below are about the PAYLOAD. With a board
+  // attached every one of them would be refused by the authority guard first,
+  // and this test would pass without exercising a single validation rule.
+  const adapter = await bootBoardless();
   const bad = [
     { producer: 'emu8051.pin', payload: { port: 9, bit: 0, level: 1 } },
     { producer: 'emu8051.pin', payload: { port: 1, bit: 8, level: 1 } },
@@ -189,17 +238,15 @@ test('a malformed fact is refused before it reaches the native setters', { skip 
   }
 });
 
-test('push mode refuses replay, because the board would overwrite it', { skip }, async () => {
-  const { adapter } = await boot('push');
-  const outcome = replayOutcome(adapter.applyReplayInput(
-    { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } }));
-  // Asserted, not branched on: this WASM build does reach push mode (measured),
-  // so a conditional here would leave one half permanently dead — the vacuous
-  // shape this suite exists to avoid. If a build stops reaching push mode, this
-  // fails loudly and says why rather than quietly testing the other mode.
-  assert.equal(adapter.getStats().mode, 'push',
-    'this test is about push mode; the build did not reach it');
-  assert.equal(outcome.accepted, false);
-  assert.equal(outcome.code, 'live-board-input-authority');
-  assert.match(outcome.reason, /board/);
+test('a boardless machine accepts replay in either mode', { skip }, async () => {
+  // The complement of the refusal above: with no board there is no competing
+  // authority, so the mode is irrelevant. Together the two tests say the guard
+  // turns on the board and not on the mode, which is the correction this commit
+  // carries.
+  for (const mode of ['poll', 'push']) {
+    const adapter = await bootBoardless(mode);
+    const outcome = replayOutcome(adapter.applyReplayInput(
+      { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } }));
+    assert.equal(outcome.accepted, true, `${mode} mode without a board must accept: ${outcome.reason}`);
+  }
 });
