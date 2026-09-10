@@ -36,12 +36,20 @@ registerAllDevices();
 function stubBoard() {
   const pins = [];
   const times = [];
+  const reads = [];
   return {
     pins,
     times,
+    /** Every readPin the adapter made, in order. See INPUT READBACK below. */
+    reads,
     setPin(name, mode, high) { pins.push({ name, mode, high }); },
     advanceTo(tNs) { times.push(tNs); },
-    readPin(name) { return stubBoard._inputLevel ?? 0; },
+    // `this._inputLevel`, not `stubBoard._inputLevel`. The latter reads a
+    // property of the FUNCTION, which nothing ever sets, so every readPin
+    // returned 0 however a caller configured the board. It did not bite,
+    // because the one test that sets `_inputLevel` also replaces `readPin`
+    // outright — which is how it survived.
+    readPin(name) { reads.push(name); return this._inputLevel ?? 0; },
     readAnalog() { return 0; },
     _inputLevel: 0,
   };
@@ -281,23 +289,43 @@ for (const factoryFn of GPIO_FACTORIES) {
     // ── 2. INPUT READBACK ──────────────────────────────────────────────
 
     if (inputPin) {
-      it('an untouched input pin reads back the board level', () => {
+      // THIS SECTION COULD NOT FAIL UNTIL 2026-09-10. Its assertion was
+      // `lastEvent.mode !== 'pushpull' || lastEvent.mode === 'pushpull'` —
+      // X || !X — and it sat inside `if (lastEvent)`, so it was vacuous twice
+      // over. It is the section of the SHARED contract that would catch an
+      // adapter whose input sync stopped working, and it has never been able
+      // to: proving those paths were live had to be done with a counting board
+      // rather than by reading this suite green.
+      it('the adapter READS the input pin from the board while it runs', () => {
+        // The check the section's name always claimed. `syncInputs` reading
+        // the board is the whole of "reads back the board level"; an adapter
+        // that stopped calling it would go on passing everything else here.
         const adapter = factory.make();
         const b = stubBoard();
         b._inputLevel = 1;
-        b.readPin = (pin) => pin === inputPin ? 1 : 0;
         adapter.attachBoard(b);
         adapter.advanceNs(100_000);
-        // The adapter should have synced inputs from the board
-        // Verify by checking no setPin for the input pin as pushpull
-        const inputEvents = b.pins.filter(c => c.name === inputPin && c.mode === 'pushpull');
-        // An untouched input should NOT be driven pushpull by the MCU
-        // (it should be in an input mode from reset)
-        const lastEvent = b.pins.filter(c => c.name === inputPin).pop();
-        if (lastEvent) {
-          assert.ok(lastEvent.mode !== 'pushpull' || lastEvent.mode === 'pushpull',
-            `input pin ${inputPin} should reflect board state`);
-        }
+
+        assert.ok(b.reads.length > 0,
+          `${name}: the adapter read no pin at all from an attached board`);
+        assert.ok(b.reads.includes(inputPin),
+          `${name}: the adapter never read ${inputPin} — it read `
+          + `${[...new Set(b.reads)].join(', ') || 'nothing'}`);
+      });
+
+      it('and does NOT drive that input pin pushpull', () => {
+        // The check the old assertion was reaching for and could not express.
+        // An untouched input must not be driven by the MCU; a pushpull event
+        // on it means the pin came out of reset as an output.
+        const adapter = factory.make();
+        const b = stubBoard();
+        b._inputLevel = 1;
+        adapter.attachBoard(b);
+        adapter.advanceNs(100_000);
+
+        const driven = b.pins.filter(c => c.name === inputPin && c.mode === 'pushpull');
+        assert.deepEqual(driven, [],
+          `${name}: ${inputPin} is an input and was driven pushpull ${driven.length} time(s)`);
       });
     }
 
