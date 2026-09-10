@@ -254,17 +254,60 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * genuine change afterwards that happened to match one would be dropped
      * silently — a log shorter than the run, with nothing to show for it.
      */
-    const eventTime = (ticks = machine.cycles) => {
-        if (ticks < lastEventTicks) {
-            eventTimeEpoch++;
-            observedInputs.clear();
-        }
+    const ownClock = (ticks = machine.cycles) => {
+        if (ticks < lastEventTicks) eventTimeEpoch++;
         lastEventTicks = ticks;
         return {
             ticks,
             domain: eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles',
             hz: machine.clockHz
         };
+    };
+
+    /**
+     * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
+     *
+     * `opts.debugTime` lets an integrator hand this target the clock the rest
+     * of that integration already uses, instead of this target owning a second
+     * one. This particular target does not need it — its one epoch already
+     * serves events, checkpoints and replay facts alike, which is why its
+     * downstream graft was safe — but it takes the same shape as its siblings
+     * so that the three read alike and an integrator does not have to know
+     * which of them happens to be the special case.
+     *
+     * With a clock injected, the domain string is a property of the
+     * INTEGRATION rather than of this target. A test here asserting
+     * `i8086-cycles-rewind-N` is describing the DEFAULT wiring.
+     */
+    const clock = typeof opts.debugTime === 'function' ? opts.debugTime : ownClock;
+
+    let lastDomain = null;
+
+    /**
+     * Take the stamp, and CLEAR THE DEDUP MAP WHENEVER THE ERA CHANGES.
+     *
+     * The map must not survive a rewind: it would hold levels from an abandoned
+     * timeline, and the first genuine change afterwards whose value happened to
+     * match one would be dropped without trace.
+     *
+     * The signal is the DOMAIN STRING, not a tick regression. An injected clock
+     * may know about a rewind this target cannot see — a downstream one is
+     * bumped explicitly by `restoreCheckpoint` — so watching the domain
+     * inherits every trigger the clock has rather than only the one this target
+     * could detect for itself. It is also why the era gate lives HERE rather
+     * than inside `ownClock`: an injected clock is not ours to put a side
+     * effect in.
+     *
+     * WHAT REMAINS UNCOVERED, stated rather than hidden: a clock whose own
+     * detection is deferred leaves a window where a rewind has happened and the
+     * domain has not moved yet, and an input arriving inside it is stamped on
+     * the old era. Narrower than detecting nothing.
+     */
+    const eventTime = (ticks) => {
+        const time = ticks === undefined ? clock() : clock(ticks);
+        if (lastDomain !== null && time.domain !== lastDomain) observedInputs.clear();
+        lastDomain = time.domain;
+        return time;
     };
 
     const emitInput = (producer, payload, time) => {
@@ -697,6 +740,15 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             case 'i8086.gpio': {
                 const applied = machine.setInput(p.chip, p.port, p.bit, p.level) === true;
                 if (applied) {
+                    // THE ERA GATE RUNS BEFORE THE SEED, and the order is
+                    // load-bearing. Measured on the landed sibling targets:
+                    // replaying an input immediately after a rewind
+                    // RE-RECORDED it, because the seed went into the map and
+                    // the publish path then cleared the map before the dedup
+                    // gate read it — a second replay pass producing a log
+                    // longer than the run, in the one moment replay actually
+                    // happens, just after a restore.
+                    eventTime();
                     observedInputs.set(`${p.chip}.${p.port}.${p.bit}`,
                         JSON.stringify({chip: p.chip, port: p.port, bit: p.bit, level: p.level}));
                 }

@@ -13,7 +13,7 @@ import { loadSNA, SNA_SIZE } from './zx-sna.js';
 import { loadZ80 } from './zx-z80file.js';
 
 /** @param {{ machine: import('./z80-machine.js').Z80Machine }} adapter */
-export function createZ80DebugTarget(adapter) {
+export function createZ80DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
 
@@ -96,40 +96,69 @@ export function createZ80DebugTarget(adapter) {
   let lastTicks = null;
 
   /**
-   * Notice a rewind, EAGERLY — before the dedup gate, not after it.
+   * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
    *
-   * A first version of this ran inside the stamp, which `publishInput` only
-   * reaches once a value has already been found to have changed. A suppressed
-   * input therefore never updated `lastTicks` and never bumped the epoch, and
-   * the dedup map survived the rewind holding values from an abandoned
-   * timeline. Constructed: hold 'a', snapshot, run on, press 'b', restore, then
-   * press 'b' again in the restored era — a genuine a→b transition, DROPPED,
-   * because the map still remembered 'b' from the timeline that no longer
-   * exists. Two facts, one domain, the third gone without trace. Silent loss in
-   * the log, which is worse than the INVALID_INPUT_ORDER it replaced: that at
-   * least threw.
+   * `opts.debugTime` lets an integrator hand this target the clock the rest of
+   * that integration already uses. A consumer downstream gives this target's
+   * checkpoints and instruction events a SHARED epoch; a record half carrying
+   * its own would put one machine on two timelines, with a replayer comparing
+   * domains by equality seeing two runs where there is one. This target is the
+   * sharper case of the two: its shared clock is named `z80-tstates` while its
+   * replay domain is `z80-cycles`, so nothing would COLLIDE and nothing would
+   * complain — input facts on one timeline, everything else on another, and no
+   * error anywhere.
    *
-   * So the clock is checked first, and a rewind clears the map as well as
-   * bumping the epoch — the 8051's sentence transfers word for word, with
-   * "reset" read as "rewind": the map remembers values from before it, and
-   * keeping them would suppress the first fact afterwards for every input whose
-   * value happens to match.
+   * The default is this target's own clock below, so a standalone target
+   * behaves exactly as before.
+   *
+   * A CONSEQUENCE WORTH NAMING: with a clock injected, the domain string is a
+   * property of the INTEGRATION, not of this target. A test here asserting
+   * `z80-cycles-rewind-N` is describing the DEFAULT wiring, not this target.
    */
-  function noticeRewind() {
+  const ownClock = () => {
     const ticks = machine.cycles;
-    if (lastTicks !== null && ticks < lastTicks) {
-      inputTimeEpoch++;
-      observedInputs.clear();
-    }
+    // The only rewind this machine has is loadState (z80-machine.js:448).
+    if (lastTicks !== null && ticks < lastTicks) inputTimeEpoch++;
     lastTicks = ticks;
-  }
+    return {
+      ticks,
+      domain: inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles',
+      hz: machine.clockHz
+    };
+  };
+  const clock = typeof opts.debugTime === 'function' ? opts.debugTime : ownClock;
 
-  /** The stamp, with any discontinuity already carried into the domain. */
-  const inputTime = () => ({
-    ticks: machine.cycles,
-    domain: inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles',
-    hz: machine.clockHz
-  });
+  let lastDomain = null;
+
+  /**
+   * Take the stamp, and CLEAR THE DEDUP MAP WHENEVER THE ERA CHANGES.
+   *
+   * The map must not survive a rewind. Constructed on the original version of
+   * this code: hold 'a', snapshot, run on, press 'b', restore, then press 'b'
+   * again in the restored era — a genuine a→b transition, DROPPED, because the
+   * map still remembered 'b' from the timeline that no longer exists. Two
+   * facts, one domain, the third gone without trace.
+   *
+   * The signal is the DOMAIN STRING, not a tick regression, and that is the
+   * point. An injected clock may know about a rewind this target cannot see —
+   * downstream's is bumped explicitly by `restoreCheckpoint` — so watching the
+   * domain inherits every trigger the clock has rather than only the one this
+   * target could detect for itself. It is also why the era gate lives HERE and
+   * not inside `ownClock`: an injected clock is not ours to put a side effect
+   * in.
+   *
+   * WHAT REMAINS UNCOVERED, stated rather than hidden: a clock whose own
+   * detection is deferred — downstream's bumps on the next `cpu.step` — leaves
+   * a window where a rewind has happened and the domain has not moved yet. An
+   * input arriving inside it is stamped on the old era. Narrower than detecting
+   * nothing, and the same window the integration's other events already sit in.
+   */
+  const stamp = () => {
+    const time = clock();
+    if (lastDomain !== null && time.domain !== lastDomain) observedInputs.clear();
+    lastDomain = time.domain;
+    return time;
+  };
 
   /**
    * Emit a fact, but only when the value has CHANGED.
@@ -139,13 +168,13 @@ export function createZ80DebugTarget(adapter) {
    * @param {object} payload the recorded value
    */
   function publishInput(producer, key, payload) {
-    // FIRST, before the dedup gate: an unchanged value must still be able to
-    // notice that the timeline moved under it.
-    noticeRewind();
+    // FIRST, before the dedup gate: a suppressed input must still be able to
+    // notice that the era moved under it.
+    const time = stamp();
     const signature = JSON.stringify(payload);
     if (observedInputs.get(key) === signature) return;
     observedInputs.set(key, signature);
-    const fact = {time: inputTime(), producer, payload: {...payload}};
+    const fact = {time, producer, payload: {...payload}};
     // Each listener gets its own copy: a recorder that stored the object and a
     // listener that mutated it would corrupt the log in place.
     for (const listener of inputListeners) {
@@ -163,8 +192,7 @@ export function createZ80DebugTarget(adapter) {
    * not consulted at all — a level's key could otherwise collide with it.
    */
   function publishEvent(producer, payload) {
-    noticeRewind();
-    const fact = {time: inputTime(), producer, payload: {...payload}};
+    const fact = {time: stamp(), producer, payload: {...payload}};
     for (const listener of inputListeners) {
       listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
     }
@@ -414,6 +442,13 @@ export function createZ80DebugTarget(adapter) {
         // recorder as a freshly observed fact. Without this, replaying a log
         // while recording produces a second copy of every fact in it, and a
         // log replayed twice grows.
+        // THE ERA GATE RUNS BEFORE THE SEED, and the order is load-bearing.
+        // Measured on the landed version: replaying an input immediately after
+        // a rewind RE-RECORDED it, because the seed went into the map and the
+        // publish path then cleared the map before the dedup gate read it. A
+        // second replay pass produced a log longer than the run, in the one
+        // moment replay actually happens — just after a restore.
+        stamp();
         observedInputs.set('buttons', JSON.stringify({mask: payload.mask & 0x1f}));
         return this.setButtons(payload.mask & 0x1f)
           ? replayAccepted()
@@ -430,6 +465,13 @@ export function createZ80DebugTarget(adapter) {
           return replayRefused('invalid-replay-input',
             'z80.keys needs at most 40 key names of at most 16 characters');
         }
+        // THE ERA GATE RUNS BEFORE THE SEED, and the order is load-bearing.
+        // Measured on the landed version: replaying an input immediately after
+        // a rewind RE-RECORDED it, because the seed went into the map and the
+        // publish path then cleared the map before the dedup gate read it. A
+        // second replay pass produced a log longer than the run, in the one
+        // moment replay actually happens — just after a restore.
+        stamp();
         observedInputs.set('keys', JSON.stringify({names: [...names]}));
         return this.setKeys([...names])
           ? replayAccepted()

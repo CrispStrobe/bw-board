@@ -159,13 +159,63 @@ Two rules that are easy to get backwards, both learned the hard way:
    surviving map holds levels from an abandoned timeline, and the first genuine
    change afterwards whose value happens to match one is dropped without trace.
 
-**THE KNOWN LIMIT.** A restore followed by running PAST the old high-water mark
-with no input in between is monotonic from the target's side and
-indistinguishable from ordinary progress. Detection cannot see it. Closing it
-needs a signal from the restore itself rather than an inference from the clock —
-which is what a checkpoint API that goes through the target gives you, and is
-the reason the checkpoint work is a separate convergence rather than a bigger
-version of this one.
+**THE KNOWN LIMIT, AND HOW AN INTEGRATION CLOSES IT.** A restore followed by
+running PAST the old high-water mark with no input in between is monotonic from
+the target's side and indistinguishable from ordinary progress. Detection
+cannot see it, and closing it needs a signal from the restore itself rather
+than an inference from the clock.
+
+**So the clock is injectable, and the era gate is DERIVED from it.** Each of the
+three JS targets takes an optional `opts.debugTime`; the default is its own
+clock, so a standalone target is unchanged. What the record half watches is not
+a tick regression but **the DOMAIN STRING changing**:
+
+```js
+const time = clock();
+if (lastDomain !== null && time.domain !== lastDomain) observedInputs.clear();
+lastDomain = time.domain;
+```
+
+Two things follow, and the second is the one worth having:
+
+1. A consumer whose checkpoints and instruction events already share an epoch
+   can hand that clock in, instead of the target carrying a second one. One
+   machine on two timelines — a checkpoint stamped in one era and an input in
+   another at the same instant — is what a second epoch produces, and a
+   replayer comparing domains by equality reads it as two runs.
+2. **The record half inherits every trigger the injected clock has**, including
+   an EXPLICIT one from a restore. That is exactly the signal this limit needs,
+   and it arrives as a side effect of removing a duplicate clock rather than as
+   a feature anyone had to build.
+
+Deriving is why `debugTime()` alone is not enough. A shared clock's read is a
+pure READ — it reports the era, it does not detect a change — so stamping from
+it and dropping the epoch would get the domain right and never clear the map.
+That is this surface's oldest defect reintroduced, and no existing test would
+notice, because a map that fails to clear is invisible unless something replays
+the same value across a rewind.
+
+**A CONSEQUENCE TO NAME: with a clock injected, the domain string is a property
+of the INTEGRATION, not of the target.** The same target code stamps
+`m6502-cycles-rewind-N` standalone and something else when wired to a shared
+clock. That is correct — a domain names a timeline, and an integration's
+timeline is the one its checkpoints are on — but it means **an upstream test
+asserting an exact domain string is describing the DEFAULT wiring and not the
+target.** Say so where the assertion lives, or the next reader takes a green
+test here as a claim about a wiring it says nothing about.
+
+**What is still uncovered**: a clock whose own detection is deferred — one that
+bumps on the next instruction step rather than at the restore — leaves a window
+in which the rewind has happened and the domain has not moved yet. An input
+arriving inside it is stamped on the old era. Narrower than detecting nothing,
+and the same window that integration's other events already sit in.
+
+**The 8051 is deliberately not injectable.** Measured: it imports no shared
+event module, its downstream fork has been retired so no integration is waiting
+to inject one, and its epoch is bumped by an explicit trigger in `reset()`
+rather than by detection. An injection point with no caller is a capability
+invented rather than needed. If a mixed-target session ever wants one clock
+across tiers, that is the moment to add it.
 
 Where a target exposes both a reading and an advancing view of the clock
 (`debugTime()` and the internal stamp), **reading must not advance**. If asking

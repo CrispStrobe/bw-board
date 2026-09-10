@@ -88,41 +88,83 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   let lastTicks = null;
 
   /**
-   * Notice a rewind EAGERLY — before the dedup gate, never after it.
+   * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
    *
-   * Running this inside the stamp would mean a suppressed input never noticed
-   * the timeline moved, and the dedup map would survive the rewind holding
-   * values from an abandoned timeline — silently dropping the first genuine
-   * change afterwards whose value happens to match. So a rewind clears the map
-   * as well as bumping the epoch.
+   * `opts.debugTime` lets an integrator hand this target the clock the rest of
+   * that integration already uses. It matters because a consumer downstream
+   * gives this target's checkpoints and instruction events a SHARED epoch, and
+   * a record half carrying its own would put one machine on two timelines: a
+   * checkpoint stamped in one era and an input stamped in another at the same
+   * instant, with a replayer comparing domains by equality seeing two runs.
+   *
+   * The default is this target's own clock below, so a standalone target
+   * behaves exactly as before.
+   *
+   * A CONSEQUENCE WORTH NAMING: with a clock injected, the domain string is a
+   * property of the INTEGRATION, not of this target. A test here asserting
+   * `m6502-cycles-rewind-N` is describing the DEFAULT wiring; the same code
+   * wired to a shared clock will legitimately stamp something else. That is not
+   * a bug — a domain names a timeline, and an integration's timeline is the one
+   * its checkpoints are on.
    */
-  function noticeRewind() {
+  const ownClock = () => {
     const ticks = machine.cycles;
-    if (lastTicks !== null && ticks < lastTicks) {
-      inputTimeEpoch++;
-      observedInputs.clear();
-    }
+    // The only rewind this machine has is loadState (m6502-machine.js:806).
+    if (lastTicks !== null && ticks < lastTicks) inputTimeEpoch++;
     lastTicks = ticks;
-  }
+    return {
+      ticks,
+      domain: inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles',
+      hz: machine.clockHz
+    };
+  };
+  const clock = typeof opts.debugTime === 'function' ? opts.debugTime : ownClock;
 
-  const inputTime = () => ({
-    ticks: machine.cycles,
-    domain: inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles',
-    hz: machine.clockHz
-  });
+  let lastDomain = null;
+
+  /**
+   * Take the stamp, and CLEAR THE DEDUP MAP WHENEVER THE ERA CHANGES.
+   *
+   * The map must not survive a rewind: it would hold levels from an abandoned
+   * timeline, and the first genuine change afterwards whose value happened to
+   * match one would be dropped without trace.
+   *
+   * The signal is the DOMAIN STRING, not a tick regression, and that is the
+   * whole point of the design. An injected clock may know about a rewind this
+   * target cannot see — downstream's is bumped explicitly by `restoreCheckpoint`
+   * — so watching the domain inherits every trigger the clock has instead of
+   * only the one this target could detect for itself. It is also why the era
+   * gate lives HERE rather than inside `ownClock`: an injected clock is not
+   * ours to put a side effect in.
+   *
+   * WHAT REMAINS UNCOVERED, stated rather than hidden: a clock whose own
+   * detection is deferred — downstream's bumps on the next `cpu.step` — leaves a
+   * window where a rewind has happened and the domain has not moved yet. An
+   * input arriving inside it is stamped on the old era. Narrower than detecting
+   * nothing, and the same window the integration's other events already sit in.
+   */
+  const stamp = () => {
+    const time = clock();
+    if (lastDomain !== null && time.domain !== lastDomain) observedInputs.clear();
+    lastDomain = time.domain;
+    return time;
+  };
 
   /**
    * Emit a fact, but only when the value has CHANGED.
    *
    * For LEVELS only — a button mask that is set twice is one state, so the
    * second call is not a fact. Events use `publishEvent`.
+   *
+   * The stamp is taken FIRST, before the dedup gate: a suppressed input must
+   * still be able to notice that the era moved under it.
    */
   function publishInput(producer, key, payload) {
-    noticeRewind();
+    const time = stamp();
     const signature = JSON.stringify(payload);
     if (observedInputs.get(key) === signature) return;
     observedInputs.set(key, signature);
-    emit(producer, payload);
+    emit(producer, payload, time);
   }
 
   /**
@@ -132,12 +174,11 @@ export function createM6502DebugTarget(adapter, opts = {}) {
    * not apply and must not be consulted — a level's key would collide with it.
    */
   function publishEvent(producer, payload) {
-    noticeRewind();
-    emit(producer, payload);
+    emit(producer, payload, stamp());
   }
 
-  function emit(producer, payload) {
-    const fact = {time: inputTime(), producer, payload: {...payload}};
+  function emit(producer, payload, time) {
+    const fact = {time, producer, payload: {...payload}};
     // Each listener gets its own copy: a recorder that stored the object and a
     // listener that mutated it would corrupt the log in place.
     for (const listener of inputListeners) {
@@ -470,6 +511,15 @@ export function createM6502DebugTarget(adapter, opts = {}) {
           // call records — and the next live call with that raw value would then
           // read as a change that never happened.
           const mask = payload.mask;
+          // THE ERA GATE RUNS BEFORE THE SEED, and the order is load-bearing.
+          // Measured on the landed version: replaying an input immediately
+          // after a rewind RE-RECORDED it, because the seed went into the map
+          // and the publish path then cleared the map before the dedup gate
+          // read it. A second replay pass therefore produced a log longer than
+          // the run — in the one moment replay actually happens, just after a
+          // restore. Stamping first consumes the era change, so the seed
+          // survives to do its job.
+          stamp();
           // Seeded before applying, so the replay does not come back out of the
           // recorder as a freshly observed fact.
           observedInputs.set('buttons', JSON.stringify({mask}));
