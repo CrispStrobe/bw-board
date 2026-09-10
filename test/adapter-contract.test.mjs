@@ -71,6 +71,10 @@ async function avr8jsFactory() {
            'A0', 'A1', 'A2', 'A3', 'A4', 'A5'],
     togglePin: 'D13',
     inputPin: 'D2',
+    // What the MACHINE sees on that pin. D2 is PORTD bit 2 on an atmega328p,
+    // and PIND is the input register at 0x29 — the far end of the path
+    // syncInputs drives, so this is what "reads back" actually means.
+    inputReadback: adapter => (adapter.cpu.data[0x29] >> 2) & 1,
     make() { return createAvr8jsAdapter({ program }); },
     soakNs: 500_000_000, // 500ms — fast enough for reliable toggling
   };
@@ -91,6 +95,10 @@ async function rp2040jsFactory() {
     pins: Array.from({ length: 29 }, (_, i) => `GP${i}`),
     togglePin: 'GP25',
     inputPin: 'GP2',
+    // `rawInputValue` is where setInputValue lands; `inputValue` is gated by
+    // inputEnable and stays false on a pin the program has not configured,
+    // which is why it is not the field to read. Measured, not guessed.
+    inputReadback: adapter => (adapter.rp2040.gpio[2].rawInputValue ? 1 : 0),
     make() { return createRp2040jsAdapter({ program }); },
     // rp2040js instruction-steps at ~125MHz simulated; 3s wall is expensive
     soakNs: 100_000_000, // 100ms soak — crosses no u32 boundary but tests monotonicity
@@ -255,7 +263,7 @@ for (const factoryFn of GPIO_FACTORIES) {
       it(`SKIP — factory failed: ${e.message}`, () => { assert.ok(true); });
       return;
     }
-    const { name, pins, togglePin, inputPin, modes, soakNs } = factory;
+    const { name, pins, togglePin, inputPin, inputReadback, modes, soakNs } = factory;
 
     // ── 1. ATTACH SEATS ALL PINS ──────────────────────────────────────
 
@@ -311,6 +319,38 @@ for (const factoryFn of GPIO_FACTORIES) {
         assert.ok(b.reads.includes(inputPin),
           `${name}: the adapter never read ${inputPin} — it read `
           + `${[...new Set(b.reads)].join(', ') || 'nothing'}`);
+      });
+
+      it('THE LEVEL THE BOARD REPORTS REACHES THE MACHINE', () => {
+        // The third check the section's name implies, and the one that was
+        // still missing after the tautology went: `b.reads.includes(inputPin)`
+        // proves the adapter ASKED. Nothing proved it HEARD. An adapter that
+        // read the pin and discarded the answer passed everything here.
+        //
+        // It is also what makes `b._inputLevel` load-bearing rather than
+        // decorative: reverting the stub board's `this._inputLevel` back to the
+        // function-property read it had until today passes every other
+        // assertion in this file and fails this one.
+        //
+        // A factory that declares an inputPin must say how to read it back, or
+        // this check silently stops existing for that adapter. Named rather
+        // than skipped: a TypeError on an undefined function would say nothing
+        // about what is missing.
+        assert.equal(typeof inputReadback, 'function',
+          `${name} declares inputPin ${inputPin} but no inputReadback(adapter) — `
+          + 'without one, nothing checks that the level reaches the machine');
+
+        // Both levels, so it cannot pass by returning a constant.
+        for (const level of [1, 0]) {
+          const adapter = factory.make();
+          const b = stubBoard();
+          b._inputLevel = level;
+          adapter.attachBoard(b);
+          adapter.advanceNs(100_000);
+          assert.equal(inputReadback(adapter), level,
+            `${name}: board reported ${level} on ${inputPin} and the machine sees `
+            + `${inputReadback(adapter)}`);
+        }
       });
 
       it('and does NOT drive that input pin pushpull', () => {
