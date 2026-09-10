@@ -14,7 +14,7 @@
  * row REDDENS — which is the only part of this that keeps working when someone
  * who has not read this comment adds a target.
  *
- * FIVE CLAIMS, FOUR EXERCISABLE. FOUR TARGETS, THREE ALWAYS DRIVABLE. Both
+ * SIX CLAIMS, FOUR EXERCISABLE. FOUR TARGETS, THREE ALWAYS DRIVABLE. Both
  * numbers are stated here rather than left to be inferred from a green run,
  * because a conformance test that passes LOOKS like conformance and that is
  * exactly the failure this file would otherwise be:
@@ -29,6 +29,21 @@
  *                           declares one this file reddens and someone has to
  *                           write the positive case.
  *   C5  a SAMPLING BOARD is never silent                        exercisable
+ *   C6  a target that can PARK says so                          NO SUBJECT
+ *                           A core in HALT/WAI/SLEEP advances the clock and
+ *                           retires nothing, and a consumer then sees the tick
+ *                           counter jump with nothing explaining it —
+ *                           indistinguishable from a dropped record. Measured
+ *                           live: a halted z80 passes 200,000 cycles in 50
+ *                           steps, a 6502 in WAI passes 50,000, and before
+ *                           bw-board `c8d7101` neither published anything.
+ *                           `instruction-debug-events.js` now brackets
+ *                           `machine.step` and emits an `idle/elapse` fact —
+ *                           but NO TARGET IN THIS TREE INSTALLS THAT MODULE, so
+ *                           the claim has no subject here. Asserted as an
+ *                           absence, like C4, so the day a target does install
+ *                           it, this file reddens and someone has to write the
+ *                           positive case rather than inheriting a green run.
  *                           A live board changes input nets outside the target
  *                           and nothing records them, so a session with one
  *                           cannot be replayed. Every target must SAY so —
@@ -353,5 +368,51 @@ describe('C4 has NO upstream subject, and that is asserted rather than assumed',
     assert.equal(text.includes('capabilities()'), false,
       'emu8051-adapter grew a capabilities() — canVetoDebugInput now means what it says '
       + 'for it, and this note can go');
+  });
+});
+
+describe('C6 has NO subject in this tree, and that is asserted rather than assumed', () => {
+  // A conformance check added later, against callers that already exist, is a
+  // check nobody has ever seen fail. So this one is written now, while its
+  // subject is absent, in the form that will notice a subject arriving.
+  it('no target here installs instruction-debug-events, so the claim is unexercised', () => {
+    const installers = readdirSync(SRC)
+      .filter(name => name.endsWith('.js') && name !== 'instruction-debug-events.js')
+      .filter(name => readFileSync(join(SRC, name), 'utf8').includes('installInstructionDebugEvents'));
+
+    assert.deepEqual(installers, [],
+      `${installers.join(', ')} now installs instruction-debug-events — C6 needs a positive case: `
+      + 'drive that target into HALT/WAI/SLEEP and assert an idle/elapse fact appears. '
+      + 'Five claims are exercised in this file and six are declared; do not let a green run '
+      + 'be read as six.');
+  });
+
+  it('and the module it would be about really can produce that fact', async () => {
+    // Guards the absence above from being satisfied by a module that cannot do
+    // the thing either — an absence is only informative if the thing exists.
+    //
+    // DRIVEN, NOT GREPPED. My first version matched the module's source for
+    // `machine.step = outer`, and commenting that line out left the text in the
+    // comment and the assertion green — the same trap as a file documenting a
+    // sibling answering a vocabulary grep with the sibling's answer, in the
+    // check written the same afternoon I named it.
+    const { installInstructionDebugEvents } =
+      await import('../src/instruction-debug-events.js');
+    const machine = new Z80Machine(
+      { clockHz: 4_000_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+    machine.load(Uint8Array.from([0x76]), 0);          // HALT
+    machine.cpu.pc = 0;
+
+    const seen = [];
+    installInstructionDebugEvents({ cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks' })
+      .onDebugEvent(e => seen.push(`${e.kind}/${e.phase}`));
+
+    machine.step();                                    // executes the HALT
+    seen.length = 0;
+    machine.step();                                    // now parked
+
+    assert.ok(machine.cpu.halted, 'the fixture must actually park');
+    assert.deepEqual(seen, ['idle/elapse'],
+      'the module can no longer report that time passed with nothing retiring');
   });
 });

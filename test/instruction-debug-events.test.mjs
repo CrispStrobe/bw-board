@@ -17,6 +17,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { installInstructionDebugEvents } from '../src/instruction-debug-events.js';
+import { Z80Machine } from '../src/z80-machine.js';
+import { M6502Machine } from '../src/m6502-machine.js';
 
 /**
  * A CPU that does exactly what a test tells it to on each step.
@@ -627,5 +629,141 @@ describe('TIME PASSED AND NOTHING RETIRED', () => {
     const { seen } = record(events);
     events.publishIdleElapse({ cycles: 8, ticks: 100 });
     assert.equal(seen[0].time.ticks, 100n);
+  });
+});
+
+describe('A PARKED CORE SAYS SO, on the real machines', () => {
+  // Driven against Z80Machine and M6502Machine rather than the fake, because
+  // the whole point is what those two do when they park — and they do it
+  // differently. Measured before this landed:
+  //
+  //   z80  HALT   8,004 cycles pass, facts: the HALT's access and retire, then NOTHING
+  //   6502 WAI    3,000 cycles pass, facts: NONE AT ALL
+  //
+  // A consumer saw the tick counter jump with nothing to explain it, which is
+  // indistinguishable from a dropped record.
+
+  const haltedZ80 = () => {
+    const machine = new Z80Machine(
+      { clockHz: 4_000_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+    machine.load(Uint8Array.from([0x76]), 0);           // HALT
+    machine.cpu.pc = 0;
+    return machine;
+  };
+
+  const waitingM6502 = () => {
+    const machine = new M6502Machine({ clockHz: 1_000_000,
+      regions: [{ kind: 'ram', start: 0, end: 0x7fff }, { kind: 'rom', start: 0x8000, end: 0xffff }],
+      chips: [] }, {});
+    machine.loadRom([0x58, 0xcb, 0xea, 0x4c, 0x02, 0x80]);   // CLI / WAI / NOP / JMP
+    machine.mem[0xfffc] = 0x00; machine.mem[0xfffd] = 0x80;
+    machine.reset();
+    return machine;
+  };
+
+  const watch = (machine, cause) => {
+    const events = installInstructionDebugEvents({
+      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks', idleCause: cause });
+    const seen = [];
+    events.onDebugEvent(e => seen.push(e));
+    return { events, seen };
+  };
+
+  it('the z80 in HALT — where cpu.step is never called at all', () => {
+    // The hard case: the machine short-circuits the CPU, so nothing a cpu.step
+    // wrapper can see happens. The bracket is on machine.step for this reason.
+    const machine = haltedZ80();
+    const { seen } = watch(machine, () => (machine.cpu.halted ? 'halt' : 'parked'));
+
+    machine.step();                                     // executes the HALT
+    const before = machine.cycles;
+    seen.length = 0;
+    machine.step();                                     // now parked
+
+    assert.ok(machine.cpu.halted, 'the fixture must actually be halted');
+    assert.ok(machine.cycles > before, 'and time must actually pass');
+    assert.deepEqual(seen.map(e => `${e.kind}/${e.phase}`), ['idle/elapse']);
+    assert.equal(seen[0].cause, 'halt');
+    assert.equal(seen[0].changes.cycles, machine.cycles - before,
+      'the fact must carry the cycles the MACHINE advanced, not the CPU');
+  });
+
+  it('the 6502 in WAI — where cpu.step runs and returns nothing', () => {
+    const machine = waitingM6502();
+    const { seen } = watch(machine, () => (machine.cpu.waiting ? 'wai' : 'parked'));
+
+    for (let i = 0; i < 3; i++) machine.step();          // reach the WAI
+    assert.ok(machine.cpu.waiting, 'the fixture must actually be waiting');
+    const before = machine.cycles;
+    seen.length = 0;
+    machine.step();
+
+    assert.deepEqual(seen.map(e => `${e.kind}/${e.phase}`), ['idle/elapse']);
+    assert.equal(seen[0].cause, 'wai');
+    assert.equal(seen[0].changes.cycles, machine.cycles - before);
+  });
+
+  it('a RETIRING step publishes no idle fact, so nothing is double-reported', () => {
+    // The flag exists for this: an instruction that retired accounts for its
+    // own cycles, and an elapse beside it would claim the time twice.
+    const machine = waitingM6502();
+    const { seen } = watch(machine);
+    machine.step();                                     // CLI retires
+
+    assert.ok(seen.some(e => e.kind === 'instruction'), 'the step retired');
+    assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+      'a retiring step also claimed an idle elapse');
+  });
+
+  it('a machine that advances NOTHING publishes nothing', () => {
+    // STP on the 6502 returns 0 and stops time. An elapse fact there would say
+    // time passed when it did not.
+    const machine = waitingM6502();
+    machine.cpu.stopped = true;
+    machine.cpu.waiting = false;
+    const { seen } = watch(machine);
+    const before = machine.cycles;
+    machine.step();
+
+    assert.equal(machine.cycles, before, 'the fixture must really stop time');
+    assert.deepEqual(seen, []);
+  });
+
+  it('the machine.step bracket follows the SAME lifecycle as the others', () => {
+    const machine = haltedZ80();
+    const step = machine.step;
+    const events = installInstructionDebugEvents({
+      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks' });
+
+    assert.equal(machine.step, step, 'machine.step was wrapped with no listener attached');
+    const stop = events.onDebugEvent(() => {});
+    assert.notEqual(machine.step, step);
+    stop();
+    assert.equal(machine.step, step, 'the last listener left and the bracket stayed');
+  });
+
+  it('and does not unwrap another party’s machine.step either', () => {
+    const machine = haltedZ80();
+    const events = installInstructionDebugEvents({
+      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks' });
+    const stop = events.onDebugEvent(() => {});
+
+    const ours = machine.step;
+    const theirs = () => ours();
+    machine.step = theirs;
+
+    stop();
+    assert.equal(machine.step, theirs);
+  });
+
+  it('the default cause is stated rather than invented', () => {
+    // A target that does not say why its core parked gets 'parked', which is
+    // true and uninformative — better than a guess that reads as a diagnosis.
+    const machine = haltedZ80();
+    const { seen } = watch(machine);
+    machine.step();
+    seen.length = 0;
+    machine.step();
+    assert.equal(seen[0].cause, 'parked');
   });
 });

@@ -48,14 +48,33 @@
  * @module
  */
 export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, port = false,
-  captureRegisters, captureInstruction}) {
+  captureRegisters, captureInstruction, idleCause = () => 'parked'}) {
   const listeners = new Set();
   let accesses = null;
   let timeEpoch = 0;
   let lastTicks = null;
 
+  /** Set by the instruction wrapper when a step actually retired something. */
+  let retired = false;
+
   const publish = event => {
     for (const listener of [...listeners]) listener(event);
+  };
+
+  /** One emitter for the wrapper and the public method, so they cannot drift. */
+  const emitIdle = (cycles, ticks, cause = idleCause()) => {
+    if (!listeners.size) return false;
+    if (!Number.isFinite(cycles) || cycles <= 0) return false;
+    publish({
+      cpuId,
+      kind: 'idle',
+      phase: 'elapse',
+      fidelity: 'recorded',
+      time: time(ticks),
+      cause,
+      changes: {cycles}
+    });
+    return true;
   };
   const time = ticks => {
     const value = BigInt(ticks);
@@ -116,6 +135,40 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     hooks.ours.step = stepWrapper;
     cpu.step = stepWrapper;
 
+    // THE OUTER BRACKET: machine.step, above the short-circuit.
+    //
+    // A parked core is invisible from inside `cpu.step` on some machines and
+    // visible-but-silent on others — measured: a halted z80 advances 80,000
+    // cycles with `cpu.step` called ZERO times, while a 6502 in WAI calls it
+    // twenty times and gets 0 back each time. Neither publishes anything, and
+    // a consumer sees the tick counter jump with nothing to explain it.
+    //
+    // Both are visible from OUTSIDE `machine.step`, which is why the bracket
+    // goes there: the machine advanced and nothing retired.
+    if (typeof machine?.step === 'function') {
+      hooks.machineStep = machine.step;
+      const outer = () => {
+        const before = machine.cycles;
+        retired = false;
+        const n = hooks.machineStep.call(machine);
+        if (!retired) {
+          const advanced = machine.cycles - before;
+          // STP on the 6502 returns 0 and advances nothing: time genuinely
+          // stopped, and an elapse fact there would claim otherwise.
+          //
+          // The `> 0` here is belt-and-braces: `emitIdle` refuses a non-advance
+          // itself, and that guard is the one with tests behind it. Mutating
+          // this one away is therefore INERT, and it is recorded as inert
+          // rather than chased — it reads at the call site, which is worth a
+          // line that cannot fail on its own.
+          if (advanced > 0) emitIdle(advanced, machine.cycles);
+        }
+        return n;
+      };
+      hooks.ours.machineStep = outer;
+      machine.step = outer;
+    }
+
     hooks.ours.read = address => {
       const value = hooks.read(address);
       if (accesses) accesses.push({kind: 'memory', memory: {
@@ -156,6 +209,9 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
   const removeHooks = () => {
     if (!hooks) return;
     // Only put back what is still ours. See the note above.
+    if (hooks.ours.machineStep && machine.step === hooks.ours.machineStep) {
+      machine.step = hooks.machineStep;
+    }
     if (cpu.step === hooks.ours.step) cpu.step = hooks.step;
     originalStep = null;
     if (cpu.read === hooks.ours.read) cpu.read = hooks.read;
@@ -197,6 +253,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
           if (!Object.is(before, after)) registerChanges[name] = {before, after};
         }
       }
+      retired = true;
       publish({
         cpuId,
         kind: 'instruction',
@@ -260,19 +317,8 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
      *
      * @param {{cycles: number, ticks?: number, cause?: string}} elapse
      */
-    publishIdleElapse({cycles, ticks = machine.cycles, cause = 'parked'} = {}) {
-      if (!listeners.size) return false;
-      if (!Number.isFinite(cycles) || cycles <= 0) return false;
-      publish({
-        cpuId,
-        kind: 'idle',
-        phase: 'elapse',
-        fidelity: 'recorded',
-        time: time(ticks),
-        cause,
-        changes: {cycles}
-      });
-      return true;
+    publishIdleElapse({cycles, ticks = machine.cycles, cause = idleCause()} = {}) {
+      return emitIdle(cycles, ticks, cause);
     },
 
     /**
