@@ -112,6 +112,22 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
       + 'and never exempt by pattern.');
   });
 
+  it('the scan sees the tree at all', () => {
+    // DRIVEN AND IT DID NOT FIRE. With `offendersNow()` forced to return an
+    // empty list, all fifteen cases here passed: the gate's own verdict is
+    // "no file reaches for a fixed depth", which is exactly what it says when
+    // it has read nothing. A wrong directory, a rename, or a typo in the
+    // extension filter would all report success.
+    //
+    // So the population is asserted, not assumed. A floor rather than an exact
+    // count, because test files arrive constantly and this is not a ratchet --
+    // what it must catch is a scan that has stopped reading.
+    const scanned = readdirSync(TEST_DIR).filter(name => /\.(mjs|js)$/.test(name));
+    assert.ok(scanned.length > 100,
+      `the scan sees only ${scanned.length} files in ${TEST_DIR} — a census that has `
+      + 'stopped reading reports the same clean result as a tree with nothing wrong');
+  });
+
   it('no test file reaches for a sibling checkout at a fixed depth', () => {
     const offenders = offendersNow();
 
