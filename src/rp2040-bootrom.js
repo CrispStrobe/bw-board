@@ -1786,6 +1786,233 @@ export function buildBootrom () {
         ]);
     }
 
+    // ── sinCore(r0 = x, r1 = quadrant offset) → r0 = sin(x + offset*pi/2) ──
+    //
+    // The shared body of fsin, fcos and ftan. cos(x) is sin at quadrant q+1,
+    // so ONE reduction serves both: adding pi/2 to x before reducing would
+    // lose accuracy for large x, adding 1 to the quadrant afterwards loses
+    // nothing.
+    //
+    // THE REDUCTION IS THE WHOLE PROBLEM, not the series. x = k*(pi/2) + r
+    // with |r| <= pi/4, and the answer comes from a short polynomial in r --
+    // but r is a DIFFERENCE of two nearly equal numbers, so every bit lost
+    // computing k*(pi/2) is a bit lost in the answer. Cody-Waite splits pi/2
+    // into three pieces, each with only eight significant bits, so that
+    // k*HI and k*MID are EXACT float32 products for every k this routine
+    // accepts, and only the tiny k*LO term rounds. All three are DERIVED here
+    // from the double-precision pi/2 rather than typed: a constant of this
+    // kind copied by hand is a constant nobody can check.
+    //
+    // DECLARED DEVIATION -- THE DOMAIN IS BOUNDED, AND IT IS BOUNDED BY THE
+    // EXACTNESS ABOVE, not by taste. Eight significant bits in HI means k*HI
+    // stays exact only while k fits in sixteen, so |x| must stay under 2^16.
+    // Past that the reduction silently stops being exact and the answer
+    // degrades without any signal -- so this returns a quiet NaN instead.
+    // Doing better needs Payne-Hanek, which needs a multi-word table of 2/pi;
+    // that is a real piece of work and it is not done here. A NaN is a
+    // recognisable refusal. A quietly wrong sine is not.
+    const sinCore = pc;
+    {
+        const buf = new DataView(new ArrayBuffer(4));
+        const PI2 = Math.PI / 2;
+        const chop = (value) => {
+            buf.setFloat32(0, Math.fround(value));
+            buf.setUint32(0, buf.getUint32(0) & 0xffff0000);
+            return buf.getFloat32(0);
+        };
+        const P_HI = chop(PI2);
+        const P_MID = chop(PI2 - P_HI);
+        const P_MID2 = chop(PI2 - P_HI - P_MID);
+        const P_LO = Math.fround(PI2 - P_HI - P_MID - P_MID2);
+        const INV = k(Math.fround(2 / Math.PI));
+        const PI2_HI = k(P_HI), PI2_MID = k(P_MID), PI2_MID2 = k(P_MID2), PI2_LO = k(P_LO);
+        const HALF = k(0.5), NHALF = k(-0.5), ONE = k(1);
+        // sin(r)/r and cos(r) as polynomials in z = r*r. Both are the Taylor
+        // series; on |r| <= pi/4 the first omitted term is below a quarter of
+        // an ULP, so there is nothing to gain from a fitted minimax here.
+        const S = [-1 / 6, 1 / 120, -1 / 5040, 1 / 362880].map((c) => k(Math.fround(c)));
+        const C = [-0.5, 1 / 24, -1 / 720, 1 / 40320, -1 / 3628800].map((c) => k(Math.fround(c)));
+        pc = asm(view, pc, [
+            0xb5f0,                     // push {r4-r7, lr}
+            0xb083,                     // sub  sp, #12
+            0x9000,                     // str  r0, [sp, #0]      ; x
+            0x9101,                     // str  r1, [sp, #4]      ; quadrant offset
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24       ; exponent
+            0x2bff,                     // cmp  r3, #255
+            ['beq', 'tr_bad'],          //                        ; NaN and Inf alike
+            0x2b8f,                     // cmp  r3, #143          ; 2^16
+            ['blt', 'tr_ok'],
+            // The refusal gets its own epilogue here rather than a branch to
+            // the one at the end: a conditional branch reaches 127 halfwords
+            // and the two polynomials in between are longer than that.
+            ['label', 'tr_bad'],
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23
+            0x2101,                     // movs r1, #1
+            0x0589,                     // lsls r1, r1, #22
+            0x4308,                     // orrs r0, r1            ; 7FC00000h
+            0xb003,                     // add  sp, #12
+            0xbdf0,                     // pop  {r4-r7, pc}
+            ['label', 'tr_ok'],
+            // k = round(x * 2/pi), by biasing then truncating
+            ...poolBase(5),
+            ldrK(1, 5, INV),
+            ['bl', fmul],
+            0x0006,                     // movs r6, r0
+            0x0fc1,                     // lsrs r1, r0, #31       ; sign of t
+            // THE POOL BASE IS BUILT BEFORE THE COMPARE, NOT BETWEEN IT AND
+            // THE BRANCH. Thumb-1 has no flag-preserving MOV immediate: both
+            // `movs rN, #16` and `lsls rN, rN, #8` write the flags, so a
+            // poolBase() sitting between a CMP and its Bcc silently retargets
+            // the branch at the shift's result. lsls leaves Z clear, so `bne`
+            // was taken unconditionally -- every positive t biased by -0.5
+            // instead of +0.5, k came out one too low, and the reduction
+            // returned x unchanged. fexp has the same two instructions in the
+            // same place and is correct because its CMP comes after them.
+            ...poolBase(5),
+            0x2900,                     // cmp  r1, #0
+            ['bne', 'tr_neg'],
+            ldrK(1, 5, HALF),
+            ['b', 'tr_bias'],
+            ['label', 'tr_neg'],
+            ldrK(1, 5, NHALF),
+            ['label', 'tr_bias'],
+            0x0030,                     // movs r0, r6
+            ['bl', fadd],
+            ['bl', float2int],
+            0x0004,                     // movs r4, r0            ; k, as an integer
+            ['bl', int2float],
+            0x9002,                     // str  r0, [sp, #8]      ; k, as a float
+            // r = ((x - k*HI) - k*MID) - k*LO
+            ...poolBase(5),
+            ldrK(1, 5, PI2_HI),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x9800,                     // ldr  r0, [sp, #0]
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x9802,                     // ldr  r0, [sp, #8]
+            ...poolBase(5),
+            ldrK(1, 5, PI2_MID),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x9802,                     // ldr  r0, [sp, #8]
+            ...poolBase(5),
+            ldrK(1, 5, PI2_MID2),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x9802,                     // ldr  r0, [sp, #8]
+            ...poolBase(5),
+            ldrK(1, 5, PI2_LO),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0006,                     // movs r6, r0            ; r6 = r
+            // q = (k + offset) & 3
+            0x9b01,                     // ldr  r3, [sp, #4]
+            0x18e4,                     // adds r4, r4, r3
+            0x2303,                     // movs r3, #3
+            0x401c,                     // ands r4, r3
+            // z = r*r
+            0x0030,                     // movs r0, r6
+            0x0031,                     // movs r1, r6
+            ['bl', fmul],
+            0x0007,                     // movs r7, r0            ; r7 = z
+            0x2301,                     // movs r3, #1
+            0x4023,                     // ands r3, r4
+            0x2b00,                     // cmp  r3, #0
+            ['bne', 'tr_cos'],
+            // sin(r) = r * (1 + z*(-1/6 + z*(1/120 + ...)))
+            ...poolBase(5),
+            ldrK(0, 5, S[3]),
+            ...[S[2], S[1], S[0], ONE].flatMap((ci) => [
+                0x0039,                 // movs r1, r7            ; * z
+                ['bl', fmul],
+                ...poolBase(5),
+                ldrK(1, 5, ci),
+                ['bl', fadd]
+            ]),
+            0x0031,                     // movs r1, r6
+            ['bl', fmul],               // * r
+            ['b', 'tr_sign'],
+            ['label', 'tr_cos'],
+            // cos(r) = 1 + z*(-1/2 + z*(1/24 + ...))
+            ...poolBase(5),
+            ldrK(0, 5, C[4]),
+            ...[C[3], C[2], C[1], C[0], ONE].flatMap((ci) => [
+                0x0039,                 // movs r1, r7
+                ['bl', fmul],
+                ...poolBase(5),
+                ldrK(1, 5, ci),
+                ['bl', fadd]
+            ]),
+            ['label', 'tr_sign'],
+            // Quadrants 2 and 3 are the negatives of 0 and 1.
+            0x2302,                     // movs r3, #2
+            0x4023,                     // ands r3, r4
+            0x2b00,                     // cmp  r3, #0
+            ['beq', 'tr_out'],
+            0x2101,                     // movs r1, #1
+            0x07c9,                     // lsls r1, r1, #31
+            0x4048,                     // eors r0, r1            ; flip the sign bit
+            ['label', 'tr_out'],
+            0xb003,                     // add  sp, #12
+            0xbdf0                      // pop  {r4-r7, pc}
+        ]);
+    }
+
+    // ── fsin / fcos (r0 = float) → r0 = sin(x) / cos(x) ────────────────
+    //
+    // SF indices 16 and 15. Both are sinCore with a different quadrant
+    // offset, which is the whole of the difference between them.
+    const fsin = pc;
+    pc = asm(view, pc, [
+        0xb500,                         // push {lr}
+        0x2100,                         // movs r1, #0
+        ['bl', sinCore],
+        0xbd00                          // pop  {pc}
+    ]);
+    const fcos = pc;
+    pc = asm(view, pc, [
+        0xb500,                         // push {lr}
+        0x2101,                         // movs r1, #1
+        ['bl', sinCore],
+        0xbd00                          // pop  {pc}
+    ]);
+
+    // ── ftan(r0 = float) → r0 = tan(x) ─────────────────────────────────
+    //
+    // SF index 17, as sin/cos. That looks like it should lose accuracy near
+    // the poles and does not: after reduction the polynomial argument r is
+    // small exactly where tan is large, so cos(x) there is +-sin(r) with r
+    // near zero -- a small value computed to full RELATIVE accuracy, not a
+    // cancellation. The quotient's relative error stays bounded across the
+    // pole. It is the reduction that would fail first, and that is refused
+    // by domain above rather than approximated.
+    const ftan = pc;
+    pc = asm(view, pc, [
+        0xb530,                         // push {r4, r5, lr}
+        0x0004,                         // movs r4, r0            ; keep x
+        0x2100,                         // movs r1, #0
+        ['bl', sinCore],
+        0x0005,                         // movs r5, r0            ; sin(x)
+        0x0020,                         // movs r0, r4
+        0x2101,                         // movs r1, #1
+        ['bl', sinCore],
+        0x0001,                         // movs r1, r0            ; cos(x)
+        0x0028,                         // movs r0, r5
+        ['bl', fdiv],
+        0xbd30                          // pop  {r4, r5, pc}
+    ]);
+
     // ── the single-precision soft-float stub ───────────────────────────
     //
     // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
@@ -1875,18 +2102,25 @@ export function buildBootrom () {
     //  16 fsin       17 ftan       18 deprecated 19 fexp
     //  20 fln
     //
-    // NAMED STOP: EVERY ENTRY IS `sfUnimplemented`. NO ARITHMETIC IS
-    // IMPLEMENTED HERE. What this buys is not a working float unit — it is
-    // that a caller now reaches a routine that returns a quiet NaN instead of
-    // dereferencing null. A hang becomes a defined, recognisable wrong
-    // answer, which is a diagnosis rather than a mystery.
+    // STATUS, 2026-09-10: EIGHTEEN OF THE TWENTY-ONE ENTRIES ARE IMPLEMENTED.
+    // Indices 4, 5 and 18 are the datasheet's deprecated slots and stay the
+    // stub deliberately; every other entry is real code, graded against
+    // Math.fround. This paragraph said "EVERY ENTRY IS `sfUnimplemented`, NO
+    // ARITHMETIC IS IMPLEMENTED HERE" for three days after that stopped being
+    // true, which is the same class of defect as the version byte below: a
+    // comment that a reader consults instead of the code, still teaching the
+    // state the code has left.
     //
-    // Doing it properly means IEEE-754 single-precision add, multiply and
-    // divide hand-written in Thumb-1 on a core with no FPU, no divide and no
-    // CLZ, each agreeing with an oracle at the rounding edge. Implementing it
-    // in the host and calling out through a breakpoint would be easier and
-    // WORSE: the DoD's test is agreement with JavaScript's Math, and a JS
-    // implementation tested against JS Math measures itself. See LANES 13.
+    // What the stub still buys, for the three deprecated slots: a caller
+    // reaches a routine that returns a quiet NaN instead of dereferencing
+    // null. A hang becomes a defined, recognisable wrong answer.
+    //
+    // The arithmetic is IEEE-754 single precision hand-written in Thumb-1 on a
+    // core with no FPU, no divide and no CLZ, each operator agreeing with an
+    // oracle at the rounding edge. Implementing it in the host and calling out
+    // through a breakpoint would be easier and WORSE: the DoD's test is
+    // agreement with JavaScript's Math, and a JS implementation tested against
+    // JS Math measures itself. See LANES 13.
     const SF_TABLE_ENTRIES = 21;
     const sfTable = (at + 4 + 3) & ~3;
     for (let i = 0; i < SF_TABLE_ENTRIES; i++) {
@@ -1910,6 +2144,9 @@ export function buildBootrom () {
     view.setUint32(sfTable + 9 * 4, thumb(float2uint), true);
     view.setUint32(sfTable + 11 * 4, thumb(int2float), true);
     view.setUint32(sfTable + 13 * 4, thumb(uint2float), true);
+    view.setUint32(sfTable + 15 * 4, thumb(fcos), true);
+    view.setUint32(sfTable + 16 * 4, thumb(fsin), true);
+    view.setUint32(sfTable + 17 * 4, thumb(ftan), true);
 
     const dataTable = sfTable + SF_TABLE_ENTRIES * 4;
     view.setUint16(dataTable, ROM_DATA.SOFT_FLOAT, true);
