@@ -145,13 +145,36 @@ describe('the injected bracket produces the same facts as the wrapped one', () =
     assert.equal(drivenByHand().filter(f => JSON.parse(f).kind === 'idle').length, 0);
   });
 
-  it('refuses anything that is not a function', () => {
+  it('refuses anything that is not a function, BY NAME', () => {
     const machine = machines.z80.make();
     const events = installInstructionDebugEvents({
       cpu: machine.cpu, machine, cpuId: 'z80', timeDomain: 'z80-tstates' });
     for (const bad of [undefined, null, 42, 'step', {}]) {
-      assert.throws(() => events.aroundInstruction(bad), TypeError);
+      // The message matters, not just the class. Deleting the type check leaves
+      // this throwing a TypeError anyway — `execute is not a function`, raised
+      // from inside the bracket after it has already begun. A bare
+      // `assert.throws(…, TypeError)` passes against that, and did: the
+      // mutation that removes the guard survived it. Naming the message is what
+      // separates a refusal from a crash.
+      assert.throws(() => events.aroundInstruction(bad),
+        /aroundInstruction needs a function that runs one instruction/);
     }
+  });
+
+  it('leaves no `step` behind on a core that never had one', () => {
+    // `removeHooks` restores `cpu.step` from the saved value. On a core with no
+    // step, both the saved value and ours are undefined, so an unguarded
+    // restore ASSIGNS undefined — creating a `step` property that answers
+    // `'step' in cpu` with true and `typeof cpu.step` with 'undefined'. A
+    // caller probing for a step then finds one that cannot be called.
+    const cpu = { pc: 0, cycles: 0, readData: () => 0, writeData: () => {} };
+    const events = installInstructionDebugEvents({
+      cpu, machine: { clockHz: 1 }, cpuId: 'avr', timeDomain: 'avr-cycles',
+      accessors: { read: 'readData', write: 'writeData' },
+      pcOf: c => c.pc * 2, clock: () => cpu.cycles });
+    const off = events.onDebugEvent(() => {});
+    off();
+    assert.equal('step' in cpu, false, 'the restore invented a `step`');
   });
 
   it('is the bare call with no listener attached', () => {
