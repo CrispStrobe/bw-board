@@ -180,12 +180,27 @@ function asm (view, start, items) {
     let at = start;
     for (const it of items) {
         if (Array.isArray(it) && it[0] === 'label') { labels.set(it[1], at); continue; }
-        at += 2;
+        at += (Array.isArray(it) && it[0] === 'bl') ? 4 : 2;
     }
     const end = at;
     at = start;
     for (const it of items) {
         if (Array.isArray(it) && it[0] === 'label') continue;
+        if (Array.isArray(it) && it[0] === 'bl') {
+            // BL is the only 32-bit instruction this emitter produces. The
+            // target is an ABSOLUTE address already known — every callee is
+            // emitted before its caller — so there is no label to resolve.
+            // J1 and J2 are both 1 for the short offsets used here, positive or
+            // negative: for a small delta the sign-extension bits I1 and I2 are
+            // equal to S, and J = NOT(I) XOR S is 1 either way.
+            const delta = it[1] - (at + 4);
+            if (delta % 2) throw new Error('asm: misaligned bl');
+            if (delta < -0x400000 || delta > 0x3ffffe) throw new Error('asm: bl out of range');
+            view.setUint16(at, 0xf000 | ((delta < 0 ? 1 : 0) << 10) | ((delta >> 12) & 0x3ff), true);
+            view.setUint16(at + 2, 0xf800 | ((delta >> 1) & 0x7ff), true);
+            at += 4;
+            continue;
+        }
         if (Array.isArray(it)) {
             const [kind, name] = it;
             if (!labels.has(name)) throw new Error(`asm: branch to unknown label '${name}'`);
@@ -1460,6 +1475,307 @@ export function buildBootrom () {
         0xbdf0, // pop  {r4-r7, pc}
     ]);
 
+    // ── the float constant pool ────────────────────────────────────────
+    //
+    // Thumb-1 cannot materialise an arbitrary 32-bit value inline, and this
+    // emitter has no literal pool: a PC-relative LDR needs word alignment it
+    // does not track. So constants live at a FIXED address instead, and a
+    // routine builds that address in two instructions — `movs rN, #16` then
+    // `lsls rN, rN, #8` — and reads a word with LDR's 5-bit offset.
+    //
+    // 0x1000 is chosen because the code ends well below it (0x84b as of
+    // 2026-09-10) and the tables sit below that too, so the pool cannot
+    // collide with anything that grows. The 5-bit offset caps one base at 32
+    // words, which is checked below rather than assumed.
+    const CONST_POOL = 0x1000;
+    const constants = [];
+    /** Register a float constant; returns its word index for LDR. */
+    const k = (value) => {
+        const at = constants.indexOf(value);
+        if (at >= 0) return at;
+        constants.push(value);
+        if (constants.length > 32) {
+            throw new Error('constant pool past 32 words: LDR\'s 5-bit offset cannot reach it');
+        }
+        return constants.length - 1;
+    };
+    /** `movs rN, #16; lsls rN, rN, #8` — the pool's base address, 0x1000. */
+    const poolBase = (reg) => [0x2010 | (reg << 8), 0x0200 | (reg << 3) | reg];
+    /** `ldr rD, [rBase, #index*4]` */
+    const ldrK = (rd, rbase, index) => 0x6800 | (index << 6) | (rbase << 3) | rd;
+
+    // ── fln(r0 = float) → r0 = ln(x) ───────────────────────────────────
+    //
+    // SF table index 20, and the first entry here that APPROXIMATES. Every
+    // operator above has a single correctly-rounded answer and is graded
+    // bit-exact against Math.fround. A transcendental does not: JavaScript
+    // computes it in DOUBLE and rounds down, and a float32 polynomial differs
+    // in the last bit on a fair share of inputs. Grading this bit-exact would
+    // fail a perfectly good implementation, so the test states a ULP bound
+    // instead — and the bound is CHOSEN, not derived.
+    //
+    // ln(x) = ln(m) + e*ln2 for x = m * 2^e, and the reduction is EXACT:
+    // pulling the exponent out costs no accuracy at all, which is why the
+    // series only has to be good on [1, 2).
+    //
+    // ln(m) = 2*atanh(s) with s = (m-1)/(m+1), so s is at most 1/3 and the
+    // series converges fast: the term in s^(2k+1) is bounded by (1/9)^k/(2k+1)
+    // relative to s, which passes 2^-24 by k=7. Hence the coefficients 1/3
+    // through 1/15, evaluated by Horner in s^2.
+    const fln = pc;
+    {
+        const c = [k(1), k(1 / 3), k(1 / 5), k(1 / 7), k(1 / 9), k(1 / 11), k(1 / 13), k(1 / 15)];
+        const LN2 = k(Math.fround(Math.LN2));
+        const SQRT2 = k(Math.fround(Math.SQRT2));
+        pc = asm(view, pc, [
+            0xb5f0,                     // push {r4-r7, lr}
+            0xb081,                     // sub  sp, #4            ; a slot for e
+            // ---- specials -------------------------------------------------
+            0x0002,                     // movs r2, r0
+            0x0fd2,                     // lsrs r2, r2, #31       ; sign
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24       ; exponent
+            0x2b00,                     // cmp  r3, #0
+            ['bne', 'ln_nz'],
+            // +-0 -> -Infinity, which is IEEE's answer and not an error here
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23
+            0x2101,                     // movs r1, #1
+            0x07c9,                     // lsls r1, r1, #31
+            0x4308,                     // orrs r0, r1            ; -Inf
+            ['b', 'ln_out'],
+            ['label', 'ln_nz'],
+            0x2a00,                     // cmp  r2, #0
+            ['bne', 'ln_nan'],          //                        ; ln of a negative
+            0x2bff,                     // cmp  r3, #255
+            ['bne', 'ln_finite'],
+            0x0241,                     // lsls r1, r0, #9
+            0x0a49,                     // lsrs r1, r1, #9        ; mantissa bits
+            0x2900,                     // cmp  r1, #0
+            // ln(+Inf) = +Inf. Inverted around an unconditional branch because
+            // a conditional one reaches 127 halfwords and ln_out is further
+            // than that now — the assembler said so by name rather than
+            // truncating, which is the whole reason it throws.
+            ['bne', 'ln_nan'],
+            ['b', 'ln_out'],
+            ['label', 'ln_nan'],
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23
+            0x2101,                     // movs r1, #1
+            0x0589,                     // lsls r1, r1, #22
+            0x4308,                     // orrs r0, r1            ; qNaN
+            ['b', 'ln_out'],
+            // ---- x = m * 2^e, m in [1,2) ----------------------------------
+            ['label', 'ln_finite'],
+            0x1e5c,                     // subs r4, r3, #1        ; e = exp - 127...
+            0x3c7e,                     // subs r4, #126          ; ...in two steps
+            0x0240,                     // lsls r0, r0, #9
+            0x0a40,                     // lsrs r0, r0, #9        ; mantissa
+            0x217f,                     // movs r1, #127
+            0x05c9,                     // lsls r1, r1, #23       ; 3f800000h = 1.0f.
+                                        //   The exponent FIELD of 1.0 is 127,
+                                        //   not the 63 this first built.
+            0x4308,                     // orrs r0, r1            ; r0 = m, in [1,2)
+            // THE RANGE IS CENTRED ON 1, NOT ON [1,2), and this is the whole
+            // accuracy of the routine near x = 1. With m in [1,2), an x just
+            // below 1 gives m near 2 and e = -1, so the answer is a tiny
+            // DIFFERENCE of ln(m) = +0.693 and e*ln2 = -0.693: measured, the
+            // error at ln(0.99999994) was a factor of two. Folding m into
+            // [1/sqrt2, sqrt2) makes e = 0 there, so there is nothing to
+            // cancel — and it shrinks |s| from 1/3 to 0.172, which the series
+            // is glad of as well.
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, SQRT2),
+            0x4288,                     // cmp  r0, r1            ; both positive: bits compare
+            ['blo', 'ln_centred'],
+            0x2101,                     // movs r1, #1
+            0x05c9,                     // lsls r1, r1, #23
+            0x1a40,                     // subs r0, r0, r1        ; m /= 2, exactly
+            0x3401,                     // adds r4, #1            ; ...and e absorbs it
+            ['label', 'ln_centred'],
+            0x9400,                     // str  r4, [sp, #0]      ; keep e
+            0x0004,                     // movs r4, r0            ; keep m
+            // s = (m - 1) / (m + 1)
+            0x0021,                     // movs r1, r4
+            0x0020,                     // movs r0, r4
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, c[0]),           // ldr  r1, [pool, #1.0]
+            ['bl', fsub],               // m - 1
+            0x0006,                     // movs r6, r0
+            0x0020,                     // movs r0, r4
+            ...poolBase(5),
+            ldrK(1, 5, c[0]),
+            ['bl', fadd],               // m + 1
+            0x0001,                     // movs r1, r0
+            0x0030,                     // movs r0, r6
+            ['bl', fdiv],               // s
+            0x0004,                     // movs r4, r0            ; r4 = s
+            0x0001,                     // movs r1, r0
+            ['bl', fmul],               // u = s*s
+            0x0005,                     // movs r5, r0            ; r5 = u
+            // Horner in u, from 1/15 down to 1
+            0x2600,                     // movs r6, #0
+            ...poolBase(6),
+            ldrK(0, 6, c[7]),           // acc = 1/15
+            ...[[c[6]], [c[5]], [c[4]], [c[3]], [c[2]], [c[1]], [c[0]]].flatMap(([ci]) => [
+                0x0029,                 // movs r1, r5            ; * u
+                ['bl', fmul],
+                0x2600,                 // movs r6, #0
+                ...poolBase(6),
+                ldrK(1, 6, ci),         // + coefficient
+                ['bl', fadd]
+            ]),
+            // ln(m) = 2 * s * acc
+            0x0021,                     // movs r1, r4
+            ['bl', fmul],               // s * acc
+            0x0001,                     // movs r1, r0
+            ['bl', fadd],               // + itself, i.e. * 2
+            0x0006,                     // movs r6, r0            ; r6 = ln(m)
+            // + e * ln2
+            0x9800,                     // ldr  r0, [sp, #0]      ; e
+            ['bl', int2float],
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, LN2),
+            ['bl', fmul],               // e * ln2
+            0x0001,                     // movs r1, r0
+            0x0030,                     // movs r0, r6
+            ['bl', fadd],               // ln(m) + e*ln2
+            ['label', 'ln_out'],
+            0xb001,                     // add  sp, #4
+            0xbdf0                      // pop  {r4-r7, pc}
+        ]);
+    }
+
+    // ── fexp(r0 = float) → r0 = e^x ────────────────────────────────────
+    //
+    // SF table index 19. e^x = 2^k * e^r with k = round(x/ln2), so |r| is at
+    // most ln2/2 and the Taylor series converges in a handful of terms; the
+    // 2^k is then free, because scaling by a power of two is an ADD to the
+    // exponent field.
+    //
+    // ln2 IS SPLIT IN TWO. k*ln2 reaches 88 while r is under 0.35, so
+    // computing r = x - k*ln2 in one step throws away most of r's significant
+    // bits to cancellation. LN2_HI has its low twelve mantissa bits cleared,
+    // which makes k*LN2_HI exact for every k this routine sees, and LN2_LO
+    // carries the remainder — the same trick, and the same reason, as
+    // centring fln's reduction on 1.
+    const fexp = pc;
+    {
+        // ln2 with its low twelve mantissa bits cleared, DERIVED rather than
+        // typed: a constant of this kind copied by hand is a constant nobody
+        // can check.
+        const hiBuf = new DataView(new ArrayBuffer(4));
+        hiBuf.setFloat32(0, Math.fround(Math.LN2));
+        hiBuf.setUint32(0, hiBuf.getUint32(0) & 0xfffff000);
+        const HI = hiBuf.getFloat32(0);
+        const LO = Math.fround(Math.LN2 - HI);
+        const INV = k(Math.fround(1 / Math.LN2));
+        const LN2_HI = k(HI), LN2_LO = k(LO);
+        const HALF = k(0.5), NHALF = k(-0.5), ONE = k(1);
+        const T = [2, 6, 24, 120, 720, 5040, 40320, 362880].map((f) => k(Math.fround(1 / f)));
+        pc = asm(view, pc, [
+            0xb5f0,                     // push {r4-r7, lr}
+            0xb081,                     // sub  sp, #4
+            0x9000,                     // str  r0, [sp, #0]      ; keep x
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24
+            0x2bff,                     // cmp  r3, #255
+            ['bne', 'ex_finite'],
+            0x0241,                     // lsls r1, r0, #9
+            0x0a49,                     // lsrs r1, r1, #9
+            0x2900,                     // cmp  r1, #0
+            ['bne', 'ex_early'],        //                        ; NaN in, NaN out
+            0x0fc1,                     // lsrs r1, r0, #31
+            0x2900,                     // cmp  r1, #0
+            ['beq', 'ex_early'],        //                        ; e^+Inf = +Inf
+            0x2000,                     // movs r0, #0            ; e^-Inf = +0
+            // The specials get their own epilogue rather than branching to the
+            // one at the end: a conditional branch reaches 127 halfwords and
+            // the polynomial between here and there is longer than that.
+            ['label', 'ex_early'],
+            0xb001,                     // add  sp, #4
+            0xbdf0,                     // pop  {r4-r7, pc}
+            ['label', 'ex_finite'],
+            // k = round(x / ln2)
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, INV),
+            ['bl', fmul],               // t = x / ln2
+            0x0006,                     // movs r6, r0
+            0x0fc1,                     // lsrs r1, r0, #31       ; sign of t
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            0x2900,                     // cmp  r1, #0
+            ['bne', 'ex_neg'],
+            ldrK(1, 5, HALF),
+            ['b', 'ex_bias'],
+            ['label', 'ex_neg'],
+            ldrK(1, 5, NHALF),
+            ['label', 'ex_bias'],
+            0x0030,                     // movs r0, r6
+            ['bl', fadd],               // t +- 0.5, so truncation rounds
+            ['bl', float2int],
+            0x0004,                     // movs r4, r0            ; r4 = k
+            ['bl', int2float],
+            0x0006,                     // movs r6, r0            ; r6 = (float)k
+            // r = (x - k*LN2_HI) - k*LN2_LO
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, LN2_HI),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x9800,                     // ldr  r0, [sp, #0]      ; x
+            ['bl', fsub],
+            0x0007,                     // movs r7, r0
+            0x0030,                     // movs r0, r6
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(1, 5, LN2_LO),
+            ['bl', fmul],
+            0x0001,                     // movs r1, r0
+            0x0038,                     // movs r0, r7
+            ['bl', fsub],
+            0x0006,                     // movs r6, r0            ; r6 = r
+            // e^r by Horner: acc = 1/9!, then acc*r + 1/n! down to + 1
+            0x2500,                     // movs r5, #0
+            ...poolBase(5),
+            ldrK(0, 5, T[7]),           // 1/9!
+            ...[T[6], T[5], T[4], T[3], T[2], T[1], T[0], ONE, ONE].flatMap((ci) => [
+                0x0031,                 // movs r1, r6            ; * r
+                ['bl', fmul],
+                0x2500,                 // movs r5, #0
+                ...poolBase(5),
+                ldrK(1, 5, ci),
+                ['bl', fadd]
+            ]),
+            // scale by 2^k: an ADD to the exponent field, with both ends checked
+            0x0043,                     // lsls r3, r0, #1
+            0x0e1b,                     // lsrs r3, r3, #24       ; exponent of e^r
+            0x191b,                     // adds r3, r3, r4        ; + k
+            0x2b00,                     // cmp  r3, #0
+            ['bgt', 'ex_hi'],
+            0x2000,                     // movs r0, #0            ; underflow, flushed
+            ['b', 'ex_out'],
+            ['label', 'ex_hi'],
+            0x2bff,                     // cmp  r3, #255
+            ['blt', 'ex_pack'],
+            0x20ff,                     // movs r0, #255
+            0x05c0,                     // lsls r0, r0, #23       ; overflow to +Inf
+            ['b', 'ex_out'],
+            ['label', 'ex_pack'],
+            0x0240,                     // lsls r0, r0, #9
+            0x0a40,                     // lsrs r0, r0, #9        ; mantissa
+            0x05db,                     // lsls r3, r3, #23
+            0x4318,                     // orrs r0, r3            ; e^r is never negative
+            ['label', 'ex_out'],
+            0xb001,                     // add  sp, #4
+            0xbdf0                      // pop  {r4-r7, pc}
+        ]);
+    }
+
     // ── the single-precision soft-float stub ───────────────────────────
     //
     // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
@@ -1577,6 +1893,8 @@ export function buildBootrom () {
     view.setUint32(sfTable + 14 * 4, thumb(ufix2float), true);
     view.setUint32(sfTable + 8 * 4, thumb(float2fix), true);
     view.setUint32(sfTable + 10 * 4, thumb(float2ufix), true);
+    view.setUint32(sfTable + 19 * 4, thumb(fexp), true);
+    view.setUint32(sfTable + 20 * 4, thumb(fln), true);
     view.setUint32(sfTable + 6 * 4, thumb(fsqrt), true);
     view.setUint32(sfTable + 7 * 4, thumb(float2int), true);
     view.setUint32(sfTable + 9 * 4, thumb(float2uint), true);
@@ -1587,6 +1905,10 @@ export function buildBootrom () {
     view.setUint16(dataTable, ROM_DATA.SOFT_FLOAT, true);
     view.setUint16(dataTable + 2, sfTable, true);
     view.setUint32(dataTable + 4, 0, true);          // terminator
+
+    // The pool is written once every constant is known.
+    if (CONST_POOL + constants.length * 4 > BOOTROM_SIZE) throw new Error('constant pool past the ROM');
+    constants.forEach((value, index) => view.setFloat32(CONST_POOL + index * 4, value, true));
 
     // ── the fixed header ───────────────────────────────────────────────
     view.setUint32(0x00, 0x20042000, true);         // initial SP: top of SRAM

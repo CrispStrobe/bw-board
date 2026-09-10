@@ -668,6 +668,95 @@ test('DECLARED DEVIATIONS: what the conversions refuse, stated rather than disco
     }
 });
 
+/**
+ * Distance between two float32 values counted in representable steps.
+ *
+ * THE TRANSCENDENTALS CANNOT BE GRADED BIT-EXACT and it would be wrong to try.
+ * Every operator above has one correctly-rounded answer, so `assert.equal`
+ * against Math.fround is the right instrument. ln and exp do not: JavaScript
+ * computes them in DOUBLE and rounds down, while these compute in float32
+ * throughout, so the two differ in the last bit on a fair share of inputs. A
+ * bit-exact assertion would fail a perfectly good implementation.
+ */
+const ord = (u) => { const i = u | 0; return i < 0 ? -(i & 0x7fffffff) : i; };
+const ulps = (got, want) => Math.abs(ord(got) - ord(F32(want)));
+
+// CHOSEN, NOT DERIVED. Measured worst case is 2 ulp for fln over 9,912 values
+// including 6,001 straddling 1.0, and 1 ulp for fexp over 5,543. Four is that
+// with room, and it is a bound this tier is committing to rather than a
+// reading it happened to get.
+const ULP_BOUND = 4;
+
+test('fln is within the declared ULP bound, including either side of 1.0', {skip: SKIP}, async () => {
+    // x just below 1 is the case that matters. With the mantissa taken from
+    // [1,2) the answer there is a tiny DIFFERENCE of ln(m) and e*ln2, and
+    // measured before the reduction was centred, ln(0.99999994) came out a
+    // factor of two wrong. Centring on [1/sqrt2, sqrt2) makes e zero there.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fn = view.getUint32(sf + 20 * 4, true);
+    let worst = 0, worstAt = null;
+    const check = (v) => {
+        if (!(v > 0) || !Number.isFinite(v) || SUBNORMAL(v)) return;
+        const want = Math.fround(Math.log(v));
+        if (!Number.isFinite(want)) return;
+        assert.ok(run(fn, {0: F32(v)}, 20000) >= 0, `fln(${v}) never returned`);
+        const d = ulps(mcu.core.registers[0] >>> 0, want);
+        if (d > worst) { worst = d; worstAt = v; }
+    };
+    for (let i = -400; i <= 400; i++) check(F((F32(1) + i) >>> 0));
+    let seed = 0x51ed270b;
+    for (let i = 0; i < 400; i++) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; check(F(seed)); }
+    for (const v of [1, 2, 4, 0.5, 0.25, Math.E, 1.5, 1e-30, 1e30]) check(v);
+    assert.ok(worst <= ULP_BOUND, `fln worst error ${worst} ulp at ${worstAt}, bound ${ULP_BOUND}`);
+});
+
+test('fexp is within the declared ULP bound, and saturates at both ends', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fn = view.getUint32(sf + 19 * 4, true);
+    let worst = 0, worstAt = null;
+    const check = (v0) => {
+        const v = F(F32(v0));
+        const want = Math.fround(Math.exp(v));
+        if (!Number.isFinite(want) || want === 0 || SUBNORMAL(want)) return;
+        assert.ok(run(fn, {0: F32(v)}, 20000) >= 0, `fexp(${v}) never returned`);
+        const d = ulps(mcu.core.registers[0] >>> 0, want);
+        if (d > worst) { worst = d; worstAt = v; }
+    };
+    for (let i = 0; i <= 600; i++) check(-88 + i * (176 / 600));
+    for (const v of [0, 1, -1, 0.5, -0.5, 2, 10, -10, Math.LN2, -Math.LN2, 1e-8]) check(v);
+    assert.ok(worst <= ULP_BOUND, `fexp worst error ${worst} ulp at ${worstAt}, bound ${ULP_BOUND}`);
+
+    // Overflow and underflow are saturated deliberately, not left to the
+    // exponent field wrapping into a plausible wrong answer.
+    for (const [x, want] of [[0, F32(1)], [200, F32(Infinity)], [-200, 0],
+        [Infinity, F32(Infinity)], [-Infinity, 0]]) {
+        assert.ok(run(fn, {0: F32(x)}, 20000) >= 0, `fexp(${x}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, want >>> 0, `fexp(${x})`);
+    }
+    assert.ok(run(fn, {0: F32(NaN)}, 20000) >= 0, 'fexp(NaN) never returned');
+    assert.ok(Number.isNaN(F(mcu.core.registers[0] >>> 0)), 'fexp(NaN) must be NaN');
+});
+
+test('fln refuses its edges: zero, negatives, and infinity', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fn = view.getUint32(sf + 20 * 4, true);
+    for (const [x, want] of [[0, F32(-Infinity)], [-0, F32(-Infinity)],
+        [Infinity, F32(Infinity)]]) {
+        assert.ok(run(fn, {0: F32(x)}, 20000) >= 0, `fln(${x}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, want >>> 0, `fln(${x})`);
+    }
+    for (const x of [-1, -1e30, NaN]) {
+        assert.ok(run(fn, {0: F32(x)}, 20000) >= 0, `fln(${x}) never returned`);
+        assert.ok(Number.isNaN(F(mcu.core.registers[0] >>> 0)), `fln(${x}) must be NaN`);
+    }
+});
+
 test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an oracle failure', {skip: SKIP}, async () => {
     // Stated rather than discovered. Gradual underflow costs a normalisation
     // path in every operator, and nothing in this tier has produced a
@@ -684,14 +773,14 @@ test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an ora
         'a subnormal operand is treated as zero — JavaScript would give 2.8e-45');
 });
 
-test('NAMED STOP: the five transcendentals are still the stub', {skip: SKIP}, async () => {
+test('NAMED STOP: the three trigonometric entries are still the stub', {skip: SKIP}, async () => {
     // fadd, fsub and int2float have left this list. Implementing another
     // operator must BREAK this test, so whoever does it comes here and records
     // which one now works rather than leaving a stale claim standing.
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
     const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
-    const stubbed = [[15, 'fcos'], [16, 'fsin'], [17, 'ftan'], [19, 'fexp'], [20, 'fln']];
+    const stubbed = [[15, 'fcos'], [16, 'fsin'], [17, 'ftan']];
     for (const [i, name] of stubbed) {
         const fn = view.getUint32(sf + i * 4, true);
         assert.ok(run(fn, {0: F32(2.5), 1: F32(1.0)}) >= 0, `${name} never returned`);
