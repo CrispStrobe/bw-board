@@ -164,14 +164,22 @@ let pendingLookup = null;
 // Writes into the cached table. This separates "the initialiser never ran"
 // from "it ran and wrote zeros" -- two different defects that present
 // identically as a table full of zeros at the end of the run.
-const TABLE = 0x2002f808, TABLE_END = TABLE + 0x80;
+// TWO tables live in the same literal pool. 0x2002f808 is where the failing
+// 2.5+1.0 dereferences; 0x2003163c is the one an earlier reading reported a
+// non-null value from. Watching only one is how a reassuring number about the
+// wrong structure gets read as evidence about the failing path.
+const TABLES = [
+    { name: 'A 0x2002f808', base: 0x2002f808 },
+    { name: 'B 0x2003163c', base: 0x2003163c }
+];
 const tableWrites = [];
 for (const w of ['writeUint32', 'writeUint16', 'writeUint8']) {
     const orig = rp2040[w].bind(rp2040);
     rp2040[w] = (addr, value, ...rest) => {
         const a = addr >>> 0;
-        if (a >= TABLE && a < TABLE_END) {
-            tableWrites.push({ w, addr: a, value: hex(value >>> 0), pc: hex(core.PC), step: state.steps });
+        const t = TABLES.find(t => a >= t.base && a < t.base + 0x80);
+        if (t) {
+            tableWrites.push({ t: t.name, w, addr: a, value: hex(value >>> 0), pc: hex(core.PC), step: state.steps });
         }
         return orig(addr, value, ...rest);
     };
@@ -334,13 +342,19 @@ for (let i = 0; i < 32; i++) {
 }
 
 console.log('');
-console.log(`WRITES into 0x2002f808..+0x80: ${tableWrites.length}`);
-if (tableWrites.length === 0) {
-    console.log('  NONE. The table is zero because nothing ever filled it -- the');
-    console.log('  initialiser did not run, as distinct from running and failing.');
-}
-const zeroFill = tableWrites.filter(t => t.value === '0x00000000').length;
-console.log(`  ${zeroFill} of them write ZERO (the crt0 .bss clear); the rest are below:`);
-for (const t of tableWrites.filter(t => t.value !== '0x00000000')) {
-    console.log(`  ${t.w} [${hex(t.addr)}] = ${t.value}  pc=${t.pc} step=${t.step}`);
+for (const t of TABLES) {
+    const mine = tableWrites.filter(x => x.t === t.name);
+    const zero = mine.filter(x => x.value === '0x00000000').length;
+    console.log(`table ${t.name}: ${mine.length} writes, ${zero} of them the crt0 .bss zero-fill`);
+    if (mine.length === 0) {
+        console.log('    NONE. Zero because nothing filled it -- the initialiser did not');
+        console.log('    run, as distinct from running and writing zeros.');
+    }
+    for (const x of mine.filter(x => x.value !== '0x00000000').slice(0, 12)) {
+        console.log(`    [${hex(x.addr)}] = ${x.value}  pc=${x.pc} step=${x.step}`);
+    }
+    const words = [];
+    for (let i = 0; i < 26; i++) words.push(rp2040.readUint32(t.base + i * 4) >>> 0);
+    console.log(`    final: ${words.filter(w => w !== 0).length}/26 non-zero`);
+    console.log(`    ${words.slice(0, 8).map(hex).join(' ')}`);
 }
