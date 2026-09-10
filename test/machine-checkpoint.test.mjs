@@ -78,6 +78,46 @@ for (const { name, make } of MACHINES) {
     // refused the same input by name. Every entry below is a VALID envelope
     // carrying ONE malformed field, so a machine that fails for some unrelated
     // reason cannot look like a pass.
+    // THE REMAINING SHARED CLAUSES, each fired on its own. Measured on the
+    // converged tree before these existed: neutering the version, CPU-field or
+    // component-set check changed NOTHING across seven machine and state suites.
+    // A clause no test holds is a clause that can be deleted in a refactor
+    // without anything going red, which is how the memory check was lost in the
+    // first place. Every entry is a VALID envelope carrying ONE malformed field.
+    test(`${name}: restore fails closed on each malformed state field`, () => {
+        const source = make();
+        const cp = source.captureCheckpoint();
+        const cpuKey = Object.keys(cp.state.cpu)[0];
+        const chipKey = Object.keys(cp.state.chips)[0];
+        assert.ok(cpuKey && chipKey, `${name} needs at least one CPU field and one chip to vary`);
+
+        const cases = [
+            ['an unsupported state version', s => ({ ...s, v: s.v + 1 }), /version/],
+            ['a missing CPU field', s => {
+                const cpu = { ...s.cpu }; delete cpu[cpuKey];
+                return { ...s, cpu };
+            }, /CPU fields missing/],
+            ['a CPU record that is not an object', s => ({ ...s, cpu: null }), /CPU record/],
+            ['an extra chip in the snapshot', s => ({ ...s, chips: { ...s.chips, ghost: {} } }), /chip set/],
+            ['a missing chip in the snapshot', s => {
+                const chips = { ...s.chips }; delete chips[chipKey];
+                return { ...s, chips };
+            }, /chip set/],
+            ['an extra device in the snapshot', s => ({ ...s, devices: { ...s.devices, ghost: {} } }), /device set/],
+        ];
+        for (const [label, mangle, reason] of cases) {
+            const target = make();
+            const before = target.cycles;
+            const refusal = target.restoreCheckpoint({ ...cp, state: mangle(cp.state) });
+            assert.ok(refusal && refusal.code === 'INVALID_CHECKPOINT',
+                `${name} accepted a checkpoint with ${label}: ${JSON.stringify(refusal)}`);
+            assert.match(refusal.details.reason, reason,
+                `${name} refused ${label} for the wrong reason: ${refusal.details.reason}`);
+            assert.equal(target.cycles, before,
+                `${name} advanced its clock while refusing a checkpoint with ${label}`);
+        }
+    });
+
     test(`${name}: restore fails closed on a malformed memory image`, () => {
         const source = make();
         const cp = source.captureCheckpoint();
@@ -125,3 +165,39 @@ test('an incompletely-serialisable machine refuses to capture rather than drop s
     assert.equal(cp.code, 'INCOMPLETE_CHECKPOINT_STATE', 'capture refuses rather than dropping the chip');
     assert.ok(cp.refused.includes('__opaque'), 'the refusal names the offending chip');
 });
+
+// THE SHAPE CHECK IS NOT UNIVERSAL, and that is a decision rather than a gap.
+// m6502 and i8086 pass a freshly-captured saveState() as `shape`, so a restored
+// value whose TYPE differs from what this machine captures is refused before any
+// component is touched. z80 does not, because its chip state legitimately changes
+// shape between captures — the tape's block list and the ULA's edge arrays grow —
+// so a shape check against a fresh sample would refuse valid checkpoints. z80
+// checks the same ground precisely, per chip, in its own clauses. This test names
+// both halves so that neither can be quietly dropped: it asserts the two machines
+// that opt in DO refuse, and that z80's abstention is deliberate.
+for (const { name, make, shapeChecked } of [
+    { name: 'm6502', make: () => new M6502Machine(), shapeChecked: true },
+    { name: 'z80', make: () => new Z80Machine(), shapeChecked: false },
+    { name: 'i8086', make: () => new I8086Machine(), shapeChecked: true },
+]) {
+    test(`${name}: a CPU field of the wrong type is ${shapeChecked ? 'refused' : 'left to the machine'}`, () => {
+        const source = make();
+        const cp = source.captureCheckpoint();
+        const cpuKey = Object.keys(cp.state.cpu).find(k => typeof cp.state.cpu[k] === 'number');
+        assert.ok(cpuKey, `${name} needs a numeric CPU field to retype`);
+        const state = { ...cp.state, cpu: { ...cp.state.cpu, [cpuKey]: 'not a number' } };
+
+        const target = make();
+        const refusal = target.restoreCheckpoint({ ...cp, state });
+        if (shapeChecked) {
+            assert.ok(refusal && refusal.code === 'INVALID_CHECKPOINT',
+                `${name} opts into the shape check and must refuse a retyped ${cpuKey}`);
+            assert.match(refusal.details.reason, /shape/,
+                `${name} refused for the wrong reason: ${refusal.details.reason}`);
+        } else {
+            assert.equal(refusal, undefined,
+                `${name} does not opt into the shape check; if it now refuses, the ` +
+                'comment above and the z80 abstention need rewriting rather than this line');
+        }
+    });
+}
