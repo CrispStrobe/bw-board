@@ -106,6 +106,8 @@ const MAX_BREAKPOINTS = 32;
 const MAX_CODE_ADDRESS = 0xffff;
 const CODE_ADDRESS_REFUSAL =
     `code breakpoint addr must be in 0x0000..0x${MAX_CODE_ADDRESS.toString(16)}`;
+/** Nanoseconds per second: the one authority for the tick⇄ns conversion in debugTime. */
+const NS_PER_S = 1_000_000_000n;
 
 /**
  * @typedef {object} SymbolTable stc_symtab.py's output (format 004)
@@ -120,6 +122,7 @@ const CODE_ADDRESS_REFUSAL =
  * @param {object} wasm the Emscripten module instance
  * @param {object} [opts]
  * @param {SymbolTable} [opts.symbols] load it now instead of calling setSymbols
+ * @param {number} [opts.clockHz] oscillator frequency, for exact cycle-domain timestamps
  * @returns {object} the DebugTarget
  */
 export function createEmu8051DebugTarget(wasm, opts = {}) {
@@ -145,6 +148,12 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
     let symbols = null;
     let listeners = [];
+    /**
+     * Bumped on every reset so a timestamp taken after a reset carries a
+     * different domain than one taken before it — two runs of the same program
+     * never read as one monotonic series. Zero means "not yet reset".
+     */
+    let debugTimeEpoch = 0;
     /**
      * Set while runFor is inside emu_dbg_run_until_ns. Every halt that arrives
      * in that window is swallowed: the budget expiring is one of them and is
@@ -266,6 +275,25 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
     }
 
     /**
+     * The reset-aware time domain the target reports facts in. `ticks` counts
+     * oscillator cycles when a usable clockHz was supplied and native
+     * nanoseconds otherwise; `domain` names which, and carries the reset epoch.
+     * This is the single source of the domain string — cycleProvider (and any
+     * later event contract) reads it here rather than re-deriving it, so the
+     * clock-vs-ns choice and the reset epoch are decided in exactly one place.
+     */
+    function debugTime() {
+        const ns = nowNs();
+        const hz = Number(opts.clockHz);
+        return Number.isSafeInteger(hz) && hz > 0
+            ? {ticks: (ns * BigInt(hz) + NS_PER_S / 2n) / NS_PER_S,
+                domain: debugTimeEpoch ? `8051-oscillator-reset-${debugTimeEpoch}` : '8051-oscillator', hz}
+            : {ticks: ns,
+                domain: debugTimeEpoch ? `8051-simulation-ns-reset-${debugTimeEpoch}` : '8051-simulation-ns',
+                hz: Number(NS_PER_S)};
+    }
+
+    /**
      * One byte out of one address space, using only value-returning calls.
      * Mirrors dbg_read_mem's switch exactly, including the bit-space derivation
      * (0x00–0x7F are the bits of IRAM 0x20–0x2F; 0x80 and up are the bits of the
@@ -350,6 +378,37 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
     // ─── the target ──────────────────────────────────────────────────────
 
     const target = {
+        /** The reset-aware time domain (see debugTime) the emitted facts live in. */
+        time() {
+            return debugTime();
+        },
+
+        /**
+         * What a resumable oscillator boundary is, and — as important — what it
+         * is not. The pinned WASM's cycle step is one real oscillator tick, so
+         * the boundary is recorded and resumable; but this ABI exposes no ALE,
+         * PSEN, address or data bus, so `signals` is empty as a promise (clients
+         * must not synthesize a waveform), and architectural reads omit in-flight
+         * and peripheral state, so `checkpoint` is false. Null when the build has
+         * no cycle step at all. The time domain comes from debugTime, not a
+         * second copy of the clock-vs-ns rule.
+         */
+        cycleProvider() {
+            if (!hasCycleStep) return null;
+            const hz = Number(opts.clockHz);
+            return {
+                schema: 1,
+                engine: 'emu8051-stc',
+                boundary: 'oscillator-clock',
+                timeDomain: debugTime().domain,
+                ...(Number.isSafeInteger(hz) && hz > 0 ? {clockHz: hz} : {}),
+                fidelity: 'recorded',
+                resumable: true,
+                signals: [],
+                checkpoint: false
+            };
+        },
+
         capabilities() {
             // Feature-detect watchpoints: available if _emu_dbg_set_bp_write exists
             const hasWatchpoints = typeof wasm._emu_dbg_set_bp_write === 'function';
@@ -427,6 +486,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         reset() {
             stepping = false;
             pendingCause = null;
+            debugTimeEpoch++;
             wasm._emu_dbg_reset();
             // Breakpoints deliberately survive: `dbg_reset` resets the CPU and
             // the peripherals and does not touch `t->bps`, so the emulator will
