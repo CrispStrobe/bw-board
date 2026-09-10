@@ -59,8 +59,14 @@ function bodyReturns(source) {
   const sites = [];
   for (const m of code.matchAll(new RegExp(BODY_RETURN.source, 'gm'))) {
     const before = code.slice(0, m.index);
-    const describes = [...before.matchAll(/^(\s*)describe\(/gm)];
-    const cases = [...before.matchAll(/^(\s*)(it|test)\(/gm)];
+    // A QUALIFIER IS ALLOWED ON BOTH, and its absence was a real blind spot: a
+    // peer planted `test.describe(…) { test.it.skip(…); return; }` — the exact
+    // shape, in the idiom node's own docs use — and this said nothing, because
+    // `^\s*describe\(` does not match `test.describe(`. One file in this tree
+    // already writes it that way. Found by someone else's probe, which is the
+    // argument for handing a new gate to somebody who did not write it.
+    const describes = [...before.matchAll(/^(\s*)(?:[\w$]+\.)?describe\(/gm)];
+    const cases = [...before.matchAll(/^(\s*)(?:[\w$]+\.)?(it|test)\(/gm)];
     const lastDescribe = describes.at(-1);
     const lastCase = cases.at(-1);
     // Inside a case, `return` is ordinary control flow; inside a describe body
@@ -91,6 +97,14 @@ describe('no case is abandoned before it is declared', () => {
     const remedy = "describe('x', () => {\n  it('a', {skip: SKIP}, () => {\n    return;\n  });\n";
     assert.deepEqual(bodyReturns(shape), [4], 'the pattern no longer matches the shape');
     assert.deepEqual(bodyReturns(remedy), [], 'the pattern claims a return inside a CASE');
+  });
+
+  it('the qualified idiom counts too — test.describe, not just describe', () => {
+    // The blind spot a peer found by planting a probe I had not thought to
+    // write. Both spellings are the same defect and the gate saw one of them.
+    const qualified = "test.describe('probe', () => {\n  test.it.skip('oracle missing');\n  return;\n});\n";
+    assert.deepEqual(bodyReturns(qualified), [3],
+      'a qualified describe is still a describe; its body abandons the same way');
   });
 
   it('a return inside a comment is not a return', () => {
