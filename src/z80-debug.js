@@ -8,6 +8,7 @@
  * @module
  */
 import { disasmZ80 } from './z80-disasm.js';
+import { replayAccepted, replayRefused } from './debug-replay-contract.js';
 import { loadSNA, SNA_SIZE } from './zx-sna.js';
 import { loadZ80 } from './zx-z80file.js';
 
@@ -202,6 +203,61 @@ export function createZ80DebugTarget(adapter) {
       if (!machine.ula || typeof machine.ula.setKeys !== 'function') return false;
       machine.ula.setKeys(names);
       return true;
+    },
+
+    /**
+     * Apply a recorded host-input fact — the APPLY half of the replay surface
+     * declared in debug-replay-contract.js.
+     *
+     * It routes through the same two methods the face uses, `setButtons` and
+     * `setKeys`, rather than reaching into the machine again: a replayed input
+     * taking a different path from a live one would replay something the
+     * recording never captured.
+     *
+     * EVERY FAILURE IS A RETURN VALUE. A producer this build has no path for is
+     * refused with a reason naming what is missing, not thrown — the driver
+     * decides whether an unreplayable fact ends the session, and a throw would
+     * be indistinguishable from the emulator breaking.
+     *
+     * `z80.serial` is refused HERE ON PURPOSE. A downstream copy of this target
+     * routes it through an `adapter.sendSerial` this build does not have.
+     * Refusing by name is the honest answer and it names the gap; accepting
+     * silently would replay nothing and report success.
+     *
+     * @param {{producer: string, payload: object}} input a recorded fact
+     * @returns {{accepted: boolean, code?: string, reason?: string}}
+     */
+    applyReplayInput(input) {
+      const payload = input?.payload;
+      if (input?.producer === 'z80.buttons') {
+        if (!Number.isSafeInteger(payload?.mask)) {
+          return replayRefused('invalid-replay-input', 'z80.buttons needs a safe-integer mask');
+        }
+        return this.setButtons(payload.mask & 0x1f)
+          ? replayAccepted()
+          : replayRefused('no-input-path',
+            'this machine has no joystick interface to receive a button mask');
+      }
+      if (input?.producer === 'z80.keys') {
+        const names = payload?.names;
+        // Bounded on purpose: a recorded fact is untrusted by the time it is
+        // replayed, and the ULA matrix is 8x5 — forty is every key at once,
+        // which is already impossible on real hardware.
+        if (!Array.isArray(names) || names.length > 40 ||
+            !names.every(name => typeof name === 'string' && name.length <= 16)) {
+          return replayRefused('invalid-replay-input',
+            'z80.keys needs at most 40 key names of at most 16 characters');
+        }
+        return this.setKeys([...names])
+          ? replayAccepted()
+          : replayRefused('no-input-path', 'this machine has no ULA to receive key names');
+      }
+      if (input?.producer === 'z80.serial') {
+        return replayRefused('no-input-path',
+          'this build has no serial input path for the Z80 target');
+      }
+      return replayRefused('unsupported-replay-input',
+        `no replay path for producer ${input?.producer ?? '(none)'}`);
     },
 
     video() {
