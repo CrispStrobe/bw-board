@@ -8,16 +8,22 @@
  * an interface anything declares, and this module is the declaration. Nothing
  * here is new behaviour.
  *
- * THE SURFACE. A target that supports input replay implements two methods:
+ * THE SURFACE IS TWO SEPARATE CAPABILITIES, NOT ONE. A target may implement
+ * either without the other, and the first version of this module was wrong to
+ * require both — see the correction note at the end.
  *
- *   onInput(cb) -> unsubscribe
+ *   applyReplayInput(fact) -> outcome                        [the APPLY half]
+ *     Apply a previously recorded fact. Returns an OUTCOME (below). Never
+ *     throws for an input it merely does not support; that is a refusal.
+ *     All four downstream implementations have this one.
+ *
+ *   onDebugInput(listener) -> unsubscribe                    [the RECORD half]
  *     Register a listener for host-input FACTS as they are observed. Each fact
  *     is `{time, producer, payload}`. Deduplication is the target's business —
  *     a fact is emitted when the value the machine receives actually changes.
- *
- *   applyReplayInput(fact) -> outcome
- *     Apply a previously recorded fact. Returns an OUTCOME (below). Never
- *     throws for an input it merely does not support; that is a refusal.
+ *     This is the name the RECORDER requires: downstream's
+ *     `subscribeDebugTargetInputs` returns null for a target without it, so a
+ *     target using any other name is simply not recorded.
  *
  * A REFUSAL IS A RETURN VALUE, NOT AN EXCEPTION. This is the point of the
  * module and the one thing an implementer must not get wrong. A target that
@@ -93,7 +99,7 @@ export function replayOutcome(value, label = 'replay input') {
 }
 
 /**
- * Does this target implement the surface at all?
+ * Can this target APPLY a recorded fact?
  *
  * Separate from whether a given SESSION can be replayed — see `replaySupport`.
  * A driver uses this to refuse early with a message naming the target, instead
@@ -102,9 +108,32 @@ export function replayOutcome(value, label = 'replay input') {
  * @param {object} target
  * @returns {boolean}
  */
-export const implementsReplaySurface = target =>
-  !!target && typeof target.applyReplayInput === 'function' &&
-  typeof target.onInput === 'function';
+export const canApplyReplayInput = target =>
+  !!target && typeof target.applyReplayInput === 'function';
+
+/**
+ * Can this target RECORD its host inputs?
+ *
+ * A separate question from applying, and a target may do either alone. One
+ * downstream target applies facts it never records: they are produced by the
+ * driver rather than observed by the target.
+ *
+ * @param {object} target
+ * @returns {boolean}
+ */
+export const canRecordDebugInput = target =>
+  !!target && typeof target.onDebugInput === 'function';
+
+/**
+ * The two halves, reported separately.
+ *
+ * @param {object} target
+ * @returns {{applies: boolean, records: boolean}}
+ */
+export const replayCapabilities = target => ({
+  applies: canApplyReplayInput(target),
+  records: canRecordDebugInput(target)
+});
 
 /**
  * Can this target replay, and if not, why not — as a LIST.
@@ -129,8 +158,10 @@ export const implementsReplaySurface = target =>
  */
 export function replaySupport(target, reasons = []) {
   const missing = [...reasons];
-  if (!implementsReplaySurface(target)) {
-    missing.push('the target does not implement onInput and applyReplayInput');
+  // Only the APPLY half is required to replay. Recording is what produced the
+  // facts; a target handed facts from elsewhere can still replay them.
+  if (!canApplyReplayInput(target)) {
+    missing.push('the target does not implement applyReplayInput');
   }
   return missing.length ? {supported: false, reasons: missing}
     : {supported: true, reasons: []};
@@ -146,3 +177,28 @@ export const replaySupportRefusal = support => ({
   ...replayRefused('replay-unsupported', support.reasons.join('; ')),
   details: {reasons: [...support.reasons]}
 });
+
+/**
+ * CORRECTION, recorded rather than silently applied.
+ *
+ * The first version of this module named the record half `onInput` and required
+ * BOTH halves for a target to count as implementing the surface. Both were
+ * wrong, and measuring the four downstream implementations is what showed it:
+ *
+ *   emu8051-adapter  applyReplayInput + onInput
+ *   z80-debug        applyReplayInput + onDebugInput
+ *   m6502-debug      applyReplayInput + onDebugInput
+ *   i8086-debug      applyReplayInput only
+ *
+ * So requiring both would have refused three of the four, and the name it
+ * required is the one the RECORDER does not consume: downstream's
+ * `subscribeDebugTargetInputs` tests for `onDebugInput` and returns null
+ * without it, which makes `emu8051-adapter.onInput` reachable only from that
+ * target's own tests. The first version was written from one implementation's
+ * vocabulary and generalised — the same error, one layer up, as counting one
+ * word to find a subsystem.
+ *
+ * `onDebugInput` is therefore the declared name: it is the one with a consumer.
+ * The odd target out is a divergence for the upstreaming to resolve, not a
+ * second name for this module to bless.
+ */

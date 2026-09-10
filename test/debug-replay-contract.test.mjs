@@ -16,8 +16,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  replayAccepted, replayRefused, replayOutcome, implementsReplaySurface,
-  replaySupport, replaySupportRefusal
+  replayAccepted, replayRefused, replayOutcome, canApplyReplayInput,
+  canRecordDebugInput, replayCapabilities, replaySupport, replaySupportRefusal
 } from '../src/debug-replay-contract.js';
 
 /** A target that records what it is given and can be asked to apply it back. */
@@ -36,7 +36,7 @@ function makeRecordingTarget({ shape = 'outcome' } = {}) {
       for (const cb of listeners) cb(fact);
       return true;
     },
-    onInput(cb) {
+    onDebugInput(cb) {
       if (typeof cb !== 'function') throw new TypeError('input listener must be a function');
       listeners.push(cb);
       return () => { listeners = listeners.filter(l => l !== cb); };
@@ -57,7 +57,7 @@ describe('the replay surface, driven end to end', () => {
   it('records facts and applies them back, in order', () => {
     const target = makeRecordingTarget();
     const recorded = [];
-    const stop = target.onInput(fact => recorded.push(fact));
+    const stop = target.onDebugInput(fact => recorded.push(fact));
 
     target.observe('test.pin', 'pin:1.0', { port: 1, bit: 0, level: 1 });
     target.observe('test.pin', 'pin:1.0', { port: 1, bit: 0, level: 1 }); // unchanged
@@ -135,20 +135,40 @@ describe('replayOutcome normalises the shapes that already exist', () => {
 });
 
 describe('support is a list of reasons, not a boolean', () => {
-  it('a target implementing the surface is supported', () => {
+  it('a target implementing both halves is supported', () => {
     const target = makeRecordingTarget();
-    assert.equal(implementsReplaySurface(target), true);
+    assert.deepEqual(replayCapabilities(target), { applies: true, records: true });
     assert.deepEqual(replaySupport(target), { supported: true, reasons: [] });
   });
 
-  it('a target missing the surface is refused, naming what is missing', () => {
-    const support = replaySupport({ applyReplayInput() {} });   // no onInput
+  it('APPLYING WITHOUT RECORDING IS SUPPORTED, because one real target does exactly that', () => {
+    // i8086-debug applies facts it never records — they are produced by the
+    // driver rather than observed by the target. Requiring both halves would
+    // refuse it, and refuse the two targets whose record half has another name.
+    const applyOnly = { applyReplayInput: () => replayAccepted() };
+    assert.deepEqual(replayCapabilities(applyOnly), { applies: true, records: false });
+    assert.deepEqual(replaySupport(applyOnly), { supported: true, reasons: [] });
+  });
+
+  it('recording without applying cannot replay, and says which half is missing', () => {
+    const recordOnly = { onDebugInput: () => () => {} };
+    assert.deepEqual(replayCapabilities(recordOnly), { applies: false, records: true });
+    const support = replaySupport(recordOnly);
     assert.equal(support.supported, false);
-    assert.match(support.reasons[0], /onInput and applyReplayInput/);
+    assert.match(support.reasons[0], /does not implement applyReplayInput/);
     const refusal = replaySupportRefusal(support);
     assert.equal(refusal.accepted, false);
     assert.equal(refusal.code, 'replay-unsupported');
     assert.deepEqual(refusal.details.reasons, support.reasons);
+  });
+
+  it('the RECORD half is named onDebugInput, which is the name with a consumer', () => {
+    // Measured downstream: subscribeDebugTargetInputs tests for onDebugInput and
+    // returns null without it, so a target using another name is never recorded.
+    const otherName = { applyReplayInput: () => replayAccepted(), onInput: () => () => {} };
+    assert.equal(canRecordDebugInput(otherName), false,
+      'onInput must not count as the record half — the recorder does not consume it');
+    assert.equal(canApplyReplayInput(otherName), true);
   });
 
   it('THE TWO KINDS OF REFUSAL COMPOSE, which is why reasons are a list', () => {
@@ -160,7 +180,7 @@ describe('support is a list of reasons, not a boolean', () => {
     assert.equal(support.supported, false);
     assert.equal(support.reasons.length, 2, 'both reasons must survive');
     assert.match(support.reasons.join(' | '), /live board input sampling/);
-    assert.match(support.reasons.join(' | '), /does not implement/);
+    assert.match(support.reasons.join(' | '), /does not implement applyReplayInput/);
   });
 
   it('a caller-supplied reason alone is enough to refuse a capable target', () => {
