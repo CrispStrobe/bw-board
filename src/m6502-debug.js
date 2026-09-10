@@ -474,6 +474,36 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     },
 
     /**
+     * A non-maskable interrupt, driven by the HOST rather than by the board.
+     *
+     * THE RECORD HALF FOR `m6502.nmi`, which did not exist: the apply switch
+     * could replay an NMI fact and nothing on this target could produce one. A
+     * driver pulsing NMI got no log entry, and the session then could not be
+     * replayed through the interrupt it took — the apply half without the
+     * record half, for one producer, inside a target where every other producer
+     * had both.
+     *
+     * PUBLISHED AFTER the machine takes it, not before. A downstream copy does
+     * the opposite, and deliberately: publishing first is what lets its
+     * listeners VETO an input. This target has no veto and does have the rule
+     * that only a fact the machine TOOK is a fact. Same feature, opposite
+     * ordering, and the ordering is the part that is a decision.
+     *
+     * There is no gate on the machine's return value, and that is not an
+     * oversight: an NMI is non-maskable and `M6502Machine.nmi()` returns true
+     * unconditionally. A conditional that cannot be false is worse than none —
+     * it reads as a check and tests nothing.
+     *
+     * @returns {boolean} whether the machine had an NMI entry point at all
+     */
+    nmi() {
+      if (typeof machine?.nmi !== 'function') return false;
+      machine.nmi();
+      publishEvent('m6502.nmi', {});
+      return true;
+    },
+
+    /**
      * The RECORD half: subscribe to host-input facts as they are observed.
      * Named `onDebugInput` because that is the name the recorder consumes.
      *
@@ -523,12 +553,18 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * rather than assumed, because the first draft of this method refused two of
      * them by name on the strength of a sentence about what the machine lacks:
      *
-     *   m6502.buttons  machine.setButtons        m6502-machine.js:606
+     *   m6502.buttons  machine.setButtons        m6502-machine.js
      *   m6502.serial   adapter.sendSerial        m6502-adapter.js:156
-     *   m6502.nmi      machine.cpu.nmi()         w65c02.js:64 — the machine has
-     *                  no `nmi()` of its own, but it is not the machine's to
-     *                  have: m6502-machine.js:705 reaches the CPU's directly
-     *                  for the vsync NMI, and this takes the same route.
+     *   m6502.nmi      machine.nmi()             m6502-machine.js
+     *
+     * The nmi row said something else until the machine grew an entry point:
+     * "the machine has no `nmi()` of its own, but it is not the machine's to
+     * have". Half right. It did not have one, and it should — `cpu.nmi()`
+     * charges the seven-cycle interrupt sequence to the CPU's counter and to
+     * nothing else, so machine time and the peripherals were never advanced
+     * through it. The comment is kept in this form rather than deleted because
+     * "X is not X's to have" is the shape of a conclusion drawn from an
+     * absence.
      *
      * A CAVEAT ON REPLAYED NMI, stated rather than guarded. A config with
      * `simplevga {nmi: true}` generates its own NMIs from vsync. Those are
