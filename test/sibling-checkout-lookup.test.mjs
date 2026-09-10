@@ -31,6 +31,22 @@ describe('ancestorCandidates', () => {
     assert.equal(ancestorCandidates('/a/b/c/d/e/f/g', ['z'], 2).length, 3);
   });
 
+  // THE DEFAULT DEPTH IS LOAD-BEARING AND NOTHING HELD IT. Measured on this
+  // tree: changing `levels = 6` to `levels = 0` reddens NOTHING and moves the
+  // skip count from 3 to 5 — two suites stop running and the summary still
+  // reads `# fail 0`. That is the exact failure this helper exists to end, so
+  // the default gets an assertion of its own rather than living on the
+  // signature line where a reasonable-looking edit can silently narrow it.
+  //
+  // Seven candidates (levels 0..6) is what a worktree needs: test/ -> repo ->
+  // code/wt -> code -> volume1 -> mnt -> /. A caller that wants less says so.
+  it('the DEFAULT depth reaches past a worktree, not just an explicit one', () => {
+    assert.equal(ancestorCandidates('/mnt/volume1/code/wt/lane/test', ['x']).length, 7,
+      'the default must climb far enough to leave a worktree without being asked');
+    assert.ok(ancestorCandidates('/mnt/volume1/code/wt/lane/test', ['x'])
+      .includes('/mnt/volume1/code/x'), 'and must reach the sibling level itself');
+  });
+
   const RELATIVE = ['blinkenrocket-firmware', 'build', 'main.hex'];
   const FOUND = ancestorCandidates(HERE, RELATIVE).find(p => existsSync(p));
 
