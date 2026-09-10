@@ -312,8 +312,26 @@ export class Z80Machine {
      * bit4 fire) mapped onto Kempston bit order (000FUDLR). False
      * when the machine has no Kempston interface.
      */
+    /**
+     * Can this machine take a button mask at all?
+     *
+     * Asked BEFORE a host offers buttons, so the offer matches the board — the
+     * shape `I8086Machine.canTakeKeys()` already has, and for the same reason.
+     * Without it a caller can only find out by calling `setButtons` and reading
+     * the answer, which is too late for anything that wants to act on the
+     * capability rather than on the outcome: a face that advertises a control
+     * the board cannot take, or a recorder that logs a press nothing received.
+     *
+     * A board has a Kempston port when the config asks for one or when it has a
+     * ULA (z80-machine.js constructor); without it the read at 0x1f is unmapped
+     * and there is nowhere for a mask to go.
+     *
+     * @returns {boolean}
+     */
+    canTakeButtons() { return this._kempston !== null; }
+
     setButtons(mask) {
-        if (this._kempston === null) return false;
+        if (!this.canTakeButtons()) return false;
         this._kempston =
             ((mask >> 2) & 1)          // right
             | (((mask >> 3) & 1) << 1) // left
