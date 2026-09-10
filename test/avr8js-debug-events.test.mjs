@@ -147,6 +147,28 @@ test('device observation is disposable and cannot perturb a bridge transaction',
     'detaching the target removes its adapter observation subscription');
 });
 
+test('a detached target is silent even while the board keeps running', () => {
+  // The device bridge has its own unsubscribe, so the existing lifecycle test
+  // stays green when detach() forgets to drop the INSTRUCTION subscriptions —
+  // it only drives a bridge transaction. The leak shows the moment the adapter
+  // runs on its own, which is exactly what a board does after a debugger lets
+  // go of it: the target's listener would keep receiving retires and accesses
+  // from an instrument it no longer has any claim on.
+  const adapter = createAvr8jsAdapter({ program: SRAM_TOUCH });
+  const target = createAvr8jsDebugTarget(adapter);
+  const seen = [];
+  target.onDebugEvent(event => seen.push(event));
+
+  adapter.advanceNs(2_000);
+  const whileAttached = seen.length;
+  assert.ok(whileAttached > 0, 'the fixture must publish while attached, or this proves nothing');
+
+  target.detach();
+  adapter.advanceNs(2_000);
+  assert.equal(seen.length, whileAttached,
+    `detached target received ${seen.length - whileAttached} facts from the running board`);
+});
+
 test('TWI facts describe the completed transaction without extra device calls', () => {
   const completions = [];
   const facts = [];
