@@ -129,6 +129,26 @@ node bench/perf.js          # performance benchmark
 
 Requires Node 20+. No build step, no dependencies.
 
+### What a `# skipped` count means here
+
+Some suites are driven by an oracle this repo does not contain — a built
+emu8051 WASM, a firmware hex, a corpus. When one is not reachable, those cases
+**skip, by name, saying which oracle is missing and how to get it**. So a local
+run reporting skips is a box without an oracle, not a broken build.
+
+`# pass` is a count of cases that actually RAN. It did not always mean that: nine
+suites used to guard with an early `return` inside the test body, which the
+runner never hears — the `# SKIP` was a printed comment and the case was counted
+as a pass. Measured with the emulator deliberately unreachable, one file
+reported `# pass 25 # skipped 0` while printing that comment 24 times; converted,
+the same file under the same conditions reports `# pass 0 # skipped 25`. The
+numbers got worse-looking and started being true.
+
+CI does not skip these: it checks the emulator out and then asserts it arrived
+(`node scripts/oracle-census.mjs --require nasm,emu8051`), so a green run there
+cannot be hiding an oracle that failed to appear. `node scripts/oracle-census.mjs`
+lists every oracle, whether it is present, and which gates depend on it.
+
 ## Quick start
 
 ```js

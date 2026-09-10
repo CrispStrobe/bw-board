@@ -44,7 +44,23 @@ for (const p of CANDIDATES) {
   if (existsSync(p)) { createEmu8051 = require(p); break; }
 }
 
-const skip = () => { if (!createEmu8051) console.log('# SKIP: no emu8051 build reachable'); return !createEmu8051; };
+/**
+ * ONE ORACLE, ONE NAMED REASON, AND IT REACHES THE RUNNER.
+ *
+ * This was `if (skip()) return;` inside the case, where the `# SKIP` is a
+ * printed comment and the early return is a PASS. Measured with the build
+ * unreachable, this file reported `# pass 1 # skipped 0` while printing that
+ * line once; across the nine suites using the pattern, 41 cases were counted as
+ * passes that had not run.
+ *
+ * `skip:` is the runner's own mechanism, so the summary says `# skipped` and
+ * names which oracle is missing. CI cannot go quiet: ci.yml checks the emulator
+ * out AND `oracle-census.mjs --require nasm,emu8051` fails the build when it did
+ * not arrive, so a skip here means a developer box.
+ */
+const SKIP_EMU8051 = createEmu8051 ? false
+  : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this repo '
+    + 'and build its WASM, or set $EMU8051_JS';
 
 /**
  * Hand-assembled Intel HEX for PCA 50% PWM on P1.3 (CEX0).
@@ -137,8 +153,7 @@ function makeHex() {
 }
 
 describe('brightness end-to-end: emu8051 PCA PWM → board', () => {
-  it('50% PCA PWM produces brightness ~0.07 through real emulation', async () => {
-    if (skip()) return;
+  it('50% PCA PWM produces brightness ~0.07 through real emulation', {skip: SKIP_EMU8051}, async () => {
 
     const wasm = await createEmu8051();
     const board = new BoardImpl(5.0);
