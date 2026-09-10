@@ -69,6 +69,40 @@ for (const { name, make } of MACHINES) {
             'a checkpoint with the wrong schema is refused, not loaded');
     });
 
+    // THE AXIS THE OTHER CASES DO NOT REACH. Schema and topology are answered by
+    // the shared module, so all three machines were always going to agree there;
+    // this suite passed with 13 green while the state BODY — the one thing each
+    // machine validated alone — went unchecked. It was not a hypothetical gap:
+    // on 2026-09-10 the converged 8086 accepted a truncated memory image and
+    // restored the destination's own bytes past the end of it, where m6502
+    // refused the same input by name. Every entry below is a VALID envelope
+    // carrying ONE malformed field, so a machine that fails for some unrelated
+    // reason cannot look like a pass.
+    test(`${name}: restore fails closed on a malformed memory image`, () => {
+        const source = make();
+        const cp = source.captureCheckpoint();
+        const bytes = cp.state.mem.length;
+        const cases = [
+            ['one byte short', new Uint8Array(bytes - 1)],
+            ['one byte long', new Uint8Array(bytes + 1)],
+            ['a bare Array', new Array(7).fill(0x11)],
+            ['a string', 'not a memory image'],
+            ['absent', undefined],
+        ];
+        for (const [label, mem] of cases) {
+            const target = make();
+            target.mem.fill(0x5a);
+            const witness = target.mem[bytes - 1];
+            const refusal = target.restoreCheckpoint({ ...cp, state: { ...cp.state, mem } });
+            assert.ok(refusal && refusal.code === 'INVALID_CHECKPOINT',
+                `${name} accepted a memory image that was ${label}: ${JSON.stringify(refusal)}`);
+            assert.match(refusal.details.reason, /memory image/,
+                `${name} refused ${label} for the wrong reason: ${refusal.details.reason}`);
+            assert.equal(target.mem[bytes - 1], witness,
+                `${name} mutated memory while refusing a checkpoint that was ${label}`);
+        }
+    });
+
     test(`${name}: restore fails closed on a foreign topology`, () => {
         const m = make();
         const cp = m.captureCheckpoint();

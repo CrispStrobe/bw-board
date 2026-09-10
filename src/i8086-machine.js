@@ -38,7 +38,8 @@
 import { I8086 } from './i8086.js';
 import {
     MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport,
-    checkpointTopology, cloneCheckpointValue, statePair, validateCheckpointEnvelope
+    checkpointTopology, cloneCheckpointValue, statePair, validateCheckpointEnvelope,
+    validateCheckpointState
 } from './machine-checkpoint.js';
 import { installI8086RamWordAccess } from './i8086-ram-words.js';
 import { I8255 } from './i8255.js';
@@ -1590,6 +1591,29 @@ export class I8086Machine {
         // the core and therefore part of an equality-preserving checkpoint.
         'intShadow', 'repInterrupted'];
 
+    // `cycles` above is the CORE's own counter (i8086.js:1274 increments it per
+    // instruction) and is NOT a duplicate of `machine.cycles`, which this class
+    // advances itself and never derives from the core. It is tempting to read
+    // them as one number, because on a freshly-constructed machine that has
+    // never been reset they agree exactly. MEASURED, they part company twice:
+    //
+    //   after construct    machine      0   cpu     0
+    //   after reset()      machine      4   cpu     0   <- reset() adds 4, the
+    //                                                      core's reset zeroes
+    //   two steps          machine     50   cpu    46
+    //   HLT, then 5 steps  machine +25000   cpu    +0   <- the machine advances
+    //                                                      by the wake horizon
+    //                                                      without calling
+    //                                                      cpu.step() at all
+    //
+    // machine.cycles is the AUTHORITATIVE simulation time -- tMs, runUntil and
+    // the checkpoint's time.ticks all read it -- and it is snapshotted
+    // separately at the top level of saveState(). cpu.cycles is read by nothing
+    // in this machine and is carried so a restored machine is EQUAL to the
+    // captured one rather than merely equivalent. Two counters, both restored,
+    // neither derived; dropping either restores a machine that is subtly not the
+    // one that was captured.
+
     /**
      * EVERYTHING THE CHIPS REFUSED, in one place, because until 2026-09-05
      * nothing read any of it.
@@ -1846,8 +1870,24 @@ export class I8086Machine {
         if (!support.supported) return checkpointRefusal(support);
         const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
         if (refusal) return refusal;
-        // loadState owns the deep, 8086-specific state validation -- version,
-        // the variant-decode guard, the component-set match, per-chip restore
+        // THE STATE BODY IS VALIDATED HERE, BEFORE ANYTHING IS MUTATED, by the
+        // same shared clauses m6502 and z80 use. Until 2026-09-10 this machine
+        // had no equivalent: `this.mem.set(s.mem)` accepts a SHORT image and
+        // leaves the tail as the destination machine had it, so a truncated
+        // checkpoint restored a wrong machine instead of failing. The over-long
+        // direction did throw, but with the engine's own "offset is out of
+        // bounds" rather than a refusal anyone could act on.
+        const badState = validateCheckpointState(checkpoint.state, {
+            version: 2,
+            memBytes: this.mem.length,
+            cpuKeys: I8086Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices,
+            shape: this.saveState()
+        });
+        if (badState) return badState;
+        // loadState still owns the deep, 8086-specific validation -- the
+        // variant-decode guard, the topology string, per-component restore
         // APIs. It signals a bad snapshot by THROWING; surface that as a returned
         // INVALID_CHECKPOINT so this contract is return-convention like m6502/z80,
         // without moving that validation out of the codec that owns it. Time is

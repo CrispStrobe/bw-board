@@ -31,28 +31,15 @@ import { Latch374 } from './latch374.js';
 import { SDCardSPI } from './sdcard-spi.js';
 import {
     MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport, cloneCheckpointValue,
-    checkpointTopology, statePair, validateCheckpointEnvelope
+    checkpointTopology, statePair, validateCheckpointEnvelope, validateCheckpointState
 } from './machine-checkpoint.js';
 
 // State codecs are part of the checkpoint schema. Comparing their structural
 // shape against a fresh sample catches a missing nested latch/counter before
 // any component is mutated. Array lengths may legitimately vary (UART RX
 // queues); typed memory blocks may not.
-const sameCheckpointShape = (actual, expected) => {
-    if (ArrayBuffer.isView(expected)) {
-        return ArrayBuffer.isView(actual) && actual.constructor === expected.constructor &&
-            actual.length === expected.length;
-    }
-    if (Array.isArray(expected)) return Array.isArray(actual);
-    if (expected && typeof expected === 'object') {
-        if (!actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
-        const a = Object.keys(actual).sort();
-        const e = Object.keys(expected).sort();
-        return a.length === e.length && e.every((key, index) => key === a[index] &&
-            sameCheckpointShape(actual[key], expected[key]));
-    }
-    return typeof actual === typeof expected;
-};
+// sameCheckpointShape moved to machine-checkpoint.js on 2026-09-10; it was
+// always a contract-layer helper and the 8086 needed it too.
 
 /**
  * @typedef {object} MachineConfig
@@ -872,21 +859,23 @@ export class M6502Machine {
         const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
         if (refusal) return refusal;
         const state = checkpoint.state;
-        const expected = Object.keys(this.chips).sort();
-        const actual = Object.keys(state.chips || {}).sort();
-        const expectedDevices = Object.keys(this.devices || {}).sort();
-        const actualDevices = Object.keys(state.devices || {}).sort();
-        const currentShape = this.saveState();
-        if (state.v !== 1 || !(state.mem instanceof Uint8Array) || state.mem.length !== 65536 ||
-            !state.cpu || M6502Machine.CPU_STATE.some(key => !Object.hasOwn(state.cpu, key)) ||
-            !Number.isSafeInteger(state.cycles) || state.cycles < 0 ||
-            !state.pinLevels || typeof state.pinLevels !== 'object' || Array.isArray(state.pinLevels) ||
-            JSON.stringify(expected) !== JSON.stringify(actual) ||
-            JSON.stringify(expectedDevices) !== JSON.stringify(actualDevices) ||
-            !sameCheckpointShape(state.cpu, currentShape.cpu) ||
-            !sameCheckpointShape(state.chips, currentShape.chips) ||
-            !sameCheckpointShape(state.devices, currentShape.devices)) {
-            return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT'};
+        // The version / memory-image / CPU-field / component-set / shape clauses
+        // are the SHARED ones and live in machine-checkpoint.js, so all three
+        // machines refuse the same malformed state for the same named reason.
+        // Only what is genuinely this machine's stays here.
+        const badState = validateCheckpointState(state, {
+            version: 1,
+            memBytes: this.mem.length,
+            cpuKeys: M6502Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices,
+            shape: this.saveState()
+        });
+        if (badState) return badState;
+        if (!Number.isSafeInteger(state.cycles) || state.cycles < 0 ||
+            !state.pinLevels || typeof state.pinLevels !== 'object' || Array.isArray(state.pinLevels)) {
+            return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT',
+                details: {reason: 'cycle counter or pin levels are not a restorable shape'}};
         }
         if (!checkpoint.time || checkpoint.time.ticks !== state.cycles ||
             checkpoint.time.hz !== this.clockHz ||

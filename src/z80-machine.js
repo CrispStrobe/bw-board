@@ -27,7 +27,7 @@ import { Latch374 } from './latch374.js';
 import { Buffer244 } from './buffer244.js';
 import {
     MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport, cloneCheckpointValue,
-    checkpointTopology, statePair, validateCheckpointEnvelope
+    checkpointTopology, statePair, validateCheckpointEnvelope, validateCheckpointState
 } from './machine-checkpoint.js';
 
 export const SEARLE = Object.freeze({
@@ -375,16 +375,26 @@ export class Z80Machine {
         const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
         if (refusal) return refusal;
         const state = checkpoint.state;
-        const expected = Object.keys(this.chips).sort();
-        const actual = Object.keys(state.chips || {}).sort();
-        const expectedDevices = Object.keys(this.devices || {}).sort();
-        const actualDevices = Object.keys(state.devices || {}).sort();
+        // The version / memory-image / CPU-field / component-set clauses are the
+        // SHARED ones and live in machine-checkpoint.js, so all three machines
+        // refuse the same malformed state for the same named reason. The tape,
+        // the ULA and the 128K banking below are genuinely this machine's.
+        //
+        // No `shape` is passed: a z80's chip state legitimately changes shape
+        // between captures (the tape's block list, the ULA's edge arrays), so a
+        // shape check against a fresh sample would refuse valid checkpoints.
+        // That is a property of this machine, not an omission -- see the
+        // per-chip clauses below, which check the same ground precisely.
+        const badState = validateCheckpointState(state, {
+            version: 1,
+            memBytes: this.mem.length,
+            cpuKeys: Z80Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices
+        });
+        if (badState) return badState;
         const ulaState = this.ula && state.chips?.ula;
-        if (state.v !== 1 || !(state.mem instanceof Uint8Array) || state.mem.length !== 65536 ||
-            !state.cpu || Z80Machine.CPU_STATE.some(key => !Object.hasOwn(state.cpu, key)) ||
-            JSON.stringify(expected) !== JSON.stringify(actual) ||
-            JSON.stringify(expectedDevices) !== JSON.stringify(actualDevices) ||
-            (!!state.zx128 !== this._zx128) ||
+        if ((!!state.zx128 !== this._zx128) ||
             (!!state.tape !== !!this.tape) ||
             (state.tape && (!Number.isSafeInteger(state.tape.pos) || !Array.isArray(state.tape.blocks) ||
                 state.tape.blocks.some(block => !Number.isSafeInteger(block.flag) ||
