@@ -68,6 +68,28 @@ jobs:
       # layouts equivalent.
       - name: Mark the emulator build as CommonJS
         run: echo '{"type":"commonjs"}' > emu8051-stc/package.json
+
+      # THE BLINKENROCKET FIRMWARE, for the one end-to-end test that runs real
+      # third-party firmware: encodeTextMessage("Hi") becomes PCM, the PCM
+      # drives the ATtiny88's ADC, the firmware demodulates it, and the
+      # FEC-decoded pattern arrives in the external I2C EEPROM. Until now it
+      # skipped on every runner, which is the same shape as the emu8051
+      # checkout above: an absent input reading exactly like a pass.
+      #
+      # `build/main.hex` is NOT tracked in that repo -- it is built locally, so
+      # a checkout alone would give nothing and this step would be theatre.
+      # `releases/blinkenrocket_2.1.hex` IS tracked, and it was MEASURED green
+      # against this suite before this step was written: 52,934 ADC reads,
+      # header [0x10, 0x2], decoded text "Hi" -- against 52,933 for a local
+      # build of a different commit, the same decode through the full FEC path.
+      #
+      # Pinned like every other external input here, so this repo's verdict
+      # does not float with another repo's HEAD.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: CrispStrobe/blinkenrocket-firmware
+          ref: 813e2656f38f9f41180ecde1783e26e49035dac9
+          path: blinkenrocket-firmware
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
