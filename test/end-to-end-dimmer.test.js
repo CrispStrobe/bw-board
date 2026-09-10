@@ -31,23 +31,50 @@ const WASM_PATH = resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']);
 const HEX_PATH = resolveAncestor(here, ['stc', 'examples', '06-dimmer', '06-dimmer.hex']);
 const PINS_PATH = resolveAncestor(here, ['stc', 'examples', '06-dimmer', 'pins.json']);
 
+/**
+ * TWO ORACLES OF DIFFERENT STATUS, ONE GUARD EACH, EACH NAMING ITSELF.
+ *
+ * The firmware half already reached the runner, via `it.skip`, but under a
+ * placeholder name and with the whole describe returning early — so the cases
+ * that would have run were never REGISTERED and the summary said "1 skipped"
+ * for two tests. The emulator half did not reach the runner at all:
+ * `if (!wasm) { console.log('# SKIP: …'); return; }` is an early return, which
+ * is counted as a PASS.
+ *
+ *   the emulator  ci.yml checks it out and `oracle-census.mjs --require
+ *                 nasm,emu8051` asserts it arrived, so a skip means a developer box
+ *   the 06-dimmer hex and pins.json  come from an `stc` checkout beside this
+ *                 repo, which CI does not make; that skip is the ordinary case
+ *
+ * `require` throwing is not used as the signal for either: it throws
+ * MODULE_NOT_FOUND for an absent file and a SyntaxError for a broken one, and
+ * treating "threw" as an answer merges every reason it could have thrown.
+ */
+const WASM_PRESENT = existsSync(WASM_PATH);
 let createEmu8051;
-try { createEmu8051 = require(WASM_PATH); } catch {}
-
-async function loadWasm() {
-  if (!createEmu8051) return null;
-  try { return await createEmu8051(); } catch { return null; }
+let loadError = null;
+if (WASM_PRESENT) {
+  try { createEmu8051 = require(WASM_PATH); } catch (e) { loadError = e; }
 }
 
-describe('end-to-end: 06-dimmer through real emulator', () => {
-  if (!existsSync(HEX_PATH) || !existsSync(PINS_PATH)) {
-    it.skip('06-dimmer files not found');
-    return;
-  }
+async function loadWasm() {
+  if (loadError) throw new Error(`${WASM_PATH} exists but would not load: ${loadError.message}`);
+  return createEmu8051();
+}
 
-  it('loads firmware and runs for 50ms', async () => {
+const SKIP_EMU8051 = WASM_PRESENT ? false
+  : `no emu8051 build at ${WASM_PATH} — check out CrispStrobe/emu8051-stc beside this `
+    + 'repo and build its WASM, or set $EMU8051_JS';
+const missingDimmer = [HEX_PATH, PINS_PATH].filter(f => !existsSync(f));
+const SKIP_DIMMER = missingDimmer.length === 0 ? false
+  : `06-dimmer not found: ${missingDimmer.join(', ')} — check out CrispStrobe/stc beside `
+    + 'this repo and build its examples; CI does not carry them';
+const SKIP = SKIP_EMU8051 || SKIP_DIMMER;
+
+describe('end-to-end: 06-dimmer through real emulator', () => {
+
+  it('loads firmware and runs for 50ms', {skip: SKIP}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP: WASM not available'); return; }
 
     // Load pins and build circuit
     const stc = JSON.parse(readFileSync(PINS_PATH, 'utf-8'));
@@ -91,9 +118,8 @@ describe('end-to-end: 06-dimmer through real emulator', () => {
     adapter.destroy();
   });
 
-  it('runs for 200ms and captures probe data', async () => {
+  it('runs for 200ms and captures probe data', {skip: SKIP}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP: WASM not available'); return; }
 
     const stc = JSON.parse(readFileSync(PINS_PATH, 'utf-8'));
     const { parts, nets } = inferNetlist(stc);
