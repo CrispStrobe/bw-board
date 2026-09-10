@@ -223,6 +223,83 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
         if (!listeners.size) removeHooks();  // last one out takes them off again
       };
     },
+    /**
+     * TIME PASSED AND NOTHING RETIRED, declared by whoever knows it did.
+     *
+     * The module could only ever say "an instruction retired". A consumer
+     * reading the stream therefore sees the tick counter jump between two
+     * retires with nothing explaining it — which is indistinguishable from a
+     * DROPPED RECORD, and that is the defect rather than the missing feature.
+     *
+     * MEASURED, live, on two shipping cores today:
+     *
+     *   6502 in WAI    50 steps  cycles 2012 -> 52012  (+50,000)   0 facts
+     *   z80 in HALT    50 steps  cycles    4 -> 200004 (+200,000)  0 facts
+     *
+     * TWO KINDS, NOT ONE, and the distinction is the point. A core parked in
+     * WAI/HALT/SLEEP is not the same event as time jumping forward to a
+     * scheduled peripheral callback: the first is "nothing happened for N
+     * cycles", the second is "N cycles passed and then a thing fired". One
+     * `cycles-advanced` fact covering both would be the same defect as one
+     * refusal code for every situation, which this surface removed from the
+     * replay half earlier today.
+     *
+     * DECLARED RATHER THAN OBSERVED, and that is forced rather than chosen.
+     * Measured: on the 6502 a parked step still calls `cpu.step` (20 calls for
+     * 20,000 cycles), so this module's wrapper sees it and could infer it. On
+     * the z80 the machine short-circuits the CPU entirely — `cpu.step` is
+     * called ZERO times while 80,000 cycles pass — so there is nothing for a
+     * wrapper to observe. The same event is inferable on one core and invisible
+     * on another, exactly as an instruction bracket is a wrapped method on one
+     * and an injected call on another.
+     *
+     * So the module supplies the VOCABULARY and the caller supplies the fact.
+     * Emitting these automatically where they can be inferred would change how
+     * much a shipping target publishes, which is a separate decision from
+     * having a way to say it at all.
+     *
+     * @param {{cycles: number, ticks?: number, cause?: string}} elapse
+     */
+    publishIdleElapse({cycles, ticks = machine.cycles, cause = 'parked'} = {}) {
+      if (!listeners.size) return false;
+      if (!Number.isFinite(cycles) || cycles <= 0) return false;
+      publish({
+        cpuId,
+        kind: 'idle',
+        phase: 'elapse',
+        fidelity: 'recorded',
+        time: time(ticks),
+        cause,
+        changes: {cycles}
+      });
+      return true;
+    },
+
+    /**
+     * Time advanced to a SCHEDULED event, and that event fired.
+     *
+     * The other half of the pair above, and deliberately its own kind. A
+     * consumer distinguishing "the core slept through the slice" from "the
+     * clock jumped to a timer callback" is asking a real question, and one fact
+     * shape cannot answer it.
+     *
+     * @param {{cycles: number, ticks?: number, event?: object}} jump
+     */
+    publishClockJump({cycles, ticks = machine.cycles, event = null} = {}) {
+      if (!listeners.size) return false;
+      if (!Number.isFinite(cycles) || cycles <= 0) return false;
+      publish({
+        cpuId,
+        kind: 'clock',
+        phase: 'fire',
+        fidelity: 'recorded',
+        time: time(ticks),
+        ...(event ? {event} : {}),
+        changes: {cycles}
+      });
+      return true;
+    },
+
     debugTime() {
       return {
         ticks: machine.cycles,

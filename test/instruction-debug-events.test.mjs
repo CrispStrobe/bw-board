@@ -534,3 +534,98 @@ describe('the accessor wrappers cost nothing while nobody is listening', () => {
     assert.equal(cpu.pc, 0x999);
   });
 });
+
+describe('TIME PASSED AND NOTHING RETIRED', () => {
+  // The module could only say "an instruction retired", so a consumer saw the
+  // tick counter jump between two retires with nothing explaining it — which is
+  // indistinguishable from a dropped record. Measured live on two shipping
+  // cores: a 6502 in WAI advanced 50,000 cycles over 50 steps and published
+  // nothing; a z80 in HALT advanced 200,000 and published nothing.
+
+  it('an idle elapse is its own fact, with the cycles and a cause', () => {
+    const cpu = fakeCpu();
+    const machine = { cycles: 4000, clockHz: 1e6 };
+    const events = install(cpu, machine);
+    const { seen } = record(events);
+
+    assert.equal(events.publishIdleElapse({ cycles: 50_000, cause: 'wai' }), true);
+
+    assert.equal(seen.length, 1);
+    assert.deepEqual(
+      { kind: seen[0].kind, phase: seen[0].phase, fidelity: seen[0].fidelity, cause: seen[0].cause },
+      { kind: 'idle', phase: 'elapse', fidelity: 'recorded', cause: 'wai' });
+    assert.equal(seen[0].changes.cycles, 50_000);
+    // BigInt, like every other stamp this module makes — `time()` does
+    // `BigInt(ticks)`, and comparing to a Number is what my first version did.
+    assert.equal(seen[0].time.ticks, 4000n, 'stamped where the machine clock is');
+  });
+
+  it('a clock jump is a DIFFERENT kind, not the same fact with a flag', () => {
+    // Collapsing the two would be the same defect as one refusal code for every
+    // situation: "the core slept through the slice" and "the clock jumped to a
+    // timer callback" are different questions and one shape cannot answer both.
+    const cpu = fakeCpu();
+    const events = install(cpu, { cycles: 900, clockHz: 1e6 });
+    const { seen } = record(events);
+
+    events.publishIdleElapse({ cycles: 10 });
+    events.publishClockJump({ cycles: 25, event: { name: 'timer0' } });
+
+    assert.deepEqual(seen.map(e => `${e.kind}/${e.phase}`), ['idle/elapse', 'clock/fire']);
+    assert.notEqual(seen[0].kind, seen[1].kind, 'the two events must not share a kind');
+    assert.deepEqual(seen[1].event, { name: 'timer0' });
+    assert.equal(seen[0].event, undefined, 'an idle elapse has no scheduled event to name');
+  });
+
+  it('both are silent with no listener, like everything else here', () => {
+    const cpu = fakeCpu();
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    assert.equal(events.publishIdleElapse({ cycles: 10 }), false);
+    assert.equal(events.publishClockJump({ cycles: 10 }), false);
+  });
+
+  it('REFUSES a non-advance rather than publishing a fact about nothing', () => {
+    // Zero or negative cycles is not an elapse; publishing one would put a
+    // "time passed" fact in the log for a moment when it did not.
+    const cpu = fakeCpu();
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    const { seen } = record(events);
+
+    for (const cycles of [0, -1, NaN, undefined, '50', null]) {
+      assert.equal(events.publishIdleElapse({ cycles }), false, `cycles=${String(cycles)}`);
+      assert.equal(events.publishClockJump({ cycles }), false, `cycles=${String(cycles)}`);
+    }
+    assert.equal(events.publishIdleElapse(), false, 'no argument at all');
+    assert.equal(seen.length, 0);
+  });
+
+  it('they share the EPOCH with everything else, so a rewind renames them too', () => {
+    // The whole point is that these sit in one timeline with the retires. A
+    // fact carrying its own unrelated domain would be a second clock.
+    const cpu = fakeCpu([{}]);
+    const machine = { cycles: 5000, clockHz: 1e6 };
+    const events = install(cpu, machine);
+    const { seen } = record(events);
+
+    cpu.step();
+    assert.equal(seen.at(-1).time.domain, 'test-ticks');
+
+    machine.cycles = 10;                       // a restore
+    events.publishIdleElapse({ cycles: 3 });
+    assert.equal(seen.at(-1).time.domain, 'test-ticks-reset-1',
+      'an idle fact after a rewind must name the new era');
+
+    events.publishClockJump({ cycles: 3 });
+    assert.equal(seen.at(-1).time.domain, 'test-ticks-reset-1');
+  });
+
+  it('an explicit ticks argument is honoured, for a caller stamping after the fact', () => {
+    // The adapter shapes that need this know the tick the elapse STARTED at,
+    // which is not necessarily where the clock is by the time they can say so.
+    const cpu = fakeCpu();
+    const events = install(cpu, { cycles: 9999, clockHz: 1e6 });
+    const { seen } = record(events);
+    events.publishIdleElapse({ cycles: 8, ticks: 100 });
+    assert.equal(seen[0].time.ticks, 100n);
+  });
+});
