@@ -14,7 +14,7 @@
  * row REDDENS — which is the only part of this that keeps working when someone
  * who has not read this comment adds a target.
  *
- * FOUR CLAIMS, THREE EXERCISABLE. FOUR TARGETS, THREE ALWAYS DRIVABLE. Both
+ * FIVE CLAIMS, FOUR EXERCISABLE. FOUR TARGETS, THREE ALWAYS DRIVABLE. Both
  * numbers are stated here rather than left to be inferred from a green run,
  * because a conformance test that passes LOOKS like conformance and that is
  * exactly the failure this file would otherwise be:
@@ -28,6 +28,15 @@
  *                           Asserted as an absence, so the day a target
  *                           declares one this file reddens and someone has to
  *                           write the positive case.
+ *   C5  a SAMPLING BOARD is never silent                        exercisable
+ *                           A live board changes input nets outside the target
+ *                           and nothing records them, so a session with one
+ *                           cannot be replayed. Every target must SAY so —
+ *                           through replaySupport's reasons, or by refusing the
+ *                           input outright. What it must not do is accept the
+ *                           replay and reproduce a run whose board inputs were
+ *                           never in the log. Two spellings, one claim: the
+ *                           claim is that it is stated, not how.
  *
  * AND ONE PREDICATE ANSWERS RIGHT FOR THE WRONG REASON, which belongs in the
  * file and not in a workaround: `emu8051-adapter` has no `capabilities()` at
@@ -50,9 +59,11 @@ import { createM6502DebugTarget } from '../src/m6502-debug.js';
 import { I8086Machine, BREADBOARD8086 } from '../src/i8086-machine.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
 import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
+import { createZ80Adapter } from '../src/z80-adapter.js';
+import { createI8086Adapter } from '../src/i8086-adapter.js';
 import { BoardImpl } from '../src/board.js';
 import {
-  canApplyReplayInput, canRecordDebugInput, canVetoDebugInput, replayOutcome
+  canApplyReplayInput, canRecordDebugInput, canVetoDebugInput, replayOutcome, replaySupport
 } from '../src/debug-replay-contract.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -73,6 +84,9 @@ const WASM = [
   join(HERE, '..', '..', 'emu8051-stc', 'build', 'emu8051.js')
 ].find(existsSync);
 const require = createRequire(import.meta.url);
+
+/** The only property that matters: a board that OFFERS an input to sample. */
+const samplingBoard = () => ({ advanceTo() {}, setPin() {}, readPin() { return 1; } });
 
 const rom8086 = code => {
   const img = new Uint8Array(0x8000);
@@ -97,6 +111,17 @@ const ROWS = {
       { clockHz: 3_500_000, regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }], ula: true }, {}) }),
     drive: target => target.setKeys(['a']),
     fact: { producer: 'z80.keys', payload: { names: ['a'] } },
+    // A config WITH a buffer port: that is the only route this machine samples
+    // board inputs through, so it is the only one where a board is unlogged.
+    withSamplingBoard: () => {
+      const adapter = createZ80Adapter({ config: {
+        clockHz: 4_000_000,
+        regions: [{ kind: 'ram', start: 0, end: 0xffff }],
+        ports: [{ kind: 'buffer', name: 'inputs', at: 0x10 }]
+      } });
+      adapter.attachBoard(samplingBoard());
+      return createZ80DebugTarget(adapter);
+    },
     applied: target => target.setKeys(['b']) && true
   },
   'm6502-debug.js': {
@@ -111,6 +136,14 @@ const ROWS = {
     },
     drive: target => target.setButtons(0b0001),
     fact: { producer: 'm6502.buttons', payload: { mask: 0b0010 } },
+    withSamplingBoard: () => {
+      const adapter = createM6502Adapter({});
+      adapter.machine.loadRom([0xea, 0x4c, 0x00, 0x80]);
+      adapter.machine.mem[0xfffc] = 0x00; adapter.machine.mem[0xfffd] = 0x80;
+      adapter.machine.reset();
+      adapter.attachBoard(samplingBoard());
+      return createM6502DebugTarget(adapter);
+    },
     applied: target => (target.machineRef.chips.via1.inA & 0x0f) !== 0x0f
   },
   'i8086-debug.js': {
@@ -124,6 +157,11 @@ const ROWS = {
     },
     drive: target => target.setInput('ppi1', 'b', 0, 1),
     fact: { producer: 'i8086.gpio', payload: { chip: 'ppi1', port: 'b', bit: 1, level: 1 } },
+    withSamplingBoard: () => {
+      const adapter = createI8086Adapter({ config: BREADBOARD8086, rom: rom8086([0x90, 0xeb, 0xfd]) });
+      adapter.attachBoard(samplingBoard());
+      return createI8086DebugTarget(adapter);
+    },
     applied: target => (target.machineRef.chips.ppi1.inB & 0x03) !== 0
   },
   'emu8051-adapter.js': {
@@ -145,6 +183,26 @@ const ROWS = {
       return adapter;
     },
     drive: adapter => { adapter.runNs(2_000_000); return true; },
+    // This one says it the OTHER way: it has no replayRefusalReasons and
+    // refuses the input outright while a board is attached, because a live
+    // board re-asserts its own pin values through the same native setter
+    // replay uses. Same claim, different spelling.
+    withSamplingBoard: async () => {
+      const mod = require(WASM);
+      const Module = await (typeof mod === 'function' ? mod : mod.default)();
+      const adapter = createEmu8051Adapter(Module, { mode: 'poll' });
+      const board = new BoardImpl(5);
+      board.setNetlist([
+        { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },
+        { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
+        { id: 'R', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] }
+      ], [
+        { id: 'n0', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R', terminal: 'a' }] },
+        { id: 'n1', terminals: [{ part: 'R', terminal: 'b' }, { part: 'MCU', terminal: 'P1.0' }] }
+      ]);
+      adapter.attachBoard(board);
+      return adapter;
+    },
     // A boardless adapter is the only state this target permits a replay in;
     // the row's own `fact` is applied against a second, boardless one.
     fact: { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } },
@@ -195,6 +253,49 @@ for (const [name, row] of Object.entries(ROWS)) {
       assert.equal(typeof fact.producer, 'string');
       assert.ok(fact.payload && typeof fact.payload === 'object');
       assert.ok(fact.time && fact.time.domain, 'a fact carries a timeline');
+    });
+
+    it('C5: a SAMPLING BOARD is never silent', { skip }, async () => {
+      // A live board changes input nets outside the debug target and nothing
+      // records them, so a session with one cannot be replayed. Measured across
+      // the tree: seven of eight adapters sample board inputs and only the 8051
+      // records from that site. Every target must SAY so; what it must not do
+      // is accept the replay and reproduce a run whose board inputs were never
+      // in the log.
+      //
+      // TWO SPELLINGS, ONE CLAIM. Three targets report a reason through
+      // replaySupport; the 8051 refuses the input outright, because a live
+      // board re-asserts its own pin values through the same native setter
+      // replay uses. The claim is that the state is STATED, not how — asserting
+      // one spelling would have made the other look like a defect.
+      assert.equal(typeof row.withSamplingBoard, 'function',
+        `${name} has no sampling-board construction, so nothing checks it says anything`);
+      const target = await row.withSamplingBoard();
+
+      const support = replaySupport(target);
+      const refusal = replayOutcome(target.applyReplayInput(row.fact));
+      assert.ok(support.supported === false || refusal.accepted === false,
+        `${name}: a sampling board is attached and the target neither reports a `
+        + 'replay-support reason nor refuses the input — the session is silently '
+        + 'unreplayable');
+
+      // And whichever way it speaks, it must name the board rather than answer
+      // with something generic.
+      const said = support.supported === false
+        ? support.reasons.join('; ')
+        : `${refusal.code}: ${refusal.reason}`;
+      assert.match(said, /board/i, `${name} refused without naming the board: ${said}`);
+    });
+
+    it('C5 control: with NO board, the same target is replayable', { skip }, async () => {
+      // Without this, C5 passes for a target that refuses everything always,
+      // which is the failure mode of a check that only looks for a refusal.
+      const target = await row.make();
+      const support = replaySupport(target);
+      const refusal = replayOutcome(
+        (row.applyOn ? await row.applyOn() : target).applyReplayInput(row.fact));
+      assert.equal(support.supported, true, support.reasons.join('; '));
+      assert.equal(refusal.accepted, true, refusal.reason);
     });
 
     it('C3: does NOT declare veto => a refusing listener changes nothing', { skip }, async () => {
