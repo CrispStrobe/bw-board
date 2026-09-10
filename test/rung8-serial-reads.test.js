@@ -19,12 +19,19 @@ import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFrame, FrameReceiver, CMD } from '../src/serial-debug.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const HEX_PATH = '/tmp/10-live-firmware.hex';
-const WASM_PATH = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+const WASM_PATH = resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']);
 
 let createEmu8051;
 try { createEmu8051 = require(WASM_PATH); } catch {}

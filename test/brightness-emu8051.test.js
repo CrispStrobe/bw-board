@@ -23,13 +23,20 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 import { BoardImpl } from '../src/board.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const CANDIDATES = [
   process.env.EMU8051_JS,
-  path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+  resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']),
 ].filter(Boolean);
 
 let createEmu8051 = null;

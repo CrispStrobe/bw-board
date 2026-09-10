@@ -18,6 +18,7 @@ import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 import { BoardImpl } from '../src/board.js';
 import { registerST7920, st7920Pixel } from '../src/devices/st7920.js';
 import { unregisterDevice } from '../src/devices.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 try { registerST7920(); } catch {}
 
@@ -26,7 +27,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 // ── WASM discovery ──────────────────────────────────────────────────────
 let createEmu8051 = null;
-const wasmPath = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+const wasmPath = resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']);
 if (existsSync(wasmPath)) createEmu8051 = require(wasmPath);
 
 const FOSC = 11059200; // HC6800-ES crystal: 11.0592 MHz

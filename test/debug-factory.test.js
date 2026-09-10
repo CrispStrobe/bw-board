@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { createDebugTarget, getTargetKinds } from '../src/debug-target-factory.js';
 import { buildFrame, CMD } from '../src/serial-debug.js';
 import { BoardImpl } from '../src/board.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -212,7 +213,13 @@ describe('factory → conformance: both targets satisfy the interface', () => {
     try {
       const { createRequire } = await import('node:module');
       const require = createRequire(import.meta.url);
-      createEmu8051 = require(path.resolve(here, '../../emu8051-stc/build/emu8051.js'));
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+      createEmu8051 = require(resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']));
     } catch { return; } // WASM not available — skip
 
     const wasm = await createEmu8051();

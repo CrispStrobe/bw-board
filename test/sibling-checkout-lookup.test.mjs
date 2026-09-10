@@ -62,22 +62,12 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
   // of a census that grows silently.
   const EXEMPT = new Set(['sibling-checkout-lookup.test.mjs']);
 
-  // THE RATCHET. Exact names, not a count: a count cannot tell "one converted
-  // and one added" from "nothing happened".
-  const EXPECTED_OFFENDERS = [
-    'brightness-emu8051.test.js',
-    'conformance-real-wasm.test.js',
-    'debug-factory.test.js',
-    'device-drivers-e2e.test.js',
-    'emu8051-debug.test.js',
-    'motor-e2e.test.js',
-    'multimeter-chain.test.mjs',
-    'rung8-serial-reads.test.js',
-    'serial-debug-e2e.test.js',
-    'servo-e2e.test.js',
-    'stc89c52-demos.test.mjs'
-  ];
-
+  // THE RATCHET REACHED ZERO, AND ITS SCAFFOLDING CAME OUT WITH THE LAST ENTRY.
+  // Nineteen files carried a fixed-depth lookup; they were converted in two
+  // batches under an expected-offender list asserted by NAME in both
+  // directions. That list is gone because it is empty, which is the terminal
+  // condition the ratchet declared for itself. What remains is the plain
+  // assertion it was always aiming at.
   const offendersNow = () => readdirSync(TEST_DIR)
     .filter(name => /\.(mjs|js)$/.test(name) && !EXEMPT.has(name))
     .filter(name => {
@@ -122,47 +112,17 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
       + 'and never exempt by pattern.');
   });
 
-  it('the offender list is exactly what is on the ratchet, in both directions', () => {
-    const now = offendersNow();
-    const added = now.filter(n => !EXPECTED_OFFENDERS.includes(n));
-    const converted = EXPECTED_OFFENDERS.filter(n => !now.includes(n));
+  it('no test file reaches for a sibling checkout at a fixed depth', () => {
+    const offenders = offendersNow();
 
-    assert.deepEqual(added, [],
-      `${added.join(', ')} reaches for a sibling checkout at a FIXED depth. That is where one `
+    assert.deepEqual(offenders, [],
+      `${offenders.join(', ')} reaches for a sibling checkout at a FIXED depth. That is where one `
       + 'sits relative to a CLONE and never relative to a git WORKTREE, which lives a level '
       + "deeper — so CI keeps the suite and every lane loses it, as a '# skipped' that reads "
-      + 'like a deliberate exclusion. Use ancestorCandidates() from ./helpers/sibling-checkout.mjs.');
-
-    assert.deepEqual(converted, [],
-      `${converted.join(', ')} no longer uses a fixed depth — take ${converted.length === 1
-        ? 'that name' : 'those names'} off EXPECTED_OFFENDERS in this file. The ratchet only `
-      + 'falls, and it falls by being edited deliberately.');
+      + 'like a deliberate exclusion, or worse as a PASS. Use ancestorCandidates() or '
+      + 'resolveAncestor() from ./helpers/sibling-checkout.mjs.');
   });
 
-  it('a converted suite can actually REACH its oracle, where the oracle exists', () => {
-    // COMING OFF THE LIST IS NOT THE SAME AS RUNNING. A conversion that fixed
-    // the lookup while the suite went on skipping for a second reason would
-    // lower the ratchet and change no coverage at all, which is the failure
-    // this whole exercise is about.
-    //
-    // Conditional on the oracle, and that is honest rather than convenient: on
-    // CI it IS absent — ci.yml checks out emu8051-stc and not stc — so the
-    // eight converted suites still skip there, and this must not pretend
-    // otherwise. What it holds is the box where the oracle exists: if the
-    // examples tree is anywhere up the tree, the walk must find it.
-    const found = ancestorCandidates(HERE, ['stc', 'examples']).find(p => existsSync(p));
-    if (!found) return;
-    assert.ok(existsSync(join(found, '06-dimmer', 'pins.json')),
-      `${found} is not the examples tree those suites need`);
-  });
-
-  it('the ratchet is not already empty, so the assertions above are exercised', () => {
-    // The day this reds is the day the list is empty and this whole block,
-    // EXPECTED_OFFENDERS included, comes out — leaving the plain assertion that
-    // no file uses a fixed depth.
-    assert.ok(EXPECTED_OFFENDERS.length > 0,
-      'the ratchet reached zero: delete EXPECTED_OFFENDERS and assert offendersNow() is empty');
-  });
 });
 
 describe('ancestorCandidates', () => {
