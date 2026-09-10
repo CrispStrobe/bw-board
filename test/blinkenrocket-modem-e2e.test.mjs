@@ -42,6 +42,12 @@ const HEX_CANDIDATES = [
   ...ancestorCandidates(HERE, ['blinkenrocket-firmware', 'build', 'main.hex']),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
+  // THE TRACKED RELEASE, LAST, and the reason it is here at all is that
+  // `build/main.hex` is NOT tracked in that repo. A checkout gives a release
+  // and nothing else, so without this line a CI checkout would be theatre --
+  // the step would run, the file would not be there, and the suite would go on
+  // skipping. Last, so a developer's own build still wins where one exists.
+  ...ancestorCandidates(HERE, ['blinkenrocket-firmware', 'releases', 'blinkenrocket_2.1.hex']),
 ].filter(Boolean);
 const HEX_PATH = HEX_CANDIDATES.find(p => existsSync(p)) || HEX_CANDIDATES[HEX_CANDIDATES.length - 1];
 
@@ -50,6 +56,12 @@ test('modem full loop: encodeTextMessage → firmware ADC → EEPROM pattern', {
     skip: !existsSync(HEX_PATH) && 'blinkenrocket firmware hex not found at ' + HEX_PATH,
     timeout: 120_000,
 }, () => {
+    // NAME WHAT WAS MEASURED. Three different hexes exist across the boxes and
+    // the runner -- a local build, a with-minigame variant, and the tracked
+    // 2.1 release -- and they do not produce identical cycle counts. A green
+    // run that does not say which firmware it decoded is a result nobody can
+    // reproduce.
+    console.log(`# modem e2e: firmware ${HEX_PATH}`);
     // ── Encode the message ────────────────────────────────────────
     const text = 'Hi';
     const pcmSamples = encodeTextMessage(text, { sync: 200 });
