@@ -66,6 +66,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
@@ -97,8 +98,16 @@ const implementers = readdirSync(SRC)
 
 // The emu8051 build, discovered the way its own suites discover it.
 const WASM = [
-  join(HERE, '..', 'emu8051-stc', 'build', 'emu8051.js'),
-  join(HERE, '..', '..', 'emu8051-stc', 'build', 'emu8051.js')
+  // WALKED UP, NOT A FIXED DEPTH. The nearest ancestor comes first, so the CI
+  // layout (the build inside the workspace, where actions/checkout puts it)
+  // still wins over a sibling checkout. What changes is REACH: a git worktree
+  // lives a level deeper than a clone, so `<repo>/../..` lands in `code/wt`
+  // and never at `code/emu8051-stc`. Measured from a worktree one level
+  // deeper than usual, the old list lost 22 cases across four suites — and on
+  // this box the usual depth only worked through an UNDECLARED SYMLINK,
+  // `code/wt/emu8051-stc -> code/emu8051-stc`, added 2026-09-03. The defect
+  // had already been paid for once, in the filesystem instead of the lookup.
+  ...ancestorCandidates(HERE, ['emu8051-stc', 'build', 'emu8051.js'])
 ].find(existsSync);
 const require = createRequire(import.meta.url);
 

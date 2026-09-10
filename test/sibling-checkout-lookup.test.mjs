@@ -10,12 +10,52 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
+  // THE POPULATION, NOT THE INSTANCE. Two suites looked for a firmware at
+  // `<repo>/../..` and four more looked for the emu8051 wasm there. On this box
+  // the second group appeared to work — because `code/wt/emu8051-stc` is a
+  // SYMLINK to `code/emu8051-stc`, added 2026-09-03. Someone hit this defect
+  // three weeks ago and fixed it in the FILESYSTEM instead of in the lookup, so
+  // four suites (replay-surface-conformance among them) rested on undeclared
+  // state that a cleanup would remove. Measured from a worktree one level
+  // deeper, where the symlink does not help: 22 cases stopped running.
+  //
+  // So the check is over the whole directory rather than over the files anyone
+  // remembers. A new suite that copies the old shape reddens this, and the
+  // message says what to use instead.
+  const TEST_DIR = HERE;
+  const FIXED_DEPTH = /['"]\.\.['"]\s*,\s*['"]\.\.['"]/;
+  // The holder below builds the old shape ON PURPOSE, to assert the walk finds
+  // what it cannot. Named, with its reason, rather than pattern-excluded.
+  const EXEMPT = new Set(['sibling-checkout-lookup.test.mjs']);
+
+  it('and the scan can see the shape at all', () => {
+    // A census whose pattern matches nothing proves nothing. This asserts the
+    // regex fires on the one file that deliberately contains the shape.
+    const holder = readFileSync(join(TEST_DIR, 'sibling-checkout-lookup.test.mjs'), 'utf8');
+    assert.ok(FIXED_DEPTH.test(holder), 'the pattern no longer matches its own example');
+  });
+
+  it('every other test file uses the walk', () => {
+    const offenders = readdirSync(TEST_DIR)
+      .filter(name => /\.(mjs|js)$/.test(name) && !EXEMPT.has(name))
+      .filter(name => FIXED_DEPTH.test(readFileSync(join(TEST_DIR, name), 'utf8')));
+
+    assert.deepEqual(offenders, [],
+      `${offenders.join(', ')} reaches for a path two levels up. That is where a sibling `
+      + 'checkout sits relative to a CLONE and never relative to a git WORKTREE, which lives '
+      + "one level deeper — so CI keeps the suite and every lane loses it, as a '# skipped' "
+      + 'that reads like a deliberate exclusion. Use ancestorCandidates() from '
+      + './helpers/sibling-checkout.mjs'.replace(/^/, '') + '.');
+  });
+});
 
 describe('ancestorCandidates', () => {
   it('offers a candidate at every level, nearest first, and stops at the root', () => {
