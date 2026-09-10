@@ -20,62 +20,135 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
   // THE POPULATION, NOT THE INSTANCE. Two suites looked for a firmware at
   // `<repo>/../..` and four more looked for the emu8051 wasm there. On this box
-  // the second group appeared to work — because `code/wt/emu8051-stc` is a
-  // SYMLINK to `code/emu8051-stc`, added 2026-09-03. Someone hit this defect
-  // three weeks ago and fixed it in the FILESYSTEM instead of in the lookup, so
-  // four suites (replay-surface-conformance among them) rested on undeclared
-  // state that a cleanup would remove. Measured from a worktree one level
-  // deeper, where the symlink does not help: 22 cases stopped running.
+  // some of them appeared to work — because `code/wt/emu8051-stc` is a SYMLINK
+  // to `code/emu8051-stc`, added 2026-09-03. Someone hit this defect three
+  // weeks ago and fixed it in the FILESYSTEM instead of in the lookup. Measured
+  // from a worktree one level deeper, where the symlink does not help: 22 cases
+  // stopped running.
   //
-  // So the check is over the whole directory rather than over the files anyone
-  // remembers. A new suite that copies the old shape reddens this, and the
-  // message says what to use instead.
+  // TWO SPELLINGS, AND THE FIRST VERSION OF THIS GATE SAW ONLY ONE. It matched
+  // two SEPARATE arguments — `join(HERE, '..', '..', 'x')` — and was blind to
+  // `'../../x'`, which is the form nineteen files in this directory actually
+  // use. It reported zero offenders while the tree was full of them: a census
+  // that is vacuous against the real population reads exactly like a clean one.
+  //
+  // SO IT IS A RATCHET, not a pass/fail gate: widening it reds nineteen files
+  // at once, which is not a reviewable change. The expected set is asserted BY
+  // NAME in both directions — a new fixed-depth lookup reds it, and converting
+  // one reds it too, saying to take the name off the list. Terminal value:
+  // empty.
   const TEST_DIR = HERE;
-  const FIXED_DEPTH = /['"]\.\.['"]\s*,\s*['"]\.\.['"]/;
-  // The holder below builds the old shape ON PURPOSE, to assert the walk finds
-  // what it cannot. Named, with its reason, rather than pattern-excluded.
+
+  // Each spelling carries its own example AND counter-example. A pattern that
+  // covers two forms needs two positive cases, or you widen it, catch one, and
+  // believe you caught both — which is exactly what happened here.
+  const SPELLINGS = [
+    {
+      what: 'two separate arguments',
+      re: /['"]\.\.['"]\s*,\s*['"]\.\.['"]/,
+      example: "const C = [join(HERE, '..', '..', 'emu8051-stc', 'build', 'emu8051.js')];",
+      counter: "const C = ancestorCandidates(HERE, ['emu8051-stc', 'build', 'emu8051.js']);"
+    },
+    {
+      what: 'one string',
+      re: /['"](?:\.\.\/)+\.\.\//,
+      example: "for (const p of ['../../emu8051-stc/build/emu8051.js']) {",
+      counter: "for (const p of ancestorCandidates(HERE, ['emu8051-stc'])) {"
+    }
+  ];
+
+  // The holder builds both shapes ON PURPOSE, to fire the patterns at them.
+  // Named, with its reason, never a pattern — an exemption list is the one part
+  // of a census that grows silently.
   const EXEMPT = new Set(['sibling-checkout-lookup.test.mjs']);
 
-  it('and the scan can see the shape at all', () => {
-    // A census whose pattern matches nothing proves nothing — so this fires the
-    // regex at a CONSTRUCTED example, and at a counter-example that must not
-    // match.
-    //
-    // IT USED TO READ THIS FILE, AND THAT MADE IT VACUOUS. The pattern is
-    // DEFINED in this file, so its own source text is in the haystack: any
-    // regex matches the line that declares it. Measured — replacing the pattern
-    // with /NEVERMATCHESANYTHING/ left this green, because the file then
-    // contained the word NEVERMATCHESANYTHING. Only /x{999}/, which cannot
-    // match its own spelling, reddened it. An anti-vacuity check that reads the
-    // file defining the thing it checks is testing the wrong haystack.
-    const example = "const CANDIDATES = [join(HERE, '..', '..', 'emu8051-stc')];";
-    const walked = "const CANDIDATES = ancestorCandidates(HERE, ['emu8051-stc']);";
-    assert.ok(FIXED_DEPTH.test(example), 'the pattern no longer matches the shape it is for');
-    assert.ok(!FIXED_DEPTH.test(walked), 'the pattern matches the shape it is meant to allow');
+  // THE RATCHET. Exact names, not a count: a count cannot tell "one converted
+  // and one added" from "nothing happened".
+  const EXPECTED_OFFENDERS = [
+    'brightness-emu8051.test.js',
+    'conformance-real-wasm.test.js',
+    'debug-factory.test.js',
+    'device-drivers-e2e.test.js',
+    'emu8051-debug.test.js',
+    'end-to-end-dimmer.test.js',
+    'example-bundles.test.js',
+    'example-buzzer.test.js',
+    'example-dimmer.test.js',
+    'example-manifest.test.js',
+    'example-pwm-preview.test.js',
+    'example-seven-segment.test.js',
+    'example-shift-register.test.js',
+    'motor-e2e.test.js',
+    'multimeter-chain.test.mjs',
+    'rung8-serial-reads.test.js',
+    'serial-debug-e2e.test.js',
+    'servo-e2e.test.js',
+    'stc89c52-demos.test.mjs'
+  ];
+
+  const offendersNow = () => readdirSync(TEST_DIR)
+    .filter(name => /\.(mjs|js)$/.test(name) && !EXEMPT.has(name))
+    .filter(name => {
+      const source = readFileSync(join(TEST_DIR, name), 'utf8');
+      return SPELLINGS.some(s => s.re.test(source));
+    })
+    .sort();
+
+  for (const spelling of SPELLINGS) {
+    it(`the ${spelling.what} pattern matches its shape and not the remedy`, () => {
+      // Fired at CONSTRUCTED text, never at this file: the patterns are DEFINED
+      // here, so this file's own source is in the haystack and any regex
+      // matches the line that declares it. Measured on the earlier version —
+      // /NEVERMATCHESANYTHING/ left the check green because the file then
+      // contained that word.
+      assert.ok(spelling.re.test(spelling.example),
+        `the pattern no longer matches: ${spelling.example}`);
+      assert.ok(!spelling.re.test(spelling.counter),
+        `the pattern matches the remedy: ${spelling.counter}`);
+    });
+  }
+
+  it('the spellings are distinct, so one cannot stand in for the other', () => {
+    // Without this, collapsing both entries to the same regex passes every
+    // check above while halving the population the gate can see.
+    const [two, one] = SPELLINGS;
+    assert.ok(!two.re.test(one.example), 'the two-argument pattern claims the one-string form');
+    assert.ok(!one.re.test(two.example), 'the one-string pattern claims the two-argument form');
   });
 
   it('the exemption is one named file, not a widening pattern', () => {
     // Measured: replacing this set with every filename in the directory reds
-    // nothing, because an all-exempt scan has no offenders and `deepEqual([],
-    // [])` passes. An exemption list is the one part of a census that grows
-    // silently, so its SIZE is asserted rather than left to review.
+    // nothing, because an all-exempt scan has no offenders and deepEqual([],[])
+    // passes. So its exact contents are asserted.
     assert.deepEqual([...EXEMPT], ['sibling-checkout-lookup.test.mjs'],
-      'this holder builds the old shape on purpose and is the only file that may. '
+      'this holder builds both shapes on purpose and is the only file that may. '
       + 'Adding a name here removes a file from the scan — say why in the commit, '
       + 'and never exempt by pattern.');
   });
 
-  it('every other test file uses the walk', () => {
-    const offenders = readdirSync(TEST_DIR)
-      .filter(name => /\.(mjs|js)$/.test(name) && !EXEMPT.has(name))
-      .filter(name => FIXED_DEPTH.test(readFileSync(join(TEST_DIR, name), 'utf8')));
+  it('the offender list is exactly what is on the ratchet, in both directions', () => {
+    const now = offendersNow();
+    const added = now.filter(n => !EXPECTED_OFFENDERS.includes(n));
+    const converted = EXPECTED_OFFENDERS.filter(n => !now.includes(n));
 
-    assert.deepEqual(offenders, [],
-      `${offenders.join(', ')} reaches for a path two levels up. That is where a sibling `
-      + 'checkout sits relative to a CLONE and never relative to a git WORKTREE, which lives '
-      + "one level deeper — so CI keeps the suite and every lane loses it, as a '# skipped' "
-      + 'that reads like a deliberate exclusion. Use ancestorCandidates() from '
-      + './helpers/sibling-checkout.mjs'.replace(/^/, '') + '.');
+    assert.deepEqual(added, [],
+      `${added.join(', ')} reaches for a sibling checkout at a FIXED depth. That is where one `
+      + 'sits relative to a CLONE and never relative to a git WORKTREE, which lives a level '
+      + "deeper — so CI keeps the suite and every lane loses it, as a '# skipped' that reads "
+      + 'like a deliberate exclusion. Use ancestorCandidates() from ./helpers/sibling-checkout.mjs.');
+
+    assert.deepEqual(converted, [],
+      `${converted.join(', ')} no longer uses a fixed depth — take ${converted.length === 1
+        ? 'that name' : 'those names'} off EXPECTED_OFFENDERS in this file. The ratchet only `
+      + 'falls, and it falls by being edited deliberately.');
+  });
+
+  it('the ratchet is not already empty, so the assertions above are exercised', () => {
+    // The day this reds is the day the list is empty and this whole block,
+    // EXPECTED_OFFENDERS included, comes out — leaving the plain assertion that
+    // no file uses a fixed depth.
+    assert.ok(EXPECTED_OFFENDERS.length > 0,
+      'the ratchet reached zero: delete EXPECTED_OFFENDERS and assert offendersNow() is empty');
   });
 });
 
