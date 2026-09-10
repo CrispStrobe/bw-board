@@ -113,8 +113,26 @@ test('the debt list is not a way to exempt the whole tree', () => {
     // file from debt to detector-false-positive cannot be used to make room.
     const exempt = derived().filter(
         (f) => UNTRIAGED_2026_09_05.has(f) || IN_REPO_DEFENSIVE.has(f)).length;
-    assert.ok(exempt <= 12,
-        `${exempt} of ${total} guard-then-skip files are exempted; the frozen debt was `
-        + '16 on 2026-09-05, dropped to 14 when masm and nasm were promoted to census '
-        + 'rows, and must only shrink. Write a census row instead of extending the list.');
+    // EXACT, NOT A CEILING, AND THE DIFFERENCE IS NOT PEDANTRY. This was
+    // `exempt <= 12` and the count was under it, so ADDING an exemption passed
+    // — measured, under time pressure, by me, while master was red: only the
+    // failure text above ("write a census row instead") stopped the wrong fix.
+    // A cap that sits above the count is permission to spend the gap, and the
+    // moment somebody spends it is the moment nobody is reading carefully.
+    //
+    // So both directions red. Growing means the debt grew; SHRINKING means
+    // somebody paid it down and must write the smaller number here, which is
+    // the only way a ratchet reaches its terminal value of zero rather than
+    // sitting under a ceiling forever.
+    const EXEMPT_AT_2026_09_10 = 11;
+    assert.equal(exempt, EXEMPT_AT_2026_09_10,
+        exempt > EXEMPT_AT_2026_09_10
+            ? `the exemption list GREW to ${exempt} of ${total} (was `
+              + `${EXEMPT_AT_2026_09_10} on 2026-09-10). Write a census row in `
+              + 'scripts/oracle-census.mjs instead of extending the list — the frozen debt '
+              + 'was 16 on 2026-09-05 and 14 when masm and nasm were promoted, and it only '
+              + 'goes down.'
+            : `the exemption list FELL to ${exempt} of ${total} — good. Lower `
+              + `EXEMPT_AT_2026_09_10 in this file to ${exempt} and date it, so the next `
+              + 'person cannot spend what you paid off.');
 });
