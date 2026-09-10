@@ -64,6 +64,41 @@ test('AVR code breakpoint only: run-to advertises its exact range and accepts th
   assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: AVR_CODE_MAX }), 'number');
 });
 
+// THE THREE STATEMENTS OF ONE LIMIT MUST AGREE — asserted by CONSEQUENCE.
+//
+// `cpu.progMem.length * 2 - 2` used to be written three times: the runTo
+// descriptor, setBreakpoint's guard, and the refusal text. The tests above pin
+// each against 0x7FFE and a literal message, which are a fourth and a fifth
+// copy — so they catch a change, but they describe it as a string mismatch.
+//
+// This one takes every number FROM THE TARGET and asks what a caller loses if
+// they disagree: told one limit, refused at another, handed a third in the
+// message. That is the failure a user meets, and it is what the assertion says.
+test('the limit a caller is TOLD, the limit ENFORCED, and the limit NAMED agree', () => {
+  const { target } = make(BLINK);
+  const told = target.capabilities().runTo[0].addressMax;
+
+  const atTold = target.setBreakpoint({ kind: 'code', addr: told });
+  assert.equal(typeof atTold, 'number',
+    `the descriptor promises addresses up to 0x${told.toString(16)} are settable, but setting ` +
+    `0x${told.toString(16)} was refused — a caller trusting capabilities() loses the top of flash ` +
+    `and can discover it only by trying`);
+
+  const aboveTold = target.setBreakpoint({ kind: 'code', addr: told + 2 });
+  assert.ok(aboveTold && aboveTold.unsupported,
+    `0x${(told + 2).toString(16)} is past the advertised limit and was ACCEPTED — a caller gets a ` +
+    `breakpoint that can never hit, with nothing to say why`);
+
+  const named = /0x([0-9a-f]+)\s*$/.exec(aboveTold.unsupported);
+  assert.ok(named,
+    `the refusal names no limit at all: ${JSON.stringify(aboveTold.unsupported)} — a caller is told ` +
+    `no and cannot tell which addresses would work`);
+  assert.equal(parseInt(named[1], 16), told,
+    `the refusal names 0x${named[1]} while the descriptor promises 0x${told.toString(16)} — a caller ` +
+    `believing the message avoids addresses that are in fact settable, and one believing the ` +
+    `descriptor meets a refusal that contradicts it`);
+});
+
 for (const [name, addr] of [
   ['negative address', -2],
   ['fractional address', 2.5],

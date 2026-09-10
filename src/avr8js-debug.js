@@ -66,6 +66,23 @@ function makeWhy(target, cause, hit) {
 export function createAvr8jsDebugTarget(adapter, opts = {}) {
   const cpu = adapter.cpu;
 
+  // ONE DERIVATION, because it was written three times.
+  //
+  // `cpu.progMem.length * 2 - 2` appeared in the runTo descriptor, in
+  // setBreakpoint's guard, and again inside the refusal text it prints. Three
+  // copies of one fact: a device with different program memory could be
+  // DESCRIBED with one limit, ENFORCED with another, and REFUSED with a third,
+  // and every copy reads as obviously correct on its own.
+  //
+  // rp2040js-debug.js already solved this — MAX_CODE_ADDRESS, with its refusal
+  // built from the constant via toString(16) so even the message cannot drift.
+  // Same shape here, except the value is derived PER CPU rather than fixed at
+  // 0xfffffffe: an AVR's last addressable code byte is the program memory it
+  // actually has, so the bound belongs to the instance, not the module.
+  const maxCodeAddress = cpu.progMem.length * 2 - 2;
+  const codeAddressRefusal =
+    `code breakpoint addr must be in 0x0000..0x${maxCodeAddress.toString(16)}`;
+
   let running = false;
   let detached = false;
   /** Instructions left in a pending step('insn'); null = not insn-stepping. */
@@ -327,7 +344,7 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         steps: ['insn', 'block', 'over', 'out'],
         breakpoints: ['code', 'yield', 'write'],
         runTo: [{kind: 'address', space: 'code', addressMin: 0,
-          addressMax: cpu.progMem.length * 2 - 2, stopSides: ['before'], installation: 'sync'}],
+          addressMax: maxCodeAddress, stopSides: ['before'], installation: 'sync'}],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped', // AVR I/O registers live in the data space
@@ -418,9 +435,8 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
     setBreakpoint(bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
       if (bp.kind === 'code') {
-        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > cpu.progMem.length * 2 - 2) {
-          return { unsupported: `code breakpoint addr must be in 0x0000..0x${
-            (cpu.progMem.length * 2 - 2).toString(16)}` };
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > maxCodeAddress) {
+          return { unsupported: codeAddressRefusal };
         }
         if ((bp.addr & 1) !== 0) {
           return { unsupported:
