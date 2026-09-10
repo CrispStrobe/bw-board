@@ -3843,6 +3843,41 @@ what moved, and the failure message is the only place that distinction can live.
 
 ### R3 The `'SF'` soft-float table is empty, and it is what stops Kaluma
 
+**RESOLVED 2026-09-10 (`64354e8`), AND THE NAMED CAUSE BELOW IS WRONG. The
+original text is kept because the retraction is the useful part.**
+
+`2.5+1.0` now evaluates to `3.5` in Kaluma's REPL, measured end to end by
+`scripts/probe-sf-unaligned.mjs`. The cause was one byte in the header, not an
+empty table:
+
+* **`'SF'` is answered, and always was once the table landed.** Every
+  `rom_table_lookup` during boot SUCCEEDS — `'SF'` returns `0x0a88`, a valid
+  pointer. The claim below that it is "the one unanswered code" described the
+  ROM as it stood on 2026-09-06 and was carried forward past the fix.
+* **The null pointer is not a missed lookup.** pico-sdk reads the bootrom
+  version with `*(uint8_t *)0x13`; Kaluma branches on it (`cmp r5,#1` at flash
+  `0x1002096c`) and fills all 32 shim slots only when it reads 1. This ROM put
+  `'M','u',0x01` at `0x10..0x12` and left `0x13` at ZERO, believing the `0x01`
+  to be the version — it is the magic's third byte. Reading 0 took the short
+  leg, which fills slot 18 and leaves 31 **double**-precision pointers null.
+  The register file at the jump (`r1=0x40040000`, `r3=0x3ff00000` — the high
+  words of 2.5 and 1.0) is what identified it as double, not single.
+* **Nothing writes the shim table at `0x2002f808` except the crt0 zero-fill.**
+  A write trap is what separated "the initialiser never ran" from "it ran and
+  wrote zeros"; reading could not have settled it.
+* **Both observed symptoms are this one defect.** Version too low answers `0`;
+  version too high (2 or 3, measured) makes Kaluma take its V2 leg, look for
+  the `'DF'` double table this ROM does not publish, and return NO value — the
+  echo lego-ac's `--eval` reading hit at pin `1f809683e` and reported as a
+  third outcome.
+* **Why no test caught it:** the test asserted `rom[0x12] === 1` and labelled
+  it `'version'`. It checked the magic's third byte twice and the version byte
+  not at all. An assertion carrying the same wrong belief as the code cannot
+  fail by construction.
+
+The soft-float work below stands on its own and is not retracted — the table
+is real, graded, and reached. It simply was not what R3 turned on.
+
 **Reported by lego-ac (brickwright-lite N5), 2026-09-06. THE CAUSE IS
 CONFIRMED HERE by reading `src/rp2040-bootrom.js`, which already documents it;
 the Kaluma measurements are theirs and have not been re-run in this repo.**

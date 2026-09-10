@@ -230,10 +230,20 @@ function asm (view, start, items) {
  * Layout follows the datasheet's fixed offsets exactly, because the SDK
  * reads them by address and nothing else identifies them:
  *
- *   0x00  initial SP        0x10  'M','u', version, reserved
- *   0x04  reset vector      0x14  u16 → function table
- *   0x08  NMI               0x16  u16 → data table
- *   0x0c  HardFault         0x18  u16 → table lookup routine
+ *   0x00  initial SP        0x10  'M'  ┐
+ *   0x04  reset vector      0x11  'u'  ├ magic, all THREE bytes
+ *   0x08  NMI               0x12  0x01 ┘
+ *   0x0c  HardFault         0x13  bootrom version  <-- read by the SDK
+ *                           0x14  u16 → function table
+ *                           0x16  u16 → data table
+ *                           0x18  u16 → table lookup routine
+ *
+ * 0x12 IS NOT THE VERSION AND 0x13 IS NOT RESERVED. This table said the
+ * opposite until 2026-09-10, and it is the artefact a reader consults instead
+ * of reading the code -- so the wrong version offset survived here even after
+ * the emitter and its test were corrected. pico-sdk reads the version with
+ * *(uint8_t *)0x13; leaving it zero cost ROADMAP R3 (`2.5+1.0` evaluating to
+ * 0). The measurement and both failing legs are at the header emitter below.
  *
  * @returns {Uint8Array} 16 KB, ready to be written at address 0
  */
