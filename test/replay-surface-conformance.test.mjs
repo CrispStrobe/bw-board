@@ -14,7 +14,7 @@
  * row REDDENS — which is the only part of this that keeps working when someone
  * who has not read this comment adds a target.
  *
- * SIX CLAIMS, FOUR EXERCISABLE. FOUR TARGETS, THREE ALWAYS DRIVABLE. Both
+ * SIX CLAIMS, FIVE EXERCISABLE. FOUR TARGETS, THREE ALWAYS DRIVABLE. Both
  * numbers are stated here rather than left to be inferred from a green run,
  * because a conformance test that passes LOOKS like conformance and that is
  * exactly the failure this file would otherwise be:
@@ -29,7 +29,7 @@
  *                           declares one this file reddens and someone has to
  *                           write the positive case.
  *   C5  a SAMPLING BOARD is never silent                        exercisable
- *   C6  a target that can PARK says so                          NO SUBJECT
+ *   C6  a target that can PARK says so                         exercisable
  *                           A core in HALT/WAI/SLEEP advances the clock and
  *                           retires nothing, and a consumer then sees the tick
  *                           counter jump with nothing explaining it —
@@ -37,13 +37,15 @@
  *                           live: a halted z80 passes 200,000 cycles in 50
  *                           steps, a 6502 in WAI passes 50,000, and before
  *                           bw-board `c8d7101` neither published anything.
- *                           `instruction-debug-events.js` now brackets
- *                           `machine.step` and emits an `idle/elapse` fact —
- *                           but NO TARGET IN THIS TREE INSTALLS THAT MODULE, so
- *                           the claim has no subject here. Asserted as an
- *                           absence, like C4, so the day a target does install
- *                           it, this file reddens and someone has to write the
- *                           positive case rather than inheriting a green run.
+ *                           `instruction-debug-events.js` brackets
+ *                           `machine.step` and emits an `idle/elapse` fact, and
+ *                           AS OF THE AVR WIRING IT HAS A SUBJECT HERE:
+ *                           `avr8js-adapter.js` installs it, so an ordinary
+ *                           `advanceNs` run publishes, and a core parked at
+ *                           SLEEP publishes `idle/elapse` with cause
+ *                           `sleeping`. The absence assertion this replaces did
+ *                           its job — it reddened on the commit that added the
+ *                           installer, and named the positive case to write.
  *                           A live board changes input nets outside the target
  *                           and nothing records them, so a session with one
  *                           cannot be replayed. Every target must SAY so —
@@ -371,20 +373,69 @@ describe('C4 has NO upstream subject, and that is asserted rather than assumed',
   });
 });
 
-describe('C6 has NO subject in this tree, and that is asserted rather than assumed', () => {
-  // A conformance check added later, against callers that already exist, is a
-  // check nobody has ever seen fail. So this one is written now, while its
-  // subject is absent, in the form that will notice a subject arriving.
-  it('no target here installs instruction-debug-events, so the claim is unexercised', () => {
-    const installers = readdirSync(SRC)
-      .filter(name => name.endsWith('.js') && name !== 'instruction-debug-events.js')
-      .filter(name => readFileSync(join(SRC, name), 'utf8').includes('installInstructionDebugEvents'));
+describe('C6: a target that can PARK says so', () => {
+  // WRITTEN AS AN ABSENCE FIRST, AND IT FIRED. Until the AVR wiring, no target
+  // installed the module, so this described the empty set and said what to
+  // write the day one did. It reddened on exactly that commit, naming
+  // avr8js-adapter.js and the case below. Recorded because the alternative —
+  // adding a conformance check afterwards, against a caller that already exists
+  // — is a check nobody has ever seen fail.
+  const installers = () => readdirSync(SRC)
+    .filter(name => name.endsWith('.js') && name !== 'instruction-debug-events.js')
+    .filter(name => readFileSync(join(SRC, name), 'utf8').includes('installInstructionDebugEvents'));
 
-    assert.deepEqual(installers, [],
-      `${installers.join(', ')} now installs instruction-debug-events — C6 needs a positive case: `
-      + 'drive that target into HALT/WAI/SLEEP and assert an idle/elapse fact appears. '
-      + 'Five claims are exercised in this file and six are declared; do not let a green run '
-      + 'be read as six.');
+  it('the installers are exactly the ones with a positive case below', () => {
+    // Still an enumeration, still derived from the source: a SECOND installer
+    // reddens this and has to bring its own parking case, rather than
+    // inheriting the AVR's green run.
+    assert.deepEqual(installers(), ['avr8js-adapter.js'],
+      `installers changed: ${installers().join(', ')}. C6 needs a positive case per target — `
+      + 'drive it into HALT/WAI/SLEEP and assert an idle/elapse fact appears.');
+  });
+
+  it('avr8js: a core parked at SLEEP publishes idle/elapse during an ORDINARY run', async () => {
+    // NOT under a debugger. This is `advanceNs` — what a board does when it is
+    // simply running — which is the whole point of the wiring: before it, an
+    // AVR advanced a full simulated millisecond and published nothing at all,
+    // while the z80 and 6502 published throughout.
+    const { createAvr8jsAdapter } = await import('../src/avr8js-adapter.js');
+    // Hand-assembled so this does not need avr-gcc:
+    //   ldi r24,1 / out SMCR,r24 (SE) / sleep / rjmp .-2
+    const adapter = createAvr8jsAdapter({ chip: 'atmega328p',
+      program: new Uint16Array([0xe081, 0xbf83, 0x9588, 0xcfff]) });
+
+    const seen = [];
+    adapter.onDebugEvent(event => seen.push(event));
+    adapter.advanceNs(1_000_000);
+
+    const idle = seen.filter(e => e.kind === 'idle' && e.phase === 'elapse');
+    assert.equal(idle.length, 1, `parked AVR published ${idle.length} idle facts`);
+    assert.equal(idle[0].cause, 'sleeping');
+    assert.ok(idle[0].changes.cycles > 15_000,
+      `the idle fact must account for the slice: ${idle[0].changes.cycles} cycles`);
+    // And the counter it explains really did move that far.
+    assert.equal(idle[0].time.ticks, BigInt(adapter.cpu.cycles));
+
+    // Non-vacuous: the same fixture retires instructions too, so a target that
+    // published NOTHING would not pass by having no idle to get wrong.
+    assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+      'no retires at all — the fixture never ran');
+  });
+
+  it('and a running AVR does not claim to be parked', async () => {
+    // The other direction, or `cause: 'sleeping'` on every slice would pass the
+    // test above just as well.
+    const { createAvr8jsAdapter } = await import('../src/avr8js-adapter.js');
+    const adapter = createAvr8jsAdapter({ chip: 'atmega328p',
+      program: new Uint16Array([0xcfff]) });        // rjmp .-2, never sleeps
+
+    const seen = [];
+    adapter.onDebugEvent(event => seen.push(event));
+    adapter.advanceNs(100_000);
+
+    assert.equal(seen.filter(e => e.kind === 'idle').length, 0);
+    assert.ok(seen.filter(e => e.kind === 'instruction').length > 100,
+      'the busy fixture must actually spin');
   });
 
   it('and the module it would be about really can produce that fact', async () => {

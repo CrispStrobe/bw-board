@@ -17,6 +17,7 @@ import {
   AVRTWI, AVRSPI,
 } from 'avr8js';
 import { CHIPS, ATMEGA328P } from './avr-chips.js';
+import { installInstructionDebugEvents } from './instruction-debug-events.js';
 import { createTWIBridge } from './twi-bridge.js';
 import { createSPIBridge } from './spi-bridge.js';
 import { createUSIBridge } from './usi-bridge.js';
@@ -70,6 +71,39 @@ export function createAvr8jsAdapter(opts = {}) {
       try { listener({...fact}); } catch {}
     }
   };
+
+  /**
+   * THE INSTRUMENT, AND WHY IT LIVES ON THE ADAPTER RATHER THAN THE DEBUGGER.
+   *
+   * Every other core in this tree publishes debug facts during an ORDINARY run:
+   * the z80 and 6502 wrap `cpu.step`, so anything that advances the machine is
+   * observed. The AVR did not. `avr8js-debug.js` publishes from its own
+   * `execute()` loop, which only runs when a debugger is DRIVING — so an AVR
+   * board running normally was silent, and a consumer attaching a listener saw
+   * nothing until it took control. Measured before this change: an attiny85
+   * advanced a full simulated millisecond and published zero facts.
+   *
+   * The ordinary run is `advanceNs`, and `advanceNs` is the adapter's. So the
+   * instrument is the adapter's too.
+   *
+   * FOUR PARAMETERS, BECAUSE THIS CORE SPELLS FOUR THINGS DIFFERENTLY. It has
+   * `readData`/`writeData` rather than `read`/`write`; its `pc` counts WORDS
+   * while every AVR tool speaks bytes; its cycle counter is on the CPU, not on
+   * a machine; and it has no `cpu.step` at all — `avrInstruction(cpu)` is a
+   * free function, so the instruction bracket is INJECTED (`aroundInstruction`)
+   * instead of wrapped. None of that is a different mechanism, which is why it
+   * became parameters rather than a second implementation.
+   */
+  const debugEvents = installInstructionDebugEvents({
+    cpu,
+    machine: {clockHz},          // no `step`: the bracket below is the outer one
+    cpuId: 'main',
+    timeDomain: 'avr-cycles',
+    accessors: {read: 'readData', write: 'writeData'},
+    pcOf: c => c.pc * 2,         // BYTES, like avr-objdump and the debug target
+    clock: () => cpu.cycles,
+    idleCause: () => 'sleeping'  // the only way this core parks
+  });
 
   // ── Ports ──
   const ioPorts = {};
@@ -220,6 +254,20 @@ export function createAvr8jsAdapter(opts = {}) {
      *  No-op on chips without USART (ATtiny85). */
     onSerial(cb) { serialListener = cb; },
 
+    /**
+     * Observe instruction retires, data accesses and idle during ORDINARY runs.
+     *
+     * Many listeners, each returning its own unsubscribe — the same contract as
+     * `onDeviceAccess` above and as the shared module's other users, and
+     * deliberately NOT the single-listener-or-throw contract that
+     * `avr8js-debug.js`'s own `onDebugEvent` has. The two coexist: that one
+     * reports while a debugger drives, this one while the board just runs.
+     */
+    onDebugEvent(cb) { return debugEvents.onDebugEvent(cb); },
+    debugTime() { return debugEvents.debugTime(); },
+    openTimeEpoch() { return debugEvents.openTimeEpoch(); },
+    debugEvents,
+
     /** Observe completed hardware-peripheral accesses without performing one. */
     onDeviceAccess(cb) {
       if (typeof cb !== 'function') throw new TypeError('device access listener must be a function');
@@ -257,6 +305,16 @@ export function createAvr8jsAdapter(opts = {}) {
       // cpu.pc negative and the core executes garbage. Masking after
       // each instruction is what the silicon's program counter does.
       const pcMask = cpu.progMem.length - 1;
+      // One instruction, bracketed. With no listener attached `aroundInstruction`
+      // is the bare call, so an unobserved run pays one function call per
+      // instruction and nothing else.
+      const runOne = () => {
+        const before = cpu.cycles;
+        avrInstruction(cpu);
+        cpu.pc &= pcMask;
+        cpu.tick();
+        return cpu.cycles - before;
+      };
       // SLEEP fast-forward: avr8js implements the SLEEP opcode as a NOP,
       // so a firmware that idles correctly on silicon would still grind
       // this interpreter at full clock (the pico lane measured that spin
@@ -278,9 +336,7 @@ export function createAvr8jsAdapter(opts = {}) {
           if (cpu.interruptsEnabled && cpu.nextInterrupt >= 0) {
             // Wake: sleep completes, the ISR returns to the instruction
             // after it — consume the opcode before dispatching.
-            avrInstruction(cpu);
-            cpu.pc &= pcMask;
-            cpu.tick();
+            debugEvents.aroundInstruction(runOne);
             continue;
           }
           const evt = cpu.nextClockEvent;
@@ -290,7 +346,16 @@ export function createAvr8jsAdapter(opts = {}) {
             // must happen on the wake path above, with the post-sleep
             // return address). The loop re-checks: if the callback
             // pended an enabled interrupt, the next iteration wakes.
-            if (evt.cycles > cpu.cycles) { stats.sleptCycles += evt.cycles - cpu.cycles; cpu.cycles = evt.cycles; }
+            if (evt.cycles > cpu.cycles) {
+              const jumped = evt.cycles - cpu.cycles;
+              stats.sleptCycles += jumped;
+              cpu.cycles = evt.cycles;
+              // Time advanced to a SCHEDULED event and that event then fired —
+              // its own fact kind, not an elapse. A consumer asking "did the
+              // core sleep through the slice or did the clock jump to a timer?"
+              // is asking a real question, and one shape cannot answer it.
+              debugEvents.publishClockJump({cycles: jumped, event: {kind: 'clock-event'}});
+            }
             evt.callback();
             cpu.nextClockEvent = evt.next;
             continue;
@@ -298,14 +363,20 @@ export function createAvr8jsAdapter(opts = {}) {
           // Nothing due before the slice ends: sleep through the rest of
           // it, still parked — the next slice's syncInputs may pend a
           // pin-change wake, or a later event will.
-          stats.sleptCycles += targetCycles - cpu.cycles;
-          cpu.cycles = targetCycles;
+          {
+            const slept = targetCycles - cpu.cycles;
+            stats.sleptCycles += slept;
+            cpu.cycles = targetCycles;
+            // The slice ended with the core parked at SLEEP. Nothing retired
+            // and the counter moved: without this the consumer sees the tick
+            // count jump with nothing to explain it — the exact hole the z80's
+            // HALT had before the module grew the vocabulary.
+            debugEvents.publishIdleElapse({cycles: slept});
+          }
           break;
         }
         stats.instructions++;
-        avrInstruction(cpu);
-        cpu.pc &= pcMask;
-        cpu.tick();
+        debugEvents.aroundInstruction(runOne);
       }
       if (board && board.advanceTo) {
         board.advanceTo(this.timeNs());
