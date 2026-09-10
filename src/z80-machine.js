@@ -25,6 +25,10 @@ import { ZXTape } from './zx-tape.js';
 import { AY38912 } from './ay-3-8912.js';
 import { Latch374 } from './latch374.js';
 import { Buffer244 } from './buffer244.js';
+import {
+    MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport, cloneCheckpointValue,
+    checkpointTopology, statePair, validateCheckpointEnvelope
+} from './machine-checkpoint.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -341,6 +345,71 @@ export class Z80Machine {
         return true;
     }
 
+    checkpointSupport() {
+        const reasons = [];
+        if (this.pcTraps.size) reasons.push('host PC traps may own state outside the machine');
+        if (this._unloggedBoardInputs) reasons.push('live board buffer-input sampling is not logged');
+        return checkpointSupport(this.chips, this.devices, reasons);
+    }
+
+    checkpointTopology() {
+        return checkpointTopology('z80', this.config, this.chips, this.devices, {
+            tape: !!this.tape, zx128: this._zx128
+        });
+    }
+
+    captureCheckpoint() {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        return cloneCheckpointValue({
+            schema: MACHINE_CHECKPOINT_SCHEMA,
+            topology: this.checkpointTopology(),
+            time: {ticks: this.cycles, domain: 'z80-tstates', hz: this.clockHz},
+            state: this.saveState()
+        });
+    }
+
+    restoreCheckpoint(checkpoint) {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
+        if (refusal) return refusal;
+        const state = checkpoint.state;
+        const expected = Object.keys(this.chips).sort();
+        const actual = Object.keys(state.chips || {}).sort();
+        const expectedDevices = Object.keys(this.devices || {}).sort();
+        const actualDevices = Object.keys(state.devices || {}).sort();
+        const ulaState = this.ula && state.chips?.ula;
+        if (state.v !== 1 || !(state.mem instanceof Uint8Array) || state.mem.length !== 65536 ||
+            !state.cpu || Z80Machine.CPU_STATE.some(key => !Object.hasOwn(state.cpu, key)) ||
+            JSON.stringify(expected) !== JSON.stringify(actual) ||
+            JSON.stringify(expectedDevices) !== JSON.stringify(actualDevices) ||
+            (!!state.zx128 !== this._zx128) ||
+            (!!state.tape !== !!this.tape) ||
+            (state.tape && (!Number.isSafeInteger(state.tape.pos) || !Array.isArray(state.tape.blocks) ||
+                state.tape.blocks.some(block => !Number.isSafeInteger(block.flag) ||
+                    !(block.data instanceof Uint8Array)))) ||
+            (this.ula && (!(ulaState?.rows instanceof Uint8Array) || ulaState.rows.length !== 8 ||
+                !Array.isArray(ulaState.speakerEdges) || !Array.isArray(ulaState.earEdges) ||
+                !Number.isSafeInteger(ulaState.earIdx) || ulaState.earIdx < 0 ||
+                ulaState.earIdx > ulaState.earEdges.length)) ||
+            (this._zx128 && (!Array.isArray(state.zx128.roms) || state.zx128.roms.length !== 2 ||
+                state.zx128.roms.some(rom => !(rom instanceof Uint8Array) || rom.length !== 16384) ||
+                !Array.isArray(state.zx128.pages) || state.zx128.pages.length !== 6 ||
+                state.zx128.pages.some(page => !(page instanceof Uint8Array) || page.length !== 16384) ||
+                !state.zx128.bank || !['page', 'rom', 'shadow', 'locked'].every(key =>
+                    Number.isSafeInteger(state.zx128.bank[key]))))) {
+            return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT'};
+        }
+        if (!checkpoint.time || checkpoint.time.ticks !== state.cycles ||
+            checkpoint.time.hz !== this.clockHz ||
+            !/^z80-tstates(?:-reset-\d+)?$/.test(checkpoint.time.domain)) {
+            return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
+        }
+        this.loadState(cloneCheckpointValue(state));
+        return undefined;
+    }
+
     /**
      * Snapshot the whole machine — CPU, memory, ULA, tape position —
      * as a plain JSON-able object (mem is a Uint8Array; the caller
@@ -364,8 +433,13 @@ export class Z80Machine {
             // because the loop below has no `else`: a chip it does not
             // recognise is skipped without comment. That is how the 6551's
             // serial state was absent from every 6502 snapshot.
-            if (typeof c.getState === 'function') chips[name] = c.getState();
-            else if (typeof c.saveState === 'function') chips[name] = c.saveState();
+            const pair = statePair(c);
+            if (pair) chips[name] = c[pair[0]]();
+        }
+        const devices = {};
+        for (const [name, device] of Object.entries(this.devices || {})) {
+            const pair = statePair(device);
+            devices[name] = device[pair[0]]();
         }
         return {
             v: 1,
@@ -373,11 +447,18 @@ export class Z80Machine {
             cycles: this.cycles,
             mem: this.mem.slice(),
             tapePos: this.tape ? this.tape.pos : null,
+            tape: this.tape ? {
+                pos: this.tape.pos,
+                blocks: this.tape.blocks.map(block => ({flag: block.flag, data: block.data.slice()}))
+            } : null,
+            kempston: this._kempston,
             chips,
+            devices,
             // 128K: the six real pages (5 and 2 live in mem) + banking.
             // ROMs are load-time configuration, like the 48K ROM.
             zx128: this._zx128 ? {
                 pages: [0, 1, 3, 4, 6, 7].map((i) => this.pages[i].slice()),
+                roms: this.roms.map(rom => rom.slice()),
                 bank: { ...this._bank },
             } : null,
         };
@@ -390,18 +471,26 @@ export class Z80Machine {
         for (const k of Z80Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
         this.cycles = s.cycles;
         this.mem.set(s.mem);
-        if (s.tapePos != null) {
+        this._kempston = s.kempston ?? this._kempston;
+        if (s.tape) {
             if (!this.tape) throw new Error('snapshot has a tape position but no tape is inserted');
-            this.tape.pos = s.tapePos;
+            this.tape.pos = s.tape.pos;
+            this.tape.blocks = s.tape.blocks.map(block => ({flag: block.flag, data: block.data.slice()}));
         }
         for (const [name, cs] of Object.entries(s.chips ?? {})) {
             const c = this.chips[name];
             if (!c) continue;
-            if (typeof c.setState === 'function') c.setState(cs);
-            else if (typeof c.loadState === 'function') c.loadState(cs);
+            const pair = statePair(c);
+            c[pair[1]](cs);
+        }
+        for (const [name, ds] of Object.entries(s.devices ?? {})) {
+            const device = this.devices?.[name];
+            const pair = statePair(device);
+            device[pair[1]](ds);
         }
         if (s.zx128 && this._zx128) {
             [0, 1, 3, 4, 6, 7].forEach((page, i) => this.pages[page].set(s.zx128.pages[i]));
+            this.roms.forEach((rom, i) => rom.set(s.zx128.roms[i]));
             this._bank.locked = 0;                        // let _setBank apply
             this._setBank(
                 s.zx128.bank.page

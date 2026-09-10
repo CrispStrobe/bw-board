@@ -29,6 +29,30 @@ import { M6532 } from './m6532.js';
 import { AY38912 } from './ay-3-8912.js';
 import { Latch374 } from './latch374.js';
 import { SDCardSPI } from './sdcard-spi.js';
+import {
+    MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport, cloneCheckpointValue,
+    checkpointTopology, statePair, validateCheckpointEnvelope
+} from './machine-checkpoint.js';
+
+// State codecs are part of the checkpoint schema. Comparing their structural
+// shape against a fresh sample catches a missing nested latch/counter before
+// any component is mutated. Array lengths may legitimately vary (UART RX
+// queues); typed memory blocks may not.
+const sameCheckpointShape = (actual, expected) => {
+    if (ArrayBuffer.isView(expected)) {
+        return ArrayBuffer.isView(actual) && actual.constructor === expected.constructor &&
+            actual.length === expected.length;
+    }
+    if (Array.isArray(expected)) return Array.isArray(actual);
+    if (expected && typeof expected === 'object') {
+        if (!actual || typeof actual !== 'object' || Array.isArray(actual)) return false;
+        const a = Object.keys(actual).sort();
+        const e = Object.keys(expected).sort();
+        return a.length === e.length && e.every((key, index) => key === a[index] &&
+            sameCheckpointShape(actual[key], expected[key]));
+    }
+    return typeof actual === typeof expected;
+};
 
 /**
  * @typedef {object} MachineConfig
@@ -814,7 +838,64 @@ export class M6502Machine {
     }
 
     /** CPU state keys to snapshot (same pattern as Z80Machine.CPU_STATE). */
-    static CPU_STATE = ['pc', 'a', 'x', 'y', 's', 'p'];
+    /** CPU state keys to snapshot (same pattern as Z80Machine.CPU_STATE). */
+    static CPU_STATE = [
+        'pc', 'a', 'x', 'y', 's', 'p', 'stopped', 'waiting', 'cycles', '_crossed', '_extra'
+    ];
+
+    checkpointSupport() {
+        const reasons = [];
+        if (this._bb) reasons.push('bit-banged serial queues are not checkpointed');
+        if (this._audioBus) reasons.push('rendered audio queues are not checkpointed');
+        if (this._unloggedBoardInputs) reasons.push('live board input-net sampling is not logged');
+        return checkpointSupport(this.chips, this.devices, reasons);
+    }
+
+    checkpointTopology() {
+        return checkpointTopology('m6502', this.config, this.chips, this.devices);
+    }
+
+    captureCheckpoint() {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        return cloneCheckpointValue({
+            schema: MACHINE_CHECKPOINT_SCHEMA,
+            topology: this.checkpointTopology(),
+            time: {ticks: this.cycles, domain: 'm6502-cycles', hz: this.clockHz},
+            state: this.saveState()
+        });
+    }
+
+    restoreCheckpoint(checkpoint) {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
+        if (refusal) return refusal;
+        const state = checkpoint.state;
+        const expected = Object.keys(this.chips).sort();
+        const actual = Object.keys(state.chips || {}).sort();
+        const expectedDevices = Object.keys(this.devices || {}).sort();
+        const actualDevices = Object.keys(state.devices || {}).sort();
+        const currentShape = this.saveState();
+        if (state.v !== 1 || !(state.mem instanceof Uint8Array) || state.mem.length !== 65536 ||
+            !state.cpu || M6502Machine.CPU_STATE.some(key => !Object.hasOwn(state.cpu, key)) ||
+            !Number.isSafeInteger(state.cycles) || state.cycles < 0 ||
+            !state.pinLevels || typeof state.pinLevels !== 'object' || Array.isArray(state.pinLevels) ||
+            JSON.stringify(expected) !== JSON.stringify(actual) ||
+            JSON.stringify(expectedDevices) !== JSON.stringify(actualDevices) ||
+            !sameCheckpointShape(state.cpu, currentShape.cpu) ||
+            !sameCheckpointShape(state.chips, currentShape.chips) ||
+            !sameCheckpointShape(state.devices, currentShape.devices)) {
+            return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT'};
+        }
+        if (!checkpoint.time || checkpoint.time.ticks !== state.cycles ||
+            checkpoint.time.hz !== this.clockHz ||
+            !/^m6502-cycles(?:-reset-\d+)?$/.test(checkpoint.time.domain)) {
+            return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
+        }
+        this.loadState(cloneCheckpointValue(state));
+        return undefined;
+    }
 
     /**
      * Snapshot the whole machine — CPU, memory, chip state — as a plain
@@ -824,7 +905,9 @@ export class M6502Machine {
      */
     saveState() {
         const cpu = {};
-        for (const k of M6502Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
+        for (const k of M6502Machine.CPU_STATE) {
+            cpu[k] = ['stopped', 'waiting', '_crossed'].includes(k) ? !!this.cpu[k] : (this.cpu[k] ?? 0);
+        }
         const chips = {};
         for (const [name, c] of Object.entries(this.chips)) {
             // BOTH CONVENTIONS, as I8086Machine does. Chips in this tree
@@ -835,8 +918,13 @@ export class M6502Machine {
             // because the loop below has no `else`: a chip it does not
             // recognise is skipped without comment. That is how the 6551's
             // serial state was absent from every 6502 snapshot.
-            if (typeof c.getState === 'function') chips[name] = c.getState();
-            else if (typeof c.saveState === 'function') chips[name] = c.saveState();
+            const pair = statePair(c);
+            if (pair) chips[name] = c[pair[0]]();
+        }
+        const devices = {};
+        for (const [name, device] of Object.entries(this.devices || {})) {
+            const pair = statePair(device);
+            devices[name] = device[pair[0]]();
         }
         return {
             v: 1,
@@ -844,6 +932,8 @@ export class M6502Machine {
             cycles: this.cycles,
             mem: this.mem.slice(),
             chips,
+            devices,
+            pinLevels: {...this._pinLevels},
         };
     }
 
@@ -854,11 +944,17 @@ export class M6502Machine {
         for (const k of M6502Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
         this.cycles = s.cycles;
         this.mem.set(s.mem);
+        this._pinLevels = {...(s.pinLevels || {})};
         for (const [name, cs] of Object.entries(s.chips ?? {})) {
             const c = this.chips[name];
             if (!c) continue;
-            if (typeof c.setState === 'function') c.setState(cs);
-            else if (typeof c.loadState === 'function') c.loadState(cs);
+            const pair = statePair(c);
+            c[pair[1]](cs);
+        }
+        for (const [name, ds] of Object.entries(s.devices ?? {})) {
+            const device = this.devices?.[name];
+            const pair = statePair(device);
+            device[pair[1]](ds);
         }
     }
 

@@ -385,27 +385,28 @@ test('machine: a snapshot carries its variant and refuses a mismatched restore',
     const a = new I8086Machine(machineCfg('80186'));
     a.cpu.ax = 0x1234;
     const snap = a.saveState();
-    assert.equal(snap.variant, '80186', 'the variant is IN the snapshot');
+    // The complete v2 checkpoint carries the variant inside its topology, where
+    // it belongs: 60h is PUSHA on a 186 and JO on an 8086, so the variant is a
+    // decode property of the snapshotted machine, not a free-standing key.
+    assert.equal(JSON.parse(snap.topology).variant, '80186', 'the variant is IN the snapshot topology');
 
     // Onto an identical machine: fine.
     const b = new I8086Machine(machineCfg('80186'));
     b.loadState(snap);
     assert.equal(b.cpu.ax, 0x1234);
 
-    // Onto the other chip: REFUSED BY NAME. Loading it silently would give a
-    // machine that runs the restored program correctly right up to the first
-    // 186 opcode and then quietly takes a conditional jump instead.
+    // Onto the other chip: REFUSED. Loading it silently would give a machine
+    // that runs the restored program correctly right up to the first 186 opcode
+    // and then quietly takes a conditional jump instead. The variant is part of
+    // the topology, so a cross-variant restore fails the topology match.
     const c = new I8086Machine(machineCfg('8086'));
-    assert.throws(() => c.loadState(snap), /snapshot is from a 80186 machine/);
+    assert.throws(() => c.loadState(snap), /topology does not match|from a 80186 machine/);
 
-    // A snapshot written before the variant existed has no key at all. Those
-    // were all 8086s, so an absent key reads as '8086' -- old snapshots stay
-    // loadable, and one of them still cannot be put on a 186.
-    const legacy = { ...a.saveState() };
-    delete legacy.variant;
+    // The complete v2 checkpoint replaced the older best-effort v1 snapshot,
+    // which omitted live component and interrupt state and is intentionally not
+    // accepted as a deterministic continuation point.
     const d = new I8086Machine(machineCfg('8086'));
-    d.loadState(legacy);
-    assert.equal(d.cpu.ax, 0x1234, 'a pre-variant snapshot still loads on an 8086');
-    const e = new I8086Machine(machineCfg('80186'));
-    assert.throws(() => e.loadState(legacy), /snapshot is from a 8086 machine/);
+    assert.throws(
+        () => d.loadState({ v: 1, variant: '8086', cpu: {}, cycles: 0, mem: new Uint8Array(0), chips: {} }),
+        /version 2 required/);
 });
