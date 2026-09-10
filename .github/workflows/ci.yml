@@ -119,7 +119,20 @@ jobs:
       # missing, so the build fails at the install rather than passing at the
       # test.
       - name: The oracle is actually present
-        run: node scripts/oracle-census.mjs --require nasm
+        # emu8051 joins nasm here for the same reason, and it is the half that
+        # was missing: the step above checks the emulator out, and until now
+        # nothing asserted it ARRIVED. Nine suites skip their emu8051 cases when
+        # it is unreachable -- and until this branch they skipped them as PASSES,
+        # via an early `return` the runner never hears about. So a build could go
+        # green on a checkout that had silently failed, with 41 cases counted as
+        # passing that had not run.
+        #
+        # This require was only safe to add once the census could SEE the CI
+        # layout: its paths listed two developer locations and not
+        # `<repo>/emu8051-stc`, where Actions is obliged to put it, so adding
+        # this line first would have reddened every build with the emulator
+        # sitting in the workspace.
+        run: node scripts/oracle-census.mjs --require nasm,emu8051
 
       - name: Test
         # The 65x02 and z80 vector-suite tests skip cleanly when their suites

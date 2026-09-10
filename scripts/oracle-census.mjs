@@ -65,8 +65,14 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const HOME = homedir();
+// `resolve` is already an export of this module, so the path one is imported
+// under a different name rather than shadowed -- the collision made the whole
+// file fail to parse, with an error pointing at the export.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * Every external input that gates a check. `detect` is the key a reader can
@@ -147,7 +153,16 @@ export const INPUTS = [
         // or checked out inside it (the CI layout). Listing only one of them
         // made this row claim a variable none of its gates read — caught by
         // test/oracle-census.test.mjs, which is what that test is for.
-        paths: [join(HOME, 'code', 'emu8051-stc'), '/mnt/volume1/code/emu8051-stc'],
+        // THE CI LAYOUT IS FIRST AND IT WAS MISSING. This row's own comment says
+        // a gate looks for the build "checked out inside it (the CI layout)"
+        // and `ci:` below promises the `test` job provides it -- but the paths
+        // listed only two DEVELOPER locations, so on a runner this row reported
+        // ABSENT while the emulator sat in the workspace. Adding
+        // `--require emu8051` to ci.yml against that list would have reddened
+        // every build. Actions refuses a checkout path outside the workspace,
+        // so `<repo>/emu8051-stc` is the only place it can be.
+        paths: [join(ROOT, 'emu8051-stc', 'build'), join(HOME, 'code', 'emu8051-stc'),
+            '/mnt/volume1/code/emu8051-stc'],
         gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
             'test/emu8051-debug.test.js'],
         obtain: 'git clone https://github.com/CrispStrobe/emu8051-stc and build its WASM',
