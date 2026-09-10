@@ -36,6 +36,24 @@
  * flash block below, thirteen are answered and zero calls land at address
  * 0. The fourteenth is `'SF'`.
  *
+ * A SECOND PROBE ARTEFACT, IN THE SAME ROUTINE, 2026-09-10. A probe watching
+ * `rom_table_lookup`'s entry address reported each call with a DIFFERENT table
+ * pointer, ascending by four — which reads like a caller walking a structure
+ * and is nothing of the kind. The old loop branched back to the routine's
+ * FIRST instruction, so every iteration re-entered the watched address with r0
+ * already advanced, and the probe recorded the scan rather than the call.
+ *
+ * Measured both ways rather than reasoned about, by restoring the old loop:
+ *
+ *   entry == loop start   table=68c, 690, 694, 698, 684, 67c, 688, 680 ...
+ *   loop one in           table=680 every time, which is the real argument
+ *
+ * The bound added below moved the loop one instruction past the entry, so the
+ * artefact is gone by construction rather than by care. The CODES were always
+ * real; the addresses beside them were the instrument. Kept because this file
+ * has now produced two probe artefacts in the same routine, and the next
+ * person to point something at it should expect a third.
+ *
  * THE PANIC THIS HEADER USED TO DESCRIBE WAS A PROBE ARTEFACT, and the
  * detail is kept because it cost a session and would cost another. The
  * earlier probe entered the image at its own vector table (0x10000100)
