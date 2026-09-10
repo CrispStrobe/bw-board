@@ -47,8 +47,34 @@
  *
  * @module
  */
+/**
+ * FOUR PARAMETERS, EVERY DEFAULT EXACTLY TODAY'S BEHAVIOUR. They exist because
+ * one core in this tree spells all four differently, and the spelling — not the
+ * mechanism — was the whole of the incompatibility. Measured on avr8js:
+ *
+ *   accessors    it has `readData`/`writeData`; `read`/`write` are undefined
+ *   runInstruction  it has no `cpu.step` at all — `avrInstruction(cpu)` is a
+ *                free function the adapter calls, so the bracket is injected
+ *                rather than wrapped
+ *   pcOf         its `pc` counts WORDS (`progMem` is a Uint16Array indexed by
+ *                it); the existing AVR target already publishes `pc * 2`
+ *   clock        its cycle count lives on the CPU; the adapter has no `cycles`
+ *
+ * None of that is something avr8js cannot express, which is why the answer to
+ * "what is missing" was nothing and no patch went to a third party.
+ *
+ * @param {object} opts
+ * @param {{read?: string, write?: string, inPort?: string, outPort?: string}} [opts.accessors]
+ *   Property names on `cpu` for the four wrappable accessors.
+ * @param {(cpu: object) => number} [opts.pcOf] the program counter, in the units facts carry.
+ * @param {() => number} [opts.clock] the tick count facts are stamped with.
+ */
 export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, port = false,
-  captureRegisters, captureInstruction, idleCause = () => 'parked'}) {
+  captureRegisters, captureInstruction, idleCause = () => 'parked',
+  accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff,
+  clock = () => machine.cycles}) {
+  const NAME = {read: 'read', write: 'write', inPort: 'inPort', outPort: 'outPort',
+    ...accessorNames};
   const listeners = new Set();
   let accesses = null;
   let timeEpoch = 0;
@@ -128,12 +154,18 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
 
   const installHooks = () => {
     if (hooks) return;
-    hooks = {read: cpu.read, write: cpu.write, inPort: cpu.inPort, outPort: cpu.outPort,
-        step: cpu.step, ours: {}};
+    hooks = {read: cpu[NAME.read], write: cpu[NAME.write], inPort: cpu[NAME.inPort],
+        outPort: cpu[NAME.outPort], step: cpu.step, ours: {}};
 
-    originalStep = hooks.step.bind(cpu);
-    hooks.ours.step = stepWrapper;
-    cpu.step = stepWrapper;
+    // A core need not HAVE a step to wrap. avr8js's `avrInstruction(cpu)` is a
+    // free function, so there is nothing on the cpu to replace; that adapter
+    // reaches the same bracket through `aroundInstruction`. Wrapping is the
+    // convenience for cores that do have one, not the mechanism.
+    if (typeof hooks.step === 'function') {
+      originalStep = hooks.step.bind(cpu);
+      hooks.ours.step = stepWrapper;
+      cpu.step = stepWrapper;
+    }
 
     // THE OUTER BRACKET: machine.step, above the short-circuit.
     //
@@ -148,11 +180,11 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     if (typeof machine?.step === 'function') {
       hooks.machineStep = machine.step;
       const outer = () => {
-        const before = machine.cycles;
+        const before = clock();
         retired = false;
         const n = hooks.machineStep.call(machine);
         if (!retired) {
-          const advanced = machine.cycles - before;
+          const advanced = clock() - before;
           // STP on the 6502 returns 0 and advances nothing: time genuinely
           // stopped, and an elapse fact there would claim otherwise.
           //
@@ -161,7 +193,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
           // this one away is therefore INERT, and it is recorded as inert
           // rather than chased — it reads at the call site, which is worth a
           // line that cannot fail on its own.
-          if (advanced > 0) emitIdle(advanced, machine.cycles);
+          if (advanced > 0) emitIdle(advanced, clock());
         }
         return n;
       };
@@ -169,40 +201,45 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
       machine.step = outer;
     }
 
+    // `.call(cpu, …)` rather than a bare call: the saved accessor may be a
+    // PROTOTYPE METHOD that uses `this`. The z80 and 6502 cores here bind or
+    // close over their state so a bare call works, and avr8js's `readData`
+    // reads `this.data` — it throws. Restoring the receiver is invisible to a
+    // function that ignores it, which is why the captured streams do not move.
     hooks.ours.read = address => {
-      const value = hooks.read(address);
+      const value = hooks.read.call(cpu, address);
       if (accesses) accesses.push({kind: 'memory', memory: {
         space: 'mem', address: address & 0xffff, width: 1, direction: 'read', value: value & 0xff
       }});
       return value;
     };
-    cpu.read = hooks.ours.read;
+    cpu[NAME.read] = hooks.ours.read;
 
     hooks.ours.write = (address, value) => {
       if (accesses) accesses.push({kind: 'memory', memory: {
         space: 'mem', address: address & 0xffff, width: 1, direction: 'write', value: value & 0xff
       }});
-      return hooks.write(address, value);
+      return hooks.write.call(cpu, address, value);
     };
-    cpu.write = hooks.ours.write;
+    cpu[NAME.write] = hooks.ours.write;
 
     if (port) {
       hooks.ours.inPort = address => {
-        const value = hooks.inPort(address);
+        const value = hooks.inPort.call(cpu, address);
         if (accesses) accesses.push({kind: 'port', port: {
           address: address & 0xffff, direction: 'read', value: value & 0xff
         }});
         return value;
       };
-      cpu.inPort = hooks.ours.inPort;
+      cpu[NAME.inPort] = hooks.ours.inPort;
 
       hooks.ours.outPort = (address, value) => {
         if (accesses) accesses.push({kind: 'port', port: {
           address: address & 0xffff, direction: 'write', value: value & 0xff
         }});
-        return hooks.outPort(address, value);
+        return hooks.outPort.call(cpu, address, value);
       };
-      cpu.outPort = hooks.ours.outPort;
+      cpu[NAME.outPort] = hooks.ours.outPort;
     }
   };
 
@@ -212,22 +249,31 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     if (hooks.ours.machineStep && machine.step === hooks.ours.machineStep) {
       machine.step = hooks.machineStep;
     }
-    if (cpu.step === hooks.ours.step) cpu.step = hooks.step;
+    if (hooks.ours.step && cpu.step === hooks.ours.step) cpu.step = hooks.step;
     originalStep = null;
-    if (cpu.read === hooks.ours.read) cpu.read = hooks.read;
-    if (cpu.write === hooks.ours.write) cpu.write = hooks.write;
+    if (cpu[NAME.read] === hooks.ours.read) cpu[NAME.read] = hooks.read;
+    if (cpu[NAME.write] === hooks.ours.write) cpu[NAME.write] = hooks.write;
     if (port) {
-      if (cpu.inPort === hooks.ours.inPort) cpu.inPort = hooks.inPort;
-      if (cpu.outPort === hooks.ours.outPort) cpu.outPort = hooks.outPort;
+      if (cpu[NAME.inPort] === hooks.ours.inPort) cpu[NAME.inPort] = hooks.inPort;
+      if (cpu[NAME.outPort] === hooks.ours.outPort) cpu[NAME.outPort] = hooks.outPort;
     }
     hooks = null;
   };
 
   let originalStep = null;
-  const stepWrapper = () => {
-    if (!listeners.size) return originalStep();
-    const pcBefore = cpu.pc & 0xffff;
-    const ticksBefore = machine.cycles;
+  /**
+   * THE INSTRUCTION BRACKET, as a function rather than only as a wrapper.
+   *
+   * `execute` runs one instruction and returns the cycles it consumed. Wrapping
+   * `cpu.step` is one caller of this; a core whose step is a FREE FUNCTION —
+   * avr8js, where the adapter calls `avrInstruction(cpu)` — is the other, and
+   * it reaches this through `aroundInstruction` below. One body, so a bracketed
+   * instruction means the same thing however the core is driven.
+   */
+  const runInstruction = (execute) => {
+    if (!listeners.size) return execute();
+    const pcBefore = pcOf(cpu);
+    const ticksBefore = clock();
     // These samples are intentionally behind listener opt-in. Instruction
     // bytes must be captured before execution: code may overwrite itself.
     const registersBefore = captureRegisters ? captureRegisters() : null;
@@ -235,7 +281,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     accesses = [];
     let cycles;
     try {
-      cycles = originalStep();
+      cycles = execute();
     } finally {
       const captured = accesses;
       accesses = null;
@@ -261,7 +307,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
         fidelity: 'recorded',
         time: time(ticksBefore + cycles),
         pcBefore,
-        pcAfter: cpu.pc & 0xffff,
+        pcAfter: pcOf(cpu),
         instruction,
         ...(registersAfter ? {registersAfter} : {}),
         changes: {cycles, registers: registerChanges}
@@ -269,6 +315,8 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     }
     return cycles;
   };
+
+  const stepWrapper = () => runInstruction(originalStep);
 
   return {
     onDebugEvent(listener) {
@@ -280,6 +328,29 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
         if (!listeners.size) removeHooks();  // last one out takes them off again
       };
     },
+    /**
+     * Run one instruction inside the bracket, for a core with no `cpu.step`.
+     *
+     * The injected half of the same duality the accessors have: a wrapped
+     * method where one exists, an explicit call where it does not. avr8js's
+     * adapter owns the instruction loop and calls a free function, so it calls
+     * this instead of having its step wrapped — and gets the identical fact
+     * stream, because there is one body behind both.
+     *
+     * With no listener it is the bare call, so an unlistened target pays a
+     * `listeners.size` check and nothing else — the same rule the wrapper
+     * follows.
+     *
+     * @param {() => number} execute runs one instruction, returns its cycles
+     * @returns {number} whatever `execute` returned
+     */
+    aroundInstruction(execute) {
+      if (typeof execute !== 'function') {
+        throw new TypeError('aroundInstruction needs a function that runs one instruction');
+      }
+      return runInstruction(execute);
+    },
+
     /**
      * TIME PASSED AND NOTHING RETIRED, declared by whoever knows it did.
      *
@@ -317,7 +388,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
      *
      * @param {{cycles: number, ticks?: number, cause?: string}} elapse
      */
-    publishIdleElapse({cycles, ticks = machine.cycles, cause = idleCause()} = {}) {
+    publishIdleElapse({cycles, ticks = clock(), cause = idleCause()} = {}) {
       return emitIdle(cycles, ticks, cause);
     },
 
@@ -331,7 +402,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
      *
      * @param {{cycles: number, ticks?: number, event?: object}} jump
      */
-    publishClockJump({cycles, ticks = machine.cycles, event = null} = {}) {
+    publishClockJump({cycles, ticks = clock(), event = null} = {}) {
       if (!listeners.size) return false;
       if (!Number.isFinite(cycles) || cycles <= 0) return false;
       publish({
@@ -348,7 +419,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
 
     debugTime() {
       return {
-        ticks: machine.cycles,
+        ticks: clock(),
         domain: timeEpoch ? `${timeDomain}-reset-${timeEpoch}` : timeDomain,
         hz: machine.clockHz
       };
