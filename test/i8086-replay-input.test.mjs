@@ -22,6 +22,7 @@ import {
   I8086Machine, KBDDEMO8086, BREADBOARD8086, SERIALSHELL8086
 } from '../src/i8086-machine.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
+import { readFileSync } from 'node:fs';
 import { replayOutcome, replayCapabilities } from '../src/debug-replay-contract.js';
 
 /** A ROM image whose reset jump lands on `code` at F800:0000. */
@@ -471,5 +472,79 @@ describe('the event clock, and the rewind it can and cannot see', () => {
   it('refuses a listener that is not a function', () => {
     const {target} = makeTarget();
     assert.throws(() => target.onDebugInput(null), TypeError);
+  });
+});
+
+describe('A HOLLOW TARGET REFUSES, IT DOES NOT THROW', () => {
+  // The contract's central rule: applyReplayInput never throws for an input it
+  // merely cannot serve. A target built over a bare `{machine}` is not
+  // hypothetical — `code-address-progression.test.mjs:32` builds
+  // `{machine: {cpu: {}}}` literally, and three more suites construct over
+  // `{machine}`.
+  //
+  // This is an ENUMERATION rather than a handful of cases, because a handful of
+  // cases is how it got here: `sendSerial` was written WITH the guard, and its
+  // own comment says why, while the preflight beside it called
+  // `Object.values(machine.chips)` on a machine with no chips. The code written
+  // to turn a hardware fact into a refusal was the code that threw instead.
+  const SOURCE = readFileSync(new URL('../src/i8086-debug.js', import.meta.url), 'utf8');
+  const PRODUCERS = [...new Set(
+    [...SOURCE.matchAll(/case '(i8086\.[a-z]+)':/g)].map(m => m[1]))];
+
+  // A VALID payload per producer, so the refusal comes from the missing
+  // hardware and not from a validation short-circuit that would have returned
+  // before reaching anything.
+  const VALID = {
+    'i8086.key': {scancode: 0x1e},
+    'i8086.gpio': {chip: 'ppi1', port: 'b', bit: 0, level: 1},
+    'i8086.serial': {byte: 0x41},
+    'i8086.nmi': {},
+    'i8086.rom': {bytes: new Uint8Array(16)}
+  };
+
+  const hollow = () => createI8086DebugTarget({machine: {cpu: {}}});
+
+  it('the payload table covers every producer the source handles', () => {
+    // Without this the table silently describes an older switch, and a producer
+    // added later is never driven here at all.
+    assert.deepEqual(PRODUCERS.sort(), Object.keys(VALID).sort(),
+      'a producer with no valid payload here is a producer this test does not check');
+    assert.ok(PRODUCERS.length >= 5, `the scan found only ${PRODUCERS.length}`);
+  });
+
+  it('every producer returns a refusal, with a VALID payload', () => {
+    const target = hollow();
+    for (const producer of PRODUCERS) {
+      const out = replayOutcome(target.applyReplayInput({producer, payload: VALID[producer]}));
+      assert.equal(out.accepted, false, `${producer} must refuse`);
+      assert.equal(out.code, 'no-input-path',
+        `${producer} refused for the wrong reason: ${out.reason}`);
+    }
+  });
+
+  it('the preflight agrees, and does not throw either', () => {
+    // canApplyReplayInput is called by the runner BEFORE the apply half, so it
+    // is the first thing a hollow target would throw from — and on this target
+    // it was: `Object.values(machine.chips)` with no chips.
+    const target = hollow();
+    for (const producer of PRODUCERS) {
+      assert.equal(target.canApplyReplayInput({producer, payload: VALID[producer]}), false,
+        `${producer} preflight must answer false, not throw`);
+    }
+  });
+
+  it('and so do the record entry points, and an unknown producer', () => {
+    const target = hollow();
+    assert.equal(target.keyIn(0x1e), false);
+    assert.equal(target.setInput('ppi1', 'b', 0, 1), false);
+    assert.equal(target.sendSerial(0x41), false);
+    assert.equal(target.nmi(), false);
+    const out = replayOutcome(target.applyReplayInput({producer: 'i8086.paddle', payload: {}}));
+    assert.equal(out.code, 'unsupported-replay-input');
+  });
+
+  it('reading the clock on a hollow target does not throw either', () => {
+    const target = hollow();
+    assert.equal(typeof target.debugTime(), 'object');
   });
 });

@@ -489,6 +489,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          * reports true for "delivered" rather than passing undefined through.
          */
         nmi() {
+            if (typeof machine?.nmi !== 'function') return false;
             machine.nmi();
             publishInputEvent('i8086.nmi', {});
             return true;
@@ -508,9 +509,10 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             // unconditionally would throw where the machine can take the byte
             // perfectly well. i8086-adapter.js:74 is itself a one-line
             // delegation to machine.serialIn.
-            const send = typeof adapter?.sendSerial === 'function'
-                ? b => adapter.sendSerial(b)
-                : b => machine.serialIn(b);
+            const send = typeof adapter?.sendSerial === 'function' ? b => adapter.sendSerial(b)
+                : typeof machine?.serialIn === 'function' ? b => machine.serialIn(b)
+                : null;
+            if (!send) return false;
             const accepted = send(byte & 0xff) === true;
             if (accepted) publishInputEvent('i8086.serial', {byte: byte & 0xff});
             return accepted;
@@ -564,6 +566,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          */
         replayInputRefusal(input) {
             const p = input?.payload;
+            // EVERY REACH OUTSIDE THIS CLOSURE IS CHECKED HERE, not at the call
+            // site that happened to be written last. Callers construct this
+            // target over a bare `{machine}` — code-address-progression.test.mjs
+            // :32 builds `{machine: {cpu: {}}}` literally — so `machine.chips`,
+            // `machine.canTakeKeys` and the rest are frequently absent, and the
+            // contract's central rule is that a target refuses rather than
+            // throwing for an input it merely cannot serve.
+            const has = name => typeof machine?.[name] === 'function';
+            const chips = machine?.chips && typeof machine.chips === 'object'
+                ? machine.chips : null;
             if (!p || typeof p !== 'object') {
                 return {code: 'invalid-replay-input', reason: 'a replay input needs a payload object'};
             }
@@ -572,18 +584,21 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 if (!(Number.isInteger(p.scancode) && p.scancode >= 0 && p.scancode <= 0xff)) {
                     return {code: 'invalid-replay-input', reason: 'i8086.key needs a scancode in 0..255'};
                 }
+                if (!has('canTakeKeys') || !has('keyIn')) {
+                    return {code: 'no-input-path', reason: 'this target has no machine that can take a key'};
+                }
                 if (machine.canTakeKeys() !== true) {
                     return {code: 'no-input-path', reason: 'this board has no 8255 + PIC to take a key'};
                 }
                 return null;
             case 'i8086.gpio': {
-                const chip = typeof p.chip === 'string' ? machine.chips[p.chip] : null;
+                const chip = chips && typeof p.chip === 'string' ? chips[p.chip] : null;
                 if (!(['a', 'b', 'c'].includes(p.port) && Number.isInteger(p.bit) &&
                       p.bit >= 0 && p.bit <= 7 && (p.level === 0 || p.level === 1))) {
                     return {code: 'invalid-replay-input',
                         reason: 'i8086.gpio needs port a|b|c, bit 0..7 and level 0|1'};
                 }
-                if (!chip || typeof chip.setInput !== 'function') {
+                if (!chip || typeof chip.setInput !== 'function' || !has('setInput')) {
                     return {code: 'no-input-path',
                         reason: `no chip named ${p.chip} on this board takes an input bit`};
                 }
@@ -605,14 +620,17 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // a board exists which needs it; it is that a preflight must
                 // answer the question the operation asks, so that adding such a
                 // chip does not silently start refusing a path it has.
-                if (!Object.values(machine.chips).some(
-                    c => typeof c.rxPush === 'function' || typeof c.rxByte === 'function')) {
+                if (!chips || !has('serialIn') || !Object.values(chips).some(
+                    c => typeof c?.rxPush === 'function' || typeof c?.rxByte === 'function')) {
                     return {code: 'no-input-path', reason: 'no chip on this board receives a byte'};
                 }
                 return null;
             case 'i8086.nmi':
-                return Object.keys(p).length === 0 ? null
-                    : {code: 'invalid-replay-input', reason: 'i8086.nmi carries no payload'};
+                if (Object.keys(p).length !== 0) {
+                    return {code: 'invalid-replay-input', reason: 'i8086.nmi carries no payload'};
+                }
+                return has('nmi') ? null
+                    : {code: 'no-input-path', reason: 'this target has no machine to interrupt'};
             case 'i8086.rom':
                 if (!(p.bytes instanceof Uint8Array)) {
                     return {code: 'invalid-replay-input', reason: 'i8086.rom needs bytes as a Uint8Array'};
@@ -621,7 +639,8 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                       (Number.isInteger(p.at) && p.at >= 0 && p.at < 0x100000))) {
                     return {code: 'invalid-replay-input', reason: 'i8086.rom `at` must be inside 1MB'};
                 }
-                return null;
+                return has('loadRom') && has('reset') ? null
+                    : {code: 'no-input-path', reason: 'this target has no machine to load a ROM into'};
             default:
                 return {code: 'unsupported-replay-input',
                     reason: `no replay path for producer ${input?.producer ?? '(none)'}`};
