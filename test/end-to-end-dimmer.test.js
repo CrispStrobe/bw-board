@@ -17,13 +17,19 @@ import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-const WASM_PATH = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
-const HEX_PATH = path.resolve(here, '../../stc/examples/06-dimmer/06-dimmer.hex');
-const PINS_PATH = path.resolve(here, '../../stc/examples/06-dimmer/pins.json');
+// WALKED UP, NOT A FIXED DEPTH. `'../../x'` is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper -- so CI kept these cases and every lane lost them, as a '# skipped'
+// that reads like a deliberate exclusion. The absent case is unchanged: with
+// nothing found anywhere, resolveAncestor returns the same path this named.
+const WASM_PATH = resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']);
+const HEX_PATH = resolveAncestor(here, ['stc', 'examples', '06-dimmer', '06-dimmer.hex']);
+const PINS_PATH = resolveAncestor(here, ['stc', 'examples', '06-dimmer', 'pins.json']);
 
 let createEmu8051;
 try { createEmu8051 = require(WASM_PATH); } catch {}

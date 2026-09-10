@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
+import { ancestorCandidates, stripComments } from './helpers/sibling-checkout.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -70,14 +70,6 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
     'debug-factory.test.js',
     'device-drivers-e2e.test.js',
     'emu8051-debug.test.js',
-    'end-to-end-dimmer.test.js',
-    'example-bundles.test.js',
-    'example-buzzer.test.js',
-    'example-dimmer.test.js',
-    'example-manifest.test.js',
-    'example-pwm-preview.test.js',
-    'example-seven-segment.test.js',
-    'example-shift-register.test.js',
     'motor-e2e.test.js',
     'multimeter-chain.test.mjs',
     'rung8-serial-reads.test.js',
@@ -89,7 +81,11 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
   const offendersNow = () => readdirSync(TEST_DIR)
     .filter(name => /\.(mjs|js)$/.test(name) && !EXEMPT.has(name))
     .filter(name => {
-      const source = readFileSync(join(TEST_DIR, name), 'utf8');
+      // COMMENTS STRIPPED, because a scan for a code shape cannot tell code
+      // from prose about code. The first version of this reddened on eight
+      // files it had just cleaned: the comment explaining each conversion
+      // quoted the shape it was explaining.
+      const source = stripComments(readFileSync(join(TEST_DIR, name), 'utf8'));
       return SPELLINGS.some(s => s.re.test(source));
     })
     .sort();
@@ -141,6 +137,23 @@ describe('no suite reaches for a sibling checkout at a FIXED depth', () => {
       `${converted.join(', ')} no longer uses a fixed depth — take ${converted.length === 1
         ? 'that name' : 'those names'} off EXPECTED_OFFENDERS in this file. The ratchet only `
       + 'falls, and it falls by being edited deliberately.');
+  });
+
+  it('a converted suite can actually REACH its oracle, where the oracle exists', () => {
+    // COMING OFF THE LIST IS NOT THE SAME AS RUNNING. A conversion that fixed
+    // the lookup while the suite went on skipping for a second reason would
+    // lower the ratchet and change no coverage at all, which is the failure
+    // this whole exercise is about.
+    //
+    // Conditional on the oracle, and that is honest rather than convenient: on
+    // CI it IS absent — ci.yml checks out emu8051-stc and not stc — so the
+    // eight converted suites still skip there, and this must not pretend
+    // otherwise. What it holds is the box where the oracle exists: if the
+    // examples tree is anywhere up the tree, the walk must find it.
+    const found = ancestorCandidates(HERE, ['stc', 'examples']).find(p => existsSync(p));
+    if (!found) return;
+    assert.ok(existsSync(join(found, '06-dimmer', 'pins.json')),
+      `${found} is not the examples tree those suites need`);
   });
 
   it('the ratchet is not already empty, so the assertions above are exercised', () => {
@@ -197,5 +210,33 @@ describe('ancestorCandidates', () => {
     // Running from a WORKTREE — precisely the case that used to skip.
     assert.notEqual(path.resolve(FOUND), path.resolve(fixedDepth),
       'the walk found what the fixed depth could not');
+  });
+});
+
+describe('stripComments', () => {
+  // The ratchet's population depends entirely on this, so it is held rather
+  // than trusted: a stripper that removed too much would shrink the offender
+  // list silently, and one that removed too little would put prose back in it.
+  it('removes both comment forms and keeps the code around them', () => {
+    const src = "const a = 1; // '../../x'\n/* '../../y' */ const b = 2;\n";
+    const out = stripComments(src);
+    assert.ok(!out.includes('../../x'), 'a line comment survived');
+    assert.ok(!out.includes('../../y'), 'a block comment survived');
+    assert.ok(out.includes('const a = 1;') && out.includes('const b = 2;'), 'it ate code');
+  });
+
+  it('keeps a comment marker that is inside a string', () => {
+    // The case that makes a naive stripper delete the rest of a file.
+    const src = "const url = 'https://example.com/a'; const p = '../../real';\n";
+    assert.ok(stripComments(src).includes('../../real'),
+      'a // inside a string ate the code after it');
+  });
+
+  it('keeps one inside a template literal, and an escaped quote does not end the string', () => {
+    const src = 'const t = `a // b`; const p = "../../real";\n'
+      + 'const e = "he said \\"//\\""; const q = \'../../also\';\n';
+    const out = stripComments(src);
+    assert.ok(out.includes('../../real'), 'a // inside a template ate the code after it');
+    assert.ok(out.includes('../../also'), 'an escaped quote ended the string early');
   });
 });

@@ -29,6 +29,7 @@
  * @returns {string[]} candidates, nearest ancestor first
  */
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 
 export function ancestorCandidates(fromDir, relative, levels = 6) {
   const out = [];
@@ -38,6 +39,74 @@ export function ancestorCandidates(fromDir, relative, levels = 6) {
     const up = path.dirname(dir);
     if (up === dir) break;                 // filesystem root: stop, do not loop
     dir = up;
+  }
+  return out;
+}
+
+/**
+ * The first of those candidates that exists — or, if none does, the one the
+ * old fixed-depth code would have named.
+ *
+ * Most callers here do not want a list: they hold ONE path and check it with
+ * `existsSync` to decide whether to skip. Handing them the sibling-level
+ * candidate when nothing is found keeps that absent case EXACTLY as it was,
+ * message included, and changes only what happens when the thing is actually
+ * present somewhere up the tree. A conversion that altered the failure text as
+ * well as the search would make it impossible to tell which change did what.
+ *
+ * @param {string} fromDir directory to start from (a test's own dirname)
+ * @param {string[]} relative path segments below each ancestor
+ * @param {number} [levels]
+ * @returns {string} an existing path, else the beside-the-repo candidate
+ */
+export function resolveAncestor(fromDir, relative, levels = 6) {
+  const candidates = ancestorCandidates(fromDir, relative, levels);
+  // Index 2 from a test/ directory is test -> repo -> BESIDE THE REPO, which is
+  // what the fixed-depth form meant.
+  return candidates.find(existsSync) ?? candidates[Math.min(2, candidates.length - 1)];
+}
+
+/**
+ * The same source with comments removed, string and template literals intact.
+ *
+ * A scan for a CODE shape cannot tell code from prose about code. The first
+ * version of the fixed-depth ratchet reddened on eight files it had just
+ * cleaned, because the comment explaining each conversion QUOTED the shape it
+ * was explaining. That is the same species as a divergence ledger answering a
+ * search about a file with prose rather than a declaration: the document
+ * discussing the thing matches every pattern the thing does.
+ *
+ * So the ratchet reads this instead. Quotes are tracked because a line-comment
+ * marker inside a string is not a comment, and one inside a template literal
+ * would otherwise eat the rest of the file.
+ */
+export function stripComments(source) {
+  let out = '';
+  let quote = null;
+  let escaped = false;
+  for (let i = 0; i < source.length; i++) {
+    const c = source[i];
+    const next = source[i + 1];
+    if (quote) {
+      out += c;
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      quote = c;
+      out += c;
+    } else if (c === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i++;
+      out += '\n';
+    } else if (c === '/' && next === '*') {
+      i += 2;
+      while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) i++;
+      i++;
+    } else {
+      out += c;
+    }
   }
   return out;
 }

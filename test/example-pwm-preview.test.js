@@ -17,9 +17,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const EXAMPLES_DIR = path.resolve(here, '../../stc/examples');
+// WALKED UP, NOT A FIXED DEPTH. `'../../x'` is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper -- so CI kept these cases and every lane lost them, as a '# skipped'
+// that reads like a deliberate exclusion. The absent case is unchanged: with
+// nothing found anywhere, resolveAncestor returns the same path this named.
+const EXAMPLES_DIR = resolveAncestor(here, ['stc', 'examples']);
 
 function loadPins(name) {
   const path = `${EXAMPLES_DIR}/${name}/pins.json`;
