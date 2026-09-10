@@ -30,6 +30,7 @@ export function createI8086Adapter(opts = {}) {
     const config = opts.config ?? BREADBOARD8086;
 
     let board = null;
+    let unloggedBoardInputs = false;
     let serialListener = null;
     const stats = { pinChangeCount: 0, advanceToCount: 0 };
 
@@ -69,6 +70,9 @@ export function createI8086Adapter(opts = {}) {
         machine,
         clockHz: config.clockHz,
 
+        /** Does a live board sample input nets that nothing records? */
+        unloggedBoardInputs() { return unloggedBoardInputs; },
+
         onSerial(cb) { serialListener = cb; },
 
         sendSerial(byte) { return machine.serialIn(byte & 0xff); },
@@ -77,6 +81,9 @@ export function createI8086Adapter(opts = {}) {
 
         attachBoard(b) {
             board = b;
+            // syncInputs samples input nets that never pass through the debug
+            // target, so nothing records them.
+            unloggedBoardInputs = typeof b?.readPin === 'function';
             // Reset fetches from FFFF:0000 and publishes the initial pin
             // state, which for a just-reset 8255 is "nothing driven".
             machine.reset();

@@ -216,6 +216,27 @@ export const replayCapabilities = target => ({
  */
 export function replaySupport(target, reasons = []) {
   const missing = [...reasons];
+  // THE TARGET CONTRIBUTES ITS OWN DYNAMIC REASONS, and this is what makes the
+  // list more than a formality. The doc above names the case: a live board
+  // changes input nets OUTSIDE the debug target, so a restored run diverges
+  // from the recorded one. Only the target knows whether it is in that state,
+  // and a caller cannot be expected to ask — the whole failure this closes is
+  // a driver offering a replay nobody told it was unsafe.
+  //
+  // Optional, and absence is not a refusal: a target that does not implement it
+  // is one with no session-scoped reason to give.
+  if (typeof target?.replayRefusalReasons === 'function') {
+    try {
+      for (const reason of target.replayRefusalReasons() ?? []) {
+        if (typeof reason === 'string' && reason) missing.push(reason);
+      }
+    } catch {
+      // A target that throws while being asked is not thereby supported: the
+      // one rule this module states is that a refusal is a return value, and a
+      // question that cannot be answered is not an answer of yes.
+      missing.push('the target failed while reporting its replay refusal reasons');
+    }
+  }
   // Only the APPLY half is required to replay. Recording is what produced the
   // facts; a target handed facts from elsewhere can still replay them.
   if (!canApplyReplayInput(target)) {
