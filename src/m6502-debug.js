@@ -585,11 +585,18 @@ export function createM6502DebugTarget(adapter, opts = {}) {
               'no chip in this config accepts a received byte');
         }
         case 'm6502.nmi':
-          if (typeof cpu?.nmi !== 'function') {
+          // `machine.nmi()`, not `cpu.nmi()`. The CPU's entry point charges the
+          // seven-cycle interrupt sequence to its own counter and to nothing
+          // else, so `machine.cycles` does not move, the peripherals are not
+          // advanced through that bus time, and the stamp on the next recorded
+          // fact reads as though the interrupt were free. The machine's method
+          // does all three. It exists here as of this change; it had existed
+          // downstream for months.
+          if (typeof machine?.nmi !== 'function') {
             return replayRefused('no-input-path',
-              'this machine has no CPU with an NMI entry point');
+              'this machine has no NMI entry point');
           }
-          cpu.nmi();
+          machine.nmi();
           return replayAccepted();
         default:
           return replayRefused('unsupported-replay-input',
