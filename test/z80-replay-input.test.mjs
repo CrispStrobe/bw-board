@@ -110,6 +110,62 @@ test('a snapshot RESTORE moves the clock backwards, and the domain says so', () 
   }
 });
 
+test('an input unchanged since an ABANDONED timeline is still recorded', () => {
+  // THE DEFECT THIS EXISTS FOR. Detection used to sit inside the stamp, which is
+  // only reached once a value has been found to have changed — so a suppressed
+  // input never noticed the rewind, and the dedup map survived it holding values
+  // from a timeline that no longer exists.
+  //
+  // Hold 'a', snapshot, run on, press 'b', restore, press 'b' again BELOW the
+  // old high-water mark. That last one is a genuine a→b transition in the
+  // restored era, and it was dropped because the map still remembered 'b'.
+  // Silent loss in the log, which is worse than the ordering error it replaced:
+  // that at least threw.
+  const { machine, target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+
+  target.setKeys(['a']);
+  const snapshot = machine.saveState();
+  machine.cycles = 50_000;
+  target.setKeys(['b']);
+  machine.loadState(snapshot);
+  machine.cycles = 10_000;        // below the last tick issued: the rewind is visible
+  target.setKeys(['b']);          // same VALUE, different timeline
+
+  assert.equal(facts.length, 3, 'the post-rewind input was suppressed by a stale dedup entry');
+  assert.match(facts[2].time.domain, /rewind-\d+$/,
+    'the post-rewind fact must not claim the abandoned domain');
+});
+
+test('KNOWN LIMIT: a rewind that runs past the old high-water mark is invisible', () => {
+  // Pinned rather than implied, so the boundary is a fact instead of a promise.
+  // Clock-watching sees a rewind only when a later input observes a LOWER tick.
+  // Restore, then run past where the timeline had already reached, and the next
+  // fact is monotonic and indistinguishable from ordinary progress — the log
+  // implies time elapsed between two facts on opposite sides of a restore.
+  //
+  // Nothing on this side can detect it: the machine would have to say so, and
+  // closing it needs a machine-side signal on loadState. THIS TEST ASSERTS THE
+  // CURRENT BEHAVIOUR, INCLUDING ITS LOSS. If it starts failing because a signal
+  // arrived, that is the good outcome — delete it and cover the case properly.
+  const { machine, target } = zx();
+  const facts = [];
+  target.onDebugInput(fact => facts.push(fact));
+
+  target.setKeys(['a']);
+  const snapshot = machine.saveState();
+  machine.cycles = 50_000;
+  target.setKeys(['b']);
+  machine.loadState(snapshot);
+  machine.cycles = 60_000;        // ABOVE the last tick issued: the rewind is not visible
+  target.setKeys(['b']);
+
+  assert.equal(facts.length, 2, 'a signal must have arrived; this limit can now be closed');
+  assert.equal(new Set(facts.map(f => f.time.domain)).size, 1,
+    'the domain split, so something detected a rewind this test says is undetectable');
+});
+
 test('a rewind that does not happen does not split the domain', () => {
   // The complement: forward-only recording stays in one domain, so the epoch is
   // not bumped by ordinary use.

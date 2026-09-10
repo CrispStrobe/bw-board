@@ -77,33 +77,59 @@ export function createZ80DebugTarget(adapter) {
   // WHY DETECTION RATHER THAN A HOOK. This target never calls `loadState`; the
   // restore is driven by the caller, so there is no call site here to bump an
   // epoch at, the way the 8051 bumps one inside its own `reset()`. Watching the
-  // clock instead needs no cooperation from the machine and covers EVERY rewind
-  // path rather than the one that was found — and the one that was found is not
-  // the only one there will be. `m6502-machine.js:806` is the same assignment,
-  // so this mechanism transfers verbatim rather than being re-derived.
+  // clock needs no cooperation from the machine and covers every rewind path a
+  // subsequent input can SEE. `m6502-machine.js:806` is the same assignment, so
+  // this mechanism transfers verbatim rather than being re-derived.
+  //
+  // WHAT IT CANNOT SEE, STATED RATHER THAN IMPLIED. A rewind followed by running
+  // PAST the old high-water mark, with no input in between, is invisible from
+  // this side: ticks 100000, 100001, then restore to 100000 and run to 150000 —
+  // the next fact stamps 150000, monotonic, same domain, and the log implies
+  // 50000 cycles elapsed between two facts that sit on opposite sides of a
+  // restore. No amount of watching the clock detects that; the machine would
+  // have to say so. Closing it needs a machine-side signal on `loadState`, and
+  // until there is one this is the boundary — every rewind an input can observe,
+  // not every rewind.
   const observedInputs = new Map();
   let inputListeners = [];
   let inputTimeEpoch = 0;
   let lastTicks = null;
 
   /**
-   * The stamp, with the discontinuity carried in the domain.
+   * Notice a rewind, EAGERLY — before the dedup gate, not after it.
    *
-   * A rewind is detected by comparison rather than by being told: if the clock
-   * is lower than the last tick this domain issued, the era has changed and the
-   * domain says so. Facts either side then belong to different domains and
-   * nothing compares them.
+   * A first version of this ran inside the stamp, which `publishInput` only
+   * reaches once a value has already been found to have changed. A suppressed
+   * input therefore never updated `lastTicks` and never bumped the epoch, and
+   * the dedup map survived the rewind holding values from an abandoned
+   * timeline. Constructed: hold 'a', snapshot, run on, press 'b', restore, then
+   * press 'b' again in the restored era — a genuine a→b transition, DROPPED,
+   * because the map still remembered 'b' from the timeline that no longer
+   * exists. Two facts, one domain, the third gone without trace. Silent loss in
+   * the log, which is worse than the INVALID_INPUT_ORDER it replaced: that at
+   * least threw.
+   *
+   * So the clock is checked first, and a rewind clears the map as well as
+   * bumping the epoch — the 8051's sentence transfers word for word, with
+   * "reset" read as "rewind": the map remembers values from before it, and
+   * keeping them would suppress the first fact afterwards for every input whose
+   * value happens to match.
    */
-  function inputTime() {
+  function noticeRewind() {
     const ticks = machine.cycles;
-    if (lastTicks !== null && ticks < lastTicks) inputTimeEpoch++;
+    if (lastTicks !== null && ticks < lastTicks) {
+      inputTimeEpoch++;
+      observedInputs.clear();
+    }
     lastTicks = ticks;
-    return {
-      ticks,
-      domain: inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles',
-      hz: machine.clockHz
-    };
   }
+
+  /** The stamp, with any discontinuity already carried into the domain. */
+  const inputTime = () => ({
+    ticks: machine.cycles,
+    domain: inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles',
+    hz: machine.clockHz
+  });
 
   /**
    * Emit a fact, but only when the value has CHANGED.
@@ -113,6 +139,9 @@ export function createZ80DebugTarget(adapter) {
    * @param {object} payload the recorded value
    */
   function publishInput(producer, key, payload) {
+    // FIRST, before the dedup gate: an unchanged value must still be able to
+    // notice that the timeline moved under it.
+    noticeRewind();
     const signature = JSON.stringify(payload);
     if (observedInputs.get(key) === signature) return;
     observedInputs.set(key, signature);
