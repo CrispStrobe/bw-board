@@ -419,7 +419,20 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
 
     debugTime() {
       return {
-        ticks: clock(),
+        // BigInt, LIKE THE STAMPS. It used to return the raw counter while
+        // every fact this module publishes carries a BigInt, so `===` or
+        // `deepEqual` between a read and a stamp of the SAME instant was false
+        // forever, with both printing the same digits. Nothing downstream
+        // broke, because five separate places in the consumer layer already
+        // coerce `time.ticks` through their own BigInt() normaliser before
+        // daring to compare it — that duplication was the compensation, and it
+        // is what a new caller does not know to write.
+        //
+        // `time()` is not reused here: it MOVES the epoch state, and reading
+        // the clock must not (a driver that merely asked the time after a
+        // restore would consume the regression and leave the next real fact in
+        // an era nothing explains).
+        ticks: BigInt(clock()),
         domain: timeEpoch ? `${timeDomain}-reset-${timeEpoch}` : timeDomain,
         hz: machine.clockHz
       };

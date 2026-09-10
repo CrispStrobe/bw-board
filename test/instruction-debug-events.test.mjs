@@ -358,12 +358,46 @@ describe('the epoch: a fact after a rewind names a different timeline', () => {
       'reading the clock consumed the regression and opened an era nothing explains');
   });
 
+  it('the READ and the STAMP are the same type, so === between them works', () => {
+    // A module whose facts carry BigInt ticks and whose clock-read returns a
+    // Number is a trap that no single call can see: both look right, both
+    // print the same digits, and `===` or `deepEqual` between them is false
+    // forever with nothing to indicate why. Found by a test that compared the
+    // two and had to be written wrong to pass.
+    //
+    // Not hypothetical downstream: five separate places in the consumer layer
+    // coerce `time.ticks` through their own BigInt() normaliser before daring
+    // to compare it. That duplication is the compensation for this.
+    const machine = { cycles: 700, clockHz: 1e6 };
+    const cpu = fakeCpu([{ cycles: 4 }], machine);
+    const events = install(cpu, machine);
+    const { seen } = record(events);
+
+    cpu.step();
+    const stamp = seen.at(-1).time;
+    const read = events.debugTime();
+
+    assert.equal(typeof read.ticks, typeof stamp.ticks,
+      `the read is ${typeof read.ticks} and the stamp is ${typeof stamp.ticks}`);
+    assert.equal(read.ticks === stamp.ticks, true,
+      `the values print the same (${read.ticks} / ${stamp.ticks}) and === says otherwise: `
+      + 'a Number/BigInt split');
+    assert.deepEqual(read, stamp, 'the read after the instruction is the retire stamp');
+
+    // AND THE FIXTURE HAS TO ADVANCE THE CLOCK FOR THAT TO MEAN ANYTHING. The
+    // retire stamp is a PROJECTION — `ticksBefore + cycles` — not a read. A
+    // fake whose step leaves `machine.cycles` alone makes the two disagree by
+    // the instruction's cost while both are perfectly correct, which is a
+    // property of the fixture rather than of the module.
+    assert.equal(machine.cycles, 704, 'the fixture stopped advancing the clock');
+  });
+
   it('debugTime reports the machine clock and the domain of the current era', () => {
     const cpu = fakeCpu([{}]);
     const machine = { cycles: 4242, clockHz: 3_500_000 };
     const events = install(cpu, machine);
     assert.deepEqual(events.debugTime(),
-      { ticks: 4242, domain: 'test-ticks', hz: 3_500_000 });
+      { ticks: 4242n, domain: 'test-ticks', hz: 3_500_000 });
 
     events.openTimeEpoch();
     assert.equal(events.debugTime().domain, 'test-ticks-reset-1');

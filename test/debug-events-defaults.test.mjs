@@ -263,11 +263,11 @@ describe('a core that spells all four differently', () => {
 
     const retire = facts.find(f => f.kind === 'instruction');
     assert.equal(retire.time.ticks, 103n, 'stamped 100 + 3 from the CPU clock');
-    // NOT a typo, and not this lane's to change: `debugTime()` returns the raw
-    // counter while every FACT carries a BigInt. That asymmetry is today's
-    // behaviour on all three existing machines, so it is asserted as found and
-    // reported rather than quietly normalised here.
-    assert.equal(events.debugTime().ticks, 103);
+    // Asserted as a Number here when this lane found it, reported, and FIXED
+    // in the follow-up: the read now carries a BigInt like every stamp, so
+    // `===` between a read and a fact of the same instant finally holds.
+    assert.equal(events.debugTime().ticks, 103n);
+    assert.equal(events.debugTime().ticks === retire.time.ticks, true);
   });
 
   it('publishes idle through the declared vocabulary, not a second mechanism', () => {
