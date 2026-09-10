@@ -110,6 +110,22 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   // A reset restarts the clock, so facts from before it are not comparable
   // with facts after. The domain says which era a fact belongs to; without it
   // a replay could interleave two runs and look ordered.
+  //
+  // THIS COVERAGE IS BY ENUMERATION, NOT BY DETECTION, and that is the thing to
+  // know before adding an ABI call. The z80, 6502 and 8086 targets compare the
+  // clock against the last stamped tick and notice a rewind whoever caused it.
+  // This one cannot: the clock lives in the WASM core
+  // (`_emu_get_time_ns_lo/hi`) and the epoch bumps only where `reset()` below
+  // says so. That is correct TODAY and was measured rather than assumed —
+  // `reset()` takes the clock to 0 and `loadHex` leaves it exactly where it
+  // was — but it is correct only for as long as the enumeration holds.
+  //
+  // `test/emu8051-clock-enumeration.test.mjs` is that enumeration, executable:
+  // it calls every public method of this adapter and asserts the clock never
+  // moves backwards except where a row says it does, and it reddens on a method
+  // it has never been told about. If you add one that moves time, that test
+  // will tell you, and the answer is either a trigger here or a switch to
+  // detection.
   let inputTimeEpoch = 0;
 
   const inputTime = () => ({
