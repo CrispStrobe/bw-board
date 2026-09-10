@@ -510,6 +510,35 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
      * @returns {() => void} unsubscribe
      */
+    /**
+     * SESSION-SCOPED REASONS THIS TARGET CANNOT REPLAY, collected by
+     * `replaySupport`. Empty when there are none.
+     *
+     * A LIVE BOARD IS THE CASE, and it is the one the contract module named in
+     * the abstract months before anyone measured it: a board changes input nets
+     * OUTSIDE the debug target, so a restored run silently diverges from the
+     * recorded one. The record half here covers this target's own entry points
+     * -- the adapter's `syncInputs` is a different class of input and nothing
+     * logs it.
+     *
+     * Until now this target would record such a session, accept a replay, and
+     * reproduce a run whose board inputs were never in the log, with nothing
+     * saying so. A downstream consumer has declared it for months, as a
+     * CHECKPOINT refusal; there is no checkpoint API here, and `replaySupport`
+     * is the slot that does exist.
+     *
+     * NOT A CLAIM THAT RECORDING THEM IS NEXT. Logging every polled pin is what
+     * the 8051's deduplication exists to survive, and it is a design question.
+     * This converts a silent wrong answer into a stated refusal.
+     *
+     * @returns {string[]}
+     */
+    replayRefusalReasons() {
+      return adapter?.unloggedBoardInputs?.()
+        ? ['live board input-net sampling is not logged']
+        : [];
+    },
+
     onDebugInput(listener) {
       if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
       inputListeners.push(listener);

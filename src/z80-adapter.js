@@ -24,6 +24,7 @@ import { PS2Keyboard, PS2Capture } from './ps2.js';
 export function createZ80Adapter(opts = {}) {
     const config = opts.config ?? (opts.cpm ? CPM64K : SEARLE);
     let board = null;
+    let unloggedBoardInputs = false;
     const stats = { serialCount: 0, advanceToCount: 0 };
     let serialListener = null;
 
@@ -226,6 +227,10 @@ export function createZ80Adapter(opts = {}) {
 
         attachBoard(b) {
             board = b;
+            // Gated on BUFFER CHIPS: this machine only samples board inputs
+            // through them, so a board on a config without one changes no
+            // input net and needs no refusal.
+            unloggedBoardInputs = bufferChips.length > 0 && typeof b?.readPin === 'function';
             bridgePS2(b);
             machine.cpu.pc = opts.pc ?? (opts.cpm ? 0x0100 : 0);
             if (opts.cpm) machine.cpu.sp = 0xfdff;
@@ -239,6 +244,9 @@ export function createZ80Adapter(opts = {}) {
         exited() { return cpmExited; },
 
         /** The serial console face: listen for TX bytes. */
+        /** Does a live board sample input nets that nothing records? */
+        unloggedBoardInputs() { return unloggedBoardInputs; },
+
         onSerial(cb) { serialListener = cb; },
 
         /** RX side: feed a byte to the first ACIA (keyboard → machine). */
