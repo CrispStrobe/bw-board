@@ -21,9 +21,14 @@
  * copied; the datasheet describes an interface and this satisfies it.
  *
  * WHAT IT IS NOT. This is not the real bootrom. There is no USB mass
- * storage, no `reset_usb_boot`, and — the one that currently matters — no
- * SOFT-FLOAT TABLE. mufplib is exactly the part that is not free, so the
- * `'SF'` lookup misses and returns 0.
+ * storage and no `reset_usb_boot`.
+ *
+ * THE SOFT-FLOAT TABLE IS NO LONGER THE GAP, and this paragraph said it was
+ * for two days after it stopped being true — the failure this file keeps
+ * finding in other people's prose, in its own header. mufplib remains the
+ * part of Raspberry Pi's ROM that is not free, so none of it is used; the
+ * table below is written from the datasheet's interface like everything else
+ * here, and nine of its entries are real (see SF_TABLE).
  *
  * HOW FAR THAT GETS, measured against MicroPython 1.22.2 for the Pico
  * (RPI_PICO-20240222-v1.22.2.uf2, reproducible with
@@ -80,11 +85,17 @@
  * VTOR yourself, and none of it happens. See
  * docs/PICO-MICROPYTHON-BOOT.md in brickwright-lite for the measurements.
  *
- * WHAT IS STILL MISSING is the soft-float table. `'SF'` returns 0 and the
- * lookup path tolerates it. Worth knowing: a MISSED lookup returns 0 and
- * the SDK calls it — there is no null check at most call sites — so
- * address 0 gets executed as Thumb. That is why the flash functions below
- * had to be real rather than absent.
+ * WHAT IS STILL MISSING, as of 2026-09-10: USB mass storage,
+ * `reset_usb_boot`, and nine of the twenty-one soft-float entries — the four
+ * fixed-point conversions and the five transcendentals. Those return a quiet
+ * NaN and are named one by one in the test, so the list cannot go stale
+ * quietly the way the paragraph above did.
+ *
+ * Worth knowing, and still true: a MISSED lookup returns 0 and the SDK calls
+ * it — there is no null check at most call sites — so address 0 gets executed
+ * as Thumb. That is why the flash functions below had to be real rather than
+ * absent, and why every soft-float entry points at a routine that RETURNS
+ * rather than at nothing.
  *
  * @module
  */
