@@ -174,15 +174,16 @@ leave the next real input stamped in an epoch nothing could explain.
 
 ## What the four targets implement
 
-Measured, not remembered. Two of these are on unmerged lane branches at the time
-of writing; the table says which.
+Measured, not remembered. All four are on master as of `0b00f6a`; the `where`
+column stays because a row that names a branch is how a reader tells a shipped
+surface from a proposed one, and the next target added here will need it again.
 
 | target | producers | domain | where |
 |---|---|---|---|
 | `emu8051-adapter` | `emu8051.pin`, `emu8051.adc` | `8051-input-ns` | master |
-| `z80-debug` | `z80.buttons`, `z80.keys`, `z80.serial` | `z80-cycles` | master + `fix/z80-hollow-target` |
-| `m6502-debug` | `m6502.buttons`, `m6502.serial`, `m6502.nmi` | `m6502-cycles` | `feat/m6502-replay-input` |
-| `i8086-debug` | `i8086.key`, `.gpio`, `.serial`, `.nmi`, `.rom` | `i8086-cycles` | `feat/i8086-replay-input` |
+| `z80-debug` | `z80.buttons`, `z80.keys`, `z80.serial` | `z80-cycles` | master |
+| `m6502-debug` | `m6502.buttons`, `m6502.serial`, `m6502.nmi` | `m6502-cycles` | master |
+| `i8086-debug` | `i8086.key`, `.gpio`, `.serial`, `.nmi`, `.rom` | `i8086-cycles` | master |
 
 The 8051 refuses everything while a board is attached, and the reason is worth
 repeating because the first version of that guard got it wrong: **the hazard is
