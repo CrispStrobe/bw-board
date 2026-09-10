@@ -3932,8 +3932,38 @@ did not disappear.
   12     fix2float    2,514 agree            (2026-09-10)
   13     uint2float   3,013 agree            (2026-09-10)
   14     ufix2float   2,507 agree            (2026-09-10)
-  rest   fcos, fsin, ftan, fexp, fln — quiet-NaN stub, named in the test
+  19     fexp         worst 1 ulp / 5,543     (2026-09-10)
+  20     fln          worst 2 ulp / 9,912     (2026-09-10)
+  15     fcos         worst 2 ulp             (2026-09-10)
+  16     fsin         worst 2 ulp             (2026-09-10)
+  17     ftan         worst 3 ulp             (2026-09-10)
+  4,5,18 deprecated slots — quiet-NaN stub, PERMANENTLY, named in the test
 ```
+
+**THE TABLE IS COMPLETE: 18 OF 21, AND THE OTHER 3 HAVE NO OPERATION.**
+Indices 4, 5 and 18 are the datasheet's deprecated slots, so the stub list has
+stopped shrinking rather than emptied. The five transcendentals are graded
+against a ULP bound rather than bit-exactly, because JavaScript computes them
+in double and rounds down; the bound is 4, CHOSEN, and the measured worst is 3.
+
+`fcos`, `fsin` and `ftan` share one range reduction and one pair of
+polynomials — cos(x) is sin at quadrant q+1, so adding to the QUADRANT rather
+than to x costs nothing, and tan is the quotient. **Declared deviation: the
+domain stops at |x| = 2^16 and returns a quiet NaN past it.** pi/2 is split
+into four float32 chunks whose sum reproduces the double exactly, and the
+leading chunk's eight significant bits keep k*HI an exact product only while k
+fits in sixteen. Beyond that the reduction degrades with no signal, so it
+refuses instead; going further needs Payne-Hanek and a multi-word 2/pi table.
+
+Two defects worth keeping, both found by measuring rather than reading. A
+`poolBase()` sitting between a CMP and its Bcc retargeted the branch: Thumb-1
+has no flag-preserving MOV immediate, `lsls` left Z clear, so every positive
+argument took the wrong rounding bias and the reduction returned x unchanged
+(21,250,770 ulp at fround(pi)). And the harness fed the oracle unrounded
+doubles while the ROM saw fround(x) — near a zero of sine those are different
+numbers with different answers, and it read 1.5e9 ulp until the input was
+rounded first. That is the FOURTH time that same oracle bug has appeared in
+this file's history.
 
 **THE FIXED-POINT CONVERSIONS ARE THE INTEGER ONES WITH A SHIFTED EXPONENT.**
 `fix2float(m, n)` is `int2float(m)` with the exponent reduced by n, and
@@ -4087,9 +4117,11 @@ formatter — and `1.5+1.5` printing `3` while `2.5+1.0` prints `0` would
 separate those two in one line. This repo's probe boots and stops; the harness
 that drives the REPL is lite's.
 
-**REMAINING:** `fsqrt`, the float↔fix/uint conversions, and the
-transcendentals (`fcos`, `fsin`, `ftan`, `fexp`, `fln`). None is needed for
-ordinary arithmetic; all are still the stub and still named in the test.
+**REMAINING: NOTHING.** This paragraph read "`fsqrt`, the float↔fix/uint
+conversions, and the transcendentals ... all are still the stub" until
+2026-09-10; every operator it named is now implemented and graded. Only the
+three deprecated slots are still the stub, and they have no operation to
+implement.
 
 What landed: `'SF'` now resolves to a real 21-entry table at the datasheet's
 layout (§2.8.3, indices 0..16 cross-checked against two independent sources
