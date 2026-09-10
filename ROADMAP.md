@@ -3884,14 +3884,36 @@ did not disappear.
 
 ```
   index  operator     status
-  0      fadd         6,435 vector pairs agree with Math.fround
+  0      fadd         6,437 vector pairs agree with Math.fround
   1      fsub         6,455 agree
   2      fmul         6,213 agree
   3      fdiv         6,159 agree
+  6      fsqrt        5,999 agree            (2026-09-10)
+  7      float2int    2,527 agree            (2026-09-10)
+  9      float2uint   1,008 agree            (2026-09-10)
   11     int2float    4,025 agree
-  rest   fsqrt, the conversions, fcos/fsin/ftan/fexp/fln
-                      quiet-NaN stub, unimplemented, named in the test
+  13     uint2float   3,013 agree            (2026-09-10)
+  rest   float2fix, float2ufix, fix2float, ufix2float, fcos, fsin, ftan,
+         fexp, fln — quiet-NaN stub, unimplemented, named in the test
 ```
+
+**SECOND INCREMENT, 2026-09-10: sqrt and the integer conversions.** `fsqrt` is
+digit-by-digit rather than Newton, and the reason is the same one that made
+`fdiv` work: two bits of radicand per bit of root leaves an EXACT REMAINDER,
+and the remainder is what separates a root that terminates from one that does
+not. Newton converges faster and cannot tell those apart at the rounding edge.
+The exponent is forced even first, folding the odd bit into the significand as
+a doubling, so the root is 25 bits with bit 24 set in both cases and there is
+one shape to pack rather than two.
+
+**The conversions truncate, they do not round** — that is C's rule, so 2.5 goes
+to 2 and -2.5 to -2, and those two cases catch an implementation that rounded.
+
+**MORE DECLARED DEVIATIONS, and they have their own test.** `float2int` of
+anything with |x| >= 2^31, `float2uint` of a negative or of anything >= 2^32,
+and either of NaN or infinity, are all UNDEFINED in C. They return 0 rather
+than inventing a saturation the datasheet does not specify, and the test pins
+that 0 by name so "agrees with JavaScript" is never read as total.
 
 **2.5 + 1.0 = 3.5** — the case lego-ac used to prove the float path was dead.
 

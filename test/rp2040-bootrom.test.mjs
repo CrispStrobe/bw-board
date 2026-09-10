@@ -354,13 +354,13 @@ test('an SF entry RETURNS rather than hanging, which is the whole point', {skip:
     const view = new DataView(buildBootrom().buffer);
     const dataTable = view.getUint16(0x16, true);
     const sf = view.getUint16(dataTable + 2, true);
-    // Index 6 (fsqrt), still the stub. This has now moved three times — off
-    // index 0, 2 and 3 as fadd, fmul and fdiv landed. Each time it silently
+    // Index 15 (fcos), still the stub. This has now moved four times — off 0,
+    // 2, 3 and 6 as fadd, fmul, fdiv and fsqrt landed. Each time it silently
     // began timing a REAL routine instead of the stub it is named for, which
-    // is why every move is recorded instead of quietly made. If it ever runs
+    // is why every move is recorded rather than quietly made. If it ever runs
     // out of stubs to point at, the operator set is complete and this test
     // should be deleted rather than repointed again.
-    const stub = view.getUint32(sf + 6 * 4, true);
+    const stub = view.getUint32(sf + 15 * 4, true);
 
     const steps = run(stub, {0: F32(2.5), 1: F32(1.0)});
     assert.ok(steps >= 0, 'the SF stub never returned — it hung, which is the bug it replaces');
@@ -502,6 +502,88 @@ test('int2float agrees with JavaScript, ties included', {skip: SKIP}, async () =
     }
 });
 
+test('fsqrt agrees with JavaScript, exact squares included', {skip: SKIP}, async () => {
+    // Digit-by-digit, so the remainder is exact and a root that terminates
+    // rounds differently from one that does not on the same guard bit. The
+    // perfect squares are the cases that would hide a wrong remainder: 4 and
+    // 16 come out right under almost any rounding mistake.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const fn = view.getUint32(sf + 6 * 4, true);
+    const cases = [0, -0, 1, 4, 9, 16, 2, 3, 0.25, 0.5, 100, 2.5, 1e20, 1e-20,
+        Infinity, NaN, -1, -4, 16777216, 1 / 3, 3.4028234663852886e38];
+    let seed = 0x2545f491;
+    for (let i = 0; i < 400; i++) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; cases.push(F(seed)); }
+    for (const c of cases) {
+        const x = R(c), want = Math.fround(Math.sqrt(x));
+        if (SUBNORMAL(x) || SUBNORMAL(want)) continue;
+        assert.ok(run(fn, {0: F32(x)}, 4000) >= 0, `fsqrt(${x}) never returned`);
+        const got = mcu.core.registers[0] >>> 0;
+        if (Number.isNaN(want)) assert.ok(Number.isNaN(F(got)), `fsqrt(${x}) = ${F(got)}, want NaN`);
+        else assert.equal(got, F32(want), `fsqrt(${x}) = ${F(got)}, want ${want}`);
+    }
+});
+
+test('the conversions agree with JavaScript, and refuse their edges by name', {skip: SKIP}, async () => {
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const f2i = view.getUint32(sf + 7 * 4, true);
+    const f2u = view.getUint32(sf + 9 * 4, true);
+    const u2f = view.getUint32(sf + 13 * 4, true);
+
+    let seed = 0x9e3779b9;
+    const next = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed; };
+
+    // float2int TRUNCATES toward zero, as C does — it does not round. 2.5 -> 2
+    // and -2.5 -> -2 are the pair that catches a rounding implementation.
+    for (const c of [0, 1, 1.5, -1.5, 2.5, -2.5, 0.9, -0.9, 255.7, -255.7, 1e9, -1e9, 1 / 3]) {
+        const x = R(c);
+        assert.ok(run(f2i, {0: F32(x)}) >= 0, `float2int(${x}) never returned`);
+        assert.equal(mcu.core.registers[0] | 0, Math.trunc(x) | 0, `float2int(${x})`);
+    }
+    for (let i = 0; i < 300; i++) {
+        const x = F(next());
+        if (!Number.isFinite(x) || Math.abs(x) >= 2147483648) continue;   // declared unsupported
+        assert.ok(run(f2i, {0: F32(x)}) >= 0, `float2int(${x}) never returned`);
+        assert.equal(mcu.core.registers[0] | 0, Math.trunc(x) | 0, `float2int(${x})`);
+    }
+    for (let i = 0; i < 300; i++) {
+        const u = next();
+        assert.ok(run(u2f, {0: u >>> 0}) >= 0, `uint2float(${u}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, F32(Math.fround(u >>> 0)), `uint2float(${u >>> 0})`);
+    }
+    for (const c of [0, 1, 1.5, 255.7, 65535.9, 1e9, 4e9, 1 / 3]) {
+        const x = R(c);
+        assert.ok(run(f2u, {0: F32(x)}) >= 0, `float2uint(${x}) never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, Math.trunc(x) >>> 0, `float2uint(${x})`);
+    }
+});
+
+test('DECLARED DEVIATIONS: what the conversions refuse, stated rather than discovered', {skip: SKIP}, async () => {
+    // Every one of these is undefined in C. The ROM returns 0 rather than
+    // inventing a saturation the datasheet does not specify, and this pins
+    // that so "agrees with JavaScript" is never read as total.
+    const {mcu, run} = await callRom();
+    const view = new DataView(buildBootrom().buffer);
+    const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
+    const f2i = view.getUint32(sf + 7 * 4, true);
+    const f2u = view.getUint32(sf + 9 * 4, true);
+    for (const [fn, x, name] of [
+        [f2i, 1e30, 'float2int of 1e30 (>= 2^31)'],
+        [f2i, Infinity, 'float2int of Infinity'],
+        [f2i, NaN, 'float2int of NaN'],
+        [f2u, -1, 'float2uint of a negative'],
+        [f2u, 1e30, 'float2uint of 1e30 (>= 2^32)'],
+        [f2u, NaN, 'float2uint of NaN']
+    ]) {
+        assert.ok(run(fn, {0: F32(x)}) >= 0, `${name} never returned`);
+        assert.equal(mcu.core.registers[0] >>> 0, 0,
+            `${name} returned something other than the documented 0`);
+    }
+});
+
 test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an oracle failure', {skip: SKIP}, async () => {
     // Stated rather than discovered. Gradual underflow costs a normalisation
     // path in every operator, and nothing in this tier has produced a
@@ -518,16 +600,16 @@ test('DECLARED DEVIATION: subnormals are flushed to zero, and that is not an ora
         'a subnormal operand is treated as zero — JavaScript would give 2.8e-45');
 });
 
-test('NAMED STOP: fsqrt, the conversions and the transcendentals are still the stub', {skip: SKIP}, async () => {
+test('NAMED STOP: the fixed-point conversions and the transcendentals are still the stub', {skip: SKIP}, async () => {
     // fadd, fsub and int2float have left this list. Implementing another
     // operator must BREAK this test, so whoever does it comes here and records
     // which one now works rather than leaving a stale claim standing.
     const {mcu, run} = await callRom();
     const view = new DataView(buildBootrom().buffer);
     const sf = view.getUint16(view.getUint16(0x16, true) + 2, true);
-    const stubbed = [[6, 'fsqrt'], [7, 'float2int'],
-        [9, 'float2uint'], [12, 'fix2float'], [13, 'uint2float'], [15, 'fcos'],
-        [16, 'fsin'], [19, 'fexp'], [20, 'fln']];
+    const stubbed = [[8, 'float2fix'], [10, 'float2ufix'], [12, 'fix2float'],
+        [14, 'ufix2float'], [15, 'fcos'], [16, 'fsin'], [17, 'ftan'],
+        [19, 'fexp'], [20, 'fln']];
     for (const [i, name] of stubbed) {
         const fn = view.getUint32(sf + i * 4, true);
         assert.ok(run(fn, {0: F32(2.5), 1: F32(1.0)}) >= 0, `${name} never returned`);

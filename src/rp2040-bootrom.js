@@ -944,6 +944,258 @@ export function buildBootrom () {
         ['b', 'fd_signit'],
     ]);
 
+    // ── float2int(r0 = float) → r0 = int32, truncating toward zero ─────
+    //
+    // SF table index 7, and the inverse of int2float above. C truncates toward
+    // zero rather than rounding, so the right shift IS the conversion and there
+    // is no rounding step to get wrong.
+    //
+    // DECLARED UNSUPPORTED, and refused by name in the tests rather than
+    // guessed at: |x| >= 2^31 does not fit an int32, and C leaves the result
+    // undefined. This returns 0 rather than inventing a saturation the
+    // datasheet does not specify. NaN and infinity land in the same branch.
+    const float2int = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x0fc1, // lsrs r1, r0, #31       ; r1 = sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24       ; r2 = exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9        ; r3 = mantissa
+        0x2a7f, // cmp  r2, #127
+        ['bge', 'f2i_ge1'],
+        0x2000, // movs r0, #0
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'f2i_ge1'],
+        0x2a9e, // cmp  r2, #158
+        ['blt', 'f2i_range'],
+        0x2000, // movs r0, #0
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'f2i_range'],
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4            ; restore the implicit 1: r3 = 1.mmm << 23
+        0x0014, // movs r4, r2
+        0x3c96, // subs r4, #150          ; r4 = exp - 150
+        0x2c00, // cmp  r4, #0
+        ['blt', 'f2i_right'],
+        0x40a3, // lsls r3, r4            ; scale up
+        ['b', 'f2i_sign'],
+        ['label', 'f2i_right'],
+        0x4264, // rsbs r4, r4, #0        ; how far down
+        0x40e3, // lsrs r3, r4            ; TRUNCATES toward zero, which is the C rule
+        ['label', 'f2i_sign'],
+        0x0018, // movs r0, r3
+        0x2900, // cmp  r1, #0
+        ['beq', 'f2i_out'],
+        0x4240, // rsbs r0, r0, #0        ; negative
+        ['label', 'f2i_out'],
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── uint2float(r0 = uint32) → r0 = float ───────────────────────────
+    //
+    // SF table index 13. int2float without the sign step, and with the same
+    // round-to-nearest-ties-to-even, so 2^24+1 rounds DOWN and 2^24+3 rounds UP
+    // for the same reason: the surviving mantissa must be even.
+    const uint2float = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x2800, // cmp  r0, #0
+        ['bne', 'u2f_nz'],
+        0xbdf0, // pop  {r4-r7, pc}       ; +0.0
+        ['label', 'u2f_nz'],
+        0x2200, // movs r2, #0            ; shift count
+        ['label', 'u2f_norm'],
+        0x0003, // movs r3, r0            ; N = bit 31
+        ['bmi', 'u2f_normed'],
+        0x0040, // lsls r0, r0, #1
+        0x3201, // adds r2, #1
+        ['b', 'u2f_norm'],
+        ['label', 'u2f_normed'],
+        0x239e, // movs r3, #158
+        0x1a9b, // subs r3, r3, r2        ; exponent
+        0x0002, // movs r2, r0
+        0x0612, // lsls r2, r2, #24       ; the 8 dropped bits
+        0x0a00, // lsrs r0, r0, #8
+        0x2a00, // cmp  r2, #0
+        ['beq', 'u2f_pack'],
+        0x0014, // movs r4, r2
+        ['bpl', 'u2f_pack'],                    // guard clear
+        0x0054, // lsls r4, r2, #1        ; sticky
+        ['bne', 'u2f_up'],
+        0x0004, // movs r4, r0
+        0x07e4, // lsls r4, r4, #31       ; tie: to even
+        ['beq', 'u2f_pack'],
+        ['label', 'u2f_up'],
+        0x3001, // adds r0, #1
+        0x0e04, // lsrs r4, r0, #24
+        0x2c00, // cmp  r4, #0
+        ['beq', 'u2f_pack'],
+        0x0840, // lsrs r0, r0, #1
+        0x3301, // adds r3, #1
+        ['label', 'u2f_pack'],
+        0x0240, // lsls r0, r0, #9
+        0x0a40, // lsrs r0, r0, #9
+        0x05db, // lsls r3, r3, #23
+        0x4318, // orrs r0, r3
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── float2uint(r0 = float) → r0 = uint32, truncating ───────────────
+    //
+    // SF table index 9. Every refused case returns 0 and they are refused BY
+    // NAME in the tests rather than guessed at: a negative input, |x| >= 2^32,
+    // NaN and infinity are all undefined in C, and this does not invent a
+    // saturation the datasheet does not specify. The zero is loaded before the
+    // checks so every refusal exits through one path.
+    const float2uint = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x0fc1, // lsrs r1, r0, #31       ; sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24       ; exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9        ; mantissa
+        0x2000, // movs r0, #0            ; the answer for every refused case
+        0x2900, // cmp  r1, #0
+        ['bne', 'f2u_out'],                     // negative: undefined in C, refused
+        0x2a7f, // cmp  r2, #127
+        ['blt', 'f2u_out'],                     // |x| < 1
+        0x2a9f, // cmp  r2, #159
+        ['bge', 'f2u_out'],                     // >= 2^32, and NaN/Inf, refused
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4            ; implicit 1
+        0x0014, // movs r4, r2
+        0x3c96, // subs r4, #150
+        0x2c00, // cmp  r4, #0
+        ['blt', 'f2u_right'],
+        0x40a3, // lsls r3, r4
+        ['b', 'f2u_done'],
+        ['label', 'f2u_right'],
+        0x4264, // rsbs r4, r4, #0
+        0x40e3, // lsrs r3, r4            ; truncate
+        ['label', 'f2u_done'],
+        0x0018, // movs r0, r3
+        ['label', 'f2u_out'],
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
+    // ── fsqrt(r0 = float) → r0 = sqrt(x) ───────────────────────────────
+    //
+    // SF table index 6. Digit-by-digit, two bits of radicand per bit of root,
+    // which is long division's cousin and the reason to prefer it here: it
+    // leaves an exact REMAINDER, and the remainder is what separates a root
+    // that terminates from one that does not. Newton's method converges faster
+    // and cannot tell those apart at the rounding edge.
+    //
+    // The exponent is forced EVEN first, folding the odd bit into the
+    // significand as a doubling. sqrt of a value in [1,4) is in [1,2), so the
+    // root is 25 bits with bit 24 set in both cases and there is one shape to
+    // pack rather than two.
+    //
+    // A negative input is undefined in C and returns a quiet NaN; sqrt(+Inf)
+    // is +Inf; signed zeros come back unchanged, which is IEEE's rule and not
+    // an accident of the flush.
+    const fsqrt = pc;
+    pc = asm(view, pc, [
+        0xb5f0, // push {r4-r7, lr}
+        0x0fc1, // lsrs r1, r0, #31       ; sign
+        0x0042, // lsls r2, r0, #1
+        0x0e12, // lsrs r2, r2, #24       ; exponent
+        0x0243, // lsls r3, r0, #9
+        0x0a5b, // lsrs r3, r3, #9        ; mantissa
+        0x2aff, // cmp  r2, #255
+        ['bne', 'sq_finite'],
+        0x2b00, // cmp  r3, #0
+        ['bne', 'sq_nan'],                      // NaN in, NaN out
+        0x2900, // cmp  r1, #0
+        ['bne', 'sq_nan'],                      // sqrt(-Inf)
+        0xbdf0, // pop  {r4-r7, pc}       ; sqrt(+Inf) = +Inf
+        ['label', 'sq_finite'],
+        0x2a00, // cmp  r2, #0
+        ['beq', 'sq_ret'],                      // +-0, and subnormals flushed to it
+        0x2900, // cmp  r1, #0
+        ['beq', 'sq_pos'],
+        ['label', 'sq_nan'],
+        0x20ff, // movs r0, #255
+        0x05c0, // lsls r0, r0, #23
+        0x2101, // movs r1, #1
+        0x0589, // lsls r1, r1, #22
+        0x4308, // orrs r0, r1            ; sqrt of a negative is undefined: qNaN
+        ['label', 'sq_ret'],
+        0xbdf0, // pop  {r4-r7, pc}
+        ['label', 'sq_pos'],
+        0x2401, // movs r4, #1
+        0x05e4, // lsls r4, r4, #23
+        0x4323, // orrs r3, r4            ; r3 = S = 1.f as 24 bits
+        0x3a7f, // subs r2, #127          ; r2 = e
+        0x0014, // movs r4, r2
+        0x2501, // movs r5, #1
+        0x402c, // ands r4, r5            ; r4 = e & 1
+        0x2c00, // cmp  r4, #0
+        ['beq', 'sq_even'],
+        0x3a01, // subs r2, #1            ; e -= 1, now even
+        0x009b, // lsls r3, r3, #2        ; and the value doubles: M = S << 2
+        ['b', 'sq_scaled'],
+        ['label', 'sq_even'],
+        0x005b, // lsls r3, r3, #1        ; M = S << 1
+        ['label', 'sq_scaled'],
+        0x1052, // asrs r2, r2, #1        ; result exponent = e/2, arithmetic for negatives
+        0x327f, // adds r2, #127          ; ...biased
+        0x019b, // lsls r3, r3, #6        ; align M so its top bit is at 31
+        0x2400, // movs r4, #0            ; root
+        0x2500, // movs r5, #0            ; remainder
+        0x2619, // movs r6, #25           ; bits to produce
+        ['label', 'sq_loop'],
+        0x001f, // movs r7, r3
+        0x0fbf, // lsrs r7, r7, #30       ; the next two bits
+        0x009b, // lsls r3, r3, #2        ; zeros arrive on their own once M is spent
+        0x00ad, // lsls r5, r5, #2
+        0x433d, // orrs r5, r7            ; rem = rem<<2 | pair
+        0x0027, // movs r7, r4
+        0x00bf, // lsls r7, r7, #2
+        0x3701, // adds r7, #1            ; trial = root<<2 | 1
+        0x42bd, // cmp  r5, r7
+        ['blo', 'sq_zero'],
+        0x1bed, // subs r5, r5, r7        ; it fits
+        0x0064, // lsls r4, r4, #1
+        0x3401, // adds r4, #1            ; root = root<<1 | 1
+        ['b', 'sq_next'],
+        ['label', 'sq_zero'],
+        0x0064, // lsls r4, r4, #1        ; root = root<<1
+        ['label', 'sq_next'],
+        0x3e01, // subs r6, #1
+        0x2e00, // cmp  r6, #0
+        ['bne', 'sq_loop'],
+        0x0027, // movs r7, r4
+        0x2001, // movs r0, #1
+        0x4007, // ands r7, r0            ; guard = root bit 0
+        0x0864, // lsrs r4, r4, #1        ; 24-bit significand
+        0x2f00, // cmp  r7, #0
+        ['beq', 'sq_pack'],                     // guard clear: round down
+        0x2d00, // cmp  r5, #0
+        ['bne', 'sq_up'],                       // a remainder is sticky: round up
+        0x0027, // movs r7, r4
+        0x07ff, // lsls r7, r7, #31       ; exact tie: round to even
+        ['beq', 'sq_pack'],
+        ['label', 'sq_up'],
+        0x3401, // adds r4, #1
+        0x0e27, // lsrs r7, r4, #24
+        0x2f00, // cmp  r7, #0
+        ['beq', 'sq_pack'],
+        0x0864, // lsrs r4, r4, #1
+        0x3201, // adds r2, #1
+        ['label', 'sq_pack'],
+        0x0264, // lsls r4, r4, #9
+        0x0a64, // lsrs r4, r4, #9        ; drop the implicit 1
+        0x05d2, // lsls r2, r2, #23
+        0x0020, // movs r0, r4
+        0x4310, // orrs r0, r2            ; sqrt is never negative
+        0xbdf0, // pop  {r4-r7, pc}
+    ]);
+
     // ── the single-precision soft-float stub ───────────────────────────
     //
     // EVERY 'SF' ENTRY POINTS HERE, AND NONE OF THEM COMPUTES ANYTHING.
@@ -1057,7 +1309,11 @@ export function buildBootrom () {
     view.setUint32(sfTable + 1 * 4, thumb(fsub), true);
     view.setUint32(sfTable + 2 * 4, thumb(fmul), true);
     view.setUint32(sfTable + 3 * 4, thumb(fdiv), true);
+    view.setUint32(sfTable + 6 * 4, thumb(fsqrt), true);
+    view.setUint32(sfTable + 7 * 4, thumb(float2int), true);
+    view.setUint32(sfTable + 9 * 4, thumb(float2uint), true);
     view.setUint32(sfTable + 11 * 4, thumb(int2float), true);
+    view.setUint32(sfTable + 13 * 4, thumb(uint2float), true);
 
     const dataTable = sfTable + SF_TABLE_ENTRIES * 4;
     view.setUint16(dataTable, ROM_DATA.SOFT_FLOAT, true);
