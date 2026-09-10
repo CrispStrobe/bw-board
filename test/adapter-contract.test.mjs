@@ -244,6 +244,11 @@ async function stm32f0Factory() {
     pins: Object.keys(STM32F0_PINS),
     togglePin: 'PA0',
     inputPin: 'PA1',
+    // PA1 is port A bit 1. `syncInputs` seats a sampled board level with
+    // `gpio.setInput(bit, …)` (stm32-adapter.js:86), which writes the pad's
+    // bit in `inputs` (stm32f0-board.js:189) — that is where the level the
+    // board reported actually lands in the machine.
+    inputReadback: adapter => (adapter.peripherals.gpioA.inputs >>> 1) & 1,
     make() { return createStm32F0Adapter({ program: image }); },
     // instruction-stepped like rp2040js — a short soak with the same
     // boundary assertions
