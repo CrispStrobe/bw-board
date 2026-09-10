@@ -151,6 +151,10 @@ test('replay is REFUSED while a board is attached, in either mode', { skip }, as
   // conflict, and it used to be accepted silently.
   for (const mode of ['poll', 'push']) {
     const { adapter } = await boot(mode);
+    // Asserted, not assumed: with a board these really are two distinct states,
+    // which is what makes this loop coverage rather than repetition.
+    assert.equal(adapter.getStats().mode, mode,
+      `the build did not reach ${mode} mode, so this iteration is not testing it`);
     const outcome = replayOutcome(adapter.applyReplayInput(
       { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } }));
     assert.equal(outcome.accepted, false, `${mode} mode with a board must refuse replay`);
@@ -238,15 +242,20 @@ test('a malformed fact is refused before it reaches the native setters', { skip 
   }
 });
 
-test('a boardless machine accepts replay in either mode', { skip }, async () => {
-  // The complement of the refusal above: with no board there is no competing
-  // authority, so the mode is irrelevant. Together the two tests say the guard
-  // turns on the board and not on the mode, which is the correction this commit
-  // carries.
-  for (const mode of ['poll', 'push']) {
-    const adapter = await bootBoardless(mode);
-    const outcome = replayOutcome(adapter.applyReplayInput(
-      { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } }));
-    assert.equal(outcome.accepted, true, `${mode} mode without a board must accept: ${outcome.reason}`);
-  }
+test('a boardless machine accepts replay, and has no mode at all', { skip }, async () => {
+  // ONE CASE, NOT TWO, AND THE ASSERTION SAYS WHY. A first version of this test
+  // looped over ['poll', 'push'] as the complement of the refusal above. Both
+  // iterations ran the identical state: `stats.mode` is assigned only inside
+  // `attachBoard` — 'push' from setupPushCallbacks, 'poll' from the fallback
+  // beneath it — so a boardless adapter never leaves 'none'. The `mode` option
+  // is a REQUEST that nothing acts on until a board arrives. Two iterations that
+  // look like coverage and exercise one case is the shape this suite exists to
+  // avoid, and the version of this test it replaced had the discipline that
+  // catches it: assert the state you claim to be varying.
+  const adapter = await bootBoardless('push');
+  assert.equal(adapter.getStats().mode, 'none',
+    'a boardless adapter is expected to have no mode; if that changes, this test must vary it');
+  const outcome = replayOutcome(adapter.applyReplayInput(
+    { producer: 'emu8051.pin', payload: { port: 1, bit: 0, level: 1 } }));
+  assert.equal(outcome.accepted, true, `a boardless machine must accept replay: ${outcome.reason}`);
 });

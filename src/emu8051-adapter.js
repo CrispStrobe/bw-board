@@ -513,8 +513,8 @@ export function createEmu8051Adapter(wasm, opts = {}) {
       // mode, and replay must not pretend otherwise.
       if (board) {
         return replayRefused('live-board-input-authority',
-          'a board is attached and re-asserts its own pin values; detach it before replaying, ' +
-          'or the replayed value is overwritten on the next run slice');
+          'a board is attached and re-asserts its own pin values; replay into a machine with ' +
+          'no board attached, or the replayed value is overwritten on the next run slice');
       }
       const payload = input?.payload;
       if (input?.producer === 'emu8051.pin') {
