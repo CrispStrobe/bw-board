@@ -202,11 +202,38 @@ replayed level is overwritten on the next run slice. The guard is `if (board)`.
 
   Renaming one side alone breaks replay of existing logs — a log carries the
   string and a replayer compares by equality — which is why the 8086's is kept
-  for now. But "a wrong name kept because the consumer knows it" is a debt that
+  for now. **The coupling is three call sites here and three in the downstream
+  copy**, measured rather than asserted, which is the whole of the argument: a
+  rename on one side leaves six sites disagreeing about what a timeline is
+  called. But "a wrong name kept because the consumer knows it" is a debt that
   gets more expensive with every target that copies the pattern, and there are
-  four. **The ruling is: do the rename, as one change across both sides, in the
-  same week as the downstream retirement**, with a note that logs recorded
-  before it are not replayable after it. Not before, and not never.
+  four. **The ruling is: do the rename as one change across both sides**, with
+  a note that logs recorded before it are not replayable after it. Not before,
+  and not never.
+
+  **It is not a deletion, and calling it one sends the next reader to the wrong
+  tool.** An earlier version of this page, and the commit that ported the apply
+  half up, described the downstream file as something that could then be
+  deleted and taken from upstream. That is true of the APPLY HALF and false of
+  the FILE. Measured against this tree: the downstream copy holds **196
+  lite-only lines** that have no upstream counterpart — a checkpoint capture, a
+  live-input-source predicate, a video-frame cache, a DOS trap layer's
+  boundary-service dispatch, a disassembler integration — none of it replay.
+  The file is a GRAFT, and a whole-file sync would refuse on those 196 lines,
+  which is the good outcome but only after someone had already formed the wrong
+  plan.
+
+  And the graft is not purely additive, which is the part worth knowing before
+  starting it. Eight identifiers exist on both sides, and one of them decides
+  the result: `eventTime` differs by exactly the rewind behaviour. The upstream
+  one CLEARS the dedup map on a rewind; the downstream one does not, because it
+  has no map — but the downstream file bumps the epoch EXPLICITLY on
+  `restoreCheckpoint`, which upstream cannot do because its restore does not go
+  through the target. **The merged version needs both**, and neither side alone
+  is correct after the graft: take upstream's and you lose the explicit restore
+  bump, keep downstream's and the map survives a rewind holding levels from an
+  abandoned timeline. `keyIn`, `setInput` and `nmi` are replacements rather than
+  additions for the same reason — the upstream versions record.
 
 - **The 8051 is covered by enumeration, not detection.** Its clock lives in the
   WASM core, so it cannot compare against a last-stamped tick; the epoch bumps
