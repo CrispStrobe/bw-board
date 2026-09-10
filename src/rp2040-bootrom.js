@@ -1915,10 +1915,44 @@ export function buildBootrom () {
     view.setUint32(0x04, thumb(spin), true);        // reset
     view.setUint32(0x08, thumb(spin), true);        // NMI
     view.setUint32(0x0c, thumb(spin), true);        // HardFault
-    rom[0x10] = 0x4d;                               // 'M'
-    rom[0x11] = 0x75;                               // 'u'
-    rom[0x12] = 0x01;                               // version 1
-    rom[0x13] = 0x00;
+    // THE MAGIC IS THREE BYTES AND THE VERSION IS A FOURTH. 'M', 'u', 0x01 at
+    // 0x10..0x12 is the whole of the magic -- the 0x01 is a CONSTANT part of
+    // it, not a version number -- and the bootrom version is the separate byte
+    // at 0x13. This comment used to read "version 1" against 0x12, which put
+    // the version in the magic's third byte and left 0x13 at zero.
+    //
+    // A zero there is not a harmless omission. pico-sdk reads the version with
+    // `*(uint8_t *)0x13` and branches on it, and Kaluma 1.2.1 does exactly
+    // that at flash 0x1002096c:
+    //
+    //     movs r3, #0x13
+    //     ldrb r5, [r3]        ; the version byte
+    //     cmp  r5, #1
+    //     beq  fill_all        ; version 1 -> fill all 32 shim slots
+    //     ble  fill_one        ; version < 1 -> fill slot 18 and stop
+    //
+    // Reading 0 took the `ble` leg, so 31 of 32 double-precision operator
+    // pointers stayed NULL, and the first one called branched to address 0.
+    // From 0 the core NOP-slid up through this ROM's zeros into
+    // rom_table_lookup at 0x100 and returned whatever that left in r0. That is
+    // ROADMAP R3: `2.5+1.0` evaluating to 0 while `1+1` gave 2, because
+    // integer arithmetic never goes through the shim table.
+    //
+    // MEASURED, not reasoned: scripts/probe-sf-unaligned.mjs boots Kaluma
+    // 1.2.1 and evaluates the expression. With 0x13 = 0 the REPL answers 0;
+    // with 0x13 = 1 it answers 3.5. Setting 0x12 instead changes nothing,
+    // which is how the two bytes were told apart.
+    //
+    // 1 IS THE HONEST NUMBER, not the one that makes the most callers happy.
+    // Claiming 2 or 3 promises the V2 double-precision table ('DF') and the
+    // larger V2 function table, and this ROM publishes neither. Measured at
+    // 0x13 = 2 and = 3, Kaluma takes its V2 leg, finds no 'DF', and `2.5+1.0`
+    // returns NO value at all -- it echoes. A wrong version trades a wrong
+    // answer for no answer.
+    rom[0x10] = 0x4d;                               // 'M' ┐
+    rom[0x11] = 0x75;                               // 'u' ├ magic, all three bytes
+    rom[0x12] = 0x01;                               //     ┘
+    rom[0x13] = 0x01;                               // bootrom version: V1, what this ROM implements
     view.setUint16(0x14, table, true);
     view.setUint16(0x16, dataTable, true);
     view.setUint16(0x18, thumb(lookup), true);

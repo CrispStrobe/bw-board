@@ -40,7 +40,18 @@ test('the header sits where the datasheet says, because the SDK reads it by addr
     const view = new DataView(rom.buffer);
 
     assert.equal(String.fromCharCode(rom[0x10], rom[0x11]), 'Mu', 'the magic identifies the ROM');
-    assert.equal(rom[0x12], 1, 'version');
+    // The magic is THREE bytes -- 'M', 'u', 0x01 -- and the 0x01 is a fixed
+    // part of it. The line here used to assert rom[0x12] === 1 and call it
+    // 'version', which is why a zero version byte survived: the test asserted
+    // the magic's third byte twice and the version not at all.
+    assert.equal(rom[0x12], 0x01, "the magic's third byte");
+    // pico-sdk reads the version with *(uint8_t *)0x13, and Kaluma branches on
+    // it: version 1 fills all 32 double-precision shim slots, anything less
+    // fills one and leaves 31 null. A zero here made `2.5+1.0` evaluate to 0.
+    // 1 is what this ROM actually implements -- V1 tables, no 'DF'.
+    assert.equal(rom[0x13], 1, 'the bootrom version byte at 0x13');
+    assert.notEqual(rom[0x13], 0,
+        'a zero version byte is the R3 defect: pico-sdk reads 0x13, not 0x12');
     // Nothing else names these tables — they are found only by offset.
     assert.ok(view.getUint16(0x14, true) > 0x100, 'no function table pointer');
     assert.ok(view.getUint16(0x18, true) > 0x100, 'no lookup routine pointer');
@@ -205,7 +216,9 @@ test('the adapter installs the ROM where the core reads it', {skip: SKIP}, async
     const rom = buildBootrom();
     const view = new DataView(rom.buffer);
 
-    // Word 4 covers 0x10..0x13: 'M', 'u', version, pad.
+    // Word 4 covers 0x10..0x13: 'M', 'u', 0x01 (all three the magic), then the
+    // version byte. It is NOT 'M', 'u', version, pad -- that reading is what
+    // left 0x13 at zero.
     assert.equal(rp2040.readUint32(0x10), view.getUint32(0x10, true),
         'the §2.8.2 header is not what the core sees at 0x10');
     assert.equal(String.fromCharCode(rp2040.readUint32(0x10) & 0xff,
