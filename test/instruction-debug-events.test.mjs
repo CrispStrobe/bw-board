@@ -367,3 +367,170 @@ describe('the epoch: a fact after a rewind names a different timeline', () => {
     assert.equal(events.debugTime().domain, 'test-ticks-reset-1');
   });
 });
+
+describe('the accessor wrappers cost nothing while nobody is listening', () => {
+  // MEASURED, not stylistic. With the wrappers installed at construction, a
+  // memory-bound program paid for a debugger nobody had opened:
+  //
+  //   6502   400k steps   no target 104ms   target installed 118ms   1.14x
+  //   z80    400k steps   no target  78ms   target installed 112ms   1.43x
+  //
+  // The z80 is worse because it passes `port: true` and wraps four methods
+  // rather than two. The constant is ~45ns per access, so the ratio belongs to
+  // the program: the same wrapper on a pin-toggle loop measures 1.06x and looks
+  // free. That is why this is asserted STRUCTURALLY here rather than as a
+  // timing — a wall clock on this hardware cannot separate 1.06x from noise,
+  // and identity can.
+
+  it('installs nothing until the first listener arrives', () => {
+    const cpu = fakeCpu();
+    const read = cpu.read, write = cpu.write;
+    install(cpu, { cycles: 0, clockHz: 1e6 });
+
+    assert.equal(cpu.read, read, 'cpu.read was wrapped with no listener attached');
+    assert.equal(cpu.write, write, 'cpu.write was wrapped with no listener attached');
+  });
+
+  it('installs on the first listener and removes on the last', () => {
+    const cpu = fakeCpu();
+    const read = cpu.read, write = cpu.write;
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+
+    const stopA = events.onDebugEvent(() => {});
+    assert.notEqual(cpu.read, read, 'the first listener did not install the wrapper');
+    const wrapped = cpu.read;
+
+    const stopB = events.onDebugEvent(() => {});
+    assert.equal(cpu.read, wrapped, 'a second listener must not wrap the wrapper');
+
+    stopA();
+    assert.equal(cpu.read, wrapped, 'the wrapper came off while a listener was still attached');
+
+    stopB();
+    assert.equal(cpu.read, read, 'the last listener left and the wrapper stayed');
+    assert.equal(cpu.write, write);
+  });
+
+  it('and the facts still arrive after a re-attach', () => {
+    // The cycle has to be idempotent: off, on, off, on must record the same
+    // way the first attachment did, or the saving costs correctness.
+    const cpu = fakeCpu([{ reads: [0x20] }, { reads: [0x20] }]);
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+
+    const first = [];
+    events.onDebugEvent(e => first.push(e))();     // attach and immediately detach
+    cpu.step();
+    assert.equal(first.length, 0, 'a detached listener still received a fact');
+
+    const second = [];
+    events.onDebugEvent(e => second.push(e));
+    cpu.step();
+    assert.deepEqual(second.map(e => `${e.kind}/${e.phase}`),
+      ['memory/access', 'instruction/retire'], 're-attaching did not restore recording');
+  });
+
+  it('the PORT wrappers follow the same lifecycle, and only when port is set', () => {
+    const cpu = fakeCpu();
+    const inPort = cpu.inPort, outPort = cpu.outPort;
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 }, { port: true });
+
+    assert.equal(cpu.inPort, inPort, 'ports wrapped with no listener');
+    const stop = events.onDebugEvent(() => {});
+    assert.notEqual(cpu.inPort, inPort);
+    assert.notEqual(cpu.outPort, outPort);
+    stop();
+    assert.equal(cpu.inPort, inPort);
+    assert.equal(cpu.outPort, outPort);
+  });
+
+  it('leaves the ports ALONE when port is not set, at every stage', () => {
+    const cpu = fakeCpu();
+    const inPort = cpu.inPort;
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    const stop = events.onDebugEvent(() => {});
+    assert.equal(cpu.inPort, inPort, 'a non-port target wrapped a port accessor');
+    stop();
+    assert.equal(cpu.inPort, inPort);
+  });
+
+  it('DOES NOT UNWRAP SOMEONE ELSE’S WRAPPER, even at the cost of leaving ours on', () => {
+    // We are not necessarily the outermost. If another party wraps cpu.read
+    // after us, restoring our original discards theirs silently — a corruption,
+    // where leaving ours installed is only a cost, and the `accesses` null check
+    // keeps it inert.
+    const cpu = fakeCpu();
+    const original = cpu.read;
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    const stop = events.onDebugEvent(() => {});
+
+    const oursRead = cpu.read, oursWrite = cpu.write;
+    const theirs = address => oursRead(address);
+    const theirsWrite = (address, value) => oursWrite(address, value);
+    cpu.read = theirs;                       // someone wraps on top of us
+    cpu.write = theirsWrite;
+
+    stop();
+    assert.equal(cpu.write, theirsWrite, 'write was restored over another party’s wrapper');
+    assert.equal(cpu.read, theirs, 'the last listener leaving discarded another party’s wrapper');
+    assert.notEqual(cpu.read, original);
+  });
+
+  it('and the same for STEP, which is the one I first tested only for read', () => {
+    // EVERY wrapper this module installs, not the one the test happened to
+    // drive. Removing the conditional restore for `step` passed the whole file
+    // until this existed — one rule applied where I was looking rather than
+    // across the surface it governs, in the file written for that exact
+    // failure, again.
+    const cpu = fakeCpu([{}]);
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    const stop = events.onDebugEvent(() => {});
+
+    const ours = cpu.step;
+    const theirs = () => ours();
+    cpu.step = theirs;
+
+    stop();
+    assert.equal(cpu.step, theirs, 'the last listener leaving discarded another party’s step wrapper');
+  });
+
+  it('and for the PORT pair', () => {
+    const cpu = fakeCpu([{}]);
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 }, { port: true });
+    const stop = events.onDebugEvent(() => {});
+
+    const oursIn = cpu.inPort, oursOut = cpu.outPort;
+    const theirsIn = a => oursIn(a), theirsOut = (a, v) => oursOut(a, v);
+    cpu.inPort = theirsIn; cpu.outPort = theirsOut;
+
+    stop();
+    assert.equal(cpu.inPort, theirsIn);
+    assert.equal(cpu.outPort, theirsOut);
+  });
+
+  it('THE STEP WRAPPER IS LAZY TOO, because the measurement said so', () => {
+    // I first kept it, arguing its guard is per-instruction rather than
+    // per-access and therefore a rounding error. That was true and it was not a
+    // measurement. With only the accessors made lazy, a listener-less target
+    // still cost 1.44x on a two-access instruction, and the ratio FELL as
+    // accesses per step rose — 1.44x at 2, 1.28x at 16, 1.05x at 128 — which is
+    // the signature of a per-STEP cost. With eager accessors it rises instead.
+    const cpu = fakeCpu([{}]);
+    const step = cpu.step;
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    assert.equal(cpu.step, step, 'the step wrapper went on with no listener attached');
+
+    const stop = events.onDebugEvent(() => {});
+    assert.notEqual(cpu.step, step, 'the first listener did not install the step wrapper');
+    stop();
+    assert.equal(cpu.step, step, 'the last listener left and the step wrapper stayed');
+  });
+
+  it('and stepping with NO listener still returns the core’s own cycles', () => {
+    // The unwrapped path has to behave: an unlistened target is the common case
+    // and it must be indistinguishable from no target at all.
+    const cpu = fakeCpu([{ cycles: 11, pcAfter: 0x999 }]);
+    install(cpu, { cycles: 0, clockHz: 1e6 });
+    assert.equal(cpu.step(), 11);
+    assert.equal(cpu.pc, 0x999);
+  });
+});
