@@ -287,7 +287,12 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
       accesses = null;
       for (const access of captured) publish({
         cpuId, ...access, phase: 'access', fidelity: 'reconstructed', time: time(ticksBefore),
-        cause: 'instruction-access'
+        // PROVENANCE IS STATED, NOT INFERRED. An access the wrappers saw the
+        // CPU issue and one a peripheral completed on its own clock are both
+        // real and both belong to this instruction, but they are not the same
+        // evidence — and a consumer cannot tell them apart from the payload.
+        // `cause` says which; a contributed access brings its own.
+        cause: access.cause ?? 'instruction-access'
       });
     }
     if (cycles > 0) {
@@ -317,6 +322,50 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
   };
 
   const stepWrapper = () => runInstruction(originalStep);
+
+  /**
+   * An access this module did not observe itself.
+   *
+   * The accessor wrappers see what goes through the CPU. They cannot see an
+   * access a PERIPHERAL completes on its own clock — an SPI transfer finishing
+   * some cycles after the store that started it, a TWI START issued from a
+   * bridge callback. Those are real, ordered evidence about the same
+   * instruction, observed by something else.
+   *
+   * WHY IT GOES IN THE WINDOW RATHER THAN OUT. If an instruction is open, a
+   * contributed access joins the ones the wrappers collected and publishes with
+   * them, before the retire it belongs to and stamped with the instruction's
+   * START time. That is not a nicety: a consumer deciding where to break needs
+   * every access for an instruction to arrive before its boundary, and it
+   * cannot tell which of them the CPU issued directly. Outside a window there
+   * is no instruction to belong to, so the fact goes out immediately at the
+   * current clock.
+   *
+   * FIDELITY IS THE SAME AND THAT IS AN ASSERTION, NOT AN OVERSIGHT.
+   * `reconstructed` here means one thing: this timestamp was reconstructed from
+   * the instruction boundary rather than measured at the access. That is
+   * equally true of a wrapped access and a contributed one — neither has a
+   * timestamp of its own, both inherit the instruction's start. What DOES
+   * differ is where the observation came from, and that is what `cause` is
+   * for: `instruction-access` for one the wrappers saw, `peripheral-access`
+   * for one contributed from outside. A caller may override it.
+   *
+   * The same rule the accessor wrappers follow: with no listener it does
+   * nothing at all.
+   */
+  const contributeAccess = access => {
+    if (!listeners.size) return false;
+    if (!access || typeof access !== 'object' || typeof access.kind !== 'string') {
+      throw new TypeError('recordAccess needs an access fact carrying a kind');
+    }
+    const tagged = {...access, cause: access.cause ?? 'peripheral-access'};
+    if (accesses) {
+      accesses.push(tagged);
+      return true;
+    }
+    publish({cpuId, ...tagged, phase: 'access', fidelity: 'reconstructed', time: time(clock())});
+    return true;
+  };
 
   return {
     onDebugEvent(listener) {
@@ -417,6 +466,19 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
       return true;
     },
 
+    /**
+     * Contribute an access observed elsewhere. See `contributeAccess`.
+     *
+     * @param {{kind: string}} access the fact's own fields, without the
+     *   envelope: this module supplies cpuId, phase, fidelity, time and cause,
+     *   so a contributed access is indistinguishable from an observed one
+     *   except in what it describes. That uniformity is the point — a target
+     *   that hand-rolled its own envelope was the duplication this removes.
+     * @returns {boolean} false if nobody is listening
+     */
+    recordAccess(access) {
+      return contributeAccess(access);
+    },
     debugTime() {
       return {
         // BigInt, LIKE THE STAMPS. It used to return the raw counter while

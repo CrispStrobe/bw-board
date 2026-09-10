@@ -24,7 +24,8 @@ import { M6502Machine } from '../src/m6502-machine.js';
  * A CPU that does exactly what a test tells it to on each step.
  *
  * `plan` is consumed one entry per step: `{reads, writes, ins, outs, cycles,
- * pcAfter, throws}`. Everything is optional.
+ * pcAfter, throws, during}`. Everything is optional. `during` runs INSIDE the
+ * step, which is the only place a peripheral's own callback can fire.
  */
 function fakeCpu(plan = [], machine = null) {
   const cpu = {
@@ -41,6 +42,7 @@ function fakeCpu(plan = [], machine = null) {
       for (const [a, v] of s.writes ?? []) cpu.write(a, v);
       for (const p of s.ins ?? []) cpu.inPort(p);
       for (const [p, v] of s.outs ?? []) cpu.outPort(p, v);
+      if (s.during) s.during();
       if (s.regs) Object.assign(cpu, s.regs);
       if (s.throws) throw new Error(s.throws);
       cpu.pc = s.pcAfter ?? (cpu.pc + 1);
@@ -401,6 +403,93 @@ describe('the epoch: a fact after a rewind names a different timeline', () => {
 
     events.openTimeEpoch();
     assert.equal(events.debugTime().domain, 'test-ticks-reset-1');
+  });
+});
+
+describe('an access observed by something OTHER than the wrappers', () => {
+  // The wrappers see what goes through the CPU. They cannot see an access a
+  // PERIPHERAL completes on its own clock — an SPI transfer finishing some
+  // cycles after the store that started it, a TWI START issued from a bridge
+  // callback. Those are real, ordered evidence about the same instruction,
+  // observed by something else, and before this they were hand-rolled by every
+  // target that had any.
+  //
+  // BOTH HALVES ARE TESTED ON PURPOSE. The hand-rolled logic being replaced had
+  // an in-window path and an out-of-window one, and a fold that keeps only the
+  // common case loses the half nobody thought to test.
+
+  it('IN a window: it joins the instruction, before the retire, at the START time', () => {
+    const machine = { cycles: 500, clockHz: 1e6 };
+    let events;
+    // `during` runs INSIDE the step, which is the only place a peripheral's own
+    // callback can fire — and therefore the only place the window is open.
+    const cpu = fakeCpu([{ reads: [0x20], cycles: 6, during: () => events.recordAccess(
+      { kind: 'device', device: { id: 'twi0', bus: 'twi', event: 'start' } }) }], machine);
+    events = install(cpu, machine);
+    const { seen } = record(events);
+
+    cpu.step();
+
+    assert.deepEqual(seen.map(e => `${e.kind}/${e.phase}`),
+      ['memory/access', 'device/access', 'instruction/retire']);
+    const device = seen[1];
+    assert.equal(device.time.ticks, 500n, 'the contributed access carries the instruction START');
+    assert.ok(device.time.ticks < seen[2].time.ticks,
+      'and the retire carries the completion time');
+    assert.deepEqual(device.device, { id: 'twi0', bus: 'twi', event: 'start' });
+  });
+
+  it('OUT of a window: it publishes immediately and invents no instruction', () => {
+    const machine = { cycles: 900, clockHz: 1e6 };
+    const cpu = fakeCpu([{}], machine);
+    const events = install(cpu, machine);
+    const { seen } = record(events);
+
+    events.recordAccess({ kind: 'device', device: { id: 'spi0', bus: 'spi', event: 'transfer' } });
+
+    assert.deepEqual(seen.map(e => `${e.kind}/${e.phase}`), ['device/access']);
+    assert.equal(seen[0].time.ticks, 900n, 'stamped at the clock, there being no instruction');
+  });
+
+  it('says WHERE it came from, and a wrapped access says something different', () => {
+    // Condition from review: either the two are the same evidence and that is
+    // asserted, or they are not and the fact says so. What must not happen is
+    // that the difference exists unstated.
+    const machine = { cycles: 10, clockHz: 1e6 };
+    let events;
+    const cpu = fakeCpu([{ reads: [0x20], cycles: 2,
+      during: () => events.recordAccess({ kind: 'device', device: { id: 'x' } }) }], machine);
+    events = install(cpu, machine);
+    const { seen } = record(events);
+
+    cpu.step();
+
+    const [wrapped, contributed] = seen;
+    assert.equal(wrapped.cause, 'instruction-access');
+    assert.equal(contributed.cause, 'peripheral-access');
+    // FIDELITY IS THE SAME, and that is the assertion rather than an accident:
+    // `reconstructed` means the timestamp came from the instruction boundary
+    // rather than the access, which is equally true of both.
+    assert.equal(wrapped.fidelity, 'reconstructed');
+    assert.equal(contributed.fidelity, 'reconstructed');
+    assert.equal(wrapped.time.ticks, contributed.time.ticks,
+      'both inherit the instruction start; that is what reconstructed MEANS here');
+  });
+
+  it('refuses a fact with no kind, and does nothing at all with no listener', () => {
+    const machine = { cycles: 0, clockHz: 1e6 };
+    const cpu = fakeCpu([{}], machine);
+    const events = install(cpu, machine);
+
+    assert.equal(events.recordAccess({ kind: 'device' }), false,
+      'published to nobody');                       // no listener yet
+
+    const { seen } = record(events);
+    for (const bad of [undefined, null, 42, 'device', {}, { kind: 7 }]) {
+      assert.throws(() => events.recordAccess(bad),
+        /recordAccess needs an access fact carrying a kind/);
+    }
+    assert.deepEqual(seen, [], 'a refused contribution published nothing');
   });
 });
 
