@@ -241,6 +241,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     // really is a reset epoch. The name matches the mechanism on both targets
     // now, which is the point — not that all four should read alike.
     let eventTimeEpoch = 0;
+    /**
+     * The event clock's domain name. Written out at three sites once the
+     * checkpoint needs it, so it is named here instead: a restore starts a new
+     * epoch, and a reader comparing two facts must be able to tell that they
+     * came from different timelines rather than from one that jumped.
+     */
+    const eventDomain = () =>
+        (eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles');
+    /**
+     * State this target cannot capture, because it does not live in the machine.
+     * A live board input source is sampled directly and never logged, so a
+     * checkpoint taken over one is missing inputs it cannot even enumerate.
+     * Declining is the point: a snapshot that silently omits state restores a
+     * machine that looks right and is not.
+     */
+    const hasUncapturedInputState = () => adapter?.unloggedBoardInputs?.() === true;
     let lastEventTicks = -1;
     /** Levels only — see publishInputLevel. Events must not consult this. */
     const observedInputs = new Map();
@@ -259,7 +275,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         lastEventTicks = ticks;
         return {
             ticks,
-            domain: eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles',
+            domain: eventDomain(),
             hz: machine.clockHz
         };
     };
@@ -485,6 +501,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 breakpoints: machine.hooks
                     ? ['code', 'write', 'port', 'int']
                     : ['code', 'write'],
+                // Declared only when the machine can actually checkpoint AND
+                // nothing outside it holds state. Advertising a recording a
+                // caller cannot complete is the same defect as advertising a
+                // breakpoint that never fires.
+                recording: !hasUncapturedInputState() && machine.canCheckpoint?.()
+                    ? ['checkpoint', 'restore'] : [],
                 timeFreezes: true,
                 consumes: [],
                 // Declared only when the machine can actually take a key. A
@@ -663,10 +685,86 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         },
 
         /** The event clock, READ without advancing it. See eventTime(). */
+        /**
+         * A checkpoint of the MACHINE plus this target's own bookkeeping.
+         *
+         * The machine's envelope is not enough on its own: run state, a pending
+         * step and the event-clock epoch live here, are not derivable from the
+         * machine, and a restore without them single-steps into the wrong place.
+         */
+        captureCheckpoint() {
+            if (hasUncapturedInputState()) {
+                return {code: 'INCOMPLETE_CHECKPOINT_STATE',
+                    refused: 'a live board input source is sampled outside the machine and cannot be captured'};
+            }
+            const checkpoint = machine.captureCheckpoint();
+            if (checkpoint.refused) return checkpoint;
+            // The debug event clock, not the machine's base time: a consumer
+            // comparing this against a debug fact must get one clock, not two.
+            checkpoint.time = {ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz};
+            checkpoint.debugger = {runState, pendingStep: pendingStep ? {...pendingStep} : null,
+                eventTimeEpoch, lastEventTicks};
+            return checkpoint;
+        },
+
+        restoreCheckpoint(snapshot) {
+            if (!snapshot || !snapshot.debugger) {
+                return {code: 'INVALID_CHECKPOINT', refused: 'checkpoint has no 8086 debugger state'};
+            }
+            if (hasUncapturedInputState()) {
+                return {code: 'INCOMPLETE_CHECKPOINT_STATE',
+                    refused: 'cannot restore over a live board input source outside the machine'};
+            }
+            // VALIDATE BEFORE THE MACHINE MUTATES. machine.restoreCheckpoint is
+            // itself atomic -- it refuses without applying -- so the only way to
+            // half-apply is to let the machine succeed and then reject the
+            // debugger half. Both halves are checked first.
+            const state = snapshot.debugger.runState;
+            if (state !== 'running' && state !== 'halted') {
+                return {code: 'INVALID_CHECKPOINT', refused: 'invalid debugger run state'};
+            }
+            const stepState = snapshot.debugger.pendingStep;
+            if (stepState !== null && (!stepState || typeof stepState !== 'object' ||
+                !['insn', 'over', 'out'].includes(stepState.kind))) {
+                return {code: 'INVALID_CHECKPOINT', refused: 'invalid pending instruction step'};
+            }
+            const machineRefusal = machine.restoreCheckpoint(snapshot);
+            if (machineRefusal) return machineRefusal;
+            runState = state;
+            pendingStep = stepState ? {...stepState} : null;
+            syncEventHooks();
+            // A restore is a BRANCH in history, not permission to run the event
+            // clock backwards. A fresh epoch renames the domain, so two facts
+            // from different timelines cannot be read as one timeline that
+            // jumped. eventTime's own rewind detection cannot see this case: a
+            // restore landing ABOVE the last stamped tick looks like ordinary
+            // forward motion.
+            eventTimeEpoch++;
+            lastEventTicks = machine.cycles;
+            watchHit = null;
+            eventHit = null;
+            return true;
+        },
+
+        /** Retire exactly one instruction boundary, for verified replay. */
+        replayInstruction() {
+            if (hasUncapturedInputState() || !machine.canCheckpoint?.()) {
+                return {accepted: false, code: 'unsupported-replay',
+                    reason: '8086 machine state is not completely replayable'};
+            }
+            if (cpu.halted) {
+                return {accepted: false, code: 'halted-without-instruction',
+                    reason: 'the halted CPU cannot retire an instruction without a recorded wake input'};
+            }
+            const before = machine.cycles;
+            machine.step();
+            return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
+        },
+
         debugTime() {
             return {
                 ticks: machine.cycles,
-                domain: eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles',
+                domain: eventDomain(),
                 hz: machine.clockHz
             };
         },
