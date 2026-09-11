@@ -33,6 +33,40 @@ test('every file the census claims to gate actually exists', () => {
     }
 });
 
+test('a repo ci.yml checks out is a row that CLAIMS ci availability', () => {
+    // THE DRIFT THIS CATCHES HAPPENED TWICE IN ONE DAY, to two different rows,
+    // by the same hand three hours apart. `blinkenrocket-fw` said
+    // `ciAvailable: false` and `ci: 'no'` while ci.yml checked the firmware out
+    // at a pinned ref; `emu8051` claimed the CI layout in its prose while its
+    // paths named only two developer locations. The row and the workflow are
+    // edited separately and nothing connected them, so fixing the pattern in
+    // one row did not stop the next one being written.
+    //
+    // MATCHED ON `owner/name`, WHICH IS WHY ROWS NOW CARRY IT. Two earlier
+    // attempts at this comparison failed on the prose: a substring match on
+    // "8086" found nine rows that merely MENTION 8086, and a strict match
+    // against the `obtain` sentence missed blinkenrocket entirely because its
+    // sentence says "build blinkenrocket-firmware" with no URL. A field a
+    // machine can read is the difference between a check and a guess.
+    const workflow = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+    const checkedOut = [...workflow.matchAll(/repository:\s*([^\s#]+)/g)].map((m) => m[1]);
+    assert.ok(checkedOut.length >= 5,
+        `only ${checkedOut.length} checkouts found in ci.yml — has the scan stopped reading?`);
+
+    const byRepo = new Map(INPUTS.filter((i) => i.repository).map((i) => [i.repository, i]));
+    for (const repo of checkedOut) {
+        const row = byRepo.get(repo);
+        assert.ok(row,
+            `ci.yml checks out ${repo} and no census row names it. Add `
+            + "`repository: '" + repo + "'` to the row for that input, so its ciAvailable "
+            + 'claim can be checked rather than trusted.');
+        assert.equal(row.ciAvailable, true,
+            `${row.id} says ciAvailable: false, but ci.yml checks out ${repo}. A reader `
+            + 'deciding whether CI can be relied on for this input gets the wrong answer, '
+            + 'and nobody adds --require for an input the census says is not there.');
+    }
+});
+
 test('every gated file actually mentions the thing the census detects', () => {
     // THIS IS THE ANTI-DRIFT CHECK, and it is checked in BOTH directions
     // because one direction alone is not enough. My first version asked only
