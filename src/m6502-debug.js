@@ -453,6 +453,65 @@ export function createM6502DebugTarget(adapter, opts = {}) {
       return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
     },
 
+    /**
+     * REVERSE-STEP TO A RECORDED INPUT. The companion to replayInstruction():
+     * that one retires exactly one instruction, this one runs forward to the
+     * exact machine time at which a recorded input was delivered, so a replay
+     * can re-apply it at the tick it actually happened rather than near it.
+     *
+     * EVERY REFUSAL IS CODED AND NOTHING IS COERCED. The boundary comes out of
+     * a recording, which means it comes from disk, another session, or another
+     * version of this file -- so `ticks` is parsed with BigInt() inside a try
+     * rather than with Number(). `Number('12x')` is NaN and NaN comparisons are
+     * all false, so a malformed boundary silently satisfies `>= machine.cycles`,
+     * the loop never runs, and the caller is told it stopped at a boundary it
+     * never reached. BigInt() throws on exactly that input, which is why the
+     * refusal is possible to make at all.
+     *
+     * THE DOMAIN CHECK STRIPS A RESET SUFFIX BY DESIGN. restoreCheckpoint()
+     * renames the domain per epoch (`m6502-cycles-reset-3`) so facts from two
+     * timelines cannot be read as one; a boundary recorded before a restore is
+     * still on this clock, so the suffix is removed before comparing rather
+     * than treated as a foreign domain.
+     *
+     * INEXACT IS A REFUSAL, NOT A ROUNDING. The 6502 retires whole
+     * instructions, so a boundary recorded mid-instruction has no machine state
+     * to stop at. Running to the next boundary after it and reporting success
+     * would replay the input at the wrong time and report that it did not --
+     * so the overshoot is detected and named.
+     */
+    replayToInputBoundary(boundary) {
+      let requested;
+      try {
+        requested = BigInt(boundary?.ticks);
+      } catch {
+        return {accepted: false, code: 'invalid-input-boundary',
+          reason: 'recorded input boundary ticks must be an integer'};
+      }
+      const domain = String(boundary?.domain || '').replace(/-reset-\d+$/, '');
+      if (domain !== 'm6502-cycles' || requested < 0n ||
+          requested > BigInt(Number.MAX_SAFE_INTEGER)) {
+        return {accepted: false, code: 'invalid-input-boundary',
+          reason: 'recorded input boundary is outside the m6502 cycle clock'};
+      }
+      if (requested < BigInt(machine.cycles)) {
+        return {accepted: false, code: 'input-boundary-passed',
+          reason: 'machine is already past the recorded input boundary'};
+      }
+      while (BigInt(machine.cycles) < requested) {
+        if (cpu.stopped) return {accepted: false, code: 'stopped-before-input',
+          reason: 'STP cannot advance to a future input boundary; only reset can revive it'};
+        const advanced = machine.step();
+        if (!(advanced > 0)) return {accepted: false, code: 'input-boundary-stalled',
+          reason: 'machine time did not advance toward the recorded input boundary'};
+        if (BigInt(machine.cycles) > requested) {
+          return {accepted: false, code: 'input-boundary-inexact',
+            reason: 'the next exact machine boundary lies after the recorded input time'};
+        }
+      }
+      return {accepted: true, boundary: 'input', time: this.debugTime()};
+    },
+
     regs() {
       return {
         pc: cpu.pc,
