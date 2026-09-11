@@ -43,6 +43,10 @@ export function createZ80DebugTarget(adapter, opts = {}) {
    */
   const debugEvents = installInstructionDebugEvents({
     cpu, machine, cpuId, timeDomain: 'z80-cycles', port: true,
+    // 'rewind', because z80-machine.reset() ADVANCES the clock — the only
+    // backward move is loadState/restore. This also aligns event facts with
+    // this target's INPUT facts, which already stamp `-rewind-` (eventDomain).
+    rewindLabel: 'rewind',
     clock: () => machine.cycles,
     captureRegisters: () => ({pc: cpu.pc, sp: cpu.sp, a: cpu.a, f: cpu.f, bc: cpu.bc,
       de: cpu.de, hl: cpu.hl, ix: cpu.ix, iy: cpu.iy, i: cpu.i, r: cpu.r,

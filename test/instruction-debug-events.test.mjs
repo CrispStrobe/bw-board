@@ -59,6 +59,7 @@ function fakeCpu(plan = [], machine = null) {
 
 const install = (cpu, machine, opts = {}) => installInstructionDebugEvents({
   cpu, machine, cpuId: 'test', timeDomain: 'test-ticks',
+  rewindLabel: 'reset',            // required; 'reset' keeps the synthetic domain's existing assertions
   captureRegisters: () => ({ a: cpu.a, x: cpu.x }),
   captureInstruction: address => ({ address, bytes: [cpu.mem[address], cpu.mem[address + 1]] }),
   ...opts
@@ -242,7 +243,7 @@ describe('listeners', () => {
     let captured = 0;
     const cpu = fakeCpu([{}, {}]);
     const events = installInstructionDebugEvents({
-      cpu, machine: { cycles: 0, clockHz: 1e6 }, cpuId: 'test', timeDomain: 'test-ticks',
+      cpu, machine: { cycles: 0, clockHz: 1e6 }, cpuId: 'test', timeDomain: 'test-ticks', rewindLabel: 'reset',
       captureRegisters: () => { captured++; return { a: cpu.a }; },
       captureInstruction: address => ({ address })
     });
@@ -334,6 +335,38 @@ describe('the epoch: a fact after a rewind names a different timeline', () => {
     machine.cycles = 50;                 // a genuine regression inside era 1
     cpu.step();
     assert.equal(seen.at(-1).time.domain, 'test-ticks-reset-2');
+  });
+
+  it('rewindLabel names the epoch suffix — the same regression, a different word', () => {
+    // The parameter is REQUIRED and per-target: a core whose reset() ADVANCES the
+    // clock (z80, 6502, 8086 — backward move is loadState/restore) stamps
+    // `-rewind-`, not `-reset-`. This reds against the pre-parameter module, which
+    // hardcoded `-reset-` for every core, and it is why lite forbids converging
+    // the 8051's (correct) `-reset-` with the others.
+    const cpu = fakeCpu([{}, {}]);
+    const machine = { cycles: 1000, clockHz: 1e6 };
+    const events = install(cpu, machine, { rewindLabel: 'rewind' });
+    const { seen } = record(events);
+
+    cpu.step();
+    assert.equal(seen.at(-1).time.domain, 'test-ticks', 'the first era is unnumbered, label unused');
+    machine.cycles = 10;                 // a restore
+    cpu.step();
+    assert.equal(seen.at(-1).time.domain, 'test-ticks-rewind-1',
+      'the suffix is the caller\'s word, not a module constant');
+    // debugTime() reads the SAME label, not a second spelling.
+    assert.equal(events.debugTime().domain, 'test-ticks-rewind-1');
+  });
+
+  it('rewindLabel is REQUIRED — a caller that omits it is told, not defaulted', () => {
+    // No safe default: `-reset-` is wrong for every core that reaches this code,
+    // and a default would go invisible the moment a fifth consumer forgot it.
+    const cpu = fakeCpu([{}]);
+    assert.throws(
+      () => installInstructionDebugEvents({ cpu, machine: { cycles: 0, clockHz: 1 },
+        cpuId: 'x', timeDomain: 'x-ticks' }),
+      /rewindLabel/,
+      'omitting rewindLabel must throw and name the parameter');
   });
 
   it('debugTime() READS the clock and does not advance it', () => {
@@ -786,7 +819,7 @@ describe('A PARKED CORE SAYS SO, on the real machines', () => {
 
   const watch = (machine, cause) => {
     const events = installInstructionDebugEvents({
-      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks', idleCause: cause });
+      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks', idleCause: cause, rewindLabel: 'reset' });
     const seen = [];
     events.onDebugEvent(e => seen.push(e));
     return { events, seen };
@@ -856,7 +889,7 @@ describe('A PARKED CORE SAYS SO, on the real machines', () => {
     const machine = haltedZ80();
     const step = machine.step;
     const events = installInstructionDebugEvents({
-      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks' });
+      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks', rewindLabel: 'reset' });
 
     assert.equal(machine.step, step, 'machine.step was wrapped with no listener attached');
     const stop = events.onDebugEvent(() => {});
@@ -868,7 +901,7 @@ describe('A PARKED CORE SAYS SO, on the real machines', () => {
   it('and does not unwrap another party’s machine.step either', () => {
     const machine = haltedZ80();
     const events = installInstructionDebugEvents({
-      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks' });
+      cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks', rewindLabel: 'reset' });
     const stop = events.onDebugEvent(() => {});
 
     const ours = machine.step;

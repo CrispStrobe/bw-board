@@ -44,6 +44,10 @@ export function createM6502DebugTarget(adapter, opts = {}) {
    */
   const debugEvents = installInstructionDebugEvents({
     cpu, machine, cpuId, timeDomain: 'm6502-cycles',
+    // 'rewind', because m6502-machine.reset() ADVANCES the clock (+7) — the only
+    // backward move is loadState/restore. Aligns event facts with this target's
+    // INPUT facts, which already stamp `-rewind-` (eventDomain).
+    rewindLabel: 'rewind',
     clock: () => machine.cycles,
     captureRegisters: () => ({pc: cpu.pc, a: cpu.a, x: cpu.x, y: cpu.y, sp: cpu.s, p: cpu.p}),
     captureInstruction: address => ({address, ...disasm6502(a => machine.mem[a & 0xffff], address)})

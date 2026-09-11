@@ -218,6 +218,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      */
     const debugEvents = installInstructionDebugEvents({
         cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
+        // UNREVIEWED — preserves today's `-reset-` behaviour EXACTLY (a no-op made
+        // explicit because rewindLabel is now required). This core's reset()
+        // advances the clock, so the correct label is 'rewind', but that is a
+        // behaviour change with a test and belongs to the i8086 session's #8 work
+        // (rides with restoring the interrupt vocabulary). Do not flip it here.
+        rewindLabel: 'reset',
         addressMask: 0xfffff,
         pcOf: c => c.pc & 0xfffff,
         clock: () => machine.cycles,

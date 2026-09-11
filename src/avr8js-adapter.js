@@ -99,6 +99,11 @@ export function createAvr8jsAdapter(opts = {}) {
     machine: {clockHz},          // no `step`: the bracket below is the outer one
     cpuId: 'main',
     timeDomain: 'avr-cycles',
+    // UNREVIEWED — preserves today's `-reset-` behaviour EXACTLY (a no-op made
+    // explicit because rewindLabel is now required). Whether avr's cycle counter
+    // advances or rewinds on reset() is the avr session's knowledge; the correct
+    // label is theirs to confirm. Do not guess it into a behaviour change here.
+    rewindLabel: 'reset',
     accessors: {read: 'readData', write: 'writeData'},
     pcOf: c => c.pc * 2,         // BYTES, like avr-objdump and the debug target
     clock: () => cpu.cycles,

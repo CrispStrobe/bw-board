@@ -36,7 +36,7 @@ const run = opts => {
     m.mem[0x0500] = 0x5a;
     const facts = [];
     installInstructionDebugEvents({
-        cpu: m.cpu, machine: m, cpuId: 'i8086', timeDomain: 'i8086-cycles',
+        cpu: m.cpu, machine: m, cpuId: 'i8086', timeDomain: 'i8086-cycles', rewindLabel: 'reset',
         pcOf: c => c.pc & 0xfffff, ...opts
     }).onDebugEvent(f => facts.push(f));
     m.step();
