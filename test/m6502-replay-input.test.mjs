@@ -56,14 +56,29 @@ const buttonPins = machine => {
 };
 
 describe('the 6502 target implements both halves', () => {
-  it('reports both capabilities', () => {
+  it('reports all three capabilities, and now vetoes', () => {
     const {target} = makeTarget();
-    assert.deepEqual(replayCapabilities(target), {applies: true, records: true, vetoes: false});
-    // `vetoes: false` is the DECLARED half, not an incidental one: this target
-    // publishes a fact AFTER the machine has taken the input, so there is no
-    // moment at which a listener could refuse one. Adopting a veto means moving
-    // to publish-before and accepting that a log can then contain an input the
-    // machine refused — a trade, and this assertion is what makes it deliberate.
+    assert.deepEqual(replayCapabilities(target), {applies: true, records: true, vetoes: true});
+    // `vetoes: true` is DECLARED, and it is the convergence: this target ASKs
+    // before apply through onDebugInputAdmission (a dry run that records nothing
+    // on refusal), so the old "publishes AFTER, no moment to refuse" trade is
+    // gone — the two-hook split gives it both a veto and a clean log. See
+    // debug-replay-contract.js and bridge-admission-ordering.test.mjs.
+  });
+
+  it('the LIVE path refuses exactly what the REPLAY path refuses — no un-replayable mask is recorded', () => {
+    // REGRESSION GUARD (upstream defect found by simulating the pin take against
+    // lite's suites). The safe-integer bound lived only on applyReplayInput, so a
+    // non-safe-integer mask was applied AND RECORDED live and then its own replay
+    // refused it — the inverse of the admission guarantee. One validity check,
+    // both readers. The valid mask is accepted live first, so a `false` below is
+    // the bound talking, not a missing interface.
+    const {target} = makeTarget();
+    assert.notEqual(target.setButtons(0b0011), false, 'control: a valid mask is not refused live');
+    assert.equal(target.applyReplayInput({producer: 'm6502.buttons', payload: {mask: 2 ** 60}}).accepted, false,
+      'precondition: replay refuses a non-safe-integer mask');
+    assert.equal(target.setButtons(2 ** 60), false,
+      'the live path must ALSO refuse a non-safe-integer mask — else an un-replayable input is recorded');
   });
 });
 
@@ -290,9 +305,39 @@ describe('nmi reaches the CPU through the route the machine itself uses', () => 
     assert.equal(machine.cpu.pc, 0x1234, 'and the machine took it');
     assert.equal(machine.cycles - before, 7, 'charging the interrupt to machine time');
 
-    // Published AFTER the machine took it, so the stamp is on the far side of
-    // the interrupt's seven cycles rather than the near one.
-    assert.equal(facts[0].time.ticks, machine.cycles);
+    // STAMPED AT ARRIVAL — the NEAR side of the interrupt's seven cycles. This
+    // used to assert the FAR side ("Published AFTER the machine took it, so the
+    // stamp is on the far side rather than the near one"), a deliberate choice
+    // made when a fact's time was only a label nothing read back. The admission
+    // hook made that unreachable: an admitter refuses on the input's TIME, so the
+    // recorded time must be the time the admitter read — arrival, before apply.
+    // The far side is now unreachable BY CONSTRUCTION, because the ASK and the
+    // TELL share one stamp taken before the machine acts. It is also where the
+    // fact belongs: before the handler facts the interrupt causes, not after them.
+    assert.equal(facts[0].time.ticks, before);
+  });
+
+  it('LEVELS AND EVENTS ARE STAMPED AT THE SAME POINT — arrival, before apply', () => {
+    // The guard that stops the far-side stamp drifting back. A level and an event
+    // must take their stamp at the same point relative to apply; only a
+    // cycle-costing apply makes that point OBSERVABLE, and nmi is the one that
+    // costs cycles (seven). A future zero-cost producer stamping post-apply would
+    // look identical to arrival and nothing else would notice — so the non-vacuous
+    // half of this check is the event, and it is here that it has to bite.
+    const {target, machine} = makeTarget();
+    const facts = [];
+    target.onDebugInput(f => facts.push(f));
+
+    const beforeEvent = machine.cycles;
+    target.nmi();                              // EVENT, apply costs 7 cycles
+    assert.equal(machine.cycles - beforeEvent, 7, 'the event\'s apply really did advance the clock');
+    assert.equal(facts[0].time.ticks, beforeEvent,
+      'the event is stamped at ARRIVAL, not on the far side of its own seven cycles');
+
+    const beforeLevel = machine.cycles;
+    target.setButtons(0b0001);                 // LEVEL, zero-cost apply
+    assert.equal(facts[1].time.ticks, beforeLevel,
+      'the level is stamped at arrival too — one convention, so a cycle-costing level could not stamp elsewhere');
   });
 
   it('AN NMI IS AN EVENT: pulsed twice is two facts, not one state', () => {

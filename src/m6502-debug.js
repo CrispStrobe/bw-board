@@ -16,12 +16,54 @@
  */
 import { disasm6502 } from './w65c02-disasm.js';
 
-import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
+import { installInstructionDebugEvents } from './instruction-debug-events.js';
 
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
+  const cpuId = opts.cpuId || 'm6502';
   const symbols = opts.symbols ?? null;
+
+  /**
+   * THE SHARED EVENT MODULE — instruction retires, memory accesses, and a
+   * monotonic event clock. avr8js, i8086 and z80 publish these facts through
+   * this module; this target and z80 were the last two not to. No `port: true`:
+   * the 6502's I/O is memory-mapped, so it has no separate port space to wrap.
+   *
+   * ITS CLOCK AND THIS TARGET'S SHARE A DOMAIN BASE AND NOT AN EPOCH COUNTER.
+   * Both read `machine.cycles` and both stamp `m6502-cycles`, so an ordinary
+   * event fact and an ordinary debugTime() agree. After a rewind they diverge in
+   * the SUFFIX — this target counts `-rewind-N` on its input facts, the module
+   * `-reset-N` on its events, and neither observes the other's bump. A seam, not
+   * a defect today: nothing moves `machine.cycles` backwards except a checkpoint
+   * restore, which opens this target's epoch, and the two kinds of fact are
+   * never compared against each other. (The base is `m6502-cycles`, matching the
+   * input-fact base, so no cross-timeline mismatch — see z80-debug for the trap
+   * a different base would open.)
+   */
+  const debugEvents = installInstructionDebugEvents({
+    cpu, machine, cpuId, timeDomain: 'm6502-cycles',
+    clock: () => machine.cycles,
+    captureRegisters: () => ({pc: cpu.pc, a: cpu.a, x: cpu.x, y: cpu.y, sp: cpu.s, p: cpu.p}),
+    captureInstruction: address => ({address, ...disasm6502(a => machine.mem[a & 0xffff], address)})
+  });
+
+  // ONE PREDICATE for uncaptured board input, read by replayRefusalReasons AND
+  // the checkpoint gate (recording, checkpointRefusal, captureCheckpoint,
+  // restoreCheckpoint) so the reason and the enforcement cannot disagree. A board
+  // sampling input nets does so OUTSIDE the target, so those inputs are not in the
+  // log and a checkpoint over them replays into a divergence: refuse, do not merely
+  // mention it. The gate used to live on the machine (checkpointSupport() read
+  // machine._unloggedBoardInputs); the adapter sync onto unloggedBoardInputs()
+  // retired that flag, so it has to read the accessor HERE or the gate goes dead.
+  const UNCAPTURED_INPUT_REASON = 'live board input-net sampling is not logged';
+  const hasUncapturedInputState = () => adapter?.unloggedBoardInputs?.() === true;
+
+  // ONE VALIDITY CHECK, read by the FACE method (setButtons, live) and by
+  // applyReplayInput (replay), so the live path cannot accept a mask replay will
+  // refuse — an un-replayable input recorded is the inverse of the guarantee.
+  const validButtonMask = mask => Number.isSafeInteger(mask);
 
   let runState = 'halted'; // 'halted' | 'running'
   let pendingStep = null;  // { kind: 'insn'|'block'|'over'|'out', ... }
@@ -84,8 +126,17 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   // Closing that needs a machine-side signal on loadState.
   const observedInputs = new Map();
   let inputListeners = [];
+  let admitters = [];
   let inputTimeEpoch = 0;
   let lastTicks = null;
+
+  /**
+   * The input-fact clock's domain name, READ without advancing the clock, used
+   * by captureCheckpoint() and debugTime(). The module (events) keeps its own
+   * epoch on the same `m6502-cycles` base — see the seam note at the top.
+   */
+  const eventDomain = () =>
+    inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles';
 
   /**
    * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
@@ -114,7 +165,7 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     lastTicks = ticks;
     return {
       ticks,
-      domain: inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles',
+      domain: eventDomain(),
       hz: machine.clockHz
     };
   };
@@ -159,23 +210,42 @@ export function createM6502DebugTarget(adapter, opts = {}) {
    * The stamp is taken FIRST, before the dedup gate: a suppressed input must
    * still be able to notice that the era moved under it.
    */
-  function publishInput(producer, key, payload) {
-    const time = stamp();
-    const signature = JSON.stringify(payload);
-    if (observedInputs.get(key) === signature) return;
-    observedInputs.set(key, signature);
-    emit(producer, payload, time);
-  }
+  // The payload is the record; the signature is the comparison. m6502's only
+  // level is buttons, and its machine reads the bits it wants (PA0..3), so the
+  // record is the RAW value and the signature is identity — there is no keys
+  // producer here to make order-independent, and no mask to apply (masking the
+  // seed against a raw record is the z80 defect this convergence removes).
+  const signatureOf = (producer, payload) => JSON.stringify(payload);
+
+  const admit = input => {
+    for (const a of admitters) {
+      if (!assertAdmissionVerdict(a(input), 'm6502-debug onDebugInputAdmission').accepted) return false;
+    }
+    return true;
+  };
 
   /**
-   * Emit a fact with NO dedup, because some inputs are events rather than
-   * levels: the same serial byte typed twice is two bytes, and suppressing the
-   * second would replay a transcript missing a character. The dedup map does
-   * not apply and must not be consulted — a level's key would collide with it.
+   * A LEVEL input, in the order the eight rules fix: one stamp (era gate first),
+   * the dedup read, the ASK before apply, apply, seed ON ACCEPTANCE, then TELL
+   * reusing the stamp. A refused ASK writes nothing; a deduped repeat is applied
+   * silently, because a held level must keep reaching the machine.
    */
-  function publishEvent(producer, payload) {
-    emit(producer, payload, stamp());
-  }
+  const level = (producer, key, payload, apply) => {
+    const time = stamp();
+    const signature = signatureOf(producer, payload);
+    if (observedInputs.get(key) === signature) return apply();       // deduped: applied silently
+    const input = {time, producer, payload};
+    if (!admit(input)) return false;                                 // refused ASK writes nothing
+    const result = apply();
+    if (result === false) return result;                            // only a fact the machine TOOK is a fact
+    observedInputs.set(key, signature);                             // seed on acceptance
+    emit(producer, payload, time);                                  // TELL, reusing the stamp (emit copies per listener)
+    return result;
+  };
+
+  // Events (serial, nmi) record with NO dedup — the same byte twice is two bytes.
+  // Each event path (the serial wrapper below, and nmi) takes its own stamp, ASKs,
+  // and calls `emit` on acceptance; the old publishEvent helper is gone.
 
   /**
    * SERIAL IS RECORDED AT THE ADAPTER, which is where the bypass was.
@@ -209,8 +279,13 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   if (previousSendSerial) {
     const wrapped = byte => {
       const value = byte & 0xff;
+      // An EVENT: the ASK comes before the byte reaches the machine (a veto must),
+      // then TELL unconditionally on acceptance; the dedup map is never touched.
+      const time = stamp();
+      const input = {time, producer: 'm6502.serial', payload: {byte: value}};
+      if (!admit(input)) return false;
       const accepted = previousSendSerial(value);
-      if (accepted) publishEvent('m6502.serial', {byte: value});
+      if (accepted) emit('m6502.serial', {byte: value}, time);
       return accepted;
     };
     wrapped.rootDebugSendSerial = rawSendSerial;
@@ -228,11 +303,31 @@ export function createM6502DebugTarget(adapter, opts = {}) {
 
   return {
     capabilities() {
+      // Tolerate a hollow {machine:{cpu:{}}} — several callers build this target
+      // over a bare machine, and capabilities()/canVetoDebugInput must answer
+      // without throwing. A machine with no checkpoint support records nothing.
+      const checkpointStatus = typeof machine.checkpointSupport === 'function'
+        ? machine.checkpointSupport()
+        : { supported: false, reasons: ['this machine has no checkpoint support'] };
+      // ONE list: the machine's own reasons AND uncaptured board input, so
+      // recording, checkpointRefusal and captureCheckpoint() cannot disagree.
+      const checkpointRefusalReasons = [
+        ...(checkpointStatus.supported ? [] : checkpointStatus.reasons),
+        ...(hasUncapturedInputState() ? [UNCAPTURED_INPUT_REASON] : [])
+      ];
       return {
         steps: [...(symbols ? ['insn', 'block'] : ['insn']), 'over', 'out'],
         breakpoints: [...(symbols ? ['code', 'yield'] : ['code']), 'write'],
+        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffff,
+          stopSides: ['before'], installation: 'sync'}],
         timeFreezes: true,
         consumes: [],
+        // What the shared event module now publishes. No 'port': the 6502's I/O
+        // is memory-mapped, so a store to a VIA register is a `memory` fact.
+        events: ['instruction', 'memory'],
+        spaces: {mem: {read: true, write: true, passiveRead: false}},
+        fidelity: {instruction: 'recorded', memory: 'reconstructed', cycle: 'unsupported'},
+        recording: checkpointRefusalReasons.length ? [] : ['checkpoint', 'restore'],
         // Two audio contracts (E6.8.11a). 'tone' is what the hardware is
         // CONFIGURED to produce and 'samples' is what it SOUNDS like;
         // 'samples' is advertised only when a chip on this machine can
@@ -241,6 +336,22 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         audio: machine.canRenderAudio && machine.canRenderAudio()
           ? ['tone', 'samples']
           : ['tone'],
+        extensions: {
+          // Declares the ASK hook, read by canVetoDebugInput(target). One of the
+          // first two targets to declare it (with z80-debug) — the consumer
+          // convergence the ledger named: upstreaming the contract did not retire
+          // it, converging the consumers did.
+          inputAdmission: 'may-refuse',
+          // Memory facts are published before the same machine.step() publishes
+          // its recorded retire, so the runner may defer their actions safely.
+          eventBreakpointBoundary: 'instruction-retire',
+          ...(checkpointRefusalReasons.length ? {checkpointRefusal: checkpointRefusalReasons} : {}),
+          inputReplay: ['m6502.buttons', 'm6502.nmi', ...(rawSendSerial ? ['m6502.serial'] : [])],
+          inputRefusals: [
+            'live board input-net changes bypass the target and disable checkpoint recording',
+            'ROM/media loading is configuration, not a replayable runtime input'
+          ]
+        },
       };
     },
 
@@ -260,6 +371,83 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     },
 
     state() { return runState; },
+
+    /**
+     * The EVENT half, mirroring onDebugInput below: instruction/access/idle
+     * facts from the shared module. Delegated rather than reimplemented — a
+     * second publisher of the same facts is how two vocabularies for one thing
+     * begin.
+     */
+    onDebugEvent: debugEvents.onDebugEvent,
+
+    /**
+     * The event clock, READ without advancing it. On the same `m6502-cycles`
+     * base as an input fact's stamp, so a consumer comparing a checkpoint
+     * against a debug input fact gets one clock. (The module's own event epoch
+     * may carry a different suffix after a rewind — the seam noted at the top.)
+     */
+    debugTime() {
+      return { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
+    },
+
+    /**
+     * A checkpoint of the machine, stamped with this target's event clock — the
+     * debug clock, not the machine's base time, so a consumer comparing it
+     * against a debug fact gets one clock, not two.
+     */
+    captureCheckpoint() {
+      // A snapshot over unlogged board inputs restores a machine that looks right
+      // and is not — refuse rather than hand back a checkpoint replayRefusalReasons()
+      // has already disowned.
+      if (hasUncapturedInputState()) {
+        return { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: UNCAPTURED_INPUT_REASON };
+      }
+      const checkpoint = machine.captureCheckpoint();
+      if (!checkpoint.refused) {
+        checkpoint.time = { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
+      }
+      return checkpoint;
+    },
+
+    /**
+     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in
+     * history, not permission to run the clock backwards: renaming the domain
+     * stops two facts from different timelines being read as one that jumped,
+     * and the era gate (stamp()) then clears the dedup map on the next input.
+     * `ownClock`'s own rewind detection cannot see a restore that lands ABOVE
+     * the last stamped tick, which is why the bump is explicit here. The module's
+     * own event epoch is left to its detection: the accepted seam.
+     */
+    restoreCheckpoint(checkpoint) {
+      if (hasUncapturedInputState()) {
+        return { code: 'INCOMPLETE_CHECKPOINT_STATE',
+          refused: 'cannot restore over a live board input source sampled outside the machine' };
+      }
+      const result = machine.restoreCheckpoint(checkpoint);
+      if (!result) { inputTimeEpoch++; lastTicks = machine.cycles; }
+      return result;
+    },
+
+    /** Execute one complete instruction for checked history replay. */
+    replayInstruction() {
+      const support = machine.checkpointSupport();
+      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
+        reason: support.reasons.join('; ')};
+      if (cpu.stopped || cpu.waiting) return {accepted: false, code: 'halted-without-instruction',
+        reason: 'the stopped or waiting 6502 cannot retire an instruction without a recorded wake input'};
+      const before = machine.cycles;
+      let cycles;
+      watchHit = null;
+      try {
+        cycles = machine.step();
+      } finally {
+        // Replay reconstructs history; it must not arm a future live halt.
+        watchHit = null;
+      }
+      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
+        reason: 'the 6502 did not retire an instruction'};
+      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
+    },
 
     regs() {
       return {
@@ -465,12 +653,13 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * PA0..3). Returns false when the machine has no VIA to receive it.
      */
     setButtons(mask) {
-      if (typeof machine.setButtons !== 'function') return false;
-      const accepted = machine.setButtons(mask);
-      // Recorded at the entry point, which is also the path replay routes
-      // through, so a replayed input and a live one take one route.
-      if (accepted !== false) publishInput('m6502.buttons', 'buttons', {mask});
-      return accepted;
+      // Refuse a mask the REPLAY path would refuse (validButtonMask), so a live
+      // input that cannot be replayed is not applied and recorded. Same predicate,
+      // both paths — see the m6502.buttons branch in applyReplayInput.
+      if (typeof machine.setButtons !== 'function' || !validButtonMask(mask)) return false;
+      // RAW — the machine reads PA0..3 and ignores the rest; the log records what
+      // the host sent, and the signature is that raw value on both live and replay.
+      return level('m6502.buttons', 'buttons', {mask}, () => machine.setButtons(mask));
     },
 
     /**
@@ -498,8 +687,16 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      */
     nmi() {
       if (typeof machine?.nmi !== 'function') return false;
+      // An EVENT: ASK before the interrupt reaches the machine, then TELL; never
+      // touches the dedup map. A refused ASK means the input does not happen —
+      // "if it cannot be recorded, it does not happen" — so the machine is not
+      // pulsed. NMI is non-maskable at the machine, but whether it is RECORDED is
+      // the admitter's to refuse.
+      const time = stamp();
+      const input = {time, producer: 'm6502.nmi', payload: {}};
+      if (!admit(input)) return true;
       machine.nmi();
-      publishEvent('m6502.nmi', {});
+      emit('m6502.nmi', {}, time);
       return true;
     },
 
@@ -534,8 +731,8 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      * @returns {string[]}
      */
     replayRefusalReasons() {
-      return adapter?.unloggedBoardInputs?.()
-        ? ['live board input-net sampling is not logged']
+      return hasUncapturedInputState()
+        ? [UNCAPTURED_INPUT_REASON]
         : [];
     },
 
@@ -543,6 +740,18 @@ export function createM6502DebugTarget(adapter, opts = {}) {
       if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
       inputListeners.push(listener);
       return () => { inputListeners = inputListeners.filter(l => l !== listener); };
+    },
+
+    /**
+     * The ASK half: register an admitter consulted BEFORE an input reaches the
+     * machine. It returns {accepted: boolean}; a refusal stops the input, records
+     * nothing, and seeds nothing. Separate from onDebugInput so a recorder that
+     * only wants facts cannot veto by returning one. See debug-replay-contract.js.
+     */
+    onDebugInputAdmission(admitter) {
+      if (typeof admitter !== 'function') throw new TypeError('debug input admitter must be a function');
+      admitters.push(admitter);
+      return () => { admitters = admitters.filter(a => a !== admitter); };
     },
 
     /**
@@ -608,7 +817,7 @@ export function createM6502DebugTarget(adapter, opts = {}) {
       const payload = input?.payload;
       switch (input?.producer) {
         case 'm6502.buttons': {
-          if (!Number.isSafeInteger(payload?.mask)) {
+          if (!validButtonMask(payload?.mask)) {
             return replayRefused('invalid-replay-input', 'm6502.buttons needs a safe-integer mask');
           }
           // Passed through UNMASKED. The machine reads bits 0..3 and ignores the
@@ -626,12 +835,15 @@ export function createM6502DebugTarget(adapter, opts = {}) {
           // restore. Stamping first consumes the era change, so the seed
           // survives to do its job.
           stamp();
-          // Seeded before applying, so the replay does not come back out of the
-          // recorder as a freshly observed fact.
-          observedInputs.set('buttons', JSON.stringify({mask}));
-          return this.setButtons(mask)
-            ? replayAccepted()
-            : replayRefused('no-input-path', 'this machine has no VIA to receive a button mask');
+          // Replay applies DIRECTLY, never through the face setButtons (which now
+          // ASKs, and replay must not — R3). Era gate first, then apply, then seed
+          // with the RAW value through the ONE signatureOf the live path uses, so a
+          // later live input of the same value dedups against it.
+          if (typeof machine.setButtons !== 'function' || machine.setButtons(mask) === false) {
+            return replayRefused('no-input-path', 'this machine has no VIA to receive a button mask');
+          }
+          observedInputs.set('buttons', signatureOf('m6502.buttons', {mask}));
+          return replayAccepted();
         }
         case 'm6502.serial': {
           if (!Number.isInteger(payload?.byte) || payload.byte < 0 || payload.byte > 0xff) {

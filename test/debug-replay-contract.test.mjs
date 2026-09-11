@@ -20,7 +20,8 @@ import { createM6502DebugTarget } from '../src/m6502-debug.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
 import {
   replayAccepted, replayRefused, replayOutcome, canApplyReplayInput,
-  canRecordDebugInput, canVetoDebugInput, replayCapabilities, replaySupport, replaySupportRefusal
+  canRecordDebugInput, canVetoDebugInput, replayCapabilities, replaySupport, replaySupportRefusal,
+  assertAdmissionVerdict
 } from '../src/debug-replay-contract.js';
 
 /** A target that records what it is given and can be asked to apply it back. */
@@ -248,29 +249,30 @@ describe('a listener\u2019s return value is IGNORED unless the target says other
   });
 });
 
-describe('THE ASYMMETRY IS DECLARED, so converting a target has to be deliberate', () => {
-  // This module states, as a measurement, that every target in this tree is
-  // fire-and-forget. A statement in a comment goes stale silently; this is the
-  // same statement as an assertion. Converting a target to veto -- which means
-  // adopting publish-BEFORE, and with it the ability to log an input the
-  // machine then refused -- reddens here, which is the point: it is a trade to
-  // be made deliberately, not a tidy-up.
+describe('THE VETO IS DECLARED PER TARGET, so gaining or losing it has to be deliberate', () => {
+  // This module once measured, as an assertion, that EVERY target was
+  // fire-and-forget. Two are no longer: z80 and m6502 converged onto the
+  // admission hook (the ASK/TELL split, arrival-time stamp) and now declare a
+  // veto. So the assertion is per-target and EXACT — a target gaining the veto
+  // it should not, or losing the one it converged to, reddens here. That is the
+  // point: it is a decision, not a tidy-up. The old blanket "does NOT veto"
+  // reddening on the convergence WAS this guard doing its job.
   //
   // The 8051 is absent from this table on purpose and not by omission: it
   // publishes at the instant the core READS a pin, so it has no "before" at
   // which to refuse and could not adopt the veto if someone wanted it to.
   const TARGETS = {
-    z80: () => createZ80DebugTarget({ machine: { cpu: {} } }),
-    m6502: () => createM6502DebugTarget({ machine: { cpu: {} } }),
-    i8086: () => createI8086DebugTarget({ machine: { cpu: {} } })
+    z80: { make: () => createZ80DebugTarget({ machine: { cpu: {} } }), vetoes: true },
+    m6502: { make: () => createM6502DebugTarget({ machine: { cpu: {} } }), vetoes: true },
+    i8086: { make: () => createI8086DebugTarget({ machine: { cpu: {} } }), vetoes: false }
   };
 
-  for (const [name, make] of Object.entries(TARGETS)) {
-    it(`${name} records and does NOT veto`, () => {
+  for (const [name, { make, vetoes }] of Object.entries(TARGETS)) {
+    it(`${name} records, and ${vetoes ? 'DOES' : 'does NOT'} veto — its declared state`, () => {
       const target = make();
       assert.equal(canRecordDebugInput(target), true, 'the record half is there to be asked about');
-      assert.equal(canVetoDebugInput(target), false);
-      assert.equal(replayCapabilities(target).vetoes, false);
+      assert.equal(canVetoDebugInput(target), vetoes);
+      assert.equal(replayCapabilities(target).vetoes, vetoes);
     });
   }
 
@@ -283,5 +285,32 @@ describe('THE ASYMMETRY IS DECLARED, so converting a target has to be deliberate
       capabilities: () => ({ extensions: { inputAdmission: 'may-refuse' } })
     };
     assert.equal(canVetoDebugInput(declaring), true);
+  });
+});
+
+describe('assertAdmissionVerdict is STRICT, because a loose verdict silently refuses everything', () => {
+  // The ASK hook is new surface, so strictness is free — and load-bearing. A
+  // TELL-shaped listener mis-registered on onDebugInputAdmission returns
+  // undefined; if that were a refusal, every input would be declined, the
+  // recorder would record nothing, and the replay would agree with itself. So
+  // anything that is not {accepted: boolean} throws, naming the admitter.
+  it('accepts exactly {accepted: boolean} and returns it', () => {
+    assert.deepEqual(assertAdmissionVerdict({ accepted: true }, 'a'), { accepted: true });
+    assert.deepEqual(assertAdmissionVerdict({ accepted: false, code: 'x' }, 'a'), { accepted: false, code: 'x' });
+  });
+
+  it('throws on everything loose, naming the admitter', () => {
+    for (const bad of [undefined, null, true, false, 0, 1, 'accepted', {}, { accepted: 'yes' }, { accept: true }, () => {}]) {
+      assert.throws(() => assertAdmissionVerdict(bad, 'my-admitter'),
+        err => err instanceof TypeError && /my-admitter/.test(err.message),
+        `should throw naming the admitter for ${JSON.stringify(bad) ?? String(bad)}`);
+    }
+  });
+
+  it('bare true is refused — the shape must be an object, not a truthy value', () => {
+    // The trap: `replayOutcome` normalises bare `true` for legacy applyReplayInput,
+    // so a reader might expect the ASK hook to too. It must not — a returned true
+    // is exactly what a listener wired to the wrong hook might produce.
+    assert.throws(() => assertAdmissionVerdict(true, 'a'), TypeError);
   });
 });

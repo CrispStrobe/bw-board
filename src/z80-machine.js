@@ -391,7 +391,7 @@ export class Z80Machine {
         return cloneCheckpointValue({
             schema: MACHINE_CHECKPOINT_SCHEMA,
             topology: this.checkpointTopology(),
-            time: {ticks: this.cycles, domain: 'z80-tstates', hz: this.clockHz},
+            time: {ticks: this.cycles, domain: 'z80-cycles', hz: this.clockHz},
             state: this.saveState()
         });
     }
@@ -438,9 +438,24 @@ export class Z80Machine {
                     Number.isSafeInteger(state.zx128.bank[key]))))) {
             return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT'};
         }
+        // THE DOMAIN THIS ACCEPTS MUST BE THE ONE z80-debug.js STAMPS.
+        //
+        // It read `z80-tstates` while the target stamps `z80-cycles`, so a
+        // target could not restore a checkpoint it had just captured. The base
+        // moved deliberately — an event clock on a different base from the
+        // replay clock is two timelines a replayer reads as one, argued in
+        // z80-debug.js:37-42 — and this reader was left behind. It is the site
+        // a name census misses, because it matches a FRAGMENT inside a regex
+        // rather than appearing as `domain: '...'`.
+        //
+        // BOTH EPOCH SUFFIXES ARE ACCEPTED, and that is not generosity: two
+        // counters live on this one base by design. The target suffixes
+        // `-rewind-N` on the facts it stamps, including checkpoints, and the
+        // shared event module suffixes `-reset-N` on its events. A guard
+        // accepting only the bare base refuses every post-rewind checkpoint.
         if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
             checkpoint.time.hz !== this.clockHz ||
-            !/^z80-tstates(?:-reset-\d+)?$/.test(checkpoint.time.domain)) {
+            !/^z80-cycles(?:-(?:reset|rewind)-\d+)?$/.test(checkpoint.time.domain)) {
             return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
         }
         this.loadState(cloneCheckpointValue(state));

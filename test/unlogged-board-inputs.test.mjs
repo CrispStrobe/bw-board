@@ -27,9 +27,10 @@ import { createM6502Adapter } from '../src/m6502-adapter.js';
 import { createM6502DebugTarget } from '../src/m6502-debug.js';
 import { createZ80Adapter } from '../src/z80-adapter.js';
 import { createZ80DebugTarget } from '../src/z80-debug.js';
+import { Z80Machine } from '../src/z80-machine.js';
 import { createI8086Adapter } from '../src/i8086-adapter.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
-import { BREADBOARD8086 } from '../src/i8086-machine.js';
+import { BREADBOARD8086, I8086Machine } from '../src/i8086-machine.js';
 import { replaySupport, replaySupportRefusal } from '../src/debug-replay-contract.js';
 
 /** A board that samples: the only property that matters is `readPin`. */
@@ -116,8 +117,70 @@ for (const [name, spec] of Object.entries(TARGETS)) {
       assert.match(support.reasons.join(' | '), /host clock/);
       assert.match(support.reasons.join(' | '), spec.reason);
     });
+
   });
 }
+
+// REGRESSION GUARD B (upstream defect found by simulating the pin take against
+// lite's suites). The stated refusal (replayRefusalReasons) and the checkpoint
+// enforcement (capabilities().recording, its checkpointRefusal, captureCheckpoint)
+// must read ONE predicate — adapter.unloggedBoardInputs(). When they were two —
+// the reason on that accessor, the enforcement on the machine's _unloggedBoardInputs
+// flag — a board sampling unlogged inputs was ANNOUNCED un-replayable and still
+// handed a checkpoint that replays into the very divergence the reason warns of.
+//
+// WHY THIS DOES NOT USE THE ADAPTER FIXTURES ABOVE. Those adapters (pre-sync) still
+// poke machine._unloggedBoardInputs, so the machine's checkpointSupport() reports
+// unsupported and MASKS whether the bridge itself gates. This is the state the pin
+// take moves away from: the adapters sync onto unloggedBoardInputs() and stop
+// poking the flag, at which point the bridge is the only thing that can refuse. So
+// the take is simulated directly — a controlled adapter whose accessor answers and
+// whose machine flag is NOT set — which is exactly how lego-ac reproduced it.
+describe('a bridge refuses checkpoint from the SAME predicate it states the refusal from', () => {
+  const CORES = {
+    z80: () => {
+      const machine = new Z80Machine({ clockHz: 3_500_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+      return unlogged => createZ80DebugTarget({ machine, unloggedBoardInputs: () => unlogged });
+    },
+    m6502: () => {
+      const adapter = createM6502Adapter({});
+      adapter.machine.loadRom([0xea]); adapter.machine.mem[0xfffc] = 0x00; adapter.machine.mem[0xfffd] = 0x80; adapter.machine.reset();
+      return unlogged => createM6502DebugTarget({ machine: adapter.machine, unloggedBoardInputs: () => unlogged });
+    }
+    // i8086 is deliberately not here: it is another session's converged file, and
+    // it gates recording/captureCheckpoint without declaring checkpointRefusal, so
+    // it is not a control for the full property. Its own event/checkpoint gaps are
+    // routed to that session. The logged-vs-unlogged legs below are self-
+    // discriminating without it.
+  };
+
+  for (const [name, coreFactory] of Object.entries(CORES)) {
+    it(`${name}: unlogged inputs refuse checkpoint; logged inputs allow it`, () => {
+      const make = coreFactory();
+
+      // Uncaptured input state: the reason is stated AND the checkpoint is refused,
+      // from one predicate. The logged control below (make(false)) proves this is
+      // conditional on sampling, not an always-on refusal.
+      const unlogged = make(true);
+      assert.ok(unlogged.replayRefusalReasons().length > 0, 'precondition: the accessor reports unlogged inputs');
+      const capsU = unlogged.capabilities();
+      assert.deepEqual(capsU.recording, [],
+        'recording must be empty when inputs are unlogged — a checkpoint over them replays into a divergence');
+      assert.ok((capsU.extensions?.checkpointRefusal ?? []).length > 0,
+        'the refusal must be declared in capabilities, not only via replayRefusalReasons');
+      assert.equal(unlogged.captureCheckpoint().code, 'INCOMPLETE_CHECKPOINT_STATE',
+        'captureCheckpoint must refuse, not hand back a snapshot it just warned about');
+
+      // Control, same core: with inputs logged, the reason is gone and the
+      // checkpoint is NOT refused for uncaptured input — so the refusal is about
+      // sampling, not a blanket veto.
+      const logged = make(false);
+      assert.equal(logged.replayRefusalReasons().length, 0, 'control: nothing unlogged');
+      assert.notEqual(logged.captureCheckpoint()?.code, 'INCOMPLETE_CHECKPOINT_STATE',
+        'control: a logged session is not refused for uncaptured input');
+    });
+  }
+});
 
 describe('the z80 gate is on BUFFER CHIPS, not on attachment', () => {
   it('a config with no buffer chip samples nothing, so it refuses nothing', () => {

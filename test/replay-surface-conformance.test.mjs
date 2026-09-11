@@ -154,6 +154,7 @@ const ROWS = {
   'z80-debug.js': {
     make: async () => createZ80DebugTarget({ machine: new Z80Machine(
       { clockHz: 3_500_000, regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }], ula: true }, {}) }),
+    vetoes: true,                        // converged onto the admission hook
     drive: target => target.setKeys(['a']),
     fact: { producer: 'z80.keys', payload: { names: ['a'] } },
     // A config WITH a buffer port: that is the only route this machine samples
@@ -179,6 +180,7 @@ const ROWS = {
       target.machineRef = adapter.machine;
       return target;
     },
+    vetoes: true,                        // converged onto the admission hook
     drive: target => target.setButtons(0b0001),
     fact: { producer: 'm6502.buttons', payload: { mask: 0b0010 } },
     withSamplingBoard: () => {
@@ -343,61 +345,91 @@ for (const [name, row] of Object.entries(ROWS)) {
       assert.equal(refusal.accepted, true, refusal.reason);
     });
 
-    it('C3: does NOT declare veto => a refusing listener changes nothing', { skip }, async () => {
-      // The behavioural half of the declaration. A target that ignores the
-      // return must go on delivering to other listeners AND go on applying the
-      // input; a target that honoured one without declaring it would fail here
-      // rather than silently give a recorder a guarantee the contract does not
-      // promise.
+    it('C3a: a refusing onDebugInput (TELL) listener changes nothing — EVERY target', { skip }, async () => {
+      // The UNIVERSAL half, and it runs for the veto-capable targets too, where it
+      // matters MORE not less: onDebugInput's return is ignored always, so this is
+      // the only thing standing between the contract and someone re-implementing
+      // the veto as a TELL return — which is exactly what the convergence moved
+      // away from. A refusing TELL listener must go on delivering to others AND
+      // applying the input. (The veto lives on onDebugInputAdmission; see C4.)
       const target = await row.make();
-      assert.equal(canVetoDebugInput(target), false, 'this row is for a fire-and-forget target');
-
       const seen = [];
       target.onDebugInput(() => ({ accepted: false, code: 'conformance-refusal' }));
       target.onDebugInput(fact => seen.push(fact));
 
       const drove = row.drive(target);
-      assert.notEqual(drove, false, 'a refusing listener must not make the drive fail');
-      assert.ok(seen.length > 0, 'a refusing listener must not stop delivery to other listeners');
+      assert.notEqual(drove, false, 'a refusing TELL listener must not make the drive fail');
+      assert.ok(seen.length > 0, 'a refusing TELL listener must not stop delivery to other listeners');
       if (row.applied) {
         assert.equal(row.applied(target), true,
-          'a refusing listener must not stop the input reaching the machine');
+          'a refusing TELL listener must not stop the input reaching the machine');
       }
+    });
+
+    it('C3b: canVetoDebugInput matches the row\'s declared expectation', { skip }, async () => {
+      // The per-row declaration, exact. A target that gains or loses the admission
+      // hook reds here until its row is updated in the same commit as the code —
+      // the enumeration in C4 is derived from the same `vetoes`, so the two cannot
+      // drift.
+      const target = await row.make();
+      assert.equal(canVetoDebugInput(target), row.vetoes === true,
+        `${name}: canVetoDebugInput is ${canVetoDebugInput(target)} but the row declares vetoes=${row.vetoes === true}`);
     });
   });
 }
 
-describe('C4 has NO upstream subject, and that is asserted rather than assumed', () => {
-  it('no target here declares a veto, so the positive direction is unexercised', async () => {
-    // The moment one does, this reddens and someone has to write:
-    //   declares-veto => a refusing listener DOES stop the input.
-    // Until then, three claims are exercised and four are declared, and a green
-    // run on this file must not be read as four.
+describe('C4: the veto-capable set, and the positive direction it now has a subject for', () => {
+  // C4 once had NO subject and asserted so. The convergence gave it two: z80-debug
+  // and m6502-debug carry the admission hook. So this is now an ENUMERATION — the
+  // veto-capable set is exactly those two — never an exclusion of them by name,
+  // which would be paying locally to keep a green number (see the note at the top
+  // of this file about the last such).
+  it('the veto-capable set is exactly {m6502-debug, z80-debug}', async () => {
+    // Derived by asking canVetoDebugInput on each constructed target — NOT by
+    // reading `vetoes` and NOT by matching 'may-refuse' a second time. A row that
+    // lies (declares a veto the target lacks, or the reverse) reds C3b; a typo in
+    // the capability string reds here, because the predicate is the only reader.
+    const capable = [];
     for (const [name, row] of Object.entries(ROWS)) {
       if (row.skip) continue;
+      if (canVetoDebugInput(await row.make())) capable.push(name);
+    }
+    assert.deepEqual(capable.sort(), ['m6502-debug.js', 'z80-debug.js'],
+      'the veto-capable set moved — a target gained or lost the admission hook; update this set '
+      + 'and the rows\' `vetoes` together');
+  });
+
+  it('declares-veto => a refusing admitter STOPS the input, recording nothing', async () => {
+    // The positive direction, with a control INSIDE the fixture: after the veto,
+    // the SAME drive with the admitter removed must record — so the zero is the
+    // veto, not a dead fixture.
+    for (const [name, row] of Object.entries(ROWS)) {
+      if (row.skip || row.vetoes !== true) continue;
       const target = await row.make();
-      assert.equal(canVetoDebugInput(target), false,
-        `${name} now declares a veto — C4 needs a positive case, which this file does not have`);
+      const seen = [];
+      target.onDebugInput(fact => seen.push(fact));
+      const off = target.onDebugInputAdmission(() => ({ accepted: false }));
+      row.drive(target);
+      assert.equal(seen.length, 0, `${name}: a refused admitter must record nothing`);
+      off();
+      row.drive(target);
+      assert.ok(seen.length > 0, `${name}: with the admitter gone the same drive records — the veto was doing the work`);
     }
   });
 
-  it('the predicate CAN say true, so the assertion above is not vacuous', () => {
-    const declaring = {
-      applyReplayInput: () => ({ accepted: true }),
-      onDebugInput: () => () => {},
-      capabilities: () => ({ extensions: { inputAdmission: 'may-refuse' } })
-    };
-    assert.equal(canVetoDebugInput(declaring), true);
+  it('the predicate CAN say false, so the enumeration is not vacuous', () => {
+    // A fire-and-forget target — no capabilities() — answers false structurally,
+    // which is the majority and the reason the set is only two.
+    assert.equal(canVetoDebugInput({ applyReplayInput: () => ({ accepted: true }), onDebugInput: () => () => {} }), false);
   });
 
   it('emu8051-adapter answers false for a STRUCTURAL reason, stated here', () => {
-    // It has no capabilities() at all, so the predicate would answer false even
-    // if it grew a veto. The answer is right and the reason is not the one the
-    // predicate is checking; recorded so nobody reads this row as evidence.
+    // It has no capabilities() at all, so the predicate answers false even if it
+    // grew a veto. Recorded so nobody reads its absence from the set as evidence
+    // it was considered and declined.
     const text = readFileSync(join(SRC, 'emu8051-adapter.js'), 'utf8');
     assert.equal(text.includes('capabilities()'), false,
-      'emu8051-adapter grew a capabilities() — canVetoDebugInput now means what it says '
-      + 'for it, and this note can go');
+      'emu8051-adapter grew a capabilities() — canVetoDebugInput now means what it says for it, and this note can go');
   });
 });
 
@@ -416,7 +448,7 @@ describe('C6: a target that can PARK says so', () => {
     // Still an enumeration, still derived from the source: a SECOND installer
     // reddens this and has to bring its own parking case, rather than
     // inheriting the AVR's green run.
-    assert.deepEqual(installers(), ['avr8js-adapter.js', 'i8086-debug.js'],
+    assert.deepEqual(installers(), ['avr8js-adapter.js', 'i8086-debug.js', 'm6502-debug.js', 'z80-debug.js'],
       `installers changed: ${installers().join(', ')}. C6 needs a positive case per target — `
       + 'drive it into HALT/WAI/SLEEP and assert an idle/elapse fact appears.');
   });
@@ -490,6 +522,91 @@ describe('C6: a target that can PARK says so', () => {
       const seen = [];
       createI8086DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
       for (let i = 0; i < 8; i++) machine.step();
+
+      assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+        'a running core claiming to be parked would pass the case above just as well');
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('z80: a core parked at HALT publishes idle/elapse during an ORDINARY run', async () => {
+      // The third installer. A halted z80 short-circuits cpu.step ENTIRELY —
+      // measured in the module's own comment: it advances tens of thousands of
+      // cycles with cpu.step called ZERO times. So the idle fact can only come
+      // from the module's outer machine.step bracket, which is the path this
+      // case drives — and is why the z80 could not inherit the AVR's run.
+      const { createZ80DebugTarget } = await import('../src/z80-debug.js');
+      const machine = new Z80Machine(
+        { clockHz: 3_500_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+      machine.load(Uint8Array.from([0x00, 0x00, 0x76]), 0);  // NOP NOP HALT
+      machine.cpu.pc = 0;
+
+      const seen = [];
+      createZ80DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) machine.step();            // NOPs, HALT, then parked
+
+      const idle = seen.filter(e => e.kind === 'idle' && e.phase === 'elapse');
+      assert.ok(idle.length > 0, 'a parked z80 published no idle facts at all');
+      assert.ok(idle[0].changes.cycles > 0,
+        `an idle fact must account for time actually spent: ${idle[0].changes.cycles}`);
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('and a running z80 does not claim to be parked', async () => {
+      // The other direction, the same reason as the i8086 and AVR controls: an
+      // idle fact on every slice would pass the case above just as well.
+      const { createZ80DebugTarget } = await import('../src/z80-debug.js');
+      const machine = new Z80Machine(
+        { clockHz: 3_500_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+      machine.load(Uint8Array.from([0x00, 0x18, 0xfd]), 0);  // NOP; JR -3 — a tight loop, never halts
+      machine.cpu.pc = 0;
+
+      const seen = [];
+      createZ80DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) machine.step();
+
+      assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+        'a running core claiming to be parked would pass the case above just as well');
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('m6502: a core parked at WAI publishes idle/elapse during an ORDINARY run', async () => {
+      // The fourth installer. WAI (0xCB) halts the 65C02 until an interrupt; the
+      // core keeps being stepped and advances cycles with nothing retiring, which
+      // the module's machine.step bracket turns into idle/elapse.
+      const { createM6502Adapter } = await import('../src/m6502-adapter.js');
+      const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+      const adapter = createM6502Adapter({});
+      adapter.machine.loadRom([0xcb]);                       // WAI at $8000
+      adapter.machine.mem[0xfffc] = 0x00; adapter.machine.mem[0xfffd] = 0x80;
+      adapter.machine.reset();
+
+      const seen = [];
+      createM6502DebugTarget(adapter).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) adapter.machine.step();    // the WAI, then parked
+
+      const idle = seen.filter(e => e.kind === 'idle' && e.phase === 'elapse');
+      assert.ok(idle.length > 0, 'a parked 6502 published no idle facts at all');
+      assert.equal(idle[0].cause, 'parked');
+      assert.ok(idle[0].changes.cycles > 0,
+        `an idle fact must account for time actually spent: ${idle[0].changes.cycles}`);
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('and a running 6502 does not claim to be parked', async () => {
+      const { createM6502Adapter } = await import('../src/m6502-adapter.js');
+      const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+      const adapter = createM6502Adapter({});
+      adapter.machine.loadRom([0xea, 0x4c, 0x00, 0x80]);     // NOP; JMP $8000 — never parks
+      adapter.machine.mem[0xfffc] = 0x00; adapter.machine.mem[0xfffd] = 0x80;
+      adapter.machine.reset();
+
+      const seen = [];
+      createM6502DebugTarget(adapter).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) adapter.machine.step();
 
       assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
         'a running core claiming to be parked would pass the case above just as well');

@@ -25,9 +25,35 @@
  *     `subscribeDebugTargetInputs` returns null for a target without it, so a
  *     target using any other name is simply not recorded.
  *
- *     A LISTENER'S RETURN VALUE IS IGNORED unless the target declares
- *     otherwise. See `canVetoDebugInput` — this sentence is the whole of the
- *     hole it closes.
+ *     A LISTENER'S RETURN VALUE IS IGNORED, always. The veto is NOT a return
+ *     value on this hook — it is a separate hook, `onDebugInputAdmission`, so a
+ *     recorder that only wants facts cannot accidentally veto by returning one,
+ *     and a target need not ask which meaning a return carries.
+ *
+ *   onDebugInputAdmission(admitter) -> unsubscribe           [the ASK half]
+ *     Register an admitter consulted BEFORE the input reaches the machine. It
+ *     returns `{accepted: boolean}` — validated by `assertAdmissionVerdict`,
+ *     which THROWS on anything looser, because a loose return here silently
+ *     refuses every input (see that function). A refused ASK writes nothing: no
+ *     fact, no dedup seed, no machine mutation, so a log never contains an input
+ *     the machine did not take. A target that has this hook declares
+ *     `capabilities().extensions.inputAdmission === 'may-refuse'`; see
+ *     `canVetoDebugInput`. A target without it applies every input (fire and
+ *     forget), which is the majority.
+ *
+ * A FACT IS STAMPED AT ARRIVAL — before apply, and the ASK and the TELL share
+ * that one stamp. Not a style choice: an admitter refuses on the input's TIME,
+ * and the recorded fact is what a replay re-presents to it, so the recorded time
+ * must be the time the admitter read. If the ASK decided on the arrival time and
+ * the TELL wrote the post-apply time, the log would hold a timestamp no admitter
+ * ever approved, and replaying it would ask a different question than the run
+ * answered — a log you cannot re-ask is a log you cannot replay through the veto.
+ * It is also ONE convention for every producer: before the ASK existed an event
+ * stamped on the FAR side of its own apply and a level on the near side,
+ * indistinguishable except on an input whose apply costs cycles (an NMI), where
+ * it read as a property of that producer rather than a second convention.
+ * Arrival-time makes the log say one thing about time, and puts an input fact
+ * before the facts its effect produces rather than after them.
  *
  * A REFUSAL IS A RETURN VALUE, NOT AN EXCEPTION. This is the point of the
  * module and the one thing an implementer must not get wrong. A target that
@@ -67,6 +93,38 @@ export const replayAccepted = () => ({accepted: true});
  * @returns {{accepted: false, code: string, reason: string}}
  */
 export const replayRefused = (code, reason) => ({accepted: false, code, reason});
+
+/**
+ * Validate an ADMISSION verdict from an `onDebugInputAdmission` admitter, STRICTLY.
+ *
+ * The admission hook is the ASK half (below): a target calls its admitters BEFORE
+ * applying a host input and does not apply it if one refuses. Unlike
+ * `replayOutcome`, which normalises three legacy shapes because four
+ * implementations predate this module, an admitter is NEW surface and a loose
+ * return is a defect rather than a dialect. The failure it prevents is specific
+ * and silent: `onDebugInput` and `onDebugInputAdmission` differ by one word and
+ * both take a function, so a TELL-shaped listener registered on the ASK hook
+ * returns `undefined` — and if `undefined` were read as a refusal, every input
+ * would be silently declined, the recorder would record nothing, and the replay
+ * would be perfectly self-consistent with itself. A confident null with the
+ * volume turned up. So anything that is not an object with a boolean `accepted`
+ * THROWS, naming the admitter; nothing loose is accepted, not bare `true`.
+ *
+ * @param {*} verdict whatever the admitter returned
+ * @param {string} label identifies the admitter in the message
+ * @returns {{accepted: boolean}} the verdict, when valid
+ */
+export const assertAdmissionVerdict = (verdict, label) => {
+    if (!verdict || typeof verdict !== 'object' || typeof verdict.accepted !== 'boolean') {
+        const seen = verdict === null ? 'null'
+            : typeof verdict === 'object' ? JSON.stringify(verdict)
+                : `${typeof verdict} ${String(verdict)}`;
+        throw new TypeError(
+            `admission verdict from ${label} must be an object with a boolean \`accepted\`, got ${seen} — `
+            + 'a loose return on the ASK hook (onDebugInputAdmission) would silently refuse every input');
+    }
+    return verdict;
+};
 
 /**
  * Normalise any of the three shapes above into one outcome.
@@ -153,13 +211,17 @@ export const canRecordDebugInput = target =>
  * are observations of a read already in flight. Refusing there would mean
  * declining to answer a read the CPU has issued, which is not an operation.
  *
- * NOR IS IT FREE FOR THE TARGETS THAT COULD ADOPT IT. Publishing BEFORE applying
- * is what makes a veto possible, and it is also what lets a log contain an input
- * the machine then refused — measured downstream: a button press on a board with
- * no VIA is logged, and replaying that log aborts on the refusal. The targets
- * here publish AFTER and only on acceptance, so only a fact the machine TOOK is
- * a fact. The two are a TRADE, not a ladder, which is why this reports what a
- * target does rather than what it should do.
+ * ONCE A TRADE, NO LONGER. The first version of this recorded that a veto and a
+ * clean log were mutually exclusive: making a veto possible meant publishing
+ * BEFORE applying, and that is also what let a log contain an input the machine
+ * then refused — a button press on a board with no VIA logged, and replaying
+ * that log aborting on the refusal. The two-hook shape retires the trade. The
+ * veto is now the ASK half (`onDebugInputAdmission`), a DRY RUN consulted before
+ * apply that records nothing when it refuses; the fact is the TELL half
+ * (`onDebugInput`), emitted AFTER the machine accepts. So a target can have both
+ * a veto and a log in which every entry is an input the machine took — the veto
+ * no longer costs the clean log. This still reports what a target DOES, not what
+ * it should: a fire-and-forget target has no ASK hook and is not lying about one.
  *
  * THIS PREDICATE INVOKES THE TARGET, and its siblings do not. `canApplyReplayInput`
  * and `canRecordDebugInput` ask a STRUCTURAL question — is there a method — that

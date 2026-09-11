@@ -539,6 +539,23 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 breakpoints: machine.hooks
                     ? ['code', 'write', 'port', 'int']
                     : ['code', 'write'],
+                // RESTORED AFTER THE MODULE ADOPTION TOOK THEM WITH THE
+                // PUBLICATION. Both mechanisms stayed in this file and both
+                // declarations left with the code that used to publish, so every
+                // capability-driven consumer fail-closed on a target that works.
+                //
+                // `runTo` is the 20-bit physical space: the run-to mechanism is
+                // the code breakpoint above, and setBreakpoint accepts any
+                // address the bus can carry.
+                runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xfffff,
+                    stopSides: ['before'], installation: 'sync'}],
+                // WHAT IS ACTUALLY PUBLISHED, which is not what lite declared
+                // before the adoption. It listed 'interrupt' too; the shared
+                // module has no interrupt vocabulary -- zero occurrences -- so
+                // this target no longer produces one. Declaring it here would
+                // restore the claim without the fact, which is the same defect
+                // in the opposite direction and the harder one to find.
+                events: ['instruction', 'memory', 'port'],
                 // Declared only when the machine can actually checkpoint AND
                 // nothing outside it holds state. Advertising a recording a
                 // caller cannot complete is the same defect as advertising a
