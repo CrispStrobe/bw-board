@@ -144,6 +144,20 @@ export class I8086 {
         this.variant = opts.variant || '8086';
         this._is186 = this.variant === '80186';
         this.read = bus.read;
+        /**
+         * THE SAME BUS, UNDER A SECOND NAME. A fetch and a data read are
+         * different events -- this core already says so above `_fetch8` and
+         * already keeps fetches out of `_rd8` for that reason -- but both used
+         * `read`, so nothing observing the bus could tell them apart.
+         *
+         * Defaulting to `read` is what makes this safe: every byte still reaches
+         * the same function exactly once, which is the invariant a bisected
+         * duplicate-read established. What it buys is that an observer can now
+         * wrap `read` and see ONLY what the program did, or wrap `fetch` and see
+         * instruction traffic, instead of both arriving through one name with no
+         * way to express either.
+         */
+        this.fetch = bus.fetch || bus.read;
         this.write = bus.write;
         this._inPort = bus.in || (() => 0xff);
         this.inPort = (p) => { if (this.busTrace !== null) this.busTrace.push(3, p & 0xffff); return this._inPort(p); };
@@ -298,7 +312,7 @@ export class I8086 {
      *  scheduler fed that trace would invent a memory cycle per opcode byte. */
     _fetch8() {
         if (this.busTrace !== null) return this._fetch8Traced();
-        const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
+        const b = this.fetch(I8086.phys(this.cs, this.ip)) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
     }
@@ -320,7 +334,7 @@ export class I8086 {
         // Compared after execution to decide whether the queue was flushed.
         this._seqIp = (this.ip + 1) & 0xffff;
         this._seqCs = this.cs;
-        const b = this.read(a) & 0xff;
+        const b = this.fetch(a) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
     }
@@ -1207,7 +1221,12 @@ export class I8086 {
             // So the loop no longer peeks at all: it CONSUMES each byte once,
             // and when the byte turns out not to be a prefix it IS the opcode
             // and is used as such. Every byte reaches `read()` exactly once.
-            const b = this.read(I8086.phys(this.cs, this.ip)) & 0xff;
+            // THE THIRD FETCH SITE, and the one it is worst to forget: this is
+            // where the duplicate-read bug was bisected and fixed. Leave it on
+            // `read` and a PREFIXED instruction leaks its bytes into the stream
+            // while an unprefixed one does not -- a difference nobody reading a
+            // log could explain.
+            const b = this.fetch(I8086.phys(this.cs, this.ip)) & 0xff;
             // Segment prefixes are 26/2E/36/3E; LOCK/REP and their alias
             // occupy F0-F3. Two masked tests keep ordinary opcodes out of
             // the prefix dispatch without changing a single bus fetch.

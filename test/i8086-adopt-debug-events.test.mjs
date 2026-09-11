@@ -23,7 +23,14 @@ import { I8086Machine, BREADBOARD8086 } from '../src/i8086-machine.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
 
 // mov al,[0x0500] ; mov [0x0501],al -- operands under 64K, fetches at 0xF8000.
-const CODE = [0xa0, 0x00, 0x05, 0xa2, 0x01, 0x05];
+// mov ax,0xB800 ; mov ds,ax ; mov [0000],al  -- a DATA write at 0xB8000.
+// It used to be enough to look at an instruction FETCH above 64K, but fetches are
+// no longer published as memory facts (they are not what the program did), so the
+// above-64K evidence has to be an access the program actually performs.
+const CODE = [0xa0, 0x00, 0x05,        // mov al,[0500]  -- a read UNDER 64K
+              0xb8, 0x00, 0xb8,        // mov ax,0xB800
+              0x8e, 0xd8,              // mov ds,ax
+              0xa2, 0x00, 0x00];       // mov [0000],al -- a write at 0xB8000
 const build = () => {
     const r = new Uint8Array(0x8000).fill(0x90);
     r.set(CODE, 0);
@@ -42,22 +49,21 @@ test('the target publishes retires and accesses, at this core\'s address width',
     assert.equal(typeof t.onDebugEvent, 'function',
         'the target must expose the module\'s subscription, not a private one');
     t.onDebugEvent(f => facts.push(f));
-    m.step();
-    m.step();
+    for (let i = 0; i < 5; i++) m.step();
 
-    assert.equal(m.mem[0x0501], 0x5a, 'the program did not run; nothing below means anything');
+    assert.equal(m.cpu.ds, 0xb800, 'the program did not run; nothing below means anything');
     assert.ok(facts.length > 0, 'no facts at all -- the instrument, not the core');
 
     const retires = facts.filter(f => f.phase === 'retire');
     const mem = facts.filter(f => f.phase === 'access' && f.memory);
-    assert.equal(retires.length, 2, 'one retire per instruction');
+    assert.equal(retires.length, 5, 'one retire per instruction, and five were stepped');
     assert.ok(mem.length > 0, 'no MEMORY access facts -- check the field, not the core');
 
     const addrs = mem.map(f => f.memory.address);
-    assert.ok(addrs.includes(0xf8000),
-        'a fetch at 0xF8000 must arrive whole; 0x8000 here means the width was not passed');
+    assert.ok(addrs.includes(0xb8000),
+        'the store at 0xB8000 must arrive whole; 0x8000 here means the width was not passed');
     assert.equal(addrs.includes(0x8000), false, 'and the truncated form must be gone');
-    assert.ok(addrs.includes(0x0501), 'the store under 64K is still itself');
+    assert.ok(addrs.includes(0x0500), 'the read under 64K is still itself');
 });
 
 test('with no subscriber the target costs nothing it did not before', () => {
@@ -97,8 +103,7 @@ test('port accesses are observed too, which `port: true` is the only reason for'
     const facts = [];
     const t = createI8086DebugTarget({machine: m});
     t.onDebugEvent(f => facts.push(f));
-    m.step();
-    m.step();
+    for (let i = 0; i < 5; i++) m.step();
 
     assert.equal(m.cpu.ax & 0xff, 0x41, 'the program did not run; nothing below means anything');
     assert.ok(facts.length > 0, 'no facts at all -- the instrument, not the core');

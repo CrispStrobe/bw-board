@@ -21,7 +21,14 @@ import { I8086Machine, BREADBOARD8086 } from '../src/i8086-machine.js';
 import { installInstructionDebugEvents } from '../src/instruction-debug-events.js';
 
 // mov al,[0x0500] ; mov [0x0501],al — operands under 64K, fetches at 0xF8000.
-const CODE = [0xa0, 0x00, 0x05, 0xa2, 0x01, 0x05];
+// mov ax,0xB800 ; mov ds,ax ; mov [0000],al  -- a DATA write at 0xB8000.
+// It used to be enough to look at an instruction FETCH above 64K, but fetches are
+// no longer published as memory facts (they are not what the program did), so the
+// above-64K evidence has to be an access the program actually performs.
+const CODE = [0xa0, 0x00, 0x05,        // mov al,[0500]  -- a read UNDER 64K
+              0xb8, 0x00, 0xb8,        // mov ax,0xB800
+              0x8e, 0xd8,              // mov ds,ax
+              0xa2, 0x00, 0x00];       // mov [0000],al -- a write at 0xB8000
 const romWith = code => {
     const r = new Uint8Array(0x8000).fill(0x90);
     r.set(code, 0);
@@ -39,11 +46,10 @@ const run = opts => {
         cpu: m.cpu, machine: m, cpuId: 'i8086', timeDomain: 'i8086-cycles', rewindLabel: 'reset',
         pcOf: c => c.pc & 0xfffff, ...opts
     }).onDebugEvent(f => facts.push(f));
-    m.step();
-    m.step();
+    for (let i = 0; i < 5; i++) m.step();
     // The control every probe of this module needs: prove the subject ACTED and
     // that the stream is non-empty, before believing anything a filter says.
-    assert.equal(m.mem[0x0501], 0x5a, 'the program did not run; nothing below means anything');
+    assert.equal(m.cpu.ds, 0xb800, 'the program did not run; nothing below means anything');
     assert.ok(facts.length > 0, 'no facts at all — the instrument, not the subject');
     const mem = facts.filter(f => f.phase === 'access' && f.memory);
     assert.ok(mem.length > 0, 'no MEMORY access facts — check the field, not the core');
@@ -53,14 +59,14 @@ const run = opts => {
 test('the default is unchanged: sixteen bits, as every current consumer gets today', () => {
     const addrs = run({});
     assert.ok(addrs.includes(0x8000),
-        'a fetch at 0xF8000 arrives truncated under the default, which is what today does');
+        'a store at 0xB8000 arrives truncated under the default, which is what today does');
     assert.ok(addrs.every(a => a <= 0xffff), 'nothing above 16 bits escapes the default mask');
 });
 
 test('a 20-bit core can ask for its own width, and gets the address the core used', () => {
     const addrs = run({addressMask: 0xfffff});
-    assert.ok(addrs.includes(0xf8000),
-        'the fetch at 0xF8000 must arrive as 0xF8000, not 0x8000');
+    assert.ok(addrs.includes(0xb8000),
+        'the store at 0xB8000 must arrive whole, not as its low sixteen bits');
     assert.ok(addrs.includes(0x0500), 'the operand read under 64K is still itself');
     assert.equal(addrs.includes(0x8000), false,
         'and the truncated form must be GONE, not merely accompanied by the right one');
