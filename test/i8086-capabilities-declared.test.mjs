@@ -43,6 +43,11 @@ test('every event kind it declares is one it actually publishes', () => {
     const seen = new Set();
     target.onDebugEvent(f => seen.add(f.kind));
     for (let i = 0; i < 12; i++) machine.step();
+    // The program first, then a delivered line: an NMI redirects execution, so
+    // firing it early means the `out` never runs. Both halves are needed because
+    // the declaration covers both.
+    machine.nmi();
+    machine.step();
 
     assert.ok(seen.size > 0, 'no facts at all -- the instrument, not the target');
     for (const kind of declared) {
@@ -59,6 +64,8 @@ test('and it does not publish a kind it never declared', () => {
     const seen = new Set();
     target.onDebugEvent(f => seen.add(f.kind));
     for (let i = 0; i < 12; i++) machine.step();
+    machine.nmi();
+    machine.step();
 
     for (const kind of seen) {
         assert.ok(declared.has(kind),

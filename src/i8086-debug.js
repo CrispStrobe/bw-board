@@ -291,6 +291,8 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     // (emu8051-adapter.js), and that reset takes its clock to zero. Its epoch
     // really is a reset epoch. The name matches the mechanism on both targets
     // now, which is the point — not that all four should read alike.
+    /** Subscribers to the EVENT half; the interrupt hook installs for them too. */
+    let debugEventSubscribers = 0;
     let eventTimeEpoch = 0;
     /**
      * The event clock's domain name. Written out at three sites once the
@@ -518,8 +520,17 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 }
             }
             : null;
-        machine.hooks.onInterrupt = intWatches.size
+        // TWO CONSUMERS, ONE HOOK. The watch path predates the event path and
+        // must not depend on it, so the hook installs for either -- a target
+        // whose interrupt observation worked only while somebody was subscribed
+        // would satisfy every publication test and fail the breakpoint.
+        //
+        // `publishInterrupt` is itself inert without listeners, so the event half
+        // costs a call and a `listeners.size` check on a path that fires per
+        // delivered interrupt rather than per instruction.
+        machine.hooks.onInterrupt = (intWatches.size || debugEventSubscribers)
             ? (ev) => {
+                debugEvents.publishInterrupt({vector: ev.vector, source: ev.source});
                 for (const [id, w] of intWatches) {
                     if (w.vector != null && w.vector !== ev.vector) continue;
                     if (w.source && w.source !== ev.source) continue;
@@ -597,7 +608,9 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 // this target no longer produces one. Declaring it here would
                 // restore the claim without the fact, which is the same defect
                 // in the opposite direction and the harder one to find.
-                events: ['instruction', 'memory', 'port'],
+                // 'interrupt' is back because publishInterrupt exists again --
+                // the claim returns with the fact, not before it.
+                events: ['instruction', 'memory', 'port', 'interrupt'],
                 // Declared only when the machine can actually checkpoint AND
                 // nothing outside it holds state. Advertising a recording a
                 // caller cannot complete is the same defect as advertising a
@@ -779,7 +792,13 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          * vocabularies for one thing begin.
          */
         onDebugEvent(listener) {
-            return debugEvents.onDebugEvent(listener);
+            // The module's hooks install themselves on first listener; the
+            // machine-level interrupt hook is THIS file's and has to be told,
+            // or a subscriber arriving after construction sees no interrupts.
+            const off = debugEvents.onDebugEvent(listener);
+            debugEventSubscribers++;
+            syncEventHooks();
+            return () => { off?.(); debugEventSubscribers--; syncEventHooks(); };
         },
 
         onDebugInput(listener) {
