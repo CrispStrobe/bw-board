@@ -198,6 +198,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      */
     const priorPortAccess = adapter?.machine?.hooks?.onPortAccess ?? null;
 
+    /**
+     * And the same for the interrupt observer, for the same reason. `2a5a607`
+     * fixed the port hook; this is the other hook on the same object, assigned
+     * over in the same function, and it stayed only because the test that caught
+     * the first one exercises ports.
+     */
+    const priorInterrupt = adapter?.machine?.hooks?.onInterrupt ?? null;
+
     const machine = adapter.machine;
     const cpu = machine.cpu;
     const cpuId = opts.cpuId || 'i8086';
@@ -561,8 +569,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         // `publishInterrupt` is itself inert without listeners, so the event half
         // costs a call and a `listeners.size` check on a path that fires per
         // delivered interrupt rather than per instruction.
-        machine.hooks.onInterrupt = (intWatches.size || debugEventSubscribers)
+        // CHAINED, NOT OVERWRITTEN -- see priorPortAccess above. Also note the
+        // condition: without `priorInterrupt` here, clearing the last watch wrote
+        // `null` over the machine's own hook and erased it for good.
+        machine.hooks.onInterrupt = (intWatches.size || debugEventSubscribers || priorInterrupt)
             ? (ev) => {
+                if (priorInterrupt) priorInterrupt(ev);
                 debugEvents.publishInterrupt({vector: ev.vector, source: ev.source});
                 for (const [id, w] of intWatches) {
                     if (w.vector != null && w.vector !== ev.vector) continue;
