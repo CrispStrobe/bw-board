@@ -383,7 +383,26 @@ describe('debug target: a cycle step is offered only where cycles exist', () => 
 
     it('takes 3 cycle steps and 2 instruction steps to cross the same two instructions', {skip: SKIP}, async () => {
             const t = await targetWith(CYCLE_HEX);
-            if (!t.capabilities().steps.includes('cycle')) return;
+            if (!t.capabilities().steps.includes('cycle')) {
+                // AN EARLY RETURN WAS A PASS, in the file where that shape was
+                // converted yesterday -- my conversion replaced the `skip(t)`
+                // guards and walked past this one, because its condition is a
+                // CAPABILITY rather than a missing oracle and it did not match
+                // the pattern I was looking for.
+                //
+                // The block comment above says an older build "refuses by name,
+                // which is the honest outcome and is asserted as such rather
+                // than skipped past". The sibling case up the file does exactly
+                // that; this one returned. So it asserts the documented
+                // behaviour now, and an old build produces a real result rather
+                // than a silent pass.
+                const refusal = t.step('cycle', 1);
+                assert.match(refusal?.unsupported ?? '', /no cycle step/i,
+                    'this emulator build predates the cycle step (emu8051-stc cf3c7c0) and '
+                    + 'must refuse by name rather than step silently. Bump the ref in '
+                    + '.github/workflows/ci.yml, or point $EMU8051_JS at a newer build.');
+                return;
+            }
 
             const count = async (kind) => {
                 const u = await targetWith(CYCLE_HEX);
@@ -410,7 +429,18 @@ describe('debug target: a cycle step is offered only where cycles exist', () => 
 describe('debug target: a watchpoint halt names the byte, not just the PC', () => {
     it('reports space, address, new value and previous value', {skip: SKIP}, async () => {
         const t = await targetWith(WATCH_HEX);
-        if (!t.capabilities().breakpoints.includes('write')) return;
+        // DEAD ON EVERY BUILD WE HAVE, and an early return is a PASS, so this
+        // was a silent skip waiting for a build that dropped the capability.
+        // Measured at both refs -- the old pin and the current one -- and both
+        // declare `write`. Asserted rather than deleted, for the same reason as
+        // the serial bridge in rung8-serial-reads: a guard that cannot fire is
+        // one nobody will notice starting to fire, and deleting it outright
+        // would leave the setBreakpoint call below failing somewhere less
+        // obvious.
+        assert.ok(t.capabilities().breakpoints.includes('write'),
+            'this emulator build declares no write watchpoint, so the case below cannot '
+            + 'run. Both emu8051-stc refs bw-board has used declare it; if that changed, '
+            + 'say which build dropped it rather than passing quietly.');
 
         // THE BUILD'S CAPABILITY, NAMED, BEFORE THE BEHAVIOUR THAT NEEDS IT.
         //

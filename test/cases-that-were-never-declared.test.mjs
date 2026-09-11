@@ -29,6 +29,57 @@
  *   - A `describe` BODY THAT THROWS. The runner reports the failure, so it is
  *     not silent, but the cases below it are equally undeclared.
  *   - A case removed by an edit. Nothing here knows what used to exist.
+ *   - A `return` inside a CASE body. A different shape with a different
+ *     meaning, and **whether it is a silent skip or ordinary control flow
+ *     cannot be decided from the shape**: `if (x) return;` after an assertion is
+ *     fine, and the identical line before one checks nothing. A regex cannot
+ *     tell "we already checked" from "we checked nothing". Two such lines in
+ *     `emu8051-debug.test.js` were both real -- one silently passed on a build
+ *     without the cycle step, the other was dead on every build we have -- but
+ *     they were resolvable only by DRIVING two emulator builds and seeing which
+ *     branch was unreachable. See the standing list below.
+ */
+
+/**
+ * THE STANDING LIST: one-line conditional returns inside case bodies.
+ *
+ * Derived on master `6e0677a` -- a census names the tree it measured -- as a
+ * one-line `if (...) return;` whose nearest enclosing block is a case rather
+ * than a describe. **This is a reading list, not a defect list.** Most of these
+ * are ordinary control flow. It lives here because whoever wonders about this
+ * shape will be standing at this file.
+ *
+ *     ac-small-signal.test.mjs          156
+ *     avr-attiny88.test.js              305, 396
+ *     conformance-mismatch.test.js      24, 53, 59, 91, 97, 127, 159, 166
+ *     emu8051-adapter.test.js           399
+ *     example-pwm-preview.test.js       202, 212
+ *     machine-checkpoint.test.mjs       232
+ *     ngspice-diode.test.js             58, 88, 118, 146, 182
+ *     rp2040-bootrom.test.mjs           719, 721, 742, 844, 846, 880, 882
+ *     sibling-checkout-lookup.test.mjs  185
+ *     sparse-lu.test.mjs                186
+ *
+ * THE UNIT OF WORK IS ONE FILE, and the question is: on the box where this
+ * branch is taken, what did the case verify? -- answered by RUNNING it, not by
+ * reading the line. A mass conversion would produce thirty plausible diffs, all
+ * green on the box that wrote them.
+ *
+ * TWO ARE WORTH READING SOONER, not because their sites are likelier to be
+ * defects but because both files are INSTRUMENTS other things are measured
+ * with. Both were read when this list was written and neither is a defect
+ * today:
+ *
+ *   sibling-checkout-lookup.test.mjs:185  `if (existsSync(fixedDepth)) return;`
+ *       Honest, and it weakens the case on a CLONE: there the walk and the
+ *       fixed depth agree, so the meaningful assertion -- that the walk found
+ *       what a fixed depth could not -- does not run. On a worktree, and on CI
+ *       where the oracle sits inside the workspace, it does.
+ *   machine-checkpoint.test.mjs:232      `if (!validatesTime) return;`
+ *       A per-machine capability flag, and the case asserts the BigInt refusal
+ *       BEFORE it, so the early return skips an extra table rather than the
+ *       whole case. It does mean a machine with `validatesTime` false
+ *       contributes nothing to those rows.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -127,6 +178,8 @@ describe('no case is abandoned before it is declared', () => {
       + 'across runs. Give each case its own `skip:` instead. NOTE WHAT THIS CHECK DOES '
       + 'NOT SEE: cases generated from an input that yields nothing (assert the generator '
       + 'produced something, as example-manifest.test.js does), a describe body that '
-      + 'throws, and a case deleted by an edit.');
+      + 'throws, a case deleted by an edit, and a `return` inside a CASE body — that '
+      + 'last one is a different shape whose meaning cannot be read off the shape, and '
+      + 'the standing list of them is in this file\'s header.');
   });
 });

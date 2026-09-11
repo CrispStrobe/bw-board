@@ -291,34 +291,47 @@ test('a present FILE oracle reports the digest of what it found', () => {
     // PRESENCE IS NOT IDENTITY. A row saying `present` cannot say whether the
     // file is the same one CI has, and on 2026-09-11 that cost thirteen
     // consecutive red master runs: a suite bound to a sibling emu8051 checkout
-    // on the box, passed 25/25 locally, and failed on CI, which builds its own
-    // WASM from a pinned ref. Nothing in the local run said which build produced
-    // the green.
+    // on the box, passed 25/25 locally, and failed on CI, which builds from a
+    // pinned ref. Nothing in the local run said which build produced the green.
     //
-    // The digest does not DETECT that — the census cannot know CI's digest — it
-    // makes the question answerable from one line of either log.
+    // THE ASSERTION IS A RELATION, NOT A COUNT, AND THAT IS THE SECOND LESSON
+    // FROM THE SAME DEFECT. The first version of this test asserted `>= 3`
+    // oracles carry a digest — a threshold read off THIS BOX, which has more
+    // inputs present than a runner does. It passed here and failed on CI with
+    // "only 2 present oracles carry a digest", which is a fact about the runner
+    // and not about the census. A count of what happens to be installed is a
+    // claim about the installation; the claim worth making is that EVERY present
+    // file has a digest and NO present directory does, which holds wherever this
+    // runs and however many inputs are there.
     const rows = INPUTS.map(i => ({ id: i.id, ...resolve(i) }));
+    const present = rows.filter(r => r.present && typeof r.via === 'string');
 
-    const files = rows.filter(r => r.present && r.digest !== null && r.digest !== undefined);
-    assert.ok(files.length >= 3,
-        `only ${files.length} present oracles carry a digest — a scan that has stopped `
-        + 'hashing reports the same clean bill of health as one that found nothing to hash');
+    assert.ok(present.length >= 1,
+        'no oracle is present at all, so every relation below holds vacuously');
 
-    for (const r of files) {
-        assert.match(r.digest, /^(sha256:[0-9a-f]{16}|unreadable \(.+\))$/,
-            `${r.id} reports a digest of ${JSON.stringify(r.digest)}, which is neither a `
-            + 'sha256 nor a named refusal — a fabricated digest is worse than none');
+    const pathOf = r => (r.via.startsWith('$') ? r.via.split('=').slice(1).join('=') : r.via)
+        .split(' ')[0];
+
+    let files = 0, dirs = 0;
+    for (const r of present) {
+        const p = pathOf(r);
+        if (!p || !existsSync(p)) continue;              // a service, or a path with no file
+        if (statSync(p).isDirectory()) {
+            dirs++;
+            assert.equal(r.digest ?? null, null,
+                `${r.id} resolves to a DIRECTORY (${p}) and reports a digest — hashing a tree `
+                + 'is a different and more expensive claim than hashing a file');
+        } else {
+            files++;
+            assert.match(String(r.digest), /^(sha256:[0-9a-f]{16}|unreadable \(.+\))$/,
+                `${r.id} is a present FILE at ${p} and reports ${JSON.stringify(r.digest)} — `
+                + 'neither a sha256 nor a named refusal. A fabricated digest is worse than none.');
+        }
     }
 
-    // A DIRECTORY MUST NOT GET ONE. Hashing a tree is a different and more
-    // expensive claim; reporting a file digest for a directory would be a
-    // confident answer to a question nobody asked.
-    const dirs = rows.filter(r => r.present && r.via && !r.via.startsWith('$')
-        && existsSync(r.via.split(' ')[0]) && statSync(r.via.split(' ')[0]).isDirectory());
-    for (const r of dirs) {
-        assert.equal(r.digest ?? null, null,
-            `${r.id} resolves to a DIRECTORY (${r.via}) and reports a digest — hashing a tree `
-            + 'is a different claim from hashing a file');
-    }
-    assert.ok(dirs.length >= 1, 'no oracle resolves to a directory here, so the rule above is untested');
+    // Vacuity, stated as what was actually examined rather than as a threshold:
+    // if neither shape was seen, the loop above asserted nothing at all.
+    assert.ok(files + dirs >= 1,
+        `${present.length} oracles report present but none resolved to a file or a directory `
+        + 'on disk, so neither rule above was exercised');
 });
