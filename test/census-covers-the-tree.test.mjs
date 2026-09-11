@@ -65,10 +65,50 @@ const UNTRIAGED_2026_09_05 = new Set([
     'twi-bridge.test.mjs',
 ]);
 
+/**
+ * Comments removed, string and template literals intact.
+ *
+ * THE DETECTOR WAS READING PROSE. `EXTERNAL` matches `existsSync(` and `SKIPS`
+ * matches `{ skip:`, and a file that DISCUSSES either -- a comment quoting
+ * `if (existsSync(fixedDepth)) return;`, say -- matched both without containing
+ * either. It cost a red master within minutes of a documentation-only commit:
+ * the standing list added to `cases-that-were-never-declared.test.mjs` made that
+ * file look like a guard-then-skip test, in the gate whose own header warns that
+ * a document about a thing matches every pattern meant for the thing.
+ *
+ * Measured: stripping comments drops exactly two files from the derived set --
+ * that one, and `hb6502-ehbasic-boot.mjs`, which had been a false positive
+ * before anyone noticed.
+ */
+function stripComments(source) {
+    let out = '';
+    let quote = null;
+    let escaped = false;
+    for (let i = 0; i < source.length; i++) {
+        const c = source[i];
+        const next = source[i + 1];
+        if (quote) {
+            out += c;
+            if (escaped) escaped = false;
+            else if (c === '\\') escaped = true;
+            else if (c === quote) quote = null;
+            continue;
+        }
+        if (c === '"' || c === "'" || c === '`') { quote = c; out += c; }
+        else if (c === '/' && next === '/') { while (i < source.length && source[i] !== '\n') i++; out += '\n'; }
+        else if (c === '/' && next === '*') {
+            i += 2;
+            while (i < source.length && !(source[i] === '*' && source[i + 1] === '/')) i++;
+            i++;
+        } else out += c;
+    }
+    return out;
+}
+
 function derived() {
     const out = [];
     for (const f of readdirSync('test').filter((f) => /\.(test\.)?m?js$/.test(f))) {
-        const s = readFileSync('test/' + f, 'utf8');
+        const s = stripComments(readFileSync('test/' + f, 'utf8'));
         if (EXTERNAL.test(s) && SKIPS.test(s)) out.push(f);
     }
     return out;
