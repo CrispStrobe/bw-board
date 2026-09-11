@@ -429,7 +429,18 @@ describe('debug target: a cycle step is offered only where cycles exist', () => 
 describe('debug target: a watchpoint halt names the byte, not just the PC', () => {
     it('reports space, address, new value and previous value', {skip: SKIP}, async () => {
         const t = await targetWith(WATCH_HEX);
-        if (!t.capabilities().breakpoints.includes('write')) return;
+        // DEAD ON EVERY BUILD WE HAVE, and an early return is a PASS, so this
+        // was a silent skip waiting for a build that dropped the capability.
+        // Measured at both refs -- the old pin and the current one -- and both
+        // declare `write`. Asserted rather than deleted, for the same reason as
+        // the serial bridge in rung8-serial-reads: a guard that cannot fire is
+        // one nobody will notice starting to fire, and deleting it outright
+        // would leave the setBreakpoint call below failing somewhere less
+        // obvious.
+        assert.ok(t.capabilities().breakpoints.includes('write'),
+            'this emulator build declares no write watchpoint, so the case below cannot '
+            + 'run. Both emu8051-stc refs bw-board has used declare it; if that changed, '
+            + 'say which build dropped it rather than passing quietly.');
 
         // THE BUILD'S CAPABILITY, NAMED, BEFORE THE BEHAVIOUR THAT NEEDS IT.
         //
