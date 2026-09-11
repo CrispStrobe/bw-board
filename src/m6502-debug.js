@@ -494,7 +494,13 @@ export function createM6502DebugTarget(adapter, opts = {}) {
 
     setBreakpoint(spec) {
       if (spec.kind === 'code') {
-        if (spec.addr == null) return { unsupported: 'addr required' };
+        // ENFORCE the ceiling capabilities().runTo declares (addressMax 0xffff).
+        // Without it an out-of-range address is accepted and stored: it cannot
+        // match a 16-bit pc, so it is a handle for a breakpoint that never fires —
+        // accepted but dead, and one mask away from the z80's wrong-place halt.
+        if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xffff) {
+          return { unsupported: 'code breakpoint addr must be in 0x0000..0xffff' };
+        }
         const id = nextBpId++;
         breakpoints.set(id, { kind: 'code', addr: spec.addr });
         return id;
