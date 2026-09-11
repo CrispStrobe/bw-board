@@ -1193,7 +1193,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     return undefined;
                 }
                 runState = 'running';
-                pendingStep = { kind: 'over', sp0: cpu.sp, entered: false };
+                // THE RETURN ADDRESS IS KNOWN NOW, and knowing it is what stops
+                // the step ending inside the callee. Decode the call and add its
+                // length: a near call returns to the byte after itself, and the
+                // composed address wraps at 20 bits like every other bus address
+                // here while IP wraps at 16.
+                const decoded = disasmI8086(a => machine._read(a & 0xfffff), cpu.pc, { ip: cpu.ip });
+                pendingStep = {
+                    kind: 'over', sp0: cpu.sp, entered: false,
+                    returnAddr: (((cpu.cs << 4) + ((cpu.ip + decoded.length) & 0xffff)) & 0xfffff)
+                };
                 return undefined;
             }
             if (kind === 'out') {
@@ -1238,7 +1247,14 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     // SP rising back to or above where it started means the
                     // frame is gone. Sixteen-bit wraparound is why the test
                     // is a sign check on the difference, not a comparison.
+                    // BOTH, and the stack alone is why this used to be wrong. A
+                    // callee that pops its return address, works, and pushes it
+                    // back balances the stack mid-body, and a stack-only test
+                    // halts there -- inside the function the user asked to step
+                    // OVER, reporting cause 'step' at a plausible address with
+                    // nothing thrown.
                     if (pendingStep.kind === 'over' && pendingStep.entered
+                        && cpu.pc === pendingStep.returnAddr
                         && ((cpu.sp - pendingStep.sp0) & 0x8000) === 0) { halt({ cause: 'step' }); return 'halted'; }
                     if (pendingStep.kind === 'out'
                         && cpu.sp !== pendingStep.sp0 && ((cpu.sp - pendingStep.sp0) & 0x8000) === 0) {
