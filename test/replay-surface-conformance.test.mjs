@@ -154,6 +154,7 @@ const ROWS = {
   'z80-debug.js': {
     make: async () => createZ80DebugTarget({ machine: new Z80Machine(
       { clockHz: 3_500_000, regions: [{ kind: 'rom', start: 0x0000, end: 0x3fff }], ula: true }, {}) }),
+    vetoes: true,                        // converged onto the admission hook
     drive: target => target.setKeys(['a']),
     fact: { producer: 'z80.keys', payload: { names: ['a'] } },
     // A config WITH a buffer port: that is the only route this machine samples
@@ -179,6 +180,7 @@ const ROWS = {
       target.machineRef = adapter.machine;
       return target;
     },
+    vetoes: true,                        // converged onto the admission hook
     drive: target => target.setButtons(0b0001),
     fact: { producer: 'm6502.buttons', payload: { mask: 0b0010 } },
     withSamplingBoard: () => {
@@ -343,61 +345,91 @@ for (const [name, row] of Object.entries(ROWS)) {
       assert.equal(refusal.accepted, true, refusal.reason);
     });
 
-    it('C3: does NOT declare veto => a refusing listener changes nothing', { skip }, async () => {
-      // The behavioural half of the declaration. A target that ignores the
-      // return must go on delivering to other listeners AND go on applying the
-      // input; a target that honoured one without declaring it would fail here
-      // rather than silently give a recorder a guarantee the contract does not
-      // promise.
+    it('C3a: a refusing onDebugInput (TELL) listener changes nothing — EVERY target', { skip }, async () => {
+      // The UNIVERSAL half, and it runs for the veto-capable targets too, where it
+      // matters MORE not less: onDebugInput's return is ignored always, so this is
+      // the only thing standing between the contract and someone re-implementing
+      // the veto as a TELL return — which is exactly what the convergence moved
+      // away from. A refusing TELL listener must go on delivering to others AND
+      // applying the input. (The veto lives on onDebugInputAdmission; see C4.)
       const target = await row.make();
-      assert.equal(canVetoDebugInput(target), false, 'this row is for a fire-and-forget target');
-
       const seen = [];
       target.onDebugInput(() => ({ accepted: false, code: 'conformance-refusal' }));
       target.onDebugInput(fact => seen.push(fact));
 
       const drove = row.drive(target);
-      assert.notEqual(drove, false, 'a refusing listener must not make the drive fail');
-      assert.ok(seen.length > 0, 'a refusing listener must not stop delivery to other listeners');
+      assert.notEqual(drove, false, 'a refusing TELL listener must not make the drive fail');
+      assert.ok(seen.length > 0, 'a refusing TELL listener must not stop delivery to other listeners');
       if (row.applied) {
         assert.equal(row.applied(target), true,
-          'a refusing listener must not stop the input reaching the machine');
+          'a refusing TELL listener must not stop the input reaching the machine');
       }
+    });
+
+    it('C3b: canVetoDebugInput matches the row\'s declared expectation', { skip }, async () => {
+      // The per-row declaration, exact. A target that gains or loses the admission
+      // hook reds here until its row is updated in the same commit as the code —
+      // the enumeration in C4 is derived from the same `vetoes`, so the two cannot
+      // drift.
+      const target = await row.make();
+      assert.equal(canVetoDebugInput(target), row.vetoes === true,
+        `${name}: canVetoDebugInput is ${canVetoDebugInput(target)} but the row declares vetoes=${row.vetoes === true}`);
     });
   });
 }
 
-describe('C4 has NO upstream subject, and that is asserted rather than assumed', () => {
-  it('no target here declares a veto, so the positive direction is unexercised', async () => {
-    // The moment one does, this reddens and someone has to write:
-    //   declares-veto => a refusing listener DOES stop the input.
-    // Until then, three claims are exercised and four are declared, and a green
-    // run on this file must not be read as four.
+describe('C4: the veto-capable set, and the positive direction it now has a subject for', () => {
+  // C4 once had NO subject and asserted so. The convergence gave it two: z80-debug
+  // and m6502-debug carry the admission hook. So this is now an ENUMERATION — the
+  // veto-capable set is exactly those two — never an exclusion of them by name,
+  // which would be paying locally to keep a green number (see the note at the top
+  // of this file about the last such).
+  it('the veto-capable set is exactly {m6502-debug, z80-debug}', async () => {
+    // Derived by asking canVetoDebugInput on each constructed target — NOT by
+    // reading `vetoes` and NOT by matching 'may-refuse' a second time. A row that
+    // lies (declares a veto the target lacks, or the reverse) reds C3b; a typo in
+    // the capability string reds here, because the predicate is the only reader.
+    const capable = [];
     for (const [name, row] of Object.entries(ROWS)) {
       if (row.skip) continue;
+      if (canVetoDebugInput(await row.make())) capable.push(name);
+    }
+    assert.deepEqual(capable.sort(), ['m6502-debug.js', 'z80-debug.js'],
+      'the veto-capable set moved — a target gained or lost the admission hook; update this set '
+      + 'and the rows\' `vetoes` together');
+  });
+
+  it('declares-veto => a refusing admitter STOPS the input, recording nothing', async () => {
+    // The positive direction, with a control INSIDE the fixture: after the veto,
+    // the SAME drive with the admitter removed must record — so the zero is the
+    // veto, not a dead fixture.
+    for (const [name, row] of Object.entries(ROWS)) {
+      if (row.skip || row.vetoes !== true) continue;
       const target = await row.make();
-      assert.equal(canVetoDebugInput(target), false,
-        `${name} now declares a veto — C4 needs a positive case, which this file does not have`);
+      const seen = [];
+      target.onDebugInput(fact => seen.push(fact));
+      const off = target.onDebugInputAdmission(() => ({ accepted: false }));
+      row.drive(target);
+      assert.equal(seen.length, 0, `${name}: a refused admitter must record nothing`);
+      off();
+      row.drive(target);
+      assert.ok(seen.length > 0, `${name}: with the admitter gone the same drive records — the veto was doing the work`);
     }
   });
 
-  it('the predicate CAN say true, so the assertion above is not vacuous', () => {
-    const declaring = {
-      applyReplayInput: () => ({ accepted: true }),
-      onDebugInput: () => () => {},
-      capabilities: () => ({ extensions: { inputAdmission: 'may-refuse' } })
-    };
-    assert.equal(canVetoDebugInput(declaring), true);
+  it('the predicate CAN say false, so the enumeration is not vacuous', () => {
+    // A fire-and-forget target — no capabilities() — answers false structurally,
+    // which is the majority and the reason the set is only two.
+    assert.equal(canVetoDebugInput({ applyReplayInput: () => ({ accepted: true }), onDebugInput: () => () => {} }), false);
   });
 
   it('emu8051-adapter answers false for a STRUCTURAL reason, stated here', () => {
-    // It has no capabilities() at all, so the predicate would answer false even
-    // if it grew a veto. The answer is right and the reason is not the one the
-    // predicate is checking; recorded so nobody reads this row as evidence.
+    // It has no capabilities() at all, so the predicate answers false even if it
+    // grew a veto. Recorded so nobody reads its absence from the set as evidence
+    // it was considered and declined.
     const text = readFileSync(join(SRC, 'emu8051-adapter.js'), 'utf8');
     assert.equal(text.includes('capabilities()'), false,
-      'emu8051-adapter grew a capabilities() — canVetoDebugInput now means what it says '
-      + 'for it, and this note can go');
+      'emu8051-adapter grew a capabilities() — canVetoDebugInput now means what it says for it, and this note can go');
   });
 });
 

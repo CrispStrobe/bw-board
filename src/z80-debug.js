@@ -8,7 +8,7 @@
  * @module
  */
 import { disasmZ80 } from './z80-disasm.js';
-import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
 import { loadSNA, SNA_SIZE } from './zx-sna.js';
 import { loadZ80 } from './zx-z80file.js';
 
@@ -92,6 +92,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   // not every rewind.
   const observedInputs = new Map();
   let inputListeners = [];
+  let admitters = [];
   let inputTimeEpoch = 0;
   let lastTicks = null;
 
@@ -198,48 +199,103 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   if (previousSendSerial) {
     const wrapped = byte => {
       const value = byte & 0xff;
+      // A serial byte is an EVENT: the ASK still comes before the byte reaches
+      // the machine (a veto must), then TELL unconditionally on acceptance. The
+      // dedup map is never touched — the same byte twice is two characters.
+      const input = {time: stamp(), producer: 'z80.serial', payload: {byte: value}};
+      if (!admit(input)) return false;
       const accepted = previousSendSerial(value) === true;
-      if (accepted) publishEvent('z80.serial', {byte: value});
+      if (accepted) tell(input);
       return accepted;
     };
     wrapped.rootDebugSendSerial = rawSendSerial;
     adapter.sendSerial = wrapped;
   }
 
-  function publishInput(producer, key, payload) {
-    // FIRST, before the dedup gate: a suppressed input must still be able to
-    // notice that the era moved under it.
-    const time = stamp();
-    const signature = JSON.stringify(payload);
-    if (observedInputs.get(key) === signature) return;
-    observedInputs.set(key, signature);
-    const fact = {time, producer, payload: {...payload}};
-    // Each listener gets its own copy: a recorder that stored the object and a
-    // listener that mutated it would corrupt the log in place.
-    for (const listener of inputListeners) {
-      listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
+  // THE PAYLOAD IS THE RECORD; THE SIGNATURE IS THE COMPARISON. One pure function,
+  // used by the live record AND the replay seed on the payload each is about to
+  // write, so the two cannot dedup differently. What it computes is the key that
+  // decides "did the input CHANGE", which is not always the whole recorded value:
+  //   buttons: identity — the RAW mask. The log says what the host sent; the
+  //            machine narrows it (z80-machine.setButtons extracts its bits).
+  //            The old replay path masked the seed `& 0x1f` against a raw live
+  //            record — a replayed 0xFF seeded {"mask":31}, a live 0xFF signed
+  //            {"mask":255}, they did not match, and a fact was recorded that
+  //            never happened. R8 is that defect's regression test.
+  //   keys:    order-INDEPENDENT — sort the names FOR THE SIGNATURE ONLY. The
+  //            recorded payload keeps the face's order (honest), but the ULA ANDs
+  //            a bit per name (zx-ula.js) so ['a','b'] and ['b','a'] are one
+  //            machine state; the old signature was order-sensitive and recorded
+  //            the reorder as a change that did not happen. R9 is its regression test.
+  const signatureOf = (producer, payload) =>
+    producer === 'z80.keys'
+      ? JSON.stringify({names: [...payload.names].sort()})
+      : JSON.stringify(payload);
+
+  // THE ASK. Every admitter must accept, or the input does not happen. A verdict
+  // that is not {accepted: boolean} throws (assertAdmissionVerdict) rather than
+  // being read as a silent refusal.
+  const admit = input => {
+    for (const a of admitters) {
+      if (!assertAdmissionVerdict(a(input), 'z80-debug onDebugInputAdmission').accepted) return false;
     }
-  }
+    return true;
+  };
+
+  const tell = input => {
+    // Each listener gets its own copy of the fact, TIME INCLUDED: a listener that
+    // stored a fact and mutated it would otherwise corrupt the log for the next
+    // listener (z80-replay-input.test.mjs:247). R5 is preserved by VALUE, not
+    // reference — the ASK and the TELL share ONE stamp (the incrementing clock
+    // makes a second stamp show as different ticks), and R5 asserts they are
+    // deep-equal rather than identical, because these copies cannot be identical.
+    for (const listener of inputListeners) {
+      listener({...input, time: {...input.time}, payload: {...input.payload}});
+    }
+  };
+
+  /**
+   * A LEVEL input, in the order the eight rules fix: one stamp (era gate first),
+   * the dedup read, the ASK before apply, apply, seed ON ACCEPTANCE, then TELL
+   * reusing the ASK's stamp. A refused ASK writes nothing; a deduped repeat is
+   * applied silently (neither asked nor told), because a held level must keep
+   * reaching the machine without being recorded again.
+   *
+   * @param {string} producer e.g. 'z80.keys'
+   * @param {string} key the dedup key
+   * @param {object} payload the recorded (and, for buttons, masked) value
+   * @param {() => (boolean|undefined)} apply returns false only if the machine refused
+   */
+  const level = (producer, key, payload, apply) => {
+    const time = stamp();
+    const signature = signatureOf(producer, payload);
+    if (observedInputs.get(key) === signature) return apply();   // deduped: applied silently
+    const input = {time, producer, payload: {...payload}};
+    if (!admit(input)) return false;                             // refused ASK writes nothing
+    const result = apply();
+    if (result === false) return result;                         // machine refused: only a fact it TOOK is a fact
+    observedInputs.set(key, signature);                          // seed on acceptance
+    tell(input);
+    return result;
+  };
 
   // Call-class opcodes for step-over: CALL nn, CALL cc,nn, and RST n.
   const isCallClass = (op) => op === 0xcd || (op & 0xc7) === 0xc4 || (op & 0xc7) === 0xc7;
 
-  /**
-   * Emit a fact with NO dedup, because a serial byte is an EVENT and not a
-   * level: the same byte typed twice is two characters, and suppressing the
-   * second would replay a transcript with something missing. The dedup map is
-   * not consulted at all — a level's key could otherwise collide with it.
-   */
-  function publishEvent(producer, payload) {
-    const fact = {time: stamp(), producer, payload: {...payload}};
-    for (const listener of inputListeners) {
-      listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
-    }
-  }
+  // Serial (an EVENT) records with NO dedup, in the adapter wrapper above via
+  // `tell` — the same byte typed twice is two characters. The old publishEvent
+  // helper is gone: the wrapper is the one event path and inlines the ASK.
 
   return {
     capabilities() {
-      return { steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true, consumes: [] };
+      // extensions.inputAdmission === 'may-refuse' declares the ASK hook, which
+      // canVetoDebugInput(target) reads. This target is one of the first two to
+      // declare it (with m6502-debug), which is the consumer-adoption the ledger
+      // entry named: upstreaming the contract did not retire it; converging did.
+      return {
+        steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true, consumes: [],
+        extensions: { inputAdmission: 'may-refuse' }
+      };
     },
 
     state() { return runState; },
@@ -378,12 +434,10 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      *  onto the Kempston port. False without the interface. */
     setButtons(mask) {
       if (typeof machine.setButtons !== 'function') return false;
-      const accepted = machine.setButtons(mask);
-      // Recorded HERE, at the entry point, rather than inside the machine: this
-      // is the boundary the contract is about, and it is the same method replay
-      // routes through, so a replayed input and a live one take one path.
-      if (accepted !== false) publishInput('z80.buttons', 'buttons', {mask});
-      return accepted;
+      // The recorded value is RAW — what the host sent. z80-machine.setButtons
+      // narrows it to the Kempston bits; the log is not the machine's place to
+      // narrow, and a masked record against a raw one is the defect R8 guards.
+      return level('z80.buttons', 'buttons', {mask}, () => machine.setButtons(mask));
     },
 
     /**
@@ -394,9 +448,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      */
     setKeys(names) {
       if (!machine.ula || typeof machine.ula.setKeys !== 'function') return false;
-      machine.ula.setKeys(names);
-      publishInput('z80.keys', 'keys', {names: [...names]});
-      return true;
+      return level('z80.keys', 'keys', {names: [...names]}, () => { machine.ula.setKeys(names); return true; });
     },
 
     /**
@@ -477,6 +529,21 @@ export function createZ80DebugTarget(adapter, opts = {}) {
     },
 
     /**
+     * The ASK half: register an admitter consulted BEFORE an input reaches the
+     * machine. It returns {accepted: boolean}; a refusal stops the input, records
+     * nothing, and seeds nothing. Separate from onDebugInput so a recorder that
+     * only wants facts cannot veto by returning one. See debug-replay-contract.js.
+     *
+     * @param {(input: object) => {accepted: boolean}} admitter
+     * @returns {() => void} unsubscribe
+     */
+    onDebugInputAdmission(admitter) {
+      if (typeof admitter !== 'function') throw new TypeError('debug input admitter must be a function');
+      admitters.push(admitter);
+      return () => { admitters = admitters.filter(a => a !== admitter); };
+    },
+
+    /**
      * Apply a recorded host-input fact — the APPLY half of the replay surface
      * declared in debug-replay-contract.js.
      *
@@ -504,22 +571,21 @@ export function createZ80DebugTarget(adapter, opts = {}) {
         if (!Number.isSafeInteger(payload?.mask)) {
           return replayRefused('invalid-replay-input', 'z80.buttons needs a safe-integer mask');
         }
-        // SEEDED BEFORE APPLYING, so the replay does not come back out of the
-        // recorder as a freshly observed fact. Without this, replaying a log
-        // while recording produces a second copy of every fact in it, and a
-        // log replayed twice grows.
-        // THE ERA GATE RUNS BEFORE THE SEED, and the order is load-bearing.
-        // Measured on the landed version: replaying an input immediately after
-        // a rewind RE-RECORDED it, because the seed went into the map and the
-        // publish path then cleared the map before the dedup gate read it. A
-        // second replay pass produced a log longer than the run, in the one
-        // moment replay actually happens — just after a restore.
+        // Replay applies DIRECTLY to the machine, never through the face
+        // setButtons: that method now ASKs, and replay must not ask or tell (R3).
+        // THE ERA GATE RUNS FIRST — stamp() clears the dedup map on a domain
+        // change, so a rewind is consumed before the seed — then the machine
+        // takes the input, then the seed goes in with the RAW value through the
+        // ONE signatureOf the live path uses, so a later live input of the same
+        // value dedups against it. (The old path masked the seed & 0x1f against a
+        // raw live record; a replayed 0xFF then failed to dedup a live 0xFF and
+        // recorded a fact that never happened. R8 is that defect's regression test.)
         stamp();
-        observedInputs.set('buttons', JSON.stringify({mask: payload.mask & 0x1f}));
-        return this.setButtons(payload.mask & 0x1f)
-          ? replayAccepted()
-          : replayRefused('no-input-path',
-            'this machine has no joystick interface to receive a button mask');
+        if (typeof machine.setButtons !== 'function' || machine.setButtons(payload.mask) === false) {
+          return replayRefused('no-input-path', 'this machine has no joystick interface to receive a button mask');
+        }
+        observedInputs.set('buttons', signatureOf('z80.buttons', {mask: payload.mask}));
+        return replayAccepted();
       }
       if (input?.producer === 'z80.keys') {
         const names = payload?.names;
@@ -531,17 +597,14 @@ export function createZ80DebugTarget(adapter, opts = {}) {
           return replayRefused('invalid-replay-input',
             'z80.keys needs at most 40 key names of at most 16 characters');
         }
-        // THE ERA GATE RUNS BEFORE THE SEED, and the order is load-bearing.
-        // Measured on the landed version: replaying an input immediately after
-        // a rewind RE-RECORDED it, because the seed went into the map and the
-        // publish path then cleared the map before the dedup gate read it. A
-        // second replay pass produced a log longer than the run, in the one
-        // moment replay actually happens — just after a restore.
+        if (!machine.ula || typeof machine.ula.setKeys !== 'function') {
+          return replayRefused('no-input-path', 'this machine has no ULA to receive key names');
+        }
+        // Direct apply + seed, era gate first — see the buttons branch above.
         stamp();
-        observedInputs.set('keys', JSON.stringify({names: [...names]}));
-        return this.setKeys([...names])
-          ? replayAccepted()
-          : replayRefused('no-input-path', 'this machine has no ULA to receive key names');
+        machine.ula.setKeys([...names]);
+        observedInputs.set('keys', signatureOf('z80.keys', {names: [...names]}));
+        return replayAccepted();
       }
       if (input?.producer === 'z80.serial') {
         const byte = input?.payload?.byte;

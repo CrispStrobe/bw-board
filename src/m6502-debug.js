@@ -16,7 +16,7 @@
  */
 import { disasm6502 } from './w65c02-disasm.js';
 
-import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
 
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
@@ -84,6 +84,7 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   // Closing that needs a machine-side signal on loadState.
   const observedInputs = new Map();
   let inputListeners = [];
+  let admitters = [];
   let inputTimeEpoch = 0;
   let lastTicks = null;
 
@@ -159,23 +160,42 @@ export function createM6502DebugTarget(adapter, opts = {}) {
    * The stamp is taken FIRST, before the dedup gate: a suppressed input must
    * still be able to notice that the era moved under it.
    */
-  function publishInput(producer, key, payload) {
-    const time = stamp();
-    const signature = JSON.stringify(payload);
-    if (observedInputs.get(key) === signature) return;
-    observedInputs.set(key, signature);
-    emit(producer, payload, time);
-  }
+  // The payload is the record; the signature is the comparison. m6502's only
+  // level is buttons, and its machine reads the bits it wants (PA0..3), so the
+  // record is the RAW value and the signature is identity — there is no keys
+  // producer here to make order-independent, and no mask to apply (masking the
+  // seed against a raw record is the z80 defect this convergence removes).
+  const signatureOf = (producer, payload) => JSON.stringify(payload);
+
+  const admit = input => {
+    for (const a of admitters) {
+      if (!assertAdmissionVerdict(a(input), 'm6502-debug onDebugInputAdmission').accepted) return false;
+    }
+    return true;
+  };
 
   /**
-   * Emit a fact with NO dedup, because some inputs are events rather than
-   * levels: the same serial byte typed twice is two bytes, and suppressing the
-   * second would replay a transcript missing a character. The dedup map does
-   * not apply and must not be consulted — a level's key would collide with it.
+   * A LEVEL input, in the order the eight rules fix: one stamp (era gate first),
+   * the dedup read, the ASK before apply, apply, seed ON ACCEPTANCE, then TELL
+   * reusing the stamp. A refused ASK writes nothing; a deduped repeat is applied
+   * silently, because a held level must keep reaching the machine.
    */
-  function publishEvent(producer, payload) {
-    emit(producer, payload, stamp());
-  }
+  const level = (producer, key, payload, apply) => {
+    const time = stamp();
+    const signature = signatureOf(producer, payload);
+    if (observedInputs.get(key) === signature) return apply();       // deduped: applied silently
+    const input = {time, producer, payload};
+    if (!admit(input)) return false;                                 // refused ASK writes nothing
+    const result = apply();
+    if (result === false) return result;                            // only a fact the machine TOOK is a fact
+    observedInputs.set(key, signature);                             // seed on acceptance
+    emit(producer, payload, time);                                  // TELL, reusing the stamp (emit copies per listener)
+    return result;
+  };
+
+  // Events (serial, nmi) record with NO dedup — the same byte twice is two bytes.
+  // Each event path (the serial wrapper below, and nmi) takes its own stamp, ASKs,
+  // and calls `emit` on acceptance; the old publishEvent helper is gone.
 
   /**
    * SERIAL IS RECORDED AT THE ADAPTER, which is where the bypass was.
@@ -209,8 +229,13 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   if (previousSendSerial) {
     const wrapped = byte => {
       const value = byte & 0xff;
+      // An EVENT: the ASK comes before the byte reaches the machine (a veto must),
+      // then TELL unconditionally on acceptance; the dedup map is never touched.
+      const time = stamp();
+      const input = {time, producer: 'm6502.serial', payload: {byte: value}};
+      if (!admit(input)) return false;
       const accepted = previousSendSerial(value);
-      if (accepted) publishEvent('m6502.serial', {byte: value});
+      if (accepted) emit('m6502.serial', {byte: value}, time);
       return accepted;
     };
     wrapped.rootDebugSendSerial = rawSendSerial;
@@ -241,6 +266,11 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         audio: machine.canRenderAudio && machine.canRenderAudio()
           ? ['tone', 'samples']
           : ['tone'],
+        // Declares the ASK hook, read by canVetoDebugInput(target). One of the
+        // first two targets to declare it (with z80-debug) — the consumer
+        // convergence the ledger named: upstreaming the contract did not retire
+        // it, converging the consumers did.
+        extensions: { inputAdmission: 'may-refuse' },
       };
     },
 
@@ -466,11 +496,9 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      */
     setButtons(mask) {
       if (typeof machine.setButtons !== 'function') return false;
-      const accepted = machine.setButtons(mask);
-      // Recorded at the entry point, which is also the path replay routes
-      // through, so a replayed input and a live one take one route.
-      if (accepted !== false) publishInput('m6502.buttons', 'buttons', {mask});
-      return accepted;
+      // RAW — the machine reads PA0..3 and ignores the rest; the log records what
+      // the host sent, and the signature is that raw value on both live and replay.
+      return level('m6502.buttons', 'buttons', {mask}, () => machine.setButtons(mask));
     },
 
     /**
@@ -498,8 +526,16 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      */
     nmi() {
       if (typeof machine?.nmi !== 'function') return false;
+      // An EVENT: ASK before the interrupt reaches the machine, then TELL; never
+      // touches the dedup map. A refused ASK means the input does not happen —
+      // "if it cannot be recorded, it does not happen" — so the machine is not
+      // pulsed. NMI is non-maskable at the machine, but whether it is RECORDED is
+      // the admitter's to refuse.
+      const time = stamp();
+      const input = {time, producer: 'm6502.nmi', payload: {}};
+      if (!admit(input)) return true;
       machine.nmi();
-      publishEvent('m6502.nmi', {});
+      emit('m6502.nmi', {}, time);
       return true;
     },
 
@@ -543,6 +579,18 @@ export function createM6502DebugTarget(adapter, opts = {}) {
       if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
       inputListeners.push(listener);
       return () => { inputListeners = inputListeners.filter(l => l !== listener); };
+    },
+
+    /**
+     * The ASK half: register an admitter consulted BEFORE an input reaches the
+     * machine. It returns {accepted: boolean}; a refusal stops the input, records
+     * nothing, and seeds nothing. Separate from onDebugInput so a recorder that
+     * only wants facts cannot veto by returning one. See debug-replay-contract.js.
+     */
+    onDebugInputAdmission(admitter) {
+      if (typeof admitter !== 'function') throw new TypeError('debug input admitter must be a function');
+      admitters.push(admitter);
+      return () => { admitters = admitters.filter(a => a !== admitter); };
     },
 
     /**
@@ -626,12 +674,15 @@ export function createM6502DebugTarget(adapter, opts = {}) {
           // restore. Stamping first consumes the era change, so the seed
           // survives to do its job.
           stamp();
-          // Seeded before applying, so the replay does not come back out of the
-          // recorder as a freshly observed fact.
-          observedInputs.set('buttons', JSON.stringify({mask}));
-          return this.setButtons(mask)
-            ? replayAccepted()
-            : replayRefused('no-input-path', 'this machine has no VIA to receive a button mask');
+          // Replay applies DIRECTLY, never through the face setButtons (which now
+          // ASKs, and replay must not — R3). Era gate first, then apply, then seed
+          // with the RAW value through the ONE signatureOf the live path uses, so a
+          // later live input of the same value dedups against it.
+          if (typeof machine.setButtons !== 'function' || machine.setButtons(mask) === false) {
+            return replayRefused('no-input-path', 'this machine has no VIA to receive a button mask');
+          }
+          observedInputs.set('buttons', signatureOf('m6502.buttons', {mask}));
+          return replayAccepted();
         }
         case 'm6502.serial': {
           if (!Number.isInteger(payload?.byte) || payload.byte < 0 || payload.byte > 0xff) {
