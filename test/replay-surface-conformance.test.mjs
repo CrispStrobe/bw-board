@@ -65,6 +65,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { stripComments } from './helpers/sibling-checkout.mjs';
 import { join, dirname } from 'node:path';
 import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
 import { fileURLToPath } from 'node:url';
@@ -87,11 +88,29 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, '..', 'src');
 
-/** Every source file implementing either half. The population, derived. */
+/**
+ * Every source file implementing either half. The population, derived.
+ *
+ * COMMENTS ARE STRIPPED, because the population was being decided by PROSE.
+ * `debug-replay-contract.js` contains neither call — it is the contract module,
+ * whose predicates describe the surface — but its header names both
+ * `applyReplayInput(` and `onDebugInput(` while explaining them, so a raw
+ * `includes` pulled it in. Somebody hit that and excluded the file BY NAME,
+ * which is correct in effect and hides the cause: the next file that documents
+ * this surface joins the population and needs its own exclusion.
+ *
+ * Measured: with comments stripped it is the only file that leaves the set, so
+ * this changes nothing today and stops the next one arriving.
+ *
+ * THE BY-NAME EXCLUSION STAYS, and is now belt-and-braces rather than load-
+ * bearing: the contract module is not a target whatever its comments say, and a
+ * reader meeting the line should see that stated rather than infer it from a
+ * detector's behaviour.
+ */
 const implementers = readdirSync(SRC)
   .filter(name => name.endsWith('.js') && name !== 'debug-replay-contract.js')
   .filter(name => {
-    const text = readFileSync(join(SRC, name), 'utf8');
+    const text = stripComments(readFileSync(join(SRC, name), 'utf8'));
     return text.includes('applyReplayInput(') || text.includes('onDebugInput(');
   })
   .sort();
