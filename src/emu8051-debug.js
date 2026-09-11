@@ -89,6 +89,24 @@
  * `'budget'` (this slice is over, call again). Nothing above this line ever
  * learns that the emulator technically stopped.
  *
+ * ## Checkpoints fail closed on this ABI
+ *
+ * The pinned WASM exposes architectural reads and memory writes, but no native
+ * state serializer. Rebuilding from PC, IRAM, SFR and XRAM would omit an
+ * instruction in flight, program time, timer/interrupt peripheral phases,
+ * UART queues and external input latches. `captureCheckpoint` and
+ * `restoreCheckpoint` therefore return a structured refusal and `recording`
+ * remains empty. An architectural dump is useful for display; it is not a
+ * deterministic continuation point.
+ *
+ * ## Native pin-event transport
+ *
+ * The pinned ABI exposes a 4,096-entry C ring of pin transitions. It is
+ * decoded after execution in one batch, preserving native nanosecond time,
+ * pin mode and drive level. Overflow becomes an explicit `history-gap`
+ * signal. This is signal evidence, not an internal address/data bus trace or
+ * a passive memory-read watchpoint.
+ *
  * @module
  */
 
@@ -101,6 +119,9 @@ const SPACE = { code: 0, iram: 1, sfr: 2, xram: 3, bit: 4 };
 /** The same table read the other way, for turning a reported space back into a name. */
 const SPACE_NAME = Object.keys(SPACE);
 
+/** stc12_pin_mode in stc12.h, by value: 0 quasi, 1 push-pull, 2 input, 3 open-drain. */
+const MODE_NAMES = ['quasi', 'pushpull', 'input', 'opendrain'];
+
 /** DBG_MAX_BP in debug.h. Exceeding it returns -1, which we turn into a reason. */
 const MAX_BREAKPOINTS = 32;
 const MAX_CODE_ADDRESS = 0xffff;
@@ -108,6 +129,31 @@ const CODE_ADDRESS_REFUSAL =
     `code breakpoint addr must be in 0x0000..0x${MAX_CODE_ADDRESS.toString(16)}`;
 /** Nanoseconds per second: the one authority for the tick⇄ns conversion in debugTime. */
 const NS_PER_S = 1_000_000_000n;
+/** PIN_HISTORY_SIZE in the pinned native ABI. */
+const PIN_HISTORY_CAPACITY = 4096;
+
+/**
+ * What an architectural dump cannot carry, named rather than summarised, so a
+ * caller that wanted a checkpoint learns which state is missing and not merely
+ * that it was refused.
+ */
+const CHECKPOINT_MISSING = Object.freeze([
+    'cpu-in-flight-microstate',
+    'program-time',
+    'timer-and-interrupt-internals',
+    'uart-queues',
+    'external-input-latches'
+]);
+
+function checkpointRefusal(operation) {
+    return {
+        refused: 'deterministic 8051 checkpoints require a native complete-state WASM ABI; ' +
+            'copying visible registers and memory would omit mutable execution state',
+        code: 'incomplete-snapshot-abi',
+        operation,
+        missing: [...CHECKPOINT_MISSING]
+    };
+}
 
 /**
  * @typedef {object} SymbolTable stc_symtab.py's output (format 004)
@@ -123,6 +169,13 @@ const NS_PER_S = 1_000_000_000n;
  * @param {object} [opts]
  * @param {SymbolTable} [opts.symbols] load it now instead of calling setSymbols
  * @param {number} [opts.clockHz] oscillator frequency, for exact cycle-domain timestamps
+ * @param {(opcode: number) => number} [opts.instructionLength] byte length of the
+ *   instruction starting with this opcode. INJECTED, NOT IMPLEMENTED HERE: the
+ *   8051 length table is generated from stc-compiler's stc_disasm.py, which does
+ *   not live in this repo, so a copy here would be an unverified hand-copy of a
+ *   generated artefact with no oracle behind it. Without it an instruction event
+ *   still carries its address, registers and disassembly text — it omits `bytes`
+ *   and `length`, and says so by leaving them absent rather than empty.
  * @returns {object} the DebugTarget
  */
 export function createEmu8051DebugTarget(wasm, opts = {}) {
@@ -148,6 +201,13 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
     let symbols = null;
     let listeners = [];
+    /** Recorded-fact subscribers. Separate from `listeners`, which are halts. */
+    let debugListeners = [];
+    /** Evidence captured before an armed step, read back when its halt arrives. */
+    let pendingStep = null;
+    /** Native ring read cursor: total produced, and the next-write position. */
+    let pinHistoryReadCount = 0;
+    let pinHistoryReadHead = 0;
     /**
      * Bumped on every reset so a timestamp taken after a reset carries a
      * different domain than one taken before it — two runs of the same program
@@ -198,6 +258,31 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
      */
     const hasCycleStep = typeof wasm._emu_dbg_supports_step === 'function'
         && wasm._emu_dbg_supports_step(STEP_KIND.cycle) === 1;
+
+    /**
+     * Complete native pin-history surface; partial/older ABIs fail closed.
+     * The size check is a layout check: the decoder below reads fixed offsets
+     * out of `struct stc12_pin_event`, so a build whose struct is smaller than
+     * those offsets never becomes a capability.
+     */
+    const hasPinHistoryApi = !!(wasm.HEAPU8 &&
+        typeof wasm._emu_pin_history_enable === 'function' &&
+        typeof wasm._emu_pin_history_count === 'function' &&
+        typeof wasm._emu_pin_history_head === 'function' &&
+        typeof wasm._emu_pin_history_get === 'function' &&
+        typeof wasm._emu_pin_event_size === 'function');
+    const pinEventSize = hasPinHistoryApi ? wasm._emu_pin_event_size() : 0;
+    const hasPinHistory = hasPinHistoryApi && pinEventSize >= 12;
+    if (hasPinHistory) {
+        wasm._emu_pin_history_enable();
+        pinHistoryReadCount = wasm._emu_pin_history_count() >>> 0;
+        pinHistoryReadHead = wasm._emu_pin_history_head() >>> 0;
+    }
+
+    /** The injected opcode-length table, or null when the host supplied none. */
+    const instructionLength = typeof opts.instructionLength === 'function'
+        ? opts.instructionLength
+        : null;
 
     function haltReason(cause) {
         const pc = wasm._emu_dbg_pc();
@@ -250,6 +335,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
     function announce(cause) {
         const why = haltReason(cause);
+        emitHaltEvidence(why);
         for (const cb of listeners) cb(why);
         return why;
     }
@@ -293,6 +379,99 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 hz: Number(NS_PER_S)};
     }
 
+    function emitDebug(event) {
+        for (const cb of debugListeners) cb({...event, time: event.time || debugTime(), cpuId: 'main'});
+    }
+
+    /**
+     * Decode the native ring in batches after execution. Unlike pin polling,
+     * this preserves every retained sub-instruction edge and its native time.
+     */
+    function drainPinHistory() {
+        if (!hasPinHistory) return;
+        const count = wasm._emu_pin_history_count() >>> 0;
+        const head = wasm._emu_pin_history_head() >>> 0;
+        const produced = (count - pinHistoryReadCount) >>> 0;
+        let available = produced;
+        let first = pinHistoryReadHead;
+        if (available > PIN_HISTORY_CAPACITY) {
+            const dropped = available - PIN_HISTORY_CAPACITY;
+            available = PIN_HISTORY_CAPACITY;
+            // `head` is the native next-write position. Work backwards from
+            // it to the oldest retained entry; count is used only for loss.
+            first = (head - PIN_HISTORY_CAPACITY) >>> 0;
+            emitDebug({kind: 'signal', phase: 'history-gap', fidelity: 'recorded',
+                signal: {name: '8051.pin-history-gap', value: dropped}});
+        }
+        // The ABI returns sizeof(struct stc12_pin_event); offsets 0 and 8..11
+        // are fixed by its exported C definition. Malformed layouts were
+        // rejected during feature detection and never become a capability.
+        // The view is built once: nothing in this loop executes code, so the
+        // WASM heap cannot grow and detach the buffer underneath it.
+        const view = new DataView(wasm.HEAPU8.buffer);
+        for (let n = 0; n < available; n++) {
+            const index = (first + n) >>> 0;
+            const ptr = wasm._emu_pin_history_get(index);
+            if (!ptr || ptr + pinEventSize > view.byteLength) break;
+            const tNs = view.getBigUint64(ptr, true);
+            const port = view.getUint8(ptr + 8);
+            const bit = view.getUint8(ptr + 9);
+            const mode = MODE_NAMES[view.getUint8(ptr + 10)] ?? 'unknown';
+            const drive = view.getUint8(ptr + 11) !== 0;
+            emitDebug({kind: 'signal', phase: 'pin-change', fidelity: 'recorded',
+                time: {ticks: tNs,
+                    domain: debugTimeEpoch ? `8051-simulation-ns-reset-${debugTimeEpoch}` :
+                        '8051-simulation-ns', hz: Number(NS_PER_S)},
+                signal: {name: `P${port}.${bit}`, value: drive, mode}});
+        }
+        pinHistoryReadCount = count;
+        pinHistoryReadHead = head;
+    }
+
+    function emitHaltEvidence(why) {
+        if (pendingStep && why.cause === 'step') {
+            const step = pendingStep;
+            pendingStep = null;
+            if (step.kind === 'cycle') {
+                // The WASM's cycle step is one real oscillator tick. No bus
+                // pins are claimed: this build exposes the boundary, not its
+                // internal address/data/control signals.
+                emitDebug({kind: 'bus', phase: 'oscillator-clock', fidelity: 'recorded',
+                    pcBefore: step.pcBefore, pcAfter: why.pc,
+                    cause: 'step'});
+            } else if (step.kind === 'insn') {
+                if (!step.registersBefore) {
+                    emitDebug({kind: 'instruction', phase: 'retire', fidelity: 'recorded',
+                        pcBefore: step.pcBefore, pcAfter: why.pc,
+                        instruction: {address: step.pcBefore}, cause: 'step'});
+                    return;
+                }
+                const registersAfter = readRegisters();
+                const registerChanges = {};
+                for (const [name, after] of Object.entries(registersAfter)) {
+                    const before = step.registersBefore[name];
+                    const equal = Array.isArray(after) && Array.isArray(before) ?
+                        after.length === before.length && after.every((value, index) => value === before[index]) :
+                        Object.is(after, before);
+                    if (!equal) registerChanges[name] = {before, after};
+                }
+                emitDebug({kind: 'instruction', phase: 'retire', fidelity: 'recorded',
+                    pcBefore: step.pcBefore, pcAfter: why.pc,
+                    instruction: step.instruction, registersAfter,
+                    changes: {registers: registerChanges}, cause: 'step'});
+            }
+        }
+        if (why.cause === 'watchpoint') {
+            // This is evidence of a value transition sampled by the native
+            // change watchpoint, not proof of every store (same-value stores
+            // and multiple writes within one instruction remain invisible).
+            emitDebug({kind: 'memory', phase: 'change-watchpoint', fidelity: 'recorded',
+                memory: {space: why.space, address: why.addr, width: 1,
+                    direction: 'write', before: why.prev, value: why.value},
+                pcAfter: why.pc, cause: 'watchpoint'});
+        }
+    }
+
     /**
      * One byte out of one address space, using only value-returning calls.
      * Mirrors dbg_read_mem's switch exactly, including the bit-space derivation
@@ -321,6 +500,25 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
      * Where every task is, per DEBUG-CONTROL-MODEL §2. Three RAM reads and no
      * instrumentation — which is why this works on silicon too.
      */
+    function readRegisters() {
+        const psw = wasm._emu_dbg_psw();
+        return {pc: wasm._emu_dbg_pc(), a: wasm._emu_dbg_acc(), b: wasm._emu_dbg_b(),
+            dptr: wasm._emu_dbg_dptr(), sp: wasm._emu_dbg_sp(), psw,
+            // Reported, not left for the front end to derive from PSW —
+            // §6 says a conforming target states the bank explicitly.
+            bank: (psw >> 3) & 3,
+            r: Array.from({length: 8}, (_, n) => wasm._emu_dbg_rn(n))};
+    }
+
+    function disassemble(addr) {
+        if (!wasm.ccall || !wasm._emu_disasm) return '';
+        try {
+            return wasm.ccall('emu_disasm', 'string', ['number'], [addr & 0xFFFF]) || '';
+        } catch {
+            return '';
+        }
+    }
+
     function positionOf() {
         if (!symbols) return undefined;
         const out = [];
@@ -412,6 +610,10 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         capabilities() {
             // Feature-detect watchpoints: available if _emu_dbg_set_bp_write exists
             const hasWatchpoints = typeof wasm._emu_dbg_set_bp_write === 'function';
+            // A watchpoint that cannot report WHICH byte changed is a stop, not
+            // evidence: the memory fact needs space/addr/prev/value out of the
+            // halt reason, so the evidence claim is gated on both.
+            const hasWatchpointEvidence = hasWatchpoints && hasHaltReason;
 
             return {
                 // `line` is absent on purpose — see "Two corrections" above.
@@ -434,10 +636,40 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 sfrs: 'all',
                 haltPolicy: 'freeze-timers',
                 timeFreezes: true,
+                // Empty because captureCheckpoint refuses: there is no native
+                // complete-state ABI to record from. See the module header.
+                recording: [],
                 // An emulator takes nothing from the program: no timer, no
                 // UART, no pin. The on-chip monitor is the one that has to
                 // confess here (§7 decision 5).
-                consumes: []
+                consumes: [],
+                events: [
+                    'instruction',
+                    ...(hasCycleStep ? ['bus'] : []),
+                    ...(hasWatchpointEvidence ? ['memory'] : []),
+                    ...(hasPinHistory ? ['signal'] : [])
+                ],
+                fidelity: {
+                    instruction: 'recorded',
+                    cycle: hasCycleStep ? 'recorded' : 'unsupported',
+                    memory: hasWatchpointEvidence ? 'recorded' : 'unsupported'
+                },
+                extensions: {
+                    cycleEvidence: hasCycleStep ? 'oscillator-step-boundary' : 'none',
+                    instructionEvidence: 'single-step-retire-only',
+                    busSignals: false,
+                    signalEvidence: hasPinHistory ? 'native-pin-history' : 'none',
+                    pinHistoryCapacity: hasPinHistory ? PIN_HISTORY_CAPACITY : 0,
+                    memoryEvidence: hasWatchpointEvidence ? 'change-watchpoint-only' : 'none',
+                    // Whether an instruction fact can carry its opcode bytes is
+                    // a property of the HOST's injection, not of this build.
+                    instructionBytes: instructionLength ? 'injected-length-table' : 'none',
+                    checkpoint: {
+                        supported: false,
+                        code: 'incomplete-snapshot-abi',
+                        missing: [...CHECKPOINT_MISSING]
+                    }
+                }
             };
         },
 
@@ -449,10 +681,12 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         run() {
             stepping = false;
             pendingCause = null;
+            pendingStep = null;
             wasm._emu_dbg_run();
         },
 
         halt() {
+            pendingStep = null;
             pendingCause = 'user';
             wasm._emu_dbg_halt();
         },
@@ -472,12 +706,34 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             if (k === undefined) return { unsupported: `no such step kind: ${kind}` };
             stepping = true;
             pendingCause = 'step';
+            const pcBefore = wasm._emu_dbg_pc();
+            let stepEvidence = null;
+            if (count === 1 && (kind === 'cycle' || kind === 'insn')) {
+                stepEvidence = {kind, pcBefore};
+                // Only read the machine for evidence somebody is listening for.
+                if (kind === 'insn' && debugListeners.length) {
+                    stepEvidence.registersBefore = readRegisters();
+                    stepEvidence.instruction = {address: pcBefore, text: disassemble(pcBefore)};
+                    // `bytes`/`length` need the injected table. ABSENT, not
+                    // empty, when no table was supplied: an empty byte list
+                    // would assert a zero-length instruction, which is a claim
+                    // about the program rather than about this target's reach.
+                    if (instructionLength) {
+                        const length = instructionLength(readByte('code', pcBefore));
+                        stepEvidence.instruction.bytes =
+                            Array.from({length}, (_, offset) => readByte('code', pcBefore + offset));
+                        stepEvidence.instruction.length = length;
+                    }
+                }
+            }
+            pendingStep = stepEvidence;
             // -1 means the emulator itself declined the kind. Passing that back
             // matters: the alternative is reporting "stepping" for a step that
             // never started, and then waiting for a halt that never comes.
             if (wasm._emu_dbg_step(k, count) < 0) {
                 stepping = false;
                 pendingCause = null;
+                pendingStep = null;
                 return { unsupported: `this emulator build does not implement step kind: ${kind}` };
             }
             return undefined;
@@ -486,8 +742,17 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         reset() {
             stepping = false;
             pendingCause = null;
+            pendingStep = null;
             debugTimeEpoch++;
             wasm._emu_dbg_reset();
+            if (hasPinHistory) {
+                // Re-seed rather than zero: stc12_init PRESERVES the ring
+                // pointer but zeroes its head and count, so a cursor left at
+                // the pre-reset totals would read the new epoch's first events
+                // as an overflow.
+                pinHistoryReadCount = wasm._emu_pin_history_count() >>> 0;
+                pinHistoryReadHead = wasm._emu_pin_history_head() >>> 0;
+            }
             // Breakpoints deliberately survive: `dbg_reset` resets the CPU and
             // the peripherals and does not touch `t->bps`, so the emulator will
             // still stop at them. Clearing our record here would leave the two
@@ -605,28 +870,45 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             for (let i = 0; i < data.length; i++) {
                 wasm._emu_dbg_write_mem(s, (addr + i) & 0xFFFF, data[i]);
             }
+            // NO PIN DRAIN HERE, AND THAT IS MEASURED RATHER THAN ASSUMED.
+            // The downstream copy drained the native ring at this point, on the
+            // reasoning that a debug write to a port SFR moves a pin. It does
+            // not: `dbg_write_mem` assigns `mSFR[addr - 0x80]` directly and
+            // never dispatches the `sfrwrite` callbacks, so `emit_pin_changes`
+            // — the only writer of the ring — is never reached. Driven at the
+            // pinned build: writing P1 and then P1M0 leaves the native count at
+            // zero. The call could only ever drain edges some earlier run had
+            // already drained, and runFor drains after every run.
+            // test/emu8051-debug-events.test.mjs pins the ABI fact, so a build
+            // that starts routing debug writes through the hooks fails there
+            // rather than silently withholding an edge.
             return undefined;
         },
 
         regs() {
-            const psw = wasm._emu_dbg_psw();
-            return {
-                pc: wasm._emu_dbg_pc(),
-                a: wasm._emu_dbg_acc(),
-                b: wasm._emu_dbg_b(),
-                dptr: wasm._emu_dbg_dptr(),
-                sp: wasm._emu_dbg_sp(),
-                psw,
-                // Reported, not left for the front end to derive from PSW —
-                // §6 says a conforming target states the bank explicitly.
-                bank: (psw >> 3) & 3,
-                r: Array.from({ length: 8 }, (_, n) => wasm._emu_dbg_rn(n))
-            };
+            return readRegisters();
+        },
+
+        /** Refuse partial architectural dumps as deterministic checkpoints. */
+        captureCheckpoint() {
+            return checkpointRefusal('save');
+        },
+
+        /** Refuse before inspecting or mutating the supplied partial state. */
+        restoreCheckpoint(_snapshot) {
+            return checkpointRefusal('restore');
         },
 
         onHalt(cb) {
             listeners.push(cb);
             return () => { listeners = listeners.filter((f) => f !== cb); };
+        },
+
+        /** Subscribe to recorded facts. Sequencing/schema wrapping belongs to the runner. */
+        onDebugEvent(cb) {
+            if (typeof cb !== 'function') throw new TypeError('debug event listener must be a function');
+            debugListeners.push(cb);
+            return () => { debugListeners = debugListeners.filter((f) => f !== cb); };
         },
 
         // ─── beyond the interface ────────────────────────────────────────
@@ -655,12 +937,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
          * walk forward gets that from an opcode table.
          */
         disasm(addr) {
-            if (!wasm.ccall || !wasm._emu_disasm) return '';
-            try {
-                return wasm.ccall('emu_disasm', 'string', ['number'], [addr & 0xFFFF]) || '';
-            } catch {
-                return '';
-            }
+            return disassemble(addr);
         },
 
         /** Normalise a code address and advance it in the 8051's 16-bit space. */
@@ -717,6 +994,9 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             } finally {
                 inBudgetedRun = false;
             }
+            // After execution, never during: one batch decode keeps native
+            // timestamps and costs nothing per instruction.
+            drainPinHistory();
 
             if (stopped) {
                 // The return value is what separates a real stop from the
@@ -744,6 +1024,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             }
             haltCbPtr = null;
             listeners = [];
+            debugListeners = [];
         }
     };
 
