@@ -228,6 +228,9 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         })
     });
 
+    /** Last rendered frame and the key it was rendered for. See video(). */
+    let cachedVideoKey = null;
+    let cachedVideoFrame = null;
     let runState = 'halted';
     let pendingStep = null;
     const haltListeners = [];
@@ -1211,10 +1214,24 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         /** Spend up to budgetNs of simulated time. Returns 'halted' or 'budget'. */
         runFor(budgetNs) {
             if (runState !== 'running') return 'halted';
-            const deadline = machine.tMs + budgetNs / 1e6;
-            while (machine.tMs < deadline) {
-                for (const [id, bp] of breakpoints) {
-                    if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
+            // The same test as `tMs < tMs + budgetNs / 1e6` with the common
+            // factors cancelled, in the integer the machine already keeps.
+            // DO NOT ROUND: any positive budget must still retire one whole
+            // instruction, exactly as the strict float comparison did, or a
+            // caller asking for a small slice gets no progress and the machine
+            // appears hung.
+            const deadlineCycles = machine.cycles + budgetNs * machine.clockHz / 1e9;
+            while (machine.cycles < deadlineCycles) {
+                // The overwhelmingly common run has no code breakpoint, and
+                // constructing a Map iterator per instruction for an empty Map
+                // is a cost paid by every program that never sets one. The
+                // watch and event traps already install themselves only when
+                // something is watching; this is the same discipline for the
+                // one check that did not.
+                if (breakpoints.size) {
+                    for (const [id, bp] of breakpoints) {
+                        if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
+                    }
                 }
                 if (pendingStep) {
                     if (pendingStep.kind === 'insn' && pendingStep.remaining <= 0) { halt({ cause: 'step' }); return 'halted'; }
@@ -1329,8 +1346,24 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 if (vo.intensity === undefined) vo.intensity = (card.color & 0x10) !== 0;
                 if (vo.cgaPalette === undefined) vo.cgaPalette = (card.color & 0x20) !== 0;
             }
+            // Rendering text mode alone costs about 8 ms on the measured Node
+            // path, and a static DOS prompt was paying it on every call for a
+            // picture that had not changed. Key the cache on the machine's
+            // display revision -- the token that moves on exactly the writes
+            // that can change what is on screen -- plus the inputs the render
+            // depends on that the token does not cover.
+            //
+            // THE FRAME NUMBER IS PART OF THE POINT, not decoration: a consumer
+            // that keys its own repaint on it freezes after the first paint if
+            // it never moves.
+            const videoKey = `${machine.displayRevision || 0}:${guess.mode}:`
+                + `${seen.join(',')}:${vo.blinkPhase ?? ''}`;
+            if (videoKey === cachedVideoKey && cachedVideoFrame) return cachedVideoFrame;
             const frame = renderMode(guess.mode, (a) => machine._read(a & 0xfffff), vo);
-            return { ...frame, mode: guess.mode, why: guess.reason };
+            cachedVideoKey = videoKey;
+            cachedVideoFrame = { ...frame, frame: machine.displayRevision || 0,
+                mode: guess.mode, why: guess.reason };
+            return cachedVideoFrame;
         },
 
         /**
