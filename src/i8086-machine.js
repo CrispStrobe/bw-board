@@ -1380,10 +1380,58 @@ export class I8086Machine {
             this._advanceChips(n);
             return n;
         }
+        // THE INSTRUCTION OBSERVER IS HERE, INSIDE step(), AND THAT IS THE POINT.
+        // A debugger can wrap step() from outside, but _serviceInterrupts() has
+        // already run by the time the core retires anything: the pc such a wrapper
+        // read is not necessarily the pc the instruction ran from. Observing after
+        // arbitration and around the one retiring call is the only place that can
+        // report the truth.
+        //
+        // A MACHINE WITH NO OBSERVER PAYS ONE PROPERTY READ. Everything else is
+        // inside the branch, and the snapshot half is inside a second branch the
+        // observer opts into, so an observer that only wants addresses is not
+        // charged for a register copy and a 15-byte image on every retire.
+        const observer = this.hooks.onInstruction;
+        if (!observer) {
+            const n = this._cycleEst === null ? this.cpu.step() : this._stepTimed();
+            this.cycles += n;
+            this._advanceChips(n);
+            return n;
+        }
+        const pcBefore = this.cpu.pc;
+        const cyclesBefore = this.cycles;
+        const captureSnapshot = observer.captureSnapshot === true;
+        const registersBefore = captureSnapshot ? this._architecturalRegisters() : null;
+        // The core is instruction-atomic and does not expose fetch cycles, so the
+        // image is taken BEFORE execution: a self-modifying instruction must not be
+        // able to make the historical disassembly describe the new bytes.
+        const bytesBefore = captureSnapshot
+            ? Array.from({length: 15}, (_, offset) => this._read((pcBefore + offset) & 0xfffff))
+            : null;
         const n = this._cycleEst === null ? this.cpu.step() : this._stepTimed();
         this.cycles += n;
         this._advanceChips(n);
+        observer({
+            pcBefore,
+            pcAfter: this.cpu.pc,
+            cycles: n,
+            cyclesBefore,
+            cyclesAfter: this.cycles,
+            ...(captureSnapshot ? {
+                bytesBefore, registersBefore, registersAfter: this._architecturalRegisters()
+            } : {})
+        });
         return n;
+    }
+
+    /** The architectural register file, as a plain snapshot. */
+    _architecturalRegisters() {
+        return {
+            ax: this.cpu.ax, bx: this.cpu.bx, cx: this.cpu.cx, dx: this.cpu.dx,
+            sp: this.cpu.sp, bp: this.cpu.bp, si: this.cpu.si, di: this.cpu.di,
+            ip: this.cpu.ip, cs: this.cpu.cs, ds: this.cpu.ds, es: this.cpu.es,
+            ss: this.cpu.ss, flags: this.cpu.flags, pc: this.cpu.pc
+        };
     }
 
     /**
