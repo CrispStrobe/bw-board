@@ -56,7 +56,7 @@ const machines = {
 const streamOf = (name, options = {}) => {
   const machine = machines[name].make();
   const events = installInstructionDebugEvents({
-    cpu: machine.cpu, machine, cpuId: name, timeDomain: machines[name].domain, ...options });
+    cpu: machine.cpu, machine, cpuId: name, timeDomain: machines[name].domain, rewindLabel: 'reset', ...options });
   const facts = [];
   events.onDebugEvent(event => facts.push(serialise(event)));
   for (let i = 0; i < 6; i++) machine.step();
@@ -122,7 +122,7 @@ describe('the injected bracket produces the same facts as the wrapped one', () =
   const drivenByHand = () => {
     const machine = machines.m6502.make();
     const events = installInstructionDebugEvents({
-      cpu: machine.cpu, machine, cpuId: 'm6502', timeDomain: 'm6502-cycles' });
+      cpu: machine.cpu, machine, cpuId: 'm6502', timeDomain: 'm6502-cycles', rewindLabel: 'reset' });
     const facts = [];
     events.onDebugEvent(event => facts.push(serialise(event)));
     // Drive it the way an adapter whose step is a free function would: call the
@@ -148,7 +148,7 @@ describe('the injected bracket produces the same facts as the wrapped one', () =
   it('refuses anything that is not a function, BY NAME', () => {
     const machine = machines.z80.make();
     const events = installInstructionDebugEvents({
-      cpu: machine.cpu, machine, cpuId: 'z80', timeDomain: 'z80-tstates' });
+      cpu: machine.cpu, machine, cpuId: 'z80', timeDomain: 'z80-tstates', rewindLabel: 'reset' });
     for (const bad of [undefined, null, 42, 'step', {}]) {
       // The message matters, not just the class. Deleting the type check leaves
       // this throwing a TypeError anyway — `execute is not a function`, raised
@@ -169,7 +169,7 @@ describe('the injected bracket produces the same facts as the wrapped one', () =
     // caller probing for a step then finds one that cannot be called.
     const cpu = { pc: 0, cycles: 0, readData: () => 0, writeData: () => {} };
     const events = installInstructionDebugEvents({
-      cpu, machine: { clockHz: 1 }, cpuId: 'avr', timeDomain: 'avr-cycles',
+      cpu, machine: { clockHz: 1 }, cpuId: 'avr', timeDomain: 'avr-cycles', rewindLabel: 'reset',
       accessors: { read: 'readData', write: 'writeData' },
       pcOf: c => c.pc * 2, clock: () => cpu.cycles });
     const off = events.onDebugEvent(() => {});
@@ -181,7 +181,7 @@ describe('the injected bracket produces the same facts as the wrapped one', () =
     let ran = 0;
     const machine = machines.z80.make();
     const events = installInstructionDebugEvents({
-      cpu: machine.cpu, machine, cpuId: 'z80', timeDomain: 'z80-tstates' });
+      cpu: machine.cpu, machine, cpuId: 'z80', timeDomain: 'z80-tstates', rewindLabel: 'reset' });
     assert.equal(events.aroundInstruction(() => { ran++; return 7; }), 7);
     assert.equal(ran, 1);
   });
@@ -213,6 +213,7 @@ describe('a core that spells all four differently', () => {
 
   const install = ({ cpu, machine }) => installInstructionDebugEvents({
     cpu, machine, cpuId: 'avr', timeDomain: 'avr-cycles',
+    rewindLabel: 'reset',            // required; no rewind asserted in these cases
     accessors: { read: 'readData', write: 'writeData' },
     pcOf: c => c.pc * 2,
     clock: () => cpu.cycles

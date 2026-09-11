@@ -34,6 +34,7 @@ const install = (m, facts, opt = true) => {
     const d = installInstructionDebugEvents({
         cpu: m.cpu, machine: m, cpuId: 'i8086', timeDomain: 'i8086-cycles',
         addressMask: 0xfffff, pcOf: c => c.pc & 0xfffff, clock: () => m.cycles,
+        rewindLabel: 'reset',        // required; this suite tests the write `before` field, not epochs
         captureWriteBefore: opt
     });
     if (facts) d.onDebugEvent(f => facts.push(f));

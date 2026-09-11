@@ -647,7 +647,7 @@ describe('C6: a target that can PARK says so', () => {
     machine.cpu.pc = 0;
 
     const seen = [];
-    installInstructionDebugEvents({ cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks' })
+    installInstructionDebugEvents({ cpu: machine.cpu, machine, cpuId: 't', timeDomain: 'ticks', rewindLabel: 'reset' })
       .onDebugEvent(e => seen.push(`${e.kind}/${e.phase}`));
 
     machine.step();                                    // executes the HALT

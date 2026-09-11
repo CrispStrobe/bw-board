@@ -93,7 +93,21 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
   captureRegisters, captureInstruction, idleCause = () => 'parked',
   accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff, addressMask = 0xffff,
   captureWriteBefore = false,
-  clock = () => machine.cycles}) {
+  clock = () => machine.cycles, rewindLabel}) {
+  // REQUIRED, no default: the suffix stamped on a domain after a BACKWARD clock
+  // move is a per-target FACT, not a module constant. Pass 'rewind' when the
+  // core's reset() ADVANCES the clock (the backward moves are loadState /
+  // checkpoint restore — z80, 6502, 8086); pass 'reset' when reset() zeroes it.
+  // There is no safe default — `-reset-` is wrong for every core that reaches
+  // this code, and a default would go invisible the moment a fifth consumer
+  // forgot it. lite's comment forbids converging the two namings for exactly
+  // this reason, so the parameter — not a constant — is the fix.
+  if (typeof rewindLabel !== 'string' || !rewindLabel) {
+    throw new TypeError(
+      'installInstructionDebugEvents needs rewindLabel: "rewind" if this core\'s '
+      + 'reset() advances the clock (the backward move is loadState/restore), '
+      + '"reset" if reset() zeroes it. State it; there is no safe default.');
+  }
   const NAME = {read: 'read', write: 'write', inPort: 'inPort', outPort: 'outPort',
     ...accessorNames};
   const listeners = new Set();
@@ -129,7 +143,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     lastTicks = value;
     return {
       ticks: value,
-      domain: timeEpoch ? `${timeDomain}-reset-${timeEpoch}` : timeDomain,
+      domain: timeEpoch ? `${timeDomain}-${rewindLabel}-${timeEpoch}` : timeDomain,
       hz: machine.clockHz
     };
   };
@@ -532,7 +546,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
         // restore would consume the regression and leave the next real fact in
         // an era nothing explains).
         ticks: BigInt(clock()),
-        domain: timeEpoch ? `${timeDomain}-reset-${timeEpoch}` : timeDomain,
+        domain: timeEpoch ? `${timeDomain}-${rewindLabel}-${timeEpoch}` : timeDomain,
         hz: machine.clockHz
       };
     },

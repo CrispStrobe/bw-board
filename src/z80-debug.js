@@ -43,6 +43,10 @@ export function createZ80DebugTarget(adapter, opts = {}) {
    */
   const debugEvents = installInstructionDebugEvents({
     cpu, machine, cpuId, timeDomain: 'z80-cycles', port: true,
+    // 'rewind', because z80-machine.reset() ADVANCES the clock — the only
+    // backward move is loadState/restore. This also aligns event facts with
+    // this target's INPUT facts, which already stamp `-rewind-` (eventDomain).
+    rewindLabel: 'rewind',
     clock: () => machine.cycles,
     captureRegisters: () => ({pc: cpu.pc, sp: cpu.sp, a: cpu.a, f: cpu.f, bc: cpu.bc,
       de: cpu.de, hl: cpu.hl, ix: cpu.ix, iy: cpu.iy, i: cpu.i, r: cpu.r,
@@ -526,7 +530,13 @@ export function createZ80DebugTarget(adapter, opts = {}) {
         return id;
       }
       if (spec.kind !== 'code') return { unsupported: `unknown breakpoint kind: ${spec.kind}` };
-      if (spec.addr == null) return { unsupported: 'addr required' };
+      // ENFORCE the ceiling capabilities().runTo declares (addressMax 0xffff). Without
+      // this, an out-of-range address is masked `& 0xffff` at the store below, so a
+      // breakpoint at 0x10000 fires at 0x0000 — a working handle for a breakpoint at
+      // the wrong place. A refusal, not a wrapped halt.
+      if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xffff) {
+        return { unsupported: 'code breakpoint addr must be in 0x0000..0xffff' };
+      }
       const id = nextBpId++;
       breakpoints.set(id, { kind: 'code', addr: spec.addr & 0xffff });
       return id;
