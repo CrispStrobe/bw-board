@@ -18,6 +18,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { I8086Machine, PCXT8086 } from '../src/i8086-machine.js';
 import { createI8086DebugTarget } from '../src/i8086-debug.js';
+import {logicalTimeDomain, REWIND_LABELS} from '../src/instruction-debug-events.js';
 
 const build = () => {
     const r = new Uint8Array(0x10000).fill(0x90);
@@ -72,6 +73,24 @@ test('the label is the one every reader strips, not a private spelling', () => {
     machine.step();
     target.restoreCheckpoint(snapshot);
 
-    assert.equal(target.debugTime().domain.includes('-reset-'), false,
-        'this target must not stamp a label its readers do not strip');
+    // DERIVED FROM THE AUTHORITY, not from the one wrong spelling.
+    //
+    // This asserted `!domain.includes('-reset-')` — true, and true about a
+    // single label somebody thought of. The claim is that whatever this target
+    // stamps, THE PARSER EVERY READER USES CAN TAKE IT OFF. Written that way it
+    // follows REWIND_LABELS: a fifth label added there is covered here for free,
+    // and a private spelling fails whatever it happens to be.
+    const domain = target.debugTime().domain;
+    assert.match(domain, /-rewind-\d+$/,
+        `fixture: no rewind epoch was stamped (${domain}), so the check below is looking at `
+        + 'an ordinary domain and would pass with any label at all');
+    assert.equal(logicalTimeDomain(domain), 'i8086-cycles',
+        `this target stamps ${domain}, which logicalTimeDomain() cannot reduce to its base `
+        + 'clock. Every reader derives its pattern from REWIND_LABELS, so a label outside '
+        + 'that set is one nothing downstream can strip — a replay would compare this '
+        + 'against the unstamped recording and declare the stream diverged.');
+    for (const label of REWIND_LABELS) {
+        assert.equal(logicalTimeDomain(`i8086-cycles-${label}-4`), 'i8086-cycles',
+            `the authority no longer strips its own declared label "${label}"`);
+    }
 });
