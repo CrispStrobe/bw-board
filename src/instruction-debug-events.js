@@ -68,6 +68,16 @@
  *   Property names on `cpu` for the four wrappable accessors.
  * @param {(cpu: object) => number} [opts.pcOf] the program counter, in the units facts carry.
  * @param {() => number} [opts.clock] the tick count facts are stamped with.
+ * @param {boolean} [opts.captureWriteBefore=false] include the PRIOR value on a
+ *   memory write fact, making it a diff rather than an assignment. Off by
+ *   default because adding a field changes the fact shape for every existing
+ *   subscriber. MEASURED on the write path in isolation -- 2M writes inside one
+ *   bracket, best of seven, two runs: 1.13x / 63.8ns and 1.09x / 42.8ns per
+ *   write. That is an upper bound, not a program's cost: the same change against
+ *   a STEPPING machine at one, four and sixteen stores per loop gave 1.079,
+ *   1.005 and 1.120 -- a spread wider than the effect, so at realistic densities
+ *   it is below this harness's noise floor. Quoted as unresolved there rather
+ *   than as the one clean-looking number.
  * @param {number} [opts.addressMask=0xffff] width of the MEMORY address space, as
  *   a mask. The default is every core this module served when it was written; a
  *   20-bit core passes 0xfffff. `pcOf` was already a parameter, so without this a
@@ -82,6 +92,7 @@
 export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, port = false,
   captureRegisters, captureInstruction, idleCause = () => 'parked',
   accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff, addressMask = 0xffff,
+  captureWriteBefore = false,
   clock = () => machine.cycles, rewindLabel}) {
   // REQUIRED, no default: the suffix stamped on a domain after a BACKWARD clock
   // move is a per-target FACT, not a module constant. Pass 'rewind' when the
@@ -240,8 +251,24 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     cpu[NAME.read] = hooks.ours.read;
 
     hooks.ours.write = (address, value) => {
+      // `before` is what makes a write fact a DIFF rather than an assignment.
+      // "This address is now 5" and "this write changed something" are different
+      // claims, and real code makes no-op writes constantly -- read-modify-write
+      // and masked register updates store the value already there.
+      //
+      // TWO GATES, AND THEY DO DIFFERENT JOBS. The `accesses` guard is the
+      // LISTENER opt-in -- null unless somebody is subscribed and a bracket is
+      // open -- so an unwatched machine performs no read at all, the same stance
+      // as the register and instruction samples above. `captureWriteBefore` is
+      // the CONSUMER opt-in, and it defaults off because adding a field changes
+      // the fact shape for every existing subscriber: the golden capture reddens
+      // on it, which is that fixture doing exactly its job. A caller that wants
+      // diffs asks for them and pays the extra read per write; one that does not
+      // is byte-for-byte unaffected.
       if (accesses) accesses.push({kind: 'memory', memory: {
-        space: 'mem', address: address & addressMask, width: 1, direction: 'write', value: value & 0xff
+        space: 'mem', address: address & addressMask, width: 1, direction: 'write',
+        ...(captureWriteBefore ? {before: hooks.read.call(cpu, address) & 0xff} : {}),
+        value: value & 0xff
       }});
       return hooks.write.call(cpu, address, value);
     };
