@@ -182,10 +182,26 @@ describe('ancestorCandidates', () => {
   }, () => {
     const fixedDepth = path.join(HERE, '..', '..', ...RELATIVE);
     assert.ok(existsSync(FOUND), FOUND);
-    if (existsSync(fixedDepth)) return;   // running from a clone: both work
-    // Running from a WORKTREE — precisely the case that used to skip.
-    assert.notEqual(path.resolve(FOUND), path.resolve(fixedDepth),
-      'the walk found what the fixed depth could not');
+
+    // THE SUPERSET PROPERTY, ASSERTED IN EVERY ENVIRONMENT. This used to be
+    // `if (existsSync(fixedDepth)) return;` — on a clone, where both paths
+    // resolve, the case then passed having asserted nothing about the claim in
+    // its own name. An early return inside a case body is a PASS, and this file
+    // exists to hold exactly that class.
+    //
+    // What holds on EVERY box is that the walk never LOSES what the fixed depth
+    // would have found: `ancestorCandidates` offers a candidate at every level,
+    // and `<here>/../..` is one of them. A replacement that reached the worktree
+    // by starting higher would break the clone, and nothing else here would say so.
+    assert.ok(ancestorCandidates(HERE, RELATIVE).includes(fixedDepth),
+      'the walk stopped offering the old fixed-depth candidate — it must be a '
+      + 'SUPERSET of what it replaced, not a different guess that happens to work here');
+
+    if (!existsSync(fixedDepth)) {
+      // Running from a WORKTREE — precisely the case that used to skip.
+      assert.notEqual(path.resolve(FOUND), path.resolve(fixedDepth),
+        'the walk found what the fixed depth could not');
+    }
   });
 });
 

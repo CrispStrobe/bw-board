@@ -230,13 +230,37 @@ for (const { name, make, validatesTime } of [
         assert.equal(make().restoreCheckpoint(asBigInt), undefined,
             `${name} refused a checkpoint whose ticks are the same number spelled as a BigInt`);
 
-        if (!validatesTime) return;
-        for (const [label, ticks] of [
+        // ONE list, driven by BOTH branches. Two lists would let the positive
+        // and negative halves stop being about the same inputs, and the drift
+        // would read as two rows disagreeing about the target rather than about
+        // their fixtures.
+        const wrongTimes = [
             ['a BigInt one tick off', BigInt(cp.time.ticks) + 1n],
             ['a Number one tick off', cp.time.ticks + 1],
             ['a string', 'nope'],
             ['a fraction', cp.time.ticks + 0.5],
-        ]) {
+        ];
+
+        if (!validatesTime) {
+            // THE NAME'S NEGATIVE, ASSERTED. This row is named "not judged here
+            // at all" and used to make that claim by RETURNING — and a case that
+            // stops asserting passes whatever the subject does, so the day this
+            // target started judging time the row would have stayed green under
+            // a name that had become false.
+            //
+            // MEASURED 2026-09-11: all four spellings are accepted, because
+            // checkpoint time here is written by the debug layer's event clock
+            // rather than derived from the machine, so the machine has nothing
+            // to compare against. That is the reason in the header, now held.
+            for (const [label, ticks] of wrongTimes) {
+                assert.equal(make().restoreCheckpoint({ ...cp, time: { ...cp.time, ticks } }), undefined,
+                    `${name} REFUSED ${label}. It judges checkpoint time now, so this row's `
+                    + 'name is wrong and `validatesTime: true` is the truth — move it.');
+            }
+            return;
+        }
+
+        for (const [label, ticks] of wrongTimes) {
             const refusal = make().restoreCheckpoint({ ...cp, time: { ...cp.time, ticks } });
             assert.equal(refusal?.code, 'INVALID_CHECKPOINT_TIME',
                 `${name} accepted ${label} as the captured time`);
