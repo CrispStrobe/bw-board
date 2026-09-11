@@ -48,6 +48,12 @@ const HEX_CANDIDATES = [
 ].filter(Boolean);
 
 const TRACE_CANDIDATES = [
+  // $UCSIM_STC12_TRACE FIRST, so a box with the build elsewhere can name it
+  // rather than binding to wherever the walk happens to land. The census
+  // declares this key and asserts the gated file really reads it: a detection
+  // key nothing reads makes the census report on a condition with no effect,
+  // which is exactly how an oracle becomes ambient.
+  process.env.UCSIM_STC12_TRACE,
   resolveAncestor(here, ['ucsim-stc', 'ucsim', 'src', 'sims', 's51.src', 'stc12_trace']),
 ].filter(Boolean);
 

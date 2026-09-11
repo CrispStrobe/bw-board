@@ -414,6 +414,31 @@ export const INPUTS = [
         ci: 'no — deliberately, the ROMs are not ours to ship',
     },
     {
+        // THE ONLY PATH ANYTHING REACHES INSIDE THAT TREE, measured 2026-09-11:
+        // `ucsim-stc/ucsim/src/sims/s51.src/stc12_trace` and nothing else. The
+        // repository was archived to a CIFS mount during a disk purge and the
+        // 4.7 MB binary was brought back to local disk while the other 809 MB
+        // stayed archived — so this row describes a FILE, not a checkout.
+        //
+        // WHY IT HAS A ROW AT ALL. Before this it was a binary someone had put
+        // on the box: present, unnamed, unversioned, and reached by exactly one
+        // test through an ancestor walk. That is the shape that cost thirteen
+        // red master runs on the emu8051 build — an input whose identity nobody
+        // records. `digest` is printed on every run, so which binary produced a
+        // number is answerable from the log rather than from a bisect.
+        id: 'ucsim-stc12-trace', kind: 'oracle',
+        what: 'The ucsim STC12 trace binary, built with -inject support (a81091e). '
+            + 'serial-debug-e2e compares the monitor protocol against it.',
+        env: 'UCSIM_STC12_TRACE',
+        paths: [join(ROOT, 'ucsim-stc', 'ucsim', 'src', 'sims', 's51.src', 'stc12_trace'),
+            '/mnt/volume1/code/ucsim-stc/ucsim/src/sims/s51.src/stc12_trace'],
+        gates: ['test/serial-debug-e2e.test.js'],
+        obtain: 'build ucsim-stc with -inject support (a81091e), or set $UCSIM_STC12_TRACE',
+        ciAvailable: false,
+        ciCadence: false,
+        ci: 'no — ci.yml does not check this out; serial-debug-e2e skips its ucsim half there',
+    },
+    {
         id: 'blinkenrocket-fw', kind: 'fixture',
         what: 'The reference Blinkenrocket firmware hex. Without it the sound-becomes-data '
             + 'modem loop is unproven end to end.',
