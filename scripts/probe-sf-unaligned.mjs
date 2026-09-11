@@ -52,6 +52,8 @@ function parseArgs (argv) {
         if (argv[i] === '--expr') a.expr = argv[++i];
         else if (argv[i] === '--uf2') a.uf2 = argv[++i];
         else if (argv[i] === '--rom-version') a.romVersion = Number(argv[++i]);
+        else if (argv[i] === '--pin') a.pin = Number(argv[++i]);
+        else if (argv[i] === '--input-high') a.inputHigh = true;
     }
     return a;
 }
@@ -250,6 +252,17 @@ function run (done, budget, idleCapNanos = 2e9) {
     return done && done() ? 'done' : 'budget';
 }
 
+// --pin watches a GPIO. An API call that RETURNS proves the call returned; it
+// says nothing about whether the pad moved. R3 recorded the first GPIO call
+// hanging, so "it answered" is progress and not the claim worth making.
+const pinEdges = [];
+if (args.pin !== undefined) {
+    rp2040.gpio[args.pin].addListener((state) => {
+        pinEdges.push({ state, step: state === undefined ? -1 : stateSteps() });
+    });
+}
+const stateSteps = () => state.steps;
+
 const cdc = new USBCDC(rp2040.usbCtrl);
 cdc.onDeviceConnected = () => { state.usbConnected = true; };
 cdc.onSerialData = buf => { for (const b of buf) state.usb += String.fromCharCode(b); };
@@ -260,6 +273,14 @@ run(null, 400_000);
 for (const ch of '\r\n') cdc.sendSerialByte(ch.charCodeAt(0));
 run(() => />/.test(state.usb), 20_000_000);
 console.log(`prompt              ${/>/.test(state.usb) ? 'reached' : 'NOT reached'} at instruction ${state.steps}`);
+
+// --input-high feeds the pad's INPUT register before the expression runs.
+// Without a board attached, syncInputs() never runs and the input register
+// keeps its power-on value, so digitalRead on a pin this harness is driving
+// HIGH still reads 0. That is a property of the probe. This flag is how that
+// is demonstrated rather than asserted: if the read follows the flag, the
+// mechanism is the missing board and not the ROM.
+if (args.inputHigh && args.pin !== undefined) rp2040.gpio[args.pin].setInputValue(true);
 
 const beforeExpr = lowReads.length;
 const usbBefore = state.usb.length;
@@ -372,4 +393,16 @@ for (const t of TABLES) {
     for (let i = 0; i < 26; i++) words.push(rp2040.readUint32(t.base + i * 4) >>> 0);
     console.log(`    final: ${words.filter(w => w !== 0).length}/26 non-zero`);
     console.log(`    ${words.slice(0, 8).map(hex).join(' ')}`);
+}
+
+if (args.pin !== undefined) {
+    const pin = rp2040.gpio[args.pin];
+    console.log('');
+    console.log(`GPIO${args.pin}: ${pinEdges.length} transitions during the run`);
+    for (const e of pinEdges.slice(0, 12)) console.log(`    -> ${e.state} at step ${e.step}`);
+    console.log(`    final value=${pin.value} outputEnable=${pin.outputEnable}`);
+    if (pinEdges.length === 0) {
+        console.log('    NO TRANSITIONS. The call returning is not the pad moving;');
+        console.log('    this is the half that would have been assumed.');
+    }
 }
