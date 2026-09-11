@@ -82,6 +82,7 @@ export const INPUTS = [
     {
         id: '8086-vectors', kind: 'oracle',
         repository: 'SingleStepTests/8086',
+        ciCadence: 'push',   // the `vectors` job
         what: 'SingleStepTests 8086 — 646,000 vectors from an Intel P80C86A-2. '
             + 'Grounds src/i8086.js and src/i8086-disasm.js on TEXT as well as state.',
         env: 'I8086_VECTORS',
@@ -95,6 +96,7 @@ export const INPUTS = [
     {
         id: '8088-vectors', kind: 'oracle',
         repository: 'SingleStepTests/v20',
+        ciCadence: 'push',   // the `vectors186` job
         what: 'SingleStepTests 8088 v2 — per-CYCLE bus traces: m-cycle type, T-state, '
             + 'and the queue F/S/E operations with the byte read. The ONLY thing that can '
             + 'grade timing and access ORDER; the 8086 suite compares final state and is '
@@ -113,6 +115,7 @@ export const INPUTS = [
     {
         id: 'z80-vectors', kind: 'oracle',
         repository: 'SingleStepTests/z80',
+        ciCadence: 'schedule',   // the `vectors-full` job
         what: 'SingleStepTests z80 — 1,604 opcode files with full undocumented state '
             + '(X/Y flags, Q latch, R per-M1, WZ). Grounds src/z80.js.',
         env: 'Z80_VECTORS',
@@ -125,6 +128,7 @@ export const INPUTS = [
     {
         id: '65c02-vectors', kind: 'oracle',
         repository: 'SingleStepTests/65x02',
+        ciCadence: 'schedule',   // the `vectors-full` job
         what: 'SingleStepTests 65x02, WDC variant — ~10k vectors per opcode including '
             + 'cycle counts. Grounds src/w65c02.js.',
         env: 'VECTORS_DIR',
@@ -149,6 +153,7 @@ export const INPUTS = [
     {
         id: 'emu8051', kind: 'oracle',
         repository: 'CrispStrobe/emu8051-stc',
+        ciCadence: 'push',   // the `test` job
         what: 'A second 8051 implementation (MIT sibling repo), built to WASM. '
             + 'Cross-checks the emu8051 adapter against a different upstream.',
         env: 'EMU8051_JS',
@@ -259,6 +264,7 @@ export const INPUTS = [
     {
         id: 'amey-corpus', kind: 'fixture',
         repository: 'Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS',
+        ciCadence: 'push',   // the `corpus` job
         what: 'The Amey-Thakur corpus — 525 real DOS assembly programs '
             + '(github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS). The single '
             + 'largest evidence that src/i8086-asm.js handles real-world MASM/NASM '
@@ -402,6 +408,7 @@ export const INPUTS = [
         // The `obtain` prose below says "build blinkenrocket-firmware", which no
         // scan can match against ci.yml's `repository:` line.
         repository: 'CrispStrobe/blinkenrocket-firmware',
+        ciCadence: 'push',   // the `test` job
         gates: ['test/blinkenrocket-modem-e2e.test.mjs',
             // Same oracle, second gate: the lookup test proves the ancestor walk
             // REACHES this firmware from a worktree, where a fixed depth cannot.
@@ -618,6 +625,13 @@ function snapshot(rows) {
     };
 }
 
+// `ciCadence` is deliberately NOT in the snapshot below. The rows a consumer
+// reads carry a SCHEMA, and `test/oracle-census.test.mjs` asserts every one of
+// them has a boolean `ciAvailable` -- a pinned downstream reads a missing field
+// as falsy, which is why that assertion exists. Adding a field to the wire
+// shape is a schema bump and a consumer question, not a detail; `ciCadence`
+// answers an in-repo question and stays in-repo until someone downstream needs
+// it.
 const jsonRows = (rs) => rs.map(
     ({ id, kind, present, via, gates, ci, ciAvailable, what }) =>
         ({ id, kind, present, ciAvailable, ci, via, gates, what }));
