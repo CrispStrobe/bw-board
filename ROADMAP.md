@@ -3875,6 +3875,33 @@ empty table:
   not at all. An assertion carrying the same wrong belief as the code cannot
   fail by construction.
 
+**THE GPIO HALF IS ALSO MEASURED, 2026-09-11 (`9031682`), AND IT IS NARROWER
+THAN "R3 IS CLOSED".** This entry also recorded Kaluma's first GPIO call
+hanging. Driven through the REPL at master, it does not:
+
+```
+pinMode(25,1)                                      -> undefined, and RETURNS
+(pinMode(25,1),digitalWrite(25,1),digitalRead(25))
+    GPIO25 transitions logged during the expression
+    final value=1  outputEnable=true
+    0 jumps to address zero
+```
+
+The claim is about the PAD, not the return value — `scripts/probe-sf-unaligned.mjs
+--pin N` attaches a listener, because an API call that returns proves only that
+it returned. Reporting this off `undefined` was available and would have been
+wrong in the direction where a green reads as a capability.
+
+`digitalRead` returning 0 while the pad is driven high is **this probe**, not
+the ROM: no board is attached, so `syncInputs()` never runs and the input
+register keeps its power-on value. Demonstrated rather than argued — with
+`--input-high` the read returns 1, so it tracks the register.
+
+**STILL OPEN:** `--blink` itself, which loads a program rather than typing
+lines and is lite's probe, and the `rom_table_lookup` busy-loop it hits. No
+measurement here touches either. "The GPIO hang is gone" must not travel as
+"R3 is closed".
+
 The soft-float work below stands on its own and is not retracted — the table
 is real, graded, and reached. It simply was not what R3 turned on.
 
