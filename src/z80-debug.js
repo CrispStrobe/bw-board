@@ -11,11 +11,47 @@ import { disasmZ80 } from './z80-disasm.js';
 import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
 import { loadSNA, SNA_SIZE } from './zx-sna.js';
 import { loadZ80 } from './zx-z80file.js';
+import { installInstructionDebugEvents } from './instruction-debug-events.js';
 
 /** @param {{ machine: import('./z80-machine.js').Z80Machine }} adapter */
 export function createZ80DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
+  const cpuId = opts.cpuId || 'z80';
+
+  /**
+   * THE SHARED EVENT MODULE — instruction retires, memory and port accesses,
+   * and a monotonic event clock. avr8js, i8086 and m6502 publish these facts
+   * through this module; this target and m6502 were the last two not to, and
+   * hand-rolled nothing in their place — the events simply did not exist here.
+   *
+   * ITS CLOCK AND THIS TARGET'S SHARE A DOMAIN BASE AND NOT AN EPOCH COUNTER.
+   * Both read `machine.cycles` and both stamp `z80-cycles`, so an ordinary
+   * event fact and an ordinary debugTime() agree. After a rewind they diverge
+   * in the SUFFIX — this target counts `-rewind-N` on its input facts, the
+   * module `-reset-N` on its events, and neither observes the other's bump.
+   * A seam, not a defect today: nothing moves `machine.cycles` backwards except
+   * a checkpoint restore, which opens this target's epoch, and the two kinds of
+   * fact are never compared against each other. Closing it means one clock
+   * owning both and changing debugTime()'s return type — a separate decision,
+   * deliberately not taken here. (The base is `z80-cycles`, NOT the `z80-tstates`
+   * a downstream copy used: naming the event clock a different base from the
+   * replay clock is the silent cross-timeline shape the injectable-clock note
+   * below warns against — an input fact on one timeline, an event on another,
+   * and a replayer comparing domains by equality seeing two runs where there is
+   * one. Matching the base closes it.)
+   */
+  const debugEvents = installInstructionDebugEvents({
+    cpu, machine, cpuId, timeDomain: 'z80-cycles', port: true,
+    clock: () => machine.cycles,
+    captureRegisters: () => ({pc: cpu.pc, sp: cpu.sp, a: cpu.a, f: cpu.f, bc: cpu.bc,
+      de: cpu.de, hl: cpu.hl, ix: cpu.ix, iy: cpu.iy, i: cpu.i, r: cpu.r,
+      af_: cpu.af_, bc_: cpu.bc_, de_: cpu.de_, hl_: cpu.hl_, iff1: cpu.iff1, im: cpu.im}),
+    captureInstruction: address => {
+      const read = machine.readBus ?? (a => machine.mem[a & 0xffff]);
+      return {address, ...disasmZ80(a => read(a & 0xffff), address)};
+    }
+  });
 
   let runState = 'halted';
   let pendingStep = null;
@@ -97,17 +133,29 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   let lastTicks = null;
 
   /**
+   * The input-fact clock's domain name, READ without advancing the clock.
+   * Named here because captureCheckpoint() and debugTime() stamp with it and a
+   * reader comparing two facts must be able to tell an epoch apart. The module
+   * (events) keeps its own epoch on the same `z80-cycles` base — see the seam
+   * note at the top.
+   */
+  const eventDomain = () =>
+    inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles';
+
+  /**
    * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
    *
    * `opts.debugTime` lets an integrator hand this target the clock the rest of
    * that integration already uses. A consumer downstream gives this target's
    * checkpoints and instruction events a SHARED epoch; a record half carrying
    * its own would put one machine on two timelines, with a replayer comparing
-   * domains by equality seeing two runs where there is one. This target is the
-   * sharper case of the two: its shared clock is named `z80-tstates` while its
-   * replay domain is `z80-cycles`, so nothing would COLLIDE and nothing would
-   * complain — input facts on one timeline, everything else on another, and no
-   * error anywhere.
+   * domains by equality seeing two runs where there is one. That hazard used to
+   * be sharpest HERE, because the event clock was named `z80-tstates` while the
+   * replay domain was `z80-cycles` — two names for one `machine.cycles`, so
+   * nothing collided and nothing complained. The module now stamps `z80-cycles`
+   * too (see the seam note above), so the base matches and that particular trap
+   * is closed by construction; the injectable clock remains for an integration
+   * that owns its own timeline.
    *
    * The default is this target's own clock below, so a standalone target
    * behaves exactly as before.
@@ -123,7 +171,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
     lastTicks = ticks;
     return {
       ticks,
-      domain: inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles',
+      domain: eventDomain(),
       hz: machine.clockHz
     };
   };
@@ -288,17 +336,111 @@ export function createZ80DebugTarget(adapter, opts = {}) {
 
   return {
     capabilities() {
+      // Tolerate a hollow {machine:{cpu:{}}} — several callers build this target
+      // over a bare machine, and capabilities()/canVetoDebugInput must answer
+      // without throwing. A machine with no checkpoint support simply records
+      // nothing.
+      const checkpointStatus = typeof machine.checkpointSupport === 'function'
+        ? machine.checkpointSupport()
+        : { supported: false, reasons: ['this machine has no checkpoint support'] };
       // extensions.inputAdmission === 'may-refuse' declares the ASK hook, which
-      // canVetoDebugInput(target) reads. This target is one of the first two to
-      // declare it (with m6502-debug), which is the consumer-adoption the ledger
-      // entry named: upstreaming the contract did not retire it; converging did.
+      // canVetoDebugInput(target) reads (with m6502-debug, the first two to
+      // declare it). events/spaces/fidelity describe what the shared event
+      // module now publishes; runTo is backed by the code breakpoint the session
+      // installs to stop at an address; recording appears only when the machine
+      // can actually checkpoint.
       return {
-        steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true, consumes: [],
-        extensions: { inputAdmission: 'may-refuse' }
+        steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true,
+        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffff,
+          stopSides: ['before'], installation: 'sync'}],
+        consumes: [], events: ['instruction', 'memory', 'port'],
+        spaces: {mem: {read: true, write: true, passiveRead: true}},
+        fidelity: {instruction: 'recorded', memory: 'reconstructed', port: 'reconstructed', cycle: 'unsupported'},
+        recording: checkpointStatus.supported ? ['checkpoint', 'restore'] : [],
+        extensions: {
+          inputAdmission: 'may-refuse',
+          // Access facts are published before the same machine.step() publishes
+          // its recorded retire, so the runner may defer their actions safely.
+          eventBreakpointBoundary: 'instruction-retire',
+          ...(checkpointStatus.supported ? {} : {checkpointRefusal: checkpointStatus.reasons}),
+          inputReplay: ['z80.buttons', 'z80.keys', ...(rawSendSerial ? ['z80.serial'] : [])],
+          inputRefusals: [
+            'tape insertion and snapshot/media loading are configuration changes, not replayable runtime inputs',
+            'board-buffer input nets bypass the target and require a complete device codec'
+          ]
+        }
       };
     },
 
     state() { return runState; },
+
+    /**
+     * The EVENT half, mirroring onDebugInput below: instruction/access/idle
+     * facts from the shared module. Delegated rather than reimplemented — a
+     * second publisher of the same facts is how two vocabularies for one thing
+     * begin.
+     */
+    onDebugEvent: debugEvents.onDebugEvent,
+
+    /**
+     * The event clock, READ without advancing it. On the same `z80-cycles` base
+     * as an input fact's stamp, so a consumer comparing a checkpoint against a
+     * debug input fact gets one clock. (The module's own event epoch may carry a
+     * different suffix after a rewind — the seam noted at the top.)
+     */
+    debugTime() {
+      return { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
+    },
+
+    /**
+     * A checkpoint of the machine, stamped with this target's event clock — the
+     * debug clock, not the machine's base time, so a consumer comparing it
+     * against a debug fact gets one clock, not two.
+     */
+    captureCheckpoint() {
+      const checkpoint = machine.captureCheckpoint();
+      if (!checkpoint.refused) {
+        checkpoint.time = { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
+      }
+      return checkpoint;
+    },
+
+    /**
+     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in
+     * history, not permission to run the clock backwards: renaming the domain
+     * stops two facts from different timelines being read as one that jumped,
+     * and the era gate (stamp()) then clears the dedup map on the next input
+     * because the domain string has changed. `ownClock`'s own rewind detection
+     * cannot see a restore that lands ABOVE the last stamped tick — it reads as
+     * ordinary forward motion — which is why the bump is explicit here. The
+     * module's own event epoch is left to its detection: the accepted seam.
+     */
+    restoreCheckpoint(checkpoint) {
+      const result = machine.restoreCheckpoint(checkpoint);
+      if (!result) { inputTimeEpoch++; lastTicks = machine.cycles; }
+      return result;
+    },
+
+    /** Execute one complete instruction for checked history replay. */
+    replayInstruction() {
+      const support = machine.checkpointSupport();
+      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
+        reason: support.reasons.join('; ')};
+      if (cpu.halted) return {accepted: false, code: 'halted-without-instruction',
+        reason: 'the halted Z80 cannot retire an instruction without a recorded interrupt input'};
+      const before = machine.cycles;
+      let cycles;
+      watchHit = null;
+      try {
+        cycles = machine.step();
+      } finally {
+        // Replay reconstructs history; it must not arm a future live halt.
+        watchHit = null;
+      }
+      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
+        reason: 'the Z80 did not retire an instruction'};
+      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
+    },
 
     regs() {
       return {

@@ -17,11 +17,37 @@
 import { disasm6502 } from './w65c02-disasm.js';
 
 import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
+import { installInstructionDebugEvents } from './instruction-debug-events.js';
 
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
+  const cpuId = opts.cpuId || 'm6502';
   const symbols = opts.symbols ?? null;
+
+  /**
+   * THE SHARED EVENT MODULE — instruction retires, memory accesses, and a
+   * monotonic event clock. avr8js, i8086 and z80 publish these facts through
+   * this module; this target and z80 were the last two not to. No `port: true`:
+   * the 6502's I/O is memory-mapped, so it has no separate port space to wrap.
+   *
+   * ITS CLOCK AND THIS TARGET'S SHARE A DOMAIN BASE AND NOT AN EPOCH COUNTER.
+   * Both read `machine.cycles` and both stamp `m6502-cycles`, so an ordinary
+   * event fact and an ordinary debugTime() agree. After a rewind they diverge in
+   * the SUFFIX — this target counts `-rewind-N` on its input facts, the module
+   * `-reset-N` on its events, and neither observes the other's bump. A seam, not
+   * a defect today: nothing moves `machine.cycles` backwards except a checkpoint
+   * restore, which opens this target's epoch, and the two kinds of fact are
+   * never compared against each other. (The base is `m6502-cycles`, matching the
+   * input-fact base, so no cross-timeline mismatch — see z80-debug for the trap
+   * a different base would open.)
+   */
+  const debugEvents = installInstructionDebugEvents({
+    cpu, machine, cpuId, timeDomain: 'm6502-cycles',
+    clock: () => machine.cycles,
+    captureRegisters: () => ({pc: cpu.pc, a: cpu.a, x: cpu.x, y: cpu.y, sp: cpu.s, p: cpu.p}),
+    captureInstruction: address => ({address, ...disasm6502(a => machine.mem[a & 0xffff], address)})
+  });
 
   let runState = 'halted'; // 'halted' | 'running'
   let pendingStep = null;  // { kind: 'insn'|'block'|'over'|'out', ... }
@@ -89,6 +115,14 @@ export function createM6502DebugTarget(adapter, opts = {}) {
   let lastTicks = null;
 
   /**
+   * The input-fact clock's domain name, READ without advancing the clock, used
+   * by captureCheckpoint() and debugTime(). The module (events) keeps its own
+   * epoch on the same `m6502-cycles` base — see the seam note at the top.
+   */
+  const eventDomain = () =>
+    inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles';
+
+  /**
    * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
    *
    * `opts.debugTime` lets an integrator hand this target the clock the rest of
@@ -115,7 +149,7 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     lastTicks = ticks;
     return {
       ticks,
-      domain: inputTimeEpoch ? `m6502-cycles-rewind-${inputTimeEpoch}` : 'm6502-cycles',
+      domain: eventDomain(),
       hz: machine.clockHz
     };
   };
@@ -253,11 +287,25 @@ export function createM6502DebugTarget(adapter, opts = {}) {
 
   return {
     capabilities() {
+      // Tolerate a hollow {machine:{cpu:{}}} — several callers build this target
+      // over a bare machine, and capabilities()/canVetoDebugInput must answer
+      // without throwing. A machine with no checkpoint support records nothing.
+      const checkpointStatus = typeof machine.checkpointSupport === 'function'
+        ? machine.checkpointSupport()
+        : { supported: false, reasons: ['this machine has no checkpoint support'] };
       return {
         steps: [...(symbols ? ['insn', 'block'] : ['insn']), 'over', 'out'],
         breakpoints: [...(symbols ? ['code', 'yield'] : ['code']), 'write'],
+        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffff,
+          stopSides: ['before'], installation: 'sync'}],
         timeFreezes: true,
         consumes: [],
+        // What the shared event module now publishes. No 'port': the 6502's I/O
+        // is memory-mapped, so a store to a VIA register is a `memory` fact.
+        events: ['instruction', 'memory'],
+        spaces: {mem: {read: true, write: true, passiveRead: false}},
+        fidelity: {instruction: 'recorded', memory: 'reconstructed', cycle: 'unsupported'},
+        recording: checkpointStatus.supported ? ['checkpoint', 'restore'] : [],
         // Two audio contracts (E6.8.11a). 'tone' is what the hardware is
         // CONFIGURED to produce and 'samples' is what it SOUNDS like;
         // 'samples' is advertised only when a chip on this machine can
@@ -266,11 +314,22 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         audio: machine.canRenderAudio && machine.canRenderAudio()
           ? ['tone', 'samples']
           : ['tone'],
-        // Declares the ASK hook, read by canVetoDebugInput(target). One of the
-        // first two targets to declare it (with z80-debug) — the consumer
-        // convergence the ledger named: upstreaming the contract did not retire
-        // it, converging the consumers did.
-        extensions: { inputAdmission: 'may-refuse' },
+        extensions: {
+          // Declares the ASK hook, read by canVetoDebugInput(target). One of the
+          // first two targets to declare it (with z80-debug) — the consumer
+          // convergence the ledger named: upstreaming the contract did not retire
+          // it, converging the consumers did.
+          inputAdmission: 'may-refuse',
+          // Memory facts are published before the same machine.step() publishes
+          // its recorded retire, so the runner may defer their actions safely.
+          eventBreakpointBoundary: 'instruction-retire',
+          ...(checkpointStatus.supported ? {} : {checkpointRefusal: checkpointStatus.reasons}),
+          inputReplay: ['m6502.buttons', 'm6502.nmi', ...(rawSendSerial ? ['m6502.serial'] : [])],
+          inputRefusals: [
+            'live board input-net changes bypass the target and disable checkpoint recording',
+            'ROM/media loading is configuration, not a replayable runtime input'
+          ]
+        },
       };
     },
 
@@ -290,6 +349,73 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     },
 
     state() { return runState; },
+
+    /**
+     * The EVENT half, mirroring onDebugInput below: instruction/access/idle
+     * facts from the shared module. Delegated rather than reimplemented — a
+     * second publisher of the same facts is how two vocabularies for one thing
+     * begin.
+     */
+    onDebugEvent: debugEvents.onDebugEvent,
+
+    /**
+     * The event clock, READ without advancing it. On the same `m6502-cycles`
+     * base as an input fact's stamp, so a consumer comparing a checkpoint
+     * against a debug input fact gets one clock. (The module's own event epoch
+     * may carry a different suffix after a rewind — the seam noted at the top.)
+     */
+    debugTime() {
+      return { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
+    },
+
+    /**
+     * A checkpoint of the machine, stamped with this target's event clock — the
+     * debug clock, not the machine's base time, so a consumer comparing it
+     * against a debug fact gets one clock, not two.
+     */
+    captureCheckpoint() {
+      const checkpoint = machine.captureCheckpoint();
+      if (!checkpoint.refused) {
+        checkpoint.time = { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
+      }
+      return checkpoint;
+    },
+
+    /**
+     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in
+     * history, not permission to run the clock backwards: renaming the domain
+     * stops two facts from different timelines being read as one that jumped,
+     * and the era gate (stamp()) then clears the dedup map on the next input.
+     * `ownClock`'s own rewind detection cannot see a restore that lands ABOVE
+     * the last stamped tick, which is why the bump is explicit here. The module's
+     * own event epoch is left to its detection: the accepted seam.
+     */
+    restoreCheckpoint(checkpoint) {
+      const result = machine.restoreCheckpoint(checkpoint);
+      if (!result) { inputTimeEpoch++; lastTicks = machine.cycles; }
+      return result;
+    },
+
+    /** Execute one complete instruction for checked history replay. */
+    replayInstruction() {
+      const support = machine.checkpointSupport();
+      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
+        reason: support.reasons.join('; ')};
+      if (cpu.stopped || cpu.waiting) return {accepted: false, code: 'halted-without-instruction',
+        reason: 'the stopped or waiting 6502 cannot retire an instruction without a recorded wake input'};
+      const before = machine.cycles;
+      let cycles;
+      watchHit = null;
+      try {
+        cycles = machine.step();
+      } finally {
+        // Replay reconstructs history; it must not arm a future live halt.
+        watchHit = null;
+      }
+      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
+        reason: 'the 6502 did not retire an instruction'};
+      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
+    },
 
     regs() {
       return {

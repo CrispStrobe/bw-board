@@ -448,7 +448,7 @@ describe('C6: a target that can PARK says so', () => {
     // Still an enumeration, still derived from the source: a SECOND installer
     // reddens this and has to bring its own parking case, rather than
     // inheriting the AVR's green run.
-    assert.deepEqual(installers(), ['avr8js-adapter.js', 'i8086-debug.js'],
+    assert.deepEqual(installers(), ['avr8js-adapter.js', 'i8086-debug.js', 'm6502-debug.js', 'z80-debug.js'],
       `installers changed: ${installers().join(', ')}. C6 needs a positive case per target — `
       + 'drive it into HALT/WAI/SLEEP and assert an idle/elapse fact appears.');
   });
@@ -522,6 +522,91 @@ describe('C6: a target that can PARK says so', () => {
       const seen = [];
       createI8086DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
       for (let i = 0; i < 8; i++) machine.step();
+
+      assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+        'a running core claiming to be parked would pass the case above just as well');
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('z80: a core parked at HALT publishes idle/elapse during an ORDINARY run', async () => {
+      // The third installer. A halted z80 short-circuits cpu.step ENTIRELY —
+      // measured in the module's own comment: it advances tens of thousands of
+      // cycles with cpu.step called ZERO times. So the idle fact can only come
+      // from the module's outer machine.step bracket, which is the path this
+      // case drives — and is why the z80 could not inherit the AVR's run.
+      const { createZ80DebugTarget } = await import('../src/z80-debug.js');
+      const machine = new Z80Machine(
+        { clockHz: 3_500_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+      machine.load(Uint8Array.from([0x00, 0x00, 0x76]), 0);  // NOP NOP HALT
+      machine.cpu.pc = 0;
+
+      const seen = [];
+      createZ80DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) machine.step();            // NOPs, HALT, then parked
+
+      const idle = seen.filter(e => e.kind === 'idle' && e.phase === 'elapse');
+      assert.ok(idle.length > 0, 'a parked z80 published no idle facts at all');
+      assert.ok(idle[0].changes.cycles > 0,
+        `an idle fact must account for time actually spent: ${idle[0].changes.cycles}`);
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('and a running z80 does not claim to be parked', async () => {
+      // The other direction, the same reason as the i8086 and AVR controls: an
+      // idle fact on every slice would pass the case above just as well.
+      const { createZ80DebugTarget } = await import('../src/z80-debug.js');
+      const machine = new Z80Machine(
+        { clockHz: 3_500_000, regions: [{ kind: 'ram', start: 0, end: 0xffff }] }, {});
+      machine.load(Uint8Array.from([0x00, 0x18, 0xfd]), 0);  // NOP; JR -3 — a tight loop, never halts
+      machine.cpu.pc = 0;
+
+      const seen = [];
+      createZ80DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) machine.step();
+
+      assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+        'a running core claiming to be parked would pass the case above just as well');
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('m6502: a core parked at WAI publishes idle/elapse during an ORDINARY run', async () => {
+      // The fourth installer. WAI (0xCB) halts the 65C02 until an interrupt; the
+      // core keeps being stepped and advances cycles with nothing retiring, which
+      // the module's machine.step bracket turns into idle/elapse.
+      const { createM6502Adapter } = await import('../src/m6502-adapter.js');
+      const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+      const adapter = createM6502Adapter({});
+      adapter.machine.loadRom([0xcb]);                       // WAI at $8000
+      adapter.machine.mem[0xfffc] = 0x00; adapter.machine.mem[0xfffd] = 0x80;
+      adapter.machine.reset();
+
+      const seen = [];
+      createM6502DebugTarget(adapter).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) adapter.machine.step();    // the WAI, then parked
+
+      const idle = seen.filter(e => e.kind === 'idle' && e.phase === 'elapse');
+      assert.ok(idle.length > 0, 'a parked 6502 published no idle facts at all');
+      assert.equal(idle[0].cause, 'parked');
+      assert.ok(idle[0].changes.cycles > 0,
+        `an idle fact must account for time actually spent: ${idle[0].changes.cycles}`);
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('and a running 6502 does not claim to be parked', async () => {
+      const { createM6502Adapter } = await import('../src/m6502-adapter.js');
+      const { createM6502DebugTarget } = await import('../src/m6502-debug.js');
+      const adapter = createM6502Adapter({});
+      adapter.machine.loadRom([0xea, 0x4c, 0x00, 0x80]);     // NOP; JMP $8000 — never parks
+      adapter.machine.mem[0xfffc] = 0x00; adapter.machine.mem[0xfffd] = 0x80;
+      adapter.machine.reset();
+
+      const seen = [];
+      createM6502DebugTarget(adapter).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) adapter.machine.step();
 
       assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
         'a running core claiming to be parked would pass the case above just as well');
