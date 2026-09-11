@@ -221,15 +221,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * as 0x8000 -- right for exactly the first 64K, which is where a test
      * program's operands live and not where its code does.
      *
-     * ITS CLOCK AND THIS TARGET'S SHARE A DOMAIN BASE AND NOT AN EPOCH COUNTER.
-     * Both read machine.cycles and both stamp `i8086-cycles`, so an ordinary fact
-     * and an ordinary debugTime() agree. After a rewind they diverge in the
-     * SUFFIX -- this target counts `-rewind-N`, the module `-reset-N`, and
-     * neither observes the other's bump. That is a seam, not a defect today:
-     * nothing moves machine.cycles backwards except a checkpoint restore, which
-     * opens this target's epoch. Closing it means one clock owning both, and that
-     * changes debugTime()'s return type from Number to BigInt for every existing
-     * caller -- a separate decision, deliberately not taken here.
+     * ITS CLOCK AND THIS TARGET'S AGREE, INCLUDING AFTER A REWIND. Both read
+     * machine.cycles and both stamp `i8086-cycles`, and since this target passes
+     * `rewindLabel: 'rewind'` both stamp `-rewind-N` after a backward move --
+     * asserted in i8086-clock-agreement, not left to this comment.
+     *
+     * WHAT THIS PARAGRAPH USED TO SAY WAS THAT THEY DIVERGED, one counting
+     * `-rewind-` and the module `-reset-`. That was true when it was written and
+     * stopped being true when the label became a parameter every core passes.
+     * It is recorded because a comment describing a defect that has been repaired
+     * is worse than no comment: it reads as a live warning, and the next person
+     * either works around a seam that is closed or distrusts the pair that agree.
+     *
+     * They remain TWO counters. Nothing forces them to bump together; they do
+     * because the only thing that moves machine.cycles backwards is a restore,
+     * which both observe. That is why the agreement is a test rather than an
+     * argument.
      */
     const debugEvents = installInstructionDebugEvents({
         cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
