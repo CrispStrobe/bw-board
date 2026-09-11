@@ -518,6 +518,33 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     },
 
     /**
+     * Publish an INTERRUPT fact — a target-callable publisher, like
+     * publishIdleElapse and publishClockJump: additive and inert until a target
+     * calls it. No core in this module published an interrupt before; the 8086
+     * hand-rolled one downstream with exactly this shape
+     * (`{kind:'interrupt', phase:'accepted', interrupt:{vector, source}}`) and its
+     * adoption of this module dropped it, because there was no verb here to
+     * publish it WITH. A target that does not call this is unchanged, and
+     * `capabilities().events` must not list 'interrupt' until one does — declaring
+     * a kind nothing publishes is the same defect pointing the other way.
+     *
+     * @param {{vector?: number, source?: string, ticks?: number, phase?: string}} [opts]
+     * @returns {boolean} false if nobody is listening
+     */
+    publishInterrupt({vector, source, ticks = clock(), phase = 'accepted'} = {}) {
+      if (!listeners.size) return false;
+      publish({
+        cpuId,
+        kind: 'interrupt',
+        phase,
+        fidelity: 'recorded',
+        time: time(ticks),
+        interrupt: {vector, source}
+      });
+      return true;
+    },
+
+    /**
      * Contribute an access observed elsewhere. See `contributeAccess`.
      *
      * @param {{kind: string}} access the fact's own fields, without the
