@@ -307,7 +307,36 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * Declining is the point: a snapshot that silently omits state restores a
      * machine that looks right and is not.
      */
-    const hasUncapturedInputState = () => adapter?.unloggedBoardInputs?.() === true;
+    /**
+     * A BOUNDARY SERVICE MAY OWN THE INSTRUCTION STEP. Some hosts put a layer
+     * between this target and the machine -- work that must happen at an
+     * instruction boundary before the hardware steps, a DOS trap layer being the
+     * case this exists for. Stepping the machine directly runs the CPU and not
+     * the service: the program executes, its system calls never happen, and
+     * nothing reports it.
+     *
+     * NOTHING IN THIS REPOSITORY INSTALLS ONE, which makes it UNINSTALLED rather
+     * than dead -- the same standing as `captureWriteBefore`, which nothing here
+     * sets either. The distinction is whether anything CAN install it, and a
+     * downstream vendoring of this file does. It was deleted once as an
+     * unreachable branch, on a measurement taken only in this repository.
+     *
+     * Kept as one replaceable operation rather than a Proxy over the machine:
+     * runFor reads machine time every instruction, and proxying those reads
+     * makes a direct execution loop pay for service dispatch repeatedly.
+     */
+    const executeStep = typeof adapter?.step === 'function'
+        ? () => adapter.step()
+        : () => machine.step();
+    /**
+     * State this target cannot capture, in EITHER of its two forms: a live board
+     * input source sampled directly and never logged, or a boundary service
+     * holding functional state outside I8086Machine. Declining is the point --
+     * a checkpoint that silently omits state restores a machine that looks right
+     * and is not.
+     */
+    const hasUncapturedInputState = () => typeof adapter?.step === 'function'
+        || adapter?.unloggedBoardInputs?.() === true;
     let lastEventTicks = -1;
     /** Levels only — see publishInputLevel. Events must not consult this. */
     const observedInputs = new Map();
@@ -834,6 +863,12 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     reason: 'the halted CPU cannot retire an instruction without a recorded wake input'};
             }
             const before = machine.cycles;
+            // machine.step, NOT executeStep, and the reason is three lines above:
+            // this method refuses outright when a boundary service exists, so a
+            // seam here could never be reached. Routing through it anyway would
+            // be a branch that cannot be taken -- which is the exact shape whose
+            // deletion cost the seam in the first place, and it is no better for
+            // being on the other side of the argument.
             machine.step();
             return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
         },
@@ -1291,7 +1326,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                         halt({ cause: 'step' }); return 'halted';
                     }
                 }
-                machine.step();
+                // NO-PROGRESS GUARD, and the seam is why it is needed.
+                // machine.step() always advances -- even a halted CPU advances by
+                // its wake horizon -- so this loop could not fail to terminate while
+                // that was the only way to step. A boundary service can decline to
+                // advance, and then `machine.cycles < deadlineCycles` is true forever:
+                // the debugger hangs, with no timeout and no verdict.
+                //
+                // Halting BY NAME rather than spinning or quietly returning. A service
+                // that retires no machine time is a real condition its host has to see.
+                const cyclesBeforeStep = machine.cycles;
+                executeStep();
+                if (machine.cycles === cyclesBeforeStep) {
+                    halt({ cause: 'no-progress',
+                        reason: 'the boundary service retired no machine time; it cannot be stepped' });
+                    return 'halted';
+                }
                 // Checked BEFORE the write watch, and the order is arbitrary
                 // only in appearance: a port write that trips both is one
                 // event, and reporting the port — the thing the user asked
