@@ -218,12 +218,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      */
     const debugEvents = installInstructionDebugEvents({
         cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
-        // UNREVIEWED — preserves today's `-reset-` behaviour EXACTLY (a no-op made
-        // explicit because rewindLabel is now required). This core's reset()
-        // advances the clock, so the correct label is 'rewind', but that is a
-        // behaviour change with a test and belongs to the i8086 session's #8 work
-        // (rides with restoring the interrupt vocabulary). Do not flip it here.
-        rewindLabel: 'reset',
+        // REVIEWED AND FLIPPED 2026-09-11. This core's `reset()` ADVANCES the clock
+        // — the backward moves are `loadState` and the explicit bump in
+        // `restoreCheckpoint` — so the epoch it opens is a REWIND, never a reset.
+        // It was `'reset'` for one commit as an explicit no-op while the parameter
+        // became required, with a note routing the correction here.
+        //
+        // The evidence is downstream: brickwright-lite's `i8086-debug-events`
+        // asserts `i8086-cycles-rewind-1` after restoring an older checkpoint, and
+        // the no-op produced `i8086-cycles-reset-1`. That expectation is not a
+        // preference — lite renamed this epoch on 2026-09-10 precisely because the
+        // clock does not go backwards on reset, and its comment says the 8051's
+        // `-reset-` is correct for ITS mechanism and must not be converged with
+        // this one.
+        //
+        // avr8js is still `'reset'` and still unreviewed; that is its session's.
+        rewindLabel: 'rewind',
         addressMask: 0xfffff,
         // A write fact that says only what the address BECAME cannot tell a
         // no-op write from a real one, and 8086 code makes no-op writes
