@@ -529,6 +529,14 @@ export class I8086Machine {
         // the site rather than left in a review comment.
         this._cycleEst = null;   // opt-in; see enableI8088CycleTiming()
         this._advList = null;
+        // Monotonic invalidation token for a host renderer. It moves on the
+        // events that can change what is VISIBLE -- video-window writes, display
+        // control ports, an overlapping bulk load, a state restore -- and on
+        // nothing else. A renderer caches its last frame against it and skips
+        // when it has not moved. The negative is what makes it useful: a token
+        // that moved on every instruction would be safe and carry no
+        // information, so ordinary RAM must leave it alone.
+        this.displayRevision = 0;
         this.cycles = 0;
         this._pinLevels = {};
         this._nmiPending = false;
@@ -995,6 +1003,9 @@ export class I8086Machine {
     }
 
     _write(addr, val) {
+        if (addr >= 0xa0000 && addr <= 0xbffff) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         const k = this._page[addr >>> 12];
         if (k === 1) { this.mem[addr] = val & 0xff; return; }
         if (k === 2 || k === 0) return;              // ROM swallows it; unmapped goes nowhere
@@ -1030,6 +1041,9 @@ export class I8086Machine {
     }
 
     _out(port, val) {
+        if (port >= 0x3b0 && port <= 0x3df) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         for (const w of this._io) {
             if (port >= w.start && port <= w.end) {
                 const reg = regOf(w, port);
@@ -1124,6 +1138,9 @@ export class I8086Machine {
         const rom = this.config.regions.find((r) => r.kind === 'rom');
         const base = at ?? (rom ? rom.start : 0xf8000);
         this.mem.set(bytes, base);
+        if (base <= 0xbffff && base + bytes.length > 0xa0000) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         return base;
     }
 
@@ -1993,6 +2010,10 @@ export class I8086Machine {
         this._nmiPending = !!s.machine.nmiPending;
         this._kbdStrobe = !!s.machine.kbdStrobe;
         this._pinLevels = {...s.machine.pinLevels};
+        // A restore replaces video memory wholesale without going through
+        // _write, so a renderer holding a cached frame would keep drawing the
+        // pre-restore screen until something unrelated moved the token.
+        this.displayRevision = (this.displayRevision + 1) >>> 0;
         for (const name of chipNames) {
             const pair = statePair(this.chips[name]);
             this.chips[name][pair[1]](s.chips[name]);
