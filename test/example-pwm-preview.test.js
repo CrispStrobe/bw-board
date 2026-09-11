@@ -146,9 +146,12 @@ describe('PWM preview: buzzer on blink circuit', () => {
     assert.ok(Math.abs(tone.hz - 1000) < 50, `freq ${tone.hz} ≈ 1000 Hz`);
   });
 
-  it('pot controls buzzer frequency (simulated firmware loop)', () => {
+  it('pot controls buzzer frequency (simulated firmware loop)', (t) => {
     const stc = loadPins('03-potentiometer');
-    if (!stc) { return; }
+    // SKIPPED BY NAME, like line 40 of this same file. A bare `return` here
+    // made the case a silent PASS on every box without the `stc` checkout —
+    // and CI is one of them, so this reported coverage it never had.
+    if (!stc) { t.skip(`no pins.json for 03-potentiometer under ${EXAMPLES_DIR}`); return; }
 
     // Build circuit with pot + buzzer
     const { parts: potParts, nets: potNets } = inferNetlist(stc);
@@ -197,9 +200,9 @@ describe('PWM preview: buzzer on blink circuit', () => {
 // ─── Probe on example circuits ────────────────────────────────────────────
 
 describe('PWM preview: oscilloscope capture', () => {
-  it('probe captures PWM waveform on 04-brightness circuit', () => {
+  it('probe captures PWM waveform on 04-brightness circuit', (t) => {
     const stc = loadPins('04-brightness');
-    if (!stc) return;
+    if (!stc) { t.skip(`no pins.json for 04-brightness under ${EXAMPLES_DIR}`); return; }
 
     const { parts, nets } = inferNetlist(stc);
     const board = new BoardImpl(5.0);
@@ -209,7 +212,10 @@ describe('PWM preview: oscilloscope capture', () => {
     const ledNet = nets.find(n => n.terminals.some(
       t => t.part === 'MCU' && t.terminal === 'P1.0'
     ));
-    if (!ledNet) return;
+    // NOT an absent input: the circuit is loaded and this net is supposed to be
+    // in it. A missing P1.0 net means the example changed under the test, which
+    // is a finding, not a reason to stop asserting.
+    assert.ok(ledNet, 'no net on MCU P1.0 in 04-brightness — the example changed');
 
     board.addProbe(ledNet.id);
 

@@ -23,7 +23,7 @@ describe('vs ngspice: red LED I-V across resistor values', () => {
   for (const r of [100, 220, 330, 470, 680, 1000, 2200, 4700, 10000]) {
     it(`R=${r}Ω: current matches ngspice`, () => {
       const ref = find(`led_red_${r}`);
-      if (!ref) { assert.ok(false, `no ngspice data for R=${r}`); return; }
+      assert.ok(ref, `no ngspice data for R=${r}`);
 
       const { parts, nets } = new NetlistBuilder()
         .vcc('VCC').gnd('GND')
@@ -55,7 +55,7 @@ describe('vs ngspice: red LED at 3.3V', () => {
   for (const r of [220, 470, 1000]) {
     it(`R=${r}Ω at 3.3V`, () => {
       const ref = find(`led_red_${r}_3v3`);
-      if (!ref) return;
+      assert.ok(ref, `no ngspice data for led_red_${r}_3v3`);
 
       const { parts, nets } = new NetlistBuilder()
         .vcc('VCC').gnd('GND')
@@ -85,7 +85,7 @@ describe('vs ngspice: blue LED', () => {
   for (const r of [220, 470, 1000]) {
     it(`R=${r}Ω`, () => {
       const ref = find(`led_blue_${r}`);
-      if (!ref) return;
+      assert.ok(ref, `no ngspice data for led_blue_${r}`);
 
       const { parts, nets } = new NetlistBuilder()
         .vcc('VCC').gnd('GND')
@@ -115,7 +115,7 @@ describe('vs ngspice: silicon diode (1N4148-like)', () => {
   for (const r of [100, 1000, 10000]) {
     it(`R=${r}Ω`, () => {
       const ref = find(`si_diode_${r}`);
-      if (!ref) return;
+      assert.ok(ref, `no ngspice data for si_diode_${r}`);
 
       const { parts, nets } = new NetlistBuilder()
         .vcc('VCC').gnd('GND')
@@ -141,9 +141,12 @@ describe('vs ngspice: silicon diode (1N4148-like)', () => {
 
 describe('vs ngspice: two LEDs in series at various VCC', () => {
   for (const vcc of [5.0, 3.3, 7.0]) {
-    it(`VCC=${vcc}V`, () => {
-      const ref = find(`two_leds_series_${vcc}V`);
-      if (!ref) return;
+    // ONE DECIMAL PLACE, because that is how the golden file spells it.
+    // `${5.0}` is "5", not "5.0" — the lookup missed and the case passed.
+    const V = vcc.toFixed(1);
+    it(`VCC=${V}V`, () => {
+      const ref = find(`two_leds_series_${V}V`);
+      assert.ok(ref, `no ngspice data for two_leds_series_${V}V`);
 
       const { parts, nets } = new NetlistBuilder()
         .vcc('VCC').gnd('GND')
@@ -177,9 +180,11 @@ describe('vs ngspice: two LEDs in series at various VCC', () => {
 
 describe('vs ngspice: RC charge at 9 time points', () => {
   for (const mult of [0.1, 0.2, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 5.0]) {
-    it(`${mult}RC`, () => {
-      const ref = find(`rc_at_${mult}RC`);
-      if (!ref) return;
+    // Same spelling rule as the VCC sweep above.
+    const M = mult.toFixed(1);
+    it(`${M}RC`, () => {
+      const ref = find(`rc_at_${M}RC`);
+      assert.ok(ref, `no ngspice data for rc_at_${M}RC`);
 
       const { parts, nets } = new NetlistBuilder()
         .vcc('VCC').gnd('GND')
