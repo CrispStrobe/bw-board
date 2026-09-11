@@ -55,7 +55,31 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: CrispStrobe/emu8051-stc
-          ref: e473e906c1a8db9a50e5b70ef42171e79a0de372
+          # BUMPED because the pin was OLDER THAN WHAT THE TESTS SAY THEY NEED.
+          # `test/emu8051-debug.test.js:338` states it in prose -- "Both of these
+          # need the emulator built at emu8051-stc cf3c7c0 or later" -- and
+          # e473e906 is an ANCESTOR of cf3c7c0. Nothing checked the sentence
+          # against the pin, so CI ran a build that predates the halt-reason
+          # rebuild and answered `breakpoint` where the suite expects
+          # `watchpoint`.
+          #
+          # Invisible until 2026-09-10, because that suite printed `# SKIP` and
+          # returned -- a PASS -- whenever it could not reach an emulator, and on
+          # a runner it never could: the lookup wanted a sibling beside the repo
+          # while Actions puts the checkout INSIDE it. Converting the skip and
+          # fixing the lookup made the suite run, and it immediately reported a
+          # real disagreement between two builds.
+          #
+          # DRIVEN, not reasoned, over every emu8051-gated suite:
+          #   e473e906 (the old pin)      63 pass  1 fail
+          #   cf3c7c0  (what the test names) 64 pass  0 fail
+          #   47c50419 (this ref)          64 pass  0 fail
+          #
+          # 47c50419 rather than the minimal cf3c7c0 on purpose: it is the tip of
+          # that repo's master and the artefact developers here already use, so a
+          # local green and a CI green are now statements about the same build.
+          # The old pin made them different claims that looked identical.
+          ref: 47c504191a8420676415a1b86766621d6ea0de86
           # Actions refuses a path outside the workspace, so the sibling lands
           # INSIDE it and the test looks in both places.
           path: emu8051-stc
