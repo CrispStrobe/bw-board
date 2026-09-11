@@ -119,3 +119,30 @@ test('the machine advances THROUGH the service, not alongside it', () => {
         `the machine advanced ${machine.cycles - before} cycles while the service declined to ` +
         'advance it -- the target is stepping the machine behind the seam');
 });
+
+test('a service that works one boundary and steps the next is NOT stopped', () => {
+    // THE CASE THE FIRST VERSION OF THIS GUARD BROKE, and it broke it silently.
+    // A boundary service does work AT a boundary: the DOS trap layer answers
+    // INT 21h by inspecting CS:IP before the hardware steps, so an iteration
+    // where machine time does not move is ordinary servicing, not a stall.
+    //
+    // Halting on the FIRST such iteration stopped every DOS program from ever
+    // reaching INT 21h/4Ch. They ran, never terminated, and looked on screen
+    // exactly like a program that hung -- no throw, no red, nothing to read.
+    const machine = machineWith([0x90]);
+    let calls = 0;
+    const adapter = {machine, step() {
+        // odd calls service and return without advancing; even calls step
+        return (++calls % 2) ? 0 : machine.step();
+    }};
+    const target = createI8086DebugTarget(adapter);
+
+    const before = machine.cycles;
+    target.run();
+    const verdict = target.runFor(50_000);
+
+    assert.ok(machine.cycles > before,
+        'the alternating service made no progress at all; the guard stopped it');
+    assert.notEqual(verdict, 'halted',
+        'a service that advances every second boundary is working, not stalled');
+});

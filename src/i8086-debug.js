@@ -1313,6 +1313,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             // instruction, exactly as the strict float comparison did, or a
             // caller asking for a small slice gets no progress and the machine
             // appears hung.
+            let noProgressRun = 0;
             const deadlineCycles = machine.cycles + budgetNs * machine.clockHz / 1e9;
             while (machine.cycles < deadlineCycles) {
                 // The overwhelmingly common run has no code breakpoint, and
@@ -1357,9 +1358,28 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 const cyclesBeforeStep = machine.cycles;
                 executeStep();
                 if (machine.cycles === cyclesBeforeStep) {
-                    halt({ cause: 'no-progress',
-                        reason: 'the boundary service retired no machine time; it cannot be stepped' });
-                    return 'halted';
+                    // ONE ITERATION OF GRACE, AND THE REASON IS WHAT A BOUNDARY
+                    // SERVICE IS. A service does work AT an instruction boundary
+                    // -- the DOS trap layer answers INT 21h by inspecting CS:IP
+                    // BEFORE the hardware steps -- so it may legitimately consume
+                    // an iteration without machine time moving. Two in a row is
+                    // different: nothing is driving the machine, and the loop
+                    // would spin to its deadline or forever.
+                    //
+                    // The first version halted on ONE, which read as correct and
+                    // stopped every DOS program from reaching INT 21h/4Ch: they
+                    // ran, never terminated, and looked exactly like a hang. The
+                    // longest legitimate run measured across the example corpus
+                    // is 1, which is the CHECK on this rule rather than its
+                    // derivation.
+                    if (noProgressRun++) {
+                        halt({ cause: 'no-progress',
+                            reason: 'the boundary service retired no machine time twice running; '
+                                + 'it cannot be stepped' });
+                        return 'halted';
+                    }
+                } else {
+                    noProgressRun = 0;
                 }
                 // Checked BEFORE the write watch, and the order is arbitrary
                 // only in appearance: a port write that trips both is one
