@@ -191,6 +191,13 @@ export function labelsFromAssembly(result, opts = {}) {
 import { replayAccepted, replayRefused } from './debug-replay-contract.js';
 
 export function createI8086DebugTarget(adapter, opts = {}) {
+    /**
+     * Whatever port observer the MACHINE already had. Captured once, before this
+     * target installs anything, so the watch handler can chain to it instead of
+     * replacing it. See the assignment site for why capturing later is wrong.
+     */
+    const priorPortAccess = adapter?.machine?.hooks?.onPortAccess ?? null;
+
     const machine = adapter.machine;
     const cpu = machine.cpu;
     const cpuId = opts.cpuId || 'i8086';
@@ -521,6 +528,21 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * gave up rather than what it was about to.
      */
     const syncEventHooks = () => {
+        // CHAINED, NOT OVERWRITTEN. This used to assign the watch handler over
+        // `machine.hooks.onPortAccess` and, with no watches, assign `null` —
+        // which SILENCED whatever the machine already had installed. Measured:
+        // a machine constructed with its own `onPortAccess` saw its hook fire,
+        // and stopped the moment a debug listener registered. A debugger that
+        // silences the instrumentation already present is worse than one that
+        // observes nothing, because that hook is how something else was watching.
+        //
+        // `priorPortAccess` is captured ONCE at construction, not here: this
+        // assignment runs again whenever the watch set changes, and capturing at
+        // the assignment would capture OUR OWN wrapper the second time round and
+        // chain it to itself.
+        //
+        // Same defect as `sendSerial` had before `rootDebugSendSerial`; this is
+        // the accessor where the chaining was still missing.
         machine.hooks.onPortAccess = portWatches.size
             ? (ev) => {
                 for (const [id, w] of portWatches) {
@@ -528,8 +550,9 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     if (w.dir && w.dir !== ev.dir) continue;
                     eventHit = { cause: 'port', bp: id, ...ev };
                 }
+                if (priorPortAccess) priorPortAccess(ev);
             }
-            : null;
+            : priorPortAccess ?? null;
         // TWO CONSUMERS, ONE HOOK. The watch path predates the event path and
         // must not depend on it, so the hook installs for either -- a target
         // whose interrupt observation worked only while somebody was subscribed
