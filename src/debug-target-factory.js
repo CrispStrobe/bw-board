@@ -273,24 +273,16 @@ async function createAvr8jsTarget(kind, opts) {
 
 // ─── 6502 breadboard computer (Eater-style) ─────────────────────────────
 
+// ─── Z80 (extracted: the cycle path must stay dynamically imported) ─────
+//
+// THE ADAPTER, NOT `{machine}`. The inline version here passed
+// `{machine: adapter.machine}`, which carries the machine and drops everything
+// else the target reads off the adapter -- the serial wrapper landed on a
+// throwaway literal and adapter-derived refusals never fired. The extracted
+// factory passes the adapter, which is why adopting it repairs that.
 async function createZ80Target(opts) {
-  const { board, rom, config, pc, cpm } = opts;
-  // The Z80 bench has no GPIO boundary — board is optional; when
-  // present it only receives time sync (the serial console is the
-  // observable surface, via adapter.onSerial / sendSerial).
-  const { createZ80Adapter } = await import('./z80-adapter.js');
-  const adapter = createZ80Adapter({ config, rom, romAt: opts.romAt, pc, cpm });
-  if (board) adapter.attachBoard(board);
-  else adapter.attachBoard({ advanceTo() {} });
-
-  let target = null;
-  try {
-    const mod = await import('./z80-debug.js');
-    if (mod.createZ80DebugTarget) {
-      target = mod.createZ80DebugTarget({ machine: adapter.machine });
-    }
-  } catch { /* adapter-only mode */ }
-  return { target, adapter };
+  const { createZ80Target: selectZ80Target } = await import('./z80-target-factory.js');
+  return selectZ80Target(opts);
 }
 
 /**
