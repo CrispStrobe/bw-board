@@ -216,3 +216,67 @@ test('replayToInputBoundary accepts a boundary recorded after a rewind', () => {
         'a boundary on THIS target\'s own post-rewind clock was rejected as outside the '
         + `m6502 cycle clock: ${JSON.stringify(out)}`);
 });
+
+// ---- the one core whose label nobody has confirmed --------------------------
+
+import { createAvr8jsAdapter } from '../src/avr8js-adapter.js';
+
+test('avr stamps a label its readers can strip, whichever label that turns out to be', () => {
+    // `avr8js-adapter.js` carries `rewindLabel: 'reset'` with an UNREVIEWED
+    // comment: it was placed as a no-op when the parameter became required, and
+    // the correct value is the avr session's knowledge. i8086 was corrected to
+    // 'rewind' (e8654ae); avr never was.
+    //
+    // MEASURED 2026-09-11, and the measurement corrects a reasonable assumption.
+    // It is NOT unreachable: `openTimeEpoch()` is a public method on the adapter
+    // (avr8js-adapter.js:273), and calling it stamps `avr-cycles-reset-1`. What
+    // makes it harmless is not that nothing can reach it — it is that `reset` is
+    // in REWIND_LABELS, so every reader downstream strips it correctly.
+    //
+    // So the SAFETY property is asserted here and holds for either label. The
+    // semantic question — avr's reset() does not zero the clock, and 'reset' is
+    // the label for one that does — stays open, and the case below is what makes
+    // it impossible to forget.
+    const adapter = createAvr8jsAdapter({chip: 'atmega328p', program: Uint16Array.from([0xcfff])});
+    const domains = [];
+    adapter.onDebugEvent(event => domains.push(event.time?.domain));
+    adapter.advanceNs(2000);
+    assert.ok(domains.length > 0,
+        'fixture: the avr adapter published no events, so nothing below is looking at a '
+        + 'stamped domain');
+    assert.equal(logicalTimeDomain(domains[0]), 'avr-cycles',
+        'the unstamped avr domain does not reduce to its own base clock');
+
+    const before = domains.length;
+    adapter.openTimeEpoch();
+    adapter.advanceNs(2000);
+    const after = domains.slice(before).filter(Boolean);
+    assert.ok(after.length > 0, 'fixture: no events after the epoch was opened');
+    assert.match(after[0], /-(?:reset|rewind)-\d+$/,
+        `fixture: openTimeEpoch() did not stamp an epoch (${after[0]}), so the check below `
+        + 'is looking at an ordinary domain');
+    assert.equal(logicalTimeDomain(after[0]), 'avr-cycles',
+        `avr stamps ${after[0]}, which logicalTimeDomain() cannot reduce. Whatever label the `
+        + 'avr session settles on, it has to be one every reader strips.');
+});
+
+test('avr has no restore, and the day it gains one its label stops being cosmetic', () => {
+    // WRITTEN AS AN ABSENCE ON PURPOSE. `rewindLabel: 'reset'` is semantically
+    // questionable and operationally harmless, and the thing that separates
+    // those two is that avr cannot move its clock BACKWARD: no captureCheckpoint,
+    // no restoreCheckpoint, cycles monotonic forward.
+    //
+    // That is the condition under which "unreviewed" is an acceptable state. It
+    // is not a permanent property of avr — it is a fact about today — so it is
+    // asserted rather than assumed, and this fails on the day somebody adds the
+    // capability rather than at whatever a user does next.
+    const adapter = createAvr8jsAdapter({chip: 'atmega328p', program: Uint16Array.from([0xcfff])});
+    const gained = ['captureCheckpoint', 'restoreCheckpoint']
+        .filter(name => typeof adapter[name] === 'function');
+    assert.deepEqual(gained, [],
+        `avr8js-adapter has gained ${gained.join(' and ')}. Its rewindLabel is 'reset', placed `
+        + 'as an UNREVIEWED no-op — and a reset that ZEROES a clock is what that label names, '
+        + "while avr's reset() does not touch cpu.cycles. With a real backward clock move the "
+        + 'label starts describing something, so confirm it with the avr session and drop the '
+        + 'UNREVIEWED comment in the same commit as the capability.');
+});

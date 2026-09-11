@@ -42,6 +42,66 @@ for (const { name, make } of MACHINES) {
         assert.ok(cp.state && typeof cp.state === 'object', 'the envelope carries machine state');
     });
 
+    test(`${name}: a checkpoint taken AFTER a restore is itself restorable`, () => {
+        // THE SECOND LAP AT THE MACHINE LEVEL. The target-level twin, which is
+        // where the real defect lived, is machine-checkpoint-second-lap.test.mjs.
+        //
+        // Every checkpoint case here restores exactly ONCE. One restore never
+        // produces the state that only exists after a rewind — a clock whose
+        // domain now carries an epoch suffix — so nothing ever fed that state
+        // back into capture and restore. On the 6502 the second restore was
+        // REFUSED, `INVALID_CHECKPOINT_TIME`, because the domain guard matched
+        // `-reset-` while the target stamps `-rewind-`. Reverse debugging
+        // worked once per session and then stopped, blaming simulation time.
+        //
+        // "The unit that exists is the unit that gets exercised once." This is
+        // that sentence turned into a case, and it runs for every core in
+        // MACHINES rather than the one where the defect happened to surface.
+        const m = make();
+        m.advanceToMs(0.2);
+
+        const first = m.captureCheckpoint();
+        assert.ok(!first.refused, `${name}: the first capture was refused: ${JSON.stringify(first.refused)}`);
+        trace(m, 150);
+        assert.equal(m.restoreCheckpoint(first), undefined,
+            `${name}: the FIRST restore was refused — this case cannot reach the second lap`);
+
+        // WHAT THIS CASE DOES NOT COVER, stated because I wrote it believing it
+        // did. A BARE MACHINE NEVER STAMPS AN EPOCH — measured: the domain here
+        // is `m6502-cycles` before and after a restore. The suffix is stamped by
+        // installInstructionDebugEvents, which only runs when a DEBUG TARGET is
+        // attached, so the guard that was broken cannot fail from this fixture
+        // and this case stayed green against the reverted guard.
+        //
+        // The epoch half lives in machine-checkpoint-second-lap.test.mjs, which
+        // builds real targets. This one is still worth having — restore must be
+        // repeatable at the machine level too — but the assertion below records
+        // what state it is actually in, so nobody else mistakes its scope.
+        const second = m.captureCheckpoint();
+        assert.equal(second.time.domain, first.time.domain,
+            `${name}: this fixture's domain CHANGED across a restore (${first.time.domain} -> `
+            + `${second.time.domain}). A bare machine is not supposed to stamp an epoch — if `
+            + 'it now does, this case covers the epoch guard after all and the comment above '
+            + 'is wrong.');
+        assert.ok(!second.refused,
+            `${name}: CAPTURE after a restore was refused: ${JSON.stringify(second.refused)}`);
+
+        trace(m, 40);
+        assert.equal(m.restoreCheckpoint(second), undefined,
+            `${name}: a checkpoint captured AFTER a restore could not be restored. Its time `
+            + `domain is ${JSON.stringify(second.time.domain)}; if that carries an epoch `
+            + 'suffix the guard is not reducing it with logicalTimeDomain(), and reverse '
+            + 'debugging works exactly once.');
+
+        // And a third, because "works twice" and "works repeatedly" are
+        // different claims and the epoch counter increments each time.
+        const third = m.captureCheckpoint();
+        assert.ok(!third.refused, `${name}: capture after the second restore was refused`);
+        assert.equal(m.restoreCheckpoint(third), undefined,
+            `${name}: the third restore was refused — the epoch counter grows with each `
+            + 'rewind, so a guard that copes with epoch 1 need not cope with epoch 2');
+    });
+
     test(`${name}: capture then restore continues in lockstep with the original`, () => {
         // The property is CONTINUATION, not field equality: capture, run the
         // machine PAST the checkpoint so its state genuinely moves, then restore
