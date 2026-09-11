@@ -742,6 +742,30 @@ describe('TIME PASSED AND NOTHING RETIRED', () => {
     assert.equal(events.publishClockJump({ cycles: 10 }), false);
   });
 
+  it('publishInterrupt emits the interrupt kind — the vocabulary the 8086 adoption dropped', () => {
+    // Additive publisher (like idle/clock): no core here published an interrupt,
+    // the 8086 hand-rolled one downstream, and its module adoption dropped it
+    // because there was no verb. A caller that never calls this is unchanged, so
+    // `capabilities().events` must not list 'interrupt' until one does.
+    const cpu = fakeCpu();
+    const events = install(cpu, { cycles: 700, clockHz: 1e6 });
+    const { seen } = record(events);
+
+    assert.equal(events.publishInterrupt({ vector: 0x21, source: 'pic' }), true);
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].kind, 'interrupt');
+    assert.equal(seen[0].phase, 'accepted');
+    assert.equal(seen[0].fidelity, 'recorded');
+    assert.deepEqual(seen[0].interrupt, { vector: 0x21, source: 'pic' });
+    assert.equal(seen[0].time.domain, 'test-ticks', 'stamped on the same clock as every other fact');
+  });
+
+  it('publishInterrupt is silent with no listener, like everything else here', () => {
+    const cpu = fakeCpu();
+    const events = install(cpu, { cycles: 0, clockHz: 1e6 });
+    assert.equal(events.publishInterrupt({ vector: 1, source: 'nmi' }), false);
+  });
+
   it('REFUSES a non-advance rather than publishing a fact about nothing', () => {
     // Zero or negative cycles is not an elapse; publishing one would put a
     // "time passed" fact in the log for a moment when it did not.
