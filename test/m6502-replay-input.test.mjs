@@ -65,6 +65,21 @@ describe('the 6502 target implements both halves', () => {
     // gone — the two-hook split gives it both a veto and a clean log. See
     // debug-replay-contract.js and bridge-admission-ordering.test.mjs.
   });
+
+  it('the LIVE path refuses exactly what the REPLAY path refuses — no un-replayable mask is recorded', () => {
+    // REGRESSION GUARD (upstream defect found by simulating the pin take against
+    // lite's suites). The safe-integer bound lived only on applyReplayInput, so a
+    // non-safe-integer mask was applied AND RECORDED live and then its own replay
+    // refused it — the inverse of the admission guarantee. One validity check,
+    // both readers. The valid mask is accepted live first, so a `false` below is
+    // the bound talking, not a missing interface.
+    const {target} = makeTarget();
+    assert.notEqual(target.setButtons(0b0011), false, 'control: a valid mask is not refused live');
+    assert.equal(target.applyReplayInput({producer: 'm6502.buttons', payload: {mask: 2 ** 60}}).accepted, false,
+      'precondition: replay refuses a non-safe-integer mask');
+    assert.equal(target.setButtons(2 ** 60), false,
+      'the live path must ALSO refuse a non-safe-integer mask — else an un-replayable input is recorded');
+  });
 });
 
 describe('buttons: record on one machine, apply on another', () => {

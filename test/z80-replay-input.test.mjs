@@ -53,6 +53,31 @@ test('the target declares BOTH halves of the surface', () => {
   assert.deepEqual(replaySupport(target), { supported: true, reasons: [] });
 });
 
+test('the LIVE path refuses exactly what the REPLAY path refuses — no un-replayable input is recorded', () => {
+  // REGRESSION GUARD (upstream defect found by simulating the pin take against
+  // lite's suites). The bound lived only on applyReplayInput, so a 41-key set was
+  // applied AND RECORDED live and then its own replay refused it as invalid — the
+  // inverse of the admission guarantee ("an un-recordable input does not happen").
+  // Live and replay must reject the same set, from one validity check. The valid
+  // form is accepted live first, so a `false` below is the bound talking, not a
+  // missing interface.
+  const { target } = zx();
+  assert.notEqual(target.setKeys(['a']), false, 'control: a valid key set is not refused live');
+  assert.notEqual(target.setButtons(0x03), false, 'control: a valid mask is not refused live');
+
+  const cases = [
+    { producer: 'z80.keys', payload: { names: Array(41).fill('a') }, drive: () => target.setKeys(Array(41).fill('a')) },
+    { producer: 'z80.keys', payload: { names: ['x'.repeat(20)] }, drive: () => target.setKeys(['x'.repeat(20)]) },
+    { producer: 'z80.buttons', payload: { mask: 2 ** 60 }, drive: () => target.setButtons(2 ** 60) },
+  ];
+  for (const c of cases) {
+    assert.equal(target.applyReplayInput({ producer: c.producer, payload: c.payload }).accepted, false,
+      `precondition: replay refuses ${JSON.stringify(c.payload)}`);
+    assert.equal(c.drive(), false,
+      `the live path must ALSO refuse ${JSON.stringify(c.payload)} — else an un-replayable input happens and is recorded`);
+  }
+});
+
 test('a recorded fact is stamped from the machine CLOCK, not from a projection of it', () => {
   const { machine, target } = zx();
   const facts = [];

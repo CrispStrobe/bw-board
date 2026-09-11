@@ -53,6 +53,27 @@ export function createZ80DebugTarget(adapter, opts = {}) {
     }
   });
 
+  // ONE PREDICATE for uncaptured board input, read by replayRefusalReasons AND
+  // the checkpoint gate (recording, checkpointRefusal, captureCheckpoint,
+  // restoreCheckpoint) so the reason and the enforcement cannot disagree. A board
+  // sampling input nets does so OUTSIDE the target, so those inputs are not in the
+  // log and a checkpoint over them replays into a divergence: the target must
+  // REFUSE to checkpoint, not merely mention it. This gate used to live on the
+  // machine — checkpointSupport() read machine._unloggedBoardInputs — but the
+  // adapter sync onto unloggedBoardInputs() retired that flag, so the gate has to
+  // read the accessor HERE or it goes dead (the compensation-removal that let a
+  // stated-un-replayable session still be handed a checkpoint).
+  const UNCAPTURED_INPUT_REASON = 'live board buffer-input sampling is not logged';
+  const hasUncapturedInputState = () => adapter?.unloggedBoardInputs?.() === true;
+
+  // ONE VALIDITY CHECK per producer, read by the FACE method (live) and by
+  // applyReplayInput (replay), so the live path cannot accept what replay will
+  // refuse — an un-replayable input that happens and is recorded is the inverse
+  // of the admission guarantee. The bound had drifted onto the replay path alone.
+  const validButtonMask = mask => Number.isSafeInteger(mask);
+  const validKeyNames = names => Array.isArray(names) && names.length <= 40
+    && names.every(name => typeof name === 'string' && name.length <= 16);
+
   let runState = 'halted';
   let pendingStep = null;
   const haltListeners = [];
@@ -343,12 +364,19 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       const checkpointStatus = typeof machine.checkpointSupport === 'function'
         ? machine.checkpointSupport()
         : { supported: false, reasons: ['this machine has no checkpoint support'] };
+      // The checkpoint is refused for the machine's own reasons AND for uncaptured
+      // board input — ONE list, so `recording` and `checkpointRefusal` and
+      // captureCheckpoint() cannot disagree about whether a checkpoint is sound.
+      const checkpointRefusalReasons = [
+        ...(checkpointStatus.supported ? [] : checkpointStatus.reasons),
+        ...(hasUncapturedInputState() ? [UNCAPTURED_INPUT_REASON] : [])
+      ];
       // extensions.inputAdmission === 'may-refuse' declares the ASK hook, which
       // canVetoDebugInput(target) reads (with m6502-debug, the first two to
       // declare it). events/spaces/fidelity describe what the shared event
       // module now publishes; runTo is backed by the code breakpoint the session
-      // installs to stop at an address; recording appears only when the machine
-      // can actually checkpoint.
+      // installs to stop at an address; recording appears only when a checkpoint
+      // would actually be sound.
       return {
         steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true,
         runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffff,
@@ -356,13 +384,13 @@ export function createZ80DebugTarget(adapter, opts = {}) {
         consumes: [], events: ['instruction', 'memory', 'port'],
         spaces: {mem: {read: true, write: true, passiveRead: true}},
         fidelity: {instruction: 'recorded', memory: 'reconstructed', port: 'reconstructed', cycle: 'unsupported'},
-        recording: checkpointStatus.supported ? ['checkpoint', 'restore'] : [],
+        recording: checkpointRefusalReasons.length ? [] : ['checkpoint', 'restore'],
         extensions: {
           inputAdmission: 'may-refuse',
           // Access facts are published before the same machine.step() publishes
           // its recorded retire, so the runner may defer their actions safely.
           eventBreakpointBoundary: 'instruction-retire',
-          ...(checkpointStatus.supported ? {} : {checkpointRefusal: checkpointStatus.reasons}),
+          ...(checkpointRefusalReasons.length ? {checkpointRefusal: checkpointRefusalReasons} : {}),
           inputReplay: ['z80.buttons', 'z80.keys', ...(rawSendSerial ? ['z80.serial'] : [])],
           inputRefusals: [
             'tape insertion and snapshot/media loading are configuration changes, not replayable runtime inputs',
@@ -398,6 +426,12 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * against a debug fact gets one clock, not two.
      */
     captureCheckpoint() {
+      // A snapshot over unlogged board inputs restores a machine that looks right
+      // and is not — the inputs it was sampling are not in the log. Refuse rather
+      // than hand back a checkpoint replayRefusalReasons() has already disowned.
+      if (hasUncapturedInputState()) {
+        return { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: UNCAPTURED_INPUT_REASON };
+      }
       const checkpoint = machine.captureCheckpoint();
       if (!checkpoint.refused) {
         checkpoint.time = { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
@@ -416,6 +450,10 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * module's own event epoch is left to its detection: the accepted seam.
      */
     restoreCheckpoint(checkpoint) {
+      if (hasUncapturedInputState()) {
+        return { code: 'INCOMPLETE_CHECKPOINT_STATE',
+          refused: 'cannot restore over a live board input source sampled outside the machine' };
+      }
       const result = machine.restoreCheckpoint(checkpoint);
       if (!result) { inputTimeEpoch++; lastTicks = machine.cycles; }
       return result;
@@ -575,7 +613,10 @@ export function createZ80DebugTarget(adapter, opts = {}) {
     /** Face-input contract, joystick side: the VdpScreen button mask
      *  onto the Kempston port. False without the interface. */
     setButtons(mask) {
-      if (typeof machine.setButtons !== 'function') return false;
+      // Refuse a mask the REPLAY path would refuse (validButtonMask): a live input
+      // that cannot be replayed must not be applied and recorded. Same predicate,
+      // both paths — see applyReplayInput's buttons branch.
+      if (typeof machine.setButtons !== 'function' || !validButtonMask(mask)) return false;
       // The recorded value is RAW — what the host sent. z80-machine.setButtons
       // narrows it to the Kempston bits; the log is not the machine's place to
       // narrow, and a masked record against a raw one is the defect R8 guards.
@@ -589,7 +630,11 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * false when the machine has no ULA to receive them.
      */
     setKeys(names) {
-      if (!machine.ula || typeof machine.ula.setKeys !== 'function') return false;
+      // Refuse a key set the REPLAY path would refuse (validKeyNames): the bound
+      // is 40 keys of at most 16 chars — the ULA matrix is 8x5 — and a live set
+      // that fails it must not be applied and recorded, or its own replay refuses
+      // the fact it wrote. Same predicate, both paths — see applyReplayInput.
+      if (!machine.ula || typeof machine.ula.setKeys !== 'function' || !validKeyNames(names)) return false;
       return level('z80.keys', 'keys', {names: [...names]}, () => { machine.ula.setKeys(names); return true; });
     },
 
@@ -659,9 +704,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * @returns {string[]}
      */
     replayRefusalReasons() {
-      return adapter?.unloggedBoardInputs?.()
-        ? ['live board buffer-input sampling is not logged']
-        : [];
+      return hasUncapturedInputState() ? [UNCAPTURED_INPUT_REASON] : [];
     },
 
     onDebugInput(listener) {
@@ -710,7 +753,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
     applyReplayInput(input) {
       const payload = input?.payload;
       if (input?.producer === 'z80.buttons') {
-        if (!Number.isSafeInteger(payload?.mask)) {
+        if (!validButtonMask(payload?.mask)) {
           return replayRefused('invalid-replay-input', 'z80.buttons needs a safe-integer mask');
         }
         // Replay applies DIRECTLY to the machine, never through the face
@@ -731,11 +774,11 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       }
       if (input?.producer === 'z80.keys') {
         const names = payload?.names;
-        // Bounded on purpose: a recorded fact is untrusted by the time it is
-        // replayed, and the ULA matrix is 8x5 — forty is every key at once,
-        // which is already impossible on real hardware.
-        if (!Array.isArray(names) || names.length > 40 ||
-            !names.every(name => typeof name === 'string' && name.length <= 16)) {
+        // Bounded on purpose (validKeyNames, the same predicate setKeys uses): a
+        // recorded fact is untrusted by the time it is replayed, and the ULA
+        // matrix is 8x5 — forty is every key at once, already impossible on real
+        // hardware.
+        if (!validKeyNames(names)) {
           return replayRefused('invalid-replay-input',
             'z80.keys needs at most 40 key names of at most 16 characters');
         }
