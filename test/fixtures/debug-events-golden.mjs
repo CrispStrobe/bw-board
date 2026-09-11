@@ -5,6 +5,20 @@
  *
  * Regenerating this to make a test pass is the one thing not to do with it: it
  * exists so that a default drifting has to be noticed and argued for.
+ *
+ * WHAT IT CANNOT NOTICE, because a reader will otherwise assume it covers every
+ * default: a change to `addressMask`. Both subjects captured here are 16-bit, so
+ * widening that default to 0xfffff moves NONE of these bytes and every case below
+ * stays green -- including the anti-vacuity case, which passes a check designed to
+ * prove this file is not vacuous while being exactly vacuous for that parameter.
+ * Measured, not reasoned: the mutation was run.
+ *
+ * A golden capture can only notice a change that moves the bytes it captured, so
+ * its reach is the address space of its SUBJECTS, not the parameter space of the
+ * module -- strongest exactly where drift is least likely, blind where a new width
+ * lands. `test/debug-events-address-width.test.mjs` holds width drift instead, on
+ * a 20-bit core. Adding a synthetic wide core HERE was considered and rejected:
+ * this file's worth is that nobody chose what it contains.
  */
 export const GOLDEN = {
   z80: [

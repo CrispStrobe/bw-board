@@ -28,6 +28,7 @@
  * @module
  */
 import { disasmI8086 } from './i8086-disasm.js';
+import { installInstructionDebugEvents } from './instruction-debug-events.js';
 import { renderMode, likelyMode } from './i8086-cga.js';
 
 /**
@@ -192,6 +193,40 @@ import { replayAccepted, replayRefused } from './debug-replay-contract.js';
 export function createI8086DebugTarget(adapter, opts = {}) {
     const machine = adapter.machine;
     const cpu = machine.cpu;
+    const cpuId = opts.cpuId || 'i8086';
+
+    /**
+     * THE SHARED EVENT MODULE, which this target was the last one not to use.
+     * avr8js uses it here; m6502 and z80 use it downstream. Everything it
+     * publishes -- instruction retires, memory and port accesses, a monotonic
+     * event clock -- existed only as a hand-rolled equivalent elsewhere.
+     *
+     * `addressMask` is why this could not be done until now: the module masked
+     * memory addresses to sixteen bits, so this core's fetches at 0xF8000 arrived
+     * as 0x8000 -- right for exactly the first 64K, which is where a test
+     * program's operands live and not where its code does.
+     *
+     * ITS CLOCK AND THIS TARGET'S SHARE A DOMAIN BASE AND NOT AN EPOCH COUNTER.
+     * Both read machine.cycles and both stamp `i8086-cycles`, so an ordinary fact
+     * and an ordinary debugTime() agree. After a rewind they diverge in the
+     * SUFFIX -- this target counts `-rewind-N`, the module `-reset-N`, and
+     * neither observes the other's bump. That is a seam, not a defect today:
+     * nothing moves machine.cycles backwards except a checkpoint restore, which
+     * opens this target's epoch. Closing it means one clock owning both, and that
+     * changes debugTime()'s return type from Number to BigInt for every existing
+     * caller -- a separate decision, deliberately not taken here.
+     */
+    const debugEvents = installInstructionDebugEvents({
+        cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
+        addressMask: 0xfffff,
+        pcOf: c => c.pc & 0xfffff,
+        clock: () => machine.cycles,
+        captureRegisters: () => machine._architecturalRegisters(),
+        captureInstruction: address => ({
+            address,
+            ...disasmI8086(a => machine._read(a & 0xfffff), address, {ip: cpu.ip})
+        })
+    });
 
     let runState = 'halted';
     let pendingStep = null;
@@ -674,6 +709,15 @@ export function createI8086DebugTarget(adapter, opts = {}) {
           return adapter?.unloggedBoardInputs?.()
             ? ['live board input sampling is not logged']
             : [];
+        },
+
+        /**
+         * The EVENT half, mirroring onDebugInput below. Delegated rather than
+         * reimplemented: a second publisher of the same facts is how two
+         * vocabularies for one thing begin.
+         */
+        onDebugEvent(listener) {
+            return debugEvents.onDebugEvent(listener);
         },
 
         onDebugInput(listener) {

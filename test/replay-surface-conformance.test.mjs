@@ -448,7 +448,7 @@ describe('C6: a target that can PARK says so', () => {
     // Still an enumeration, still derived from the source: a SECOND installer
     // reddens this and has to bring its own parking case, rather than
     // inheriting the AVR's green run.
-    assert.deepEqual(installers(), ['avr8js-adapter.js'],
+    assert.deepEqual(installers(), ['avr8js-adapter.js', 'i8086-debug.js'],
       `installers changed: ${installers().join(', ')}. C6 needs a positive case per target — `
       + 'drive it into HALT/WAI/SLEEP and assert an idle/elapse fact appears.');
   });
@@ -482,7 +482,54 @@ describe('C6: a target that can PARK says so', () => {
       'no retires at all — the fixture never ran');
   });
 
-  it('and a running AVR does not claim to be parked', async () => {
+  it('i8086: a core parked at HLT publishes idle/elapse during an ORDINARY run', async () => {
+      // The second installer, and it had to bring this case rather than inherit
+      // the AVR's green run -- which is exactly what the enumeration above is for.
+      const { I8086Machine, BREADBOARD8086 } = await import('../src/i8086-machine.js');
+      const { createI8086DebugTarget } = await import('../src/i8086-debug.js');
+      const rom = new Uint8Array(0x8000).fill(0x90);
+      rom.set([0xf4], 0);                                  // hlt
+      rom.set([0xea, 0x00, 0x00, 0x00, 0xf8], 0x7ff0);     // reset vector -> F800:0000
+      const machine = new I8086Machine(BREADBOARD8086, {});
+      machine.loadRom(rom);
+      machine.reset();
+
+      const seen = [];
+      createI8086DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) machine.step();          // the jump, the hlt, then parked
+
+      const idle = seen.filter(e => e.kind === 'idle' && e.phase === 'elapse');
+      assert.ok(idle.length > 0, 'a parked 8086 published no idle facts at all');
+      assert.ok(idle[0].changes.cycles > 0,
+        `an idle fact must account for time actually spent: ${idle[0].changes.cycles}`);
+
+      // Non-vacuous, the same way the AVR case is: this fixture retires the far
+      // jump and the HLT, so a target publishing NOTHING could not pass by having
+      // no idle to get wrong.
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('and a running i8086 does not claim to be parked', async () => {
+      const { I8086Machine, BREADBOARD8086 } = await import('../src/i8086-machine.js');
+      const { createI8086DebugTarget } = await import('../src/i8086-debug.js');
+      const rom = new Uint8Array(0x8000).fill(0x90);       // nops, never halts
+      rom.set([0xea, 0x00, 0x00, 0x00, 0xf8], 0x7ff0);
+      const machine = new I8086Machine(BREADBOARD8086, {});
+      machine.loadRom(rom);
+      machine.reset();
+
+      const seen = [];
+      createI8086DebugTarget({ machine }).onDebugEvent(event => seen.push(event));
+      for (let i = 0; i < 8; i++) machine.step();
+
+      assert.equal(seen.filter(e => e.kind === 'idle').length, 0,
+        'a running core claiming to be parked would pass the case above just as well');
+      assert.ok(seen.some(e => e.kind === 'instruction' && e.phase === 'retire'),
+        'no retires at all -- the fixture never ran');
+    });
+
+    it('and a running AVR does not claim to be parked', async () => {
     // The other direction, or `cause: 'sleeping'` on every slice would pass the
     // test above just as well.
     const { createAvr8jsAdapter } = await import('../src/avr8js-adapter.js');
