@@ -17,7 +17,7 @@
 import { disasm6502 } from './w65c02-disasm.js';
 
 import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
-import { installInstructionDebugEvents } from './instruction-debug-events.js';
+import { installInstructionDebugEvents, logicalTimeDomain } from './instruction-debug-events.js';
 
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
@@ -488,7 +488,12 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         return {accepted: false, code: 'invalid-input-boundary',
           reason: 'recorded input boundary ticks must be an integer'};
       }
-      const domain = String(boundary?.domain || '').replace(/-reset-\d+$/, '');
+      // `logicalTimeDomain`, NOT a local regex. This read `/-reset-\d+$/` while
+      // this very file installs its events with `rewindLabel: 'rewind'` — so a
+      // boundary recorded after ANY restore looked like a foreign clock and was
+      // refused as `invalid-input-boundary`. The file disagreed with itself,
+      // three lines apart, and the test that covers this method never restores.
+      const domain = logicalTimeDomain(boundary?.domain);
       if (domain !== 'm6502-cycles' || requested < 0n ||
           requested > BigInt(Number.MAX_SAFE_INTEGER)) {
         return {accepted: false, code: 'invalid-input-boundary',

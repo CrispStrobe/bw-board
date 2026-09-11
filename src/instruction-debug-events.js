@@ -89,6 +89,54 @@
  *   core this module serves, so widening it would describe an address space that
  *   does not exist.
  */
+/**
+ * THE EPOCH SUFFIX, DECLARED ONCE, FOR THE WRITER AND EVERY READER.
+ *
+ * `time()` below stamps a domain as `<timeDomain>-<rewindLabel>-<epoch>` after a
+ * backward clock move, so a fact from before a restore cannot be read as one
+ * from after it. Something has to take that suffix back OFF to compare two facts
+ * that are on the same logical clock — and until 2026-09-11 every reader carried
+ * its own copy of that rule.
+ *
+ * THEY DID NOT AGREE, AND THE ONES THAT WERE WRONG WERE THE PRODUCTION ONES:
+ *
+ *   z80-machine.js          /-(?:reset|rewind)-\d+/   correct
+ *   m6502-machine.js        /-reset-\d+/              WRONG: m6502 stamps `rewind`
+ *   m6502-debug.js          /-reset-\d+/              WRONG: same target, same file's own label
+ *   lite's replayClockDomain /-reset-\d+/             WRONG for z80, m6502 AND 8086
+ *
+ * Three of the four cores here pass `rewindLabel: 'rewind'`. So after ANY
+ * restore, a reader stripping only `-reset-` sees a domain it calls foreign,
+ * every replayed event compares unequal, and a reverse step refuses with
+ * "replayed event stream diverged". That is what lite's browser proof had been
+ * failing on, and the refusal names the symptom rather than the cause.
+ *
+ * WHAT MADE IT INVISIBLE IS THE PART WORTH KEEPING. Every TEST that drives this
+ * path defines its own `logicalDomain` — and all of them strip both labels,
+ * because whoever wrote them read the builder. The tests were doing the app's
+ * job, so they passed while the app failed, and nothing connected the two until
+ * a browser drove the real thing.
+ *
+ * So the set is closed and declared HERE, next to the code that writes it, and
+ * `installInstructionDebugEvents` now REFUSES a label outside it. A fifth label
+ * cannot be introduced without teaching the parser, because the writer will not
+ * accept one the parser does not know.
+ */
+export const REWIND_LABELS = Object.freeze(['reset', 'rewind']);
+
+/** `<domain>-<label>-<n>` -> `<domain>`. The inverse of what `time()` stamps. */
+export const EPOCH_SUFFIX = new RegExp(`-(?:${REWIND_LABELS.join('|')})-\\d+$`);
+
+/**
+ * The logical clock a domain belongs to, with any epoch suffix removed.
+ *
+ * Use this anywhere two time facts are compared for "same clock?". Do NOT write
+ * the regex out again: a fifth core with a new label updates REWIND_LABELS, and
+ * every caller of this function follows for free. A caller with its own copy
+ * does not, which is the whole defect this replaces.
+ */
+export const logicalTimeDomain = domain => String(domain ?? '').replace(EPOCH_SUFFIX, '');
+
 export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, port = false,
   captureRegisters, captureInstruction, idleCause = () => 'parked',
   accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff, addressMask = 0xffff,
@@ -107,6 +155,18 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
       'installInstructionDebugEvents needs rewindLabel: "rewind" if this core\'s '
       + 'reset() advances the clock (the backward move is loadState/restore), '
       + '"reset" if reset() zeroes it. State it; there is no safe default.');
+  }
+  // AND IT MUST BE ONE THE PARSER KNOWS. A label outside REWIND_LABELS stamps a
+  // suffix `logicalTimeDomain` cannot take off, so every reader downstream sees
+  // a foreign clock after the first restore and every replay comparison
+  // diverges -- silently, and only after a rewind has happened. Refusing here
+  // makes the writer and the reader one decision instead of two.
+  if (!REWIND_LABELS.includes(rewindLabel)) {
+    throw new TypeError(
+      `installInstructionDebugEvents got rewindLabel: ${JSON.stringify(rewindLabel)}, which `
+      + `logicalTimeDomain() cannot strip. Known labels: ${REWIND_LABELS.join(', ')}. Add it `
+      + 'to REWIND_LABELS in this file if a core genuinely needs a new one -- every reader '
+      + 'derives its pattern from that list, so they cannot drift apart.');
   }
   const NAME = {read: 'read', write: 'write', inPort: 'inPort', outPort: 'outPort',
     ...accessorNames};

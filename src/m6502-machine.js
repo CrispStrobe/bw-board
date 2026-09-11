@@ -17,6 +17,7 @@
  * @module
  */
 import { W65C02 } from './w65c02.js';
+import { logicalTimeDomain } from './instruction-debug-events.js';
 import { AudioBus } from './audio-bus.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
@@ -906,7 +907,11 @@ export class M6502Machine {
         }
         if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
             checkpoint.time.hz !== this.clockHz ||
-            !/^m6502-cycles(?:-reset-\d+)?$/.test(checkpoint.time.domain)) {
+            // DERIVED, not written out: z80-machine.js:458 already accepted
+            // `(?:reset|rewind)` and this one did not, so the same fix had been
+            // applied to one of a pair. m6502 stamps `rewind`, so a checkpoint
+            // captured after a restore failed its OWN domain guard.
+            `${logicalTimeDomain(checkpoint.time.domain)}` !== 'm6502-cycles') {
             return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
         }
         this.loadState(cloneCheckpointValue(state));

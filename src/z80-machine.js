@@ -17,6 +17,7 @@
  * @module
  */
 import { Z80 } from './z80.js';
+import { logicalTimeDomain } from './instruction-debug-events.js';
 import { MC6850 } from './mc6850.js';
 import { Z80CTC } from './z80-ctc.js';
 import { MC6845 } from './mc6845.js';
@@ -455,7 +456,10 @@ export class Z80Machine {
         // accepting only the bare base refuses every post-rewind checkpoint.
         if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
             checkpoint.time.hz !== this.clockHz ||
-            !/^z80-cycles(?:-(?:reset|rewind)-\d+)?$/.test(checkpoint.time.domain)) {
+            // This one was already RIGHT, and that is exactly why it is being
+            // changed: it was right by having been fixed once, in one of four
+            // places, and nothing made the other three follow. Derived now.
+            `${logicalTimeDomain(checkpoint.time.domain)}` !== 'z80-cycles') {
             return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
         }
         this.loadState(cloneCheckpointValue(state));
