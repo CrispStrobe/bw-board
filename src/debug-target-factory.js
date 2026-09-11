@@ -316,7 +316,19 @@ async function createI8086Target(opts) {
   try {
     const mod = await import('./i8086-debug.js');
     if (mod.createI8086DebugTarget) {
-      target = mod.createI8086DebugTarget({ machine: adapter.machine });
+      // THE ADAPTER, NOT `{machine}`. `createI8086DebugTarget(adapter, opts)`
+      // reads THREE things off this argument -- `.machine`, `.sendSerial` and
+      // `.unloggedBoardInputs()` -- and an object literal carries only the
+      // first. Passing one silently disabled two declared guarantees in every
+      // production build while both stayed green, because the two tests that
+      // exercise them construct a real adapter and this call site does not.
+      // Measured before the fix, at 56a49dc:
+      //   replayRefusalReasons()  -> [] even with a sampling board attached
+      //   adapter.sendSerial(b)   -> 0 facts recorded, byte reaches the machine
+      // See test/factory-wires-the-adapter.test.mjs, which drives the FACTORY
+      // rather than the constructor, because constructing it directly is what
+      // let this in.
+      target = mod.createI8086DebugTarget(adapter);
     }
   } catch { /* adapter-only mode */ }
   return { target, adapter };
