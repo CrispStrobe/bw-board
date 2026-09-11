@@ -85,16 +85,18 @@ test('the selection decides the target, so a substituting boundary is honoured',
   assert.deepEqual(made.target.capabilities().steps, ['cycle']);
 });
 
-test('a hook is ignored when there is no target to wrap', async () => {
-  // Adapter-only mode: with no target there is nothing for a boundary to
-  // select between, and calling the hook with null would hand it a target its
-  // own contract says it always gets.
-  const fake = fakeBoundary();
-  const made = await createDebugTarget('eater6502',
-    { rom: rom(), board: board(), providerBoundary: fake.make });
-  if (made.target) {
-    assert.ok(fake.calls.length > 0, 'fixture: a target exists here, so the hook must have run');
-  } else {
-    assert.equal(fake.calls.length, 0, 'no target means the hook is not called');
-  }
-});
+/**
+ * NO CASE FOR THE `!target` GUARD, AND THAT IS MEASURED RATHER THAN FORGOTTEN.
+ *
+ * The factory skips the hook in adapter-only mode -- a boundary's contract is
+ * that it always receives a target, so handing it null would break the
+ * contract at the seam. But this fixture cannot reach that branch: the m6502
+ * target always loads here, and adapter-only mode needs `./m6502-debug.js`
+ * itself to fail to import, which a test cannot arrange from outside.
+ *
+ * My first version of this case branched on `if (made.target)` and asserted
+ * the guard in the else -- a branch that never runs. Removing `!target` from
+ * the condition left the whole suite green, which is what a case like that is
+ * worth. It is recorded here instead: the guard is deliberate, defensive, and
+ * unheld, so a change to it will not be caught by this file.
+ */

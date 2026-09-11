@@ -390,7 +390,30 @@ async function createEater6502Target(opts) {
     // m6502-debug.js not available — adapter-only mode
   }
 
-  return { target, adapter };
+  // AN OPTIONAL CYCLE-PROVIDER BOUNDARY, INJECTED RATHER THAN IMPORTED.
+  //
+  // A consumer that selects between this fast target and an optional cycle
+  // engine passes `opts.providerBoundary`, a function from the built target to
+  // a boundary. This tree does not need a conditional provider — it needs
+  // somewhere to put one — so nothing is imported here and the absence is the
+  // default: with no hook the result is exactly what it was before, WITHOUT
+  // null-valued keys, so a caller can tell "no boundary" from "a boundary that
+  // refused".
+  //
+  // THE BOUNDARY IS DUCK-TYPED ON PURPOSE: used only as `.select(id)` returning
+  // `{target, ...}`, which is what keeps the seam from dragging a type or a
+  // helper across the boundary with it. `select` supplies its own default when
+  // `cycleProvider` is undefined, so no provider id is named here.
+  //
+  // The SELECTION decides the target: a boundary may substitute a different one,
+  // and returning the locally built target regardless would make the whole hook
+  // decorative.
+  if (!target || typeof opts.providerBoundary !== 'function') {
+    return { target, adapter };
+  }
+  const providerBoundary = opts.providerBoundary(target);
+  const providerSelection = providerBoundary.select(opts.cycleProvider);
+  return { target: providerSelection.target, adapter, providerBoundary, providerSelection };
 }
 
 // ─── Pico target (RP2040 via rp2040js) ──────────────────────────────────
