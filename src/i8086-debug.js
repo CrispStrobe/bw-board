@@ -572,15 +572,25 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         // CHAINED, NOT OVERWRITTEN -- see priorPortAccess above. Also note the
         // condition: without `priorInterrupt` here, clearing the last watch wrote
         // `null` over the machine's own hook and erased it for good.
+        //
+        // OUR OWN BOOKKEEPING FIRST, FOREIGN CALLBACKS AFTER -- the same order
+        // the port chain above uses, and the reason is not symmetry for its own
+        // sake. `eventHit` is a pure assignment that cannot throw; `priorInterrupt`
+        // is somebody else's function and `publishInterrupt` runs somebody else's
+        // listeners. Calling either of those before the watch scan means one
+        // throwing observer costs the debugger the breakpoint it was holding --
+        // the user asked to stop on vector 0x08, an unrelated hook threw, and
+        // execution ran on with nothing recorded. Scan first and that cannot
+        // happen, whatever the foreign code does.
         machine.hooks.onInterrupt = (intWatches.size || debugEventSubscribers || priorInterrupt)
             ? (ev) => {
-                if (priorInterrupt) priorInterrupt(ev);
-                debugEvents.publishInterrupt({vector: ev.vector, source: ev.source});
                 for (const [id, w] of intWatches) {
                     if (w.vector != null && w.vector !== ev.vector) continue;
                     if (w.source && w.source !== ev.source) continue;
                     eventHit = { cause: 'interrupt', bp: id, ...ev };
                 }
+                debugEvents.publishInterrupt({vector: ev.vector, source: ev.source});
+                if (priorInterrupt) priorInterrupt(ev);
             }
             : null;
     };

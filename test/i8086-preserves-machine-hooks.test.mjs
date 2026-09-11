@@ -67,3 +67,44 @@ test('a port WATCH still fires, and the machine hook fires too — both, not eit
         'the machine hook stopped once a watch existed — the chain runs the watch INSTEAD '
         + 'of the prior observer rather than as well as it');
 });
+
+test('a prior observer that THROWS does not cost the debugger its own port record', () => {
+    // ORDER IS THE CLAIM, and chaining alone does not make it. A chain that calls
+    // the foreign hook FIRST loses everything after it the moment that hook throws:
+    // the user asked to stop on port 0x20, an unrelated observer threw, and the
+    // run continued with no breakpoint recorded and no sign why.
+    //
+    // Our scan is a pure assignment that cannot throw, so it runs first and the
+    // foreign call last. Measured both ways on 2026-09-11 — scan-first leaves a
+    // pending hit that the next runFor retires as `halted`/`cause: 'port'`;
+    // prior-first leaves nothing and the same call returns `budget`.
+    //
+    // NOTE FOR ANYONE EDITING THIS: `target.run()` is load-bearing. `runFor` on a
+    // target that was never run returns 'halted' immediately, which is how the
+    // first draft of this test passed under BOTH orderings.
+    const seen = [];
+    const m = new I8086Machine(CONFIG, {
+        onPortAccess: ev => { seen.push(ev.value); throw new Error('foreign observer exploded'); }
+    });
+    m.cpu.cs = 0; m.cpu.ip = 0x100;
+    m.mem.set([0xb0, 0x33, 0xe6, 0x20], 0x100);
+
+    const target = createI8086DebugTarget({machine: m});
+    const halts = [];
+    target.onHalt(h => halts.push(h));
+    const set = target.setBreakpoint({kind: 'port', port: 0x20});
+    assert.ok(set && !set.unsupported, `fixture: the port watch was refused (${JSON.stringify(set)})`);
+    target.run();
+
+    // The throw propagates out of the machine's unguarded call site — not ours to
+    // swallow. What must survive it is the hit already recorded underneath.
+    assert.throws(() => { m.step(); m.step(); }, /foreign observer exploded/,
+        'fixture: the prior hook never threw, so this case proves nothing');
+    assert.deepEqual(seen, [0x33], 'fixture: the prior hook never ran at all');
+
+    assert.equal(target.runFor(1), 'halted',
+        'the port breakpoint was lost because a foreign observer threw BEFORE the watch '
+        + 'scan. Scan first, call foreign code last.');
+    assert.deepEqual(halts.map(h => h.cause), ['port'],
+        `the run stopped, but not for the port watch: ${JSON.stringify(halts)}`);
+});

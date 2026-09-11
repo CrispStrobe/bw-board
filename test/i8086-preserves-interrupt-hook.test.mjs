@@ -76,3 +76,35 @@ test('clearing the last watch leaves the original in place, not null', () => {
     machine.step();
     assert.deepEqual(seen, [2], 'clearing the last watch erased the hook the machine came with');
 });
+
+test('a prior observer that THROWS does not cost the debugger its own interrupt record', () => {
+    // The interrupt twin of the port case in i8086-preserves-machine-hooks.test.mjs,
+    // and the same claim: our own watch scan is a pure assignment that cannot
+    // throw, so it runs BEFORE `publishInterrupt` and before the foreign hook.
+    // Call foreign code first and one throwing observer silently costs the user
+    // the breakpoint they asked for.
+    //
+    // `target.run()` is load-bearing here too — `runFor` on a target that was
+    // never run returns 'halted' for free, which passes under either ordering.
+    const machine = build();
+    const seen = [];
+    machine.hooks.onInterrupt = ev => { seen.push(ev.vector); throw new Error('foreign observer exploded'); };
+
+    const target = createI8086DebugTarget({machine});
+    const halts = [];
+    target.onHalt(h => halts.push(h));
+    const id = target.setBreakpoint({kind: 'int', vector: 2});
+    assert.ok(Number.isInteger(id), `fixture: setBreakpoint refused: ${JSON.stringify(id)}`);
+    target.run();
+
+    machine.nmi();
+    assert.throws(() => machine.step(), /foreign observer exploded/,
+        'fixture: the prior hook never threw, so this case proves nothing');
+    assert.deepEqual(seen, [2], 'fixture: the prior hook never ran at all');
+
+    assert.equal(target.runFor(1), 'halted',
+        'the interrupt breakpoint was lost because a foreign observer threw BEFORE the '
+        + 'watch scan. Scan first, call foreign code last.');
+    assert.deepEqual(halts.map(h => h.cause), ['interrupt'],
+        `the run stopped, but not for the interrupt watch: ${JSON.stringify(halts)}`);
+});
