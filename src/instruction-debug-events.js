@@ -68,10 +68,20 @@
  *   Property names on `cpu` for the four wrappable accessors.
  * @param {(cpu: object) => number} [opts.pcOf] the program counter, in the units facts carry.
  * @param {() => number} [opts.clock] the tick count facts are stamped with.
+ * @param {number} [opts.addressMask=0xffff] width of the MEMORY address space, as
+ *   a mask. The default is every core this module served when it was written; a
+ *   20-bit core passes 0xfffff. `pcOf` was already a parameter, so without this a
+ *   wide-address core reports its program counter correctly and every memory fact
+ *   truncated -- right for exactly the first 64K, which is where a small test
+ *   program's operands live and not where its code does.
+ *
+ *   THE I/O RECORDERS ARE DELIBERATELY NOT COVERED. I/O space is 16 bits on every
+ *   core this module serves, so widening it would describe an address space that
+ *   does not exist.
  */
 export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, port = false,
   captureRegisters, captureInstruction, idleCause = () => 'parked',
-  accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff,
+  accessors: accessorNames = {}, pcOf = c => c.pc & 0xffff, addressMask = 0xffff,
   clock = () => machine.cycles}) {
   const NAME = {read: 'read', write: 'write', inPort: 'inPort', outPort: 'outPort',
     ...accessorNames};
@@ -209,7 +219,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
     hooks.ours.read = address => {
       const value = hooks.read.call(cpu, address);
       if (accesses) accesses.push({kind: 'memory', memory: {
-        space: 'mem', address: address & 0xffff, width: 1, direction: 'read', value: value & 0xff
+        space: 'mem', address: address & addressMask, width: 1, direction: 'read', value: value & 0xff
       }});
       return value;
     };
@@ -217,7 +227,7 @@ export function installInstructionDebugEvents({cpu, machine, cpuId, timeDomain, 
 
     hooks.ours.write = (address, value) => {
       if (accesses) accesses.push({kind: 'memory', memory: {
-        space: 'mem', address: address & 0xffff, width: 1, direction: 'write', value: value & 0xff
+        space: 'mem', address: address & addressMask, width: 1, direction: 'write', value: value & 0xff
       }});
       return hooks.write.call(cpu, address, value);
     };
