@@ -353,6 +353,9 @@ async function targetWith(hex) {
     const t = createEmu8051DebugTarget(wasm);
     wasm.ccall('emu_load_hex', 'number', ['string', 'number'], [hex, hex.length]);
     t.reset();
+    // The build is attached so a case can ASK what this build can do rather
+    // than infer it from an assertion that fails for the wrong reason.
+    t.wasm = wasm;
     return t;
 }
 
@@ -408,6 +411,26 @@ describe('debug target: a watchpoint halt names the byte, not just the PC', () =
     it('reports space, address, new value and previous value', {skip: SKIP}, async () => {
         const t = await targetWith(WATCH_HEX);
         if (!t.capabilities().breakpoints.includes('write')) return;
+
+        // THE BUILD'S CAPABILITY, NAMED, BEFORE THE BEHAVIOUR THAT NEEDS IT.
+        //
+        // The comment above this block says an older build "refuses by name,
+        // which is the honest outcome and is asserted as such rather than
+        // skipped past". `src/emu8051-debug.js:190` really does detect the
+        // capability -- but nothing here asserted it, so on a build predating
+        // the halt-reason exports this case failed as
+        // `expected 'watchpoint', actual 'breakpoint'`: a true statement about
+        // the wrong thing. CI ran exactly that for thirteen runs, because its
+        // pin was OLDER than the ref this file's own prose names.
+        //
+        // So the requirement is checked rather than described. A build without
+        // the exports now fails saying WHICH build it is and what to do.
+        assert.equal(typeof t.wasm._emu_dbg_halt_is_watch, 'function',
+            'this emulator build predates the halt-reason exports (emu8051-stc cf3c7c0). '
+            + 'It cannot tell a watchpoint halt from a breakpoint halt, so the assertions '
+            + 'below would compare a correct expectation against the wrong build — which '
+            + 'is what CI did for thirteen runs. Bump the ref in '
+            + '.github/workflows/ci.yml, or point $EMU8051_JS at a newer build.');
 
         const seen = [];
         t.onHalt((why) => seen.push(why));

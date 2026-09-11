@@ -38,6 +38,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { USBCDC } from 'rp2040js';
 import { createRp2040jsAdapter, FLASH_BASE, BOOT_SP } from '../src/rp2040js-adapter.js';
@@ -47,13 +48,14 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const hex = n => `0x${(n >>> 0).toString(16).padStart(8, '0')}`;
 
 function parseArgs (argv) {
-    const a = { expr: '2.5+1.0', uf2: '/mnt/volume1/code/wt/lego-be-pinleg/artifacts/pico-kaluma/kaluma-rp2-pico-1.2.1.uf2' };
+    const a = { expr: '2.5+1.0', uf2: process.env.BW_KALUMA_UF2 };
     for (let i = 2; i < argv.length; i++) {
         if (argv[i] === '--expr') a.expr = argv[++i];
         else if (argv[i] === '--uf2') a.uf2 = argv[++i];
         else if (argv[i] === '--rom-version') a.romVersion = Number(argv[++i]);
         else if (argv[i] === '--pin') a.pin = Number(argv[++i]);
         else if (argv[i] === '--input-high') a.inputHigh = true;
+        else if (argv[i] === '--any-firmware') a.anyFirmware = true;
     }
     return a;
 }
@@ -82,8 +84,45 @@ function parseUF2 (uf2) {
     return { blocks: nblocks, base, image };
 }
 
+// THE FIRMWARE IS AN ORACLE, AND AN ORACLE MUST NAME ITSELF.
+//
+// This defaulted to an absolute path on one box. A reading taken that way is a
+// fact about that box: the file could be a different Kaluma build, or missing,
+// and nothing printed would have said so. That is the ambient-binding species,
+// and the emu8051 debug suite was silently red in CI for thirteen runs on
+// exactly it -- passing locally against a sibling checkout sixteen commits
+// ahead of the ref CI builds. A green there was a fact about the box too.
+//
+// So: the path comes from $BW_KALUMA_UF2 or --uf2, the refusal names what is
+// missing, and the sha256 of what was actually loaded is CHECKED and PRINTED
+// on every run. "A file is present" is not "the same build the last reading
+// used", and only the digest can tell those apart.
+const KNOWN_SHA256 = '74fde251f1de7153bc16488e15515e2d86e47652f66d86dc589e92b8f54e15ea';
+const KNOWN_NAME = 'kaluma-rp2-pico-1.2.1.uf2';
+
 const args = parseArgs(process.argv);
+if (!args.uf2) {
+    console.error(`no firmware. Set $BW_KALUMA_UF2 or pass --uf2 PATH.
+
+Expected ${KNOWN_NAME}, sha256 ${KNOWN_SHA256}
+(Kaluma 1.2.1, from the project's own release. This probe never fetches: it
+reads a file you already have, so that a reading cannot depend on the network.)`);
+    process.exit(1);
+}
+if (!fs.existsSync(args.uf2)) {
+    console.error(`no firmware at ${args.uf2} -- named rather than left as a stack trace.`);
+    process.exit(1);
+}
 const uf2 = fs.readFileSync(args.uf2);
+const digest = createHash('sha256').update(uf2).digest('hex');
+if (digest !== KNOWN_SHA256 && !args.anyFirmware) {
+    console.error(`firmware is NOT the build this probe's readings were taken against.
+    expected ${KNOWN_SHA256}
+    got      ${digest}
+A different oracle makes every number below a measurement of something else.
+Pass --any-firmware to proceed deliberately.`);
+    process.exit(1);
+}
 const { blocks, base, image } = parseUF2(uf2);
 
 let sha = 'unknown';
@@ -93,6 +132,7 @@ try {
 
 console.log(`bootrom under test  ${sha}  (THIS worktree, not necessarily the pin)`);
 console.log(`firmware            ${path.basename(args.uf2)}  ${blocks} blocks at ${hex(base)}`);
+console.log(`firmware sha256     ${digest}${digest === KNOWN_SHA256 ? '  (the expected build)' : '  *** NOT the expected build ***'}`);
 console.log(`expression          ${JSON.stringify(args.expr)}`);
 console.log('');
 

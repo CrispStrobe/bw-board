@@ -14,7 +14,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
-import { existsSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
@@ -285,4 +285,40 @@ test('a hit under the system temp dir is annotated as volatile', () => {
             `${i.id} resolved to ${hit}, under the shared temp dir, without saying so — `
             + 'a reader cannot tell a stable location from a volatile one');
     }
+});
+
+test('a present FILE oracle reports the digest of what it found', () => {
+    // PRESENCE IS NOT IDENTITY. A row saying `present` cannot say whether the
+    // file is the same one CI has, and on 2026-09-11 that cost thirteen
+    // consecutive red master runs: a suite bound to a sibling emu8051 checkout
+    // on the box, passed 25/25 locally, and failed on CI, which builds its own
+    // WASM from a pinned ref. Nothing in the local run said which build produced
+    // the green.
+    //
+    // The digest does not DETECT that — the census cannot know CI's digest — it
+    // makes the question answerable from one line of either log.
+    const rows = INPUTS.map(i => ({ id: i.id, ...resolve(i) }));
+
+    const files = rows.filter(r => r.present && r.digest !== null && r.digest !== undefined);
+    assert.ok(files.length >= 3,
+        `only ${files.length} present oracles carry a digest — a scan that has stopped `
+        + 'hashing reports the same clean bill of health as one that found nothing to hash');
+
+    for (const r of files) {
+        assert.match(r.digest, /^(sha256:[0-9a-f]{16}|unreadable \(.+\))$/,
+            `${r.id} reports a digest of ${JSON.stringify(r.digest)}, which is neither a `
+            + 'sha256 nor a named refusal — a fabricated digest is worse than none');
+    }
+
+    // A DIRECTORY MUST NOT GET ONE. Hashing a tree is a different and more
+    // expensive claim; reporting a file digest for a directory would be a
+    // confident answer to a question nobody asked.
+    const dirs = rows.filter(r => r.present && r.via && !r.via.startsWith('$')
+        && existsSync(r.via.split(' ')[0]) && statSync(r.via.split(' ')[0]).isDirectory());
+    for (const r of dirs) {
+        assert.equal(r.digest ?? null, null,
+            `${r.id} resolves to a DIRECTORY (${r.via}) and reports a digest — hashing a tree `
+            + 'is a different claim from hashing a file');
+    }
+    assert.ok(dirs.length >= 1, 'no oracle resolves to a directory here, so the rule above is untested');
 });
