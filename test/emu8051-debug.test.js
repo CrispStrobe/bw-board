@@ -383,7 +383,26 @@ describe('debug target: a cycle step is offered only where cycles exist', () => 
 
     it('takes 3 cycle steps and 2 instruction steps to cross the same two instructions', {skip: SKIP}, async () => {
             const t = await targetWith(CYCLE_HEX);
-            if (!t.capabilities().steps.includes('cycle')) return;
+            if (!t.capabilities().steps.includes('cycle')) {
+                // AN EARLY RETURN WAS A PASS, in the file where that shape was
+                // converted yesterday -- my conversion replaced the `skip(t)`
+                // guards and walked past this one, because its condition is a
+                // CAPABILITY rather than a missing oracle and it did not match
+                // the pattern I was looking for.
+                //
+                // The block comment above says an older build "refuses by name,
+                // which is the honest outcome and is asserted as such rather
+                // than skipped past". The sibling case up the file does exactly
+                // that; this one returned. So it asserts the documented
+                // behaviour now, and an old build produces a real result rather
+                // than a silent pass.
+                const refusal = t.step('cycle', 1);
+                assert.match(refusal?.unsupported ?? '', /no cycle step/i,
+                    'this emulator build predates the cycle step (emu8051-stc cf3c7c0) and '
+                    + 'must refuse by name rather than step silently. Bump the ref in '
+                    + '.github/workflows/ci.yml, or point $EMU8051_JS at a newer build.');
+                return;
+            }
 
             const count = async (kind) => {
                 const u = await targetWith(CYCLE_HEX);
