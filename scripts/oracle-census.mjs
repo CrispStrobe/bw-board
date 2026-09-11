@@ -61,7 +61,8 @@
  *
  * @module
  */
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
@@ -72,6 +73,38 @@ const HOME = homedir();
 // `resolve` is already an export of this module, so the path one is imported
 // under a different name rather than shadowed -- the collision made the whole
 // file fail to parse, with an error pointing at the export.
+/**
+ * PRESENCE IS NOT IDENTITY, AND ONLY THE SECOND IS FALSIFIABLE.
+ *
+ * A row saying `present` answers "is there a file at this path". It cannot say
+ * whether the file is the same one CI has -- and on 2026-09-11 that distinction
+ * cost THIRTEEN consecutive red master runs before anyone noticed. The emu8051
+ * debug suite bound to a sibling checkout on this box, passed 25/25 locally, and
+ * failed on CI, which builds its own WASM from a PINNED ref: the two builds
+ * disagree about whether a write halt reports `watchpoint` or `breakpoint`.
+ * Nothing in a local run said which build produced the green.
+ *
+ * So every present file-shaped oracle carries the sha256 of what was actually
+ * found, printed on every run. This does NOT detect a mismatch by itself -- the
+ * census cannot know CI's digest -- but it makes "which build produced this
+ * number" answerable from one line of either log, which is the difference
+ * between a comparison and a bisect.
+ *
+ * A DIRECTORY GETS NO DIGEST rather than a fabricated one: hashing a tree is a
+ * different and more expensive claim, and a wrong digest is worse than none.
+ * Unreadable is reported as unreadable, never as absent.
+ */
+function digestOf (p) {
+    let st;
+    try { st = statSync(p); } catch { return null; }
+    if (st.isDirectory()) return null;
+    try {
+        return 'sha256:' + createHash('sha256').update(readFileSync(p)).digest('hex').slice(0, 16);
+    } catch (error) {
+        return `unreadable (${error.code || error.message})`;
+    }
+}
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
@@ -567,6 +600,7 @@ export function resolve(input) {
         return {
             present: true,
             via: volatile_ ? `${p} (under ${tmp}: shared and cleared on reboot)` : p,
+            digest: digestOf(p),
         };
     }
     const tried = [input.env ? `$${input.env}` : null, ...input.paths].filter(Boolean);
@@ -668,6 +702,7 @@ if (snapAt >= 0) {
     for (const r of rows) {
         console.log(`${pad(r.id, 20)}${pad(r.kind, 9)}${pad(r.present ? 'present' : 'ABSENT', 9)}`
             + `${pad(r.gates.length, 7)}${r.via}`);
+        if (r.digest) console.log(`${' '.repeat(20)}${r.digest}`);
     }
     const absent = rows.filter((r) => !r.present);
     const gatesLost = absent.reduce((n, r) => n + r.gates.length, 0);
