@@ -47,7 +47,6 @@ import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
 import { I8254 } from './i8254.js';
 import { I8259 } from './i8259.js';
-import { CycleEstimator } from './i8088-timing.js';
 
 /**
  * Opcodes whose cycle-table key carries the modrm reg field: 80-83, D0-D3,
@@ -1297,7 +1296,32 @@ export class I8086Machine {
      * correct. `cycleTimingStats()` reports coverage so the difference between
      * "predicted" and "fell back" is never invisible.
      */
-    enableI8088CycleTiming(on = true) {
+    enableI8088CycleTiming(on = true, {CycleEstimator} = {}) {
+        // THE ESTIMATOR IS INJECTED, NOT IMPORTED, and the reason is 975 KB.
+        //
+        // This file used to `import { CycleEstimator } from './i8088-timing.js'`
+        // at module scope, and that file imports `./i8088-cycles.js` — a single
+        // generated table of 974,864 bytes. Both static, so every bundle carrying
+        // this machine carried the table, for a path that is opt-in, defaults to
+        // null, and that NOTHING in this repo enables.
+        //
+        // Downstream it was not a cost, it was an EXCLUSION: brickwright-lite
+        // could not ship 975 KB in an editor bundle, so it removed the whole
+        // cycle-timing path and declared both files `absentByDesign`. A consumer
+        // dropping a FEATURE to avoid a byte cost is the strongest signal
+        // available that a dependency is in the wrong place — and it made this
+        // file unvendorable, which cost a pin bump an extra divergence.
+        //
+        // Injected, the feature is unchanged for anyone who wants it and free for
+        // everyone who does not. The refusal is BY NAME rather than a TypeError
+        // on `new undefined`, so a caller who forgets learns what to pass.
+        if (on && typeof CycleEstimator !== 'function') {
+            throw new Error(
+                'enableI8088CycleTiming needs its estimator injected: '
+                + "import { CycleEstimator } from './i8088-timing.js' and pass "
+                + '{CycleEstimator}. It is not imported here because its cycle '
+                + 'table is 975 KB and this path is opt-in.');
+        }
         if (on && this.variant === '80186') {
             throw new Error(
                 'i8088 cycle tables do not cover the 80186: the 186 changed both '
