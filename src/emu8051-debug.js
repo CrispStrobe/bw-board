@@ -870,18 +870,27 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             for (let i = 0; i < data.length; i++) {
                 wasm._emu_dbg_write_mem(s, (addr + i) & 0xFFFF, data[i]);
             }
-            // NO PIN DRAIN HERE, AND THAT IS MEASURED RATHER THAN ASSUMED.
-            // The downstream copy drained the native ring at this point, on the
-            // reasoning that a debug write to a port SFR moves a pin. It does
-            // not: `dbg_write_mem` assigns `mSFR[addr - 0x80]` directly and
-            // never dispatches the `sfrwrite` callbacks, so `emit_pin_changes`
-            // — the only writer of the ring — is never reached. Driven at the
-            // pinned build: writing P1 and then P1M0 leaves the native count at
-            // zero. The call could only ever drain edges some earlier run had
-            // already drained, and runFor drains after every run.
-            // test/emu8051-debug-events.test.mjs pins the ABI fact, so a build
-            // that starts routing debug writes through the hooks fails there
-            // rather than silently withholding an edge.
+            // A DRAIN OPPORTUNITY, NOT A CONSEQUENCE OF THE WRITE.
+            //
+            // The write itself moves no pin: `dbg_write_mem` assigns
+            // `mSFR[addr - 0x80]` directly and never dispatches the `sfrwrite`
+            // callbacks, so `emit_pin_changes` — the only writer of the ring —
+            // is not reached. Driven at the pinned build: writing P1 and then
+            // P1M0 leaves the native count unchanged, and a case below pins
+            // that so a build which starts routing debug writes through the
+            // hooks is a red rather than a silently withheld edge.
+            //
+            // THE DRAIN IS STILL LOAD-BEARING, and a previous revision of this
+            // file removed it by reasoning from that measurement to the wrong
+            // conclusion. "The write produces no edge" does not give "there is
+            // nothing to drain": that needs "every edge was produced by
+            // execution this target drove", and a host can advance the
+            // emulator WITHOUT passing through runFor — calling
+            // `wasm._emu_run` on the module it already holds is enough. Edges
+            // from such a window sit in the ring undrained, and `writeMem` is
+            // the next moment this target gets control. A debugger write is
+            // exactly when a caller expects to see them.
+            drainPinHistory();
             return undefined;
         },
 

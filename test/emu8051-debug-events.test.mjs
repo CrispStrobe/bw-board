@@ -307,6 +307,42 @@ describe('emu8051 step evidence: what a retire can and cannot carry', () => {
     });
 });
 
+describe('emu8051 writeMem drains edges this target did not drive', () => {
+    it('flushes a ring filled by execution that never passed through runFor', {skip: SKIP}, async () => {
+        // THE CASE WHOSE ABSENCE LET THE DRAIN BE DELETED. A host can advance
+        // the emulator on the module it already holds — `wasm._emu_run` — so
+        // edges exist that no runFor drained. writeMem is the next moment this
+        // target gets control, and a debugger write is when a caller expects
+        // to see them. Without the drain nothing below arrives, and nothing
+        // else in this suite notices, because every other case reaches the
+        // ring through runFor.
+        const t = await targetWith(TOGGLE_BYTES);
+        assert.equal(typeof t.wasm._emu_run, 'function',
+            'this case needs the raw run export to produce edges out of band');
+
+        const facts = [];
+        t.onDebugEvent((e) => facts.push(e));
+
+        // Out of band on purpose: no runFor, so no drain has happened.
+        t.wasm._emu_run(20000);
+        const produced = t.wasm._emu_pin_history_count() >>> 0;
+        assert.ok(produced > 0,
+            `the out-of-band run produced ${produced} edges, so this case would assert nothing`);
+        assert.equal(facts.length, 0, 'and nothing has been published yet');
+
+        // A write that moves no pin of its own, purely to hand control back.
+        t.writeMem('iram', 0x20, [0]);
+
+        const edges = facts.filter((e) => e.phase === 'pin-change');
+        assert.ok(edges.length > 0,
+            'writeMem published nothing, so edges produced outside runFor are stranded in the '
+            + 'ring. Restore drainPinHistory() in writeMem: the write moving no pin does not '
+            + 'mean there is nothing to drain.');
+        assert.equal(edges[0].fidelity, 'recorded');
+        assert.match(edges[0].signal.name, /^P\d\.\d$/);
+    });
+});
+
 describe('emu8051 onDebugEvent: many listeners, each removable', () => {
     it('rejects a non-function instead of failing at the first fact', {skip: SKIP}, async () => {
         const t = await targetWith(PIN_BYTES);
@@ -356,12 +392,13 @@ describe('emu8051 onDebugEvent: many listeners, each removable', () => {
      * a target that clears the listeners and one that cannot publish at all,
      * and the mutation proved it: deleting the line left this suite green.
      */
-    it('a debug write does not move a pin on this ABI, so no edge is owed', {skip: SKIP}, async () => {
-        // THE ABSENCE IS THE SUBJECT. writeMem deliberately does not drain the
-        // ring, because `dbg_write_mem` assigns the SFR array directly and
-        // never dispatches the `sfrwrite` hooks that feed it. If a future build
-        // routes debug writes through those hooks, this fails and says so —
-        // and the drain in writeMem becomes load-bearing.
+    it('a debug write does not itself move a pin on this ABI', {skip: SKIP}, async () => {
+        // THE ABSENCE IS THE SUBJECT, and it is NOT a licence to drop the drain
+        // in writeMem — see the comment there. This pins only that the write
+        // produces no edge of its own, because `dbg_write_mem` assigns the SFR
+        // array directly and never dispatches the `sfrwrite` hooks that feed
+        // the ring. If a future build routes debug writes through those hooks,
+        // this fails and says so.
         const t = await targetWith(PIN_BYTES);
         const before = t.wasm._emu_pin_history_count() >>> 0;
         t.writeMem('sfr', 0x90, [0x00]);   // P1 latch 0xFF -> 0x00: eight bits
