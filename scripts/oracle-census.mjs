@@ -213,7 +213,8 @@ export const INPUTS = [
         // all. Converting them to a real `skip:` made them visible, and the census
         // immediately said what it says: an external input with no row.
         gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
-            'test/emu8051-debug.test.js', 'test/conformance-real-wasm.test.js',
+            'test/emu8051-debug.test.js', 'test/emu8051-debug-events.test.mjs',
+            'test/conformance-real-wasm.test.js',
             'test/device-drivers-e2e.test.js', 'test/end-to-end-dimmer.test.js',
             'test/motor-e2e.test.js', 'test/rung8-serial-reads.test.js',
             'test/servo-e2e.test.js'],
