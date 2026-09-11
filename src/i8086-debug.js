@@ -219,6 +219,13 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     const debugEvents = installInstructionDebugEvents({
         cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
         addressMask: 0xfffff,
+        // A write fact that says only what the address BECAME cannot tell a
+        // no-op write from a real one, and 8086 code makes no-op writes
+        // constantly through read-modify-write and masked register updates. The
+        // module defaults this off because adding the field changes the fact
+        // shape for every subscriber; this target wants the diff and pays the
+        // extra read per write for it, and only while somebody is listening.
+        captureWriteBefore: true,
         pcOf: c => c.pc & 0xfffff,
         clock: () => machine.cycles,
         captureRegisters: () => machine._architecturalRegisters(),
