@@ -145,6 +145,19 @@ A corrected consumer must count the same initialization/run interval at both
 ends and report active throughput separately from wall pacing. No new capacity
 number is established merely by adding the arithmetic helper.
 
+The corrected browser consumer is integrated at `0da858c`. Combined checks:
+87 native/registered-memory tests, 32 policy/measurement/census tests, and
+22 measurement/chunk tests passed without skips (the latter selections overlap).
+Chromium accepted schema v2, reference/packed/layout memory state hashes,
+all existing native oracles, and the standalone bus's 782 boundaries,
+30 transactions and 36 physical completions. See
+[HARRIS-POLICY-INTEGRATED-BROWSER.json](HARRIS-POLICY-INTEGRATED-BROWSER.json)
+and [HARRIS-POLICY-INTEGRATED-BUILD.json](HARRIS-POLICY-INTEGRATED-BUILD.json).
+This one-round shared-host run measured roughly 5,498 / 13,425 / 13,658
+active modeled periods/s for the three **JavaScript whole-board memory modes**.
+It is correctness/measurement acceptance, not a stable performance comparison,
+native full-board measurement, full DOS run or 4.77 MHz qualification.
+
 ### P6 incremental checkpoint — dirty net queues
 
 The gated incremental C resolver now queues dirty nets and clears only the
