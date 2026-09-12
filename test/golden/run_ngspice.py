@@ -53,8 +53,39 @@ def run_spice(name, netlist, measurements):
         os.unlink(cirfile)
 
 
+# ngspice silently CLAMPS a diode saturation current at this value. A .model
+# line asking for 1e-30 is solved as 1e-28 with no warning on stdout or stderr,
+# and the recorded golden is then a measurement of a device nobody specified.
+#
+# MEASURED: led_blue_470 asked for IS=1e-30 and its recorded v_anode of
+# 3.090935 reproduces bit-identically at IS=1e-28, 1e-30 and 1e-35 -- the deck
+# and the answer had already stopped being about the same diode. Because the
+# error is silent and unbounded (1e-35 gives that same number), a corpus cannot
+# notice it by inspection; only refusing to record it works.
+#
+# For an LED calibrated to drop vf at 20 mA, IS = 0.02 / exp((vf - 0.02*rs)/nVt),
+# so the clamp makes any LED above roughly 2.86 V (n=1.8) unrepresentable here.
+# Such a circuit must be left OUT of the corpus, not recorded wrong.
+NGSPICE_IS_CLAMP = 1e-28
+
+
+def _refuse_clamped_is(name, netlist):
+    """Fail closed on a .model IS ngspice would silently clamp."""
+    for m in re.finditer(r'IS\s*=\s*([0-9.eE+-]+)', netlist):
+        val = float(m.group(1))
+        if val < NGSPICE_IS_CLAMP:
+            raise SystemExit(
+                f"REFUSING to record '{name}': the netlist asks for IS={m.group(1)}, "
+                f"below ngspice's silent clamp of {NGSPICE_IS_CLAMP}. ngspice would solve "
+                f"a DIFFERENT diode and this corpus would record the answer as truth. "
+                f"Either raise IS (equivalently, model a lower-Vf part or a higher n), "
+                f"or leave the circuit out -- an absent oracle is honest, a wrong one is not."
+            )
+
+
 def run_spice_op(name, netlist, nodes):
     """Run operating point analysis and extract node voltages."""
+    _refuse_clamped_is(name, netlist)
     full = netlist + '\n.op\n.end\n'
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.cir', delete=False) as f:
@@ -106,7 +137,14 @@ for r1, r2 in [(1000, 1000), (1000, 2000), (1000, 3000), (2200, 4700),
 
 # 2. LED circuits (diode model: D1N4148-like with modified Vf)
 for r, vf_name in [(220, 'red'), (1000, 'red'), (470, 'blue')]:
-    is_val = {'red': '1e-20', 'blue': '1e-30'}[vf_name]
+    # blue is 1e-28, NOT the 1e-30 this line used to ask for: 1e-30 is below
+    # ngspice's silent clamp, so it was already being solved as 1e-28. Writing
+    # the value that is actually used changes no recorded number -- verified by
+    # regenerating and diffing -- and makes the deck describe the diode the
+    # corpus contains. At n=2.0 and RS=10 this is the highest-Vf blue LED
+    # ngspice can represent (vf ~ 3.34 V at 20 mA); a real 3.5 V part cannot be
+    # oracled here at all and must not be faked with a clamped IS.
+    is_val = {'red': '1e-20', 'blue': '1e-28'}[vf_name]
     n_val = {'red': '1.8', 'blue': '2.0'}[vf_name]
     run_spice_op(f"led_{vf_name}_{r}",
         f"LED circuit {vf_name} R={r}\n"
