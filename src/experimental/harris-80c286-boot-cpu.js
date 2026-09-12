@@ -775,6 +775,71 @@ export class HarrisBootCPU {
         while (this.status === 'running' && clocks < maxClocks) { this.stepClock(); clocks++; }
         return {status: this.status === 'running' ? 'budget-exhausted' : this.status, clocks, retired: this.retired};
     }
+    // Explicit memory-only hybrid path. Each native call still executes every
+    // electrical period. Callers must yield to their event loop between budgets;
+    // this synchronous method does not make a large total budget responsive.
+    runTransactions(options = {}) {
+        if (!options || typeof options !== 'object' || Array.isArray(options) ||
+            Object.keys(options).some(key => !['maxPeriods', 'maxBatchPeriods', 'ready_n', 'signal'].includes(key)))
+            throw new TypeError('unsupported transaction runner options');
+        const {maxPeriods, maxBatchPeriods = 256, ready_n = 0, signal} = options;
+        if (!Number.isSafeInteger(maxPeriods) || maxPeriods < 1) throw new RangeError('maxPeriods');
+        if (!Number.isSafeInteger(maxBatchPeriods) || maxBatchPeriods < 1 || maxBatchPeriods > 8192)
+            throw new RangeError('maxBatchPeriods 1..8192');
+        if (ready_n !== 0 && ready_n !== 1) throw new RangeError('ready_n 0 or 1');
+        if (signal !== undefined && (!signal || typeof signal !== 'object' || typeof signal.aborted !== 'boolean'))
+            throw new TypeError('signal must expose an aborted boolean');
+        if (this.board.capabilities?.transactionBatching !== true ||
+            this.board.capabilities?.nativeMemoryBus !== true || typeof this.board.runUntilCompletion !== 'function' ||
+            this.board.capabilities?.nmi || this.board.capabilities?.intr)
+            throw new CircuitFault('UNSUPPORTED_TRANSACTION_BATCHING', 'explicit native memory-only board required');
+        let periods = 0;
+        const completions = [];
+        const invalid = () => new CircuitFault('INVALID_BATCH_RESULT', 'invalid bounded transaction progress');
+        try {
+            while (this.status === 'running' && periods < maxPeriods) {
+                if (signal?.aborted) { this.cancel(); break; }
+                this.instructionBoundary = false;
+                const budget = Math.min(maxBatchPeriods, maxPeriods - periods);
+                let result;
+                try { result = this.board.runUntilCompletion({maxPeriods: budget, inputs: {ready_n}}); }
+                catch (error) {
+                    // A native fault can follow successful boundaries, including
+                    // the first half of an odd word. Never pump on this path.
+                    const progress = error.progress;
+                    if (progress && Number.isSafeInteger(progress.periods) && progress.periods >= 0 &&
+                        progress.periods <= budget && Array.isArray(progress.completions)) {
+                        periods += progress.periods;
+                        completions.push(...progress.completions);
+                    }
+                    throw error;
+                }
+                if (!result || !Number.isSafeInteger(result.periods) || result.periods < 1 ||
+                    result.periods > budget || typeof result.completed !== 'boolean' ||
+                    !Array.isArray(result.completions) || result.completions.length > result.periods ||
+                    result.completions.length > 2) throw invalid();
+                const last = result.completions.at(-1);
+                if (result.completions.some((transfer, index) => !transfer || typeof transfer.last !== 'boolean' ||
+                    (transfer.last && index !== result.completions.length - 1)) ||
+                    result.completed !== (last?.last === true) ||
+                    (result.completed && (!Number.isInteger(last.operand) || last.operand < 0 || last.operand > 65535)))
+                    throw invalid();
+                periods += result.periods;
+                completions.push(...result.completions);
+                if (result.completed) this._pump(last.operand);
+            }
+        } catch (error) {
+            this.status = 'faulted';
+            this.fault = Object.freeze({code: error.code || 'ERROR', message: error.message});
+            // Retain the original native busClock: a faulting partial period
+            // may advance it, but is not a successfully completed period.
+            error.progress = Object.freeze({...error.progress, stopReason: 'fault', periods,
+                completions: Object.freeze(completions), retired: this.retired});
+            throw error;
+        }
+        return {status: this.status === 'running' ? 'budget-exhausted' : this.status,
+            periods, retired: this.retired, completions};
+    }
     cancel() { if (this.status === 'running') this.status = 'cancelled'; }
     inspect() {
         return {status: this.status, registers: {...this.regs}, cs: this.cs, csBase: this.csBase, ip: this.ip,
