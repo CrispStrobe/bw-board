@@ -81,23 +81,47 @@ test('INVARIANT that holds at any rs: the rated bias gives exactly 20 mA', () =>
         const i = Math.abs(b.branchCurrent('D1', 'anode'));
         assert.ok(Math.abs(i - 0.020) < 1e-5,
             `${kind}: the rated bias must give 20.000 mA by construction, got ${(i * 1e3).toFixed(4)} mA`);
+        // AND the piecewise path must agree there, which is the vf-convention
+        // correction itself: before it, this read 18.7500 mA against 20.0000.
+        const iPwl = chain(5.0, 150, {vf: 2.0, model: 'pwl'});
+        assert.ok(Math.abs(iPwl - 0.020) < 1e-5,
+            `the piecewise path must also give 20.000 mA at the rated bias, got `
+            + `${(iPwl * 1e3).toFixed(4)} mA — vf has stopped meaning the same thing in both paths`);
     }
 });
 
-// MEASURED 2026-09-12 against ngspice (see test/measurements/E13B-CALIBRATION-REDERIVED.md).
-// The piecewise path and the exponential path, same part, same bias. This gap is
-// the device swap, and it may only FALL. Closing it means the coupled change.
-const RATED_BIAS_GAP = 0.0667;
+// MEASURED 2026-09-12, AFTER the vf-convention correction. There were TWO
+// divergences between the paths and they close separately:
+//
+//   the vf CONVENTION  -- piecewise read vf as the knee, exponential as the
+//                         total drop at the rated current. CLOSED: both paths
+//                         now give exactly 20.000 mA at the rated bias, which
+//                         is asserted above and is not a ratchet.
+//   rs versus rd       -- 2 against 10, the same physical quantity. STILL OPEN,
+//                         and it is what the remaining spread is made of:
+//                         6.67% at the rated bias before, 1.83% worst now.
+//
+// This ratchet tracks the SECOND one only, away from the rated bias where the
+// first one used to hide it. It may only fall. Closing it means giving rs and
+// rd one value per kind — and note that a sweep cannot choose that value: it
+// elects whatever RS the reference device was built with (an exact diagonal at
+// RS = 5, 10, 25, 40), because shockleyParams reconstructs the device when rs
+// matches. Pick it from the part, not from a fit.
+const PATH_GAP_OFF_RATED = 0.0183;
 
-test('RATCHET: how far apart the two paths put the same part', () => {
-    const iPwl = chain(5.0, 150, {vf: 2.0, model: 'pwl'});
-    const iShk = chain(5.0, 150, {vf: 2.0, model: 'shockley'});
-    const gap = Math.abs(iShk - iPwl) / iPwl;
-    assert.ok(iPwl > 0 && iShk > 0, 'both paths must have produced a driven current');
-    assert.ok(gap <= RATED_BIAS_GAP + 1e-4,
-        `the two paths now disagree by ${(gap * 100).toFixed(2)}% at the RATED bias, worse than the `
-        + `recorded ${(RATED_BIAS_GAP * 100).toFixed(2)}%. They model one device; this may only fall.`);
-    assert.ok(gap > 0,
-        'the paths agree exactly, which means the divergence is CLOSED — delete this file and its '
+test('RATCHET: the rs-versus-rd half, away from the rated bias', () => {
+    let worst = 0, worstR = 0;
+    for (const r of [100, 220, 470, 1000, 2200]) {
+        const iPwl = chain(5.0, r, {vf: 2.0, model: 'pwl'});
+        const iShk = chain(5.0, r, {vf: 2.0, model: 'shockley'});
+        assert.ok(iPwl > 0 && iShk > 0, `R=${r}: both paths must have produced a driven current`);
+        const gap = Math.abs(iShk - iPwl) / iPwl;
+        if (gap > worst) { worst = gap; worstR = r; }
+    }
+    assert.ok(worst <= PATH_GAP_OFF_RATED + 1e-4,
+        `the two paths now disagree by ${(worst * 100).toFixed(2)}% at R=${worstR}, worse than the `
+        + `recorded ${(PATH_GAP_OFF_RATED * 100).toFixed(2)}%. They model one device; this may only fall.`);
+    assert.ok(worst > 0,
+        'the paths agree everywhere, so rs and rd have been reconciled — delete this file and the '
         + 'JUNCTION_RD note rather than leaving a passing test that describes a fixed defect');
 });

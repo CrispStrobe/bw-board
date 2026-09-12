@@ -20,7 +20,7 @@
 
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
-import { solveMNA, OPAMP_ISHORT_DEFAULT } from './mna.js';
+import { solveMNA, OPAMP_ISHORT_DEFAULT, kneeFromVf } from './mna.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
@@ -3903,8 +3903,15 @@ export class BoardImpl {
    * @param {Part} led
    */
   _solveLedChain(led) {
-    const vf = /** @type {number} */ (led.params.vf ?? LED_VF);
     const rd = LED_RD;
+    // DATASHEET DROP -> PIECEWISE KNEE. `vf` is the total drop at the rated
+    // 20 mA (LED_I_RATED, and what the exponential path calibrates to); this
+    // closed form answers `vf + i*rd`, so it must be given the knee or the
+    // part drops 0.2 V too much and the walker disagrees with the MNA about
+    // the same LED. That disagreement is why nodeVoltage and branchCurrent
+    // had to be corrected in one commit.
+    const vf = kneeFromVf(
+      /** @type {number} */ (led.params.vf ?? LED_VF), rd);
 
     // LED terminals: "anode" and "cathode"
     const anodeNet = this._netForTerminal(led.id, 'anode');

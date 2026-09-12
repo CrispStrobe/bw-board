@@ -8,6 +8,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { kneeFromVf, JUNCTION_RD } from '../mna.js';
 
 // Input pins draw nothing here, on purpose. These models used to declare
 // `ctx.conductance(pin, null, 1 / R_INPUT)` with R_INPUT = 1e6 — a call that
@@ -152,8 +153,13 @@ export function registerDisplayDevices() {
       // offset. `_on` comes from update(), which is the standard
       // stamp-from-the-previous-solution arrangement this device API allows;
       // the built-in led/diode kinds get the solver's Newton-Raphson instead.
-      const vf = part.params?.vForward ?? 2.0;
-      const rd = Math.max(1e-3, part.params?.rDynamic ?? 10);
+      // `vForward` is the DATASHEET drop at this part's own iFull, so the
+      // piecewise companion below must be given the knee — the same
+      // conversion the led/diode stamp does, with this part's rating rather
+      // than the global one. rDynamic defaults to JUNCTION_RD so the bargraph
+      // and the built-in kinds describe the same junction.
+      const rd = Math.max(1e-3, part.params?.rDynamic ?? JUNCTION_RD);
+      const vf = kneeFromVf(part.params?.vForward ?? 2.0, rd, part.params?.iFull ?? 0.02);
       const g = 1 / rd;
       for (let i = 0; i < 10; i++) {
         if (state?._on?.[i]) {
@@ -167,9 +173,11 @@ export function registerDisplayDevices() {
     },
 
     update(part, state, read) {
-      const vf = part.params?.vForward ?? 2.0;
-      const rd = Math.max(1e-3, part.params?.rDynamic ?? 10);
+      const rd = Math.max(1e-3, part.params?.rDynamic ?? JUNCTION_RD);
       const iFull = part.params?.iFull ?? 0.02;   // 20 mA is a lit segment
+      // Same knee the stamp used. If these two ever disagree the device
+      // decides "on" against one model and reports brightness from another.
+      const vf = kneeFromVf(part.params?.vForward ?? 2.0, rd, iFull);
       let changed = false;
       for (let i = 0; i < 10; i++) {
         const v = (read(`a${i}`) ?? 0) - (read(`k${i}`) ?? 0);

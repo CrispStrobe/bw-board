@@ -24,8 +24,7 @@
 
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA,
-  shockleyParams, shockleyEval, shockleyJunctionFromTotal,
-} from './mna.js';
+  shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
 
@@ -38,7 +37,9 @@ const VT = 0.02585;
 function junctionG(part, vAcross, vf, rd) {
   const opts = junctionOpts(part);
   if (!opts) {
-    // C1 PWL knee: derivative of pwlKneeCurrent.
+    // C1 PWL knee: derivative of pwlKneeCurrent, at the SAME knee the DC
+    // stamp used. `vf` arrives here already converted for led/diode (see the
+    // call site); BJT callers pass vbe, which is a knee and stays one.
     const EPS = 0.025;
     if (vAcross < vf - EPS) return 1e-9;
     if (vAcross > vf + EPS) return 1 / rd;
@@ -242,7 +243,13 @@ export function acSweep(args) {
           const na = netOf(part.id, 'anode');
           const nc = netOf(part.id, 'cathode');
           const vf = P.vf ?? (part.kind === 'diode' ? 0.7 : 2.0);
-          addG2(na, nc, junctionG(part, vOp(na) - vOp(nc), vf, 10));
+          // Datasheet drop -> knee, matching the DC stamp. The small-signal
+          // answer must be the derivative of the model that was stamped, so
+          // this conversion is not optional: skipping it would linearise a
+          // different device than the one the operating point came from.
+          const acOpts = junctionOpts(part);
+          addG2(na, nc, junctionG(part, vOp(na) - vOp(nc),
+            acOpts ? vf : kneeFromVf(vf, JUNCTION_RD), JUNCTION_RD));
           break;
         }
         case 'zener': {

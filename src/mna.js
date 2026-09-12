@@ -299,6 +299,43 @@ export const MNA_HEADROOM_V = 2.0;
 export const JUNCTION_RD = 10;
 
 /**
+ * The current at which a junction's `vf` is specified, in amps. A datasheet
+ * gives an LED as `Vf @ If = 20 mA`; the number is meaningless without it.
+ * Matches board.js LED_I_RATED, which normalises brightness by the same value.
+ */
+export const JUNCTION_I_RATED = 0.020;
+
+/**
+ * The PIECEWISE KNEE for a part whose `vf` is the DATASHEET total drop.
+ *
+ * The piecewise model answers `vf + i*rd`, so feeding it the datasheet drop
+ * makes the part drop `vf + 0.020*rd` at its own rated current -- 0.2 V too
+ * much for an LED, which is why the piecewise path read 18.75 mA where the
+ * exponential path read exactly 20.000 mA at the rated bias. The exponential
+ * path already calibrates the TOTAL drop to vf (`shockleyParams`:
+ * `vJrated = vf - 0.020*rs`); this is the same subtraction for the other path,
+ * so one `vf` means one thing in both.
+ *
+ * MEASURED against ngspice: applying this takes the piecewise path from
+ * -7.13/-9.14/-14.39 % to -0.58/-2.74/-4.14 % on the three corpus LED devices.
+ *
+ * ONLY FOR CLASSES THAT HAVE A RATED CURRENT AND A DATASHEET COUNTERPART --
+ * led and diode. Zener forward drop and BJT `vbe` are deliberately NOT passed
+ * through here: they can never reach the exponential path (stampZener,
+ * stampNPN and stampPNP hold no reference to it), so there is no second answer
+ * for them to agree with, and 0.020 A is the LED's rating, not theirs. 0.7 is
+ * equally the knee number for a silicon junction, so the corpus gives no tell.
+ * test/junction-knee-classes.test.mjs pins that exclusion with its reasons.
+ *
+ * `iRated` is a parameter because the rating is a property of the PART, not a
+ * constant: the bargraph carries its own `iFull`, and a knee derived from the
+ * wrong rating is exactly the error this function exists to remove, one level
+ * down. Callers with no rating of their own must not call it at all.
+ */
+export const kneeFromVf = (vf, rd = JUNCTION_RD, iRated = JUNCTION_I_RATED) =>
+  vf - iRated * rd;
+
+/**
  * The model this junction will actually be solved with.
  *
  * `headroomV` is the supply margin over the total forward drop, or undefined
@@ -424,7 +461,8 @@ const VT_25C = 0.02585;
 function junctionCurrent(part, vAcross, vf, rd) {
   const opts = junctionOpts(part);
   if (!opts) {
-    return pwlKneeCurrent(vAcross, vf, rd);
+    // Must match what was stamped, which now feeds the knee, not the datasheet vf.
+    return pwlKneeCurrent(vAcross, kneeFromVf(vf, rd), rd);
   }
   const VT = 0.02585;
   // Total-voltage evaluation of the composite: recover the junction
@@ -2143,7 +2181,11 @@ function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const rd = 10;
 
   const vAcross = diodeVoltages.get(part.id) ?? 0;
-  const { gEq, iEq } = diodeCompanion(vAcross, vf, rd, junctionOpts(part));
+  // The PWL branch wants the knee; the Shockley branch wants the datasheet
+  // drop and already subtracts rs itself. Converting HERE rather than inside
+  // diodeCompanion keeps the BJT callers (which pass vbe, a knee) untouched.
+  const jOpts = junctionOpts(part);
+  const { gEq, iEq } = diodeCompanion(vAcross, jOpts ? vf : kneeFromVf(vf, rd), rd, jOpts);
 
   const idxA = anodeNet ? nodeIndex.get(anodeNet) : undefined;
   const idxC = cathodeNet ? nodeIndex.get(cathodeNet) : undefined;
