@@ -60,6 +60,7 @@ export async function createHarrisNativeMemoryBoard(options = {}) {
         resetWorkCounters: native.resetWorkCounters,
         inspectProducerCounters: native.inspectProducerCounters,
         resetProducerCounters: native.resetProducerCounters,
+        inspectMemoryAdmission: native.inspectMemoryAdmission,
         ...(stageAttribution ? {inspectStageAttribution: native.inspectStageAttribution,
             resetStageAttribution: native.resetStageAttribution} : {}),
         inspectMemory(id) {

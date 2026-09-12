@@ -483,7 +483,7 @@ is the honest interim.
 
 ---
 
-## Backends and licence policy (verified against primary sources, 2026-08-23)
+## Backends and licence policy (verified against primary sources, 2026-08-23; rows below the spice-ts one added 2026-09-12)
 
 The engine stays ours. No permissive drop-in replacement carries our boundary
 contracts, honesty rules, or MCU coupling. External engines serve as **oracles only**
@@ -499,6 +499,11 @@ For anyone touching E1.1/E2.1, the licence map:
 | Eigen SparseLU | MPL-2.0 (master; build `EIGEN_MPL2_ONLY`) | Acceptable at file level if a WASM route is ever preferred over JS; JS-native is the default plan. |
 | SuperLU | BSD-3 | OK as a reference; exclude its non-free MC64 ILU path. |
 | @spice-ts/core (pure-TS engine) | MIT | OK to adapt specific pieces (sparse LU, pnjlim, LTE step control) **with attribution in THIRD-PARTY.md**. Too young (2026-04, ~20 stars) to depend on as a package. |
+| eecircuit-engine (the optional `simulator: 'ngspice-wasm'` backend behind spice-ts) | ngspice WASM build | Same ruling as the ngspice WASM row: **NOT bundleable** (numparam). Do not pull it in transitively through spice-ts. |
+| thevenin (Rust crate `cramt/thevenin`, v0.5.0 2026-07, created 2026-03) | BSD-3-Clause | Equations/structure reference and a **second oracle** beside ngspice: ngspice-dialect netlists, `.control` scripts, BSIM/VBIC/Gummel-Poon, wasm32 target. Too young to depend on; not an engine candidate (no MCU pin coupling, no device layer, no boundary contracts). |
+| sindr (Rust crates `sindr` + `sindr-devices`, 0.1.0-alpha.6, created 2026-05) | MIT OR Apache-2.0 | Reference only. Alpha; backward-Euler transient; narrower than `mna.js` already is. |
+| WRspice (wrcad/xictools) | Apache-2.0 | Oracle only. Desktop C++ suite aimed at superconducting design, no WASM route; adds nothing over ngspice as an oracle. |
+| JoSIM | MIT | Not applicable: RCSJ Josephson-junction model, transient-only. |
 | SpiceSharp (C#) | MIT | Equation/structure reference and oracle only; its BSIM add-on repo has NO licence file — do not touch that repo. |
 | Berkeley BSIM | UC-permissive (BSD-like + "no charging for the UC code") | OK if ever needed; explicitly out of scope for E3. |
 | Open-PDK model cards (sky130, gf180mcu, SG13G2) | Apache-2.0 | OK. |
@@ -506,6 +511,8 @@ For anyone touching E1.1/E2.1, the licence map:
 | GPL simulators/engines (any) | GPL | Oracle only, never in the dependency graph, never read for implementation. |
 
 Every adapted-code landing updates `THIRD-PARTY.md` in the same commit.
+
+Ruling, restated 2026-09-12 after the question "should the app use thevenin / sindr / spice-ts / WRspice / libngspice / JoSIM": **no**. The engine stays ours; every row above is an oracle or an equation source, never a dependency. What a lesson can't model goes through E3.x and a `spec-updates/` file, not through an engine swap.
 
 ## E6 — The 8086 tier (scoped 2026-09-03, owner-requested)
 

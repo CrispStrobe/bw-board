@@ -810,7 +810,12 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                         ...(checkpointSupport().supported ? {version: CHECKPOINT_VERSION,
                             buildId: CHECKPOINT_BUILD_ID, size: checkpointSize} :
                             {code: checkpointSupport().code || checkpointCode,
-                                reason: checkpointSupport().reason,
+                                // A reason is named or absent, never an undefined-valued
+                                // key: consumers compare this refusal shape exactly
+                                // (brickwright-lite's checkpoint-refusal contract), and
+                                // `reason: undefined` is a key that says nothing. Same
+                                // rule as unavailableCheckpointRefusal below.
+                                ...(checkpointSupport().reason ? {reason: checkpointSupport().reason} : {}),
                                 missing: [...CHECKPOINT_MISSING]})
                     }
                 }

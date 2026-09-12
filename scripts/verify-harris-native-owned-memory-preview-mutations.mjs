@@ -22,7 +22,7 @@ const mutations=[
         from:'#ifdef NATIVE_STAGE_ATTRIBUTION\n    STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);\n    #endif\n    for(u32 b=0;b<banks;b++) {',
         to:'#ifdef NATIVE_STAGE_ATTRIBUTION\n    STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);\n    #endif\n    for(u32 b=0;b<1;b++) {'},
     {name:'owned preview ABI version is stale',pattern:'owned circuit memory preview',file:'memory-circuit.c',
-        from:'u32 memory_circuit_version(void){return 3;}',to:'u32 memory_circuit_version(void){return 2;}'}
+        from:'u32 memory_circuit_version(void){return 4;}',to:'u32 memory_circuit_version(void){return 3;}'}
 ];
 for(const mutation of mutations){
     const sandbox=mkdtempSync(join(tmpdir(),'harris-owned-memory-preview-mutant.'));
