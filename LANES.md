@@ -1,5 +1,12 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-12 R1 hybrid CPU integration — ACTIVE, Codex root, user-requested actual
+wired execution/performance coding. Isolated `feat/harris-hybrid-cpu-integration`
+from upstream `6e4327c393ae6f57beb09d345a3aa91be1393729`; adapter worker owns
+`feat/harris-native-memory-board-r1`, CPU worker owns
+`feat/harris-boot-cpu-batching`, both from `7fbdfa9`. Root owns differential
+integration tests, benchmark and docs. No app pin/default/merge/deploy change.
+
 Created 2026-09-04, at `lego-47`'s request, because the fleet's 8086 work now
 runs across a dozen worktrees and the claims had nowhere in THIS repo to live.
 The protocol is brickwright-lite's `LANES.md`, unchanged, and that file remains
