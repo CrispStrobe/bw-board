@@ -8,8 +8,9 @@ typedef unsigned char u8;
 extern u32 resolve_nets(u32,u32,const u32*,const u32*,const u8*,u8*,u8*);
 extern void evaluate_owned_operations(u32,const u32*,const u8*,u8*,const u32*,const u32*,const u8*);
 static u32 driver_net[LIMIT];
-static u8 queued_driver[LIMIT],dirty[LIMIT];
-static u32 driver_queue[LIMIT],dirty_queue[LIMIT],changed_queue[LIMIT],driver_count,dirty_count,changed_count;
+static u8 queued_driver[LIMIT],dirty[LIMIT],queued_publish[LIMIT];
+static u32 driver_queue[LIMIT],dirty_queue[LIMIT],changed_queue[LIMIT],publish_queue[LIMIT];
+static u32 driver_count,dirty_count,changed_count,publish_count;
 /* Test-visible u32 work counters wrap modulo 2^32. They observe work only;
  * admission and policy do not read them. Keep the order in sync with
  * memory-circuit.js. Driver comparisons count native work; the permitted JS
@@ -33,10 +34,10 @@ static u32 write_driver(const u32 *c,u32 id,u32 code,u32 count_comparison) {
 u32 write_owned_driver(const u32 *c,u32 id,u32 code){return write_driver(c,id,code,1);}
 u32 admit_incremental_context(const u32 *c) {
     if(c[0]>LIMIT||c[1]>LIMIT)return 7;
-    driver_count=0;dirty_count=0;changed_count=0;
+    driver_count=0;dirty_count=0;changed_count=0;publish_count=0;
     for(u32 d=0;d<c[1];d++){driver_net[d]=NONE;queued_driver[d]=0;}
     for(u32 n=0;n<c[0];n++) {
-        dirty[n]=0;
+        dirty[n]=0;queued_publish[n]=0;
         for(u32 p=W(2)[n];p<W(2)[n+1];p++) {
             const u32 d=W(3)[p];
             if(driver_net[d]!=NONE)return 6; // Require a bijective driver membership image.
@@ -65,17 +66,30 @@ static u32 resolve_dirty(const u32 *c) {
         for(u32 p=W(2)[n];p<W(2)[n+1];p++){incremental_work[3]++;u8 code=B(4)[W(3)[p]];if(code!=3)mask|=1u<<code;}
         u8 conflict=(mask&3)==3;
         B(5)[n]=!mask?3:conflict||(mask&4)?2:(mask&1)?0:1;B(6)[n]=conflict;
+        if((B(5)[n]!=B(10)[n]||B(6)[n]!=B(11)[n])&&!queued_publish[n]){
+            if(publish_count==LIMIT)return NONE; // Dedup makes this unreachable for a valid admitted graph.
+            queued_publish[n]=1;publish_queue[publish_count++]=n;
+        }
         if(B(5)[n]!=B(16)[n]){B(17)[n]=1;changed_queue[changed_count++]=n;B(16)[n]=B(5)[n];}
     }
     dirty_count=0;return changed_count;
 }
 static void publish_incremental(const u32 *c) {
-    for(u32 n=0;n<c[0];n++){incremental_work[8]++;B(10)[n]=B(5)[n];B(11)[n]=B(6)[n];}
+    // A net can leave and return to its published state across deltas. Keep one
+    // candidate until a successful fixpoint, then copy only its final state.
+    for(u32 i=0;i<publish_count;i++){
+        const u32 n=publish_queue[i];queued_publish[n]=0;
+        if(B(10)[n]!=B(5)[n]||B(11)[n]!=B(6)[n]){
+            incremental_work[8]++;B(10)[n]=B(5)[n];B(11)[n]=B(6)[n];
+        }
+    }
+    publish_count=0;
 }
 u32 settle_incremental_context(const u32 *c) {
     for(u32 delta=0;delta<c[12];delta++) {
         incremental_work[9]++;
         const u32 resolved_changed=resolve_dirty(c);
+        if(resolved_changed==NONE)return 0x80000007u;
         // Driver changes masked on a net do not schedule pure evaluators.
         // Conflict-only changes still publish their diagnostics below.
         if(!resolved_changed){publish_incremental(c);return delta+1;}
@@ -87,6 +101,7 @@ u32 settle_incremental_context(const u32 *c) {
         }}
         if(!changed){publish_incremental(c);return delta+1;}
     }
-    // Keep pending-driver/live history, but do not publish a failed fixpoint.
+    // Keep pending-driver/live and publication queues, but do not publish a
+    // failed fixpoint. A later successful settle commits every retained net.
     return 0x80000003u;
 }

@@ -39,7 +39,7 @@ test('work counters observe existing full and incremental loops and reset withou
     assert.equal(incremental.step([3,3,2,3]),1);
     assert.deepEqual(incremental.counters(),{
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:0,dependencyProbes:0,
-        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
+        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:0,deltas:1
     });
     const state=incremental.inspect();incremental.resetCounters();
     assert.deepEqual(incremental.counters(),Object.fromEntries(WORK_COUNTERS.map(name=>[name,0])));
@@ -47,7 +47,7 @@ test('work counters observe existing full and incremental loops and reset withou
     assert.equal(incremental.step([3,3,2,3]),1);
     assert.deepEqual(incremental.counters(),{
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:0,netDriverVisits:0,evaluatorRows:0,dependencyProbes:0,
-        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
+        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:0,deltas:1
     });
     checked.resetCounters();assert.equal(checked.step([3,3,2,3]),1);
     assert.deepEqual(checked.counters(),{
@@ -103,7 +103,10 @@ test('incremental resolver matches checked deltas through X/Z, masked changes an
     const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
     const step=levels=>{assert.equal(incremental.step(levels),checked.step(levels));assert.deepEqual(incremental.inspect(),checked.inspect());};
     step([1,0,3,3]);step([1,0,1,0]);assert.equal(incremental.inspect().publishedConflicts[2],1);
-    step([1,0,2,3]);assert.equal(incremental.inspect().publishedConflicts[2],0);assert.equal(incremental.inspect().drivers[2],2);
+    incremental.resetCounters();step([1,0,2,3]);
+    assert.equal(incremental.inspect().publishedConflicts[2],0);assert.equal(incremental.inspect().drivers[2],2);
+    assert.equal(incremental.counters().evaluatorRows,0,'conflict-only publication does not schedule a value consumer');
+    assert.equal(incremental.counters().publishNetCopies,1,'conflict-only publication commits its diagnostic');
     let seed=0x12345678;
     for(let i=0;i<1024;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;step([seed&3,(seed>>>4)&3,(seed>>>8)&3,(seed>>>12)&3]);}
 });
@@ -112,6 +115,27 @@ test('incremental nonconvergence preserves published state and recovers using pe
     assert.equal(incremental.step([0,0,0]),0x80000003);assert.equal(checked.step([0,0,0]),0x80000003);
     assert.deepEqual(incremental.inspect(),checked.inspect());assert.deepEqual(incremental.inspect().published,[2,0,0]);
     assert.equal(incremental.step([2,0,0]),checked.step([2,0,0]));assert.deepEqual(incremental.inspect(),checked.inspect());
+    assert.equal(incremental.counters().publishNetCopies,0,'a queued net that returns to its published state is not copied');
+    const retained=await rawKernel({incremental:true,oscillator:true});retained.resetCounters();
+    assert.equal(retained.step([0,1,0]),0x80000003);assert.deepEqual(retained.inspect().published,[2,0,0]);
+    retained.resetCounters();assert.equal(retained.step([2,1,0]),1);
+    assert.deepEqual(retained.inspect().published,[2,1,0],'successful recovery commits a stable candidate retained across failure');
+    assert.equal(retained.counters().publishNetCopies,1,'only the retained final difference is copied');
+    const readmitted=await rawKernel({incremental:true,oscillator:true});
+    assert.equal(readmitted.step([0,1,0]),0x80000003);
+    readmitted.v.setUint32(readmitted.p.context,1,true);readmitted.v.setUint32(readmitted.p.context+4,1,true);
+    readmitted.v.setUint32(readmitted.p.context+7*4,0,true);readmitted.v.setUint32(readmitted.p.context+15*4,0,true);
+    new Uint8Array(readmitted.e.memory.buffer,readmitted.p.published,3)[1]=77;
+    assert.equal(readmitted.e.admit_owned_context(readmitted.p.context),0);
+    assert.notEqual(readmitted.e.settle_owned_context(readmitted.p.context)>>>0,0x80000003);
+    assert.equal(new Uint8Array(readmitted.e.memory.buffer,readmitted.p.published,3)[1],77,
+        're-admission of a smaller graph discards publication candidates from the old graph');
+});
+test('publication candidate queue stays bounded across repeated failed fixpoints',native,async()=>{
+    const k=await rawKernel({incremental:true,oscillator:true});
+    for(let i=0;i<9000;i++)assert.equal(k.step([0,1,0]),0x80000003);
+    assert.deepEqual(k.inspect().published,[2,0,0],'no failed fixpoint becomes observable');
+    assert.equal(k.step([2,1,0]),1);assert.deepEqual(k.inspect().published,[2,1,0]);
 });
 test('incremental dirty queues initialize unchanged drivers and clear prior changed flags on idle settling',native,async()=>{
     const checked=await rawKernel({previousImage:[0,0,0]}),incremental=await rawKernel({incremental:true,previousImage:[0,0,0]});

@@ -18,8 +18,11 @@ const artifact=(path,revision)=>{
 };
 const before=artifact(process.env.HARRIS_COMPARE_WASM,process.env.HARRIS_COMPARE_REVISION);
 const after=artifact(process.env.HARRIS_NET_WASM,process.env.HARRIS_FRONTIER_REVISION??'working-tree');
-const modes=[{name:'admitted-full-scan',artifact:before,incremental:false},{name:'incremental-scan',artifact:before,incremental:true},
-    {name:'incremental-driver-frontier',artifact:after,incremental:true}];
+const publication=process.env.HARRIS_FRONTIER_KIND==='publication';
+const modes=publication?
+    [{name:'incremental-driver-frontier',artifact:before,incremental:true},{name:'incremental-publication-frontier',artifact:after,incremental:true}]:
+    [{name:'admitted-full-scan',artifact:before,incremental:false},{name:'incremental-scan',artifact:before,incremental:true},
+        {name:'incremental-driver-frontier',artifact:after,incremental:true}];
 const normalize=value=>value instanceof Uint8Array?Array.from(value):Array.isArray(value)?value.map(normalize):value&&typeof value==='object'?
     Object.fromEntries(Object.entries(value).map(([k,v])=>[k,normalize(v)])):value;
 const snapshot=kernel=>{
@@ -84,7 +87,7 @@ async function rawKernel(mode,{oscillator=false}={}) {
 async function rawCases(mode) {
     const k=await rawKernel(mode),out={};
     for(const [name,levels] of [['idle',[3,3,2,3]],['one-host-pin-change',[1,3,2,3]],['x-z',[1,0,3,3]],
-        ['conflict',[1,0,1,0]],['masked-same-net',[1,0,2,0]],['conflict-only',[1,0,2,3]]]){
+        ['conflict',[1,0,1,0]],['conflict-only',[1,0,2,3]],['masked-same-net',[1,0,2,0]]]){
         k.e.reset_incremental_work_counters();const result=k.step(levels);out[name]={result,counters:k.counters(),stateSHA256:digest(JSON.stringify(k.inspect()))};
     }
     const o=await rawKernel(mode,{oscillator:true});o.e.reset_incremental_work_counters();const failed=o.step([0,0,0]),failedHash=digest(JSON.stringify(o.inspect()));
@@ -102,7 +105,20 @@ for(const name of Object.keys(raw[modes[0].name]))for(const field of Object.keys
 const median=a=>{const s=[...a].sort((x,y)=>x-y),i=Math.floor(s.length/2);return s.length%2?s[i]:(s[i-1]+s[i])/2;};
 const summaries=Object.fromEntries(modes.map(mode=>{const own=samples.filter(s=>s.mode===mode.name),times=own.map(s=>s.elapsedMS);
     return [mode.name,{medianMS:median(times),minMS:Math.min(...times),maxMS:Math.max(...times),counters:own[0].counters}];}));
-const report={benchmark:'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
+if(publication){
+    const prior=modes[0].name,current=modes[1].name,counterNames=Object.keys(summaries[prior].counters);
+    assert.equal(categories[current]['empty-input-period'].publishNetCopies,0,'empty input publishes no net copies');
+    assert.ok(summaries[current].counters.publishNetCopies<summaries[prior].counters.publishNetCopies,'total publication copies decrease');
+    for(const name of counterNames.filter(name=>name!=='publishNetCopies')){
+        assert.equal(summaries[current].counters[name],summaries[prior].counters[name],`${name} summary differs`);
+        for(const category of Object.keys(categories[prior]))
+            assert.equal(categories[current][category][name],categories[prior][category][name],`${category} ${name} differs`);
+    }
+    for(const name of Object.keys(raw[prior]))for(let i=0;i<10;i++)if(i!==8)
+        assert.equal(raw[current][name].counters?.[i]??raw[current][name].recoveryCounters[i],
+            raw[prior][name].counters?.[i]??raw[prior][name].recoveryCounters[i],`${name} counter ${i} differs`);
+}
+const report={benchmark:publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
     benchmarkSHA256:digest(readFileSync(new URL(import.meta.url))),
     revisions:Object.fromEntries(modes.map(m=>[m.name,m.artifact.revision])),builds:{before:before.build,after:after.build},
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length,node:process.version},summaries,categories,raw,samples,
