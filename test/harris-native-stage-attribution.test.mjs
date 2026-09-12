@@ -15,6 +15,8 @@ function assertDerivedStageCounterSources(files){
     assert.equal((preview.match(/\breturn\b/g)??[]).length,2,'both enabled and disabled exit macros return directly');
     assert.doesNotMatch(preview,/STAGE_ADD\(STAGE_MEMORY_PREVIEW_BANKS,1\)|STAGE_ADD\(STAGE_MEMORY_PREVIEW_STATE_WORD_COPIES,WORDS\)/);
     for(const formula of ['MAPPING_RETURN(2,i+1)','MAPPING_RETURN(3,banks*28+i*(i+1)/2+1)','MAPPING_RETURN(4,banks*28+i*(i+1)/2+j+2)','MAPPING_RETURN(0,banks*28+(banks*8)*(banks*8+1)/2)'])assert.ok(memory.includes(formula),formula);
+    for(const formula of ['INLINE_MAPPING_FAILURE(2,i+1)','INLINE_MAPPING_FAILURE(3,banks*28+i*(i+1)/2+1)','INLINE_MAPPING_FAILURE(4,banks*28+i*(i+1)/2+j+2)','STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28+(banks*8)*(banks*8+1)/2)'])assert.ok(memory.includes(formula),formula);
+    assert.match(memory,/STAGE_ADD\(STAGE_MEMORY_WRITER_PUBLICATIONS,publications\);\n                    #endif\n                    fault\[0\]=1;fault\[1\]=2;return 1;/);
     for(const formula of ['PHASE_MAPPING_RETURN(reject_phase(p,4,6,i,fault),i+1)','PHASE_MAPPING_RETURN(reject_phase(p,4,7,i,fault),6+i+1)','PHASE_MAPPING_RETURN(reject_phase(p,4,8,i,fault),13+i+1)','PHASE_MAPPING_RETURN(reject_phase(p,4,9,i,fault),40+i+1)','PHASE_MAPPING_RETURN(0,66)'])assert.ok(phase.includes(formula),formula);
     for(const formula of ['BUS_MAPPING_RETURN(failure(p,8,2,i,fault),i+1)','BUS_MAPPING_RETURN(failure(p,8,2,i,fault),24+i+1)','BUS_MAPPING_RETURN(failure(p,8,2,i,fault),72+i+1)','BUS_MAPPING_RETURN(0,72+p[6])'])assert.ok(bus.includes(formula),formula);
     assert.match(phase,/if\(p\[2\]>1\|\|p\[3\]>1\)return reject_phase/);assert.match(bus,/if\(p\[6\]>128\)return failure/);
@@ -85,7 +87,12 @@ test('moved memory mutations retain unique selectors and named reds',()=>{const 
 });
 test('stage counters aggregate preview writes and derive exact early-exit visit totals',()=>{const files={banks:source('src/experimental/wired-kernel/memory-banks.c'),memory:source('src/experimental/wired-kernel/memory-circuit.c'),phase:source('src/experimental/wired-kernel/phase-circuit.c'),bus:source('src/experimental/wired-kernel/bus-circuit.c')};
     assert.doesNotThrow(()=>assertDerivedStageCounterSources(files));
-    const mutations=[['banks','#define PREVIEW_VISIT() stage_visited++','#define PREVIEW_VISIT() ((void)0)'],['banks','PREVIEW_RETURN(error);','return error;'],['memory','banks*28+i*(i+1)/2+j+2','banks*28+i+j+2'],['phase','40+i+1','40+i'],['bus','72+p[6]','72']];
+    const mutations=[['banks','#define PREVIEW_VISIT() stage_visited++;','#define PREVIEW_VISIT()'],['banks','PREVIEW_RETURN(error);','return error;'],
+        ['memory','INLINE_MAPPING_FAILURE(4,banks*28+i*(i+1)/2+j+2)','INLINE_MAPPING_FAILURE(4,banks*28+i+j+2)'],
+        ['memory','STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28+(banks*8)*(banks*8+1)/2)','STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28)'],
+        ['memory','STAGE_ADD(STAGE_MEMORY_WRITER_PUBLICATIONS,publications);\n                    #endif\n                    fault[0]=1;fault[1]=2;return 1;',
+            '(void)publications;\n                    #endif\n                    fault[0]=1;fault[1]=2;return 1;'],
+        ['phase','40+i+1','40+i'],['bus','72+p[6]','72']];
     for(const [file,from,to] of mutations){const changed={...files,[file]:files[file].replace(from,to)};assert.notEqual(changed[file],files[file],from);assert.throws(()=>assertDerivedStageCounterSources(changed),undefined,from);}
 });
 test('legacy producer receipt keeps C and exact header provenance separate',()=>{const runner=source('scripts/measure-harris-hybrid-producers.mjs');assert.match(runner,/assert\.match\(path, \/\^src\\\/experimental\\\/wired-kernel\\\/\[a-z-\]\+\\\.c\$\//);assert.match(runner,/assert\.deepEqual\(Object\.keys\(build\.headerHashes \?\? \{\}\), \[headerPath\]\)/);
