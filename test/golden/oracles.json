@@ -105,8 +105,8 @@
         "r_pin": 25
       },
       "expected": {
-        "current_mA": 11.764706,
-        "brightness": 0.588235
+        "current_mA": 12.54902,
+        "brightness": 0.627451
       }
     },
     {
@@ -120,8 +120,8 @@
         "r_pin": 25
       },
       "expected": {
-        "current_mA": 8.219178,
-        "brightness": 0.410959
+        "current_mA": 8.767123,
+        "brightness": 0.438356
       }
     },
     {
@@ -135,8 +135,8 @@
         "r_pin": 25
       },
       "expected": {
-        "current_mA": 2.898551,
-        "brightness": 0.144928
+        "current_mA": 3.091787,
+        "brightness": 0.154589
       }
     },
     {
@@ -150,8 +150,8 @@
         "r_pin": 25
       },
       "expected": {
-        "current_mA": 3.564356,
-        "brightness": 0.178218
+        "current_mA": 3.960396,
+        "brightness": 0.19802
       }
     },
     {
@@ -165,8 +165,8 @@
         "r_pin": 25
       },
       "expected": {
-        "current_mA": 1.73913,
-        "brightness": 0.086957
+        "current_mA": 1.932367,
+        "brightness": 0.096618
       }
     },
     {
@@ -180,7 +180,7 @@
         "r_pin": 25
       },
       "expected": {
-        "current_mA": 23.703704,
+        "current_mA": 25.185185,
         "brightness": 1.0
       }
     },
@@ -192,8 +192,8 @@
         "drive": "low"
       },
       "expected": {
-        "current_mA": 2.898551,
-        "brightness": 0.144928
+        "current_mA": 3.091787,
+        "brightness": 0.154589
       }
     },
     {
@@ -216,8 +216,8 @@
         "drive": "high"
       },
       "expected": {
-        "current_mA": 0.1321,
-        "brightness": 0.006605
+        "current_mA": 0.140907,
+        "brightness": 0.007045
       }
     },
     {
@@ -228,8 +228,8 @@
         "drive": "high"
       },
       "expected": {
-        "current_mA": 2.898551,
-        "brightness": 0.144928
+        "current_mA": 3.091787,
+        "brightness": 0.154589
       }
     },
     {

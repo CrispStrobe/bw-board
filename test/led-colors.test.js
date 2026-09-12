@@ -48,8 +48,14 @@ describe('LED colors: brightness through same 1kΩ resistor at 5V', () => {
       const brightness = board.ledBrightness('LED1');
       const mnaCurrent = board.branchCurrent('LED1', 'anode');
 
-      // I = (5 - Vf) / (R + Rd + Rpin) = (5 - Vf) / 1035
-      const expectedI = (5.0 - led.vf) / (1000 + 10 + 25);
+      // I = (5 - KNEE) / (R + Rd + Rpin) = (5 - KNEE) / 1035, where the KNEE is
+      // Vf - I_RATED*Rd and NOT Vf itself. Vf is the DATASHEET drop, specified
+      // at the rated 20 mA; a piecewise model answers Vf + i*Rd, so feeding it
+      // Vf directly describes a part that drops 0.2 V too much at its own rated
+      // current. Written out rather than imported from the engine on purpose:
+      // this is meant to be a third opinion, and a hand check that calls the
+      // code under test has stopped being one.
+      const expectedI = (5.0 - (led.vf - 0.020 * 10)) / (1000 + 10 + 25);
       const expectedB = Math.min(1.0, expectedI / 0.020);
 
       if (led.vf < 5.0) {
@@ -118,7 +124,14 @@ describe('LED: different series resistors', () => {
       board.setPin('P1.0', 'pushpull', false);
       board.advanceTo(25_000_000n);
 
-      const expectedI = 3.0 / (r + 10 + 25);
+      // 3.2, not 3.0, and the digits are spelled out because the old constant
+      // had ABSORBED the parameter: `3.0` was 5.0 - Vf with Vf already folded
+      // in, so no search for `vf` could find this line when Vf's meaning
+      // changed. Vf is the datasheet drop at the rated 20 mA, so the piecewise
+      // knee is Vf - 0.020*Rd = 2.0 - 0.2 = 1.8, and the driving voltage is
+      // 5.0 - 1.8 = 3.2.
+      const VCC = 5.0, VF = 2.0, RD = 10, I_RATED = 0.020;
+      const expectedI = (VCC - (VF - I_RATED * RD)) / (r + RD + 25);
       const b = board.ledBrightness('LED1');
       const expectedB = Math.min(1.0, expectedI / 0.020);
 

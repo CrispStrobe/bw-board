@@ -30,6 +30,18 @@ for r1, r2 in [(1000, 1000), (1000, 2000), (1000, 3000), (2200, 4700),
         "current_mA": round(i * 1000, 6),
     })
 
+# THE KNEE IS NOT vf. A datasheet gives a junction as `Vf @ If = I_RATED`, so a
+# part whose piecewise model answers `vf + i*rd` must be given `vf - I_RATED*rd`
+# as its knee or it drops I_RATED*rd too much at its own rated current. These
+# oracles used `vf` directly and so described a part 0.2 V different from the one
+# their `vf` field names -- which made this file agree with the engine's old
+# reading and disagree with ngspice by -7 to -14 %.
+#
+# This file stays INDEPENDENT OF THE SOLVER: it is still a hand calculation and
+# is not regenerated from bw-board output. What changed is which DEVICE it
+# describes, and that is a fact about the part, not about the engine.
+I_RATED = 0.020
+
 # ─── 2. LED circuits ─────────────────────────────────────────────────────
 
 for r, vf, label in [(220, 2.0, "red_220"), (330, 2.0, "red_330"),
@@ -38,7 +50,7 @@ for r, vf, label in [(220, 2.0, "red_220"), (330, 2.0, "red_330"),
     vcc = 5.0
     rd = 10  # dynamic resistance
     r_pin = 25  # pushpull pin Rth
-    i = (vcc - vf) / (r + rd + r_pin)
+    i = (vcc - (vf - I_RATED * rd)) / (r + rd + r_pin)
     brightness = min(1.0, i / 0.020)
     add(f"led_{label}", {
         "type": "led_circuit", "vcc": vcc, "r": r, "vf": vf,
@@ -58,7 +70,7 @@ r_strong = 25
 r_quasi_pullup = 21700
 
 # Active-low: VCC → R → LED → pin(quasi, low)
-i_active_low = (vcc - vf) / (r + rd + r_strong)
+i_active_low = (vcc - (vf - I_RATED * rd)) / (r + rd + r_strong)
 add("active_low_quasi_sink", {
     "type": "active_low_led", "mode": "quasi", "drive": "low"
 }, {
@@ -78,7 +90,7 @@ add("active_low_quasi_source", {
 })
 
 # Naive wiring: pin(quasi, high) → R → LED → GND
-i_naive_quasi = (vcc - vf) / (r_quasi_pullup + r + rd)
+i_naive_quasi = (vcc - (vf - I_RATED * rd)) / (r_quasi_pullup + r + rd)
 add("naive_wiring_quasi_high", {
     "type": "naive_led", "mode": "quasi", "drive": "high"
 }, {
@@ -87,7 +99,7 @@ add("naive_wiring_quasi_high", {
 })
 
 # Naive wiring: pin(pushpull, high) → R → LED → GND
-i_naive_pp = (vcc - vf) / (r_strong + r + rd)
+i_naive_pp = (vcc - (vf - I_RATED * rd)) / (r_strong + r + rd)
 add("naive_wiring_pushpull_high", {
     "type": "naive_led", "mode": "pushpull", "drive": "high"
 }, {

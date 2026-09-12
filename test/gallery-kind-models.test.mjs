@@ -206,7 +206,25 @@ describe('diode default Vf (wiring-sweep escalation 2026-08-15)', () => {
     };
     const vDiode = mk('diode');
     const vLed = mk('led');
-    assert.ok(Math.abs(vDiode - 0.74) < 0.1, `bare diode anode ~0.74 V, got ${vDiode}`);
-    assert.ok(vLed > 1.9, `bare LED keeps its ~2 V junction, got ${vLed}`);
+    // MEASURED against ngspice, 5 V through 1 kOhm, for the devices these
+    // defaults actually build (n and rs from junctionOpts, IS calibrated so the
+    // TOTAL drop is vf at the rated 20 mA):
+    //   diode  D(IS=2.52e-9  RS=0.568 N=1.752)   -> 0.6532 V   (I = 4.347 mA)
+    //   led    D(IS=3.1657e-19 RS=10 N=1.8)      -> 1.7490 V   (I = 3.251 mA)
+    //
+    // The old thresholds were ~0.74 and >1.9. BOTH sat above the physical
+    // values, so `>1.9` was asserting something FALSE about a real LED at
+    // 3.25 mA, not merely something true of the old knee. Re-derived rather
+    // than relaxed.
+    assert.ok(Math.abs(vDiode - 0.6532) < 0.08,
+      `bare diode anode ~0.6532 V (ngspice), got ${vDiode}`);
+    assert.ok(Math.abs(vLed - 1.7490) < 0.12,
+      `bare LED anode ~1.7490 V (ngspice), got ${vLed}`);
+    // And the point of the test, which no absolute threshold states: the two
+    // kinds are DIFFERENT junctions. A silicon default leaking into the LED
+    // path (or the reverse) is the defect this catches, and it survives any
+    // later re-derivation of the two numbers above.
+    assert.ok(vLed - vDiode > 0.8,
+      `an LED junction must sit far above a silicon one: led ${vLed}, diode ${vDiode}`);
   });
 });

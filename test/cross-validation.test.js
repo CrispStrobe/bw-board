@@ -90,10 +90,15 @@ describe('cross-validation: LED circuits', () => {
       // MNA: branchCurrent
       const mnaCurrent = board.branchCurrent('LED1', 'anode');
 
-      // Hand-computed
+      // Hand-computed, and the knee is Vf - I_RATED*Rd rather than Vf. Vf is the
+      // DATASHEET drop at the rated 20 mA; the piecewise model answers Vf + i*Rd,
+      // so handing it Vf describes a part 0.2 V different from the one named.
+      // Kept as literal arithmetic rather than importing the engine's helper:
+      // the whole point of this file is that three independent answers agree.
       const rd = 10;
       const rPin = 25;
-      const expected = (5.0 - tc.vf) / (tc.r + rd + rPin);
+      const I_RATED = 0.020;
+      const expected = (5.0 - (tc.vf - I_RATED * rd)) / (tc.r + rd + rPin);
 
       assertClose(cfCurrent, expected, 0.0005, 'CF vs hand');
       assertClose(mnaCurrent, expected, 0.0005, 'MNA vs hand');

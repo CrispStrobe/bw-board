@@ -369,8 +369,20 @@ describe('board-kind LED circuit', () => {
   });
 
   it('Pico 3V3 → 100Ω → LED (Vf=2) → GND gives correct brightness', () => {
-    // I = (3.3 - 2) / (100 + 10 + 0.2) = 1.3 / 110.2 ≈ 11.80 mA
-    // brightness = 11.80 / 20 ≈ 0.5899
+    // NOT a piecewise hand calculation. Headroom here is 3.3 - 2.0 = 1.3 V,
+    // below MNA_HEADROOM_V, so this LED routes to the EXPONENTIAL path and the
+    // old `1.3 / 110.2` was the wrong MODEL, not merely the wrong knee. (The
+    // 1.3 had also absorbed its parameter -- it was 3.3 - Vf with Vf folded in,
+    // so no search for Vf could find this line.)
+    //
+    // MEASURED against ngspice for the device this actually builds --
+    // vf = 2.0 datasheet, n = 1.8, rs = 2, so IS = 1.016451e-20:
+    //     V1 1 0 3.3 / Rr 1 1a 0.2 / R1 1a 2 100 / D1 2 0 LEDM
+    //     .model LEDM D(IS=1.016451e-20 N=1.8 RS=2)   .options TEMP=27 TNOM=27
+    //   -> I = 13.2868 mA, brightness 0.6643. Our solver reads 0.6655, +0.18 %.
+    // Take the current across R1 as v(1a) - v(2), not 3.3 - v(2): the 0.2 Ohm
+    // rail drop is otherwise counted as LED current, which is how an earlier
+    // note of mine recorded 0.6705 for this same circuit.
     const board = makeBoard(
       [
         { id: 'PICO', kind: 'pi_pico', params: {},
@@ -395,7 +407,7 @@ describe('board-kind LED circuit', () => {
     );
 
     const brightness = board.ledBrightness('LED1');
-    const expected = 1.3 / (100 + 10 + 0.2) / 0.020;
+    const expected = 0.6643;  // ngspice, see the derivation above
     assert.ok(Math.abs(brightness - expected) < expected * 0.1,
       `LED brightness should be ~${expected.toFixed(4)}, got ${brightness.toFixed(4)}`);
   });

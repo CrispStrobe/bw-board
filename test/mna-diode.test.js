@@ -185,13 +185,18 @@ describe('MNA: resistance with LEDs', () => {
     // The 1mA test current through R1+LED produces enough voltage to turn
     // the diode on (NR converges to the ON state). Measured R includes the
     // apparent resistance from the forward voltage drop:
-    //   R_measured = R1 + Rd + Vf/I_test = 1000 + 10 + 2/0.001 = 3010 Ω
+    //   R_measured = R1 + Rd + KNEE/I_test = 1000 + 10 + 1.8/0.001 = 2810 Ω
+    //
+    // KNEE, not Vf. The ohmmeter sees the LED's whole drop divided by its test
+    // current, and that drop is knee + i*Rd. Vf is the DATASHEET value at the
+    // rated 20 mA, so the knee is Vf - 0.020*Rd = 2.0 - 0.2 = 1.8, and the
+    // apparent resistance falls by 200 Ohm accordingly. Measured: 2806.6 Ohm.
     // This is physically correct: a real DMM in resistance mode would show
     // a similar value because the diode's forward voltage creates an
     // apparent resistance of Vf/I_test.
     const r = board.resistance('na', 'nb');
     assert.ok(typeof r === 'number');
-    assert.ok(Math.abs(/** @type {number} */(r) - 3010) < 50,
-      `R through LED = ${r} should be ≈ 3010 Ω (R1 + Rd + Vf/I)`);
+    assert.ok(Math.abs(/** @type {number} */(r) - 2810) < 50,
+      `R through LED = ${r} should be ≈ 2810 Ω (R1 + Rd + knee/I)`);
   });
 });
