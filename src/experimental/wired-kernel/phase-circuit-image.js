@@ -23,11 +23,11 @@ export function preparePhaseCircuit({circuit,image,phase}) {
         reserve(reserve){
             for(const [name,array] of Object.entries(maps))reserve(name,array.byteLength);
             reserve('phaseState',24);reserve('latchValues',26);reserve('phaseInputs',27);reserve('phaseConflicts',27);reserve('phaseOutputs',27);
-            reserve('phaseFault',8);reserve('phaseReady',4);reserve('phasePresent',1);reserve('phaseLifecycle',8);reserve('phaseContext',64);
+            reserve('phaseFault',8);reserve('phaseReady',4);reserve('phasePresent',1);reserve('phaseLifecycle',12);reserve('phaseContext',64);
             schedule?.reserve(reserve);
         },
         initialize({e,p,put,inspect,setDriverLevels,memoryFault}) {
-            if(e.phase_circuit_version?.()!==1||e.phase_components_version?.()!==1)throw new TypeError('rebuild native phase circuit: ABI version mismatch');
+            if(e.phase_circuit_version?.()!==2||e.phase_components_version?.()!==1)throw new TypeError('rebuild native phase circuit: ABI version mismatch (phase circuit v2 required)');
             for(const [name,array] of Object.entries(maps))put(name,array);
             const v=new DataView(e.memory.buffer),word=(name,i=0)=>v.getUint32(p[name]+4*i,true);
             v.setUint32(p.phaseState+4,1,true);new Uint8Array(e.memory.buffer,p.latchValues,26).fill(2);
@@ -45,17 +45,23 @@ export function preparePhaseCircuit({circuit,image,phase}) {
             };
             const beginClock=levels=>{
                 if(word('phaseLifecycle',1))throw new CircuitFault('BOARD_FAULTED','reconstruct native latched-memory circuit');
-                if(word('phaseLifecycle'))throw new CircuitFault('CLOCK_ORDER','endClock required');
+                if(word('phaseLifecycle')||word('phaseLifecycle',2))throw new CircuitFault('CLOCK_ORDER','endClock/finishEndClock required');
                 setDriverLevels(levels);const result=e.begin_latched_memory_clock(p.phaseContext,p.fault);if(result)fault(result);return inspect();
             };
-            const endClock=()=>{
-                const result=e.end_latched_memory_clock(p.phaseContext,p.fault);if(result)fault(result);
+            const endOperation=name=>()=>{
+                const result=e[name](p.phaseContext,p.fault);if(result)fault(result);
                 const ready=word('phaseReady');return {ready:ready===0xffffffff?null:ready,...inspect()};
+            };
+            const endClock=endOperation('end_latched_memory_clock');
+            const previewEndClock=endOperation('preview_latched_memory_clock');
+            const finishEndClock=endOperation('finish_latched_memory_clock');
+            const abortEndClock=()=>{
+                const result=e.abort_latched_memory_clock(p.phaseContext,p.fault);if(result)fault(result);
             };
             const inspectPhase=()=>({state:['TI','TS','TC'][word('phaseState')],phase:word('phaseState',1),open:!!word('phaseState',2),
                 tcCount:word('phaseState',4)*4294967296+word('phaseState',3),kind:KINDS[word('phaseState',5)],
-                periodOpen:!!word('phaseLifecycle'),faulted:!!word('phaseLifecycle',1),latch:new Uint8Array(e.memory.buffer,p.latchValues,26).slice()});
-            return {beginClock,endClock,inspectPhase,...schedule?.initialize({e,p,put,inspect,fault})};
+                periodOpen:!!(word('phaseLifecycle')||word('phaseLifecycle',2)),faulted:!!word('phaseLifecycle',1),latch:new Uint8Array(e.memory.buffer,p.latchValues,26).slice()});
+            return {beginClock,endClock,previewEndClock,finishEndClock,abortEndClock,inspectPhase,...schedule?.initialize({e,p,put,inspect,fault})};
         }
     };
 }

@@ -20,7 +20,7 @@ u32 run_latched_memory_schedule(const u32 *p,u32 count,u32 updates,const u32 *of
     }
     for(u32 i=0;i<updates;i++)if(ids[i]>=c[1]||!allowed[ids[i]]||values[i]>3)return schedule_fault(6,i,fault);
     // All schedule admission precedes mutation of pending drivers or clock state.
-    if(W(15)[1]||W(15)[0]){fault[0]=6;fault[1]=W(15)[1]?1:2;return 6;}
+    if(W(15)[1]||W(15)[0]||W(15)[2]){fault[0]=6;fault[1]=W(15)[1]?1:2;return 6;}
     for(u32 step=0;step<count;step++) {
         for(u32 i=offsets[step];i<offsets[step+1];i++)drivers[ids[i]]=values[i];
         u32 result=begin_latched_memory_clock(p,fault);if(result)return result;

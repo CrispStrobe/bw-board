@@ -13,7 +13,7 @@ extern u32 update_address_latch(u8*,const u8*,const u8*,u8*,u32*);
 /* Private phase context: memory context ptr, state ptr, io,intr,input-net IDs,
  * controller driver IDs,latch input-net IDs,latch driver IDs,latch values,
  * input staging,conflict staging,output staging,phase fault,ready,present,
- * lifecycle [open,faulted]. Buffers 9..11 accommodate 27 pins. */
+ * lifecycle [open,faulted,previewed]. Buffers 9..11 accommodate 27 pins. */
 static u32 reject_phase(const u32 *p,u32 category,u32 code,u32 detail,u32 *fault) {
     fault[0]=category;fault[1]=code;fault[2]=detail;fault[3]=NONE;
     if(category!=6||code!=2)W(15)[1]=1;
@@ -49,10 +49,10 @@ static u32 phase_component_error(const u32 *p,u32 result,u32 component,u32 *faul
 static u32 settle_phase_memory(const u32 *p,u32 *fault) {
     u32 result=settle_memory_circuit(W(0),8,fault);if(result)W(15)[1]=1;return result;
 }
-u32 phase_circuit_version(void){return 1;}
+u32 phase_circuit_version(void){return 2;}
 u32 begin_latched_memory_clock(const u32 *p,u32 *fault) {
     if(W(15)[1])return reject_phase(p,6,1,NONE,fault);
-    if(W(15)[0])return reject_phase(p,6,2,NONE,fault);
+    if(W(15)[0]||W(15)[2])return reject_phase(p,6,2,NONE,fault);
     u32 result=validate_phase_mapping(p,fault);if(result)return result;
     if((result=settle_phase_nets(p,fault)))return result;
     gather_phase(p,4,6);
@@ -64,15 +64,33 @@ u32 begin_latched_memory_clock(const u32 *p,u32 *fault) {
     if((result=settle_phase_memory(p,fault)))return result;
     W(15)[0]=1;fault[0]=0;return 0;
 }
-u32 end_latched_memory_clock(const u32 *p,u32 *fault) {
+/* Capture READY before CPU/master sampling. Do not release any command yet. */
+u32 preview_latched_memory_clock(const u32 *p,u32 *fault) {
     if(W(15)[1])return reject_phase(p,6,1,NONE,fault);
-    if(!W(15)[0])return reject_phase(p,6,2,NONE,fault);
+    if(!W(15)[0]||W(15)[2])return reject_phase(p,6,2,NONE,fault);
     W(15)[0]=0;gather_phase(p,4,6);
     u32 result=preview_memory_phase_end(W(1),B(9),B(10),W(13),W(12));if(result)return phase_component_error(p,result,0,fault);
-    result=finish_memory_phase(W(1),*W(13),B(11),B(14),W(12));if(result)return phase_component_error(p,result,0,fault);
+    W(15)[2]=1;fault[0]=0;return 0;
+}
+/* Consume the captured READY exactly once; no fresh input sampling here. */
+u32 finish_latched_memory_clock(const u32 *p,u32 *fault) {
+    if(W(15)[1])return reject_phase(p,6,1,NONE,fault);
+    if(!W(15)[2])return reject_phase(p,6,2,NONE,fault);
+    W(15)[2]=0;
+    u32 result=finish_memory_phase(W(1),*W(13),B(11),B(14),W(12));if(result)return phase_component_error(p,result,0,fault);
     if(*B(14)) {
         publish_controller(p);if((result=settle_phase_nets(p,fault)))return result;
         if((result=settle_phase_memory(p,fault)))return result;
     }
     fault[0]=0;return 0;
+}
+/* A future CPU/master sample fault must not let finish commit the write edge. */
+u32 abort_latched_memory_clock(const u32 *p,u32 *fault) {
+    if(W(15)[1])return reject_phase(p,6,1,NONE,fault);
+    if(!W(15)[2])return reject_phase(p,6,2,NONE,fault);
+    W(15)[2]=0;W(15)[1]=1;fault[0]=0;return 0;
+}
+u32 end_latched_memory_clock(const u32 *p,u32 *fault) {
+    u32 result=preview_latched_memory_clock(p,fault);if(result)return result;
+    return finish_latched_memory_clock(p,fault);
 }
