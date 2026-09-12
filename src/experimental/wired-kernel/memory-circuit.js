@@ -38,7 +38,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const outputIds=Uint32Array.from(descriptors.flatMap(b=>Array.from({length:8},(_,i)=>terminals.get(`${b.id}.d${i}`).driver)));
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
-    if(incrementalGraph&&e.incremental_kernel_version?.()!==1)throw new TypeError('rebuild native incremental kernel: ABI version mismatch');
+    if(incrementalGraph&&(e.incremental_kernel_version?.()!==2||typeof e.write_owned_driver!=='function'))
+        throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
     if(e.incremental_work_counters_version?.()!==1)throw new TypeError('rebuild native work counters: ABI version mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
@@ -66,12 +67,11 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,incrementalGraph?2:Number(admittedGraph)]);
     if(admittedGraph&&(e.admit_owned_context(p.context)>>>0)!==0)throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph admission failed');
     const inspect=()=>({levels:bytes('published',nets).slice(),conflicts:bytes('publishedConflicts',nets).slice(),driverLevels:bytes('drivers',drivers).slice()});
-    let hostValueChangingDriverWrites=0;
     const inspectWorkCounters=()=>{
         const values=new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),WORK_COUNTERS.length);
-        return Object.freeze(Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,(values[i]+(i===1?hostValueChangingDriverWrites:0))>>>0])));
+        return Object.freeze(Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,values[i]])));
     };
-    const resetWorkCounters=()=>{hostValueChangingDriverWrites=0;e.reset_incremental_work_counters();};
+    const resetWorkCounters=()=>e.reset_incremental_work_counters();
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
         const word=w=>view.getUint32(p.states+(bank*WORDS+w)*4,true),out=word(2);
@@ -86,7 +86,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
             const current=bytes('drivers',drivers);
             if(incrementalGraph){
                 for(let i=0;i<drivers;i++)if(current[i]!==levels[i]){
-                    hostValueChangingDriverWrites++;if(e.write_owned_driver(p.context,i,levels[i]))throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
+                    if(e.write_owned_driver(p.context,i,levels[i]))throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
                 }
             }else current.set(levels);
         }

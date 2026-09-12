@@ -16,7 +16,9 @@ u32 incremental_work[10];
 u32 *incremental_work_counters_ptr(void){return incremental_work;}
 void reset_incremental_work_counters(void){for(u32 i=0;i<10;i++)incremental_work[i]=0;}
 u32 incremental_work_counters_version(void){return 1;}
-u32 incremental_kernel_version(void){return 1;}
+/* ABI 2 requires every runtime driver mutation to use write_owned_driver.
+ * ABI 1 wrappers wrote the arena directly and depended on a discovery scan. */
+u32 incremental_kernel_version(void){return 2;}
 static u32 write_driver(const u32 *c,u32 id,u32 code,u32 count_comparison) {
     if(id>=c[1]||(c[31]==2&&driver_net[id]==NONE))return 1;
     if(code>3)return 2;

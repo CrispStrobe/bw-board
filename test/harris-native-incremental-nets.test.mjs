@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {runNativeMemoryCircuitOracle} from '../scripts/lib/harris-native-memory-circuit-oracle.mjs';
+import {createMemoryCircuitOracle,runNativeMemoryCircuitOracle} from '../scripts/lib/harris-native-memory-circuit-oracle.mjs';
 import {runNativePhaseCircuitOracle} from '../scripts/lib/harris-native-phase-circuit-oracle.mjs';
 import {runNativePhaseScheduleOracle} from '../scripts/lib/harris-native-phase-schedule-oracle.mjs';
 const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
@@ -31,6 +31,8 @@ async function rawKernel({incremental=false,oscillator=false,previousImage=null}
 }
 test('work counters observe existing full and incremental loops and reset without changing state',native,async()=>{
     const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
+    assert.equal(incremental.e.incremental_kernel_version(),2);
+    assert.equal(typeof incremental.e.write_owned_driver,'function');
     assert.equal(incremental.e.incremental_work_counters_version(),1);
     incremental.resetCounters();
     assert.equal(incremental.step([3,3,2,3]),1);
@@ -51,6 +53,19 @@ test('work counters observe existing full and incremental loops and reset withou
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:1,dependencyProbes:3,
         stagedDriverCopies:4,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
     });
+});
+test('incremental wrapper requires ABI 2 with its writer export and counts one host transition once',native,async()=>{
+    const f=await createMemoryCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});f.pass();f.kernel.resetWorkCounters();
+    f.pass({a23:1});const work=f.kernel.inspectWorkCounters();
+    assert.equal(work.committedEvaluatorOutputs,2,'a23 changes both decoder outputs in this fixture');
+    assert.equal(work.valueChangingDriverWrites-work.committedEvaluatorOutputs,1,'the single host transition is not double counted');
+    const missingWriter=wasmBytes.slice(),needle=new TextEncoder().encode('write_owned_driver');let occurrences=0;
+    outer:for(let i=0;i<=missingWriter.length-needle.length;i++){
+        for(let j=0;j<needle.length;j++)if(missingWriter[i+j]!==needle[j])continue outer;
+        missingWriter[i]='x'.charCodeAt(0);occurrences++;
+    }
+    assert.ok(occurrences>=1,'writer export is present');
+    await assert.rejects(createMemoryCircuitOracle({wasmBytes:missingWriter,admittedGraph:true,incrementalGraph:true}),/ABI version\/writer mismatch/);
 });
 test('driver seam validates before mutation, preserves duplicate order and queues one dirty net',native,async()=>{
     const k=await rawKernel({incremental:true});k.resetCounters();const before=k.inspect();
