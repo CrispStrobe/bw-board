@@ -153,6 +153,7 @@ const CHECKPOINT_NATIVE_ERRORS = Object.freeze({
 const INTRINSIC_ARRAY_IS_ARRAY = Array.isArray;
 const INTRINSIC_OBJECT_KEYS = Object.keys;
 const INTRINSIC_GET_PROTOTYPE_OF = Object.getPrototypeOf;
+const INTRINSIC_GET_OWN_PROPERTY_DESCRIPTOR = Object.getOwnPropertyDescriptor;
 const INTRINSIC_ARRAY_SORT = Array.prototype.sort;
 const INTRINSIC_ARRAY_EVERY = Array.prototype.every;
 const INTRINSIC_ARRAY_MAP = Array.prototype.map;
@@ -1120,18 +1121,48 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             if (!snapshot || snapshot.schema !== 1 || snapshot.kind !== 'emu8051-native' ||
                 snapshot.session !== checkpointSession ||
                 snapshot.version !== CHECKPOINT_VERSION || snapshot.buildId !== CHECKPOINT_BUILD_ID ||
-                snapshot.size !== checkpointSize || !(snapshot.bytes instanceof Uint8Array) ||
-                snapshot.bytes.length !== checkpointSize || !snapshot.local ||
-                !Array.isArray(snapshot.local.taskIndex) || !Array.isArray(snapshot.local.yieldAddr) ||
-                !Array.isArray(snapshot.local.breakpoints) ||
-                typeof structuredClone !== 'function') {
+                snapshot.size !== checkpointSize || typeof structuredClone !== 'function') {
                 return {refused: 'checkpoint envelope or identity does not match this 8051 target',
                     code: 'invalid-checkpoint-envelope'};
             }
+            let rawBytes;
+            let rawLocal;
+            let proofToken;
+            try {
+                rawBytes = snapshot?.bytes;
+                rawLocal = snapshot?.local;
+                const proofDescriptor = rawLocal &&
+                    INTRINSIC_GET_OWN_PROPERTY_DESCRIPTOR(rawLocal, 'proof');
+                if (!proofDescriptor || !('value' in proofDescriptor)) throw new TypeError('opaque proof');
+                proofToken = proofDescriptor.value;
+            } catch {
+                return {refused: 'checkpoint envelope cannot be staged safely',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            if (!(rawBytes instanceof Uint8Array) || rawBytes.length !== checkpointSize || !rawLocal) {
+                return {refused: 'checkpoint envelope or identity does not match this 8051 target',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            let stagedLocal;
+            let bytes;
+            try {
+                stagedLocal = structuredClone(rawLocal);
+                delete stagedLocal.proof;
+                bytes = copyCheckpointBytes(rawBytes);
+            } catch {
+                return {refused: 'checkpoint continuation state cannot be staged',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            if (!INTRINSIC_ARRAY_IS_ARRAY(stagedLocal.taskIndex) ||
+                !INTRINSIC_ARRAY_IS_ARRAY(stagedLocal.yieldAddr) ||
+                !INTRINSIC_ARRAY_IS_ARRAY(stagedLocal.breakpoints)) {
+                return {refused: 'checkpoint debugger-local state is malformed',
+                    code: 'invalid-checkpoint-envelope'};
+            }
             const validEntry = entry => Array.isArray(entry) && entry.length === 2;
-            const tasks = snapshot.local.taskIndex;
-            const yields = snapshot.local.yieldAddr;
-            const bps = snapshot.local.breakpoints;
+            const tasks = stagedLocal.taskIndex;
+            const yields = stagedLocal.yieldAddr;
+            const bps = stagedLocal.breakpoints;
             const unique = values => new Set(values).size === values.length;
             const every = (array, predicate) => INTRINSIC_ARRAY_EVERY.call(array, predicate);
             const map = (array, mapper) => INTRINSIC_ARRAY_MAP.call(array, mapper);
@@ -1150,7 +1181,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     bp.pc === bp.addr;
                 return false;
             };
-            const pending = snapshot.local.pendingStep;
+            const pending = stagedLocal.pendingStep;
             const validPending = pending === null || (pending && typeof pending === 'object' &&
                 ['cycle', 'insn'].includes(pending.kind) && Number.isSafeInteger(pending.pcBefore) &&
                 pending.pcBefore >= 0 && pending.pcBefore <= 0xffff);
@@ -1165,32 +1196,29 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     ([name]) => key.startsWith(`${name}/`))) ||
                 !every(bps, entry => validEntry(entry) && validBreakpoint(entry)) ||
                 !unique(map(bps, entry => entry[0])) || !validPending ||
-                typeof snapshot.local.stepping !== 'boolean' ||
-                (snapshot.local.stepping && snapshot.local.pendingCause !== 'step') ||
-                (pending !== null && (!snapshot.local.stepping ||
-                    snapshot.local.pendingCause !== 'step')) ||
-                (!snapshot.local.stepping && snapshot.local.pendingCause === 'step') ||
-                snapshot.local.inBudgetedRun !== false ||
-                !(snapshot.local.pendingCause === null ||
-                    ['step', 'user'].includes(snapshot.local.pendingCause)) ||
-                !Number.isSafeInteger(snapshot.local.pinHistoryReadCount) ||
-                snapshot.local.pinHistoryReadCount < 0 ||
-                snapshot.local.pinHistoryReadCount > 0xffffffff ||
-                !Number.isSafeInteger(snapshot.local.pinHistoryReadHead) ||
-                snapshot.local.pinHistoryReadHead < 0 ||
-                snapshot.local.pinHistoryReadHead > 0xffffffff ||
-                snapshot.local.pinHistoryReadHead !== snapshot.local.pinHistoryReadCount) {
+                typeof stagedLocal.stepping !== 'boolean' ||
+                (stagedLocal.stepping && stagedLocal.pendingCause !== 'step') ||
+                (pending !== null && (!stagedLocal.stepping ||
+                    stagedLocal.pendingCause !== 'step')) ||
+                (!stagedLocal.stepping && stagedLocal.pendingCause === 'step') ||
+                stagedLocal.inBudgetedRun !== false ||
+                !(stagedLocal.pendingCause === null ||
+                    ['step', 'user'].includes(stagedLocal.pendingCause)) ||
+                !Number.isSafeInteger(stagedLocal.pinHistoryReadCount) ||
+                stagedLocal.pinHistoryReadCount < 0 ||
+                stagedLocal.pinHistoryReadCount > 0xffffffff ||
+                !Number.isSafeInteger(stagedLocal.pinHistoryReadHead) ||
+                stagedLocal.pinHistoryReadHead < 0 ||
+                stagedLocal.pinHistoryReadHead > 0xffffffff ||
+                stagedLocal.pinHistoryReadHead !== stagedLocal.pinHistoryReadCount) {
                 return {refused: 'checkpoint debugger-local state is malformed',
                     code: 'invalid-checkpoint-envelope'};
             }
-            const proof = checkpointLocalProofs.get(snapshot.local.proof);
-            let publicLocal;
+            const proof = checkpointLocalProofs.get(proofToken);
             let bindingMatches = false;
             try {
-                const {proof: _opaqueProof, ...continuationLocal} = snapshot.local;
-                publicLocal = continuationLocal;
-                bindingMatches = !!proof && checkpointBytesEqual(snapshot.bytes, proof.bytes) &&
-                    checkpointValueEqual(publicLocal, proof.local);
+                bindingMatches = !!proof && checkpointBytesEqual(bytes, proof.bytes) &&
+                    checkpointValueEqual(stagedLocal, proof.local);
             } catch {
                 return {refused: 'checkpoint continuation provenance is malformed',
                     code: 'invalid-checkpoint-envelope'};
@@ -1200,16 +1228,11 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 code: 'invalid-checkpoint-envelope'};
             let staged;
             try {
-                const clone = structuredClone(snapshot.local);
-                staged = {...clone, taskIndex: new Map(clone.taskIndex),
-                    yieldAddr: new Map(clone.yieldAddr), breakpoints: new Map(clone.breakpoints)};
+                staged = {...stagedLocal, taskIndex: new Map(stagedLocal.taskIndex),
+                    yieldAddr: new Map(stagedLocal.yieldAddr),
+                    breakpoints: new Map(stagedLocal.breakpoints)};
             } catch {
                 return {refused: 'checkpoint debugger-local state cannot be cloned',
-                    code: 'invalid-checkpoint-envelope'};
-            }
-            let bytes;
-            try { bytes = copyCheckpointBytes(snapshot.bytes); } catch {
-                return {refused: 'checkpoint native bytes cannot be copied',
                     code: 'invalid-checkpoint-envelope'};
             }
             const adapterRestore = opts.adapter?.prepareCheckpointRestore?.(staged.adapter);
