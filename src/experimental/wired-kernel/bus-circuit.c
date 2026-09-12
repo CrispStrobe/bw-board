@@ -10,13 +10,15 @@ typedef unsigned char u8;
 extern u32 bus_input_ptr(void),bus_output_ptr(void),bus_completion_ptr(void),bus_error_pin(void);
 extern u32 bus_begin(void),bus_end(void);
 extern u32 settle_owned_context(const u32*);
-extern u32 write_owned_driver(const u32*,u32,u32);
+extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
 extern u32 begin_latched_memory_clock(const u32*,u32*),preview_latched_memory_clock(const u32*,u32*);
 extern u32 finish_latched_memory_clock(const u32*,u32*),abort_latched_memory_clock(const u32*,u32*);
 extern double bus_inspect(u32);
 u32 bus_circuit_version(void){return 1;}
 /* All external and CPU bus outputs participate in the admitted dirty frontier. */
-static u32 stage_bus_driver(const u32 *c,u32 id,u8 value){return write_owned_driver(c,id,value);}
+#define PRODUCER_BUS_EXTERNAL 1
+#define PRODUCER_BUS_OUTPUT 2
+static u32 stage_bus_driver(const u32 *c,u32 id,u8 value,u32 producer){return write_owned_driver_tagged(c,id,value,producer);}
 static u32 failure(const u32*p,u32 category,u32 code,u32 pin,u32*fault) {
     fault[0]=category;fault[1]=code;fault[2]=pin;fault[3]=0xffffffff;
     if(category!=6||code!=2)W(7)[1]=1;return category;
@@ -42,11 +44,11 @@ u32 begin_bus_memory_clock(const u32*p,u32*fault) {
     if(W(7)[1])return failure(p,6,1,0,fault);
     if(W(7)[0])return failure(p,6,2,0,fault);
     u32 result=validate(p,fault);if(result)return result;
-    for(u32 i=0;i<p[6];i++)if(stage_bus_driver(W(0),W(4)[i],B(5)[i]))return failure(p,8,2,i,fault);
+    for(u32 i=0;i<p[6];i++)if(stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     gather(p);result=bus_begin();if(result)return failure(p,7,result,bus_error_pin(),fault);
     const u32*output=(u32*)(unsigned long)bus_output_ptr();
-    for(u32 i=0;i<48;i++)if(stage_bus_driver(W(0),W(3)[i],(u8)output[i]))return failure(p,8,2,i,fault);
+    for(u32 i=0;i<48;i++)if(stage_bus_driver(W(0),W(3)[i],(u8)output[i],PRODUCER_BUS_OUTPUT))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     result=begin_latched_memory_clock(W(1),fault);if(result){W(7)[1]=1;return result;}
     W(7)[0]=1;fault[0]=0;return 0;

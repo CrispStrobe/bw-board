@@ -24,7 +24,9 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     '-Wl,--export=incremental_kernel_version',
     ...['bus_sequencer_version','bus_input_ptr','bus_output_ptr','bus_completion_ptr','bus_error_pin','bus_initialize','bus_submit','bus_begin','bus_end','bus_inspect'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export=incremental_work_counters_version','-Wl,--export=incremental_work_counters_ptr','-Wl,--export=reset_incremental_work_counters',
-    '-Wl,--export=write_owned_driver',
+    '-Wl,--export=producer_work_counters_version','-Wl,--export=producer_work_counters_ptr','-Wl,--export=reset_producer_work_counters',
+    '-Wl,--export=memory_pass_counters_version','-Wl,--export=memory_pass_counters_ptr','-Wl,--export=reset_memory_pass_counters',
+    '-Wl,--export=write_owned_driver','-Wl,--export=write_owned_driver_tagged',
     ...['bus_circuit_version','begin_bus_memory_clock','end_bus_memory_clock','run_bus_memory_until_completion'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();

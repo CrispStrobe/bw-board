@@ -9,9 +9,19 @@ import {prepareBusCircuit} from './bus-circuit-image.js';
 const SIZE=32768,WORDS=9;
 const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
     'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits'];
+const PRODUCER_NAMES=['other','busExternal','busOutput','phaseController','phaseLatch','memoryBank','phaseSchedule','evaluator','fullScan'];
+const MEMORY_PASS_COUNTERS=['settleCalls','passes','previewCalls','previewBanks','presentBanks','changedBanks',
+    'postMemorySettles','postMemorySettlesWithoutDriverChange'];
 export function assertIncrementalKernelABI(exports,enabled) {
     if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
         throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
+}
+export function assertProducerCounterABI(exports) {
+    if(exports.producer_work_counters_version?.()!==1||exports.memory_pass_counters_version?.()!==1||
+        typeof exports.producer_work_counters_ptr!=='function'||typeof exports.memory_pass_counters_ptr!=='function'||
+        typeof exports.reset_producer_work_counters!=='function'||typeof exports.reset_memory_pass_counters!=='function'||
+        typeof exports.write_owned_driver_tagged!=='function')
+        throw new TypeError('rebuild native producer counters: ABI version/exports mismatch');
 }
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
@@ -46,6 +56,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
     assertIncrementalKernelABI(e,incrementalGraph);
     if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
+    assertProducerCounterABI(e);
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
@@ -82,6 +93,15 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         return Object.freeze(Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,values[i]])));
     };
     const resetWorkCounters=()=>e.reset_incremental_work_counters();
+    const inspectProducerCounters=()=>{
+        const values=new Uint32Array(e.memory.buffer,e.producer_work_counters_ptr(),PRODUCER_NAMES.length*2);
+        const producers=Object.fromEntries(PRODUCER_NAMES.map((name,i)=>[name,
+            Object.freeze({attempts:values[i],changes:values[PRODUCER_NAMES.length+i]})]));
+        const memoryValues=new Uint32Array(e.memory.buffer,e.memory_pass_counters_ptr(),MEMORY_PASS_COUNTERS.length);
+        return Object.freeze({producers:Object.freeze(producers),memory:Object.freeze(Object.fromEntries(
+            MEMORY_PASS_COUNTERS.map((name,i)=>[name,memoryValues[i]])))});
+    };
+    const resetProducerCounters=()=>{e.reset_producer_work_counters();e.reset_memory_pass_counters();};
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
         const word=w=>view.getUint32(p.states+(bank*WORDS+w)*4,true),out=word(2);
@@ -119,5 +139,5 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const busMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
         latchedMemoryClocks:!!phaseBinding,nativeMemoryBus:!!busBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(busMethods??phaseMethods??{settleMemories}),
-        inspect,inspectMemory,inspectWorkCounters,resetWorkCounters});
+        inspect,inspectMemory,inspectWorkCounters,resetWorkCounters,inspectProducerCounters,resetProducerCounters});
 }
