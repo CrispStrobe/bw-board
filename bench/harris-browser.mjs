@@ -129,6 +129,12 @@ try {
                 const boot=report.nativeOracle.hybridBoot?.[mode];
                 assert.equal(boot?.accepted,true);assert.equal(boot?.capacityClaim,false);
                 assert.equal(boot.fullNativeCPU,false);assert.equal(boot.fullDOSBoot,false);
+                assert.equal(boot.cooperative?.accepted,true);assert.equal(boot.cooperative?.capacityClaim,false);
+                assert.equal(boot.cooperative.asynchronousStop,true);assert.equal(boot.cooperative.pendingTransferPreserved,true);
+                assert.equal(boot.cooperative.pausedMemoryBytesCompared,131072);assert.equal(boot.cooperative.memoryBytesCompared,131072);
+                assert.equal(boot.cooperative.retired,47);assert.equal(boot.cooperative.initializationPeriods,67);
+                assert.equal(boot.cooperative.physicalClock,boot.cooperative.periods+67);
+                assert.equal(boot.cooperative.stopPeriods+boot.cooperative.resumedPeriods,boot.cooperative.periods);
                 assert.deepEqual(boot.samples.map(s=>s.name),['boot','loop','mismatch']);
                 assert.deepEqual(boot.samples.map(s=>s.retired),[10,47,48]);
                 for(const sample of boot.samples) {
@@ -137,6 +143,7 @@ try {
                 }
             }
             assert.deepEqual(report.nativeOracle.hybridBoot.checked.samples,report.nativeOracle.hybridBoot.incremental.samples);
+            assert.deepEqual(report.nativeOracle.hybridBoot.checked.cooperative,report.nativeOracle.hybridBoot.incremental.cooperative);
         }
         report.nativeBuild=nativeModule;
     }
