@@ -22,7 +22,7 @@ const mutations=[
         from:'output_changes[pin>>5]|=1u<<(pin&31);',to:'output_changes[pin>>5]|=1u<<(pin&30);'}]},
     {name:'published every unmarked output',pattern:frontier,edits:[{file:'bus-circuit.c',
         from:'if((changed[i>>5]&(1u<<(i&31)))&&\n       stage_bus_driver',
-        to:'if((1u)&&\n       stage_bus_driver'}]},
+        to:'if((changed[i>>5]|1u)&&\n       stage_bus_driver'}]},
     {name:'bypassed canonical tagged writer',pattern:differential,edits:[{file:'bus-circuit.c',
         from:'stage_bus_driver(W(0),W(3)[i],(u8)output[i],PRODUCER_BUS_OUTPUT)',
         to:'(((u8*)(unsigned long)W(0)[4])[W(3)[i]]=(u8)output[i],0)'}]},
