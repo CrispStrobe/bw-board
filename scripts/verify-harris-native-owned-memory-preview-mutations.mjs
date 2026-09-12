@@ -21,7 +21,7 @@ const mutations=[
     {name:'peer commit loop stops after first bank',pattern:'late peer-bank fault',file:'memory-banks.c',
         from:'/* Commit the old pending bytes only after all peer previews succeeded. */\n    for(u32 b=0;b<banks;b++) {',
         to:'/* Commit the old pending bytes only after all peer previews succeeded. */\n    for(u32 b=0;b<1;b++) {'},
-    {name:'owned preview ABI version is stale',pattern:'owned memory preview ABI',file:'memory-circuit.c',
+    {name:'owned preview ABI version is stale',pattern:'owned circuit memory preview',file:'memory-circuit.c',
         from:'u32 memory_circuit_version(void){return 3;}',to:'u32 memory_circuit_version(void){return 2;}'}
 ];
 for(const mutation of mutations){
