@@ -104,20 +104,22 @@ test('schedule refuses a previewed period before mutating any pending driver',na
 test('native finish consumes one captured READY even if a future native sampler changes the net',native,async t=>{
     // Test-only export interception reaches the private ABI without adding a
     // mutable memory/driver escape hatch to the production wrapper.
+    for(const mode of [{},{admittedGraph:true,incrementalGraph:true}]) {
     const instantiate=WebAssembly.instantiate;let e,context;
     const mock=t.mock.method(WebAssembly,'instantiate',async(...args)=>{
         const result=await instantiate(...args);e=result.instance.exports;
         return {...result,instance:{exports:{...e,preview_latched_memory_clock(p,fault){context=p;return e.preview_latched_memory_clock(p,fault);}}}};
     });
-    const f=await createPhaseCircuitOracle({wasmBytes});mock.mock.restore();writeTC2(f);
+    const f=await createPhaseCircuitOracle({wasmBytes,...mode});mock.mock.restore();writeTC2(f);
     assert.equal(f.kernel.previewEndClock().ready,0);
-    const view=new DataView(e.memory.buffer),word=p=>view.getUint32(p,true),c=word(context),drivers=word(c+4*4);
-    view.setUint8(drivers+hostDrivers(f).get('ready_n'),1);
+    const view=new DataView(e.memory.buffer),word=p=>view.getUint32(p,true),c=word(context);
+    assert.equal(e.write_owned_driver(c,hostDrivers(f).get('ready_n'),1),0);
     assert.ok((e.settle_owned_context(c)>>>0)<0x80000000);
     const readyNet=word(word(context+4*4)+4),published=word(c+10*4);
     assert.equal(view.getUint8(published+readyNet),1);
     assert.equal(f.kernel.finishEndClock().ready,0);
     assert.equal(f.kernel.inspectPhase().state,'TI');assert.equal(f.kernel.inspectMemory(0).writes,1);
+    }
 });
 
 test('phase v1 artifacts are explicitly refused instead of using the shorter lifecycle allocation',native,async t=>{
