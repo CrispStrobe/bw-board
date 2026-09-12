@@ -1,5 +1,28 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-12 R2 cooperative hybrid execution — IMPLEMENTED/LOCALLY QUALIFIED, Codex root. User explicitly
+requested continued performance coding and remote default-branch merge after
+qualification. Integration `feat/harris-hybrid-cpu-integration` now includes
+upstream `536eb19`. Dedicated workers own `harris-cooperative-transactions`
+(host runner/tests) and `harris-native-ci` (native workflow/contracts); root owns
+sustained ROM benchmark, real-board event tests, census, docs and merge checks.
+No branch deletion, app deployment or implicit backend promotion is requested.
+Worker lanes are complete; source candidate `c42ed96` passes 171 local tests
+without skips and frozen Chromium qualification. Final hosted qualification and
+authorized remote master merge are tracked in engine PR5. Receipts and remaining
+scope: HARRIS-HYBRID-COOPERATIVE-EXECUTION.md. No full-native/capacity completion.
+
+2026-09-12 R1 hybrid CPU integration — DONE (bounded R1 only), Codex root, user-requested actual
+wired execution/performance coding. Isolated `feat/harris-hybrid-cpu-integration`
+from upstream `6e4327c393ae6f57beb09d345a3aa91be1393729`; adapter worker owns
+`feat/harris-native-memory-board-r1`, CPU worker owns
+`feat/harris-boot-cpu-batching`, both from `7fbdfa9`. Root owns differential
+integration tests, benchmark and docs. Adapter `52b23fb`, CPU `270f88b`, browser
+oracle `a835ff6`, final validation `718ba08`: 151 targeted tests, zero skips;
+frozen Chromium accepted. HARRIS-HYBRID-CPU-IMPLEMENTATION.md and receipts record
+scope and remaining full-native/peripheral/capacity work. Both worker sublanes
+are complete. No app pin/default/merge/deploy change.
+
 Created 2026-09-04, at `lego-47`'s request, because the fleet's 8086 work now
 runs across a dozen worktrees and the claims had nowhere in THIS repo to live.
 The protocol is brickwright-lite's `LANES.md`, unchanged, and that file remains

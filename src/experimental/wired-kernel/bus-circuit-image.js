@@ -5,6 +5,8 @@ const INPUTS=['reset','hold','pereq','intr','nmi','busy_n','error_n','ready_n',.
 const OUTPUTS=[...Array.from({length:24},(_,i)=>`a${i}`),...Array.from({length:16},(_,i)=>`d${i}`),
     'bhe_n','s1_n','s0_n','cod_inta_n','m_io','lock_n','hlda','peack_n'];
 const KINDS=['memory-read','code-read','memory-write'];
+const BUS_STATES=['RESET_REQUIRED','RESET','INIT','TI','TS','TC'];
+const BUS_IDLE=BUS_STATES.indexOf('TI');
 const BUS_ERRORS=['','CLOCK_ORDER','OVERFLOW','FLOATING','UNKNOWN','BUS_FAULTED','RESET_REQUIRED',
     'SHORT_RESET','UNSUPPORTED_HOLD','UNSUPPORTED_INPUT','WAIT_LIMIT','BUS_UNAVAILABLE','UNSUPPORTED_TRANSACTION','CONTENTION'];
 const transactionFields=new Set(['kind','address','width','value','locked']);
@@ -73,7 +75,7 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             };
             const inspectBus=()=>{
                 const get=i=>e.bus_inspect(i);
-                return {state:['RESET_REQUIRED','RESET','INIT','TI','TS','TC'][get(0)],phase:get(1),open:!!get(2),faulted:!!get(3),
+                return {state:BUS_STATES[get(0)],phase:get(1),open:!!get(2),faulted:!!get(3),
                     clock:get(4),resetClocks:get(5),initClocks:get(6),writeHold:get(7),address:get(8),
                     pending:get(9)?{index:get(10),waits:get(11),bytes:Array.from({length:get(12)},(_,i)=>get(13+i)),transferCount:get(15)}:null};
             };
@@ -86,7 +88,10 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             const endClock=()=>{guard(true);fault(e.end_bus_memory_clock(p.busContext,p.fault));return completion(e.bus_completion_ptr());};
             const submit=transaction=>{
                 if(word('busLifecycle',1)||word('busLifecycle'))throw new CircuitFault('BOARD_FAULTED','board unavailable');
-                const s=inspectBus();if(s.faulted||s.open||s.pending||s.state!=='TI')throw new CircuitFault('BUS_UNAVAILABLE','reset/init/pending');
+                // Admission needs four scalar flags, not a diagnostic snapshot
+                // (including pending-byte copies and many extra Wasm calls).
+                if(e.bus_inspect(3)||e.bus_inspect(2)||e.bus_inspect(9)||e.bus_inspect(0)!==BUS_IDLE)
+                    throw new CircuitFault('BUS_UNAVAILABLE','reset/init/pending');
                 if(!transaction||typeof transaction!=='object'||Object.keys(transaction).some(k=>!transactionFields.has(k)))
                     throw new CircuitFault('UNSUPPORTED_TRANSACTION','memory subset');
                 const {kind,address,width=1,value=0,locked=false}=transaction;
@@ -97,13 +102,13 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             };
             const runUntilCompletion=({maxPeriods=1024,inputs={}}={})=>{
                 guard();if(!Number.isInteger(maxPeriods)||maxPeriods<1||maxPeriods>8192)throw new RangeError('maxPeriods 1..8192');
-                if(!inspectBus().pending)throw new CircuitFault('BUS_UNAVAILABLE','submit a transaction first');
+                if(!e.bus_inspect(9))throw new CircuitFault('BUS_UNAVAILABLE','submit a transaction first');
                 update(inputs);const result=e.run_bus_memory_until_completion(p.busContext,maxPeriods,p.fault);
                 const completions=Object.freeze(Array.from({length:word('busRun',1)},(_,i)=>completion(p.busResults+i*36)));
                 try{fault(result);}catch(error){
                     // Only fully successful period boundaries are counted here;
                     // the faulting period may already have advanced CPU clock.
-                    error.progress=Object.freeze({stopReason:'fault',periods:word('busRun'),completions,busClock:inspectBus().clock});
+                    error.progress=Object.freeze({stopReason:'fault',periods:word('busRun'),completions,busClock:e.bus_inspect(4)});
                     throw error;
                 }
                 const completed=!!word('busRun',2);

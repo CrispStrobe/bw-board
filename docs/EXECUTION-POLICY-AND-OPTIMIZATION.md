@@ -1,5 +1,21 @@
 # Execution policy and whole-system optimization
 
+**R2 continuation:** HARRIS-HYBRID-COOPERATIVE-EXECUTION.md records implemented
+cooperative READY-bounded hybrid execution, native CI, sustained workload/profile
+receipts and hot-path scalar bus admission. Based on upstream `536eb19` including
+the native dependency index. This is host scheduling and memory-only execution,
+not full native peripherals/CPU or a completed 4.77 MHz capacity gate.
+
+**2026-09-12 later implementation update:** application package/policy integration
+is CI-qualified in brickwright-lite PR110 at `ea9816884` (not merged/deployed).
+Actual wired execution work has resumed on upstream engine `6e4327c`:
+HARRIS-HYBRID-CPU-IMPLEMENTATION.md records the default-off CPU/native-memory
+bridge, bounded execution, reference comparisons and measured memory-loop gain.
+This closes the planned R1 memory-only hybrid bridge, not P7's native CPU and
+peripherals or P9's complete workload/capacity qualification. Earlier progress
+entries below remain dated checkpoints, not a statement that the bridge is
+still unimplemented.
+
 2026-09-12. User requested documentation first, then implementation, with
 independent agents and existing relevant screen sessions available for help.
 This is an execution plan, not a claim that the performance target is achieved.

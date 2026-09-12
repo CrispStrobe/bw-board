@@ -1,5 +1,9 @@
 # R1 hybrid CPU bridge: bounded implementation plan
 
+Implementation update: see HARRIS-HYBRID-CPU-IMPLEMENTATION.md for the completed
+bounded memory-only bridge, qualification and remaining full-native/peripheral
+work. The following text is the original pre-implementation design checkpoint.
+
 2026-09-12, read-only design review. This is **not implemented**. The reviewed
 bus binding was in-flight work in `native-286-memory-bus`, based at `3a1efb6`;
 its final exported contract must be rechecked after that lane lands. No CPU core,

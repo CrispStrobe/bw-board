@@ -64,6 +64,12 @@ self.onmessage=async({data})=>{
                 nativeOracle.busCircuit={checked:await runNativeBusCircuitOracle({wasmBytes}),
                     incremental:await runNativeBusCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true})};
             }
+            if(data.hybridBoot) {
+                const {runNativeBootOracle}=await import('../scripts/lib/harris-native-boot-oracle.mjs');
+                const options={wasmBytes,yieldTask,stopped:()=>active.cancelled};
+                nativeOracle.hybridBoot={checked:await runNativeBootOracle(options),
+                    incremental:await runNativeBootOracle({...options,admittedGraph:true,incrementalGraph:true})};
+            }
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});
