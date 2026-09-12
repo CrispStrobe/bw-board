@@ -19,8 +19,25 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 import { INPUTS, resolve } from '../scripts/oracle-census.mjs';
+import { createHash } from 'node:crypto';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+test('environment-selected files carry the same identity as default-path files', () => {
+    const key = 'BW_CENSUS_DIGEST_TEST_PATH', previous = process.env[key];
+    const path = fileURLToPath(import.meta.url);
+    try {
+        process.env[key] = path;
+        const selected = resolve({kind: 'fixture', env: key, paths: []});
+        assert.equal(selected.present, true);
+        assert.equal(selected.digest, 'sha256:' + createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16));
+        assert.equal(selected.digest, resolve({kind: 'fixture', paths: [path]}).digest);
+        process.env[key] = ROOT;
+        assert.equal(resolve({kind: 'fixture', env: key, paths: []}).digest, null);
+    } finally {
+        if (previous === undefined) delete process.env[key]; else process.env[key] = previous;
+    }
+});
 
 test('every file the census claims to gate actually exists', () => {
     for (const input of INPUTS) {

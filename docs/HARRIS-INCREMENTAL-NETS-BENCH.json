@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-09",
+  "benchmark": "synthetic-resolver-only",
+  "command": "node bench/harris-net-resolve.mjs",
+  "baselineCommit": "c658507c0912375d45926be5450b2d48c77f7d9a",
+  "node": "v20.20.2",
+  "previousSHA256": "24c1ef2dc358b131532e50123753ac6c98a73137d2e895020d38de1d32d26611",
+  "currentSHA256": "ebf7e278921601737fe993e43f9f1a8db3ea7a6800b8684f7fa4d2e0ee19d3f0",
+  "parts": 256,
+  "nets": 514,
+  "iterations": 10000,
+  "emulatorThroughput": false,
+  "note": "Shared-host run alongside the long wired DOS diagnostic; not a guest throughput, browser or real-time multiplier. Baseline predates the static-layout optimization; this is not an isolated comparison against the preceding commit.",
+  "rounds": [
+    {
+      "round": 0,
+      "previous": {
+        "ms": 9467.82203,
+        "checksum": 5140000
+      },
+      "current": {
+        "ms": 1906.2340760000006,
+        "checksum": 5140000
+      }
+    },
+    {
+      "round": 1,
+      "current": {
+        "ms": 2031.185397000001,
+        "checksum": 5140000
+      },
+      "previous": {
+        "ms": 10678.766394999999,
+        "checksum": 5140000
+      }
+    },
+    {
+      "round": 2,
+      "previous": {
+        "ms": 10406.218754000001,
+        "checksum": 5140000
+      },
+      "current": {
+        "ms": 2378.770934,
+        "checksum": 5140000
+      }
+    },
+    {
+      "round": 3,
+      "current": {
+        "ms": 2229.418660999996,
+        "checksum": 5140000
+      },
+      "previous": {
+        "ms": 8038.146990000001,
+        "checksum": 5140000
+      }
+    }
+  ]
+}

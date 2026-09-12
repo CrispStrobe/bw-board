@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-08",
+  "suite": "https://github.com/SingleStepTests/80286",
+  "suiteRevision": "37c73caf53dcd22d3dd369ff09305d13d117a4fe",
+  "revocationListSha256": "219381caae2bd5f86d616fd9ee7309193c1dc254589ef032c0059dd42db3716f",
+  "cpuSourceSha256": "278de148a4ac4755a83871951f44e1d106951a97e3a02aae96104eb101f3afa9",
+  "adapterSourceSha256": "ce9a325d870ae66a8f715fd90c6deea6bf7bf38ee8249e0bb0ae367dc36fe6a2",
+  "runnerSourceSha256": "8fc85a55cf8c1c51632120c6c3474ee10e732fb292f94e1f9b491b79af8e14ba",
+  "backend": "harris-286-boot-subset / test-only semantic memory",
+  "command": "I80286_VECTORS=/external/pinned/80286 node scripts/grind-i80286.mjs",
+  "fullInventoryTraversed": true,
+  "files": 326,
+  "selected": 1478000,
+  "executionAttempted": 1435656,
+  "pass": 675501,
+  "fail": 0,
+  "unsupported": 802496,
+  "budget": 0,
+  "revoked": 3,
+  "unsupportedBreakdown": {
+    "UNSUPPORTED_OPCODE": 548465,
+    "UNSUPPORTED_PREFIX_SEQUENCE": 8997,
+    "UNSUPPORTED_ALU": 86766,
+    "UNSUPPORTED_SEGMENT_WRAP": 2909,
+    "UNSUPPORTED_OPCODE_EXTENSION": 113018,
+    "exceptionOrInterruptPreflight": 42341
+  },
+  "exitCode": 1,
+  "accepted": false,
+  "timingGraded": false,
+  "physicalBoardGraded": false,
+  "protectedModeGraded": false
+}

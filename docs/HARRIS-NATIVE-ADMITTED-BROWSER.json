@@ -1,0 +1,321 @@
+{
+  "accepted": true,
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "hardwareConcurrency": 4,
+  "rounds": 1,
+  "warmupRounds": 1,
+  "modes": {
+    "layouts": {
+      "netBackend": "compiled",
+      "memoryScheduling": true,
+      "deviceScheduling": true,
+      "packedBus": true,
+      "driveLayouts": true
+    }
+  },
+  "busTraceEnabled": false,
+  "cpuHistoryEnabled": true,
+  "initializationIncluded": true,
+  "constructionIncluded": false,
+  "yieldOverheadIncluded": true,
+  "fullDOSBoot": false,
+  "nativeOracle": {
+    "accepted": true,
+    "periods": 118,
+    "comparisons": 2366,
+    "transactions": 11,
+    "capacityClaim": false,
+    "scope": "test-only owned combinational oracle; stateful board and CPU not ported",
+    "memory": {
+      "accepted": true,
+      "comparisons": 1795,
+      "faults": 1,
+      "banks": 4,
+      "byteValues": 256,
+      "capacityClaim": false,
+      "scope": "isolated owned digital memory component oracle; no native board or CPU execution"
+    },
+    "memoryCircuit": {
+      "accepted": true,
+      "comparisons": 1026,
+      "faults": 1,
+      "byteValues": 256,
+      "swapAddress": false,
+      "capacityClaim": false,
+      "scope": "coupled owned net/combinational/memory fixed-point loop; no native CPU or board clock"
+    },
+    "phase": {
+      "accepted": true,
+      "periods": 360,
+      "latchComparisons": 128,
+      "capacityClaim": false,
+      "scope": "isolated owned ideal phase controller/latch; no native CPU or complete board clock"
+    },
+    "phaseCircuit": {
+      "accepted": true,
+      "comparisons": 1532,
+      "faults": 0,
+      "transactions": 128,
+      "capacityClaim": false,
+      "scope": "actual-net ideal controller/latch/memory clock boundaries; CPU bus and peripheral clocks not ported"
+    },
+    "schedule": {
+      "accepted": true,
+      "periods": 258,
+      "reads": 64,
+      "capacityClaim": false,
+      "scope": "bounded synthetic input schedule; every period executes, no CPU/device runner"
+    },
+    "admittedGraph": {
+      "accepted": true,
+      "capacityClaim": false,
+      "memory": {
+        "accepted": true,
+        "comparisons": 1026,
+        "faults": 1,
+        "byteValues": 256,
+        "swapAddress": true,
+        "capacityClaim": false,
+        "scope": "coupled owned net/combinational/memory fixed-point loop; no native CPU or board clock"
+      },
+      "phase": {
+        "accepted": true,
+        "comparisons": 1532,
+        "faults": 0,
+        "transactions": 128,
+        "capacityClaim": false,
+        "scope": "actual-net ideal controller/latch/memory clock boundaries; CPU bus and peripheral clocks not ported"
+      },
+      "schedule": {
+        "accepted": true,
+        "periods": 258,
+        "reads": 64,
+        "capacityClaim": false,
+        "scope": "bounded synthetic input schedule; every period executes, no CPU/device runner"
+      }
+    },
+    "moduleSHA256": "d38e485f13605f3efb7f1a00708eb410e5e9bc0b5edeea460eb1f40509cf3158"
+  },
+  "cancellation": {
+    "status": "stopped",
+    "clocks": 32,
+    "chunks": 1,
+    "periodClosed": true
+  },
+  "heartbeat": {
+    "count": 2384,
+    "medianMS": 16,
+    "p95MS": 17.300000190734863,
+    "maxMS": 33.59999942779541
+  },
+  "samples": [
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "layouts",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 2958,
+      "periodsPerSecond": 11106.152805949967,
+      "chunks": 301,
+      "maxChunkMS": 12.300000190734863,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "layouts",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 498.6000003814697,
+      "periodsPerSecond": 13574.007209831383,
+      "chunks": 52,
+      "maxChunkMS": 11.800000190734863,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "layouts",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 474.6000003814697,
+      "periodsPerSecond": 12031.184145407644,
+      "chunks": 50,
+      "maxChunkMS": 13.90000057220459,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "layouts",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 121.70000076293945,
+      "periodsPerSecond": 27510.270986124313,
+      "chunks": 14,
+      "maxChunkMS": 9.700000762939453,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "layouts",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 435.70000076293945,
+      "periodsPerSecond": 22951.572142504796,
+      "chunks": 48,
+      "maxChunkMS": 10.800000190734863,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    }
+  ],
+  "nativeBuild": {
+    "sha256": "d38e485f13605f3efb7f1a00708eb410e5e9bc0b5edeea460eb1f40509cf3158",
+    "sourceHashes": {
+      "src/experimental/wired-kernel/net-resolver.c": "507d8600524fdd7f14652d68e85c9e8ed3a21446db15cf078459a6a672133d49",
+      "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+      "src/experimental/wired-kernel/memory-circuit.c": "307ff2254215267cbe694486cd9203b0331aaa6db7625f3fd48ea30bfd65495f",
+      "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+      "src/experimental/wired-kernel/phase-circuit.c": "2405f63448a9f7f7a457d7c5280c2e2064980380572a89df91a452ce49ce6455",
+      "src/experimental/wired-kernel/phase-schedule.c": "faec158fdfbdde45fbd916336a664e0e75827e99b307d34e347e5db6f85310ad"
+    },
+    "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+    "admittedGraph": true
+  },
+  "summaries": [
+    {
+      "name": "memory",
+      "modes": {
+        "layouts": {
+          "medianMS": 2958,
+          "minMS": 2958,
+          "maxMS": 2958,
+          "periodsPerSecond": 11106.152805949967,
+          "xtCapacityFactor": 0.0011635017890139082
+        }
+      }
+    },
+    {
+      "name": "io",
+      "modes": {
+        "layouts": {
+          "medianMS": 498.6000003814697,
+          "minMS": 498.6000003814697,
+          "maxMS": 498.6000003814697,
+          "periodsPerSecond": 13574.007209831383,
+          "xtCapacityFactor": 0.0014220389318131315
+        }
+      }
+    },
+    {
+      "name": "dma",
+      "modes": {
+        "layouts": {
+          "medianMS": 474.6000003814697,
+          "minMS": 474.6000003814697,
+          "maxMS": 474.6000003814697,
+          "periodsPerSecond": 12031.184145407644,
+          "xtCapacityFactor": 0.0012604098396375536
+        }
+      }
+    },
+    {
+      "name": "interrupt",
+      "modes": {
+        "layouts": {
+          "medianMS": 121.70000076293945,
+          "minMS": 121.70000076293945,
+          "maxMS": 121.70000076293945,
+          "periodsPerSecond": 27510.270986124313,
+          "xtCapacityFactor": 0.002882028553709893
+        }
+      }
+    },
+    {
+      "name": "idle",
+      "modes": {
+        "layouts": {
+          "medianMS": 435.70000076293945,
+          "minMS": 435.70000076293945,
+          "maxMS": 435.70000076293945,
+          "periodsPerSecond": 22951.572142504796,
+          "xtCapacityFactor": 0.0024044505523262484
+        }
+      }
+    }
+  ],
+  "benchmark": "owned-wired-browser-worker",
+  "browserVersion": "Chromium 150.0.7869.0",
+  "node": "v20.20.2",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCPUs": 4
+  },
+  "sourceHashes": {
+    "bench/harris-browser.mjs": "218ab2ce22db03c38f7ade01ba021148c34eb27d861b332c4f2b3521de2749bc",
+    "src/experimental/wired-kernel/net-resolver.c": "507d8600524fdd7f14652d68e85c9e8ed3a21446db15cf078459a6a672133d49",
+    "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+    "src/experimental/wired-kernel/memory-circuit.c": "307ff2254215267cbe694486cd9203b0331aaa6db7625f3fd48ea30bfd65495f",
+    "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+    "src/experimental/wired-kernel/phase-circuit.c": "2405f63448a9f7f7a457d7c5280c2e2064980380572a89df91a452ce49ce6455",
+    "src/experimental/wired-kernel/phase-schedule.c": "faec158fdfbdde45fbd916336a664e0e75827e99b307d34e347e5db6f85310ad",
+    "bench/harris-browser.html": "d883f22e13deb438b5de56a7ef392624a8689693ad7b257e23794ae9503eb5e4",
+    "bench/harris-browser-worker.mjs": "886175f3bc33a3efa736d96cc293e2443bd63999f10ce8a5e0324aa0cbca335c",
+    "scripts/lib/harris-owned-workloads.mjs": "3a9131d8c7554175057dd7ea0069d85e6a4cdd7634e4a9f5c190d7fdfc557e88",
+    "src/experimental/harris-run-chunks.js": "a252a4263a04136b7e5d77e82ec0a2c552ebfa375aff81aa2bda89d22117a2ce",
+    "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+    "src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "src/experimental/harris-boot-rom.js": "ecbee5bc5556257acaae231e2b2d153a9a1d04acde67d98342374dc6c2cbd98c",
+    "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "src/experimental/harris-8254-adapter.js": "eb1643b2be68f21f0e9c319d03a74e305383214b983d720d5b77718890e7f293",
+    "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+    "src/experimental/harris-fdc-adapter.js": "b19260367dcb2e9a737ec68fb639a6fb2491c4bfb1c2a93e4881019e1e2a2fe8",
+    "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+    "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "src/experimental/harris-keyboard-adapter.js": "acccc5ac0a78c4fe5fada61ee0204f606c7bd2cc7feaa126ac6d2d8fa4475e12",
+    "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/devices.js": "396ffede2fa30fbf39a16cae97b747d16ee099f7665e8094dab939b48a681151",
+    "src/experimental/compiled-digital-circuit.js": "69a693b1340ea93240c1caf402665573f6651be0e34fef408bf3a1f42b65a03e",
+    "src/experimental/harris-80c286-bus.js": "987832faf0b66548dbfce7062b18a9a2abbac0d0ae0ce7fea2976a3416ecf386",
+    "src/experimental/harris-memory-decoder.js": "1f274145e565f125284c5f312a62a9219d3dc64ce246fb52ba18b8857719721c",
+    "src/experimental/compiled-device-scheduler.js": "b0674f709446a3e1b42f22d2712988a25cdd5e3e4239c841b7ea00d2f6dc66f3",
+    "src/experimental/wired-kernel/evaluator-contract.js": "c6227d1b5c4dc2f25689f17edd852611c3fdee045fdc5d10517ffd2e1d3fffd3",
+    "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+    "src/chip-ledger.js": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a",
+    "scripts/lib/harris-native-settle-oracle.mjs": "8c7eaff431beb850a004859282839a1a26ce1c52b0b1ebba5849b5ae9f3e8d36",
+    "src/experimental/wired-net-image.js": "6979669bc6403ffe5b7b12227c146212f501c9abb0b49871b4f43b9c81879d11",
+    "src/experimental/wired-kernel/owned-kernel.js": "66bbe9e53b5e910642ac2ad08f757ad5b13929cde67274ec7c89a99e67ecafc7",
+    "src/experimental/wired-kernel/evaluator-image.js": "d1ec76ff31a3fb2151c8fb3ad2badad0d9e8d662219fdfc1b6e7ddd5842c463e",
+    "src/experimental/wired-kernel/net-resolver.js": "6666359a92495a1b8bbd03d8144bbb5ad70fed986ebb61a55edd08e85bf1a8ef",
+    "scripts/lib/harris-native-memory-oracle.mjs": "4950f62c0807590f316445a3f7deaa62336212764610d26ecea72def17ad8f0b",
+    "src/experimental/wired-kernel/memory-banks.js": "1763d7ee24fa087c5ba30a601dd7e87d970a6ce8aef52bee16bce854da725898",
+    "scripts/lib/harris-native-memory-circuit-oracle.mjs": "0519d95d1a47cb508fe4a558341c2a0c2a9543eef924d7abc976cfea27e66c79",
+    "src/experimental/wired-kernel/memory-circuit.js": "6f152374573ebb19018f6e3ca7170976d715f1d7d16d573ff8c92d6745994561",
+    "src/experimental/wired-kernel/phase-circuit-image.js": "493b8cc660aca0b7c812b9c9ed710cafb43c4d4da97f896d8c6bbc12a27776eb",
+    "src/experimental/wired-kernel/phase-components.js": "eeff37a4966c5908d7f72ee69db9baaca12e3820b8c4c2beb67662efb2707fd1",
+    "src/experimental/wired-kernel/phase-schedule.js": "87eb96b8633b14c2a8e6ce6f73a420f8f5142ac7d83fc174b009b742d8be75f7",
+    "scripts/lib/harris-native-phase-oracle.mjs": "6aa4293dd82a696833835203846afdb3984cae0127aabb30f4b8c61811113746",
+    "scripts/lib/harris-native-phase-circuit-oracle.mjs": "c1121ffd68260ff10751cff53d68762c3a2136dd4d552a892563d6a2ebd970da",
+    "scripts/lib/harris-native-phase-schedule-oracle.mjs": "d5dc383d0f8c09f4ba88574e56eeaf4ef3de3050d3034de8674e04d6da56bd74"
+  },
+  "nodeReference": {
+    "receipt": "HARRIS-OWNED-WORKLOADS-BENCH.json",
+    "sha256": "0639dbdcff3bb6bf4b72e9f8e4138d71f58826dead82956cba12614298007c41",
+    "revision": "03946c7fa6574848e35659941b3f6f19fd2adaa5"
+  },
+  "notes": [
+    "Fresh browser profile and loopback-only source server; no guest media.",
+    "Capacity factor is not complete silicon timing certification.",
+    "Worker heartbeat is observed responsiveness, not a hard frame deadline or an intrinsic throughput gain.",
+    "Shared host load uncontrolled."
+  ],
+  "temporaryProfileRemoved": true
+}

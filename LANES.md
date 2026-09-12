@@ -561,6 +561,7 @@ rather than each against the master it branched from.
 | lane | who | started | what |
 
 | --- | --- | --- | --- |
+| wired-286-dos-boot | Codex | 2026-09-09 | Wired DOS boot, pinned oracle harness and iterative compiled-wired performance toward the documented 4.77 MHz-equivalent capacity gate. Keep reference/default gates; no deploy or media hosting. Plans: WIRED-X86-PERFORMANCE-PLAN.md and X86-ORACLE-STRATEGY.md. **2026-09-12 integration milestone:** user authorized complete lab publication to upstream; candidate 69583a8 merges pinned master fa20bb8, hosted push jobs green, final native suite 66/66. Details and explicit skip/coverage limits: docs/X86-UPSTREAM-INTEGRATION.md. This completes integration, not the still-unmet 4.77 MHz optimization plan. |
 | machine-checkpoint contract + its three machine consumers (complete capability) | this session (Lane A, assigned + audited by lego-ac) | `converge/machine-checkpoint-contract` at exact base `38de2e6` | **LOCAL CANDIDATE 2026-09-10.** New `src/machine-checkpoint.js` (self-contained, no outward imports) + the checkpoint methods `checkpointSupport`/`checkpointTopology`/`captureCheckpoint`/`restoreCheckpoint` on `m6502`/`z80`/`i8086` machines. **The methods are NOT separable from the state serialisation under them:** `captureCheckpoint` calls `saveState`, `restoreCheckpoint` calls `loadState`, and upstream had only a simpler `saveState`/`loadState` (m6502/z80 without devices+pinLevels+statePair; i8086 a v1 `{variant,cpu,cycles,mem,chips}`). So the enhanced `saveState`/`loadState`/`CPU_STATE` go up with the methods — measured round-trip-compatible (every existing upstream `saveState`/`loadState` test asserts LOCKSTEP, not format or version; `machine-contract` 26/26 unchanged). **FINDING, named not fixed-in-passing (third instance today after `_buildAdvanceList` and the marker retraction):** that enhanced serialisation was an UNDECLARED divergence — no ledger `contains` for `saveState`/`CPU_STATE`/`statePair`; the 12 entries pinned method SIGNATURES and nothing pinned the state format they depend on. A file declared divergent for reason X silently carried divergence Y; that is a gap in the ledger's coverage, its own lane. **Decision — throw-vs-skip (asked explicitly):** `saveState` stays BEST-EFFORT (upstream's deliberate, essay-documented contract in `machine-contract.test.mjs`: walk the chip map, skip a chip with no state codec, a separate structural test catches gaps); completeness REFUSAL lives in the contract — `checkpointSupport` reports it and `captureCheckpoint` refuses before ever calling `saveState`, so the no-silent-drop safety holds at the correct layer. i8086's old `saveState`-level throw was NOT ported. **Decision — wrapped-vs-raw:** i8086 stored component state WRAPPED (`{api,state}` via bespoke `_saveComponent`), m6502/z80 store RAW via the shared `statePair`; `machine-contract` asserts the raw form and that all three discover state identically, so i8086 CONVERGED onto `statePair` (its bespoke `_saveComponent`/`_loadComponent`/`_cloneCheckpointValue` dropped, `_snapshotTopology` kept). i8086 goes v1→v2 (complete state: topology+devices+machine pin state+intShadow/repInterrupted); `test/i8086-186.test.mjs`'s variant test updated to read the variant from `topology` and to reflect that v1 payloads are refused. Debug bridges deliberately OUT of scope (they carry replay/input divergence beyond checkpoint). Tests: new `test/machine-checkpoint.test.mjs` (13 — three machines: complete envelope, capture→restore lockstep, schema + topology fail-closed, incomplete-machine refusal); full machine+savestate+checkpoint sweep GREEN (only `i8086-debug`/`dos-bios-cursor` skip — pre-existing missing `avr8js` dep, fails identically on master). No-strangers: `git diff origin/master..HEAD --name-only` is exactly the six lane files + this row. Merged forward onto `ff9b324` (no rebase). Retires the 12 contract entries + i8086's helper entries (~16). Handing the branch to lego-ac to audit + land, then the Lite pin bump + ledger retirements. **AUDITED + EXTENDED BY lego-ac 2026-09-10, two commits appended (`12835d4`, `1239668`); the claim above stands except where corrected here.** (1) **A DEFECT WAS FOUND IN THE wrapped→raw HALF AND FIXED, NOT WAIVED.** Converging i8086 onto `statePair` dropped every check on the state BODY: `restoreCheckpoint` validated the ENVELOPE and handed the state to `loadState`, whose `this.mem.set(s.mem)` accepts a SHORT image and leaves the tail as the destination machine had it. Measured into a machine pre-filled `0x5a`: a one-byte-short image, a 7-element bare Array and a string were all ACCEPTED; only the over-long case refused, with the engine's own `offset is out of bounds`. m6502 refused all four by name. The comment at the site asserted the check "lives in the contract layer, as it does for m6502/z80" — it lived in those two machines' own `restoreCheckpoint` and nowhere else. (2) **THE COMMON CLAUSES NOW LIVE IN THE MODULE** as `validateCheckpointState` (state version, memory image type AND exact length, CPU field set, chip/device name sets, optional shape), with `details.reason` naming which clause fired; `sameCheckpointShape` moved out of m6502, which was its only home. Each machine keeps what is genuinely its own (m6502's cycle counter and pin levels; z80's tape, ULA and 128K banking). **z80 deliberately passes no `shape`** — its chip state legitimately reshapes between captures — and that abstention is now asserted in both directions. (3) **FOUR CLAUSES WERE UNHELD BY ANY TEST** (version, missing CPU field, null CPU record, wrong component set: each neutered, nothing red across seven suites), so the parameterised loop gained a case per clause. Suite 13 → **22**. Seven mutations, seven red. (4) **`cycles` in `I8086Machine.CPU_STATE` is KEPT and documented, not dropped.** It looks like a duplicate of `machine.cycles` and is not: `reset()` adds 4 to the machine while the core's reset zeroes it, and `step()` short-circuits on `cpu.halted`, advancing the machine by the wake horizon without calling `cpu.step()` at all (+25,000 machine cycles against +0 core cycles over five parked steps). `machine.cycles` is the authoritative simulation time; both are restored, neither is derived. (5) **Corrections to the claim above:** merged forward onto master `c8d7101`, not `ff9b324` (elapsed-without-retire landed under the lane; before the forward-merge the no-strangers diff read NINE files, two of them deletions of landed work). `i8086-debug` is **39/39 green** here — its `avr8js ERR_MODULE_NOT_FOUND` was a bare worktree with no `node_modules`, not a missing dependency. Full sweep is **87 machine/state/checkpoint/debug suites, 0 failures**. (6) **Accepted with a note:** `_snapshotTopology()` is a second builder of the same kind of value alongside the shared `checkpointTopology()` (155 chars vs 73, different inputs). Both directions of disagreement fail closed, so it stands — recorded here as a known double-source because a rename has as many sites as builders. (7) The undeclared-serialisation finding is correctly named-not-folded and is now its own lane with a falsifying threshold stated before measurement. |
 | emu8051 reset-aware time domain + cycle-provider truth | this session (`8086 coverage testing materials`), root audits/promotes | `lane/emu8051-contract2-time-cycle` at exact base `5ada87b2` | **LOCAL CANDIDATE 2026-09-10**, commit `98c41a6`. Contract 2 of the emu8051-debug decomposition (after bwcx's exact-address run-to): the reset-aware time domain and the cycle-boundary truth, moved up from the Lite fork as one unit. `debugTime()`/`target.time()` reports `ticks` in oscillator cycles when a usable `clockHz` is supplied and native nanoseconds otherwise, with a `domain` string carrying a reset epoch so two runs of one program never read as one monotonic series. `cycleProvider()` publishes a recorded, resumable oscillator boundary that promises nothing it cannot deliver — `signals: []` (this ABI has no ALE/PSEN/address/data bus; clients must not synthesize a waveform) and `checkpoint: false` (architectural reads omit in-flight and peripheral state); it reads its `timeDomain` from `debugTime`, not a second copy of the clock-vs-ns rule, so a recorded cycle fact and the declared boundary can never disagree on the clock. ONE numeric authority: `NS_PER_S` (spelled as in `labwired-adapter.js`) drives the tick⇄ns scale, not a per-use literal. `test/emu8051-time-cycle.test.mjs`, 11 cases, each red by NAMED CONSEQUENCE (mutation-verified: wrong ns/s scale, dropped half-up bias, an inlined domain string drifting from `debugTime` across a reset, a non-empty `signals`, a true `checkpoint`, and a missing reset-epoch bump each reproduce as targeted reds; baseline restores to 11/11). Envelope: `src/emu8051-debug.js`, one focused test, this row. Full emu8051 suite green locally. **`target.time()` — KEPT, decided:** contract 2 promises reset-epoch MONOTONICITY ("emitted facts keep monotonic meaning across resets"), which is a property of the tick VALUE — `cycleProvider().timeDomain` is a string and cannot express it, nor can it test the cycles-vs-ns conversion or the `NS_PER_S` rounding, both observable only through `time()`. This is the FIRST public `time()` in bw-board; the recommendation is that other targets adopt a `time()`/`now()` surface when they publish reset-aware timestamps — a decided precedent, not an accidental one. **Hold released 2026-09-10** (bwcx's Lite pin + four lanes landed); MERGED FORWARD onto master `3a18a8c` (no rebase). `git diff master..HEAD` is exactly these 60 lines + test + this row; master's ci.yml `branches:['**']`, `scripts/probe-sf-unaligned.mjs`, and the `emu8051-adapter.js` post-reset pin-mode fix are carried, not reverted. Pushed for auto-triggered CI; handing the merged head to lego-ac to audit and land. |
 | emu8051 exact code address + run-to descriptor | bwcx (Codex), root audits/promotes | `converge/emu8051-exact-runto` at exact base `8deff2a2f` | **CLAIM 2026-09-09.** One 16-bit maximum drives the emu8051 code-breakpoint guard, its refusal text, and the established synchronous-before-address `runTo` descriptor. This replaces `bp.addr & 0xffff`, which let a high address silently arm a different byte. Focused caller-facing evidence must prove the published maximum is accepted, its first successor is refused without reaching WASM, malformed numbers refuse, deleting the guard reintroduces the wrong-byte arm by name, and descriptor/guard drift reds by name. Envelope: `src/emu8051-debug.js`, one focused test, this row. Branch CI may run, but master landing is held until sim2cx's Lite RP2040 retirement lands. Baseline CI `34303655233`: 3917/3782/0/135; expected candidate +5 tests = 3922/3787/0/135, with vectors and 525-program corpus unchanged. |
@@ -568,6 +569,191 @@ rather than each against the master it branched from.
 | debug-session wall-budget convergence | bwcx (Codex), root audits/promotes | `converge/debug-session-wall-budget` at base `8deaf1ea6` | Upstream the general opt-in session primitive from Lite: a bounded host-wall-time pump carries simulated-time debt instead of freezing the browser or dropping program time. The default path remains one whole `runFor` call per pump when `wallBudgetMs` is absent; Lite's only current opt-in is the i8086 host. Envelope: `src/debug-session.js`, one focused test, this row. |
 
 ## DONE
+
+286 DMA register prerequisite: source `cdbf18a` on `feat/x86-backend-lab`,
+2026-09-09. Optional channel-2 register/XT-style page bridge uses physical
+byte lanes and I/O strobes, private unchanged I8237 register core, no callbacks
+or transfers. Address/count shared pointer, strict modes/masks, page/reset,
+floating undefined reads and DREQ/software-request refusals tested. Owned
+guest programs 7C00h/01FFh/page04h/mode46h and reads registers back with PIC,
+PIT and FDC connected. Seven new tests plus one CLI test; expanded targeted
+suite with I8237 core 475/475 pass, no skips. --dma-mode registers is explicit;
+default none, dma capability remains false, FDC data commands still refuse.
+HOLD/HLDA, bus ownership and terminal count are NOT implemented; those are
+the next functional gate before sectors. Details HARRIS-286-DMA.md. No new
+long POST/DOS boot, full vectors/CI/browser, app pins/defaults, merge/deploy
+or media. CPU/SST hashes unchanged. Claim released.
+
+286 FDC control/IRQ6 bridge: source `6b18924` on `feat/x86-backend-lab`,
+2026-09-09. Explicit optional DOR/MSR/FIFO byte-lane wiring and FDC IRQ6 net
+to PIC; private unchanged UPD765 core admits only control commands. Data/DMA/
+PIO commands refuse before core admission, no media API or transfer callback.
+Owned guest programs PIC, pulses DOR, receives vector 0Eh via two physical
+INTA pulses, sends EOI/IRET, drains four reset replies into wired RAM, then
+SPECIFY/HLT. Tests cover gates, port conflicts, control replies, reset, READY,
+missing wires and refusal boundaries. Ten FDC tests plus one probe CLI test;
+targeted suite including unchanged FDC core 431/431 pass, zero skips. Optional
+--fdc-mode control probe metadata/provenance added; default none. No new long
+POST run or DOS boot claim. Next: wired DMA channel 2, bus ownership and TC,
+owned sector transfers before admitting data commands; larger normal POST
+probe separately. Details HARRIS-286-FDC.md. CPU/SST hashes unchanged; no new
+full vectors/CI/browser, app pins/defaults, merge/deploy or media. Claim released.
+
+286 static net-layout resolver: source `e6fbc0d`, extended probe receipt/docs
+`aa95abe`, on `feat/x86-backend-lab`, 2026-09-08. Precompute fixed membership,
+canonical roots and driver order; still resolve every current level and settle
+normally. Three differential tests; targeted suite 371/371 pass, zero skips.
+Pinned synthetic benchmark measures 3.0–5.9x resolver-only improvement, not
+overall emulator/RT speed. New configured 64 KiB/110,000-clock probe matches
+old 48k/50k/64k checkpoints and ends at F000:0453, 7,511 retired, still banner
+dispatch. Budget-exhausted/accepted:false, no next fault or POST/DOS completion.
+Historical receipts preserved. Next functional task: FDC control-port/IRQ6
+bridge and owned microguest tests, then larger normal POST probe; reject data
+transfers until physical DMA exists. CPU/SST hashes unchanged. No new full
+vector run, full CI/browser, app defaults/pins, merge/deploy or media hosting.
+Claim released.
+
+286 net-read optimization / longer POST diagnostic: source `c658507` on
+`feat/x86-backend-lab`, 2026-09-08. Internal scalar reads avoid defensive
+diagnostic copies; inspection, net resolution and physical bus behavior stay
+unchanged. Three differential tests plus broader regression: 368/368 pass,
+zero skips. Probe provenance now includes digital-circuit.js. Original-code
+64 KiB/65,000-clock run passes screen clear into banner handling, ending at
+F000:0447 with 3,293 retired, budget-exhausted/accepted:false. Historical source
+hashes and new receipt preserved in HARRIS-286-BIOS-BANNER-REPORT.json. No next
+peripheral fault, complete POST, DOS boot or end-to-end speedup claimed. Next:
+larger normal POST budget, then physical FDC reset/IRQ6 and DMA acceptance gates
+documented in HARRIS-286-BIOS-POST.md. CPU/SST hashes unchanged. No new full
+vector run, full CI/browser, app pins/defaults, merge/deploy or media hosting.
+Claim released.
+
+286 BIOS POST configuration: source `de39245` on `feat/x86-backend-lab`,
+2026-09-08. Full 640 KiB baseline reaches actual PIC ICW4=09h refusal at
+F000:00F9 after 13,543 completed clocks/1,516 retired. Explicit source-level
+single-unbuffered BIOS build changes only the ICW4 byte; original default ROM
+remains hash-identical and PIC guards unchanged. Configured 640 KiB probe
+initializes PIC/timer, reaches text-memory REP clear, exhausts 20,000 clocks
+with 1,763 retired; accepted:false, no POST/DOS completion or next-fault claim.
+Reusable bounded CLI, profile/provenance tests and two-run hashed receipt in
+docs/HARRIS-286-BIOS-POST*. Five new tests; suite including existing BIOS ROM/
+floppy tests 345/345 pass, no skips. CPU/SST hashes unchanged; no new full-vector
+run, full CI/browser, app pins, default changes, merge/deploy or media hosting.
+Claim released; continue configured POST toward disk/peripheral prerequisites.
+
+286 conventional/text memory map: source `b301310` on `feat/x86-backend-lab`,
+2026-09-08. Explicit 64–640 KiB conventional RAM and optional B8000h text RAM
+use additional registered chip pairs/full latched-address decoders. Defaults
+and saved recipe remain 64 KiB. Ten new tests cover chip isolation, boundaries,
+READY/partial faults, holes and owned code relocation/far call at 9000:0200
+with an upper-memory stack and text-memory write. Targeted run 274/274, no skips.
+Unmodified BIOS probe: 6,000 clocks/747 retired, budget exhausted in IVT setup
+at F000:0073, zero PIC writes; accepted:false, no POST/DOS boot claim.
+CPU/SST hashes unchanged; no new full-vector run, full CI/browser, app pins,
+merge/deploy or media hosting. Claim released; longer BIOS probe/peripheral
+gates in docs/HARRIS-286-MEMORY-MAP.md. BIOS ICW4=09h mismatch is source-audited,
+not yet the observed runtime stop; PPI/video/FDC/DMA wiring remains pending.
+
+286 wired programmable timer: source `1d9ab7c` on `feat/x86-backend-lab`,
+2026-09-08. Default-off counter-0 binary modes 0/2/even-3 subset with independent
+ideal divider, resolved CLK/GATE/OUT0-to-PIC-IR0 and port/lane wiring. Separate
+pin-clocked counter preserves visible pulses; production I8254 unchanged.
+Sixteen owned tests cover waveform/count/load/latch/gate/guards and actual
+guest periodic IRQ0/EOI/IRET/HLT, READY stalls, mask/unmask and disconnected nets.
+Targeted suite including production PIC/PIT tests: 264/264 pass, zero skips.
+CPU/SST adapter/runner hashes unchanged from SST286-INTR-REPORT.json; no new
+full-vector run, hardware oracle, full CI/browser or wired DOS boot claim.
+No app pin/default changes, merge/deploy or media hosting. Claim released;
+storage/BIOS/memory-map boot prerequisites next in docs/HARRIS-286-TIMER.md.
+
+286 wired programmable PIC: source `25d39dd` on `feat/x86-backend-lab`,
+2026-09-08. Explicit I/O/controller gate and PIC+decoder/byte-lane adapter
+reuse the existing unchanged I8259 core. Guest IN/OUT initialization, masks,
+ISR/IRR, paired INTA vectors, HLT/IRET and EOI; fixed-priority single edge-mode
+subset only. Cascade, auto-EOI, level/rotation/special modes explicitly refused.
+Fifteen new owned tests; targeted run including PIC core tests 218/218, no skips.
+CPU/SST adapter/runner hashes unchanged from SST286-INTR-REPORT.json; prior
+1,477,997-pass receipt retained, no new full-vector run or hardware oracle claim.
+No app pin/default changes, full CI/browser, merge/deploy or media hosting.
+Claim released; timer/IRQ0 guest gate next in docs/HARRIS-286-PIC.md.
+
+286 wired INTR integration: source `14549f0` on `feat/x86-backend-lab`,
+2026-09-08. Opt-in controller INTA outputs and independent READY gate connect
+the CPU's paired acknowledgement to an external part/vector-net connector.
+IF/STI/SS blocking, qualified level requests, NMI priority, HLT wake, IRET and
+REP restart tested with an independent lab peer (not a programmed PIC).
+Twelve new tests; final targeted run 176/176, no skips. Fresh full pinned SST286
+1,477,997 pass, 3 revoked, zero fail/unsupported/budget, exit 0; hashed receipt
+SST286-INTR-REPORT.json. SST is not an asynchronous/bus oracle. PIC ports,
+timer, cascade, timing/protection and actual wired DOS boot remain pending.
+No app pin/default changes, full CI/browser, merge/deploy or media hosting.
+Claim released; next programmable PIC/port gate in docs/HARRIS-286-INTR.md.
+
+286 INTA sequencer foundation: source `5bfe02e` on `feat/x86-backend-lab`,
+2026-09-08. Bus-only `intrEnabled:true` enables a paired INTA transaction and
+resolved INTR-level observation, not CPU interrupt selection. Five new net-peer
+tests verify ignored first data, second-byte vector, six-system-clock gap,
+address/BHE release, LOCK, external wait enforcement and RESET cancellation.
+Final targeted regressions 164/164, zero skips. CPU/adapter/runner hashes still
+match the previous 1,477,997-pass SST286 receipt; no new full-vector run claimed.
+Controller/PIC wiring and CPU IF/shadow/priority/HLT/REP integration remain
+pending; memory-board INTR remains refused. No app pins/defaults, full CI/browser,
+merge/deploy or media changes. Claim released; next gates in HARRIS-286-INTA.md.
+
+286 NMI foundation: source `bbf7cdd` on `feat/x86-backend-lab`, 2026-09-08.
+Explicit `nmiEnabled:true` board option samples resolved NMI, qualifies edges,
+delivers wired vector 2, supports HLT wake, SS shadow, IRET blocking/coalescing
+and REP element-boundary restart. Thirteen new tests; final targeted run
+159/159, no skips. Full pinned SST286 remains 1,477,997 pass, 3 revoked,
+zero fail/unsupported/budget, exit 0; hashed receipt SST286-NMI-REPORT.json.
+SST supplies no NMI inputs: asynchronous evidence is owned wired tests plus
+cited manuals, not silicon timing. INTR/INTA, controller, debug/trap priority,
+full reset/halt/shutdown and protected mode remain gates. No application
+pin/default changes, full CI/browser, merge/deploy or media hosting. Claim
+released; next INTR acknowledgement gate in docs/HARRIS-286-NMI.md.
+
+286 system-state prerequisites: source `c38e0d6` on `feat/x86-backend-lab`,
+2026-09-08. Real-mode LGDT/LIDT/SGDT/SIDT/SMSW/LMSW(non-PE)/CLTS, protected-only
+real-mode faults, IDTR-based INT/IRET and debugger register inspection. Twelve
+new owned tests; final targeted run 146/146, no skips. Full pinned SST286 rerun
+1,477,997 pass, 3 upstream revoked, zero fail/unsupported/budget, exit 0;
+new hashed receipt in `docs/SST286-SYSTEM-STATE-REPORT.json`. System forms lack
+SST silicon vectors: cited Intel manual + owned wired/semantic tests only.
+PE=1, nested-fault delivery failure, LOADALL and external INTR/NMI stay explicit
+limitations. Default-off, no app pins, full CI/browser, merge/deploy or media
+hosting changes. Claim released; next gates in HARRIS-286-SYSTEM-STATE.md.
+
+286 real-mode expansion: source `aff6a67` on `feat/x86-backend-lab`, 2026-09-08.
+All 326 pinned SST286 files selected: 1,477,997 executed/pass, 3 upstream
+revocations, zero fail/unsupported/budget, exit 0; hashed per-file receipt in
+`docs/SST286-REAL-MODE-REPORT.json`. Local targeted regression 134/134, no skips,
+including wired fault/INT/REP/READY tests, Paterson on 8086/80186/wired 286 and
+DOS file persistence on 8086/80186. Semantic vector coverage is not physical
+bus/timing or full 80286 acceptance; protected mode, external interrupts,
+system instructions outside the suite, devices and wired DOS boot remain.
+LOCK bypass and inactive-coprocessor profile are explicit test conditions,
+not physical protocol support. Default-off; application pins unchanged; no
+full CI/browser acceptance, merge, deployment or new media hosting. Claim
+released at this incremental handoff; remaining gates in SST286-RUNNER.md.
+
+286 vectors/private media increment: engine `7b7f92f`, paired Lite docs `15be58905`. Pinned SST286 inventory traversed all 326 files / 1,478,000 vectors: 675,501 matched, 802,496 unsupported (42,341 exception/interrupt cases refused before execution), three revoked, no completed-state mismatches or budget exhaustion; exit 1, NOT full acceptance. Test-only 16 MiB semantic memory drives unchanged boot decoder; no physical-board/timing/protected-mode claim. Added external-only reviewed/hash-checked private media admission, no game downloads/uploads or private repository creation. Fourteen new harness tests and 30 existing Paterson/prerequisite tests passed locally (42 combined before two additional parser/CLI tests, final 14 harness tests green). No app runtime/vendor/production pin change, merge/deploy or full hosted CI. Claim released at incremental handoff; CPU expansion and guest milestones remain pending.
+
+Paterson guest increment: source `f2eeb5964bc1285a6c8f3b1c297d2998833cc56f`, paired Lite `9b5ea89dc55ea0e987591c3db4b6d4d2cf3c7745`. Preserved MIT original/adapted FAT12 routines pass on 8086/80186/wired 286 subset; byte/stack/segment/ALU prerequisites remain experimental. Real DOS shell disk persistence passes on 8086/80186. 71 targeted engine tests passed locally, no skips; Lite preservation/runtime and isolated browser passed. No full 80286 vector run, general 286, accepted ELKS/MINIX boot, games import, DOSBox package support, production pin change, merge or deployment. The five requested milestones remain open in the plans; this bounded implementation/research increment is handed off, claim released.
+
+286 saved profile/debugger session: source `14f2538` on `feat/x86-backend-lab`; strict JSON construction recipe for the fixed latched-memory profile, editable saved wires, fresh-state reload, bank/net inspection, bounded clock/instruction stepping and 24-bit physical code breakpoints. Unsupported parts/backends/live snapshot and mutation operations fail explicitly. 10 new tests; final targeted run 117/117, four suites, no skips. Engine-only, default-off; no full Boundary-D registration, application controls, production defaults/pins, merge or deployment. Full CI/browser/hardware not run. Claim released; application import/export and debugger controls remain next.
+
+286 addressing and loops: source `bf83dac` on `feat/x86-backend-lab`; word ModR/M MOV/ADD/CMP in both directions, register INC/DEC, JE/JNE/JMP/LOOP. Owned ROM fills/sums wired RAM and checks the result in guest code (47 instructions, sum 10; deliberate failure branch also verified). 13 new tests include all 256 ModR/M decoder encodings as a unit check, representative wired accesses and delayed RMW flags/retirement. Final targeted run 107/107, no skips; loop demo passed. Still no general 286, timing/prefetch/protection or editor integration; no production defaults/pins/deployment. Full CI/hardware/browser not run. Claim released; saved circuit/debugger integration remains planned.
+
+286 boot instruction subset: source `8e9d684` on `feat/x86-backend-lab`; generator-resumable real-mode subset fetches owned reset/program ROM through the latched board, retires ten instructions and writes `0x68ac` to wired RAM, then halts. Low ROM alias is explicit board decode, default-off. Assembly sources reproduce ROM bytes; shared-subset results agree with separate 8086 decoder. 15 new tests; final targeted run 94/94, zero skips; demo `cpuExecuted:true`. Still no general 286, prefetch/instruction timing/protection/interrupts, physical HLT signalling, snapshots or editor component. Full CI/hardware/browser not run; no production promotion or deployment. Claim released; broader CPU and Circuit Editor integration remain planned.
+
+286 latched memory bridge: source `5e5c71a` on `feat/x86-backend-lab`; external phase controller and address/control latch feed existing 62256/28C256 update models through an ideal-digital adapter. Write storage changes on command trailing edges, not CPU callbacks; late-bank preflight is staged before commit. 16 new integration tests; final targeted run 79/79, no skips; demo verifies `0x68ac`, zero/one writes before/after edge, `cpuExecuted:false`. No full 82C288, analog solver, instruction CPU, editor integration, production defaults/pin changes, merge or deployment. Full CI/browser/hardware traces not run. Claim released; resumable instruction subset is the next execution gate.
+
+286 bus contract and phase sequencer: source `610a1e3` on `feat/x86-backend-lab`; pinned Harris August 1996 PDF checksum, PLCC/status/lane metadata, reset qualification, active-low READY, waits, split words and write-data hold. 22 new tests; final targeted foundation/electrical memory/8086 machine run 63/63, zero skips. Owned ROM fetch through nets checked without executing instructions. Explicitly non-pipelined system-clock phases, not edge-accurate timing or an instruction CPU; no controller/editor/pin promotion. Full CI/hardware traces/browser not run. Claim released at this incremental handoff; next gates in `docs/HARRIS-80C286-BUS-CONTRACT.md`.
+
+286 circuit foundation: initial partial-M1 milestone at `90467ee` on `feat/x86-backend-lab`. Default-off ideal digital nets and synthetic wired ROM/RAM master, 20 new tests passing; targeted run including electrical memory, 8086 extractor and machine passed 56/56, no skips. Demo verifies wired result with `cpuExecuted:false`; no claim of 286 CPU, pin timing or editor integration. No production exports/defaults or consuming pin changes. Full CI not run for this milestone. Claim released; M0 sign-off, remaining M1 and actual CPU implementation remain planned.
+
+8086 PIT follow-up: engine half complete at `dedfbc8`, full CI `34249782632` green (units, vectors, full vectors, 80186 vectors, corpus). Added callback-time CPU/PIT clock and counter-method observability assertions. No engine runtime changes. Paired Lite branch retains correct candidates default-off and removes the stale-state scheduler implementation; measurements/retention policy live there. Claim released; feature branch only.
+
+8086 device advancement: complete on `perf/i8086-device-advance`, source/test commit `4f72ff4`. Full CI `34246446550` green (units, vectors, full vectors, 80186 vectors, corpus). Added the instruction-boundary observability contract and differential/negative fixtures. Paired Lite experiments reject all four measured device candidates; no production source changes or general deferred scheduling. Feature-branch handoff only, not merged. Claim released.
 
 8086 promotion and sandbox: complete; reconciled engine `4c6ab1a7289db121284a2c0e98435598bd3ef24c` retains tone and W65C51 master changes alongside verified prefix/REP/PIT/RAM optimizations. Full engine CI `34235227257` green; consuming Lite build/corpus/both browser suites `34237479071` green, including isolated GUI comparisons and diagnostic reference-word access. This ledger-only handoff accompanies fast-forward promotion to master; source pin remains the verified runtime commit. Claim released.
 

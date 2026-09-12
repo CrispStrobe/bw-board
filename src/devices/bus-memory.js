@@ -93,7 +93,7 @@ const DATA = Array.from({ length: DATA_BITS }, (_, i) => `d${i}`);
  * @param {boolean} eeprom  honour params.readOnly.
  */
 function parallelMemory(selPin, terminals, fill, eeprom) {
-    return {
+    const model = {
         terminals,
 
         init(part) {
@@ -114,7 +114,7 @@ function parallelMemory(selPin, terminals, fill, eeprom) {
         // is now what the model actually does — no stamp. The 1 MOhm
         // declarations that used to sit here named no second terminal and
         // never stamped (spec-updates/ideal-high-z-inputs.md).
-        update(part, state, read) {
+        update(part, state, read, _timeNs, deferWrite = null) {
             const vcc = read('vcc') || 5.0;
             const th = vcc * 0.5;
 
@@ -142,7 +142,10 @@ function parallelMemory(selPin, terminals, fill, eeprom) {
                 state._out = -1;
                 if (leavingWrite && state._armed && state._pending) {
                     const { a, byte } = state._pending;
-                    if (!(eeprom && part?.params?.readOnly)) state.mem[a] = byte;
+                    if (!(eeprom && part?.params?.readOnly)) {
+                        if(deferWrite)deferWrite(a,byte);
+                        else state.mem[a] = byte;
+                    }
                 }
                 state._pending = null;
                 if (cycle !== 'write') state._armed = true;
@@ -183,6 +186,20 @@ function parallelMemory(selPin, terminals, fill, eeprom) {
             return true;
         },
     };
+    // Explicit contract for ideal-digital adapters: update advances only when
+    // an input changes or its previous call requested another solve pass.
+    // Keep the function identity, so replacing update invalidates this opt-in.
+    model.eventDrivenUpdate = model.update;
+    // The exact same edge algorithm may stage its sole storage mutation for
+    // all-peer digital preflight. Ordinary analog update keeps immediate writes.
+    const update=model.update;
+    model.transactionalUpdate=update;
+    model.previewUpdate=(part,state,read)=>{
+        const writes=[];
+        const changed=update(part,state,read,undefined,(address,byte)=>writes.push([address,byte]));
+        return {changed,commit:()=>{for(const [address,byte] of writes)state.mem[address]=byte;}};
+    };
+    return model;
 }
 
 // JEDEC 28-pin 32Kx8, in PACKAGE order: pins 1-14 down the left, then

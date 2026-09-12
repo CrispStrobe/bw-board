@@ -1,0 +1,59 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {runNativeMemoryCircuitOracle} from '../scripts/lib/harris-native-memory-circuit-oracle.mjs';
+import {runNativePhaseCircuitOracle} from '../scripts/lib/harris-native-phase-circuit-oracle.mjs';
+import {runNativePhaseScheduleOracle} from '../scripts/lib/harris-native-phase-schedule-oracle.mjs';
+const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
+const native={skip:wasmBytes?false:'build incremental prototype and set HARRIS_NET_WASM; native gate not exercised'};
+async function rawKernel({incremental=false,oscillator=false}={}) {
+    const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
+    const p={context:base,offsets:base+128,ids:base+144,drivers:base+160,live:base+164,conflicts:base+168,ops:base+172,
+        staged:base+300,published:base+304,publishedConflicts:base+308,dependencyOffsets:base+312,dependencies:base+320,previous:base+332,changed:base+336};
+    const put=(at,values)=>values.forEach((n,i)=>v.setUint32(at+4*i,n,true));
+    const drivers=oscillator?3:4;
+    put(p.context,[3,drivers,p.offsets,p.ids,p.drivers,p.live,p.conflicts,1,p.ops,p.staged,p.published,p.publishedConflicts,oscillator?2:8,
+        p.dependencyOffsets,p.dependencies,3,p.previous,p.changed,...new Array(13).fill(0),incremental?2:0]);
+    put(p.offsets,[0,1,2,drivers]);put(p.ids,oscillator?[0,1,2]:[0,1,2,3]);put(p.dependencyOffsets,[0,3]);put(p.dependencies,[0,1,2]);
+    put(p.ops,oscillator?[1,0,0,65536,0,0,1,0,...new Array(24).fill(2)]:[2,0,1,2]);
+    const initial=oscillator?[2,0,0]:[3,3,2,3],published=oscillator?[2,0,0]:[3,3,2];
+    new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);new Uint8Array(e.memory.buffer,p.previous,3).set(published);
+    new Uint8Array(e.memory.buffer,p.published,3).set(published);
+    if(incremental)assert.equal(e.admit_owned_context(p.context),0);
+    const inspect=()=>Object.fromEntries(['drivers','live','conflicts','published','publishedConflicts','previous'].map(name=>
+        [name,Array.from(new Uint8Array(e.memory.buffer,p[name],name==='drivers'?drivers:3))]));
+    return {e,p,v,inspect,step:levels=>{new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
+}
+test('incremental private graph matches memory, phase and native schedule oracles',native,async()=>{
+    const options={wasmBytes,admittedGraph:true,incrementalGraph:true};
+    assert.equal((await runNativeMemoryCircuitOracle({...options,swapAddress:true})).comparisons,1026);
+    assert.equal((await runNativePhaseCircuitOracle(options)).comparisons,1532);
+    assert.equal((await runNativePhaseScheduleOracle(options)).periods,258);
+});
+test('incremental resolver matches checked deltas through X/Z, masked changes and conflict-only transitions',native,async()=>{
+    const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
+    const step=levels=>{assert.equal(incremental.step(levels),checked.step(levels));assert.deepEqual(incremental.inspect(),checked.inspect());};
+    step([1,0,3,3]);step([1,0,1,0]);assert.equal(incremental.inspect().publishedConflicts[2],1);
+    step([1,0,2,3]);assert.equal(incremental.inspect().publishedConflicts[2],0);assert.equal(incremental.inspect().drivers[2],2);
+    let seed=0x12345678;
+    for(let i=0;i<1024;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;step([seed&3,(seed>>>4)&3,(seed>>>8)&3,(seed>>>12)&3]);}
+});
+test('incremental nonconvergence preserves published state and recovers using pending/live history',native,async()=>{
+    const checked=await rawKernel({oscillator:true}),incremental=await rawKernel({incremental:true,oscillator:true});
+    assert.equal(incremental.step([0,0,0]),0x80000003);assert.equal(checked.step([0,0,0]),0x80000003);
+    assert.deepEqual(incremental.inspect(),checked.inspect());assert.deepEqual(incremental.inspect().published,[2,0,0]);
+    assert.equal(incremental.step([2,0,0]),checked.step([2,0,0]));assert.deepEqual(incremental.inspect(),checked.inspect());
+});
+test('incremental admission requires unique membership, bounded caches and the admitted mode',native,async()=>{
+    const k=await rawKernel({incremental:true});k.v.setUint32(k.p.context+31*4,1,true);
+    assert.equal(k.e.settle_owned_context(k.p.context)>>>0,0x80000006);
+    k.v.setUint32(k.p.context+31*4,2,true);k.v.setUint32(k.p.ids+12,0,true);
+    assert.equal(k.e.admit_owned_context(k.p.context)>>>0,0x80000006);
+    assert.equal(k.e.settle_owned_context(k.p.context)>>>0,0x80000006);
+    const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
+    const offsets=base+128,dependencyOffsets=offsets+16386*4;
+    [16385,0,offsets,0,0,0,0,0,0,0,0,0,8,dependencyOffsets,0,0,0,0,...new Array(13).fill(0),2]
+        .forEach((n,i)=>v.setUint32(base+4*i,n,true));
+    assert.equal(e.admit_owned_context(base)>>>0,0x80000007);
+    assert.equal(e.settle_owned_context(base)>>>0,0x80000006);
+});

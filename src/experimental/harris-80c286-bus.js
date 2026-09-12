@@ -1,0 +1,260 @@
+/**
+ * Default-off, non-pipelined SYSTEM-CLOCK-PHASE subset of Harris bus sequencing.
+ * Not an instruction core; not exact edge/AC timing. See source-backed contract.
+ * beginClock drives a complete idealized period; endClock samples its end.
+ * The caller must resolve the circuit in between; read(pin) returns a NET level.
+ */
+import {CircuitFault, bitPins, bitDrives} from './digital-circuit.js';
+import {plan286Transfers} from './harris-80c286-contract.js';
+
+const A = bitPins('a', 24);
+const D = bitPins('d', 16);
+const RELEASED_DATA = Object.freeze(Object.fromEntries(D.map(p => [p, 'Z'])));
+const RELEASED_ADDRESS = Object.freeze(Object.fromEntries(A.map(p => [p, 'Z'])));
+const releaseData = () => ({...RELEASED_DATA});
+const OUTPUTS = [...A, ...D, 'bhe_n', 's1_n', 's0_n', 'cod_inta_n', 'm_io', 'lock_n', 'hlda', 'peack_n'];
+const INPUTS = ['reset', 'ready_n', 'hold', 'intr', 'nmi', 'pereq', 'busy_n', 'error_n'];
+const known = (read, pin) => {
+    const v = read(pin);
+    if (v !== 0 && v !== 1) throw new CircuitFault(v === 'Z' ? 'FLOATING' : 'UNKNOWN', pin);
+    return v;
+};
+
+export class Harris80C286Bus {
+    #outputs; #packed = null; #heldPacked = {data:0,dataZ:65535};
+    constructor({enabled = false, maxWaitStates = 1024, traceLimit = 256, traceEnabled = true, nmiEnabled = false, intrEnabled = false, holdEnabled = false, packedDrives = false} = {}) {
+        if (enabled !== true) throw new CircuitFault('EXPERIMENT_DISABLED', 'enabled:true required');
+        for (const v of [maxWaitStates, traceLimit]) if (!Number.isSafeInteger(v) || v < 1) throw new RangeError('limits');
+        this.maxWaitStates = maxWaitStates;
+        if (typeof holdEnabled !== 'boolean') throw new TypeError('holdEnabled');
+        this.holdEnabled = holdEnabled;
+        if (typeof nmiEnabled !== 'boolean') throw new TypeError('nmiEnabled');
+        this.nmiEnabled = nmiEnabled;
+        if (typeof intrEnabled !== 'boolean') throw new TypeError('intrEnabled');
+        this.intrEnabled = intrEnabled; this.intrLevel = 0; this.intrSamples = 0; this.ackGap = 0;
+        this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
+        this.traceLimit = traceLimit;
+        if(typeof traceEnabled!=='boolean')throw new TypeError('traceEnabled');
+        this.traceEnabled=traceEnabled;
+        if(typeof packedDrives!=='boolean')throw new TypeError('packedDrives');
+        this.packedDrives=packedDrives;
+        this.capabilities = Object.freeze({cpu: false, experimental: true,
+            fidelity: 'non-pipelined-system-clock-phases', clockEdges: false,
+            systemClockStepping: true, snapshots: false, hold: holdEnabled, interrupts: false, nmi: nmiEnabled,
+            interruptAcknowledge: intrEnabled, packedDrives,
+            pipelinedAddress: false, protectedMode: false});
+        this.state = 'RESET_REQUIRED';
+        this.phase = 1;
+        this.clock = 0;
+        this.open = false;
+        this.faulted = false;
+        this.resetClocks = 0;
+        this.initClocks = 0;
+        this.pending = null;
+        this.writeHold = 0;
+        this.heldData = releaseData();
+        this.address = 0xffffff;
+        this.control = {bhe_n: 1, s1_n: 1, s0_n: 1, cod_inta_n: 0, m_io: 0};
+        this.trace = [];
+        this.dropped = 0;
+    }
+
+    part(id = 'cpu') { return {id, pins: [...INPUTS, ...OUTPUTS], outputs: [...OUTPUTS]}; }
+
+    get outputs() {
+        if(!this.#packed)return this.#outputs;
+        const p=this.#packed;
+        if(p.controls.hlda===1)return {...Object.fromEntries(OUTPUTS.map(pin=>[pin,'Z'])),hlda:1};
+        const data=bitDrives(D,p.data);
+        for(let i=0;i<16;i++)if(p.dataZ&(1<<i))data[D[i]]='Z';
+        const {lock_n,hlda,peack_n,...status}=p.controls;
+        return {...(p.addressZ?RELEASED_ADDRESS:bitDrives(A,p.address)),...status,...data,lock_n,hlda,peack_n};
+    }
+    set outputs(values) {this.#outputs=values;this.#packed=null;}
+
+    submit(transaction) {
+        if (this.faulted || this.open || this.pending || !['TI','TH'].includes(this.state)) {
+            throw new CircuitFault('BUS_UNAVAILABLE', 'reset/init/pending clock or transaction');
+        }
+        if (transaction.kind === 'interrupt-acknowledge' && !this.intrEnabled)
+            throw new CircuitFault('EXPERIMENT_DISABLED','INTA requires intrEnabled:true');
+        const transfers = plan286Transfers(transaction);
+        this.pending = {transfers, index: 0, bytes: [], waits: 0, kind: transaction.kind, locked:transaction.locked===true};
+    }
+
+    _record(event) {
+        if (this.trace.length === this.traceLimit) { this.trace.shift(); this.dropped++; }
+        this.trace.push(Object.freeze({clock: this.clock, ...event}));
+    }
+
+    beginClock(read, compact = false) {
+        if(compact&&!this.packedDrives)throw new TypeError('compact outputs require packedDrives');
+        if (this.open) throw new CircuitFault('CLOCK_ORDER', 'endClock required');
+        if (this.clock >= Number.MAX_SAFE_INTEGER) throw new RangeError('clock overflow');
+        try {
+            const reset = known(read, 'reset');
+            if (reset) {
+                if (this.state !== 'RESET' || this.faulted) this.resetClocks = 0;
+                this.state = 'RESET'; this.phase = 1;
+                this.pending = null; this.writeHold = 0;
+                this.intrLevel = 0; this.intrSamples = 0; this.ackGap = 0;
+                this.nmiPending = false; this.nmiLow = 0; this.nmiHigh = 0; this.nmiArmed = false;
+                this.address = 0xffffff;
+                this.control = {bhe_n: 1, s1_n: 1, s0_n: 1, cod_inta_n: 0, m_io: 0};
+                this.faulted = false;
+            } else {
+                if (this.faulted) throw new CircuitFault('BUS_FAULTED', 'assert RESET to recover');
+                if (this.state === 'RESET_REQUIRED') throw new CircuitFault('RESET_REQUIRED', 'assert RESET first');
+                if (this.state === 'RESET') {
+                    // p.6 says MORE THAN 16 periods; use 17, not an off-by-one 16.
+                    if (this.resetClocks < 17) throw new CircuitFault('SHORT_RESET', `${this.resetClocks} complete periods; require 17`);
+                    this.state = 'INIT'; this.initClocks = 50; this.phase = 1;
+                }
+            }
+            // Fail closed instead of silently ignoring yet-unimplemented pins.
+            const hold = known(read, 'hold');
+            if (hold && !this.holdEnabled) throw new CircuitFault('UNSUPPORTED_HOLD', this.state);
+            if (!reset) for (const pin of ['pereq', ...(this.intrEnabled ? [] : ['intr']), ...(this.nmiEnabled ? [] : ['nmi'])]) {
+                if (known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
+            }
+            if (!reset && this.intrEnabled) {
+                this.intrLevel = known(read,'intr');
+                this.intrSamples = this.intrLevel ? Math.min(4,this.intrSamples + 1) : 0;
+            }
+            if (!reset && this.nmiEnabled) {
+                // Conservative ideal-digital qualification, not an analog
+                // synchronizer: four complete observed low/high periods.
+                if (known(read,'nmi') === 0) {
+                    this.nmiHigh = 0; this.nmiLow = Math.min(4,this.nmiLow + 1);
+                    if (this.nmiLow === 4) this.nmiArmed = true;
+                } else {
+                    if (this.nmiHigh === 0) this.nmiArmed = this.nmiLow === 4;
+                    this.nmiLow = 0; this.nmiHigh = Math.min(4,this.nmiHigh + 1);
+                    if (this.nmiArmed && this.nmiHigh === 4) {this.nmiPending = true; this.nmiArmed = false;}
+                }
+            }
+            if (!reset) for (const pin of ['busy_n', 'error_n']) {
+                if (!known(read, pin)) throw new CircuitFault('UNSUPPORTED_INPUT', pin);
+            }
+            if (this.holdEnabled && !reset && this.phase === 1) {
+                if (this.state === 'TH' && !hold) this.state = 'TI';
+                else if (this.state === 'TI' && hold && !this.writeHold && !this.ackGap &&
+                    !this.pending?.locked && !(this.pending?.kind === 'interrupt-acknowledge' && this.pending.index > 0)) this.state = 'TH';
+            }
+            const grantPending = this.holdEnabled && hold && !this.pending?.locked &&
+                !(this.pending?.kind === 'interrupt-acknowledge' && this.pending.index > 0);
+            if (this.state === 'TI' && this.phase === 1 && this.pending && this.ackGap === 0 && !grantPending) {
+                this.state = 'TS';
+                const t = this.pending.transfers[this.pending.index];
+                this.address = t.address;
+                this.control = {bhe_n: t.bhe_n, s1_n: t.s1_n, s0_n: t.s0_n,
+                    cod_inta_n: t.cod_inta_n, m_io: t.m_io};
+            }
+            let data = this.packedDrives ? null : this.writeHold ? this.heldData : releaseData();
+            let dataBits=this.writeHold?this.#heldPacked.data:0,dataZ=this.writeHold?this.#heldPacked.dataZ:65535;
+            const transfer = this.pending?.transfers[this.pending.index];
+            if (transfer?.kind.endsWith('write') && (this.state === 'TC' || this.state === 'TS' && this.phase === 2)) {
+                if(this.packedDrives){dataBits=transfer.data;dataZ=(transfer.a0===0?0:255)|(transfer.bhe_n===0?0:65280);}
+                else data = bitDrives(D, transfer.data);
+                // Inactive lanes are not used; represent them as high-Z in this
+                // subset, not a claim about the silicon's unused-byte values.
+                if(!this.packedDrives)for (let i = 0; i < 16; i++) if (i < 8 ? transfer.a0 !== 0 : transfer.bhe_n !== 0) data[D[i]] = 'Z';
+            }
+            this.period = {state: this.state, phase: this.phase, held: this.writeHold > 0};
+            const status = this.state === 'TS' ? this.control : {...this.control, s1_n: 1, s0_n: 1};
+            const ack = this.pending?.kind === 'interrupt-acknowledge';
+            const floatingAddress = ack && (this.pending.index === 0 || this.pending.waits === 0);
+            // INTA LOCK is active in TS and the first TC of EACH cycle,
+            // independent of external wait count. An explicitly locked operand
+            // keeps ownership across all of its physical cycles.
+            const lock_n = Number(!(this.pending?.locked || ack && (this.state === 'TS' || this.state === 'TC' && this.pending.waits === 0)));
+            if(this.packedDrives) {
+                const held=this.state==='TH';
+                const controls=held?{bhe_n:'Z',s1_n:'Z',s0_n:'Z',cod_inta_n:'Z',m_io:'Z',lock_n:'Z',hlda:1,peack_n:'Z'}:
+                    {...status,bhe_n:floatingAddress?'Z':status.bhe_n,lock_n,hlda:0,peack_n:1};
+                this.#packed=Object.freeze({address:this.address,addressZ:floatingAddress||held,data:dataBits,dataZ:held?65535:dataZ,controls:Object.freeze(controls)});
+            } else {
+                const addressDrives = floatingAddress ? RELEASED_ADDRESS : bitDrives(A,this.address);
+                this.outputs = {...addressDrives, ...status, ...data, lock_n, hlda: 0, peack_n: 1};
+                if (floatingAddress) this.outputs.bhe_n = 'Z';
+                if (this.state === 'TH') this.outputs = {...Object.fromEntries(OUTPUTS.map(p=>[p,'Z'])),hlda:1};
+            }
+            this.open = true;
+            return compact?this.#packed:{...this.outputs};
+        } catch (error) { this.faulted = true; throw error; }
+    }
+
+    endClock(read) {
+        if (!this.open) throw new CircuitFault('CLOCK_ORDER', 'beginClock required');
+        this.open = false;
+        this.clock++;
+        const {state, phase, held} = this.period;
+        let completion = null;
+        let readySample = null;
+        try {
+            if (held) this.writeHold--;
+            if (state === 'RESET') this.resetClocks++;
+            else if (state === 'TI' && this.ackGap) this.ackGap--;
+            else if (state === 'INIT') {
+                if (--this.initClocks === 0) { this.state = 'TI'; this.phase = 2; }
+            } else if (state === 'TS' && phase === 2) this.state = 'TC';
+            else if (state === 'TC' && phase === 2) {
+                const ready = known(read, 'ready_n');
+                readySample = ready;
+                if (this.pending.kind === 'interrupt-acknowledge' && this.pending.index === 1 && this.pending.waits === 0 && !ready)
+                    throw new CircuitFault('INTA_WAIT_REQUIRED','external READY must extend the second INTA cycle by at least one TC');
+                if (ready) {
+                    this.pending.waits++;
+                    if (this.pending.waits >= this.maxWaitStates) throw new CircuitFault('WAIT_LIMIT', 'host diagnostic, not hardware timeout');
+                } else {
+                    const t = this.pending.transfers[this.pending.index];
+                    const bytes = [];
+                    for (const start of [0, 8]) {
+                        if (t.ackIndex === 0) continue; // First INTA data is ignored, including floating nets.
+                        if (start === 0 ? t.a0 !== 0 : t.bhe_n !== 0) continue;
+                        let byte = 0;
+                        for (let i = 0; i < 8; i++) byte |= known(read, D[start + i]) << i;
+                        bytes.push(byte);
+                    }
+                    // Only report acceptance. A connected memory/controller owns
+                    // writes and their edges; the sequencer has no backing RAM.
+                    completion = Object.freeze({kind: t.kind, address: t.address, width: t.width,
+                        ...(t.ackIndex === undefined ? {} : {ackIndex:t.ackIndex}),
+                        data: bytes[0] | ((bytes[1] || 0) << 8), waits: this.pending.waits,
+                        last: this.pending.index === this.pending.transfers.length - 1});
+                    this.pending.bytes.push(...bytes);
+                    if (t.kind.endsWith('write')) {
+                        this.writeHold = 1;
+                        if(this.packedDrives)this.#heldPacked=this.#packed;
+                        else this.heldData = Object.fromEntries(D.map(p => [p, this.outputs[p]]));
+                    }
+                    if (completion.last) {
+                        completion = Object.freeze({...completion,
+                            operand: this.pending.bytes[0] | ((this.pending.bytes[1] || 0) << 8)});
+                        this.pending = null;
+                    } else {
+                        this.pending.index++; this.pending.waits = 0;
+                        if (t.ackIndex === 0) this.ackGap = 6; // Three idle processor clocks.
+                    }
+                    this.state = 'TI';
+                }
+            }
+            if(this.traceEnabled){const outputs=this.outputs;this._record({state, phase, address: this.address,
+                s1_n: outputs.s1_n, s0_n: outputs.s0_n,
+                bhe_n: outputs.bhe_n, readySample,
+                drives: Object.freeze({...outputs}), completion});}
+            if (state !== 'RESET') this.phase = this.phase === 1 ? 2 : 1;
+            return completion;
+        } catch (error) {
+            this.faulted = true;
+            if(this.traceEnabled)this._record({state, phase, fault: error.code || 'ERROR'});
+            throw error;
+        }
+    }
+
+    getTrace() { return {dropped: this.dropped, entries: this.trace.map(e => ({...e}))}; }
+    takeNMI() {
+        const pending = this.nmiEnabled && this.nmiPending;
+        this.nmiPending = false; return pending;
+    }
+}

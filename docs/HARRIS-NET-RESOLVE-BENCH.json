@@ -1,0 +1,60 @@
+{
+  "date": "2026-09-08",
+  "benchmark": "synthetic-resolver-only",
+  "command": "node bench/harris-net-resolve.mjs",
+  "baselineCommit": "c658507c0912375d45926be5450b2d48c77f7d9a",
+  "node": "v20.20.2",
+  "previousSHA256": "24c1ef2dc358b131532e50123753ac6c98a73137d2e895020d38de1d32d26611",
+  "currentSHA256": "8826947ba763e30ed5acb77f3fdaca24881b21b188469cccb4e09d13ad261c1e",
+  "parts": 256,
+  "nets": 514,
+  "iterations": 10000,
+  "emulatorThroughput": false,
+  "note": "Shared-host run alongside BIOS diagnostics; timing is noisy. Synthetic fixed driven levels and resolver allocations only, not guest execution, browser frame rate, electrical timing or real-time multiplier.",
+  "rounds": [
+    {
+      "round": 0,
+      "previous": {
+        "ms": 16961.557700999998,
+        "checksum": 5140000
+      },
+      "current": {
+        "ms": 2869.4537439999986,
+        "checksum": 5140000
+      }
+    },
+    {
+      "round": 1,
+      "current": {
+        "ms": 2621.2577979999987,
+        "checksum": 5140000
+      },
+      "previous": {
+        "ms": 11901.881146,
+        "checksum": 5140000
+      }
+    },
+    {
+      "round": 2,
+      "previous": {
+        "ms": 13517.858464999998,
+        "checksum": 5140000
+      },
+      "current": {
+        "ms": 3241.9278810000033,
+        "checksum": 5140000
+      }
+    },
+    {
+      "round": 3,
+      "current": {
+        "ms": 2875.1499790000016,
+        "checksum": 5140000
+      },
+      "previous": {
+        "ms": 8516.410093999999,
+        "checksum": 5140000
+      }
+    }
+  ]
+}

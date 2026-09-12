@@ -1,0 +1,2636 @@
+{
+  "summary": {
+    "suiteRevision": "37c73caf53dcd22d3dd369ff09305d13d117a4fe",
+    "backend": "harris-286-boot-subset / test-only semantic memory",
+    "fullSuite": true,
+    "timingGraded": false,
+    "physicalBoardGraded": false,
+    "files": 326,
+    "available": 1478000,
+    "selected": 1478000,
+    "executed": 1477997,
+    "pass": 1477997,
+    "fail": 0,
+    "unsupported": 0,
+    "budget": 0,
+    "revoked": 3,
+    "reasons": {},
+    "sourceHashes": {
+      "../src/experimental/harris-80c286-boot-cpu.js": "c32d2c9438fb0de5c2ed1506a60aa556c3298bfeb407f66a43f9c421319a6b59",
+      "./lib/sst286.mjs": "f628e423454669b905bcdf684e0a077ac427130b9cda711a7999eedf26f98878",
+      "./grind-i80286.mjs": "5d38f70df21a8c83d2e6fcaa3a7532a327d9902683f1cd021ba7ebed4dfc9643"
+    },
+    "coprocessorProfile": "inactive-lines (no 287 execution or protocol grading)",
+    "accepted": true
+  },
+  "files": [
+    {
+      "file": "v1_real_mode/00.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/01.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/02.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/03.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/04.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/05.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/06.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/07.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/08.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/09.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/0A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/0B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/0C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/0D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/0E.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/10.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/11.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/12.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/13.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/14.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/15.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/16.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/17.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/18.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/19.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/1A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/1B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/1C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/1D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/1E.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/1F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/20.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/21.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/22.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/23.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/24.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/25.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/27.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/28.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/29.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/2A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/2B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/2C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/2D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/2F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/30.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/31.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/32.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/33.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/34.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/35.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/37.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/38.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/39.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/3A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/3B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/3C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/3D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/3F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/40.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/41.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/42.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/43.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/44.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/45.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/46.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/47.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/48.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/49.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/4A.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/4B.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/4C.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/4D.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/4E.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/4F.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/50.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/51.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/52.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/53.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/54.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/55.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/56.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/57.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/58.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/59.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/5A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/5B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/5C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/5D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/5E.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/5F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/60.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/61.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/62.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/68.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/69.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/6A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/6B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/6C.MOO.gz",
+      "pass": 2000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/6D.MOO.gz",
+      "pass": 2000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/6E.MOO.gz",
+      "pass": 2000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/6F.MOO.gz",
+      "pass": 2000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/70.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/71.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/72.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/73.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/74.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/75.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/76.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/77.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/78.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/79.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/7A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/7B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/7C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/7D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/7E.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/7F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/80.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/81.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/82.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/83.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/84.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/85.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/86.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/87.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/88.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/89.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/8A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/8B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/8C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/8D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/8E.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/8F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/90.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/91.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/92.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/93.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/94.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/95.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/96.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/97.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/98.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/99.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/9A.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/9B.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/9C.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/9D.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/9E.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/9F.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A8.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/A9.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/AA.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/AB.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/AC.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/AD.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/AE.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/AF.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B8.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/B9.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/BA.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/BB.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/BC.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/BD.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/BE.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/BF.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C0.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C1.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/C6.MOO.gz",
+      "pass": 4999,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 1
+    },
+    {
+      "file": "v1_real_mode/C7.MOO.gz",
+      "pass": 4999,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 1
+    },
+    {
+      "file": "v1_real_mode/C8.MOO.gz",
+      "pass": 4999,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 1
+    },
+    {
+      "file": "v1_real_mode/C9.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/CA.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/CB.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/CC.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/CD.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/CE.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/CF.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D0.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D1.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D2.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D3.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D6.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/D8.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E8.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/E9.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/EA.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/EB.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/EC.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/ED.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/EE.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/EF.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F4.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F5.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F6.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F7.7.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F8.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/F9.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FA.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FB.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FC.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FD.MOO.gz",
+      "pass": 1000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FE.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FE.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.0.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.1.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.2.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.3.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.4.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.5.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    },
+    {
+      "file": "v1_real_mode/FF.6.MOO.gz",
+      "pass": 5000,
+      "fail": 0,
+      "unsupported": 0,
+      "budget": 0,
+      "revoked": 0
+    }
+  ]
+}
