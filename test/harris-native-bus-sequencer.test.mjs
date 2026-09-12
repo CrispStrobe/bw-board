@@ -135,3 +135,61 @@ test('second odd-word data fault retains first byte; writes sample nets rather t
         assert.equal(h.native.inspect().pending.index,1);
     }
 });
+
+test('reset at every transaction phase cancels partial state; open-period reset remains an order error',optional,async()=>{
+    for(const kind of ['memory-read','memory-write'])for(let elapsed=0;elapsed<8;elapsed++) {
+        const h=await createBusSequencerOracle(module);h.boot();
+        h.submit({kind,address:1,width:2,value:0xabcd});
+        for(let i=0;i<elapsed;i++)h.period(passiveBusPins());
+        h.call('beginClock',passiveBusPins());
+        assert.equal(h.call('beginClock',{...passiveBusPins(),reset:1}).error.code,'CLOCK_ORDER');
+        h.call('endClock',passiveBusPins());
+        h.period({...passiveBusPins(),reset:1});
+        assert.equal(h.native.inspect().state,'RESET');
+        assert.equal(h.native.inspect().pending,null);assert.equal(h.native.inspect().writeHold,0);
+        assert.equal(h.native.inspect().resetClocks,1);
+    }
+});
+
+test('unknown/floating pin images obey sampling matrix at every physical transfer phase',optional,async()=>{
+    for(const [pin,value] of [['ready_n','Z'],['d0','X'],['d8','Z']])
+        for(const kind of ['memory-read','memory-write'])for(let elapsed=0;elapsed<4;elapsed++) {
+            const h=await createBusSequencerOracle(module);h.boot();
+            h.submit({kind,address:1,width:1,value:0xa5});
+            for(let i=0;i<elapsed;i++)h.period(passiveBusPins());
+            const pins={...passiveBusPins(),[pin]:value};
+            // Begin never samples data or READY; end samples only at accepted TC2.
+            assert.equal(h.call('beginClock',pins).error,undefined);
+            const result=h.call('endClock',pins);
+            if(elapsed===3&&pin!=='d0')assert.ok(result.error);
+            else assert.equal(result.error,undefined);
+        }
+});
+
+test('private instances isolate state and stale raw completion is never an accepted API result',optional,async()=>{
+    const h=await createBusSequencerOracle(module);h.boot();
+    const other=await createNative286MemoryBus({enabled:true,module});
+    h.submit({kind:'memory-read',address:0});let done;
+    while(!done)done=h.period(passiveBusPins()).value;
+    assert.equal(done.last,true);assert.equal(other.inspect().state,'RESET_REQUIRED');
+    assert.equal(h.call('endClock',null).error.code,'CLOCK_ORDER');
+    assert.equal(h.call('beginClock',{...passiveBusPins(),hold:1}).error.code,'UNSUPPORTED_HOLD');
+    assert.equal(h.period({...passiveBusPins(),reset:1}).value,null);
+    // Raw ABI callers must check status before reading completion, unlike the
+    // JS wrapper which enforces this rule automatically on every call.
+    const {exports:e}=await WebAssembly.instantiate(module);
+    e.bus_initialize(1024);
+    const inputs=new Uint32Array(e.memory.buffer,e.bus_input_ptr(),24);
+    const result=new Uint32Array(e.memory.buffer,e.bus_completion_ptr(),9);
+    inputs[5]=inputs[6]=1;
+    for(let period=0;period<67;period++) {
+        inputs[0]=period<17?1:0;assert.equal(e.bus_begin(),0);assert.equal(e.bus_end(),0);
+    }
+    assert.equal(e.bus_submit(0,0,1,0,0),0);
+    for(let period=0;period<4;period++){assert.equal(e.bus_begin(),0);assert.equal(e.bus_end(),0);}
+    assert.equal(result[0],1);assert.equal(e.bus_end(),1);assert.equal(result[0],1);
+    assert.equal(e.bus_submit(0,0,1,0,0),0);
+    for(let period=0;period<3;period++){assert.equal(e.bus_begin(),0);assert.equal(e.bus_end(),0);}
+    assert.equal(e.bus_begin(),0);inputs[7]=3;
+    assert.equal(e.bus_end(),3);assert.equal(result[0],0);
+});

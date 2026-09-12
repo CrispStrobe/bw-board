@@ -90,9 +90,11 @@ HARRIS_NET_WASM=EXISTING_NEW_DIR/wired-net-kernel.wasm \
 ```
 
 Without `HARRIS_NET_WASM`, native-dependent tests explicitly skip; gate validation
-still runs. With the built module the focused suite passes **10/10, no skips**.
-The complete `test/harris-native-*.test.mjs test/bus-memory.test.mjs` selection
-passes **77/77 tests across 4 suites, no failures/skips** on the component build.
+still runs. With the built module the focused suite passes **13/13, no skips**,
+including added phase-by-phase reset, unknown-pin sampling matrix and private
+instance/stale-completion checks. Before those three audit tests were added, the
+complete `test/harris-native-*.test.mjs test/bus-memory.test.mjs` selection passed
+**77/77 tests across 4 suites, no failures/skips** on the same unchanged C build.
 The portable helper has no Node imports, but a browser run has **not** been
 performed for this new component. Safe-integer wait-limit acceptance is tested;
 exhausting the 53-bit clock/reset range is not practically exercised.
@@ -102,3 +104,35 @@ sample/finish ordering is established, add required CPU/peripheral scheduling
 and interrupt/DMA semantics or refuse incompatible projects, compare complete
 board traces/state, and only then assess whole-runner performance and admission.
 Existing compiled/reference backends and all default gates remain unchanged.
+
+## Audit and minimal same-instance integration seam
+
+The audit found no differential implementation mismatch in the reviewed subset.
+One raw-ABI pitfall is explicit: after a clock-order failure, completion storage
+may retain the last successful result. Raw callers must check `bus_end` status
+before consuming it. A sampling failure clears completion validity; the JS API
+always checks status before reading any completion and never returns stale data.
+Raw initialization requires a validated positive safe-integer wait bound; raw
+pointers and mutable module memory are trusted, not hostile-input interfaces.
+
+The current public bus constructor creates a **different private instance** from
+the phase/memory constructor. Calling those wrappers in sequence does not form a
+single native execution region. Minimal future integration is an explicit owned
+descriptor admitted by the existing private memory/phase factory, not public
+instance injection:
+
+1. Validate all CPU input-net and output-driver IDs against actual connectivity;
+   initialize one bus inside that already-owned module instance. The current C
+   static state allows **one bus per instance**; do not attach a second bus or
+   reinitialize a running one. Supporting several buses later requires separate
+   allocated bus contexts.
+2. On begin, settle external inputs, gather CPU pin levels, call bus begin, stage
+   its actual driver levels, settle, then run controller/latch/memory begin.
+3. On end, preview the controller first and compare controller/CPU READY; sample
+   bus completion from current resolved nets **before** controller finish and
+   trailing-edge memory settling. Preview/READY/bus sampling failures must abort
+   without running the trailing-edge commit. Match board-level fault latching
+   separately from standalone bus reset recovery.
+4. Qualify this joined memory-only fixture before adding bounded host-request
+   batches. That still does not supply CPU instructions, DMA/interrupt devices or
+   admission for a full machine.
