@@ -121,6 +121,7 @@ export const INPUTS = [
             'test/harris-native-incremental-nets.test.mjs', 'test/harris-native-memory-circuit.test.mjs',
             'test/harris-native-memory.test.mjs', 'test/harris-native-net-kernel.test.mjs',
             'test/harris-native-phase-circuit.test.mjs', 'test/harris-native-phase-components.test.mjs',
+            'test/harris-native-producer-counters.test.mjs',
             'test/harris-native-phase-schedule.test.mjs', 'test/harris-native-phase-end-seam.test.mjs'],
         obtain: 'With wasm32-capable clang and wasm-ld, run node scripts/build-wired-net-kernel.mjs EXISTING_EMPTY_DIRECTORY, then set HARRIS_NET_WASM to its wired-net-kernel.wasm. WASM_LD may select the linker. Rebuild when kernel sources change.',
         ciAvailable: true,
