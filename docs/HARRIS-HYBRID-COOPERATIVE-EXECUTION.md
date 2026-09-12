@@ -43,17 +43,31 @@ memory hashes across reference JS, compiled JS, hybrid single and hybrid batched
 It measured approximately 155k batched versus 16k compiled periods/s on this
 shared host, before the scalar-admission cleanup. This is a memory-only workload,
 not DOS, full-board RT, native instruction execution or browser throughput.
+The final source-pinned three-round receipt, HARRIS-HYBRID-SUSTAINED-BENCH.json,
+measured about 136k batched versus 17k compiled (8.09x). Run-to-run variation
+means no isolated scalar-cleanup speedup is established; reduced snapshot work
+is structural, not a claim that this edit alone improved measured throughput.
 
 The longer profile identifies native memory settling/preview as major remaining
 work, with JS bus submission/inspection also visible. It does not justify calling
 the remaining gap solved by porting the decoder alone. Raw throughput must still
 reach 9,545,454 modeled periods/s for the stated clock-equivalent target.
+HARRIS-HYBRID-SUSTAINED-PROFILE.json records self-sample counts, source identity
+and the raw profile digest. Reproduce with `node --cpu-prof
+scripts/bench-harris-hybrid-cpu.mjs --experimental --iterations=8192 --rounds=1
+--variants=hybrid-batched` and the matching HARRIS_NET_WASM build.
 
 Node integration tests compare exact reference READY schedules and physical
 completions across checked/admitted/incremental modes, plus actual asynchronous
 stop/resume with pending fetch state. The browser oracle compares complete CPU
 and all mapped bytes both at the paused state and after halt, using a deterministic
 scheduler clock only for acceptance, never as a performance measurement.
+The combined local selection passed 171 tests, zero failures/skips, including
+native, boot CPU, memory board, cooperative scheduler, workflow and census checks.
+The frozen-source local Chromium run passed: HARRIS-HYBRID-COOPERATIVE-BROWSER.json
+records checked/incremental pause after 3 periods, 379 resumed periods, 47
+retirements and complete state comparisons at both pause and halt. Existing
+native oracles, workload hashes, heartbeat and cancellation checks also passed.
 
 `.github/workflows/harris-native.yml` builds a fresh artifact, requires native
 tests to have zero skips, and runs checked/incremental native and hybrid Chromium

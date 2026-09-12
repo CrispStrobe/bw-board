@@ -1,5 +1,11 @@
 # Execution policy and whole-system optimization
 
+**R2 continuation:** HARRIS-HYBRID-COOPERATIVE-EXECUTION.md records implemented
+cooperative READY-bounded hybrid execution, native CI, sustained workload/profile
+receipts and hot-path scalar bus admission. Based on upstream `536eb19` including
+the native dependency index. This is host scheduling and memory-only execution,
+not full native peripherals/CPU or a completed 4.77 MHz capacity gate.
+
 **2026-09-12 later implementation update:** application package/policy integration
 is CI-qualified in brickwright-lite PR110 at `ea9816884` (not merged/deployed).
 Actual wired execution work has resumed on upstream engine `6e4327c`:
