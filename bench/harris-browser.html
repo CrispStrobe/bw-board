@@ -33,6 +33,7 @@ try {
             phase:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/phase-components.c'],
             phaseCircuit:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/phase-circuit.c'],
             schedule:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/phase-schedule.c'],
+            busSequencer:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/bus-sequencer.c'],
             admittedGraph:config.nativeOracle.admittedGraph,incrementalGraph:config.nativeOracle.incrementalGraph});});
         nativeOracle=result.nativeOracle;
         if(!nativeOracle.accepted||nativeOracle.capacityClaim!==false)throw new Error('native oracle failed or overclaimed');

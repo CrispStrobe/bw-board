@@ -53,6 +53,11 @@ self.onmessage=async({data})=>{
                     memory:await runNativeMemoryCircuitOracle({...options,swapAddress:true}),
                     phase:await runNativePhaseCircuitOracle(options),schedule:await runNativePhaseScheduleOracle(options)};
             }
+            if(data.busSequencer) {
+                const {runNativeBusSequencerOracle}=await import('../scripts/lib/harris-native-bus-sequencer-oracle.mjs');
+                nativeOracle.busSequencer={...await runNativeBusSequencerOracle(wasmBytes),accepted:true,capacityClaim:false,
+                    scope:'standalone memory bus subset; no CPU or full-board native runner'};
+            }
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});
