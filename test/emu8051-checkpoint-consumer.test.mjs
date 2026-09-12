@@ -389,3 +389,19 @@ test('opaque provenance binds all local continuation state to exact native byte 
   assert.equal(target.restoreCheckpoint({...bp64, bytes: offsetView}), true,
     'byteOffset and ArrayBuffer identity are not part of the seal');
 });
+
+test('an alternating local accessor is read once and cannot change staged restore state', () => {
+  const fixture = makeWasm();
+  const target = createEmu8051DebugTarget(fixture.wasm);
+  const snapshot = target.captureCheckpoint();
+  const local = {...snapshot.local};
+  let reads = 0;
+  Object.defineProperty(local, 'symbols', {enumerable: true, configurable: true, get() {
+    reads++;
+    return reads === 1 ? snapshot.local.symbols : {scheduler: {tasks: [{name: 'invented'}]}};
+  }});
+  assert.equal(target.restoreCheckpoint({...snapshot, local}), true);
+  assert.equal(reads, 1, 'local continuation getters are consumed only by the one staging clone');
+  assert.deepEqual(target.captureCheckpoint().local.symbols, snapshot.local.symbols,
+    'the proof-matching staged value, not a later accessor value, was committed');
+});
