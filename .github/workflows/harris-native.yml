@@ -109,7 +109,7 @@ jobs:
           set -euo pipefail
           node scripts/verify-harris-native-system-admission-mutations.mjs \
             | tee "$HARRIS_RECEIPT_DIR/memory-map-admission-mutations.tap"
-          test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/memory-map-admission-mutations.tap")" -eq 9
+          test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/memory-map-admission-mutations.tap")" -eq 10
 
       - name: Qualify the same module in a fresh Chromium worker
         env:

@@ -9,14 +9,14 @@ const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.
 const native={skip:wasmBytes?false:'build memory circuit prototype and set HARRIS_NET_WASM; native gate not exercised'};
 test('owned circuit memory preview has a separate fail-closed ABI',native,async()=>{
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
-    assert.equal(e.memory_circuit_version(),3);
+    assert.equal(e.memory_circuit_version(),4);
     assert.equal(e.preview_owned_memory_banks,undefined,'owned fast path stays internal to the circuit');
 });
 test('owned memory preview ABI rejects stale versions and missing exports',()=>{
-    const good={memory_circuit_version:()=>3};
+    const good={memory_circuit_version:()=>4};
     assert.doesNotThrow(()=>assertOwnedMemoryPreviewABI(good));
     for(const name of Object.keys(good))assert.throws(()=>assertOwnedMemoryPreviewABI({...good,[name]:undefined}),/version mismatch/,name);
-    assert.throws(()=>assertOwnedMemoryPreviewABI({...good,memory_circuit_version:()=>2}),/version mismatch/);
+    assert.throws(()=>assertOwnedMemoryPreviewABI({...good,memory_circuit_version:()=>3}),/version mismatch/);
 });
 test('native memory circuit gate is explicit',async()=>{
     await assert.rejects(createNativeMemoryCircuit(),{code:'EXPERIMENT_DISABLED'});

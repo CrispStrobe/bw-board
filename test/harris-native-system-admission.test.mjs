@@ -43,7 +43,12 @@ async function rawMemory(){
     put(p.outputIds,[0,1,2,3,4,5,6,7]);new Uint8Array(e.memory.buffer,p.protected,1)[0]=0;
     const counters=()=>Object.fromEntries(COUNTERS.map((name,i)=>[name,new Uint32Array(e.memory.buffer,e.memory_admission_counters_ptr(),8)[i]]));
     const fault=()=>Array.from(new Uint32Array(e.memory.buffer,p.fault,4));
-    return {e,p,v,counters,fault};
+    const snapshot=()=>({drivers:Array.from(new Uint8Array(e.memory.buffer,p.drivers,8)),
+        published:Array.from(new Uint8Array(e.memory.buffer,p.published,1)),memory:Array.from(new Uint8Array(e.memory.buffer,p.memory,16)),
+        states:Array.from(new Uint32Array(e.memory.buffer,p.states,9)),work:Array.from(new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),12)),
+        producer:Array.from(new Uint32Array(e.memory.buffer,e.producer_work_counters_ptr(),18)),
+        memoryPass:Array.from(new Uint32Array(e.memory.buffer,e.memory_pass_counters_ptr(),8))});
+    return {e,p,v,counters,fault,snapshot};
 }
 
 test('combined admission rejects each immutable memory-map defect and revokes graph trust',native,async()=>{
@@ -65,8 +70,10 @@ test('graph-only admission never grants memory trust and revokes an existing mem
     assert.deepEqual(k.counters(),{attempts:1,admissions:1,failures:0,inputMapVisits:28,outputMapVisits:8,
         outputAliasComparisons:28,protectionVisits:1,runtimeMapVisits:0});
     assert.equal(k.e.admit_owned_context(k.p.context),0,'legacy graph-only admission remains independently valid');
+    const before=k.snapshot();
     assert.equal(k.e.settle_memory_circuit(k.p.context,8,k.p.fault),4,'old wrapper cannot execute with graph trust alone');
     assert.equal(k.fault()[1],10,'the stale memory-map grant is refused before memory work');
+    assert.deepEqual(k.snapshot(),before,'grant refusal precedes native state, counter, driver and publication mutation');
 });
 
 test('failed combined re-admission revokes the prior same-context grant',native,async()=>{

@@ -24,7 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           BASE_SHA=208710e006af1e5007fe31e37fb472ce9587255f
-          CANDIDATE_SHA=935490592505add92a8c2af09c6904f1b0dd2adf
+          CANDIDATE_SHA=7e8941254ac72ff7a9add2aa061528c0f41768c6
           test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
           git cat-file -e "$BASE_SHA^{commit}"
           git cat-file -e "$CANDIDATE_SHA^{commit}"
@@ -71,7 +71,30 @@ jobs:
             --iterations=4096 --warmup-rounds=2 --rounds=12 \
             --batch-periods=8192 --wall-budget-ms=1000 \
             > "$RECEIPT_DIR/native-system-admission.json"
-          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-system-admission.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"208710e006af1e5007fe31e37fb472ce9587255f"); assert.equal(r.variants.candidate.revision,"935490592505add92a8c2af09c6904f1b0dd2adf"); assert.equal(r.variants.attribution.revision,"935490592505add92a8c2af09c6904f1b0dd2adf"); assert.equal(r.attributionProof.stage.native.memoryMappingCalls,r.attributionProof.semantic.producerWork.memory.settleCalls); assert.equal(r.attributionProof.stage.native.memoryMappingVisits,r.attributionProof.stage.native.memoryMappingCalls*640); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.ok(r.activeRatio.median>=1.10); assert.ok(r.activeRatio.q1>=1.05); assert.ok(r.activeRatio.min>=1); assert.equal(r.decision.capacityLeverAccepted,true);'
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-system-admission.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"208710e006af1e5007fe31e37fb472ce9587255f"); assert.equal(r.variants.candidate.revision,"7e8941254ac72ff7a9add2aa061528c0f41768c6"); assert.equal(r.variants.attribution.revision,"7e8941254ac72ff7a9add2aa061528c0f41768c6"); assert.equal(r.attributionProof.stage.native.memoryMappingCalls,r.attributionProof.semantic.producerWork.memory.settleCalls); assert.equal(r.attributionProof.stage.native.memoryMappingVisits,r.attributionProof.stage.native.memoryMappingCalls*640); assert.deepEqual(r.removedWork,{baseSettleCalls:143420,visitsPerSettle:640,baseRepeatedMapVisits:91788800,candidateAdmissionVisits:644,candidateRuntimeMapVisits:0,unit:"validation visits; not elapsed-time attribution"}); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.ok(r.activeRatio.median>=1.10); assert.ok(r.activeRatio.q1>=1.05); assert.ok(r.activeRatio.min>=1); assert.equal(r.decision.capacityLeverAccepted,true);'
+
+      - name: Inventory every evidence payload before acceptance
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import path from 'node:path';
+          import crypto from 'node:crypto';
+          import assert from 'node:assert/strict';
+          const root=process.env.RECEIPT_DIR,expected=[
+            'base-build.log','base-build/wired-net-kernel-build.json','base-build/wired-net-kernel.wasm',
+            'candidate-build.log','candidate-build/wired-net-kernel-build.json','candidate-build/wired-net-kernel.wasm',
+            'attribution-build.log','attribution-build/wired-net-kernel-build.json','attribution-build/wired-net-kernel.wasm',
+            'native-system-admission.json'];
+          const walk=directory=>fs.readdirSync(directory,{withFileTypes:true}).flatMap(entry=>{
+            const absolute=path.join(directory,entry.name);return entry.isDirectory()?walk(absolute):[path.relative(root,absolute)];});
+          const actual=walk(root).sort(),missing=expected.filter(name=>!actual.includes(name)),unexpected=actual.filter(name=>!expected.includes(name));
+          const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return [name,{bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')}];}));
+          fs.writeFileSync(path.join(root,'artifact-manifest.json'),JSON.stringify({schemaVersion:1,expected:[...expected].sort(),actual,missing,unexpected,files},null,2)+'\n',{flag:'wx'});
+          assert.deepEqual(missing,[]);assert.deepEqual(unexpected,[]);for(const name of expected)assert.ok(files[name].bytes>0,name);
+          NODE
+          test -s "$RECEIPT_DIR/artifact-manifest.json"
 
       - name: Upload exact A/B evidence and both builds
         if: ${{ always() && env.RECEIPT_DIR != '' }}
