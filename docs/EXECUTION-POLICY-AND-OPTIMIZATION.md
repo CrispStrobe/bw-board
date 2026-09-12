@@ -111,6 +111,40 @@ Keep working code behind gates; do not select known-broken candidates.
 
 ## Performance acceptance
 
+### Integration checkpoint — policy, GUI and native prerequisites
+
+The full engine test run at `63359b8364fc4d4e463752e0269348b8c594a572`
+completed with **5,073 passed, zero failed, 32 skipped** (5,105 tests,
+937 suites). It used the locally built queued-net artifact, so optional native
+tests actually ran. This is a local result, not a hosted-CI completion or a
+qualification of commits added afterward.
+
+The next engine checkpoint adds the split preview/finish clock-end seam
+(`bcbe00c`), pure clock-domain measurement (`dbc017a`), and standalone native
+286 memory bus sequencer (`3a37121`, audited in `f30dd06`). See
+[NATIVE-END-CLOCK-SEAM.md](NATIVE-END-CLOCK-SEAM.md),
+[EXECUTION-MEASUREMENT.md](EXECUTION-MEASUREMENT.md), and
+[HARRIS-NATIVE-BUS-SEQUENCER.md](HARRIS-NATIVE-BUS-SEQUENCER.md).
+These are prerequisites, not a complete native execution region. Phase ABI v2
+requires rebuilding old artifacts; old ABI-v1 A/B receipts remain historical
+evidence rather than modules loadable by the new wrapper.
+
+The application GUI candidate is isolated on `feat/execution-policy-gui` at
+`bbfe54a41`: browser-local Auto/Functional/Wired preferences, named wired
+refusal, and status published only after successful construction. It preserves
+the separate RAM preference. Twenty focused behavioral tests passed using an
+explicit test-only mapping to the policy source. The actual browser journey is
+implemented but **not yet run against the migrated installed package**; P1/P3
+remain open. This first slice does not persist project semantics, expose a
+native project backend, or establish cross-chip/observer re-admission.
+
+P4 review also found that the old browser `xtCapacityFactor` mixed wall waits
+and initialization time with a numerator excluding initialization periods.
+Do not interpret that historical field as measured active execution capacity.
+A corrected consumer must count the same initialization/run interval at both
+ends and report active throughput separately from wall pacing. No new capacity
+number is established merely by adding the arithmetic helper.
+
 ### P6 incremental checkpoint — dirty net queues
 
 The gated incremental C resolver now queues dirty nets and clears only the
