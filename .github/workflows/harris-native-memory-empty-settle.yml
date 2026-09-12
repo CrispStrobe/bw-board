@@ -1,0 +1,82 @@
+name: Harris native sparse memory-empty-settle evidence
+
+on:
+  push:
+    branches: ['perf/native-memory-empty-settle', 'perf/native-memory-empty-settle-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prepare exact base and candidate trees
+        run: |
+          set -euo pipefail
+          BASE_SHA=059a7c09838aaf3a83711bf4be552cfe589c15d5
+          CANDIDATE_SHA=3f3ed960b51671a88da3ecfe8cb476ddcf1738cf
+          git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$CANDIDATE_SHA^{commit}"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" "$GITHUB_SHA"
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-memory-empty-settle.XXXXXX")
+          TREE_DIR=$(mktemp -d "$RUNNER_TEMP/harris-memory-empty-settle-trees.XXXXXX")
+          BASE_TREE="$TREE_DIR/base"
+          CANDIDATE_TREE="$TREE_DIR/candidate"
+          git worktree add --detach "$BASE_TREE" "$BASE_SHA"
+          git worktree add --detach "$CANDIDATE_TREE" "$CANDIDATE_SHA"
+          test "$(git -C "$BASE_TREE" rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git -C "$CANDIDATE_TREE" rev-parse HEAD)" = "$CANDIDATE_SHA"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          {
+            echo "CLANG=$(command -v clang)"
+            echo "WASM_LD=$(command -v wasm-ld)"
+            echo "RECEIPT_DIR=$RECEIPT_DIR"
+            echo "TREE_DIR=$TREE_DIR"
+            echo "BASE_TREE=$BASE_TREE"
+            echo "CANDIDATE_TREE=$CANDIDATE_TREE"
+          } >> "$GITHUB_ENV"
+
+      - name: Build exact base and candidate modules independently
+        run: |
+          set -euo pipefail
+          mkdir "$RECEIPT_DIR/base-build" "$RECEIPT_DIR/candidate-build"
+          node "$BASE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/base-build" \
+            | tee "$RECEIPT_DIR/base-build.log"
+          node "$CANDIDATE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/candidate-build" \
+            | tee "$RECEIPT_DIR/candidate-build.log"
+          test -s "$RECEIPT_DIR/base-build/wired-net-kernel.wasm"
+          test -s "$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm"
+
+      - name: Measure same-runner sparse memory-empty-settle effect
+        run: |
+          set -euo pipefail
+          node --expose-gc scripts/measure-harris-native-memory-empty-settle.mjs --experimental \
+            --base-dir="$BASE_TREE" --candidate-dir="$CANDIDATE_TREE" \
+            --base-wasm="$RECEIPT_DIR/base-build/wired-net-kernel.wasm" \
+            --candidate-wasm="$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm" \
+            --iterations=4096 --warmup-rounds=2 --rounds=12 \
+            --batch-periods=8192 --wall-budget-ms=1000 \
+            > "$RECEIPT_DIR/native-memory-empty-settle.json"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-memory-empty-settle.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"059a7c09838aaf3a83711bf4be552cfe589c15d5"); assert.equal(r.variants.candidate.revision,"3f3ed960b51671a88da3ecfe8cb476ddcf1738cf"); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.ok(r.deltaReduction>=.10); assert.ok(r.pairedActiveThroughputRatio.median>=1.05);'
+
+      - name: Upload exact evidence and both build receipts
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-memory-empty-settle-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 14
