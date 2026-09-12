@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MASTER_REVISION,DIAGNOSTIC_JS_PATH,DIAGNOSTIC_SOURCE_PATH,HEADER_PATH,NATIVE_SOURCE_PATHS,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,
-    assertDiagnosticJSImportHashes,assertDiagnosticSourceHashes,assertHeaderHashes,assertJSImportHashes,assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
+import {MASTER_REVISION,DIAGNOSTIC_JS_PATHS,DIAGNOSTIC_SOURCE_PATH,HEADER_PATH,NATIVE_SOURCE_PATHS,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,
+    assertDiagnosticJSImportHashes,assertDiagnosticSourceHashes,assertHeaderHashes,assertJSImportHashes,assertNativeStageReceipt,assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
     collectJSImportClosure,controlGateResult,rotatedOrder,summarize}
     from '../scripts/measure-harris-native-stage-attribution.mjs';
-import {createAcceptedBusStageAttribution,snapshotAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
+import {createAcceptedBusStageAttribution,createNativeStageAttribution,inspectStageAttributionReceipt,selectBusStageAttribution,snapshotAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
+import {createHarrisNativeMemoryBoard} from '../src/experimental/harris-native-memory-board.js';
 
 const workflow=readFileSync(new URL('../.github/workflows/harris-native-stage-attribution.yml',import.meta.url),'utf8');
 const source=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -44,6 +45,8 @@ test('stage receipt reconciles exact loop dimensions and receipt crossings',()=>
     assert.throws(()=>assertStageReceipt(stages(),semantic(),{memoryMapping:'admitted'}));
     assert.doesNotThrow(()=>assertStageReceipt(stages(),semantic()),'historical caller keeps the no-options mapping equation');
     assert.throws(()=>assertStageReceipt(admitted,semantic()),undefined,'no-options default cannot silently become admitted mode');
+    assert.doesNotThrow(()=>assertNativeStageReceipt({native:stages().native},semantic(),{memoryMapping:'historical-runtime-validation'}));
+    assert.throws(()=>assertNativeStageReceipt({native:stages().native,js:{}},semantic()),/native-only stage receipt shape/);
     for(const [section,name] of [['native','memoryMappingVisits'],['native','memoryCommitStateWordCopies'],['js','materializedCompletionRecordBytes']]){
         const bad=structuredClone(stages());bad[section][name]++;assert.throws(()=>assertStageReceipt(bad,semantic(),{memoryMapping:'historical-runtime-validation'}));}
 });
@@ -80,10 +83,11 @@ test('current attribution provenance fails closed on native inventories and foll
     const js=Object.fromEntries(closure.map((path,index)=>[path,`js-${index}`]));assert.deepEqual(assertJSImportHashes({...js},js),js);
     const jsMissing={...js};delete jsMissing[closure[0]];const jsWrong={...js,[closure[0]]:'wrong'},jsExtra={...js,'src/extra.js':'extra'};
     for(const value of [jsMissing,jsWrong,jsExtra])assert.throws(()=>assertJSImportHashes(value,js));
-    const diagnosticJS={...js,[DIAGNOSTIC_JS_PATH]:'diagnostic-js'};
+    const diagnosticJS={...js,...Object.fromEntries(DIAGNOSTIC_JS_PATHS.map((path,index)=>[path,`diagnostic-js-${index}`]))};
     assert.deepEqual(assertDiagnosticJSImportHashes(diagnosticJS,js),diagnosticJS);
     assert.throws(()=>assertDiagnosticJSImportHashes(js,js));
-    assert.throws(()=>assertDiagnosticJSImportHashes({...diagnosticJS,[closure.find(path=>path!==DIAGNOSTIC_JS_PATH)]:'unrelated'},js));
+    for(const path of DIAGNOSTIC_JS_PATHS)assert.throws(()=>assertDiagnosticJSImportHashes({...diagnosticJS,[path]:js[path]},js));
+    assert.throws(()=>assertDiagnosticJSImportHashes({...diagnosticJS,[closure.find(path=>!DIAGNOSTIC_JS_PATHS.includes(path))]:'unrelated'},js));
     for(const value of [jsMissing,jsExtra])assert.throws(()=>assertDiagnosticJSImportHashes(value,js));
     assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_ATTRIBUTION=1','-Wl,--export=stage_attribution_version','-Wl,--export=stage_attribution_counters_ptr','-Wl,--export=reset_stage_attribution_counters',`/a/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/a']),
         ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
@@ -105,6 +109,8 @@ test('workflow pins exact control, builds off/on separately, and rejects weak at
 });
 test('timed native neutrality and untimed JavaScript counts stay disjoint',()=>{const runner=source('scripts/measure-harris-native-stage-attribution.mjs');
     assert.match(runner,/timedVariants=\{master,diagnosticOff:off,nativeCounter\}/);
+    assert.match(runner,/loadVariant\('nativeCounter',[^\n]+true,false,false\)/);assert.match(runner,/loadVariant\('combinedCounter',[^\n]+true,false,true\)/);assert.match(runner,/loadVariant\('namedProfile',[^\n]+false,true,false\)/);
+    assert.match(runner,/const controlGate=controlGateResult\(ratios\);\n    const untimedCombinedReceipt=controlGate\.passed/);
     assert.match(runner,/sample\(combinedCounter,iterations,\{timed:false\}\)/);
     assert.match(runner,/return timed\?\{\.\.\.receipt,activeMS:result\.activeMS,wallMS,activePeriodsPerSecond:/);
     assert.match(runner,/const ratios=\{candidateOffToMaster:[^\n]+nativeCounterToOff:/);
@@ -117,7 +123,8 @@ test('diagnostic build is conditional and stable work-counter ABI source is unto
     assert.match(runner,/assertSourceHashes\(build\.sourceHashes/);assert.match(runner,/assertHeaderHashes\(build\.headerHashes/);
     assert.match(runner,/diagnostics-off production Wasm identity/);assert.match(runner,/only explicit diagnostic build flags may differ/);
     assert.match(runner,/assertDiagnosticSourceHashes/);assert.match(runner,/immutable admission work is unchanged by execution/);
-    assert.match(runner,/assertStageReceipt\(stage,semantic,\{memoryMapping:'admitted'\}\)/);
+    assert.match(runner,/v\.jsStageAttribution\?assertStageReceipt:assertNativeStageReceipt/);
+    assert.match(runner,/\(stage,semantic,\{memoryMapping:'admitted'\}\)/);
     assert.match(header,/STAGE_COUNTER_COUNT/);assert.match(header,/#ifdef NATIVE_STAGE_PROFILE_NAMING\n#define STAGE_NOINLINE/);assert.doesNotMatch(header,/incremental_work|producer_work|memory_pass_work/);
 });
 test('accepted boundary counters preserve disabled bus shape and disclose rejected calls',()=>{const bus=source('src/experimental/wired-kernel/bus-circuit-image.js'),memory=source('src/experimental/wired-kernel/memory-circuit.js'),runner=source('scripts/measure-harris-native-stage-attribution.mjs');
@@ -145,6 +152,23 @@ test('accepted boundary counters execute success, budget, fault, exclusion, rese
     assert.deepEqual(snapshotAcceptedBusStageAttribution(0xffffffff,0xffffffff,0xffffffff,0xffffffff),
         {wasmBusInspectEntries:0xfffffff9,wasmBusSubmitEntries:0xffffffff,wasmBusRunEntries:0xfffffffe,
             completionObjects:0xffffffff,materializedCompletionRecordBytes:0xffffffdc});
+});
+test('native-only stage access validates the real ABI and never wraps raw bus methods',()=>{const raw={submit(){},runUntilCompletion(){}};
+    assert.equal(selectBusStageAttribution(raw,false,false),raw);assert.equal(selectBusStageAttribution(raw,true,false),raw);
+    const combined=selectBusStageAttribution(raw,true,true);assert.notEqual(combined,raw);assert.equal(typeof combined.inspectJSStageAttribution,'function');
+    for(const flags of [[false,true],[0,false],[true,0]])assert.throws(()=>selectBusStageAttribution(raw,...flags));
+    const memory=new WebAssembly.Memory({initial:1}),words=new Uint32Array(memory.buffer,0,NATIVE_STAGES.length);NATIVE_STAGES.forEach((_,i)=>words[i]=i+1);let resets=0;
+    const exports={memory,stage_attribution_version:()=>1,stage_attribution_counters_ptr:()=>0,reset_stage_attribution_counters:()=>{resets++;words.fill(0);}};
+    assert.equal(createNativeStageAttribution(exports,false),null);assert.throws(()=>createNativeStageAttribution({},true),/ABI mismatch/);
+    const native=createNativeStageAttribution(exports,true),nativeReceipt=inspectStageAttributionReceipt(native,raw,false);
+    assert.deepEqual(Object.keys(nativeReceipt),['native']);assert.equal(nativeReceipt.native[NATIVE_STAGES.at(-1)],NATIVE_STAGES.length);
+    native.reset();assert.equal(resets,1);assert.ok(Object.values(native.inspect()).every(value=>value===0));
+    const combinedReceipt=inspectStageAttributionReceipt(native,combined,true);assert.deepEqual(Object.keys(combinedReceipt),['native','js']);
+    assert.throws(()=>inspectStageAttributionReceipt(native,raw,true),/JS stage attribution access/);
+});
+test('board refuses invalid native and JavaScript attribution combinations before construction',async()=>{
+    await assert.rejects(createHarrisNativeMemoryBoard({enabled:true,stageAttribution:false,jsStageAttribution:true}),/JS stage attribution requires native stage attribution/);
+    await assert.rejects(createHarrisNativeMemoryBoard({enabled:true,stageAttribution:true,jsStageAttribution:1}),/jsStageAttribution/);
 });
 test('receipts precede workflow acceptance and profile classification has no in-process gate',()=>{const runner=source('scripts/measure-harris-native-stage-attribution.mjs');assert.match(runner,/process\.stdout\.write\(JSON\.stringify\(report,null,2\)\+'\\n'\);\}/);assert.doesNotMatch(runner,/process\.stdout\.write[^\n]+assert/);
     const classify=runner.slice(runner.indexOf("if(options['classify-profile'])"),runner.indexOf("assert.equal(options.experimental"));assert.doesNotMatch(classify,/assertProfileGates/);assert.match(classify,/console\.log\(JSON\.stringify/);assert.match(classify,/construction and final inspection frames/);assert.doesNotMatch(classify,/never contribute to actionableSamples/);});

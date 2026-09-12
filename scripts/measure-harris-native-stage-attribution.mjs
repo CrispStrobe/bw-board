@@ -17,7 +17,7 @@ export const NATIVE_SOURCE_PATHS=Object.freeze([
     'src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c',
     'src/experimental/wired-kernel/bus-circuit.c']);
 export const DIAGNOSTIC_SOURCE_PATH='src/experimental/wired-kernel/memory-circuit.c';
-export const DIAGNOSTIC_JS_PATH='src/experimental/wired-kernel/memory-circuit.js';
+export const DIAGNOSTIC_JS_PATHS=Object.freeze(['src/experimental/harris-native-memory-board.js','src/experimental/wired-kernel/memory-circuit.js']);
 export const LEGACY_WORK_COUNTERS=Object.freeze(['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions',
     'netDriverVisits','evaluatorRows','dependencyProbes','stagedDriverCopies','committedEvaluatorOutputs',
     'publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits']);
@@ -59,10 +59,10 @@ export function assertJSImportHashes(sourceHashes,expected){
 }
 export function assertDiagnosticJSImportHashes(sourceHashes,masterHashes){
     assert.deepEqual(Object.keys(sourceHashes??{}),Object.keys(masterHashes??{}),'exact workload JS closure inventory');
-    for(const path of Object.keys(masterHashes))if(path===DIAGNOSTIC_JS_PATH)
-        assert.notEqual(sourceHashes[path],masterHashes[path],'diagnostic JS source must carry the accepted-boundary batching repair');
+    for(const path of Object.keys(masterHashes))if(DIAGNOSTIC_JS_PATHS.includes(path))
+        assert.notEqual(sourceHashes[path],masterHashes[path],`${path}: diagnostic JS source must carry the native/JS attribution split`);
     else assert.equal(sourceHashes[path],masterHashes[path],`${path}: diagnostic JS source must equal master`);
-    assert.ok(Object.hasOwn(masterHashes,DIAGNOSTIC_JS_PATH),'diagnostic JS source belongs to workload closure');
+    for(const path of DIAGNOSTIC_JS_PATHS)assert.ok(Object.hasOwn(masterHashes,path),`${path}: diagnostic JS source belongs to workload closure`);
     return Object.freeze({...sourceHashes});
 }
 export function collectJSImportClosure(directory,entries){
@@ -84,10 +84,10 @@ export function canonicalBuildArgs(args){
         const source=NATIVE_SOURCE_PATHS.find(path=>args[i]===path||args[i].endsWith(`/${path}`));result.push(source??args[i]);}
     return Object.freeze(result);
 }
-export function assertStageReceipt(stage,semantic,{memoryMapping='historical-runtime-validation'}={}){
-    assert.deepEqual(Object.keys(stage.native),[...NATIVE_STAGES],'native stage schema');
-    for(const [name,value] of Object.entries(stage.native))assert.ok(Number.isSafeInteger(value)&&value>=0&&value<=0xffffffff,`${name}: u32`);
-    const m=semantic.producerWork.memory,n=stage.native,j=stage.js;
+function assertNativeStageCounters(n,semantic,{memoryMapping='historical-runtime-validation'}={}){
+    assert.deepEqual(Object.keys(n),[...NATIVE_STAGES],'native stage schema');
+    for(const [name,value] of Object.entries(n))assert.ok(Number.isSafeInteger(value)&&value>=0&&value<=0xffffffff,`${name}: u32`);
+    const m=semantic.producerWork.memory;
     assert.ok(['historical-runtime-validation','admitted'].includes(memoryMapping),'explicit memory mapping receipt mode');
     if(memoryMapping==='admitted'){assert.equal(n.memoryMappingCalls,0);assert.equal(n.memoryMappingVisits,0);}
     else {assert.equal(n.memoryMappingCalls,m.settleCalls);assert.equal(n.memoryMappingVisits,n.memoryMappingCalls*640);}
@@ -99,10 +99,17 @@ export function assertStageReceipt(stage,semantic,{memoryMapping='historical-run
     assert.equal(n.memoryPostSettles,m.postMemorySettles);
     assert.equal(n.phaseValidationCalls,semantic.periods);assert.equal(n.phaseValidationVisits,semantic.periods*66);
     assert.equal(n.busValidationCalls,semantic.periods);assert.equal(n.busValidationVisits,semantic.periods*82);
+}
+export function assertNativeStageReceipt(stage,semantic,options){
+    assert.deepEqual(Object.keys(stage),['native'],'native-only stage receipt shape');assertNativeStageCounters(stage.native,semantic,options);
+}
+export function assertStageReceipt(stage,semantic,options){
+    assert.deepEqual(Object.keys(stage),['native','js'],'combined stage receipt shape');assertNativeStageCounters(stage.native,semantic,options);
+    const j=stage.js;
     for(const value of Object.values(j))assert.ok(Number.isSafeInteger(value)&&value>=0&&value<=0xffffffff,'JS stage u32');
-    assert.equal(j.wasmBusSubmitEntries+1,j.completionObjects);assert.equal(j.wasmBusRunEntries,j.completionObjects);
-    assert.equal(j.wasmBusInspectEntries,j.wasmBusSubmitEntries*4+j.wasmBusRunEntries);
-    assert.equal(j.materializedCompletionRecordBytes,j.completionObjects*36);
+    assert.equal((j.wasmBusSubmitEntries+1)>>>0,j.completionObjects);assert.equal(j.wasmBusRunEntries,j.completionObjects);
+    assert.equal(j.wasmBusInspectEntries,(j.wasmBusSubmitEntries*4+j.wasmBusRunEntries)>>>0);
+    assert.equal(j.materializedCompletionRecordBytes,(j.completionObjects*36)>>>0);
 }
 
 const options={};
@@ -122,7 +129,8 @@ async function loadVariant(name,directory,wasmPath,revision,buildStageAttributio
     const paths=['src/devices/bus-memory.js','src/experimental/harris-80c286-boot-cpu.js','src/experimental/harris-boot-rom.js','src/experimental/harris-native-memory-board.js','src/experimental/harris-run-transactions.js'];
     const provenancePaths=collectJSImportClosure(directory,paths);
     const [bus,cpu,rom,board,run]=await Promise.all(paths.map(path=>import(moduleURL(directory,path))));bus.registerBusMemory();
-    return {name,directory,revision,wasm,HarrisBootCPU:cpu.HarrisBootCPU,createROM:rom.createHarrisStoreLoopROM,createBoard:board.createHarrisNativeMemoryBoard,run:run.runHarrisTransactions,stageAttribution:jsStageAttribution,
+    return {name,directory,revision,wasm,HarrisBootCPU:cpu.HarrisBootCPU,createROM:rom.createHarrisStoreLoopROM,createBoard:board.createHarrisNativeMemoryBoard,run:run.runHarrisTransactions,
+        nativeStageAttribution:buildStageAttribution,jsStageAttribution,
         provenance:{revision,wasmSHA256:build.wasmSHA256,manifestSHA256:hash(manifestBytes),stageAttribution:buildStageAttribution,jsStageAttribution,stageProfileNames,compiler:build.compiler,args:build.args,sourceHashes,headerHashes,
             jsSourceHashes:Object.fromEntries(provenancePaths.map(path=>[path,hash(readFileSync(join(directory,path)))]))}};
 }
@@ -134,17 +142,17 @@ function stateOf(cpu,board){const cpuState=cpu.inspect(),bus=board.inspectBus(),
     return {stateHash:hash(JSON.stringify(observable)),componentHashes,physicalClock:bus.clock,retired:cpu.retired,
         writes:[memory[2].writes,memory[3].writes]};}
 async function sample(v,iterations=4096,{timed=true}={}){const board=await v.createBoard({enabled:true,rom:v.createROM(iterations),romLowAlias:true,wasmBytes:v.wasm,admittedGraph:true,incrementalGraph:true,
-        ...(v.name==='master'?{}:{stageAttribution:v.stageAttribution})});
+        ...(v.name==='master'?{}:{stageAttribution:v.nativeStageAttribution,jsStageAttribution:v.jsStageAttribution})});
     const cpu=new v.HarrisBootCPU({enabled:true,board});cpu.initialize();const admissionBefore=board.inspectMemoryAdmission();
-    board.resetWorkCounters();board.resetProducerCounters();if(v.stageAttribution)board.resetStageAttribution();global.gc?.();
+    board.resetWorkCounters();board.resetProducerCounters();if(v.nativeStageAttribution)board.resetStageAttribution();global.gc?.();
     const start=timed?performance.now():0,result=await v.run({cpu,maxPeriods:iterations*32+100,batchPeriods:8192,wallBudgetMS:1000,yieldTask:()=>Promise.resolve()}),wallMS=timed?performance.now()-start:undefined;
     assert.equal(result.status,'halted');assert.equal(result.chunks,1);assert.equal(cpu.retired,iterations*3+4);
-    const work=board.inspectWorkCounters(),producerWork=board.inspectProducerCounters(),stage=v.stageAttribution?board.inspectStageAttribution():null,state=stateOf(cpu,board),admissionAfter=board.inspectMemoryAdmission();
+    const work=board.inspectWorkCounters(),producerWork=board.inspectProducerCounters(),stage=v.nativeStageAttribution?board.inspectStageAttribution():null,state=stateOf(cpu,board),admissionAfter=board.inspectMemoryAdmission();
     assert.deepEqual(Object.keys(work),[...LEGACY_WORK_COUNTERS]);assert.deepEqual(Object.keys(producerWork.producers),[...PRODUCERS]);assert.deepEqual(state.writes,[iterations,iterations]);assert.equal(state.physicalClock,result.periods+67);
     const semantic={stateHash:state.stateHash,componentHashes:state.componentHashes,periods:result.periods,retired:state.retired,writes:state.writes,physicalClock:state.physicalClock,chunks:result.chunks,yields:0,work,producerWork};
     assert.deepEqual(admissionAfter,admissionBefore,`${v.name}: immutable admission work is unchanged by execution`);
     assert.equal(admissionAfter.runtimeMapVisits,0,`${v.name}: admitted runtime mapping visits`);
-    if(stage)assertStageReceipt(stage,semantic,{memoryMapping:'admitted'});const receipt={label:v.name,semantic,stage,admissionBefore,admissionAfter};
+    if(stage)(v.jsStageAttribution?assertStageReceipt:assertNativeStageReceipt)(stage,semantic,{memoryMapping:'admitted'});const receipt={label:v.name,semantic,stage,admissionBefore,admissionAfter};
     return timed?{...receipt,activeMS:result.activeMS,wallMS,activePeriodsPerSecond:result.periods*1000/result.activeMS}:receipt;}
 function classifyNode(frame){const f=frame.functionName||'',u=frame.url||'';
     if(f==='(idle)')return 'idle';if(f==='(garbage collector)')return 'gc';
@@ -191,6 +199,7 @@ async function main(){parseOptions(process.argv.slice(2));if(options['classify-p
     const metrics=Object.fromEntries(Object.keys(timedVariants).map(label=>[label,summarize(samples.filter(s=>s.label===label).map(s=>s.activePeriodsPerSecond))]));
     const ratios={candidateOffToMaster:metrics.diagnosticOff.median/metrics.master.median,nativeCounterToOff:metrics.nativeCounter.median/metrics.diagnosticOff.median};
     const root=realpathSync(fileURLToPath(new URL('..',import.meta.url)));assert.equal(git(root,'rev-parse','HEAD'),candidate);assert.equal(git(root,'status','--porcelain'),'');
+    const controlGate=controlGateResult(ratios);
     const untimedCombinedReceipt=controlGate.passed?await sample(combinedCounter,iterations,{timed:false}):null;
     if(untimedCombinedReceipt)assertSemantic(untimedCombinedReceipt.semantic,expected,'untimed combined counter');
     const variants={master,diagnosticOff:off,nativeCounter,combinedCounter},report={schemaVersion:1,accepted:controlGate.passed,controlGate,workload:'owned-harris-store-loop-memory-only-admitted-incremental-native-stage-attribution',measurementRevision:candidate,clean:true,settings:{iterations,warmupRounds,rounds,batchPeriods:8192,wallBudgetMS:1000},host:{hostname:hostname(),platform:platform(),arch:arch(),cpu:cpus()[0]?.model,node:process.version,loadavg:loadavg()},variants:Object.fromEntries(Object.entries(variants).map(([k,v])=>[k,v.provenance])),expected,metrics,ratios,warmups,samples,untimedCombinedReceipt,limitations:['Diagnostic counters wrap modulo 2^32 and preserve all existing counter layouts and meanings.','Derived JavaScript crossing totals cover accepted submits, successful run returns, and native run faults carrying progress. Other rejected high-level calls are excluded, including validation paths that may already have called bus_inspect.','Master, diagnostics-off, and native-counter arms run in rotating same-job order; shared-host timing remains nondeterministic.','The combined JS-wrapped counter arm runs once after the timing gate solely to reconcile exact counted work; it contributes no timing sample, ratio, capacity, neutrality, cost, or speed claim.','The unchanged symmetric acceptance gates apply to diagnostics-off versus master and native-counter versus diagnostics-off.','The counter timing build does not use noinline profile boundaries. CPU profiling uses a distinct named-profile build with the JavaScript wrapper disabled in separate whole-process runs.','Memory-only workload; no DOS, peripherals, browser capacity, optimization, or default-change claim.']};

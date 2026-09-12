@@ -46,6 +46,24 @@ export function snapshotAcceptedBusStageAttribution(acceptedSubmits,returnedRuns
         wasmBusSubmitEntries:acceptedSubmits,wasmBusRunEntries:(returnedRuns+progressFaultRuns)>>>0,completionObjects,
         materializedCompletionRecordBytes:(completionObjects*36)>>>0};
 }
+export function selectBusStageAttribution(rawBusMethods,stageAttribution,jsStageAttribution) {
+    if(typeof stageAttribution!=='boolean'||typeof jsStageAttribution!=='boolean')throw new TypeError('stage attribution flags');
+    if(jsStageAttribution&&!stageAttribution)throw new TypeError('JS stage attribution requires native stage attribution');
+    return jsStageAttribution?createAcceptedBusStageAttribution(rawBusMethods):rawBusMethods;
+}
+export function createNativeStageAttribution(exports,enabled) {
+    if(typeof enabled!=='boolean')throw new TypeError('stageAttribution');if(!enabled)return null;
+    if(exports.stage_attribution_version?.()!==1||typeof exports.stage_attribution_counters_ptr!=='function'||
+        typeof exports.reset_stage_attribution_counters!=='function')throw new TypeError('rebuild native stage attribution: ABI mismatch');
+    return Object.freeze({inspect(){const values=new Uint32Array(exports.memory.buffer,exports.stage_attribution_counters_ptr(),NATIVE_STAGE_COUNTERS.length);
+            return Object.freeze(Object.fromEntries(NATIVE_STAGE_COUNTERS.map((name,i)=>[name,values[i]])));},
+        reset:()=>exports.reset_stage_attribution_counters()});
+}
+export function inspectStageAttributionReceipt(nativeStage,busMethods,jsStageAttribution) {
+    if(!nativeStage||typeof nativeStage.inspect!=='function'||typeof jsStageAttribution!=='boolean')throw new TypeError('native stage attribution access');
+    if(jsStageAttribution&&typeof busMethods?.inspectJSStageAttribution!=='function')throw new TypeError('JS stage attribution access');
+    return Object.freeze({native:nativeStage.inspect(),...(jsStageAttribution?{js:Object.freeze(busMethods.inspectJSStageAttribution())}:{})});
+}
 export function createAcceptedBusStageAttribution(rawBusMethods) {
     if(typeof rawBusMethods?.submit!=='function'||typeof rawBusMethods?.runUntilCompletion!=='function')throw new TypeError('raw bus methods');
     let acceptedSubmits=0,returnedRuns=0,progressFaultRuns=0,completionObjects=0;
@@ -62,12 +80,14 @@ export function createAcceptedBusStageAttribution(rawBusMethods) {
         resetJSStageAttribution:()=>{acceptedSubmits=returnedRuns=progressFaultRuns=completionObjects=0;}};
 }
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false,
-    stageAttribution=false}={}) {
-    captureKernelEvaluatorImage({enabled,circuit});
+    stageAttribution=false,jsStageAttribution=stageAttribution}={}) {
     if(typeof admittedGraph!=='boolean')throw new TypeError('admittedGraph');
     if(typeof incrementalGraph!=='boolean'||incrementalGraph&&!admittedGraph)throw new TypeError('incrementalGraph requires admittedGraph:true');
     if(typeof stageAttribution!=='boolean')throw new TypeError('stageAttribution');
+    if(typeof jsStageAttribution!=='boolean')throw new TypeError('jsStageAttribution');
+    if(jsStageAttribution&&!stageAttribution)throw new TypeError('JS stage attribution requires native stage attribution');
     if(stageAttribution&&bus===null)throw new TypeError('stage attribution requires owned bus');
+    captureKernelEvaluatorImage({enabled,circuit});
     const prototype=circuit instanceof CompiledDigitalCircuit?CompiledDigitalCircuit.prototype:DigitalCircuit.prototype;
     if(circuit.resolve!==prototype.resolve||circuit.settle!==prototype.settle)throw new CircuitFault('UNSUPPORTED_KERNEL_OVERRIDE','custom resolution/settling');
     if(!Array.isArray(banks)||banks.length<1||banks.length>32)throw new RangeError('native banks 1..32');
@@ -100,8 +120,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     assertIncrementalKernelABI(e,incrementalGraph);
     if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
     assertProducerCounterABI(e);
-    if(stageAttribution&&(e.stage_attribution_version?.()!==1||typeof e.stage_attribution_counters_ptr!=='function'||
-        typeof e.reset_stage_attribution_counters!=='function'))throw new TypeError('rebuild native stage attribution: ABI mismatch');
+    const nativeStage=createNativeStageAttribution(e,stageAttribution);
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
@@ -189,15 +208,13 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
     const rawBusMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
-    const busMethods=stageAttribution?createAcceptedBusStageAttribution(rawBusMethods):rawBusMethods;
+    const busMethods=selectBusStageAttribution(rawBusMethods,stageAttribution,jsStageAttribution);
     const inspectStageAttribution=()=>{
         if(!stageAttribution)throw new TypeError('stage attribution disabled');
-        const values=new Uint32Array(e.memory.buffer,e.stage_attribution_counters_ptr(),NATIVE_STAGE_COUNTERS.length);
-        return Object.freeze({native:Object.freeze(Object.fromEntries(NATIVE_STAGE_COUNTERS.map((name,i)=>[name,values[i]]))),
-            js:Object.freeze(busMethods.inspectJSStageAttribution())});
+        return inspectStageAttributionReceipt(nativeStage,busMethods,jsStageAttribution);
     };
     const resetStageAttribution=()=>{if(!stageAttribution)throw new TypeError('stage attribution disabled');
-        e.reset_stage_attribution_counters();busMethods.resetJSStageAttribution();};
+        nativeStage.reset();if(jsStageAttribution)busMethods.resetJSStageAttribution();};
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
         latchedMemoryClocks:!!phaseBinding,nativeMemoryBus:!!busBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(busMethods??phaseMethods??{settleMemories}),
         inspect,inspectMemory,inspectWorkCounters,resetWorkCounters,inspectProducerCounters,resetProducerCounters,
