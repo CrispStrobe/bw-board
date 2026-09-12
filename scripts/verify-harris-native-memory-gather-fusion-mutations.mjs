@@ -29,7 +29,7 @@ export const MUTATIONS=Object.freeze([
         to:'input_nets[offset+(index)]:offset+(index)]\n        #define CONFLICT(index) conflicts[input_nets?input_nets[offset+((index)+1<PINS?(index)+1:0)]:offset+(index)]'},
     {name:'published memory drivers return without settling',pattern:'settles published drivers',file:'memory-circuit.c',
         from:'#ifdef NATIVE_STAGE_ATTRIBUTION\n        STAGE_ADD(STAGE_MEMORY_POST_SETTLES,1);\n        #endif\n        result=settle_context(c);\n        #endif\n        if(result&0x80000000u)',
-        to:'#ifdef NATIVE_STAGE_ATTRIBUTION\n        STAGE_ADD(STAGE_MEMORY_POST_SETTLES,1);\n        #endif\n        result=0;\n        #endif\n        if(result&0x80000000u)'},
+        to:'#ifdef NATIVE_STAGE_ATTRIBUTION\n        STAGE_ADD(STAGE_MEMORY_POST_SETTLES,1);\n        #endif\n        if(changed){fault[0]=0;return 0;} result=settle_context(c);\n        #endif\n        if(result&0x80000000u)'},
 ]);
 
 async function main(){for(const mutation of MUTATIONS){
