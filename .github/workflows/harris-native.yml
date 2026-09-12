@@ -97,6 +97,13 @@ jobs:
             | tee "$HARRIS_RECEIPT_DIR/bus-output-sparse-mutations.tap"
           test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/bus-output-sparse-mutations.tap")" -eq 9
 
+      - name: Prove immutable bus-map admission mutations are rejected
+        run: |
+          set -euo pipefail
+          node scripts/verify-harris-native-bus-admission-mutations.mjs \
+            | tee "$HARRIS_RECEIPT_DIR/bus-map-admission-mutations.tap"
+          test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/bus-map-admission-mutations.tap")" -eq 25
+
       - name: Prove admitted memory preview mutations are rejected
         run: |
           set -euo pipefail

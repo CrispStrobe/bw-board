@@ -30,7 +30,7 @@ function semantic(){return {stateHash:'x',componentHashes:{cpu:'a',bus:'b',phase
         memory:{settleCalls:5,passes:6,previewCalls:6,previewBanks:24,presentBanks:12,changedBanks:4,postMemorySettles:6,postMemorySettlesWithoutDriverChange:3,ownedPreviewCalls:6,checkedValidationBanks:0,checkedValidationPinRecords:0}}};}
 function stages(){return {native:{memoryMappingCalls:5,memoryMappingVisits:3200,memoryGatherCalls:6,memoryGatherPinRecords:672,memoryPreviewCalls:6,
     memoryPreviewBanks:24,memoryPreviewStateWordCopies:216,memoryCommitBanks:24,memoryCommitStateWordCopies:216,memoryWriterPublications:96,
-    memoryPostSettles:6,phaseValidationCalls:10,phaseValidationVisits:660,busValidationCalls:10,busValidationVisits:820},
+    memoryPostSettles:6,phaseValidationCalls:10,phaseValidationVisits:660,busValidationCalls:10,busValidationVisits:100},
     js:{wasmBusInspectEntries:46,wasmBusSubmitEntries:9,wasmBusRunEntries:10,completionObjects:10,materializedCompletionRecordBytes:360}};}
 
 test('stage receipt reconciles exact loop dimensions and receipt crossings',()=>{

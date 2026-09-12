@@ -40,7 +40,8 @@ export function assertStageReceipt(stage,semantic){
     assert.equal(n.memoryWriterPublications,semantic.producerWork.producers.memoryBank.attempts);
     assert.equal(n.memoryPostSettles,m.postMemorySettles);
     assert.equal(n.phaseValidationCalls,semantic.periods);assert.equal(n.phaseValidationVisits,semantic.periods*66);
-    assert.equal(n.busValidationCalls,semantic.periods);assert.equal(n.busValidationVisits,semantic.periods*82);
+    assert.equal(n.busValidationCalls,semantic.periods);assert.equal(n.busValidationVisits,
+        semantic.producerWork.producers.busExternal.attempts,'admitted runtime validates every live external level');
     for(const value of Object.values(j))assert.ok(Number.isSafeInteger(value)&&value>=0&&value<=0xffffffff,'JS stage u32');
     assert.equal(j.wasmBusSubmitEntries+1,j.completionObjects);assert.equal(j.wasmBusRunEntries,j.completionObjects);
     assert.equal(j.wasmBusInspectEntries,j.wasmBusSubmitEntries*4+j.wasmBusRunEntries);

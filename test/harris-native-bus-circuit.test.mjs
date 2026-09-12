@@ -17,10 +17,23 @@ test('sparse bus output admission rejects aliased owned driver mappings',()=>{
     ])assert.throws(()=>assertDistinctBusDrivers(maps),/must be distinct/);
 });
 test('sparse bus output bridge refuses stale modules without the mask ABI',()=>{
-    const good={bus_circuit_version:()=>2,bus_sequencer_version:()=>1,bus_output_change_word(){}};
+    const good={bus_circuit_version:()=>3,bus_sequencer_version:()=>1,bus_output_change_word(){},
+        bus_admission_version:()=>1,bus_admission_counters_version:()=>1,admit_owned_bus_context(){},
+        bus_admission_counters_ptr(){},reset_bus_admission_counters(){}};
     assert.doesNotThrow(()=>assertBusCircuitABI(good));
     for(const name of Object.keys(good))assert.throws(()=>assertBusCircuitABI({...good,[name]:undefined}),/ABI mismatch/,name);
-    assert.throws(()=>assertBusCircuitABI({...good,bus_circuit_version:()=>1}),/ABI mismatch/);
+    for(const [name,value] of [['bus_circuit_version',2],['bus_admission_version',2],['bus_admission_counters_version',2]])
+        assert.throws(()=>assertBusCircuitABI({...good,[name]:()=>value}),/ABI mismatch/,name);
+});
+
+test('admitted bus captures exact maps once and keeps live levels checked per period',optional,async()=>{
+    const f=await createBusCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});
+    assert.deepEqual(f.kernel.inspectBusAdmission(),{attempts:1,admissions:1,failures:0,
+        inputMapVisits:24,outputMapVisits:48,externalMapVisits:27});
+    f.kernel.resetBusAdmissionCounters();
+    for(let i=0;i<4;i++)assert.equal(f.period({reset:Number(i<2)}).error,undefined);
+    assert.deepEqual(f.kernel.inspectBusAdmission(),{attempts:0,admissions:0,failures:0,
+        inputMapVisits:0,outputMapVisits:0,externalMapVisits:0},'runtime never repeats immutable map admission');
 });
 
 test('same-instance bus/actual-net/controller/memory oracle compares every boundary',optional,async()=>{
