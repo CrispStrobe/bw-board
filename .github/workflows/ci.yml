@@ -70,16 +70,16 @@ jobs:
           # fixing the lookup made the suite run, and it immediately reported a
           # real disagreement between two builds.
           #
-          # DRIVEN, not reasoned, over every emu8051-gated suite:
+          # The earlier halt/watchpoint correction was driven over every
+          # emu8051-gated suite:
           #   e473e906 (the old pin)      63 pass  1 fail
           #   cf3c7c0  (what the test names) 64 pass  0 fail
-          #   47c50419 (this ref)          64 pass  0 fail
+          #   47c50419 (previous ref)      64 pass  0 fail
           #
-          # 47c50419 rather than the minimal cf3c7c0 on purpose: it is the tip of
-          # that repo's master and the artefact developers here already use, so a
-          # local green and a CI green are now statements about the same build.
-          # The old pin made them different claims that looked identical.
-          ref: 47c504191a8420676415a1b86766621d6ea0de86
+          # The current exact ref advances that known-good baseline to the
+          # independently proven checkpoint-v1 master and its committed WASM.
+          # The environment gate below makes loss of that capability red.
+          ref: 398c31cad1dd9db4b914a00c34a79b796982e514
           # Actions refuses a path outside the workspace, so the sibling lands
           # INSIDE it and the test looks in both places.
           path: emu8051-stc
@@ -165,6 +165,10 @@ jobs:
         # for the 8086 by checking the suite out and grinding all 646,000. The
         # other two CPUs still have no such job; when one is added it belongs
         # beside it, not in this comment.
+        env:
+          # Prevent an old/partial emulator pin from making checkpoint tests
+          # pass through their intentional unsupported-build branch.
+          EMU8051_CHECKPOINT_REQUIRED: '1'
         run: npm test
 
       # WHICH ORACLES DID NOT RUN. `npm test` above reports its skips, and in
