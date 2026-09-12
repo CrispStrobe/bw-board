@@ -2,7 +2,10 @@
  * bw-board — the board layer between an emulated MCU and a circuit designer.
  *
  * Netlist, component models, pin resolution, instruments, and transducers.
- * No runtime dependencies. Runs in a browser or Node.
+ * Runtime dependencies: avr8js and rp2040js (both MIT), reached only through
+ * the adapters that need them. Runs in a browser or Node; this file is the
+ * browser entry and imports nothing from `node:` (gated by
+ * test/package-consumable.test.mjs).
  *
  * @module bw-board
  */
