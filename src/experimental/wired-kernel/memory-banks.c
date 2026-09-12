@@ -32,11 +32,13 @@ static STAGE_NOINLINE void commit_memory_stage(u32 banks,u8 *memory,u32 *states,
     }
 }
 #define PREVIEW_FUNCTION preview_memory_stage
+#define PREVIEW_ATTRIBUTE STAGE_NOINLINE
 #else
 #define PREVIEW_FUNCTION preview_banks
+#define PREVIEW_ATTRIBUTE __attribute__((always_inline))
 #endif
-static STAGE_NOINLINE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
-                         const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
+static PREVIEW_ATTRIBUTE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
+                         const u8 *inputs,const u8 *conflicts,const u32 *input_nets,u8 *staged_drives,
                          u8 *staged_present,u8 *staged_changed,u32 *fault,u32 owned) {
     if(!banks||banks>32)return fail_memory(8,0,NONE,fault);
     /* The standalone entry accepts caller buffers and validates their complete
@@ -66,26 +68,28 @@ static STAGE_NOINLINE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 
     #endif
     for(u32 b=0;b<banks;b++) {
         PREVIEW_VISIT()
-        const u8 *in=inputs+b*PINS,*cf=conflicts+b*PINS;const u32 *s=states+b*WORDS;u32 *n=staged+b*WORDS;
+        const u32 offset=b*PINS;const u32 *s=states+b*WORDS;u32 *n=staged+b*WORDS;
+        #define INPUT(index) inputs[input_nets?input_nets[offset+(index)]:offset+(index)]
+        #define CONFLICT(index) conflicts[input_nets?input_nets[offset+(index)]:offset+(index)]
         for(u32 w=0;w<WORDS;w++)n[w]=s[w];
         staged_changed[b]=0;staged_present[b]=1;
         u8 power,oe,we,select=1,bit;u32 error;
-        if((error=known_memory(in[0],cf[0],b,0,fault,&power)))PREVIEW_RETURN(error);
+        if((error=known_memory(INPUT(0),CONFLICT(0),b,0,fault,&power)))PREVIEW_RETURN(error);
         if(power!=1)PREVIEW_RETURN(fail_memory(4,b,0,fault));
-        if((error=known_memory(in[1],cf[1],b,1,fault,&power)))PREVIEW_RETURN(error);
+        if((error=known_memory(INPUT(1),CONFLICT(1),b,1,fault,&power)))PREVIEW_RETURN(error);
         if(power!=0)PREVIEW_RETURN(fail_memory(4,b,1,fault));
-        if((error=known_memory(in[2],cf[2],b,2,fault,&oe)))PREVIEW_RETURN(error);
-        if((error=known_memory(in[3],cf[3],b,3,fault,&we)))PREVIEW_RETURN(error);
-        if((oe!=1||we!=1)&&(error=known_memory(in[4],cf[4],b,4,fault,&select)))PREVIEW_RETURN(error);
+        if((error=known_memory(INPUT(2),CONFLICT(2),b,2,fault,&oe)))PREVIEW_RETURN(error);
+        if((error=known_memory(INPUT(3),CONFLICT(3),b,3,fault,&we)))PREVIEW_RETURN(error);
+        if((oe!=1||we!=1)&&(error=known_memory(INPUT(4),CONFLICT(4),b,4,fault,&select)))PREVIEW_RETURN(error);
         u32 active=select==0;
         if(!active&&s[0]==1){staged_present[b]=0;continue;}
         u32 address=0,byte=0;
         if(active)for(u32 p=0;p<15;p++) {
-            if((error=known_memory(in[5+p],cf[5+p],b,5+p,fault,&bit)))PREVIEW_RETURN(error);
+            if((error=known_memory(INPUT(5+p),CONFLICT(5+p),b,5+p,fault,&bit)))PREVIEW_RETURN(error);
             address|=(u32)bit<<p;
         }
         if(active&&!we)for(u32 p=0;p<8;p++) {
-            if((error=known_memory(in[20+p],cf[20+p],b,20+p,fault,&bit)))PREVIEW_RETURN(error);
+            if((error=known_memory(INPUT(20+p),CONFLICT(20+p),b,20+p,fault,&bit)))PREVIEW_RETURN(error);
             byte|=(u32)bit<<p;
         }
         u32 cycle=!active?1:!we?3:!oe?2:1;
@@ -107,6 +111,8 @@ static STAGE_NOINLINE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 
             if(s[1]!=address||s[2]!=byte){n[1]=address;n[2]=byte;staged_changed[b]=1;}
         }
         for(u32 p=0;p<8;p++)staged_drives[b*8+p]=n[2]==NONE?3:(n[2]>>p)&1;
+        #undef INPUT
+        #undef CONFLICT
     }
     /* Commit the old pending bytes only after all peer previews succeeded. */
     #ifdef NATIVE_STAGE_PROFILE_NAMING
@@ -129,12 +135,22 @@ u32 preview_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *
                          const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
                          u8 *staged_present,u8 *staged_changed,u32 *fault) {
     return PREVIEW_FUNCTION(banks,memory,states,staged,protected_rom,inputs,conflicts,
-        staged_drives,staged_present,staged_changed,fault,0);
+        0,staged_drives,staged_present,staged_changed,fault,0);
 }
 u32 preview_owned_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
                                const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
                                u8 *staged_present,u8 *staged_changed,u32 *fault) {
     return PREVIEW_FUNCTION(banks,memory,states,staged,protected_rom,inputs,conflicts,
-        staged_drives,staged_present,staged_changed,fault,1);
+        0,staged_drives,staged_present,staged_changed,fault,1);
+}
+/* The admitted circuit owns the immutable map and all pointed-to storage. Live
+ * levels and conflicts remain a single post-settle image while every bank is
+ * previewed; publication still happens only after this call returns. */
+u32 preview_owned_memory_banks_mapped(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
+                                      const u8 *levels,const u8 *conflicts,const u32 *input_nets,
+                                      u8 *staged_drives,u8 *staged_present,u8 *staged_changed,u32 *fault) {
+    return PREVIEW_FUNCTION(banks,memory,states,staged,protected_rom,levels,conflicts,
+        input_nets,staged_drives,staged_present,staged_changed,fault,1);
 }
 #undef PREVIEW_FUNCTION
+#undef PREVIEW_ATTRIBUTE
