@@ -69,10 +69,12 @@ test('diagnostic build is conditional and stable work-counter ABI source is unto
 });
 test('crossing counters follow actual calls while disabled bus paths retain production shape',()=>{const bus=source('src/experimental/wired-kernel/bus-circuit-image.js'),memory=source('src/experimental/wired-kernel/memory-circuit.js'),runner=source('scripts/measure-harris-native-stage-attribution.mjs');
     assert.doesNotMatch(bus,/stageAttribution|wasmBusInspectEntries|inspectJSStageAttribution/);
-    assert.match(memory,/const busExports=stageAttribution\?\{\.\.\.e,/);assert.match(memory,/\}:e;\n    const rawBusMethods=busBinding\?\.initialize\(\{e:busExports/);
-    assert.match(memory,/bus_inspect\(field\)\{if\(countBusCrossings\)countJSStage\('wasmBusInspectEntries'\);return e\.bus_inspect\(field\);\}/);
-    assert.match(memory,/submit\(\.\.\.args\)\{return countCrossings\(\(\)=>rawBusMethods\.submit\(\.\.\.args\)\);\}/);
+    assert.match(memory,/const rawBusMethods=busBinding\?\.initialize\(\{e,p,put,inspect/);assert.doesNotMatch(memory,/busExports|countBusCrossings|countJSStage/);
+    assert.match(memory,/submit\(\.\.\.args\)\{const result=rawBusMethods\.submit\(\.\.\.args\);/);
+    assert.match(memory,/jsStage\.wasmBusInspectEntries=\(jsStage\.wasmBusInspectEntries\+4\)>>>0/);
+    assert.match(memory,/runUntilCompletion\(\.\.\.args\)\{try\{const result=rawBusMethods\.runUntilCompletion/);
     assert.match(memory,/materializedCompletionRecordBytes/);assert.doesNotMatch(memory,/nativeReceiptBytesRead/);
+    assert.match(runner,/calls rejected before the corresponding Wasm boundary are deliberately excluded/);
     for(const name of ['inspectPhase','inspectLifecycle','inspectNets','componentHashes','headerHashes','nativeCounter','combinedCounter'])assert.ok(runner.includes(name),name);
 });
 test('receipts precede workflow acceptance and profile classification has no in-process gate',()=>{const runner=source('scripts/measure-harris-native-stage-attribution.mjs');assert.match(runner,/process\.stdout\.write\(JSON\.stringify\(report,null,2\)\+'\\n'\);\}/);assert.doesNotMatch(runner,/process\.stdout\.write[^\n]+assert/);

@@ -155,20 +155,22 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
     const jsStage=stageAttribution?{wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,
         completionObjects:0,materializedCompletionRecordBytes:0}:null;
-    const countJSStage=(name,value=1)=>{jsStage[name]=(jsStage[name]+value)>>>0;};
-    let countBusCrossings=false;
-    const busExports=stageAttribution?{...e,
-        bus_inspect(field){if(countBusCrossings)countJSStage('wasmBusInspectEntries');return e.bus_inspect(field);},
-        bus_submit(...args){if(countBusCrossings)countJSStage('wasmBusSubmitEntries');return e.bus_submit(...args);},
-        run_bus_memory_until_completion(...args){if(countBusCrossings)countJSStage('wasmBusRunEntries');return e.run_bus_memory_until_completion(...args);}}:e;
-    const rawBusMethods=busBinding?.initialize({e:busExports,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
-    const countCrossings=callback=>{countBusCrossings=true;try{return callback();}finally{countBusCrossings=false;}};
-    const countCompletionRecords=result=>{const count=result?.completions?.length??0;
-        countJSStage('completionObjects',count);countJSStage('materializedCompletionRecordBytes',count*36);};
+    const rawBusMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
     const busMethods=stageAttribution?{...rawBusMethods,
-        submit(...args){return countCrossings(()=>rawBusMethods.submit(...args));},
-        runUntilCompletion(...args){try{const result=countCrossings(()=>rawBusMethods.runUntilCompletion(...args));countCompletionRecords(result);return result;}
-            catch(error){countCompletionRecords(error.progress);throw error;}},
+        submit(...args){const result=rawBusMethods.submit(...args);
+            jsStage.wasmBusInspectEntries=(jsStage.wasmBusInspectEntries+4)>>>0;
+            jsStage.wasmBusSubmitEntries=(jsStage.wasmBusSubmitEntries+1)>>>0;return result;},
+        runUntilCompletion(...args){try{const result=rawBusMethods.runUntilCompletion(...args),count=result.completions.length;
+                jsStage.wasmBusInspectEntries=(jsStage.wasmBusInspectEntries+1)>>>0;
+                jsStage.wasmBusRunEntries=(jsStage.wasmBusRunEntries+1)>>>0;
+                jsStage.completionObjects=(jsStage.completionObjects+count)>>>0;
+                jsStage.materializedCompletionRecordBytes=(jsStage.materializedCompletionRecordBytes+count*36)>>>0;return result;}
+            catch(error){const count=error.progress?.completions?.length??0;if(error.progress){
+                    jsStage.wasmBusInspectEntries=(jsStage.wasmBusInspectEntries+2)>>>0;
+                    jsStage.wasmBusRunEntries=(jsStage.wasmBusRunEntries+1)>>>0;
+                    jsStage.completionObjects=(jsStage.completionObjects+count)>>>0;
+                    jsStage.materializedCompletionRecordBytes=(jsStage.materializedCompletionRecordBytes+count*36)>>>0;}
+                throw error;}},
         inspectJSStageAttribution:()=>({...jsStage}),
         resetJSStageAttribution:()=>{for(const name of Object.keys(jsStage))jsStage[name]=0;}}:rawBusMethods;
     const inspectStageAttribution=()=>{
