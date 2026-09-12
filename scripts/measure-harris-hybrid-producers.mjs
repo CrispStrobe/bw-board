@@ -101,6 +101,7 @@ async function sample(instrumented) {
     const initializationMS = performance.now() - initializationStart;
     for (const key of Object.keys(timings)) timings[key] = 0;
     raw.resetWorkCounters();
+    raw.resetProducerCounters();
     global.gc?.();
     const gc = [];
     const observer = new PerformanceObserver(list => {
@@ -130,12 +131,18 @@ async function sample(instrumented) {
     assert.equal(state.physicalClock, result.periods + 67, 'successful run must account for every post-initialization physical period');
     assert.equal(yields, result.chunks - 1, 'a halted cooperative run yields between chunks only');
     const work = raw.inspectWorkCounters();
+    const producerWork = raw.inspectProducerCounters();
+    const producerValues = Object.values(producerWork.producers);
+    assert.equal(producerValues.reduce((sum, value) => sum + value.attempts, 0) >>> 0,
+        work.driverComparisons, 'producer attempts reconcile with aggregate comparisons');
+    assert.equal(producerValues.reduce((sum, value) => sum + value.changes, 0) >>> 0,
+        work.valueChangingDriverWrites, 'producer changes reconcile with aggregate changing writes');
     const common = {mode: instrumented ? 'instrumented' : 'control', constructionMS, initializationMS,
         result, wallMS, yields, yieldWaitMS, wallOutsideActiveAndYieldMS: wallMS - result.activeMS - yieldWaitMS,
         activePeriodsPerSecond: result.periods * 1000 / result.activeMS,
         wallPeriodsPerSecond: result.periods * 1000 / wallMS, heapDeltaBytes: heapAfter - heapBefore,
         gc: {events: gc.length, durationMS: gc.reduce((sum, entry) => sum + entry.durationMS, 0), entries: gc},
-        work, ...state};
+        work, producerWork, ...state};
     if (!instrumented) return common;
     assert.equal(timings.returnedPeriods, result.periods, 'native returned periods reconcile with cooperative progress');
     assert.equal(timings.nativeCalls, timings.submitCalls + 1, 'one initialized pending transaction precedes measured submits');
@@ -160,7 +167,7 @@ for (let round = 0; round <= rounds; round++) {
     for (const instrumented of round % 2 ? [true, false] : [false, true]) {
         const value = await sample(instrumented);
         const identity = {stateHash: value.stateHash, periods: value.result.periods, retired: value.retired,
-            physicalClock: value.physicalClock, writes: value.writes, work: value.work};
+            physicalClock: value.physicalClock, writes: value.writes, work: value.work, producerWork: value.producerWork};
         expected ??= identity;
         assert.deepEqual(identity, expected, `${value.mode} round ${round} identity`);
         if (round) samples.push({round, ...value});

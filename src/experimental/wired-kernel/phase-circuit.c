@@ -10,7 +10,9 @@ extern u32 begin_memory_phase(u32*,u32,u32,const u8*,const u8*,u8*,u32*);
 extern u32 preview_memory_phase_end(const u32*,const u8*,const u8*,u32*,u32*);
 extern u32 finish_memory_phase(u32*,u32,u8*,u8*,u32*);
 extern u32 update_address_latch(u8*,const u8*,const u8*,u8*,u32*);
-extern u32 write_owned_driver(const u32*,u32,u32);
+extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
+#define PRODUCER_PHASE_CONTROLLER 3
+#define PRODUCER_PHASE_LATCH 4
 /* Private phase context: memory context ptr, state ptr, io,intr,input-net IDs,
  * controller driver IDs,latch input-net IDs,latch driver IDs,latch values,
  * input staging,conflict staging,output staging,phase fault,ready,present,
@@ -43,7 +45,7 @@ static void gather_phase(const u32 *p,u32 mapping,u32 count) {
 }
 static u32 publish_controller(const u32 *p) {
     const u32 *c=W(0);for(u32 i=0;i<7;i++)if(controller_output(p,i)){
-        if(write_owned_driver(c,W(5)[i],B(11)[i]))return 1;
+        if(write_owned_driver_tagged(c,W(5)[i],B(11)[i],PRODUCER_PHASE_CONTROLLER))return 1;
     }
     return 0;
 }
@@ -65,7 +67,7 @@ u32 begin_latched_memory_clock(const u32 *p,u32 *fault) {
     gather_phase(p,6,27);
     result=update_address_latch(B(8),B(9),B(10),B(11),W(12));if(result)return phase_component_error(p,result,1,fault);
     const u32 *c=W(0);for(u32 i=0;i<26;i++){
-        if(write_owned_driver(c,W(7)[i],B(11)[i]))return reject_phase(p,1,2,NONE,fault);
+        if(write_owned_driver_tagged(c,W(7)[i],B(11)[i],PRODUCER_PHASE_LATCH))return reject_phase(p,1,2,NONE,fault);
     }
     if((result=settle_phase_memory(p,fault)))return result;
     W(15)[0]=1;fault[0]=0;return 0;

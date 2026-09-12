@@ -57,6 +57,8 @@ export async function createHarrisNativeMemoryBoard(options = {}) {
         inspectNets: native.inspect,
         inspectWorkCounters: native.inspectWorkCounters,
         resetWorkCounters: native.resetWorkCounters,
+        inspectProducerCounters: native.inspectProducerCounters,
+        resetProducerCounters: native.resetProducerCounters,
         inspectMemory(id) {
             const index = BANK_IDS.indexOf(id);
             if (index < 0) throw new RangeError(`unknown memory ${id}`);
