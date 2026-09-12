@@ -67,10 +67,11 @@ export async function runHarrisTransactions(options = {}) {
                 let result;
                 try {result = cpu.runTransactions({maxPeriods: budget, maxBatchPeriods: budget, ready_n});}
                 catch (error) {
-                    if (error.progress !== undefined) {
-                        if (!Number.isSafeInteger(error.progress?.periods) || error.progress.periods < 0 ||
-                            error.progress.periods > budget) throw invalid();
-                        periods += error.progress.periods;
+                    const progress = error?.progress;
+                    if (progress !== undefined) {
+                        if (!Number.isSafeInteger(progress?.periods) || progress.periods < 0 ||
+                            progress.periods > budget) throw invalid();
+                        periods += progress.periods;
                     }
                     throw error;
                 }
@@ -100,7 +101,18 @@ export async function runHarrisTransactions(options = {}) {
             // Do not replace a wired fault if a diagnostic clock itself fails.
             try {closeChunk(time());} catch {chunkStart = null;}
         }
-        error.runnerProgress = Object.freeze(report('fault'));
-        throw error;
+        const progress = Object.freeze(report('fault'));
+        // Host callbacks may throw frozen errors or primitive values. Preserve
+        // the original failure as cause rather than replacing it with an
+        // incidental property-assignment TypeError and losing executed periods.
+        let attached = false;
+        if (error && (typeof error === 'object' || typeof error === 'function')) {
+            try {error.runnerProgress = progress; attached = error.runnerProgress === progress;} catch {}
+        }
+        if (attached) throw error;
+        const wrapped = new Error(error instanceof Error ? error.message : 'hybrid runner failed', {cause: error});
+        if (typeof error?.code === 'string') wrapped.code = error.code;
+        wrapped.runnerProgress = progress;
+        throw wrapped;
     }
 }

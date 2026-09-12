@@ -5,7 +5,9 @@ import {registerBusMemory} from '../src/devices/bus-memory.js';
 import {createHarrisMemoryBoard} from '../src/experimental/harris-80c286-memory-board.js';
 import {createHarrisNativeMemoryBoard} from '../src/experimental/harris-native-memory-board.js';
 import {HarrisBootCPU} from '../src/experimental/harris-80c286-boot-cpu.js';
-import {createHarrisBootROM, createHarrisLoopROM} from '../src/experimental/harris-boot-rom.js';
+import {createHarrisBootROM, createHarrisLoopROM, createHarrisStoreLoopROM} from '../src/experimental/harris-boot-rom.js';
+import {assembleRaw} from '../src/i8086-asm.js';
+import {runHarrisTransactions} from '../src/experimental/harris-run-transactions.js';
 
 registerBusMemory();
 const wasmBytes = process.env.HARRIS_NET_WASM ? readFileSync(process.env.HARRIS_NET_WASM) : null;
@@ -132,5 +134,64 @@ test('real IN OUT and string I/O programs refuse rather than injecting host serv
         assert.throws(() => finish(cpu, 256), {code: 'UNSUPPORTED_TRANSACTION'});
         assert.equal(cpu.status, 'faulted'); assert.equal(cpu.retired, 1);
         assert.equal(board.inspectMemory('ram0').writes, 0); assert.equal(board.inspectMemory('ram1').writes, 0);
+    }
+});
+
+test('sustained owned loop bytes agree with assembler and retain every guest store', optional, async () => {
+    const rom = createHarrisStoreLoopROM(64);
+    const assembled = assembleRaw('mov cx, 64\nmov ax, 0\nagain:\ninc ax\nmov [0500h], ax\nloop again\nhlt', 0x100);
+    assert.deepEqual(rom.slice(0x100, 0x100 + assembled.length), assembled);
+    for (const invalid of [0, -1, 65536, 1.5, NaN]) assert.throws(() => createHarrisStoreLoopROM(invalid), RangeError);
+    const expected = reference(rom);
+    assert.equal(expected.cpu.retired, 196); assert.equal(word(expected.board, 0x500), 64);
+    for (const mode of modes) {
+        const actual = await native(rom, mode);
+        compare(expected, actual, finish(actual.cpu, 7));
+        assert.equal(actual.board.inspectMemory('ram0').writes, 64);
+        assert.equal(actual.board.inspectMemory('ram1').writes, 64);
+    }
+});
+
+test('cooperative READY events match every reference period and physical completion across native modes', optional, async () => {
+    const events = [{at: 0, ready_n: 1}, {at: 9, ready_n: 0}, {at: 83, ready_n: 1}, {at: 92, ready_n: 0}];
+    const rom = createHarrisBootROM();
+    const board = createHarrisMemoryBoard({enabled: true, rom, romLowAlias: true});
+    const cpu = cpuFor(board); let periods = 0, ready_n = 0, index = 0;
+    const completions = [];
+    while (cpu.status === 'running' && periods < 500) {
+        if (events[index]?.at === periods) ready_n = events[index++].ready_n;
+        const completion = cpu.stepClock(ready_n); periods++;
+        if (completion) completions.push(completion);
+    }
+    assert.equal(cpu.status, 'halted');
+    for (const mode of modes) {
+        const actualBoard = await createHarrisNativeMemoryBoard({enabled: true, wasmBytes, rom, romLowAlias: true, ...mode});
+        const observed = [];
+        const observedBoard = {...actualBoard, runUntilCompletion(options) {
+            const result = actualBoard.runUntilCompletion(options); observed.push(...result.completions); return result;
+        }};
+        const actual = {board: actualBoard, cpu: cpuFor(observedBoard)};
+        let now = 0, yields = 0;
+        const result = await runHarrisTransactions({cpu: actual.cpu, maxPeriods: 500, batchPeriods: 7,
+            events, wallBudgetMS: 2, now: () => now++, yieldTask: async () => {yields++; now += 100;}});
+        assert.equal(result.status, 'halted'); assert.ok(yields > 0);
+        compare({board, cpu, periods, completions}, actual, {periods: result.periods, completions: observed});
+        assert.equal(actualBoard.inspectBus().clock, board.bus.clock);
+        assert.ok(result.activeMS < yields * 100, 'awaited host time is not active execution');
+    }
+});
+
+test('cooperative stop after a host yield leaves the actual pending CPU transfer resumable', optional, async () => {
+    const rom = createHarrisBootROM(), expected = reference(rom);
+    for (const mode of modes) {
+        const actual = await native(rom, mode); let yielded = false, now = 0;
+        const first = await runHarrisTransactions({cpu: actual.cpu, maxPeriods: 500, batchPeriods: 3,
+            wallBudgetMS: 1, now: () => now++, yieldTask: async () => {yielded = true;}, stopped: () => yielded});
+        assert.equal(first.status, 'stopped'); assert.equal(actual.cpu.status, 'running');
+        assert.equal(first.periods, 3); assert.equal(actual.cpu.retired, 0);
+        const second = await runHarrisTransactions({cpu: actual.cpu, maxPeriods: 500, batchPeriods: 7});
+        assert.equal(second.status, 'halted'); assert.equal(first.periods + second.periods, expected.periods);
+        assert.deepEqual(actual.cpu.inspect(), expected.cpu.inspect());
+        for (const id of ['ram0', 'ram1']) assert.deepEqual(actual.board.inspectMemory(id).bytes, expected.board.inspectMemory(id).bytes);
     }
 });

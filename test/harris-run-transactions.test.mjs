@@ -86,6 +86,22 @@ test('early halt counts actual progress and does not yield or add periods', asyn
     assert.equal(f.read().yields, 0);
 });
 
+test('frozen and primitive host failures retain their cause and executed-period receipt', async () => {
+    for (const cause of [Object.freeze(new Error('host yield failed')), null, 'yield failed']) {
+        const f = fixture();
+        await assert.rejects(runHarrisTransactions({cpu: f.cpu, maxPeriods: 5, batchPeriods: 1,
+            wallBudgetMS: 1, now: f.now, yieldTask: async () => {throw cause;}}), error => {
+            assert.equal(error.cause, cause); assert.equal(error.runnerProgress.periods, 1);
+            assert.equal(error.runnerProgress.chunks, 1); assert.ok(Object.isFrozen(error.runnerProgress)); return true;
+        });
+        assert.equal(f.read().clock, 1); assert.equal(f.cpu.status, 'running');
+    }
+    const f = fixture(); f.cpu.runTransactions = () => {throw null;};
+    await assert.rejects(runHarrisTransactions({cpu: f.cpu, maxPeriods: 1}), error => {
+        assert.equal(error.cause, null); assert.equal(error.runnerProgress.periods, 0); return true;
+    });
+});
+
 test('all options/events are admitted before executing any period', async () => {
     const f = fixture();
     for (const options of [null, [], {}, {maxPeriods: 0}, {maxPeriods: 1.5},

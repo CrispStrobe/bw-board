@@ -1,5 +1,13 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-12 R2 cooperative hybrid execution — ACTIVE, Codex root. User explicitly
+requested continued performance coding and remote default-branch merge after
+qualification. Integration `feat/harris-hybrid-cpu-integration` now includes
+upstream `536eb19`. Dedicated workers own `harris-cooperative-transactions`
+(host runner/tests) and `harris-native-ci` (native workflow/contracts); root owns
+sustained ROM benchmark, real-board event tests, census, docs and merge checks.
+No branch deletion, app deployment or implicit backend promotion is requested.
+
 2026-09-12 R1 hybrid CPU integration — DONE (bounded R1 only), Codex root, user-requested actual
 wired execution/performance coding. Isolated `feat/harris-hybrid-cpu-integration`
 from upstream `6e4327c393ae6f57beb09d345a3aa91be1393729`; adapter worker owns
