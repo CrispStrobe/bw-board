@@ -19,12 +19,19 @@ import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFrame, FrameReceiver, CMD } from '../src/serial-debug.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const HEX_PATH = '/tmp/10-live-firmware.hex';
-const WASM_PATH = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+const WASM_PATH = resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']);
 
 let createEmu8051;
 try { createEmu8051 = require(WASM_PATH); } catch {}
@@ -34,15 +41,29 @@ async function loadWasm() {
   try { return await createEmu8051(); } catch { return null; }
 }
 
-describe('rung 8: serial monitor vs emulator (same image)', () => {
-  if (!existsSync(HEX_PATH)) {
-    it.skip('10-live-firmware.hex not found');
-    return;
-  }
+/**
+ * TWO ORACLES, ONE GUARD EACH, EACH NAMING ITSELF.
+ *
+ * Collapsing them into one skip loses WHICH input is missing, which is the same
+ * information loss as a printed comment one level up. They also differ in
+ * status: ci.yml checks the emulator out and `oracle-census.mjs --require
+ * nasm,emu8051` asserts it arrived, so a skip on that one means a developer box.
+ * The firmware hex is compiled into /tmp by hand and CI never has it, so its
+ * skip is the ordinary case rather than a signal.
+ */
+const SKIP_EMU8051 = createEmu8051 ? false
+  : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this repo '
+    + 'and build its WASM, or set $EMU8051_JS';
+const SKIP_HEX = existsSync(HEX_PATH) ? false
+  : `${HEX_PATH} not found — build 10-live-firmware from the stc examples and copy `
+    + 'its .hex there; CI does not carry this one';
+const SKIP = SKIP_EMU8051 || SKIP_HEX;
 
-  it('loads the monitor firmware', async () => {
+describe('rung 8: serial monitor vs emulator (same image)', () => {
+
+  it('loads the monitor firmware', {skip: SKIP}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP: WASM not available'); return; }
+    assert.ok(wasm, `${WASM_PATH} would not instantiate`);
 
     // Load hex
     const hex = readFileSync(HEX_PATH, 'utf-8');
@@ -77,14 +98,21 @@ describe('rung 8: serial monitor vs emulator (same image)', () => {
 
     console.log(`# PC after 100ms: 0x${wasm._emu_get_pc().toString(16)}`);
 
-    // Check if serial write/read functions exist
-    const hasSerial = typeof wasm._emu_serial_write === 'function';
-    console.log(`# Serial API: ${hasSerial ? 'available' : 'missing'}`);
-
-    if (!hasSerial) {
-      console.log('# SKIP: no serial bridge in this WASM build');
-      return;
-    }
+    // NOT A MISSING ORACLE — A CAPABILITY OF THE PINNED ONE, AND IT IS PRESENT.
+    //
+    // This used to skip when `_emu_serial_write` was absent, and that skip was
+    // DEAD: measured at the exact ref ci.yml pins, `e473e906`, by extracting
+    // that tree's `build/emu8051.js` and instantiating it —
+    // `typeof wasm._emu_serial_write === 'function'`. A skip that cannot fire
+    // is a skip nobody will notice when it starts firing.
+    //
+    // So it is an assertion instead of a deletion. Deleting it outright would
+    // leave a future pin that drops the bridge failing as
+    // `wasm._emu_serial_write is not a function` from inside the loop below;
+    // this reds at the top and says what changed.
+    assert.equal(typeof wasm._emu_serial_write, 'function',
+      'the pinned emu8051 build has lost its serial bridge — this test compares the '
+      + "monitor's protocol against it, so re-pin or state the gap here rather than skip");
 
     // Send HELLO frame byte-by-byte through the serial port
     const helloFrame = buildFrame(CMD.HELLO, []);

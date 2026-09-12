@@ -3843,6 +3843,68 @@ what moved, and the failure message is the only place that distinction can live.
 
 ### R3 The `'SF'` soft-float table is empty, and it is what stops Kaluma
 
+**RESOLVED 2026-09-10 (`64354e8`), AND THE NAMED CAUSE BELOW IS WRONG. The
+original text is kept because the retraction is the useful part.**
+
+`2.5+1.0` now evaluates to `3.5` in Kaluma's REPL, measured end to end by
+`scripts/probe-sf-unaligned.mjs`. The cause was one byte in the header, not an
+empty table:
+
+* **`'SF'` is answered, and always was once the table landed.** Every
+  `rom_table_lookup` during boot SUCCEEDS — `'SF'` returns `0x0a88`, a valid
+  pointer. The claim below that it is "the one unanswered code" described the
+  ROM as it stood on 2026-09-06 and was carried forward past the fix.
+* **The null pointer is not a missed lookup.** pico-sdk reads the bootrom
+  version with `*(uint8_t *)0x13`; Kaluma branches on it (`cmp r5,#1` at flash
+  `0x1002096c`) and fills all 32 shim slots only when it reads 1. This ROM put
+  `'M','u',0x01` at `0x10..0x12` and left `0x13` at ZERO, believing the `0x01`
+  to be the version — it is the magic's third byte. Reading 0 took the short
+  leg, which fills slot 18 and leaves 31 **double**-precision pointers null.
+  The register file at the jump (`r1=0x40040000`, `r3=0x3ff00000` — the high
+  words of 2.5 and 1.0) is what identified it as double, not single.
+* **Nothing writes the shim table at `0x2002f808` except the crt0 zero-fill.**
+  A write trap is what separated "the initialiser never ran" from "it ran and
+  wrote zeros"; reading could not have settled it.
+* **Both observed symptoms are this one defect.** Version too low answers `0`;
+  version too high (2 or 3, measured) makes Kaluma take its V2 leg, look for
+  the `'DF'` double table this ROM does not publish, and return NO value — the
+  echo lego-ac's `--eval` reading hit at pin `1f809683e` and reported as a
+  third outcome.
+* **Why no test caught it:** the test asserted `rom[0x12] === 1` and labelled
+  it `'version'`. It checked the magic's third byte twice and the version byte
+  not at all. An assertion carrying the same wrong belief as the code cannot
+  fail by construction.
+
+**THE GPIO HALF IS ALSO MEASURED, 2026-09-11 (`9031682`), AND IT IS NARROWER
+THAN "R3 IS CLOSED".** This entry also recorded Kaluma's first GPIO call
+hanging. Driven through the REPL at master, it does not:
+
+```
+pinMode(25,1)                                      -> undefined, and RETURNS
+(pinMode(25,1),digitalWrite(25,1),digitalRead(25))
+    GPIO25 transitions logged during the expression
+    final value=1  outputEnable=true
+    0 jumps to address zero
+```
+
+The claim is about the PAD, not the return value — `scripts/probe-sf-unaligned.mjs
+--pin N` attaches a listener, because an API call that returns proves only that
+it returned. Reporting this off `undefined` was available and would have been
+wrong in the direction where a green reads as a capability.
+
+`digitalRead` returning 0 while the pad is driven high is **this probe**, not
+the ROM: no board is attached, so `syncInputs()` never runs and the input
+register keeps its power-on value. Demonstrated rather than argued — with
+`--input-high` the read returns 1, so it tracks the register.
+
+**STILL OPEN:** `--blink` itself, which loads a program rather than typing
+lines and is lite's probe, and the `rom_table_lookup` busy-loop it hits. No
+measurement here touches either. "The GPIO hang is gone" must not travel as
+"R3 is closed".
+
+The soft-float work below stands on its own and is not retracted — the table
+is real, graded, and reached. It simply was not what R3 turned on.
+
 **Reported by lego-ac (brickwright-lite N5), 2026-09-06. THE CAUSE IS
 CONFIRMED HERE by reading `src/rp2040-bootrom.js`, which already documents it;
 the Kaluma measurements are theirs and have not been re-run in this repo.**
@@ -3884,14 +3946,76 @@ did not disappear.
 
 ```
   index  operator     status
-  0      fadd         6,435 vector pairs agree with Math.fround
+  0      fadd         6,437 vector pairs agree with Math.fround
   1      fsub         6,455 agree
   2      fmul         6,213 agree
   3      fdiv         6,159 agree
+  6      fsqrt        5,999 agree            (2026-09-10)
+  7      float2int    2,527 agree            (2026-09-10)
+  9      float2uint   1,008 agree            (2026-09-10)
   11     int2float    4,025 agree
-  rest   fsqrt, the conversions, fcos/fsin/ftan/fexp/fln
-                      quiet-NaN stub, unimplemented, named in the test
+  8      float2fix    1,488 agree            (2026-09-10)
+  10     float2ufix     710 agree            (2026-09-10)
+  12     fix2float    2,514 agree            (2026-09-10)
+  13     uint2float   3,013 agree            (2026-09-10)
+  14     ufix2float   2,507 agree            (2026-09-10)
+  19     fexp         worst 1 ulp / 5,543     (2026-09-10)
+  20     fln          worst 2 ulp / 9,912     (2026-09-10)
+  15     fcos         worst 2 ulp             (2026-09-10)
+  16     fsin         worst 2 ulp             (2026-09-10)
+  17     ftan         worst 3 ulp             (2026-09-10)
+  4,5,18 deprecated slots — quiet-NaN stub, PERMANENTLY, named in the test
 ```
+
+**THE TABLE IS COMPLETE: 18 OF 21, AND THE OTHER 3 HAVE NO OPERATION.**
+Indices 4, 5 and 18 are the datasheet's deprecated slots, so the stub list has
+stopped shrinking rather than emptied. The five transcendentals are graded
+against a ULP bound rather than bit-exactly, because JavaScript computes them
+in double and rounds down; the bound is 4, CHOSEN, and the measured worst is 3.
+
+`fcos`, `fsin` and `ftan` share one range reduction and one pair of
+polynomials — cos(x) is sin at quadrant q+1, so adding to the QUADRANT rather
+than to x costs nothing, and tan is the quotient. **Declared deviation: the
+domain stops at |x| = 2^16 and returns a quiet NaN past it.** pi/2 is split
+into four float32 chunks whose sum reproduces the double exactly, and the
+leading chunk's eight significant bits keep k*HI an exact product only while k
+fits in sixteen. Beyond that the reduction degrades with no signal, so it
+refuses instead; going further needs Payne-Hanek and a multi-word 2/pi table.
+
+Two defects worth keeping, both found by measuring rather than reading. A
+`poolBase()` sitting between a CMP and its Bcc retargeted the branch: Thumb-1
+has no flag-preserving MOV immediate, `lsls` left Z clear, so every positive
+argument took the wrong rounding bias and the reduction returned x unchanged
+(21,250,770 ulp at fround(pi)). And the harness fed the oracle unrounded
+doubles while the ROM saw fround(x) — near a zero of sine those are different
+numbers with different answers, and it read 1.5e9 ulp until the input was
+rounded first. That is the FOURTH time that same oracle bug has appeared in
+this file's history.
+
+**THE FIXED-POINT CONVERSIONS ARE THE INTEGER ONES WITH A SHIFTED EXPONENT.**
+`fix2float(m, n)` is `int2float(m)` with the exponent reduced by n, and
+`float2fix(v, n)` is `float2int` with it raised by n before the range check —
+the significand and its rounding are identical, and only the scale differs.
+Implementing them that way rather than separately is why all four landed
+without a rounding bug: there was no new rounding to get wrong.
+
+**SECOND INCREMENT, 2026-09-10: sqrt and the integer conversions.** `fsqrt` is
+digit-by-digit rather than Newton, and the reason is the same one that made
+`fdiv` work: two bits of radicand per bit of root leaves an EXACT REMAINDER,
+and the remainder is what separates a root that terminates from one that does
+not. Newton converges faster and cannot tell those apart at the rounding edge.
+The exponent is forced even first, folding the odd bit into the significand as
+a doubling, so the root is 25 bits with bit 24 set in both cases and there is
+one shape to pack rather than two.
+
+**The conversions truncate, they do not round** — that is C's rule, so 2.5 goes
+to 2 and -2.5 to -2, and those two cases catch an implementation that rounded.
+
+**MORE DECLARED DEVIATIONS, and they have their own test.** `float2int` of
+anything with |x| >= 2^31, `float2uint` of a negative or of anything >= 2^32,
+and either of NaN or infinity, are all UNDEFINED in C. They return 0 rather
+than inventing a saturation the datasheet does not specify, and the test pins
+that 0 by name so "agrees with JavaScript" is never read as total.
 
 **2.5 + 1.0 = 3.5** — the case lego-ac used to prove the float path was dead.
 
@@ -3950,6 +4074,24 @@ chain does not survive measurement**: that word holds the answer to a
 DIFFERENT ROM lookup ('L3'), and it is not null. Whatever produces 0, it is
 not that.
 
+**A SECOND ROM-TABLE FINDING, 2026-09-10, and it is the other half of the
+Kaluma story.** lego-ac reports the `--blink` path busy-looping in
+`rom_table_lookup` itself, at 0x100, entered from 0x1000463f with a garbage
+table and code. Read against the routine: **the scan was unbounded.** It walked
+four bytes at a time until it read a zero halfword, with nothing to stop it —
+so a bad table pointer is not a slow lookup, it is a HANG, and `adds r0, #4`
+wraps r0 around 32 bits rather than terminating.
+
+A function whose contract is "returns 0 when the code is not present" could not
+honour that for a bad table. It is bounded at 255 pairs now — 1020 bytes, far
+past the SDK's largest table at about fifteen entries — so a legitimate call
+cannot reach the bound and a bad one gets the documented miss.
+
+**THIS DOES NOT EXPLAIN WHY THE POINTER IS GARBAGE**, and the caller's bad
+argument is still open. What it does is convert an undiagnosable hang into a
+defined 0, which is exactly where the SF table went: the value of the change is
+that the next person sees a miss instead of a machine that stopped.
+
 **NOT ESTABLISHED, and stated so nobody builds on it:** no SF entry is entered
 in 2.5M instructions — but the probe never drives the REPL, so that is a fact
 about BOOT. `2.5+1.0` is only evaluated when JS runs. Reading it as "the
@@ -4002,9 +4144,11 @@ formatter — and `1.5+1.5` printing `3` while `2.5+1.0` prints `0` would
 separate those two in one line. This repo's probe boots and stops; the harness
 that drives the REPL is lite's.
 
-**REMAINING:** `fsqrt`, the float↔fix/uint conversions, and the
-transcendentals (`fcos`, `fsin`, `ftan`, `fexp`, `fln`). None is needed for
-ordinary arithmetic; all are still the stub and still named in the test.
+**REMAINING: NOTHING.** This paragraph read "`fsqrt`, the float↔fix/uint
+conversions, and the transcendentals ... all are still the stub" until
+2026-09-10; every operator it named is now implemented and graded. Only the
+three deprecated slots are still the stub, and they have no operation to
+implement.
 
 What landed: `'SF'` now resolves to a real 21-entry table at the datasheet's
 layout (§2.8.3, indices 0..16 cross-checked against two independent sources

@@ -7,7 +7,29 @@ on:
     # setPin budget in test/perf-budget.test.js goes red under a concurrent
     # suite and passes alone, which is the whole reason that budget had to
     # be re-derived.
-    branches: [master, main, 'fable/**', 'wip/**', 'perf/i8086-execution']
+    #
+    # THE LIST IS A WILDCARD ON PURPOSE, and it must stay one. It used to name
+    # five patterns -- master, main, fable/**, wip/**, perf/i8086-execution --
+    # while the sentence above promised that feature branches build. Those two
+    # disagreed, and the disagreement was INVISIBLE: a branch outside the five
+    # produced no run at all. Not a failure, not a skip. A run list that looks
+    # exactly like you have not pushed yet.
+    #
+    # Found 2026-09-10 when `fix/emu8051-post-reset-pin-mode` was pushed for
+    # review and silently got nothing; the author noticed only by going to look
+    # for the receipt. Every convention this fleet actually uses -- fix/, lane/,
+    # vendor/, pin/, converge/ -- was outside the list, so an auditor could be
+    # handed a candidate with no CI and no signal that any was missing.
+    #
+    # An enumerated list drifts the moment someone invents a prefix, which is
+    # precisely how this happened. `'**'` cannot. The heavy vector suites are
+    # already nightly-and-on-demand (see below), so a branch push runs the fast
+    # jobs, which is what the sentence above was promising all along.
+    #
+    # This repo already states the principle two comments down: fifteen
+    # cross-repo tests once skipped silently for weeks, and a skip reads the
+    # same as a pass. Absence is harder to notice than a loud refusal.
+    branches: ['**']
   pull_request:
   # The heavy vector suites are ground nightly rather than per push: the
   # z80 suite unpacks to 1.6 GB and the 65x02 to a comparable size, which is
@@ -22,7 +44,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       # emu8051-stc is a public MIT sibling, and test/emu8051-idle-fastforward
       # needs its built WASM. Checking it out is the difference between that
       # gate RUNNING and it skipping on every CI run — the failure mode this
@@ -30,10 +52,34 @@ jobs:
       # skipped silently for weeks and a skip reads the same as a pass in the
       # summary line. Pinned, so this repo's verdict does not float with
       # another repo's HEAD.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: CrispStrobe/emu8051-stc
-          ref: e473e906c1a8db9a50e5b70ef42171e79a0de372
+          # BUMPED because the pin was OLDER THAN WHAT THE TESTS SAY THEY NEED.
+          # `test/emu8051-debug.test.js:338` states it in prose -- "Both of these
+          # need the emulator built at emu8051-stc cf3c7c0 or later" -- and
+          # e473e906 is an ANCESTOR of cf3c7c0. Nothing checked the sentence
+          # against the pin, so CI ran a build that predates the halt-reason
+          # rebuild and answered `breakpoint` where the suite expects
+          # `watchpoint`.
+          #
+          # Invisible until 2026-09-10, because that suite printed `# SKIP` and
+          # returned -- a PASS -- whenever it could not reach an emulator, and on
+          # a runner it never could: the lookup wanted a sibling beside the repo
+          # while Actions puts the checkout INSIDE it. Converting the skip and
+          # fixing the lookup made the suite run, and it immediately reported a
+          # real disagreement between two builds.
+          #
+          # DRIVEN, not reasoned, over every emu8051-gated suite:
+          #   e473e906 (the old pin)      63 pass  1 fail
+          #   cf3c7c0  (what the test names) 64 pass  0 fail
+          #   47c50419 (this ref)          64 pass  0 fail
+          #
+          # 47c50419 rather than the minimal cf3c7c0 on purpose: it is the tip of
+          # that repo's master and the artefact developers here already use, so a
+          # local green and a CI green are now statements about the same build.
+          # The old pin made them different claims that looked identical.
+          ref: 47c504191a8420676415a1b86766621d6ea0de86
           # Actions refuses a path outside the workspace, so the sibling lands
           # INSIDE it and the test looks in both places.
           path: emu8051-stc
@@ -46,7 +92,29 @@ jobs:
       # layouts equivalent.
       - name: Mark the emulator build as CommonJS
         run: echo '{"type":"commonjs"}' > emu8051-stc/package.json
-      - uses: actions/setup-node@v4
+
+      # THE BLINKENROCKET FIRMWARE, for the one end-to-end test that runs real
+      # third-party firmware: encodeTextMessage("Hi") becomes PCM, the PCM
+      # drives the ATtiny88's ADC, the firmware demodulates it, and the
+      # FEC-decoded pattern arrives in the external I2C EEPROM. Until now it
+      # skipped on every runner, which is the same shape as the emu8051
+      # checkout above: an absent input reading exactly like a pass.
+      #
+      # `build/main.hex` is NOT tracked in that repo -- it is built locally, so
+      # a checkout alone would give nothing and this step would be theatre.
+      # `releases/blinkenrocket_2.1.hex` IS tracked, and it was MEASURED green
+      # against this suite before this step was written: 52,934 ADC reads,
+      # header [0x10, 0x2], decoded text "Hi" -- against 52,933 for a local
+      # build of a different commit, the same decode through the full FEC path.
+      #
+      # Pinned like every other external input here, so this repo's verdict
+      # does not float with another repo's HEAD.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: CrispStrobe/blinkenrocket-firmware
+          ref: 813e2656f38f9f41180ecde1783e26e49035dac9
+          path: blinkenrocket-firmware
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -75,7 +143,20 @@ jobs:
       # missing, so the build fails at the install rather than passing at the
       # test.
       - name: The oracle is actually present
-        run: node scripts/oracle-census.mjs --require nasm
+        # emu8051 joins nasm here for the same reason, and it is the half that
+        # was missing: the step above checks the emulator out, and until now
+        # nothing asserted it ARRIVED. Nine suites skip their emu8051 cases when
+        # it is unreachable -- and until this branch they skipped them as PASSES,
+        # via an early `return` the runner never hears about. So a build could go
+        # green on a checkout that had silently failed, with 41 cases counted as
+        # passing that had not run.
+        #
+        # This require was only safe to add once the census could SEE the CI
+        # layout: its paths listed two developer locations and not
+        # `<repo>/emu8051-stc`, where Actions is obliged to put it, so adding
+        # this line first would have reddened every build with the emulator
+        # sitting in the workspace.
+        run: node scripts/oracle-census.mjs --require nasm,emu8051
 
       - name: Test
         # The 65x02 and z80 vector-suite tests skip cleanly when their suites
@@ -145,8 +226,8 @@ jobs:
   vectors:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: SingleStepTests/8086
           ref: e71c68d215a6bb8c356bd4cb3842de3bef345ca9
@@ -158,7 +239,7 @@ jobs:
             /v1/00.json.gz
             /v1/8F.json.gz
             /v1/D0.6.json.gz
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -290,13 +371,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS
           ref: aa8f32aee87c68db1fb9b1f6005b494884df8935
           path: corpus
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -353,8 +434,8 @@ jobs:
   vectors186:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: SingleStepTests/v20
           ref: 9efbd02b8ec1a3aad347c2b59672ad25f3bcdb21
@@ -391,7 +472,7 @@ jobs:
             /v1_native/C1.5.json.gz
             /v1_native/C1.6.json.gz
             /v1_native/C1.7.json.gz
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
@@ -447,22 +528,37 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Install
         run: npm install --no-audit --no-fund
 
-      - name: Fetch the z80 suite
-        run: git clone --depth 1 --filter=blob:none
-             https://github.com/SingleStepTests/z80 "$HOME/code/z80-vectors"
-      - name: Fetch the 65x02 suite (WDC variant only)
+      - name: Fetch the pinned z80 suite
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/z80
+          ref: ebe1875d48f374bcfd4b505d8eb8ee751568b5f7
+          path: z80-vectors
+          filter: blob:none
+      - name: Fetch the pinned 65x02 suite (WDC variant only)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/65x02
+          ref: 2f6980a2d95757486c7bee24355c360e40e2a224
+          path: 65x02-vectors
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: /wdc65c02/v1/
+      # Keep the historical on-disk contract. Seven consumers resolve these
+      # paths through homedir(), including two tests with no env override.
+      - name: Move the pinned suites to the existing grinder paths
         run: |
           set -euo pipefail
-          git clone --depth 1 --filter=blob:none --sparse \
-            https://github.com/SingleStepTests/65x02 "$HOME/code/65x02-vectors"
-          cd "$HOME/code/65x02-vectors" && git sparse-checkout set wdc65c02/v1
+          mkdir -p "$HOME/code"
+          mv "$GITHUB_WORKSPACE/z80-vectors" "$HOME/code/z80-vectors"
+          mv "$GITHUB_WORKSPACE/65x02-vectors" "$HOME/code/65x02-vectors"
 
       # Assert the suites arrived BEFORE grinding them. Without this, a clone
       # that fetched nothing produces a grinder that finds no files, and the

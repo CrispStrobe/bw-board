@@ -169,6 +169,66 @@ test('RP2040 step-over: BL body runs, halts after it', {
   assert.equal(rp2040.readUint8(0x20001000), 0x42, 'store executed');
 });
 
+const STEP_OUT_HEURISTIC_LIMIT =
+  'the union may stop early if an unrelated branch reaches LR or SP rises mid-function; ' +
+  'an early stop is preferable to exhausting the run budget forever';
+
+test('RP2040 step-out union: a leaf BX lr stops with SP unchanged', {
+  skip: !rp2040Available && 'rp2040js not available',
+}, async () => {
+  const { createRp2040jsAdapter } = await import('../src/rp2040js-adapter.js');
+  const { createRp2040jsDebugTarget } = await import('../src/rp2040js-debug.js');
+
+  const adapter = createRp2040jsAdapter();
+  const { rp2040, core } = adapter;
+  const base = 0x20000000;
+  const caller = base + 0x04;
+  const leaf = base + 0x10;
+  const sp = base + 0x8000;
+
+  rp2040.writeUint16(caller, 0xe7fe); // caller: B .
+  rp2040.writeUint16(leaf, 0x2001); // MOVS R0,#1
+  rp2040.writeUint16(leaf + 2, 0x4770); // BX LR
+  core.PC = leaf | 1;
+  core.LR = caller | 1;
+  core.SP = sp;
+
+  const target = createRp2040jsDebugTarget(adapter);
+  target.step('out');
+  assert.equal(target.runFor(1_000), 'halted', STEP_OUT_HEURISTIC_LIMIT);
+  assert.equal(target.regs().pc, caller, 'halted at the caller return site');
+  assert.equal(target.regs().sp, sp, 'the leaf return did not change SP');
+});
+
+test('RP2040 step-out union: POP pc stops after a nested call replaced LR', {
+  skip: !rp2040Available && 'rp2040js not available',
+}, async () => {
+  const { createRp2040jsAdapter } = await import('../src/rp2040js-adapter.js');
+  const { createRp2040jsDebugTarget } = await import('../src/rp2040js-debug.js');
+
+  const adapter = createRp2040jsAdapter();
+  const { rp2040, core } = adapter;
+  const base = 0x20000000;
+  const caller = base + 0x04;
+  const continuation = base + 0x16;
+  const sp = base + 0x8000;
+
+  rp2040.writeUint16(caller, 0xe7fe); // caller: B .
+  rp2040.writeUint16(continuation, 0x2002); // MOVS R0,#2
+  rp2040.writeUint16(continuation + 2, 0xbd00); // POP {PC}
+  rp2040.writeUint32(sp, caller | 1); // caller LR saved before the nested BL
+  core.PC = continuation | 1;
+  core.LR = continuation | 1; // nested BL still names its local continuation
+  core.SP = sp;
+
+  const target = createRp2040jsDebugTarget(adapter);
+  target.step('out');
+  assert.equal(target.runFor(1_000), 'halted', STEP_OUT_HEURISTIC_LIMIT);
+  assert.equal(target.regs().pc, caller,
+    'halted at the stacked caller, not at the stale LR continuation');
+  assert.equal(target.regs().sp, sp + 4, 'POP {PC} raised SP past the captured level');
+});
+
 test('RP2040 write watchpoint: STR fires with address and value', {
   skip: !rp2040Available && 'rp2040js not available',
 }, async () => {

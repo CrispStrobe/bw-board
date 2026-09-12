@@ -22,6 +22,7 @@ import { parseIntelHex } from '../src/intel-hex.js';
 import { encodeTextMessage, MODEM_RATE } from '../src/blinkenrocket-modem.js';
 
 import path from 'node:path';
+import { ancestorCandidates } from './helpers/sibling-checkout.mjs';
 import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // The blinkenrocket firmware is a SIBLING checkout, not a fixture in this
@@ -32,18 +33,44 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // build in an unusual place can still be pointed at.
 const HEX_CANDIDATES = [
   process.env.BLINKENROCKET_HEX,
-  path.join(HERE, '..', '..', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
-  path.join(HERE, '..', '..', 'blinkenrocket-firmware', 'build', 'main.hex'),
+  // WALKED UP, NOT A FIXED DEPTH. The firmware sits BESIDE this repo, and
+  // `<repo>/../..` is where that is only from a clone: a git worktree lives
+  // one level deeper, so every lane measured in one lost these cases while
+  // CI kept them. Measured: found from /mnt/volume1/code/bw-board, missed
+  // from all 66 worktrees on this box.
+  ...ancestorCandidates(HERE, ['blinkenrocket-firmware-with-minigame', 'build', 'main.hex']),
+  ...ancestorCandidates(HERE, ['blinkenrocket-firmware', 'build', 'main.hex']),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware-with-minigame', 'build', 'main.hex'),
   path.join(process.env.HOME || '', 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
+  // THE TRACKED RELEASE, LAST, and the reason it is here at all is that
+  // `build/main.hex` is NOT tracked in that repo. A checkout gives a release
+  // and nothing else, so without this line a CI checkout would be theatre --
+  // the step would run, the file would not be there, and the suite would go on
+  // skipping. Last, so a developer's own build still wins where one exists.
+  ...ancestorCandidates(HERE, ['blinkenrocket-firmware', 'releases', 'blinkenrocket_2.1.hex']),
 ].filter(Boolean);
-const HEX_PATH = HEX_CANDIDATES.find(p => existsSync(p)) || HEX_CANDIDATES[HEX_CANDIDATES.length - 1];
+const HEX_PATH = HEX_CANDIDATES.find(p => existsSync(p)) || null;
+// NAME SOMETHING ACTIONABLE WHEN NOTHING IS FOUND. The message used to name
+// the LAST candidate, which after the walk was added is a path at the
+// filesystem root — true, and useless to act on. Say how many places were
+// tried and name the two a person can actually do something about: the env
+// var, and the checkout beside the repo that CI makes.
+const HEX_MISSING = 'blinkenrocket firmware hex not found in '
+  + HEX_CANDIDATES.length + ' places. Set $BLINKENROCKET_HEX, or check out '
+  + 'CrispStrobe/blinkenrocket-firmware beside this repo (its releases/'
+  + 'blinkenrocket_2.1.hex is tracked; build/main.hex is not).';
 
 
 test('modem full loop: encodeTextMessage → firmware ADC → EEPROM pattern', {
-    skip: !existsSync(HEX_PATH) && 'blinkenrocket firmware hex not found at ' + HEX_PATH,
+    skip: HEX_PATH ? false : HEX_MISSING,
     timeout: 120_000,
 }, () => {
+    // NAME WHAT WAS MEASURED. Three different hexes exist across the boxes and
+    // the runner -- a local build, a with-minigame variant, and the tracked
+    // 2.1 release -- and they do not produce identical cycle counts. A green
+    // run that does not say which firmware it decoded is a result nobody can
+    // reproduce.
+    console.log(`# modem e2e: firmware ${HEX_PATH}`);
     // ── Encode the message ────────────────────────────────────────
     const text = 'Hi';
     const pcmSamples = encodeTextMessage(text, { sync: 200 });

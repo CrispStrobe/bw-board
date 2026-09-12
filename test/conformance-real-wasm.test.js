@@ -15,41 +15,78 @@ import { fileURLToPath } from 'node:url';
 import { runConformance, formatReport } from '../src/conformance.js';
 import { createEmu8051Adapter, formatPollingLossReport } from '../src/emu8051-adapter.js';
 import { BoardImpl } from '../src/board.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 // Load the real WASM module
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
-const WASM_PATH = path.resolve(here, '../../emu8051-stc/build/emu8051.js');
-let createEmu8051;
-try {
-  createEmu8051 = require(WASM_PATH);
-} catch (e) {
-  console.log('# SKIP: emu8051 WASM not available:', e.message);
-}
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+const WASM_PATH = resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']);
+/**
+ * ABSENT AND BROKEN ARE DIFFERENT ANSWERS AND THIS FILE USED TO GIVE ONE.
+ *
+ * Both the `require` failing and the module failing to INSTANTIATE printed a
+ * `# SKIP` and returned null, and every case then did `if (!wasm) { …; return; }`
+ * — an early return, which the runner counts as a PASS. So an emulator that was
+ * not there and an emulator that was there and would not load were reported
+ * identically, and both as green.
+ *
+ * They are separated now, and only one of them is a skip:
+ *
+ *   NOT THERE       a real `skip:`, naming the oracle and how to get it. ci.yml
+ *                   checks the emulator out and `--require nasm,emu8051` asserts
+ *                   it arrived, so this means a developer box.
+ *   THERE, BROKEN   a FAILURE, carrying the exception's own message. A broken
+ *                   oracle is a real problem somebody has to see, and hiding it
+ *                   behind a skip is how it stays invisible for weeks.
+ *
+ * Same species as a refusal and a crash sharing a constructor: two conditions
+ * with one outcome tells you less than either would alone.
+ */
+// THE PATH IS THE QUESTION, NOT THE EXCEPTION. My first attempt used "did
+// `require` throw" as the signal — and `require` throws MODULE_NOT_FOUND for an
+// absent file too, so every absent case turned into a failure. The exception
+// cannot tell the two apart; only the filesystem can.
+const WASM_PRESENT = existsSync(WASM_PATH);
 
-async function loadWasm() {
-  if (!createEmu8051) return null;
+let createEmu8051;
+let loadError = null;
+if (WASM_PRESENT) {
   try {
-    const wasm = await createEmu8051();
-    return wasm;
+    createEmu8051 = require(WASM_PATH);
   } catch (e) {
-    console.log('# SKIP: WASM instantiation failed:', e.message);
-    return null;
+    loadError = e;
   }
 }
 
+const SKIP_EMU8051 = WASM_PRESENT ? false
+  : `no emu8051 build at ${WASM_PATH} — check out CrispStrobe/emu8051-stc beside this `
+    + 'repo and build its WASM, or set $EMU8051_JS';
+
+async function loadWasm() {
+  // `require` threw on a path that EXISTS: the build is there and unusable.
+  if (loadError) {
+    throw new Error(`${WASM_PATH} exists but would not load: ${loadError.message}`);
+  }
+  // Instantiation throwing is the same class — the caller lets it out.
+  return createEmu8051();
+}
+
 describe('conformance: real emu8051-stc WASM', () => {
-  it('loads the WASM module', async () => {
+  it('loads the WASM module', {skip: SKIP_EMU8051}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP'); return; }
     assert.ok(wasm._emu_init, 'should have _emu_init');
     assert.ok(wasm._emu_set_board_callbacks, 'should have _emu_set_board_callbacks');
     assert.ok(wasm.addFunction, 'should have addFunction');
   });
 
-  it('creates adapter in poll mode (push needs WASM_BIGINT rebuild)', async () => {
+  it('creates adapter in poll mode (push needs WASM_BIGINT rebuild)', {skip: SKIP_EMU8051}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP'); return; }
 
     // Force poll mode: the current WASM build does not have -sWASM_BIGINT,
     // so Emscripten legalizes uint64_t to split i32 args in callbacks,
@@ -68,9 +105,8 @@ describe('conformance: real emu8051-stc WASM', () => {
     adapter.destroy();
   });
 
-  it('runs full conformance suite and reports per-requirement', async () => {
+  it('runs full conformance suite and reports per-requirement', {skip: SKIP_EMU8051}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP'); return; }
 
     const adapter = createEmu8051Adapter(wasm, { mode: 'poll' });
     const results = runConformance(adapter);
@@ -92,9 +128,8 @@ describe('conformance: real emu8051-stc WASM', () => {
     adapter.destroy();
   });
 
-  it('drives an LED end-to-end through real WASM + BoardImpl', async () => {
+  it('drives an LED end-to-end through real WASM + BoardImpl', {skip: SKIP_EMU8051}, async () => {
     const wasm = await loadWasm();
-    if (!wasm) { console.log('# SKIP'); return; }
 
     const adapter = createEmu8051Adapter(wasm, { mode: 'poll' });
     const board = new BoardImpl(5.0);

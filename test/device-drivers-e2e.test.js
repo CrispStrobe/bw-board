@@ -22,12 +22,19 @@ import { createEmu8051Adapter } from '../src/emu8051-adapter.js';
 import { BoardImpl } from '../src/board.js';
 import { registerRelay } from '../src/devices/relay.js';
 import { unregisterDevice } from '../src/devices.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const WASM_CANDIDATES = [
-  path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+  resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']),
 ].filter(Boolean);
 
 let createEmu8051 = null;
@@ -41,19 +48,33 @@ const HEX = {
   adc:    '/tmp/verify-build/adc.ihx',
 };
 
-const skip = () => {
-  if (!createEmu8051) { console.log('# SKIP: no emu8051 build'); return true; }
-  for (const [k, p] of Object.entries(HEX)) {
-    if (!existsSync(p)) { console.log(`# SKIP: ${p} not found`); return true; }
-  }
-  return false;
-};
+/**
+ * TWO ORACLES OF DIFFERENT STATUS, ONE GUARD EACH, EACH NAMING ITSELF.
+ *
+ * This was `if (skip()) return;` inside every case — an early return the runner
+ * counts as a PASS, with the `# SKIP` only a printed comment. It also collapsed
+ * the two inputs into one answer, so a reader could not tell a missing emulator
+ * from a missing hex.
+ *
+ *   the emulator  ci.yml checks it out and `oracle-census.mjs --require
+ *                 nasm,emu8051` asserts it arrived, so a skip means a developer box
+ *   the hexes     compiled by hand into /tmp/verify-build; CI never has them, so
+ *                 their skip is the ordinary case rather than a signal — and the
+ *                 message names WHICH one is missing, since there are three
+ */
+const missingHex = Object.values(HEX).filter(f => !existsSync(f));
+const SKIP_EMU8051 = createEmu8051 ? false
+  : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this repo '
+    + 'and build its WASM, or set $EMU8051_JS';
+const SKIP_HEX = missingHex.length === 0 ? false
+  : `firmware not built: ${missingHex.join(', ')} — compile the verify-build examples `
+    + 'with SDCC and copy the .ihx files there; CI does not carry them';
+const SKIP = SKIP_EMU8051 || SKIP_HEX;
 
 // ─── Relay: GPIO write, active-low ──────────────────────────────────────
 
 describe('relay e2e: GPIO write active-low → coil state decode', () => {
-  it('P2.0 goes LOW when relay ON, HIGH when OFF', async () => {
-    if (skip()) return;
+  it('P2.0 goes LOW when relay ON, HIGH when OFF', {skip: SKIP}, async () => {
     registerRelay();
     try {
       const wasm = await createEmu8051();
@@ -98,8 +119,7 @@ describe('relay e2e: GPIO write active-low → coil state decode', () => {
 // ─── Button: GPIO read, active-low ──────────────────────────────────────
 
 describe('button e2e: GPIO read active-low contact closure', () => {
-  it('P3.2 driven LOW by board → firmware reads pressed', async () => {
-    if (skip()) return;
+  it('P3.2 driven LOW by board → firmware reads pressed', {skip: SKIP}, async () => {
 
     const wasm = await createEmu8051();
     const board = new BoardImpl(5.0);
@@ -148,8 +168,7 @@ describe('button e2e: GPIO read active-low contact closure', () => {
 // ─── ADC: register sequence verified, analog path NOT ───────────────────
 
 describe('ADC e2e: register sequence (analog path requires silicon)', () => {
-  it('ADC_CONTR configured, P1ASF set for channel 1', async () => {
-    if (skip()) return;
+  it('ADC_CONTR configured, P1ASF set for channel 1', {skip: SKIP}, async () => {
 
     const wasm = await createEmu8051();
     const board = new BoardImpl(5.0);

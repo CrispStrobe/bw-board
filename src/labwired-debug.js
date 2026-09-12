@@ -42,6 +42,10 @@
 /** Engine cycles per pump slice when nothing is armed — big enough that the
  *  wasm boundary is not the bottleneck, small enough to stay responsive. */
 const FREE_RUN_CHUNK = 200_000;
+const CODE_ADDRESS_MAX = 0xfffffffe;
+
+const isCodeAddress = addr => Number.isSafeInteger(addr) &&
+  addr >= 0 && addr <= CODE_ADDRESS_MAX;
 
 /**
  * @param {object} opts
@@ -60,6 +64,9 @@ export function createLabwiredDebugTarget (opts) {
   let detached = false;
   let insnRemaining = null;
   let listeners = [];
+  let nextBreakpointHandle = 1;
+  /** Opaque handle -> code address. Clearing owns an installation, not an address. */
+  const breakpoints = new Map();
   /** Code breakpoints, Thumb bit already masked off. */
   const codeBps = new Set();
 
@@ -113,17 +120,27 @@ export function createLabwiredDebugTarget (opts) {
         return { unsupported: `labwired offers code breakpoints only; '${bp.kind}' is not ` +
           'available (there is no write-watch on this bus, and no yield set).' };
       }
-      if (typeof bp.addr !== 'number') return { unsupported: 'code breakpoint needs addr' };
+      if (!isCodeAddress(bp.addr)) {
+        return { unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe' };
+      }
       if ((bp.addr & 1) !== 0) {
         return { unsupported: `Thumb code address ${bp.addr.toString(16)} is odd. Bit 0 is the ` +
           'execution-state flag, not part of the address — a breakpoint set on it could never match.' };
       }
-      codeBps.add(bp.addr >>> 0);
-      return undefined;
+      const handle = nextBreakpointHandle++;
+      const addr = bp.addr >>> 0;
+      breakpoints.set(handle, addr);
+      codeBps.add(addr);
+      return handle;
     },
 
-    clearBreakpoint (bp) {
-      if (bp && typeof bp.addr === 'number') codeBps.delete((bp.addr & ~1) >>> 0);
+    clearBreakpoint (handle) {
+      const addr = breakpoints.get(handle);
+      if (addr === undefined) return undefined;
+      breakpoints.delete(handle);
+      // Separate installations at one address have separate identities. Keep
+      // watching until the final owner is cleared.
+      if (![...breakpoints.values()].includes(addr)) codeBps.delete(addr);
       return undefined;
     },
 
@@ -257,7 +274,13 @@ export function createLabwiredDebugTarget (opts) {
 
     detach () { detached = true; running = false; },
 
-    destroy () { detached = true; running = false; listeners = []; codeBps.clear(); },
+    destroy () {
+      detached = true;
+      running = false;
+      listeners = [];
+      breakpoints.clear();
+      codeBps.clear();
+    },
   };
 
   return target;

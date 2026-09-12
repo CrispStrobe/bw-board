@@ -74,6 +74,52 @@ test('capabilities: declares what it has, not what it wishes', () => {
   assert.deepEqual(caps.consumes, []);
 });
 
+const CODE_ADDRESS_REFUSAL = {
+  unsupported: 'code breakpoint addr must be in 0x00000000..0xfffffffe',
+};
+const ARCHITECTURAL_WIDTH_ONLY =
+  'this bounds the 32-bit PC width; mapped execution is deliberately not constrained because ' +
+  'the adapter exposes no mapping predicate';
+
+for (const [name, addr] of [
+  ['negative address', -2],
+  ['fractional address', RAM_START + 0.5],
+  ['non-finite address', Number.NaN],
+  ['address wider than the 32-bit PC', 0x100000000],
+]) {
+  test(`RP2040 code breakpoint only: refuses ${name}`, () => {
+    const { target } = make(BLINK);
+    assert.deepEqual(target.setBreakpoint({ kind: 'code', addr }), CODE_ADDRESS_REFUSAL,
+      ARCHITECTURAL_WIDTH_ONLY);
+  });
+}
+
+test('run-to capability tells a caller whether its highest code address is settable', () => {
+  const { target } = make(BLINK);
+  const [route] = target.capabilities().runTo;
+  const { addressMax, ...shape } = route;
+  assert.deepEqual(shape, {
+    kind: 'address', space: 'code', addressMin: 0,
+    stopSides: ['before'], installation: 'sync',
+  }, 'the descriptor deliberately makes no mapped-memory claim');
+  assert.equal(Number.isSafeInteger(addressMax) && addressMax >= 0 &&
+    (addressMax & 1) === 0, true, 'the published maximum is an even code address');
+  assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: addressMax }), 'number',
+    'a debugger can set the highest code address the capability publishes');
+  assert.deepEqual(target.setBreakpoint({ kind: 'code', addr: addressMax + 2 }),
+    CODE_ADDRESS_REFUSAL,
+    'a debugger can distinguish the first wider even address by the engine refusal');
+});
+
+test('RP2040 code breakpoint only: still refuses the Thumb-state bit', () => {
+  const { target } = make(BLINK);
+  assert.deepEqual(target.setBreakpoint({ kind: 'code', addr: RAM_START + 1 }), {
+    unsupported:
+      `Thumb code addresses are halfword-aligned; bit 0 is the execution-state flag, ` +
+      `not part of the address: ${RAM_START + 1}`,
+  }, ARCHITECTURAL_WIDTH_ONLY);
+});
+
 test('code breakpoint: halts AT the address, before executing it', () => {
   const { target, halts } = make(BLINK);
   const handle = target.setBreakpoint({ kind: 'code', addr: RAM_START + 0x0E });
@@ -159,8 +205,6 @@ test('refusals are stated, not silent', () => {
   assert.ok(target.step('block').unsupported, 'block without symbols refuses');
   assert.ok(target.step('line').unsupported, 'line is not offered');
   assert.ok(target.setBreakpoint({ kind: 'yield', task: 'x', state: 1 }).unsupported);
-  assert.ok(target.setBreakpoint({ kind: 'code', addr: RAM_START + 1 }).unsupported,
-    'odd (Thumb-flagged) address refused');
   assert.ok(target.readMem('xram', RAM_START, 1).unsupported, 'no such space on ARM');
   assert.ok(target.writeMem('code', RAM_START, new Uint8Array(1)).refused);
   assert.ok(target.writeMem('sram', 0x10000000, new Uint8Array(1)).refused,

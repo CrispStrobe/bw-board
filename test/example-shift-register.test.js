@@ -13,9 +13,15 @@ import { fileURLToPath } from 'node:url';
 import { BoardImpl } from '../src/board.js';
 import { inferNetlist } from '../src/infer-netlist.js';
 import { validateNetlist } from '../src/validate.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const PINS_PATH = path.resolve(here, '../../stc/examples/09-shift-register/pins.json');
+// WALKED UP, NOT A FIXED DEPTH. `'../../x'` is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper -- so CI kept these cases and every lane lost them, as a '# skipped'
+// that reads like a deliberate exclusion. The absent case is unchanged: with
+// nothing found anywhere, resolveAncestor returns the same path this named.
+const PINS_PATH = resolveAncestor(here, ['stc', 'examples', '09-shift-register', 'pins.json']);
 
 function loadFixture() {
   if (!existsSync(PINS_PATH)) return null;

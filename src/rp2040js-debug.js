@@ -34,6 +34,10 @@
  */
 
 const RAM_START = 0x20000000;
+/** Architectural width only; the adapter exposes no mapped-code predicate. */
+const MAX_CODE_ADDRESS = 0xfffffffe;
+const CODE_ADDRESS_REFUSAL =
+  `code breakpoint addr must be in 0x00000000..0x${MAX_CODE_ADDRESS.toString(16)}`;
 
 /** Halt-cause detail passed to onHalt listeners; shape mirrors the siblings. */
 function makeWhy(target, cause, hit) {
@@ -255,7 +259,11 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
             return 'halted';
           }
         } else if (depthStep.kind === 'out') {
-          if (core.SP > depthStep.sp0) {
+          // The return PC catches leaf BX lr; the SP rise catches a saved-LR
+          // POP {pc} after nested calls have replaced LR. Both are heuristics:
+          // an unrelated branch can reach returnPc, and SP can rise inside the
+          // function. An early stop is preferable to never stopping.
+          if (curPc === depthStep.returnPc || core.SP > depthStep.sp0) {
             running = false; depthStep = null;
             resumeGuard = curPc;
             syncBoard(); announce('step');
@@ -292,6 +300,8 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
       return {
         steps: ['insn', 'block', 'over', 'out'],
         breakpoints: ['code', 'yield', 'write'],
+        runTo: [{kind: 'address', space: 'code', addressMin: 0,
+          addressMax: MAX_CODE_ADDRESS, stopSides: ['before'], installation: 'sync'}],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped',
@@ -363,11 +373,9 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
         return undefined;
       }
       if (kind === 'out') {
-        // Run until SP rises above its current level (a POP {PC} or
-        // epilogue restoring LR then BX LR). For leaf functions that
-        // never touched SP this waits forever — a stated limitation,
-        // same as the AVR and 6502 targets.
-        depthStep = { kind: 'out', sp0: core.SP };
+        // LR is a leaf function's caller; an SP rise identifies a stacked
+        // return even when a nested BL has replaced LR with a local address.
+        depthStep = { kind: 'out', returnPc: core.LR & ~1, sp0: core.SP };
         insnRemaining = null;
         blockStep = false;
         running = true;
@@ -386,7 +394,9 @@ export function createRp2040jsDebugTarget(adapter, opts = {}) {
     setBreakpoint(bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
       if (bp.kind === 'code') {
-        if (typeof bp.addr !== 'number') return { unsupported: 'code breakpoint needs addr' };
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > MAX_CODE_ADDRESS) {
+          return { unsupported: CODE_ADDRESS_REFUSAL };
+        }
         if ((bp.addr & 1) !== 0) {
           return { unsupported:
             `Thumb code addresses are halfword-aligned; bit 0 is the ` +

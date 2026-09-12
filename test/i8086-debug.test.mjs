@@ -55,6 +55,39 @@ test('regs report the pair AND the flat address it names', () => {
     }
 });
 
+const CODE_BREAKPOINT_REFUSAL = {
+    unsupported: 'code breakpoint addr must be a safe integer within 20-bit physical space',
+};
+
+for (const [name, addr] of [
+    ['a negative address', -1],
+    ['a fractional address', 1.5],
+    ['a NaN address', Number.NaN],
+    ['an infinite address', Number.POSITIVE_INFINITY],
+    ['an address beyond physical space', 0x100000],
+]) {
+    test(`i8086 direct code breakpoint refuses ${name}`, () => {
+        const { t } = machineWith(CALL_PROGRAM);
+        assert.deepEqual(t.setBreakpoint({kind: 'code', addr}), CODE_BREAKPOINT_REFUSAL,
+            'a direct physical address must not wrap onto a different instruction');
+    });
+}
+
+test('i8086 direct code breakpoint accepts high memory and the final physical byte', () => {
+    const { t } = machineWith(CALL_PROGRAM);
+    assert.equal(typeof t.setBreakpoint({kind: 'code', addr: 0x1f000}), 'number',
+        'a valid physical address above 64 KiB must not be rejected');
+    assert.equal(typeof t.setBreakpoint({kind: 'code', addr: 0xfffff}), 'number',
+        'the 20-bit bound includes the final physical byte');
+});
+
+test('an unknown symbol keeps its named refusal instead of entering the direct-address guard', () => {
+    const { t } = machineWith(CALL_PROGRAM);
+    t.setSymbols(new Map([[0xf8000, 'start']]));
+    assert.deepEqual(t.setBreakpoint({kind: 'code', symbol: 'missing'}),
+        {unsupported: 'no symbol named "missing"'});
+});
+
 test('a code breakpoint set through a DIFFERENT seg:off pair still fires', () => {
     const { t } = machineWith(CALL_PROGRAM);
     // F800:0006 and F7FF:0016 are the same byte. The program only ever uses
@@ -138,6 +171,37 @@ test('a write watchpoint is twenty bits wide, not sixteen', () => {
     assert.equal(halted.bp, id);
     assert.equal(halted.addr, 0x1f000, 'a 16-bit mask would have watched the wrong byte');
     assert.equal(halted.value, 0x55);
+});
+
+const WRITE_WATCH_REFUSAL = {
+    unsupported: 'write watchpoint range must be safe integers within 20-bit physical space',
+};
+
+for (const [name, spec] of [
+    ['a missing address', { kind: 'write' }],
+    ['a negative address', { kind: 'write', addr: -1 }],
+    ['a fractional address', { kind: 'write', addr: 1.5 }],
+    ['a NaN address', { kind: 'write', addr: Number.NaN }],
+    ['an infinite address', { kind: 'write', addr: Number.POSITIVE_INFINITY }],
+    ['an address beyond physical space', { kind: 'write', addr: 0x100000 }],
+    ['a negative length', { kind: 'write', addr: 0, len: -1 }],
+    ['a zero length', { kind: 'write', addr: 0, len: 0 }],
+    ['a fractional length', { kind: 'write', addr: 0, len: 1.5 }],
+    ['a NaN length', { kind: 'write', addr: 0, len: Number.NaN }],
+    ['an infinite length', { kind: 'write', addr: 0, len: Number.POSITIVE_INFINITY }],
+    ['a range crossing the top of physical space', { kind: 'write', addr: 0xfffff, len: 2 }],
+]) {
+    test(`i8086 write watchpoint only: refuses ${name}`, () => {
+        const { t } = machineWith(CALL_PROGRAM);
+        assert.deepEqual(t.setBreakpoint(spec), WRITE_WATCH_REFUSAL,
+            'an armed-looking watch must not relocate, truncate, or cover only part of its range');
+    });
+}
+
+test('i8086 write watchpoint only: accepts the final physical byte', () => {
+    const { t } = machineWith(CALL_PROGRAM);
+    assert.equal(typeof t.setBreakpoint({ kind: 'write', addr: 0xfffff, len: 1 }), 'number',
+        'the range bound includes the last byte without wrapping to address zero');
 });
 
 test('memory reads and writes reach the whole megabyte, ROM included', () => {

@@ -36,13 +36,17 @@
  * @module
  */
 import { I8086 } from './i8086.js';
+import {
+    MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport,
+    checkpointTopology, cloneCheckpointValue, statePair, validateCheckpointEnvelope,
+    validateCheckpointState
+} from './machine-checkpoint.js';
 import { installI8086RamWordAccess } from './i8086-ram-words.js';
 import { I8255 } from './i8255.js';
 import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
 import { I8254 } from './i8254.js';
 import { I8259 } from './i8259.js';
-import { CycleEstimator } from './i8088-timing.js';
 
 /**
  * Opcodes whose cycle-table key carries the modrm reg field: 80-83, D0-D3,
@@ -524,6 +528,14 @@ export class I8086Machine {
         // the site rather than left in a review comment.
         this._cycleEst = null;   // opt-in; see enableI8088CycleTiming()
         this._advList = null;
+        // Monotonic invalidation token for a host renderer. It moves on the
+        // events that can change what is VISIBLE -- video-window writes, display
+        // control ports, an overlapping bulk load, a state restore -- and on
+        // nothing else. A renderer caches its last frame against it and skips
+        // when it has not moved. The negative is what makes it useful: a token
+        // that moved on every instruction would be safe and carry no
+        // information, so ordinary RAM must leave it alone.
+        this.displayRevision = 0;
         this.cycles = 0;
         this._pinLevels = {};
         this._nmiPending = false;
@@ -990,6 +1002,9 @@ export class I8086Machine {
     }
 
     _write(addr, val) {
+        if (addr >= 0xa0000 && addr <= 0xbffff) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         const k = this._page[addr >>> 12];
         if (k === 1) { this.mem[addr] = val & 0xff; return; }
         if (k === 2 || k === 0) return;              // ROM swallows it; unmapped goes nowhere
@@ -1025,6 +1040,9 @@ export class I8086Machine {
     }
 
     _out(port, val) {
+        if (port >= 0x3b0 && port <= 0x3df) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         for (const w of this._io) {
             if (port >= w.start && port <= w.end) {
                 const reg = regOf(w, port);
@@ -1119,6 +1137,9 @@ export class I8086Machine {
         const rom = this.config.regions.find((r) => r.kind === 'rom');
         const base = at ?? (rom ? rom.start : 0xf8000);
         this.mem.set(bytes, base);
+        if (base <= 0xbffff && base + bytes.length > 0xa0000) {
+            this.displayRevision = (this.displayRevision + 1) >>> 0;
+        }
         return base;
     }
 
@@ -1275,7 +1296,32 @@ export class I8086Machine {
      * correct. `cycleTimingStats()` reports coverage so the difference between
      * "predicted" and "fell back" is never invisible.
      */
-    enableI8088CycleTiming(on = true) {
+    enableI8088CycleTiming(on = true, {CycleEstimator} = {}) {
+        // THE ESTIMATOR IS INJECTED, NOT IMPORTED, and the reason is 975 KB.
+        //
+        // This file used to `import { CycleEstimator } from './i8088-timing.js'`
+        // at module scope, and that file imports `./i8088-cycles.js` — a single
+        // generated table of 974,864 bytes. Both static, so every bundle carrying
+        // this machine carried the table, for a path that is opt-in, defaults to
+        // null, and that NOTHING in this repo enables.
+        //
+        // Downstream it was not a cost, it was an EXCLUSION: brickwright-lite
+        // could not ship 975 KB in an editor bundle, so it removed the whole
+        // cycle-timing path and declared both files `absentByDesign`. A consumer
+        // dropping a FEATURE to avoid a byte cost is the strongest signal
+        // available that a dependency is in the wrong place — and it made this
+        // file unvendorable, which cost a pin bump an extra divergence.
+        //
+        // Injected, the feature is unchanged for anyone who wants it and free for
+        // everyone who does not. The refusal is BY NAME rather than a TypeError
+        // on `new undefined`, so a caller who forgets learns what to pass.
+        if (on && typeof CycleEstimator !== 'function') {
+            throw new Error(
+                'enableI8088CycleTiming needs its estimator injected: '
+                + "import { CycleEstimator } from './i8088-timing.js' and pass "
+                + '{CycleEstimator}. It is not imported here because its cycle '
+                + 'table is 975 KB and this path is opt-in.');
+        }
         if (on && this.variant === '80186') {
             throw new Error(
                 'i8088 cycle tables do not cover the 80186: the 186 changed both '
@@ -1580,7 +1626,34 @@ export class I8086Machine {
 
     /** CPU state keys to snapshot (same pattern as M6502Machine.CPU_STATE). */
     static CPU_STATE = ['ax', 'bx', 'cx', 'dx', 'sp', 'bp', 'si', 'di',
-        'ip', 'cs', 'ds', 'es', 'ss', 'flags', 'halted'];
+        'ip', 'cs', 'ds', 'es', 'ss', 'flags', 'halted', 'cycles',
+        // The interrupt inhibition after MOV/POP SS is architecturally live
+        // between instructions. repInterrupted is diagnostic state exposed by
+        // the core and therefore part of an equality-preserving checkpoint.
+        'intShadow', 'repInterrupted'];
+
+    // `cycles` above is the CORE's own counter (i8086.js:1274 increments it per
+    // instruction) and is NOT a duplicate of `machine.cycles`, which this class
+    // advances itself and never derives from the core. It is tempting to read
+    // them as one number, because on a freshly-constructed machine that has
+    // never been reset they agree exactly. MEASURED, they part company twice:
+    //
+    //   after construct    machine      0   cpu     0
+    //   after reset()      machine      4   cpu     0   <- reset() adds 4, the
+    //                                                      core's reset zeroes
+    //   two steps          machine     50   cpu    46
+    //   HLT, then 5 steps  machine +25000   cpu    +0   <- the machine advances
+    //                                                      by the wake horizon
+    //                                                      without calling
+    //                                                      cpu.step() at all
+    //
+    // machine.cycles is the AUTHORITATIVE simulation time -- tMs, runUntil and
+    // the checkpoint's time.ticks all read it -- and it is snapshotted
+    // separately at the top level of saveState(). cpu.cycles is read by nothing
+    // in this machine and is carried so a restored machine is EQUAL to the
+    // captured one rather than merely equivalent. Two counters, both restored,
+    // neither derived; dropping either restores a machine that is subtly not the
+    // one that was captured.
 
     /**
      * EVERYTHING THE CHIPS REFUSED, in one place, because until 2026-09-05
@@ -1775,26 +1848,154 @@ export class I8086Machine {
         return rows;
     }
 
+    _snapshotTopology() {
+        return JSON.stringify({
+            variant: this.variant,
+            regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
+            chips: (this.config.chips || []).map(c => [
+                c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
+                c.stride ?? 1, c.irq ?? null, c.irqChannel ?? null
+            ]),
+            attached: Object.keys(this.devices || {}).sort()
+        });
+    }
+
+    // ─── the shared machine-checkpoint contract ─────────────────────────
+    // The 8086 is the third consumer of machine-checkpoint.js, after m6502 and
+    // z80. It reaches the same contract from a different starting point (it once
+    // hand-rolled clone/topology/refusal and THREW; m6502/z80 always RETURNED),
+    // and the module took it with no amendment: its per-machine `reasons` slot
+    // already carries machine-specific refusals (m6502 passes bit-banged serial
+    // and audio; z80 passes buffer-input), so the 8086's bus-trace and audio
+    // refusals are just more reasons.
+
+    checkpointSupport() {
+        // Live state outside the component snapshot: refuse these MODES, the same
+        // shape m6502/z80 use for their own unsnapshotable queues. The shared
+        // checkpointSupport adds a reason for any chip or device whose state
+        // codec is not a complete getState/setState or saveState/loadState pair.
+        const reasons = [];
+        if (this.cpu.busTrace !== null) reasons.push('bus trace is an externally-owned append cursor, not part of the snapshot');
+        if (this._audioBus) reasons.push('audio mixer source phases and buffers are not covered by the chip state APIs');
+        return checkpointSupport(this.chips, this.devices, reasons);
+    }
+
+    checkpointTopology() {
+        // `variant` in the extra slot: 60h is PUSHA on an 80186 and JO on an
+        // 8086, so a checkpoint from the wrong variant must not restore. The
+        // deep state codec guards it again inside loadState; this guards the
+        // envelope before the state is even inspected.
+        return checkpointTopology('i8086', this.config, this.chips, this.devices, {variant: this.variant});
+    }
+
+    /** Kept for callers that only need the boolean; derived from checkpointSupport now. */
+    canCheckpoint() {
+        return this.checkpointSupport().supported;
+    }
+
+    captureCheckpoint() {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        // A base machine-domain time; the debug target overrides it with its
+        // own event-clock domain, the same way m6502/z80's debug bridges do.
+        return cloneCheckpointValue({
+            schema: MACHINE_CHECKPOINT_SCHEMA,
+            topology: this.checkpointTopology(),
+            time: {ticks: this.cycles, domain: 'i8086-cycles', hz: this.clockHz},
+            state: this.saveState()
+        });
+    }
+
+    restoreCheckpoint(checkpoint) {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
+        if (refusal) return refusal;
+        // THE STATE BODY IS VALIDATED HERE, BEFORE ANYTHING IS MUTATED, by the
+        // same shared clauses m6502 and z80 use. Until 2026-09-10 this machine
+        // had no equivalent: `this.mem.set(s.mem)` accepts a SHORT image and
+        // leaves the tail as the destination machine had it, so a truncated
+        // checkpoint restored a wrong machine instead of failing. The over-long
+        // direction did throw, but with the engine's own "offset is out of
+        // bounds" rather than a refusal anyone could act on.
+        const badState = validateCheckpointState(checkpoint.state, {
+            version: 2,
+            memBytes: this.mem.length,
+            cpuKeys: I8086Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices,
+            shape: this.saveState()
+        });
+        if (badState) return badState;
+        // loadState still owns the deep, 8086-specific validation -- the
+        // variant-decode guard, the topology string, per-component restore
+        // APIs. It signals a bad snapshot by THROWING; surface that as a returned
+        // INVALID_CHECKPOINT so this contract is return-convention like m6502/z80,
+        // without moving that validation out of the codec that owns it. Time is
+        // NOT validated here: unlike m6502/z80 whose domain is machine-derived,
+        // the 8086's checkpoint time is written by the debug layer (eventDomain),
+        // so the machine cannot judge it -- the debug bridge does.
+        try {
+            this.loadState(cloneCheckpointValue(checkpoint.state));
+        } catch (error) {
+            return {refused: error.message, code: 'INVALID_CHECKPOINT'};
+        }
+        return undefined;
+    }
+
     saveState() {
         const cpu = {};
         for (const k of I8086Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
+        // BOTH CONVENTIONS via the shared statePair, the same discovery
+        // m6502/z80 use: getState/setState or saveState/loadState, raw state
+        // stored under the chip name. A chip with neither is skipped here and
+        // refused at capture by checkpointSupport, not silently dropped into a
+        // checkpoint.
         const chips = {};
         for (const [name, c] of Object.entries(this.chips)) {
-            if (typeof c.getState === 'function') chips[name] = c.getState();
-            else if (typeof c.saveState === 'function') chips[name] = c.saveState();
+            const pair = statePair(c);
+            if (pair) chips[name] = c[pair[0]]();
+        }
+        const devices = {};
+        for (const [name, d] of Object.entries(this.devices || {})) {
+            const pair = statePair(d);
+            if (pair) devices[name] = d[pair[0]]();
         }
         // THE VARIANT IS PART OF THE SNAPSHOT even though it is not CPU state,
         // because restoring without it fails SILENTLY and in the worst way:
         // the same bytes execute as different instructions. 60h is PUSHA on
         // one machine and JO on the other, and nothing about the restored
         // registers or memory would look wrong. See loadState().
-        return { v: 1, variant: this.variant, cpu, cycles: this.cycles,
-            mem: this.mem.slice(), chips };
+        return {
+            v: 2, topology: this._snapshotTopology(), cpu, cycles: this.cycles,
+            mem: this.mem.slice(), chips, devices,
+            machine: {
+                nmiPending: this._nmiPending,
+                kbdStrobe: this._kbdStrobe,
+                pinLevels: {...this._pinLevels}
+            }
+        };
     }
 
     loadState(s) {
-        if (s.v !== 1) throw new Error(`unknown machine state version ${s.v}`);
-        // A MISMATCHED RESTORE IS REFUSED BY NAME, following z80-machine.js:370
+        if (!s || s.v !== 2) {
+            throw new Error(`8086 checkpoint refused: complete state version 2 required (got ${s?.v})`);
+        }
+        if (s.topology !== this._snapshotTopology()) {
+            throw new Error('8086 checkpoint refused: machine topology does not match');
+        }
+        // mem leniency matches m6502/z80's loadState: the real checkpoint path
+        // clones with structuredClone (mem stays a Uint8Array), while a caller
+        // that JSON-encodes a snapshot chooses its own re-decoding; this.mem.set
+        // takes whatever array-like it is handed. The strict Uint8Array/length
+        // check lives in the contract layer, as it does for m6502/z80.
+        if (!s.cpu || !s.mem || !s.machine || !s.chips || !s.devices) {
+            throw new Error('8086 checkpoint refused: snapshot is incomplete');
+        }
+        for (const k of I8086Machine.CPU_STATE) {
+            if (!(k in s.cpu)) throw new Error(`8086 checkpoint refused: CPU field '${k}' is missing`);
+        }
+        // A MISMATCHED RESTORE IS REFUSED BY NAME, following z80-machine.js
         // (a snapshot with a tape position and no tape inserted). A snapshot
         // is restored onto an identically-BUILT machine; the variant is a
         // construction choice, not state, so a difference here means the
@@ -1802,27 +2003,68 @@ export class I8086Machine {
         // Silently loading it would produce a machine that runs the restored
         // program correctly right up to the first 186 opcode and then quietly
         // takes a conditional jump instead.
-        //
-        // A snapshot written before the variant existed carries no `variant`
-        // key at all, and those were all 8086s -- so an absent key reads as
-        // '8086' rather than as "any", which keeps the old snapshots loadable
-        // and still refuses to put one on a 186.
-        const want = s.variant ?? '8086';
+        const want = JSON.parse(s.topology).variant;
         if (want !== this.variant) {
             throw new Error(`snapshot is from a ${want} machine and this is a ${this.variant}: `
                 + 'the same bytes decode differently on the two, so this would run '
                 + 'silently wrong rather than fail');
         }
-        for (const k of I8086Machine.CPU_STATE) if (k in s.cpu) this.cpu[k] = s.cpu[k];
+        const chipNames = Object.keys(this.chips).sort();
+        const savedChipNames = Object.keys(s.chips).sort();
+        const deviceNames = Object.keys(this.devices || {}).sort();
+        const savedDeviceNames = Object.keys(s.devices).sort();
+        if (JSON.stringify(chipNames) !== JSON.stringify(savedChipNames) ||
+            JSON.stringify(deviceNames) !== JSON.stringify(savedDeviceNames)) {
+            throw new Error('8086 checkpoint refused: component state set does not match');
+        }
+        // Verify all restore APIs before mutating any execution state.
+        for (const name of chipNames) {
+            if (!statePair(this.chips[name])) {
+                throw new Error(`8086 checkpoint refused: component '${name}' has no state API`);
+            }
+        }
+        for (const name of deviceNames) {
+            if (!statePair(this.devices[name])) {
+                throw new Error(`8086 checkpoint refused: component 'device:${name}' has no state API`);
+            }
+        }
+        for (const k of I8086Machine.CPU_STATE) this.cpu[k] = s.cpu[k];
         this.cycles = s.cycles;
         this.mem.set(s.mem);
-        for (const [name, cs] of Object.entries(s.chips || {})) {
-            const c = this.chips[name];
-            if (!c) continue;
-            if (typeof c.setState === 'function') c.setState(cs);
-            else if (typeof c.loadState === 'function') c.loadState(cs);
+        this._nmiPending = !!s.machine.nmiPending;
+        this._kbdStrobe = !!s.machine.kbdStrobe;
+        this._pinLevels = {...s.machine.pinLevels};
+        // A restore replaces video memory wholesale without going through
+        // _write, so a renderer holding a cached frame would keep drawing the
+        // pre-restore screen until something unrelated moved the token.
+        this.displayRevision = (this.displayRevision + 1) >>> 0;
+        for (const name of chipNames) {
+            const pair = statePair(this.chips[name]);
+            this.chips[name][pair[1]](s.chips[name]);
+        }
+        for (const name of deviceNames) {
+            const pair = statePair(this.devices[name]);
+            this.devices[name][pair[1]](s.devices[name]);
         }
     }
+
+    /**
+     * The architectural register file, as a plain snapshot.
+     *
+     * Added with the instruction hook (438d8bb) and OUTLIVED it: the hook is
+     * gone, this is not. `i8086-debug.js` passes it to the shared event module
+     * as `captureRegisters`, so reverting it with its original commit would
+     * have taken the register half of every instruction fact with it.
+     */
+    _architecturalRegisters() {
+        return {
+            ax: this.cpu.ax, bx: this.cpu.bx, cx: this.cpu.cx, dx: this.cpu.dx,
+            sp: this.cpu.sp, bp: this.cpu.bp, si: this.cpu.si, di: this.cpu.di,
+            ip: this.cpu.ip, cs: this.cpu.cs, ds: this.cpu.ds, es: this.cpu.es,
+            ss: this.cpu.ss, flags: this.cpu.flags, pc: this.cpu.pc
+        };
+    }
+
 }
 
 export default I8086Machine;

@@ -17,6 +17,7 @@
  * @module
  */
 import { Z80 } from './z80.js';
+import { logicalTimeDomain } from './instruction-debug-events.js';
 import { MC6850 } from './mc6850.js';
 import { Z80CTC } from './z80-ctc.js';
 import { MC6845 } from './mc6845.js';
@@ -25,6 +26,10 @@ import { ZXTape } from './zx-tape.js';
 import { AY38912 } from './ay-3-8912.js';
 import { Latch374 } from './latch374.js';
 import { Buffer244 } from './buffer244.js';
+import {
+    MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport, cloneCheckpointValue,
+    checkpointTopology, statePair, validateCheckpointEnvelope, validateCheckpointState
+} from './machine-checkpoint.js';
 
 export const SEARLE = Object.freeze({
     clockHz: 7_372_800,
@@ -49,6 +54,33 @@ export const CPM64K = Object.freeze({
         { kind: 'acia6850', name: 'acia1', at: 0x80 },
     ],
 });
+
+/**
+ * SAME TICK COUNT, EITHER SPELLING. `debugTime()` returns a BigInt and a machine
+ * counts in Numbers, so a checkpoint whose `time` a debug bridge supplied
+ * carries BigInt ticks while `state.cycles` is a Number — and `!==` between them
+ * is false for identical digits. Landed 2026-09-10, this refused every
+ * debug-target checkpoint restore on m6502 and z80 with
+ * INVALID_CHECKPOINT_TIME while both values printed the same number.
+ *
+ * The consumer layer already had this compensation in five separate places
+ * (run-to.js accepts `Number.isSafeInteger(t) || typeof t === 'bigint'`); the
+ * machines did not, because until the read and the stamp agreed on type nobody
+ * had ever handed them a BigInt.
+ */
+const sameTicks = (a, b) => {
+    if (typeof a === 'bigint' || typeof b === 'bigint') {
+        // The a-side guard is INERT TODAY and is recorded as inert rather than
+        // removed: `state.cycles` is always a Number, so reaching it needs a
+        // BigInt on the b side, which no machine here produces. It exists
+        // because BigInt(1.5) THROWS rather than returning false, so the day a
+        // machine counts in BigInt its absence is a crash and not a refusal.
+        if (!(typeof a === 'bigint' || Number.isSafeInteger(a))) return false;
+        if (!(typeof b === 'bigint' || Number.isSafeInteger(b))) return false;
+        return BigInt(a) === BigInt(b);
+    }
+    return a === b;
+};
 
 export class Z80Machine {
     /** Every scalar the core carries — the snapshot contract. */
@@ -312,8 +344,26 @@ export class Z80Machine {
      * bit4 fire) mapped onto Kempston bit order (000FUDLR). False
      * when the machine has no Kempston interface.
      */
+    /**
+     * Can this machine take a button mask at all?
+     *
+     * Asked BEFORE a host offers buttons, so the offer matches the board — the
+     * shape `I8086Machine.canTakeKeys()` already has, and for the same reason.
+     * Without it a caller can only find out by calling `setButtons` and reading
+     * the answer, which is too late for anything that wants to act on the
+     * capability rather than on the outcome: a face that advertises a control
+     * the board cannot take, or a recorder that logs a press nothing received.
+     *
+     * A board has a Kempston port when the config asks for one or when it has a
+     * ULA (z80-machine.js constructor); without it the read at 0x1f is unmapped
+     * and there is nowhere for a mask to go.
+     *
+     * @returns {boolean}
+     */
+    canTakeButtons() { return this._kempston !== null; }
+
     setButtons(mask) {
-        if (this._kempston === null) return false;
+        if (!this.canTakeButtons()) return false;
         this._kempston =
             ((mask >> 2) & 1)          // right
             | (((mask >> 3) & 1) << 1) // left
@@ -321,6 +371,99 @@ export class Z80Machine {
             | (((mask >> 1) & 1) << 3) // up
             | (mask & 0x10);           // fire
         return true;
+    }
+
+    checkpointSupport() {
+        const reasons = [];
+        if (this.pcTraps.size) reasons.push('host PC traps may own state outside the machine');
+        if (this._unloggedBoardInputs) reasons.push('live board buffer-input sampling is not logged');
+        return checkpointSupport(this.chips, this.devices, reasons);
+    }
+
+    checkpointTopology() {
+        return checkpointTopology('z80', this.config, this.chips, this.devices, {
+            tape: !!this.tape, zx128: this._zx128
+        });
+    }
+
+    captureCheckpoint() {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        return cloneCheckpointValue({
+            schema: MACHINE_CHECKPOINT_SCHEMA,
+            topology: this.checkpointTopology(),
+            time: {ticks: this.cycles, domain: 'z80-cycles', hz: this.clockHz},
+            state: this.saveState()
+        });
+    }
+
+    restoreCheckpoint(checkpoint) {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
+        if (refusal) return refusal;
+        const state = checkpoint.state;
+        // The version / memory-image / CPU-field / component-set clauses are the
+        // SHARED ones and live in machine-checkpoint.js, so all three machines
+        // refuse the same malformed state for the same named reason. The tape,
+        // the ULA and the 128K banking below are genuinely this machine's.
+        //
+        // No `shape` is passed: a z80's chip state legitimately changes shape
+        // between captures (the tape's block list, the ULA's edge arrays), so a
+        // shape check against a fresh sample would refuse valid checkpoints.
+        // That is a property of this machine, not an omission -- see the
+        // per-chip clauses below, which check the same ground precisely.
+        const badState = validateCheckpointState(state, {
+            version: 1,
+            memBytes: this.mem.length,
+            cpuKeys: Z80Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices
+        });
+        if (badState) return badState;
+        const ulaState = this.ula && state.chips?.ula;
+        if ((!!state.zx128 !== this._zx128) ||
+            (!!state.tape !== !!this.tape) ||
+            (state.tape && (!Number.isSafeInteger(state.tape.pos) || !Array.isArray(state.tape.blocks) ||
+                state.tape.blocks.some(block => !Number.isSafeInteger(block.flag) ||
+                    !(block.data instanceof Uint8Array)))) ||
+            (this.ula && (!(ulaState?.rows instanceof Uint8Array) || ulaState.rows.length !== 8 ||
+                !Array.isArray(ulaState.speakerEdges) || !Array.isArray(ulaState.earEdges) ||
+                !Number.isSafeInteger(ulaState.earIdx) || ulaState.earIdx < 0 ||
+                ulaState.earIdx > ulaState.earEdges.length)) ||
+            (this._zx128 && (!Array.isArray(state.zx128.roms) || state.zx128.roms.length !== 2 ||
+                state.zx128.roms.some(rom => !(rom instanceof Uint8Array) || rom.length !== 16384) ||
+                !Array.isArray(state.zx128.pages) || state.zx128.pages.length !== 6 ||
+                state.zx128.pages.some(page => !(page instanceof Uint8Array) || page.length !== 16384) ||
+                !state.zx128.bank || !['page', 'rom', 'shadow', 'locked'].every(key =>
+                    Number.isSafeInteger(state.zx128.bank[key]))))) {
+            return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT'};
+        }
+        // THE DOMAIN THIS ACCEPTS MUST BE THE ONE z80-debug.js STAMPS.
+        //
+        // It read `z80-tstates` while the target stamps `z80-cycles`, so a
+        // target could not restore a checkpoint it had just captured. The base
+        // moved deliberately — an event clock on a different base from the
+        // replay clock is two timelines a replayer reads as one, argued in
+        // z80-debug.js:37-42 — and this reader was left behind. It is the site
+        // a name census misses, because it matches a FRAGMENT inside a regex
+        // rather than appearing as `domain: '...'`.
+        //
+        // BOTH EPOCH SUFFIXES ARE ACCEPTED, and that is not generosity: two
+        // counters live on this one base by design. The target suffixes
+        // `-rewind-N` on the facts it stamps, including checkpoints, and the
+        // shared event module suffixes `-reset-N` on its events. A guard
+        // accepting only the bare base refuses every post-rewind checkpoint.
+        if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
+            checkpoint.time.hz !== this.clockHz ||
+            // This one was already RIGHT, and that is exactly why it is being
+            // changed: it was right by having been fixed once, in one of four
+            // places, and nothing made the other three follow. Derived now.
+            `${logicalTimeDomain(checkpoint.time.domain)}` !== 'z80-cycles') {
+            return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
+        }
+        this.loadState(cloneCheckpointValue(state));
+        return undefined;
     }
 
     /**
@@ -346,8 +489,13 @@ export class Z80Machine {
             // because the loop below has no `else`: a chip it does not
             // recognise is skipped without comment. That is how the 6551's
             // serial state was absent from every 6502 snapshot.
-            if (typeof c.getState === 'function') chips[name] = c.getState();
-            else if (typeof c.saveState === 'function') chips[name] = c.saveState();
+            const pair = statePair(c);
+            if (pair) chips[name] = c[pair[0]]();
+        }
+        const devices = {};
+        for (const [name, device] of Object.entries(this.devices || {})) {
+            const pair = statePair(device);
+            devices[name] = device[pair[0]]();
         }
         return {
             v: 1,
@@ -355,11 +503,18 @@ export class Z80Machine {
             cycles: this.cycles,
             mem: this.mem.slice(),
             tapePos: this.tape ? this.tape.pos : null,
+            tape: this.tape ? {
+                pos: this.tape.pos,
+                blocks: this.tape.blocks.map(block => ({flag: block.flag, data: block.data.slice()}))
+            } : null,
+            kempston: this._kempston,
             chips,
+            devices,
             // 128K: the six real pages (5 and 2 live in mem) + banking.
             // ROMs are load-time configuration, like the 48K ROM.
             zx128: this._zx128 ? {
                 pages: [0, 1, 3, 4, 6, 7].map((i) => this.pages[i].slice()),
+                roms: this.roms.map(rom => rom.slice()),
                 bank: { ...this._bank },
             } : null,
         };
@@ -372,18 +527,26 @@ export class Z80Machine {
         for (const k of Z80Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
         this.cycles = s.cycles;
         this.mem.set(s.mem);
-        if (s.tapePos != null) {
+        this._kempston = s.kempston ?? this._kempston;
+        if (s.tape) {
             if (!this.tape) throw new Error('snapshot has a tape position but no tape is inserted');
-            this.tape.pos = s.tapePos;
+            this.tape.pos = s.tape.pos;
+            this.tape.blocks = s.tape.blocks.map(block => ({flag: block.flag, data: block.data.slice()}));
         }
         for (const [name, cs] of Object.entries(s.chips ?? {})) {
             const c = this.chips[name];
             if (!c) continue;
-            if (typeof c.setState === 'function') c.setState(cs);
-            else if (typeof c.loadState === 'function') c.loadState(cs);
+            const pair = statePair(c);
+            c[pair[1]](cs);
+        }
+        for (const [name, ds] of Object.entries(s.devices ?? {})) {
+            const device = this.devices?.[name];
+            const pair = statePair(device);
+            device[pair[1]](ds);
         }
         if (s.zx128 && this._zx128) {
             [0, 1, 3, 4, 6, 7].forEach((page, i) => this.pages[page].set(s.zx128.pages[i]));
+            this.roms.forEach((rom, i) => rom.set(s.zx128.roms[i]));
             this._bank.locked = 0;                        // let _setBank apply
             this._setBank(
                 s.zx128.bank.page

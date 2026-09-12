@@ -117,23 +117,44 @@ export class ZXULA {
         return [{ hz: Math.round(hz), on: true }];
     }
 
-    /** Machine-snapshot hooks. Held keys and recorded speaker edges
-     *  are transients and reset; timing state carries over exactly. */
+    /** Complete machine-snapshot hooks. Input levels and queued edges are
+     *  part of deterministic execution: replay after a checkpoint must see
+     *  the same held keys, EAR pulse and audio history without replaying an
+     *  already-consumed host input prefix. */
     saveState() {
         return {
             border: this.border, speaker: this.speaker, frame: this.frame,
             tStates: this.tStates, toFrame: this._toFrame, intLeft: this._intLeft,
+            rows: this.rows.slice(),
+            speakerEdges: this.speakerEdges.map(edge => [...edge]),
+            earEdges: this._earEdges.map(edge => ({...edge})),
+            earIdx: this._earIdx,
+            earLevel: this._earLevel,
         };
     }
 
     loadState(s) {
+        // Historical machine-v1 snapshots omitted all five input/audio fields.
+        // Preserve their documented reset behavior; partially supplied modern
+        // snapshots are corrupt and must not be mistaken for that legacy form.
+        const inputFields = ['rows', 'speakerEdges', 'earEdges', 'earIdx', 'earLevel'];
+        if (inputFields.every(key => !Object.hasOwn(s, key))) {
+            s = {...s, rows: new Uint8Array(8).fill(0x1f), speakerEdges: [],
+                earEdges: [], earIdx: 0, earLevel: 1};
+        }
+        if (!(s.rows instanceof Uint8Array) || s.rows.length !== 8 ||
+            !Array.isArray(s.speakerEdges) || !Array.isArray(s.earEdges) ||
+            !Number.isSafeInteger(s.earIdx) || s.earIdx < 0 || s.earIdx > s.earEdges.length ||
+            (s.earLevel !== 0 && s.earLevel !== 1)) {
+            throw new TypeError('incomplete ZX ULA checkpoint state');
+        }
         this.border = s.border; this.speaker = s.speaker; this.frame = s.frame;
         this.tStates = s.tStates; this._toFrame = s.toFrame; this._intLeft = s.intLeft;
-        this.rows.fill(0x1f);
-        this.speakerEdges.length = 0;
-        this._earEdges = [];
-        this._earIdx = 0;
-        this._earLevel = 1;
+        this.rows.set(s.rows);
+        this.speakerEdges = s.speakerEdges.map(edge => [...edge]);
+        this._earEdges = s.earEdges.map(edge => ({...edge}));
+        this._earIdx = s.earIdx;
+        this._earLevel = s.earLevel;
     }
 
     // ── Contention ─────────────────────────────────────────────────

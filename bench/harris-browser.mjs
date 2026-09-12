@@ -22,12 +22,13 @@ if(nativePath) {
     const verifiedSources=build.sourceHashes??{'src/experimental/wired-kernel/net-resolver.c':build.sourceSHA256};
     assert.ok(Object.hasOwn(verifiedSources,'src/experimental/wired-kernel/net-resolver.c'));
     for(const [path,expected] of Object.entries(verifiedSources)) {
-        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c'].includes(path),'unexpected native source');
+        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c'].includes(path),'unexpected native source');
         assert.equal(hash(readFileSync(join(root,path))),expected,'rebuild native module for this source');sourceHashes[path]=expected;
     }
     assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');
     nativeModule={sha256:build.wasmSHA256,sourceHashes:verifiedSources,compiler:build.compiler,
-        admittedGraph:WebAssembly.Module.exports(new WebAssembly.Module(nativeBytes)).some(e=>e.name==='admit_owned_context')};
+        admittedGraph:WebAssembly.Module.exports(new WebAssembly.Module(nativeBytes)).some(e=>e.name==='admit_owned_context'),
+        incrementalGraph:WebAssembly.Module.exports(new WebAssembly.Module(nativeBytes)).some(e=>e.name==='incremental_kernel_version')};
 }
 const nodeReceiptBytes=readFileSync(join(root,'docs/HARRIS-OWNED-WORKLOADS-BENCH.json'));
 const nodeReceipt=JSON.parse(nodeReceiptBytes),expectedStateHashes=Object.fromEntries(nodeReceipt.samples.map(s=>[s.name,s.stateSHA256]));
@@ -107,6 +108,11 @@ try {
         if(nativeModule.admittedGraph) {
             const admitted=report.nativeOracle.admittedGraph;assert.equal(admitted?.accepted,true);assert.equal(admitted?.capacityClaim,false);
             assert.equal(admitted?.memory.comparisons,1026);assert.equal(admitted?.phase.comparisons,1532);assert.equal(admitted?.schedule.periods,258);
+        }
+        if(nativeModule.incrementalGraph) {
+            const incremental=report.nativeOracle.incrementalGraph;
+            assert.equal(incremental?.accepted,true);assert.equal(incremental?.capacityClaim,false);
+            assert.equal(incremental?.memory.comparisons,1026);assert.equal(incremental?.phase.comparisons,1532);assert.equal(incremental?.schedule.periods,258);
         }
         report.nativeBuild=nativeModule;
     }

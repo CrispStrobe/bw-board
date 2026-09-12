@@ -17,6 +17,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createEmu8051DebugTarget } from '../src/emu8051-debug.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -25,7 +26,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // developer's machine, then the VPS path the other WASM test uses.
 const CANDIDATES = [
     process.env.EMU8051_JS,
-    path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+    resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']),
 ].filter(Boolean);
 
 let createEmu8051 = null;
@@ -50,11 +57,30 @@ async function target() {
     return t;
 }
 
-const skip = (t) => { if (!t) console.log('# SKIP: no emu8051 build reachable'); return !t; };
+/**
+ * A SKIP MUST REACH THE RUNNER, NOT JUST THE LOG.
+ *
+ * This was `const skip = t => { if (!t) console.log('# SKIP: …'); return !t; }`
+ * with `if (skip(t)) return;` at the top of every case — and AN EARLY RETURN
+ * INSIDE A TEST BODY IS A PASS. The runner never hears about it; the `# SKIP` is
+ * a printed comment. Measured with the build unreachable: this file printed that
+ * line 24 times and reported `# pass 25 # fail 0 # skipped 0`, and across the
+ * nine suites using this pattern, 41 cases were counted as passes that had not
+ * run.
+ *
+ * `skip:` is the runner's own mechanism, so the summary says `# skipped` and an
+ * absent oracle is a number a reader sees. CI cannot go quiet this way: ci.yml
+ * checks the emulator out and `oracle-census.mjs --require emu8051` fails the
+ * build when it is missing, so a skip here means a developer box and never a
+ * green run with nothing behind it.
+ */
+const SKIP = createEmu8051 ? false
+    : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this '
+      + 'repo and build it, or set $EMU8051_JS';
 
 describe('debug target: capabilities are what this emulator can really do', () => {
-    it('offers block stepping and yield breakpoints — the universal pair', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('offers block stepping and yield breakpoints — the universal pair', {skip: SKIP}, async () => {
+        const t = await target();
         const caps = t.capabilities();
         assert.ok(caps.steps.includes('block'));
         assert.ok(caps.breakpoints.includes('yield'));
@@ -62,8 +88,8 @@ describe('debug target: capabilities are what this emulator can really do', () =
         assert.deepEqual(caps.consumes, [], 'an emulator takes nothing from the program');
     });
 
-    it('does NOT claim line stepping, and refuses it with a reason', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('does NOT claim line stepping, and refuses it with a reason', {skip: SKIP}, async () => {
+        const t = await target();
         // dbg_step returns success for STEP_LINE and then steps one INSTRUCTION
         // ("Would need a line table"). Passing that through would be the exact
         // failure DEBUG-CONTROL-MODEL §1 forbids: doing something else quietly.
@@ -74,8 +100,8 @@ describe('debug target: capabilities are what this emulator can really do', () =
         assert.equal(t.state(), 'halted', 'and it did not move');
     });
 
-    it('watchpoint capability matches what the WASM actually exports', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('watchpoint capability matches what the WASM actually exports', {skip: SKIP}, async () => {
+        const t = await target();
         const caps = t.capabilities();
         // Feature detection: if the WASM exports _emu_dbg_set_bp_write,
         // the target claims 'write' breakpoints. Otherwise it refuses.
@@ -93,8 +119,8 @@ describe('debug target: capabilities are what this emulator can really do', () =
 });
 
 describe('debug target: run control', () => {
-    it('reset leaves it halted at 0, and step(insn) advances one instruction', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('reset leaves it halted at 0, and step(insn) advances one instruction', {skip: SKIP}, async () => {
+        const t = await target();
         assert.equal(t.state(), 'halted');
         assert.equal(t.regs().pc, 0);
 
@@ -110,8 +136,8 @@ describe('debug target: run control', () => {
         assert.equal(halts[0].skewNs, 0n, 'an emulator freezes time, so nothing was missed');
     });
 
-    it('a budgeted run does NOT look like a halt', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('a budgeted run does NOT look like a halt', {skip: SKIP}, async () => {
+        const t = await target();
         // emu_dbg_run_until_ns stops the target when the budget runs out, and
         // dbg_halt reports that as HALT_USER. Left alone, a host pumping once
         // per frame would see a "halt" sixty times a second.
@@ -126,8 +152,8 @@ describe('debug target: run control', () => {
         assert.ok(t.timeNs() >= 10_000_000n, 'while really advancing program time');
     });
 
-    it('a breakpoint stops it, says so once, and names which one', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('a breakpoint stops it, says so once, and names which one', {skip: SKIP}, async () => {
+        const t = await target();
         const halts = [];
         t.onHalt((why) => halts.push(why));
         const handle = t.setBreakpoint({ kind: 'code', addr: 0x0006 });
@@ -142,8 +168,8 @@ describe('debug target: run control', () => {
         assert.equal(halts[0].bpKind, 'code');
     });
 
-    it('breakpoints survive a reset, because the emulator keeps them', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('breakpoints survive a reset, because the emulator keeps them', {skip: SKIP}, async () => {
+        const t = await target();
         // dbg_reset resets the CPU and the peripherals and does not touch
         // t->bps. Forgetting our own record here would leave the two sides
         // disagreeing, and every later hit reported as "some breakpoint".
@@ -156,8 +182,8 @@ describe('debug target: run control', () => {
         assert.equal(halts.at(-1).bp, handle, 'still known after the reset');
     });
 
-    it('clearing a breakpoint really clears it', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('clearing a breakpoint really clears it', {skip: SKIP}, async () => {
+        const t = await target();
         const handle = t.setBreakpoint({ kind: 'code', addr: 0x0006 });
         t.clearBreakpoint(handle);
         t.run();
@@ -166,21 +192,21 @@ describe('debug target: run control', () => {
 });
 
 describe('debug target: memory and registers', () => {
-    it('reads code space back as it was loaded', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('reads code space back as it was loaded', {skip: SKIP}, async () => {
+        const t = await target();
         assert.deepEqual(Array.from(t.readMem('code', 0, 3)), [0x02, 0x00, 0x06]);
     });
 
-    it('reads every space, and refuses one that does not exist', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('reads every space, and refuses one that does not exist', {skip: SKIP}, async () => {
+        const t = await target();
         for (const space of ['code', 'iram', 'sfr', 'xram', 'bit']) {
             assert.ok(t.readMem(space, 0x00, 4) instanceof Uint8Array, space);
         }
         assert.ok(t.readMem('flash', 0, 1).unsupported);
     });
 
-    it('bit space is the bits of IRAM 0x20 and of the SFRs', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('bit space is the bits of IRAM 0x20 and of the SFRs', {skip: SKIP}, async () => {
+        const t = await target();
         t.writeMem('iram', 0x20, Uint8Array.from([0b10100101]));
         const bits = Array.from(t.readMem('bit', 0, 8));
         assert.deepEqual(bits, [1, 0, 1, 0, 0, 1, 0, 1], 'LSB first, as bit 0x00 is IRAM 0x20.0');
@@ -188,15 +214,15 @@ describe('debug target: memory and registers', () => {
         assert.deepEqual(Array.from(t.readMem('bit', 0x80, 8)), [1, 1, 1, 1, 0, 0, 0, 0]);
     });
 
-    it('a multi-byte write goes in a byte at a time and comes back whole', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('a multi-byte write goes in a byte at a time and comes back whole', {skip: SKIP}, async () => {
+        const t = await target();
         const data = Uint8Array.from([0xDE, 0xAD, 0xBE, 0xEF]);
         assert.equal(t.writeMem('xram', 0x100, data), undefined);
         assert.deepEqual(Array.from(t.readMem('xram', 0x100, 4)), [0xDE, 0xAD, 0xBE, 0xEF]);
     });
 
-    it('reports the register bank rather than leaving PSW to be decoded', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('reports the register bank rather than leaving PSW to be decoded', {skip: SKIP}, async () => {
+        const t = await target();
         const r = t.regs();
         assert.equal(r.bank, (r.psw >> 3) & 3);
         assert.equal(r.r.length, 8);
@@ -221,8 +247,8 @@ describe('debug target: Level 1 position', () => {
         }
     };
 
-    it('reads (task, state) straight out of RAM', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('reads (task, state) straight out of RAM', {skip: SKIP}, async () => {
+        const t = await target();
         assert.equal(t.position(), undefined, 'nothing to say without a symbol table');
         const loaded = t.setSymbols(SYMBOLS);
         assert.deepEqual(loaded, { tasks: 1, yields: 2 });
@@ -232,8 +258,8 @@ describe('debug target: Level 1 position', () => {
         assert.deepEqual(t.position(), [{ task: 'bw_task0', state: 3, until: 1000 }]);
     });
 
-    it('a finished task reports no deadline', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('a finished task reports no deadline', {skip: SKIP}, async () => {
+        const t = await target();
         t.setSymbols(SYMBOLS);
         t.writeMem('iram', 0x0C, Uint8Array.from([0xFF, 0xFF]));   // ran to the end
         t.writeMem('iram', 0x0E, Uint8Array.from([0xE8, 0x03]));
@@ -242,8 +268,8 @@ describe('debug target: Level 1 position', () => {
         assert.equal(pos.until, undefined, 'a finished task is not waiting for anything');
     });
 
-    it('a yield breakpoint resolves through the symbol table', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('a yield breakpoint resolves through the symbol table', {skip: SKIP}, async () => {
+        const t = await target();
         assert.match(
             t.setBreakpoint({ kind: 'yield', task: 'bw_task0', state: 1 }).unsupported,
             /symbol table/, 'and says so when there is none');
@@ -259,8 +285,8 @@ describe('debug target: Level 1 position', () => {
             /no task named/);
     });
 
-    it('the halt reason carries the position, so a front end needs no second call', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('the halt reason carries the position, so a front end needs no second call', {skip: SKIP}, async () => {
+        const t = await target();
         t.setSymbols(SYMBOLS);
         const halts = [];
         t.onHalt((why) => halts.push(why));
@@ -273,7 +299,7 @@ describe('debug target: Level 1 position', () => {
 });
 
 describe('debug target: refusing a build it cannot drive', () => {
-    it('says which exports are missing rather than failing later', () => {
+    it('says which exports are missing rather than failing later', {skip: SKIP}, () => {
         assert.throws(
             () => createEmu8051DebugTarget({ _emu_dbg_state: () => 0 }),
             /no debug surface.*_emu_dbg_run/s
@@ -282,8 +308,8 @@ describe('debug target: refusing a build it cannot drive', () => {
 });
 
 describe('debug target: the pieces the TUI shows and this must too', () => {
-    it('disassembles, through the one route a pointer return can take', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('disassembles, through the one route a pointer return can take', {skip: SKIP}, async () => {
+        const t = await target();
         // emu_disasm returns a `const char *`, and no build exports a heap view.
         // ccall's 'string' return type marshals it with Emscripten's own access.
         assert.match(t.disasm(0x0000), /LJMP/i, 'the LJMP the fixture starts with');
@@ -291,14 +317,14 @@ describe('debug target: the pieces the TUI shows and this must too', () => {
         assert.equal(typeof t.disasm(0x1234), 'string', 'and never throws on empty code');
     });
 
-    it('moves the PC, which is the TUI\'s "go to address"', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('moves the PC, which is the TUI\'s "go to address"', {skip: SKIP}, async () => {
+        const t = await target();
         assert.equal(t.setPc(0x0006), undefined);
         assert.equal(t.regs().pc, 0x0006);
     });
 
-    it('wipe clears RAM, reset does not', async () => {
-        const t = await target(); if (skip(t)) return;
+    it('wipe clears RAM, reset does not', {skip: SKIP}, async () => {
+        const t = await target();
         t.writeMem('iram', 0x30, Uint8Array.from([0xAB]));
         t.reset();
         assert.equal(t.readMem('iram', 0x30, 1)[0], 0xAB, 'reset keeps memory');
@@ -327,6 +353,9 @@ async function targetWith(hex) {
     const t = createEmu8051DebugTarget(wasm);
     wasm.ccall('emu_load_hex', 'number', ['string', 'number'], [hex, hex.length]);
     t.reset();
+    // The build is attached so a case can ASK what this build can do rather
+    // than infer it from an assertion that fails for the wrong reason.
+    t.wasm = wasm;
     return t;
 }
 
@@ -336,8 +365,8 @@ function settle(t, budgetNs = 1000) {
 }
 
 describe('debug target: a cycle step is offered only where cycles exist', () => {
-    it('declares `cycle` when the build asserts it, and never otherwise', async () => {
-        const t = await targetWith(CYCLE_HEX); if (skip(t)) return;
+    it('declares `cycle` when the build asserts it, and never otherwise', {skip: SKIP}, async () => {
+        const t = await targetWith(CYCLE_HEX);
         const steps = t.capabilities().steps;
         // Whatever the answer is, it must AGREE with the emulator rather than
         // with this file's expectations — the point of feature-detection.
@@ -352,10 +381,28 @@ describe('debug target: a cycle step is offered only where cycles exist', () => 
         assert.ok(!steps.includes('line'), '`line` is still withheld');
     });
 
-    it('takes 3 cycle steps and 2 instruction steps to cross the same two instructions',
-        async () => {
-            const t = await targetWith(CYCLE_HEX); if (skip(t)) return;
-            if (!t.capabilities().steps.includes('cycle')) return;
+    it('takes 3 cycle steps and 2 instruction steps to cross the same two instructions', {skip: SKIP}, async () => {
+            const t = await targetWith(CYCLE_HEX);
+            if (!t.capabilities().steps.includes('cycle')) {
+                // AN EARLY RETURN WAS A PASS, in the file where that shape was
+                // converted yesterday -- my conversion replaced the `skip(t)`
+                // guards and walked past this one, because its condition is a
+                // CAPABILITY rather than a missing oracle and it did not match
+                // the pattern I was looking for.
+                //
+                // The block comment above says an older build "refuses by name,
+                // which is the honest outcome and is asserted as such rather
+                // than skipped past". The sibling case up the file does exactly
+                // that; this one returned. So it asserts the documented
+                // behaviour now, and an old build produces a real result rather
+                // than a silent pass.
+                const refusal = t.step('cycle', 1);
+                assert.match(refusal?.unsupported ?? '', /no cycle step/i,
+                    'this emulator build predates the cycle step (emu8051-stc cf3c7c0) and '
+                    + 'must refuse by name rather than step silently. Bump the ref in '
+                    + '.github/workflows/ci.yml, or point $EMU8051_JS at a newer build.');
+                return;
+            }
 
             const count = async (kind) => {
                 const u = await targetWith(CYCLE_HEX);
@@ -380,9 +427,40 @@ describe('debug target: a cycle step is offered only where cycles exist', () => 
 });
 
 describe('debug target: a watchpoint halt names the byte, not just the PC', () => {
-    it('reports space, address, new value and previous value', async () => {
-        const t = await targetWith(WATCH_HEX); if (skip(t)) return;
-        if (!t.capabilities().breakpoints.includes('write')) return;
+    it('reports space, address, new value and previous value', {skip: SKIP}, async () => {
+        const t = await targetWith(WATCH_HEX);
+        // DEAD ON EVERY BUILD WE HAVE, and an early return is a PASS, so this
+        // was a silent skip waiting for a build that dropped the capability.
+        // Measured at both refs -- the old pin and the current one -- and both
+        // declare `write`. Asserted rather than deleted, for the same reason as
+        // the serial bridge in rung8-serial-reads: a guard that cannot fire is
+        // one nobody will notice starting to fire, and deleting it outright
+        // would leave the setBreakpoint call below failing somewhere less
+        // obvious.
+        assert.ok(t.capabilities().breakpoints.includes('write'),
+            'this emulator build declares no write watchpoint, so the case below cannot '
+            + 'run. Both emu8051-stc refs bw-board has used declare it; if that changed, '
+            + 'say which build dropped it rather than passing quietly.');
+
+        // THE BUILD'S CAPABILITY, NAMED, BEFORE THE BEHAVIOUR THAT NEEDS IT.
+        //
+        // The comment above this block says an older build "refuses by name,
+        // which is the honest outcome and is asserted as such rather than
+        // skipped past". `src/emu8051-debug.js:190` really does detect the
+        // capability -- but nothing here asserted it, so on a build predating
+        // the halt-reason exports this case failed as
+        // `expected 'watchpoint', actual 'breakpoint'`: a true statement about
+        // the wrong thing. CI ran exactly that for thirteen runs, because its
+        // pin was OLDER than the ref this file's own prose names.
+        //
+        // So the requirement is checked rather than described. A build without
+        // the exports now fails saying WHICH build it is and what to do.
+        assert.equal(typeof t.wasm._emu_dbg_halt_is_watch, 'function',
+            'this emulator build predates the halt-reason exports (emu8051-stc cf3c7c0). '
+            + 'It cannot tell a watchpoint halt from a breakpoint halt, so the assertions '
+            + 'below would compare a correct expectation against the wrong build — which '
+            + 'is what CI did for thirteen runs. Bump the ref in '
+            + '.github/workflows/ci.yml, or point $EMU8051_JS at a newer build.');
 
         const seen = [];
         t.onHalt((why) => seen.push(why));
@@ -407,8 +485,8 @@ describe('debug target: a watchpoint halt names the byte, not just the PC', () =
         assert.equal(why.prev, 0x00, 'the transition, not just the destination');
     });
 
-    it('leaves the watch fields off a halt that is not a watchpoint', async () => {
-        const t = await targetWith(CYCLE_HEX); if (skip(t)) return;
+    it('leaves the watch fields off a halt that is not a watchpoint', {skip: SKIP}, async () => {
+        const t = await targetWith(CYCLE_HEX);
         const seen = [];
         t.onHalt((why) => seen.push(why));
         t.step('insn', 1);

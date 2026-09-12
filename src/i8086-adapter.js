@@ -30,6 +30,7 @@ export function createI8086Adapter(opts = {}) {
     const config = opts.config ?? BREADBOARD8086;
 
     let board = null;
+    let unloggedBoardInputs = false;
     let serialListener = null;
     const stats = { pinChangeCount: 0, advanceToCount: 0 };
 
@@ -68,6 +69,34 @@ export function createI8086Adapter(opts = {}) {
     return {
         machine,
         clockHz: config.clockHz,
+        /**
+         * Which RAM word-access path this machine resolved to, OBSERVED from
+         * the machine rather than re-derived from `config`.
+         *
+         * `installI8086RamWordAccess` assigns its own `_rd16` over the
+         * prototype's, so the own-property is the installation itself — the
+         * effect, not a second reading of the condition that caused it. That
+         * also keeps this change inside THIS file: a record stored on the
+         * machine would be unreachable for the consumer that needs it, because
+         * a downstream tree that omits the cycle-timing path cannot vendor
+         * i8086-machine.js at all.
+         *
+         * DECLARED BECAUSE THE RESOLUTION MOVED OUT. A caller supplies the
+         * config, so a caller that means to decline the fast path can fail to,
+         * and without this it has no way to tell. Reporting it makes the seam's
+         * absence detectable, which is the condition on every other injected
+         * seam in this tree.
+         *
+         * What the suite DOES defend is that this agrees with the effect: a
+         * hardcoded value, a dropped field, or a machine that records one thing
+         * and installs another all red. What it does not defend is reading the
+         * machine rather than re-deriving from `config` -- see the note at the
+         * machine's own recording site.
+         */
+        fastWordAccess: Object.hasOwn(machine.cpu, '_rd16'),
+
+        /** Does a live board sample input nets that nothing records? */
+        unloggedBoardInputs() { return unloggedBoardInputs; },
 
         onSerial(cb) { serialListener = cb; },
 
@@ -77,6 +106,9 @@ export function createI8086Adapter(opts = {}) {
 
         attachBoard(b) {
             board = b;
+            // syncInputs samples input nets that never pass through the debug
+            // target, so nothing records them.
+            unloggedBoardInputs = typeof b?.readPin === 'function';
             // Reset fetches from FFFF:0000 and publishes the initial pin
             // state, which for a just-reset 8255 is "nothing driven".
             machine.reset();

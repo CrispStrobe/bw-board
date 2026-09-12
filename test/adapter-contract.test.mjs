@@ -26,6 +26,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { BoardImpl } from '../src/board.js';
 import { registerAllDevices } from '../src/register-all.js';
 
@@ -36,12 +37,20 @@ registerAllDevices();
 function stubBoard() {
   const pins = [];
   const times = [];
+  const reads = [];
   return {
     pins,
     times,
+    /** Every readPin the adapter made, in order. See INPUT READBACK below. */
+    reads,
     setPin(name, mode, high) { pins.push({ name, mode, high }); },
     advanceTo(tNs) { times.push(tNs); },
-    readPin(name) { return stubBoard._inputLevel ?? 0; },
+    // `this._inputLevel`, not `stubBoard._inputLevel`. The latter reads a
+    // property of the FUNCTION, which nothing ever sets, so every readPin
+    // returned 0 however a caller configured the board. It did not bite,
+    // because the one test that sets `_inputLevel` also replaces `readPin`
+    // outright — which is how it survived.
+    readPin(name) { reads.push(name); return this._inputLevel ?? 0; },
     readAnalog() { return 0; },
     _inputLevel: 0,
   };
@@ -63,6 +72,10 @@ async function avr8jsFactory() {
            'A0', 'A1', 'A2', 'A3', 'A4', 'A5'],
     togglePin: 'D13',
     inputPin: 'D2',
+    // What the MACHINE sees on that pin. D2 is PORTD bit 2 on an atmega328p,
+    // and PIND is the input register at 0x29 — the far end of the path
+    // syncInputs drives, so this is what "reads back" actually means.
+    inputReadback: adapter => (adapter.cpu.data[0x29] >> 2) & 1,
     make() { return createAvr8jsAdapter({ program }); },
     soakNs: 500_000_000, // 500ms — fast enough for reliable toggling
   };
@@ -83,6 +96,10 @@ async function rp2040jsFactory() {
     pins: Array.from({ length: 29 }, (_, i) => `GP${i}`),
     togglePin: 'GP25',
     inputPin: 'GP2',
+    // `rawInputValue` is where setInputValue lands; `inputValue` is gated by
+    // inputEnable and stays false on a pin the program has not configured,
+    // which is why it is not the field to read. Measured, not guessed.
+    inputReadback: adapter => (adapter.rp2040.gpio[2].rawInputValue ? 1 : 0),
     make() { return createRp2040jsAdapter({ program }); },
     // rp2040js instruction-steps at ~125MHz simulated; 3s wall is expensive
     soakNs: 100_000_000, // 100ms soak — crosses no u32 boundary but tests monotonicity
@@ -227,6 +244,11 @@ async function stm32f0Factory() {
     pins: Object.keys(STM32F0_PINS),
     togglePin: 'PA0',
     inputPin: 'PA1',
+    // PA1 is port A bit 1. `syncInputs` seats a sampled board level with
+    // `gpio.setInput(bit, …)` (stm32-adapter.js:86), which writes the pad's
+    // bit in `inputs` (stm32f0-board.js:189) — that is where the level the
+    // board reported actually lands in the machine.
+    inputReadback: adapter => (adapter.peripherals.gpioA.inputs >>> 1) & 1,
     make() { return createStm32F0Adapter({ program: image }); },
     // instruction-stepped like rp2040js — a short soak with the same
     // boundary assertions
@@ -238,16 +260,45 @@ async function stm32f0Factory() {
 
 const GPIO_FACTORIES = [avr8jsFactory, rp2040jsFactory, emu8051Factory, stm32f0Factory];
 
+/**
+ * A FACTORY THAT CANNOT BE BUILT IS A SKIP, NOT A PASS.
+ *
+ * This file used to answer a construction failure with
+ * `it('SKIP — factory failed: …', () => assert.ok(true))`. Node counts that as
+ * a PASSING test, so a checkout without `avr8js` and `rp2040js` installed
+ * reported `# pass 10, # skipped 0` while THREE of the four adapters ran zero
+ * contract assertions. You had to read subtest names to find out.
+ *
+ * That is why the tautology in the INPUT READBACK section survived: every
+ * factory with a non-null `inputPin` fails to construct in a bare worktree, so
+ * locally the section did not run and the summary said green. A peer's
+ * mutation against that section came back inert for the same reason and was
+ * nearly reported as a defect in the fix.
+ *
+ * The fleet's rule already covers the shape — SKIP BY NAME, and never let a
+ * skip count as a pass — and the emu8051 suites follow it. This one converted
+ * an absent dependency into a green tick, in the file whose whole job is to
+ * hold four adapters to one contract.
+ *
+ * `built` also lets the suite assert at the end that SOMETHING ran. A green
+ * run over zero executed contracts is the failure this whole file is for.
+ */
+const built = [];
+
 for (const factoryFn of GPIO_FACTORIES) {
-  describe(`adapter contract: ${factoryFn.name.replace('Factory', '')}`, async () => {
+  const label = factoryFn.name.replace('Factory', '');
+  describe(`adapter contract: ${label}`, async () => {
     let factory;
     try {
       factory = await factoryFn();
+      built.push(label);
     } catch (e) {
-      it(`SKIP — factory failed: ${e.message}`, () => { assert.ok(true); });
+      // A real skip: it lands in `# skipped`, and the reason names the adapter
+      // and the cause rather than being a green tick with a message on it.
+      it(`the ${label} contract`, { skip: `factory failed: ${e.message}` }, () => {});
       return;
     }
-    const { name, pins, togglePin, inputPin, modes, soakNs } = factory;
+    const { name, pins, togglePin, inputPin, inputReadback, modes, soakNs } = factory;
 
     // ── 1. ATTACH SEATS ALL PINS ──────────────────────────────────────
 
@@ -281,23 +332,75 @@ for (const factoryFn of GPIO_FACTORIES) {
     // ── 2. INPUT READBACK ──────────────────────────────────────────────
 
     if (inputPin) {
-      it('an untouched input pin reads back the board level', () => {
+      // THIS SECTION COULD NOT FAIL UNTIL 2026-09-10. Its assertion was
+      // `lastEvent.mode !== 'pushpull' || lastEvent.mode === 'pushpull'` —
+      // X || !X — and it sat inside `if (lastEvent)`, so it was vacuous twice
+      // over. It is the section of the SHARED contract that would catch an
+      // adapter whose input sync stopped working, and it has never been able
+      // to: proving those paths were live had to be done with a counting board
+      // rather than by reading this suite green.
+      it('the adapter READS the input pin from the board while it runs', () => {
+        // The check the section's name always claimed. `syncInputs` reading
+        // the board is the whole of "reads back the board level"; an adapter
+        // that stopped calling it would go on passing everything else here.
         const adapter = factory.make();
         const b = stubBoard();
         b._inputLevel = 1;
-        b.readPin = (pin) => pin === inputPin ? 1 : 0;
         adapter.attachBoard(b);
         adapter.advanceNs(100_000);
-        // The adapter should have synced inputs from the board
-        // Verify by checking no setPin for the input pin as pushpull
-        const inputEvents = b.pins.filter(c => c.name === inputPin && c.mode === 'pushpull');
-        // An untouched input should NOT be driven pushpull by the MCU
-        // (it should be in an input mode from reset)
-        const lastEvent = b.pins.filter(c => c.name === inputPin).pop();
-        if (lastEvent) {
-          assert.ok(lastEvent.mode !== 'pushpull' || lastEvent.mode === 'pushpull',
-            `input pin ${inputPin} should reflect board state`);
+
+        assert.ok(b.reads.length > 0,
+          `${name}: the adapter read no pin at all from an attached board`);
+        assert.ok(b.reads.includes(inputPin),
+          `${name}: the adapter never read ${inputPin} — it read `
+          + `${[...new Set(b.reads)].join(', ') || 'nothing'}`);
+      });
+
+      it('THE LEVEL THE BOARD REPORTS REACHES THE MACHINE', () => {
+        // The third check the section's name implies, and the one that was
+        // still missing after the tautology went: `b.reads.includes(inputPin)`
+        // proves the adapter ASKED. Nothing proved it HEARD. An adapter that
+        // read the pin and discarded the answer passed everything here.
+        //
+        // It is also what makes `b._inputLevel` load-bearing rather than
+        // decorative: reverting the stub board's `this._inputLevel` back to the
+        // function-property read it had until today passes every other
+        // assertion in this file and fails this one.
+        //
+        // A factory that declares an inputPin must say how to read it back, or
+        // this check silently stops existing for that adapter. Named rather
+        // than skipped: a TypeError on an undefined function would say nothing
+        // about what is missing.
+        assert.equal(typeof inputReadback, 'function',
+          `${name} declares inputPin ${inputPin} but no inputReadback(adapter) — `
+          + 'without one, nothing checks that the level reaches the machine');
+
+        // Both levels, so it cannot pass by returning a constant.
+        for (const level of [1, 0]) {
+          const adapter = factory.make();
+          const b = stubBoard();
+          b._inputLevel = level;
+          adapter.attachBoard(b);
+          adapter.advanceNs(100_000);
+          assert.equal(inputReadback(adapter), level,
+            `${name}: board reported ${level} on ${inputPin} and the machine sees `
+            + `${inputReadback(adapter)}`);
         }
+      });
+
+      it('and does NOT drive that input pin pushpull', () => {
+        // The check the old assertion was reaching for and could not express.
+        // An untouched input must not be driven by the MCU; a pushpull event
+        // on it means the pin came out of reset as an output.
+        const adapter = factory.make();
+        const b = stubBoard();
+        b._inputLevel = 1;
+        adapter.attachBoard(b);
+        adapter.advanceNs(100_000);
+
+        const driven = b.pins.filter(c => c.name === inputPin && c.mode === 'pushpull');
+        assert.deepEqual(driven, [],
+          `${name}: ${inputPin} is an input and was driven pushpull ${driven.length} time(s)`);
       });
     }
 
@@ -423,7 +526,10 @@ describe('emu8051 u32 boundary soak', async () => {
   try {
     factory = await emu8051Factory();
   } catch (e) {
-    it('SKIP', () => assert.ok(true));
+    // A SECOND passing placeholder, found by the source assertion below rather
+    // than by reading — and worse than the first, because its name was the bare
+    // word 'SKIP' with no adapter and no cause.
+    it('the emu8051 u32 boundary soak', { skip: `factory failed: ${e.message}` }, () => {});
     return;
   }
 
@@ -448,5 +554,51 @@ describe('emu8051 u32 boundary soak', async () => {
       assert.ok(b.times[i] >= b.times[i - 1],
         `time went backward at index ${i}: ${b.times[i-1]} > ${b.times[i]}`);
     }
+  });
+});
+
+describe('the contract ran against something', () => {
+  it('at least one adapter was actually built', () => {
+    // Without this a checkout missing every optional dependency reports a
+    // green adapter contract having checked no adapter at all — which is
+    // exactly the state this file spent a day being in for three of four.
+    assert.ok(built.length > 0,
+      'no adapter factory could be constructed, so this suite checked nothing: '
+      + `${GPIO_FACTORIES.map(f => f.name.replace('Factory', '')).join(', ')}`);
+  });
+
+  it('A FAILED FACTORY IS A SKIP AND NOT A PASSING PLACEHOLDER', () => {
+    // The property has no other holder. If someone restores
+    // `it('SKIP — …', () => assert.ok(true))`, a bare checkout goes back to
+    // reporting `pass 10, skipped 0` over three adapters that ran nothing, and
+    // no assertion anywhere would notice — the summary is the runner's, not
+    // this suite's, so the only thing that can hold it is the source.
+    //
+    // The needle is assembled from fragments so this assertion does not match
+    // itself.
+    // CODE LINES ONLY. The comments above quote the bad pattern on purpose, and
+    // a scan that matched them would be a check that can never pass — the
+    // mirror image of the one being removed.
+    const source = readFileSync(new URL(import.meta.url), 'utf8');
+    const placeholder = 'assert.ok(' + 'true)';
+    const offenders = source.split('\n')
+      .map((line, i) => [i + 1, line])
+      .filter(([, line]) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+      .filter(([, line]) => line.includes(placeholder));
+    assert.deepEqual(offenders, [],
+      'a test whose body asserts a constant is a green tick standing in for a '
+      + 'check that did not run — use { skip: reason } so the runner counts it');
+    assert.match(source, /\{ skip: `factory failed:/,
+      'the factory-failure path must mark a real skip');
+  });
+
+  it('reports WHICH adapters ran, so a green run is readable', () => {
+    // Printed rather than asserted against a fixed list: which optional
+    // dependencies are installed is a property of the checkout, not of the
+    // contract, and pinning it here would make a bare worktree fail for the
+    // wrong reason.
+    console.log(`# adapter contract ran against: ${built.join(', ') || 'nothing'} `
+      + `(of ${GPIO_FACTORIES.length})`);
+    assert.ok(Array.isArray(built));
   });
 });

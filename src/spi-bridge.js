@@ -20,9 +20,13 @@
  * of SPI device handlers.
  *
  * @param {import('avr8js').AVRSPI} spi - the AVRSPI instance
+ * @param {{onAccess?: (device: object) => void}} [opts] observation only
  * @returns {object} bridge with attach() and the onByte callback
  */
-export function createSPIBridge(spi) {
+export function createSPIBridge(spi, opts = {}) {
+  const observe = (device) => {
+    try { opts.onAccess?.(device); } catch {}
+  };
   const bridge = {
     spi,
     /** @type {Array<{onByte: (value: number) => number}>} */
@@ -57,7 +61,11 @@ export function createSPIBridge(spi) {
         response = bridge.active.onByte(value) & 0xff;
       }
       // Complete the transfer after the SPI clock cycles
-      spi.cpu.addClockEvent(() => spi.completeTransfer(response), spi.transferCycles);
+      spi.cpu.addClockEvent(() => {
+        spi.completeTransfer(response);
+        observe({ id: 'spi0', bus: 'spi', event: 'transfer', tx: value & 0xff,
+          rx: response });
+      }, spi.transferCycles);
     },
   };
 

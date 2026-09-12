@@ -28,20 +28,33 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createSerialDebugTarget, buildFrame, CMD } from '../src/serial-debug.js';
+import { resolveAncestor } from './helpers/sibling-checkout.mjs';
 
 const require = createRequire(import.meta.url);
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const WASM_CANDIDATES = [
-  path.resolve(here, '../../emu8051-stc/build/emu8051.js'),
+// WALKED UP, NOT A FIXED DEPTH. Two levels up is where a sibling checkout sits
+// relative to a CLONE and never relative to a git WORKTREE, which lives a level
+// deeper. These suites APPEARED to work here only because code/wt/emu8051-stc is
+// a symlink somebody added 2026-09-03 -- the defect paid for in the filesystem
+// instead of the lookup. The absent case is unchanged: with nothing found
+// anywhere, resolveAncestor returns the same path this named.
+  resolveAncestor(here, ['emu8051-stc', 'build', 'emu8051.js']),
 ].filter(Boolean);
 
 const HEX_CANDIDATES = [
-  path.resolve(here, '../../stc/build/stc12c5a60s2/10-live-firmware/main.ihx'),
+  resolveAncestor(here, ['stc', 'build', 'stc12c5a60s2', '10-live-firmware', 'main.ihx']),
 ].filter(Boolean);
 
 const TRACE_CANDIDATES = [
-  path.resolve(here, '../../ucsim-stc/ucsim/src/sims/s51.src/stc12_trace'),
+  // $UCSIM_STC12_TRACE FIRST, so a box with the build elsewhere can name it
+  // rather than binding to wherever the walk happens to land. The census
+  // declares this key and asserts the gated file really reads it: a detection
+  // key nothing reads makes the census report on a condition with no effect,
+  // which is exactly how an oracle becomes ambient.
+  process.env.UCSIM_STC12_TRACE,
+  resolveAncestor(here, ['ucsim-stc', 'ucsim', 'src', 'sims', 's51.src', 'stc12_trace']),
 ].filter(Boolean);
 
 let createEmu8051 = null;
@@ -53,20 +66,65 @@ for (const p of WASM_CANDIDATES) { if (existsSync(p)) { createEmu8051 = require(
 for (const p of HEX_CANDIDATES) { if (existsSync(p)) { firmwareHex = readFileSync(p, 'utf8'); firmwareHexPath = p; break; } }
 for (const p of TRACE_CANDIDATES) { if (existsSync(p)) { traceBin = p; break; } }
 
-// ─── Loud skip: a skipped test must be visible ──────────────────────────
-
-const MISSING = [];
-if (!createEmu8051) MISSING.push('emu8051 WASM (build/emu8051.js)');
-if (!firmwareHex) MISSING.push('10-live-firmware hex');
-
-function loudSkip(testName) {
-  if (MISSING.length === 0) return false;
-  const msg = `⚠ SKIPPED: ${testName} — missing: ${MISSING.join(', ')}. ` +
-    'This is the strongest non-bench evidence in the project. ' +
-    'A silent skip here means it stopped being collected.';
-  console.log(`# ${msg}`);
-  return true;
+// ─── Three oracles, three named skips, all reaching the runner ──────────
+//
+// THIS FILE ALREADY KNEW. Its header says "a silent skip is indistinguishable
+// from a test that never existed", and `loudSkip` printed a paragraph saying
+// so. But it then `return`ed from inside the case, and an early return is a
+// PASS — the runner never heard it, and the loudest possible comment still
+// arrived inside `# pass`. Being loud in the log and invisible to the summary
+// is the exact failure the comment describes.
+//
+// Three inputs, three guards, because collapsing them loses which is missing:
+//
+//   emu8051 WASM     ci.yml checks it out and `oracle-census.mjs --require
+//                    nasm,emu8051` asserts it arrived — a skip means a developer box
+//   10-live firmware built from the `stc` examples; CI does not make that checkout
+//   stc12_trace      a ucsim-stc build, and the ONLY path that can exercise the
+//                    idle-timeout resync at all; described by what a person needs
+//                    rather than by where it currently sits
+/**
+ * Check whether stc12_trace accepts -inject by running it with --help
+ * or a trivial invocation. If it does, the test MUST run — a skip
+ * after this point is a failure, not a skip.
+ */
+function injectSupported() {
+  if (!traceBin) return false;
+  try {
+    execFileSync(traceBin, ['-t', 'STC12', '-inject', '0,0x00', '-until-ns', '1000', '/dev/null'],
+      { timeout: 3000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch (e) {
+    // An unknown option produces "unknown option" or similar in stderr.
+    // Do NOT check e.message for 'inject' — it contains the full command
+    // line, so it always matches and falsely rejects a working binary.
+    const stderr = (e.stderr || '').toLowerCase();
+    if (stderr.includes('unknown option') || stderr.includes('unrecognized')) return false;
+    // Exit code 1 with no "unknown option" means -inject was accepted
+    // but the invocation failed for another reason (e.g. /dev/null is not hex).
+    return true;
+  }
 }
+
+const SKIP_EMU8051 = createEmu8051 ? false
+  : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this repo '
+    + 'and build its WASM, or set $EMU8051_JS';
+const SKIP_FIRMWARE = firmwareHex ? false
+  : 'no 10-live-firmware hex — check out CrispStrobe/stc beside this repo and build '
+    + 'stc12c5a60s2/10-live-firmware; CI does not carry it';
+const SKIP_SERIAL = SKIP_EMU8051 || SKIP_FIRMWARE;
+const SKIP_TRACE = !traceBin
+  ? 'no stc12_trace binary — build ucsim-stc (>= a81091e, the ref that added -inject) '
+    + 'and put it beside this repo. Idle-timeout resync is the one path emu8051 cannot '
+    + 'exercise, so this case is not covered anywhere else.'
+  // A CAPABILITY OF A BINARY NOBODY PINS, so unlike the emu8051 serial bridge it
+  // is a real skip rather than an assertion: an older ucsim build is a normal
+  // thing to have. The probe runs ONCE, here, because `skip:` is evaluated when
+  // the case is declared -- and running it at declaration time is what lets the
+  // refusal reach the runner instead of being a printed comment inside a pass.
+  : injectSupported() ? false
+    : 'stc12_trace does not accept -inject — the binary exists but predates a81091e; '
+      + 'rebuild ucsim-stc from that ref or later';
 
 // ─── Transport: bridge serial-debug.js to emu8051's UART ────────────────
 
@@ -109,8 +167,7 @@ function createEmuTransport(wasm) {
 // ─── Tests ──────────────────────────────────────────────────────────────
 
 describe('serial DebugTarget e2e: real firmware, no mock', () => {
-  it('HELLO round-trip against 10-live-firmware', async () => {
-    if (loudSkip('HELLO')) return;
+  it('HELLO round-trip against 10-live-firmware', {skip: SKIP_SERIAL}, async () => {
 
     const wasm = await createEmu8051();
     wasm._emu_init(1);
@@ -130,8 +187,7 @@ describe('serial DebugTarget e2e: real firmware, no mock', () => {
     } finally { transport.destroy(); }
   });
 
-  it('REGS + READ round-trip', async () => {
-    if (loudSkip('REGS+READ')) return;
+  it('REGS + READ round-trip', {skip: SKIP_SERIAL}, async () => {
 
     const wasm = await createEmu8051();
     wasm._emu_init(1);
@@ -145,7 +201,13 @@ describe('serial DebugTarget e2e: real firmware, no mock', () => {
 
     try {
       await target.connect();
-      if (target.state() !== 'halted') { console.log('# SKIP: could not connect'); return; }
+      // NOT A MISSING ORACLE. By here the emulator and the firmware are both
+      // present -- the case would have skipped otherwise -- so failing to
+      // connect is the monitor or the transport being wrong, which is what this
+      // test exists to detect. It used to return, and an early return is a pass.
+      assert.equal(target.state(), 'halted',
+        `connected but the target is ${target.state()} rather than halted -- the monitor `
+        + 'did not answer HELLO on a build that has both the emulator and the firmware');
 
       const regs = await target.readRegs();
       console.log(`# REGS: ${regs ? Object.keys(regs).length + ' fields' : 'null'}`);
@@ -198,50 +260,14 @@ describe('serial resync: torn frame recovery via stc12_trace -inject', () => {
   // If any of these fail, the failure is the finding — do not adjust
   // the assertion to match what happened.
 
-  /**
-   * Check whether stc12_trace accepts -inject by running it with --help
-   * or a trivial invocation. If it does, the test MUST run — a skip
-   * after this point is a failure, not a skip.
-   */
-  function injectSupported() {
-    if (!traceBin) return false;
-    try {
-      execFileSync(traceBin, ['-t', 'STC12', '-inject', '0,0x00', '-until-ns', '1000', '/dev/null'],
-        { timeout: 3000, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-      return true;
-    } catch (e) {
-      // An unknown option produces "unknown option" or similar in stderr.
-      // Do NOT check e.message for 'inject' — it contains the full command
-      // line, so it always matches and falsely rejects a working binary.
-      const stderr = (e.stderr || '').toLowerCase();
-      if (stderr.includes('unknown option') || stderr.includes('unrecognized')) return false;
-      // Exit code 1 with no "unknown option" means -inject was accepted
-      // but the invocation failed for another reason (e.g. /dev/null is not hex).
-      return true;
-    }
-  }
 
-  it('firmware recovers from a torn frame after idle timeout', () => {
-    if (!traceBin) {
-      console.log('# ⚠ SKIPPED: stc12_trace binary not found.');
-      console.log('#   Build ucsim-stc with -inject support (a81091e).');
-      console.log('#   Idle-timeout resync is the one path emu8051 cannot exercise.');
-      return;
-    }
-    if (!firmwareHexPath) {
-      console.log('# ⚠ SKIPPED: no firmware hex');
-      return;
-    }
+  it('firmware recovers from a torn frame after idle timeout',
+    {skip: SKIP_TRACE || SKIP_FIRMWARE}, () => {
 
-    const hasInject = injectSupported();
-    if (!hasInject) {
-      console.log('# ⚠ SKIPPED: stc12_trace does not accept -inject.');
-      console.log('#   Binary exists but predates a81091e. Rebuild needed.');
-      return;
-    }
-
-    // -inject IS accepted — from here, a skip is a failure, not a skip.
-    // The test MUST run and produce a result.
+    // -inject IS accepted — the declaration's `skip:` established that before
+    // this body ran. From here a skip is a failure, not a skip, which is what
+    // the original comment here said and what an early `return` could not
+    // deliver: it was counted as a pass.
 
     // Injection schedule:
     //   t=0:         SOF (0x7E) — starts a frame

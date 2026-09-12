@@ -28,6 +28,28 @@
 // generator is CORRECT. A wrong generator faithfully reproduced still passes.
 // This gate is about correspondence and nothing else.
 //
+// THE CONSEQUENCE, which is sharper than it first reads: this file can never be
+// the oracle for a claim that the shipped ROM bytes are unchanged by some piece
+// of work. It rebuilds THROUGH the same generators, so a generator that drifted
+// in lockstep with its output passes green. An oracle that shares an
+// implementation with the thing it checks is measuring self-consistency, not
+// correctness -- the same shape as a reproducibility twin proving an artefact
+// matches a fresh run of the same faulty query. Its green means "these bytes
+// are not STALE"; it has never meant "these bytes are RIGHT".
+//
+// So a "no ROM byte moved" claim needs an anchor OUTSIDE this implementation.
+// One exists as of 2026-09-10: an isolated single-branch clone identified BIOS
+// source 7b8d1404 with zero bios.asm commits between it and the then-current
+// pin, and all seven demo ROMs compared byte for byte from there --
+// 4f9d09331bdf37c6, 39fe4f6e277180f5, 51b8940c9c5234b6, 9b35f9e4a4492cbd,
+// dd6399cbcce5afa3, 88d66b132eff501e, 803cd82a0be9e661. A second, independent
+// route (a recorder-selection repair) predicted the same 7b8d1404 without
+// relying on the first. That pass ran COMPARE-ONLY BEFORE ANY WRITE, which is
+// an ordering requirement rather than a preference: a compare performed after
+// writing cannot distinguish "unchanged" from "overwritten with the same
+// bytes". Re-run that shape when the claim is needed again; do not substitute
+// this file's green for it.
+//
 // NOT DELETABLE AS REDUNDANT: bw-board's own BIOS is immune to this by
 // construction — rom/bios.bin is gitignored and untracked, so consumers build
 // from rom/bios.asm and run what they built. The demo ROMs cannot take that

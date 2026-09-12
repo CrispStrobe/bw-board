@@ -17,6 +17,7 @@
  * @module
  */
 import { W65C02 } from './w65c02.js';
+import { logicalTimeDomain } from './instruction-debug-events.js';
 import { AudioBus } from './audio-bus.js';
 import { W65C22 } from './w65c22.js';
 import { W65C51 } from './w65c51.js';
@@ -29,6 +30,17 @@ import { M6532 } from './m6532.js';
 import { AY38912 } from './ay-3-8912.js';
 import { Latch374 } from './latch374.js';
 import { SDCardSPI } from './sdcard-spi.js';
+import {
+    MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport, cloneCheckpointValue,
+    checkpointTopology, statePair, validateCheckpointEnvelope, validateCheckpointState
+} from './machine-checkpoint.js';
+
+// State codecs are part of the checkpoint schema. Comparing their structural
+// shape against a fresh sample catches a missing nested latch/counter before
+// any component is mutated. Array lengths may legitimately vary (UART RX
+// queues); typed memory blocks may not.
+// sameCheckpointShape moved to machine-checkpoint.js on 2026-09-10; it was
+// always a contract-layer helper and the 8086 needed it too.
 
 /**
  * @typedef {object} MachineConfig
@@ -155,6 +167,33 @@ export const GPASCAL = Object.freeze({
     ],
     serial: { kind: 'via-bitbang', chip: 'via1', txBit: 1, rxBit: 0, cb2: true, baud: 4800 },
 });
+
+/**
+ * SAME TICK COUNT, EITHER SPELLING. `debugTime()` returns a BigInt and a machine
+ * counts in Numbers, so a checkpoint whose `time` a debug bridge supplied
+ * carries BigInt ticks while `state.cycles` is a Number — and `!==` between them
+ * is false for identical digits. Landed 2026-09-10, this refused every
+ * debug-target checkpoint restore on m6502 and z80 with
+ * INVALID_CHECKPOINT_TIME while both values printed the same number.
+ *
+ * The consumer layer already had this compensation in five separate places
+ * (run-to.js accepts `Number.isSafeInteger(t) || typeof t === 'bigint'`); the
+ * machines did not, because until the read and the stamp agreed on type nobody
+ * had ever handed them a BigInt.
+ */
+const sameTicks = (a, b) => {
+    if (typeof a === 'bigint' || typeof b === 'bigint') {
+        // The a-side guard is INERT TODAY and is recorded as inert rather than
+        // removed: `state.cycles` is always a Number, so reaching it needs a
+        // BigInt on the b side, which no machine here produces. It exists
+        // because BigInt(1.5) THROWS rather than returning false, so the day a
+        // machine counts in BigInt its absence is a crash and not a refusal.
+        if (!(typeof a === 'bigint' || Number.isSafeInteger(a))) return false;
+        if (!(typeof b === 'bigint' || Number.isSafeInteger(b))) return false;
+        return BigInt(a) === BigInt(b);
+    }
+    return a === b;
+};
 
 export class M6502Machine {
     /**
@@ -598,13 +637,62 @@ export class M6502Machine {
 
     /** One instruction (or one idle cycle when waiting); returns cycles consumed. */
     /**
+     * Pulse NMI as an external pin event, and ADVANCE MACHINE TIME THROUGH IT.
+     *
+     * The CPU has had `nmi()` since this file existed and nothing surfaced it,
+     * so the debug target reached `machine.cpu.nmi()` directly — which is what
+     * this machine does internally for the vsync NMI at the simplevga branch
+     * below, and which is wrong for an EXTERNAL pulse. `cpu.nmi()` charges the
+     * seven-cycle interrupt sequence to the CPU's own counter and to nothing
+     * else: `this.cycles` does not move, so the peripherals are not advanced
+     * through that bus time and every timestamp taken from the machine clock
+     * reads as though the interrupt were free.
+     *
+     * Ported from a downstream consumer's copy of this file, which has had it
+     * for months. Upstream had the CPU entry point and no machine one.
+     *
+     * @returns {boolean} always true — an NMI is non-maskable and always taken
+     */
+    nmi() {
+        this.cpu.nmi();
+        this.cycles += 7;
+        this._advanceChips(7);
+        return true;
+    }
+
+    /**
      * Face-input contract: press/release the four control buttons a
      * human (or a face capturing arrow keys) drives. Convention from
      * gfoot's simplevga snake — ACTIVE-LOW buttons on the first VIA's
      * PA0..PA3 (down, up, right, left). mask bit set = pressed.
      */
+    /**
+     * The VIA a button mask goes to, or null. One `find`, two callers.
+     *
+     * The predicate below and `setButtons` were the same scan written twice;
+     * they cannot disagree now.
+     */
+    _buttonVia() {
+        return Object.values(this.chips).find(
+            (c) => c && typeof c.setInput === 'function' && 'inA' in c) ?? null;
+    }
+
+    /**
+     * Can this machine take a button mask at all?
+     *
+     * Asked BEFORE a host offers buttons, so the offer matches the board — the
+     * shape `I8086Machine.canTakeKeys()` already has, and for the same reason.
+     * Without it a caller can only find out by calling `setButtons` and reading
+     * the answer, which is too late for anything that wants to act on the
+     * capability rather than on the outcome: a face that advertises a control
+     * the board cannot take, or a recorder that logs a press nothing received.
+     *
+     * @returns {boolean}
+     */
+    canTakeButtons() { return this._buttonVia() !== null; }
+
     setButtons(mask) {
-        const via = Object.values(this.chips).find((c) => c && typeof c.setInput === 'function' && 'inA' in c);
+        const via = this._buttonVia();
         if (!via) return false;
         for (let bit = 0; bit < 4; bit++) {
             via.setInput('a', bit, (mask >> bit) & 1 ? 0 : 1);
@@ -765,7 +853,70 @@ export class M6502Machine {
     }
 
     /** CPU state keys to snapshot (same pattern as Z80Machine.CPU_STATE). */
-    static CPU_STATE = ['pc', 'a', 'x', 'y', 's', 'p'];
+    /** CPU state keys to snapshot (same pattern as Z80Machine.CPU_STATE). */
+    static CPU_STATE = [
+        'pc', 'a', 'x', 'y', 's', 'p', 'stopped', 'waiting', 'cycles', '_crossed', '_extra'
+    ];
+
+    checkpointSupport() {
+        const reasons = [];
+        if (this._bb) reasons.push('bit-banged serial queues are not checkpointed');
+        if (this._audioBus) reasons.push('rendered audio queues are not checkpointed');
+        if (this._unloggedBoardInputs) reasons.push('live board input-net sampling is not logged');
+        return checkpointSupport(this.chips, this.devices, reasons);
+    }
+
+    checkpointTopology() {
+        return checkpointTopology('m6502', this.config, this.chips, this.devices);
+    }
+
+    captureCheckpoint() {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        return cloneCheckpointValue({
+            schema: MACHINE_CHECKPOINT_SCHEMA,
+            topology: this.checkpointTopology(),
+            time: {ticks: this.cycles, domain: 'm6502-cycles', hz: this.clockHz},
+            state: this.saveState()
+        });
+    }
+
+    restoreCheckpoint(checkpoint) {
+        const support = this.checkpointSupport();
+        if (!support.supported) return checkpointRefusal(support);
+        const refusal = validateCheckpointEnvelope(checkpoint, this.checkpointTopology());
+        if (refusal) return refusal;
+        const state = checkpoint.state;
+        // The version / memory-image / CPU-field / component-set / shape clauses
+        // are the SHARED ones and live in machine-checkpoint.js, so all three
+        // machines refuse the same malformed state for the same named reason.
+        // Only what is genuinely this machine's stays here.
+        const badState = validateCheckpointState(state, {
+            version: 1,
+            memBytes: this.mem.length,
+            cpuKeys: M6502Machine.CPU_STATE,
+            chips: this.chips,
+            devices: this.devices,
+            shape: this.saveState()
+        });
+        if (badState) return badState;
+        if (!Number.isSafeInteger(state.cycles) || state.cycles < 0 ||
+            !state.pinLevels || typeof state.pinLevels !== 'object' || Array.isArray(state.pinLevels)) {
+            return {refused: 'checkpoint machine state is incomplete', code: 'INVALID_CHECKPOINT',
+                details: {reason: 'cycle counter or pin levels are not a restorable shape'}};
+        }
+        if (!checkpoint.time || !sameTicks(checkpoint.time.ticks, state.cycles) ||
+            checkpoint.time.hz !== this.clockHz ||
+            // DERIVED, not written out: z80-machine.js:458 already accepted
+            // `(?:reset|rewind)` and this one did not, so the same fix had been
+            // applied to one of a pair. m6502 stamps `rewind`, so a checkpoint
+            // captured after a restore failed its OWN domain guard.
+            `${logicalTimeDomain(checkpoint.time.domain)}` !== 'm6502-cycles') {
+            return {refused: 'checkpoint simulation time is inconsistent', code: 'INVALID_CHECKPOINT_TIME'};
+        }
+        this.loadState(cloneCheckpointValue(state));
+        return undefined;
+    }
 
     /**
      * Snapshot the whole machine — CPU, memory, chip state — as a plain
@@ -775,7 +926,9 @@ export class M6502Machine {
      */
     saveState() {
         const cpu = {};
-        for (const k of M6502Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
+        for (const k of M6502Machine.CPU_STATE) {
+            cpu[k] = ['stopped', 'waiting', '_crossed'].includes(k) ? !!this.cpu[k] : (this.cpu[k] ?? 0);
+        }
         const chips = {};
         for (const [name, c] of Object.entries(this.chips)) {
             // BOTH CONVENTIONS, as I8086Machine does. Chips in this tree
@@ -786,8 +939,13 @@ export class M6502Machine {
             // because the loop below has no `else`: a chip it does not
             // recognise is skipped without comment. That is how the 6551's
             // serial state was absent from every 6502 snapshot.
-            if (typeof c.getState === 'function') chips[name] = c.getState();
-            else if (typeof c.saveState === 'function') chips[name] = c.saveState();
+            const pair = statePair(c);
+            if (pair) chips[name] = c[pair[0]]();
+        }
+        const devices = {};
+        for (const [name, device] of Object.entries(this.devices || {})) {
+            const pair = statePair(device);
+            devices[name] = device[pair[0]]();
         }
         return {
             v: 1,
@@ -795,6 +953,8 @@ export class M6502Machine {
             cycles: this.cycles,
             mem: this.mem.slice(),
             chips,
+            devices,
+            pinLevels: {...this._pinLevels},
         };
     }
 
@@ -805,11 +965,17 @@ export class M6502Machine {
         for (const k of M6502Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
         this.cycles = s.cycles;
         this.mem.set(s.mem);
+        this._pinLevels = {...(s.pinLevels || {})};
         for (const [name, cs] of Object.entries(s.chips ?? {})) {
             const c = this.chips[name];
             if (!c) continue;
-            if (typeof c.setState === 'function') c.setState(cs);
-            else if (typeof c.loadState === 'function') c.loadState(cs);
+            const pair = statePair(c);
+            c[pair[1]](cs);
+        }
+        for (const [name, ds] of Object.entries(s.devices ?? {})) {
+            const device = this.devices?.[name];
+            const pair = statePair(device);
+            device[pair[1]](ds);
         }
     }
 

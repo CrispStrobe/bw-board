@@ -61,12 +61,51 @@
  *
  * @module
  */
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const HOME = homedir();
+// `resolve` is already an export of this module, so the path one is imported
+// under a different name rather than shadowed -- the collision made the whole
+// file fail to parse, with an error pointing at the export.
+/**
+ * PRESENCE IS NOT IDENTITY, AND ONLY THE SECOND IS FALSIFIABLE.
+ *
+ * A row saying `present` answers "is there a file at this path". It cannot say
+ * whether the file is the same one CI has -- and on 2026-09-11 that distinction
+ * cost THIRTEEN consecutive red master runs before anyone noticed. The emu8051
+ * debug suite bound to a sibling checkout on this box, passed 25/25 locally, and
+ * failed on CI, which builds its own WASM from a PINNED ref: the two builds
+ * disagree about whether a write halt reports `watchpoint` or `breakpoint`.
+ * Nothing in a local run said which build produced the green.
+ *
+ * So every present file-shaped oracle carries the sha256 of what was actually
+ * found, printed on every run. This does NOT detect a mismatch by itself -- the
+ * census cannot know CI's digest -- but it makes "which build produced this
+ * number" answerable from one line of either log, which is the difference
+ * between a comparison and a bisect.
+ *
+ * A DIRECTORY GETS NO DIGEST rather than a fabricated one: hashing a tree is a
+ * different and more expensive claim, and a wrong digest is worse than none.
+ * Unreadable is reported as unreadable, never as absent.
+ */
+function digestOf (p) {
+    let st;
+    try { st = statSync(p); } catch { return null; }
+    if (st.isDirectory()) return null;
+    try {
+        return 'sha256:' + createHash('sha256').update(readFileSync(p)).digest('hex').slice(0, 16);
+    } catch (error) {
+        return `unreadable (${error.code || error.message})`;
+    }
+}
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * Every external input that gates a check. `detect` is the key a reader can
@@ -74,7 +113,22 @@ const HOME = homedir();
  */
 export const INPUTS = [
     {
+        id: 'harris-native-wasm', kind: 'fixture',
+        what: 'Locally built owned native wired-kernel prototype. Enables differential checks against our JavaScript net, memory and phase implementations; not an independent CPU oracle or full-board capacity proof.',
+        env: 'HARRIS_NET_WASM', paths: [],
+        gates: ['test/harris-native-admitted-graph.test.mjs', 'test/harris-native-evaluators.test.mjs',
+            'test/harris-native-incremental-nets.test.mjs', 'test/harris-native-memory-circuit.test.mjs',
+            'test/harris-native-memory.test.mjs', 'test/harris-native-net-kernel.test.mjs',
+            'test/harris-native-phase-circuit.test.mjs', 'test/harris-native-phase-components.test.mjs',
+            'test/harris-native-phase-schedule.test.mjs'],
+        obtain: 'With wasm32-capable clang and wasm-ld, run node scripts/build-wired-net-kernel.mjs EXISTING_EMPTY_DIRECTORY, then set HARRIS_NET_WASM to its wired-net-kernel.wasm. WASM_LD may select the linker. Rebuild when kernel sources change.',
+        ciAvailable: false,
+        ci: 'no — bw-board CI does not yet build the optional native prototype; its tests report explicit skips without HARRIS_NET_WASM',
+    },
+    {
         id: '8086-vectors', kind: 'oracle',
+        repository: 'SingleStepTests/8086',
+        ciCadence: 'push',   // the `vectors` job
         what: 'SingleStepTests 8086 — 646,000 vectors from an Intel P80C86A-2. '
             + 'Grounds src/i8086.js and src/i8086-disasm.js on TEXT as well as state.',
         env: 'I8086_VECTORS',
@@ -87,6 +141,8 @@ export const INPUTS = [
     },
     {
         id: '8088-vectors', kind: 'oracle',
+        repository: 'SingleStepTests/v20',
+        ciCadence: 'push',   // the `vectors186` job
         what: 'SingleStepTests 8088 v2 — per-CYCLE bus traces: m-cycle type, T-state, '
             + 'and the queue F/S/E operations with the byte read. The ONLY thing that can '
             + 'grade timing and access ORDER; the 8086 suite compares final state and is '
@@ -99,11 +155,13 @@ export const INPUTS = [
             + "https://github.com/SingleStepTests/8088 ~/code/8088-vectors "
             + "&& cd ~/code/8088-vectors && git sparse-checkout set --no-cone '/v2/*.json.gz' "
             + '(2.0 GB whole; a sparse subset of opcode files is enough to move the score)',
-        ciAvailable: false,
-        ci: 'not yet — the grind is young and its scores are still moving',
+        ciAvailable: true,
+        ci: 'yes — the `vectors186` job checks out SingleStepTests/v20 at a pinned ref. This row said "not yet" while that job already existed; the claim was about the SCORES still moving, which is a different question from whether CI has the input',
     },
     {
         id: 'z80-vectors', kind: 'oracle',
+        repository: 'SingleStepTests/z80',
+        ciCadence: 'schedule',   // the `vectors-full` job
         what: 'SingleStepTests z80 — 1,604 opcode files with full undocumented state '
             + '(X/Y flags, Q latch, R per-M1, WZ). Grounds src/z80.js.',
         env: 'Z80_VECTORS',
@@ -115,6 +173,8 @@ export const INPUTS = [
     },
     {
         id: '65c02-vectors', kind: 'oracle',
+        repository: 'SingleStepTests/65x02',
+        ciCadence: 'schedule',   // the `vectors-full` job
         what: 'SingleStepTests 65x02, WDC variant — ~10k vectors per opcode including '
             + 'cycle counts. Grounds src/w65c02.js.',
         env: 'VECTORS_DIR',
@@ -138,6 +198,8 @@ export const INPUTS = [
     },
     {
         id: 'emu8051', kind: 'oracle',
+        repository: 'CrispStrobe/emu8051-stc',
+        ciCadence: 'push',   // the `test` job
         what: 'A second 8051 implementation (MIT sibling repo), built to WASM. '
             + 'Cross-checks the emu8051 adapter against a different upstream.',
         env: 'EMU8051_JS',
@@ -147,12 +209,47 @@ export const INPUTS = [
         // or checked out inside it (the CI layout). Listing only one of them
         // made this row claim a variable none of its gates read — caught by
         // test/oracle-census.test.mjs, which is what that test is for.
-        paths: [join(HOME, 'code', 'emu8051-stc'), '/mnt/volume1/code/emu8051-stc'],
+        // THE CI LAYOUT IS FIRST AND IT WAS MISSING. This row's own comment says
+        // a gate looks for the build "checked out inside it (the CI layout)"
+        // and `ci:` below promises the `test` job provides it -- but the paths
+        // listed only two DEVELOPER locations, so on a runner this row reported
+        // ABSENT while the emulator sat in the workspace. Adding
+        // `--require emu8051` to ci.yml against that list would have reddened
+        // every build. Actions refuses a checkout path outside the workspace,
+        // so `<repo>/emu8051-stc` is the only place it can be.
+        paths: [join(ROOT, 'emu8051-stc', 'build'), join(HOME, 'code', 'emu8051-stc'),
+            '/mnt/volume1/code/emu8051-stc'],
+        // SEVEN MORE GATES ARRIVED WITHOUT MOVING, and that is worth a line. They
+        // always depended on this oracle; they used to skip by printing a comment
+        // and returning, which the runner counts as a PASS -- so
+        // `census-covers-the-tree` could not see them as guard-then-skip tests at
+        // all. Converting them to a real `skip:` made them visible, and the census
+        // immediately said what it says: an external input with no row.
         gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
-            'test/emu8051-debug.test.js'],
+            'test/emu8051-debug.test.js', 'test/emu8051-debug-events.test.mjs',
+            'test/conformance-real-wasm.test.js',
+            'test/device-drivers-e2e.test.js', 'test/end-to-end-dimmer.test.js',
+            'test/motor-e2e.test.js', 'test/rung8-serial-reads.test.js',
+            'test/servo-e2e.test.js'],
         obtain: 'git clone https://github.com/CrispStrobe/emu8051-stc and build its WASM',
         ciAvailable: true,
         ci: 'yes — checked out at a pinned ref by the `test` job',
+    },
+    {
+        id: 'stc-examples', kind: 'fixture',
+        what: 'The stc example set — one NN-name directory per example, each with a '
+            + 'pins.json the netlist inference is checked against, plus a manifest.',
+        // NO ENV VAR, and that is a statement rather than an omission: every gate
+        // finds this by walking up from its own directory, and none reads an
+        // override. Listing one would make this row claim a variable nothing
+        // reads — which test/oracle-census.test.mjs checks in both directions.
+        env: null,
+        paths: [join(ROOT, 'stc', 'examples'), join(HOME, 'code', 'stc', 'examples'),
+            '/mnt/volume1/code/stc/examples'],
+        gates: ['test/example-manifest.test.js'],
+        obtain: 'git clone https://github.com/CrispStrobe/stc and build its examples',
+        ciAvailable: false,
+        ci: 'no — the `test` job checks out emu8051-stc only',
     },
     {
         id: 'labwired-wasm', kind: 'oracle',
@@ -213,6 +310,8 @@ export const INPUTS = [
     },
     {
         id: 'amey-corpus', kind: 'fixture',
+        repository: 'Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS',
+        ciCadence: 'push',   // the `corpus` job
         what: 'The Amey-Thakur corpus — 525 real DOS assembly programs '
             + '(github.com/Amey-Thakur/8086-ASSEMBLY-LANGUAGE-PROGRAMS). The single '
             + 'largest evidence that src/i8086-asm.js handles real-world MASM/NASM '
@@ -329,6 +428,31 @@ export const INPUTS = [
         ci: 'no — deliberately, the ROMs are not ours to ship',
     },
     {
+        // THE ONLY PATH ANYTHING REACHES INSIDE THAT TREE, measured 2026-09-11:
+        // `ucsim-stc/ucsim/src/sims/s51.src/stc12_trace` and nothing else. The
+        // repository was archived to a CIFS mount during a disk purge and the
+        // 4.7 MB binary was brought back to local disk while the other 809 MB
+        // stayed archived — so this row describes a FILE, not a checkout.
+        //
+        // WHY IT HAS A ROW AT ALL. Before this it was a binary someone had put
+        // on the box: present, unnamed, unversioned, and reached by exactly one
+        // test through an ancestor walk. That is the shape that cost thirteen
+        // red master runs on the emu8051 build — an input whose identity nobody
+        // records. `digest` is printed on every run, so which binary produced a
+        // number is answerable from the log rather than from a bisect.
+        id: 'ucsim-stc12-trace', kind: 'oracle',
+        what: 'The ucsim STC12 trace binary, built with -inject support (a81091e). '
+            + 'serial-debug-e2e compares the monitor protocol against it.',
+        env: 'UCSIM_STC12_TRACE',
+        paths: [join(ROOT, 'ucsim-stc', 'ucsim', 'src', 'sims', 's51.src', 'stc12_trace'),
+            '/mnt/volume1/code/ucsim-stc/ucsim/src/sims/s51.src/stc12_trace'],
+        gates: ['test/serial-debug-e2e.test.js'],
+        obtain: 'build ucsim-stc with -inject support (a81091e), or set $UCSIM_STC12_TRACE',
+        ciAvailable: false,
+        ciCadence: false,
+        ci: 'no — ci.yml does not check this out; serial-debug-e2e skips its ucsim half there',
+    },
+    {
         id: 'blinkenrocket-fw', kind: 'fixture',
         what: 'The reference Blinkenrocket firmware hex. Without it the sound-becomes-data '
             + 'modem loop is unproven end to end.',
@@ -338,9 +462,29 @@ export const INPUTS = [
         // only -- so a firmware that was checked out AND BUILT reported as
         // ABSENT, and its gate silently did not run. That is the census's own
         // failure mode happening to the census.
-        paths: [join(HOME, 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
+        // THE CI LAYOUT IS FIRST AND IT WAS MISSING, for the second time in one
+        // day. ci.yml checks this firmware out at a pinned ref into
+        // `<repo>/blinkenrocket-firmware` -- Actions refuses a path outside the
+        // workspace -- and it is `releases/blinkenrocket_2.1.hex` that is
+        // TRACKED there; `build/main.hex` is built locally and is a 404 at that
+        // ref. So on a runner this row reported ABSENT while the firmware sat in
+        // the workspace, exactly as the emu8051 row did before it.
+        //
+        // Same author, same session, three hours apart: the row and the workflow
+        // are edited separately and nothing connects them, so fixing the pattern
+        // in one row does not stop the next one being written.
+        paths: [join(ROOT, 'blinkenrocket-firmware', 'releases', 'blinkenrocket_2.1.hex'),
+            join(HOME, 'code', 'blinkenrocket-firmware', 'build', 'main.hex'),
             '/mnt/volume1/code/blinkenrocket-firmware/build/main.hex'],
-        gates: ['test/blinkenrocket-modem-e2e.test.mjs'],
+        // MACHINE-READABLE, so `ciAvailable` can be checked rather than trusted.
+        // The `obtain` prose below says "build blinkenrocket-firmware", which no
+        // scan can match against ci.yml's `repository:` line.
+        repository: 'CrispStrobe/blinkenrocket-firmware',
+        ciCadence: 'push',   // the `test` job
+        gates: ['test/blinkenrocket-modem-e2e.test.mjs',
+            // Same oracle, second gate: the lookup test proves the ancestor walk
+            // REACHES this firmware from a worktree, where a fixed depth cannot.
+            'test/sibling-checkout-lookup.test.mjs'],
         obtain: 'build blinkenrocket-firmware; see the REF WARNING below',
         // REF WARNING, and it is not a detail. This entry said "build at ref
         // 140e2931". THAT COMMIT COULD NOT BE FOUND: not in the local clone,
@@ -354,8 +498,8 @@ export const INPUTS = [
         // reader thinks it means. Whoever wrote 140e2931 should say what it
         // was, or the pin should be replaced deliberately with a ref that
         // exists.
-        ciAvailable: false,
-        ci: 'no',
+        ciAvailable: true,
+        ci: 'yes — checked out at a pinned ref by the `test` job since 2026-09-10, which is what makes the modem end-to-end run there rather than skip',
     },
     {
         id: 'smlrc', kind: 'oracle',
@@ -470,7 +614,7 @@ export function resolve(input) {
     }
     if (fromEnv) {
         return existsSync(fromEnv)
-            ? { present: true, via: `$${input.env}=${fromEnv}` }
+            ? { present: true, via: `$${input.env}=${fromEnv}`, digest: digestOf(fromEnv) }
             : { present: false, via: `$${input.env}=${fromEnv} (set, but does not exist)` };
     }
     for (const p of input.paths) {
@@ -495,6 +639,7 @@ export function resolve(input) {
         return {
             present: true,
             via: volatile_ ? `${p} (under ${tmp}: shared and cleared on reboot)` : p,
+            digest: digestOf(p),
         };
     }
     const tried = [input.env ? `$${input.env}` : null, ...input.paths].filter(Boolean);
@@ -553,6 +698,13 @@ function snapshot(rows) {
     };
 }
 
+// `ciCadence` is deliberately NOT in the snapshot below. The rows a consumer
+// reads carry a SCHEMA, and `test/oracle-census.test.mjs` asserts every one of
+// them has a boolean `ciAvailable` -- a pinned downstream reads a missing field
+// as falsy, which is why that assertion exists. Adding a field to the wire
+// shape is a schema bump and a consumer question, not a detail; `ciCadence`
+// answers an in-repo question and stays in-repo until someone downstream needs
+// it.
 const jsonRows = (rs) => rs.map(
     ({ id, kind, present, via, gates, ci, ciAvailable, what }) =>
         ({ id, kind, present, ciAvailable, ci, via, gates, what }));
@@ -589,6 +741,7 @@ if (snapAt >= 0) {
     for (const r of rows) {
         console.log(`${pad(r.id, 20)}${pad(r.kind, 9)}${pad(r.present ? 'present' : 'ABSENT', 9)}`
             + `${pad(r.gates.length, 7)}${r.via}`);
+        if (r.digest) console.log(`${' '.repeat(20)}${r.digest}`);
     }
     const absent = rows.filter((r) => !r.present);
     const gatesLost = absent.reduce((n, r) => n + r.gates.length, 0);

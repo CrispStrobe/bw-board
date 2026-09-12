@@ -14,13 +14,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
-import { existsSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 import { INPUTS, resolve } from '../scripts/oracle-census.mjs';
+import { createHash } from 'node:crypto';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+test('environment-selected files carry the same identity as default-path files', () => {
+    const key = 'BW_CENSUS_DIGEST_TEST_PATH', previous = process.env[key];
+    const path = fileURLToPath(import.meta.url);
+    try {
+        process.env[key] = path;
+        const selected = resolve({kind: 'fixture', env: key, paths: []});
+        assert.equal(selected.present, true);
+        assert.equal(selected.digest, 'sha256:' + createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16));
+        assert.equal(selected.digest, resolve({kind: 'fixture', paths: [path]}).digest);
+        process.env[key] = ROOT;
+        assert.equal(resolve({kind: 'fixture', env: key, paths: []}).digest, null);
+    } finally {
+        if (previous === undefined) delete process.env[key]; else process.env[key] = previous;
+    }
+});
 
 test('every file the census claims to gate actually exists', () => {
     for (const input of INPUTS) {
@@ -30,6 +47,82 @@ test('every file the census claims to gate actually exists', () => {
                 `${input.id} names "${g}", which is not in the tree. The census is reporting on `
                 + 'a file that no longer exists.');
         }
+    }
+});
+
+/**
+ * Which runs actually carry a given checkout: the job that contains it, and
+ * whether that job is gated on an event name.
+ *
+ * Reading the workflow rather than trusting a field is the whole point -- the
+ * two rows this caught had a hand-maintained claim that had drifted from the
+ * file it describes.
+ */
+function cadenceOf(workflow, repo) {
+    let job = null;
+    let current = null;
+    for (const line of workflow.split('\n')) {
+        const j = /^  ([a-z][a-z0-9-]*):\s*$/.exec(line);
+        if (j) { current = { name: j[1], gated: false }; }
+        if (current && /^    if:.*event_name/.test(line)) {
+            current.gated = /schedule|workflow_dispatch/.test(line);
+        }
+        if (current && new RegExp(`^\\s+repository:\\s*${repo.replace(/[/.]/g, '\\$&')}\\s*$`).test(line)) {
+            job = current;
+        }
+    }
+    if (!job) return null;
+    return job.gated ? 'schedule' : 'push';
+}
+
+test('a repo ci.yml checks out is a row that CLAIMS ci availability', () => {
+    // THE DRIFT THIS CATCHES HAPPENED TWICE IN ONE DAY, to two different rows,
+    // by the same hand three hours apart. `blinkenrocket-fw` said
+    // `ciAvailable: false` and `ci: 'no'` while ci.yml checked the firmware out
+    // at a pinned ref; `emu8051` claimed the CI layout in its prose while its
+    // paths named only two developer locations. The row and the workflow are
+    // edited separately and nothing connected them, so fixing the pattern in
+    // one row did not stop the next one being written.
+    //
+    // MATCHED ON `owner/name`, WHICH IS WHY ROWS NOW CARRY IT. Two earlier
+    // attempts at this comparison failed on the prose: a substring match on
+    // "8086" found nine rows that merely MENTION 8086, and a strict match
+    // against the `obtain` sentence missed blinkenrocket entirely because its
+    // sentence says "build blinkenrocket-firmware" with no URL. A field a
+    // machine can read is the difference between a check and a guess.
+    const workflow = readFileSync(join(ROOT, '.github/workflows/ci.yml'), 'utf8');
+    const checkedOut = [...workflow.matchAll(/repository:\s*([^\s#]+)/g)].map((m) => m[1]);
+    assert.ok(checkedOut.length >= 5,
+        `only ${checkedOut.length} checkouts found in ci.yml — has the scan stopped reading?`);
+
+    const byRepo = new Map(INPUTS.filter((i) => i.repository).map((i) => [i.repository, i]));
+    for (const repo of checkedOut) {
+        const row = byRepo.get(repo);
+        assert.ok(row,
+            `ci.yml checks out ${repo} and no census row names it. Add `
+            + "`repository: '" + repo + "'` to the row for that input, so its ciAvailable "
+            + 'claim can be checked rather than trusted.');
+        assert.equal(row.ciAvailable, true,
+            `${row.id} says ciAvailable: false, but ci.yml checks out ${repo}. A reader `
+            + 'deciding whether CI can be relied on for this input gets the wrong answer, '
+            + 'and nobody adds --require for an input the census says is not there.');
+
+        // AND ON WHICH RUNS, because `ciAvailable` is a boolean over four job
+        // cadences and the prose already knew what the field could not say:
+        // the z80 and 65c02 rows read "on a schedule rather than per push"
+        // while the field was a bare `true`. **A field that cannot express what
+        // the comment beside it knows is a split waiting to be discovered by
+        // whoever adds `--require`** -- a per-push run would fail on a
+        // schedule-only oracle and the message would name a missing INPUT
+        // rather than a missing distinction.
+        //
+        // Derived from the workflow, never typed: the job that holds the
+        // checkout, and whether that job is gated on an event name.
+        const cadence = cadenceOf(workflow, repo);
+        assert.equal(row.ciCadence, cadence,
+            `${row.id} records ciCadence '${row.ciCadence}' but ci.yml checks ${repo} out `
+            + `in a job that runs on '${cadence}'. A --require for this input would fail `
+            + 'on every run of the other kind.');
     }
 });
 
@@ -209,4 +302,53 @@ test('a hit under the system temp dir is annotated as volatile', () => {
             `${i.id} resolved to ${hit}, under the shared temp dir, without saying so — `
             + 'a reader cannot tell a stable location from a volatile one');
     }
+});
+
+test('a present FILE oracle reports the digest of what it found', () => {
+    // PRESENCE IS NOT IDENTITY. A row saying `present` cannot say whether the
+    // file is the same one CI has, and on 2026-09-11 that cost thirteen
+    // consecutive red master runs: a suite bound to a sibling emu8051 checkout
+    // on the box, passed 25/25 locally, and failed on CI, which builds from a
+    // pinned ref. Nothing in the local run said which build produced the green.
+    //
+    // THE ASSERTION IS A RELATION, NOT A COUNT, AND THAT IS THE SECOND LESSON
+    // FROM THE SAME DEFECT. The first version of this test asserted `>= 3`
+    // oracles carry a digest — a threshold read off THIS BOX, which has more
+    // inputs present than a runner does. It passed here and failed on CI with
+    // "only 2 present oracles carry a digest", which is a fact about the runner
+    // and not about the census. A count of what happens to be installed is a
+    // claim about the installation; the claim worth making is that EVERY present
+    // file has a digest and NO present directory does, which holds wherever this
+    // runs and however many inputs are there.
+    const rows = INPUTS.map(i => ({ id: i.id, ...resolve(i) }));
+    const present = rows.filter(r => r.present && typeof r.via === 'string');
+
+    assert.ok(present.length >= 1,
+        'no oracle is present at all, so every relation below holds vacuously');
+
+    const pathOf = r => (r.via.startsWith('$') ? r.via.split('=').slice(1).join('=') : r.via)
+        .split(' ')[0];
+
+    let files = 0, dirs = 0;
+    for (const r of present) {
+        const p = pathOf(r);
+        if (!p || !existsSync(p)) continue;              // a service, or a path with no file
+        if (statSync(p).isDirectory()) {
+            dirs++;
+            assert.equal(r.digest ?? null, null,
+                `${r.id} resolves to a DIRECTORY (${p}) and reports a digest — hashing a tree `
+                + 'is a different and more expensive claim than hashing a file');
+        } else {
+            files++;
+            assert.match(String(r.digest), /^(sha256:[0-9a-f]{16}|unreadable \(.+\))$/,
+                `${r.id} is a present FILE at ${p} and reports ${JSON.stringify(r.digest)} — `
+                + 'neither a sha256 nor a named refusal. A fabricated digest is worse than none.');
+        }
+    }
+
+    // Vacuity, stated as what was actually examined rather than as a threshold:
+    // if neither shape was seen, the loop above asserted nothing at all.
+    assert.ok(files + dirs >= 1,
+        `${present.length} oracles report present but none resolved to a file or a directory `
+        + 'on disk, so neither rule above was exercised');
 });

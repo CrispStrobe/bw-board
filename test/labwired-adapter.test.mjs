@@ -285,7 +285,8 @@ describe('labwired-wasm boundary-A adapter', { skip }, () => {
             target.step('insn', 1); target.runFor(1_000_000n);
             const addr = target.regs().pc;
             target.reset();
-            assert.equal(target.setBreakpoint({ kind: 'code', addr }), undefined);
+            const handle = target.setBreakpoint({ kind: 'code', addr });
+            assert.equal(typeof handle, 'number');
             let halt = null;
             target.onHalt((e) => { halt = e; });
             target.run();

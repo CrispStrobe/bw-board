@@ -28,6 +28,7 @@
  * @module
  */
 import { disasmI8086 } from './i8086-disasm.js';
+import { installInstructionDebugEvents } from './instruction-debug-events.js';
 import { renderMode, likelyMode } from './i8086-cga.js';
 
 /**
@@ -187,10 +188,94 @@ export function labelsFromAssembly(result, opts = {}) {
     return out;
 }
 
+import { replayAccepted, replayRefused } from './debug-replay-contract.js';
+
 export function createI8086DebugTarget(adapter, opts = {}) {
+    /**
+     * Whatever port observer the MACHINE already had. Captured once, before this
+     * target installs anything, so the watch handler can chain to it instead of
+     * replacing it. See the assignment site for why capturing later is wrong.
+     */
+    const priorPortAccess = adapter?.machine?.hooks?.onPortAccess ?? null;
+
+    /**
+     * And the same for the interrupt observer, for the same reason. `2a5a607`
+     * fixed the port hook; this is the other hook on the same object, assigned
+     * over in the same function, and it stayed only because the test that caught
+     * the first one exercises ports.
+     */
+    const priorInterrupt = adapter?.machine?.hooks?.onInterrupt ?? null;
+
     const machine = adapter.machine;
     const cpu = machine.cpu;
+    const cpuId = opts.cpuId || 'i8086';
 
+    /**
+     * THE SHARED EVENT MODULE, which this target was the last one not to use.
+     * avr8js uses it here; m6502 and z80 use it downstream. Everything it
+     * publishes -- instruction retires, memory and port accesses, a monotonic
+     * event clock -- existed only as a hand-rolled equivalent elsewhere.
+     *
+     * `addressMask` is why this could not be done until now: the module masked
+     * memory addresses to sixteen bits, so this core's fetches at 0xF8000 arrived
+     * as 0x8000 -- right for exactly the first 64K, which is where a test
+     * program's operands live and not where its code does.
+     *
+     * ITS CLOCK AND THIS TARGET'S AGREE, INCLUDING AFTER A REWIND. Both read
+     * machine.cycles and both stamp `i8086-cycles`, and since this target passes
+     * `rewindLabel: 'rewind'` both stamp `-rewind-N` after a backward move --
+     * asserted in i8086-clock-agreement, not left to this comment.
+     *
+     * WHAT THIS PARAGRAPH USED TO SAY WAS THAT THEY DIVERGED, one counting
+     * `-rewind-` and the module `-reset-`. That was true when it was written and
+     * stopped being true when the label became a parameter every core passes.
+     * It is recorded because a comment describing a defect that has been repaired
+     * is worse than no comment: it reads as a live warning, and the next person
+     * either works around a seam that is closed or distrusts the pair that agree.
+     *
+     * They remain TWO counters. Nothing forces them to bump together; they do
+     * because the only thing that moves machine.cycles backwards is a restore,
+     * which both observe. That is why the agreement is a test rather than an
+     * argument.
+     */
+    const debugEvents = installInstructionDebugEvents({
+        cpu, machine, cpuId, timeDomain: 'i8086-cycles', port: true,
+        // REVIEWED AND FLIPPED 2026-09-11. This core's `reset()` ADVANCES the clock
+        // — the backward moves are `loadState` and the explicit bump in
+        // `restoreCheckpoint` — so the epoch it opens is a REWIND, never a reset.
+        // It was `'reset'` for one commit as an explicit no-op while the parameter
+        // became required, with a note routing the correction here.
+        //
+        // The evidence is downstream: brickwright-lite's `i8086-debug-events`
+        // asserts `i8086-cycles-rewind-1` after restoring an older checkpoint, and
+        // the no-op produced `i8086-cycles-reset-1`. That expectation is not a
+        // preference — lite renamed this epoch on 2026-09-10 precisely because the
+        // clock does not go backwards on reset, and its comment says the 8051's
+        // `-reset-` is correct for ITS mechanism and must not be converged with
+        // this one.
+        //
+        // avr8js is still `'reset'` and still unreviewed; that is its session's.
+        rewindLabel: 'rewind',
+        addressMask: 0xfffff,
+        // A write fact that says only what the address BECAME cannot tell a
+        // no-op write from a real one, and 8086 code makes no-op writes
+        // constantly through read-modify-write and masked register updates. The
+        // module defaults this off because adding the field changes the fact
+        // shape for every subscriber; this target wants the diff and pays the
+        // extra read per write for it, and only while somebody is listening.
+        captureWriteBefore: true,
+        pcOf: c => c.pc & 0xfffff,
+        clock: () => machine.cycles,
+        captureRegisters: () => machine._architecturalRegisters(),
+        captureInstruction: address => ({
+            address,
+            ...disasmI8086(a => machine._read(a & 0xfffff), address, {ip: cpu.ip})
+        })
+    });
+
+    /** Last rendered frame and the key it was rendered for. See video(). */
+    let cachedVideoKey = null;
+    let cachedVideoFrame = null;
     let runState = 'halted';
     let pendingStep = null;
     const haltListeners = [];
@@ -198,7 +283,239 @@ export function createI8086DebugTarget(adapter, opts = {}) {
     /** Linear address -> symbol name, or null. See setSymbols(). */
     let labels = null;
     let nextBpId = 1;
+
+    // ─── The replay surface ─────────────────────────────────────────────
+    // Declared in debug-replay-contract.js. The APPLY half is a PORT of the
+    // implementation a downstream consumer has been running against this target
+    // for months, moved here so the two stop being maintained separately. (An
+    // earlier version of this comment said "so the copy can be deleted". That
+    // was true of the APPLY HALF and false of the FILE: the downstream copy
+    // holds ~196 lines this tree has nothing for — checkpoint capture, a
+    // video-frame cache, a DOS trap layer, disassembler integration — so it is
+    // a graft, not a deletion.) The RECORD half is new: downstream records at
+    // the driver, so a key delivered straight to the target was never logged.
+    //
+    // THE EPOCH IS A REWIND EPOCH AND IS NOW NAMED ONE. It was
+    // `i8086-cycles-reset-N` until 2026-09-10, ported in under that name from
+    // the downstream copy, and the name was wrong: this epoch does not bump on
+    // a reset. i8086-machine.js:1130 resets the CPU and does `this.cycles += 4`
+    // — it ADVANCES by the reset sequence's cost, exactly as the 6502's does.
+    // The only backward move is `this.cycles = s.cycles` in loadState
+    // (i8086-machine.js:1817); the constructor's `= 0` at :527 is the only
+    // other assignment. So it bumps on a REWIND, which is what the z80 and 6502
+    // targets have always called it, and this target has stopped being the odd
+    // one out.
+    //
+    // A LOG RECORDED BEFORE THAT RENAME IS NOT REPLAYABLE, and there is no
+    // migration. This is written here rather than only in a commit message
+    // because the person who needs it is someone staring at a replay that
+    // refuses for no visible reason. A replayer compares `domain` by EQUALITY
+    // to decide whether two facts came from the same timeline; a log carrying
+    // `i8086-cycles-reset-2` and a live run producing `i8086-cycles-rewind-2`
+    // describe the same era and will not match. Re-record. The alternative was
+    // keeping a name that says "reset" about something that is not a reset, in
+    // a surface four targets now copy from, which gets more expensive with each
+    // one.
+    //
+    // NOT EVERY `-reset-` IN THIS TREE IS WRONG. The 8051 adapter's
+    // `8051-input-ns-reset-N` is CORRECT and must not be "converged" with this:
+    // measured, its epoch bumps at exactly one place, inside its `reset()`
+    // (emu8051-adapter.js), and that reset takes its clock to zero. Its epoch
+    // really is a reset epoch. The name matches the mechanism on both targets
+    // now, which is the point — not that all four should read alike.
+    /** Subscribers to the EVENT half; the interrupt hook installs for them too. */
+    let debugEventSubscribers = 0;
+    let eventTimeEpoch = 0;
+    /**
+     * The event clock's domain name. Written out at three sites once the
+     * checkpoint needs it, so it is named here instead: a restore starts a new
+     * epoch, and a reader comparing two facts must be able to tell that they
+     * came from different timelines rather than from one that jumped.
+     */
+    const eventDomain = () =>
+        (eventTimeEpoch ? `i8086-cycles-rewind-${eventTimeEpoch}` : 'i8086-cycles');
+    /**
+     * State this target cannot capture, because it does not live in the machine.
+     * A live board input source is sampled directly and never logged, so a
+     * checkpoint taken over one is missing inputs it cannot even enumerate.
+     * Declining is the point: a snapshot that silently omits state restores a
+     * machine that looks right and is not.
+     */
+    /**
+     * A BOUNDARY SERVICE MAY OWN THE INSTRUCTION STEP. Some hosts put a layer
+     * between this target and the machine -- work that must happen at an
+     * instruction boundary before the hardware steps, a DOS trap layer being the
+     * case this exists for. Stepping the machine directly runs the CPU and not
+     * the service: the program executes, its system calls never happen, and
+     * nothing reports it.
+     *
+     * NOTHING IN THIS REPOSITORY INSTALLS ONE, which makes it UNINSTALLED rather
+     * than dead -- the same standing as `captureWriteBefore`, which nothing here
+     * sets either. The distinction is whether anything CAN install it, and a
+     * downstream vendoring of this file does. It was deleted once as an
+     * unreachable branch, on a measurement taken only in this repository.
+     *
+     * Kept as one replaceable operation rather than a Proxy over the machine:
+     * runFor reads machine time every instruction, and proxying those reads
+     * makes a direct execution loop pay for service dispatch repeatedly.
+     */
+    const executeStep = typeof adapter?.step === 'function'
+        ? () => adapter.step()
+        : () => machine.step();
+    /**
+     * State this target cannot capture, in EITHER of its two forms: a live board
+     * input source sampled directly and never logged, or a boundary service
+     * holding functional state outside I8086Machine. Declining is the point --
+     * a checkpoint that silently omits state restores a machine that looks right
+     * and is not.
+     */
+    const hasUncapturedInputState = () => typeof adapter?.step === 'function'
+        || adapter?.unloggedBoardInputs?.() === true;
+    let lastEventTicks = -1;
+    /** Levels only — see publishInputLevel. Events must not consult this. */
+    const observedInputs = new Map();
+    let inputListeners = [];
+
+    /**
+     * The advancing stamp: reading it is how a rewind gets noticed.
+     *
+     * A rewind CLEARS the dedup map as well as bumping the epoch. A map that
+     * survived would hold levels from an abandoned timeline, and the first
+     * genuine change afterwards that happened to match one would be dropped
+     * silently — a log shorter than the run, with nothing to show for it.
+     */
+    const ownClock = (ticks = machine.cycles) => {
+        if (ticks < lastEventTicks) eventTimeEpoch++;
+        lastEventTicks = ticks;
+        return {
+            ticks,
+            domain: eventDomain(),
+            hz: machine.clockHz
+        };
+    };
+
+    /**
+     * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
+     *
+     * `opts.debugTime` lets an integrator hand this target the clock the rest
+     * of that integration already uses, instead of this target owning a second
+     * one. This particular target does not need it — its one epoch already
+     * serves events, checkpoints and replay facts alike, which is why its
+     * downstream graft was safe — but it takes the same shape as its siblings
+     * so that the three read alike and an integrator does not have to know
+     * which of them happens to be the special case.
+     *
+     * With a clock injected, the domain string is a property of the
+     * INTEGRATION rather than of this target. A test here asserting
+     * `i8086-cycles-rewind-N` is describing the DEFAULT wiring.
+     */
+    const clock = typeof opts.debugTime === 'function' ? opts.debugTime : ownClock;
+
+    let lastDomain = null;
+
+    /**
+     * Take the stamp, and CLEAR THE DEDUP MAP WHENEVER THE ERA CHANGES.
+     *
+     * The map must not survive a rewind: it would hold levels from an abandoned
+     * timeline, and the first genuine change afterwards whose value happened to
+     * match one would be dropped without trace.
+     *
+     * The signal is the DOMAIN STRING, not a tick regression. An injected clock
+     * may know about a rewind this target cannot see — a downstream one is
+     * bumped explicitly by `restoreCheckpoint` — so watching the domain
+     * inherits every trigger the clock has rather than only the one this target
+     * could detect for itself. It is also why the era gate lives HERE rather
+     * than inside `ownClock`: an injected clock is not ours to put a side
+     * effect in.
+     *
+     * WHAT REMAINS UNCOVERED, stated rather than hidden: a clock whose own
+     * detection is deferred leaves a window where a rewind has happened and the
+     * domain has not moved yet, and an input arriving inside it is stamped on
+     * the old era. Narrower than detecting nothing.
+     */
+    const eventTime = (ticks) => {
+        const time = ticks === undefined ? clock() : clock(ticks);
+        if (lastDomain !== null && time.domain !== lastDomain) observedInputs.clear();
+        lastDomain = time.domain;
+        return time;
+    };
+
+    /**
+     * SERIAL IS RECORDED AT THE ADAPTER, which is where the bypass was.
+     *
+     * Same change as the z80 and 6502 targets and for the same reason: a caller
+     * holding the adapter reached the machine without passing anything that
+     * could log it. The adapter is the one place every caller passes through.
+     *
+     * This target keeps its `machine.serialIn` fallback for the many callers
+     * that construct it over a bare `{machine}` — there is no adapter to wrap
+     * there, and no bypass either, because there is no second route in.
+     *
+     * `rawSendSerial` is the adapter's true original and is what REPLAY uses;
+     * `previousSendSerial` is whatever was there at construction, so two
+     * targets over one adapter CHAIN and each records a live byte once without
+     * a replay in one leaking a fact into the other.
+     */
+    const previousSendSerial = typeof adapter?.sendSerial === 'function'
+        ? adapter.sendSerial.bind(adapter) : null;
+    const rawSendSerial = adapter?.sendSerial?.rootDebugSendSerial ?? previousSendSerial;
+    if (previousSendSerial) {
+        const wrapped = byte => {
+            const value = byte & 0xff;
+            const accepted = previousSendSerial(value) === true;
+            if (accepted) publishInputEvent('i8086.serial', {byte: value});
+            return accepted;
+        };
+        wrapped.rootDebugSendSerial = rawSendSerial;
+        adapter.sendSerial = wrapped;
+    }
+
+    const emitInput = (producer, payload, time) => {
+        const fact = {time, producer, payload: {...payload}};
+        // A copy each: a recorder that stores the object and a listener that
+        // mutates it would otherwise corrupt the log in place.
+        for (const listener of inputListeners) {
+            listener({...fact, time: {...fact.time}, payload: {...fact.payload}});
+        }
+    };
+
+    /**
+     * A LEVEL: a GPIO bit that is already high and is set high again is one
+     * state, not two facts.
+     *
+     * The stamp is taken BEFORE the dedup gate, never after. A suppressed input
+     * that skipped the stamp would never notice the timeline moved.
+     */
+    const publishInputLevel = (producer, key, payload) => {
+        const time = eventTime();
+        const signature = JSON.stringify(payload);
+        if (observedInputs.get(key) === signature) return;
+        observedInputs.set(key, signature);
+        emitInput(producer, payload, time);
+    };
+
+    /**
+     * An EVENT: a scancode, a byte, an NMI. The same scancode twice is
+     * autorepeat and the same byte twice is two characters; deduplicating
+     * either would replay a transcript with something missing.
+     */
+    const publishInputEvent = (producer, payload) => {
+        emitInput(producer, payload, eventTime());
+    };
     const halt = (info) => { runState = 'halted'; for (const cb of haltListeners) cb(info); };
+
+    /**
+     * Recover the segment-relative position represented by a linear address.
+     * The modular distance keeps a CS window that crosses 0xfffff in the same
+     * segment. Disassembly and listing progression must share this choice.
+     */
+    const codePosition = addr => {
+        const linear = addr & 0xfffff;
+        const currentSegmentBase = (cpu.cs << 4) & 0xfffff;
+        const currentIp = (linear - currentSegmentBase) & 0xfffff;
+        const ip = currentIp <= 0xffff ? currentIp : linear & 0xffff;
+        return {linear, segmentBase: (linear - ip) & 0xfffff, ip};
+    };
 
     // Write watchpoints trap TRUE writes by wrapping the core's write
     // callback (installed only while a watch exists) — z80/emu8051 parity.
@@ -226,6 +543,21 @@ export function createI8086DebugTarget(adapter, opts = {}) {
      * gave up rather than what it was about to.
      */
     const syncEventHooks = () => {
+        // CHAINED, NOT OVERWRITTEN. This used to assign the watch handler over
+        // `machine.hooks.onPortAccess` and, with no watches, assign `null` —
+        // which SILENCED whatever the machine already had installed. Measured:
+        // a machine constructed with its own `onPortAccess` saw its hook fire,
+        // and stopped the moment a debug listener registered. A debugger that
+        // silences the instrumentation already present is worse than one that
+        // observes nothing, because that hook is how something else was watching.
+        //
+        // `priorPortAccess` is captured ONCE at construction, not here: this
+        // assignment runs again whenever the watch set changes, and capturing at
+        // the assignment would capture OUR OWN wrapper the second time round and
+        // chain it to itself.
+        //
+        // Same defect as `sendSerial` had before `rootDebugSendSerial`; this is
+        // the accessor where the chaining was still missing.
         machine.hooks.onPortAccess = portWatches.size
             ? (ev) => {
                 for (const [id, w] of portWatches) {
@@ -233,15 +565,39 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     if (w.dir && w.dir !== ev.dir) continue;
                     eventHit = { cause: 'port', bp: id, ...ev };
                 }
+                if (priorPortAccess) priorPortAccess(ev);
             }
-            : null;
-        machine.hooks.onInterrupt = intWatches.size
+            : priorPortAccess ?? null;
+        // TWO CONSUMERS, ONE HOOK. The watch path predates the event path and
+        // must not depend on it, so the hook installs for either -- a target
+        // whose interrupt observation worked only while somebody was subscribed
+        // would satisfy every publication test and fail the breakpoint.
+        //
+        // `publishInterrupt` is itself inert without listeners, so the event half
+        // costs a call and a `listeners.size` check on a path that fires per
+        // delivered interrupt rather than per instruction.
+        // CHAINED, NOT OVERWRITTEN -- see priorPortAccess above. Also note the
+        // condition: without `priorInterrupt` here, clearing the last watch wrote
+        // `null` over the machine's own hook and erased it for good.
+        //
+        // OUR OWN BOOKKEEPING FIRST, FOREIGN CALLBACKS AFTER -- the same order
+        // the port chain above uses, and the reason is not symmetry for its own
+        // sake. `eventHit` is a pure assignment that cannot throw; `priorInterrupt`
+        // is somebody else's function and `publishInterrupt` runs somebody else's
+        // listeners. Calling either of those before the watch scan means one
+        // throwing observer costs the debugger the breakpoint it was holding --
+        // the user asked to stop on vector 0x08, an unrelated hook threw, and
+        // execution ran on with nothing recorded. Scan first and that cannot
+        // happen, whatever the foreign code does.
+        machine.hooks.onInterrupt = (intWatches.size || debugEventSubscribers || priorInterrupt)
             ? (ev) => {
                 for (const [id, w] of intWatches) {
                     if (w.vector != null && w.vector !== ev.vector) continue;
                     if (w.source && w.source !== ev.source) continue;
                     eventHit = { cause: 'interrupt', bp: id, ...ev };
                 }
+                debugEvents.publishInterrupt({vector: ev.vector, source: ev.source});
+                if (priorInterrupt) priorInterrupt(ev);
             }
             : null;
     };
@@ -298,6 +654,31 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 breakpoints: machine.hooks
                     ? ['code', 'write', 'port', 'int']
                     : ['code', 'write'],
+                // RESTORED AFTER THE MODULE ADOPTION TOOK THEM WITH THE
+                // PUBLICATION. Both mechanisms stayed in this file and both
+                // declarations left with the code that used to publish, so every
+                // capability-driven consumer fail-closed on a target that works.
+                //
+                // `runTo` is the 20-bit physical space: the run-to mechanism is
+                // the code breakpoint above, and setBreakpoint accepts any
+                // address the bus can carry.
+                runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xfffff,
+                    stopSides: ['before'], installation: 'sync'}],
+                // WHAT IS ACTUALLY PUBLISHED, which is not what lite declared
+                // before the adoption. It listed 'interrupt' too; the shared
+                // module has no interrupt vocabulary -- zero occurrences -- so
+                // this target no longer produces one. Declaring it here would
+                // restore the claim without the fact, which is the same defect
+                // in the opposite direction and the harder one to find.
+                // 'interrupt' is back because publishInterrupt exists again --
+                // the claim returns with the fact, not before it.
+                events: ['instruction', 'memory', 'port', 'interrupt'],
+                // Declared only when the machine can actually checkpoint AND
+                // nothing outside it holds state. Advertising a recording a
+                // caller cannot complete is the same defect as advertising a
+                // breakpoint that never fires.
+                recording: !hasUncapturedInputState() && machine.canCheckpoint?.()
+                    ? ['checkpoint', 'restore'] : [],
                 timeFreezes: true,
                 consumes: [],
                 // Declared only when the machine can actually take a key. A
@@ -352,7 +733,13 @@ export function createI8086DebugTarget(adapter, opts = {}) {
          * leaves every modifier stuck down.
          */
         keyIn(scancode) {
-            return typeof machine.keyIn === 'function' ? machine.keyIn(scancode) : false;
+            if (typeof machine.keyIn !== 'function') return false;
+            const accepted = machine.keyIn(scancode);
+            // Only a key the machine TOOK is a fact. A board with no keyboard
+            // returns false, and logging that would replay a keystroke that
+            // never reached anything.
+            if (accepted === true) publishInputEvent('i8086.key', {scancode});
+            return accepted;
         },
 
         /**
@@ -374,8 +761,377 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         },
 
         setInput(chip, port, bit, level) {
-            return typeof machine.setInput === 'function'
-                ? machine.setInput(chip, port, bit, level) : false;
+            if (typeof machine.setInput !== 'function') return false;
+            const accepted = machine.setInput(chip, port, bit, level);
+            if (accepted === true) {
+                publishInputLevel('i8086.gpio', `${chip}.${port}.${bit}`,
+                    {chip, port, bit, level});
+            }
+            return accepted;
+        },
+
+        /**
+         * A non-maskable interrupt, driven by the host rather than by the board.
+         *
+         * The downstream target has had this for as long as the replay surface
+         * has; it is here so that copy can go. `machine.nmi()` sets a pending
+         * flag (i8086-machine.js:1226) and returns nothing, so the target
+         * reports true for "delivered" rather than passing undefined through.
+         */
+        nmi() {
+            if (typeof machine?.nmi !== 'function') return false;
+            machine.nmi();
+            publishInputEvent('i8086.nmi', {});
+            return true;
+        },
+
+        /**
+         * A received serial byte, RECORDED on the way in.
+         *
+         * The target had no serial entry point, so a byte reaching the machine
+         * through `adapter.sendSerial` passed nothing that could log it. THE
+         * BYPASS IS STATED RATHER THAN CLAIMED CLOSED: a caller holding the
+         * adapter can still call it directly and will not be recorded.
+         */
+        sendSerial(byte) {
+            // With an adapter this delegates to the WRAPPED method, which is
+            // what records; publishing here as well would log a byte twice for
+            // a caller who came through the target rather than round it.
+            //
+            // Without one — several callers construct this target over a bare
+            // {machine} — it goes straight to machine.serialIn and records
+            // here, because there is no adapter to have wrapped and no second
+            // route for a caller to take. i8086-adapter.js:74 is itself a
+            // one-line delegation to the same method.
+            if (typeof adapter?.sendSerial === 'function') {
+                return adapter.sendSerial(byte & 0xff) === true;
+            }
+            if (typeof machine?.serialIn !== 'function') return false;
+            const accepted = machine.serialIn(byte & 0xff) === true;
+            if (accepted) publishInputEvent('i8086.serial', {byte: byte & 0xff});
+            return accepted;
+        },
+
+        /**
+         * The RECORD half. `onDebugInput` is the name with a consumer:
+         * downstream's `subscribeDebugTargetInputs` returns null without it.
+         *
+         * @param {(fact: {time: object, producer: string, payload: object}) => void} listener
+         * @returns {() => void} unsubscribe
+         */
+        /**
+         * SESSION-SCOPED REASONS THIS TARGET CANNOT REPLAY, collected by
+         * `replaySupport`. Empty when there are none.
+         *
+         * A LIVE BOARD IS THE CASE, and it is the one the contract module named in
+         * the abstract months before anyone measured it: a board changes input nets
+         * OUTSIDE the debug target, so a restored run silently diverges from the
+         * recorded one. The record half here covers this target's own entry points
+         * -- the adapter's `syncInputs` is a different class of input and nothing
+         * logs it.
+         *
+         * Until now this target would record such a session, accept a replay, and
+         * reproduce a run whose board inputs were never in the log, with nothing
+         * saying so. A downstream consumer has declared it for months, as a
+         * CHECKPOINT refusal; there is no checkpoint API here, and `replaySupport`
+         * is the slot that does exist.
+         *
+         * NOT A CLAIM THAT RECORDING THEM IS NEXT. Logging every polled pin is what
+         * the 8051's deduplication exists to survive, and it is a design question.
+         * This converts a silent wrong answer into a stated refusal.
+         *
+         * @returns {string[]}
+         */
+        replayRefusalReasons() {
+          return adapter?.unloggedBoardInputs?.()
+            ? ['live board input sampling is not logged']
+            : [];
+        },
+
+        /**
+         * The EVENT half, mirroring onDebugInput below. Delegated rather than
+         * reimplemented: a second publisher of the same facts is how two
+         * vocabularies for one thing begin.
+         */
+        onDebugEvent(listener) {
+            // The module's hooks install themselves on first listener; the
+            // machine-level interrupt hook is THIS file's and has to be told,
+            // or a subscriber arriving after construction sees no interrupts.
+            const off = debugEvents.onDebugEvent(listener);
+            debugEventSubscribers++;
+            syncEventHooks();
+            return () => { off?.(); debugEventSubscribers--; syncEventHooks(); };
+        },
+
+        onDebugInput(listener) {
+            if (typeof listener !== 'function') {
+                throw new TypeError('debug input listener must be a function');
+            }
+            inputListeners.push(listener);
+            return () => { inputListeners = inputListeners.filter(l => l !== listener); };
+        },
+
+        /** The event clock, READ without advancing it. See eventTime(). */
+        /**
+         * A checkpoint of the MACHINE plus this target's own bookkeeping.
+         *
+         * The machine's envelope is not enough on its own: run state, a pending
+         * step and the event-clock epoch live here, are not derivable from the
+         * machine, and a restore without them single-steps into the wrong place.
+         */
+        captureCheckpoint() {
+            if (hasUncapturedInputState()) {
+                return {code: 'INCOMPLETE_CHECKPOINT_STATE',
+                    refused: 'a live board input source is sampled outside the machine and cannot be captured'};
+            }
+            const checkpoint = machine.captureCheckpoint();
+            if (checkpoint.refused) return checkpoint;
+            // The debug event clock, not the machine's base time: a consumer
+            // comparing this against a debug fact must get one clock, not two.
+            checkpoint.time = {ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz};
+            checkpoint.debugger = {runState, pendingStep: pendingStep ? {...pendingStep} : null,
+                eventTimeEpoch, lastEventTicks};
+            return checkpoint;
+        },
+
+        restoreCheckpoint(snapshot) {
+            if (!snapshot || !snapshot.debugger) {
+                return {code: 'INVALID_CHECKPOINT', refused: 'checkpoint has no 8086 debugger state'};
+            }
+            if (hasUncapturedInputState()) {
+                return {code: 'INCOMPLETE_CHECKPOINT_STATE',
+                    refused: 'cannot restore over a live board input source outside the machine'};
+            }
+            // VALIDATE BEFORE THE MACHINE MUTATES. machine.restoreCheckpoint is
+            // itself atomic -- it refuses without applying -- so the only way to
+            // half-apply is to let the machine succeed and then reject the
+            // debugger half. Both halves are checked first.
+            const state = snapshot.debugger.runState;
+            if (state !== 'running' && state !== 'halted') {
+                return {code: 'INVALID_CHECKPOINT', refused: 'invalid debugger run state'};
+            }
+            const stepState = snapshot.debugger.pendingStep;
+            if (stepState !== null && (!stepState || typeof stepState !== 'object' ||
+                !['insn', 'over', 'out'].includes(stepState.kind))) {
+                return {code: 'INVALID_CHECKPOINT', refused: 'invalid pending instruction step'};
+            }
+            const machineRefusal = machine.restoreCheckpoint(snapshot);
+            if (machineRefusal) return machineRefusal;
+            runState = state;
+            pendingStep = stepState ? {...stepState} : null;
+            syncEventHooks();
+            // A restore is a BRANCH in history, not permission to run the event
+            // clock backwards. A fresh epoch renames the domain, so two facts
+            // from different timelines cannot be read as one timeline that
+            // jumped. eventTime's own rewind detection cannot see this case: a
+            // restore landing ABOVE the last stamped tick looks like ordinary
+            // forward motion.
+            eventTimeEpoch++;
+            lastEventTicks = machine.cycles;
+            watchHit = null;
+            eventHit = null;
+            return true;
+        },
+
+        /** Retire exactly one instruction boundary, for verified replay. */
+        replayInstruction() {
+            if (hasUncapturedInputState() || !machine.canCheckpoint?.()) {
+                return {accepted: false, code: 'unsupported-replay',
+                    reason: '8086 machine state is not completely replayable'};
+            }
+            if (cpu.halted) {
+                return {accepted: false, code: 'halted-without-instruction',
+                    reason: 'the halted CPU cannot retire an instruction without a recorded wake input'};
+            }
+            const before = machine.cycles;
+            // machine.step, NOT executeStep, and the reason is three lines above:
+            // this method refuses outright when a boundary service exists, so a
+            // seam here could never be reached. Routing through it anyway would
+            // be a branch that cannot be taken -- which is the exact shape whose
+            // deletion cost the seam in the first place, and it is no better for
+            // being on the other side of the argument.
+            machine.step();
+            return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
+        },
+
+        debugTime() {
+            return {
+                ticks: machine.cycles,
+                domain: eventDomain(),
+                hz: machine.clockHz
+            };
+        },
+
+        /**
+         * Pure preflight: can this exact fact be applied right now?
+         *
+         * Consumed by the runner before it decides to replay at all, which is
+         * why it stays a separate member rather than folding into the apply
+         * half. Ported unchanged in behaviour from the downstream copy.
+         */
+        canApplyReplayInput(input) {
+            return this.replayInputRefusal(input) === null;
+        },
+
+        /**
+         * WHY THE REFUSALS ARE SEPARATED, when the ported version returned one
+         * code for all of them. Downstream answered a malformed payload, an
+         * unsupported producer and a board with no keyboard with the same
+         * `invalid-replay-input`, and the third is not the caller's fault at
+         * all — it is a fact about the hardware. Measured before changing it:
+         * no consumer reads the code (the runner reads `.accepted`, and the two
+         * replay drivers discard the result), so refining it breaks nothing.
+         *
+         * @returns {{code: string, reason: string}|null} null when applicable
+         */
+        replayInputRefusal(input) {
+            const p = input?.payload;
+            // EVERY REACH OUTSIDE THIS CLOSURE IS CHECKED HERE, not at the call
+            // site that happened to be written last. Callers construct this
+            // target over a bare `{machine}` — code-address-progression.test.mjs
+            // :32 builds `{machine: {cpu: {}}}` literally — so `machine.chips`,
+            // `machine.canTakeKeys` and the rest are frequently absent, and the
+            // contract's central rule is that a target refuses rather than
+            // throwing for an input it merely cannot serve.
+            const has = name => typeof machine?.[name] === 'function';
+            const chips = machine?.chips && typeof machine.chips === 'object'
+                ? machine.chips : null;
+            if (!p || typeof p !== 'object') {
+                return {code: 'invalid-replay-input', reason: 'a replay input needs a payload object'};
+            }
+            switch (input.producer) {
+            case 'i8086.key':
+                if (!(Number.isInteger(p.scancode) && p.scancode >= 0 && p.scancode <= 0xff)) {
+                    return {code: 'invalid-replay-input', reason: 'i8086.key needs a scancode in 0..255'};
+                }
+                if (!has('canTakeKeys') || !has('keyIn')) {
+                    return {code: 'no-input-path', reason: 'this target has no machine that can take a key'};
+                }
+                if (machine.canTakeKeys() !== true) {
+                    return {code: 'no-input-path', reason: 'this board has no 8255 + PIC to take a key'};
+                }
+                return null;
+            case 'i8086.gpio': {
+                const chip = chips && typeof p.chip === 'string' ? chips[p.chip] : null;
+                if (!(['a', 'b', 'c'].includes(p.port) && Number.isInteger(p.bit) &&
+                      p.bit >= 0 && p.bit <= 7 && (p.level === 0 || p.level === 1))) {
+                    return {code: 'invalid-replay-input',
+                        reason: 'i8086.gpio needs port a|b|c, bit 0..7 and level 0|1'};
+                }
+                if (!chip || typeof chip.setInput !== 'function' || !has('setInput')) {
+                    return {code: 'no-input-path',
+                        reason: `no chip named ${p.chip} on this board takes an input bit`};
+                }
+                return null;
+            }
+            case 'i8086.serial':
+                if (!(Number.isInteger(p.byte) && p.byte >= 0 && p.byte <= 0xff)) {
+                    return {code: 'invalid-replay-input', reason: 'i8086.serial needs a byte in 0..255'};
+                }
+                // THE PREFLIGHT TESTS WHAT serialIn TESTS, both branches.
+                // machine.serialIn (i8086-machine.js:1423) accepts a chip with
+                // rxPush OR one with rxByte; the ported preflight tested only
+                // rxPush, so the two could disagree about the same board.
+                //
+                // Measured, so the reason for the second branch is not
+                // overstated: NO chip in this tree exposes an `rxByte` method
+                // today — the 16550 and the 8251 both use rxPush, and that
+                // branch of serialIn has no implementor. The point is not that
+                // a board exists which needs it; it is that a preflight must
+                // answer the question the operation asks, so that adding such a
+                // chip does not silently start refusing a path it has.
+                if (!chips || !has('serialIn') || !Object.values(chips).some(
+                    c => typeof c?.rxPush === 'function' || typeof c?.rxByte === 'function')) {
+                    return {code: 'no-input-path', reason: 'no chip on this board receives a byte'};
+                }
+                return null;
+            case 'i8086.nmi':
+                if (Object.keys(p).length !== 0) {
+                    return {code: 'invalid-replay-input', reason: 'i8086.nmi carries no payload'};
+                }
+                return has('nmi') ? null
+                    : {code: 'no-input-path', reason: 'this target has no machine to interrupt'};
+            case 'i8086.rom':
+                if (!(p.bytes instanceof Uint8Array)) {
+                    return {code: 'invalid-replay-input', reason: 'i8086.rom needs bytes as a Uint8Array'};
+                }
+                if (!(p.at === undefined ||
+                      (Number.isInteger(p.at) && p.at >= 0 && p.at < 0x100000))) {
+                    return {code: 'invalid-replay-input', reason: 'i8086.rom `at` must be inside 1MB'};
+                }
+                return has('loadRom') && has('reset') ? null
+                    : {code: 'no-input-path', reason: 'this target has no machine to load a ROM into'};
+            default:
+                return {code: 'unsupported-replay-input',
+                    reason: `no replay path for producer ${input?.producer ?? '(none)'}`};
+            }
+        },
+
+        /**
+         * The APPLY half. Every failure is a return value, never a throw.
+         *
+         * Five producers, all five with a measured path in THIS build:
+         *
+         *   i8086.key     machine.keyIn        i8086-machine.js:1574
+         *   i8086.gpio    machine.setInput     i8086-machine.js:1558
+         *   i8086.serial  adapter.sendSerial   i8086-adapter.js:74
+         *   i8086.nmi     machine.nmi          i8086-machine.js:1226
+         *   i8086.rom     machine.loadRom      i8086-machine.js:1118
+         *
+         * NOTHING APPLIED HERE IS RE-RECORDED. Each path reaches the machine
+         * directly rather than through this target's own recording entry
+         * points; the one that needs a gate is the GPIO level, whose dedup map
+         * is seeded so a second replay pass does not read as a change.
+         */
+        applyReplayInput(input) {
+            const refusal = this.replayInputRefusal(input);
+            if (refusal) return replayRefused(refusal.code, refusal.reason);
+            const p = input.payload;
+            switch (input.producer) {
+            case 'i8086.key':
+                return machine.keyIn(p.scancode) === true ? replayAccepted()
+                    : replayRefused('no-input-path', 'the machine did not take the key');
+            case 'i8086.gpio': {
+                const applied = machine.setInput(p.chip, p.port, p.bit, p.level) === true;
+                if (applied) {
+                    // THE ERA GATE RUNS BEFORE THE SEED, and the order is
+                    // load-bearing. Measured on the landed sibling targets:
+                    // replaying an input immediately after a rewind
+                    // RE-RECORDED it, because the seed went into the map and
+                    // the publish path then cleared the map before the dedup
+                    // gate read it — a second replay pass producing a log
+                    // longer than the run, in the one moment replay actually
+                    // happens, just after a restore.
+                    eventTime();
+                    observedInputs.set(`${p.chip}.${p.port}.${p.bit}`,
+                        JSON.stringify({chip: p.chip, port: p.port, bit: p.bit, level: p.level}));
+                }
+                return applied ? replayAccepted()
+                    : replayRefused('no-input-path', 'the machine did not take the input bit');
+            }
+            case 'i8086.serial': {
+                // The adapter's UNWRAPPED method when there is one, so a
+                // replayed byte does not come back out of the recorder — or out
+                // of another target's recorder, if two share the adapter.
+                const deliver = rawSendSerial ?? (b => machine.serialIn(b));
+                return deliver(p.byte) === true ? replayAccepted()
+                    : replayRefused('no-input-path', 'no chip took the received byte');
+            }
+            case 'i8086.nmi':
+                machine.nmi();
+                return replayAccepted();
+            case 'i8086.rom':
+                machine.loadRom(p.bytes, p.at);
+                machine.reset();
+                return replayAccepted();
+            default:
+                // Unreachable: replayInputRefusal has already refused it. Kept
+                // so a new producer added to one switch and not the other is a
+                // refusal rather than a silent `accepted: true` fall-through,
+                // which is what the ported version did.
+                return replayRefused('unsupported-replay-input',
+                    `no replay path for producer ${input?.producer ?? '(none)'}`);
+            }
         },
 
         state() { return runState; },
@@ -423,9 +1179,7 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         symbolAt(addr) { return labels?.get(addr & 0xfffff) ?? null; },
 
         disasm(addr) {
-            const a = addr & 0xfffff;
-            const csBase = (cpu.cs << 4) & 0xfffff;
-            const ip = (a >= csBase && a <= csBase + 0xffff) ? (a - csBase) & 0xffff : a & 0xffff;
+            const {linear, segmentBase, ip} = codePosition(addr);
             // THE MAP IS LINEAR AND THE DISASSEMBLER'S IS NOT, and this is the
             // join that is easy to get silently wrong. The disassembler labels
             // a 16-BIT operand — a jump target, or the address inside
@@ -438,11 +1192,22 @@ export function createI8086DebugTarget(adapter, opts = {}) {
             if (labels) {
                 inSeg = new Map();
                 for (const [lin, name] of labels) {
-                    if (lin >= csBase && lin <= csBase + 0xffff) inSeg.set((lin - csBase) & 0xffff, name);
+                    const offset = (lin - segmentBase) & 0xfffff;
+                    if (offset <= 0xffff) inSeg.set(offset, name);
                 }
             }
-            return disasmI8086((x) => machine._read(x & 0xfffff), a,
+            return disasmI8086((x) => machine._read(x & 0xfffff), linear,
                 inSeg && inSeg.size ? { ip, labels: inSeg } : { ip });
+        },
+
+        /** Advance through segmented fetch while retaining a linear address. */
+        nextCodeAddress(addr, length) {
+            if (!Number.isSafeInteger(addr) || addr < 0 || addr > 0xfffff ||
+                !Number.isSafeInteger(length) || length < 0) {
+                return { unsupported: 'code address progression requires safe integers in 20-bit physical space' };
+            }
+            const {segmentBase, ip} = codePosition(addr);
+            return (segmentBase + ((ip + (length & 0xffff)) & 0xffff)) & 0xfffff;
         },
 
         onHalt(cb) {
@@ -458,9 +1223,17 @@ export function createI8086DebugTarget(adapter, opts = {}) {
 
         setBreakpoint(spec) {
             if (spec.kind === 'write') {
-                if (spec.addr == null) return { unsupported: 'addr required' };
+                const len = spec.len ?? 1;
+                if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 ||
+                    !Number.isSafeInteger(len) || len < 1 || spec.addr + len > 0x100000) {
+                    return { unsupported:
+                        'write watchpoint range must be safe integers within 20-bit physical space' };
+                }
                 const id = nextBpId++;
-                writeWatches.set(id, { addr: spec.addr & 0xfffff, len: spec.len ?? 1 });
+                // The range guard already proves addr <= 0xfffff, so the old
+                // `& 0xfffff` would be an identity here. Store the exact value;
+                // restoring that mask cannot change any accepted input.
+                writeWatches.set(id, { addr: spec.addr, len });
                 syncWriteTrap();
                 return id;
             }
@@ -521,13 +1294,21 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 return id;
             }
             if (spec.addr == null) return { unsupported: 'addr or symbol required' };
+            // seg:off is an explicitly different input: each register is
+            // 16-bit hardware and the composed bus address wraps at 20 bits.
+            // A direct address is already physical, so masking it would turn
+            // invalid input into a breakpoint on a different instruction.
+            let addr;
+            if (spec.seg != null) {
+                addr = (((spec.seg & 0xffff) << 4) + (spec.addr & 0xffff)) & 0xfffff;
+            } else {
+                if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xfffff) {
+                    return { unsupported:
+                        'code breakpoint addr must be a safe integer within 20-bit physical space' };
+                }
+                addr = spec.addr;
+            }
             const id = nextBpId++;
-            // seg:off is accepted and resolved here, once, so the compare
-            // stays linear. A caller that already has a physical address
-            // passes only addr.
-            const addr = spec.seg != null
-                ? (((spec.seg & 0xffff) << 4) + (spec.addr & 0xffff)) & 0xfffff
-                : spec.addr & 0xfffff;
             breakpoints.set(id, { kind: 'code', addr });
             return id;
         },
@@ -558,7 +1339,16 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                     return undefined;
                 }
                 runState = 'running';
-                pendingStep = { kind: 'over', sp0: cpu.sp, entered: false };
+                // THE RETURN ADDRESS IS KNOWN NOW, and knowing it is what stops
+                // the step ending inside the callee. Decode the call and add its
+                // length: a near call returns to the byte after itself, and the
+                // composed address wraps at 20 bits like every other bus address
+                // here while IP wraps at 16.
+                const decoded = disasmI8086(a => machine._read(a & 0xfffff), cpu.pc, { ip: cpu.ip });
+                pendingStep = {
+                    kind: 'over', sp0: cpu.sp, entered: false,
+                    returnAddr: (((cpu.cs << 4) + ((cpu.ip + decoded.length) & 0xffff)) & 0xfffff)
+                };
                 return undefined;
             }
             if (kind === 'out') {
@@ -579,24 +1369,80 @@ export function createI8086DebugTarget(adapter, opts = {}) {
         /** Spend up to budgetNs of simulated time. Returns 'halted' or 'budget'. */
         runFor(budgetNs) {
             if (runState !== 'running') return 'halted';
-            const deadline = machine.tMs + budgetNs / 1e6;
-            while (machine.tMs < deadline) {
-                for (const [id, bp] of breakpoints) {
-                    if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
+            // The same test as `tMs < tMs + budgetNs / 1e6` with the common
+            // factors cancelled, in the integer the machine already keeps.
+            // DO NOT ROUND: any positive budget must still retire one whole
+            // instruction, exactly as the strict float comparison did, or a
+            // caller asking for a small slice gets no progress and the machine
+            // appears hung.
+            let noProgressRun = 0;
+            const deadlineCycles = machine.cycles + budgetNs * machine.clockHz / 1e9;
+            while (machine.cycles < deadlineCycles) {
+                // The overwhelmingly common run has no code breakpoint, and
+                // constructing a Map iterator per instruction for an empty Map
+                // is a cost paid by every program that never sets one. The
+                // watch and event traps already install themselves only when
+                // something is watching; this is the same discipline for the
+                // one check that did not.
+                if (breakpoints.size) {
+                    for (const [id, bp] of breakpoints) {
+                        if (bp.addr === cpu.pc) { halt({ cause: 'breakpoint', bp: id }); return 'halted'; }
+                    }
                 }
                 if (pendingStep) {
                     if (pendingStep.kind === 'insn' && pendingStep.remaining <= 0) { halt({ cause: 'step' }); return 'halted'; }
                     // SP rising back to or above where it started means the
                     // frame is gone. Sixteen-bit wraparound is why the test
                     // is a sign check on the difference, not a comparison.
+                    // BOTH, and the stack alone is why this used to be wrong. A
+                    // callee that pops its return address, works, and pushes it
+                    // back balances the stack mid-body, and a stack-only test
+                    // halts there -- inside the function the user asked to step
+                    // OVER, reporting cause 'step' at a plausible address with
+                    // nothing thrown.
                     if (pendingStep.kind === 'over' && pendingStep.entered
+                        && cpu.pc === pendingStep.returnAddr
                         && ((cpu.sp - pendingStep.sp0) & 0x8000) === 0) { halt({ cause: 'step' }); return 'halted'; }
                     if (pendingStep.kind === 'out'
                         && cpu.sp !== pendingStep.sp0 && ((cpu.sp - pendingStep.sp0) & 0x8000) === 0) {
                         halt({ cause: 'step' }); return 'halted';
                     }
                 }
-                machine.step();
+                // NO-PROGRESS GUARD, and the seam is why it is needed.
+                // machine.step() always advances -- even a halted CPU advances by
+                // its wake horizon -- so this loop could not fail to terminate while
+                // that was the only way to step. A boundary service can decline to
+                // advance, and then `machine.cycles < deadlineCycles` is true forever:
+                // the debugger hangs, with no timeout and no verdict.
+                //
+                // Halting BY NAME rather than spinning or quietly returning. A service
+                // that retires no machine time is a real condition its host has to see.
+                const cyclesBeforeStep = machine.cycles;
+                executeStep();
+                if (machine.cycles === cyclesBeforeStep) {
+                    // ONE ITERATION OF GRACE, AND THE REASON IS WHAT A BOUNDARY
+                    // SERVICE IS. A service does work AT an instruction boundary
+                    // -- the DOS trap layer answers INT 21h by inspecting CS:IP
+                    // BEFORE the hardware steps -- so it may legitimately consume
+                    // an iteration without machine time moving. Two in a row is
+                    // different: nothing is driving the machine, and the loop
+                    // would spin to its deadline or forever.
+                    //
+                    // The first version halted on ONE, which read as correct and
+                    // stopped every DOS program from reaching INT 21h/4Ch: they
+                    // ran, never terminated, and looked exactly like a hang. The
+                    // longest legitimate run measured across the example corpus
+                    // is 1, which is the CHECK on this rule rather than its
+                    // derivation.
+                    if (noProgressRun++) {
+                        halt({ cause: 'no-progress',
+                            reason: 'the boundary service retired no machine time twice running; '
+                                + 'it cannot be stepped' });
+                        return 'halted';
+                    }
+                } else {
+                    noProgressRun = 0;
+                }
                 // Checked BEFORE the write watch, and the order is arbitrary
                 // only in appearance: a port write that trips both is one
                 // event, and reporting the port — the thing the user asked
@@ -697,8 +1543,24 @@ export function createI8086DebugTarget(adapter, opts = {}) {
                 if (vo.intensity === undefined) vo.intensity = (card.color & 0x10) !== 0;
                 if (vo.cgaPalette === undefined) vo.cgaPalette = (card.color & 0x20) !== 0;
             }
+            // Rendering text mode alone costs about 8 ms on the measured Node
+            // path, and a static DOS prompt was paying it on every call for a
+            // picture that had not changed. Key the cache on the machine's
+            // display revision -- the token that moves on exactly the writes
+            // that can change what is on screen -- plus the inputs the render
+            // depends on that the token does not cover.
+            //
+            // THE FRAME NUMBER IS PART OF THE POINT, not decoration: a consumer
+            // that keys its own repaint on it freezes after the first paint if
+            // it never moves.
+            const videoKey = `${machine.displayRevision || 0}:${guess.mode}:`
+                + `${seen.join(',')}:${vo.blinkPhase ?? ''}`;
+            if (videoKey === cachedVideoKey && cachedVideoFrame) return cachedVideoFrame;
             const frame = renderMode(guess.mode, (a) => machine._read(a & 0xfffff), vo);
-            return { ...frame, mode: guess.mode, why: guess.reason };
+            cachedVideoKey = videoKey;
+            cachedVideoFrame = { ...frame, frame: machine.displayRevision || 0,
+                mode: guess.mode, why: guess.reason };
+            return cachedVideoFrame;
         },
 
         /**
