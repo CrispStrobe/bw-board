@@ -5,10 +5,12 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync,spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 
 if(!process.env.WASM_LD)throw new Error('WASM_LD required');
 const root=fileURLToPath(new URL('../',import.meta.url));
+const revision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),hash=value=>createHash('sha256').update(value).digest('hex');
 const cases=[
     ['drop-inverse-membership','src/experimental/wired-kernel/evaluator-image.js',
         'for(let p=dependencyOffsets[operation];p<dependencyOffsets[operation+1];p++)reverse[dependencies[p]].push(operation);',
@@ -55,4 +57,4 @@ for(const [name,relative,from,to,testName] of cases){
     assert.equal(fired,true,`${name}: mutation must fail ${testName}`);results.push({name,testName,status:run.status,namedRed:true});
 }
 for(const [relative,source] of originals)assert.equal(readFileSync(join(root,relative),'utf8'),source,`${relative} restored`);
-console.log(JSON.stringify({accepted:true,kills:results.length,results},null,2));
+console.log(JSON.stringify({accepted:true,revision,sourceSHA256:Object.fromEntries([...originals].map(([name,source])=>[name,hash(source)])),kills:results.length,results},null,2));
