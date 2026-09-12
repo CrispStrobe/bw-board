@@ -30,7 +30,7 @@ export function assertProducerCounterABI(exports) {
         throw new TypeError('rebuild native producer counters: ABI version/exports mismatch');
 }
 export function assertOwnedMemoryPreviewABI(exports) {
-    if(exports.memory_circuit_version?.()!==3)
+    if(exports.memory_circuit_version?.()!==4)
         throw new TypeError('rebuild native owned memory preview: ABI version mismatch');
 }
 export function assertOwnedMemoryAdmissionABI(exports) {

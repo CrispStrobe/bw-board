@@ -61,10 +61,10 @@ void reset_stage_attribution_counters(void){for(u32 i=0;i<STAGE_COUNTER_COUNT;i+
 static STAGE_NOINLINE u32 validate_memory_mapping(const u32 *c,u32 banks,const u32 *input_nets,const u32 *output_ids) {
     STAGE_ADD(STAGE_MEMORY_MAPPING_CALLS,1);
     #define MAPPING_RETURN(code,count) do{STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,(count));return(code);}while(0)
-    for(u32 i=0;i<banks*28;i++)if(input_nets[i]>=c[0])MAPPING_RETURN(2,i+1);
+    for(u32 i=0;i<banks*28;i++){memory_admission_work[7]++;if(input_nets[i]>=c[0])MAPPING_RETURN(2,i+1);}
     for(u32 i=0;i<banks*8;i++) {
-        if(output_ids[i]>=c[1])MAPPING_RETURN(3,banks*28+i*(i+1)/2+1);
-        for(u32 j=0;j<i;j++)if(output_ids[i]==output_ids[j])MAPPING_RETURN(4,banks*28+i*(i+1)/2+j+2);
+        memory_admission_work[7]++;if(output_ids[i]>=c[1])MAPPING_RETURN(3,banks*28+i*(i+1)/2+1);
+        for(u32 j=0;j<i;j++){memory_admission_work[7]++;if(output_ids[i]==output_ids[j])MAPPING_RETURN(4,banks*28+i*(i+1)/2+j+2);}
     }
     MAPPING_RETURN(0,banks*28+(banks*8)*(banks*8+1)/2);
     #undef MAPPING_RETURN
@@ -89,7 +89,7 @@ static STAGE_NOINLINE u32 publish_memory_writers(const u32 *c,u32 banks,const u3
 }
 static STAGE_NOINLINE u32 post_memory_settle(const u32 *c){STAGE_ADD(STAGE_MEMORY_POST_SETTLES,1);return settle_context(c);}
 #endif
-u32 memory_circuit_version(void){return 3;}
+u32 memory_circuit_version(void){return 4;}
 /* fault: category (1 combinational,2 memory,3 limit,4 mapping),code,bank,pin.
  * Per-pass commit matches JS: a later settle failure does not roll back a
  * successfully committed earlier memory pass. A peer preflight failure does. */
@@ -105,10 +105,10 @@ u32 settle_memory_circuit(const u32 *c,u32 passes,u32 *fault) {
     #ifdef NATIVE_STAGE_ATTRIBUTION
     STAGE_ADD(STAGE_MEMORY_MAPPING_CALLS,1);
     #define INLINE_MAPPING_FAILURE(code,count) do{STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,(count));fault[0]=4;fault[1]=(code);return 4;}while(0)
-    for(u32 i=0;i<banks*28;i++)if(input_nets[i]>=c[0])INLINE_MAPPING_FAILURE(2,i+1);
+    for(u32 i=0;i<banks*28;i++){memory_admission_work[7]++;if(input_nets[i]>=c[0])INLINE_MAPPING_FAILURE(2,i+1);}
     for(u32 i=0;i<banks*8;i++) {
-        if(output_ids[i]>=c[1])INLINE_MAPPING_FAILURE(3,banks*28+i*(i+1)/2+1);
-        for(u32 j=0;j<i;j++)if(output_ids[i]==output_ids[j])INLINE_MAPPING_FAILURE(4,banks*28+i*(i+1)/2+j+2);
+        memory_admission_work[7]++;if(output_ids[i]>=c[1])INLINE_MAPPING_FAILURE(3,banks*28+i*(i+1)/2+1);
+        for(u32 j=0;j<i;j++){memory_admission_work[7]++;if(output_ids[i]==output_ids[j])INLINE_MAPPING_FAILURE(4,banks*28+i*(i+1)/2+j+2);}
     }
     STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28+(banks*8)*(banks*8+1)/2);
     #undef INLINE_MAPPING_FAILURE
