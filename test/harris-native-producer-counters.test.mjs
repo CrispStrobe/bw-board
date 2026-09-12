@@ -48,7 +48,10 @@ test('cooperative producer labels reconcile with exact call-path dimensions in e
         const p=diagnostic.producers,memory=diagnostic.memory,incremental=mode.incrementalGraph===true;
         assert.deepEqual(p.other,{attempts:0,changes:0});
         assert.equal(p.busExternal.attempts,run.periods*10,'ten ideal external drivers are staged per physical period');
-        assert.equal(p.busOutput.attempts,run.periods*48,'all 48 CPU bus outputs are staged per physical period');
+        assert.equal(p.busOutput.attempts,p.busOutput.changes,
+            'after initialization only final CPU output changes reach the canonical writer');
+        assert.ok(p.busOutput.attempts<run.periods,
+            'the bounded CPU output frontier is sparse across this stable-heavy workload');
         assert.equal(p.phaseLatch.attempts,run.periods*26,'the owned latch publishes 26 outputs per physical period');
         assert.equal(p.memoryBank.attempts,memory.presentBanks*8,'each present memory bank publishes eight output drivers');
         assert.ok(p.phaseController.attempts>=run.periods*3&&p.phaseController.attempts%3===0,

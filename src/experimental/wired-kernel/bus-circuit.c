@@ -8,13 +8,14 @@ typedef unsigned char u8;
 #define W(i) ((u32*)(unsigned long)p[i])
 #define B(i) ((u8*)(unsigned long)p[i])
 extern u32 bus_input_ptr(void),bus_output_ptr(void),bus_completion_ptr(void),bus_error_pin(void);
+extern u32 bus_output_change_word(u32);
 extern u32 bus_begin(void),bus_end(void);
 extern u32 settle_owned_context(const u32*);
 extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
 extern u32 begin_latched_memory_clock(const u32*,u32*),preview_latched_memory_clock(const u32*,u32*);
 extern u32 finish_latched_memory_clock(const u32*,u32*),abort_latched_memory_clock(const u32*,u32*);
 extern double bus_inspect(u32);
-u32 bus_circuit_version(void){return 1;}
+u32 bus_circuit_version(void){return 2;}
 /* All external and CPU bus outputs participate in the admitted dirty frontier. */
 #define PRODUCER_BUS_EXTERNAL 1
 #define PRODUCER_BUS_OUTPUT 2
@@ -48,7 +49,12 @@ u32 begin_bus_memory_clock(const u32*p,u32*fault) {
     if((result=settle(p,fault)))return result;
     gather(p);result=bus_begin();if(result)return failure(p,7,result,bus_error_pin(),fault);
     const u32*output=(u32*)(unsigned long)bus_output_ptr();
-    for(u32 i=0;i<48;i++)if(stage_bus_driver(W(0),W(3)[i],(u8)output[i],PRODUCER_BUS_OUTPUT))return failure(p,8,2,i,fault);
+    /* The sequencer retains the complete final four-state output image. This
+     * mask only suppresses redundant canonical writer calls; it never stands
+     * in for output computation or resolved-net state. */
+    const u32 changed[2]={bus_output_change_word(0),bus_output_change_word(1)};
+    for(u32 i=0;i<48;i++)if((changed[i>>5]&(1u<<(i&31)))&&
+       stage_bus_driver(W(0),W(3)[i],(u8)output[i],PRODUCER_BUS_OUTPUT))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     result=begin_latched_memory_clock(W(1),fault);if(result){W(7)[1]=1;return result;}
     W(7)[0]=1;fault[0]=0;return 0;

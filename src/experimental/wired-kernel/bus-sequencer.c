@@ -17,10 +17,11 @@ static struct {
     u64 clock,reset,max_wait,waits;
     Transfer transfers[2];
 } b;
-static u32 inputs[24], outputs[48], completion[9], error_pin;
+static u32 inputs[24], outputs[48], output_changes[2], completion[9], error_pin, first_outputs;
 u32 bus_sequencer_version(void) {return 1;}
 u32 bus_input_ptr(void) {return (u32)(uintptr_t)inputs;}
 u32 bus_output_ptr(void) {return (u32)(uintptr_t)outputs;}
+u32 bus_output_change_word(u32 word) {return word<2?output_changes[word]:0;}
 u32 bus_completion_ptr(void) {return (u32)(uintptr_t)completion;}
 u32 bus_error_pin(void) {return error_pin;}
 static u32 known(u32 pin) {
@@ -34,7 +35,13 @@ void bus_initialize(double maximum) {
     b.max_wait=(u64)maximum;b.phase=1;b.address=0xffffff;b.bhe=b.s1=b.s0=1;
     for(u32 i=0;i<16;i++)b.held[i]=3;
     for(u32 i=0;i<48;i++)outputs[i]=3;
+    output_changes[0]=output_changes[1]=0;first_outputs=1;
     for(u32 i=0;i<9;i++)completion[i]=0;
+}
+static void set_output(u32 pin,u32 value) {
+    /* Compare raw driver codes against the last successful final image. */
+    if(first_outputs||outputs[pin]!=value)output_changes[pin>>5]|=1u<<(pin&31);
+    outputs[pin]=value;
 }
 static Transfer transfer(u32 kind,u32 address,u32 width,u32 value) {
     Transfer t={kind,address,width,width==1&&(address&1)?value<<8:value,address&1,
@@ -84,17 +91,19 @@ u32 bus_begin(void) {
         Transfer *t=&b.transfers[b.index];b.state=TS;b.address=t->address;
         b.bhe=t->bhe;b.s1=t->kind==2?1:0;b.s0=t->kind==2?0:1;b.cod=t->kind==1;b.mio=1;
     }
-    for(u32 i=0;i<24;i++)outputs[i]=(b.address>>i)&1;
-    for(u32 i=0;i<16;i++)outputs[24+i]=b.write_hold?b.held[i]:3;
-    if(b.has_pending&&b.transfers[b.index].kind==2&&
-       (b.state==TC||(b.state==TS&&b.phase==2))) {
-        Transfer *t=&b.transfers[b.index];
-        for(u32 i=0;i<16;i++)outputs[24+i]=(i<8?t->a0!=0:t->bhe!=0)?3:(t->data>>i)&1;
+    output_changes[0]=output_changes[1]=0;
+    for(u32 i=0;i<24;i++)set_output(i,(b.address>>i)&1);
+    Transfer *active=b.has_pending&&b.transfers[b.index].kind==2&&
+        (b.state==TC||(b.state==TS&&b.phase==2))?&b.transfers[b.index]:0;
+    for(u32 i=0;i<16;i++) {
+        u32 value=b.write_hold?b.held[i]:3;
+        if(active)value=(i<8?active->a0!=0:active->bhe!=0)?3:(active->data>>i)&1;
+        set_output(24+i,value);
     }
     b.period_state=b.state;b.period_phase=b.phase;b.period_held=b.write_hold>0;
-    outputs[40]=b.bhe;outputs[41]=b.state==TS?b.s1:1;outputs[42]=b.state==TS?b.s0:1;
-    outputs[43]=b.cod;outputs[44]=b.mio;
-    outputs[45]=1;outputs[46]=0;outputs[47]=1;b.open=1;return OK;
+    set_output(40,b.bhe);set_output(41,b.state==TS?b.s1:1);set_output(42,b.state==TS?b.s0:1);
+    set_output(43,b.cod);set_output(44,b.mio);
+    set_output(45,1);set_output(46,0);set_output(47,1);first_outputs=0;b.open=1;return OK;
 }
 u32 bus_end(void) {
     if(!b.open)return ORDER;

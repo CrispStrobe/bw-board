@@ -90,6 +90,13 @@ jobs:
             | tee "$HARRIS_RECEIPT_DIR/producer-counter-mutations.tap"
           test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/producer-counter-mutations.tap")" -eq 23
 
+      - name: Prove sparse CPU bus-output mutations are rejected
+        run: |
+          set -euo pipefail
+          node scripts/verify-harris-native-bus-output-sparse-mutations.mjs \
+            | tee "$HARRIS_RECEIPT_DIR/bus-output-sparse-mutations.tap"
+          test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/bus-output-sparse-mutations.tap")" -eq 9
+
       - name: Qualify the same module in a fresh Chromium worker
         env:
           HARRIS_BROWSER_REPORT: ${{ env.HARRIS_RECEIPT_DIR }}/browser-receipt.json
