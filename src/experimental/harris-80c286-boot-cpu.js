@@ -796,6 +796,19 @@ export class HarrisBootCPU {
         let periods = 0;
         const completions = [];
         const invalid = () => new CircuitFault('INVALID_BATCH_RESULT', 'invalid bounded transaction progress');
+        const validProgress = (receipt, budget, fault = false) => {
+            if (!receipt || !Number.isSafeInteger(receipt.periods) || receipt.periods < (fault ? 0 : 1) ||
+                receipt.periods > budget || !Array.isArray(receipt.completions) ||
+                receipt.completions.length > receipt.periods || receipt.completions.length > (fault ? 1 : 2)) return false;
+            const transfers = receipt.completions, last = transfers.at(-1);
+            if (Array.from(transfers).some((transfer, index) => !transfer || typeof transfer.last !== 'boolean' ||
+                (transfer.last && (fault || index !== transfers.length - 1)))) return false;
+            // A logical word has at most two physical beats; the second ends it.
+            if (transfers.length === 2 && !last.last) return false;
+            if (fault) return true; // native runner stops before any final completion on failure
+            return typeof receipt.completed === 'boolean' && receipt.completed === (last?.last === true) &&
+                (!receipt.completed || (Number.isInteger(last.operand) && last.operand >= 0 && last.operand <= 65535));
+        };
         try {
             while (this.status === 'running' && periods < maxPeriods) {
                 if (signal?.aborted) { this.cancel(); break; }
@@ -807,23 +820,15 @@ export class HarrisBootCPU {
                     // A native fault can follow successful boundaries, including
                     // the first half of an odd word. Never pump on this path.
                     const progress = error.progress;
-                    if (progress && Number.isSafeInteger(progress.periods) && progress.periods >= 0 &&
-                        progress.periods <= budget && Array.isArray(progress.completions)) {
+                    if (progress !== undefined) {
+                        if (!validProgress(progress, budget, true)) throw invalid();
                         periods += progress.periods;
                         completions.push(...progress.completions);
                     }
                     throw error;
                 }
-                if (!result || !Number.isSafeInteger(result.periods) || result.periods < 1 ||
-                    result.periods > budget || typeof result.completed !== 'boolean' ||
-                    !Array.isArray(result.completions) || result.completions.length > result.periods ||
-                    result.completions.length > 2) throw invalid();
+                if (!validProgress(result, budget)) throw invalid();
                 const last = result.completions.at(-1);
-                if (result.completions.some((transfer, index) => !transfer || typeof transfer.last !== 'boolean' ||
-                    (transfer.last && index !== result.completions.length - 1)) ||
-                    result.completed !== (last?.last === true) ||
-                    (result.completed && (!Number.isInteger(last.operand) || last.operand < 0 || last.operand > 65535)))
-                    throw invalid();
                 periods += result.periods;
                 completions.push(...result.completions);
                 if (result.completed) this._pump(last.operand);

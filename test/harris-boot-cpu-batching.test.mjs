@@ -79,12 +79,27 @@ test('malformed or zero progress faults without resuming generator or looping', 
     for (const response of [undefined, result(0), result(4), result(1.5),
         {periods: 1, completed: true, completions: []},
         {periods: 1, completed: false, completions: [final]},
-        result(2, [final, partial]), result(1, [{last: true}]),
-        result(1, [{last: true, operand: 65536}]), result(1, [null])]) {
+        result(2, [final, partial]), result(2, [partial, partial]), result(1, [{last: true}]),
+        result(1, [{last: true, operand: 65536}]), result(1, [null]), result(1, Array(1))]) {
         const {cpu, calls, operands} = fixture([response]);
         assert.throws(() => cpu.runTransactions({maxPeriods: 3}), {code: 'INVALID_BATCH_RESULT'});
         assert.equal(cpu.status, 'faulted'); assert.equal(calls.length, 1);
         assert.deepEqual(operands, []);
+    }
+});
+
+test('malformed fault receipts cannot publish invented completions or elapsed periods', () => {
+    for (const progress of [{periods: 0, completions: [partial]}, {periods: 1, completions: [null]},
+        {periods: 1, completions: [final]}, {periods: 2, completions: [partial, partial]},
+        {periods: 4, completions: []}, {periods: -1, completions: []}, {periods: 1, completions: Array(1)}]) {
+        const error = Object.assign(new Error('invalid native receipt'), {progress});
+        const {cpu, operands} = fixture([error]);
+        assert.throws(() => cpu.runTransactions({maxPeriods: 3}), caught => {
+            assert.equal(caught.code, 'INVALID_BATCH_RESULT');
+            assert.equal(caught.progress.periods, 0); assert.deepEqual(caught.progress.completions, []);
+            return true;
+        });
+        assert.deepEqual(operands, []); assert.equal(cpu.status, 'faulted');
     }
 });
 
