@@ -19,8 +19,8 @@ const mutations=[
     {name:'public preview accepts out-of-range state address',pattern:'public native memory preview',file:'memory-banks.c',
         from:'s[0]>3||s[1]>=SIZE',to:'s[0]>3||s[1]>SIZE'},
     {name:'peer commit loop stops after first bank',pattern:'late peer-bank fault',file:'memory-banks.c',
-        from:'/* Commit the old pending bytes only after all peer previews succeeded. */\n    for(u32 b=0;b<banks;b++) {',
-        to:'/* Commit the old pending bytes only after all peer previews succeeded. */\n    for(u32 b=0;b<1;b++) {'},
+        from:'STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);\n    for(u32 b=0;b<banks;b++) {',
+        to:'STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);\n    for(u32 b=0;b<1;b++) {'},
     {name:'owned preview ABI version is stale',pattern:'owned circuit memory preview',file:'memory-circuit.c',
         from:'u32 memory_circuit_version(void){return 3;}',to:'u32 memory_circuit_version(void){return 2;}'}
 ];

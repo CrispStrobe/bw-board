@@ -45,13 +45,14 @@ jobs:
             echo "CLANG=$(command -v clang)"
             echo "WASM_LD=$(command -v wasm-ld)"
           } >> "$GITHUB_ENV"
-      - name: Build production control and both candidate modes
+      - name: Build production control, counter timing, and named profile modes
         run: |
           set -euo pipefail
-          mkdir "$RECEIPT_DIR/master-build" "$RECEIPT_DIR/diagnostic-off-build" "$RECEIPT_DIR/diagnostic-on-build"
+          mkdir "$RECEIPT_DIR/master-build" "$RECEIPT_DIR/diagnostic-off-build" "$RECEIPT_DIR/counter-on-build" "$RECEIPT_DIR/named-profile-build"
           node "$MASTER_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/master-build" | tee "$RECEIPT_DIR/master-build.log"
           node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/diagnostic-off-build" | tee "$RECEIPT_DIR/diagnostic-off-build.log"
-          NATIVE_STAGE_ATTRIBUTION=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/diagnostic-on-build" | tee "$RECEIPT_DIR/diagnostic-on-build.log"
+          NATIVE_STAGE_ATTRIBUTION=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/counter-on-build" | tee "$RECEIPT_DIR/counter-on-build.log"
+          NATIVE_STAGE_PROFILE_NAMING=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/named-profile-build" | tee "$RECEIPT_DIR/named-profile-build.log"
       - name: Measure uninstrumented control separately from profiling
         run: |
           set -euo pipefail
@@ -59,10 +60,11 @@ jobs:
             --master-dir="$MASTER_TREE" --candidate-dir="$GITHUB_WORKSPACE" \
             --master-wasm="$RECEIPT_DIR/master-build/wired-net-kernel.wasm" \
             --off-wasm="$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm" \
-            --on-wasm="$RECEIPT_DIR/diagnostic-on-build/wired-net-kernel.wasm" \
+            --counter-wasm="$RECEIPT_DIR/counter-on-build/wired-net-kernel.wasm" \
+            --profile-wasm="$RECEIPT_DIR/named-profile-build/wired-net-kernel.wasm" \
             --candidate-revision="$CANDIDATE_SHA" --iterations=4096 --warmup-rounds=3 --rounds=12 \
             > "$RECEIPT_DIR/native-stage-attribution-control.json"
-          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-stage-attribution-control.json"));assert.equal(r.measurementRevision,process.env.CANDIDATE_SHA);assert.equal(r.variants.master.revision,process.env.MASTER_SHA);assert.equal(r.warmups.length,9);assert.equal(r.samples.length,36);assert.ok(r.ratios.candidateOffToMaster>=.98&&r.ratios.candidateOffToMaster<=1.02);assert.ok(r.ratios.diagnosticOnToOff>=.98&&r.ratios.diagnosticOnToOff<=1.02);assert.equal(Object.keys(r.expected.work).length,12);'
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-stage-attribution-control.json"));assert.equal(r.measurementRevision,process.env.CANDIDATE_SHA);assert.equal(r.variants.master.revision,process.env.MASTER_SHA);assert.deepEqual([r.variants.diagnosticOff.stageAttribution,r.variants.diagnosticOff.stageProfileNames],[false,false]);assert.deepEqual([r.variants.counterOn.stageAttribution,r.variants.counterOn.stageProfileNames],[true,false]);assert.equal(r.warmups.length,9);assert.equal(r.samples.length,36);assert.equal(r.accepted,true);assert.ok(r.ratios.candidateOffToMaster>=.98&&r.ratios.candidateOffToMaster<=1.02);assert.ok(r.ratios.counterOnToOff>=.98&&r.ratios.counterOnToOff<=1.02);assert.equal(Object.keys(r.expected.work).length,12);'
       - name: Profile diagnostic mode in a separate process
         run: |
           set -euo pipefail
@@ -72,7 +74,8 @@ jobs:
               --master-dir="$MASTER_TREE" --candidate-dir="$GITHUB_WORKSPACE" \
               --master-wasm="$RECEIPT_DIR/master-build/wired-net-kernel.wasm" \
               --off-wasm="$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm" \
-              --on-wasm="$RECEIPT_DIR/diagnostic-on-build/wired-net-kernel.wasm" \
+              --counter-wasm="$RECEIPT_DIR/counter-on-build/wired-net-kernel.wasm" \
+              --profile-wasm="$RECEIPT_DIR/named-profile-build/wired-net-kernel.wasm" \
               --candidate-revision="$CANDIDATE_SHA" --iterations=4096 --profile-repetitions=8 \
               > "$RECEIPT_DIR/native-stage-profile-receipt-$run.json"
             node scripts/measure-harris-native-stage-attribution.mjs \
@@ -80,11 +83,12 @@ jobs:
               --profile-receipt="$RECEIPT_DIR/native-stage-profile-receipt-$run.json" \
               > "$RECEIPT_DIR/native-stage-profile-classification-$run.json"
           done
-          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const d=process.env.RECEIPT_DIR,read=name=>JSON.parse(fs.readFileSync(d+"/"+name)),runs=[1,2,3].map(i=>read(`native-stage-profile-classification-${i}.json`));for(const r of runs){const c=r.classification;assert.ok(c.nonIdleSamples>0);assert.ok(c.classifiedRatio>=.90);assert.ok(c.actionableRatio>=.70);assert.equal(c.topTwoActionable.length,2);assert.ok(c.topTwoActionable.every(x=>x.samples>=50&&x.shareOfNonIdle>=.10));assert.ok(c.topTwoCombinedShare>=.25);}assert.deepEqual(runs[1].classification.topTwoActionableFamilies,runs[0].classification.topTwoActionableFamilies);assert.deepEqual(runs[2].classification.topTwoActionableFamilies,runs[0].classification.topTwoActionableFamilies);'
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const d=process.env.RECEIPT_DIR,read=name=>JSON.parse(fs.readFileSync(d+"/"+name)),runs=[1,2,3].map(i=>read(`native-stage-profile-classification-${i}.json`));for(const r of runs){assert.deepEqual([r.profileReceipt.variant.stageAttribution,r.profileReceipt.variant.stageProfileNames],[false,true]);const c=r.classification;assert.ok(c.nonIdleSamples>0);assert.ok(c.classifiedRatio>=.90);assert.ok(c.actionableRatio>=.70);assert.equal(c.topTwoActionable.length,2);assert.ok(c.topTwoActionable.every(x=>x.samples>=50&&x.shareOfNonIdle>=.10));assert.ok(c.topTwoCombinedShare>=.25);}assert.deepEqual(runs[1].classification.topTwoActionableFamilies,runs[0].classification.topTwoActionableFamilies);assert.deepEqual(runs[2].classification.topTwoActionableFamilies,runs[0].classification.topTwoActionableFamilies);'
       - name: Inventory every evidence payload before upload
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
         run: |
           set -euo pipefail
-          node --input-type=module -e 'import fs from "node:fs";import path from "node:path";import assert from "node:assert/strict";import {createHash} from "node:crypto";const root=process.env.RECEIPT_DIR,expected=["master-build.log","diagnostic-off-build.log","diagnostic-on-build.log",...["master","diagnostic-off","diagnostic-on"].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),"native-stage-attribution-control.json",...Array.from({length:3},(_,i)=>[`native-stage-profile-receipt-${i+1}.json`,`hybrid-native-stages-${i+1}.cpuprofile`,`native-stage-profile-classification-${i+1}.json`]).flat()].sort();const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{const p=path.join(dir,e.name);return e.isDirectory()?walk(p):[path.relative(root,p)]});const actual=walk(root).sort();assert.deepEqual(actual,expected);const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return [name,{size:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex")}]}));for(const value of Object.values(files)){assert.ok(value.size>0);assert.match(value.sha256,/^[0-9a-f]{64}$/);}fs.writeFileSync(path.join(root,"artifact-manifest.json"),JSON.stringify({schemaVersion:1,selfExcluded:"artifact-manifest.json",files},null,2)+"\n",{flag:"wx"});'
+          node --input-type=module -e 'import fs from "node:fs";import path from "node:path";import assert from "node:assert/strict";import {createHash} from "node:crypto";const root=process.env.RECEIPT_DIR,expected=["master-build.log","diagnostic-off-build.log","counter-on-build.log","named-profile-build.log",...["master","diagnostic-off","counter-on","named-profile"].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),"native-stage-attribution-control.json",...Array.from({length:3},(_,i)=>[`native-stage-profile-receipt-${i+1}.json`,`hybrid-native-stages-${i+1}.cpuprofile`,`native-stage-profile-classification-${i+1}.json`]).flat()].sort();const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{const p=path.join(dir,e.name);return e.isDirectory()?walk(p):[path.relative(root,p)]});const actual=walk(root).sort(),missing=expected.filter(name=>!actual.includes(name)),unexpected=actual.filter(name=>!expected.includes(name));const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return [name,{size:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex")}]}));fs.writeFileSync(path.join(root,"artifact-manifest.json"),JSON.stringify({schemaVersion:1,selfExcluded:"artifact-manifest.json",expected,actual,missing,unexpected,files},null,2)+"\n",{flag:"wx"});assert.deepEqual(missing,[]);assert.deepEqual(unexpected,[]);for(const value of Object.values(files)){assert.ok(value.size>0);assert.match(value.sha256,/^[0-9a-f]{64}$/);}'
       - name: Upload exact control, profile, counters, and byte receipts
         if: ${{ always() && env.RECEIPT_DIR != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

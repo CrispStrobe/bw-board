@@ -26,9 +26,13 @@ enum {
 /* Measurement-only counters wrap modulo 2^32 and never affect execution. */
 extern stage_u32 native_stage_work[STAGE_COUNTER_COUNT];
 #define STAGE_ADD(index,value) (native_stage_work[(index)]+=(stage_u32)(value))
-#define STAGE_NOINLINE __attribute__((noinline))
 #else
 #define STAGE_ADD(index,value) ((void)(index),(void)(value))
+#endif
+
+#ifdef NATIVE_STAGE_PROFILE_NAMING
+#define STAGE_NOINLINE __attribute__((noinline))
+#else
 #define STAGE_NOINLINE
 #endif
 

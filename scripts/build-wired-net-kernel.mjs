@@ -11,12 +11,16 @@ if(existsSync(output)||existsSync(manifest))throw new Error('refusing to overwri
 const clang=process.env.CLANG??'clang';
 if(process.env.NATIVE_STAGE_ATTRIBUTION!==undefined&&process.env.NATIVE_STAGE_ATTRIBUTION!=='1')
     throw new Error('NATIVE_STAGE_ATTRIBUTION must be 1 when present');
+if(process.env.NATIVE_STAGE_PROFILE_NAMING!==undefined&&process.env.NATIVE_STAGE_PROFILE_NAMING!=='1')
+    throw new Error('NATIVE_STAGE_PROFILE_NAMING must be 1 when present');
 const stageAttribution=process.env.NATIVE_STAGE_ATTRIBUTION==='1';
+const stageProfileNames=process.env.NATIVE_STAGE_PROFILE_NAMING==='1';
 const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c'];
 sourceNames.push('src/experimental/wired-kernel/bus-circuit.c');
 const sources=sourceNames.map(p=>fileURLToPath(new URL('../'+p,import.meta.url)));
 const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall','-Wextra',
     ...(stageAttribution?['-DNATIVE_STAGE_ATTRIBUTION=1']:[]),
+    ...(stageProfileNames?['-DNATIVE_STAGE_PROFILE_NAMING=1']:[]),
     ...(process.env.WASM_LD?[`-fuse-ld=${process.env.WASM_LD}`]:[]),
     '-Wl,--no-entry','-Wl,--export=arena_ptr','-Wl,--export=arena_capacity','-Wl,--export=resolve_nets','-Wl,--export=settle_owned','-Wl,--export=owned_kernel_version',
     '-Wl,--export=memory_kernel_version','-Wl,--export=preview_memory_banks',
@@ -39,8 +43,8 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const receiptNames=[...sourceNames,...(stageAttribution?['src/experimental/wired-kernel/stage-attribution.h']:[])];
-const report={prototype:'wired-owned-memory-circuit',compiler:version,args,stageAttribution,
+const receiptNames=[...sourceNames,'src/experimental/wired-kernel/stage-attribution.h'];
+const report={prototype:'wired-owned-memory-circuit',compiler:version,args,stageAttribution,stageProfileNames,
     sourceSHA256:hash(readFileSync(sources[0])),sourceHashes:Object.fromEntries(receiptNames.map(p=>
         [p,hash(readFileSync(fileURLToPath(new URL('../'+p,import.meta.url))))])),wasmSHA256:hash(readFileSync(output)),
     notes:['Owned C, no runtime imports/WASI, no guest media.','No board backend or real-time throughput claim.']};
