@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {MASTER_REVISION,HEADER_PATH,NATIVE_SOURCE_PATHS,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,assertHeaderHashes,
-    assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
+    assertJSImportHashes,assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
     collectJSImportClosure,controlGateResult,rotatedOrder,summarize}
     from '../scripts/measure-harris-native-stage-attribution.mjs';
 import {createAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
@@ -67,6 +67,9 @@ test('current attribution provenance fails closed on native inventories and foll
         'src/experimental/harris-boot-rom.js','src/experimental/harris-native-memory-board.js','src/experimental/harris-run-transactions.js']);
     for(const path of ['src/experimental/wired-kernel/memory-circuit.js','src/experimental/wired-kernel/phase-circuit-image.js',
         'src/experimental/wired-kernel/bus-circuit-image.js'])assert.ok(closure.includes(path),path);
+    const js=Object.fromEntries(closure.map((path,index)=>[path,`js-${index}`]));assert.deepEqual(assertJSImportHashes({...js},js),js);
+    const jsMissing={...js};delete jsMissing[closure[0]];const jsWrong={...js,[closure[0]]:'wrong'},jsExtra={...js,'src/extra.js':'extra'};
+    for(const value of [jsMissing,jsWrong,jsExtra])assert.throws(()=>assertJSImportHashes(value,js));
     assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_ATTRIBUTION=1',`/a/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/a']),
         ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
     assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_PROFILE_NAMING=1',`/b/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/b']),

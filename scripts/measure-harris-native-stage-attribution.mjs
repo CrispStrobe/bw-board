@@ -43,6 +43,10 @@ export function assertHeaderHashes(headerHashes,expected){
     assert.deepEqual(Object.keys(headerHashes??{}),[HEADER_PATH],'exact native header inventory');
     assert.equal(headerHashes[HEADER_PATH],expected,'exact native header digest');return Object.freeze({...headerHashes});
 }
+export function assertJSImportHashes(sourceHashes,expected){
+    assert.deepEqual(Object.keys(sourceHashes??{}),Object.keys(expected),'exact workload JS closure inventory');
+    assert.deepEqual(sourceHashes,expected,'exact workload JS closure digests');return Object.freeze({...sourceHashes});
+}
 export function collectJSImportClosure(directory,entries){
     const root=realpathSync(directory),pending=[...entries],seen=new Set();
     while(pending.length){const path=pending.pop();if(seen.has(path))continue;const absolute=resolve(root,path);
@@ -151,6 +155,7 @@ async function main(){parseOptions(process.argv.slice(2));if(options['classify-p
     for(const variant of [off,nativeCounter,profile]){assert.equal(variant.provenance.compiler,master.provenance.compiler,`${variant.name}: compiler identity`);
         assert.deepEqual(variant.provenance.sourceHashes,master.provenance.sourceHashes,`${variant.name}: native source identity`);
         assert.deepEqual(variant.provenance.headerHashes,master.provenance.headerHashes,`${variant.name}: native header identity`);
+        assertJSImportHashes(variant.provenance.jsSourceHashes,master.provenance.jsSourceHashes);
         assert.deepEqual(canonicalBuildArgs(variant.provenance.args),canonicalBuildArgs(master.provenance.args),`${variant.name}: only explicit diagnostic build flags may differ`);}
     assert.equal(off.provenance.wasmSHA256,master.provenance.wasmSHA256,'diagnostics-off production Wasm identity');
     if(options['profile-only']){const repetitions=integer('profile-repetitions',6,20),samples=[];let expected=null;for(let i=0;i<repetitions;i++){const value=await sample(profile,iterations);expected??=value.semantic;assertSemantic(value.semantic,expected,`profile ${i+1}`);samples.push(value);}
