@@ -341,3 +341,41 @@ test('capture owns nested symbols and breakpoint metadata independently of calle
   assert.equal(snapshot.local.symbols.scheduler.bw_ms.addr, 4);
   assert.equal(snapshot.local.breakpoints[0][1].label.text, 'original');
 });
+
+test('opaque provenance binds all local continuation state to exact native byte values', () => {
+  const fixture = makeWasm();
+  let generation = 1;
+  fixture.wasm._emu_checkpoint_save = (ptr, len) => {
+    fixture.wasm.HEAPU8.fill(generation, ptr, ptr + len);
+    return 0;
+  };
+  const target = createEmu8051DebugTarget(fixture.wasm);
+  const first = target.captureCheckpoint();
+  generation = 2;
+  const second = target.captureCheckpoint();
+  assert.equal(target.restoreCheckpoint({...first, bytes: second.bytes.slice()}).code,
+    'invalid-checkpoint-envelope', 'same metadata cannot authenticate other native state');
+
+  target.setBreakpoint({kind: 'code', addr: 64});
+  generation = 3;
+  const bp64 = target.captureCheckpoint();
+  target.clearBreakpoint(1);
+  target.setBreakpoint({kind: 'code', addr: 128});
+  generation = 4;
+  const bp128 = target.captureCheckpoint();
+  assert.equal(target.restoreCheckpoint({...bp64, bytes: bp128.bytes.slice()}).code,
+    'invalid-checkpoint-envelope');
+  assert.equal(target.restoreCheckpoint({...bp128, local: bp64.local}).code,
+    'invalid-checkpoint-envelope');
+  const invented = {...bp64, local: {...bp64.local, stepping: true, pendingCause: 'step',
+    pendingStep: {kind: 'insn', pcBefore: 777}}};
+  assert.equal(target.restoreCheckpoint(invented).code, 'invalid-checkpoint-envelope');
+
+  assert.equal(target.restoreCheckpoint({...bp64, bytes: bp64.bytes.slice()}), true,
+    'a value-identical owned copy remains valid');
+  const backing = new Uint8Array(bp64.bytes.length + 9);
+  const offsetView = backing.subarray(5, 5 + bp64.bytes.length);
+  offsetView.set(bp64.bytes);
+  assert.equal(target.restoreCheckpoint({...bp64, bytes: offsetView}), true,
+    'byteOffset and ArrayBuffer identity are not part of the seal');
+});

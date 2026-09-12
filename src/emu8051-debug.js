@@ -101,6 +101,10 @@
  * Board is a separate reactive machine whose editor snapshot omits scheduled
  * device and solver continuation, so the shared adapter/factory boundary fails
  * closed instead of mislabelling a native MCU blob as a whole-board checkpoint.
+ * The returned value is deliberately an in-memory, same-target opaque handle:
+ * its private token binds native bytes to debugger/adapter continuation state.
+ * It is not structured-cloneable, transferable, or a persistence format;
+ * callers may copy the byte values, including into a nonzero-offset view.
  * Reverse execution remains a separate, unclaimed integration.
  *
  * ## Native pin-event transport
@@ -214,8 +218,32 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
     /** A native blob is valid only for the target/configuration that captured it. */
     const checkpointSession = {};
     const checkpointLocalProofs = new WeakMap();
-    const breakpointProof = local => JSON.stringify({taskIndex: local.taskIndex,
-        yieldAddr: local.yieldAddr, breakpoints: local.breakpoints});
+    /** Exact value equality for the structured-cloneable checkpoint-local tree. */
+    const checkpointValueEqual = (left, right, seen = new WeakMap()) => {
+        if (Object.is(left, right)) return true;
+        if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
+        if (seen.has(left)) return seen.get(left) === right;
+        seen.set(left, right);
+        if (left instanceof Uint8Array || right instanceof Uint8Array) {
+            return left instanceof Uint8Array && right instanceof Uint8Array &&
+                left.length === right.length && left.every((value, i) => value === right[i]);
+        }
+        if (Array.isArray(left) || Array.isArray(right)) {
+            return Array.isArray(left) && Array.isArray(right) && left.length === right.length &&
+                left.every((value, i) => checkpointValueEqual(value, right[i], seen));
+        }
+        const leftProto = Object.getPrototypeOf(left);
+        const rightProto = Object.getPrototypeOf(right);
+        if (![Object.prototype, null].includes(leftProto) ||
+            ![Object.prototype, null].includes(rightProto)) return false;
+        const leftKeys = Object.keys(left).sort();
+        const rightKeys = Object.keys(right).sort();
+        return leftKeys.length === rightKeys.length &&
+            leftKeys.every((key, i) => key === rightKeys[i] &&
+                checkpointValueEqual(left[key], right[key], seen));
+    };
+    const checkpointBytesEqual = (left, right) => left.length === right.length &&
+        left.every((value, i) => value === right[i]);
 
     let symbols = null;
     let listeners = [];
@@ -1001,8 +1029,6 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     // are replayed once after restore, rather than silently dropped.
                     inBudgetedRun, pinHistoryReadCount, pinHistoryReadHead, adapter
                 });
-                local.proof = {};
-                checkpointLocalProofs.set(local.proof, breakpointProof(local));
             } catch {
                 return {refused: 'checkpoint debugger-local state cannot be cloned',
                     code: 'invalid-checkpoint-local-state'};
@@ -1031,11 +1057,23 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 if (!heap || ptr + checkpointSize > heap.length) return {
                     refused: 'checkpoint allocation became invalid after native save',
                     code: 'invalid-checkpoint-allocation'};
+                const bytes = Uint8Array.from(heap.subarray(ptr, ptr + checkpointSize));
+                let privateLocal;
+                try { privateLocal = structuredClone(local); } catch {
+                    return {refused: 'checkpoint continuation state cannot be privately sealed',
+                        code: 'invalid-checkpoint-local-state'};
+                }
+                if (!checkpointValueEqual(local, privateLocal)) return {
+                    refused: 'checkpoint continuation state is not a plain cloneable value tree',
+                    code: 'invalid-checkpoint-local-state'};
+                local.proof = {};
+                checkpointLocalProofs.set(local.proof, {bytes: Uint8Array.from(bytes),
+                    local: privateLocal});
                 return {
                     schema: 1, kind: 'emu8051-native', version: CHECKPOINT_VERSION,
                     buildId: CHECKPOINT_BUILD_ID, size: checkpointSize,
                     session: checkpointSession, timeNs: nowNs(),
-                    bytes: Uint8Array.from(heap.subarray(ptr, ptr + checkpointSize)), local
+                    bytes, local
                 };
             } finally {
                 freeCheckpointBuffer(ptr);
@@ -1110,13 +1148,20 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 return {refused: 'checkpoint debugger-local state is malformed',
                     code: 'invalid-checkpoint-envelope'};
             }
-            let proof;
-            try { proof = breakpointProof(snapshot.local); } catch {
-                return {refused: 'checkpoint breakpoint provenance is malformed',
+            const proof = checkpointLocalProofs.get(snapshot.local.proof);
+            let publicLocal;
+            let bindingMatches = false;
+            try {
+                const {proof: _opaqueProof, ...continuationLocal} = snapshot.local;
+                publicLocal = continuationLocal;
+                bindingMatches = !!proof && checkpointBytesEqual(snapshot.bytes, proof.bytes) &&
+                    checkpointValueEqual(publicLocal, proof.local);
+            } catch {
+                return {refused: 'checkpoint continuation provenance is malformed',
                     code: 'invalid-checkpoint-envelope'};
             }
-            if (checkpointLocalProofs.get(snapshot.local.proof) !== proof) return {
-                refused: 'checkpoint breakpoint metadata differs from its captured native handles',
+            if (!bindingMatches) return {
+                refused: 'checkpoint native and local state differ from their opaque captured pair',
                 code: 'invalid-checkpoint-envelope'};
             let staged;
             try {
