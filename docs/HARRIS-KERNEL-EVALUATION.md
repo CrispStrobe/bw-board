@@ -424,3 +424,30 @@ passes 8,194 periods in all five modes, using multiple bounded schedule calls
 with identical final hashes and read counts. It is one smoke round, not another
 repeated performance result. The [native build](HARRIS-NATIVE-ADMITTED-BUILD.json)
 uses memory-context ABI 2 and records source/module hashes.
+
+### Current cooperative hybrid attribution
+
+The current [hosted producer receipt](HARRIS-HYBRID-PRODUCER-ATTRIBUTION.json)
+measures the real cooperative memory-only CPU path after incremental dirty-net,
+operation-bitset and phase-schedule-delta work. Harris qualification run
+`34696776443` and ordinary CI run `34696776489` are green at exact source
+`1144fd8`. Alternating control and instrumented executions preserve the same
+57,392 periods, 6,148 retirements, 57,459 physical clocks, CPU/memory hash and
+all twelve native work counters. The receipt also reconciles returned native
+periods, the initialized pending transaction, chunks/yields and completion hash.
+
+Native work remains the primary measured cost. The CPU profile's leading native
+self samples are settling 161, memory preview 71, incremental settling 61,
+driver publication 52 and bus-begin work 45. JS `runUntilCompletion` records 43
+self samples and about 200 KB of sampled self allocation, so a compact result
+reader is plausible but is not selected by this evidence. The combined nested
+timer around native execution and JS result construction has a 176.2 ms median
+versus 20.9 ms instruction pumping, 7.2 ms submission and 10.9 ms CPU receipt
+control. It cannot split native execution from result materialization.
+
+The next bounded experiment is diagnostic per-producer counting in the native
+bus, phase and memory publication paths. Record attempts and actual value changes
+for each producer, preserve all existing semantic and work-counter receipts, and
+use the result to decide whether sparse bus-output publication has enough causal
+weight to implement. Do not infer that choice from the aggregate 5,749,404
+driver comparisons or from profiler self samples alone.

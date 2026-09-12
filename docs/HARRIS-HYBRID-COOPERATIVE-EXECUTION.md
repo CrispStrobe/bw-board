@@ -57,6 +57,28 @@ and the raw profile digest. Reproduce with `node --cpu-prof
 scripts/bench-harris-hybrid-cpu.mjs --experimental --iterations=8192 --rounds=1
 --variants=hybrid-batched` and the matching HARRIS_NET_WASM build.
 
+The later hosted [cooperative producer attribution](HARRIS-HYBRID-PRODUCER-ATTRIBUTION.json)
+binds exact source `1144fd8`, Harris qualification run `34696776443`, the fresh
+Wasm build, full CPU/memory/work identity, and raw CPU/heap profile digests. All
+three measured control and instrumented runs halt after 57,392 successful periods,
+6,148 retirements and 2,048 writes to each RAM bank; physical clock is exactly
+57,459, including the 67 initialization periods outside the timed numerator.
+The instrumented medians attribute about 176.2 ms to the combined native/result
+boundary, 20.9 ms to instruction pumping, 7.2 ms to submission, 10.9 ms to CPU
+receipt control and 0.7 ms to cooperative control. Timer instrumentation retains
+about 85.6% of control active throughput, so these are coarse hotspot values,
+not an acceptance-speed comparison.
+
+The separate CPU profile still places native settling first: 161 self samples
+in `settle_memory_circuit`, then 71 in memory preview, 61 in incremental settle
+and 52 in native driver writes. The public JS `runUntilCompletion` has 43 self
+samples, while its sampled heap allocation is about 200 KB of 2.83 MB across the
+complete profiled process. Completion allocation remains a real secondary cost;
+this evidence does not select it ahead of native settling. The next measurement
+must count attempted and value-changing writes by native producer. Only those
+causal counts can select or reject sparse bus-output publication; aggregate work
+counters cannot identify which producer generated unchanged writes.
+
 Node integration tests compare exact reference READY schedules and physical
 completions across checked/admitted/incremental modes, plus actual asynchronous
 stop/resume with pending fetch state. The browser oracle compares complete CPU
@@ -77,9 +99,11 @@ its results must not be substituted for this dedicated qualification.
 
 ## Merge and remaining scope
 
-This candidate is intended for engine PR5 after both ordinary and dedicated
-native CI pass. Qualification receipts and final merge state are recorded in the
-PR; no earlier failed or source-changing run is relabeled as accepted.
+The cooperative runner and the subsequent admitted, incremental and schedule
+optimizations are present on the upstream default branch. The producer-attribution
+qualification passed both dedicated native and ordinary CI at exact source
+`1144fd8`; it changes measurement and qualification only and does not enable a
+backend by default.
 
 Remaining: sparse native memory scheduling, native peripheral/I/O events,
 instruction execution inside the native region, full wired BIOS/DOS workloads,
