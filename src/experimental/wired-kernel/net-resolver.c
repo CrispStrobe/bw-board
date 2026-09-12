@@ -3,6 +3,7 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 _Static_assert(sizeof(u32)==4,"32-bit index required");
 static u8 arena[2*1024*1024] __attribute__((aligned(16)));
+extern u32 incremental_work[10];
 u8 *arena_ptr(void){return arena;}
 u32 arena_capacity(void){return sizeof(arena);}
 u32 owned_kernel_version(void){return 1;}
@@ -21,8 +22,10 @@ static u32 validate_nets(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,
 }
 static void resolve_valid(u32 nets,const u32 *offsets,const u32 *ids,const u8 *levels,u8 *resolved,u8 *conflicts) {
     for(u32 n=0;n<nets;n++) {
+        incremental_work[2]++;
         u32 mask=0;
         for(u32 p=offsets[n];p<offsets[n+1];p++) {
+            incremental_work[3]++;
             u8 code=levels[ids[p]];if(code!=3)mask|=1u<<code;
         }
         u8 conflict=(mask&3)==3;
@@ -58,8 +61,9 @@ static u32 validate_operations(u32 count,const u32 *ops,u32 nets,u32 drivers,con
 void evaluate_owned_operations(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
                                 const u32 *dep_offsets,const u32 *deps,const u8 *changed) {
     for(u32 i=0;i<count;i++) {
+        incremental_work[4]++;
         u32 affected=0;
-        for(u32 p=dep_offsets[i];p<dep_offsets[i+1];p++)if(changed[deps[p]]){affected=1;break;}
+        for(u32 p=dep_offsets[i];p<dep_offsets[i+1];p++){incremental_work[5]++;if(changed[deps[p]]){affected=1;break;}}
         if(!affected)continue;
         const u32 *r=ops+i*32;
         if(r[0]==1) {
@@ -88,14 +92,15 @@ static u32 settle_validated(u32 nets,u32 drivers,const u32 *offsets,const u32 *i
                  const u32 *dep_offsets,const u32 *deps,u32 dep_count,u8 *previous,u8 *changed_nets) {
     (void)dep_count; /* Immutable dependency bounds already admitted. */
     for(u32 delta=0;delta<max_deltas;delta++) {
+        incremental_work[9]++;
         resolve_valid(nets,offsets,ids,levels,live,live_conflicts);
         for(u32 n=0;n<nets;n++){changed_nets[n]=live[n]!=previous[n];previous[n]=live[n];}
-        for(u32 d=0;d<drivers;d++)staged[d]=levels[d];
+        for(u32 d=0;d<drivers;d++){incremental_work[6]++;staged[d]=levels[d];}
         evaluate_owned_operations(count,ops,live,staged,dep_offsets,deps,changed_nets);
         u32 changed=0;
-        for(u32 d=0;d<drivers;d++){if(staged[d]!=levels[d])changed=1;levels[d]=staged[d];}
+        for(u32 d=0;d<drivers;d++){incremental_work[0]++;if(staged[d]!=levels[d]){incremental_work[1]++;incremental_work[7]++;changed=1;}levels[d]=staged[d];}
         if(!changed) {
-            for(u32 n=0;n<nets;n++){published[n]=live[n];published_conflicts[n]=live_conflicts[n];}
+            for(u32 n=0;n<nets;n++){incremental_work[8]++;published[n]=live[n];published_conflicts[n]=live_conflicts[n];}
             return delta+1;
         }
     }

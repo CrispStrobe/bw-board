@@ -10,6 +10,12 @@ extern void evaluate_owned_operations(u32,const u32*,const u8*,u8*,const u32*,co
 static u32 driver_net[LIMIT];
 static u8 last_driver[LIMIT],dirty[LIMIT];
 static u32 dirty_queue[LIMIT],changed_queue[LIMIT],dirty_count,changed_count;
+/* Test-visible work counters. They observe work only; admission and policy do
+ * not read them. Keep the order in sync with memory-circuit.js. */
+u32 incremental_work[10];
+u32 *incremental_work_counters_ptr(void){return incremental_work;}
+void reset_incremental_work_counters(void){for(u32 i=0;i<10;i++)incremental_work[i]=0;}
+u32 incremental_work_counters_version(void){return 1;}
 u32 incremental_kernel_version(void){return 1;}
 u32 admit_incremental_context(const u32 *c) {
     if(c[0]>LIMIT||c[1]>LIMIT)return 7;
@@ -34,14 +40,14 @@ u32 admit_incremental_context(const u32 *c) {
 static u32 resolve_dirty(const u32 *c) {
     for(u32 i=0;i<changed_count;i++)B(17)[changed_queue[i]]=0;
     changed_count=0;
-    for(u32 d=0;d<c[1];d++)if(B(4)[d]!=last_driver[d]) {
+    for(u32 d=0;d<c[1];d++){incremental_work[0]++;if(B(4)[d]!=last_driver[d]) {
         last_driver[d]=B(4)[d];const u32 n=driver_net[d];
         if(!dirty[n]){dirty[n]=1;dirty_queue[dirty_count++]=n;}
-    }
+    }}
     for(u32 i=0;i<dirty_count;i++) {
-        const u32 n=dirty_queue[i];
+        const u32 n=dirty_queue[i];incremental_work[2]++;
         u32 mask=0;dirty[n]=0;
-        for(u32 p=W(2)[n];p<W(2)[n+1];p++){u8 code=B(4)[W(3)[p]];if(code!=3)mask|=1u<<code;}
+        for(u32 p=W(2)[n];p<W(2)[n+1];p++){incremental_work[3]++;u8 code=B(4)[W(3)[p]];if(code!=3)mask|=1u<<code;}
         u8 conflict=(mask&3)==3;
         B(5)[n]=!mask?3:conflict||(mask&4)?2:(mask&1)?0:1;B(6)[n]=conflict;
         if(B(5)[n]!=B(16)[n]){B(17)[n]=1;changed_queue[changed_count++]=n;B(16)[n]=B(5)[n];}
@@ -49,18 +55,19 @@ static u32 resolve_dirty(const u32 *c) {
     dirty_count=0;return changed_count;
 }
 static void publish_incremental(const u32 *c) {
-    for(u32 n=0;n<c[0];n++){B(10)[n]=B(5)[n];B(11)[n]=B(6)[n];}
+    for(u32 n=0;n<c[0];n++){incremental_work[8]++;B(10)[n]=B(5)[n];B(11)[n]=B(6)[n];}
 }
 u32 settle_incremental_context(const u32 *c) {
     for(u32 delta=0;delta<c[12];delta++) {
+        incremental_work[9]++;
         const u32 resolved_changed=resolve_dirty(c);
         // Driver changes masked on a net do not schedule pure evaluators.
         // Conflict-only changes still publish their diagnostics below.
         if(!resolved_changed){publish_incremental(c);return delta+1;}
-        for(u32 d=0;d<c[1];d++)B(9)[d]=B(4)[d];
+        for(u32 d=0;d<c[1];d++){incremental_work[6]++;B(9)[d]=B(4)[d];}
         evaluate_owned_operations(c[7],W(8),B(5),B(9),W(13),W(14),B(17));
         u32 changed=0;
-        for(u32 d=0;d<c[1];d++){if(B(9)[d]!=B(4)[d])changed=1;B(4)[d]=B(9)[d];}
+        for(u32 d=0;d<c[1];d++){incremental_work[0]++;if(B(9)[d]!=B(4)[d]){incremental_work[1]++;incremental_work[7]++;changed=1;}B(4)[d]=B(9)[d];}
         if(!changed){publish_incremental(c);return delta+1;}
     }
     // Keep pending-driver/live history, but do not publish a failed fixpoint.

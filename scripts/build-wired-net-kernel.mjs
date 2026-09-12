@@ -22,6 +22,7 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     ...['admit_owned_context','settle_owned_context'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export=incremental_kernel_version',
     ...['bus_sequencer_version','bus_input_ptr','bus_output_ptr','bus_completion_ptr','bus_error_pin','bus_initialize','bus_submit','bus_begin','bus_end','bus_inspect'].map(n=>`-Wl,--export=${n}`),
+    '-Wl,--export=incremental_work_counters_version','-Wl,--export=incremental_work_counters_ptr','-Wl,--export=reset_incremental_work_counters',
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});

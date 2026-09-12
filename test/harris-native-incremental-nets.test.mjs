@@ -6,6 +6,8 @@ import {runNativePhaseCircuitOracle} from '../scripts/lib/harris-native-phase-ci
 import {runNativePhaseScheduleOracle} from '../scripts/lib/harris-native-phase-schedule-oracle.mjs';
 const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
 const native={skip:wasmBytes?false:'build incremental prototype and set HARRIS_NET_WASM; native gate not exercised'};
+const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
+    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas'];
 async function rawKernel({incremental=false,oscillator=false,previousImage=null}={}) {
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
     const p={context:base,offsets:base+128,ids:base+144,drivers:base+160,live:base+164,conflicts:base+168,ops:base+172,
@@ -22,8 +24,33 @@ async function rawKernel({incremental=false,oscillator=false,previousImage=null}
     if(incremental)assert.equal(e.admit_owned_context(p.context),0);
     const inspect=()=>Object.fromEntries(['drivers','live','conflicts','published','publishedConflicts','previous','changed'].map(name=>
         [name,Array.from(new Uint8Array(e.memory.buffer,p[name],name==='drivers'?drivers:3))]));
-    return {e,p,v,inspect,step:levels=>{new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
+    const counters=()=>Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),10)[i]]));
+    return {e,p,v,inspect,counters,resetCounters:()=>e.reset_incremental_work_counters(),
+        step:levels=>{new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
 }
+test('work counters observe existing full and incremental loops and reset without changing state',native,async()=>{
+    const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
+    assert.equal(incremental.e.incremental_work_counters_version(),1);
+    incremental.resetCounters();
+    assert.equal(incremental.step([3,3,2,3]),1);
+    assert.deepEqual(incremental.counters(),{
+        driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:0,dependencyProbes:0,
+        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
+    });
+    const state=incremental.inspect();incremental.resetCounters();
+    assert.deepEqual(incremental.counters(),Object.fromEntries(WORK_COUNTERS.map(name=>[name,0])));
+    assert.deepEqual(incremental.inspect(),state,'counter reset is observational only');
+    assert.equal(incremental.step([3,3,2,3]),1);
+    assert.deepEqual(incremental.counters(),{
+        driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:0,netDriverVisits:0,evaluatorRows:0,dependencyProbes:0,
+        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
+    });
+    checked.resetCounters();assert.equal(checked.step([3,3,2,3]),1);
+    assert.deepEqual(checked.counters(),{
+        driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:1,dependencyProbes:3,
+        stagedDriverCopies:4,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
+    });
+});
 test('incremental private graph matches memory, phase and native schedule oracles',native,async()=>{
     const options={wasmBytes,admittedGraph:true,incrementalGraph:true};
     assert.equal((await runNativeMemoryCircuitOracle({...options,swapAddress:true})).comparisons,1026);

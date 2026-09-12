@@ -6,6 +6,8 @@ import {validateWiredNetImage} from './net-resolver.js';
 import {MEMORY_BANK_PINS} from './memory-banks.js';
 import {preparePhaseCircuit} from './phase-circuit-image.js';
 const SIZE=32768,WORDS=9;
+const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
+    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas'];
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,admittedGraph=false,incrementalGraph=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
     if(typeof admittedGraph!=='boolean')throw new TypeError('admittedGraph');
@@ -37,6 +39,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
     if(incrementalGraph&&e.incremental_kernel_version?.()!==1)throw new TypeError('rebuild native incremental kernel: ABI version mismatch');
+    if(e.incremental_work_counters_version?.()!==1)throw new TypeError('rebuild native work counters: ABI version mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
@@ -63,6 +66,12 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,incrementalGraph?2:Number(admittedGraph)]);
     if(admittedGraph&&(e.admit_owned_context(p.context)>>>0)!==0)throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph admission failed');
     const inspect=()=>({levels:bytes('published',nets).slice(),conflicts:bytes('publishedConflicts',nets).slice(),driverLevels:bytes('drivers',drivers).slice()});
+    let hostValueChangingDriverWrites=0;
+    const inspectWorkCounters=()=>{
+        const values=new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),WORK_COUNTERS.length);
+        return Object.freeze(Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,(values[i]+(i===1?hostValueChangingDriverWrites:0))>>>0])));
+    };
+    const resetWorkCounters=()=>{hostValueChangingDriverWrites=0;e.reset_incremental_work_counters();};
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
         const word=w=>view.getUint32(p.states+(bank*WORDS+w)*4,true),out=word(2);
@@ -74,7 +83,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         if(levels!==undefined){
             if(!(levels instanceof Uint8Array)||levels.length!==drivers)throw new TypeError('driver dimensions');
             for(const code of levels)if(code>3)throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
-            bytes('drivers',drivers).set(levels);
+            const current=bytes('drivers',drivers);for(let i=0;i<drivers;i++)if(current[i]!==levels[i])hostValueChangingDriverWrites++;
+            current.set(levels);
         }
     };
     const memoryFault=result=>{
@@ -93,5 +103,6 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
-        latchedMemoryClocks:!!phaseBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(phaseMethods??{settleMemories}),inspect,inspectMemory});
+        latchedMemoryClocks:!!phaseBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(phaseMethods??{settleMemories}),
+        inspect,inspectMemory,inspectWorkCounters,resetWorkCounters});
 }
