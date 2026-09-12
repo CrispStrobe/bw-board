@@ -211,6 +211,7 @@ test('sparse evaluator outputs preserve multi-output and duplicate row order wit
     assert.equal(incremental.counters().committedEvaluatorOutputs,5);
     assert.equal(incremental.counters().dependencyProbes,0);
     assert.equal(incremental.counters().reverseIndexVisits,8,'changed nets visit each reverse membership once and deduplicate rows');
+    assert.equal(incremental.counters().evaluatorRows,5,'eight reverse hits evaluate five unique rows once each');
     incremental.resetCounters();step({0:0,1:0,2:1,3:0,4:0});
     assert.deepEqual(incremental.inspect().drivers.slice(5),[0,0,1,1,0]);
     assert.equal(incremental.counters().stagedDriverCopies,0);assert.equal(incremental.counters().driverComparisons,10);
@@ -237,6 +238,10 @@ test('operation bitset preserves row order and deduplication across 31/32 and 63
     assert.equal(incremental.counters().operationBitsetWordVisits,3);
     incremental.resetCounters();step([1,0,0,0,3]);
     assert.equal(incremental.counters().evaluatorRows,0);assert.equal(incremental.counters().operationBitsetWordVisits,0,'idle settle scans no bitset words');
+    new Uint32Array(incremental.e.memory.buffer,incremental.p.affected,3).fill(0xffffffff);
+    assert.equal(incremental.e.admit_owned_context(incremental.p.context),0);
+    assert.deepEqual(Array.from(new Uint32Array(incremental.e.memory.buffer,incremental.p.affected,3)),[0,0,0],
+        're-admission clears every word, including the partial final word');
 });
 test('incremental dirty queues initialize unchanged drivers and clear prior changed flags on idle settling',native,async()=>{
     const checked=await rawKernel({previousImage:[0,0,0]}),incremental=await rawKernel({incremental:true,previousImage:[0,0,0]});
@@ -265,6 +270,17 @@ test('incremental admission requires unique membership, bounded caches and the a
         .forEach((n,i)=>v.setUint32(base+4*i,n,true));
     assert.equal(e.admit_owned_context(base)>>>0,0x80000007);
     assert.equal(e.settle_owned_context(base)>>>0,0x80000006);
+});
+test('admission bounds operation and dependency counts before dereferencing their tables',native,async()=>{
+    const k=await rawKernel({incremental:true});
+    k.v.setUint32(k.p.context+7*4,16385,true);k.v.setUint32(k.p.context+8*4,0xfffffff0,true);
+    assert.equal(k.e.admit_owned_context(k.p.context)>>>0,0x80000007,'oversized operation table is refused before its pointer is read');
+    assert.equal(k.e.settle_owned_context(k.p.context)>>>0,0x80000006,'failed operation admission revokes the old grant');
+    k.v.setUint32(k.p.context+7*4,1,true);k.v.setUint32(k.p.context+8*4,k.p.ops,true);
+    assert.equal(k.e.admit_owned_context(k.p.context),0);
+    k.v.setUint32(k.p.context+15*4,524289,true);k.v.setUint32(k.p.context+14*4,0xfffffff0,true);
+    assert.equal(k.e.admit_owned_context(k.p.context)>>>0,0x80000007,'oversized dependency table is refused before its pointer is read');
+    assert.equal(k.e.settle_owned_context(k.p.context)>>>0,0x80000006,'failed dependency admission revokes the old grant');
 });
 test('incremental admission rejects malformed or inexact reverse dependency images and revokes the prior grant',native,async()=>{
     const cases=[

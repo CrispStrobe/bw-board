@@ -9,24 +9,28 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 
 if(!process.env.WASM_LD)throw new Error('WASM_LD required');
-const root=fileURLToPath(new URL('../',import.meta.url)),boundary='operation bitset preserves row order',dirty='incremental dirty queues initialize',admission='incremental admission requires unique membership';
+const root=fileURLToPath(new URL('../',import.meta.url)),boundary='operation bitset preserves row order',dirty='incremental dirty queues initialize',admission='incremental admission requires unique membership',dedup='sparse evaluator outputs preserve',capacity='admission bounds operation and dependency counts';
 const revision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),hash=value=>createHash('sha256').update(value).digest('hex');
 const cases=[
     ['floor-word-count','src/experimental/wired-kernel/net-resolver.c','for(u32 word=0;word<(count+31)/32;word++) {','for(u32 word=0;word<count/32;word++) {',boundary],
     ['replace-mark-or','src/experimental/wired-kernel/incremental-nets.c',
         'if(!(affected[operation>>5]&mask)){affected[operation>>5]|=mask;has_affected=1;}',
         'if(!(affected[operation>>5]&mask)){affected[operation>>5]=mask;has_affected=1;}',boundary],
+    ['add-duplicate-mark','src/experimental/wired-kernel/incremental-nets.c',
+        'if(!(affected[operation>>5]&mask)){affected[operation>>5]|=mask;has_affected=1;}',
+        'affected[operation>>5]+=mask;has_affected=1;',dedup],
     ['reverse-bit-order','src/experimental/wired-kernel/net-resolver.c','const u32 bit=__builtin_ctz(bits),i=word*32+bit;bits&=bits-1;',
         'const u32 bit=31-__builtin_clz(bits),i=word*32+bit;bits&=~(1u<<bit);',boundary],
     ['reverse-word-order','src/experimental/wired-kernel/net-resolver.c','for(u32 word=0;word<(count+31)/32;word++) {',
         'for(u32 word=(count+31)/32;word-->0;) {',boundary],
     ['retain-word-marks','src/experimental/wired-kernel/net-resolver.c','u32 bits=affected[word];affected[word]=0;',
         'u32 bits=affected[word];',boundary],
-    ['omit-admission-clear','src/experimental/wired-kernel/incremental-nets.c','for(u32 word=0;word<(c[7]+31)/32;word++)affected[word]=0;',
-        'for(u32 word=0;word<0;word++)affected[word]=0;',dirty],
+    ['clear-only-first-word','src/experimental/wired-kernel/incremental-nets.c','for(u32 word=0;word<(c[7]+31)/32;word++)affected[word]=0;',
+        'for(u32 word=0;word<1;word++)affected[word]=0;',boundary],
     ['hide-word-visits','src/experimental/wired-kernel/net-resolver.c','incremental_work[11]++;','(void)word;',boundary],
     ['accept-abi3-mode','src/experimental/wired-kernel/net-resolver.c','if(c[31]!=1&&c[31]!=4)return 0x80000006u;',
-        'if(c[31]!=1&&c[31]!=2&&c[31]!=3&&c[31]!=4)return 0x80000006u;',admission]
+        'if(c[31]!=1&&c[31]!=2&&c[31]!=3&&c[31]!=4)return 0x80000006u;',admission],
+    ['omit-operation-capacity-preflight','src/experimental/wired-kernel/net-resolver.c','c[7]>OWNED_OPERATION_LIMIT','c[7]>0xffffffffu',capacity]
 ];
 const originals=new Map();for(const [,relative] of cases)if(!originals.has(relative))originals.set(relative,readFileSync(join(root,relative),'utf8'));
 const results=[];

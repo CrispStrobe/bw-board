@@ -35,7 +35,7 @@ static u32 write_driver(const u32 *c,u32 id,u32 code,u32 count_comparison) {
 }
 u32 write_owned_driver(const u32 *c,u32 id,u32 code){return write_driver(c,id,code,1);}
 u32 admit_incremental_context(const u32 *c) {
-    if(c[0]>LIMIT||c[1]>LIMIT||c[7]>0xffffffe0u)return 7;
+    if(c[0]>LIMIT||c[1]>LIMIT)return 7;
     const u32 *reverse_offsets=W(32),*reverse_operations=W(33);u32 *affected=W(34);
     if(reverse_offsets[0]!=0||reverse_offsets[c[0]]!=c[15])return 4;
     for(u32 n=0;n<c[0];n++){

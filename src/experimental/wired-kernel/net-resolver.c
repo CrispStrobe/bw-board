@@ -3,6 +3,8 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 _Static_assert(sizeof(u32)==4,"32-bit index required");
 static u8 arena[2*1024*1024] __attribute__((aligned(16)));
+#define OWNED_U32_LIMIT (sizeof(arena)/sizeof(u32))
+#define OWNED_OPERATION_LIMIT (sizeof(arena)/(32u*sizeof(u32)))
 extern u32 incremental_work[12];
 u8 *arena_ptr(void){return arena;}
 u32 arena_capacity(void){return sizeof(arena);}
@@ -170,11 +172,15 @@ extern u32 settle_incremental_context(const u32*);
 #define CW(i) ((u32*)(unsigned long)c[i])
 u32 admit_owned_context(const u32 *c) {
     admitted_context=0;admitted_mode=0; /* Failed re-admission revokes the old grant. */
+    if(c[31]!=1&&c[31]!=4)return 0x80000006u;
+    /* Refuse counts that cannot fit even as one arena-resident table before
+     * dereferencing caller offsets or records. ABI 4 has tighter static-cache
+     * limits, enforced by its incremental admission below. */
+    if(c[0]>=OWNED_U32_LIMIT||c[1]>OWNED_U32_LIMIT||c[7]>OWNED_OPERATION_LIMIT||c[15]>OWNED_U32_LIMIT)return 0x80000007u;
     u32 error=validate_nets(c[0],c[1],CW(2),CW(3),CB(4));
     if(!error)error=validate_operations(c[7],CW(8),c[0],c[1],CW(13),CW(14),c[15]);
     if(error)return 0x80000000u|error;
     if(!c[12]||c[12]>1024)return 0x80000005u;
-    if(c[31]!=1&&c[31]!=4)return 0x80000006u;
     if(c[31]==4&&(error=admit_incremental_context(c)))return 0x80000000u|error;
     admitted_context=c;admitted_mode=c[31];return 0;
 }
