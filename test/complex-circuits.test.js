@@ -116,7 +116,44 @@ describe('LED with different forward voltages', () => {
     board.advanceTo(1_000_000n);
 
     const b = board.ledBrightness('LED1');
-    assert.ok(b < 0.01, `LED with Vf(3.5) > VCC(3.3) should not conduct, brightness=${b}`);
+
+    // THE CLAIM THAT USED TO BE HERE WAS `b < 0.01`, AND IT WAS A PWL ARTEFACT.
+    //
+    // "Vf > VCC therefore no current" is exact under a hard knee and false under
+    // any physical junction: 3.5 V against a 3.3 V rail is 200 mV below the knee,
+    // which is under two decades at n=1.8, not "far off". The routed model puts
+    // ~290 uA here and a real LED at 200 mV below its rated point does conduct
+    // and does faintly glow. The renderer agrees rather than disagrees -- it
+    // multiplies brightness by 8 precisely so a dim LED reads as dim-not-dark.
+    //
+    // NO VISIBILITY FLOOR WAS ADDED, DELIBERATELY. A floor high enough to zero
+    // this (>0.0145) sits directly under the band the suite already treats as
+    // meaningfully lit: brightness-cross-validate drives 25 % duty to ~0.037 and
+    // brightness-emu8051 asserts > 0.01. A number wedged into an occupied band
+    // and defended by one test is a preference, not a derivation.
+    //
+    // What the original test was really guarding is that an UNDER-DRIVEN LED is
+    // dramatically dimmer than a properly driven one. That claim is true under
+    // every junction model, so it is the one asserted -- and it is checked as a
+    // RATIO against the same LED on a 5 V rail, which no model choice can move.
+    const bright = (() => {
+      const b2 = new BoardImpl(5.0);
+      b2.setNetlist(structuredClone(parts), structuredClone(nets));
+      b2.setPin('P1.0', 'pushpull', false);
+      b2.advanceTo(1_000_000n);
+      return b2.ledBrightness('LED1');
+    })();
+
+    // NON-VACUITY FIRST: a ratio between two dark LEDs passes anything.
+    assert.ok(bright > 0.3,
+      `the 5 V control must actually be LIT or the ratio below is meaningless, got ${bright}`);
+    // MEASURED: 42.3x routed and infinite under pure PWL. A solver that ignored
+    // Vf entirely would give ~1x (both rails clamp to full brightness), so 20x
+    // separates "respects the knee" from "does not" with >2x headroom either way
+    // and is not tuned to the reading.
+    assert.ok(bright / b >= 20,
+      `an LED with Vf(3.5) above VCC(3.3) must be far dimmer than the same LED on 5 V: `
+      + `under-driven ${b}, driven ${bright}, ratio ${(bright / b).toFixed(1)}x (need >=20x)`);
   });
 });
 
