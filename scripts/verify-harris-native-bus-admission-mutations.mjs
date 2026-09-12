@@ -14,6 +14,8 @@ const capture='post-admission arena map edits cannot redirect any of the three c
 const revocation='every bus, graph and memory re-admission attempt revokes';
 const resets='logical, sequencer and counter reset preserve mapping authority';
 const raw='raw mode retains full final-entry map and live-level validation';
+const rawCount='raw mode accepts count 128 and refuses 129 before a writer';
+const midPeriod='mid-period re-admission invalidates the end edge before phase preview or memory commit';
 const mutations=[
     {name:'128-entry external boundary is rejected',pattern:boundary,file:'bus-circuit.c',
         from:'count>128)',to:'count>=128)'},
@@ -77,6 +79,11 @@ const mutations=[
         from:'return admitted_bus_context==p&&',to:'return 1&&'},
     {name:'raw context takes admitted fast path',pattern:raw,file:'bus-circuit.c',
         from:'if(!p[10])return validate_raw_bus_mapping(p,fault);',to:'if(0)return validate_raw_bus_mapping(p,fault);'},
+    {name:'raw context omits its external count bound',pattern:rawCount,file:'bus-circuit.c',
+        from:'if(p[6]>128)return failure(p,8,2,0,fault);',to:'if(0)return failure(p,8,2,0,fault);'},
+    {name:'end edge omits its admitted authority check',pattern:midPeriod,file:'bus-circuit.c',
+        from:'if(p[10]&&!admitted_bus_grant_matches(p))return failure(p,8,2,0,fault);',
+        to:'if(0)return failure(p,8,2,0,fault);'},
     {name:'live validation occurs after an external writer',pattern:resets,file:'bus-circuit.c',edits:[
         {from:'if(B(5)[i]>3){',to:'if(0&&B(5)[i]>3){'},
         {from:'if(stage_bus_driver(W(0),external[i],B(5)[i],PRODUCER_BUS_EXTERNAL))',

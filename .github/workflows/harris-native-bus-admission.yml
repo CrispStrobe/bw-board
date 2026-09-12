@@ -86,7 +86,7 @@ jobs:
           node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const tap=fs.readFileSync(process.env.RECEIPT_DIR+"/focused-tests.tap","utf8"); assert.match(tap,/^# fail 0$/m); assert.match(tap,/^# skipped 0$/m); assert.doesNotMatch(tap,/# SKIP\b/i);'
           node scripts/verify-harris-native-bus-admission-mutations.mjs \
             | tee "$RECEIPT_DIR/bus-map-admission-mutations.tap"
-          test "$(grep -c '^# mutation rejected:' "$RECEIPT_DIR/bus-map-admission-mutations.tap")" -eq 29
+          test "$(grep -c '^# mutation rejected:' "$RECEIPT_DIR/bus-map-admission-mutations.tap")" -eq 31
 
       - name: Measure same-runner immutable bus-map admission
         run: |

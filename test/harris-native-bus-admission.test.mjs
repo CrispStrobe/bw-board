@@ -41,6 +41,7 @@ async function rawBus(){
     const counters=()=>Object.fromEntries(COUNTERS.map((name,i)=>[name,words(e.bus_admission_counters_ptr(),6)[i]]));
     const fault=()=>words(p.fault,4),life=()=>words(p.lifecycle,2);
     const execution=()=>({drivers:Array.from(new Uint8Array(e.memory.buffer,p.drivers,58)),
+        memory:words(p.states,9),memoryStaged:words(p.memoryStaged,9),
         work:words(e.incremental_work_counters_ptr(),12),producer:words(e.producer_work_counters_ptr(),18)});
     const admitMemory=()=>e.admit_owned_memory_context(p.context,p.fault)>>>0;
     const admitBus=()=>e.admit_owned_bus_context(p.busContext,p.fault)>>>0;
@@ -122,11 +123,25 @@ test('every bus, graph and memory re-admission attempt revokes the preceding bus
         k.v.setUint32(k.p.lifecycle+4,0,true);const before=k.execution();
         assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),8);assert.deepEqual(k.execution(),before);
     }
-    for(const [name,readmit] of [['memory',k=>k.admitMemory()],['graph',k=>k.e.admit_owned_context(k.p.context)>>>0]]){
-        const k=await admitted();assert.equal(readmit(k),0,name);const before=k.execution();
+    for(const [name,readmit] of [
+        ['successful memory',k=>k.admitMemory()],
+        ['successful graph',k=>k.e.admit_owned_context(k.p.context)>>>0],
+        ['failed memory',k=>{new Uint8Array(k.e.memory.buffer,k.p.protected,1)[0]=2;
+            const result=k.admitMemory();new Uint8Array(k.e.memory.buffer,k.p.protected,1)[0]=0;return result;}],
+        ['failed graph',k=>{k.v.setUint32(k.p.context+31*4,2,true);
+            const result=k.e.admit_owned_context(k.p.context)>>>0;k.v.setUint32(k.p.context+31*4,1,true);return result;}]
+    ]){
+        const k=await admitted();const result=readmit(k);assert.equal(result===0,name.startsWith('successful'),name);const before=k.execution();
         assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),8,`${name} re-admission revokes bus`);
         assert.deepEqual(k.execution(),before);
     }
+});
+
+test('mid-period re-admission invalidates the end edge before phase preview or memory commit',native,async()=>{
+    const k=await admitted();k.e.bus_initialize(1024);assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),0);
+    assert.equal(k.admitMemory(),0,'same-address memory re-admission revokes the derived bus grant');
+    const before=k.execution();assert.equal(k.e.end_bus_memory_clock(k.p.busContext,k.p.fault),8);
+    assert.deepEqual(k.fault(),[8,2,0,0xffffffff]);assert.deepEqual(k.execution(),before,'end refusal precedes preview and commit');
 });
 
 test('logical, sequencer and counter reset preserve mapping authority and live-level refusal',native,async()=>{
@@ -147,5 +162,18 @@ test('raw mode retains full final-entry map and live-level validation',native,as
         const k=await rawBus();k.v.setUint32(k.p.busContext+10*4,0,true);mutate(k);const before=k.execution();
         assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),8,name);
         assert.deepEqual(k.fault(),[8,2,pin,0xffffffff]);assert.deepEqual(k.execution(),before);
+    }
+});
+
+test('raw mode accepts count 128 and refuses 129 before a writer',native,async()=>{
+    {
+        const k=await rawBus();assert.equal(k.admitMemory(),0);k.v.setUint32(k.p.busContext+10*4,0,true);
+        k.v.setUint32(k.p.busContext+6*4,128,true);k.e.bus_initialize(1024);
+        assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),0,'exact raw count boundary');
+    }
+    {
+        const k=await rawBus();k.v.setUint32(k.p.busContext+10*4,0,true);k.v.setUint32(k.p.busContext+6*4,129,true);
+        const before=k.execution();assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),8);
+        assert.deepEqual(k.fault(),[8,2,0,0xffffffff]);assert.deepEqual(k.execution(),before,'raw count refusal precedes a writer');
     }
 });
