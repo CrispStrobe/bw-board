@@ -101,3 +101,14 @@ Failure results are frozen `{accepted:false, code, reason}`. Codes:
 
 Verify with `node --test --test-concurrency=1 test/execution-measurement.test.mjs`.
 This does not wire any existing target, GUI, worker or benchmark automatically.
+
+## Explicit consumers
+
+The browser benchmark now uses this helper with actual bus clock stamps;
+see [HARRIS-BROWSER-MEASUREMENT-V2.md](HARRIS-BROWSER-MEASUREMENT-V2.md).
+`bench/harris-native-phase.mjs` also records a measurement for each successful
+sample. That synchronous component fixture counts completed periods, supplies
+no Hz, and deliberately returns null RT factors. Its active and wall intervals
+are equal because the measured body does not yield. This does not make it a
+CPU/whole-board benchmark. A one-round eight-transaction-count integration smoke
+check passed all six reference/compiled/native modes with identical final hashes.

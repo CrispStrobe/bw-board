@@ -5,6 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {dirname,join} from 'node:path';
 import {cpus,platform,arch} from 'node:os';
 import assert from 'node:assert/strict';
+import {measureExecutionSlice} from '../src/execution-measurement.js';
 import {DigitalCircuit,bitDrives} from '../src/experimental/digital-circuit.js';
 import {CompiledDigitalCircuit} from '../src/experimental/compiled-digital-circuit.js';
 import {settleBusMemories} from '../src/experimental/latched-memory-components.js';
@@ -63,10 +64,10 @@ for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].rever
         }
         if(chunk.length)handles.push(f.kernel.compileSchedule(chunk));
     }
-    let levels=image.driverLevels,reads=0;
+    let levels=image.driverLevels,reads=0,completedPeriods=0;
     const start=performance.now();
     if(batched) {
-        for(const handle of handles){const result=f.kernel.runSchedule(handle);assert.equal(result.periods,handle.periods);reads+=result.reads;levels=result.driverLevels;}
+        for(const handle of handles){const result=f.kernel.runSchedule(handle);assert.equal(result.periods,handle.periods);completedPeriods+=result.periods;reads+=result.reads;levels=result.driverLevels;}
     }else for(const step of steps) {
         if(mode==='native') {
             for(const[id,value]of step.updates)levels[id]=value;
@@ -80,8 +81,16 @@ for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].rever
             const end=f.controller.previewEnd(p=>c.require('controller',p)),commands=end.finish();
             if(commands){c.drive('controller',commands);c.settle();settleBusMemories(c,f.refs);}
         }
+        completedPeriods++;
     }
     const elapsedMS=performance.now()-start;
+    assert.equal(completedPeriods,steps.length);
+    const measurement=measureExecutionSlice({
+        before:{ticks:0,domain:'owned-latched-memory-fixture-periods'},
+        after:{ticks:completedPeriods,domain:'owned-latched-memory-fixture-periods'},
+        activeMS:elapsedMS,wallMS:elapsedMS});
+    assert.equal(measurement.accepted,true);
+    assert.equal(measurement.capacityRealTimeFactor,null); // No CPU-clock authority in this fixture.
     assert.equal(reads,count*2);
     const state=mode.startsWith('native')?f.kernel.inspect():captureWiredNetImage({enabled:true,circuit:f.circuit});
     const memory=f.refs.map((ref,i)=>{
@@ -92,7 +101,7 @@ for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].rever
     const stateSHA256=hash(JSON.stringify({levels:Array.from(state.levels??state.resolvedLevels),
         conflicts:Array.from(state.conflicts??state.resolvedConflicts),drivers:Array.from(state.driverLevels),memory}));
     expected??=stateSHA256;assert.equal(stateSHA256,expected,`${mode} final state`);
-    if(round>=0)samples.push({round,mode,periods:steps.length,reads,writes:count*2,elapsedMS,periodsPerSecond:steps.length*1000/elapsedMS,stateSHA256});
+    if(round>=0)samples.push({round,mode,periods:completedPeriods,reads,writes:count*2,elapsedMS,periodsPerSecond:measurement.activeTicksPerSecond,measurement,stateSHA256});
 }
 for(const[p,h]of Object.entries(sourceHashes))assert.equal(hash(readFileSync(new URL(p,root))),h,'source changed during benchmark');
 const median=a=>{const s=[...a].sort((a,b)=>a-b),i=Math.floor(s.length/2);return s.length%2?s[i]:(s[i-1]+s[i])/2;};
@@ -104,6 +113,7 @@ const report={benchmark:'owned-latched-memory-components',accepted:true,capacity
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length},node:process.version,samples,summaries,
     notes:['Two SRAM banks/64 KiB, ideal controller/latch and actual nets only. No CPU, timers, DMA, interrupts or DOS workload.',
         'Construction, Wasm instantiation and final hashes excluded; sampled read checks included.',
+        'Completed fixture periods use an unscaled domain: RT factors are null. Synchronous active/wall intervals are equal and include host descheduling, not process CPU time.',
         'Native mode copies typed input and diagnostic output arrays per begin/end boundary. Native-batched uses precompiled bounded fixture schedules; compilation excluded, upload/admission included.',
         'Every native-batched period and actual-net read check still executes; synthetic schedule replay is not a CPU/device runner.',
         'Native-admitted uses the same bounded schedule with private immutable graph admission; input/schedule validation remains enabled.',
