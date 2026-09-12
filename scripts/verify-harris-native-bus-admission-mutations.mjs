@@ -14,7 +14,7 @@ const capture='post-admission arena map edits cannot redirect any of the three c
 const revocation='every bus, graph and memory re-admission attempt revokes';
 const resets='logical, sequencer and counter reset preserve mapping authority';
 const raw='raw mode retains full final-entry map and live-level validation';
-const rawCount='raw mode accepts count 128 and refuses 129 before a writer';
+const rawCount='raw validator accepts count 128 and refuses 129 before a writer';
 const midPeriod='mid-period re-admission invalidates the end edge before phase preview or memory commit';
 const mutations=[
     {name:'128-entry external boundary is rejected',pattern:boundary,file:'bus-circuit.c',

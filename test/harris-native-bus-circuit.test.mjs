@@ -31,7 +31,8 @@ test('admitted bus captures exact maps once and keeps live levels checked per pe
     assert.deepEqual(f.kernel.inspectBusAdmission(),{attempts:1,admissions:1,failures:0,
         inputMapVisits:24,outputMapVisits:48,externalMapVisits:27});
     f.kernel.resetBusAdmissionCounters();
-    for(let i=0;i<4;i++)assert.equal(f.period({reset:Number(i<2)}).error,undefined);
+    for(let i=0;i<17;i++)assert.equal(f.period({reset:1}).error,undefined);
+    assert.equal(f.period({reset:0}).error,undefined,'deasserted edge proves the sequencer retained reset history');
     assert.deepEqual(f.kernel.inspectBusAdmission(),{attempts:0,admissions:0,failures:0,
         inputMapVisits:0,outputMapVisits:0,externalMapVisits:0},'runtime never repeats immutable map admission');
 });
