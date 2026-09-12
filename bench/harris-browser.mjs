@@ -53,7 +53,7 @@ const server=createServer((req,res)=>{
     try {
         const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
         const allowed=pathname==='/bench/harris-browser.html'||pathname==='/bench/harris-browser-worker.mjs'||
-            ['/scripts/lib/harris-browser-measurement.mjs','/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs','/scripts/lib/harris-native-phase-oracle.mjs','/scripts/lib/harris-native-phase-circuit-oracle.mjs','/scripts/lib/harris-native-phase-schedule-oracle.mjs','/scripts/lib/harris-native-bus-sequencer-oracle.mjs','/scripts/lib/harris-native-bus-circuit-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
+            ['/scripts/lib/harris-browser-measurement.mjs','/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs','/scripts/lib/harris-native-phase-oracle.mjs','/scripts/lib/harris-native-phase-circuit-oracle.mjs','/scripts/lib/harris-native-phase-schedule-oracle.mjs','/scripts/lib/harris-native-bus-sequencer-oracle.mjs','/scripts/lib/harris-native-bus-circuit-oracle.mjs','/scripts/lib/harris-native-boot-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
         if(req.method!=='GET'||!allowed)throw new Error('not served');
         const path=realpathSync(resolve(root,'.'+pathname));if(!path.startsWith(root+sep))throw new Error('outside source root');
         const bytes=readFileSync(path),key=path.slice(root.length+1),digest=hash(bytes);
@@ -126,7 +126,17 @@ try {
                 const bus=report.nativeOracle.busCircuit?.[mode];
                 assert.equal(bus?.accepted,true);assert.equal(bus?.capacityClaim,false);
                 assert.equal(bus.boundaries,830);assert.equal(bus.transactions,48);assert.equal(bus.completions,63);
+                const boot=report.nativeOracle.hybridBoot?.[mode];
+                assert.equal(boot?.accepted,true);assert.equal(boot?.capacityClaim,false);
+                assert.equal(boot.fullNativeCPU,false);assert.equal(boot.fullDOSBoot,false);
+                assert.deepEqual(boot.samples.map(s=>s.name),['boot','loop','mismatch']);
+                assert.deepEqual(boot.samples.map(s=>s.retired),[10,47,48]);
+                for(const sample of boot.samples) {
+                    assert.equal(sample.memoryBytesCompared,131072);assert.equal(sample.initializationPeriods,67);
+                    assert.equal(sample.physicalClock,sample.periods+67);assert.ok(sample.completions>0);
+                }
             }
+            assert.deepEqual(report.nativeOracle.hybridBoot.checked.samples,report.nativeOracle.hybridBoot.incremental.samples);
         }
         report.nativeBuild=nativeModule;
     }
