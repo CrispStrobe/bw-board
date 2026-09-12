@@ -8,8 +8,10 @@ const atSample=f=>f.kernel.inspectBus().state==='TC'&&f.kernel.inspectBus().phas
 const advanceToSample=f=>{for(let i=0;!atSample(f);i++){assert.ok(i<20);assert.equal(f.period().error,undefined);}};
 
 test('same-instance bus/actual-net/controller/memory oracle compares every boundary',optional,async()=>{
-    const report=await runNativeBusCircuitOracle({wasmBytes});
+    for(const mode of [{},{admittedGraph:true,incrementalGraph:true}]) {
+    const report=await runNativeBusCircuitOracle({wasmBytes,...mode});
     assert.equal(report.boundaries,830);assert.equal(report.transactions,48);assert.equal(report.completions,63);
+    }
 });
 test('same-instance bridge retains actual swapped address wiring in admitted/incremental modes',optional,async()=>{
     const editWires=w=>w.map(item=>item.to==='low'&&['a0','a1'].includes(item.toTerminal)?

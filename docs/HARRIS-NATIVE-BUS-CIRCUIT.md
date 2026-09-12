@@ -130,12 +130,14 @@ The next architectural work is CPU instruction integration and required device,
 interrupt and DMA scheduling, with complete-board reference comparisons. This
 small memory-only host transaction fixture does not satisfy those requirements.
 
-## Driver-writer frontier integration warning
+## Driver-writer frontier integration
 
 All new bridge driver writes pass through the single C `stage_bus_driver` seam.
-This version targets the existing scan-discovered incremental backend. When
-integrating a producer-marked dirty frontier, replace that seam with its
-authoritative `write_owned_driver(context,id,code)` path and check returned
-errors. Do not leave direct array writes that bypass dirty marking. Root's
-separate frontier lane owns that integration; no unverified frontier dependency
-has been pulled into this component branch.
+The isolated component originally targeted the scan-discovered backend. Root
+integration now routes that seam through the authoritative checked
+`write_owned_driver(context,id,code)` for both external inputs and bus outputs.
+No runtime bridge driver bypasses dirty marking. Incremental ABI v2 and phase
+ABI v2 are separately checked; stale artifacts require reconstruction.
+The portable full-boundary oracle now runs in both checked and incremental
+modes in Node and the browser acceptance harness. Combined acceptance receipts
+are separate from the original component branch's tests.

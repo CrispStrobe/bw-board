@@ -24,7 +24,7 @@ if(nativePath) {
     const verifiedSources=build.sourceHashes??{'src/experimental/wired-kernel/net-resolver.c':build.sourceSHA256};
     assert.ok(Object.hasOwn(verifiedSources,'src/experimental/wired-kernel/net-resolver.c'));
     for(const [path,expected] of Object.entries(verifiedSources)) {
-        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c'].includes(path),'unexpected native source');
+        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c','src/experimental/wired-kernel/bus-circuit.c'].includes(path),'unexpected native source');
         assert.equal(hash(readFileSync(join(root,path))),expected,'rebuild native module for this source');sourceHashes[path]=expected;
     }
     assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');
@@ -53,7 +53,7 @@ const server=createServer((req,res)=>{
     try {
         const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
         const allowed=pathname==='/bench/harris-browser.html'||pathname==='/bench/harris-browser-worker.mjs'||
-            ['/scripts/lib/harris-browser-measurement.mjs','/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs','/scripts/lib/harris-native-phase-oracle.mjs','/scripts/lib/harris-native-phase-circuit-oracle.mjs','/scripts/lib/harris-native-phase-schedule-oracle.mjs','/scripts/lib/harris-native-bus-sequencer-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
+            ['/scripts/lib/harris-browser-measurement.mjs','/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs','/scripts/lib/harris-native-phase-oracle.mjs','/scripts/lib/harris-native-phase-circuit-oracle.mjs','/scripts/lib/harris-native-phase-schedule-oracle.mjs','/scripts/lib/harris-native-bus-sequencer-oracle.mjs','/scripts/lib/harris-native-bus-circuit-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
         if(req.method!=='GET'||!allowed)throw new Error('not served');
         const path=realpathSync(resolve(root,'.'+pathname));if(!path.startsWith(root+sep))throw new Error('outside source root');
         const bytes=readFileSync(path),key=path.slice(root.length+1),digest=hash(bytes);
@@ -120,6 +120,13 @@ try {
             const bus=report.nativeOracle.busSequencer;
             assert.equal(bus?.accepted,true);assert.equal(bus?.capacityClaim,false);
             assert.equal(bus.boundaries,782);assert.equal(bus.transactions,30);assert.equal(bus.completions,36);
+        }
+        if(nativeModule.sourceHashes['src/experimental/wired-kernel/bus-circuit.c']) {
+            for(const mode of ['checked','incremental']) {
+                const bus=report.nativeOracle.busCircuit?.[mode];
+                assert.equal(bus?.accepted,true);assert.equal(bus?.capacityClaim,false);
+                assert.equal(bus.boundaries,830);assert.equal(bus.transactions,48);assert.equal(bus.completions,63);
+            }
         }
         report.nativeBuild=nativeModule;
     }

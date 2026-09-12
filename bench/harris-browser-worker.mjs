@@ -59,6 +59,11 @@ self.onmessage=async({data})=>{
                 nativeOracle.busSequencer={...await runNativeBusSequencerOracle(wasmBytes),accepted:true,capacityClaim:false,
                     scope:'standalone memory bus subset; no CPU or full-board native runner'};
             }
+            if(data.busCircuit) {
+                const {runNativeBusCircuitOracle}=await import('../scripts/lib/harris-native-bus-circuit-oracle.mjs');
+                nativeOracle.busCircuit={checked:await runNativeBusCircuitOracle({wasmBytes}),
+                    incremental:await runNativeBusCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true})};
+            }
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});

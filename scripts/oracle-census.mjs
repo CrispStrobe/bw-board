@@ -116,7 +116,7 @@ export const INPUTS = [
         id: 'harris-native-wasm', kind: 'fixture',
         what: 'Locally built owned native wired-kernel prototype. Enables differential checks against our JavaScript net, memory and phase implementations; not an independent CPU oracle or full-board capacity proof.',
         env: 'HARRIS_NET_WASM', paths: [],
-        gates: ['test/harris-native-admitted-graph.test.mjs', 'test/harris-native-bus-sequencer.test.mjs', 'test/harris-native-evaluators.test.mjs',
+        gates: ['test/harris-native-admitted-graph.test.mjs', 'test/harris-native-bus-sequencer.test.mjs', 'test/harris-native-bus-circuit.test.mjs', 'test/harris-native-evaluators.test.mjs',
             'test/harris-native-incremental-nets.test.mjs', 'test/harris-native-memory-circuit.test.mjs',
             'test/harris-native-memory.test.mjs', 'test/harris-native-net-kernel.test.mjs',
             'test/harris-native-phase-circuit.test.mjs', 'test/harris-native-phase-components.test.mjs',
