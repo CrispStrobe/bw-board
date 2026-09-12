@@ -1,0 +1,156 @@
+name: Harris native incremental-stage attribution
+
+on:
+  push:
+    branches: ['evidence/native-incremental-stages', 'evidence/native-incremental-stages-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harris-native-incremental-stages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prepare exact control, production, and evidence revisions
+        run: |
+          set -euo pipefail
+          BASE_SHA=d11fb2e1f0af8f030cf3951bc96abb79b39b35e3
+          CANDIDATE_SHA=4779a8ca51c05051ed50e1e04dfcbe11dc922ae5
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          git merge-base --is-ancestor "$BASE_SHA" "$CANDIDATE_SHA"
+          git merge-base --is-ancestor "$CANDIDATE_SHA" "$GITHUB_SHA"
+          test "$(git rev-list --count "$BASE_SHA..$CANDIDATE_SHA")" -eq 3
+          printf '%s\n' scripts/build-wired-net-kernel.mjs src/experimental/wired-kernel/incremental-nets.c | sort > /tmp/expected-production
+          git diff --name-only "$BASE_SHA..$CANDIDATE_SHA" | sort > /tmp/actual-production
+          cmp /tmp/expected-production /tmp/actual-production
+          printf '%s\n' \
+            .github/workflows/harris-native-incremental-stages.yml \
+            scripts/classify-harris-native-incremental-stages.mjs \
+            scripts/measure-harris-native-incremental-stages.mjs \
+            scripts/verify-harris-native-incremental-stage-mutations.mjs \
+            test/harris-native-incremental-stages.test.mjs | sort > /tmp/expected-evidence
+          git diff --name-only "$CANDIDATE_SHA..$GITHUB_SHA" | sort > /tmp/actual-evidence
+          cmp /tmp/expected-evidence /tmp/actual-evidence
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-native-incremental-stages.XXXXXX")
+          TREE_DIR=$(mktemp -d "$RUNNER_TEMP/harris-native-incremental-stage-trees.XXXXXX")
+          rmdir "$TREE_DIR"
+          mkdir "$TREE_DIR"
+          git worktree add --detach "$TREE_DIR/base" "$BASE_SHA"
+          git worktree add --detach "$TREE_DIR/candidate" "$CANDIDATE_SHA"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          {
+            echo "BASE_SHA=$BASE_SHA"
+            echo "CANDIDATE_SHA=$CANDIDATE_SHA"
+            echo "BASE_TREE=$TREE_DIR/base"
+            echo "CANDIDATE_TREE=$TREE_DIR/candidate"
+            echo "RECEIPT_DIR=$RECEIPT_DIR"
+            echo "CLANG=$(command -v clang)"
+            echo "WASM_LD=$(command -v wasm-ld)"
+          } >> "$GITHUB_ENV"
+
+      - name: Build exact base, diagnostic-off, and dedicated named variants
+        run: |
+          set -euo pipefail
+          mkdir "$RECEIPT_DIR/base-build" "$RECEIPT_DIR/off-build" "$RECEIPT_DIR/named-build"
+          (cd "$BASE_TREE" && node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/base-build") | tee "$RECEIPT_DIR/base-build.log"
+          (cd "$CANDIDATE_TREE" && node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/off-build") | tee "$RECEIPT_DIR/off-build.log"
+          (cd "$CANDIDATE_TREE" && NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/named-build") | tee "$RECEIPT_DIR/named-build.log"
+          cmp "$RECEIPT_DIR/base-build/wired-net-kernel.wasm" "$RECEIPT_DIR/off-build/wired-net-kernel.wasm"
+          # The dedicated flag leaves both global diagnostic flags off, so the
+          # admitted mapped preview remains selected rather than legacy gather.
+          test "$(grep -Fc '#if defined(NATIVE_STAGE_PROFILE_NAMING) || defined(NATIVE_STAGE_ATTRIBUTION)' "$CANDIDATE_TREE/src/experimental/wired-kernel/memory-circuit.c")" -eq 1
+          test "$(grep -Fc 'if(c[31])result=preview_owned_memory_banks_mapped' "$CANDIDATE_TREE/src/experimental/wired-kernel/memory-circuit.c")" -eq 1
+
+      - name: Prove focused runtime and mutation contracts without skips
+        env:
+          HARRIS_NET_WASM: ${{ env.RECEIPT_DIR }}/named-build/wired-net-kernel.wasm
+        run: |
+          set -euo pipefail
+          node --test --test-concurrency=1 --test-reporter=tap \
+            test/harris-native-incremental-stages.test.mjs \
+            test/harris-native-incremental-nets.test.mjs \
+            test/harris-native-memory-circuit.test.mjs \
+            | tee "$RECEIPT_DIR/focused-tests.tap"
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const t=fs.readFileSync(process.env.RECEIPT_DIR+"/focused-tests.tap","utf8");assert.match(t,/^# fail 0$/m);assert.match(t,/^# skipped 0$/m);assert.doesNotMatch(t,/# SKIP\b/i);'
+          node scripts/verify-harris-native-incremental-stage-mutations.mjs | tee "$RECEIPT_DIR/incremental-stage-mutations.tap"
+          test "$(grep -c '^# mutation rejected:' "$RECEIPT_DIR/incremental-stage-mutations.tap")" -eq 4
+
+      - name: Serialize neutrality evidence before applying the unchanged gate
+        run: |
+          set -euo pipefail
+          node --expose-gc scripts/measure-harris-native-incremental-stages.mjs --experimental \
+            --base-dir="$BASE_TREE" --candidate-dir="$CANDIDATE_TREE" \
+            --base-wasm="$RECEIPT_DIR/base-build/wired-net-kernel.wasm" \
+            --off-wasm="$RECEIPT_DIR/off-build/wired-net-kernel.wasm" \
+            --named-wasm="$RECEIPT_DIR/named-build/wired-net-kernel.wasm" \
+            --measurement-revision="$GITHUB_SHA" --iterations=4096 --warmups=4 --rounds=12 \
+            > "$RECEIPT_DIR/incremental-stage-neutrality.json"
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/incremental-stage-neutrality.json"));assert.equal(r.measurementRevision,process.env.GITHUB_SHA);assert.equal(r.variants.base.revision,process.env.BASE_SHA);assert.equal(r.variants.off.revision,process.env.CANDIDATE_SHA);assert.equal(r.variants.named.revision,process.env.CANDIDATE_SHA);assert.deepEqual([r.variants.named.stageAttribution,r.variants.named.stageProfileNames,r.variants.named.incrementalStageProfileNames],[false,false,true]);assert.deepEqual([r.variants.off.stageAttribution,r.variants.off.stageProfileNames,r.variants.off.incrementalStageProfileNames],[false,false,false]);assert.equal(r.warmupSamples.length,8);assert.equal(r.samples.length,24);assert.equal(r.pairs.length,12);assert.equal(Object.keys(r.expected.work).length,12);assert.equal(r.decision.accepted,true);'
+
+      - name: Profile and classify exactly three dedicated named runs
+        run: |
+          set -euo pipefail
+          for run in 1 2 3; do
+            node --expose-gc --cpu-prof --cpu-prof-dir="$RECEIPT_DIR" --cpu-prof-name="incremental-stages-$run.cpuprofile" \
+              scripts/measure-harris-native-incremental-stages.mjs --experimental --profile-only \
+              --base-dir="$BASE_TREE" --candidate-dir="$CANDIDATE_TREE" \
+              --base-wasm="$RECEIPT_DIR/base-build/wired-net-kernel.wasm" \
+              --off-wasm="$RECEIPT_DIR/off-build/wired-net-kernel.wasm" \
+              --named-wasm="$RECEIPT_DIR/named-build/wired-net-kernel.wasm" \
+              --measurement-revision="$GITHUB_SHA" --iterations=4096 --repetitions=8 \
+              > "$RECEIPT_DIR/incremental-stage-profile-$run.json"
+            node scripts/classify-harris-native-incremental-stages.mjs \
+              "$RECEIPT_DIR/incremental-stages-$run.cpuprofile" "$RECEIPT_DIR/incremental-stage-profile-$run.json" \
+              > "$RECEIPT_DIR/incremental-stage-classification-$run.json"
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';import fs from 'node:fs';
+          import {agree} from './scripts/classify-harris-native-incremental-stages.mjs';
+          const dir=process.env.RECEIPT_DIR,read=n=>JSON.parse(fs.readFileSync(`${dir}/${n}`));
+          const control=read('incremental-stage-neutrality.json');
+          const runs=[1,2,3].map(i=>read(`incremental-stage-classification-${i}.json`));
+          for(const run of runs){assert.equal(run.receipt.measurementRevision,process.env.GITHUB_SHA);assert.deepEqual(run.receipt.expected,control.expected);assert.deepEqual([run.receipt.variant.stageAttribution,run.receipt.variant.stageProfileNames,run.receipt.variant.incrementalStageProfileNames],[false,false,true]);}
+          const consensus=agree(runs.map(run=>run.classification));
+          fs.writeFileSync(`${dir}/incremental-stage-consensus.json`,JSON.stringify({schemaVersion:1,measurementRevision:process.env.GITHUB_SHA,consensus},null,2)+'\n',{flag:'wx'});
+          NODE
+
+      - name: Inventory every evidence payload before upload
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR="$RECEIPT_DIR" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import fs from 'node:fs';import path from 'node:path';
+          const root=process.env.RECEIPT_DIR;
+          const expected=['base-build.log','off-build.log','named-build.log','focused-tests.tap','incremental-stage-mutations.tap','incremental-stage-neutrality.json','incremental-stage-consensus.json',...['base','off','named'].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),...Array.from({length:3},(_,i)=>[`incremental-stages-${i+1}.cpuprofile`,`incremental-stage-profile-${i+1}.json`,`incremental-stage-classification-${i+1}.json`]).flat()].sort();
+          const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.relative(root,path.join(d,e.name))]);
+          const actual=walk(root).sort(),missing=expected.filter(x=>!actual.includes(x)),unexpected=actual.filter(x=>!expected.includes(x));
+          const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return[name,{bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')}]}));
+          fs.writeFileSync(path.join(root,'artifact-manifest.json'),JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,expected,actual,missing,unexpected,files},null,2)+'\n',{flag:'wx'});
+          assert.deepEqual(missing,[]);assert.deepEqual(unexpected,[]);for(const value of Object.values(files)){assert.ok(value.bytes>0);assert.match(value.sha256,/^[0-9a-f]{64}$/);}
+          NODE
+
+      - name: Upload exact neutrality, mutation, and profile evidence
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-incremental-stages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 14
