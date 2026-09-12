@@ -7,10 +7,11 @@ typedef unsigned char u8;
 #define W(i) ((u32*)(unsigned long)c[i])
 extern u32 resolve_nets(u32,u32,const u32*,const u32*,const u8*,u8*,u8*);
 extern void evaluate_owned_operations(u32,const u32*,const u8*,u8*,const u32*,const u32*,const u8*);
+extern u32 evaluate_owned_operations_sparse(u32,const u32*,const u8*,u8*,const u32*,const u32*,const u8*,u8*,u32*,u32);
 static u32 driver_net[LIMIT];
-static u8 queued_driver[LIMIT],dirty[LIMIT],queued_publish[LIMIT];
-static u32 driver_queue[LIMIT],dirty_queue[LIMIT],changed_queue[LIMIT],publish_queue[LIMIT];
-static u32 driver_count,dirty_count,changed_count,publish_count;
+static u8 queued_driver[LIMIT],dirty[LIMIT],queued_publish[LIMIT],queued_output[LIMIT];
+static u32 driver_queue[LIMIT],dirty_queue[LIMIT],changed_queue[LIMIT],publish_queue[LIMIT],output_queue[LIMIT];
+static u32 driver_count,dirty_count,changed_count,publish_count,output_count;
 /* Test-visible u32 work counters wrap modulo 2^32. They observe work only;
  * admission and policy do not read them. Keep the order in sync with
  * memory-circuit.js. Driver comparisons count native work; the permitted JS
@@ -34,8 +35,8 @@ static u32 write_driver(const u32 *c,u32 id,u32 code,u32 count_comparison) {
 u32 write_owned_driver(const u32 *c,u32 id,u32 code){return write_driver(c,id,code,1);}
 u32 admit_incremental_context(const u32 *c) {
     if(c[0]>LIMIT||c[1]>LIMIT)return 7;
-    driver_count=0;dirty_count=0;changed_count=0;publish_count=0;
-    for(u32 d=0;d<c[1];d++){driver_net[d]=NONE;queued_driver[d]=0;}
+    driver_count=0;dirty_count=0;changed_count=0;publish_count=0;output_count=0;
+    for(u32 d=0;d<c[1];d++){driver_net[d]=NONE;queued_driver[d]=0;queued_output[d]=0;}
     for(u32 n=0;n<c[0];n++) {
         dirty[n]=0;queued_publish[n]=0;
         for(u32 p=W(2)[n];p<W(2)[n+1];p++) {
@@ -93,12 +94,13 @@ u32 settle_incremental_context(const u32 *c) {
         // Driver changes masked on a net do not schedule pure evaluators.
         // Conflict-only changes still publish their diagnostics below.
         if(!resolved_changed){publish_incremental(c);return delta+1;}
-        for(u32 d=0;d<c[1];d++){incremental_work[6]++;B(9)[d]=B(4)[d];}
-        evaluate_owned_operations(c[7],W(8),B(5),B(9),W(13),W(14),B(17));
+        output_count=evaluate_owned_operations_sparse(c[7],W(8),B(5),B(9),W(13),W(14),B(17),queued_output,output_queue,c[1]);
+        if(output_count==NONE)return 0x80000007u;
         u32 changed=0;
-        for(u32 d=0;d<c[1];d++){incremental_work[0]++;if(B(9)[d]!=B(4)[d]){
+        for(u32 i=0;i<output_count;i++){const u32 d=output_queue[i];queued_output[d]=0;incremental_work[0]++;if(B(9)[d]!=B(4)[d]){
             incremental_work[7]++;changed=1;if(write_driver(c,d,B(9)[d],0))return 0x80000002u;
         }}
+        output_count=0;
         if(!changed){publish_incremental(c);return delta+1;}
     }
     // Keep pending-driver/live and publication queues, but do not publish a

@@ -30,6 +30,32 @@ async function rawKernel({incremental=false,oscillator=false,previousImage=null}
         step:levels=>{if(incremental)levels.forEach((code,id)=>assert.equal(e.write_owned_driver(p.context,id,code),0));
             else new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
 }
+async function outputKernel({incremental=false}={}) {
+    const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
+    const p={context:base,offsets:base+256,ids:base+320,drivers:base+384,live:base+416,conflicts:base+448,
+        ops:base+512,staged:base+1280,published:base+1312,publishedConflicts:base+1344,
+        dependencyOffsets:base+1376,dependencies:base+1408,previous:base+1536,changed:base+1568};
+    const put=(at,values)=>values.forEach((n,i)=>v.setUint32(at+4*i,n,true)),nets=10,drivers=10,count=5;
+    put(p.context,[nets,drivers,p.offsets,p.ids,p.drivers,p.live,p.conflicts,count,p.ops,p.staged,p.published,p.publishedConflicts,8,
+        p.dependencyOffsets,p.dependencies,19,p.previous,p.changed,...new Array(13).fill(0),incremental?2:0]);
+    put(p.offsets,Array.from({length:nets+1},(_,i)=>i));put(p.ids,Array.from({length:drivers},(_,i)=>i));
+    const or=(a,b,out)=>[2,a,b,out,...new Array(28).fill(0)];
+    const mux=[3,4,0,0,1,2,3,0,0,0,0,5,6,7,9,...new Array(17).fill(0)];
+    [or(0,1,8),or(2,3,8),mux,mux,mux].forEach((row,i)=>put(p.ops+i*128,row));
+    put(p.dependencyOffsets,[0,2,4,9,14,19]);put(p.dependencies,[0,1,2,3,...[0,1,2,3,4],...[0,1,2,3,4],...[0,1,2,3,4]]);
+    const initial=[0,0,1,0,0,3,3,3,3,3];
+    new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);
+    new Uint8Array(e.memory.buffer,p.previous,nets).set(initial);new Uint8Array(e.memory.buffer,p.published,nets).set(initial);
+    if(incremental)assert.equal(e.admit_owned_context(p.context),0);
+    const inspect=()=>({drivers:Array.from(new Uint8Array(e.memory.buffer,p.drivers,drivers)),
+        published:Array.from(new Uint8Array(e.memory.buffer,p.published,nets))});
+    const counters=()=>Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),10)[i]]));
+    const step=updates=>{for(const [id,code] of Object.entries(updates)){
+        if(incremental)assert.equal(e.write_owned_driver(p.context,Number(id),code),0);
+        else new Uint8Array(e.memory.buffer,p.drivers,drivers)[id]=code;
+    }return e.settle_owned_context(p.context)>>>0;};
+    return {e,inspect,counters,step,resetCounters:()=>e.reset_incremental_work_counters()};
+}
 test('work counters observe existing full and incremental loops and reset without changing state',native,async()=>{
     const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
     assert.equal(incremental.e.incremental_kernel_version(),2);
@@ -136,6 +162,21 @@ test('publication candidate queue stays bounded across repeated failed fixpoints
     for(let i=0;i<9000;i++)assert.equal(k.step([0,1,0]),0x80000003);
     assert.deepEqual(k.inspect().published,[2,0,0],'no failed fixpoint becomes observable');
     assert.equal(k.step([2,1,0]),1);assert.deepEqual(k.inspect().published,[2,1,0]);
+});
+test('sparse evaluator outputs preserve multi-output and duplicate row order within their bound',native,async()=>{
+    const checked=await outputKernel(),incremental=await outputKernel({incremental:true});
+    const step=updates=>{assert.equal(incremental.step(updates),checked.step(updates));assert.deepEqual(incremental.inspect(),checked.inspect());};
+    incremental.resetCounters();step({0:1,1:0,2:0,3:0,4:0});
+    assert.deepEqual(incremental.inspect().drivers.slice(5),[1,0,0,0,0],
+        'four-output rows keep all outputs while the later duplicate OR row wins driver 8');
+    assert.equal(incremental.counters().stagedDriverCopies,0,'sparse rows overwrite their outputs without a driver-image prefill');
+    assert.equal(incremental.counters().driverComparisons,10,'five host inputs and five unique evaluator outputs compare once');
+    assert.equal(incremental.counters().committedEvaluatorOutputs,5);
+    incremental.resetCounters();step({0:0,1:0,2:1,3:0,4:0});
+    assert.deepEqual(incremental.inspect().drivers.slice(5),[0,0,1,1,0]);
+    assert.equal(incremental.counters().stagedDriverCopies,0);assert.equal(incremental.counters().driverComparisons,10);
+    incremental.resetCounters();step({});assert.equal(incremental.counters().stagedDriverCopies,0);
+    assert.equal(incremental.counters().driverComparisons,0,'an idle settle compares no evaluator outputs');
 });
 test('incremental dirty queues initialize unchanged drivers and clear prior changed flags on idle settling',native,async()=>{
     const checked=await rawKernel({previousImage:[0,0,0]}),incremental=await rawKernel({incremental:true,previousImage:[0,0,0]});

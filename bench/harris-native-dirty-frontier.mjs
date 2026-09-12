@@ -18,8 +18,9 @@ const artifact=(path,revision)=>{
 };
 const before=artifact(process.env.HARRIS_COMPARE_WASM,process.env.HARRIS_COMPARE_REVISION);
 const after=artifact(process.env.HARRIS_NET_WASM,process.env.HARRIS_FRONTIER_REVISION??'working-tree');
-const publication=process.env.HARRIS_FRONTIER_KIND==='publication';
-const modes=publication?
+const frontierKind=process.env.HARRIS_FRONTIER_KIND??'driver',publication=frontierKind==='publication',output=frontierKind==='output';
+const modes=output?
+    [{name:'incremental-publication-frontier',artifact:before,incremental:true},{name:'incremental-output-frontier',artifact:after,incremental:true}]:publication?
     [{name:'incremental-driver-frontier',artifact:before,incremental:true},{name:'incremental-publication-frontier',artifact:after,incremental:true}]:
     [{name:'admitted-full-scan',artifact:before,incremental:false},{name:'incremental-scan',artifact:before,incremental:true},
         {name:'incremental-driver-frontier',artifact:after,incremental:true}];
@@ -119,7 +120,30 @@ if(publication){
         assert.equal(raw[current][name].counters?.[i]??raw[current][name].recoveryCounters[i],
             raw[prior][name].counters?.[i]??raw[prior][name].recoveryCounters[i],`${name} counter ${i} differs`);
 }
-const report={benchmark:publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
+if(output){
+    const prior=modes[0].name,current=modes[1].name,unchanged=Object.keys(summaries[prior].counters)
+        .filter(name=>name!=='driverComparisons'&&name!=='stagedDriverCopies');
+    const assertSparseBound=(beforeCounters,afterCounters,label)=>{
+        assert.equal(afterCounters.stagedDriverCopies,0,`${label} has no full-image staging copies`);
+        const comparisons=afterCounters.driverComparisons-(beforeCounters.driverComparisons-beforeCounters.stagedDriverCopies);
+        assert.ok(comparisons>=0&&comparisons<=4*afterCounters.evaluatorRows,`${label} compares at most four outputs per evaluated row`);
+        return comparisons;
+    };
+    summaries[current].sparseOutputComparisons=assertSparseBound(summaries[prior].counters,summaries[current].counters,'summary');
+    for(const name of unchanged){
+        assert.equal(summaries[current].counters[name],summaries[prior].counters[name],`${name} summary differs`);
+        for(const category of Object.keys(categories[prior]))
+            assert.equal(categories[current][category][name],categories[prior][category][name],`${category} ${name} differs`);
+    }
+    for(const category of Object.keys(categories[prior]))assertSparseBound(categories[prior][category],categories[current][category],category);
+    for(const name of Object.keys(raw[prior])){
+        const a=raw[current][name].counters??raw[current][name].recoveryCounters,b=raw[prior][name].counters??raw[prior][name].recoveryCounters;
+        for(let i=0;i<10;i++)if(i!==0&&i!==6)assert.equal(a[i],b[i],`${name} counter ${i} differs`);
+        assertSparseBound({driverComparisons:b[0],stagedDriverCopies:b[6],evaluatorRows:b[4]},
+            {driverComparisons:a[0],stagedDriverCopies:a[6],evaluatorRows:a[4]},name);
+    }
+}
+const report={benchmark:output?'native-output-frontier':publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
     benchmarkSHA256:digest(readFileSync(new URL(import.meta.url))),
     revisions:Object.fromEntries(modes.map(m=>[m.name,m.artifact.revision])),builds:{before:before.build,after:after.build},
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length,node:process.version},summaries,categories,raw,samples,
