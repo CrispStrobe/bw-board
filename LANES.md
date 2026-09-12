@@ -558,6 +558,13 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
+Native 286 memory bus component (P7-R1 prerequisite): delegated Codex subagent,
+2026-09-12, isolated `feat/native-286-memory-bus` from `63359b8`. Owned standalone
+C/JS sequencer, portable differential helper and optional tests; no phase-circuit
+edits, full runner, backend registration, default change, push or deployment.
+Component implementation complete; parent owns review/integration and remaining
+P7 work. Details: `docs/HARRIS-NATIVE-BUS-SEQUENCER.md`.
+
 | lane | who | started | what |
 
 | --- | --- | --- | --- |
