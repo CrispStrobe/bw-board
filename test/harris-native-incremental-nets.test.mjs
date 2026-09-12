@@ -153,6 +153,7 @@ test('incremental resolver matches checked deltas through X/Z, masked changes an
 test('incremental nonconvergence preserves published state and recovers using pending/live history',native,async()=>{
     const checked=await rawKernel({oscillator:true}),incremental=await rawKernel({incremental:true,oscillator:true});
     assert.equal(incremental.step([0,0,0]),0x80000003);assert.equal(checked.step([0,0,0]),0x80000003);
+    assert.equal(new Uint8Array(incremental.e.memory.buffer,incremental.p.affected,1)[0],0,'failed fixpoints retain no operation mark');
     assert.deepEqual(incremental.inspect(),checked.inspect());assert.deepEqual(incremental.inspect().published,[2,0,0]);
     assert.equal(incremental.step([2,0,0]),checked.step([2,0,0]));assert.deepEqual(incremental.inspect(),checked.inspect());
     assert.equal(incremental.counters().publishNetCopies,0,'a queued net that returns to its published state is not copied');

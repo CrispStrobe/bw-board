@@ -152,6 +152,8 @@ if(reverse){
     baselineReceipt=JSON.parse(readFileSync(process.env.HARRIS_COMPARE_REPORT));
     const priorName='incremental-output-frontier',current=modes[0].name,prior=baselineReceipt.summaries?.[priorName];
     assert.equal(baselineReceipt.revisions?.[priorName],before.revision,'baseline receipt revision');assert.ok(prior,'baseline summary');
+    assert.equal(baselineReceipt.builds?.after?.wasmSHA256,before.build.wasmSHA256,'baseline receipt/module identity');
+    assert.deepEqual(baselineReceipt.builds?.after?.sourceHashes,before.build.sourceHashes,'baseline receipt/source identity');
     const currentCounters=summaries[current].counters;
     assert.equal(currentCounters.dependencyProbes,0,'forward dependency probes are eliminated');
     assert.ok(currentCounters.reverseIndexVisits*2<=prior.counters.dependencyProbes,'reverse visits decrease dependency traversal by at least 50%');
