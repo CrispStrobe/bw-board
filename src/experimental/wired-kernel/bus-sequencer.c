@@ -1,12 +1,13 @@
 /* Owned, standalone, ideal-system-period memory bus subset. No CPU or RAM.
  * Private instance state; raw ABI is trusted internal input, not a snapshot API.
- * Input codes: 0/1/X=2/Z=3. Sampling order matches Harris80C286Bus. */
+ * Input codes: 0/1/X=2/Z=3; private bridge code 4 means resolved contention.
+ * Sampling order matches Harris80C286Bus. */
 #include <stdint.h>
 typedef uint32_t u32;
 typedef uint64_t u64;
 enum { REQUIRED, RESET, INIT, TI, TS, TC };
 enum { OK, ORDER, OVERFLOW, FLOATING, UNKNOWN, FAULTED, NEED_RESET,
-       SHORT_RESET, HOLD, INPUT, WAIT_LIMIT, UNAVAILABLE, TRANSACTION };
+       SHORT_RESET, HOLD, INPUT, WAIT_LIMIT, UNAVAILABLE, TRANSACTION, CONTENTION };
 enum { I_RESET, I_HOLD, I_PEREQ, I_INTR, I_NMI, I_BUSY, I_ERROR, I_READY, I_DATA };
 typedef struct {u32 kind,address,width,data,a0,bhe;} Transfer;
 static struct {
@@ -24,7 +25,7 @@ u32 bus_completion_ptr(void) {return (u32)(uintptr_t)completion;}
 u32 bus_error_pin(void) {return error_pin;}
 static u32 known(u32 pin) {
     error_pin=pin;
-    return inputs[pin]<2 ? OK : inputs[pin]==3 ? FLOATING : UNKNOWN;
+    return inputs[pin]<2 ? OK : inputs[pin]==3 ? FLOATING : inputs[pin]==4 ? CONTENTION : UNKNOWN;
 }
 static u32 fault(u32 code) {b.faulted=1;return code;}
 void bus_initialize(double maximum) {

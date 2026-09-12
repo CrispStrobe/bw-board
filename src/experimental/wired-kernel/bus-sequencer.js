@@ -11,7 +11,7 @@ const STATES = ['RESET_REQUIRED','RESET','INIT','TI','TS','TC'];
 const KINDS = ['memory-read','code-read','memory-write'];
 const ERRORS = ['', 'CLOCK_ORDER','OVERFLOW','FLOATING','UNKNOWN','BUS_FAULTED',
     'RESET_REQUIRED','SHORT_RESET','UNSUPPORTED_HOLD','UNSUPPORTED_INPUT','WAIT_LIMIT',
-    'BUS_UNAVAILABLE','UNSUPPORTED_TRANSACTION'];
+    'BUS_UNAVAILABLE','UNSUPPORTED_TRANSACTION','CONTENTION'];
 const decode = value => value < 2 ? value : value === 3 ? 'Z' : 'X';
 const encode = value => value === 0 || value === 1 ? value : value === 'Z' ? 3 : 2;
 
@@ -31,7 +31,7 @@ export async function createNative286MemoryBus({enabled=false,module,maxWaitStat
         if(!code)return;
         if(code===2)throw new RangeError('clock overflow');
         throw new CircuitFault(ERRORS[code]??'NATIVE_BUS_ERROR',
-            [3,4,9].includes(code)?INPUTS[e.bus_error_pin()]:ERRORS[code]);
+            [3,4,9,13].includes(code)?INPUTS[e.bus_error_pin()]:ERRORS[code]);
     };
     const image=levels=>{
         if(!levels||typeof levels!=='object'||Array.isArray(levels))throw new TypeError('pin-level image');

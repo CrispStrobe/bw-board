@@ -10,6 +10,7 @@ const output=join(directory,'wired-net-kernel.wasm'),manifest=join(directory,'wi
 if(existsSync(output)||existsSync(manifest))throw new Error('refusing to overwrite existing build');
 const clang=process.env.CLANG??'clang';
 const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c'];
+sourceNames.push('src/experimental/wired-kernel/bus-circuit.c');
 const sources=sourceNames.map(p=>fileURLToPath(new URL('../'+p,import.meta.url)));
 const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall','-Wextra',
     ...(process.env.WASM_LD?[`-fuse-ld=${process.env.WASM_LD}`]:[]),
@@ -24,6 +25,7 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     ...['bus_sequencer_version','bus_input_ptr','bus_output_ptr','bus_completion_ptr','bus_error_pin','bus_initialize','bus_submit','bus_begin','bus_end','bus_inspect'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export=incremental_work_counters_version','-Wl,--export=incremental_work_counters_ptr','-Wl,--export=reset_incremental_work_counters',
     '-Wl,--export=write_owned_driver',
+    ...['bus_circuit_version','begin_bus_memory_clock','end_bus_memory_clock','run_bus_memory_until_completion'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});

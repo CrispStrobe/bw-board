@@ -115,11 +115,15 @@ always checks status before reading any completion and never returns stale data.
 Raw initialization requires a validated positive safe-integer wait bound; raw
 pointers and mutable module memory are trusted, not hostile-input interfaces.
 
-The current public bus constructor creates a **different private instance** from
+The standalone public bus constructor creates a **different private instance** from
 the phase/memory constructor. Calling those wrappers in sequence does not form a
 single native execution region. Minimal future integration is an explicit owned
 descriptor admitted by the existing private memory/phase factory, not public
 instance injection:
+
+An optional joined prototype now implements this seam; see
+`HARRIS-NATIVE-BUS-CIRCUIT.md` for its explicit descriptor, tests and limitations.
+The required ordering remains:
 
 1. Validate all CPU input-net and output-driver IDs against actual connectivity;
    initialize one bus inside that already-owned module instance. The current C

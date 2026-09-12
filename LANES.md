@@ -564,6 +564,10 @@ C/JS sequencer, portable differential helper and optional tests; no phase-circui
 edits, full runner, backend registration, default change, push or deployment.
 Component implementation complete; parent owns review/integration and remaining
 P7 work. Details: `docs/HARRIS-NATIVE-BUS-SEQUENCER.md`.
+Follow-on same-instance memory bus fixture is also implemented in this isolated
+lane, using phase ABI 2; root owns combined validation and producer-frontier
+writer adaptation. Still no CPU/full machine or capacity claim. Details:
+`docs/HARRIS-NATIVE-BUS-CIRCUIT.md`.
 
 | lane | who | started | what |
 
