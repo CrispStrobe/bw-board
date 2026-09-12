@@ -9,6 +9,10 @@ import {prepareBusCircuit} from './bus-circuit-image.js';
 const SIZE=32768,WORDS=9;
 const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
     'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas'];
+export function assertIncrementalKernelABI(exports,enabled) {
+    if(enabled&&(exports.incremental_kernel_version?.()!==2||typeof exports.write_owned_driver!=='function'))
+        throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
+}
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
     if(typeof admittedGraph!=='boolean')throw new TypeError('admittedGraph');
@@ -40,8 +44,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const outputIds=Uint32Array.from(descriptors.flatMap(b=>Array.from({length:8},(_,i)=>terminals.get(`${b.id}.d${i}`).driver)));
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
-    if(incrementalGraph&&(e.incremental_kernel_version?.()!==2||typeof e.write_owned_driver!=='function'))
-        throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
+    assertIncrementalKernelABI(e,incrementalGraph);
     if(e.incremental_work_counters_version?.()!==1)throw new TypeError('rebuild native work counters: ABI version mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};

@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {createMemoryCircuitOracle,runNativeMemoryCircuitOracle} from '../scripts/lib/harris-native-memory-circuit-oracle.mjs';
 import {runNativePhaseCircuitOracle} from '../scripts/lib/harris-native-phase-circuit-oracle.mjs';
 import {runNativePhaseScheduleOracle} from '../scripts/lib/harris-native-phase-schedule-oracle.mjs';
+import {assertIncrementalKernelABI} from '../src/experimental/wired-kernel/memory-circuit.js';
 const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
 const native={skip:wasmBytes?false:'build incremental prototype and set HARRIS_NET_WASM; native gate not exercised'};
 const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
@@ -53,6 +54,13 @@ test('work counters observe existing full and incremental loops and reset withou
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:1,dependencyProbes:3,
         stagedDriverCopies:4,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
     });
+});
+test('incremental ABI gate rejects legacy versions and missing writer exports',()=>{
+    const writer=()=>0;
+    assert.doesNotThrow(()=>assertIncrementalKernelABI({},false));
+    assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>1,write_owned_driver:writer},true),/ABI version\/writer mismatch/);
+    assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>2},true),/ABI version\/writer mismatch/);
+    assert.doesNotThrow(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>2,write_owned_driver:writer},true));
 });
 test('incremental wrapper requires ABI 2 with its writer export and counts one host transition once',native,async()=>{
     const f=await createMemoryCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});f.pass();f.kernel.resetWorkCounters();
