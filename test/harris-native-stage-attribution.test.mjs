@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {MASTER_REVISION,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,assertProfileGates,assertSemantic,assertStageReceipt,classifyProfile,controlGateResult,rotatedOrder,summarize}
     from '../scripts/measure-harris-native-stage-attribution.mjs';
+import {createAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
 
 const workflow=readFileSync(new URL('../.github/workflows/harris-native-stage-attribution.yml',import.meta.url),'utf8');
 const source=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -67,15 +68,27 @@ test('diagnostic build is conditional and stable work-counter ABI source is unto
     assert.match(runner,/if\(name==='master'\)assert\.deepEqual\(Object\.keys\(headerHashes\),\[\]/);assert.match(runner,/else \{assert\.deepEqual\(Object\.keys\(headerHashes\),\[headerPath\]/);
     assert.match(header,/STAGE_COUNTER_COUNT/);assert.match(header,/#ifdef NATIVE_STAGE_PROFILE_NAMING\n#define STAGE_NOINLINE/);assert.doesNotMatch(header,/incremental_work|producer_work|memory_pass_work/);
 });
-test('crossing counters follow actual calls while disabled bus paths retain production shape',()=>{const bus=source('src/experimental/wired-kernel/bus-circuit-image.js'),memory=source('src/experimental/wired-kernel/memory-circuit.js'),runner=source('scripts/measure-harris-native-stage-attribution.mjs');
+test('accepted boundary counters preserve disabled bus shape and disclose rejected calls',()=>{const bus=source('src/experimental/wired-kernel/bus-circuit-image.js'),memory=source('src/experimental/wired-kernel/memory-circuit.js'),runner=source('scripts/measure-harris-native-stage-attribution.mjs');
     assert.doesNotMatch(bus,/stageAttribution|wasmBusInspectEntries|inspectJSStageAttribution/);
     assert.match(memory,/const rawBusMethods=busBinding\?\.initialize\(\{e,p,put,inspect/);assert.doesNotMatch(memory,/busExports|countBusCrossings|countJSStage/);
-    assert.match(memory,/submit\(\.\.\.args\)\{const result=rawBusMethods\.submit\(\.\.\.args\);/);
-    assert.match(memory,/jsStage\.wasmBusInspectEntries=\(jsStage\.wasmBusInspectEntries\+4\)>>>0/);
-    assert.match(memory,/runUntilCompletion\(\.\.\.args\)\{try\{const result=rawBusMethods\.runUntilCompletion/);
+    assert.match(memory,/createAcceptedBusStageAttribution\(rawBusMethods\)/);
     assert.match(memory,/materializedCompletionRecordBytes/);assert.doesNotMatch(memory,/nativeReceiptBytesRead/);
-    assert.match(runner,/calls rejected before the corresponding Wasm boundary are deliberately excluded/);
+    assert.match(runner,/Other rejected high-level calls are excluded, including validation paths that may already have called bus_inspect/);
     for(const name of ['inspectPhase','inspectLifecycle','inspectNets','componentHashes','headerHashes','nativeCounter','combinedCounter'])assert.ok(runner.includes(name),name);
+});
+test('accepted boundary counters execute success, budget, fault, exclusion, reset and u32 wrap contracts',()=>{
+    const acceptedSubmit={token:'submit'},completed={completed:true,completions:[{},{}]},budget={completed:false,stopReason:'budget',completions:[{}]};
+    let nextRun=completed;const raw={marker:7,submit:()=>acceptedSubmit,runUntilCompletion:()=>nextRun};const measured=createAcceptedBusStageAttribution(raw);
+    assert.equal(measured.marker,7);assert.equal(measured.submit(),acceptedSubmit);assert.equal(measured.runUntilCompletion(),completed);
+    assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:5,wasmBusSubmitEntries:1,wasmBusRunEntries:1,completionObjects:2,materializedCompletionRecordBytes:72});
+    nextRun=budget;assert.equal(measured.runUntilCompletion(),budget);assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:6,wasmBusSubmitEntries:1,wasmBusRunEntries:2,completionObjects:3,materializedCompletionRecordBytes:108});
+    const fault=new Error('native fault');fault.progress={completions:[{},{}]};nextRun=undefined;raw.runUntilCompletion=()=>{throw fault;};
+    assert.throws(()=>measured.runUntilCompletion(),error=>error===fault);assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:8,wasmBusSubmitEntries:1,wasmBusRunEntries:3,completionObjects:5,materializedCompletionRecordBytes:180});
+    measured.resetJSStageAttribution();assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,completionObjects:0,materializedCompletionRecordBytes:0});
+    const rejected=new Error('pre-boundary');delete fault.progress;raw.submit=raw.runUntilCompletion=()=>{throw rejected;};
+    assert.throws(()=>measured.submit(),error=>error===rejected);assert.throws(()=>measured.runUntilCompletion(),error=>error===rejected);assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,completionObjects:0,materializedCompletionRecordBytes:0});
+    raw.runUntilCompletion=()=>({completions:{length:0xffffffff}});measured.runUntilCompletion();raw.runUntilCompletion=()=>({completions:{length:1}});measured.runUntilCompletion();
+    assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:2,wasmBusSubmitEntries:0,wasmBusRunEntries:2,completionObjects:0,materializedCompletionRecordBytes:0});
 });
 test('receipts precede workflow acceptance and profile classification has no in-process gate',()=>{const runner=source('scripts/measure-harris-native-stage-attribution.mjs');assert.match(runner,/process\.stdout\.write\(JSON\.stringify\(report,null,2\)\+'\\n'\);\}/);assert.doesNotMatch(runner,/process\.stdout\.write[^\n]+assert/);
     const classify=runner.slice(runner.indexOf("if(options['classify-profile'])"),runner.indexOf("assert.equal(options.experimental"));assert.doesNotMatch(classify,/assertProfileGates/);assert.match(classify,/console\.log\(JSON\.stringify/);assert.match(classify,/construction and final inspection frames/);assert.doesNotMatch(classify,/never contribute to actionableSamples/);});
