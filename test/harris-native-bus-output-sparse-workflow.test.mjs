@@ -5,6 +5,7 @@ import {BASE_REVISION,CANDIDATE_REVISION,LEGACY_WORK_COUNTERS,PRODUCERS,assertSp
     interleavedOrder,summarize} from '../scripts/measure-harris-native-bus-output-sparse.mjs';
 
 const workflow=readFileSync(new URL('../.github/workflows/harris-native-bus-output-sparse.yml',import.meta.url),'utf8');
+const runner=readFileSync(new URL('../scripts/measure-harris-native-bus-output-sparse.mjs',import.meta.url),'utf8');
 function contract(source){
     assert.equal(BASE_REVISION,'059a7c09838aaf3a83711bf4be552cfe589c15d5');
     assert.equal(CANDIDATE_REVISION,'d86c163147c7f4ecf7300dc0948f184b332de987');
@@ -23,6 +24,12 @@ function contract(source){
     assert.doesNotMatch(source,/continue-on-error: true|\|\| true/);
 }
 test('sparse output workflow builds adjacent exact revisions and enforces work and throughput gates',()=>contract(workflow));
+test('performance receipt names and limits its admitted incremental scope',()=>{
+    assert.match(runner,/workload:'owned-harris-store-loop-memory-only-admitted-incremental-native-bus-output-sparse'/);
+    assert.match(runner,/admittedGraph:true,incrementalGraph:true/);
+    assert.match(runner,/thresholds qualify only the explicitly selected admittedGraph:true, incrementalGraph:true path/);
+    assert.match(runner,/not default checked-path performance evidence/);
+});
 test('workflow contract rejects weakened provenance, balance, thresholds, artifacts and failure handling',()=>{
     for(const mutant of [workflow.replace(BASE_REVISION,'0'.repeat(40)),workflow.replace(CANDIDATE_REVISION,'1'.repeat(40)),
         workflow.replace('git worktree add --detach "$CANDIDATE_TREE" "$CANDIDATE_SHA"','echo missing-candidate'),

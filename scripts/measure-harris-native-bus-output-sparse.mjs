@@ -146,12 +146,13 @@ async function main(){
     assert.ok(pairedActiveThroughputRatio.median>=1.05,`paired median active throughput ratio ${pairedActiveThroughputRatio.median} below 1.05`);
     const measurementDirectory=realpathSync(fileURLToPath(new URL('..',import.meta.url))),measurementRevision=git(measurementDirectory,'rev-parse','HEAD');
     assert.equal(git(measurementDirectory,'status','--porcelain'),'','measurement requires a clean harness tree');
-    console.log(JSON.stringify({schemaVersion:1,workload:'owned-harris-store-loop-memory-only-native-bus-output-sparse',
+    console.log(JSON.stringify({schemaVersion:1,workload:'owned-harris-store-loop-memory-only-admitted-incremental-native-bus-output-sparse',
         measurementRevision,clean:true,settings,host:{hostname:hostname(),platform:platform(),arch:arch(),cpu:cpus()[0]?.model,
             node:process.version,loadavg:loadavg(),exposedGC:typeof global.gc==='function'},
         variants:Object.fromEntries(Object.entries(variants).map(([name,variant])=>[name,variant.provenance])),
         expectedByVariant,comparisonReduction,pairedActiveThroughputRatio,positionEffects,metrics,warmups,samples,paired,
         limitations:['Same hosted job, process and balanced AB/BA order reduce runner drift but do not make shared-host timing deterministic.',
+            'The comparison and throughput thresholds qualify only the explicitly selected admittedGraph:true, incrementalGraph:true path; they are not default checked-path performance evidence.',
             'The candidate changes only native CPU bus-output publication plus its fail-closed ABI and qualification gates; neither variant changes execution defaults.',
             'The mask compares raw per-driver 0/1/X/Z codes. Other drivers remain responsible for contention and resolved-net changes.',
             'Counters wrap modulo 2^32; driverComparisons is kernel-side and excludes JavaScript bulk-image scanning.',
