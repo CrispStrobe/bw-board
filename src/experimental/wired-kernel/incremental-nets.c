@@ -99,6 +99,8 @@ u32 admit_incremental_context(const u32 *c) {
 #ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
 #define RESOLVE_DIRTY incremental_stage_resolve_dirty
 #define PUBLISH_INCREMENTAL incremental_stage_publish_successful_fixpoint
+#define MARK_AFFECTED incremental_stage_mark_affected_operations
+#define EVALUATE_SPARSE incremental_stage_evaluate_and_stage_sparse_outputs
 #else
 #define RESOLVE_DIRTY resolve_dirty
 #define PUBLISH_INCREMENTAL publish_incremental
@@ -137,7 +139,7 @@ static INCREMENTAL_STAGE_NOINLINE void PUBLISH_INCREMENTAL(const u32 *c) {
     publish_count=0;
 }
 #ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
-static INCREMENTAL_STAGE_NOINLINE u32 incremental_stage_mark_affected_operations(const u32 *c) {
+static INCREMENTAL_STAGE_NOINLINE u32 MARK_AFFECTED(const u32 *c) {
     u32 *affected=W(34);const u32 *reverse_offsets=W(32),*reverse_operations=W(33);u32 has_affected=0;
     for(u32 i=0;i<changed_count;i++)for(u32 p=reverse_offsets[changed_queue[i]];p<reverse_offsets[changed_queue[i]+1];p++){
         const u32 operation=reverse_operations[p],mask=1u<<(operation&31);incremental_work[10]++;
@@ -145,7 +147,7 @@ static INCREMENTAL_STAGE_NOINLINE u32 incremental_stage_mark_affected_operations
     }
     return has_affected;
 }
-static INCREMENTAL_STAGE_NOINLINE u32 incremental_stage_evaluate_and_stage_sparse_outputs(const u32 *c,u32 has_affected) {
+static INCREMENTAL_STAGE_NOINLINE u32 EVALUATE_SPARSE(const u32 *c,u32 has_affected) {
     u32 *affected=W(34);output_count=has_affected?evaluate_owned_operations_marked_sparse(c[7],W(8),B(5),B(9),affected,queued_output,output_queue,c[1]):0;
     if(output_count==NONE)return NONE;
     u32 changed=0;
@@ -165,8 +167,8 @@ u32 settle_incremental_context(const u32 *c) {
         // Conflict-only changes still publish their diagnostics below.
         if(!resolved_changed){PUBLISH_INCREMENTAL(c);return delta+1;}
         #ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
-        const u32 has_affected=incremental_stage_mark_affected_operations(c);
-        const u32 changed=incremental_stage_evaluate_and_stage_sparse_outputs(c,has_affected);
+        const u32 has_affected=MARK_AFFECTED(c);
+        const u32 changed=EVALUATE_SPARSE(c,has_affected);
         if(changed==NONE)return 0x80000007u;
         #else
         u32 *affected=W(34);const u32 *reverse_offsets=W(32),*reverse_operations=W(33);
@@ -192,4 +194,8 @@ u32 settle_incremental_context(const u32 *c) {
 }
 #undef RESOLVE_DIRTY
 #undef PUBLISH_INCREMENTAL
+#ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
+#undef MARK_AFFECTED
+#undef EVALUATE_SPARSE
+#endif
 #undef INCREMENTAL_STAGE_NOINLINE
