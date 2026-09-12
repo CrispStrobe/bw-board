@@ -144,9 +144,12 @@ describe('AVR end-to-end: blink → avr-gcc → avr8js → board → LED', () =>
     console.log(`# Pin changes: ${adapter.stats.pinChangeCount}`);
 
     // Derived prediction: VCC=5V, R=220Ω, LED Vf=2V Rd=10Ω, pin Rth=25Ω.
-    // Total series R = 220+10+25 = 255Ω. I = (5-2)/255 = 11.76 mA.
-    // Brightness = 11.76/20 = 0.5882. Tolerance ±5%.
-    const expected = (5.0 - 2.0) / (220 + 10 + 25) / 0.020; // 0.5882
+    // Total series R = 220+10+25 = 255Ω. The driving voltage is 5 - KNEE, and
+    // the knee is Vf - I_RATED*Rd = 2.0 - 0.2 = 1.8, NOT Vf: Vf is the
+    // datasheet drop at the rated 20 mA and the piecewise model answers
+    // Vf + i*Rd. I = (5-1.8)/255 = 12.55 mA, brightness 0.6275. Tolerance ±5%.
+    // Matches test/golden/oracles.json led_red_220 = 12.54902 mA.
+    const expected = (5.0 - (2.0 - 0.020 * 10)) / (220 + 10 + 25) / 0.020; // 0.6275
     assert.ok(Math.abs(brightness - expected) < expected * 0.05,
       `LED brightness should be ~${expected.toFixed(4)}, got ${brightness.toFixed(4)}. ` +
       `Derived: I=(5-2)/(220+10+25)=11.76mA, brightness=11.76/20=0.5882.`);

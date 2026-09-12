@@ -22,8 +22,15 @@ test('nodeVoltage sees a diode load (walker used to report 5 V)', () => {
       { id: 'gnd', terminals: [{ part: 'G1', terminal: 'gnd' }, { part: 'D1', terminal: 'cathode' }] },
     ]);
   const v = b.nodeVoltage('n1');
-  const expected = 0.7 + 10 * ((5 - 0.7) / 1010); // 0.74257
-  assert.ok(Math.abs(v - expected) < 1e-3, `n1 = ${v}, expected ${expected}`);
+  // NOT 0.7 + 10*((5-0.7)/1010). That read vf as the knee AND used the LED's
+  // rd for a silicon part. vf is the datasheet drop at the rated current, and
+  // silicon bulk is SILICON_RD = 0.568 (our own D1N4148 reference), not 10.
+  // ngspice for this exact loop -- V1 5, R1 1k, D(IS=2.52e-9 RS=0.568 N=1.752)
+  // -- gives 0.6532 V; this solver reads 0.6793, +4.0 %. Anchored on the
+  // oracle with a tolerance that covers the piecewise model's own error, the
+  // same way test/gallery-kind-models.test.mjs does for the same circuit.
+  const expected = 0.6532;  // ngspice
+  assert.ok(Math.abs(v - expected) < 0.08, `n1 = ${v}, expected ~${expected} (ngspice)`);
 });
 
 test('an NPN switch: collector voltage from one coherent solve', () => {
@@ -93,7 +100,13 @@ test('a LOADED pot wiper routes to MNA; an ADC wiper stays on the walker', () =>
     ]);
   const vW = b.nodeVoltage('wip');
   const vL = b.nodeVoltage('led');
-  assert.ok(Math.abs(vW - 2.0301) < 0.005, `loaded wiper sags to 2.0301, got ${vW.toFixed(4)}`);
+  // 1.8485, not 2.0301. The only thing that moved is the DIODE in the load:
+  // its knee is now vf - I_RATED*SILICON_RD and its bulk 0.568 rather than 10.
+  // EVIDENCE TIER: this one is CHARACTERISED, not oracled -- I did not build an
+  // ngspice deck for the loaded-pot topology. It is pinned so a further change
+  // is noticed; the diode itself is oracled in the two tests above, and if this
+  // number ever needs defending it needs its own deck first.
+  assert.ok(Math.abs(vW - 1.8485) < 0.005, `loaded wiper sags to 1.8485, got ${vW.toFixed(4)}`);
   const residual = (5 - vW) / 5000 - vW / 5000 - (vW - vL) / 220;
   assert.ok(Math.abs(residual) < 1e-6,
     `KCL closes at the wiper: residual ${(residual * 1e3).toFixed(4)} mA`);
@@ -161,8 +174,9 @@ test('RC charging beside a diode: transient MNA carries the cap forward', () => 
     ]);
   // 10 ms ≫ τ: fully settled at the diode clamp, NOT at 5 V.
   b.advanceTo(10_000_000n);
-  const vClamp = 0.7 + 10 * ((5 - 0.7) / 1010); // same loop as the diode test
+  const vClamp = 0.6532; // same loop as the diode test above: ngspice, not a
+                         // knee formula -- see the note there
   const v = b.getCapVoltage('C1');
-  assert.ok(Math.abs(v - vClamp) < 0.02, `cap settled at ${v}, expected clamp ${vClamp}`);
+  assert.ok(Math.abs(v - vClamp) < 0.08, `cap settled at ${v}, expected clamp ~${vClamp} (ngspice)`);
   assert.ok(v < 1.0, 'the diode clamp held — without MNA routing this reads ~5 V');
 });

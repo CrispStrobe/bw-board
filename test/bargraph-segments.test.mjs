@@ -84,10 +84,13 @@ describe('bargraph segments light', () => {
 describe('bargraph segments are diodes, not resistors', () => {
   it('a forward segment CLAMPS near its drop instead of dividing', () => {
     // The old fixed 110 ohm put this node at 5 * 110/440 = 1.25 V, which is a
-    // divider. A diode holds vf plus its own small drop: about 2.09 V.
+    // divider. A diode holds its KNEE plus its own small drop: knee is
+    // vForward - iFull*rDynamic = 2.0 - 0.2 = 1.8, so about 1.89 V. (It read
+    // ~2.09 V while vForward was treated as the knee itself.) The band is what
+    // separates a clamp from a divider, and 1.25 is still far outside it.
     const s = seg();
-    assert.ok(s.volts > 1.9 && s.volts < 2.4,
-      `expected a clamp near 2.1 V, got ${s.volts.toFixed(2)} V — 1.25 V means it is a resistor again`);
+    assert.ok(s.volts > 1.7 && s.volts < 2.1,
+      `expected a clamp near 1.89 V, got ${s.volts.toFixed(2)} V — 1.25 V means it is a resistor again`);
   });
 
   it('a REVERSE-connected segment does not conduct, and does not light', () => {

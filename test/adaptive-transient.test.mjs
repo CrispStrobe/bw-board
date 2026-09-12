@@ -165,7 +165,14 @@ describe('adaptive transient: advance pattern must not change the physics', () =
       };
       const spike = mk();
       spike.advanceTo(10_010_000n);
-      assert.ok(spike.nodeVoltage('n_sw') < -5,
+      // -0.5 V, not -5 V. The old threshold was an artefact of silicon sharing
+      // the LED's rd = 10: a clamp of -(0.7 + i*10) put a few hundred mA of
+      // inductor current below -5 V. With SILICON_RD = 0.568 (our own D1N4148
+      // reference) the clamp is -(0.7 + i*0.568) and reads -1.190 V, which is
+      // what a real signal diode does. The CLAIM is that opening an inductive
+      // circuit produces a real negative excursion rather than nothing, and
+      // that survives; -5 V was asserting the size of a modelling error.
+      assert.ok(spike.nodeVoltage('n_sw') < -0.5,
         `the flyback spike is real at 10 µs, got ${spike.nodeVoltage('n_sw').toFixed(3)} V`);
       const single = mk();
       single.advanceTo(11_000_000n);

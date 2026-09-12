@@ -107,7 +107,12 @@ describe('saturated PNP stamps its base junction (source honesty 2)', () => {
         const iRl = I(r, 'rl', 'b');
         assert.ok(Math.abs(ic - iRl) < 1e-6,
             `ic ${(ic * 1e3).toFixed(4)} mA == load ${(iRl * 1e3).toFixed(4)} mA`);
-        assert.ok(Math.abs(ic - 2.772e-3) < 0.05e-3, `ic ≈ 2.772 mA: got ${(ic * 1e3).toFixed(4)}`);
+        // 2.970 mA, not 2.772: the load here is an LED and its knee moved with
+        // the datasheet convention (vf - I_RATED*rd). The TRANSISTOR is
+        // untouched -- vbe stays a knee, and the sibling base-junction
+        // assertion above is unchanged and still passes, which is how we know
+        // the LED and not the PNP moved.
+        assert.ok(Math.abs(ic - 2.970e-3) < 0.05e-3, `ic ≈ 2.970 mA: got ${(ic * 1e3).toFixed(4)}`);
         const kcl = I(r, 'q1', 'base') + I(r, 'q1', 'collector') + I(r, 'q1', 'emitter');
         assert.ok(Math.abs(kcl) < 1e-9, `KCL at q1: ${(kcl * 1e3).toExponential(2)} mA`);
     });
