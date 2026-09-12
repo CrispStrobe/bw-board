@@ -104,6 +104,13 @@ jobs:
             | tee "$HARRIS_RECEIPT_DIR/owned-memory-preview-mutations.tap"
           test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/owned-memory-preview-mutations.tap")" -eq 7
 
+      - name: Prove immutable memory-map admission mutations are rejected
+        run: |
+          set -euo pipefail
+          node scripts/verify-harris-native-system-admission-mutations.mjs \
+            | tee "$HARRIS_RECEIPT_DIR/memory-map-admission-mutations.tap"
+          test "$(grep -c '^# mutation rejected:' "$HARRIS_RECEIPT_DIR/memory-map-admission-mutations.tap")" -eq 10
+
       - name: Qualify the same module in a fresh Chromium worker
         env:
           HARRIS_BROWSER_REPORT: ${{ env.HARRIS_RECEIPT_DIR }}/browser-receipt.json

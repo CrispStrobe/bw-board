@@ -119,6 +119,7 @@ export const INPUTS = [
         gates: ['test/harris-native-admitted-graph.test.mjs', 'test/harris-native-bus-sequencer.test.mjs', 'test/harris-native-bus-circuit.test.mjs', 'test/harris-native-evaluators.test.mjs',
             'test/harris-native-boot-bridge.test.mjs', 'test/harris-native-memory-board.test.mjs',
             'test/harris-native-incremental-nets.test.mjs', 'test/harris-native-memory-circuit.test.mjs',
+            'test/harris-native-system-admission.test.mjs',
             'test/harris-native-memory.test.mjs', 'test/harris-native-net-kernel.test.mjs',
             'test/harris-native-phase-circuit.test.mjs', 'test/harris-native-phase-components.test.mjs',
             'test/harris-native-producer-counters.test.mjs',

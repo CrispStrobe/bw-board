@@ -171,11 +171,13 @@ u32 settle_owned(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *leve
  * host/schedule inputs remain validated, and owned native writers emit 0..3. */
 static const u32 *admitted_context;
 static u32 admitted_mode;
+extern void revoke_owned_memory_admission(void);
 extern u32 admit_incremental_context(const u32*);
 extern u32 settle_incremental_context(const u32*);
 #define CB(i) ((u8*)(unsigned long)c[i])
 #define CW(i) ((u32*)(unsigned long)c[i])
-u32 admit_owned_context(const u32 *c) {
+void revoke_owned_graph_admission(void){admitted_context=0;admitted_mode=0;}
+u32 admit_owned_context_for_memory(const u32 *c) {
     admitted_context=0;admitted_mode=0; /* Failed re-admission revokes the old grant. */
     if(c[31]!=1&&c[31]!=4)return 0x80000006u;
     /* Refuse counts that cannot fit even as one arena-resident table before
@@ -188,6 +190,10 @@ u32 admit_owned_context(const u32 *c) {
     if(!c[12]||c[12]>1024)return 0x80000005u;
     if(c[31]==4&&(error=admit_incremental_context(c)))return 0x80000000u|error;
     admitted_context=c;admitted_mode=c[31];return 0;
+}
+u32 admit_owned_context(const u32 *c) {
+    revoke_owned_memory_admission();
+    return admit_owned_context_for_memory(c);
 }
 u32 settle_owned_context(const u32 *c) {
     if(c[31]) {

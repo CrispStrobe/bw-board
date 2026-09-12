@@ -16,6 +16,7 @@ const MEMORY_PREVIEW_COUNTERS=['ownedPreviewCalls','checkedValidationBanks','che
 const NATIVE_STAGE_COUNTERS=['memoryMappingCalls','memoryMappingVisits','memoryGatherCalls','memoryGatherPinRecords',
     'memoryPreviewCalls','memoryPreviewBanks','memoryPreviewStateWordCopies','memoryCommitBanks','memoryCommitStateWordCopies',
     'memoryWriterPublications','memoryPostSettles','phaseValidationCalls','phaseValidationVisits','busValidationCalls','busValidationVisits'];
+const MEMORY_ADMISSION_COUNTERS=['attempts','admissions','failures','inputMapVisits','outputMapVisits','outputAliasComparisons','protectionVisits','runtimeMapVisits'];
 export function assertIncrementalKernelABI(exports,enabled) {
     if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
         throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
@@ -29,8 +30,14 @@ export function assertProducerCounterABI(exports) {
         throw new TypeError('rebuild native producer counters: ABI version/exports mismatch');
 }
 export function assertOwnedMemoryPreviewABI(exports) {
-    if(exports.memory_circuit_version?.()!==3)
+    if(exports.memory_circuit_version?.()!==4)
         throw new TypeError('rebuild native owned memory preview: ABI version mismatch');
+}
+export function assertOwnedMemoryAdmissionABI(exports) {
+    if(exports.memory_admission_version?.()!==1||exports.memory_admission_counters_version?.()!==1||
+        typeof exports.admit_owned_memory_context!=='function'||typeof exports.memory_admission_counters_ptr!=='function'||
+        typeof exports.reset_memory_admission_counters!=='function')
+        throw new TypeError('rebuild native memory-map admission: ABI version mismatch');
 }
 /** Diagnostic totals for accepted submits and returned/native-progress runs.
  * Rejections before those main Wasm boundaries are deliberately excluded. */
@@ -91,6 +98,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     if(e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
     assertOwnedMemoryPreviewABI(e);
+    assertOwnedMemoryAdmissionABI(e);
     assertIncrementalKernelABI(e,incrementalGraph);
     if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
     assertProducerCounterABI(e);
@@ -125,7 +133,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         p.published,p.publishedConflicts,image.maxDeltas,p.dependencyOffsets,p.dependencies,image.dependencies.length,p.previous,p.changed,
         count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,
         incrementalGraph?4:Number(admittedGraph),p.reverseDependencyOffsets,p.reverseOperations,p.affectedOperations]);
-    if(admittedGraph&&(e.admit_owned_context(p.context)>>>0)!==0)throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph admission failed');
+    if(admittedGraph&&(e.admit_owned_memory_context(p.context,p.fault)>>>0)!==0)
+        throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph and memory-map admission failed');
     const inspect=()=>({levels:bytes('published',nets).slice(),conflicts:bytes('publishedConflicts',nets).slice(),driverLevels:bytes('drivers',drivers).slice()});
     const inspectWorkCounters=()=>{
         const values=new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),WORK_COUNTERS.length);
@@ -143,6 +152,10 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
             ...MEMORY_PREVIEW_COUNTERS.map((name,i)=>[name,previewValues[i]])]))});
     };
     const resetProducerCounters=()=>{e.reset_producer_work_counters();e.reset_memory_pass_counters();e.reset_memory_preview_counters();};
+    const inspectMemoryAdmission=()=>{
+        const values=new Uint32Array(e.memory.buffer,e.memory_admission_counters_ptr(),MEMORY_ADMISSION_COUNTERS.length);
+        return Object.freeze(Object.fromEntries(MEMORY_ADMISSION_COUNTERS.map((name,i)=>[name,values[i]])));
+    };
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
         const word=w=>view.getUint32(p.states+(bank*WORDS+w)*4,true),out=word(2);
@@ -190,5 +203,6 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
         latchedMemoryClocks:!!phaseBinding,nativeMemoryBus:!!busBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(busMethods??phaseMethods??{settleMemories}),
         inspect,inspectMemory,inspectWorkCounters,resetWorkCounters,inspectProducerCounters,resetProducerCounters,
+        inspectMemoryAdmission,
         ...(stageAttribution?{inspectStageAttribution,resetStageAttribution}:{})});
 }
