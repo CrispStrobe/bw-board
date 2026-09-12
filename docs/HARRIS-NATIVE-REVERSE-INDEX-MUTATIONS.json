@@ -1,5 +1,11 @@
 {
   "accepted": true,
+  "revision": "d61481a786c95190b9aceada2f8b68f602022965",
+  "sourceSHA256": {
+    "src/experimental/wired-kernel/evaluator-image.js": "05945e555041114b1ca3ed4619898efec85ad98faa1141c97a47351e70fa9266",
+    "src/experimental/wired-kernel/incremental-nets.c": "c5799bbc7142f04983083d6d66c19f8f5e3fdea1dde29970eff60df67833ff68",
+    "src/experimental/wired-kernel/net-resolver.c": "05761c27766212f7bb7407e53d499c1693dff6d9a2e51ababb780721251ec434"
+  },
   "kills": 7,
   "results": [
     {

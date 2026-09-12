@@ -6,10 +6,10 @@
   "cpu": false,
   "rounds": 5,
   "periods": 8194,
-  "benchmarkSHA256": "1abe5806f68b7be656671b0b1d18040a2dedc1501cf8869f5d3782121b749058",
+  "benchmarkSHA256": "8cb36756ff21f03c502c43c32fc36d81ee591cd1d11bae725ebcf701c20e2fba",
   "revisions": {
     "baseline": "6e4327c393ae6f57beb09d345a3aa91be1393729",
-    "incremental-reverse-index": "91a20c503ef2e82294f81d141bbc89a3e213c87e"
+    "incremental-reverse-index": "d61481a786c95190b9aceada2f8b68f602022965"
   },
   "builds": {
     "before": {
@@ -168,7 +168,7 @@
         "/mnt/volume1/code/wt/bwb-native-reverse-index/src/experimental/wired-kernel/bus-sequencer.c",
         "/mnt/volume1/code/wt/bwb-native-reverse-index/src/experimental/wired-kernel/bus-circuit.c",
         "-o",
-        "/tmp/harris-reverse-exact.KHNI9i/wired-net-kernel.wasm"
+        "/tmp/harris-reverse-final-build.58riRZ/wired-net-kernel.wasm"
       ],
       "sourceSHA256": "05761c27766212f7bb7407e53d499c1693dff6d9a2e51ababb780721251ec434",
       "sourceHashes": {
@@ -199,9 +199,9 @@
   },
   "summaries": {
     "incremental-reverse-index": {
-      "medianMS": 45.46188200000006,
-      "minMS": 31.03756999999996,
-      "maxMS": 59.12960100000009,
+      "medianMS": 80.86301400000002,
+      "minMS": 35.1797160000001,
+      "maxMS": 108.69117400000005,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -402,7 +402,7 @@
     {
       "round": 0,
       "mode": "incremental-reverse-index",
-      "elapsedMS": 59.12960100000009,
+      "elapsedMS": 108.69117400000005,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -423,7 +423,7 @@
     {
       "round": 1,
       "mode": "incremental-reverse-index",
-      "elapsedMS": 31.03756999999996,
+      "elapsedMS": 67.04280699999981,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -444,7 +444,7 @@
     {
       "round": 2,
       "mode": "incremental-reverse-index",
-      "elapsedMS": 52.576568999999836,
+      "elapsedMS": 35.1797160000001,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -465,7 +465,7 @@
     {
       "round": 3,
       "mode": "incremental-reverse-index",
-      "elapsedMS": 45.46188200000006,
+      "elapsedMS": 80.86301400000002,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -486,7 +486,7 @@
     {
       "round": 4,
       "mode": "incremental-reverse-index",
-      "elapsedMS": 34.10324300000002,
+      "elapsedMS": 91.02230200000031,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
