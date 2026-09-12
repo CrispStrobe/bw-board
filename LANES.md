@@ -570,6 +570,13 @@ rather than each against the master it branched from.
 
 ## DONE
 
+Execution policy P2 contract: Codex engine_policy, 2026-09-12, branch
+`feat/execution-policy-contract` from `5804fff`. Dependency-free admission seam,
+reviewed adapter-owned catalog, no built-in backend claims, direct package export,
+9 synthetic positive/negative tests. Existing factories/defaults unchanged.
+Local integration handoff only; no push or deployment. See
+`docs/EXECUTION-POLICY-API.md`.
+
 286 DMA register prerequisite: source `cdbf18a` on `feat/x86-backend-lab`,
 2026-09-09. Optional channel-2 register/XT-style page bridge uses physical
 byte lanes and I/O strobes, private unchanged I8237 register core, no callbacks

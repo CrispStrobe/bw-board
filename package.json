@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.js",
     "./types": "./src/types.js",
+    "./execution-policy": "./src/execution-policy.js",
     "./conformance": "./src/conformance.js",
     "./emu8051-adapter": "./src/emu8051-adapter.js",
     "./emu8051-debug": "./src/emu8051-debug.js",
