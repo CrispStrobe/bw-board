@@ -267,8 +267,48 @@ function pwlKneeCurrent(v, vf, rd) {
  * the machinery (companion, pnjlim, extraction) is complete and tested
  * behind the param. Ideality: LEDs 1.8, silicon 1.0, via params.n.
  */
+/**
+ * THE JUNCTION-ROUTING POLICY, in one place, with a toggle.
+ *
+ * 'auto'     — per-circuit: Shockley where the walker's knee model is not
+ *              adequate, PWL where it is. The default, and what the E1.3b
+ *              measurement supports.
+ * 'shockley' — every junction exponential. The E1.3b full flip, kept reachable
+ *              so it can be turned on wholesale the day the ~4x solve cost is
+ *              acceptable, without re-deriving any of this.
+ * 'pwl'      — every junction piecewise. The pre-E1.3b behaviour, kept so a
+ *              regression can be bisected against it rather than argued about.
+ *
+ * A part's own `params.model` always wins: an explicit choice on the part is a
+ * statement about that device, and a global policy must not overrule it.
+ */
+export const JUNCTION_ROUTING = {mode: 'auto'};
+
+/** The headroom below which the walker stops being adequate. Derived; see board.js. */
+export const MNA_HEADROOM_V = 2.0;
+
+/**
+ * The model this junction will actually be solved with.
+ *
+ * `headroomV` is the supply margin over the total forward drop, or undefined
+ * where the caller cannot compute it — in which case 'auto' keeps today's
+ * behaviour (opt-in only) rather than guessing.
+ */
+export function junctionModelOf(part, headroomV) {
+  const explicit = part?.params?.model;
+  if (explicit === 'shockley' || explicit === 'pwl') return explicit;
+  if (JUNCTION_ROUTING.mode === 'shockley') return 'shockley';
+  if (JUNCTION_ROUTING.mode === 'pwl') return 'pwl';
+  if (typeof headroomV !== 'number' || !Number.isFinite(headroomV)) return 'pwl';
+  return headroomV < MNA_HEADROOM_V ? 'shockley' : 'pwl';
+}
+
 function junctionOpts(part) {
-  if (part.params?.model !== 'shockley') return undefined;
+  // The board resolved this once per solve and stamped it (board.js,
+  // setNetlist). Reading the stamp rather than re-deciding is what keeps
+  // `junctionCurrent`'s "must match what was stamped" true.
+  const model = part?._junctionModel ?? junctionModelOf(part, undefined);
+  if (model !== 'shockley') return undefined;
   return {
     shockley: true,
     is: part.params?.is,

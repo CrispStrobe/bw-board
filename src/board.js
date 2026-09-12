@@ -26,6 +26,7 @@ import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
+import { junctionModelOf } from './mna.js';
 
 /**
  * Internal pin state.
@@ -576,6 +577,24 @@ export class BoardImpl {
     this._solveParts = macroView.parts;
     this._solveNets = macroView.nets;
     this._macroFallbacks = macroView.notes;
+
+    // RESOLVE EACH JUNCTION'S MODEL ONCE, HERE, FOR THE WHOLE SOLVE.
+    //
+    // `junctionCurrent` in mna.js carries the comment "must match what was
+    // stamped" — the model used to READ a solved voltage has to be the one used
+    // to STAMP the matrix. Deciding per call site would let those two disagree
+    // whenever the inputs differed, and the disagreement would be silent: a
+    // current read off a matrix built for the other model.
+    //
+    // So it is decided in one place, on the solve-local parts (derived data,
+    // rebuilt with every netlist — never the caller's objects), and every site
+    // downstream reads that answer rather than recomputing it.
+    {
+      const headroomV = this._junctionHeadroomV();
+      for (const p of this._solveParts) {
+        if (p.kind === 'led' || p.kind === 'diode') p._junctionModel = junctionModelOf(p, headroomV);
+      }
+    }
     // A new netlist is a new bench: every reactive part starts at rest.
     // The clear has to come BEFORE the seeding below, not after it — it
     // used to run after, which silently undid the whole seeding pass and
@@ -2770,6 +2789,53 @@ export class BoardImpl {
    * silently report voltages as if those parts were absent, which is the
    * "plausible, wrong" answer this project's doctrine forbids.
    */
+  /**
+   * WHICH JUNCTION MODEL THIS PART USES, and the reason there is a choice.
+   *
+   * MEASURED 2026-09-12 against test/golden/ngspice_diode.json, 19 cases over
+   * five junction families:
+   *
+   *     PWL default        mean 11.4% error   worst 100%
+   *     Shockley default   mean  1.8% error   worst 7.8%
+   *
+   * The 100% is not a calibration offset. Two 2.0 V LEDs on a 3.3 V rail read
+   * 0.000 mA under PWL where ngspice and Shockley both say 0.020 mA: the hard
+   * knee reports a conducting circuit as DARK. That is the failure this routing
+   * exists to prevent.
+   *
+   * SO WHY NOT SHOCKLEY EVERYWHERE. Routing a junction past the walker costs
+   * about 4x per solve (measured: ~80 us -> ~330 us on a one-LED circuit, ratio
+   * stable across three runs on a loaded box). Paid on every LED circuit
+   * including the ones where PWL is already within 2%, that is a real cost in a
+   * live editor.
+   *
+   * THE THRESHOLD IS DERIVED, NOT PICKED. Sweeping supply headroom
+   * (Vcc - sum of forward drops) against the worst disagreement over R and
+   * topology gives a curve that asymptotes at ~13.7%:
+   *
+   *     headroom <= 0 V    93-100%   <- qualitative: PWL says cut off
+   *              1.0 V       32.8%
+   *              2.0 V       18.7%   <- within 1.4x of the asymptote
+   *              4.0 V       13.7%   asymptote
+   *
+   * Above ~2 V the walker is as good as it will ever be and routing buys
+   * nothing; below it the error climbs steeply into the qualitative failure. So
+   * 2 V is where the walker stops being adequate, and that is the number.
+   *
+   * CONSERVATIVE BY CONSTRUCTION: the headroom is computed against the sum of
+   * EVERY junction's forward drop, not per series path. Parallel branches are
+   * therefore over-counted, headroom is under-estimated, and the decision errs
+   * toward MNA — slower, never less accurate.
+   */
+  _junctionHeadroomV() {
+    let totalVf = 0;
+    for (const p of this.parts) {
+      if (p.kind !== 'led' && p.kind !== 'diode') continue;
+      totalVf += Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+    }
+    return (Number(this.vcc) || 0) - totalVf;
+  }
+
   _needsMNA() {
     for (const p of this.parts) {
       if (MNA_ONLY_KINDS.has(p.kind) || getDevice(p.kind)) return true;
@@ -2777,7 +2843,8 @@ export class BoardImpl {
       // vocabulary: letting the walker answer nodeVoltage while the
       // instruments answer from the exponential model is two truths on
       // one bench (spec-updates/shockley-junction-limiting.md).
-      if ((p.kind === 'led' || p.kind === 'diode') && p.params?.model === 'shockley') return true;
+      // The stamp from setNetlist — the same answer the solver will use.
+      if ((p.kind === 'led' || p.kind === 'diode') && (p._junctionModel ?? junctionModelOf(p)) === 'shockley') return true;
     }
     // A potentiometer with a LOADED wiper is beyond the walker:
     // _solvePot answers the unloaded midpoint while _solveLedChain treats

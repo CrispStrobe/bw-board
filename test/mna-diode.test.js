@@ -58,7 +58,7 @@ describe('MNA: LED current through different resistors', () => {
 });
 
 describe('MNA: series LEDs', () => {
-  it('two LEDs in series: I = (5 - 4) / (1000 + 20) ≈ 0.98 mA', () => {
+  it('two LEDs in series carry the current ngspice measures, ~1.30 mA', () => {
     const board = new BoardImpl(5.0);
     const parts = [
       { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
@@ -75,10 +75,24 @@ describe('MNA: series LEDs', () => {
     ];
     board.setNetlist(parts, nets);
 
-    // I = (5 - 2 - 2) / (1000 + 10 + 10) = 1/1020 ≈ 0.98 mA
+    // THE EXPECTATION USED TO BE THE PWL FORMULA, AND IT WAS WRONG.
+    //
+    // It read `I = (5 - 2 - 2) / (1000 + 10 + 10) = 1/1020 ~= 0.98 mA` — the
+    // piecewise model's own arithmetic, asserted as though it were the
+    // circuit's behaviour. test/golden/ngspice_diode.json measures this exact
+    // circuit at 1.304 mA, so the old expectation was 25% below the device and
+    // the test's own NAME carried the error.
+    //
+    // A junction pair on a 5 V rail has only 1 V of headroom over its 4 V of
+    // forward drop, which is inside the band where the walker's knee is not
+    // adequate, so this circuit now routes to the exponential model (see
+    // _junctionHeadroomV in board.js). Tolerance is +-5% of the ngspice value
+    // rather than the old +-0.2 mA, which was 20% and wide enough to hide this.
+    const NGSPICE = 0.001304;
     const i1 = board.branchCurrent('LED1', 'anode');
     const i2 = board.branchCurrent('LED2', 'anode');
-    assert.ok(Math.abs(i1 - 0.00098) < 0.0002, `LED1 current ${i1} ≈ 0.98 mA`);
+    assert.ok(Math.abs(i1 - NGSPICE) < NGSPICE * 0.05,
+      `LED1 current ${(i1 * 1000).toFixed(3)} mA, ngspice measures ${(NGSPICE * 1000).toFixed(3)} mA`);
     assert.ok(Math.abs(i1 - i2) < 0.0001, 'series LEDs carry same current');
   });
 
