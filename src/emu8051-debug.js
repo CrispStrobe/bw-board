@@ -213,6 +213,9 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
     let breakpoints = new Map();
     /** A native blob is valid only for the target/configuration that captured it. */
     const checkpointSession = {};
+    const checkpointLocalProofs = new WeakMap();
+    const breakpointProof = local => JSON.stringify({taskIndex: local.taskIndex,
+        yieldAddr: local.yieldAddr, breakpoints: local.breakpoints});
 
     let symbols = null;
     let listeners = [];
@@ -423,6 +426,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         if (inBudgetedRun) return;      // runFor speaks for this window
         const cause = pendingCause || 'breakpoint';
         pendingCause = null;
+        stepping = false;
         announce(cause);
     }
 
@@ -997,6 +1001,8 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     // are replayed once after restore, rather than silently dropped.
                     inBudgetedRun, pinHistoryReadCount, pinHistoryReadHead, adapter
                 });
+                local.proof = {};
+                checkpointLocalProofs.set(local.proof, breakpointProof(local));
             } catch {
                 return {refused: 'checkpoint debugger-local state cannot be cloned',
                     code: 'invalid-checkpoint-local-state'};
@@ -1039,6 +1045,9 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         /** Validate the JS envelope before asking native code to mutate. */
         restoreCheckpoint(snapshot) {
             if (!checkpointSupport().supported) return unavailableCheckpointRefusal('restore');
+            if (inBudgetedRun) return {
+                refused: 'checkpoint restore requires a quiescent run boundary',
+                code: 'checkpoint-not-quiescent'};
             if (!snapshot || snapshot.schema !== 1 || snapshot.kind !== 'emu8051-native' ||
                 snapshot.session !== checkpointSession ||
                 snapshot.version !== CHECKPOINT_VERSION || snapshot.buildId !== CHECKPOINT_BUILD_ID ||
@@ -1060,11 +1069,13 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     !bp || typeof bp !== 'object' ||
                     !Number.isSafeInteger(bp.pc) || bp.pc < 0 || bp.pc > 0xffff) return false;
                 if (bp.kind === 'code') return Number.isSafeInteger(bp.addr) &&
-                    bp.addr >= 0 && bp.addr <= 0xffff;
+                    bp.addr >= 0 && bp.addr <= 0xffff && bp.pc === bp.addr;
                 if (bp.kind === 'yield') return typeof bp.task === 'string' &&
-                    Number.isSafeInteger(bp.state) && bp.state >= 0 && bp.state <= 0x7fffffff;
+                    Number.isSafeInteger(bp.state) && bp.state >= 0 && bp.state <= 0x7fffffff &&
+                    yields.some(([key, addr]) => key === `${bp.task}/${bp.state}` && addr === bp.pc);
                 if (bp.kind === 'write') return SPACE[bp.space ?? 'iram'] !== undefined &&
-                    Number.isSafeInteger(bp.addr) && bp.addr >= 0 && bp.addr <= 0xffff;
+                    Number.isSafeInteger(bp.addr) && bp.addr >= 0 && bp.addr <= 0xffff &&
+                    bp.pc === bp.addr;
                 return false;
             };
             const pending = snapshot.local.pendingStep;
@@ -1083,18 +1094,30 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 !unique(bps.map(entry => entry[0])) || !validPending ||
                 typeof snapshot.local.stepping !== 'boolean' ||
                 (snapshot.local.stepping && snapshot.local.pendingCause !== 'step') ||
-                (pending !== null && !snapshot.local.stepping) ||
+                (pending !== null && (!snapshot.local.stepping ||
+                    snapshot.local.pendingCause !== 'step')) ||
+                (!snapshot.local.stepping && snapshot.local.pendingCause === 'step') ||
                 snapshot.local.inBudgetedRun !== false ||
                 !(snapshot.local.pendingCause === null ||
                     ['step', 'user'].includes(snapshot.local.pendingCause)) ||
                 !Number.isSafeInteger(snapshot.local.pinHistoryReadCount) ||
                 snapshot.local.pinHistoryReadCount < 0 ||
+                snapshot.local.pinHistoryReadCount > 0xffffffff ||
                 !Number.isSafeInteger(snapshot.local.pinHistoryReadHead) ||
                 snapshot.local.pinHistoryReadHead < 0 ||
-                snapshot.local.pinHistoryReadHead >= PIN_HISTORY_CAPACITY) {
+                snapshot.local.pinHistoryReadHead > 0xffffffff ||
+                snapshot.local.pinHistoryReadHead !== snapshot.local.pinHistoryReadCount) {
                 return {refused: 'checkpoint debugger-local state is malformed',
                     code: 'invalid-checkpoint-envelope'};
             }
+            let proof;
+            try { proof = breakpointProof(snapshot.local); } catch {
+                return {refused: 'checkpoint breakpoint provenance is malformed',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            if (checkpointLocalProofs.get(snapshot.local.proof) !== proof) return {
+                refused: 'checkpoint breakpoint metadata differs from its captured native handles',
+                code: 'invalid-checkpoint-envelope'};
             let staged;
             try {
                 const clone = structuredClone(snapshot.local);
@@ -1260,6 +1283,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 // budget one, so it — not the swallowed callback — decides
                 // what the listeners hear.
                 stepping = false;
+                pendingCause = null;
                 announce(wasStepping ? 'step' : 'breakpoint');
                 return 'halted';
             }

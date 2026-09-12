@@ -176,6 +176,25 @@ describe('emu8051 pin history: native edges, not polled samples', () => {
 });
 
 describe('emu8051 checkpoints: a refusal that names what is missing', () => {
+    it('self-restores an absolute pin cursor beyond the physical ring', {skip: SKIP}, async () => {
+        const t = await targetWith(TOGGLE_BYTES);
+        if (!t.capabilities().extensions.checkpoint.supported) return;
+        t.run();
+        t.runFor(5_000_000);
+        const head = t.wasm._emu_pin_history_head() >>> 0;
+        assert.ok(head > 4096, `fixture produced only ${head} events`);
+        const snapshot = t.captureCheckpoint();
+        assert.equal(snapshot.local.pinHistoryReadHead, head,
+            'cursor remains the native absolute uint32, not a ring index');
+        assert.equal(snapshot.local.pinHistoryReadCount, head);
+        assert.equal(t.restoreCheckpoint(snapshot), true);
+        const facts = [];
+        t.onDebugEvent(fact => facts.push(fact));
+        t.runFor(100_000);
+        assert.equal(facts.filter(fact => fact.phase === 'history-gap').length, 0,
+            'self-restore must not reinterpret an absolute cursor as lost history');
+    });
+
     it('refuses to save, and says which state an architectural dump omits', {skip: SKIP}, async () => {
         const t = await targetWith(PIN_BYTES);
         const r = t.captureCheckpoint();

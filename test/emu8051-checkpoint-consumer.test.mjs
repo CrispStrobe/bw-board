@@ -5,12 +5,17 @@ import {createEmu8051Adapter} from '../src/emu8051-adapter.js';
 import {createDebugTarget} from '../src/debug-target-factory.js';
 
 const CHECKPOINT_SIZE = 443483;
-const makeWasm = ({version = 1, buildId = 0x80510101, size = CHECKPOINT_SIZE} = {}) => {
+const makeWasm = ({version = 1, buildId = 0x80510101, size = CHECKPOINT_SIZE,
+  history = false, historyStart = 0} = {}) => {
   let heap = new Uint8Array(CHECKPOINT_SIZE + 1024);
   let time = 100n;
   let frees = 0;
   let restores = 0;
   let restoreCode = 0;
+  let debugState = 0;
+  let historyCount = historyStart >>> 0;
+  let historyHead = historyStart >>> 0;
+  let restoredPayload = null;
   const wasm = {
     get HEAPU8() { return heap; },
     set HEAPU8(value) { heap = value; },
@@ -23,12 +28,19 @@ const makeWasm = ({version = 1, buildId = 0x80510101, size = CHECKPOINT_SIZE} = 
       for (let i = 0; i < len; i++) heap[ptr + i] = (i * 17) & 0xff;
       return 0;
     },
-    _emu_checkpoint_restore: () => { restores++; time = 50n; return restoreCode; },
-    _emu_dbg_state: () => 0,
-    _emu_dbg_run: () => {}, _emu_dbg_halt: () => {}, _emu_dbg_step: () => 0,
+    _emu_checkpoint_restore: (ptr, len) => {
+      restores++;
+      restoredPayload = Uint8Array.from(heap.subarray(ptr, ptr + len));
+      if (restoreCode === 0) time = 50n;
+      return restoreCode;
+    },
+    _emu_dbg_state: () => debugState,
+    _emu_dbg_run: () => { debugState = 1; }, _emu_dbg_halt: () => { debugState = 0; },
+    _emu_dbg_step: () => { debugState = 1; return 0; },
     _emu_dbg_reset: () => {}, _emu_dbg_run_until_ns: () => 0,
     _emu_dbg_read_mem: () => 0, _emu_dbg_write_mem: () => {}, _emu_dbg_pc: () => 0,
     _emu_dbg_supports_step: () => 0,
+    _emu_dbg_set_bp_code: () => 1, _emu_dbg_clear_bp: () => {},
     _emu_init: () => {}, _emu_reset: () => { time = 0n; },
     _emu_set_part: () => {}, _emu_set_fosc: () => {}, _emu_set_vcc: () => {},
     _emu_get_pin_mode: () => 0, _emu_get_pin_drive: () => 1,
@@ -38,9 +50,17 @@ const makeWasm = ({version = 1, buildId = 0x80510101, size = CHECKPOINT_SIZE} = 
     _emu_get_time_ns_lo: () => Number(time & 0xffffffffn),
     _emu_get_time_ns_hi: () => Number(time >> 32n)
   };
+  if (history) Object.assign(wasm, {
+    _emu_pin_history_enable: () => {}, _emu_pin_event_size: () => 12,
+    _emu_pin_history_count: () => historyCount,
+    _emu_pin_history_head: () => historyHead,
+    _emu_pin_history_get: index => 16 + (index % 4096) * 12
+  });
   return {wasm, heap: () => heap, stats: () => ({frees, restores}),
     setRestoreCode: value => { restoreCode = value; },
-    setTime: value => { time = BigInt(value); }};
+    setTime: value => { time = BigInt(value); }, setHistory(value) {
+      historyCount = historyHead = value >>> 0;
+    }, restoredPayload: () => restoredPayload};
 };
 
 test('exact ABI advertises checkpoint/restore, copies bytes, and never claims reverse', () => {
@@ -78,6 +98,52 @@ test('armed step bookkeeping survives while listeners remain live', () => {
   assert.equal(target.restoreCheckpoint(snapshot), true);
   nativeHalt();
   assert.deepEqual(causes, ['step']);
+
+  const completed = target.captureCheckpoint();
+  assert.equal(completed.local.stepping, false,
+    'direct native completion canonicalizes wrapper lifecycle bookkeeping');
+  assert.equal(completed.local.pendingCause, null);
+  assert.equal(completed.local.pendingStep, null);
+  target.run();
+  assert.equal(target.restoreCheckpoint(completed), true,
+    'a checkpoint produced after direct completion must accept itself');
+
+  target.step('insn');
+  target.halt();
+  nativeHalt();
+  const cancelled = target.captureCheckpoint();
+  assert.deepEqual({stepping: cancelled.local.stepping, cause: cancelled.local.pendingCause,
+    step: cancelled.local.pendingStep}, {stepping: false, cause: null, step: null});
+  target.run();
+  assert.equal(target.restoreCheckpoint(cancelled), true,
+    'a checkpoint produced after cancelling a step must accept itself');
+});
+
+test('restore re-entered from an active run slice refuses before native mutation', () => {
+  const fixture = makeWasm();
+  const target = createEmu8051DebugTarget(fixture.wasm);
+  const snapshot = target.captureCheckpoint();
+  let refusal;
+  fixture.wasm._emu_dbg_run_until_ns = () => {
+    refusal = target.restoreCheckpoint(snapshot);
+    return 0;
+  };
+  target.run();
+  target.runFor(1);
+  assert.equal(refusal.code, 'checkpoint-not-quiescent');
+  assert.equal(fixture.stats().restores, 0);
+});
+
+test('runFor step completion leaves canonical checkpoint bookkeeping', () => {
+  const fixture = makeWasm();
+  fixture.wasm._emu_dbg_run_until_ns = () => 1;
+  const target = createEmu8051DebugTarget(fixture.wasm);
+  target.step('insn');
+  assert.equal(target.runFor(1), 'halted');
+  const snapshot = target.captureCheckpoint();
+  assert.deepEqual({stepping: snapshot.local.stepping, cause: snapshot.local.pendingCause,
+    step: snapshot.local.pendingStep}, {stepping: false, cause: null, step: null});
+  assert.equal(target.restoreCheckpoint(snapshot), true);
 });
 
 test('detached adapter state is restored while its input epoch always branches', () => {
@@ -177,6 +243,8 @@ test('restore copies a heap alias before malloc growth and rejects cross-target 
     return 256;
   };
   assert.equal(target.restoreCheckpoint(aliased), true);
+  assert.deepEqual(fixture.restoredPayload(), snapshot.bytes,
+    'the exact aliased subarray payload reaches native after heap growth');
   const other = createEmu8051DebugTarget(fixture.wasm);
   assert.equal(other.restoreCheckpoint(snapshot).code, 'invalid-checkpoint-envelope');
   fixture.wasm._malloc = oldMalloc;
@@ -195,10 +263,28 @@ test('capture reacquires a heap grown by native save', () => {
   assert.equal(snapshot.bytes.at(-1), 0x5a);
 });
 
+test('absolute pin-history cursors survive >capacity values and uint32 wrap', () => {
+  const fixture = makeWasm({history: true, historyStart: 0xfffffffe});
+  const target = createEmu8051DebugTarget(fixture.wasm);
+  const facts = [];
+  target.onDebugEvent(fact => facts.push(fact));
+  fixture.setHistory(1); // three absolute events across uint32 wrap
+  target.writeMem('iram', 0, new Uint8Array());
+  assert.equal(facts.filter(fact => fact.phase === 'pin-change').length, 3);
+  assert.equal(facts.filter(fact => fact.phase === 'history-gap').length, 0);
+  const snapshot = target.captureCheckpoint();
+  assert.equal(snapshot.local.pinHistoryReadHead, 1);
+  assert.equal(target.restoreCheckpoint(snapshot), true);
+  const incoherent = {...snapshot, local: {...snapshot.local, pinHistoryReadHead: 2}};
+  assert.equal(target.restoreCheckpoint(incoherent).code, 'invalid-checkpoint-envelope');
+});
+
 test('envelope validation precedes mutation and native errors stay structured', () => {
   const fixture = makeWasm();
   const target = createEmu8051DebugTarget(fixture.wasm);
   const snapshot = target.captureCheckpoint();
+  target.setBreakpoint({kind: 'code', addr: 64});
+  const withBreakpoint = target.captureCheckpoint();
   const malformedLocals = [
     {...snapshot.local, symbols: {bad() {}}},
     {...snapshot.local, breakpoints: [['bad']]},
@@ -206,7 +292,8 @@ test('envelope validation precedes mutation and native errors stay structured', 
     {...snapshot.local, breakpoints: [[33, {kind: 'code', addr: 0, pc: 0}],
       [33, {kind: 'code', addr: 1, pc: 1}]]},
     {...snapshot.local, pendingStep: {kind: 'insn', pcBefore: -1}, stepping: true,
-      pendingCause: 'step'}
+      pendingCause: 'step'},
+    {...withBreakpoint.local, breakpoints: [[1, {kind: 'code', addr: 64, pc: 65}]]}
   ];
   for (const local of malformedLocals) {
     const malformed = {...snapshot, local};
@@ -216,9 +303,41 @@ test('envelope validation precedes mutation and native errors stay structured', 
 
   fixture.setRestoreCode(-7);
   const domainBefore = target.time().domain;
+  const nativeBefore = target.captureCheckpoint().bytes;
   const refusal = target.restoreCheckpoint(snapshot);
   assert.deepEqual({code: refusal.code, nativeCode: refusal.nativeCode, reason: refusal.reason},
     {code: 'native-checkpoint-refused', nativeCode: -7, reason: 'invalid-state'});
   assert.equal(fixture.stats().restores, 1);
   assert.equal(target.time().domain, domainBefore, 'a failed native restore does not branch JS time');
+  assert.deepEqual(target.captureCheckpoint().bytes, nativeBefore,
+    'native rejection leaves machine bytes unchanged');
+});
+
+test('adapter restore commits exactly once after native success and never on refusal', () => {
+  const fixture = makeWasm();
+  let commits = 0;
+  const adapter = {checkpointSupport: () => ({supported: true}),
+    captureCheckpointState: () => ({schema: 1}),
+    prepareCheckpointRestore: () => ({accepted: true, commit() { commits++; }})};
+  const target = createEmu8051DebugTarget(fixture.wasm, {adapter});
+  const snapshot = target.captureCheckpoint();
+  fixture.setRestoreCode(-7);
+  assert.ok(target.restoreCheckpoint(snapshot).refused);
+  assert.equal(commits, 0);
+  fixture.setRestoreCode(0);
+  assert.equal(target.restoreCheckpoint(snapshot), true);
+  assert.equal(commits, 1);
+});
+
+test('capture owns nested symbols and breakpoint metadata independently of callers', () => {
+  const fixture = makeWasm();
+  const symbols = {scheduler: {tasks: [], bw_ms: {addr: 4}}};
+  const target = createEmu8051DebugTarget(fixture.wasm, {symbols});
+  const bp = {kind: 'code', addr: 64, label: {text: 'original'}};
+  target.setBreakpoint(bp);
+  const snapshot = target.captureCheckpoint();
+  symbols.scheduler.bw_ms.addr = 99;
+  bp.label.text = 'mutated';
+  assert.equal(snapshot.local.symbols.scheduler.bw_ms.addr, 4);
+  assert.equal(snapshot.local.breakpoints[0][1].label.text, 'original');
 });
