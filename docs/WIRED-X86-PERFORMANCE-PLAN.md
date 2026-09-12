@@ -1,5 +1,12 @@
 # Wired x86 performance: iterative execution plan
 
+**2026-09-12 scope update:** the complete lab was integrated into upstream at
+`5ecd612`; see X86-UPSTREAM-INTEGRATION.md. The user now requests application
+adoption and unified execution policy, followed by iterative optimization.
+EXECUTION-POLICY-AND-OPTIMIZATION.md is the current cross-project delivery plan.
+The older scope restrictions and runtime measurements below describe their
+dated checkpoints, not the current publication status. Capacity remains unmet.
+
 2026-09-09. Requested scope: document the strategy, then implement and validate
 it iteratively. This is not a completed-performance claim. Keep the reference
 interpreter and valid experiments; no production pin change, merge, deployment,
