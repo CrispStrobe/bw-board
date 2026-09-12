@@ -165,6 +165,50 @@ threshold was calibrated to the old `rd = 10` clamp near −1.7 V). A real 1N414
 clamping 100 mA sits near −0.85 V, so the new value is closer to the device and
 that threshold is another number calibrated to the old bulk resistance.
 
+## Corpus delta: what changes for users
+
+Required before landing. Measured over every shipped circuit in
+`brickwright-lite/overlay/scratch-gui/examples/` (2,131 files).
+
+| | |
+|---|---|
+| circuits containing LEDs | 1,095 |
+| LEDs | 2,525 |
+| bare diodes | 103 |
+| LEDs on the PIECEWISE path (changed by this lane) | 2,516 |
+| LEDs on the EXPONENTIAL path (unchanged) | 9 |
+
+**Only the piecewise path moved.** The exponential path already calibrated the
+total drop to `vf` (`shockleyParams`: `vJrated = vf - 0.020*rs`), so a
+Shockley-routed LED reads exactly what it read before.
+
+For a piecewise LED the change is exact and independent of the series
+resistance: the driving voltage goes from `V - vf` to `V - vf + I_RATED*rd`, so
+brightness scales by `(V - vf + 0.2) / (V - vf)`. It depends only on headroom.
+
+| brightness change | LEDs | share |
+|---|---|---|
+| brighter +5–10 % | 2,500 | 99.0 % |
+| brighter +0–5 % | 14 | 0.6 % |
+| unchanged | 9 | 0.4 % |
+| brighter +10–20 % | 2 | 0.1 % |
+
+Ratio: min 1.0286, median **1.0667**, p95 1.0667, max 1.1000.
+
+**Every LED gets slightly brighter and nothing changes qualitatively.** No
+circuit crosses a lit/dark boundary, no verdict flips, and the largest single
+move is +10.0 %. That is the expected shape: the correction gives every
+piecewise part back the 0.2 V it was wrongly dropping, and 0.2 V against a
+typical 3 V headroom is 6.7 %.
+
+METHOD AND ITS LIMIT, stated because the number is load-bearing: this is
+computed from each circuit's `vcc` and each LED's `vf` param, not by solving
+2,131 circuits twice. That is exact for the piecewise ratio — the algebra
+cancels every series resistance — but it does NOT capture second-order
+interactions in circuits where an LED's current changes another part's
+operating point. Those exist (transistor loads, shared rails) and are not in
+this table.
+
 ## What is NOT done here
 
 - **The knee correction across all readers.** A census (session lego-38) found **11
