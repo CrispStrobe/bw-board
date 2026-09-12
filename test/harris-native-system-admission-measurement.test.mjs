@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {BASE_REVISION,CANDIDATE_REVISION,HEADER_PATH,assertAdmissionCounters,assertAdmissionReconciliation,assertHeaderHashes,
-    collectJSImportClosure,interleavedOrder,summarize}
+import {BASE_REVISION,CANDIDATE_REVISION,HEADER_PATH,NATIVE_SOURCE_PATHS,assertAdmissionCounters,assertAdmissionReconciliation,
+    assertHeaderHashes,assertSourceHashes,collectJSImportClosure,interleavedOrder,summarize}
     from '../scripts/measure-harris-native-system-admission.mjs';
 
 const semantic=()=>({stateHash:'same',periods:7,retired:3,physicalClock:74,chunks:1,yields:0,writes:[1,1],
@@ -23,6 +23,15 @@ test('memory admission A/B order and dispersion are deterministic',()=>{
 test('memory admission provenance fails closed on missing, extra or wrong native headers',()=>{
     assert.deepEqual(assertHeaderHashes({[HEADER_PATH]:'abc'},'abc'),{[HEADER_PATH]:'abc'});
     for(const value of [{},{[HEADER_PATH]:'bad'},{[HEADER_PATH]:'abc',extra:'abc'}])assert.throws(()=>assertHeaderHashes(value,'abc'));
+});
+
+test('memory admission provenance requires every exact native source',()=>{
+    const expected=Object.fromEntries(NATIVE_SOURCE_PATHS.map((path,index)=>[path,`digest-${index}`]));
+    assert.deepEqual(assertSourceHashes({...expected},expected),expected);
+    const missing={...expected};delete missing[NATIVE_SOURCE_PATHS[0]];
+    const wrong={...expected,[NATIVE_SOURCE_PATHS[0]]:'wrong'};
+    const extra={...expected,'src/experimental/wired-kernel/extra.c':'extra'};
+    for(const value of [missing,wrong,extra])assert.throws(()=>assertSourceHashes(value,expected));
 });
 
 test('memory admission evidence fixes exact work units and follows the runtime JS import closure',()=>{

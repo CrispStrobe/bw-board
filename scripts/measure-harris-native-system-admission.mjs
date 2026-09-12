@@ -12,6 +12,12 @@ import {assertStageReceipt} from './measure-harris-native-stage-attribution.mjs'
 export const BASE_REVISION='208710e006af1e5007fe31e37fb472ce9587255f';
 export const CANDIDATE_REVISION='7e8941254ac72ff7a9add2aa061528c0f41768c6';
 export const HEADER_PATH='src/experimental/wired-kernel/stage-attribution.h';
+export const NATIVE_SOURCE_PATHS=Object.freeze([
+    'src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c',
+    'src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c',
+    'src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c',
+    'src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c',
+    'src/experimental/wired-kernel/bus-circuit.c']);
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const median=values=>{const a=[...values].sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;};
 const quantile=(values,q)=>{const a=[...values].sort((x,y)=>x-y),p=(a.length-1)*q,l=Math.floor(p),f=p-l;return a[l]+(a[Math.min(l+1,a.length-1)]-a[l])*f;};
@@ -35,6 +41,10 @@ export function assertAdmissionReconciliation(candidate,base,label='sample'){
 export function assertHeaderHashes(headerHashes,expected){
     assert.deepEqual(Object.keys(headerHashes??{}),[HEADER_PATH],'exact native header inventory');
     assert.equal(headerHashes[HEADER_PATH],expected,'native header digest');return Object.freeze({...headerHashes});
+}
+export function assertSourceHashes(sourceHashes,expected){
+    assert.deepEqual(Object.keys(sourceHashes??{}),NATIVE_SOURCE_PATHS,'exact native source inventory');
+    assert.deepEqual(sourceHashes,expected,'exact native source digests');return Object.freeze({...sourceHashes});
 }
 export function assertAdmissionCounters(value){
     const expected={attempts:1,admissions:1,failures:0,inputMapVisits:112,outputMapVisits:32,
@@ -61,7 +71,8 @@ async function loadVariant(name,directory,wasmPath,revision,stageAttribution=fal
     directory=realpathSync(directory);wasmPath=realpathSync(wasmPath);assert.equal(git(directory,'rev-parse','HEAD'),revision);
     assert.equal(git(directory,'status','--porcelain'),'');const wasm=readFileSync(wasmPath),manifestBytes=readFileSync(join(dirname(wasmPath),'wired-net-kernel-build.json'));
     const manifest=JSON.parse(manifestBytes);assert.equal(manifest.wasmSHA256,hash(wasm));
-    for(const [path,digest] of Object.entries(manifest.sourceHashes))assert.equal(hash(readFileSync(join(directory,path))),digest,path);
+    const nativeSourceHashes=assertSourceHashes(manifest.sourceHashes,Object.fromEntries(NATIVE_SOURCE_PATHS.map(path=>
+        [path,hash(readFileSync(join(directory,path)))])));
     assert.equal(manifest.stageAttribution??false,stageAttribution,`${name}: stage-attribution build flag`);
     const headerHashes=assertHeaderHashes(manifest.headerHashes,hash(readFileSync(join(directory,HEADER_PATH))));
     const paths=['src/devices/bus-memory.js','src/experimental/harris-80c286-boot-cpu.js','src/experimental/harris-boot-rom.js',
@@ -70,7 +81,7 @@ async function loadVariant(name,directory,wasmPath,revision,stageAttribution=fal
     const js=collectJSImportClosure(directory,paths);
     return {name,revision,wasm,stageAttribution,HarrisBootCPU:cpu.HarrisBootCPU,createROM:rom.createHarrisStoreLoopROM,
         createBoard:board.createHarrisNativeMemoryBoard,run:runner.runHarrisTransactions,provenance:{revision,wasmSHA256:manifest.wasmSHA256,
-            manifestSHA256:hash(manifestBytes),compiler:manifest.compiler,buildArgs:manifest.args,nativeSourceHashes:manifest.sourceHashes,headerHashes,
+        manifestSHA256:hash(manifestBytes),compiler:manifest.compiler,buildArgs:manifest.args,nativeSourceHashes,headerHashes,
             jsSourceHashes:Object.fromEntries(js.map(path=>[path,hash(readFileSync(join(directory,path)))]))}};
 }
 function state(cpu,board){const bus=board.inspectBus(),memories=['rom0','rom1','ram0','ram1'].map(id=>{const m=board.inspectMemory(id);return {id,bytes:[...m.bytes],writes:m.writes};});
