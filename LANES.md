@@ -1,11 +1,15 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-12 R1 hybrid CPU integration — ACTIVE, Codex root, user-requested actual
+2026-09-12 R1 hybrid CPU integration — DONE (bounded R1 only), Codex root, user-requested actual
 wired execution/performance coding. Isolated `feat/harris-hybrid-cpu-integration`
 from upstream `6e4327c393ae6f57beb09d345a3aa91be1393729`; adapter worker owns
 `feat/harris-native-memory-board-r1`, CPU worker owns
 `feat/harris-boot-cpu-batching`, both from `7fbdfa9`. Root owns differential
-integration tests, benchmark and docs. No app pin/default/merge/deploy change.
+integration tests, benchmark and docs. Adapter `52b23fb`, CPU `270f88b`, browser
+oracle `a835ff6`, final validation `718ba08`: 151 targeted tests, zero skips;
+frozen Chromium accepted. HARRIS-HYBRID-CPU-IMPLEMENTATION.md and receipts record
+scope and remaining full-native/peripheral/capacity work. Both worker sublanes
+are complete. No app pin/default/merge/deploy change.
 
 Created 2026-09-04, at `lego-47`'s request, because the fleet's 8086 work now
 runs across a dozen worktrees and the claims had nowhere in THIS repo to live.

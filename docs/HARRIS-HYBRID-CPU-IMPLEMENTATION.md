@@ -28,11 +28,15 @@ on its reviewed package pin; no default, GUI backend, merge or deployment change
 
 ## Evidence and interpretation
 
-The combined native, CPU and memory-board selection passed **150 tests, zero
+The combined native, CPU and memory-board selection passed **151 tests, zero
 failures and zero skips**, using a fresh native module compiled from the current
 upstream source. The module SHA-256 is
 `e5b0efe3a31673c0008ba5db9d9eb6f8cf005bac8260f658da6971d089f41c6c`.
 This is a targeted selection, not a full engine suite or hosted CI receipt.
+Independent review tightened malformed success/fault receipt handling, including
+impossible half-transfer sequences, excess completions and sparse arrays. The
+final source selection is committed at `718ba08`; the final review found no
+remaining blocker in that runner contract.
 
 Integration tests cover budgets 1/2/3/7/256 across checked, admitted and incremental
 native modes; mixed single stepping; real READY-stalled odd guest stores; missing
@@ -48,10 +52,20 @@ not DOS, populated-board or browser capacity. Batching alone was only about
 1.04x native single stepping in the second run; the larger gain is entering the
 native region. Construction/reset are excluded from both timed periods and time.
 Noise and short duration prohibit a stable speed guarantee.
+The source-pinned second benchmark receipt is HARRIS-HYBRID-CPU-BENCH.json;
+it predates only the subsequent malformed-receipt validation hardening.
 
 The 4.77 MHz-equivalent target still requires 9,545,454 modeled periods/s under
-this clock convention. It is not achieved. Browser receipt is recorded separately
-when the combined harness finishes.
+this clock convention. It is not achieved.
+
+The frozen-source Chromium run passed all existing combined native oracles and
+the new checked/incremental hybrid boot oracle. See HARRIS-HYBRID-CPU-BROWSER.json:
+three ROM variants per mode, 131,072 compared ROM/RAM bytes per variant, identical
+CPU state/history, physical completions and clock counts. Reference/packed
+whole-board memory workload hashes and worker cancellation/heartbeat checks also
+passed. This is browser correctness acceptance, not a hybrid browser throughput
+measurement. An intermediate run was correctly rejected because review edits
+changed CPU source during execution; only the final frozen run is qualified.
 
 ## Remaining actual coding
 

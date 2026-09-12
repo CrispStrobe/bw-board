@@ -1,5 +1,15 @@
 # Execution policy and whole-system optimization
 
+**2026-09-12 later implementation update:** application package/policy integration
+is CI-qualified in brickwright-lite PR110 at `ea9816884` (not merged/deployed).
+Actual wired execution work has resumed on upstream engine `6e4327c`:
+HARRIS-HYBRID-CPU-IMPLEMENTATION.md records the default-off CPU/native-memory
+bridge, bounded execution, reference comparisons and measured memory-loop gain.
+This closes the planned R1 memory-only hybrid bridge, not P7's native CPU and
+peripherals or P9's complete workload/capacity qualification. Earlier progress
+entries below remain dated checkpoints, not a statement that the bridge is
+still unimplemented.
+
 2026-09-12. User requested documentation first, then implementation, with
 independent agents and existing relevant screen sessions available for help.
 This is an execution plan, not a claim that the performance target is achieved.
