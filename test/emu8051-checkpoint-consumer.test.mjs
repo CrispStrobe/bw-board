@@ -365,6 +365,16 @@ test('opaque provenance binds all local continuation state to exact native byte 
   const bp128 = target.captureCheckpoint();
   assert.equal(target.restoreCheckpoint({...bp64, bytes: bp128.bytes.slice()}).code,
     'invalid-checkpoint-envelope');
+  const hostileBytes = bp128.bytes.slice();
+  hostileBytes.every = () => true;
+  assert.equal(target.restoreCheckpoint({...bp64, bytes: hostileBytes}).code,
+    'invalid-checkpoint-envelope', 'an own every override cannot choose seal comparison');
+  const hostileIterator = bp64.bytes.slice();
+  hostileIterator[Symbol.iterator] = function* () { yield* bp128.bytes; };
+  assert.equal(target.restoreCheckpoint({...bp64, bytes: hostileIterator}), true,
+    'an iterator override cannot change the indexed bytes copied after validation');
+  assert.deepEqual(fixture.restoredPayload(), bp64.bytes,
+    'native receives the same indexed values which passed the seal');
   assert.equal(target.restoreCheckpoint({...bp128, local: bp64.local}).code,
     'invalid-checkpoint-envelope');
   const invented = {...bp64, local: {...bp64.local, stepping: true, pendingCause: 'step',
