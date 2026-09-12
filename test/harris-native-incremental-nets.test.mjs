@@ -6,7 +6,7 @@ import {runNativePhaseCircuitOracle} from '../scripts/lib/harris-native-phase-ci
 import {runNativePhaseScheduleOracle} from '../scripts/lib/harris-native-phase-schedule-oracle.mjs';
 const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
 const native={skip:wasmBytes?false:'build incremental prototype and set HARRIS_NET_WASM; native gate not exercised'};
-async function rawKernel({incremental=false,oscillator=false}={}) {
+async function rawKernel({incremental=false,oscillator=false,previousImage=null}={}) {
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
     const p={context:base,offsets:base+128,ids:base+144,drivers:base+160,live:base+164,conflicts:base+168,ops:base+172,
         staged:base+300,published:base+304,publishedConflicts:base+308,dependencyOffsets:base+312,dependencies:base+320,previous:base+332,changed:base+336};
@@ -17,10 +17,10 @@ async function rawKernel({incremental=false,oscillator=false}={}) {
     put(p.offsets,[0,1,2,drivers]);put(p.ids,oscillator?[0,1,2]:[0,1,2,3]);put(p.dependencyOffsets,[0,3]);put(p.dependencies,[0,1,2]);
     put(p.ops,oscillator?[1,0,0,65536,0,0,1,0,...new Array(24).fill(2)]:[2,0,1,2]);
     const initial=oscillator?[2,0,0]:[3,3,2,3],published=oscillator?[2,0,0]:[3,3,2];
-    new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);new Uint8Array(e.memory.buffer,p.previous,3).set(published);
+    new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);new Uint8Array(e.memory.buffer,p.previous,3).set(previousImage??published);
     new Uint8Array(e.memory.buffer,p.published,3).set(published);
     if(incremental)assert.equal(e.admit_owned_context(p.context),0);
-    const inspect=()=>Object.fromEntries(['drivers','live','conflicts','published','publishedConflicts','previous'].map(name=>
+    const inspect=()=>Object.fromEntries(['drivers','live','conflicts','published','publishedConflicts','previous','changed'].map(name=>
         [name,Array.from(new Uint8Array(e.memory.buffer,p[name],name==='drivers'?drivers:3))]));
     return {e,p,v,inspect,step:levels=>{new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
 }
@@ -43,6 +43,17 @@ test('incremental nonconvergence preserves published state and recovers using pe
     assert.equal(incremental.step([0,0,0]),0x80000003);assert.equal(checked.step([0,0,0]),0x80000003);
     assert.deepEqual(incremental.inspect(),checked.inspect());assert.deepEqual(incremental.inspect().published,[2,0,0]);
     assert.equal(incremental.step([2,0,0]),checked.step([2,0,0]));assert.deepEqual(incremental.inspect(),checked.inspect());
+});
+test('incremental dirty queues initialize unchanged drivers and clear prior changed flags on idle settling',native,async()=>{
+    const checked=await rawKernel({previousImage:[0,0,0]}),incremental=await rawKernel({incremental:true,previousImage:[0,0,0]});
+    const step=levels=>{assert.equal(incremental.step(levels),checked.step(levels));assert.deepEqual(incremental.inspect(),checked.inspect());};
+    step([3,3,2,3]);assert.deepEqual(incremental.inspect().changed,[1,1,1]);
+    step([3,3,2,3]);assert.deepEqual(incremental.inspect().changed,[0,0,0]);
+    // Multiple changed drivers on one net enqueue it once. Re-admission resets
+    // queue state; neither duplicated entries nor old changed flags survive.
+    step([1,0,0,1]);step([1,0,2,0]);
+    assert.equal(incremental.e.admit_owned_context(incremental.p.context),0);
+    step([1,0,2,0]);step([3,3,2,3]);
 });
 test('incremental admission requires unique membership, bounded caches and the admitted mode',native,async()=>{
     const k=await rawKernel({incremental:true});k.v.setUint32(k.p.context+31*4,1,true);

@@ -24,10 +24,24 @@ paths.push('bench/harris-native-phase.mjs');
 for(const p of paths)sourceHashes[p]=hash(readFileSync(new URL(p,root)));
 for(const[p,h]of Object.entries(build.sourceHashes))assert.equal(sourceHashes[p],h,'rebuild native sources');
 const samples=[],modes=['reference','compiled','native','native-batched','native-admitted','native-incremental'];let expected;
+// Optional same-process A/B comparison of a prior native artifact. Its source
+// identity is checked against an explicit immutable commit, never moving HEAD.
+let baselineBytes=null,baselineBuild=null,baselineRevision=null;
+if(process.env.HARRIS_COMPARE_WASM) {
+    baselineRevision=process.env.HARRIS_COMPARE_REVISION;
+    assert.match(baselineRevision??'',/^[0-9a-f]{40}$/,'full baseline revision required');
+    baselineBytes=new Uint8Array(readFileSync(process.env.HARRIS_COMPARE_WASM));
+    baselineBuild=JSON.parse(readFileSync(join(dirname(process.env.HARRIS_COMPARE_WASM),'wired-net-kernel-build.json')));
+    assert.equal(hash(baselineBytes),baselineBuild.wasmSHA256,'baseline artifact identity');
+    assert.deepEqual(Object.keys(baselineBuild.sourceHashes).sort(),Object.keys(build.sourceHashes).sort(),'comparable kernel source inventory');
+    for(const[path,digest]of Object.entries(baselineBuild.sourceHashes))
+        assert.equal(hash(execFileSync('git',['show',`${baselineRevision}:${path}`],{cwd:root})),digest,'baseline source identity');
+    modes.push('native-incremental-baseline');
+}
 for(let round=-1;round<rounds;round++)for(const mode of round%2?[...modes].reverse():modes) {
-    const admitted=mode==='native-admitted'||mode==='native-incremental',batched=mode==='native-batched'||admitted;
-    const f=await createPhaseCircuitOracle({wasmBytes,Circuit:mode==='compiled'?CompiledDigitalCircuit:DigitalCircuit,schedule:batched,
-        admittedGraph:admitted,incrementalGraph:mode==='native-incremental'});
+    const incremental=mode.startsWith('native-incremental'),admitted=mode==='native-admitted'||incremental,batched=mode==='native-batched'||admitted;
+    const f=await createPhaseCircuitOracle({wasmBytes:mode==='native-incremental-baseline'?baselineBytes:wasmBytes,Circuit:mode==='compiled'?CompiledDigitalCircuit:DigitalCircuit,schedule:batched,
+        admittedGraph:admitted,incrementalGraph:incremental});
     const image=captureWiredNetImage({enabled:true,circuit:f.circuit}),driverIDs=new Map(image.driverNames.map((n,i)=>[n,i]));
     const dataNets=f.D.map(p=>image.terminals.find(t=>t.name===`host.${p}`).net);
     const steps=[{values:{...f.passive,reset:1}},{values:f.passive}];
@@ -86,6 +100,7 @@ const summaries=Object.fromEntries(modes.map(mode=>{const s=samples.filter(x=>x.
     return [mode,{medianMS:m,minMS:Math.min(...ms),maxMS:Math.max(...ms),periodsPerSecond:s[0].periods*1000/m}];}));
 const report={benchmark:'owned-latched-memory-components',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,warmupRounds:1,count,
     revision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),sourceHashes,nativeBuild:build,
+    baselineRevision,baselineBuild,
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length},node:process.version,samples,summaries,
     notes:['Two SRAM banks/64 KiB, ideal controller/latch and actual nets only. No CPU, timers, DMA, interrupts or DOS workload.',
         'Construction, Wasm instantiation and final hashes excluded; sampled read checks included.',

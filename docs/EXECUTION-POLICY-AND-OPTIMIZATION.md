@@ -109,6 +109,27 @@ Keep working code behind gates; do not select known-broken candidates.
 
 ## Performance acceptance
 
+### P6 incremental checkpoint — dirty net queues
+
+The gated incremental C resolver now queues dirty nets and clears only the
+previous changed-net list instead of scanning every net for both operations.
+Initial admission queues all nets so unchanged initial drivers still compare
+against the previous image. Driver scanning and full publication copies remain;
+this is not a fully event-indexed or whole-board native runner.
+
+The existing native/registered-memory sweep passed 66 tests without skips; the
+expanded incremental file separately passed five tests including changed-flag
+reset, duplicate driver changes and re-admission. All seven-round A/B workload
+state hashes matched. HARRIS-NATIVE-QUEUE-AB.json pins the prior artifact sources
+to `5ecd612` and captures current source hashes/build identity.
+
+Component-only A/B medians: prior incremental 68.60 ms versus queued 53.10 ms
+for 4,098 periods (about 1.29× ratio). Ranges overlap substantially, individual
+rounds reverse order, and shared-host load is uncontrolled: **no stable speedup
+claim or default promotion**. Structural scan removal is established; capacity
+remains unestablished. The benchmark now accepts an optional prior artifact only
+with a full commit ID, matching source inventory, source hashes and module hash.
+
 The current Harris clock convention requires **9,545,454 modeled periods/s**
 for 4,772,727 Hz processor-equivalent capacity. This is neither instruction
 throughput nor a certified hardware clock rate. Historical full populated-board
