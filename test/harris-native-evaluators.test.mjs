@@ -19,7 +19,13 @@ function check(circuit,kernel) {
 }
 test('evaluator admission requires owned identities and original output/compiled-evaluator contracts',async()=>{
     const make=()=>new DigitalCircuit({enabled:true,parts:[createHarrisMemoryDecoder({id:'decoder',lane:0,start:0,end:65536})]});
-    assert.equal(captureKernelEvaluatorImage({enabled:true,circuit:make()}).operations[0],1);
+    const admitted=captureKernelEvaluatorImage({enabled:true,circuit:make()});assert.equal(admitted.operations[0],1);
+    assert.equal(admitted.reverseDependencyOffsets.length,admitted.resolvedLevels.length+1);
+    assert.equal(admitted.reverseDependencyOffsets.at(-1),admitted.dependencies.length);
+    for(let net=0;net<admitted.resolvedLevels.length;net++)for(let p=admitted.reverseDependencyOffsets[net];p<admitted.reverseDependencyOffsets[net+1];p++){
+        const operation=admitted.reverseOperations[p],dependencies=admitted.dependencies.slice(admitted.dependencyOffsets[operation],admitted.dependencyOffsets[operation+1]);
+        assert.ok(dependencies.includes(net),'reverse dependency entries are exact forward memberships');
+    }
     for(const change of [part=>{part.evaluate=()=>({ce_n:0});},part=>{part.compileEvaluate=()=>()=>({ce_n:0});},
         part=>{part.kernelCertificate={...part.kernelCertificate};},part=>{part.outputs.push('extra');}]) {
         const circuit=make();change(circuit.parts.get('decoder'));

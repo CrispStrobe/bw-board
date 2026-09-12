@@ -3,7 +3,7 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 _Static_assert(sizeof(u32)==4,"32-bit index required");
 static u8 arena[2*1024*1024] __attribute__((aligned(16)));
-extern u32 incremental_work[10];
+extern u32 incremental_work[11];
 u8 *arena_ptr(void){return arena;}
 u32 arena_capacity(void){return sizeof(arena);}
 u32 owned_kernel_version(void){return 1;}
@@ -102,6 +102,25 @@ u32 evaluate_owned_operations_sparse(u32 count,const u32 *ops,const u8 *nets,u8 
     }
     return queued_count;
 }
+u32 evaluate_owned_operations_marked_sparse(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
+                                            u8 *affected,u8 *queued,u32 *queue,u32 drivers) {
+    u32 queued_count=0;
+    for(u32 i=0;i<count;i++) {
+        incremental_work[4]++;
+        if(!affected[i])continue;
+        affected[i]=0;
+        const u32 *r=ops+i*32,*outputs;u32 one,count_outputs;
+        if(r[0]==1){one=r[7];outputs=&one;count_outputs=1;}
+        else if(r[0]==2){one=r[3];outputs=&one;count_outputs=1;}
+        else {outputs=r+11;count_outputs=4;}
+        for(u32 j=0;j<count_outputs;j++)if(!queued[outputs[j]]){
+            if(queued_count==drivers)return 0xffffffffu;
+            queued[outputs[j]]=1;queue[queued_count++]=outputs[j];
+        }
+        evaluate_operation(r,nets,staged);
+    }
+    return queued_count;
+}
 /* Success is delta+1. High-bit results are errors; published outputs remain
  * unchanged on every error, including nonconvergence. Live drivers can change
  * during failed settling, matching the separate pending/published contract. */
@@ -151,14 +170,14 @@ u32 admit_owned_context(const u32 *c) {
     if(!error)error=validate_operations(c[7],CW(8),c[0],c[1],CW(13),CW(14),c[15]);
     if(error)return 0x80000000u|error;
     if(!c[12]||c[12]>1024)return 0x80000005u;
-    if(c[31]!=1&&c[31]!=2)return 0x80000006u;
-    if(c[31]==2&&(error=admit_incremental_context(c)))return 0x80000000u|error;
+    if(c[31]!=1&&c[31]!=3)return 0x80000006u;
+    if(c[31]==3&&(error=admit_incremental_context(c)))return 0x80000000u|error;
     admitted_context=c;admitted_mode=c[31];return 0;
 }
 u32 settle_owned_context(const u32 *c) {
     if(c[31]) {
         if(admitted_context!=c||admitted_mode!=c[31])return 0x80000006u;
-        if(admitted_mode==2)return settle_incremental_context(c);
+        if(admitted_mode==3)return settle_incremental_context(c);
         return settle_validated(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
     }
     return settle_owned(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
