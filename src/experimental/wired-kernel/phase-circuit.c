@@ -26,14 +26,14 @@ static u32 reject_phase(const u32 *p,u32 category,u32 code,u32 detail,u32 *fault
 static u32 controller_output(const u32 *p,u32 bit){return bit<3||(bit<5?p[2]:p[3]);}
 static STAGE_NOINLINE u32 validate_phase_mapping(const u32 *p,u32 *fault) {
     const u32 *c=W(0);
-    u32 visits=0;STAGE_ADD(STAGE_PHASE_VALIDATION_CALLS,1);
-    #define PHASE_MAPPING_RETURN(value) do{STAGE_ADD(STAGE_PHASE_VALIDATION_VISITS,visits);return(value);}while(0)
+    STAGE_ADD(STAGE_PHASE_VALIDATION_CALLS,1);
+    #define PHASE_MAPPING_RETURN(value,count) do{STAGE_ADD(STAGE_PHASE_VALIDATION_VISITS,(count));return(value);}while(0)
     if(p[2]>1||p[3]>1)return reject_phase(p,4,5,NONE,fault);
-    for(u32 i=0;i<6;i++){visits++;if(W(4)[i]>=c[0])PHASE_MAPPING_RETURN(reject_phase(p,4,6,i,fault));}
-    for(u32 i=0;i<7;i++){visits++;if(controller_output(p,i)&&W(5)[i]>=c[1])PHASE_MAPPING_RETURN(reject_phase(p,4,7,i,fault));}
-    for(u32 i=0;i<27;i++){visits++;if(W(6)[i]>=c[0])PHASE_MAPPING_RETURN(reject_phase(p,4,8,i,fault));}
-    for(u32 i=0;i<26;i++){visits++;if(W(7)[i]>=c[1])PHASE_MAPPING_RETURN(reject_phase(p,4,9,i,fault));}
-    PHASE_MAPPING_RETURN(0);
+    for(u32 i=0;i<6;i++)if(W(4)[i]>=c[0])PHASE_MAPPING_RETURN(reject_phase(p,4,6,i,fault),i+1);
+    for(u32 i=0;i<7;i++)if(controller_output(p,i)&&W(5)[i]>=c[1])PHASE_MAPPING_RETURN(reject_phase(p,4,7,i,fault),6+i+1);
+    for(u32 i=0;i<27;i++)if(W(6)[i]>=c[0])PHASE_MAPPING_RETURN(reject_phase(p,4,8,i,fault),13+i+1);
+    for(u32 i=0;i<26;i++)if(W(7)[i]>=c[1])PHASE_MAPPING_RETURN(reject_phase(p,4,9,i,fault),40+i+1);
+    PHASE_MAPPING_RETURN(0,66);
     #undef PHASE_MAPPING_RETURN
 }
 static u32 settle_phase_nets(const u32 *p,u32 *fault) {

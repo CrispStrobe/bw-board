@@ -48,6 +48,11 @@ for (const [path, expected] of Object.entries(build.sourceHashes)) {
     assert.equal(actual, expected, `rebuild for changed source: ${path}`);
     sourceHashes[path] = actual;
 }
+const headerPath = 'src/experimental/wired-kernel/stage-attribution.h';
+assert.deepEqual(Object.keys(build.headerHashes ?? {}), [headerPath]);
+const headerHash = hash(readFileSync(new URL(`../${headerPath}`, import.meta.url)));
+assert.equal(headerHash, build.headerHashes[headerPath], `rebuild for changed source: ${headerPath}`);
+const headerHashes = {[headerPath]: headerHash};
 const revision = execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim();
 assert.equal(execFileSync('git', ['status', '--porcelain'], {encoding: 'utf8'}), '', 'measurement requires a clean source tree');
 registerBusMemory();
@@ -186,7 +191,7 @@ console.log(JSON.stringify({schemaVersion: 1, workload: 'owned-harris-store-loop
     revision, clean: true, options: {iterations, rounds, batchPeriods, wallBudgetMS},
     host: {hostname: hostname(), platform: platform(), arch: arch(), cpu: cpus()[0]?.model,
         node: process.version, loadavg: loadavg(), exposedGC: typeof global.gc === 'function'},
-    wasmSHA256: hash(wasmBytes), sourceHashes, warmupRounds: 1, measuredRounds: rounds,
+    wasmSHA256: hash(wasmBytes), sourceHashes, headerHashes, warmupRounds: 1, measuredRounds: rounds,
     expected, modes, instrumentationActiveThroughputRatio, samples,
     limitations: ['Timer wrappers perturb wall-budget cutoffs; compare the paired control before using instrumented timings.',
         'nativeAndReceiptMS combines native execution with JavaScript completion/result materialization; CPU and heap profiles must resolve that split.',

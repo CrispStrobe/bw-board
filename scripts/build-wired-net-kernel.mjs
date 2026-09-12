@@ -43,9 +43,10 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const receiptNames=[...sourceNames,'src/experimental/wired-kernel/stage-attribution.h'];
+const headerName='src/experimental/wired-kernel/stage-attribution.h';
 const report={prototype:'wired-owned-memory-circuit',compiler:version,args,stageAttribution,stageProfileNames,
-    sourceSHA256:hash(readFileSync(sources[0])),sourceHashes:Object.fromEntries(receiptNames.map(p=>
+    sourceSHA256:hash(readFileSync(sources[0])),sourceHashes:Object.fromEntries(sourceNames.map(p=>
         [p,hash(readFileSync(fileURLToPath(new URL('../'+p,import.meta.url))))])),wasmSHA256:hash(readFileSync(output)),
+    headerHashes:{[headerName]:hash(readFileSync(fileURLToPath(new URL('../'+headerName,import.meta.url))))},
     notes:['Owned C, no runtime imports/WASI, no guest media.','No board backend or real-time throughput claim.']};
 writeFileSync(manifest,JSON.stringify(report,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({output,manifest,...report},null,2));

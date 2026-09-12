@@ -27,13 +27,13 @@ static u32 failure(const u32*p,u32 category,u32 code,u32 pin,u32*fault) {
 }
 static STAGE_NOINLINE u32 validate_bus_mapping(const u32*p,u32*fault) {
     const u32*c=W(0);
-    u32 visits=0;STAGE_ADD(STAGE_BUS_VALIDATION_CALLS,1);
-    #define BUS_MAPPING_RETURN(value) do{STAGE_ADD(STAGE_BUS_VALIDATION_VISITS,visits);return(value);}while(0)
+    STAGE_ADD(STAGE_BUS_VALIDATION_CALLS,1);
+    #define BUS_MAPPING_RETURN(value,count) do{STAGE_ADD(STAGE_BUS_VALIDATION_VISITS,(count));return(value);}while(0)
     if(p[6]>128)return failure(p,8,2,0,fault);
-    for(u32 i=0;i<24;i++){visits++;if(W(2)[i]>=c[0])BUS_MAPPING_RETURN(failure(p,8,2,i,fault));}
-    for(u32 i=0;i<48;i++){visits++;if(W(3)[i]>=c[1])BUS_MAPPING_RETURN(failure(p,8,2,i,fault));}
-    for(u32 i=0;i<p[6];i++){visits++;if(W(4)[i]>=c[1]||B(5)[i]>3)BUS_MAPPING_RETURN(failure(p,8,2,i,fault));}
-    BUS_MAPPING_RETURN(0);
+    for(u32 i=0;i<24;i++)if(W(2)[i]>=c[0])BUS_MAPPING_RETURN(failure(p,8,2,i,fault),i+1);
+    for(u32 i=0;i<48;i++)if(W(3)[i]>=c[1])BUS_MAPPING_RETURN(failure(p,8,2,i,fault),24+i+1);
+    for(u32 i=0;i<p[6];i++)if(W(4)[i]>=c[1]||B(5)[i]>3)BUS_MAPPING_RETURN(failure(p,8,2,i,fault),72+i+1);
+    BUS_MAPPING_RETURN(0,72+p[6]);
     #undef BUS_MAPPING_RETURN
 }
 static void gather(const u32*p) {

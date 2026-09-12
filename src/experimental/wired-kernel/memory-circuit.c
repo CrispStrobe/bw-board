@@ -30,14 +30,14 @@ u32 *stage_attribution_counters_ptr(void){return native_stage_work;}
 void reset_stage_attribution_counters(void){for(u32 i=0;i<STAGE_COUNTER_COUNT;i++)native_stage_work[i]=0;}
 #endif
 static STAGE_NOINLINE u32 validate_memory_mapping(const u32 *c,u32 banks,const u32 *input_nets,const u32 *output_ids) {
-    u32 visits=0;STAGE_ADD(STAGE_MEMORY_MAPPING_CALLS,1);
-    #define MAPPING_RETURN(code) do{STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,visits);return(code);}while(0)
-    for(u32 i=0;i<banks*28;i++){visits++;if(input_nets[i]>=c[0])MAPPING_RETURN(2);}
+    STAGE_ADD(STAGE_MEMORY_MAPPING_CALLS,1);
+    #define MAPPING_RETURN(code,count) do{STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,(count));return(code);}while(0)
+    for(u32 i=0;i<banks*28;i++)if(input_nets[i]>=c[0])MAPPING_RETURN(2,i+1);
     for(u32 i=0;i<banks*8;i++) {
-        visits++;if(output_ids[i]>=c[1])MAPPING_RETURN(3);
-        for(u32 j=0;j<i;j++){visits++;if(output_ids[i]==output_ids[j])MAPPING_RETURN(4);}
+        if(output_ids[i]>=c[1])MAPPING_RETURN(3,banks*28+i*(i+1)/2+1);
+        for(u32 j=0;j<i;j++)if(output_ids[i]==output_ids[j])MAPPING_RETURN(4,banks*28+i*(i+1)/2+j+2);
     }
-    MAPPING_RETURN(0);
+    MAPPING_RETURN(0,banks*28+(banks*8)*(banks*8+1)/2);
     #undef MAPPING_RETURN
 }
 static STAGE_NOINLINE void gather_memory_inputs(const u32 *c,u32 banks,const u32 *input_nets,u8 *inputs,u8 *conflicts) {

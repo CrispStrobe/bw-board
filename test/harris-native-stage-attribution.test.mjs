@@ -6,6 +6,20 @@ import {MASTER_REVISION,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,assertP
 
 const workflow=readFileSync(new URL('../.github/workflows/harris-native-stage-attribution.yml',import.meta.url),'utf8');
 const source=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
+function assertDerivedStageCounterSources(files){
+    const {banks,memory,phase,bus}=files;
+    assert.match(banks,/#define PREVIEW_RETURN\(value\) do\{STAGE_ADD\(STAGE_MEMORY_PREVIEW_BANKS,stage_visited\);STAGE_ADD\(STAGE_MEMORY_PREVIEW_STATE_WORD_COPIES,stage_visited\*WORDS\);return\(value\);\}while\(0\)/);
+    const preview=banks.slice(banks.indexOf('STAGE_ADD(STAGE_MEMORY_PREVIEW_CALLS,1);'),banks.indexOf('u32 preview_memory_banks'));
+    assert.match(preview,/#ifdef NATIVE_STAGE_ATTRIBUTION\n    u32 stage_visited=0;/);assert.match(preview,/#define PREVIEW_VISIT\(\) stage_visited\+\+/);assert.match(preview,/#else\n    #define PREVIEW_VISIT\(\) \(\(void\)0\)\n    #define PREVIEW_RETURN\(value\) return\(value\)/);
+    assert.match(preview,/for\(u32 b=0;b<banks;b\+\+\) \{\n        PREVIEW_VISIT\(\);/);
+    assert.equal((preview.match(/\breturn\b/g)??[]).length,2,'both enabled and disabled exit macros return directly');
+    assert.doesNotMatch(preview,/STAGE_ADD\(STAGE_MEMORY_PREVIEW_BANKS,1\)|STAGE_ADD\(STAGE_MEMORY_PREVIEW_STATE_WORD_COPIES,WORDS\)/);
+    for(const formula of ['MAPPING_RETURN(2,i+1)','MAPPING_RETURN(3,banks*28+i*(i+1)/2+1)','MAPPING_RETURN(4,banks*28+i*(i+1)/2+j+2)','MAPPING_RETURN(0,banks*28+(banks*8)*(banks*8+1)/2)'])assert.ok(memory.includes(formula),formula);
+    for(const formula of ['PHASE_MAPPING_RETURN(reject_phase(p,4,6,i,fault),i+1)','PHASE_MAPPING_RETURN(reject_phase(p,4,7,i,fault),6+i+1)','PHASE_MAPPING_RETURN(reject_phase(p,4,8,i,fault),13+i+1)','PHASE_MAPPING_RETURN(reject_phase(p,4,9,i,fault),40+i+1)','PHASE_MAPPING_RETURN(0,66)'])assert.ok(phase.includes(formula),formula);
+    for(const formula of ['BUS_MAPPING_RETURN(failure(p,8,2,i,fault),i+1)','BUS_MAPPING_RETURN(failure(p,8,2,i,fault),24+i+1)','BUS_MAPPING_RETURN(failure(p,8,2,i,fault),72+i+1)','BUS_MAPPING_RETURN(0,72+p[6])'])assert.ok(bus.includes(formula),formula);
+    assert.match(phase,/if\(p\[2\]>1\|\|p\[3\]>1\)return reject_phase/);assert.match(bus,/if\(p\[6\]>128\)return failure/);
+    assert.doesNotMatch(memory,/\bvisits\+\+/);assert.doesNotMatch(phase,/\bvisits\+\+/);assert.doesNotMatch(bus,/\bvisits\+\+/);
+}
 function semantic(){return {stateHash:'x',componentHashes:{cpu:'a',bus:'b',phase:'c',lifecycle:'d',nets:'e',memory:{rom0:'f',rom1:'g',ram0:'h',ram1:'i'}},periods:10,retired:3,writes:[1,1],physicalClock:77,chunks:1,yields:0,
     work:Object.fromEntries(LEGACY_WORK_COUNTERS.map((name,i)=>[name,i+1])),producerWork:{producers:{other:{attempts:0,changes:0},
         busExternal:{attempts:100,changes:0},busOutput:{attempts:20,changes:20},phaseController:{attempts:30,changes:10},phaseLatch:{attempts:260,changes:9},
@@ -35,24 +49,26 @@ test('actionable family ties use deterministic lexical order',()=>{const frames=
 test('actionable gates cannot be satisfied by runtime, harness, or fixture samples',()=>{const frames=[...Array.from({length:90},()=>['compileForInternalLoader','node:internal/test']),...Array.from({length:5},()=>['preview_memory_stage','wasm://x']),...Array.from({length:5},()=>['_instructions','file:///x/harris-80c286-boot-cpu.js'])];
     const c=classifyProfile({nodes:frames.map(([functionName,url],i)=>({id:i+1,callFrame:{functionName,url}})),samples:frames.map((_,i)=>i+1)});assert.equal(c.classifiedRatio,1);assert.equal(c.actionableRatio,.1);assert.throws(()=>assertProfileGates(c),/70% actionable/);
     assert.deepEqual(PROFILE_GATES,{classifiedRatio:.9,actionableRatio:.7,topFamilySamples:50,topFamilyShare:.1,topTwoCombinedShare:.25});});
-test('rotating order and summaries are deterministic',()=>{assert.deepEqual([1,2,3].map(rotatedOrder),[['master','diagnosticOff','counterOn'],['diagnosticOff','counterOn','master'],['counterOn','master','diagnosticOff']]);assert.equal(summarize([1,2,3]).median,2);});
+test('rotating order and summaries are deterministic',()=>{assert.deepEqual([1,2,3,4].map(rotatedOrder),[['master','diagnosticOff','nativeCounter','combinedCounter'],['diagnosticOff','nativeCounter','combinedCounter','master'],['nativeCounter','combinedCounter','master','diagnosticOff'],['combinedCounter','master','diagnosticOff','nativeCounter']]);assert.equal(summarize([1,2,3]).median,2);});
 test('failed control gate remains a serializable observation',()=>{const gate=controlGateResult({candidateOffToMaster:1,counterOnToOff:.97});assert.equal(gate.passed,false);assert.deepEqual(gate.observations.counterOnToOff,{value:.97,minimum:.98,maximum:1.02,passed:false});assert.doesNotThrow(()=>JSON.stringify(gate));});
 test('workflow pins exact control, builds off/on separately, and rejects weak attribution',()=>{
     assert.ok(workflow.includes(`MASTER_SHA=${MASTER_REVISION}`));assert.match(workflow,/workflow_dispatch:/);assert.match(workflow,/branches: \['perf\/native-stage-attribution', 'perf\/native-stage-attribution-\*'\]/);
     assert.equal((workflow.match(/build-wired-net-kernel\.mjs/g)??[]).length,4);assert.equal((workflow.match(/NATIVE_STAGE_ATTRIBUTION=1/g)??[]).length,1);assert.equal((workflow.match(/NATIVE_STAGE_PROFILE_NAMING=1/g)??[]).length,1);
-    assert.match(workflow,/candidateOffToMaster>=\.98&&r\.ratios\.candidateOffToMaster<=1\.02/);assert.match(workflow,/counterOnToOff>=\.98&&r\.ratios\.counterOnToOff<=1\.02/);assert.match(workflow,/stageProfileNames\],\[true,false\]/);assert.match(workflow,/stageProfileNames\],\[false,true\]/);
+    assert.match(workflow,/candidateOffToMaster>=\.98&&r\.ratios\.candidateOffToMaster<=1\.02/);assert.match(workflow,/combinedCounterToOff>=\.98&&r\.ratios\.combinedCounterToOff<=1\.02/);assert.match(workflow,/nativeCounterToOff/);assert.match(workflow,/combinedCounterToNative/);assert.match(workflow,/stageProfileNames\],\[true,false,false\]/);assert.match(workflow,/stageProfileNames\],\[false,false,true\]/);
     assert.match(workflow,/for run in 1 2 3/);assert.match(workflow,/--cpu-prof/);assert.match(workflow,/--profile-repetitions=8/);assert.match(workflow,/profileReceipt\.expected,control\.expected/);assert.match(workflow,/classifiedRatio>=\.90/);assert.match(workflow,/actionableRatio>=\.70/);assert.match(workflow,/x\.samples>=50&&x\.shareOfNonIdle>=\.10/);assert.match(workflow,/topTwoCombinedShare>=\.25/);assert.match(workflow,/topTwoActionableFamilies/);assert.match(workflow,/artifact-manifest\.json/);assert.match(workflow,/createHash\("sha256"\)/);assert.match(workflow,/\["master","diagnostic-off","counter-on","named-profile"\]/);assert.match(workflow,/missing,unexpected,files/);assert.doesNotMatch(workflow,/continue-on-error: true|\|\| true/);
     for(const action of workflow.matchAll(/uses: [^@\s]+@([^\s]+)/g))assert.match(action[1],/^[0-9a-f]{40}$/);
 });
 test('diagnostic build is conditional and stable work-counter ABI source is untouched',()=>{
-    const build=source('scripts/build-wired-net-kernel.mjs'),incremental=source('src/experimental/wired-kernel/incremental-nets.c'),header=source('src/experimental/wired-kernel/stage-attribution.h');
-    assert.match(build,/NATIVE_STAGE_ATTRIBUTION/);assert.match(build,/NATIVE_STAGE_PROFILE_NAMING/);assert.match(build,/\.\.\.sourceNames,'src\/experimental\/wired-kernel\/stage-attribution\.h'/);assert.match(build,/stage_attribution_version/);assert.match(incremental,/u32 incremental_work\[12\]/);assert.match(incremental,/incremental_work_counters_version\(void\)\{return 3;\}/);
+    const build=source('scripts/build-wired-net-kernel.mjs'),runner=source('scripts/measure-harris-native-stage-attribution.mjs'),incremental=source('src/experimental/wired-kernel/incremental-nets.c'),header=source('src/experimental/wired-kernel/stage-attribution.h');
+    assert.match(build,/NATIVE_STAGE_ATTRIBUTION/);assert.match(build,/NATIVE_STAGE_PROFILE_NAMING/);assert.match(build,/headerHashes:\{\[headerName\]:hash/);assert.doesNotMatch(build,/\.\.\.sourceNames,'src\/experimental\/wired-kernel\/stage-attribution\.h'/);assert.match(build,/stage_attribution_version/);assert.match(incremental,/u32 incremental_work\[12\]/);assert.match(incremental,/incremental_work_counters_version\(void\)\{return 3;\}/);
+    assert.match(runner,/if\(name==='master'\)assert\.deepEqual\(Object\.keys\(headerHashes\),\[\]/);assert.match(runner,/else \{assert\.deepEqual\(Object\.keys\(headerHashes\),\[headerPath\]/);
     assert.match(header,/STAGE_COUNTER_COUNT/);assert.match(header,/#ifdef NATIVE_STAGE_PROFILE_NAMING\n#define STAGE_NOINLINE/);assert.doesNotMatch(header,/incremental_work|producer_work|memory_pass_work/);
 });
 test('crossing counters follow actual calls and semantic hash covers hidden state',()=>{const bus=source('src/experimental/wired-kernel/bus-circuit-image.js'),runner=source('scripts/measure-harris-native-stage-attribution.mjs');
+    assert.match(bus,/const count=stageAttribution\?\(name,value=1\)=>\{jsStage\[name\]=\(jsStage\[name\]\+value\)>>>0;\}:\(\)=>\{\};/);assert.doesNotMatch(bus,/const count=.*if\(stageAttribution\)/);
     assert.match(bus,/const inspectEntry=field=>\{count\('wasmBusInspectEntries'\);return e\.bus_inspect\(field\);\}/);assert.doesNotMatch(bus,/count\('wasmBusInspectEntries',4\)/);
     assert.match(bus,/materializedCompletionRecordBytes/);assert.doesNotMatch(bus,/nativeReceiptBytesRead/);
-    for(const name of ['inspectPhase','inspectLifecycle','inspectNets','componentHashes'])assert.ok(runner.includes(name),name);
+    for(const name of ['inspectPhase','inspectLifecycle','inspectNets','componentHashes','headerHashes','nativeCounter','combinedCounter'])assert.ok(runner.includes(name),name);
 });
 test('receipts precede workflow acceptance and profile classification has no in-process gate',()=>{const runner=source('scripts/measure-harris-native-stage-attribution.mjs');assert.match(runner,/process\.stdout\.write\(JSON\.stringify\(report,null,2\)\+'\\n'\);\}/);assert.doesNotMatch(runner,/process\.stdout\.write[^\n]+assert/);
     const classify=runner.slice(runner.indexOf("if(options['classify-profile'])"),runner.indexOf("assert.equal(options.experimental"));assert.doesNotMatch(classify,/assertProfileGates/);assert.match(classify,/console\.log\(JSON\.stringify/);assert.match(classify,/construction and final inspection frames/);assert.doesNotMatch(classify,/never contribute to actionableSamples/);});
@@ -60,4 +76,12 @@ test('moved memory mutations retain unique selectors and named reds',()=>{const 
     for(const anchor of ['drives[b*8+bit],PRODUCER_MEMORY_BANK)','if(present[b])memory_pass_work[4]++;','if(bank_changed[b]){*changed=1;memory_pass_work[5]++;}']){assert.equal(memoryCircuit.split(anchor).length-1,1,anchor);assert.ok(producer.includes(anchor),anchor);}
     const commitAnchor='STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);\n    for(u32 b=0;b<banks;b++) {';
     assert.match(producer,/name:'mislabelled memory producer'/);assert.match(owned,/name:'peer commit loop stops after first bank',pattern:'late peer-bank fault'/);assert.equal(memoryBanks.split(commitAnchor).length-1,1);assert.ok(owned.includes(commitAnchor.replace('\n','\\n')));
+});
+test('stage counters aggregate preview writes and derive exact early-exit visit totals',()=>{const files={banks:source('src/experimental/wired-kernel/memory-banks.c'),memory:source('src/experimental/wired-kernel/memory-circuit.c'),phase:source('src/experimental/wired-kernel/phase-circuit.c'),bus:source('src/experimental/wired-kernel/bus-circuit.c')};
+    assert.doesNotThrow(()=>assertDerivedStageCounterSources(files));
+    const mutations=[['banks','#define PREVIEW_VISIT() stage_visited++','#define PREVIEW_VISIT() ((void)0)'],['banks','PREVIEW_RETURN(error);','return error;'],['memory','banks*28+i*(i+1)/2+j+2','banks*28+i+j+2'],['phase','40+i+1','40+i'],['bus','72+p[6]','72']];
+    for(const [file,from,to] of mutations){const changed={...files,[file]:files[file].replace(from,to)};assert.notEqual(changed[file],files[file],from);assert.throws(()=>assertDerivedStageCounterSources(changed),undefined,from);}
+});
+test('legacy producer receipt keeps C and exact header provenance separate',()=>{const runner=source('scripts/measure-harris-hybrid-producers.mjs');assert.match(runner,/assert\.match\(path, \/\^src\\\/experimental\\\/wired-kernel\\\/\[a-z-\]\+\\\.c\$\//);assert.match(runner,/assert\.deepEqual\(Object\.keys\(build\.headerHashes \?\? \{\}\), \[headerPath\]\)/);
+    assert.match(runner,/headerPath = 'src\/experimental\/wired-kernel\/stage-attribution\.h'/);assert.match(runner,/const headerHash = hash\(readFileSync/);assert.match(runner,/assert\.equal\(headerHash, build\.headerHashes\[headerPath\]/);assert.match(runner,/wasmSHA256: hash\(wasmBytes\), sourceHashes, headerHashes/);
 });

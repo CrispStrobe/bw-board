@@ -55,7 +55,7 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             const externalValues=new Uint8Array(e.memory.buffer,p.busExternalValues,externalPins.length);
             const jsStage={wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,
                 completionObjects:0,materializedCompletionRecordBytes:0};
-            const count=(name,value=1)=>{if(stageAttribution)jsStage[name]=(jsStage[name]+value)>>>0;};
+            const count=stageAttribution?(name,value=1)=>{jsStage[name]=(jsStage[name]+value)>>>0;}:()=>{};
             const inspectEntry=field=>{count('wasmBusInspectEntries');return e.bus_inspect(field);};
             externalValues.set(maps.busExternalIds.map(id=>image.driverLevels[id]));
             put('busContext',[p.context,p.phaseContext,p.busInputNets,p.busOutputIds,p.busExternalIds,p.busExternalValues,
