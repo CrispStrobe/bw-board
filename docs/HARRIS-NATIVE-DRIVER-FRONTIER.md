@@ -61,3 +61,18 @@ four-state input and duplicate-write ordering. At initial root review these
 were reported in a temporary handoff, not a committed machine-readable mutation
 receipt; do not upgrade that report to independently reproduced evidence.
 Combined root qualification and the next bus bridge remain separate gates.
+
+## Subsequent root mutation verification
+
+The verifier is now committed as
+`scripts/verify-harris-native-dirty-frontier-mutations.mjs`. Root extended it to
+cover the new bus's external-input and output producers, then reran all **nine**
+mutations in an exclusive disposable worktree. All nine rebuilt artifacts
+triggered their named differential failures; the worktree was clean afterward.
+See [HARRIS-NATIVE-DRIVER-MUTATIONS.json](HARRIS-NATIVE-DRIVER-MUTATIONS.json)
+for the exact revision/tree and results. This closes the earlier missing
+reproduction evidence, not the performance or whole-CPU qualification gap.
+
+Do not run the verifier beside another worker or benchmark in a shared tree:
+it briefly mutates C sources while building each artifact, restoring them before
+the named test. Use an isolated checkout even though restoration is guarded.

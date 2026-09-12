@@ -158,6 +158,39 @@ active modeled periods/s for the three **JavaScript whole-board memory modes**.
 It is correctness/measurement acceptance, not a stable performance comparison,
 native full-board measurement, full DOS run or 4.77 MHz qualification.
 
+### Later checkpoint — producer queues and same-instance memory bus
+
+The root integration through `dba7fc6` joins the reviewed producer-marked dirty
+driver frontier with a native memory bus in the same private instance as actual
+nets, controller, latch and registered memory. Bounded transactions execute every
+period and preserve prior physical completions in immutable fault progress.
+See [HARRIS-NATIVE-DRIVER-FRONTIER.md](HARRIS-NATIVE-DRIVER-FRONTIER.md) and
+[HARRIS-NATIVE-BUS-CIRCUIT.md](HARRIS-NATIVE-BUS-CIRCUIT.md). **There is still no
+CPU instruction executor or time-driven peripheral inside this region.**
+
+Combined native/memory, policy, measurement and census checks passed **139/139,
+zero skipped**. Chromium accepted the fresh combined module, all earlier
+oracles, and both checked/incremental bus fixtures with 830 compared boundaries,
+48 transactions and 63 physical completions each. Receipts:
+[HARRIS-NATIVE-BUS-FRONTIER-BROWSER.json](HARRIS-NATIVE-BUS-FRONTIER-BROWSER.json),
+[HARRIS-NATIVE-BUS-FRONTIER-BUILD.json](HARRIS-NATIVE-BUS-FRONTIER-BUILD.json).
+Independent source review found no remaining blocker in the merged writer,
+private-instance, clock lifecycle or partial-progress contracts. This targeted
+suite supplements—not replaces or retroactively extends—the earlier full run.
+The nine producer/input/order mutation cases were also reproduced in an isolated
+worktree, all killed, with clean sources afterward; see
+[HARRIS-NATIVE-DRIVER-MUTATIONS.json](HARRIS-NATIVE-DRIVER-MUTATIONS.json).
+
+The next bounded hybrid CPU milestone is specified in
+[HARRIS-HYBRID-CPU-BRIDGE-PLAN.md](HARRIS-HYBRID-CPU-BRIDGE-PLAN.md). It must reuse
+the authoritative ROM/RAM wiring and add an explicit bounded CPU method without
+changing existing one-period stepping. It is planned, **not implemented**.
+
+The overall program remains open: P1/P3 application package/browser integration,
+P4 full workload/profile coverage, P5 shared host improvements, remaining P6
+sparse scheduling, P7 CPU/peripherals, P8 event-safe skipping and P9 whole-machine
+qualification. The completed prerequisites do not close these larger gates.
+
 ### P6 incremental checkpoint — dirty net queues
 
 The gated incremental C resolver now queues dirty nets and clears only the
