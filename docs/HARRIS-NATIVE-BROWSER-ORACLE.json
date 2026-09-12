@@ -1,0 +1,230 @@
+{
+  "accepted": true,
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "hardwareConcurrency": 4,
+  "rounds": 1,
+  "warmupRounds": 1,
+  "modes": {
+    "layouts": {
+      "netBackend": "compiled",
+      "memoryScheduling": true,
+      "deviceScheduling": true,
+      "packedBus": true,
+      "driveLayouts": true
+    }
+  },
+  "busTraceEnabled": false,
+  "cpuHistoryEnabled": true,
+  "initializationIncluded": true,
+  "constructionIncluded": false,
+  "yieldOverheadIncluded": true,
+  "fullDOSBoot": false,
+  "nativeOracle": {
+    "accepted": true,
+    "periods": 118,
+    "comparisons": 2366,
+    "transactions": 11,
+    "capacityClaim": false,
+    "scope": "test-only owned combinational oracle; stateful board and CPU not ported",
+    "moduleSHA256": "294dffaac61cf09e0c292403ac674a73f8219e1ce580b7f12c07d7fed0e4a88c"
+  },
+  "cancellation": {
+    "status": "stopped",
+    "clocks": 64,
+    "chunks": 1,
+    "periodClosed": true
+  },
+  "heartbeat": {
+    "count": 873,
+    "medianMS": 16,
+    "p95MS": 17.5,
+    "maxMS": 26.699999809265137
+  },
+  "samples": [
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "layouts",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 2747.4000005722046,
+      "periodsPerSecond": 11957.48707620218,
+      "chunks": 282,
+      "maxChunkMS": 14.09999942779541,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "layouts",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 553.1999998092651,
+      "periodsPerSecond": 12234.273323090207,
+      "chunks": 57,
+      "maxChunkMS": 11.40000057220459,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "layouts",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 464.80000019073486,
+      "periodsPerSecond": 12284.85369547515,
+      "chunks": 49,
+      "maxChunkMS": 11.199999809265137,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "layouts",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 120.59999942779541,
+      "periodsPerSecond": 27761.19416156785,
+      "chunks": 14,
+      "maxChunkMS": 9.600000381469727,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "layouts",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 300.19999980926514,
+      "periodsPerSecond": 33311.125937220495,
+      "chunks": 35,
+      "maxChunkMS": 8.800000190734863,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    }
+  ],
+  "nativeBuild": {
+    "sha256": "294dffaac61cf09e0c292403ac674a73f8219e1ce580b7f12c07d7fed0e4a88c",
+    "sourceSHA256": "b37463162042c39813f5f6bf5e64543a60adc665962fe90185ce9df3d391b456",
+    "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin"
+  },
+  "summaries": [
+    {
+      "name": "memory",
+      "modes": {
+        "layouts": {
+          "medianMS": 2747.4000005722046,
+          "minMS": 2747.4000005722046,
+          "maxMS": 2747.4000005722046,
+          "periodsPerSecond": 11957.48707620218,
+          "xtCapacityFactor": 0.0012526891938510396
+        }
+      }
+    },
+    {
+      "name": "io",
+      "modes": {
+        "layouts": {
+          "medianMS": 553.1999998092651,
+          "minMS": 553.1999998092651,
+          "maxMS": 553.1999998092651,
+          "periodsPerSecond": 12234.273323090207,
+          "xtCapacityFactor": 0.0012816858499438797
+        }
+      }
+    },
+    {
+      "name": "dma",
+      "modes": {
+        "layouts": {
+          "medianMS": 464.80000019073486,
+          "minMS": 464.80000019073486,
+          "maxMS": 464.80000019073486,
+          "periodsPerSecond": 12284.85369547515,
+          "xtCapacityFactor": 0.001286984746401287
+        }
+      }
+    },
+    {
+      "name": "interrupt",
+      "modes": {
+        "layouts": {
+          "medianMS": 120.59999942779541,
+          "minMS": 120.59999942779541,
+          "maxMS": 120.59999942779541,
+          "periodsPerSecond": 27761.19416156785,
+          "xtCapacityFactor": 0.002908315745020389
+        }
+      }
+    },
+    {
+      "name": "idle",
+      "modes": {
+        "layouts": {
+          "medianMS": 300.19999980926514,
+          "minMS": 300.19999980926514,
+          "maxMS": 300.19999980926514,
+          "periodsPerSecond": 33311.125937220495,
+          "xtCapacityFactor": 0.0034897372023604636
+        }
+      }
+    }
+  ],
+  "benchmark": "owned-wired-browser-worker",
+  "browserVersion": "Chromium 150.0.7869.0",
+  "node": "v20.20.2",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCPUs": 4
+  },
+  "sourceHashes": {
+    "bench/harris-browser.mjs": "c4e5fe6edb980b0455d6bbec2ccc6a6ab9afdde7daae3905e6d3ddd5466a06f3",
+    "src/experimental/wired-kernel/net-resolver.c": "b37463162042c39813f5f6bf5e64543a60adc665962fe90185ce9df3d391b456",
+    "bench/harris-browser.html": "0f0b1d5169037a859372308288a70be16d2383c13d8c1a75df22e4108d2c818d",
+    "bench/harris-browser-worker.mjs": "c52eae9063d4aaebf9703ebe3b52ed7c82d9372bdc0870e7de946067982660c7",
+    "scripts/lib/harris-owned-workloads.mjs": "3a9131d8c7554175057dd7ea0069d85e6a4cdd7634e4a9f5c190d7fdfc557e88",
+    "src/experimental/harris-run-chunks.js": "a252a4263a04136b7e5d77e82ec0a2c552ebfa375aff81aa2bda89d22117a2ce",
+    "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+    "src/experimental/harris-boot-rom.js": "ecbee5bc5556257acaae231e2b2d153a9a1d04acde67d98342374dc6c2cbd98c",
+    "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+    "src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "src/experimental/harris-fdc-adapter.js": "b19260367dcb2e9a737ec68fb639a6fb2491c4bfb1c2a93e4881019e1e2a2fe8",
+    "src/experimental/harris-keyboard-adapter.js": "acccc5ac0a78c4fe5fada61ee0204f606c7bd2cc7feaa126ac6d2d8fa4475e12",
+    "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "src/experimental/harris-8254-adapter.js": "eb1643b2be68f21f0e9c319d03a74e305383214b983d720d5b77718890e7f293",
+    "src/devices.js": "396ffede2fa30fbf39a16cae97b747d16ee099f7665e8094dab939b48a681151",
+    "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "src/experimental/compiled-digital-circuit.js": "69a693b1340ea93240c1caf402665573f6651be0e34fef408bf3a1f42b65a03e",
+    "src/experimental/harris-80c286-bus.js": "987832faf0b66548dbfce7062b18a9a2abbac0d0ae0ce7fea2976a3416ecf386",
+    "src/experimental/harris-memory-decoder.js": "1f274145e565f125284c5f312a62a9219d3dc64ce246fb52ba18b8857719721c",
+    "src/experimental/wired-kernel/evaluator-contract.js": "c6227d1b5c4dc2f25689f17edd852611c3fdee045fdc5d10517ffd2e1d3fffd3",
+    "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+    "src/experimental/compiled-device-scheduler.js": "b0674f709446a3e1b42f22d2712988a25cdd5e3e4239c841b7ea00d2f6dc66f3",
+    "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+    "src/chip-ledger.js": "b12b5d635086636f0f9f405e4a06816943b74c03c1b036fcbd3ffe813055ac3a",
+    "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+    "scripts/lib/harris-native-settle-oracle.mjs": "8c7eaff431beb850a004859282839a1a26ce1c52b0b1ebba5849b5ae9f3e8d36",
+    "src/experimental/wired-net-image.js": "6979669bc6403ffe5b7b12227c146212f501c9abb0b49871b4f43b9c81879d11",
+    "src/experimental/wired-kernel/owned-kernel.js": "66bbe9e53b5e910642ac2ad08f757ad5b13929cde67274ec7c89a99e67ecafc7",
+    "src/experimental/wired-kernel/evaluator-image.js": "d1ec76ff31a3fb2151c8fb3ad2badad0d9e8d662219fdfc1b6e7ddd5842c463e",
+    "src/experimental/wired-kernel/net-resolver.js": "6666359a92495a1b8bbd03d8144bbb5ad70fed986ebb61a55edd08e85bf1a8ef"
+  },
+  "nodeReference": {
+    "receipt": "HARRIS-OWNED-WORKLOADS-BENCH.json",
+    "sha256": "0639dbdcff3bb6bf4b72e9f8e4138d71f58826dead82956cba12614298007c41",
+    "revision": "03946c7fa6574848e35659941b3f6f19fd2adaa5"
+  },
+  "notes": [
+    "Fresh browser profile and loopback-only source server; no guest media.",
+    "Capacity factor is not complete silicon timing certification.",
+    "Worker heartbeat is observed responsiveness, not a hard frame deadline or an intrinsic throughput gain.",
+    "Shared host load uncontrolled."
+  ],
+  "temporaryProfileRemoved": true
+}

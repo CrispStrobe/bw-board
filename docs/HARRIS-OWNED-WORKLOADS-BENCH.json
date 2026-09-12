@@ -1,0 +1,817 @@
+{
+  "benchmark": "owned-wired-full-board",
+  "node": "v20.20.2",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "logicalCPUs": 4
+  },
+  "revision": "03946c7fa6574848e35659941b3f6f19fd2adaa5",
+  "sourceHashes": {
+    "bench/harris-owned-workloads.mjs": "f8762a648eb388279d529653e58de544a4d5c29551e14a2542be0836fd7cc758",
+    "scripts/lib/harris-owned-workloads.mjs": "cd5efee0a796d34904853ebeb41f47e00e242e70f0cbe0a19862d0907b2fee8f",
+    "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+    "src/experimental/harris-80c286-memory-board.js": "30e5feb7e4bc078bf006e089b33ee5edca02152339293ee7a313bbbc1bc06a1a",
+    "src/experimental/harris-80c286-bus.js": "f2576bda64d3cb2d6dedfcc50bc9f7bd923f33ec22a2ca770957882d16ef8ab0",
+    "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+    "src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "src/experimental/harris-boot-rom.js": "ecbee5bc5556257acaae231e2b2d153a9a1d04acde67d98342374dc6c2cbd98c",
+    "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "src/experimental/compiled-digital-circuit.js": "47f982f80b474021b379ba18d8e8cc539d4f90e9e3e9947c0aa4fbf055f5f760",
+    "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+    "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "src/experimental/harris-8254-adapter.js": "00670920fdf1c161e42403b1757f54fae7bf6b2507547a24db2956340618611a",
+    "src/experimental/harris-fdc-adapter.js": "a850e48da0e479c7e484cbb78ba1ea953d41ae4606abfb8e74405dff4913251c",
+    "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "src/experimental/harris-keyboard-adapter.js": "d389d04d94519291043bb37ca9e73613f97b21dd2aed82df8752660ddfb886c2",
+    "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+    "src/devices.js": "396ffede2fa30fbf39a16cae97b747d16ee099f7665e8094dab939b48a681151",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874"
+  },
+  "rounds": 3,
+  "warmupRounds": 1,
+  "busTraceEnabled": false,
+  "cpuHistoryEnabled": true,
+  "initializationIncluded": true,
+  "constructionIncluded": false,
+  "notes": [
+    "Shared-host scheduling uncontrolled.",
+    "Capacity denominator is 9545454 system periods/s, not certified complete CPU/prefetch timing.",
+    "Owned synthetic sector and assembly only; no DOS boot or browser claim.",
+    "Idle is reported separately and never substituted for useful CPU/memory, I/O, DMA or interrupt work."
+  ],
+  "summaries": [
+    {
+      "name": "memory",
+      "modes": {
+        "reference": {
+          "medianMS": 18212.524126000004,
+          "minMS": 17926.958966000006,
+          "maxMS": 20951.607963999995,
+          "periodsPerSecond": 1803.8136708958884,
+          "xtCapacityFactor": 0.00018897096679695784
+        },
+        "compiled": {
+          "medianMS": 12087.897237000012,
+          "minMS": 11535.659476,
+          "maxMS": 15465.76767999999,
+          "periodsPerSecond": 2717.759702609223,
+          "xtCapacityFactor": 0.0002847176994000729
+        },
+        "scheduled": {
+          "medianMS": 11507.151364999998,
+          "minMS": 10166.60081199999,
+          "maxMS": 11921.757677999994,
+          "periodsPerSecond": 2854.920297643969,
+          "xtCapacityFactor": 0.0002990869054152866
+        },
+        "journal": {
+          "medianMS": 11776.432020999986,
+          "minMS": 8881.737465000013,
+          "maxMS": 12816.215729000018,
+          "periodsPerSecond": 2789.6395055325424,
+          "xtCapacityFactor": 0.000292247964898531
+        }
+      }
+    },
+    {
+      "name": "io",
+      "modes": {
+        "reference": {
+          "medianMS": 4107.228369000019,
+          "minMS": 2750.541190000018,
+          "maxMS": 5223.202542999992,
+          "periodsPerSecond": 1647.8265613576768,
+          "xtCapacityFactor": 0.00017262945914963047
+        },
+        "compiled": {
+          "medianMS": 2458.612444999977,
+          "minMS": 2223.2150440000114,
+          "maxMS": 2605.109438000014,
+          "periodsPerSecond": 2752.7722044049374,
+          "xtCapacityFactor": 0.0002883856759882702
+        },
+        "scheduled": {
+          "medianMS": 2241.7693460000155,
+          "minMS": 2235.3862760000047,
+          "maxMS": 2855.7844840000034,
+          "periodsPerSecond": 3019.043869109964,
+          "xtCapacityFactor": 0.00031628080436089934
+        },
+        "journal": {
+          "medianMS": 2594.135832,
+          "minMS": 2523.6318419999734,
+          "maxMS": 2884.048895999993,
+          "periodsPerSecond": 2608.9613028405215,
+          "xtCapacityFactor": 0.0002733197711539463
+        }
+      }
+    },
+    {
+      "name": "dma",
+      "modes": {
+        "reference": {
+          "medianMS": 3382.9393960000016,
+          "minMS": 2946.6752419999684,
+          "maxMS": 3710.1390529999917,
+          "periodsPerSecond": 1687.8812569777401,
+          "xtCapacityFactor": 0.00017682566559722987
+        },
+        "compiled": {
+          "medianMS": 2149.3862879999797,
+          "minMS": 2120.5063379999483,
+          "maxMS": 2302.656604000018,
+          "periodsPerSecond": 2656.572265245629,
+          "xtCapacityFactor": 0.00027830758654807085
+        },
+        "scheduled": {
+          "medianMS": 1910.9479750000173,
+          "minMS": 1825.1971750000375,
+          "maxMS": 2054.944079000008,
+          "periodsPerSecond": 2988.045762993599,
+          "xtCapacityFactor": 0.00031303338353457036
+        },
+        "journal": {
+          "medianMS": 1863.0025669999886,
+          "minMS": 1782.0680670000147,
+          "maxMS": 2156.183258999983,
+          "periodsPerSecond": 3064.944783836165,
+          "xtCapacityFactor": 0.0003210894718927109
+        }
+      }
+    },
+    {
+      "name": "interrupt",
+      "modes": {
+        "reference": {
+          "medianMS": 1315.078722999955,
+          "minMS": 1242.1147439999622,
+          "maxMS": 1335.3511279999802,
+          "periodsPerSecond": 2545.8551959251145,
+          "xtCapacityFactor": 0.0002667086548136018
+        },
+        "compiled": {
+          "medianMS": 1095.1487860000052,
+          "minMS": 875.19412499998,
+          "maxMS": 1363.7956920000142,
+          "periodsPerSecond": 3057.1188525245593,
+          "xtCapacityFactor": 0.00032026961237512216
+        },
+        "scheduled": {
+          "medianMS": 772.7844380000024,
+          "minMS": 734.257117000001,
+          "maxMS": 790.8581830000039,
+          "periodsPerSecond": 4332.385378598928,
+          "xtCapacityFactor": 0.0004538689703600193
+        },
+        "journal": {
+          "medianMS": 914.8150709999609,
+          "minMS": 831.0059430000256,
+          "maxMS": 1106.3371460000053,
+          "periodsPerSecond": 3659.7560601405344,
+          "xtCapacityFactor": 0.00038340303773299147
+        }
+      }
+    },
+    {
+      "name": "idle",
+      "modes": {
+        "reference": {
+          "medianMS": 3554.812608999986,
+          "minMS": 2934.163942000014,
+          "maxMS": 3625.6029949999647,
+          "periodsPerSecond": 2813.087805158069,
+          "xtCapacityFactor": 0.0002947044535710998
+        },
+        "compiled": {
+          "medianMS": 2726.431301000004,
+          "minMS": 2704.077739999979,
+          "maxMS": 2990.3160919999937,
+          "periodsPerSecond": 3667.7982666690286,
+          "xtCapacityFactor": 0.000384245554655549
+        },
+        "scheduled": {
+          "medianMS": 2283.3512780000456,
+          "minMS": 2212.319808,
+          "maxMS": 2924.000890999974,
+          "periodsPerSecond": 4379.527625183829,
+          "xtCapacityFactor": 0.000458807682189221
+        },
+        "journal": {
+          "medianMS": 2616.826998000004,
+          "minMS": 2122.967757000006,
+          "maxMS": 2694.365119999973,
+          "periodsPerSecond": 3821.421900508833,
+          "xtCapacityFactor": 0.00040033946007270404
+        }
+      }
+    }
+  ],
+  "samples": [
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "reference",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 20951.607963999995,
+      "periodsPerSecond": 1567.9942110623585,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "compiled",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 12087.897237000012,
+      "periodsPerSecond": 2717.759702609223,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "scheduled",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 11921.757677999994,
+      "periodsPerSecond": 2755.633933125814,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "memory",
+      "mode": "journal",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 12816.215729000018,
+      "periodsPerSecond": 2563.3151543839745,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "reference",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 5223.202542999992,
+      "periodsPerSecond": 1295.7567592453997,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "compiled",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2605.109438000014,
+      "periodsPerSecond": 2597.9714714771853,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "scheduled",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2855.7844840000034,
+      "periodsPerSecond": 2369.926735689902,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "io",
+      "mode": "journal",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2523.6318419999734,
+      "periodsPerSecond": 2681.8491855120883,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "reference",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 3710.1390529999917,
+      "periodsPerSecond": 1539.0258743490854,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "compiled",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 2302.656604000018,
+      "periodsPerSecond": 2479.7444786517353,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "scheduled",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 2054.944079000008,
+      "periodsPerSecond": 2778.664421261839,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "dma",
+      "mode": "journal",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 2156.183258999983,
+      "periodsPerSecond": 2648.1979099718283,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "reference",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 1335.3511279999802,
+      "periodsPerSecond": 2507.205730237006,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "compiled",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 1095.1487860000052,
+      "periodsPerSecond": 3057.1188525245593,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "scheduled",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 734.257117000001,
+      "periodsPerSecond": 4559.710655143701,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "interrupt",
+      "mode": "journal",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 1106.3371460000053,
+      "periodsPerSecond": 3026.20228571805,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "reference",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 3554.812608999986,
+      "periodsPerSecond": 2813.087805158069,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "compiled",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2704.077739999979,
+      "periodsPerSecond": 3698.118531163264,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "scheduled",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2212.319808,
+      "periodsPerSecond": 4520.142143933649,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 0,
+      "name": "idle",
+      "mode": "journal",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2616.826998000004,
+      "periodsPerSecond": 3821.421900508833,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "journal",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 11776.432020999986,
+      "periodsPerSecond": 2789.6395055325424,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "scheduled",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 11507.151364999998,
+      "periodsPerSecond": 2854.920297643969,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "compiled",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 15465.76767999999,
+      "periodsPerSecond": 2124.175189989665,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "memory",
+      "mode": "reference",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 18212.524126000004,
+      "periodsPerSecond": 1803.8136708958884,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "journal",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2884.048895999993,
+      "periodsPerSecond": 2346.700851496249,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "scheduled",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2241.7693460000155,
+      "periodsPerSecond": 3019.043869109964,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "compiled",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2458.612444999977,
+      "periodsPerSecond": 2752.7722044049374,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "io",
+      "mode": "reference",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 4107.228369000019,
+      "periodsPerSecond": 1647.8265613576768,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "journal",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1782.0680670000147,
+      "periodsPerSecond": 3204.142482398206,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "scheduled",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1910.9479750000173,
+      "periodsPerSecond": 2988.045762993599,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "compiled",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 2149.3862879999797,
+      "periodsPerSecond": 2656.572265245629,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "dma",
+      "mode": "reference",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 2946.6752419999684,
+      "periodsPerSecond": 1937.7771661476027,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "journal",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 831.0059430000256,
+      "periodsPerSecond": 4028.852053588619,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "scheduled",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 790.8581830000039,
+      "periodsPerSecond": 4233.375935113747,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "compiled",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 875.19412499998,
+      "periodsPerSecond": 3825.4370137597493,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "interrupt",
+      "mode": "reference",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 1242.1147439999622,
+      "periodsPerSecond": 2695.403155121152,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "journal",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2122.967757000006,
+      "periodsPerSecond": 4710.387130010459,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "scheduled",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2283.3512780000456,
+      "periodsPerSecond": 4379.527625183829,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "compiled",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2990.3160919999937,
+      "periodsPerSecond": 3344.1280762100855,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 1,
+      "name": "idle",
+      "mode": "reference",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2934.163942000014,
+      "periodsPerSecond": 3408.125857202001,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "reference",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 17926.958966000006,
+      "periodsPerSecond": 1832.5472860347702,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "compiled",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 11535.659476,
+      "periodsPerSecond": 2847.8649242679844,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "scheduled",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 10166.60081199999,
+      "periodsPerSecond": 3231.3651934896125,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "memory",
+      "mode": "journal",
+      "clocks": 32852,
+      "retired": 2567,
+      "elapsedMS": 8881.737465000013,
+      "periodsPerSecond": 3698.825835537118,
+      "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "reference",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2750.541190000018,
+      "periodsPerSecond": 2460.6066706457705,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "compiled",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2223.2150440000114,
+      "periodsPerSecond": 3044.2399255373,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "scheduled",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2235.3862760000047,
+      "periodsPerSecond": 3027.6646468952313,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "io",
+      "mode": "journal",
+      "clocks": 6768,
+      "retired": 652,
+      "elapsedMS": 2594.135832,
+      "periodsPerSecond": 2608.9613028405215,
+      "stateSHA256": "c2fb8747e0842eb3d34fb34bf4bfc1c175324d6bc191427f629c4e56b8ede66c"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "reference",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 3382.9393960000016,
+      "periodsPerSecond": 1687.8812569777401,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "compiled",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 2120.5063379999483,
+      "periodsPerSecond": 2692.7530928229367,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "scheduled",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1825.1971750000375,
+      "periodsPerSecond": 3128.429124376594,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "dma",
+      "mode": "journal",
+      "clocks": 5710,
+      "retired": 323,
+      "elapsedMS": 1863.0025669999886,
+      "periodsPerSecond": 3064.944783836165,
+      "stateSHA256": "4c4aefa915c6c2c436e642bf7c5586c7c292b75c5c122b3a4c13d0ac1a37cfce"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "reference",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 1315.078722999955,
+      "periodsPerSecond": 2545.8551959251145,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "compiled",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 1363.7956920000142,
+      "periodsPerSecond": 2454.9131659817303,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "scheduled",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 772.7844380000024,
+      "periodsPerSecond": 4332.385378598928,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "interrupt",
+      "mode": "journal",
+      "clocks": 3348,
+      "retired": 49,
+      "elapsedMS": 914.8150709999609,
+      "periodsPerSecond": 3659.7560601405344,
+      "stateSHA256": "183c94751f483dde52aad2d7cfd10a768e8150bfba929bdcf8609af104d2b33e"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "reference",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 3625.6029949999647,
+      "periodsPerSecond": 2758.16188749593,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "compiled",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2726.431301000004,
+      "periodsPerSecond": 3667.7982666690286,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "scheduled",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2924.000890999974,
+      "periodsPerSecond": 3419.97159808666,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    },
+    {
+      "round": 2,
+      "name": "idle",
+      "mode": "journal",
+      "clocks": 10000,
+      "retired": 22,
+      "elapsedMS": 2694.365119999973,
+      "periodsPerSecond": 3711.449471258038,
+      "stateSHA256": "f480f4d80b43d5b0b2b6e905e5c2f5a0989fa56e16f767936214984e1a52367f"
+    }
+  ]
+}

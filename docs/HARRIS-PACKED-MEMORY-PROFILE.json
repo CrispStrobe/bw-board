@@ -1,0 +1,484 @@
+{
+  "accepted": true,
+  "benchmark": "owned-wired-sampled-profile",
+  "name": "memory",
+  "node": "v20.20.2",
+  "hostCPU": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+  "revision": "eeeffa3dadf3548a5f58e7e7359f8c6854c1b68b",
+  "sourceHashes": {
+    "bench/harris-profile.mjs": "4786e60e68248e5601d57d709e3804736f68ed91055d16182bed30ae5e41c93b",
+    "bench/harris-owned-workloads.mjs": "32a26913ab1384d0c9c49896105a0b3b4e6679d931cf068d24dffd3c08f5fff3",
+    "scripts/lib/harris-owned-workloads.mjs": "93e712d8f08512a1727f91a962936a181f059ff94d89883ada1069212a0dbdb4",
+    "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
+    "src/experimental/harris-80c286-memory-board.js": "a340ecac07be2e341882ecd91da675fd4e580bd43eafb12aacfbc04f4ff25c5b",
+    "src/experimental/harris-80c286-bus.js": "987832faf0b66548dbfce7062b18a9a2abbac0d0ae0ce7fea2976a3416ecf386",
+    "src/experimental/harris-80c286-contract.js": "bb9325becac1c41339b3ba642444da332aef26083b1a2cbd49d147faf037e287",
+    "src/experimental/harris-80c286-boot-cpu.js": "4a57426bf51f8971ed5890a4717618181a0900a3cb69f8683c0d877c9474b007",
+    "src/experimental/harris-boot-rom.js": "ecbee5bc5556257acaae231e2b2d153a9a1d04acde67d98342374dc6c2cbd98c",
+    "src/experimental/digital-circuit.js": "25706053494e30bab3ec65be15008c961bcbe61d5080b386afede66d5fda91d8",
+    "src/experimental/compiled-digital-circuit.js": "0da0f31269ba01f40550f6bba432ba779d766d4e9b32d385f046da811fe89fc9",
+    "src/experimental/latched-memory-components.js": "f5f963d25f17d6970babc5a13b53daf6fe046c445cfa51f875619d0ae87418c4",
+    "src/experimental/harris-8259-adapter.js": "702bc90387e706ffeb886c6acf1c0c1aa32943556564ea6b092adcb2c59dccb8",
+    "src/experimental/harris-8254-adapter.js": "eb1643b2be68f21f0e9c319d03a74e305383214b983d720d5b77718890e7f293",
+    "src/experimental/harris-fdc-adapter.js": "b19260367dcb2e9a737ec68fb639a6fb2491c4bfb1c2a93e4881019e1e2a2fe8",
+    "src/experimental/harris-dma-adapter.js": "a43239174f83ed665edb21cb388b45ba98a846d5f2f54b1564ddbbcfe55cb02c",
+    "src/experimental/harris-keyboard-adapter.js": "acccc5ac0a78c4fe5fada61ee0204f606c7bd2cc7feaa126ac6d2d8fa4475e12",
+    "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+    "src/devices.js": "396ffede2fa30fbf39a16cae97b747d16ee099f7665e8094dab939b48a681151",
+    "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+    "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+    "src/i8255.js": "3445ac6676005f225db542031be51b6d1561045d2be76be339e5853a50f6ff7f",
+    "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+    "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+    "src/experimental/compiled-device-scheduler.js": "b0674f709446a3e1b42f22d2712988a25cdd5e3e4239c841b7ea00d2f6dc66f3",
+    "src/experimental/harris-memory-decoder.js": "19c7892261781d680856deac58384503a4fdd7291943f3692e8bde91d0e2d9ad"
+  },
+  "options": {
+    "netBackend": "compiled",
+    "memoryScheduling": true,
+    "deviceScheduling": true,
+    "packedBus": true,
+    "busTraceEnabled": false
+  },
+  "warmupRuns": 1,
+  "initializationIncluded": false,
+  "constructionIncluded": false,
+  "verificationIncluded": false,
+  "samplingIntervalUS": 1000,
+  "clocks": 32852,
+  "retired": 2567,
+  "elapsedMS": 6387.707811,
+  "stateSHA256": "fedc270c90c8af452a5af13fa0c6819118d92ce7d1a3a9cf8864266542c85284",
+  "samples": 5015,
+  "sampledUS": 6465283,
+  "self": [
+    {
+      "function": "(garbage collector)",
+      "url": "",
+      "line": 0,
+      "microseconds": 437843,
+      "percent": 6.772217086243557
+    },
+    {
+      "function": "#drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 84,
+      "microseconds": 393105,
+      "percent": 6.080244283196884
+    },
+    {
+      "function": "preview",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 137,
+      "microseconds": 386035,
+      "percent": 5.970890988066571
+    },
+    {
+      "function": "readBits",
+      "url": "src/experimental/digital-circuit.js",
+      "line": 196,
+      "microseconds": 350164,
+      "percent": 5.416066087130293
+    },
+    {
+      "function": "beginClock",
+      "url": "src/experimental/harris-80c286-bus.js",
+      "line": 90,
+      "microseconds": 305382,
+      "percent": 4.723412726094125
+    },
+    {
+      "function": "#drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 84,
+      "microseconds": 262769,
+      "percent": 4.0643077804946826
+    },
+    {
+      "function": "update",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 29,
+      "microseconds": 205694,
+      "percent": 3.1815157975296673
+    },
+    {
+      "function": "settle",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 116,
+      "microseconds": 201944,
+      "percent": 3.1235136961522025
+    },
+    {
+      "function": "update",
+      "url": "src/experimental/harris-dma-adapter.js",
+      "line": 75,
+      "microseconds": 192577,
+      "percent": 2.978632180524812
+    },
+    {
+      "function": "update",
+      "url": "src/experimental/harris-8259-adapter.js",
+      "line": 51,
+      "microseconds": 180097,
+      "percent": 2.7856011871406094
+    },
+    {
+      "function": "preview",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 137,
+      "microseconds": 176631,
+      "percent": 2.731991778240798
+    },
+    {
+      "function": "settleBusMemories",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 170,
+      "microseconds": 171882,
+      "percent": 2.6585379170563765
+    },
+    {
+      "function": "#lookup",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 74,
+      "microseconds": 160107,
+      "percent": 2.4764113187311367
+    },
+    {
+      "function": "beginClock",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 232,
+      "microseconds": 152333,
+      "percent": 2.3561690957688937
+    },
+    {
+      "function": "evaluate",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 136,
+      "microseconds": 150119,
+      "percent": 2.3219246551156383
+    },
+    {
+      "function": "settle",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 116,
+      "microseconds": 124963,
+      "percent": 1.9328310918485703
+    },
+    {
+      "function": "read",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 52,
+      "microseconds": 119434,
+      "percent": 1.8473127935776361
+    },
+    {
+      "function": "drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 175,
+      "microseconds": 109529,
+      "percent": 1.694109909805959
+    },
+    {
+      "function": "drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 175,
+      "microseconds": 97912,
+      "percent": 1.51442713335209
+    },
+    {
+      "function": "_instructions",
+      "url": "src/experimental/harris-80c286-boot-cpu.js",
+      "line": 372,
+      "microseconds": 78098,
+      "percent": 1.2079594969005998
+    },
+    {
+      "function": "masterDrives",
+      "url": "src/experimental/harris-dma-adapter.js",
+      "line": 25,
+      "microseconds": 76358,
+      "percent": 1.181046521861456
+    },
+    {
+      "function": "beginClock",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 69,
+      "microseconds": 76176,
+      "percent": 1.1782314865412697
+    },
+    {
+      "function": "released",
+      "url": "src/experimental/harris-8259-adapter.js",
+      "line": 17,
+      "microseconds": 72816,
+      "percent": 1.1262616037070612
+    },
+    {
+      "function": "dispatch",
+      "url": "",
+      "line": 0,
+      "microseconds": 72493,
+      "percent": 1.1212656893750823
+    },
+    {
+      "function": "released",
+      "url": "src/experimental/harris-dma-adapter.js",
+      "line": 8,
+      "microseconds": 70585,
+      "percent": 1.091754220194228
+    },
+    {
+      "function": "settleInterruptDevice",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 202,
+      "microseconds": 68484,
+      "percent": 1.0592575761958138
+    },
+    {
+      "function": "lookup",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 173,
+      "microseconds": 63786,
+      "percent": 0.9865925435901259
+    },
+    {
+      "function": "evaluate",
+      "url": "src/experimental/harris-memory-decoder.js",
+      "line": 10,
+      "microseconds": 62774,
+      "percent": 0.9709397098317274
+    },
+    {
+      "function": "#lookup",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 74,
+      "microseconds": 60705,
+      "percent": 0.9389380170984007
+    },
+    {
+      "function": "driveCPU",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 183,
+      "microseconds": 57798,
+      "percent": 0.8939747881105901
+    }
+  ],
+  "inclusive": [
+    {
+      "function": "(root)",
+      "url": "",
+      "line": 0,
+      "microseconds": 6465283,
+      "percent": 100
+    },
+    {
+      "function": "(anonymous)",
+      "url": "bench/harris-profile.mjs",
+      "line": 0,
+      "microseconds": 6027440,
+      "percent": 93.22778291375644
+    },
+    {
+      "function": "execute",
+      "url": "bench/harris-profile.mjs",
+      "line": 20,
+      "microseconds": 5939151,
+      "percent": 91.86219690615245
+    },
+    {
+      "function": "stepClock",
+      "url": "src/experimental/harris-80c286-boot-cpu.js",
+      "line": 756,
+      "microseconds": 5912875,
+      "percent": 91.45578004860731
+    },
+    {
+      "function": "clock",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 274,
+      "microseconds": 5693389,
+      "percent": 88.06094025582485
+    },
+    {
+      "function": "beginClock",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 232,
+      "microseconds": 5037943,
+      "percent": 77.92300816530383
+    },
+    {
+      "function": "settleBusMemories",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 170,
+      "microseconds": 1896830,
+      "percent": 29.338700254884433
+    },
+    {
+      "function": "settleInterruptDevice",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 202,
+      "microseconds": 1264574,
+      "percent": 19.55945315928166
+    },
+    {
+      "function": "settle",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 116,
+      "microseconds": 1114089,
+      "percent": 17.23186749907158
+    },
+    {
+      "function": "evaluate",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 62,
+      "microseconds": 834254,
+      "percent": 12.903596022014813
+    },
+    {
+      "function": "evaluate",
+      "url": "src/experimental/harris-memory-decoder.js",
+      "line": 10,
+      "microseconds": 795603,
+      "percent": 12.305772229924042
+    },
+    {
+      "function": "readBits",
+      "url": "src/experimental/digital-circuit.js",
+      "line": 196,
+      "microseconds": 632137,
+      "percent": 9.777406495585732
+    },
+    {
+      "function": "endClock",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 251,
+      "microseconds": 616743,
+      "percent": 9.53930400262448
+    },
+    {
+      "function": "(anonymous)",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 174,
+      "microseconds": 583945,
+      "percent": 9.032009890363655
+    },
+    {
+      "function": "preview",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 137,
+      "microseconds": 551322,
+      "percent": 8.52742254283378
+    },
+    {
+      "function": "drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 175,
+      "microseconds": 491017,
+      "percent": 7.594671416548974
+    },
+    {
+      "function": "driveCPU",
+      "url": "src/experimental/harris-80c286-memory-board.js",
+      "line": 183,
+      "microseconds": 478683,
+      "percent": 7.403898638311734
+    },
+    {
+      "function": "(garbage collector)",
+      "url": "",
+      "line": 0,
+      "microseconds": 437843,
+      "percent": 6.772217086243557
+    },
+    {
+      "function": "#drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 84,
+      "microseconds": 393105,
+      "percent": 6.080244283196884
+    },
+    {
+      "function": "settle",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 116,
+      "microseconds": 388414,
+      "percent": 6.007687521180434
+    },
+    {
+      "function": "drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 175,
+      "microseconds": 384144,
+      "percent": 5.941642461745294
+    },
+    {
+      "function": "settleBusMemories",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 170,
+      "microseconds": 369195,
+      "percent": 5.710422884814168
+    },
+    {
+      "function": "beginClock",
+      "url": "src/experimental/harris-80c286-bus.js",
+      "line": 90,
+      "microseconds": 326663,
+      "percent": 5.052570784604479
+    },
+    {
+      "function": "update",
+      "url": "src/experimental/harris-8259-adapter.js",
+      "line": 51,
+      "microseconds": 309301,
+      "percent": 4.784028788840334
+    },
+    {
+      "function": "update",
+      "url": "src/experimental/harris-dma-adapter.js",
+      "line": 75,
+      "microseconds": 289163,
+      "percent": 4.472549770829831
+    },
+    {
+      "function": "read",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 52,
+      "microseconds": 279541,
+      "percent": 4.323724112308773
+    },
+    {
+      "function": "#drive",
+      "url": "src/experimental/compiled-digital-circuit.js",
+      "line": 84,
+      "microseconds": 274615,
+      "percent": 4.247532551939335
+    },
+    {
+      "function": "(anonymous)",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 174,
+      "microseconds": 258406,
+      "percent": 3.9968242689453812
+    },
+    {
+      "function": "preview",
+      "url": "src/experimental/latched-memory-components.js",
+      "line": 137,
+      "microseconds": 240161,
+      "percent": 3.714624711710222
+    },
+    {
+      "function": "_pump",
+      "url": "src/experimental/harris-80c286-boot-cpu.js",
+      "line": 752,
+      "microseconds": 215521,
+      "percent": 3.3335122375926933
+    }
+  ],
+  "notes": [
+    "Sampled profile, not a controlled performance receipt.",
+    "Inclusive entries overlap; do not add their percentages.",
+    "A sample points to a stack frame, not a proof of the cost of one source expression.",
+    "Inspector start/stop overhead can appear at the edges. Shared-host load uncontrolled."
+  ]
+}

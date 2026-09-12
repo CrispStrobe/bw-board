@@ -7,6 +7,8 @@
   "exports": {
     ".": "./src/index.js",
     "./types": "./src/types.js",
+    "./execution-policy": "./src/execution-policy.js",
+    "./execution-measurement": "./src/execution-measurement.js",
     "./conformance": "./src/conformance.js",
     "./emu8051-adapter": "./src/emu8051-adapter.js",
     "./emu8051-debug": "./src/emu8051-debug.js",
@@ -26,7 +28,14 @@
     "./devices/h-bridge": "./src/devices/h-bridge.js",
     "./devices/motor-drivers": "./src/devices/motor-drivers.js",
     "./devices/display": "./src/devices/display.js",
-    "./devices/digital-ics": "./src/devices/digital-ics.js"
+    "./devices/digital-ics": "./src/devices/digital-ics.js",
+    "./register-all": "./src/register-all.js",
+    "./pin-functions": "./src/pin-functions.js",
+    "./package.json": "./package.json",
+    "./rom/*": "./rom/*",
+    "./roms/*": "./roms/*",
+    "./test/golden/*": "./test/golden/*",
+    "./*": "./src/*"
   },
   "scripts": {
     "test": "node --test test/*.test.js test/*.test.mjs test/74ls193.test.mjs test/74hc75.test.mjs test/pcf8574-address.test.mjs test/bmp280-address.test.mjs test/stepper-bipolar.test.mjs test/gas-sensor-module.test.mjs test/lcapy-oracle.test.mjs test/rail-duplicate-symbols.test.mjs test/dangling-terminal.test.mjs",
@@ -38,5 +47,12 @@
   "dependencies": {
     "avr8js": "^0.21.0",
     "rp2040js": "^1.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CrispStrobe/bw-board.git"
   }
 }

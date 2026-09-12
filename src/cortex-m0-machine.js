@@ -20,11 +20,28 @@
  * @module
  */
 
-// Deep import by FILE PATH: rp2040js's `exports` map exposes only the
-// package root, which does not re-export CortexM0Core. A relative path
-// bypasses the map in Node; the lite bundle will need a webpack alias
-// for the same reason (recorded in STM32-PATH.md Phase 1).
-import { CortexM0Core } from '../node_modules/rp2040js/dist/esm/cortex-m0-core.js';
+// rp2040js's `exports` map exposes only the package root, which does not
+// re-export CortexM0Core. Until 2026-09-12 this was a relative deep import
+// through `../node_modules/rp2040js/dist/esm/cortex-m0-core.js`, which
+// resolves ONLY while rp2040js sits inside bw-board's own node_modules: a
+// consumer that installs bw-board as a dependency hoists rp2040js one level
+// up and the path reaches nothing, so every consumer had to patch the line
+// (lite's vendor-rewrites.mjs) or alias it in its bundler. The class is
+// reachable through the public root instead: an RP2040 instance owns a
+// `core` built from it. Derived once on first use; the SoC instance is
+// dropped afterwards (its 16 MiB flash buffer is the whole cost, paid once).
+// test/package-consumable.test.mjs refuses any `node_modules/` path import
+// in src/ so the deep import cannot come back.
+import { RP2040 } from 'rp2040js';
+
+let _CortexM0Core = null;
+/** @returns {typeof import('rp2040js/dist/esm/cortex-m0-core.js').CortexM0Core} */
+function cortexM0CoreClass() {
+  if (!_CortexM0Core) {
+    _CortexM0Core = Object.getPrototypeOf(new RP2040().core).constructor;
+  }
+  return _CortexM0Core;
+}
 
 const FLASH_BASE_DEFAULT = 0x08000000; // where ST parts map flash
 const SRAM_BASE = 0x20000000;
@@ -61,6 +78,7 @@ export class CortexM0Machine {
       writeUint16 (addr, v) { machine._write(addr, v, 2); },
       writeUint32 (addr, v) { machine._write(addr, v, 4); },
     };
+    const CortexM0Core = cortexM0CoreClass();
     this.core = new CortexM0Core(bus);
     // Exposed for the debug target's write-watch wrap: the core calls
     // bus.writeUint8/16/32 through property lookup on THIS object, so

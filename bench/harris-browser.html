@@ -1,0 +1,64 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Owned wired x86 worker benchmark</title>
+<p id="status">Starting owned, media-free worker workloads…</p>
+<script type="module">
+const config=await (await fetch('/config')).json(),samples=[],gaps=[];
+let last=performance.now(),id=0,worker;
+const heartbeat=setInterval(()=>{const now=performance.now();gaps.push(now-last);last=now;},16);
+try {
+    worker=new Worker('/bench/harris-browser-worker.mjs',{type:'module'});
+    const pending=new Map();
+    worker.onmessage=({data})=>{const waiter=pending.get(data.id);if(!waiter)return;pending.delete(data.id);data.error?waiter.reject(new Error(data.error)):waiter.resolve(data);};
+    worker.onerror=event=>{for(const waiter of pending.values())waiter.reject(new Error(event.message));pending.clear();};
+    const run=(name,options)=>new Promise((resolve,reject)=>{const next=++id;pending.set(next,{resolve,reject});worker.postMessage({kind:'run',id:next,name,options});});
+    for(let round=-1;round<config.rounds;round++)for(const name of config.workloads) {
+        const modes=Object.keys(config.modes);if(round%2)modes.reverse();
+        for(const mode of modes) {
+            document.getElementById('status').textContent=`${round<0?'Warmup':round}: ${name}/${mode}`;
+            const result=await run(name,config.modes[mode]);
+            if(result.run.status!=='completed'||!result.periodClosed)throw new Error(`${name}/${mode}: incomplete period/run`);
+            if(result.stateSHA256!==config.expectedStateHashes[name])throw new Error(`${name}/${mode}: Node receipt state mismatch`);
+            if(round>=0)samples.push({round,name,mode,clocks:result.run.clocks,retired:result.state.cpu.retired,
+                elapsedMS:result.elapsedMS,periodsPerSecond:result.measurement.wallTicksPerSecond,
+                measurement:result.measurement,initializationPeriods:result.initializationPeriods,
+                chunks:result.run.chunks,maxChunkMS:result.run.maxChunkMS,stateSHA256:result.stateSHA256});
+        }
+    }
+    let nativeOracle=null;
+    if(config.nativeOracle) {
+        const next=++id;
+        const result=await new Promise((resolve,reject)=>{pending.set(next,{resolve,reject});worker.postMessage({kind:'kernel-oracle',id:next,sha256:config.nativeOracle.sha256,
+            memory:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/memory-banks.c'],
+            memoryCircuit:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/memory-circuit.c'],
+            phase:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/phase-components.c'],
+            phaseCircuit:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/phase-circuit.c'],
+            schedule:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/phase-schedule.c'],
+            busSequencer:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/bus-sequencer.c'],
+            busCircuit:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/bus-circuit.c'],
+            hybridBoot:!!config.nativeOracle.sourceHashes['src/experimental/wired-kernel/bus-circuit.c'],
+            admittedGraph:config.nativeOracle.admittedGraph,incrementalGraph:config.nativeOracle.incrementalGraph});});
+        nativeOracle=result.nativeOracle;
+        if(!nativeOracle.accepted||nativeOracle.capacityClaim!==false)throw new Error('native oracle failed or overclaimed');
+    }
+    const cancelId=++id;
+    const cancelled=new Promise((resolve,reject)=>{pending.set(cancelId,{resolve,reject});worker.postMessage({kind:'run',id:cancelId,name:'memory',options:Object.values(config.modes).at(-1)});});
+    setTimeout(()=>worker.postMessage({kind:'cancel',id:cancelId}),0);
+    const stopped=await cancelled;
+    if(stopped.run.status!=='stopped'||!stopped.periodClosed)throw new Error('worker cancellation did not stop at a completed period');
+    clearInterval(heartbeat);worker.terminate();
+    const sorted=[...gaps].sort((a,b)=>a-b);
+    const report={nonce:config.nonce,accepted:true,userAgent:navigator.userAgent,hardwareConcurrency:navigator.hardwareConcurrency,
+        rounds:config.rounds,warmupRounds:1,modes:config.modes,busTraceEnabled:false,cpuHistoryEnabled:true,
+        measurementVersion:2,initializationIncluded:true,constructionIncluded:false,yieldOverheadIncluded:true,
+        activeYieldOverheadIncluded:false,fullDOSBoot:false,nativeOracle,
+        cancellation:{status:stopped.run.status,clocks:stopped.run.clocks,chunks:stopped.run.chunks,periodClosed:stopped.periodClosed},
+        heartbeat:{count:gaps.length,medianMS:sorted[Math.floor(sorted.length/2)],p95MS:sorted[Math.floor(sorted.length*.95)],maxMS:sorted.at(-1)},samples};
+    if(gaps.length<2)throw new Error('no main-thread heartbeat observed');
+    await fetch('/result',{method:'POST',body:JSON.stringify(report)});document.getElementById('status').textContent='Passed';
+} catch(error) {
+    clearInterval(heartbeat);worker?.terminate();
+    await fetch('/result',{method:'POST',body:JSON.stringify({nonce:config.nonce,accepted:false,error:error.message})});
+    document.getElementById('status').textContent=error.message;
+}
+</script>

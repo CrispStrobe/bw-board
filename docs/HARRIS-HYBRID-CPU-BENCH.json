@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "workload": "owned-harris-loop-memory-only",
+  "host": {
+    "hostname": "ubuntu-2gb-fsn1-1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "node": "v22.23.2",
+    "loadavg": [
+      1.88,
+      1.9,
+      1.75
+    ]
+  },
+  "wasmSHA256": "e5b0efe3a31673c0008ba5db9d9eb6f8cf005bac8260f658da6971d089f41c6c",
+  "sourceHashes": {
+    "src/experimental/wired-kernel/net-resolver.c": "3ff1c20e7b2e6e33eecf1da16d449348423046ad8db295f7fd10f17e926721b7",
+    "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+    "src/experimental/wired-kernel/memory-circuit.c": "d67debb7c80dc839be962701d67592a16eeb18f4e0d466a1d485b270d9604cc9",
+    "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+    "src/experimental/wired-kernel/phase-circuit.c": "09ab60c2c068079890c179bf68787c5ba0979ac0f23169cd5344920b7816970a",
+    "src/experimental/wired-kernel/phase-schedule.c": "ab83285145df56e6d43bf501d2311df951e014bc3fda89a51a11cc9ef8d12852",
+    "src/experimental/wired-kernel/incremental-nets.c": "3e93dead43c9f010ec1964748c05b2851e963bdbe16a3d08191f243268a8b248",
+    "src/experimental/wired-kernel/bus-sequencer.c": "c472dbd15d3006c97c8d90599f8012895e7bf160f9210bbb5e705b7ded031656",
+    "src/experimental/wired-kernel/bus-circuit.c": "cb4836814c31edd4a659c7ba845a8f43e43fa3c8cd188c0a31176b87d9a5156e",
+    "scripts/bench-harris-hybrid-cpu.mjs": "85e7fbaa6ff8c78daad6164156b156b5ec2cfa9ab8c8d70adf1f40887e1b936c",
+    "src/experimental/harris-native-memory-board.js": "3a4cb1e85bb4e154a5c6ad942a637105e6969dd2dcf4465f0178e14c31b7b525",
+    "src/experimental/harris-80c286-boot-cpu.js": "9084a798decbb078c0183877698769b0cf4bea1103928156226ebd68d578048c",
+    "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf"
+  },
+  "warmupRounds": 1,
+  "measuredRounds": 5,
+  "expected": {
+    "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358",
+    "periods": 372
+  },
+  "medians": {
+    "reference-js": 8016.715800658084,
+    "compiled-js": 13411.300578178423,
+    "hybrid-single": 72702.85366518158,
+    "hybrid-batched": 75602.0268659552
+  },
+  "batchedVersusCompiled": 5.637188311845574,
+  "samples": {
+    "reference-js": [
+      {
+        "activeMs": 46.403041999999914,
+        "periods": 372,
+        "periodsPerSecond": 8016.715800658084,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 38.6617500000001,
+        "periods": 372,
+        "periodsPerSecond": 9621.913131195537,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 68.71303699999999,
+        "periods": 372,
+        "periodsPerSecond": 5413.819796671191,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 51.09704899999997,
+        "periods": 372,
+        "periodsPerSecond": 7280.263875904071,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 35.0727710000001,
+        "periods": 372,
+        "periodsPerSecond": 10606.51865802103,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      }
+    ],
+    "compiled-js": [
+      {
+        "activeMs": 40.61318799999992,
+        "periods": 372,
+        "periodsPerSecond": 9159.586290049447,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 25.78915200000006,
+        "periods": 372,
+        "periodsPerSecond": 14424.669721594535,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 52.20520099999999,
+        "periods": 372,
+        "periodsPerSecond": 7125.726802584289,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 24.669847000000118,
+        "periods": 372,
+        "periodsPerSecond": 15079.136891282635,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 27.7378020000001,
+        "periods": 372,
+        "periodsPerSecond": 13411.300578178423,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      }
+    ],
+    "hybrid-single": [
+      {
+        "activeMs": 6.450238000000013,
+        "periods": 372,
+        "periodsPerSecond": 57672.290541837254,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 5.116717999999992,
+        "periods": 372,
+        "periodsPerSecond": 72702.85366518158,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 7.75222900000017,
+        "periods": 372,
+        "periodsPerSecond": 47986.198550119174,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 3.5284610000001067,
+        "periods": 372,
+        "periodsPerSecond": 105428.40065399298,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 3.7552670000000035,
+        "periods": 372,
+        "periodsPerSecond": 99060.86571207843,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      }
+    ],
+    "hybrid-batched": [
+      {
+        "activeMs": 6.9774269999999206,
+        "periods": 372,
+        "periodsPerSecond": 53314.782082278216,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 3.5982709999998406,
+        "periods": 372,
+        "periodsPerSecond": 103382.98588405833,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 4.3533910000001015,
+        "periods": 372,
+        "periodsPerSecond": 85450.62917619651,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 6.0839189999999235,
+        "periods": 372,
+        "periodsPerSecond": 61144.79827887332,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      },
+      {
+        "activeMs": 4.920502999999826,
+        "periods": 372,
+        "periodsPerSecond": 75602.0268659552,
+        "stateHash": "56b7e84b5d44b74eac1ed7a6ac59e7469e15c0d01897a02274e22f45e89b7358"
+      }
+    ]
+  },
+  "limitations": [
+    "Initialization and construction excluded from both period and time counts.",
+    "Short memory-only owned workload; not DOS, peripherals, full-native CPU or browser capacity.",
+    "Shared-host measurements are not a stable performance guarantee."
+  ]
+}

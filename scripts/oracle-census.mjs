@@ -113,6 +113,23 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 export const INPUTS = [
     {
+        id: 'harris-native-wasm', kind: 'fixture',
+        what: 'Locally built owned native wired-kernel prototype. Enables differential checks against our JavaScript net, memory and phase implementations; not an independent CPU oracle or full-board capacity proof.',
+        env: 'HARRIS_NET_WASM', paths: [],
+        gates: ['test/harris-native-admitted-graph.test.mjs', 'test/harris-native-bus-sequencer.test.mjs', 'test/harris-native-bus-circuit.test.mjs', 'test/harris-native-evaluators.test.mjs',
+            'test/harris-native-boot-bridge.test.mjs', 'test/harris-native-memory-board.test.mjs',
+            'test/harris-native-incremental-nets.test.mjs', 'test/harris-native-memory-circuit.test.mjs',
+            'test/harris-native-system-admission.test.mjs',
+            'test/harris-native-memory.test.mjs', 'test/harris-native-net-kernel.test.mjs',
+            'test/harris-native-phase-circuit.test.mjs', 'test/harris-native-phase-components.test.mjs',
+            'test/harris-native-producer-counters.test.mjs',
+            'test/harris-native-phase-schedule.test.mjs', 'test/harris-native-phase-end-seam.test.mjs'],
+        obtain: 'With wasm32-capable clang and wasm-ld, run node scripts/build-wired-net-kernel.mjs EXISTING_EMPTY_DIRECTORY, then set HARRIS_NET_WASM to its wired-net-kernel.wasm. WASM_LD may select the linker. Rebuild when kernel sources change.',
+        ciAvailable: true,
+        ciCadence: 'push',
+        ci: 'yes — .github/workflows/harris-native.yml builds a fresh owned artifact, requires zero skipped native/hybrid tests and qualifies the same module in Chromium; ordinary CI may still skip without HARRIS_NET_WASM',
+    },
+    {
         id: '8086-vectors', kind: 'oracle',
         repository: 'SingleStepTests/8086',
         ciCadence: 'push',   // the `vectors` job
@@ -213,7 +230,7 @@ export const INPUTS = [
         // all. Converting them to a real `skip:` made them visible, and the census
         // immediately said what it says: an external input with no row.
         gates: ['test/emu8051-idle-fastforward.test.mjs', 'test/brightness-emu8051.test.js',
-            'test/emu8051-debug.test.js', 'test/emu8051-debug-events.test.mjs',
+            'test/emu8051-debug.test.js', 'test/emu8051-checkpoint-refusal-shape.test.mjs', 'test/emu8051-debug-events.test.mjs',
             'test/conformance-real-wasm.test.js',
             'test/device-drivers-e2e.test.js', 'test/end-to-end-dimmer.test.js',
             'test/motor-e2e.test.js', 'test/rung8-serial-reads.test.js',
@@ -601,7 +618,7 @@ export function resolve(input) {
     }
     if (fromEnv) {
         return existsSync(fromEnv)
-            ? { present: true, via: `$${input.env}=${fromEnv}` }
+            ? { present: true, via: `$${input.env}=${fromEnv}`, digest: digestOf(fromEnv) }
             : { present: false, via: `$${input.env}=${fromEnv} (set, but does not exist)` };
     }
     for (const p of input.paths) {

@@ -1,0 +1,54 @@
+{
+  "accepted": true,
+  "revision": "6709dacf04692964793efdbf44c174f16a39d4a8",
+  "sourceSHA256": {
+    "src/experimental/wired-kernel/evaluator-image.js": "05945e555041114b1ca3ed4619898efec85ad98faa1141c97a47351e70fa9266",
+    "src/experimental/wired-kernel/incremental-nets.c": "255a3f6b3b751915a67fc6b1eb55b3d6e73821a5ed7e5d4b7cdc380027006161",
+    "src/experimental/wired-kernel/net-resolver.c": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28"
+  },
+  "kills": 7,
+  "results": [
+    {
+      "name": "drop-inverse-membership",
+      "testName": "evaluator admission requires owned identities",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "drop-affected-mark",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "reverse-marked-row-order",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "retain-operation-mark",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "accept-inexact-inverse",
+      "testName": "incremental admission rejects malformed or inexact reverse dependency images",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "hide-reverse-visits",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "accept-old-incremental-mode",
+      "testName": "incremental admission requires unique membership",
+      "status": 1,
+      "namedRed": true
+    }
+  ]
+}

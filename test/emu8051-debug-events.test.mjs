@@ -40,6 +40,7 @@ for (const p of CANDIDATES) {
 const SKIP = createEmu8051 ? false
     : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this '
       + 'repo and build it, or set $EMU8051_JS';
+const REQUIRE_CHECKPOINT = process.env.EMU8051_CHECKPOINT_REQUIRED === '1';
 
 /** Assemble one Intel HEX record, checksum computed rather than hand-written. */
 function hexOf(bytes, addr = 0) {
@@ -176,9 +177,61 @@ describe('emu8051 pin history: native edges, not polled samples', () => {
 });
 
 describe('emu8051 checkpoints: a refusal that names what is missing', () => {
+    it('self-restores an absolute pin cursor beyond the physical ring', {skip: SKIP}, async () => {
+        const t = await targetWith(TOGGLE_BYTES);
+        if (!t.capabilities().extensions.checkpoint.supported) return;
+        t.run();
+        t.runFor(5_000_000);
+        const head = t.wasm._emu_pin_history_head() >>> 0;
+        assert.ok(head > 4096, `fixture produced only ${head} events`);
+        const snapshot = t.captureCheckpoint();
+        assert.equal(snapshot.local.pinHistoryReadHead, head,
+            'cursor remains the native absolute uint32, not a ring index');
+        assert.equal(snapshot.local.pinHistoryReadCount, head);
+        assert.equal(t.restoreCheckpoint(snapshot), true);
+        const facts = [];
+        t.onDebugEvent(fact => facts.push(fact));
+        t.runFor(100_000);
+        assert.equal(facts.filter(fact => fact.phase === 'history-gap').length, 0,
+            'self-restore must not reinterpret an absolute cursor as lost history');
+    });
+
+    it('restores the native breakpoint with its matching JS identity', {skip: SKIP}, async () => {
+        const t = await targetWith(PIN_BYTES);
+        if (!t.capabilities().extensions.checkpoint.supported) return;
+        const handle = t.setBreakpoint({kind: 'code', addr: 3});
+        assert.equal(typeof handle, 'number');
+        const snapshot = t.captureCheckpoint();
+        stepOnce(t);
+        assert.equal(t.restoreCheckpoint(snapshot), true);
+        const halts = [];
+        t.onHalt(why => halts.push(why));
+        t.run();
+        settle(t);
+        assert.equal(halts.length, 1);
+        assert.equal(halts[0].bp, handle);
+        assert.equal(halts[0].bpKind, 'code');
+        assert.equal(halts[0].pc, 3);
+    });
+
     it('refuses to save, and says which state an architectural dump omits', {skip: SKIP}, async () => {
         const t = await targetWith(PIN_BYTES);
         const r = t.captureCheckpoint();
+        if (REQUIRE_CHECKPOINT) assert.equal(t.capabilities().extensions.checkpoint.supported, true,
+            'CI requires the exact checkpoint-capable emu8051 artifact');
+        if (t.capabilities().extensions.checkpoint.supported) {
+            assert.equal(r.kind, 'emu8051-native');
+            assert.ok(r.bytes instanceof Uint8Array && r.bytes.length === r.size);
+            assert.deepEqual(t.capabilities().recording, ['checkpoint', 'restore']);
+            assert.equal(t.capabilities().reverse, undefined,
+                'checkpoint support alone is not a reverse-execution claim');
+            const pc = t.regs().pc;
+            stepOnce(t);
+            assert.notEqual(t.regs().pc, pc, 'the live core moved after capture');
+            assert.equal(t.restoreCheckpoint(r), true);
+            assert.equal(t.regs().pc, pc, 'the native checkpoint restored the real core');
+            return;
+        }
         assert.equal(r.code, 'incomplete-snapshot-abi');
         assert.equal(r.operation, 'save');
         assert.match(r.refused, /native complete-state WASM ABI/);
@@ -199,6 +252,12 @@ describe('emu8051 checkpoints: a refusal that names what is missing', () => {
         let touched = null;
         const trap = new Proxy({}, {get(_, k) { touched = String(k); return undefined; }});
         const r = t.restoreCheckpoint(trap);
+        if (t.capabilities().extensions.checkpoint.supported) {
+            assert.equal(r.code, 'invalid-checkpoint-envelope');
+            assert.equal(touched, 'schema', 'supported builds inspect only the envelope before refusing');
+            assert.equal(t.regs().pc, pcBefore, 'and invalid input moved nothing');
+            return;
+        }
         assert.equal(r.code, 'incomplete-snapshot-abi');
         assert.equal(r.operation, 'restore');
         assert.equal(touched, null, `restore read '${touched}' out of a snapshot it refused`);
