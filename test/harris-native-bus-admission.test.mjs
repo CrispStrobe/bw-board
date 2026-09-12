@@ -15,7 +15,8 @@ async function rawBus(){
         protected:alloc(1),inputs:alloc(28),inputConflicts:alloc(28),drives:alloc(8),present:alloc(1),memoryChanged:alloc(1),
         memoryFault:alloc(3*4),inputNets:alloc(28*4),outputIds:alloc(8*4),reverseOffsets:alloc(100*4),reverseOperations:alloc(4),
         affectedOperations:alloc(4),busInputNets:alloc(24*4),busOutputIds:alloc(48*4),busExternalIds:alloc(128*4),
-        busExternalValues:alloc(128),lifecycle:alloc(2*4),run:alloc(3*4),results:alloc(18*4),busContext:alloc(11*4),fault:alloc(4*4),
+        busExternalValues:alloc(128),lifecycle:alloc(2*4),run:alloc(3*4),results:alloc(18*4),busContext:alloc(11*4),
+        busContextCopy:alloc(11*4),fault:alloc(4*4),
         phaseContext:alloc(16*4),phaseState:alloc(6*4),phaseInputNets:alloc(6*4),controllerIds:alloc(7*4),latchInputNets:alloc(27*4),
         latchIds:alloc(26*4),latchValues:alloc(26),phaseInputs:alloc(27),phaseConflicts:alloc(27),phaseOutputs:alloc(27),
         phaseFault:alloc(2*4),ready:alloc(4),present:alloc(1),phaseLifecycle:alloc(3*4)};
@@ -26,8 +27,8 @@ async function rawBus(){
         p.reverseOperations,p.affectedOperations]);
     put(p.offsets,Array.from({length:100},(_,i)=>i));put(p.ids,Array.from({length:99},(_,i)=>i));
     new Uint8Array(e.memory.buffer,p.drivers,99).fill(3);put(p.dependencyOffsets,[0]);
-    put(p.inputNets,[48,49,53,53,53,...Array(23).fill(49)]);put(p.outputIds,Array.from({length:8},(_,i)=>91+i));
-    put(p.busInputNets,[48,49,50,51,52,53,54,55,...Array(16).fill(57)]);put(p.busOutputIds,Array.from({length:48},(_,i)=>i));
+    put(p.inputNets,[53,49,53,53,53,...Array(23).fill(49)]);put(p.outputIds,Array.from({length:8},(_,i)=>91+i));
+    put(p.busInputNets,[48,49,50,51,52,53,54,55,...Array(15).fill(57),56]);put(p.busOutputIds,Array.from({length:48},(_,i)=>i));
     put(p.busExternalIds,[...Array.from({length:10},(_,i)=>48+i),...Array(118).fill(0)]);
     new Uint8Array(e.memory.buffer,p.busExternalValues,128).fill(3);
     new Uint8Array(e.memory.buffer,p.busExternalValues,10).set([1,0,0,0,0,1,1,0,1,0]);
@@ -80,34 +81,38 @@ test('bus admission refuses each final map entry, bound and live value with its 
 
 test('admitted runtime refuses stale pointer, count and graph-bound authority before a writer',native,async()=>{
     const cases=[
-        ['context pointer',0,k=>k.v.setUint32(k.p.busContext,k.p.context+4,true)],
+        ['graph context pointer',0,k=>k.v.setUint32(k.p.busContext,k.p.context+4,true)],
+        ['bus context pointer',0,k=>{k.put(k.p.busContextCopy,k.words(k.p.busContext,11));return {target:k.p.busContextCopy};}],
         ['input pointer',2,k=>k.v.setUint32(k.p.busContext+2*4,k.p.busInputNets+4,true)],
         ['output pointer',3,k=>k.v.setUint32(k.p.busContext+3*4,k.p.busOutputIds+4,true)],
         ['external pointer',4,k=>k.v.setUint32(k.p.busContext+4*4,k.p.busExternalIds+4,true)],
         ['value pointer',5,k=>k.v.setUint32(k.p.busContext+5*4,k.p.busExternalValues+1,true)],
         ['count',6,k=>k.v.setUint32(k.p.busContext+6*4,9,true)],
         ['net bound',0,k=>k.v.setUint32(k.p.context,98,true)],
-        ['driver bound',1,k=>k.v.setUint32(k.p.context+4,98,true)]
+        ['driver bound',1,k=>k.v.setUint32(k.p.context+4,98,true)],
+        ['graph mode',31,k=>{k.v.setUint32(k.p.context+31*4,4,true);
+            return {restore:()=>k.v.setUint32(k.p.context+31*4,1,true)};}]
     ];
     for(const [name,,mutate] of cases){
-        const k=await admitted();mutate(k);const before=k.execution();
-        assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),8,name);
+        const k=await admitted(),before=k.execution(),change=mutate(k)??{};
+        assert.equal(k.e.begin_bus_memory_clock(change.target??k.p.busContext,k.p.fault),8,name);change.restore?.();
         assert.deepEqual(k.fault(),[8,2,0,0xffffffff],name);assert.deepEqual(k.execution(),before,`${name}: no writer called`);
     }
 });
 
 test('post-admission arena map edits cannot redirect any of the three consumers',native,async()=>{
     {
-        const k=await admitted();k.e.bus_initialize(1024);k.v.setUint32(k.p.busInputNets,49,true);
-        k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault);
-        assert.equal(k.e.bus_inspect(0),1,'gather uses captured reset net, not edited arena input map');
-        assert.equal(k.e.bus_inspect(3),0,'captured reset reaches the sequencer without a NEED_RESET fault');
+        const k=await admitted();k.e.bus_initialize(1024);k.v.setUint32(k.p.busInputNets+23*4,57,true);
+        assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),0);
+        assert.equal(new Uint32Array(k.e.memory.buffer,k.e.bus_input_ptr(),24)[23],1,
+            'captured final data-input net supplies bit 15 instead of mutable arena net or omitted zero slot');
     }
     {
-        const k=await admitted();k.e.bus_initialize(1024);k.v.setUint32(k.p.busExternalIds,49,true);
-        k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault);
-        assert.equal(new Uint8Array(k.e.memory.buffer,k.p.drivers,58)[48],1,
-            'external publication uses captured driver ID');
+        const k=await admitted();k.e.bus_initialize(1024);k.v.setUint32(k.p.busExternalIds+9*4,56,true);
+        assert.equal(k.e.begin_bus_memory_clock(k.p.busContext,k.p.fault),0);
+        const drivers=new Uint8Array(k.e.memory.buffer,k.p.drivers,99);
+        assert.equal(drivers[56],1,'substituted arena driver remains unchanged');
+        assert.equal(drivers[57],0,'captured final external driver receives its admitted value');
     }
     {
         const k=await admitted();k.e.bus_initialize(1024);k.v.setUint32(k.p.busOutputIds+47*4,46,true);
