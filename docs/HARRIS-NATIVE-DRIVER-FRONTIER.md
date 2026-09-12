@@ -76,3 +76,20 @@ reproduction evidence, not the performance or whole-CPU qualification gap.
 Do not run the verifier beside another worker or benchmark in a shared tree:
 it briefly mutates C sources while building each artifact, restoring them before
 the named test. Use an isolated checkout even though restoration is guarded.
+
+## Reverse-index continuation
+
+The later `91a20c5` checkpoint removes the remaining forward dependency probes
+from the incremental path. The wrapper builds a caller-owned net-to-operation
+CSR inverse, and admission proves it exactly matches the forward dependency
+image before changing occupancy, live state or queue state. ABI v3 refuses the
+old context layout. Affected rows are marked from changed nets and then consumed
+in original row order, so duplicate-output last-write behavior is unchanged.
+
+The 8,194-period receipt records 667,808 to zero forward probes and 4,126 reverse
+membership visits. All ten prior counters and all correctness hashes remain
+exact; timing is diagnostic. The new work-counter ABI v2 adds the separate
+`reverseIndexVisits` field rather than changing the meaning of the historical
+`dependencyProbes` field. See
+[HARRIS-NATIVE-REVERSE-INDEX-AB.json](HARRIS-NATIVE-REVERSE-INDEX-AB.json) and
+[HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json).

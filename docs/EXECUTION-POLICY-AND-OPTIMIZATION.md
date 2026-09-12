@@ -181,6 +181,23 @@ The nine producer/input/order mutation cases were also reproduced in an isolated
 worktree, all killed, with clean sources afterward; see
 [HARRIS-NATIVE-DRIVER-MUTATIONS.json](HARRIS-NATIVE-DRIVER-MUTATIONS.json).
 
+The next P6 slice is implemented at `91a20c5`. Admission now validates an exact
+caller-owned net-to-operation CSR inverse and ABI v3 refuses older incremental
+images. Changed nets mark affected operations through that index; operations are
+still consumed in original row order, preserving shared-output last-write
+behavior and one resolved input image per delta. The work-counter ABI is v2 and
+adds `reverseIndexVisits`; its unsigned counters still wrap modulo 2^32.
+
+On the same 8,194-period component schedule, forward dependency probes fell
+from **667,808 to zero** and the reverse index visited **4,126** memberships.
+Evaluator rows stayed at 26,630 and every other existing counter stayed exact.
+State, phase, complete-memory and raw four-state/nonconvergence hashes match the
+frozen `6e4327c` receipt. The full native selection passed **95/95, zero skipped**,
+and seven rebuilt mutations failed their named contract tests. See
+[HARRIS-NATIVE-REVERSE-INDEX-AB.json](HARRIS-NATIVE-REVERSE-INDEX-AB.json) and
+[HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json).
+Timing remains a shared-host diagnostic and establishes no speed or capacity claim.
+
 The next bounded hybrid CPU milestone is specified in
 [HARRIS-HYBRID-CPU-BRIDGE-PLAN.md](HARRIS-HYBRID-CPU-BRIDGE-PLAN.md). It must reuse
 the authoritative ROM/RAM wiring and add an explicit bounded CPU method without
@@ -188,7 +205,7 @@ changing existing one-period stepping. It is planned, **not implemented**.
 
 The overall program remains open: P1/P3 application package/browser integration,
 P4 full workload/profile coverage, P5 shared host improvements, remaining P6
-sparse scheduling, P7 CPU/peripherals, P8 event-safe skipping and P9 whole-machine
+row-scan removal, P7 CPU/peripherals, P8 event-safe skipping and P9 whole-machine
 qualification. The completed prerequisites do not close these larger gates.
 
 ### P6 incremental checkpoint — dirty net queues
@@ -227,19 +244,17 @@ results. Arbitrary custom circuits have no promised performance ceiling.
 
 ## Coordination
 
-**Application adoption update:** simclaude2/lego-38 owns the concurrent migration
+**Application adoption update:** the package-migration lane owns the concurrent migration
 from copied bw-board/bw-circuit-ui roots to pinned npm dependencies. The isolated
 old-copy adoption checkpoint `42ea32059` in Lite is **not for landing**; its
 documentation is retained, but the obsolete sync changes must not be published
 over that migration. GUI work is isolated from packaging and will integrate
-after the new dependency boundary is available. P1 remains open until verified.
+after the new dependency boundary is available. Its current clean candidate is
+`ea9816884`; P1 remains open until exact-head full and browser qualification is complete.
 
-Latest GUI candidate is `f3dcbd066` on `feat/execution-policy-gui`; it also
-contains the executable but unrun application browser journey and migration
-diagnosis. The migration owner hit its session limit and left its large
-uncommitted tree at app `411828a`. No ownership takeover or destructive cleanup
-was inferred. User direction was requested for an isolated takeover versus
-leaving that migration with its owner.
+The earlier GUI candidate `f3dcbd066` contains the executable but unrun
+application browser journey and migration diagnosis. It must be reconciled with
+the package lane rather than treated as a separately deployable result.
 
 Circuit UI PR20 at `657e021`, CI run `34685501168`, passed 33/34 interaction
 scenarios; only dragging a resistor during a live sweep failed (0 px movement).

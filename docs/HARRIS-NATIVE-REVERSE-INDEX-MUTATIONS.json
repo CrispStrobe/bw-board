@@ -1,0 +1,48 @@
+{
+  "accepted": true,
+  "kills": 7,
+  "results": [
+    {
+      "name": "drop-inverse-membership",
+      "testName": "evaluator admission requires owned identities",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "drop-affected-mark",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "reverse-marked-row-order",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "retain-operation-mark",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "accept-inexact-inverse",
+      "testName": "incremental admission rejects malformed or inexact reverse dependency images",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "hide-reverse-visits",
+      "testName": "sparse evaluator outputs preserve multi-output",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "accept-old-incremental-mode",
+      "testName": "incremental admission requires unique membership",
+      "status": 1,
+      "namedRed": true
+    }
+  ]
+}
