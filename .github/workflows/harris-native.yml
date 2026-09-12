@@ -63,6 +63,26 @@ jobs:
             | tee "$HARRIS_RECEIPT_DIR/native-tests.tap"
           node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const tap=fs.readFileSync(process.env.HARRIS_RECEIPT_DIR+"/native-tests.tap","utf8"); assert.match(tap,/^# tests [1-9][0-9]*$/m); assert.match(tap,/^# fail 0$/m); assert.match(tap,/^# skipped 0$/m); assert.doesNotMatch(tap,/# SKIP\b/i);'
 
+      - name: Attribute cooperative hybrid producers on the hosted runner
+        run: |
+          set -euo pipefail
+          test -s "$HARRIS_NET_WASM"
+          node --expose-gc scripts/measure-harris-hybrid-producers.mjs --experimental \
+            --iterations=2048 --rounds=3 --batch-periods=256 --wall-budget-ms=8 \
+            > "$HARRIS_RECEIPT_DIR/hybrid-producer-attribution.json"
+          node --cpu-prof --cpu-prof-dir="$HARRIS_RECEIPT_DIR" --cpu-prof-name=hybrid-producer.cpuprofile \
+            --expose-gc scripts/measure-harris-hybrid-producers.mjs --experimental \
+            --iterations=2048 --rounds=1 --batch-periods=256 --wall-budget-ms=8 \
+            > "$HARRIS_RECEIPT_DIR/hybrid-producer-cpu-profile.json"
+          node --heap-prof --heap-prof-interval=32768 --heap-prof-dir="$HARRIS_RECEIPT_DIR" \
+            --heap-prof-name=hybrid-producer.heapprofile --expose-gc \
+            scripts/measure-harris-hybrid-producers.mjs --experimental \
+            --iterations=2048 --rounds=1 --batch-periods=256 --wall-budget-ms=8 \
+            > "$HARRIS_RECEIPT_DIR/hybrid-producer-heap-profile.json"
+          test -s "$HARRIS_RECEIPT_DIR/hybrid-producer.cpuprofile"
+          test -s "$HARRIS_RECEIPT_DIR/hybrid-producer.heapprofile"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.HARRIS_RECEIPT_DIR+"/hybrid-producer-attribution.json")); assert.equal(r.revision,process.env.GITHUB_SHA); assert.equal(r.clean,true); assert.equal(r.samples.length,6); assert.equal(r.expected.physicalClock,r.expected.periods+67); assert.deepEqual([...new Set(r.samples.map(s=>s.stateHash))],[r.expected.stateHash]);'
+
       - name: Qualify the same module in a fresh Chromium worker
         env:
           HARRIS_BROWSER_REPORT: ${{ env.HARRIS_RECEIPT_DIR }}/browser-receipt.json

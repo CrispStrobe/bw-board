@@ -19,6 +19,13 @@ function contract(source) {
     assert.ok(source.includes('/^# skipped 0$/m'));
     assert.ok(source.includes('/^# tests [1-9][0-9]*$/m'));
     assert.ok(source.includes('assert.doesNotMatch(tap,/# SKIP\\b/i)'));
+    assert.match(source, /node --expose-gc scripts\/measure-harris-hybrid-producers\.mjs --experimental/);
+    assert.match(source, /hybrid-producer-attribution\.json/);
+    assert.match(source, /--cpu-prof-name=hybrid-producer\.cpuprofile/);
+    assert.match(source, /--heap-prof-name=hybrid-producer\.heapprofile/);
+    assert.match(source, /test -s "\$HARRIS_RECEIPT_DIR\/hybrid-producer\.cpuprofile"/);
+    assert.match(source, /test -s "\$HARRIS_RECEIPT_DIR\/hybrid-producer\.heapprofile"/);
+    assert.ok(source.includes('assert.equal(r.expected.physicalClock,r.expected.periods+67)'));
     assert.match(source, /CHROME_BIN=\$\(command -v google-chrome/);
     assert.match(source, /node bench\/harris-browser\.mjs 1 memory,io,dma,interrupt,idle reference,packed/);
     assert.match(source, /test -s "\$HARRIS_BROWSER_REPORT"/);
@@ -31,6 +38,9 @@ test('contract detects disappearing native inputs, skip acceptance and unpinned 
     for (const source of [workflow.replace('test/harris-run-transactions.test.mjs', ''),
         workflow.replace('HARRIS_NET_WASM=$HARRIS_RECEIPT_DIR/wired-net-kernel.wasm', 'UNUSED_ARTIFACT=missing'),
         workflow.replace('/^# skipped 0$/m', '/^# skipped [0-9]+$/m'),
+        workflow.replace('scripts/measure-harris-hybrid-producers.mjs', 'scripts/missing-producer-measurement.mjs'),
+        workflow.replace('r.expected.periods+67', 'r.expected.periods'),
+        workflow.replace('--heap-prof-name=hybrid-producer.heapprofile', '--heap-prof-name=missing.heapprofile'),
         workflow.replace(/actions\/checkout@[0-9a-f]{40}/, 'actions/checkout@v4'),
         workflow.replace('node bench/harris-browser.mjs 1', 'echo browser-disabled 1')]) assert.throws(() => contract(source));
 });
