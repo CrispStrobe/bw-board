@@ -288,6 +288,17 @@ export const JUNCTION_ROUTING = {mode: 'auto'};
 export const MNA_HEADROOM_V = 2.0;
 
 /**
+ * The piecewise path's junction dynamic resistance, in ohms — the value
+ * `board.js` calls LED_RD and `mna.js` repeats as `const rd = 10` in seven
+ * places. The exponential path's `rs` is THE SAME PHYSICAL QUANTITY and
+ * currently defaults to 2 instead, so the routing toggle does not switch
+ * models of one device, it switches DEVICES. Recorded here, and its cost
+ * measured in test/junction-rs-divergence.test.mjs, rather than silently
+ * fixed: correcting it in isolation makes the suite worse.
+ */
+export const JUNCTION_RD = 10;
+
+/**
  * The model this junction will actually be solved with.
  *
  * `headroomV` is the supply margin over the total forward drop, or undefined
@@ -313,12 +324,46 @@ function junctionOpts(part) {
     shockley: true,
     is: part.params?.is,
     n: part.params?.n ?? (part.kind === 'led' ? 1.8 : 1.0),
-    // Series bulk resistance (SPICE's RS). Without it the exponential
-    // undershoots the declared Vf everywhere below rated current — the
-    // E1.3b corpus delta showed PWL consistently a little above each
-    // LED's Vf and bare Shockley consistently below: the knee's rd was
-    // crudely modelling this term, and dropping it moved AWAY from the
-    // devices. 2 Ω is a typical LED/small-diode bulk value.
+    // SERIES BULK RESISTANCE, AND IT MUST EQUAL THE PIECEWISE PATH'S rd,
+    // BECAUSE THEY ARE THE SAME PHYSICAL QUANTITY.
+    //
+    // This defaulted to 2 while the piecewise path uses rd = 10 (board.js
+    // LED_RD, and `const rd = 10` in seven places here). With two different
+    // values the routing toggle did not switch MODELS of one device, it
+    // switched DEVICES — so flipping JUNCTION_ROUTING changed the part, not
+    // just the numerics, which is not a toggle anyone can reason about.
+    //
+    // The 2 was not measured against a device. It was chosen because it
+    // minimised error against test/golden/oracles.json, and that file is the
+    // piecewise model written down (`compute_oracles.py`, `"rd": 10`, expected
+    // current exactly (5.0-3.2)/(470+10+25)). Fitting the exponential to the
+    // piecewise answer optimises toward the thing being corrected.
+    //
+    // DO NOT re-tune this against the corpus: a sweep elects whatever RS the
+    // reference devices were built with — an exact 0.04% diagonal at RS = 5,
+    // 10, 25 and 40 — because shockleyParams ALGEBRAICALLY RECONSTRUCTS the
+    // device when rs matches, so the residual is only VT_25C (0.02585, which
+    // is really 26.83 °C) against ngspice's 300.15 K value. It is a tautology
+    // with a units artefact on top, not a fit. Move this only with the
+    // piecewise rd, together.
+    //
+    // KNOWN WRONG FOR SILICON, TRACKED NOT FIXED: this is shared with
+    // `kind === 'diode'` (board.js gates on led||diode), and our own reference
+    // part in test/golden/run_ngspice_diode.py is
+    // `D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752)` — real bulk 0.568 Ω, so 10 is
+    // 17x high, about 94 mV of extra drop at 10 mA. The piecewise path has the
+    // identical error (its silicon rd is also 10), so the two paths still agree
+    // and the invariant below still holds; correcting silicon means moving rd
+    // and rs together and re-deriving the diode corpus. Splitting them here
+    // would trade a shared, visible error for a silent disagreement.
+    // STILL 2, AND THAT IS A KNOWN DEFECT, NOT A CHOICE. See JUNCTION_RD above
+    // and test/junction-rs-divergence.test.mjs, which records the measured cost.
+    // Setting it to JUNCTION_RD in isolation was TRIED and makes things worse:
+    // the suite goes 8 -> 17 failures, because it moves away from expectations
+    // calibrated to the piecewise path without the knee correction that would
+    // justify them, and because silicon shares this default (real 1N4148 bulk
+    // is 0.568 Ω, so 10 is 17x high). The fix is coupled: rd and rs must become
+    // per-kind AND equal, and the knee must become vf - 0.020*rd, together.
     rs: part.params?.rs ?? 2,
   };
 }
