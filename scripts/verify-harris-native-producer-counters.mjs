@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
 const cooperative='cooperative producer labels reconcile';
+const publishScope=['static STAGE_NOINLINE u32 publish_memory_writers','static STAGE_NOINLINE u32 post_memory_settle'];
 const mutations=[
     {name:'mislabelled bus-external producer',edits:[{file:'bus-circuit.c',from:'B(5)[i],PRODUCER_BUS_EXTERNAL)',
         to:'B(5)[i],PRODUCER_OTHER)',prelude:'#define PRODUCER_OTHER 0\n'}]},
@@ -18,7 +19,7 @@ const mutations=[
     {name:'mislabelled latch producer',edits:[{file:'phase-circuit.c',from:'B(11)[i],PRODUCER_PHASE_LATCH)',
         to:'B(11)[i],PRODUCER_OTHER)',prelude:'#define PRODUCER_OTHER 0\n'}]},
     {name:'mislabelled memory producer',edits:[{file:'memory-circuit.c',from:'drives[b*8+bit],PRODUCER_MEMORY_BANK)',
-        to:'drives[b*8+bit],PRODUCER_OTHER)',prelude:'#define PRODUCER_OTHER 0\n'}]},
+        to:'drives[b*8+bit],PRODUCER_OTHER)',prelude:'#define PRODUCER_OTHER 0\n',scope:publishScope}]},
     {name:'mislabelled evaluator producer',edits:[{file:'incremental-nets.c',from:'producer_work[PRODUCER_EVALUATOR]++;',
         to:'producer_work[PRODUCER_OTHER]++;'}]},
     {name:'mislabelled schedule producer',pattern:'phase schedule has',edits:[{file:'phase-schedule.c',
@@ -43,10 +44,11 @@ const mutations=[
         ['missing post-memory-settle count','memory_pass_work[6]++;','(void)0;'],
         ['missing empty-post-settle count','if(producer_work[PRODUCER_COUNT+PRODUCER_MEMORY_BANK]==prior_driver_changes)memory_pass_work[7]++;',
             '(void)prior_driver_changes;']
-    ].map(([name,from,to])=>({name,edits:[{file:'memory-circuit.c',from,to}]})),
+    ].map(([name,from,to])=>({name,edits:[{file:'memory-circuit.c',from,to,
+        ...(/present-bank|changed-bank/.test(name)?{scope:publishScope}:{})}]})),
     {name:'swapped present and changed bank counts',edits:[
-        {file:'memory-circuit.c',from:'if(present[b])memory_pass_work[4]++;',to:'if(present[b])memory_pass_work[5]++;'},
-        {file:'memory-circuit.c',from:'if(bank_changed[b]){*changed=1;memory_pass_work[5]++;}',to:'if(bank_changed[b]){*changed=1;memory_pass_work[4]++;}'}]},
+        {file:'memory-circuit.c',from:'if(present[b])memory_pass_work[4]++;',to:'if(present[b])memory_pass_work[5]++;',scope:publishScope},
+        {file:'memory-circuit.c',from:'if(bank_changed[b]){*changed=1;memory_pass_work[5]++;}',to:'if(bank_changed[b]){*changed=1;memory_pass_work[4]++;}',scope:publishScope}]},
     {name:'missing producer reset',edits:[{file:'incremental-nets.c',
         from:'for(u32 i=0;i<PRODUCER_COUNT*2;i++)producer_work[i]=0;',to:'(void)producer_work;'}]},
     {name:'missing memory reset',edits:[{file:'memory-circuit.c',
@@ -62,11 +64,14 @@ for(const mutation of mutations){
         cpSync(join(root,'scripts/build-wired-net-kernel.mjs'),join(sandbox,'scripts/build-wired-net-kernel.mjs'));
         for(const edit of mutation.edits){
             const path=join(sandbox,'src/experimental/wired-kernel',edit.file),source=readFileSync(path,'utf8');
-            assert.equal(source.split(edit.from).length-1,1,`${mutation.name} source shape`);
-            writeFileSync(path,(edit.prelude??'')+source.replace(edit.from,edit.to));
+            const [scopeStart,scopeEnd]=edit.scope??['', ''];
+            const start=scopeStart?source.indexOf(scopeStart):0,end=scopeEnd?source.indexOf(scopeEnd,start):source.length;
+            assert.ok(start>=0&&end>start,`${mutation.name} source scope`);
+            const scoped=source.slice(start,end);assert.equal(scoped.split(edit.from).length-1,1,`${mutation.name} source shape`);
+            writeFileSync(path,(edit.prelude??'')+source.slice(0,start)+scoped.replace(edit.from,edit.to)+source.slice(end));
         }
         const build=join(sandbox,'build');mkdirSync(build);
-        execFileSync(process.execPath,[join(sandbox,'scripts/build-wired-net-kernel.mjs'),build],{stdio:'pipe'});
+        execFileSync(process.execPath,[join(sandbox,'scripts/build-wired-net-kernel.mjs'),build],{stdio:'pipe',env:{...process.env,NATIVE_STAGE_ATTRIBUTION:'1'}});
         let output='',failed=false;
         const pattern=mutation.pattern??cooperative;
         try{execFileSync(process.execPath,['--test',`--test-name-pattern=${pattern}`,

@@ -22,6 +22,7 @@ static u32 preview_work[3];
 u32 memory_preview_counters_version(void){return 1;}
 u32 *memory_preview_counters_ptr(void){return preview_work;}
 void reset_memory_preview_counters(void){preview_work[0]=preview_work[1]=preview_work[2]=0;}
+#if defined(NATIVE_STAGE_ATTRIBUTION) || defined(NATIVE_STAGE_PROFILE_NAMING)
 static STAGE_NOINLINE void commit_memory_stage(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom) {
     STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);
     for(u32 b=0;b<banks;b++) {
@@ -30,7 +31,11 @@ static STAGE_NOINLINE void commit_memory_stage(u32 banks,u8 *memory,u32 *states,
         for(u32 w=0;w<WORDS;w++)s[w]=n[w];
     }
 }
-static STAGE_NOINLINE u32 preview_memory_stage(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
+#define PREVIEW_FUNCTION preview_memory_stage
+#else
+#define PREVIEW_FUNCTION preview_banks
+#endif
+static STAGE_NOINLINE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
                          const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
                          u8 *staged_present,u8 *staged_changed,u32 *fault,u32 owned) {
     if(!banks||banks>32)return fail_memory(8,0,NONE,fault);
@@ -48,17 +53,19 @@ static STAGE_NOINLINE u32 preview_memory_stage(u32 banks,u8 *memory,u32 *states,
     }}
     /* Preflight and preview every bank. No actual state/byte/net-drive commit
      * occurs here; the output buffers are private preview staging as well. */
+    #if defined(NATIVE_STAGE_ATTRIBUTION) || defined(NATIVE_STAGE_PROFILE_NAMING)
     STAGE_ADD(STAGE_MEMORY_PREVIEW_CALLS,1);
+    #endif
     #ifdef NATIVE_STAGE_ATTRIBUTION
     u32 stage_visited=0;
-    #define PREVIEW_VISIT() stage_visited++
-    #define PREVIEW_RETURN(value) do{STAGE_ADD(STAGE_MEMORY_PREVIEW_BANKS,stage_visited);STAGE_ADD(STAGE_MEMORY_PREVIEW_STATE_WORD_COPIES,stage_visited*WORDS);return(value);}while(0)
+    #define PREVIEW_VISIT() stage_visited++;
+    #define PREVIEW_RETURN(value) do{STAGE_ADD(STAGE_MEMORY_PREVIEW_BANKS,stage_visited);STAGE_ADD(STAGE_MEMORY_PREVIEW_STATE_WORD_COPIES,stage_visited*WORDS);return value;}while(0)
     #else
-    #define PREVIEW_VISIT() ((void)0)
-    #define PREVIEW_RETURN(value) return(value)
+    #define PREVIEW_VISIT()
+    #define PREVIEW_RETURN(value) return value
     #endif
     for(u32 b=0;b<banks;b++) {
-        PREVIEW_VISIT();
+        PREVIEW_VISIT()
         const u8 *in=inputs+b*PINS,*cf=conflicts+b*PINS;const u32 *s=states+b*WORDS;u32 *n=staged+b*WORDS;
         for(u32 w=0;w<WORDS;w++)n[w]=s[w];
         staged_changed[b]=0;staged_present[b]=1;
@@ -102,7 +109,15 @@ static STAGE_NOINLINE u32 preview_memory_stage(u32 banks,u8 *memory,u32 *states,
         for(u32 p=0;p<8;p++)staged_drives[b*8+p]=n[2]==NONE?3:(n[2]>>p)&1;
     }
     /* Commit the old pending bytes only after all peer previews succeeded. */
+    #if defined(NATIVE_STAGE_ATTRIBUTION) || defined(NATIVE_STAGE_PROFILE_NAMING)
     commit_memory_stage(banks,memory,states,staged,protected_rom);
+    #else
+    for(u32 b=0;b<banks;b++) {
+        u32 *s=states+b*WORDS,*n=staged+b*WORDS;
+        if(s[0]==3&&n[0]!=3&&s[3]&&s[4]&&!protected_rom[b])memory[b*SIZE+s[5]]=(u8)s[6];
+        for(u32 w=0;w<WORDS;w++)s[w]=n[w];
+    }
+    #endif
     fault[0]=0;PREVIEW_RETURN(0);
     #undef PREVIEW_VISIT
     #undef PREVIEW_RETURN
@@ -110,12 +125,13 @@ static STAGE_NOINLINE u32 preview_memory_stage(u32 banks,u8 *memory,u32 *states,
 u32 preview_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
                          const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
                          u8 *staged_present,u8 *staged_changed,u32 *fault) {
-    return preview_memory_stage(banks,memory,states,staged,protected_rom,inputs,conflicts,
+    return PREVIEW_FUNCTION(banks,memory,states,staged,protected_rom,inputs,conflicts,
         staged_drives,staged_present,staged_changed,fault,0);
 }
 u32 preview_owned_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
                                const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
                                u8 *staged_present,u8 *staged_changed,u32 *fault) {
-    return preview_memory_stage(banks,memory,states,staged,protected_rom,inputs,conflicts,
+    return PREVIEW_FUNCTION(banks,memory,states,staged,protected_rom,inputs,conflicts,
         staged_drives,staged_present,staged_changed,fault,1);
 }
+#undef PREVIEW_FUNCTION

@@ -153,7 +153,24 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         setDriverLevels(levels);memoryFault(e.settle_memory_circuit(p.context,maxPasses,p.fault));return inspect();
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
-    const busMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault,stageAttribution});
+    const jsStage=stageAttribution?{wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,
+        completionObjects:0,materializedCompletionRecordBytes:0}:null;
+    const countJSStage=(name,value=1)=>{jsStage[name]=(jsStage[name]+value)>>>0;};
+    let countBusCrossings=false;
+    const busExports=stageAttribution?{...e,
+        bus_inspect(field){if(countBusCrossings)countJSStage('wasmBusInspectEntries');return e.bus_inspect(field);},
+        bus_submit(...args){if(countBusCrossings)countJSStage('wasmBusSubmitEntries');return e.bus_submit(...args);},
+        run_bus_memory_until_completion(...args){if(countBusCrossings)countJSStage('wasmBusRunEntries');return e.run_bus_memory_until_completion(...args);}}:e;
+    const rawBusMethods=busBinding?.initialize({e:busExports,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
+    const countCrossings=callback=>{countBusCrossings=true;try{return callback();}finally{countBusCrossings=false;}};
+    const countCompletionRecords=result=>{const count=result?.completions?.length??0;
+        countJSStage('completionObjects',count);countJSStage('materializedCompletionRecordBytes',count*36);};
+    const busMethods=stageAttribution?{...rawBusMethods,
+        submit(...args){return countCrossings(()=>rawBusMethods.submit(...args));},
+        runUntilCompletion(...args){try{const result=countCrossings(()=>rawBusMethods.runUntilCompletion(...args));countCompletionRecords(result);return result;}
+            catch(error){countCompletionRecords(error.progress);throw error;}},
+        inspectJSStageAttribution:()=>({...jsStage}),
+        resetJSStageAttribution:()=>{for(const name of Object.keys(jsStage))jsStage[name]=0;}}:rawBusMethods;
     const inspectStageAttribution=()=>{
         if(!stageAttribution)throw new TypeError('stage attribution disabled');
         const values=new Uint32Array(e.memory.buffer,e.stage_attribution_counters_ptr(),NATIVE_STAGE_COUNTERS.length);

@@ -34,7 +34,7 @@ for(const mutation of mutations){
         assert.equal(source.split(mutation.from).length-1,1,`${mutation.name} source shape`);
         writeFileSync(path,source.replace(mutation.from,mutation.to));
         const build=join(sandbox,'build');mkdirSync(build);
-        execFileSync(process.execPath,[join(sandbox,'scripts/build-wired-net-kernel.mjs'),build],{stdio:'pipe'});
+        execFileSync(process.execPath,[join(sandbox,'scripts/build-wired-net-kernel.mjs'),build],{stdio:'pipe',env:{...process.env,NATIVE_STAGE_ATTRIBUTION:'1'}});
         let output='',failed=false;
         try{execFileSync(process.execPath,['--test',`--test-name-pattern=${mutation.pattern}`,
             'test/harris-native-memory.test.mjs','test/harris-native-memory-circuit.test.mjs',

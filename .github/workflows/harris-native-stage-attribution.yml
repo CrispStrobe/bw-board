@@ -53,6 +53,11 @@ jobs:
           node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/diagnostic-off-build" | tee "$RECEIPT_DIR/diagnostic-off-build.log"
           NATIVE_STAGE_ATTRIBUTION=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/counter-on-build" | tee "$RECEIPT_DIR/counter-on-build.log"
           NATIVE_STAGE_PROFILE_NAMING=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/named-profile-build" | tee "$RECEIPT_DIR/named-profile-build.log"
+      - name: Verify diagnostics-off keeps the production executable shape
+        run: |
+          set -euo pipefail
+          cmp "$RECEIPT_DIR/master-build/wired-net-kernel.wasm" "$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm"
+          cmp "$MASTER_TREE/src/experimental/wired-kernel/bus-circuit-image.js" "src/experimental/wired-kernel/bus-circuit-image.js"
       - name: Measure uninstrumented control separately from profiling
         run: |
           set -euo pipefail
