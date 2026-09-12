@@ -198,6 +198,21 @@ and seven rebuilt mutations failed their named contract tests. See
 [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json).
 Timing remains a shared-host diagnostic and establishes no speed or capacity claim.
 
+The following P6 slice at `d1e85f9` packs operation marks into caller-owned
+32-bit words. ABI v4 prevents ABI-v3 callers from underallocating that storage.
+The kernel scans words and set bits in ascending order, clears each word before
+evaluation, and skips the bitset entirely when changed nets have no consumers.
+The work-counter ABI is v3 and adds `operationBitsetWordVisits`.
+
+On the same schedule, operation-row work fell from **26,630 scanned rows** to
+**2,050 evaluated rows plus 1,025 bitset-word visits**. Dependency probes stayed
+zero, reverse-index visits stayed 4,126, and every other counter and correctness
+hash stayed exact. The full native selection passed **96/96, zero skipped**.
+Eight new bitset mutations and all seven reverse-index mutations failed their
+named tests. See
+[HARRIS-NATIVE-OPERATION-BITSET-AB.json](HARRIS-NATIVE-OPERATION-BITSET-AB.json)
+and [HARRIS-NATIVE-OPERATION-BITSET-MUTATIONS.json](HARRIS-NATIVE-OPERATION-BITSET-MUTATIONS.json).
+
 The next bounded hybrid CPU milestone is specified in
 [HARRIS-HYBRID-CPU-BRIDGE-PLAN.md](HARRIS-HYBRID-CPU-BRIDGE-PLAN.md). It must reuse
 the authoritative ROM/RAM wiring and add an explicit bounded CPU method without
@@ -205,7 +220,7 @@ changing existing one-period stepping. It is planned, **not implemented**.
 
 The overall program remains open: P1/P3 application package/browser integration,
 P4 full workload/profile coverage, P5 shared host improvements, remaining P6
-row-scan removal, P7 CPU/peripherals, P8 event-safe skipping and P9 whole-machine
+integration/qualification, P7 CPU/peripherals, P8 event-safe skipping and P9 whole-machine
 qualification. The completed prerequisites do not close these larger gates.
 
 ### P6 incremental checkpoint — dirty net queues
