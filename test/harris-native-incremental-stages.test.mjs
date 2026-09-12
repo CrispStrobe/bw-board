@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {STAGES,agree,classify,gate} from '../scripts/classify-harris-native-incremental-stages.mjs';
-import {BASE_REVISION,CANDIDATE_REVISION,WORK,neutrality,summary} from '../scripts/measure-harris-native-incremental-stages.mjs';
+import {BASE_REVISION,CANDIDATE_REVISION,WORK,assertManifestShape,neutrality,summary} from '../scripts/measure-harris-native-incremental-stages.mjs';
 import {MUTATIONS} from '../scripts/verify-harris-native-incremental-stage-mutations.mjs';
 
 const source=readFileSync(new URL('../src/experimental/wired-kernel/incremental-nets.c',import.meta.url),'utf8');
@@ -39,6 +39,19 @@ test('neutrality gate requires median, lower quartile, and minimum inside the fi
     for(const values of [[.97,1,1.01],[.99,1.03,1.03],[.97,.98,.99]])assert.equal(neutrality(summary(values)).accepted,false);
     assert.throws(()=>summary([]));
     assert.throws(()=>summary([1,Number.NaN]));
+});
+
+test('manifest provenance rejects missing, extra, and wrong diagnostic inputs',()=>{
+    const names=['net-resolver.c','memory-banks.c','memory-circuit.c','phase-components.c','phase-circuit.c','phase-schedule.c','incremental-nets.c','bus-sequencer.c','bus-circuit.c'].map(name=>`src/experimental/wired-kernel/${name}`);
+    const manifest={stageProfileNames:false,stageAttribution:false,incrementalStageProfileNames:true,args:['-O3','-DNATIVE_INCREMENTAL_STAGE_PROFILE_NAMING=1'],sourceHashes:Object.fromEntries(names.map(name=>[name,'hash'])),headerHashes:{'src/experimental/wired-kernel/stage-attribution.h':'hash'}};
+    assert.doesNotThrow(()=>assertManifestShape(manifest,true));
+    for(const mutant of [
+        {...manifest,sourceHashes:Object.fromEntries(Object.entries(manifest.sourceHashes).slice(1))},
+        {...manifest,sourceHashes:{...manifest.sourceHashes,'src/extra.c':'hash'}},
+        {...manifest,headerHashes:{...manifest.headerHashes,'src/extra.h':'hash'}},
+        {...manifest,args:[...manifest.args,'-DNATIVE_STAGE_PROFILE_NAMING=1']},
+        {...manifest,incrementalStageProfileNames:false},
+    ])assert.throws(()=>assertManifestShape(mutant,true));
 });
 
 test('classifier is exhaustive and accepts three resolved actionable profiles with one stable winner',()=>{
