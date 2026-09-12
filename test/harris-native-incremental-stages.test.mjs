@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {STAGES,agree,classify,gate} from '../scripts/classify-harris-native-incremental-stages.mjs';
-import {BASE_REVISION,CANDIDATE_REVISION,WORK,assertManifestShape,neutrality,summary} from '../scripts/measure-harris-native-incremental-stages.mjs';
+import {BASE_REVISION,CANDIDATE_REVISION,WORK,assertManifestShape,assertSameExports,neutrality,summary} from '../scripts/measure-harris-native-incremental-stages.mjs';
 import {MUTATIONS} from '../scripts/verify-harris-native-incremental-stage-mutations.mjs';
 
 const source=readFileSync(new URL('../src/experimental/wired-kernel/incremental-nets.c',import.meta.url),'utf8');
@@ -54,6 +54,13 @@ test('manifest provenance rejects missing, extra, and wrong diagnostic inputs',(
     ])assert.throws(()=>assertManifestShape(mutant,true));
 });
 
+test('dedicated naming preserves the exact Wasm export ABI',()=>{
+    const expected=[{name:'memory',kind:'memory'},{name:'settle_owned',kind:'function'}];
+    assert.doesNotThrow(()=>assertSameExports(expected,structuredClone(expected)));
+    assert.throws(()=>assertSameExports(expected,[...expected,{name:'diagnostic',kind:'function'}]),/exact Wasm exports/);
+    assert.throws(()=>assertSameExports(expected,[{name:'memory',kind:'memory'},{name:'settle_owned',kind:'global'}]),/exact Wasm exports/);
+});
+
 test('classifier is exhaustive and accepts three resolved actionable profiles with one stable winner',()=>{
     const values=[profile(),profile({stage:[41,29,20,10],runtime:5,unresolved:5}),profile({stage:[42,28,20,10],runtime:5,unresolved:5})].map(classify);
     for(const value of values){
@@ -69,6 +76,8 @@ test('classifier is exhaustive and accepts three resolved actionable profiles wi
 test('classifier fails closed on unknown stages and every classification or selection weakness',()=>{
     const unknown=profile();unknown.nodes[1].callFrame.functionName='incremental_stage_unknown';
     assert.throws(()=>classify(unknown),/unknown incremental stage/);
+    const ancestorOnly={nodes:[{id:1,callFrame:{functionName:'incremental_stage_unknown_ancestor',url:'wasm://wasm/kernel'},children:[2]},{id:2,callFrame:{functionName:'ordinary_leaf',url:'wasm://wasm/kernel'}}],samples:[2]};
+    assert.throws(()=>classify(ancestorOnly),/unknown incremental stage incremental_stage_unknown_ancestor/);
     assert.throws(()=>gate(classify(profile({stage:[40,30,20,10],runtime:5,unresolved:20}))),/resolved share/);
     assert.throws(()=>gate(classify(profile({stage:[40,30,20,10],runtime:50,unresolved:0}))),/actionable share/);
     assert.throws(()=>gate(classify(profile({stage:[20,20,20,20],runtime:5,unresolved:0}))),/settle inclusive/);
@@ -91,6 +100,10 @@ test('workflow freezes exact source and evidence envelopes, gates before three p
     assert.match(workflow,/for run in 1 2 3/);
     assert.ok(workflow.indexOf('assert.equal(r.decision.accepted,true)')<workflow.indexOf('for run in 1 2 3'));
     assert.match(workflow,/verify-harris-native-incremental-stage-mutations\.mjs/);
+    assert.match(workflow,/focused-tests-off\.tap/);
+    assert.match(workflow,/focused-tests-named\.tap/);
+    assert.match(workflow,/mutant-\$\{n\}\.cpuprofile/);
+    assert.match(workflow,/mutant-\$\{n\}\.json/);
     assert.match(workflow,/test "\$\(grep -c '\^# mutation rejected:' .*\)" -eq 4/);
     assert.match(workflow,/artifact-manifest\.json/);
     assert.doesNotMatch(workflow,/continue-on-error: true|\|\| true/);

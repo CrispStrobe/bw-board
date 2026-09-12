@@ -79,17 +79,18 @@ jobs:
           test "$(grep -Fc 'if(c[31])result=preview_owned_memory_banks_mapped' "$CANDIDATE_TREE/src/experimental/wired-kernel/memory-circuit.c")" -eq 1
 
       - name: Prove focused runtime and mutation contracts without skips
-        env:
-          HARRIS_NET_WASM: ${{ env.RECEIPT_DIR }}/named-build/wired-net-kernel.wasm
         run: |
           set -euo pipefail
-          node --test --test-concurrency=1 --test-reporter=tap \
-            test/harris-native-incremental-stages.test.mjs \
-            test/harris-native-incremental-nets.test.mjs \
-            test/harris-native-memory-circuit.test.mjs \
-            | tee "$RECEIPT_DIR/focused-tests.tap"
-          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const t=fs.readFileSync(process.env.RECEIPT_DIR+"/focused-tests.tap","utf8");assert.match(t,/^# fail 0$/m);assert.match(t,/^# skipped 0$/m);assert.doesNotMatch(t,/# SKIP\b/i);'
-          node scripts/verify-harris-native-incremental-stage-mutations.mjs | tee "$RECEIPT_DIR/incremental-stage-mutations.tap"
+          node --test test/harris-native-incremental-stages.test.mjs
+          for mode in off named; do
+            HARRIS_NET_WASM="$RECEIPT_DIR/$mode-build/wired-net-kernel.wasm" \
+              node --test --test-concurrency=1 --test-reporter=tap \
+                test/harris-native-incremental-nets.test.mjs \
+                test/harris-native-memory-circuit.test.mjs \
+                | tee "$RECEIPT_DIR/focused-tests-$mode.tap"
+            MODE="$mode" node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const t=fs.readFileSync(process.env.RECEIPT_DIR+"/focused-tests-"+process.env.MODE+".tap","utf8");assert.match(t,/^# fail 0$/m);assert.match(t,/^# skipped 0$/m);assert.doesNotMatch(t,/# SKIP\b/i);'
+          done
+          node scripts/verify-harris-native-incremental-stage-mutations.mjs --receipt-dir="$RECEIPT_DIR" | tee "$RECEIPT_DIR/incremental-stage-mutations.tap"
           test "$(grep -c '^# mutation rejected:' "$RECEIPT_DIR/incremental-stage-mutations.tap")" -eq 4
 
       - name: Serialize neutrality evidence before applying the unchanged gate
@@ -138,7 +139,8 @@ jobs:
           RECEIPT_DIR="$RECEIPT_DIR" node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import fs from 'node:fs';import path from 'node:path';
           const root=process.env.RECEIPT_DIR;
-          const expected=['base-build.log','off-build.log','named-build.log','focused-tests.tap','incremental-stage-mutations.tap','incremental-stage-neutrality.json','incremental-stage-consensus.json',...['base','off','named'].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),...Array.from({length:3},(_,i)=>[`incremental-stages-${i+1}.cpuprofile`,`incremental-stage-profile-${i+1}.json`,`incremental-stage-classification-${i+1}.json`]).flat()].sort();
+          const mutantSlugs=['resolve-dirty','mark-affected','evaluate-sparse','publish-incremental'];
+          const expected=['base-build.log','off-build.log','named-build.log','focused-tests-off.tap','focused-tests-named.tap','incremental-stage-mutations.tap','incremental-stage-neutrality.json','incremental-stage-consensus.json',...['base','off','named'].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),...mutantSlugs.flatMap(n=>[`mutant-${n}.cpuprofile`,`mutant-${n}.json`]),...Array.from({length:3},(_,i)=>[`incremental-stages-${i+1}.cpuprofile`,`incremental-stage-profile-${i+1}.json`,`incremental-stage-classification-${i+1}.json`]).flat()].sort();
           const walk=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(d,e.name)):[path.relative(root,path.join(d,e.name))]);
           const actual=walk(root).sort(),missing=expected.filter(x=>!actual.includes(x)),unexpected=actual.filter(x=>!expected.includes(x));
           const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return[name,{bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')}]}));
