@@ -101,6 +101,39 @@ The blink-bench and Thévenin cases derive from the same on-state current.
 reconstructed. The independent evidence is §1 (solver vs ngspice on the corpus's own
 devices) and the `LED_RD` identity. Do not quote it as a fit.
 
+## The bulk resistance is per kind, and that is what makes the conversion work
+
+**The conversion subtracts `iRated × rd`, so sharing one `rd` across kinds
+subtracts the wrong voltage.** `rd = 10` is an LED's bulk resistance. Our own
+reference silicon part — `D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752)` in
+`test/golden/run_ngspice_diode.py` — has 0.568 Ω, so its true bulk drop at 20 mA
+is 11 mV, not 200 mV.
+
+Measured on a bare diode, 5 V through 1 kΩ, against ngspice's **0.6532 V**:
+
+| | anode | error |
+|---|---|---|
+| `vf` treated as the knee, `rd = 10` (before any change) | 0.7426 V | +13.68 % |
+| converted, `rd = 10` | 0.5446 V | **−16.63 %** |
+| converted, `rd = SILICON_RD = 0.568` | 0.6793 V | **+4.00 %** |
+
+The middle row is the point: applied with the LED's `rd`, the vf correction made
+silicon **worse than doing nothing**. The per-kind split is not tidiness — it is
+the difference between a correction and a regression, and the shared `rd` was the
+reason the correction looked like one.
+
+**How it was caught, because the method matters more than the number.** The
+suite's bare-diode expectation moved, and the easy reading was "another piecewise
+number that shifts with the convention, re-derive it". Driving the real device
+through ngspice instead showed the shift went the wrong way and was larger than
+the error it replaced. *A hand-computed expectation moving is not evidence the new
+value is better. Only the oracle is.*
+
+Consequence elsewhere: the flyback clamp is now harder (−1.190 V where the
+threshold was calibrated to the old `rd = 10` clamp near −1.7 V). A real 1N4148
+clamping 100 mA sits near −0.85 V, so the new value is closer to the device and
+that threshold is another number calibrated to the old bulk resistance.
+
 ## What is NOT done here
 
 - **The knee correction across all readers.** A census (session lego-38) found **11
