@@ -1,6 +1,6 @@
 {
   "accepted": true,
-  "revision": "2c7d1dadc24e8f57768315a2003e12f2b04c1cdf",
+  "revision": "6709dacf04692964793efdbf44c174f16a39d4a8",
   "sourceSHA256": {
     "src/experimental/wired-kernel/evaluator-image.js": "05945e555041114b1ca3ed4619898efec85ad98faa1141c97a47351e70fa9266",
     "src/experimental/wired-kernel/incremental-nets.c": "255a3f6b3b751915a67fc6b1eb55b3d6e73821a5ed7e5d4b7cdc380027006161",

@@ -214,7 +214,7 @@ and seven rebuilt mutations failed their named contract tests. See
 [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json).
 Timing remains a shared-host diagnostic and establishes no speed or capacity claim.
 
-The following P6 slice at `2c7d1da` packs operation marks into caller-owned
+The following P6 slice at `e5a3545` packs operation marks into caller-owned
 32-bit words. ABI v4 prevents ABI-v3 callers from underallocating that storage.
 The kernel scans words and set bits in ascending order, clears each word before
 evaluation, and skips the bitset entirely when changed nets have no consumers.
@@ -223,7 +223,7 @@ The work-counter ABI is v3 and adds `operationBitsetWordVisits`.
 On the same schedule, operation-row work fell from **26,630 scanned rows** to
 **2,050 evaluated rows plus 1,025 bitset-word visits**. Dependency probes stayed
 zero, reverse-index visits stayed 4,126, and every other counter and correctness
-hash stayed exact. The full native selection passed **97/97, zero skipped**. Admission now refuses
+hash stayed exact. The full native selection passed **114/114, zero skipped**. Admission now refuses
 arena-impossible operation and dependency counts before table dereference; tests
 also cover five-row deduplication and clearing all three words on re-admission.
 Ten new bitset mutations and all seven inherited reverse-index mutations failed

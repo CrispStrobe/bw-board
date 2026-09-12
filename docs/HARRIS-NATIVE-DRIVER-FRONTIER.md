@@ -94,7 +94,7 @@ exact; timing is diagnostic. The new work-counter ABI v2 adds the separate
 [HARRIS-NATIVE-REVERSE-INDEX-AB.json](HARRIS-NATIVE-REVERSE-INDEX-AB.json) and
 [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json).
 
-The subsequent `2c7d1da` checkpoint replaces the remaining full operation-row
+The subsequent `e5a3545` checkpoint replaces the remaining full operation-row
 scan with ascending words and bits in a caller-owned packed mark set. ABI v4
 changes the mark allocation contract; work-counter ABI v3 separately counts
 bitset words. On the same schedule, 26,630 scanned rows become 2,050 evaluated

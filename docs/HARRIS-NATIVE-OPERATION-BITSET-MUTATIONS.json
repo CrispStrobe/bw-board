@@ -1,6 +1,6 @@
 {
   "accepted": true,
-  "revision": "2c7d1dadc24e8f57768315a2003e12f2b04c1cdf",
+  "revision": "6709dacf04692964793efdbf44c174f16a39d4a8",
   "sourceSHA256": {
     "src/experimental/wired-kernel/net-resolver.c": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28",
     "src/experimental/wired-kernel/incremental-nets.c": "255a3f6b3b751915a67fc6b1eb55b3d6e73821a5ed7e5d4b7cdc380027006161"

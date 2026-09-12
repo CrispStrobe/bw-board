@@ -9,7 +9,7 @@
   "benchmarkSHA256": "fc50903305f5f1f8cd805f2353d60ea1dad937ccb51b50f2e845985b7bc3091b",
   "revisions": {
     "baseline": "d61481a786c95190b9aceada2f8b68f602022965",
-    "incremental-operation-bitset": "2c7d1dadc24e8f57768315a2003e12f2b04c1cdf"
+    "incremental-operation-bitset": "6709dacf04692964793efdbf44c174f16a39d4a8"
   },
   "builds": {
     "before": {
@@ -158,17 +158,17 @@
         "-Wl,--export=end_bus_memory_clock",
         "-Wl,--export=run_bus_memory_until_completion",
         "-Wl,--export-memory",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/net-resolver.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/memory-banks.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/memory-circuit.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/phase-components.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/phase-circuit.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/phase-schedule.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/incremental-nets.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/bus-sequencer.c",
-        "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/bus-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/net-resolver.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/memory-banks.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/memory-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/phase-components.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/phase-circuit.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/phase-schedule.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/incremental-nets.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/bus-sequencer.c",
+        "/mnt/volume1/code/wt/bwb-native-operation-bitset-v2/src/experimental/wired-kernel/bus-circuit.c",
         "-o",
-        "/tmp/harris-bitset-exact.Kls9Wv/wired-net-kernel.wasm"
+        "/tmp/harris-bitset-v2-exact.ibrMS7/wired-net-kernel.wasm"
       ],
       "sourceSHA256": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28",
       "sourceHashes": {
@@ -199,9 +199,9 @@
   },
   "summaries": {
     "incremental-operation-bitset": {
-      "medianMS": 44.491161999999804,
-      "minMS": 30.41768500000012,
-      "maxMS": 48.30810199999996,
+      "medianMS": 32.35903599999983,
+      "minMS": 27.34853299999986,
+      "maxMS": 45.3844170000001,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -414,7 +414,7 @@
     {
       "round": 0,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 48.30810199999996,
+      "elapsedMS": 45.3844170000001,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -436,7 +436,7 @@
     {
       "round": 1,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 39.35724800000003,
+      "elapsedMS": 42.4408259999999,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -458,7 +458,7 @@
     {
       "round": 2,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 47.31666200000018,
+      "elapsedMS": 27.34853299999986,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -480,7 +480,7 @@
     {
       "round": 3,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 30.41768500000012,
+      "elapsedMS": 32.09140000000002,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -502,7 +502,7 @@
     {
       "round": 4,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 44.491161999999804,
+      "elapsedMS": 32.35903599999983,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
