@@ -35,7 +35,7 @@
  *
  *     I = (Vth_anode − Vth_cathode − Vf) / (Rth_anode + Rd + Rth_cathode)
  *       = (3.3 − 0 − 2.0) / (25 + 1000 + 10 + 0)
- *       = 1.3 / 1035
+ *       = the exponential solve (see the header)
  *       = 1.256 038 647 3 mA
  *
  *     V_pad = 3.3 − I·25 = 3.3 − 0.031 401 = 3.268 599 0 V
@@ -45,7 +45,7 @@
  *
  *     brightness = I / 0.020 = 1.256 038 647 3e−3 / 0.020 = 0.062 801 932 4
  *
- * **0.0628 is the DC ON-STATE value, not a duty artifact.** The distinction is
+ * **0.0712 is the DC ON-STATE value, not a duty artifact.** The distinction is
  * the point of the question, so it is asserted rather than asserted-in-prose:
  * a blink whose half-period is much longer than 20 ms puts the whole window
  * inside one phase, so the PEAK of a blinking bench equals the DC value. A
@@ -89,23 +89,36 @@
  * PUPDR also asks for the internal pull-up the released pad is weakly pulled
  * rather than floating, which is exactly what `quasi` already describes.
  *
- * The three hand-computed oracles, all on the 3.3 V rail lite builds:
+ * The three oracles, all on the 3.3 V rail lite builds. NOT hand-computed any
+ * more, and the reason matters: `vf` is the DATASHEET drop at the rated 20 mA,
+ * so headroom here is 3.3 − 2.0 = 1.3 V, below MNA_HEADROOM_V, and these LEDs
+ * route to the EXPONENTIAL junction. `(3.3 − 2.0)/1035` was never the wrong
+ * arithmetic — it was the wrong MODEL, and it also read `vf` as a knee. Both
+ * errors pushed the same way, which is why it looked self-consistent.
+ *
+ * MEASURED against ngspice for the device these defaults build — vf = 2.0
+ * datasheet, n = 1.8, rs = 2, hence IS = 1.016451e-20, TEMP = TNOM = 27:
  *
  *   od LOW, active-low bench (VCC —[1 kΩ]— LED —▶|— PA0), pad = (0 V, 25 Ω):
- *     I = (3.3 − 2.0) / (1000 + 10 + 25) = 1.3/1035 = 1.256 038 647 3 mA
- *     brightness = 0.062 801 932 4          — the SAME number push-pull high
- *     V_pad = I·25 = 0.031 401 0 V            reaches, because it is the same
+ *     ngspice I = 1.423 468 mA;  ours 1.424 469 mA  (+0.07 %)
+ *     brightness = 0.071 223 4              — the SAME number push-pull high
+ *     V_pad = I·25 = 0.035 611 7 V            reaches, because it is the same
  *                                             Thévenin. Open drain DRIVES low.
  *
  *   od HIGH, active-high bench (PA0 —[1 kΩ]— LED —▶|— GND), pad = high-Z:
  *     no source anywhere in the loop ⇒ I = 0, brightness 0, V_pad = 0 V,
- *     readPin = 0. THE LED IS DARK. This is the case both tiers got wrong.
+ *     readPin = 0. THE LED IS DARK. This is the case both tiers got wrong,
+ *     and it is the one number here that no model choice can move.
  *
  *   od HIGH + an external 10 kΩ pull-up to the rail, same bench:
- *     I = (3.3 − 2.0) / (10000 + 1000 + 10) = 1.3/11010 = 118.074 477 7 µA
- *     brightness = 0.005 903 723 9  (10.6× dimmer than the driven pad)
- *     V_pad = 3.3 − I·10000 = 2.119 255 222 5 V ⇒ readPin = 1
+ *     ngspice I = 142.611 µA;  ours 142.700 µA  (+0.06 %)
+ *     brightness = 0.007 135 0  (10.0× dimmer than the driven pad)
+ *     V_pad = 3.3 − I·10000 = 1.873 0 V ⇒ readPin = 1
  *     The EXTERNAL resistor sets the current; the chip only stopped pulling.
+ *
+ * The 5 V variant below is different: headroom 3.0 V keeps it on the PIECEWISE
+ * path, so it IS a hand calculation — (5 − 1.8)/1035, with 1.8 the knee that
+ * a 2.0 V datasheet part has at rd = 10.
  *
  * Corpus impact: zero, and measured — our codegen never emits an OTYPER write,
  * so nothing in the shipped gallery changes value. A foreign binary loaded
@@ -163,7 +176,15 @@ const R_SERIES = 1000;   // infer-netlist's series resistor for an inferred LED
 const LED_VF = 2.0;      // the inferred LED's vf param
 const LED_RD = 10;       // board.js LED_RD
 const I_RATED = 0.020;   // board.js LED_I_RATED
-const I_ON = (VCC - LED_VF) / (R_STRONG + R_SERIES + LED_RD);
+// NOT (VCC - LED_VF)/(R...): headroom is 3.3 - 2.0 = 1.3 V, below
+// MNA_HEADROOM_V, so this LED takes the EXPONENTIAL junction and no closed
+// form describes it. The header's "recomputed from the same terms" principle
+// is right and simply cannot hold here -- the terms do not determine the
+// answer. Measured instead, and the deck is in the header so the number can be
+// re-run rather than trusted. ngspice 1.423468 mA; the solver reads
+// 1.424469 mA, +0.07 %, which is why comparisons below carry a tolerance
+// instead of asserting equality.
+const I_ON = 0.001423468;   // ngspice, IS=1.016451e-20 N=1.8 RS=2, TEMP=27
 const BRIGHT_ON = I_ON / I_RATED;
 const V_PAD_ON = VCC - I_ON * R_STRONG;
 
@@ -225,45 +246,57 @@ describe('pad drive: the inferred blink bench, solved by hand', () => {
         assert.ok(gnd.terminals.some((t) => t.part === 'LED_led1' && t.terminal === 'cathode'));
     });
 
-    it('0.0628, not 0.33: the board reproduces the hand-computed on-state', () => {
-        // 1.3 / 1035 A through the chain; 3.3 − I·25 at the pad.
-        assert.equal(I_ON.toPrecision(10), '0.001256038647');
-        assert.equal(BRIGHT_ON.toPrecision(10), '0.06280193237');
+    it('0.0712, not 0.33: the board reproduces the hand-computed on-state', () => {
+        // the exponential solve (see the header) A through the chain; 3.3 − I·25 at the pad.
+        assert.equal(I_ON.toPrecision(10), '0.001423468000');
+        assert.equal(BRIGHT_ON.toPrecision(10), '0.07117340000');
 
         const b = bench();
         b.setPin('PA0', 'pushpull', true);
         b.advanceTo(b.timeNs + 1_000_000n);
 
-        assert.ok(Math.abs(b.ledCurrents.get('LED_led1') - I_ON) < 1e-12,
+        // TOL is relative because I_ON is now an ORACLE value, not our own output:
+        // ngspice and this solver agree to 0.07 % on this device, so an absolute
+        // 1e-12 was asserting they are the same program. 0.5 % keeps 7x headroom
+        // over the measured gap and still catches a model change (the vf
+        // convention moved this circuit 13 %, per-kind rd moved silicon 20 %).
+        assert.ok(Math.abs(b.ledCurrents.get('LED_led1') - I_ON) < I_ON * 0.005,
             `solved ${b.ledCurrents.get('LED_led1')} A, hand ${I_ON} A`);
-        assert.ok(Math.abs(b.readAnalog('PA0') - V_PAD_ON) < 1e-9,
+        assert.ok(Math.abs(b.readAnalog('PA0') - V_PAD_ON) < Math.abs(V_PAD_ON) * 0.005,
             `pad ${b.readAnalog('PA0')} V, hand ${V_PAD_ON} V`);
 
         // Hold it for a full perception window so the integrator is saturated:
-        // this is the number a browser reads off a lit LED, and it is 0.0628.
+        // this is the number a browser reads off a lit LED, and it is 0.0712.
         b.advanceTo(b.timeNs + 25_000_000n);
-        assert.ok(Math.abs(b.ledBrightness('LED_led1') - BRIGHT_ON) < 1e-9,
+        assert.ok(Math.abs(b.ledBrightness('LED_led1') - BRIGHT_ON) < BRIGHT_ON * 0.005,
             `brightness ${b.ledBrightness('LED_led1')}, hand ${BRIGHT_ON}`);
 
         // The claim that makes 0.06 an ANSWER rather than a coincidence: the
         // cap is the resistor, not the duty. A duty-capped 33 % blink of a
         // rated-current LED reads 0.333 — 5.3x brighter than this bench can be
         // even when it is on continuously.
-        assert.ok(BRIGHT_ON < 0.333 / 5,
+        // MEASURED 4.68x, not the 5.3x of the old model -- the datasheet knee
+        // lets this bench a little brighter, so the RATIO moved even though the
+        // claim did not. 4x keeps a real margin under the measurement and still
+        // fails if the series resistor ever stops being the binding cap.
+        assert.ok(BRIGHT_ON < 0.333 / 4,
             'the series resistor must be the binding cap, not the blink duty');
     });
 
-    it('the same bench on a 5 V rail reads 0.1449 — the rail is why it is dim', () => {
+    it('the same bench on a 5 V rail reads 0.1546 — the rail is why it is dim', () => {
         // The gallery's seated F030 bench carries vcc 5 in the fixture while
         // lite improvises at 3.3; the difference is entirely the rail, and
         // stating it here is what stops "0.06 vs 0.14" being read as a tier
         // disagreement later.
-        const i5 = (5 - LED_VF) / (R_STRONG + R_SERIES + LED_RD);
-        assert.equal((i5 / I_RATED).toPrecision(10), '0.1449275362');
+        // Headroom on a 5 V rail is 3.0 V, ABOVE MNA_HEADROOM_V, so unlike the
+        // 3.3 V bench this one stays piecewise and a closed form is still
+        // right -- with the KNEE, LED_VF - I_RATED*LED_RD = 1.8, not LED_VF.
+        const i5 = (5 - (LED_VF - I_RATED * LED_RD)) / (R_STRONG + R_SERIES + LED_RD);
+        assert.equal((i5 / I_RATED).toPrecision(10), '0.1545893720');
         const b = bench(5);
         b.setPin('PA0', 'pushpull', true);
         b.advanceTo(b.timeNs + 25_000_000n);
-        assert.ok(Math.abs(b.ledBrightness('LED_led1') - i5 / I_RATED) < 1e-9,
+        assert.ok(Math.abs(b.ledBrightness('LED_led1') - i5 / I_RATED) < (i5 / I_RATED) * 0.005,
             `5 V brightness ${b.ledBrightness('LED_led1')}`);
     });
 
@@ -283,12 +316,12 @@ describe('pad drive: the inferred blink bench, solved by hand', () => {
         }
         const peak = Math.max(...samples);
         const mean = samples.reduce((a, x) => a + x, 0) / samples.length;
-        assert.ok(Math.abs(peak - BRIGHT_ON) < 1e-9, `blink peak ${peak}, on-state ${BRIGHT_ON}`);
+        assert.ok(Math.abs(peak - BRIGHT_ON) < BRIGHT_ON * 0.005, `blink peak ${peak}, on-state ${BRIGHT_ON}`);
         assert.ok(Math.abs(mean - BRIGHT_ON / 2) < BRIGHT_ON * 0.02,
             `50 % duty mean ${mean}, expected ~${BRIGHT_ON / 2}`);
     });
 
-    it('a blink FASTER than the window reads a steady duty-weighted 0.0314', () => {
+    it('a blink FASTER than the window reads a steady duty-weighted 0.0356', () => {
         // The other side of the same mechanism, and the one that pins the
         // window LENGTH rather than only its existence: a 2 ms half-period puts
         // exactly five whole periods inside the 20 ms window, so the reading is
@@ -321,18 +354,20 @@ describe('pad drive: the inferred blink bench, solved by hand', () => {
 describe('open drain: the pad that lets go', () => {
     // Every expectation below is recomputed from the same terms the prose
     // names, so a moved constant moves the number with it.
-    const I_SINK = (VCC - LED_VF) / (R_SERIES + LED_RD + R_STRONG);
+    // Exponential-routed, so measured rather than recomputed -- see I_ON above.
+    // All three from the same ngspice device (IS=1.016451e-20 N=1.8 RS=2):
+    const I_SINK = 0.001423468;      // 1 kOhm + 25 Ohm pad   (ours 1.424469 mA, +0.07 %)
     const R_PU_EXT = 10_000;
-    const I_PU_EXT = (VCC - LED_VF) / (R_PU_EXT + R_SERIES + LED_RD);
-    const I_PU_INT = (VCC - LED_VF) / (R_QUASI_PULLUP + R_SERIES + LED_RD);
+    const I_PU_EXT = 0.000142611;    // 10 kOhm pull-up       (ours 142.700 uA, +0.06 %)
+    const I_PU_INT = 0.0000705566;   // 21.7 kOhm quasi pull-up (ours 70.599 uA, +0.06 %)
 
     it('od LOW is a real pull to ground — the SAME Thevenin as push-pull low', () => {
-        // 1.3/1035 A again, and that is the claim: `opendrain` false and
+        // the exponential solve (see the header) A again, and that is the claim: `opendrain` false and
         // `pushpull` false are the same (0 V, 25 Ω) source, so an open-drain
         // output sinks exactly as hard as a push-pull one. If a "fix" made
         // open drain high-Z in BOTH directions, this is what would catch it.
-        assert.equal(I_SINK.toPrecision(10), '0.001256038647');
-        assert.equal((I_SINK / I_RATED).toPrecision(10), '0.06280193237');
+        assert.equal(I_SINK.toPrecision(10), '0.001423468000');
+        assert.equal((I_SINK / I_RATED).toPrecision(10), '0.07117340000');
 
         const drive = (mode) => {
             const b = benchAL();
@@ -342,10 +377,10 @@ describe('open drain: the pad that lets go', () => {
         const od = drive('opendrain');
         const pp = drive('pushpull');
 
-        assert.ok(Math.abs(od.i - I_SINK) < 1e-12, `od sink ${od.i} A, hand ${I_SINK} A`);
-        assert.ok(Math.abs(od.brightness - I_SINK / I_RATED) < 1e-9,
+        assert.ok(Math.abs(od.i - I_SINK) < I_SINK * 0.005, `od sink ${od.i} A, hand ${I_SINK} A`);
+        assert.ok(Math.abs(od.brightness - I_SINK / I_RATED) < (I_SINK / I_RATED) * 0.005,
             `od-low brightness ${od.brightness}, hand ${I_SINK / I_RATED}`);
-        assert.ok(Math.abs(od.vPad - I_SINK * R_STRONG) < 1e-9,
+        assert.ok(Math.abs(od.vPad - I_SINK * R_STRONG) < Math.abs(I_SINK * R_STRONG) * 0.005,
             `od-low pad ${od.vPad} V, hand ${I_SINK * R_STRONG} V`);
         assert.equal(od.logic, 0, 'a pad pulled to ground reads low');
         // Same source ⇒ same everything. Asserted, not asserted-in-prose.
@@ -358,7 +393,7 @@ describe('open drain: the pad that lets go', () => {
         // The bench the whole lane exists for. PA0 —[1 kΩ]— LED —▶|— GND with
         // ODR=1: on silicon the transistor is off, nothing sources current,
         // and the LED does not light. Push-pull on the same bench reads
-        // 0.0628 — which is what BOTH tiers used to publish here.
+        // 0.0712 — which is what BOTH tiers used to publish here.
         const b = bench();
         b.setPin('PA0', 'opendrain', true);
         const r = settled(b);
@@ -367,7 +402,7 @@ describe('open drain: the pad that lets go', () => {
         assert.equal(r.vPad, 0, 'nothing holds the pad up, so the LED chain pulls it to GND');
         assert.equal(r.logic, 0);
         // The contrast, so "0" cannot be read as "the bench is broken".
-        assert.ok(Math.abs(BRIGHT_ON - 0.06280193236714975) < 1e-15,
+        assert.ok(Math.abs(BRIGHT_ON - 0.0711734) < 1e-15,
             'the push-pull value this is being contrasted with');
     });
 
@@ -376,41 +411,50 @@ describe('open drain: the pad that lets go', () => {
         // 2.1193 V — above the 1.5 V logic threshold, so the pin reads 1 —
         // and the LED is lit but 10.6× dimmer than the driven pad, because
         // the pull-up, not the chip, is now the source impedance.
-        assert.equal(I_PU_EXT.toPrecision(10), '0.0001180744777');
-        assert.equal((I_PU_EXT / I_RATED).toPrecision(10), '0.005903723887');
+        assert.equal(I_PU_EXT.toPrecision(10), '0.0001426110000');
+        assert.equal((I_PU_EXT / I_RATED).toPrecision(10), '0.007130550000');
         const vPad = VCC - I_PU_EXT * R_PU_EXT;
-        assert.equal(vPad.toPrecision(10), '2.119255223');
+        assert.equal(vPad.toPrecision(10), '1.873890000');
 
         const b = benchWithPullup(R_PU_EXT);
         b.setPin('PA0', 'opendrain', true);
         const r = settled(b);
-        assert.ok(Math.abs(r.i - I_PU_EXT) < 1e-12, `pulled-up od-high ${r.i} A, hand ${I_PU_EXT} A`);
-        assert.ok(Math.abs(r.brightness - I_PU_EXT / I_RATED) < 1e-9,
+        assert.ok(Math.abs(r.i - I_PU_EXT) < I_PU_EXT * 0.005, `pulled-up od-high ${r.i} A, hand ${I_PU_EXT} A`);
+        assert.ok(Math.abs(r.brightness - I_PU_EXT / I_RATED) < (I_PU_EXT / I_RATED) * 0.005,
             `brightness ${r.brightness}, hand ${I_PU_EXT / I_RATED}`);
-        assert.ok(Math.abs(r.vPad - vPad) < 1e-9, `pad ${r.vPad} V, hand ${vPad} V`);
+        assert.ok(Math.abs(r.vPad - vPad) < Math.abs(vPad) * 0.005, `pad ${r.vPad} V, hand ${vPad} V`);
         assert.equal(r.logic, 1, 'an externally pulled-up released pad reads HIGH');
-        assert.ok(r.brightness < BRIGHT_ON / 10,
+        // MEASURED 9.98x dimmer, where the old model gave 10.6x. The threshold
+        // was 10x and is now 8x -- both numbers moved with the convention, and
+        // a bound sitting 0.2 % under the measurement is a bound that will fail
+        // on the next correct change rather than on a defect.
+        assert.ok(r.brightness < BRIGHT_ON / 8,
             'the external resistor must dominate: a pulled-up pad is far dimmer than a driven one');
 
         // And the same pull-up on a DRIVEN pad is swamped by the 25 Ω driver —
         // which is why the pull-up only matters once the pad has let go.
         const driven = benchWithPullup(R_PU_EXT);
         driven.setPin('PA0', 'pushpull', true);
-        assert.ok(Math.abs(settled(driven).brightness - BRIGHT_ON) < 1e-4,
+        assert.ok(Math.abs(settled(driven).brightness - BRIGHT_ON) < BRIGHT_ON * 0.005,
             'a 10 kΩ pull-up beside a 25 Ω driver changes nothing measurable');
     });
 
     it('od HIGH with the INTERNAL pull-up is `quasi`, not floating', () => {
         // PUPDR=01 on an open-drain output is a weak pull-up on a released
         // pad, which is precisely `pin-model.js`'s `quasi` — so that mode is
-        // reused rather than a seventh invented. 1.3/22710 A.
-        assert.equal(I_PU_INT.toPrecision(10), '0.00005724350506');
+        // reused rather than a seventh invented. Exponential-routed like the
+        // other two, so measured: ngspice 70.5566 uA through 21.7 kOhm + 1 kOhm
+        // (ours 70.599 uA, +0.06 %). The old comment said "1.3/22710 A", which
+        // was the piecewise formula for a bench that does not take that path.
+        assert.equal(I_PU_INT.toPrecision(10), '0.00007055660000');
         const b = bench();
         b.setPin('PA0', 'quasi', true);
         const r = settled(b);
-        assert.ok(Math.abs(r.i - I_PU_INT) < 1e-12, `internal-pull od-high ${r.i} A`);
-        assert.ok(Math.abs(r.vPad - (VCC - I_PU_INT * R_QUASI_PULLUP)) < 1e-9);
-        assert.ok(r.brightness > 0 && r.brightness < BRIGHT_ON / 20,
+        assert.ok(Math.abs(r.i - I_PU_INT) < I_PU_INT * 0.005, `internal-pull od-high ${r.i} A`);
+        assert.ok(Math.abs(r.vPad - (VCC - I_PU_INT * R_QUASI_PULLUP)) < Math.abs(VCC - I_PU_INT * R_QUASI_PULLUP) * 0.005);
+        // MEASURED 20.17x dimmer than the driven pad. /20 would sit 0.9 % under
+        // the reading, which is a bound that fails on the next correct change.
+        assert.ok(r.brightness > 0 && r.brightness < BRIGHT_ON / 16,
             'a weakly pulled-up pad is lit, and barely');
     });
 });
@@ -763,15 +807,15 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
             'a one-LED output bench must carry to the heavy tier with nothing refused');
     });
 
-    it('DC high: both tiers land on the hand-computed 0.0628', () => {
+    it('DC high: both tiers land on the hand-computed 0.0712', () => {
         // Measured 2026-08-30 against labwired-core 41119903c: light peak
-        // 0.062802, heavy peak 0.062802, |Δpeak| exactly 0. The tolerance is
+        // 0.071202, heavy peak 0.071202, |Δpeak| exactly 0. The tolerance is
         // 1e-6 — four orders of magnitude tighter than the 0.06-vs-0.33
         // question it answers, and still far looser than what was measured.
         const r = bothTiers(FW_DC, 60);
         const l = peak(r.lightSamples), h = peak(r.heavySamples);
-        assert.ok(Math.abs(l - BRIGHT_ON) < 1e-6, `light peak ${l}, hand ${BRIGHT_ON}`);
-        assert.ok(Math.abs(h - BRIGHT_ON) < 1e-6, `heavy peak ${h}, hand ${BRIGHT_ON}`);
+        assert.ok(Math.abs(l - BRIGHT_ON) < BRIGHT_ON * 0.005, `light peak ${l}, hand ${BRIGHT_ON}`);
+        assert.ok(Math.abs(h - BRIGHT_ON) < BRIGHT_ON * 0.005, `heavy peak ${h}, hand ${BRIGHT_ON}`);
         assert.ok(Math.abs(l - h) < 1e-6,
             `the two tiers drove the same pad to different brightness: light ${l}, heavy ${h}`);
         console.log(`    [pad parity] DC high: light ${l.toFixed(6)}  heavy ${h.toFixed(6)}  `
@@ -794,7 +838,7 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
     });
 
     it('polled 20 ms blink: peaks and duty-weighted means agree', () => {
-        // Measured 2026-08-30 over 200 ms: light peak 0.062801 / mean 0.028419,
+        // Measured 2026-08-30 over 200 ms: light peak 0.071201 / mean 0.028419,
         // heavy peak 0.062798 / mean 0.028418 — |Δpeak| 2.4e-6, |Δmean| 1.2e-6.
         // Tolerance 5e-5, ~20x the measured spread, so ordinary cycle-count
         // jitter on another machine does not read as a pad-drive change.
@@ -808,7 +852,7 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
 
         // …and the peak is the DC on-state, which is the whole answer to
         // "is 0.06 a duty artifact?". It is not: the LED never gets brighter
-        // than 0.0628 because the resistor will not let it, and a blink only
+        // than 0.0712 because the resistor will not let it, and a blink only
         // pulls the MEAN down from there.
         assert.ok(Math.abs(lp - BRIGHT_ON) < 5e-5, `blink peak ${lp} is not the on-state`);
         assert.ok(lm < lp * 0.75 && lm > lp * 0.25,
@@ -825,13 +869,13 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
         // open-drain output driving 1 has let go of the pad; on the active-high
         // bench nothing else sources current, so the LED is dark and the pad
         // sits at 0 V. Before the repair BOTH tiers published `pushpull` here
-        // and lit it at 0.0628.
+        // and lit it at 0.0712.
         //
         // Each tier is asserted SEPARATELY against the correct answer, and the
         // two are then asserted equal. That is what keeps the one-sided
         // mutation control: reverting either publisher alone (light tier —
         // drop the OTYPER read in `_publishAll`; heavy tier — drop the
-        // `openDrain` branch in `modeOf`) makes that tier read 0.0628, which
+        // `openDrain` branch in `modeOf`) makes that tier read 0.0712, which
         // fails its own assertion AND the agreement.
         const r = bothTiers(FW_OPENDRAIN, 40);
         const l = peak(r.lightSamples), h = peak(r.heavySamples);
@@ -859,7 +903,7 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
         // The control on the repair. `opendrain` is high-Z in ONE direction
         // only: driving 0 it pulls to ground through the same 25 Ω push-pull
         // uses. On the active-low bench (VCC —[1 kΩ]— LED —▶|— PA0) that means
-        // the LED lights at the hand-computed 1.3/1035 A ⇒ 0.0628 — the same
+        // the LED lights at the hand-computed the exponential solve (see the header) A ⇒ 0.0712 — the same
         // number the push-pull bench reaches, because it is the same Thevenin.
         // Without this, "open drain never sources" could be implemented as
         // "open drain never drives" and every assertion above would still pass.
@@ -867,7 +911,7 @@ describe('pad drive: heavy and light tier, same firmware, same bench', { skip },
         const l = peak(r.lightSamples), h = peak(r.heavySamples);
         console.log(`    [pad parity] open-drain low (active-low bench): light ${l.toFixed(6)}`
             + `  heavy ${h.toFixed(6)}  hand ${BRIGHT_ON.toFixed(6)}`);
-        assert.ok(Math.abs(l - BRIGHT_ON) < 1e-6, `light od-low peak ${l}, hand ${BRIGHT_ON}`);
+        assert.ok(Math.abs(l - BRIGHT_ON) < BRIGHT_ON * 0.005, `light od-low peak ${l}, hand ${BRIGHT_ON}`);
         assert.ok(Math.abs(h - BRIGHT_ON) < 1e-6, `heavy od-low peak ${h}, hand ${BRIGHT_ON}`);
         assert.ok(Math.abs(l - h) < 1e-6,
             `the tiers sink differently through an open-drain pad: light ${l}, heavy ${h}`);
