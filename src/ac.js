@@ -24,7 +24,7 @@
 
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_SMOOTH_DELTA,
-  shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD } from './mna.js';
+  shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
 
@@ -248,8 +248,9 @@ export function acSweep(args) {
           // this conversion is not optional: skipping it would linearise a
           // different device than the one the operating point came from.
           const acOpts = junctionOpts(part);
+          const acRd = junctionRd(part);
           addG2(na, nc, junctionG(part, vOp(na) - vOp(nc),
-            acOpts ? vf : kneeFromVf(vf, JUNCTION_RD), JUNCTION_RD));
+            acOpts ? vf : kneeFromVf(vf, acRd), acRd));
           break;
         }
         case 'zener': {

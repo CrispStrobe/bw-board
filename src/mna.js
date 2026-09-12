@@ -306,6 +306,28 @@ export const JUNCTION_RD = 10;
 export const JUNCTION_I_RATED = 0.020;
 
 /**
+ * Silicon signal-diode bulk resistance, in ohms — our own reference part,
+ * `D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752)` in test/golden/run_ngspice_diode.py.
+ *
+ * NOT the LED's 10. This is load-bearing, not tidiness: the knee conversion
+ * subtracts `iRated * rd`, so sharing the LED's value would subtract 0.2 V from
+ * a part whose real bulk drop at 20 mA is 11 mV. MEASURED on 5 V through 1 kOhm,
+ * against ngspice's 0.6532 V:
+ *
+ *     vf as knee,      rd=10      0.7426 V   +13.68 %
+ *     converted,       rd=10      0.5446 V   -16.63 %   <- worse than before
+ *     converted,       rd=0.568   0.6911 V    +5.80 %   <- and better than both
+ *
+ * So the per-kind split is what makes the conversion an improvement for silicon
+ * rather than a regression. A shared rd was the reason it looked like one.
+ */
+export const SILICON_RD = 0.568;
+
+/** The dynamic/bulk resistance for a junction part, by kind. */
+export const junctionRd = part =>
+  /** @type {number} */ (part?.params?.rd ?? (part?.kind === 'diode' ? SILICON_RD : JUNCTION_RD));
+
+/**
  * The PIECEWISE KNEE for a part whose `vf` is the DATASHEET total drop.
  *
  * The piecewise model answers `vf + i*rd`, so feeding it the datasheet drop
@@ -1684,7 +1706,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // (Sweep finding 2026-08-15: both defaulted to 2.0, so an
       // unparameterized diode behaved exactly like an LED.)
       const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
-      const rd = 10; // dynamic resistance
+      const rd = junctionRd(part); // bulk resistance, per kind
       const vAcross = vAnode - vCathode;
       // Same model as the stamp — a PWL current read off a Shockley solve
       // (or vice versa) is a plausible wrong number.
@@ -2178,7 +2200,7 @@ function stampDiode(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const anodeNet = findNet(nets, part.id, 'anode');
   const cathodeNet = findNet(nets, part.id, 'cathode');
   const vf = effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0)));
-  const rd = 10;
+  const rd = junctionRd(part);
 
   const vAcross = diodeVoltages.get(part.id) ?? 0;
   // The PWL branch wants the knee; the Shockley branch wants the datasheet
