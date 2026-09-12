@@ -1,0 +1,59 @@
+{
+  "accepted": true,
+  "revision": "d1e85f9af18369673230e9ad27a1818bbe8c9286",
+  "sourceSHA256": {
+    "src/experimental/wired-kernel/net-resolver.c": "72ab6eb4421489998490a6df456aeb453c7792a67354dfe80f63e8f63287e412",
+    "src/experimental/wired-kernel/incremental-nets.c": "1dec4c1c2b018aaea0309c52ca4f24699d658804a34cb6b81d3c18a4b174d809"
+  },
+  "kills": 8,
+  "results": [
+    {
+      "name": "floor-word-count",
+      "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "replace-mark-or",
+      "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "reverse-bit-order",
+      "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "reverse-word-order",
+      "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "retain-word-marks",
+      "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "omit-admission-clear",
+      "testName": "incremental dirty queues initialize",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "hide-word-visits",
+      "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "accept-abi3-mode",
+      "testName": "incremental admission requires unique membership",
+      "status": 1,
+      "namedRed": true
+    }
+  ]
+}
