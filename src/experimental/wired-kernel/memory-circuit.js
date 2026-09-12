@@ -12,6 +12,7 @@ const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetRe
 const PRODUCER_NAMES=['other','busExternal','busOutput','phaseController','phaseLatch','memoryBank','phaseSchedule','evaluator','fullScan'];
 const MEMORY_PASS_COUNTERS=['settleCalls','passes','previewCalls','previewBanks','presentBanks','changedBanks',
     'postMemorySettles','postMemorySettlesWithoutDriverChange'];
+const MEMORY_PREVIEW_COUNTERS=['ownedPreviewCalls','checkedValidationBanks','checkedValidationPinRecords'];
 export function assertIncrementalKernelABI(exports,enabled) {
     if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
         throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
@@ -20,8 +21,13 @@ export function assertProducerCounterABI(exports) {
     if(exports.producer_work_counters_version?.()!==1||exports.memory_pass_counters_version?.()!==1||
         typeof exports.producer_work_counters_ptr!=='function'||typeof exports.memory_pass_counters_ptr!=='function'||
         typeof exports.reset_producer_work_counters!=='function'||typeof exports.reset_memory_pass_counters!=='function'||
-        typeof exports.write_owned_driver_tagged!=='function')
+        typeof exports.write_owned_driver_tagged!=='function'||exports.memory_preview_counters_version?.()!==1||
+        typeof exports.memory_preview_counters_ptr!=='function'||typeof exports.reset_memory_preview_counters!=='function')
         throw new TypeError('rebuild native producer counters: ABI version/exports mismatch');
+}
+export function assertOwnedMemoryPreviewABI(exports) {
+    if(exports.memory_circuit_version?.()!==3)
+        throw new TypeError('rebuild native owned memory preview: ABI version mismatch');
 }
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
@@ -53,7 +59,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const inputNets=Uint32Array.from(descriptors.flatMap(b=>b.pins.map(pin=>terminals.get(`${b.id}.${pin}`).net)));
     const outputIds=Uint32Array.from(descriptors.flatMap(b=>Array.from({length:8},(_,i)=>terminals.get(`${b.id}.d${i}`).driver)));
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
-    if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
+    if(e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
+    assertOwnedMemoryPreviewABI(e);
     assertIncrementalKernelABI(e,incrementalGraph);
     if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
     assertProducerCounterABI(e);
@@ -98,10 +105,12 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         const producers=Object.fromEntries(PRODUCER_NAMES.map((name,i)=>[name,
             Object.freeze({attempts:values[i],changes:values[PRODUCER_NAMES.length+i]})]));
         const memoryValues=new Uint32Array(e.memory.buffer,e.memory_pass_counters_ptr(),MEMORY_PASS_COUNTERS.length);
-        return Object.freeze({producers:Object.freeze(producers),memory:Object.freeze(Object.fromEntries(
-            MEMORY_PASS_COUNTERS.map((name,i)=>[name,memoryValues[i]])))});
+        const previewValues=new Uint32Array(e.memory.buffer,e.memory_preview_counters_ptr(),MEMORY_PREVIEW_COUNTERS.length);
+        return Object.freeze({producers:Object.freeze(producers),memory:Object.freeze(Object.fromEntries([
+            ...MEMORY_PASS_COUNTERS.map((name,i)=>[name,memoryValues[i]]),
+            ...MEMORY_PREVIEW_COUNTERS.map((name,i)=>[name,previewValues[i]])]))});
     };
-    const resetProducerCounters=()=>{e.reset_producer_work_counters();e.reset_memory_pass_counters();};
+    const resetProducerCounters=()=>{e.reset_producer_work_counters();e.reset_memory_pass_counters();e.reset_memory_preview_counters();};
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
         const word=w=>view.getUint32(p.states+(bank*WORDS+w)*4,true),out=word(2);

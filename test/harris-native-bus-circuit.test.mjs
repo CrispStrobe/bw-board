@@ -2,16 +2,47 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createBusCircuitOracle,runNativeBusCircuitOracle} from '../scripts/lib/harris-native-bus-circuit-oracle.mjs';
+import {assertBusCircuitABI,assertDistinctBusDrivers} from '../src/experimental/wired-kernel/bus-circuit-image.js';
 const wasmBytes=process.env.HARRIS_NET_WASM?readFileSync(process.env.HARRIS_NET_WASM):null;
 const optional={skip:!wasmBytes&&'set HARRIS_NET_WASM to owned bus bridge build'};
 const atSample=f=>f.kernel.inspectBus().state==='TC'&&f.kernel.inspectBus().phase===2;
 const advanceToSample=f=>{for(let i=0;!atSample(f);i++){assert.ok(i<20);assert.equal(f.period().error,undefined);}};
+
+test('sparse bus output admission rejects aliased owned driver mappings',()=>{
+    assert.doesNotThrow(()=>assertDistinctBusDrivers({busOutputIds:[0,31,32,47],busExternalIds:[48,49]}));
+    for(const maps of [
+        {busOutputIds:[0,31,31,47],busExternalIds:[48,49]},
+        {busOutputIds:[0,31,32,47],busExternalIds:[48,48]},
+        {busOutputIds:[0,31,32,47],busExternalIds:[47,48]}
+    ])assert.throws(()=>assertDistinctBusDrivers(maps),/must be distinct/);
+});
+test('sparse bus output bridge refuses stale modules without the mask ABI',()=>{
+    const good={bus_circuit_version:()=>2,bus_sequencer_version:()=>1,bus_output_change_word(){}};
+    assert.doesNotThrow(()=>assertBusCircuitABI(good));
+    for(const name of Object.keys(good))assert.throws(()=>assertBusCircuitABI({...good,[name]:undefined}),/ABI mismatch/,name);
+    assert.throws(()=>assertBusCircuitABI({...good,bus_circuit_version:()=>1}),/ABI mismatch/);
+});
 
 test('same-instance bus/actual-net/controller/memory oracle compares every boundary',optional,async()=>{
     for(const mode of [{},{admittedGraph:true,incrementalGraph:true}]) {
     const report=await runNativeBusCircuitOracle({wasmBytes,...mode});
     assert.equal(report.boundaries,830);assert.equal(report.transactions,48);assert.equal(report.completions,63);
     }
+});
+test('CPU output frontier publishes the full first image then skips an identical reset image',optional,async()=>{
+    const f=await createBusCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});
+    f.kernel.resetWorkCounters();f.kernel.resetProducerCounters();
+    assert.equal(f.call('beginClock',{reset:1}).error,undefined);
+    let diagnostic=f.kernel.inspectProducerCounters();
+    assert.deepEqual(diagnostic.producers.busOutput,{attempts:48,changes:32},
+        'the first begin publishes every output, including 16 already-matching drivers');
+    assert.equal(f.call('endClock').error,undefined);
+    f.kernel.resetWorkCounters();f.kernel.resetProducerCounters();
+    assert.equal(f.call('beginClock',{reset:1}).error,undefined);
+    diagnostic=f.kernel.inspectProducerCounters();
+    assert.deepEqual(diagnostic.producers.busOutput,{attempts:0,changes:0},
+        'the same final output image schedules no writer calls or driver comparisons');
+    assert.equal(f.call('endClock').error,undefined);
 });
 test('same-instance bridge retains actual swapped address wiring in admitted/incremental modes',optional,async()=>{
     const editWires=w=>w.map(item=>item.to==='low'&&['a0','a1'].includes(item.toTerminal)?

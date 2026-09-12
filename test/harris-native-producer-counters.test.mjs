@@ -15,12 +15,14 @@ const native={skip:wasmBytes?false:'build current native module and set HARRIS_N
 const zeroProducers=()=>Object.fromEntries(['other','busExternal','busOutput','phaseController','phaseLatch','memoryBank',
     'phaseSchedule','evaluator','fullScan'].map(name=>[name,{attempts:0,changes:0}]));
 const zeroMemory=()=>Object.fromEntries(['settleCalls','passes','previewCalls','previewBanks','presentBanks','changedBanks',
-    'postMemorySettles','postMemorySettlesWithoutDriverChange'].map(name=>[name,0]));
+    'postMemorySettles','postMemorySettlesWithoutDriverChange','ownedPreviewCalls','checkedValidationBanks',
+    'checkedValidationPinRecords'].map(name=>[name,0]));
 
 test('producer counter ABI fails closed on missing or stale diagnostic exports',()=>{
     const good={producer_work_counters_version:()=>1,memory_pass_counters_version:()=>1,
         producer_work_counters_ptr(){},memory_pass_counters_ptr(){},reset_producer_work_counters(){},
-        reset_memory_pass_counters(){},write_owned_driver_tagged(){}};
+        reset_memory_pass_counters(){},write_owned_driver_tagged(){},memory_preview_counters_version:()=>1,
+        memory_preview_counters_ptr(){},reset_memory_preview_counters(){}};
     assert.doesNotThrow(()=>assertProducerCounterABI(good));
     for(const name of Object.keys(good))assert.throws(()=>assertProducerCounterABI({...good,[name]:undefined}),
         /producer counters: ABI version\/exports mismatch/,name);
@@ -48,7 +50,10 @@ test('cooperative producer labels reconcile with exact call-path dimensions in e
         const p=diagnostic.producers,memory=diagnostic.memory,incremental=mode.incrementalGraph===true;
         assert.deepEqual(p.other,{attempts:0,changes:0});
         assert.equal(p.busExternal.attempts,run.periods*10,'ten ideal external drivers are staged per physical period');
-        assert.equal(p.busOutput.attempts,run.periods*48,'all 48 CPU bus outputs are staged per physical period');
+        assert.equal(p.busOutput.attempts,p.busOutput.changes,
+            'after initialization only final CPU output changes reach the canonical writer');
+        assert.ok(p.busOutput.attempts>0&&p.busOutput.attempts<run.periods*48,
+            'the bounded CPU output frontier removes redundant writer attempts from this workload');
         assert.equal(p.phaseLatch.attempts,run.periods*26,'the owned latch publishes 26 outputs per physical period');
         assert.equal(p.memoryBank.attempts,memory.presentBanks*8,'each present memory bank publishes eight output drivers');
         assert.ok(p.phaseController.attempts>=run.periods*3&&p.phaseController.attempts%3===0,
@@ -57,6 +62,10 @@ test('cooperative producer labels reconcile with exact call-path dimensions in e
         assert.equal(p.evaluator.attempts>0,incremental);
         assert.ok(memory.settleCalls>0);assert.ok(memory.passes>memory.settleCalls);
         assert.equal(memory.passes,memory.previewCalls);assert.equal(memory.previewBanks,memory.previewCalls*4);
+        assert.equal(memory.ownedPreviewCalls,mode.admittedGraph?memory.previewCalls:0);
+        assert.equal(memory.checkedValidationBanks,mode.admittedGraph?0:memory.previewBanks,
+            'only an admitted circuit bypasses the standalone buffer validator');
+        assert.equal(memory.checkedValidationPinRecords,memory.checkedValidationBanks*28);
         assert.equal(memory.postMemorySettles,memory.previewCalls);
         assert.ok(memory.presentBanks>0);assert.ok(memory.changedBanks>0);assert.ok(memory.changedBanks<memory.presentBanks);
         assert.ok(memory.postMemorySettlesWithoutDriverChange>0);
