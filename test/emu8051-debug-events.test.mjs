@@ -195,6 +195,24 @@ describe('emu8051 checkpoints: a refusal that names what is missing', () => {
             'self-restore must not reinterpret an absolute cursor as lost history');
     });
 
+    it('restores the native breakpoint with its matching JS identity', {skip: SKIP}, async () => {
+        const t = await targetWith(PIN_BYTES);
+        if (!t.capabilities().extensions.checkpoint.supported) return;
+        const handle = t.setBreakpoint({kind: 'code', addr: 3});
+        assert.equal(typeof handle, 'number');
+        const snapshot = t.captureCheckpoint();
+        stepOnce(t);
+        assert.equal(t.restoreCheckpoint(snapshot), true);
+        const halts = [];
+        t.onHalt(why => halts.push(why));
+        t.run();
+        settle(t);
+        assert.equal(halts.length, 1);
+        assert.equal(halts[0].bp, handle);
+        assert.equal(halts[0].bpKind, 'code');
+        assert.equal(halts[0].pc, 3);
+    });
+
     it('refuses to save, and says which state an architectural dump omits', {skip: SKIP}, async () => {
         const t = await targetWith(PIN_BYTES);
         const r = t.captureCheckpoint();

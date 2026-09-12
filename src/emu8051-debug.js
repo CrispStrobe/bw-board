@@ -148,6 +148,16 @@ const CHECKPOINT_NATIVE_ERRORS = Object.freeze({
     [-4]: 'malformed', [-5]: 'unsupported-version', [-6]: 'incompatible-build',
     [-7]: 'invalid-state', [-8]: 'allocation-failed'
 });
+// Captured once: checkpoint envelopes are untrusted and must not choose the
+// comparison implementation through own/prototype method overrides.
+const INTRINSIC_ARRAY_IS_ARRAY = Array.isArray;
+const INTRINSIC_OBJECT_KEYS = Object.keys;
+const INTRINSIC_GET_PROTOTYPE_OF = Object.getPrototypeOf;
+const INTRINSIC_ARRAY_SORT = Array.prototype.sort;
+const INTRINSIC_ARRAY_EVERY = Array.prototype.every;
+const INTRINSIC_ARRAY_MAP = Array.prototype.map;
+const INTRINSIC_ARRAY_SOME = Array.prototype.some;
+const UINT8_ARRAY_PROTOTYPE = Uint8Array.prototype;
 
 /**
  * What an architectural dump cannot carry, named rather than summarised, so a
@@ -224,26 +234,47 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
         if (seen.has(left)) return seen.get(left) === right;
         seen.set(left, right);
-        if (left instanceof Uint8Array || right instanceof Uint8Array) {
-            return left instanceof Uint8Array && right instanceof Uint8Array &&
-                left.length === right.length && left.every((value, i) => value === right[i]);
+        const leftIsBytes = INTRINSIC_GET_PROTOTYPE_OF(left) === UINT8_ARRAY_PROTOTYPE;
+        const rightIsBytes = INTRINSIC_GET_PROTOTYPE_OF(right) === UINT8_ARRAY_PROTOTYPE;
+        if (leftIsBytes || rightIsBytes) {
+            if (!leftIsBytes || !rightIsBytes || left.length !== right.length) return false;
+            for (let i = 0; i < left.length; i++) if (left[i] !== right[i]) return false;
+            return true;
         }
-        if (Array.isArray(left) || Array.isArray(right)) {
-            return Array.isArray(left) && Array.isArray(right) && left.length === right.length &&
-                left.every((value, i) => checkpointValueEqual(value, right[i], seen));
+        const leftIsArray = INTRINSIC_ARRAY_IS_ARRAY(left);
+        const rightIsArray = INTRINSIC_ARRAY_IS_ARRAY(right);
+        if (leftIsArray || rightIsArray) {
+            if (!leftIsArray || !rightIsArray || left.length !== right.length) return false;
+            for (let i = 0; i < left.length; i++) {
+                if (!checkpointValueEqual(left[i], right[i], seen)) return false;
+            }
+            return true;
         }
-        const leftProto = Object.getPrototypeOf(left);
-        const rightProto = Object.getPrototypeOf(right);
+        const leftProto = INTRINSIC_GET_PROTOTYPE_OF(left);
+        const rightProto = INTRINSIC_GET_PROTOTYPE_OF(right);
         if (![Object.prototype, null].includes(leftProto) ||
             ![Object.prototype, null].includes(rightProto)) return false;
-        const leftKeys = Object.keys(left).sort();
-        const rightKeys = Object.keys(right).sort();
-        return leftKeys.length === rightKeys.length &&
-            leftKeys.every((key, i) => key === rightKeys[i] &&
-                checkpointValueEqual(left[key], right[key], seen));
+        const leftKeys = INTRINSIC_OBJECT_KEYS(left);
+        const rightKeys = INTRINSIC_OBJECT_KEYS(right);
+        INTRINSIC_ARRAY_SORT.call(leftKeys);
+        INTRINSIC_ARRAY_SORT.call(rightKeys);
+        if (leftKeys.length !== rightKeys.length) return false;
+        for (let i = 0; i < leftKeys.length; i++) {
+            const key = leftKeys[i];
+            if (key !== rightKeys[i] || !checkpointValueEqual(left[key], right[key], seen)) return false;
+        }
+        return true;
     };
-    const checkpointBytesEqual = (left, right) => left.length === right.length &&
-        left.every((value, i) => value === right[i]);
+    const checkpointBytesEqual = (left, right) => {
+        if (left.length !== right.length) return false;
+        for (let i = 0; i < left.length; i++) if (left[i] !== right[i]) return false;
+        return true;
+    };
+    const copyCheckpointBytes = source => {
+        const copy = new Uint8Array(source.length);
+        for (let i = 0; i < source.length; i++) copy[i] = source[i];
+        return copy;
+    };
 
     let symbols = null;
     let listeners = [];
@@ -1057,7 +1088,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 if (!heap || ptr + checkpointSize > heap.length) return {
                     refused: 'checkpoint allocation became invalid after native save',
                     code: 'invalid-checkpoint-allocation'};
-                const bytes = Uint8Array.from(heap.subarray(ptr, ptr + checkpointSize));
+                const bytes = copyCheckpointBytes(heap.subarray(ptr, ptr + checkpointSize));
                 let privateLocal;
                 try { privateLocal = structuredClone(local); } catch {
                     return {refused: 'checkpoint continuation state cannot be privately sealed',
@@ -1067,7 +1098,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     refused: 'checkpoint continuation state is not a plain cloneable value tree',
                     code: 'invalid-checkpoint-local-state'};
                 local.proof = {};
-                checkpointLocalProofs.set(local.proof, {bytes: Uint8Array.from(bytes),
+                checkpointLocalProofs.set(local.proof, {bytes: copyCheckpointBytes(bytes),
                     local: privateLocal});
                 return {
                     schema: 1, kind: 'emu8051-native', version: CHECKPOINT_VERSION,
@@ -1102,6 +1133,8 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             const yields = snapshot.local.yieldAddr;
             const bps = snapshot.local.breakpoints;
             const unique = values => new Set(values).size === values.length;
+            const every = (array, predicate) => INTRINSIC_ARRAY_EVERY.call(array, predicate);
+            const map = (array, mapper) => INTRINSIC_ARRAY_MAP.call(array, mapper);
             const validBreakpoint = ([id, bp]) => {
                 if (!Number.isSafeInteger(id) || id <= 0 || id > 0x7fffffff ||
                     !bp || typeof bp !== 'object' ||
@@ -1110,7 +1143,8 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     bp.addr >= 0 && bp.addr <= 0xffff && bp.pc === bp.addr;
                 if (bp.kind === 'yield') return typeof bp.task === 'string' &&
                     Number.isSafeInteger(bp.state) && bp.state >= 0 && bp.state <= 0x7fffffff &&
-                    yields.some(([key, addr]) => key === `${bp.task}/${bp.state}` && addr === bp.pc);
+                    INTRINSIC_ARRAY_SOME.call(yields,
+                        ([key, addr]) => key === `${bp.task}/${bp.state}` && addr === bp.pc);
                 if (bp.kind === 'write') return SPACE[bp.space ?? 'iram'] !== undefined &&
                     Number.isSafeInteger(bp.addr) && bp.addr >= 0 && bp.addr <= 0xffff &&
                     bp.pc === bp.addr;
@@ -1121,15 +1155,16 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 ['cycle', 'insn'].includes(pending.kind) && Number.isSafeInteger(pending.pcBefore) &&
                 pending.pcBefore >= 0 && pending.pcBefore <= 0xffff);
             if (tasks.length > 8 || bps.length > MAX_BREAKPOINTS ||
-                !tasks.every(entry => validEntry(entry) && typeof entry[0] === 'string' &&
+                !every(tasks, entry => validEntry(entry) && typeof entry[0] === 'string' &&
                     Number.isSafeInteger(entry[1]) && entry[1] >= 0 && entry[1] < 8) ||
-                !unique(tasks.map(entry => entry[0])) || !unique(tasks.map(entry => entry[1])) ||
-                !yields.every(entry => validEntry(entry) && typeof entry[0] === 'string' &&
+                !unique(map(tasks, entry => entry[0])) || !unique(map(tasks, entry => entry[1])) ||
+                !every(yields, entry => validEntry(entry) && typeof entry[0] === 'string' &&
                     Number.isSafeInteger(entry[1]) && entry[1] >= 0 && entry[1] <= 0xffff) ||
-                !unique(yields.map(entry => entry[0])) ||
-                !yields.every(([key]) => tasks.some(([name]) => key.startsWith(`${name}/`))) ||
-                !bps.every(entry => validEntry(entry) && validBreakpoint(entry)) ||
-                !unique(bps.map(entry => entry[0])) || !validPending ||
+                !unique(map(yields, entry => entry[0])) ||
+                !every(yields, ([key]) => INTRINSIC_ARRAY_SOME.call(tasks,
+                    ([name]) => key.startsWith(`${name}/`))) ||
+                !every(bps, entry => validEntry(entry) && validBreakpoint(entry)) ||
+                !unique(map(bps, entry => entry[0])) || !validPending ||
                 typeof snapshot.local.stepping !== 'boolean' ||
                 (snapshot.local.stepping && snapshot.local.pendingCause !== 'step') ||
                 (pending !== null && (!snapshot.local.stepping ||
@@ -1173,7 +1208,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     code: 'invalid-checkpoint-envelope'};
             }
             let bytes;
-            try { bytes = Uint8Array.from(snapshot.bytes); } catch {
+            try { bytes = copyCheckpointBytes(snapshot.bytes); } catch {
                 return {refused: 'checkpoint native bytes cannot be copied',
                     code: 'invalid-checkpoint-envelope'};
             }
