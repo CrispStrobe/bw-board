@@ -153,7 +153,7 @@ static INCREMENTAL_STAGE_NOINLINE u32 EVALUATE_SPARSE(const u32 *c,u32 has_affec
     u32 changed=0;
     for(u32 i=0;i<output_count;i++){const u32 d=output_queue[i];queued_output[d]=0;incremental_work[0]++;producer_work[PRODUCER_EVALUATOR]++;
         if(B(9)[d]!=B(4)[d]){
-        incremental_work[7]++;producer_work[PRODUCER_COUNT+PRODUCER_EVALUATOR]++;changed=1;if(write_driver(c,d,B(9)[d],0))return NONE;
+        incremental_work[7]++;producer_work[PRODUCER_COUNT+PRODUCER_EVALUATOR]++;changed=1;if(write_driver(c,d,B(9)[d],0))return NONE-1;
     }}
     output_count=0;return changed;
 }
@@ -170,6 +170,7 @@ u32 settle_incremental_context(const u32 *c) {
         const u32 has_affected=MARK_AFFECTED(c);
         const u32 changed=EVALUATE_SPARSE(c,has_affected);
         if(changed==NONE)return 0x80000007u;
+        if(changed==NONE-1)return 0x80000002u;
         #else
         u32 *affected=W(34);const u32 *reverse_offsets=W(32),*reverse_operations=W(33);
         u32 has_affected=0;
