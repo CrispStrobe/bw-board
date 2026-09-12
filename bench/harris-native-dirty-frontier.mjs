@@ -108,7 +108,8 @@ const summaries=Object.fromEntries(modes.map(mode=>{const own=samples.filter(s=>
 if(publication){
     const prior=modes[0].name,current=modes[1].name,counterNames=Object.keys(summaries[prior].counters);
     assert.equal(categories[current]['empty-input-period'].publishNetCopies,0,'empty input publishes no net copies');
-    assert.ok(summaries[current].counters.publishNetCopies<summaries[prior].counters.publishNetCopies,'total publication copies decrease');
+    assert.ok(summaries[current].counters.publishNetCopies*10<summaries[prior].counters.publishNetCopies,
+        'total publication copies decrease by more than 90%');
     for(const name of counterNames.filter(name=>name!=='publishNetCopies')){
         assert.equal(summaries[current].counters[name],summaries[prior].counters[name],`${name} summary differs`);
         for(const category of Object.keys(categories[prior]))
@@ -126,7 +127,7 @@ const report={benchmark:publication?'native-publication-frontier':'native-dirty-
         'Counters are unsigned 32-bit observations and wrap modulo 2^32; reset between bounded measurements.',
         'driverComparisons counts kernel-side comparisons. It excludes the permitted JS bulk-image scan before changed host drivers enter the native seam.',
         'The 8,194-period schedule contains reset/idle, controller/latch changes, 1,024 memory writes and 1,024 memory reads; every period and sampled read executes.',
-        'Raw cases isolate idle, one input change, X/Z, contention, a masked same-net change, conflict-only publication and nonconvergence/recovery.',
+        'The raw sequence covers idle, one input change, X/Z, contention, conflict-only publication and a masked same-net change; a separate kernel covers nonconvergence/recovery.',
         'Timing ranges are shared-host component measurements and make no speed or full-board capacity claim.']};
 writeFileSync(process.env.HARRIS_FRONTIER_REPORT,JSON.stringify(report,null,2)+'\n');
 console.log(JSON.stringify({accepted:true,capacityClaim:false,summaries},null,2));
