@@ -26,6 +26,7 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     '-Wl,--export=memory_kernel_version','-Wl,--export=preview_memory_banks',
     '-Wl,--export=memory_preview_counters_version','-Wl,--export=memory_preview_counters_ptr','-Wl,--export=reset_memory_preview_counters',
     '-Wl,--export=memory_circuit_version','-Wl,--export=settle_memory_circuit',
+    ...['memory_admission_version','admit_owned_memory_context','memory_admission_counters_version','memory_admission_counters_ptr','reset_memory_admission_counters'].map(n=>`-Wl,--export=${n}`),
     ...(stageAttribution?['stage_attribution_version','stage_attribution_counters_ptr','reset_stage_attribution_counters'].map(n=>`-Wl,--export=${n}`):[]),
     ...['phase_components_version','read_memory_phase_commands','begin_memory_phase','preview_memory_phase_end','finish_memory_phase','update_address_latch'].map(n=>`-Wl,--export=${n}`),
     ...['phase_circuit_version','begin_latched_memory_clock','end_latched_memory_clock',
