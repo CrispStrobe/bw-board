@@ -25,8 +25,14 @@ export function captureKernelEvaluatorImage({enabled=false,circuit}={}) {
         operations.push(...row);evaluatorNames.push(id);
         dependencies.push(...new Set(part.pins.map(net)));dependencyOffsets.push(dependencies.length);
     }
+    const reverse=Array.from({length:image.resolvedLevels.length},()=>[]);
+    for(let operation=0;operation<evaluatorNames.length;operation++)
+        for(let p=dependencyOffsets[operation];p<dependencyOffsets[operation+1];p++)reverse[dependencies[p]].push(operation);
+    const reverseDependencyOffsets=[0],reverseOperations=[];
+    for(const operationsForNet of reverse){reverseOperations.push(...operationsForNet);reverseDependencyOffsets.push(reverseOperations.length);}
     return {...image,capabilities:{...image.capabilities,combinationalEvaluation:true},
         evaluatorSchema:'bw-owned-evaluators-v1',evaluatorStride:EVALUATOR_STRIDE,
         evaluatorNames,operations:new Uint32Array(operations),dependencies:new Uint32Array(dependencies),
-        dependencyOffsets:new Uint32Array(dependencyOffsets),maxDeltas:circuit.maxDeltas};
+        dependencyOffsets:new Uint32Array(dependencyOffsets),reverseDependencyOffsets:new Uint32Array(reverseDependencyOffsets),
+        reverseOperations:new Uint32Array(reverseOperations),maxDeltas:circuit.maxDeltas};
 }

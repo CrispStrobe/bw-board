@@ -10,6 +10,8 @@ import {createPhaseCircuitOracle} from '../scripts/lib/harris-native-phase-circu
 const rounds=Number(process.argv[2]??5),count=Number(process.argv[3]??1024);
 if(!Number.isInteger(rounds)||rounds<2||rounds>10||count!==1024)throw new RangeError('rounds 2..10 and count 1024 required');
 for(const name of ['HARRIS_NET_WASM','HARRIS_COMPARE_WASM','HARRIS_COMPARE_REVISION','HARRIS_FRONTIER_REPORT'])if(!process.env[name])throw new Error(`${name} required`);
+const frontierKind=process.env.HARRIS_FRONTIER_KIND??'driver',publication=frontierKind==='publication',output=frontierKind==='output',reverse=frontierKind==='reverse';
+if(reverse&&!process.env.HARRIS_COMPARE_REPORT)throw new Error('HARRIS_COMPARE_REPORT required for ABI-incompatible reverse-index measurement');
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const artifact=(path,revision)=>{
     const bytes=new Uint8Array(readFileSync(path)),build=JSON.parse(readFileSync(new URL('wired-net-kernel-build.json',`file://${path}`)));
@@ -18,8 +20,8 @@ const artifact=(path,revision)=>{
 };
 const before=artifact(process.env.HARRIS_COMPARE_WASM,process.env.HARRIS_COMPARE_REVISION);
 const after=artifact(process.env.HARRIS_NET_WASM,process.env.HARRIS_FRONTIER_REVISION??'working-tree');
-const frontierKind=process.env.HARRIS_FRONTIER_KIND??'driver',publication=frontierKind==='publication',output=frontierKind==='output';
-const modes=output?
+const modes=reverse?
+    [{name:'incremental-reverse-index',artifact:after,incremental:true}]:output?
     [{name:'incremental-publication-frontier',artifact:before,incremental:true},{name:'incremental-output-frontier',artifact:after,incremental:true}]:publication?
     [{name:'incremental-driver-frontier',artifact:before,incremental:true},{name:'incremental-publication-frontier',artifact:after,incremental:true}]:
     [{name:'admitted-full-scan',artifact:before,incremental:false},{name:'incremental-scan',artifact:before,incremental:true},
@@ -68,17 +70,19 @@ async function categoryCounters(mode) {
 }
 async function rawKernel(mode,{oscillator=false}={}) {
     const {instance}=await WebAssembly.instantiate(mode.artifact.bytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
-    const p={context:base,offsets:base+128,ids:base+144,drivers:base+160,live:base+164,conflicts:base+168,ops:base+172,
-        staged:base+300,published:base+304,publishedConflicts:base+308,dependencyOffsets:base+312,dependencies:base+320,previous:base+332,changed:base+336};
+    const p={context:base,offsets:base+256,ids:base+320,drivers:base+384,live:base+416,conflicts:base+448,ops:base+512,
+        staged:base+768,published:base+800,publishedConflicts:base+832,dependencyOffsets:base+864,dependencies:base+896,
+        previous:base+928,changed:base+960,reverseOffsets:base+992,reverseOperations:base+1024,affected:base+1056};
     const put=(at,values)=>values.forEach((n,i)=>v.setUint32(at+4*i,n,true)),drivers=oscillator?3:4;
     put(p.context,[3,drivers,p.offsets,p.ids,p.drivers,p.live,p.conflicts,1,p.ops,p.staged,p.published,p.publishedConflicts,oscillator?2:8,
-        p.dependencyOffsets,p.dependencies,3,p.previous,p.changed,...new Array(13).fill(0),mode.incremental?2:1]);
+        p.dependencyOffsets,p.dependencies,3,p.previous,p.changed,...new Array(13).fill(0),mode.incremental?3:1,p.reverseOffsets,p.reverseOperations,p.affected]);
     put(p.offsets,[0,1,2,drivers]);put(p.ids,oscillator?[0,1,2]:[0,1,2,3]);put(p.dependencyOffsets,[0,3]);put(p.dependencies,[0,1,2]);
+    put(p.reverseOffsets,[0,1,2,3]);put(p.reverseOperations,[0,0,0]);
     put(p.ops,oscillator?[1,0,0,65536,0,0,1,0,...new Array(24).fill(2)]:[2,0,1,2]);
     const initial=oscillator?[2,0,0]:[3,3,2,3],published=oscillator?[2,0,0]:[3,3,2];
     new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);new Uint8Array(e.memory.buffer,p.previous,3).set(published);
     new Uint8Array(e.memory.buffer,p.published,3).set(published);assert.equal(e.admit_owned_context(p.context),0);
-    const counters=()=>Array.from(new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),10));
+    const counters=()=>Array.from(new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),reverse?11:10));
     const inspect=()=>Object.fromEntries(['drivers','live','conflicts','published','publishedConflicts','previous','changed'].map(name=>
         [name,Array.from(new Uint8Array(e.memory.buffer,p[name],name==='drivers'?drivers:3))]));
     const step=levels=>{if(mode.incremental&&e.write_owned_driver)levels.forEach((code,id)=>assert.equal(e.write_owned_driver(p.context,id,code),0));
@@ -143,9 +147,34 @@ if(output){
             {driverComparisons:a[0],stagedDriverCopies:a[6],evaluatorRows:a[4]},name);
     }
 }
-const report={benchmark:output?'native-output-frontier':publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
+let baselineReceipt=null;
+if(reverse){
+    baselineReceipt=JSON.parse(readFileSync(process.env.HARRIS_COMPARE_REPORT));
+    const priorName='incremental-output-frontier',current=modes[0].name,prior=baselineReceipt.summaries?.[priorName];
+    assert.equal(baselineReceipt.revisions?.[priorName],before.revision,'baseline receipt revision');assert.ok(prior,'baseline summary');
+    const currentCounters=summaries[current].counters;
+    assert.equal(currentCounters.dependencyProbes,0,'forward dependency probes are eliminated');
+    assert.ok(currentCounters.reverseIndexVisits*2<=prior.counters.dependencyProbes,'reverse visits decrease dependency traversal by at least 50%');
+    for(const name of Object.keys(prior.counters).filter(name=>name!=='dependencyProbes'))assert.equal(currentCounters[name],prior.counters[name],`${name} summary differs`);
+    for(const category of Object.keys(baselineReceipt.categories[priorName])){
+        const a=categories[current][category],b=baselineReceipt.categories[priorName][category];
+        assert.equal(a.dependencyProbes,0,`${category} forward dependency probes`);
+        for(const name of Object.keys(b).filter(name=>name!=='dependencyProbes'))assert.equal(a[name],b[name],`${category} ${name} differs`);
+    }
+    for(const [name,aCase] of Object.entries(raw[current])){
+        const bCase=baselineReceipt.raw[priorName][name];
+        for(const field of Object.keys(aCase).filter(k=>/SHA256$/.test(k)))assert.equal(aCase[field],bCase[field],`${name} ${field} differs`);
+        const a=aCase.counters??aCase.recoveryCounters,b=bCase.counters??bCase.recoveryCounters;
+        assert.equal(a[5],0,`${name} forward dependency probes`);
+        for(let i=0;i<10;i++)if(i!==5)assert.equal(a[i],b[i],`${name} counter ${i} differs`);
+    }
+    const expectedHashes=['stateSHA256','phaseSHA256','memorySHA256'];
+    for(const field of expectedHashes)assert.equal(samples[0][field],baselineReceipt.samples[0][field],`${field} differs from frozen baseline`);
+}
+const report={benchmark:reverse?'native-reverse-index':output?'native-output-frontier':publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
     benchmarkSHA256:digest(readFileSync(new URL(import.meta.url))),
-    revisions:Object.fromEntries(modes.map(m=>[m.name,m.artifact.revision])),builds:{before:before.build,after:after.build},
+    revisions:{baseline:before.revision,...Object.fromEntries(modes.map(m=>[m.name,m.artifact.revision]))},builds:{before:before.build,after:after.build},
+    ...(baselineReceipt&&{baselineReceiptSHA256:digest(readFileSync(process.env.HARRIS_COMPARE_REPORT))}),
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length,node:process.version},summaries,categories,raw,samples,
     notes:['Counters are reset after construction/admission and read outside each timed region.',
         'Counters are unsigned 32-bit observations and wrap modulo 2^32; reset between bounded measurements.',
