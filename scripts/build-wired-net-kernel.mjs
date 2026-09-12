@@ -13,14 +13,19 @@ if(process.env.NATIVE_STAGE_ATTRIBUTION!==undefined&&process.env.NATIVE_STAGE_AT
     throw new Error('NATIVE_STAGE_ATTRIBUTION must be 1 when present');
 if(process.env.NATIVE_STAGE_PROFILE_NAMING!==undefined&&process.env.NATIVE_STAGE_PROFILE_NAMING!=='1')
     throw new Error('NATIVE_STAGE_PROFILE_NAMING must be 1 when present');
+if(process.env.NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING!==undefined&&process.env.NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING!=='1')
+    throw new Error('NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING must be 1 when present');
 const stageAttribution=process.env.NATIVE_STAGE_ATTRIBUTION==='1';
 const stageProfileNames=process.env.NATIVE_STAGE_PROFILE_NAMING==='1';
+const incrementalStageProfileNames=process.env.NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING==='1';
+if(stageProfileNames&&incrementalStageProfileNames)throw new Error('global and incremental stage profile naming are mutually exclusive');
 const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c'];
 sourceNames.push('src/experimental/wired-kernel/bus-circuit.c');
 const sources=sourceNames.map(p=>fileURLToPath(new URL('../'+p,import.meta.url)));
 const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall','-Wextra',
     ...(stageAttribution?['-DNATIVE_STAGE_ATTRIBUTION=1']:[]),
     ...(stageProfileNames?['-DNATIVE_STAGE_PROFILE_NAMING=1']:[]),
+    ...(incrementalStageProfileNames?['-DNATIVE_INCREMENTAL_STAGE_PROFILE_NAMING=1']:[]),
     ...(process.env.WASM_LD?[`-fuse-ld=${process.env.WASM_LD}`]:[]),
     '-Wl,--no-entry','-Wl,--export=arena_ptr','-Wl,--export=arena_capacity','-Wl,--export=resolve_nets','-Wl,--export=settle_owned','-Wl,--export=owned_kernel_version',
     '-Wl,--export=memory_kernel_version','-Wl,--export=preview_memory_banks',
@@ -45,7 +50,7 @@ const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const headerName='src/experimental/wired-kernel/stage-attribution.h';
-const report={prototype:'wired-owned-memory-circuit',compiler:version,args,stageAttribution,stageProfileNames,
+const report={prototype:'wired-owned-memory-circuit',compiler:version,args,stageAttribution,stageProfileNames,incrementalStageProfileNames,
     sourceSHA256:hash(readFileSync(sources[0])),sourceHashes:Object.fromEntries(sourceNames.map(p=>
         [p,hash(readFileSync(fileURLToPath(new URL('../'+p,import.meta.url))))])),wasmSHA256:hash(readFileSync(output)),
     headerHashes:{[headerName]:hash(readFileSync(fileURLToPath(new URL('../'+headerName,import.meta.url))))},

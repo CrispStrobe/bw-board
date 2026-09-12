@@ -5,6 +5,11 @@ typedef unsigned char u8;
 #define NONE 0xffffffffu
 #define B(i) ((u8*)(unsigned long)c[i])
 #define W(i) ((u32*)(unsigned long)c[i])
+#ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
+#define INCREMENTAL_STAGE_NOINLINE __attribute__((noinline))
+#else
+#define INCREMENTAL_STAGE_NOINLINE
+#endif
 extern u32 resolve_nets(u32,u32,const u32*,const u32*,const u8*,u8*,u8*);
 extern void evaluate_owned_operations(u32,const u32*,const u8*,u8*,const u32*,const u32*,const u8*);
 extern u32 evaluate_owned_operations_marked_sparse(u32,const u32*,const u8*,u8*,u32*,u8*,u32*,u32);
@@ -91,7 +96,14 @@ u32 admit_incremental_context(const u32 *c) {
     for(u32 n=0;n<c[0];n++){dirty[n]=1;dirty_queue[dirty_count++]=n;B(17)[n]=0;}
     return 0;
 }
-static u32 resolve_dirty(const u32 *c) {
+#ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
+#define RESOLVE_DIRTY incremental_stage_resolve_dirty
+#define PUBLISH_INCREMENTAL incremental_stage_publish_successful_fixpoint
+#else
+#define RESOLVE_DIRTY resolve_dirty
+#define PUBLISH_INCREMENTAL publish_incremental
+#endif
+static INCREMENTAL_STAGE_NOINLINE u32 RESOLVE_DIRTY(const u32 *c) {
     for(u32 i=0;i<changed_count;i++)B(17)[changed_queue[i]]=0;
     changed_count=0;
     for(u32 i=0;i<driver_count;i++) {
@@ -113,7 +125,7 @@ static u32 resolve_dirty(const u32 *c) {
     }
     dirty_count=0;return changed_count;
 }
-static void publish_incremental(const u32 *c) {
+static INCREMENTAL_STAGE_NOINLINE void PUBLISH_INCREMENTAL(const u32 *c) {
     // A net can leave and return to its published state across deltas. Keep one
     // candidate until a successful fixpoint, then copy only its final state.
     for(u32 i=0;i<publish_count;i++){
@@ -124,14 +136,39 @@ static void publish_incremental(const u32 *c) {
     }
     publish_count=0;
 }
+#ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
+static INCREMENTAL_STAGE_NOINLINE u32 incremental_stage_mark_affected_operations(const u32 *c) {
+    u32 *affected=W(34);const u32 *reverse_offsets=W(32),*reverse_operations=W(33);u32 has_affected=0;
+    for(u32 i=0;i<changed_count;i++)for(u32 p=reverse_offsets[changed_queue[i]];p<reverse_offsets[changed_queue[i]+1];p++){
+        const u32 operation=reverse_operations[p],mask=1u<<(operation&31);incremental_work[10]++;
+        if(!(affected[operation>>5]&mask)){affected[operation>>5]|=mask;has_affected=1;}
+    }
+    return has_affected;
+}
+static INCREMENTAL_STAGE_NOINLINE u32 incremental_stage_evaluate_and_stage_sparse_outputs(const u32 *c,u32 has_affected) {
+    u32 *affected=W(34);output_count=has_affected?evaluate_owned_operations_marked_sparse(c[7],W(8),B(5),B(9),affected,queued_output,output_queue,c[1]):0;
+    if(output_count==NONE)return NONE;
+    u32 changed=0;
+    for(u32 i=0;i<output_count;i++){const u32 d=output_queue[i];queued_output[d]=0;incremental_work[0]++;producer_work[PRODUCER_EVALUATOR]++;
+        if(B(9)[d]!=B(4)[d]){
+        incremental_work[7]++;producer_work[PRODUCER_COUNT+PRODUCER_EVALUATOR]++;changed=1;if(write_driver(c,d,B(9)[d],0))return NONE;
+    }}
+    output_count=0;return changed;
+}
+#endif
 u32 settle_incremental_context(const u32 *c) {
     for(u32 delta=0;delta<c[12];delta++) {
         incremental_work[9]++;
-        const u32 resolved_changed=resolve_dirty(c);
+        const u32 resolved_changed=RESOLVE_DIRTY(c);
         if(resolved_changed==NONE)return 0x80000007u;
         // Driver changes masked on a net do not schedule pure evaluators.
         // Conflict-only changes still publish their diagnostics below.
-        if(!resolved_changed){publish_incremental(c);return delta+1;}
+        if(!resolved_changed){PUBLISH_INCREMENTAL(c);return delta+1;}
+        #ifdef NATIVE_INCREMENTAL_STAGE_PROFILE_NAMING
+        const u32 has_affected=incremental_stage_mark_affected_operations(c);
+        const u32 changed=incremental_stage_evaluate_and_stage_sparse_outputs(c,has_affected);
+        if(changed==NONE)return 0x80000007u;
+        #else
         u32 *affected=W(34);const u32 *reverse_offsets=W(32),*reverse_operations=W(33);
         u32 has_affected=0;
         for(u32 i=0;i<changed_count;i++)for(u32 p=reverse_offsets[changed_queue[i]];p<reverse_offsets[changed_queue[i]+1];p++){
@@ -146,9 +183,13 @@ u32 settle_incremental_context(const u32 *c) {
             incremental_work[7]++;producer_work[PRODUCER_COUNT+PRODUCER_EVALUATOR]++;changed=1;if(write_driver(c,d,B(9)[d],0))return 0x80000002u;
         }}
         output_count=0;
-        if(!changed){publish_incremental(c);return delta+1;}
+        #endif
+        if(!changed){PUBLISH_INCREMENTAL(c);return delta+1;}
     }
     // Keep pending-driver/live and publication queues, but do not publish a
     // failed fixpoint. A later successful settle commits every retained net.
     return 0x80000003u;
 }
+#undef RESOLVE_DIRTY
+#undef PUBLISH_INCREMENTAL
+#undef INCREMENTAL_STAGE_NOINLINE
