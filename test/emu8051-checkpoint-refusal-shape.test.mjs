@@ -89,11 +89,11 @@ describe('8051 checkpoint capability refusal: a reason is named or absent', () =
         assert.equal('reason' in r, false, 'no adapter, no native error: nothing to name');
     });
 
-    it('with the ABI present and an adapter that refuses WITH a reason, the reason is named', {skip: SKIP}, async () => {
+    it('with the ABI present and an adapter that refuses WITH a reason, the reason is named', {skip: SKIP}, async (ctx) => {
         const wasm = await wasmReady();
         if (typeof wasm._emu_checkpoint_size !== 'function') {
-            // Skip by name: this build cannot reach the adapter branch at all.
-            return assert.ok(true, 'SKIPPED BY NAME: the emu8051 build has no checkpoint ABI, the adapter branch is unreachable here') && undefined;
+            // A skip, not a pass: this build cannot reach the adapter branch at all.
+            return ctx.skip('the emu8051 build has no checkpoint ABI, the adapter branch is unreachable here');
         }
         const adapter = {
             checkpointSupport: () => ({supported: false, code: 'adapter-not-ready', reason: 'the test adapter is not ready'}),
