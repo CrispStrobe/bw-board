@@ -171,10 +171,30 @@ const state = board.getRenderState();
 // state.leds[0].brightness ≈ 0.145
 ```
 
-## Vendoring
+## Consuming
 
-Copy `src/` into the consuming project. `src/index.js` is the single entry
-point. All imports are relative within `src/`. No build step, no dependencies.
+bw-board is an npm package consumed at a git sha, not copied:
+
+```json
+"dependencies": { "bw-board": "github:CrispStrobe/bw-board#<40-hex sha>" }
+```
+
+`import { BoardImpl } from 'bw-board'` is the browser entry; every file under
+`src/` is also reachable as `bw-board/<file>` (`bw-board/i8086-asm.js`,
+`bw-board/devices/ssd1306.js`), and `bw-board/rom/*` / `bw-board/roms/*`
+serve the ROM images. `bw-board/pin-functions` is node-only and is not part
+of the browser entry graph. No build step. Two runtime dependencies, avr8js
+and rp2040js, both MIT.
+
+There is deliberately no `files` field: the whole tree installs, because
+consumers read `rom/`, `docs/generated/` and `scripts/` from the installed
+package the same way they used to read a checkout at the pin.
+
+`test/package-consumable.test.mjs` holds the four properties this depends on
+(declared deps == imported deps; no `node_modules/` path imports; every src
+file resolves through `exports`; no `node:` import in the browser graph).
+Copying `src/` into a consumer (the pre-2026-09-12 regime) still works but is
+no longer how brickwright-lite takes the engine.
 
 ## Performance
 
