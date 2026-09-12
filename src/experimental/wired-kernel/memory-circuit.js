@@ -8,9 +8,9 @@ import {preparePhaseCircuit} from './phase-circuit-image.js';
 import {prepareBusCircuit} from './bus-circuit-image.js';
 const SIZE=32768,WORDS=9;
 const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
-    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits'];
+    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits'];
 export function assertIncrementalKernelABI(exports,enabled) {
-    if(enabled&&(exports.incremental_kernel_version?.()!==3||typeof exports.write_owned_driver!=='function'))
+    if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
         throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
 }
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false}={}) {
@@ -45,7 +45,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
     assertIncrementalKernelABI(e,incrementalGraph);
-    if(e.incremental_work_counters_version?.()!==2)throw new TypeError('rebuild native work counters: ABI version mismatch');
+    if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
@@ -53,7 +53,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         ['reverseOperations',image.reverseOperations],['inputNets',inputNets],['outputIds',outputIds]])reserve(name,array.byteLength);
     for(const name of ['drivers','staged'])reserve(name,drivers);
     for(const name of ['live','liveConflicts','published','publishedConflicts','previous','changed'])reserve(name,nets);
-    reserve('affectedOperations',image.evaluatorNames.length);
+    reserve('affectedOperations',Math.ceil(image.evaluatorNames.length/32)*4);
     reserve('memory',count*SIZE);reserve('states',count*WORDS*4);reserve('memoryStaged',count*WORDS*4);reserve('protected',count);
     reserve('inputs',count*28);reserve('conflicts',count*28);reserve('drives',count*8);reserve('present',count);reserve('memoryChanged',count);
     reserve('memoryFault',12);reserve('fault',16);reserve('context',35*4);
@@ -74,7 +74,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     put('context',[nets,drivers,p.offsets,p.ids,p.drivers,p.live,p.liveConflicts,image.operations.length/EVALUATOR_STRIDE,p.ops,p.staged,
         p.published,p.publishedConflicts,image.maxDeltas,p.dependencyOffsets,p.dependencies,image.dependencies.length,p.previous,p.changed,
         count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,
-        incrementalGraph?3:Number(admittedGraph),p.reverseDependencyOffsets,p.reverseOperations,p.affectedOperations]);
+        incrementalGraph?4:Number(admittedGraph),p.reverseDependencyOffsets,p.reverseOperations,p.affectedOperations]);
     if(admittedGraph&&(e.admit_owned_context(p.context)>>>0)!==0)throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph admission failed');
     const inspect=()=>({levels:bytes('published',nets).slice(),conflicts:bytes('publishedConflicts',nets).slice(),driverLevels:bytes('drivers',drivers).slice()});
     const inspectWorkCounters=()=>{

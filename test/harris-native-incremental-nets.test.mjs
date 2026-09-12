@@ -8,7 +8,7 @@ import {assertIncrementalKernelABI} from '../src/experimental/wired-kernel/memor
 const wasmBytes=process.env.HARRIS_NET_WASM?new Uint8Array(readFileSync(process.env.HARRIS_NET_WASM)):null;
 const native={skip:wasmBytes?false:'build incremental prototype and set HARRIS_NET_WASM; native gate not exercised'};
 const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
-    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits'];
+    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits'];
 const reverseIndex=(nets,offsets,dependencies)=>{
     const rows=Array.from({length:nets},()=>[]);
     for(let operation=0;operation<offsets.length-1;operation++)for(let p=offsets[operation];p<offsets[operation+1];p++)rows[dependencies[p]].push(operation);
@@ -25,7 +25,7 @@ async function rawKernel({incremental=false,oscillator=false,previousImage=null}
     const drivers=oscillator?3:4;
     const dependencyOffsets=[0,3],dependencies=[0,1,2],reverse=reverseIndex(3,dependencyOffsets,dependencies);
     put(p.context,[3,drivers,p.offsets,p.ids,p.drivers,p.live,p.conflicts,1,p.ops,p.staged,p.published,p.publishedConflicts,oscillator?2:8,
-        p.dependencyOffsets,p.dependencies,3,p.previous,p.changed,...new Array(13).fill(0),incremental?3:0,p.reverseOffsets,p.reverseOperations,p.affected]);
+        p.dependencyOffsets,p.dependencies,3,p.previous,p.changed,...new Array(13).fill(0),incremental?4:0,p.reverseOffsets,p.reverseOperations,p.affected]);
     put(p.offsets,[0,1,2,drivers]);put(p.ids,oscillator?[0,1,2]:[0,1,2,3]);put(p.dependencyOffsets,dependencyOffsets);put(p.dependencies,dependencies);
     put(p.reverseOffsets,reverse.reverseOffsets);put(p.reverseOperations,reverse.reverseOperations);
     put(p.ops,oscillator?[1,0,0,65536,0,0,1,0,...new Array(24).fill(2)]:[2,0,1,2]);
@@ -49,7 +49,7 @@ async function outputKernel({incremental=false}={}) {
     const put=(at,values)=>values.forEach((n,i)=>v.setUint32(at+4*i,n,true)),nets=10,drivers=10,count=5;
     const dependencyOffsets=[0,2,4,9,14,19],dependencies=[0,1,2,3,...[0,1,2,3,4],...[0,1,2,3,4],...[0,1,2,3,4]],reverse=reverseIndex(nets,dependencyOffsets,dependencies);
     put(p.context,[nets,drivers,p.offsets,p.ids,p.drivers,p.live,p.conflicts,count,p.ops,p.staged,p.published,p.publishedConflicts,8,
-        p.dependencyOffsets,p.dependencies,19,p.previous,p.changed,...new Array(13).fill(0),incremental?3:0,p.reverseOffsets,p.reverseOperations,p.affected]);
+        p.dependencyOffsets,p.dependencies,19,p.previous,p.changed,...new Array(13).fill(0),incremental?4:0,p.reverseOffsets,p.reverseOperations,p.affected]);
     put(p.offsets,Array.from({length:nets+1},(_,i)=>i));put(p.ids,Array.from({length:drivers},(_,i)=>i));
     const or=(a,b,out)=>[2,a,b,out,...new Array(28).fill(0)];
     const mux=[3,4,0,0,1,2,3,0,0,0,0,5,6,7,9,...new Array(17).fill(0)];
@@ -68,16 +68,36 @@ async function outputKernel({incremental=false}={}) {
     }return e.settle_owned_context(p.context)>>>0;};
     return {e,p,v,inspect,counters,step,resetCounters:()=>e.reset_incremental_work_counters()};
 }
+async function wordBoundaryKernel({incremental=false}={}) {
+    const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer),nets=5,drivers=5,count=66;
+    const p={context:base,offsets:base+256,ids:base+512,drivers:base+768,live:base+800,conflicts:base+832,ops:base+1024,
+        staged:base+9472,published:base+9504,publishedConflicts:base+9536,dependencyOffsets:base+9568,dependencies:base+9856,
+        previous:base+10400,changed:base+10432,reverseOffsets:base+10464,reverseOperations:base+10528,affected:base+11100,canary:base+11112};
+    const put=(at,values)=>values.forEach((n,i)=>v.setUint32(at+4*i,n,true)),dependencyOffsets=[0],dependencies=[],operations=[];
+    for(let operation=0;operation<count;operation++){const odd=(operation&1)&&operation!==31,a=odd?2:0,b=odd?3:1;operations.push(2,a,b,4,...new Array(28).fill(0));dependencies.push(a,b);dependencyOffsets.push(dependencies.length);}
+    const reverse=reverseIndex(nets,dependencyOffsets,dependencies),initial=[1,0,0,0,3];
+    put(p.context,[nets,drivers,p.offsets,p.ids,p.drivers,p.live,p.conflicts,count,p.ops,p.staged,p.published,p.publishedConflicts,8,
+        p.dependencyOffsets,p.dependencies,dependencies.length,p.previous,p.changed,...new Array(13).fill(0),incremental?4:0,p.reverseOffsets,p.reverseOperations,p.affected]);
+    put(p.offsets,[0,1,2,3,4,5]);put(p.ids,[0,1,2,3,4]);put(p.ops,operations);put(p.dependencyOffsets,dependencyOffsets);put(p.dependencies,dependencies);
+    put(p.reverseOffsets,reverse.reverseOffsets);put(p.reverseOperations,reverse.reverseOperations);v.setUint32(p.canary,0xdecafbad,true);
+    new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);new Uint8Array(e.memory.buffer,p.previous,nets).set(initial);new Uint8Array(e.memory.buffer,p.published,nets).set(initial);
+    if(incremental)assert.equal(e.admit_owned_context(p.context),0);
+    const inspect=()=>({drivers:Array.from(new Uint8Array(e.memory.buffer,p.drivers,drivers)),published:Array.from(new Uint8Array(e.memory.buffer,p.published,nets))});
+    const counters=()=>Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),WORK_COUNTERS.length)[i]]));
+    const step=levels=>{if(incremental)levels.forEach((code,id)=>{if(new Uint8Array(e.memory.buffer,p.drivers,drivers)[id]!==code)assert.equal(e.write_owned_driver(p.context,id,code),0);});
+        else new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;};
+    return {e,p,v,inspect,counters,step,resetCounters:()=>e.reset_incremental_work_counters()};
+}
 test('work counters observe existing full and incremental loops and reset without changing state',native,async()=>{
     const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
-    assert.equal(incremental.e.incremental_kernel_version(),3);
+    assert.equal(incremental.e.incremental_kernel_version(),4);
     assert.equal(typeof incremental.e.write_owned_driver,'function');
-    assert.equal(incremental.e.incremental_work_counters_version(),2);
+    assert.equal(incremental.e.incremental_work_counters_version(),3);
     incremental.resetCounters();
     assert.equal(incremental.step([3,3,2,3]),1);
     assert.deepEqual(incremental.counters(),{
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:0,dependencyProbes:0,
-        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:0,deltas:1,reverseIndexVisits:0
+        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:0,deltas:1,reverseIndexVisits:0,operationBitsetWordVisits:0
     });
     const state=incremental.inspect();incremental.resetCounters();
     assert.deepEqual(incremental.counters(),Object.fromEntries(WORK_COUNTERS.map(name=>[name,0])));
@@ -85,12 +105,12 @@ test('work counters observe existing full and incremental loops and reset withou
     assert.equal(incremental.step([3,3,2,3]),1);
     assert.deepEqual(incremental.counters(),{
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:0,netDriverVisits:0,evaluatorRows:0,dependencyProbes:0,
-        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:0,deltas:1,reverseIndexVisits:0
+        stagedDriverCopies:0,committedEvaluatorOutputs:0,publishNetCopies:0,deltas:1,reverseIndexVisits:0,operationBitsetWordVisits:0
     });
     checked.resetCounters();assert.equal(checked.step([3,3,2,3]),1);
     assert.deepEqual(checked.counters(),{
         driverComparisons:4,valueChangingDriverWrites:0,dirtyNetResolutions:3,netDriverVisits:4,evaluatorRows:1,dependencyProbes:3,
-        stagedDriverCopies:4,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1,reverseIndexVisits:0
+        stagedDriverCopies:4,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1,reverseIndexVisits:0,operationBitsetWordVisits:0
     });
 });
 test('incremental ABI gate rejects legacy versions and missing writer exports',()=>{
@@ -98,10 +118,11 @@ test('incremental ABI gate rejects legacy versions and missing writer exports',(
     assert.doesNotThrow(()=>assertIncrementalKernelABI({},false));
     assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>1,write_owned_driver:writer},true),/ABI version\/writer mismatch/);
     assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>2,write_owned_driver:writer},true),/ABI version\/writer mismatch/);
-    assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>3},true),/ABI version\/writer mismatch/);
-    assert.doesNotThrow(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>3,write_owned_driver:writer},true));
+    assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>3,write_owned_driver:writer},true),/ABI version\/writer mismatch/);
+    assert.throws(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>4},true),/ABI version\/writer mismatch/);
+    assert.doesNotThrow(()=>assertIncrementalKernelABI({incremental_kernel_version:()=>4,write_owned_driver:writer},true));
 });
-test('incremental wrapper requires ABI 3 with its writer export and counts one host transition once',native,async()=>{
+test('incremental wrapper requires ABI 4 with its writer export and counts one host transition once',native,async()=>{
     const f=await createMemoryCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});f.pass();f.kernel.resetWorkCounters();
     f.pass({a23:1});const work=f.kernel.inspectWorkCounters();
     assert.equal(work.committedEvaluatorOutputs,2,'a23 changes both decoder outputs in this fixture');
@@ -153,7 +174,7 @@ test('incremental resolver matches checked deltas through X/Z, masked changes an
 test('incremental nonconvergence preserves published state and recovers using pending/live history',native,async()=>{
     const checked=await rawKernel({oscillator:true}),incremental=await rawKernel({incremental:true,oscillator:true});
     assert.equal(incremental.step([0,0,0]),0x80000003);assert.equal(checked.step([0,0,0]),0x80000003);
-    assert.equal(new Uint8Array(incremental.e.memory.buffer,incremental.p.affected,1)[0],0,'failed fixpoints retain no operation mark');
+    assert.equal(new Uint32Array(incremental.e.memory.buffer,incremental.p.affected,1)[0],0,'failed fixpoints retain no operation mark');
     assert.deepEqual(incremental.inspect(),checked.inspect());assert.deepEqual(incremental.inspect().published,[2,0,0]);
     assert.equal(incremental.step([2,0,0]),checked.step([2,0,0]));assert.deepEqual(incremental.inspect(),checked.inspect());
     assert.equal(incremental.counters().publishNetCopies,0,'a queued net that returns to its published state is not copied');
@@ -197,6 +218,26 @@ test('sparse evaluator outputs preserve multi-output and duplicate row order wit
     assert.equal(incremental.counters().driverComparisons,0,'an idle settle compares no evaluator outputs');
     assert.equal(incremental.counters().reverseIndexVisits,0,'idle settling retains no operation marks');
 });
+test('operation bitset preserves row order and deduplication across 31/32 and 63/64 boundaries',native,async()=>{
+    const checked=await wordBoundaryKernel(),incremental=await wordBoundaryKernel({incremental:true});
+    const step=levels=>{assert.equal(incremental.step(levels),checked.step(levels));assert.deepEqual(incremental.inspect(),checked.inspect());};
+    incremental.resetCounters();step([0,0,1,0,3]);
+    assert.equal(incremental.inspect().drivers[4],1,'row 65 wins after both word boundaries');
+    assert.equal(incremental.counters().reverseIndexVisits,66,'two changed nets visit all 66 rows once');
+    assert.equal(incremental.counters().evaluatorRows,66,'each multiply-targeted row evaluates once');
+    assert.equal(incremental.counters().operationBitsetWordVisits,3,'66 rows occupy three words');
+    assert.equal(incremental.v.getUint32(incremental.p.canary,true),0xdecafbad,'partial final word does not touch adjacent storage');
+    incremental.resetCounters();step([0,0,0,0,3]);
+    assert.equal(incremental.inspect().drivers[4],0,'the final affected odd row drives zero');
+    assert.equal(incremental.counters().reverseIndexVisits,32);assert.equal(incremental.counters().evaluatorRows,32);
+    assert.equal(incremental.counters().operationBitsetWordVisits,3);
+    incremental.resetCounters();step([1,0,0,0,3]);
+    assert.equal(incremental.inspect().drivers[4],1,'row 64 wins without stale later odd marks');
+    assert.equal(incremental.counters().reverseIndexVisits,34);assert.equal(incremental.counters().evaluatorRows,34);
+    assert.equal(incremental.counters().operationBitsetWordVisits,3);
+    incremental.resetCounters();step([1,0,0,0,3]);
+    assert.equal(incremental.counters().evaluatorRows,0);assert.equal(incremental.counters().operationBitsetWordVisits,0,'idle settle scans no bitset words');
+});
 test('incremental dirty queues initialize unchanged drivers and clear prior changed flags on idle settling',native,async()=>{
     const checked=await rawKernel({previousImage:[0,0,0]}),incremental=await rawKernel({incremental:true,previousImage:[0,0,0]});
     const step=levels=>{assert.equal(incremental.step(levels),checked.step(levels));assert.deepEqual(incremental.inspect(),checked.inspect());};
@@ -205,20 +246,22 @@ test('incremental dirty queues initialize unchanged drivers and clear prior chan
     // Multiple changed drivers on one net enqueue it once. Re-admission resets
     // queue state; neither duplicated entries nor old changed flags survive.
     step([1,0,0,1]);step([1,0,2,0]);
+    new Uint32Array(incremental.e.memory.buffer,incremental.p.affected,1)[0]=0xffffffff;
     assert.equal(incremental.e.admit_owned_context(incremental.p.context),0);
+    assert.equal(new Uint32Array(incremental.e.memory.buffer,incremental.p.affected,1)[0],0,'re-admission clears every operation bit');
     step([1,0,2,0]);step([3,3,2,3]);
 });
 test('incremental admission requires unique membership, bounded caches and the admitted mode',native,async()=>{
     const k=await rawKernel({incremental:true});k.v.setUint32(k.p.context+31*4,1,true);
     assert.equal(k.e.settle_owned_context(k.p.context)>>>0,0x80000006);
     k.v.setUint32(k.p.context+31*4,2,true);
-    assert.equal(k.e.admit_owned_context(k.p.context)>>>0,0x80000006,'ABI 3 kernel refuses the old mode before reading appended fields');
-    k.v.setUint32(k.p.context+31*4,3,true);k.v.setUint32(k.p.ids+12,0,true);
+    assert.equal(k.e.admit_owned_context(k.p.context)>>>0,0x80000006,'ABI 4 kernel refuses old modes before reading the bitset');
+    k.v.setUint32(k.p.context+31*4,4,true);k.v.setUint32(k.p.ids+12,0,true);
     assert.equal(k.e.admit_owned_context(k.p.context)>>>0,0x80000006);
     assert.equal(k.e.settle_owned_context(k.p.context)>>>0,0x80000006);
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
     const offsets=base+128,dependencyOffsets=offsets+16386*4;
-    [16385,0,offsets,0,0,0,0,0,0,0,0,0,8,dependencyOffsets,0,0,0,0,...new Array(13).fill(0),3]
+    [16385,0,offsets,0,0,0,0,0,0,0,0,0,8,dependencyOffsets,0,0,0,0,...new Array(13).fill(0),4]
         .forEach((n,i)=>v.setUint32(base+4*i,n,true));
     assert.equal(e.admit_owned_context(base)>>>0,0x80000007);
     assert.equal(e.settle_owned_context(base)>>>0,0x80000006);
