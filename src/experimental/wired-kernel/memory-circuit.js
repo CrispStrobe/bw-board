@@ -13,6 +13,9 @@ const PRODUCER_NAMES=['other','busExternal','busOutput','phaseController','phase
 const MEMORY_PASS_COUNTERS=['settleCalls','passes','previewCalls','previewBanks','presentBanks','changedBanks',
     'postMemorySettles','postMemorySettlesWithoutDriverChange'];
 const MEMORY_PREVIEW_COUNTERS=['ownedPreviewCalls','checkedValidationBanks','checkedValidationPinRecords'];
+const NATIVE_STAGE_COUNTERS=['memoryMappingCalls','memoryMappingVisits','memoryGatherCalls','memoryGatherPinRecords',
+    'memoryPreviewCalls','memoryPreviewBanks','memoryPreviewStateWordCopies','memoryCommitBanks','memoryCommitStateWordCopies',
+    'memoryWriterPublications','memoryPostSettles','phaseValidationCalls','phaseValidationVisits','busValidationCalls','busValidationVisits'];
 export function assertIncrementalKernelABI(exports,enabled) {
     if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
         throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
@@ -29,10 +32,13 @@ export function assertOwnedMemoryPreviewABI(exports) {
     if(exports.memory_circuit_version?.()!==3)
         throw new TypeError('rebuild native owned memory preview: ABI version mismatch');
 }
-export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false}={}) {
+export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false,
+    stageAttribution=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
     if(typeof admittedGraph!=='boolean')throw new TypeError('admittedGraph');
     if(typeof incrementalGraph!=='boolean'||incrementalGraph&&!admittedGraph)throw new TypeError('incrementalGraph requires admittedGraph:true');
+    if(typeof stageAttribution!=='boolean')throw new TypeError('stageAttribution');
+    if(stageAttribution&&bus===null)throw new TypeError('stage attribution requires owned bus');
     const prototype=circuit instanceof CompiledDigitalCircuit?CompiledDigitalCircuit.prototype:DigitalCircuit.prototype;
     if(circuit.resolve!==prototype.resolve||circuit.settle!==prototype.settle)throw new CircuitFault('UNSUPPORTED_KERNEL_OVERRIDE','custom resolution/settling');
     if(!Array.isArray(banks)||banks.length<1||banks.length>32)throw new RangeError('native banks 1..32');
@@ -64,6 +70,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     assertIncrementalKernelABI(e,incrementalGraph);
     if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
     assertProducerCounterABI(e);
+    if(stageAttribution&&(e.stage_attribution_version?.()!==1||typeof e.stage_attribution_counters_ptr!=='function'||
+        typeof e.reset_stage_attribution_counters!=='function'))throw new TypeError('rebuild native stage attribution: ABI mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
@@ -145,8 +153,17 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         setDriverLevels(levels);memoryFault(e.settle_memory_circuit(p.context,maxPasses,p.fault));return inspect();
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
-    const busMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
+    const busMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault,stageAttribution});
+    const inspectStageAttribution=()=>{
+        if(!stageAttribution)throw new TypeError('stage attribution disabled');
+        const values=new Uint32Array(e.memory.buffer,e.stage_attribution_counters_ptr(),NATIVE_STAGE_COUNTERS.length);
+        return Object.freeze({native:Object.freeze(Object.fromEntries(NATIVE_STAGE_COUNTERS.map((name,i)=>[name,values[i]]))),
+            js:Object.freeze(busMethods.inspectJSStageAttribution())});
+    };
+    const resetStageAttribution=()=>{if(!stageAttribution)throw new TypeError('stage attribution disabled');
+        e.reset_stage_attribution_counters();busMethods.resetJSStageAttribution();};
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
         latchedMemoryClocks:!!phaseBinding,nativeMemoryBus:!!busBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(busMethods??phaseMethods??{settleMemories}),
-        inspect,inspectMemory,inspectWorkCounters,resetWorkCounters,inspectProducerCounters,resetProducerCounters});
+        inspect,inspectMemory,inspectWorkCounters,resetWorkCounters,inspectProducerCounters,resetProducerCounters,
+        ...(stageAttribution?{inspectStageAttribution,resetStageAttribution}:{})});
 }

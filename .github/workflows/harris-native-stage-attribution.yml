@@ -1,0 +1,87 @@
+name: Harris native exact-stage attribution
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Prepare exact promoted control
+        run: |
+          set -euo pipefail
+          MASTER_SHA=c3c0bbf97d7f68194b8dc5f1d0c6a423193731b0
+          CANDIDATE_SHA=$GITHUB_SHA
+          git cat-file -e "$MASTER_SHA^{commit}"
+          git merge-base --is-ancestor "$MASTER_SHA" "$CANDIDATE_SHA"
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-native-stage-attribution.XXXXXX")
+          TREE_DIR=$(mktemp -d "$RUNNER_TEMP/harris-native-stage-trees.XXXXXX")
+          MASTER_TREE="$TREE_DIR/master"
+          git worktree add --detach "$MASTER_TREE" "$MASTER_SHA"
+          test "$(git -C "$MASTER_TREE" rev-parse HEAD)" = "$MASTER_SHA"
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          test -z "$(git status --porcelain)"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          {
+            echo "MASTER_SHA=$MASTER_SHA"
+            echo "CANDIDATE_SHA=$CANDIDATE_SHA"
+            echo "MASTER_TREE=$MASTER_TREE"
+            echo "RECEIPT_DIR=$RECEIPT_DIR"
+            echo "CLANG=$(command -v clang)"
+            echo "WASM_LD=$(command -v wasm-ld)"
+          } >> "$GITHUB_ENV"
+      - name: Build production control and both candidate modes
+        run: |
+          set -euo pipefail
+          mkdir "$RECEIPT_DIR/master-build" "$RECEIPT_DIR/diagnostic-off-build" "$RECEIPT_DIR/diagnostic-on-build"
+          node "$MASTER_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/master-build" | tee "$RECEIPT_DIR/master-build.log"
+          node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/diagnostic-off-build" | tee "$RECEIPT_DIR/diagnostic-off-build.log"
+          NATIVE_STAGE_ATTRIBUTION=1 node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/diagnostic-on-build" | tee "$RECEIPT_DIR/diagnostic-on-build.log"
+      - name: Measure uninstrumented control separately from profiling
+        run: |
+          set -euo pipefail
+          node --expose-gc scripts/measure-harris-native-stage-attribution.mjs --experimental \
+            --master-dir="$MASTER_TREE" --candidate-dir="$GITHUB_WORKSPACE" \
+            --master-wasm="$RECEIPT_DIR/master-build/wired-net-kernel.wasm" \
+            --off-wasm="$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm" \
+            --on-wasm="$RECEIPT_DIR/diagnostic-on-build/wired-net-kernel.wasm" \
+            --candidate-revision="$CANDIDATE_SHA" --iterations=4096 --warmup-rounds=3 --rounds=12 \
+            > "$RECEIPT_DIR/native-stage-attribution-control.json"
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-stage-attribution-control.json"));assert.equal(r.measurementRevision,process.env.CANDIDATE_SHA);assert.equal(r.variants.master.revision,process.env.MASTER_SHA);assert.equal(r.warmups.length,9);assert.equal(r.samples.length,36);assert.ok(r.ratios.candidateOffToMaster>=.98&&r.ratios.candidateOffToMaster<=1.02);assert.ok(r.ratios.diagnosticOnToOff>=.98&&r.ratios.diagnosticOnToOff<=1.02);assert.equal(Object.keys(r.expected.work).length,12);'
+      - name: Profile diagnostic mode in a separate process
+        run: |
+          set -euo pipefail
+          node --expose-gc --cpu-prof --cpu-prof-dir="$RECEIPT_DIR" --cpu-prof-name=hybrid-native-stages.cpuprofile \
+            scripts/measure-harris-native-stage-attribution.mjs --experimental --profile-only \
+            --master-dir="$MASTER_TREE" --candidate-dir="$GITHUB_WORKSPACE" \
+            --master-wasm="$RECEIPT_DIR/master-build/wired-net-kernel.wasm" \
+            --off-wasm="$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm" \
+            --on-wasm="$RECEIPT_DIR/diagnostic-on-build/wired-net-kernel.wasm" \
+            --candidate-revision="$CANDIDATE_SHA" --iterations=4096 --profile-repetitions=6 \
+            > "$RECEIPT_DIR/native-stage-profile-receipt.json"
+          node scripts/measure-harris-native-stage-attribution.mjs \
+            --classify-profile="$RECEIPT_DIR/hybrid-native-stages.cpuprofile" \
+            --profile-receipt="$RECEIPT_DIR/native-stage-profile-receipt.json" \
+            > "$RECEIPT_DIR/native-stage-profile-classification.json"
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const d=process.env.RECEIPT_DIR,r=JSON.parse(fs.readFileSync(d+"/native-stage-profile-classification.json"));assert.ok(r.classification.nonIdleSamples>0);assert.ok(r.classification.classifiedRatio>=.90);const files=["native-stage-attribution-control.json","native-stage-profile-receipt.json","hybrid-native-stages.cpuprofile","native-stage-profile-classification.json"];fs.writeFileSync(d+"/artifact-byte-counts.json",JSON.stringify(Object.fromEntries(files.map(name=>[name,fs.statSync(d+"/"+name).size])),null,2)+"\n");'
+      - name: Upload exact control, profile, counters, and byte receipts
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-stage-attribution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 14

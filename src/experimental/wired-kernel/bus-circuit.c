@@ -5,6 +5,7 @@
  * last],two physical completion records (9 words each). */
 typedef unsigned int u32;
 typedef unsigned char u8;
+#include "stage-attribution.h"
 #define W(i) ((u32*)(unsigned long)p[i])
 #define B(i) ((u8*)(unsigned long)p[i])
 extern u32 bus_input_ptr(void),bus_output_ptr(void),bus_completion_ptr(void),bus_error_pin(void);
@@ -24,13 +25,16 @@ static u32 failure(const u32*p,u32 category,u32 code,u32 pin,u32*fault) {
     fault[0]=category;fault[1]=code;fault[2]=pin;fault[3]=0xffffffff;
     if(category!=6||code!=2)W(7)[1]=1;return category;
 }
-static u32 validate(const u32*p,u32*fault) {
+static STAGE_NOINLINE u32 validate_bus_mapping(const u32*p,u32*fault) {
     const u32*c=W(0);
+    u32 visits=0;STAGE_ADD(STAGE_BUS_VALIDATION_CALLS,1);
+    #define BUS_MAPPING_RETURN(value) do{STAGE_ADD(STAGE_BUS_VALIDATION_VISITS,visits);return(value);}while(0)
     if(p[6]>128)return failure(p,8,2,0,fault);
-    for(u32 i=0;i<24;i++)if(W(2)[i]>=c[0])return failure(p,8,2,i,fault);
-    for(u32 i=0;i<48;i++)if(W(3)[i]>=c[1])return failure(p,8,2,i,fault);
-    for(u32 i=0;i<p[6];i++)if(W(4)[i]>=c[1]||B(5)[i]>3)return failure(p,8,2,i,fault);
-    return 0;
+    for(u32 i=0;i<24;i++){visits++;if(W(2)[i]>=c[0])BUS_MAPPING_RETURN(failure(p,8,2,i,fault));}
+    for(u32 i=0;i<48;i++){visits++;if(W(3)[i]>=c[1])BUS_MAPPING_RETURN(failure(p,8,2,i,fault));}
+    for(u32 i=0;i<p[6];i++){visits++;if(W(4)[i]>=c[1]||B(5)[i]>3)BUS_MAPPING_RETURN(failure(p,8,2,i,fault));}
+    BUS_MAPPING_RETURN(0);
+    #undef BUS_MAPPING_RETURN
 }
 static void gather(const u32*p) {
     const u32*c=W(0);const u8*levels=(u8*)(unsigned long)c[10],*conflicts=(u8*)(unsigned long)c[11];
@@ -44,7 +48,7 @@ static u32 settle(const u32*p,u32*fault) {
 u32 begin_bus_memory_clock(const u32*p,u32*fault) {
     if(W(7)[1])return failure(p,6,1,0,fault);
     if(W(7)[0])return failure(p,6,2,0,fault);
-    u32 result=validate(p,fault);if(result)return result;
+    u32 result=validate_bus_mapping(p,fault);if(result)return result;
     for(u32 i=0;i<p[6];i++)if(stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     gather(p);result=bus_begin();if(result)return failure(p,7,result,bus_error_pin(),fault);

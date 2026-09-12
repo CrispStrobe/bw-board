@@ -1,0 +1,35 @@
+#ifndef NATIVE_STAGE_ATTRIBUTION_H
+#define NATIVE_STAGE_ATTRIBUTION_H
+
+typedef unsigned int stage_u32;
+
+enum {
+    STAGE_MEMORY_MAPPING_CALLS,
+    STAGE_MEMORY_MAPPING_VISITS,
+    STAGE_MEMORY_GATHER_CALLS,
+    STAGE_MEMORY_GATHER_PIN_RECORDS,
+    STAGE_MEMORY_PREVIEW_CALLS,
+    STAGE_MEMORY_PREVIEW_BANKS,
+    STAGE_MEMORY_PREVIEW_STATE_WORD_COPIES,
+    STAGE_MEMORY_COMMIT_BANKS,
+    STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,
+    STAGE_MEMORY_WRITER_PUBLICATIONS,
+    STAGE_MEMORY_POST_SETTLES,
+    STAGE_PHASE_VALIDATION_CALLS,
+    STAGE_PHASE_VALIDATION_VISITS,
+    STAGE_BUS_VALIDATION_CALLS,
+    STAGE_BUS_VALIDATION_VISITS,
+    STAGE_COUNTER_COUNT
+};
+
+#ifdef NATIVE_STAGE_ATTRIBUTION
+/* Measurement-only counters wrap modulo 2^32 and never affect execution. */
+extern stage_u32 native_stage_work[STAGE_COUNTER_COUNT];
+#define STAGE_ADD(index,value) (native_stage_work[(index)]+=(stage_u32)(value))
+#define STAGE_NOINLINE __attribute__((noinline))
+#else
+#define STAGE_ADD(index,value) ((void)(index),(void)(value))
+#define STAGE_NOINLINE
+#endif
+
+#endif
