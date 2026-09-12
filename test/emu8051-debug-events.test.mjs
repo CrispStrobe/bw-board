@@ -40,6 +40,7 @@ for (const p of CANDIDATES) {
 const SKIP = createEmu8051 ? false
     : 'no emu8051 build reachable — check out CrispStrobe/emu8051-stc beside this '
       + 'repo and build it, or set $EMU8051_JS';
+const REQUIRE_CHECKPOINT = process.env.EMU8051_CHECKPOINT_REQUIRED === '1';
 
 /** Assemble one Intel HEX record, checksum computed rather than hand-written. */
 function hexOf(bytes, addr = 0) {
@@ -216,6 +217,8 @@ describe('emu8051 checkpoints: a refusal that names what is missing', () => {
     it('refuses to save, and says which state an architectural dump omits', {skip: SKIP}, async () => {
         const t = await targetWith(PIN_BYTES);
         const r = t.captureCheckpoint();
+        if (REQUIRE_CHECKPOINT) assert.equal(t.capabilities().extensions.checkpoint.supported, true,
+            'CI requires the exact checkpoint-capable emu8051 artifact');
         if (t.capabilities().extensions.checkpoint.supported) {
             assert.equal(r.kind, 'emu8051-native');
             assert.ok(r.bytes instanceof Uint8Array && r.bytes.length === r.size);
