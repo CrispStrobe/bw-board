@@ -40,6 +40,30 @@ test('shorted byte lanes fault before either bank commits and can recover',nativ
     assert.equal(f.kernel.inspectMemory(0).writes,0);assert.equal(f.kernel.inspectMemory(1).writes,0);
     f.pass({...bitDrives(f.D,0x5555)});f.pass({web:1});assert.equal(f.kernel.inspectMemory(0).writes,1);
 });
+test('admitted mapped preview reads the final data pin and later live values',native,async()=>{
+    const f=await createMemoryCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});f.pass();
+    f.pass({...bitDrives(f.A,0x200),...bitDrives(f.D,0x8080),web:0});f.pass({web:1});
+    f.pass({...bitDrives(f.A,0x202),...bitDrives(f.D,0),web:0});f.pass({web:1});
+    assert.equal(f.kernel.inspectMemory(0).bytes[0x100],0x80);assert.equal(f.kernel.inspectMemory(1).bytes[0x100],0x80);
+    assert.equal(f.kernel.inspectMemory(0).bytes[0x101],0);assert.equal(f.kernel.inspectMemory(1).bytes[0x101],0);
+});
+test('admitted mapped preview propagates conflicts before peer commit',native,async()=>{
+    const f=await createMemoryCircuitOracle({wasmBytes,shortLanes:true,admittedGraph:true,incrementalGraph:true});f.pass();
+    const before=[f.kernel.inspectMemory(0).writes,f.kernel.inspectMemory(1).writes];
+    assert.equal(f.pass({...bitDrives(f.D,0x0100),web:0})?.code,'CONTENTION');
+    assert.deepEqual([f.kernel.inspectMemory(0).writes,f.kernel.inspectMemory(1).writes],before);
+});
+test('admitted mapped preview keeps late peer faults atomic and settles published drivers',native,async()=>{
+    const f=await createMemoryCircuitOracle({wasmBytes,admittedGraph:true,incrementalGraph:true});f.pass();
+    f.pass({...bitDrives(f.A,0x240),...bitDrives(f.D,0xa55a),web:0});
+    assert.equal(f.pass({web:1,late_vcc:'Z'})?.code,'FLOATING');
+    assert.deepEqual([f.kernel.inspectMemory(0).writes,f.kernel.inspectMemory(1).writes],[0,0]);
+    f.pass({late_vcc:1});
+    assert.deepEqual([f.kernel.inspectMemory(0).writes,f.kernel.inspectMemory(1).writes],[1,1]);
+    f.pass({...Object.fromEntries(f.D.map(p=>[p,'Z'])),oeb:0});
+    const decoded=Array.from({length:16},(_,i)=>f.circuit.require('host',`d${i}`)).reduce((v,b,i)=>v|(b<<i),0);
+    assert.equal(decoded,0xa55a);
+});
 test('memory fixed-point limit preserves per-pass progress and permits retry',native,async()=>{
     const f=await createMemoryCircuitOracle({wasmBytes});
     assert.equal(f.pass({},1)?.code,'MEMORY_NON_CONVERGENT');f.pass();

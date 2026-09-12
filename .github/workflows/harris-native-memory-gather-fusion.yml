@@ -1,0 +1,123 @@
+name: Harris native admitted memory input fusion evidence
+
+on:
+  push:
+    branches: ['perf/native-memory-input-fusion', 'perf/native-memory-input-fusion-*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harris-native-memory-input-fusion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prepare exact trees and fresh receipt directory
+        run: |
+          set -euo pipefail
+          BASE_SHA=0e80e9ff044898bead53114c420ba8055f054ace
+          CANDIDATE_SHA=c743e8501c82394aad9590c43bd958020a0f0ead
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git merge-base --is-ancestor "$BASE_SHA" "$CANDIDATE_SHA"
+          test "$(git rev-list --count "$BASE_SHA..$CANDIDATE_SHA")" -eq 1
+          EXPECTED=$(mktemp)
+          ACTUAL=$(mktemp)
+          cat > "$EXPECTED" <<'EOF'
+          src/experimental/wired-kernel/memory-banks.c
+          src/experimental/wired-kernel/memory-circuit.c
+          EOF
+          git diff --name-only "$BASE_SHA..$CANDIDATE_SHA" | sort > "$ACTUAL"
+          sort -o "$EXPECTED" "$EXPECTED"
+          cmp "$EXPECTED" "$ACTUAL"
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-memory-input-fusion.XXXXXX")
+          TREE_DIR=$(mktemp -d "$RUNNER_TEMP/harris-memory-input-fusion-trees.XXXXXX")
+          rmdir "$TREE_DIR"
+          mkdir "$TREE_DIR"
+          git worktree add --detach "$TREE_DIR/base" "$BASE_SHA"
+          git worktree add --detach "$TREE_DIR/candidate" "$CANDIDATE_SHA"
+          echo "BASE_TREE=$TREE_DIR/base" >> "$GITHUB_ENV"
+          echo "CANDIDATE_TREE=$TREE_DIR/candidate" >> "$GITHUB_ENV"
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          echo "CLANG=$(command -v clang)" >> "$GITHUB_ENV"
+          echo "WASM_LD=$(command -v wasm-ld)" >> "$GITHUB_ENV"
+
+      - name: Build exact base and production candidate
+        run: |
+          set -euo pipefail
+          mkdir "$RECEIPT_DIR/base-build" "$RECEIPT_DIR/candidate-build"
+          (cd "$BASE_TREE" && node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/base-build") \
+            | tee "$RECEIPT_DIR/base-build.log"
+          (cd "$CANDIDATE_TREE" && node scripts/build-wired-net-kernel.mjs "$RECEIPT_DIR/candidate-build") \
+            | tee "$RECEIPT_DIR/candidate-build.log"
+          test -s "$RECEIPT_DIR/base-build/wired-net-kernel.wasm"
+          test -s "$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm"
+
+      - name: Prove focused fusion and mutation contracts without skips
+        env:
+          HARRIS_NET_WASM: ${{ env.RECEIPT_DIR }}/candidate-build/wired-net-kernel.wasm
+        run: |
+          set -euo pipefail
+          node --test --test-concurrency=1 --test-reporter=tap \
+            test/harris-native-memory.test.mjs \
+            test/harris-native-memory-circuit.test.mjs \
+            test/harris-native-system-admission.test.mjs \
+            | tee "$RECEIPT_DIR/focused-tests.tap"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const tap=fs.readFileSync(process.env.RECEIPT_DIR+"/focused-tests.tap","utf8"); assert.match(tap,/^# fail 0$/m); assert.match(tap,/^# skipped 0$/m); assert.doesNotMatch(tap,/# SKIP\b/i);'
+          node scripts/verify-harris-native-memory-gather-fusion-mutations.mjs \
+            | tee "$RECEIPT_DIR/memory-input-fusion-mutations.tap"
+          test "$(grep -c '^# mutation rejected:' "$RECEIPT_DIR/memory-input-fusion-mutations.tap")" -eq 7
+
+      - name: Measure same-runner admitted memory input fusion
+        run: |
+          set -euo pipefail
+          node --expose-gc scripts/measure-harris-native-memory-gather-fusion.mjs --experimental \
+            --base-dir="$BASE_TREE" --candidate-dir="$CANDIDATE_TREE" \
+            --base-wasm="$RECEIPT_DIR/base-build/wired-net-kernel.wasm" \
+            --candidate-wasm="$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm" \
+            --iterations=4096 --warmup-rounds=4 --rounds=12 --batch-periods=8192 --wall-budget-ms=1000 \
+            > "$RECEIPT_DIR/native-memory-input-fusion.json"
+          test -s "$RECEIPT_DIR/native-memory-input-fusion.json"
+
+      - name: Audit serialized receipt and apply unchanged selection gate
+        run: |
+          set -euo pipefail
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-memory-input-fusion.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"0e80e9ff044898bead53114c420ba8055f054ace"); assert.equal(r.variants.candidate.revision,"c743e8501c82394aad9590c43bd958020a0f0ead"); assert.equal(r.warmups.length,8); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.equal(r.intermediateInputCopiesAvoided,50484224); assert.equal(r.liveMappedInputReadsRetained,50484224); assert.equal(r.expectedByVariant.candidate.periods,114736); assert.equal(r.expectedByVariant.candidate.retired,12292); assert.deepEqual(r.expectedByVariant.candidate.writes,[4096,4096]); assert.equal(r.expectedByVariant.candidate.physicalClock,114803); assert.equal(Object.keys(r.expectedByVariant.candidate.work).length,12); assert.deepEqual(r.expectedByVariant.candidate.memoryAdmissionAtConstruction,{attempts:1,admissions:1,failures:0,inputMapVisits:112,outputMapVisits:32,outputAliasComparisons:496,protectionVisits:4,runtimeMapVisits:0}); assert.deepEqual(r.expectedByVariant.candidate.memoryAdmissionAfterRun,r.expectedByVariant.candidate.memoryAdmissionAtConstruction); assert.ok(r.pairedActiveThroughputRatio.median>=1.05); assert.ok(r.pairedActiveThroughputRatio.q1>=1); assert.ok(r.pairedActiveThroughputRatio.min>=.98); assert.equal(r.decision.accepted,true);'
+
+      - name: Record exact artifact manifest
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR="$RECEIPT_DIR" node --input-type=module <<'NODE'
+          import {createHash} from 'node:crypto';
+          import {readdirSync,readFileSync,statSync,writeFileSync} from 'node:fs';
+          import {join,relative} from 'node:path';
+          const root=process.env.RECEIPT_DIR,files=[];
+          function walk(dir){for(const name of readdirSync(dir).sort()){const path=join(dir,name),stat=statSync(path);if(stat.isDirectory())walk(path);else files.push(path);}}
+          walk(root);const entries=files.filter(path=>!path.endsWith('/artifact-manifest.json')).map(path=>({path:relative(root,path),bytes:statSync(path).size,sha256:createHash('sha256').update(readFileSync(path)).digest('hex')}));
+          writeFileSync(join(root,'artifact-manifest.json'),JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,entries},null,2)+'\n',{flag:'wx'});
+          NODE
+
+      - name: Upload admitted memory input fusion evidence
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-memory-input-fusion-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 14
