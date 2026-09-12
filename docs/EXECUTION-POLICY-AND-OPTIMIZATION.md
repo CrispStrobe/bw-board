@@ -234,6 +234,21 @@ documentation is retained, but the obsolete sync changes must not be published
 over that migration. GUI work is isolated from packaging and will integrate
 after the new dependency boundary is available. P1 remains open until verified.
 
+Latest GUI candidate is `f3dcbd066` on `feat/execution-policy-gui`; it also
+contains the executable but unrun application browser journey and migration
+diagnosis. The migration owner hit its session limit and left its large
+uncommitted tree at app `411828a`. No ownership takeover or destructive cleanup
+was inferred. User direction was requested for an isolated takeover versus
+leaving that migration with its owner.
+
+Circuit UI PR20 at `657e021`, CI run `34685501168`, passed 33/34 interaction
+scenarios; only dragging a resistor during a live sweep failed (0 px movement).
+No browser artifacts established whether the cause was blocking, pointer
+handling or occlusion. Policy changes were absent. The audited checkout lacked
+Vite and the script lacked a scenario filter, so no targeted reproduction was
+claimed. Finishing package provenance, a qualified engine pin and actual GUI
+browser acceptance remain required before application adoption.
+
 One worker per worktree. Pin remote SHAs; shared refs can move. Delegate bounded
 independent work with explicit file/worktree ownership. Inspect existing screen
 sessions before messaging; never type into an unidentified shell or interrupt
