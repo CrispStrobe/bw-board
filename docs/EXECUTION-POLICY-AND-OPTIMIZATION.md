@@ -84,10 +84,12 @@ policy seams, then expose only modes actually connected to project execution.
 - [ ] P1: Adopt a reviewed engine SHA into an isolated app branch. Reconcile
   declared vendor forks, mirrors, census/provenance and browser tests. No unrelated
   application deployment or guest-media publication.
-- [ ] P2: Implement a dependency-light, tested selection/admission contract.
+- [x] P2 contract: Implement a dependency-light, tested selection/admission contract.
   Tests: semantic mismatch, missing capability, unavailable loader, rejected
   candidate, opt-in experiment, explicit reference, deterministic Auto, and
-  restart/no-mutation behavior. Integrate existing consumers incrementally.
+  restart/no-mutation behavior. Implemented at 9931e37, nine focused tests;
+  independent review found no blocker. Existing consumer integration is P3,
+  not established by these synthetic catalog tests.
 - [ ] P3: App execution status/preferences using the contract, with browser
   coverage of actual target creation, persistence, refusal and reconstruction.
 - [ ] P4: Repeated end-to-end benchmarks: CPU, devices, nets, allocation/GC,
@@ -117,10 +119,12 @@ Initial admission queues all nets so unchanged initial drivers still compare
 against the previous image. Driver scanning and full publication copies remain;
 this is not a fully event-indexed or whole-board native runner.
 
-The existing native/registered-memory sweep passed 66 tests without skips; the
-expanded incremental file separately passed five tests including changed-flag
-reset, duplicate driver changes and re-admission. All seven-round A/B workload
-state hashes matched. HARRIS-NATIVE-QUEUE-AB.json pins the prior artifact sources
+The final integrated native/registered-memory plus policy sweep passed 76 tests
+without skips. This includes five incremental tests covering changed-flag
+reset, duplicate driver changes and re-admission. Chromium accepted the same
+native oracles plus reference/packed/layout memory workloads; receipt:
+HARRIS-NATIVE-QUEUE-BROWSER.json. All seven-round A/B workload state hashes
+matched. HARRIS-NATIVE-QUEUE-AB.json pins the prior artifact sources
 to `5ecd612` and captures current source hashes/build identity.
 
 Component-only A/B medians: prior incremental 68.60 ms versus queued 53.10 ms
@@ -142,6 +146,13 @@ capacity for a named reference board and workload, with separate traced/untraced
 results. Arbitrary custom circuits have no promised performance ceiling.
 
 ## Coordination
+
+**Application adoption update:** simclaude2/lego-38 owns the concurrent migration
+from copied bw-board/bw-circuit-ui roots to pinned npm dependencies. The isolated
+old-copy adoption checkpoint `42ea32059` in Lite is **not for landing**; its
+documentation is retained, but the obsolete sync changes must not be published
+over that migration. GUI work is isolated from packaging and will integrate
+after the new dependency boundary is available. P1 remains open until verified.
 
 One worker per worktree. Pin remote SHAs; shared refs can move. Delegate bounded
 independent work with explicit file/worktree ownership. Inspect existing screen

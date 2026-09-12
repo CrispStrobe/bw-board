@@ -56,6 +56,11 @@ ID and opt-in and must still be qualified and available. Explicit selections
 never fall back to a different ID, CPU family or machine. Reference mode filters
 to qualified reference entries. No runtime microbenchmark changes ranking.
 
+The existing GUI's **reference byte access** is a separate RAM diagnostic
+preference, not this API's reference implementation mode. It disables one
+guarded word shortcut while other optimizations remain enabled. Never label
+that preference as a completely unoptimized/reference backend.
+
 Success returns `accepted`, `code: 'selected'`, normalized `requested`, frozen
 `selected` metadata including capabilities/evidence, `reason`, skipped candidate
 `refusals`, and **`restartRequired: true`**. This always describes a reconstruction
