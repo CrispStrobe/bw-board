@@ -24,15 +24,18 @@ test('stage receipt reconciles exact loop dimensions and receipt crossings',()=>
 test('semantic reconciliation includes all existing counter fields',()=>{const expected=semantic();assert.equal(LEGACY_WORK_COUNTERS.length,12);assert.doesNotThrow(()=>assertSemantic(structuredClone(expected),expected));
     for(const field of ['stateHash','periods','retired','writes','physicalClock']){const bad=structuredClone(expected);bad[field]=field==='writes'?[2,1]:field==='stateHash'?'bad':bad[field]+1;assert.throws(()=>assertSemantic(bad,expected));}
     for(const name of LEGACY_WORK_COUNTERS){const bad=structuredClone(expected);bad.work[name]++;assert.throws(()=>assertSemantic(bad,expected));}});
-test('profile classifier uses leaf samples once and excludes idle and GC',()=>{const frames=[['validate_memory_mapping','wasm://x'],['_instructions','file:///x/harris-80c286-boot-cpu.js'],['compileForInternalLoader',''],['mystery',''],['(idle)',''],['(garbage collector)','']];
+test('profile classifier uses leaf samples once, rejects unknown Wasm, and excludes idle and GC',()=>{const frames=[['validate_memory_mapping','wasm://x'],['_instructions','file:///x/harris-80c286-boot-cpu.js'],['compileForInternalLoader',''],['unknown_future_kernel','wasm://x'],['(idle)',''],['(garbage collector)','']];
     const profile={nodes:frames.map(([functionName,url],i)=>({id:i+1,callFrame:{functionName,url}})),samples:[1,2,3,4,5,6]};const c=classifyProfile(profile);
-    assert.deepEqual({total:c.totalSamples,idle:c.idleSamples,gc:c.gcSamples,nonIdle:c.nonIdleSamples,classified:c.classifiedSamples},{total:6,idle:1,gc:1,nonIdle:4,classified:3});assert.equal(c.classifiedRatio,.75);});
+    assert.deepEqual({total:c.totalSamples,idle:c.idleSamples,gc:c.gcSamples,nonIdle:c.nonIdleSamples,classified:c.classifiedSamples},{total:6,idle:1,gc:1,nonIdle:4,classified:3});assert.equal(c.classifiedRatio,.75);assert.deepEqual(c.topTwoActionableFamilies,['jsCPU','nativeMemory']);});
+test('actionable family ties use deterministic lexical order',()=>{const frames=[['settle_incremental_context','wasm://x'],['bus_begin','wasm://x'],['preview_memory_stage','wasm://x']];
+    const c=classifyProfile({nodes:frames.map(([functionName,url],i)=>({id:i+1,callFrame:{functionName,url}})),samples:[1,2,3]});
+    assert.deepEqual(c.actionableRanking.map(x=>x.family),['nativeBusAndPhase','nativeMemory','nativeNetKernel']);});
 test('rotating order and summaries are deterministic',()=>{assert.deepEqual([1,2,3].map(rotatedOrder),[['master','diagnosticOff','diagnosticOn'],['diagnosticOff','diagnosticOn','master'],['diagnosticOn','master','diagnosticOff']]);assert.equal(summarize([1,2,3]).median,2);});
 test('workflow pins exact control, builds off/on separately, and rejects weak attribution',()=>{
-    assert.ok(workflow.includes(`MASTER_SHA=${MASTER_REVISION}`));assert.match(workflow,/workflow_dispatch:/);assert.doesNotMatch(workflow,/push:/);
+    assert.ok(workflow.includes(`MASTER_SHA=${MASTER_REVISION}`));assert.match(workflow,/workflow_dispatch:/);assert.match(workflow,/branches: \['perf\/native-stage-attribution', 'perf\/native-stage-attribution-\*'\]/);
     assert.equal((workflow.match(/build-wired-net-kernel\.mjs/g)??[]).length,3);assert.equal((workflow.match(/NATIVE_STAGE_ATTRIBUTION=1/g)??[]).length,1);
     assert.match(workflow,/candidateOffToMaster>=\.98&&r\.ratios\.candidateOffToMaster<=1\.02/);assert.match(workflow,/diagnosticOnToOff>=\.98&&r\.ratios\.diagnosticOnToOff<=1\.02/);
-    assert.match(workflow,/--cpu-prof/);assert.match(workflow,/classifiedRatio>=\.90/);assert.match(workflow,/artifact-byte-counts\.json/);assert.doesNotMatch(workflow,/continue-on-error: true|\|\| true/);
+    assert.match(workflow,/for run in 1 2 3/);assert.match(workflow,/--cpu-prof/);assert.match(workflow,/--profile-repetitions=8/);assert.match(workflow,/classifiedRatio>=\.90/);assert.match(workflow,/topTwoActionableFamilies/);assert.match(workflow,/artifact-byte-counts\.json/);assert.doesNotMatch(workflow,/continue-on-error: true|\|\| true/);
     for(const action of workflow.matchAll(/uses: [^@\s]+@([^\s]+)/g))assert.match(action[1],/^[0-9a-f]{40}$/);
 });
 test('diagnostic build is conditional and stable work-counter ABI source is untouched',()=>{

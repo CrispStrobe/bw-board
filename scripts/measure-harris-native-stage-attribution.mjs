@@ -71,15 +71,25 @@ async function sample(v,iterations=4096){const board=await v.createBoard({enable
 function classifyNode(frame){const f=frame.functionName||'',u=frame.url||'';
     if(f==='(idle)')return 'idle';if(f==='(garbage collector)')return 'gc';
     const exact={validate_memory_mapping:'memoryMappingValidation',gather_memory_inputs:'memoryGather',preview_memory_stage:'memoryPreview',commit_memory_stage:'memoryCommit',publish_memory_writers:'memoryWriterPublication',post_memory_settle:'memoryPostSettle',validate_phase_mapping:'phaseValidation',validate_bus_mapping:'busValidation'};
-    if(exact[f])return exact[f];if(u.startsWith('wasm://'))return 'nativeOther';
+    if(exact[f])return exact[f];
+    const memory=new Set(['settle_memory_circuit','preview_memory_banks','preview_owned_memory_banks','known_memory']);
+    const net=new Set(['settle_incremental_context','resolve_dirty','publish_incremental','settle_owned_context','admit_owned_context',
+        'resolve_nets','resolve_valid','evaluate_owned_operations_marked_sparse','evaluate_operation','write_driver','write_owned_driver','write_owned_driver_tagged']);
+    const busPhase=new Set(['run_bus_memory_until_completion','begin_bus_memory_clock','end_bus_memory_clock','validate_bus_mapping','gather','bus_begin','bus_end','bus_submit','bus_inspect','bus_output_ptr',
+        'begin_latched_memory_clock','preview_latched_memory_clock','finish_latched_memory_clock','settle_phase_nets','gather_phase','publish_controller',
+        'begin_memory_phase','preview_memory_phase_end','finish_memory_phase','update_address_latch','phase_commands','phase_decode']);
+    if(u.startsWith('wasm://')){if(memory.has(f))return 'nativeMemoryOrchestration';if(net.has(f))return 'nativeNetKernel';if(busPhase.has(f))return 'nativeBusAndPhase';return 'unclassified';}
     if(u.includes('harris-80c286-boot-cpu.js'))return 'jsCPU';if(u.includes('bus-circuit-image.js')||u.includes('memory-circuit.js')||u.includes('harris-native-memory-board.js'))return 'jsWasmEntriesAndReceipt';
     if(u.includes('harris-run-transactions.js'))return 'cooperativeControl';if(u.includes('measure-harris-native-stage-attribution.mjs'))return 'measurementHarness';
     if(u.includes('/src/'))return 'fixtureAndModelOther';if(f.startsWith('js-to-wasm'))return 'wasmEntryTrampoline';
     if(u.startsWith('node:')||u.includes('/internal/')||['(program)','(root)','compileForInternalLoader','compileFunction',
         'getPackageScopeConfig','lstat','read','parse','now','get buffer'].includes(f))return 'nodeRuntime';return 'unclassified';}
-export function classifyProfile(profile){const nodes=new Map(profile.nodes.map(n=>[n.id,n.callFrame])),counts={};for(const id of profile.samples??[]){const category=classifyNode(nodes.get(id)??{});counts[category]=(counts[category]??0)+1;}
+const ACTIONABLE_FAMILY=Object.freeze({memoryMappingValidation:'nativeMemory',memoryGather:'nativeMemory',memoryPreview:'nativeMemory',memoryCommit:'nativeMemory',memoryWriterPublication:'nativeMemory',memoryPostSettle:'nativeMemory',nativeMemoryOrchestration:'nativeMemory',
+    nativeNetKernel:'nativeNetKernel',phaseValidation:'nativeBusAndPhase',busValidation:'nativeBusAndPhase',nativeBusAndPhase:'nativeBusAndPhase',jsCPU:'jsCPU',jsWasmEntriesAndReceipt:'jsWasmBoundary',wasmEntryTrampoline:'jsWasmBoundary',cooperativeControl:'cooperativeControl'});
+export function classifyProfile(profile){const nodes=new Map(profile.nodes.map(n=>[n.id,n.callFrame])),counts={},families={};for(const id of profile.samples??[]){const category=classifyNode(nodes.get(id)??{});counts[category]=(counts[category]??0)+1;const family=ACTIONABLE_FAMILY[category];if(family)families[family]=(families[family]??0)+1;}
     const total=(profile.samples??[]).length,idle=counts.idle??0,gc=counts.gc??0,nonIdle=total-idle-gc,unclassified=counts.unclassified??0,classified=nonIdle-unclassified,ratio=nonIdle?classified/nonIdle:0;
-    return {totalSamples:total,idleSamples:idle,gcSamples:gc,nonIdleSamples:nonIdle,classifiedSamples:classified,classifiedRatio:ratio,categories:counts};}
+    const actionableRanking=Object.entries(families).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([family,samples])=>({family,samples}));
+    return {totalSamples:total,idleSamples:idle,gcSamples:gc,nonIdleSamples:nonIdle,classifiedSamples:classified,classifiedRatio:ratio,categories:counts,actionableFamilies:families,actionableRanking,topTwoActionableFamilies:actionableRanking.slice(0,2).map(x=>x.family)};}
 async function main(){parseOptions(process.argv.slice(2));if(options['classify-profile']){const profile=JSON.parse(readFileSync(options['classify-profile'])),receipt=JSON.parse(readFileSync(options['profile-receipt']));const classification=classifyProfile(profile);assert.ok(receipt.samples?.length,'profile receipt');assert.ok(classification.classifiedRatio>=.90,'less than 90% of non-idle/non-GC samples classified');console.log(JSON.stringify({schemaVersion:1,profileReceipt:receipt,classification,limitations:['Leaf samples are assigned once; inclusive stacks are not summed. Idle and garbage-collector samples are disclosed and excluded from the classification denominator.']},null,2));return;}
     assert.equal(options.experimental,true,'--experimental required');const candidate=options['candidate-revision'];assert.match(candidate??'',/^[0-9a-f]{40}$/);const iterations=integer('iterations',4096,65535);
     const master=await loadVariant('master',options['master-dir'],options['master-wasm'],MASTER_REVISION,false),off=await loadVariant('diagnosticOff',options['candidate-dir'],options['off-wasm'],candidate,false),on=await loadVariant('diagnosticOn',options['candidate-dir'],options['on-wasm'],candidate,true);

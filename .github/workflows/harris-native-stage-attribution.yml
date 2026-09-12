@@ -1,6 +1,8 @@
 name: Harris native exact-stage attribution
 
 on:
+  push:
+    branches: ['perf/native-stage-attribution', 'perf/native-stage-attribution-*']
   workflow_dispatch:
 
 permissions:
@@ -64,19 +66,21 @@ jobs:
       - name: Profile diagnostic mode in a separate process
         run: |
           set -euo pipefail
-          node --expose-gc --cpu-prof --cpu-prof-dir="$RECEIPT_DIR" --cpu-prof-name=hybrid-native-stages.cpuprofile \
-            scripts/measure-harris-native-stage-attribution.mjs --experimental --profile-only \
-            --master-dir="$MASTER_TREE" --candidate-dir="$GITHUB_WORKSPACE" \
-            --master-wasm="$RECEIPT_DIR/master-build/wired-net-kernel.wasm" \
-            --off-wasm="$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm" \
-            --on-wasm="$RECEIPT_DIR/diagnostic-on-build/wired-net-kernel.wasm" \
-            --candidate-revision="$CANDIDATE_SHA" --iterations=4096 --profile-repetitions=6 \
-            > "$RECEIPT_DIR/native-stage-profile-receipt.json"
-          node scripts/measure-harris-native-stage-attribution.mjs \
-            --classify-profile="$RECEIPT_DIR/hybrid-native-stages.cpuprofile" \
-            --profile-receipt="$RECEIPT_DIR/native-stage-profile-receipt.json" \
-            > "$RECEIPT_DIR/native-stage-profile-classification.json"
-          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const d=process.env.RECEIPT_DIR,r=JSON.parse(fs.readFileSync(d+"/native-stage-profile-classification.json"));assert.ok(r.classification.nonIdleSamples>0);assert.ok(r.classification.classifiedRatio>=.90);const files=["native-stage-attribution-control.json","native-stage-profile-receipt.json","hybrid-native-stages.cpuprofile","native-stage-profile-classification.json"];fs.writeFileSync(d+"/artifact-byte-counts.json",JSON.stringify(Object.fromEntries(files.map(name=>[name,fs.statSync(d+"/"+name).size])),null,2)+"\n");'
+          for run in 1 2 3; do
+            node --expose-gc --cpu-prof --cpu-prof-dir="$RECEIPT_DIR" --cpu-prof-name="hybrid-native-stages-$run.cpuprofile" \
+              scripts/measure-harris-native-stage-attribution.mjs --experimental --profile-only \
+              --master-dir="$MASTER_TREE" --candidate-dir="$GITHUB_WORKSPACE" \
+              --master-wasm="$RECEIPT_DIR/master-build/wired-net-kernel.wasm" \
+              --off-wasm="$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm" \
+              --on-wasm="$RECEIPT_DIR/diagnostic-on-build/wired-net-kernel.wasm" \
+              --candidate-revision="$CANDIDATE_SHA" --iterations=4096 --profile-repetitions=8 \
+              > "$RECEIPT_DIR/native-stage-profile-receipt-$run.json"
+            node scripts/measure-harris-native-stage-attribution.mjs \
+              --classify-profile="$RECEIPT_DIR/hybrid-native-stages-$run.cpuprofile" \
+              --profile-receipt="$RECEIPT_DIR/native-stage-profile-receipt-$run.json" \
+              > "$RECEIPT_DIR/native-stage-profile-classification-$run.json"
+          done
+          node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const d=process.env.RECEIPT_DIR,read=name=>JSON.parse(fs.readFileSync(d+"/"+name)),runs=[1,2,3].map(i=>read(`native-stage-profile-classification-${i}.json`));for(const r of runs){assert.ok(r.classification.nonIdleSamples>0);assert.ok(r.classification.classifiedRatio>=.90);assert.equal(r.classification.topTwoActionableFamilies.length,2);}assert.deepEqual(runs[1].classification.topTwoActionableFamilies,runs[0].classification.topTwoActionableFamilies);assert.deepEqual(runs[2].classification.topTwoActionableFamilies,runs[0].classification.topTwoActionableFamilies);const files=["native-stage-attribution-control.json",...Array.from({length:3},(_,i)=>[`native-stage-profile-receipt-${i+1}.json`,`hybrid-native-stages-${i+1}.cpuprofile`,`native-stage-profile-classification-${i+1}.json`]).flat()];fs.writeFileSync(d+"/artifact-byte-counts.json",JSON.stringify(Object.fromEntries(files.map(name=>[name,fs.statSync(d+"/"+name).size])),null,2)+"\n");'
       - name: Upload exact control, profile, counters, and byte receipts
         if: ${{ always() && env.RECEIPT_DIR != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
