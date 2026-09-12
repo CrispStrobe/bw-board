@@ -83,8 +83,12 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         if(levels!==undefined){
             if(!(levels instanceof Uint8Array)||levels.length!==drivers)throw new TypeError('driver dimensions');
             for(const code of levels)if(code>3)throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
-            const current=bytes('drivers',drivers);for(let i=0;i<drivers;i++)if(current[i]!==levels[i])hostValueChangingDriverWrites++;
-            current.set(levels);
+            const current=bytes('drivers',drivers);
+            if(incrementalGraph){
+                for(let i=0;i<drivers;i++)if(current[i]!==levels[i]){
+                    hostValueChangingDriverWrites++;if(e.write_owned_driver(p.context,i,levels[i]))throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
+                }
+            }else current.set(levels);
         }
     };
     const memoryFault=result=>{

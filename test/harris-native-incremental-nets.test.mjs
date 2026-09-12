@@ -26,7 +26,8 @@ async function rawKernel({incremental=false,oscillator=false,previousImage=null}
         [name,Array.from(new Uint8Array(e.memory.buffer,p[name],name==='drivers'?drivers:3))]));
     const counters=()=>Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),10)[i]]));
     return {e,p,v,inspect,counters,resetCounters:()=>e.reset_incremental_work_counters(),
-        step:levels=>{new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
+        step:levels=>{if(incremental)levels.forEach((code,id)=>assert.equal(e.write_owned_driver(p.context,id,code),0));
+            else new Uint8Array(e.memory.buffer,p.drivers,drivers).set(levels);return e.settle_owned_context(p.context)>>>0;}};
 }
 test('work counters observe existing full and incremental loops and reset without changing state',native,async()=>{
     const checked=await rawKernel(),incremental=await rawKernel({incremental:true});
@@ -51,10 +52,28 @@ test('work counters observe existing full and incremental loops and reset withou
         stagedDriverCopies:4,committedEvaluatorOutputs:0,publishNetCopies:3,deltas:1
     });
 });
-test('incremental private graph matches memory, phase and native schedule oracles',native,async()=>{
+test('driver seam validates before mutation, preserves duplicate order and queues one dirty net',native,async()=>{
+    const k=await rawKernel({incremental:true});k.resetCounters();const before=k.inspect();
+    assert.equal(k.e.write_owned_driver(k.p.context,4,0),1);assert.equal(k.e.write_owned_driver(k.p.context,0,4),2);
+    assert.deepEqual(k.inspect(),before);assert.deepEqual(k.counters(),Object.fromEntries(WORK_COUNTERS.map(name=>[name,0])));
+    assert.equal(k.e.write_owned_driver(k.p.context,0,1),0);
+    assert.equal(k.e.write_owned_driver(k.p.context,0,0),0);
+    assert.equal(k.e.write_owned_driver(k.p.context,0,1),0);
+    assert.equal(k.e.settle_owned_context(k.p.context),1);
+    assert.equal(k.inspect().drivers[0],1,'the final duplicate write wins');
+    assert.equal(k.counters().valueChangingDriverWrites,3,'each real ordered transition is retained');
+    assert.equal(k.counters().dirtyNetResolutions,3,'admission nets resolve once; the rewritten driver is not enqueued twice');
+});
+test('incremental memory oracle compares evaluator and memory-output driver state',native,async()=>{
     const options={wasmBytes,admittedGraph:true,incrementalGraph:true};
     assert.equal((await runNativeMemoryCircuitOracle({...options,swapAddress:true})).comparisons,1026);
+});
+test('incremental phase oracle compares controller and latch driver state',native,async()=>{
+    const options={wasmBytes,admittedGraph:true,incrementalGraph:true};
     assert.equal((await runNativePhaseCircuitOracle(options)).comparisons,1532);
+});
+test('incremental schedule oracle compares every native host-driver update',native,async()=>{
+    const options={wasmBytes,admittedGraph:true,incrementalGraph:true};
     assert.equal((await runNativePhaseScheduleOracle(options)).periods,258);
 });
 test('incremental resolver matches checked deltas through X/Z, masked changes and conflict-only transitions',native,async()=>{
