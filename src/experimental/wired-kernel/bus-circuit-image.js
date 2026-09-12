@@ -54,8 +54,9 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             const view=new DataView(e.memory.buffer),word=(name,i=0)=>view.getUint32(p[name]+4*i,true);
             const externalValues=new Uint8Array(e.memory.buffer,p.busExternalValues,externalPins.length);
             const jsStage={wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,
-                completionObjects:0,nativeReceiptBytesRead:0};
+                completionObjects:0,materializedCompletionRecordBytes:0};
             const count=(name,value=1)=>{if(stageAttribution)jsStage[name]=(jsStage[name]+value)>>>0;};
+            const inspectEntry=field=>{count('wasmBusInspectEntries');return e.bus_inspect(field);};
             externalValues.set(maps.busExternalIds.map(id=>image.driverLevels[id]));
             put('busContext',[p.context,p.phaseContext,p.busInputNets,p.busOutputIds,p.busExternalIds,p.busExternalValues,
                 externalPins.length,p.busLifecycle,p.busRun,p.busResults]);
@@ -104,8 +105,7 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
                 if(word('busLifecycle',1)||word('busLifecycle'))throw new CircuitFault('BOARD_FAULTED','board unavailable');
                 // Admission needs four scalar flags, not a diagnostic snapshot
                 // (including pending-byte copies and many extra Wasm calls).
-                count('wasmBusInspectEntries',4);
-                if(e.bus_inspect(3)||e.bus_inspect(2)||e.bus_inspect(9)||e.bus_inspect(0)!==BUS_IDLE)
+                if(inspectEntry(3)||inspectEntry(2)||inspectEntry(9)||inspectEntry(0)!==BUS_IDLE)
                     throw new CircuitFault('BUS_UNAVAILABLE','reset/init/pending');
                 if(!transaction||typeof transaction!=='object'||Object.keys(transaction).some(k=>!transactionFields.has(k)))
                     throw new CircuitFault('UNSUPPORTED_TRANSACTION','memory subset');
@@ -117,14 +117,14 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             };
             const runUntilCompletion=({maxPeriods=1024,inputs={}}={})=>{
                 guard();if(!Number.isInteger(maxPeriods)||maxPeriods<1||maxPeriods>8192)throw new RangeError('maxPeriods 1..8192');
-                count('wasmBusInspectEntries');if(!e.bus_inspect(9))throw new CircuitFault('BUS_UNAVAILABLE','submit a transaction first');
+                if(!inspectEntry(9))throw new CircuitFault('BUS_UNAVAILABLE','submit a transaction first');
                 update(inputs);count('wasmBusRunEntries');const result=e.run_bus_memory_until_completion(p.busContext,maxPeriods,p.fault);
-                const receiptCount=word('busRun',1);count('completionObjects',receiptCount);count('nativeReceiptBytesRead',receiptCount*36);
+                const receiptCount=word('busRun',1);count('completionObjects',receiptCount);count('materializedCompletionRecordBytes',receiptCount*36);
                 const completions=Object.freeze(Array.from({length:receiptCount},(_,i)=>completion(p.busResults+i*36)));
                 try{fault(result);}catch(error){
                     // Only fully successful period boundaries are counted here;
                     // the faulting period may already have advanced CPU clock.
-                    count('wasmBusInspectEntries');error.progress=Object.freeze({stopReason:'fault',periods:word('busRun'),completions,busClock:e.bus_inspect(4)});
+                    error.progress=Object.freeze({stopReason:'fault',periods:word('busRun'),completions,busClock:inspectEntry(4)});
                     throw error;
                 }
                 const completed=!!word('busRun',2);
