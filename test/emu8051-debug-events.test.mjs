@@ -179,6 +179,19 @@ describe('emu8051 checkpoints: a refusal that names what is missing', () => {
     it('refuses to save, and says which state an architectural dump omits', {skip: SKIP}, async () => {
         const t = await targetWith(PIN_BYTES);
         const r = t.captureCheckpoint();
+        if (t.capabilities().extensions.checkpoint.supported) {
+            assert.equal(r.kind, 'emu8051-native');
+            assert.ok(r.bytes instanceof Uint8Array && r.bytes.length === r.size);
+            assert.deepEqual(t.capabilities().recording, ['checkpoint', 'restore']);
+            assert.equal(t.capabilities().reverse, undefined,
+                'checkpoint support alone is not a reverse-execution claim');
+            const pc = t.regs().pc;
+            stepOnce(t);
+            assert.notEqual(t.regs().pc, pc, 'the live core moved after capture');
+            assert.equal(t.restoreCheckpoint(r), true);
+            assert.equal(t.regs().pc, pc, 'the native checkpoint restored the real core');
+            return;
+        }
         assert.equal(r.code, 'incomplete-snapshot-abi');
         assert.equal(r.operation, 'save');
         assert.match(r.refused, /native complete-state WASM ABI/);
@@ -199,6 +212,12 @@ describe('emu8051 checkpoints: a refusal that names what is missing', () => {
         let touched = null;
         const trap = new Proxy({}, {get(_, k) { touched = String(k); return undefined; }});
         const r = t.restoreCheckpoint(trap);
+        if (t.capabilities().extensions.checkpoint.supported) {
+            assert.equal(r.code, 'invalid-checkpoint-envelope');
+            assert.equal(touched, 'schema', 'supported builds inspect only the envelope before refusing');
+            assert.equal(t.regs().pc, pcBefore, 'and invalid input moved nothing');
+            return;
+        }
         assert.equal(r.code, 'incomplete-snapshot-abi');
         assert.equal(r.operation, 'restore');
         assert.equal(touched, null, `restore read '${touched}' out of a snapshot it refused`);

@@ -91,13 +91,14 @@
  *
  * ## Checkpoints fail closed on this ABI
  *
- * The pinned WASM exposes architectural reads and memory writes, but no native
- * state serializer. Rebuilding from PC, IRAM, SFR and XRAM would omit an
- * instruction in flight, program time, timer/interrupt peripheral phases,
- * UART queues and external input latches. `captureCheckpoint` and
- * `restoreCheckpoint` therefore return a structured refusal and `recording`
- * remains empty. An architectural dump is useful for display; it is not a
- * deterministic continuation point.
+ * Checkpoint support is admitted only by the exact five-export native ABI v1
+ * and its deterministic layout id. Older, partial, wrong-version and
+ * wrong-layout builds keep the prior structured refusal: reconstructing from
+ * PC, IRAM, SFR and XRAM would omit in-flight and peripheral state. The native
+ * blob is copied out of the WASM heap into caller-owned bytes and restore
+ * validates its JS envelope before the atomic native call. This enables
+ * checkpoint/restore recording only; reverse execution remains a separate,
+ * unclaimed integration.
  *
  * ## Native pin-event transport
  *
@@ -131,6 +132,14 @@ const CODE_ADDRESS_REFUSAL =
 const NS_PER_S = 1_000_000_000n;
 /** PIN_HISTORY_SIZE in the pinned native ABI. */
 const PIN_HISTORY_CAPACITY = 4096;
+const CHECKPOINT_VERSION = 1;
+const CHECKPOINT_BUILD_ID = 0x80510101;
+const CHECKPOINT_MAX_BYTES = 2 * 1024 * 1024;
+const CHECKPOINT_NATIVE_ERRORS = Object.freeze({
+    [-1]: 'not-initialized', [-2]: 'null-buffer', [-3]: 'wrong-length',
+    [-4]: 'malformed', [-5]: 'unsupported-version', [-6]: 'incompatible-build',
+    [-7]: 'invalid-state', [-8]: 'allocation-failed'
+});
 
 /**
  * What an architectural dump cannot carry, named rather than summarised, so a
@@ -278,6 +287,38 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         pinHistoryReadCount = wasm._emu_pin_history_count() >>> 0;
         pinHistoryReadHead = wasm._emu_pin_history_head() >>> 0;
     }
+
+    const checkpointExports = [
+        '_emu_checkpoint_version', '_emu_checkpoint_build_id', '_emu_checkpoint_size',
+        '_emu_checkpoint_save', '_emu_checkpoint_restore'
+    ];
+    let checkpointSize = 0;
+    let checkpointCode = 'incomplete-snapshot-abi';
+    if (wasm.HEAPU8 && typeof wasm._malloc === 'function' && typeof wasm._free === 'function' &&
+        checkpointExports.every(name => typeof wasm[name] === 'function')) {
+        try {
+            const version = wasm._emu_checkpoint_version() >>> 0;
+            const buildId = wasm._emu_checkpoint_build_id() >>> 0;
+            const size = wasm._emu_checkpoint_size() >>> 0;
+            if (version !== CHECKPOINT_VERSION) checkpointCode = 'unsupported-checkpoint-version';
+            else if (buildId !== CHECKPOINT_BUILD_ID) checkpointCode = 'incompatible-checkpoint-build';
+            else if (!Number.isSafeInteger(size) || size <= 0 || size > CHECKPOINT_MAX_BYTES) {
+                checkpointCode = 'invalid-checkpoint-size';
+            } else checkpointSize = size;
+        } catch {
+            checkpointCode = 'invalid-checkpoint-abi';
+        }
+    }
+    const hasCheckpoint = checkpointSize > 0;
+
+    const nativeCheckpointRefusal = (operation, nativeCode) => ({
+        refused: `native 8051 checkpoint ${operation} refused (${CHECKPOINT_NATIVE_ERRORS[nativeCode] ||
+            `error-${nativeCode}`})`,
+        code: 'native-checkpoint-refused', operation, nativeCode,
+        reason: CHECKPOINT_NATIVE_ERRORS[nativeCode] || 'unknown-native-error'
+    });
+    const unavailableCheckpointRefusal = operation => ({...checkpointRefusal(operation),
+        code: checkpointCode});
 
     /** The injected opcode-length table, or null when the host supplied none. */
     const instructionLength = typeof opts.instructionLength === 'function'
@@ -603,7 +644,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 fidelity: 'recorded',
                 resumable: true,
                 signals: [],
-                checkpoint: false
+                checkpoint: hasCheckpoint
             };
         },
 
@@ -636,9 +677,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 sfrs: 'all',
                 haltPolicy: 'freeze-timers',
                 timeFreezes: true,
-                // Empty because captureCheckpoint refuses: there is no native
-                // complete-state ABI to record from. See the module header.
-                recording: [],
+                recording: hasCheckpoint ? ['checkpoint', 'restore'] : [],
                 // An emulator takes nothing from the program: no timer, no
                 // UART, no pin. The on-chip monitor is the one that has to
                 // confess here (§7 decision 5).
@@ -665,9 +704,10 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     // a property of the HOST's injection, not of this build.
                     instructionBytes: instructionLength ? 'injected-length-table' : 'none',
                     checkpoint: {
-                        supported: false,
-                        code: 'incomplete-snapshot-abi',
-                        missing: [...CHECKPOINT_MISSING]
+                        supported: hasCheckpoint,
+                        ...(hasCheckpoint ? {version: CHECKPOINT_VERSION,
+                            buildId: CHECKPOINT_BUILD_ID, size: checkpointSize} :
+                            {code: checkpointCode, missing: [...CHECKPOINT_MISSING]})
                     }
                 }
             };
@@ -898,14 +938,96 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
             return readRegisters();
         },
 
-        /** Refuse partial architectural dumps as deterministic checkpoints. */
+        /** Copy the complete native blob out of transient WASM-owned memory. */
         captureCheckpoint() {
-            return checkpointRefusal('save');
+            if (!hasCheckpoint) return unavailableCheckpointRefusal('save');
+            const ptr = wasm._malloc(checkpointSize);
+            if (!ptr) return nativeCheckpointRefusal('save', -8);
+            try {
+                if (ptr < 0 || ptr + checkpointSize > wasm.HEAPU8.length) {
+                    return {refused: 'checkpoint allocation lies outside the WASM heap',
+                        code: 'invalid-checkpoint-allocation'};
+                }
+                const nativeCode = wasm._emu_checkpoint_save(ptr, checkpointSize);
+                if (nativeCode !== 0) return nativeCheckpointRefusal('save', nativeCode);
+                return {
+                    schema: 1, kind: 'emu8051-native', version: CHECKPOINT_VERSION,
+                    buildId: CHECKPOINT_BUILD_ID, size: checkpointSize,
+                    timeNs: nowNs(), bytes: Uint8Array.from(
+                        wasm.HEAPU8.subarray(ptr, ptr + checkpointSize)),
+                    local: {
+                        symbols: typeof structuredClone === 'function' ? structuredClone(symbols) : symbols,
+                        taskIndex: [...taskIndex], yieldAddr: [...yieldAddr],
+                        breakpoints: [...breakpoints].map(([id, bp]) => [id, {...bp}])
+                    }
+                };
+            } finally {
+                wasm._free(ptr);
+            }
         },
 
-        /** Refuse before inspecting or mutating the supplied partial state. */
-        restoreCheckpoint(_snapshot) {
-            return checkpointRefusal('restore');
+        /** Validate the JS envelope before asking native code to mutate. */
+        restoreCheckpoint(snapshot) {
+            if (!hasCheckpoint) return unavailableCheckpointRefusal('restore');
+            if (!snapshot || snapshot.schema !== 1 || snapshot.kind !== 'emu8051-native' ||
+                snapshot.version !== CHECKPOINT_VERSION || snapshot.buildId !== CHECKPOINT_BUILD_ID ||
+                snapshot.size !== checkpointSize || !(snapshot.bytes instanceof Uint8Array) ||
+                snapshot.bytes.length !== checkpointSize || !snapshot.local ||
+                !Array.isArray(snapshot.local.taskIndex) || !Array.isArray(snapshot.local.yieldAddr) ||
+                !Array.isArray(snapshot.local.breakpoints)) {
+                return {refused: 'checkpoint envelope or identity does not match this 8051 target',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            const validEntry = entry => Array.isArray(entry) && entry.length === 2;
+            if (!snapshot.local.taskIndex.every(validEntry) ||
+                !snapshot.local.yieldAddr.every(validEntry) ||
+                !snapshot.local.breakpoints.every(entry => validEntry(entry) &&
+                    Number.isSafeInteger(entry[0]) && entry[1] && typeof entry[1] === 'object')) {
+                return {refused: 'checkpoint debugger-local state is malformed',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            let restoredSymbols;
+            try {
+                restoredSymbols = typeof structuredClone === 'function' ?
+                    structuredClone(snapshot.local.symbols) : snapshot.local.symbols;
+            } catch {
+                return {refused: 'checkpoint symbol state cannot be cloned',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            const ptr = wasm._malloc(checkpointSize);
+            if (!ptr) return nativeCheckpointRefusal('restore', -8);
+            if (ptr < 0 || ptr + checkpointSize > wasm.HEAPU8.length) {
+                wasm._free(ptr);
+                return {refused: 'checkpoint allocation lies outside the WASM heap',
+                    code: 'invalid-checkpoint-allocation'};
+            }
+            const before = nowNs();
+            let nativeCode;
+            try {
+                wasm.HEAPU8.set(snapshot.bytes, ptr);
+                nativeCode = wasm._emu_checkpoint_restore(ptr, checkpointSize);
+            } finally {
+                wasm._free(ptr);
+            }
+            if (nativeCode !== 0) return nativeCheckpointRefusal('restore', nativeCode);
+
+            symbols = restoredSymbols;
+            taskIndex.clear();
+            yieldAddr.clear();
+            breakpoints.clear();
+            for (const entry of snapshot.local.taskIndex) taskIndex.set(...entry);
+            for (const entry of snapshot.local.yieldAddr) yieldAddr.set(...entry);
+            for (const [id, bp] of snapshot.local.breakpoints) breakpoints.set(id, {...bp});
+            pendingStep = null;
+            pendingCause = null;
+            stepping = false;
+            inBudgetedRun = false;
+            if (nowNs() < before) debugTimeEpoch++;
+            if (hasPinHistory) {
+                pinHistoryReadCount = wasm._emu_pin_history_count() >>> 0;
+                pinHistoryReadHead = wasm._emu_pin_history_head() >>> 0;
+            }
+            return true;
         },
 
         onHalt(cb) {
