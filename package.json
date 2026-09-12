@@ -32,6 +32,7 @@
     "./package.json": "./package.json",
     "./rom/*": "./rom/*",
     "./roms/*": "./roms/*",
+    "./test/golden/*": "./test/golden/*",
     "./*": "./src/*"
   },
   "scripts": {

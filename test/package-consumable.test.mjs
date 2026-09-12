@@ -130,6 +130,9 @@ test('3. every src file resolves through the exports map as bw-board/<subpath>',
     assert.equal(import.meta.resolve(`${pkg.name}/${sub}`),
       pathToFileURL(path.join(SRC, `${sub}.js`)).href, sub);
   }
+  // Oracle helpers a consumer's tests share (bw-circuit-ui's cube golden).
+  assert.equal(import.meta.resolve(`${pkg.name}/test/golden/cube-oracle.js`),
+    pathToFileURL(path.join(ROOT, 'test/golden/cube-oracle.js')).href);
   // Counter-example: something outside src is not reachable by the wildcard.
   assert.throws(() => import.meta.resolve(`${pkg.name}/../package.json`));
   assert.equal(import.meta.resolve(`${pkg.name}/package.json`), pathToFileURL(path.join(ROOT, 'package.json')).href);
