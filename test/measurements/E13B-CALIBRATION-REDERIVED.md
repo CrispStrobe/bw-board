@@ -117,6 +117,37 @@ Measured on a bare diode, 5 V through 1 kΩ, against ngspice's **0.6532 V**:
 | converted, `rd = 10` | 0.5446 V | **−16.63 %** |
 | converted, `rd = SILICON_RD = 0.568` | 0.6793 V | **+4.00 %** |
 
+**How to reproduce these four numbers, because three of them cannot be recovered
+from this description alone.** A reader who re-derived the table from the prose
+got rows 1 and 2 exactly — they need only the device and the piecewise formula —
+and missed rows 3 and 4, reconstructing 0.5063 and 0.6517 by guessing `vf = 0.7,
+n = 1.0`. The guess is reasonable and wrong, because rows 3 and 4 are **solver
+readings, not hand formulas**, and depend on which junction path the part routes
+to. A measurement nobody can re-run is a claim, so:
+
+- **Row 1 (truth)** — ngspice, `.options TEMP=27 TNOM=27`:
+
+      V1 1 0 5
+      R1 1 2 1000
+      D1 2 0 D1N4148
+      .model D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752)
+
+  Read `v(2)`. Note the deck's first line is the TITLE; a deck starting with
+  `V1 …` silently drops the source and every node sits at 0 V.
+
+- **Rows 2, 3 and 4** — `BoardImpl`, reading `nodeVoltages.get('n_a')` after
+  `advanceTo(1_000_000n)`, on the netlist in
+  `test/gallery-kind-models.test.mjs` "a bare diode is silicon (0.7 V)":
+  vcc 5 V → 1 kΩ → `{kind: 'diode', params: {}}` → gnd. Defaults decide
+  everything else: `vf` from `kind === 'diode' ? 0.7 : 2.0`, `rd` from
+  `junctionRd(part)`, and the model from `junctionModelOf`.
+
+  Row 2 is that reading before this lane, row 3 with `kneeFromVf` applied at the
+  shared `rd = 10`, row 4 with `junctionRd` returning `SILICON_RD`.
+
+Shas: rows 2–4 on `lane/e13-junction-routing-measured`; row 4 is the current
+behaviour at that lane's head.
+
 The middle row is the point: applied with the LED's `rd`, the vf correction made
 silicon **worse than doing nothing**. The per-kind split is not tidiness — it is
 the difference between a correction and a regression, and the shared `rd` was the
