@@ -9,9 +9,9 @@ import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const mutations=[
     {name:'raw circuit wrongly uses owned preview',pattern:'cooperative producer labels',file:'memory-circuit.c',
-        from:'if(c[31])result=preview_owned_memory_banks',to:'if(1)result=preview_owned_memory_banks'},
+        from:'if(c[31])result=preview_owned_memory_banks(',to:'if(1)result=preview_owned_memory_banks('},
     {name:'admitted circuit keeps checked preview',pattern:'cooperative producer labels',file:'memory-circuit.c',
-        from:'if(c[31])result=preview_owned_memory_banks',to:'if(0)result=preview_owned_memory_banks'},
+        from:'if(c[31])result=preview_owned_memory_banks(',to:'if(0)result=preview_owned_memory_banks('},
     {name:'public preview accepts malformed protection',pattern:'public native memory preview',file:'memory-banks.c',
         from:'if(protected_rom[b]>1)return fail_memory(9,b,NONE,fault);',to:'(void)protected_rom[b];'},
     {name:'public preview accepts invalid level encoding',pattern:'public native memory preview',file:'memory-banks.c',
