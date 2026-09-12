@@ -5,17 +5,17 @@ export async function runHarrisChunks({cpu,maxClocks,finished=()=>cpu.status!=='
     for(const [name,value] of Object.entries({maxClocks,chunkClocks,checkEvery}))
         if(!Number.isSafeInteger(value)||value<1)throw new RangeError(name);
     if(!Number.isFinite(wallBudgetMS)||wallBudgetMS<=0)throw new RangeError('wallBudgetMS');
-    let clocks=0,chunks=0,maxChunkMS=0;
+    let clocks=0,chunks=0,maxChunkMS=0,activeMS=0;
     while(clocks<maxClocks&&!finished(clocks)) {
-        if(stopped(clocks))return {status:'stopped',clocks,chunks,maxChunkMS};
+        if(stopped(clocks))return {status:'stopped',clocks,chunks,maxChunkMS,activeMS};
         const start=now();let count=0;
         while(clocks<maxClocks&&count<chunkClocks&&!finished(clocks)&&!stopped(clocks)) {
             beforeClock(clocks);cpu.stepClock();clocks++;count++;
             if(count%checkEvery===0&&now()-start>=wallBudgetMS)break;
         }
-        chunks++;maxChunkMS=Math.max(maxChunkMS,now()-start);
-        if(stopped(clocks))return {status:'stopped',clocks,chunks,maxChunkMS};
+        const chunkMS=now()-start;chunks++;maxChunkMS=Math.max(maxChunkMS,chunkMS);activeMS+=chunkMS;
+        if(stopped(clocks))return {status:'stopped',clocks,chunks,maxChunkMS,activeMS};
         if(!finished(clocks)&&clocks<maxClocks)await yieldTask();
     }
-    return {status:finished(clocks)?'completed':'budget-exhausted',clocks,chunks,maxChunkMS};
+    return {status:finished(clocks)?'completed':'budget-exhausted',clocks,chunks,maxChunkMS,activeMS};
 }

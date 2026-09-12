@@ -5,8 +5,15 @@ import {captureKernelEvaluatorImage,EVALUATOR_STRIDE} from './evaluator-image.js
 import {validateWiredNetImage} from './net-resolver.js';
 import {MEMORY_BANK_PINS} from './memory-banks.js';
 import {preparePhaseCircuit} from './phase-circuit-image.js';
+import {prepareBusCircuit} from './bus-circuit-image.js';
 const SIZE=32768,WORDS=9;
-export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,admittedGraph=false,incrementalGraph=false}={}) {
+const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions','netDriverVisits','evaluatorRows','dependencyProbes',
+    'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits'];
+export function assertIncrementalKernelABI(exports,enabled) {
+    if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
+        throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
+}
+export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false}={}) {
     captureKernelEvaluatorImage({enabled,circuit});
     if(typeof admittedGraph!=='boolean')throw new TypeError('admittedGraph');
     if(typeof incrementalGraph!=='boolean'||incrementalGraph&&!admittedGraph)throw new TypeError('incrementalGraph requires admittedGraph:true');
@@ -30,28 +37,34 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     circuit.settle();
     const image=captureKernelEvaluatorImage({enabled,circuit}),{nets,drivers}=validateWiredNetImage(image);
     const phaseBinding=phase===null?null:preparePhaseCircuit({circuit,image,phase});
+    const busBinding=bus===null?null:prepareBusCircuit({circuit,image,bus,phase,banks:descriptors});
     if(!Number.isInteger(image.maxDeltas)||image.maxDeltas<1||image.maxDeltas>1024)throw new RangeError('native maxDeltas 1..1024');
     const terminals=new Map(image.terminals.map(t=>[t.name,t]));
     const inputNets=Uint32Array.from(descriptors.flatMap(b=>b.pins.map(pin=>terminals.get(`${b.id}.${pin}`).net)));
     const outputIds=Uint32Array.from(descriptors.flatMap(b=>Array.from({length:8},(_,i)=>terminals.get(`${b.id}.d${i}`).driver)));
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
     if(e.memory_circuit_version?.()!==2||e.memory_kernel_version?.()!==1||e.owned_kernel_version?.()!==1)throw new TypeError('rebuild native memory circuit: ABI version mismatch');
-    if(incrementalGraph&&e.incremental_kernel_version?.()!==1)throw new TypeError('rebuild native incremental kernel: ABI version mismatch');
+    assertIncrementalKernelABI(e,incrementalGraph);
+    if(e.incremental_work_counters_version?.()!==3)throw new TypeError('rebuild native work counters: ABI version mismatch');
     const start=e.arena_ptr(),capacity=e.arena_capacity(),p={},count=descriptors.length;let end=start;
     const reserve=(name,size)=>{end=Math.ceil(end/4)*4;p[name]=end;end+=size;};
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
-        ['dependencyOffsets',image.dependencyOffsets],['dependencies',image.dependencies],['inputNets',inputNets],['outputIds',outputIds]])reserve(name,array.byteLength);
+        ['dependencyOffsets',image.dependencyOffsets],['dependencies',image.dependencies],['reverseDependencyOffsets',image.reverseDependencyOffsets],
+        ['reverseOperations',image.reverseOperations],['inputNets',inputNets],['outputIds',outputIds]])reserve(name,array.byteLength);
     for(const name of ['drivers','staged'])reserve(name,drivers);
     for(const name of ['live','liveConflicts','published','publishedConflicts','previous','changed'])reserve(name,nets);
+    reserve('affectedOperations',Math.ceil(image.evaluatorNames.length/32)*4);
     reserve('memory',count*SIZE);reserve('states',count*WORDS*4);reserve('memoryStaged',count*WORDS*4);reserve('protected',count);
     reserve('inputs',count*28);reserve('conflicts',count*28);reserve('drives',count*8);reserve('present',count);reserve('memoryChanged',count);
-    reserve('memoryFault',12);reserve('fault',16);reserve('context',32*4);
+    reserve('memoryFault',12);reserve('fault',16);reserve('context',35*4);
     phaseBinding?.reserve(reserve);
+    busBinding?.reserve(reserve);
     if(!Number.isSafeInteger(end)||start<0||end-start>capacity||end>e.memory.buffer.byteLength)throw new RangeError('native memory circuit arena capacity');
     const view=new DataView(e.memory.buffer),bytes=(name,length)=>new Uint8Array(e.memory.buffer,p[name],length);
     const put=(name,array)=>array.forEach((v,i)=>view.setUint32(p[name]+4*i,v,true));
     for(const [name,array] of [['offsets',image.netOffsets],['ids',image.netDriverIds],['ops',image.operations],
-        ['dependencyOffsets',image.dependencyOffsets],['dependencies',image.dependencies],['inputNets',inputNets],['outputIds',outputIds]])put(name,array);
+        ['dependencyOffsets',image.dependencyOffsets],['dependencies',image.dependencies],['reverseDependencyOffsets',image.reverseDependencyOffsets],
+        ['reverseOperations',image.reverseOperations],['inputNets',inputNets],['outputIds',outputIds]])put(name,array);
     bytes('drivers',drivers).set(image.driverLevels);bytes('previous',nets).set(image.resolvedLevels);
     bytes('published',nets).set(image.resolvedLevels);bytes('publishedConflicts',nets).set(image.resolvedConflicts);
     descriptors.forEach((b,i)=>{
@@ -60,9 +73,15 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
     });
     put('context',[nets,drivers,p.offsets,p.ids,p.drivers,p.live,p.liveConflicts,image.operations.length/EVALUATOR_STRIDE,p.ops,p.staged,
         p.published,p.publishedConflicts,image.maxDeltas,p.dependencyOffsets,p.dependencies,image.dependencies.length,p.previous,p.changed,
-        count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,incrementalGraph?2:Number(admittedGraph)]);
+        count,p.memory,p.states,p.memoryStaged,p.protected,p.inputs,p.conflicts,p.drives,p.present,p.memoryChanged,p.memoryFault,p.inputNets,p.outputIds,
+        incrementalGraph?4:Number(admittedGraph),p.reverseDependencyOffsets,p.reverseOperations,p.affectedOperations]);
     if(admittedGraph&&(e.admit_owned_context(p.context)>>>0)!==0)throw new CircuitFault('INVALID_KERNEL_ADMISSION','private graph admission failed');
     const inspect=()=>({levels:bytes('published',nets).slice(),conflicts:bytes('publishedConflicts',nets).slice(),driverLevels:bytes('drivers',drivers).slice()});
+    const inspectWorkCounters=()=>{
+        const values=new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),WORK_COUNTERS.length);
+        return Object.freeze(Object.fromEntries(WORK_COUNTERS.map((name,i)=>[name,values[i]])));
+    };
+    const resetWorkCounters=()=>e.reset_incremental_work_counters();
     const inspectMemory=bank=>{
         if(!Number.isInteger(bank)||bank<0||bank>=count)throw new RangeError('bank index');
         const word=w=>view.getUint32(p.states+(bank*WORDS+w)*4,true),out=word(2);
@@ -74,7 +93,12 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         if(levels!==undefined){
             if(!(levels instanceof Uint8Array)||levels.length!==drivers)throw new TypeError('driver dimensions');
             for(const code of levels)if(code>3)throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
-            bytes('drivers',drivers).set(levels);
+            const current=bytes('drivers',drivers);
+            if(incrementalGraph){
+                for(let i=0;i<drivers;i++)if(current[i]!==levels[i]){
+                    if(e.write_owned_driver(p.context,i,levels[i]))throw new CircuitFault('INVALID_DRIVER_LEVEL','four-state driver code required');
+                }
+            }else current.set(levels);
         }
     };
     const memoryFault=result=>{
@@ -92,6 +116,8 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         setDriverLevels(levels);memoryFault(e.settle_memory_circuit(p.context,maxPasses,p.fault));return inspect();
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
+    const busMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
     return Object.freeze({capabilities:Object.freeze({experimental:true,netResolution:true,combinationalEvaluation:true,digitalMemoryBanks:true,
-        latchedMemoryClocks:!!phaseBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(phaseMethods??{settleMemories}),inspect,inspectMemory});
+        latchedMemoryClocks:!!phaseBinding,nativeMemoryBus:!!busBinding,admittedGraph,incrementalGraph,cpu:false,board:false,resumableSnapshot:false}),...(busMethods??phaseMethods??{settleMemories}),
+        inspect,inspectMemory,inspectWorkCounters,resetWorkCounters});
 }

@@ -8,6 +8,7 @@ test('chunk runner preserves exact period budget and input order across host yie
         beforeClock:clock=>inputs.push(clock),yieldTask:async()=>{yields++;}});
     assert.equal(result.status,'budget-exhausted');assert.equal(result.clocks,11);assert.equal(periods,11);
     assert.equal(result.chunks,4);assert.equal(yields,3);assert.deepEqual(inputs,Array.from({length:11},(_,i)=>i));
+    assert.equal(result.activeMS,0);
 });
 test('chunk runner stops before the requested period and yields at cooperative wall limits',async()=>{
     let time=0,yields=0;
@@ -16,6 +17,22 @@ test('chunk runner stops before the requested period and yields at cooperative w
         stopped:clock=>clock===7,yieldTask:async()=>{yields++;}});
     assert.equal(result.status,'stopped');assert.equal(result.clocks,7);assert.equal(time,7);
     assert.equal(yields,3);assert.equal(result.maxChunkMS,2);
+    assert.equal(result.activeMS,7);
+});
+test('chunk active duration excludes awaited host yields while counting every executed period',async()=>{
+    let time=0;
+    const cpu={status:'running',stepClock(){time++;}};
+    const result=await runHarrisChunks({cpu,maxClocks:5,chunkClocks:2,now:()=>time,
+        yieldTask:async()=>{time+=100;}});
+    assert.equal(result.clocks,5);assert.equal(result.chunks,3);
+    assert.equal(result.activeMS,5);assert.equal(result.maxChunkMS,2);assert.equal(time,205);
+});
+test('stop/completion before any period reports zero active duration',async()=>{
+    for(const options of [{stopped:()=>true},{finished:()=>true}]) {
+        const result=await runHarrisChunks({cpu:{status:'running',stepClock(){throw Error('must not execute');}},maxClocks:1,now:()=>100,...options});
+        assert.equal(result.clocks,0);assert.equal(result.chunks,0);assert.equal(result.activeMS,0);
+        assert.equal(result.status,options.stopped?'stopped':'completed');
+    }
 });
 test('chunk runner propagates faults and does not execute after a completion predicate',async()=>{
     let clocks=0;const cpu={stepClock(){clocks++;}};

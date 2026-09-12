@@ -1,0 +1,106 @@
+name: Harris native qualification
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: harris-native-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prepare fresh receipt directory and owned build tools
+        run: |
+          set -euo pipefail
+          HARRIS_RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/harris-native.XXXXXX")
+          echo "HARRIS_RECEIPT_DIR=$HARRIS_RECEIPT_DIR" >> "$GITHUB_ENV"
+          if ! command -v clang >/dev/null || ! command -v wasm-ld >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y clang lld
+          fi
+          echo "CLANG=$(command -v clang)" >> "$GITHUB_ENV"
+          echo "WASM_LD=$(command -v wasm-ld)" >> "$GITHUB_ENV"
+          # Hosted Ubuntu carries Chrome. Missing tooling is a failure, never
+          # a skipped browser/native qualification or a silent npm download.
+          CHROME_BIN=$(command -v google-chrome || command -v google-chrome-stable)
+          test -x "$CHROME_BIN"
+          echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+          "$CHROME_BIN" --version
+
+      - name: Build fresh owned native artifact and retain its provenance
+        run: |
+          set -euo pipefail
+          node scripts/build-wired-net-kernel.mjs "$HARRIS_RECEIPT_DIR" | tee "$HARRIS_RECEIPT_DIR/build.log"
+          test -s "$HARRIS_RECEIPT_DIR/wired-net-kernel.wasm"
+          test -s "$HARRIS_RECEIPT_DIR/wired-net-kernel-build.json"
+          echo "HARRIS_NET_WASM=$HARRIS_RECEIPT_DIR/wired-net-kernel.wasm" >> "$GITHUB_ENV"
+          node --input-type=module -e 'import fs from "node:fs"; import {execFileSync} from "node:child_process"; fs.writeFileSync(process.env.HARRIS_RECEIPT_DIR+"/qualification-context.json",JSON.stringify({revision:execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim(),node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,experimental:true,defaultEnabled:false,fullNativeCPU:false},null,2)+"\n",{flag:"wx"});'
+
+      - name: Exercise native, hybrid CPU and bounded scheduler contracts without skips
+        run: |
+          set -euo pipefail
+          test -s "$HARRIS_NET_WASM"
+          node --test --test-concurrency=1 --test-reporter=tap \
+            test/harris-native-*.test.mjs \
+            test/harris-80c286-memory-board.test.mjs \
+            test/harris-80c286-boot-cpu.test.mjs \
+            test/harris-boot-cpu-batching.test.mjs \
+            test/harris-run-transactions.test.mjs \
+            | tee "$HARRIS_RECEIPT_DIR/native-tests.tap"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const tap=fs.readFileSync(process.env.HARRIS_RECEIPT_DIR+"/native-tests.tap","utf8"); assert.match(tap,/^# tests [1-9][0-9]*$/m); assert.match(tap,/^# fail 0$/m); assert.match(tap,/^# skipped 0$/m); assert.doesNotMatch(tap,/# SKIP\b/i);'
+
+      - name: Attribute cooperative hybrid producers on the hosted runner
+        run: |
+          set -euo pipefail
+          test -s "$HARRIS_NET_WASM"
+          node --expose-gc scripts/measure-harris-hybrid-producers.mjs --experimental \
+            --iterations=2048 --rounds=3 --batch-periods=256 --wall-budget-ms=8 \
+            > "$HARRIS_RECEIPT_DIR/hybrid-producer-attribution.json"
+          node --cpu-prof --cpu-prof-dir="$HARRIS_RECEIPT_DIR" --cpu-prof-name=hybrid-producer.cpuprofile \
+            --expose-gc scripts/measure-harris-hybrid-producers.mjs --experimental \
+            --iterations=2048 --rounds=1 --batch-periods=256 --wall-budget-ms=8 \
+            > "$HARRIS_RECEIPT_DIR/hybrid-producer-cpu-profile.json"
+          node --heap-prof --heap-prof-interval=32768 --heap-prof-dir="$HARRIS_RECEIPT_DIR" \
+            --heap-prof-name=hybrid-producer.heapprofile --expose-gc \
+            scripts/measure-harris-hybrid-producers.mjs --experimental \
+            --iterations=2048 --rounds=1 --batch-periods=256 --wall-budget-ms=8 \
+            > "$HARRIS_RECEIPT_DIR/hybrid-producer-heap-profile.json"
+          test -s "$HARRIS_RECEIPT_DIR/hybrid-producer.cpuprofile"
+          test -s "$HARRIS_RECEIPT_DIR/hybrid-producer.heapprofile"
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.HARRIS_RECEIPT_DIR+"/hybrid-producer-attribution.json")); assert.equal(r.revision,process.env.GITHUB_SHA); assert.equal(r.clean,true); assert.equal(r.samples.length,6); assert.equal(r.expected.physicalClock,r.expected.periods+67); assert.deepEqual([...new Set(r.samples.map(s=>s.stateHash))],[r.expected.stateHash]);'
+
+      - name: Qualify the same module in a fresh Chromium worker
+        env:
+          HARRIS_BROWSER_REPORT: ${{ env.HARRIS_RECEIPT_DIR }}/browser-receipt.json
+        run: |
+          set -euo pipefail
+          test -s "$HARRIS_NET_WASM"
+          node bench/harris-browser.mjs 1 memory,io,dma,interrupt,idle reference,packed \
+            | tee "$HARRIS_RECEIPT_DIR/browser.log"
+          test -s "$HARRIS_BROWSER_REPORT"
+          # The bench asserts the checked+incremental native and hybrid boot
+          # oracles before writing this receipt. It does not enable a default,
+          # certify full DOS/AT compatibility, or set a shared-host speed floor.
+
+      - name: Upload qualification receipts, logs and exact module
+        if: ${{ always() && env.HARRIS_RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: harris-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.HARRIS_RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 2,
+  "workload": "owned-harris-store-loop-memory-only",
+  "iterations": 1024,
+  "host": {
+    "hostname": "ubuntu-2gb-fsn1-1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "node": "v22.23.2",
+    "loadavg": [
+      2.61,
+      1.84,
+      1.76
+    ]
+  },
+  "wasmSHA256": "d4f2a84fde3eef4de01a5ef09abc613c0db2d50617b150c725b1c4a3e8a13b7b",
+  "sourceHashes": {
+    "src/experimental/wired-kernel/net-resolver.c": "05761c27766212f7bb7407e53d499c1693dff6d9a2e51ababb780721251ec434",
+    "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
+    "src/experimental/wired-kernel/memory-circuit.c": "d67debb7c80dc839be962701d67592a16eeb18f4e0d466a1d485b270d9604cc9",
+    "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+    "src/experimental/wired-kernel/phase-circuit.c": "09ab60c2c068079890c179bf68787c5ba0979ac0f23169cd5344920b7816970a",
+    "src/experimental/wired-kernel/phase-schedule.c": "ab83285145df56e6d43bf501d2311df951e014bc3fda89a51a11cc9ef8d12852",
+    "src/experimental/wired-kernel/incremental-nets.c": "c5799bbc7142f04983083d6d66c19f8f5e3fdea1dde29970eff60df67833ff68",
+    "src/experimental/wired-kernel/bus-sequencer.c": "c472dbd15d3006c97c8d90599f8012895e7bf160f9210bbb5e705b7ded031656",
+    "src/experimental/wired-kernel/bus-circuit.c": "cb4836814c31edd4a659c7ba845a8f43e43fa3c8cd188c0a31176b87d9a5156e",
+    "scripts/bench-harris-hybrid-cpu.mjs": "adc70f603387a9d7bace7a00d16ed4359efee2967b1124697de1ac03402e3c80",
+    "src/experimental/harris-native-memory-board.js": "3a4cb1e85bb4e154a5c6ad942a637105e6969dd2dcf4465f0178e14c31b7b525",
+    "src/experimental/wired-kernel/bus-circuit-image.js": "929b8247640734171aaa43470da9a0d3ea12ede77bf9efb35ba147ead8fcc9d1",
+    "src/experimental/harris-80c286-boot-cpu.js": "e44f66cbd032e5887fae4f33a03b3100d910cffbfcbc88e354eaf7d1cbe9b5ab",
+    "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+    "src/experimental/harris-boot-rom.js": "7e184ed31af43f90775a7caa8f9c2de532abc57c9d42b1be590bb9ebc585c51b"
+  },
+  "warmupRounds": 1,
+  "measuredRounds": 3,
+  "expected": {
+    "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091",
+    "periods": 28720
+  },
+  "medians": {
+    "reference-js": 10681.305148423186,
+    "compiled-js": 16801.483694564296,
+    "hybrid-single": 110793.83388490668,
+    "hybrid-batched": 135867.00380165075
+  },
+  "batchedVersusCompiled": 8.086607484885823,
+  "samples": {
+    "reference-js": [
+      {
+        "activeMs": 2688.809991,
+        "periods": 28720,
+        "periodsPerSecond": 10681.305148423186,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 2562.1535729999996,
+        "periods": 28720,
+        "periodsPerSecond": 11209.32027753982,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 2840.5253190000003,
+        "periods": 28720,
+        "periodsPerSecond": 10110.805845628161,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      }
+    ],
+    "compiled-js": [
+      {
+        "activeMs": 1880.4446580000003,
+        "periods": 28720,
+        "periodsPerSecond": 15272.983375403326,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 1709.372846000002,
+        "periods": 28720,
+        "periodsPerSecond": 16801.483694564296,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 1706.4749020000017,
+        "periods": 28720,
+        "periodsPerSecond": 16830.01605610486,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      }
+    ],
+    "hybrid-single": [
+      {
+        "activeMs": 283.6466359999995,
+        "periods": 28720,
+        "periodsPerSecond": 101252.74321956017,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 257.5330369999974,
+        "periods": 28720,
+        "periodsPerSecond": 111519.67271678735,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 259.2202020000004,
+        "periods": 28720,
+        "periodsPerSecond": 110793.83388490668,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      }
+    ],
+    "hybrid-batched": [
+      {
+        "activeMs": 211.38318499999968,
+        "periods": 28720,
+        "periodsPerSecond": 135867.00380165075,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 215.48661899999934,
+        "periods": 28720,
+        "periodsPerSecond": 133279.7374300076,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      },
+      {
+        "activeMs": 161.44801300000108,
+        "periods": 28720,
+        "periodsPerSecond": 177890.08031953796,
+        "stateHash": "95566e20eb142808eba1433167c3e8bf4fb9475c3fc118fe585cd0128bbdd091"
+      }
+    ]
+  },
+  "limitations": [
+    "Initialization and construction excluded from both period and time counts.",
+    "Memory-only owned workload; not DOS, peripherals, full-native CPU or browser capacity.",
+    "Shared-host measurements are not a stable performance guarantee."
+  ]
+}

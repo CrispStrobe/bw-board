@@ -3,6 +3,7 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 extern u32 settle_owned_context(const u32*);
 extern u32 preview_memory_banks(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,u8*,u8*,u8*,u32*);
+extern u32 write_owned_driver(const u32*,u32,u32);
 /* Private wrapper-owned context; pointer entries are wasm32 arena offsets.
  * net args[0..17], bank args[18..28], input-net IDs[29], output IDs[30],
  * private graph-admission gate[31]. */
@@ -33,7 +34,9 @@ u32 settle_memory_circuit(const u32 *c,u32 passes,u32 *fault) {
         u32 changed=0;
         for(u32 b=0;b<banks;b++) {
             if(U8(27)[b])changed=1;
-            if(U8(26)[b])for(u32 bit=0;bit<8;bit++)U8(4)[output_ids[b*8+bit]]=U8(25)[b*8+bit];
+            if(U8(26)[b])for(u32 bit=0;bit<8;bit++){
+                if(write_owned_driver(c,output_ids[b*8+bit],U8(25)[b*8+bit])){fault[0]=1;fault[1]=2;return 1;}
+            }
         }
         result=settle_context(c);
         if(result&0x80000000u){fault[0]=1;fault[1]=result&0x7fffffffu;return 1;}

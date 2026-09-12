@@ -22,10 +22,30 @@ const stepsFor=(f,count=16)=>{
 };
 test('native schedule matches every-period oracle final nets, phase and memory without dropping periods',native,async()=>{
     const f=await createPhaseCircuitOracle({wasmBytes,schedule:true}),reference=await createPhaseCircuitOracle({wasmBytes}),steps=stepsFor(f,32);
-    const handle=f.kernel.compileSchedule(steps);for(const step of steps)assert.equal(reference.period(step.values),undefined);
+    const handle=f.kernel.compileSchedule(steps);assert.deepEqual(handle,{periods:258,updates:6796,encodedUpdates:1369});
+    for(const step of steps)assert.equal(reference.period(step.values),undefined);
     const result=f.kernel.runSchedule(handle);assert.equal(result.periods,258);assert.equal(result.reads,64);
     assert.deepEqual(f.kernel.inspect(),reference.kernel.inspect());assert.deepEqual(f.kernel.inspectPhase(),reference.kernel.inspectPhase());
     for(let bank=0;bank<2;bank++)assert.deepEqual(f.kernel.inspectMemory(bank),reference.kernel.inspectMemory(bank));
+});
+test('schedule delta encoding is per handle, preserves four-state transitions and reconciles reused handles',native,async()=>{
+    const f=await createPhaseCircuitOracle({wasmBytes,schedule:true}),reference=await createPhaseCircuitOracle({wasmBytes});
+    const image={...f.passive,...bitDrives(f.A,0),...Object.fromEntries(f.D.map(p=>[p,'Z'])),vcc:1,gnd:0,bhe_n:0};
+    const low=[{values:{...image,a0:0,d0:'Z'}},{values:{a0:0,d0:'Z'}},{values:{}},{values:{a0:1,d0:'X'}},{values:{a0:0,d0:'Z'}}];
+    const high=[{values:{...image,a0:1,d0:'X'}}],lowHandle=f.kernel.compileSchedule(low),highHandle=f.kernel.compileSchedule(high);
+    assert.equal(lowHandle.updates,Object.keys(low[0].values).length+6,'raw capacity counts every submitted assignment');
+    assert.equal(lowHandle.encodedUpdates,Object.keys(low[0].values).length+4,'identical repeats elide but 0 to 1 to 0 and Z to X to Z remain');
+    assert.equal(highHandle.updates,highHandle.encodedUpdates,'each handle retains its first assignment for every pin');
+    const run=(handle,steps)=>{const result=f.kernel.runSchedule(handle);for(const step of steps)assert.equal(reference.period(step.values),undefined);return result;};
+    run(lowHandle,low);run(highHandle,high);const result=run(lowHandle,low);
+    assert.equal(result.periods,low.length,'empty-value periods still execute when the handle is reused');
+    assert.deepEqual(f.kernel.inspect(),reference.kernel.inspect());assert.deepEqual(f.kernel.inspectPhase(),reference.kernel.inspectPhase());
+});
+test('schedule capacity counts validated submitted entries before delta encoding',native,async()=>{
+    const f=await createPhaseCircuitOracle({wasmBytes,schedule:true,scheduleOptions:{maxUpdates:2}}),before=f.kernel.inspect();
+    assert.throws(()=>f.kernel.compileSchedule([{values:{a0:0}},{values:{a0:0}},{values:{a0:0}}]),/schedule update capacity/);
+    assert.throws(()=>f.kernel.compileSchedule([{values:{a0:0}},{values:{a0:4}}]),{code:'INVALID_DRIVER_LEVEL'});
+    assert.deepEqual(f.kernel.inspect(),before,'compile-time refusal cannot mutate the native image');
 });
 test('schedule compilation is defensive, instance-owned and admits only its explicit input pins',native,async()=>{
     const f=await createPhaseCircuitOracle({wasmBytes,schedule:true}),other=await createPhaseCircuitOracle({wasmBytes,schedule:true});
