@@ -88,6 +88,8 @@ test('moved memory mutations retain unique selectors and named reds',()=>{const 
 test('stage counters aggregate preview writes and derive exact early-exit visit totals',()=>{const files={banks:source('src/experimental/wired-kernel/memory-banks.c'),memory:source('src/experimental/wired-kernel/memory-circuit.c'),phase:source('src/experimental/wired-kernel/phase-circuit.c'),bus:source('src/experimental/wired-kernel/bus-circuit.c')};
     assert.doesNotThrow(()=>assertDerivedStageCounterSources(files));
     const mutations=[['banks','#define PREVIEW_VISIT() stage_visited++;','#define PREVIEW_VISIT()'],['banks','PREVIEW_RETURN(error);','return error;'],
+        ['memory','INLINE_MAPPING_FAILURE(2,i+1)','INLINE_MAPPING_FAILURE(2,i)'],
+        ['memory','INLINE_MAPPING_FAILURE(3,banks*28+i*(i+1)/2+1)','INLINE_MAPPING_FAILURE(3,banks*28+i+1)'],
         ['memory','INLINE_MAPPING_FAILURE(4,banks*28+i*(i+1)/2+j+2)','INLINE_MAPPING_FAILURE(4,banks*28+i+j+2)'],
         ['memory','STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28+(banks*8)*(banks*8+1)/2)','STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28)'],
         ['memory','STAGE_ADD(STAGE_MEMORY_WRITER_PUBLICATIONS,publications);\n                    #endif\n                    fault[0]=1;fault[1]=2;return 1;',
