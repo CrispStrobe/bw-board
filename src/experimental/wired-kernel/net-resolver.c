@@ -6,6 +6,9 @@ static u8 arena[2*1024*1024] __attribute__((aligned(16)));
 #define OWNED_U32_LIMIT (sizeof(arena)/sizeof(u32))
 #define OWNED_OPERATION_LIMIT (sizeof(arena)/(32u*sizeof(u32)))
 extern u32 incremental_work[12];
+extern u32 producer_work[18];
+#define PRODUCER_FULL_SCAN 8
+#define PRODUCER_COUNT 9
 u8 *arena_ptr(void){return arena;}
 u32 arena_capacity(void){return sizeof(arena);}
 u32 owned_kernel_version(void){return 1;}
@@ -142,7 +145,9 @@ static u32 settle_validated(u32 nets,u32 drivers,const u32 *offsets,const u32 *i
         for(u32 d=0;d<drivers;d++){incremental_work[6]++;staged[d]=levels[d];}
         evaluate_owned_operations(count,ops,live,staged,dep_offsets,deps,changed_nets);
         u32 changed=0;
-        for(u32 d=0;d<drivers;d++){incremental_work[0]++;if(staged[d]!=levels[d]){incremental_work[1]++;incremental_work[7]++;changed=1;}levels[d]=staged[d];}
+        for(u32 d=0;d<drivers;d++){incremental_work[0]++;producer_work[PRODUCER_FULL_SCAN]++;
+            if(staged[d]!=levels[d]){incremental_work[1]++;incremental_work[7]++;
+                producer_work[PRODUCER_COUNT+PRODUCER_FULL_SCAN]++;changed=1;}levels[d]=staged[d];}
         if(!changed) {
             for(u32 n=0;n<nets;n++){incremental_work[8]++;published[n]=live[n];published_conflicts[n]=live_conflicts[n];}
             return delta+1;

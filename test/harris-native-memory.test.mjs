@@ -152,3 +152,41 @@ test('native write counts carry past 32 bits and refuse unsafe overflow before a
     assert.equal(v.getUint32(p.states+(9+7)*4,true),0);assert.equal(v.getUint32(p.states+(9+8)*4,true),1);
     assert.equal(v.getUint8(p.memory+0x1234),0x40);assert.equal(v.getUint8(p.memory+32768+0x1234),0x41);
 });
+test('public native memory preview validates caller-owned buffers before any commit',native,async()=>{
+    const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports,base=e.arena_ptr(),v=new DataView(e.memory.buffer);
+    let end=base;const reserve=size=>{const at=end;end+=size;return at;};
+    const p={memory:reserve(32768),states:reserve(36),staged:reserve(36),protected:reserve(1),inputs:reserve(28),
+        conflicts:reserve(28),drives:reserve(8),present:reserve(1),changed:reserve(1),fault:reserve(12)};
+    v.setUint32(p.states+8,0xffffffff,true);
+    new Uint8Array(e.memory.buffer,p.inputs,28).set([1,0,1,1,1]);
+    const preview=()=>e.preview_memory_banks(1,p.memory,p.states,p.staged,p.protected,p.inputs,p.conflicts,
+        p.drives,p.present,p.changed,p.fault);
+    assert.equal(preview(),0);
+    const memory=new Uint8Array(e.memory.buffer,p.memory,32768).slice(),states=new Uint8Array(e.memory.buffer,p.states,36).slice();
+    const rejects=[
+        [p.protected,0,2,9],
+        [p.inputs,27,4,5],
+        [p.conflicts,27,2,5],
+        [p.states,0,4,6],
+        [p.states,4,32768,6],
+        [p.states,8,256,6],
+        [p.states,12,2,6],
+        [p.states,16,2,6],
+        [p.states,20,32768,6],
+        [p.states,24,256,6],
+        [p.states,32,0x200000,6]
+    ];
+    for(const [address,offset,value,code] of rejects){
+        const width=address===p.inputs||address===p.conflicts||address===p.protected?1:4;
+        const prior=width===1?v.getUint8(address+offset):v.getUint32(address+offset,true);
+        if(width===1)v.setUint8(address+offset,value);else v.setUint32(address+offset,value,true);
+        const injectedStates=new Uint8Array(e.memory.buffer,p.states,36).slice();
+        assert.equal(preview(),code);assert.deepEqual(new Uint8Array(e.memory.buffer,p.memory,32768),memory);
+        assert.deepEqual(new Uint8Array(e.memory.buffer,p.states,36),injectedStates);
+        if(width===1)v.setUint8(address+offset,prior);else v.setUint32(address+offset,prior,true);
+    }
+    new Uint8Array(e.memory.buffer,p.inputs,28).set([1,0,1,1,1]);
+    v.setUint8(p.inputs+27,1);v.setUint8(p.conflicts+27,1);
+    assert.equal(preview(),5);assert.deepEqual(new Uint8Array(e.memory.buffer,p.memory,32768),memory);
+    assert.deepEqual(new Uint8Array(e.memory.buffer,p.states,36),states);
+});

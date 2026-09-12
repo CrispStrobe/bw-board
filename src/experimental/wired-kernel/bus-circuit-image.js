@@ -10,6 +10,14 @@ const BUS_IDLE=BUS_STATES.indexOf('TI');
 const BUS_ERRORS=['','CLOCK_ORDER','OVERFLOW','FLOATING','UNKNOWN','BUS_FAULTED','RESET_REQUIRED',
     'SHORT_RESET','UNSUPPORTED_HOLD','UNSUPPORTED_INPUT','WAIT_LIMIT','BUS_UNAVAILABLE','UNSUPPORTED_TRANSACTION','CONTENTION'];
 const transactionFields=new Set(['kind','address','width','value','locked']);
+export function assertDistinctBusDrivers({busOutputIds,busExternalIds}) {
+    const all=[...busOutputIds,...busExternalIds];
+    if(new Set(all).size!==all.length)throw new TypeError('bus driver mappings must be distinct');
+}
+export function assertBusCircuitABI(exports) {
+    if(exports.bus_circuit_version?.()!==2||exports.bus_sequencer_version?.()!==1||
+        typeof exports.bus_output_change_word!=='function')throw new TypeError('rebuild native bus bridge: ABI mismatch');
+}
 export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
     if(bus?.kind!=='owned-286-memory-bus-v1'||Object.keys(bus).some(k=>!['kind','cpu','inputPart','maxWaitStates'].includes(k)))
         throw new TypeError('explicit owned memory-bus descriptor required');
@@ -32,12 +40,15 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
     const externalPins=[...external.pins];
     const maps={busInputNets:map(cpu,INPUTS,'net'),busOutputIds:map(cpu,OUTPUTS,'driver'),
         busExternalIds:map(inputPart,externalPins,'driver')};
+    // Sparse publication preserves ordered writer semantics only when each
+    // admitted terminal owns a distinct driver, as normal circuit images do.
+    assertDistinctBusDrivers(maps);
     return {
         reserve(reserve){for(const [name,array]of Object.entries(maps))reserve(name,array.byteLength);
             reserve('busExternalValues',externalPins.length);reserve('busLifecycle',8);reserve('busRun',12);
             reserve('busResults',72);reserve('busContext',40);},
         initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault}) {
-            if(e.bus_circuit_version?.()!==1||e.bus_sequencer_version?.()!==1)throw new TypeError('rebuild native bus bridge: ABI mismatch');
+            assertBusCircuitABI(e);
             for(const [name,array]of Object.entries(maps))put(name,array);
             e.bus_initialize(maxWaitStates);
             const view=new DataView(e.memory.buffer),word=(name,i=0)=>view.getUint32(p[name]+4*i,true);

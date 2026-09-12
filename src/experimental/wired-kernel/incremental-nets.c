@@ -20,6 +20,16 @@ u32 incremental_work[12];
 u32 *incremental_work_counters_ptr(void){return incremental_work;}
 void reset_incremental_work_counters(void){for(u32 i=0;i<12;i++)incremental_work[i]=0;}
 u32 incremental_work_counters_version(void){return 3;}
+/* Diagnostic producer counters are separate from the stable twelve work
+ * counters above. Attempts occupy [0..8], value changes [9..17]. They wrap
+ * modulo 2^32 and never participate in execution policy. */
+#define PRODUCER_COUNT 9
+#define PRODUCER_OTHER 0
+#define PRODUCER_EVALUATOR 7
+u32 producer_work[PRODUCER_COUNT*2];
+u32 *producer_work_counters_ptr(void){return producer_work;}
+void reset_producer_work_counters(void){for(u32 i=0;i<PRODUCER_COUNT*2;i++)producer_work[i]=0;}
+u32 producer_work_counters_version(void){return 1;}
 /* ABI 4 requires every runtime driver mutation to use write_owned_driver and
  * packs the admitted reverse dependency operation marks into ordered words.
  * ABI 1 wrappers wrote the arena directly and depended on a discovery scan. */
@@ -33,7 +43,15 @@ static u32 write_driver(const u32 *c,u32 id,u32 code,u32 count_comparison) {
     if(c[31]==4&&!queued_driver[id]){queued_driver[id]=1;driver_queue[driver_count++]=id;}
     return 0;
 }
-u32 write_owned_driver(const u32 *c,u32 id,u32 code){return write_driver(c,id,code,1);}
+u32 write_owned_driver_tagged(const u32 *c,u32 id,u32 code,u32 producer) {
+    if(producer>=PRODUCER_COUNT)return 3;
+    if(id>=c[1]||(c[31]==4&&driver_net[id]==NONE))return 1;
+    if(code>3)return 2;
+    producer_work[producer]++;
+    if(B(4)[id]!=code)producer_work[PRODUCER_COUNT+producer]++;
+    return write_driver(c,id,code,1);
+}
+u32 write_owned_driver(const u32 *c,u32 id,u32 code){return write_owned_driver_tagged(c,id,code,PRODUCER_OTHER);}
 u32 admit_incremental_context(const u32 *c) {
     if(c[0]>LIMIT||c[1]>LIMIT)return 7;
     const u32 *reverse_offsets=W(32),*reverse_operations=W(33);u32 *affected=W(34);
@@ -123,8 +141,9 @@ u32 settle_incremental_context(const u32 *c) {
         output_count=has_affected?evaluate_owned_operations_marked_sparse(c[7],W(8),B(5),B(9),affected,queued_output,output_queue,c[1]):0;
         if(output_count==NONE)return 0x80000007u;
         u32 changed=0;
-        for(u32 i=0;i<output_count;i++){const u32 d=output_queue[i];queued_output[d]=0;incremental_work[0]++;if(B(9)[d]!=B(4)[d]){
-            incremental_work[7]++;changed=1;if(write_driver(c,d,B(9)[d],0))return 0x80000002u;
+        for(u32 i=0;i<output_count;i++){const u32 d=output_queue[i];queued_output[d]=0;incremental_work[0]++;producer_work[PRODUCER_EVALUATOR]++;
+            if(B(9)[d]!=B(4)[d]){
+            incremental_work[7]++;producer_work[PRODUCER_COUNT+PRODUCER_EVALUATOR]++;changed=1;if(write_driver(c,d,B(9)[d],0))return 0x80000002u;
         }}
         output_count=0;
         if(!changed){publish_incremental(c);return delta+1;}

@@ -48,6 +48,11 @@ for (const [path, expected] of Object.entries(build.sourceHashes)) {
     assert.equal(actual, expected, `rebuild for changed source: ${path}`);
     sourceHashes[path] = actual;
 }
+const headerPath = 'src/experimental/wired-kernel/stage-attribution.h';
+assert.deepEqual(Object.keys(build.headerHashes ?? {}), [headerPath]);
+const headerHash = hash(readFileSync(new URL(`../${headerPath}`, import.meta.url)));
+assert.equal(headerHash, build.headerHashes[headerPath], `rebuild for changed source: ${headerPath}`);
+const headerHashes = {[headerPath]: headerHash};
 const revision = execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim();
 assert.equal(execFileSync('git', ['status', '--porcelain'], {encoding: 'utf8'}), '', 'measurement requires a clean source tree');
 registerBusMemory();
@@ -101,6 +106,7 @@ async function sample(instrumented) {
     const initializationMS = performance.now() - initializationStart;
     for (const key of Object.keys(timings)) timings[key] = 0;
     raw.resetWorkCounters();
+    raw.resetProducerCounters();
     global.gc?.();
     const gc = [];
     const observer = new PerformanceObserver(list => {
@@ -130,12 +136,18 @@ async function sample(instrumented) {
     assert.equal(state.physicalClock, result.periods + 67, 'successful run must account for every post-initialization physical period');
     assert.equal(yields, result.chunks - 1, 'a halted cooperative run yields between chunks only');
     const work = raw.inspectWorkCounters();
+    const producerWork = raw.inspectProducerCounters();
+    const producerValues = Object.values(producerWork.producers);
+    assert.equal(producerValues.reduce((sum, value) => sum + value.attempts, 0) >>> 0,
+        work.driverComparisons, 'producer attempts reconcile with aggregate comparisons');
+    assert.equal(producerValues.reduce((sum, value) => sum + value.changes, 0) >>> 0,
+        work.valueChangingDriverWrites, 'producer changes reconcile with aggregate changing writes');
     const common = {mode: instrumented ? 'instrumented' : 'control', constructionMS, initializationMS,
         result, wallMS, yields, yieldWaitMS, wallOutsideActiveAndYieldMS: wallMS - result.activeMS - yieldWaitMS,
         activePeriodsPerSecond: result.periods * 1000 / result.activeMS,
         wallPeriodsPerSecond: result.periods * 1000 / wallMS, heapDeltaBytes: heapAfter - heapBefore,
         gc: {events: gc.length, durationMS: gc.reduce((sum, entry) => sum + entry.durationMS, 0), entries: gc},
-        work, ...state};
+        work, producerWork, ...state};
     if (!instrumented) return common;
     assert.equal(timings.returnedPeriods, result.periods, 'native returned periods reconcile with cooperative progress');
     assert.equal(timings.nativeCalls, timings.submitCalls + 1, 'one initialized pending transaction precedes measured submits');
@@ -160,7 +172,7 @@ for (let round = 0; round <= rounds; round++) {
     for (const instrumented of round % 2 ? [true, false] : [false, true]) {
         const value = await sample(instrumented);
         const identity = {stateHash: value.stateHash, periods: value.result.periods, retired: value.retired,
-            physicalClock: value.physicalClock, writes: value.writes, work: value.work};
+            physicalClock: value.physicalClock, writes: value.writes, work: value.work, producerWork: value.producerWork};
         expected ??= identity;
         assert.deepEqual(identity, expected, `${value.mode} round ${round} identity`);
         if (round) samples.push({round, ...value});
@@ -179,7 +191,7 @@ console.log(JSON.stringify({schemaVersion: 1, workload: 'owned-harris-store-loop
     revision, clean: true, options: {iterations, rounds, batchPeriods, wallBudgetMS},
     host: {hostname: hostname(), platform: platform(), arch: arch(), cpu: cpus()[0]?.model,
         node: process.version, loadavg: loadavg(), exposedGC: typeof global.gc === 'function'},
-    wasmSHA256: hash(wasmBytes), sourceHashes, warmupRounds: 1, measuredRounds: rounds,
+    wasmSHA256: hash(wasmBytes), sourceHashes, headerHashes, warmupRounds: 1, measuredRounds: rounds,
     expected, modes, instrumentationActiveThroughputRatio, samples,
     limitations: ['Timer wrappers perturb wall-budget cutoffs; compare the paired control before using instrumented timings.',
         'nativeAndReceiptMS combines native execution with JavaScript completion/result materialization; CPU and heap profiles must resolve that split.',

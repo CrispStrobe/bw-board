@@ -98,14 +98,14 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   let board = null;
 
   /** @type {Map<string, PinSnapshot>} */
-  const lastState = new Map();
+  let lastState = new Map();
 
   // ─── The RECORD half of the replay surface ──────────────────────────
   // Declared in debug-replay-contract.js. Facts are emitted as the machine
   // OBSERVES them, which is why the hooks sit at the native boundary rather
   // than at the board: what matters for replay is the value the MCU actually
   // received, not the value the circuit was carrying.
-  const observedInputs = new Map();
+  let observedInputs = new Map();
   let inputListeners = [];
   // A reset restarts the clock, so facts from before it are not comparable
   // with facts after. The domain says which era a fact belongs to; without it
@@ -158,7 +158,7 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   const normalizeVolts = value => Math.max(0, Math.min(vcc,
     Number.isFinite(Number(value)) ? Number(value) : 0));
 
-  const stats = {
+  let stats = {
     pollCount: 0,
     pinChangeCount: 0,
     advanceToCount: 0,
@@ -340,6 +340,76 @@ export function createEmu8051Adapter(wasm, opts = {}) {
   // ─── The adapter ─────────────────────────────────────────────────────
 
   const adapter = {
+    checkpointSupport() {
+      return board ? {supported: false, code: 'live-board-checkpoint-unsupported',
+        reason: 'the attached board and its reactive state are outside the native MCU checkpoint'} :
+        {supported: true};
+    },
+
+    captureCheckpointState() {
+      if (board) return {refused: 'the attached board has no complete deterministic checkpoint codec',
+        code: 'live-board-checkpoint-unsupported'};
+      return {
+        schema: 1,
+        config: {fosc, vcc, ports: [...ports], pollIntervalNs, part, requestedMode: opts.mode ?? 'auto'},
+        lastState: [...lastState], observedInputs: [...observedInputs],
+        inputTimeEpoch, stats: {...stats}
+      };
+    },
+
+    prepareCheckpointRestore(state) {
+      if (board) return {accepted: false, code: 'live-board-checkpoint-unsupported',
+        reason: 'the attached board has no complete deterministic checkpoint codec'};
+      const config = state?.config;
+      const sameConfig = state?.schema === 1 && config?.fosc === fosc && config?.vcc === vcc &&
+        config?.pollIntervalNs === pollIntervalNs && config?.part === part &&
+        config?.requestedMode === (opts.mode ?? 'auto') && Array.isArray(config?.ports) &&
+        config.ports.length === ports.length && config.ports.every((value, i) => value === ports[i]);
+      const validLast = Array.isArray(state?.lastState) && state.lastState.every(entry =>
+        Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' &&
+        entry[1] && typeof entry[1] === 'object' && MODE_NAMES.includes(entry[1].mode) &&
+        typeof entry[1].driveHigh === 'boolean');
+      const validObserved = Array.isArray(state?.observedInputs) && state.observedInputs.every(entry =>
+        Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' &&
+        typeof entry[1] === 'string');
+      const counterNames = ['pollCount', 'pinChangeCount', 'advanceToCount',
+        'pushCallbackCount', 'sleptClocks'];
+      const validStats = state?.stats && typeof state.stats === 'object' &&
+        counterNames.every(name => Number.isSafeInteger(state.stats[name]) && state.stats[name] >= 0) &&
+        ['push', 'poll', 'none'].includes(state.stats.mode);
+      if (!sameConfig || !validLast || !validObserved ||
+          !Number.isSafeInteger(state?.inputTimeEpoch) || state.inputTimeEpoch < 0 ||
+          !validStats) {
+        return {accepted: false, code: 'invalid-adapter-checkpoint',
+          reason: '8051 adapter checkpoint state or immutable configuration does not match'};
+      }
+      let stagedLast;
+      let stagedObserved;
+      let stagedStats;
+      try {
+        stagedLast = new Map(structuredClone(state.lastState));
+        stagedObserved = new Map(structuredClone(state.observedInputs));
+        stagedStats = structuredClone(state.stats);
+      } catch {
+        return {accepted: false, code: 'invalid-adapter-checkpoint',
+          reason: '8051 adapter checkpoint state cannot be staged'};
+      }
+      if (stagedLast.size !== state.lastState.length ||
+          stagedObserved.size !== state.observedInputs.length) {
+        return {accepted: false, code: 'invalid-adapter-checkpoint',
+          reason: '8051 adapter checkpoint contains duplicate keys'};
+      }
+      // Preparation is read-only. `commit` performs only reference assignments
+      // and an integer increment, so after native restore succeeds there is no
+      // JS validation/allocation step left which could create a partial refusal.
+      return {accepted: true, commit() {
+        lastState = stagedLast;
+        observedInputs = stagedObserved;
+        stats = stagedStats;
+        inputTimeEpoch++;
+      }};
+    },
+
     reset() {
       wasm._emu_reset(1);
       lastState.clear();

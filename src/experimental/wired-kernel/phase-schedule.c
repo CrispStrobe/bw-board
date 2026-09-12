@@ -3,7 +3,8 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 extern u32 begin_latched_memory_clock(const u32*,u32*);
 extern u32 end_latched_memory_clock(const u32*,u32*);
-extern u32 write_owned_driver(const u32*,u32,u32);
+extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
+#define PRODUCER_PHASE_SCHEDULE 6
 #define W(i) ((u32*)(unsigned long)p[i])
 static u32 schedule_fault(u32 code,u32 detail,u32 *fault){fault[0]=7;fault[1]=code;fault[2]=detail;fault[3]=0;return 7;}
 u32 phase_schedule_version(void){return 1;}
@@ -23,7 +24,7 @@ u32 run_latched_memory_schedule(const u32 *p,u32 count,u32 updates,const u32 *of
     // All schedule admission precedes mutation of pending drivers or clock state.
     if(W(15)[1]||W(15)[0]||W(15)[2]){fault[0]=6;fault[1]=W(15)[1]?1:2;return 6;}
     for(u32 step=0;step<count;step++) {
-        for(u32 i=offsets[step];i<offsets[step+1];i++)if(write_owned_driver(c,ids[i],values[i]))return schedule_fault(6,i,fault);
+        for(u32 i=offsets[step];i<offsets[step+1];i++)if(write_owned_driver_tagged(c,ids[i],values[i],PRODUCER_PHASE_SCHEDULE))return schedule_fault(6,i,fault);
         u32 result=begin_latched_memory_clock(p,fault);if(result)return result;
         if(read_flags[step]) {
             const u8 *levels=(u8*)(unsigned long)c[10],*conflicts=(u8*)(unsigned long)c[11];u32 value=0;

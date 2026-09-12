@@ -7,6 +7,7 @@
     {
       "name": "divider_1000_1000",
       "source": "ngspice-42",
+      "netlist": "Voltage divider 1000/1000\nV1 vcc 0 5\nR1 vcc mid 1000\nR2 mid 0 1000\n",
       "measured": {
         "v_mid": 2.5,
         "v1#branch": -0.0025
@@ -15,6 +16,7 @@
     {
       "name": "divider_1000_2000",
       "source": "ngspice-42",
+      "netlist": "Voltage divider 1000/2000\nV1 vcc 0 5\nR1 vcc mid 1000\nR2 mid 0 2000\n",
       "measured": {
         "v_mid": 3.333333,
         "v1#branch": -0.00166667
@@ -23,6 +25,7 @@
     {
       "name": "divider_1000_3000",
       "source": "ngspice-42",
+      "netlist": "Voltage divider 1000/3000\nV1 vcc 0 5\nR1 vcc mid 1000\nR2 mid 0 3000\n",
       "measured": {
         "v_mid": 3.75,
         "v1#branch": -0.00125
@@ -31,6 +34,7 @@
     {
       "name": "divider_2200_4700",
       "source": "ngspice-42",
+      "netlist": "Voltage divider 2200/4700\nV1 vcc 0 5\nR1 vcc mid 2200\nR2 mid 0 4700\n",
       "measured": {
         "v_mid": 3.405797,
         "v1#branch": -0.000724638
@@ -39,6 +43,7 @@
     {
       "name": "divider_10000_10000",
       "source": "ngspice-42",
+      "netlist": "Voltage divider 10000/10000\nV1 vcc 0 5\nR1 vcc mid 10000\nR2 mid 0 10000\n",
       "measured": {
         "v_mid": 2.5,
         "v1#branch": -0.00025
@@ -47,6 +52,7 @@
     {
       "name": "divider_470_10000",
       "source": "ngspice-42",
+      "netlist": "Voltage divider 470/10000\nV1 vcc 0 5\nR1 vcc mid 470\nR2 mid 0 10000\n",
       "measured": {
         "v_mid": 4.775549,
         "v1#branch": -0.000477555
@@ -55,6 +61,7 @@
     {
       "name": "led_red_220",
       "source": "ngspice-42",
+      "netlist": "LED circuit red R=220\nV1 vcc 0 5\nR1 vcc anode 220\nD1 anode 0 LEDMODEL\n.model LEDMODEL D(IS=1e-20 N=1.8 RS=10)\n",
       "measured": {
         "v_anode": 2.075827,
         "v1#branch": -0.0132917
@@ -63,6 +70,7 @@
     {
       "name": "led_red_1000",
       "source": "ngspice-42",
+      "netlist": "LED circuit red R=1000\nV1 vcc 0 5\nR1 vcc anode 1000\nD1 anode 0 LEDMODEL\n.model LEDMODEL D(IS=1e-20 N=1.8 RS=10)\n",
       "measured": {
         "v_anode": 1.905951,
         "v1#branch": -0.00309405
@@ -71,6 +79,7 @@
     {
       "name": "led_blue_470",
       "source": "ngspice-42",
+      "netlist": "LED circuit blue R=470\nV1 vcc 0 5\nR1 vcc anode 470\nD1 anode 0 LEDMODEL\n.model LEDMODEL D(IS=1e-28 N=2.0 RS=10)\n",
       "measured": {
         "v_anode": 3.090935,
         "v1#branch": -0.00406184
@@ -79,6 +88,7 @@
     {
       "name": "parallel_1k_1k",
       "source": "ngspice-42",
+      "netlist": "Parallel 1k/1k\nV1 vcc 0 5\nR1 vcc 0 1000\nR2 vcc 0 1000\n",
       "measured": {
         "v_vcc": 5.0,
         "v1#branch": -0.01
@@ -87,6 +97,7 @@
     {
       "name": "series_1k_1k_1k",
       "source": "ngspice-42",
+      "netlist": "Series 1k chain\nV1 vcc 0 5\nR1 vcc n1 1000\nR2 n1 n2 1000\nR3 n2 0 1000\n",
       "measured": {
         "v_n1": 3.333333,
         "v_n2": 1.666667,
@@ -96,6 +107,7 @@
     {
       "name": "wheatstone_1000_1000_1000_1000",
       "source": "ngspice-42",
+      "netlist": "Wheatstone bridge\nV1 vcc 0 5\nR1 vcc na 1000\nR2 vcc nb 1000\nR3 na 0 1000\nR4 nb 0 1000\n",
       "measured": {
         "v_na": 2.5,
         "v_nb": 2.5,
@@ -105,6 +117,7 @@
     {
       "name": "wheatstone_1000_1000_1000_2000",
       "source": "ngspice-42",
+      "netlist": "Wheatstone bridge\nV1 vcc 0 5\nR1 vcc na 1000\nR2 vcc nb 1000\nR3 na 0 1000\nR4 nb 0 2000\n",
       "measured": {
         "v_na": 2.5,
         "v_nb": 3.333333,
@@ -114,6 +127,7 @@
     {
       "name": "wheatstone_1000_2000_3000_4000",
       "source": "ngspice-42",
+      "netlist": "Wheatstone bridge\nV1 vcc 0 5\nR1 vcc na 1000\nR2 vcc nb 2000\nR3 na 0 3000\nR4 nb 0 4000\n",
       "measured": {
         "v_na": 3.75,
         "v_nb": 3.333333,
@@ -123,6 +137,7 @@
     {
       "name": "npn_switch",
       "source": "ngspice-42",
+      "netlist": "NPN switch\nV1 vcc 0 5\nV2 vbase 0 5\nRload vcc collector 1000\nRbase vbase base 10000\nQ1 collector base 0 NPNMOD\n.model NPNMOD NPN(BF=100 IS=1e-14)\n",
       "measured": {
         "v_collector": 0.0703992,
         "v_base": 0.7000261,
@@ -133,6 +148,7 @@
     {
       "name": "nmos_switch",
       "source": "ngspice-42",
+      "netlist": "NMOS switch\nV1 vcc 0 5\nV2 gate 0 5\nRload vcc drain 1000\nM1 drain gate 0 0 NMOSMOD W=1u L=1u\n.model NMOSMOD NMOS(VTO=2 KP=0.5)\n",
       "measured": {
         "v_drain": 0.003332963,
         "v1#branch": -0.00499667,
@@ -142,6 +158,7 @@
     {
       "name": "opamp_noninvert",
       "source": "ngspice-42",
+      "netlist": "Op-amp non-inverting gain=10\nV1 inp 0 0.5\nE1 out 0 inp inn 1000000\nRf out inn 9000\nRg inn 0 1000\n",
       "measured": {
         "v_out": 4.99995,
         "v_inn": 0.499995,
@@ -153,6 +170,7 @@
     {
       "name": "rc_10000_0.0001_at_1.0RC",
       "source": "ngspice-42",
+      "netlist": "RC charge R=10000 C=0.0001\nV1 vcc 0 5\nR1 vcc cap 10000\nC1 cap 0 0.0001 ic=0\n.tran 0.01 1.0 uic\n.print tran v(cap)\n.end\n",
       "measured": {
         "v_cap": 3.160617,
         "t_actual": 1.0
@@ -161,6 +179,7 @@
     {
       "name": "rc_10000_0.0001_at_2.0RC",
       "source": "ngspice-42",
+      "netlist": "RC charge R=10000 C=0.0001\nV1 vcc 0 5\nR1 vcc cap 10000\nC1 cap 0 0.0001 ic=0\n.tran 0.02 2.0 uic\n.print tran v(cap)\n.end\n",
       "measured": {
         "v_cap": 4.323367,
         "t_actual": 2.0
@@ -169,6 +188,7 @@
     {
       "name": "rc_10000_0.0001_at_5.0RC",
       "source": "ngspice-42",
+      "netlist": "RC charge R=10000 C=0.0001\nV1 vcc 0 5\nR1 vcc cap 10000\nC1 cap 0 0.0001 ic=0\n.tran 0.05 5.0 uic\n.print tran v(cap)\n.end\n",
       "measured": {
         "v_cap": 4.966345,
         "t_actual": 5.0
@@ -177,6 +197,7 @@
     {
       "name": "isource_2mA",
       "source": "ngspice-42",
+      "netlist": "Current source\nI1 0 node 0.002\nR1 node 0 1000\n",
       "measured": {
         "v_node": 2.0
       }

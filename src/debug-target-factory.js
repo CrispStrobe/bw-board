@@ -202,7 +202,7 @@ async function createEmulatorTarget(opts) {
 
   // 4. Debug target — import dynamically to avoid circular deps
   const { createEmu8051DebugTarget } = await import('./emu8051-debug.js');
-  const target = createEmu8051DebugTarget(wasm, { symbols });
+  const target = createEmu8051DebugTarget(wasm, { symbols, adapter });
 
   return { target, adapter };
 }
