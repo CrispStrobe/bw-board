@@ -97,8 +97,11 @@
  * PC, IRAM, SFR and XRAM would omit in-flight and peripheral state. The native
  * blob is copied out of the WASM heap into caller-owned bytes and restore
  * validates its JS envelope before the atomic native call. This enables
- * checkpoint/restore recording only; reverse execution remains a separate,
- * unclaimed integration.
+ * checkpoint/restore recording only for a detached MCU+adapter. An attached
+ * Board is a separate reactive machine whose editor snapshot omits scheduled
+ * device and solver continuation, so the shared adapter/factory boundary fails
+ * closed instead of mislabelling a native MCU blob as a whole-board checkpoint.
+ * Reverse execution remains a separate, unclaimed integration.
  *
  * ## Native pin-event transport
  *
@@ -134,7 +137,8 @@ const NS_PER_S = 1_000_000_000n;
 const PIN_HISTORY_CAPACITY = 4096;
 const CHECKPOINT_VERSION = 1;
 const CHECKPOINT_BUILD_ID = 0x80510101;
-const CHECKPOINT_MAX_BYTES = 2 * 1024 * 1024;
+/** Exact sizeof(emu_checkpoint_v1) for build 0x80510101. */
+const CHECKPOINT_SIZE = 443483;
 const CHECKPOINT_NATIVE_ERRORS = Object.freeze({
     [-1]: 'not-initialized', [-2]: 'null-buffer', [-3]: 'wrong-length',
     [-4]: 'malformed', [-5]: 'unsupported-version', [-6]: 'incompatible-build',
@@ -202,11 +206,13 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
     }
 
     /** Task name -> the index the WASM knows it by. Empty until symbols arrive. */
-    const taskIndex = new Map();
+    let taskIndex = new Map();
     /** "<task>/<state>" -> code address, for yield breakpoints. */
-    const yieldAddr = new Map();
+    let yieldAddr = new Map();
     /** Handle -> the Breakpoint it was set from, so we can describe a hit. */
-    const breakpoints = new Map();
+    let breakpoints = new Map();
+    /** A native blob is valid only for the target/configuration that captured it. */
+    const checkpointSession = {};
 
     let symbols = null;
     let listeners = [];
@@ -297,19 +303,45 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
     if (wasm.HEAPU8 && typeof wasm._malloc === 'function' && typeof wasm._free === 'function' &&
         checkpointExports.every(name => typeof wasm[name] === 'function')) {
         try {
-            const version = wasm._emu_checkpoint_version() >>> 0;
-            const buildId = wasm._emu_checkpoint_build_id() >>> 0;
-            const size = wasm._emu_checkpoint_size() >>> 0;
-            if (version !== CHECKPOINT_VERSION) checkpointCode = 'unsupported-checkpoint-version';
-            else if (buildId !== CHECKPOINT_BUILD_ID) checkpointCode = 'incompatible-checkpoint-build';
-            else if (!Number.isSafeInteger(size) || size <= 0 || size > CHECKPOINT_MAX_BYTES) {
+            const version = wasm._emu_checkpoint_version();
+            const buildId = wasm._emu_checkpoint_build_id();
+            const size = wasm._emu_checkpoint_size();
+            if (![version, buildId, size].every(Number.isSafeInteger) ||
+                version < 0 || size < 0 || buildId < -0x80000000 || buildId > 0xffffffff) {
+                checkpointCode = 'invalid-checkpoint-metadata';
+            }
+            else if (version !== CHECKPOINT_VERSION) checkpointCode = 'unsupported-checkpoint-version';
+            // Emscripten exposes a C uint32_t result as a signed JS i32. Validate
+            // its raw range first, then normalize that one representational case.
+            else if ((buildId >>> 0) !== CHECKPOINT_BUILD_ID) checkpointCode = 'incompatible-checkpoint-build';
+            else if (size !== CHECKPOINT_SIZE) {
                 checkpointCode = 'invalid-checkpoint-size';
             } else checkpointSize = size;
         } catch {
             checkpointCode = 'invalid-checkpoint-abi';
         }
     }
-    const hasCheckpoint = checkpointSize > 0;
+    const nativeCheckpointAvailable = checkpointSize === CHECKPOINT_SIZE;
+    const checkpointSupport = () => {
+        if (!nativeCheckpointAvailable) return {supported: false, code: checkpointCode};
+        if (opts.adapter) {
+            if (typeof opts.adapter.checkpointSupport !== 'function' ||
+                typeof opts.adapter.captureCheckpointState !== 'function' ||
+                typeof opts.adapter.prepareCheckpointRestore !== 'function') {
+                return {supported: false, code: 'incomplete-adapter-checkpoint',
+                    reason: 'the 8051 adapter does not implement the checkpoint participant contract'};
+            }
+            try {
+                const support = opts.adapter.checkpointSupport();
+                if (!support?.supported) return support || {supported: false,
+                    code: 'invalid-adapter-checkpoint-support'};
+            } catch {
+                return {supported: false, code: 'invalid-adapter-checkpoint-support',
+                    reason: 'the 8051 adapter checkpoint support probe threw'};
+            }
+        }
+        return {supported: true};
+    };
 
     const nativeCheckpointRefusal = (operation, nativeCode) => ({
         refused: `native 8051 checkpoint ${operation} refused (${CHECKPOINT_NATIVE_ERRORS[nativeCode] ||
@@ -317,8 +349,14 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
         code: 'native-checkpoint-refused', operation, nativeCode,
         reason: CHECKPOINT_NATIVE_ERRORS[nativeCode] || 'unknown-native-error'
     });
-    const unavailableCheckpointRefusal = operation => ({...checkpointRefusal(operation),
-        code: checkpointCode});
+    const unavailableCheckpointRefusal = operation => {
+        const support = checkpointSupport();
+        return {...checkpointRefusal(operation), code: support.code || checkpointCode,
+            ...(support.reason ? {reason: support.reason} : {})};
+    };
+    const freeCheckpointBuffer = ptr => {
+        try { wasm._free(ptr); } catch { /* restore/capture outcome outranks allocator diagnostics */ }
+    };
 
     /** The injected opcode-length table, or null when the host supplied none. */
     const instructionLength = typeof opts.instructionLength === 'function'
@@ -644,7 +682,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 fidelity: 'recorded',
                 resumable: true,
                 signals: [],
-                checkpoint: hasCheckpoint
+                checkpoint: checkpointSupport().supported
             };
         },
 
@@ -677,7 +715,7 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                 sfrs: 'all',
                 haltPolicy: 'freeze-timers',
                 timeFreezes: true,
-                recording: hasCheckpoint ? ['checkpoint', 'restore'] : [],
+                recording: checkpointSupport().supported ? ['checkpoint', 'restore'] : [],
                 // An emulator takes nothing from the program: no timer, no
                 // UART, no pin. The on-chip monitor is the one that has to
                 // confess here (§7 decision 5).
@@ -704,10 +742,12 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
                     // a property of the HOST's injection, not of this build.
                     instructionBytes: instructionLength ? 'injected-length-table' : 'none',
                     checkpoint: {
-                        supported: hasCheckpoint,
-                        ...(hasCheckpoint ? {version: CHECKPOINT_VERSION,
+                        supported: checkpointSupport().supported,
+                        ...(checkpointSupport().supported ? {version: CHECKPOINT_VERSION,
                             buildId: CHECKPOINT_BUILD_ID, size: checkpointSize} :
-                            {code: checkpointCode, missing: [...CHECKPOINT_MISSING]})
+                            {code: checkpointSupport().code || checkpointCode,
+                                reason: checkpointSupport().reason,
+                                missing: [...CHECKPOINT_MISSING]})
                     }
                 }
             };
@@ -940,93 +980,179 @@ export function createEmu8051DebugTarget(wasm, opts = {}) {
 
         /** Copy the complete native blob out of transient WASM-owned memory. */
         captureCheckpoint() {
-            if (!hasCheckpoint) return unavailableCheckpointRefusal('save');
-            const ptr = wasm._malloc(checkpointSize);
+            if (!checkpointSupport().supported) return unavailableCheckpointRefusal('save');
+            if (inBudgetedRun) return {refused: 'checkpoint capture requires a quiescent run boundary',
+                code: 'checkpoint-not-quiescent'};
+            if (typeof structuredClone !== 'function') return {
+                refused: 'checkpoint local state requires structuredClone',
+                code: 'checkpoint-clone-unavailable'};
+            let local;
+            try {
+                const adapter = opts.adapter?.captureCheckpointState?.() ?? null;
+                if (adapter?.refused) return adapter;
+                local = structuredClone({
+                    symbols, taskIndex: [...taskIndex], yieldAddr: [...yieldAddr],
+                    breakpoints: [...breakpoints], pendingStep, pendingCause, stepping,
+                    // Preserve the saved drain cursor: pending native ring entries
+                    // are replayed once after restore, rather than silently dropped.
+                    inBudgetedRun, pinHistoryReadCount, pinHistoryReadHead, adapter
+                });
+            } catch {
+                return {refused: 'checkpoint debugger-local state cannot be cloned',
+                    code: 'invalid-checkpoint-local-state'};
+            }
+            let ptr;
+            try { ptr = wasm._malloc(checkpointSize); } catch (error) {
+                return {refused: 'native 8051 checkpoint allocation threw',
+                    code: 'checkpoint-allocation-threw', reason: String(error?.message || error)};
+            }
             if (!ptr) return nativeCheckpointRefusal('save', -8);
             try {
-                if (ptr < 0 || ptr + checkpointSize > wasm.HEAPU8.length) {
+                let heap = wasm.HEAPU8;
+                if (!Number.isSafeInteger(ptr) || ptr < 0 || !heap ||
+                    ptr + checkpointSize > heap.length) {
                     return {refused: 'checkpoint allocation lies outside the WASM heap',
                         code: 'invalid-checkpoint-allocation'};
                 }
-                const nativeCode = wasm._emu_checkpoint_save(ptr, checkpointSize);
+                let nativeCode;
+                try { nativeCode = wasm._emu_checkpoint_save(ptr, checkpointSize); } catch (error) {
+                    return {refused: 'native 8051 checkpoint save call threw',
+                        code: 'native-checkpoint-call-threw', operation: 'save',
+                        commitUnknown: false, reason: String(error?.message || error)};
+                }
                 if (nativeCode !== 0) return nativeCheckpointRefusal('save', nativeCode);
+                heap = wasm.HEAPU8; // save may grow Emscripten memory
+                if (!heap || ptr + checkpointSize > heap.length) return {
+                    refused: 'checkpoint allocation became invalid after native save',
+                    code: 'invalid-checkpoint-allocation'};
                 return {
                     schema: 1, kind: 'emu8051-native', version: CHECKPOINT_VERSION,
                     buildId: CHECKPOINT_BUILD_ID, size: checkpointSize,
-                    timeNs: nowNs(), bytes: Uint8Array.from(
-                        wasm.HEAPU8.subarray(ptr, ptr + checkpointSize)),
-                    local: {
-                        symbols: typeof structuredClone === 'function' ? structuredClone(symbols) : symbols,
-                        taskIndex: [...taskIndex], yieldAddr: [...yieldAddr],
-                        breakpoints: [...breakpoints].map(([id, bp]) => [id, {...bp}])
-                    }
+                    session: checkpointSession, timeNs: nowNs(),
+                    bytes: Uint8Array.from(heap.subarray(ptr, ptr + checkpointSize)), local
                 };
             } finally {
-                wasm._free(ptr);
+                freeCheckpointBuffer(ptr);
             }
         },
 
         /** Validate the JS envelope before asking native code to mutate. */
         restoreCheckpoint(snapshot) {
-            if (!hasCheckpoint) return unavailableCheckpointRefusal('restore');
+            if (!checkpointSupport().supported) return unavailableCheckpointRefusal('restore');
             if (!snapshot || snapshot.schema !== 1 || snapshot.kind !== 'emu8051-native' ||
+                snapshot.session !== checkpointSession ||
                 snapshot.version !== CHECKPOINT_VERSION || snapshot.buildId !== CHECKPOINT_BUILD_ID ||
                 snapshot.size !== checkpointSize || !(snapshot.bytes instanceof Uint8Array) ||
                 snapshot.bytes.length !== checkpointSize || !snapshot.local ||
                 !Array.isArray(snapshot.local.taskIndex) || !Array.isArray(snapshot.local.yieldAddr) ||
-                !Array.isArray(snapshot.local.breakpoints)) {
+                !Array.isArray(snapshot.local.breakpoints) ||
+                typeof structuredClone !== 'function') {
                 return {refused: 'checkpoint envelope or identity does not match this 8051 target',
                     code: 'invalid-checkpoint-envelope'};
             }
             const validEntry = entry => Array.isArray(entry) && entry.length === 2;
-            if (!snapshot.local.taskIndex.every(validEntry) ||
-                !snapshot.local.yieldAddr.every(validEntry) ||
-                !snapshot.local.breakpoints.every(entry => validEntry(entry) &&
-                    Number.isSafeInteger(entry[0]) && entry[1] && typeof entry[1] === 'object')) {
+            const tasks = snapshot.local.taskIndex;
+            const yields = snapshot.local.yieldAddr;
+            const bps = snapshot.local.breakpoints;
+            const unique = values => new Set(values).size === values.length;
+            const validBreakpoint = ([id, bp]) => {
+                if (!Number.isSafeInteger(id) || id <= 0 || id > 0x7fffffff ||
+                    !bp || typeof bp !== 'object' ||
+                    !Number.isSafeInteger(bp.pc) || bp.pc < 0 || bp.pc > 0xffff) return false;
+                if (bp.kind === 'code') return Number.isSafeInteger(bp.addr) &&
+                    bp.addr >= 0 && bp.addr <= 0xffff;
+                if (bp.kind === 'yield') return typeof bp.task === 'string' &&
+                    Number.isSafeInteger(bp.state) && bp.state >= 0 && bp.state <= 0x7fffffff;
+                if (bp.kind === 'write') return SPACE[bp.space ?? 'iram'] !== undefined &&
+                    Number.isSafeInteger(bp.addr) && bp.addr >= 0 && bp.addr <= 0xffff;
+                return false;
+            };
+            const pending = snapshot.local.pendingStep;
+            const validPending = pending === null || (pending && typeof pending === 'object' &&
+                ['cycle', 'insn'].includes(pending.kind) && Number.isSafeInteger(pending.pcBefore) &&
+                pending.pcBefore >= 0 && pending.pcBefore <= 0xffff);
+            if (tasks.length > 8 || bps.length > MAX_BREAKPOINTS ||
+                !tasks.every(entry => validEntry(entry) && typeof entry[0] === 'string' &&
+                    Number.isSafeInteger(entry[1]) && entry[1] >= 0 && entry[1] < 8) ||
+                !unique(tasks.map(entry => entry[0])) || !unique(tasks.map(entry => entry[1])) ||
+                !yields.every(entry => validEntry(entry) && typeof entry[0] === 'string' &&
+                    Number.isSafeInteger(entry[1]) && entry[1] >= 0 && entry[1] <= 0xffff) ||
+                !unique(yields.map(entry => entry[0])) ||
+                !yields.every(([key]) => tasks.some(([name]) => key.startsWith(`${name}/`))) ||
+                !bps.every(entry => validEntry(entry) && validBreakpoint(entry)) ||
+                !unique(bps.map(entry => entry[0])) || !validPending ||
+                typeof snapshot.local.stepping !== 'boolean' ||
+                (snapshot.local.stepping && snapshot.local.pendingCause !== 'step') ||
+                (pending !== null && !snapshot.local.stepping) ||
+                snapshot.local.inBudgetedRun !== false ||
+                !(snapshot.local.pendingCause === null ||
+                    ['step', 'user'].includes(snapshot.local.pendingCause)) ||
+                !Number.isSafeInteger(snapshot.local.pinHistoryReadCount) ||
+                snapshot.local.pinHistoryReadCount < 0 ||
+                !Number.isSafeInteger(snapshot.local.pinHistoryReadHead) ||
+                snapshot.local.pinHistoryReadHead < 0 ||
+                snapshot.local.pinHistoryReadHead >= PIN_HISTORY_CAPACITY) {
                 return {refused: 'checkpoint debugger-local state is malformed',
                     code: 'invalid-checkpoint-envelope'};
             }
-            let restoredSymbols;
+            let staged;
             try {
-                restoredSymbols = typeof structuredClone === 'function' ?
-                    structuredClone(snapshot.local.symbols) : snapshot.local.symbols;
+                const clone = structuredClone(snapshot.local);
+                staged = {...clone, taskIndex: new Map(clone.taskIndex),
+                    yieldAddr: new Map(clone.yieldAddr), breakpoints: new Map(clone.breakpoints)};
             } catch {
-                return {refused: 'checkpoint symbol state cannot be cloned',
+                return {refused: 'checkpoint debugger-local state cannot be cloned',
                     code: 'invalid-checkpoint-envelope'};
             }
-            const ptr = wasm._malloc(checkpointSize);
+            let bytes;
+            try { bytes = Uint8Array.from(snapshot.bytes); } catch {
+                return {refused: 'checkpoint native bytes cannot be copied',
+                    code: 'invalid-checkpoint-envelope'};
+            }
+            const adapterRestore = opts.adapter?.prepareCheckpointRestore?.(staged.adapter);
+            if (adapterRestore && !adapterRestore.accepted) return {
+                refused: adapterRestore.reason || 'checkpoint adapter state cannot be restored',
+                code: adapterRestore.code || 'checkpoint-adapter-refused'};
+            let ptr;
+            try { ptr = wasm._malloc(checkpointSize); } catch (error) {
+                return {refused: 'native 8051 checkpoint allocation threw',
+                    code: 'checkpoint-allocation-threw', reason: String(error?.message || error)};
+            }
             if (!ptr) return nativeCheckpointRefusal('restore', -8);
-            if (ptr < 0 || ptr + checkpointSize > wasm.HEAPU8.length) {
-                wasm._free(ptr);
+            const heap = wasm.HEAPU8; // malloc may grow Emscripten memory
+            if (!Number.isSafeInteger(ptr) || ptr < 0 || !heap ||
+                ptr + checkpointSize > heap.length) {
+                freeCheckpointBuffer(ptr);
                 return {refused: 'checkpoint allocation lies outside the WASM heap',
                     code: 'invalid-checkpoint-allocation'};
             }
-            const before = nowNs();
             let nativeCode;
             try {
-                wasm.HEAPU8.set(snapshot.bytes, ptr);
+                heap.set(bytes, ptr);
                 nativeCode = wasm._emu_checkpoint_restore(ptr, checkpointSize);
+            } catch (error) {
+                return {refused: 'native 8051 checkpoint restore call threw',
+                    code: 'native-checkpoint-call-threw', commitUnknown: true,
+                    reason: String(error?.message || error)};
             } finally {
-                wasm._free(ptr);
+                freeCheckpointBuffer(ptr);
             }
             if (nativeCode !== 0) return nativeCheckpointRefusal('restore', nativeCode);
 
-            symbols = restoredSymbols;
-            taskIndex.clear();
-            yieldAddr.clear();
-            breakpoints.clear();
-            for (const entry of snapshot.local.taskIndex) taskIndex.set(...entry);
-            for (const entry of snapshot.local.yieldAddr) yieldAddr.set(...entry);
-            for (const [id, bp] of snapshot.local.breakpoints) breakpoints.set(id, {...bp});
-            pendingStep = null;
-            pendingCause = null;
-            stepping = false;
-            inBudgetedRun = false;
-            if (nowNs() < before) debugTimeEpoch++;
-            if (hasPinHistory) {
-                pinHistoryReadCount = wasm._emu_pin_history_count() >>> 0;
-                pinHistoryReadHead = wasm._emu_pin_history_head() >>> 0;
-            }
+            // Native mutation has committed. Everything below is a prevalidated,
+            // allocation-free assignment (plus the adapter's prepared no-fail commit).
+            symbols = staged.symbols;
+            taskIndex = staged.taskIndex;
+            yieldAddr = staged.yieldAddr;
+            breakpoints = staged.breakpoints;
+            pendingStep = staged.pendingStep;
+            pendingCause = staged.pendingCause;
+            stepping = staged.stepping;
+            inBudgetedRun = staged.inBudgetedRun;
+            pinHistoryReadCount = staged.pinHistoryReadCount;
+            pinHistoryReadHead = staged.pinHistoryReadHead;
+            debugTimeEpoch++;
+            adapterRestore?.commit();
             return true;
         },
 
