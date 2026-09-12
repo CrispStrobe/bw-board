@@ -22,7 +22,7 @@ static u32 preview_work[3];
 u32 memory_preview_counters_version(void){return 1;}
 u32 *memory_preview_counters_ptr(void){return preview_work;}
 void reset_memory_preview_counters(void){preview_work[0]=preview_work[1]=preview_work[2]=0;}
-#if defined(NATIVE_STAGE_ATTRIBUTION) || defined(NATIVE_STAGE_PROFILE_NAMING)
+#ifdef NATIVE_STAGE_PROFILE_NAMING
 static STAGE_NOINLINE void commit_memory_stage(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom) {
     STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);
     for(u32 b=0;b<banks;b++) {
@@ -53,7 +53,7 @@ static STAGE_NOINLINE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 
     }}
     /* Preflight and preview every bank. No actual state/byte/net-drive commit
      * occurs here; the output buffers are private preview staging as well. */
-    #if defined(NATIVE_STAGE_ATTRIBUTION) || defined(NATIVE_STAGE_PROFILE_NAMING)
+    #ifdef NATIVE_STAGE_ATTRIBUTION
     STAGE_ADD(STAGE_MEMORY_PREVIEW_CALLS,1);
     #endif
     #ifdef NATIVE_STAGE_ATTRIBUTION
@@ -109,9 +109,12 @@ static STAGE_NOINLINE u32 PREVIEW_FUNCTION(u32 banks,u8 *memory,u32 *states,u32 
         for(u32 p=0;p<8;p++)staged_drives[b*8+p]=n[2]==NONE?3:(n[2]>>p)&1;
     }
     /* Commit the old pending bytes only after all peer previews succeeded. */
-    #if defined(NATIVE_STAGE_ATTRIBUTION) || defined(NATIVE_STAGE_PROFILE_NAMING)
+    #ifdef NATIVE_STAGE_PROFILE_NAMING
     commit_memory_stage(banks,memory,states,staged,protected_rom);
     #else
+    #ifdef NATIVE_STAGE_ATTRIBUTION
+    STAGE_ADD(STAGE_MEMORY_COMMIT_BANKS,banks);STAGE_ADD(STAGE_MEMORY_COMMIT_STATE_WORD_COPIES,banks*WORDS);
+    #endif
     for(u32 b=0;b<banks;b++) {
         u32 *s=states+b*WORDS,*n=staged+b*WORDS;
         if(s[0]==3&&n[0]!=3&&s[3]&&s[4]&&!protected_rom[b])memory[b*SIZE+s[5]]=(u8)s[6];
