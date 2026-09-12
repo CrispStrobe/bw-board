@@ -43,6 +43,7 @@ def run_spice(name, netlist, measurements):
         results.append({
             "name": name,
             "source": "ngspice-42",
+            "netlist": netlist,
             "measured": measured,
         })
         return measured
@@ -114,7 +115,13 @@ def run_spice_op(name, netlist, nodes):
             if m and 'branch' in m.group(1):
                 measured[m.group(1)] = float(m.group(2))
 
-        results.append({"name": name, "source": "ngspice-42", "measured": measured})
+        # THE NETLIST TRAVELS WITH THE READING. Without it an entry says what
+        # was measured but not WHAT WAS MEASURED -- and that is precisely how
+        # the IS clamp hid: led_blue_470's 3.090935 was a fine ngspice solve of
+        # a diode the corpus could not name. A reading whose device is not
+        # recorded cannot be checked by anything except rerunning the generator.
+        results.append({"name": name, "source": "ngspice-42",
+                        "netlist": netlist, "measured": measured})
         return measured
     except Exception as e:
         results.append({"name": name, "source": "ngspice-42", "error": str(e)})
@@ -245,6 +252,7 @@ for rc_r, rc_c in [(10000, 1e-4)]:
                 results.append({
                     "name": f"rc_{rc_r}_{rc_c}_at_{mult}RC",
                     "source": "ngspice-42",
+                    "netlist": netlist,
                     "measured": {"v_cap": v_cap, "t_actual": t_actual},
                 })
             else:
