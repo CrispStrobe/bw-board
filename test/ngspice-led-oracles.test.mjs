@@ -107,17 +107,25 @@ test('SOLVER: with the identical device, our MNA finds ngspice\'s operating poin
 // A user types `vf`; we must build the device. `vf` alone cannot determine n
 // and rs, so this is a modelling choice and the number may only FALL.
 //
-//   piecewise, as it stands   14.39 %   <- vf is treated as the KNEE, so the
-//                                          total drop at 20 mA is vf + 0.020*rd
-//   piecewise, knee corrected  4.14 %
-//   shockley rs=2              6.38 %
-//   shockley rs=10             0.09 %   <- rs == LED_RD, i.e. one device
+//   BEFORE the vf correction  14.39 %   <- vf was treated as the KNEE, so the
+//                                           total drop at 20 mA was vf + 0.020*rd
+//   AFTER it, per device:
+//     led_red_220               0.58 %
+//     led_red_1000              2.74 %
+//     led_blue_470              6.82 %   <- the worst, and it is the rs half
+//
+// The remaining spread is NOT the convention any more, it is rs versus rd. The
+// blue device is IS=1e-28/N=2.0/RS=10 and its headroom routes it to the
+// exponential path, which defaults rs=2 -- so the model holds a different part
+// than the reference. Closing that closes this number; see
+// test/junction-rs-divergence.test.mjs, which ratchets the same gap from the
+// other side.
 //
 // Do NOT lower this by choosing rs to fit: a sweep over the reference devices
 // elects whatever RS they were built with (a 0.04 % diagonal at RS = 5, 10, 25
 // and 40), so fitting rs to this corpus is a tautology. Move it by making the
 // two junction paths describe the SAME device.
-const CALIBRATION_WORST = 0.1439;
+const CALIBRATION_WORST = 0.0682;
 
 test('CALIBRATION: what a user gets by typing vf, as a ratchet', () => {
     let worst = 0, worstName = '';
