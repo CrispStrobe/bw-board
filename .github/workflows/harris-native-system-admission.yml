@@ -52,11 +52,13 @@ jobs:
       - name: Build exact base and candidate modules independently
         run: |
           set -euo pipefail
-          mkdir "$RECEIPT_DIR/base-build" "$RECEIPT_DIR/candidate-build"
+          mkdir "$RECEIPT_DIR/base-build" "$RECEIPT_DIR/candidate-build" "$RECEIPT_DIR/attribution-build"
           node "$BASE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/base-build" | tee "$RECEIPT_DIR/base-build.log"
           node "$CANDIDATE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/candidate-build" | tee "$RECEIPT_DIR/candidate-build.log"
+          NATIVE_STAGE_ATTRIBUTION=1 node "$CANDIDATE_TREE/scripts/build-wired-net-kernel.mjs" "$RECEIPT_DIR/attribution-build" | tee "$RECEIPT_DIR/attribution-build.log"
           test -s "$RECEIPT_DIR/base-build/wired-net-kernel.wasm"
           test -s "$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm"
+          test -s "$RECEIPT_DIR/attribution-build/wired-net-kernel.wasm"
 
       - name: Measure same-runner immutable memory-map admission
         run: |
@@ -65,10 +67,11 @@ jobs:
             --base-dir="$BASE_TREE" --candidate-dir="$CANDIDATE_TREE" \
             --base-wasm="$RECEIPT_DIR/base-build/wired-net-kernel.wasm" \
             --candidate-wasm="$RECEIPT_DIR/candidate-build/wired-net-kernel.wasm" \
+            --attribution-wasm="$RECEIPT_DIR/attribution-build/wired-net-kernel.wasm" \
             --iterations=4096 --warmup-rounds=2 --rounds=12 \
             --batch-periods=8192 --wall-budget-ms=1000 \
             > "$RECEIPT_DIR/native-system-admission.json"
-          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-system-admission.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"208710e006af1e5007fe31e37fb472ce9587255f"); assert.equal(r.variants.candidate.revision,"935490592505add92a8c2af09c6904f1b0dd2adf"); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.ok(r.activeRatio.median>=1.10); assert.ok(r.activeRatio.q1>=1.05); assert.ok(r.activeRatio.min>=1); assert.equal(r.decision.capacityLeverAccepted,true);'
+          node --input-type=module -e 'import fs from "node:fs"; import assert from "node:assert/strict"; const r=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+"/native-system-admission.json")); assert.equal(r.measurementRevision,process.env.GITHUB_SHA); assert.equal(r.variants.base.revision,"208710e006af1e5007fe31e37fb472ce9587255f"); assert.equal(r.variants.candidate.revision,"935490592505add92a8c2af09c6904f1b0dd2adf"); assert.equal(r.variants.attribution.revision,"935490592505add92a8c2af09c6904f1b0dd2adf"); assert.equal(r.attributionProof.stage.native.memoryMappingCalls,r.attributionProof.semantic.producerWork.memory.settleCalls); assert.equal(r.attributionProof.stage.native.memoryMappingVisits,r.attributionProof.stage.native.memoryMappingCalls*640); assert.equal(r.warmups.length,4); assert.equal(r.samples.length,24); assert.equal(r.paired.length,12); assert.ok(r.activeRatio.median>=1.10); assert.ok(r.activeRatio.q1>=1.05); assert.ok(r.activeRatio.min>=1); assert.equal(r.decision.capacityLeverAccepted,true);'
 
       - name: Upload exact A/B evidence and both builds
         if: ${{ always() && env.RECEIPT_DIR != '' }}

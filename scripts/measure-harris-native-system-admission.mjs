@@ -7,9 +7,11 @@ import {arch,cpus,hostname,loadavg,platform} from 'node:os';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
+import {assertStageReceipt} from './measure-harris-native-stage-attribution.mjs';
 
 export const BASE_REVISION='208710e006af1e5007fe31e37fb472ce9587255f';
 export const CANDIDATE_REVISION='935490592505add92a8c2af09c6904f1b0dd2adf';
+export const HEADER_PATH='src/experimental/wired-kernel/stage-attribution.h';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const median=values=>{const a=[...values].sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;};
 const quantile=(values,q)=>{const a=[...values].sort((x,y)=>x-y),p=(a.length-1)*q,l=Math.floor(p),f=p-l;return a[l]+(a[Math.min(l+1,a.length-1)]-a[l])*f;};
@@ -30,25 +32,31 @@ export function assertAdmissionReconciliation(candidate,base,label='sample'){
     assert.deepEqual(candidate.work,base.work,`${label}: legacy work`);
     assert.deepEqual(candidate.producerWork,base.producerWork,`${label}: producer and memory work`);
 }
+export function assertHeaderHashes(headerHashes,expected){
+    assert.deepEqual(Object.keys(headerHashes??{}),[HEADER_PATH],'exact native header inventory');
+    assert.equal(headerHashes[HEADER_PATH],expected,'native header digest');return Object.freeze({...headerHashes});
+}
 const options={};
-function parse(args){for(const arg of args){const m=/^--(experimental|base-dir=(.+)|candidate-dir=(.+)|base-wasm=(.+)|candidate-wasm=(.+)|iterations=([0-9]+)|warmup-rounds=([0-9]+)|rounds=([0-9]+)|batch-periods=([0-9]+)|wall-budget-ms=([0-9]+(?:\.[0-9]+)?))$/.exec(arg);
+function parse(args){for(const arg of args){const m=/^--(experimental|base-dir=(.+)|candidate-dir=(.+)|base-wasm=(.+)|candidate-wasm=(.+)|attribution-wasm=(.+)|iterations=([0-9]+)|warmup-rounds=([0-9]+)|rounds=([0-9]+)|batch-periods=([0-9]+)|wall-budget-ms=([0-9]+(?:\.[0-9]+)?))$/.exec(arg);
     if(!m)throw new Error(`unknown option: ${arg}`);const [key,value]=arg.slice(2).split(/=(.*)/s);if(Object.hasOwn(options,key))throw new Error(`duplicate: ${key}`);options[key]=value??true;}}
 const integer=(name,fallback,max)=>{const value=options[name]===undefined?fallback:Number(options[name]);if(!Number.isSafeInteger(value)||value<1||value>max)throw new RangeError(name);return value;};
 const git=(dir,...args)=>execFileSync('git',['-C',dir,...args],{encoding:'utf8'}).trim();
 const url=(dir,path)=>pathToFileURL(join(dir,path)).href;
-async function loadVariant(name,directory,wasmPath,revision){
+async function loadVariant(name,directory,wasmPath,revision,stageAttribution=false){
     directory=realpathSync(directory);wasmPath=realpathSync(wasmPath);assert.equal(git(directory,'rev-parse','HEAD'),revision);
     assert.equal(git(directory,'status','--porcelain'),'');const wasm=readFileSync(wasmPath),manifestBytes=readFileSync(join(dirname(wasmPath),'wired-net-kernel-build.json'));
     const manifest=JSON.parse(manifestBytes);assert.equal(manifest.wasmSHA256,hash(wasm));
     for(const [path,digest] of Object.entries(manifest.sourceHashes))assert.equal(hash(readFileSync(join(directory,path))),digest,path);
+    assert.equal(manifest.stageAttribution??false,stageAttribution,`${name}: stage-attribution build flag`);
+    const headerHashes=assertHeaderHashes(manifest.headerHashes,hash(readFileSync(join(directory,HEADER_PATH))));
     const paths=['src/devices/bus-memory.js','src/experimental/harris-80c286-boot-cpu.js','src/experimental/harris-boot-rom.js',
         'src/experimental/harris-native-memory-board.js','src/experimental/harris-run-transactions.js'];
     const [busMemory,cpu,rom,board,runner]=await Promise.all(paths.map(path=>import(url(directory,path))));busMemory.registerBusMemory();
     const js=[...paths,'src/experimental/harris-80c286-memory-board.js','src/experimental/wired-kernel/bus-circuit-image.js',
         'src/experimental/wired-kernel/memory-circuit.js'];
-    return {name,revision,wasm,HarrisBootCPU:cpu.HarrisBootCPU,createROM:rom.createHarrisStoreLoopROM,
+    return {name,revision,wasm,stageAttribution,HarrisBootCPU:cpu.HarrisBootCPU,createROM:rom.createHarrisStoreLoopROM,
         createBoard:board.createHarrisNativeMemoryBoard,run:runner.runHarrisTransactions,provenance:{revision,wasmSHA256:manifest.wasmSHA256,
-            manifestSHA256:hash(manifestBytes),compiler:manifest.compiler,buildArgs:manifest.args,nativeSourceHashes:manifest.sourceHashes,
+            manifestSHA256:hash(manifestBytes),compiler:manifest.compiler,buildArgs:manifest.args,nativeSourceHashes:manifest.sourceHashes,headerHashes,
             jsSourceHashes:Object.fromEntries(js.map(path=>[path,hash(readFileSync(join(directory,path)))]))}};
 }
 function state(cpu,board){const bus=board.inspectBus(),memories=['rom0','rom1','ram0','ram1'].map(id=>{const m=board.inspectMemory(id);return {id,bytes:[...m.bytes],writes:m.writes};});
@@ -56,23 +64,28 @@ function state(cpu,board){const bus=board.inspectBus(),memories=['rom0','rom1','
         retired:cpu.retired,writes:memories.slice(2).map(m=>m.writes),physicalClock:bus.clock};}
 async function sample(variant,settings){
     const board=await variant.createBoard({enabled:true,rom:variant.createROM(settings.iterations),romLowAlias:true,wasmBytes:variant.wasm,
-        admittedGraph:true,incrementalGraph:true});const cpu=new variant.HarrisBootCPU({enabled:true,board});cpu.initialize();
-    board.resetWorkCounters();board.resetProducerCounters();global.gc?.();let yields=0;const wallStart=performance.now();
+        admittedGraph:true,incrementalGraph:true,stageAttribution:variant.stageAttribution});const cpu=new variant.HarrisBootCPU({enabled:true,board});cpu.initialize();
+    board.resetWorkCounters();board.resetProducerCounters();if(variant.stageAttribution)board.resetStageAttribution();global.gc?.();let yields=0;const wallStart=performance.now();
     const result=await variant.run({cpu,maxPeriods:settings.iterations*32+100,batchPeriods:settings.batchPeriods,wallBudgetMS:settings.wallBudgetMS,
         yieldTask:()=>new Promise(resolve=>setImmediate(()=>{yields++;resolve();}))});const wallMS=performance.now()-wallStart;
     assert.equal(result.status,'halted');const final=state(cpu,board);assert.deepEqual(final.writes,[settings.iterations,settings.iterations]);
     assert.equal(final.physicalClock,result.periods+67);assert.equal(yields,result.chunks-1);
     const semantic={...final,periods:result.periods,chunks:result.chunks,yields,work:board.inspectWorkCounters(),producerWork:board.inspectProducerCounters()};
+    const stage=variant.stageAttribution?board.inspectStageAttribution():null;if(stage)assertStageReceipt(stage,semantic);
     return {label:variant.name,activeMS:result.activeMS,wallMS,activePeriodsPerSecond:result.periods*1000/result.activeMS,
-        wallPeriodsPerSecond:result.periods*1000/wallMS,semantic};
+        wallPeriodsPerSecond:result.periods*1000/wallMS,semantic,stage};
 }
 async function main(){
-    parse(process.argv.slice(2));if(options.experimental!==true||!options['base-dir']||!options['candidate-dir']||!options['base-wasm']||!options['candidate-wasm'])throw new Error('explicit A/B inputs required');
+    parse(process.argv.slice(2));if(options.experimental!==true||!options['base-dir']||!options['candidate-dir']||!options['base-wasm']||!options['candidate-wasm']||!options['attribution-wasm'])throw new Error('explicit A/B and attribution inputs required');
     const settings={iterations:integer('iterations',4096,65535),warmupRounds:integer('warmup-rounds',2,10),rounds:integer('rounds',12,30),
         batchPeriods:integer('batch-periods',8192,8192),wallBudgetMS:options['wall-budget-ms']===undefined?1000:Number(options['wall-budget-ms'])};
     assert.ok(Number.isFinite(settings.wallBudgetMS)&&settings.wallBudgetMS>0&&settings.wallBudgetMS<=5000);
     const variants={base:await loadVariant('base',options['base-dir'],options['base-wasm'],BASE_REVISION),
         candidate:await loadVariant('candidate',options['candidate-dir'],options['candidate-wasm'],CANDIDATE_REVISION)};
+    const attribution=await loadVariant('attribution',options['candidate-dir'],options['attribution-wasm'],CANDIDATE_REVISION,true);
+    const attributionProof=await sample(attribution,settings);assert.equal(attributionProof.stage.native.memoryMappingCalls,
+        attributionProof.semantic.producerWork.memory.settleCalls);assert.equal(attributionProof.stage.native.memoryMappingVisits,
+        attributionProof.stage.native.memoryMappingCalls*640);
     const warmups=[],samples=[],paired=[];let sequence=0;const expected={};
     for(const group of interleavedOrder(settings.warmupRounds,settings.rounds)){const pair={};for(let position=0;position<2;position++){
         const value=await sample(variants[group.order[position]],settings);pair[value.label]=value;expected[value.label]??=value.semantic;
@@ -86,7 +99,8 @@ async function main(){
     assert.equal(git(measurementDirectory,'status','--porcelain'),'');
     console.log(JSON.stringify({schemaVersion:1,workload:'harris-store-loop-immutable-memory-map-admission',measurementRevision,clean:true,
         settings,host:{hostname:hostname(),platform:platform(),arch:arch(),cpu:cpus()[0]?.model,node:process.version,loadavg:loadavg()},
-        variants:{base:variants.base.provenance,candidate:variants.candidate.provenance},expected,activeRatio,wallRatio,warmups,samples,paired,
+        variants:{base:variants.base.provenance,candidate:variants.candidate.provenance,attribution:attribution.provenance},
+        attributionProof,expected,activeRatio,wallRatio,warmups,samples,paired,
         decision:{capacityLeverAccepted:activeRatio.median>=1.10&&activeRatio.q1>=1.05&&activeRatio.min>=1,
             capacityLeverStopped:activeRatio.median<1.05,policy:'go median >=1.10, Q1 >=1.05, no pair <1.0; stop claim below median 1.05'},
         limitations:['Shared hosted timing is nondeterministic; raw pairs and dispersion remain authoritative.',
