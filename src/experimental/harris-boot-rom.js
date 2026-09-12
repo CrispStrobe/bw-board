@@ -30,3 +30,19 @@ export function createHarrisLoopROM() {
     ], 0x100);
     return rom;
 }
+
+/** Owned sustained CPU/memory workload; every iteration stores through the bus. */
+export function createHarrisStoreLoopROM(iterations = 1024) {
+    if (!Number.isSafeInteger(iterations) || iterations < 1 || iterations > 65535)
+        throw new RangeError('iterations 1..65535');
+    const rom = createHarrisBootROM(); rom.fill(255, 0x100, 0xfff0);
+    rom.set([
+        0xb9, iterations & 255, iterations >> 8, // MOV CX,iterations
+        0xb8, 0x00, 0x00,                      // MOV AX,0
+        0x40,                                  // loop: INC AX
+        0xa3, 0x00, 0x05,                       // MOV [0500h],AX
+        0xe2, 0xfa,                             // LOOP loop
+        0xf4                                   // HLT
+    ], 0x100);
+    return rom;
+}

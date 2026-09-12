@@ -9,7 +9,7 @@ import {createNativeMemoryCircuit} from '../../src/experimental/wired-kernel/mem
 import {HARRIS_80C286_STATUS} from '../../src/experimental/harris-80c286-contract.js';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]);
 const wire=(from,fromTerminal,to,toTerminal=fromTerminal)=>({from,fromTerminal,to,toTerminal});
-export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit,editWires=w=>w,schedule=false,admittedGraph=false,incrementalGraph=false}={}) {
+export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit,editWires=w=>w,schedule=false,scheduleOptions={},admittedGraph=false,incrementalGraph=false}={}) {
     registerBusMemory();
     const banks=[{id:'low',kind:'62256'},{id:'high',kind:'62256'}];
     const refs=banks.map(b=>new DigitalBusMemoryAdapter({enabled:true,...b,model:getDevice(b.kind),writeJournal:true}));
@@ -32,7 +32,7 @@ export async function createPhaseCircuitOracle({wasmBytes,Circuit=DigitalCircuit
     circuit.drive('host',{...passive,...bitDrives(A,0),...Object.fromEntries(D.map(p=>[p,'Z'])),vcc:1,gnd:0,bhe_n:0});
     circuit.drive('controller',controller.commands());circuit.drive('latch',latch.values);
     const kernel=await createNativeMemoryCircuit({enabled:true,circuit,banks,wasmBytes,admittedGraph,incrementalGraph,
-        phase:{kind:'owned-latched-memory-v1',controller:'controller',latch:'latch',ioEnabled:true,intrEnabled:true,...(schedule?{schedule:{inputPart:'host'}}:{})}});
+        phase:{kind:'owned-latched-memory-v1',controller:'controller',latch:'latch',ioEnabled:true,intrEnabled:true,...(schedule?{schedule:{inputPart:'host',...scheduleOptions}}:{})}});
     let periodOpen=false,faulted=false,comparisons=0,faults=0;
     const capture=()=>captureWiredNetImage({enabled:true,circuit});
     const check=(ok,detail)=>{if(!ok)throw new Error(`native phase circuit ${detail} at boundary ${comparisons}`);};

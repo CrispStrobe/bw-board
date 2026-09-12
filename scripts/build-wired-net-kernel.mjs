@@ -9,17 +9,23 @@ const directory=realpathSync(process.argv[2]);if(!statSync(directory).isDirector
 const output=join(directory,'wired-net-kernel.wasm'),manifest=join(directory,'wired-net-kernel-build.json');
 if(existsSync(output)||existsSync(manifest))throw new Error('refusing to overwrite existing build');
 const clang=process.env.CLANG??'clang';
-const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c'];
+const sourceNames=['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c'];
+sourceNames.push('src/experimental/wired-kernel/bus-circuit.c');
 const sources=sourceNames.map(p=>fileURLToPath(new URL('../'+p,import.meta.url)));
 const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall','-Wextra',
     ...(process.env.WASM_LD?[`-fuse-ld=${process.env.WASM_LD}`]:[]),
     '-Wl,--no-entry','-Wl,--export=arena_ptr','-Wl,--export=arena_capacity','-Wl,--export=resolve_nets','-Wl,--export=settle_owned','-Wl,--export=owned_kernel_version',
     '-Wl,--export=memory_kernel_version','-Wl,--export=preview_memory_banks','-Wl,--export=memory_circuit_version','-Wl,--export=settle_memory_circuit',
     ...['phase_components_version','read_memory_phase_commands','begin_memory_phase','preview_memory_phase_end','finish_memory_phase','update_address_latch'].map(n=>`-Wl,--export=${n}`),
-    ...['phase_circuit_version','begin_latched_memory_clock','end_latched_memory_clock'].map(n=>`-Wl,--export=${n}`),
+    ...['phase_circuit_version','begin_latched_memory_clock','end_latched_memory_clock',
+        'preview_latched_memory_clock','finish_latched_memory_clock','abort_latched_memory_clock'].map(n=>`-Wl,--export=${n}`),
     ...['phase_schedule_version','run_latched_memory_schedule'].map(n=>`-Wl,--export=${n}`),
     ...['admit_owned_context','settle_owned_context'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export=incremental_kernel_version',
+    ...['bus_sequencer_version','bus_input_ptr','bus_output_ptr','bus_completion_ptr','bus_error_pin','bus_initialize','bus_submit','bus_begin','bus_end','bus_inspect'].map(n=>`-Wl,--export=${n}`),
+    '-Wl,--export=incremental_work_counters_version','-Wl,--export=incremental_work_counters_ptr','-Wl,--export=reset_incremental_work_counters',
+    '-Wl,--export=write_owned_driver',
+    ...['bus_circuit_version','begin_bus_memory_clock','end_bus_memory_clock','run_bus_memory_until_completion'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});

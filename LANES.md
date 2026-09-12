@@ -1,5 +1,28 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-12 R2 cooperative hybrid execution — IMPLEMENTED/LOCALLY QUALIFIED, Codex root. User explicitly
+requested continued performance coding and remote default-branch merge after
+qualification. Integration `feat/harris-hybrid-cpu-integration` now includes
+upstream `536eb19`. Dedicated workers own `harris-cooperative-transactions`
+(host runner/tests) and `harris-native-ci` (native workflow/contracts); root owns
+sustained ROM benchmark, real-board event tests, census, docs and merge checks.
+No branch deletion, app deployment or implicit backend promotion is requested.
+Worker lanes are complete; source candidate `c42ed96` passes 171 local tests
+without skips and frozen Chromium qualification. Final hosted qualification and
+authorized remote master merge are tracked in engine PR5. Receipts and remaining
+scope: HARRIS-HYBRID-COOPERATIVE-EXECUTION.md. No full-native/capacity completion.
+
+2026-09-12 R1 hybrid CPU integration — DONE (bounded R1 only), Codex root, user-requested actual
+wired execution/performance coding. Isolated `feat/harris-hybrid-cpu-integration`
+from upstream `6e4327c393ae6f57beb09d345a3aa91be1393729`; adapter worker owns
+`feat/harris-native-memory-board-r1`, CPU worker owns
+`feat/harris-boot-cpu-batching`, both from `7fbdfa9`. Root owns differential
+integration tests, benchmark and docs. Adapter `52b23fb`, CPU `270f88b`, browser
+oracle `a835ff6`, final validation `718ba08`: 151 targeted tests, zero skips;
+frozen Chromium accepted. HARRIS-HYBRID-CPU-IMPLEMENTATION.md and receipts record
+scope and remaining full-native/peripheral/capacity work. Both worker sublanes
+are complete. No app pin/default/merge/deploy change.
+
 Created 2026-09-04, at `lego-47`'s request, because the fleet's 8086 work now
 runs across a dozen worktrees and the claims had nowhere in THIS repo to live.
 The protocol is brickwright-lite's `LANES.md`, unchanged, and that file remains
@@ -558,6 +581,17 @@ rather than each against the master it branched from.
 
 ## CLAIMS — work in progress
 
+Native 286 memory bus component (P7-R1 prerequisite): delegated Codex subagent,
+2026-09-12, isolated `feat/native-286-memory-bus` from `63359b8`. Owned standalone
+C/JS sequencer, portable differential helper and optional tests; no phase-circuit
+edits, full runner, backend registration, default change, push or deployment.
+Component implementation complete; parent owns review/integration and remaining
+P7 work. Details: `docs/HARRIS-NATIVE-BUS-SEQUENCER.md`.
+Follow-on same-instance memory bus fixture is also implemented in this isolated
+lane, using phase ABI 2; root owns combined validation and producer-frontier
+writer adaptation. Still no CPU/full machine or capacity claim. Details:
+`docs/HARRIS-NATIVE-BUS-CIRCUIT.md`.
+
 | lane | who | started | what |
 
 | --- | --- | --- | --- |
@@ -569,6 +603,13 @@ rather than each against the master it branched from.
 | debug-session wall-budget convergence | bwcx (Codex), root audits/promotes | `converge/debug-session-wall-budget` at base `8deaf1ea6` | Upstream the general opt-in session primitive from Lite: a bounded host-wall-time pump carries simulated-time debt instead of freezing the browser or dropping program time. The default path remains one whole `runFor` call per pump when `wallBudgetMs` is absent; Lite's only current opt-in is the i8086 host. Envelope: `src/debug-session.js`, one focused test, this row. |
 
 ## DONE
+
+Execution policy P2 contract: Codex engine_policy, 2026-09-12, branch
+`feat/execution-policy-contract` from `5804fff`. Dependency-free admission seam,
+reviewed adapter-owned catalog, no built-in backend claims, direct package export,
+9 synthetic positive/negative tests. Existing factories/defaults unchanged.
+Local integration handoff only; no push or deployment. See
+`docs/EXECUTION-POLICY-API.md`.
 
 286 DMA register prerequisite: source `cdbf18a` on `feat/x86-backend-lab`,
 2026-09-09. Optional channel-2 register/XT-style page bridge uses physical

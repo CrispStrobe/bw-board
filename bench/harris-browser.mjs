@@ -7,13 +7,15 @@ import {tmpdir,cpus,platform,arch} from 'node:os';
 import {spawn,execFileSync} from 'node:child_process';
 import {createHash,randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
+import {summarizeHarrisBrowserSamples} from '../scripts/lib/harris-browser-measurement.mjs';
 const root=realpathSync(fileURLToPath(new URL('..',import.meta.url)));
 const rounds=Number(process.argv[2]??3),workloads=(process.argv[3]??'memory,io,dma,interrupt,idle').split(',');
 if(!Number.isSafeInteger(rounds)||rounds<1||rounds>10||workloads.some(n=>!['memory','io','dma','interrupt','idle'].includes(n)))throw new RangeError('rounds/workloads');
 const chrome=process.env.CHROME_BIN;
 if(!chrome)throw new Error('Set CHROME_BIN to an existing local Chromium binary');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const sourceHashes={'bench/harris-browser.mjs':hash(readFileSync(new URL(import.meta.url)))};
+const sourceHashes=Object.fromEntries(['bench/harris-browser.mjs','scripts/lib/harris-browser-measurement.mjs','src/execution-measurement.js']
+    .map(path=>[path,hash(readFileSync(join(root,path)))]));
 const nativePath=process.env.HARRIS_NET_WASM;
 let nativeBytes=null,nativeModule=null;
 if(nativePath) {
@@ -22,7 +24,7 @@ if(nativePath) {
     const verifiedSources=build.sourceHashes??{'src/experimental/wired-kernel/net-resolver.c':build.sourceSHA256};
     assert.ok(Object.hasOwn(verifiedSources,'src/experimental/wired-kernel/net-resolver.c'));
     for(const [path,expected] of Object.entries(verifiedSources)) {
-        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c'].includes(path),'unexpected native source');
+        assert.ok(['src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c','src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c','src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c','src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c','src/experimental/wired-kernel/bus-circuit.c'].includes(path),'unexpected native source');
         assert.equal(hash(readFileSync(join(root,path))),expected,'rebuild native module for this source');sourceHashes[path]=expected;
     }
     assert.equal(build.wasmSHA256,hash(nativeBytes),'native build/module mismatch');
@@ -51,7 +53,7 @@ const server=createServer((req,res)=>{
     try {
         const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
         const allowed=pathname==='/bench/harris-browser.html'||pathname==='/bench/harris-browser-worker.mjs'||
-            ['/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs','/scripts/lib/harris-native-phase-oracle.mjs','/scripts/lib/harris-native-phase-circuit-oracle.mjs','/scripts/lib/harris-native-phase-schedule-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
+            ['/scripts/lib/harris-browser-measurement.mjs','/scripts/lib/harris-owned-workloads.mjs','/scripts/lib/harris-native-settle-oracle.mjs','/scripts/lib/harris-native-memory-oracle.mjs','/scripts/lib/harris-native-memory-circuit-oracle.mjs','/scripts/lib/harris-native-phase-oracle.mjs','/scripts/lib/harris-native-phase-circuit-oracle.mjs','/scripts/lib/harris-native-phase-schedule-oracle.mjs','/scripts/lib/harris-native-bus-sequencer-oracle.mjs','/scripts/lib/harris-native-bus-circuit-oracle.mjs','/scripts/lib/harris-native-boot-oracle.mjs'].includes(pathname)||pathname.startsWith('/src/')&&pathname.endsWith('.js');
         if(req.method!=='GET'||!allowed)throw new Error('not served');
         const path=realpathSync(resolve(root,'.'+pathname));if(!path.startsWith(root+sep))throw new Error('outside source root');
         const bytes=readFileSync(path),key=path.slice(root.length+1),digest=hash(bytes);
@@ -114,20 +116,52 @@ try {
             assert.equal(incremental?.accepted,true);assert.equal(incremental?.capacityClaim,false);
             assert.equal(incremental?.memory.comparisons,1026);assert.equal(incremental?.phase.comparisons,1532);assert.equal(incremental?.schedule.periods,258);
         }
+        if(nativeModule.sourceHashes['src/experimental/wired-kernel/bus-sequencer.c']) {
+            const bus=report.nativeOracle.busSequencer;
+            assert.equal(bus?.accepted,true);assert.equal(bus?.capacityClaim,false);
+            assert.equal(bus.boundaries,782);assert.equal(bus.transactions,30);assert.equal(bus.completions,36);
+        }
+        if(nativeModule.sourceHashes['src/experimental/wired-kernel/bus-circuit.c']) {
+            for(const mode of ['checked','incremental']) {
+                const bus=report.nativeOracle.busCircuit?.[mode];
+                assert.equal(bus?.accepted,true);assert.equal(bus?.capacityClaim,false);
+                assert.equal(bus.boundaries,830);assert.equal(bus.transactions,48);assert.equal(bus.completions,63);
+                const boot=report.nativeOracle.hybridBoot?.[mode];
+                assert.equal(boot?.accepted,true);assert.equal(boot?.capacityClaim,false);
+                assert.equal(boot.fullNativeCPU,false);assert.equal(boot.fullDOSBoot,false);
+                assert.equal(boot.cooperative?.accepted,true);assert.equal(boot.cooperative?.capacityClaim,false);
+                assert.equal(boot.cooperative.asynchronousStop,true);assert.equal(boot.cooperative.pendingTransferPreserved,true);
+                assert.equal(boot.cooperative.pausedMemoryBytesCompared,131072);assert.equal(boot.cooperative.memoryBytesCompared,131072);
+                assert.equal(boot.cooperative.retired,47);assert.equal(boot.cooperative.initializationPeriods,67);
+                assert.equal(boot.cooperative.physicalClock,boot.cooperative.periods+67);
+                assert.equal(boot.cooperative.stopPeriods+boot.cooperative.resumedPeriods,boot.cooperative.periods);
+                assert.deepEqual(boot.samples.map(s=>s.name),['boot','loop','mismatch']);
+                assert.deepEqual(boot.samples.map(s=>s.retired),[10,47,48]);
+                for(const sample of boot.samples) {
+                    assert.equal(sample.memoryBytesCompared,131072);assert.equal(sample.initializationPeriods,67);
+                    assert.equal(sample.physicalClock,sample.periods+67);assert.ok(sample.completions>0);
+                }
+            }
+            assert.deepEqual(report.nativeOracle.hybridBoot.checked.samples,report.nativeOracle.hybridBoot.incremental.samples);
+            assert.deepEqual(report.nativeOracle.hybridBoot.checked.cooperative,report.nativeOracle.hybridBoot.incremental.cooperative);
+        }
         report.nativeBuild=nativeModule;
     }
     for(const [path,expected] of Object.entries(sourceHashes))assert.equal(hash(readFileSync(join(root,path))),expected,`${path} changed during run`);
-    const median=values=>{const sorted=[...values].sort((a,b)=>a-b),i=Math.floor(sorted.length/2);return sorted.length%2?sorted[i]:(sorted[i-1]+sorted[i])/2;};
+    assert.equal(report.measurementVersion,2,'worker clock measurement contract');
     report.summaries=workloads.map(name=>({name,modes:Object.fromEntries(Object.keys(config.modes).map(mode=>{
-        const samples=report.samples.filter(s=>s.name===name&&s.mode===mode),times=samples.map(s=>s.elapsedMS),ms=median(times);
-        return [mode,{medianMS:ms,minMS:Math.min(...times),maxMS:Math.max(...times),periodsPerSecond:samples[0].clocks*1000/ms,
-            xtCapacityFactor:samples[0].clocks*1000/ms/9545454}];
+        const samples=report.samples.filter(s=>s.name===name&&s.mode===mode);
+        return [mode,summarizeHarrisBrowserSamples(samples)];
     }))}));
     delete report.nonce;
     Object.assign(report,{benchmark:'owned-wired-browser-worker',browserVersion,node:process.version,
         host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length},sourceHashes,
         nodeReference:{receipt:'HARRIS-OWNED-WORKLOADS-BENCH.json',sha256:hash(nodeReceiptBytes),revision:nodeReceipt.revision},
         notes:['Fresh browser profile and loopback-only source server; no guest media.','Capacity factor is not complete silicon timing certification.',
+            'Measurement v2 uses actual bus clock delta including initialization; legacy clocks remains post-initialization for historical state hashes.',
+            'elapsedMS, periodsPerSecond and medianMS are wall-paced; active timing sums initialization and synchronous chunks, excluding awaited yields.',
+            'xtCapacityFactor now aliases measured active capacityRealTimeFactor; historical receipts used a yield-inclusive wall proxy and excluded initialization periods from their numerator.',
+            'Summary rates/factors are medians of sample rates/factors, not rates reconstructed from median durations.',
             'Worker heartbeat is observed responsiveness, not a hard frame deadline or an intrinsic throughput gain.','Shared host load uncontrolled.']});
     completedReport=report;
 }finally {

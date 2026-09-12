@@ -3,6 +3,9 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 _Static_assert(sizeof(u32)==4,"32-bit index required");
 static u8 arena[2*1024*1024] __attribute__((aligned(16)));
+#define OWNED_U32_LIMIT (sizeof(arena)/sizeof(u32))
+#define OWNED_OPERATION_LIMIT (sizeof(arena)/(32u*sizeof(u32)))
+extern u32 incremental_work[12];
 u8 *arena_ptr(void){return arena;}
 u32 arena_capacity(void){return sizeof(arena);}
 u32 owned_kernel_version(void){return 1;}
@@ -21,8 +24,10 @@ static u32 validate_nets(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,
 }
 static void resolve_valid(u32 nets,const u32 *offsets,const u32 *ids,const u8 *levels,u8 *resolved,u8 *conflicts) {
     for(u32 n=0;n<nets;n++) {
+        incremental_work[2]++;
         u32 mask=0;
         for(u32 p=offsets[n];p<offsets[n+1];p++) {
+            incremental_work[3]++;
             u8 code=levels[ids[p]];if(code!=3)mask|=1u<<code;
         }
         u8 conflict=(mask&3)==3;
@@ -55,29 +60,72 @@ static u32 validate_operations(u32 count,const u32 *ops,u32 nets,u32 drivers,con
     }
     return 0;
 }
+static void evaluate_operation(const u32 *r,const u8 *nets,u8 *staged) {
+    if(r[0]==1) {
+        u8 mio=nets[r[5]],enable=nets[r[1]?r[6]:r[8]],out=2;
+        if(mio==0||enable==1)out=1;
+        else {
+            u32 address=0,known=1;
+            for(u32 b=0;b<24;b++){u8 bit=nets[r[8+b]];if(bit>1){known=0;break;}address|=(u32)bit<<b;}
+            if(known&&mio==1&&(!r[1]||enable==0))out=!((address>=r[2]&&address<r[3])||(r[4]&&address>=0xf0000&&address<0x100000));
+        }
+        staged[r[7]]=out;
+    }else if(r[0]==2) {
+        u8 a=nets[r[1]],b=nets[r[2]];staged[r[3]]=a<2&&b<2?(a|b):2;
+    }else {
+        u8 held=nets[r[1]];u32 passive=!r[2]||(nets[r[8]]==1&&nets[r[7]]==1);
+        for(u32 b=0;b<4;b++)staged[r[11+b]]=held==0?nets[r[3+b]]:held==1?(passive?(b<2):nets[r[7+b]]):2;
+    }
+}
+static u32 affected_operation(u32 i,const u32 *dep_offsets,const u32 *deps,const u8 *changed) {
+    incremental_work[4]++;
+    for(u32 p=dep_offsets[i];p<dep_offsets[i+1];p++){incremental_work[5]++;if(changed[deps[p]])return 1;}
+    return 0;
+}
 void evaluate_owned_operations(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
                                 const u32 *dep_offsets,const u32 *deps,const u8 *changed) {
+    for(u32 i=0;i<count;i++)if(affected_operation(i,dep_offsets,deps,changed))evaluate_operation(ops+i*32,nets,staged);
+}
+u32 evaluate_owned_operations_sparse(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
+                                     const u32 *dep_offsets,const u32 *deps,const u8 *changed,
+                                     u8 *queued,u32 *queue,u32 drivers) {
+    u32 queued_count=0;
     for(u32 i=0;i<count;i++) {
-        u32 affected=0;
-        for(u32 p=dep_offsets[i];p<dep_offsets[i+1];p++)if(changed[deps[p]]){affected=1;break;}
-        if(!affected)continue;
-        const u32 *r=ops+i*32;
-        if(r[0]==1) {
-            u8 mio=nets[r[5]],enable=nets[r[1]?r[6]:r[8]],out=2;
-            if(mio==0||enable==1)out=1;
-            else {
-                u32 address=0,known=1;
-                for(u32 b=0;b<24;b++){u8 bit=nets[r[8+b]];if(bit>1){known=0;break;}address|=(u32)bit<<b;}
-                if(known&&mio==1&&(!r[1]||enable==0))out=!((address>=r[2]&&address<r[3])||(r[4]&&address>=0xf0000&&address<0x100000));
+        if(!affected_operation(i,dep_offsets,deps,changed))continue;
+        const u32 *r=ops+i*32,*outputs;u32 one,count_outputs;
+        if(r[0]==1){one=r[7];outputs=&one;count_outputs=1;}
+        else if(r[0]==2){one=r[3];outputs=&one;count_outputs=1;}
+        else {outputs=r+11;count_outputs=4;}
+        for(u32 j=0;j<count_outputs;j++)if(!queued[outputs[j]]){
+            if(queued_count==drivers)return 0xffffffffu;
+            queued[outputs[j]]=1;queue[queued_count++]=outputs[j];
+        }
+        evaluate_operation(r,nets,staged);
+    }
+    return queued_count;
+}
+u32 evaluate_owned_operations_marked_sparse(u32 count,const u32 *ops,const u8 *nets,u8 *staged,
+                                            u32 *affected,u8 *queued,u32 *queue,u32 drivers) {
+    u32 queued_count=0;
+    for(u32 word=0;word<(count+31)/32;word++) {
+        incremental_work[11]++;
+        u32 bits=affected[word];affected[word]=0;
+        while(bits){
+            const u32 bit=__builtin_ctz(bits),i=word*32+bit;bits&=bits-1;
+            if(i>=count)return 0xffffffffu;
+            incremental_work[4]++;
+            const u32 *r=ops+i*32,*outputs;u32 one,count_outputs;
+            if(r[0]==1){one=r[7];outputs=&one;count_outputs=1;}
+            else if(r[0]==2){one=r[3];outputs=&one;count_outputs=1;}
+            else {outputs=r+11;count_outputs=4;}
+            for(u32 j=0;j<count_outputs;j++)if(!queued[outputs[j]]){
+                if(queued_count==drivers)return 0xffffffffu;
+                queued[outputs[j]]=1;queue[queued_count++]=outputs[j];
             }
-            staged[r[7]]=out;
-        }else if(r[0]==2) {
-            u8 a=nets[r[1]],b=nets[r[2]];staged[r[3]]=a<2&&b<2?(a|b):2;
-        }else {
-            u8 held=nets[r[1]];u32 passive=!r[2]||(nets[r[8]]==1&&nets[r[7]]==1);
-            for(u32 b=0;b<4;b++)staged[r[11+b]]=held==0?nets[r[3+b]]:held==1?(passive?(b<2):nets[r[7+b]]):2;
+            evaluate_operation(r,nets,staged);
         }
     }
+    return queued_count;
 }
 /* Success is delta+1. High-bit results are errors; published outputs remain
  * unchanged on every error, including nonconvergence. Live drivers can change
@@ -88,14 +136,15 @@ static u32 settle_validated(u32 nets,u32 drivers,const u32 *offsets,const u32 *i
                  const u32 *dep_offsets,const u32 *deps,u32 dep_count,u8 *previous,u8 *changed_nets) {
     (void)dep_count; /* Immutable dependency bounds already admitted. */
     for(u32 delta=0;delta<max_deltas;delta++) {
+        incremental_work[9]++;
         resolve_valid(nets,offsets,ids,levels,live,live_conflicts);
         for(u32 n=0;n<nets;n++){changed_nets[n]=live[n]!=previous[n];previous[n]=live[n];}
-        for(u32 d=0;d<drivers;d++)staged[d]=levels[d];
+        for(u32 d=0;d<drivers;d++){incremental_work[6]++;staged[d]=levels[d];}
         evaluate_owned_operations(count,ops,live,staged,dep_offsets,deps,changed_nets);
         u32 changed=0;
-        for(u32 d=0;d<drivers;d++){if(staged[d]!=levels[d])changed=1;levels[d]=staged[d];}
+        for(u32 d=0;d<drivers;d++){incremental_work[0]++;if(staged[d]!=levels[d]){incremental_work[1]++;incremental_work[7]++;changed=1;}levels[d]=staged[d];}
         if(!changed) {
-            for(u32 n=0;n<nets;n++){published[n]=live[n];published_conflicts[n]=live_conflicts[n];}
+            for(u32 n=0;n<nets;n++){incremental_work[8]++;published[n]=live[n];published_conflicts[n]=live_conflicts[n];}
             return delta+1;
         }
     }
@@ -123,18 +172,22 @@ extern u32 settle_incremental_context(const u32*);
 #define CW(i) ((u32*)(unsigned long)c[i])
 u32 admit_owned_context(const u32 *c) {
     admitted_context=0;admitted_mode=0; /* Failed re-admission revokes the old grant. */
+    if(c[31]!=1&&c[31]!=4)return 0x80000006u;
+    /* Refuse counts that cannot fit even as one arena-resident table before
+     * dereferencing caller offsets or records. ABI 4 has tighter static-cache
+     * limits, enforced by its incremental admission below. */
+    if(c[0]>=OWNED_U32_LIMIT||c[1]>OWNED_U32_LIMIT||c[7]>OWNED_OPERATION_LIMIT||c[15]>OWNED_U32_LIMIT)return 0x80000007u;
     u32 error=validate_nets(c[0],c[1],CW(2),CW(3),CB(4));
     if(!error)error=validate_operations(c[7],CW(8),c[0],c[1],CW(13),CW(14),c[15]);
     if(error)return 0x80000000u|error;
     if(!c[12]||c[12]>1024)return 0x80000005u;
-    if(c[31]!=1&&c[31]!=2)return 0x80000006u;
-    if(c[31]==2&&(error=admit_incremental_context(c)))return 0x80000000u|error;
+    if(c[31]==4&&(error=admit_incremental_context(c)))return 0x80000000u|error;
     admitted_context=c;admitted_mode=c[31];return 0;
 }
 u32 settle_owned_context(const u32 *c) {
     if(c[31]) {
         if(admitted_context!=c||admitted_mode!=c[31])return 0x80000006u;
-        if(admitted_mode==2)return settle_incremental_context(c);
+        if(admitted_mode==4)return settle_incremental_context(c);
         return settle_validated(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
     }
     return settle_owned(c[0],c[1],CW(2),CW(3),CB(4),CB(5),CB(6),c[7],CW(8),CB(9),CB(10),CB(11),c[12],CW(13),CW(14),c[15],CB(16),CB(17));
