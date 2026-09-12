@@ -42,6 +42,8 @@ test('stage receipt reconciles exact loop dimensions and receipt crossings',()=>
     const admitted=stages();admitted.native.memoryMappingCalls=admitted.native.memoryMappingVisits=0;
     assert.doesNotThrow(()=>assertStageReceipt(admitted,semantic(),{memoryMapping:'admitted'}));
     assert.throws(()=>assertStageReceipt(stages(),semantic(),{memoryMapping:'admitted'}));
+    assert.doesNotThrow(()=>assertStageReceipt(stages(),semantic()),'historical caller keeps the no-options mapping equation');
+    assert.throws(()=>assertStageReceipt(admitted,semantic()),undefined,'no-options default cannot silently become admitted mode');
     for(const [section,name] of [['native','memoryMappingVisits'],['native','memoryCommitStateWordCopies'],['js','materializedCompletionRecordBytes']]){
         const bad=structuredClone(stages());bad[section][name]++;assert.throws(()=>assertStageReceipt(bad,semantic(),{memoryMapping:'historical-runtime-validation'}));}
 });
