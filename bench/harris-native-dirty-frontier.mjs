@@ -107,6 +107,8 @@ const report={benchmark:'native-dirty-driver-frontier',accepted:true,capacityCla
     revisions:Object.fromEntries(modes.map(m=>[m.name,m.artifact.revision])),builds:{before:before.build,after:after.build},
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length,node:process.version},summaries,categories,raw,samples,
     notes:['Counters are reset after construction/admission and read outside each timed region.',
+        'Counters are unsigned 32-bit observations and wrap modulo 2^32; reset between bounded measurements.',
+        'driverComparisons counts kernel-side comparisons. It excludes the permitted JS bulk-image scan before changed host drivers enter the native seam.',
         'The 8,194-period schedule contains reset/idle, controller/latch changes, 1,024 memory writes and 1,024 memory reads; every period and sampled read executes.',
         'Raw cases isolate idle, one input change, X/Z, contention, a masked same-net change, conflict-only publication and nonconvergence/recovery.',
         'Timing ranges are shared-host component measurements and make no speed or full-board capacity claim.']};

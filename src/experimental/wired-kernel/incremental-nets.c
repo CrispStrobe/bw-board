@@ -10,8 +10,10 @@ extern void evaluate_owned_operations(u32,const u32*,const u8*,u8*,const u32*,co
 static u32 driver_net[LIMIT];
 static u8 queued_driver[LIMIT],dirty[LIMIT];
 static u32 driver_queue[LIMIT],dirty_queue[LIMIT],changed_queue[LIMIT],driver_count,dirty_count,changed_count;
-/* Test-visible work counters. They observe work only; admission and policy do
- * not read them. Keep the order in sync with memory-circuit.js. */
+/* Test-visible u32 work counters wrap modulo 2^32. They observe work only;
+ * admission and policy do not read them. Keep the order in sync with
+ * memory-circuit.js. Driver comparisons count native work; the permitted JS
+ * bulk-image comparison is outside this kernel counter. */
 u32 incremental_work[10];
 u32 *incremental_work_counters_ptr(void){return incremental_work;}
 void reset_incremental_work_counters(void){for(u32 i=0;i<10;i++)incremental_work[i]=0;}
