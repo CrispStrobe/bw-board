@@ -201,6 +201,8 @@ const report={benchmark:scheduleDelta?'native-phase-schedule-delta':bitset?'nati
     notes:['Counters are reset after construction/admission and read outside each timed region.',
         'Counters are unsigned 32-bit observations and wrap modulo 2^32; reset between bounded measurements.',
         'driverComparisons counts kernel-side comparisons. It excludes the permitted JS bulk-image scan before changed host drivers enter the native seam.',
+        ...(scheduleDelta?['Schedule capacity and chunking count every submitted assignment; encoding only shrinks the private per-handle arrays passed to native code.',
+            'This JavaScript-only compiler change is bound by implementationSourceSHA256; the unchanged Wasm hash does not identify it.']:[]),
         'The 8,194-period schedule contains reset/idle, controller/latch changes, 1,024 memory writes and 1,024 memory reads; every period and sampled read executes.',
         'The raw sequence covers idle, one input change, X/Z, contention, conflict-only publication and a masked same-net change; a separate kernel covers nonconvergence/recovery.',
         'Timing ranges are shared-host component measurements and make no speed or full-board capacity claim.']};
