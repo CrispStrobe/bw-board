@@ -11,13 +11,13 @@ const WORK_COUNTERS=['driverComparisons','valueChangingDriverWrites','dirtyNetRe
     'stagedDriverCopies','committedEvaluatorOutputs','publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits'];
 const PRODUCER_NAMES=['other','busExternal','busOutput','phaseController','phaseLatch','memoryBank','phaseSchedule','evaluator','fullScan'];
 const MEMORY_PASS_COUNTERS=['settleCalls','passes','previewCalls','previewBanks','presentBanks','changedBanks',
-    'postMemorySettles','postMemorySettlesWithoutDriverChange'];
+    'postMemorySettles','skippedPostMemorySettles'];
 export function assertIncrementalKernelABI(exports,enabled) {
     if(enabled&&(exports.incremental_kernel_version?.()!==4||typeof exports.write_owned_driver!=='function'))
         throw new TypeError('rebuild native incremental kernel: ABI version/writer mismatch');
 }
 export function assertProducerCounterABI(exports) {
-    if(exports.producer_work_counters_version?.()!==1||exports.memory_pass_counters_version?.()!==1||
+    if(exports.producer_work_counters_version?.()!==1||exports.memory_pass_counters_version?.()!==2||
         typeof exports.producer_work_counters_ptr!=='function'||typeof exports.memory_pass_counters_ptr!=='function'||
         typeof exports.reset_producer_work_counters!=='function'||typeof exports.reset_memory_pass_counters!=='function'||
         typeof exports.write_owned_driver_tagged!=='function')

@@ -41,8 +41,7 @@ const mutations=[
         ['missing present-bank count','if(U8(26)[b])memory_pass_work[4]++;','(void)U8(26)[b];'],
         ['missing changed-bank count','if(U8(27)[b]){changed=1;memory_pass_work[5]++;}','if(U8(27)[b])changed=1;'],
         ['missing post-memory-settle count','memory_pass_work[6]++;','(void)0;'],
-        ['missing empty-post-settle count','if(producer_work[PRODUCER_COUNT+PRODUCER_MEMORY_BANK]==prior_driver_changes)memory_pass_work[7]++;',
-            '(void)prior_driver_changes;']
+        ['missing skipped-post-settle count','else memory_pass_work[7]++;','else (void)driver_changed;']
     ].map(([name,from,to])=>({name,edits:[{file:'memory-circuit.c',from,to}]})),
     {name:'swapped present and changed bank counts',edits:[
         {file:'memory-circuit.c',from:'if(U8(26)[b])memory_pass_work[4]++;',to:'if(U8(26)[b])memory_pass_work[5]++;'},

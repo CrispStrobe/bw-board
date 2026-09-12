@@ -15,10 +15,10 @@ const native={skip:wasmBytes?false:'build current native module and set HARRIS_N
 const zeroProducers=()=>Object.fromEntries(['other','busExternal','busOutput','phaseController','phaseLatch','memoryBank',
     'phaseSchedule','evaluator','fullScan'].map(name=>[name,{attempts:0,changes:0}]));
 const zeroMemory=()=>Object.fromEntries(['settleCalls','passes','previewCalls','previewBanks','presentBanks','changedBanks',
-    'postMemorySettles','postMemorySettlesWithoutDriverChange'].map(name=>[name,0]));
+    'postMemorySettles','skippedPostMemorySettles'].map(name=>[name,0]));
 
 test('producer counter ABI fails closed on missing or stale diagnostic exports',()=>{
-    const good={producer_work_counters_version:()=>1,memory_pass_counters_version:()=>1,
+    const good={producer_work_counters_version:()=>1,memory_pass_counters_version:()=>2,
         producer_work_counters_ptr(){},memory_pass_counters_ptr(){},reset_producer_work_counters(){},
         reset_memory_pass_counters(){},write_owned_driver_tagged(){}};
     assert.doesNotThrow(()=>assertProducerCounterABI(good));
@@ -57,11 +57,13 @@ test('cooperative producer labels reconcile with exact call-path dimensions in e
         assert.equal(p.evaluator.attempts>0,incremental);
         assert.ok(memory.settleCalls>0);assert.ok(memory.passes>memory.settleCalls);
         assert.equal(memory.passes,memory.previewCalls);assert.equal(memory.previewBanks,memory.previewCalls*4);
-        assert.equal(memory.postMemorySettles,memory.previewCalls);
         assert.ok(memory.presentBanks>0);assert.ok(memory.changedBanks>0);assert.ok(memory.changedBanks<memory.presentBanks);
-        assert.ok(memory.postMemorySettlesWithoutDriverChange>0);
-        assert.ok(memory.postMemorySettlesWithoutDriverChange<memory.postMemorySettles,
-            'the fixture contains both output-changing and output-stable post-memory settles');
+        assert.ok(memory.skippedPostMemorySettles>0,
+            'stable raw memory outputs skip a post-memory settle');
+        assert.ok(memory.postMemorySettles<memory.previewCalls,
+            'the stable-heavy fixture omits post-memory settles that have no dirty driver');
+        assert.equal(memory.postMemorySettles+memory.skippedPostMemorySettles,memory.previewCalls,
+            'every preview reconciles to an entered or deliberately skipped post-memory settle');
         const stableWork=board.inspectWorkCounters();board.resetProducerCounters();
         assert.deepEqual(board.inspectProducerCounters(),{producers:zeroProducers(),memory:zeroMemory()});
         assert.deepEqual(board.inspectWorkCounters(),stableWork,'diagnostic reset does not alter stable work counters');
@@ -93,7 +95,7 @@ test('faulted partial work stays observable and diagnostic reset cannot clear th
 
 test('producer counter ABI rejects stale modules and tagged writes validate before counting',native,async()=>{
     const {instance}=await WebAssembly.instantiate(wasmBytes,{}),e=instance.exports;
-    assert.equal(e.producer_work_counters_version(),1);assert.equal(e.memory_pass_counters_version(),1);
+    assert.equal(e.producer_work_counters_version(),1);assert.equal(e.memory_pass_counters_version(),2);
     e.reset_producer_work_counters();
     const base=e.arena_ptr(),view=new DataView(e.memory.buffer),driver=base+256,
         counters=new Uint32Array(e.memory.buffer,e.producer_work_counters_ptr(),18),

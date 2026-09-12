@@ -27,7 +27,9 @@ function contract(source) {
     assert.match(source, /test -s "\$HARRIS_RECEIPT_DIR\/hybrid-producer\.heapprofile"/);
     assert.ok(source.includes('assert.equal(r.expected.physicalClock,r.expected.periods+67)'));
     assert.match(source, /node scripts\/verify-harris-native-producer-counters\.mjs/);
+    assert.match(source, /node scripts\/verify-harris-native-memory-empty-settle-mutations\.mjs/);
     assert.match(source, /grep -c '\^# mutation rejected:'/);
+    assert.match(source, /memory-empty-settle-mutations\.tap"\)" -eq 6/);
     assert.match(source, /CHROME_BIN=\$\(command -v google-chrome/);
     assert.match(source, /node bench\/harris-browser\.mjs 1 memory,io,dma,interrupt,idle reference,packed/);
     assert.match(source, /test -s "\$HARRIS_BROWSER_REPORT"/);
@@ -43,6 +45,8 @@ test('contract detects disappearing native inputs, skip acceptance and unpinned 
         workflow.replace('scripts/measure-harris-hybrid-producers.mjs', 'scripts/missing-producer-measurement.mjs'),
         workflow.replace('r.expected.periods+67', 'r.expected.periods'),
         workflow.replace('scripts/verify-harris-native-producer-counters.mjs', 'scripts/missing-producer-mutations.mjs'),
+        workflow.replace('scripts/verify-harris-native-memory-empty-settle-mutations.mjs', 'scripts/missing-empty-settle-mutations.mjs'),
+        workflow.replace('memory-empty-settle-mutations.tap\")" -eq 6', 'memory-empty-settle-mutations.tap\")" -eq 5'),
         workflow.replace('--heap-prof-name=hybrid-producer.heapprofile', '--heap-prof-name=missing.heapprofile'),
         workflow.replace(/actions\/checkout@[0-9a-f]{40}/, 'actions/checkout@v4'),
         workflow.replace('node bench/harris-browser.mjs 1', 'echo browser-disabled 1')]) assert.throws(() => contract(source));
