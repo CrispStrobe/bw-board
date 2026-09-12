@@ -11,8 +11,8 @@ const rounds=Number(process.argv[2]??5),count=Number(process.argv[3]??1024);
 if(!Number.isInteger(rounds)||rounds<2||rounds>10||count!==1024)throw new RangeError('rounds 2..10 and count 1024 required');
 for(const name of ['HARRIS_NET_WASM','HARRIS_COMPARE_WASM','HARRIS_COMPARE_REVISION','HARRIS_FRONTIER_REPORT'])if(!process.env[name])throw new Error(`${name} required`);
 const frontierKind=process.env.HARRIS_FRONTIER_KIND??'driver',publication=frontierKind==='publication',output=frontierKind==='output',
-    reverse=frontierKind==='reverse',bitset=frontierKind==='bitset';
-if((reverse||bitset)&&!process.env.HARRIS_COMPARE_REPORT)throw new Error('HARRIS_COMPARE_REPORT required for ABI-incompatible measurement');
+    reverse=frontierKind==='reverse',bitset=frontierKind==='bitset',scheduleDelta=frontierKind==='schedule-delta';
+if((reverse||bitset||scheduleDelta)&&!process.env.HARRIS_COMPARE_REPORT)throw new Error('HARRIS_COMPARE_REPORT required for frozen measurement');
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const artifact=(path,revision)=>{
     const bytes=new Uint8Array(readFileSync(path)),build=JSON.parse(readFileSync(new URL('wired-net-kernel-build.json',`file://${path}`)));
@@ -21,7 +21,8 @@ const artifact=(path,revision)=>{
 };
 const before=artifact(process.env.HARRIS_COMPARE_WASM,process.env.HARRIS_COMPARE_REVISION);
 const after=artifact(process.env.HARRIS_NET_WASM,process.env.HARRIS_FRONTIER_REVISION??'working-tree');
-const modes=bitset?
+const modes=scheduleDelta?
+    [{name:'incremental-phase-schedule-delta',artifact:after,incremental:true}]:bitset?
     [{name:'incremental-operation-bitset',artifact:after,incremental:true}]:reverse?
     [{name:'incremental-reverse-index',artifact:after,incremental:true}]:output?
     [{name:'incremental-publication-frontier',artifact:before,incremental:true},{name:'incremental-output-frontier',artifact:after,incremental:true}]:publication?
@@ -58,7 +59,8 @@ async function runScheduleMode(mode) {
         const start=performance.now(),progress=runHandles(f.kernel,handles),elapsedMS=performance.now()-start;
     assert.deepEqual(progress,{periods:8194,reads:2048});
     const {stateSHA256,phaseSHA256,memorySHA256}=snapshot(f.kernel);
-    return {elapsedMS,counters:f.kernel.inspectWorkCounters(),stateSHA256,phaseSHA256,memorySHA256};
+    return {elapsedMS,counters:f.kernel.inspectWorkCounters(),submittedUpdates:handles.reduce((n,h)=>n+h.updates,0),
+        encodedUpdates:handles.reduce((n,h)=>n+h.encodedUpdates,0),stateSHA256,phaseSHA256,memorySHA256};
 }
 async function categoryCounters(mode) {
     const f=await createPhaseCircuitOracle({wasmBytes:mode.artifact.bytes,schedule:true,admittedGraph:true,incrementalGraph:mode.incremental});
@@ -84,7 +86,7 @@ async function rawKernel(mode,{oscillator=false}={}) {
     const initial=oscillator?[2,0,0]:[3,3,2,3],published=oscillator?[2,0,0]:[3,3,2];
     new Uint8Array(e.memory.buffer,p.drivers,drivers).set(initial);new Uint8Array(e.memory.buffer,p.previous,3).set(published);
     new Uint8Array(e.memory.buffer,p.published,3).set(published);assert.equal(e.admit_owned_context(p.context),0);
-    const counters=()=>Array.from(new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),bitset?12:reverse?11:10));
+    const counters=()=>Array.from(new Uint32Array(e.memory.buffer,e.incremental_work_counters_ptr(),bitset||scheduleDelta?12:reverse?11:10));
     const inspect=()=>Object.fromEntries(['drivers','live','conflicts','published','publishedConflicts','previous','changed'].map(name=>
         [name,Array.from(new Uint8Array(e.memory.buffer,p[name],name==='drivers'?drivers:3))]));
     const step=levels=>{if(mode.incremental&&e.write_owned_driver)levels.forEach((code,id)=>assert.equal(e.write_owned_driver(p.context,id,code),0));
@@ -150,40 +152,49 @@ if(output){
     }
 }
 let baselineReceipt=null;
-if(reverse||bitset){
+if(reverse||bitset||scheduleDelta){
     baselineReceipt=JSON.parse(readFileSync(process.env.HARRIS_COMPARE_REPORT));
-    const priorName=bitset?'incremental-reverse-index':'incremental-output-frontier',current=modes[0].name,prior=baselineReceipt.summaries?.[priorName];
+    const priorName=scheduleDelta?'incremental-operation-bitset':bitset?'incremental-reverse-index':'incremental-output-frontier',current=modes[0].name,prior=baselineReceipt.summaries?.[priorName];
     assert.equal(baselineReceipt.revisions?.[priorName],before.revision,'baseline receipt revision');assert.ok(prior,'baseline summary');
     assert.equal(baselineReceipt.builds?.after?.wasmSHA256,before.build.wasmSHA256,'baseline receipt/module identity');
     assert.deepEqual(baselineReceipt.builds?.after?.sourceHashes,before.build.sourceHashes,'baseline receipt/source identity');
     const currentCounters=summaries[current].counters;
     assert.equal(currentCounters.dependencyProbes,0,'forward dependency probes are eliminated');
-    if(bitset){
+    if(scheduleDelta){
+        assert.equal(samples[0].submittedUpdates,217100,'submitted schedule updates');
+        assert.equal(samples[0].encodedUpdates,43075,'encoded schedule updates');
+        assert.equal(currentCounters.driverComparisons,477349,'schedule delta driver comparisons');
+    }else if(bitset){
         assert.ok(currentCounters.evaluatorRows<=prior.counters.reverseIndexVisits,'evaluated rows are bounded by reverse memberships');
         assert.ok((currentCounters.evaluatorRows+currentCounters.operationBitsetWordVisits)*4<=prior.counters.evaluatorRows*3,'row and word visits decrease by at least 25%');
     }
     else assert.ok(currentCounters.reverseIndexVisits*2<=prior.counters.dependencyProbes,'reverse visits decrease dependency traversal by at least 50%');
-    for(const name of Object.keys(prior.counters).filter(name=>name!=='dependencyProbes'&&(!bitset||name!=='evaluatorRows')))
+    for(const name of Object.keys(prior.counters).filter(name=>scheduleDelta?name!=='driverComparisons':name!=='dependencyProbes'&&(!bitset||name!=='evaluatorRows')))
         assert.equal(currentCounters[name],prior.counters[name],`${name} summary differs`);
     for(const category of Object.keys(baselineReceipt.categories[priorName])){
         const a=categories[current][category],b=baselineReceipt.categories[priorName][category];
-        assert.equal(a.dependencyProbes,0,`${category} forward dependency probes`);
-        if(bitset)assert.ok(a.evaluatorRows<=a.reverseIndexVisits,`${category} evaluated-row bound`);
-        for(const name of Object.keys(b).filter(name=>name!=='dependencyProbes'&&(!bitset||name!=='evaluatorRows')))assert.equal(a[name],b[name],`${category} ${name} differs`);
+        if(scheduleDelta){
+            const expected={"empty-input-period":40,"one-host-pin-change":82,"memory-write-controller-latch":256,"memory-read-controller-latch":268};
+            assert.equal(a.driverComparisons,expected[category],`${category} driver comparisons`);
+        }else {
+            assert.equal(a.dependencyProbes,0,`${category} forward dependency probes`);
+            if(bitset)assert.ok(a.evaluatorRows<=a.reverseIndexVisits,`${category} evaluated-row bound`);
+        }
+        for(const name of Object.keys(b).filter(name=>scheduleDelta?name!=='driverComparisons':name!=='dependencyProbes'&&(!bitset||name!=='evaluatorRows')))assert.equal(a[name],b[name],`${category} ${name} differs`);
     }
     for(const [name,aCase] of Object.entries(raw[current])){
         const bCase=baselineReceipt.raw[priorName][name];
         for(const field of Object.keys(aCase).filter(k=>/SHA256$/.test(k)))assert.equal(aCase[field],bCase[field],`${name} ${field} differs`);
         const a=aCase.counters??aCase.recoveryCounters,b=bCase.counters??bCase.recoveryCounters;
-        assert.equal(a[5],0,`${name} forward dependency probes`);
-        if(bitset)assert.ok(a[4]<=a[10],`${name} evaluated-row bound`);
-        for(let i=0;i<10;i++)if(i!==5&&(!bitset||i!==4))assert.equal(a[i],b[i],`${name} counter ${i} differs`);
+        if(!scheduleDelta){assert.equal(a[5],0,`${name} forward dependency probes`);if(bitset)assert.ok(a[4]<=a[10],`${name} evaluated-row bound`);}
+        for(let i=0;i<(scheduleDelta?12:10);i++)if(scheduleDelta||i!==5&&(!bitset||i!==4))assert.equal(a[i],b[i],`${name} counter ${i} differs`);
     }
     const expectedHashes=['stateSHA256','phaseSHA256','memorySHA256'];
     for(const field of expectedHashes)assert.equal(samples[0][field],baselineReceipt.samples[0][field],`${field} differs from frozen baseline`);
 }
-const report={benchmark:bitset?'native-operation-bitset':reverse?'native-reverse-index':output?'native-output-frontier':publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
+const report={benchmark:scheduleDelta?'native-phase-schedule-delta':bitset?'native-operation-bitset':reverse?'native-reverse-index':output?'native-output-frontier':publication?'native-publication-frontier':'native-dirty-driver-frontier',accepted:true,capacityClaim:false,fullBoard:false,cpu:false,rounds,periods:8194,
     benchmarkSHA256:digest(readFileSync(new URL(import.meta.url))),
+    ...(scheduleDelta&&{implementationSourceSHA256:digest(readFileSync(new URL('../src/experimental/wired-kernel/phase-schedule.js',import.meta.url)))}),
     revisions:{baseline:before.revision,...Object.fromEntries(modes.map(m=>[m.name,m.artifact.revision]))},builds:{before:before.build,after:after.build},
     ...(baselineReceipt&&{baselineReceiptSHA256:digest(readFileSync(process.env.HARRIS_COMPARE_REPORT))}),
     host:{platform:platform(),arch:arch(),cpu:cpus()[0]?.model,logicalCPUs:cpus().length,node:process.version},summaries,categories,raw,samples,
