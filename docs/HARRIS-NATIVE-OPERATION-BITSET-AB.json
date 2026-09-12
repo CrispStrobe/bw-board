@@ -9,7 +9,7 @@
   "benchmarkSHA256": "fc50903305f5f1f8cd805f2353d60ea1dad937ccb51b50f2e845985b7bc3091b",
   "revisions": {
     "baseline": "d61481a786c95190b9aceada2f8b68f602022965",
-    "incremental-operation-bitset": "d1e85f9af18369673230e9ad27a1818bbe8c9286"
+    "incremental-operation-bitset": "2c7d1dadc24e8f57768315a2003e12f2b04c1cdf"
   },
   "builds": {
     "before": {
@@ -168,21 +168,21 @@
         "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/bus-sequencer.c",
         "/mnt/volume1/code/wt/bwb-native-operation-bitset/src/experimental/wired-kernel/bus-circuit.c",
         "-o",
-        "/tmp/harris-bitset-final.ql0CY8/wired-net-kernel.wasm"
+        "/tmp/harris-bitset-exact.Kls9Wv/wired-net-kernel.wasm"
       ],
-      "sourceSHA256": "72ab6eb4421489998490a6df456aeb453c7792a67354dfe80f63e8f63287e412",
+      "sourceSHA256": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28",
       "sourceHashes": {
-        "src/experimental/wired-kernel/net-resolver.c": "72ab6eb4421489998490a6df456aeb453c7792a67354dfe80f63e8f63287e412",
+        "src/experimental/wired-kernel/net-resolver.c": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28",
         "src/experimental/wired-kernel/memory-banks.c": "98baf316c856a1c65b18527bd545ce1af61c273759f4f5f149c1ef5e208e5579",
         "src/experimental/wired-kernel/memory-circuit.c": "d67debb7c80dc839be962701d67592a16eeb18f4e0d466a1d485b270d9604cc9",
         "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
         "src/experimental/wired-kernel/phase-circuit.c": "09ab60c2c068079890c179bf68787c5ba0979ac0f23169cd5344920b7816970a",
         "src/experimental/wired-kernel/phase-schedule.c": "ab83285145df56e6d43bf501d2311df951e014bc3fda89a51a11cc9ef8d12852",
-        "src/experimental/wired-kernel/incremental-nets.c": "1dec4c1c2b018aaea0309c52ca4f24699d658804a34cb6b81d3c18a4b174d809",
+        "src/experimental/wired-kernel/incremental-nets.c": "255a3f6b3b751915a67fc6b1eb55b3d6e73821a5ed7e5d4b7cdc380027006161",
         "src/experimental/wired-kernel/bus-sequencer.c": "c472dbd15d3006c97c8d90599f8012895e7bf160f9210bbb5e705b7ded031656",
         "src/experimental/wired-kernel/bus-circuit.c": "cb4836814c31edd4a659c7ba845a8f43e43fa3c8cd188c0a31176b87d9a5156e"
       },
-      "wasmSHA256": "4dbd9e1d6a717f52fcb289fc8e80d372d668d73fdf78f69a0b4fed5549b5a027",
+      "wasmSHA256": "62024ea27426de4ac354c41be57794ee74eeea1c7d8686d691b97c03eaee3775",
       "notes": [
         "Owned C, no runtime imports/WASI, no guest media.",
         "No board backend or real-time throughput claim."
@@ -199,9 +199,9 @@
   },
   "summaries": {
     "incremental-operation-bitset": {
-      "medianMS": 42.1457989999999,
-      "minMS": 30.117021000000022,
-      "maxMS": 86.95458000000008,
+      "medianMS": 44.491161999999804,
+      "minMS": 30.41768500000012,
+      "maxMS": 48.30810199999996,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -414,7 +414,7 @@
     {
       "round": 0,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 86.95458000000008,
+      "elapsedMS": 48.30810199999996,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -436,7 +436,7 @@
     {
       "round": 1,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 42.1457989999999,
+      "elapsedMS": 39.35724800000003,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -458,7 +458,7 @@
     {
       "round": 2,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 43.19287600000007,
+      "elapsedMS": 47.31666200000018,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -480,7 +480,7 @@
     {
       "round": 3,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 33.89086300000008,
+      "elapsedMS": 30.41768500000012,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,
@@ -502,7 +502,7 @@
     {
       "round": 4,
       "mode": "incremental-operation-bitset",
-      "elapsedMS": 30.117021000000022,
+      "elapsedMS": 44.491161999999804,
       "counters": {
         "driverComparisons": 651374,
         "valueChangingDriverWrites": 86022,

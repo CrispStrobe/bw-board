@@ -1,11 +1,11 @@
 {
   "accepted": true,
-  "revision": "d1e85f9af18369673230e9ad27a1818bbe8c9286",
+  "revision": "2c7d1dadc24e8f57768315a2003e12f2b04c1cdf",
   "sourceSHA256": {
-    "src/experimental/wired-kernel/net-resolver.c": "72ab6eb4421489998490a6df456aeb453c7792a67354dfe80f63e8f63287e412",
-    "src/experimental/wired-kernel/incremental-nets.c": "1dec4c1c2b018aaea0309c52ca4f24699d658804a34cb6b81d3c18a4b174d809"
+    "src/experimental/wired-kernel/net-resolver.c": "9cbd5c28e6c7fbbf704906495ea4fb126ab3bdb3ca2e9a42d22c44dd807b7e28",
+    "src/experimental/wired-kernel/incremental-nets.c": "255a3f6b3b751915a67fc6b1eb55b3d6e73821a5ed7e5d4b7cdc380027006161"
   },
-  "kills": 8,
+  "kills": 10,
   "results": [
     {
       "name": "floor-word-count",
@@ -16,6 +16,12 @@
     {
       "name": "replace-mark-or",
       "testName": "operation bitset preserves row order",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "add-duplicate-mark",
+      "testName": "sparse evaluator outputs preserve",
       "status": 1,
       "namedRed": true
     },
@@ -38,8 +44,8 @@
       "namedRed": true
     },
     {
-      "name": "omit-admission-clear",
-      "testName": "incremental dirty queues initialize",
+      "name": "clear-only-first-word",
+      "testName": "operation bitset preserves row order",
       "status": 1,
       "namedRed": true
     },
@@ -52,6 +58,12 @@
     {
       "name": "accept-abi3-mode",
       "testName": "incremental admission requires unique membership",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "omit-operation-capacity-preflight",
+      "testName": "admission bounds operation and dependency counts",
       "status": 1,
       "namedRed": true
     }

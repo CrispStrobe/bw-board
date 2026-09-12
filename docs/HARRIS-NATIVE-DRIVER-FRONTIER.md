@@ -94,7 +94,7 @@ exact; timing is diagnostic. The new work-counter ABI v2 adds the separate
 [HARRIS-NATIVE-REVERSE-INDEX-AB.json](HARRIS-NATIVE-REVERSE-INDEX-AB.json) and
 [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS.json).
 
-The subsequent `d1e85f9` checkpoint replaces the remaining full operation-row
+The subsequent `2c7d1da` checkpoint replaces the remaining full operation-row
 scan with ascending words and bits in a caller-owned packed mark set. ABI v4
 changes the mark allocation contract; work-counter ABI v3 separately counts
 bitset words. On the same schedule, 26,630 scanned rows become 2,050 evaluated
@@ -102,3 +102,8 @@ rows plus 1,025 word visits. Reverse visits remain 4,126, all other counters and
 all correctness hashes remain exact, and timing remains diagnostic. See
 [HARRIS-NATIVE-OPERATION-BITSET-AB.json](HARRIS-NATIVE-OPERATION-BITSET-AB.json)
 and [HARRIS-NATIVE-OPERATION-BITSET-MUTATIONS.json](HARRIS-NATIVE-OPERATION-BITSET-MUTATIONS.json).
+The final admission proof refuses arena-impossible operation/dependency counts
+before table dereference, directly asserts reverse-hit deduplication, and clears
+a three-word bitset on re-admission. Ten bitset mutations and the seven inherited
+reverse-index mutations pass on ABI v4; the latter have a distinct committed
+receipt at [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS-ABI4.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS-ABI4.json).
