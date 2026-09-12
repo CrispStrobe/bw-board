@@ -16,6 +16,7 @@ export const NATIVE_SOURCE_PATHS=Object.freeze([
     'src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c',
     'src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c',
     'src/experimental/wired-kernel/bus-circuit.c']);
+export const DIAGNOSTIC_SOURCE_PATH='src/experimental/wired-kernel/memory-circuit.c';
 export const LEGACY_WORK_COUNTERS=Object.freeze(['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions',
     'netDriverVisits','evaluatorRows','dependencyProbes','stagedDriverCopies','committedEvaluatorOutputs',
     'publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits']);
@@ -38,6 +39,14 @@ export function assertSemantic(actual,expected,label='sample'){assert.deepEqual(
 export function assertSourceHashes(sourceHashes,expected){
     assert.deepEqual(Object.keys(sourceHashes??{}),NATIVE_SOURCE_PATHS,'exact native source inventory');
     assert.deepEqual(sourceHashes,expected,'exact native source digests');return Object.freeze({...sourceHashes});
+}
+export function assertDiagnosticSourceHashes(sourceHashes,masterHashes){
+    assert.deepEqual(Object.keys(sourceHashes??{}),NATIVE_SOURCE_PATHS,'exact diagnostic source inventory');
+    assert.deepEqual(Object.keys(masterHashes??{}),NATIVE_SOURCE_PATHS,'exact master source inventory');
+    for(const path of NATIVE_SOURCE_PATHS)if(path===DIAGNOSTIC_SOURCE_PATH)
+        assert.notEqual(sourceHashes[path],masterHashes[path],'diagnostic memory source must carry the admitted-counter repair');
+    else assert.equal(sourceHashes[path],masterHashes[path],`${path}: diagnostic source must equal master`);
+    return Object.freeze({...sourceHashes});
 }
 export function assertHeaderHashes(headerHashes,expected){
     assert.deepEqual(Object.keys(headerHashes??{}),[HEADER_PATH],'exact native header inventory');
@@ -64,11 +73,13 @@ export function canonicalBuildArgs(args){
         const source=NATIVE_SOURCE_PATHS.find(path=>args[i]===path||args[i].endsWith(`/${path}`));result.push(source??args[i]);}
     return Object.freeze(result);
 }
-export function assertStageReceipt(stage,semantic){
+export function assertStageReceipt(stage,semantic,{memoryMapping='historical-runtime-validation'}={}){
     assert.deepEqual(Object.keys(stage.native),[...NATIVE_STAGES],'native stage schema');
     for(const [name,value] of Object.entries(stage.native))assert.ok(Number.isSafeInteger(value)&&value>=0&&value<=0xffffffff,`${name}: u32`);
     const m=semantic.producerWork.memory,n=stage.native,j=stage.js;
-    assert.equal(n.memoryMappingCalls,m.settleCalls);assert.equal(n.memoryMappingVisits,n.memoryMappingCalls*640);
+    assert.ok(['historical-runtime-validation','admitted'].includes(memoryMapping),'explicit memory mapping receipt mode');
+    if(memoryMapping==='admitted'){assert.equal(n.memoryMappingCalls,0);assert.equal(n.memoryMappingVisits,0);}
+    else {assert.equal(n.memoryMappingCalls,m.settleCalls);assert.equal(n.memoryMappingVisits,n.memoryMappingCalls*640);}
     assert.equal(n.memoryGatherCalls,m.passes);assert.equal(n.memoryGatherPinRecords,m.previewBanks*28);
     assert.equal(n.memoryPreviewCalls,m.previewCalls);assert.equal(n.memoryPreviewBanks,m.previewBanks);
     assert.equal(n.memoryPreviewStateWordCopies,m.previewBanks*9);assert.equal(n.memoryCommitBanks,m.previewBanks);
@@ -113,13 +124,16 @@ function stateOf(cpu,board){const cpuState=cpu.inspect(),bus=board.inspectBus(),
         writes:[memory[2].writes,memory[3].writes]};}
 async function sample(v,iterations=4096){const board=await v.createBoard({enabled:true,rom:v.createROM(iterations),romLowAlias:true,wasmBytes:v.wasm,admittedGraph:true,incrementalGraph:true,
         ...(v.name==='master'?{}:{stageAttribution:v.stageAttribution})});
-    const cpu=new v.HarrisBootCPU({enabled:true,board});cpu.initialize();board.resetWorkCounters();board.resetProducerCounters();if(v.stageAttribution)board.resetStageAttribution();global.gc?.();
+    const cpu=new v.HarrisBootCPU({enabled:true,board});cpu.initialize();const admissionBefore=board.inspectMemoryAdmission();
+    board.resetWorkCounters();board.resetProducerCounters();if(v.stageAttribution)board.resetStageAttribution();global.gc?.();
     const start=performance.now(),result=await v.run({cpu,maxPeriods:iterations*32+100,batchPeriods:8192,wallBudgetMS:1000,yieldTask:()=>Promise.resolve()}),wallMS=performance.now()-start;
     assert.equal(result.status,'halted');assert.equal(result.chunks,1);assert.equal(cpu.retired,iterations*3+4);
-    const work=board.inspectWorkCounters(),producerWork=board.inspectProducerCounters(),stage=v.stageAttribution?board.inspectStageAttribution():null,state=stateOf(cpu,board);
+    const work=board.inspectWorkCounters(),producerWork=board.inspectProducerCounters(),stage=v.stageAttribution?board.inspectStageAttribution():null,state=stateOf(cpu,board),admissionAfter=board.inspectMemoryAdmission();
     assert.deepEqual(Object.keys(work),[...LEGACY_WORK_COUNTERS]);assert.deepEqual(Object.keys(producerWork.producers),[...PRODUCERS]);assert.deepEqual(state.writes,[iterations,iterations]);assert.equal(state.physicalClock,result.periods+67);
     const semantic={stateHash:state.stateHash,componentHashes:state.componentHashes,periods:result.periods,retired:state.retired,writes:state.writes,physicalClock:state.physicalClock,chunks:result.chunks,yields:0,work,producerWork};
-    if(stage)assertStageReceipt(stage,semantic);return {label:v.name,activeMS:result.activeMS,wallMS,activePeriodsPerSecond:result.periods*1000/result.activeMS,semantic,stage};}
+    assert.deepEqual(admissionAfter,admissionBefore,`${v.name}: immutable admission work is unchanged by execution`);
+    assert.equal(admissionAfter.runtimeMapVisits,0,`${v.name}: admitted runtime mapping visits`);
+    if(stage)assertStageReceipt(stage,semantic,{memoryMapping:'admitted'});return {label:v.name,activeMS:result.activeMS,wallMS,activePeriodsPerSecond:result.periods*1000/result.activeMS,semantic,stage,admissionBefore,admissionAfter};}
 function classifyNode(frame){const f=frame.functionName||'',u=frame.url||'';
     if(f==='(idle)')return 'idle';if(f==='(garbage collector)')return 'gc';
     const exact={validate_memory_mapping:'memoryMappingValidation',gather_memory_inputs:'memoryGather',preview_memory_stage:'memoryPreview',commit_memory_stage:'memoryCommit',publish_memory_writers:'memoryWriterPublication',post_memory_settle:'memoryPostSettle',validate_phase_mapping:'phaseValidation',validate_bus_mapping:'busValidation'};
@@ -153,7 +167,7 @@ async function main(){parseOptions(process.argv.slice(2));if(options['classify-p
     assert.equal(options.experimental,true,'--experimental required');const candidate=options['candidate-revision'];assert.match(candidate??'',/^[0-9a-f]{40}$/);const iterations=integer('iterations',4096,65535);
     const master=await loadVariant('master',options['master-dir'],options['master-wasm'],MASTER_REVISION,false),off=await loadVariant('diagnosticOff',options['candidate-dir'],options['off-wasm'],candidate,false),nativeCounter=await loadVariant('nativeCounter',options['candidate-dir'],options['counter-wasm'],candidate,true,false,false),combinedCounter=await loadVariant('combinedCounter',options['candidate-dir'],options['counter-wasm'],candidate,true,false,true),profile=await loadVariant('namedProfile',options['candidate-dir'],options['profile-wasm'],candidate,false,true,false);
     for(const variant of [off,nativeCounter,profile]){assert.equal(variant.provenance.compiler,master.provenance.compiler,`${variant.name}: compiler identity`);
-        assert.deepEqual(variant.provenance.sourceHashes,master.provenance.sourceHashes,`${variant.name}: native source identity`);
+        assertDiagnosticSourceHashes(variant.provenance.sourceHashes,master.provenance.sourceHashes);
         assert.deepEqual(variant.provenance.headerHashes,master.provenance.headerHashes,`${variant.name}: native header identity`);
         assertJSImportHashes(variant.provenance.jsSourceHashes,master.provenance.jsSourceHashes);
         assert.deepEqual(canonicalBuildArgs(variant.provenance.args),canonicalBuildArgs(master.provenance.args),`${variant.name}: only explicit diagnostic build flags may differ`);}

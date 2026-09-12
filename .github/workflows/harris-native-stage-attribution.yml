@@ -58,6 +58,17 @@ jobs:
           set -euo pipefail
           cmp "$RECEIPT_DIR/master-build/wired-net-kernel.wasm" "$RECEIPT_DIR/diagnostic-off-build/wired-net-kernel.wasm"
           cmp "$MASTER_TREE/src/experimental/wired-kernel/bus-circuit-image.js" "src/experimental/wired-kernel/bus-circuit-image.js"
+
+      - name: Prove admitted and raw mapping behavior in both diagnostic builds
+        run: |
+          set -euo pipefail
+          for mode in counter-on named-profile; do
+            HARRIS_NET_WASM="$RECEIPT_DIR/$mode-build/wired-net-kernel.wasm" \
+              node --test --test-concurrency=1 --test-reporter=tap \
+                test/harris-native-memory-circuit.test.mjs test/harris-native-system-admission.test.mjs \
+                | tee "$RECEIPT_DIR/$mode-mapping-tests.tap"
+            MODE="$mode" node --input-type=module -e 'import fs from "node:fs";import assert from "node:assert/strict";const tap=fs.readFileSync(process.env.RECEIPT_DIR+"/"+process.env.MODE+"-mapping-tests.tap","utf8");assert.match(tap,/^# fail 0$/m);assert.match(tap,/^# skipped 0$/m);assert.doesNotMatch(tap,/# SKIP\b/i);'
+          done
       - name: Measure uninstrumented control separately from profiling
         run: |
           set -euo pipefail
@@ -93,7 +104,7 @@ jobs:
         if: ${{ always() && env.RECEIPT_DIR != '' }}
         run: |
           set -euo pipefail
-          node --input-type=module -e 'import fs from "node:fs";import path from "node:path";import assert from "node:assert/strict";import {createHash} from "node:crypto";const root=process.env.RECEIPT_DIR,expected=["master-build.log","diagnostic-off-build.log","counter-on-build.log","named-profile-build.log",...["master","diagnostic-off","counter-on","named-profile"].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),"native-stage-attribution-control.json",...Array.from({length:3},(_,i)=>[`native-stage-profile-receipt-${i+1}.json`,`hybrid-native-stages-${i+1}.cpuprofile`,`native-stage-profile-classification-${i+1}.json`]).flat()].sort();const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{const p=path.join(dir,e.name);return e.isDirectory()?walk(p):[path.relative(root,p)]});const actual=walk(root).sort(),missing=expected.filter(name=>!actual.includes(name)),unexpected=actual.filter(name=>!expected.includes(name));const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return [name,{size:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex")}]}));fs.writeFileSync(path.join(root,"artifact-manifest.json"),JSON.stringify({schemaVersion:1,selfExcluded:"artifact-manifest.json",expected,actual,missing,unexpected,files},null,2)+"\n",{flag:"wx"});assert.deepEqual(missing,[]);assert.deepEqual(unexpected,[]);for(const value of Object.values(files)){assert.ok(value.size>0);assert.match(value.sha256,/^[0-9a-f]{64}$/);}'
+          node --input-type=module -e 'import fs from "node:fs";import path from "node:path";import assert from "node:assert/strict";import {createHash} from "node:crypto";const root=process.env.RECEIPT_DIR,expected=["master-build.log","diagnostic-off-build.log","counter-on-build.log","named-profile-build.log","counter-on-mapping-tests.tap","named-profile-mapping-tests.tap",...["master","diagnostic-off","counter-on","named-profile"].flatMap(n=>[`${n}-build/wired-net-kernel-build.json`,`${n}-build/wired-net-kernel.wasm`]),"native-stage-attribution-control.json",...Array.from({length:3},(_,i)=>[`native-stage-profile-receipt-${i+1}.json`,`hybrid-native-stages-${i+1}.cpuprofile`,`native-stage-profile-classification-${i+1}.json`]).flat()].sort();const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>{const p=path.join(dir,e.name);return e.isDirectory()?walk(p):[path.relative(root,p)]});const actual=walk(root).sort(),missing=expected.filter(name=>!actual.includes(name)),unexpected=actual.filter(name=>!expected.includes(name));const files=Object.fromEntries(actual.map(name=>{const bytes=fs.readFileSync(path.join(root,name));return [name,{size:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex")}]}));fs.writeFileSync(path.join(root,"artifact-manifest.json"),JSON.stringify({schemaVersion:1,selfExcluded:"artifact-manifest.json",expected,actual,missing,unexpected,files},null,2)+"\n",{flag:"wx"});assert.deepEqual(missing,[]);assert.deepEqual(unexpected,[]);for(const value of Object.values(files)){assert.ok(value.size>0);assert.match(value.sha256,/^[0-9a-f]{64}$/);}'
       - name: Upload exact control, profile, counters, and byte receipts
         if: ${{ always() && env.RECEIPT_DIR != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

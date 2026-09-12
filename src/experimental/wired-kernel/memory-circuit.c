@@ -99,10 +99,13 @@ u32 settle_memory_circuit(const u32 *c,u32 passes,u32 *fault) {
     const u32 banks=c[18],*input_nets=U32(29),*output_ids=U32(30);
     if(!c[31]&&(!banks||banks>32)){fault[0]=4;fault[1]=1;return 4;}
     #ifdef NATIVE_STAGE_PROFILE_NAMING
-    u32 mapping=validate_memory_mapping(c,banks,input_nets,output_ids);
-    if(mapping){fault[0]=4;fault[1]=mapping;return 4;}
+    if(!c[31]) {
+        u32 mapping=validate_memory_mapping(c,banks,input_nets,output_ids);
+        if(mapping){fault[0]=4;fault[1]=mapping;return 4;}
+    }
     #else
     #ifdef NATIVE_STAGE_ATTRIBUTION
+    if(!c[31]) {
     STAGE_ADD(STAGE_MEMORY_MAPPING_CALLS,1);
     #define INLINE_MAPPING_FAILURE(code,count) do{STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,(count));fault[0]=4;fault[1]=(code);return 4;}while(0)
     for(u32 i=0;i<banks*28;i++){memory_admission_work[7]++;if(input_nets[i]>=c[0])INLINE_MAPPING_FAILURE(2,i+1);}
@@ -112,6 +115,7 @@ u32 settle_memory_circuit(const u32 *c,u32 passes,u32 *fault) {
     }
     STAGE_ADD(STAGE_MEMORY_MAPPING_VISITS,banks*28+(banks*8)*(banks*8+1)/2);
     #undef INLINE_MAPPING_FAILURE
+    }
     #else
     if(!c[31]){
     for(u32 i=0;i<banks*28;i++){memory_admission_work[7]++;if(input_nets[i]>=c[0]){fault[0]=4;fault[1]=2;return 4;}}
