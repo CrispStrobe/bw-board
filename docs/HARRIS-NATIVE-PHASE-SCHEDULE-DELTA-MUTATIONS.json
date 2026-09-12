@@ -1,0 +1,64 @@
+{
+  "accepted": true,
+  "revision": "68e64ed91f8dc961650a54515af059538efda7c3",
+  "sourceSHA256": {
+    "src/experimental/wired-kernel/phase-schedule.js": "b4451f3b8aa617ea0053d10af90f78b19aea1f480a4f0b9f6fc3c415fa5603ae"
+  },
+  "kills": 9,
+  "results": [
+    {
+      "name": "omit-first-assignment",
+      "testName": "schedule delta encoding is per handle",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "reset-cache-each-period",
+      "testName": "native schedule matches every-period",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "forget-return-transition",
+      "testName": "schedule delta encoding is per handle",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "conflate-x-and-z",
+      "testName": "schedule delta encoding is per handle",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "cross-driver-cache",
+      "testName": "schedule delta encoding is per handle",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "capacity-on-encoded-only",
+      "testName": "schedule capacity counts validated",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "trust-raw-handle-count",
+      "testName": "native schedule matches every-period",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "encoded-offsets-use-raw-count",
+      "testName": "native schedule matches every-period",
+      "status": 1,
+      "namedRed": true
+    },
+    {
+      "name": "skip-elided-value-validation",
+      "testName": "schedule capacity counts validated",
+      "status": 1,
+      "namedRed": true
+    }
+  ]
+}

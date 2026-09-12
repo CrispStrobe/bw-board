@@ -232,15 +232,36 @@ their named tests on ABI v4. See
 [HARRIS-NATIVE-OPERATION-BITSET-MUTATIONS.json](HARRIS-NATIVE-OPERATION-BITSET-MUTATIONS.json),
 and [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS-ABI4.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS-ABI4.json).
 
-The next bounded hybrid CPU milestone is specified in
-[HARRIS-HYBRID-CPU-BRIDGE-PLAN.md](HARRIS-HYBRID-CPU-BRIDGE-PLAN.md). It must reuse
-the authoritative ROM/RAM wiring and add an explicit bounded CPU method without
-changing existing one-period stepping. It is planned, **not implemented**.
+The bounded hybrid CPU milestone is implemented and merged through `7d43d5d`.
+JavaScript instruction semantics now drive the same-instance native actual-net
+memory/bus region through explicit bounded transactions, with cooperative READY
+events and browser qualification. Existing one-period stepping remains intact.
+See [HARRIS-HYBRID-CPU-IMPLEMENTATION.md](HARRIS-HYBRID-CPU-IMPLEMENTATION.md)
+and [HARRIS-HYBRID-COOPERATIVE-EXECUTION.md](HARRIS-HYBRID-COOPERATIVE-EXECUTION.md).
+This remains a default-off memory-only hybrid, not a native CPU/peripheral or DOS
+capacity result.
 
-The overall program remains open: P1/P3 application package/browser integration,
-P4 full workload/profile coverage, P5 shared host improvements, remaining P6
-integration/qualification, P7 CPU/peripherals, P8 event-safe skipping and P9 whole-machine
-qualification. The completed prerequisites do not close these larger gates.
+The following schedule-only slice at `68e64ed` delta-encodes repeated explicit
+input assignments within each private handle. It retains each driver's first
+assignment, every later four-state transition, all period offsets and reads, and
+resets its cache between handles. Raw submitted assignments still define capacity
+and chunking; only the private arrays passed to native code shrink. On the exact
+8,194-period synthetic fixture, **217,100 submitted assignments become 43,075
+encoded assignments**, removing 174,025 writer calls. Kernel driver comparisons
+fall exactly **651,374 to 477,349**; the other eleven counters and all state,
+phase, memory, raw and recovery hashes remain exact. The native selection passed
+**116/116, zero skipped**, and nine mutations failed their named tests. The
+unchanged Wasm cannot identify this JavaScript-only change, so the receipts bind
+the compiler source hash directly. See
+[HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-AB.json](HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-AB.json)
+and [HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-MUTATIONS.json](HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-MUTATIONS.json).
+Timing is diagnostic; this establishes no hybrid CPU speedup.
+
+The overall program remains open: application package/browser integration,
+longer CPU-bearing workload attribution, native peripheral/I/O events, native
+instruction execution, debugger/replay qualification, event-safe skipping and
+whole-machine BIOS/DOS capacity. The completed prerequisites do not close these
+gates.
 
 ### P6 incremental checkpoint — dirty net queues
 

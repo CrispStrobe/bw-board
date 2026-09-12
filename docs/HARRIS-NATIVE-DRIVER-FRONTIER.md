@@ -107,3 +107,21 @@ before table dereference, directly asserts reverse-hit deduplication, and clears
 a three-word bitset on re-admission. Ten bitset mutations and the seven inherited
 reverse-index mutations pass on ABI v4; the latter have a distinct committed
 receipt at [HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS-ABI4.json](HARRIS-NATIVE-REVERSE-INDEX-MUTATIONS-ABI4.json).
+
+
+## Phase-schedule delta continuation
+
+The later `68e64ed` checkpoint compresses repeated explicit input assignments
+inside each private compiled schedule handle. First assignments, 0/1/X/Z
+transitions, empty periods, read boundaries and reuse after another handle are
+preserved. The raw submitted count continues to enforce capacity and determine
+benchmark chunking; `encodedUpdates` reports only the private native payload.
+
+The exact synthetic fixture retains 8,194 periods and 217,100 submitted
+assignments while encoding 43,075. Driver comparisons fall from 651,374 to
+477,349; all other counters and correctness hashes remain exact. This is a
+JavaScript-only schedule-specific work reduction, not a hybrid CPU speed claim.
+The receipt therefore pins `phase-schedule.js` directly in addition to the
+unchanged Wasm. See
+[HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-AB.json](HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-AB.json)
+and [HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-MUTATIONS.json](HARRIS-NATIVE-PHASE-SCHEDULE-DELTA-MUTATIONS.json).
