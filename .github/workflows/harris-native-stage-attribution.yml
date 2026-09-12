@@ -22,7 +22,7 @@ jobs:
       - name: Prepare exact promoted control
         run: |
           set -euo pipefail
-          MASTER_SHA=c3c0bbf97d7f68194b8dc5f1d0c6a423193731b0
+          MASTER_SHA=fa1b648b25b1205201b4eba4fbeb5d7a3f6d629b
           CANDIDATE_SHA=$GITHUB_SHA
           git cat-file -e "$MASTER_SHA^{commit}"
           git merge-base --is-ancestor "$MASTER_SHA" "$CANDIDATE_SHA"

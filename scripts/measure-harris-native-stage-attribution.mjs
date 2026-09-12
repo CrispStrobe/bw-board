@@ -4,11 +4,18 @@ import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {readFileSync,realpathSync} from 'node:fs';
 import {arch,cpus,hostname,loadavg,platform} from 'node:os';
-import {dirname,join,resolve} from 'node:path';
+import {dirname,join,relative,resolve,sep} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
 
-export const MASTER_REVISION='c3c0bbf97d7f68194b8dc5f1d0c6a423193731b0';
+export const MASTER_REVISION='fa1b648b25b1205201b4eba4fbeb5d7a3f6d629b';
+export const HEADER_PATH='src/experimental/wired-kernel/stage-attribution.h';
+export const NATIVE_SOURCE_PATHS=Object.freeze([
+    'src/experimental/wired-kernel/net-resolver.c','src/experimental/wired-kernel/memory-banks.c',
+    'src/experimental/wired-kernel/memory-circuit.c','src/experimental/wired-kernel/phase-components.c',
+    'src/experimental/wired-kernel/phase-circuit.c','src/experimental/wired-kernel/phase-schedule.c',
+    'src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c',
+    'src/experimental/wired-kernel/bus-circuit.c']);
 export const LEGACY_WORK_COUNTERS=Object.freeze(['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions',
     'netDriverVisits','evaluatorRows','dependencyProbes','stagedDriverCopies','committedEvaluatorOutputs',
     'publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits']);
@@ -28,6 +35,31 @@ export function controlGateResult(ratios){const observations=Object.fromEntries(
     [name,{value,minimum:.98,maximum:1.02,passed:Number.isFinite(value)&&value>=.98&&value<=1.02}]));
     return Object.freeze({passed:Object.values(observations).every(value=>value.passed),observations:Object.freeze(observations)});}
 export function assertSemantic(actual,expected,label='sample'){assert.deepEqual(actual,expected,`${label}: exact semantic/work receipt`);}
+export function assertSourceHashes(sourceHashes,expected){
+    assert.deepEqual(Object.keys(sourceHashes??{}),NATIVE_SOURCE_PATHS,'exact native source inventory');
+    assert.deepEqual(sourceHashes,expected,'exact native source digests');return Object.freeze({...sourceHashes});
+}
+export function assertHeaderHashes(headerHashes,expected){
+    assert.deepEqual(Object.keys(headerHashes??{}),[HEADER_PATH],'exact native header inventory');
+    assert.equal(headerHashes[HEADER_PATH],expected,'exact native header digest');return Object.freeze({...headerHashes});
+}
+export function collectJSImportClosure(directory,entries){
+    const root=realpathSync(directory),pending=[...entries],seen=new Set();
+    while(pending.length){const path=pending.pop();if(seen.has(path))continue;const absolute=resolve(root,path);
+        assert.ok(!relative(root,absolute).startsWith(`..${sep}`),'JS provenance stays inside source tree');seen.add(path);
+        const source=readFileSync(absolute,'utf8'),folder=dirname(path);
+        for(const match of source.matchAll(/\b(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]([^'"]+)['"]/g))if(match[1].startsWith('.')){
+            let child=relative(root,resolve(root,folder,match[1])).split(sep).join('/');if(!child.endsWith('.js')&&!child.endsWith('.mjs'))child+='.js';pending.push(child);}
+    }
+    return Object.freeze([...seen].sort());
+}
+export function canonicalBuildArgs(args){
+    assert.ok(Array.isArray(args));const result=[];for(let i=0;i<args.length;i++){
+        if(args[i]==='-DNATIVE_STAGE_ATTRIBUTION=1'||args[i]==='-DNATIVE_STAGE_PROFILE_NAMING=1')continue;
+        if(args[i]==='-o'){result.push('-o','<output>');i++;continue;}
+        const source=NATIVE_SOURCE_PATHS.find(path=>args[i]===path||args[i].endsWith(`/${path}`));result.push(source??args[i]);}
+    return Object.freeze(result);
+}
 export function assertStageReceipt(stage,semantic){
     assert.deepEqual(Object.keys(stage.native),[...NATIVE_STAGES],'native stage schema');
     for(const [name,value] of Object.entries(stage.native))assert.ok(Number.isSafeInteger(value)&&value>=0&&value<=0xffffffff,`${name}: u32`);
@@ -58,15 +90,14 @@ async function loadVariant(name,directory,wasmPath,revision,buildStageAttributio
     assert.equal(git(directory,'status','--porcelain'),'',`${name}: clean tree`);const wasm=readFileSync(wasmPath),manifestBytes=readFileSync(join(dirname(wasmPath),'wired-net-kernel-build.json')),build=JSON.parse(manifestBytes);
     assert.equal(build.wasmSHA256,hash(wasm),`${name}: wasm receipt`);assert.equal(build.stageAttribution??false,buildStageAttribution,`${name}: counter build mode`);
     assert.equal(build.stageProfileNames??false,stageProfileNames,`${name}: profile-name build mode`);
-    for(const [path,digest] of Object.entries(build.sourceHashes))assert.equal(hash(readFileSync(join(directory,path))),digest,`${name}: ${path}`);
-    const headerPath='src/experimental/wired-kernel/stage-attribution.h',headerHashes=build.headerHashes??{};
-    if(name==='master')assert.deepEqual(Object.keys(headerHashes),[],'historical master header receipt omission only');
-    else {assert.deepEqual(Object.keys(headerHashes),[headerPath],`${name}: exact header receipt`);assert.equal(hash(readFileSync(join(directory,headerPath))),headerHashes[headerPath],`${name}: ${headerPath}`);}
+    const sourceHashes=assertSourceHashes(build.sourceHashes,Object.fromEntries(NATIVE_SOURCE_PATHS.map(path=>
+        [path,hash(readFileSync(join(directory,path)))])));
+    const headerHashes=assertHeaderHashes(build.headerHashes,hash(readFileSync(join(directory,HEADER_PATH))));
     const paths=['src/devices/bus-memory.js','src/experimental/harris-80c286-boot-cpu.js','src/experimental/harris-boot-rom.js','src/experimental/harris-native-memory-board.js','src/experimental/harris-run-transactions.js'];
-    const provenancePaths=[...paths,'src/experimental/harris-80c286-memory-board.js','src/experimental/wired-kernel/bus-circuit-image.js','src/experimental/wired-kernel/memory-circuit.js'];
+    const provenancePaths=collectJSImportClosure(directory,paths);
     const [bus,cpu,rom,board,run]=await Promise.all(paths.map(path=>import(moduleURL(directory,path))));bus.registerBusMemory();
     return {name,directory,revision,wasm,HarrisBootCPU:cpu.HarrisBootCPU,createROM:rom.createHarrisStoreLoopROM,createBoard:board.createHarrisNativeMemoryBoard,run:run.runHarrisTransactions,stageAttribution:jsStageAttribution,
-        provenance:{revision,wasmSHA256:build.wasmSHA256,manifestSHA256:hash(manifestBytes),stageAttribution:buildStageAttribution,jsStageAttribution,stageProfileNames,compiler:build.compiler,args:build.args,sourceHashes:build.sourceHashes,headerHashes,
+        provenance:{revision,wasmSHA256:build.wasmSHA256,manifestSHA256:hash(manifestBytes),stageAttribution:buildStageAttribution,jsStageAttribution,stageProfileNames,compiler:build.compiler,args:build.args,sourceHashes,headerHashes,
             jsSourceHashes:Object.fromEntries(provenancePaths.map(path=>[path,hash(readFileSync(join(directory,path)))]))}};
 }
 function stateOf(cpu,board){const cpuState=cpu.inspect(),bus=board.inspectBus(),phase=board.inspectPhase(),lifecycle=board.inspectLifecycle(),nets=board.inspectNets();
@@ -117,6 +148,11 @@ export function assertProfileGates(value){assert.ok(value.classifiedRatio>=PROFI
 async function main(){parseOptions(process.argv.slice(2));if(options['classify-profile']){const profile=JSON.parse(readFileSync(options['classify-profile'])),receipt=JSON.parse(readFileSync(options['profile-receipt']));const classification=classifyProfile(profile);assert.ok(receipt.samples?.length,'profile receipt');console.log(JSON.stringify({schemaVersion:1,profileReceipt:receipt,profileGates:PROFILE_GATES,classification,limitations:['Leaf samples are assigned once; inclusive stacks are not summed. Idle and garbage-collector samples are disclosed and excluded from the classification denominator.','Whole-process URL buckets can include board construction and final inspection frames from CPU, board, and wrapper modules; actionable shares are diagnostic localization rather than active-interval production timing.','The named-profile build intentionally uses noinline stage boundaries and the CPU profile covers the whole Node process; profile shares are diagnostic and do not measure production timing.']},null,2));return;}
     assert.equal(options.experimental,true,'--experimental required');const candidate=options['candidate-revision'];assert.match(candidate??'',/^[0-9a-f]{40}$/);const iterations=integer('iterations',4096,65535);
     const master=await loadVariant('master',options['master-dir'],options['master-wasm'],MASTER_REVISION,false),off=await loadVariant('diagnosticOff',options['candidate-dir'],options['off-wasm'],candidate,false),nativeCounter=await loadVariant('nativeCounter',options['candidate-dir'],options['counter-wasm'],candidate,true,false,false),combinedCounter=await loadVariant('combinedCounter',options['candidate-dir'],options['counter-wasm'],candidate,true,false,true),profile=await loadVariant('namedProfile',options['candidate-dir'],options['profile-wasm'],candidate,false,true,false);
+    for(const variant of [off,nativeCounter,profile]){assert.equal(variant.provenance.compiler,master.provenance.compiler,`${variant.name}: compiler identity`);
+        assert.deepEqual(variant.provenance.sourceHashes,master.provenance.sourceHashes,`${variant.name}: native source identity`);
+        assert.deepEqual(variant.provenance.headerHashes,master.provenance.headerHashes,`${variant.name}: native header identity`);
+        assert.deepEqual(canonicalBuildArgs(variant.provenance.args),canonicalBuildArgs(master.provenance.args),`${variant.name}: only explicit diagnostic build flags may differ`);}
+    assert.equal(off.provenance.wasmSHA256,master.provenance.wasmSHA256,'diagnostics-off production Wasm identity');
     if(options['profile-only']){const repetitions=integer('profile-repetitions',6,20),samples=[];let expected=null;for(let i=0;i<repetitions;i++){const value=await sample(profile,iterations);expected??=value.semantic;assertSemantic(value.semantic,expected,`profile ${i+1}`);samples.push(value);}
         console.log(JSON.stringify({schemaVersion:1,mode:'named-diagnostic-profile',revision:candidate,iterations,repetitions,variant:profile.provenance,expected,samples,limitations:['Named stage boundaries use noinline and intentionally distort this whole-process diagnostic profile; production timing is measured only by the separate master/diagnostics-off/counter-on control.']},null,2));return;}
     const warmupRounds=integer('warmup-rounds',4,12),rounds=integer('rounds',12,32),variants={master,diagnosticOff:off,nativeCounter,combinedCounter},warmups=[],samples=[];let expected=null,sequence=0;

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MASTER_REVISION,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,assertProfileGates,assertSemantic,assertStageReceipt,classifyProfile,controlGateResult,rotatedOrder,summarize}
+import {MASTER_REVISION,HEADER_PATH,NATIVE_SOURCE_PATHS,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,assertHeaderHashes,
+    assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
+    collectJSImportClosure,controlGateResult,rotatedOrder,summarize}
     from '../scripts/measure-harris-native-stage-attribution.mjs';
 import {createAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
 
@@ -54,6 +56,22 @@ test('actionable gates cannot be satisfied by runtime, harness, or fixture sampl
     assert.deepEqual(PROFILE_GATES,{classifiedRatio:.9,actionableRatio:.7,topFamilySamples:50,topFamilyShare:.1,topTwoCombinedShare:.25});});
 test('rotating order and summaries are deterministic',()=>{assert.deepEqual([1,2,3,4].map(rotatedOrder),[['master','diagnosticOff','nativeCounter','combinedCounter'],['diagnosticOff','nativeCounter','combinedCounter','master'],['nativeCounter','combinedCounter','master','diagnosticOff'],['combinedCounter','master','diagnosticOff','nativeCounter']]);assert.equal(summarize([1,2,3]).median,2);});
 test('failed control gate remains a serializable observation',()=>{const gate=controlGateResult({candidateOffToMaster:1,counterOnToOff:.97});assert.equal(gate.passed,false);assert.deepEqual(gate.observations.counterOnToOff,{value:.97,minimum:.98,maximum:1.02,passed:false});assert.doesNotThrow(()=>JSON.stringify(gate));});
+test('current attribution provenance fails closed on native inventories and follows the workload JS closure',()=>{
+    const sources=Object.fromEntries(NATIVE_SOURCE_PATHS.map((path,index)=>[path,`digest-${index}`]));
+    assert.deepEqual(assertSourceHashes({...sources},sources),sources);assert.deepEqual(assertHeaderHashes({[HEADER_PATH]:'header'},'header'),{[HEADER_PATH]:'header'});
+    const missing={...sources};delete missing[NATIVE_SOURCE_PATHS[0]];const wrong={...sources,[NATIVE_SOURCE_PATHS[0]]:'wrong'};
+    const extra={...sources,'src/experimental/wired-kernel/extra.c':'extra'};
+    for(const value of [missing,wrong,extra])assert.throws(()=>assertSourceHashes(value,sources));
+    for(const value of [{},{[HEADER_PATH]:'wrong'},{[HEADER_PATH]:'header',extra:'extra'}])assert.throws(()=>assertHeaderHashes(value,'header'));
+    const root=new URL('..',import.meta.url).pathname,closure=collectJSImportClosure(root,['src/devices/bus-memory.js','src/experimental/harris-80c286-boot-cpu.js',
+        'src/experimental/harris-boot-rom.js','src/experimental/harris-native-memory-board.js','src/experimental/harris-run-transactions.js']);
+    for(const path of ['src/experimental/wired-kernel/memory-circuit.js','src/experimental/wired-kernel/phase-circuit-image.js',
+        'src/experimental/wired-kernel/bus-circuit-image.js'])assert.ok(closure.includes(path),path);
+    assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_ATTRIBUTION=1',`/a/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/a']),
+        ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
+    assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_PROFILE_NAMING=1',`/b/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/b']),
+        ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
+});
 test('workflow pins exact control, builds off/on separately, and rejects weak attribution',()=>{
     assert.ok(workflow.includes(`MASTER_SHA=${MASTER_REVISION}`));assert.match(workflow,/workflow_dispatch:/);assert.match(workflow,/branches: \['perf\/native-stage-attribution', 'perf\/native-stage-attribution-\*'\]/);
     assert.equal((workflow.match(/build-wired-net-kernel\.mjs/g)??[]).length,4);assert.equal((workflow.match(/NATIVE_STAGE_ATTRIBUTION=1/g)??[]).length,1);assert.equal((workflow.match(/NATIVE_STAGE_PROFILE_NAMING=1/g)??[]).length,1);
@@ -65,7 +83,8 @@ test('workflow pins exact control, builds off/on separately, and rejects weak at
 test('diagnostic build is conditional and stable work-counter ABI source is untouched',()=>{
     const build=source('scripts/build-wired-net-kernel.mjs'),runner=source('scripts/measure-harris-native-stage-attribution.mjs'),incremental=source('src/experimental/wired-kernel/incremental-nets.c'),header=source('src/experimental/wired-kernel/stage-attribution.h');
     assert.match(build,/NATIVE_STAGE_ATTRIBUTION/);assert.match(build,/NATIVE_STAGE_PROFILE_NAMING/);assert.match(build,/headerHashes:\{\[headerName\]:hash/);assert.doesNotMatch(build,/\.\.\.sourceNames,'src\/experimental\/wired-kernel\/stage-attribution\.h'/);assert.match(build,/stage_attribution_version/);assert.match(incremental,/u32 incremental_work\[12\]/);assert.match(incremental,/incremental_work_counters_version\(void\)\{return 3;\}/);
-    assert.match(runner,/if\(name==='master'\)assert\.deepEqual\(Object\.keys\(headerHashes\),\[\]/);assert.match(runner,/else \{assert\.deepEqual\(Object\.keys\(headerHashes\),\[headerPath\]/);
+    assert.match(runner,/assertSourceHashes\(build\.sourceHashes/);assert.match(runner,/assertHeaderHashes\(build\.headerHashes/);
+    assert.match(runner,/diagnostics-off production Wasm identity/);assert.match(runner,/only explicit diagnostic build flags may differ/);
     assert.match(header,/STAGE_COUNTER_COUNT/);assert.match(header,/#ifdef NATIVE_STAGE_PROFILE_NAMING\n#define STAGE_NOINLINE/);assert.doesNotMatch(header,/incremental_work|producer_work|memory_pass_work/);
 });
 test('accepted boundary counters preserve disabled bus shape and disclose rejected calls',()=>{const bus=source('src/experimental/wired-kernel/bus-circuit-image.js'),memory=source('src/experimental/wired-kernel/memory-circuit.js'),runner=source('scripts/measure-harris-native-stage-attribution.mjs');
