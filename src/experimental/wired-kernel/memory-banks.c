@@ -16,18 +16,27 @@ static u32 known_memory(u8 level,u8 conflict,u32 bank,u32 pin,u32 *fault,u8 *val
     return fail_memory(level==3?1:conflict?3:2,bank,pin,fault);
 }
 u32 memory_kernel_version(void){return 1;}
-u32 preview_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
-                        const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
-                        u8 *staged_present,u8 *staged_changed,u32 *fault) {
+/* Diagnostic only: owned calls, checked banks, checked pin records. */
+static u32 preview_work[3];
+u32 memory_preview_counters_version(void){return 1;}
+u32 *memory_preview_counters_ptr(void){return preview_work;}
+void reset_memory_preview_counters(void){preview_work[0]=preview_work[1]=preview_work[2]=0;}
+static u32 preview_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
+                         const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
+                         u8 *staged_present,u8 *staged_changed,u32 *fault,u32 owned) {
     if(!banks||banks>32)return fail_memory(8,0,NONE,fault);
-    for(u32 b=0;b<banks;b++) {
+    /* The standalone entry accepts caller buffers and validates their complete
+     * snapshot. The owned circuit entry receives config/state created here and
+     * four-state inputs copied from a successfully settled admitted image. */
+    if(owned)preview_work[0]++;
+    else {preview_work[1]+=banks;preview_work[2]+=banks*PINS;for(u32 b=0;b<banks;b++) {
         if(protected_rom[b]>1)return fail_memory(9,b,NONE,fault);
         for(u32 p=0;p<PINS;p++)if(inputs[b*PINS+p]>3||conflicts[b*PINS+p]>1||(conflicts[b*PINS+p]&&inputs[b*PINS+p]!=2))
             return fail_memory(5,b,p,fault);
         const u32 *s=states+b*WORDS;
         if(s[0]>3||s[1]>=SIZE||(s[2]>255&&s[2]!=NONE)||s[3]>1||s[4]>1||s[5]>=SIZE||s[6]>255||s[8]>0x1fffff)
             return fail_memory(6,b,NONE,fault);
-    }
+    }}
     /* Preflight and preview every bank. No actual state/byte/net-drive commit
      * occurs here; the output buffers are private preview staging as well. */
     for(u32 b=0;b<banks;b++) {
@@ -80,4 +89,16 @@ u32 preview_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *
         for(u32 w=0;w<WORDS;w++)s[w]=n[w];
     }
     fault[0]=0;return 0;
+}
+u32 preview_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
+                         const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
+                         u8 *staged_present,u8 *staged_changed,u32 *fault) {
+    return preview_banks(banks,memory,states,staged,protected_rom,inputs,conflicts,
+        staged_drives,staged_present,staged_changed,fault,0);
+}
+u32 preview_owned_memory_banks(u32 banks,u8 *memory,u32 *states,u32 *staged,const u8 *protected_rom,
+                               const u8 *inputs,const u8 *conflicts,u8 *staged_drives,
+                               u8 *staged_present,u8 *staged_changed,u32 *fault) {
+    return preview_banks(banks,memory,states,staged,protected_rom,inputs,conflicts,
+        staged_drives,staged_present,staged_changed,fault,1);
 }

@@ -3,6 +3,7 @@ typedef unsigned int u32;
 typedef unsigned char u8;
 extern u32 settle_owned_context(const u32*);
 extern u32 preview_memory_banks(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,u8*,u8*,u8*,u32*);
+extern u32 preview_owned_memory_banks(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,u8*,u8*,u8*,u32*);
 extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
 extern u32 producer_work[18];
 #define PRODUCER_COUNT 9
@@ -21,7 +22,7 @@ u32 memory_pass_counters_version(void){return 1;}
 static u32 settle_context(const u32 *c) {
     return settle_owned_context(c);
 }
-u32 memory_circuit_version(void){return 2;}
+u32 memory_circuit_version(void){return 3;}
 /* fault: category (1 combinational,2 memory,3 limit,4 mapping),code,bank,pin.
  * Per-pass commit matches JS: a later settle failure does not roll back a
  * successfully committed earlier memory pass. A peer preflight failure does. */
@@ -41,7 +42,8 @@ u32 settle_memory_circuit(const u32 *c,u32 passes,u32 *fault) {
         if(result&0x80000000u){fault[0]=1;fault[1]=result&0x7fffffffu;return 1;}
         for(u32 i=0;i<banks*28;i++){U8(23)[i]=U8(10)[input_nets[i]];U8(24)[i]=U8(11)[input_nets[i]];}
         memory_pass_work[2]++;memory_pass_work[3]+=banks;
-        result=preview_memory_banks(banks,U8(19),U32(20),U32(21),U8(22),U8(23),U8(24),U8(25),U8(26),U8(27),U32(28));
+        if(c[31])result=preview_owned_memory_banks(banks,U8(19),U32(20),U32(21),U8(22),U8(23),U8(24),U8(25),U8(26),U8(27),U32(28));
+        else result=preview_memory_banks(banks,U8(19),U32(20),U32(21),U8(22),U8(23),U8(24),U8(25),U8(26),U8(27),U32(28));
         if(result){fault[0]=2;fault[1]=result;fault[2]=U32(28)[1];fault[3]=U32(28)[2];return 2;}
         u32 changed=0,prior_driver_changes=producer_work[PRODUCER_COUNT+PRODUCER_MEMORY_BANK];
         for(u32 b=0;b<banks;b++) {
