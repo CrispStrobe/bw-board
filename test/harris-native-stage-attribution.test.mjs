@@ -80,10 +80,12 @@ test('current attribution provenance fails closed on native inventories and foll
     const js=Object.fromEntries(closure.map((path,index)=>[path,`js-${index}`]));assert.deepEqual(assertJSImportHashes({...js},js),js);
     const jsMissing={...js};delete jsMissing[closure[0]];const jsWrong={...js,[closure[0]]:'wrong'},jsExtra={...js,'src/extra.js':'extra'};
     for(const value of [jsMissing,jsWrong,jsExtra])assert.throws(()=>assertJSImportHashes(value,js));
-    assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_ATTRIBUTION=1',`/a/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/a']),
+    assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_ATTRIBUTION=1','-Wl,--export=stage_attribution_version','-Wl,--export=stage_attribution_counters_ptr','-Wl,--export=reset_stage_attribution_counters',`/a/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/a']),
         ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
     assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_PROFILE_NAMING=1',`/b/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/b']),
         ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
+    assert.deepEqual(canonicalBuildArgs(['-Wl,--export=stage_attribution_version_extra','-Wl,--export=memory_admission_version']),
+        ['-Wl,--export=stage_attribution_version_extra','-Wl,--export=memory_admission_version']);
 });
 test('workflow pins exact control, builds off/on separately, and rejects weak attribution',()=>{
     assert.ok(workflow.includes(`MASTER_SHA=${MASTER_REVISION}`));assert.match(workflow,/workflow_dispatch:/);assert.match(workflow,/branches: \['perf\/native-stage-attribution', 'perf\/native-stage-attribution-\*'\]/);

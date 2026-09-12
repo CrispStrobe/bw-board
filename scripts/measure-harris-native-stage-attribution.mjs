@@ -67,8 +67,10 @@ export function collectJSImportClosure(directory,entries){
     return Object.freeze([...seen].sort());
 }
 export function canonicalBuildArgs(args){
-    assert.ok(Array.isArray(args));const result=[];for(let i=0;i<args.length;i++){
-        if(args[i]==='-DNATIVE_STAGE_ATTRIBUTION=1'||args[i]==='-DNATIVE_STAGE_PROFILE_NAMING=1')continue;
+    assert.ok(Array.isArray(args));const diagnosticArgs=new Set(['-DNATIVE_STAGE_ATTRIBUTION=1','-DNATIVE_STAGE_PROFILE_NAMING=1',
+        '-Wl,--export=stage_attribution_version','-Wl,--export=stage_attribution_counters_ptr','-Wl,--export=reset_stage_attribution_counters']);
+    const result=[];for(let i=0;i<args.length;i++){
+        if(diagnosticArgs.has(args[i]))continue;
         if(args[i]==='-o'){result.push('-o','<output>');i++;continue;}
         const source=NATIVE_SOURCE_PATHS.find(path=>args[i]===path||args[i].endsWith(`/${path}`));result.push(source??args[i]);}
     return Object.freeze(result);
