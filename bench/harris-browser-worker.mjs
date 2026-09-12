@@ -1,5 +1,6 @@
 import {createOwnedWorkload} from '../scripts/lib/harris-owned-workloads.mjs';
 import {runHarrisChunks} from '../src/experimental/harris-run-chunks.js';
+import {HARRIS_BROWSER_CLOCK,measureHarrisBrowserRun} from '../scripts/lib/harris-browser-measurement.mjs';
 const channel=new MessageChannel(),wakeups=[];
 channel.port1.onmessage=()=>wakeups.shift()?.();
 const yieldTask=()=>new Promise(resolve=>{wakeups.push(resolve);channel.port2.postMessage(0);});
@@ -61,16 +62,21 @@ self.onmessage=async({data})=>{
             self.postMessage({id:data.id,nativeOracle:{...nativeOracle,moduleSHA256}});return;
         }
         const f=createOwnedWorkload(data.name,{...data.options,busTraceEnabled:false});
-        const start=performance.now();f.cpu.initialize();
+        const stamp=()=>({ticks:f.board.bus.clock,...HARRIS_BROWSER_CLOCK});
+        const before=stamp(),start=performance.now();f.cpu.initialize();
+        const initializationActiveMS=performance.now()-start,initialized=stamp();
         const run=await runHarrisChunks({cpu:f.cpu,maxClocks:100000,finished:f.finished,stopped:()=>active.cancelled,yieldTask});
         const elapsedMS=performance.now()-start;
+        const timing=measureHarrisBrowserRun({before,initialized,after:stamp(),run,initializationActiveMS,wallMS:elapsedMS});
+        if(!timing.accepted){const error=new Error(timing.reason);error.code=timing.code;throw error;}
         if(run.status==='completed')f.verify();
         const memory={};
         for(const region of f.board.memoryMap)for(const id of region.chips) {
             const {bytes,...state}=f.board.inspectMemory(id);memory[id]={...state,sha256:await hash(bytes)};
         }
         const state={clocks:run.clocks,cpu:f.cpu.inspect(),devices:Object.fromEntries(Object.entries(f.devices).map(([name,device])=>[name,device.inspect()])),memory};
-        self.postMessage({id:data.id,name:data.name,run,elapsedMS,periodClosed:!f.board.bus.open,state,stateSHA256:await hash(new TextEncoder().encode(JSON.stringify(state)))});
+        self.postMessage({id:data.id,name:data.name,run,elapsedMS,measurement:timing.measurement,initializationPeriods:timing.initializationPeriods,
+            periodClosed:!f.board.bus.open,state,stateSHA256:await hash(new TextEncoder().encode(JSON.stringify(state)))});
     }catch(error){self.postMessage({id:data.id,error:error.message,code:error.code??error.name});}
     finally {active=null;}
 };

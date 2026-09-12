@@ -20,7 +20,8 @@ try {
             if(result.run.status!=='completed'||!result.periodClosed)throw new Error(`${name}/${mode}: incomplete period/run`);
             if(result.stateSHA256!==config.expectedStateHashes[name])throw new Error(`${name}/${mode}: Node receipt state mismatch`);
             if(round>=0)samples.push({round,name,mode,clocks:result.run.clocks,retired:result.state.cpu.retired,
-                elapsedMS:result.elapsedMS,periodsPerSecond:result.run.clocks*1000/result.elapsedMS,
+                elapsedMS:result.elapsedMS,periodsPerSecond:result.measurement.wallTicksPerSecond,
+                measurement:result.measurement,initializationPeriods:result.initializationPeriods,
                 chunks:result.run.chunks,maxChunkMS:result.run.maxChunkMS,stateSHA256:result.stateSHA256});
         }
     }
@@ -47,7 +48,8 @@ try {
     const sorted=[...gaps].sort((a,b)=>a-b);
     const report={nonce:config.nonce,accepted:true,userAgent:navigator.userAgent,hardwareConcurrency:navigator.hardwareConcurrency,
         rounds:config.rounds,warmupRounds:1,modes:config.modes,busTraceEnabled:false,cpuHistoryEnabled:true,
-        initializationIncluded:true,constructionIncluded:false,yieldOverheadIncluded:true,fullDOSBoot:false,nativeOracle,
+        measurementVersion:2,initializationIncluded:true,constructionIncluded:false,yieldOverheadIncluded:true,
+        activeYieldOverheadIncluded:false,fullDOSBoot:false,nativeOracle,
         cancellation:{status:stopped.run.status,clocks:stopped.run.clocks,chunks:stopped.run.chunks,periodClosed:stopped.periodClosed},
         heartbeat:{count:gaps.length,medianMS:sorted[Math.floor(sorted.length/2)],p95MS:sorted[Math.floor(sorted.length*.95)],maxMS:sorted.at(-1)},samples};
     if(gaps.length<2)throw new Error('no main-thread heartbeat observed');
