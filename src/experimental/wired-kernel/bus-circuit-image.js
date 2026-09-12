@@ -15,8 +15,11 @@ export function assertDistinctBusDrivers({busOutputIds,busExternalIds}) {
     if(new Set(all).size!==all.length)throw new TypeError('bus driver mappings must be distinct');
 }
 export function assertBusCircuitABI(exports) {
-    if(exports.bus_circuit_version?.()!==2||exports.bus_sequencer_version?.()!==1||
-        typeof exports.bus_output_change_word!=='function')throw new TypeError('rebuild native bus bridge: ABI mismatch');
+    if(exports.bus_circuit_version?.()!==3||exports.bus_sequencer_version?.()!==1||
+        typeof exports.bus_output_change_word!=='function'||exports.bus_admission_version?.()!==1||
+        exports.bus_admission_counters_version?.()!==1||typeof exports.admit_owned_bus_context!=='function'||
+        typeof exports.bus_admission_counters_ptr!=='function'||typeof exports.reset_bus_admission_counters!=='function')
+        throw new TypeError('rebuild native bus bridge: ABI mismatch');
 }
 export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
     if(bus?.kind!=='owned-286-memory-bus-v1'||Object.keys(bus).some(k=>!['kind','cpu','inputPart','maxWaitStates'].includes(k)))
@@ -46,8 +49,8 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
     return {
         reserve(reserve){for(const [name,array]of Object.entries(maps))reserve(name,array.byteLength);
             reserve('busExternalValues',externalPins.length);reserve('busLifecycle',8);reserve('busRun',12);
-            reserve('busResults',72);reserve('busContext',40);},
-        initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault}) {
+            reserve('busResults',72);reserve('busContext',44);},
+        initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault,admittedGraph}) {
             assertBusCircuitABI(e);
             for(const [name,array]of Object.entries(maps))put(name,array);
             e.bus_initialize(maxWaitStates);
@@ -55,7 +58,9 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
             const externalValues=new Uint8Array(e.memory.buffer,p.busExternalValues,externalPins.length);
             externalValues.set(maps.busExternalIds.map(id=>image.driverLevels[id]));
             put('busContext',[p.context,p.phaseContext,p.busInputNets,p.busOutputIds,p.busExternalIds,p.busExternalValues,
-                externalPins.length,p.busLifecycle,p.busRun,p.busResults]);
+                externalPins.length,p.busLifecycle,p.busRun,p.busResults,Number(admittedGraph)]);
+            if(admittedGraph&&(e.admit_owned_bus_context(p.busContext,p.fault)>>>0)!==0)
+                throw new CircuitFault('INVALID_KERNEL_ADMISSION','private bus-map admission failed');
             const lifecycle=()=>({periodOpen:!!word('busLifecycle'),faulted:!!word('busLifecycle',1)});
             const guard=(open=false)=>{
                 if(word('busLifecycle',1))throw new CircuitFault('BOARD_FAULTED','reconstruct owned bus fixture');
@@ -90,6 +95,12 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
                     clock:get(4),resetClocks:get(5),initClocks:get(6),writeHold:get(7),address:get(8),
                     pending:get(9)?{index:get(10),waits:get(11),bytes:Array.from({length:get(12)},(_,i)=>get(13+i)),transferCount:get(15)}:null};
             };
+            const inspectBusAdmission=()=>{
+                const names=['attempts','admissions','failures','inputMapVisits','outputMapVisits','externalMapVisits'];
+                const values=new Uint32Array(e.memory.buffer,e.bus_admission_counters_ptr(),names.length);
+                return Object.freeze(Object.fromEntries(names.map((name,i)=>[name,values[i]])));
+            };
+            const resetBusAdmissionCounters=()=>e.reset_bus_admission_counters();
             const completion=pointer=>{
                 const a=new Uint32Array(e.memory.buffer,pointer,9);if(!a[0])return null;
                 return Object.freeze({kind:KINDS[a[1]],address:a[2],width:a[3],data:a[4],waits:a[5]+a[6]*4294967296,
@@ -125,7 +136,7 @@ export function prepareBusCircuit({circuit,image,bus,phase,banks}) {
                 const completed=!!word('busRun',2);
                 return Object.freeze({completed,stopReason:completed?'completed':'budget',periods:word('busRun'),completions});
             };
-            return {beginClock,endClock,submit,runUntilCompletion,inspectBus,inspectLifecycle:lifecycle,
+            return {beginClock,endClock,submit,runUntilCompletion,inspectBus,inspectBusAdmission,resetBusAdmissionCounters,inspectLifecycle:lifecycle,
                 inspectPhase:()=>({...phaseMethods.inspectPhase(),...lifecycle()}),inspect,inspectMemory};
         }
     };

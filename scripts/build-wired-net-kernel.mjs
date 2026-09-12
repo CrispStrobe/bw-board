@@ -40,6 +40,7 @@ const args=['--target=wasm32','-O3','-nostdlib','-fno-builtin','-Werror','-Wall'
     '-Wl,--export=memory_pass_counters_version','-Wl,--export=memory_pass_counters_ptr','-Wl,--export=reset_memory_pass_counters',
     '-Wl,--export=write_owned_driver','-Wl,--export=write_owned_driver_tagged',
     ...['bus_circuit_version','begin_bus_memory_clock','end_bus_memory_clock','run_bus_memory_until_completion'].map(n=>`-Wl,--export=${n}`),
+    ...['bus_admission_version','admit_owned_bus_context','bus_admission_counters_version','bus_admission_counters_ptr','reset_bus_admission_counters'].map(n=>`-Wl,--export=${n}`),
     '-Wl,--export-memory',...sources,'-o',output];
 const version=execFileSync(clang,['--version'],{encoding:'utf8'}).trim();
 execFileSync(clang,args,{stdio:'inherit'});

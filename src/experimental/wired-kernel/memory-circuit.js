@@ -190,7 +190,7 @@ export async function createNativeMemoryCircuit({enabled=false,circuit,banks,was
         setDriverLevels(levels);memoryFault(e.settle_memory_circuit(p.context,maxPasses,p.fault));return inspect();
     };
     const phaseMethods=phaseBinding?.initialize({e,p,put,inspect,setDriverLevels,memoryFault});
-    const rawBusMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault});
+    const rawBusMethods=busBinding?.initialize({e,p,put,inspect,inspectMemory,phaseMethods,memoryFault,admittedGraph});
     const busMethods=stageAttribution?createAcceptedBusStageAttribution(rawBusMethods):rawBusMethods;
     const inspectStageAttribution=()=>{
         if(!stageAttribution)throw new TypeError('stage attribution disabled');

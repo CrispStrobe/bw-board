@@ -31,11 +31,14 @@ u32 memory_admission_counters_version(void){return 1;}
 u32 *memory_admission_counters_ptr(void){return memory_admission_work;}
 void reset_memory_admission_counters(void){for(u32 i=0;i<8;i++)memory_admission_work[i]=0;}
 void revoke_owned_memory_admission(void){admitted_memory_context=0;}
+u32 owned_memory_context_is_admitted(const u32 *c){return admitted_memory_context==c;}
 static u32 reject_memory_admission(u32 *fault,u32 code){
     admitted_memory_context=0;revoke_owned_graph_admission();memory_admission_work[2]++;
     fault[0]=4;fault[1]=code;fault[2]=fault[3]=0xffffffffu;return 4;
 }
 u32 admit_owned_memory_context(const u32 *c,u32 *fault) {
+    /* The graph admission below mechanically revokes every derived bus grant
+     * before it validates this memory admission attempt. */
     admitted_memory_context=0;memory_admission_work[0]++;
     u32 result=admit_owned_context_for_memory(c);if(result)return reject_memory_admission(fault,9);
     const u32 banks=c[18],*input_nets=U32(29),*output_ids=U32(30);const u8 *protected_rom=U8(22);

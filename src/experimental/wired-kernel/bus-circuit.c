@@ -2,7 +2,7 @@
  * No CPU/instruction execution; host transactions advance every modeled period.
  * p: memory context,phase context,input-net map,output-driver map,external IDs,
  * external values,external count,lifecycle[open,faulted],run report[periods,count,
- * last],two physical completion records (9 words each). */
+ * last],two physical completion records (9 words each),admitted-map mode. */
 typedef unsigned int u32;
 typedef unsigned char u8;
 #include "stage-attribution.h"
@@ -16,7 +16,8 @@ extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
 extern u32 begin_latched_memory_clock(const u32*,u32*),preview_latched_memory_clock(const u32*,u32*);
 extern u32 finish_latched_memory_clock(const u32*,u32*),abort_latched_memory_clock(const u32*,u32*);
 extern double bus_inspect(u32);
-u32 bus_circuit_version(void){return 2;}
+extern u32 owned_graph_context_is_admitted(const u32*),owned_memory_context_is_admitted(const u32*);
+u32 bus_circuit_version(void){return 3;}
 /* All external and CPU bus outputs participate in the admitted dirty frontier. */
 #define PRODUCER_BUS_EXTERNAL 1
 #define PRODUCER_BUS_OUTPUT 2
@@ -25,9 +26,24 @@ static u32 failure(const u32*p,u32 category,u32 code,u32 pin,u32*fault) {
     fault[0]=category;fault[1]=code;fault[2]=pin;fault[3]=0xffffffff;
     if(category!=6||code!=2)W(7)[1]=1;return category;
 }
-static STAGE_NOINLINE u32 validate_bus_mapping(const u32*p,u32*fault) {
+/* One module instance owns one admitted bus context. The captured maps prevent
+ * later arena writes from redirecting an admitted gather or publication. */
+static const u32 *admitted_bus_context,*admitted_graph_context;
+static const u32 *admitted_input_pointer,*admitted_output_pointer,*admitted_external_pointer;
+static const u8 *admitted_values_pointer;
+static u32 admitted_external_count,admitted_nets,admitted_drivers;
+static u32 admitted_inputs[24],admitted_outputs[48],admitted_externals[128];
+static u32 bus_admission_work[6];
+u32 bus_admission_version(void){return 1;}
+u32 bus_admission_counters_version(void){return 1;}
+u32 *bus_admission_counters_ptr(void){return bus_admission_work;}
+void reset_bus_admission_counters(void){for(u32 i=0;i<6;i++)bus_admission_work[i]=0;}
+void revoke_owned_bus_admission(void){admitted_bus_context=0;admitted_graph_context=0;}
+static u32 reject_bus_admission(const u32*p,u32 pin,u32*fault){
+    bus_admission_work[2]++;return failure(p,8,2,pin,fault);
+}
+static u32 validate_raw_bus_mapping(const u32*p,u32*fault) {
     const u32*c=W(0);
-    STAGE_ADD(STAGE_BUS_VALIDATION_CALLS,1);
     #define BUS_MAPPING_RETURN(value,count) do{STAGE_ADD(STAGE_BUS_VALIDATION_VISITS,(count));return(value);}while(0)
     if(p[6]>128)return failure(p,8,2,0,fault);
     for(u32 i=0;i<24;i++)if(W(2)[i]>=c[0])BUS_MAPPING_RETURN(failure(p,8,2,i,fault),i+1);
@@ -36,10 +52,45 @@ static STAGE_NOINLINE u32 validate_bus_mapping(const u32*p,u32*fault) {
     BUS_MAPPING_RETURN(0,72+p[6]);
     #undef BUS_MAPPING_RETURN
 }
+u32 admit_owned_bus_context(const u32*p,u32*fault) {
+    revoke_owned_bus_admission();bus_admission_work[0]++;
+    const u32*c=W(0),count=p[6];
+    if(p[10]!=1||!owned_graph_context_is_admitted(c)||!owned_memory_context_is_admitted(c)||count>128)
+        return reject_bus_admission(p,0,fault);
+    for(u32 i=0;i<24;i++){bus_admission_work[3]++;if(W(2)[i]>=c[0])return reject_bus_admission(p,i,fault);}
+    for(u32 i=0;i<48;i++){bus_admission_work[4]++;if(W(3)[i]>=c[1])return reject_bus_admission(p,i,fault);}
+    for(u32 i=0;i<count;i++){bus_admission_work[5]++;if(W(4)[i]>=c[1]||B(5)[i]>3)return reject_bus_admission(p,i,fault);}
+    for(u32 i=0;i<24;i++)admitted_inputs[i]=W(2)[i];
+    for(u32 i=0;i<48;i++)admitted_outputs[i]=W(3)[i];
+    for(u32 i=0;i<count;i++)admitted_externals[i]=W(4)[i];
+    admitted_graph_context=c;admitted_input_pointer=W(2);admitted_output_pointer=W(3);
+    admitted_external_pointer=W(4);admitted_values_pointer=B(5);admitted_external_count=count;
+    admitted_nets=c[0];admitted_drivers=c[1];admitted_bus_context=p;bus_admission_work[1]++;
+    fault[0]=fault[1]=fault[2]=fault[3]=0;return 0;
+}
+static u32 admitted_bus_grant_matches(const u32*p) {
+    const u32*c=W(0);
+    return admitted_bus_context==p&&admitted_graph_context==c&&owned_graph_context_is_admitted(c)&&
+        owned_memory_context_is_admitted(c)&&admitted_input_pointer==W(2)&&admitted_output_pointer==W(3)&&
+        admitted_external_pointer==W(4)&&admitted_values_pointer==B(5)&&admitted_external_count==p[6]&&
+        admitted_nets==c[0]&&admitted_drivers==c[1];
+}
+static STAGE_NOINLINE u32 validate_bus_mapping(const u32*p,u32*fault) {
+    STAGE_ADD(STAGE_BUS_VALIDATION_CALLS,1);
+    if(!p[10])return validate_raw_bus_mapping(p,fault);
+    if(!admitted_bus_grant_matches(p))return failure(p,8,2,0,fault);
+    for(u32 i=0;i<admitted_external_count;i++)if(B(5)[i]>3){
+        STAGE_ADD(STAGE_BUS_VALIDATION_VISITS,i+1);return failure(p,8,2,i,fault);}
+    STAGE_ADD(STAGE_BUS_VALIDATION_VISITS,admitted_external_count);return 0;
+}
+static const u32 *input_map(const u32*p){return p[10]?admitted_inputs:W(2);}
+static const u32 *output_map(const u32*p){return p[10]?admitted_outputs:W(3);}
+static const u32 *external_map(const u32*p){return p[10]?admitted_externals:W(4);}
 static void gather(const u32*p) {
     const u32*c=W(0);const u8*levels=(u8*)(unsigned long)c[10],*conflicts=(u8*)(unsigned long)c[11];
+    const u32*map=input_map(p);
     u32 *input=(u32*)(unsigned long)bus_input_ptr();
-    for(u32 i=0;i<24;i++){u32 net=W(2)[i];input[i]=conflicts[net]?4:levels[net];}
+    for(u32 i=0;i<24;i++){u32 net=map[i];input[i]=conflicts[net]?4:levels[net];}
 }
 static u32 settle(const u32*p,u32*fault) {
     u32 result=settle_owned_context(W(0));
@@ -49,7 +100,8 @@ u32 begin_bus_memory_clock(const u32*p,u32*fault) {
     if(W(7)[1])return failure(p,6,1,0,fault);
     if(W(7)[0])return failure(p,6,2,0,fault);
     u32 result=validate_bus_mapping(p,fault);if(result)return result;
-    for(u32 i=0;i<p[6];i++)if(stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))return failure(p,8,2,i,fault);
+    const u32*external=external_map(p);
+    for(u32 i=0;i<p[6];i++)if(stage_bus_driver(W(0),external[i],B(5)[i],PRODUCER_BUS_EXTERNAL))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     gather(p);result=bus_begin();if(result)return failure(p,7,result,bus_error_pin(),fault);
     const u32*output=(u32*)(unsigned long)bus_output_ptr();
@@ -57,8 +109,9 @@ u32 begin_bus_memory_clock(const u32*p,u32*fault) {
      * mask only suppresses redundant canonical writer calls; it never stands
      * in for output computation or resolved-net state. */
     const u32 changed[2]={bus_output_change_word(0),bus_output_change_word(1)};
+    const u32*outputs=output_map(p);
     for(u32 i=0;i<48;i++)if((changed[i>>5]&(1u<<(i&31)))&&
-       stage_bus_driver(W(0),W(3)[i],(u8)output[i],PRODUCER_BUS_OUTPUT))return failure(p,8,2,i,fault);
+       stage_bus_driver(W(0),outputs[i],(u8)output[i],PRODUCER_BUS_OUTPUT))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     result=begin_latched_memory_clock(W(1),fault);if(result){W(7)[1]=1;return result;}
     W(7)[0]=1;fault[0]=0;return 0;
@@ -66,6 +119,7 @@ u32 begin_bus_memory_clock(const u32*p,u32*fault) {
 u32 end_bus_memory_clock(const u32*p,u32*fault) {
     if(W(7)[1])return failure(p,6,1,0,fault);
     if(!W(7)[0])return failure(p,6,2,0,fault);
+    if(p[10]&&!admitted_bus_grant_matches(p))return failure(p,8,2,0,fault);
     W(7)[0]=0;
     u32 result=preview_latched_memory_clock(W(1),fault);if(result){W(7)[1]=1;return result;}
     const u32*phase=W(1);u32 ready=*(u32*)(unsigned long)phase[13];gather(p);

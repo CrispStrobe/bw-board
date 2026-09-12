@@ -172,13 +172,17 @@ u32 settle_owned(u32 nets,u32 drivers,const u32 *offsets,const u32 *ids,u8 *leve
 static const u32 *admitted_context;
 static u32 admitted_mode;
 extern void revoke_owned_memory_admission(void);
+extern void revoke_owned_bus_admission(void);
 extern u32 admit_incremental_context(const u32*);
 extern u32 settle_incremental_context(const u32*);
 #define CB(i) ((u8*)(unsigned long)c[i])
 #define CW(i) ((u32*)(unsigned long)c[i])
-void revoke_owned_graph_admission(void){admitted_context=0;admitted_mode=0;}
+void revoke_owned_graph_admission(void){admitted_context=0;admitted_mode=0;revoke_owned_bus_admission();}
+u32 owned_graph_context_is_admitted(const u32 *c){return admitted_context==c&&admitted_mode==c[31];}
 u32 admit_owned_context_for_memory(const u32 *c) {
-    admitted_context=0;admitted_mode=0; /* Failed re-admission revokes the old grant. */
+    /* Every graph admission attempt invalidates map grants derived from the
+     * preceding graph, including a same-address re-admission. */
+    revoke_owned_graph_admission();
     if(c[31]!=1&&c[31]!=4)return 0x80000006u;
     /* Refuse counts that cannot fit even as one arena-resident table before
      * dereferencing caller offsets or records. ABI 4 has tighter static-cache
