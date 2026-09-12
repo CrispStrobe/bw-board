@@ -17,6 +17,7 @@ export const NATIVE_SOURCE_PATHS=Object.freeze([
     'src/experimental/wired-kernel/incremental-nets.c','src/experimental/wired-kernel/bus-sequencer.c',
     'src/experimental/wired-kernel/bus-circuit.c']);
 export const DIAGNOSTIC_SOURCE_PATH='src/experimental/wired-kernel/memory-circuit.c';
+export const DIAGNOSTIC_JS_PATH='src/experimental/wired-kernel/memory-circuit.js';
 export const LEGACY_WORK_COUNTERS=Object.freeze(['driverComparisons','valueChangingDriverWrites','dirtyNetResolutions',
     'netDriverVisits','evaluatorRows','dependencyProbes','stagedDriverCopies','committedEvaluatorOutputs',
     'publishNetCopies','deltas','reverseIndexVisits','operationBitsetWordVisits']);
@@ -55,6 +56,14 @@ export function assertHeaderHashes(headerHashes,expected){
 export function assertJSImportHashes(sourceHashes,expected){
     assert.deepEqual(Object.keys(sourceHashes??{}),Object.keys(expected),'exact workload JS closure inventory');
     assert.deepEqual(sourceHashes,expected,'exact workload JS closure digests');return Object.freeze({...sourceHashes});
+}
+export function assertDiagnosticJSImportHashes(sourceHashes,masterHashes){
+    assert.deepEqual(Object.keys(sourceHashes??{}),Object.keys(masterHashes??{}),'exact workload JS closure inventory');
+    for(const path of Object.keys(masterHashes))if(path===DIAGNOSTIC_JS_PATH)
+        assert.notEqual(sourceHashes[path],masterHashes[path],'diagnostic JS source must carry the accepted-boundary batching repair');
+    else assert.equal(sourceHashes[path],masterHashes[path],`${path}: diagnostic JS source must equal master`);
+    assert.ok(Object.hasOwn(masterHashes,DIAGNOSTIC_JS_PATH),'diagnostic JS source belongs to workload closure');
+    return Object.freeze({...sourceHashes});
 }
 export function collectJSImportClosure(directory,entries){
     const root=realpathSync(directory),pending=[...entries],seen=new Set();
@@ -171,7 +180,7 @@ async function main(){parseOptions(process.argv.slice(2));if(options['classify-p
     for(const variant of [off,nativeCounter,profile]){assert.equal(variant.provenance.compiler,master.provenance.compiler,`${variant.name}: compiler identity`);
         assertDiagnosticSourceHashes(variant.provenance.sourceHashes,master.provenance.sourceHashes);
         assert.deepEqual(variant.provenance.headerHashes,master.provenance.headerHashes,`${variant.name}: native header identity`);
-        assertJSImportHashes(variant.provenance.jsSourceHashes,master.provenance.jsSourceHashes);
+        assertDiagnosticJSImportHashes(variant.provenance.jsSourceHashes,master.provenance.jsSourceHashes);
         assert.deepEqual(canonicalBuildArgs(variant.provenance.args),canonicalBuildArgs(master.provenance.args),`${variant.name}: only explicit diagnostic build flags may differ`);}
     assert.equal(off.provenance.wasmSHA256,master.provenance.wasmSHA256,'diagnostics-off production Wasm identity');
     if(options['profile-only']){const repetitions=integer('profile-repetitions',6,20),samples=[];let expected=null;for(let i=0;i<repetitions;i++){const value=await sample(profile,iterations);expected??=value.semantic;assertSemantic(value.semantic,expected,`profile ${i+1}`);samples.push(value);}

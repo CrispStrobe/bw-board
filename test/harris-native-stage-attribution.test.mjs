@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {MASTER_REVISION,DIAGNOSTIC_SOURCE_PATH,HEADER_PATH,NATIVE_SOURCE_PATHS,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,
-    assertDiagnosticSourceHashes,assertHeaderHashes,assertJSImportHashes,assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
+import {MASTER_REVISION,DIAGNOSTIC_JS_PATH,DIAGNOSTIC_SOURCE_PATH,HEADER_PATH,NATIVE_SOURCE_PATHS,LEGACY_WORK_COUNTERS,NATIVE_STAGES,PROFILE_GATES,
+    assertDiagnosticJSImportHashes,assertDiagnosticSourceHashes,assertHeaderHashes,assertJSImportHashes,assertProfileGates,assertSemantic,assertSourceHashes,assertStageReceipt,canonicalBuildArgs,classifyProfile,
     collectJSImportClosure,controlGateResult,rotatedOrder,summarize}
     from '../scripts/measure-harris-native-stage-attribution.mjs';
-import {createAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
+import {createAcceptedBusStageAttribution,snapshotAcceptedBusStageAttribution} from '../src/experimental/wired-kernel/memory-circuit.js';
 
 const workflow=readFileSync(new URL('../.github/workflows/harris-native-stage-attribution.yml',import.meta.url),'utf8');
 const source=path=>readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
@@ -80,6 +80,11 @@ test('current attribution provenance fails closed on native inventories and foll
     const js=Object.fromEntries(closure.map((path,index)=>[path,`js-${index}`]));assert.deepEqual(assertJSImportHashes({...js},js),js);
     const jsMissing={...js};delete jsMissing[closure[0]];const jsWrong={...js,[closure[0]]:'wrong'},jsExtra={...js,'src/extra.js':'extra'};
     for(const value of [jsMissing,jsWrong,jsExtra])assert.throws(()=>assertJSImportHashes(value,js));
+    const diagnosticJS={...js,[DIAGNOSTIC_JS_PATH]:'diagnostic-js'};
+    assert.deepEqual(assertDiagnosticJSImportHashes(diagnosticJS,js),diagnosticJS);
+    assert.throws(()=>assertDiagnosticJSImportHashes(js,js));
+    assert.throws(()=>assertDiagnosticJSImportHashes({...diagnosticJS,[closure.find(path=>path!==DIAGNOSTIC_JS_PATH)]:'unrelated'},js));
+    for(const value of [jsMissing,jsExtra])assert.throws(()=>assertDiagnosticJSImportHashes(value,js));
     assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_ATTRIBUTION=1','-Wl,--export=stage_attribution_version','-Wl,--export=stage_attribution_counters_ptr','-Wl,--export=reset_stage_attribution_counters',`/a/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/a']),
         ['-O3',NATIVE_SOURCE_PATHS[0],'-o','<output>']);
     assert.deepEqual(canonicalBuildArgs(['-O3','-DNATIVE_STAGE_PROFILE_NAMING=1',`/b/${NATIVE_SOURCE_PATHS[0]}`,'-o','/tmp/b']),
@@ -111,7 +116,8 @@ test('accepted boundary counters preserve disabled bus shape and disclose reject
     assert.doesNotMatch(bus,/stageAttribution|wasmBusInspectEntries|inspectJSStageAttribution/);
     assert.match(memory,/const rawBusMethods=busBinding\?\.initialize\(\{e,p,put,inspect/);assert.doesNotMatch(memory,/busExports|countBusCrossings|countJSStage/);
     assert.match(memory,/createAcceptedBusStageAttribution\(rawBusMethods\)/);
-    assert.match(memory,/materializedCompletionRecordBytes/);assert.doesNotMatch(memory,/nativeReceiptBytesRead/);
+    assert.match(memory,/acceptedSubmits\*4\+returnedRuns\+progressFaultRuns\*2/);
+    assert.match(memory,/materializedCompletionRecordBytes:\(completionObjects\*36\)>>>0/);assert.doesNotMatch(memory,/nativeReceiptBytesRead/);
     assert.match(runner,/Other rejected high-level calls are excluded, including validation paths that may already have called bus_inspect/);
     for(const name of ['inspectPhase','inspectLifecycle','inspectNets','componentHashes','headerHashes','nativeCounter','combinedCounter'])assert.ok(runner.includes(name),name);
 });
@@ -128,6 +134,9 @@ test('accepted boundary counters execute success, budget, fault, exclusion, rese
     assert.throws(()=>measured.submit(),error=>error===rejected);assert.throws(()=>measured.runUntilCompletion(),error=>error===rejected);assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,completionObjects:0,materializedCompletionRecordBytes:0});
     raw.runUntilCompletion=()=>({completions:{length:0xffffffff}});measured.runUntilCompletion();raw.runUntilCompletion=()=>({completions:{length:1}});measured.runUntilCompletion();
     assert.deepEqual(measured.inspectJSStageAttribution(),{wasmBusInspectEntries:2,wasmBusSubmitEntries:0,wasmBusRunEntries:2,completionObjects:0,materializedCompletionRecordBytes:0});
+    assert.deepEqual(snapshotAcceptedBusStageAttribution(0xffffffff,0xffffffff,0xffffffff,0xffffffff),
+        {wasmBusInspectEntries:0xfffffff9,wasmBusSubmitEntries:0xffffffff,wasmBusRunEntries:0xfffffffe,
+            completionObjects:0xffffffff,materializedCompletionRecordBytes:0xffffffdc});
 });
 test('receipts precede workflow acceptance and profile classification has no in-process gate',()=>{const runner=source('scripts/measure-harris-native-stage-attribution.mjs');assert.match(runner,/process\.stdout\.write\(JSON\.stringify\(report,null,2\)\+'\\n'\);\}/);assert.doesNotMatch(runner,/process\.stdout\.write[^\n]+assert/);
     const classify=runner.slice(runner.indexOf("if(options['classify-profile'])"),runner.indexOf("assert.equal(options.experimental"));assert.doesNotMatch(classify,/assertProfileGates/);assert.match(classify,/console\.log\(JSON\.stringify/);assert.match(classify,/construction and final inspection frames/);assert.doesNotMatch(classify,/never contribute to actionableSamples/);});

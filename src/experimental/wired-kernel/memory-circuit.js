@@ -41,27 +41,25 @@ export function assertOwnedMemoryAdmissionABI(exports) {
 }
 /** Diagnostic totals for accepted submits and returned/native-progress runs.
  * Rejections before those main Wasm boundaries are deliberately excluded. */
+export function snapshotAcceptedBusStageAttribution(acceptedSubmits,returnedRuns,progressFaultRuns,completionObjects) {
+    return {wasmBusInspectEntries:(acceptedSubmits*4+returnedRuns+progressFaultRuns*2)>>>0,
+        wasmBusSubmitEntries:acceptedSubmits,wasmBusRunEntries:(returnedRuns+progressFaultRuns)>>>0,completionObjects,
+        materializedCompletionRecordBytes:(completionObjects*36)>>>0};
+}
 export function createAcceptedBusStageAttribution(rawBusMethods) {
     if(typeof rawBusMethods?.submit!=='function'||typeof rawBusMethods?.runUntilCompletion!=='function')throw new TypeError('raw bus methods');
-    const values={wasmBusInspectEntries:0,wasmBusSubmitEntries:0,wasmBusRunEntries:0,
-        completionObjects:0,materializedCompletionRecordBytes:0};
+    let acceptedSubmits=0,returnedRuns=0,progressFaultRuns=0,completionObjects=0;
+    const inspect=()=>snapshotAcceptedBusStageAttribution(acceptedSubmits,returnedRuns,progressFaultRuns,completionObjects);
     return {...rawBusMethods,
         submit(...args){const result=rawBusMethods.submit(...args);
-            values.wasmBusInspectEntries=(values.wasmBusInspectEntries+4)>>>0;
-            values.wasmBusSubmitEntries=(values.wasmBusSubmitEntries+1)>>>0;return result;},
+            acceptedSubmits=(acceptedSubmits+1)>>>0;return result;},
         runUntilCompletion(...args){try{const result=rawBusMethods.runUntilCompletion(...args),count=result.completions.length;
-                values.wasmBusInspectEntries=(values.wasmBusInspectEntries+1)>>>0;
-                values.wasmBusRunEntries=(values.wasmBusRunEntries+1)>>>0;
-                values.completionObjects=(values.completionObjects+count)>>>0;
-                values.materializedCompletionRecordBytes=(values.materializedCompletionRecordBytes+count*36)>>>0;return result;}
+                returnedRuns=(returnedRuns+1)>>>0;completionObjects=(completionObjects+count)>>>0;return result;}
             catch(error){const count=error.progress?.completions?.length??0;if(error.progress){
-                    values.wasmBusInspectEntries=(values.wasmBusInspectEntries+2)>>>0;
-                    values.wasmBusRunEntries=(values.wasmBusRunEntries+1)>>>0;
-                    values.completionObjects=(values.completionObjects+count)>>>0;
-                    values.materializedCompletionRecordBytes=(values.materializedCompletionRecordBytes+count*36)>>>0;}
+                    progressFaultRuns=(progressFaultRuns+1)>>>0;completionObjects=(completionObjects+count)>>>0;}
                 throw error;}},
-        inspectJSStageAttribution:()=>({...values}),
-        resetJSStageAttribution:()=>{for(const name of Object.keys(values))values[name]=0;}};
+        inspectJSStageAttribution:inspect,
+        resetJSStageAttribution:()=>{acceptedSubmits=returnedRuns=progressFaultRuns=completionObjects=0;}};
 }
 export async function createNativeMemoryCircuit({enabled=false,circuit,banks,wasmBytes,phase=null,bus=null,admittedGraph=false,incrementalGraph=false,
     stageAttribution=false}={}) {
