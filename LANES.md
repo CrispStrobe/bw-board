@@ -65,6 +65,22 @@ The protocol is brickwright-lite's `LANES.md`, unchanged, and that file remains
 the long-form statement of it. The short version, and the two rules that were
 each learned by losing work:
 
+### Repository role — upstream first, independent of landing speed
+
+`bw-board` is the source-of-truth engine. Shared engine behavior lands here
+with its behavior tests before Brickwright Lite consumes it. Lite now installs
+this repository from the exact git SHA recorded in its `vendor-pins.json`; it
+does not carry a tracked bw-board source tree in which an unreviewed downstream
+fork can hide. Lite's package specifications and lockfile are tested derivations
+of that pin.
+
+The lean qualification rule below changes only how many times an identical
+commit waits for CI. It does not permit a Lite-only reimplementation, a moving
+branch dependency, an implicit pin bump, or a skipped upstream behavior proof.
+Engine change first; exact upstream SHA second; derived Lite dependency and
+identity gates third. Brickwright Lite's `docs/VENDORING-REGIME.md` is the
+canonical cross-repository statement.
+
 **1. Before you start, look.** `git fetch origin`, read the recent branches,
 read the CLAIMS table below. If your work is already claimed or already landed,
 you have just saved yourself a day.
@@ -73,6 +89,36 @@ you have just saved yourself a day.
 with the sha in the same push as your last.** An abandoned claim is worse than
 no claim — the next worker reads it as work in progress and stays away from
 something nobody is doing.
+
+### Lean qualification rule (2026-09-13)
+
+The claim prevents duplicate work; the tests prove the change. Do not turn the
+ledger itself into a second implementation lane:
+
+- Keep the claim, isolated worktree, explicit path envelope, focused behaviour
+  tests, and proportionate mutation proofs. Before the ONE hosted qualification,
+  make the candidate final: move its row to DONE in that same head and include
+  every receipt already available.
+- One automatic exact-head qualification set is enough. When it is green and
+  the remote default branch is still the candidate's parent, re-check both shas
+  and fast-forward normally. Never force-push and never dispatch a duplicate.
+- Moving an already-qualified identical sha to the default branch does not need
+  another blocking wait. Verify that the remote points at the intended sha;
+  automatic post-push runs remain alarms that must be acted on if red, but their
+  completion is not a second landing gate.
+- If the default branch moved, requalify when executable paths overlap or the
+  combined behaviour may have changed. For a provably disjoint documentation or
+  ledger-only move, preserve the lane diff byte-for-byte, verify ancestry and
+  focused tests, then let the automatic default-branch run test the combined
+  tree. Do not spend a full hosted cycle proving prose commutes with code.
+- A real failure still stops the lane. Do not rerun an unchanged failure, relax
+  its gate, or bury it in the ledger. Batch status checks and poll GitHub no more
+  than once per minute.
+
+This replaces the fleet habit of separately qualifying the implementation,
+then a CLAIM-to-DONE-only successor, then waiting on the identical post-push
+sha. Those repetitions supplied no new behavioural evidence and repeatedly
+turned minute-sized patches into multi-hour landing sequences.
 
 **3. ONE WORKER PER TREE, and an agent counts as a worker. PATH SCOPING IS NOT
 ENOUGH.** Commit by explicit path, never `-A` or `.`, in a tree you did not
@@ -639,6 +685,10 @@ writer adaptation. Still no CPU/full machine or capacity claim. Details:
 | debug-session wall-budget convergence | bwcx (Codex), root audits/promotes | `converge/debug-session-wall-budget` at base `8deaf1ea6` | Upstream the general opt-in session primitive from Lite: a bounded host-wall-time pump carries simulated-time debt instead of freezing the browser or dropping program time. The default path remains one whole `runFor` call per pump when `wallBudgetMs` is absent; Lite's only current opt-in is the i8086 host. Envelope: `src/debug-session.js`, one focused test, this row. |
 
 ## DONE
+
+| z80 code-breakpoint bound convergence | sim2cx (Codex) | 2026-09-13 | DONE: landed candidate `8eeb16e867beb8d277b5778bc6d6c7b609e381e1`; hosted CI `34744438972` and Harris `34744438971` green; focused 17/17 and three named mutants red including wrong-address guard sensitivity. |
+
+| m6502 code-breakpoint bound convergence | sim2cx (Codex) | 2026-09-13 | DONE: replayed onto `51e750decc007704a228c7765a0ce0fba81e39c4`; accepted candidate `cb1d36435860571b4c2e51496632d1c55e346c8b`, hosted CI `34740086533` and Harris `34740086634` green; focused 25 pass/1 documented skip and three named mutation reds. |
 
 | AVR code-breakpoint bound deduplication | sim2cx (Codex) | 2026-09-13 | DONE: landed `ea11bf930f64ec8a74d12bff9ae26df07c9c9a18`; automatic CI `34736624121` and Harris qualification `34736624077` green. Focused proof 47/47 with 0 skipped; three isolated caller-consequence mutations red by name. |
 

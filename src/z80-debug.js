@@ -17,6 +17,10 @@ import { installInstructionDebugEvents } from './instruction-debug-events.js';
 export function createZ80DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
+  // One architectural maximum drives descriptor, guard, and refusal text.
+  const maxCodeAddress = 0xffff;
+  const codeAddressRefusal =
+    `code breakpoint addr must be in 0x0000..0x${maxCodeAddress.toString(16)}`;
   const cpuId = opts.cpuId || 'z80';
 
   /**
@@ -383,7 +387,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // would actually be sound.
       return {
         steps: ['insn', 'over', 'out'], breakpoints: ['code', 'write'], timeFreezes: true,
-        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffff,
+        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: maxCodeAddress,
           stopSides: ['before'], installation: 'sync'}],
         consumes: [], events: ['instruction', 'memory', 'port'],
         spaces: {mem: {read: true, write: true, passiveRead: true}},
@@ -534,8 +538,8 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // this, an out-of-range address is masked `& 0xffff` at the store below, so a
       // breakpoint at 0x10000 fires at 0x0000 — a working handle for a breakpoint at
       // the wrong place. A refusal, not a wrapped halt.
-      if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xffff) {
-        return { unsupported: 'code breakpoint addr must be in 0x0000..0xffff' };
+      if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > maxCodeAddress) {
+        return { unsupported: codeAddressRefusal };
       }
       const id = nextBpId++;
       breakpoints.set(id, { kind: 'code', addr: spec.addr & 0xffff });
