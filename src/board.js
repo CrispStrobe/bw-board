@@ -2098,8 +2098,8 @@ export class BoardImpl {
           const outpNet = this._netForTerminal(part.id, 'outp');
           const outnNet = this._netForTerminal(part.id, 'outn');
           if (outpNet === outnNet) {
-            throw new Error(`operatingPoint: inconsistent ideal VCVS output ${part.id}; `
-              + `outp and outn resolve to the same net ${outpNet}`);
+            throw new Error(`operatingPoint: unsupported same-net ideal VCVS output ${part.id}; `
+              + `outp and outn both resolve to ${outpNet}`);
           }
         }
       }

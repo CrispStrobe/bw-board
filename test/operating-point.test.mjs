@@ -305,7 +305,8 @@ describe('BoardImpl.operatingPoint', () => {
       ] },
     ]);
     const sameBefore = stateWitness(sameNet);
-    assert.throws(() => sameNet.operatingPoint(), /outp and outn resolve to the same net gnd/);
+    assert.throws(() => sameNet.operatingPoint(),
+      /unsupported same-net ideal VCVS output E1; outp and outn both resolve to gnd/);
     assertUnchanged(sameNet, sameBefore);
 
     const disconnected = new BoardImpl(5);

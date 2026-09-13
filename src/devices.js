@@ -30,6 +30,10 @@
  * @typedef {object} DeviceModel
  * @property {string[]} terminals - terminal names, for validation
  * @property {string[]} [requiredParams] - params validation should insist on
+ * @property {Set<string>} [automaticSupplyFallbackTerminals]
+ *   Static positive-supply terminals whose model drive is only an automatic
+ *   fallback and may yield to an explicit ideal `vcc` rail. Omitted by
+ *   default: physical sources, ground, and GPIO must retain their currents.
  * @property {(part: import('./types.js').Part) => object} [init]
  *   Create per-part persistent state. Default: `{ drives: {} }`.
  *   `state.drives` maps terminal → {vTh, rTh} | null (null = high-Z).

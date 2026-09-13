@@ -1376,15 +1376,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
               }
               if (changed) state = { ...state, drives };
             }
-            // AN IDEAL RAIL OUTRANKS A FINITE-IMPEDANCE DRIVE ON THE SAME NET.
+            // AN EXPLICIT AUTOMATIC BOARD-SUPPLY FALLBACK YIELDS TO AN IDEAL
+            // RAIL ON THE SAME NET.
             //
             // A `vcc` part is a voltage-source ROW: it pins its net exactly.
-            // A device Thevenin in parallel with it cannot move that node by a
-            // microvolt — every amp it pushes returns through the ideal source
-            // — so its only effect is to invent a circulating current between
-            // two sources. Suppressing it therefore changes NO node voltage, by
-            // construction; it changes exactly two readings, the suppressed
-            // pin's own current and the rail's.
+            // A device Thevenin in parallel with it cannot move that node, but
+            // it CAN carry a physically real conflict current. Therefore the
+            // default is to preserve every drive. Suppression requires the
+            // device model to name a terminal as an automatic supply fallback.
             //
             // Found by the ngspice sweep. A Pico with VBUS on a 3.3 V bench
             // rail reported 17 A on that pin against ngspice's 0 (the exporter
@@ -1394,28 +1393,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
             // `vcc` part, and in every one of those the shared supply IS a
             // `vcc` part, so this is the whole measured population.
             //
-            // It is also the right physics: a board's VBUS/VSYS/5V pin is a
-            // source only when nothing else powers that net. Wire a bench
-            // supply to it and it is an INPUT — which is what a Schottky-OR'd
-            // supply does, and what the gallery means when it draws a rail
-            // through a dev board's power pin.
-            //
-            // Only drives the MODEL owns are outranked — `_staticDrives` is the
-            // set board.js records at init for exactly this distinction. A GPIO
-            // drive is NOT suppressed: a pin driving low into VCC is a real
-            // short and board.js reports it as one.
+            // This is the gallery's development-board abstraction, not a
+            // Schottky-OR physics claim. Physical batteries, solar cells,
+            // regulators and ground/GPIO drives do not opt in and retain the
+            // source or short current an ammeter would read.
             //
             // Limited to `vcc` rails deliberately. An op-amp output is also a
             // voltage-source row, but it is rail-clamped and nonlinear, so
             // "cannot move that node" is not true of it in the same way; no
             // corpus circuit needed it.
             if (railOwner.size && state.drives) {
-              const staticNames = state._staticDrives;
+              const fallbackNames = model.automaticSupplyFallbackTerminals;
               const kept = {};
               let dropped = false;
               for (const [term, drive] of Object.entries(state.drives)) {
-                const owned = !staticNames || staticNames.has(term);
-                const net = drive && owned ? findNet(nets, part.id, term) : null;
+                const fallback = fallbackNames?.has(term) === true;
+                const net = drive && fallback ? findNet(nets, part.id, term) : null;
                 if (net && railOwner.has(net) && railOwner.get(net) !== part.id) {
                   dropped = true;
                   continue;
