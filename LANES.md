@@ -74,6 +74,36 @@ with the sha in the same push as your last.** An abandoned claim is worse than
 no claim — the next worker reads it as work in progress and stays away from
 something nobody is doing.
 
+### Lean qualification rule (2026-09-13)
+
+The claim prevents duplicate work; the tests prove the change. Do not turn the
+ledger itself into a second implementation lane:
+
+- Keep the claim, isolated worktree, explicit path envelope, focused behaviour
+  tests, and proportionate mutation proofs. Before the ONE hosted qualification,
+  make the candidate final: move its row to DONE in that same head and include
+  every receipt already available.
+- One automatic exact-head qualification set is enough. When it is green and
+  the remote default branch is still the candidate's parent, re-check both shas
+  and fast-forward normally. Never force-push and never dispatch a duplicate.
+- Moving an already-qualified identical sha to the default branch does not need
+  another blocking wait. Verify that the remote points at the intended sha;
+  automatic post-push runs remain alarms that must be acted on if red, but their
+  completion is not a second landing gate.
+- If the default branch moved, requalify when executable paths overlap or the
+  combined behaviour may have changed. For a provably disjoint documentation or
+  ledger-only move, preserve the lane diff byte-for-byte, verify ancestry and
+  focused tests, then let the automatic default-branch run test the combined
+  tree. Do not spend a full hosted cycle proving prose commutes with code.
+- A real failure still stops the lane. Do not rerun an unchanged failure, relax
+  its gate, or bury it in the ledger. Batch status checks and poll GitHub no more
+  than once per minute.
+
+This replaces the fleet habit of separately qualifying the implementation,
+then a CLAIM-to-DONE-only successor, then waiting on the identical post-push
+sha. Those repetitions supplied no new behavioural evidence and repeatedly
+turned minute-sized patches into multi-hour landing sequences.
+
 **3. ONE WORKER PER TREE, and an agent counts as a worker. PATH SCOPING IS NOT
 ENOUGH.** Commit by explicit path, never `-A` or `.`, in a tree you did not
 create — but understand what that buys you, because on 2026-09-04 it twice did
