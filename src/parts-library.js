@@ -106,7 +106,7 @@ const CARDS = {
     },
     // ---- LED --------------------------------------------------------------
     'LED_RED': {
-        id: 'LED_RED', kind: 'led',
+        id: 'LED_RED', kind: 'led', generic: true,
         provenance: 'THE 10/2/5 RECONCILIATION. rd = 10 is board.js LED_RD, the '
             + 'value the piecewise path has always used and the one the '
             + 'exponential path should have shared; rs = 2 and the exporter\'s '
@@ -152,8 +152,16 @@ const CARDS = {
     // EVERY .model line it emits from this library rather than leaving two
     // literals behind — a literal left behind is the fourth home returning by
     // the back door. `id` is the .model name the exporter already emits.
+    //
+    // `generic: true` IS MACHINE-READABLE ON PURPOSE. lego-38's reachability
+    // gate has to answer "is every card reachable from the UI", and the answer
+    // differs by species: a real part number is reachable BY NAME, a generic is
+    // reachable through its CLASS — its kind must be placeable, nothing offers
+    // "NMOS_GENERIC" in a menu. Without a mark that gate needs a hand-kept list
+    // of which cards are real parts, in the other repo, which is one more place
+    // the two can disagree. Derive it: `allCards().filter(c => c.generic)`.
     'Q_DEFAULT': {
-        id: 'Q_DEFAULT', kind: 'npn',
+        id: 'Q_DEFAULT', kind: 'npn', generic: true,
         provenance: "bw-circuit-ui exporters/spice.js '.model Q_DEFAULT NPN "
             + "(Bf=100 Is=1e-14)', and beta 100 is also mna.js's npn default — "
             + 'the two already agreed, which is why this one is a move and not '
@@ -161,7 +169,7 @@ const CARDS = {
         params: {beta: 100, is: 1e-14, vbe: 0.7}
     },
     'NMOS_GENERIC': {
-        id: 'MOSFET', kind: 'nmos',
+        id: 'MOSFET', kind: 'nmos', generic: true,
         provenance: "bw-circuit-ui exporters/spice.js '.model MOSFET NMOS "
             + "(Vto=2 Kp=20u)'; vth 2.0 is mna.js's nmos default. Carries kp "
             + 'rather than k now that mna.js mosK() reads either: k = KP/2 * '
@@ -208,11 +216,36 @@ export const classDefaults = kind => ({
     zener: {rs: 0.568, n: 1.752, vf: 0.7}
 }[kind] ?? {});
 
-/** @returns {Card|null} the card for a part id, case-insensitively. */
+/**
+ * @returns {Card|null} the card for a part id, case-insensitively.
+ *
+ * RESOLVES BY KEY **OR** BY `id`, because those are allowed to differ and one
+ * pair does: the key `NMOS_GENERIC` names the card, the id `MOSFET` is the
+ * .model name the exporter emits. Looking up only the key meant
+ * `cardFor('MOSFET')` returned null — so the card that exists precisely to stop
+ * the exporter emitting a `.model MOSFET` literal could not be found under the
+ * name the exporter uses. Two spellings for one card, which is the shape this
+ * library exists to end; found by lego-38 wiring the exporter, not here.
+ *
+ * The alternative was to force key === id. That would have renamed the emitted
+ * model and moved deck text for a naming problem, so the split stays and the
+ * LOOKUP becomes total instead. `cardIds()` still returns keys; `cardAliases()`
+ * returns every name that resolves, which is what a reachability gate needs.
+ */
 export const cardFor = id => {
     if (typeof id !== 'string') return null;
-    const key = Object.keys(CARDS).find(k => k.toLowerCase() === id.toLowerCase());
-    return key ? CARDS[key] : null;
+    const want = id.toLowerCase();
+    const key = Object.keys(CARDS).find(k => k.toLowerCase() === want);
+    if (key) return CARDS[key];
+    const byId = Object.keys(CARDS).find(k => String(CARDS[k].id).toLowerCase() === want);
+    return byId ? CARDS[byId] : null;
+};
+
+/** Every name `cardFor` resolves — keys plus any `id` that differs from its key. */
+export const cardAliases = () => {
+    const names = new Set();
+    for (const [key, card] of Object.entries(CARDS)) { names.add(key); names.add(card.id); }
+    return [...names];
 };
 
 /** Every card id we ship. */
@@ -255,6 +288,27 @@ export const spiceModelFor = id => {
     if (c.kind === 'npn' || c.kind === 'pnp') {
         return {name: c.id, type: c.kind.toUpperCase(),
             body: `Bf=${num(p.beta)} Is=${num(p.is)}`};
+    }
+    // A DARLINGTON IS AN NPN TO SPICE. The kind exists because our own stamp
+    // differs (devices/analog-ics.js reads vbe and rceSat); SPICE has no
+    // Darlington primitive, so the deck says NPN with the pair's beta. Branching
+    // only on npn/pnp meant a card that EXISTS could not produce a model body,
+    // and the exporter then emitted an element line naming a `.model TIP120`
+    // the deck never defined — no warning, a deck that reads complete and
+    // cannot simulate.
+    if (c.kind === 'tip120') {
+        return {name: c.id, type: 'NPN', body: `Bf=${num(p.beta)} Is=${num(p.is)}`};
+    }
+    if (c.kind === 'nmos' || c.kind === 'pmos') {
+        // Vto/Kp are SPICE's spellings of vth/kp. kp is stored SPICE-native
+        // precisely so this emits it unchanged rather than converting; if a
+        // card ever carries `k` instead, that is mosK()'s k = KP/2 * W/L and
+        // the conversion belongs here, named, not silently inverted.
+        const bits = [`Vto=${num(p.vth)}`, `Kp=${num(p.kp)}`,
+            p.w === undefined ? null : `W=${num(p.w)}`,
+            p.l === undefined ? null : `L=${num(p.l)}`].filter(Boolean);
+        return {name: c.id, type: c.kind === 'nmos' ? 'NMOS' : 'PMOS',
+            body: bits.filter(b => !b.endsWith('null')).join(' ')};
     }
     return null;
 };

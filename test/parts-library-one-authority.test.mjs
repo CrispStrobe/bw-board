@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {allCards, cardFor, cardIds, spiceModelFor, resolveParams, classDefaults,
+import {allCards, cardFor, cardIds, cardAliases, spiceModelFor, resolveParams, classDefaults,
     ELECTRICAL_FIELDS, I_RATED} from '../src/parts-library.js';
 import {JUNCTION_RD, JUNCTION_I_RATED, junctionRd} from '../src/mna.js';
 
@@ -180,5 +180,111 @@ test('no card duplicates a number the solver hardcodes elsewhere', () => {
         assert.equal(v, JUNCTION_RD,
             `an rd literal of ${v} disagrees with JUNCTION_RD=${JUNCTION_RD}; it is a home this `
             + 'library does not own');
+    }
+});
+
+test('EVERY card can emit a .model body — a card that cannot is worse than no card', () => {
+    // THE GATE THAT WOULD HAVE CAUGHT ALL THREE OF lego-38's FINDINGS, and did
+    // not exist because the .model test sampled one card instead of enumerating.
+    //
+    // A card that exists and returns null is not a harmless gap. The exporter
+    // derives its element line from the card and its `.model` line from
+    // spiceModelFor, so a null produces a deck that NAMES a model it never
+    // defines: no warning, nothing in `skipped`, a deck that reads complete and
+    // cannot simulate. TIP120 and NMOS_GENERIC were both in that state — the
+    // model builder branched on npn/pnp/diode/led/zener and neither `tip120`
+    // (its own Darlington stamp) nor `nmos` had a branch.
+    const broken = [];
+    for (const id of cardIds()) {
+        const m = spiceModelFor(id);
+        if (!m || !m.name || !m.type || !m.body) { broken.push(id); continue; }
+        // A body of nothing but `null`s is the same defect wearing a string.
+        if (/(^|[ =])null([ )]|$)/.test(m.body)) broken.push(`${id} (body has null: ${m.body})`);
+    }
+    assert.deepEqual(broken, [],
+        'these cards cannot produce a .model body, so an exporter that derives from the library '
+        + 'emits an element line naming a model the deck never defines');
+});
+
+test('every name cardFor resolves is reachable, and every card is reachable by both', () => {
+    // The key and the `id` are ALLOWED to differ — NMOS_GENERIC/MOSFET does —
+    // but then BOTH must resolve, or the card is invisible under the name its
+    // consumer actually uses. cardFor('MOSFET') returned null while the card
+    // existed for the sole purpose of replacing a `.model MOSFET` literal.
+    for (const name of cardAliases()) {
+        assert.ok(cardFor(name), `cardAliases() lists ${name} but cardFor cannot resolve it`);
+    }
+    for (const key of cardIds()) {
+        const card = cardFor(key);
+        assert.ok(card, `cardFor cannot resolve its own key ${key}`);
+        assert.equal(cardFor(card.id)?.id, card.id,
+            `${key} has id ${card.id} and cardFor(${card.id}) does not find it`);
+        assert.equal(cardFor(key.toLowerCase())?.id, card.id, `${key} is not case-insensitive`);
+    }
+    // ANTI-VACUITY: the split this exists for must still be present, or the
+    // test is asserting a property of an empty difference.
+    const split = cardIds().filter(k => k !== cardFor(k).id);
+    assert.ok(split.length >= 1,
+        'no card key differs from its id any more — if that was deliberate, delete this test '
+        + 'rather than leaving it passing over a case that cannot occur');
+});
+
+test('the generics are marked, and a generic is reachable through its KIND', () => {
+    // A reachability gate has to answer "can a user get to this card", and the
+    // answer differs by species: a real part number is offered BY NAME, a
+    // generic is not — nothing puts "NMOS_GENERIC" in a menu, it is reached by
+    // placing an nmos. bw-circuit-ui needs that split derivable rather than
+    // hand-kept in the other repo, which is one more place we can disagree.
+    const generics = allCards().filter(c => c.generic);
+    const parts = allCards().filter(c => !c.generic);
+    assert.ok(generics.length >= 2, `only ${generics.length} cards marked generic`);
+    assert.ok(parts.length >= 4, `only ${parts.length} cards are real part numbers`);
+
+    // AND THE MARK MUST MATCH THE FILE'S OWN CLAIM ABOUT ITSELF, not merely be
+    // populous. A `>= 2` floor is a population check: unmarking ONE generic
+    // leaves two and passes, which a mutation run showed immediately. The
+    // source already states the answer in a section header, so make that
+    // comment a checkable claim rather than a decoration — a card that moves
+    // into the generics block without the mark, or carries the mark outside it,
+    // is then a failure by name.
+    const src = read('src/parts-library.js');
+    const start = src.indexOf('// ---- generics');
+    assert.ok(start > 0, 'the generics section header is gone — re-point this, do not delete it');
+    const rest = src.slice(start + 10);
+    const end = rest.indexOf('// ---- ');
+    const block = end === -1 ? rest : rest.slice(0, end);
+    const declared = new Set([...block.matchAll(/^\s*'([A-Za-z0-9_]+)':\s*\{/gm)].map(m => m[1]));
+    assert.ok(declared.size >= 2,
+        `the generics block declares ${declared.size} cards — the scan drifted, it is not `
+        + 'reporting an empty section as agreement');
+    for (const key of declared) {
+        assert.equal(cardFor(key)?.generic, true,
+            `${key} is declared under the generics header and is not marked generic: true`);
+    }
+    for (const c of generics) {
+        // LED_RED sits with the junctions because that is where a reader looks
+        // for it, so membership is one-way: everything in the block is generic,
+        // not everything generic is in the block. Assert the direction that
+        // holds, and name the exception rather than loosening the rule.
+        if (declared.has(cardIds().find(k => cardFor(k) === c))) continue;
+        assert.equal(c.id, 'LED_RED',
+            `${c.id} is marked generic but is not in the generics block and is not the one `
+            + 'documented exception — either move it there or say here why it is out');
+    }
+    for (const c of allCards()) {
+        assert.ok(c.generic === undefined || c.generic === true,
+            `${c.id}.generic is ${c.generic}; the mark is true or absent, never false — an `
+            + 'explicit false and an absent field would be two spellings of one state');
+    }
+    // A generic's kind must be placeable, because that is its ONLY route.
+    const known = new Set();
+    for (const f of ['src/devices.js', 'src/register-all.js']) {
+        for (const m of read(f).matchAll(/registerDevice\(\s*'([a-z0-9_]+)'/g)) known.add(m[1]);
+        for (const m of read(f).matchAll(/'([a-z0-9_]+)'/g)) known.add(m[1]);
+    }
+    for (const c of generics) {
+        assert.ok(known.has(c.kind),
+            `${c.id} is generic, so its only route to a user is placing a ${c.kind} — and no `
+            + 'registerDevice call offers that kind, which makes the card unreachable entirely');
     }
 });
