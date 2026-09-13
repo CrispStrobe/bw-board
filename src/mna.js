@@ -943,8 +943,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       // Controlled voltage source (spec-updates/controlled-sources.md)
       if (part.kind === 'vcvs') {
-        const outNet = findNet(nets, part.id, 'outp');
-        if (outNet && nodeIndex.has(outNet)) {
+        const outpNet = findNet(nets, part.id, 'outp');
+        const outnNet = findNet(nets, part.id, 'outn');
+        // Ground is implicit and absent from nodeIndex. The symmetric stamp
+        // below still needs its constraint row when EITHER output is live.
+        if ((outpNet && nodeIndex.has(outpNet)) ||
+            (outnNet && nodeIndex.has(outnNet))) {
           vsIndex.set(part.id, vsCount++);
         }
       }

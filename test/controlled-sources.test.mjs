@@ -4,6 +4,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
 
 const VCC = { id: 'V1', kind: 'vcc', params: {}, terminals: ['vcc'] };
@@ -33,7 +34,58 @@ function dividerDrivenBench(srcParams) {
   return board;
 }
 
+function groundedOutpBench(volts) {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'V1', kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] },
+    { id: 'E1', kind: 'vcvs', params: { gain: 2 },
+      terminals: ['outp', 'outn', 'inp', 'inn'] },
+    R('RL', 1000), GND,
+  ], [
+    { id: 'in', terminals: [
+      { part: 'V1', terminal: 'pos' }, { part: 'E1', terminal: 'inp' },
+    ] },
+    { id: 'out', terminals: [
+      { part: 'E1', terminal: 'outn' }, { part: 'RL', terminal: 'a' },
+    ] },
+    { id: 'gnd', terminals: [
+      { part: 'V1', terminal: 'neg' }, { part: 'E1', terminal: 'inn' },
+      { part: 'E1', terminal: 'outp' }, { part: 'RL', terminal: 'b' },
+      { part: 'G1', terminal: 'gnd' },
+    ] },
+  ]);
+  return board;
+}
+
 describe('vcvs', () => {
+  it('allocates a row with grounded outp and matches ngspice for both polarities', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    for (const vin of [1, -1]) {
+      const board = groundedOutpBench(vin);
+      const expectedOut = -2 * vin;
+      const expectedEOutn = -expectedOut / 1000;
+      assert.ok(Math.abs(board.nodeVoltage('out') - expectedOut) < 1e-10,
+        `${vin} V control must produce ${expectedOut} V at grounded-outp E1`);
+      assert.ok(Math.abs(board.branchCurrent('E1', 'outn') - expectedEOutn) < 5e-12);
+      // Live resistor extraction is out-of-part positive. Negating it gives
+      // current into RL.a, which must cancel current into E1.outn at the node.
+      assert.ok(Math.abs(board.branchCurrent('E1', 'outn')
+        - board.branchCurrent('RL', 'a')) < 5e-12, `${vin} V live-node KCL`);
+
+      const deck = `self-authored grounded-outp VCVS\nV1 in 0 DC ${vin}\n`
+        + 'E1 0 out in 0 2\nR1 out 0 1k\n.control\nset numdgt=15\nop\n'
+        + 'print v(out) @e1[i]\n.endc\n.end\n';
+      const ng = spawnSync('ngspice', ['-b'], { input: deck, encoding: 'utf8' });
+      assert.equal(ng.status, 0, ng.stderr || ng.stdout);
+      const vMatch = ng.stdout.match(/v\(out\)\s*=\s*([-+0-9.e]+)/i);
+      const iMatch = ng.stdout.match(/@e1\[i\]\s*=\s*([-+0-9.e]+)/i);
+      assert.ok(vMatch && iMatch, ng.stdout);
+      assert.ok(Math.abs(board.nodeVoltage('out') - Number(vMatch[1])) < 1e-10);
+      assert.ok(Math.abs(board.branchCurrent('E1', 'outp') - Number(iMatch[1])) < 1e-10);
+    }
+  });
+
   it('gain 10: 0.5 V control → 5.000 V into the load, current in the row', () => {
     const b = dividerDrivenBench({ kind: 'vcvs', params: { gain: 10 } });
     const vOut = b.nodeVoltage('n_out');
