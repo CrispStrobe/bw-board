@@ -71,7 +71,8 @@ export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'vf', 'rd', 'rs', 'is', 'n', 'vz',              // junctions
     'beta', 'vbe', 'rceSat',                         // bipolar
     'vth', 'k', 'kp', 'w', 'l',                      // field-effect
-    'ohms', 'farads', 'henries', 'volts', 'amps'     // passives and sources
+    'ohms', 'farads', 'henries', 'volts', 'amps',    // passives and sources
+    'kV', 'contactOhms', 'openOhms'                  // motor back-EMF, relay contacts
 ]));
 
 /**
@@ -224,7 +225,41 @@ const CARDS = {
 export const classDefaults = kind => ({
     led:   {rs: 10, n: 1.8, vf: 2.0},
     diode: {rs: 0.568, n: 1.752, vf: 0.7},
-    zener: {rs: 0.568, n: 1.752, vf: 0.7}
+    zener: {rs: 0.568, n: 1.752, vf: 0.7},
+
+    // ── DC-equivalent resistance of a part the exporter cannot spell ──
+    //
+    // A buzzer, a motor winding and a relay coil are each a resistance the
+    // SOLVER applies and any exporter must reproduce, which is the same kind of
+    // number as a junction's rd and belongs in the same place. They were in
+    // three different homes and none of them was here:
+    //
+    //   buzzer     `const g = 1 / 100` inside stampBuzzerResistance — no param,
+    //              not even a named constant, and buzzer is not a registered
+    //              device so there was nowhere else to look
+    //   dc_motor   `part.params?.windingR ?? part.params?.R ?? 10`  (devices/dc-motor.js)
+    //   relay      `part.params?.coilR ?? 200`                      (devices/relay.js)
+    //
+    // The two device defaults stay reachable by their own param names — `R` is
+    // an accepted alias on the motor and gallery circuits use it — so this
+    // changes where the DEFAULT lives, not how a part is configured.
+    //
+    // THESE ARE NOT THE WHOLE DEVICE, and the exporter must not treat them as
+    // such. A motor is this resistance in SERIES WITH A BACK-EMF SOURCE
+    // (`theveninBetween('a','b', kV*omega, R)`); it only looks like a resistor
+    // at a static operating point because omega is 0 there, which is a property
+    // of the moment and not of the part. A relay is this coil PLUS contacts
+    // stamped as controlled switches (0.1 Ohm closed, 1e9 open, with threshold
+    // and hysteresis), so emitting one resistor would model the coil and
+    // silently delete the contacts — on a relay bench, the entire circuit.
+    // Only the buzzer is fully described by its number.
+    // The motor needs BOTH numbers or the emit takes one from here and one from
+    // the device file, which is the shape we keep closing. Same for the relay's
+    // contacts: a coil resistance without them describes a relay that cannot
+    // switch.
+    buzzer:   {ohms: 100},
+    dc_motor: {ohms: 10, kV: 0.01},
+    relay:    {ohms: 200, contactOhms: 0.1, openOhms: 1e9}
 }[kind] ?? {});
 
 /**

@@ -6,9 +6,14 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { classDefaults } from '../parts-library.js';
 
-const R_CONTACT = 0.1;   // closed contact resistance (Ohm)
-const R_OPEN = 1e9;       // open contact (effectively infinite)
+// Contact resistances live in parts-library's classDefaults, beside the coil
+// resistance, because an exporter has to reproduce all three to emit a relay
+// that can switch. Read once here so the stamp and any deck agree by
+// construction rather than by copy.
+const R_CONTACT = classDefaults('relay').contactOhms;
+const R_OPEN = classDefaults('relay').openOhms;
 
 /**
  * Register the relay device model.
@@ -40,7 +45,7 @@ export function registerRelay() {
     },
 
     stamp(ctx, part, state) {
-      const coilR = part.params?.coilR ?? 200;
+      const coilR = part.params?.coilR ?? classDefaults('relay').ohms;
 
       // Coil: resistor between coil_a and coil_b
       ctx.conductance('coil_a', 'coil_b', 1 / coilR);

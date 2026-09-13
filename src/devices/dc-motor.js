@@ -18,10 +18,11 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { classDefaults } from '../parts-library.js';
 
 /** Read winding resistance: accept R as alias for windingR */
 function getR(part) {
-  return part.params?.windingR ?? part.params?.R ?? 10;
+  return part.params?.windingR ?? part.params?.R ?? classDefaults('dc_motor').ohms;
 }
 
 /**
@@ -42,7 +43,7 @@ export function registerDCMotor() {
 
     stamp(ctx, part, state) {
       const R = getR(part);
-      const kV = part.params?.kV ?? 0.01;
+      const kV = part.params?.kV ?? classDefaults('dc_motor').kV;
       const L = part.params?.windingH ?? 0.005;
 
       // Motor as Thévenin between its own pins: back-EMF (kV·omega, + at
@@ -76,14 +77,14 @@ export function registerDCMotor() {
     // one placed in a series resistor.
     branchCurrents(part, state, read) {
       const R = getR(part);
-      const kV = part.params?.kV ?? 0.01;
+      const kV = part.params?.kV ?? classDefaults('dc_motor').kV;
       const i = (read('a') - read('b') - kV * state.omega) / R;
       return new Map([['a', -i], ['b', i]]);
     },
 
     update(part, state, read, tNs) {
       const R = getR(part);
-      const kV = part.params?.kV ?? 0.01;
+      const kV = part.params?.kV ?? classDefaults('dc_motor').kV;
       const kT = part.params?.kT ?? kV; // ideal motor: kT = kV
       const J = part.params?.J ?? 0.001;
       const loadTorque = part.params?.loadTorque ?? 0;

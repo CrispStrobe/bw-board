@@ -1736,7 +1736,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const netB = findNet(nets, part.id, 'b');
       const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
-      const i = (vA - vB) / 100;              // must match stampBuzzerResistance
+      // Reads the SAME resistance the stamp used. The comment here already said
+      // "must match stampBuzzerResistance" and the literal was the reason it
+      // could stop matching: giving the stamp `params.ohms` made a 400 Ohm
+      // buzzer report 4x its current, because extraction still divided by 100.
+      const bzOhms = /** @type {number} */ (part.params?.ohms ?? classDefaults('buzzer').ohms);
+      const i = (vA - vB) / bzOhms;
       currents.set('a', -i);
       currents.set('b', i);
     }
@@ -2406,7 +2411,13 @@ function stampMcuPins(A, b, part, nets, nodeIndex, groundNetId, pinSources, srcS
 function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
   const netA = findNet(nets, part.id, 'a');
   const netB = findNet(nets, part.id, 'b');
-  const g = 1 / 100; // 100 Ω
+  // params.ohms first, then the one table. The walker in board.js reads it the
+  // same way; when this read only the table and the walker read the param, an
+  // explicitly-sized buzzer drew the default here and the configured value
+  // there — reintroducing the very disagreement this change closed, and my own
+  // test caught it before it landed.
+  const ohms = /** @type {number} */ (part.params?.ohms ?? classDefaults('buzzer').ohms);
+  const g = 1 / ohms;
   stampTwoTerminal(A, netA, netB, g, nodeIndex);
 }
 

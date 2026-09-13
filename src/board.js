@@ -21,7 +21,7 @@
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import { solveMNA, OPAMP_ISHORT_DEFAULT, kneeFromVf } from './mna.js';
-import { resolveParams } from './parts-library.js';
+import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
@@ -3874,6 +3874,29 @@ export class BoardImpl {
           }
           break;
         }
+        case 'buzzer': {
+          // A BUZZER IS A RESISTANCE TO THE WALKER TOO, AND IT WAS NOT ONE.
+          //
+          // `stampBuzzerResistance` puts it in the MNA matrix, so branchCurrent
+          // was right — but this walker had no case for it, so the walk STOPPED
+          // at the buzzer and nodeVoltage never saw the load. The two answers
+          // then described different circuits, which is the two-solvers-two-
+          // truths trap mna.js warns about, in the one place nothing checked.
+          //
+          // Measured, identical topology, 5 V through 100 Ohm:
+          //   resistor 100   nodeVoltage 2.500000   i 25.0000 mA   consistent
+          //   buzzer         nodeVoltage 5.000000   i 25.0000 mA   DISAGREE
+          //   ldr            nodeVoltage 4.999500   i  0.0050 mA   consistent
+          //
+          // 25 mA through 100 Ohm cannot leave the node at 5 V.
+          const ohms = /** @type {number} */ (part.params.ohms ?? classDefaults('buzzer').ohms);
+          const otherT = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherT);
+          if (otherNet) {
+            this._gatherSourcesInner(otherNet, visited, rAccum + ohms, out);
+          }
+          break;
+        }
         case 'ldr': {
           // Photoresistor: control 0…1 maps to resistance range.
           // 0 = dark (high R, e.g. 1MΩ), 1 = bright (low R, e.g. 100Ω).
@@ -4093,6 +4116,17 @@ export class BoardImpl {
           const otherNet = this._netForTerminal(part.id, otherTerminal);
           if (!otherNet) continue;
           const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum);
+          if (result) return result;
+          break;
+        }
+
+        case 'buzzer': {
+          // Same hole as in _gatherSourcesInner — see the note there.
+          const ohms = /** @type {number} */ (part.params.ohms ?? classDefaults('buzzer').ohms);
+          const otherTerminal = t.terminal === 'a' ? 'b' : 'a';
+          const otherNet = this._netForTerminal(part.id, otherTerminal);
+          if (!otherNet) continue;
+          const result = this._traceToSourceInner(otherNet, part.id, visited, rAccum + ohms);
           if (result) return result;
           break;
         }

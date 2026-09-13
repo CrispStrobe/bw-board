@@ -52,7 +52,22 @@ test('every schema field is one the solver actually reads', () => {
     // first draft, read by nothing, and matched a top-level geometry width in
     // all 267 bw-circuit-ui sidecars. The set is the CONTRACT another repo
     // gates on, so an unread name there is a rule imposed for no reason.
-    const src = ['src/mna.js', 'src/board.js', 'src/ac.js'].map(f => read(f)).join('\n');
+    // THE SOLVER IS NOT THREE FILES. A registered device stamps its own
+    // behaviour in `src/devices/`, so a number it reads is read by the solver
+    // just as surely as one mna.js reads — and the scan said `kV`,
+    // `contactOhms` and `openOhms` were unread the moment the motor and relay
+    // constants got a home, when relay.js and dc-motor.js were reading all
+    // three. A file list is a claim about where the solver lives; enumerate it
+    // rather than remember it.
+    const deviceDir = path.join(ROOT, 'src/devices');
+    const deviceFiles = fs.existsSync(deviceDir)
+        ? fs.readdirSync(deviceDir).filter(f => f.endsWith('.js')).map(f => `src/devices/${f}`)
+        : [];
+    assert.ok(deviceFiles.length >= 5,
+        `only ${deviceFiles.length} device file(s) found — the scan drifted and would report `
+        + 'every device-only field as unread');
+    const src = ['src/mna.js', 'src/board.js', 'src/ac.js', ...deviceFiles]
+        .map(f => read(f)).join('\n');
     // Card keys are checked as KEYS, not by searching joined text for `.key` —
     // the first version did the latter and reported `bv` unread when a card
     // plainly carried it. The gate was right about bv for the wrong reason:
