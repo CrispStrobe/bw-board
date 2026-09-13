@@ -62,39 +62,12 @@ export function toNgspice(circuit, {analysis = '.op', precision = false} = {}) {
 }
 
 /**
- * Parse ngspice batch `.op` output into {node: volts}.
+ * Parse ngspice batch output into `{node: volts}`.
  *
- * IT IS A TABLE, NOT `V(n)=x`. Batch mode prints
- *
- *     \tNode                                  Voltage
- *     \t----                                  -------
- *     \tn2                               6.666667e+00
- *
- * with the node name BARE. The interactive `print v(2)` form does use
- * `v(2) = ...`, and assuming that form here produced "0 nodes compared" across
- * all 14 circuits — twice, because the first fix guessed at the separator
- * instead of reading the output. Zero compared must never read as agreement,
- * so the caller is expected to treat an empty result as a failure to measure.
+ * RE-EXPORTED, NOT REDEFINED. This lived here first and now lives in
+ * `src/ngspice.js`, because `bwc oracle` needs the same parser and a second
+ * copy of a format rule is how the format rule rots. The full account of both
+ * output forms -- and of the two development runs where a guessed regex
+ * returned {} for all 14 circuits, which reads as agreement -- is in that file.
  */
-export function parseOp(stdout) {
-    const v = {};
-    const lines = stdout.split('\n');
-    let inTable = false;
-    for (const line of lines) {
-        // THE CONTROL-BLOCK FORM, which is the one worth having: `print` under
-        // `.control` honours numdgt and gives all 16 digits as `v(n2) = 1.0e+01`.
-        // Both forms are parsed here rather than one being chosen, because the
-        // bare `.op` table is still what a hand-written deck produces and a
-        // parser that silently handles only the other returns {} -- which reads
-        // as agreement, not as a failure to measure.
-        const pm = line.match(/^\s*v\(([A-Za-z0-9_.#]+)\)\s*=\s*([-+]?[\d.]+(?:e[-+]?\d+)?)\s*$/i);
-        if (pm) { v[pm[1].toLowerCase()] = Number(pm[2]); continue; }
-        if (/^\s*Node\s+Voltage\s*$/.test(line)) { inTable = true; continue; }
-        if (!inTable) continue;
-        if (/^\s*(Source\s+Current|-+\s*$)/.test(line)) { if (/Source/.test(line)) break; continue; }
-        const m = line.match(/^\s*([A-Za-z0-9_.#]+)\s+([-+]?[\d.]+e[-+]?\d+|[-+]?[\d.]+)\s*$/i);
-        if (m) v[m[1].toLowerCase()] = Number(m[2]);
-        else if (line.trim() === '') { /* blank inside the table is tolerated */ }
-    }
-    return v;
-}
+export { parseOp } from '../../src/ngspice.js';

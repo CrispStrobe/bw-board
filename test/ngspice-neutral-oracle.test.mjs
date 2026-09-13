@@ -101,8 +101,18 @@ describe('MNA vs ngspice (independent numeric solver, same neutral source)', { s
     // nobody invokes cannot fail, so it rots silently and its first real use is
     // a debugging session. Assert from the emitter's own exports that this file
     // reaches both of them.
+    // BOTH SPELLINGS OF AN EXPORT. The scan matched `export function X` only,
+    // so moving parseOp into src/ngspice.js and re-exporting it here made the
+    // export list shrink to one and the gate red -- correctly firing, for the
+    // wrong reason. A re-export is still a name this module offers, and a
+    // re-exported helper with no caller rots exactly like a defined one.
     const src = readFileSync(path.join(HERE, 'lcapy', 'to-ngspice.mjs'), 'utf8');
-    const exported = [...src.matchAll(/^export function (\w+)/gm)].map((m) => m[1]);
+    const exported = [
+        ...[...src.matchAll(/^export function (\w+)/gm)].map((m) => m[1]),
+        ...[...src.matchAll(/^export\s*\{([^}]*)\}/gm)]
+            .flatMap((m) => m[1].split(',').map((x) => x.trim().split(/\s+as\s+/).pop()))
+            .filter(Boolean),
+    ];
     assert.ok(exported.length >= 2, `to-ngspice exports only ${exported.join(', ')}`);
     const self = readFileSync(path.join(HERE, 'ngspice-neutral-oracle.test.mjs'), 'utf8');
     // Count CALLS, not the import line: importing a symbol and never using it
