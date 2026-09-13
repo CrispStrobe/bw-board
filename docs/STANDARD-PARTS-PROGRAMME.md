@@ -88,6 +88,70 @@ parameters the solver uses and the `.model` line the exporter emits describe the
 SAME DEVICE — emit the card, run ngspice, run our solver, compare. That is the
 gate the LED's 10/2/5 split fails today.
 
+## The corpus is the acceptance instrument, and it has to be built
+
+**Missing from the first two drafts of this plan, and it is the part that makes
+the rest verifiable.** A part card is a claim about a device. Hand-checking one
+circuit per part proves the card was typed correctly, not that the device is
+right — and every hand-check in this repo's history was written by someone who
+had already decided how the circuit behaves.
+
+So: **no card is accepted until it has been run over thousands of circuits
+against an independent engine.**
+
+### Sources, all measured 2026-09-13 (see the private corpus repo)
+
+| source | usable | licence tier |
+|---|---|---|
+| `touhid314/cktformer-dataset` | **~12,200 of 31,341** simulation-validated | 3 |
+| our gallery corpus | **1,607 reachable** (56 today) | ours |
+| `spice_netlist_generator` | **unlimited, seeded** | 1 — the only publishable one |
+| `bhatvineet/masala-chai` | 6,069 topologies, values to supply | 3 |
+| `ADI2005/spice-circuits-finetune-v2` | ~67 % of its rows, complete decks | 3 |
+| symbench | 63 runnable + 4,396 needing models | 2 |
+
+Held in `CrispStrobe/circuit-oracle-corpora` (private), tiered so redistribution
+is mechanical: all three tiers are usable as ORACLE INPUT, only tier 1 may ever
+be published, and tier 3 — no declared licence — is the MOST restricted.
+
+### What still has to be built
+
+1. **The corpus itself.** Fetchers exist (`harness/fetch-corpus.mjs`, tier
+   derived from the licence text). cktformer needs a file-level fetcher because
+   its `netlist` column holds a PATH, not content.
+2. **A Spectre/symbolic -> neutral importer**, so topology-only corpora become
+   runnable: we assign values, both engines get the identical ones. Topological
+   variety is the scarce thing; values are free.
+3. **A standard model library** — the same cards this programme adds. It
+   unlocks symbench's 4,396, cktformer's non-runnable majority, Si7li's vendor
+   parts (`2N3391A`, `2N4126`) and phy-chip-bench at once. **The parts library
+   and the corpus are the same work seen from two ends.**
+4. **A corpus baseline**, committed, so every later change diffs against it
+   rather than against a remembered number.
+
+### The acceptance rule for a card
+
+    emit the card -> ngspice
+    same circuit  -> our solver
+    compare over every corpus circuit that uses that device class
+
+A card is done when the corpus agrees within a stated tolerance, the tolerance
+is recorded with the reading that set it, and the count of circuits it was
+measured over is recorded beside it. **"Agrees" with no denominator is not a
+result** — the two-pass LED delta looked like 2,516 of 2,525 readings until it
+was actually run, when it was 313 of 2,739.
+
+### Method notes already paid for
+
+- **Compare like with like.** A 1 ms transient against a DC `.op` showed three
+  capacitor circuits disagreeing by 36 %, 81 % and 151,626,595 %. All were
+  0.0000 % once settled. The shape of that wrong answer — all capacitors — was
+  exactly convincing enough to publish as a solver defect.
+- **Zero compared is not agreement.** Two separate harness bugs reported clean
+  runs over an empty set.
+- **Durable writes per line.** A sweep that commits its result at the end
+  cannot be interrupted, and anything taking hours will be.
+
 ## What "recorded" means here
 
 Every part addition lands with: the card, its provenance (datasheet or the
