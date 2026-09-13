@@ -20,7 +20,7 @@
  *      SPICE's `Iref na nb amps` drives current FROM na THROUGH the source TO
  *      nb internally, i.e. OUT of nb into the circuit. So `to` is nb.
  */
-export function toNgspice(circuit, {analysis = '.op'} = {}) {
+export function toNgspice(circuit, {analysis = '.op', precision = false} = {}) {
     const lines = [`* ${circuit.name}`];
     let needsDiodeModel = false;
     for (const [type, ref, n1, n2, value] of circuit.parts) {
@@ -38,7 +38,26 @@ export function toNgspice(circuit, {analysis = '.op'} = {}) {
         // disagreement is about the SOLVER and not about two different parts.
         lines.push('.MODEL DMOD D (IS=2.52E-9 RS=0.568 N=1.752)');
     }
-    lines.push(analysis, '.END');
+    if (precision) {
+        // THE `.op` TABLE IS FIXED AT SEVEN SIGNIFICANT FIGURES, and that is a
+        // property of the PRINT FORMAT, not of the solve. `series-three` reads
+        // 1.015385e+01 where ngspice actually computed 10.153846153846150, so
+        // comparing at 1e-6 charged us a 3.8e-6 "disagreement" that does not
+        // exist -- our own answer is within 1.2e-9 of it. `.options numdgt` does
+        // NOT change the table; only the interactive `print` does, and it needs
+        // a .control block.
+        //
+        // Do not widen a tolerance to absorb an instrument's rounding. Read the
+        // instrument at the precision it can actually give.
+        const nodes = [...new Set(circuit.parts
+            .flatMap(([, , n1, n2]) => [n1, n2])
+            .filter((n) => n !== 0))].sort((a, b) => a - b);
+        lines.push('.control', 'set numdgt=15', analysis.replace(/^\./, ''),
+            `print ${nodes.map((n) => `v(n${n})`).join(' ')}`, '.endc');
+    } else {
+        lines.push(analysis);
+    }
+    lines.push('.END');
     return lines.join('\n') + '\n';
 }
 
@@ -62,6 +81,14 @@ export function parseOp(stdout) {
     const lines = stdout.split('\n');
     let inTable = false;
     for (const line of lines) {
+        // THE CONTROL-BLOCK FORM, which is the one worth having: `print` under
+        // `.control` honours numdgt and gives all 16 digits as `v(n2) = 1.0e+01`.
+        // Both forms are parsed here rather than one being chosen, because the
+        // bare `.op` table is still what a hand-written deck produces and a
+        // parser that silently handles only the other returns {} -- which reads
+        // as agreement, not as a failure to measure.
+        const pm = line.match(/^\s*v\(([A-Za-z0-9_.#]+)\)\s*=\s*([-+]?[\d.]+(?:e[-+]?\d+)?)\s*$/i);
+        if (pm) { v[pm[1].toLowerCase()] = Number(pm[2]); continue; }
         if (/^\s*Node\s+Voltage\s*$/.test(line)) { inTable = true; continue; }
         if (!inTable) continue;
         if (/^\s*(Source\s+Current|-+\s*$)/.test(line)) { if (/Source/.test(line)) break; continue; }
