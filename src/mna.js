@@ -878,7 +878,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // Independent voltage source (may have current limit for CC mode)
       if (part.kind === 'vsource') {
         const posNet = findNet(nets, part.id, 'pos');
-        if (posNet && nodeIndex.has(posNet)) {
+        const negNet = findNet(nets, part.id, 'neg');
+        // Ground is implicit and therefore absent from nodeIndex. The source
+        // still needs one MNA row when EITHER terminal is a live node; the
+        // stamp below already handles an absent (ground) index on either side.
+        if ((posNet && nodeIndex.has(posNet)) || (negNet && nodeIndex.has(negNet))) {
           vsIndex.set(part.id, vsCount++);
         }
       }
