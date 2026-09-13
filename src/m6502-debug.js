@@ -22,6 +22,10 @@ import { installInstructionDebugEvents, logicalTimeDomain } from './instruction-
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
   const cpu = machine.cpu;
+  // One architectural maximum drives descriptor, guard, and refusal text.
+  const maxCodeAddress = 0xffff;
+  const codeAddressRefusal =
+    `code breakpoint addr must be in 0x0000..0x${maxCodeAddress.toString(16)}`;
   const cpuId = opts.cpuId || 'm6502';
   const symbols = opts.symbols ?? null;
 
@@ -322,7 +326,7 @@ export function createM6502DebugTarget(adapter, opts = {}) {
       return {
         steps: [...(symbols ? ['insn', 'block'] : ['insn']), 'over', 'out'],
         breakpoints: [...(symbols ? ['code', 'yield'] : ['code']), 'write'],
-        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: 0xffff,
+        runTo: [{kind: 'address', space: 'code', addressMin: 0, addressMax: maxCodeAddress,
           stopSides: ['before'], installation: 'sync'}],
         timeFreezes: true,
         consumes: [],
@@ -562,8 +566,8 @@ export function createM6502DebugTarget(adapter, opts = {}) {
         // Without it an out-of-range address is accepted and stored: it cannot
         // match a 16-bit pc, so it is a handle for a breakpoint that never fires —
         // accepted but dead, and one mask away from the z80's wrong-place halt.
-        if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > 0xffff) {
-          return { unsupported: 'code breakpoint addr must be in 0x0000..0xffff' };
+        if (!Number.isSafeInteger(spec.addr) || spec.addr < 0 || spec.addr > maxCodeAddress) {
+          return { unsupported: codeAddressRefusal };
         }
         const id = nextBpId++;
         breakpoints.set(id, { kind: 'code', addr: spec.addr });
