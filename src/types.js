@@ -106,13 +106,18 @@
  * @property {(part: string, terminal: string) => number} branchCurrent
  *   Amperes into the named terminal. Requires the MNA solver (phase 6).
  *
- * @property {() => {analysis: object, converged: boolean,
+ * @property {() => {analysis: {kind: 'dc-operating-point', scope: string,
+ *   supportedKinds: string[], capacitors: 'open', sources: 'fixed-dc-only',
+ *   controlledSources: 'ideal-explicit-finite-parameters-only',
+ *   currentConvention: 'positive-into-part-terminal'}, converged: boolean,
  *   nodeVoltages: Map<string, number>,
  *   branchCurrents: Map<string, Map<string, number>>,
  *   railConflicts: string[]}} operatingPoint
  *   Non-mutating capacitor-open DC analysis for the explicitly reported
- *   supported scope. Result currents are positive into each named terminal;
- *   unsupported circuit semantics throw rather than being approximated.
+ *   supported scope (static native R/C/V/I and ideal finite-parameter
+ *   VCVS/VCCS). Result currents are positive into each named terminal;
+ *   unsupported, floating, or non-ideal circuit semantics throw rather than
+ *   being approximated.
  *
  * @property {(a: string, b: string) => number | 'requires-power-off'} resistance
  *   Resistance between two nets. Returns the reason, NOT a number, when the

@@ -36,6 +36,40 @@ function sameNetSourceBench(volts) {
   return board;
 }
 
+function controlledBench(volts = 1, extraParts = []) {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'V1', kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] },
+    { id: 'E1', kind: 'vcvs', params: { gain: 2 },
+      terminals: ['outp', 'outn', 'inp', 'inn'] },
+    { id: 'G2', kind: 'vccs', params: { gm: 1e-3 },
+      terminals: ['outp', 'outn', 'inp', 'inn'] },
+    resistor('RE', 1000), resistor('RG', 1000),
+    { id: 'C1', kind: 'capacitor', params: { farads: 1e-6 }, terminals: ['a', 'b'] },
+    ...extraParts, gnd,
+  ], [
+    { id: 'ctl', terminals: [
+      { part: 'V1', terminal: 'pos' },
+      { part: 'E1', terminal: 'inp' }, { part: 'G2', terminal: 'inp' },
+    ] },
+    { id: 'eout', terminals: [
+      { part: 'E1', terminal: 'outp' }, { part: 'RE', terminal: 'a' },
+      { part: 'C1', terminal: 'a' },
+    ] },
+    { id: 'gout', terminals: [
+      { part: 'G2', terminal: 'outp' }, { part: 'RG', terminal: 'a' },
+    ] },
+    { id: 'gnd', terminals: [
+      { part: 'V1', terminal: 'neg' },
+      { part: 'E1', terminal: 'outn' }, { part: 'E1', terminal: 'inn' },
+      { part: 'G2', terminal: 'outn' }, { part: 'G2', terminal: 'inn' },
+      { part: 'RE', terminal: 'b' }, { part: 'RG', terminal: 'b' },
+      { part: 'C1', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+    ] },
+  ]);
+  return board;
+}
+
 function stateWitness(board) {
   return {
     timeNs: board.timeNs,
@@ -138,6 +172,60 @@ describe('BoardImpl.operatingPoint', () => {
     assert.ok(Math.abs(op.nodeVoltages.get('out') - Number(match[1])) < 1e-6);
   });
 
+  it('solves ideal VCVS/VCCS with signed terminal currents, KCL, and no state adoption', () => {
+    for (const volts of [1, -1]) {
+      const board = controlledBench(volts);
+      const before = stateWitness(board);
+      const first = board.operatingPoint();
+      const second = board.operatingPoint();
+      assert.equal(first.converged, true);
+      assert.equal(first.analysis.scope, 'grounded-static-native-r-c-v-i-e-g');
+      assert.equal(first.analysis.controlledSources, 'ideal-explicit-finite-parameters-only');
+      assert.ok(first.analysis.supportedKinds.includes('vcvs'));
+      assert.ok(first.analysis.supportedKinds.includes('vccs'));
+      assert.ok(Math.abs(first.nodeVoltages.get('eout') - 2 * volts) < 1e-10);
+      assert.ok(Math.abs(first.nodeVoltages.get('gout') - volts) < 2e-9);
+      assert.equal(first.branchCurrents.get('E1').get('inp'), 0);
+      assert.equal(Math.abs(first.branchCurrents.get('G2').get('inp')), 0);
+      assert.ok(Math.abs(first.branchCurrents.get('E1').get('outp') + 2e-3 * volts) < 5e-12);
+      assert.ok(Math.abs(first.branchCurrents.get('RE').get('a') - 2e-3 * volts) < 1e-12);
+      assert.ok(Math.abs(first.branchCurrents.get('E1').get('outp')
+        + first.branchCurrents.get('RE').get('a')) < 5e-12, 'VCVS output KCL');
+      assert.ok(Math.abs(first.branchCurrents.get('G2').get('outp') + 1e-3 * volts) < 1e-12);
+      assert.ok(Math.abs(first.branchCurrents.get('RG').get('a') - 1e-3 * volts) < 2e-12);
+      assert.ok(Math.abs(first.branchCurrents.get('G2').get('outp')
+        + first.branchCurrents.get('RG').get('a')) < 2e-12, 'VCCS output KCL');
+      assert.equal(first.branchCurrents.get('C1').get('a'), 0, 'capacitor remains DC-open');
+      assert.notEqual(first.nodeVoltages, second.nodeVoltages);
+      assertUnchanged(board, before);
+    }
+  });
+
+  it('matches ngspice .op for ideal VCVS/VCCS polarities and source currents', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    for (const volts of [1, -1]) {
+      // bw-board defines G2 as current injected INTO outp. In SPICE's G-card
+      // convention that is the reversed output-node order: 0 gout ctl 0.
+      const deck = `self-authored ideal controlled sources\nV1 ctl 0 DC ${volts}\n`
+        + 'E1 eout 0 ctl 0 2\nRE eout 0 1k\nG2 0 gout ctl 0 1m\nRG gout 0 1k\n'
+        + '.control\nset numdgt=15\nop\nprint v(eout) v(gout) @e1[i] @g2[i]\n.endc\n.end\n';
+      const ng = spawnSync('ngspice', ['-b'], { input: deck, encoding: 'utf8' });
+      assert.equal(ng.status, 0, ng.stderr || ng.stdout);
+      const read = (expr) => {
+        const match = ng.stdout.match(new RegExp(`${expr}\\s*=\\s*([-+0-9.e]+)`, 'i'));
+        assert.ok(match, ng.stdout);
+        return Number(match[1]);
+      };
+      const op = controlledBench(volts).operatingPoint();
+      assert.ok(Math.abs(op.nodeVoltages.get('eout') - read('v\\(eout\\)')) < 1e-10);
+      assert.ok(Math.abs(op.nodeVoltages.get('gout') - read('v\\(gout\\)')) < 2e-9);
+      assert.ok(Math.abs(op.branchCurrents.get('E1').get('outp') - read('@e1\\[i\\]')) < 1e-10);
+      // @g2[i] enters SPICE G2's first output terminal, which is our outn.
+      assert.ok(Math.abs(op.branchCurrents.get('G2').get('outn') - read('@g2\\[i\\]')) < 1e-10);
+    }
+  });
+
   it('returns non-convergence explicitly instead of blessing the last iterate', () => {
     const board = new BoardImpl(5);
     const source = (id, volts) => ({
@@ -151,6 +239,124 @@ describe('BoardImpl.operatingPoint', () => {
     const op = board.operatingPoint();
     assert.equal(op.converged, false, 'contradictory ideal sources have no operating point');
     assertUnchanged(board, before);
+  });
+
+  it('returns controlled-source constraint non-convergence without mutating live state', () => {
+    const board = new BoardImpl(5);
+    board.setNetlist([
+      { id: 'V1', kind: 'vsource', params: { volts: 1 }, terminals: ['pos', 'neg'] },
+      { id: 'E1', kind: 'vcvs', params: { gain: 2 },
+        terminals: ['outp', 'outn', 'inp', 'inn'] }, gnd,
+    ], [
+      { id: 'n', terminals: [
+        { part: 'V1', terminal: 'pos' }, { part: 'E1', terminal: 'outp' },
+        { part: 'E1', terminal: 'inp' },
+      ] },
+      { id: 'gnd', terminals: [
+        { part: 'V1', terminal: 'neg' }, { part: 'E1', terminal: 'outn' },
+        { part: 'E1', terminal: 'inn' }, { part: 'G1', terminal: 'gnd' },
+      ] },
+    ]);
+    const before = stateWitness(board);
+    assert.equal(board.operatingPoint().converged, false);
+    assertUnchanged(board, before);
+  });
+
+  it('refuses non-ideal, unspecified, non-finite, same-net, and disconnected controlled sources', () => {
+    const cases = [
+      [{ kind: 'vcvs', params: {} }, /gain must be an explicit finite number/],
+      [{ kind: 'vcvs', params: { gain: Infinity } }, /gain must be an explicit finite number/],
+      [{ kind: 'vccs', params: {} }, /gm must be an explicit finite number/],
+      [{ kind: 'vccs', params: { gm: Number.NaN } }, /gm must be an explicit finite number/],
+      [{ kind: 'vcvs', params: { gain: 2, railHigh: 5 } }, /declared railHigh/],
+      [{ kind: 'vcvs', params: { gain: 2, rout: 10 } }, /declared rout/],
+      [{ kind: 'vcvs', params: { gain: 2, iShort: 0.04 } }, /declared iShort/],
+      [{ kind: 'vccs', params: { gm: 1e-3, iMax: 0.01 } }, /declared iMax/],
+      [{ kind: 'vccs', params: { gm: 1e-3, railLow: 0 } }, /declared railLow/],
+    ];
+    for (const [source, pattern] of cases) {
+      const board = new BoardImpl(5);
+      board.setNetlist([
+        { id: 'S1', kind: source.kind, params: source.params,
+          terminals: ['outp', 'outn', 'inp', 'inn'] }, resistor('R1', 1000), gnd,
+      ], [
+        { id: 'out', terminals: [{ part: 'S1', terminal: 'outp' }, { part: 'R1', terminal: 'a' }] },
+        { id: 'gnd', terminals: [
+          { part: 'S1', terminal: 'outn' }, { part: 'S1', terminal: 'inp' },
+          { part: 'S1', terminal: 'inn' }, { part: 'R1', terminal: 'b' },
+          { part: 'G1', terminal: 'gnd' },
+        ] },
+      ]);
+      const before = stateWitness(board);
+      assert.throws(() => board.operatingPoint(), pattern);
+      assertUnchanged(board, before);
+    }
+
+    const sameNet = new BoardImpl(5);
+    sameNet.setNetlist([
+      { id: 'E1', kind: 'vcvs', params: { gain: 0 },
+        terminals: ['outp', 'outn', 'inp', 'inn'] }, resistor('R1', 1000), gnd,
+    ], [
+      { id: 'n', terminals: [{ part: 'R1', terminal: 'a' }] },
+      { id: 'gnd', terminals: [
+        { part: 'E1', terminal: 'outp' }, { part: 'E1', terminal: 'outn' },
+        { part: 'E1', terminal: 'inp' }, { part: 'E1', terminal: 'inn' },
+        { part: 'R1', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+      ] },
+    ]);
+    const sameBefore = stateWitness(sameNet);
+    assert.throws(() => sameNet.operatingPoint(),
+      /unsupported same-net ideal VCVS output E1; outp and outn both resolve to gnd/);
+    assertUnchanged(sameNet, sameBefore);
+
+    const disconnected = new BoardImpl(5);
+    disconnected.setNetlist([
+      { id: 'E1', kind: 'vcvs', params: { gain: 2 },
+        terminals: ['outp', 'outn', 'inp', 'inn'] }, resistor('R1', 1000), gnd,
+    ], [
+      { id: 'out', terminals: [{ part: 'E1', terminal: 'outp' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'gnd', terminals: [
+        { part: 'E1', terminal: 'outn' }, { part: 'E1', terminal: 'inn' },
+        { part: 'R1', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+      ] },
+    ]);
+    const disconnectedBefore = stateWitness(disconnected);
+    assert.throws(() => disconnected.operatingPoint(), /terminal inp is not connected/);
+    assertUnchanged(disconnected, disconnectedBefore);
+  });
+
+  it('does not let control pins or VCCS output current anchor a floating DC network', () => {
+    const floatingControl = new BoardImpl(5);
+    floatingControl.setNetlist([
+      { id: 'E1', kind: 'vcvs', params: { gain: 2 },
+        terminals: ['outp', 'outn', 'inp', 'inn'] }, resistor('RO', 1000),
+      resistor('RC', 1000), gnd,
+    ], [
+      { id: 'out', terminals: [{ part: 'E1', terminal: 'outp' }, { part: 'RO', terminal: 'a' }] },
+      { id: 'cp', terminals: [{ part: 'E1', terminal: 'inp' }, { part: 'RC', terminal: 'a' }] },
+      { id: 'cn', terminals: [{ part: 'E1', terminal: 'inn' }, { part: 'RC', terminal: 'b' }] },
+      { id: 'gnd', terminals: [
+        { part: 'E1', terminal: 'outn' }, { part: 'RO', terminal: 'b' },
+        { part: 'G1', terminal: 'gnd' },
+      ] },
+    ]);
+    assert.throws(() => floatingControl.operatingPoint(), /DC-floating nets cp, cn|DC-floating nets cn, cp/);
+
+    const floatingOutput = new BoardImpl(5);
+    floatingOutput.setNetlist([
+      { id: 'V1', kind: 'vsource', params: { volts: 1 }, terminals: ['pos', 'neg'] },
+      { id: 'G2', kind: 'vccs', params: { gm: 1e-3 },
+        terminals: ['outp', 'outn', 'inp', 'inn'] }, resistor('RO', 1000), gnd,
+    ], [
+      { id: 'ctl', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'G2', terminal: 'inp' }] },
+      { id: 'op', terminals: [{ part: 'G2', terminal: 'outp' }, { part: 'RO', terminal: 'a' }] },
+      { id: 'on', terminals: [{ part: 'G2', terminal: 'outn' }, { part: 'RO', terminal: 'b' }] },
+      { id: 'gnd', terminals: [
+        { part: 'V1', terminal: 'neg' }, { part: 'G2', terminal: 'inn' },
+        { part: 'G1', terminal: 'gnd' },
+      ] },
+    ]);
+    assert.throws(() => floatingOutput.operatingPoint(), /DC-floating nets op, on|DC-floating nets on, op/);
   });
 
   it('rejects a nonzero source shorted onto one net and preserves a zero-volt control', () => {

@@ -66,9 +66,19 @@ function boardModel(allTerminals, boardVcc) {
     if (role === 'gpio') gpioTerminals.push(t);
     else powerTerminals.push({ name: t, role });
   }
+  // Explicit model policy, not a guess from voltage or `_staticDrives`.
+  // These positive supply outputs are a convenience fallback so a bare
+  // development board can power a lesson. When an authored ideal `vcc` part
+  // owns the net, the fallback yields. Ground and GPIO never do. This is an
+  // application abstraction, NOT a Schottky-diode model: a real forward-fed
+  // supply can still carry current and needs an explicit physical model.
+  const automaticSupplyFallbackTerminals = new Set(powerTerminals
+    .filter(({ role }) => role === '5v' || role === '3v3' || role === 'vsys')
+    .map(({ name }) => name));
 
   return {
     terminals: allTerminals,
+    automaticSupplyFallbackTerminals,
 
     init() {
       const drives = {};

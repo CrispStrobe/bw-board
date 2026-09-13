@@ -55,8 +55,11 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'vsource', 'isource', 'gnd', 'vcc',
+  'resistor', 'capacitor', 'vsource', 'isource', 'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
+
+const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
+const NONIDEAL_CONTROLLED_PARAMS = ['railLow', 'railHigh', 'rout', 'iShort', 'iMax'];
 
 /**
  * Nets whose DC voltage is fixed, directly or through a resistive/voltage
@@ -87,6 +90,11 @@ function dcFloatingNets(parts, nets) {
       join(netFor(part, 'a'), netFor(part, 'b'));
     } else if (part.kind === 'vsource') {
       join(netFor(part, 'pos'), netFor(part, 'neg'));
+    } else if (part.kind === 'vcvs') {
+      // An ideal VCVS fixes its OUTPUT differential voltage, so that pair
+      // propagates a DC reference. Its ideal control pins draw no current and
+      // impose no common-mode constraint. A VCCS fixes no voltage anywhere.
+      join(netFor(part, 'outp'), netFor(part, 'outn'));
     }
   }
   const hasGround = parts.some(p => p.kind === 'gnd' && netFor(p, 'gnd'));
@@ -106,7 +114,9 @@ function dcFloatingNets(parts, nets) {
 
 /** Normalize the accepted kinds without changing branchCurrent's legacy API. */
 function currentsIntoTerminals(parts, branchCurrents) {
-  const reverse = new Set(['resistor', 'capacitor', 'isource']);
+  // MNA stores VCCS output current as injection INTO outp. That is current
+  // leaving the part, so reverse it only at this new normalized boundary.
+  const reverse = new Set(['resistor', 'capacitor', 'isource', 'vccs']);
   const kinds = new Map(parts.map(p => [p.id, p.kind]));
   const out = new Map();
   for (const [partId, terminals] of branchCurrents) {
@@ -2068,8 +2078,8 @@ export class BoardImpl {
 
   /**
    * Compute, but do not adopt, a DC operating point for the first proven
-   * public domain: grounded static native R/C/V/I networks. This is not an
-   * instantaneous read: capacitors are open, independent of stored charge.
+   * public domain: grounded static native R/C/V/I/E/G networks. This is not
+   * an instantaneous read: capacitors are open, independent of stored charge.
    * Positive current means current INTO the named part terminal.
    */
   operatingPoint() {
@@ -2079,7 +2089,7 @@ export class BoardImpl {
     for (const part of this._solveParts) {
       if (!OPERATING_POINT_KINDS.has(part.kind)) {
         throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
-          + 'the initial domain is static R/C/V/I/GND/VCC only');
+          + 'the supported domain is static R/C/V/I plus ideal VCVS/VCCS only');
       }
       if (part.kind === 'vsource') {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
@@ -2102,11 +2112,39 @@ export class BoardImpl {
             + `${volts} V cannot be imposed across the same net ${posNet}`);
         }
       }
+      if (part.kind === 'vcvs' || part.kind === 'vccs') {
+        const parameter = part.kind === 'vcvs' ? 'gain' : 'gm';
+        if (typeof part.params?.[parameter] !== 'number'
+            || !Number.isFinite(part.params[parameter])) {
+          throw new Error(`operatingPoint: unsupported ${part.kind} ${part.id}; `
+            + `${parameter} must be an explicit finite number`);
+        }
+        const nonideal = NONIDEAL_CONTROLLED_PARAMS.find(name =>
+          Object.prototype.hasOwnProperty.call(part.params ?? {}, name));
+        if (nonideal) {
+          throw new Error(`operatingPoint: unsupported non-ideal ${part.kind} ${part.id}; `
+            + `declared ${nonideal} is outside the ideal controlled-source domain`);
+        }
+        for (const terminal of CONTROLLED_SOURCE_TERMINALS) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported ${part.kind} ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+        if (part.kind === 'vcvs') {
+          const outpNet = this._netForTerminal(part.id, 'outp');
+          const outnNet = this._netForTerminal(part.id, 'outn');
+          if (outpNet === outnNet) {
+            throw new Error(`operatingPoint: unsupported same-net ideal VCVS output ${part.id}; `
+              + `outp and outn both resolve to ${outpNet}`);
+          }
+        }
+      }
     }
     const floating = dcFloatingNets(this._solveParts, this._solveNets);
     if (floating.length) {
       throw new Error(`operatingPoint: DC-floating net${floating.length === 1 ? '' : 's'} `
-        + `${floating.join(', ')}; capacitors and independent current sources do not anchor voltage`);
+        + `${floating.join(', ')}; capacitors, current sources, and ideal control pins do not anchor voltage`);
     }
 
     // solveMNA's current-limit loop writes a private top-level field on source
@@ -2122,9 +2160,11 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-v-i',
+        scope: 'grounded-static-native-r-c-v-i-e-g',
+        supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: 'fixed-dc-only',
+        controlledSources: 'ideal-explicit-finite-parameters-only',
         sourceDefaults: { vsourceVolts: this.vcc, isourceAmps: 0.001 },
         tSeconds: 0,
         powered: true,
