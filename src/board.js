@@ -437,11 +437,29 @@ export class BoardImpl {
   }
 
   static _expandComposites(parts, nets) {
+    // IDEMPOTENT, BECAUSE THE OUTPUT OF THIS FUNCTION IS A LEGAL INPUT TO IT.
+    //
+    // A caller that round-trips the board's own list --
+    // `setNetlist(board.parts, board.nets)`, which is the obvious way to
+    // re-stamp after changing a param -- used to get the composites synthesized
+    // a SECOND time, under the same ids, and the duplicates are real loads.
+    // Measured on a Pico blink bench:
+    //
+    //   call 1   7 parts   I(gp25) 2.833 mA   V 3.229173
+    //   call 2   9 parts   I(gp25) 4.152 mA   V 3.196200     <- +46.6 %
+    //   call 3  11 parts
+    //
+    // Two onboard LEDs on one pin, and nothing said so: the ids collide, the
+    // answer moves, and the summary reads clean. Skipping a composite whose
+    // expansion is already present makes the function safe to re-run, which is
+    // what any caller reasonably assumes of a pure-looking static.
+    const present = new Set(parts.map((p) => p.id));
     const extraParts = [];
     const netCopies = nets.map((n) => ({ ...n, terminals: [...n.terminals] }));
     const netsOf = (partId, terminal) => netCopies.filter(
       (n) => n.terminals.some((t) => t.part === partId && t.terminal === terminal));
     const addLed = (id, anodeNets, cathodeNets) => {
+      if (present.has(id)) return;   // already expanded — see the note above
       extraParts.push({ id, kind: 'led', params: {}, terminals: ['anode', 'cathode'] });
       for (const n of anodeNets) n.terminals.push({ part: id, terminal: 'anode' });
       for (const n of cathodeNets) n.terminals.push({ part: id, terminal: 'cathode' });
@@ -473,6 +491,7 @@ export class BoardImpl {
           }
         }
       } else if (p.kind === 'pi_pico') {
+        if (present.has(`${p.id}_onboard`)) continue;   // already expanded
         // Onboard LED: GP25 → 1 kΩ resistor → LED → GND (hardwired on PCB).
         // Expand to synthetic resistor + LED so ledBrightness('<id>_onboard')
         // reports the onboard LED state — same pattern as seven_segment.
