@@ -153,13 +153,24 @@ const CARDS = {
     // literals behind — a literal left behind is the fourth home returning by
     // the back door. `id` is the .model name the exporter already emits.
     //
-    // `generic: true` IS MACHINE-READABLE ON PURPOSE. lego-38's reachability
-    // gate has to answer "is every card reachable from the UI", and the answer
-    // differs by species: a real part number is reachable BY NAME, a generic is
-    // reachable through its CLASS — its kind must be placeable, nothing offers
-    // "NMOS_GENERIC" in a menu. Without a mark that gate needs a hand-kept list
-    // of which cards are real parts, in the other repo, which is one more place
-    // the two can disagree. Derive it: `allCards().filter(c => c.generic)`.
+    // `generic: true` IS MACHINE-READABLE ON PURPOSE, AND IT ANSWERS EXACTLY
+    // ONE QUESTION: is this card an orderable part number? It is NOT a claim
+    // about reachability, and the two came apart the moment the mark existed.
+    //
+    // The mark was added for lego-38's reachability gate, which asks "can a
+    // user get to this card" — and for Q_DEFAULT and NMOS_GENERIC the answer is
+    // "only through its CLASS", since nothing offers "NMOS_GENERIC" in a menu.
+    // It is tempting to read `generic` as "not nameable", and their exporter
+    // briefly did: it refused a generic that the palette also names. LED_RED
+    // breaks that reading — it is marked because "a red LED" is not something
+    // you order by that name, yet it is plainly a palette entry. So a consumer
+    // must ask reachability PER CASE (a generic through its class, a kind that
+    // IS the part through its kind, a part number on a shared class by name)
+    // and use this field only for what it says.
+    //
+    // Derive the set: `allCards().filter(c => c.generic)`. Without the mark
+    // that list is hand-kept in the other repo, which is one more place the two
+    // of us can disagree about which cards are real parts.
     'Q_DEFAULT': {
         id: 'Q_DEFAULT', kind: 'npn', generic: true,
         provenance: "bw-circuit-ui exporters/spice.js '.model Q_DEFAULT NPN "
