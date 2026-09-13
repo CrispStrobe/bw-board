@@ -1731,6 +1731,39 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // branchCurrent read 0.0 mA while its own net carried 43 mA — a
     // KCL-invisible part (found by the EXPECTED-quantities gate on
     // 44-darlington-motor, where the buzzer IS the load being taught).
+    if (part.kind === 'potentiometer') {
+      // A POT CARRIED CURRENT AND REPORTED NONE, on every terminal.
+      //
+      // stampPotentiometer puts two resistors in the matrix, so the wiper
+      // voltage was right — 5 V across a 10k pot solves the wiper to 2.500000 —
+      // while `branchCurrent` returned 0 for a, b AND wiper, when 0.5 mA is
+      // flowing. Same shape as the buzzer's missing walker case: the extraction
+      // switch had no arm for the kind, so a real reading came back as a
+      // confident zero. A meter on a pot read 0 A.
+      //
+      // MIRRORS THE STAMP RATHER THAN RE-DERIVING IT: same authored-position
+      // fallback, same control precedence, same Math.max(1, ...) floor. If the
+      // two ever disagree the current is about a different divider than the
+      // voltage.
+      const authored = Number.isFinite(part.params?.position) ? part.params.position : 0.5;
+      const position = controls?.get(part.id) ?? authored;
+      const totalOhms = /** @type {number} */ (part.params.ohms ?? 10000);
+      const rAW = Math.max(1, totalOhms * (1 - position));
+      const rWB = Math.max(1, totalOhms * position);
+      const vAt = (term) => {
+        const n = findNet(nets, part.id, term);
+        return n ? (nodeVoltages.get(n) ?? 0) : 0;
+      };
+      const vA = vAt('a'), vW = vAt('wiper'), vB = vAt('b');
+      const iAW = (vA - vW) / rAW;   // into `a`, on toward the wiper
+      const iWB = (vW - vB) / rWB;   // out of the wiper, on toward `b`
+      currents.set('a', iAW);
+      currents.set('b', -iWB);
+      // KCL at the wiper: what arrives from `a` and does not leave toward `b`
+      // is what the wiper terminal itself carries.
+      currents.set('wiper', iWB - iAW);
+    }
+
     if (part.kind === 'buzzer') {
       const netA = findNet(nets, part.id, 'a');
       const netB = findNet(nets, part.id, 'b');
