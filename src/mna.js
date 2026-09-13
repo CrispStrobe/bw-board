@@ -1110,7 +1110,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
 
         case 'button':
         case 'switch':
-          stampButton(A, b, part, nets, nodeIndex, groundNetId, controls);
+          // Recorded as a companion for the same reason a registered device's
+          // stamps are: an exporter that has no card for this kind would
+          // otherwise drop it, and a CLOSED button dropped from a deck is an
+          // open circuit — the opposite of what the engine solved.
+          deviceStamps.set(part.id, [{ kind: 'cond', tA: 'a', tB: 'b',
+            g: stampButton(A, b, part, nets, nodeIndex, groundNetId, controls) }]);
           break;
 
         case 'vcc':
@@ -1145,7 +1150,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // solver has no model for (a machine's w65c22).
 
         case 'buzzer':
-          stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId);
+          // See the button above. A dropped buzzer left its node at the full
+          // 5 V rail in the deck against the engine's 4.0 — 5 x 100/125, the
+          // buzzer being a 100 Ohm load — on 53 corpus circuits.
+          deviceStamps.set(part.id, [{ kind: 'cond', tA: 'a', tB: 'b',
+            g: stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) }]);
           break;
 
         case 'ldr':
@@ -2308,11 +2317,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
     }
     return { nodeVoltages, branchCurrents, capVoltagesNext, capCurrentsNext,
-      inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions,
+      inductorCurrentsNext, inductorVoltagesNext, converged, opampRegions, deviceStamps,
       railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
   }
 
-  return { nodeVoltages, branchCurrents, converged, opampRegions,
+  return { nodeVoltages, branchCurrents, converged, opampRegions, deviceStamps,
     railConflicts: railConflicts.length ? [...new Set(railConflicts)] : undefined };
 }
 
@@ -2522,6 +2531,7 @@ function stampButton(A, b, part, nets, nodeIndex, groundNetId, controls) {
   const netB = findNet(nets, part.id, 'b');
   const g = pressed ? 1 / 0.001 : 1e-12; // 1mΩ when closed, effectively open when not
   stampTwoTerminal(A, netA, netB, g, nodeIndex);
+  return g;
 }
 
 /**
@@ -2605,6 +2615,7 @@ function stampBuzzerResistance(A, b, part, nets, nodeIndex, groundNetId) {
   const ohms = /** @type {number} */ (part.params?.ohms ?? classDefaults('buzzer').ohms);
   const g = 1 / ohms;
   stampTwoTerminal(A, netA, netB, g, nodeIndex);
+  return g;
 }
 
 /**

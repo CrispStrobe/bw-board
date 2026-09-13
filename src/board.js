@@ -1561,6 +1561,43 @@ export class BoardImpl {
   }
 
   /**
+   * The companion elements the last solve STAMPED for a registered device.
+   *
+   * Every registered model reaches the matrix through the same four
+   * primitives, and `stampDevice` records one entry per companion so that
+   * terminal currents can be derived generically. Those records are the
+   * device's DC linearisation at the converged operating point, in the
+   * engine's own words:
+   *
+   *   {kind: 'cond',    tA, tB, g}        conductance between two terminals
+   *   {kind: 'norton',  t, g, vth}        Thevenin vth behind 1/g, to ground
+   *   {kind: 'between', tP, tN, g, vth}   the same, floating between two pins
+   *   {kind: 'inject',  t, amps}          a current pushed into a terminal
+   *
+   * Exposed so an EXPORTER can write a device the target format has no card
+   * for. A `74hc595` or a `buzzer` dropped from a SPICE deck does not make the
+   * deck smaller, it makes it a different circuit: measured against ngspice, a
+   * dropped '595 left eight LED branches at 0 V against the engine's 1.84, and
+   * a dropped buzzer left its node at the full rail against the engine's
+   * 5 x 100/125. Writing these records instead keeps the two solvers on the
+   * same circuit while every OTHER element stays independently judged.
+   *
+   * What it is NOT: a model. It is one operating point's linearisation, so a
+   * deck built from it is only valid at that bias — the caller must say so.
+   *
+   * @param {string} partId
+   * @returns {Array<Record<string, *>>} empty when the part is not a
+   *   registered device, drove nothing, or the board is unpowered
+   */
+  deviceCompanions(partId) {
+    this._flushSolve();
+    if (!this.powered) return [];
+    if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
+    const rec = this._mnaCache.deviceStamps?.get(partId);
+    return rec ? rec.map(r => ({ ...r })) : [];
+  }
+
+  /**
    * @param {string} a
    * @param {string} b
    * @returns {number | 'requires-power-off'}

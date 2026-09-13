@@ -1,5 +1,39 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-13 `deviceCompanions`: a part with no card must not vanish — lego-ac.
+
+`BoardImpl.deviceCompanions(partId)` returns the companion elements the last
+solve STAMPED for a part: the same records the generic terminal-current
+extraction is already derived from.
+
+  {kind: 'cond',    tA, tB, g}        conductance between two terminals
+  {kind: 'norton',  t, g, vth}        Thevenin vth behind 1/g, to ground
+  {kind: 'between', tP, tN, g, vth}   the same, floating between two pins
+  {kind: 'inject',  t, amps}          a current pushed into a terminal
+
+**WHY AN EXPORTER NEEDS IT.** A part a target format has no card for was
+dropped, and a dropped part does not make a deck smaller — it makes it a
+DIFFERENT CIRCUIT, which the foreign simulator then answers about with total
+confidence. Measured against ngspice on the shipped corpus: a `74hc595` dropped
+this way left eight LED branches at 0 V against the engine's 1.842233 V, and a
+`buzzer` dropped this way left its node at the full 5 V rail against the
+engine's 4.0 (5 x 100/125). **42 kinds present the engine an impedance or a
+source and have no SPICE card, in 1,250 of the 2,163 corpus circuits.**
+
+`button`, `switch` and `buzzer` are built-ins rather than registered devices, so
+they record their own single `cond`. A CLOSED button dropped from a deck is an
+open circuit — the opposite of what the engine solved.
+
+What it is NOT: a model. It is one operating point's linearisation, valid only
+at that bias, and a consumer must label it as such. In the SPICE exporter these
+cases are `original-adapted`, never `original-direct`: the device's own DC
+behaviour is taken as given while every OTHER element stays independently
+judged.
+
+Cost: the accessor copies its records, so a caller cannot edit what the solve
+stamped.
+
+
 2026-09-13 Two sources on one terminal, and a board that fights its own rail
 — LANDED, lego-ac. Both found by the ngspice corpus sweep, neither by a test.
 No node voltage in the 5,352-test suite moved.
