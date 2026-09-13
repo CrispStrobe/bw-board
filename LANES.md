@@ -640,6 +640,8 @@ writer adaptation. Still no CPU/full machine or capacity claim. Details:
 
 ## DONE
 
+| m6502 code-breakpoint bound convergence | sim2cx (Codex) | 2026-09-13 | DONE: replayed onto `51e750decc007704a228c7765a0ce0fba81e39c4`; accepted candidate `cb1d36435860571b4c2e51496632d1c55e346c8b`, hosted CI `34740086533` and Harris `34740086634` green; focused 25 pass/1 documented skip and three named mutation reds. |
+
 | AVR code-breakpoint bound deduplication | sim2cx (Codex) | 2026-09-13 | DONE: landed `ea11bf930f64ec8a74d12bff9ae26df07c9c9a18`; automatic CI `34736624121` and Harris qualification `34736624077` green. Focused proof 47/47 with 0 skipped; three isolated caller-consequence mutations red by name. |
 
 Execution policy P2 contract: Codex engine_policy, 2026-09-12, branch
