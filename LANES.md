@@ -65,6 +65,22 @@ The protocol is brickwright-lite's `LANES.md`, unchanged, and that file remains
 the long-form statement of it. The short version, and the two rules that were
 each learned by losing work:
 
+### Repository role — upstream first, independent of landing speed
+
+`bw-board` is the source-of-truth engine. Shared engine behavior lands here
+with its behavior tests before Brickwright Lite consumes it. Lite now installs
+this repository from the exact git SHA recorded in its `vendor-pins.json`; it
+does not carry a tracked bw-board source tree in which an unreviewed downstream
+fork can hide. Lite's package specifications and lockfile are tested derivations
+of that pin.
+
+The lean qualification rule below changes only how many times an identical
+commit waits for CI. It does not permit a Lite-only reimplementation, a moving
+branch dependency, an implicit pin bump, or a skipped upstream behavior proof.
+Engine change first; exact upstream SHA second; derived Lite dependency and
+identity gates third. Brickwright Lite's `docs/VENDORING-REGIME.md` is the
+canonical cross-repository statement.
+
 **1. Before you start, look.** `git fetch origin`, read the recent branches,
 read the CLAIMS table below. If your work is already claimed or already landed,
 you have just saved yourself a day.
