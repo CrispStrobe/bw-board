@@ -1,5 +1,34 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-13 E1.3b vf convention + per-kind bulk resistance — LANDED, lego-ac.
+`vf` now means the DATASHEET total drop at the rated current in BOTH junction
+paths; it previously meant the knee in the piecewise one, so the two paths
+disagreed by 6.67 % at the rated bias (18.7500 mA against 20.0000 mA) and the
+piecewise path was -7/-9/-14 % against ngspice. Bulk resistance is now per kind
+(`SILICON_RD = 0.568` from our own D1N4148 reference) because sharing the LED's
+rd = 10 made the correction a REGRESSION for silicon: 0.5446 V where the
+unchanged code gave 0.7426 and ngspice gives 0.6532. Zener and BJT are
+deliberately excluded and PINNED by `test/junction-knee-classes.test.mjs` with
+the reasons (one path, no rated current, 0.7 IS the knee number for silicon);
+the optocoupler's hard-coded rd = 50 is a separate decision, untouched.
+
+**READ THIS BEFORE BUMPING LITE'S bw-board PIN PAST `fe17d7c`.** Nothing in the
+shipped app changes until someone bumps, because lite consumes the engine at a
+pin. When you do: **every LED gets brighter by a median +6.7 % (min +2.9 %, max
++10.0 %, 2,516 of 2,525 corpus LEDs affected; the 9 unaffected are on the
+exponential path, which already used the datasheet convention).** Lite's
+lesson-bench and claim suites carry numeric brightness expectations that WILL
+move by that amount. **Re-derive them in the same commit — do not widen
+tolerances.** The 232-bench / 2,635-claim pass belongs to that bump, not to
+this lane, and is the bump's deliverable.
+
+Derivation, every table and its falsifier:
+`test/measurements/E13B-CALIBRATION-REDERIVED.md`. 22 suite expectations were
+re-derived against ngspice where a deck was representable; the single exception
+(the loaded-pot wiper, 1.8485) is labelled CHARACTERISED not oracled in its own
+file and needs a deck before it can be defended.
+
+
 2026-09-12 R2 cooperative hybrid execution — IMPLEMENTED/LOCALLY QUALIFIED, Codex root. User explicitly
 requested continued performance coding and remote default-branch merge after
 qualification. Integration `feat/harris-hybrid-cpu-integration` now includes
