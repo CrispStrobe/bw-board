@@ -201,6 +201,25 @@ export const INPUTS = [
         ci: 'no',
     },
     {
+        id: 'ngspice', kind: 'oracle',
+        what: 'The reference NUMERIC circuit simulator. lcapy is symbolic and exact but cannot '
+            + 'model a junction; ngspice models devices, so the two are complementary rather '
+            + 'than redundant -- where both agree and we do not, it is us, and where THEY '
+            + 'disagree the circuit is ill-posed and belongs in neither corpus. Note that the '
+            + 'ngspice GOLDENS under test/golden/ are pre-recorded and need no binary; this row '
+            + 'is for the gates that invoke ngspice LIVE.',
+        env: 'NGSPICE',
+        bin: 'ngspice',   // resolved by walking $PATH; see `resolve` below
+        paths: [],
+        gates: ['test/ngspice-neutral-oracle.test.mjs'],
+        obtain: 'apt install ngspice   (44 here; decks need `.options temp=X tnom=X` '
+            + 'to match VT_25C, and `.model D` silently clamps IS at 1e-28 -- use a '
+            + 'behavioural source above ~2.86 V, see test/measurements/repro/bsource-oracle.mjs)',
+        ciAvailable: true,
+        ci: 'yes — installed by apt in the `test` job and asserted by `--require ngspice`, '
+            + 'so the live solver comparison is a standing claim rather than a recorded one',
+    },
+    {
         id: 'emu8051', kind: 'oracle',
         repository: 'CrispStrobe/emu8051-stc',
         ciCadence: 'push',   // the `test` job
@@ -621,6 +640,28 @@ export function resolve(input) {
             ? { present: true, via: `$${input.env}=${fromEnv}`, digest: digestOf(fromEnv) }
             : { present: false, via: `$${input.env}=${fromEnv} (set, but does not exist)` };
     }
+    // A THIRD SHAPE: AN EXECUTABLE ON $PATH.
+    //
+    // The census knew two ways an input can be here -- an env var pointing at
+    // it, or a file at a known absolute path. An oracle installed by the system
+    // package manager is neither, and the first one to arrive (ngspice, `apt
+    // install ngspice`) was reported ABSENT while its gate was running 19 tests
+    // against it. That is the census's own failure mode inverted: not a missing
+    // input reading as a pass, but a PRESENT input reading as missing, which
+    // teaches a reader to distrust the whole column.
+    //
+    // Resolved by walking $PATH with existsSync rather than by executing
+    // anything. Running `ngspice -v` would be a better probe of usability and a
+    // worse census: it is a subprocess per row, and a binary that exists but
+    // fails to start would flip this to ABSENT for a reason the word does not
+    // carry. Same meaning as for files -- "this run established it is here".
+    if (input.bin) {
+        for (const dir of (process.env.PATH || '').split(':').filter(Boolean)) {
+            const cand = join(dir, input.bin);
+            if (!existsSync(cand)) continue;
+            return { present: true, via: `${input.bin} on $PATH at ${cand}`, digest: digestOf(cand) };
+        }
+    }
     for (const p of input.paths) {
         if (!existsSync(p)) continue;
         // A HIT UNDER THE SYSTEM TEMP DIR IS WEAKER EVIDENCE, AND SAYS SO.
@@ -646,7 +687,8 @@ export function resolve(input) {
             digest: digestOf(p),
         };
     }
-    const tried = [input.env ? `$${input.env}` : null, ...input.paths].filter(Boolean);
+    const tried = [input.env ? `$${input.env}` : null,
+        input.bin ? `${input.bin} on $PATH` : null, ...input.paths].filter(Boolean);
     return { present: false, via: `tried ${tried.join(', ') || '(no default path)'}` };
 }
 

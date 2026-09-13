@@ -130,10 +130,24 @@ jobs:
       # It is the ONE dark oracle here that is absent by ACCIDENT rather than
       # by licence: no NC clause, no hardware rig, no 677 MB download. One
       # apt-get turns the assembler's strongest claim from recorded into
-      # standing, which is why this step exists and why no other absent oracle
-      # gets one.
-      - name: Install nasm (the differential assembler oracle)
-        run: sudo apt-get update && sudo apt-get install -y nasm
+      # standing, which is why this step exists.
+      #
+      # "AND WHY NO OTHER ABSENT ORACLE GETS ONE" USED TO FOLLOW, AND NGSPICE IS
+      # NOW THE SECOND. The rule that sentence was reaching for is not "only
+      # nasm" -- it is "an apt line is justified when it converts a RECORDED
+      # claim into a STANDING one, and not when it merely adds a dependency".
+      # Every other absent oracle here fails that test: the vector suites are
+      # hundreds of megabytes, labwired and v86 are builds, lcapy is a Python
+      # package for a JS engine.
+      #
+      # ngspice passes it. Until now every ngspice claim in this repo was a
+      # pre-recorded golden under test/golden/, so the comparison was a claim
+      # about a file somebody generated once. test/ngspice-neutral-oracle.test.mjs
+      # solves the 14 neutral circuits LIVE against our MNA, and it is the only
+      # numeric second solver we have -- lcapy is symbolic and cannot model a
+      # junction. One apt package, no build, no checkout.
+      - name: Install nasm and ngspice (the differential oracles)
+        run: sudo apt-get update && sudo apt-get install -y nasm ngspice
 
       # AND ASSERT IT ARRIVED. Without this, a failed or silently-skipped
       # install leaves nasm absent, oracle-nasm skips all six tests, and the
@@ -156,7 +170,7 @@ jobs:
         # `<repo>/emu8051-stc`, where Actions is obliged to put it, so adding
         # this line first would have reddened every build with the emulator
         # sitting in the workspace.
-        run: node scripts/oracle-census.mjs --require nasm,emu8051
+        run: node scripts/oracle-census.mjs --require nasm,emu8051,ngspice
 
       - name: Test
         # The 65x02 and z80 vector-suite tests skip cleanly when their suites
