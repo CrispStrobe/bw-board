@@ -51,17 +51,30 @@ test('zener and BJT stamps do NOT convert their vf, and cannot reach the exponen
     const fnBody = name => {
         const i = mna.indexOf(`function ${name}(`);
         assert.ok(i > 0, `${name} not found — re-point this pin, do not delete it`);
-        return mna.slice(i, i + 4000);
+        const next = mna.indexOf('\nfunction ', i + 1);
+        assert.ok(next > i, `${name} has no following top-level function — re-point this pin`);
+        // This is an executable-source sentinel, not a prose spell-check. The
+        // prior fixed 4,000-character window included comments and eventually
+        // adjacent functions as bodies grew; a comment recording a reverted
+        // Shockley experiment then falsely claimed the experiment was live.
+        return mna.slice(i, next)
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .replace(/\/\/.*$/gm, '');
     };
     for (const name of ['stampZener', 'stampNPN', 'stampPNP']) {
         const body = fnBody(name);
-        assert.ok(!body.includes('kneeFromVf'),
+        assert.ok(!/\bkneeFromVf\s*\(/.test(body),
             `${name} calls kneeFromVf. It has no rated current and no exponential counterpart, so `
             + 'the conversion would change its behaviour with nothing to check it against. If a '
             + 'rated current has been given to this class, say so here and make the decision.');
-        assert.ok(!/junctionOpts|shockley/.test(body),
+        assert.ok(!/\b(?:junctionOpts|shockleyCompanion)\s*\(/.test(body)
+            && !/model\s*:\s*['"]shockley['"]/.test(body),
             `${name} now reaches the exponential path. Reason 1 for excluding it has expired: it `
             + 'now HAS a second answer to agree with, so revisit the exclusion.');
+    }
+    for (const name of ['stampNPN', 'stampPNP']) {
+        assert.match(fnBody(name), /diodeCompanion\(vAcross,\s*vbe,\s*rd\)/,
+            `${name} no longer calls the three-argument piecewise B-E companion`);
     }
 });
 
