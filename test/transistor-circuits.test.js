@@ -151,7 +151,34 @@ describe('NPN: different beta values', () => {
     });
   }
 
-  it('higher β produces more collector current (with large R_load)', () => {
+  // A SMALL LOAD, AND THE OLD LARGE ONE WAS WHY THIS CLAIM DID NOT HOLD.
+  //
+  // "Higher beta gives more collector current" is a statement about the ACTIVE
+  // region: Ic = beta*Ib only while the load can pass it. With R_LOAD = 100k
+  // the load caps Ic at 5/100k = 0.05 mA while beta*Ib is 0.43 to 21.6 mA, so
+  // all three transistors were SATURATED — closed switches, current set by the
+  // load and not by beta. Measured there:
+  //
+  //     beta= 10   Ic 0.049880 mA   Vce 0.0328   saturated
+  //     beta=100   Ic 0.049823 mA   Vce 0.0300   saturated
+  //     beta=500   Ic 0.049820 mA   Vce 0.0297   saturated
+  //
+  // Identical to four figures, and ordered the WRONG way by about 6e-8 A. That
+  // residue is not physics: in saturation the extraction reads
+  // `gS*(Vce - Vce_sat)`, a difference of two numbers that the clamp has forced
+  // to within 5e-6 V of each other, so its low digits are cancellation noise.
+  // The test passed for years on the sign of that noise, and only stopped when
+  // Vce(sat) became a derived value and the noise landed the other way.
+  //
+  // R_LOAD = 100 puts all three in the active region, where the claim is
+  // actually true and the margins are the ratios themselves:
+  //
+  //     beta= 10   Ic  0.431843 mA   Vce 4.9568   active
+  //     beta=100   Ic  4.318428 mA   Vce 4.5682   active
+  //     beta=500   Ic 21.592142 mA   Vce 2.8408   active
+  //
+  // Ten times and five times, which is beta*Ib and nothing else.
+  it('higher β produces more collector current, in the ACTIVE region', () => {
     const currents = [];
 
     for (const beta of [10, 100, 500]) {
@@ -160,7 +187,7 @@ describe('NPN: different beta values', () => {
         [
           { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
           { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
-          { id: 'R_LOAD', kind: 'resistor', params: { ohms: 100000 }, terminals: ['a', 'b'] },
+          { id: 'R_LOAD', kind: 'resistor', params: { ohms: 100 }, terminals: ['a', 'b'] },
           { id: 'R_BASE', kind: 'resistor', params: { ohms: 100000 }, terminals: ['a', 'b'] },
           { id: 'Q1', kind: 'npn', params: { beta, vbe: 0.7 }, terminals: ['base', 'collector', 'emitter'] },
           { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.0'] },

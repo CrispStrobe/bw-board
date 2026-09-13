@@ -107,12 +107,27 @@ describe('saturated PNP stamps its base junction (source honesty 2)', () => {
         const iRl = I(r, 'rl', 'b');
         assert.ok(Math.abs(ic - iRl) < 1e-6,
             `ic ${(ic * 1e3).toFixed(4)} mA == load ${(iRl * 1e3).toFixed(4)} mA`);
-        // 2.970 mA, not 2.772: the load here is an LED and its knee moved with
-        // the datasheet convention (vf - I_RATED*rd). The TRANSISTOR is
-        // untouched -- vbe stays a knee, and the sibling base-junction
-        // assertion above is unchanged and still passes, which is how we know
-        // the LED and not the PNP moved.
-        assert.ok(Math.abs(ic - 2.970e-3) < 0.05e-3, `ic ≈ 2.970 mA: got ${(ic * 1e3).toFixed(4)}`);
+        // 3.109 mA, and THIS time it is the transistor that moved, not the load.
+        //
+        // It was 2.970 mA while Vce(sat) was a constant 0.2 V:
+        //     (5 - 0.2 - 1.8) / (1000 + 10) = 2.970 mA
+        // Vce(sat) is now derived from the drive (Ebers-Moll), and at this
+        // bench's forced beta the clamp sits far lower:
+        //     Ib      = (5 - 0.7) / 10000            = 0.430 mA   (asserted above)
+        //     forced  = Ic / Ib = 3.109 / 0.430      = 7.23
+        //     Vce_sat = Vt*ln[(1 + (1+7.23)/1) / (1 - 7.23/100)] = 0.0594 V
+        //     Ic      = (5 - 0.0594 - 1.8) / 1010    = 3.109 mA
+        //
+        // The formula is the one validated against ngspice-44 to five digits at
+        // forced betas of 1.2, 11.5 and 112.8 (see ebersMollVceSat in mna.js),
+        // and 7.23 falls between two measured points -- 5.4 gave 0.0525 and
+        // 11.5 gave 0.0687, so 0.0594 is where it belongs.
+        //
+        // The earlier 2.772 -> 2.970 move was the LED's knee under the vf
+        // convention; the transistor was untouched then and the base-junction
+        // assertion above is STILL unchanged, which is how we know which part
+        // moved each time.
+        assert.ok(Math.abs(ic - 3.109e-3) < 0.05e-3, `ic ≈ 3.109 mA: got ${(ic * 1e3).toFixed(4)}`);
         const kcl = I(r, 'q1', 'base') + I(r, 'q1', 'collector') + I(r, 'q1', 'emitter');
         assert.ok(Math.abs(kcl) < 1e-9, `KCL at q1: ${(kcl * 1e3).toExponential(2)} mA`);
     });

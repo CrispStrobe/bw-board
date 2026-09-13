@@ -389,6 +389,48 @@ export function mosK(params = {}) {
  * parts-library.js: classDefaults('diode').rs, and 1N4148's own card.
  */
 
+/**
+ * Vce(sat) FROM EBERS-MOLL, because a constant is wrong at every drive but one.
+ *
+ * The saturated stamp held Vce at a fixed `vceSat` (0.2 V by default). The real
+ * quantity is a smooth function of how hard the base is driven, and ngspice
+ * shows it moving by a factor of five across ordinary bench conditions while
+ * ours did not move at all:
+ *
+ *     forced beta (Ic/Ib)    ours      ngspice
+ *              1.2         0.200480   0.029907
+ *             11.5         0.200480   0.068744
+ *            112.8         0.200480   0.144079
+ *
+ * So no value of the constant can be right; it is a model gap, not a
+ * calibration. The textbook expression reproduces ngspice to five digits on all
+ * three with the SPICE default reverse beta of 1:
+ *
+ *     Vce(sat) = Vt * ln[ (1 + (1 + Ic/Ib)/Br) / (1 - Ic/(Ib*Bf)) ]
+ *
+ * Guarded because the log's argument leaves the physical range as the device
+ * comes out of saturation: at Ic/Ib -> Bf the denominator reaches zero and
+ * Vce(sat) diverges, which is the model saying "this is no longer saturated" —
+ * the region test says so too, and the fallback keeps the stamp finite while
+ * that decision is being made.
+ *
+ * @param {number} iC collector current, amps
+ * @param {number} iB base current, amps
+ * @param {number} betaF forward beta
+ * @param {number} betaR reverse beta (SPICE's BR; 1 by default)
+ * @param {number} fallback value to use when the device is not in the saturated range
+ */
+export function ebersMollVceSat(iC, iB, betaF, betaR = 1, fallback = 0.2) {
+  if (!(iB > 0) || !(iC >= 0) || !(betaF > 0) || !(betaR > 0)) return fallback;
+  const forced = iC / iB;
+  const denom = 1 - forced / betaF;
+  if (!(denom > 1e-6)) return fallback;          // at or past the edge of saturation
+  const arg = (1 + (1 + forced) / betaR) / denom;
+  if (!(arg > 1)) return fallback;
+  const v = VT_25C * Math.log(arg);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+}
+
 /** The dynamic/bulk resistance for a junction part, by kind. */
 // ONE TABLE, NOT A TERNARY. This branched on `kind === 'diode'` while
 // junctionOpts read classDefaults, so the two paths agreed for led and diode
@@ -450,6 +492,37 @@ export function junctionModelOf(part, headroomV) {
   if (typeof headroomV !== 'number' || !Number.isFinite(headroomV)) return 'pwl';
   return headroomV < MNA_HEADROOM_V ? 'shockley' : 'pwl';
 }
+
+/**
+ * WHY THE BJT HAS NO `model: 'shockley'` ESCAPE HATCH, measured rather than
+ * assumed — and why the piecewise knee is the BETTER approximation here.
+ *
+ * The diodes got an exponential mode because SPICE has no spelling for our
+ * knee. The obvious next step is to give the transistor's base-emitter junction
+ * the same treatment, with saturation current IS/BF since Gummel-Poon writes
+ * Ib = IS/BF*(exp(Vbe/(N*Vt)) - 1). I implemented that and it made agreement
+ * WORSE, on every bench:
+ *
+ *     RB    RC     mode       V(base)    ngspice
+ *     10k   1k     pwl        0.695747   0.699884    <- 4.1 mV
+ *     10k   1k     shockley   0.769464   0.699884    <- 69.6 mV
+ *     4k7   220    pwl        0.705229   0.736786
+ *     4k7   220    shockley   0.788862   0.736786
+ *
+ * THE REASON IS SATURATION, and it is the whole difficulty. A single junction
+ * puts all of Ib across B-E, giving Vt*ln(Ib*Bf/Is) = 0.770 V at Ib = 0.43 mA.
+ * ngspice's 0.6999 V implies only 0.0285 mA crosses B-E; the other 0.40 mA
+ * flows through the FORWARD-BIASED BASE-COLLECTOR junction, which is what
+ * saturation IS. One exponential junction cannot express that, and adding it
+ * alone is worse than the knee it replaced, because the knee at least does not
+ * claim to be the exponential.
+ *
+ * So a faithful BJT needs BOTH junctions — full Ebers-Moll with a reverse beta
+ * — not a translated diode. That is a real piece of work and it is named here
+ * so the next person does not repeat the cheap version. The saturation VOLTAGE
+ * is already exact (see `ebersMollVceSat`); it is the base NODE that is 4 mV
+ * out, and 4 mV is what the knee costs.
+ */
 
 function junctionOpts(part) {
   // The board resolved this once per solve and stamped it (board.js,
@@ -939,6 +1012,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // collector gets driven arbitrarily negative — the audit measured
   // -420V on pc24 — because beta*Ib exceeded anything the load allows.
   const bjtRegions = new Map();
+  /** Per-part Vce(sat), computed from the drive rather than held constant. */
+  const bjtVceSat = new Map();
   const mosRegions = new Map();
   /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
   const vccsClamps = new Map();
@@ -1176,11 +1251,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
 
         case 'npn':
-          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id));
+          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id));
           break;
 
         case 'pnp':
-          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id));
+          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id));
           break;
 
         case 'nmos':
@@ -1491,7 +1566,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (part.kind !== 'npn' && part.kind !== 'pnp') continue;
       const beta = /** @type {number} */ (part.params.beta ?? 100);
       const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7));
-      const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+      const vceSat = /** @type {number} */ (part.params.vceSat ?? bjtVceSat.get(part.id) ?? 0.2);
       const netC = findNet(nets, part.id, 'collector');
       const netE = findNet(nets, part.id, 'emitter');
       const idxC = netC ? nodeIndex.get(netC) : undefined;
@@ -1513,7 +1588,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // collectors and above-rail followers, oscillating against
         // the leave test forever (sweep escalation 2026-08-15).
         const vJon = diodeVoltages.get(part.id) ?? 0;
-        if (vJon > vbe - 0.05 && vOut < vceSat) next = 'saturated';
+        if (vJon > vbe - 0.05 && vOut < vceSat) {
+          next = 'saturated';
+          // SEED THE ESTIMATE ON ENTRY, not only on the pass after. The store
+          // below lives in the already-saturated branch, so a device that
+          // entered saturation on the final Newton iteration never got one and
+          // kept the constant — visible as one row of a vceSat sweep stuck at
+          // 0.200480 while its six neighbours agreed with ngspice to 1e-4.
+          if (part.params?.vceSat === undefined) {
+            const rdEntry = 10, gSEntry = 10;
+            const iBEntry = pwlKneeCurrent(vJon, vbe, rdEntry);
+            const iCEntry = Math.max(0, gSEntry * (vOut - vceSat));
+            const betaREntry = /** @type {number} */ (part.params?.betaR ?? 1);
+            bjtVceSat.set(part.id, ebersMollVceSat(iCEntry, iBEntry, beta, betaREntry, vceSat));
+          }
+        }
       } else {
         // Leave saturation when base drive no longer sustains it:
         // the base junction has fallen out of conduction, or the
@@ -1528,6 +1617,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const iB = pwlKneeCurrent(vJ, vbe, rd);
         const gS = 10;
         const iC = Math.max(0, gS * (vOut - vceSat));
+        // Vce(sat) FROM THE DRIVE, not a constant. iB and iC are already here
+        // for the leave test, and they are exactly what Ebers-Moll needs. A
+        // fixed point inside Newton: Vce(sat) depends only logarithmically on
+        // the ratio, so it settles in a couple of iterations.
+        if (part.params?.vceSat === undefined) {
+          const betaR = /** @type {number} */ (part.params?.betaR ?? 1);
+          bjtVceSat.set(part.id, ebersMollVceSat(iC, iB, beta, betaR, vceSat));
+        }
         if (vJ < vbe - 0.15 || beta * iB < iC * 0.95) next = 'active';
       }
       if (next !== region) {
@@ -1842,7 +1939,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vbeThresh = /** @type {number} */ (part.params.vbe ?? 0.7);
       const rd = 10;
 
-      const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+      // THE SAME Vce(sat) THE STAMP USED. Reading the constant here while the
+      // stamp used the derived value made the extraction report ic = 0.0000 mA
+      // for a transistor whose load was passing 0.39 mA — the stamp and the
+      // reader describing different devices, which is the defect this change
+      // set out to remove and which I reintroduced one level down by patching
+      // one reader of three.
+      const vceSat = /** @type {number} */ (part.params.vceSat ?? bjtVceSat.get(part.id) ?? 0.2);
 
       let ib, ic;
       // Same C1 knee the stamp uses — extraction and stamp must agree.
@@ -2645,11 +2748,13 @@ function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, control
  * C-E: controlled current source Ic = β × Ib (β from params, default 100).
  * Linearized: Ic = gm × Vbe - Ic0 (Norton companion model).
  */
-function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active') {
+function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10; // base-emitter dynamic resistance
-  const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+  // Explicit param wins (a typed number was meant); otherwise the value the
+  // region loop derived from this part's own drive.
+  const vceSat = /** @type {number} */ (part.params.vceSat ?? vceSatEff ?? 0.2);
 
   const netB = findNet(nets, part.id, 'base');
   const netC = findNet(nets, part.id, 'collector');
@@ -2659,7 +2764,22 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   const idxC = netC ? nodeIndex.get(netC) : undefined;
   const idxE = netE ? nodeIndex.get(netE) : undefined;
 
-  // B-E junction: diode model
+  // B-E junction: diode model.
+  //
+  // EXPONENTIAL WHEN THE ROUTING ASKS FOR IT, piecewise otherwise. SPICE has no
+  // spelling for our knee, so against ngspice the base sat 31.7 mV high
+  // (0.741546 against 0.709818) purely because the two sides were on different
+  // junction models — the same gap the diodes had before `model: 'shockley'`,
+  // and the BJT never got the escape hatch.
+  //
+  // A BJT's base-emitter junction carries Ib, and SPICE's Gummel-Poon writes
+  // Ib = IS/BF * (exp(Vbe/(N*Vt)) - 1). So the junction's own saturation
+  // current is IS/BF, which is the one line of translation this needs;
+  // `diodeCompanion` already implements the rest.
+  //
+  // Gated on the SAME switch the diodes use, so the shipped default is
+  // unchanged and no corpus value moves: `JUNCTION_ROUTING.mode = 'shockley'`
+  // (what the oracle sweep sets) or an explicit `params.model` on the part.
   const vAcross = diodeVoltages.get(part.id) ?? 0;
   const { gEq, iEq } = diodeCompanion(vAcross, vbe, rd);
 
@@ -2711,7 +2831,7 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
  * Stamp a PNP transistor. Mirror of NPN with reversed polarities.
  * Terminals: base, collector, emitter.
  */
-function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active') {
+function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10;
@@ -2730,7 +2850,11 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   // ABOVE emitter, so no PNP ever conducted (audit escalation, pc32).
   const vAcross = diodeVoltages.get(part.id) ?? 0;
   const { gEq, iEq } = diodeCompanion(vAcross, vbe, rd);
-  const vceSat = /** @type {number} */ (part.params.vceSat ?? 0.2);
+  // Explicit param wins; otherwise the value the region loop derived from
+  // this part's own drive. The NPN got this and the PNP did not, so the region
+  // decision and the PNP stamp disagreed about the clamp and the solve stopped
+  // converging — a rename has as many sites as builders.
+  const vceSat = /** @type {number} */ (part.params.vceSat ?? vceSatEff ?? 0.2);
 
   // Stamp E-B diode — in EVERY region. The saturated early-return used
   // to sit above this stamp (a botched mirror of stampNPN, where the
