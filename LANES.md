@@ -1,5 +1,61 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-13 Junction authority: zener split, half-read bulk, device-scaled knee
+— LANDED, lego-ac. Follow-on to the vf-convention entry below, and mostly a
+record of what THAT fix made findable. Suite 14 -> 0, 29 tests added, every
+moved expectation re-derived against ngspice rather than relaxed.
+
+**If you export, solve, or oracle a ZENER, re-read your bulk resistance.**
+`junctionRd` branched on `kind === 'diode'` while `junctionOpts` read
+`classDefaults`, so led and diode agreed and zener did not: a zener is silicon
+(0.568) and the else-branch handed it 10. An 18x split between the model we
+solve and the model we export. The gate that should have caught it pinned one
+CONSTANT against one CARD — true of the two kinds it named, blind to the third.
+`junctionRd` now reads the table and the gate enumerates kinds through the
+FUNCTION the solver calls; `SILICON_RD` is deleted, having lost its last code
+reader.
+
+`junctionRd` also read only `params.rd`, and cards store `rs` — so `1N4001`'s
+0.045 reached the exponential path and was invisible to the piecewise one.
+`LED_RED` hid it by carrying both spellings.
+
+**The PWL knee's blend band is no longer an absolute voltage.** `PWL_KNEE_EPS`
+was a flat 0.025 V, but the knee's scale is `i_rated*rd`: 0.2 V for an LED (8x
+the band) and 0.01136 V for a 1N4148 (0.45x — inside it). Silicon never reached
+its linear segment at its own rated current, so 5 V through 150 R, which IS the
+rated bias by definition of `vf`, read 20.0176 mA against 20.0000 and an
+effective bulk of 0.4356 against 0.568. Now `min(0.025, 0.5*i_rated*rd)`: **LED
+operating points are bit-identical, so this half costs the corpus nothing**;
+silicon becomes exact. It was unreachable while every kind shared rd = 10.
+
+**A LIMIT I RECORDED AS HARD IS NOT, AND THIS CHANGES WHAT THE CORPUS CAN
+COVER.** I wrote that ngspice's silent 1e-28 IS clamp makes every LED above
+~2.86 V unrepresentable and that such parts must be left out. The clamp belongs
+to the DIODE MODEL. A behavioural source has none, and solves the identical
+device with ngspice's own Newton and limiting. Validated against `.model D` on a
+part both express — 5e-6 relative at three operating points — then used to
+measure blue, white, UV and a vf=3.5 bench, all previously unmeasurable. Seven
+of the eight colours agree with our engine to 0.0000 %; the eighth is infrared,
+the one the router leaves on the walker, showing the 4.18 % shape gap exactly
+where `MNA_HEADROOM_V` says it should. **Before excluding a circuit from the
+sweep as "ngspice cannot represent this", re-check it against the behavioural
+form** — the exclusion list was built on the D-model limit. Blue's golden is
+still recorded AT the clamp and can now be re-derived: named, not done.
+
+**ngspice decks need BOTH `.options temp=X tnom=X`.** `temp` alone leaves a flat
++0.686 mV at every current, because IS is rescaled from the TNOM=27 default via
+the bandgap law. I had recorded the ngspice floor as VT_25C vs 300.15 K — same
+root cause, but the fix is `tnom`, and with it the floor is not 0.04 %, it is
+zero. Our spot currents then match ngspice to 2e-7 V over four decades.
+
+`bw-circuit-ui` PR #21's bench is now oracle-exact: 1.748000 V against ngspice's
+1.748004, from 1.879795 (130.8 mV out).
+
+Derivation and reproduction for every number:
+`test/measurements/JUNCTION-AUTHORITY-2026-09-13.md` and
+`test/measurements/repro/`.
+
+
 2026-09-13 E1.3b vf convention + per-kind bulk resistance — LANDED, lego-ac.
 `vf` now means the DATASHEET total drop at the rated current in BOTH junction
 paths; it previously meant the knee in the piecewise one, so the two paths
