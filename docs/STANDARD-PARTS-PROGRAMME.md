@@ -148,13 +148,20 @@ quota prevented retention of the full per-case JSON; the private log, aggregate
 summary and result hash remain, while the raw per-case artifact is unavailable.
 
 The public `BoardImpl.operatingPoint()` boundary covers grounded static native
-R/C/V/I networks with GND/VCC plus ideal finite-parameter VCVS/VCCS. Ideal
-capacitors remain DC opens. The API refuses non-ideal controlled-source rails,
+R/C/V/I networks with GND/VCC, ideal finite-parameter VCVS/VCCS, and diodes
+that explicitly declare the Shockley DC model with finite `IS > 0`, `N > 0`,
+and `RS >= 0`. The diode model uses the engine's reported fixed 0.02585 V
+thermal voltage; default/PWL/zener, temperature-dependent, breakdown, dynamic,
+and other undeclared model semantics are refused. Diodes do not anchor a
+DC-floating component. Ideal capacitors remain DC opens. The API refuses
+non-ideal controlled-source rails,
 output resistance and current limits; unconnected or DC-floating terminals;
 and unknown or non-finite gain/transconductance. It is non-mutating and is
 separately checked against ngspice for both controlled-source polarities and
 signed KCL. This expands the callable public analysis domain; it does not turn
 the private controlled-E projection denominator into public corpus coverage.
+The diode addition is a native API envelope, not importer coverage: consumer
+metadata and unsupported model fields must be classified before admission.
 
 ### Model and rights boundaries
 

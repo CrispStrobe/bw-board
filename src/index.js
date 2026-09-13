@@ -18,7 +18,7 @@ export { pinThevenin, R_STRONG, R_QUASI_PULLUP } from './pin-model.js';
 // invented. See pin-aliases.js; sb3-creator's bench-invariants gate is the
 // caller that made this an export rather than an internal.
 export { DUAL_FUNCTION_PINS, dualFunctionAlias, buildPinAliasTable } from './pin-aliases.js';
-export { solveMNA } from './mna.js';
+export { solveMNA, JUNCTION_THERMAL_VOLTAGE } from './mna.js';
 export { acSweep } from './ac.js';
 export { inferNetlist, checkWiring } from './infer-netlist.js';
 export { runTrace } from './scripted-mcu.js';

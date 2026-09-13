@@ -20,7 +20,9 @@
 
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
-import { solveMNA, OPAMP_ISHORT_DEFAULT, kneeFromVf, sourceVoltage } from './mna.js';
+import {
+  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, kneeFromVf, sourceVoltage,
+} from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
@@ -56,8 +58,10 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'vsource', 'isource', 'vcvs', 'vccs', 'gnd', 'vcc',
+  'resistor', 'capacitor', 'diode', 'vsource', 'isource', 'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
+
+const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 
 const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
 const NONIDEAL_CONTROLLED_PARAMS = ['railLow', 'railHigh', 'rout', 'iShort', 'iMax'];
@@ -2109,7 +2113,9 @@ export class BoardImpl {
 
   /**
    * Compute, but do not adopt, a DC operating point for the first proven
-   * public domain: grounded static native R/C/V/I/E/G networks. This is not
+   * public domain: grounded static native R/C/D/V/I/E/G networks. Diodes must
+   * explicitly select the Shockley model and its complete DC parameter set.
+   * This is not
    * an instantaneous read: capacitors are open, independent of stored charge.
    * Positive current means current INTO the named part terminal.
    */
@@ -2141,6 +2147,35 @@ export class BoardImpl {
         if (internalOhms <= 0 && posNet !== undefined && posNet === negNet && volts !== 0) {
           throw new Error(`operatingPoint: inconsistent ideal voltage constraint ${part.id}; `
             + `${volts} V cannot be imposed across the same net ${posNet}`);
+        }
+      }
+      if (part.kind === 'diode') {
+        const params = part.params ?? {};
+        if (params.model !== 'shockley') {
+          throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+            + "model must be explicitly 'shockley'");
+        }
+        for (const name of ['is', 'n']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        if (typeof params.rs !== 'number' || !Number.isFinite(params.rs) || params.rs < 0) {
+          throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+            + 'rs must be an explicit finite number greater than or equal to zero');
+        }
+        const extra = Object.keys(params).find(name => !DIODE_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+            + `parameter ${extra} is outside the explicit Shockley DC domain`);
+        }
+        for (const terminal of ['anode', 'cathode']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported diode ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
         }
       }
       if (part.kind === 'vcvs' || part.kind === 'vccs') {
@@ -2191,11 +2226,17 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-v-i-e-g',
+        scope: 'grounded-static-native-r-c-d-v-i-e-g-explicit-shockley',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: 'fixed-dc-only',
         controlledSources: 'ideal-explicit-finite-parameters-only',
+        diodes: {
+          model: 'explicit-shockley',
+          parameters: ['is', 'n', 'rs'],
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
         sourceDefaults: { vsourceVolts: this.vcc, isourceAmps: 0.001 },
         tSeconds: 0,
         powered: true,

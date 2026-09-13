@@ -179,7 +179,7 @@ describe('BoardImpl.operatingPoint', () => {
       const first = board.operatingPoint();
       const second = board.operatingPoint();
       assert.equal(first.converged, true);
-      assert.equal(first.analysis.scope, 'grounded-static-native-r-c-v-i-e-g');
+      assert.equal(first.analysis.scope, 'grounded-static-native-r-c-d-v-i-e-g-explicit-shockley');
       assert.equal(first.analysis.controlledSources, 'ideal-explicit-finite-parameters-only');
       assert.ok(first.analysis.supportedKinds.includes('vcvs'));
       assert.ok(first.analysis.supportedKinds.includes('vccs'));
@@ -379,7 +379,7 @@ describe('BoardImpl.operatingPoint', () => {
       [{ id: 'V1', kind: 'vsource', params: { wave: 'sine' }, terminals: ['pos', 'neg'] }, /time-varying/],
       [{ id: 'V1', kind: 'vsource', params: { volts: 5, iLimit: 0.1 }, terminals: ['pos', 'neg'] }, /current-limited/],
       [{ id: 'L1', kind: 'inductor', params: { henrys: 1e-3 }, terminals: ['a', 'b'] }, /unsupported part L1 \(inductor\)/],
-      [{ id: 'D1', kind: 'diode', params: {}, terminals: ['anode', 'cathode'] }, /unsupported part D1 \(diode\)/],
+      [{ id: 'LED1', kind: 'led', params: {}, terminals: ['anode', 'cathode'] }, /unsupported part LED1 \(led\)/],
     ];
     for (const [part, pattern] of cases) {
       const board = new BoardImpl(5);

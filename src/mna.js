@@ -428,7 +428,7 @@ export function ebersMollVceSat(iC, iB, betaF, betaR = 1, fallback = 0.2) {
   if (!(denom > 1e-6)) return fallback;          // at or past the edge of saturation
   const arg = (1 + (1 + forced) / betaR) / denom;
   if (!(arg > 1)) return fallback;
-  const v = VT_25C * Math.log(arg);
+  const v = JUNCTION_THERMAL_VOLTAGE * Math.log(arg);
   return Number.isFinite(v) && v > 0 ? v : fallback;
 }
 
@@ -547,7 +547,8 @@ function junctionOpts(part) {
     // DO NOT RE-TUNE THIS AGAINST THE CORPUS. A sweep elects whatever RS the
     // reference devices were built with -- an exact 0.04% diagonal at RS = 5,
     // 10, 25 and 40 -- because shockleyParams ALGEBRAICALLY RECONSTRUCTS the
-    // device when rs matches, so the residual is only VT_25C (0.02585, really
+    // device when rs matches, so the residual is only JUNCTION_THERMAL_VOLTAGE
+    // (0.02585, really
     // 26.83 C) against ngspice's default. It is a tautology with a units
     // artefact on top, not a fit. The value comes from the PART.
     //
@@ -564,7 +565,7 @@ function junctionOpts(part) {
  * with bulk resistance in the model.
  */
 function shockleyParams(opts, vf) {
-  const nVt = opts.n * VT_25C;
+  const nVt = opts.n * JUNCTION_THERMAL_VOLTAGE;
   const rs = opts.rs ?? 0;
   let is = opts.is;
   if (is === undefined) {
@@ -607,7 +608,8 @@ function shockleyJunctionFromTotal(vTotal, vJ0, p) {
   return vJ;
 }
 
-const VT_25C = 0.02585;
+/** Fixed junction thermal voltage used by the current DC junction models. */
+export const JUNCTION_THERMAL_VOLTAGE = 0.02585;
 
 /** Junction current at a solved voltage — must match what was stamped. */
 function junctionCurrent(part, vAcross, vf, rd) {
