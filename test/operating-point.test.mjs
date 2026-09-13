@@ -21,6 +21,21 @@ function rcBench(volts = 5) {
   return board;
 }
 
+function sameNetSourceBench(volts) {
+  const board = new BoardImpl(5);
+  board.setNetlist([
+    { id: 'V1', kind: 'vsource', params: { volts }, terminals: ['pos', 'neg'] },
+    resistor('R1', 1000), gnd,
+  ], [
+    { id: 'n', terminals: [{ part: 'R1', terminal: 'a' }] },
+    { id: 'gnd', terminals: [
+      { part: 'V1', terminal: 'pos' }, { part: 'V1', terminal: 'neg' },
+      { part: 'R1', terminal: 'b' }, { part: 'G1', terminal: 'gnd' },
+    ] },
+  ]);
+  return board;
+}
+
 function stateWitness(board) {
   return {
     timeNs: board.timeNs,
@@ -136,6 +151,21 @@ describe('BoardImpl.operatingPoint', () => {
     const op = board.operatingPoint();
     assert.equal(op.converged, false, 'contradictory ideal sources have no operating point');
     assertUnchanged(board, before);
+  });
+
+  it('rejects a nonzero source shorted onto one net and preserves a zero-volt control', () => {
+    const invalid = sameNetSourceBench(5);
+    const invalidBefore = stateWitness(invalid);
+    assert.throws(() => invalid.operatingPoint(),
+      /inconsistent ideal voltage constraint V1; 5 V cannot be imposed across the same net gnd/);
+    assertUnchanged(invalid, invalidBefore);
+
+    const zero = sameNetSourceBench(0);
+    const zeroBefore = stateWitness(zero);
+    const op = zero.operatingPoint();
+    assert.equal(op.converged, true);
+    assert.equal(op.nodeVoltages.get('n'), 0);
+    assertUnchanged(zero, zeroBefore);
   });
 
   it('refuses unsupported and DC-floating semantics without touching live state', () => {
