@@ -23,8 +23,10 @@ export function registerNamedParts() {
   // 9V PP3 battery: 9V EMF, ~1Ω internal resistance
   registerDevice('battery_9v', {
     terminals: ['pos', 'neg'],
+    // No stamp: `state.drives` is already stamped as a Norton, and a
+    // `ctx.thevenin` on the same terminal halved the 1 Ohm (see battery_aa
+    // below, and test/device-sources-once.test.mjs).
     init() { return { drives: { pos: { vTh: 9.0, rTh: 1.0 } } }; },
-    stamp(ctx) { ctx.thevenin('pos', 9.0, 1.0); },
     update() { return false; },
   });
 
@@ -47,7 +49,6 @@ export function registerNamedParts() {
   registerDevice('battery_coin', {
     terminals: ['pos', 'neg'],
     init() { return { drives: { pos: { vTh: 3.0, rTh: 10.0 } } }; },
-    stamp(ctx) { ctx.thevenin('pos', 3.0, 10.0); },
     update() { return false; },
   });
 

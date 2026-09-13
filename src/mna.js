@@ -1372,6 +1372,54 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
               }
               if (changed) state = { ...state, drives };
             }
+            // AN IDEAL RAIL OUTRANKS A FINITE-IMPEDANCE DRIVE ON THE SAME NET.
+            //
+            // A `vcc` part is a voltage-source ROW: it pins its net exactly.
+            // A device Thevenin in parallel with it cannot move that node by a
+            // microvolt — every amp it pushes returns through the ideal source
+            // — so its only effect is to invent a circulating current between
+            // two sources. Suppressing it therefore changes NO node voltage, by
+            // construction; it changes exactly two readings, the suppressed
+            // pin's own current and the rail's.
+            //
+            // Found by the ngspice sweep. A Pico with VBUS on a 3.3 V bench
+            // rail reported 17 A on that pin against ngspice's 0 (the exporter
+            // writes no card for the MCU, so the deck had no such source), and
+            // a Pico's VSYS — a 4.7 V drive — reported -3 A into a 5 V rail.
+            // 595 of the 2,163 corpus circuits wire a board supply pin to a
+            // `vcc` part, and in every one of those the shared supply IS a
+            // `vcc` part, so this is the whole measured population.
+            //
+            // It is also the right physics: a board's VBUS/VSYS/5V pin is a
+            // source only when nothing else powers that net. Wire a bench
+            // supply to it and it is an INPUT — which is what a Schottky-OR'd
+            // supply does, and what the gallery means when it draws a rail
+            // through a dev board's power pin.
+            //
+            // Only drives the MODEL owns are outranked — `_staticDrives` is the
+            // set board.js records at init for exactly this distinction. A GPIO
+            // drive is NOT suppressed: a pin driving low into VCC is a real
+            // short and board.js reports it as one.
+            //
+            // Limited to `vcc` rails deliberately. An op-amp output is also a
+            // voltage-source row, but it is rail-clamped and nonlinear, so
+            // "cannot move that node" is not true of it in the same way; no
+            // corpus circuit needed it.
+            if (railOwner.size && state.drives) {
+              const staticNames = state._staticDrives;
+              const kept = {};
+              let dropped = false;
+              for (const [term, drive] of Object.entries(state.drives)) {
+                const owned = !staticNames || staticNames.has(term);
+                const net = drive && owned ? findNet(nets, part.id, term) : null;
+                if (net && railOwner.has(net) && railOwner.get(net) !== part.id) {
+                  dropped = true;
+                  continue;
+                }
+                kept[term] = drive;
+              }
+              if (dropped) state = { ...state, drives: kept };
+            }
             const rec = [];
             deviceStamps.set(part.id, rec);
             stampDevice(A, b, part, nets, nodeIndex, model, state, controls, vcc, tSeconds,

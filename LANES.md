@@ -1,5 +1,56 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-13 Two sources on one terminal, and a board that fights its own rail
+— LANDED, lego-ac. Both found by the ngspice corpus sweep, neither by a test.
+No node voltage in the 5,352-test suite moved.
+
+**IF YOUR MODEL DECLARES `state.drives`, IT MUST NOT ALSO `ctx.thevenin` THAT
+TERMINAL.** `stampDevice` stamps every drives entry as a Norton and THEN calls
+`model.stamp`, so a model doing both put two identical Nortons in parallel: the
+declared source impedance HALVED and the terminal current DOUBLED. Nine kinds
+did it — `battery_9v`, `battery_coin`, `solar_cell`, `usb_a`, `arduino_nano`,
+`arduino_uno`, `arduino_mega`, `pi_pico`, `eater6502`. A 9 V battery had 0.5 Ohm
+internal resistance, not the 1.0 its own model declares. `src/ac.js` collapses
+drives and `ctx.thevenin` to output conductance the same way, so small-signal
+output impedance was halved too: one root, both solvers.
+
+It had been diagnosed once already. `battery_aa` carries the comment "A
+simultaneous state.drives source would put a second Norton in parallel, halve
+the declared internal resistance, and incorrectly reference pos to ground" — a
+correct account, applied to the one part where it was noticed. A rule about one
+call site is not a rule about the mechanism. `test/device-sources-once.test.mjs`
+now asks the question once per REGISTERED KIND, from the registry.
+
+**AN IDEAL `vcc` RAIL OUTRANKS A FINITE-IMPEDANCE DEVICE DRIVE ON ITS NET.** A
+`vcc` part is a voltage-source ROW: it pins its node exactly. A Pico's VBUS, a
+battery's `pos`, a usb_a's VBUS in parallel with it cannot move that node by a
+microvolt — every amp returns through the ideal source — so the drive's only
+effect was to invent a circulating current between two sources. Measured: a Pico
+with VBUS on a 3.3 V bench rail read 17 A on that pin against ngspice's 0, and
+VSYS (4.7 V) read -3 A into a 5 V rail. **595 of the 2,163 corpus circuits wire a
+dev-board supply pin to a `vcc` part**, and in every one of them the other supply
+IS a `vcc` part, so that is the whole measured population.
+
+Suppression changes NO node voltage, by construction; it changes exactly two
+readings, the suppressed pin's own current and the rail's. It is also the right
+physics: a board's VBUS/VSYS/5V pin is a source only when nothing else powers
+that net — wire a bench supply to it and it is an INPUT. Only drives the MODEL
+owns (`_staticDrives`) are outranked; a GPIO driving low into VCC is still a real
+short and board.js still reports it.
+
+Named, not done: a WARNING when the suppressed drive disagrees with the rail by
+more than a diode drop (a Pico VBUS at 5.0 on a 3.3 V rail is user error the
+bench should surface). Sized but unmeasured for noise, so left out of this
+change rather than reded across 595 circuits.
+
+**The junction-knee exclusion gate was reading prose.** It scans `stampNPN` for
+the exponential path and fired on a COMMENT recording why the exponential B-E
+junction was tried and REVERTED. Now comment-stripped, and sliced to the next
+top-level `function` instead of a fixed 4,000 characters — `stampNPN` is 3,620
+long, so the window was already reading its neighbour and would have named the
+wrong function in its own failure message.
+
+
 2026-09-13 Junction authority: zener split, half-read bulk, device-scaled knee
 — LANDED, lego-ac. Follow-on to the vf-convention entry below, and mostly a
 record of what THAT fix made findable. Suite 14 -> 0, 29 tests added, every

@@ -118,12 +118,10 @@ export function registerTier1Parts() {
       const voc = (part.params?.voc ?? 0.6) * light;
       return { drives: { pos: { vTh: voc, rTh: part.params?.rInternal ?? 5 } }, _light: light };
     },
-    stamp(ctx, part, state) {
-      const light = part.params?.light ?? 1.0;
-      const voc = (part.params?.voc ?? 0.6) * light;
-      const rInt = part.params?.rInternal ?? 5;
-      ctx.thevenin('pos', voc, rInt);
-    },
+    // No stamp: `init`/`update` own `drives.pos`, which stampDevice already
+    // stamps. Re-stamping it here put a second Norton in parallel and halved
+    // rInternal — and read `light` past `update`'s 0.01 deadband, so the two
+    // sources could disagree about the same cell.
     update(part, state) {
       const light = part.params?.light ?? 1.0;
       if (Math.abs(light - state._light) < 0.01) return false;
@@ -271,7 +269,6 @@ export function registerTier1Parts() {
   registerDevice('usb_a', {
     terminals: ['vbus', 'dm', 'dp', 'gnd'],
     init() { return { drives: { vbus: { vTh: 5.0, rTh: 0.5 } } }; },
-    stamp(ctx) { ctx.thevenin('vbus', 5.0, 0.5); },
     update() { return false; },
   });
 

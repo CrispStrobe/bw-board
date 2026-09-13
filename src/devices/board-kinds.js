@@ -88,24 +88,21 @@ function boardModel(allTerminals, boardVcc) {
       return { drives };
     },
 
-    stamp(ctx, part, state) {
-      for (const { name, role } of powerTerminals) {
-        if (role === '5v') {
-          ctx.thevenin(name, 5.0, R_SUPPLY);
-        } else if (role === '3v3') {
-          ctx.thevenin(name, 3.3, R_SUPPLY);
-        } else if (role === 'vsys') {
-          ctx.thevenin(name, 4.7, R_SUPPLY);
-        } else if (role === 'gnd') {
-          ctx.thevenin(name, 0, R_SUPPLY);
-        }
-        // vin: external input, high-Z. It gets no stamp at all. There used to
-        // be a pull-down here "to stop it floating", written against no second
-        // terminal, so it never stamped — and it was never needed: solveMNA
-        // ties EVERY node to the reference through GMIN, so an unwired vin
-        // solves to 0 V on its own (spec-updates/ideal-high-z-inputs.md).
-      }
-    },
+    // NO stamp(). The rails above are already sources: `stampDevice` stamps
+    // every entry of `state.drives` as a Norton BEFORE it calls `model.stamp`,
+    // so a `ctx.thevenin` on the same terminal put a SECOND identical Norton in
+    // parallel and halved the declared impedance. Measured: a Pico with VBUS
+    // and VSYS on a 3.3 V bench rail drew 34 A where the single source draws
+    // 17, and on a 5 V bench VSYS drew -6 A against -3. Both readings agreed
+    // with what was stamped — the stamp was doubled, not the extraction.
+    // See test/device-sources-once.test.mjs, which enumerates every registered
+    // kind rather than the one that was found.
+    //
+    // vin gets no source in either place: it is an external input, high-Z.
+    // There used to be a pull-down here "to stop it floating", written against
+    // no second terminal, so it never stamped — and it was never needed:
+    // solveMNA ties EVERY node to the reference through GMIN, so an unwired vin
+    // solves to 0 V on its own (spec-updates/ideal-high-z-inputs.md).
 
     update() { return false; }, // static power rails
 
