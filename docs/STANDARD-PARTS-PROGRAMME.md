@@ -88,69 +88,90 @@ parameters the solver uses and the `.model` line the exporter emits describe the
 SAME DEVICE — emit the card, run ngspice, run our solver, compare. That is the
 gate the LED's 10/2/5 split fails today.
 
-## The corpus is the acceptance instrument, and it has to be built
+## The corpus is an acceptance instrument, in evidence layers
 
-**Missing from the first two drafts of this plan, and it is the part that makes
-the rest verifiable.** A part card is a claim about a device. Hand-checking one
-circuit per part proves the card was typed correctly, not that the device is
-right — and every hand-check in this repo's history was written by someone who
-had already decided how the circuit behaves.
+A part card is a claim about a device. A small discriminating characterization
+is enough for a bounded first landing; a broader, resumable corpus sweep then
+raises that card from provisional to full coverage. Thousands of circuits are
+not a prerequisite for every card, and generated volume must not inflate the
+denominator.
 
-So: **no card is accepted until it has been run over thousands of circuits
-against an independent engine.**
+Every case has one of these evidence classes:
 
-### Sources, all measured 2026-09-13 (see the private corpus repo)
-
-| source | usable | licence tier |
+| class | treatment | claim supported |
 |---|---|---|
-| `touhid314/cktformer-dataset` | **~12,200 of 31,341** simulation-validated | 3 |
-| our gallery corpus | **1,607 reachable** (56 today) | ours |
-| `spice_netlist_generator` | **unlimited, seeded** | 1 — the only publishable one |
-| `bhatvineet/masala-chai` | 6,069 topologies, values to supply | 3 |
-| `ADI2005/spice-circuits-finetune-v2` | ~67 % of its rows, complete decks | 3 |
-| symbench | 63 runnable + 4,396 needing models | 2 |
+| `original-direct` | original values, models and analysis | numerical agreement for the supported original deck |
+| `original-adapted` | named model or analysis adapter | agreement only for that explicit interpretation |
+| `transformed-topology` | deterministic seeded values/models/excitation | differential coverage of the source topology |
+| `import-only` | syntax/connectivity preserved | importer coverage, not numerical agreement |
+| `unsupported` | required model/equation unavailable | an explicit gap, never silent coverage |
 
-Held in `CrispStrobe/circuit-oracle-corpora` (private), tiered so redistribution
-is mechanical: all three tiers are usable as ORACLE INPUT, only tier 1 may ever
-be published, and tier 3 — no declared licence — is the MOST restricted.
+The private `CrispStrobe/circuit-oracle-corpora` repository owns manifests,
+ingestion, transformations, oracle execution and result records. It consumes
+the public importer/engine APIs and does not copy their implementations. Current
+source inventories are leads, not fixed coverage numbers: nine of 23 locally
+sampled cktformer files ran directly after a suitable analysis was supplied, so
+the old “about 12,200” extrapolation is retired; ADI2005 contains valued decks
+but a local sample is not a corpus-wide ratio; Masala contains numeric, mixed
+and symbolic rows; and topology-only sources remain useful after a labelled,
+seeded transformation.
 
-### What still has to be built
+### Model and rights boundaries
 
-1. **The corpus itself.** Fetchers exist (`harness/fetch-corpus.mjs`, tier
-   derived from the licence text). cktformer needs a file-level fetcher because
-   its `netlist` column holds a PATH, not content.
-2. **A Spectre/symbolic -> neutral importer**, so topology-only corpora become
-   runnable: we assign values, both engines get the identical ones. Topological
-   variety is the scarce thing; values are free.
-3. **A standard model library** — the same cards this programme adds. It
-   unlocks symbench's 4,396, cktformer's non-runnable majority, Si7li's vendor
-   parts (`2N3391A`, `2N4126`) and phy-chip-bench at once. **The parts library
-   and the corpus are the same work seen from two ends.**
-4. **A corpus baseline**, committed, so every later change diffs against it
-   rather than against a remembered number.
+A standard card unlocks only parameters and equations that the importer and
+solver preserve. In particular, a LEVEL=1-like MOS claim requires `KP`, `W/L`
+and `VTO` to survive import. Extra temperature, capacitance, Gummel-Poon, BSIM
+and vendor macro-model fields remain explicit unsupported fields or named
+adapters; a familiar model name is not an implementation.
 
-### The acceptance rule for a card
+Externally visible data is not automatically redistributable. Record a compact
+source manifest with repository/config/revision, input hash, current licence or
+terms reference, access restrictions and intended use. Unknown or restrictive
+source bytes/models stay external offline/private test inputs and out of public
+packages, examples, goldens, logs and CI artifacts. This does not prevent an
+independently written harness from testing a lawfully obtained external input;
+nor does substituting synthetic values automatically clear rights in a source.
 
-    emit the card -> ngspice
-    same circuit  -> our solver
-    compare over every corpus circuit that uses that device class
+### Per-case contract and acceptance
 
-A card is done when the corpus agrees within a stated tolerance, the tolerance
-is recorded with the reading that set it, and the count of circuits it was
-measured over is recorded beside it. **"Agrees" with no denominator is not a
-result** — the two-pass LED delta looked like 2,516 of 2,525 readings until it
-was actually run, when it was 313 of 2,739.
+Each manifest fixes: input hash; evidence class; transformation/version/seed;
+models and unsupported fields; analysis and its parameters; temperature;
+boundary and initial conditions; requested node/branch observables; oracle
+version/options; engine head; tolerances; and expected comparison count. Results
+record complete finite observations plus one outcome such as `agree`,
+`disagree`, `oracle-error`, `engine-error`, `import-error`, `non-convergent`,
+`missing-observable`, `non-finite`, or `unsupported-model`.
 
-### Method notes already paid for
+Parser success and ngspice exit zero are not agreement. Zero comparisons,
+missing observables and non-finite readings fail. Preserve a source deck's
+analysis when supported instead of forcing `.op`; label every transformed deck.
+Report selected, attempted, compared, agreed and each refusal category against a
+fixed manifest. Long sweeps write results durably per case.
 
-- **Compare like with like.** A 1 ms transient against a DC `.op` showed three
-  capacitor circuits disagreeing by 36 %, 81 % and 151,626,595 %. All were
-  0.0000 % once settled. The shape of that wrong answer — all capacitors — was
-  exactly convincing enough to publish as a solver defect.
-- **Zero compared is not agreement.** Two separate harness bugs reported clean
-  runs over an empty set.
-- **Durable writes per line.** A sweep that commits its result at the end
-  cannot be interrupted, and anything taking hours will be.
+For pure linear DC, add an analytical or KCL residual spot-check so shared
+emission/parsing bugs cannot make ngspice and our solver agree falsely. Other
+engines are optional, justified adapters rather than an upfront framework. A
+small per-card characterization should cross the applicable operating regions;
+the broader sweep records its exact denominator and promotes coverage later.
+
+### Bounded landing sequence
+
+1. Start with a private fixed manifest of self-contained R/V DC decks: original
+   inputs, real ngspice and engine executions through existing APIs, requested
+   voltage/current observations, analytical/KCL checks and classified results.
+2. Add small original-direct manifests from valued decks whose terms and model
+   subset are understood. Add parser/process code upstream only if an actual
+   production seam is missing.
+3. Reuse the existing deterministic topology bridge for symbolic sources and
+   record every generated value and seed. Add device classes only when their
+   parameter boundary is explicit.
+4. Characterize each new card narrowly, then run the broader resumable sweep.
+   Solver disagreements become separate semantic-risk changes, not tolerance
+   edits inside a card landing.
+5. Keep gallery MCU/digital freezing separate. It needs a runtime snapshot of
+   supply, time, drive mode/value and high-Z/unknown/contention state, and proves
+   only the analog DC solve conditional on that boundary—not digital or
+   transient correctness.
 
 ## What "recorded" means here
 
