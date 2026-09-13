@@ -46,12 +46,68 @@ test('the conversion is what it claims: datasheet drop minus the rating times rd
     assert.equal(kneeFromVf(2.0, 10, 0.005), 1.95);
 });
 
+/**
+ * The scan below must read CODE, and a source file is code plus prose.
+ *
+ * Twice now this gate has answered about the wrong text. It fired on `stampNPN`
+ * the day a COMMENT inside it recorded a measurement naming `model: 'shockley'`
+ * — a note explaining why the exponential base-emitter junction was TRIED and
+ * REVERTED, i.e. prose whose whole content is that the code does not do this.
+ * An evidence keyword is not evidence, in either direction.
+ *
+ * `mna.js` holds no regex literals today, so tracking the three string quotes is
+ * enough. If one is ever added, `/` after `=` or `(` starts a regex and this
+ * stripper will mis-read it; the self-check below fires on the shapes it does
+ * handle, so add a case there rather than trusting it silently.
+ */
+const stripComments = src => {
+    let out = '', i = 0, quote = null;
+    while (i < src.length) {
+        const c = src[i], d = src[i + 1];
+        if (quote) {
+            if (c === '\\') { out += '  '; i += 2; continue; }
+            if (c === quote) quote = null;
+            out += c; i++; continue;
+        }
+        if (c === '\'' || c === '"' || c === '`') { quote = c; out += c; i++; continue; }
+        if (c === '/' && d === '/') {
+            while (i < src.length && src[i] !== '\n') { out += ' '; i++; }
+            continue;
+        }
+        if (c === '/' && d === '*') {
+            const end = src.indexOf('*/', i + 2);
+            const stop = end < 0 ? src.length : end + 2;
+            // Keep newlines so an offset still lands on its own line.
+            for (; i < stop; i++) out += src[i] === '\n' ? '\n' : ' ';
+            continue;
+        }
+        out += c; i++;
+    }
+    return out;
+};
+
+test('the comment stripper removes prose and keeps code', () => {
+    // Driven at an example AND a counter-example, because a stripper that
+    // removed everything would make the gate below pass forever.
+    assert.match(stripComments('a(); // shockley\nb();'), /a\(\);\s*\nb\(\);/);
+    assert.doesNotMatch(stripComments('a(); // shockley\n'), /shockley/);
+    assert.doesNotMatch(stripComments('/* junctionOpts */ a();'), /junctionOpts/);
+    assert.match(stripComments('/* x */ shockley();'), /shockley\(\)/);
+    assert.match(stripComments(`const s = '// not a comment';`), /not a comment/);
+    assert.match(stripComments('const s = "a/*b*/c";'), /a\/\*b\*\/c/);
+});
+
 test('zener and BJT stamps do NOT convert their vf, and cannot reach the exponential path', () => {
-    const mna = read('src/mna.js');
+    const mna = stripComments(read('src/mna.js'));
     const fnBody = name => {
         const i = mna.indexOf(`function ${name}(`);
         assert.ok(i > 0, `${name} not found — re-point this pin, do not delete it`);
-        return mna.slice(i, i + 4000);
+        // To the NEXT top-level function, not a fixed window. `stampNPN` is 3,620
+        // characters long and the window was 4,000, so the gate was already
+        // reading 380 characters of its neighbour and would have named the wrong
+        // function in the failure message.
+        const j = mna.indexOf('\nfunction ', i + 1);
+        return mna.slice(i, j < 0 ? mna.length : j);
     };
     for (const name of ['stampZener', 'stampNPN', 'stampPNP']) {
         const body = fnBody(name);
@@ -76,7 +132,10 @@ test('led and diode DO convert, at every reader', () => {
         ['src/devices/display.js', 'kneeFromVf', 2]  // bargraph stamp + update
     ];
     for (const [file, needle, atLeast] of sites) {
-        const n = read(file).split(needle).length - 1;
+        // Comments stripped here too: a `>=` count is satisfied by a comment
+        // NAMING the function, so the reader that stopped converting could be
+        // covered by the note explaining that it converts.
+        const n = stripComments(read(file)).split(needle).length - 1;
         assert.ok(n >= atLeast,
             `${file} references ${needle} ${n} time(s), expected at least ${atLeast}. A reader has `
             + 'stopped converting, which splits it from the others — and nodeVoltage and '
