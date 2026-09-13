@@ -21,6 +21,7 @@
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import { solveMNA, OPAMP_ISHORT_DEFAULT, kneeFromVf } from './mna.js';
+import { resolveParams } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
 import { getDevice, initDeviceState } from './devices.js';
@@ -589,6 +590,15 @@ export class BoardImpl {
     // So it is decided in one place, on the solve-local parts (derived data,
     // rebuilt with every netlist — never the caller's objects), and every site
     // downstream reads that answer rather than recomputing it.
+    // PART CARDS RESOLVE HERE, before anything reads a parameter. A part
+    // naming `params.part: '2N2222'` gets the card's numbers merged in, with
+    // anything set explicitly winning -- a card is a DEFAULT with provenance,
+    // not an override. Resolving once, into the private copy, keeps the rule
+    // that every downstream site reads an answer rather than recomputing it;
+    // it is also why a card cannot disagree with the solver by construction.
+    for (const p of this._solveParts) {
+      if (p.params && p.params.part) p.params = resolveParams(p.params);
+    }
     {
       const headroomV = this._junctionHeadroomV();
       for (const p of this._solveParts) {
