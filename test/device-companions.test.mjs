@@ -41,7 +41,9 @@ test('a buzzer reports the conductance the solver actually stamped', () => {
             { id: 'n_gnd', terminals: [{ part: 'LS1', terminal: 'b' }, { part: 'GND1', terminal: 'gnd' }] },
         ],
     );
-    const comps = board.deviceCompanions('LS1');
+    const snap = board.deviceCompanions('LS1');
+    assert.equal(snap.converged, true);
+    const comps = snap.records;
     assert.equal(comps.length, 1, `expected one companion, got ${JSON.stringify(comps)}`);
     assert.equal(comps[0].kind, 'cond');
     assert.equal(1 / comps[0].g, classDefaults('buzzer').ohms);
@@ -66,7 +68,7 @@ test('a buzzer with its own ohms reports THAT value, not the table default', () 
             { id: 'n_gnd', terminals: [{ part: 'LS1', terminal: 'b' }, { part: 'GND1', terminal: 'gnd' }] },
         ],
     );
-    assert.equal(1 / board.deviceCompanions('LS1')[0].g, 470);
+    assert.equal(1 / board.deviceCompanions('LS1').records[0].g, 470);
 });
 
 test('a button reports open or closed, and the two differ', () => {
@@ -85,11 +87,11 @@ test('a button reports open or closed, and the two differ', () => {
         return board;
     };
     const open = mk();
-    const gOpen = open.deviceCompanions('SW1')[0].g;
+    const gOpen = open.deviceCompanions('SW1').records[0].g;
 
     const closed = mk();
     closed.setControl('SW1', 1);
-    const gClosed = closed.deviceCompanions('SW1')[0].g;
+    const gClosed = closed.deviceCompanions('SW1').records[0].g;
 
     // 1 mOhm closed, effectively open otherwise. The SEPARATING state matters:
     // a companion that always reported "open" would be right for most of the
@@ -116,7 +118,7 @@ test('a registered device reports its drives as sources, at the driven level', (
             ]},
         ],
     );
-    const comps = board.deviceCompanions('B1');
+    const comps = board.deviceCompanions('B1').records;
     const src = comps.find(c => c.kind === 'norton' && c.t === 'pos');
     assert.ok(src, `no norton on pos, got ${JSON.stringify(comps)}`);
     assert.equal(src.vth, 9.0);
@@ -140,8 +142,8 @@ test('an unregistered, unstamped kind reports nothing rather than something', ()
             { part: 'GND1', terminal: 'gnd' },
         ]}],
     );
-    assert.deepEqual(board.deviceCompanions('R1'), []);
-    assert.deepEqual(board.deviceCompanions('NOT_A_PART'), []);
+    assert.deepEqual(board.deviceCompanions('R1').records, []);
+    assert.deepEqual(board.deviceCompanions('NOT_A_PART').records, []);
 });
 
 test('the records are copies: a caller cannot edit what the solve stamped', () => {
@@ -156,6 +158,51 @@ test('the records are copies: a caller cannot edit what the solve stamped', () =
             { id: 'n_gnd', terminals: [{ part: 'LS1', terminal: 'b' }, { part: 'GND1', terminal: 'gnd' }] },
         ],
     );
-    board.deviceCompanions('LS1')[0].g = 12345;
-    assert.equal(1 / board.deviceCompanions('LS1')[0].g, 470);
+    board.deviceCompanions('LS1').records[0].g = 12345;
+    assert.equal(1 / board.deviceCompanions('LS1').records[0].g, 470);
+});
+
+test('the snapshot carries its own provenance, and it is not a DC claim', () => {
+    // The review that produced this shape: the accessor reads the board's LIVE
+    // solve — the same one nodeVoltage and branchCurrent report — so it can be
+    // an instantaneous transient state, and it said nothing about convergence.
+    // A consumer must not be able to take the records without both facts.
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+        [
+            { id: 'GND1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+            { id: 'LS1', kind: 'buzzer', params: { ohms: 470 }, terminals: ['a', 'b'] },
+        ],
+        [
+            { id: 'n_a', terminals: [{ part: 'LS1', terminal: 'a' }] },
+            { id: 'n_gnd', terminals: [{ part: 'LS1', terminal: 'b' }, { part: 'GND1', terminal: 'gnd' }] },
+        ],
+    );
+    const snap = board.deviceCompanions('LS1');
+    assert.equal(typeof snap.converged, 'boolean');
+    assert.equal(typeof snap.timeNs, 'bigint');
+    assert.ok(Array.isArray(snap.records));
+    // The time it names is the board's, and it MOVES: a snapshot that always
+    // said 0 would be a label rather than provenance.
+    board.advanceTo(1_000_000n);
+    assert.equal(board.deviceCompanions('LS1').timeNs, board.timeNs);
+    assert.ok(board.timeNs > 0n, 'the board did not advance, so the check above proved nothing');
+});
+
+test('an unpowered board reports no companions, and says which board it is', () => {
+    const board = new BoardImpl(5.0);
+    board.setNetlist(
+        [
+            { id: 'GND1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+            { id: 'LS1', kind: 'buzzer', params: {}, terminals: ['a', 'b'] },
+        ],
+        [
+            { id: 'n_a', terminals: [{ part: 'LS1', terminal: 'a' }] },
+            { id: 'n_gnd', terminals: [{ part: 'LS1', terminal: 'b' }, { part: 'GND1', terminal: 'gnd' }] },
+        ],
+    );
+    board.setPower(false);
+    const snap = board.deviceCompanions('LS1');
+    assert.deepEqual(snap.records, []);
+    assert.equal(typeof snap.timeNs, 'bigint');
 });

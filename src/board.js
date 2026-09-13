@@ -1560,40 +1560,70 @@ export class BoardImpl {
   }
 
   /**
-   * The companion elements the last solve STAMPED for a registered device.
+   * The companion elements THIS BOARD'S CURRENT SOLVE stamped for a part.
    *
-   * Every registered model reaches the matrix through the same four
-   * primitives, and `stampDevice` records one entry per companion so that
-   * terminal currents can be derived generically. Those records are the
-   * device's DC linearisation at the converged operating point, in the
-   * engine's own words:
+   * READ THE NAME OF WHAT THIS IS. It is not "the DC operating point" and it is
+   * not a model. It is a snapshot of the same solve every other reading on this
+   * board comes from — `nodeVoltage`, `branchCurrent`, the meters — taken at
+   * `timeNs`, with whatever transient companions were in play at that instant
+   * (a charged capacitor is a conductance and a source, not an open). The first
+   * version of this comment said "DC linearisation at the converged operating
+   * point"; both halves were wrong, because `_solveMNA(false)` is the live
+   * instantaneous solve and convergence was neither checked nor reported.
+   * Caught in review. If you want a true DC bias, advance the board to
+   * steady state, or use `operatingPoint()`, which refuses what it cannot do.
+   *
+   * The return therefore carries its own provenance, so a caller cannot pick up
+   * the records without the two facts that qualify them:
+   *
+   *   {converged, timeNs, records}
+   *
+   * `converged: false` means the solver did not settle and the records describe
+   * an iterate, not an answer. Do not average it, publish it, or oracle against
+   * it — say the circuit did not settle, as the bench does.
+   *
+   * Record shapes, one per companion, terminal NAMES not net ids:
    *
    *   {kind: 'cond',    tA, tB, g}        conductance between two terminals
    *   {kind: 'norton',  t, g, vth}        Thevenin vth behind 1/g, to ground
    *   {kind: 'between', tP, tN, g, vth}   the same, floating between two pins
    *   {kind: 'inject',  t, amps}          a current pushed into a terminal
    *
-   * Exposed so an EXPORTER can write a device the target format has no card
-   * for. A `74hc595` or a `buzzer` dropped from a SPICE deck does not make the
-   * deck smaller, it makes it a different circuit: measured against ngspice, a
-   * dropped '595 left eight LED branches at 0 V against the engine's 1.84, and
-   * a dropped buzzer left its node at the full rail against the engine's
-   * 5 x 100/125. Writing these records instead keeps the two solvers on the
-   * same circuit while every OTHER element stays independently judged.
+   * The soft-start ramp is already applied to `vth` and `amps`. Records are
+   * copies: a caller cannot edit what the solve stamped.
    *
-   * What it is NOT: a model. It is one operating point's linearisation, so a
-   * deck built from it is only valid at that bias — the caller must say so.
+   * WHY IT IS EXPOSED. A part a target format has no card for used to be
+   * dropped from an export, and a dropped part does not make a deck smaller, it
+   * makes it a DIFFERENT CIRCUIT — which the foreign simulator then answers
+   * about with total confidence. Measured against ngspice on the shipped
+   * corpus: a `74hc595` dropped this way left eight LED branches at 0 V against
+   * the engine's 1.842233 V, and a `buzzer` dropped this way left its node at
+   * the full 5 V rail against the engine's 4.0 (5 x 100/125). 42 kinds are in
+   * that state, in 1,250 of 2,163 corpus circuits. Writing these records
+   * instead keeps the two solvers on one circuit; an exporter that kept its own
+   * table of each device's value instead is the defect that made all 45 LDR
+   * circuits disagree by a factor of 1,000.
+   *
+   * An export built on this is valid AT THIS SNAPSHOT ONLY and must say so.
    *
    * @param {string} partId
-   * @returns {Array<Record<string, *>>} empty when the part is not a
-   *   registered device, drove nothing, or the board is unpowered
+   * @returns {{converged: boolean, timeNs: bigint, records: Array<Record<string, *>>}}
+   *   `records` is empty when the part is not a registered device or built-in
+   *   that records companions, when it drove nothing, or when the board is
+   *   unpowered — which is NOT the same as a companion of zero conductance.
    */
   deviceCompanions(partId) {
     this._flushSolve();
-    if (!this.powered) return [];
+    if (!this.powered) {
+      return { converged: this._lastSolveConverged !== false, timeNs: this.timeNs, records: [] };
+    }
     if (!this._mnaCache) this._mnaCache = this._solveMNA(false);
     const rec = this._mnaCache.deviceStamps?.get(partId);
-    return rec ? rec.map(r => ({ ...r })) : [];
+    return {
+      converged: this._lastSolveConverged !== false,
+      timeNs: this.timeNs,
+      records: rec ? rec.map(r => ({ ...r })) : [],
+    };
   }
 
   /**

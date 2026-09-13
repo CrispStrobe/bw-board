@@ -1,10 +1,20 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
 2026-09-13 `deviceCompanions`: a part with no card must not vanish — lego-ac.
+**Corrected the same day after review: it returns `{converged, timeNs, records}`,
+not a bare list, and it is a SNAPSHOT of the board's live solve — not a DC
+operating point.** The first comment said "DC linearisation at the converged
+operating point" and both halves were wrong: `_solveMNA(false)` is the
+instantaneous solve (a charged capacitor is a conductance and a source, not an
+open), and convergence was neither checked nor reported. A consumer must not be
+able to take the records without the two facts that qualify them, so the two
+facts are in the return.
 
-`BoardImpl.deviceCompanions(partId)` returns the companion elements the last
-solve STAMPED for a part: the same records the generic terminal-current
-extraction is already derived from.
+
+`BoardImpl.deviceCompanions(partId)` returns the companion elements the board's
+CURRENT solve stamped for a part — the same records the generic terminal-current
+extraction is already derived from, and the same solve `nodeVoltage` and
+`branchCurrent` report.
 
   {kind: 'cond',    tA, tB, g}        conductance between two terminals
   {kind: 'norton',  t, g, vth}        Thevenin vth behind 1/g, to ground
