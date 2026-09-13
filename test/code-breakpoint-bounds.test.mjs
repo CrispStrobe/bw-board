@@ -57,4 +57,18 @@ for (const [name, make] of Object.entries(CORES)) {
     assert.notEqual(outcome, 'halted',
       `an out-of-range code breakpoint must not halt the program (halted at pc ${pc()})`);
   });
+
+  if (name === 'm6502') {
+    test('m6502: advertised maximum, acceptance, successor, and refusal name agree', () => {
+      const { target } = make();
+      const max = target.capabilities().runTo[0].addressMax;
+      assert.equal(max, 0xffff);
+      assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: max }), 'number');
+      const refusal = target.setBreakpoint({ kind: 'code', addr: max + 1 });
+      assert.ok(refusal?.unsupported);
+      const named = /0x([0-9a-f]+)\s*$/.exec(refusal.unsupported);
+      assert.ok(named, `refusal names no maximum: ${JSON.stringify(refusal.unsupported)}`);
+      assert.equal(parseInt(named[1], 16), max);
+    });
+  }
 }
