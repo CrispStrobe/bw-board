@@ -58,8 +58,8 @@ for (const [name, make] of Object.entries(CORES)) {
       `an out-of-range code breakpoint must not halt the program (halted at pc ${pc()})`);
   });
 
-  if (name === 'm6502') {
-    test('m6502: advertised maximum, acceptance, successor, and refusal name agree', () => {
+  if (name === 'm6502' || name === 'z80') {
+    test(`${name}: advertised maximum, acceptance, successor, and refusal name agree`, () => {
       const { target } = make();
       const max = target.capabilities().runTo[0].addressMax;
       assert.equal(max, 0xffff);
