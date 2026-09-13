@@ -2595,21 +2595,44 @@ function stampTwoTerminal(A, netA, netB, g, nodeIndex) {
 /**
  * Stamp a variable resistor (LDR or NTC). Resistance depends on control value.
  */
-function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls) {
-  let ohms;
+/**
+ * THE RESISTANCE A CONTROLLED PASSIVE PRESENTS, exported so nobody has to
+ * guess it.
+ *
+ * An LDR and an NTC are resistors whose value is a function of a CONTROL, not a
+ * stored number, so `params.ohms` does not exist and anything reading one gets
+ * `undefined` and substitutes its own idea. bw-circuit-ui's SPICE exporter did
+ * exactly that: `ENGINE_DEFAULTS.ldr = 1000`, a flat 1 kOhm, against this
+ * function's 1,000,000 at the default dark control. A thousandfold, and it made
+ * every LDR circuit in the corpus disagree with ngspice — 45 of 45.
+ *
+ * Exported rather than inlined because that is now the third number of this
+ * kind (the buzzer's 100, the pot's divider, this): a value the solver computes
+ * and an exporter must reproduce needs ONE definition, and a table of defaults
+ * in the consumer is not it.
+ *
+ * @param {{id: string, kind: string, params?: Record<string, unknown>}} part
+ * @param {Map<string, number>} [controls]
+ * @returns {number|null} ohms, or null when the kind is not a controlled passive
+ */
+export function controlledResistance(part, controls = new Map()) {
   if (part.kind === 'ldr') {
-    const rDark = /** @type {number} */ (part.params.rDark ?? 1000000);
-    const rLight = /** @type {number} */ (part.params.rLight ?? 100);
+    const rDark = /** @type {number} */ (part.params?.rDark ?? 1000000);
+    const rLight = /** @type {number} */ (part.params?.rLight ?? 100);
     const light = controls.get(part.id) ?? 0;
-    ohms = rDark * Math.pow(rLight / rDark, light);
-  } else {
-    // ntc
-    const rCold = /** @type {number} */ (part.params.rCold ?? 100000);
-    const rHot = /** @type {number} */ (part.params.rHot ?? 1000);
-    const temp = controls.get(part.id) ?? 0;
-    ohms = rCold * Math.pow(rHot / rCold, temp);
+    return Math.max(rDark * Math.pow(rLight / rDark, light), 0.001);
   }
-  ohms = Math.max(ohms, 0.001);
+  if (part.kind === 'ntc') {
+    const rCold = /** @type {number} */ (part.params?.rCold ?? 100000);
+    const rHot = /** @type {number} */ (part.params?.rHot ?? 1000);
+    const temp = controls.get(part.id) ?? 0;
+    return Math.max(rCold * Math.pow(rHot / rCold, temp), 0.001);
+  }
+  return null;
+}
+
+function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, controls) {
+  const ohms = /** @type {number} */ (controlledResistance(part, controls));
   const netA = findNet(nets, part.id, 'a');
   const netB = findNet(nets, part.id, 'b');
   stampTwoTerminal(A, netA, netB, 1 / ohms, nodeIndex);
