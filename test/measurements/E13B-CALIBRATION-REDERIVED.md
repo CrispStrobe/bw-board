@@ -201,6 +201,49 @@ move is +10.0 %. That is the expected shape: the correction gives every
 piecewise part back the 0.2 V it was wrongly dropping, and 0.2 V against a
 typical 3 V headroom is 6.7 %.
 
+### The two-pass solve, which CORRECTS the table above
+
+Run after landing, with the engine injected so the whole pipeline (inferNetlist
+included) runs at each version: A = the pinned pre-correction engine, B = this
+lane. 1,081 circuits appeared in both passes, 2,739 LED readings compared.
+
+| | algebraic estimate | measured two-pass |
+|---|---|---|
+| readings that moved | "2,516 of 2,525" | **313 of 2,739** |
+| median change | +6.7 % | **+5.05 %** |
+| max change | +10.0 % | **+39.6 %** |
+| lit → dark / dark → lit | 0 | **0** |
+
+**Two things the algebraic table got wrong.**
+
+*Far fewer readings move than it predicted.* It counted every LED in the corpus,
+but most are OFF at the sampled moment, and an off LED reads 0 before and after.
+2,426 of 2,739 readings are bit-identical.
+
+*The tail is four times longer than it claimed.* The estimate used each
+circuit's nominal `vcc`, so its worst case was +10.0 %. In reality a pot or a
+dropper reduces the headroom actually across the junction, and a fixed 0.2 V
+correction is proportionally larger the smaller that headroom is:
+
+    41-pot-as-dimmer   led1   0.00940 -> 0.01303   x1.386
+    disp-bargraph      pico1_onboard 0.03375 -> 0.04710   x1.396
+
+That is the correction behaving correctly — a dim LED was the case the old
+convention got most wrong — but +39.6 % is not +10 %, and anyone re-deriving a
+lite brightness claim on a dimmed LED must expect the larger number.
+
+Four further outliers are reverse-leakage readings in `28-diode-polarity` and
+`42-diode-rectifier` that fall toward zero, which is `SILICON_RD` acting on a
+non-conducting junction.
+
+**What survives unchanged: zero lit/dark crossings.** No circuit in the corpus
+changes qualitatively, which was the claim that mattered.
+
+COVERAGE: 1,081 of 2,131 files, the rest having no LEDs or not loading. The
+~210 heaviest (`eater6502-full-build` onward) are excluded because one settle of
+25 ms takes over two minutes there; they are MCU-program-driven and are the
+least informative for a device-model comparison and the most expensive.
+
 METHOD AND ITS LIMIT, stated because the number is load-bearing: this is
 computed from each circuit's `vcc` and each LED's `vf` param, not by solving
 2,131 circuits twice. That is exact for the piecewise ratio — the algebra
