@@ -26,43 +26,67 @@ tables would multiply the problem by twenty.
 
 So the first deliverable is not a part. It is the **authority**.
 
+## What already exists — surveyed 2026-09-13 against bw-circuit-ui `origin/master`
+
+**Correction to the first draft of this document.** It proposed building modular
+translators and a CLI/GUI path for them. That was written against a checkout
+**207 commits behind** on a feature branch, which showed a 126-line SPICE
+exporter, no SPICE importer and no PCB. All three readings were wrong. What is
+actually there:
+
+| surface | present |
+|---|---|
+| importers (16) | detect, eagle, easyeda, easyeda-pcb, easyeda-pro-pcb, fritzing, kicad-common, kicad-legacy, kicad-netlist, **kicad-pcb**, kicad-sch, sexpr, **spice**, wokwi, zip |
+| exporters (12) | circuitikz, download, eagle, easyeda, easyeda-pcb, easyeda-schematic, **gerber**, kicad, **kicad-pcb**, kicad-sch, **spice**, registry |
+| PCB | `footprints.js`, `pcb-drc.js`, `pcb-geometry.js`, import + export both ways, Gerber out |
+| schematic | `schematic-projection.js`, `schematic-symbols.js`, headless `schematic-svg.js`, `SchematicPanel.jsx`, CircuiTikZ export |
+| CLI `bwc` | info, convert, render, roundtrip, audit, batch |
+
+And both sides are already REGISTRIES with reachability gates:
+`exporters/registry.js`, `importers/index.js` (`IMPORTERS` + `IMPORT_FORMATS`),
+enforced by `test/export-reachability.test.js`,
+`test/import-reachability.test.js` and `test/engine-kind-registry.test.js`.
+
+The registry's own header states the rule this programme must obey:
+
+> An export nobody can invoke is not a feature, it is a defect that looks like a
+> feature: it has tests, it has a golden file, and it has never once run for a
+> user.
+
+Seven writers were in exactly that state before it existed. **Menus render FROM
+the registry, so an entry is the only way to add a format and a format cannot
+exist without an entry.** New work joins that structure; it does not build
+beside it.
+
+## So the programme is narrower than it looked
+
+Not "build translators" — they exist. The real gaps:
+
+1. **One parts authority.** The 10 / 2 / 5 split above is real and unfixed.
+2. **Part cards** for named devices, read by the solver AND the exporter AND the
+   importer's part-number resolution.
+3. **Designer sidecars + faces** for each new placeable part
+   (`<kind>.json` + `<kind>.svg`, joining the 250 already there).
+4. **`solve` as a first-class verb** in CLI and GUI, beside convert/render —
+   the engine is already reachable from both, but solving is not offered.
+5. **Examples** using the new parts, which double as the end-to-end proof.
+
 ## Architecture
 
     bw-board/src/parts-library.js      ← ONE authority: part number -> parameters
               |                    |
-              |                    +-- exporters/spice.js reads it (no hardcoded .model)
-              |                    +-- importers/spice.js resolves part numbers through it
+              |                    +-- exporters/spice.js emits its .model line
+              |                    +-- importers/spice.js resolves part numbers
               |                    +-- parts-data sidecars reference it by name
               +-- mna.js resolves params from it
 
 bw-board owns it because bw-board is the engine and is now a package
-bw-circuit-ui depends on. A card is the SINGLE source for: the solver's
-parameters, the emitted `.model` line, and what an importer recognises.
+bw-circuit-ui depends on.
 
 **Invariant, held by a test rather than a convention:** for every card, the
 parameters the solver uses and the `.model` line the exporter emits describe the
-SAME DEVICE. That is checkable — emit the card, run ngspice, run our solver,
-compare — and it is the gate the LED's 10/2/5 split would have failed.
-
-## Order, and why
-
-1. **The library + the reconciliation.** Cards for the parts already implicitly
-   present (1N4148, 1N4733A, 2N2222, 2N2907, TIP120, LED, D_DEFAULT, Q_DEFAULT),
-   the three-way `rs` split resolved to one number per part, and the
-   same-device gate. Nothing new is added until existing parts agree.
-2. **The MNA path.** `params.part: '2N2222'` resolves through the library;
-   explicit params still override. No behaviour change for parts that set
-   values directly.
-3. **Translators, modular.** One neutral form (the `test/lcapy/circuits.mjs`
-   shape already proven) with emitters per target. SPICE in/out first, then
-   KiCad/EAGLE/EasyEDA/Wokwi importers already in bw-circuit-ui get the same
-   library for part resolution.
-4. **Designer faces.** `<kind>.json` sidecar + `<kind>.svg` per new part. This
-   is bw-circuit-ui's surface and lego-38's call.
-5. **CLI + GUI.** import / export / convert / solve on both. The CLI comes
-   first because it is testable without a browser.
-6. **Examples.** Shipped circuits using the new parts, which is also the
-   coverage proof that a part is really wired end to end.
+SAME DEVICE — emit the card, run ngspice, run our solver, compare. That is the
+gate the LED's 10/2/5 split fails today.
 
 ## What "recorded" means here
 
