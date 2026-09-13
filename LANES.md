@@ -14,9 +14,16 @@ the optocoupler's hard-coded rd = 50 is a separate decision, untouched.
 
 **READ THIS BEFORE BUMPING LITE'S bw-board PIN PAST `fe17d7c`.** Nothing in the
 shipped app changes until someone bumps, because lite consumes the engine at a
-pin. When you do: **every LED gets brighter by a median +6.7 % (min +2.9 %, max
-+10.0 %, 2,516 of 2,525 corpus LEDs affected; the 9 unaffected are on the
-exponential path, which already used the datasheet convention).** Lite's
+pin. When you do — these are the MEASURED two-pass numbers, and they replace an
+earlier algebraic estimate of mine that was wrong in both directions:
+**313 of 2,739 LED readings move, median +5.05 %, and the MAXIMUM IS +39.6 %,
+not the +10 % I first wrote.** Most corpus LEDs are off at the sampled moment
+and read identically; the long tail is dimmed LEDs — a pot or dropper cuts the
+headroom across the junction, and a fixed 0.2 V correction is proportionally
+larger the smaller that headroom is (`41-pot-as-dimmer` x1.386,
+`disp-bargraph` onboard x1.396). **Zero lit/dark crossings**, which is the
+claim that mattered. If you are re-deriving a claim on a DIMMED LED, expect
+tens of percent, not single digits. Lite's
 lesson-bench and claim suites carry numeric brightness expectations that WILL
 move by that amount. **Re-derive them in the same commit — do not widen
 tolerances.** The 232-bench / 2,635-claim pass belongs to that bump, not to
