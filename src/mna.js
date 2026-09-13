@@ -28,6 +28,7 @@
  */
 import { getDevice } from './devices.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
+import { spicePulseVoltage } from './source-waveforms.js';
 
 class Matrix {
   /**
@@ -3349,6 +3350,8 @@ function stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex, vStored) {
  * amplitude is the peak deviation from offset; duty applies to square/pulse
  * (fraction of the period spent high, default 0.5); phase is in degrees.
  * A 'pulse' swings offset → offset+amplitude; the others swing symmetrically.
+ * A distinct `wave: 'spice-pulse'` uses exact `{v1,v2,td,tr,tf,pw,per}`
+ * parameters; it never changes the established native pulse contract.
  *
  * This is the whole electrical model of a function generator.
  *
@@ -3362,6 +3365,7 @@ export function sourceVoltage(part, tSeconds, vcc) {
   const wave = /** @type {string} */ (p.wave ?? 'dc');
   const volts = /** @type {number} */ (p.volts ?? vcc);
   if (wave === 'dc') return volts;
+  if (wave === 'spice-pulse') return spicePulseVoltage(p, tSeconds);
 
   // PCM playback: the source plays a sample buffer — an audio line-in.
   // { wave: 'pcm', samples: number[]|Float32Array, rate: Hz,
