@@ -28,6 +28,7 @@ import { getDevice, initDeviceState } from './devices.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
+import { nextSpicePulseCorner } from './source-waveforms.js';
 
 /**
  * Internal pin state.
@@ -3613,9 +3614,9 @@ export class BoardImpl {
   }
 
   /**
-   * Next discontinuity of any square/pulse waveform source strictly after
-   * `tSec`, in seconds — or null. Sine/triangle/pcm are continuous and the
-   * LTE controller handles them; only genuine edges need alignment.
+   * Next corner of any square/native-pulse/SPICE-PULSE source strictly after
+   * `tSec`, in seconds — or null. Sine/triangle/pcm are smooth and the LTE
+   * controller handles them; authored PULSE ramp corners need exact alignment.
    * @param {number} tSec
    * @returns {number | null}
    */
@@ -3650,6 +3651,15 @@ export class BoardImpl {
     for (const part of this.parts) {
       if (part.kind !== 'vsource') continue;
       const p = part.params ?? {};
+      if (p.wave === 'spice-pulse') {
+        // The caller already uses a 1 fs strict-after threshold for source
+        // edges. Asking past that same threshold prevents a rounded copy of
+        // the current corner from hiding the next one; it is far below the
+        // narrowest nanosecond corpus edge and does not move any solve point.
+        const tEdge = nextSpicePulseCorner(p, tSec + 1e-15);
+        if (next === null || tEdge < next) next = tEdge;
+        continue;
+      }
       if (p.wave !== 'square' && p.wave !== 'pulse') continue;
       const freq = p.freq ?? 1000;
       if (!(freq > 0)) continue;
