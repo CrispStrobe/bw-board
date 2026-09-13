@@ -5,6 +5,7 @@ typedef unsigned char u8;
 extern u32 settle_owned_context(const u32*);
 extern u32 preview_memory_banks(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,u8*,u8*,u8*,u32*);
 extern u32 preview_owned_memory_banks(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,u8*,u8*,u8*,u32*);
+extern u32 preview_owned_memory_banks_mapped(u32,u8*,u32*,u32*,const u8*,const u8*,const u8*,const u32*,u8*,u8*,u8*,u32*);
 extern u32 write_owned_driver_tagged(const u32*,u32,u32,u32);
 extern u32 producer_work[18];
 extern u32 admit_owned_context_for_memory(const u32*);
@@ -132,12 +133,21 @@ u32 settle_memory_circuit(const u32 *c,u32 passes,u32 *fault) {
         #else
         #ifdef NATIVE_STAGE_ATTRIBUTION
         STAGE_ADD(STAGE_MEMORY_GATHER_CALLS,1);STAGE_ADD(STAGE_MEMORY_GATHER_PIN_RECORDS,banks*28);
-        #endif
         for(u32 i=0;i<banks*28;i++){U8(23)[i]=U8(10)[input_nets[i]];U8(24)[i]=U8(11)[input_nets[i]];}
+        #else
+        /* The admitted owned preview reads this same settled image through its
+         * admitted map. The checked path retains the explicit snapshot. */
+        if(!c[31])for(u32 i=0;i<banks*28;i++){U8(23)[i]=U8(10)[input_nets[i]];U8(24)[i]=U8(11)[input_nets[i]];}
+        #endif
         #endif
         memory_pass_work[2]++;memory_pass_work[3]+=banks;
+        #if defined(NATIVE_STAGE_PROFILE_NAMING) || defined(NATIVE_STAGE_ATTRIBUTION)
         if(c[31])result=preview_owned_memory_banks(banks,U8(19),U32(20),U32(21),U8(22),U8(23),U8(24),U8(25),U8(26),U8(27),U32(28));
         else result=preview_memory_banks(banks,U8(19),U32(20),U32(21),U8(22),U8(23),U8(24),U8(25),U8(26),U8(27),U32(28));
+        #else
+        if(c[31])result=preview_owned_memory_banks_mapped(banks,U8(19),U32(20),U32(21),U8(22),U8(10),U8(11),input_nets,U8(25),U8(26),U8(27),U32(28));
+        else result=preview_memory_banks(banks,U8(19),U32(20),U32(21),U8(22),U8(23),U8(24),U8(25),U8(26),U8(27),U32(28));
+        #endif
         if(result){fault[0]=2;fault[1]=result;fault[2]=U32(28)[1];fault[3]=U32(28)[2];return 2;}
         u32 changed=0,prior_driver_changes=producer_work[PRODUCER_COUNT+PRODUCER_MEMORY_BANK];
         #ifdef NATIVE_STAGE_PROFILE_NAMING
