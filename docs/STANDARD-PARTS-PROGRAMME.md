@@ -116,6 +116,43 @@ but a local sample is not a corpus-wide ratio; Masala contains numeric, mixed
 and symbolic rows; and topology-only sources remain useful after a labelled,
 seeded transformation.
 
+### Measured corpus checkpoint — 2026-09-13
+
+The private corpus repository now has a dated discovery snapshot of 93 unique
+Hugging Face repositories found through eight circuit/EDA-related tags (162 tag
+memberships). That is an indexed lead set, not 93 acquired or runnable corpora:
+each row records its inspection depth, and acquisition, engine support and
+publication eligibility remain independent states. Dataset-card licence badges
+are recorded as publisher metadata rather than treated as blanket clearance of
+mixed upstream material.
+
+A separate date-bounded reconstruction pins twelve documented repositories at
+their latest commits no later than 2026-08-20. It contains 81 modern KiCad and
+seven legacy KiCad schematics, matching the old recorded counts; because the
+deleted collection had no preserved file hashes, this is not a claim of
+historical byte identity. Four additional pinned repositories provide a new
+replacement set of five EAGLE schematics and seven matching boards. They do not
+count as recovery of the missing 266-file EAGLE corpus. No external source
+payload is shipped from this public engine repository.
+
+The first hosted broad numerical qualification is also fixed rather than
+extrapolated. From the 12,471-row ADI v3 denominator, strict classification
+found 680 eligible E/R/V rows representing 85 exact projected bodies and 595
+duplicates; it found no eligible G body. The 85 bodies were each run at original
+zero bias and deterministic positive/negative DC stimuli, for 255/255 passing
+cases and 1,785/1,785 finite numeric comparisons (1,110 nonzero, 675 zero), plus
+765/765 KCL and 595/595 linearity checks. This is private analysis-derived DC
+controlled-E harness evidence, not dataset-wide coverage and not evidence that
+the public operating-point API accepts controlled sources. GitHub's artifact
+quota prevented retention of the full per-case JSON; the private log, aggregate
+summary and result hash remain, while the raw per-case artifact is unavailable.
+
+The public `BoardImpl.operatingPoint()` boundary is narrower: grounded static
+native R/C/V/I networks with GND/VCC, with ideal capacitors treated as DC opens
+and explicit refusals for declared unsupported domains. It is non-mutating and
+separately tested. Controlled-E projection evidence stays in the private
+harness until the public model and API intentionally support that class.
+
 ### Model and rights boundaries
 
 A standard card unlocks only parameters and equations that the importer and
