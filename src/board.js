@@ -20,7 +20,7 @@
 
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
-import { solveMNA, OPAMP_ISHORT_DEFAULT, kneeFromVf } from './mna.js';
+import { solveMNA, OPAMP_ISHORT_DEFAULT, kneeFromVf, sourceVoltage } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
 import { validateNetlist } from './validate.js';
@@ -2053,6 +2053,16 @@ export class BoardImpl {
         if ((part.params?.iLimit ?? 0) > 0) {
           throw new Error(`operatingPoint: unsupported current-limited source ${part.id}; `
             + 'constant-voltage and constant-current mode selection is stateful');
+        }
+        const posNet = this._netForTerminal(part.id, 'pos');
+        const negNet = this._netForTerminal(part.id, 'neg');
+        const volts = this.controls.has(part.id)
+          ? Number(this.controls.get(part.id))
+          : Number(sourceVoltage(part, 0, this.vcc));
+        const internalOhms = Number(part.params?.rInternal) || 0;
+        if (internalOhms <= 0 && posNet !== undefined && posNet === negNet && volts !== 0) {
+          throw new Error(`operatingPoint: inconsistent ideal voltage constraint ${part.id}; `
+            + `${volts} V cannot be imposed across the same net ${posNet}`);
         }
       }
     }

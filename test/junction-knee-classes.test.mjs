@@ -107,17 +107,23 @@ test('zener and BJT stamps do NOT convert their vf, and cannot reach the exponen
         // reading 380 characters of its neighbour and would have named the wrong
         // function in the failure message.
         const j = mna.indexOf('\nfunction ', i + 1);
-        return mna.slice(i, j < 0 ? mna.length : j);
+        assert.ok(j > i, `${name} has no following top-level function — re-point this pin`);
+        return mna.slice(i, j);
     };
     for (const name of ['stampZener', 'stampNPN', 'stampPNP']) {
         const body = fnBody(name);
-        assert.ok(!body.includes('kneeFromVf'),
+        assert.ok(!/\bkneeFromVf\s*\(/.test(body),
             `${name} calls kneeFromVf. It has no rated current and no exponential counterpart, so `
             + 'the conversion would change its behaviour with nothing to check it against. If a '
             + 'rated current has been given to this class, say so here and make the decision.');
-        assert.ok(!/junctionOpts|shockley/.test(body),
+        assert.ok(!/\b(?:junctionOpts|shockleyCompanion)\s*\(/.test(body)
+            && !/model\s*:\s*['"]shockley['"]/.test(body),
             `${name} now reaches the exponential path. Reason 1 for excluding it has expired: it `
             + 'now HAS a second answer to agree with, so revisit the exclusion.');
+    }
+    for (const name of ['stampNPN', 'stampPNP']) {
+        assert.match(fnBody(name), /diodeCompanion\(vAcross,\s*vbe,\s*rd\)/,
+            `${name} no longer calls the three-argument piecewise B-E companion`);
     }
 });
 
