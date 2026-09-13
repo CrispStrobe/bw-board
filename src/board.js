@@ -53,6 +53,70 @@ const MNA_ONLY_KINDS = new Set([
   'transformer',
 ]);
 
+/** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
+const OPERATING_POINT_KINDS = new Set([
+  'resistor', 'capacitor', 'vsource', 'isource', 'gnd', 'vcc',
+]);
+
+/**
+ * Nets whose DC voltage is fixed, directly or through a resistive/voltage
+ * constraint. Capacitors and current sources deliberately add NO edge: both
+ * leave common-mode voltage unconstrained at DC.
+ */
+function dcFloatingNets(parts, nets) {
+  const terminalNet = new Map();
+  for (const net of nets) {
+    for (const t of net.terminals) terminalNet.set(`${t.part}\0${t.terminal}`, net.id);
+  }
+  const graph = new Map(nets.map(n => [n.id, new Set()]));
+  const anchored = new Set();
+  const netFor = (part, terminal) => terminalNet.get(`${part.id}\0${terminal}`);
+  const join = (a, b) => {
+    if (!a || !b || a === b) return;
+    graph.get(a)?.add(b);
+    graph.get(b)?.add(a);
+  };
+  for (const part of parts) {
+    if (part.kind === 'gnd') {
+      const n = netFor(part, 'gnd');
+      if (n) anchored.add(n);
+    } else if (part.kind === 'vcc') {
+      const n = netFor(part, 'vcc');
+      if (n) anchored.add(n);
+    } else if (part.kind === 'resistor') {
+      join(netFor(part, 'a'), netFor(part, 'b'));
+    } else if (part.kind === 'vsource') {
+      join(netFor(part, 'pos'), netFor(part, 'neg'));
+    }
+  }
+  const hasGround = parts.some(p => p.kind === 'gnd' && netFor(p, 'gnd'));
+  if (!hasGround) return nets.map(n => n.id);
+  const reached = new Set(anchored);
+  const queue = [...anchored];
+  while (queue.length) {
+    const here = queue.shift();
+    for (const next of graph.get(here) ?? []) {
+      if (reached.has(next)) continue;
+      reached.add(next);
+      queue.push(next);
+    }
+  }
+  return nets.map(n => n.id).filter(id => !reached.has(id));
+}
+
+/** Normalize the accepted kinds without changing branchCurrent's legacy API. */
+function currentsIntoTerminals(parts, branchCurrents) {
+  const reverse = new Set(['resistor', 'capacitor', 'isource']);
+  const kinds = new Map(parts.map(p => [p.id, p.kind]));
+  const out = new Map();
+  for (const [partId, terminals] of branchCurrents) {
+    const sign = reverse.has(kinds.get(partId)) ? -1 : 1;
+    out.set(partId, new Map([...terminals].map(([terminal, amps]) =>
+      [terminal, sign * amps])));
+  }
+  return out;
+}
+
 /**
  * Brightness integrator window.
  */
@@ -1933,14 +1997,12 @@ export class BoardImpl {
     }
     // DC operating point: caps open, inductors shorted — the bias the
     // small-signal model is valid around.
-    const op = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
-      this.controls, this.vcc, {
-        tSeconds: Number(this.timeNs) / 1e9,
-        temperatureC: this.temperatureC,
-        deviceStates: this._deviceStates,
-        qualifiedSources: this._qualifiedSources(),
-        powerOff: !this.powered,
-      });
+    const op = this._solveDcOperatingPoint({
+      parts: this._solveParts,
+      controls: this.controls,
+      deviceStates: this._deviceStates,
+      tSeconds: Number(this.timeNs) / 1e9,
+    });
     if (op.converged === false) {
       throw new Error('runAc: the DC operating point did not converge — ' +
         'there is no bias point to linearize around');
@@ -1965,6 +2027,67 @@ export class BoardImpl {
       freqs,
       probes,
     });
+  }
+
+  /**
+   * Compute, but do not adopt, a DC operating point for the first proven
+   * public domain: grounded static native R/C/V/I networks. This is not an
+   * instantaneous read: capacitors are open, independent of stored charge.
+   * Positive current means current INTO the named part terminal.
+   */
+  operatingPoint() {
+    if (!this.powered) {
+      throw new Error('operatingPoint: the board is powered off; a source-on DC point was not computed');
+    }
+    for (const part of this._solveParts) {
+      if (!OPERATING_POINT_KINDS.has(part.kind)) {
+        throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
+          + 'the initial domain is static R/C/V/I/GND/VCC only');
+      }
+      if (part.kind === 'vsource') {
+        const wave = String(part.params?.wave ?? 'dc').toLowerCase();
+        if (wave !== 'dc') {
+          throw new Error(`operatingPoint: unsupported time-varying source ${part.id} (${wave}); `
+            + 'no waveform sample is silently treated as DC');
+        }
+        if ((part.params?.iLimit ?? 0) > 0) {
+          throw new Error(`operatingPoint: unsupported current-limited source ${part.id}; `
+            + 'constant-voltage and constant-current mode selection is stateful');
+        }
+      }
+    }
+    const floating = dcFloatingNets(this._solveParts, this._solveNets);
+    if (floating.length) {
+      throw new Error(`operatingPoint: DC-floating net${floating.length === 1 ? '' : 's'} `
+        + `${floating.join(', ')}; capacitors and independent current sources do not anchor voltage`);
+    }
+
+    // solveMNA's current-limit loop writes a private top-level field on source
+    // parts. The accepted domain excludes that mode, and shallow copies make
+    // this observational even if the implementation later inspects the field.
+    const parts = this._solveParts.map(part => ({ ...part }));
+    const op = this._solveDcOperatingPoint({
+      parts,
+      controls: new Map(this.controls),
+      deviceStates: new Map(),
+      tSeconds: 0,
+    });
+    return {
+      analysis: {
+        kind: 'dc-operating-point',
+        scope: 'grounded-static-native-r-c-v-i',
+        capacitors: 'open',
+        sources: 'fixed-dc-only',
+        sourceDefaults: { vsourceVolts: this.vcc, isourceAmps: 0.001 },
+        tSeconds: 0,
+        powered: true,
+        currentConvention: 'positive-into-part-terminal',
+      },
+      converged: op.converged === true,
+      nodeVoltages: new Map(op.nodeVoltages),
+      branchCurrents: currentsIntoTerminals(parts, op.branchCurrents),
+      railConflicts: [...(op.railConflicts ?? [])],
+    };
   }
 
   // ─── Internal: inductor integration ───────────────────────────────────────
@@ -2643,6 +2766,17 @@ export class BoardImpl {
   }
 
   // ─── Internal: MNA solver bridge ──────────────────────────────────────────
+
+  /** Shared capacitor-open DC solve used by public OP analysis and runAc. */
+  _solveDcOperatingPoint({ parts, controls, deviceStates, tSeconds }) {
+    return solveMNA(parts, this._solveNets, this._pinSources(), controls, this.vcc, {
+      tSeconds,
+      temperatureC: this.temperatureC,
+      deviceStates,
+      qualifiedSources: this._qualifiedSources(),
+      powerOff: !this.powered,
+    });
+  }
 
   /**
    * Run the MNA solver on the current netlist.
