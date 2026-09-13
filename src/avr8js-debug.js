@@ -66,6 +66,13 @@ function makeWhy(target, cause, hit) {
 export function createAvr8jsDebugTarget(adapter, opts = {}) {
   const cpu = adapter.cpu;
 
+  // One instance-derived maximum drives the descriptor, guard, and refusal.
+  // Keeping these facts together prevents a caller from being told a range
+  // that differs from the range the target enforces.
+  const maxCodeAddress = cpu.progMem.length * 2 - 2;
+  const codeAddressRefusal =
+    `code breakpoint addr must be in 0x0000..0x${maxCodeAddress.toString(16)}`;
+
   let running = false;
   let detached = false;
   /** Instructions left in a pending step('insn'); null = not insn-stepping. */
@@ -340,7 +347,7 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
         steps: ['insn', 'block', 'over', 'out'],
         breakpoints: ['code', 'yield', 'write'],
         runTo: [{kind: 'address', space: 'code', addressMin: 0,
-          addressMax: cpu.progMem.length * 2 - 2, stopSides: ['before'], installation: 'sync'}],
+          addressMax: maxCodeAddress, stopSides: ['before'], installation: 'sync'}],
         spaces: ['code', 'sram'],
         writable: ['sram'],
         sfrs: 'memory-mapped', // AVR I/O registers live in the data space
@@ -436,9 +443,8 @@ export function createAvr8jsDebugTarget(adapter, opts = {}) {
     setBreakpoint(bp) {
       if (!bp || typeof bp !== 'object') return { unsupported: 'not a breakpoint' };
       if (bp.kind === 'code') {
-        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > cpu.progMem.length * 2 - 2) {
-          return { unsupported: `code breakpoint addr must be in 0x0000..0x${
-            (cpu.progMem.length * 2 - 2).toString(16)}` };
+        if (!Number.isSafeInteger(bp.addr) || bp.addr < 0 || bp.addr > maxCodeAddress) {
+          return { unsupported: codeAddressRefusal };
         }
         if ((bp.addr & 1) !== 0) {
           return { unsupported:

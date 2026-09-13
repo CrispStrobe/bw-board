@@ -64,6 +64,19 @@ test('AVR code breakpoint only: run-to advertises its exact range and accepts th
   assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: AVR_CODE_MAX }), 'number');
 });
 
+test('the limit a caller is told, enforced, and named agrees', () => {
+  const { target } = make(BLINK);
+  const told = target.capabilities().runTo[0].addressMax;
+  assert.equal(typeof target.setBreakpoint({ kind: 'code', addr: told }), 'number');
+  const aboveTold = target.setBreakpoint({ kind: 'code', addr: told + 2 });
+  assert.ok(aboveTold && aboveTold.unsupported,
+    `0x${(told + 2).toString(16)} past the advertised range was accepted`);
+  const named = /0x([0-9a-f]+)\s*$/.exec(aboveTold.unsupported);
+  assert.ok(named, `refusal names no maximum: ${JSON.stringify(aboveTold.unsupported)}`);
+  assert.equal(parseInt(named[1], 16), told,
+    `refusal names 0x${named[1]} while descriptor advertises 0x${told.toString(16)}`);
+});
+
 for (const [name, addr] of [
   ['negative address', -2],
   ['fractional address', 2.5],
