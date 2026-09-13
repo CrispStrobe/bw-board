@@ -14,9 +14,30 @@
  * be checked, never its output.
  *
  * An LED calibrated to drop vf at 20 mA has IS = 0.02 / exp((vf - 0.02*rs)/nVt),
- * so at n=1.8 the clamp makes anything above about 2.86 V unrepresentable. Such
- * a part must be left out of the corpus. An absent oracle is honest; a wrong one
- * is not, and a wrong one is worse than none because it will be defended.
+ * so at n=1.8 the clamp makes anything above about 2.86 V unrepresentable AS A
+ * `.model D`. An absent oracle is honest; a wrong one is not, and a wrong one is
+ * worse than none because it will be defended.
+ *
+ * "LEAVE THOSE PARTS OUT OF THE CORPUS" WAS THE WRONG CONCLUSION, AND IT WAS
+ * MINE. The clamp is a property of ngspice's DIODE MODEL, not of ngspice. A
+ * behavioural source carries no such clamp, so the same device can be solved by
+ * the same engine:
+ *
+ *     B1 na nj I = <Is>*(exp(V(na,nj)/<nVt>)-1)
+ *     Rs nj 0 <rs>
+ *
+ * VALIDATED, because an instrument nobody checked is not an oracle: on a
+ * vf = 2.0 part, which BOTH forms can express, the two decks agree to 5e-6
+ * relative at three operating points. It then reads white (vf 3.4,
+ * Is = 3.17e-32) and UV (vf 3.8) and the vf = 3.5 bench in
+ * complex-circuits.test.js, all of which the D model silently mis-solves.
+ * test/measurements/repro/bsource-oracle.mjs.
+ *
+ * So the rule below is unchanged -- never record a golden from a clamped
+ * `.model D` -- but the remedy is no longer exclusion. Blue is currently
+ * recorded AT the clamp (IS=1e-28) rather than at its true Is for the same
+ * reason, and can now be re-derived; that is a separate lane and is named here
+ * so it is not lost.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';

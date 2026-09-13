@@ -13,9 +13,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {allCards, cardFor, cardIds, spiceModelFor, resolveParams,
+import {allCards, cardFor, cardIds, spiceModelFor, resolveParams, classDefaults,
     ELECTRICAL_FIELDS, I_RATED} from '../src/parts-library.js';
-import {JUNCTION_RD, JUNCTION_I_RATED} from '../src/mna.js';
+import {JUNCTION_RD, JUNCTION_I_RATED, junctionRd} from '../src/mna.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -88,11 +88,32 @@ test('the library agrees with the constants the solver actually uses', () => {
     assert.equal(led.params.rs, led.params.rd,
         'rs and rd are the same physical quantity; while they differ the routing toggle '
         + 'switches DEVICES rather than models');
-    const si = cardFor('1N4148');
-    const m = read('src/mna.js').match(/SILICON_RD\s*=\s*([\d.]+)/);
-    assert.ok(m, 'mna.js no longer declares SILICON_RD — re-point this, do not delete it');
-    assert.equal(si.params.rs, Number(m[1]),
-        `1N4148.rs=${si.params.rs} but mna.js SILICON_RD=${m[1]}`);
+    // AND THE SAME CHECK FOR EVERY JUNCTION KIND, THROUGH THE FUNCTION THE
+    // SOLVER CALLS. The clause here used to pin one CONSTANT (SILICON_RD)
+    // against one CARD (1N4148), which is true of led and diode and was blind
+    // to zener: junctionRd branched on `kind === 'diode'`, so a zener -- which
+    // is silicon -- fell into the else and got rd = 10 against classDefaults'
+    // 0.568. Two of three kinds agreeing is what a two-kind check reports as
+    // full agreement. Enumerate the kinds from the table itself.
+    const junctionKinds = ['led', 'diode', 'zener'];
+    for (const kind of junctionKinds) {
+        const want = classDefaults(kind).rs;
+        assert.ok(want !== undefined, `classDefaults(${kind}) has no rs — the table lost a junction kind`);
+        assert.equal(junctionRd({kind}), want,
+            `junctionRd(${kind})=${junctionRd({kind})} but classDefaults(${kind}).rs=${want}; `
+            + 'the piecewise path and the exponential path would model different devices');
+    }
+    // Every card of a junction kind agrees with its own class default unless it
+    // deliberately overrides -- and if it overrides, both spellings must move.
+    for (const id of cardIds()) {
+        const card = cardFor(id);
+        if (!junctionKinds.includes(card.kind)) continue;
+        const {rs, rd} = card.params;
+        if (rs !== undefined && rd !== undefined) assert.equal(rs, rd,
+            `${id} carries rs=${rs} and rd=${rd}; they are one quantity in two spellings`);
+        assert.equal(junctionRd({kind: card.kind, params: card.params}), rs ?? rd ?? classDefaults(card.kind).rs,
+            `${id}: junctionRd does not return the card's own bulk resistance`);
+    }
 });
 
 test("every card's kind is a kind the engine actually registers", () => {

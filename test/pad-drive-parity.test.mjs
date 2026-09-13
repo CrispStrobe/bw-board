@@ -113,7 +113,12 @@
  *   od HIGH + an external 10 kΩ pull-up to the rail, same bench:
  *     ngspice I = 142.611 µA;  ours 142.700 µA  (+0.06 %)
  *     brightness = 0.007 135 0  (10.0× dimmer than the driven pad)
- *     V_pad = 3.3 − I·10000 = 1.873 0 V ⇒ readPin = 1
+ *     V_pad = 3.3 − I·10000 = 1.732 7 V ⇒ readPin = 1
+ *
+ * (was 1.873 0 V on the old device; the pull-up drop grew with the current, so
+ * the released pad now sits 0.14 V lower. It is still a 1 -- the logic
+ * threshold is VCC/2 = 1.65 V -- but the margin is 83 mV rather than 223 mV,
+ * which is worth knowing before anyone lowers this rail or raises the pull-up.)
  *     The EXTERNAL resistor sets the current; the chip only stopped pulling.
  *
  * The 5 V variant below is different: headroom 3.0 V keeps it on the PIECEWISE
@@ -181,10 +186,23 @@ const I_RATED = 0.020;   // board.js LED_I_RATED
 // form describes it. The header's "recomputed from the same terms" principle
 // is right and simply cannot hold here -- the terms do not determine the
 // answer. Measured instead, and the deck is in the header so the number can be
-// re-run rather than trusted. ngspice 1.423468 mA; the solver reads
-// 1.424469 mA, +0.07 %, which is why comparisons below carry a tolerance
-// instead of asserting equality.
-const I_ON = 0.001423468;   // ngspice, IS=1.016451e-20 N=1.8 RS=2, TEMP=27
+// re-run rather than trusted.
+//
+// RE-MEASURED 2026-09-13, because the DEVICE changed and these were correct
+// readings of the old one. `rs` and `rd` now have a single home
+// (parts-library.js classDefaults), so an LED's series bulk is 10 in BOTH
+// junction paths instead of 2 in one and 10 in the other; with vf calibrated
+// to the total drop at 20 mA that makes Is = 3.1657e-19 rather than
+// 1.016451e-20. Same vf on the part, a different junction underneath it.
+//
+//     old device  IS=1.016451e-20 N=1.8 RS=2   -> 1423.468 uA
+//     new device  IS=3.1657000807e-19 N=1.8 RS=10 -> 1563.8400 uA   <- this
+//
+// and the solver reads 1563.8507 uA, +0.0007 %, which is why comparisons below
+// carry a tolerance instead of asserting equality. Decks also now pin
+// `.options temp=26.826793 tnom=26.826793`: temp alone leaves a flat +0.686 mV
+// because ngspice rescales IS from its TNOM=27 default via the bandgap law.
+const I_ON = 0.001563840;   // ngspice, IS=3.1657000807e-19 N=1.8 RS=10, temp=tnom=26.826793
 const BRIGHT_ON = I_ON / I_RATED;
 const V_PAD_ON = VCC - I_ON * R_STRONG;
 
@@ -248,8 +266,8 @@ describe('pad drive: the inferred blink bench, solved by hand', () => {
 
     it('0.0712, not 0.33: the board reproduces the hand-computed on-state', () => {
         // the exponential solve (see the header) A through the chain; 3.3 − I·25 at the pad.
-        assert.equal(I_ON.toPrecision(10), '0.001423468000');
-        assert.equal(BRIGHT_ON.toPrecision(10), '0.07117340000');
+        assert.equal(I_ON.toPrecision(10), '0.001563840000');
+        assert.equal(BRIGHT_ON.toPrecision(10), '0.07819200000');
 
         const b = bench();
         b.setPin('PA0', 'pushpull', true);
@@ -356,18 +374,18 @@ describe('open drain: the pad that lets go', () => {
     // names, so a moved constant moves the number with it.
     // Exponential-routed, so measured rather than recomputed -- see I_ON above.
     // All three from the same ngspice device (IS=1.016451e-20 N=1.8 RS=2):
-    const I_SINK = 0.001423468;      // 1 kOhm + 25 Ohm pad   (ours 1.424469 mA, +0.07 %)
+    const I_SINK = 0.001563840;      // 1 kOhm + 25 Ohm pad   (ours 1.563851 mA, +0.0007 %)
     const R_PU_EXT = 10_000;
-    const I_PU_EXT = 0.000142611;    // 10 kOhm pull-up       (ours 142.700 uA, +0.06 %)
-    const I_PU_INT = 0.0000705566;   // 21.7 kOhm quasi pull-up (ours 70.599 uA, +0.06 %)
+    const I_PU_EXT = 0.000156732;    // 10 kOhm pull-up       (ours 156.732 uA, +0.0004 %)
+    const I_PU_INT = 0.0000774299;   // 21.7 kOhm quasi pull-up (ours 77.430 uA, +0.00001 %)
 
     it('od LOW is a real pull to ground — the SAME Thevenin as push-pull low', () => {
         // the exponential solve (see the header) A again, and that is the claim: `opendrain` false and
         // `pushpull` false are the same (0 V, 25 Ω) source, so an open-drain
         // output sinks exactly as hard as a push-pull one. If a "fix" made
         // open drain high-Z in BOTH directions, this is what would catch it.
-        assert.equal(I_SINK.toPrecision(10), '0.001423468000');
-        assert.equal((I_SINK / I_RATED).toPrecision(10), '0.07117340000');
+        assert.equal(I_SINK.toPrecision(10), '0.001563840000');
+        assert.equal((I_SINK / I_RATED).toPrecision(10), '0.07819200000');
 
         const drive = (mode) => {
             const b = benchAL();
@@ -402,7 +420,7 @@ describe('open drain: the pad that lets go', () => {
         assert.equal(r.vPad, 0, 'nothing holds the pad up, so the LED chain pulls it to GND');
         assert.equal(r.logic, 0);
         // The contrast, so "0" cannot be read as "the bench is broken".
-        assert.ok(Math.abs(BRIGHT_ON - 0.0711734) < 1e-15,
+        assert.ok(Math.abs(BRIGHT_ON - 0.078192) < 1e-15,
             'the push-pull value this is being contrasted with');
     });
 
@@ -411,10 +429,10 @@ describe('open drain: the pad that lets go', () => {
         // 2.1193 V — above the 1.5 V logic threshold, so the pin reads 1 —
         // and the LED is lit but 10.6× dimmer than the driven pad, because
         // the pull-up, not the chip, is now the source impedance.
-        assert.equal(I_PU_EXT.toPrecision(10), '0.0001426110000');
-        assert.equal((I_PU_EXT / I_RATED).toPrecision(10), '0.007130550000');
+        assert.equal(I_PU_EXT.toPrecision(10), '0.0001567320000');
+        assert.equal((I_PU_EXT / I_RATED).toPrecision(10), '0.007836600000');
         const vPad = VCC - I_PU_EXT * R_PU_EXT;
-        assert.equal(vPad.toPrecision(10), '1.873890000');
+        assert.equal(vPad.toPrecision(10), '1.732680000');
 
         const b = benchWithPullup(R_PU_EXT);
         b.setPin('PA0', 'opendrain', true);
@@ -446,7 +464,7 @@ describe('open drain: the pad that lets go', () => {
         // other two, so measured: ngspice 70.5566 uA through 21.7 kOhm + 1 kOhm
         // (ours 70.599 uA, +0.06 %). The old comment said "1.3/22710 A", which
         // was the piecewise formula for a bench that does not take that path.
-        assert.equal(I_PU_INT.toPrecision(10), '0.00007055660000');
+        assert.equal(I_PU_INT.toPrecision(10), '0.00007742990000');
         const b = bench();
         b.setPin('PA0', 'quasi', true);
         const r = settled(b);

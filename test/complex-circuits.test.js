@@ -147,13 +147,45 @@ describe('LED with different forward voltages', () => {
     // NON-VACUITY FIRST: a ratio between two dark LEDs passes anything.
     assert.ok(bright > 0.3,
       `the 5 V control must actually be LIT or the ratio below is meaningless, got ${bright}`);
-    // MEASURED: 42.3x routed and infinite under pure PWL. A solver that ignored
-    // Vf entirely would give ~1x (both rails clamp to full brightness), so 20x
-    // separates "respects the knee" from "does not" with >2x headroom either way
-    // and is not tuned to the reading.
-    assert.ok(bright / b >= 20,
+
+    // ORACLE-ANCHORED, AND THE ORACLE NEEDED A NEW INSTRUMENT TO EXIST.
+    //
+    // This bench is a vf=3.5 LED, R1=100, pad pulled low through R_STRONG=25,
+    // so 125 ohm of series resistance. Under our calibration that part has
+    // Is = 3.1623e-33, which is BELOW ngspice's silent 1e-28 diode clamp -- a
+    // `.model D(IS=...)` deck cannot express it, and ngspice warns about none
+    // of this. Every LED above ~2.86 V at n=1.8 is in that hole.
+    //
+    // A behavioural source is not clamped, so ngspice can solve OUR device
+    // equation with ITS Newton and limiting:
+    //
+    //     B1 na nj I = 3.1623e-33*(exp(V(na,nj)/0.04653)-1)
+    //     Rs nj 0 10
+    //
+    // The instrument was validated on a vf=2.0 part, which BOTH forms can
+    // express, at three operating points: the two decks agree to 5e-6
+    // relative. See test/measurements/repro/bsource-oracle.mjs.
+    //
+    //     rail 3.3 V (under-driven)  ngspice 1024.264 uA -> 0.051213
+    //     rail 5.0 V (driven)        ngspice 12747.82 uA -> 0.637391
+    //     ratio                                             12.446x
+    //
+    // We read those to six digits. The ratio was recorded as 42.3x before `rs`
+    // and `rd` were unified: the under-driven leg is exponentially sensitive to
+    // Is, and Is grew 31x, so the DIM end moved and the driven end did not.
+    // 12.4x is the correct reading of the current device, not a regression.
+    assert.ok(Math.abs(b - 0.051213) < 0.0005,
+      `under-driven brightness must be the oracle's 0.051213, got ${b}`);
+    assert.ok(Math.abs(bright - 0.637391) < 0.0005,
+      `the 5 V control must be the oracle's 0.637391, got ${bright}`);
+    // And the qualitative claim the original test was really making, kept as a
+    // claim rather than a tuned number: a solver that ignored Vf entirely would
+    // read ~1x here, because both rails would clamp to full brightness. The
+    // measured 12.4x is a long way from that, which is the whole point.
+    assert.ok(bright / b >= 6,
       `an LED with Vf(3.5) above VCC(3.3) must be far dimmer than the same LED on 5 V: `
-      + `under-driven ${b}, driven ${bright}, ratio ${(bright / b).toFixed(1)}x (need >=20x)`);
+      + `under-driven ${b}, driven ${bright}, ratio ${(bright / b).toFixed(1)}x (a Vf-ignoring `
+      + 'solver reads ~1x; the oracle reads 12.4x)');
   });
 });
 

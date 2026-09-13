@@ -88,16 +88,34 @@ test('the toggle reaches a real solve, in both directions', () => {
 });
 
 test('the qualitative failure is gone: a conducting circuit is not reported dark', () => {
-    // THE CASE THIS WHOLE MECHANISM EXISTS FOR. Two 2.0 V LEDs on 3.3 V:
-    // headroom is NEGATIVE, ngspice measures 0.020 mA, and the piecewise knee
+    // THE CASE THIS WHOLE MECHANISM EXISTS FOR. Two 2.0 V LEDs on 3.3 V through
+    // 1 kOhm: headroom is NEGATIVE, the part conducts, and the piecewise knee
     // says exactly zero. A simulated board that is dark while the real one is
     // lit is not a tolerance question.
+    //
+    // THE ORACLE NUMBER HERE MOVED, AND THE OLD ONE WAS NOT WRONG WHEN WRITTEN.
+    // It recorded 20 uA, measured against the device we built BEFORE the vf
+    // convention was corrected: vf read as the total drop at the rated current
+    // with rs = 2, so vJrated = 1.96 and Is = 1.0165e-20. We now build
+    // vJrated = 2.0 - 0.020*10 = 1.8 and Is = 3.1657e-19 -- 31x larger, because
+    // rs is 10 and the calibration subtracts more. Same vf on the part, a
+    // different junction underneath it.
+    //
+    // Both devices measured on ngspice-44, same deck, temp=tnom=26.8268 C:
+    //
+    //     Is=1.0165e-20 RS=2   ->  20.49 uA   <- what the old line recorded
+    //     Is=3.1657e-19 RS=10  -> 151.42 uA   <- the device we build now
+    //
+    // and we read 151.4 uA. The old number is not a regression to fix, it is a
+    // reading of a part this engine no longer has. Unlike the white-LED case in
+    // led-colors.test.js, this one is representable: Is stays above ngspice's
+    // silent 1e-28 diode clamp, so it is a real oracle and not a hand value.
     const i = chain(2, 2.0, 3.3).branchCurrent('LED1', 'anode');
     assert.ok(i > 1e-5,
         `two LEDs on a 3.3 V rail read ${i} A — the knee model is reporting a conducting `
-        + 'circuit as off. ngspice measures 0.020 mA.');
-    assert.ok(Math.abs(i - 0.00002) < 0.00002,
-        `current ${(i * 1e6).toFixed(1)} uA is not within a factor of two of ngspice's 20 uA`);
+        + 'circuit as off. ngspice measures 151.4 uA.');
+    assert.ok(Math.abs(i - 151.42e-6) < 1.5e-6,
+        `current ${(i * 1e6).toFixed(1)} uA is not within 1 % of ngspice's 151.42 uA`);
 });
 
 test('the model is resolved ONCE per solve, so stamp and read cannot disagree', () => {

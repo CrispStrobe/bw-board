@@ -65,7 +65,14 @@ def run_spice(name, netlist, measurements):
 # notice it by inspection; only refusing to record it works.
 #
 # For an LED calibrated to drop vf at 20 mA, IS = 0.02 / exp((vf - 0.02*rs)/nVt),
-# so the clamp makes any LED above roughly 2.86 V (n=1.8) unrepresentable here.
+# so the clamp makes any LED above roughly 2.86 V (n=1.8) unrepresentable AS A
+# `.model D`. It is NOT unrepresentable in ngspice: a behavioural source has no
+# such clamp and solves the identical device --
+#   B1 na nj I = <Is>*(exp(V(na,nj)/<nVt>)-1)  /  Rs nj 0 <rs>
+# validated against the D model to 5e-6 relative on a part both can express.
+# See test/measurements/repro/bsource-oracle.mjs. This generator still refuses
+# clamped IS rather than emitting it; switching the high-vf rows over to the
+# behavioural form is a separate, named piece of work.
 # Such a circuit must be left OUT of the corpus, not recorded wrong.
 NGSPICE_IS_CLAMP = 1e-28
 

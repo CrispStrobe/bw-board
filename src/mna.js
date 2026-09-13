@@ -211,7 +211,7 @@ function diodeCompanion(vAcross, vf, rd, opts) {
   // smoothVov fix. Outside the band both branches are BIT-IDENTICAL to
   // the original lines, so every corpus operating point away from the
   // knee is untouched.
-  const EPS = PWL_KNEE_EPS;
+  const EPS = kneeEps(rd);
   if (vAcross < vf - EPS) {
     const gOff = 1e-9;
     return { gEq: gOff, iEq: 0 };
@@ -229,15 +229,47 @@ function diodeCompanion(vAcross, vf, rd, opts) {
   return { gEq, iEq: i - gEq * vAcross };
 }
 
-/** Half-width of the PWL knee's C1 blend band (volts). */
+/** Half-width of the PWL knee's C1 blend band (volts), for an LED-scale part. */
 const PWL_KNEE_EPS = 0.025;
+
+/**
+ * THE BLEND BAND IS A FRACTION OF THE DEVICE'S OWN RATED OVERDRIVE, NOT AN
+ * ABSOLUTE VOLTAGE.
+ *
+ * A flat 0.025 V is a detail for an LED and a catastrophe for silicon, and the
+ * reason is that the knee has a natural voltage scale: the part sits at
+ * `i_rated * rd` above its knee when it carries its rated current. That is
+ * 0.020*10 = 0.2 V for an LED -- eight times the band, so the rated point is
+ * far out on the linear segment -- and 0.020*0.568 = 0.01136 V for a 1N4148,
+ * which is INSIDE it. So silicon never reached its linear segment at its own
+ * rated current, and the smoothing ate the calibration: 5 V through 150 R,
+ * which is the rated bias BY DEFINITION of vf, read 20.0176 mA instead of
+ * 20.0000, and the effective bulk resistance came out 0.4356 instead of 0.568.
+ *
+ * This was invisible while every junction shared rd = 10, because at that
+ * value no kind could get near the band at its rated point. Per-kind rd is
+ * what exposed it -- a fix uncovering a defect that the thing it fixed had
+ * been hiding.
+ *
+ * alpha = 0.5 puts the rated point at exactly twice the half-width, i.e.
+ * comfortably linear, while keeping the band as wide as the device allows for
+ * Newton's sake. For an LED min() picks 0.025 unchanged, so every LED operating
+ * point in the corpus is bit-identical.
+ */
+const KNEE_EPS_ALPHA = 0.5;
+const kneeEps = rd =>
+  Math.min(PWL_KNEE_EPS, KNEE_EPS_ALPHA * JUNCTION_I_RATED * Math.max(rd, 1e-9));
 
 /** PWL knee current with the C1 blend — extraction must match the stamp. */
 function pwlKneeCurrent(v, vf, rd) {
-  if (v < vf - PWL_KNEE_EPS) return 0;
-  if (v > vf + PWL_KNEE_EPS) return (v - vf) / rd;
-  const u = v - vf + PWL_KNEE_EPS;
-  return (u * u) / (4 * PWL_KNEE_EPS * rd);
+  // Same kneeEps as diodeCompanion. If these two ever disagree, a current read
+  // off the extraction describes a different device than the one the stamp
+  // solved, which is the whole class of defect this lane has been closing.
+  const eps = kneeEps(rd);
+  if (v < vf - eps) return 0;
+  if (v > vf + eps) return (v - vf) / rd;
+  const u = v - vf + eps;
+  return (u * u) / (4 * eps * rd);
 }
 
 /**
@@ -349,12 +381,29 @@ export function mosK(params = {}) {
  *
  * So the per-kind split is what makes the conversion an improvement for silicon
  * rather than a regression. A shared rd was the reason it looked like one.
+ *
+ * The 0.568 itself is NOT declared here any more. It was `export const
+ * SILICON_RD`, which after junctionRd started reading the table had no code
+ * readers left -- a second home for a number, kept alive only by a test that
+ * pinned it against the card it was copied from. It lives in
+ * parts-library.js: classDefaults('diode').rs, and 1N4148's own card.
  */
-export const SILICON_RD = 0.568;
 
 /** The dynamic/bulk resistance for a junction part, by kind. */
+// ONE TABLE, NOT A TERNARY. This branched on `kind === 'diode'` while
+// junctionOpts read classDefaults, so the two paths agreed for led and diode
+// and DISAGREED FOR ZENER: a zener is silicon (classDefaults rs = 0.568) but
+// fell into the ternary's else and got rd = 10, an 18x split between the model
+// the solver uses and the model the exporter writes. Reading the same table is
+// the only form of this that cannot drift.
+// BOTH SPELLINGS, because `rd` and `rs` are one quantity and callers write
+// whichever their path taught them. Reading only `rd` here meant a card that
+// carried `rs` -- 1N4001 at 0.045 R, a 1 A rectifier's real bulk -- reached the
+// exponential path and was INVISIBLE to the piecewise one, which silently fell
+// back to the class default. LED_RED hid that by carrying both.
 export const junctionRd = part =>
-  /** @type {number} */ (part?.params?.rd ?? (part?.kind === 'diode' ? SILICON_RD : JUNCTION_RD));
+  /** @type {number} */ (
+    part?.params?.rd ?? part?.params?.rs ?? classDefaults(part?.kind).rs ?? JUNCTION_RD);
 
 /**
  * The PIECEWISE KNEE for a part whose `vf` is the DATASHEET total drop.
@@ -412,49 +461,24 @@ function junctionOpts(part) {
     shockley: true,
     is: part.params?.is,
     n: part.params?.n ?? classDefaults(part.kind).n ?? 1.0,
-    // SERIES BULK RESISTANCE, AND IT MUST EQUAL THE PIECEWISE PATH'S rd,
-    // BECAUSE THEY ARE THE SAME PHYSICAL QUANTITY.
+    // SERIES BULK RESISTANCE. IT IS THE SAME PHYSICAL QUANTITY AS THE
+    // PIECEWISE PATH'S rd, SO THERE IS ONE DEFINITION AND BOTH PATHS READ IT.
     //
-    // This defaulted to 2 while the piecewise path uses rd = 10 (board.js
-    // LED_RD, and `const rd = 10` in seven places here). With two different
-    // values the routing toggle did not switch MODELS of one device, it
-    // switched DEVICES — so flipping JUNCTION_ROUTING changed the part, not
-    // just the numerics, which is not a toggle anyone can reason about.
+    // classDefaults is that definition (src/parts-library.js) and junctionRd
+    // reads the same table, so `rs` and `rd` cannot drift apart per kind. They
+    // did: rs defaulted to 2 here while rd was 10, which meant the routing
+    // toggle switched DEVICES rather than models of one device, and every
+    // accuracy number measured across it was partly a device swap.
     //
-    // The 2 was not measured against a device. It was chosen because it
-    // minimised error against test/golden/oracles.json, and that file is the
-    // piecewise model written down (`compute_oracles.py`, `"rd": 10`, expected
-    // current exactly (5.0-3.2)/(470+10+25)). Fitting the exponential to the
-    // piecewise answer optimises toward the thing being corrected.
+    // DO NOT RE-TUNE THIS AGAINST THE CORPUS. A sweep elects whatever RS the
+    // reference devices were built with -- an exact 0.04% diagonal at RS = 5,
+    // 10, 25 and 40 -- because shockleyParams ALGEBRAICALLY RECONSTRUCTS the
+    // device when rs matches, so the residual is only VT_25C (0.02585, really
+    // 26.83 C) against ngspice's default. It is a tautology with a units
+    // artefact on top, not a fit. The value comes from the PART.
     //
-    // DO NOT re-tune this against the corpus: a sweep elects whatever RS the
-    // reference devices were built with — an exact 0.04% diagonal at RS = 5,
-    // 10, 25 and 40 — because shockleyParams ALGEBRAICALLY RECONSTRUCTS the
-    // device when rs matches, so the residual is only VT_25C (0.02585, which
-    // is really 26.83 °C) against ngspice's 300.15 K value. It is a tautology
-    // with a units artefact on top, not a fit. Move this only with the
-    // piecewise rd, together.
-    //
-    // KNOWN WRONG FOR SILICON, TRACKED NOT FIXED: this is shared with
-    // `kind === 'diode'` (board.js gates on led||diode), and our own reference
-    // part in test/golden/run_ngspice_diode.py is
-    // `D1N4148 D(IS=2.52e-9 RS=0.568 N=1.752)` — real bulk 0.568 Ω, so 10 is
-    // 17x high, about 94 mV of extra drop at 10 mA. The piecewise path has the
-    // identical error (its silicon rd is also 10), so the two paths still agree
-    // and the invariant below still holds; correcting silicon means moving rd
-    // and rs together and re-deriving the diode corpus. Splitting them here
-    // would trade a shared, visible error for a silent disagreement.
-    // STILL 2, AND THAT IS A KNOWN DEFECT, NOT A CHOICE. See JUNCTION_RD above
-    // and test/junction-rs-divergence.test.mjs, which records the measured cost.
-    // Setting it to JUNCTION_RD in isolation was TRIED and makes things worse:
-    // the suite goes 8 -> 17 failures, because it moves away from expectations
-    // calibrated to the piecewise path without the knee correction that would
-    // justify them, and because silicon shares this default (real 1N4148 bulk
-    // is 0.568 Ω, so 10 is 17x high). The fix is coupled: rd and rs must become
-    // per-kind AND equal, and the knee must become vf - 0.020*rd, together.
-    // ONE DEFINITION, read from the library rather than written here. The
-    // exporter reads the same function, so a deck it writes and the solve we
-    // run describe the same device by construction instead of by copy.
+    // Moving it is still coupled to the piecewise knee (kneeFromVf subtracts
+    // 0.020*rd), so change classDefaults, not this line.
     rs: part.params?.rs ?? classDefaults(part.kind).rs ?? 0,
   };
 }
