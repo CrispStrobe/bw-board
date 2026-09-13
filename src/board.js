@@ -600,9 +600,10 @@ export class BoardImpl {
       if (p.params && p.params.part) p.params = resolveParams(p.params);
     }
     {
-      const headroomV = this._junctionHeadroomV();
       for (const p of this._solveParts) {
-        if (p.kind === 'led' || p.kind === 'diode') p._junctionModel = junctionModelOf(p, headroomV);
+        if (p.kind === 'led' || p.kind === 'diode') {
+          p._junctionModel = junctionModelOf(p, this._junctionHeadroomFor(p));
+        }
       }
     }
     // A new netlist is a new bench: every reactive part starts at rest.
@@ -2837,13 +2838,49 @@ export class BoardImpl {
    * therefore over-counted, headroom is under-estimated, and the decision errs
    * toward MNA — slower, never less accurate.
    */
-  _junctionHeadroomV() {
-    let totalVf = 0;
-    for (const p of this.parts) {
-      if (p.kind !== 'led' && p.kind !== 'diode') continue;
-      totalVf += Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+  /**
+   * Headroom for ONE junction: the supply less the forward drops of the
+   * junctions IN SERIES WITH IT.
+   *
+   * This used to sum vf over EVERY junction in the netlist, so routing depended
+   * on parts sharing no current path. lego-38 measured the consequence: a
+   * second LED on a different, undriven pin — carrying 0.0000 A — moved the
+   * first LED's current, because the global sum dropped the computed headroom
+   * from 3.00 V to 1.00 V and flipped that LED from the piecewise path to the
+   * exponential one. A part conducting nothing cannot change another branch,
+   * and a routing input a parallel branch can move is not headroom.
+   *
+   * Series membership is derived from the netlist: two junctions are in series
+   * when a net joins them AND NOTHING ELSE, so the same current must pass
+   * through both. A net with a third terminal is a branch point and ends the
+   * chain. That keeps the case E1.3b cared about — a string of junctions
+   * against a supply barely clearing their sum — while making a parallel
+   * branch irrelevant, which it physically is.
+   */
+  _junctionHeadroomFor(part) {
+    const vfOf = p => Number(p.params?.vf ?? (p.kind === 'diode' ? 0.7 : 2.0)) || 0;
+    const isJunction = p => p.kind === 'led' || p.kind === 'diode';
+    const byId = new Map(this.parts.map(p => [p.id, p]));
+    const allNets = this.nets || [];
+    const chain = new Set([part.id]);
+    const queue = [part.id];
+    while (queue.length) {
+      const id = queue.pop();
+      for (const net of allNets) {
+        const terms = net.terminals || [];
+        if (terms.length !== 2) continue;          // a branch point ends the chain
+        if (!terms.some(t => t.part === id)) continue;
+        for (const t of terms) {
+          const other = byId.get(t.part);
+          if (!other || chain.has(other.id) || !isJunction(other)) continue;
+          chain.add(other.id);
+          queue.push(other.id);
+        }
+      }
     }
-    return (Number(this.vcc) || 0) - totalVf;
+    let total = 0;
+    for (const id of chain) { const p = byId.get(id); if (p) total += vfOf(p); }
+    return (Number(this.vcc) || 0) - total;
   }
 
   _needsMNA() {

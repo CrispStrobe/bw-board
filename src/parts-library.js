@@ -47,12 +47,21 @@ export const I_RATED = 0.020;
  * ten name pins `rs`, `k`, `rd` in `footprint.leads`.
  *
  * EVERY NAME HERE IS ONE THE SOLVER ACTUALLY READS, and
- * test/parts-library-one-authority.test.mjs proves it by scanning src/. The
- * first draft also carried `w`, `l`, `bf`, `kp` and `vce_sat`: `w`/`l` were
- * read by nothing and were exactly what collided with 267 documents' geometry,
- * while `bf` and `kp` were SPICE spellings of `beta` and `k` — a second
- * vocabulary for one number, which is the failure this file exists to end,
- * arriving inside the fix for it.
+ * test/parts-library-one-authority.test.mjs proves it by scanning src/.
+ *
+ * `w`, `l` and `kp` were REMOVED and then PUT BACK, and the round trip is the
+ * point. They were dropped because nothing read them — which was true, and the
+ * wrong conclusion. Every real SPICE model card specifies a MOSFET as KP with
+ * per-instance W and L, so refusing them meant no foreign netlist could be read
+ * without a hand conversion, and the corpus work depends on ingesting thousands
+ * (2,822 MOSFET topologies in one dataset alone). The solver was EXTENDED
+ * instead: `mosK()` in mna.js accepts either spelling, k = KP/2 * W/L, verified
+ * against ngspice LEVEL=1. Widening the vocabulary beat discarding the fields.
+ *
+ * `bf` and `vce_sat` stay out, and for a different reason: `bf` is SPICE's
+ * spelling of `beta`, one number with two names, which belongs in an importer's
+ * spelling map and never in a card; `vce_sat` names behaviour our BJT does not
+ * model, so a card carrying it would promise something the stamp cannot do.
  *
  * A schema entry nothing reads is a claim with no holder. Here it also
  * generated a false positive across an entire corpus of documents.
@@ -60,8 +69,8 @@ export const I_RATED = 0.020;
  */
 export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'vf', 'rd', 'rs', 'is', 'n', 'vz',              // junctions
-    'beta', 'vbe',                                   // bipolar
-    'vth', 'k',                                      // field-effect
+    'beta', 'vbe', 'rceSat',                         // bipolar
+    'vth', 'k', 'kp', 'w', 'l',                      // field-effect
     'ohms', 'farads', 'henries', 'volts', 'amps'     // passives and sources
 ]));
 
@@ -123,15 +132,44 @@ const CARDS = {
         params: {beta: 200, is: 1e-14, vbe: 0.7}
     },
     'TIP120': {
-        id: 'TIP120', kind: 'npn',
+        id: 'TIP120', kind: 'tip120',
         provenance: "bw-circuit-ui exporters/spice.js '.model TIP120 NPN "
             + "(Bf=1000 Is=1e-12)'; a Darlington, so beta is the pair's",
-        params: {beta: 1000, is: 1e-12, vbe: 1.4},
-        note: 'vbe 1.4 not 0.7: a Darlington has two junctions in series. The '
-            + 'exporter card did not say so and the solver default would have '
-            + 'used 0.7 — the first substantive disagreement this library '
-            + 'settles rather than inherits.'
+        params: {beta: 1000, is: 1e-12, vbe: 1.4, rceSat: 2.0},
+        note: 'KIND tip120, not npn. It has its OWN stamp — '
+            + "devices/analog-ics.js registerDevice('tip120') — reading vbe and "
+            + 'rceSat, so under the rule "a kind exists when the stamp differs" '
+            + 'a card naming npn would never reach it: a placed tip120 would '
+            + 'ignore the card and a placed npn+part:TIP120 would miss the '
+            + 'Darlington stamp. Two homes again, caught by lego-38 reading the '
+            + 'registry. The 1.4 was right on its own — that stamp already '
+            + "defaults vbe to 1.4 with the comment '2 x 0.7V' — so the card "
+            + 'agreed with the solver about the number while disagreeing about '
+            + 'which solver.'
     },
+    // ---- generics -----------------------------------------------------------
+    // Not real part numbers. They exist so bw-circuit-ui's exporter can derive
+    // EVERY .model line it emits from this library rather than leaving two
+    // literals behind — a literal left behind is the fourth home returning by
+    // the back door. `id` is the .model name the exporter already emits.
+    'Q_DEFAULT': {
+        id: 'Q_DEFAULT', kind: 'npn',
+        provenance: "bw-circuit-ui exporters/spice.js '.model Q_DEFAULT NPN "
+            + "(Bf=100 Is=1e-14)', and beta 100 is also mna.js's npn default — "
+            + 'the two already agreed, which is why this one is a move and not '
+            + 'a decision',
+        params: {beta: 100, is: 1e-14, vbe: 0.7}
+    },
+    'NMOS_GENERIC': {
+        id: 'MOSFET', kind: 'nmos',
+        provenance: "bw-circuit-ui exporters/spice.js '.model MOSFET NMOS "
+            + "(Vto=2 Kp=20u)'; vth 2.0 is mna.js's nmos default. Carries kp "
+            + 'rather than k now that mna.js mosK() reads either: k = KP/2 * '
+            + 'W/L, so a card can hold the SPICE-native number and the exporter '
+            + 'emits it unchanged instead of converting.',
+        params: {vth: 2.0, kp: 20e-6}
+    },
+
     // ---- zener ------------------------------------------------------------
     '1N4733A': {
         id: '1N4733A', kind: 'zener',
@@ -145,6 +183,30 @@ const CARDS = {
             + 'spiceModelFor derives that spelling rather than storing it.'
     }
 };
+
+/**
+ * The parameters an UN-CARDED part of a given kind solves with.
+ *
+ * WHY THIS EXISTS, and it is the third home. A part with no `params.part` never
+ * touches a card, so its numbers came from literals inside `junctionOpts` —
+ * `rs ?? 2` among them. bw-circuit-ui's exporter then had to guess what those
+ * literals were in order to write a deck the engine would agree with, and its
+ * old `?? 2` matched only by copy. When the exporter moved to JUNCTION_RD the
+ * copy stopped matching and the spice-oracle job reddened: engine 1.879795 V
+ * against ngspice 1.748971 V on the canonical bench, measured by lego-38.
+ *
+ * That red is correct and is the point. The defaults are now DECLARED here and
+ * read by `junctionOpts`, so there is one definition rather than a literal and
+ * a guess at it.
+ *
+ * @param {string} kind
+ * @returns {object} the class defaults, or {} for a kind with none
+ */
+export const classDefaults = kind => ({
+    led:   {rs: 10, n: 1.8, vf: 2.0},
+    diode: {rs: 0.568, n: 1.752, vf: 0.7},
+    zener: {rs: 0.568, n: 1.752, vf: 0.7}
+}[kind] ?? {});
 
 /** @returns {Card|null} the card for a part id, case-insensitively. */
 export const cardFor = id => {

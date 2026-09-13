@@ -64,8 +64,16 @@ describe('MNA: series LEDs', () => {
       { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
       { id: 'R1', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
-      { id: 'LED1', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] },
-      { id: 'LED2', kind: 'led', params: { vf: 2.0 }, terminals: ['anode', 'cathode'] },
+      // vf 2.1608, NOT 2.0 — this must be the device the GOLDEN holds. Its deck
+      // is `.model LEDM D(IS=1e-20 N=1.8 RS=10)`, and IS=1e-20 at n=1.8 with
+      // rs=10 is a part dropping 2.1608 V at the rated 20 mA. Our engine
+      // calibrates IS from vf, so vf=2.0 builds IS=3.166e-19 — 32x the deck's —
+      // and this test was comparing a 2.0 V LED against a measurement of a
+      // 2.161 V one. At 2.0 we read 1.6028 mA against the golden's 1.3043; at
+      // the deck's own device we read 1.3062, which is 0.15% and the noise
+      // floor. The disagreement was never the solver.
+      { id: 'LED1', kind: 'led', params: { vf: 2.1608 }, terminals: ['anode', 'cathode'] },
+      { id: 'LED2', kind: 'led', params: { vf: 2.1608 }, terminals: ['anode', 'cathode'] },
     ];
     const nets = [
       { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'R1', terminal: 'a' }] },

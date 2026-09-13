@@ -59,8 +59,17 @@ test('every schema field is one the solver actually reads', () => {
     // bv IS unread by the solver, and the card was storing SPICE's spelling of
     // vz alongside vz. Both were fixed; the check now cannot be right by luck.
     const inCards = new Set(allCards().flatMap(c => Object.keys(c.params)));
+    // DESTRUCTURING COUNTS AS READING. mosK does `const {kp, w, l} = params`,
+    // which no `params.w` pattern can see — so the gate reported w and l unread
+    // immediately after the solver was extended to read them. A scan that only
+    // knows one access form reports a fact about the scan.
+    const destructured = new Set();
+    for (const m of src.matchAll(/(?:const|let)\s*\{([^}]*)\}\s*=\s*\w*[Pp]arams\b/g)) {
+        for (const name of m[1].split(',')) destructured.add(name.trim().split(/[:=]/)[0].trim());
+    }
     const unread = [...ELECTRICAL_FIELDS].filter(f =>
-        !new RegExp(`params\\??\\.${f}\\b|\\.${f}\\b`).test(src) && !inCards.has(f));
+        !new RegExp(`params\\??\\.${f}\\b|\\.${f}\\b`).test(src)
+        && !destructured.has(f) && !inCards.has(f));
     assert.deepEqual(unread, [],
         'these schema fields are read by no solver source and by no card: '
         + JSON.stringify(unread) + '. Remove them, or point the scan at the file that reads them.');
@@ -84,6 +93,31 @@ test('the library agrees with the constants the solver actually uses', () => {
     assert.ok(m, 'mna.js no longer declares SILICON_RD — re-point this, do not delete it');
     assert.equal(si.params.rs, Number(m[1]),
         `1N4148.rs=${si.params.rs} but mna.js SILICON_RD=${m[1]}`);
+});
+
+test("every card's kind is a kind the engine actually registers", () => {
+    // THE SECOND-HOME CHECK, from the other side. A card whose kind is not a
+    // real kind is numbers nobody reaches; a card naming the WRONG kind is
+    // worse, because both halves look fine alone. TIP120 was exactly that: the
+    // card said `npn` while devices/analog-ics.js registers `tip120` with its
+    // own Darlington stamp, so a placed tip120 would have ignored the card and
+    // a placed npn+part:TIP120 would have missed the stamp. Found by lego-38
+    // reading the registry, not by any test here — hence this test.
+    const known = new Set();
+    for (const f of ['src/devices.js', 'src/register-all.js']) {
+        for (const m of read(f).matchAll(/registerDevice\(\s*'([a-z0-9_]+)'/g)) known.add(m[1]);
+        for (const m of read(f).matchAll(/'([a-z0-9_]+)'/g)) known.add(m[1]);
+    }
+    for (const f of fs.readdirSync(path.join(ROOT, 'src/devices'))) {
+        if (!f.endsWith('.js')) continue;
+        for (const m of read(`src/devices/${f}`).matchAll(/registerDevice\(\s*'([a-z0-9_]+)'/g)) known.add(m[1]);
+    }
+    assert.ok(known.size >= 20, `only ${known.size} kind(s) discovered — the scan drifted and this check is vacuous`);
+    for (const c of allCards()) {
+        assert.ok(known.has(c.kind),
+            `card ${c.id} names kind '${c.kind}', which no registerDevice call or builtin list mentions. `
+            + 'A card is numbers for a stamp that EXISTS.');
+    }
 });
 
 test('the .model line is DERIVED, so a card change moves it', () => {

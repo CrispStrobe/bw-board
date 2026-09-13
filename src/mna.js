@@ -303,7 +303,36 @@ export const JUNCTION_RD = 10;
  * gives an LED as `Vf @ If = 20 mA`; the number is meaningless without it.
  * Matches board.js LED_I_RATED, which normalises brightness by the same value.
  */
+import { classDefaults } from './parts-library.js';
+
 export const JUNCTION_I_RATED = 0.020;
+
+/**
+ * The square-law transconductance for a MOSFET, in A/V².
+ *
+ * ACCEPTS THE SPICE SPELLING AS WELL AS OURS. Our stamp wants a single lumped
+ * `k` in `Id = k(Vgs-Vth)²`. Every real SPICE model card instead gives `KP`
+ * with per-instance `W` and `L`, where `Id = (KP/2)(W/L)(Vgs-Vth)²`, so
+ *
+ *     k = KP/2 * W/L
+ *
+ * Refusing kp/w/l would mean no foreign MOSFET netlist could be read without a
+ * hand conversion first — and the corpus work depends on ingesting thousands of
+ * them (2,822 MOSFET topologies in one dataset alone). Extending the vocabulary
+ * is cheaper than a translation table, and a translation table would be another
+ * place for the number to drift.
+ *
+ * An explicit `k` still wins: somebody who lumped it themselves meant it.
+ */
+export function mosK(params = {}) {
+  if (params.k !== undefined) return params.k;
+  const {kp, w, l} = params;
+  if (kp !== undefined) {
+    const ratio = (w !== undefined && l !== undefined && l > 0) ? w / l : 1;
+    return (kp / 2) * ratio;
+  }
+  return 0.5;
+}
 
 /**
  * Silicon signal-diode bulk resistance, in ohms — our own reference part,
@@ -382,7 +411,7 @@ function junctionOpts(part) {
   return {
     shockley: true,
     is: part.params?.is,
-    n: part.params?.n ?? (part.kind === 'led' ? 1.8 : 1.0),
+    n: part.params?.n ?? classDefaults(part.kind).n ?? 1.0,
     // SERIES BULK RESISTANCE, AND IT MUST EQUAL THE PIECEWISE PATH'S rd,
     // BECAUSE THEY ARE THE SAME PHYSICAL QUANTITY.
     //
@@ -423,7 +452,10 @@ function junctionOpts(part) {
     // justify them, and because silicon shares this default (real 1N4148 bulk
     // is 0.568 Ω, so 10 is 17x high). The fix is coupled: rd and rs must become
     // per-kind AND equal, and the knee must become vf - 0.020*rd, together.
-    rs: part.params?.rs ?? 2,
+    // ONE DEFINITION, read from the library rather than written here. The
+    // exporter reads the same function, so a deck it writes and the solve we
+    // run describe the same device by construction instead of by copy.
+    rs: part.params?.rs ?? classDefaults(part.kind).rs ?? 0,
   };
 }
 
@@ -1787,7 +1819,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vD = netD ? (nodeVoltages.get(netD) ?? 0) : 0;
       const vS = netS ? (nodeVoltages.get(netS) ?? 0) : 0;
       const vth = /** @type {number} */ (part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0));
-      const k = /** @type {number} */ (part.params.k ?? 0.5);
+      const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
       let id;
       // Same smoothed square law as the stamp — a hard-corner current read
       // off a smoothed solve disagrees with KCL near threshold.
@@ -2726,7 +2758,7 @@ function smoothVov(vov) {
 
 function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation') {
   const vth = /** @type {number} */ (part.params.vth ?? 2.0);
-  const k = /** @type {number} */ (part.params.k ?? 0.5); // A/V² (transconductance parameter)
+  const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
   const netG = findNet(nets, part.id, 'gate');
   const netD = findNet(nets, part.id, 'drain');
@@ -2788,7 +2820,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 /** P-channel MOSFET: mirror of NMOS with reversed gate sense. */
 function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation') {
   const vth = /** @type {number} */ (part.params.vth ?? -2.0);
-  const k = /** @type {number} */ (part.params.k ?? 0.5);
+  const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
   const netG = findNet(nets, part.id, 'gate');
   const netD = findNet(nets, part.id, 'drain');
