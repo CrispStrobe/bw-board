@@ -109,6 +109,7 @@
  * @property {() => {analysis: {kind: 'dc-operating-point', scope: string,
  *   supportedKinds: string[], capacitors: 'open', sources: 'fixed-dc-only',
  *   controlledSources: 'ideal-explicit-finite-parameters-only',
+ *   inductors: 'exact-ideal-dc-short-explicit-henrys',
  *   diodes: {model: 'explicit-shockley', parameters: string[],
  *     thermalVoltage: number, temperatureModel: 'fixed'},
  *   currentConvention: 'positive-into-part-terminal'}, converged: boolean,
@@ -116,8 +117,9 @@
  *   branchCurrents: Map<string, Map<string, number>>,
  *   railConflicts: string[]}} operatingPoint
  *   Non-mutating capacitor-open DC analysis for the explicitly reported
- *   supported scope (static native R/C/V/I, explicit finite-parameter
- *   Shockley diodes, and ideal finite-parameter VCVS/VCCS). Result currents
+ *   supported scope (static native R/C/L/V/I, exact ideal-DC inductors,
+ *   explicit finite-parameter Shockley diodes, and ideal finite-parameter
+ *   VCVS/VCCS). Result currents
  *   are positive into each named terminal;
  *   unsupported, floating, or non-ideal circuit semantics throw rather than
  *   being approximated.

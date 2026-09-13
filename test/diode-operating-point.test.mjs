@@ -105,7 +105,7 @@ describe('BoardImpl.operatingPoint explicit Shockley diode domain', () => {
     const second = board.operatingPoint();
     assert.equal(first.converged, true);
     assert.equal(first.analysis.scope,
-      'grounded-static-native-r-c-d-v-i-e-g-explicit-shockley');
+      'grounded-static-native-r-c-l-d-v-i-e-g-exact-ideal-l-explicit-shockley-d');
     assert.ok(first.analysis.supportedKinds.includes('diode'));
     assert.deepEqual(first.analysis.diodes, {
       model: 'explicit-shockley',

@@ -58,10 +58,12 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'diode', 'vsource', 'isource', 'vcvs', 'vccs', 'gnd', 'vcc',
+  'resistor', 'capacitor', 'inductor', 'diode', 'vsource', 'isource',
+  'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
 
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
+const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
 
 const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
 const NONIDEAL_CONTROLLED_PARAMS = ['railLow', 'railHigh', 'rout', 'iShort', 'iMax'];
@@ -91,7 +93,7 @@ function dcFloatingNets(parts, nets) {
     } else if (part.kind === 'vcc') {
       const n = netFor(part, 'vcc');
       if (n) anchored.add(n);
-    } else if (part.kind === 'resistor') {
+    } else if (part.kind === 'resistor' || part.kind === 'inductor') {
       join(netFor(part, 'a'), netFor(part, 'b'));
     } else if (part.kind === 'vsource') {
       join(netFor(part, 'pos'), netFor(part, 'neg'));
@@ -2113,7 +2115,7 @@ export class BoardImpl {
 
   /**
    * Compute, but do not adopt, a DC operating point for the first proven
-   * public domain: grounded static native R/C/D/V/I/E/G networks. Diodes must
+   * public domain: grounded static native R/C/L/D/V/I/E/G networks. Diodes must
    * explicitly select the Shockley model and its complete DC parameter set.
    * This is not
    * an instantaneous read: capacitors are open, independent of stored charge.
@@ -2126,7 +2128,8 @@ export class BoardImpl {
     for (const part of this._solveParts) {
       if (!OPERATING_POINT_KINDS.has(part.kind)) {
         throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
-          + 'the supported domain is static R/C/V/I plus ideal VCVS/VCCS only');
+          + 'the supported domain is static R/C/L/V/I, explicit Shockley D, '
+          + 'plus ideal VCVS/VCCS only');
       }
       if (part.kind === 'vsource') {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
@@ -2178,6 +2181,31 @@ export class BoardImpl {
           }
         }
       }
+      if (part.kind === 'inductor') {
+        const params = part.params ?? {};
+        if (typeof params.henrys !== 'number' || !Number.isFinite(params.henrys)
+            || params.henrys <= 0) {
+          throw new Error(`operatingPoint: unsupported inductor ${part.id}; `
+            + 'henrys must be an explicit finite number greater than zero');
+        }
+        const extra = Object.keys(params).find(name => !INDUCTOR_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported inductor ${part.id}; `
+            + `parameter ${extra} is outside the ideal DC inductor domain`);
+        }
+        const netA = this._netForTerminal(part.id, 'a');
+        const netB = this._netForTerminal(part.id, 'b');
+        for (const [terminal, net] of [['a', netA], ['b', netB]]) {
+          if (net === undefined) {
+            throw new Error(`operatingPoint: unsupported inductor ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+        if (netA === netB) {
+          throw new Error(`operatingPoint: unsupported self-shorted inductor ${part.id}; `
+            + `a and b both resolve to ${netA}, so its branch current is indeterminate`);
+        }
+      }
       if (part.kind === 'vcvs' || part.kind === 'vccs') {
         const parameter = part.kind === 'vcvs' ? 'gain' : 'gm';
         if (typeof part.params?.[parameter] !== 'number'
@@ -2207,6 +2235,38 @@ export class BoardImpl {
         }
       }
     }
+
+    // An ideal inductor at DC is a zero-volt constraint. Two parallel ideal
+    // zero-volt constraints have a determined total current but no determined
+    // split, so their individual branch-current reports would be fiction.
+    const idealPairs = new Map();
+    const pairKey = (a, b) => a < b ? `${a}\0${b}` : `${b}\0${a}`;
+    for (const part of this._solveParts) {
+      let terminals;
+      if (part.kind === 'inductor') {
+        terminals = ['a', 'b'];
+      } else if (part.kind === 'vsource') {
+        const wave = String(part.params?.wave ?? 'dc').toLowerCase();
+        const volts = this.controls.has(part.id)
+          ? Number(this.controls.get(part.id))
+          : Number(sourceVoltage(part, 0, this.vcc));
+        const internalOhms = Number(part.params?.rInternal) || 0;
+        if (wave !== 'dc' || volts !== 0 || internalOhms > 0) continue;
+        terminals = ['pos', 'neg'];
+      } else {
+        continue;
+      }
+      const a = this._netForTerminal(part.id, terminals[0]);
+      const b = this._netForTerminal(part.id, terminals[1]);
+      if (a === undefined || b === undefined || a === b) continue;
+      const key = pairKey(a, b);
+      const prior = idealPairs.get(key);
+      if (prior && (part.kind === 'inductor' || prior.kind === 'inductor')) {
+        throw new Error(`operatingPoint: parallel ideal constraints ${prior.id} and ${part.id} `
+          + `share nets ${a}, ${b}; their individual branch currents are indeterminate`);
+      }
+      idealPairs.set(key, part);
+    }
     const floating = dcFloatingNets(this._solveParts, this._solveNets);
     if (floating.length) {
       throw new Error(`operatingPoint: DC-floating net${floating.length === 1 ? '' : 's'} `
@@ -2216,9 +2276,21 @@ export class BoardImpl {
     // solveMNA's current-limit loop writes a private top-level field on source
     // parts. The accepted domain excludes that mode, and shallow copies make
     // this observational even if the implementation later inspects the field.
-    const parts = this._solveParts.map(part => ({ ...part }));
+    const inductorIds = new Set(this._solveParts
+      .filter(part => part.kind === 'inductor').map(part => part.id));
+    const parts = this._solveParts.map(part => inductorIds.has(part.id)
+      ? { ...part, kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] }
+      : { ...part });
+    const nets = this._solveNets.map(net => ({
+      ...net,
+      terminals: net.terminals.map(terminal => {
+        if (!inductorIds.has(terminal.part)) return { ...terminal };
+        return { ...terminal, terminal: terminal.terminal === 'a' ? 'pos' : 'neg' };
+      }),
+    }));
     const op = this._solveDcOperatingPoint({
       parts,
+      nets,
       controls: new Map(this.controls),
       deviceStates: new Map(),
       tSeconds: 0,
@@ -2226,11 +2298,12 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-d-v-i-e-g-explicit-shockley',
+        scope: 'grounded-static-native-r-c-l-d-v-i-e-g-exact-ideal-l-explicit-shockley-d',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: 'fixed-dc-only',
         controlledSources: 'ideal-explicit-finite-parameters-only',
+        inductors: 'exact-ideal-dc-short-explicit-henrys',
         diodes: {
           model: 'explicit-shockley',
           parameters: ['is', 'n', 'rs'],
@@ -2244,7 +2317,18 @@ export class BoardImpl {
       },
       converged: op.converged === true,
       nodeVoltages: new Map(op.nodeVoltages),
-      branchCurrents: currentsIntoTerminals(parts, op.branchCurrents),
+      branchCurrents: (() => {
+        const currents = currentsIntoTerminals(parts, op.branchCurrents);
+        for (const id of inductorIds) {
+          const source = currents.get(id);
+          if (!source) continue;
+          currents.set(id, new Map([
+            ['a', source.get('pos') ?? 0],
+            ['b', source.get('neg') ?? 0],
+          ]));
+        }
+        return currents;
+      })(),
       railConflicts: [...(op.railConflicts ?? [])],
     };
   }
@@ -2927,8 +3011,8 @@ export class BoardImpl {
   // ─── Internal: MNA solver bridge ──────────────────────────────────────────
 
   /** Shared capacitor-open DC solve used by public OP analysis and runAc. */
-  _solveDcOperatingPoint({ parts, controls, deviceStates, tSeconds }) {
-    return solveMNA(parts, this._solveNets, this._pinSources(), controls, this.vcc, {
+  _solveDcOperatingPoint({ parts, nets = this._solveNets, controls, deviceStates, tSeconds }) {
+    return solveMNA(parts, nets, this._pinSources(), controls, this.vcc, {
       tSeconds,
       temperatureC: this.temperatureC,
       deviceStates,
