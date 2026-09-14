@@ -55,7 +55,7 @@ describe('diode (non-LED)', () => {
     board.setNetlist(parts, nets);
 
     // I = (5 - 0.7) / (1000 + 10) = 4.3/1010 ≈ 4.257 mA
-    const iD1 = board.branchCurrent('D1', 'anode');
+    const iD1 = -board.branchCurrent('D1', 'anode');
     assert.ok(Math.abs(iD1 - 0.004257) < 0.0005,
       `diode current ${iD1} should be ≈ 4.257 mA`);
   });

@@ -57,8 +57,8 @@ describe('op-amp output current limit (D20)', () => {
     // 0.040 A × 1 Ω. Before this landed: 2.499998 V and 2.499998 A.
     assert.ok(Math.abs(v - 0.040) < 1e-9, `0.040 V into 1 Ω, got ${v}`);
     assert.ok(Math.abs(v / 1 - 0.040) < 1e-9, `40 mA, got ${v / 1} A`);
-    // The branch variable is positive INTO the pin, so sourcing is negative.
-    assert.ok(Math.abs(board.branchCurrent('U1', 'out') + 0.040) < 1e-9);
+    // Public terminal current is positive OUT of the pin, so sourcing is positive.
+    assert.ok(Math.abs(board.branchCurrent('U1', 'out') - 0.040) < 1e-9);
   });
 
   it('below 62.5 Ω the output is iShort·R; above it, the divider answer', () => {
@@ -93,8 +93,8 @@ describe('op-amp output current limit (D20)', () => {
     ]);
     assert.ok(Math.abs(board.nodeVoltage('n_out') - 4.600) < 1e-9,
       `5 − 0.040×10 = 4.600 V, got ${board.nodeVoltage('n_out')}`);
-    assert.ok(Math.abs(board.branchCurrent('U1', 'out') - 0.040) < 1e-9,
-      'sinking is the POSITIVE branch direction');
+    assert.ok(Math.abs(board.branchCurrent('U1', 'out') + 0.040) < 1e-9,
+      'sinking is the negative positive-out branch direction');
   });
 
   it('the rails still clamp, and a light load never enters the limit', () => {

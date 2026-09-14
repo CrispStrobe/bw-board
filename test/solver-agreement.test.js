@@ -122,7 +122,7 @@ describe('solver agreement: LED brightness integration check', () => {
     board.advanceTo(25_000_000n);
 
     const brightness = board.ledBrightness('LED1');
-    const mnaCurrent = board.branchCurrent('LED1', 'anode');
+    const mnaCurrent = -board.branchCurrent('LED1', 'anode');
 
     // I = (5 - 1.8) / (470 + 10 + 25) = 3.2/505 = 6.337 mA
     assertClose(mnaCurrent, 0.006337, 0.0005, 'MNA current');

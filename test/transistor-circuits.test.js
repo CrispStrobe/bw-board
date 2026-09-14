@@ -87,7 +87,7 @@ describe('NPN: LED driver', () => {
     // Quasi high: weak 230µA source → enough to drive transistor base
     board.setPin('P1.0', 'quasi', true);
 
-    const iLed = board.branchCurrent('LED1', 'anode');
+      const iLed = -board.branchCurrent('LED1', 'anode'); // forward current into anode
     // Base current ≈ (5 - 0.7) / (21700 + 10000) ≈ 0.136 mA
     // Collector current = β × Ib = 13.6 mA (if not saturated)
     // LED current limited by R_LED: I = (5 - 2) / 340 ≈ 8.8 mA max
@@ -145,7 +145,7 @@ describe('NPN: different beta values', () => {
       );
       board.setPin('P1.0', 'pushpull', true);
 
-      const ic = board.branchCurrent('Q1', 'collector');
+      const ic = -board.branchCurrent('Q1', 'collector');
       assert.ok(!Number.isNaN(ic), `β=${beta}: current not NaN`);
       assert.ok(ic >= 0, `β=${beta}: current ≥ 0`);
     });
@@ -201,7 +201,7 @@ describe('NPN: different beta values', () => {
         ],
       );
       board.setPin('P1.0', 'pushpull', true);
-      currents.push({ beta, ic: board.branchCurrent('Q1', 'collector') });
+      currents.push({ beta, ic: -board.branchCurrent('Q1', 'collector') });
     }
 
     // Higher β → more Ic (when not saturated)

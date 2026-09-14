@@ -100,8 +100,8 @@ describe('KCL: LED + resistor + pin', () => {
 
     const iR = board.branchCurrent('R1', 'b');
     const iLED = board.branchCurrent('LED1', 'anode');
-    assert.ok(Math.abs(iR - iLED) < 0.0001,
-      `series: R1 current (${iR}) = LED current (${iLED})`);
+    assert.ok(Math.abs(iR + iLED) < 0.0001,
+      `series-node KCL: R1.b (${iR}) + LED.anode (${iLED}) = 0`);
   });
 });
 

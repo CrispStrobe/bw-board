@@ -174,13 +174,13 @@ describe('NPN transistor', () => {
 
     // Pin high → base current → collector current → LED on
     board.setPin('P1.0', 'pushpull', true);
-    const iLed = board.branchCurrent('LED1', 'anode');
+    const iLed = -board.branchCurrent('LED1', 'anode');
     assert.ok(!Number.isNaN(iLed), 'LED current not NaN');
     assert.ok(iLed > 0.001, `LED should conduct through NPN: ${(iLed * 1000).toFixed(2)} mA`);
 
     // Pin low → transistor off → LED off
     board.setPin('P1.0', 'pushpull', false);
-    const iOff = board.branchCurrent('LED1', 'anode');
+    const iOff = -board.branchCurrent('LED1', 'anode');
     assert.ok(iOff < 0.0001, `LED should be off: ${(iOff * 1000).toFixed(3)} mA`);
   });
 });
@@ -204,7 +204,7 @@ describe('Zener diode', () => {
       ],
     );
     // Forward: I = (5 - 0.7) / (1000 + 10) ≈ 4.257 mA
-    const i = board.branchCurrent('Z1', 'anode');
+    const i = -board.branchCurrent('Z1', 'anode'); // forward current into anode
     assert.ok(Math.abs(i - 0.004257) < 0.001,
       `forward zener: ${(i * 1000).toFixed(2)} mA ≈ 4.26 mA`);
   });

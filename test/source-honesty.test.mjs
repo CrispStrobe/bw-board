@@ -158,13 +158,13 @@ describe('FET extraction matches the region the solve used (source honesty 3)', 
         assert.ok(V(r, 'n_drain') < 0.05, `drain near ground: ${V(r, 'n_drain').toFixed(4)} V`);
         const idExtract = I(r, 'm1', 'drain');
         const iLoad = I(r, 'rd', 'b');
-        assert.ok(Math.abs(idExtract - iLoad) < 1e-6,
-            `triode extraction ${(idExtract * 1e3).toFixed(4)} mA == load ${(iLoad * 1e3).toFixed(4)} mA`);
+        assert.ok(Math.abs(idExtract + iLoad) < 1e-6,
+            `triode drain ${(idExtract * 1e3).toFixed(4)} mA opposes load ${(iLoad * 1e3).toFixed(4)} mA`);
         const kcl = I(r, 'm1', 'gate') + I(r, 'm1', 'drain') + I(r, 'm1', 'source');
         assert.ok(Math.abs(kcl) < 1e-9, `KCL at m1: ${kcl.toExponential(2)}`);
     });
 
-    it('conducting PMOS: into-source positive, into-drain negative, |i| = load', () => {
+    it('conducting PMOS: out-of-source negative, out-of-drain positive, |i| = load', () => {
         // High-side PMOS: source at 5 V, gate grounded (vsg = 5 > |vth|),
         // drain through 1 kΩ to ground — triode, load ≈ 5 mA.
         const parts = [
@@ -184,9 +184,9 @@ describe('FET extraction matches the region the solve used (source honesty 3)', 
         const iS = I(r, 'm1', 'source');
         const iD = I(r, 'm1', 'drain');
         const iLoad = I(r, 'rl', 'b');
-        assert.ok(iS > 0 && iD < 0, `signs: source ${iS.toExponential(2)}, drain ${iD.toExponential(2)}`);
-        assert.ok(Math.abs(-iD - iLoad) < 1e-6,
-            `|into-drain| ${(-iD * 1e3).toFixed(4)} mA == load ${(iLoad * 1e3).toFixed(4)} mA`);
+        assert.ok(iS < 0 && iD > 0, `signs: source ${iS.toExponential(2)}, drain ${iD.toExponential(2)}`);
+        assert.ok(Math.abs(iD - iLoad) < 1e-6,
+            `out-of-drain ${(iD * 1e3).toFixed(4)} mA == load ${(iLoad * 1e3).toFixed(4)} mA`);
     });
 });
 
@@ -212,7 +212,7 @@ describe('buzzer branch current is extractable (KCL-visible load)', () => {
         const iBuzz = I(r, 'buzz1', 'b');
         const iC = I(r, 'q1', 'collector');
         assert.ok(Math.abs(iBuzz) > 1e-3, `buzzer carries real current: ${(iBuzz * 1e3).toFixed(3)} mA`);
-        assert.ok(Math.abs(iBuzz - iC) < 1e-6,
-            `buzzer ${(iBuzz * 1e3).toFixed(4)} mA == collector ${(iC * 1e3).toFixed(4)} mA`);
+        assert.ok(Math.abs(iBuzz + iC) < 1e-6,
+            `connected buzzer ${(iBuzz * 1e3).toFixed(4)} mA opposes collector ${(iC * 1e3).toFixed(4)} mA`);
     });
 });

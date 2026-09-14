@@ -35,7 +35,7 @@ describe('vs ngspice: red LED I-V across resistor values', () => {
       const board = new BoardImpl(5.0);
       board.setNetlist(parts, nets);
 
-      const i = board.branchCurrent('LED1', 'anode');
+      const i = -board.branchCurrent('LED1', 'anode');
       const iRef = Math.abs(ref['v1#branch']);
 
       // Our piecewise model uses Vf=2.0 + Rd=10Ω.
@@ -67,7 +67,7 @@ describe('vs ngspice: red LED at 3.3V', () => {
       const board = new BoardImpl(3.3);
       board.setNetlist(parts, nets);
 
-      const i = board.branchCurrent('LED1', 'anode');
+      const i = -board.branchCurrent('LED1', 'anode');
       const iRef = Math.abs(ref['v1#branch']);
 
       if (iRef > 0.0001) {
@@ -97,7 +97,7 @@ describe('vs ngspice: blue LED', () => {
       const board = new BoardImpl(5.0);
       board.setNetlist(parts, nets);
 
-      const i = board.branchCurrent('LED1', 'anode');
+      const i = -board.branchCurrent('LED1', 'anode');
       const iRef = Math.abs(ref['v1#branch']);
 
       if (iRef > 0.0001) {
@@ -127,7 +127,7 @@ describe('vs ngspice: silicon diode (1N4148-like)', () => {
       const board = new BoardImpl(5.0);
       board.setNetlist(parts, nets);
 
-      const i = board.branchCurrent('D1', 'anode');
+      const i = -board.branchCurrent('D1', 'anode');
       const iRef = Math.abs(ref['v1#branch']);
 
       const ratio = i / iRef;
@@ -159,7 +159,7 @@ describe('vs ngspice: two LEDs in series at various VCC', () => {
       const board = new BoardImpl(vcc);
       board.setNetlist(parts, nets);
 
-      const i = board.branchCurrent('LED1', 'anode');
+      const i = -board.branchCurrent('LED1', 'anode');
       const iRef = Math.abs(ref['v1#branch'] ?? 0);
 
       if (vcc < 4.0) {

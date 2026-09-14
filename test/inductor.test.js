@@ -56,7 +56,7 @@ describe('inductor: DC steady state', () => {
     );
 
     // I = (5-2)/(1000+10) ≈ 2.97 mA (inductor adds ~0Ω at DC)
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode'); // forward current into anode
     assert.ok(Math.abs(i - 0.00297) < 0.0005,
       `LED current with inductor: ${(i*1000).toFixed(2)} mA ≈ 2.97 mA`);
   });

@@ -39,7 +39,7 @@ describe('vs ngspice: pin Thévenin LED circuits', () => {
 
     // Our piecewise LED model differs from ngspice Shockley, but current
     // should be in the same ballpark
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     close(i, Math.abs(ref['v1#branch']), 0.001, 'LED current');
   });
 
@@ -56,7 +56,7 @@ describe('vs ngspice: pin Thévenin LED circuits', () => {
     board.setNetlist(parts, nets);
     board.setPin('P1.0', 'quasi', true);
 
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     // ngspice: ~0.1mA, our model: ~0.13mA (quasi 21.7kΩ)
     assert.ok(i < 0.0005, `quasi high LED current: ${(i*1000).toFixed(3)} mA (very low)`);
   });
@@ -74,7 +74,7 @@ describe('vs ngspice: pin Thévenin LED circuits', () => {
     board.setNetlist(parts, nets);
     board.setPin('P1.0', 'pushpull', true);
 
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     close(i, Math.abs(ref['vpin#branch']), 0.001, 'pushpull LED current');
   });
 });

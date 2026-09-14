@@ -110,7 +110,7 @@ test('the qualitative failure is gone: a conducting circuit is not reported dark
     // reading of a part this engine no longer has. Unlike the white-LED case in
     // led-colors.test.js, this one is representable: Is stays above ngspice's
     // silent 1e-28 diode clamp, so it is a real oracle and not a hand value.
-    const i = chain(2, 2.0, 3.3).branchCurrent('LED1', 'anode');
+    const i = -chain(2, 2.0, 3.3).branchCurrent('LED1', 'anode'); // forward current
     assert.ok(i > 1e-5,
         `two LEDs on a 3.3 V rail read ${i} A — the knee model is reporting a conducting `
         + 'circuit as off. ngspice measures 151.4 uA.');

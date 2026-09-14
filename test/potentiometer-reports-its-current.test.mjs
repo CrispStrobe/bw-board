@@ -57,8 +57,8 @@ test('an unloaded pot reports the current its own resistance implies', () => {
     assert.ok(Math.abs(iA) > 1e-6,
         `the pot carries 5 V / 10 kOhm = 0.5 mA and reports ${iA} A — a missing extraction `
         + 'arm returns a confident zero that looks exactly like no current');
-    assert.ok(Math.abs(iA - 5 / 10000) < 1e-9, `expected 0.5 mA into a, got ${iA}`);
-    // KCL: nothing leaves the wiper, so what enters `a` leaves `b`.
+    assert.ok(Math.abs(iA + 5 / 10000) < 1e-9, `expected -0.5 mA out of a, got ${iA}`);
+    // KCL: nothing leaves the wiper, so the terminal currents cancel.
     assert.ok(Math.abs(iA + iB) < 1e-9, `a (${iA}) and b (${iB}) must be equal and opposite`);
     assert.ok(Math.abs(iW) < 1e-9, `an unloaded wiper carries nothing, got ${iW}`);
 });

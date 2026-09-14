@@ -90,7 +90,7 @@ describe('zener: forward conduction', () => {
     );
 
     // Forward: I = (5 - 0.7) / (1000 + 10) ≈ 4.257 mA
-    const i = board.branchCurrent('Z1', 'anode');
+    const i = -board.branchCurrent('Z1', 'anode'); // forward current into anode
     assert.ok(Math.abs(i - 0.004257) < 0.001,
       `forward zener: ${(i*1000).toFixed(2)} mA ≈ 4.26 mA`);
   });

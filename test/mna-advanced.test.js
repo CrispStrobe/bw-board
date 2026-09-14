@@ -169,7 +169,7 @@ describe('MNA: multiple MCU pins on same net', () => {
     assert.ok(b > 0.13, `brightness ${b} with parallel pins`);
 
     // MNA current should be slightly higher than single pin
-    const iLed = board.branchCurrent('LED1', 'anode');
+    const iLed = -board.branchCurrent('LED1', 'anode'); // forward current
     assert.ok(iLed > 0.0028, `LED current ${iLed} should be > 2.8 mA`);
   });
 });

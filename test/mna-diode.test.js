@@ -28,7 +28,7 @@ describe('MNA: LED current through different resistors', () => {
     const { parts, nets } = ledCircuit(220);
     board.setNetlist(parts, nets);
     // I = (5 - 2) / (220 + 10) = 3/230 ≈ 13.04 mA
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     assert.ok(Math.abs(i - 0.01304) < 0.001, `current ${i} ≈ 13.04 mA`);
   });
 
@@ -36,7 +36,7 @@ describe('MNA: LED current through different resistors', () => {
     const board = new BoardImpl(5.0);
     const { parts, nets } = ledCircuit(330);
     board.setNetlist(parts, nets);
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     assert.ok(Math.abs(i - 0.00882) < 0.001, `current ${i} ≈ 8.82 mA`);
   });
 
@@ -44,7 +44,7 @@ describe('MNA: LED current through different resistors', () => {
     const board = new BoardImpl(5.0);
     const { parts, nets } = ledCircuit(10000);
     board.setNetlist(parts, nets);
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     assert.ok(Math.abs(i - 0.0002994) < 0.0001, `current ${i} ≈ 0.2994 mA`);
   });
 
@@ -52,7 +52,7 @@ describe('MNA: LED current through different resistors', () => {
     const board = new BoardImpl(5.0);
     const { parts, nets } = ledCircuit(100000);
     board.setNetlist(parts, nets);
-    const i = board.branchCurrent('LED1', 'anode');
+    const i = -board.branchCurrent('LED1', 'anode');
     assert.ok(Math.abs(i - 0.00002997) < 0.00001, `current ${i} ≈ 29.97 µA`);
   });
 });
@@ -97,8 +97,8 @@ describe('MNA: series LEDs', () => {
     // _junctionHeadroomV in board.js). Tolerance is +-5% of the ngspice value
     // rather than the old +-0.2 mA, which was 20% and wide enough to hide this.
     const NGSPICE = 0.001304;
-    const i1 = board.branchCurrent('LED1', 'anode');
-    const i2 = board.branchCurrent('LED2', 'anode');
+    const i1 = -board.branchCurrent('LED1', 'anode');
+    const i2 = -board.branchCurrent('LED2', 'anode');
     assert.ok(Math.abs(i1 - NGSPICE) < NGSPICE * 0.05,
       `LED1 current ${(i1 * 1000).toFixed(3)} mA, ngspice measures ${(NGSPICE * 1000).toFixed(3)} mA`);
     assert.ok(Math.abs(i1 - i2) < 0.0001, 'series LEDs carry same current');
@@ -151,7 +151,7 @@ describe('MNA: LED + MCU Thévenin agreement', () => {
       board.advanceTo(1_000_000n);
 
       const brightness = board.ledBrightness('LED1');
-      const mnaCurrent = board.branchCurrent('LED1', 'anode');
+      const mnaCurrent = -board.branchCurrent('LED1', 'anode');
 
       // Both should agree within tolerance
       const brightFromMNA = mnaCurrent / 0.020;

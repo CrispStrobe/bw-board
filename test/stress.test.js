@@ -105,7 +105,7 @@ describe('stress: large netlist', () => {
 
     // All 20 LED currents should be computable
     for (let i = 0; i < 20; i++) {
-      const current = board.branchCurrent(`LED${i}`, 'anode');
+      const current = -board.branchCurrent(`LED${i}`, 'anode');
       // I = (5-2)/(1000+10) = 2.970 mA
       assert.ok(Math.abs(current - 0.00297) < 0.0005,
         `LED${i} current ${current} should be ~2.97 mA`);

@@ -134,7 +134,7 @@ describe('MNA: branchCurrent', () => {
     const { parts, nets } = makeLedCircuit();
     board.setNetlist(parts, nets);
 
-    const iLed = board.branchCurrent('LED1', 'anode');
+    const iLed = -board.branchCurrent('LED1', 'anode');
     assert.ok(Math.abs(iLed - 0.00297) < 0.0003,
       `LED current ${iLed} should be ≈ 2.970 mA`);
 
@@ -166,7 +166,7 @@ describe('MNA: branchCurrent', () => {
     board.advanceTo(1_000_000n);
 
     // MNA current through LED
-    const iLed = board.branchCurrent('LED1', 'anode');
+    const iLed = -board.branchCurrent('LED1', 'anode');
     // Closed-form brightness
     const brightness = board.ledBrightness('LED1');
 

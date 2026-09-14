@@ -46,7 +46,7 @@ describe('LED colors: brightness through same 1kΩ resistor at 5V', () => {
       board.advanceTo(25_000_000n);
 
       const brightness = board.ledBrightness('LED1');
-      const mnaCurrent = board.branchCurrent('LED1', 'anode');
+      const mnaCurrent = -board.branchCurrent('LED1', 'anode'); // forward current
 
       // I = (5 - KNEE) / (R + Rd + Rpin) = (5 - KNEE) / 1035, where the KNEE is
       // Vf - I_RATED*Rd and NOT Vf itself. Vf is the DATASHEET drop, specified

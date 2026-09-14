@@ -33,23 +33,23 @@ describe('independent voltage source with either terminal grounded', () => {
     assert.equal(normal.converged, true);
     assert.ok(Math.abs(normal.nodeVoltages.get('live') - 5) < 1e-9,
       'the established pos-live orientation is non-vacuously driven to +5 V');
-    assert.ok(Math.abs(current(normal, 'V1', 'pos') + 0.005) < 1e-9,
-      'normal source current enters its pos terminal at -5 mA');
+    assert.ok(Math.abs(current(normal, 'V1', 'pos') - 0.005) < 1e-9,
+      'normal source delivers 5 mA out of its pos terminal');
     assert.ok(Math.abs(current(normal, 'R1', 'a') + 0.005) < 1e-9,
       'normal load current is signed out-of-part at terminal a');
-    assert.ok(Math.abs(-current(normal, 'V1', 'pos') + current(normal, 'R1', 'a')) < 1e-9,
-      'normal live-node KCL holds after adapting the documented per-kind conventions');
+    assert.ok(Math.abs(current(normal, 'V1', 'pos') + current(normal, 'R1', 'a')) < 1e-9,
+      'normal live-node KCL holds directly in the uniform terminal convention');
 
     const reversed = sourceAndLoad(true);
     assert.equal(reversed.converged, true);
     assert.ok(Math.abs(reversed.nodeVoltages.get('live') + 5) < 1e-9,
       'a grounded pos terminal drives the live neg terminal to -5 V');
-    assert.ok(Math.abs(current(reversed, 'V1', 'neg') - 0.005) < 1e-9,
-      'reversed source current enters its neg terminal at +5 mA');
+    assert.ok(Math.abs(current(reversed, 'V1', 'neg') + 0.005) < 1e-9,
+      'reversed source draws 5 mA into its neg terminal');
     assert.ok(Math.abs(current(reversed, 'R1', 'a') - 0.005) < 1e-9,
       'reversed load current changes sign with the voltage');
-    assert.ok(Math.abs(-current(reversed, 'V1', 'neg') + current(reversed, 'R1', 'a')) < 1e-9,
-      'reversed live-node KCL holds after adapting the documented per-kind conventions');
+    assert.ok(Math.abs(current(reversed, 'V1', 'neg') + current(reversed, 'R1', 'a')) < 1e-9,
+      'reversed live-node KCL holds directly in the uniform terminal convention');
   });
 
   it('does not allocate a redundant zero-volt ground-to-ground source row', () => {

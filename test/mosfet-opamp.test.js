@@ -33,12 +33,12 @@ describe('NMOS: basic switch', () => {
 
     // Gate high (5V) → Vgs = 5V > Vth = 2V → on
     board.setPin('P1.0', 'pushpull', true);
-    const iOn = board.branchCurrent('LED1', 'anode');
+    const iOn = -board.branchCurrent('LED1', 'anode');
     assert.ok(iOn > 0.001, `NMOS on: LED current ${(iOn*1000).toFixed(2)} mA`);
 
     // Gate low → off
     board.setPin('P1.0', 'pushpull', false);
-    const iOff = board.branchCurrent('LED1', 'anode');
+    const iOff = -board.branchCurrent('LED1', 'anode');
     assert.ok(iOff < 0.0001, `NMOS off: LED current ${(iOff*1000).toFixed(3)} mA`);
   });
 });
@@ -60,7 +60,7 @@ describe('NMOS: different Vth values', () => {
       const board = new BoardImpl(3.3); // 3.3V supply
       board.setNetlist(parts, nets);
       board.setPin('P1.0', 'pushpull', true); // gate = 3.3V
-      return board.branchCurrent('M1', 'drain');
+      return -board.branchCurrent('M1', 'drain'); // channel current entering drain
     }
 
     const iLowVth = testMOS(1.0);  // Vgs=3.3 >> Vth=1.0 → strong on

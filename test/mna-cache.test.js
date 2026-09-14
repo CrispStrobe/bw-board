@@ -39,10 +39,10 @@ describe('MNA cache invalidation', () => {
     board.setNetlist(parts, nets);
 
     board.setPin('P1.0', 'pushpull', false); // sink → LED on
-    const iOn = board.branchCurrent('LED1', 'anode');
+    const iOn = -board.branchCurrent('LED1', 'anode');
 
     board.setPin('P1.0', 'pushpull', true); // source → LED off
-    const iOff = board.branchCurrent('LED1', 'anode');
+    const iOff = -board.branchCurrent('LED1', 'anode');
 
     assert.ok(iOn > 0.002, `on: ${(iOn*1000).toFixed(2)} mA`);
     assert.ok(iOff < 0.0001, `off: ${(iOff*1000).toFixed(3)} mA`);
@@ -68,10 +68,10 @@ describe('MNA cache invalidation', () => {
     board.setPin('P1.0', 'pushpull', false);
 
     board.setControl('POT', 0.9); // wiper near VCC → high voltage → more current
-    const iHigh = board.branchCurrent('LED1', 'anode');
+    const iHigh = -board.branchCurrent('LED1', 'anode');
 
     board.setControl('POT', 0.1); // wiper near GND → low voltage → less current
-    const iLow = board.branchCurrent('LED1', 'anode');
+    const iLow = -board.branchCurrent('LED1', 'anode');
 
     assert.ok(iHigh > iLow,
       `pot 0.9 (${(iHigh*1000).toFixed(2)} mA) > pot 0.1 (${(iLow*1000).toFixed(2)} mA)`);
@@ -83,11 +83,11 @@ describe('MNA cache invalidation', () => {
     board.setNetlist(parts, nets);
     board.setPin('P1.0', 'pushpull', false);
 
-    const iOn = board.branchCurrent('LED1', 'anode');
+    const iOn = -board.branchCurrent('LED1', 'anode');
     assert.ok(iOn > 0.002, `powered: ${(iOn*1000).toFixed(2)} mA`);
 
     board.setPower(false);
-    const iOff = board.branchCurrent('LED1', 'anode');
+    const iOff = -board.branchCurrent('LED1', 'anode');
     assert.ok(iOff < iOn, `off (${(iOff*1000).toFixed(3)} mA) < on (${(iOn*1000).toFixed(2)} mA)`);
   });
 
@@ -139,7 +139,8 @@ describe('MNA cache: shared solve', () => {
 
     assert.equal(solveCount, 1, `should solve exactly once, solved ${solveCount} times`);
     assert.equal(i1, i2, 'same part: bit-identical from cache');
-    assert.ok(Math.abs(i1 - i3) < 0.0001, 'series: R1 ≈ LED1');
+    assert.ok(Math.abs(i1 + i3) < 0.0001,
+      'series-node KCL: R1.b and LED.anode terminal currents oppose');
   });
 
   it('setPin between reads → two solves', () => {
