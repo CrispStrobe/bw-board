@@ -164,27 +164,20 @@ describe('the two branch-current conventions, pinned until they are converged', 
       'and L1.a POSITIVE where branchCurrent reports it negative');
   });
 
-  it('are exact negatives FOR THE FOUR KINDS operatingPoint reverses', () => {
-    // NARROWER THAN IT FIRST READ. `currentsIntoTerminals` reverses exactly
-    // {resistor, capacitor, isource, vccs}; for a vsource, a diode or a VCVS
-    // the two APIs return the IDENTICAL value, not the negative. Every part
-    // probed below is in the reversed set, so "exact negatives" is true of them
-    // and false as a general claim -- do not add a V or D part to this list
-    // expecting it to hold.
-    // THE REMEDY, IF THIS EVER REDS: converge the two on out-of-part positive
-    // (the documented one, in `test/device-kcl-visibility.test.mjs`) and update
-    // `initializeTransientFromOperatingPoint` to read terminal B in the same
-    // change. Do NOT fix one caller by flipping a sign; that is the mistake
-    // this file records.
+  it('adapts every R/L/V terminal in this bench to the explicit OP convention', () => {
+    // The boundary reverses ALL kinds. This live R/L/V bench includes source
+    // terminals formerly omitted by the four-kind conversion. The full OP
+    // domain is checked in terminal-current-contract.test.mjs. Keep storage's
+    // OP terminal-a read: physical a-to-b current is independent of API signs.
     const { board } = rlr();
     const op = board.operatingPoint();
-    for (const [part, terminal] of [['R1', 'b'], ['L1', 'a'], ['L1', 'b'], ['R2', 'a']]) {
+    for (const [part, terminal] of [['V1', 'pos'], ['V1', 'neg'], ['R1', 'a'], ['R1', 'b'], ['L1', 'a'], ['L1', 'b'], ['R2', 'a'], ['R2', 'b']]) {
       const live = board.branchCurrent(part, terminal);
       const point = op.branchCurrents.get(part)?.get(terminal);
       assert.ok(Number.isFinite(point), `${part}.${terminal} missing from operatingPoint`);
       assert.ok(Math.abs(live + point) / Math.abs(live) < 1e-3,
         `${part}.${terminal}: branchCurrent ${live}, operatingPoint ${point} — `
-        + 'these four kinds must remain exact negatives until the conventions converge');
+        + 'every live terminal must oppose its OP reading (allowing the live 1 mOhm L model)');
     }
   });
 });

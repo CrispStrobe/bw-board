@@ -16,6 +16,55 @@ function assertNetKcl(board, nets) {
   }
 }
 
+test('OP/live conversion covers every supported kind, not a four-kind reverse list', () => {
+  const parts = [];
+  const add = (id, kind, params, terminals) => parts.push({ id, kind, params, terminals });
+  add('GND', 'gnd', {}, ['gnd']);
+  add('V', 'vsource', { volts: 2 }, ['pos', 'neg']);
+  add('RAIL', 'vcc', {}, ['vcc']);
+  add('D', 'diode', { model: 'shockley', is: 1e-14, n: 1, rs: 0 }, ['anode', 'cathode']);
+  add('L', 'inductor', { henrys: 1e-3 }, ['a', 'b']);
+  add('C', 'capacitor', { farads: 1e-6 }, ['a', 'b']);
+  add('I', 'isource', { amps: 1e-3 }, ['pos', 'neg']);
+  add('E', 'vcvs', { gain: 2 }, ['outp', 'outn', 'inp', 'inn']);
+  add('G', 'vccs', { gm: 1e-3 }, ['outp', 'outn', 'inp', 'inn']);
+  for (const id of ['RD', 'RL', 'RC', 'RI', 'RE', 'RG', 'RV']) {
+    add(id, 'resistor', { ohms: 1000 }, ['a', 'b']);
+  }
+  const net = (id, refs) => ({ id, terminals: refs.map(ref => {
+    const [part, terminal] = ref.split('.'); return { part, terminal };
+  }) });
+  const nets = [
+    net('in', ['V.pos', 'RD.a', 'RL.a', 'RC.a', 'E.inp', 'G.inp']),
+    net('diode', ['RD.b', 'D.anode']), net('coil', ['RL.b', 'L.a']),
+    net('cap', ['RC.b', 'C.a']), net('isource', ['I.pos', 'RI.a']),
+    net('vcvs', ['E.outp', 'RE.a']), net('vccs', ['G.outp', 'RG.a']),
+    net('rail', ['RAIL.vcc', 'RV.a']),
+    net('ground', ['GND.gnd', 'V.neg', 'D.cathode', 'L.b', 'C.b', 'I.neg',
+      'RI.b', 'RE.b', 'RG.b', 'RV.b', 'E.outn', 'E.inn', 'G.outn', 'G.inn']),
+  ];
+  const board = new BoardImpl(5);
+  board.setNetlist(parts, nets);
+  const op = board.operatingPoint();
+  assert.deepEqual([...new Set(parts.map(p => p.kind))].sort(), op.analysis.supportedKinds.slice().sort(),
+    'expanding the OP envelope requires expanding this boundary proof');
+  board.initializeTransientFromOperatingPoint();
+  for (const phase of ['initialized', 'first-step']) {
+    if (phase === 'first-step') board.advanceTo(1n);
+    assertNetKcl(board, nets);
+    for (const part of parts) for (const terminal of part.terminals) {
+      const into = op.branchCurrents.get(part.id)?.get(terminal) ?? 0;
+      const out = board.branchCurrent(part.id, terminal);
+      assert.ok(Math.abs(into + out) < 1e-8, `${phase}: ${part.kind} ${part.id}.${terminal}`);
+    }
+    // The capacitor and its series resistor are DC-open by definition.
+    for (const part of parts.filter(p => !['gnd', 'capacitor'].includes(p.kind) && p.id !== 'RC')) {
+      assert.ok(part.terminals.some(t => Math.abs(board.branchCurrent(part.id, t)) > 1e-7),
+        `${part.id}: boundary sign proof needs driven current`);
+    }
+  }
+});
+
 for (const volts of [-5, 5]) {
   test(`shared-net KCL and OP/live cache continuity, diode at ${volts} V`, () => {
     const builder = new NetlistBuilder().gnd('GND').vsource('V1', volts)
