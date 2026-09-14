@@ -2326,23 +2326,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
       const ohms = /** @type {number} */ (part.params.ohms ?? 1000);
       const i = (vA - vB) / ohms; // current from a to b, INSIDE the part
-      // OUT-OF-PART positive. `i` enters at 'a' and leaves at 'b', so the
-      // stored values are its negation at 'a' and itself at 'b'. Both comments
-      // here used to read "into terminal", which states the opposite of what is
-      // stored -- and it was the only place in this file naming a convention
-      // for a passive part, so the one signpost pointed the wrong way. That is
-      // the likeliest reason the codebase carries TWO conventions without
-      // anyone noticing:
-      //   OUT-of-part positive: resistor, button/switch, buzzer, dc-motor, and
-      //     the generic device derivation (dc-motor's hook documents this as
-      //     what a meter in either lead expects)
-      //   INTO-part positive:   led/diode/zener (see "into anode" below), BJT
-      //     (its `emitter: -(ib + ic)` only sums to zero this way), FET, isource
-      // Measured on VCC(5V)->R1(1k)->D1(led)->GND, one current everywhere:
-      // R1.a = -2.9703 mA and D1.anode = +2.9703 mA -- the SAME physical
-      // situation, current entering the leg, with opposite stored signs.
-      // Unifying them is a real behavioural change and its own lane; this
-      // comment only stops the file from misdescribing what it does.
+      // Every raw terminal reading is OUT-OF-PART positive. `i` enters at a
+      // and leaves at b. OP adapts this once to its explicit INTO contract.
       currents.set('a', -i); // out of terminal a
       currents.set('b', i);  // out of terminal b
     }
@@ -2387,8 +2372,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const iWB = (vW - vB) / rWB;   // out of the wiper, on toward `b`
       currents.set('a', -iAW);
       currents.set('b', iWB);
-      // KCL at the wiper: what arrives from `a` and does not leave toward `b`
-      // is what the wiper terminal itself carries.
+      // Out of the wiper is internal current arriving from a minus that to b.
       currents.set('wiper', iAW - iWB);
     }
 
