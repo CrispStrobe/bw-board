@@ -1222,7 +1222,7 @@ export class BoardImpl {
 
   /**
    * @param {string} netId
-   * @returns {number} Amperes leaving the part through this terminal into its net.
+   * @returns {number}
    */
   nodeVoltage(netId) {
     // Overlay-first for the same reason as _pinVoltage: the deferred
@@ -1549,6 +1549,7 @@ export class BoardImpl {
    * @param {string} terminal
    * @returns {number}
    */
+  // Amperes leaving the part through the named terminal into its net.
   branchCurrent(partId, terminal) {
     this._flushSolve();
     if (!this.powered) return 0; // no current without power
