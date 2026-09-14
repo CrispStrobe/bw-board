@@ -3,7 +3,17 @@
  *
  * `branchCurrent(part, terminal)` is OUT-OF-PART POSITIVE — positive means
  * current leaving the part into the net. That is documented in
- * `test/device-kcl-visibility.test.mjs` and it is what every device does.
+ * `test/device-kcl-visibility.test.mjs`, and it is what the resistor, the
+ * capacitor, the buzzer, the ldr, the ntc and the current source do.
+ *
+ * IT IS NOT WHAT EVERY DEVICE DOES, and an earlier version of this comment
+ * said so wrongly. `solveMNA`'s extraction is split PER KIND: a diode, an LED,
+ * a zener and a voltage source report the opposite sign, so net-level KCL fails
+ * through this API on a resistor-plus-diode junction -- the commonest circuit in
+ * the gallery corpus -- by exactly twice the branch current. Every kind's
+ * measured verdict is in `test/branch-current-kind-census.test.mjs`. What
+ * follows is true of the inductor and the resistor, the pair this file is
+ * about; it is not a claim about the engine as a whole.
  *
  * It is not negotiable per device. Net-level KCL is the sum of every terminal's
  * reading on a net, so ONE device using the opposite sign breaks Kirchhoff
@@ -149,7 +159,13 @@ describe('the two branch-current conventions, pinned until they are converged', 
       'and L1.a POSITIVE where branchCurrent reports it negative');
   });
 
-  it('and they are exact negatives, which is why each is internally consistent', () => {
+  it('are exact negatives FOR THE FOUR KINDS operatingPoint reverses', () => {
+    // NARROWER THAN IT FIRST READ. `currentsIntoTerminals` reverses exactly
+    // {resistor, capacitor, isource, vccs}; for a vsource, a diode or a VCVS
+    // the two APIs return the IDENTICAL value, not the negative. Every part
+    // probed below is in the reversed set, so "exact negatives" is true of them
+    // and false as a general claim -- do not add a V or D part to this list
+    // expecting it to hold.
     // THE REMEDY, IF THIS EVER REDS: converge the two on out-of-part positive
     // (the documented one, in `test/device-kcl-visibility.test.mjs`) and update
     // `initializeTransientFromOperatingPoint` to read terminal B in the same
@@ -163,7 +179,7 @@ describe('the two branch-current conventions, pinned until they are converged', 
       assert.ok(Number.isFinite(point), `${part}.${terminal} missing from operatingPoint`);
       assert.ok(Math.abs(live + point) / Math.abs(live) < 1e-3,
         `${part}.${terminal}: branchCurrent ${live}, operatingPoint ${point} — `
-        + 'these must remain exact negatives until the conventions are converged');
+        + 'these four kinds must remain exact negatives until the conventions converge');
     }
   });
 });
