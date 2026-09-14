@@ -87,14 +87,17 @@ test('a saturated NPN agrees with ngspice on the exponential path', () => {
         + 'because it never enters saturation at all.');
     // Ic is the LOAD's current at that collector voltage, which is the whole
     // point of saturation: (5 - Vce) / 10.
-    assert.ok(Math.abs(r.ic - (5 - r.vc) / 10) < 1e-6,
-        `Ic ${r.ic} must be what the 10 Ohm load passes, ${(5 - r.vc) / 10}`);
+    const loadCurrent = (5 - r.vc) / 10;
+    // Load current enters the collector, so collector terminal current is its
+    // negative under the public positive-out-of-part convention.
+    assert.ok(Math.abs(r.ic + loadCurrent) < 1e-6,
+        `Ic ${r.ic} must oppose the 10 Ohm load current ${loadCurrent}`);
     // KCL at the device, asserted rather than read back from a recorded number.
     assert.ok(Math.abs(r.ib + r.ic + r.ie) < 1e-9,
         `Ib + Ic + Ie = ${r.ib + r.ic + r.ie}, must be zero`);
     // And it really is saturated: beta*Ib is far more than the load passes.
-    assert.ok(200 * r.ib > r.ic * 1.5,
-        `beta*Ib = ${200 * r.ib} is not comfortably above Ic = ${r.ic}, so this bench is not `
+    assert.ok(-200 * r.ib > -r.ic * 1.5,
+        `beta*|Ib| = ${-200 * r.ib} is not comfortably above |Ic| = ${-r.ic}, so this bench is not `
         + 'saturated and the test is measuring the wrong region');
 });
 

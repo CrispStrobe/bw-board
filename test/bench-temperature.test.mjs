@@ -26,7 +26,9 @@ describe('bench temperature', () => {
         const i85 = b.branchCurrent('D1', 'anode');
         // ΔVf = 60 °C · −2 mV/°C = −0.12 V → ΔI ≈ 0.12/330 ≈ 0.36 mA
         // (rd=10 Ω softens it slightly: 0.12/340 ≈ 0.353 mA).
-        const dI = (i85 - i25) * 1000;
+        // Forward current enters the anode, hence is negative in the public
+        // positive-out-of-part terminal convention. Compare its magnitude rise.
+        const dI = (i25 - i85) * 1000;
         assert.ok(dI > 0.30 && dI < 0.40,
             `current rises ~0.35 mA from 25→85 °C: got ${dI.toFixed(3)} mA`);
         // Symmetric: back to 25 restores the original solve exactly.

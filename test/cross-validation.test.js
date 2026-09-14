@@ -101,8 +101,10 @@ describe('cross-validation: LED circuits', () => {
       const expected = (5.0 - (tc.vf - I_RATED * rd)) / (tc.r + rd + rPin);
 
       assertClose(cfCurrent, expected, 0.0005, 'CF vs hand');
-      assertClose(mnaCurrent, expected, 0.0005, 'MNA vs hand');
-      assertClose(cfCurrent, mnaCurrent, 0.0005, 'CF vs MNA');
+      // Forward current enters the LED anode; public terminal current is
+      // positive out of the part, so compare the physical forward magnitude.
+      assertClose(-mnaCurrent, expected, 0.0005, 'MNA vs hand');
+      assertClose(cfCurrent, -mnaCurrent, 0.0005, 'CF vs MNA');
     });
   }
 });

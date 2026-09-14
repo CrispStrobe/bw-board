@@ -155,7 +155,9 @@ describe('full scenario: blink + pot + buzzer + button', () => {
     assert.ok(Math.abs(b1 - b2) < 0.01, `both LEDs should have similar brightness`);
     assert.ok(Math.abs(i1 - i2) < 0.0001, `both LEDs should have similar current`);
     // And the current should match the brightness
-    assert.ok(Math.abs(i1 / 0.020 - b1) < 0.02,
+    // Forward current enters the anode, hence is negative in the public
+    // positive-out-of-part terminal convention.
+    assert.ok(Math.abs(-i1 / 0.020 - b1) < 0.02,
       `MNA current (${i1}) and brightness (${b1}) should agree`);
   });
 });

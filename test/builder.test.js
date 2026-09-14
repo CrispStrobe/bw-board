@@ -168,10 +168,10 @@ describe('builder: end-to-end with board', () => {
 
     board.setPin('P1.0', 'pushpull', true); // base high → LED on
     const iOn = board.branchCurrent('LED1', 'anode');
-    assert.ok(iOn > 0.001, `LED on through NPN: ${(iOn * 1000).toFixed(2)} mA`);
+    assert.ok(iOn < -0.001, `LED on through NPN: ${(iOn * 1000).toFixed(2)} mA at anode`);
 
     board.setPin('P1.0', 'pushpull', false); // base low → LED off
     const iOff = board.branchCurrent('LED1', 'anode');
-    assert.ok(iOff < 0.0001, `LED off: ${(iOff * 1000).toFixed(3)} mA`);
+    assert.ok(Math.abs(iOff) < 0.0001, `LED off: ${(iOff * 1000).toFixed(3)} mA at anode`);
   });
 });

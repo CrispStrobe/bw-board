@@ -40,8 +40,9 @@ describe('beginner mistakes', () => {
     // Should still compute current — just very high
     const i = board.branchCurrent('LED1', 'anode');
     assert.ok(!Number.isNaN(i), 'current not NaN');
-    // I = (5-2)/10 = 300mA — way above rated, but calculable
-    assert.ok(i > 0.1, `current ${i} should be large (no limiting resistor)`);
+    // I = (5-2)/10 = 300mA — way above rated, but calculable. Public terminal
+    // current is positive out of the part, so forward current entering anode is negative.
+    assert.ok(i < -0.1, `forward current ${i} should be large (no limiting resistor)`);
   });
 
   it('two LEDs in parallel (mismatched Vf)', () => {
