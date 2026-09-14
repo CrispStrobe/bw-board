@@ -2114,6 +2114,99 @@ export class BoardImpl {
   }
 
   /**
+   * Adopt the strict source-on DC operating point as the initial state of a
+   * fresh non-UIC transient.  This is intentionally a separate operation from
+   * `operatingPoint()`: the latter is observational, while this method commits
+   * capacitor voltage and ideal-inductor current atomically at time zero.
+   *
+   * The accepted device/source domain is exactly `operatingPoint()`'s domain.
+   * Explicit initial-condition fields are not interpreted here; callers must
+   * refuse them instead of combining them with the source-declared bias.
+   *
+   * @returns {{analysis: object, converged: true, nodeVoltages: Map<string, number>,
+   *   branchCurrents: Map<string, Map<string, number>>, capacitorVoltages: Map<string, number>,
+   *   inductorCurrents: Map<string, number>}}
+   */
+  initializeTransientFromOperatingPoint() {
+    if (this.timeNs !== 0n) {
+      throw new Error('initializeTransientFromOperatingPoint: requires a fresh board at time zero');
+    }
+    const explicitInitial = this._solveParts.find(part =>
+      (part.kind === 'capacitor' || part.kind === 'inductor')
+      && ['ic', 'initial', 'initialVoltage', 'initialCurrent'].some(name =>
+        Object.prototype.hasOwnProperty.call(part.params ?? {}, name)));
+    if (explicitInitial) {
+      throw new Error(`initializeTransientFromOperatingPoint: explicit initial condition on ${explicitInitial.id} is unsupported`);
+    }
+    const nonFreshCap = [...this.capVoltages].find(([, value]) => value !== 0);
+    const nonFreshInductor = [...this.inductorCurrents].find(([, value]) => value !== 0);
+    if (nonFreshCap || nonFreshInductor || this._trapValid
+        || this.capCurrents.size || this.inductorVoltages.size) {
+      throw new Error('initializeTransientFromOperatingPoint: reactive state is not fresh');
+    }
+
+    // operatingPoint() is independently mutation-tested.  Everything below is
+    // prospective until all required storage values have been validated, so a
+    // refusal cannot leave a half-biased transient behind.
+    const point = this.operatingPoint();
+    if (point.converged !== true) {
+      throw new Error('initializeTransientFromOperatingPoint: DC operating point did not converge');
+    }
+    if ((point.railConflicts ?? []).length) {
+      throw new Error('initializeTransientFromOperatingPoint: DC operating point has conflicting constraints');
+    }
+    const capacitorVoltages = new Map();
+    const inductorCurrents = new Map();
+    for (const part of this._solveParts) {
+      if (part.kind === 'capacitor') {
+        const a = this._netForTerminal(part.id, 'a');
+        const b = this._netForTerminal(part.id, 'b');
+        const value = point.nodeVoltages.get(a) - point.nodeVoltages.get(b);
+        if (!Number.isFinite(value)) {
+          throw new Error(`initializeTransientFromOperatingPoint: missing finite capacitor voltage for ${part.id}`);
+        }
+        capacitorVoltages.set(part.id, value);
+      } else if (part.kind === 'inductor') {
+        const value = point.branchCurrents.get(part.id)?.get('a');
+        if (!Number.isFinite(value)) {
+          throw new Error(`initializeTransientFromOperatingPoint: missing finite inductor current for ${part.id}`);
+        }
+        inductorCurrents.set(part.id, value);
+      }
+    }
+
+    this.capVoltages = new Map(capacitorVoltages);
+    this.inductorCurrents = new Map(inductorCurrents);
+    this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
+    this.inductorVoltages = new Map([...inductorCurrents.keys()].map(id => [id, 0]));
+    this.nodeVoltages = new Map(point.nodeVoltages);
+    this._mnaCache = { nodeVoltages: new Map(point.nodeVoltages),
+      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      converged: true, deviceStamps: new Map() };
+    this._lastSolveConverged = true;
+    this._trapValid = false;
+    this._transH = 1e-4;
+    this._lastTransientSolves = 0;
+    this._transientAttemptOverflow = false;
+
+    return {
+      analysis: {
+        ...point.analysis,
+        kind: 'non-uic-transient-initialization',
+        initialization: 'source-declared-dc-operating-point',
+        storage: 'capacitor-voltage-and-inductor-current',
+        integrationRestart: 'backward-euler',
+        timeNs: 0n,
+      },
+      converged: true,
+      nodeVoltages: new Map(point.nodeVoltages),
+      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      capacitorVoltages: new Map(capacitorVoltages),
+      inductorCurrents: new Map(inductorCurrents),
+    };
+  }
+
+  /**
    * Compute, but do not adopt, a DC operating point for the first proven
    * public domain: grounded static native R/C/L/D/V/I/E/G networks. Diodes must
    * explicitly select the Shockley model and its complete DC parameter set.
