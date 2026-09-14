@@ -31,7 +31,20 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { NetlistBuilder } from '../src/builder.js';
-import { mosBulkJunction, JUNCTION_THERMAL_VOLTAGE, mosVth } from '../src/mna.js';
+import { mosBulkJunction, JUNCTION_THERMAL_VOLTAGE, mosVth, JUNCTION_GMIN } from '../src/mna.js';
+
+/**
+ * THE JUNCTION CARRIES GMIN AS WELL AS ITS DIFFUSION CURRENT.
+ *
+ * ngspice puts a 1e-12 S conductance in parallel with every pn junction:
+ * `i = IS*(exp(V/nVt) - 1) + GMIN*V`. This file was written before the engine
+ * did, so four of its assertions described the diffusion term alone. They are
+ * not loosened below -- the GMIN term is ADDED to what each one expects, which
+ * keeps every tolerance where it was. See test/junction-gmin-not-node-gmin.test.mjs
+ * for the 1 TOhm deck that establishes the term's existence and its size.
+ */
+const junction = (v, is = 1e-14) => is * (Math.exp(v / JUNCTION_THERMAL_VOLTAGE) - 1)
+  + JUNCTION_GMIN * v;
 
 const current = (v, params) => {
   const { gEq, iEq } = mosBulkJunction(v, params);
@@ -42,7 +55,7 @@ describe('mosBulkJunction: SPICE defaults, and the arithmetic that identified it
   it('carries 0.5523 mA at 0.639395 V forward — the number that closed the case', () => {
     // Hand-derived, not copied: IS*(exp(V/Vt) - 1) with SPICE's default IS.
     const v = 0.639395;
-    const expected = 1e-14 * (Math.exp(v / JUNCTION_THERMAL_VOLTAGE) - 1);
+    const expected = junction(v);
     assert.ok(Math.abs(current(v) / expected - 1) < 1e-9,
       `${current(v)} vs ${expected}`);
     // And it is the current the tail resistor demands, which is the whole point.
@@ -54,22 +67,38 @@ describe('mosBulkJunction: SPICE defaults, and the arithmetic that identified it
   it('defaults to SPICE IS = 1e-14 A and ideality 1', () => {
     assert.ok(Math.abs(current(0) ) < 1e-20, 'no current at zero bias');
     for (const v of [0.3, 0.5, 0.7]) {
-      const expected = 1e-14 * (Math.exp(v / JUNCTION_THERMAL_VOLTAGE) - 1);
+      const expected = junction(v);
       assert.ok(Math.abs(current(v) / expected - 1) < 1e-9, `at ${v} V`);
     }
   });
 
-  it('returns -IS under reverse bias, not zero and not a runaway', () => {
+  it('returns -IS plus GMIN*V under reverse bias, not zero and not a runaway', () => {
+    // GMIN dominates here by three orders: at -15 V the diffusion term is
+    // -1e-14 A and the GMIN term -1.5e-11 A. Asserting -IS alone said the
+    // junction was a current source with no conductance, which is precisely
+    // the shape that put 4.989999 V where ngspice puts 2.495000 V.
     for (const v of [-1, -5, -15]) {
-      assert.ok(Math.abs(current(v) + 1e-14) < 1e-16,
-        `reverse ${v} V should draw -IS, got ${current(v)}`);
+      const expected = -1e-14 + JUNCTION_GMIN * v;
+      assert.ok(Math.abs(current(v) - expected) < Math.abs(expected) * 1e-9,
+        `reverse ${v} V should draw ${expected} A, got ${current(v)}`);
+      assert.ok(Math.abs(current(v)) < 1e-9, `reverse ${v} V must not run away: ${current(v)}`);
     }
   });
 
-  it('honours a model-supplied IS', () => {
+  it('honours a model-supplied IS, down to the GMIN floor it cannot go below', () => {
     const v = 0.639395;
-    assert.ok(current(v, { bulkIs: 1e-30 }) < current(v) * 1e-12,
-      'IS = 1e-30 must all but extinguish it');
+    // A crushed IS extinguishes the DIFFUSION term, and what remains is GMIN*V
+    // -- not zero. ngspice behaves the same way, and in fact clamps IS at 1e-28
+    // before this even applies, so no model can put a junction below the floor.
+    // Asserting "below a trillionth of the default" instead now measures the
+    // floor rather than the model, and would pass with `bulkIs` ignored
+    // entirely if the floor were all that were checked -- hence the second
+    // assertion, which is the one that holds the parameter.
+    const crushed = current(v, { bulkIs: 1e-30 });
+    assert.ok(Math.abs(crushed - JUNCTION_GMIN * v) < JUNCTION_GMIN * v * 1e-6,
+      `IS = 1e-30 must leave only GMIN*V = ${JUNCTION_GMIN * v} A, got ${crushed}`);
+    assert.ok(crushed < current(v) * 1e-8,
+      'and that floor must still be far below the default junction');
     assert.ok(current(v, { bulkIs: 1e-12 }) > current(v) * 50,
       'IS = 1e-12 must be two orders stronger');
   });
@@ -268,13 +297,50 @@ describe('the bulk-drain junction, isolated', () => {
     assert.ok(Math.abs(v - (-0.633322)) < 5e-3, `drain ${v} V, ngspice -0.633322 V`);
   });
 
-  it('and without it the drain sits flat on the rail — a 4.4 V separation', () => {
-    const { v } = rig({ bulkAtGround: false });
-    assert.ok(Math.abs(v - (-5)) < 1e-3,
-      `with no bulk declared the three-terminal answer is the rail, got ${v} V`);
-    const withJ = rig({ bulkAtGround: true }).v;
-    assert.ok(Math.abs(withJ - v) > 4,
-      `the bench must separate by volts: ${withJ} vs ${v}`);
+  /**
+   * THE CONTROL ARM MOVED, BECAUSE THE STATE IT NAMED STOPPED EXISTING.
+   *
+   * This asserted that WITHOUT the flag the drain sits on the rail at -5 V, a
+   * 4.4 V separation proving the junction does the work. That control was "a
+   * three-terminal part has no bulk junction at all", and that is no longer
+   * reachable: a part declaring `gate, drain, source` and no bulk now means
+   * bulk-on-source, which is what the SPICE exporter has always written for it.
+   *
+   * In THIS rig the source and the bulk are both the reference, so the two
+   * declarations describe the same device and must agree -- measured on the same
+   * deck, ngspice gives -0.633322 V either way. That equality is now the
+   * assertion, and it is not vacuous: a default that skipped the junction would
+   * put this drain on the rail and fail it.
+   *
+   * The volts-apart separation moves to a subject that still exists: the import's DECLINED case: a bulk on some third
+   * node, marked `bulkUnplaced`, whose potential we refuse to invent. It must
+   * get no junction, and that is the 4.4 V.
+   */
+  it('a redundant declaration changes nothing, and a declined bulk gets no junction', () => {
+    const flagged = rig({ bulkAtGround: true }).v;
+    const defaulted = rig({ bulkAtGround: false }).v;
+    assert.ok(Math.abs(flagged - defaulted) < 1e-6,
+      `source and bulk are both the reference here, so the two declarations are the same `
+      + `device: ${flagged} V vs ${defaulted} V`);
+    assert.ok(Math.abs(defaulted - (-0.633322)) < 5e-3,
+      `and both must be ngspice's -0.633322 V; got ${defaulted} V`);
+
+    // The declined case: four terminals, no flag, bulk on a node of its own.
+    const { parts, nets } = new NetlistBuilder()
+      .vsource('VNEG', -5).gnd('GND').nmos('M1', 1.0, 1e-3).resistor('RD', 10000)
+      .wire('VNEG.neg', 'GND.gnd').wire('M1.gate', 'GND.gnd').wire('M1.source', 'GND.gnd')
+      .wire('M1.drain', 'RD.a').wire('RD.b', 'VNEG.pos')
+      .build();
+    parts.find((part) => part.id === 'M1').params.bulkUnplaced = true;
+    const board = new BoardImpl(5);
+    board.setNetlist(parts, nets);
+    const dNet = nets.find((n) => n.terminals.some((t) => t.part === 'RD' && t.terminal === 'a'));
+    const declined = board.nodeVoltage(dNet.id);
+    assert.ok(Math.abs(declined - (-5)) < 1e-3,
+      `a bulk we declined to place must get no junction and leave the `
+      + `drain on the rail; got ${declined} V`);
+    assert.ok(Math.abs(defaulted - declined) > 4,
+      `the bench must still separate by volts: ${defaulted} vs ${declined}`);
   });
 
   it('fires when source and bulk are the SAME node, which the first gate refused', () => {
@@ -347,6 +413,30 @@ describe('bulk tied to the source: the drain junction is still live', () => {
     return board.nodeVoltage(net.id);
   };
 
+  /**
+   * The same rig with the bulk DECLINED -- `bulkUnplaced`, which the importer
+   * sets when a deck ties the bulk to a third node. It must get no junction.
+   * This is the control the "without the flag" arm used to be, now expressed
+   * with a subject that still exists.
+   */
+  const declinedBulkRig = () => {
+    const { parts, nets } = new NetlistBuilder()
+      .vsource('V1', 5).gnd('GND')
+      .nmos('M1', 1.0, 5e-5)
+      .wire('V1.neg', 'GND.gnd')
+      .wire('V1.pos', 'M1.source')
+      .wire('M1.gate', 'M1.drain')
+      .build();
+    const m = parts.find((part) => part.id === 'M1');
+    m.params.lambda = 0.02;
+    m.params.bulkUnplaced = true;
+    const board = new BoardImpl(5);
+    board.setNetlist(parts, nets);
+    const net = nets.find((n) =>
+      n.terminals.some((t) => t.part === 'M1' && t.terminal === 'drain'));
+    return Math.abs(board.nodeVoltage(net.id));
+  };
+
   it('pulls the dangling drain node up towards the bulk', () => {
     const withJ = rig({ flag: true });
     assert.ok(withJ > 4.5,
@@ -356,11 +446,21 @@ describe('bulk tied to the source: the drain junction is still live', () => {
       `V(drain) ${withJ} V against ngspice's 4.999380 V`);
   });
 
-  it('and without the flag it falls to the reference — a 4.8 V separation', () => {
-    const without = rig({ flag: false });
-    assert.ok(Math.abs(without) < 1e-3,
-      `with no bulk declared the node is left to GMIN; got ${without} V`);
-    assert.ok(Math.abs(rig({ flag: true }) - without) > 4,
+  /**
+   * Same correction as above: "without the flag" used to mean "no junction" and
+   * now means bulk-on-source, which is the same device the flag names. So the
+   * two must AGREE, and the 4.8 V separation is measured against a bulk we
+   * declined to place.
+   */
+  it('the flag is redundant for a three-terminal part, and a declined bulk still falls', () => {
+    const flagged = rig({ flag: true });
+    const defaulted = rig({ flag: false });
+    assert.ok(Math.abs(flagged - defaulted) < 1e-6,
+      `a three-terminal part IS bulk-on-source: ${flagged} V vs ${defaulted} V`);
+    assert.ok(declinedBulkRig() < 1e-3,
+      `a bulk we declined to place gets no junction and is left to `
+      + `GMIN; got ${declinedBulkRig()} V`);
+    assert.ok(Math.abs(defaulted - declinedBulkRig()) > 4,
       'the bench must separate by volts, or it is not testing the junction');
   });
 
