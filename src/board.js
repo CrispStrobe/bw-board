@@ -122,17 +122,12 @@ function dcFloatingNets(parts, nets) {
   return nets.map(n => n.id).filter(id => !reached.has(id));
 }
 
-/** Normalize the accepted kinds without changing branchCurrent's legacy API. */
-function currentsIntoTerminals(parts, branchCurrents) {
-  // MNA stores VCCS output current as injection INTO outp. That is current
-  // leaving the part, so reverse it only at this new normalized boundary.
-  const reverse = new Set(['resistor', 'capacitor', 'isource', 'vccs']);
-  const kinds = new Map(parts.map(p => [p.id, p.kind]));
+/** Raw/public currents are out of part; OP explicitly reports into terminals. */
+function currentsIntoTerminals(branchCurrents) {
   const out = new Map();
   for (const [partId, terminals] of branchCurrents) {
-    const sign = reverse.has(kinds.get(partId)) ? -1 : 1;
     out.set(partId, new Map([...terminals].map(([terminal, amps]) =>
-      [terminal, sign * amps])));
+      [terminal, amps === 0 ? 0 : -amps])));
   }
   return out;
 }
@@ -637,6 +632,7 @@ export class BoardImpl {
   setNetlist(parts, nets) {
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
+    this._wiperMcuPins = undefined; // and the MCU pins sitting on a wiper net
     this._qualCache = new Map(); // qualified-pin resolutions are per-netlist
     this._pinNetCache = new Map(); // pin -> net id (per-netlist, see _pinVoltage)
     this._mcuSurface = undefined;
@@ -1226,7 +1222,7 @@ export class BoardImpl {
 
   /**
    * @param {string} netId
-   * @returns {number}
+   * @returns {number} Amperes leaving the part through this terminal into its net.
    */
   nodeVoltage(netId) {
     // Overlay-first for the same reason as _pinVoltage: the deferred
@@ -2174,6 +2170,31 @@ export class BoardImpl {
         }
         capacitorVoltages.set(part.id, value);
       } else if (part.kind === 'inductor') {
+        // TERMINAL A, AND THE REASON IS UGLY: THIS ENGINE HAS TWO BRANCH-CURRENT
+        // CONVENTIONS, AND THIS READS THE OTHER ONE.
+        //
+        // `operatingPoint()` reports INTO-THE-TERMINAL positive.
+        // `solveMNA`'s extraction, which is what `branchCurrent()` returns,
+        // reports OUT-OF-PART positive. Both are self-consistent, so net-level
+        // KCL holds inside each, and the two are exact negatives of each other.
+        // Measured on V -> R1 -> L1 -> R2 -> gnd:
+        //
+        //   branchCurrent()    L1.a = -2.499988e-2   R1.b = +2.499988e-2
+        //   operatingPoint()   L1.a = +2.500000e-2   R1.b = -2.500000e-2
+        //
+        // `point` here is an `operatingPoint()` result, so terminal A's reading
+        // IS the a -> b current and this line is correct as written. It looked
+        // wrong from the outside, and the repair that followed flipped
+        // `solveMNA`'s PUBLIC inductor signs instead -- which fixed nothing here
+        // and broke net-level KCL for every inductor sharing a net with another
+        // device, by exactly twice the branch current.
+        //
+        // The real defect is the two conventions, not this line. Converging them
+        // touches every `operatingPoint()` consumer and that API is a separate
+        // lane's contract, so it is pinned by
+        // `test/inductor-kcl-convention.test.mjs` rather than silently fixed
+        // here: the test asserts BOTH conventions as they are, so a change to
+        // either one reds with the remedy named instead of moving a sign.
         const value = point.branchCurrents.get(part.id)?.get('a');
         if (!Number.isFinite(value)) {
           throw new Error(`initializeTransientFromOperatingPoint: missing finite inductor current for ${part.id}`);
@@ -2187,8 +2208,29 @@ export class BoardImpl {
     this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
     this.inductorVoltages = new Map([...inductorCurrents.keys()].map(id => [id, 0]));
     this.nodeVoltages = new Map(point.nodeVoltages);
+    // NEGATED ON THE WAY IN, so `branchCurrent()` speaks ONE convention for the
+    // whole life of the board.
+    //
+    // `point` is an `operatingPoint()` result and that API is INTO-THE-TERMINAL
+    // positive; `_mnaCache.branchCurrents` is what `branchCurrent()` returns,
+    // and that is OUT-OF-PART positive everywhere else. Seeding the cache
+    // verbatim made every device's public current INVERT for as long as this
+    // cache stood, and then invert back on the next solve -- so the sign a
+    // meter reported depended on whether the board had just been initialised.
+    //
+    // Measured at volts = -4 on the RCL bench in
+    // `test/nonuic-transient.test.mjs`: straight after initialisation
+    // `branchCurrent('L1','b')` read +1.333333e-3 where every other moment in
+    // the board's life gives -1.333333e-3.
+    //
+    // This is the ONE boundary where the two conventions meet, so it is the one
+    // place the conversion belongs. It is not the fix for the underlying
+    // duplication -- see `test/inductor-kcl-convention.test.mjs`, which pins
+    // both conventions and names the remedy -- but it stops the inconsistency
+    // leaking into the public reader.
     this._mnaCache = { nodeVoltages: new Map(point.nodeVoltages),
-      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) =>
+        [id, new Map([...values].map(([terminal, i]) => [terminal, -i]))])),
       converged: true, deviceStamps: new Map() };
     this._lastSolveConverged = true;
     this._trapValid = false;
@@ -2433,7 +2475,7 @@ export class BoardImpl {
       converged: op.converged === true,
       nodeVoltages: new Map(op.nodeVoltages),
       branchCurrents: (() => {
-        const currents = currentsIntoTerminals(parts, op.branchCurrents);
+        const currents = currentsIntoTerminals(op.branchCurrents);
         for (const id of inductorIds) {
           const source = currents.get(id);
           if (!source) continue;
@@ -2874,7 +2916,7 @@ export class BoardImpl {
         // Use closed-form current if available, fall back to MNA
         let current = this.ledCurrents.get(part.id) ?? 0;
         if (current === 0) {
-          try { current = this.branchCurrent(part.id, 'anode'); } catch {}
+          try { current = -this.branchCurrent(part.id, 'anode'); } catch {}
         }
         if (current > 0.025) { // > 25 mA
           warnings.push({
@@ -3145,6 +3187,51 @@ export class BoardImpl {
    * @param {string} [testNodeB] - inject test current to this net
    * @param {number} [testCurrent] - test current magnitude
    */
+  /**
+   * The node voltages of a DC BIAS POINT: capacitors open, inductors short.
+   *
+   * NOT a second operating-point API. `operatingPoint()` is a strict, narrow,
+   * refuse-by-name contract over static R/C/L/V/I, explicit Shockley diodes and
+   * ideal controlled sources, and it is right to refuse everything else. This is
+   * the ordinary solve with ONE question changed, for callers that already
+   * accept the ordinary solve's domain -- transistors included -- and need the
+   * bias point rather than the instant.
+   *
+   * WHY IT HAS TO EXIST. `_solveMNA` always passes `capVoltages`, because an
+   * instrument must see the circuit as it is at `timeNs`: a half-charged
+   * capacitor pins its nets at its stored voltage. At t = 0 every capacitor is
+   * uncharged, so it pins its two nets EQUAL -- a short. That is correct for an
+   * instrument and wrong for `.op`, and there was no way to ask for the other
+   * answer.
+   *
+   * NON-MUTATING, and the word is load-bearing. It touches no cached solve, no
+   * `capVoltages`, no `nodeVoltages`, no device state, and it does not advance
+   * time. Two callers reading a board in two different ways must not be able to
+   * change what the other sees.
+   *
+   * Reports its own convergence, because a non-converged solve is an iterate and
+   * not an answer, and a caller that cannot see the difference will publish one
+   * as the other.
+   *
+   * @returns {{converged: boolean, nodeVoltages: Map<string, number>}}
+   */
+  biasPointVoltages() {
+    this._syncDeviceGpioDrives();
+    const res = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
+      this.controls, this.vcc, {
+        powerOff: false,
+        temperatureC: this.temperatureC,
+        capacitorsOpen: true,
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+      });
+    return {
+      converged: res.converged !== false,
+      nodeVoltages: new Map(res.nodeVoltages),
+    };
+  }
+
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
     this._syncDeviceGpioDrives();
     return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, {
@@ -3412,10 +3499,41 @@ export class BoardImpl {
     // KCL at the wiper by exactly what the load draws (measured: a 10 kΩ
     // pot at 50 % feeding 220 Ω + LED read 2.5000 V while sourcing
     // 2.174 mA from nowhere; found by the examples owner's KCL residual
-    // check, 2026-08-23). An MCU input is high-Z and does not load;
-    // anything else on the wiper net does.
+    // check, 2026-08-23).
+    //
+    // AN MCU *INPUT* IS HIGH-Z. AN MCU *OUTPUT* IS 25 OHMS, AND THIS EXEMPTED
+    // THE PART RATHER THAN THE MODE.
+    //
+    // The test was `other.kind !== 'mcu'`, which is a claim about a part where
+    // the thing that matters is a claim about a pin: a push-pull pin, an
+    // open-drain pin driving low, and both input-pullup and input-pulldown all
+    // LOAD the wiper. Only a plain input does not. So the walker answered for a
+    // pot whose wiper was being driven, and `_solvePot` returns the UNLOADED
+    // midpoint.
+    //
+    // Measured on the gallery topology {vcc, pot 10k, mcu} with the wiper on
+    // P1.3, the pin push-pull high:
+    //
+    //   engine                       2.500000 V   (the bare midpoint)
+    //   ngspice                      4.975248 V
+    //   (5/25 + 5/5000)/(1/25 + 1/5000 + 1/5000) = 4.975248 V   analytic
+    //
+    // 2.48 V out, and it accounted for 11 of the 47 remaining disagreements in
+    // the 2,163-circuit gallery sweep -- every one of them an `analogRead`
+    // example on a board kind whose GPIO is a bare `mcu`. The same circuit
+    // passes on every dev-board kind, because those are not `kind === 'mcu'`
+    // and so were never exempted.
+    //
+    // `pinThevenin` is asked rather than a mode list restated here: it already
+    // returns the string 'high-z' for exactly the modes that do not load, and a
+    // second copy of that rule is how the two would drift apart.
+    //
+    // The topological half is still memoised; the MODE half cannot be, because
+    // it changes on every `setPin`. So the pins are collected once and their
+    // modes consulted per call.
     if (this._wiperLoaded === undefined) {
       this._wiperLoaded = false;
+      this._wiperMcuPins = [];
       for (const p of this.parts) {
         if (p.kind !== 'potentiometer') continue;
         const wnetId = this._netForTerminal(p.id, 'wiper');
@@ -3425,12 +3543,21 @@ export class BoardImpl {
         for (const t of wnet.terminals) {
           if (t.part === p.id) continue;
           const other = this.partMap.get(t.part);
-          if (other && other.kind !== 'mcu') { this._wiperLoaded = true; break; }
+          if (!other) continue;
+          if (other.kind === 'mcu') this._wiperMcuPins.push(String(t.terminal).toLowerCase());
+          else { this._wiperLoaded = true; break; }
         }
         if (this._wiperLoaded) break;
       }
     }
     if (this._wiperLoaded) return true;
+    for (const pin of this._wiperMcuPins ?? []) {
+      const ps = this.pinStates.get(pin);
+      if (!ps) continue;                       // never driven: still high-Z
+      let th;
+      try { th = pinThevenin(ps.mode, ps.driveHigh, this.vcc); } catch { return true; }
+      if (th !== 'high-z') return true;        // a driven pin loads the wiper
+    }
     // Shared-LED fan-out is beyond the walker's vocabulary: _solveLedChain
     // traces each LED's series path INDEPENDENTLY, so two LEDs sharing a
     // net (a multiplexed display's segment bus, a charlieplexed pair)
@@ -3508,7 +3635,7 @@ export class BoardImpl {
     for (const part of this.parts) {
       if (part.kind !== 'led') continue;
       const c = res.branchCurrents.get(part.id);
-      this.ledCurrents.set(part.id, Math.max(0, c ? (c.get('anode') ?? 0) : 0));
+      this.ledCurrents.set(part.id, Math.max(0, c ? -(c.get('anode') ?? 0) : 0));
     }
     this._mnaCache = res;
     // Track non-convergence — a solver that cannot converge must say so.
@@ -3900,7 +4027,7 @@ export class BoardImpl {
       for (const part of this.parts) {
         if (part.kind !== 'led') continue;
         const c = res.branchCurrents.get(part.id);
-        this.ledCurrents.set(part.id, Math.max(0, c ? (c.get('anode') ?? 0) : 0));
+        this.ledCurrents.set(part.id, Math.max(0, c ? -(c.get('anode') ?? 0) : 0));
       }
       this._mnaCache = res;
     }

@@ -64,14 +64,13 @@ describe('vcvs', () => {
     for (const vin of [1, -1]) {
       const board = groundedOutpBench(vin);
       const expectedOut = -2 * vin;
-      const expectedEOutn = -expectedOut / 1000;
+      const expectedEOutn = expectedOut / 1000;
       assert.ok(Math.abs(board.nodeVoltage('out') - expectedOut) < 1e-10,
         `${vin} V control must produce ${expectedOut} V at grounded-outp E1`);
       assert.ok(Math.abs(board.branchCurrent('E1', 'outn') - expectedEOutn) < 5e-12);
-      // Live resistor extraction is out-of-part positive. Negating it gives
-      // current into RL.a, which must cancel current into E1.outn at the node.
+      // Both public terminal currents are out-of-part: sum at the shared net.
       assert.ok(Math.abs(board.branchCurrent('E1', 'outn')
-        - board.branchCurrent('RL', 'a')) < 5e-12, `${vin} V live-node KCL`);
+        + board.branchCurrent('RL', 'a')) < 5e-12, `${vin} V live-node KCL`);
 
       const deck = `self-authored grounded-outp VCVS\nV1 in 0 DC ${vin}\n`
         + 'E1 0 out in 0 2\nR1 out 0 1k\n.control\nset numdgt=15\nop\n'
@@ -82,7 +81,7 @@ describe('vcvs', () => {
       const iMatch = ng.stdout.match(/@e1\[i\]\s*=\s*([-+0-9.e]+)/i);
       assert.ok(vMatch && iMatch, ng.stdout);
       assert.ok(Math.abs(board.nodeVoltage('out') - Number(vMatch[1])) < 1e-10);
-      assert.ok(Math.abs(board.branchCurrent('E1', 'outp') - Number(iMatch[1])) < 1e-10);
+      assert.ok(Math.abs(board.branchCurrent('E1', 'outp') + Number(iMatch[1])) < 1e-10);
     }
   });
 

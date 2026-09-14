@@ -194,46 +194,89 @@ describe('multiple setPin before advanceTo', () => {
   });
 });
 
+/**
+ * ADC READS THROUGH DIFFERENT PORT MODES.
+ *
+ * THIS SUITE USED TO ASSERT THE DEFECT, and its own comments said so:
+ *
+ *   "the closed-form pot model is an ideal divider (zero output impedance), so
+ *    the weak pull-up can't load it. THE MNA SOLVER WOULD SHOW LOADING."
+ *   "even push-pull can't override it ... THE MNA SOLVER WOULD SHOW THE PIN
+ *    DOMINATING."
+ *
+ * Both notes are correct about the mechanism and wrong about what to expect:
+ * they pinned which internal SOLVER PATH ran, at a value they knew to be
+ * physically wrong. A test whose comment names the right answer and then
+ * asserts a different one cannot fail when the bug is fixed -- it fails when
+ * the FIX is.
+ *
+ * The routing defect is fixed (`board.js`, the wiper-load test asks
+ * `pinThevenin` about the pin's MODE instead of exempting the whole `mcu`
+ * KIND), so the engine now answers the physics. Every expectation below is
+ * ngspice's, on the same divider with the pin's Thévenin resistance as a third
+ * leg -- `.options temp=26.8267934421 tnom=26.8267934421`:
+ *
+ *   mode            pin Thevenin        ngspice wiper
+ *   input           high-z              2.500000  (unloaded midpoint)
+ *   quasi high      5 V via 21.7 k      2.758264
+ *   input-pullup    5 V via 35 k        2.666667
+ *   pushpull high   5 V via 25          4.975248
+ *   pushpull low    0 V via 25          0.024752
+ *
+ * and the engine matches each to better than 1e-6.
+ */
 describe('ADC reads through different port modes', () => {
-  it('input mode gives clean pot reading', () => {
+  const rig = () => {
     const board = new BoardImpl(5.0);
-    const parts = [
+    board.setNetlist([
       { id: 'VCC', kind: 'vcc', params: {}, terminals: ['vcc'] },
       { id: 'GND', kind: 'gnd', params: {}, terminals: ['gnd'] },
       { id: 'POT', kind: 'potentiometer', params: { ohms: 10000 }, terminals: ['a', 'b', 'wiper'] },
       { id: 'MCU', kind: 'mcu', params: {}, terminals: ['P1.3'] },
-    ];
-    const nets = [
+    ], [
       { id: 'nv', terminals: [{ part: 'VCC', terminal: 'vcc' }, { part: 'POT', terminal: 'a' }] },
       { id: 'ng', terminals: [{ part: 'GND', terminal: 'gnd' }, { part: 'POT', terminal: 'b' }] },
       { id: 'nw', terminals: [{ part: 'POT', terminal: 'wiper' }, { part: 'MCU', terminal: 'P1.3' }] },
-    ];
-    board.setNetlist(parts, nets);
+    ]);
     board.setControl('POT', 0.5);
+    return board;
+  };
 
-    // Input mode: high-Z, no loading
-    board.setPin('P1.3', 'input', false);
-    const vInput = board.readAnalog('P1.3');
-    assert.ok(Math.abs(vInput - 2.5) < 0.01, `input: ${vInput}`);
+  // [mode, driveHigh, ngspice's wiper voltage]
+  const CASES = [
+    ['input', false, 2.500000],
+    ['quasi', true, 2.758264],
+    ['input-pullup', false, 2.666667],
+    ['pushpull', true, 4.975248],
+    ['pushpull', false, 0.024752],
+  ];
 
-    // Quasi mode driving 1: the closed-form pot model is an ideal divider
-    // (zero output impedance), so the weak pull-up can't load it.
-    // The MNA solver would show loading. For the closed-form path,
-    // the wiper voltage stays at exactly VCC*position.
-    board.setPin('P1.3', 'quasi', true);
-    const vQuasi = board.readAnalog('P1.3');
-    assert.ok(Math.abs(vQuasi - 2.5) < 0.01,
-      `quasi high: ideal pot not loaded by closed-form solver: ${vQuasi}`);
+  for (const [mode, driveHigh, expected] of CASES) {
+    it(`${mode}${mode.startsWith('push') || mode === 'quasi' ? (driveHigh ? ' high' : ' low') : ''} reads ${expected} V, as ngspice does`, () => {
+      const board = rig();
+      board.setPin('P1.3', mode, driveHigh);
+      const v = board.readAnalog('P1.3');
+      assert.ok(Math.abs(v - expected) < 1e-5,
+        `${mode} driveHigh=${driveHigh}: read ${v} V, ngspice ${expected} V`);
+    });
+  }
 
-    // Push-pull driving 1: the closed-form pot is an ideal voltage source,
-    // so even push-pull can't override it in the closed-form solver.
-    // The MNA solver would show the pin dominating. For the closed-form path,
-    // the pot sets the wiper voltage before net resolution, and the pin's
-    // Thévenin source is not reflected back to the wiper.
-    board.setPin('P1.3', 'pushpull', true);
-    const vPP = board.readAnalog('P1.3');
-    // In the MNA, this would be ~5V. In closed-form, pot wins.
-    assert.ok(Math.abs(vPP - 2.5) < 0.01,
-      `closed-form: ideal pot not overridden: ${vPP}`);
+  it('a high-Z input is the ONLY mode that leaves the divider alone', () => {
+    // The claim the old suite was reaching for, stated so it can fail: every
+    // other mode must move the wiper off the bare midpoint, because every
+    // other mode presents a finite Thevenin resistance to it.
+    const unloaded = 2.5;
+    for (const [mode, driveHigh] of CASES) {
+      const board = rig();
+      board.setPin('P1.3', mode, driveHigh);
+      const v = board.readAnalog('P1.3');
+      if (mode === 'input') {
+        assert.ok(Math.abs(v - unloaded) < 1e-6, `input must not load: ${v}`);
+      } else {
+        assert.ok(Math.abs(v - unloaded) > 1e-3,
+          `${mode} (driveHigh=${driveHigh}) presents a finite resistance and must `
+          + `load the wiper, but it read the bare midpoint ${v}`);
+      }
+    }
   });
 });

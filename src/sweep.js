@@ -67,7 +67,7 @@ export function runDcSweep(board, opts) {
       board.advanceTo(t);
     }
     let i = 0;
-    try { i = -board.branchCurrent(sourceId, currentTerminal); } catch { /* open circuit */ }
+    try { i = board.branchCurrent(sourceId, currentTerminal); } catch { /* open circuit */ }
     const netV = {};
     for (const id of nets) netV[id] = board.nodeVoltage(id);
     rows.push({ v, i, nets: netV });
