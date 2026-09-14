@@ -218,19 +218,9 @@ Display-rate sampling is load-bearing.
 - `PARTS-TARGET.md` — engine-specific notes on the parts catalogue
 - `BLOCKED.md` — items waiting on external work
 
-## License
-
-MIT. See [LICENSE](LICENSE) and [THIRD-PARTY.md](THIRD-PARTY.md).
-
-
 ## Working in a git worktree
 
-`node_modules` is no longer tracked (it used to be committed as a symlink
-pointing at its own path, which dead-ended module resolution in a fresh
-clone). A new worktree therefore starts with no dependencies, and the symptom
-is specific and misleading: **every test that spawns a subprocess dies on
-import**, because `avr8js` cannot be resolved. It looks like nineteen
-unrelated failures, not one missing install.
+`node_modules` is not tracked. A new worktree therefore starts with no dependencies.
 
 Either install normally:
 
@@ -254,3 +244,8 @@ no Python with lcapy is available:
 ```sh
 pipx install lcapy          # or set LCAPY_PYTHON to an interpreter that has it
 ```
+
+
+## License
+
+MIT. See [LICENSE](LICENSE) and [THIRD-PARTY.md](THIRD-PARTY.md).
