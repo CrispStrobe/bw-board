@@ -124,6 +124,16 @@
  *   unsupported, floating, or non-ideal circuit semantics throw rather than
  *   being approximated.
  *
+ * @property {() => {analysis: object, converged: true,
+ *   nodeVoltages: Map<string, number>,
+ *   branchCurrents: Map<string, Map<string, number>>,
+ *   capacitorVoltages: Map<string, number>,
+ *   inductorCurrents: Map<string, number>}} initializeTransientFromOperatingPoint
+ *   Atomically adopt the strict source-on operating point as time-zero storage
+ *   state for a fresh non-UIC transient. Explicit initial conditions, waveform
+ *   bias inference, advanced or already-reactive state, and every unsupported
+ *   operating-point topology refuse without mutation.
+ *
  * @property {(a: string, b: string) => number | 'requires-power-off'} resistance
  *   Resistance between two nets. Returns the reason, NOT a number, when the
  *   board is powered. A real DMM measures resistance with the power OFF.

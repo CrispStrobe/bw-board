@@ -2410,8 +2410,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // DC: inductor is a wire, current = V_drop / R_wire
         i = (vA - vB) / 0.001;
       }
-      currents.set('a', -i);
-      currents.set('b', i);
+      // `i` is the companion state flowing a -> b. Public branch currents
+      // are positive INTO the named terminal, so terminal a carries +i and b
+      // carries -i. The historical reversal here made a correctly initialized
+      // positive inductor current change sign on the first transient read.
+      currents.set('a', i);
+      currents.set('b', -i);
     }
 
     if (part.kind === 'transformer') {
@@ -2589,7 +2593,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (part.kind === 'inductor') {
         const c = branchCurrents.get(part.id);
-        inductorCurrentsNext.set(part.id, c ? (c.get('b') ?? 0) : 0);
+        inductorCurrentsNext.set(part.id, c ? (c.get('a') ?? 0) : 0);
         const netA = findNet(nets, part.id, 'a');
         const netB = findNet(nets, part.id, 'b');
         const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
