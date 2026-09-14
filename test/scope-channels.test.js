@@ -239,7 +239,8 @@ describe('scope channels: current', () => {
     const results = board.sampleCurrentChannels();
     assert.ok(results.has(ch));
     const current = results.get(ch);
-    assert.ok(current > 0, `LED should have positive current, got ${current}`);
+    assert.ok(current < 0,
+      `forward LED current enters anode, so its positive-out terminal current must be negative; got ${current}`);
   });
 
   it('sampleCurrentChannels does not sample voltage channels', () => {
