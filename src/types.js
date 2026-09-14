@@ -130,8 +130,10 @@
  *   capacitorVoltages: Map<string, number>,
  *   inductorCurrents: Map<string, number>}} initializeTransientFromOperatingPoint
  *   Atomically adopt the strict source-on operating point as time-zero storage
- *   state for a fresh non-UIC transient. Explicit initial conditions, waveform
- *   bias inference, advanced or already-reactive state, and every unsupported
+ *   state for a fresh non-UIC transient. A time-varying source is initialized
+ *   from its exact transient value at t=0; its separate `dcValue` belongs to
+ *   explicit DC/AC bias analysis and is never substituted here. Explicit
+ *   reactive initial conditions, advanced or already-reactive state, and every unsupported
  *   operating-point topology refuse without mutation.
  *
  * @property {(a: string, b: string) => number | 'requires-power-off'} resistance

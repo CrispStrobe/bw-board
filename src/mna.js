@@ -28,7 +28,7 @@
  */
 import { getDevice } from './devices.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
-import { spicePulseVoltage } from './source-waveforms.js';
+import { spiceExpValue, spicePulseVoltage, spicePwlValue, spiceSineValue } from './source-waveforms.js';
 
 class Matrix {
   /**
@@ -1079,6 +1079,7 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  * @param {string} [opts.testNodeB] - inject test current to this net (for resistance)
  * @param {number} [opts.testCurrent] - test current magnitude (default 0.001 A)
  * @param {number} [opts.tSeconds] - simulation time, for time-varying sources (default 0)
+ * @param {boolean} [opts.dcSources] - use each waveform source's explicit dcValue
  * @param {Map<string, number>} [opts.capVoltages] - part id → present capacitor voltage.
  *   When given (and not in transient mode), each capacitor is stamped as a voltage
  *   source holding its stored voltage — which is what a capacitor IS at an instant.
@@ -1097,6 +1098,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const testNodeB = opts.testNodeB;
   const testCurrent = opts.testCurrent ?? 0.001;
   const tSeconds = opts.tSeconds ?? 0;
+  const dcSources = opts.dcSources === true;
   // E2.2: silicon junctions shift −2 mV/°C. Assigned on EVERY entry (no
   // stale state); solveMNA is synchronous and never re-enters, and a
   // worker thread has its own module instance.
@@ -1688,11 +1690,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'vsource':
-          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds, controls, srcScale);
+          stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds, controls, srcScale, dcSources);
           break;
 
         case 'isource':
-          stampCurrentSource(A, b, part, nets, nodeIndex, groundNetId, srcScale);
+          stampCurrentSource(A, b, part, nets, nodeIndex, groundNetId, tSeconds, srcScale, dcSources);
           break;
 
         case 'zener':
@@ -2624,7 +2626,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     }
 
     if (part.kind === 'isource') {
-      const amps = /** @type {number} */ (part.params.amps ?? 0.001);
+      const amps = dcSources ? sourceDcValue(part, 0.001) : sourceCurrent(part, tSeconds);
       currents.set('pos', amps);
       currents.set('neg', -amps);
     }
@@ -4118,8 +4120,10 @@ function stampCapAsSource(A, b, part, nets, nodeIndex, vsIndex, vStored) {
  * amplitude is the peak deviation from offset; duty applies to square/pulse
  * (fraction of the period spent high, default 0.5); phase is in degrees.
  * A 'pulse' swings offset → offset+amplitude; the others swing symmetrically.
- * A distinct `wave: 'spice-pulse'` uses exact `{v1,v2,td,tr,tf,pw,per}`
- * parameters; it never changes the established native pulse contract.
+ * Exact SPICE tags preserve their authored contracts independently of the
+ * native function-generator shapes: `spice-pulse`, `spice-pwl`, `spice-exp`,
+ * and `spice-sine`. A waveform's optional `dcValue` is deliberately ignored
+ * here; it belongs to DC initialization, not evaluation at transient t=0.
  *
  * This is the whole electrical model of a function generator.
  *
@@ -4134,6 +4138,9 @@ export function sourceVoltage(part, tSeconds, vcc) {
   const volts = /** @type {number} */ (p.volts ?? vcc);
   if (wave === 'dc') return volts;
   if (wave === 'spice-pulse') return spicePulseVoltage(p, tSeconds);
+  if (wave === 'spice-pwl') return spicePwlValue(p, tSeconds);
+  if (wave === 'spice-exp') return spiceExpValue(p, tSeconds);
+  if (wave === 'spice-sine') return spiceSineValue(p, tSeconds);
 
   // PCM playback: the source plays a sample buffer — an audio line-in.
   // { wave: 'pcm', samples: number[]|Float32Array, rate: Hz,
@@ -4184,6 +4191,29 @@ export function sourceVoltage(part, tSeconds, vcc) {
   }
 }
 
+/**
+ * Evaluate an independent current source using the same exact waveform
+ * contracts as a voltage source. The temporary view deliberately maps amps
+ * to volts: sourceVoltage is unit-agnostic arithmetic, while the stamps retain
+ * the distinct terminal/current convention.
+ */
+export function sourceCurrent(part, tSeconds, fallback = 0.001) {
+  const params = part.params ?? {};
+  return sourceVoltage({ ...part, params: { ...params, volts: params.amps ?? fallback } },
+    tSeconds, fallback);
+}
+
+/** Explicit DC-analysis value, kept distinct from a waveform's value at t=0. */
+export function sourceDcValue(part, fallback) {
+  const p = part.params ?? {};
+  const wave = String(p.wave ?? 'dc').toLowerCase();
+  if (wave === 'dc') return part.kind === 'isource' ? Number(p.amps ?? fallback) : Number(p.volts ?? fallback);
+  if (typeof p.dcValue !== 'number' || !Number.isFinite(p.dcValue)) {
+    throw new Error(`time-varying source ${part.id} requires an explicit finite dcValue for DC bias`);
+  }
+  return p.dcValue;
+}
+
 // ─── Independent sources ────────────────────────────────────────────────────
 
 /**
@@ -4191,7 +4221,7 @@ export function sourceVoltage(part, tSeconds, vcc) {
  * Params: {volts} — DC value; plus the waveform params of `sourceVoltage`
  * for time-varying operation (sine/square/triangle/pulse).
  */
-function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1) {
+function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsIndex, vcc, tSeconds = 0, controls = null, srcScale = 1, dcSources = false) {
   // Control value overrides params.volts for interactive adjustment (bench supply knob)
   let volts;
   if (part._ccClampedVolts !== undefined) {
@@ -4199,7 +4229,7 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
   } else if (controls && controls.has(part.id)) {
     volts = controls.get(part.id);
   } else {
-    volts = sourceVoltage(part, tSeconds, vcc);
+    volts = dcSources ? sourceDcValue(part, vcc) : sourceVoltage(part, tSeconds, vcc);
   }
   volts *= srcScale;
   const posNet = findNet(nets, part.id, 'pos');
@@ -4241,8 +4271,8 @@ function stampIndependentVSource(A, b, part, nets, nodeIndex, groundNetId, vsInd
  * Current flows from neg to pos (conventional).
  * Params: {amps} — the source current.
  */
-function stampCurrentSource(A, b, part, nets, nodeIndex, groundNetId, srcScale = 1) {
-  const amps = /** @type {number} */ (part.params.amps ?? 0.001) * srcScale;
+function stampCurrentSource(A, b, part, nets, nodeIndex, groundNetId, tSeconds = 0, srcScale = 1, dcSources = false) {
+  const amps = (dcSources ? sourceDcValue(part, 0.001) : sourceCurrent(part, tSeconds)) * srcScale;
   const posNet = findNet(nets, part.id, 'pos');
   const negNet = findNet(nets, part.id, 'neg');
 
