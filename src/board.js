@@ -21,7 +21,8 @@
 import { pinThevenin } from './pin-model.js';
 import { buildPinAliasTable } from './pin-aliases.js';
 import {
-  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, kneeFromVf, sourceVoltage,
+  solveMNA, OPAMP_ISHORT_DEFAULT, JUNCTION_THERMAL_VOLTAGE, kneeFromVf,
+  sourceDcValue, sourceVoltage,
 } from './mna.js';
 import { resolveParams, classDefaults } from './parts-library.js';
 import { acSweep } from './ac.js';
@@ -30,7 +31,9 @@ import { getDevice, initDeviceState } from './devices.js';
 import { feedI2CSlave } from './devices/i2c-slave.js';
 import { checkCurrentBudget } from './current-ratings.js';
 import { junctionModelOf } from './mna.js';
-import { nextSpicePulseCorner } from './source-waveforms.js';
+import {
+  nextSpiceExpCorner, nextSpicePulseCorner, nextSpicePwlCorner, nextSpiceSineCorner,
+} from './source-waveforms.js';
 
 /**
  * Internal pin state.
@@ -2148,7 +2151,7 @@ export class BoardImpl {
     // operatingPoint() is independently mutation-tested.  Everything below is
     // prospective until all required storage values have been validated, so a
     // refusal cannot leave a half-biased transient behind.
-    const point = this.operatingPoint();
+    const point = this.operatingPoint({ waveformDcBias: true });
     if (point.converged !== true) {
       throw new Error('initializeTransientFromOperatingPoint: DC operating point did not converge');
     }
@@ -2214,7 +2217,7 @@ export class BoardImpl {
    * an instantaneous read: capacitors are open, independent of stored charge.
    * Positive current means current INTO the named part terminal.
    */
-  operatingPoint() {
+  operatingPoint({ waveformDcBias = false } = {}) {
     if (!this.powered) {
       throw new Error('operatingPoint: the board is powered off; a source-on DC point was not computed');
     }
@@ -2224,12 +2227,16 @@ export class BoardImpl {
           + 'the supported domain is static R/C/L/V/I, explicit Shockley D, '
           + 'plus ideal VCVS/VCCS only');
       }
-      if (part.kind === 'vsource') {
+      if (part.kind === 'vsource' || part.kind === 'isource') {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
-        if (wave !== 'dc') {
+        if (wave !== 'dc' && !waveformDcBias) {
           throw new Error(`operatingPoint: unsupported time-varying source ${part.id} (${wave}); `
             + 'no waveform sample is silently treated as DC');
         }
+        if (wave !== 'dc') sourceDcValue(part, part.kind === 'isource' ? 0.001 : this.vcc);
+      }
+      if (part.kind === 'vsource') {
+        const wave = String(part.params?.wave ?? 'dc').toLowerCase();
         if ((part.params?.iLimit ?? 0) > 0) {
           throw new Error(`operatingPoint: unsupported current-limited source ${part.id}; `
             + 'constant-voltage and constant-current mode selection is stateful');
@@ -2238,7 +2245,7 @@ export class BoardImpl {
         const negNet = this._netForTerminal(part.id, 'neg');
         const volts = this.controls.has(part.id)
           ? Number(this.controls.get(part.id))
-          : Number(sourceVoltage(part, 0, this.vcc));
+          : Number(waveformDcBias ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
         const internalOhms = Number(part.params?.rInternal) || 0;
         if (internalOhms <= 0 && posNet !== undefined && posNet === negNet && volts !== 0) {
           throw new Error(`operatingPoint: inconsistent ideal voltage constraint ${part.id}; `
@@ -2342,9 +2349,9 @@ export class BoardImpl {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
         const volts = this.controls.has(part.id)
           ? Number(this.controls.get(part.id))
-          : Number(sourceVoltage(part, 0, this.vcc));
+          : Number(waveformDcBias ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
         const internalOhms = Number(part.params?.rInternal) || 0;
-        if (wave !== 'dc' || volts !== 0 || internalOhms > 0) continue;
+        if ((!waveformDcBias && wave !== 'dc') || volts !== 0 || internalOhms > 0) continue;
         terminals = ['pos', 'neg'];
       } else {
         continue;
@@ -2387,6 +2394,7 @@ export class BoardImpl {
       controls: new Map(this.controls),
       deviceStates: new Map(),
       tSeconds: 0,
+      dcSources: waveformDcBias,
     });
     return {
       analysis: {
@@ -2394,7 +2402,7 @@ export class BoardImpl {
         scope: 'grounded-static-native-r-c-l-d-v-i-e-g-exact-ideal-l-explicit-shockley-d',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
-        sources: 'fixed-dc-only',
+        sources: waveformDcBias ? 'explicit-waveform-dcValue-bias' : 'fixed-dc-only',
         controlledSources: 'ideal-explicit-finite-parameters-only',
         inductors: 'exact-ideal-dc-short-explicit-henrys',
         diodes: {
@@ -3104,9 +3112,11 @@ export class BoardImpl {
   // ─── Internal: MNA solver bridge ──────────────────────────────────────────
 
   /** Shared capacitor-open DC solve used by public OP analysis and runAc. */
-  _solveDcOperatingPoint({ parts, nets = this._solveNets, controls, deviceStates, tSeconds }) {
+  _solveDcOperatingPoint({ parts, nets = this._solveNets, controls, deviceStates, tSeconds,
+    dcSources = false }) {
     return solveMNA(parts, nets, this._pinSources(), controls, this.vcc, {
       tSeconds,
+      dcSources,
       temperatureC: this.temperatureC,
       deviceStates,
       qualifiedSources: this._qualifiedSources(),
@@ -3453,7 +3463,8 @@ export class BoardImpl {
   /** Any source whose value moves with time? */
   _hasTimeVaryingSource() {
     for (const p of this.parts) {
-      if (p.kind === 'vsource' && p.params && p.params.wave && p.params.wave !== 'dc') {
+      if ((p.kind === 'vsource' || p.kind === 'isource')
+          && p.params && p.params.wave && p.params.wave !== 'dc') {
         return true;
       }
     }
@@ -3934,7 +3945,7 @@ export class BoardImpl {
   _nextSourceEdgeSec(tSec) {
     let next = null;
     for (const part of this.parts) {
-      if (part.kind !== 'vsource') continue;
+      if (part.kind !== 'vsource' && part.kind !== 'isource') continue;
       const p = part.params ?? {};
       if (p.wave === 'spice-pulse') {
         // The caller already uses a 1 fs strict-after threshold for source
@@ -3943,6 +3954,21 @@ export class BoardImpl {
         // narrowest nanosecond corpus edge and does not move any solve point.
         const tEdge = nextSpicePulseCorner(p, tSec + 1e-15);
         if (next === null || tEdge < next) next = tEdge;
+        continue;
+      }
+      if (p.wave === 'spice-pwl') {
+        const tEdge = nextSpicePwlCorner(p, tSec + 1e-15);
+        if (tEdge !== null && (next === null || tEdge < next)) next = tEdge;
+        continue;
+      }
+      if (p.wave === 'spice-exp') {
+        const tEdge = nextSpiceExpCorner(p, tSec + 1e-15);
+        if (tEdge !== null && (next === null || tEdge < next)) next = tEdge;
+        continue;
+      }
+      if (p.wave === 'spice-sine') {
+        const tEdge = nextSpiceSineCorner(p, tSec + 1e-15);
+        if (tEdge !== null && (next === null || tEdge < next)) next = tEdge;
         continue;
       }
       if (p.wave !== 'square' && p.wave !== 'pulse') continue;
