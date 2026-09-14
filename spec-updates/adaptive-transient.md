@@ -49,3 +49,28 @@ with reuse that is a numeric refactor, not a rebuild). Interacts with
    cap-bound path (assert solve-count budget).
 5. Waveform-source square edge at t=1.0000 ms is a solve point exactly (no straddle).
 6. Full existing oracle suite green; scope traces show no NaN gaps introduced.
+## Numerical-analysis profile
+
+Interactive simulation keeps the established `interactive-v1` local-error and
+step limits. A fresh board may explicitly select `precision-v1` through
+`configureTransientAnalysis()` before a source-declared numerical analysis.
+The fixed profile is deliberately not an arbitrary tolerance object: it bounds
+relative/absolute local error, minimum/seed/maximum step, and attempts per
+advance without admitting non-finite or unbounded caller values.
+
+`transientAnalysisStatus()` reports the immutable selected profile, cumulative
+attempt/solve/advance work, and a sticky qualification failure. Accuracy is
+`null` before transient work. A non-converged or non-finite solve, forced
+acceptance at the minimum step, or the attempt backstop changes it to `false`;
+an analysis runner must refuse the numerical result. `true` means the local
+integration controls were met, not that every output has a global error equal
+to the local tolerance. An independent reference still needs its own refinement
+study and error budget.
+
+Source corners and scheduled device wakes at the exact requested step endpoint
+are discontinuities and restart trapezoidal history on their far side. Sample
+grid points only truncate a step. The nearest final barrier decides: a later
+source corner cannot make an earlier sample-grid endpoint spuriously restart.
+The uncontrolled backward-Euler restart is capped at one tenth of the next
+authored source segment, so a fixed seed cannot consume an entire narrow PULSE
+ramp as one endpoint-valued step.

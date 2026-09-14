@@ -33,6 +33,13 @@
  *   A write to PxM0/PxM1 is a pin event, not just a write to Px.
  * @property {(tNs: bigint) => void} advanceTo
  *   Time has passed. Nanoseconds since reset; the board integrates RC/audio up to here.
+ * @property {(id: 'interactive-v1'|'precision-v1') => Readonly<Record<string, number|string>>}
+ *   configureTransientAnalysis Select a fixed bounded integration profile on a fresh board.
+ * @property {() => {profile: Readonly<Record<string, number|string>>, accuracyMet: boolean|null,
+ *   failure: Readonly<Record<string, number|string>>|null,
+ *   work: Readonly<{attempts:number, solves:number, advances:number}>}} transientAnalysisStatus
+ *   Qualify whether the selected local-error target was met (`null` before work); an analysis must not claim a
+ *   numerical pass after a minimum-step, non-finite-error, or work-budget failure.
  */
 
 /**

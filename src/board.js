@@ -233,6 +233,19 @@ export class BoardImpl {
     this._trapValid = false;
     /** Last accepted adaptive step size (seconds); seeds the next call. */
     this._transH = 1e-4;
+    /**
+     * Transient integration policy. The interactive default is deliberately
+     * unchanged; source-declared numerical analysis can opt into the bounded
+     * precision profile through configureTransientAnalysis().
+     */
+    this._transientAnalysisProfile = Object.freeze({
+      id: 'interactive-v1', relativeTolerance: 1e-4,
+      absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
+      minStepSec: 1e-8, seedStepSec: 1e-9,
+      maxStepSec: 1e-4, maxAttempts: 20000,
+    });
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
 
     /**
      * Cached LED currents from last solve.
@@ -1194,6 +1207,55 @@ export class BoardImpl {
     }
 
     this._notifyChange('time', { tNs });
+  }
+
+  /**
+   * Select a fixed, reviewed transient integration profile. This is not an
+   * arbitrary tolerance knob: callers cannot smuggle zero/NaN tolerances or
+   * unbounded work into the solver. The precision profile controls local
+   * integration error for numerical analysis; it does not promise that every
+   * output is globally accurate to the same tolerance.
+   *
+   * Must be selected on a fresh board, before transient state exists.
+   * @param {'interactive-v1'|'precision-v1'} id
+   * @returns {Readonly<Record<string, number|string>>}
+   */
+  configureTransientAnalysis(id) {
+    if (this.timeNs !== 0n || this._trapValid || this.capCurrents.size || this.inductorVoltages.size) {
+      throw new Error('configureTransientAnalysis: requires a fresh board at time zero');
+    }
+    const profiles = {
+      'interactive-v1': {
+        id: 'interactive-v1', relativeTolerance: 1e-4,
+        absoluteVoltage: 1e-6, absoluteCurrent: 1e-9,
+        minStepSec: 1e-8, seedStepSec: 1e-9,
+        maxStepSec: 1e-4, maxAttempts: 20000,
+      },
+      'precision-v1': {
+        id: 'precision-v1', relativeTolerance: 1e-7,
+        absoluteVoltage: 1e-9, absoluteCurrent: 1e-12,
+        minStepSec: 1e-11, seedStepSec: 1e-11,
+        maxStepSec: 1e-5, maxAttempts: 20000,
+      },
+    };
+    if (!Object.prototype.hasOwnProperty.call(profiles, id)) {
+      throw new Error(`configureTransientAnalysis: unsupported profile ${String(id)}`);
+    }
+    this._transientAnalysisProfile = Object.freeze({ ...profiles[id] });
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
+    return this.transientAnalysisStatus().profile;
+  }
+
+  /** A copy-safe qualification record for the most recent transient work. */
+  transientAnalysisStatus() {
+    return {
+      profile: Object.freeze({ ...this._transientAnalysisProfile }),
+      accuracyMet: this._transientAnalysisWork.advances > 0
+        ? this._transientAccuracyUnmet === null : null,
+      failure: this._transientAccuracyUnmet ? Object.freeze({ ...this._transientAccuracyUnmet }) : null,
+      work: Object.freeze({ ...this._transientAnalysisWork }),
+    };
   }
 
   // ─── Boundary A: BoardToMcu ──────────────────────────────────────────────
@@ -2238,6 +2300,8 @@ export class BoardImpl {
     this._transH = 1e-4;
     this._lastTransientSolves = 0;
     this._transientAttemptOverflow = false;
+    this._transientAccuracyUnmet = null;
+    this._transientAnalysisWork = { attempts: 0, solves: 0, advances: 0 };
 
     return {
       analysis: {
@@ -3828,10 +3892,11 @@ export class BoardImpl {
   _integrateTransientMNA(dtSec) {
     const tEnd = Number(this.timeNs) / 1e9;
     const t0 = tEnd - dtSec;
-    const RELTOL = 1e-4;
-    const ABSTOL_V = 1e-6;
-    const ABSTOL_I = 1e-9;
-    const H_MIN = 1e-8;
+    const profile = this._transientAnalysisProfile;
+    const RELTOL = profile.relativeTolerance;
+    const ABSTOL_V = profile.absoluteVoltage;
+    const ABSTOL_I = profile.absoluteCurrent;
+    const H_MIN = profile.minStepSec;
     // A BE seed step is UNCONTROLLED (no error estimate), so it must be
     // tiny: a 100 µs BE step on a 5 kHz tank (ωh ≈ 3) eats the stored
     // energy before the trapezoidal controller ever runs. 1 ns keeps the
@@ -3840,9 +3905,9 @@ export class BoardImpl {
     // past the discontinuity, so a tpd gate schedules from the edge, not
     // from wherever the next chunk boundary happened to fall (measured:
     // an 80 ns-late observation shifted a scheduled flip by 80 ns).
-    const H_SEED = 1e-9;
+    const H_SEED = profile.seedStepSec;
     // Trace-fidelity floor (see doc above).
-    const H_SAMPLE = 1e-4;
+    const H_SAMPLE = profile.maxStepSec;
     const sampleCapped = this._scopeChannels.size > 0 || this._hasTimeVaryingSource();
     // A 'sample'-capture channel asks for the value AT a grid of instants, so
     // the step must not straddle more than one of them: with 100 µs steps and
@@ -3861,14 +3926,29 @@ export class BoardImpl {
     // A runaway backstop far above any real circuit; hitting it is
     // reported, never silently absorbed (the old 200-step cap's honesty,
     // kept at the new scale).
-    const MAX_ATTEMPTS = 20000;
+    const MAX_ATTEMPTS = profile.maxAttempts;
 
     this._syncDeviceGpioDrives();
     const pinSources = this._pinSources();
     const qual = this._qualifiedSources();
     let nSolves = 0;
-    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) =>
-      (nSolves++, solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, {
+    const markSolveFailure = (r, stage, atSec) => {
+      if (this._transientAccuracyUnmet) return;
+      const maps = [r?.nodeVoltages, r?.branchCurrents, r?.capVoltagesNext,
+        r?.capCurrentsNext, r?.inductorCurrentsNext, r?.inductorVoltagesNext];
+      const finiteMap = map => map instanceof Map && [...map.values()].every(value =>
+        value instanceof Map
+          ? [...value.values()].every(Number.isFinite)
+          : Number.isFinite(value));
+      if (r?.converged === true && maps.every(finiteMap)) return;
+      this._transientAccuracyUnmet = {
+        code: r?.converged === true ? 'non-finite-solve-state' : 'transient-solve-not-converged',
+        stage, timeSec: atSec,
+      };
+    };
+    const solveStep = (tStart, hs, method, cvS, ilS, ccS, lvS) => {
+      nSolves++;
+      const r = solveMNA(this._solveParts, this._solveNets, pinSources, this.controls, this.vcc, {
         tSeconds: tStart + hs,
         temperatureC: this.temperatureC,
         transient: { dtSec: hs, method, capVoltages: cvS, inductorCurrents: ilS,
@@ -3880,7 +3960,10 @@ export class BoardImpl {
         // discharges through whatever network remains (the audit found
         // every discharge-on-power-loss demo frozen instead).
         powerOff: !this.powered,
-      }));
+      });
+      markSolveFailure(r, method, tStart + hs);
+      return r;
+    };
 
     let cv = this.capVoltages;
     let il = this.inductorCurrents;
@@ -3922,35 +4005,10 @@ export class BoardImpl {
     while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
       attempts++;
       let hEff = Math.min(h, tEnd - t, hMax);
-      // Square/pulse edges become exact solve points (oracle: an edge at
-      // t = 1.0000 ms is stepped TO, never straddled).
-      const edge = this._nextSourceEdgeSec(t);
-      let atEdge = false;
-      if (edge !== null && edge > t + 1e-15 && edge < t + hEff - 1e-15) {
-        hEff = edge - t;
-        atEdge = true;
-      }
-      // Scheduled device wakes are step barriers too: a pending gate flip
-      // scheduled MID-CHUNK (spec-updates/scheduled-device-events.md) must
-      // land on a solve point — the outer deadline loop only sees wakes
-      // that existed before the chunk began.
-      const wake = this._nextDeviceWakeSec(t);
-      if (wake !== null && wake > t + 1e-15 && wake < t + hEff - 1e-15) {
-        hEff = wake - t;
-        atEdge = true; // a wake is a discontinuity: BE restart past it
-      }
-      // A 'sample'-capture channel's grid points are barriers too — and this
-      // is the difference between a sample series and an estimate of one. When
-      // the instant is a solve point the value stored is the solution AT it;
-      // otherwise it is interpolated between the solves either side, and on a
-      // 1 kHz sine with 100 µs steps that interpolation is 128 mV of a 2 V
-      // amplitude, i.e. ~6 % of distortion an FFT then reports as real.
-      // NOT a discontinuity: no `atEdge`, so the trapezoidal history survives
-      // and this costs one truncated step, never a BE restart.
-      const grid = this._nextSampleGridSec(t);
-      if (grid !== null && grid > t + 1e-15 && grid < t + hEff - 1e-15) {
-        hEff = grid - t;
-      }
+      const requestedEnd = t + hEff;
+      const barrier = this._transientStepBarrier(t, requestedEnd);
+      if (barrier) hEff = barrier.atSec - t;
+      const atEdge = barrier?.discontinuity === true;
 
       // Only a genuine discontinuity takes the uncontrolled BE seed. A
       // floor-sized step goes through the trapezoidal controller like any
@@ -3961,8 +4019,16 @@ export class BoardImpl {
       // on the charge-pump bench, 95 min for that one test file).
       if (!trapReady) {
         // Seed / floor step: single BE solve, no error control — kept tiny
-        // (see H_SEED). BE's damping is what a fresh discontinuity needs.
-        const hSeed = Math.min(hEff, H_SEED);
+        // (see H_SEED). When the discontinuity starts an authored finite
+        // source segment, cap the seed at one tenth of that segment. A fixed
+        // 1 ns seed spanning an entire 1 ns PULSE ramp integrates the ramp as
+        // one endpoint-valued BE step and introduces millivolts of avoidable
+        // error into a 1 us RC. BE's damping is still what a fresh
+        // discontinuity needs; it simply cannot consume the whole feature.
+        const nextCorner = this._nextSourceEdgeSec(t);
+        const featureSeed = nextCorner !== null && nextCorner > t + 1e-15
+          ? (nextCorner - t) / 10 : Infinity;
+        const hSeed = Math.min(hEff, H_SEED, featureSeed);
         const r = solveStep(t, hSeed, 'be', cv, il, cc, lv);
         t += hSeed;
         accept(r, t);
@@ -3989,7 +4055,9 @@ export class BoardImpl {
         err = Math.max(err, Math.abs(iF - iH) / sc);
       }
 
-      if (err <= 1 || !Number.isFinite(err) || hEff <= H_MIN * 1.000001) {
+      const forcedAtFloor = hEff <= H_MIN * 1.000001 && err > 1;
+      const nonFiniteError = !Number.isFinite(err);
+      if (err <= 1 || nonFiniteError || forcedAtFloor) {
         // Non-finite means a solve bailed (singular mid-step) — accept the
         // half-step result and let the convergence warning say so. An
         // at-floor step is accepted regardless of err: it cannot be
@@ -3998,6 +4066,12 @@ export class BoardImpl {
         publish(h1, t + hEff / 2);
         t += hEff;
         accept(h2, t);
+        if ((forcedAtFloor || nonFiniteError) && !this._transientAccuracyUnmet) {
+          this._transientAccuracyUnmet = {
+            code: nonFiniteError ? 'non-finite-error-estimate' : 'minimum-step-accuracy-unmet',
+            timeSec: t, stepSec: hEff, normalizedError: err,
+          };
+        }
         if (atEdge) trapReady = false;
         const grow = err > 0 ? Math.min(2, 0.9 * Math.pow(err, -1 / 3)) : 2;
         h = Math.min(Math.max(hEff * grow, H_MIN), hMax);
@@ -4013,6 +4087,12 @@ export class BoardImpl {
       accept(r, tEnd);
       trapReady = false;
       this._transientAttemptOverflow = true;
+      if (!this._transientAccuracyUnmet) {
+        this._transientAccuracyUnmet = {
+          code: 'step-attempt-budget-exceeded', timeSec: t,
+          stepSec: tEnd - t, attempts, maxAttempts: MAX_ATTEMPTS,
+        };
+      }
     }
 
     this.capVoltages = new Map(cv);
@@ -4023,6 +4103,11 @@ export class BoardImpl {
     this._transH = h;
     // Observable for the idle-advance solve-count oracle; costs nothing.
     this._lastTransientSolves = nSolves;
+    this._transientAnalysisWork = {
+      attempts: this._transientAnalysisWork.attempts + attempts,
+      solves: this._transientAnalysisWork.solves + nSolves,
+      advances: this._transientAnalysisWork.advances + 1,
+    };
     if (res) {
       this.nodeVoltages = new Map(res.nodeVoltages);
       for (const part of this.parts) {
@@ -4082,6 +4167,34 @@ export class BoardImpl {
       if (at > tSec + 1e-15 && (next === null || at < next)) next = at;
     }
     return next;
+  }
+
+  /**
+   * Choose the nearest transient step barrier in (tSec, requestedEndSec].
+   * Source corners and device wakes restart integration history; a sample
+   * grid only truncates the step. Coincident barriers inherit discontinuity.
+   * Selection is centralized so a later source edge cannot leave a sticky
+   * restart flag when an earlier sample point actually wins.
+   *
+   * @param {number} tSec
+   * @param {number} requestedEndSec
+   * @returns {{atSec:number, discontinuity:boolean}|null}
+   */
+  _transientStepBarrier(tSec, requestedEndSec) {
+    const candidates = [
+      { atSec: this._nextSourceEdgeSec(tSec), discontinuity: true },
+      { atSec: this._nextDeviceWakeSec(tSec), discontinuity: true },
+      { atSec: this._nextSampleGridSec(tSec), discontinuity: false },
+    ].filter(candidate => candidate.atSec !== null
+      && candidate.atSec > tSec + 1e-15
+      && candidate.atSec <= requestedEndSec + 1e-15);
+    if (!candidates.length) return null;
+    const atSec = Math.min(...candidates.map(candidate => candidate.atSec));
+    return {
+      atSec: Math.min(atSec, requestedEndSec),
+      discontinuity: candidates.some(candidate => candidate.discontinuity
+        && Math.abs(candidate.atSec - atSec) <= 1e-15),
+    };
   }
 
   _nextSourceEdgeSec(tSec) {
