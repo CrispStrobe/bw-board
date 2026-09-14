@@ -69,8 +69,11 @@ function junctionG(part, vAcross, vf, rd) {
  *   DC bias. Without it the rows below assume `linear`, which is what this
  *   file did for op-amps unconditionally until
  *   spec-updates/ac-operating-region.md.
- * @param {string} args.sourceId - the swept vsource part id (unit phasor)
+ * @param {string} args.sourceId - the swept vsource/isource part id (unit phasor)
  * @param {number[]} args.freqs - Hz, each > 0
+ * @param {number} [args.nodeRegularizationSiemens=1e-12]
+ * @param {string} [args.analysisProfile='interactive-v1']
+ * @param {string} [args.sourceBiasPolicy='waveform-at-current-board-time']
  * @param {string[]} [args.probes] - net ids to report (default: all)
  * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
  *   outOfLinear?: Array<{part: string, kind: string, region: string}>}>}
@@ -79,7 +82,15 @@ export function acSweep(args) {
   const {
     parts, nets, pinSources, controls, vcc, opVoltages,
     deviceStates, opRegions, sourceId, freqs, probes,
+    nodeRegularizationSiemens = 1e-12, analysisProfile = 'interactive-v1',
+    sourceBiasPolicy = 'waveform-at-current-board-time',
   } = args;
+  if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
+    throw new Error('acSweep: nodeRegularizationSiemens must be finite and >= 0');
+  }
+  if (!['interactive-v1', 'source-analysis-v1'].includes(analysisProfile)) {
+    throw new Error('acSweep: unsupported analysisProfile');
+  }
 
   // Small-signal validity, per part. A stage at a rail cannot move its output
   // (its VOLTAGE is pinned); a stage at its short-circuit current cannot move
@@ -92,14 +103,14 @@ export function acSweep(args) {
 
   const partById = new Map(parts.map(p => [p.id, p]));
   const source = partById.get(sourceId);
-  if (!source || source.kind !== 'vsource') {
-    throw new Error(`acSweep: "${sourceId}" is not a vsource on this bench`);
+  if (!source || !['vsource', 'isource'].includes(source.kind)) {
+    throw new Error(`acSweep: "${sourceId}" is not a vsource or isource on this bench`);
   }
 
   // ── Node indexing ───────────────────────────────────────────────────
-  // AC ground = every net that is DC-pinned by a rail or a NON-swept
-  // voltage source: gnd symbols, vcc rails, other vsources' terminals.
-  // (An ideal DC-pinned node cannot move at any frequency.)
+  // AC ground comes only from actual reference/rail parts. Independent
+  // voltage sources, including killed sources, remain differential MNA
+  // constraints: grounding both terminals destroys floating bridges.
   const grounded = new Set();
   for (const net of nets) {
     for (const t of net.terminals) {
@@ -107,12 +118,8 @@ export function acSweep(args) {
       if (!p) continue;
       if (p.kind === 'gnd') grounded.add(net.id);
       if (p.kind === 'vcc' && t.terminal === 'vcc') grounded.add(net.id);
-      if (p.kind === 'vsource' && p.id !== sourceId) grounded.add(net.id);
     }
   }
-  // The swept source's neg terminal is its reference.
-  const srcNeg = findNet(nets, sourceId, 'neg');
-  if (srcNeg) grounded.add(srcNeg);
 
   /** @type {Map<string, number>} */
   const nodeIndex = new Map();
@@ -124,15 +131,21 @@ export function acSweep(args) {
   const vOp = (netId) => netId ? (opVoltages.get(netId) ?? 0) : 0;
   const netOf = (partId, terminal) => findNet(nets, partId, terminal);
 
-  // Extra rows: the swept source and each op-amp output.
+  const sourcePos = netOf(sourceId, 'pos');
+  const sourceNeg = netOf(sourceId, 'neg');
+  if (!sourcePos || !sourceNeg) {
+    throw new Error('acSweep: the swept source must have both terminals connected');
+  }
+
+  // Extra rows: every ideal voltage source and each op-amp output. A killed
+  // source has a zero RHS but still constrains its two authored terminals.
   let acRows = 0;
   const rowIndex = new Map();
-  const srcPos = netOf(sourceId, 'pos');
-  if (idxOf(srcPos) === undefined) {
-    throw new Error('acSweep: the swept source drives a DC-pinned or missing net');
-  }
-  rowIndex.set(sourceId, acRows++);
   for (const p of parts) {
+    if (p.kind === 'vsource'
+        && (idxOf(netOf(p.id, 'pos')) !== undefined || idxOf(netOf(p.id, 'neg')) !== undefined)) {
+      rowIndex.set(p.id, acRows++);
+    }
     if (p.kind === 'opamp' && idxOf(netOf(p.id, 'out')) !== undefined) {
       rowIndex.set(p.id, acRows++);
     }
@@ -140,10 +153,16 @@ export function acSweep(args) {
       rowIndex.set(p.id, acRows++);
     }
   }
+  if (source.kind === 'vsource' && !rowIndex.has(sourceId)
+      || source.kind === 'isource'
+        && idxOf(sourcePos) === undefined && idxOf(sourceNeg) === undefined) {
+    throw new Error('acSweep: the swept source drives only AC-grounded nets');
+  }
 
   const N = nodeCount + acRows;
   const dim = 2 * N; // real-equivalent bordered system
-  if (nodeCount === 0) return freqs.map(hz => ({ hz, results: new Map() }));
+  const profile = { id: analysisProfile, nodeRegularizationSiemens, sourceBiasPolicy };
+  if (nodeCount === 0) return freqs.map(hz => ({ hz, results: new Map(), profile }));
 
   const A = new CooMatrix(dim);
   const b = new Float64Array(dim);
@@ -430,23 +449,29 @@ export function acSweep(args) {
           break;
         }
         case 'vsource': {
-          if (part.id !== sourceId) break; // others are AC ground
-          // (Grounding a NON-swept source's net ignores its rInternal —
-          // at the 0.5–2 Ω the gallery uses that error is far below
-          // lesson resolution; stated bound, not an oversight.)
+          if (!rowIndex.has(part.id)) break; // redundant zero-volt constraint between AC grounds
           const row = nodeCount + rowIndex.get(part.id);
-          const iP = idxOf(srcPos);
-          addC(iP, row, 1, 0);
-          addC(row, iP, 1, 0);
+          const iP = idxOf(netOf(part.id, 'pos'));
+          const iN = idxOf(netOf(part.id, 'neg'));
+          if (iP !== undefined) { addC(iP, row, 1, 0); addC(row, iP, 1, 0); }
+          if (iN !== undefined) { addC(iN, row, -1, 0); addC(row, iN, -1, 0); }
           const rInt = Number(part.params?.rInternal) || 0;
           if (rInt > 0) addC(row, row, -rInt, 0); // series source resistance
-          b[row] = 1; // unit phasor, 0°
+          b[row] = part.id === sourceId ? 1 : 0;
           break;
         }
         case 'vcc':
         case 'gnd':
-        case 'isource':
-          break; // AC ground / open
+          break;
+        case 'isource': {
+          if (part.id !== sourceId) break; // every non-selected current source is AC-open
+          const iP = idxOf(netOf(part.id, 'pos'));
+          const iN = idxOf(netOf(part.id, 'neg'));
+          // Positive current follows the native/SPICE neg -> pos convention.
+          if (iP !== undefined) b[iP] += 1;
+          if (iN !== undefined) b[iN] -= 1;
+          break;
+        }
         default: {
           // Registered devices: their PASSIVE loading only. Drives collapse
           // to their output conductance (a killed Thévenin); stamp() runs
@@ -487,8 +512,9 @@ export function acSweep(args) {
         }
       }
     }
-    // gmin on every node diagonal, both blocks.
-    for (let i = 0; i < nodeCount; i++) addC(i, i, 1e-12, 0);
+    // Historical interactive runs retain 1e-12 S by default. Strict source
+    // analysis can request zero after its own topology qualification.
+    for (let i = 0; i < nodeCount; i++) addC(i, i, nodeRegularizationSiemens, 0);
   };
 
   // A correct 0 where the caller expected gain is still a mystery unless the
@@ -533,7 +559,7 @@ export function acSweep(args) {
         phaseDeg: Math.atan2(im, re) * 180 / Math.PI,
       });
     }
-    out.push(outOfLinear.length ? { hz, results, outOfLinear } : { hz, results });
+    out.push(outOfLinear.length ? { hz, results, profile, outOfLinear } : { hz, results, profile });
   }
   return out;
 }

@@ -2131,38 +2131,65 @@ export class BoardImpl {
    * answer about a nonexistent bias point is a plausible wrong Bode plot.
    *
    * @param {object} opts
-   * @param {string} opts.sourceId - vsource part to sweep
-   * @param {number} opts.from - start frequency, Hz
-   * @param {number} opts.to - end frequency, Hz
+   * @param {string} opts.sourceId - independent voltage/current source to sweep
+   * @param {number} [opts.from] - legacy start frequency, Hz
+   * @param {number} [opts.to] - legacy end frequency, Hz
    * @param {number} [opts.pointsPerDecade]
+   * @param {number[]} [opts.frequencies] - exact, strictly increasing source-analysis grid
+   * @param {'interactive-v1'|'source-analysis-v1'} [opts.analysisProfile='interactive-v1']
+   * @param {number} [opts.nodeRegularizationSiemens=1e-12]
    * @param {string[]} [opts.probes] - net ids to report (default: all)
-   * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>}>}
+   * @returns {Array<{hz: number, results: Map<string, {mag: number, phaseDeg: number}>,
+   *   profile: {id: string, nodeRegularizationSiemens: number, sourceBiasPolicy: string}}>}
    */
-  runAc({ sourceId, from, to, pointsPerDecade = 20, probes }) {
-    if (!(from > 0) || !(to > from)) {
-      throw new Error('runAc: need 0 < from < to');
+  runAc({ sourceId, from, to, pointsPerDecade = 20, frequencies, probes,
+    analysisProfile = 'interactive-v1', nodeRegularizationSiemens = 1e-12 }) {
+    if (!['interactive-v1', 'source-analysis-v1'].includes(analysisProfile)) {
+      throw new Error('runAc: unsupported analysisProfile');
+    }
+    if (!Number.isFinite(nodeRegularizationSiemens) || nodeRegularizationSiemens < 0) {
+      throw new Error('runAc: nodeRegularizationSiemens must be finite and >= 0');
+    }
+    const exactGrid = frequencies !== undefined;
+    if (exactGrid) {
+      if (analysisProfile !== 'source-analysis-v1' || from !== undefined || to !== undefined
+          || !Array.isArray(frequencies) || frequencies.length === 0
+          || frequencies.some((hz, index) => !Number.isFinite(hz) || hz <= 0
+            || (index > 0 && hz <= frequencies[index - 1]))) {
+        throw new Error('runAc: source-analysis frequencies must be a non-empty, finite, positive, strictly increasing exact grid');
+      }
+    } else if (analysisProfile !== 'interactive-v1' || !(from > 0) || !(to > from)) {
+      throw new Error('runAc: interactive-v1 needs 0 < from < to');
     }
     // DC operating point: caps open, inductors shorted — the bias the
     // small-signal model is valid around.
+    // Source analysis uses authored DC/DC-bias values, never a waveform's
+    // instantaneous value or an interactive source-control override.
+    const biasControls = analysisProfile === 'source-analysis-v1' ? new Map() : this.controls;
     const op = this._solveDcOperatingPoint({
       parts: this._solveParts,
-      controls: this.controls,
+      controls: biasControls,
       deviceStates: this._deviceStates,
       tSeconds: Number(this.timeNs) / 1e9,
+      dcSources: analysisProfile === 'source-analysis-v1',
     });
     if (op.converged === false) {
       throw new Error('runAc: the DC operating point did not converge — ' +
         'there is no bias point to linearize around');
     }
-    const decades = Math.log10(to / from);
-    const nPts = Math.max(2, Math.round(decades * pointsPerDecade) + 1);
-    const freqs = Array.from({ length: nPts },
-      (_, i) => from * Math.pow(10, (i * decades) / (nPts - 1)));
+    let freqs;
+    if (exactGrid) freqs = [...frequencies];
+    else {
+      const decades = Math.log10(to / from);
+      const nPts = Math.max(2, Math.round(decades * pointsPerDecade) + 1);
+      freqs = Array.from({ length: nPts },
+        (_, i) => from * Math.pow(10, (i * decades) / (nPts - 1)));
+    }
     return acSweep({
       parts: this._solveParts,
       nets: this._solveNets,
       pinSources: this._pinSources(),
-      controls: this.controls,
+      controls: biasControls,
       vcc: this.vcc,
       opVoltages: op.nodeVoltages,
       // The region each op-amp settled in at this bias. Without it the sweep
@@ -2173,6 +2200,11 @@ export class BoardImpl {
       sourceId,
       freqs,
       probes,
+      nodeRegularizationSiemens,
+      analysisProfile,
+      sourceBiasPolicy: analysisProfile === 'source-analysis-v1'
+        ? 'authored-dc-value-no-interactive-source-controls'
+        : 'waveform-at-current-board-time',
     });
   }
 
