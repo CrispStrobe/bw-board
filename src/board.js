@@ -2167,6 +2167,31 @@ export class BoardImpl {
         }
         capacitorVoltages.set(part.id, value);
       } else if (part.kind === 'inductor') {
+        // TERMINAL A, AND THE REASON IS UGLY: THIS ENGINE HAS TWO BRANCH-CURRENT
+        // CONVENTIONS, AND THIS READS THE OTHER ONE.
+        //
+        // `operatingPoint()` reports INTO-THE-TERMINAL positive.
+        // `solveMNA`'s extraction, which is what `branchCurrent()` returns,
+        // reports OUT-OF-PART positive. Both are self-consistent, so net-level
+        // KCL holds inside each, and the two are exact negatives of each other.
+        // Measured on V -> R1 -> L1 -> R2 -> gnd:
+        //
+        //   branchCurrent()    L1.a = -2.499988e-2   R1.b = +2.499988e-2
+        //   operatingPoint()   L1.a = +2.500000e-2   R1.b = -2.500000e-2
+        //
+        // `point` here is an `operatingPoint()` result, so terminal A's reading
+        // IS the a -> b current and this line is correct as written. It looked
+        // wrong from the outside, and the repair that followed flipped
+        // `solveMNA`'s PUBLIC inductor signs instead -- which fixed nothing here
+        // and broke net-level KCL for every inductor sharing a net with another
+        // device, by exactly twice the branch current.
+        //
+        // The real defect is the two conventions, not this line. Converging them
+        // touches every `operatingPoint()` consumer and that API is a separate
+        // lane's contract, so it is pinned by
+        // `test/inductor-kcl-convention.test.mjs` rather than silently fixed
+        // here: the test asserts BOTH conventions as they are, so a change to
+        // either one reds with the remedy named instead of moving a sign.
         const value = point.branchCurrents.get(part.id)?.get('a');
         if (!Number.isFinite(value)) {
           throw new Error(`initializeTransientFromOperatingPoint: missing finite inductor current for ${part.id}`);

@@ -1,0 +1,187 @@
+/**
+ * ONE SIGN CONVENTION FOR BRANCH CURRENTS, AND NET-LEVEL KCL PROVES IT.
+ *
+ * `branchCurrent(part, terminal)` is OUT-OF-PART POSITIVE — positive means
+ * current leaving the part into the net. That is documented in
+ * `test/device-kcl-visibility.test.mjs` and it is what every device does.
+ *
+ * It is not negotiable per device. Net-level KCL is the sum of every terminal's
+ * reading on a net, so ONE device using the opposite sign breaks Kirchhoff
+ * wherever it shares a net with anything else — and the reading a user takes
+ * with a meter in that lead is then wrong by twice the current.
+ *
+ * WHY THIS FILE EXISTS. The inductor's extraction briefly read `a: +i, b: -i`,
+ * with a comment asserting "positive INTO the named terminal". The motivation
+ * was real: `initializeTransientFromOperatingPoint` reads the stored a -> b
+ * current off a terminal, and it was reading terminal A, whose value is the
+ * NEGATIVE of that. But the repair went into the public reader instead of the
+ * initializer, so it fixed one consumer and broke all the others.
+ *
+ * Measured on the bench below, where NEITHER of the inductor's nets carries a
+ * reference terminal, so no question about whether the ground rail reports
+ * current can arise:
+ *
+ *   out-of-part          KCL at L1.a's net  0.0000 mA, at L1.b's  0.0000 mA
+ *   into-the-terminal    KCL at L1.a's net 49.9998 mA, at L1.b's -49.9997 mA
+ *
+ * Off by exactly twice the branch current, in both places at once.
+ *
+ * AND THE FULL SUITE PASSED IN BOTH STATES — 5,447 tests, 0 failures, with the
+ * violation in place. No test put an inductor on a shared net with another
+ * device and summed. That gap is what this file closes; the assertion is on
+ * KCL at a net, not on a sign, because the sign is a means and KCL is the claim.
+ */
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { BoardImpl } from '../src/board.js';
+import { NetlistBuilder } from '../src/builder.js';
+import { registerAllDevices } from '../src/register-all.js';
+
+registerAllDevices();
+
+/** V1 -> R1 -> L1 -> R2 -> gnd. Both of L1's nets are ordinary nets. */
+function rlr() {
+  const { parts, nets } = new NetlistBuilder()
+    .vsource('V1', 5).gnd('GND')
+    .resistor('R1', 100).inductor('L1', 1e-3).resistor('R2', 100)
+    .wire('V1.neg', 'GND.gnd').wire('V1.pos', 'R1.a')
+    .wire('R1.b', 'L1.a').wire('L1.b', 'R2.a').wire('R2.b', 'GND.gnd')
+    .build();
+  const board = new BoardImpl(5);
+  board.setNetlist(parts, nets);
+  const netOf = (part, terminal) => nets.find(
+    (n) => n.terminals.some((t) => t.part === part && t.terminal === terminal));
+  return { board, nets, netOf };
+}
+
+const kcl = (board, net) => net.terminals
+  .reduce((sum, t) => sum + board.branchCurrent(t.part, t.terminal), 0);
+
+describe('an inductor obeys the same branch-current convention as everything else', () => {
+  it('KCL holds at the net on the inductor\'s A side', () => {
+    const { board, netOf } = rlr();
+    const net = netOf('L1', 'a');
+    assert.ok(!net.terminals.some((t) => t.part === 'GND'),
+      'the bench must put no reference terminal on this net, or KCL is not a fair test');
+    const sum = kcl(board, net);
+    assert.ok(Math.abs(sum) < 1e-9,
+      `KCL at L1.a's net: ${(sum * 1e3).toFixed(4)} mA — an inductor using the `
+      + 'opposite sign to the resistor beside it is off by twice the current');
+  });
+
+  it('KCL holds at the net on the inductor\'s B side', () => {
+    // BOTH ends, because a sign flip breaks one and could be mistaken for a
+    // problem with the other device.
+    const { board, netOf } = rlr();
+    const net = netOf('L1', 'b');
+    assert.ok(!net.terminals.some((t) => t.part === 'GND'));
+    const sum = kcl(board, net);
+    assert.ok(Math.abs(sum) < 1e-9, `KCL at L1.b's net: ${(sum * 1e3).toFixed(4)} mA`);
+  });
+
+  it('and the inductor conserves across its own two terminals', () => {
+    // This held even while KCL was broken — a device can be internally
+    // consistent and still disagree with the rest of the circuit, which is
+    // exactly why the assertions above are about NETS.
+    const { board } = rlr();
+    const a = board.branchCurrent('L1', 'a');
+    const b = board.branchCurrent('L1', 'b');
+    assert.ok(Math.abs(a + b) < 1e-12, `a ${a} + b ${b}`);
+    assert.ok(Math.abs(a) > 1e-3, 'and it must actually be carrying current');
+  });
+
+  it('the resistor beside it reads the same magnitude with the opposite sign', () => {
+    // Pins the convention itself, so a future reader can see which way round it
+    // is without deriving it from KCL.
+    const { board } = rlr();
+    const iR1b = board.branchCurrent('R1', 'b');
+    const iL1a = board.branchCurrent('L1', 'a');
+    // Relative, not absolute: the two come from different computations -- R1's
+    // from Ohm's law across its own nodes, L1's from the 1 mOhm DC wire -- so
+    // they agree to about 1e-9 relative, not to the last bit.
+    assert.ok(Math.abs(iR1b + iL1a) / Math.abs(iR1b) < 1e-6,
+      `R1.b ${iR1b} and L1.a ${iL1a} are the two ends of one wire`);
+    assert.ok(iR1b > 0, 'current LEAVES R1 at b, so out-of-part is positive there');
+    assert.ok(iL1a < 0, 'and ENTERS L1 at a, so out-of-part is negative there');
+  });
+});
+
+/**
+ * THE REAL DEFECT UNDERNEATH: TWO BRANCH-CURRENT CONVENTIONS IN ONE ENGINE.
+ *
+ * `branchCurrent()` (from `solveMNA`'s extraction) is OUT-OF-PART positive.
+ * `operatingPoint()` is INTO-THE-TERMINAL positive. Both are self-consistent,
+ * so net-level KCL holds inside each, and the two are exact negatives:
+ *
+ *   branchCurrent()    L1.a = -2.499988e-2   R1.b = +2.499988e-2
+ *   operatingPoint()   L1.a = +2.500000e-2   R1.b = -2.500000e-2
+ *
+ * That is what made the inductor look wrong from the outside.
+ * `initializeTransientFromOperatingPoint` reads an `operatingPoint()` result,
+ * where terminal A's value IS the a -> b current, so its `get('a')` was
+ * correct — and the repair that followed flipped `solveMNA`'s PUBLIC signs to
+ * match a consumer of the OTHER convention, fixing nothing and breaking KCL.
+ *
+ * Converging the two touches every `operatingPoint()` consumer, and that API is
+ * a separate lane's refuse-by-name contract. So this pins BOTH conventions AS
+ * THEY ARE, with the remedy named: whichever one moves, this reds and says what
+ * the decision is, instead of a sign quietly changing under one caller.
+ */
+describe('the two branch-current conventions, pinned until they are converged', () => {
+  it('branchCurrent() is out-of-part positive', () => {
+    const { board } = rlr();
+    assert.ok(board.branchCurrent('R1', 'b') > 0,
+      'current leaves R1 at b, so out-of-part is positive');
+    assert.ok(board.branchCurrent('L1', 'a') < 0,
+      'current enters L1 at a, so out-of-part is negative');
+  });
+
+  it('operatingPoint() is into-the-terminal positive — the OPPOSITE one', () => {
+    const { board } = rlr();
+    const op = board.operatingPoint();
+    const r1 = op.branchCurrents.get('R1');
+    const l1 = op.branchCurrents.get('L1');
+    assert.ok(r1 && l1, 'both parts must be reported');
+    assert.ok(r1.get('b') < 0,
+      'operatingPoint reports R1.b NEGATIVE where branchCurrent reports it positive');
+    assert.ok(l1.get('a') > 0,
+      'and L1.a POSITIVE where branchCurrent reports it negative');
+  });
+
+  it('and they are exact negatives, which is why each is internally consistent', () => {
+    // THE REMEDY, IF THIS EVER REDS: converge the two on out-of-part positive
+    // (the documented one, in `test/device-kcl-visibility.test.mjs`) and update
+    // `initializeTransientFromOperatingPoint` to read terminal B in the same
+    // change. Do NOT fix one caller by flipping a sign; that is the mistake
+    // this file records.
+    const { board } = rlr();
+    const op = board.operatingPoint();
+    for (const [part, terminal] of [['R1', 'b'], ['L1', 'a'], ['L1', 'b'], ['R2', 'a']]) {
+      const live = board.branchCurrent(part, terminal);
+      const point = op.branchCurrents.get(part)?.get(terminal);
+      assert.ok(Number.isFinite(point), `${part}.${terminal} missing from operatingPoint`);
+      assert.ok(Math.abs(live + point) / Math.abs(live) < 1e-3,
+        `${part}.${terminal}: branchCurrent ${live}, operatingPoint ${point} — `
+        + 'these must remain exact negatives until the conventions are converged');
+    }
+  });
+});
+
+describe('the transient initializer stores a positive a -> b current', () => {
+  it('initialises +I for current flowing a -> b', () => {
+    // The consumer whose sign started all of this. What it must produce is
+    // stated here in PHYSICAL terms — a positive stored current for current
+    // flowing a to b — so the assertion survives either convention being
+    // chosen later.
+    const { board } = rlr();
+    assert.equal(typeof board.initializeTransientFromOperatingPoint, 'function',
+      'initializeTransientFromOperatingPoint is gone; this test must be re-aimed');
+    board.initializeTransientFromOperatingPoint();
+    const stored = board.inductorCurrents.get('L1');
+    const expected = 5 / (100 + 100 + 0.001);
+    assert.ok(Math.abs(stored - expected) / expected < 1e-3,
+      `stored inductor current ${stored} A, expected +${expected} A flowing a -> b`);
+    assert.ok(stored > 0, 'a current flowing a to b must be stored POSITIVE');
+  });
+});

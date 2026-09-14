@@ -2671,12 +2671,34 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         // DC: inductor is a wire, current = V_drop / R_wire
         i = (vA - vB) / 0.001;
       }
-      // `i` is the companion state flowing a -> b. Public branch currents
-      // are positive INTO the named terminal, so terminal a carries +i and b
-      // carries -i. The historical reversal here made a correctly initialized
-      // positive inductor current change sign on the first transient read.
-      currents.set('a', i);
-      currents.set('b', -i);
+      // THE HOUSE CONVENTION IS OUT-OF-PART POSITIVE, and it is not negotiable
+      // per device: net-level KCL is the sum of every terminal's reading on a
+      // net, so one device using the opposite sign breaks Kirchhoff wherever it
+      // shares a net with anything else.
+      //
+      // This briefly read `a: +i, b: -i` with a comment asserting "positive
+      // INTO the named terminal". The motivation was real -- the non-UIC
+      // initializer was reading a sign it did not expect -- but the repair was
+      // at the wrong layer, and it broke every other consumer. Measured on
+      // V -> R1 -> L1 -> R2 -> gnd, where NEITHER of the inductor's nets
+      // carries a reference terminal so no question about the ground rail can
+      // arise:
+      //
+      //   out-of-part (here)   KCL at L1.a's net 0.0000 mA, at L1.b's 0.0000 mA
+      //   into-the-terminal    KCL at L1.a's net 49.9998 mA, at L1.b's -49.9997
+      //
+      // i.e. off by exactly twice the branch current, in both places. The full
+      // suite passed in both states, which is the coverage gap this comment and
+      // `test/inductor-kcl-convention.test.mjs` exist to close.
+      //
+      // AND THE INITIALIZER WAS NEVER WRONG. It reads an `operatingPoint()`
+      // result, and that API reports INTO-THE-TERMINAL positive -- the exact
+      // negative of this extraction. Two conventions in one engine, each
+      // self-consistent, is the real defect; flipping one of them to match a
+      // consumer of the other just moves the breakage. Both are pinned as they
+      // are by `test/inductor-kcl-convention.test.mjs`.
+      currents.set('a', -i);
+      currents.set('b', i);
     }
 
     if (part.kind === 'transformer') {
@@ -2854,7 +2876,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (part.kind === 'inductor') {
         const c = branchCurrents.get(part.id);
-        inductorCurrentsNext.set(part.id, c ? (c.get('a') ?? 0) : 0);
+        // Terminal B's reading IS the a -> b current under the out-of-part
+        // convention restored above.
+        inductorCurrentsNext.set(part.id, c ? (c.get('b') ?? 0) : 0);
         const netA = findNet(nets, part.id, 'a');
         const netB = findNet(nets, part.id, 'b');
         const vA = netA ? (nodeVoltages.get(netA) ?? 0) : 0;
