@@ -51,9 +51,24 @@ export const NGSPICE_IS_CLAMP = 1e-28;
  */
 export const ORACLE_TEMP_C = 0.02585 * 1.602176634e-19 / 1.380649e-23 - 273.15;
 
-/** The `.options` line every deck needs. Both keys, always -- see rule 2. */
-export const optionsCard = (tempC = ORACLE_TEMP_C) =>
-  `.options temp=${tempC.toFixed(6)} tnom=${tempC.toFixed(6)}`;
+/**
+ * The `.options` line every deck needs. Both keys, always -- see rule 2.
+ *
+ * PRECISION IS LOAD-BEARING HERE, and `toFixed(6)` was not enough. Rounding the
+ * temperature to a microkelvin moves the thermal voltage by 1.4736794688e-9
+ * relative -- small, and NOT small compared with the agreement this card exists
+ * to produce, which is 2e-7 V over four decades of current. A deck that names a
+ * rounded temperature cannot round-trip the constant it was derived from, so
+ * "strict thermal equality" would be a claim the emitted text does not support.
+ * Caught in review by the corpus lane; verified at 1.47e-9 before changing it.
+ *
+ * 12 significant digits, via toPrecision rather than a fixed decimal count, so
+ * the emitted value re-reads as the same double. ngspice parses it fine.
+ */
+export const optionsCard = (tempC = ORACLE_TEMP_C) => {
+  const t = Number(tempC).toPrecision(12);
+  return `.options temp=${t} tnom=${t}`;
+};
 
 /**
  * Saturation current for a junction calibrated to drop `vf` at the rated
