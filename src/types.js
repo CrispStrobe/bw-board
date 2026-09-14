@@ -103,7 +103,7 @@
  * @property {(net: string) => number} nodeVoltage
  *   Volts at the named net.
  *
- * @property {(part: string, terminal: string) => number} branchCurrent
+ * @property {(part: string, terminal: string) => number} branchCurrent Amperes out of the named part terminal into its net (OP results explicitly use the opposite convention).
  *   Amperes into the named terminal. Requires the MNA solver (phase 6).
  *
  * @property {() => {analysis: {kind: 'dc-operating-point', scope: string,

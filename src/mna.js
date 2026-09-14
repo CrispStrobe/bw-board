@@ -1088,6 +1088,8 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
  *   Backward-Euler transient step: capacitors stamp as G=C/dt ∥ I=G·V_prev,
  *   inductors as G=dt/L ∥ I=I_prev. The result then carries capVoltagesNext /
  *   inductorCurrentsNext for the caller to store.
+ * Raw branchCurrents are amperes OUT of the named part terminal into its net.
+ * Source-row unknowns retain their MNA orientation; extraction converts them.
  * @returns {{ nodeVoltages: Map<string, number>, branchCurrents: Map<string, Map<string, number>>,
  *             capVoltagesNext?: Map<string, number>, inductorCurrentsNext?: Map<string, number>,
  *             converged?: boolean }}

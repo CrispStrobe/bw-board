@@ -43,7 +43,7 @@
  *             read: (terminal: string) => number, tNs: bigint) => boolean} [update]
  *   Behavioral step; return true if the network must be re-solved.
  * @property {(part: import('./types.js').Part, state: object,
- *             read: (terminal: string) => number) => Map<string, number>} [branchCurrents]
+ *             read: (terminal: string) => number) => Map<string, number>} [branchCurrents] Terminal amperes OUT of the part into its net, matching solveMNA and Board.branchCurrent.
  *   Optional terminal currents for the instruments.
  * Scheduled events: `update()` may set `state._wakeNs` (BigInt, absolute
  * sim time) and the board sub-steps advanceTo TO that instant exactly —
