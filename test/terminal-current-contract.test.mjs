@@ -62,4 +62,7 @@ test('LED forward brightness and delivered source current survive raw convention
   assert.ok(board.branchCurrent('D1', 'anode') < -0.025);
   assert.ok(board.branchCurrent('V1', 'pos') > 0.025);
   assert.ok(board.ledCurrents.get('D1') > 0.025, 'forward display current stays positive');
+  board.ledCurrents.set('D1', 0); // Exercise DRC's raw-current fallback, not its cache.
+  assert.ok(board.getWarnings().some(w => w.partId === 'D1' && w.severity === 'danger'),
+    'forward overcurrent must not disappear when the raw anode sign changes');
 });
