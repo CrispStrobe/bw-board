@@ -3575,7 +3575,39 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  *
  * Returns [vov_s, d(vov_s)/d(vov)].
  */
-const MOS_SMOOTH_DELTA = 0.05;
+/**
+ * HALF-WIDTH OF THE THRESHOLD BLEND, AND THE ERROR IT COSTS.
+ *
+ * The blend exists because a HARD cutoff branch gave Newton a discontinuous
+ * derivative exactly where a near-threshold operating point lives: the
+ * cross-coupled latch orbited 1.84 -> cutoff -> 5 -> fetlim 2.5 -> 2.16 -> 1.84
+ * forever, at every transconductance tried. That reason has not gone away.
+ *
+ * BUT THE WIDTH IS AN ERROR TERM, AND IT WAS THE LARGEST ONE LEFT. Wherever a
+ * device sits AT threshold with only leakage to balance it, the operating point
+ * lands inside the band and the answer is wrong by of order delta. ADI2005 v3
+ * row 187, an NMOS cascode: M1 is a volt below threshold and cut off, so CASC is
+ * held only by leakage, and M2 settles wherever its blended current matches it.
+ * ngspice puts CASC at 0.799205 V -- M2 exactly at threshold -- and we put it
+ * 48 mV higher, M2 48 mV BELOW threshold, which is delta.
+ *
+ * Proven by sweeping the one number the mechanism turns on, on a
+ * Miller-compensated op-amp bench:
+ *
+ *   delta = 0.05    worst error 4.88e-2 V
+ *   delta = 0.02    worst error 2.00e-2 V
+ *   delta = 0.005   worst error 5.98e-3 V
+ *
+ * Linear in delta, over a factor of ten. So this is not a modelling subtlety in
+ * four topologies, it is one constant, and it accounted for all 69 remaining
+ * MOSFET numeric disagreements in a 2,000-deck sample.
+ *
+ * 5 mV is chosen because it is the smallest value that keeps the corpus and the
+ * full suite green -- including the latch the blend was introduced for -- not
+ * because it is small. The measurement for the value it replaced is above; the
+ * measurement for this one is in the commit that changed it.
+ */
+const MOS_SMOOTH_DELTA = 0.005;
 function smoothVov(vov) {
   if (vov <= -MOS_SMOOTH_DELTA) return [0, 0];
   if (vov >= MOS_SMOOTH_DELTA) return [vov, 1];

@@ -94,18 +94,34 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
   });
 
   it('is continuous in value AND slope across both joins', () => {
+    // THE TOLERANCES DERIVE FROM THE PROBE AND THE BAND, not from a constant.
+    // In band the slope is (vov + d)/(2d), so stepping across a join by h moves
+    // it by h/(2d) -- a number that depends on delta. A flat 1e-7 tolerance
+    // silently encoded delta = 0.05 and reddened the day delta moved to 0.005,
+    // accusing the function of a discontinuity it does not have.
     const h = 1e-9;
+    const valueTol = 4 * h;                          // slope <= 1 either side
+    const slopeTol = 4 * h / MOS_SMOOTH_DELTA;       // d(slope)/d(vov) = 1/(2d)
     for (const join of [-MOS_SMOOTH_DELTA, MOS_SMOOTH_DELTA]) {
       const [lo, dlo] = smoothVov(join - h);
       const [hi, dhi] = smoothVov(join + h);
-      assert.ok(Math.abs(hi - lo) < 1e-7, `value jump at ${join}: ${hi - lo}`);
-      assert.ok(Math.abs(dhi - dlo) < 1e-7, `slope jump at ${join}: ${dhi - dlo}`);
+      assert.ok(Math.abs(hi - lo) < valueTol,
+        `value jump at ${join}: ${hi - lo} (tol ${valueTol})`);
+      assert.ok(Math.abs(dhi - dlo) < slopeTol,
+        `slope jump at ${join}: ${dhi - dlo} (tol ${slopeTol})`);
     }
+    // And the tolerances must not be so loose that a real jump would pass:
+    // the old hyperbola's slope at -delta was 0.5*(1 - 1/sqrt(1+1)) = 0.146,
+    // which is orders above slopeTol at any delta this band takes.
+    assert.ok(slopeTol < 0.01, `slopeTol ${slopeTol} would admit a real jump`);
   });
 
   it('has the analytic derivative of its own value, in band', () => {
-    const h = 1e-7;
-    for (const vov of [-0.04, -0.02, 0, 0.02, 0.04]) {
+    // The probe points are FRACTIONS OF THE BAND, so this stays in band when
+    // delta moves. Absolute values would walk outside it and test the lines.
+    const h = MOS_SMOOTH_DELTA * 2e-6;
+    for (const f of [-0.8, -0.4, 0, 0.4, 0.8]) {
+      const vov = f * MOS_SMOOTH_DELTA;
       const [, d] = smoothVov(vov);
       const numeric = (smoothVov(vov + h)[0] - smoothVov(vov - h)[0]) / (2 * h);
       assert.ok(Math.abs(d - numeric) < 1e-6, `vov ${vov}: stated ${d}, numeric ${numeric}`);
@@ -113,7 +129,8 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
   });
 
   it('the in-band value never exceeds the line it joins, and is never negative', () => {
-    for (let vov = -0.05; vov <= 0.05; vov += 0.001) {
+    const step = MOS_SMOOTH_DELTA / 50;
+    for (let vov = -MOS_SMOOTH_DELTA; vov <= MOS_SMOOTH_DELTA; vov += step) {
       const [s] = smoothVov(vov);
       assert.ok(s >= 0, `vov ${vov} gave a NEGATIVE overdrive ${s}`);
       assert.ok(s <= Math.max(vov, 0) + MOS_SMOOTH_DELTA / 4 + 1e-12,
@@ -242,5 +259,88 @@ describe('an off MOSFET must not drive a floating node', () => {
     for (const k of [1e-6, 1e-4, 1e-2, 1]) {
       assert.ok(Math.abs(read(k)) < 1e-3, `k = ${k} gave ${read(k)} V`);
     }
+  });
+});
+
+/**
+ * THE BLEND WIDTH IS AN ERROR TERM, AND THIS BENCH MEASURES IT.
+ *
+ * ADI2005 v3 row 187, an NMOS cascode amplifier, transcribed:
+ *
+ *   VDD VDD 0 DC 3.3
+ *   VIN IN 0 DC 0.49
+ *   VBIAS BIAS 0 DC 1.8
+ *   RD VDD OUT 270
+ *   M1 CASC IN 0 0 NMOS W=20u L=1u
+ *   M2 OUT BIAS CASC 0 NMOS W=20u L=1u
+ *   .MODEL NMOS NMOS (LEVEL=1 VTO=1 KP=1.0e-4 LAMBDA=0.005)
+ *
+ * M1's gate is at 0.49 V against a 1 V threshold, so it is half a volt into
+ * cutoff and CASC is held only by leakage. M2 therefore settles wherever its
+ * current matches that leakage, which is AT threshold: ngspice puts CASC at
+ * 0.799205 V, i.e. Vgs = 1.8 - 0.799 = 1.0008 against VTO = 1.
+ *
+ * A blend of half-width delta puts the balance point inside the band instead,
+ * so the answer is wrong by of order delta. Swept on a Miller-compensated
+ * op-amp bench, the worst error was linear in delta over a factor of ten:
+ *
+ *   delta = 0.05    4.88e-2 V        delta = 0.02    2.00e-2 V
+ *   delta = 0.005   5.98e-3 V
+ *
+ * which is why this is one constant and not four topologies. The assertion
+ * below is what delta has to buy: 5 mV of tolerance against a node the band
+ * used to move by 48 mV.
+ */
+describe('a device at threshold on a leakage-held node', () => {
+  it('sits AT threshold, not a blend-width below it (ngspice 0.799205 V)', () => {
+    const { parts, nets } = new NetlistBuilder()
+      .vsource('VDD', 3.3).vsource('VIN', 0.49).vsource('VBIAS', 1.8)
+      .gnd('GND')
+      .resistor('RD', 270)
+      .nmos('M1', 1.0, 1e-3)          // k = KP/2 * W/L = 5e-5 * 20
+      .nmos('M2', 1.0, 1e-3)
+      .wire('VDD.neg', 'GND.gnd').wire('VIN.neg', 'GND.gnd').wire('VBIAS.neg', 'GND.gnd')
+      .wire('VDD.pos', 'RD.a')
+      .wire('RD.b', 'M2.drain')
+      .wire('VBIAS.pos', 'M2.gate')
+      .wire('M2.source', 'M1.drain')
+      .wire('VIN.pos', 'M1.gate')
+      .wire('M1.source', 'GND.gnd')
+      .build();
+    for (const id of ['M1', 'M2']) {
+      const m = parts.find((p) => p.id === id);
+      m.params.lambda = 0.005;
+      m.params.bulkAtGround = true;
+    }
+    const board = new BoardImpl(3.3);
+    board.setNetlist(parts, nets);
+    const casc = nets.find((n) =>
+      n.terminals.some((t) => t.part === 'M2' && t.terminal === 'source')).id;
+    const v = board.nodeVoltage(casc);
+    // THE CORPUS RULE, not a stricter one invented here: a node disagrees only
+    // if it misses on BOTH 5 mV absolute and 1 % relative. Asserting the
+    // absolute half alone made this red at 5.04 mV on a 0.8 V node — a
+    // tolerance the oracle sweep does not apply, so the test would have been
+    // measuring something the programme does not.
+    const ref = 0.799205;
+    const abs = Math.abs(v - ref);
+    const rel = abs / Math.abs(ref);
+    assert.ok(abs <= 5e-3 || rel <= 0.01,
+      `CASC ${v} V, ngspice ${ref} V — abs ${abs.toExponential(2)}, `
+      + `rel ${(rel * 100).toFixed(2)} %. An error of order MOS_SMOOTH_DELTA `
+      + `(${MOS_SMOOTH_DELTA}) means the blend band is setting the answer.`);
+    // And it must be a real bound, not a wide one: at the old delta of 0.05
+    // this node read 0.847573 V, which fails both halves.
+    assert.ok(abs < 0.02, `${abs} V is blend-width-scale error, not rounding`);
+  });
+
+  it('and the blend is narrow enough to be inside the corpus tolerance', () => {
+    // The claim this file exists to hold: the band's width is smaller than the
+    // agreement tolerance it would otherwise blow. Stated as a bound on the
+    // CONSTANT, so raising delta reds here rather than in one bench by luck.
+    assert.ok(MOS_SMOOTH_DELTA <= 5e-3,
+      `MOS_SMOOTH_DELTA is ${MOS_SMOOTH_DELTA}; an operating point held at `
+      + 'threshold by leakage is then wrong by that much, and the corpus '
+      + 'tolerance is 5 mV. If this must grow, re-measure the corpus first.');
   });
 });
