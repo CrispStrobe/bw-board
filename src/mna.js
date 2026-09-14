@@ -449,6 +449,52 @@ export function mosGds(params, id0, taper) {
  * @param {object} params  vth, gamma, phi, bulkAtGround
  * @param {number} vsb     source-bulk bias, from the solve
  */
+/**
+ * THE FOURTH TERMINAL'S TWO DIODES.
+ *
+ * A SPICE MOSFET has four terminals, and the bulk carries a pn junction to the
+ * source and another to the drain. Our nmos/pmos have three, so those two
+ * diodes had no representation at all — and they are not a detail. Measured on
+ * an ADI2005 NMOS diff pair with a 13k tail resistor to a -15 V rail
+ * (`test/mosfet-bulk-junction.test.mjs` carries the deck):
+ *
+ *   bulk at node 0, as the deck writes it   ngspice TAIL = -0.639395 V
+ *   bulk moved to VSS                       ngspice TAIL = -1.667870 V
+ *   bulk at 0 but IS crushed to 1e-30       ngspice TAIL = -1.559280 V
+ *
+ * and our three-terminal answer was -1.673589 V — within 6 mV of the
+ * bulk-at-VSS deck. So the channel model was already right and the whole 1.03 V
+ * was ONE MISSING DIODE: with the source a volt below the grounded bulk, the
+ * bulk-source junction is forward biased and conducts. 1e-14·(e^(0.639395/vt)−1)
+ * = 0.553 mA per device, two devices, 1.107 mA — and (TAIL−VSS)/13k demands
+ * 1.1047 mA. The arithmetic closes to 0.2 %, which is how this was identified
+ * rather than guessed.
+ *
+ * This applies ONLY where the importer could tell us where the bulk is, which
+ * in practice means the deck tied it to the reference (`bulkAtGround`). A bulk
+ * on the source shorts both junctions and needs nothing. A bulk on some third
+ * node is declined at import, because a potential we would have to invent is
+ * not a potential we know.
+ *
+ * IS = 1e-14 A and N = 1 are SPICE's own defaults for the bulk junction when no
+ * area is given; `shockleyEval`'s reverse branch already returns −IS with a
+ * 1e-12 conductance, which is what ngspice's GMIN puts there.
+ *
+ * @param {number} vAcross  bulk→source for an n-channel, source→bulk for a p
+ * @param {object} [params]  the part's params; `bulkIs` overrides SPICE's default
+ * @returns {{gEq: number, iEq: number}} Norton companion
+ */
+export function mosBulkJunction(vAcross, params = {}) {
+  const is = Number.isFinite(params.bulkIs) && params.bulkIs > 0 ? params.bulkIs : MOS_BULK_IS;
+  const p = { is, nVt: MOS_BULK_N * JUNCTION_THERMAL_VOLTAGE, rs: 0 };
+  const { i, gj } = shockleyEval(vAcross, p);
+  return { gEq: gj, iEq: i - gj * vAcross };
+}
+
+/** SPICE's default bulk-junction saturation current and ideality. */
+const MOS_BULK_IS = 1e-14;
+const MOS_BULK_N = 1;
+
 export function mosVth(params = {}, vsb = 0) {
   const vth = Number(params.vth ?? 2.0);
   const gamma = Number(params.gamma ?? 0);
@@ -1275,6 +1321,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // bulk on source, Vsb is 0 and `mosVth` is identity.
   /** @type {Map<string, number>} */
   const mosVsb = new Map();
+  // THE BULK-DRAIN JUNCTION'S OWN STATE. `mosVsb` already carries V(source);
+  // the second bulk diode sits on the DRAIN and needs its own, for the same
+  // reason: it is a potential, not a terminal difference. Both are tracked only
+  // where the deck told us the bulk is at the reference.
+  /** @type {Map<string, number>} */
+  const mosVdb = new Map();
   const mosRegions = new Map();
   /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
   const vccsClamps = new Map();
@@ -1288,7 +1340,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (part.kind === 'nmos' || part.kind === 'pmos') {
         mosVds.set(part.id, 0);
-        if (part.params?.bulkAtGround) mosVsb.set(part.id, 0);
+        if (part.params?.bulkAtGround) { mosVsb.set(part.id, 0); mosVdb.set(part.id, 0); }
       }
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
@@ -1536,11 +1588,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'nmos':
-          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb);
+          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
           break;
 
         case 'pmos':
-          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb);
+          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb, mosVdb);
           break;
 
         case 'opamp':
@@ -1786,6 +1838,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         maxDelta = Math.max(maxDelta, Math.abs(vNew4 - vOld4));
         mosVsb.set(part.id,
           vOld4 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, vNew4 - vOld4)));
+      }
+
+      // V(drain), same convention, for the bulk-drain junction. A forward-biased
+      // bulk diode is an exponential, so it takes the same step limiting the
+      // other junctions get; without it a first iteration that puts the drain a
+      // volt below a grounded bulk asks for e^40.
+      if (mosVdb.has(part.id)) {
+        const netD5 = findNet(nets, part.id, 'drain');
+        const iD5 = netD5 ? nodeIndex.get(netD5) : undefined;
+        const vD5 = iD5 !== undefined ? solution[iD5] : 0;
+        const vNew5 = part.kind === 'nmos' ? vD5 : -vD5;
+        const vOld5 = mosVdb.get(part.id) ?? 0;
+        maxDelta = Math.max(maxDelta, Math.abs(vNew5 - vOld5));
+        mosVdb.set(part.id,
+          vOld5 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, vNew5 - vOld5)));
       }
 
       if (mosVds.has(part.id)) {
@@ -2441,6 +2508,39 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       currents.set('drain', part.kind === 'nmos' ? id : -id);
       currents.set('source', part.kind === 'nmos' ? -id : id);
       currents.set('gate', 0); // gate draws no DC current
+
+      // THE BULK JUNCTIONS ARE PART OF THE BRANCH THE SOLVE STAMPED, so an
+      // ammeter on the source lead must see them. This is the same lesson the
+      // `gds` line above records: a reader that leaves out a stamped element
+      // describes a different device than the one that was solved, and the two
+      // answers then disagree at a net where the user can measure both.
+      //
+      // A THREE-TERMINAL PART CANNOT CONSERVE A FOUR-TERMINAL CURRENT. Net-level
+      // KCL holds, because the junction current really does enter the source net
+      // from the reference and this reading includes it. Part-level KCL does
+      // NOT: drain + gate + source no longer sums to zero, because current
+      // arrives through a terminal this part does not have. That is a true fact
+      // about the model, not a rounding error, so it is reported rather than
+      // absorbed — `bulk` carries the sum and the three leads plus `bulk` do
+      // conserve.
+      if (part.params?.bulkAtGround) {
+        const stateS = part.kind === 'nmos' ? vS : -vS;
+        const stateD = part.kind === 'nmos' ? vD : -vD;
+        const nodeIsCathode = part.kind === 'nmos' ? 1 : -1;
+        // `iS`/`iD` are the junction current flowing from the bulk INTO the
+        // device node. In this reader's convention (positive = out of the part
+        // into the net) that current ENTERS the part at the bulk and LEAVES at
+        // the source, so it adds to the source lead and the bulk lead carries
+        // its negative. Getting this sign wrong is not subtle: net KCL at the
+        // tail came out at exactly -2*iS per device, which is how it was caught.
+        const jS = mosBulkJunction(-stateS, part.params);
+        const jD = mosBulkJunction(-stateD, part.params);
+        const iS = (jS.iEq + jS.gEq * -stateS) * nodeIsCathode;
+        const iD = (jD.iEq + jD.gEq * -stateD) * nodeIsCathode;
+        currents.set('source', (currents.get('source') ?? 0) + iS);
+        currents.set('drain', (currents.get('drain') ?? 0) + iD);
+        currents.set('bulk', -(iS + iD));
+      }
     }
 
     if (part.kind === 'isource') {
@@ -3460,7 +3560,42 @@ function smoothVov(vov) {
   return [(u * u) / (4 * MOS_SMOOTH_DELTA), u / (2 * MOS_SMOOTH_DELTA)];
 }
 
-function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb) {
+/**
+ * Stamp the two bulk junctions of a MOSFET whose bulk the deck tied to the
+ * reference. See `mosBulkJunction` for why these exist and what they are worth.
+ *
+ * The polarity falls out of the state convention `mosVsb`/`mosVdb` already use.
+ * An n-channel's bulk is p-type, so the junction runs bulk(anode) -> source
+ * (cathode) and its forward voltage is 0 - V(source). A p-channel's bulk is
+ * n-type, so it runs source(anode) -> bulk(cathode) and its forward voltage is
+ * V(source) - 0. Both maps store V(source) negated for a p-channel, so in BOTH
+ * cases the junction sees `-state`; only which end of the diode the node is
+ * differs, and that is the one sign below.
+ */
+function stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb) {
+  if (!part.params?.bulkAtGround) return;
+  if (!mosVsb || !mosVdb) return;
+  const idxB = groundNetId !== undefined && groundNetId !== null
+    ? nodeIndex.get(groundNetId) : undefined;
+  // +1 when the DEVICE NODE is the cathode (n-channel), -1 when it is the anode.
+  const nodeIsCathode = part.kind === 'nmos' ? 1 : -1;
+  const one = (idx, state) => {
+    if (idx === undefined) return;
+    const { gEq, iEq } = mosBulkJunction(-(state ?? 0), part.params);
+    A.add(idx, idx, gEq);
+    if (idxB !== undefined) {
+      A.add(idxB, idxB, gEq);
+      A.add(idx, idxB, -gEq);
+      A.add(idxB, idx, -gEq);
+      b[idxB] -= nodeIsCathode * iEq;
+    }
+    b[idx] += nodeIsCathode * iEq;
+  };
+  one(idxS, mosVsb.get(part.id));
+  one(idxD, mosVdb.get(part.id));
+}
+
+function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb, mosVdb) {
   // ONE definition of the threshold, read by the stamp, the region FSM and the
   // extraction alike. Three readers of one number is how the vceSat split
   // happened; this one is a function call in all three places.
@@ -3476,6 +3611,8 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   const idxS = netS ? nodeIndex.get(netS) : undefined;
 
   const vgs = diodeVoltages.get(part.id) ?? 0;
+
+  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb);
 
   if (region === 'triode') {
     // THE LEVEL-1 LINEAR REGION, WITH ITS SECOND TERM.
@@ -3561,7 +3698,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 }
 
 /** P-channel MOSFET: mirror of NMOS with reversed gate sense. */
-function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb) {
+function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb, mosVdb) {
   // See stampNMOS. A p-channel's Vsb is V(bulk) - V(source); with the bulk at
   // ground and the source above it that is negative, i.e. a forward-biased
   // body junction, and `mosVth` clamps it to the no-shift case rather than
@@ -3580,6 +3717,8 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 
   // For PMOS: Vsg > |Vth| to turn on
   const vsg = diodeVoltages.get(part.id) ?? 0;
+
+  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb);
 
   if (region === 'triode') {
     // The level-1 linear region with its second term — see the NMOS note.

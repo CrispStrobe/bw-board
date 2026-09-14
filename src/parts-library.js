@@ -72,6 +72,7 @@ export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'beta', 'br', 'vbe', 'rceSat',                   // bipolar (br = reverse beta)
     'vth', 'k', 'kp', 'w', 'l', 'lambda',            // field-effect (lambda = channel-length modulation)
     'gamma', 'phi', 'bulkAtGround',                  // body effect: threshold shifts with source-bulk bias
+    'bulkIs',                                        // bulk-junction saturation current (SPICE IS on an M model)
     'ohms', 'farads', 'henries', 'volts', 'amps',    // passives and sources
     'kV', 'contactOhms', 'openOhms'                  // motor back-EMF, relay contacts
 ]));
