@@ -399,6 +399,60 @@ export const MOS_GDS_FLOOR = 1e-12;
  * @param {number} id0     the channel current at the expansion point
  * @param {number} taper   0 at cutoff, 1 fully conducting
  */
+/**
+ * THE LEVEL-1 TRIODE LAW, WITH CHANNEL-LENGTH MODULATION, IN ONE PLACE.
+ *
+ *   Id  = K*(2*Vov*Vds - Vds^2) * (1 + LAMBDA*Vds)
+ *   gds = dId/dVds = K*[ 2*(Vov - Vds)*(1 + LAMBDA*Vds) + (2*Vov*Vds - Vds^2)*LAMBDA ]
+ *   gm  = dId/dVgs = 2*K*Vds*dVov * (1 + LAMBDA*Vds)
+ *
+ * SPICE APPLIES LAMBDA IN THE LINEAR REGION TOO, and this engine applied it
+ * only in saturation. Measured, on a device held firmly in triode (Vds = 62 mV
+ * against Vov = 4 V) so that nothing else could account for the difference:
+ *
+ *   .model NM NMOS(LEVEL=1 VTO=1 KP=1.0e-4 LAMBDA=0.1)   ngspice d = 6.182569e-2
+ *   .model NM NMOS(LEVEL=1 VTO=1 KP=1.0e-4 LAMBDA=0)     ngspice d = 6.220612e-2
+ *
+ * The current is pinned by the 10k load, so the drain-source voltage is what
+ * moves: 0.0618257/0.0622061 = 0.993886, against 1/(1 + 0.1*0.0618) = 0.993855.
+ * Agreement to 3e-5, in both directions.
+ *
+ * Corpus consequence: ADI2005 v3 row 417, a source-degenerated amplifier whose
+ * device is in triode at Vds = 2.55 V against Vov = 3.93 V. ngspice reads the
+ * drain at 4.217489 V, which needs Id = 13.897 mA; the law WITHOUT the lambda
+ * factor gives 13.797 mA and a drain 56 mV high. With it, 13.90 mA.
+ *
+ * AT LAMBDA = 0 THIS IS BIT-IDENTICAL to the expression it replaces, so every
+ * deck that states no LAMBDA is untouched.
+ *
+ * AND THE TWO REGIONS STILL MEET, now in slope as well as value. At Vds = Vov:
+ * Id = K*Vov^2*(1 + LAMBDA*Vov), which is the saturation law at Vds = Vov; and
+ * gds = K*LAMBDA*Vov^2, which is `mosGds`'s LAMBDA*|Id|. Before this the triode
+ * gds went to zero at the boundary while saturation's was LAMBDA*Id, so the
+ * meeting was in value only.
+ *
+ * ONE definition, three readers: both stamps and the current extraction. The
+ * vceSat split happened because a law had two copies.
+ *
+ * @param {number} k       K, or KP/2 * (W/L)
+ * @param {number} vov     smoothed overdrive at the operating point
+ * @param {number} vds     effective drain-source voltage (already clamped)
+ * @param {number} dVov    d(vov_s)/d(vov), for gm
+ * @param {object} params  the part's params; `lambda` defaults to 0
+ * @returns {{id: number, gds: number, gm: number}}
+ */
+export function mosTriode(k, vov, vds, dVov, params) {
+  const raw = Number(params?.lambda ?? 0);
+  const lambda = Number.isFinite(raw) && raw > 0 ? raw : 0;
+  const mod = 1 + lambda * vds;
+  const base = 2 * vov * vds - vds * vds;
+  return {
+    id: k * base * mod,
+    gds: k * (2 * (vov - vds) * mod + base * lambda),
+    gm: 2 * k * vds * dVov * mod,
+  };
+}
+
 export function mosGds(params, id0, taper) {
   const lambda = Number(params?.lambda ?? 0);
   const model = Number.isFinite(lambda) && lambda > 0 ? lambda * Math.abs(id0) : 0;
@@ -2506,20 +2560,23 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       let vov = 0;
       if (part.kind === 'nmos') {
         const vgs = vG - vS;
-        const [vovS] = smoothVov(vgs - vth);
+        const [vovS, dVovS] = smoothVov(vgs - vth);
         vov = vovS;
-        // Same law the stamp uses, at the same operating point.
+        // Same law the stamp uses, at the same operating point. `dVovS` is
+        // passed for real rather than as a placeholder 1: only `.id` is read
+        // here, but an argument that lies is a claim nobody checks until
+        // someone reads `.gm` off the same call.
         const vdsE = Math.min(Math.max(vD - vS, 0), Math.max(vovS, 0));
         id = inTriode
-          ? k * (2 * vovS * vdsE - vdsE * vdsE)        // must match stampNMOS
+          ? mosTriode(k, vovS, vdsE, dVovS, part.params).id   // must match stampNMOS
           : k * vovS * vovS;
       } else {
         const vsg = vS - vG;
-        const [vovS] = smoothVov(vsg - Math.abs(vth));
+        const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth));
         vov = vovS;
         const vsdE = Math.min(Math.max(vS - vD, 0), Math.max(vovS, 0));
         id = inTriode
-          ? k * (2 * vovS * vsdE - vsdE * vsdE)        // must match stampPMOS
+          ? mosTriode(k, vovS, vsdE, dVovS, part.params).id   // must match stampPMOS
           : k * vovS * vovS;
       }
       if (!inTriode) {
@@ -3692,9 +3749,10 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     // Clamped at the boundary: past Vds = Vov the parabola turns over and
     // would report a FALLING current, which is what saturation replaces.
     const vdsEff = Math.min(Math.max(vds, 0), Math.max(vovS, 0));
-    const idTri = k * (2 * vovS * vdsEff - vdsEff * vdsEff);
-    const gds = 2 * k * (vovS - vdsEff) + MOS_GDS_FLOOR;
-    const gm = 2 * k * vdsEff * dVovS;
+    const tri = mosTriode(k, vovS, vdsEff, dVovS, part.params);
+    const idTri = tri.id;
+    const gds = tri.gds + MOS_GDS_FLOOR;
+    const gm = tri.gm;
     // THE OFFSET MUST USE THE POINT THE CURRENT WAS EVALUATED AT.
     //
     // The companion is I(v) = idTri(vdsEff) + gds*(v - vdsEff), so the Norton
@@ -3782,9 +3840,10 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     const [vovSt, dVovSt] = smoothVov(vsg - Math.abs(vth));
     const vsd = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
     const vsdEff = Math.min(Math.max(vsd, 0), Math.max(vovSt, 0));
-    const idTri = k * (2 * vovSt * vsdEff - vsdEff * vsdEff);
-    const gds = 2 * k * (vovSt - vsdEff) + MOS_GDS_FLOOR;
-    const gm = 2 * k * vsdEff * dVovSt;
+    const tri = mosTriode(k, vovSt, vsdEff, dVovSt, part.params);
+    const idTri = tri.id;
+    const gds = tri.gds + MOS_GDS_FLOOR;
+    const gm = tri.gm;
     const iEq = idTri - gm * vsg - gds * vsdEff;   // see the NMOS note
 
     if (idxD !== undefined) A.add(idxD, idxD, gds);
