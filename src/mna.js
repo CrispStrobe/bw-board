@@ -3372,7 +3372,16 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     const idTri = k * (2 * vovS * vdsEff - vdsEff * vdsEff);
     const gds = 2 * k * (vovS - vdsEff) + MOS_GDS_FLOOR;
     const gm = 2 * k * vdsEff * dVovS;
-    const iEq = idTri - gm * vgs - gds * vds;
+    // THE OFFSET MUST USE THE POINT THE CURRENT WAS EVALUATED AT.
+    //
+    // The companion is I(v) = idTri(vdsEff) + gds*(v - vdsEff), so the Norton
+    // term is `idTri - gds*vdsEff`. Using the RAW `vds` injected current
+    // whenever the clamp bit — and it bites exactly when the drain is on the
+    // wrong side, `vds < 0`, where vdsEff is 0 and the raw value is negative.
+    // Measured on a CMOS NAND with both inputs low: OUT settled at 5.431579 V
+    // on a 5 V supply, 0.43 V ABOVE every source in the circuit, against
+    // ngspice's 5.000000.
+    const iEq = idTri - gm * vgs - gds * vdsEff;
 
     if (idxD !== undefined) A.add(idxD, idxD, gds);
     if (idxS !== undefined) A.add(idxS, idxS, gds);
@@ -3446,7 +3455,7 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     const idTri = k * (2 * vovSt * vsdEff - vsdEff * vsdEff);
     const gds = 2 * k * (vovSt - vsdEff) + MOS_GDS_FLOOR;
     const gm = 2 * k * vsdEff * dVovSt;
-    const iEq = idTri - gm * vsg - gds * vsd;
+    const iEq = idTri - gm * vsg - gds * vsdEff;   // see the NMOS note
 
     if (idxD !== undefined) A.add(idxD, idxD, gds);
     if (idxS !== undefined) A.add(idxS, idxS, gds);

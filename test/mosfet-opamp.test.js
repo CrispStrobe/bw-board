@@ -220,3 +220,64 @@ describe('new components: validation', () => {
     assert.ok(errors.some(e => e.severity === 'error' && e.partId === 'U1'));
   });
 });
+
+// ─── A node cannot sit above every source in the circuit ─────────────────
+//
+// A CMOS NAND with both inputs low: both PMOS on, both NMOS off, output pulled
+// to VDD. ngspice reads 5.000000 V. The engine read 5.431579 — 0.43 V ABOVE
+// every source in the circuit, which is not an accuracy question.
+//
+// The cause was a triode companion linearised at one point and offset from
+// another: `I(v) = idTri(vdsEff) + gds*(v - vdsEff)`, so the Norton term is
+// `idTri - gds*vdsEff`, and using the RAW vds injected current whenever the
+// clamp bit — which is exactly when the drain is on the wrong side and vds is
+// negative.
+//
+// Asserted as a BOUND, not a recorded number: no node in a circuit whose only
+// sources are a rail and ground may leave [0, VDD]. That holds whatever the
+// model does next.
+describe('CMOS gate rail bounds', () => {
+  it('no node sits outside the supply rails', () => {
+  const board = new BoardImpl(5);
+  const mos = (id, kind, d, g, s) => ({ id, kind,
+    params: { vth: kind === 'nmos' ? 1 : -1, kp: kind === 'nmos' ? 1e-4 : 5e-5,
+      w: kind === 'nmos' ? 4e-6 : 8e-6, l: 0.5e-6, lambda: 0.02 },
+    terminals: ['drain', 'gate', 'source'], _n: { d, g, s } });
+  const parts = [
+    { id: 'VDD', kind: 'vcc', params: {}, terminals: ['vcc'] },
+    { id: 'GND1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+    { id: 'VA', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] },
+    { id: 'VB', kind: 'vsource', params: { volts: 0 }, terminals: ['pos', 'neg'] },
+    mos('MP1', 'pmos'), mos('MP2', 'pmos'), mos('MN1', 'nmos'), mos('MN2', 'nmos'),
+  ].map(({ _n, ...p }) => p);
+  const nets = [
+    { id: 'n_vdd', terminals: [
+      { part: 'VDD', terminal: 'vcc' },
+      { part: 'MP1', terminal: 'source' }, { part: 'MP2', terminal: 'source' } ] },
+    { id: 'n_a', terminals: [
+      { part: 'VA', terminal: 'pos' },
+      { part: 'MP1', terminal: 'gate' }, { part: 'MN1', terminal: 'gate' } ] },
+    { id: 'n_b', terminals: [
+      { part: 'VB', terminal: 'pos' },
+      { part: 'MP2', terminal: 'gate' }, { part: 'MN2', terminal: 'gate' } ] },
+    { id: 'n_out', terminals: [
+      { part: 'MP1', terminal: 'drain' }, { part: 'MP2', terminal: 'drain' },
+      { part: 'MN1', terminal: 'drain' } ] },
+    { id: 'n_mid', terminals: [
+      { part: 'MN1', terminal: 'source' }, { part: 'MN2', terminal: 'drain' } ] },
+    { id: 'n_gnd', terminals: [
+      { part: 'GND1', terminal: 'gnd' },
+      { part: 'VA', terminal: 'neg' }, { part: 'VB', terminal: 'neg' },
+      { part: 'MN2', terminal: 'source' } ] },
+  ];
+  board.setNetlist(parts, nets);
+  for (const net of nets) {
+    const v = board.nodeVoltage(net.id);
+    assert.ok(v >= -1e-3 && v <= 5 + 1e-3,
+      `${net.id} reads ${v} V, outside the 0..5 V the only sources in this circuit can make`);
+  }
+  // And the gate does what a NAND does: both inputs low, output high.
+  assert.ok(Math.abs(board.nodeVoltage('n_out') - 5) < 0.05,
+    `both inputs low must pull OUT to the rail, read ${board.nodeVoltage('n_out')} V`);
+  });
+});
