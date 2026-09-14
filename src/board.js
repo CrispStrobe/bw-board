@@ -2205,8 +2205,29 @@ export class BoardImpl {
     this.capCurrents = new Map([...capacitorVoltages.keys()].map(id => [id, 0]));
     this.inductorVoltages = new Map([...inductorCurrents.keys()].map(id => [id, 0]));
     this.nodeVoltages = new Map(point.nodeVoltages);
+    // NEGATED ON THE WAY IN, so `branchCurrent()` speaks ONE convention for the
+    // whole life of the board.
+    //
+    // `point` is an `operatingPoint()` result and that API is INTO-THE-TERMINAL
+    // positive; `_mnaCache.branchCurrents` is what `branchCurrent()` returns,
+    // and that is OUT-OF-PART positive everywhere else. Seeding the cache
+    // verbatim made every device's public current INVERT for as long as this
+    // cache stood, and then invert back on the next solve -- so the sign a
+    // meter reported depended on whether the board had just been initialised.
+    //
+    // Measured at volts = -4 on the RCL bench in
+    // `test/nonuic-transient.test.mjs`: straight after initialisation
+    // `branchCurrent('L1','b')` read +1.333333e-3 where every other moment in
+    // the board's life gives -1.333333e-3.
+    //
+    // This is the ONE boundary where the two conventions meet, so it is the one
+    // place the conversion belongs. It is not the fix for the underlying
+    // duplication -- see `test/inductor-kcl-convention.test.mjs`, which pins
+    // both conventions and names the remedy -- but it stops the inconsistency
+    // leaking into the public reader.
     this._mnaCache = { nodeVoltages: new Map(point.nodeVoltages),
-      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) => [id, new Map(values)])),
+      branchCurrents: new Map([...point.branchCurrents].map(([id, values]) =>
+        [id, new Map([...values].map(([terminal, i]) => [terminal, -i]))])),
       converged: true, deviceStamps: new Map() };
     this._lastSolveConverged = true;
     this._trapValid = false;

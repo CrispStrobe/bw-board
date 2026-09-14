@@ -185,3 +185,57 @@ describe('the transient initializer stores a positive a -> b current', () => {
     assert.ok(stored > 0, 'a current flowing a to b must be stored POSITIVE');
   });
 });
+
+/**
+ * AND THE PUBLIC READER MUST NOT CHANGE CONVENTION MID-LIFE.
+ *
+ * `initializeTransientFromOperatingPoint` seeds `_mnaCache.branchCurrents` from
+ * an `operatingPoint()` result. Seeded verbatim, that inverted EVERY device's
+ * public current for as long as that cache stood, and then inverted back on the
+ * next solve — so the sign a meter reported depended on whether the board had
+ * just been initialised. Measured at volts = -4 on the RCL bench: L1.b read
+ * +1.333333e-3 straight after initialisation and -1.333333e-3 at every other
+ * moment.
+ *
+ * The conversion now happens at that one boundary. This asserts the property it
+ * buys, which is not a sign but STABILITY: the same reading before and after.
+ */
+describe('branchCurrent keeps one convention across initialisation', () => {
+  it('reports the same sign before and after initializeTransientFromOperatingPoint', () => {
+    const { board } = rlr();
+    const before = ['a', 'b'].map((t) => board.branchCurrent('L1', t));
+    assert.ok(Math.abs(before[0]) > 1e-3, 'the bench must be carrying current');
+    board.initializeTransientFromOperatingPoint();
+    const after = ['a', 'b'].map((t) => board.branchCurrent('L1', t));
+    for (let k = 0; k < 2; k++) {
+      assert.ok(Math.abs(after[k] - before[k]) / Math.abs(before[k]) < 1e-3,
+        `L1.${'ab'[k]}: ${before[k]} before initialisation, ${after[k]} after — `
+        + 'the public convention must not depend on what the board just did');
+    }
+  });
+
+  it('and KCL still holds at a net immediately after initialisation', () => {
+    // The stronger form: it is not enough for the signs to be stable, they must
+    // be stable AT THE CONVENTION THAT SATISFIES KIRCHHOFF.
+    const { board, netOf } = rlr();
+    board.initializeTransientFromOperatingPoint();
+    for (const terminal of ['a', 'b']) {
+      const net = netOf('L1', terminal);
+      const sum = kcl(board, net);
+      assert.ok(Math.abs(sum) < 1e-9,
+        `KCL at L1.${terminal}'s net straight after initialisation: ${(sum * 1e3).toFixed(6)} mA`);
+    }
+  });
+
+  it('every device is converted, not just the inductor', () => {
+    // Guard every reach: the seed converts a whole map, so a resistor on the
+    // same board must move with it.
+    const { board } = rlr();
+    const before = board.branchCurrent('R1', 'b');
+    board.initializeTransientFromOperatingPoint();
+    const after = board.branchCurrent('R1', 'b');
+    assert.ok(Math.abs(after - before) / Math.abs(before) < 1e-3,
+      `R1.b: ${before} before, ${after} after`);
+    assert.ok(after > 0, 'and still out-of-part positive where current leaves');
+  });
+});

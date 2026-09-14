@@ -64,12 +64,42 @@ test('non-UIC initialization adopts signed RCL bias and stays numerically aligne
     assert.equal(initialized.analysis.integrationRestart, 'backward-euler');
     assert.equal(Math.sign(initialized.capacitorVoltages.get('C1')), Math.sign(volts));
     assert.equal(Math.sign(initialized.inductorCurrents.get('L1')), Math.sign(volts));
-    assert.equal(board.branchCurrent('L1', 'a'), initialized.inductorCurrents.get('L1'));
+    // TERMINAL B, NOT A, AND THE RESISTOR BESIDE IT SETTLES WHY.
+    //
+    // `branchCurrent()` is OUT-OF-PART POSITIVE. ngspice's `i(lxxx)` is the
+    // FIRST-node-to-second-node current, so for `L1 coil 0` it is the a -> b
+    // current -- which under this convention is terminal B's reading and the
+    // NEGATIVE of terminal A's.
+    //
+    // Reading 'a' here is what motivated flipping the inductor's public signs
+    // inside `solveMNA`, and that flip broke net-level Kirchhoff for every
+    // inductor sharing a net with another device, by exactly twice the branch
+    // current. Measured, both source polarities, on this very bench:
+    //
+    //   volts = -4   ngspice i(l1) = -1.333330e-3
+    //                L1.a = +1.333333e-3   L1.b = -1.333333e-3   -> B matches
+    //                R2's a -> b current from Ohm's law = -1.333333e-3
+    //                R2.a = +1.333333e-3   R2.b = -1.333333e-3   -> B matches
+    //   volts = +4   the same with every sign reversed
+    //   KCL at the coil net (R2.b + L1.a): 2.2e-16 mA
+    //
+    // The resistor's a -> b current is derived from Ohm's law across its own
+    // nodes and so depends on no convention at all -- and it lands on terminal
+    // B exactly as the inductor does. So the inductor was never the odd one
+    // out; the terminal this test read was.
+    //
+    // Everything else in this test is unchanged and still holds: the signed
+    // bias, the sign tracking `volts`, and agreement with ngspice to 6e-9.
+    assert.equal(board.branchCurrent('L1', 'b'), initialized.inductorCurrents.get('L1'));
     board.advanceTo(100_000n);
     assert.ok(Math.abs(board.nodeVoltage('mid') - expected.mid) < 6e-6);
     assert.ok(Math.abs(board.nodeVoltage('coil') - expected.coil) < 1e-10);
-    assert.ok(Math.abs(board.branchCurrent('L1', 'a') - expected.inductor) < 6e-9);
-    assert.equal(Math.sign(board.branchCurrent('L1', 'a')), Math.sign(volts));
+    assert.ok(Math.abs(board.branchCurrent('L1', 'b') - expected.inductor) < 6e-9);
+    assert.equal(Math.sign(board.branchCurrent('L1', 'b')), Math.sign(volts));
+    // And the invariant that the flip broke, asserted here too so this bench
+    // cannot go green on a convention that fails Kirchhoff.
+    assert.ok(Math.abs(board.branchCurrent('R2', 'b') + board.branchCurrent('L1', 'a')) < 1e-9,
+      'KCL at the coil net: R2.b and L1.a are the two ends of one wire');
     assert.ok(Math.abs(board.capVoltages.get('C1') - expected.mid) < 6e-6);
     assert.equal(board._lastSolveConverged, true);
   }
