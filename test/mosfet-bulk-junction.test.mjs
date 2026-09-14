@@ -31,7 +31,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { NetlistBuilder } from '../src/builder.js';
-import { mosBulkJunction, JUNCTION_THERMAL_VOLTAGE } from '../src/mna.js';
+import { mosBulkJunction, JUNCTION_THERMAL_VOLTAGE, mosVth } from '../src/mna.js';
 
 const current = (v, params) => {
   const { gEq, iEq } = mosBulkJunction(v, params);
@@ -292,5 +292,83 @@ describe('the bulk-drain junction, isolated', () => {
     let sum = 0;
     for (const t of dNet.terminals) sum += board.branchCurrent(t.part, t.terminal);
     assert.ok(Math.abs(sum) < 1e-7, `KCL at the drain net: ${(sum * 1e3).toFixed(7)} mA`);
+  });
+});
+
+/**
+ * BULK TIED TO THE SOURCE IS ALSO A KNOWN BULK POTENTIAL.
+ *
+ * It shorts the bulk-SOURCE junction — which is why that case needs no
+ * threshold shift — but NOT the bulk-DRAIN one, and that is live whenever the
+ * drain goes below the source.
+ *
+ * ADI2005 v3 row 4654 is the whole case in three lines:
+ *
+ *   M1 VDD VDD 3 3 NMOS W=1u L=1u
+ *   V1 3 0 5
+ *   .MODEL NMOS NMOS (LEVEL=1 VTO=1 KP=1.0e-4 LAMBDA=0.02)
+ *
+ * a diode-connected device whose source and bulk sit at 5 V with its drain/gate
+ * node dangling. ngspice, three ways:
+ *
+ *   bulk at 5 V, as written    V(VDD) = 4.999380
+ *   bulk moved to node 0       V(VDD) = 3.36e-19     <- our answer before this
+ *   bulk at 5 V, IS = 1e-30    V(VDD) = 5.000000     <- pure GMIN tie, no drop
+ *
+ * The junction's own forward drop is the 0.62 mV; its ABSENCE was the whole
+ * 5 V. 6 of the 24 remaining numeric disagreements in the full 12,471-deck
+ * corpus are this one shape.
+ *
+ * WHAT IS LEFT AFTERWARDS IS OUR NODE SHUNT, and it is stated here rather than
+ * papered over: with the junction stamped we read 4.840139 V against ngspice's
+ * 4.999380 — 0.16 V low, down from 5.00 V, because `solveMNA` puts GMIN on
+ * every node diagonal and that 1e-12 to GROUND competes with the junction's
+ * 1e-12 to the BULK. ngspice puts GMIN only across pn junctions, so there the
+ * junction is the only tie and wins outright. Lowering ours globally was
+ * measured WORSE (a 2,000-deck sample fell 1,612 -> 1,559 agreeing); the fix
+ * is a selective shunt, which is its own piece of work.
+ */
+describe('bulk tied to the source: the drain junction is still live', () => {
+  const rig = ({ flag }) => {
+    const { parts, nets } = new NetlistBuilder()
+      .vsource('V1', 5).gnd('GND')
+      .nmos('M1', 1.0, 5e-5)          // k = KP/2 * W/L = 5e-5 * 1
+      .wire('V1.neg', 'GND.gnd')
+      .wire('V1.pos', 'M1.source')
+      .wire('M1.gate', 'M1.drain')    // diode-connected, drain/gate dangling
+      .build();
+    const m = parts.find((p) => p.id === 'M1');
+    m.params.lambda = 0.02;
+    if (flag) m.params.bulkOnSource = true;
+    const board = new BoardImpl(5);
+    board.setNetlist(parts, nets);
+    const net = nets.find((n) =>
+      n.terminals.some((t) => t.part === 'M1' && t.terminal === 'drain'));
+    return board.nodeVoltage(net.id);
+  };
+
+  it('pulls the dangling drain node up towards the bulk', () => {
+    const withJ = rig({ flag: true });
+    assert.ok(withJ > 4.5,
+      `the bulk-drain junction must carry the node up near the 5 V bulk; got ${withJ} V`);
+    // ngspice reads 4.999380; the residue is our node shunt, documented above.
+    assert.ok(Math.abs(withJ - 4.999380) < 0.25,
+      `V(drain) ${withJ} V against ngspice's 4.999380 V`);
+  });
+
+  it('and without the flag it falls to the reference — a 4.8 V separation', () => {
+    const without = rig({ flag: false });
+    assert.ok(Math.abs(without) < 1e-3,
+      `with no bulk declared the node is left to GMIN; got ${without} V`);
+    assert.ok(Math.abs(rig({ flag: true }) - without) > 4,
+      'the bench must separate by volts, or it is not testing the junction');
+  });
+
+  it('a bulk on the source does NOT shift the threshold', () => {
+    // The half that must stay unchanged: Vsb is zero by construction here, so
+    // `mosVth` is identity whatever GAMMA says.
+    assert.equal(mosVth({ vth: 1, gamma: 0.5, phi: 0.6, bulkOnSource: true }, 0), 1);
+    assert.equal(mosVth({ vth: 1, gamma: 0.5, phi: 0.6, bulkOnSource: true }, 4), 1,
+      'bulkOnSource must not enable the body effect at any Vsb');
   });
 });

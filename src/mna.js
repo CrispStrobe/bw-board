@@ -3701,7 +3701,46 @@ function smoothVov(vov) {
  * cases the junction sees `-state`; only which end of the diode the node is
  * differs, and that is the one sign below.
  */
-function stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb) {
+function stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds) {
+  // BULK TIED TO THE SOURCE IS ALSO A KNOWN BULK POTENTIAL.
+  //
+  // It shorts the bulk-SOURCE junction -- which is why that case needs no
+  // threshold shift -- but NOT the bulk-drain one, and that is live whenever
+  // the drain goes below the source. ADI2005 v3 row 4654 is the case in three
+  // lines:
+  //
+  //   M1 VDD VDD 3 3 NMOS  /  V1 3 0 5
+  //
+  // a diode-connected device whose source and bulk sit at 5 V with its
+  // drain/gate node dangling. Measured:
+  //
+  //   bulk at 5 V, as written    ngspice V(VDD) = 4.999380
+  //   bulk moved to node 0       ngspice V(VDD) = 3.36e-19   <- our old answer
+  //   bulk at 5 V, IS = 1e-30    ngspice V(VDD) = 5.000000   <- pure GMIN tie
+  //
+  // The junction's own forward drop is the 0.62 mV, and its ABSENCE was the
+  // whole 5 V. 6 of the 24 remaining numeric disagreements in the full
+  // 12,471-deck corpus are this one shape.
+  //
+  // The bulk node here IS the source node, so the drain junction is stamped
+  // between `idxS` and `idxD` and sees -Vds: for an n-channel the bulk is
+  // p-type and the junction runs bulk->drain, so its forward voltage is
+  // V(source) - V(drain) = -Vds; for a p-channel every sign is already stored
+  // inverted, so it is -Vds there too. One expression, both channel types --
+  // the same coincidence the grounded-bulk case relies on.
+  if (part.params?.bulkOnSource) {
+    if (idxS === undefined || idxD === undefined || !mosVds) return;
+    const vds = mosVds.get(part.id) ?? 0;
+    const { gEq, iEq } = mosBulkJunction(-vds, part.params);
+    const nodeIsCathode = part.kind === 'nmos' ? 1 : -1;
+    A.add(idxD, idxD, gEq);
+    A.add(idxS, idxS, gEq);
+    A.add(idxD, idxS, -gEq);
+    A.add(idxS, idxD, -gEq);
+    b[idxD] += nodeIsCathode * iEq;
+    b[idxS] -= nodeIsCathode * iEq;
+    return;
+  }
   if (!part.params?.bulkAtGround) return;
   if (!mosVsb || !mosVdb) return;
   const idxB = groundNetId !== undefined && groundNetId !== null
@@ -3741,7 +3780,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 
   const vgs = diodeVoltages.get(part.id) ?? 0;
 
-  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb);
+  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds);
 
   if (region === 'triode') {
     // THE LEVEL-1 LINEAR REGION, WITH ITS SECOND TERM.
@@ -3848,7 +3887,7 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   // For PMOS: Vsg > |Vth| to turn on
   const vsg = diodeVoltages.get(part.id) ?? 0;
 
-  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb);
+  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds);
 
   if (region === 'triode') {
     // The level-1 linear region with its second term — see the NMOS note.
