@@ -634,6 +634,7 @@ export class BoardImpl {
   setNetlist(parts, nets) {
     this._ledFanout = undefined; // netlist changed: recompute the fan-out memo
     this._wiperLoaded = undefined; // ditto for the loaded-wiper routing memo
+    this._wiperMcuPins = undefined; // and the MCU pins sitting on a wiper net
     this._qualCache = new Map(); // qualified-pin resolutions are per-netlist
     this._pinNetCache = new Map(); // pin -> net id (per-netlist, see _pinVoltage)
     this._mcuSurface = undefined;
@@ -3479,10 +3480,41 @@ export class BoardImpl {
     // KCL at the wiper by exactly what the load draws (measured: a 10 kΩ
     // pot at 50 % feeding 220 Ω + LED read 2.5000 V while sourcing
     // 2.174 mA from nowhere; found by the examples owner's KCL residual
-    // check, 2026-08-23). An MCU input is high-Z and does not load;
-    // anything else on the wiper net does.
+    // check, 2026-08-23).
+    //
+    // AN MCU *INPUT* IS HIGH-Z. AN MCU *OUTPUT* IS 25 OHMS, AND THIS EXEMPTED
+    // THE PART RATHER THAN THE MODE.
+    //
+    // The test was `other.kind !== 'mcu'`, which is a claim about a part where
+    // the thing that matters is a claim about a pin: a push-pull pin, an
+    // open-drain pin driving low, and both input-pullup and input-pulldown all
+    // LOAD the wiper. Only a plain input does not. So the walker answered for a
+    // pot whose wiper was being driven, and `_solvePot` returns the UNLOADED
+    // midpoint.
+    //
+    // Measured on the gallery topology {vcc, pot 10k, mcu} with the wiper on
+    // P1.3, the pin push-pull high:
+    //
+    //   engine                       2.500000 V   (the bare midpoint)
+    //   ngspice                      4.975248 V
+    //   (5/25 + 5/5000)/(1/25 + 1/5000 + 1/5000) = 4.975248 V   analytic
+    //
+    // 2.48 V out, and it accounted for 11 of the 47 remaining disagreements in
+    // the 2,163-circuit gallery sweep -- every one of them an `analogRead`
+    // example on a board kind whose GPIO is a bare `mcu`. The same circuit
+    // passes on every dev-board kind, because those are not `kind === 'mcu'`
+    // and so were never exempted.
+    //
+    // `pinThevenin` is asked rather than a mode list restated here: it already
+    // returns the string 'high-z' for exactly the modes that do not load, and a
+    // second copy of that rule is how the two would drift apart.
+    //
+    // The topological half is still memoised; the MODE half cannot be, because
+    // it changes on every `setPin`. So the pins are collected once and their
+    // modes consulted per call.
     if (this._wiperLoaded === undefined) {
       this._wiperLoaded = false;
+      this._wiperMcuPins = [];
       for (const p of this.parts) {
         if (p.kind !== 'potentiometer') continue;
         const wnetId = this._netForTerminal(p.id, 'wiper');
@@ -3492,12 +3524,21 @@ export class BoardImpl {
         for (const t of wnet.terminals) {
           if (t.part === p.id) continue;
           const other = this.partMap.get(t.part);
-          if (other && other.kind !== 'mcu') { this._wiperLoaded = true; break; }
+          if (!other) continue;
+          if (other.kind === 'mcu') this._wiperMcuPins.push(String(t.terminal).toLowerCase());
+          else { this._wiperLoaded = true; break; }
         }
         if (this._wiperLoaded) break;
       }
     }
     if (this._wiperLoaded) return true;
+    for (const pin of this._wiperMcuPins ?? []) {
+      const ps = this.pinStates.get(pin);
+      if (!ps) continue;                       // never driven: still high-Z
+      let th;
+      try { th = pinThevenin(ps.mode, ps.driveHigh, this.vcc); } catch { return true; }
+      if (th !== 'high-z') return true;        // a driven pin loads the wiper
+    }
     // Shared-LED fan-out is beyond the walker's vocabulary: _solveLedChain
     // traces each LED's series path INDEPENDENTLY, so two LEDs sharing a
     // net (a multiplexed display's segment bus, a charlieplexed pair)
