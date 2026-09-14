@@ -1,5 +1,15 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-14 ACTIVE — root Codex: current-contract convergence, isolated worktree
+`/mnt/volume1/code/wt/bwb-current-contract-root`, branch `lane/current-contract-root`.
+Owns mixed-kind MNA extraction, public-current/cache consistency and affected
+engine consumers; integrates bwlang `4ec189e` corrections with waveform master.
+Raw/public terminal currents become positive out of part; operatingPoint keeps
+its explicit positive-into-terminal API via one exhaustive boundary conversion.
+James owns independent net-KCL/oracle acceptance; Zeno audits downstream signed
+consumers and remains the guarded CI reader. Waveform numerical promotion paused.
+No blind sign changes to storage histories, LED clamps, DRC or sweep consumers.
+
 2026-09-14 The MOSFET was two numerical conveniences, not a model — lego-ac.
 
 Found by pointing the oracle at a FOREIGN corpus for the first time (ADI2005
