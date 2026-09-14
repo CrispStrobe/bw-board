@@ -1,4 +1,9 @@
 /**
+ * Current contract: raw currents uniformly OUT, operatingPoint explicitly
+ * INTO. The following historical diagnosis explains the former extraction
+ * defect. The initializer's OP terminal-a read was correct throughout; its
+ * cache conversion and the public extraction were the broken boundaries.
+ *
  * ONE SIGN CONVENTION FOR BRANCH CURRENTS, AND NET-LEVEL KCL PROVES IT.
  *
  * `branchCurrent(part, terminal)` is OUT-OF-PART POSITIVE — positive means

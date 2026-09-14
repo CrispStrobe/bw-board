@@ -1,4 +1,10 @@
 /**
+ * CURRENT CONTRACT: every tested kind must satisfy shared-net KCL. The empty
+ * violating set below is deliberate; the historical diagnosis below records
+ * the pre-convergence failure, NOT the current engine's behavior.
+ *
+ * Historical diagnosis (before terminal-current-contract convergence):
+ *
  * WHICH PRIMITIVES AGREE WITH A RESISTOR ABOUT THE SIGN OF A SHARED WIRE.
  *
  * `branchCurrent()` IS NOT ONE CONVENTION. The extraction in `solveMNA` is
@@ -66,7 +72,7 @@ const SUBJECTS = [
   ['vsource', 'pos', 'neg', { volts: 2 }],
 ];
 
-/** Kinds whose terminal sign DISAGREES with a resistor's, as measured today. */
+/** No primitive may disagree with the shared out-of-part convention. */
 const VIOLATES_KCL = new Set();
 
 function seriesWithResistor(kind, tHigh, tLow, params) {
