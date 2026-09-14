@@ -3028,6 +3028,51 @@ export class BoardImpl {
    * @param {string} [testNodeB] - inject test current to this net
    * @param {number} [testCurrent] - test current magnitude
    */
+  /**
+   * The node voltages of a DC BIAS POINT: capacitors open, inductors short.
+   *
+   * NOT a second operating-point API. `operatingPoint()` is a strict, narrow,
+   * refuse-by-name contract over static R/C/L/V/I, explicit Shockley diodes and
+   * ideal controlled sources, and it is right to refuse everything else. This is
+   * the ordinary solve with ONE question changed, for callers that already
+   * accept the ordinary solve's domain -- transistors included -- and need the
+   * bias point rather than the instant.
+   *
+   * WHY IT HAS TO EXIST. `_solveMNA` always passes `capVoltages`, because an
+   * instrument must see the circuit as it is at `timeNs`: a half-charged
+   * capacitor pins its nets at its stored voltage. At t = 0 every capacitor is
+   * uncharged, so it pins its two nets EQUAL -- a short. That is correct for an
+   * instrument and wrong for `.op`, and there was no way to ask for the other
+   * answer.
+   *
+   * NON-MUTATING, and the word is load-bearing. It touches no cached solve, no
+   * `capVoltages`, no `nodeVoltages`, no device state, and it does not advance
+   * time. Two callers reading a board in two different ways must not be able to
+   * change what the other sees.
+   *
+   * Reports its own convergence, because a non-converged solve is an iterate and
+   * not an answer, and a caller that cannot see the difference will publish one
+   * as the other.
+   *
+   * @returns {{converged: boolean, nodeVoltages: Map<string, number>}}
+   */
+  biasPointVoltages() {
+    this._syncDeviceGpioDrives();
+    const res = solveMNA(this._solveParts, this._solveNets, this._pinSources(),
+      this.controls, this.vcc, {
+        powerOff: false,
+        temperatureC: this.temperatureC,
+        capacitorsOpen: true,
+        tSeconds: Number(this.timeNs) / 1e9,
+        deviceStates: this._deviceStates,
+        qualifiedSources: this._qualifiedSources(),
+      });
+    return {
+      converged: res.converged !== false,
+      nodeVoltages: new Map(res.nodeVoltages),
+    };
+  }
+
   _solveMNA(powerOff, testNodeA, testNodeB, testCurrent) {
     this._syncDeviceGpioDrives();
     return solveMNA(this._solveParts, this._solveNets, this._pinSources(), this.controls, this.vcc, {

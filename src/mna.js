@@ -1049,7 +1049,30 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   benchTemperatureC = opts.temperatureC ?? 25;
   tempVfShiftV = (benchTemperatureC - 25) * -0.002;
   const transient = opts.transient ?? null;
-  const capVoltagesIn = transient ? transient.capVoltages : opts.capVoltages;
+  // A BIAS POINT AND AN INSTANT ARE DIFFERENT QUESTIONS, AND ONLY ONE WAS
+  // REACHABLE.
+  //
+  // Outside a transient this solver already has both answers for a capacitor:
+  // with `capVoltages` it holds the stored voltage as a source row (which for
+  // an UNCHARGED capacitor is 0 V, i.e. a SHORT between its two nets), and
+  // without it the capacitor is an OPEN, which is what `.op` means by one.
+  // `BoardImpl._solveMNA` always passes `capVoltages`, correctly, because an
+  // instrument must see the circuit as it is at `timeNs`. The consequence was
+  // that no caller could ask for the other answer at all.
+  //
+  // It is not a hypothetical gap. ADI2005 v3 row 69, a two-stage
+  // Miller-compensated op-amp: the 3 pF between COMP and OUT pinned the
+  // compensation node to the output, both read 1.792744 V, and ngspice has COMP
+  // at 2.298037 V with OUT on the -3.3 V rail because the output PMOS ends 2 mV
+  // into cutoff. A 5.09 V disagreement from one capacitor being the wrong
+  // element.
+  //
+  // `capacitorsOpen` selects the branch explicitly rather than by the absence
+  // of an argument, so a caller states which question it is asking. It changes
+  // nothing by default, and it is ignored inside a transient, where the
+  // companion model is the only correct answer.
+  const capVoltagesIn = transient ? transient.capVoltages
+    : (opts.capacitorsOpen ? null : opts.capVoltages);
   // Every node gets a tiny conductance to the reference (gmin). This keeps a
   // floating net (e.g. behind a DC-open capacitor or an off transistor) from
   // making the matrix singular — which used to be caught silently and returned
