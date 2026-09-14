@@ -1251,6 +1251,7 @@ export class BoardImpl {
   transientAnalysisStatus() {
     return {
       profile: Object.freeze({ ...this._transientAnalysisProfile }),
+      integrationMode: this._transientIntegrationMode(),
       accuracyMet: this._transientAnalysisWork.advances > 0
         ? this._transientAccuracyUnmet === null : null,
       failure: this._transientAccuracyUnmet ? Object.freeze({ ...this._transientAccuracyUnmet }) : null,
@@ -3666,6 +3667,24 @@ export class BoardImpl {
     return false;
   }
 
+  /**
+   * Current transient execution mode. A network with no storage, scheduled
+   * device state, shift-register state, or scope time grid has no history to
+   * integrate: its value at t depends only on the sources at t. Such a board
+   * can solve each requested endpoint directly. Opening a scope deliberately
+   * leaves it on the adaptive path because scope buckets require intermediate
+   * samples, not merely the final endpoint.
+   *
+   * @returns {'algebraic-direct'|'adaptive'}
+   */
+  _transientIntegrationMode() {
+    return !this._hasReactive()
+      && this._deviceStates.size === 0
+      && this._shiftRegisters.size === 0
+      && this._scopeChannels.size === 0
+      ? 'algebraic-direct' : 'adaptive';
+  }
+
   /** Any source whose value moves with time? */
   _hasTimeVaryingSource() {
     for (const p of this.parts) {
@@ -4001,6 +4020,24 @@ export class BoardImpl {
         }
       }
     };
+
+    // No capacitor/inductor/device history and no scope grid means this is a
+    // sequence of independent algebraic operating points. Adaptive stepping
+    // used to solve every 100 us even when callers requested only 101 values
+    // over six seconds (the measured 28-source Fourier case: at least 60,000
+    // accepted steps and three MNA solves per step). One endpoint solve is
+    // exact for this domain because no state is reused across time. This is
+    // intentionally disabled by a scope: its intermediate buckets are
+    // observable and still require the existing time grid.
+    if (this._transientIntegrationMode() === 'algebraic-direct') {
+      attempts = 1;
+      // Keep the established first-step diagnostic stage (`be`). With no
+      // storage, BE and trapezoidal stamp the identical algebraic system.
+      const direct = solveStep(t0, dtSec, 'be', cv, il, cc, lv);
+      t = tEnd;
+      accept(direct, t);
+      trapReady = true;
+    }
 
     while (t < tEnd - 1e-15 && attempts < MAX_ATTEMPTS) {
       attempts++;
