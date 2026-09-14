@@ -2117,12 +2117,13 @@ export class BoardImpl {
   }
 
   /**
-   * Adopt the strict source-on DC operating point as the initial state of a
+   * Adopt the strict source-on time-zero operating point as the initial state of a
    * fresh non-UIC transient.  This is intentionally a separate operation from
    * `operatingPoint()`: the latter is observational, while this method commits
    * capacitor voltage and ideal-inductor current atomically at time zero.
    *
-   * The accepted device/source domain is exactly `operatingPoint()`'s domain.
+   * The accepted device/source domain is exactly `operatingPoint()`'s domain;
+   * waveform sources use their transient t=0 value, not a separate DC value.
    * Explicit initial-condition fields are not interpreted here; callers must
    * refuse them instead of combining them with the source-declared bias.
    *
@@ -2151,7 +2152,7 @@ export class BoardImpl {
     // operatingPoint() is independently mutation-tested.  Everything below is
     // prospective until all required storage values have been validated, so a
     // refusal cannot leave a half-biased transient behind.
-    const point = this.operatingPoint({ waveformDcBias: true });
+    const point = this.operatingPoint({ waveformBias: 'time-zero' });
     if (point.converged !== true) {
       throw new Error('initializeTransientFromOperatingPoint: DC operating point did not converge');
     }
@@ -2217,7 +2218,10 @@ export class BoardImpl {
    * an instantaneous read: capacitors are open, independent of stored charge.
    * Positive current means current INTO the named part terminal.
    */
-  operatingPoint({ waveformDcBias = false } = {}) {
+  operatingPoint({ waveformBias = 'refuse' } = {}) {
+    if (!['refuse', 'dc-value', 'time-zero'].includes(waveformBias)) {
+      throw new Error(`operatingPoint: unknown waveform bias mode ${waveformBias}`);
+    }
     if (!this.powered) {
       throw new Error('operatingPoint: the board is powered off; a source-on DC point was not computed');
     }
@@ -2229,11 +2233,13 @@ export class BoardImpl {
       }
       if (part.kind === 'vsource' || part.kind === 'isource') {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
-        if (wave !== 'dc' && !waveformDcBias) {
+        if (wave !== 'dc' && waveformBias === 'refuse') {
           throw new Error(`operatingPoint: unsupported time-varying source ${part.id} (${wave}); `
             + 'no waveform sample is silently treated as DC');
         }
-        if (wave !== 'dc') sourceDcValue(part, part.kind === 'isource' ? 0.001 : this.vcc);
+        if (wave !== 'dc' && waveformBias === 'dc-value') {
+          sourceDcValue(part, part.kind === 'isource' ? 0.001 : this.vcc);
+        }
       }
       if (part.kind === 'vsource') {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
@@ -2245,7 +2251,8 @@ export class BoardImpl {
         const negNet = this._netForTerminal(part.id, 'neg');
         const volts = this.controls.has(part.id)
           ? Number(this.controls.get(part.id))
-          : Number(waveformDcBias ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
+          : Number(waveformBias === 'dc-value'
+            ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
         const internalOhms = Number(part.params?.rInternal) || 0;
         if (internalOhms <= 0 && posNet !== undefined && posNet === negNet && volts !== 0) {
           throw new Error(`operatingPoint: inconsistent ideal voltage constraint ${part.id}; `
@@ -2349,9 +2356,10 @@ export class BoardImpl {
         const wave = String(part.params?.wave ?? 'dc').toLowerCase();
         const volts = this.controls.has(part.id)
           ? Number(this.controls.get(part.id))
-          : Number(waveformDcBias ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
+          : Number(waveformBias === 'dc-value'
+            ? sourceDcValue(part, this.vcc) : sourceVoltage(part, 0, this.vcc));
         const internalOhms = Number(part.params?.rInternal) || 0;
-        if ((!waveformDcBias && wave !== 'dc') || volts !== 0 || internalOhms > 0) continue;
+        if ((waveformBias === 'refuse' && wave !== 'dc') || volts !== 0 || internalOhms > 0) continue;
         terminals = ['pos', 'neg'];
       } else {
         continue;
@@ -2394,7 +2402,7 @@ export class BoardImpl {
       controls: new Map(this.controls),
       deviceStates: new Map(),
       tSeconds: 0,
-      dcSources: waveformDcBias,
+      dcSources: waveformBias === 'dc-value',
     });
     return {
       analysis: {
@@ -2402,7 +2410,8 @@ export class BoardImpl {
         scope: 'grounded-static-native-r-c-l-d-v-i-e-g-exact-ideal-l-explicit-shockley-d',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
-        sources: waveformDcBias ? 'explicit-waveform-dcValue-bias' : 'fixed-dc-only',
+        sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
+          : waveformBias === 'time-zero' ? 'waveform-time-zero-bias' : 'fixed-dc-only',
         controlledSources: 'ideal-explicit-finite-parameters-only',
         inductors: 'exact-ideal-dc-short-explicit-henrys',
         diodes: {

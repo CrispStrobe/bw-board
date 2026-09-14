@@ -75,12 +75,13 @@ test('non-UIC initialization adopts signed RCL bias and stays numerically aligne
   }
 });
 
-test('initializer failure is atomic for advanced, precharged, explicit-IC and waveform states', () => {
+test('initializer failure is atomic for advanced, precharged, explicit-IC and malformed waveform states', () => {
   const cases = [
     board => board.advanceTo(1n),
     board => board.capVoltages.set('C1', 1),
     board => { board._solveParts.find(part => part.id === 'C1').params.ic = 1; },
-    board => { const source = board._solveParts.find(part => part.id === 'V1'); source.params.wave = 'sine'; source.params.amplitude = 1; source.params.frequency = 1000; },
+    board => { const source = board._solveParts.find(part => part.id === 'V1');
+      source.params.wave = 'spice-pwl'; source.params.points = [[0, 1]]; },
   ];
   for (const arrange of cases) {
     const board = rcl(); arrange(board); const before = state(board);

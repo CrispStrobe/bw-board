@@ -90,13 +90,15 @@ describe('exact SPICE PWL and EXP source primitives', () => {
     const board = oneSourceBoard('vsource', params, true);
     assert.throws(() => board.operatingPoint(), /unsupported time-varying source/);
     const initialized = board.initializeTransientFromOperatingPoint();
-    assert.ok(Math.abs(initialized.capacitorVoltages.get('C1') - 4) < 1e-8,
-      'the non-UIC state is biased from dcValue, not PWL(t=0)');
-    assert.ok(Math.abs(board.nodeVoltage('src') - 4) < 1e-10);
+    assert.ok(Math.abs(initialized.capacitorVoltages.get('C1') - 1) < 1e-8,
+      'the non-UIC state is biased from PWL(t=0), not the distinct .op dcValue');
+    assert.ok(Math.abs(board.nodeVoltage('src') - 1) < 1e-10);
     assert.equal(sourceVoltage(source('vsource', params), 0, 5), 1);
+    const dc = oneSourceBoard('vsource', params, true).operatingPoint({ waveformBias: 'dc-value' });
+    assert.ok(Math.abs(dc.nodeVoltages.get('src') - 4) < 1e-10);
 
     const missing = oneSourceBoard('vsource', { ...params, dcValue: undefined }, true);
-    assert.throws(() => missing.initializeTransientFromOperatingPoint(), /explicit finite dcValue/);
+    assert.throws(() => missing.operatingPoint({ waveformBias: 'dc-value' }), /explicit finite dcValue/);
   });
 
   it('matches ngspice waveform values at independently selected transient instants', (t) => {
