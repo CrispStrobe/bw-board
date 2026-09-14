@@ -70,7 +70,7 @@ export const I_RATED = 0.020;
 export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'vf', 'rd', 'rs', 'is', 'n', 'vz',              // junctions
     'beta', 'br', 'vbe', 'rceSat',                   // bipolar (br = reverse beta)
-    'vth', 'k', 'kp', 'w', 'l',                      // field-effect
+    'vth', 'k', 'kp', 'w', 'l', 'lambda',            // field-effect (lambda = channel-length modulation)
     'ohms', 'farads', 'henries', 'volts', 'amps',    // passives and sources
     'kV', 'contactOhms', 'openOhms'                  // motor back-EMF, relay contacts
 ]));

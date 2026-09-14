@@ -1,5 +1,41 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-14 The MOSFET was two numerical conveniences, not a model — lego-ac.
+
+Found by pointing the oracle at a FOREIGN corpus for the first time (ADI2005
+v3, 12,471 valued decks, 15,587 M elements). Shipped gallery unchanged:
+2,114 of 2,163 before and after, no circuit changed side. Suite 5,396 / 0.
+
+**A 1 kOhm RESISTOR ACROSS EVERY CONDUCTING CHANNEL.** `gds` was a flat
+`0.001 * taper^2`, put there for Newton stability. On an ADI cascode
+(LEVEL=1, VTO=1, KP=1e-4, W/L=20, Vgs=1.8) the channel sources 640 uA and that
+1 kOhm passed 3.4 mA beside it: ngspice 655 uA and V(out) 11.40 V, engine
+4.56 mA and 7.85 V. `mosGds` now returns the MODEL's slope — `LAMBDA * Id`,
+LAMBDA defaulting to SPICE's 0 — over a GMIN-scale floor (`MOS_GDS_FLOOR`
+1e-7 S = 10 MOhm, four orders below the 1 kOhm it replaces).
+
+**AND THE READER LEFT IT OUT.** The saturation extraction returned only the
+VCCS term, so `branchCurrent` did not equal what the solve passed and KCL
+failed AT THE PART: M2's drain read 1.395 mA while the 910 Ohm in series with
+it carried 4.556 mA. Two ammeter positions, two answers.
+
+**THE TRIODE LAW WAS MISSING ITS SECOND TERM.** `gOn = 2K*Vov` is the
+small-Vds limit; the law is `K*(2*Vov*Vds - Vds^2)`, and at the saturation
+boundary the dropped term is HALF the current. At Vov = 0.35 V into 36k the
+engine passed 240 uA against 125, and the collapsed drain then held the device
+in triode so it never recovered — a wrong model that also picks the wrong
+region. Now the full law, with `Vds` as a second Newton variable (the same
+shape as the BJT's second junction) and clamped at the boundary, so triode and
+saturation MEET at `Vds = Vov` instead of stepping.
+
+`lambda` joins the electrical schema. Channel-length modulation needs no extra
+state: level-1 saturation is LINEAR in Vds, so `lambda * Id` stamped as the
+drain-source conductance reproduces `Id*(1 + LAMBDA*Vds)` exactly.
+
+On the cascode bench, cumulative: V(out) 0.0188 V -> 11.4037 V against
+ngspice's 11.40361, and V(casc) 4.8032 against 4.803472.
+
+
 2026-09-14 Full Ebers-Moll for the BJT, and the generic PNP — LANDED, lego-ac.
 
 **`stampNPN` and `stampPNP` now reach an exponential path.** Not a translated

@@ -357,6 +357,44 @@ export const JUNCTION_I_RATED = 0.020;
  *
  * An explicit `k` still wins: somebody who lumped it themselves meant it.
  */
+/**
+ * The numerical floor under a conducting channel's output conductance.
+ *
+ * 1e-7 S is 10 MOhm: four orders below the 1 kOhm it replaces, so it cannot
+ * move an operating point a meter would read, and still large enough to keep a
+ * drain node from being carried only by GMIN while the VCCS is linearised.
+ */
+export const MOS_GDS_FLOOR = 1e-7;
+
+/**
+ * A SATURATED MOSFET'S OUTPUT CONDUCTANCE, FROM THE MODEL AND NOT FROM A
+ * NUMERICAL CONVENIENCE.
+ *
+ * This was a flat `0.001 * taper^2` — a 1 kOhm resistor across every conducting
+ * channel, put there for Newton stability. It is not a small correction. On the
+ * ADI cascode bench (LEVEL=1, VTO=1, KP=1e-4, W/L=20, Vgs=1.8) the channel
+ * sources 640 uA and that 1 kOhm passed 3.4 mA beside it:
+ *
+ *     ngspice   Id 655 uA,  V(out) 11.40 V
+ *     engine    Id 4.56 mA, V(out)  7.85 V
+ *
+ * SPICE's level-1 saturation slope is `LAMBDA * Id`, and LAMBDA DEFAULTS TO 0 —
+ * an ideal current source. So the model's answer is "no output conductance
+ * unless the deck states one", and a deck that states LAMBDA gets it. The
+ * numerical floor stays, at the GMIN scale rather than three orders above it,
+ * and the taper still carries the sub-threshold leak so a cut-off drain is not
+ * left floating.
+ *
+ * @param {object} params  the part's params (`lambda`, optional)
+ * @param {number} id0     the channel current at the expansion point
+ * @param {number} taper   0 at cutoff, 1 fully conducting
+ */
+export function mosGds(params, id0, taper) {
+  const lambda = Number(params?.lambda ?? 0);
+  const model = Number.isFinite(lambda) && lambda > 0 ? lambda * Math.abs(id0) : 0;
+  return (model + MOS_GDS_FLOOR) * taper * taper + 1e-9;
+}
+
 export function mosK(params = {}) {
   if (params.k !== undefined) return params.k;
   const {kp, w, l} = params;
@@ -1157,6 +1195,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // second one stops being a function of the first.
   /** @type {Map<string, number>} */
   const bjtVbc = new Map();
+  // TRIODE NEEDS Vds AS WELL AS Vgs. The level-1 linear-region current is
+  // `k*(2*Vov*Vds - Vds^2)`, quadratic in Vds, so one Newton variable is not
+  // enough — the same shape as the BJT's second junction. `diodeVoltages`
+  // holds Vgs (nmos) / Vsg (pmos); this holds Vds (nmos) / Vsd (pmos).
+  /** @type {Map<string, number>} */
+  const mosVds = new Map();
   const mosRegions = new Map();
   /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
   const vccsClamps = new Map();
@@ -1168,6 +1212,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if ((part.kind === 'npn' || part.kind === 'pnp') && ebersMollParams(part)) {
         bjtVbc.set(part.id, 0);
       }
+      if (part.kind === 'nmos' || part.kind === 'pmos') mosVds.set(part.id, 0);
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
     if (part.kind === 'vcvs' && (part.params?.railLow !== undefined
@@ -1414,11 +1459,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'nmos':
-          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id));
+          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds);
           break;
 
         case 'pmos':
-          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id));
+          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds);
           break;
 
         case 'opamp':
@@ -1648,6 +1693,23 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const cathodeIdx = cathodeNet ? nodeIndex.get(cathodeNet) : undefined;
         vNew = (anodeIdx !== undefined ? solution[anodeIdx] : 0) -
                (cathodeIdx !== undefined ? solution[cathodeIdx] : 0);
+      }
+
+      // TRIODE'S SECOND VARIABLE. Tracked for every MOSFET, so a device that
+      // enters the linear region mid-solve already has a state to linearise
+      // about rather than starting from zero on the iteration it switches.
+      if (mosVds.has(part.id)) {
+        const netD3 = findNet(nets, part.id, 'drain');
+        const netS3 = findNet(nets, part.id, 'source');
+        const iD3 = netD3 ? nodeIndex.get(netD3) : undefined;
+        const iS3 = netS3 ? nodeIndex.get(netS3) : undefined;
+        const vD3 = iD3 !== undefined ? solution[iD3] : 0;
+        const vS3 = iS3 !== undefined ? solution[iS3] : 0;
+        const vNew3 = part.kind === 'nmos' ? (vD3 - vS3) : (vS3 - vD3);
+        const vOld3 = mosVds.get(part.id) ?? 0;
+        maxDelta = Math.max(maxDelta, Math.abs(vNew3 - vOld3));
+        mosVds.set(part.id,
+          vOld3 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, vNew3 - vOld3)));
       }
 
       // SECOND JUNCTION, EBERS-MOLL ONLY. Vbc (npn) / Vcb (pnp) is an
@@ -2240,18 +2302,40 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // the current is gOn·vds (the BJT saturation lesson, again: the
       // extraction must read the same element the solve stamped).
       const inTriode = mosRegions.get(part.id) === 'triode';
+      // THE OUTPUT CONDUCTANCE IS PART OF THE BRANCH, AND THE READER LEFT IT OUT.
+      //
+      // In saturation the stamp puts `gds` across drain-source beside the VCCS,
+      // and this reader returned only the VCCS term — so `branchCurrent` did not
+      // equal what the solve passed and KCL failed AT THE PART. Measured on the
+      // ADI cascode bench before `mosGds` shrank it: M2's drain read 1.395 mA
+      // while the 910 Ohm in series with it carried 4.556 mA. A learner putting
+      // an ammeter in either lead gets two different answers, which is the
+      // defect class this engine keeps closing — the reader must describe the
+      // element the solve stamped.
+      let vov = 0;
       if (part.kind === 'nmos') {
         const vgs = vG - vS;
         const [vovS] = smoothVov(vgs - vth);
+        vov = vovS;
+        // Same law the stamp uses, at the same operating point.
+        const vdsE = Math.min(Math.max(vD - vS, 0), Math.max(vovS, 0));
         id = inTriode
-          ? 2 * k * Math.max(vovS, 0.05) * (vD - vS)   // must match stampNMOS
+          ? k * (2 * vovS * vdsE - vdsE * vdsE)        // must match stampNMOS
           : k * vovS * vovS;
       } else {
         const vsg = vS - vG;
         const [vovS] = smoothVov(vsg - Math.abs(vth));
+        vov = vovS;
+        const vsdE = Math.min(Math.max(vS - vD, 0), Math.max(vovS, 0));
         id = inTriode
-          ? 2 * k * Math.max(vovS, 0.05) * (vS - vD)   // must match stampPMOS
+          ? k * (2 * vovS * vsdE - vsdE * vsdE)        // must match stampPMOS
           : k * vovS * vovS;
+      }
+      if (!inTriode) {
+        // Same expression as the stamp, at the same operating point.
+        const taper = vov / (vov + MOS_SMOOTH_DELTA);
+        const gds = mosGds(part.params, id, taper);
+        id += gds * (part.kind === 'nmos' ? (vD - vS) : (vS - vD));
       }
       currents.set('drain', part.kind === 'nmos' ? id : -id);
       currents.set('source', part.kind === 'nmos' ? -id : id);
@@ -3248,7 +3332,7 @@ function smoothVov(vov) {
   return [0.5 * (vov + r), 0.5 * (1 + vov / r)];
 }
 
-function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation') {
+function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds) {
   const vth = /** @type {number} */ (part.params.vth ?? 2.0);
   const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
@@ -3263,18 +3347,45 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   const vgs = diodeVoltages.get(part.id) ?? 0;
 
   if (region === 'triode') {
-    // Fully-enhanced switch with small vds: the channel is a resistor,
-    // Rds(on) ≈ 1/(2K·Vov). Without this region the saturation VCCS
-    // demanded K·Vov² amps through any load and the drain ran away to
-    // -2247 V (sweep escalation 2026-08-15) — the NPN lesson, again.
-    const [vovS] = smoothVov(vgs - vth);
-    const gOn = 2 * k * Math.max(vovS, 0.05);
-    if (idxD !== undefined) A.add(idxD, idxD, gOn);
-    if (idxS !== undefined) A.add(idxS, idxS, gOn);
+    // THE LEVEL-1 LINEAR REGION, WITH ITS SECOND TERM.
+    //
+    // This was `gOn = 2K*Vov`, a plain resistor — the SMALL-Vds limit of the
+    // triode law with the `-Vds^2` term dropped. That term is not a
+    // refinement: at the saturation boundary, where Vds = Vov, it is half the
+    // current. Measured on an ADI cascode at Vov = 0.35 V, RD = 36k, the
+    // engine passed 240 uA where the deck's own numbers and ngspice give 125,
+    // and the collapsed drain then held the device in triode so it never
+    // recovered — a wrong model that also picks the wrong region.
+    //
+    //   Id  = K*(2*Vov*Vds - Vds^2)
+    //   gds = dId/dVds = 2K*(Vov - Vds)
+    //   gm  = dId/dVgs = 2K*Vds*dVov
+    //
+    // At Vds = Vov this returns K*Vov^2 and gds = 0, which is exactly the
+    // saturation value — so the two regions now meet, and the FSM's hysteresis
+    // is about which side to linearise on, not about a step in the current.
+    const [vovS, dVovS] = smoothVov(vgs - vth);
+    const vds = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
+    // Clamped at the boundary: past Vds = Vov the parabola turns over and
+    // would report a FALLING current, which is what saturation replaces.
+    const vdsEff = Math.min(Math.max(vds, 0), Math.max(vovS, 0));
+    const idTri = k * (2 * vovS * vdsEff - vdsEff * vdsEff);
+    const gds = 2 * k * (vovS - vdsEff) + MOS_GDS_FLOOR;
+    const gm = 2 * k * vdsEff * dVovS;
+    const iEq = idTri - gm * vgs - gds * vds;
+
+    if (idxD !== undefined) A.add(idxD, idxD, gds);
+    if (idxS !== undefined) A.add(idxS, idxS, gds);
     if (idxD !== undefined && idxS !== undefined) {
-      A.add(idxD, idxS, -gOn);
-      A.add(idxS, idxD, -gOn);
+      A.add(idxD, idxS, -gds);
+      A.add(idxS, idxD, -gds);
     }
+    if (idxD !== undefined && idxG !== undefined) A.add(idxD, idxG, gm);
+    if (idxD !== undefined && idxS !== undefined) A.add(idxD, idxS, -gm);
+    if (idxS !== undefined && idxG !== undefined) A.add(idxS, idxG, -gm);
+    if (idxS !== undefined) A.add(idxS, idxS, gm);
+    if (idxD !== undefined) b[idxD] -= iEq;
+    if (idxS !== undefined) b[idxS] += iEq;
   } else {
     // On: Id = K·vov_s². Linearized about the smoothed overdrive:
     // gm = dId/dVgs = 2K·vov_s·(dvov_s/dvov); Norton offset from Id at
@@ -3299,7 +3410,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     // second Newton corner — the branch is gone; this expression IS the
     // cutoff behaviour (gds → the 1 nS leak as vov_s → 0).
     const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
-    const gds = 0.001 * taper * taper + 1e-9;
+    const gds = mosGds(part.params, id0, taper);
     if (idxD !== undefined) A.add(idxD, idxD, gds);
     if (idxS !== undefined) A.add(idxS, idxS, gds);
     if (idxD !== undefined && idxS !== undefined) {
@@ -3310,7 +3421,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 }
 
 /** P-channel MOSFET: mirror of NMOS with reversed gate sense. */
-function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation') {
+function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds) {
   const vth = /** @type {number} */ (part.params.vth ?? -2.0);
   const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
@@ -3326,15 +3437,30 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   const vsg = diodeVoltages.get(part.id) ?? 0;
 
   if (region === 'triode') {
-    // Enhanced switch, small |vds|: channel = Rds(on) ≈ 1/(2K·Vov).
-    const [vovSt] = smoothVov(vsg - Math.abs(vth));
-    const gOn = 2 * k * Math.max(vovSt, 0.05);
-    if (idxD !== undefined) A.add(idxD, idxD, gOn);
-    if (idxS !== undefined) A.add(idxS, idxS, gOn);
+    // The level-1 linear region with its second term — see the NMOS note.
+    // The stored variables are Vsg and Vsd, so every sign is already the
+    // NMOS one and only the terminal roles swap.
+    const [vovSt, dVovSt] = smoothVov(vsg - Math.abs(vth));
+    const vsd = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
+    const vsdEff = Math.min(Math.max(vsd, 0), Math.max(vovSt, 0));
+    const idTri = k * (2 * vovSt * vsdEff - vsdEff * vsdEff);
+    const gds = 2 * k * (vovSt - vsdEff) + MOS_GDS_FLOOR;
+    const gm = 2 * k * vsdEff * dVovSt;
+    const iEq = idTri - gm * vsg - gds * vsd;
+
+    if (idxD !== undefined) A.add(idxD, idxD, gds);
+    if (idxS !== undefined) A.add(idxS, idxS, gds);
     if (idxD !== undefined && idxS !== undefined) {
-      A.add(idxD, idxS, -gOn);
-      A.add(idxS, idxD, -gOn);
+      A.add(idxD, idxS, -gds);
+      A.add(idxS, idxD, -gds);
     }
+    // Source-referenced VCCS, mirrored: current flows S -> D.
+    if (idxS !== undefined && idxS !== undefined) A.add(idxS, idxS, gm);
+    if (idxS !== undefined && idxG !== undefined) A.add(idxS, idxG, -gm);
+    if (idxD !== undefined && idxS !== undefined) A.add(idxD, idxS, -gm);
+    if (idxD !== undefined && idxG !== undefined) A.add(idxD, idxG, gm);
+    if (idxS !== undefined) b[idxS] -= iEq;
+    if (idxD !== undefined) b[idxD] += iEq;
   } else {
     const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth));
     const gm = 2 * k * vovS * dVovS;
@@ -3350,9 +3476,9 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     if (idxS !== undefined) b[idxS] -= iEq;
     if (idxD !== undefined) b[idxD] += iEq;
 
-    // Tapered stability Rds — see the NMOS note.
+    // Output conductance from the model — see the NMOS note and `mosGds`.
     const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
-    const gds = 0.001 * taper * taper + 1e-9;
+    const gds = mosGds(part.params, id0, taper);
     if (idxD !== undefined) A.add(idxD, idxD, gds);
     if (idxS !== undefined) A.add(idxS, idxS, gds);
     if (idxD !== undefined && idxS !== undefined) {
