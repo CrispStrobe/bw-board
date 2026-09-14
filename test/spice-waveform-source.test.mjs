@@ -90,6 +90,8 @@ describe('exact SPICE PWL and EXP source primitives', () => {
     const board = oneSourceBoard('vsource', params, true);
     assert.throws(() => board.operatingPoint(), /unsupported time-varying source/);
     const initialized = board.initializeTransientFromOperatingPoint();
+    assert.equal(initialized.analysis.initialization,
+      'source-declared-waveform-time-zero-operating-point');
     assert.ok(Math.abs(initialized.capacitorVoltages.get('C1') - 1) < 1e-8,
       'the non-UIC state is biased from PWL(t=0), not the distinct .op dcValue');
     assert.ok(Math.abs(board.nodeVoltage('src') - 1) < 1e-10);

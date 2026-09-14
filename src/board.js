@@ -2152,6 +2152,9 @@ export class BoardImpl {
     // operatingPoint() is independently mutation-tested.  Everything below is
     // prospective until all required storage values have been validated, so a
     // refusal cannot leave a half-biased transient behind.
+    const hasTimeVaryingSource = this._solveParts.some(part =>
+      (part.kind === 'vsource' || part.kind === 'isource')
+      && part.params?.wave && part.params.wave !== 'dc');
     const point = this.operatingPoint({ waveformBias: 'time-zero' });
     if (point.converged !== true) {
       throw new Error('initializeTransientFromOperatingPoint: DC operating point did not converge');
@@ -2197,7 +2200,9 @@ export class BoardImpl {
       analysis: {
         ...point.analysis,
         kind: 'non-uic-transient-initialization',
-        initialization: 'source-declared-dc-operating-point',
+        initialization: hasTimeVaryingSource
+          ? 'source-declared-waveform-time-zero-operating-point'
+          : 'source-declared-dc-operating-point',
         storage: 'capacitor-voltage-and-inductor-current',
         integrationRestart: 'backward-euler',
         timeNs: 0n,
