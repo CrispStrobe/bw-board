@@ -4081,6 +4081,17 @@ export class BoardImpl {
         h1.capCurrentsNext ?? cc, h1.inductorVoltagesNext ?? lv);
 
       let err = 0;
+      // The accepted public observables include node voltages, not only the
+      // capacitor-voltage / inductor-current state.
+      // A state-only estimate can look excellent while an inductor voltage
+      // (a derivative of its current) remains measurably outside the requested
+      // local scale. Compare the two endpoint solutions themselves as well as
+      // their stored state so precision profiles control what callers read.
+      for (const [id, vH] of h2.nodeVoltages ?? []) {
+        const vF = full.nodeVoltages?.get(id) ?? 0;
+        const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));
+        err = Math.max(err, Math.abs(vF - vH) / sc);
+      }
       for (const [id, vH] of h2.capVoltagesNext ?? []) {
         const vF = full.capVoltagesNext?.get(id) ?? 0;
         const sc = ABSTOL_V + RELTOL * Math.max(Math.abs(vH), Math.abs(vF));

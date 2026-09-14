@@ -68,3 +68,35 @@ describe('stateless transient execution', () => {
     assert.equal(scoped.transientAnalysisStatus().integrationMode, 'adaptive');
   });
 });
+
+describe('observable-aware transient error control', () => {
+  it('controls an energized RL node voltage, not only its stored current', () => {
+    const board = new BoardImpl(5);
+    board.configureTransientAnalysis('precision-v1');
+    board.setNetlist([
+      { id: 'V1', kind: 'vsource', params: { wave: 'spice-sine', offset: 0,
+        amplitude: 10, freq: 1000, td: 0, theta: 0, phase: 0 }, terminals: ['pos', 'neg'] },
+      { id: 'R1', kind: 'resistor', params: { ohms: 30 }, terminals: ['a', 'b'] },
+      { id: 'L1', kind: 'inductor', params: { henrys: 3e-3 }, terminals: ['a', 'b'] },
+      ground,
+    ], [
+      { id: 'source', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'R1', terminal: 'a' }] },
+      { id: 'out', terminals: [{ part: 'R1', terminal: 'b' }, { part: 'L1', terminal: 'a' }] },
+      { id: '0', terminals: [{ part: 'V1', terminal: 'neg' },
+        { part: 'L1', terminal: 'b' }, { part: 'GND', terminal: 'gnd' }] },
+    ]);
+    board.initializeTransientFromOperatingPoint();
+    for (let ns = 0; ns <= 350_000; ns += 50_000) board.advanceTo(BigInt(ns));
+
+    // Independent closed form for L voltage in a series RL driven from rest.
+    const t = 350e-6; const r = 30; const l = 3e-3; const omega = 2 * Math.PI * 1000;
+    const magnitude = 10 * omega * l / Math.hypot(r, omega * l);
+    const phase = Math.atan(r / (omega * l));
+    const expected = magnitude * Math.sin(omega * t + phase)
+      - magnitude * Math.sin(phase) * Math.exp(-t / (l / r));
+    const tolerance = 1e-6 + 1e-6 * Math.abs(expected);
+    assert.ok(Math.abs(board.nodeVoltage('out') - expected) <= tolerance,
+      `RL output ${board.nodeVoltage('out')} vs closed form ${expected}`);
+    assert.equal(board.transientAnalysisStatus().accuracyMet, true);
+  });
+});
