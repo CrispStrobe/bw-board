@@ -358,13 +358,23 @@ export const JUNCTION_I_RATED = 0.020;
  * An explicit `k` still wins: somebody who lumped it themselves meant it.
  */
 /**
- * The numerical floor under a conducting channel's output conductance.
+ * The numerical floor under a channel's output conductance — at GMIN's scale,
+ * deliberately, and not above it.
  *
- * 1e-7 S is 10 MOhm: four orders below the 1 kOhm it replaces, so it cannot
- * move an operating point a meter would read, and still large enough to keep a
- * drain node from being carried only by GMIN while the VCCS is linearised.
+ * Its only job is to stop an exactly-singular row at the triode/saturation
+ * boundary, where the triode `gds = 2K*(Vov - Vds)` passes through zero. Every
+ * other operating point already has the channel's own conductance holding the
+ * drain.
+ *
+ * It was 1e-7 (10 MOhm), which sounds negligible and is not, because what
+ * matters at CUTOFF is the ratio to GMIN. A drain-source leak ties a floating
+ * node to whatever the other off device touches; GMIN ties it to GROUND, which
+ * is where ngspice puts it. At 1e-7 the leak still out-argued GMIN 15:1 through
+ * the taper and a CMOS NAND's internal node read 0.200 V between two cut-off
+ * NMOS; at GMIN's own scale it reads 0, which is ngspice's answer and the one a
+ * probe on an unconnected node should give.
  */
-export const MOS_GDS_FLOOR = 1e-7;
+export const MOS_GDS_FLOOR = 1e-12;
 
 /**
  * A SATURATED MOSFET'S OUTPUT CONDUCTANCE, FROM THE MODEL AND NOT FROM A
@@ -392,7 +402,17 @@ export const MOS_GDS_FLOOR = 1e-7;
 export function mosGds(params, id0, taper) {
   const lambda = Number(params?.lambda ?? 0);
   const model = Number.isFinite(lambda) && lambda > 0 ? lambda * Math.abs(id0) : 0;
-  return (model + MOS_GDS_FLOOR) * taper * taper + 1e-9;
+  // NO FLAT FLOOR. A cut-off MOSFET conducts nothing, and `solveMNA` already
+  // ties EVERY node to the reference through GMIN — so a flat drain-source
+  // leak is not insurance, it is a second, WRONGER tie: GMIN pulls a floating
+  // node to GROUND, which is where ngspice puts it, while a drain-source leak
+  // pulls it towards whatever the other off device happens to touch.
+  //
+  // Measured on a CMOS NAND with both inputs low, where N1 sits between two
+  // cut-off NMOS: 1 nS on each made it a divider between OUT and ground and it
+  // read 2.410857 V, against ngspice's 0. The taper already carries this to
+  // zero; the flat term was what stopped it arriving.
+  return (model + MOS_GDS_FLOOR) * taper * taper;
 }
 
 export function mosK(params = {}) {

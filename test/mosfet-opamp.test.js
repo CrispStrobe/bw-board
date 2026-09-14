@@ -279,5 +279,18 @@ describe('CMOS gate rail bounds', () => {
   // And the gate does what a NAND does: both inputs low, output high.
   assert.ok(Math.abs(board.nodeVoltage('n_out') - 5) < 0.05,
     `both inputs low must pull OUT to the rail, read ${board.nodeVoltage('n_out')} V`);
+
+  // A NODE BETWEEN TWO CUT-OFF DEVICES BELONGS TO GMIN, NOT TO A LEAK.
+  //
+  // Both NMOS are off here, so n_mid touches nothing that conducts. ngspice
+  // puts such a node at 0, because GMIN is the only thing holding it. Ours put
+  // it at 2.410857 V — a divider between OUT and ground through a flat 1 nS
+  // drain-source leak on each off device — and then at 0.200 V once the flat
+  // term went, because the remaining floor still out-argued GMIN 15 to 1.
+  // A drain-source leak ties a floating node to whatever the other off device
+  // happens to touch; GMIN ties it to ground.
+  assert.ok(Math.abs(board.nodeVoltage('n_mid')) < 1e-3,
+    `a node between two cut-off NMOS reads ${board.nodeVoltage('n_mid')} V; with nothing `
+    + 'conducting it belongs to GMIN, at 0');
   });
 });
