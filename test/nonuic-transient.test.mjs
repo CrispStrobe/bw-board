@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
 
+const NGSPICE = process.env.NGSPICE || 'ngspice';
+
 function rcl(volts = -4, capParams = { farads: 1e-6 }) {
   const board = new BoardImpl();
   board.setNetlist([
@@ -24,7 +26,7 @@ function rcl(volts = -4, capParams = { farads: 1e-6 }) {
 
 function ngspiceFinal(volts) {
   const deck = `* self-authored non-UIC RCL transient\nV1 in 0 ${volts}\nR1 in mid 1k\nC1 mid 0 1u\nR2 mid coil 2k\nL1 coil 0 3m\n.tran 10u 100u\n.print tran v(mid) v(coil) i(l1)\n.end\n`;
-  const result = spawnSync('ngspice', ['-n', '-b'], { input: deck, encoding: 'utf8',
+  const result = spawnSync(NGSPICE, ['-n', '-b'], { input: deck, encoding: 'utf8',
     env: { PATH: process.env.PATH, HOME: process.env.HOME } });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const row = result.stdout.split(/\r?\n/).map(line => line.trim().split(/\s+/))
@@ -53,7 +55,7 @@ function unchanged(board, before) {
 }
 
 test('non-UIC initialization adopts signed RCL bias and stays numerically aligned with ngspice', {
-  skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  skip: spawnSync(NGSPICE, ['--version'], { encoding: 'utf8' }).status !== 0,
 }, () => {
   for (const volts of [-4, 4]) {
     const expected = ngspiceFinal(volts); const board = rcl(volts);
@@ -86,4 +88,3 @@ test('initializer failure is atomic for advanced, precharged, explicit-IC and wa
     unchanged(board, before);
   }
 });
-
