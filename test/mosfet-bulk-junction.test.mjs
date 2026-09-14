@@ -209,3 +209,88 @@ describe('a part with no bulk wiring declared is untouched', () => {
       `and then the three terminals DO conserve: ${three}`);
   });
 });
+
+/**
+ * THE BULK-DRAIN JUNCTION ON ITS OWN.
+ *
+ * The diff pair above exercises the bulk-SOURCE junction; its drains sit at
+ * +14 V, so the drain junction is reverse biased and contributes -1e-14 A.
+ * Deleting the drain junction entirely therefore left every assertion above
+ * green — a mutation that failed to break, which is a check that misses it.
+ *
+ * This bench isolates the other one. Source and bulk are both node 0, so the
+ * bulk-source junction has nothing across it; the drain is pulled to -5 V
+ * through 10k, so the bulk-drain junction is the only thing that can hold it up:
+ *
+ *   * bulk-DRAIN junction alone
+ *   Vneg neg 0 DC -5
+ *   Vg g 0 DC 0
+ *   M1 d g 0 0 NM W=10u L=1u
+ *   Rd d neg 10k
+ *   .model NM NMOS(VTO=1 KP=2.0e-4)
+ *
+ * ngspice: d = -6.33322e-01 V. The junction carries
+ * 1e-14*(e^(0.633322/0.02585) - 1) = 0.436 mA and 10k of that is 4.37 V, which
+ * lifts the drain from -5 V to -0.63 V. The channel takes no part: the gate is
+ * at 0 and the most positive terminal is node 0, so the overdrive is 0.633
+ * against a 1 V threshold.
+ *
+ * THIS BENCH ALSO FOUND A SECOND DEFECT IN THE GATE ITSELF. The flag that
+ * enables the junctions once required the source to be off the bulk as well as
+ * the bulk to be grounded — two different needs conflated. The body effect
+ * does want a source off the bulk; the drain junction does not care, and this
+ * deck, with source and bulk both on node 0, got neither junction and read a
+ * flat -5 V.
+ */
+describe('the bulk-drain junction, isolated', () => {
+  const rig = ({ bulkAtGround }) => {
+    const { parts, nets } = new NetlistBuilder()
+      .vsource('VNEG', -5)
+      .gnd('GND')
+      .nmos('M1', 1.0, 1e-3)          // k = KP/2 * W/L = 1e-4 * 10
+      .resistor('RD', 10000)
+      .wire('VNEG.neg', 'GND.gnd')
+      .wire('M1.gate', 'GND.gnd')
+      .wire('M1.source', 'GND.gnd')
+      .wire('M1.drain', 'RD.a')
+      .wire('RD.b', 'VNEG.pos')
+      .build();
+    if (bulkAtGround) parts.find((p) => p.id === 'M1').params.bulkAtGround = true;
+    const board = new BoardImpl(5);
+    board.setNetlist(parts, nets);
+    const dNet = nets.find((n) =>
+      n.terminals.some((t) => t.part === 'RD' && t.terminal === 'a'));
+    return { board, v: board.nodeVoltage(dNet.id), dNet };
+  };
+
+  it('lifts the drain to ngspice -0.633322 V', () => {
+    const { v } = rig({ bulkAtGround: true });
+    assert.ok(Math.abs(v - (-0.633322)) < 5e-3, `drain ${v} V, ngspice -0.633322 V`);
+  });
+
+  it('and without it the drain sits flat on the rail — a 4.4 V separation', () => {
+    const { v } = rig({ bulkAtGround: false });
+    assert.ok(Math.abs(v - (-5)) < 1e-3,
+      `with no bulk declared the three-terminal answer is the rail, got ${v} V`);
+    const withJ = rig({ bulkAtGround: true }).v;
+    assert.ok(Math.abs(withJ - v) > 4,
+      `the bench must separate by volts: ${withJ} vs ${v}`);
+  });
+
+  it('fires when source and bulk are the SAME node, which the first gate refused', () => {
+    // The regression this pins: `bulkAtGround` must mean "the deck tied the bulk
+    // to the reference" and nothing more. Here the source IS the reference, so a
+    // gate that also demanded a source off the bulk stamped no junction at all.
+    const { board } = rig({ bulkAtGround: true });
+    const iD = board.branchCurrent('M1', 'drain');
+    assert.ok(Math.abs(iD) > 1e-4,
+      `the drain must carry the junction's 0.436 mA, got ${(iD * 1e3).toFixed(4)} mA`);
+  });
+
+  it('net KCL holds at the drain', () => {
+    const { board, dNet } = rig({ bulkAtGround: true });
+    let sum = 0;
+    for (const t of dNet.terminals) sum += board.branchCurrent(t.part, t.terminal);
+    assert.ok(Math.abs(sum) < 1e-7, `KCL at the drain net: ${(sum * 1e3).toFixed(7)} mA`);
+  });
+});
