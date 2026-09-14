@@ -22,6 +22,25 @@ function rcBoard(params, r = 1000, c = 1e-9, profile = null) {
   return board;
 }
 
+function highpassBoard(r, c, profile) {
+  const board = new BoardImpl(5);
+  board.configureTransientAnalysis(profile);
+  board.setNetlist([
+    { id: 'V1', kind: 'vsource', params: { wave: 'spice-pulse', v1: 0, v2: 3,
+      td: 5e-6, tr: 1e-9, tf: 1e-9, pw: 5e-6, per: 10e-6 }, terminals: ['pos', 'neg'] },
+    { id: 'C1', kind: 'capacitor', params: { farads: c }, terminals: ['a', 'b'] },
+    { id: 'R1', kind: 'resistor', params: { ohms: r }, terminals: ['a', 'b'] },
+    ground,
+  ], [
+    { id: 'in', terminals: [{ part: 'V1', terminal: 'pos' }, { part: 'C1', terminal: 'b' }] },
+    { id: 'out', terminals: [{ part: 'C1', terminal: 'a' }, { part: 'R1', terminal: 'a' }] },
+    { id: '0', terminals: [{ part: 'V1', terminal: 'neg' },
+      { part: 'R1', terminal: 'b' }, { part: 'GND', terminal: 'gnd' }] },
+  ]);
+  board.initializeTransientFromOperatingPoint();
+  return board;
+}
+
 // Exact convolution of a piecewise-linear source with a first-order RC.
 function linearRc(v0, u0, slope, dt, tau) {
   return u0 + slope * (dt - tau) + (v0 - u0 + slope * tau) * Math.exp(-dt / tau);
@@ -51,9 +70,9 @@ describe('bounded transient numerical-analysis profile', () => {
       'an untouched board has no measured accuracy result');
     const selected = board.configureTransientAnalysis('precision-v1');
     assert.deepEqual(selected, {
-      id: 'precision-v1', relativeTolerance: 1e-7,
-      absoluteVoltage: 1e-9, absoluteCurrent: 1e-12,
-      minStepSec: 1e-11, seedStepSec: 1e-11,
+      id: 'precision-v1', relativeTolerance: 1e-8,
+      absoluteVoltage: 1e-10, absoluteCurrent: 1e-13,
+      minStepSec: 1e-12, seedStepSec: 1e-12,
       maxStepSec: 1e-5, maxAttempts: 20000,
     });
     assert.equal(Object.isFrozen(selected), true);
@@ -94,6 +113,20 @@ describe('bounded transient numerical-analysis profile', () => {
     assert.ok(Math.abs(board.nodeVoltage('out') - expected) < 1e-6,
       `precision result ${board.nodeVoltage('out')} vs closed-form ${expected}`);
     assert.equal(board.transientAnalysisStatus().accuracyMet, true);
+  });
+
+  it('resolves the three retained narrow-edge high-pass RC families', () => {
+    for (const [r, c] of [[1000, 470e-12], [330, 470e-12], [330, 3.3e-9]]) {
+      const board = highpassBoard(r, c, 'precision-v1');
+      for (let ns = 500; ns <= 5500; ns += 500) board.advanceTo(BigInt(ns));
+      const tau = r * c;
+      const edgeValue = (3 / 1e-9) * tau * (1 - Math.exp(-1e-9 / tau));
+      const expected = edgeValue * Math.exp(-499e-9 / tau);
+      const tolerance = 1e-6 + 1e-6 * Math.abs(expected);
+      assert.ok(Math.abs(board.nodeVoltage('out') - expected) <= tolerance,
+        `R=${r}, C=${c}: ${board.nodeVoltage('out')} vs closed-form ${expected}`);
+      assert.equal(board.transientAnalysisStatus().accuracyMet, true);
+    }
   });
 
   it('marks a source corner at an advance endpoint as a restart boundary', () => {

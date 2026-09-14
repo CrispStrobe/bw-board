@@ -1232,9 +1232,9 @@ export class BoardImpl {
         maxStepSec: 1e-4, maxAttempts: 20000,
       },
       'precision-v1': {
-        id: 'precision-v1', relativeTolerance: 1e-7,
-        absoluteVoltage: 1e-9, absoluteCurrent: 1e-12,
-        minStepSec: 1e-11, seedStepSec: 1e-11,
+        id: 'precision-v1', relativeTolerance: 1e-8,
+        absoluteVoltage: 1e-10, absoluteCurrent: 1e-13,
+        minStepSec: 1e-12, seedStepSec: 1e-12,
         maxStepSec: 1e-5, maxAttempts: 20000,
       },
     };
