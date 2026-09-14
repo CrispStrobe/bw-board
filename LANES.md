@@ -1,5 +1,44 @@
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-14 Full Ebers-Moll for the BJT, and the generic PNP — LANDED, lego-ac.
+
+**`stampNPN` and `stampPNP` now reach an exponential path.** Not a translated
+diode — that was measured and rejected — but full Ebers-Moll in transport form:
+both junctions, a reverse beta, saturation falling out of the model instead of
+being clamped. The same routing switch the diodes use gates it
+(`JUNCTION_ROUTING.mode = 'shockley'` or `params.model`), so **the shipped
+default is the knee and no corpus number moves**. Suite 5,396 / 0.
+
+Measured on the saturated motor bench (5 V, 10 Ohm winding, base from 4.898 V
+through 1k, 2N2222), against ngspice on the deck our own exporter writes:
+
+    model        V(base)     V(collector)
+    ngspice      0.815259    0.147347
+    piecewise    0.741564    0.067245     <- never enters saturation
+    Ebers-Moll   0.814789    0.147254     <- 0.5 mV and 0.1 mV
+
+`test/junction-knee-classes.test.mjs` said the day a BJT reached an exponential
+path it would fail and the decision would get made on purpose. **It did not
+fail**, and that is the second finding: it scanned for three NAMES and
+Ebers-Moll arrived under a fourth. A refusal by name needs the reachable set,
+and nobody has that for a name not yet written. The zener's exclusion is now
+driven rather than scanned, and the BJT's is a stated decision.
+
+**A BARE TRANSISTOR WAS EXPORTED AS A DIFFERENT DEVICE THAN IT WAS SOLVED AS.**
+bw-circuit-ui's symbol table falls back to a NAMED part number for an un-carded
+transistor — `2N2222` for npn, `2N2907` for pnp — and both carry Bf = 200 while
+the solver's default is 100. On `10-motor-speed` the engine put the collector at
+0.912 V (active at Bf = 100) and ngspice at 0.147 V (saturated at Bf = 200): a
+15.8 % split on supply current across 15 circuits, and NOT a model gap. Added
+`Q_DEFAULT_PNP`, the mirror of `Q_DEFAULT`, so an exporter has a generic card to
+resolve to instead of a part number that is not the device on the bench.
+
+`classDefaults` gained `npn`/`pnp`/`tip120` with `is`, `beta`, `br` and `n`.
+`br` (reverse beta) is new and is SPICE's own default of 1 — no card carried
+one, so the choice is stated in the one authority rather than as a literal in
+the stamp.
+
+
 2026-09-13 `deviceCompanions`: a part with no card must not vanish — lego-ac.
 **Corrected the same day after review: it returns `{converged, timeNs, records}`,
 not a bare list, and it is a SNAPSHOT of the board's live solve — not a DC

@@ -525,6 +525,124 @@ export function junctionModelOf(part, headroomV) {
  * out, and 4 mV is what the knee costs.
  */
 
+/**
+ * FULL EBERS-MOLL FOR A BJT — BOTH JUNCTIONS, WITH A REVERSE BETA.
+ *
+ * The comment above says why a single exponential base-emitter junction is
+ * WORSE than the knee it would replace, and names this as the work that is
+ * actually needed. This is that work.
+ *
+ * Transport form, the same one SPICE's Gummel-Poon reduces to when a `.model`
+ * line gives only Is and Bf (NF = NR = 1, BR = 1, no Early effect, no
+ * high-level injection) — which is exactly what every deck we export declares:
+ *
+ *   iF = Is * (exp(Vbe / nVt) - 1)          forward transport
+ *   iR = Is * (exp(Vbc / nVt) - 1)          reverse transport
+ *   Ib = iF/BF + iR/BR
+ *   Ic = iF - iR * (1 + 1/BR)
+ *   Ie = -(Ib + Ic)
+ *
+ * SATURATION FALLS OUT rather than being clamped. Forward-bias the collector
+ * junction and iR grows, taking its share of Ib and pulling Ic down; Vce
+ * settles wherever the two junctions balance. That is what a saturated
+ * transistor IS, and it is why the measured base error was 4.1 mV with the knee
+ * and 69.6 mV with one exponential junction: one junction has to carry all of
+ * Ib, so it reports Vt*ln(Ib*Bf/Is) = 0.770 V where only 0.0285 mA of the
+ * 0.43 mA actually crosses B-E.
+ *
+ * GATED ON THE SAME SWITCH THE DIODES USE, and off by default. The piecewise
+ * BJT is what 2,163 corpus circuits and 5,000 tests are written against, and
+ * `JUNCTION_ROUTING.mode = 'shockley'` (what the oracle sweep sets) or an
+ * explicit `params.model` is how you ask for the exponential one. So this adds
+ * a model rather than replacing one, and no shipped number moves.
+ *
+ * @param {Part} part
+ * @returns {{is: number, nVt: number, bf: number, br: number} | null}
+ *   null when this part is not on the exponential path.
+ */
+function ebersMollParams(part) {
+  const model = part?._junctionModel ?? junctionModelOf(part, undefined);
+  if (model !== 'shockley') return null;
+  const cls = classDefaults(part.kind);
+  // The card is the only home of an electrical value: `is`, `beta` and `br`
+  // come from the part, then from the class table the exporter's `.model` line
+  // is derived from. A literal here would be the LDR defect again — the deck
+  // saying one number and the solve using another.
+  const is = Number(part.params?.is ?? cls.is);
+  const bf = Number(part.params?.beta ?? cls.beta);
+  const br = Number(part.params?.br ?? cls.br);
+  const n = Number(part.params?.n ?? cls.n ?? 1);
+  if (!(is > 0) || !(bf > 0) || !(br > 0) || !(n > 0)) return null;
+  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br };
+}
+
+/**
+ * Linearise Ebers-Moll at a stored (Vbe, Vbc) and return the stamp.
+ *
+ * Signs are for an NPN with currents flowing INTO the device at each terminal.
+ * A PNP is the same device with every junction voltage negated, so the caller
+ * passes (Veb, Vcb) and negates the resulting currents — one model, two stamps.
+ *
+ * @returns {{gpi: number, gmu: number, gcF: number, gcR: number,
+ *            ieqB: number, ieqC: number, ib: number, ic: number}}
+ */
+function ebersMollCompanion(vbe, vbc, p) {
+  const cap = 80 * p.nVt;
+  const expF = Math.exp(Math.min(vbe, cap) / p.nVt);
+  const expR = Math.exp(Math.min(vbc, cap) / p.nVt);
+  const iF = p.is * (expF - 1);
+  const iR = p.is * (expR - 1);
+  // Conductances floored the way shockleyEval floors its own: a reverse-biased
+  // junction has a real but tiny slope, and a hard zero makes the row singular
+  // when a transistor is the only thing on a node.
+  const gF = Math.min(Math.max(p.is * expF / p.nVt, 1e-12), 1e6);
+  const gR = Math.min(Math.max(p.is * expR / p.nVt, 1e-12), 1e6);
+
+  const ib = iF / p.bf + iR / p.br;
+  const ic = iF - iR * (1 + 1 / p.br);
+
+  const gpi = gF / p.bf;              // d Ib / d Vbe
+  const gmu = gR / p.br;              // d Ib / d Vbc
+  const gcF = gF;                     // d Ic / d Vbe
+  const gcR = -gR * (1 + 1 / p.br);   // d Ic / d Vbc
+
+  return {
+    gpi, gmu, gcF, gcR,
+    ieqB: ib - gpi * vbe - gmu * vbc,
+    ieqC: ic - gcF * vbe - gcR * vbc,
+    ib, ic,
+  };
+}
+
+/**
+ * Stamp the linearised Ebers-Moll companion.
+ *
+ * `sign` is +1 for an NPN and -1 for a PNP: the PNP's terminal currents are the
+ * NPN's negated, and its junction voltages were negated on the way in, so one
+ * stamp serves both rather than a transcribed copy that can drift.
+ */
+function stampEbersMoll(A, b, idxB, idxC, idxE, c, sign) {
+  const add = (r, col, v) => { if (r !== undefined && col !== undefined) A.add(r, col, v); };
+  const inj = (r, v) => { if (r !== undefined) b[r] -= sign * v; };
+
+  // Vbe = vB - vE, Vbc = vB - vC.
+  // Row B: +Ib
+  add(idxB, idxB, c.gpi + c.gmu);
+  add(idxB, idxE, -c.gpi);
+  add(idxB, idxC, -c.gmu);
+  inj(idxB, c.ieqB);
+  // Row C: +Ic
+  add(idxC, idxB, c.gcF + c.gcR);
+  add(idxC, idxE, -c.gcF);
+  add(idxC, idxC, -c.gcR);
+  inj(idxC, c.ieqC);
+  // Row E: -(Ib + Ic)
+  add(idxE, idxB, -(c.gpi + c.gmu + c.gcF + c.gcR));
+  add(idxE, idxE, c.gpi + c.gcF);
+  add(idxE, idxC, c.gmu + c.gcR);
+  inj(idxE, -(c.ieqB + c.ieqC));
+}
+
 function junctionOpts(part) {
   // The board resolved this once per solve and stamped it (board.js,
   // setNetlist). Reading the stamp rather than re-deciding is what keeps
@@ -644,13 +762,21 @@ function pnjlim(vnew, vold, nVt, vcrit) {
   return vnew;
 }
 
+/**
+ * SPICE's critical junction voltage: where the exponential's curvature makes an
+ * unlimited Newton step unsafe. One definition, so the diode path and the
+ * Ebers-Moll path cannot pick different ones.
+ */
+function junctionVcrit(is, nVt) {
+  return nVt * Math.log(nVt / (Math.SQRT2 * is));
+}
+
 /** Critical voltage + nVt for a part's junction (Shockley parts only). */
 function junctionLimitParams(part, vf) {
   const opts = junctionOpts(part);
   if (!opts) return null;
   const p = shockleyParams(opts, vf);
-  const vcrit = p.nVt * Math.log(p.nVt / (Math.SQRT2 * p.is));
-  return { nVt: p.nVt, vcrit, p };
+  return { nVt: p.nVt, vcrit: junctionVcrit(p.is, p.nVt), p };
 }
 
 /**
@@ -1025,6 +1151,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   const bjtRegions = new Map();
   /** Per-part Vce(sat), computed from the drive rather than held constant. */
   const bjtVceSat = new Map();
+  // SECOND JUNCTION STATE, for the Ebers-Moll path only. `diodeVoltages` holds
+  // Vbe (npn) / Veb (pnp); this holds Vbc (npn) / Vcb (pnp). Two junctions need
+  // two Newton variables, and the saturated region is precisely where the
+  // second one stops being a function of the first.
+  /** @type {Map<string, number>} */
+  const bjtVbc = new Map();
   const mosRegions = new Map();
   /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
   const vccsClamps = new Map();
@@ -1033,6 +1165,9 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         || part.kind === 'pnp' || part.kind === 'zener'
         || part.kind === 'nmos' || part.kind === 'pmos') {
       diodeVoltages.set(part.id, 0); // initial guess
+      if ((part.kind === 'npn' || part.kind === 'pnp') && ebersMollParams(part)) {
+        bjtVbc.set(part.id, 0);
+      }
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
     if (part.kind === 'vcvs' && (part.params?.railLow !== undefined
@@ -1271,11 +1406,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         }
 
         case 'npn':
-          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id));
+          stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc);
           break;
 
         case 'pnp':
-          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id));
+          stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, bjtRegions.get(part.id), bjtVceSat.get(part.id), bjtVbc);
           break;
 
         case 'nmos':
@@ -1515,6 +1650,27 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
                (cathodeIdx !== undefined ? solution[cathodeIdx] : 0);
       }
 
+      // SECOND JUNCTION, EBERS-MOLL ONLY. Vbc (npn) / Vcb (pnp) is an
+      // independent Newton variable — in saturation it is precisely the one
+      // that stops being a function of Vbe — and it gets the same logarithmic
+      // pull-back, because two exponentials in series-opposition are what a
+      // flat clamp oscillates on.
+      if (bjtVbc.has(part.id)) {
+        const emp = ebersMollParams(part);
+        const netC2 = findNet(nets, part.id, 'collector');
+        const netB2 = findNet(nets, part.id, 'base');
+        const idxC2 = netC2 ? nodeIndex.get(netC2) : undefined;
+        const idxB2 = netB2 ? nodeIndex.get(netB2) : undefined;
+        const vC2 = idxC2 !== undefined ? solution[idxC2] : 0;
+        const vB2 = idxB2 !== undefined ? solution[idxB2] : 0;
+        const vNew2 = part.kind === 'npn' ? (vB2 - vC2) : (vC2 - vB2);
+        const vOld2 = bjtVbc.get(part.id) ?? 0;
+        maxDelta = Math.max(maxDelta, Math.abs(vNew2 - vOld2));
+        bjtVbc.set(part.id, emp
+          ? pnjlim(vNew2, vOld2, emp.nVt, junctionVcrit(emp.is, emp.nVt))
+          : vOld2 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, vNew2 - vOld2)));
+      }
+
       const vOld = diodeVoltages.get(part.id) ?? 0;
 
       // Limited update. Shockley diodes/LEDs get pnjlim — the logarithmic
@@ -1524,10 +1680,17 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // convergence check, so a limited step cannot fake convergence.
       let rawDelta = vNew - vOld;
       let vLimited;
-      const lim = (part.kind === 'led' || part.kind === 'diode')
-        ? junctionLimitParams(part,
-            effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0))))
-        : null;
+      // A BJT on the Ebers-Moll path is an exponential junction like any
+      // other and needs the same limiter; the flat NR_MAX_STEP clamp was
+      // written for the knee, which has no exponential to overshoot.
+      const emLim = bjtVbc.has(part.id) ? ebersMollParams(part) : null;
+      const lim = emLim
+        ? { p: { nVt: emLim.nVt, is: emLim.is, rs: 0 }, nVt: emLim.nVt,
+            vcrit: junctionVcrit(emLim.is, emLim.nVt), noRs: true }
+        : (part.kind === 'led' || part.kind === 'diode')
+          ? junctionLimitParams(part,
+              effVf(/** @type {number} */ (part.params.vf ?? (part.kind === 'diode' ? 0.7 : 2.0))))
+          : null;
       if (lim) {
         // The solve gives TOTAL branch volts; the NR state is the
         // JUNCTION voltage behind rs — recover it, limit it, and drive
@@ -1625,6 +1788,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // BJT region transitions: active ↔ saturated.
     for (const part of parts) {
       if (part.kind !== 'npn' && part.kind !== 'pnp') continue;
+      // Ebers-Moll produces its own saturation, so it takes no region and no
+      // clamp. Running this FSM alongside it would be two answers to one
+      // question, and the clamp — a stiff 10 S conductance — would win.
+      if (bjtVbc.has(part.id)) continue;
       const beta = /** @type {number} */ (part.params.beta ?? 100);
       const vbe = effVf(/** @type {number} */ (part.params.vbe ?? 0.7));
       const vceSat = /** @type {number} */ (part.params.vceSat ?? bjtVceSat.get(part.id) ?? 0.2);
@@ -2007,6 +2174,25 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // set out to remove and which I reintroduced one level down by patching
       // one reader of three.
       const vceSat = /** @type {number} */ (part.params.vceSat ?? bjtVceSat.get(part.id) ?? 0.2);
+
+      // EBERS-MOLL: READ THE MODEL THE STAMP USED.
+      //
+      // Three readers of vceSat once disagreed here and the extraction reported
+      // ic = 0.0000 mA against a 0.39 mA load. Same rule: if the stamp was
+      // Ebers-Moll, the currents are Ebers-Moll's, evaluated at the CONVERGED
+      // junction voltages read back off the node solution — not at the stored
+      // Newton state, which is one limited step behind.
+      const emX = bjtVbc.has(part.id) ? ebersMollParams(part) : null;
+      if (emX) {
+        const vbeX = part.kind === 'npn' ? vB - vE : vE - vB;
+        const vbcX = part.kind === 'npn' ? vB - vC : vC - vB;
+        const c = ebersMollCompanion(vbeX, vbcX, emX);
+        const sgn = part.kind === 'npn' ? 1 : -1;
+        currents.set('base', sgn * c.ib);
+        currents.set('collector', sgn * c.ic);
+        currents.set('emitter', -sgn * (c.ib + c.ic));
+        continue;
+      }
 
       let ib, ic;
       // Same C1 knee the stamp uses — extraction and stamp must agree.
@@ -2811,7 +2997,7 @@ function stampVariableResistor(A, b, part, nets, nodeIndex, groundNetId, control
  * C-E: controlled current source Ic = β × Ib (β from params, default 100).
  * Linearized: Ic = gm × Vbe - Ic0 (Norton companion model).
  */
-function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined) {
+function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10; // base-emitter dynamic resistance
@@ -2826,6 +3012,22 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   const idxB = netB ? nodeIndex.get(netB) : undefined;
   const idxC = netC ? nodeIndex.get(netC) : undefined;
   const idxE = netE ? nodeIndex.get(netE) : undefined;
+
+  // FULL EBERS-MOLL WHEN THE ROUTING ASKS FOR IT.
+  //
+  // Both junctions, with a reverse beta, so saturation falls out of the model
+  // instead of being clamped — and so the base node stops being 4 mV out
+  // against ngspice, which is what the knee costs. See `ebersMollParams`.
+  // The region machinery below is SKIPPED on this path deliberately: a Vce
+  // clamp on top of a model that already produces Vce(sat) would be two
+  // answers to one question, and the clamp would win.
+  const em = ebersMollParams(part);
+  if (em && bjtVbc) {
+    const vbe = diodeVoltages.get(part.id) ?? 0;
+    const vbc = bjtVbc.get(part.id) ?? 0;
+    stampEbersMoll(A, b, idxB, idxC, idxE, ebersMollCompanion(vbe, vbc, em), 1);
+    return;
+  }
 
   // B-E junction: diode model.
   //
@@ -2894,7 +3096,7 @@ function stampNPN(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
  * Stamp a PNP transistor. Mirror of NPN with reversed polarities.
  * Terminals: base, collector, emitter.
  */
-function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined) {
+function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'active', vceSatEff = undefined, bjtVbc) {
   const beta = /** @type {number} */ (part.params.beta ?? 100);
   const vbe = /** @type {number} */ (part.params.vbe ?? 0.7);
   const rd = 10;
@@ -2906,6 +3108,18 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
   const idxB = netB ? nodeIndex.get(netB) : undefined;
   const idxC = netC ? nodeIndex.get(netC) : undefined;
   const idxE = netE ? nodeIndex.get(netE) : undefined;
+
+  // FULL EBERS-MOLL WHEN THE ROUTING ASKS FOR IT — the same model as the NPN,
+  // with every junction voltage negated and the terminal currents with it.
+  // `stampEbersMoll`'s `sign` is the whole of the difference, so the two stamps
+  // cannot drift the way the vceSat readers did.
+  const em = ebersMollParams(part);
+  if (em && bjtVbc) {
+    const veb = diodeVoltages.get(part.id) ?? 0;   // vE - vB, as the loop stores it
+    const vcb = bjtVbc.get(part.id) ?? 0;          // vC - vB
+    stampEbersMoll(A, b, idxB, idxC, idxE, ebersMollCompanion(veb, vcb, em), -1);
+    return;
+  }
 
   // E-B junction: diode (reversed from NPN — emitter is higher)
   // The Newton store already computes vE - vB for pnp (the update loop

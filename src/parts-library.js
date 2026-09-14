@@ -69,7 +69,7 @@ export const I_RATED = 0.020;
  */
 export const ELECTRICAL_FIELDS = Object.freeze(new Set([
     'vf', 'rd', 'rs', 'is', 'n', 'vz',              // junctions
-    'beta', 'vbe', 'rceSat',                         // bipolar
+    'beta', 'br', 'vbe', 'rceSat',                   // bipolar (br = reverse beta)
     'vth', 'k', 'kp', 'w', 'l',                      // field-effect
     'ohms', 'farads', 'henries', 'volts', 'amps',    // passives and sources
     'kV', 'contactOhms', 'openOhms'                  // motor back-EMF, relay contacts
@@ -180,6 +180,28 @@ const CARDS = {
             + 'a decision',
         params: {beta: 100, is: 1e-14, vbe: 0.7}
     },
+    // THE GENERIC PNP, the counterpart of Q_DEFAULT, added because its absence
+    // was measurable. bw-circuit-ui's symbol table falls back to a NAMED part
+    // number for an un-carded transistor — `2N2222` for npn, `2N2907` for pnp —
+    // and both of those carry Bf = 200 while the solver's default for a bare
+    // transistor is 100. So a placed-and-unconfigured transistor was exported
+    // as a device with TWICE the beta it was solved with.
+    //
+    // Measured on `10-motor-speed`: the engine put the collector at 0.912 V
+    // (Ic = beta*Ib = 409 mA, still active at Bf = 100) and ngspice at 0.147 V
+    // (saturated at Bf = 200), a 15.8 % split on supply current across 15
+    // circuits. Not a model gap — the two sides were describing different
+    // transistors, which is what a generic card exists to stop.
+    'Q_DEFAULT_PNP': {
+        id: 'Q_DEFAULT_PNP', kind: 'pnp', generic: true,
+        provenance: "the pnp mirror of Q_DEFAULT: beta 100 is mna.js's default "
+            + 'for a bare transistor of either polarity (`part.params.beta ?? '
+            + '100` in stampNPN and stampPNP alike), and Is 1e-14 matches '
+            + 'Q_DEFAULT. Named rather than inherited so an exporter has one '
+            + 'card to resolve to instead of a part number that is not the '
+            + 'device on the bench.',
+        params: {beta: 100, is: 1e-14, vbe: 0.7}
+    },
     'NMOS_GENERIC': {
         id: 'MOSFET', kind: 'nmos', generic: true,
         provenance: "bw-circuit-ui exporters/spice.js '.model MOSFET NMOS "
@@ -257,6 +279,22 @@ export const classDefaults = kind => ({
     // the device file, which is the shape we keep closing. Same for the relay's
     // contacts: a coil resistance without them describes a relay that cannot
     // switch.
+    // ── BJT EBERS-MOLL PARAMETERS ──
+    //
+    // `is` and `beta` mirror Q_DEFAULT / the generic PNP card, which the
+    // exporter already writes as `.model ... (Bf=100 Is=1e-14)`; they are here
+    // so an UN-CARDED npn solves with the same two numbers the deck declares.
+    // `br` and `n` are new and are SPICE's own defaults (BR=1, NF=NR=1) — an
+    // Ebers-Moll model needs a REVERSE beta and no card carried one, so the
+    // choice is stated here rather than as a literal in the stamp.
+    //
+    // BR = 1 is not a datasheet figure for any real part; it is the value the
+    // reference simulator uses when a `.model` line omits it, which is what
+    // every deck we export does. A card that carries a measured `br` wins.
+    npn:      {is: 1e-14, beta: 100, br: 1, n: 1},
+    pnp:      {is: 1e-14, beta: 100, br: 1, n: 1},
+    tip120:   {is: 1e-14, beta: 1000, br: 1, n: 1},
+
     buzzer:   {ohms: 100},
     dc_motor: {ohms: 10, kV: 0.01},
     relay:    {ohms: 200, contactOhms: 0.1, openOhms: 1e9}

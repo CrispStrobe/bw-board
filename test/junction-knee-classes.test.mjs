@@ -6,12 +6,30 @@
  * BJT `vbe` are deliberately left as knees. Three reasons, each measured, and
  * this file exists so that the exclusion is a decision rather than an oversight:
  *
- * 1. ONE PATH, NOTHING TO AGREE WITH. Only led and diode can reach the
- *    exponential model (board.js gates on `kind === 'led' || kind === 'diode'`;
- *    stampZener, stampNPN and stampPNP hold no reference to it). For led and
- *    diode the correction makes two disagreeing paths agree — that is the whole
- *    argument. For zener and BJT there is no second answer, so the same edit
- *    would be a unilateral behaviour change with nothing to check it against.
+ * 1. ONE PATH, NOTHING TO AGREE WITH — **EXPIRED FOR THE BJT, 2026-09-14, AND
+ *    THE DECISION IS MADE.** This file always said the day a BJT reached an
+ *    exponential path it would fail and the decision would get made on purpose.
+ *    That day came: `stampNPN` and `stampPNP` now reach FULL EBERS-MOLL — both
+ *    junctions with a reverse beta — gated on the same routing switch the
+ *    diodes use. There IS a second answer now, ngspice's, and on the motor
+ *    bench the two agree to 0.5 mV at the base (0.814789 against 0.815259) and
+ *    0.1 mV at the collector (0.147254 against 0.147347), where the knee was
+ *    765 mV out because it never entered saturation at all.
+ *
+ *    The gate below did NOT catch the change, which is the second thing worth
+ *    recording. It scanned for three NAMES — `junctionOpts`,
+ *    `shockleyCompanion`, `model: 'shockley'` — and Ebers-Moll arrived under a
+ *    fourth, `ebersMollParams`. A refusal by name needs the reachable set, and
+ *    nobody has that for names not yet written. So the gate is now DRIVEN: it
+ *    asks the function what it returns, in both routing modes, instead of
+ *    reading the source for a word.
+ *
+ *    `stampZener` keeps the exclusion, unchanged and for the original reason.
+ *
+ *    What has NOT changed is the DEFAULT. `JUNCTION_ROUTING.mode` is 'auto',
+ *    which for a BJT means piecewise, and the test below drives a bench in both
+ *    modes to hold that: every corpus number and every other test in this suite
+ *    is written against the knee.
  *
  * 2. NO RATED CURRENT. `JUNCTION_I_RATED` is 20 mA because that is what an LED
  *    datasheet specifies Vf at. A BJT's `vbe` is not "Vbe at 20 mA of BASE
@@ -24,8 +42,8 @@
  *    silicon part. But `vbe: 0.7` (x8) and `vz: 5.1` (x8) are just the defaults,
  *    and 0.7 IS the knee number for a silicon junction. There is nothing to read.
  *
- * The day someone gives a BJT or zener a rated current, this file fails and the
- * decision gets made on purpose.
+ * The day someone gives a ZENER a rated current, this file fails and that
+ * decision gets made on purpose too.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -116,10 +134,16 @@ test('zener and BJT stamps do NOT convert their vf, and cannot reach the exponen
             `${name} calls kneeFromVf. It has no rated current and no exponential counterpart, so `
             + 'the conversion would change its behaviour with nothing to check it against. If a '
             + 'rated current has been given to this class, say so here and make the decision.');
-        assert.ok(!/\b(?:junctionOpts|shockleyCompanion)\s*\(/.test(body)
+    }
+    // The zener alone keeps the exclusion. The BJTs deliberately reach an
+    // exponential path now (Ebers-Moll); see the header.
+    {
+        const body = fnBody('stampZener');
+        assert.ok(!/\b(?:junctionOpts|shockleyCompanion|ebersMollParams)\s*\(/.test(body)
             && !/model\s*:\s*['"]shockley['"]/.test(body),
-            `${name} now reaches the exponential path. Reason 1 for excluding it has expired: it `
-            + 'now HAS a second answer to agree with, so revisit the exclusion.');
+            'stampZener now reaches an exponential path. Reason 1 for excluding it has expired: '
+            + 'it now HAS a second answer to agree with, so revisit the exclusion — and add the '
+            + 'driven check the BJTs got, because a name list cannot see the name nobody wrote yet.');
     }
     for (const name of ['stampNPN', 'stampPNP']) {
         assert.match(fnBody(name), /diodeCompanion\(vAcross,\s*vbe,\s*rd\)/,
