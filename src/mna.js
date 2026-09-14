@@ -415,6 +415,54 @@ export function mosGds(params, id0, taper) {
   return (model + MOS_GDS_FLOOR) * taper * taper;
 }
 
+/**
+ * THE BODY EFFECT: a MOSFET's threshold rises with its source-bulk bias.
+ *
+ *     Vth = VTO + GAMMA * (sqrt(PHI + Vsb) - sqrt(PHI))
+ *
+ * GAMMA defaults to 0 in SPICE, so this is identity for any model that does not
+ * state it — which is why the shipped gallery cannot move.
+ *
+ * WHY IT IS WORTH HAVING. It is the largest single cause of numeric
+ * disagreement left in the ADI2005 corpus: of 311 disagreements in a 2,000-deck
+ * sample, **107 are decks that state a non-zero GAMMA and have a MOSFET whose
+ * source sits off its bulk** — every Wilson current mirror (63) and every plain
+ * NMOS differential pair (44). Corpus-wide that condition holds for 624 of
+ * 12,471 decks. A stacked device (a cascode's upper transistor, a diff pair's
+ * tail-connected pair, a mirror's output leg) has its source above the bulk BY
+ * CONSTRUCTION, so its threshold is simply not VTO.
+ *
+ * THE BULK IS NOT A TERMINAL HERE. The engine's nmos/pmos have three, and a
+ * fourth would move every sidecar and canvas that draws one. The importer
+ * therefore records `bulkAtGround` when the deck ties the bulk to node 0 and
+ * the source to something else — the case that matters, 3,334 of 15,587 M cards
+ * — and leaves it unset when bulk and source are the same node, where Vsb is 0
+ * and there is no shift to compute. A deck whose bulk is a THIRD node is
+ * neither, and is left alone rather than guessed at.
+ *
+ * The Jacobian omits `gmb` (the bulk transconductance), so the threshold is
+ * evaluated at the stored Vsb and iterated to a fixed point inside Newton —
+ * the same technique `bjtVceSat` uses. Convergence is a little slower; the
+ * converged answer satisfies the correct equations, which is the part that
+ * matters.
+ *
+ * @param {object} params  vth, gamma, phi, bulkAtGround
+ * @param {number} vsb     source-bulk bias, from the solve
+ */
+export function mosVth(params = {}, vsb = 0) {
+  const vth = Number(params.vth ?? 2.0);
+  const gamma = Number(params.gamma ?? 0);
+  if (!Number.isFinite(gamma) || gamma === 0 || !params.bulkAtGround) return vth;
+  const phi = Number(params.phi ?? 0.6);
+  if (!Number.isFinite(phi) || phi <= 0) return vth;
+  // A NEGATIVE Vsb forward-biases the bulk junction, which is not a normal
+  // operating condition and which this model has no business extrapolating
+  // into: the square root would go complex below -PHI. Clamped at 0, which is
+  // the no-shift case.
+  const v = Math.max(vsb, 0);
+  return vth + gamma * (Math.sqrt(phi + v) - Math.sqrt(phi));
+}
+
 export function mosK(params = {}) {
   if (params.k !== undefined) return params.k;
   const {kp, w, l} = params;
@@ -1221,6 +1269,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // holds Vgs (nmos) / Vsg (pmos); this holds Vds (nmos) / Vsd (pmos).
   /** @type {Map<string, number>} */
   const mosVds = new Map();
+  // THE BODY EFFECT NEEDS THE SOURCE'S OWN POTENTIAL, not a difference between
+  // two terminals — so it cannot be derived from vgs and vds and needs its own
+  // state. Tracked only for a part whose bulk the deck tied to ground; with
+  // bulk on source, Vsb is 0 and `mosVth` is identity.
+  /** @type {Map<string, number>} */
+  const mosVsb = new Map();
   const mosRegions = new Map();
   /** vccs iMax clamp state: 'linear' | 'clamp+' | 'clamp-' */
   const vccsClamps = new Map();
@@ -1232,7 +1286,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if ((part.kind === 'npn' || part.kind === 'pnp') && ebersMollParams(part)) {
         bjtVbc.set(part.id, 0);
       }
-      if (part.kind === 'nmos' || part.kind === 'pmos') mosVds.set(part.id, 0);
+      if (part.kind === 'nmos' || part.kind === 'pmos') {
+        mosVds.set(part.id, 0);
+        if (part.params?.bulkAtGround) mosVsb.set(part.id, 0);
+      }
     }
     if (part.kind === 'opamp') opampRegions.set(part.id, 'linear');
     if (part.kind === 'vcvs' && (part.params?.railLow !== undefined
@@ -1479,11 +1536,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           break;
 
         case 'nmos':
-          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds);
+          stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb);
           break;
 
         case 'pmos':
-          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds);
+          stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, mosRegions.get(part.id), mosVds, mosVsb);
           break;
 
         case 'opamp':
@@ -1718,6 +1775,19 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // TRIODE'S SECOND VARIABLE. Tracked for every MOSFET, so a device that
       // enters the linear region mid-solve already has a state to linearise
       // about rather than starting from zero on the iteration it switches.
+      if (mosVsb.has(part.id)) {
+        // V(source) itself, with the bulk at the reference. A p-channel's Vsb
+        // is the other sign; `mosVth` clamps a negative one.
+        const netS4 = findNet(nets, part.id, 'source');
+        const iS4 = netS4 ? nodeIndex.get(netS4) : undefined;
+        const vS4 = iS4 !== undefined ? solution[iS4] : 0;
+        const vNew4 = part.kind === 'nmos' ? vS4 : -vS4;
+        const vOld4 = mosVsb.get(part.id) ?? 0;
+        maxDelta = Math.max(maxDelta, Math.abs(vNew4 - vOld4));
+        mosVsb.set(part.id,
+          vOld4 + Math.max(-NR_MAX_STEP, Math.min(NR_MAX_STEP, vNew4 - vOld4)));
+      }
+
       if (mosVds.has(part.id)) {
         const netD3 = findNet(nets, part.id, 'drain');
         const netS3 = findNet(nets, part.id, 'source');
@@ -1949,7 +2019,12 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // drain lifts clear (small hysteresis against flip-flopping).
     for (const part of parts) {
       if (part.kind !== 'nmos' && part.kind !== 'pmos') continue;
-      const vth = /** @type {number} */ (part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0));
+      // The SAME threshold the stamp used, body effect included — a region
+      // decision taken against VTO while the stamp conducts at a shifted
+      // threshold is the vceSat split one level down.
+      const vth = mosVth(
+        { ...part.params, vth: part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0) },
+        mosVsb.get(part.id) ?? 0);
       const vgs = diodeVoltages.get(part.id) ?? 0; // vGS (nmos) / vSG (pmos)
       const vov = vgs - Math.abs(vth);
       const netD = findNet(nets, part.id, 'drain');
@@ -2312,7 +2387,13 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vG = netG ? (nodeVoltages.get(netG) ?? 0) : 0;
       const vD = netD ? (nodeVoltages.get(netD) ?? 0) : 0;
       const vS = netS ? (nodeVoltages.get(netS) ?? 0) : 0;
-      const vth = /** @type {number} */ (part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0));
+      // THE SAME THRESHOLD AGAIN, third reader. `mosVsb` is not in scope here,
+      // so it is recomputed from the solved node voltages — which is the
+      // converged value the stamp iterated to, not one step behind it.
+      const vBulkRef = part.kind === 'nmos' ? (vS - 0) : (0 - vS);
+      const vth = mosVth(
+        { ...part.params, vth: part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0) },
+        vBulkRef);
       const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
       let id;
       // Same smoothed square law as the stamp — a hard-corner current read
@@ -3336,24 +3417,54 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  * Linearized as Norton companion for NR.
  */
 /**
- * Smoothed overdrive: vov_s = ½·(vov + √(vov² + δ²)) — the square law with
- * a continuous derivative through the threshold corner. A HARD cutoff
- * branch (gOff below Vth, square law above) gave Newton a discontinuous
- * derivative exactly where a near-threshold operating point lives: the
- * cross-coupled latch orbited 1.84 → cutoff → 5 → fetlim 2.5 → 2.16 →
- * 1.84 forever, at every transconductance tried. δ = 50 mV of smoothing
- * is invisible at real operating points (vov = 3 V shifts by 0.2 mV) and
- * conducts ~µA-scale phantom current near Vth — stated, not hidden.
+ * Smoothed overdrive, C1 and EXACTLY ZERO BELOW CUTOFF.
+ *
+ *   vov_s = 0                      vov ≤ −δ
+ *         = (vov + δ)² / (4δ)      |vov| < δ
+ *         = vov                     vov ≥ δ
+ *
+ * The corner still has to be smoothed — a HARD cutoff branch (gOff below
+ * Vth, square law above) gave Newton a discontinuous derivative exactly
+ * where a near-threshold operating point lives, and the cross-coupled latch
+ * orbited 1.84 → cutoff → 5 → fetlim 2.5 → 2.16 → 1.84 forever at every
+ * transconductance tried. But the shape that smoothing takes is load-bearing,
+ * and the first one chosen — ½·(vov + √(vov² + δ²)) — NEVER REACHES ZERO.
+ *
+ * A HYPERBOLA'S TAIL IS A CURRENT SOURCE ON A FLOATING NODE. At vov = −1 V,
+ * a volt into cutoff, the old form returned vov_s = 6.24e-4 with derivative
+ * 6.24e-4, so the device injected id0 = k·vov_s² through its own
+ * gm = 2k·vov_s·dvov_s. Both are negligible; their RATIO is not. A node with
+ * nothing else on it settles where id0/gm puts it, and that is
+ * vov_s/(2·dvov_s) — HALF A VOLT, INDEPENDENT OF k. Making the device weaker
+ * does not help, because the phantom current and the phantom conductance
+ * shrink together. Corpus deck ADI #699's gate-drain node read −5.155 V
+ * against ngspice's 0: not a near miss, a fixed point of the smoothing.
+ *
+ * Below −δ this returns 0 with derivative 0, so an off device stamps NOTHING
+ * and the node is left to GMIN, which ties it to the reference — the same
+ * place ngspice puts it. That is the identical argument MOS_GDS_FLOOR settles
+ * for the output conductance; a numerical aid must not out-argue GMIN on a
+ * node it does not own.
+ *
+ * Above +δ it is the SQUARE LAW EXACTLY, where the old form ran 0.2 mV high at
+ * vov = 3 V. Same parabolic-blend shape as `diodeCompanion`'s knee, for the
+ * same reason and with matching slope at both joins.
+ *
  * Returns [vov_s, d(vov_s)/d(vov)].
  */
 const MOS_SMOOTH_DELTA = 0.05;
 function smoothVov(vov) {
-  const r = Math.sqrt(vov * vov + MOS_SMOOTH_DELTA * MOS_SMOOTH_DELTA);
-  return [0.5 * (vov + r), 0.5 * (1 + vov / r)];
+  if (vov <= -MOS_SMOOTH_DELTA) return [0, 0];
+  if (vov >= MOS_SMOOTH_DELTA) return [vov, 1];
+  const u = vov + MOS_SMOOTH_DELTA;
+  return [(u * u) / (4 * MOS_SMOOTH_DELTA), u / (2 * MOS_SMOOTH_DELTA)];
 }
 
-function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds) {
-  const vth = /** @type {number} */ (part.params.vth ?? 2.0);
+function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb) {
+  // ONE definition of the threshold, read by the stamp, the region FSM and the
+  // extraction alike. Three readers of one number is how the vceSat split
+  // happened; this one is a function call in all three places.
+  const vth = mosVth(part.params, mosVsb ? (mosVsb.get(part.id) ?? 0) : 0);
   const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
   const netG = findNet(nets, part.id, 'gate');
@@ -3450,8 +3561,13 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 }
 
 /** P-channel MOSFET: mirror of NMOS with reversed gate sense. */
-function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds) {
-  const vth = /** @type {number} */ (part.params.vth ?? -2.0);
+function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb) {
+  // See stampNMOS. A p-channel's Vsb is V(bulk) - V(source); with the bulk at
+  // ground and the source above it that is negative, i.e. a forward-biased
+  // body junction, and `mosVth` clamps it to the no-shift case rather than
+  // extrapolating a model that has no business there.
+  const vth = mosVth({ ...part.params, vth: part.params.vth ?? -2.0 },
+    mosVsb ? (mosVsb.get(part.id) ?? 0) : 0);
   const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
   const netG = findNet(nets, part.id, 'gate');
