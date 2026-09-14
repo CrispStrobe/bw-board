@@ -67,6 +67,14 @@ integration controls were met, not that every output has a global error equal
 to the local tolerance. An independent reference still needs its own refinement
 study and error budget.
 
+The status also reports the circuit's current `integrationMode`. With no
+reactive storage, scheduled device/shift-register state, or scope sampling
+grid, `algebraic-direct` solves each requested endpoint once: there is no
+history to integrate between observations. Adding any such state selects the
+existing `adaptive` path. This distinction lets bounded analysis callers use
+the requested point count for a stateless many-source circuit instead of the
+otherwise conservative `ceil(stop/maxStep)` integration lower bound.
+
 Source corners and scheduled device wakes at the exact requested step endpoint
 are discontinuities and restart trapezoidal history on their far side. Sample
 grid points only truncate a step. The nearest final barrier decides: a later

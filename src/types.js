@@ -101,7 +101,8 @@
  * @property {(parts: Part[], nets: Net[]) => void} setNetlist
  * @property {(id: 'interactive-v1'|'precision-v1') => Readonly<Record<string, number|string>>}
  *   configureTransientAnalysis Select a fixed bounded integration profile on a fresh board.
- * @property {() => {profile: Readonly<Record<string, number|string>>, accuracyMet: boolean|null,
+ * @property {() => {profile: Readonly<Record<string, number|string>>,
+ *   integrationMode: 'algebraic-direct'|'adaptive', accuracyMet: boolean|null,
  *   failure: Readonly<Record<string, number|string>>|null,
  *   work: Readonly<{attempts:number, solves:number, advances:number}>}} transientAnalysisStatus
  *   Qualify whether the selected local-error target was met (`null` before work); an analysis must not claim a
