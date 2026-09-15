@@ -1,6 +1,23 @@
 /** Pure admission only: no engine imports, loader calls, or running-target mutation. */
+/*
+ * Machine semantics, coarsest first. The order is documentation, not behaviour:
+ * this module only ever asks whether a value is a member.
+ *
+ * 'gate-level' sits BENEATH 'wired-digital' and is not a synonym for it.
+ * 'wired-digital' resolves address/data/control connections through BUS PHASES
+ * -- contention, chip selects, READY, bus ownership. A gate-level netlist has no
+ * bus protocol at all; it is logic gates and nets, one layer down. Widening
+ * 'wired-digital' to cover netlists would blur a definition the 8086 execution
+ * policy depends on, so this is a fourth value rather than a reinterpretation.
+ *
+ * Adding a value costs nothing here and everything downstream: an adapter that
+ * cannot provide it must simply not put it in its catalog, and a request for it
+ * then returns a NAMED refusal ('no-matching-implementation') rather than
+ * quietly selecting a coarser machine. That non-degradation is the contract, and
+ * it is tested in test/execution-policy.test.mjs.
+ */
 export const MACHINE_SEMANTICS = Object.freeze([
-  'dos-services', 'functional-hardware', 'wired-digital'
+  'dos-services', 'functional-hardware', 'wired-digital', 'gate-level'
 ]);
 
 const text = value => typeof value === 'string' && value.length > 0;
