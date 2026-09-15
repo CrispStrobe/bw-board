@@ -2416,6 +2416,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // capacitor is an open at an operating point), and that is the singular
   // matrix the shunt exists to prevent: it keeps it. The subtraction is exact
   // in binary, both operands being the same constant.
+  //
+  // ONE PASS, AND ITERATING IT WAS TRIED AND IS WORSE. A single re-solve is
+  // exact for a linear network and only a step for an exponential one, so where
+  // the shunt was doing real work the step falls short -- a diode-connected
+  // MOSFET whose gate-drain node hangs on its bulk junction lands at 4.867521 V
+  // against ngspice's 4.999380 V, and that 132 mV is a KNOWN remaining gap
+  // (test/mosfet-body-effect.test.mjs asserts a band around ngspice's number
+  // rather than ours, so it is recorded and not enshrined).
+  //
+  // Looping the refinement does not close it: `runNewton` RE-ADDS the shunt,
+  // because that is what its continuation ladders rely on, so each pass
+  // re-converges to the shunted answer and the loop oscillates. Measured: the
+  // same node moved to 4.840996 V -- further away -- and four tests went red.
+  // Closing this properly needs the junctions to re-converge with the shunt
+  // absent while the region FSMs stay frozen, which is a different change from
+  // this one.
   if (converged && !transient) {
     let removed = 0;
     for (let i = 0; i < nodeCount; i++) {
