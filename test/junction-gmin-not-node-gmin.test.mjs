@@ -145,6 +145,65 @@ describe('the junction carries GMIN; the node does not', () => {
   });
 
   /**
+   * THE REFINEMENT IS TWO STEPS, AND THE SECOND ONE IS CONDITIONAL.
+   *
+   * Step one re-solves the final assembly with the shunt subtracted -- exact
+   * for a linear network, one Newton step for an exponential. Step two
+   * re-converges the junctions with the shunt absent and the region FSMs
+   * frozen, and it runs ONLY where step one moved the answer by more than
+   * 1e-6 V.
+   *
+   * That condition is derived, not a device list, and both halves of it have a
+   * witness here:
+   *
+   *   a node HELD BY the shunt      step one moves it by volts, so step two
+   *                                 runs: 4.867521 -> 5.000000 V against
+   *                                 ngspice's 4.999380 V
+   *   an ordinary-impedance node    step one moves it by ~1e-11 V, step two is
+   *                                 skipped, and the answer is bit-identical
+   *
+   * The second witness is why the condition exists at all: iterating
+   * unconditionally moves the piecewise BJT bench 0.067245 -> 0.195212 V even
+   * with the regions frozen, because that bench is not uniquely converged and
+   * any second trajectory lands somewhere else. `test/bjt-ebers-moll.test.mjs`
+   * holds that number; this test holds the case that needs the iteration, so
+   * the two together pin the threshold from both sides.
+   */
+  it('re-converges a node the shunt was holding, and leaves an ordinary one alone', () => {
+    // HELD BY THE SHUNT: a diode-connected MOSFET whose gate-drain node hangs
+    // on its bulk junction and nothing else. One linear step reached 4.867521 V
+    // and is 132 mV short; the iteration closes it to the reference's 0.62 mV
+    // junction drop.
+    const { parts, nets } = new NetlistBuilder()
+      .vsource('VS', 5).gnd('GND').nmos('M1', 1.0, 1e-3)
+      .wire('VS.neg', 'GND.gnd').wire('VS.pos', 'M1.source')
+      .wire('M1.gate', 'M1.drain')
+      .build();
+    const board = new BoardImpl(5);
+    board.setNetlist(parts, nets);
+    const held = nets.find((n) => n.terminals?.some((t) => t.part === 'M1' && t.terminal === 'gate'));
+    const v = board.nodeVoltage(held.id);
+    assert.ok(Math.abs(v - 4.999380) < 5e-3,
+      `a node held only by its bulk junction must reach the bulk rail: ngspice `
+      + `4.999380 V, got ${v} V (one linear step alone gives 4.867521)`);
+
+    // ORDINARY IMPEDANCES: the divider below is 1k/3k, where GMIN is eleven
+    // orders down. Step one cannot move it, step two must not run, and the
+    // answer must be EXACT -- a tolerance here would hide the iteration firing
+    // where it has no business.
+    const d = new NetlistBuilder()
+      .vsource('V1', 5).gnd('GND').resistor('R1', 1000).resistor('R2', 3000)
+      .wire('V1.neg', 'GND.gnd').wire('V1.pos', 'R1.a')
+      .wire('R1.b', 'R2.a').wire('R2.b', 'GND.gnd')
+      .build();
+    const b2 = new BoardImpl(5);
+    b2.setNetlist(d.parts, d.nets);
+    const mid = d.nets.find((n) => n.terminals.some((t) => t.part === 'R1' && t.terminal === 'b'));
+    assert.equal(b2.nodeVoltage(mid.id), 3.75,
+      'an ordinary divider must be exactly 5 * 3k/4k, with no iteration anywhere near it');
+  });
+
+  /**
    * THE BJT'S JACOBIAN, HELD AS A DERIVATIVE AND NOT AS A VOLTAGE.
    *
    * Writing this test taught me something I had asserted without holding: the

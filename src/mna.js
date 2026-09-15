@@ -1514,7 +1514,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // the same circuit at a tenth of the excitation). All nonlinear state
   // (junction voltages, region FSMs, CC clamps) lives in the enclosing
   // scope, so each rung seeds the next — the point of a continuation.
-  const runNewton = (gmin, srcScale = 1) => {
+  const runNewton = (gmin, srcScale = 1, selectiveShunt = false) => {
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
     // Clear values; the assembled pattern survives for factor reuse.
     A.reset();
@@ -1933,7 +1933,14 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // converged and seeded the junction state, because the blanket shunt is
     // also the continuation that gets a hard operating point to converge at
     // all. If the refinement does not converge, the full-shunt answer stands.
-    for (let i = 0; i < nodeCount; i++) A.add(i, i, gmin);
+    for (let i = 0; i < nodeCount; i++) {
+      // Selective: only a node with NOTHING else on it keeps the shunt. The
+      // diagonal here excludes `gmin` -- every stamp has run and this loop is
+      // what adds it -- so a non-zero diagonal means a real conductance is
+      // already holding the node.
+      if (selectiveShunt && A.get(i, i) !== 0) continue;
+      A.add(i, i, gmin);
+    }
 
     // Solve
     const bcopy = new Float64Array(b);
@@ -2389,66 +2396,103 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // an iterate with no term, and a caller cannot tell an iterate from an answer.
   // `solution` and the junction state are only overwritten on success, so a
   // failed refinement leaves the accepted answer exactly as it was.
-  // THE SAME LINEAR SYSTEM, MINUS THE TERM THAT IS NOT PHYSICAL.
+  // THE REFINEMENT: RE-CONVERGE WITHOUT THE TERM THAT IS NOT PHYSICAL.
   //
-  // Everything above ran with the blanket node shunt, because that shunt is
-  // the continuation that gets a hard operating point to converge. The accepted
+  // Everything above ran with the blanket node shunt, because that shunt is the
+  // continuation that gets a hard operating point to converge. The accepted
   // answer therefore contains a conductance to the reference that ngspice does
   // not have -- worth 2.5 V on a 1 TOhm divider. See JUNCTION_GMIN.
   //
-  // WHY THIS RE-SOLVES AND DOES NOT RE-STAMP. Two earlier versions re-ran the
-  // Newton loop (once fully, once bounded to a single iteration) and both moved
-  // the PIECEWISE BJT bench's collector from 0.067245 V to 0.195212 V -- a
-  // model with no pn junction in it, which this refinement cannot improve and
-  // must not touch. The reason is that the region FSMs are updated AFTER the
-  // last solve, so by the time the loop exits, `bjtRegions` can already name a
-  // different region than the one the accepted answer was stamped in. Any
-  // re-stamp then assembles a different circuit and calls the difference a
-  // refinement.
+  // So Newton runs once more with the shunt kept ONLY on nodes that have
+  // nothing else on them -- and only where a cheap first step has proved that
+  // it matters.
   //
-  // `A` and `b` still hold the final iteration's assembly -- `solveAssembled`
-  // copies to CSC and mutates neither -- so the shunt can be subtracted from
-  // the diagonals it was added to and the SAME system re-solved. Nothing is
-  // re-evaluated, no device state moves, and the only difference between the
-  // two answers is the term being removed.
+  //  - A single LINEAR re-solve cannot finish the job on its own. It is exact
+  //    for a linear network and one step for an exponential, so where the shunt
+  //    was doing real work it falls short: a diode-connected MOSFET whose
+  //    gate-drain node hangs on its bulk junction reached 4.867521 V against
+  //    ngspice's 4.999380 V, and a two-open-switch interlock was 864 mV out.
+  //    Looping the re-solve is worse still (4.840996) because `runNewton`
+  //    re-adds the shunt its ladders rely on.
+  //  - I also froze the region FSMs here, on the theory that re-stamping
+  //    re-drives them and that this was what moved the piecewise BJT bench
+  //    0.067245 -> 0.195212 V. IT IS NOT, and the freeze was inert: with a
+  //    circuit that has BOTH a shunt-held node and a saturated BJT, frozen and
+  //    unfrozen give the same 0.195212 V to six figures. The movement comes
+  //    from ITERATING a bench that is not uniquely converged, not from region
+  //    state, so the freeze was a mechanism with nothing behind it and is gone.
+  //    What protects that bench is the threshold below, and only that.
   //
-  // A node whose diagonal is exactly the shunt has nothing else on it (a
-  // capacitor is an open at an operating point), and that is the singular
-  // matrix the shunt exists to prevent: it keeps it. The subtraction is exact
-  // in binary, both operands being the same constant.
-  //
-  // ONE PASS, AND ITERATING IT WAS TRIED AND IS WORSE. A single re-solve is
-  // exact for a linear network and only a step for an exponential one, so where
-  // the shunt was doing real work the step falls short -- a diode-connected
-  // MOSFET whose gate-drain node hangs on its bulk junction lands at 4.867521 V
-  // against ngspice's 4.999380 V, and that 132 mV is a KNOWN remaining gap
-  // (test/mosfet-body-effect.test.mjs asserts a band around ngspice's number
-  // rather than ours, so it is recorded and not enshrined).
-  //
-  // Looping the refinement does not close it: `runNewton` RE-ADDS the shunt,
-  // because that is what its continuation ladders rely on, so each pass
-  // re-converges to the shunted answer and the loop oscillates. Measured: the
-  // same node moved to 4.840996 V -- further away -- and four tests went red.
-  // Closing this properly needs the junctions to re-converge with the shunt
-  // absent while the region FSMs stay frozen, which is a different change from
-  // this one.
+  // IT IS A REFINEMENT AND NOT A REPLACEMENT. If it does not converge the
+  // full-shunt answer stands, device state included: a converged solve with a
+  // small wrong term beats an iterate with no term, and a caller cannot tell an
+  // iterate from an answer.
   if (converged && !transient) {
+    const shunted = Float64Array.from(solution);
+    const snap = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc].map((m) => new Map(m));
+    const restore = () => {
+      solution = shunted;
+      for (const [m, saved] of [[diodeVoltages, snap[0]], [mosVsb, snap[1]],
+        [mosVdb, snap[2]], [mosVds, snap[3]], [bjtVbc, snap[4]]]) {
+        m.clear();
+        for (const [k, v] of saved) m.set(k, v);
+      }
+    };
+    const allFinite = (v) => {
+      for (let i = 0; i < v.length; i++) if (!Number.isFinite(v[i])) return false;
+      return true;
+    };
+
+    // STEP ONE: the same assembly, minus the shunt. `A` and `b` still hold the
+    // final iteration's stamps -- `solveAssembled` copies to CSC and mutates
+    // neither -- so this changes exactly one thing and nothing is re-evaluated.
     let removed = 0;
     for (let i = 0; i < nodeCount; i++) {
       if (A.get(i, i) - GMIN !== 0) { A.add(i, i, -GMIN); removed++; }
     }
+    let moved = 0;
     if (removed) {
       try {
-        const refined = solveAssembled(A, new Float64Array(b));
-        let finite = true;
-        for (let i = 0; i < refined.length; i++) {
-          if (!Number.isFinite(refined[i])) { finite = false; break; }
+        const once = solveAssembled(A, new Float64Array(b));
+        if (allFinite(once)) {
+          for (let i = 0; i < once.length; i++) moved = Math.max(moved, Math.abs(once[i] - solution[i]));
+          solution = once;
         }
-        // A near-singular system without the shunt publishes NaN as an answer,
-        // and a caller cannot tell that from a voltage. The shunted answer is
-        // converged and slightly wrong, which is the better of the two.
-        if (finite) solution = refined;
       } catch { /* singular without it: the shunted answer stands */ }
+    }
+
+    // STEP TWO, AND ONLY WHERE STEP ONE PROVED IT IS NEEDED.
+    //
+    // How far step one moved the answer IS the measurement of whether the shunt
+    // was load-bearing, and it decides whether the junctions must re-converge.
+    // A circuit at ordinary impedances does not move at all -- the term is
+    // eleven orders below its conductances -- and it keeps step one's answer,
+    // bit-identical to before this block existed. A circuit whose nodes hung on
+    // the shunt moves by volts, and there the frozen linearisation is stale and
+    // one step is not enough: the dangling gate-drain bench needed this to go
+    // from 4.867521 V to 5.000000 V against ngspice's 4.999380 V.
+    //
+    // Deriving the condition is the point. Keying it to a device kind would be
+    // a list to keep, and the thing that matters is not which parts are present
+    // but whether the shunt was holding a node up.
+    //
+    // WHY IT HAS TO BE CONDITIONAL. Iterating unconditionally moves the
+    // PIECEWISE BJT bench 0.067245 -> 0.195212 V, because that bench is not
+    // uniquely converged -- any second trajectory lands on a different
+    // consistent point. Its step-one move is ~1e-11 V, so the threshold leaves
+    // it alone, and the two cases separate by seven orders of magnitude rather
+    // than by a predicate anyone has to maintain.
+    //
+    // WHAT THE THRESHOLD DOES NOT PROMISE. A circuit with BOTH a shunt-held
+    // node and a region-bearing device does take the iteration, and there the
+    // piecewise answer does move: the same motor bench with one dangling 1 TOhm
+    // resistor added reads 0.195212 V rather than 0.067245 V. No gallery
+    // circuit is in that class -- the 2,131-circuit A/B is +10 and zero
+    // regressions -- but it is a real consequence and not a case the threshold
+    // rules out.
+    if (moved > 1e-6) {
+      const ok2 = runNewton(GMIN, 1, true);
+      if (!ok2 || !allFinite(solution)) restore();
     }
   }
 
