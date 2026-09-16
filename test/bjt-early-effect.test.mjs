@@ -36,6 +36,10 @@
  *      nothing else in this file can see it.
  *   5. VAF=0 and a negative VAF mean "no Early effect", as in SPICE, rather
  *      than a division by zero or a sign inversion.
+ *   6. SATURATION, where Vbc > 0 and the factor drops BELOW one. Every other
+ *      test here is forward-active, so a sign error that only shows up on the
+ *      other side of Vbc = 0 would have no holder. This is also ROADMAP E3.2's
+ *      "saturated transistor" case.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -162,4 +166,64 @@ test('VAF=0 and a negative VAF mean no Early effect, as they do in SPICE', () =>
     const r = follower({ ...CARD, vaf: NaN });
     assert.equal(r.converged, true);
     assert.equal(r.vb.toFixed(9), BEFORE.vb.toFixed(9));
+});
+
+/** The saturated motor-driver bench from `bjt-ebers-moll`, with a VAF on it. */
+function saturatedBench(params) {
+    const prior = JUNCTION_ROUTING.mode;
+    JUNCTION_ROUTING.mode = 'shockley';
+    try {
+        const b = new BoardImpl(5);
+        b.setNetlist([
+            { id: 'VCC1', kind: 'vcc', params: {}, terminals: ['vcc'] },
+            { id: 'GND1', kind: 'gnd', params: {}, terminals: ['gnd'] },
+            { id: 'VB', kind: 'vsource', params: { volts: 4.898 }, terminals: ['pos', 'neg'] },
+            { id: 'RM', kind: 'resistor', params: { ohms: 10 }, terminals: ['a', 'b'] },
+            { id: 'RB', kind: 'resistor', params: { ohms: 1000 }, terminals: ['a', 'b'] },
+            { id: 'Q1', kind: 'npn', params, terminals: ['base', 'collector', 'emitter'] },
+        ], [
+            { id: 'n_v', terminals: [{ part: 'VCC1', terminal: 'vcc' }, { part: 'RM', terminal: 'a' }] },
+            { id: 'n_c', terminals: [{ part: 'RM', terminal: 'b' }, { part: 'Q1', terminal: 'collector' }] },
+            { id: 'n_bs', terminals: [{ part: 'VB', terminal: 'pos' }, { part: 'RB', terminal: 'a' }] },
+            { id: 'n_b', terminals: [{ part: 'RB', terminal: 'b' }, { part: 'Q1', terminal: 'base' }] },
+            { id: 'n_g', terminals: [
+                { part: 'GND1', terminal: 'gnd' },
+                { part: 'Q1', terminal: 'emitter' },
+                { part: 'VB', terminal: 'neg' },
+            ] },
+        ]);
+        return {
+            vc: b.nodeVoltage('n_c'),
+            ic: b.branchCurrent('Q1', 'collector'),
+            converged: b._lastSolveConverged,
+        };
+    } finally {
+        JUNCTION_ROUTING.mode = prior;
+    }
+}
+
+test('in SATURATION the factor goes below one, and the solve still converges', () => {
+    // Every other test here is forward-active, where Vbc < 0 and the factor is
+    // above 1. Saturation is the other sign: Vbc > 0, so `early` < 1 and Ic is
+    // REDUCED. A sign error that this file's forward-active tests would catch
+    // is not the same as one that only shows up here, and an unclamped factor
+    // is worth exercising at a VAF small enough to matter -- which is also the
+    // roadmap's "saturated transistor" case for E3.2.
+    const CARD_SAT = { part: '2N2222', beta: 200, is: 1e-14, model: 'shockley' };
+    const plain = saturatedBench({ ...CARD_SAT });
+    assert.equal(plain.converged, true);
+    let previousVc = plain.vc;
+    for (const vaf of [100, 10, 1]) {
+        const r = saturatedBench({ ...CARD_SAT, vaf });
+        assert.equal(r.converged, true, `VAF=${vaf} did not converge in saturation`);
+        // Less collector current through a fixed 10 Ohm load means a HIGHER
+        // collector voltage, monotonically as VAF falls.
+        assert.ok(r.vc > previousVc,
+            `V(collector) must rise as VAF falls: ${previousVc} then ${r.vc} at VAF=${vaf}`);
+        assert.ok(Math.abs(r.ic) < Math.abs(plain.ic),
+            `|Ic| must be below the no-VAF ${plain.ic}, was ${r.ic} at VAF=${vaf}`);
+        previousVc = r.vc;
+    }
+    // And the bench is genuinely saturated, or the sign of Vbc above is a guess.
+    assert.ok(plain.vc < 0.4, `V(collector) ${plain.vc} is not a saturated collector`);
 });
