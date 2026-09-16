@@ -299,7 +299,21 @@ export const classDefaults = kind => ({
 
     buzzer:   {ohms: 100},
     dc_motor: {ohms: 10, kV: 0.01},
-    relay:    {ohms: 200, contactOhms: 0.1, openOhms: 1e9}
+    relay:    {ohms: 200, contactOhms: 0.1, openOhms: 1e9},
+
+    // ── THE DARLINGTON'S INPUT RESISTANCE, which was a fourth home ──
+    //
+    // `devices/analog-ics.js` stamps `tip120`'s base-emitter path as
+    // `R_INPUT / 10` -- a literal divided by a literal, in the stamp, where no
+    // exporter could see it. That mattered the moment the deck had to describe
+    // the device rather than approximate it: bw-circuit-ui exports this kind as
+    // a base resistor plus a voltage-controlled switch, and the resistor's
+    // value has to be the one the solver uses, not a guess that happens to
+    // match. Same reason the three `ohms` above are here rather than inline.
+    //
+    // `vbe` and `rceSat` already live on the TIP120 card; this is the third
+    // number that stamp reads and the only one with nowhere to be read from.
+    tip120:   {rBase: 1e5, vbe: 1.4, rceSat: 2.0}
 }[kind] ?? {});
 
 /**
