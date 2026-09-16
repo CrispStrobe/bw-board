@@ -1486,12 +1486,57 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   }
 
   // Newton–Raphson iterations
-  const MAX_NR_ITER = 50;
   const NR_TOL = 1e-6;
   // Junction-voltage damping: an exponential nonlinearity can fling NR across
   // volts per iteration and oscillate forever; classic per-step limiting keeps
   // every update inside the model's trust region.
   const NR_MAX_STEP = 0.5;
+
+  /**
+   * THE ITERATION BUDGET IS A CONSEQUENCE OF THE STEP CLAMP, NOT A ROUND NUMBER.
+   *
+   * It was 50, and 50 is not enough for a circuit on wide rails. Junction
+   * limiting moves each junction at most `NR_MAX_STEP` per iteration, so a node
+   * that starts one rail away and must end at the other cannot arrive in fewer
+   * than `span / NR_MAX_STEP` iterations however well conditioned it is. At
+   * +/-15 V that is 60, and the loop gave up at 50.
+   *
+   * The failure was silent in the worst way: not an oscillation, but a STEADY
+   * WALK. Instrumenting ADI2005 v3 row 526, a two-stage Miller-compensated
+   * op-amp, the residual fell by exactly 0.5 V per iteration -- 2.67, 2.17,
+   * 1.67, 1.17, 0.673, 0.173 -- and the budget ran out two iterations from the
+   * answer. It read as "engine-non-convergence: bias point", which is the
+   * reason a reader would then go looking for a model or a continuation defect.
+   * Sixty of the 66 non-convergences in that 12,471-deck corpus were this one
+   * topology on +/-15 V rails, and finer source stepping does nothing for it
+   * (measured: two denser ladders, no change).
+   *
+   * So it is derived from the widest source pair the netlist actually contains,
+   * with 50 kept as the floor so nothing narrow gets less than before, and a
+   * margin for Newton's own convergence once the walk arrives. Circuits that do
+   * not need the iterations still exit at `NR_TOL` and pay nothing.
+   *
+   * THE `+ 20` IS A FLOOR AND NOT A MEASUREMENT, said plainly: removing it
+   * leaves exactly `span / NR_MAX_STEP` and the op-amp still converges, so no
+   * case in the corpus requires it. It is there because the walk and Newton's
+   * own convergence are two costs and only the first is bounded by the span --
+   * a circuit that arrives on its last permitted iteration would still need a
+   * few more to satisfy NR_TOL. `test/newton-budget-from-rail-span.test.mjs`
+   * records that its mutation survives.
+   */
+  const sourceSpan = (() => {
+    let lo = 0; let hi = 0;
+    for (const part of parts) {
+      for (const key of ['volts', 'emf', 'vcc']) {
+        const v = Number(part.params?.[key]);
+        if (!Number.isFinite(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    }
+    return hi - lo;
+  })();
+  const MAX_NR_ITER = Math.max(50, Math.ceil(sourceSpan / NR_MAX_STEP) + 20);
 
   let solution = new Float64Array(dim);
   let converged = false;
