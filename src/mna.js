@@ -795,8 +795,17 @@ function ebersMollParams(part) {
   const bf = Number(part.params?.beta ?? cls.beta);
   const br = Number(part.params?.br ?? cls.br);
   const n = Number(part.params?.n ?? cls.n ?? 1);
+  // Forward Early voltage. ABSENT MEANS INFINITE, not zero and not a default
+  // number: a card that does not declare VAF must solve exactly as it did
+  // before this parameter existed, and `Infinity` is the only value of it that
+  // makes the Early term vanish algebraically rather than numerically. A zero
+  // would be a divide-by-zero dressed as a default, so it is rejected here
+  // along with a negative -- SPICE treats VAF=0 as "no Early effect" and so do
+  // we, by falling back to Infinity rather than by a branch downstream.
+  const vafDeclared = Number(part.params?.vaf ?? cls.vaf ?? Infinity);
+  const vaf = vafDeclared > 0 ? vafDeclared : Infinity;
   if (!(is > 0) || !(bf > 0) || !(br > 0) || !(n > 0)) return null;
-  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br };
+  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf };
 }
 
 /**
@@ -841,13 +850,50 @@ export function ebersMollCompanion(vbe, vbc, p) {
   // ngspice adds GMIN to the base-emitter and base-collector JUNCTION currents
   // themselves, so it appears once on each junction at full strength. The
   // transport terms (`iF`, `ic`) are not junction currents and get none.
+  // THE EARLY EFFECT, on the TRANSPORT current and nothing else.
+  //
+  // ngspice's BJT computes its base-charge factor as q1 = 1/(1 - Vbc/VAF -
+  // Vbe/VAR) and its transport current as (iF - iR)/qb; with no VAR and no
+  // high-current knee that is exactly (iF - iR) * (1 - Vbc/VAF), which is the
+  // form below. `vaf` is Infinity unless a card declares it, so `early` is
+  // exactly 1 and `dEarly` exactly 0 for every part that does not, and the
+  // stamp is then bit-identical to the one before this term existed.
+  //
+  // IT MUST NOT TOUCH THE BASE CURRENT. Ib stays iF/BF + iR/BR: Early raises
+  // the collector current at a FIXED base current, which is the same statement
+  // as beta rising with Vce, and putting the factor on Ib as well would cancel
+  // the whole effect while still looking like an implementation of it.
+  //
+  // MEASURED, on the corpus family that made the case -- ADI2005 v2's "BJT
+  // Emitter Follower", 59 decks, one model card (IS=1e-14 BF=200 VAF=100) and
+  // a 22 MOhm base resistor:
+  //
+  //     ngspice V(BASE) 1.022540    before 1.006830    delta 15.7 mV
+  //
+  // and the removal test that isolated it: with VAF deleted from the card the
+  // two engines AGREE, with IKF or RC deleted instead they still differ by the
+  // same 15.7 mV. Vce is about 4.6 V there, so the factor is 1.046 -- a few
+  // percent on Ic, which on a 22 MOhm base is 16 mV of base voltage.
+  // `?? Infinity` rather than assuming the field: this function is exported and
+  // a caller assembling `p` by hand (several tests do) would otherwise divide
+  // by undefined and stamp NaN through the whole matrix.
+  const vaf = p.vaf ?? Infinity;
+  const early = 1 - vbc / vaf;
+  const dEarly = Number.isFinite(vaf) ? -1 / vaf : 0;
+  const ict = iF - iR;
+
   const ib = iF / p.bf + iR / p.br + JUNCTION_GMIN * (vbe + vbc);
-  const ic = iF - iR * (1 + 1 / p.br) - JUNCTION_GMIN * vbc;
+  const ic = ict * early - iR / p.br - JUNCTION_GMIN * vbc;
 
   const gpi = gF / p.bf + JUNCTION_GMIN;   // d Ib / d Vbe
   const gmu = gR / p.br + JUNCTION_GMIN;   // d Ib / d Vbc
-  const gcF = gF;                          // d Ic / d Vbe
-  const gcR = -gR * (1 + 1 / p.br) - JUNCTION_GMIN;   // d Ic / d Vbc
+  const gcF = gF * early;                  // d Ic / d Vbe
+  // d Ic / d Vbc: the reverse transport slope through the same factor, plus the
+  // factor's OWN derivative times the transport current -- the term a chain
+  // rule left out would make the Jacobian disagree with the current it stamps,
+  // which costs iterations rather than accuracy and is invisible in any
+  // converged voltage. It has its own finite-difference assertion.
+  const gcR = -gR * early + ict * dEarly - gR / p.br - JUNCTION_GMIN;
 
   return {
     gpi, gmu, gcF, gcR,
