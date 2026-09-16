@@ -111,3 +111,71 @@ test('malformed preferences return named refusal instead of changing execution',
   assert.equal(policy.select(request(), {available: 'normal'}).code, 'invalid-request');
   assert.equal(policy.select(request(), null).code, 'invalid-request');
 });
+
+// ── 'gate-level' — the fourth machine semantics ──────────────────────
+//
+// Added for FPGA work (a synthesised netlist simulated gate by gate). The
+// tests that matter are not "the value exists" but "it never silently becomes
+// something coarser", which is the whole point of the policy layer.
+
+test('gate-level is a machine semantics, beneath wired-digital and distinct from it', () => {
+  assert.ok(MACHINE_SEMANTICS.includes('gate-level'));
+  // The three that existed before must survive, in order: other modules and
+  // saved catalogs depend on these spellings.
+  assert.deepEqual(MACHINE_SEMANTICS.slice(0, 3),
+    ['dos-services', 'functional-hardware', 'wired-digital']);
+  assert.ok(Object.isFrozen(MACHINE_SEMANTICS));
+});
+
+test('a gate-level request is REFUSED BY NAME rather than degraded to a coarser machine', () => {
+  // The catalog offers the two nearest neighbours and no netlist provider.
+  const policy = createExecutionPolicy([
+    entry('functional', {semantics: 'functional-hardware', rank: 0}),
+    entry('wired', {semantics: 'wired-digital', rank: 1}),
+  ]);
+  const result = policy.select(request({semantics: 'gate-level'}),
+    {available: ['functional', 'wired']});
+  assert.equal(result.accepted, false);
+  assert.equal(result.code, 'no-matching-implementation');
+  assert.equal(result.selected, null,
+    'silently selecting a coarser machine is the failure this layer exists to prevent');
+  assert.equal(result.requested.semantics, 'gate-level',
+    'the refusal must still say what was asked for');
+});
+
+test('gate-level is selected when a provider actually offers it', () => {
+  const policy = createExecutionPolicy([
+    entry('netlist', {semantics: 'gate-level', capabilities: ['nets', 'gates']}),
+    entry('wired', {semantics: 'wired-digital', rank: 0}),
+  ]);
+  const result = policy.select(request({semantics: 'gate-level'}), {available: ['netlist', 'wired']});
+  assert.equal(result.accepted, true);
+  assert.equal(result.selected.id, 'netlist');
+  assert.equal(result.selected.semantics, 'gate-level');
+  assert.equal(result.restartRequired, true);
+});
+
+test('a gate-level provider never satisfies a request for a coarser machine', () => {
+  // The converse leak: a cheap netlist entry must not be handed to something
+  // that asked for bus-phase behaviour it cannot model.
+  const policy = createExecutionPolicy([entry('netlist', {semantics: 'gate-level', rank: 0})]);
+  for (const semantics of ['wired-digital', 'functional-hardware', 'dos-services']) {
+    const result = policy.select(request({semantics}), {available: ['netlist']});
+    assert.equal(result.accepted, false, `${semantics} must not be served by a gate-level entry`);
+    assert.equal(result.code, 'no-matching-implementation');
+  }
+});
+
+test('gate-level obeys the same admission rules as every other semantics', () => {
+  const policy = createExecutionPolicy([
+    entry('unavailable', {semantics: 'gate-level', rank: 0}),
+    entry('needs-caps', {semantics: 'gate-level', rank: 1, capabilities: ['nets']}),
+  ]);
+  const missing = policy.select(request({semantics: 'gate-level', requiredCapabilities: ['waveforms']}),
+    {available: ['unavailable', 'needs-caps']});
+  assert.equal(missing.accepted, false);
+  assert.ok(missing.refusals.some(r => r.code === 'missing-capability'));
+  const unavailable = policy.select(request({semantics: 'gate-level'}), {available: []});
+  assert.equal(unavailable.accepted, false);
+  assert.ok(unavailable.refusals.every(r => r.code === 'implementation-unavailable'));
+});

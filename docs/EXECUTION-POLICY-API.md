@@ -14,7 +14,16 @@ catalog**, never from user preferences, media metadata or project JSON. Entries:
 | Field | Meaning |
 | --- | --- |
 | `id`, `family`, `implementation` | Nonempty stable strings; ID is unique |
-| `semantics` | `dos-services`, `functional-hardware`, or `wired-digital` |
+| `semantics` | `dos-services`, `functional-hardware`, `wired-digital`, or `gate-level` |
+
+`gate-level` sits **beneath** `wired-digital` and is not a synonym for it.
+`wired-digital` resolves address/data/control connections through **bus phases**
+— contention, chip selects, READY, bus ownership. A gate-level netlist has no bus
+protocol at all: it is logic gates and nets, one layer down. An adapter that
+cannot provide it simply omits it from its catalog, and a request then returns a
+named `no-matching-implementation` refusal rather than quietly selecting a
+coarser machine.
+
 | `rank` | Nonnegative safe integer; lower reviewed rank wins |
 | `capabilities` | Unique observation capability strings owned by the adapter |
 | `reference`, `experimental` | Required booleans |
