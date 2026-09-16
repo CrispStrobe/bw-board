@@ -217,15 +217,27 @@ describe('body effect in a solve, against ngspice', () => {
  *
  *   * a dangling gate-drain node on an OFF nmos
  *   Vs s 0 DC 5
- *   M1 n1 n1 s 0 NM W=10u L=1u
+ *   M1 n1 n1 s <bulk> NM W=10u L=1u
  *   .model NM NMOS(VTO=1 KP=200u)
  *
- * ngspice: n1 = 5.917696e-20 V — GMIN alone holds it at the reference.
- * Before the smoothing was made exactly zero, our answer was about half a volt
- * and no choice of KP moved it.
+ * THE BULK NODE DECIDES THE ANSWER, and this file used to state only one of the
+ * two. Measured on that deck:
+ *
+ *   bulk 0  (the reference)   ngspice n1 = 3.362041e-19 V
+ *   bulk s  (its own source)  ngspice n1 = 4.999380e+00 V
+ *
+ * Both are ngspice's answer, for two different devices. The recorded 5.9e-20
+ * belongs to the first, and the engine's three-terminal `nmos` is the SECOND --
+ * its symbol ties bulk to source and its SPICE export writes `M1 n1 n1 s s`, so
+ * the bulk-drain junction holds the node up near the source rail.
+ *
+ * What the original defect was, and what still has to hold: our answer used to
+ * be about half a volt and INDEPENDENT of KP, which is the tell that a
+ * smoothing term rather than the circuit was setting it. Independence of k is
+ * therefore still asserted, against whichever number the bulk wiring implies.
  */
 describe('an off MOSFET must not drive a floating node', () => {
-  it('leaves a dangling gate-drain node at the reference, not at vov_s/(2 dvov_s)', () => {
+  it('leaves a dangling gate-drain node where its bulk junction puts it', () => {
     const { parts, nets } = new NetlistBuilder()
       .vsource('VS', 5)
       .gnd('GND')
@@ -238,8 +250,26 @@ describe('an off MOSFET must not drive a floating node', () => {
     board.setNetlist(parts, nets);
     const net = nets.find(n => n.terminals?.some(t => t.part === 'M1' && t.terminal === 'gate'));
     const v = board.nodeVoltage(net.id);
-    assert.ok(Math.abs(v) < 1e-3,
-      `a floating gate-drain node on an off device must sit at the reference; got ${v} V`);
+    // Bulk on source: ngspice 4.999380 V. Our bulk-on-source stamp is still
+    // 132 mV off that (4.867521 V measured), which is a KNOWN remaining
+    // disagreement and is why this is a band rather than a point -- asserting
+    // our own 4.867521 would be a test of the defect.
+    assert.ok(Math.abs(v - 4.999380) < 0.2,
+      `a three-terminal device's bulk-drain junction must hold this node near its `
+      + `source rail; ngspice 4.999380 V, got ${v} V`);
+
+    // THE CONTROL: the same bench with the bulk declared at the reference is
+    // the OTHER device, and ngspice puts it at 3.362041e-19 V. Two wirings,
+    // two answers, five volts apart -- so neither assertion can pass on the
+    // other's number.
+    parts.find(part => part.id === 'M1').params.bulkAtGround = true;
+    const grounded = new BoardImpl(5);
+    grounded.setNetlist(parts, nets);
+    const atReference = grounded.nodeVoltage(net.id);
+    assert.ok(Math.abs(atReference) < 1e-3,
+      `with the bulk at the reference the node belongs to GMIN; ngspice 3.4e-19 V, got ${atReference} V`);
+    assert.ok(Math.abs(v - atReference) > 4,
+      `the two bulk wirings must separate by volts: ${v} vs ${atReference}`);
   });
 
   it('and the answer does not depend on the device strength', () => {
@@ -256,8 +286,16 @@ describe('an off MOSFET must not drive a floating node', () => {
       const net = nets.find(n => n.terminals?.some(t => t.part === 'M1' && t.terminal === 'gate'));
       return board.nodeVoltage(net.id);
     };
+    // INDEPENDENCE OF k is the claim, not the value: the defect's signature was
+    // a wrong voltage that no choice of KP moved. So every k must give the SAME
+    // number, and that number must be the bulk junction's, not a smoothing
+    // artefact's.
+    const first = read(1e-6);
     for (const k of [1e-6, 1e-4, 1e-2, 1]) {
-      assert.ok(Math.abs(read(k)) < 1e-3, `k = ${k} gave ${read(k)} V`);
+      assert.ok(Math.abs(read(k) - first) < 1e-9,
+        `k = ${k} gave ${read(k)} V, k = 1e-6 gave ${first} V — a cutoff device's `
+        + 'floating node must not depend on its strength');
+      assert.ok(Math.abs(read(k) - 4.999380) < 0.2, `k = ${k} gave ${read(k)} V`);
     }
   });
 });

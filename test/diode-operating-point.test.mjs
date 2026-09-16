@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
-import { JUNCTION_THERMAL_VOLTAGE } from '../src/mna.js';
+import { JUNCTION_THERMAL_VOLTAGE, JUNCTION_GMIN } from '../src/mna.js';
 
 const K_OVER_Q = 8.617333262145e-5;
 const MATCHED_TEMP_C = JUNCTION_THERMAL_VOLTAGE / K_OVER_Q - 273.15;
@@ -136,8 +136,28 @@ describe('BoardImpl.operatingPoint explicit Shockley diode domain', () => {
       assert.ok(Math.abs(iD - expected.diode) < currentTolerance, `${volts} V diode current`);
       assert.ok(Math.abs(iV - expected.source) < currentTolerance, `${volts} V source current`);
       if (volts < 0) {
-        assert.ok(Math.abs(iD + PARAMS.is) < 1e-18,
-          'reverse diode current is its declared negative saturation current');
+        // -IS + GMIN*V, which is what the REFERENCE carries: ngspice puts GMIN
+        // across the junction, so a reverse diode is a conductance as well as a
+        // saturation current.
+        //
+        // WHAT THIS LINE USED TO SAY, AND WHY IT MATTERS. It asserted
+        // `iD == -IS` to 1e-18 -- a claim about this engine's old model, sitting
+        // next to a live-ngspice comparison that passed. With IS = 2e-12 and
+        // V = -2 V the GMIN term is another -2e-12, so the old answer was off
+        // by EXACTLY A FACTOR OF TWO and the 3e-12 absolute tolerance above was
+        // wide enough to hold either. The hand-written claim was the only thing
+        // separating them, and it was separating in favour of the wrong one.
+        //
+        // So the tolerance is relative now and 200x tighter than the gap
+        // between the two models, which is what makes it a test rather than an
+        // accommodation.
+        const expectedReverse = -PARAMS.is + JUNCTION_GMIN * volts;
+        assert.ok(Math.abs(iD - expectedReverse) < Math.abs(expectedReverse) * 1e-6,
+          `reverse diode current ${iD} A, contract ${expectedReverse} A `
+          + '(-IS + GMIN*V, the reference\'s own junction)');
+        assert.ok(Math.abs(iD / expected.diode - 1) < 1e-4,
+          `reverse diode current ${iD} A vs ngspice ${expected.diode} A: a relative `
+          + 'check, because an absolute one at this scale passes a 2x error');
       }
       assert.ok(Math.abs(iD + iRout) < 1e-11, `${volts} V output-node KCL`);
       assert.ok(Math.abs(iV + op.branchCurrents.get('R1').get('a')) < 1e-11,

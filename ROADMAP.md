@@ -225,12 +225,25 @@ starting (contents: the two-node macromodel, param names, how the region FSM
 composes, and the AC-analysis stamps). Oracle: a unity-gain follower's −3 dB point at
 GBW; an inverting ×10 amp at GBW/10 — both against the E2.1 AC sweep AND analytic.
 
-### E3.2 BJT: Early effect + reverse-active — `src/mna.js` (GATED)
-Extend the simplified Ebers-Moll (currently B-E diode + gm VCCS, no Early, no
-reverse) with VA (output conductance gm·Vce/VA term) and the reverse-active region.
-Equations from the BSD-licensed SPICE3f5 set. File
-`spec-updates/bjt-early-reverse.md`. Oracle: a common-emitter stage's measured gain
-vs the analytic gm·(RC ∥ ro); a saturated-then-reversed transistor test.
+### E3.2 BJT: Early effect + reverse-active — `src/mna.js` — DONE (both halves)
+Reverse-active landed first, as full Ebers-Moll with a reverse beta in
+`ebersMollCompanion` — so this item's original problem statement ("currently B-E
+diode + gm VCCS, no Early, no reverse") stopped describing the tree before the Early
+half was written. The Early effect landed second: one factor `(1 - Vbc/VAF)` on the
+transport current, Ib untouched, `VAF` absent meaning INFINITE so a card that does
+not declare it is bit-identical to the tree before it existed. Both crossings moved
+with it — bw-circuit-ui's importer carries VAF onto the part and its exporter states
+`Vaf=` in the deck, because a parameter the engine reads and the deck omits is the
+authored-beta defect again.
+
+Measured rather than asserted: 700 ADI2005 v2 decks declare VAF on a BJT and all 700
+now agree with ngspice; the "BJT Emitter Follower" family that motivated it went from
+15.7 mV out to 0.245 mV, and a removal test proved VAF was the whole of that error
+while IKF and RC were irrelevant to it. See `spec-updates/bjt-early-reverse.md`,
+which also names what was deliberately left: VAR (no deck measured declares it) and
+the IKF/IKR knee (worth 0.245 mV here). The roadmap's analytic oracle — a
+common-emitter gain against gm·(RC ∥ ro) — is only now *possible*, since `ro` was
+infinite before, and is the right next unit test.
 
 ### E3.3 MOSFET: body diode + gate capacitance — `src/mna.js` (GATED)
 Level-1 with Meyer capacitances and the body diode (reuses E1.3's junction stamp).

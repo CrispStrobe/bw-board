@@ -37,7 +37,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
-import { MNA_HEADROOM_V } from '../src/mna.js';
+import { JUNCTION_GMIN, MNA_HEADROOM_V } from '../src/mna.js';
 
 const VCC = 5.0, VF = 2.0;
 
@@ -101,14 +101,45 @@ test('a bystander in a PARALLEL branch changes nothing about LED1', () => {
     assert.ok(alone.i > 0, 'fixture: LED1 must carry a driven current');
     for (const second of ['resistor', 'led', 'floating-led']) {
         const got = read(build(second));
-        // BIT-IDENTICAL, not "close". A part on another branch does not perturb
-        // this solve at all, so a tolerance here would be admitting it might.
+        // THE MODEL IS BIT-IDENTICAL, ALWAYS. It is the routing heuristic's own
+        // output, and a tolerance on it would be admitting the heuristic might
+        // read state that is not about this part -- which is the defect this
+        // file exists for.
         assert.equal(got.model, alone.model,
             `a second ${second} changed LED1's MODEL from ${alone.model} to ${got.model} — `
             + 'the routing heuristic is reading state that is not about this part');
-        assert.equal(got.i, alone.i,
-            `a second ${second} moved LED1 from ${(alone.i * 1e3).toFixed(6)} mA to `
-            + `${(got.i * 1e3).toFixed(6)} mA`);
+
+        // THE CURRENT IS BIT-IDENTICAL ONLY WHEN THE BYSTANDER HAS NO JUNCTION,
+        // and that split is physics rather than a loosened tolerance.
+        //
+        // This assertion was `strictEqual` for all three, on the stated grounds
+        // that "a part on another branch does not perturb this solve at all".
+        // That was true only while a reverse junction had NO conductance. It has
+        // one now: ngspice puts GMIN across every pn junction and this engine
+        // follows it (see JUNCTION_GMIN), so an added LED really does couple to
+        // its nodes -- the reference would show the same coupling. Measured: a
+        // second floating LED moves LED1 by 1.8e-12 A out of 3.17e-3 A.
+        //
+        // So a bystander that adds no junction must STILL be bit-identical, and
+        // one that adds a junction is bounded by what that junction can pass:
+        // GMIN times the rail. The bound is derived, not chosen, and it is seven
+        // orders below the reading -- a routing heuristic reading netlist-wide
+        // state destroyed this reading outright, which no bound this tight could
+        // ever absorb.
+        const hasJunction = second !== 'resistor';
+        if (!hasJunction) {
+            assert.equal(got.i, alone.i,
+                `a second ${second} adds no junction and must not move LED1 at all: `
+                + `${(alone.i * 1e3).toFixed(9)} mA -> ${(got.i * 1e3).toFixed(9)} mA`);
+        } else {
+            const bound = JUNCTION_GMIN * VCC;
+            assert.ok(Math.abs(got.i - alone.i) <= bound,
+                `a second ${second} moved LED1 by ${Math.abs(got.i - alone.i)} A, more than `
+                + `the ${bound} A its own junction can pass at GMIN`);
+            assert.ok(Math.abs(got.i - alone.i) / alone.i < 1e-8,
+                `a second ${second} moved LED1 by a visible fraction `
+                + `(${Math.abs(got.i - alone.i) / alone.i}) — that is a heuristic, not a junction`);
+        }
     }
     // The parallel LED must itself be lit, or "it changed nothing" is a claim
     // about a part that is not in the circuit in any meaningful sense.

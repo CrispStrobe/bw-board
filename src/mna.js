@@ -377,6 +377,23 @@ export const JUNCTION_I_RATED = 0.020;
 export const MOS_GDS_FLOOR = 1e-12;
 
 /**
+ * GMIN: the conductance ngspice places ACROSS EVERY PN JUNCTION, and nowhere
+ * else. Not a node-diagonal term -- proven at 1 TOhm: `R1 a b 1T` with no
+ * junction gives exactly 5.000000 V, and with one reverse diode 2.495000 V,
+ * which is (5e-12 - 1e-14)/2e-12 and only solves if the junction carries a
+ * 1e-12 conductance IN PARALLEL with its saturation current.
+ *
+ * A floored CONDUCTANCE is not the same term and does not produce that number.
+ * A Newton stamp of `g = 1e-12, Ieq = i(V0) - g*V0` makes the branch carry
+ * exactly `i(V0)` at convergence -- for a reverse diode, a pure 1e-14 A current
+ * source with no conductance at all. Measured on the deck above: 4.989999 V,
+ * because 1e-14 A through 1 TOhm is 0.01 V. The missing piece is the GMIN*V
+ * term in the junction CURRENT, which is what makes the junction a conductance
+ * as well as a source.
+ */
+export const JUNCTION_GMIN = 1e-12;
+
+/**
  * A SATURATED MOSFET'S OUTPUT CONDUCTANCE, FROM THE MODEL AND NOT FROM A
  * NUMERICAL CONVENIENCE.
  *
@@ -778,8 +795,17 @@ function ebersMollParams(part) {
   const bf = Number(part.params?.beta ?? cls.beta);
   const br = Number(part.params?.br ?? cls.br);
   const n = Number(part.params?.n ?? cls.n ?? 1);
+  // Forward Early voltage. ABSENT MEANS INFINITE, not zero and not a default
+  // number: a card that does not declare VAF must solve exactly as it did
+  // before this parameter existed, and `Infinity` is the only value of it that
+  // makes the Early term vanish algebraically rather than numerically. A zero
+  // would be a divide-by-zero dressed as a default, so it is rejected here
+  // along with a negative -- SPICE treats VAF=0 as "no Early effect" and so do
+  // we, by falling back to Infinity rather than by a branch downstream.
+  const vafDeclared = Number(part.params?.vaf ?? cls.vaf ?? Infinity);
+  const vaf = vafDeclared > 0 ? vafDeclared : Infinity;
   if (!(is > 0) || !(bf > 0) || !(br > 0) || !(n > 0)) return null;
-  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br };
+  return { is, nVt: n * JUNCTION_THERMAL_VOLTAGE, bf, br, vaf };
 }
 
 /**
@@ -792,25 +818,82 @@ function ebersMollParams(part) {
  * @returns {{gpi: number, gmu: number, gcF: number, gcR: number,
  *            ieqB: number, ieqC: number, ib: number, ic: number}}
  */
-function ebersMollCompanion(vbe, vbc, p) {
+export function ebersMollCompanion(vbe, vbc, p) {
   const cap = 80 * p.nVt;
   const expF = Math.exp(Math.min(vbe, cap) / p.nVt);
   const expR = Math.exp(Math.min(vbc, cap) / p.nVt);
   const iF = p.is * (expF - 1);
   const iR = p.is * (expR - 1);
-  // Conductances floored the way shockleyEval floors its own: a reverse-biased
-  // junction has a real but tiny slope, and a hard zero makes the row singular
-  // when a transistor is the only thing on a node.
-  const gF = Math.min(Math.max(p.is * expF / p.nVt, 1e-12), 1e6);
-  const gR = Math.min(Math.max(p.is * expR / p.nVt, 1e-12), 1e6);
+  const gF = Math.min(p.is * expF / p.nVt, 1e6);
+  const gR = Math.min(p.is * expR / p.nVt, 1e6);
 
-  const ib = iF / p.bf + iR / p.br;
-  const ic = iF - iR * (1 + 1 / p.br);
+  // GMIN GOES ON THE JUNCTIONS, AND NOT DIVIDED BY BETA.
+  //
+  // These conductances used to be FLOORED at 1e-12 "the way shockleyEval
+  // floors its own". Two things were wrong with that, and they compound:
+  //
+  //  - A floor on the slope is not a parallel conductance, and the CURRENT is
+  //    what fixes the answer. The Newton stamp makes the branch carry exactly
+  //    `i(V0)` at convergence, so a floored reverse junction is a pure
+  //    saturation-current source with no conductance at all -- see
+  //    JUNCTION_GMIN for the 1 TOhm measurement. Measured on a base behind a
+  //    coupling capacitor: engine 0.009954 V against ngspice 0.276875 V.
+  //  - The floor also landed on `gF`, which reaches the base only as
+  //    `gF / BF`. That one is a JACOBIAN error rather than a wrong answer: a
+  //    converged solution does not depend on it. It is still wrong, because a
+  //    Jacobian entry that is not the derivative of its own current costs
+  //    convergence -- and the honest test of it is the derivative, not the
+  //    voltage. `JUNCTION_GMIN` added to `ib` differentiates to `JUNCTION_GMIN`
+  //    on `gpi`, undivided; a mutation dividing it by BF is invisible in every
+  //    node voltage, which is exactly why it needs its own assertion.
+  //
+  // ngspice adds GMIN to the base-emitter and base-collector JUNCTION currents
+  // themselves, so it appears once on each junction at full strength. The
+  // transport terms (`iF`, `ic`) are not junction currents and get none.
+  // THE EARLY EFFECT, on the TRANSPORT current and nothing else.
+  //
+  // ngspice's BJT computes its base-charge factor as q1 = 1/(1 - Vbc/VAF -
+  // Vbe/VAR) and its transport current as (iF - iR)/qb; with no VAR and no
+  // high-current knee that is exactly (iF - iR) * (1 - Vbc/VAF), which is the
+  // form below. `vaf` is Infinity unless a card declares it, so `early` is
+  // exactly 1 and `dEarly` exactly 0 for every part that does not, and the
+  // stamp is then bit-identical to the one before this term existed.
+  //
+  // IT MUST NOT TOUCH THE BASE CURRENT. Ib stays iF/BF + iR/BR: Early raises
+  // the collector current at a FIXED base current, which is the same statement
+  // as beta rising with Vce, and putting the factor on Ib as well would cancel
+  // the whole effect while still looking like an implementation of it.
+  //
+  // MEASURED, on the corpus family that made the case -- ADI2005 v2's "BJT
+  // Emitter Follower", 59 decks, one model card (IS=1e-14 BF=200 VAF=100) and
+  // a 22 MOhm base resistor:
+  //
+  //     ngspice V(BASE) 1.022540    before 1.006830    delta 15.7 mV
+  //
+  // and the removal test that isolated it: with VAF deleted from the card the
+  // two engines AGREE, with IKF or RC deleted instead they still differ by the
+  // same 15.7 mV. Vce is about 4.6 V there, so the factor is 1.046 -- a few
+  // percent on Ic, which on a 22 MOhm base is 16 mV of base voltage.
+  // `?? Infinity` rather than assuming the field: this function is exported and
+  // a caller assembling `p` by hand (several tests do) would otherwise divide
+  // by undefined and stamp NaN through the whole matrix.
+  const vaf = p.vaf ?? Infinity;
+  const early = 1 - vbc / vaf;
+  const dEarly = Number.isFinite(vaf) ? -1 / vaf : 0;
+  const ict = iF - iR;
 
-  const gpi = gF / p.bf;              // d Ib / d Vbe
-  const gmu = gR / p.br;              // d Ib / d Vbc
-  const gcF = gF;                     // d Ic / d Vbe
-  const gcR = -gR * (1 + 1 / p.br);   // d Ic / d Vbc
+  const ib = iF / p.bf + iR / p.br + JUNCTION_GMIN * (vbe + vbc);
+  const ic = ict * early - iR / p.br - JUNCTION_GMIN * vbc;
+
+  const gpi = gF / p.bf + JUNCTION_GMIN;   // d Ib / d Vbe
+  const gmu = gR / p.br + JUNCTION_GMIN;   // d Ib / d Vbc
+  const gcF = gF * early;                  // d Ic / d Vbe
+  // d Ic / d Vbc: the reverse transport slope through the same factor, plus the
+  // factor's OWN derivative times the transport current -- the term a chain
+  // rule left out would make the Jacobian disagree with the current it stamps,
+  // which costs iterations rather than accuracy and is invisible in any
+  // converged voltage. It has its own finite-difference assertion.
+  const gcR = -gR * early + ict * dEarly - gR / p.br - JUNCTION_GMIN;
 
   return {
     gpi, gmu, gcF, gcR,
@@ -903,11 +986,18 @@ function shockleyParams(opts, vf) {
 /** Junction current and conductance at a JUNCTION voltage. */
 function shockleyEval(vJ, p) {
   const vClamped = Math.min(vJ, p.nVt * 80);
-  if (vClamped < -5 * p.nVt) return { i: -p.is, gj: 1e-12 };
+  // `+ JUNCTION_GMIN * v` on the current and `+ JUNCTION_GMIN` on the slope:
+  // the parallel conductance ngspice puts across the junction. It replaces the
+  // old 1e-12 FLOOR on the slope, which looked like the same thing and is not
+  // -- see JUNCTION_GMIN for the measurement that separates them. In forward
+  // bias the term is ~7e-13 A against milliamps, so nothing there moves.
+  if (vClamped < -5 * p.nVt) {
+    return { i: -p.is + JUNCTION_GMIN * vClamped, gj: JUNCTION_GMIN };
+  }
   const expV = Math.exp(vClamped / p.nVt);
   return {
-    i: p.is * (expV - 1),
-    gj: Math.min(Math.max(p.is * expV / p.nVt, 1e-12), 1e6),
+    i: p.is * (expV - 1) + JUNCTION_GMIN * vClamped,
+    gj: Math.min(p.is * expV / p.nVt + JUNCTION_GMIN, 1e6),
   };
 }
 
@@ -1040,16 +1130,20 @@ function shockleyCompanion(vAcross, vf, rd, is, n) {
   const vClamped = Math.min(vAcross, nVt * 80);
 
   if (vClamped < -5 * nVt) {
-    // Deep reverse bias: essentially off
-    return { gEq: 1e-12, iEq: 0 };
+    // Deep reverse bias: the saturation current in parallel with GMIN. The
+    // Norton current is `i - g*V` = `(-is + GMIN*V) - GMIN*V` = `-is`, which is
+    // why the source term is the plain saturation current and the conductance
+    // carries the GMIN.
+    return { gEq: JUNCTION_GMIN, iEq: -is };
   }
 
   const expV = Math.exp(vClamped / nVt);
-  const iD = is * (expV - 1);
-  const gEq = is * expV / nVt; // dI/dV
+  const iD = is * (expV - 1) + JUNCTION_GMIN * vClamped;
+  const gEq = is * expV / nVt + JUNCTION_GMIN; // dI/dV, GMIN in parallel
 
-  // Clamp gEq to avoid numerical issues
-  const gClamped = Math.min(Math.max(gEq, 1e-12), 1e6);
+  // Upper clamp only: GMIN is already the floor, and a floor is not the same
+  // term as a parallel conductance.
+  const gClamped = Math.min(gEq, 1e6);
 
   // Norton: I_eq = I(V0) - G_eq × V0
   const iEq = iD - gClamped * vAcross;
@@ -1438,12 +1532,57 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   }
 
   // Newton–Raphson iterations
-  const MAX_NR_ITER = 50;
   const NR_TOL = 1e-6;
   // Junction-voltage damping: an exponential nonlinearity can fling NR across
   // volts per iteration and oscillate forever; classic per-step limiting keeps
   // every update inside the model's trust region.
   const NR_MAX_STEP = 0.5;
+
+  /**
+   * THE ITERATION BUDGET IS A CONSEQUENCE OF THE STEP CLAMP, NOT A ROUND NUMBER.
+   *
+   * It was 50, and 50 is not enough for a circuit on wide rails. Junction
+   * limiting moves each junction at most `NR_MAX_STEP` per iteration, so a node
+   * that starts one rail away and must end at the other cannot arrive in fewer
+   * than `span / NR_MAX_STEP` iterations however well conditioned it is. At
+   * +/-15 V that is 60, and the loop gave up at 50.
+   *
+   * The failure was silent in the worst way: not an oscillation, but a STEADY
+   * WALK. Instrumenting ADI2005 v3 row 526, a two-stage Miller-compensated
+   * op-amp, the residual fell by exactly 0.5 V per iteration -- 2.67, 2.17,
+   * 1.67, 1.17, 0.673, 0.173 -- and the budget ran out two iterations from the
+   * answer. It read as "engine-non-convergence: bias point", which is the
+   * reason a reader would then go looking for a model or a continuation defect.
+   * Sixty of the 66 non-convergences in that 12,471-deck corpus were this one
+   * topology on +/-15 V rails, and finer source stepping does nothing for it
+   * (measured: two denser ladders, no change).
+   *
+   * So it is derived from the widest source pair the netlist actually contains,
+   * with 50 kept as the floor so nothing narrow gets less than before, and a
+   * margin for Newton's own convergence once the walk arrives. Circuits that do
+   * not need the iterations still exit at `NR_TOL` and pay nothing.
+   *
+   * THE `+ 20` IS A FLOOR AND NOT A MEASUREMENT, said plainly: removing it
+   * leaves exactly `span / NR_MAX_STEP` and the op-amp still converges, so no
+   * case in the corpus requires it. It is there because the walk and Newton's
+   * own convergence are two costs and only the first is bounded by the span --
+   * a circuit that arrives on its last permitted iteration would still need a
+   * few more to satisfy NR_TOL. `test/newton-budget-from-rail-span.test.mjs`
+   * records that its mutation survives.
+   */
+  const sourceSpan = (() => {
+    let lo = 0; let hi = 0;
+    for (const part of parts) {
+      for (const key of ['volts', 'emf', 'vcc']) {
+        const v = Number(part.params?.[key]);
+        if (!Number.isFinite(v)) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+    }
+    return hi - lo;
+  })();
+  const MAX_NR_ITER = Math.max(50, Math.ceil(sourceSpan / NR_MAX_STEP) + 20);
 
   let solution = new Float64Array(dim);
   let converged = false;
@@ -1466,7 +1605,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
   // the same circuit at a tenth of the excitation). All nonlinear state
   // (junction voltages, region FSMs, CC clamps) lives in the enclosing
   // scope, so each rung seeds the next — the point of a continuation.
-  const runNewton = (gmin, srcScale = 1) => {
+  const runNewton = (gmin, srcScale = 1, selectiveShunt = false) => {
   for (let iter = 0; iter < MAX_NR_ITER; iter++) {
     // Clear values; the assembled pattern survives for factor reuse.
     A.reset();
@@ -1855,8 +1994,44 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (idxB !== undefined) b[idxB] -= testCurrent;
     }
 
-    // gmin from every node to the reference: keeps floating nets solvable.
-    for (let i = 0; i < nodeCount; i++) A.add(i, i, gmin);
+    // GMIN, AND WHERE NGSPICE ACTUALLY PUTS IT.
+    //
+    // ngspice puts GMIN across pn JUNCTIONS and nothing on a node diagonal.
+    // Proven at 1 TOhm: `R1 a b 1T` with no junction gives exactly 5.000000 V,
+    // and with one reverse diode 2.495000 V = (5e-12 - 1e-14)/2e-12.
+    //
+    // A blanket node shunt is therefore a conductance to the reference that the
+    // reference does not have, and on a high-impedance net it is not a rounding
+    // term -- it is the answer. Measured against ngspice on the same deck:
+    //
+    //   1T divider, far node floating   engine 2.500000 V   ngspice 5.000000 V
+    //   BJT base behind a coupling cap  engine 0.009954 V   ngspice 0.276875 V
+    //
+    // The first is 1e-12 S of shunt against 1e-12 S of resistor: a perfect
+    // 50/50 divider out of nothing. Lowering GMIN globally was measured and is
+    // WORSE (1,612 -> 1,559 agreeing ADI decks, convergence failures doubled),
+    // because the shunt is also what keeps a floating net solvable.
+    //
+    // So it is kept where it earns its keep and removed where it lies. A node
+    // whose diagonal is already non-zero has a real conductance on it -- a
+    // resistor, or a junction whose own `gj` floor is 1e-12, which is ngspice's
+    // junction GMIN by another name -- and needs no help. A node whose diagonal
+    // is zero is attached to nothing the DC solve can see (a capacitor is open
+    // at an operating point), and that is the singular matrix this term exists
+    // to prevent.
+    //
+    // Selective mode runs as a REFINEMENT, after a full-shunt solve has
+    // converged and seeded the junction state, because the blanket shunt is
+    // also the continuation that gets a hard operating point to converge at
+    // all. If the refinement does not converge, the full-shunt answer stands.
+    for (let i = 0; i < nodeCount; i++) {
+      // Selective: only a node with NOTHING else on it keeps the shunt. The
+      // diagonal here excludes `gmin` -- every stamp has run and this loop is
+      // what adds it -- so a non-zero diagonal means a real conductance is
+      // already holding the node.
+      if (selectiveShunt && A.get(i, i) !== 0) continue;
+      A.add(i, i, gmin);
+    }
 
     // Solve
     const bcopy = new Float64Array(b);
@@ -2298,6 +2473,118 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       if (!runNewton(GMIN, s)) { laddered = false; break; }
     }
     converged = laddered;
+  }
+
+  // THE REFINEMENT. Everything above ran with the blanket node shunt, because
+  // that shunt is the continuation that makes a hard operating point converge.
+  // Now that the junction state is seeded by a converged solve, the same
+  // Newton runs once more with the shunt kept ONLY on nodes that have nothing
+  // else on them -- which is where ngspice puts it. See the long note at the
+  // shunt itself for the two measurements this exists to fix.
+  //
+  // IT IS A REFINEMENT AND NOT A REPLACEMENT. If it does not converge, the
+  // full-shunt answer stands: a converged solve with a small wrong term beats
+  // an iterate with no term, and a caller cannot tell an iterate from an answer.
+  // `solution` and the junction state are only overwritten on success, so a
+  // failed refinement leaves the accepted answer exactly as it was.
+  // THE REFINEMENT: RE-CONVERGE WITHOUT THE TERM THAT IS NOT PHYSICAL.
+  //
+  // Everything above ran with the blanket node shunt, because that shunt is the
+  // continuation that gets a hard operating point to converge. The accepted
+  // answer therefore contains a conductance to the reference that ngspice does
+  // not have -- worth 2.5 V on a 1 TOhm divider. See JUNCTION_GMIN.
+  //
+  // So Newton runs once more with the shunt kept ONLY on nodes that have
+  // nothing else on them -- and only where a cheap first step has proved that
+  // it matters.
+  //
+  //  - A single LINEAR re-solve cannot finish the job on its own. It is exact
+  //    for a linear network and one step for an exponential, so where the shunt
+  //    was doing real work it falls short: a diode-connected MOSFET whose
+  //    gate-drain node hangs on its bulk junction reached 4.867521 V against
+  //    ngspice's 4.999380 V, and a two-open-switch interlock was 864 mV out.
+  //    Looping the re-solve is worse still (4.840996) because `runNewton`
+  //    re-adds the shunt its ladders rely on.
+  //  - I also froze the region FSMs here, on the theory that re-stamping
+  //    re-drives them and that this was what moved the piecewise BJT bench
+  //    0.067245 -> 0.195212 V. IT IS NOT, and the freeze was inert: with a
+  //    circuit that has BOTH a shunt-held node and a saturated BJT, frozen and
+  //    unfrozen give the same 0.195212 V to six figures. The movement comes
+  //    from ITERATING a bench that is not uniquely converged, not from region
+  //    state, so the freeze was a mechanism with nothing behind it and is gone.
+  //    What protects that bench is the threshold below, and only that.
+  //
+  // IT IS A REFINEMENT AND NOT A REPLACEMENT. If it does not converge the
+  // full-shunt answer stands, device state included: a converged solve with a
+  // small wrong term beats an iterate with no term, and a caller cannot tell an
+  // iterate from an answer.
+  if (converged && !transient) {
+    const shunted = Float64Array.from(solution);
+    const snap = [diodeVoltages, mosVsb, mosVdb, mosVds, bjtVbc].map((m) => new Map(m));
+    const restore = () => {
+      solution = shunted;
+      for (const [m, saved] of [[diodeVoltages, snap[0]], [mosVsb, snap[1]],
+        [mosVdb, snap[2]], [mosVds, snap[3]], [bjtVbc, snap[4]]]) {
+        m.clear();
+        for (const [k, v] of saved) m.set(k, v);
+      }
+    };
+    const allFinite = (v) => {
+      for (let i = 0; i < v.length; i++) if (!Number.isFinite(v[i])) return false;
+      return true;
+    };
+
+    // STEP ONE: the same assembly, minus the shunt. `A` and `b` still hold the
+    // final iteration's stamps -- `solveAssembled` copies to CSC and mutates
+    // neither -- so this changes exactly one thing and nothing is re-evaluated.
+    let removed = 0;
+    for (let i = 0; i < nodeCount; i++) {
+      if (A.get(i, i) - GMIN !== 0) { A.add(i, i, -GMIN); removed++; }
+    }
+    let moved = 0;
+    if (removed) {
+      try {
+        const once = solveAssembled(A, new Float64Array(b));
+        if (allFinite(once)) {
+          for (let i = 0; i < once.length; i++) moved = Math.max(moved, Math.abs(once[i] - solution[i]));
+          solution = once;
+        }
+      } catch { /* singular without it: the shunted answer stands */ }
+    }
+
+    // STEP TWO, AND ONLY WHERE STEP ONE PROVED IT IS NEEDED.
+    //
+    // How far step one moved the answer IS the measurement of whether the shunt
+    // was load-bearing, and it decides whether the junctions must re-converge.
+    // A circuit at ordinary impedances does not move at all -- the term is
+    // eleven orders below its conductances -- and it keeps step one's answer,
+    // bit-identical to before this block existed. A circuit whose nodes hung on
+    // the shunt moves by volts, and there the frozen linearisation is stale and
+    // one step is not enough: the dangling gate-drain bench needed this to go
+    // from 4.867521 V to 5.000000 V against ngspice's 4.999380 V.
+    //
+    // Deriving the condition is the point. Keying it to a device kind would be
+    // a list to keep, and the thing that matters is not which parts are present
+    // but whether the shunt was holding a node up.
+    //
+    // WHY IT HAS TO BE CONDITIONAL. Iterating unconditionally moves the
+    // PIECEWISE BJT bench 0.067245 -> 0.195212 V, because that bench is not
+    // uniquely converged -- any second trajectory lands on a different
+    // consistent point. Its step-one move is ~1e-11 V, so the threshold leaves
+    // it alone, and the two cases separate by seven orders of magnitude rather
+    // than by a predicate anyone has to maintain.
+    //
+    // WHAT THE THRESHOLD DOES NOT PROMISE. A circuit with BOTH a shunt-held
+    // node and a region-bearing device does take the iteration, and there the
+    // piecewise answer does move: the same motor bench with one dangling 1 TOhm
+    // resistor added reads 0.195212 V rather than 0.067245 V. No gallery
+    // circuit is in that class -- the 2,131-circuit A/B is +10 and zero
+    // regressions -- but it is a real consequence and not a case the threshold
+    // rules out.
+    if (moved > 1e-6) {
+      const ok2 = runNewton(GMIN, 1, true);
+      if (!ok2 || !allFinite(solution)) restore();
+    }
   }
 
   // ─── Extract results ────────────────────────────────────────────────────
@@ -3701,7 +3988,88 @@ function smoothVov(vov) {
  * cases the junction sees `-state`; only which end of the diode the node is
  * differs, and that is the one sign below.
  */
-function stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb) {
+function stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds) {
+  // BULK TIED TO THE SOURCE IS ALSO A KNOWN BULK POTENTIAL.
+  //
+  // It shorts the bulk-SOURCE junction -- which is why that case needs no
+  // threshold shift -- but NOT the bulk-drain one, and that is live whenever
+  // the drain goes below the source. ADI2005 v3 row 4654 is the case in three
+  // lines:
+  //
+  //   M1 VDD VDD 3 3 NMOS  /  V1 3 0 5
+  //
+  // a diode-connected device whose source and bulk sit at 5 V with its
+  // drain/gate node dangling. Measured:
+  //
+  //   bulk at 5 V, as written    ngspice V(VDD) = 4.999380
+  //   bulk moved to node 0       ngspice V(VDD) = 3.36e-19   <- our old answer
+  //   bulk at 5 V, IS = 1e-30    ngspice V(VDD) = 5.000000   <- pure GMIN tie
+  //
+  // The junction's own forward drop is the 0.62 mV, and its ABSENCE was the
+  // whole 5 V. 6 of the 24 remaining numeric disagreements in the full
+  // 12,471-deck corpus are this one shape.
+  //
+  // The bulk node here IS the source node, so the drain junction is stamped
+  // between `idxS` and `idxD` and sees -Vds: for an n-channel the bulk is
+  // p-type and the junction runs bulk->drain, so its forward voltage is
+  // V(source) - V(drain) = -Vds; for a p-channel every sign is already stored
+  // inverted, so it is -Vds there too. One expression, both channel types --
+  // the same coincidence the grounded-bulk case relies on.
+  // A THREE-TERMINAL MOSFET'S BULK IS ON ITS SOURCE, and saying nothing about
+  // it is not the same as it having none.
+  //
+  // This engine's own `nmos`/`pmos` parts declare `gate, drain, source` and no
+  // bulk, so they carried NEITHER flag and stamped no junction at all -- while
+  // the SPICE exporter writes them `M<ref> <d> <g> <s> <s>`, bulk on source,
+  // which in ngspice carries a drain-bulk junction. Engine and deck were
+  // different devices, and the gallery's `pc39-nmos-switch` is where it shows:
+  // an open switch leaves the drain floating, held only by leak paths, and our
+  // drain sat at 4.301317 V against ngspice's 4.245149 V.
+  //
+  // It went unseen because the blanket node shunt was standing in for the
+  // missing junction -- a 1e-12 tie to ground where the junction's own GMIN
+  // should have been. Removing that shunt is what exposed it, which is the
+  // usual shape: a convergence removes the compensation and the original defect
+  // becomes visible for the first time.
+  //
+  // THE ONE CASE THE DEFAULT MUST NOT CAPTURE is a deck that ties the bulk to
+  // some THIRD node. The importer declines those -- it will not invent a
+  // potential -- and marks them `bulkUnplaced`, which is why that flag exists
+  // rather than the decline living only in a warning: a part whose refusal is
+  // not in its params arrives here indistinguishable from one that said nothing
+  // and would take the default, guessing the very potential we refused.
+  //
+  // Keying this off the terminal list instead was my first attempt and it does
+  // not work: `nmos` is registered with exactly `gate, drain, source`, so a
+  // four-terminal one cannot be built and the guard could never fire.
+  if (part.params?.bulkUnplaced) return;
+  if (part.params?.bulkOnSource || !part.params?.bulkAtGround) {
+    // A SOURCE AT THE REFERENCE HAS NO ROW, AND THAT IS NOT A REASON TO SKIP
+    // THE JUNCTION.
+    //
+    // `idxS` is `undefined` whenever the source sits on the ground net, because
+    // the reference is implicit and has no matrix row. The guard here required
+    // BOTH indices, so the branch returned without stamping for the commonest
+    // MOSFET wiring there is -- a grounded source. That is why the
+    // `pc39-nmos-switch` drain kept reading 4.301317 V after the bulk-on-source
+    // default was added: the default was reached and the stamp was not.
+    //
+    // Only the drain is needed. With the source at the reference the junction is
+    // between the drain node and ground, which is a diagonal-and-RHS stamp.
+    if (idxD === undefined || !mosVds) return;
+    const vds = mosVds.get(part.id) ?? 0;
+    const { gEq, iEq } = mosBulkJunction(-vds, part.params);
+    const nodeIsCathode = part.kind === 'nmos' ? 1 : -1;
+    A.add(idxD, idxD, gEq);
+    b[idxD] += nodeIsCathode * iEq;
+    if (idxS !== undefined) {
+      A.add(idxS, idxS, gEq);
+      A.add(idxD, idxS, -gEq);
+      A.add(idxS, idxD, -gEq);
+      b[idxS] -= nodeIsCathode * iEq;
+    }
+    return;
+  }
   if (!part.params?.bulkAtGround) return;
   if (!mosVsb || !mosVdb) return;
   const idxB = groundNetId !== undefined && groundNetId !== null
@@ -3741,7 +4109,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
 
   const vgs = diodeVoltages.get(part.id) ?? 0;
 
-  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb);
+  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds);
 
   if (region === 'triode') {
     // THE LEVEL-1 LINEAR REGION, WITH ITS SECOND TERM.
@@ -3848,7 +4216,7 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   // For PMOS: Vsg > |Vth| to turn on
   const vsg = diodeVoltages.get(part.id) ?? 0;
 
-  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb);
+  stampMosBulkDiodes(A, b, part, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds);
 
   if (region === 'triode') {
     // The level-1 linear region with its second term — see the NMOS note.

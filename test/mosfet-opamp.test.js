@@ -280,17 +280,41 @@ describe('CMOS gate rail bounds', () => {
   assert.ok(Math.abs(board.nodeVoltage('n_out') - 5) < 0.05,
     `both inputs low must pull OUT to the rail, read ${board.nodeVoltage('n_out')} V`);
 
-  // A NODE BETWEEN TWO CUT-OFF DEVICES BELONGS TO GMIN, NOT TO A LEAK.
+  // A NODE BETWEEN TWO CUT-OFF DEVICES BELONGS TO THEIR JUNCTIONS' GMIN, AND
+  // "AT 0" WAS THE ANSWER TO A DIFFERENT DECK.
   //
-  // Both NMOS are off here, so n_mid touches nothing that conducts. ngspice
-  // puts such a node at 0, because GMIN is the only thing holding it. Ours put
-  // it at 2.410857 V — a divider between OUT and ground through a flat 1 nS
-  // drain-source leak on each off device — and then at 0.200 V once the flat
-  // term went, because the remaining floor still out-argued GMIN 15 to 1.
-  // A drain-source leak ties a floating node to whatever the other off device
-  // happens to touch; GMIN ties it to ground.
-  assert.ok(Math.abs(board.nodeVoltage('n_mid')) < 1e-3,
-    `a node between two cut-off NMOS reads ${board.nodeVoltage('n_mid')} V; with nothing `
-    + 'conducting it belongs to GMIN, at 0');
+  // Both NMOS are off, so n_mid touches nothing that conducts a channel. This
+  // asserted 0 on the stated grounds that 0 "is ngspice's answer". It is --
+  // for a device whose bulk is tied to the REFERENCE. Measured on the same
+  // NAND deck, both inputs low:
+  //
+  //   MN1 nout na nmid nmid   (bulk on source)   ngspice nmid = 2.500001 V
+  //   MN1 nout na nmid 0      (bulk at node 0)   ngspice nmid = -1.9e-14 V
+  //
+  // A three-terminal `nmos` is the first of those -- its symbol ties bulk to
+  // source and the SPICE export writes it that way -- so each off device holds
+  // n_mid through its own bulk-drain junction, and the node is a GMIN divider
+  // between OUT and ground. Half of 5 V is 2.5, and that is ngspice's number to
+  // seven figures.
+  //
+  // The history is still worth keeping because it is the same node three times:
+  // ours read 2.410857 V through a flat 1 nS drain-source leak, then 0.200 V
+  // once that went, then 0 when the blanket node shunt was the only thing left
+  // holding it -- which matched a deck we do not export. A drain-source leak
+  // ties a floating node to whatever the other off device happens to touch;
+  // the junctions tie it to the bulks, which is where ngspice puts it.
+  assert.ok(Math.abs(board.nodeVoltage('n_mid') - 2.500001) < 5e-3,
+    `a node between two cut-off NMOS, each with its bulk on its source, is a GMIN `
+    + `divider: ngspice reads 2.500001 V, we read ${board.nodeVoltage('n_mid')} V`);
+
+  // AND THE OTHER DECK'S ANSWER IS STILL REACHABLE, by declaring what that deck
+  // declares. Without this the assertion above could pass on a model that had
+  // simply stopped distinguishing the two wirings.
+  for (const id of ['MN1', 'MN2']) parts.find(part => part.id === id).params.bulkAtGround = true;
+  const grounded = new BoardImpl(5);
+  grounded.setNetlist(parts, nets);
+  assert.ok(Math.abs(grounded.nodeVoltage('n_mid')) < 1e-3,
+    `with both bulks at the reference the node belongs to GMIN at 0; ngspice -1.9e-14 V, `
+    + `we read ${grounded.nodeVoltage('n_mid')} V`);
   });
 });

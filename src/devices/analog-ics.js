@@ -10,6 +10,7 @@
  */
 
 import { registerDevice } from '../devices.js';
+import { classDefaults } from '../parts-library.js';
 
 const R_INPUT = 1e6;
 const R_OUT = 50;
@@ -37,12 +38,18 @@ export function registerAnalogICs() {
     },
 
     stamp(ctx, part, state) {
-      // Base: high impedance (Darlington input)
-      ctx.conductance('base', 'emitter', 1 / (R_INPUT / 10)); // ~100kΩ base R
+      // Base: high impedance (Darlington input). The value is READ from
+      // `classDefaults('tip120').rBase` rather than derived from R_INPUT here,
+      // because the SPICE exporter has to reproduce this exact resistance and a
+      // literal in a stamp is a number no exporter can see. See the note beside
+      // it in parts-library.js.
+      const d = classDefaults('tip120');
+      const rBase = Number(part.params?.rBase) > 0 ? Number(part.params.rBase) : d.rBase;
+      ctx.conductance('base', 'emitter', 1 / rBase);
 
       if (state._on) {
         // Saturated: collector-emitter is a low resistance
-        const rCeSat = part.params?.rceSat ?? 2.0;
+        const rCeSat = part.params?.rceSat ?? classDefaults('tip120').rceSat;
         ctx.conductance('collector', 'emitter', 1 / rCeSat);
       }
     },
@@ -51,7 +58,8 @@ export function registerAnalogICs() {
       const vBase = read('base');
       const vEmitter = read('emitter');
       const vbe = vBase - vEmitter;
-      const vbeThreshold = part.params?.vbe ?? 1.4; // 2 × 0.7V
+      // 2 x 0.7 V, declared in classDefaults so the exporter reads the same number.
+      const vbeThreshold = part.params?.vbe ?? classDefaults('tip120').vbe;
 
       const shouldBeOn = vbe > vbeThreshold;
       if (shouldBeOn === state._on) return false;
