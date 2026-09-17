@@ -3752,8 +3752,30 @@ reboots a loaded image, proved in `test/rp2040-bootrom-reset.test.mjs` (an
 erased device still spins rather than sliding through `0xffff`, and that guard
 is mutation-verified).
 
-**This supplies a prerequisite, not the feature, and the triage above already
-says why:** a narrow reset callback previously produced a second MicroPython
+**CORRECTED SAME DAY — IT IS NOT ON THIS DEFECT'S CURRENT PATH AT ALL.** I
+wrote that it "supplies the first clause". Read the adapter: `machine.reset()`
+reaches `watchdog.onWatchdogTrigger`, which writes 0 to CTRL, records a
+`resetRequest`, sets `core.waiting = true` and hands the event to the host. It
+never calls `core.reset()` and never fetches the reset vector. The only
+`core.reset()` in the adapter is inside `resetToProgram()`, which overwrites PC
+on the next line. **So no current code path enters through the ROM's reset
+handler, and the adapter bypasses it deliberately** — its comment says a real
+reboot must replace the whole SoC.
+
+What the handler actually provides is an OPTION that did not exist before: a
+whole-SoC replacement can now let the new SoC boot through the vector instead
+of hand-assigning PC, which is the shape "PC back through the bootrom" asks
+for. Whether R1's implementation takes that route is undecided and not mine to
+decide.
+
+I over-claimed in the direction of justifying work I had just stopped
+objecting to — having withdrawn a dissent, I overshot into crediting the change
+with more than it does. And I tried to settle it with a 15-minute emulator run
+on a thrashing box, which was killed at its timeout, when two `grep`s over the
+adapter answered it in seconds. **The cheap structural read should have come
+before the expensive dynamic one.**
+
+**The triage above already says what remains:** a narrow reset callback previously produced a second MicroPython
 banner and `main.py` still did not run, because peripheral and controller state
 survives. The remaining work is unchanged — whole-SoC replacement with host
 USB/GPIO rebinding, through `onResetRequest`/`takeResetRequest()`. Do not read
@@ -3762,6 +3784,27 @@ this note as movement on that.
 Recorded here because I built that handler while arguing it had no consumer,
 and R1 — in this file, which I maintain — is the consumer. One `grep` would
 have found it.
+
+**2026-09-17 — THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON
+KNOWLEDGE, and that is measured rather than assumed.** Every iteration of the
+whole-SoC work needs a MicroPython boot to a REPL, which is ~2.2M instructions
+before the reset is even reached. Attempted on this box: killed at its own
+900 s timeout while still burning 91% CPU, with the machine at swap 12254/12287
+MB used, 33 MB free, load average 42.5 and twenty Claude sessions resident.
+Nothing was captured. One iteration does not fit, let alone the several that a
+replace-the-SoC-and-rebind-USB/GPIO loop needs.
+
+**A route exists if someone wants it.** The firmware is deliberately not in the
+repo and this repo's probes never fetch, which is what keeps a reading
+independent of the network — but CI is a different context, and Lite's N11a
+already has the pattern: a sha-pinned fetch verified by content hash BEFORE
+extraction, declared in its fetch-pinning census, cached by the sha alone. The
+same shape would let the R1 loop run in Actions instead of competing with
+twenty sessions for a thrashing box.
+
+The local UF2 exists meanwhile at
+`brickwright-lite/artifacts/pico-micropython/RPI_PICO-20240222-v1.22.2.uf2`,
+which is the version this entry's triage used.
 
 **DEFINITION OF DONE**, agreed with lego-ac 2026-09-06, because they move
 lite's Pico Run seam to install-and-reboot the moment this lands and the
