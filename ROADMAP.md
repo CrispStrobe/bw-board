@@ -3731,10 +3731,29 @@ from the preserved flash and reconnect USB/GPIO. This avoids pretending that a
 partial list of rp2040js private fields is a hardware reset.
 
 **Why it matters here rather than there:** `src/rp2040js-adapter.js` is this
-repo's file; lite vendors it. A learner program that calls `machine.reset()`
-would freeze the simulator. lite currently uses live exec for its sim Run and
-refuses by name if the program text calls `machine.reset()`, which is a
-containment, not a fix.
+repo's file; lite consumes it. A learner program that calls `machine.reset()`
+would freeze the simulator.
+
+**CORRECTED 2026-09-17 — LITE'S CONTAINMENT IS NOT WHAT THIS ENTRY SAID.** It
+read "lite currently uses live exec for its sim Run and refuses by name if the
+program text calls `machine.reset()`". The live-exec half is right; the refusal
+is not. There is no text-level refusal. Verified in lite at `origin/main`:
+
+* `overlay/scratch-gui/src/lib/bw-matrix/capabilities.js` ~265 — the sim tier
+  offers `py` and drives it LIVE over `createPicoRepl`, and its comment says it
+  "does NOT install-and-reboot in the sim — machine.reset() does not reboot the
+  emulator yet (finding N3c-1)... that half stays silicon-only".
+* `overlay/scratch-gui/src/lib/pico-sim-run.js` ~235 — "Its final
+  `machine.reset()` asks the host to replace the complete SoC".
+
+So the containment is a CAPABILITY-MATRIX decision — install-and-reboot is
+simply not offered on the sim tier — not a guard that inspects a learner's
+program and rejects it. That is a materially different thing: it withholds a
+route rather than refusing a user's code, and it is cheaper to keep. Reported by
+brickwright-lite-96, who checked lite's source rather than accept my
+description of it; I had been repeating this entry's wording, including to them.
+Also corrected above: lite CONSUMES this file as a package now, it does not
+vendor it.
 
 **Where the evidence is:** `docs/PICO-SIM-RUN-FINDINGS.md` on branch
 `lane/n3c-pico-micropython-run` in brickwright-lite, with the probe and the
@@ -3785,8 +3804,97 @@ Recorded here because I built that handler while arguing it had no consumer,
 and R1 — in this file, which I maintain — is the consumer. One `grep` would
 have found it.
 
-**2026-09-17 — THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON
-KNOWLEDGE, and that is measured rather than assumed.** Every iteration of the
+**2026-09-17 — REPRODUCIBLE ON DEMAND: `scripts/probe-pico-reset.mjs`.** It
+boots the pinned MicroPython, reaches the REPL, calls `machine.reset()` and
+reports what happens instead of a reboot. Exit status is the verdict — non-zero
+while R1 stands — so it is the RED-before/green-after instrument the DoD asks
+for rather than something a reader has to interpret. Deterministic: identical
+counts across three runs.
+
+```
+REPL prompt ">>>"          852,524      onResetRequest  fired exactly once
+import machine           1,120,686        {cause:"watchdog",
+machine.reset() -> park  1,240,679         entryPC:0x10000000,
+                                           entrySP:0x20042000}
+core.waiting  true       PC 0x1002ec7c    takeResetRequest() returns it
+second banner  no
+```
+
+**THE SEAM WORKS; WHAT IS MISSING IS A CONSUMER — and that is a sharper
+statement than "it freezes".** `machine.reset()` does reach
+`watchdog.onWatchdogTrigger`, it does fire `onResetRequest` with a named cause
+and the entry the program was booted at, and `takeResetRequest()` does return
+it. The core then parks deliberately, and nothing constructs the replacement
+SoC. A broken mechanism and an unconsumed one need different fixes.
+
+Quote the ABSOLUTE count, 1,240,679, when anchoring against this. Two readings
+of the same run quoted 388,155 and 119,993 instructions and both were correct —
+measured from the REPL prompt and from `import machine` respectively. The probe
+now prints the absolute figure alongside the relative one for that reason.
+
+**2026-09-17 — DIAGNOSED. IT WAS NEVER CAPACITY; IT WAS A GUARD I DROPPED.**
+Measured on this box while it was thrashing (swap 33 MB free, load 42):
+
+```
+MicroPython v1.22.2 enumerate  ->  642,528 instructions,  657 ms
+REPL prompt ">>>" reached      ->  852,524 instructions,  745 ms
+```
+
+Under a second. The box was never the constraint and my "blocked on capacity"
+note was wrong in every part.
+
+**The real cause.** I copied the run loop out of
+`scripts/probe-sf-unaligned.mjs` and dropped one line — the idle cap:
+
+```js
+state.idleNanos += dt;
+if (state.idleNanos > idleCapNanos) return 'idle';   // <- omitted
+continue;
+```
+
+Without it, a PARKED core loops forever: `continue` skips the `steps++`, so
+`while (steps < limit)` can never terminate while the core is waiting with no
+alarm pending. It advances simulated time and never the counter the budget is
+measured in.
+
+**And the parked core is R1's own defect.** `machine.reset()` reaches the
+adapter's `onWatchdogTrigger`, which sets `core.waiting = true` deliberately
+and hands the reset to the host. So the harness hung at precisely the moment
+the defect fires — the freeze under investigation was mistaken for the box.
+
+**What this gives whoever takes R1:** MicroPython boots to a REPL in under a
+second here, so iterate freely; no CI infrastructure is needed to escape a
+limit that does not exist. Any harness driving this must cap idle time, because
+the thing being tested parks the core by design and an uncapped loop cannot
+tell "parked" from "busy".
+
+The two superseded notes follow, kept because the retractions are the useful
+part.
+
+**SUPERSEDED — I claimed capacity was the blocker and did not establish it.** A Kaluma probe on this same box,
+the same afternoon, reaches a REPL prompt at 3,370,335 instructions and
+completes comfortably — repeatedly. That is the same class of workload, so
+"the box cannot run a ~2M-instruction boot" is contradicted by my own runs.
+
+What the killed run actually shows is that it did not finish inside 900 s. It
+does NOT show why. My probe's `done()` conditions total ~103M instructions of
+budget if none of them match — it waits for `>>>` to appear on CDC, and if that
+never matched (MicroPython drops stdout until DTR, and its prompt may not be
+the string I grepped for) it would burn ~63M instructions after enumeration on
+budgets alone. That is a plausible harness fault, not a box fault, and I cannot
+separate the two because I piped the run through `tail`, which discarded every
+line of progress output when it was killed.
+
+**So the honest status is: UNDIAGNOSED.** Whoever picks this up should NOT
+start by building CI infrastructure to escape a capacity limit that may not be
+the problem. Start by running the probe without a `tail` pipe and watching
+where it stops — a `done()` that never matches and a box too slow look
+identical from outside and are one print statement apart.
+
+The original note follows, kept because the retraction is the useful part:
+
+**THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON KNOWLEDGE, and that is
+measured rather than assumed.** Every iteration of the
 whole-SoC work needs a MicroPython boot to a REPL, which is ~2.2M instructions
 before the reset is even reached. Attempted on this box: killed at its own
 900 s timeout while still burning 91% CPU, with the machine at swap 12254/12287
