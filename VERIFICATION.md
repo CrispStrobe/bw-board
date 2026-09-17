@@ -42,6 +42,25 @@ measurement. This is the strongest cross-check short of hardware.
 | 347-image corpus: zero genuine disagreements between emu8051-stc and ucsim-stc | ucsim-stc `c6e3cea` | **Different upstream projects** — emu8051 (jcmvbkbc/emu8051) and ucsim (sdcc.sourceforge.net/ucsim) are forks written by different people years apart. Agreement here is closer to hardware verification than any other evidence in this project. |
 | 70 ngspice golden circuits agree (stated tolerances per test) | `test/golden/ngspice_*.json` | **Independent reference solver** — ngspice is a mature open-source SPICE implementation with decades of validation. Our MNA solver was not derived from it. |
 | LED brightness: emu8051 PCA → adapter → board = **0.07248**, analytic = **0.07246** (0.03%) | `test/brightness-emu8051.test.js` | **Cross-boundary check** — emu8051's PCA model (C, stc12.c:543) and bw-board's brightness integrator (JS, board.js) were written independently by different agents. The adapter bug (all edges at time zero) was found by this check — self-consistency could not have found it. |
+| RP2040 `machine.reset()` reboots the SoC and a deployed `main.py` then runs (ROADMAP R1) | `scripts/probe-pico-reset.mjs` against MicroPython **v1.22.2**, UF2 sha256 `e92c2a25…4bba9`. Measured 2026-09-17: watchdog request fired once, `replaceSoC()` + host rebind, re-enumerate at 1,644,989, live `>>>`, and `main.py` drives GP25 high from a zero-edge baseline. | **Independent upstream firmware** — MicroPython is written by different people and knows nothing of this emulator; it exercises the watchdog, USB re-enumeration and the flash filesystem as a real guest would. **BUT SEE THE CAVEAT BELOW: CI CANNOT RUN THIS ORACLE.** |
+
+**THE RP2040 REBOOT ROW IS NOT CONTINUOUSLY VERIFIED, and that is the most
+important thing about it.** The MicroPython UF2 is deliberately not in this
+repository and `probe-pico-reset.mjs` never fetches — a reading must not depend
+on the network, and a firmware that silently changed would make every number
+above a measurement of something else. The consequence is that **`npm test` and
+CI never exercise this claim.** A reader seeing the rp2040 suites green in CI is
+seeing `replaceSoC`'s unit-level behaviour (`test/rp2040-soc-replacement.test.mjs`
+— flash survives, core/SRAM/parked-flag do not, mutation-verified), not the
+end-to-end reboot. The end-to-end claim rests on a local run against a
+sha-pinned firmware, and it re-verifies only when someone runs the probe:
+
+```
+BW_PICO_MICROPYTHON_UF2=<path to the pinned UF2> node scripts/probe-pico-reset.mjs
+```
+
+Exit status is the verdict — 0 once the machine reboots to a live prompt. The
+probe refuses by name if the firmware is absent or its sha256 differs.
 
 ## 2b. Same-source agreement (catches transcription, NOT misreadings)
 

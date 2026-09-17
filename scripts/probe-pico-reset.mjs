@@ -116,7 +116,12 @@ function bindHost () {
     cdc = new USBCDC(adapter.rp2040.usbCtrl);
     cdc.onDeviceConnected = () => { state.connected = true; };
     cdc.onSerialData = buf => { for (const b of buf) state.usb += String.fromCharCode(b); };
+    // GP25 is the DoD's evidence that a DEPLOYED program ran, not merely that
+    // the machine came back. Re-attached per SoC, like the CDC.
+    adapter.rp2040.gpio[25].addListener(s => gp25Edges.push(s));
 }
+const gp25Edges = [];
+const send = text => { for (const c of text) cdc.sendSerialByte(c.charCodeAt(0)); };
 bindHost();
 
 function run (done, budget, idleIters = 2_000_000) {
@@ -143,8 +148,29 @@ console.log(`enumerate       ${run(() => state.connected, 10_000_000)} at ${stat
 run(null, 200_000);
 for (const c of '\r\n') cdc.sendSerialByte(c.charCodeAt(0));
 console.log(`REPL prompt     ${run(() => />>>/.test(state.usb), 10_000_000)} at ${state.steps}`);
-const mark = state.usb.length;
-for (const c of 'import machine\r') cdc.sendSerialByte(c.charCodeAt(0));
+// DEPLOY main.py FIRST, because DoD bullet 1 asks whether a deployed program
+// runs after the reboot — not merely whether the machine returns. Written over
+// the ordinary REPL and READ BACK, so "it ran" cannot be confused with "it was
+// never written".
+let mark = state.usb.length;
+send("f=open('main.py','w')\r");
+run(() => state.usb.slice(mark).includes('>>>'), 5_000_000);
+mark = state.usb.length;
+send("f.write('from machine import Pin\\nPin(25,Pin.OUT).value(1)\\n')\r");
+run(() => state.usb.slice(mark).includes('>>>'), 5_000_000);
+mark = state.usb.length;
+send('f.close()\r');
+console.log(`deploy main.py  ${run(() => state.usb.slice(mark).includes('>>>'), 5_000_000)} at ${state.steps}`);
+mark = state.usb.length;
+send("print(open('main.py').read())\r");
+run(() => state.usb.slice(mark).includes('>>>'), 5_000_000);
+const readBack = /Pin\(25/.test(state.usb.slice(mark));
+console.log(`  read back     ${readBack ? 'yes -- main.py is on the filesystem' : 'NO -- it was never written'}`);
+const edgesBeforeReset = gp25Edges.length;
+console.log(`  GP25 edges    ${edgesBeforeReset} before the reset (the baseline)`);
+
+mark = state.usb.length;
+send('import machine\r');
 console.log(`import machine  ${run(() => state.usb.slice(mark).includes('>>>'), 5_000_000)} at ${state.steps}`);
 
 // REPORT AN ABSOLUTE COUNT ALONGSIDE ANY RELATIVE ONE: two readings of this
@@ -160,7 +186,7 @@ console.log(`park            ${parked}`);
 console.log(`                ${state.steps - stepsAtReset} instructions from \`import machine\`; ${state.steps} absolute`);
 console.log(`onResetRequest  fired ${resetEvents} time(s)`);
 
-let rebooted = false;
+let rebooted = false, mainRan = false;
 if (resetEvents === 0) {
     console.log('no reset request was ever surfaced — the watchdog seam did not fire');
 } else if (noReplace) {
@@ -198,12 +224,22 @@ if (resetEvents === 0) {
     const banner = state.usb.slice(before).includes('MicroPython');
     console.log(`banner          ${banner ? 'seen' : 'not seen (expected: dropped before DTR)'}`);
     if (rebooted) console.log(`                ${JSON.stringify(state.usb.slice(before).trim().slice(-60))}`);
+
+    // The DoD's actual question: did the DEPLOYED program run?
+    const pin = adapter.rp2040.gpio[25];
+    const droveIt = pin.outputEnable && pin.value === 1;
+    console.log(`main.py ran     ${droveIt ? 'YES' : 'no'} -- GP25 value=${pin.value} outputEnable=${pin.outputEnable},`
+        + ` ${gp25Edges.length - edgesBeforeReset} edges on the new SoC`);
+    mainRan = droveIt && readBack;
 }
 
 console.log('');
-console.log(rebooted
-    ? 'R1 IS FIXED on this tree: machine.reset() replaced the SoC and MicroPython\n'
-      + 'came back to a live REPL prompt on the new machine.'
-    : 'R1 NOT FIXED here: the replacement did not reach a prompt. What the seam and\n'
-      + 'the re-enumeration did is printed above; read those before concluding.');
-process.exit(rebooted ? 0 : 1);
+console.log(rebooted && mainRan
+    ? 'R1 DoD BULLET 1 SATISFIED: main.py deployed, machine.reset() replaced the SoC,\n'
+      + 'MicroPython came back to a live prompt, and the deployed program drove GP25.'
+    : rebooted
+      ? 'PARTIAL: the machine rebooted to a live prompt, but the deployed main.py did\n'
+        + 'not drive GP25. Read the deploy and read-back lines above before concluding.'
+      : 'R1 NOT FIXED here: the replacement did not reach a prompt. What the seam and\n'
+        + 'the re-enumeration did is printed above; read those before concluding.');
+process.exit(rebooted && mainRan ? 0 : 1);
