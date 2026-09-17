@@ -3785,8 +3785,31 @@ Recorded here because I built that handler while arguing it had no consumer,
 and R1 — in this file, which I maintain — is the consumer. One `grep` would
 have found it.
 
-**2026-09-17 — THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON
-KNOWLEDGE, and that is measured rather than assumed.** Every iteration of the
+**2026-09-17 — CORRECTED BELOW; READ THE CORRECTION FIRST. I claimed capacity
+was the blocker and did not establish it.** A Kaluma probe on this same box,
+the same afternoon, reaches a REPL prompt at 3,370,335 instructions and
+completes comfortably — repeatedly. That is the same class of workload, so
+"the box cannot run a ~2M-instruction boot" is contradicted by my own runs.
+
+What the killed run actually shows is that it did not finish inside 900 s. It
+does NOT show why. My probe's `done()` conditions total ~103M instructions of
+budget if none of them match — it waits for `>>>` to appear on CDC, and if that
+never matched (MicroPython drops stdout until DTR, and its prompt may not be
+the string I grepped for) it would burn ~63M instructions after enumeration on
+budgets alone. That is a plausible harness fault, not a box fault, and I cannot
+separate the two because I piped the run through `tail`, which discarded every
+line of progress output when it was killed.
+
+**So the honest status is: UNDIAGNOSED.** Whoever picks this up should NOT
+start by building CI infrastructure to escape a capacity limit that may not be
+the problem. Start by running the probe without a `tail` pipe and watching
+where it stops — a `done()` that never matches and a box too slow look
+identical from outside and are one print statement apart.
+
+The original note follows, kept because the retraction is the useful part:
+
+**THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON KNOWLEDGE, and that is
+measured rather than assumed.** Every iteration of the
 whole-SoC work needs a MicroPython boot to a REPL, which is ~2.2M instructions
 before the reset is even reached. Attempted on this box: killed at its own
 900 s timeout while still burning 91% CPU, with the machine at swap 12254/12287
