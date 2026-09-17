@@ -130,6 +130,73 @@ test('pure ROL/ROR mask too, but INVISIBLY: their period divides 32', () => {
     }
 });
 
+// The three tests above drive D2 -- the 8-bit operand path. D3 is the 16-bit
+// path, a SEPARATE operand handler masked by the same single site, so the same
+// ungraded counts exercise a second body of code. AX=8001h keeps a set top bit
+// (SAR sign, rotate wrap) and a set bottom bit (CF out).
+const shiftAxCl = (modrm, variant, ax, cl, cfIn = 1) => {
+    const { cpu } = bench([0xd3, modrm], variant);
+    cpu.ax = ax; cpu.cl = cl;
+    if (cfIn) cpu.flags |= 0x0001; else cpu.flags &= ~0x0001;
+    cpu.step();
+    return { ax: cpu.ax, cf: cpu.flags & 0x0001 ? 1 : 0 };
+};
+
+test('the WORD shift/rotate group masks too (D3), on the 16-bit operand path', () => {
+    // cl=33 masks to 1 on the 186. The rotate-through-carry pair is period 17
+    // here (16 + the carry bit), which still does not divide 32, so RCL/RCR
+    // stay visible; every op differs from the unmasked 8086.
+    const masked1 = {
+        shl: { ax: 0x0002, cf: 1 },   // 8001 << 1, CF = old bit15
+        shr: { ax: 0x4000, cf: 1 },   // 8001 >> 1, CF = old bit0
+        sar: { ax: 0xc000, cf: 1 },   // arithmetic: the sign fills from the left
+        rcl: { ax: 0x0003, cf: 1 },   // (8001<<1)|cf_in, CF = old bit15
+        rcr: { ax: 0xc000, cf: 1 },   // (cf_in<<15)|(8001>>1), CF = old bit0
+    };
+    for (const [op, want] of Object.entries(masked1)) {
+        assert.deepEqual(shiftAxCl(GROUP2[op], '80186', 0x8001, 33), want,
+            `${op} ax,cl (cl=33) masks to 1 on the 186`);
+        assert.notEqual(shiftAxCl(GROUP2[op], '8086', 0x8001, 33).ax, want.ax,
+            `${op}: the 8086 word form does not mask either`);
+    }
+});
+
+test('a word count of 32 is a 186 no-op and an 8086 wipe', () => {
+    for (const op of ['shl', 'shr', 'sar', 'rcl', 'rcr']) {
+        assert.deepEqual(shiftAxCl(GROUP2[op], '80186', 0x8001, 32), { ax: 0x8001, cf: 1 },
+            `${op} ax by 32 is a no-op on the 186: nothing moved, CF unchanged`);
+        assert.notDeepEqual(shiftAxCl(GROUP2[op], '8086', 0x8001, 32), { ax: 0x8001, cf: 1 },
+            `${op} ax by 32 is NOT a no-op on the 8086`);
+    }
+});
+
+test('word ROL/ROR mask invisibly too: their period 16 divides 32', () => {
+    for (const op of ['rol', 'ror']) {
+        assert.deepEqual(
+            shiftAxCl(GROUP2[op], '80186', 0x8001, 33),
+            shiftAxCl(GROUP2[op], '8086', 0x8001, 33),
+            `${op} ax by 33: masked and unmasked coincide (period 16 | 32)`);
+    }
+});
+
+test('shift by WORD immediate: C1 masks on the 186 and is a near RET on the 8086', () => {
+    // The byte-immediate C0 is covered below; C1 is its 16-bit operand form. On
+    // an 8086 C1 is an alias of NEAR RET -- it pops IP and runs no shift -- so
+    // the variants must genuinely diverge, exactly as C0/C2 do.
+    const { cpu: a } = bench([0xc1, 0xe0, 0x21], '80186');   // shl ax, 21h; 0x21 masks to 1
+    a.ax = 0x8001; a.step();
+    assert.equal(a.ax, 0x0002, 'shl ax, 21h masks 33 to 1');
+    assert.equal(a.ip, 3, 'a three-byte instruction on the 186');
+
+    const { cpu: b, mem } = bench([0xc1, 0xe0, 0x21], '8086');
+    b.ax = 0x8001; b.sp = 0x1000;
+    mem[0x1000] = 0x34; mem[0x1001] = 0x12;                  // a return address on the stack
+    b.step();
+    assert.equal(b.ax, 0x8001, 'on an 8086 C1 runs no shift: AX is untouched');
+    assert.equal(b.ip, 0x1234, 'C1 is a near RET: IP comes off the stack');
+    assert.equal(b.sp, 0x1002, 'and only the two IP bytes are popped -- no immediate');
+});
+
 test('shift by immediate: C0/C1 exist only on the 186, and mask', () => {
     // On an 8086 C0 is an ALIAS OF RET imm16 -- it pops IP and adds the
     // immediate to SP. That is not a rough edge to smooth off: it is what
