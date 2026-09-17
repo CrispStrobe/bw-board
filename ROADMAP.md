@@ -3917,10 +3917,50 @@ the ROM: no board is attached, so `syncInputs()` never runs and the input
 register keeps its power-on value. Demonstrated rather than argued — with
 `--input-high` the read returns 1, so it tracks the register.
 
-**STILL OPEN:** `--blink` itself, which loads a program rather than typing
-lines and is lite's probe, and the `rom_table_lookup` busy-loop it hits. No
-measurement here touches either. "The GPIO hang is gone" must not travel as
-"R3 is closed".
+**CLOSED 2026-09-17, AND THE SENTENCE ABOVE WAS WRONG ABOUT WHY IT WAS OPEN.**
+It read: "`--blink` itself, which LOADS A PROGRAM rather than typing lines... a
+different entry path that can reach lookups the REPL never issues". That is not
+what `--blink` does. Read at lite `origin/main`, `scripts/probe-pico-kaluma.mjs`
+sends
+
+    pinMode(25, OUTPUT); digitalWrite(25, HIGH);\r
+
+down the REPL transport and watches `rp2040.gpio[25]` with a listener — the same
+entry path and the same observation as this repo's `--pin` flag. There was never
+a second path. I invented the distinction, wrote it into a merged claim row, and
+told two peers to plan around it; it cost a lane that turned out to be a reading
+of somebody else's script.
+
+Measured with that exact line at `c0073ef`:
+
+```
+GPIO25            -> 1, outputEnable=true      (the MCU drove the LED)
+rom_table_lookup  14 codes asked, 14 answered, none returning 0, none spinning
+0x1000463f        never appears
+jumps to address 0                              0
+```
+
+`0x1000463f` is the caller lite's comment names as passing "a garbage
+table/code" into `rom_table_lookup` at `0x100`. It does not occur. The busy-loop
+was the version byte at `0x13` all along: with it zero, the double-precision
+shim table stayed null, and the first GPIO call went through a null pointer into
+the ROM's zeros. Both halves of R3 were one byte.
+
+**The pre-registered falsifying condition did not fire.** The claim row said a
+`--blink` run that spins, or any code returning 0, would kill the
+null-double-shim hypothesis. Neither happened. But the hypothesis survives on a
+weaker footing than it looks: `--blink` and the REPL are the same path, so this
+run re-measured what was already measured rather than testing it independently.
+A second entry path into the bootrom — a loaded program, which is what I
+wrongly thought `--blink` was — remains genuinely unmeasured.
+
+**Consequence for Lite's N11 row, surfaced not edited** (lite's registry is not
+this repo's, and `/root/sol_lane_coordination` is the docs landing owner): its
+Pico C image "jumps at the boot vector, never touches the incomplete bootrom —
+dodges the Kaluma `rom_table_lookup` wall". The wall is gone, so that PREMISE is
+dead. The sentence survives as an ISOLATION argument — a compiled-C differential
+should not depend on this ROM, or oracle and subject share a failure mode — and
+that is a different reason which rules out different Door 2 designs.
 
 The soft-float work below stands on its own and is not retracted — the table
 is real, graded, and reached. It simply was not what R3 turned on.
