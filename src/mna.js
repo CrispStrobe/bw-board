@@ -2029,7 +2029,40 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // diagonal here excludes `gmin` -- every stamp has run and this loop is
       // what adds it -- so a non-zero diagonal means a real conductance is
       // already holding the node.
-      if (selectiveShunt && A.get(i, i) !== 0) continue;
+      //
+      // A ZERO DIAGONAL IS NOT THE SAME AS AN UNDETERMINED ROW, and reading it
+      // that way put a shunt on nodes that never needed one. A voltage source
+      // contributes NO conductance to its terminals' diagonals -- its branch
+      // current is a separate unknown -- so a node touched only by a source
+      // looked bare while its KCL row was already complete: `sum of currents =
+      // 0` becomes `i_branch = 0`, and the branch row supplies the voltage.
+      //
+      // The shunt there is not a neutral aid but a current source loading a
+      // floating subnet. Measured on ADI2005 v2 deck 1090, one off NMOS and a
+      // 5 V source whose far node touches nothing else:
+      //
+      //     node 3's shunt draws 4.841 pA, which flows through V1 into node 2
+      //     ours    V(2) -0.159004  V(3) 4.840996
+      //     ngspice V(2)  0.000000  V(3) 5.000000
+      //
+      // and 159 mV is the whole of that deck's disagreement. ngspice has no node
+      // shunt and solves the subnet exactly, because it was never singular.
+      //
+      // Asked of the MATRIX rather than of a parallel bookkeeping of which parts
+      // own a branch: the question is whether THIS ROW already has an unknown
+      // that determines it, and the row is where that is written down. If the
+      // resulting system IS singular after all -- an isolated source between two
+      // otherwise bare nodes can slide -- `solveAssembled` throws, the
+      // refinement is rejected, and the full-shunt answer stands, which is the
+      // fallback this refinement has always had.
+      if (selectiveShunt) {
+        if (A.get(i, i) !== 0) continue;
+        let determinedByBranch = false;
+        for (let j = nodeCount; j < dim; j++) {
+          if (A.get(i, j) !== 0) { determinedByBranch = true; break; }
+        }
+        if (determinedByBranch) continue;
+      }
       A.add(i, i, gmin);
     }
 
@@ -3922,10 +3955,23 @@ export function zenerBreakdown(vRev, bv, ibv, rs, nVt) {
     if (Math.abs(step) < 1e-15) break;
   }
   const i = Math.exp(lnI);
-  // dI/d|V| = 1 / (nVt/I + RS). JUNCTION_GMIN keeps a node that has nothing
-  // else on it tied to the reference instead of to whatever the underflowed
-  // conductance leaves behind -- the same argument stampDiode's note makes.
-  return [i, 1 / (nVt / i + rs) + JUNCTION_GMIN];
+  // dI/d|V| = 1 / (nVt/I + RS), AND NOTHING ELSE.
+  //
+  // JUNCTION_GMIN was inside this slope for one revision and did nothing at
+  // all, which is this engine's own documented trap: the Newton stamp is
+  // `iEq = i(V0) - g*V0`, so the branch carries exactly `i(V0)` at convergence
+  // whatever `g` is. Adding GMIN to the slope and then building iEq from the
+  // same slope cancels it term for term -- a FLOORED CONDUCTANCE IS NOT A
+  // PARALLEL CONDUCTANCE, which JUNCTION_GMIN's own note says in as many words.
+  //
+  // It cost two Si7li decks: a zener whose cathode touches nothing else (its
+  // deck's first line is the SPICE title, so the load resistor is eaten) has a
+  // node determined ONLY by the junction's leakage. ngspice's exponential
+  // carries no current at zero bias, so it puts that node at the anode
+  // (-8.000580 V); we clamped it to the piecewise corner instead (-3.878413 V).
+  // With GMIN a real parallel conductance in the stamp, the balance
+  // `-I_rev(-V) + GMIN*V = 0` determines the node the way the reference does.
+  return [i, 1 / (nVt / i + rs)];
 }
 
 /**
@@ -3967,7 +4013,10 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
     // linear model into it and recovering `vz/rzener` exactly.
     const u = -vAcross;
     const [iRev, gRev] = zenerBreakdown(u, vz, ibv, zenerSeriesR(part, rzener), JUNCTION_THERMAL_VOLTAGE);
-    gEq = gRev;
+    // GMIN AS A PARALLEL CONDUCTANCE, not as a floor on the slope: it goes into
+    // the diagonal and NOT into the Norton source, so the branch really carries
+    // `-I_rev + GMIN*V` and a node with only this junction on it is determined.
+    gEq = gRev + JUNCTION_GMIN;
     iEq = -iRev + gRev * u;
   } else if (vAcross <= -vz) {
     // Zener breakdown, piecewise: a straight line through (vz, 0). Kept for

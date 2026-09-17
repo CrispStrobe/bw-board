@@ -156,7 +156,7 @@ test('the stamped conductance is the derivative of the stamped current', () => {
       const [, g] = zenerBreakdown(vRev, bv, ibv, rs, nVt);
       const up = zenerBreakdown(vRev + h, bv, ibv, rs, nVt)[0];
       const down = zenerBreakdown(vRev - h, bv, ibv, rs, nVt)[0];
-      const fd = (up - down) / (2 * h) + JUNCTION_GMIN;
+      const fd = (up - down) / (2 * h);
       assert.ok(Math.abs(g - fd) <= Math.abs(fd) * 1e-4 + 1e-15,
         `BV=${bv} IBV=${ibv} RS=${rs} at |V|=${vRev.toFixed(2)}: `
         + `stamped ${g.toExponential(6)}, finite difference ${fd.toExponential(6)}`);
@@ -173,8 +173,12 @@ test('GMIN holds the floor a volt into the off region', () => {
   // it tied to the reference -- which is the claim the code makes there.
   const [i, g] = zenerBreakdown(3.3 - 1.0, 3.3, 5e-3, 5, JUNCTION_THERMAL_VOLTAGE);
   assert.ok(i < 1e-15, `a volt into the off region must carry ~nothing: ${i.toExponential(3)}`);
-  assert.ok(Math.abs(g - JUNCTION_GMIN) <= JUNCTION_GMIN * 1e-3,
-    `the conductance must be GMIN itself down here, was ${g.toExponential(6)}`);
+  // The breakdown's OWN slope down here is ~1e-18, far under GMIN. GMIN is not
+  // in this return value -- it is added in the stamp, as a parallel
+  // conductance, because putting it in the slope cancels out of the Norton
+  // source term for term and holds nothing. See zenerBreakdown's note.
+  assert.ok(g < JUNCTION_GMIN,
+    `the breakdown slope alone must be below GMIN here, was ${g.toExponential(6)}`);
 });
 
 test('the solve holds across five decades of knee current and breakdown voltage', () => {
