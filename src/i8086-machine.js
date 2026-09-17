@@ -1182,9 +1182,15 @@ export class I8086Machine {
      * reach the CPU through chip inputs, like the bench.
      */
     attachDevice(name, dev) {
+        // Settle the accrued debt on the CURRENT set first, so the newcomer is
+        // not charged cycles from before it existed; then re-arm the deadline
+        // with it included, or a device attached mid-run would not be advanced
+        // until the stale deadline happened to fire.
+        this._catchUpChips();
         this.devices = this.devices || {};
         this.devices[name] = dev;
         this._advList = null;   // schedule is stale
+        this._chipDeadline = this._wakeHorizon();
         return dev;
     }
 
