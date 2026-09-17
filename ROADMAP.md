@@ -4027,6 +4027,34 @@ did not disappear.
   4,5,18 deprecated slots — quiet-NaN stub, PERMANENTLY, named in the test
 ```
 
+**AND NOTHING CALLS IT. Measured 2026-09-17 at `b8faec5`, and recorded here
+because it bears directly on whether any further work on this table is worth
+doing.** Across a full Kaluma 1.2.1 boot AND the expression `2.5+1.0`, the only
+bootrom code the guest reaches is `clz32` (244 calls), `rom_table_lookup`, and
+the flash no-ops. **Not one of the eighteen implemented SF operators is ever
+invoked.** Kaluma looks up `'SF'`, receives a valid table pointer, and never
+calls an entry: JerryScript's numbers are doubles, and its double shims are its
+own flash routines at `0x10021e39` and friends, filled into a RAM table by the
+version-byte branch. The single-precision table is simply not on that path.
+
+So the honest status of this table is three things at once, and dropping any of
+them misstates it:
+
+* **CORRECT** — every operator graded against `Math.fround`, bit-exact where
+  that is the right standard and inside a stated ULP bound where it is not.
+* **CALLABLE** — `test/rp2040-bootrom-guest-abi.test.mjs` has a guest program
+  perform the documented lookup and reach every conversion, so a consumer that
+  wanted it could use it.
+* **UNCALLED** — by the only firmware that has ever booted on this ROM.
+
+It is not wasted: a non-null table is precisely what stopped the null-deref that
+was ROADMAP R3, and the datasheet ABI is what a pico-sdk C program compiled for
+float would use. But **the obvious follow-on — Payne-Hanek, to lift the
+trigonometric domain limit at 2^16 — is speculative until a consumer exists**,
+and nobody should inherit "finish the SF table" as a goal without first naming
+who calls it. That is the whole reason this paragraph sits above the status
+rather than below it.
+
 **THE TABLE IS COMPLETE: 18 OF 21, AND THE OTHER 3 HAVE NO OPERATION.**
 Indices 4, 5 and 18 are the datasheet's deprecated slots, so the stub list has
 stopped shrinking rather than emptied. The five transcendentals are graded
