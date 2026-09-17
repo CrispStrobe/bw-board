@@ -2836,7 +2836,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       let vov = 0;
       if (part.kind === 'nmos') {
         const vgs = vG - vS;
-        const [vovS, dVovS] = smoothVov(vgs - vth);
+        const [vovS, dVovS] = smoothVov(vgs - vth, mosKsubthres(part));
         vov = vovS;
         // Same law the stamp uses, at the same operating point. `dVovS` is
         // passed for real rather than as a placeholder 1: only `.id` is read
@@ -2848,7 +2848,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
           : k * vovS * vovS;
       } else {
         const vsg = vS - vG;
-        const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth));
+        const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth), mosKsubthres(part));
         vov = vovS;
         const vsdE = Math.min(Math.max(vS - vD, 0), Math.max(vovS, 0));
         id = inTriode
@@ -3969,7 +3969,68 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  * measurement for this one is in the commit that changed it.
  */
 const MOS_SMOOTH_DELTA = 0.005;
-function smoothVov(vov) {
+
+/**
+ * SUBTHRESHOLD CONDUCTION, WHERE A MODEL CARD DECLARES IT.
+ *
+ * LTspice's power MOSFETs are `VDMOS` models, and ngspice implements those with
+ * real subthreshold conduction governed by `Ksubthres`. Our level-1 stamp cuts
+ * off exactly (see smoothVov below, and that IS right for a level-1 card --
+ * measured, ngspice's own level-1 MOS sits flat at 5e-12 right up to threshold).
+ * So this branch is opt-in on the declared parameter and changes nothing for a
+ * card without one.
+ *
+ * THE SHAPE WAS CHARACTERISED AGAINST ngspice, NOT COPIED FROM IT. A DC sweep of
+ * `.model VD VDMOS(Vto=1 Kp=0.12 Ksubthres=0.1)` from Vgs 0.2 to 1.4 V, fitted:
+ *
+ *     Vov_eff = Ksub * ln(1 + exp(Vov / Ksub))        the SOFT-PLUS
+ *     Id      = the ordinary square law on Vov_eff
+ *
+ * agrees with ngspice to **0.000 %** across 19 of 25 points, the residual 2.9 %
+ * appearing only at 6.9e-11 A where ngspice's own leakage floor dominates. Two
+ * independent consequences of that form were confirmed separately:
+ *
+ *   - deep subthreshold, Vov_eff -> Ksub*exp(Vov/Ksub), so Id ~ exp(2Vov/Ksub)
+ *     and the slope is Ksub*ln(10)/2 V/decade. Measured at Ksub = 0.1, 0.2, 0.3
+ *     and 0.5: every one within 0.2 % of that law.
+ *   - above threshold Vov_eff -> Vov EXACTLY, so the square law is untouched --
+ *     which is why VDMOS and our level-1 already agreed to five significant
+ *     figures for Vgs >= 1.75 V, and why 80 of the 84 corpus decks with a VDMOS
+ *     in play agreed before this existed.
+ *
+ * WHY THE TAIL IS ACCEPTABLE HERE, when smoothVov's note rejects a shape that
+ * never reaches zero. That objection is about out-arguing GMIN: the old
+ * hyperbola left a floating node at vov_s/(2*dvov_s) = HALF A VOLT regardless of
+ * k, and ngspice put it at 0. The soft-plus has the same kind of tail -- its
+ * ratio is Ksub/2 -- but it is ngspice's OWN tail, with ngspice's own slope, so a
+ * node held only by this device settles where the reference settles it instead of
+ * somewhere we invented. Matching the oracle is the whole point; the objection
+ * was never to tails as such.
+ */
+function softPlusVov(vov, ksub) {
+  const x = vov / ksub;
+  // For large x the soft-plus IS the identity to within double precision, and
+  // taking the exponential there would overflow for no gain.
+  if (x > 40) return [vov, 1];
+  const e = Math.exp(x);
+  return [ksub * Math.log1p(e), e / (1 + e)];
+}
+
+/**
+ * The declared subthreshold slope, or 0 for "this card has none".
+ *
+ * Read in ONE place and passed to every `smoothVov` call, because the six call
+ * sites (nmos/pmos x the region FSM x the bias-point walker) must agree about
+ * the same device -- a parameter threaded through five of six is a stamp whose
+ * current and Jacobian describe different transistors.
+ */
+function mosKsubthres(part) {
+  const k = Number(part?.params?.ksubthres);
+  return Number.isFinite(k) && k > 0 ? k : 0;
+}
+
+function smoothVov(vov, ksub = 0) {
+  if (ksub > 0) return softPlusVov(vov, ksub);
   if (vov <= -MOS_SMOOTH_DELTA) return [0, 0];
   if (vov >= MOS_SMOOTH_DELTA) return [vov, 1];
   const u = vov + MOS_SMOOTH_DELTA;
@@ -4129,7 +4190,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     // At Vds = Vov this returns K*Vov^2 and gds = 0, which is exactly the
     // saturation value — so the two regions now meet, and the FSM's hysteresis
     // is about which side to linearise on, not about a step in the current.
-    const [vovS, dVovS] = smoothVov(vgs - vth);
+    const [vovS, dVovS] = smoothVov(vgs - vth, mosKsubthres(part));
     const vds = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
     // Clamped at the boundary: past Vds = Vov the parabola turns over and
     // would report a FALLING current, which is what saturation replaces.
@@ -4165,7 +4226,7 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     // On: Id = K·vov_s². Linearized about the smoothed overdrive:
     // gm = dId/dVgs = 2K·vov_s·(dvov_s/dvov); Norton offset from Id at
     // the expansion point.
-    const [vovS, dVovS] = smoothVov(vgs - vth);
+    const [vovS, dVovS] = smoothVov(vgs - vth, mosKsubthres(part));
     const gm = 2 * k * vovS * dVovS;
     const id0 = k * vovS * vovS;
     const iEq = id0 - gm * vgs;
@@ -4222,7 +4283,7 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     // The level-1 linear region with its second term — see the NMOS note.
     // The stored variables are Vsg and Vsd, so every sign is already the
     // NMOS one and only the terminal roles swap.
-    const [vovSt, dVovSt] = smoothVov(vsg - Math.abs(vth));
+    const [vovSt, dVovSt] = smoothVov(vsg - Math.abs(vth), mosKsubthres(part));
     const vsd = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
     const vsdEff = Math.min(Math.max(vsd, 0), Math.max(vovSt, 0));
     const tri = mosTriode(k, vovSt, vsdEff, dVovSt, part.params);
@@ -4245,7 +4306,7 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     if (idxS !== undefined) b[idxS] -= iEq;
     if (idxD !== undefined) b[idxD] += iEq;
   } else {
-    const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth));
+    const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth), mosKsubthres(part));
     const gm = 2 * k * vovS * dVovS;
     const id0 = k * vovS * vovS;
     const iEq = id0 - gm * vsg;
