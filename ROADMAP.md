@@ -3731,10 +3731,29 @@ from the preserved flash and reconnect USB/GPIO. This avoids pretending that a
 partial list of rp2040js private fields is a hardware reset.
 
 **Why it matters here rather than there:** `src/rp2040js-adapter.js` is this
-repo's file; lite vendors it. A learner program that calls `machine.reset()`
-would freeze the simulator. lite currently uses live exec for its sim Run and
-refuses by name if the program text calls `machine.reset()`, which is a
-containment, not a fix.
+repo's file; lite consumes it. A learner program that calls `machine.reset()`
+would freeze the simulator.
+
+**CORRECTED 2026-09-17 — LITE'S CONTAINMENT IS NOT WHAT THIS ENTRY SAID.** It
+read "lite currently uses live exec for its sim Run and refuses by name if the
+program text calls `machine.reset()`". The live-exec half is right; the refusal
+is not. There is no text-level refusal. Verified in lite at `origin/main`:
+
+* `overlay/scratch-gui/src/lib/bw-matrix/capabilities.js` ~265 — the sim tier
+  offers `py` and drives it LIVE over `createPicoRepl`, and its comment says it
+  "does NOT install-and-reboot in the sim — machine.reset() does not reboot the
+  emulator yet (finding N3c-1)... that half stays silicon-only".
+* `overlay/scratch-gui/src/lib/pico-sim-run.js` ~235 — "Its final
+  `machine.reset()` asks the host to replace the complete SoC".
+
+So the containment is a CAPABILITY-MATRIX decision — install-and-reboot is
+simply not offered on the sim tier — not a guard that inspects a learner's
+program and rejects it. That is a materially different thing: it withholds a
+route rather than refusing a user's code, and it is cheaper to keep. Reported by
+brickwright-lite-96, who checked lite's source rather than accept my
+description of it; I had been repeating this entry's wording, including to them.
+Also corrected above: lite CONSUMES this file as a package now, it does not
+vendor it.
 
 **Where the evidence is:** `docs/PICO-SIM-RUN-FINDINGS.md` on branch
 `lane/n3c-pico-micropython-run` in brickwright-lite, with the probe and the
