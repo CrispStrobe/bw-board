@@ -3742,6 +3742,27 @@ step count. Start by reproducing it against this repo's own adapter before
 touching anything — the step count is precise enough to be a real anchor, and
 a reproduction here is what turns a reported gap into a triaged one.
 
+**2026-09-17 — THE FIRST CLAUSE'S MECHANISM NOW EXISTS (`a20cdfa`), AND R1 IS
+STILL OPEN.** The DoD below asks for "PC back through the bootrom". Until now
+the bootrom's reset vector was `b .`, so no reset could satisfy that clause
+whatever the adapter did: `core.reset()` simply hung and every caller assigned
+PC by hand. The ROM's reset handler now reads the first word of flash, installs
+the boot SP, and enters the image at `FLASH_BASE` — so a plain `core.reset()`
+reboots a loaded image, proved in `test/rp2040-bootrom-reset.test.mjs` (an
+erased device still spins rather than sliding through `0xffff`, and that guard
+is mutation-verified).
+
+**This supplies a prerequisite, not the feature, and the triage above already
+says why:** a narrow reset callback previously produced a second MicroPython
+banner and `main.py` still did not run, because peripheral and controller state
+survives. The remaining work is unchanged — whole-SoC replacement with host
+USB/GPIO rebinding, through `onResetRequest`/`takeResetRequest()`. Do not read
+this note as movement on that.
+
+Recorded here because I built that handler while arguing it had no consumer,
+and R1 — in this file, which I maintain — is the consumer. One `grep` would
+have found it.
+
 **DEFINITION OF DONE**, agreed with lego-ac 2026-09-06, because they move
 lite's Pico Run seam to install-and-reboot the moment this lands and the
 sim/silicon difference collapses. Their criteria, recorded as given:
