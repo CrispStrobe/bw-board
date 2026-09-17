@@ -3785,8 +3785,69 @@ Recorded here because I built that handler while arguing it had no consumer,
 and R1 — in this file, which I maintain — is the consumer. One `grep` would
 have found it.
 
-**2026-09-17 — THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON
-KNOWLEDGE, and that is measured rather than assumed.** Every iteration of the
+**2026-09-17 — DIAGNOSED. IT WAS NEVER CAPACITY; IT WAS A GUARD I DROPPED.**
+Measured on this box while it was thrashing (swap 33 MB free, load 42):
+
+```
+MicroPython v1.22.2 enumerate  ->  642,528 instructions,  657 ms
+REPL prompt ">>>" reached      ->  852,524 instructions,  745 ms
+```
+
+Under a second. The box was never the constraint and my "blocked on capacity"
+note was wrong in every part.
+
+**The real cause.** I copied the run loop out of
+`scripts/probe-sf-unaligned.mjs` and dropped one line — the idle cap:
+
+```js
+state.idleNanos += dt;
+if (state.idleNanos > idleCapNanos) return 'idle';   // <- omitted
+continue;
+```
+
+Without it, a PARKED core loops forever: `continue` skips the `steps++`, so
+`while (steps < limit)` can never terminate while the core is waiting with no
+alarm pending. It advances simulated time and never the counter the budget is
+measured in.
+
+**And the parked core is R1's own defect.** `machine.reset()` reaches the
+adapter's `onWatchdogTrigger`, which sets `core.waiting = true` deliberately
+and hands the reset to the host. So the harness hung at precisely the moment
+the defect fires — the freeze under investigation was mistaken for the box.
+
+**What this gives whoever takes R1:** MicroPython boots to a REPL in under a
+second here, so iterate freely; no CI infrastructure is needed to escape a
+limit that does not exist. Any harness driving this must cap idle time, because
+the thing being tested parks the core by design and an uncapped loop cannot
+tell "parked" from "busy".
+
+The two superseded notes follow, kept because the retractions are the useful
+part.
+
+**SUPERSEDED — I claimed capacity was the blocker and did not establish it.** A Kaluma probe on this same box,
+the same afternoon, reaches a REPL prompt at 3,370,335 instructions and
+completes comfortably — repeatedly. That is the same class of workload, so
+"the box cannot run a ~2M-instruction boot" is contradicted by my own runs.
+
+What the killed run actually shows is that it did not finish inside 900 s. It
+does NOT show why. My probe's `done()` conditions total ~103M instructions of
+budget if none of them match — it waits for `>>>` to appear on CDC, and if that
+never matched (MicroPython drops stdout until DTR, and its prompt may not be
+the string I grepped for) it would burn ~63M instructions after enumeration on
+budgets alone. That is a plausible harness fault, not a box fault, and I cannot
+separate the two because I piped the run through `tail`, which discarded every
+line of progress output when it was killed.
+
+**So the honest status is: UNDIAGNOSED.** Whoever picks this up should NOT
+start by building CI infrastructure to escape a capacity limit that may not be
+the problem. Start by running the probe without a `tail` pipe and watching
+where it stops — a `done()` that never matches and a box too slow look
+identical from outside and are one print statement apart.
+
+The original note follows, kept because the retraction is the useful part:
+
+**THE REMAINING WORK IS BLOCKED ON BOX CAPACITY, NOT ON KNOWLEDGE, and that is
+measured rather than assumed.** Every iteration of the
 whole-SoC work needs a MicroPython boot to a REPL, which is ~2.2M instructions
 before the reset is even reached. Attempted on this box: killed at its own
 900 s timeout while still burning 91% CPU, with the machine at swap 12254/12287
