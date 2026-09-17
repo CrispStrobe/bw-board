@@ -652,6 +652,39 @@ test('several bits in one write are each named', () => {
     }
 });
 
+test('the temporary register reads back zero -- memory-to-memory is unmodelled', () => {
+    // Port 0Dh reads the temporary register a mem-to-mem transfer would use to
+    // carry a byte between channels. That path is not modelled, so the header
+    // promises the register reads back zero -- and 0Dh WRITE is master clear, so
+    // the read side is easy to leave unchecked. The name tests above prove the
+    // FEATURE is surfaced; this is the value the port actually hands back.
+    const d = new I8237();
+    assert.equal(d.read(P_MASTERCLEAR), 0, 'the temporary register reads zero');
+    d.write(P_MASTERCLEAR, 0xff);           // 0Dh write is master clear, not a temp load
+    assert.equal(d.read(P_MASTERCLEAR), 0, 'and still zero afterward -- nothing loads it');
+});
+
+test('DREQ/DACK sense inversion is stored but IGNORED: the raw level drives HRQ', () => {
+    // Command bits 6/7 invert the DREQ/DACK sense on real hardware. Here they are
+    // stored (surfaced by name, above) but ignored: a request asserts on its raw
+    // level either way. The discriminating case is a LOW dreq UNDER inversion --
+    // an inverting chip would read the low line as a request; this one must not.
+    const unmasked = (cmd) => {
+        const d = new I8237();
+        d.write(P_COMMAND, cmd);
+        d.write(P_MASK1, 0x00);             // channel 0, mask bit clear -> unmasked
+        return d;
+    };
+    const plain = unmasked(0x00);       plain.dreq(0, true);
+    const inv = unmasked(0x40 | 0x80);  inv.dreq(0, true);
+    assert.equal(plain.hrq, true, 'a raw-high DREQ raises HRQ');
+    assert.equal(inv.hrq, true, 'and identically with both sense bits set -- ignored, not applied');
+
+    const invLow = unmasked(0x40 | 0x80);  invLow.dreq(0, false);
+    assert.equal(invLow.hrq, false,
+        'a low DREQ stays low under inversion: the sense bit did not turn it into a request');
+});
+
 test('a quiet chip stays quiet — nothing is invented', () => {
     const d = new I8237();
     d.write(P_COMMAND, 0x00);
