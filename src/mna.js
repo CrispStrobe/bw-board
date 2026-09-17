@@ -2722,10 +2722,18 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vz = /** @type {number} */ (part.params.vz ?? 5.1);
       const rd = 10;
       const rzener = /** @type {number} */ (part.params.rz ?? 5);
+      const ibvDeclared = Number(part.params.ibv);
+      const ibv = Number.isFinite(ibvDeclared) && ibvDeclared > 0 ? ibvDeclared : 0;
       const vAcross = vAnode - vCathode;
+      // THE SAME REGIONS AS THE STAMP, IN THE SAME ORDER. This reader is the
+      // stamp's twin: a node voltage that agrees while the branch current does
+      // not is the exact signature of one of the two moving without the other,
+      // and it has cost this engine real debugging time before.
       let i;
       if (vAcross >= vf) i = (vAcross - vf) / rd;
-      else if (vAcross <= -vz) i = (vAcross + vz) / rzener;
+      else if (ibv > 0 && vAcross < 0) {
+        i = -zenerBreakdown(-vAcross, vz, ibv, zenerSeriesR(part, rzener), JUNCTION_THERMAL_VOLTAGE)[0];
+      } else if (vAcross <= -vz) i = (vAcross + vz) / rzener;
       else i = 0;
       currents.set('anode', -i);
       currents.set('cathode', i);
@@ -3848,6 +3856,79 @@ function stampPNP(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regio
 }
 
 /**
+ * A ZENER'S BREAKDOWN KNEE, WHERE THE CARD STATES THE CURRENT IT IS MEASURED AT.
+ *
+ * SPICE's diode model takes BV **and IBV**, and those two numbers together pin
+ * one point on an exponential rather than describing a corner: ngspice places
+ * the junction so that the current is exactly IBV when |Vj| = BV. Inverted,
+ * which is the form that needs no solver:
+ *
+ *     |V| = BV + nVt*ln(I/IBV) + I*RS
+ *
+ * Measured against ngspice over the whole breakdown region of the corpus card
+ * `D(BV=3.3 IBV=5m RS=5)`, five decades of current from 2.2 uA to 162 mA:
+ * **worst voltage error 0.186 mV**.
+ *
+ * WHAT THE PIECEWISE MODEL COSTS. `1/rz` from a corner at vz is a straight line
+ * through (vz, 0), so it reads vz + I*rz regardless of how far below the knee
+ * the current sits. On ADI2005 v2's zener regulator -- 7.4 V through 8.2 kOhm
+ * into this card, about 0.5 mA -- that is 3.3025 V against ngspice's 3.2435 V,
+ * and the corpus reported the gap as 5.92e-2 V on 12 decks. The exponential is
+ * BELOW BV at currents below IBV, which is the whole of the difference.
+ *
+ * SOLVED IN LOG SPACE because the relation is implicit in I once RS is present
+ * and I spans decades: Newton on ln(I) converges from the RS-free estimate in a
+ * handful of steps at any current, where Newton on I itself either overshoots
+ * into the negative or crawls. The series resistance is inside the solve rather
+ * than stamped separately, so the returned conductance is the SERIES
+ * combination -- dV/dI = nVt/I + RS -- and the caller needs no extra node.
+ *
+ * @returns {[number, number]} the breakdown current magnitude and dI/d|V|
+ */
+/**
+ * THE SERIES RESISTANCE IS THE CARD'S RS, NOT THE PIECEWISE `rz`.
+ *
+ * They are different quantities that happen to share a default of 5 ohms: `rz`
+ * is the slope of the piecewise line through (vz, 0), while SPICE's RS is a real
+ * series resistance. The ADI corpus card states RS=5, so reading `rz` here would
+ * have matched ngspice BY COINCIDENCE on exactly the decks that motivated this
+ * and diverged on the first card stating anything else -- measured, ngspice moves
+ * from 3.240815 V at RS=0 to 3.250873 V at RS=20 on that bench while a reader
+ * stuck on `rz` returns 3.243367 V for all of them.
+ *
+ * Read in ONE place for both the stamp and its branch-current twin.
+ */
+function zenerSeriesR(part, fallback) {
+  const rs = Number(part?.params?.rs);
+  return Number.isFinite(rs) && rs >= 0 ? rs : fallback;
+}
+
+// EXPORTED FOR ITS JACOBIAN, on the same grounds `ebersMollCompanion` is. The
+// returned conductance enters only the NEWTON MATRIX -- `iEq = i(V0) - g*V0`
+// makes the branch carry exactly `i(V0)` at convergence whatever `g` is -- so
+// dropping RS from `dI/d|V|` is invisible in every converged voltage and costs
+// only iterations. A mutation doing exactly that passed every voltage assertion
+// in this device's suite, which is how the gap was found; it is now held by a
+// finite-difference check, the only instrument that can see it.
+export function zenerBreakdown(vRev, bv, ibv, rs, nVt) {
+  // ln(I) ignoring RS is the starting point; it is exact when RS is 0.
+  let lnI = Math.log(ibv) + (vRev - bv) / nVt;
+  for (let k = 0; k < 60; k++) {
+    const i = Math.exp(lnI);
+    const f = bv + nVt * (lnI - Math.log(ibv)) + i * rs - vRev;
+    const df = nVt + i * rs;                 // d|V|/d(lnI)
+    const step = f / df;
+    lnI -= step;
+    if (Math.abs(step) < 1e-15) break;
+  }
+  const i = Math.exp(lnI);
+  // dI/d|V| = 1 / (nVt/I + RS). JUNCTION_GMIN keeps a node that has nothing
+  // else on it tied to the reference instead of to whatever the underflowed
+  // conductance leaves behind -- the same argument stampDiode's note makes.
+  return [i, 1 / (nVt / i + rs) + JUNCTION_GMIN];
+}
+
+/**
  * Stamp a Zener diode.
  * Forward: like a regular diode (Vf ≈ 0.7V).
  * Reverse: conducts at Vz (breakdown voltage), maintaining Vz across it.
@@ -3858,6 +3939,10 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const vz = /** @type {number} */ (part.params.vz ?? 5.1);
   const rd = 10;
   const rzener = /** @type {number} */ (part.params.rz ?? 5); // zener dynamic R
+  // The knee current. ABSENT MEANS "use the piecewise corner": a card that does
+  // not state IBV must solve exactly as it did before this branch existed.
+  const ibvDeclared = Number(part.params.ibv);
+  const ibv = Number.isFinite(ibvDeclared) && ibvDeclared > 0 ? ibvDeclared : 0;
 
   const netA = findNet(nets, part.id, 'anode');
   const netC = findNet(nets, part.id, 'cathode');
@@ -3871,8 +3956,23 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
     // Forward conduction
     gEq = 1 / rd;
     iEq = -vf / rd;
+  } else if (ibv > 0 && vAcross < 0) {
+    // EXPONENTIAL BREAKDOWN, when the card states the knee current.
+    //
+    // Continuous from zero reverse bias: at |V| well below BV the exponential
+    // is e^(-BV/nVt) of IBV, which is indistinguishable from the off region it
+    // replaces, so there is no corner to cross and no region test to get wrong.
+    // `iEq = i(V0) - g*V0` with i the ANODE-TO-CATHODE current, which is the
+    // convention both other branches here use -- checked by substituting the
+    // linear model into it and recovering `vz/rzener` exactly.
+    const u = -vAcross;
+    const [iRev, gRev] = zenerBreakdown(u, vz, ibv, zenerSeriesR(part, rzener), JUNCTION_THERMAL_VOLTAGE);
+    gEq = gRev;
+    iEq = -iRev + gRev * u;
   } else if (vAcross <= -vz) {
-    // Zener breakdown (reverse conduction)
+    // Zener breakdown, piecewise: a straight line through (vz, 0). Kept for
+    // every card that states no IBV, where it is what 2,163 corpus circuits and
+    // this suite are written against.
     gEq = 1 / rzener;
     iEq = vz / rzener; // current flows cathode→anode in breakdown
   } else {
