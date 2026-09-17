@@ -2044,10 +2044,47 @@ export function buildBootrom () {
         0x4770              // bx   lr
     ]);
 
-    // A reset handler that goes nowhere: we boot from flash, and this
-    // exists so the vector table is not a pointer to zero.
+    // ── the reset handler ──────────────────────────────────────────────
+    //
+    // This used to be `b .` — a handler that went nowhere, on the reasoning
+    // that we boot from flash and the vector table simply must not point at
+    // zero. The consequence was that `core.reset()` alone HUNG: every caller
+    // had to assign PC by hand afterwards, which is what `resetToProgram()`
+    // and `bootFromFlash()` do. A reset that cannot boot is a gap in the ROM,
+    // not in its callers.
+    //
+    // NOT A CLAIM OF SILICON FIDELITY. Real RP2040 boot copies the 256-byte
+    // second stage out of flash into SRAM, CRC-checks it, and runs it there,
+    // because XIP is not yet configured. rp2040js serves XIP without that
+    // setup — which is exactly why `bootFromFlash()` enters at FLASH_BASE
+    // directly and says so. This handler puts THAT documented entry in the
+    // ROM. A faithful boot2 path is a larger and different piece of work.
+    //
+    // THE HAZARD, and it is the reason for the first four instructions. An
+    // unconditional jump to flash on an ERASED device executes 0xffff — an
+    // undefined-instruction slide that rp2040js logs once per instruction, and
+    // which the adapter's own comment records producing 298 MB of output. So
+    // the first word of flash is read, and an erased device (0xffffffff, which
+    // +1 makes zero) spins exactly as before rather than sliding. A device
+    // with an image boots it.
     const spin = pc;
-    pc = emit(view, pc, [0xe7fe]);          // b .
+    pc = asm(view, pc, [
+        0x2001,                 // movs r0, #1
+        0x0700,                 // lsls r0, r0, #28       ; 0x10000000, XIP base
+        0x6801,                 // ldr  r1, [r0, #0]      ; first word of the image
+        0x1c49,                 // adds r1, r1, #1        ; 0xffffffff -> 0
+        ['beq', 'rst_erased'],  //                        ; erased: behave as before
+        0x2320,                 // movs r3, #0x20
+        0x061b,                 // lsls r3, r3, #24       ; 0x20000000
+        0x2421,                 // movs r4, #33
+        0x0364,                 // lsls r4, r4, #13       ; 0x00042000
+        0x4323,                 // orrs r3, r4            ; 0x20042000, the boot SP
+        0x469d,                 // mov  sp, r3
+        0x1c40,                 // adds r0, r0, #1        ; Thumb bit
+        0x4700,                 // bx   r0                ; enter the image
+        ['label', 'rst_erased'],
+        0xe7fe                  // b .
+    ]);
 
     // ── the function table ─────────────────────────────────────────────
     //
