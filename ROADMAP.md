@@ -3785,8 +3785,46 @@ Recorded here because I built that handler while arguing it had no consumer,
 and R1 — in this file, which I maintain — is the consumer. One `grep` would
 have found it.
 
-**2026-09-17 — CORRECTED BELOW; READ THE CORRECTION FIRST. I claimed capacity
-was the blocker and did not establish it.** A Kaluma probe on this same box,
+**2026-09-17 — DIAGNOSED. IT WAS NEVER CAPACITY; IT WAS A GUARD I DROPPED.**
+Measured on this box while it was thrashing (swap 33 MB free, load 42):
+
+```
+MicroPython v1.22.2 enumerate  ->  642,528 instructions,  657 ms
+REPL prompt ">>>" reached      ->  852,524 instructions,  745 ms
+```
+
+Under a second. The box was never the constraint and my "blocked on capacity"
+note was wrong in every part.
+
+**The real cause.** I copied the run loop out of
+`scripts/probe-sf-unaligned.mjs` and dropped one line — the idle cap:
+
+```js
+state.idleNanos += dt;
+if (state.idleNanos > idleCapNanos) return 'idle';   // <- omitted
+continue;
+```
+
+Without it, a PARKED core loops forever: `continue` skips the `steps++`, so
+`while (steps < limit)` can never terminate while the core is waiting with no
+alarm pending. It advances simulated time and never the counter the budget is
+measured in.
+
+**And the parked core is R1's own defect.** `machine.reset()` reaches the
+adapter's `onWatchdogTrigger`, which sets `core.waiting = true` deliberately
+and hands the reset to the host. So the harness hung at precisely the moment
+the defect fires — the freeze under investigation was mistaken for the box.
+
+**What this gives whoever takes R1:** MicroPython boots to a REPL in under a
+second here, so iterate freely; no CI infrastructure is needed to escape a
+limit that does not exist. Any harness driving this must cap idle time, because
+the thing being tested parks the core by design and an uncapped loop cannot
+tell "parked" from "busy".
+
+The two superseded notes follow, kept because the retractions are the useful
+part.
+
+**SUPERSEDED — I claimed capacity was the blocker and did not establish it.** A Kaluma probe on this same box,
 the same afternoon, reaches a REPL prompt at 3,370,335 instructions and
 completes comfortably — repeatedly. That is the same class of workload, so
 "the box cannot run a ~2M-instruction boot" is contradicted by my own runs.
