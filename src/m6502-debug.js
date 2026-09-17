@@ -18,7 +18,7 @@ import { disasm6502 } from './w65c02-disasm.js';
 
 import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-replay-contract.js';
 import { installInstructionDebugEvents, logicalTimeDomain } from './instruction-debug-events.js';
-import { createInputAdmission, validButtonMask } from './debug-input-admission.js';
+import { createInputAdmission, createCheckpointMethods, validButtonMask } from './debug-input-admission.js';
 
 export function createM6502DebugTarget(adapter, opts = {}) {
   const machine = adapter.machine;
@@ -219,6 +219,14 @@ export function createM6502DebugTarget(adapter, opts = {}) {
     admission.tell({time, producer, payload});
   }
 
+  const checkpointMethods = createCheckpointMethods({
+    machine, admission,
+    isHalted: () => cpu.stopped || cpu.waiting,
+    haltReason: 'the stopped or waiting 6502 cannot retire an instruction without a recorded wake input',
+    notRetiredReason: 'the 6502 did not retire an instruction',
+    resetWatch: () => { watchHit = null; },
+  });
+
   return {
     capabilities() {
       // Tolerate a hollow {machine:{cpu:{}}} — several callers build this target
@@ -298,74 +306,12 @@ export function createM6502DebugTarget(adapter, opts = {}) {
      */
     onDebugEvent: debugEvents.onDebugEvent,
 
-    /**
-     * The event clock, READ without advancing it. On the same `m6502-cycles`
-     * base as an input fact's stamp, so a consumer comparing a checkpoint
-     * against a debug input fact gets one clock. (The module's own event epoch
-     * may carry a different suffix after a rewind — the seam noted at the top.)
-     */
-    debugTime() {
-      return { ticks: machine.cycles, domain: admission.eventDomain(), hz: machine.clockHz };
-    },
-
-    /**
-     * A checkpoint of the machine, stamped with this target's event clock — the
-     * debug clock, not the machine's base time, so a consumer comparing it
-     * against a debug fact gets one clock, not two.
-     */
-    captureCheckpoint() {
-      // A snapshot over unlogged board inputs restores a machine that looks right
-      // and is not — refuse rather than hand back a checkpoint replayRefusalReasons()
-      // has already disowned.
-      if (admission.hasUncapturedInputState()) {
-        return { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: admission.uncapturedInputReason };
-      }
-      const checkpoint = machine.captureCheckpoint();
-      if (!checkpoint.refused) {
-        checkpoint.time = { ticks: machine.cycles, domain: admission.eventDomain(), hz: machine.clockHz };
-      }
-      return checkpoint;
-    },
-
-    /**
-     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in
-     * history, not permission to run the clock backwards: renaming the domain
-     * stops two facts from different timelines being read as one that jumped,
-     * and the era gate (stamp()) then clears the dedup map on the next input.
-     * `ownClock`'s own rewind detection cannot see a restore that lands ABOVE
-     * the last stamped tick, which is why the bump is explicit here. The module's
-     * own event epoch is left to its detection: the accepted seam.
-     */
-    restoreCheckpoint(checkpoint) {
-      if (admission.hasUncapturedInputState()) {
-        return { code: 'INCOMPLETE_CHECKPOINT_STATE',
-          refused: 'cannot restore over a live board input source sampled outside the machine' };
-      }
-      const result = machine.restoreCheckpoint(checkpoint);
-      if (!result) { admission.openEpochOnRestore(); }
-      return result;
-    },
-
-    /** Execute one complete instruction for checked history replay. */
-    replayInstruction() {
-      const support = machine.checkpointSupport();
-      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
-        reason: support.reasons.join('; ')};
-      if (cpu.stopped || cpu.waiting) return {accepted: false, code: 'halted-without-instruction',
-        reason: 'the stopped or waiting 6502 cannot retire an instruction without a recorded wake input'};
-      const before = machine.cycles;
-      let cycles;
-      watchHit = null;
-      try {
-        cycles = machine.step();
-      } finally {
-        // Replay reconstructs history; it must not arm a future live halt.
-        watchHit = null;
-      }
-      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
-        reason: 'the 6502 did not retire an instruction'};
-      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
-    },
+    // debugTime / captureCheckpoint / restoreCheckpoint / replayInstruction: the
+    // shared checkpoint methods (createCheckpointMethods), so a fix to the refusal
+    // gate has one home. On the same `m6502-cycles` event clock as an input fact's
+    // stamp. replayInstruction's halt predicate and reason strings are the only
+    // per-CPU parts, passed in where checkpointMethods is built.
+    ...checkpointMethods,
 
     /**
      * REVERSE-STEP TO A RECORDED INPUT. The companion to replayInstruction():

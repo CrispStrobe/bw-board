@@ -187,6 +187,98 @@ export function createInputAdmission({
   };
 }
 
+/**
+ * Shared CHECKPOINT/REPLAY methods for the boundary-D bridges. The same drift the
+ * input side had lived here too: debugTime/captureCheckpoint/restoreCheckpoint were
+ * byte-identical copies in z80-debug.js and m6502-debug.js, and the checkpoint
+ * refusal gate (B, above) had to be fixed in both. Only replayInstruction genuinely
+ * differs per CPU, and only in three places — the halt predicate and two reason
+ * strings — so those are parameters and the skeleton is shared.
+ *
+ * These read the SAME `admission` the input side owns, so a checkpoint and a debug
+ * input fact carry one event clock (admission.eventDomain), and the uncaptured-input
+ * gate (admission.hasUncapturedInputState / uncapturedInputReason) has one home for
+ * both the replay-refusal reasons and the checkpoint refusal.
+ *
+ * @param {object} opts
+ * @param {{cycles:number, clockHz:number, captureCheckpoint:Function, restoreCheckpoint:Function, checkpointSupport:Function, step:Function}} opts.machine
+ * @param {{eventDomain:Function, hasUncapturedInputState:Function, uncapturedInputReason:string, openEpochOnRestore:Function}} opts.admission the return of createInputAdmission
+ * @param {() => boolean} opts.isHalted whether the CPU cannot retire an instruction without a recorded wake input
+ * @param {string} opts.haltReason the refusal text when isHalted()
+ * @param {string} opts.notRetiredReason the refusal text when a step retires no instruction
+ * @param {() => void} opts.resetWatch clears the bridge's live watch latch (replay must not arm a future halt)
+ */
+export function createCheckpointMethods({
+  machine, admission, isHalted, haltReason, notRetiredReason, resetWatch,
+}) {
+  return {
+    /**
+     * The machine's clock, reported as this target's EVENT clock (the debug clock,
+     * not the machine's base time), so a consumer comparing it against a debug fact
+     * gets one clock, not two.
+     */
+    debugTime() {
+      return { ticks: machine.cycles, domain: admission.eventDomain(), hz: machine.clockHz };
+    },
+
+    /**
+     * A checkpoint of the machine, stamped with the event clock. A snapshot over
+     * unlogged board inputs restores a machine that looks right and is not — the
+     * inputs it was sampling are not in the log — so refuse rather than hand back a
+     * checkpoint replayRefusalReasons() has already disowned.
+     */
+    captureCheckpoint() {
+      if (admission.hasUncapturedInputState()) {
+        return { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: admission.uncapturedInputReason };
+      }
+      const checkpoint = machine.captureCheckpoint();
+      if (!checkpoint.refused) {
+        checkpoint.time = { ticks: machine.cycles, domain: admission.eventDomain(), hz: machine.clockHz };
+      }
+      return checkpoint;
+    },
+
+    /**
+     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in history,
+     * not permission to run the clock backwards: renaming the domain stops two facts
+     * from different timelines being read as one that jumped, and the era gate then
+     * clears the dedup map on the next input because the domain string has changed.
+     * (openEpochOnRestore lives on the admission because ownClock's own rewind
+     * detection cannot see a restore that lands ABOVE the last stamped tick.)
+     */
+    restoreCheckpoint(checkpoint) {
+      if (admission.hasUncapturedInputState()) {
+        return { code: 'INCOMPLETE_CHECKPOINT_STATE',
+          refused: 'cannot restore over a live board input source sampled outside the machine' };
+      }
+      const result = machine.restoreCheckpoint(checkpoint);
+      if (!result) { admission.openEpochOnRestore(); }
+      return result;
+    },
+
+    /** Execute one complete instruction for checked history replay. */
+    replayInstruction() {
+      const support = machine.checkpointSupport();
+      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
+        reason: support.reasons.join('; ')};
+      if (isHalted()) return {accepted: false, code: 'halted-without-instruction',
+        reason: haltReason};
+      const before = machine.cycles;
+      let cycles;
+      resetWatch();
+      try {
+        cycles = machine.step();
+      } finally {
+        // Replay reconstructs history; it must not arm a future live halt.
+        resetWatch();
+      }
+      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
+        reason: notRetiredReason};
+      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
+    },
+  };
+}
+
 /** A safe-integer button mask — the bound the replay path enforces, so the FACE
  *  method (setButtons) must enforce it too, or a live input the machine records
  *  is one its own replay refuses. */

@@ -12,7 +12,7 @@ import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-r
 import { loadSNA, SNA_SIZE } from './zx-sna.js';
 import { loadZ80 } from './zx-z80file.js';
 import { installInstructionDebugEvents } from './instruction-debug-events.js';
-import { createInputAdmission, validButtonMask } from './debug-input-admission.js';
+import { createInputAdmission, createCheckpointMethods, validButtonMask } from './debug-input-admission.js';
 
 /** @param {{ machine: import('./z80-machine.js').Z80Machine }} adapter */
 export function createZ80DebugTarget(adapter, opts = {}) {
@@ -239,6 +239,14 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   // `tell` — the same byte typed twice is two characters. The old publishEvent
   // helper is gone: the wrapper is the one event path and inlines the ASK.
 
+  const checkpointMethods = createCheckpointMethods({
+    machine, admission,
+    isHalted: () => cpu.halted,
+    haltReason: 'the halted Z80 cannot retire an instruction without a recorded interrupt input',
+    notRetiredReason: 'the Z80 did not retire an instruction',
+    resetWatch: () => { watchHit = null; },
+  });
+
   return {
     capabilities() {
       // Tolerate a hollow {machine:{cpu:{}}} — several callers build this target
@@ -294,75 +302,12 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      */
     onDebugEvent: debugEvents.onDebugEvent,
 
-    /**
-     * The event clock, READ without advancing it. On the same `z80-cycles` base
-     * as an input fact's stamp, so a consumer comparing a checkpoint against a
-     * debug input fact gets one clock. (The module's own event epoch may carry a
-     * different suffix after a rewind — the seam noted at the top.)
-     */
-    debugTime() {
-      return { ticks: machine.cycles, domain: admission.eventDomain(), hz: machine.clockHz };
-    },
-
-    /**
-     * A checkpoint of the machine, stamped with this target's event clock — the
-     * debug clock, not the machine's base time, so a consumer comparing it
-     * against a debug fact gets one clock, not two.
-     */
-    captureCheckpoint() {
-      // A snapshot over unlogged board inputs restores a machine that looks right
-      // and is not — the inputs it was sampling are not in the log. Refuse rather
-      // than hand back a checkpoint replayRefusalReasons() has already disowned.
-      if (admission.hasUncapturedInputState()) {
-        return { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: admission.uncapturedInputReason };
-      }
-      const checkpoint = machine.captureCheckpoint();
-      if (!checkpoint.refused) {
-        checkpoint.time = { ticks: machine.cycles, domain: admission.eventDomain(), hz: machine.clockHz };
-      }
-      return checkpoint;
-    },
-
-    /**
-     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in
-     * history, not permission to run the clock backwards: renaming the domain
-     * stops two facts from different timelines being read as one that jumped,
-     * and the era gate (stamp()) then clears the dedup map on the next input
-     * because the domain string has changed. `ownClock`'s own rewind detection
-     * cannot see a restore that lands ABOVE the last stamped tick — it reads as
-     * ordinary forward motion — which is why the bump is explicit here. The
-     * module's own event epoch is left to its detection: the accepted seam.
-     */
-    restoreCheckpoint(checkpoint) {
-      if (admission.hasUncapturedInputState()) {
-        return { code: 'INCOMPLETE_CHECKPOINT_STATE',
-          refused: 'cannot restore over a live board input source sampled outside the machine' };
-      }
-      const result = machine.restoreCheckpoint(checkpoint);
-      if (!result) { admission.openEpochOnRestore(); }
-      return result;
-    },
-
-    /** Execute one complete instruction for checked history replay. */
-    replayInstruction() {
-      const support = machine.checkpointSupport();
-      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
-        reason: support.reasons.join('; ')};
-      if (cpu.halted) return {accepted: false, code: 'halted-without-instruction',
-        reason: 'the halted Z80 cannot retire an instruction without a recorded interrupt input'};
-      const before = machine.cycles;
-      let cycles;
-      watchHit = null;
-      try {
-        cycles = machine.step();
-      } finally {
-        // Replay reconstructs history; it must not arm a future live halt.
-        watchHit = null;
-      }
-      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
-        reason: 'the Z80 did not retire an instruction'};
-      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
-    },
+    // debugTime / captureCheckpoint / restoreCheckpoint / replayInstruction: the
+    // shared checkpoint methods (createCheckpointMethods), so a fix to the refusal
+    // gate has one home. On the same `z80-cycles` event clock as an input fact's
+    // stamp. replayInstruction's halt predicate and reason strings are the only
+    // per-CPU parts, passed in where checkpointMethods is built.
+    ...checkpointMethods,
 
     regs() {
       return {

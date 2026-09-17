@@ -4,7 +4,7 @@
 // no bridge test happens to cover still reddens something.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createInputAdmission, validButtonMask } from '../src/debug-input-admission.js';
+import { createInputAdmission, createCheckpointMethods, validButtonMask } from '../src/debug-input-admission.js';
 
 const jsonSig = (_producer, payload) => JSON.stringify(payload);
 
@@ -93,4 +93,100 @@ test('validButtonMask accepts a safe integer and rejects the rest', () => {
   assert.equal(validButtonMask(2 ** 60), false);
   assert.equal(validButtonMask('3'), false);
   assert.equal(validButtonMask(NaN), false);
+});
+
+// --- createCheckpointMethods: the shared CHECKPOINT/REPLAY half ---------------
+// The bridge suites (unlogged-board-inputs, debug-replay-contract, the *-replay
+// suites) exercise these end-to-end; this pins the factory's DIRECT contract in
+// isolation, including the per-CPU parameters (halt predicate + reason strings)
+// and the watch-latch reset, so a drift the bridge fixtures don't happen to cover
+// still reddens.
+const mkCkpt = (opts = {}) => {
+  const calls = { resetWatch: 0 };
+  const state = { uncaptured: false, epochOpened: 0 };
+  const machine = {
+    cycles: 42, clockHz: 1e6,
+    checkpointSupport: () => ({ supported: true, reasons: [] }),
+    captureCheckpoint: () => ({ data: 'snap' }),
+    restoreCheckpoint: () => undefined,          // falsy return = a successful restore
+    step: () => 4,
+    ...opts.machine,
+  };
+  const admission = {
+    eventDomain: () => 'dom-1',
+    hasUncapturedInputState: () => state.uncaptured,
+    uncapturedInputReason: 'unlogged board sampling',
+    openEpochOnRestore: () => { state.epochOpened++; },
+  };
+  const methods = createCheckpointMethods({
+    machine, admission,
+    isHalted: () => opts.halted === true,
+    haltReason: 'HALT-REASON', notRetiredReason: 'NOT-RETIRED-REASON',
+    resetWatch: () => { calls.resetWatch++; },
+  });
+  return { methods, machine, state, calls };
+};
+
+test('captureCheckpoint: refuses over uncaptured input, else stamps the event clock', () => {
+  const c = mkCkpt();
+  const ok = c.methods.captureCheckpoint();
+  assert.deepEqual(ok.time, { ticks: 42, domain: 'dom-1', hz: 1e6 }, 'a sound checkpoint carries the event clock');
+  c.state.uncaptured = true;
+  assert.deepEqual(c.methods.captureCheckpoint(),
+    { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: 'unlogged board sampling' },
+    'over unlogged inputs it refuses with the shared reason, unstamped');
+});
+
+test('captureCheckpoint: a machine that refuses is passed through UNSTAMPED', () => {
+  const c = mkCkpt({ machine: { captureCheckpoint: () => ({ refused: 'no support' }) } });
+  const out = c.methods.captureCheckpoint();
+  assert.equal(out.refused, 'no support');
+  assert.equal(out.time, undefined, 'a refused checkpoint is not given a time');
+});
+
+test('restoreCheckpoint: opens a fresh epoch on success, not on refusal, gated on uncaptured input', () => {
+  const ok = mkCkpt();
+  assert.equal(ok.methods.restoreCheckpoint({}), undefined);
+  assert.equal(ok.state.epochOpened, 1, 'a successful restore opens the input epoch');
+
+  const bad = mkCkpt({ machine: { restoreCheckpoint: () => ({ error: 'bad' }) } });
+  assert.deepEqual(bad.methods.restoreCheckpoint({}), { error: 'bad' });
+  assert.equal(bad.state.epochOpened, 0, 'a failed restore does NOT branch the timeline');
+
+  let restored = false;
+  const d = mkCkpt({ machine: { restoreCheckpoint: () => { restored = true; return undefined; } } });
+  d.state.uncaptured = true;
+  const out = d.methods.restoreCheckpoint({});
+  assert.equal(out.code, 'INCOMPLETE_CHECKPOINT_STATE');
+  assert.equal(restored, false, 'it refuses BEFORE touching the machine');
+  assert.equal(d.state.epochOpened, 0);
+});
+
+test('replayInstruction: unsupported / halted / not-retired / accepted, with per-CPU reasons', () => {
+  const unsup = mkCkpt({ machine: { checkpointSupport: () => ({ supported: false, reasons: ['a', 'b'] }) } });
+  assert.deepEqual(unsup.methods.replayInstruction(),
+    { accepted: false, code: 'unsupported-replay', reason: 'a; b' });
+
+  const halted = mkCkpt({ halted: true });
+  assert.deepEqual(halted.methods.replayInstruction(),
+    { accepted: false, code: 'halted-without-instruction', reason: 'HALT-REASON' },
+    'the injected halt predicate and its reason are used');
+
+  const stuck = mkCkpt({ machine: { step: () => 0 } });
+  assert.deepEqual(stuck.methods.replayInstruction(),
+    { accepted: false, code: 'instruction-not-retired', reason: 'NOT-RETIRED-REASON' });
+
+  const good = mkCkpt({ machine: { cycles: 100, step() { this.cycles = 106; return 6; } } });
+  assert.deepEqual(good.methods.replayInstruction(),
+    { accepted: true, boundary: 'instruction', cycles: 6 }, 'cycles is the delta the step advanced');
+});
+
+test('replayInstruction: resets the watch latch around the step, even if the step throws', () => {
+  const ok = mkCkpt();
+  ok.methods.replayInstruction();
+  assert.equal(ok.calls.resetWatch, 2, 'reset before the step and again in the finally');
+
+  const boom = mkCkpt({ machine: { step: () => { throw new Error('bang'); } } });
+  assert.throws(() => boom.methods.replayInstruction(), /bang/);
+  assert.equal(boom.calls.resetWatch, 2, 'the finally still cleared the latch when the step threw');
 });
