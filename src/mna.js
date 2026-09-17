@@ -2755,8 +2755,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vz = /** @type {number} */ (part.params.vz ?? 5.1);
       const rd = 10;
       const rzener = /** @type {number} */ (part.params.rz ?? 5);
-      const ibvDeclared = Number(part.params.ibv);
-      const ibv = Number.isFinite(ibvDeclared) && ibvDeclared > 0 ? ibvDeclared : 0;
+      const ibv = zenerKneeCurrent(part);
       const vAcross = vAnode - vCathode;
       // THE SAME REGIONS AS THE STAMP, IN THE SAME ORDER. This reader is the
       // stamp's twin: a node voltage that agrees while the branch current does
@@ -2765,7 +2764,10 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       let i;
       if (vAcross >= vf) i = (vAcross - vf) / rd;
       else if (ibv > 0 && vAcross < 0) {
-        i = -zenerBreakdown(-vAcross, vz, ibv, zenerSeriesR(part, rzener), JUNCTION_THERMAL_VOLTAGE)[0];
+        const nB = Number.isFinite(Number(part.params.n)) && Number(part.params.n) > 0
+          ? Number(part.params.n) : 1;
+        i = -zenerBreakdown(-vAcross, vz, ibv, zenerSeriesR(part, rzener),
+          nB * JUNCTION_THERMAL_VOLTAGE)[0];
       } else if (vAcross <= -vz) i = (vAcross + vz) / rzener;
       else i = 0;
       currents.set('anode', -i);
@@ -3943,6 +3945,38 @@ function zenerSeriesR(part, fallback) {
 // only iterations. A mutation doing exactly that passed every voltage assertion
 // in this device's suite, which is how the gap was found; it is now held by a
 // finite-difference check, the only instrument that can see it.
+/**
+ * ngspice's own default for a diode card's breakdown knee current.
+ *
+ * SPICE places the junction so the current is IBV at |Vj| = BV whether or not
+ * the card states IBV. Matching the reference means taking the same default:
+ * measured on the gallery's zener clamp, a card stating only `BV=5.1` reads
+ * 5.199200 V in ngspice against 5.141511 V from the piecewise corner -- 57.7 mV,
+ * and the whole of that circuit's disagreement.
+ */
+const SPICE_DEFAULT_IBV = 1e-3;
+
+/**
+ * The knee current a card asks for: a number, SPICE's default, or the piecewise
+ * corner.
+ *
+ *   ibv > 0     that knee current, exponential breakdown
+ *   absent      SPICE_DEFAULT_IBV, exponential -- what ngspice does
+ *   ibv === 0   the PIECEWISE corner, explicitly asked for
+ *
+ * The third case is the one that needed saying. An absence and an explicit zero
+ * used to mean the same thing, and taking the SPICE default for both would have
+ * made the piecewise model UNREACHABLE: `rz` dead, its three-region stamp dead,
+ * and no way for a caller to ask for the knee-free device that 2,163 corpus
+ * circuits were written against. An absence is a default; a zero is a choice,
+ * and collapsing them removes a model rather than adding one.
+ */
+function zenerKneeCurrent(part) {
+  const declared = Number(part?.params?.ibv);
+  if (declared === 0) return 0;                      // piecewise, on purpose
+  return Number.isFinite(declared) && declared > 0 ? declared : SPICE_DEFAULT_IBV;
+}
+
 export function zenerBreakdown(vRev, bv, ibv, rs, nVt) {
   // ln(I) ignoring RS is the starting point; it is exact when RS is 0.
   let lnI = Math.log(ibv) + (vRev - bv) / nVt;
@@ -3987,8 +4021,7 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
   const rzener = /** @type {number} */ (part.params.rz ?? 5); // zener dynamic R
   // The knee current. ABSENT MEANS "use the piecewise corner": a card that does
   // not state IBV must solve exactly as it did before this branch existed.
-  const ibvDeclared = Number(part.params.ibv);
-  const ibv = Number.isFinite(ibvDeclared) && ibvDeclared > 0 ? ibvDeclared : 0;
+  const ibv = zenerKneeCurrent(part);
 
   const netA = findNet(nets, part.id, 'anode');
   const netC = findNet(nets, part.id, 'cathode');
@@ -4012,7 +4045,16 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
     // convention both other branches here use -- checked by substituting the
     // linear model into it and recovering `vz/rzener` exactly.
     const u = -vAcross;
-    const [iRev, gRev] = zenerBreakdown(u, vz, ibv, zenerSeriesR(part, rzener), JUNCTION_THERMAL_VOLTAGE);
+    // AND THE BREAKDOWN USES THE MODEL'S IDEALITY FACTOR, NOT 1. Measured
+    // against ngspice at N = 1, 1.5, 1.752 and 2.5: the slope is N*Vt*ln(10) per
+    // decade every time, to four figures. The first characterisation of this law
+    // missed it because the ADI corpus card states no N -- so N was 1 and the two
+    // forms agreed exactly. The gallery's zener states N=1.752, where it is 40 mV
+    // of the 57.7.
+    const nBreak = Number.isFinite(Number(part.params.n)) && Number(part.params.n) > 0
+      ? Number(part.params.n) : 1;
+    const [iRev, gRev] = zenerBreakdown(u, vz, ibv, zenerSeriesR(part, rzener),
+      nBreak * JUNCTION_THERMAL_VOLTAGE);
     // GMIN AS A PARALLEL CONDUCTANCE, not as a floor on the slope: it goes into
     // the diagonal and NOT into the Norton source, so the branch really carries
     // `-I_rev + GMIN*V` and a node with only this junction on it is determined.
