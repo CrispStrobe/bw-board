@@ -226,6 +226,29 @@ test('reg=6 is SETMO on an 8086 and a second SHL on a 186', () => {
     assert.equal(b.al, 0x06, 'on a 186 the same encoding shifts left by one');
 });
 
+test('reg=6 covers the word and by-CL forms too: SETMO(C) on the 8086, a shift on a 186', () => {
+    // The test above covers D0 /6 -- the 8-bit, count-1 form. D1 is the 16-bit
+    // operand, and D2/D3 are the by-CL "SETMOC". Each is all-ones on the 8086
+    // (undocumented, vector-verified) and the reclaimed second shift on the 186.
+    // Verified against the core; nothing else grades that they split BY VARIANT.
+    const regSix = (bytes, variant, wide) => {
+        const { cpu } = bench(bytes, variant);
+        if (wide) cpu.ax = 0x0003; else cpu.al = 0x03;
+        cpu.cl = 1;                                    // the by-CL forms shift once
+        cpu.step();
+        return wide ? cpu.ax : cpu.al;
+    };
+    for (const [label, bytes, wide, ones] of [
+        ['D1/6 word, count 1', [0xd1, 0xf0], true, 0xffff],
+        ['D2/6 byte, by cl',   [0xd2, 0xf0], false, 0xff],
+        ['D3/6 word, by cl',   [0xd3, 0xf0], true, 0xffff],
+    ]) {
+        assert.equal(regSix(bytes, '8086', wide), ones, `${label}: SETMO sets every bit on the 8086`);
+        assert.equal(regSix(bytes, '80186', wide), wide ? 0x0006 : 0x06,
+            `${label}: the 186 shifts left by one instead`);
+    }
+});
+
 test('PUSHA pushes the ENTRY SP, and POPA discards that slot', () => {
     const { cpu, mem } = bench([0x60], '80186');
     cpu.ax = 0x1111; cpu.cx = 0x2222; cpu.dx = 0x3333; cpu.bx = 0x4444;
