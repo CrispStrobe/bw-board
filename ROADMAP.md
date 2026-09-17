@@ -3698,6 +3698,52 @@ and whether anyone here has reproduced it.
 
 ### R1 `machine.reset()` freezes the rp2040 adapter instead of rebooting
 
+**THE REBOOT HALF IS FIXED 2026-09-17. ONE DoD CLAUSE REMAINS UNTESTED BY ME —
+read the scope below before recording this as closed.**
+
+`replaceSoC(previous, opts)` in `src/rp2040js-adapter.js` consumes the reset
+request the watchdog hook was already surfacing: it copies flash out, builds a
+fresh SoC, and boots the preserved image. Measured end to end by
+`scripts/probe-pico-reset.mjs`, which now also does the HOST half the adapter
+cannot — re-attaching a `USBCDC` to the new `usbCtrl`:
+
+```
+machine.reset() -> park          1,240,679 absolute; onResetRequest fired once
+replaceSoC() + host rebind
+re-enumerate USB                 done at 1,644,989
+second REPL prompt ">>>"         REACHED
+banner                           not seen -- dropped before DTR, as expected
+```
+
+Probe exit status is now 0. rp2040 suites 99/99, census 14/14.
+
+**THE BOUNDARY, decided rather than assumed.** The adapter's comment assigns
+the replacement to "a browser or runner". The split landed here is: the
+flash-preserving reconstruction is generic and lives in this repo; the USB/GPIO
+rebinding stays with the host, which owns those objects and which the adapter
+cannot reach. That is the smallest split that makes the reusable half reusable
+without pretending the host-specific half is generic.
+
+**WHAT IS STILL UNTESTED, and it is a DoD clause:** bullet 1 asks for a test
+that deploys a `main.py` driving GP25 through `deployMainPy`, calls
+`machine.reset()`, and asserts **`main.py` then runs** so GP25 toggles. I proved
+the machine REBOOTS to a live prompt. I did NOT drive `deployMainPy`, and I did
+NOT assert a deployed program runs after the reboot. Flash survives the
+replacement (asserted in `test/rp2040-soc-replacement.test.mjs`), so there is
+reason to expect it — but expecting is not measuring, and that clause belongs to
+whoever closes this entry.
+
+**ONE INSTRUMENT CORRECTION WORTH KEEPING.** The first run of the fixed probe
+printed "R1 NOT FIXED" about a SoC that had already re-enumerated USB, because
+it waited for MicroPython's BANNER. `mp_hal_stdout_tx_strn` drops every byte
+until CDC reports DTR, so on a machine that enumerates later the banner is
+simply gone — a warning lite's own `probe-pico-micropython.mjs` carries in its
+comments. The first boot in that same probe never trusted the banner; it
+knocked and waited for `>>>`. **Using a weaker instrument for the second
+reading than the first** is what produced a false negative about my own fix.
+
+
+
 **Reported by lego-ac (brickwright-lite, N3c), 2026-09-06. REPRODUCED AND
 TRIAGED HERE 2026-09-06; whole-SoC adoption remains open.**
 

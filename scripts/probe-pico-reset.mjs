@@ -29,13 +29,21 @@
  * depend on the network, and "a file is present" is not "the build the last
  * reading used".
  *
+ * SINCE 2026-09-17 IT ALSO CONSUMES THE REQUEST. `replaceSoC()` builds a fresh
+ * SoC carrying the preserved flash, and this probe does the HOST half the
+ * adapter cannot: re-attaching a USBCDC to the new `usbCtrl`. If a second
+ * MicroPython banner then appears, R1 is fixed and the exit status is 0.
+ * `--no-replace` skips the replacement to reproduce the original parked
+ * behaviour, which is what the RED half of the DoD wants.
+ *
  * Usage: BW_PICO_MICROPYTHON_UF2=<path> node scripts/probe-pico-reset.mjs
+ *        [--no-replace]
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { USBCDC } from 'rp2040js';
-import { createRp2040jsAdapter } from '../src/rp2040js-adapter.js';
+import { createRp2040jsAdapter, replaceSoC } from '../src/rp2040js-adapter.js';
 
 const KNOWN_SHA256 = 'e92c2a253d2d4830d56cd6aebae1bbc6c913f413122dabba3cc2de74b984bba9';
 const KNOWN_NAME = 'RPI_PICO-20240222-v1.22.2.uf2';
@@ -88,23 +96,29 @@ console.log(`firmware        ${path.basename(uf2Path)}  ${image.length} bytes at
 console.log(`firmware sha256 ${digest}${digest === KNOWN_SHA256 ? '  (the expected build)' : '  *** NOT the expected build ***'}`);
 
 let resetEvents = 0;
-const adapter = createRp2040jsAdapter({
-    onResetRequest: r => { resetEvents++; console.log(`  onResetRequest  ${JSON.stringify(r)}`); }
-});
-const { rp2040, core } = adapter;
+const noReplace = argv.includes('--no-replace');
+const onResetRequest = r => { resetEvents++; console.log(`  onResetRequest  ${JSON.stringify(r)}`); };
+
+// The machine is REBINDABLE, because replacing the SoC replaces every object
+// below. A loop that closed over the first `core` would keep driving the
+// discarded one and report a reboot that never happened.
+let adapter = createRp2040jsAdapter({ onResetRequest });
+let core = adapter.core;
+let clock = adapter.rp2040.clock;
+const cycleNanos = 1e9 / adapter.clockHz;
 adapter.bootFromFlash(image);      // the documented entry, so entryPC is not stale
 
 const state = { steps: 0, usb: '', connected: false };
-const cdc = new USBCDC(rp2040.usbCtrl);
-cdc.onDeviceConnected = () => { state.connected = true; };
-cdc.onSerialData = buf => { for (const b of buf) state.usb += String.fromCharCode(b); };
+let cdc;
+/** The host half: a new SoC has a new usbCtrl, so the CDC must be re-attached. */
+function bindHost () {
+    state.connected = false;
+    cdc = new USBCDC(adapter.rp2040.usbCtrl);
+    cdc.onDeviceConnected = () => { state.connected = true; };
+    cdc.onSerialData = buf => { for (const b of buf) state.usb += String.fromCharCode(b); };
+}
+bindHost();
 
-const clock = rp2040.clock, cycleNanos = 1e9 / adapter.clockHz;
-/**
- * @param done  stop when this returns true
- * @param budget  instruction budget — CANNOT bound a parked core, see header
- * @param idleIters  iteration bound while parked; this is what actually stops it
- */
 function run (done, budget, idleIters = 2_000_000) {
     const limit = state.steps + budget;
     let idle = 0;
@@ -133,30 +147,63 @@ const mark = state.usb.length;
 for (const c of 'import machine\r') cdc.sendSerialByte(c.charCodeAt(0));
 console.log(`import machine  ${run(() => state.usb.slice(mark).includes('>>>'), 5_000_000)} at ${state.steps}`);
 
-// REPORT AN ABSOLUTE COUNT ALONGSIDE THE RELATIVE ONE, because a number
-// labelled loosely becomes a wrong anchor later. Two readings of this defect
-// quoted 388,155 and 119,993 instructions; both were correct and measured from
-// different origins — the REPL prompt and `import machine` respectively, which
-// end at the same absolute step. The relative figure below is measured from
-// `import machine`; the absolute one needs no origin to be quoted against.
-const beforeReset = state.usb.length, stepsAtReset = state.steps;
+// REPORT AN ABSOLUTE COUNT ALONGSIDE ANY RELATIVE ONE: two readings of this
+// defect quoted 388,155 and 119,993 instructions and both were correct,
+// measured from the REPL prompt and from `import machine`. The absolute figure
+// needs no origin to be quoted against.
+const stepsAtReset = state.steps;
 console.log('');
 console.log('--- machine.reset() ---');
 for (const c of 'machine.reset()\r') cdc.sendSerialByte(c.charCodeAt(0));
-const why = run(() => state.usb.slice(beforeReset).includes('MicroPython'), 20_000_000);
-
-const rebooted = state.usb.slice(beforeReset).includes('MicroPython');
-console.log(`outcome         ${why}`);
-console.log(`                ${state.steps - stepsAtReset} instructions from \`import machine\` to stop`);
-console.log(`                ${state.steps} total instructions; the stop is at this absolute count`);
+const parked = run(() => resetEvents > 0 && core.waiting, 20_000_000);
+console.log(`park            ${parked}`);
+console.log(`                ${state.steps - stepsAtReset} instructions from \`import machine\`; ${state.steps} absolute`);
 console.log(`onResetRequest  fired ${resetEvents} time(s)`);
-console.log(`takeResetRequest ${JSON.stringify(adapter.takeResetRequest())}`);
-console.log(`core.waiting    ${core.waiting}`);
-console.log(`PC              ${hex(core.PC)}`);
-console.log(`second banner   ${rebooted ? 'YES -- it rebooted' : 'no -- it did not reboot (R1)'}`);
+
+let rebooted = false;
+if (resetEvents === 0) {
+    console.log('no reset request was ever surfaced — the watchdog seam did not fire');
+} else if (noReplace) {
+    console.log('--no-replace: leaving the SoC parked, which is R1 unfixed');
+} else {
+    const request = adapter.takeResetRequest();
+    console.log(`takeResetRequest ${JSON.stringify(request)}`);
+    console.log('');
+    console.log('--- replaceSoC() + host rebind ---');
+    adapter = replaceSoC(adapter);
+    core = adapter.core;
+    clock = adapter.rp2040.clock;
+    bindHost();                                   // the half the adapter cannot do
+    const before = state.usb.length;
+    const why = run(() => state.connected, 20_000_000);
+    console.log(`re-enumerate    ${why} at ${state.steps}`);
+
+    // PROVE LIFE THE SAME WAY THE FIRST BOOT DID: knock, and wait for the
+    // prompt. NOT by waiting for the banner.
+    //
+    // MicroPython writes its banner the instant the REPL starts, and
+    // mp_hal_stdout_tx_strn DROPS every byte until CDC reports DTR — so on a
+    // machine that enumerates later the banner is simply gone, and a probe
+    // waiting for it reads a healthy boot as a hang. Lite's own
+    // probe-pico-micropython.mjs carries that warning in its comments, and
+    // this probe walked into it anyway on the first attempt: it reported
+    // "second banner not seen" about a SoC that had already re-enumerated USB.
+    // The first boot above never trusted the banner either; using a weaker
+    // instrument for the second reading than the first is how that slipped
+    // past.
+    for (const c of '\r\n') cdc.sendSerialByte(c.charCodeAt(0));
+    const prompt = run(() => />>>/.test(state.usb.slice(before)), 20_000_000);
+    rebooted = />>>/.test(state.usb.slice(before));
+    console.log(`second prompt   ${prompt} -> ${rebooted ? 'REACHED' : 'not reached'}`);
+    const banner = state.usb.slice(before).includes('MicroPython');
+    console.log(`banner          ${banner ? 'seen' : 'not seen (expected: dropped before DTR)'}`);
+    if (rebooted) console.log(`                ${JSON.stringify(state.usb.slice(before).trim().slice(-60))}`);
+}
+
 console.log('');
 console.log(rebooted
-    ? 'R1 IS FIXED on this tree: the machine rebooted after machine.reset().'
-    : 'R1 REPRODUCES: the seam fired and the core parked, because nothing built\n'
-      + 'the replacement SoC. That is a missing consumer, not a broken mechanism.');
+    ? 'R1 IS FIXED on this tree: machine.reset() replaced the SoC and MicroPython\n'
+      + 'came back to a live REPL prompt on the new machine.'
+    : 'R1 NOT FIXED here: the replacement did not reach a prompt. What the seam and\n'
+      + 'the re-enumeration did is printed above; read those before concluding.');
 process.exit(rebooted ? 0 : 1);
