@@ -148,6 +148,53 @@ test('state round-trips mid-sequence', () => {
     assert.deepEqual(out, [0x41]);
 });
 
+test('the sync-mode warning carries its port and its symptom, not just a message', () => {
+    // The tests above check that a sync mode word warns; _setModeWarning also
+    // builds WHERE (the control port, the only place a mode word can arrive) and
+    // WHAT goes wrong (the receiver never enters hunt, so a program waiting on
+    // SYNDET waits for ever). Those two are the actionable half and nothing else
+    // grades them.
+    const u = new I8251();
+    u.write(1, 0x00);                       // sync mode word
+    assert.equal(u.modeWarningAt, 1, 'the warning points at the control port');
+    assert.match(u.modeWarningSymptom, /SYNDET/,
+        'the symptom names the receiver never acquiring sync');
+
+    // An async mode carries none of it -- message, port, and symptom all clear.
+    const a = new I8251();
+    a.write(1, MODE_8N1);
+    assert.equal(a.modeWarning, null);
+    assert.equal(a.modeWarningAt, null);
+    assert.equal(a.modeWarningSymptom, null);
+});
+
+test('the sync warning is DERIVED across a checkpoint, not remembered', () => {
+    // The contract on _setModeWarning: mode and _sync are in the checkpoint, so
+    // a restore RECONSTRUCTS the warning rather than carrying a remembered
+    // string. A chip loaded from a sync-configured snapshot therefore warns even
+    // though THIS instance never saw the mode write -- the case where a warning
+    // held as a plain field would have been lost.
+    const u = new I8251();
+    u.write(1, 0x00);                       // sync mode
+    const snap = u.saveState();
+
+    const v = new I8251();
+    assert.equal(v.modeWarning, null, 'a fresh chip has no warning to remember');
+    v.loadState(snap);
+    assert.match(v.modeWarning, /synchronous/, 'the restore reconstructs the warning');
+    assert.equal(v.modeWarningAt, 1, 'with its port');
+    assert.match(v.modeWarningSymptom, /SYNDET/, 'and its symptom');
+
+    // And an ASYNC snapshot restores WITHOUT conjuring one -- the derivation is
+    // gated on the restored mode, not on there being a mode at all.
+    const asyncChip = new I8251();
+    asyncChip.write(1, MODE_8N1);
+    const w = new I8251();
+    w.loadState(asyncChip.saveState());
+    assert.equal(w.modeWarning, null, 'no warning invented for an async restore');
+    assert.equal(w.modeWarningAt, null);
+});
+
 test('reset clears everything back to expecting a mode word', () => {
     const u = configured();
     u.rxPush(0x33);
