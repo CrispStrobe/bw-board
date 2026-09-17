@@ -229,18 +229,29 @@ for (const w of ['writeUint32', 'writeUint16', 'writeUint8']) {
 
 const cycleNanos = 1e9 / adapter.clockHz;
 const clock = rp2040.clock;
-function run (done, budget, idleCapNanos = 2e9) {
+function run (done, budget, idleCapNanos = 2e9, idleIterCap = 2_000_000) {
     const limit = state.steps + budget;
+    let idleIters = 0;
     while (state.steps < limit) {
         if (done && done()) return 'done';
         if (core.waiting) {
+            // BOUND ITERATIONS AS WELL AS SIMULATED TIME. A parked core with no
+            // alarm pending advances ~8 ns per tick, so a 2-second cap needs
+            // ~250 MILLION iterations to trip and presents as a hang for tens of
+            // seconds before it does. The instruction budget above cannot help:
+            // `continue` skips the step counter, so a parked core never consumes
+            // it. Copying this loop WITHOUT any cap cost 15 minutes and a false
+            // "blocked on box capacity" entry in ROADMAP R1 -- the core was
+            // parked by the very defect under investigation.
             const toAlarm = clock.nanosToNextAlarm;
             const dt = toAlarm > 0 ? toAlarm : cycleNanos;
             clock.tick(dt);
             state.idleNanos += dt;
             if (state.idleNanos > idleCapNanos) return 'idle';
+            if (++idleIters > idleIterCap) return 'idle (core parked, not executing)';
             continue;
         }
+        idleIters = 0;
         let cycles;
         // Every ENTRY into the bootrom, by whatever instruction. blTaken sees
         // bl and blx only; a `bx rN` or a `pop {pc}` with a wrong value is
