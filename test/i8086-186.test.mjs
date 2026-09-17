@@ -66,6 +66,70 @@ test('shift counts: an 8086 does not mask, a 186 does', () => {
     }
 });
 
+// The test above masks SHL only. The 186 masks the count for the WHOLE group-2
+// (D0-D3), once, before the op runs -- so SHR/SAR and the rotates mask too, and
+// the places it is VISIBLE are exactly the ones no oracle grades: the v20 grind
+// drops every count over 31. Ground-truthed against the core, then pinned here
+// so a change of mind about the 186 has to be a change of mind IN THIS FILE.
+//
+// `D2 /r  <op> al, cl` -- the reg field of the ModRM byte selects the op.
+const GROUP2 = { rol: 0xc0, ror: 0xc8, rcl: 0xd0, rcr: 0xd8, shl: 0xe0, shr: 0xe8, sar: 0xf8 };
+const shiftAlCl = (modrm, variant, al, cl, cfIn = 1) => {
+    const { cpu } = bench([0xd2, modrm], variant);
+    cpu.al = al; cpu.cl = cl;
+    if (cfIn) cpu.flags |= 0x0001; else cpu.flags &= ~0x0001;
+    cpu.step();
+    return { al: cpu.al, cf: cpu.flags & 0x0001 ? 1 : 0 };
+};
+
+test('the whole shift/rotate group masks its count, not just SHL', () => {
+    // cl=33 masks to 1 on the 186. AL=81h with CF=1 coming in, so a single step
+    // of each op has a distinct, hand-checkable result -- and every one DIFFERS
+    // from the unmasked 8086, which acts on the count 33 times. RCL/RCR are the
+    // subtle pair: a rotate-through-carry has period 9 (byte), which does NOT
+    // divide 32, so masking to five bits changes the result rather than being
+    // absorbed by the period the way a plain rotate's is.
+    const masked1 = {
+        shl: { al: 0x02, cf: 1 },   // 81 << 1, CF = old bit7
+        shr: { al: 0x40, cf: 1 },   // 81 >> 1, CF = old bit0
+        sar: { al: 0xc0, cf: 1 },   // arithmetic: the sign fills from the left
+        rcl: { al: 0x03, cf: 1 },   // (81<<1)|cf_in, CF = old bit7
+        rcr: { al: 0xc0, cf: 1 },   // (cf_in<<7)|(81>>1), CF = old bit0
+    };
+    for (const [op, want] of Object.entries(masked1)) {
+        assert.deepEqual(shiftAlCl(GROUP2[op], '80186', 0x81, 33), want,
+            `${op} al,cl (cl=33) masks to 1 on the 186`);
+        assert.notEqual(shiftAlCl(GROUP2[op], '8086', 0x81, 33).al, want.al,
+            `${op}: the 8086 does not mask, so its result differs`);
+    }
+});
+
+test('a count of 32 is a complete no-op on the 186 and a wipe on the 8086', () => {
+    // 32 & 31 = 0: the 186 does nothing at all -- operand AND flags untouched --
+    // while the 8086 acts on the operand 32 times. The cleanest single tell
+    // between the parts, and unreachable by the v20 grind (which stops at 31).
+    for (const op of ['shl', 'shr', 'sar', 'rcl', 'rcr']) {
+        assert.deepEqual(shiftAlCl(GROUP2[op], '80186', 0x81, 32), { al: 0x81, cf: 1 },
+            `${op} by 32 is a no-op on the 186: nothing moved, CF unchanged`);
+        assert.notDeepEqual(shiftAlCl(GROUP2[op], '8086', 0x81, 32), { al: 0x81, cf: 1 },
+            `${op} by 32 is NOT a no-op on the 8086`);
+    }
+});
+
+test('pure ROL/ROR mask too, but INVISIBLY: their period divides 32', () => {
+    // Both mask like the rest -- but a byte rotate has period 8, and 8 divides
+    // 32, so (count & 31) and count always land on the same rotation. Asserted
+    // EQUAL across the variants on purpose: it marks the boundary of what the
+    // masking can be observed through, and stops a future reader "fixing" a
+    // divergence that cannot exist here.
+    for (const op of ['rol', 'ror']) {
+        assert.deepEqual(
+            shiftAlCl(GROUP2[op], '80186', 0x81, 33),
+            shiftAlCl(GROUP2[op], '8086', 0x81, 33),
+            `${op} by 33: masked and unmasked coincide (period 8 | 32)`);
+    }
+});
+
 test('shift by immediate: C0/C1 exist only on the 186, and mask', () => {
     // On an 8086 C0 is an ALIAS OF RET imm16 -- it pops IP and adds the
     // immediate to SP. That is not a rough edge to smooth off: it is what
