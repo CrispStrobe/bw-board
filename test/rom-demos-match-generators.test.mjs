@@ -37,6 +37,35 @@
 // matches a fresh run of the same faulty query. Its green means "these bytes
 // are not STALE"; it has never meant "these bytes are RIGHT".
 //
+// SWEPT 2026-09-17 FOR OTHER INSTANCES, and the result is that there are none
+// in the shape searched. I had flagged "any gate whose oracle is the tool under
+// test" as an UNMEASURED surface rather than a clean one; this is the
+// measurement, with its own limits stated.
+//
+// Searched two structural shapes, not keywords — a keyword scan matched prose
+// and was discarded: (a) tests that EXECUTE a generator under `scripts/` and
+// compare its output to something tracked, (b) `--check` twins that regenerate
+// an artefact and compare it to the committed copy. Ten candidates. Every one
+// has an oracle OUTSIDE the thing it builds:
+//
+//   i8086-asm-186 / asm-probes   NASM and MASM, external assemblers
+//   ci-external-input-pins       SingleStepTests vectors
+//   x86-owned-oracle             PCjs, an independent emulator
+//   sst286                       SingleStepTests vectors
+//   gen-labwired-chips --check   the CLI fixture is the source, not the generator
+//   gen-i8088-cycle-tables       SingleStepTests 8088 v2, captured from silicon
+//   harris-bios-probe            a LITERAL sha256 in the test, which does not
+//                                move when the builder changes — the opposite
+//                                of this file's defect, where artefact and
+//                                rebuild moved together
+//
+// WHAT THE SWEEP DOES NOT COVER, so it is not read as a clean bill: it finds
+// gates that SHELL OUT to a generator or carry a `--check` flag. A test that
+// imports a module and computes its own expectation WITH that module has the
+// same defect and this search would not see it. That narrower shape is still
+// unmeasured, and saying "no instances found" without this paragraph would be
+// the same over-claim the file is about.
+//
 // So a "no ROM byte moved" claim needs an anchor OUTSIDE this implementation.
 // One exists as of 2026-09-10: an isolated single-branch clone identified BIOS
 // source 7b8d1404 with zero bios.asm commits between it and the then-current
