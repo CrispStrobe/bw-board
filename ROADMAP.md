@@ -3785,6 +3785,34 @@ Recorded here because I built that handler while arguing it had no consumer,
 and R1 — in this file, which I maintain — is the consumer. One `grep` would
 have found it.
 
+**2026-09-17 — REPRODUCIBLE ON DEMAND: `scripts/probe-pico-reset.mjs`.** It
+boots the pinned MicroPython, reaches the REPL, calls `machine.reset()` and
+reports what happens instead of a reboot. Exit status is the verdict — non-zero
+while R1 stands — so it is the RED-before/green-after instrument the DoD asks
+for rather than something a reader has to interpret. Deterministic: identical
+counts across three runs.
+
+```
+REPL prompt ">>>"          852,524      onResetRequest  fired exactly once
+import machine           1,120,686        {cause:"watchdog",
+machine.reset() -> park  1,240,679         entryPC:0x10000000,
+                                           entrySP:0x20042000}
+core.waiting  true       PC 0x1002ec7c    takeResetRequest() returns it
+second banner  no
+```
+
+**THE SEAM WORKS; WHAT IS MISSING IS A CONSUMER — and that is a sharper
+statement than "it freezes".** `machine.reset()` does reach
+`watchdog.onWatchdogTrigger`, it does fire `onResetRequest` with a named cause
+and the entry the program was booted at, and `takeResetRequest()` does return
+it. The core then parks deliberately, and nothing constructs the replacement
+SoC. A broken mechanism and an unconsumed one need different fixes.
+
+Quote the ABSOLUTE count, 1,240,679, when anchoring against this. Two readings
+of the same run quoted 388,155 and 119,993 instructions and both were correct —
+measured from the REPL prompt and from `import machine` respectively. The probe
+now prints the absolute figure alongside the relative one for that reason.
+
 **2026-09-17 — DIAGNOSED. IT WAS NEVER CAPACITY; IT WAS A GUARD I DROPPED.**
 Measured on this box while it was thrashing (swap 33 MB free, load 42):
 
