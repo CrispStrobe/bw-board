@@ -1329,6 +1329,16 @@ export class I8086 {
         // not the post-decode IP. Traps (INT3/INTO/single-step) and INT n push
         // the following IP and use this.ip directly. See _fault().
         this._instrStartIp = this.ip;
+        // A 286 fault RESTARTS the instruction: any GPR/CS the opcode had already
+        // changed before it faulted is rolled back (LEAVE's SP, ENTER's BP, a
+        // LES whose second word wraps, ...). Snapshot them here; the fault path
+        // in the catch below restores from _restartRegs (an opcode override, e.g.
+        // the string ops that ADVANCE SI/DI even on a fault) or this snapshot.
+        if (this._is286) {
+            this._restartRegs = null;
+            this._faultSnap = { ax: this.ax, bx: this.bx, cx: this.cx, dx: this.dx,
+                sp: this.sp, bp: this.bp, si: this.si, di: this.di, cs: this.cs };
+        }
         // SINGLE-STEP IS SAMPLED BEFORE THE INSTRUCTION, NOT AFTER. The 8086
         // tests TF at an instruction boundary and takes a type-1 interrupt if
         // it was set; sampling the value the instruction LEAVES would mean a
@@ -1436,6 +1446,12 @@ export class I8086 {
             n += this._exec(op);
         } catch (e) {
             if (e && e.name === 'RealModeFault') {
+                // Roll back the partially-committed instruction: GPRs and CS to
+                // the restart state (the string-op override, else the start
+                // snapshot), then deliver with restart semantics.
+                const s = this._restartRegs ?? this._faultSnap;
+                this.ax = s.ax; this.bx = s.bx; this.cx = s.cx; this.dx = s.dx;
+                this.sp = s.sp; this.bp = s.bp; this.si = s.si; this.di = s.di; this.cs = s.cs;
                 this._fault(e.vector);   // rewinds to _instrStartIp (286) and vectors through the IVT
                 n += 51;                 // nominal fault-entry cost (this core does not grade 286 timing)
                 faulted = true;
