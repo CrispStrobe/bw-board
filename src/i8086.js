@@ -187,6 +187,13 @@ export class I8086 {
         this.flags = fixFlags(0);
         this.halted = false;
         this.cycles = 0;
+        // 80286 real-mode state (only touched by the variant's 0x0F group).
+        // MSW: PE|MP|EM|TS in bits 0-3; SST286 fixes it at 0xfff0 before a test.
+        // GDTR/IDTR are loaded by LGDT/LIDT and read back by SGDT/SIDT; they are
+        // not part of the visible register set the vectors compare.
+        this.msw = 0xfff0;
+        this.gdtr = { base: 0, limit: 0 };
+        this.idtr = { base: 0, limit: 0 };
         /** null, or an array the bus operations are appended to. See _rd8. */
         this.busTrace = null;
         this._fsOpcodeSeen = false;
@@ -1137,6 +1144,59 @@ export class I8086 {
         }
     }
 
+    /**
+     * The 80286 two-byte (0x0F) group — real-mode EXECUTING subset only:
+     * SGDT/SIDT/LGDT/LIDT/SMSW/LMSW (0F 01 /0../6) and CLTS (0F 06). The
+     * protected-mode-only instructions (0F 00/02/03, and the register form of
+     * the descriptor-table loads) fault as #UD on a real-mode 286; those are
+     * added with the SST286 grade in front of us, so for now they throw
+     * Unimplemented (the grinder scores that as 'unsupported', not wrong).
+     * Cycle counts are nominal — this core does not grade 286 timing.
+     */
+    _exec0F286() {
+        const op2 = this._fetch8();
+        if (op2 === 0x01) {
+            const c = this._modrm();                 // ModR/M reg selects the sub-op
+            const seg = this.eaSeg, ea = this.ea;
+            switch (this.reg) {
+                case 0:                              // SGDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this._wr16(seg, ea, this.gdtr.limit & 0xffff);
+                    this._wr16(seg, (ea + 2) & 0xffff, this.gdtr.base & 0xffff);
+                    this._wr8(seg, (ea + 4) & 0xffff, (this.gdtr.base >> 16) & 0xff);
+                    this._wr8(seg, (ea + 5) & 0xffff, 0xff);   // 286 forces the top byte to 0xFF
+                    return 11 + c;
+                case 1:                              // SIDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this._wr16(seg, ea, this.idtr.limit & 0xffff);
+                    this._wr16(seg, (ea + 2) & 0xffff, this.idtr.base & 0xffff);
+                    this._wr8(seg, (ea + 4) & 0xffff, (this.idtr.base >> 16) & 0xff);
+                    this._wr8(seg, (ea + 5) & 0xffff, 0xff);
+                    return 12 + c;
+                case 2:                              // LGDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this.gdtr = { limit: this._rd16(seg, ea),
+                        base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
+                    return 11 + c;
+                case 3:                              // LIDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this.idtr = { limit: this._rd16(seg, ea),
+                        base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
+                    return 12 + c;
+                case 4:                              // SMSW r/m16
+                    this._rm16set(this.msw & 0xffff);
+                    return this.mod === 3 ? 2 : 3 + c;
+                case 6:                              // LMSW r/m16 — PE may be set, never cleared
+                    this.msw = (this._rm16() | (this.msw & 1)) & 0xffff;
+                    return this.mod === 3 ? 3 : 6 + c;
+                default:
+                    throw new Unimplemented(0x0f01);
+            }
+        }
+        if (op2 === 0x06) { this.msw &= ~0x08; return 2; }   // CLTS: clear the TS bit
+        throw new Unimplemented(0x0f00 | op2);
+    }
+
     /** INS: read the port in DX into ES:DI. No segment override applies to a
      *  string DESTINATION, so this does not consult _srcSeg(). */
     _ins(w) {
@@ -1339,6 +1399,11 @@ export class I8086 {
         }
 
         switch (op) {
+            // On the 80286, 0x0F is the two-byte-opcode prefix (it was POP CS on
+            // the 8086, which this core does not model). Route to the 286 group.
+            case 0x0f:
+                if (this._is286) return this._exec0F286();
+                throw new Unimplemented(0x0f);
             // ---- segment register push/pop and the BCD adjusts -----------
             case 0x06: this._push(this.es); return 10;
             case 0x07: this.es = this._pop(); this.intShadow = 1; return 8;

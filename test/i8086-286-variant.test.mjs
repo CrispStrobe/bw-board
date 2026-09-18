@@ -47,6 +47,34 @@ function runOne(variant, init, bytes) {
   return { threw, regs, mem };
 }
 
+test("the 80286 0x0F group executes SMSW/LMSW/LGDT/SGDT/CLTS in real mode", () => {
+  // Self-contained: flat 1 MB memory so the descriptor-table operands are easy.
+  const run = (bytes, before) => {
+    const mem = new Uint8Array(1 << 20);
+    const cpu = new I8086({ read: (a) => mem[a & 0xfffff], write: (a, v) => { mem[a & 0xfffff] = v & 0xff; }, in: () => 0xff, out: () => {} }, { variant: '80286' });
+    cpu.cs = 0x1000; cpu.ds = 0x3000; cpu.ip = 0x100;
+    const at = (0x1000 << 4) + 0x100;
+    bytes.forEach((b, i) => { mem[at + i] = b; });
+    if (before) before(cpu, mem);
+    cpu.step();
+    return { cpu, mem };
+  };
+  const DS = 0x3000 << 4;
+
+  assert.equal(run([0x0f, 0x01, 0xe0]).cpu.ax, 0xfff0, 'SMSW AX stores MSW');
+  assert.equal(run([0x0f, 0x06], (c) => { c.msw = 0xfff8; }).cpu.msw, 0xfff0, 'CLTS clears TS');
+  assert.equal(run([0x0f, 0x01, 0xf0], (c) => { c.ax = 0x0003; }).cpu.msw & 0xf, 0x3, 'LMSW loads MSW');
+
+  const lg = run([0x0f, 0x01, 0x16, 0x00, 0x02], (c, m) => {          // LGDT [ds:0x200]
+    m[DS + 0x200] = 0x34; m[DS + 0x201] = 0x12; m[DS + 0x202] = 0x00; m[DS + 0x203] = 0x78; m[DS + 0x204] = 0x56;
+  });
+  assert.equal(lg.cpu.gdtr.limit, 0x1234, 'LGDT limit');
+  assert.equal(lg.cpu.gdtr.base, 0x567800, 'LGDT 24-bit base');
+
+  const sg = run([0x0f, 0x01, 0x06, 0x00, 0x03], (c) => { c.gdtr = { limit: 0x1234, base: 0x567800 }; }); // SGDT [ds:0x300] (0F 01 /0, mod=00 rm=110)
+  assert.deepEqual([...sg.mem.slice(DS + 0x300, DS + 0x306)], [0x34, 0x12, 0x00, 0x78, 0x56, 0xff], 'SGDT stores limit+base and forces 0xFF top byte');
+});
+
 test("the 'i80286' target kind is pickable and builds a real-mode 286 machine", async () => {
   assert.ok(getTargetKinds().find(k => k.kind === 'i80286'), 'i80286 must be in the picker');
   const { adapter, target } = await createDebugTarget('i80286', {});
@@ -80,6 +108,10 @@ test("'80286' is byte-identical to '80186' across random real-mode instructions"
       sp: 0x0f00 | ((rnd() & 7) << 1), bp: rw(), si: rw(), di: rw(),
     } };
     const bytes = [rnd(), rnd(), rnd(), rnd(), rnd()];
+    // 0x0F is the ONE place the 286 deliberately diverges from the 186: on the
+    // 186 it is undefined, on the 286 it is the two-byte-opcode prefix. That
+    // group is exercised by the dedicated 0F test below, not here.
+    if (bytes[0] === 0x0f) continue;
     const a = runOne('80186', init, bytes);
     const b = runOne('80286', init, bytes);
     compared++;
