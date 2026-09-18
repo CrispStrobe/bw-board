@@ -30,7 +30,18 @@ function executeVariant(t, fileMasks) {
     for (const r of REGS) cpu[r] = t.initial.regs[r];
     cpu.flags = t.initial.regs.flags;
     try {
-        cpu.step();
+        cpu.step();                       // the instruction under test
+        // SST286 terminates every test with an injected HALT (0xF4): the CPU
+        // executes the instruction AND that HALT, so the recorded final ip is
+        // one past it. Consume it here (matching executeSST286) without
+        // corrupting the memory the final state compares against.
+        if (!cpu.halted) {
+            const p = ((cpu.cs << 4) + cpu.ip) & 0xfffff;
+            const saved = mem[p];
+            mem[p] = 0xf4;
+            cpu.step();
+            mem[p] = saved;
+        }
     } catch (e) {
         const code = e?.name === 'UnsupportedOpcode' || e?.constructor?.name === 'UnsupportedOpcode'
             ? 'unsupported-opcode' : (e?.code || e?.name || 'error');
