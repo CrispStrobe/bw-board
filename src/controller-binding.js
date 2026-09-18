@@ -100,6 +100,30 @@ export function bindPanelToBoard(panel, board) {
         }
       }
     }
+    // PIN-bound numeric displays: mirror a board pin's DIGITAL LEVEL (1/0).
+    //
+    // The output direction already writes a widget's value out to a pin
+    // (writePin); this is the read-back the FPGA surface needs — a design that
+    // drives header pins (an on-screen Tang Nano's LEDs) can now light an
+    // on-panel indicator too, so the Controller view reflects the same signal
+    // the board does. A pin carries ONE bit, so only the numeric indicators
+    // make sense; a character/pixel display bound to a pin is meaningless and
+    // is left alone. `getPinState` returns `{mode, driveHigh}` for a driven pin
+    // and null for high-Z, which reads as 0 — an undriven pin is dark, not
+    // "unknown", because that is what the board's own LED shows.
+    for (const w of panel.getWidgets()) {
+      if (!w.binding || w.binding.target !== 'pin' || !PIN_DISPLAYS.has(w.type)) continue;
+      if (typeof board.getPinState !== 'function') continue;
+      let st = null;
+      try { st = board.getPinState(w.binding.pinName); } catch (e) { /* unknown pin */ }
+      const level = st && st.driveHigh ? 1 : 0;
+      if (shown.get(w.name) === level) continue;
+      shown.set(w.name, level);
+      if (w.type === 'gauge' && typeof panel.setGaugeValue === 'function') panel.setGaugeValue(w.name, level);
+      else if (w.type === 'bargraph' && typeof panel.setBargraphValue === 'function') panel.setBargraphValue(w.name, level);
+      else if (w.type === 'sevenseg' && typeof panel.setSevenSegValue === 'function') panel.setSevenSegValue(w.name, level);
+      else if (w.type === 'matrix' && typeof panel.setMatrixValue === 'function') panel.setMatrixValue(w.name, level);
+    }
     if (raf !== null) raf = requestAnimationFrame(pumpDisplays);
   }
   let raf = typeof requestAnimationFrame === 'function'
@@ -162,6 +186,10 @@ const DISPLAYS = new Set([
   'gauge', 'matrix', 'lcd', 'oled', 'terminal', 'sevenseg',
   'bargraph', 'simplevga', 'mono_lcd', 'rgb_light',
 ]);
+
+// Numeric indicators that can mirror a single pin's digital level (1/0). A pin
+// is one bit, so the character/pixel displays and the colour light are excluded.
+const PIN_DISPLAYS = new Set(['gauge', 'bargraph', 'sevenseg', 'matrix']);
 
 export function bindPanelToVariables(panel, vm, opts = {}) {
   const autoPump = opts.autoPump !== false;
