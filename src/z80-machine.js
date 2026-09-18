@@ -108,6 +108,7 @@ export class Z80Machine {
         // full note; the hazard is silent, so it is recorded at both sites.
         this._advList = null;   // hot-loop caches; see _buildHotLists
         this._irqList = null;
+        this._hasAdv = true;    // any advancing chip/device? conservative until built
         this._portMap = new Map();
         // Direction-aware port slots: a read-strobed chip (74HC244 IN) and
         // a write-strobed chip (74HC374 OUT) legally share one port — IN
@@ -566,6 +567,7 @@ export class Z80Machine {
         this.devices = this.devices || {};
         this.devices[name] = dev;
         this._advList = null;   // schedule is stale
+        this._hasAdv = true;    // force a rebuild+advance so a new advancer is not skipped
         return dev;
     }
 
@@ -604,6 +606,7 @@ export class Z80Machine {
             }
         }
         this._irqList = Object.values(this.chips);
+        this._hasAdv = this._advList.length > 0;   // skip the per-step advance call when nothing advances
     }
 
     _advanceChips(n) {
@@ -636,7 +639,7 @@ export class Z80Machine {
             this._advanceChips(n);
             return n;
         }
-        if (this._anyIrq() && this.cpu.iff1 && !this.cpu.eiLatch) {
+        if (this.cpu.iff1 && !this.cpu.eiLatch && this._anyIrq()) {
             this.cpu.halted = false;
             this.cpu.iff1 = 0; this.cpu.iff2 = 0;
             this.cpu._push16(this.cpu.pc);
@@ -664,13 +667,15 @@ export class Z80Machine {
             this._advanceChips(13);
             return 13;
         }
-        const trap = this.pcTraps.get(this.cpu.pc);
-        if (trap) {
-            const n = trap(this);
-            if (n > 0) {
-                this.cycles += n;
-                this._advanceChips(n);
-                return n;
+        if (this.pcTraps.size) {
+            const trap = this.pcTraps.get(this.cpu.pc);
+            if (trap) {
+                const n = trap(this);
+                if (n > 0) {
+                    this.cycles += n;
+                    this._advanceChips(n);
+                    return n;
+                }
             }
         }
         // LD-BYTES fast-load trap: with a tape inserted, entering the
@@ -688,7 +693,7 @@ export class Z80Machine {
         }
         const n = this.cpu.step();
         this.cycles += n;
-        this._advanceChips(n);
+        if (this._hasAdv) this._advanceChips(n);
         return n;
     }
 

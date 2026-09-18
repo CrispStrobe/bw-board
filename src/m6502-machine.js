@@ -213,6 +213,8 @@ export class M6502Machine {
         // board that is about to be rejected. See i8086-machine.js for the
         // full note; the hazard is silent, so it is recorded at both sites.
         this._advList = null;   // hot-loop cache; see _buildAdvanceList
+        this._irqChips = null;  // cached IRQ-chip list; see _anyIrq
+        this._hasAdv = true;    // any advancing chip/device? conservative until built
         this._decode = [];
         for (const r of config.regions) {
             this._decode.push({ ...r, chip: null });
@@ -562,6 +564,8 @@ export class M6502Machine {
         this.devices = this.devices || {};
         this.devices[name] = dev;
         this._advList = null;   // schedule is stale
+        this._irqChips = null;  // rebuild the cached IRQ list too
+        this._hasAdv = true;    // force a rebuild+advance so a new advancer is not skipped
         return dev;
     }
 
@@ -584,6 +588,8 @@ export class M6502Machine {
             }
         }
         this._advList = list;
+        this._irqChips = Object.values(this.chips);   // cache: _anyIrq allocated Object.keys() every call
+        this._hasAdv = list.length > 0;               // skip the per-step advance call when nothing advances
         return list;
     }
 
@@ -629,9 +635,8 @@ export class M6502Machine {
     }
 
     _anyIrq() {
-        for (const name of Object.keys(this.chips)) {
-            if (this.chips[name].irqAsserted) return true;
-        }
+        const list = this._irqChips !== null ? this._irqChips : (this._buildAdvanceList(), this._irqChips);
+        for (let i = 0; i < list.length; i++) if (list[i].irqAsserted) return true;
         return false;
     }
 
@@ -767,7 +772,7 @@ export class M6502Machine {
             n = this._wakeHorizon();
         }
         this.cycles += n;
-        this._advanceChips(n);
+        if (this._hasAdv) this._advanceChips(n);
         // The bus renders EMULATED time, so it is told where emulated time
         // has reached — and only when something is attached, which is the
         // same zero-cost rule the write trap and the port hooks follow.
