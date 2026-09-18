@@ -37,6 +37,7 @@
 
 import { RP2040, GPIOPinState, ConsoleLogger, LogLevel } from 'rp2040js';
 import { buildBootrom } from './rp2040-bootrom.js';
+import { fastExecuteInstruction } from './vendor/rp2040js-fast/execute-instruction.js';
 
 export const RAM_START = 0x20000000;
 
@@ -84,6 +85,19 @@ export function createRp2040jsAdapter(opts = {}) {
   const rp2040 = new RP2040();
   const clock = rp2040.clock;
   const core = rp2040.core;
+  // FAST DISPATCH FORK (src/vendor/rp2040js-fast/execute-instruction.js):
+  // rp2040js decodes each Thumb halfword through an 82-branch linear
+  // if/else chain (~57% of emulation time; the RP2040 is the slowest core
+  // on the box). Point THIS core instance's executeInstruction at the
+  // switch-dispatch fork — a behavior-identical restructuring, verified by
+  // an exhaustive stock-vs-fork differential over all 65536 opcodes
+  // (test/rp2040-fast-dispatch-differential.test.mjs). Opt out with
+  // opts.fastDispatch === false (used by the A/B bench for the stock
+  // baseline) — nothing else in the tree passes it, so the app is always
+  // on the fork.
+  if (opts.fastDispatch !== false) {
+    core.executeInstruction = fastExecuteInstruction;
+  }
   // Errors only, and never throw: a program that escapes into unmapped
   // memory logs ONE line per instruction at warn level — a runaway loop
   // floods the host console (298 MB observed) and an emulated program's
