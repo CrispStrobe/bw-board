@@ -39,6 +39,21 @@ function abPair(label, run, Stock, Lean) {
   console.log(`${label}: stock ${ms.toFixed(1)}ms  lean ${ml.toFixed(1)}ms  => SPEEDUP ${(ms/ml).toFixed(3)}x   [noise floor stock/stockB ${(ms/mb).toFixed(3)}x]`);
 }
 
+async function abAvr() {
+  // AVR: fastAvrInstruction (switch fork) vs avr8js's own linear avrInstruction.
+  // No stock copy needed -- the baseline IS the library. Representative mix.
+  const { createRequire } = await import('node:module');
+  const require = createRequire(new URL('../package.json', import.meta.url));
+  const avr = require('avr8js');
+  const { fastAvrInstruction } = await import('../src/vendor/avr8js-fast/instruction.js');
+  const PROG = new Uint16Array(1024);
+  PROG.set([0x0c01, 0x9403, 0x2c23, 0x0f11, 0x2401, 0xcffb]); // add; inc; mov; lsl; clr; rjmp -5
+  const run = (fn) => { const cpu = new avr.CPU(PROG, 2048); const t = process.hrtime.bigint();
+    for (let i = 0; i < STEPS; i++) { fn(cpu); cpu.pc &= 1023; } return Number(process.hrtime.bigint() - t) / 1e6; };
+  return abPair('AVR (avr8js)', run, avr.avrInstruction, fastAvrInstruction);
+}
+
 console.log(`steps/trial=${STEPS.toLocaleString()} trials=${TRIALS}`);
 await abZ80();
 await ab6502();
+await abAvr();
