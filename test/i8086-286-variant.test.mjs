@@ -63,10 +63,11 @@ test("286 PUSH SP pushes the pre-decrement value; POPF/SAHF/IRET use 286 flag se
   assert.equal(stackTop(run('80286', [0x54], (c) => { c.sp = 0x1000; })), 0x1000);
   assert.equal(stackTop(run('80186', [0x54], (c) => { c.sp = 0x1000; })), 0x0ffe);
 
-  // POPF 0xFFD5: 286 clears bit 15 and keeps IOPL/NT (12-14) -> 0x7FD7; 8086/186
-  // force bits 12-15 to 1 -> 0xFFD7.
+  // POPF 0xFFD5: the 286 forces bits 12-15 to 0 (IOPL/NT are not modifiable in
+  // real mode; bit 15 reads 0) -> 0x0FD7; the 8086/186 force bits 12-15 to 1 ->
+  // 0xFFD7.
   const popf = (variant) => run(variant, [0x9d], (c, m) => { c.sp = 0x1000; const sa = (0x2000 << 4) + 0x1000; m[sa] = 0xd5; m[sa + 1] = 0xff; }).cpu.flags;
-  assert.equal(popf('80286'), 0x7fd7);
+  assert.equal(popf('80286'), 0x0fd7);
   assert.equal(popf('80186'), 0xffd7);
 });
 
@@ -136,7 +137,8 @@ test("'80286' is byte-identical to '80186' across random real-mode instructions"
     // prefix on the 286); PUSH SP (0x54, pre- vs post-decrement); and the flag
     // normalisers POPF/SAHF/IRET (0x9d/0x9e/0xcf — the 286 has IOPL/NT and bit 15
     // reads 0, the 8086 forces bits 12-15 to 1). Exercised elsewhere, not here.
-    if (bytes[0] === 0x0f || bytes[0] === 0x54 || bytes[0] === 0x9d || bytes[0] === 0x9e || bytes[0] === 0xcf) continue;
+    if (bytes[0] === 0x0f || bytes[0] === 0x54 || bytes[0] === 0x9d || bytes[0] === 0x9e || bytes[0] === 0xcf
+        || bytes[0] === 0x69 || bytes[0] === 0x6b) continue;   // IMUL imm: 286 defines SF/ZF/PF, the 186 does not
     const a = runOne('80186', init, bytes);
     const b = runOne('80286', init, bytes);
     compared++;

@@ -107,10 +107,12 @@ const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800;
 // flags word fails every test that touches the stack.
 const F_ON = 0xf002, F_OFF = 0x0028;
 const fixFlags = (f) => (f | F_ON) & ~F_OFF;
-// The 80286 flags word differs from the 8086's: bits 12-15 are IOPL (12-13) and
-// NT (14), settable in real mode, and bit 15 reads 0 — not the 8086's "bits
-// 12-15 always 1". So force only bit 1, and clear bits 3, 5 and 15.
-const F_ON286 = 0x0002, F_OFF286 = 0x8028;
+// The 80286 flags word differs from the 8086's: bit 15 reads 0 (not the 8086's
+// "bits 12-15 always 1"), and IOPL (12-13) and NT (14) are NOT modifiable in real
+// mode — POPF/IRET force them to 0 there (confirmed against SST286: POPF/IRET
+// clear bits 12-14, not preserve them). So force bit 1, and clear bits 3, 5, and
+// 12-15.
+const F_ON286 = 0x0002, F_OFF286 = 0xf028;
 const fixFlags286 = (f) => (f | F_ON286) & ~F_OFF286;
 
 const PARITY = new Uint8Array(256);
@@ -1086,7 +1088,18 @@ export class I8086 {
                 const low = full & 0xffff;
                 this._r16set(this.reg, low);
                 const fits = full === sx16(low);
-                this.flags = fits ? (this.flags & ~(CF | OF)) : (this.flags | CF | OF);
+                if (this._is286) {
+                    // The 286 defines SF/ZF/PF from the low result (only AF stays
+                    // undefined — SST286 masks 0xFFEF). The 8086/186 leave all of
+                    // SZAP undefined, so the branch below leaves them alone.
+                    let f = this.flags & ~(CF | OF | SF | ZF | PF);
+                    if (!fits) f |= CF | OF;
+                    if (!low) f |= ZF;
+                    if (low & 0x8000) f |= SF;
+                    this.flags = f | PARITY[low & 0xff];
+                } else {
+                    this.flags = fits ? (this.flags & ~(CF | OF)) : (this.flags | CF | OF);
+                }
                 return (this.mod === 3 ? 22 : 29 + c);
             }
 
