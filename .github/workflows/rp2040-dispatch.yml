@@ -1,0 +1,53 @@
+name: RP2040 dispatch fork
+
+# Off-box verification for the switch-dispatch fork of rp2040js' Thumb decoder
+# (src/vendor/rp2040js-fast/execute-instruction.js): the exhaustive stock-vs-fork
+# differential (correctness gate) plus the interleaved A/B throughput bench
+# (speed), on a quiet cloud runner rather than the memory-starved dev box.
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: 'Instructions per A/B trial'
+        required: false
+        default: '4000000'
+  push:
+    branches: ['lane/rp2040-switch-dispatch']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev || npm i --omit=dev || true
+      - name: Correctness — exhaustive stock-vs-fork opcode differential (the gate)
+        run: node --test test/rp2040-fast-dispatch-differential.test.mjs
+      - name: Correctness — RP2040 adapter/core suites through the fork
+        run: |
+          node --test \
+            test/adapter-contract.test.mjs \
+            test/cortex-m0-machine.test.mjs \
+            test/rp2040js-adapter.test.js \
+            test/rp2040js-debug.test.js \
+            test/rp2040-boot-from-flash.test.mjs \
+            test/rp2040-bootrom.test.mjs \
+            test/rp2040-bootrom-reset.test.mjs \
+            test/rp2040-bootrom-guest-abi.test.mjs \
+            test/rp2040-soc-replacement.test.mjs \
+            test/pico-onboard-led.test.mjs \
+            test/pico-blink-full-chain.test.mjs
+      - name: Speed — interleaved A/B (fork vs stock), medians + noise floor
+        run: |
+          set -euo pipefail
+          STEPS='${{ github.event.inputs.steps || 4000000 }}'
+          for pass in 1 2 3; do
+            echo "===== pass $pass ====="
+            node scripts/bench-rp2040-dispatch-ab.mjs "$STEPS" 15
+          done
