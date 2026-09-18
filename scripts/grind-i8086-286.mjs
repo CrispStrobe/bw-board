@@ -101,7 +101,8 @@ try {
             report[result.status]++; counts[result.status]++;
             if (result.executed) report.executed++;
             if (result.reason) report.reasons[result.reason] = (report.reasons[result.reason] ?? 0) + 1;
-            if (result.status === 'fail' && !firstFailure) firstFailure = {index: t.index, hash: t.hash, name: t.name, diffs: result.diffs};
+            if (result.status === 'fail' && !firstFailure) firstFailure = {index: t.index, hash: t.hash, name: t.name, diffs: result.diffs,
+                initIp: t.initial.regs.ip, finIp: t.final.regs.ip, bytes: t.bytes, bytesLen: t.bytes.length};
         }
         const op = path.split('/')[1].replace('.MOO.gz', '');
         if (counts.fail) report.failOpcodes[op] = counts.fail;
