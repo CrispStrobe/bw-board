@@ -43,6 +43,10 @@ jobs:
                --pattern 'nodejs-*' --dir lw --clobber; then
             cp lw/nodejs-labwired_wasm.js      lw/nodejs/labwired_wasm.js
             cp lw/nodejs-labwired_wasm_bg.wasm lw/nodejs/labwired_wasm_bg.wasm
+            # The glue is CommonJS, but the repo is "type":"module", so require()
+            # would read it as ESM ("exports is not defined"). This out-dir marker
+            # (which wasm-bindgen normally ships) makes require() treat it as CJS.
+            printf '{"type":"commonjs"}' > lw/nodejs/package.json
             echo "LABWIRED_WASM=$PWD/lw/nodejs" >> "$GITHUB_ENV"
             echo "labwired-wasm ready at $PWD/lw/nodejs"
           else
