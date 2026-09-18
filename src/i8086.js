@@ -876,6 +876,15 @@ export class I8086 {
      */
     _fault(n) {
         this.onInterrupt?.({ vector: n, source: 'exception' });
+        // A 286 fault RESTARTS the instruction: it pushes the faulting
+        // instruction's own CS:IP, not the address the decoder has advanced to
+        // (#DE 0, #BR 5, #UD 6, #GP 13). The single-step trap (#DB 1) is NOT a
+        // restart — it fires AFTER the instruction retires and pushes the
+        // following IP — so it is excluded. (_interrupt pushes this.ip, which it
+        // then overwrites with the handler vector, so rewinding it here only
+        // affects the pushed return address.) The 8086/186 keep their historical
+        // behaviour (this.ip as-left).
+        if (this._is286 && n !== 1) this.ip = this._instrStartIp;
         this._interrupt(n);
     }
 
@@ -1210,45 +1219,51 @@ export class I8086 {
      */
     _exec0F286() {
         const op2 = this._fetch8();
+        // 0F 00 (SLDT/STR/LLDT/LTR/VERR/VERW), 0F 02 (LAR), 0F 03 (LSL) are
+        // protected-mode-only: on a real-mode 286 they are invalid-opcode (#UD,
+        // int 6), NOT no-ops. Matches the harris 286 reference and SST286.
+        if (op2 === 0x00 || op2 === 0x02 || op2 === 0x03) { this._fault(6); return 0; }
+        if (op2 === 0x06) { this.msw &= ~0x08; return 2; }   // CLTS: clear the TS bit
         if (op2 === 0x01) {
             const c = this._modrm();                 // ModR/M reg selects the sub-op
             const seg = this.eaSeg, ea = this.ea;
             switch (this.reg) {
-                case 0:                              // SGDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 0:                              // SGDT m — the register form is #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this._wr16(seg, ea, this.gdtr.limit & 0xffff);
                     this._wr16(seg, (ea + 2) & 0xffff, this.gdtr.base & 0xffff);
                     this._wr8(seg, (ea + 4) & 0xffff, (this.gdtr.base >> 16) & 0xff);
                     this._wr8(seg, (ea + 5) & 0xffff, 0xff);   // 286 forces the top byte to 0xFF
                     return 11 + c;
-                case 1:                              // SIDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 1:                              // SIDT m — register form #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this._wr16(seg, ea, this.idtr.limit & 0xffff);
                     this._wr16(seg, (ea + 2) & 0xffff, this.idtr.base & 0xffff);
                     this._wr8(seg, (ea + 4) & 0xffff, (this.idtr.base >> 16) & 0xff);
                     this._wr8(seg, (ea + 5) & 0xffff, 0xff);
                     return 12 + c;
-                case 2:                              // LGDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 2:                              // LGDT m — register form #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this.gdtr = { limit: this._rd16(seg, ea),
                         base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
                     return 11 + c;
-                case 3:                              // LIDT m
-                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                case 3:                              // LIDT m — register form #UD
+                    if (this.mod === 3) { this._fault(6); return 0; }
                     this.idtr = { limit: this._rd16(seg, ea),
                         base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
                     return 12 + c;
-                case 4:                              // SMSW r/m16
+                case 4:                              // SMSW r/m16 (memory or register)
                     this._rm16set(this.msw & 0xffff);
                     return this.mod === 3 ? 2 : 3 + c;
                 case 6:                              // LMSW r/m16 — PE may be set, never cleared
                     this.msw = (this._rm16() | (this.msw & 1)) & 0xffff;
                     return this.mod === 3 ? 3 : 6 + c;
-                default:
-                    throw new Unimplemented(0x0f01);
+                default:                             // 0F 01 /5 and /7 are #UD
+                    this._fault(6); return 0;
             }
         }
-        if (op2 === 0x06) { this.msw &= ~0x08; return 2; }   // CLTS: clear the TS bit
+        // 0F 05/07 and higher (including the undocumented LOADALL) are not
+        // implemented; the grinder scores those 'unsupported' (not wrong).
         throw new Unimplemented(0x0f00 | op2);
     }
 
@@ -1288,6 +1303,11 @@ export class I8086 {
     step() {
         this._seg = -1;
         this._rep = 0;
+        // The IP at the START of this instruction (before prefixes). A 286 FAULT
+        // (#UD/#GP/#BR/#DE) restarts the instruction, so it pushes this address,
+        // not the post-decode IP. Traps (INT3/INTO/single-step) and INT n push
+        // the following IP and use this.ip directly. See _fault().
+        this._instrStartIp = this.ip;
         // SINGLE-STEP IS SAMPLED BEFORE THE INSTRUCTION, NOT AFTER. The 8086
         // tests TF at an instruction boundary and takes a type-1 interrupt if
         // it was set; sampling the value the instruction LEAVES would mean a
@@ -1502,7 +1522,13 @@ export class I8086 {
             case 0x60: case 0x70: return this._jcc(this.flags & OF);
             case 0x61: case 0x71: return this._jcc(!(this.flags & OF));
             case 0x62: case 0x72: return this._jcc(this.flags & CF);
-            case 0x63: case 0x73: return this._jcc(!(this.flags & CF));
+            case 0x63:
+                // ARPL on the 286 — protected-mode only, so #UD (int 6) in real
+                // mode. On the 8086/186 0x63 has no opcode of its own and decodes
+                // as the 0x73 conditional-jump alias (JNC/JAE).
+                if (this._is286) { this._fault(6); return 0; }
+                return this._jcc(!(this.flags & CF));
+            case 0x73: return this._jcc(!(this.flags & CF));
             case 0x64: case 0x74: return this._jcc(this.flags & ZF);
             case 0x65: case 0x75: return this._jcc(!(this.flags & ZF));
             case 0x66: case 0x76: return this._jcc((this.flags & CF) || (this.flags & ZF));
