@@ -352,12 +352,14 @@ export class I8086 {
      *  scheduler fed that trace would invent a memory cycle per opcode byte. */
     _fetch8() {
         if (this.busTrace !== null) return this._fetch8Traced();
+        if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
         const b = this.fetch(I8086.phys(this.cs, this.ip)) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
     }
 
     _fetch8Traced() {
+        if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
         const a = I8086.phys(this.cs, this.ip);
         // KIND 0 IS AN 'F' AND KIND 5 IS AN 'S', which is the queue-status
         // distinction the 8088 puts on its QS0/QS1 lines: F for the first byte
@@ -924,10 +926,16 @@ export class I8086 {
      *  so if the word access #GPs at offset 0xFFFF the instruction restarts with
      *  the index moved on — exactly what SST286 records. On success the index
      *  advances normally. (The 8086/186 paths never call this.) */
-    _strElem(indexName, seg, w, write, value) {
+    _strElem(indexName, seg, w, write, value, cxDelta = -1) {
         const off = this[indexName];
         const d = this._delta(w);
-        this._restartRegs = this._snap286({ [indexName]: (off + d) & 0xffff });
+        const over = { [indexName]: (off + d) & 0xffff };
+        // REP-string fault microcode: the 286 pre-decrements CX per iteration
+        // (our _repeat post-decrements), and a repeated WRITE fault consumes an
+        // extra count while CMPS's leading ES:DI read undoes the pre-decrement.
+        // cxDelta folds all three: -1 for a read, -2 for a write, 0 for CMPS's DI.
+        if (this._rep) over.cx = (this.cx + cxDelta) & 0xffff;
+        this._restartRegs = this._snap286(over);
         const r = write
             ? (w ? this._wr16(seg, off, value) : this._wr8(seg, off, value & 0xff))
             : (w ? this._rd16(seg, off) : this._rd8(seg, off));
@@ -937,8 +945,8 @@ export class I8086 {
 
     _movs(w) {
         if (this._is286) {                       // advance SI (read) then DI (write); each #GPs on a 0xFFFF wrap
-            const v = this._strElem('si', this._srcSeg(), w, false);
-            this._strElem('di', this.es, w, true, v);
+            const v = this._strElem('si', this._srcSeg(), w, false, undefined, -1);
+            this._strElem('di', this.es, w, true, v, -2);
             return;
         }
         const d = this._delta(w), s = this._srcSeg();
@@ -948,8 +956,8 @@ export class I8086 {
     }
     _cmps(w) {
         if (this._is286) {                       // the 286 reads ES:DI FIRST — a fault there leaves SI untouched
-            const b = this._strElem('di', this.es, w, false);
-            const a = this._strElem('si', this._srcSeg(), w, false);
+            const b = this._strElem('di', this.es, w, false, undefined, 0);   // CMPS's DI read undoes the REP pre-decrement
+            const a = this._strElem('si', this._srcSeg(), w, false, undefined, -1);
             this._sub(a, b, 0, w);
             return;
         }
@@ -960,7 +968,7 @@ export class I8086 {
         this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
     }
     _stos(w) {
-        if (this._is286) { this._strElem('di', this.es, w, true, w ? this.ax : this.al); return; }
+        if (this._is286) { this._strElem('di', this.es, w, true, w ? this.ax : this.al, -2); return; }
         const d = this._delta(w);
         if (w) this._wr16(this.es, this.di, this.ax); else this._wr8(this.es, this.di, this.al);
         this.di = (this.di + d) & 0xffff;
@@ -1337,7 +1345,9 @@ export class I8086 {
         // The 286 word write to ES:DI #GPs when it crosses offset 0xFFFF, with DI
         // advanced (this path writes two bytes, so _wr16's own check never fires).
         if (this._is286 && w && this.di === 0xffff) {
-            this._restartRegs = this._snap286({ di: (this.di + d) & 0xffff });
+            const over = { di: (this.di + d) & 0xffff };
+            if (this._rep) over.cx = (this.cx - 2) & 0xffff;   // repeated WRITE fault consumes an extra count
+            this._restartRegs = this._snap286(over);
             throw new RealModeFault(13);
         }
         if (w) {
@@ -1355,7 +1365,9 @@ export class I8086 {
         // The 286 word read from DS:SI #GPs when it crosses offset 0xFFFF, with SI
         // advanced (byte-pair read, so _rd16's own check never fires here).
         if (this._is286 && w && this.si === 0xffff) {
-            this._restartRegs = this._snap286({ si: (this.si + d) & 0xffff });
+            const over = { si: (this.si + d) & 0xffff };
+            if (this._rep) over.cx = (this.cx - 1) & 0xffff;   // repeated READ fault: just the pre-decrement
+            this._restartRegs = this._snap286(over);
             throw new RealModeFault(13);
         }
         if (w) {
@@ -1384,6 +1396,7 @@ export class I8086 {
         // the string ops that ADVANCE SI/DI even on a fault) or this snapshot.
         if (this._is286) {
             this._restartRegs = null;
+            this._ibytes = 0;   // instruction-byte count, for the 286's 10-byte limit
             this._faultSnap = { ax: this.ax, bx: this.bx, cx: this.cx, dx: this.dx,
                 sp: this.sp, bp: this.bp, si: this.si, di: this.di, cs: this.cs };
         }
@@ -1410,10 +1423,18 @@ export class I8086 {
         this.intShadow = 0;
         let n = 0;
         let op = 0;
+        let faulted = false;
+        // The whole instruction — prefix loop, operand fetch and execution — runs
+        // inside one try so a 286 RealModeFault raised anywhere in it (the 10-byte
+        // length limit, a #GP on a word access that crosses the segment top) is
+        // delivered with restart semantics rather than escaping step().
+        try {
 
-        // Prefixes. There is no length limit on real silicon and the last
-        // segment override wins, so this is a loop and not an if.
+        // Prefixes. On the 8086 there is no length limit and the last segment
+        // override wins, so this is a loop and not an if; the 286 caps the whole
+        // instruction (prefixes included) at 10 bytes — the 11th fetch is #GP(13).
         for (;;) {
+            if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);
             // A PEEK, NOT A BUS CYCLE. This looks at the next byte to decide
             // whether it is a prefix, and if it is not, `_fetch8()` below reads
             // the same byte again. Real silicon takes it from the queue once.
@@ -1484,14 +1505,11 @@ export class I8086 {
             }
         }
 
-        // A 286 real-mode fault (e.g. #GP on a word access that crosses the
-        // 0xFFFF segment boundary) unwinds out of the opcode as a RealModeFault;
-        // deliver it with restart semantics and skip the normal completion path
-        // (queue-flush trace, single-step trap). Other throws (Unimplemented)
-        // propagate to the grinder as before.
-        let faulted = false;
-        try {
-            n += this._exec(op);
+        // Execution. A 286 RealModeFault raised here or in the prefix/operand
+        // fetch above is delivered with restart semantics and skips the normal
+        // completion path (queue-flush trace, single-step trap). Other throws
+        // (Unimplemented) propagate to the grinder as before.
+        n += this._exec(op);
         } catch (e) {
             if (e && e.name === 'RealModeFault') {
                 // Roll back the partially-committed instruction: GPRs and CS to
