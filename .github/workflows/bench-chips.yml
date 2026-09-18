@@ -1,0 +1,36 @@
+name: Chip RTx benchmark
+
+# Real-time-factor (x real time) for the emulated cores, measured on a fresh,
+# quiet cloud runner rather than the memory-starved dev box (~30% noise there).
+# workflow_dispatch for a hand run; push on the lane branch for a receipt.
+on:
+  workflow_dispatch:
+    inputs:
+      instructions:
+        description: 'Steps per core'
+        required: false
+        default: '40000000'
+  push:
+    branches: ['lane/rtx-chip-benches']
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev || npm i --omit=dev || true
+      - name: RTx benchmark (three warmup+measure passes for a median)
+        run: |
+          set -euo pipefail
+          INSTR='${{ github.event.inputs.instructions || 40000000 }}'
+          for pass in 1 2 3; do
+            echo "===== pass $pass ====="
+            node scripts/bench-chips.mjs --instructions "$INSTR"
+          done
