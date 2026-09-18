@@ -107,6 +107,11 @@ const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800;
 // flags word fails every test that touches the stack.
 const F_ON = 0xf002, F_OFF = 0x0028;
 const fixFlags = (f) => (f | F_ON) & ~F_OFF;
+// The 80286 flags word differs from the 8086's: bits 12-15 are IOPL (12-13) and
+// NT (14), settable in real mode, and bit 15 reads 0 — not the 8086's "bits
+// 12-15 always 1". So force only bit 1, and clear bits 3, 5 and 15.
+const F_ON286 = 0x0002, F_OFF286 = 0x8028;
+const fixFlags286 = (f) => (f | F_ON286) & ~F_OFF286;
 
 const PARITY = new Uint8Array(256);
 for (let i = 0; i < 256; i++) {
@@ -184,7 +189,7 @@ export class I8086 {
         this.ip = 0;
         // Power-on vector: FFFF:0000, the top sixteen bytes of the space.
         this.cs = 0xffff; this.ds = 0; this.es = 0; this.ss = 0;
-        this.flags = fixFlags(0);
+        this.flags = (this._is286 ? fixFlags286 : fixFlags)(0);
         this.halted = false;
         this.cycles = 0;
         // 80286 real-mode state (only touched by the variant's 0x0F group).
@@ -364,8 +369,12 @@ export class I8086 {
      *  is how period software tells an 8086 from its successors, so it is
      *  not a rough edge to smooth off. */
     _pushR16(i) {
+        const spBefore = this.sp;
         this.sp = (this.sp - 2) & 0xffff;
-        this._wr16(this.ss, this.sp, i === 4 ? this.sp : this._r16(i));
+        // PUSH SP: the 8086 pushes the ALREADY-decremented value; the 286 pushes
+        // the value from BEFORE the decrement. This is the canonical 8086-vs-286
+        // tell, so the variant must reproduce it.
+        this._wr16(this.ss, this.sp, i === 4 ? (this._is286 ? spBefore : this.sp) : this._r16(i));
     }
 
     // ---- ModR/M ---------------------------------------------------------
@@ -1511,8 +1520,8 @@ export class I8086 {
             case 0x9a: { const ip = this._fetch16(), cs = this._fetch16(); this._push(this.cs); this._push(this.ip); this.cs = cs; this.ip = ip; return 28; }
             case 0x9b: return 4;                              // WAIT, with no 8087 to wait for
             case 0x9c: this._push(this.flags); return 10;
-            case 0x9d: this.flags = fixFlags(this._pop()); return 8;
-            case 0x9e: this.flags = fixFlags((this.flags & 0xff00) | this.ah); return 4;
+            case 0x9d: this.flags = (this._is286 ? fixFlags286 : fixFlags)(this._pop()); return 8;
+            case 0x9e: this.flags = (this._is286 ? fixFlags286 : fixFlags)((this.flags & 0xff00) | this.ah); return 4;
             case 0x9f: this.ah = this.flags & 0xff; return 4;
 
             // ---- 0xa0-0xaf: accumulator moves, TEST imm, string ops ------
@@ -1550,7 +1559,7 @@ export class I8086 {
             case 0xcc: this._swInt(3); return 52;
             case 0xcd: { const v = this._fetch8(); this._swInt(v); return 51; }
             case 0xce: if (this.flags & OF) { this._swInt(4); return 53; } return 4;
-            case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = fixFlags(this._pop()); return 24;
+            case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = (this._is286 ? fixFlags286 : fixFlags)(this._pop()); return 24;
 
             // ---- 0xd0-0xd7: shift group, BCD by immediate, SALC, XLAT ----
             case 0xd0: case 0xd1: case 0xd2: case 0xd3: {
