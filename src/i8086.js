@@ -913,13 +913,46 @@ export class I8086 {
     _srcSeg() { return this._seg >= 0 ? this._seg : this.ds; }
     _delta(w) { return (this.flags & DF ? -1 : 1) * (w ? 2 : 1); }
 
+    /** GPR+CS snapshot for the 286 fault-restart path, with optional overrides. */
+    _snap286(over) {
+        return { ax: this.ax, bx: this.bx, cx: this.cx, dx: this.dx,
+            sp: this.sp, bp: this.bp, si: this.si, di: this.di, cs: this.cs, ...over };
+    }
+
+    /** One 286 string-element access with the "advance the index even on a
+     *  fault" microcode: stage the restart snapshot with SI/DI already advanced,
+     *  so if the word access #GPs at offset 0xFFFF the instruction restarts with
+     *  the index moved on — exactly what SST286 records. On success the index
+     *  advances normally. (The 8086/186 paths never call this.) */
+    _strElem(indexName, seg, w, write, value) {
+        const off = this[indexName];
+        const d = this._delta(w);
+        this._restartRegs = this._snap286({ [indexName]: (off + d) & 0xffff });
+        const r = write
+            ? (w ? this._wr16(seg, off, value) : this._wr8(seg, off, value & 0xff))
+            : (w ? this._rd16(seg, off) : this._rd8(seg, off));
+        this[indexName] = (off + d) & 0xffff;
+        return r;
+    }
+
     _movs(w) {
+        if (this._is286) {                       // advance SI (read) then DI (write); each #GPs on a 0xFFFF wrap
+            const v = this._strElem('si', this._srcSeg(), w, false);
+            this._strElem('di', this.es, w, true, v);
+            return;
+        }
         const d = this._delta(w), s = this._srcSeg();
         if (w) this._wr16(this.es, this.di, this._rd16(s, this.si));
         else this._wr8(this.es, this.di, this._rd8(s, this.si));
         this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
     }
     _cmps(w) {
+        if (this._is286) {                       // the 286 reads ES:DI FIRST — a fault there leaves SI untouched
+            const b = this._strElem('di', this.es, w, false);
+            const a = this._strElem('si', this._srcSeg(), w, false);
+            this._sub(a, b, 0, w);
+            return;
+        }
         const d = this._delta(w), s = this._srcSeg();
         const a = w ? this._rd16(s, this.si) : this._rd8(s, this.si);
         const b = w ? this._rd16(this.es, this.di) : this._rd8(this.es, this.di);
@@ -927,16 +960,19 @@ export class I8086 {
         this.si = (this.si + d) & 0xffff; this.di = (this.di + d) & 0xffff;
     }
     _stos(w) {
+        if (this._is286) { this._strElem('di', this.es, w, true, w ? this.ax : this.al); return; }
         const d = this._delta(w);
         if (w) this._wr16(this.es, this.di, this.ax); else this._wr8(this.es, this.di, this.al);
         this.di = (this.di + d) & 0xffff;
     }
     _lods(w) {
+        if (this._is286) { const v = this._strElem('si', this._srcSeg(), w, false); if (w) this.ax = v; else this.al = v; return; }
         const d = this._delta(w), s = this._srcSeg();
         if (w) this.ax = this._rd16(s, this.si); else this.al = this._rd8(s, this.si);
         this.si = (this.si + d) & 0xffff;
     }
     _scas(w) {
+        if (this._is286) { const b = this._strElem('di', this.es, w, false); this._sub(w ? this.ax : this.al, b, 0, w); return; }
         const d = this._delta(w);
         const b = w ? this._rd16(this.es, this.di) : this._rd8(this.es, this.di);
         this._sub(w ? this.ax : this.al, b, 0, w);
@@ -1298,6 +1334,12 @@ export class I8086 {
         // bus once and using the result as a word gives 00FFh where the
         // hardware gives FFFFh, which is a whole high byte of nothing.
         const p = this.dx;
+        // The 286 word write to ES:DI #GPs when it crosses offset 0xFFFF, with DI
+        // advanced (this path writes two bytes, so _wr16's own check never fires).
+        if (this._is286 && w && this.di === 0xffff) {
+            this._restartRegs = this._snap286({ di: (this.di + d) & 0xffff });
+            throw new RealModeFault(13);
+        }
         if (w) {
             this._wr8(this.es, this.di, this.inPort(p) & 0xff);
             this._wr8(this.es, (this.di + 1) & 0xffff, this.inPort((p + 1) & 0xffff) & 0xff);
@@ -1310,6 +1352,12 @@ export class I8086 {
         const seg = this._srcSeg();
         const d = this._delta(w);
         const p = this.dx;
+        // The 286 word read from DS:SI #GPs when it crosses offset 0xFFFF, with SI
+        // advanced (byte-pair read, so _rd16's own check never fires here).
+        if (this._is286 && w && this.si === 0xffff) {
+            this._restartRegs = this._snap286({ si: (this.si + d) & 0xffff });
+            throw new RealModeFault(13);
+        }
         if (w) {
             this.outPort(p, this._rd8(seg, this.si));
             this.outPort((p + 1) & 0xffff, this._rd8(seg, (this.si + 1) & 0xffff));
