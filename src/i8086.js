@@ -1408,18 +1408,16 @@ export class I8086 {
         }
 
         switch (op) {
-            // On the 80286, 0x0F is the two-byte-opcode prefix (it was POP CS on
-            // the 8086, which this core does not model). Route to the 286 group.
-            case 0x0f:
-                if (this._is286) return this._exec0F286();
-                throw new Unimplemented(0x0f);
             // ---- segment register push/pop and the BCD adjusts -----------
             case 0x06: this._push(this.es); return 10;
             case 0x07: this.es = this._pop(); this.intShadow = 1; return 8;
             case 0x0e: this._push(this.cs); return 10;
-            // POP CS is real on the 8086: there are no two-byte opcodes for
-            // 0x0f to introduce, so it decodes as the pop nobody wanted.
-            case 0x0f: this.cs = this._pop(); this.intShadow = 1; return 8;
+            // 0x0F: on the 8086/186 it is POP CS (no two-byte opcodes exist for
+            // it), a real segment-register load that raises the interrupt shadow.
+            // On the 80286 it is the two-byte-opcode prefix -> the 286 group.
+            case 0x0f:
+                if (this._is286) return this._exec0F286();
+                this.cs = this._pop(); this.intShadow = 1; return 8;
             case 0x16: this._push(this.ss); return 10;
             case 0x17: this.ss = this._pop(); this.intShadow = 1; return 8;
             case 0x1e: this._push(this.ds); return 10;

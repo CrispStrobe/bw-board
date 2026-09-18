@@ -73,7 +73,7 @@ function executeVariant(t, fileMasks) {
 
 try {
     const args = process.argv.slice(2), root = process.env.I80286_VECTORS;
-    if (!root) throw new Error('Set I80286_VECTORS to an external SingleStepTests/80286 checkout');
+    if (!root) throw new Error('Set I80286_VECTORS to an external SingleStepTests/80286 checkout (e.g. ~/code/80286-vectors)');
     let limit = Infinity, reportPath;
     const selected = [];
     for (let i = 0; i < args.length; i++) {
