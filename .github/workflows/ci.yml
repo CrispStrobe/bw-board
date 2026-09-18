@@ -317,7 +317,7 @@ jobs:
         env:
           I80286_VECTORS: ${{ github.workspace }}/80286-vectors
         run: |
-          echo "--- diffs for the 286 word-wrap #GP(13) candidates (string A5/A7/6F, shift C1/D1, group F7/81) ---
+          echo "--- diffs for the 286 word-wrap GP(13) candidates: string A5/A7/6F, shift C1/D1, group F7/81 ---"
           node scripts/grind-i8086-286.mjs A5 A7 C1 D1 F7 81 6F --limit 4 || true
           echo "--- full census (sampled) ---"
           node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
