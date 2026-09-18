@@ -36,6 +36,41 @@ async function benchAVR() {
   const { cy, secs } = timed(() => { const c0=cpu.cycles; for(let i=0;i<STEPS;i++) avrInstruction(cpu); return cpu.cycles-c0; });
   return { name:'AVR ATmega328P (16 MHz)', realHz:HZ, cyPerSec: cy/secs };
 }
+async function benchRP2040() {
+  const { createRp2040jsAdapter } = await import('../src/rp2040js-adapter.js');
+  const HZ = 125_000_000;                                 // RP2040 Cortex-M0+ at 125 MHz
+  // adds r0,#1 ; adds r0,#1 ; b .-4  (a tight ALU loop in SRAM)
+  const prog = new Uint16Array([0x3001, 0x3001, 0xe7fc]);
+  const a = createRp2040jsAdapter({ clockHz: HZ, program: prog });
+  const core = a.core;
+  const { cy, secs } = timed(() => { let c=0; for(let i=0;i<STEPS;i++) c+=core.executeInstruction(); return c; });
+  return { name:'RP2040 Cortex-M0+ (125 MHz)', realHz:HZ, cyPerSec: cy/secs };
+}
+async function bench8051() {
+  const { ancestorCandidates } = await import('../test/helpers/sibling-checkout.mjs');
+  const { existsSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname } = await import('node:path');
+  const { createRequire } = await import('node:module');
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const wasmJs = ancestorCandidates(HERE, ['emu8051-stc','build','emu8051.js']).find(existsSync);
+  if (!wasmJs) throw new Error('emu8051-stc sibling not found (clone CrispStrobe/emu8051-stc beside bw-board)');
+  const req = createRequire(import.meta.url);
+  let mod; try { mod = req(wasmJs); } catch { mod = (await import(wasmJs)).default; }
+  const createEmu8051 = typeof mod === 'function' ? mod : mod?.default;
+  const Module = await createEmu8051();
+  const { createEmu8051Adapter } = await import('../src/emu8051-adapter.js');
+  const adapter = createEmu8051Adapter(Module, {});
+  const rec = (addr, bytes) => { const b=[bytes.length,(addr>>8)&0xff,addr&0xff,0x00,...bytes]; const sum=(0x100-(b.reduce((a,v)=>a+v,0)&0xff))&0xff; return ':'+[...b,sum].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase(); };
+  const hex = rec(0x0000,[0x04,0x24,0x05,0x80,0xFB]) + '\n:00000001FF\n';   // INC A; ADD A,#5; SJMP -5
+  const loadHex = Module.cwrap('emu_load_hex','number',['string','number']);
+  loadHex(hex, hex.length);
+  const T_NS = 2_000_000_000;                             // 2 s of emulated 8051 time
+  const t = process.hrtime.bigint();
+  adapter.runNs(BigInt(T_NS));
+  const wallNs = Number(process.hrtime.bigint()-t);
+  return { name:'8051 (emu8051 STC)', rtxDirect: T_NS / wallNs };  // RTx = emulated/wall, clock-independent
+}
 async function tryBench(fn, label) {
   try { return await fn(); } catch (e) { return { name:label, skipped:String(e.message||e).slice(0,80) }; }
 }
@@ -45,13 +80,14 @@ rows.push(await tryBench(benchZ80, 'Z80'));
 rows.push(await tryBench(bench6502, '6502'));
 rows.push(await tryBench(benchAVR, 'AVR ATmega328P'));
 // WASM/firmware-gated cores: honestly reported as needing their engine.
-rows.push({ name:'RP2040 (rp2040js, 125 MHz)', skipped:'needs a Cortex-M0+ firmware image — separate harness' });
-rows.push({ name:'8051 (emu8051)', skipped:'needs the emu8051 WASM module' });
+rows.push(await tryBench(benchRP2040, 'RP2040 Cortex-M0+'));
+rows.push(await tryBench(bench8051, '8051 (emu8051 STC)'));
 rows.push({ name:'labwired STM32/RISC-V/Xtensa', skipped:'needs the 20 MB labwired-wasm engine' });
 
 console.log('core                             emulated cycles/s     x real time   STEPS='+STEPS);
 for (const r of rows) {
   if (r.skipped) { console.log(`${r.name.padEnd(32)} SKIPPED — ${r.skipped}`); continue; }
+  if (r.rtxDirect !== undefined) { console.log(`${r.name.padEnd(32)} ${'(emulated/wall)'.padStart(15)}   ${r.rtxDirect.toFixed(1).padStart(7)}x`); continue; }
   const rtx = r.cyPerSec / r.realHz;
   console.log(`${r.name.padEnd(32)} ${String(Math.round(r.cyPerSec)).padStart(15)}   ${rtx.toFixed(1).padStart(7)}x`);
 }

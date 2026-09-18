@@ -26,6 +26,8 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --omit=dev || npm i --omit=dev || true
+      - name: Fetch emu8051-stc sibling (for the 8051 RTx)
+        run: git clone --depth 1 https://github.com/CrispStrobe/emu8051-stc.git ../emu8051-stc || echo "emu8051-stc clone failed; 8051 will SKIP"
       - name: RTx benchmark (three warmup+measure passes for a median)
         run: |
           set -euo pipefail
