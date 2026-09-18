@@ -26,8 +26,22 @@ jobs:
         with:
           node-version: 22
       - run: npm ci --omit=dev || npm i --omit=dev || true
-      - name: Fetch emu8051-stc sibling (for the 8051 RTx)
-        run: git clone --depth 1 https://github.com/CrispStrobe/emu8051-stc.git ../emu8051-stc || echo "emu8051-stc clone failed; 8051 will SKIP"
+      # emu8051-stc is a public MIT sibling holding the built 8051 WASM. Checked
+      # out by a PINNED actions/checkout (not a raw `git clone`, which the CI
+      # external-input audit rejects as a moving ref — test/ci-external-input-pins).
+      # Same pin ci.yml uses. Lands in-workspace because Actions refuses a path
+      # outside it; the bench's ancestorCandidates() finds it there.
+      - name: Check out emu8051-stc (for the 8051 RTx)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: CrispStrobe/emu8051-stc
+          ref: 47c504191a8420676415a1b86766621d6ea0de86
+          path: emu8051-stc
+      # Emscripten's MODULARIZE output is CommonJS, but a `.js` under this
+      # "type":"module" repo is parsed as ESM (createEmu8051 comes back
+      # undefined). The marker makes the in-workspace layout load as CJS.
+      - name: Mark the emu8051 build as CommonJS
+        run: echo '{"type":"commonjs"}' > emu8051-stc/package.json
       - name: Fetch prebuilt labwired-wasm (for the heavy-tier STM32F0 RTx)
         env:
           GH_TOKEN: ${{ github.token }}
