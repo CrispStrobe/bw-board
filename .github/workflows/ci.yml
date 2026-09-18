@@ -317,8 +317,8 @@ jobs:
         env:
           I80286_VECTORS: ${{ github.workspace }}/80286-vectors
         run: |
-          echo "--- diffs for a few simple shared opcodes (INC AX=40, ADD=00, MOV=88) ---"
-          node scripts/grind-i8086-286.mjs 40 00 88 --limit 2 || true
+          echo "--- diffs for the failing opcodes (IMUL 69/6B, POPF 9D, IRET CF, DAA 27) ---"
+          node scripts/grind-i8086-286.mjs 69 6B 9D CF 27 --limit 2 || true
           echo "--- full census (sampled) ---"
           node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
           tail -1 /tmp/286grind.txt \
