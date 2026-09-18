@@ -317,8 +317,8 @@ jobs:
         env:
           I80286_VECTORS: ${{ github.workspace }}/80286-vectors
         run: |
-          echo "--- diffs for the 286 word-wrap GP(13) candidates: string A5/A7/6F, shift C1/D1, group F7/81 ---"
-          node scripts/grind-i8086-286.mjs A5 A7 C1 D1 F7 81 6F --limit 4 || true
+          echo "--- diffs for the residual string/ENTER/LEAVE fails (A5/A7/AB/AD/AF/6D/6F/C8/C9/81); --limit matches the census so the firstFailure is captured ---"
+          node scripts/grind-i8086-286.mjs A5 A7 AB AD AF 6D 6F C8 C9 81 --limit 200 2>&1 | grep -E '"fail":[1-9]|firstFailure' | head -20 || true
           echo "--- full census (sampled) ---"
           node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
           tail -1 /tmp/286grind.txt \

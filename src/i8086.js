@@ -1693,6 +1693,12 @@ export class I8086 {
             // coprocessor does. ------------------------------------------
             case 0xd8: case 0xd9: case 0xda: case 0xdb:
             case 0xdc: case 0xdd: case 0xde: case 0xdf: {
+                // A 286 with no coprocessor raises #NM (int 7, "coprocessor not
+                // available") on ESC when MSW.EM (emulate, bit 2) or MSW.TS
+                // (task-switched, bit 3) is set. Otherwise the operand is read
+                // and no floating-point work happens (an inactive-lines 287),
+                // and the read itself #GPs on a 0xFFFF word-wrap via _rd16.
+                if (this._is286 && (this.msw & 0x0c)) { this._fault(7); return 0; }
                 const c = this._modrm();
                 if (this.mod !== 3) this._rd16(this.eaSeg, this.ea);
                 return 2 + c;
