@@ -710,6 +710,31 @@ export class I8086 {
      *  behavior, not documentation, and it is deliberately written to look
      *  odd so nobody "corrects" it back. */
     _bcdAdjust(sub) {
+        if (this._is286) {
+            // The 286 uses the textbook rule (high correction on old > 0x99 || CF)
+            // rather than the 8086's fitted 0x9a-0x9f/AF quirk, and the LOW
+            // correction can itself set CF (old > 0xf9 for DAA, old < 6 for DAS).
+            // Mirrors the harris 286 reference; SST286-exact.
+            const old = this.al, cf = this.flags & CF ? 1 : 0, af = this.flags & AF;
+            let value = old, carry = 0, adjustAf = 0;
+            if ((old & 0x0f) > 9 || af) {
+                value = (old + (sub ? -6 : 6)) & 0xff;
+                adjustAf = AF;
+                carry = ((sub ? old < 6 : old > 0xf9) ? 1 : 0) | cf;
+            }
+            if (old > 0x99 || cf) {
+                value = (value + (sub ? -0x60 : 0x60)) & 0xff;
+                carry = 1;
+            }
+            this.al = value;
+            let f = this.flags & ~(CF | AF | PF | ZF | SF | OF);
+            if (!value) f |= ZF;
+            if (value & 0x80) f |= SF;
+            if (adjustAf) f |= AF;
+            if (carry) f |= CF;
+            this.flags = f | PARITY[value];
+            return;
+        }
         const oldAl = this.al, oldCf = this.flags & CF ? 1 : 0, oldAf = this.flags & AF;
         let f = this.flags & ~(CF | AF | PF | ZF | SF);
         if ((oldAl & 0x0f) > 9 || oldAf) {
@@ -726,25 +751,27 @@ export class I8086 {
     }
     _daa() { this._bcdAdjust(false); }
     _das() { this._bcdAdjust(true); }
-    _aaa() {
-        let f = this.flags & ~(CF | AF);
-        if ((this.al & 0x0f) > 9 || (this.flags & AF)) {
-            this.al = this.al + 6;
-            this.ah = this.ah + 1;
-            f |= AF | CF;
+    _aaa() { this._asciiAdjust(false); }
+    _aas() { this._asciiAdjust(true); }
+    /** AAA/AAS. The 286 applies the correction as a single 16-bit AX +/- 0x106,
+     *  so a carry out of AL+6 propagates into AH (AL >= 0xFA with a low nibble
+     *  above 9 bumps AH by TWO, matching SST286 and the harris 286 reference);
+     *  the 8086/186 do a separate AL+/-6 / AH+/-1 with no such carry. Only CF
+     *  and AF are defined (both = the adjust flag); SF/ZF/PF/OF are undefined
+     *  and preserved. */
+    _asciiAdjust(sub) {
+        const adjust = (this.al & 0x0f) > 9 || (this.flags & AF);
+        if (this._is286) {
+            if (adjust) this.ax = (this.ax + (sub ? -0x106 : 0x106)) & 0xffff;
+            this.al = this.al & 0x0f;
+        } else {
+            if (adjust) {
+                this.al = sub ? this.al - 6 : this.al + 6;
+                this.ah = sub ? this.ah - 1 : this.ah + 1;
+            }
+            this.al = this.al & 0x0f;
         }
-        this.al = this.al & 0x0f;
-        this.flags = f;
-    }
-    _aas() {
-        let f = this.flags & ~(CF | AF);
-        if ((this.al & 0x0f) > 9 || (this.flags & AF)) {
-            this.al = this.al - 6;
-            this.ah = this.ah - 1;
-            f |= AF | CF;
-        }
-        this.al = this.al & 0x0f;
-        this.flags = f;
+        this.flags = (this.flags & ~(CF | AF)) | (adjust ? (CF | AF) : 0);
     }
     /** The immediate byte is a real operand, not a hardwired ten -- AAM 0
      *  divides by zero and takes INT 0 like any other. */
@@ -1089,14 +1116,20 @@ export class I8086 {
                 this._r16set(this.reg, low);
                 const fits = full === sx16(low);
                 if (this._is286) {
-                    // The 286 defines SF/ZF/PF from the low result (only AF stays
-                    // undefined — SST286 masks 0xFFEF). The 8086/186 leave all of
-                    // SZAP undefined, so the branch below leaves them alone.
+                    // The 286 defines SF/ZF/PF from the HIGH product word — not the
+                    // low result stored in reg (only AF stays undefined — SST286
+                    // masks 0xFFEF). Verified against SST286 and the harris 286
+                    // reference (logicalFlags((product>>>16),2)): e.g. IMUL 6B with a
+                    // negative result that fits gives high word 0xFFFF -> SF=1, PF=1
+                    // (PARITY[0xFF] even), which the low word cannot reproduce. The
+                    // 8086/186 leave all of SZAP undefined, so the branch below
+                    // leaves them alone.
+                    const hi = (full >>> 16) & 0xffff;
                     let f = this.flags & ~(CF | OF | SF | ZF | PF);
                     if (!fits) f |= CF | OF;
-                    if (!low) f |= ZF;
-                    if (low & 0x8000) f |= SF;
-                    this.flags = f | PARITY[low & 0xff];
+                    if (!hi) f |= ZF;
+                    if (hi & 0x8000) f |= SF;
+                    this.flags = f | PARITY[hi & 0xff];
                 } else {
                     this.flags = fits ? (this.flags & ~(CF | OF)) : (this.flags | CF | OF);
                 }

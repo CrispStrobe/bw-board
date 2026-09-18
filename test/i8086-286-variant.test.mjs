@@ -138,7 +138,8 @@ test("'80286' is byte-identical to '80186' across random real-mode instructions"
     // normalisers POPF/SAHF/IRET (0x9d/0x9e/0xcf — the 286 has IOPL/NT and bit 15
     // reads 0, the 8086 forces bits 12-15 to 1). Exercised elsewhere, not here.
     if (bytes[0] === 0x0f || bytes[0] === 0x54 || bytes[0] === 0x9d || bytes[0] === 0x9e || bytes[0] === 0xcf
-        || bytes[0] === 0x69 || bytes[0] === 0x6b) continue;   // IMUL imm: 286 defines SF/ZF/PF, the 186 does not
+        || bytes[0] === 0x69 || bytes[0] === 0x6b   // IMUL imm: 286 defines SF/ZF/PF (from the HIGH word), the 186 does not
+        || bytes[0] === 0x27 || bytes[0] === 0x2f || bytes[0] === 0x37 || bytes[0] === 0x3f) continue;  // DAA/DAS/AAA/AAS: 286 rule differs (16-bit carry, textbook high correction)
     const a = runOne('80186', init, bytes);
     const b = runOne('80286', init, bytes);
     compared++;
