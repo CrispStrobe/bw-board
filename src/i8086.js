@@ -1098,7 +1098,9 @@ export class I8086 {
             // and not something to smooth over.
             case 0x62: {
                 const c = this._modrm();
-                if (this.mod === 3) throw new Unimplemented(op);  // no register form
+                // No register form: #UD (int 6) on the 286, an honest refusal on
+                // the 186 (the grinder scores that 'unsupported', not wrong).
+                if (this.mod === 3) { if (this._is286) { this._fault(6); return 0; } throw new Unimplemented(op); }
                 const idx = sx16(this._r16(this.reg));
                 const lo = sx16(this._rd16(this.eaSeg, this.ea));
                 const hi = sx16(this._rd16(this.eaSeg, (this.ea + 2) & 0xffff));
@@ -1568,16 +1570,16 @@ export class I8086 {
             case 0x89: { const c = this._modrm(); this._rm16set(this._r16(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
             case 0x8a: { const c = this._modrm(); this._r8set(this.reg, this._rm8()); return this.mod === 3 ? 2 : 8 + c; }
             case 0x8b: { const c = this._modrm(); this._r16set(this.reg, this._rm16()); return this.mod === 3 ? 2 : 8 + c; }
-            case 0x8c: { const c = this._modrm(); this._rm16set(this._sreg(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
-            case 0x8d: { const c = this._modrm(); this._r16set(this.reg, this.ea); return 2 + c; }
+            case 0x8c: { const c = this._modrm(); if (this._is286 && this.reg > 3) { this._fault(6); return 0; } this._rm16set(this._sreg(this.reg)); return this.mod === 3 ? 2 : 9 + c; }
+            case 0x8d: { const c = this._modrm(); if (this._is286 && this.mod === 3) { this._fault(6); return 0; } this._r16set(this.reg, this.ea); return 2 + c; }
             // MOV to a segment register and POP of one arm the interrupt
             // shadow; LES and LDS (C4/C5) deliberately do NOT. The shadow
             // exists so `mov ss,ax` / `mov sp,imm` cannot be split, and
             // LES/LDS load DS or ES, which can never be half of that pair —
             // so there is no behaviour to protect and no evidence they are
             // shadowed. Absent evidence, the narrower answer.
-            case 0x8e: { const c = this._modrm(); this._sregSet(this.reg, this._rm16()); this.intShadow = 1; return this.mod === 3 ? 2 : 8 + c; }
-            case 0x8f: { const c = this._modrm(); this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
+            case 0x8e: { const c = this._modrm(); if (this._is286 && (this.reg > 3 || this.reg === 1)) { this._fault(6); return 0; } this._sregSet(this.reg, this._rm16()); this.intShadow = 1; return this.mod === 3 ? 2 : 8 + c; }
+            case 0x8f: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
 
             // ---- 0x90-0x9f ----------------------------------------------
             case 0x90: return 3;                              // NOP = XCHG AX,AX
@@ -1620,10 +1622,10 @@ export class I8086 {
             // decode as the returns two bits along.
             case 0xc0: case 0xc2: { const k = this._fetch16(); this.ip = this._pop(); this.sp = (this.sp + k) & 0xffff; return 20; }
             case 0xc1: case 0xc3: this.ip = this._pop(); return 16;
-            case 0xc4: { const c = this._modrm(); this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.es = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
-            case 0xc5: { const c = this._modrm(); this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.ds = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
-            case 0xc6: { const c = this._modrm(); this._rm8set(this._fetch8()); return this.mod === 3 ? 4 : 10 + c; }
-            case 0xc7: { const c = this._modrm(); this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
+            case 0xc4: { const c = this._modrm(); if (this._is286 && this.mod === 3) { this._fault(6); return 0; } this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.es = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
+            case 0xc5: { const c = this._modrm(); if (this._is286 && this.mod === 3) { this._fault(6); return 0; } this._r16set(this.reg, this._rd16(this.eaSeg, this.ea)); this.ds = this._rd16(this.eaSeg, (this.ea + 2) & 0xffff); return 16 + c; }
+            case 0xc6: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm8set(this._fetch8()); return this.mod === 3 ? 4 : 10 + c; }
+            case 0xc7: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm16set(this._fetch16()); return this.mod === 3 ? 4 : 10 + c; }
             case 0xc8: case 0xca: { const k = this._fetch16(); this.ip = this._pop(); this.cs = this._pop(); this.sp = (this.sp + k) & 0xffff; return 25; }
             case 0xc9: case 0xcb: this.ip = this._pop(); this.cs = this._pop(); return 26;
             case 0xcc: this._swInt(3); return 52;
@@ -1746,6 +1748,13 @@ export class I8086 {
     _group45(w) {
         const c = this._modrm();
         const mem = this.mod !== 3;
+        // 286 real-mode #UD (int 6) for the invalid group encodings: FE only
+        // defines /0 INC and /1 DEC; FF /7 is undefined; and the far CALL/JMP
+        // forms (FF /3, /5) require a memory operand — a register operand is #UD.
+        if (this._is286) {
+            if (!w && this.reg > 1) { this._fault(6); return 0; }
+            if (w && (this.reg === 7 || ((this.reg === 3 || this.reg === 5) && !mem))) { this._fault(6); return 0; }
+        }
         if (!w) {
             switch (this.reg) {
                 case 0: this._rm8set(this._inc(this._rm8(), 0)); return mem ? 15 + c : 3;

@@ -133,13 +133,20 @@ test("'80286' is byte-identical to '80186' across random real-mode instructions"
     } };
     const bytes = [rnd(), rnd(), rnd(), rnd(), rnd()];
     // The opcodes where the 286 DELIBERATELY differs from the 186 (all confirmed
-    // against SingleStepTests/80286): 0x0F (undefined on the 186, the two-byte
-    // prefix on the 286); PUSH SP (0x54, pre- vs post-decrement); and the flag
-    // normalisers POPF/SAHF/IRET (0x9d/0x9e/0xcf — the 286 has IOPL/NT and bit 15
-    // reads 0, the 8086 forces bits 12-15 to 1). Exercised elsewhere, not here.
-    if (bytes[0] === 0x0f || bytes[0] === 0x54 || bytes[0] === 0x9d || bytes[0] === 0x9e || bytes[0] === 0xcf
-        || bytes[0] === 0x69 || bytes[0] === 0x6b   // IMUL imm: 286 defines SF/ZF/PF (from the HIGH word), the 186 does not
-        || bytes[0] === 0x27 || bytes[0] === 0x2f || bytes[0] === 0x37 || bytes[0] === 0x3f) continue;  // DAA/DAS/AAA/AAS: 286 rule differs (16-bit carry, textbook high correction)
+    // against SingleStepTests/80286), so the byte-identity check skips them and
+    // they are graded against the vectors instead:
+    //   0x0F  — undefined on the 186, the two-byte prefix on the 286
+    //   0x54  — PUSH SP, pre- vs post-decrement
+    //   0x9d/0x9e/0xcf — POPF/SAHF/IRET flag word (286 IOPL/NT, bit 15 reads 0)
+    //   0x69/0x6b — IMUL imm defines SF/ZF/PF (from the HIGH product word)
+    //   0x27/0x2f/0x37/0x3f — DAA/DAS/AAA/AAS 286 rule (16-bit carry, textbook)
+    //   the rest raise a real-mode #UD (int 6) on the 286 for encodings the 186
+    //   executes: 0x62 BOUND reg-form, 0x63 ARPL, MOV Sreg 0x8c/0x8e (sreg>3, CS),
+    //   LEA 0x8d reg-form, POP r/m 0x8f /≠0, LES/LDS 0xc4/0xc5 reg-form,
+    //   MOV imm 0xc6/0xc7 /≠0, and the FE/FF group's invalid sub-ops.
+    const DIVERGENT = new Set([0x0f, 0x54, 0x9d, 0x9e, 0xcf, 0x69, 0x6b, 0x27, 0x2f, 0x37, 0x3f,
+        0x62, 0x63, 0x8c, 0x8d, 0x8e, 0x8f, 0xc4, 0xc5, 0xc6, 0xc7, 0xfe, 0xff]);
+    if (DIVERGENT.has(bytes[0])) continue;
     const a = runOne('80186', init, bytes);
     const b = runOne('80286', init, bytes);
     compared++;
@@ -153,7 +160,7 @@ test("'80286' is byte-identical to '80186' across random real-mode instructions"
     for (const [k, v] of a.mem) assert.equal(b.mem.get(k) ?? 0, v, `mem[0x${k.toString(16)}] differs at op 0x${bytes[0].toString(16)}`);
     for (const [k, v] of b.mem) assert.equal(a.mem.get(k) ?? 0, v, `mem[0x${k.toString(16)}] only on 286 at op 0x${bytes[0].toString(16)}`);
   }
-  assert.ok(compared >= N * 0.95, `only ${compared} compared`);   // a handful of opcodes are skipped as 286-divergent
+  assert.ok(compared >= N * 0.88, `only ${compared} compared`);   // ~23/256 first-bytes are skipped as 286-divergent (#UD group + flag/BCD rules)
   assert.ok(ran > N * 0.4, `only ${ran} instructions actually executed on both — sample too thin`);
   console.log(`# 80286==80186 over ${compared} random instructions (${ran} executed on both), 0 divergences`);
 });
