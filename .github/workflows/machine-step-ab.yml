@@ -13,7 +13,7 @@ on:
         required: false
         default: '30000000'
   push:
-    branches: ['lane/machine-step-lean-hotpath']
+    branches: ['lane/machine-step-lean-hotpath', 'lane/z80-chip-advance-batching']
 
 permissions:
   contents: read
