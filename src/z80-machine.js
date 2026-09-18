@@ -600,17 +600,32 @@ export class Z80Machine {
         return dev;
     }
 
-    /** How far a halted CPU may jump in one step: the nearest chip that
-     *  can actually assert INT. Mirrors m6502-machine's WAI fast-forward,
-     *  veto included. Capped so a pathological horizon cannot swallow a
-     *  slice unexamined. */
+    /** How far a halted CPU may jump — and how long the chip advance may be
+     *  batched — in one step: the nearest event any ADVANCER can raise. Iterates
+     *  the flat advance list so it covers attachDevice()'d devices too, not just
+     *  this.chips (a device that advances but names no horizon must force a short
+     *  horizon, or the batch would starve it — the machine-contract regression).
+     *  Mirrors m6502/i8086's fast-forward, veto included. Capped so a
+     *  pathological horizon cannot swallow a slice unexamined. */
     _wakeHorizon() {
+        // Live iteration (not the cached _advList): a chip added straight onto
+        // this.chips, or a device without a horizon, must still veto -- and only
+        // the live collections see it. Called on flush/HALT/IO, not per
+        // instruction, so the Object.keys cost is off the hot path.
         let h = Infinity;
         for (const k of Object.keys(this.chips)) {
             const chip = this.chips[k];
             if (!chip || !chip.advance) continue;
-            if (typeof chip.nextWake !== 'function') return 4;
+            if (typeof chip.nextWake !== 'function') return 4;   // horizon-less advancer: flush every few cycles
             h = Math.min(h, chip.nextWake());
+        }
+        if (this.devices) {
+            for (const k of Object.keys(this.devices)) {
+                const dev = this.devices[k];
+                if (!dev || !dev.advance) continue;
+                if (typeof dev.nextWake !== 'function') return 4;
+                h = Math.min(h, dev.nextWake());
+            }
         }
         if (!Number.isFinite(h)) h = Math.round(this.clockHz / 1000);
         return Math.max(4, Math.min(h, 0x10000));
