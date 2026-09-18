@@ -16,6 +16,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { I8086 } from '../src/i8086.js';
+import { createDebugTarget, getTargetKinds } from '../src/debug-target-factory.js';
 
 const GPR = ['ax', 'bx', 'cx', 'dx', 'sp', 'bp', 'si', 'di'];
 const SEG = ['cs', 'ss', 'ds', 'es'];
@@ -45,6 +46,15 @@ function runOne(variant, init, bytes) {
   regs.ip = cpu.ip & 0xffff; regs.flags = cpu.flags & 0xffff;
   return { threw, regs, mem };
 }
+
+test("the 'i80286' target kind is pickable and builds a real-mode 286 machine", async () => {
+  assert.ok(getTargetKinds().find(k => k.kind === 'i80286'), 'i80286 must be in the picker');
+  const { adapter, target } = await createDebugTarget('i80286', {});
+  assert.equal(adapter.machine.variant, '80286');
+  assert.equal(adapter.machine.cpu._is286, true);
+  assert.ok(target, 'a debug target is built (CLI + widgets pane reach the 286)');
+  for (let i = 0; i < 10; i++) adapter.machine.step();   // and it actually runs
+});
 
 test("'80286' variant is accepted and reports _is286 and _is186", () => {
   const { cpu } = makeCpu('80286');

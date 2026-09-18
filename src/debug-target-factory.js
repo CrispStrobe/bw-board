@@ -89,6 +89,12 @@ export async function createDebugTarget(kind, opts) {
   if (kind === 'i8086') {
     return createI8086Target(opts);
   }
+  if (kind === 'i80286') {
+    // Same fast functional core + machine + debug target as i8086, in its
+    // 80286 real-mode variant (the 186 ISA; the 0x0F protected-mode group
+    // faults). A distinct kind so it surfaces in the picker on its own.
+    return createI8086Target({ ...opts, variant: '80286' });
+  }
   if (kind === 'rp2040js') {
     return createRp2040jsTarget(opts);
   }
@@ -102,7 +108,7 @@ export async function createDebugTarget(kind, opts) {
     return createSerialTarget(opts);
   }
   throw new Error(
-    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'z80', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
+    `Unknown debug target kind: '${kind}'. Use 'emulator', 'avr8js', 'atmega2560', 'attiny85', 'attiny88', 'eater6502', 'i8086', 'i80286', 'z80', 'rp2040js', 'stm32f0', 'labwired', or 'serial'.`
   );
 }
 
@@ -292,8 +298,15 @@ async function createZ80Target(opts) {
  * to pass a real one.
  */
 async function createI8086Target(opts) {
-  const { board, rom, config } = opts;
+  const { board, rom } = opts;
   const { createI8086Adapter } = await import('./i8086-adapter.js');
+  // The 80286 kind reuses this whole path in the '80286' variant: merge it into
+  // the config (defaulting to the 8086 breadboard) so the machine builds a 286.
+  let config = opts.config;
+  if (opts.variant) {
+    const { BREADBOARD8086 } = await import('./i8086-machine.js');
+    config = { ...(config ?? BREADBOARD8086), variant: opts.variant };
+  }
   const adapter = createI8086Adapter({ config, rom, romAt: opts.romAt });
   // setPin() is NOT optional in this stub, and its absence was a real trap.
   // The adapter's onPinChange hook calls board.setPin() on the first 8255
