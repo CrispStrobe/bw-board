@@ -317,8 +317,8 @@ jobs:
         env:
           I80286_VECTORS: ${{ github.workspace }}/80286-vectors
         run: |
-          echo "--- diffs for the real-mode #UD candidates now that exceptions are graded (MOV Sreg 8C/8E, LES/LDS C4/C5, LEA 8D, POP r/m 8F, group FE/FF, BOUND 62) ---"
-          node scripts/grind-i8086-286.mjs 8C 8E C4 C5 8D 8F FE FF 62 --limit 4 || true
+          echo "--- diffs for the 286 word-wrap #GP(13) candidates (string A5/A7/6F, shift C1/D1, group F7/81) ---
+          node scripts/grind-i8086-286.mjs A5 A7 C1 D1 F7 81 6F --limit 4 || true
           echo "--- full census (sampled) ---"
           node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
           tail -1 /tmp/286grind.txt \

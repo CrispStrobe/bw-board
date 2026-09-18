@@ -132,6 +132,20 @@ export class Unimplemented extends Error {
     }
 }
 
+/** A 286 real-mode processor fault raised from DEEP inside an instruction (a
+ *  memory access that crosses the segment's 0xFFFF boundary is #GP, vector 13).
+ *  It is thrown so it unwinds the partially-run opcode; step() catches it and
+ *  delivers the interrupt with restart semantics (the faulting CS:IP is pushed).
+ *  #UD faults that can be detected up-front are delivered inline via _fault(6)
+ *  instead; this class is for faults that must abort work already in progress. */
+export class RealModeFault extends Error {
+    constructor(vector) {
+        super(`80286 real-mode fault ${vector}`);
+        this.name = 'RealModeFault';
+        this.vector = vector;
+    }
+}
+
 export class I8086 {
     /** @param {{ read: (a:number)=>number, write:(a:number,v:number)=>void,
      *            in?:(port:number)=>number, out?:(port:number,v:number)=>void }} bus */
@@ -319,9 +333,14 @@ export class I8086 {
         this.write(a, v & 0xff);
     }
     _rd16(seg, off) {
+        // A word whose low byte is at offset 0xFFFF straddles the segment's top
+        // (the high byte would be at 0x10000). The 8086/186 wrap it to offset 0;
+        // the 286 raises #GP (int 13). See RealModeFault / step()'s catch.
+        if (this._is286 && (off & 0xffff) === 0xffff) throw new RealModeFault(13);
         return this._rd8(seg, off) | (this._rd8(seg, (off + 1) & 0xffff) << 8);
     }
     _wr16(seg, off, v) {
+        if (this._is286 && (off & 0xffff) === 0xffff) throw new RealModeFault(13);
         this._wr8(seg, off, v & 0xff);
         this._wr8(seg, (off + 1) & 0xffff, (v >> 8) & 0xff);
     }
@@ -1407,7 +1426,22 @@ export class I8086 {
             }
         }
 
-        n += this._exec(op);
+        // A 286 real-mode fault (e.g. #GP on a word access that crosses the
+        // 0xFFFF segment boundary) unwinds out of the opcode as a RealModeFault;
+        // deliver it with restart semantics and skip the normal completion path
+        // (queue-flush trace, single-step trap). Other throws (Unimplemented)
+        // propagate to the grinder as before.
+        let faulted = false;
+        try {
+            n += this._exec(op);
+        } catch (e) {
+            if (e && e.name === 'RealModeFault') {
+                this._fault(e.vector);   // rewinds to _instrStartIp (286) and vectors through the IVT
+                n += 51;                 // nominal fault-entry cost (this core does not grade 286 timing)
+                faulted = true;
+            } else throw e;
+        }
+        if (faulted) { this.cycles += n; return n; }
 
         // THE QUEUE FLUSH (E). The 8088 throws the prefetch queue away when
         // control goes somewhere the queue was not already reading, and its
