@@ -529,6 +529,16 @@ Ruling, restated 2026-09-12 after the question "should the app use thevenin / si
 
 ## E6 — The 8086 tier (scoped 2026-09-03, owner-requested)
 
+> **80286 — separate, experimental, ON HOLD (not on master).** A distinct effort
+> lives on branch `feat/native-286-memory-bus` (codex sessions, 2026-09-12): the
+> WIRED / Harris 80C286 path — `src/experimental/harris-80c286-*` wire-executes a
+> small real-mode subset through a phase-bus sequencer to resolved pins (a
+> 2026-09-08 correctness milestone, default-off, "not a complete implementation
+> or an editor-visible CPU part"), plus a diagnostic SingleStepTests/80286
+> executor (`scripts/lib/sst286.mjs`, "no production CPU/timing claim"). There is
+> NO production 80286 core in `src/` and NO 80286 speed number. Do not treat it as
+> shipped; verify against that branch before building on it.
+
 Context: the retro tier gains an x86 beside the W65C02 and the Z80. The
 survey that preceded it is in brickwright-lite `docs/I8086-CORE-PLAN.md`
 and its conclusion is load-bearing, so it is repeated here in one line:
@@ -1114,7 +1124,7 @@ in each).
 
 ---
 
-#### E6.8.1 The 80186/80188 instruction set — cheapest real win, and it has an oracle
+#### E6.8.1 The 80186/80188 instruction set — DONE. `{variant:'80186'}`, graded 132,532/132,532 SingleStepTests v20 vectors; the shift-count masking and reg=6 aliasing the suite can't grade are pinned in `test/i8086-186.test.mjs` (byte + word forms, 2026-09-17)
 
 `i8086.js:679` decodes `0x60` as a `Jcc` alias. That is correct 8086 and is
 exactly what a 186 is not. Missing: `PUSHA`/`POPA`, `PUSH imm`,
@@ -1142,7 +1152,7 @@ PCjs loads symbol tables and names its breakpoints. This is the highest
 value-per-line item on the list — an existing producer wired to an existing
 consumer — and it also buys breakpoint-by-name for free.
 
-#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors — MACHINE HALF DONE (2026-09-04, `00ed9f9`)
+#### E6.8.3 Breakpoints on I/O ports and on interrupt vectors — DONE (both halves). Debugger half landed: `i8086-debug.js` declares `breakpoints: ['code','write','port','int']`, `setBreakpoint({kind:'port'|'int'})` with dir/vector/source filtering + hook-chaining + `clearBreakpoint`; 9 tests in `test/i8086-event-breakpoints.test.mjs`. Machine half was 2026-09-04, `00ed9f9`
 
 Split by lane. **Machine half (this lane) DONE:** the machine fires
 `hooks.onPortAccess(dir, port, value)` on every IN and OUT, decoded or not
@@ -2451,7 +2461,7 @@ exists, and that is stated at the site rather than left to look measured.
 cannot reproduce — precisely what E6.8.4g–j's tables address, and precisely why
 they are worth having despite the 54% coverage ceiling of E6.8.4j.
 
-#### E6.8.4a The machine layer costs more than the CPU — measure, then reclaim it (NEW 2026-09-04, and it goes BEFORE E6.8.4)
+#### E6.8.4a The machine layer costs more than the CPU — DONE 2026-09-17. Profiled (`--prof`): `_advanceChips`, run every instruction, was 30% of the machine workload — more than the CPU core — while the interrupt poll (the other flagged candidate) did not sample at all (its answer is the cached `_intActive` flag; a measured red herring). Fixed by DEADLINE-BATCHED chip advance (`_chipDebt`/`_chipDeadline`/`_flushChips`, reusing the `nextWake` horizon), correctness-equivalent (790/0 across the i8086+chip+checkpoint+video suites) and re-profiled to ~0; bench machine/core ratio 0.31→0.79. A follow-up CORE-DISPATCH experiment (function-pointer table vs the dense `switch`) was measured off-box on a fresh CI runner (interleaved, noise floor ±3.4%): table 0.6% SLOWER, inside the floor — no win, the switch stays. (Original text below.)
 
 Fell out of E6.8.4's benchmark rather than being looked for, which is why it
 is worth its own entry: nobody had put the two workloads side by side.
