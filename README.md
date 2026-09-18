@@ -6,7 +6,8 @@ servo angles, motor speeds, and relay states — from pin-level physics, not
 shortcuts.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
-1357 tests, 0 failures. 129+ part kinds. Two vector-verified CPU cores.
+5,400+ tests, 0 failures. 129+ part kinds. Three vector-verified CPU cores
+(W65C02, Z80, and 8086/8088 — the last also as an 80186 and cycle-accurate).
 
 ## What is in this repo
 
@@ -46,7 +47,7 @@ service-side objdump listings for toolchain targets).
 
 ## The retro tier (2026-08)
 
-**Two CPU cores, ours, verified end to end against ground truth:**
+**Three CPU cores, ours, verified end to end against ground truth:**
 - `src/w65c02.js` — W65C02, 2,540,000/2,540,000 SingleStepTests vectors,
   both Klaus Dormann suites (52M instructions), 52.6M instructions in
   lockstep with vrEmu6502 (three documented, vector-adjudicated
@@ -55,6 +56,14 @@ service-side objdump listings for toolchain targets).
   the undocumented machinery: X/Y flags, the Q latch, MEMPTR, R per M1,
   interrupted-repeat block-op rules derived from the vectors themselves.
   Grinder: `scripts/grind-z80.mjs`.
+- `src/i8086.js` — 8086/8088, 646,000/646,000 SingleStepTests 8086 vectors,
+  plus the 80186 variant graded against 132,532 SingleStepTests v20 vectors
+  (`{variant:'80186'}`; shift-count masking and the reg=6 aliasing the suite
+  can't grade are pinned in `test/i8086-186.test.mjs`). Opt-in cycle accuracy
+  (`enableI8088CycleTiming`) charges instructions from a BIU scheduler
+  (`src/i8088-biu.js`) graded against the SingleStepTests 8088 bus traces.
+  Grinders: `scripts/grind-i8086.mjs`, `grind-i8086-v20.mjs`,
+  `grind-i8088-cycles.mjs`.
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
@@ -68,6 +77,16 @@ extractors):
   IM 1 delivery in the machine layer. Presets: SEARLE, CPM64K.
   Extractor: `src/z80-extract.js` (MREQ/IORQ-aware, per-space
   contention).
+- `src/i8086-machine.js` — regions + PORT-mapped chips (8259 PIC, 8254 PIT,
+  8255 PPI, 8237 DMA, 8251 USART, CGA/EGA/Hercules, uPD765 FDC). Presets from
+  a minimal-GPIO breadboard (`BLINK8086`) up to a PC/XT that boots real MS-DOS.
+  Chip advance is deadline-batched, so the machine layer stays thin over the
+  core. **Speed (measured off-box on a fresh CI runner, functional path):**
+  ~150x a 4.77 MHz IBM XT for the bare core, and **~3.3x real time booting real
+  MS-DOS** through the full PC/XT. The *wired* path (GPIO pins driven into the
+  breadboard's MNA circuit solver) is not a single figure — it is the
+  functional speed gated by one circuit solve per pin edge, so it depends on
+  the circuit and how often the program toggles pins.
 - `src/vdu-decoder.js` — the BBC VDU byte protocol as typed events
   (graphics without video hardware); `src/devices/hd44780.js` — the
   parallel character LCD as a board part.
