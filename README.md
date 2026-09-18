@@ -105,7 +105,7 @@ order-of-magnitude — the *ranking* is what is stable:
 | 6502 (`w65c02.js`) | ours | 1 MHz | ~60–80× |
 | AVR ATmega328P | avr8js | 16 MHz | ~5–6× |
 | 8051 | emu8051-stc (WASM) | — | ~3× |
-| RP2040 Cortex-M0+ | rp2040js | 125 MHz | ~0.8–1.0× |
+| RP2040 Cortex-M0+ | rp2040js † | 125 MHz | ~0.8–1.0× |
 | labwired STM32F0 | labwired (multi-arch WASM) | 48 MHz | ~0.1–0.2× |
 
 The three cores we own run tens of times faster than the real silicon. The
@@ -114,6 +114,14 @@ peripheral-accurate labwired STM32/RISC-V/Xtensa engine — get progressively
 heavier: labwired models a whole SoC at full peripheral fidelity, so it runs
 well below real time. That is the tier's cost, and the budget the widgets pane
 plans against.
+
+† rp2040js's Thumb decoder is an 82-branch linear `if/else` chain; we run it
+through a **switch-dispatch fork** (`src/vendor/rp2040js-fast/`, default-on and
+behavior-identical — verified by an exhaustive 65,536-opcode stock-vs-fork
+differential, `test/rp2040-fast-dispatch-differential.test.mjs`). Off-box it is
+~1.11× on a realistic instruction mix and ~1.6× on decode-bound (MOVS-heavy)
+loops; the all-ADDS RTx loop above is its weak case, so the table figure is
+unchanged. Upstreaming the restructuring to rp2040js is the end state.
 
 **Whole-system smokes** (each skips loudly without its local artifact):
 BBC BASIC 4 boots interactively on the 6502 machine with LCD state
