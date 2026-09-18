@@ -106,7 +106,7 @@ order-of-magnitude — the *ranking* is what is stable:
 | AVR ATmega328P | avr8js | 16 MHz | ~5–6× |
 | 8051 | emu8051-stc (WASM) | — | ~3× |
 | RP2040 Cortex-M0+ | rp2040js | 125 MHz | ~0.8–1.0× |
-| labwired STM32F0 | labwired (multi-arch WASM) | 48 MHz | ~0.13× |
+| labwired STM32F0 | labwired (multi-arch WASM) | 48 MHz | ~0.1–0.2× |
 
 The three cores we own run tens of times faster than the real silicon. The
 third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051, and the
