@@ -91,6 +91,30 @@ extractors):
   (graphics without video hardware); `src/devices/hd44780.js` — the
   parallel character LCD as a board part.
 
+**Real-time factor across the cores** — how fast each runs relative to the
+real part, measured off-box on a fresh CI runner (`scripts/bench-chips.mjs`,
+`.github/workflows/bench-chips.yml`; each core runs a small ALU + memory +
+branch loop). RTx = emulated cycles per wall-second ÷ the part's real clock, so
+**1.0× is real time**. A shared runner varies ±~25% run to run, so read these as
+order-of-magnitude — the *ranking* is what is stable:
+
+| Core | Engine | Clock | RTx (off-box) |
+|------|--------|-------|---------------|
+| 8086/8088 (`i8086.js`) | ours | 4.77 MHz | ~150× core · ~3.3× booting MS-DOS through the full PC/XT |
+| Z80 (`z80.js`) | ours | 4 MHz | ~80–100× |
+| 6502 (`w65c02.js`) | ours | 1 MHz | ~60–80× |
+| AVR ATmega328P | avr8js | 16 MHz | ~5–6× |
+| 8051 | emu8051-stc (WASM) | — | ~3× |
+| RP2040 Cortex-M0+ | rp2040js | 125 MHz | ~0.8–1.0× |
+| labwired STM32F0 | labwired (multi-arch WASM) | 48 MHz | ~0.1–0.2× |
+
+The three cores we own run tens of times faster than the real silicon. The
+third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051, and the
+peripheral-accurate labwired STM32/RISC-V/Xtensa engine — get progressively
+heavier: labwired models a whole SoC at full peripheral fidelity, so it runs
+well below real time. That is the tier's cost, and the budget the widgets pane
+plans against.
+
 **Whole-system smokes** (each skips loudly without its local artifact):
 BBC BASIC 4 boots interactively on the 6502 machine with LCD state
 asserted (`scripts/beebeater-smoke.mjs`); R.T. Russell's BBC BASIC
