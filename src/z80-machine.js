@@ -109,6 +109,17 @@ export class Z80Machine {
         this._advList = null;   // hot-loop caches; see _buildHotLists
         this._irqList = null;
         this._hasAdv = true;    // any advancing chip/device? conservative until built
+        // DEADLINE-BATCHED CHIP ADVANCE (ported from i8086-machine). Advancing
+        // every chip on every instruction dominates machine.step() when chips
+        // are present (measured: step() 73% of ticks on a 4-chip machine vs the
+        // CPU's 18%). Instead accrue the uncharged cycles in _chipDebt and apply
+        // them in one batch when the nearest chip event is due (_wakeHorizon,
+        // the same horizon HALT already uses). A chip is caught up lazily on any
+        // read/write (in/out) and snapshot (saveState) so nothing observes a
+        // stale chip; between events the advance simply does not run. Only armed
+        // when _hasAdv — a chip-light machine keeps the plain lean path.
+        this._chipDebt = 0;
+        this._chipDeadline = 0;
         this._portMap = new Map();
         // Direction-aware port slots: a read-strobed chip (74HC244 IN) and
         // a write-strobed chip (74HC374 OUT) legally share one port — IN
@@ -273,31 +284,44 @@ export class Z80Machine {
             read: readFn,
             write: writeFn,
             in: (port) => {
+                // A chip must be current at the cycle it is read; then re-arm,
+                // since a status read can change a chip's next-event horizon
+                // (the i8086 latch-read case). Single exit so every path re-arms.
+                if (this._hasAdv) this._catchUpChips();
                 // Port contention: even ports (ULA-decoded) are contended
                 if (this._contention && (port & 1) === 0) applyContention(0x4000);
-                if (this.ula && (port & 1) === 0) return this.ula.in(port);
-                if (this._kempston !== null && (port & 0x21) === 0x01) return this._kempston;
+                let r;
+                if (this.ula && (port & 1) === 0) r = this.ula.in(port);
+                else if (this._kempston !== null && (port & 0x21) === 0x01) r = this._kempston;
                 // AY read: $FFFD (A15=1, A14=1, A1=0)
-                if (this.ay && (port & 0xc002) === 0xc000) return this.ay.read();
-                const slot = this._portMap.get(port & 0xff);
-                const e = slot && (slot.r || slot.w);
-                return e ? e.chip.read(e.rs) : 0xff;
+                else if (this.ay && (port & 0xc002) === 0xc000) r = this.ay.read();
+                else { const slot = this._portMap.get(port & 0xff); const e = slot && (slot.r || slot.w); r = e ? e.chip.read(e.rs) : 0xff; }
+                if (this._hasAdv) this._chipDeadline = this._wakeHorizon();
+                return r;
             },
             out: (port, v) => {
+                // Catch up before the write lands on a chip, then re-arm the
+                // deadline from the POST-write state (a CTC time-constant or AY
+                // period write moves the horizon). Single exit so every path
+                // re-arms.
+                if (this._hasAdv) this._catchUpChips();
                 if (this._contention && (port & 1) === 0) applyContention(0x4000);
-                if (this.ula && (port & 1) === 0) { this.ula.out(port, v, this.cycles); return; }
+                if (this.ula && (port & 1) === 0) this.ula.out(port, v, this.cycles);
                 // 128K banking: $7FFD partial decode (A15 and A1 low),
                 // write-only, dead once the lock bit has been set.
-                if (this._zx128 && (port & 0x8002) === 0) { this._setBank(v); return; }
+                else if (this._zx128 && (port & 0x8002) === 0) this._setBank(v);
                 // AY select: $FFFD (A15=1, A14=1, A1=0)
-                if (this.ay && (port & 0xc002) === 0xc000) { this.ay.select(v); return; }
+                else if (this.ay && (port & 0xc002) === 0xc000) this.ay.select(v);
                 // AY data: $BFFD (A15=1, A14=0, A1=0)
-                if (this.ay && (port & 0xc002) === 0x8000) { this.ay.write(v); return; }
-                const slot = this._portMap.get(port & 0xff);
-                const e = slot && (slot.w || slot.r);
-                if (e) e.chip.write(e.rs, v);
+                else if (this.ay && (port & 0xc002) === 0x8000) this.ay.write(v);
+                else { const slot = this._portMap.get(port & 0xff); const e = slot && (slot.w || slot.r); if (e) e.chip.write(e.rs, v); }
+                if (this._hasAdv) this._chipDeadline = this._wakeHorizon();
             },
         });
+        // Arm _hasAdv from the real chip set now, so a chip-light machine
+        // (no advancing chip) never enters the batch path and keeps the plain
+        // lean step(); a chip-ful one arms the deadline on its first step.
+        this._buildHotLists();
     }
 
     get tMs() { return this.cycles * 1000 / this.clockHz; }
@@ -478,6 +502,7 @@ export class Z80Machine {
      * the chip to snapshot.
      */
     saveState() {
+        if (this._hasAdv) this._catchUpChips();   // chips must be current in the snapshot
         const cpu = {};
         for (const k of Z80Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
         const chips = {};
@@ -527,6 +552,8 @@ export class Z80Machine {
         if (s.v !== 1) throw new Error(`unknown machine state version ${s.v}`);
         for (const k of Z80Machine.CPU_STATE) this.cpu[k] = s.cpu[k] ?? 0;
         this.cycles = s.cycles;
+        this._chipDebt = 0;      // restored chips are current; re-arm on the next step
+        this._chipDeadline = 0;
         this.mem.set(s.mem);
         this._kempston = s.kempston ?? this._kempston;
         if (s.tape) {
@@ -564,10 +591,12 @@ export class Z80Machine {
      * CPU through chip inputs or port reads, like the bench.
      */
     attachDevice(name, dev) {
+        if (this._hasAdv) this._catchUpChips();   // settle debt onto the current chip set first
         this.devices = this.devices || {};
         this.devices[name] = dev;
         this._advList = null;   // schedule is stale
         this._hasAdv = true;    // force a rebuild+advance so a new advancer is not skipped
+        this._chipDeadline = 0; // re-arm on the next step, from the new schedule
         return dev;
     }
 
@@ -615,6 +644,23 @@ export class Z80Machine {
         for (let i = 0; i < list.length; i++) list[i].advance(n);
     }
 
+    /** Apply the accrued debt and re-arm the deadline from the post-catch-up
+     *  state. Called at the deadline in step(), and eagerly wherever a chip is
+     *  about to be read or written (in/out, saveState) so no reader sees a chip
+     *  that is behind. */
+    _flushChips() {
+        this._catchUpChips();
+        this._chipDeadline = this._wakeHorizon();
+    }
+
+    /** Apply the accrued debt WITHOUT re-arming the deadline -- the caller
+     *  re-arms after whatever it does next, because a chip WRITE (loading a CTC
+     *  time constant, say) changes the horizon and the deadline must be
+     *  recomputed from the post-write state, not the pre-write one. */
+    _catchUpChips() {
+        if (this._chipDebt > 0) { this._advanceChips(this._chipDebt); this._chipDebt = 0; }
+    }
+
     _anyIrq() {
         if (this._advList === null) this._buildHotLists();
         const list = this._irqList;
@@ -624,22 +670,31 @@ export class Z80Machine {
 
     /** One instruction; IM 1 delivery when a chip asserts and IFF1 is set. */
     step() {
-        if (this.cpu.halted && !(this._anyIrq() && this.cpu.iff1)) {
+        // The nearest chip event is due once the accrued debt reaches the
+        // deadline: apply it (raising any chip's IRQ) BEFORE the interrupt is
+        // checked for this instruction. Only armed when chips actually advance;
+        // a chip-light machine never accrues, so this is a dead branch there.
+        if (this._hasAdv && this._chipDebt >= this._chipDeadline) this._flushChips();
+        if (this.cpu.halted && !(this.cpu.iff1 && this._anyIrq())) {
             // HALT burns NOPs until an interrupt — but burning them FOUR
             // CYCLES PER CALL made a halted CPU cost more than a running
             // one (a ZX game HALTing for the 50 Hz frame crawled ~17,500
             // iterations per frame). Jump to the nearest wake horizon
             // instead; a chip that advances but cannot name its horizon
             // vetoes the jump — a skipped event is a correctness bug, a
-            // crawl is only slow. With IFF1 clear nothing can wake this
-            // CPU anyway (there is no NMI source in these machines), so
-            // the jump is just time passing.
+            // crawl is only slow. Settle any debt first so the horizon is
+            // measured from where the chips actually are.
+            if (this._hasAdv) this._flushChips();
             const n = this._wakeHorizon();
             this.cycles += n;
             this._advanceChips(n);
+            if (this._hasAdv) this._chipDeadline = this._wakeHorizon();
             return n;
         }
         if (this.cpu.iff1 && !this.cpu.eiLatch && this._anyIrq()) {
+            // Delivering an interrupt reads and clears a chip (ackVector), so
+            // settle the debt first and re-arm the deadline after.
+            if (this._hasAdv) this._flushChips();
             this.cpu.halted = false;
             this.cpu.iff1 = 0; this.cpu.iff2 = 0;
             this.cpu._push16(this.cpu.pc);
@@ -658,6 +713,7 @@ export class Z80Machine {
                 this.cpu.wz = this.cpu.pc;
                 this.cycles += 19;
                 this._advanceChips(19);
+                if (this._hasAdv) this._chipDeadline = this._wakeHorizon();
                 return 19;
             }
             // IM 1 acknowledge: RST $38, 13 cycles.
@@ -665,6 +721,7 @@ export class Z80Machine {
             this.cpu.wz = 0x0038;
             this.cycles += 13;
             this._advanceChips(13);
+            if (this._hasAdv) this._chipDeadline = this._wakeHorizon();
             return 13;
         }
         if (this.pcTraps.size) {
@@ -673,7 +730,7 @@ export class Z80Machine {
                 const n = trap(this);
                 if (n > 0) {
                     this.cycles += n;
-                    this._advanceChips(n);
+                    if (this._hasAdv) this._chipDebt += n;
                     return n;
                 }
             }
@@ -688,12 +745,12 @@ export class Z80Machine {
             this.tape.trap(this.cpu, this.mem, this.writeBus);
             this.cpu.pc = this.cpu._pop16();
             this.cycles += 100; // a token cost; the real routine took minutes
-            this._advanceChips(100);
+            if (this._hasAdv) this._chipDebt += 100;
             return 100;
         }
         const n = this.cpu.step();
         this.cycles += n;
-        if (this._hasAdv) this._advanceChips(n);
+        if (this._hasAdv) this._chipDebt += n;      // accrued, not charged: see the deadline batch above
         return n;
     }
 

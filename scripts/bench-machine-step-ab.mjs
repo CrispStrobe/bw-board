@@ -22,6 +22,19 @@ async function abZ80() {
     const t=process.hrtime.bigint(); for(let i=0;i<STEPS;i++) m.step(); return Number(process.hrtime.bigint()-t)/1e6; };
   return abPair('Z80 (SEARLE)', run, Stock, Lean);
 }
+async function abZ80Chips() {
+  // chip-HEAVY: several advancing chips (CTCs + CRTC), all advanced every
+  // instruction on stock, deadline-batched on lean. This is what the batching
+  // targets (the chip-light SEARLE case above should be a wash).
+  const { Z80Machine: Lean } = await import('../src/z80-machine.js');
+  const { Z80Machine: Stock } = await import('../src/z80-machine.stock.js');
+  const cfg = { clockHz: 3_500_000, regions: [], ports: [
+    { kind: 'ctc', name: 'ctc1', at: 0x10 }, { kind: 'ctc', name: 'ctc2', at: 0x20 },
+    { kind: 'ctc', name: 'ctc3', at: 0x30 }, { kind: 'crtc', name: 'crtc1', at: 0x40, vramSize: 2048, charH: 8 } ] };
+  const run = (Cls) => { const m=new Cls(cfg); m.load([0x3c,0x06,0x05,0x80,0x18,0xfa],0); m.cpu.pc=0;
+    const t=process.hrtime.bigint(); for(let i=0;i<STEPS;i++) m.step(); return Number(process.hrtime.bigint()-t)/1e6; };
+  return abPair('Z80 (4 chips)', run, Stock, Lean);
+}
 async function ab6502() {
   const { M6502Machine: Lean } = await import('../src/m6502-machine.js');
   const { M6502Machine: Stock } = await import('../src/m6502-machine.stock.js');
@@ -41,4 +54,5 @@ function abPair(label, run, Stock, Lean) {
 
 console.log(`steps/trial=${STEPS.toLocaleString()} trials=${TRIALS}`);
 await abZ80();
+await abZ80Chips();
 await ab6502();
