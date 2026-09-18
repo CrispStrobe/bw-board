@@ -28,12 +28,17 @@ function bench6502() {
   return { name:'6502 (1 MHz)', realHz:HZ, cyPerSec: cy/secs };
 }
 async function benchAVR() {
-  const { CPU, avrInstruction } = await import('avr8js');
+  const { CPU } = await import('avr8js');
+  // Run the SWITCH-DISPATCH FORK (src/vendor/avr8js-fast), the decoder the
+  // avr8js adapter — and so the widgets pane — actually uses (~1.45x off-box
+  // over avr8js's stock linear decoder). Measuring stock here would understate
+  // what a user gets.
+  const { fastAvrInstruction } = await import('../src/vendor/avr8js-fast/instruction.js');
   const HZ = 16_000_000;                                  // ATmega328P at 16 MHz
   const prog = new Uint16Array(1024);
   prog.set([0x0c01, 0x9403, 0xcffd]);                     // add r0,r1; inc r0; rjmp -3
   const cpu = new CPU(prog);
-  const { cy, secs } = timed(() => { const c0=cpu.cycles; for(let i=0;i<STEPS;i++) avrInstruction(cpu); return cpu.cycles-c0; });
+  const { cy, secs } = timed(() => { const c0=cpu.cycles; for(let i=0;i<STEPS;i++) fastAvrInstruction(cpu); return cpu.cycles-c0; });
   return { name:'AVR ATmega328P (16 MHz)', realHz:HZ, cyPerSec: cy/secs };
 }
 async function benchRP2040() {
