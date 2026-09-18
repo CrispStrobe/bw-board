@@ -71,6 +71,44 @@ async function bench8051() {
   const wallNs = Number(process.hrtime.bigint()-t);
   return { name:'8051 (emu8051 STC)', rtxDirect: T_NS / wallNs };  // RTx = emulated/wall, clock-independent
 }
+async function benchLabwired() {
+  // The heavy tier: LabWired's multi-arch (STM32/RISC-V/Xtensa) WASM engine, run
+  // here as an STM32F0 (Cortex-M0, 48 MHz). Gated on LABWIRED_WASM pointing at the
+  // wasm-bindgen NODEJS out-dir (CI downloads the prebuilt release; locally, set it
+  // to a `node scripts/build-labwired-wasm.mjs` out/nodejs). The engine is a full
+  // peripheral-accurate model, so it runs well below real time — that IS the number.
+  const WASM_DIR = process.env.LABWIRED_WASM;
+  if (!WASM_DIR) throw new Error('set LABWIRED_WASM to the wasm-bindgen nodejs out-dir');
+  const { readFileSync, existsSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname, join } = await import('node:path');
+  const { createRequire } = await import('node:module');
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const wasmJs = join(WASM_DIR, 'labwired_wasm.js');
+  if (!existsSync(wasmJs)) throw new Error(`no labwired_wasm.js in ${WASM_DIR}`);
+  const wasm = createRequire(import.meta.url)(wasmJs);
+  if (!wasm.WasmSimulator) throw new Error('labwired glue exposes no WasmSimulator');
+  const { toLoadableElf } = await import('../src/bin-to-elf.js');
+  const FX = join(HERE, '..', 'test', 'fixtures', 'labwired');
+  const systemYaml = readFileSync(join(FX, 'f0-system.yaml'), 'utf8');
+  const chipYaml   = readFileSync(join(FX, 'stm32f0-chip.yaml'), 'utf8');
+  const HZ = 48_000_000;                                  // STM32F0 at 48 MHz
+  // A minimal valid F0 image, hand-rolled so the bench needs no ARM toolchain: a
+  // vector table (SP, reset) then the same ALU+memory+branch loop shape the other
+  // cores run — flash @0x08000000, RAM @0x20000000. Reset vectors to the handler
+  // @0x08000008 with the Thumb bit set.
+  const u16 = [0x2000,0x2000, 0x0009,0x0800,             // SP=0x20002000, reset=0x08000009
+               0x2000, 0x2120, 0x0609,                    // movs r0,#0; movs r1,#0x20; lsls r1,#24 -> r1=0x20000000
+               0x3001, 0x6008, 0x680a, 0xe7fb];           // loop: adds r0,#1; str r0,[r1]; ldr r2,[r1]; b loop
+  const bin = new Uint8Array(u16.length * 2);
+  u16.forEach((h, i) => { bin[i*2] = h & 0xff; bin[i*2+1] = (h >> 8) & 0xff; });
+  const sim = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, toLoadableElf(bin), undefined);
+  const BATCH = 50_000;
+  const N = Math.min(STEPS, 8_000_000);                  // rate-based; cap so the heavy engine stays quick
+  sim.step_batch(BATCH);                                  // warm up + fail fast on a bad image
+  const { cy, secs } = timed(() => { let c=0; for(let i=0;i<N;i+=BATCH){ sim.step_batch(BATCH); c+=BATCH; } return c; });
+  return { name:'labwired STM32F0 (48 MHz)', realHz:HZ, cyPerSec: cy/secs };
+}
 async function tryBench(fn, label) {
   try { return await fn(); } catch (e) { return { name:label, skipped:String(e.message||e).slice(0,80) }; }
 }
@@ -82,13 +120,16 @@ rows.push(await tryBench(benchAVR, 'AVR ATmega328P'));
 // WASM/firmware-gated cores: honestly reported as needing their engine.
 rows.push(await tryBench(benchRP2040, 'RP2040 Cortex-M0+'));
 rows.push(await tryBench(bench8051, '8051 (emu8051 STC)'));
-rows.push({ name:'labwired STM32/RISC-V/Xtensa', skipped:'needs the 20 MB labwired-wasm engine' });
+rows.push(await tryBench(benchLabwired, 'labwired STM32F0 (48 MHz)'));
 
+// Two decimals below 10x, one below 100x, whole above — so a sub-real-time
+// heavy tier reads as 0.03x, not a rounded-away 0.0x.
+const fmtx = (x) => (x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2));
 console.log('core                             emulated cycles/s     x real time   STEPS='+STEPS);
 for (const r of rows) {
   if (r.skipped) { console.log(`${r.name.padEnd(32)} SKIPPED — ${r.skipped}`); continue; }
-  if (r.rtxDirect !== undefined) { console.log(`${r.name.padEnd(32)} ${'(emulated/wall)'.padStart(15)}   ${r.rtxDirect.toFixed(1).padStart(7)}x`); continue; }
+  if (r.rtxDirect !== undefined) { console.log(`${r.name.padEnd(32)} ${'(emulated/wall)'.padStart(15)}   ${fmtx(r.rtxDirect).padStart(7)}x`); continue; }
   const rtx = r.cyPerSec / r.realHz;
-  console.log(`${r.name.padEnd(32)} ${String(Math.round(r.cyPerSec)).padStart(15)}   ${rtx.toFixed(1).padStart(7)}x`);
+  console.log(`${r.name.padEnd(32)} ${String(Math.round(r.cyPerSec)).padStart(15)}   ${fmtx(rtx).padStart(7)}x`);
 }
 console.log('\nBox timing is noisy — read as order-of-magnitude; the off-box CI run is the figure.');

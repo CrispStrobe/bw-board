@@ -11,7 +11,7 @@ on:
         required: false
         default: '40000000'
   push:
-    branches: ['lane/rtx-chip-benches']
+    branches: ['lane/rtx-chip-benches', 'lane/rtx-labwired-and-docs']
 
 permissions:
   contents: read
@@ -28,6 +28,26 @@ jobs:
       - run: npm ci --omit=dev || npm i --omit=dev || true
       - name: Fetch emu8051-stc sibling (for the 8051 RTx)
         run: git clone --depth 1 https://github.com/CrispStrobe/emu8051-stc.git ../emu8051-stc || echo "emu8051-stc clone failed; 8051 will SKIP"
+      - name: Fetch prebuilt labwired-wasm (for the heavy-tier STM32F0 RTx)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The 21 MB engine is a build, not an npm dep — pull the pinned release
+          # the labwired-wasm workflow publishes. wasm-bindgen's nodejs glue reads
+          # `labwired_wasm_bg.wasm` beside `labwired_wasm.js`, so undo the release's
+          # `nodejs-` asset prefix into a proper out-dir. On any failure the bench
+          # SKIPs labwired rather than failing (benchLabwired throws -> tryBench).
+          mkdir -p lw/nodejs
+          if gh release download labwired-wasm-0c0cd0ec --repo "${{ github.repository }}" \
+               --pattern 'nodejs-*' --dir lw --clobber; then
+            cp lw/nodejs-labwired_wasm.js      lw/nodejs/labwired_wasm.js
+            cp lw/nodejs-labwired_wasm_bg.wasm lw/nodejs/labwired_wasm_bg.wasm
+            echo "LABWIRED_WASM=$PWD/lw/nodejs" >> "$GITHUB_ENV"
+            echo "labwired-wasm ready at $PWD/lw/nodejs"
+          else
+            echo "labwired-wasm release download failed; labwired will SKIP"
+          fi
       - name: RTx benchmark (three warmup+measure passes for a median)
         run: |
           set -euo pipefail
