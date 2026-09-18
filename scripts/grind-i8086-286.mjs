@@ -27,6 +27,11 @@ function executeVariant(t, fileMasks) {
     for (const [addr] of t.initial.ram) mem[addr & 0xfffff] = 0;
     for (const [addr] of t.final.ram) mem[addr & 0xfffff] = 0;
     for (const [addr, val] of t.initial.ram) mem[addr & 0xfffff] = val & 0xff;
+    // Fresh internal state each vector: the cpu is reused, and leftover halted /
+    // _rep / _seg / msw from the prior test's terminating HALT would corrupt the
+    // next. reset() clears them (and sets msw to 0xfff0, matching executeSST286);
+    // the register overlay below then installs this vector's initial state.
+    cpu.reset();
     for (const r of REGS) cpu[r] = t.initial.regs[r];
     cpu.flags = t.initial.regs.flags;
     try {
