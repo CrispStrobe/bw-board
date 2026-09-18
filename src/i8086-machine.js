@@ -105,8 +105,10 @@ function regOf(w, addr) {
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz CPU clock
- * @property {'8086'|'80186'} [variant] which chip the core is. Default
- *   '8086'. '80186' adds the fifteen opcodes the 186 put in the holes the
+ * @property {'8086'|'80186'|'80286'} [variant] which chip the core is. Default
+ *   '8086'. '80286' is the 186 real-mode ISA on this real-mode core (the 0x0F
+ *   protected-mode group faults as unimplemented). '80186' adds the fifteen
+ *   opcodes the 186 put in the holes the
  *   8086 left as decode aliases and masks shift counts to five bits, which
  *   is the one difference a program can SEE on an instruction both parts
  *   have. A breadboard 80188 is the reason this exists: same ISA, eight-bit
@@ -1370,11 +1372,11 @@ export class I8086Machine {
                 + '{CycleEstimator}. It is not imported here because its cycle '
                 + 'table is 975 KB and this path is opt-in.');
         }
-        if (on && this.variant === '80186') {
+        if (on && (this.variant === '80186' || this.variant === '80286')) {
             throw new Error(
-                'i8088 cycle tables do not cover the 80186: the 186 changed both '
-                + 'instruction timings and the prefetch queue, and no oracle for it '
-                + 'exists. Refusing rather than reporting 8088 numbers as 186 ones.');
+                `i8088 cycle tables do not cover the ${this.variant}: the 186/286 changed `
+                + 'both instruction timings and the prefetch queue, and no oracle for '
+                + 'either exists. Refusing rather than reporting 8088 numbers as 186/286 ones.');
         }
         if (!on) { this._cycleEst = null; return false; }
         this._cycleEst = new CycleEstimator();

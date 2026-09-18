@@ -137,12 +137,19 @@ export class I8086 {
         // drift. Anything that reads this must treat '8086' as the fallback:
         // an unknown string is a caller error and is rejected here rather
         // than silently becoming a 186.
-        if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186') {
+        if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186' && opts.variant !== '80286') {
             throw new Error(`8086: unknown variant ${JSON.stringify(opts.variant)} `
-                + "-- expected '8086' or '80186'");
+                + "-- expected '8086', '80186' or '80286'");
         }
         this.variant = opts.variant || '8086';
-        this._is186 = this.variant === '80186';
+        // The 80286 in REAL MODE is the 80186 instruction set (the 15 hole-filling
+        // opcodes, the count-masking shifts, PUSH SP semantics) plus the 0x0F
+        // protected-mode group. This core is a real-mode functional core, so a
+        // '80286' is a superset of the 186 for everything real-mode software uses;
+        // _is286 is carried for the 0x0F group (LGDT/LIDT/SMSW/LMSW/... — not yet
+        // implemented; they fault as UnsupportedOpcode, the honest refusal).
+        this._is286 = this.variant === '80286';
+        this._is186 = this.variant === '80186' || this._is286;
         this.read = bus.read;
         /**
          * THE SAME BUS, UNDER A SECOND NAME. A fetch and a data read are
