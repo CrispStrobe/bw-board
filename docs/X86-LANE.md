@@ -13,38 +13,27 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `833dca7219d24243b8b5e7ed4888d68aa3c61941`,
-tag `milestones/x86-386-system-stack-20260919`. The functional AT profile executes
-the external IBM Rev1 BIOS, boots DOS 2.00/Command 2.02 from floppy, writes
-`at-boot-ok` through the guest shell, then reads the exact file in a fresh boot.
-The explicit 640KiB profile is required by this owned IO.SYS image. Fresh
-receipts at `439560e` bind all 15 executed source files and link the media
-hashes; BIOS and media bytes remain external. See [AT boot evidence](I80286-AT-BOOT.md).
+The latest landed milestone is `14d59084f14fdde5dba158e5ac2a3b25884e56e0`,
+tag `milestones/x86-386-protection-20260919`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35475646953)
+passed 5,554 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35475646987)
+and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35475647084)
+also passed. The exact qualified candidate was fast-forwarded to master.
 
-Qualified candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` passed
-[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35473644024)
-(5,527 pass, 272 optional skips, zero fail),
-[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35473644021)
-(full fast/Harris 286 corpora, 362 bounded 386 hardware samples and PCjs oracles),
-and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35473644044).
-Post-landing [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35473831178)
-and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35473831160)
-also passed. The landing preserves an unrelated analog lane claim and adds
-only qualification documentation to that candidate.
+The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
+DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
+fresh boot. FreeDOS 1.4 now also completes the guest write and fresh-remount
+read in source-bound worker receipts; that harness/evidence integration is
+pending its next qualification. BIOS and media bytes remain external. See
+[AT boot evidence](I80286-AT-BOOT.md).
 
 The independent [386 executor](I80386-EXPERIMENTAL.md) remains opt-in and
-incomplete. The landed stage includes paging, reset, REP restart, basic ALU,
-far-pointer loads, real-mode control transfers and a separate AT adapter.
-System selectors, descriptor stores, LEA and additional stack instructions
-are now landed. Continuation adds privilege-changing interrupt/return paths,
-protected far calls and call gates, and TSS I/O permissions; these later
-changes await their own qualification. The unchanged external CPU diagnostic
-now reaches VM86 IRET after 805,601 steps. The integrated protection stage
-passes 133 focused tests and awaits hosted qualification; see its
-[source-bound receipt](receipts/2026-09-19-386-protection.json). FreeDOS has
-completed a shell write and fresh-remount read on the 286 AT worker; its
-separate evidence integration remains pending. Windows and Doom remain
-unexecuted acceptance targets. Earlier milestones remain in history.
+incomplete. The latest landed stage adds privilege-changing interrupts and
+returns, protected far calls and call gates, conforming code, and TSS I/O
+permissions. The unchanged external CPU diagnostic reaches VM86 IRET after
+805,601 steps. The [protection receipt](receipts/2026-09-19-386-protection.json)
+records exact source hashes and known reference-emulator differences.
+VM86, functional device pacing and larger-memory work continue separately.
+Windows and Doom remain unexecuted acceptance targets.
 
 ## Earlier milestone: common ISA, gates, tasks and existing binaries
 

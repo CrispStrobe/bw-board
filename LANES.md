@@ -38,9 +38,10 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implemented; exact-head qualification pending) — Astra/Sol
-386 ring, far-control and I/O continuation. Candidate is the commit containing
-this row; executed source is `f87a3b42cdd90b1866f9204273c1c1720d212bbb`.
+2026-09-19 DONE (qualified and landed) — Astra/Sol
+386 ring, far-control and I/O continuation. Candidate and landing are
+`14d59084f14fdde5dba158e5ac2a3b25884e56e0`; executed source is
+`f87a3b42cdd90b1866f9204273c1c1720d212bbb`.
 Adds inner-ring interrupt stacks, outer IRET, protected far CALL/JMP/RETF,
 16/32-bit call gates with copied parameters, conforming targets and TSS scalar
 I/O permissions. Coordinator audit corrected fault ordering, mixed stack
@@ -53,6 +54,10 @@ negative controls reject. Unchanged test386 reaches POST21/VM86 IRET after
 `docs/receipts/2026-09-19-386-protection.json`. No full386DX, Windows, Doom,
 physical bus or timing claim. FreeDOS persistence, functional device pacing,
 VM86 and larger-memory platform work remain outside this freeze.
+Exact candidate CI `35475646953` passed (5,554 pass, 272 skip, zero fail),
+CPU `35475646987` passed and native `35475647084` passed. Guarded normal
+push advanced master from `c0711d2` to the exact qualified candidate. Tag:
+`milestones/x86-386-protection-20260919`.
 
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol
 386 system and stack continuation. Candidate is `68b6aa92d76ac9416451d9f0dc48db24c5254035`;
