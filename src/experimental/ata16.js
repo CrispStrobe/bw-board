@@ -143,6 +143,12 @@ export class ExperimentalATA16 {
     this.command = command & 0xff;
     this.error = 0;
     this._clearIRQ();
+    // A newly accepted command replaces any unfinished PIO phase.  In
+    // particular, non-data commands must not leave an old DRQ buffer live.
+    this.buffer = null;
+    this.wordIndex = 0;
+    this.direction = null;
+    this.status = STATUS_IDLE;
     if (this.command === 0x20 || this.command === 0x21) this._loadReadSector();
     else if (this.command === 0x30 || this.command === 0x31) this._prepareWriteSector();
     else if (this.command === 0xec) this._identify();

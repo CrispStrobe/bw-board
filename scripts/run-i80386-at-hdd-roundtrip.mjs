@@ -41,8 +41,13 @@ if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 100_000_000)
 
 const inputImage = createI80386AtFat16Image();
 const inputImageSha256 = sha256(inputImage);
+const inputBootSectorSha256 = sha256(inputImage.subarray(0, 512));
 let steps = 0;
 const ataPorts = [];
+let ataPortsTruncated = false;
+const commandEvents = [];
+let commandTraceOverflow = false;
+const dataTransfers = {reads16: 0, writes16: 0, otherWidth: 0};
 const interrupts = [];
 const post = [];
 let bootSector = null;
@@ -55,6 +60,17 @@ machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD, {
     if ((event.port >= 0x1f0 && event.port <= 0x1f7) || event.port === 0x3f6) {
       if (ataPorts.length < 4096) ataPorts.push({step: steps, cs: machine.cpu.cs,
         eip: machine.cpu.eip, ...event});
+      else ataPortsTruncated = true;
+      if (event.dir === 'out' && event.port === 0x1f7) {
+        if (commandEvents.length < 256) commandEvents.push({step: steps,
+          cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value});
+        else commandTraceOverflow = true;
+      }
+      if (event.port === 0x1f0) {
+        if (event.width !== 16) dataTransfers.otherWidth++;
+        else if (event.dir === 'in') dataTransfers.reads16++;
+        else dataTransfers.writes16++;
+      }
     }
     if (event.dir === 'out' && event.port === 0x80) {
       if (post.length < 1024) post.push({step: steps, cs: machine.cpu.cs,
@@ -103,17 +119,17 @@ if (git('rev-parse', 'HEAD') !== executionRevision)
 
 const outputImage = machine.ata.mediaBytes();
 const lastSector = outputImage.slice(-512);
-const commands = ataPorts.filter(event => event.dir === 'out' && event.port === 0x1f7)
-  .map(event => event.value);
-const bootCommands = bootSector ? ataPorts.filter(event => event.step >= bootSector.step &&
-  event.dir === 'out' && event.port === 0x1f7).map(event => event.value) : [];
+const commands = commandEvents.map(event => event.value);
+const bootCommands = bootSector ? commandEvents.filter(event => event.step >= bootSector.step)
+  .map(event => event.value) : [];
 const expectedTail = new Uint8Array(512);
 expectedTail.set(Buffer.from(HDD_ROUNDTRIP_TEXT));
 const accepted = outcome === 'roundtrip-observed' && marker?.value === 0xa5 && !!bootSector &&
+  bootSector.sha256 === inputBootSectorSha256 &&
   bootCommands.includes(0x30) && bootCommands.includes(0x20) &&
   lastSector.every((byte, index) => byte === expectedTail[index]) &&
-  ataPorts.some(event => event.port === 0x1f0 && event.width === 16) &&
-  !ataPorts.some(event => event.port === 0x1f0 && event.width !== 16);
+  dataTransfers.reads16 >= 256 && dataTransfers.writes16 >= 256 &&
+  dataTransfers.otherWidth === 0 && !commandTraceOverflow;
 
 const report = {
   schema: 'astra.i80386-at-hdd-roundtrip.v1',
@@ -130,13 +146,18 @@ const report = {
   marker,
   commands,
   bootCommands,
+  commandEvents,
+  commandTraceOverflow,
+  dataTransfers,
   ataPorts,
+  ataPortsTruncated,
   interrupts,
   post,
   media: {
     geometry: IBM_TYPE1_GEOMETRY,
     bytes: inputImage.length,
     inputSha256: inputImageSha256,
+    inputBootSectorSha256,
     outputSha256: sha256(outputImage),
     finalSectorSha256: sha256(lastSector),
     expectedText: HDD_ROUNDTRIP_TEXT,

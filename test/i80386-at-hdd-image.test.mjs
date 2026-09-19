@@ -52,3 +52,19 @@ test('IBM BIOS task-file commands write and read the owned final physical sector
   for (let wordIndex = 0; wordIndex < 8; wordIndex++)
     assert.equal(ata.readData16(), 0xa500 | wordIndex);
 });
+
+test('a non-data ATA command cancels an unfinished PIO buffer', () => {
+  const ata = new ExperimentalATA16(createI80386AtFat16Image(), IBM_TYPE1_GEOMETRY);
+  ata.writeRegister(7, 0x20);
+  assert.equal(ata.readRegister(7) & 0x08, 0x08);
+  ata.writeRegister(7, 0x70);
+  assert.equal(ata.readRegister(7) & 0x08, 0);
+  assert.equal(ata.readData16(), 0xffff);
+
+  ata.writeRegister(7, 0x30);
+  assert.equal(ata.readRegister(7) & 0x08, 0x08);
+  ata.writeRegister(7, 0x90);
+  assert.equal(ata.readRegister(7) & 0x08, 0);
+  ata.writeData16(0xa55a);
+  assert.ok(ata.mediaBytes().slice(-512).every(byte => byte === 0));
+});
