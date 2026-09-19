@@ -396,6 +396,14 @@ a surfaced architectural fault are separate outcomes. HLT is left to the
 machine scheduler so a pending device interrupt can wake it; HLT alone is never
 reported as success. The runner does not claim POST or operating-system boot.
 
+An optional `ataImage` plus explicit geometry attaches the bounded
+`ExperimentalATA16` task-file device at 1F0h–1F7h/3F6h. Its data FIFO is one
+native 16-bit access at 1F0h; the adapter does not split it into byte accesses
+to 1F0h and 1F1h. It provides synchronous CHS/LBA sector reads and writes,
+IDENTIFY data, persistent output bytes, status/error reporting and IRQ14.
+Command latency, DMA, multiple-mode transfers, power management and a complete
+WD1003/ATA compatibility claim remain outside this stage.
+
 ## REP and ISA continuation receipt
 
 The [continuation receipt](receipts/2026-09-19-386-rep-isa.json) binds execution

@@ -1,5 +1,6 @@
 import {I8086Machine, PCAT80286_BOOT_640K} from '../i8086-machine.js';
 import ExperimentalI80386 from './i80386.js';
+import ExperimentalATA16 from './ata16.js';
 
 /**
  * Opt-in bridge from the bounded 80386 executor to the existing AT devices.
@@ -27,6 +28,19 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
     };
     this.cpu = new ExperimentalI80386(bus, {deliverFaults: true});
     this.cpu.onInterrupt = event => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(event); };
+    this.ata = null;
+    if (hooks.ataImage !== undefined) {
+      this.ata = new ExperimentalATA16(hooks.ataImage, hooks.ataGeometry ?? {
+        cylinders: 306, heads: 4, sectors: 17,
+      }, {
+        onIRQ: active => this.chips.pic2?.setIRQ(6, active ? 1 : 0),
+      });
+    }
+  }
+
+  reset() {
+    super.reset();
+    this.ata?.reset();
   }
 
   _gate386(address) {
@@ -59,6 +73,22 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _in386(port, width) {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
+    if (this.ata && port === 0x1f0) {
+      if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
+      const value = this.ata.readData16();
+      this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      return value;
+    }
+    if (this.ata && width === 8 && port >= 0x1f1 && port <= 0x1f7) {
+      const value = this.ata.readRegister(port - 0x1f0);
+      this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      return value;
+    }
+    if (this.ata && width === 8 && port === 0x3f6) {
+      const value = this.ata.readRegister(7, {alternate: true});
+      this.hooks.onPortAccess?.({dir: 'in', port, width, value});
+      return value;
+    }
     let value = 0;
     for (let byte = 0; byte < width / 8; byte++) value |= this._in((port + byte) & 0xffff) << (byte * 8);
     return value >>> 0;
@@ -66,6 +96,22 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _out386(port, value, width) {
     if (![8, 16, 32].includes(width)) throw new Error(`unsupported 386 I/O width ${width}`);
+    if (this.ata && port === 0x1f0) {
+      if (width !== 16) throw new Error('experimental ATA data register requires native 16-bit I/O');
+      this.ata.writeData16(value);
+      this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xffff});
+      return;
+    }
+    if (this.ata && width === 8 && port >= 0x1f1 && port <= 0x1f7) {
+      this.ata.writeRegister(port - 0x1f0, value);
+      this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
+      return;
+    }
+    if (this.ata && width === 8 && port === 0x3f6) {
+      this.ata.writeRegister(7, value, {control: true});
+      this.hooks.onPortAccess?.({dir: 'out', port, width, value: value & 0xff});
+      return;
+    }
     for (let byte = 0; byte < width / 8; byte++)
       this._out((port + byte) & 0xffff, value >>> (byte * 8));
   }
