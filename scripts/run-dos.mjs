@@ -73,7 +73,7 @@ export function importDosboxConf(confPath) {
 }
 
 function parseArgs(argv) {
-    const o = { program: null, variant: '8086', preset: 'at', max: 20_000_000, keys: '', screen: false, quiet: false, conf: null, files: [], out: null };
+    const o = { program: null, variant: '8086', preset: 'at', max: 20_000_000, keys: '', screen: false, quiet: false, conf: null, files: [], out: null, chain: null, masm: null, link: null };
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
         if (a === '--variant') o.variant = argv[++i];
@@ -85,6 +85,9 @@ function parseArgs(argv) {
         else if (a === '--dosbox-conf') o.conf = argv[++i];
         else if (a === '--file') o.files.push(argv[++i]);   // mount a host file into DOS (repeatable)
         else if (a === '--out') o.out = argv[++i];          // save files the program wrote into this dir
+        else if (a === '--chain') o.chain = argv[++i];      // assemble+link SOURCE.ASM -> .EXE (MASM then LINK)
+        else if (a === '--masm') o.masm = argv[++i];        // path to MASM.EXE (else $MSDOS_BIN_DIR)
+        else if (a === '--link') o.link = argv[++i];        // path to LINK.EXE (else $MSDOS_BIN_DIR)
         else if (a.startsWith('--')) throw new Error(`unknown option ${a}`);
         else o.program = a;
     }
@@ -98,9 +101,14 @@ function parseArgs(argv) {
  * Map createDos8086 reads and writes as its disk, plus the set of input names
  * so the caller can tell which files the program CREATED.
  */
-function mountFiles(specs) {
+function mountFiles(specs, preloaded) {
     const files = new Map();
     const inputs = new Set();
+    // In-memory inputs (e.g. one chain stage's artifact fed to the next).
+    if (preloaded) for (const [name, bytes] of (preloaded instanceof Map ? preloaded : Object.entries(preloaded))) {
+        files.set(name, bytes instanceof Uint8Array ? bytes : Uint8Array.from(bytes));
+        inputs.add(name);
+    }
     for (const spec of specs) {
         const eq = spec.indexOf('=');
         const [name, path] = eq >= 0 ? [spec.slice(0, eq), spec.slice(eq + 1)] : [basename(spec).toUpperCase(), spec];
@@ -134,7 +142,7 @@ export function runDos(opts, { write = (s) => process.stdout.write(s) } = {}) {
 
     const machine = new I8086Machine({ ...PRESETS[preset], variant });
     let streamed = 0;
-    const { files, inputs } = mountFiles(opts.files || []);
+    const { files, inputs } = mountFiles(opts.files || [], opts.preloaded);
     const dos = createDos8086(machine, {
         onChar: (ch) => { streamed++; write(ch); },
         keys: [...keys].map((c) => c.charCodeAt(0) & 0xff),
@@ -148,13 +156,63 @@ export function runDos(opts, { write = (s) => process.stdout.write(s) } = {}) {
     return { result, dos, machine, kind, program, preset, variant, cyclesNote, machineNote, streamed, files, inputs, created };
 }
 
+/**
+ * Assemble + link a .ASM into a runnable .EXE in one go, chaining the artifacts
+ * between the real DOS tools: MASM (SOURCE.ASM -> STEM.OBJ) then LINK (STEM.OBJ
+ * -> an .EXE). Each stage runs through runDos; the .OBJ is fed to LINK in
+ * memory (no temp files). LINK names its output with the default-drive prefix
+ * (A:STEM.EXE), so the .EXE is found by extension, not by an exact name.
+ *
+ * @returns {{ ok, stem, exe: Uint8Array|null, exeName, obj, stages: object[] }}
+ */
+export function runChain(opts, hooks = {}) {
+    const bin = opts.bin || process.env.MSDOS_BIN_DIR;
+    const masm = opts.masm || (bin && join(bin, 'MASM.EXE'));
+    const link = opts.link || (bin && join(bin, 'LINK.EXE'));
+    if (!masm || !link) throw new Error('run-dos --chain needs MASM.EXE and LINK.EXE (pass --masm/--link or set MSDOS_BIN_DIR)');
+    const common = { variant: opts.variant || '8086', preset: opts.preset || 'at', max: opts.max || 40_000_000 };
+    const stem = basename(opts.source).replace(/\.[^.]+$/, '').toUpperCase();
+
+    // Stage 1 — MASM: prompts are Source / Object / Listing / Cross-ref; STEM
+    // then defaults. Mount the source as STEM.ASM.
+    const asm = runDos({ ...common, program: masm, keys: `${stem}\r\r\r\r`, files: [`${stem}.ASM=${opts.source}`] }, hooks);
+    const objName = asm.created.find((n) => /\.OBJ$/i.test(n));
+    if (!asm.result.terminated || !objName) return { ok: false, stem, exe: null, exeName: null, obj: null, stages: [{ tool: 'masm', ...summary(asm) }] };
+    const obj = asm.files.get(objName);
+
+    // Stage 2 — LINK: prompts are Objects / Run file / List / Libraries. Feed
+    // the .OBJ in memory as STEM.OBJ.
+    const lnk = runDos({ ...common, program: link, keys: `${stem}\r\r\r\r`, preloaded: { [`${stem}.OBJ`]: obj } }, hooks);
+    const exeName = lnk.created.find((n) => /\.EXE$/i.test(n));
+    const exe = exeName ? lnk.files.get(exeName) : null;
+    return { ok: !!exe, stem, exe, exeName, obj,
+        stages: [{ tool: 'masm', ...summary(asm) }, { tool: 'link', ...summary(lnk) }] };
+}
+
+const summary = (r) => ({ terminated: r.result.terminated, exitCode: r.result.exitCode, steps: r.result.steps, created: r.created });
+
 // ── CLI entry ────────────────────────────────────────────────────────────
 if (import.meta.url === `file://${process.argv[1]}`) {
     let opts;
     try { opts = parseArgs(process.argv.slice(2)); }
     catch (e) { console.error(`run-dos: ${e.message}`); process.exit(64); }
+
+    // --chain: assemble+link a .ASM into a .EXE (MASM -> LINK) and save it.
+    if (opts.chain) {
+        let c;
+        try { c = runChain({ ...opts, source: opts.chain }); }
+        catch (e) { console.error(`run-dos: ${e.message}`); process.exit(66); }
+        if (c.ok && opts.out) { mkdirSync(opts.out, { recursive: true }); writeFileSync(join(opts.out, `${c.stem}.EXE`), c.exe); }
+        if (!opts.quiet) {
+            for (const s of c.stages) process.stderr.write(`[run-dos:chain] ${s.tool}: ${s.terminated ? `exit ${s.exitCode}` : 'DID NOT TERMINATE'} in ${s.steps} — wrote [${s.created.join(', ')}]\n`);
+            process.stderr.write(`[run-dos:chain] ${opts.chain} -> ${c.ok ? `${c.stem}.EXE (${c.exe.length} bytes)${opts.out ? ` in ${opts.out}` : ''}` : 'FAILED'}\n`);
+        }
+        process.exit(c.ok ? 0 : 2);
+    }
+
     if (!opts.program && !opts.conf) {
-        console.error('usage: run-dos.mjs PROGRAM.COM|.EXE [--variant 8086|80286] [--preset at|xt] [--dosbox-conf FILE] [--keys TEXT] [--screen] [--max N]');
+        console.error('usage: run-dos.mjs PROGRAM.COM|.EXE [--variant 8086|80286] [--preset at|xt] [--dosbox-conf FILE] [--keys TEXT] [--screen] [--max N]\n'
+            + '       run-dos.mjs --chain SOURCE.ASM [--masm PATH --link PATH | MSDOS_BIN_DIR] [--out DIR] [--variant 80286]');
         process.exit(64);
     }
     let out;
