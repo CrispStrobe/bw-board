@@ -462,6 +462,7 @@ export class ProtectedI80286 extends I8086 {
                 this._pmOperandWrite(ea, word, result);
                 return ea.isReg ? 3 : 16;
             }
+            if(ea.reg===1)this._pmFault(6,0,'invalid F6/F7 group');
             const value=this._pmOperandRead(ea,word);
             if(ea.reg===4){word?this._mul16(value):this._mul8(value);return ea.isReg?70:76;}
             if(ea.reg===5){word?this._imul16(value):this._imul8(value);return ea.isReg?98:104;}
@@ -693,7 +694,7 @@ export class ProtectedI80286 extends I8086 {
 
     _pmSystem(op) {
         if(op===0x02||op===0x03){
-            const ea=this._pmModRM(),selector=this._pmOperandRead(ea,true),descriptor=this._pmQueryDescriptor(selector);
+            const ea=this._pmModRM(),selector=this._pmOperandRead(ea,true),descriptor=this._pmQueryDescriptor(selector,op===0x02?'lar':'lsl');
             if(descriptor){this.flags|=ZF;this._r16set(ea.reg,op===0x02?descriptor.access<<8:descriptor.limit);}
             else this.flags&=~ZF;return ea.isReg?14:16;
         }
@@ -705,7 +706,7 @@ export class ProtectedI80286 extends I8086 {
                 return ea.isReg ? 2 : 3;
             }
             if(ea.reg===4||ea.reg===5){
-                const descriptor=this._pmQueryDescriptor(this._pmOperandRead(ea,true));
+                const descriptor=this._pmQueryDescriptor(this._pmOperandRead(ea,true),'verify');
                 const readable=descriptor&&!!(descriptor.access&0x10)&&(!descriptor.code||descriptor.readable);
                 const writable=descriptor&&!!(descriptor.access&0x10)&&!descriptor.code&&descriptor.writable;
                 if(ea.reg===4?readable:writable)this.flags|=ZF;else this.flags&=~ZF;return ea.isReg?10:12;
@@ -754,7 +755,7 @@ export class ProtectedI80286 extends I8086 {
         return 11;
     }
 
-    _pmQueryDescriptor(selector){
+    _pmQueryDescriptor(selector,operation){
         selector&=0xffff;if((selector&0xfffc)===0)return null;
         const table=selector&4?this.ldtr:this.gdtr;if((selector&4)&&!table.valid)return null;
         if((selector&0xfff8)+7>table.limit)return null;
@@ -764,7 +765,8 @@ export class ProtectedI80286 extends I8086 {
             if(!conforming&&Math.max(this.cpl,rpl)>dpl)return null;
             return{...raw,code,readable:!code||!!(access&2),writable:!code&&!!(access&2)};
         }
-        const type=access&0x0f;if(![1,2,3].includes(type)||Math.max(this.cpl,rpl)>dpl)return null;
+        const type=access&0x0f,allowed=operation==='lar'?[1,2,3,4,5]:operation==='lsl'?[1,2,3]:[];
+        if(!allowed.includes(type)||Math.max(this.cpl,rpl)>dpl)return null;
         return{...raw,code:false,readable:false,writable:false};
     }
 

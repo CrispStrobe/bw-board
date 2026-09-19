@@ -20,5 +20,6 @@ protection exception. Their memory operand itself may still fault. ARPL writes
 only after destination permission and span checks.
 
 This remains a bounded functional decoder. Timing is estimated and ungraded.
+Undefined arithmetic flags are also excluded from oracle comparisons.
 Far calls, gates, task switches, and task returns are maintained in the
 separate protected control-transfer layer.
