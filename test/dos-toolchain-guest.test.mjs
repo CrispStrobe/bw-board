@@ -17,7 +17,7 @@ const acceptance=()=>accepted??=runDosToolchainGuest({dir,variant:'80286'});
 
 test('guest receipt scope names only an admitted CPU variant',()=>{
     for(const variant of ['8086','80186','80286'])
-        assert.equal(guestScope(variant),`${variant} fast-core real mode on BIOS-service machine; not wired or protected-mode evidence`);
+        assert.equal(guestScope(variant),`fast ${variant} real-mode core on BIOS-service machine; not wired or protected-mode evidence`);
     for(const variant of ['286','i80286','80386',null,undefined])
         assert.throws(()=>guestScope(variant),/guest variant must be '8086', '80186' or '80286'/);
 });

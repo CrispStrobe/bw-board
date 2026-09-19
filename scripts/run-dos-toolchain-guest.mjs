@@ -43,7 +43,7 @@ const bytes=(s)=>Uint8Array.from(s,(c)=>c.charCodeAt(0));
 export function guestScope(variant) {
     if(!['8086','80186','80286'].includes(variant))
         throw new RangeError("guest variant must be '8086', '80186' or '80286'");
-    return `${variant} fast-core real mode on BIOS-service machine; not wired or protected-mode evidence`;
+    return `fast ${variant} real-mode core on BIOS-service machine; not wired or protected-mode evidence`;
 }
 
 export function readFatFile(image,name) {
