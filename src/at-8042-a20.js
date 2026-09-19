@@ -78,28 +78,30 @@ export class AT8042A20 {
     }
     advance(cycles) {
         if(!Number.isFinite(cycles)||cycles<=0)return;
-        if(this.delayedResponse) {
-            this.responseCyclesRemaining-=cycles;
-            this.inputBusyCyclesRemaining=Math.max(0,this.inputBusyCyclesRemaining-cycles);
-            if(this.responseCyclesRemaining<=0) {
+        let remaining=cycles;
+        while(remaining>0) {
+            const controllerDeadline=this.delayedResponse
+                ? (this.inputBusyCyclesRemaining>0
+                    ? Math.min(this.inputBusyCyclesRemaining,this.responseCyclesRemaining)
+                    : this.responseCyclesRemaining)
+                : Infinity;
+            const keyboardDeadline=(this.commandByte&0x10)
+                ? Infinity:(this.keyboardSchedule[0]?.remaining??Infinity);
+            const delta=Math.min(remaining,controllerDeadline,keyboardDeadline);
+            if(this.delayedResponse) {
+                this.responseCyclesRemaining-=delta;
+                this.inputBusyCyclesRemaining=Math.max(0,this.inputBusyCyclesRemaining-delta);
+            }
+            if(this.keyboardSchedule.length)
+                this.keyboardSchedule[0].remaining=Math.max(0,this.keyboardSchedule[0].remaining-delta);
+            remaining-=delta;
+            if(this.delayedResponse&&this.responseCyclesRemaining<=0) {
                 const value=this.delayedResponse.value;
-                this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
+                this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;
+                this._queue(value);
             }
-        }
-        let keyboardCycles=cycles;
-        while(keyboardCycles>0&&this.keyboardSchedule.length) {
-            const event=this.keyboardSchedule[0];
-            if(this.commandByte&0x10) {
-                event.remaining=Math.max(0,event.remaining-keyboardCycles);
-                break;
-            }
-            if(event.remaining>keyboardCycles) {
-                event.remaining-=keyboardCycles;
-                break;
-            }
-            keyboardCycles-=event.remaining;
-            event.remaining=0;
             this._releaseKeyboardSchedule();
+            if(delta===0&&controllerDeadline===Infinity&&keyboardDeadline===Infinity)break;
         }
     }
     nextWake() {

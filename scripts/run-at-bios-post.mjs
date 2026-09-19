@@ -108,6 +108,8 @@ const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
         shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]},
+    screenText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
+        String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,'')),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
         si:machine.cpu.si,di:machine.cpu.di,bp:machine.cpu.bp,sp:machine.cpu.sp,
         ds:machine.cpu.ds,es:machine.cpu.es,ss:machine.cpu.ss,flags:machine.cpu.flags,

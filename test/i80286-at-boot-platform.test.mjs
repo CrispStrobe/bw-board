@@ -136,6 +136,15 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     splitStep.advance(60_000);splitStep.advance(4_200_000);
     assert.deepEqual(oneStep.getState(),splitStep.getState(),
         'large and split cycle advances reach the same ACK/BAT state');
+
+    const combinedOne=new AT8042A20({responseDelayCycles:32,powerOnKeyboardBatCycles:10});
+    const combinedSplit=new AT8042A20({responseDelayCycles:32,powerOnKeyboardBatCycles:10});
+    combinedOne.writeCommand(0x20);combinedSplit.writeCommand(0x20);
+    combinedOne.advance(32);combinedSplit.advance(10);combinedSplit.advance(22);
+    assert.deepEqual(combinedOne.getState(),combinedSplit.getState(),
+        'controller and keyboard events retain chronological queue order across batching');
+    assert.deepEqual(combinedOne.outputQueue.map(entry=>[entry.value,entry.keyboard]),
+        [[0xaa,true],[0,false]]);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {
