@@ -19,6 +19,38 @@ Harris has a historical source-pinned DOS-prompt receipt. See
 fast-machine memory map remains one MiB with no PC/AT A20 or extended-memory
 model. The real DOS persistence test initially covered only 8086 and 80186.
 
+## Current increment
+
+The real DOS 2 kernel and shell now exercise persistence on 80286 as well as
+8086/80186. On fast 286, the actual Microsoft MASM, LINK and EXE2BIN binaries
+build an owned guest program inside DOS and execute its exact expected COM
+bytes: `GUEST-TOOLCHAIN-OK`, shell return, no unsupported services, 1,111,040
+steps. See [the source-bound receipt](receipts/2026-09-19-dos-toolchain-fast286.json).
+This uses the machine's BIOS services. The high-memory word shortcut now follows
+the CPU address policy, fixing 286 reads/writes incorrectly aliasing low RAM.
+
+An [opt-in protected executor](I80286-PROTECTED-EXPERIMENT.md) proves ring-0 GDT
+entry, separate hidden segment caches, accessed bits, high memory, bounded
+permission/limit checks and restart diagnostics. Its small instruction subset
+is isolated to preserve the production decoder's throughput. A pinned PCjs
+comparison independently matches the owned bootstrap. IDT delivery, full
+instruction coverage, privilege transitions, gates and tasks remain unfinished;
+the ordinary fast core explicitly refuses continued protected execution.
+
+[Native writer suppression](HARRIS-NATIVE-WRITER-SUPPRESSION.md) removes
+2,004,603 unchanged submissions in the fixed memory-only workload, preserving
+state, progress and unaffected counters. Twelve paired timing samples remain
+inconclusive; no stable speedup is claimed. The measurement source history is
+retained at tag `receipts/astra-x86-native-20260919` so the receipt's original
+candidate and harness revisions remain available after integration.
+
+Qualification now includes hash-pinned real DOS toolchain execution and the
+protected PCjs bootstrap, alongside the full real-mode 286 corpora and native
+contracts. These are separate acceptance results, not a full protected-mode or
+Windows/Doom compatibility claim. The next CPU milestone is broader protected
+instruction/address coverage followed by architectural exception delivery;
+the next machine milestone is PC/AT memory and A20 behavior.
+
 ## Milestones and acceptance
 
 | Stage | Concrete acceptance | Still separate |
