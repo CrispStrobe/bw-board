@@ -25,6 +25,7 @@ test('owned real bytes enter 32-bit protected mode and execute SIB, stack, arith
   ]);
   for(let i=0;i<80&&!f.cpu.halted;i++)f.cpu.step();
   assert.equal(f.cpu.halted,true);assert.equal(f.cpu.protectedMode,true);
+  assert.equal(f.mem.get(0x20d),0x9b);assert.equal(f.mem.get(0x215),0x93,'protected segment loads set descriptor accessed bits');
   assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.eax,f.cpu.ebx,f.cpu.ecx,f.cpu.edx,f.cpu.esp],
     [8,47,0x11223345,0x201,0,0x11223345,0x400]);
   assert.equal(f.dword(0x120214),0x11223344,'32-bit SIB store uses DS base and scaled ECX');
@@ -124,4 +125,27 @@ test('faulting PUSH preserves ESP and MOV stores do not read their destination',
   const far=fixture();far.cpu.cr0=1;far.cpu.gdtr={base:0x200,limit:0x0f};far.put(0x208,[3,0,0,0,0x10,0x9a,0x40,0]);
   far.put(0,[0x66,0xea,4,0,0,0,8,0]);const before={...far.cpu.segmentCaches[1]};
   assert.throws(()=>far.cpu.step(),/far target/);assert.deepEqual(far.cpu.segmentCaches[1],before);
+
+  const ret=fixture();ret.cpu.segmentCaches[1]={base:0,limit:3,default32:true,present:true,code:true,readable:true,writable:false};
+  ret.cpu.segmentCaches[2]={base:0,limit:0xffff,default32:true,present:true,code:false,readable:true,writable:true};ret.cpu.esp=0x100;
+  ret.put(0,[0xc3]);ret.put(0x100,[4,0,0,0]);assert.throws(()=>ret.cpu.step(),/segment limit/);assert.equal(ret.cpu.esp,0x100);
+});
+
+test('byte aliases, MOVZX/MOVSX, and two-operand IMUL preserve native 32-bit state',()=>{
+  const f=fixture();f.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  f.put(0,[0xb0,0x80,0xb4,0xff,0x0f,0xbe,0xdc,0x0f,0xb6,0xc4,0xb9,3,0,0,0,0xba,0xfe,0xff,0xff,0xff,0x0f,0xaf,0xca,0xf4]);
+  for(let i=0;i<10&&!f.cpu.halted;i++)f.cpu.step();
+  assert.deepEqual([f.cpu.eax,f.cpu.ebx,f.cpu.ecx,f.cpu.edx],[255,0xffffffff,0xfffffffa,0xfffffffe]);
+  assert.equal(f.cpu.eflags&0x801,0,'fitting IMUL clears CF and OF');
+
+  const overflow=fixture();overflow.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  overflow.cpu.eax=0x7fffffff;overflow.cpu.ecx=2;overflow.put(0,[0x0f,0xaf,0xc1]);overflow.cpu.step();
+  assert.equal(overflow.cpu.eax,0xfffffffe);assert.equal(overflow.cpu.eflags&0x801,0x801);
+});
+
+test('protected data access respects execute-only and non-writable code descriptors',()=>{
+  const write=fixture();write.cpu.cr0=1;write.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,readable:true,writable:false};write.cpu.eax=1;write.cpu.ebx=0x100;write.put(0,[0x2e,0x89,3]);
+  assert.throws(()=>write.cpu.step(),/non-writable/);assert.equal(write.writes.length,0);
+  const read=fixture();read.cpu.cr0=1;read.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,readable:false,writable:false};read.cpu.ebx=0x100;read.put(0,[0x2e,0x8b,3]);const before=read.reads.length;
+  assert.throws(()=>read.cpu.step(),/execute-only/);assert.equal(read.reads.length,before);
 });
