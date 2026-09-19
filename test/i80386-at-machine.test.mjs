@@ -14,7 +14,7 @@ test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-a
   assert.equal(machine.cpu.pc, 0xfffffff0);
   assert.equal(machine.cpu.read(0xfffffff0), 0xf4);
   assert.equal(machine.cpu.read(0x10fffff0), 0xff);
-  machine.step();
+  assert.equal(machine.step(), 4, 'completed reset-vector HLT receives functional charge');
   assert.equal(machine.cpu.halted, true);
 });
 
@@ -40,7 +40,7 @@ test('experimental 386 AT cold board reset restores configured A20 before reset-
     'a CPU-only reset with the external A20 gate low does not invent a ROM alias');
   machine.reset();
   assert.equal(machine.a20Enabled, true, 'cold board reset restores the profile output-port state');
-  machine.step();
+  assert.equal(machine.step(), 4, 'IRQ wake executes and charges the handler HLT');
   assert.equal(machine.cpu.halted, true);
 });
 

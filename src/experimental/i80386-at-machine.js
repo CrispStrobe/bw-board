@@ -91,9 +91,15 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
   }
 
   step() {
-    const executed = !this.cpu.halted && !this.cpu.shutdown;
+    const completedBefore = this.cpu.cycles;
     const cycles = super.step();
-    if (!executed || cycles !== 1 || this.functionalInstructionCycles === 1) return cycles;
+    // The core increments its counter only after a completed instruction.
+    // This also detects an IRQ waking HLT and executing its first handler
+    // instruction. A delivered fault that completed no instruction receives
+    // no flat charge; a completed HLT does, while later idle horizons do not
+    // move the core counter.
+    const completed = this.cpu.cycles !== completedBefore;
+    if (!completed || cycles !== 1 || this.functionalInstructionCycles === 1) return cycles;
     const extra = this.functionalInstructionCycles - 1;
     this.cycles += extra;
     this._chipDebt += extra;

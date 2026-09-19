@@ -349,6 +349,8 @@ it lets bounded firmware polling loops observe PIT/device progress while the
 experimental executor lacks per-opcode 80386 timing. It is neither a measured
 silicon timing table nor a cycle-accuracy claim. HLT continues to advance to
 the next device deadline rather than receiving this flat instruction charge.
+An interrupt that wakes HLT charges the handler instruction it actually
+executes. Fault delivery with no completed instruction receives no flat charge.
 
 `scripts/run-i80386-at-bios-diagnostic.mjs` executes an externally supplied,
 hash-pinned IBM 5170 Rev1 ROM through this adapter. It admits a clean exact HEAD
