@@ -2898,7 +2898,8 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       const vG = netG ? (nodeVoltages.get(netG) ?? 0) : 0;
       const vD = netD ? (nodeVoltages.get(netD) ?? 0) : 0;
       const vS = netS ? (nodeVoltages.get(netS) ?? 0) : 0;
-      const vB = netB ? (nodeVoltages.get(netB) ?? 0) : 0;
+      const vB = netB ? (nodeVoltages.get(netB) ?? 0)
+        : part.params?.bulkOnSource ? vS : 0;
       // THE SAME THRESHOLD AGAIN, third reader. `mosVsb` is not in scope here,
       // so it is recomputed from the solved node voltages — which is the
       // converged value the stamp iterated to, not one step behind it.
@@ -2971,7 +2972,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // about the model, not a rounding error, so it is reported rather than
       // absorbed — `bulk` carries the sum and the three leads plus `bulk` do
       // conserve.
-      if (part.params?.bulkAtGround || netB !== undefined) {
+      if (part.params?.bulkAtGround || part.params?.bulkOnSource || netB !== undefined) {
         const stateS = part.kind === 'nmos' ? (vS - vB) : (vB - vS);
         const stateD = part.kind === 'nmos' ? (vD - vB) : (vB - vD);
         const nodeIsCathode = part.kind === 'nmos' ? 1 : -1;
@@ -2985,9 +2986,16 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
         const jD = mosBulkJunction(-stateD, part.params);
         const iS = (jS.iEq + jS.gEq * -stateS) * nodeIsCathode;
         const iD = (jD.iEq + jD.gEq * -stateD) * nodeIsCathode;
-        currents.set('source', (currents.get('source') ?? 0) + iS);
         currents.set('drain', (currents.get('drain') ?? 0) + iD);
-        currents.set('bulk', -(iS + iD));
+        if (part.params?.bulkOnSource && netB === undefined) {
+          // The authored bulk terminal is the source terminal. The source-bulk
+          // junction is an internal self-loop, while drain-bulk current leaves
+          // through drain and returns through that same external source lead.
+          currents.set('source', (currents.get('source') ?? 0) - iD);
+        } else {
+          currents.set('source', (currents.get('source') ?? 0) + iS);
+          currents.set('bulk', -(iS + iD));
+        }
       }
     }
 
