@@ -829,10 +829,12 @@ export class ExperimentalI80386 {
     const bitmap = this._readLinear((this.tr.base + 0x66) >>> 0, 2, {
       supervisor: true,
     });
+    if (bitmap >= this.tr.limit)
+      throw new I80386Fault(13, 0, "I/O bitmap has no trailing deny byte");
     for (let byte = 0; byte < (width >>> 3); byte++) {
       const numberedPort = (port & 0xffff) + byte;
       const offset = bitmap + (numberedPort >>> 3);
-      if (offset > this.tr.limit)
+      if (offset >= this.tr.limit)
         throw new I80386Fault(13, 0, "I/O bitmap ends before port permission");
       const permissions = this._readLinear((this.tr.base + offset) >>> 0, 1, {
         supervisor: true,
@@ -1023,7 +1025,9 @@ export class ExperimentalI80386 {
       type = access & 15;
     if (access & 0x10) {
       const descriptor = this._ringCodeDescriptor(selector, false, true);
-      if ((selector & 3) > cpl || descriptor.dpl !== cpl)
+      if (descriptor.conforming
+        ? descriptor.dpl > cpl
+        : (selector & 3) > cpl || descriptor.dpl !== cpl)
         throw new I80386Fault(13, errorCode, "far code privilege");
       if (!descriptor.present)
         throw new I80386Fault(11, errorCode, "far code not present");
@@ -1064,8 +1068,8 @@ export class ExperimentalI80386 {
       0;
     const count = raw.bytes[4] & 31;
     const descriptor = this._ringCodeDescriptor(targetSelector, false, true);
-    const targetCpl = descriptor.dpl;
-    if (targetCpl > cpl)
+    const targetCpl = descriptor.conforming ? cpl : descriptor.dpl;
+    if (descriptor.dpl > cpl)
       throw new I80386Fault(
         13,
         targetSelector & 0xfffc,
@@ -1158,7 +1162,9 @@ export class ExperimentalI80386 {
     const outer = returnCpl > currentCpl;
     if (outer) this._linear(SEG_SS, old, bytes * 4 + (discard & 0xffff));
     const descriptor = this._ringCodeDescriptor(selector, false, true);
-    if (descriptor.dpl !== returnCpl)
+    if (descriptor.conforming
+      ? descriptor.dpl > returnCpl
+      : descriptor.dpl !== returnCpl)
       throw new I80386Fault(13, selector & 0xfffc, "far return code privilege");
     if (!descriptor.present)
       throw new I80386Fault(
@@ -1496,10 +1502,6 @@ export class ExperimentalI80386 {
       flags = bytes[6];
     if (!(access & 0x10) || !(access & 8))
       throw new I80386Fault(13, code, "selector does not name code");
-    if (access & 4)
-      throw new UnsupportedI80386(
-        "conforming ring transition is outside the bounded profile",
-      );
     if (!(access & 0x80) && !deferPresent)
       throw new I80386Fault(11, code, "code segment not present");
     let limit = (bytes[0] | (bytes[1] << 8) | ((flags & 15) << 16)) >>> 0;
@@ -1519,6 +1521,7 @@ export class ExperimentalI80386 {
       access,
       address,
       dpl: (access >>> 5) & 3,
+      conforming: !!(access & 4),
       present: !!(access & 0x80),
     };
   }
@@ -1684,8 +1687,8 @@ export class ExperimentalI80386 {
     const selector = b[2] | (b[3] << 8),
       descriptor = this._ringCodeDescriptor(selector, external),
       oldCpl = this.cs & 3,
-      targetCpl = descriptor.dpl;
-    if (targetCpl > oldCpl)
+      targetCpl = descriptor.conforming ? oldCpl : descriptor.dpl;
+    if (descriptor.dpl > oldCpl)
       throw new I80386Fault(
         13,
         (selector & 0xfffc) | (external ? 1 : 0),
@@ -1893,7 +1896,10 @@ export class ExperimentalI80386 {
       const outer = returnCpl > currentCpl;
       if (outer) this._linear(SEG_SS, old, bytes * 5);
       const descriptor = this._ringCodeDescriptor(selector, false, true);
-      if (descriptor.dpl !== returnCpl)
+      const invalidCodePrivilege = descriptor.conforming
+        ? descriptor.dpl > returnCpl || (outer && descriptor.dpl <= currentCpl)
+        : descriptor.dpl !== returnCpl;
+      if (invalidCodePrivilege)
         throw new I80386Fault(13, selector & 0xfffc, "IRET code privilege");
       if (!descriptor.present)
         throw new I80386Fault(11, selector & 0xfffc, "IRET code not present");

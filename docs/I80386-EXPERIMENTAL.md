@@ -222,8 +222,16 @@ the target code, new stack descriptor, complete new frame, and target offset
 before changing visible execution state. Outer IRET follows the original-386
 order: complete old frame, return code descriptor, return stack descriptor,
 then target offset; it does not eagerly validate the returned stack pointer.
-Task gates, nested-task returns, VM86 returns, conforming transitions, and
-expand-down privilege stacks remain explicit refusals.
+Task gates, nested-task returns, VM86 returns, and expand-down privilege
+stacks remain explicit refusals.
+
+Conforming code descriptors are admitted for interrupt gates, direct far
+control, call-gate targets, IRET, and RETF. Entry retains the caller CPL and
+therefore uses the current stack even when the conforming descriptor has a
+numerically lower DPL. Returns apply the original instruction-specific rules:
+same-level returns require DPL no greater than CPL, outer RETF permits DPL no
+greater than the return RPL, while outer IRET additionally requires the
+conforming DPL to be numerically greater than the interrupted CPL.
 
 Protected far CALL/JMP and RETF support nonconforming same-ring code
 transfers. A 16-bit or 32-bit call gate can enter an inner ring through a
@@ -238,7 +246,11 @@ I/O permission bitmap for every byte-wide port covered by the transfer. The
 bitmap offset and permission bytes use supervisor paging, missing or set bits
 raise #GP(0), and a transfer crossing port FFFF consults the trailing deny
 byte rather than wrapping its permission check. String I/O and task switching
-remain outside this profile.
+remain outside this profile. Per the original manual, a bitmap base at or
+beyond the TSS limit means that no bitmap is present and all ports are denied.
+The pinned PCjs comparison covers one permitted byte access and one denied
+byte access as semantic evidence; it is not a physical access-order oracle or
+a protected-I/O hardware corpus.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index

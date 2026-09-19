@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import I80386, { UnsupportedI80386 } from "../src/experimental/i80386.js";
+import I80386 from "../src/experimental/i80386.js";
 
 test("hardwareReset uses the 386 reset cache until a real CS reload", () => {
   const seen = [];
@@ -96,7 +96,7 @@ test("CLI, STI, and HLT fault at insufficient protected privilege", () => {
   }
 });
 
-test("IN/OUT preserve width and refuse unimplemented protected bitmap admission", () => {
+test("IN/OUT preserve width and fault precisely when protected I/O has no bitmap", () => {
   const writes = [];
   const memory = new Map([
     [0, 0xe4],
@@ -129,13 +129,16 @@ test("IN/OUT preserve width and refuse unimplemented protected bitmap admission"
   cpu.step();
   assert.deepEqual(writes.pop(), [0x30, 0x89abcdef, 32]);
 
-  const denied = new I80386({ fetch: () => 0xec });
+  let deniedReads=0;
+  const denied = new I80386({ fetch: () => 0xec, inPort:()=>{deniedReads++;return 1;} });
   denied.cr0 = 1;
   denied.cs = 3;
+  denied.eax=0x12345678;
   assert.throws(
     () => denied.step(),
-    (e) => e instanceof UnsupportedI80386 && /bitmap/.test(e.message),
+    (e) => e?.vector===13&&e.errorCode===0,
   );
+  assert.deepEqual([denied.eip,denied.eax,deniedReads],[0,0x12345678,0]);
 });
 
 test("LOOP address size and accumulator/group immediates execute general byte streams", () => {

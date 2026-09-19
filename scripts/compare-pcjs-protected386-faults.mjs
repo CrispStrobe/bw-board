@@ -13,6 +13,31 @@ const git = (...args) =>
   execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 if (git("rev-parse", "HEAD") !== PIN || git("status", "--porcelain"))
   throw new Error("PCjs must match the exact clean oracle pin");
+const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const localPathspecs = [
+  "scripts/compare-pcjs-protected386-faults.mjs",
+  "src/experimental/i80386.js",
+];
+const verifyLocal = () =>
+  execFileSync("git", ["diff", "--quiet", "HEAD", "--", ...localPathspecs], {
+    cwd: repositoryRoot,
+  });
+verifyLocal();
+const executionRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: repositoryRoot,
+  encoding: "utf8",
+}).trim();
+const sources = [
+  "./compare-pcjs-protected386-faults.mjs",
+  "../src/experimental/i80386.js",
+];
+const hash = (data) => createHash("sha256").update(data).digest("hex");
+const sourceHashes = Object.fromEntries(
+  sources.map((path) => [
+    path,
+    hash(readFileSync(new URL(path, import.meta.url))),
+  ]),
+);
 const moduleURL = (name) =>
   pathToFileURL(resolve(root, `machines/pcx86/modules/v2/${name}.js`)).href;
 for (const name of ["x86func", "x86help", "x86mods", "x86op0f", "x86ops"])
@@ -28,7 +53,6 @@ class QuietBus extends Bus {
 
 const CODE = 0x100000,
   STACK = 0x120000;
-const hash = (data) => createHash("sha256").update(data).digest("hex");
 const put = (write, at, bytes) =>
   bytes.forEach((value, index) => write(at + index, value));
 const descriptor = (base, access) => [
@@ -282,15 +306,18 @@ function runCallGatePCjs(){
 function installIoBitmap(write,denied){
   installRing(write);write(0x228,0x70);write(0x666,0x68);write(0x667,0);
   write(0x66c,denied?0x01:0);put(write,0x140000,[0xe4,0x20]);
+  put(write,0x300+13*8,[0x80,0x01,0x08,0,0,0x8e,0,0]);put(write,CODE+0x180,[0xf4]);
 }
 function runIoLocal(denied){
   const memory=new Uint8Array(1<<24),ports=[];
   const cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;},
-    inPort:(port,width)=>{ports.push([port,width]);return 0x5a;}});
+    inPort:(port,width)=>{ports.push([port,width]);return 0x5a;}},{deliverFaults:true});
   installIoBitmap((a,v)=>{memory[a]=v;},denied);
   for(let steps=0;steps<60&&!(cpu.cs===0x1b&&cpu.eip===0);steps++)cpu.step();
-  let fault=null;try{cpu.step();}catch(error){fault=error.vector??error.message;}
-  return{completed:denied?fault===13:cpu.eip===2,...(!denied?{al:cpu.al}:{}),ports,fault};
+  const bootstrap=cpu.cs===0x1b&&cpu.eip===0;cpu.step();
+  if(!denied)return{bootstrap,completed:cpu.eip===2,al:cpu.al,ports};
+  const dword=address=>(memory[address]|(memory[address+1]<<8)|(memory[address+2]<<16)|(memory[address+3]*0x1000000))>>>0;
+  return{bootstrap,handler:cpu.cs===8&&cpu.eip===0x180,error:dword(STACK+0x3e8),restartEip:dword(STACK+0x3ec),savedCs:dword(STACK+0x3f0),savedFlags:dword(STACK+0x3f4),ports};
 }
 function runIoPCjs(denied){
   const cpu=new CPU({id:`fault386.io.${denied}`,model:80386}),bus=new QuietBus({id:`fault386.io.bus.${denied}`,busWidth:32},cpu),ports=[];
@@ -298,9 +325,29 @@ function runIoPCjs(denied){
   bus.addPortInputNotify(0x20,0x20,(port)=>{ports.push([port,8]);return 0x5a;});
   installIoBitmap((a,v)=>bus.setByteDirect(a,v),denied);cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);
   for(let steps=0;steps<60&&!(cpu.getCS()===0x1b&&cpu.getIP()===0);steps++)cpu.stepCPU(0);
-  let fault=null;try{cpu.stepCPU(0);}catch(error){fault=typeof error==='number'?(error===-1?13:error):error.message;}
-  return{completed:denied?fault===13:cpu.getIP()===2,...(!denied?{al:cpu.regEAX&255}:{}),ports,fault};
+  const bootstrap=cpu.getCS()===0x1b&&cpu.getIP()===0;
+  try {
+    cpu.stepCPU(0);
+  } catch (error) {
+    // PCjs reports the architectural vector to its host after entering the
+    // installed handler.  The handler state and frame below, rather than this
+    // sentinel, are the evidence that #GP was delivered.
+    if (!(denied && error === 13 && cpu.getCS() === 8 && cpu.getIP() === 0x180))
+      throw error;
+  }
+  if(!denied)return{bootstrap,completed:cpu.getIP()===2,al:cpu.regEAX&255,ports};
+  const dword=address=>(bus.getByteDirect(address)|(bus.getByteDirect(address+1)<<8)|(bus.getByteDirect(address+2)<<16)|(bus.getByteDirect(address+3)*0x1000000))>>>0;
+  return{bootstrap,handler:cpu.getCS()===8&&cpu.getIP()===0x180,error:dword(STACK+0x3e8),restartEip:dword(STACK+0x3ec),savedCs:dword(STACK+0x3f0),savedFlags:dword(STACK+0x3f4),ports};
 }
+function installConforming(write){installRing(write);write(0x20d,0x9e);}
+function conformingResult(cpu,read,pcjs,visited,completed){
+  const word=address=>read(address)|(read(address+1)<<8);
+  return{cs:pcjs?cpu.getCS():cpu.cs,eip:(pcjs?cpu.getIP():cpu.eip)>>>0,
+    ss:pcjs?cpu.getSS():cpu.ss,esp:(pcjs?cpu.getSP():cpu.esp)>>>0,visited,completed,
+    frame:[0,4,8].map(delta=>(word(0x1607f4+delta)|(word(0x1607f6+delta)<<16))>>>0)};
+}
+function runConformingLocal(){const memory=new Uint8Array(1<<24),cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;}},{deliverFaults:true});installConforming((a,v)=>{memory[a]=v;});let visited=false;for(let steps=0;steps<80&&!(cpu.cs===0x1b&&cpu.eip===2);steps++){if(cpu.cs===0x0b&&cpu.eip===0x100)visited=true;cpu.step();}return conformingResult(cpu,a=>memory[a],false,visited,cpu.cs===0x1b&&cpu.eip===2);}
+function runConformingPCjs(){const cpu=new CPU({id:"fault386.conforming",model:80386}),bus=new QuietBus({id:"fault386.conforming.bus",busWidth:32},cpu);if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;installConforming((a,v)=>bus.setByteDirect(a,v));cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let visited=false;for(let steps=0;steps<80&&!(cpu.getCS()===0x1b&&cpu.getIP()===2);steps++){if(cpu.getCS()===0x0b&&cpu.getIP()===0x100)visited=true;cpu.stepCPU(0);}return conformingResult(cpu,a=>bus.getByteDirect(a),true,visited,cpu.getCS()===0x1b&&cpu.getIP()===2);}
 
 const cases = {};
 for (const [name, type] of [
@@ -316,12 +363,14 @@ cases.ringTransition = { reference: runRingPCjs(), actual: runRingLocal() };
 cases.callGate = { reference:runCallGatePCjs(), actual:runCallGateLocal() };
 cases.ioAllowed={reference:runIoPCjs(false),actual:runIoLocal(false)};
 cases.ioDenied={reference:runIoPCjs(true),actual:runIoLocal(true)};
+cases.conformingInterrupt={reference:runConformingPCjs(),actual:runConformingLocal()};
 const mutation = process.env.I386_FAULT_ORACLE_MUTATION ?? null;
 if (mutation === "frame") cases.interrupt32.actual.entry.frame[0] ^= 1;
 else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
 else if (mutation === "ring-stack") cases.ringTransition.actual.frame[3] ^= 1;
 else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
 else if (mutation === "io-access") cases.ioDenied.actual.ports.push([0x20,8]);
+else if (mutation === "conforming-cpl") cases.conformingInterrupt.actual.cs=8;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
@@ -334,12 +383,20 @@ const expectedGate={cs:0x1b,eip:7,ss:0x23,esp:0x804,visitedHandler:true,complete
 for(const [engine,value] of Object.entries(cases.callGate))
   if(JSON.stringify(value)!==JSON.stringify(expectedGate))
     differences.push({case:"callGateExpected",engine,expected:expectedGate,actual:value});
-const expectedIoAllowed={completed:true,al:0x5a,ports:[[0x20,8]],fault:null};
-const expectedIoDenied={completed:true,ports:[],fault:13};
-for(const [name,expected] of [["ioAllowed",expectedIoAllowed],["ioDenied",expectedIoDenied]])
-  for(const [engine,value] of Object.entries(cases[name]))
-    if(JSON.stringify(value)!==JSON.stringify(expected))
-      differences.push({case:`${name}Expected`,engine,expected,actual:value});
+const expectedIoAllowed={bootstrap:true,completed:true,al:0x5a,ports:[[0x20,8]]};
+const expectedIoDenied={bootstrap:true,handler:true,error:0,restartEip:0,savedCs:0x1b,savedFlags:0x10002,ports:[]};
+for(const [engine,value] of Object.entries(cases.ioAllowed))
+  if(JSON.stringify(value)!==JSON.stringify(expectedIoAllowed))
+    differences.push({case:"ioAllowedExpected",engine,expected:expectedIoAllowed,actual:value});
+for(const [engine,value] of Object.entries(cases.ioDenied)) {
+  const expected={...expectedIoDenied,savedFlags:engine==="reference"?2:0x10002};
+  if(JSON.stringify(value)!==JSON.stringify(expected))
+    differences.push({case:"ioDeniedExpected",engine,expected,actual:value});
+}
+const expectedConforming={cs:0x1b,eip:2,ss:0x23,esp:0x800,visited:true,completed:true,frame:[2,0x1b,2]};
+for(const [engine,value] of Object.entries(cases.conformingInterrupt))
+  if(JSON.stringify(value)!==JSON.stringify(expectedConforming))
+    differences.push({case:"conformingExpected",engine,expected:expectedConforming,actual:value});
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);
@@ -347,25 +404,37 @@ for (const [name, value] of Object.entries(cases)) {
     reference.entry.frame[3] &= ~0x10000;
     actual.entry.frame[3] &= ~0x10000;
   }
+  if (name === "ioDenied") {
+    reference.savedFlags &= ~0x10000;
+    actual.savedFlags &= ~0x10000;
+  }
   if (JSON.stringify(reference) !== JSON.stringify(actual))
     differences.push({ case: name, ...value });
 }
 if (git("rev-parse", "HEAD") !== PIN || git("status", "--porcelain"))
   throw new Error("PCjs provenance changed during comparison");
-const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const sources = [
-  "./compare-pcjs-protected386-faults.mjs",
-  "../src/experimental/i80386.js",
-];
+if (
+  execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  }).trim() !== executionRevision
+)
+  throw new Error("local execution revision changed during comparison");
+verifyLocal();
+const endingSourceHashes = Object.fromEntries(
+  sources.map((path) => [
+    path,
+    hash(readFileSync(new URL(path, import.meta.url))),
+  ]),
+);
+if (JSON.stringify(endingSourceHashes) !== JSON.stringify(sourceHashes))
+  throw new Error("local executed sources changed during comparison");
 console.log(
   JSON.stringify(
     {
       oracle: "PCjs",
       revision: PIN,
-      executionRevision: execFileSync("git", ["rev-parse", "HEAD"], {
-        cwd: repositoryRoot,
-        encoding: "utf8",
-      }).trim(),
+      executionRevision,
       node: process.version,
       scope:
         "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
@@ -376,13 +445,14 @@ console.log(
           intel386Expected: "RF set in the saved EFLAGS image for a fault",
           localObserved: cases.generalProtection.actual.entry.frame[3] >>> 0,
         },
+        ioResumeFlag: {
+          graded: false,
+          pcjsObserved: cases.ioDenied.reference.savedFlags >>> 0,
+          intel386Expected: "RF set in the saved EFLAGS image for the denied IN fault",
+          localObserved: cases.ioDenied.actual.savedFlags >>> 0,
+        },
       },
-      sourceHashes: Object.fromEntries(
-        sources.map((path) => [
-          path,
-          hash(readFileSync(new URL(path, import.meta.url))),
-        ]),
-      ),
+      sourceHashes,
       mutation,
       status: differences.length ? "fail" : "pass",
       cases,
