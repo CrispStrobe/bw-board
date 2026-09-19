@@ -103,6 +103,12 @@ function dcFloatingNets(parts, nets) {
       if (n) anchored.add(n);
     } else if (part.kind === 'resistor' || part.kind === 'inductor') {
       join(netFor(part, 'a'), netFor(part, 'b'));
+    } else if (part.kind === 'nmos' && part.params?.model === 'level1') {
+      // The admitted Level-1 stamp always carries MOS_GDS_FLOOR between
+      // drain and source, including cutoff.  Preflight must therefore see
+      // that structural DC path, while gate and proven-ground bulk remain
+      // insulating control terminals.
+      join(netFor(part, 'drain'), netFor(part, 'source'));
     } else if (part.kind === 'vsource') {
       join(netFor(part, 'pos'), netFor(part, 'neg'));
     } else if (part.kind === 'vcvs') {
