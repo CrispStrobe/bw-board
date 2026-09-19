@@ -423,6 +423,85 @@ test("REP INS commits one interruptible iteration per step", () => {
   assert.deepEqual([cpu.eip, cpu.cx, cpu.di, memory.get(0x101)], [2, 0, 0x102, 0x41]);
 });
 
+test("an interrupt and IRET resume REP INS without consuming an extra FIFO byte", () => {
+  const memory = new Map();
+  const put = (at, bytes) =>
+    bytes.forEach((value, index) => memory.set(at + index, value));
+  put(0x1000, [0xf3, 0x6c]);
+  put(0x80, [0x00, 0x02, 0x00, 0x00]);
+  put(0x200, [0xcf]);
+  const inputs = [];
+  const cpu = new I80386({
+    read: address => memory.get(address) ?? 0,
+    fetch: address => memory.get(address) ?? 0,
+    write: (address, value) => memory.set(address, value & 0xff),
+    inPort: () => { inputs.push(inputs.length + 0x50); return inputs.at(-1); },
+  });
+  cpu.cs = 0x100;
+  cpu.segmentCaches[1].base = 0x1000;
+  cpu.sp = 0x100;
+  cpu.cx = 2;
+  cpu.di = 0x300;
+  cpu.eflags |= 0x200;
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di, inputs], [0, 1, 0x301, [0x50]]);
+  assert.equal(cpu.interrupt(0x20), true);
+  cpu.step();
+  assert.deepEqual([cpu.cs, cpu.eip, inputs], [0x100, 0, [0x50]]);
+  cpu.step();
+  assert.deepEqual(
+    [cpu.eip, cpu.cx, cpu.di, inputs, memory.get(0x300), memory.get(0x301)],
+    [2, 0, 0x302, [0x50, 0x51], 0x50, 0x51],
+  );
+});
+
+test("a later REP INS page fault preserves completed bytes and does not consume input", () => {
+  const memory = new Map([[0, 0xf3], [1, 0x6c]]);
+  const put32 = (address, value) => {
+    for (let index = 0; index < 4; index++)
+      memory.set(address + index, (value >>> (index * 8)) & 0xff);
+  };
+  put32(0x1000, 0x2003);
+  put32(0x2000, 0x0003);
+  put32(0x200c, 0x3003);
+  let inputs = 0;
+  const cpu = new I80386({
+    read: address => memory.get(address) ?? 0,
+    fetch: address => memory.get(address) ?? 0,
+    write: (address, value) => memory.set(address, value & 0xff),
+    inPort: () => { inputs++; return 0x66; },
+  });
+  cpu.cr0 = 0x80000001;
+  cpu.cr3 = 0x1000;
+  cpu.cx = 2;
+  cpu.di = 0x3fff;
+  cpu.step();
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di, inputs, memory.get(0x3fff)], [0, 1, 0x4000, 1, 0x66]);
+  assert.throws(
+    () => cpu.step(),
+    error => error?.vector === 14 && error.errorCode === 2,
+  );
+  assert.deepEqual([cpu.eip, cpu.cx, cpu.di, inputs, cpu.cr2], [0, 1, 0x4000, 1, 0x4000]);
+});
+
+test("a denied REP INS bitmap check consumes no device input", () => {
+  const { cpu, memory } = fixture([0xf3, 0x6c]);
+  let inputs = 0;
+  cpu.inPort = () => { inputs++; return 0; };
+  cpu.cr0 = 1;
+  cpu.cs = 3;
+  cpu.tr = { selector: 8, base: 0x100, limit: 0x68, present: true, type: 11 };
+  memory.set(0x166, 0x68);
+  memory.set(0x167, 0);
+  memory.set(0x168, 1);
+  cpu.cx = 1;
+  assert.throws(
+    () => cpu.step(),
+    error => error?.vector === 13 && error.errorCode === 0,
+  );
+  assert.deepEqual([inputs, cpu.cx, cpu.di, cpu.eip], [0, 1, 0, 0]);
+});
+
 test("INS destination faults occur before a device read", () => {
   let inputs = 0;
   const cpu = fixture([0x6d]).cpu;
