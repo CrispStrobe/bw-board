@@ -3653,8 +3653,7 @@
     "Most hardware profiles select three deterministic eligible cases per file; the full-circle profile selects two explicit cases.",
     "Rotate hardware coverage is 36 count-one cases plus two full-circle carry cases, not general variable-count coverage.",
     "POPAD upperESP behavior on16-bit stacks follows measured386EX captures; not a general386DXhardware claim.",
-    "REP interruption policy and later-Intel fault-EFLAGS guidance remain separately documented.",
-    "Source-bound AT DOS acceptance must be refreshed for the RTC/harness changes before landing this continuation."
+    "REP interruption policy and later-Intel fault-EFLAGS guidance remain separately documented."
   ],
   "pcjsBootstrap": {
     "oracle": "PCjs",
@@ -3987,5 +3986,11 @@
       }
     },
     "differences": []
+  },
+  "atPersistenceEvidence": {
+    "fixture": "test/fixtures/at-dos-persistence-evidence.json",
+    "executionRevision": "439560e3dc02c9c11eb36afbe374859126e11e47",
+    "writeAccepted": true,
+    "freshRebootReadAccepted": true
   }
 }
