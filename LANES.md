@@ -9,6 +9,17 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-19 CLAIM — Astra coordinator, two Sol implementers: AT boot and CPU
+exception continuation toward 386DX, Windows and Doom. Integration worktree
+`/mnt/volume1/code/wt/astra-x86-tasks`, branch `lane/astra-x86-at-boot`, base
+`220b22b9db5326732c86f549877259d8acbcbb9d`. Owns x86 experimental CPU,
+AT reset/device/boot integration, focused guest tests/harnesses, qualification
+and source-bound notes. First parallel tasks: protected exception/trap recovery
+and genuine AT reset/BIOS boot investigation and implementation. Subsequent
+386 and application work follows measured prerequisites. Excludes analog,
+FPGA, schematics and unrelated UI; no full compatibility claim without guest
+acceptance. External proprietary media stays outside public source/artifacts.
+
 2026-09-19 DONE — bwcx: exact explicit-NPN Ebers–Moll small-signal AC,
 isolated worktree `/mnt/volume1/code/wt/bwb-npn-ac-level1`, branch
 `lane/npn-ac-ebers-moll`, exact base `aec83d458ed5f638728148f9b389178e85716745`.
