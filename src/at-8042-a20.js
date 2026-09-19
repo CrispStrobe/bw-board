@@ -62,7 +62,12 @@ export class AT8042A20 {
         const value=this.delayedResponse.value;
         this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
     }
-    nextWake() { return this.delayedResponse?this.responseCyclesRemaining:Infinity; }
+    nextWake() {
+        if(!this.delayedResponse)return Infinity;
+        return this.inputBusyCyclesRemaining>0
+            ? Math.min(this.inputBusyCyclesRemaining,this.responseCyclesRemaining)
+            : this.responseCyclesRemaining;
+    }
     readData() {
         if(!this.outputQueue.length)return 0xff;
         const entry=this.outputQueue.shift();
@@ -82,7 +87,7 @@ export class AT8042A20 {
         if(value===0x60){this.pendingCommand=0x60;return;}
         if(value===0xad){this.commandByte|=0x10;this._publish();return;}
         if(value===0xae){this.commandByte&=~0x10;this._publish();return;}
-        if(value===0xaa){this.systemFlag=true;this._respond(0x55);this.pendingCommand=null;return;}
+        if(value===0xaa){this._respond(0x55);this.pendingCommand=null;return;}
         if(value===0xab){this._respond(0x00);this.pendingCommand=null;return;}
         if(value===0xc0){this._respond(this.inputPort);this.pendingCommand=null;return;}
         if(value===0xd0){if(this.outputQueue.length)throw new Error('AT 8042 D0 refused: output buffer is full');this.pendingCommand=null;this._respond(this.outputPort);return;}

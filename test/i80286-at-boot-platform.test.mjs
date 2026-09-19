@@ -39,19 +39,19 @@ test('AT port 61h reports refresh edges and timer-2 output separately', () => {
     assert.deepEqual(gates,[false,true]);
 });
 
-test('8042 self-test sets system flag and opt-in reset preserves controller state', () => {
+test('8042 self-test returns 55h while command-byte bit 2 controls system flag', () => {
     let resets=0;
     const controller=new AT8042A20({a20Enabled:true,inputBusyCycles:12,responseDelayCycles:32,
         allowReset:true,onResetRequest:()=>resets++});
     controller.writeCommand(0xaa);
-    assert.equal(controller.readStatus()&7,6,'busy status also exposes the system flag');
-    assert.equal(controller.readStatus()&7,6,'polling does not advance controller time');
+    assert.equal(controller.readStatus()&7,2,'self-test makes the input buffer busy');
+    assert.equal(controller.readStatus()&7,2,'polling does not advance controller time');
     controller.advance(11);
-    assert.equal(controller.readStatus()&7,6);
+    assert.equal(controller.readStatus()&7,2);
     controller.advance(1);
-    assert.equal(controller.readStatus()&7,4,'input acceptance precedes output response');
+    assert.equal(controller.readStatus()&7,0,'input acceptance precedes output response');
     controller.advance(20);
-    assert.equal(controller.readStatus()&5,5,'response becomes available after elapsed cycles');
+    assert.equal(controller.readStatus()&5,1,'response becomes available after elapsed cycles');
     const independentlyPolled=new AT8042A20({inputBusyCycles:12,responseDelayCycles:32});
     const unpolled=new AT8042A20({inputBusyCycles:12,responseDelayCycles:32});
     independentlyPolled.writeCommand(0xaa);
@@ -64,6 +64,7 @@ test('8042 self-test sets system flag and opt-in reset preserves controller stat
     controller.writeCommand(0x60);controller.writeData(controller.commandByte&~4);
     assert.equal(controller.readStatus()&4,0,'command-byte system flag is visible in status');
     controller.writeCommand(0x60);controller.writeData(controller.commandByte|4);
+    assert.equal(controller.readStatus()&4,4);
     controller.writeCommand(0xfe);
     assert.equal(resets,1);
     assert.equal(controller.readStatus()&4,4);
@@ -81,9 +82,9 @@ test('machine checkpoint preserves an in-flight timed 8042 response', () => {
     machine._a20Controller.advance(25);
     assert.equal(machine._a20Controller.readStatus()&1,1);
     machine.loadState(checkpoint);
-    assert.equal(machine._a20Controller.readStatus()&7,6);
+    assert.equal(machine._a20Controller.readStatus()&7,2);
     machine._a20Controller.advance(25);
-    assert.equal(machine._a20Controller.readStatus()&5,5);
+    assert.equal(machine._a20Controller.readStatus()&5,1);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {
@@ -93,6 +94,9 @@ test('second-pass AT page windows participate in I/O conflict validation', () =>
         {kind:'pic',name:'overlap',at:0x88},
     ]};
     assert.throws(()=>new I8086Machine(config),/"overlap" and "pages" both claim I\/O address 88h/);
+    config.chips.pop();config.chips[2].at=0x60;
+    config.a20={controller:'8042'};
+    assert.throws(()=>new I8086Machine(config),/8042 A20 controller conflicts.*"pages"/);
 });
 
 test('boot profile separates 16MiB address space from one MiB installed RAM', () => {
@@ -119,8 +123,10 @@ test('8042 reset is applied after OUT completes and preserves board state', () =
     machine.chips.rtc1.ram[0x0f]=2;
     machine.reset();
     machine._a20Controller.writeCommand(0xaa);
-    machine._a20Controller.advance(12);
+    machine._a20Controller.advance(32);
     machine._a20Controller.readData();
+    machine._a20Controller.writeCommand(0x60);
+    machine._a20Controller.writeData(4);
     const before=machine.cycles;
 
     machine.step();
