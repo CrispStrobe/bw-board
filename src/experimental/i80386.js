@@ -1929,7 +1929,7 @@ export class ExperimentalI80386 {
   }
 
   _iret(width) {
-    if (this.protectedMode && this.eflags & NT)
+    if (this.protectedMode && !this.virtual8086 && this.eflags & NT)
       throw new UnsupportedI80386(
         "nested-task IRET is outside the bounded profile",
       );
@@ -1950,7 +1950,7 @@ export class ExperimentalI80386 {
       if (stack32) this.esp = (old + bytes * 3) >>> 0;
       else this.sp = (old + bytes * 3) & 0xffff;
       this.eip = width === 32 ? target >>> 0 : target & 0xffff;
-      const writable = width === 32 ? 0x7fd5 : 0x7fd5;
+      const writable = width === 32 ? 0x14fd5 : 0x4fd5;
       this.eflags = ((this.eflags & ~writable) | (flags & writable) | 2) >>> 0;
       this._preserveRf = true;
       this._nmiActive = false;
@@ -2429,9 +2429,8 @@ export class ExperimentalI80386 {
         ioWidth,
       );
     } else if (op === 0xcc) {
-      this._checkVmIopl("INT3");
       this._suppressTrace = true;
-      this._deliver(3, this.eip, null, { software: true });
+      this._deliver(3, this.eip, null);
     } else if (op === 0xcd) {
       const vector = this._fetch8();
       this._checkVmIopl("INT");
@@ -2509,6 +2508,12 @@ export class ExperimentalI80386 {
       return;
     }
     if (op === 0x00) {
+      if (this.virtual8086)
+        throw new I80386Fault(
+          6,
+          null,
+          "system selector instruction is undefined in VM86",
+        );
       const ea = this._decodeEA(address32, override);
       if (ea.reg > 3)
         throw new UnsupportedI80386("0F 00 verification instruction");

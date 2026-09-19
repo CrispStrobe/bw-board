@@ -235,10 +235,12 @@ builds the nine-dword VM86 frame on the 386 TSS-selected stack, clears the
 visible VM86 data segments, and can return through IRETD. The bounded path
 requires a 32-bit gate to nonconforming ring-0 code; other target privileges
 fault architecturally, while 16-bit VM86 gates remain an explicit refusal.
-On the original 386, VM86 PUSHF, POPF, INT, IRET, CLI, STI, and LOCK require
-IOPL3; lower IOPL raises #GP(0). IN and OUT consult the current 386 TSS I/O
-bitmap in VM86 even when IOPL is 3. LOCK execution after that privilege check
-remains outside the bounded instruction profile.
+On the original 386, VM86 PUSHF, POPF, INT imm8, IRET, CLI, STI, and LOCK
+require IOPL3; lower IOPL raises #GP(0). INT3 is exempt and enters its IDT
+gate. VM86 IRET bypasses nested-task return, preserves VM and IOPL, and IRETD
+can restore RF. IN and OUT consult the current 386 TSS I/O bitmap in VM86 even
+when IOPL is 3. LOCK execution after that privilege check remains outside the
+bounded instruction profile. SLDT, STR, LLDT, and LTR raise #UD in VM86.
 
 Conforming code descriptors are admitted for interrupt gates, direct far
 control, call-gate targets, IRET, and RETF. Entry retains the caller CPL and

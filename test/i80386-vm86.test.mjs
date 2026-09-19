@@ -140,12 +140,12 @@ test("VM86 uses CPL3 for paging and system instructions even when CS low bits ar
   put(memory, 0xf0000, [0x0f,0x00,0xd0]);
   assert.throws(
     () => cpu.step(),
-    (error) => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0,
+    (error) => error instanceof I80386Fault && error.vector === 6,
   );
 });
 
 test("original-386 VM86 sensitive instructions require IOPL3", () => {
-  for (const bytes of [[0x9c],[0x9d],[0xcc],[0xcd,0x20],[0xf0,0x90]]) {
+  for (const bytes of [[0x9c],[0x9d],[0xcd,0x20],[0xf0,0x90]]) {
     const { cpu, memory } = fixture();
     cpu.step();
     cpu.eflags &= ~0x3000;
@@ -155,6 +155,42 @@ test("original-386 VM86 sensitive instructions require IOPL3", () => {
       (error) => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0,
     );
     assert.equal(cpu.eip,0x10);
+  }
+});
+
+test("VM86 INT3 bypasses the IOPL check and enters its ring-0 gate", () => {
+  const { cpu, memory } = fixture();
+  cpu.gdtr = { base: 0x200, limit: 0x2ff };
+  cpu.idtr = { base: 0x300, limit: 0x7ff };
+  cpu.tr = { selector: 0x28, base: 0x600, limit: 0x67, present: true, type: 11 };
+  put(memory, 0x208, descriptor(0x100000, 0x9a));
+  put(memory, 0x210, descriptor(0x120000, 0x92));
+  put(memory, 0x604, [0,4,0,0,0x10,0]);
+  put(memory, 0x300 + 3 * 8, [0,1,8,0,0,0x8e,0,0]);
+  put(memory, 0x12350, [0xcc]);
+  cpu.step();
+  cpu.eflags &= ~0x3000;
+  cpu.step();
+  assert.deepEqual([cpu.virtual8086,cpu.cs,cpu.eip,cpu.esp],[false,8,0x100,0x3dc]);
+});
+
+test("VM86 IRET preserves IOPL and VM while 32-bit IRET can restore RF", () => {
+  for (const width of [16,32]) {
+    const { cpu, memory } = fixture();
+    cpu.step();
+    cpu.eflags |= 0x4000;
+    put(memory,0x12350,width===32?[0x66,0xcf]:[0xcf]);
+    const stack=0x20200;
+    const values=[0x20,0x2222,0x10002];
+    values.forEach((value,index)=>{
+      for(let byte=0;byte<width/8;byte++)
+        memory.set(stack+index*(width/8)+byte,(value>>>(byte*8))&255);
+    });
+    cpu.step();
+    assert.deepEqual([cpu.cs,cpu.eip,cpu.esp&0xffff],[0x2222,0x20,0x200+3*(width/8)]);
+    assert.equal(cpu.eflags&0x23000,0x23000,"VM and IOPL remain set");
+    assert.equal(cpu.eflags&0x4000,0,"NT follows the stacked image without task return");
+    assert.equal(!!(cpu.eflags&0x10000),width===32,"only IRETD restores RF");
   }
 });
 
