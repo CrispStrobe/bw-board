@@ -25,6 +25,15 @@ const verifyLocal = () =>
     cwd: repositoryRoot,
   });
 verifyLocal();
+const executionRevision = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: repositoryRoot,
+  encoding: "utf8",
+}).trim();
+const hash = (data) => createHash("sha256").update(data).digest("hex");
+const sources = ["./compare-pcjs-i80386-system-selectors.mjs", "../src/experimental/i80386.js"];
+const sourceHashes = Object.fromEntries(
+  sources.map((path) => [path, hash(readFileSync(new URL(path, import.meta.url)))]),
+);
 const moduleURL = (name) => pathToFileURL(resolve(root, `machines/pcx86/modules/v2/${name}.js`)).href;
 for (const name of ["x86func", "x86help", "x86mods", "x86op0f", "x86ops"])
   await import(moduleURL(name));
@@ -81,9 +90,10 @@ if (mutation === "busy") actual.busyAccess ^= 2;
 else if (mutation) throw new Error(`unknown mutation ${mutation}`);
 const differences = Object.keys(reference).filter((field) => reference[field] !== actual[field]).map((field) => ({ field, reference:reference[field], actual:actual[field] }));
 verifyPin();
-const hash = (data) => createHash("sha256").update(data).digest("hex");
-const sources = ["./compare-pcjs-i80386-system-selectors.mjs", "../src/experimental/i80386.js"];
 verifyLocal();
-const executionRevision = execFileSync("git", ["rev-parse", "HEAD"], { cwd:repositoryRoot, encoding:"utf8" }).trim();
-console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 LLDT/LTR/SLDT/STR plus one LDT data load; no task switch or privilege transition", sourceHashes:Object.fromEntries(sources.map(path=>[path,hash(readFileSync(new URL(path,import.meta.url)))])), mutation, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
+if (
+  execFileSync("git", ["rev-parse", "HEAD"], { cwd:repositoryRoot, encoding:"utf8" }).trim() !== executionRevision ||
+  sources.some((path) => hash(readFileSync(new URL(path, import.meta.url))) !== sourceHashes[path])
+) throw new Error("local execution sources changed during comparison");
+console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 LLDT/LTR/SLDT/STR plus one LDT data load; no task switch or privilege transition", sourceHashes, mutation, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
 process.exitCode = differences.length ? 1 : 0;
