@@ -224,7 +224,7 @@ M1 drain gate 0 0 NM W=100u L=1u
     assert.ok(Math.abs(triode.branchCurrents.get('M1').get('drain') - triodeOracle['@m1[id]']) < 1e-8);
   });
 
-  it('refuses implicit, incomplete, invalid, extra, unproved-bulk, disconnected, and PMOS semantics', () => {
+  it('refuses implicit, incomplete, invalid, extra, unproved-bulk, and disconnected semantics', () => {
     const cases = [
       [{ ...PARAMS, model: undefined }, /model must be explicitly/],
       [{ ...PARAMS, vth: NaN }, /vth must be an explicit finite number/],
@@ -243,7 +243,7 @@ M1 drain gate 0 0 NM W=100u L=1u
     assert.throws(() => commonSource(PARAMS, { disconnect: 'drain' }).operatingPoint(),
       /terminal drain is not connected/);
     assert.throws(() => commonSource(PARAMS, { kind: 'pmos' }).operatingPoint(),
-      /unsupported part M1 \(pmos\)/);
+      /parameter bulkAtGround is outside the explicit-bulk Level-1 DC domain/);
   });
 
   it('recognizes the always-stamped drain/source path without making a MOS gate conductive', {

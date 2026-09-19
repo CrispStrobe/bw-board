@@ -36,8 +36,8 @@ const KNOWN_TERMINALS = {
   inductor: ['a', 'b'],
   transformer: ['p1', 'p2', 's1', 's2'],
   zener: ['anode', 'cathode'],
-  nmos: ['gate', 'drain', 'source'],
-  pmos: ['gate', 'drain', 'source'],
+  nmos: ['gate', 'drain', 'source', 'bulk'],
+  pmos: ['gate', 'drain', 'source', 'bulk'],
   opamp: ['inp', 'inn', 'out'],
   vsource: ['pos', 'neg'],
   isource: ['pos', 'neg'],
@@ -139,6 +139,7 @@ export function validateNetlist(parts, nets) {
 
       // Missing required terminals
       for (const t of expectedTerminals) {
+        if ((part.kind === 'nmos' || part.kind === 'pmos') && t === 'bulk') continue;
         if (!part.terminals.includes(t)) {
           errors.push({
             severity: 'warning',

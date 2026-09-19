@@ -28,12 +28,14 @@ test('OP/live conversion covers every supported kind, not a four-kind reverse li
     ['base', 'collector', 'emitter']);
   add('M', 'nmos', { model: 'level1', vth: 1, kp: 50e-6, w: 100e-6, l: 1e-6,
     lambda: 0.01, bulkAtGround: true }, ['drain', 'gate', 'source']);
+  add('P', 'pmos', { model: 'level1', vth: -1, kp: 25e-6, w: 100e-6, l: 1e-6,
+    lambda: 0.01 }, ['drain', 'gate', 'source', 'bulk']);
   add('L', 'inductor', { henrys: 1e-3 }, ['a', 'b']);
   add('C', 'capacitor', { farads: 1e-6 }, ['a', 'b']);
   add('I', 'isource', { amps: 1e-3 }, ['pos', 'neg']);
   add('E', 'vcvs', { gain: 2 }, ['outp', 'outn', 'inp', 'inn']);
   add('G', 'vccs', { gm: 1e-3 }, ['outp', 'outn', 'inp', 'inn']);
-  for (const id of ['RD', 'RZ', 'RBQ', 'RCQ', 'RM', 'RL', 'RC', 'RI', 'RE', 'RG', 'RV']) {
+  for (const id of ['RD', 'RZ', 'RBQ', 'RCQ', 'RM', 'RMP', 'RL', 'RC', 'RI', 'RE', 'RG', 'RV']) {
     add(id, 'resistor', { ohms: 1000 }, ['a', 'b']);
   }
   const net = (id, refs) => ({ id, terminals: refs.map(ref => {
@@ -44,12 +46,13 @@ test('OP/live conversion covers every supported kind, not a four-kind reverse li
     net('diode', ['RD.b', 'D.anode']), net('zener', ['RZ.b', 'Z.anode']),
     net('qbase', ['RBQ.b', 'Q.base']), net('qcollector', ['RCQ.b', 'Q.collector']),
     net('mosdrain', ['RM.b', 'M.drain']),
+    net('pmosdrain', ['P.drain', 'RMP.a']),
     net('coil', ['RL.b', 'L.a']),
     net('cap', ['RC.b', 'C.a']), net('isource', ['I.pos', 'RI.a']),
     net('vcvs', ['E.outp', 'RE.a']), net('vccs', ['G.outp', 'RG.a']),
-    net('rail', ['RAIL.vcc', 'RV.a']),
+    net('rail', ['RAIL.vcc', 'RV.a', 'P.source', 'P.bulk']),
     net('ground', ['GND.gnd', 'V.neg', 'D.cathode', 'Z.cathode', 'Q.emitter', 'M.source', 'L.b', 'C.b', 'I.neg',
-      'RI.b', 'RE.b', 'RG.b', 'RV.b', 'E.outn', 'E.inn', 'G.outn', 'G.inn']),
+      'P.gate', 'RMP.b', 'RI.b', 'RE.b', 'RG.b', 'RV.b', 'E.outn', 'E.inn', 'G.outn', 'G.inn']),
   ];
   const board = new BoardImpl(5);
   board.setNetlist(parts, nets);
