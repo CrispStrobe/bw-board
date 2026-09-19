@@ -1,32 +1,35 @@
 // Grade the i8086 core's '80286' real-mode VARIANT against SingleStepTests/80286
 // (the same suite grind-i80286.mjs runs the harris backend against). This is the
-// FAST functional 286 (src/i8086.js variant:'80286'); the harris grinder is the
-// cycle-accurate one. Diagnostic: reports pass/fail/unsupported per opcode file
-// so the exact gap (the unimplemented 0x0F protected-mode group, plus any
-// 286-vs-186 behavioural differences) is visible. Exit 0 always while the gap is
-// being closed; flip `accepted` to a hard gate once the real-mode set is clean.
+// FAST functional 286 (src/i8086.js variant:'80286'). The separate Harris
+// grinder exercises a test-only semantic adapter; neither runner grades timing
+// or a physical board. This command is a hard functional gate.
 import {readFileSync, writeFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import {join} from 'node:path';
 import {SST286_REVISION, parseSST286, parseRevocations} from './lib/sst286.mjs';
+import {fast286ExitCode, fast286Verdict} from './lib/fast286-verdict.mjs';
 import {I8086} from '../src/i8086.js';
 
 const REGS = ['ax','bx','cx','dx','cs','ss','ds','es','sp','bp','si','di','ip'];
 const mem = new Uint8Array(1 << 20);
+const generation = new Uint32Array(1 << 20);
+let currentGeneration = 0;
 const cpu = new I8086({
-    read: (a) => mem[a & 0xfffff],
-    write: (a, v) => { mem[a & 0xfffff] = v & 0xff; },
+    read: (a) => generation[a & 0xfffff] === currentGeneration ? mem[a & 0xfffff] : 0,
+    write: (a, v) => { a &= 0xfffff; mem[a] = v & 0xff; generation[a] = currentGeneration; },
     in: () => 0xff, out: () => {},
 }, {variant: '80286'});
 
 /** Run one SST286 vector on the i8086 '80286' variant; same compare shape as
  *  grind-i8086.mjs (register + memory diff under the suite's flag/reg masks). */
 function executeVariant(t, fileMasks) {
-    for (const [addr] of t.initial.ram) mem[addr & 0xfffff] = 0;
-    for (const [addr] of t.final.ram) mem[addr & 0xfffff] = 0;
-    for (const [addr, val] of t.initial.ram) mem[addr & 0xfffff] = val & 0xff;
+    currentGeneration = (currentGeneration + 1) >>> 0;
+    if (currentGeneration === 0) { generation.fill(0); currentGeneration = 1; }
+    for (const [addr, val] of t.initial.ram) {
+        const a = addr & 0xfffff; mem[a] = val & 0xff; generation[a] = currentGeneration;
+    }
     // Fresh internal state each vector: the cpu is reused, and leftover halted /
     // _rep / _seg / msw from the prior test's terminating HALT would corrupt the
     // next. reset() clears them (and sets msw to 0xfff0, matching executeSST286);
@@ -47,10 +50,10 @@ function executeVariant(t, fileMasks) {
         // corrupting the memory the final state compares against.
         if (!cpu.halted) {
             const p = ((cpu.cs << 4) + cpu.ip) & 0xfffff;
-            const saved = mem[p];
-            mem[p] = 0xf4;
+            const saved = cpu.read(p);
+            cpu.write(p, 0xf4);
             cpu.step();
-            mem[p] = saved;
+            cpu.write(p, saved);
         }
     } catch (e) {
         const code = e?.name === 'UnsupportedOpcode' || e?.constructor?.name === 'UnsupportedOpcode'
@@ -81,14 +84,17 @@ function executeVariant(t, fileMasks) {
         // is compared exactly. Mirrors executeSST286's memory comparison.
         const shift = t.exception ? (addr - t.exception.flagAddress) : -1;
         const mask = (shift === 0 || shift === 1) ? ((masks.flags ?? 0xffff) >> (shift * 8)) & 0xff : 0xff;
-        if ((mem[addr & 0xfffff] & mask) !== ((val & 0xff) & mask)) {
-            diffs.push({address: addr, actual: mem[addr & 0xfffff], expected: val & 0xff, mask});
+        const actual = cpu.read(addr);
+        if ((actual & mask) !== ((val & 0xff) & mask)) {
+            diffs.push({address: addr, actual, expected: val & 0xff, mask});
         }
     }
     return {status: diffs.length ? 'fail' : 'pass', executed: true, diffs: diffs.slice(0, 12)};
 }
 
-try {
+export {executeVariant};
+
+if (process.env.FAST286_RUNNER_TEST !== '1') try {
     const args = process.argv.slice(2), root = process.env.I80286_VECTORS;
     if (!root) throw new Error('Set I80286_VECTORS to an external SingleStepTests/80286 checkout (e.g. ~/code/80286-vectors)');
     let limit = Infinity, reportPath;
@@ -116,10 +122,11 @@ try {
     const files = inventory.filter(path => !selected.length || selected.includes(path.split('/')[1].replace('.MOO.gz', '')));
     if (!files.length || selected.some(name => !files.includes(`v1_real_mode/${name}.MOO.gz`))) throw new Error('unmatched opcode selection');
     const report = {suiteRevision: SST286_REVISION, backend: 'i8086-core variant:80286 (fast functional real-mode)',
-        fullSuite: files.length === inventory.length && limit === Infinity, timingGraded: false,
+        fullSuite: files.length === inventory.length && limit === Infinity,
+        timingGraded: false, physicalBoardGraded: false,
         files: files.length, available: 0, selected: 0, executed: 0, pass: 0, fail: 0, unsupported: 0, budget: 0, revoked: 0,
         reasons: {}, failOpcodes: {}};
-    report.sourceHashes = Object.fromEntries(['../src/i8086.js', './lib/sst286.mjs', './grind-i8086-286.mjs'].map(path =>
+    report.sourceHashes = Object.fromEntries(['../src/i8086.js', './lib/sst286.mjs', './lib/fast286-verdict.mjs', './grind-i8086-286.mjs'].map(path =>
         [path, createHash('sha256').update(readFileSync(new URL(path, import.meta.url))).digest('hex')]));
     const fileReports = [];
     for (const path of files) {
@@ -131,6 +138,9 @@ try {
             report.selected++;
             if (revocations.has(t.hash)) { counts.revoked++; report.revoked++; continue; }
             const result = executeVariant(t, suite.masks);
+            if (!['pass', 'fail', 'unsupported', 'budget'].includes(result.status)) {
+                throw new Error(`unknown execution status: ${result.status}`);
+            }
             report[result.status]++; counts[result.status]++;
             if (result.executed) report.executed++;
             if (result.reason) report.reasons[result.reason] = (report.reasons[result.reason] ?? 0) + 1;
@@ -144,10 +154,9 @@ try {
         const fileReport = {file: path, ...counts, ...(firstFailure ? {firstFailure} : {})};
         fileReports.push(fileReport); console.log(JSON.stringify(fileReport));
     }
-    report.realModeShareClean = report.fail === 0;
+    report.coverage = limit === Infinity ? 'full' : `first-${limit}-per-file`;
+    Object.assign(report, fast286Verdict(report));
     if (reportPath) writeFileSync(reportPath, JSON.stringify({summary: report, files: fileReports}, null, 2) + '\n', {flag: 'wx'});
     console.log(JSON.stringify({summary: report}));
-    // DIAGNOSTIC: exit 0 while the 0x0F group is unimplemented — the report shows
-    // the gap. Flip to `report.fail ? 1 : 0` once the real-mode set is clean.
-    process.exitCode = 0;
+    process.exitCode = fast286ExitCode(report);
 } catch (error) { console.error(error.message); process.exitCode = 2; }

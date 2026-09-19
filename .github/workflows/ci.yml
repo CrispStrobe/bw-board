@@ -303,29 +303,23 @@ jobs:
           I8086_VECTORS: ${{ github.workspace }}/8086-vectors
         run: node scripts/grind-i8086.mjs
 
-      # DIAGNOSTIC (not a gate yet): grade the FAST functional 286 variant
-      # (i8086 core variant:'80286') against SingleStepTests/80286 real-mode, and
-      # print the summary so the exact gap is visible — the unimplemented 0x0F
-      # protected-mode group and any 286-vs-186 behavioural differences show up as
-      # `fail`/`unsupported` per opcode. Grinder exits 0 while the gap is open; it
-      # becomes a hard gate once the real-mode set is clean. Sampled (--limit) to
-      # keep the job quick; drop the limit for a full census.
-      - name: 286 real-mode variant — SST286 gap census (diagnostic)
-        # Purely diagnostic: it reports the gap, it never gates. continue-on-error
-        # so nothing here can red the vectors job while the 0x0F group is open.
-        continue-on-error: true
+      # Blocking, bounded coverage of every opcode file for the FAST functional
+      # core. The grinder verifies all 326 files against the pinned Git tree and
+      # refuses failures, unsupported results, exhausted budgets, or incomplete
+      # accounting. Full-corpus qualification runs in the dedicated hosted 286
+      # workflow; this 65,200-vector sample stays affordable on every CI run.
+      - name: FAST 286 real-mode — 200 vectors from every opcode file
         env:
           I80286_VECTORS: ${{ github.workspace }}/80286-vectors
-        run: |
-          echo "--- diffs for any residual (strings A5/A7/6D/6F should be clean now; 81.0/C7/F7.0 are the undiagnosed imm/fetch-wrap fails) ---"
-          node scripts/grind-i8086-286.mjs A5 A7 6D 6F C8 C9 81.0 81.5 C7 F7.0 F7.6 --limit 200 2>&1 | grep -aF firstFailure | head -20 || true
-          echo "--- full census (sampled) ---"
-          node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
-          tail -1 /tmp/286grind.txt \
-            | node -e "try { const s=JSON.parse(require('fs').readFileSync(0,'utf8')).summary; \
-              console.log('286 variant vs SST286:', 'pass', s.pass, 'fail', s.fail, 'unsupported', s.unsupported, 'of', s.selected); \
-              console.log('fail opcodes:', JSON.stringify(s.failOpcodes)); \
-              console.log('reasons:', JSON.stringify(s.reasons)); } catch(e){ console.log('286 grind produced no summary:', e.message); }"
+        run: node scripts/grind-i8086-286.mjs --limit 200 --report fast80286-sample.json
+
+      - name: Retain FAST 286 sample evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fast80286-sample-${{ github.sha }}
+          path: fast80286-sample.json
+          if-no-files-found: error
 
       - name: 8086 disassembler — all 646,000, on text and length
         env:
