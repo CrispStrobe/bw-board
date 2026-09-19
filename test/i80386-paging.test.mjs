@@ -129,8 +129,8 @@ test("faulting second page retains first-page walk/read effects and precise rest
   );
   assert.equal(
     write.memory.get(0x6fff),
-    0x78,
-    "the completed first-page byte write remains observable",
+    undefined,
+    "scalar destination bytes wait until the full span translates",
   );
   assert.equal(write.dword(0x2010) & 0x60, 0x60);
 
@@ -186,6 +186,25 @@ test("distinguishes missing PDE/PTE and rejects user writes with exact #PF bits"
     0,
     "denied PTE is neither accessed nor dirtied",
   );
+
+  for (const [bytes, expected, label] of [
+    [[0x01, 0x03], 7, "ADD RMW is a write access"],
+    [[0x39, 0x03], 5, "CMP remains a read access"],
+    [[0xc1, 0x23, 0], 5, "count-zero shift remains a read access"],
+  ]) {
+    const rmw = fixture();
+    rmw.map(0, 0x3000, 7);
+    rmw.map(0x4000, 0x6000, 1);
+    rmw.putDword(0x1000, 0x2007);
+    rmw.put(0x3000, bytes);
+    rmw.cpu.cs = 3;
+    rmw.cpu.ebx = 0x4000;
+    assert.throws(
+      () => rmw.cpu.step(),
+      (e) => e instanceof I80386Fault && e.errorCode === expected,
+      label,
+    );
+  }
 });
 
 test("system-table walks use supervisor privilege and MOV CR3 remaps immediately", () => {
@@ -211,6 +230,37 @@ test("system-table walks use supervisor privilege and MOV CR3 remaps immediately
   assert.equal(remap.cpu.cr3, 0x4000);
   remap.put(0x7000, [0x5a]);
   assert.equal(remap.cpu._readLinear(0, 1), 0x5a);
+
+  for (const bytes of [
+    [0x0f, 0x20, 0xc0],
+    [0x0f, 0x22, 0xd8],
+    [0x0f, 0x01, 0x16, 0x20, 0],
+    [0x0f, 0x01, 0x1e, 0x20, 0],
+  ]) {
+    const user = fixture();
+    user.map(0, 0x3000, 7);
+    user.put(0x3000, bytes);
+    user.cpu.cs = 3;
+    const before = {
+      cr0: user.cpu.cr0,
+      cr3: user.cpu.cr3,
+      gdtr: { ...user.cpu.gdtr },
+      idtr: { ...user.cpu.idtr },
+    };
+    assert.throws(
+      () => user.cpu.step(),
+      (e) => e instanceof I80386Fault && e.vector === 13 && e.errorCode === 0,
+    );
+    assert.deepEqual(
+      {
+        cr0: user.cpu.cr0,
+        cr3: user.cpu.cr3,
+        gdtr: user.cpu.gdtr,
+        idtr: user.cpu.idtr,
+      },
+      before,
+    );
+  }
 });
 
 test("segment checks precede paging and paged IDT/GDT/stack references use their proper policies", () => {

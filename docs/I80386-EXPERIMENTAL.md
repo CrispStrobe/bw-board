@@ -43,18 +43,21 @@ the original supervisor-writes-ignore-R/W rule, records CR2 and the 386
 three-bit #PF error code, and translates instruction, data, stack, GDT, and
 IDT accesses. Present PDEs acquire A before a missing-PTE fault; present PTEs
 acquire A after permission admission, and writable accesses acquire D before
-the data write. Cross-page operations retain completed bus and page-table
-side effects if a later page faults, while architectural register state
-restarts at the instruction boundary. Interrupt frames translate and preflight
-their complete span before writing frame bytes.
+the data write. Cross-page reads retain completed reads and page-table effects
+if a later page faults. Scalar writes preflight the full translated destination
+before changing guest bytes; page-table A/D effects from completed walks remain
+visible. Architectural register state restarts at the instruction boundary.
+Interrupt frames translate and preflight their complete span before writing
+frame bytes; descriptor accessed-bit admission precedes frame writes.
 
 PSE, CR0.WP behavior from later processors, VM86, task/ring transitions, and
 TLB timing are outside this stage. Reloading CR3 takes effect immediately
 because this functional executor does not cache translations.
-The pinned PCjs comparisons currently keep PG clear, so they guard the
-non-paged execution and fault paths rather than serving as a paging oracle.
-Paging expectations in this stage come directly from the Intel 80386 page
-entry, protection-combination, and #PF error-code definitions.
+`scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
+the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
+and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the
+saved fault frame at this pin, so that single difference is recorded and
+ungraded; the remaining paging state is strict.
 
 `scripts/compare-pcjs-protected386-faults.mjs` binds a clean PCjs revision
 `c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70` and compares independent 32-bit

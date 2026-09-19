@@ -296,11 +296,11 @@ export class ExperimentalI80386 {
     return value >>> 0;
   }
   _writeLinear(a, size, v, options) {
+    const physical = Array.from({ length: size }, (_, i) =>
+      this._translate((a + i) >>> 0, { ...options, write: true }),
+    );
     for (let i = 0; i < size; i++)
-      this.write(
-        this._translate((a + i) >>> 0, { ...options, write: true }),
-        (v >>> (8 * i)) & 255,
-      );
+      this.write(physical[i], (v >>> (8 * i)) & 255);
   }
   _read(seg, off, width) {
     const cache = this.segmentCaches[seg];
@@ -468,6 +468,13 @@ export class ExperimentalI80386 {
       if (width === 8) this._setReg8(ea.rm, v);
       else this._setReg(ea.rm, width, v);
     } else this._write(ea.seg, ea.off, width, v);
+  }
+  _operandPreflightWrite(ea, width) {
+    if (ea.isReg) return;
+    const bytes = width >>> 3,
+      linear = this._linear(ea.seg, ea.off, bytes);
+    for (let i = 0; i < bytes; i++)
+      this._translate((linear + i) >>> 0, { write: true });
   }
   _setLogic(v, width) {
     const mask = maskFor(width),
@@ -740,8 +747,8 @@ export class ExperimentalI80386 {
     const savedFlags = fault ? this.eflags | RF : this.eflags;
     const values = [returnEip, this.cs, savedFlags];
     if (errorCode !== null) values.unshift(errorCode);
-    this._stackFrame(width, values);
     this._markAccessed(descriptor);
+    this._stackFrame(width, values);
     this.cs = selector & 0xfffc;
     this.segmentCaches[SEG_CS] = descriptor;
     this.eip = width === 32 ? offset : offset & 0xffff;
@@ -979,6 +986,7 @@ export class ExperimentalI80386 {
         this.cycles++;
         return 1;
       }
+      if (!toReg && op !== 0x38) this._operandPreflightWrite(ea, 8);
       const src = toReg ? this._operandRead(ea, 8) : this._reg8(ea.reg),
         dst = toReg ? this._reg8(ea.reg) : this._operandRead(ea, 8);
       let out = src;
@@ -1008,6 +1016,7 @@ export class ExperimentalI80386 {
         this.cycles++;
         return 1;
       }
+      if (!toReg && op !== 0x39) this._operandPreflightWrite(ea, width);
       const src = toReg
           ? this._operandRead(ea, width)
           : this._reg(ea.reg, width),
@@ -1034,8 +1043,9 @@ export class ExperimentalI80386 {
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
     } else if (op === 0x83) {
       const ea = this._decodeEA(address32, override),
-        imm = (this._fetch8() << 24) >> 24,
-        dst = this._operandRead(ea, width);
+        imm = (this._fetch8() << 24) >> 24;
+      if (ea.reg !== 7) this._operandPreflightWrite(ea, width);
+      const dst = this._operandRead(ea, width);
       let out;
       if (ea.reg === 0) out = this._add(dst, imm, width);
       else if (ea.reg === 1) out = this._setLogic(dst | imm, width);
@@ -1050,6 +1060,7 @@ export class ExperimentalI80386 {
       const shiftWidth = byte ? 8 : width;
       const ea = this._decodeEA(address32, override);
       const count = op < 0xd0 ? this._fetch8() : op < 0xd2 ? 1 : this.cl;
+      if ((count & 31) !== 0) this._operandPreflightWrite(ea, shiftWidth);
       const original = this._operandRead(ea, shiftWidth);
       if ((count & 31) !== 0)
         this._operandWrite(
@@ -1189,6 +1200,8 @@ export class ExperimentalI80386 {
       const ea = this._decodeEA(address32, override);
       if (ea.isReg || (ea.reg !== 2 && ea.reg !== 3))
         throw new UnsupportedI80386("only LGDT and LIDT are supported");
+      if ((this.cs & 3) !== 0)
+        throw new I80386Fault(13, 0, "LGDT/LIDT require CPL0");
       const a = this._linear(ea.seg, ea.off, 6),
         base = this._readLinear((a + 2) >>> 0, 4);
       const table = {
@@ -1207,6 +1220,8 @@ export class ExperimentalI80386 {
         register = m & 7;
       if (![0, 2, 3].includes(control))
         throw new I80386Fault(6, null, "invalid control register");
+      if ((this.cs & 3) !== 0)
+        throw new I80386Fault(13, 0, "MOV CR requires CPL0");
       if (op === 0x20) this._setReg(register, 32, this[`cr${control}`]);
       else {
         const value = this._reg(register, 32);
@@ -1214,9 +1229,9 @@ export class ExperimentalI80386 {
           throw new I80386Fault(13, 0, "paging requires protected mode");
         this[`cr${control}`] =
           control === 3
-            ? value & 0xfffff000
+            ? (value & 0xfffff000) >>> 0
             : control === 0
-              ? value & 0x8000001f
+              ? (value & 0x8000001f) >>> 0
               : value;
       }
       return;

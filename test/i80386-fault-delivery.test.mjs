@@ -201,10 +201,11 @@ test("stack preflight faults have no frame writes and host bus errors are never 
   const before = preflight.writes.length;
   preflight.cpu.step();
   assert.equal(preflight.cpu.shutdown, true);
-  assert.equal(
-    preflight.writes.length,
-    before,
-    "failed original and #DF frames perform no writes",
+  const effects = preflight.writes.slice(before);
+  assert.deepEqual(
+    effects.map(([address]) => address),
+    [0x20d],
+    "descriptor accessed state precedes frame admission, but failed frames write no stack bytes",
   );
 
   const marker = new Error("host write failed");
