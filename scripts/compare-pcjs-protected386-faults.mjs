@@ -340,14 +340,15 @@ function runIoPCjs(denied){
   return{bootstrap,handler:cpu.getCS()===8&&cpu.getIP()===0x180,error:dword(STACK+0x3e8),restartEip:dword(STACK+0x3ec),savedCs:dword(STACK+0x3f0),savedFlags:dword(STACK+0x3f4),ports};
 }
 function installConforming(write){installRing(write);write(0x20d,0x9e);}
-function conformingResult(cpu,read,pcjs,visited,completed){
+function conformingResult(cpu,read,pcjs,handlerCs,completed){
   const word=address=>read(address)|(read(address+1)<<8);
   return{cs:pcjs?cpu.getCS():cpu.cs,eip:(pcjs?cpu.getIP():cpu.eip)>>>0,
-    ss:pcjs?cpu.getSS():cpu.ss,esp:(pcjs?cpu.getSP():cpu.esp)>>>0,visited,completed,
-    frame:[0,4,8].map(delta=>(word(0x1607f4+delta)|(word(0x1607f6+delta)<<16))>>>0)};
+    ss:pcjs?cpu.getSS():cpu.ss,esp:(pcjs?cpu.getSP():cpu.esp)>>>0,handlerCs,completed,
+    currentStackFrame:[0,4,8].map(delta=>(word(0x1607f4+delta)|(word(0x1607f6+delta)<<16))>>>0),
+    innerStackFrame:[0,4,8,12,16].map(delta=>(word(STACK+0x3ec+delta)|(word(STACK+0x3ee+delta)<<16))>>>0)};
 }
-function runConformingLocal(){const memory=new Uint8Array(1<<24),cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;}},{deliverFaults:true});installConforming((a,v)=>{memory[a]=v;});let visited=false;for(let steps=0;steps<80&&!(cpu.cs===0x1b&&cpu.eip===2);steps++){if(cpu.cs===0x0b&&cpu.eip===0x100)visited=true;cpu.step();}return conformingResult(cpu,a=>memory[a],false,visited,cpu.cs===0x1b&&cpu.eip===2);}
-function runConformingPCjs(){const cpu=new CPU({id:"fault386.conforming",model:80386}),bus=new QuietBus({id:"fault386.conforming.bus",busWidth:32},cpu);if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;installConforming((a,v)=>bus.setByteDirect(a,v));cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let visited=false;for(let steps=0;steps<80&&!(cpu.getCS()===0x1b&&cpu.getIP()===2);steps++){if(cpu.getCS()===0x0b&&cpu.getIP()===0x100)visited=true;cpu.stepCPU(0);}return conformingResult(cpu,a=>bus.getByteDirect(a),true,visited,cpu.getCS()===0x1b&&cpu.getIP()===2);}
+function runConformingLocal(){const memory=new Uint8Array(1<<24),cpu=new I80386({read:a=>memory[a],fetch:a=>memory[a],write:(a,v)=>{memory[a]=v;}},{deliverFaults:true});installConforming((a,v)=>{memory[a]=v;});let handlerCs=null;for(let steps=0;steps<80&&!(cpu.cs===0x1b&&cpu.eip===2);steps++){if(cpu.eip===0x100)handlerCs=cpu.cs;cpu.step();}return conformingResult(cpu,a=>memory[a],false,handlerCs,cpu.cs===0x1b&&cpu.eip===2);}
+function runConformingPCjs(){const cpu=new CPU({id:"fault386.conforming",model:80386}),bus=new QuietBus({id:"fault386.conforming.bus",busWidth:32},cpu);if(!bus.addMemory(0,1<<24,Memory.TYPE.RAM))throw new Error("PCjs memory allocation failed");cpu.bus=bus;installConforming((a,v)=>bus.setByteDirect(a,v));cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);let handlerCs=null;for(let steps=0;steps<80&&!(cpu.getCS()===0x1b&&cpu.getIP()===2);steps++){if(cpu.getIP()===0x100)handlerCs=cpu.getCS();cpu.stepCPU(0);}return conformingResult(cpu,a=>bus.getByteDirect(a),true,handlerCs,cpu.getCS()===0x1b&&cpu.getIP()===2);}
 
 const cases = {};
 for (const [name, type] of [
@@ -370,7 +371,7 @@ else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
 else if (mutation === "ring-stack") cases.ringTransition.actual.frame[3] ^= 1;
 else if (mutation === "gate-parameter") cases.callGate.actual.frame[2] ^= 1;
 else if (mutation === "io-access") cases.ioDenied.actual.ports.push([0x20,8]);
-else if (mutation === "conforming-cpl") cases.conformingInterrupt.actual.cs=8;
+else if (mutation === "conforming-cpl") cases.conformingInterrupt.actual.handlerCs=8;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
@@ -393,10 +394,15 @@ for(const [engine,value] of Object.entries(cases.ioDenied)) {
   if(JSON.stringify(value)!==JSON.stringify(expected))
     differences.push({case:"ioDeniedExpected",engine,expected,actual:value});
 }
-const expectedConforming={cs:0x1b,eip:2,ss:0x23,esp:0x800,visited:true,completed:true,frame:[2,0x1b,2]};
-for(const [engine,value] of Object.entries(cases.conformingInterrupt))
-  if(JSON.stringify(value)!==JSON.stringify(expectedConforming))
-    differences.push({case:"conformingExpected",engine,expected:expectedConforming,actual:value});
+const expectedConformingLocal={cs:0x1b,eip:2,ss:0x23,esp:0x800,handlerCs:0x0b,completed:true,
+  currentStackFrame:[2,0x1b,2],innerStackFrame:[0,0,0,0,0]};
+const expectedConformingPCjs={cs:0x1b,eip:2,ss:0x23,esp:0x800,handlerCs:8,completed:true,
+  currentStackFrame:[0,0,0],innerStackFrame:[2,0x1b,2,0x800,0x23]};
+for(const [engine,expected] of [["actual",expectedConformingLocal],["reference",expectedConformingPCjs]]) {
+  const value=cases.conformingInterrupt[engine];
+  if(JSON.stringify(value)!==JSON.stringify(expected))
+    differences.push({case:"conformingExpected",engine,expected,actual:value});
+}
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);
@@ -408,6 +414,7 @@ for (const [name, value] of Object.entries(cases)) {
     reference.savedFlags &= ~0x10000;
     actual.savedFlags &= ~0x10000;
   }
+  if (name === "conformingInterrupt") continue;
   if (JSON.stringify(reference) !== JSON.stringify(actual))
     differences.push({ case: name, ...value });
 }
@@ -450,6 +457,15 @@ console.log(
           pcjsObserved: cases.ioDenied.reference.savedFlags >>> 0,
           intel386Expected: "RF set in the saved EFLAGS image for the denied IN fault",
           localObserved: cases.ioDenied.actual.savedFlags >>> 0,
+        },
+        conformingGateTargetRpl: {
+          graded: false,
+          pcjsObserved:
+            "target selector RPL 0 becomes CPL 0 and selects the inner stack",
+          intel386Expected:
+            "conforming target retains caller CPL 3 and the current stack",
+          localObserved:
+            "handler CS has RPL 3 and the current ring-3 stack contains the frame",
         },
       },
       sourceHashes,
