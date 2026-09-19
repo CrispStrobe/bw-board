@@ -16,6 +16,27 @@ direct far `JMP`; `NOP`; and `HLT`. All classic 16-bit ModR/M effective-address
 forms are decoded, with BP-based forms defaulting to SS and the other forms to
 DS. ES, CS, SS, and DS overrides replace that default. Read-modify-write
 instructions validate the destination for writing before reading its operand.
+MOVS, STOS, LODS, CMPS, and SCAS support byte and word operands, DF, source
+segment overrides, and REP/REPE/REPNE. Repeated strings execute one completed
+iteration per `step()`: IP remains at the prefix while repetition continues,
+so interrupts may enter between iterations. A fault rolls back only its current
+iteration; earlier memory writes, indices, count, and comparison flags remain
+committed. Every current iteration validates all source and destination spans
+and permissions before its first operand bus access. CX zero performs no
+operand access. The protected CMPS implementation does not claim bus-read-order
+grading beyond those preflight and architectural-state guarantees.
+
+The bounded common subset also includes CLD/STD, CLC/STC/CMC, LAHF/SAHF,
+PUSHF/POPF, CLI/STI, byte and word IN/OUT, immediate and segment PUSH/POP,
+XCHG, CBW/CWD, immediate TEST, NOT/NEG, and register/immediate shifts. CLI,
+STI, and I/O enforce CPL against IOPL. STI has a maskable-interrupt-only shadow;
+the existing MOV/POP SS shadow remains distinct because it also inhibits NMI.
+`canTakeInterrupt()` exposes both constraints and `canTakeNmi()` exposes only
+the SS shadow; a machine embedding this experimental CPU must consult the
+latter before delivering NMI. An SS shadow is retained across the executor's
+one-iteration REP steps because the prefixed REP remains the following
+architectural instruction. That choice follows the manual's instruction-level
+wording; the PCjs receipt does not grade interrupt-shadow timing.
 
 The optional IDT subset supports 286 interrupt gates (type 6) and trap gates
 (type 7) targeting present ring-0 nonconforming code in the GDT. It implements
@@ -54,7 +75,7 @@ cpu.setProtectedState(checkpoint);
 This slice refuses LDT selectors, system descriptors, null data selectors,
 privilege levels other than ring 0, conforming and expand-down segments, task
 gates and task returns, privilege-changing gates, nested/double-fault delivery,
-REP/string execution, far `CALL`/`RET`, TF single-step delivery, and all opcodes or address forms
+far `CALL`/`RET`, TF single-step delivery, and all opcodes or address forms
 outside the lists above. With delivery disabled, a supported protection fault
 is surfaced as `ProtectedModeFault` with vector, error code, and restart IP.
 With delivery enabled, #UD, #NP, #SS, and #GP raised by the bounded decoder are
@@ -93,3 +114,12 @@ call/return stack traffic, and halt against the same exact PCjs revision. It
 compares the resulting registers, defined flags, selectors, IP, stack balance,
 and high-memory result. The receipt is evidence for that program and opcode
 subset only; instruction timing remains ungraded.
+
+`scripts/compare-pcjs-protected286-rep.mjs` runs a guest-owned restart path on
+both executors. The first REP MOVSW iteration commits, the second faults on the
+cached DS limit, and the #GP handler switches to a flat segment, expands the
+descriptor in memory, reloads DS, removes the error word, and IRETs to the REP
+prefix. The receipt requires both engines to finish the remaining copy with
+matching registers and memory. The owned executor uses one `step()` per REP
+iteration; PCjs may complete several iterations within one host step. Neither
+step count nor instruction timing is graded.

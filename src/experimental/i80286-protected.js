@@ -37,9 +37,17 @@ export class ProtectedI80286 extends I8086 {
         this._protectedCapable = true;
         this.deliverProtectedFaults = !!deliverProtectedFaults;
         this._deliveringProtected = false;
+        this._pmStiShadow = 0;
     }
 
-    reset() { super.reset(); this.cpl = 0; this._initRealCaches(); }
+    reset() { super.reset(); this.cpl = 0; this._pmStiShadow = 0; this._initRealCaches(); }
+
+    canTakeInterrupt() {
+        if (!(this.msw & 1)) return super.canTakeInterrupt();
+        return (this.flags & IF) !== 0 && this.intShadow === 0 && this._pmStiShadow === 0;
+    }
+
+    canTakeNmi() { return !(this.msw & 1) || this.intShadow === 0; }
 
     get pc() {
         if (!(this.msw & 1)) return super.pc;
@@ -169,7 +177,7 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _execProtected(op) {
-        if (op >= 0xa4 && op <= 0xaf) return this._pmString(op);
+        if (op >= 0xa4 && op <= 0xaf && op !== 0xa8 && op !== 0xa9) return this._pmString(op);
         if (op === 0x06 || op === 0x0e || op === 0x16 || op === 0x1e) {
             this._pmPush([this.es, this.cs, this.ss, this.ds][op >> 3]);
             return 10;
@@ -438,7 +446,8 @@ export class ProtectedI80286 extends I8086 {
         if (op === 0xf9) { this.flags |= CF; return 2; }
         if (op === 0xfa || op === 0xfb) {
             this._pmCheckIOPrivilege(op === 0xfa ? 'CLI' : 'STI');
-            if (op === 0xfa) this.flags &= ~IF; else this.flags |= IF;
+            if (op === 0xfa) this.flags &= ~IF;
+            else { this.flags |= IF; this._pmStiShadow = 1; }
             return 2;
         }
         if (op === 0xfc) { this.flags &= ~DF; return 2; }
@@ -447,7 +456,11 @@ export class ProtectedI80286 extends I8086 {
             const port = this._pmFetch8(); this._pmIO(op, port); return 10;
         }
         if (op >= 0xec && op <= 0xef) { this._pmIO(op, this.dx); return 8; }
-        if (op === 0xf4) { this.halted = true; return 2; }
+        if (op === 0xf4) {
+            if (this.cpl !== 0) this._pmFault(13, 0, 'HLT requires CPL 0');
+            this.halted = true;
+            return 2;
+        }
         throw new UnsupportedProtectedMode(`opcode ${op.toString(16).padStart(2, '0')}`);
     }
 
@@ -609,7 +622,7 @@ export class ProtectedI80286 extends I8086 {
             this._writeFrameWord(frameAddress + bytes - 6, returnIp);
             if (pushesError) this._writeFrameWord(frameAddress, errorCode);
             this.sp = newSp; this.ip = gate.offset; this.flags = nextFlags;
-            this.halted = false;
+            this.halted = false; this.intShadow = 0; this._pmStiShadow = 0;
         } finally { this._deliveringProtected = false; }
     }
 
@@ -638,7 +651,9 @@ export class ProtectedI80286 extends I8086 {
         try {
             this._instrStartIp = this.ip;
             const priorShadow = this.intShadow;
+            const priorStiShadow = this._pmStiShadow;
             this.intShadow = 0;
+            this._pmStiShadow = 0;
             this._pmOverride = null;
             this._pmRep = 0;
             this._pmRepContinues = false;
@@ -651,7 +666,7 @@ export class ProtectedI80286 extends I8086 {
             }
             if (this._pmRep && (op < 0xa4 || op > 0xaf || op === 0xa8 || op === 0xa9))
                 throw new UnsupportedProtectedMode('REP on non-string instruction');
-            if (this._pmRep && this.cx !== 0 && (this.flags & IF) && !priorShadow && this.intPending()) {
+            if (this._pmRep && this.cx !== 0 && (this.flags & IF) && !priorShadow && !priorStiShadow && this.intPending()) {
                 this.ip = this._instrStartIp;
                 return 0;
             }
@@ -717,6 +732,7 @@ export class ProtectedI80286 extends I8086 {
         state.gdtr = {...this.gdtr}; state.idtr = {...this.idtr}; state.cpl = this.cpl;
         state.segmentCaches = Object.fromEntries(Object.entries(this.segmentCaches ?? {}).map(([id, cache]) => [id, {...cache}]));
         state.halted = this.halted; state.cycles = this.cycles; state.intShadow = this.intShadow;
+        state.pmStiShadow = this._pmStiShadow;
         return state;
     }
 
@@ -725,6 +741,7 @@ export class ProtectedI80286 extends I8086 {
         this.gdtr = {...state.gdtr}; this.idtr = {...state.idtr}; this.cpl = state.cpl;
         this.segmentCaches = Object.fromEntries(Object.entries(state.segmentCaches).map(([id, cache]) => [id, {...cache}]));
         this.halted = state.halted; this.cycles = state.cycles; this.intShadow = state.intShadow;
+        this._pmStiShadow = state.pmStiShadow ?? 0;
     }
 }
 

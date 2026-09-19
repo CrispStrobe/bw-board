@@ -79,7 +79,8 @@ test('pending interrupt leaves REP at its prefix and MOV SS shadow covers all it
   let pending=true;const f=fixture({intPending:()=>pending});boot(f,[0xf3,0xa4]);
   Object.assign(f.cpu,{si:0x10,di:0x20,cx:2,flags:f.cpu.flags|0x200});f.mem.set(0x120010,1);f.mem.set(0x120011,2);
   const prefix=f.cpu.ip;assert.equal(f.cpu.step(),0);assert.deepEqual([f.cpu.ip,f.cpu.cx],[prefix,2]);
-  f.cpu.intShadow=1;f.cpu.step();assert.deepEqual([f.cpu.ip,f.cpu.cx,f.cpu.intShadow],[prefix,1,1]);
+  f.cpu.intShadow=1;assert.equal(f.cpu.canTakeNmi(),false);f.cpu.step();
+  assert.deepEqual([f.cpu.ip,f.cpu.cx,f.cpu.intShadow],[prefix,1,1]);
   pending=false;f.cpu.step();assert.deepEqual([f.cpu.ip,f.cpu.cx,f.cpu.intShadow],[prefix+2,0,0]);
 });
 
@@ -89,4 +90,21 @@ test('bounded flag, stack, exchange, unary, shift, and port forms execute in pro
     0xb8,1,0,0xbb,2,0,0x93,0xf7,0xd8,0xd1,0xe0,0xe4,0x21,0xe6,0x22]);
   for(let i=0;i<15;i++)f.cpu.step();
   assert.equal(f.cpu.bx,1);assert.equal(f.cpu.ax&0xff,0x5a);assert.deepEqual(ports,[[0x22,0x5a]]);
+});
+
+test('TEST accumulator remains arithmetic and STI shadows one following instruction',()=>{
+  let pending=true;const f=fixture({intPending:()=>pending});boot(f,[0xa9,0,0,0xfb,0xf3,0xa4,0x90]);
+  f.cpu.ax=1;f.cpu.cx=2;f.cpu.si=0x10;f.cpu.di=0x20;f.mem.set(0x120010,1);f.mem.set(0x120011,2);
+  f.cpu.step();assert.ok(f.cpu.flags&0x40,'TEST AX,0 sets ZF');
+  f.cpu.step();assert.equal(f.cpu._pmStiShadow,1);assert.equal(f.cpu.canTakeInterrupt(),false);
+  assert.equal(f.cpu.canTakeNmi(),true,'STI does not inhibit NMI');
+  const prefix=f.cpu.ip;f.cpu.step();assert.deepEqual([f.cpu.ip,f.cpu.cx,f.cpu._pmStiShadow],[prefix,1,0]);
+  assert.equal(f.cpu.step(),0);assert.deepEqual([f.cpu.ip,f.cpu.cx],[prefix,1]);
+  pending=false;f.cpu.step();assert.deepEqual([f.cpu.ip,f.cpu.cx],[prefix+2,0]);
+});
+
+test('HLT outside ring 0 raises #GP(0) without halting',()=>{
+  const f=fixture();boot(f,[0xf4]);f.cpu.cpl=3;
+  assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===13&&e.errorCode===0);
+  assert.equal(f.cpu.halted,false);
 });

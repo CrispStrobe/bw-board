@@ -2,7 +2,7 @@ name: 80286 qualification
 
 on:
   push:
-    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa']
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa', 'lane/astra-x86-protection-at']
   workflow_dispatch:
     inputs:
       evidence:
@@ -65,6 +65,21 @@ jobs:
             | tee "$RECEIPT_DIR/pcjs-protected286-idt.json"
           node scripts/compare-pcjs-protected286-isa.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286-isa.json"
+          node scripts/compare-pcjs-protected286-rep.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-rep.json"
+          if REP_ORACLE_MUTATION=destination node scripts/compare-pcjs-protected286-rep.mjs \
+            > "$RECEIPT_DIR/rejected-rep-destination.json"; then
+            echo "protected REP oracle failed to reject destination mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-rep-destination.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'destination');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['destination']);
+          NODE
           if ISA_ORACLE_MUTATION=result node scripts/compare-pcjs-protected286-isa.mjs \
             > "$RECEIPT_DIR/rejected-isa-result.json"; then
             echo "protected ISA oracle failed to reject result mutation" >&2
