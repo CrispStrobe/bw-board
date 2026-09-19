@@ -20,6 +20,8 @@ const IDS = [SEG_ES, SEG_CS, SEG_SS, SEG_DS];
 const CF = 0x0001, PF = 0x0004, ZF = 0x0040, SF = 0x0080;
 const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800, NT = 0x4000;
 const ERROR_CODE_VECTORS = new Set([10, 11, 12, 13]);
+const DOUBLE_FAULT_CONTRIBUTORS = new Set([0, 10, 11, 12, 13]);
+const RESET_CS_IDENTITY = 0x10000;
 
 /**
  * Experimental, deliberately bounded 80286 protected-mode executor.
@@ -77,6 +79,8 @@ export class ProtectedI80286 extends I8086 {
     canTakeNmi() { return !(this.msw & 1) || this.intShadow === 0; }
 
     get pc() {
+        if (!(this.msw & 1) && this._resetCodeBase !== null)
+            return (this._resetCodeBase + this.ip) & 0xffffff;
         if (!(this.msw & 1)) return super.pc;
         return (this.segmentCaches[SEG_CS].base + (this.ip & 0xffff)) & 0xffffff;
     }
@@ -187,38 +191,22 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _phys(id, off) {
-        // The inherited real-mode decoder fetches its opcode directly through
-        // _phys(), while subsequent bytes use _fetch8(). Restrict the reset
-        // base to the live instruction-stream offset so an equal numeric DS,
-        // ES, or SS selector cannot acquire CS's hidden base.
-        if (!(this.msw & 1) && this._resetCodeBase !== null && id === this.cs && (off & 0xffff) === this.ip)
+        if (!(this.msw & 1) && this._resetCodeBase !== null && id === RESET_CS_IDENTITY)
             return (this._resetCodeBase + (off & 0xffff)) & 0xffffff;
         if (!(this.msw & 1)) return super._phys(id, off);
         return this._linear(id, off, 1, id === SEG_CS ? 'fetch' : 'read');
     }
 
-    _fetch8() {
-        if ((this.msw & 1) || this._resetCodeBase === null) return super._fetch8();
-        if (this.busTrace !== null) return this._fetch8Traced();
-        if (this._ibytes >= 10) return super._fetch8();
-        this._ibytes++;
-        const value=this.fetch((this._resetCodeBase+this.ip)&0xffffff)&0xff;
-        this.ip=(this.ip+1)&0xffff;
-        return value;
+    _codePhys(off) {
+        if (!(this.msw & 1) && this._resetCodeBase !== null)
+            return (this._resetCodeBase + (off & 0xffff)) & 0xffffff;
+        return super._codePhys(off);
     }
 
-    _fetch8Traced() {
-        if ((this.msw & 1) || this._resetCodeBase === null) return super._fetch8Traced();
-        if (this._ibytes >= 10) return super._fetch8Traced();
-        this._ibytes++;
-        const address=(this._resetCodeBase+this.ip)&0xffffff;
-        this.busTrace.push(this._fsOpcodeSeen?5:0,address);
-        this._fsOpcodeSeen=true;
-        this._seqIp=(this.ip+1)&0xffff;
-        this._seqCs=this.cs;
-        const value=this.fetch(address)&0xff;
-        this.ip=(this.ip+1)&0xffff;
-        return value;
+    _segmentOverrideValue(prefix) {
+        if (!(this.msw & 1) && this._resetCodeBase !== null && prefix === 0x2e)
+            return RESET_CS_IDENTITY;
+        return super._segmentOverrideValue(prefix);
     }
     _rd8(id, off) {
         if (!(this.msw & 1)) return super._rd8(id, off);
@@ -258,7 +246,11 @@ export class ProtectedI80286 extends I8086 {
     _exec0F286() {
         const before = this.msw & 1;
         const n = super._exec0F286();
-        if (!before && (this.msw & 1)) this._initRealCaches();
+        if (!before && (this.msw & 1)) {
+            const resetBase=this._resetCodeBase;
+            this._initRealCaches();
+            if(resetBase!==null)this.segmentCaches[SEG_CS].base=resetBase;
+        }
         return n;
     }
 

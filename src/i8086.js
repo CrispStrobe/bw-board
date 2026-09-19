@@ -279,7 +279,7 @@ export class I8086 {
     set dh(v) { this.dx = (this.dx & 0x00ff) | ((v & 0xff) << 8); }
 
     /** The flat address CS:IP names — what a debugger anchors on. */
-    get pc() { return ((this.cs << 4) + this.ip) & 0xfffff; }
+    get pc() { return this._codePhys(this.ip); }
 
     /**
      * May a maskable interrupt be delivered right now? The machine layer
@@ -312,6 +312,11 @@ export class I8086 {
     _phys(seg, off) {
         const address = ((seg & 0xffff) << 4) + (off & 0xffff);
         return this._is286 ? address & 0xffffff : address & 0xfffff;
+    }
+    _codePhys(off) { return this._phys(this.cs, off); }
+    _segmentOverrideValue(prefix) {
+        return prefix === 0x26 ? this.es : prefix === 0x2e ? this.cs
+            : prefix === 0x36 ? this.ss : this.ds;
     }
 
     /**
@@ -385,14 +390,14 @@ export class I8086 {
     _fetch8() {
         if (this.busTrace !== null) return this._fetch8Traced();
         if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
-        const b = this.fetch(this._phys(this.cs, this.ip)) & 0xff;
+        const b = this.fetch(this._codePhys(this.ip)) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
     }
 
     _fetch8Traced() {
         if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
-        const a = this._phys(this.cs, this.ip);
+        const a = this._codePhys(this.ip);
         // KIND 0 IS AN 'F' AND KIND 5 IS AN 'S', which is the queue-status
         // distinction the 8088 puts on its QS0/QS1 lines: F for the first byte
         // of an instruction OR of a prefix, S for every subsequent byte -- a
@@ -1519,13 +1524,13 @@ export class I8086 {
             // `read` and a PREFIXED instruction leaks its bytes into the stream
             // while an unprefixed one does not -- a difference nobody reading a
             // log could explain.
-            const b = this.fetch(this._phys(this.cs, this.ip)) & 0xff;
+            const b = this.fetch(this._codePhys(this.ip)) & 0xff;
             // Segment prefixes are 26/2E/36/3E; LOCK/REP and their alias
             // occupy F0-F3. Two masked tests keep ordinary opcodes out of
             // the prefix dispatch without changing a single bus fetch.
             if ((b & 0xe7) !== 0x26 && (b & 0xfc) !== 0xf0) {
                 if (this.busTrace !== null) {
-                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, this._phys(this.cs, this.ip));
+                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, this._codePhys(this.ip));
                     this._fsOpcodeSeen = true;
                     this._seqIp = (this.ip + 1) & 0xffff;
                     this._seqCs = this.cs;
@@ -1536,12 +1541,11 @@ export class I8086 {
             }
             // Not a closure per instruction: allocating one on every step is
             // measurable in a loop this hot, and the trace is off by default.
-            const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, this._phys(this.cs, this.ip));
+            const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, this._codePhys(this.ip));
             if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e) {
                 eaten();
                 this.ip = (this.ip + 1) & 0xffff; n += 2;
-                this._seg = b === 0x26 ? this.es : b === 0x2e ? this.cs
-                    : b === 0x36 ? this.ss : this.ds;
+                this._seg = this._segmentOverrideValue(b);
             } else if (b === 0xf2 || b === 0xf3) {
                 eaten();
                 // Remember WHERE the REP prefix is, not just that there is
@@ -1590,7 +1594,7 @@ export class I8086 {
         // comparison rather than a list.
         if (this.busTrace !== null
             && (this._tookBranch || this.ip !== this._seqIp || this.cs !== this._seqCs)) {
-            this.busTrace.push(6, this._phys(this.cs, this.ip));
+            this.busTrace.push(6, this._codePhys(this.ip));
         }
 
         // The trap fires after the instruction has completed and committed.
