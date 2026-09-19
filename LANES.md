@@ -38,6 +38,23 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
+2026-09-19 DONE (implementation frozen; hosted qualification pending) — Astra/Sol
+386 system and stack continuation. Candidate is the commit carrying this row;
+source `a797266` adds LLDT/LTR/SLDT/STR, LDT lookup, SMSW/LMSW, SGDT/SIDT,
+LEA, segment PUSH/POP, POP r/m and PUSH imm8. Coordinator rejected a broad
+real-stack wrapping change; only selector-specific word transfers remain.
+362 bounded physical 386EX samples and five PCjs comparisons pass; ten
+mutations reject, including exact completion/budget and busy-bit controls.
+111 focused CPU/adapter/parser tests pass across the recorded runs after a
+stale unloaded-LDT expectation was corrected to #GP(4). SGDT's high byte and
+POP fault/EA rules document PCjs support and hardware-evidence limits.
+Unchanged test386 reaches POST20 then unsupported outer IRET. The separate
+386 BIOS reaches POST2A but enters firmware CLI/HLT error handling; neither
+is acceptance. Source-bound receipt: `docs/receipts/2026-09-19-386-system-stack.json`.
+286 DOS2 persistence retains unchanged dependency hashes. Ring transitions,
+FreeDOS shell acceptance and further platform fixes remain outside this freeze.
+No full 386DX, Windows, Doom, physical bus or timing claim.
+
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol
 386 REP/ISA and RTC continuation. Frozen integration worktree
 `/mnt/volume1/code/wt/astra-x86-rep-rtc-land`, branch

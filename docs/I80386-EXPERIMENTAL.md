@@ -325,3 +325,14 @@ IBM Rev1 BIOS probe now reaches SMSW at F000:060D after 1,100,307 instructions.
 Neither diagnostic is an accepted 386 OS boot. Fresh DOS2 RTC-dependent write/reboot receipts pass at `439560e`; hosted
 qualification passed at candidate `3fa9afa`: CI `35472633235`, CPU
 `35472633257`, and native `35472633215`.
+
+## System and stack continuation receipt
+
+[The system/stack receipt](receipts/2026-09-19-386-system-stack.json) records
+source `a797266`: 362 bounded hardware samples, five PCjs comparisons, ten
+rejecting controls, and 111 focused tests (including the separately rerun
+external parser cases). Hosted qualification is pending for this snapshot.
+The exact external test386 reaches POST20 and refuses outer IRET. The genuine
+386 AT BIOS reaches POST2A, then enters its CLI/HLT error path at F000:0C93;
+the diagnostic budget result does not establish successful POST or boot.
+Later privilege transitions and platform work require separate receipts.
