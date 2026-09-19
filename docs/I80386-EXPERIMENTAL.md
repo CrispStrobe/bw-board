@@ -208,9 +208,12 @@ decoder also computes an ESP-based effective address after performing the pop.
 PUSH imm8 sign-extends its source to the selected word or dword operand size.
 
 SGDT and SIDT store the complete six-byte pseudo-descriptor after validating
-the complete writable destination. Original 386 behavior writes all 32 base
-bits with either operand size; a cross-page destination fault may update page
-table accessed/dirty state but commits no pseudo-descriptor bytes.
+the complete writable destination. The pinned PCjs implementation records
+that actual 386 behavior writes all 32 base bits with either operand size and
+notes software that depends on it, despite contradictory wording in the
+original manual; the pinned 386EX corpus has no SGDT/SIDT samples. A
+cross-page destination fault may update page-table accessed/dirty state but
+commits no pseudo-descriptor bytes.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
