@@ -121,7 +121,7 @@ describe('BoardImpl.operatingPoint explicit-bulk Level-1 PMOS domain', () => {
       model: 'explicit-spice-level1-explicit-bulk-terminal',
       requiredParameters: ['vth', 'kp', 'w', 'l', 'lambda'],
       requiredTerminals: ['gate', 'drain', 'source', 'bulk'],
-      defaults: {bulkIs: 1e-14, bulkN: 1}, thermalVoltage: 0.025865002516330077,
+      defaults: {bulkIs: 1e-14, bulkN: 1}, thermalVoltage: 0.025864925786328753,
       temperatureModel: 'fixed',
     });
     assert.ok(Math.abs(op.nodeVoltages.get('drain') - oracle['v(drain)']) < 1e-6);
