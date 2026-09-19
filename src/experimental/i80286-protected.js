@@ -24,10 +24,11 @@ const ERROR_CODE_VECTORS = new Set([11, 12, 13]);
 /**
  * Experimental, deliberately bounded 80286 protected-mode executor.
  *
- * It implements ring-0, GDT-only, expand-up 16-bit code/data segments.  It
- * executes enough real instructions to enter protected mode and prove cached
- * 24-bit addressing.  Gates, tasks, LDT, privilege changes, expand-down
- * segments, REP, and protected interrupt delivery fail before execution.
+ * It implements ring-0, GDT-only, expand-up 16-bit code/data segments. It
+ * executes enough real instructions to enter protected mode, prove cached
+ * 24-bit addressing, and optionally deliver same-ring interrupt/trap gates.
+ * Tasks, LDT, privilege changes, expand-down segments, and REP fail before
+ * execution.
  */
 export class ProtectedI80286 extends I8086 {
     constructor(bus, {deliverProtectedFaults = false} = {}) {

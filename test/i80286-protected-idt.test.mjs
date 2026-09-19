@@ -75,6 +75,32 @@ test('a supported #GP is delivered with restart IP and error code',()=>{
   assert.equal(f.cpu.ax,0x10,'faulting MOV did not commit');
 });
 
+test('delivered #UD has no error word while #NP and #SS retain their error frames',()=>{
+  const cases=[
+    {name:'#UD',vector:6,program:[0x8e,0xc8],setup(){},error:null,restart:8},
+    {name:'#NP',vector:11,program:[0xb8,0x18,0,0x8e,0xd8],setup(f){
+      f.cpu.gdtr.limit=0x1f;f.desc(0x218,0x140000,0xffff,0x12);
+    },error:0x18,restart:11},
+    {name:'#SS',vector:12,program:[0x36,0x8b,0x06,0xff,0xff],setup(){},error:0,restart:8},
+  ];
+  for(const c of cases) {
+    const f=fixture();boot(f,c.program);c.setup(f);f.gate(c.vector,0x1c0+c.vector*2,{type:6});
+    if(c.name==='#NP')f.cpu.step();
+    const ax=f.cpu.ax,data=f.mem.get(0x12ffff),writes=f.writes.length;
+    f.cpu.step();
+    assert.equal(f.cpu.ip,0x1c0+c.vector*2,c.name);
+    if(c.error===null) {
+      assert.equal(f.cpu.sp,0xfa);assert.equal(f.word(0x1200fa),c.restart);
+    } else {
+      assert.equal(f.cpu.sp,0xf8);assert.equal(f.word(0x1200f8),c.error);
+      assert.equal(f.word(0x1200fa),c.restart);
+    }
+    assert.equal(f.cpu.ax,ax,`${c.name} faulting operand did not commit`);
+    assert.equal(f.mem.get(0x12ffff),data,`${c.name} faulting operand did not write data`);
+    assert.ok(f.writes.length>writes,'only the architectural frame/descriptor effects were added');
+  }
+});
+
 test('bad software gate faults through #GP with the IDT error code',()=>{
   const f=fixture();boot(f,[0xcd,0x22]);
   f.gate(0x22,0x100,{type:5,dpl:3}); // task gate is an explicit unsupported boundary
@@ -110,6 +136,17 @@ test('external interrupts set EXT in IDT delivery errors',()=>{
   // Public interrupt faults while validating vector 30h, then the host sees
   // that delivery fault directly; automatic nesting is deliberately absent.
   assert.throws(()=>f.cpu.interrupt(0x30),e=>e instanceof ProtectedModeFault&&e.errorCode===((0x30<<3)|3));
+
+  const nullTarget=fixture();boot(nullTarget,[0x90]);nullTarget.gate(0x31,0,{type:6,selector:0});
+  assert.throws(()=>nullTarget.cpu.interrupt(0x31),e=>e instanceof ProtectedModeFault&&e.vector===13&&e.errorCode===1,
+    'external null target selector reports EXT with a zero selector index');
+});
+
+test('IRET with current NT set refuses task return independently of TF',()=>{
+  const f=fixture();boot(f,[0xcf]);f.cpu.flags=0x4002;
+  const before=f.cpu.getProtectedState(),writes=f.writes.length;
+  assert.throws(()=>f.cpu.step(),e=>e instanceof UnsupportedProtectedMode&&/nested-task IRET/.test(e.message));
+  assert.deepEqual(f.cpu.getProtectedState(),before);assert.equal(f.writes.length,writes);
 });
 
 test('same-ring entry accepts SP=0 but rejects partial frames from SP=2 or 4',()=>{
