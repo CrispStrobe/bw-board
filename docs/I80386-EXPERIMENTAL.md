@@ -232,8 +232,13 @@ bounded 16-bit instruction profile there; I/O and privileged instructions use
 VM86 CPL3 admission rather than the visible CS selector bits.
 An admitted VM86 interrupt or trap enters a nonconforming inner-ring gate,
 builds the nine-dword VM86 frame on the 386 TSS-selected stack, clears the
-visible VM86 data segments, and can return through IRETD. Conforming VM86 gate
-targets remain an explicit refusal.
+visible VM86 data segments, and can return through IRETD. The bounded path
+requires a 32-bit gate to nonconforming ring-0 code; other target privileges
+fault architecturally, while 16-bit VM86 gates remain an explicit refusal.
+On the original 386, VM86 PUSHF, POPF, INT, IRET, CLI, STI, and LOCK require
+IOPL3; lower IOPL raises #GP(0). IN and OUT consult the current 386 TSS I/O
+bitmap in VM86 even when IOPL is 3. LOCK execution after that privilege check
+remains outside the bounded instruction profile.
 
 Conforming code descriptors are admitted for interrupt gates, direct far
 control, call-gate targets, IRET, and RETF. Entry retains the caller CPL and

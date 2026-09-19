@@ -313,7 +313,7 @@ export class ExperimentalI80386 {
   _translate(linear, { write = false, supervisor = false } = {}) {
     linear >>>= 0;
     if (!(this.cr0 & 0x80000000)) return linear;
-    const user = !supervisor && (this.cs & 3) === 3;
+    const user = !supervisor && this.currentPrivilegeLevel === 3;
     const pdeAddress =
       ((this.cr3 & 0xfffff000) + ((linear >>> 20) & 0xffc)) >>> 0;
     let pde = this._readPhysical(pdeAddress, 4);
@@ -838,7 +838,11 @@ export class ExperimentalI80386 {
 
   _checkIo(port, width) {
     if (!this.protectedMode) return;
-    if (this.currentPrivilegeLevel <= ((this.eflags >>> 12) & 3)) return;
+    if (
+      !this.virtual8086 &&
+      this.currentPrivilegeLevel <= ((this.eflags >>> 12) & 3)
+    )
+      return;
     if (!this.tr.present || (this.tr.type !== 9 && this.tr.type !== 11))
       throw new I80386Fault(13, 0, "I/O requires a current 386 TSS");
     if (this.tr.limit < 0x67)
@@ -859,6 +863,11 @@ export class ExperimentalI80386 {
       if (permissions & (1 << (numberedPort & 7)))
         throw new I80386Fault(13, 0, "I/O bitmap denies port");
     }
+  }
+
+  _checkVmIopl(name) {
+    if (this.virtual8086 && ((this.eflags >>> 12) & 3) !== 3)
+      throw new I80386Fault(13, 0, `VM86 ${name} requires IOPL3`);
   }
 
   _popFlags(width) {
@@ -1707,10 +1716,6 @@ export class ExperimentalI80386 {
       descriptor = this._ringCodeDescriptor(selector, external),
       oldCpl = this.currentPrivilegeLevel,
       targetCpl = descriptor.conforming ? oldCpl : descriptor.dpl;
-    if (vm86 && descriptor.conforming)
-      throw new UnsupportedI80386(
-        "conforming VM86 interrupt targets are outside the bounded profile",
-      );
     if (descriptor.dpl > oldCpl)
       throw new I80386Fault(
         13,
@@ -1718,6 +1723,16 @@ export class ExperimentalI80386 {
         "interrupt target privilege",
       );
     const width = type >= 14 ? 32 : 16;
+    if (vm86 && (descriptor.conforming || descriptor.dpl !== 0))
+      throw new I80386Fault(
+        13,
+        (selector & 0xfffc) | (external ? 1 : 0),
+        "VM86 interrupt target must be nonconforming ring 0 code",
+      );
+    if (vm86 && width !== 32)
+      throw new UnsupportedI80386(
+        "16-bit VM86 interrupt gates are outside the bounded profile",
+      );
     const offset =
       (b[0] |
         (b[1] << 8) |
@@ -1918,14 +1933,29 @@ export class ExperimentalI80386 {
       throw new UnsupportedI80386(
         "nested-task IRET is outside the bounded profile",
       );
+    if (this.virtual8086 && ((this.eflags >>> 12) & 3) !== 3)
+      throw new I80386Fault(13, 0, "VM86 IRET requires IOPL3");
     const bytes = width >>> 3,
       stack32 = !!this.segmentCaches[SEG_SS].default32;
     const old = stack32 ? this.esp : this.sp;
-    const currentCpl = this.cs & 3;
+    const currentCpl = this.currentPrivilegeLevel;
     const address = this._linear(SEG_SS, old, bytes * 3);
     const target = this._readLinear(address, bytes);
     const selector = this._readLinear(address + bytes, bytes) & 0xffff;
     const flags = this._readLinear(address + bytes * 2, bytes);
+    if (this.virtual8086) {
+      if (target > 0xffff)
+        throw new I80386Fault(13, 0, "VM86 IRET target exceeds 16 bits");
+      this._loadSeg(SEG_CS, selector);
+      if (stack32) this.esp = (old + bytes * 3) >>> 0;
+      else this.sp = (old + bytes * 3) & 0xffff;
+      this.eip = width === 32 ? target >>> 0 : target & 0xffff;
+      const writable = width === 32 ? 0x7fd5 : 0x7fd5;
+      this.eflags = ((this.eflags & ~writable) | (flags & writable) | 2) >>> 0;
+      this._preserveRf = true;
+      this._nmiActive = false;
+      return;
+    }
     if (this.protectedMode && currentCpl === 0 && flags & 0x20000) {
       if (width !== 32)
         throw new I80386Fault(13, 0, "VM86 return requires IRETD");
@@ -2069,6 +2099,7 @@ export class ExperimentalI80386 {
       address32 = default32,
       override = null,
       repeat = null,
+      lock = false,
       op;
     do {
       op = this._fetch8();
@@ -2081,8 +2112,16 @@ export class ExperimentalI80386 {
       else if (op === 0x64) override = SEG_FS;
       else if (op === 0x65) override = SEG_GS;
       else if (op === 0xf2 || op === 0xf3) repeat = op;
+      else if (op === 0xf0) {
+        this._checkVmIopl("LOCK");
+        lock = true;
+      }
       else break;
     } while (true);
+    if (lock)
+      throw new UnsupportedI80386(
+        "LOCK execution is outside the bounded 386 profile",
+      );
     const width = operand32 ? 32 : 16;
     const stringOpcodes = [
       0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
@@ -2366,8 +2405,13 @@ export class ExperimentalI80386 {
     } else if (op === 0x9e)
       this.eflags = (this.eflags & ~0xd5) | (this.ah & 0xd5) | 2;
     else if (op === 0x9f) this.ah = (this.eflags | 2) & 0xff;
-    else if (op === 0x9c) this._push((this.eflags & 0x7fd5) | 2, width);
-    else if (op === 0x9d) this._popFlags(width);
+    else if (op === 0x9c) {
+      this._checkVmIopl("PUSHF");
+      this._push((this.eflags & 0x7fd5) | 2, width);
+    } else if (op === 0x9d) {
+      this._checkVmIopl("POPF");
+      this._popFlags(width);
+    }
     else if ([0xe4, 0xe5, 0xec, 0xed].includes(op)) {
       const port = op < 0xec ? this._fetch8() : this.dx,
         ioWidth = op === 0xe4 || op === 0xec ? 8 : width;
@@ -2385,10 +2429,12 @@ export class ExperimentalI80386 {
         ioWidth,
       );
     } else if (op === 0xcc) {
+      this._checkVmIopl("INT3");
       this._suppressTrace = true;
       this._deliver(3, this.eip, null, { software: true });
     } else if (op === 0xcd) {
       const vector = this._fetch8();
+      this._checkVmIopl("INT");
       this._suppressTrace = true;
       this._deliver(vector, this.eip, null, { software: true });
     } else if (op === 0xcf) this._iret(width);
@@ -2473,7 +2519,7 @@ export class ExperimentalI80386 {
           "system selector instruction outside protected mode",
         );
       if (ea.reg >= 2) {
-        if ((this.cs & 3) !== 0)
+        if (this.currentPrivilegeLevel !== 0)
           throw new I80386Fault(13, 0, "LLDT/LTR require CPL0");
         this._loadSystemRegister(
           ea.reg === 2 ? "ldtr" : "tr",

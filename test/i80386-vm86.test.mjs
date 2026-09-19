@@ -4,10 +4,15 @@ import I80386, { I80386Fault } from "../src/experimental/i80386.js";
 
 function fixture(target = 0x10) {
   const memory = new Map([[0, 0xcf]]);
+  const ports = [];
   const cpu = new I80386({
     read: (address) => memory.get(address >>> 0) ?? 0,
     fetch: (address) => memory.get(address >>> 0) ?? 0,
     write: (address, value) => memory.set(address >>> 0, value & 0xff),
+    inPort: (port, width) => {
+      ports.push([port, width]);
+      return 0x5a;
+    },
   });
   cpu.cr0 = 1;
   cpu.cs = 8;
@@ -37,7 +42,7 @@ function fixture(target = 0x10) {
     for (let byte = 0; byte < 4; byte++)
       memory.set(0x1100 + index * 4 + byte, (value >>> (byte * 8)) & 0xff);
   });
-  return { cpu, memory };
+  return { cpu, memory, ports };
 }
 
 function put(memory, address, bytes) {
@@ -115,4 +120,54 @@ test("a VM86 software interrupt builds the extended inner frame and IRETD return
     [cpu.virtual8086,cpu.cs,cpu.eip,cpu.ss,cpu.esp,cpu.es,cpu.ds,cpu.fs,cpu.gs],
     [true,0x1234,0x12,0x2000,0x200,0x3000,0x4000,0x5000,0x6000],
   );
+});
+
+test("VM86 uses CPL3 for paging and system instructions even when CS low bits are zero", () => {
+  const { cpu, memory } = fixture();
+  cpu.step();
+  cpu.cs = 0xf000;
+  cpu.segmentCaches[1] = cpu._virtualSegmentCache(1, cpu.cs);
+  cpu.cr3 = 0x1000;
+  cpu.cr0 = 0x80000001;
+  put(memory, 0x1000, [1,0x20,0,0]);
+  put(memory, 0x2000, [1,0x30,0,0]);
+  assert.throws(
+    () => cpu._translate(0, { write: false }),
+    (error) => error instanceof I80386Fault && error.vector === 14 && error.errorCode === 5,
+  );
+  cpu.cr0 = 1;
+  cpu.eip = 0;
+  put(memory, 0xf0000, [0x0f,0x00,0xd0]);
+  assert.throws(
+    () => cpu.step(),
+    (error) => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0,
+  );
+});
+
+test("original-386 VM86 sensitive instructions require IOPL3", () => {
+  for (const bytes of [[0x9c],[0x9d],[0xcc],[0xcd,0x20],[0xf0,0x90]]) {
+    const { cpu, memory } = fixture();
+    cpu.step();
+    cpu.eflags &= ~0x3000;
+    put(memory,0x12350,bytes);
+    assert.throws(
+      () => cpu.step(),
+      (error) => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0,
+    );
+    assert.equal(cpu.eip,0x10);
+  }
+});
+
+test("VM86 I/O consults the TSS bitmap even at IOPL3", () => {
+  const { cpu, memory, ports } = fixture();
+  cpu.step();
+  cpu.tr={selector:0x28,base:0x600,limit:0x80,present:true,type:11};
+  put(memory,0x666,[0x68,0]);
+  memory.set(0x66c,1);
+  put(memory,0x12350,[0xe4,0x20]);
+  assert.throws(
+    () => cpu.step(),
+    (error) => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0,
+  );
+  assert.deepEqual(ports,[]);
 });
