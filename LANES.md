@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: exact Level-1 PMOS operating-point and explicit bulk
+2026-09-19 DONE — bwcx: exact Level-1 PMOS operating-point and explicit bulk
 terminal, isolated worktree `/mnt/volume1/code/wt/bwb-pmos-explicit-bulk`, branch
 `lane/pmos-explicit-bulk-op`. Owns only the MOS bulk state/stamp/current path in
 `src/mna.js`, strict public PMOS admission and structural preflight in
@@ -21,7 +21,16 @@ node tied to one explicit grounded 5–12 V source. Preserve all three-terminal
 MOS behavior and default paths byte-for-behavior; do not infer bulk voltage,
 alias bulk to source/ground, edit CUI/Lite/corpus repos, alter tolerances, or
 broaden to richer MOS models. Board first; downstream import/replay follows only
-after exact upstream qualification.
+after exact upstream qualification. Implemented optional explicit-bulk state,
+two junction stamps and terminal-current extraction while retaining the existing
+three-terminal source/ground cases. Strict public PMOS admission requires the
+complete five-parameter Level-1 card and all four connected terminals. Focused
+surface 101/101; self-authored saturation and forward body-junction witnesses
+match ngspice, including bulk/source rail current and four-terminal KCL. Three
+isolated mutations (drop explicit junction path, drop explicit current reader,
+drop public admission) red by name. The first hosted candidate correctly found
+two stale exact-scope assertions; the forward test-only repair is part of the
+final qualified head. No CUI, Lite, corpus, richer MOS or tolerance change.
 
 2026-09-14 DONE — root Codex: current-contract convergence, isolated worktree
 `/mnt/volume1/code/wt/bwb-current-contract-root`, branch `lane/current-contract-root`.
