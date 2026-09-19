@@ -27,7 +27,7 @@
  * Exit status is the program's DOS exit code (AH=4Ch), or 2 if it never
  * terminated within the budget.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, dirname, resolve, join } from 'node:path';
 import { I8086Machine } from '../src/i8086-machine.js';
 import { createDos8086, DOSBOX8086, DOSBOX8086_XT } from '../src/i8086-dos.js';
@@ -73,7 +73,7 @@ export function importDosboxConf(confPath) {
 }
 
 function parseArgs(argv) {
-    const o = { program: null, variant: '8086', preset: 'at', max: 20_000_000, keys: '', screen: false, quiet: false, conf: null };
+    const o = { program: null, variant: '8086', preset: 'at', max: 20_000_000, keys: '', screen: false, quiet: false, conf: null, files: [], out: null };
     for (let i = 0; i < argv.length; i++) {
         const a = argv[i];
         if (a === '--variant') o.variant = argv[++i];
@@ -83,10 +83,31 @@ function parseArgs(argv) {
         else if (a === '--screen') o.screen = true;
         else if (a === '--quiet') o.quiet = true;
         else if (a === '--dosbox-conf') o.conf = argv[++i];
+        else if (a === '--file') o.files.push(argv[++i]);   // mount a host file into DOS (repeatable)
+        else if (a === '--out') o.out = argv[++i];          // save files the program wrote into this dir
         else if (a.startsWith('--')) throw new Error(`unknown option ${a}`);
         else o.program = a;
     }
     return o;
+}
+
+/**
+ * Mount host files into the DOS virtual filesystem. A spec is `PATH` (mounted
+ * under the uppercased basename, the name a tool constructs — MASM opens
+ * `T.ASM`) or `DOSNAME=PATH` (mount under an explicit DOS name). Returns the
+ * Map createDos8086 reads and writes as its disk, plus the set of input names
+ * so the caller can tell which files the program CREATED.
+ */
+function mountFiles(specs) {
+    const files = new Map();
+    const inputs = new Set();
+    for (const spec of specs) {
+        const eq = spec.indexOf('=');
+        const [name, path] = eq >= 0 ? [spec.slice(0, eq), spec.slice(eq + 1)] : [basename(spec).toUpperCase(), spec];
+        files.set(name, new Uint8Array(readFileSync(path)));
+        inputs.add(name);
+    }
+    return { files, inputs };
 }
 
 /** Load a program image and dispatch to loadExe (MZ header) or loadCom. */
@@ -113,13 +134,18 @@ export function runDos(opts, { write = (s) => process.stdout.write(s) } = {}) {
 
     const machine = new I8086Machine({ ...PRESETS[preset], variant });
     let streamed = 0;
+    const { files, inputs } = mountFiles(opts.files || []);
     const dos = createDos8086(machine, {
         onChar: (ch) => { streamed++; write(ch); },
         keys: [...keys].map((c) => c.charCodeAt(0) & 0xff),
+        files,
     }).install();
     const kind = loadProgram(dos, program);
     const result = dos.run(max);
-    return { result, dos, machine, kind, program, preset, variant, cyclesNote, machineNote, streamed };
+    // Files present after the run that were not mounted inputs are what the
+    // program CREATED (a .OBJ from MASM, a .EXE from LINK, ...).
+    const created = [...files.keys()].filter((n) => !inputs.has(n));
+    return { result, dos, machine, kind, program, preset, variant, cyclesNote, machineNote, streamed, files, inputs, created };
 }
 
 // ── CLI entry ────────────────────────────────────────────────────────────
@@ -141,10 +167,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         const screen = out.dos.screenText().join('\n').replace(/\n+$/, '');
         if (screen.trim()) process.stdout.write((out.streamed ? '\n' : '') + screen + '\n');
     }
+    // Save what the program wrote (a .OBJ, .EXE, .BIN, ...) so a run can feed
+    // the next tool in the chain — MASM's .OBJ into LINK, LINK's .EXE into EXE2BIN.
+    if (opts.out && out.created.length) {
+        mkdirSync(opts.out, { recursive: true });
+        for (const name of out.created) writeFileSync(join(opts.out, name), out.files.get(name));
+    }
     if (!opts.quiet) {
         const conf = opts.conf ? ` conf=${basename(opts.conf)}${out.machineNote ? ` machine=${out.machineNote}` : ''}${out.cyclesNote ? ` cycles=${out.cyclesNote}` : ''}` : '';
+        const wrote = out.created.length ? ` wrote=[${out.created.join(', ')}]${opts.out ? ` -> ${opts.out}` : ''}` : '';
         process.stderr.write(`\n[run-dos] ${basename(out.program)} (${out.kind}) on ${out.variant}/${out.preset}: `
-            + `${out.result.terminated ? `exit ${out.result.exitCode}` : 'DID NOT TERMINATE'} in ${out.result.steps} instructions${conf}\n`);
+            + `${out.result.terminated ? `exit ${out.result.exitCode}` : 'DID NOT TERMINATE'} in ${out.result.steps} instructions${conf}${wrote}\n`);
     }
     process.exit(out.result.terminated ? out.result.exitCode : 2);
 }
