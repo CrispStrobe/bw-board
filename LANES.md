@@ -9,6 +9,21 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-19 CLAIM — bwcx: exact Level-1 MOS triode/saturation boundary, isolated
+worktree `/mnt/volume1/code/wt/bwb-mos-region-boundary`, branch
+`lane/mos-region-boundary-exact`, exact base `6cb3c4d05ccbc6791b30c1d820dbe25844ef4dd3`.
+Owns only the MOS region decision in `src/mna.js`, focused boundary coverage in
+`test/nmos-operating-point.test.mjs`, and this ledger entry. The sole residual
+after the exact 121-row NMOS replay is ADI-v5 row 1328: physical Vds is 1.6%
+below Vov, but the historical 5% FSM band selects the saturation equation,
+moving source/drain by 11.9/81.0 microvolts. The triode and saturation laws now
+meet in value and first derivative, so measure replacing branch-changing
+hysteresis with the exact physical boundary while preserving cutoff, declared
+VDMOS soft-plus, body/bulk behavior, PMOS symmetry, and historical latch
+convergence. Prove the exact common-gate ngspice witness and a mutation that
+restores the 0.95/1.05 band. No tolerance, Newton budget, importer/CUI/corpus,
+other device, workflow, or unrelated solver change.
+
 2026-09-19 DONE — bwcx: explicit NPN base resistance, isolated worktree
 `/mnt/volume1/code/wt/bw-board-npn-rb`, branch `lane/npn-base-resistance`, base
 `5eb1f3013747c6f291b989b76afe5428269607c8`. Owns only the Ebers-Moll NPN
