@@ -403,6 +403,9 @@ to 1F0h and 1F1h. It provides synchronous CHS/LBA sector reads and writes,
 IDENTIFY data, persistent output bytes, status/error reporting and IRQ14.
 Command latency, DMA, multiple-mode transfers, power management and a complete
 WD1003/ATA compatibility claim remain outside this stage.
+The interrupt-pending, `nIEN`, software-reset and PIO block boundaries follow
+ATA-3 revision 7b sections 4.2.10, 5.2.7 and 8.2; device 1 remains explicitly
+absent rather than aliasing the writable master image.
 
 ## REP and ISA continuation receipt
 

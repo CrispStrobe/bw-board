@@ -30,6 +30,68 @@ test('experimental ATA performs CHS sector reads and writes with a native word F
   assert.ok(irq.includes(true));
 });
 
+test('experimental ATA raises and acknowledges each multi-sector PIO block', () => {
+  const irq = [];
+  const ata = new ExperimentalATA16(image(), geometry, {onIRQ: level => irq.push(level)});
+  const select = count => {
+    ata.writeRegister(2, count);
+    ata.writeRegister(3, 1);
+    ata.writeRegister(6, 0xa0);
+  };
+  select(2);
+  ata.writeRegister(7, 0x20);
+  assert.deepEqual(irq, [true]);
+  ata.readRegister(7);
+  assert.deepEqual(irq, [true, false]);
+  for (let word = 0; word < 256; word++) ata.readData16();
+  assert.deepEqual(irq, [true, false, true], 'second read block becomes ready');
+  ata.readRegister(7);
+  for (let word = 0; word < 256; word++) ata.readData16();
+  assert.equal(ata.readRegister(7), 0x40);
+
+  irq.length = 0;
+  select(2);
+  ata.writeRegister(7, 0x30);
+  assert.deepEqual(irq, [], 'first write block is polled without an interrupt');
+  for (let word = 0; word < 256; word++) ata.writeData16(0x1100 | word);
+  assert.deepEqual(irq, [true], 'second write block becomes ready');
+  ata.readRegister(7);
+  for (let word = 0; word < 256; word++) ata.writeData16(0x2200 | word);
+  assert.deepEqual(irq, [true, false, true], 'write command completion interrupts');
+  ata.readRegister(7);
+  assert.deepEqual(irq, [true, false, true, false]);
+});
+
+test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 absent', () => {
+  const irq = [];
+  const ata = new ExperimentalATA16(image(), geometry, {onIRQ: level => irq.push(level)});
+  ata.writeRegister(7, 0x20);
+  assert.deepEqual(irq, [true]);
+  ata.writeRegister(7, 2, {control: true});
+  assert.deepEqual(irq, [true, false]);
+  assert.equal(ata.readRegister(7, {alternate: true}) & 8, 8);
+  ata.writeRegister(7, 0, {control: true});
+  assert.deepEqual(irq, [true, false, true], 'unmask exposes the still-pending interrupt');
+
+  ata.writeRegister(7, 4, {control: true});
+  assert.deepEqual(irq, [true, false, true, false]);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x80);
+  assert.equal(ata.readData16(), 0xffff, 'SRST cancels the pending data phase');
+  ata.writeRegister(7, 2, {control: true});
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x40);
+  ata.writeRegister(7, 0, {control: true});
+  assert.deepEqual(irq, [true, false, true, false], 'reset cleared pending IRQ');
+
+  const before = ata.mediaBytes();
+  ata.writeRegister(6, 0xb0);
+  assert.equal(ata.readRegister(7), 0, 'device 1 does not respond');
+  ata.writeRegister(7, 0x30);
+  for (let word = 0; word < 256; word++) ata.writeData16(word);
+  assert.deepEqual(ata.mediaBytes(), before);
+  ata.writeRegister(6, 0xa0);
+  assert.equal(ata.readRegister(7), 0x40, 'reselecting device 0 restores its status');
+});
+
 test('experimental ATA rejects invalid CHS and unsupported commands without media mutation', () => {
   const initial = image();
   const ata = new ExperimentalATA16(initial, geometry);
@@ -59,6 +121,8 @@ test('386 AT dispatches ATA data as one 16-bit port access and persists sector w
   assert.equal(machine.cpu.inPort(0x1f0, 16), 0x0100);
   assert.deepEqual(accesses.at(-1), {dir: 'in', port: 0x1f0, width: 16, value: 0x0100});
   assert.throws(() => machine.cpu.inPort(0x1f0, 8), /native 16-bit/);
+  assert.equal(accesses.some(event => event.port === 0x1f1 && event.width === 8), false,
+    'native data read never touches the adjacent error/features port');
 
   out8(0x1f3, 2);
   out8(0x1f2, 1);

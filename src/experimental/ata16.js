@@ -20,6 +20,7 @@ export class ExperimentalATA16 {
   }
 
   reset() {
+    const wasOutput = this._irqOutput ?? false;
     this.error = 0;
     this.features = 0;
     this.sectorCount = 1;
@@ -33,15 +34,20 @@ export class ExperimentalATA16 {
     this.buffer = null;
     this.wordIndex = 0;
     this.direction = null;
-    this._irq = false;
+    this._irqPending = false;
+    this._irqOutput = false;
+    if (wasOutput) this.onIRQ?.(false);
   }
 
-  _setIRQ(level) {
-    const next = !!level;
-    if (next === this._irq) return;
-    this._irq = next;
+  _updateIRQ() {
+    const next = this._irqPending && !(this.control & 2) && !(this.driveHead & 0x10);
+    if (next === this._irqOutput) return;
+    this._irqOutput = next;
     this.onIRQ?.(next);
   }
+
+  _raiseIRQ() { this._irqPending = true; this._updateIRQ(); }
+  _clearIRQ() { this._irqPending = false; this._updateIRQ(); }
 
   _lba() {
     if (this.driveHead & 0x40)
@@ -60,7 +66,7 @@ export class ExperimentalATA16 {
     this.status = STATUS_DRDY | STATUS_ERR;
     this.buffer = null;
     this.direction = null;
-    this._setIRQ(true);
+    this._raiseIRQ();
   }
 
   _loadReadSector() {
@@ -70,7 +76,7 @@ export class ExperimentalATA16 {
     this.wordIndex = 0;
     this.direction = 'read';
     this.status = STATUS_DRDY | STATUS_DRQ;
-    this._setIRQ(true);
+    this._raiseIRQ();
   }
 
   _prepareWriteSector() {
@@ -112,6 +118,7 @@ export class ExperimentalATA16 {
     words[1] = this.geometry.cylinders;
     words[3] = this.geometry.heads;
     words[6] = this.geometry.sectors;
+    words[49] = 0x0200; // LBA is the only optional transfer capability advertised.
     const sectors = this.image.length / 512;
     words[60] = sectors & 0xffff;
     words[61] = sectors >>> 16;
@@ -123,13 +130,14 @@ export class ExperimentalATA16 {
     this.wordIndex = 0;
     this.direction = 'read';
     this.status = STATUS_DRDY | STATUS_DRQ;
-    this._setIRQ(true);
+    this._raiseIRQ();
   }
 
   writeCommand(command) {
     this.command = command & 0xff;
     this.error = 0;
-    this._setIRQ(false);
+    this._clearIRQ();
+    if (this.driveHead & 0x10) return;
     if (this.command === 0x20) this._loadReadSector();
     else if (this.command === 0x30) this._prepareWriteSector();
     else if (this.command === 0xec) this._identify();
@@ -159,16 +167,20 @@ export class ExperimentalATA16 {
     if (++this.wordIndex !== 256) return;
     const lba = this._lba();
     this.image.set(this.buffer, lba * 512);
-    if (this._advanceAddress()) this._prepareWriteSector();
+    if (this._advanceAddress()) {
+      this._prepareWriteSector();
+      this._raiseIRQ();
+    }
     else {
       this.buffer = null;
       this.direction = null;
       this.status = STATUS_DRDY;
-      this._setIRQ(true);
+      this._raiseIRQ();
     }
   }
 
   readRegister(register, {alternate = false} = {}) {
+    if (this.driveHead & 0x10) return 0;
     if (alternate) return this.status;
     if (register === 1) return this.error;
     if (register === 2) return this.sectorCount;
@@ -178,7 +190,7 @@ export class ExperimentalATA16 {
     if (register === 6) return this.driveHead;
     if (register === 7) {
       const value = this.status;
-      this._setIRQ(false);
+      this._clearIRQ();
       return value;
     }
     return 0xff;
@@ -188,8 +200,18 @@ export class ExperimentalATA16 {
     const byte = value & 0xff;
     if (control) {
       const old = this.control;
-      this.control = byte;
-      if ((old & 4) && !(byte & 4)) this.reset();
+      this.control = byte & 6;
+      if (!(old & 4) && (this.control & 4)) {
+        this.buffer = null;
+        this.direction = null;
+        this.status = 0x80;
+        this._clearIRQ();
+      } else if ((old & 4) && !(this.control & 4)) {
+        const interruptMask = this.control & 2;
+        this.reset();
+        this.control = interruptMask;
+        this._updateIRQ();
+      } else this._updateIRQ();
       return;
     }
     if (register === 1) this.features = byte;
@@ -197,7 +219,10 @@ export class ExperimentalATA16 {
     else if (register === 3) this.sectorNumber = byte;
     else if (register === 4) this.cylinderLow = byte;
     else if (register === 5) this.cylinderHigh = byte;
-    else if (register === 6) this.driveHead = byte;
+    else if (register === 6) {
+      this.driveHead = byte;
+      this._updateIRQ();
+    }
     else if (register === 7) this.writeCommand(byte);
   }
 
