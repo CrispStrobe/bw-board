@@ -92,6 +92,15 @@ Reference* (1984), system-board memory map and system-control schematics, and
 Intel's *80286 and 80287 Programmer's Reference Manual* (1987), processor
 initialization chapter.
 
+The RTC calendar model follows Motorola's *MC146818A Real-Time Clock Plus RAM*.
+While SET is asserted, the ten time/calendar registers retain the literal bytes
+written by firmware. Clearing SET validates and decodes them using the final
+DM and 12/24-hour format, because changing either format requires firmware to
+reinitialize the affected registers. Setting SET also clears UIE. The bounded
+model keeps day-of-week independently writable, advances its two-digit year on
+a four-year cycle, and migrates valid version-1 non-SET checkpoints; it refuses
+version-1 checkpoints captured during an unrepresentable SET transaction.
+
 Historical source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)
 records execution at `d8ff0734e9283aa1ca5662bce70d6c8ad10da713`.
 Both [negative controls](receipts/2026-09-19-at-bios-post-negative.json) reject

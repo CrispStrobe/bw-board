@@ -13,6 +13,19 @@ const DEFAULT_STEPS=2_000_000;
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sourceHash=file=>sha(fs.readFileSync(path.join(root,file)));
+const sourcePaths=[
+    'src/i8086-machine.js','src/i8086.js','src/i8086-ram-words.js',
+    'src/experimental/i80286-protected.js','src/at-8042-a20.js','src/at-system-control.js',
+    'src/i8254.js','src/i8259.js','src/i8237.js','src/mc146818.js','src/cga-card.js',
+    'src/upd765.js','src/machine-checkpoint.js',
+    'scripts/lib/at-dos-acceptance.mjs','scripts/run-at-bios-post.mjs'];
+const executionRevision=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+try {
+    execFileSync('git',['diff','--quiet','HEAD','--',...sourcePaths],{cwd:root,stdio:'ignore'});
+} catch {
+    throw new Error('AT BIOS run refused: an executed source path differs from HEAD');
+}
+const sourceSha256=Object.fromEntries(sourcePaths.map(file=>[file,sourceHash(file)]));
 const romPath=process.env.AT_BIOS_ROM;
 if(!romPath)throw new Error('AT_BIOS_ROM must name the external 64KiB IBM 5170 Rev1 ROM');
 const rom=fs.readFileSync(romPath);
@@ -213,13 +226,12 @@ const report={schema:'astra.at-bios-post.v2',passed,stepLimit,steps,
         samples:progressSamples},
     memory:{addressSpaceBytes:machine.mem.length,installedRamBytes:(baseRamKiB<<10)+0x80000,
         baseRamBytes:baseRamKiB<<10,extendedRamBytes:0x80000},
-    executionRevision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
-    sourceSha256:Object.fromEntries([
-        'src/i8086-machine.js','src/i8086.js','src/i8086-ram-words.js',
-        'src/experimental/i80286-protected.js','src/at-8042-a20.js','src/at-system-control.js',
-        'src/i8254.js','src/i8259.js','src/i8237.js','src/mc146818.js','src/cga-card.js',
-        'src/upd765.js','src/machine-checkpoint.js',
-        'scripts/lib/at-dos-acceptance.mjs',
-        'scripts/run-at-bios-post.mjs'].map(file=>[file,sourceHash(file)]))};
+    executionRevision,sourceSha256};
+for(const [file,before] of Object.entries(sourceSha256)) {
+    const after=sourceHash(file);
+    if(after!==before)throw new Error(`AT BIOS run refused: executed source changed during execution: ${file}`);
+}
+if(execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim()!==executionRevision)
+    throw new Error('AT BIOS run refused: HEAD changed during execution');
 process.stdout.write(`${JSON.stringify(report,null,2)}\n`);
 if(!passed||(expectedFile&&!fullBootAccepted))process.exitCode=1;
