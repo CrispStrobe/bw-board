@@ -1,5 +1,26 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Execution routes and evidence boundaries
+
+These routes answer different questions and their results are not
+interchangeable:
+
+| Route | Execution model | Accepted evidence |
+| --- | --- | --- |
+| Reference wired Harris | Harris instruction generator drives the populated latched circuit and peripheral adapters through the reference net resolver | Hosted MS-DOS 2.00 prompt receipt below; functional wired boot, without timing or physical-board grading |
+| Compiled scheduled wired Harris | The same wired machine, with indexed net resolution and opt-in scheduling; CPU instructions are not replaced | Historical [compiled DOS report](HARRIS-COMPILED-DOS-BOOT-REPORT.json), preserved by [`90754a4`](https://github.com/CrispStrobe/bw-board/commit/90754a4e07dea8ea9b5937ddad44232c9f91db46): DOS prompt at 5,930,000 clocks |
+| Harris semantic adapter | `HarrisBootCPU` executes directly against test-only sparse semantic memory, without the latched board or peripherals | Full pinned SST286 real-mode inventory; instruction-state compatibility only |
+| Memory-only Harris hybrid | JS Harris instruction semantics cross the actual-net/native memory transaction path | Owned ROM, memory, READY, completion and browser comparisons; no DOS or peripheral boot acceptance |
+| Independent fast286 | `I8086`'s independent `variant:'80286'` functional core | Full pinned SST286 real-mode inventory; no Harris circuit, device, timing or application claim |
+
+[Hosted qualification run 35438804417](https://github.com/CrispStrobe/bw-board/actions/runs/35438804417)
+is green at merged revision
+[`84842a8678ef08766a6447618e0662c0f7cd40f2`](https://github.com/CrispStrobe/bw-board/commit/84842a8678ef08766a6447618e0662c0f7cd40f2):
+its independent `fast-full` and Harris `full-semantic` jobs each accepted the
+complete pinned real-mode corpus, and its bounded `wired-bios` job passed. The
+manual long `wired-dos` job was intentionally not selected in that run; its
+separate accepted hosted receipt remains the one cited below.
+
 ## Fresh exact-source receipts, 2026-09-19
 
 Candidate [`431acef1d5d1ff459414d6c4f8a67edd892e4f9a`](https://github.com/CrispStrobe/bw-board/commit/431acef1d5d1ff459414d6c4f8a67edd892e4f9a)
@@ -65,9 +86,11 @@ boot. It checks out Microsoft's MIT-licensed DOS 2.0 inputs at commit
 `2d04cacc5322951f187bb17e017c12920ac8ebe2`, leaves every optional performance
 switch off, and requires the real disk path, COMMAND.COM image and `A>` prompt.
 It is not enabled for branch pushes: the historical reference run took about
-105 minutes, and the newer optimized combinations have not yet earned an
-equivalent full-boot receipt. A passing result remains functional evidence,
-not instruction timing or physical-board certification.
+105 minutes. The specific compiled-connectivity, memory-scheduling-on,
+bus-trace-off configuration has the historical accepted report cited in the
+route table above; later optimization combinations need their own equivalent
+full-boot receipts. A passing result remains functional evidence, not
+instruction timing or physical-board certification.
 
 Dispatch only after the combined candidate SHA is frozen. Normal branch
 qualification produces three artifacts; a narrower manual selection produces

@@ -1,9 +1,11 @@
-2026-09-19 Harris route evidence documentation — ACTIVE, Codex Sol. Isolated worktree
+2026-09-19 Harris route evidence documentation — DONE, Codex Sol. Isolated worktree
 `/mnt/volume1/code/wt/astra-harris-route-docs`, branch `lane/harris-route-docs`.
 Owns documentation-only corrections in `docs/HARRIS-COMPILED-NETS.md` and
 `docs/SST286-RUNNER.md`: distinguish reference/compiled wired DOS, Harris semantic
 and hybrid routes, and independent fast286 evidence. No implementation, package
 pin, private transcript, or new software-proof claim.
+Corrected the dated compiled-DOS status without rewriting its history; added a
+five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 

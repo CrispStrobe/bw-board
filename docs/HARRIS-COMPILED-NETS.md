@@ -28,7 +28,8 @@ backend for that diagnostic hook. Topology is immutable after construction.
   writes/readback and verify, plus matching guest and memory state.
 - The real BIOS disk and keyboard integration fixtures run on both backends.
 - Targeted suite including the new oracle-adapter tests: **525/525 pass**,
-  zero skips. This does not mean compiled DOS boot has yet been accepted.
+  zero skips. At this point in the dated sequence, compiled DOS boot had not
+  yet been accepted; the later source-pinned acceptance is recorded below.
 
 The [four-pair startup receipt](HARRIS-INDEXED-NETS-BENCH.json) records median
 10,000-period POST times of **6,145 ms reference / 5,347 ms indexed**, about
@@ -42,9 +43,40 @@ HARRIS_NET_BACKEND=compiled node scripts/probe-harris-dos.mjs 10000000 /tmp/comp
 ```
 
 Existing local DOS inputs are required; neither command downloads or hosts
-media. The latter command is a reproduction route, not an already-passed run.
+media. The latter command was initially only a reproduction route. A later run
+of that route reached the DOS prompt and is retained in
+[HARRIS-COMPILED-DOS-BOOT-REPORT.json](HARRIS-COMPILED-DOS-BOOT-REPORT.json).
 Next: bound device access, explicit trace-off measurements, affected-device
 scheduling, and whole-kernel execution under the [performance plan](WIRED-X86-PERFORMANCE-PLAN.md).
+
+## Later compiled wired DOS acceptance
+
+Commit [`90754a4e07dea8ea9b5937ddad44232c9f91db46`](https://github.com/CrispStrobe/bw-board/commit/90754a4e07dea8ea9b5937ddad44232c9f91db46)
+preserves the accepted report produced from execution revision
+`03946c7fa6574848e35659941b3f6f19fd2adaa5`. With compiled connectivity,
+memory scheduling on and bus tracing off, the wired Harris board reached the
+MS-DOS 2.00 `A>` prompt after 5,930,000 modeled clocks in 1,946,641 ms. The
+report records the boot-sector, DOS and COMMAND.COM landmarks and the hashes of
+the CPU, circuit, peripheral adapters, ROM and three DOS inputs. This is an
+optimized **wired circuit** result: compilation changes net representation and
+scheduling, not Harris instruction semantics or physical/silicon timing.
+
+Reproduction uses local DOS 2.0 binaries and does not download them:
+
+```sh
+MSDOS_BIN_DIR=/absolute/path/to/ms-dos/v2.0/bin \
+HARRIS_NET_BACKEND=compiled \
+HARRIS_MEMORY_SCHEDULING=on \
+HARRIS_BUS_TRACE=off \
+node scripts/probe-harris-dos.mjs 6000000 /tmp/harris-compiled-dos.json
+```
+
+`MSDOS_BIN_DIR` must contain `MSDOS.SYS`, `COMMAND.COM` and `SYSINIT.OBJ`, the
+inputs consumed by `build-dos-image.mjs`. The historical report identifies them
+as `msdos`, `command` and `sysinit` and pins each SHA-256; current hosted
+reference-DOS qualification obtains the same inputs from Microsoft/MS-DOS commit
+`2d04cacc5322951f187bb17e017c12920ac8ebe2`. A different checkout or hash is a
+different input and cannot inherit this result.
 
 ## Bound access and bus trace control
 
