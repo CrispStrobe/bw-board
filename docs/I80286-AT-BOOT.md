@@ -169,3 +169,38 @@ read command.
 Guest HLT is not a stop condition in this runner: the machine advances to its
 next device deadline and may wake on an interrupt. Architectural shutdown
 remains a hard diagnostic stop.
+
+## Accepted FreeDOS 1.4 shell persistence
+
+The [source-bound FreeDOS evidence](../test/fixtures/freedos14-at-persistence-evidence.json)
+uses the unchanged official 1.2MiB image. The first fresh machine waits for the
+installer's real prompt, injects `N` and Enter through the 8042, and observes
+FreeDOS's explicit aborted-install message before reaching the shell. It then
+runs `echo fd-boot-ok>fdboot.txt` and `type fdboot.txt`. The FAT12 root file is
+exactly `fd-boot-ok\r\n`, and the output image SHA-256 is
+`1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815`.
+
+A second fresh machine admits that image only through the accepted write report,
+repeats the no-install choice, observes the live prompt cursor, and injects only
+`type fdboot.txt`. It displays the exact standalone line and returns to a final
+standalone `A:\>` prompt. The two raw reports retain their actual, separately
+source-bound harness revisions; the reboot receipt binds the current pure
+acceptance grader and rejects key, cursor, DMA, file, output and media-link
+mutations. No installer partition, format or copy action executes.
+
+## Next platform boundaries
+
+A Doom-class target needs a separate opt-in machine profile with at least 4MiB
+installed RAM and matching CMOS/BIOS memory evidence; the accepted 286 profile
+remains 640KiB conventional plus 512KiB extended. The repository has no
+AT-compatible hard-disk controller, while the executable and WAD exceed floppy
+capacity. A real sector-I/O path therefore needs an ATA/WD1003-style controller
+at 1F0h with IRQ14, bootable FAT media, and native 16-bit data-register I/O;
+splitting that access across adjacent byte ports would incorrectly hit 1F1h.
+
+The existing VGA device supplies register, DAC, retrace and linear mode-13h
+behavior. It does not interpret planar memory or unchained page flipping, and
+the IBM CGA BIOS does not initialize a VGA card. A later Doom platform needs a
+licensed external VGA ROM/INT10 path plus the planar/Mode-X behavior required
+by the selected unchanged binary. These are concrete missing platform pieces,
+not capabilities implied by the current 386 CPU or AT adapter.

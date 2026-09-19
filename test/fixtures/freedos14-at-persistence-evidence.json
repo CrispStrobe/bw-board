@@ -1,0 +1,1678 @@
+{
+  "schema": "astra.freedos14-at-persistence-evidence.v1",
+  "write": {
+    "schema": "astra.freedos14-at-acceptance.v1",
+    "passed": true,
+    "fullBootAccepted": true,
+    "diagnosticOnly": false,
+    "steps": 71256064,
+    "stopReason": "acceptance-observed",
+    "scope": "unchanged FreeDOS 1.4 floppy boot, explicit installer decline, and keyboard shell command",
+    "input": {
+      "name": "IBM 5170 Rev1 BIOS 1984-01-10",
+      "bytes": 65536,
+      "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+      "expectedSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+      "distribution": "external; ROM bytes are not stored by this repository",
+      "floppy": {
+        "bytes": 1228800,
+        "sha256": "03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77",
+        "bootSectorSha256": "02aa8525a3dce52cf544fd6acff21687973362da0bef1503428d6eb694659189",
+        "geometry": {
+          "cylinders": 80,
+          "heads": 2,
+          "sectors": 15,
+          "bytesPerSector": 512
+        },
+        "output": {
+          "path": "/tmp/astra-freedos14-at-write-494d597.img",
+          "sha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815"
+        }
+      }
+    },
+    "executionBoundaries": {
+      "int19": {
+        "step": 22985116,
+        "before": {
+          "cs": 61440,
+          "ip": 5803,
+          "sp": 256,
+          "ss": 48
+        },
+        "after": {
+          "cs": 61440,
+          "ip": 59122,
+          "sp": 250,
+          "ss": 48
+        },
+        "devices": {
+          "masterPic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 188,
+            "vectorBase": 8,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "slavePic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 253,
+            "vectorBase": 112,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "primaryDma": {
+            "command": 0,
+            "status": 0,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 254,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "secondaryDma": {
+            "command": 0,
+            "status": 0,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 3,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": false,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "fdc": {
+            "dor": 12,
+            "ccr": 2,
+            "phase": "command",
+            "cmdBuf": [],
+            "cmdLen": 1,
+            "resultBuf": [],
+            "resultIdx": 0,
+            "pendingInt": [
+              {
+                "st0": 32,
+                "drive": 0
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              }
+            ],
+            "intPending": false,
+            "irq": false,
+            "driveBusy": 1,
+            "srt": 13,
+            "hut": 15,
+            "hlt": 1,
+            "nonDma": false,
+            "refusals": 0,
+            "lastRefusal": null,
+            "lastRefusalSymptom": null,
+            "lastRefusalAt": null,
+            "lastFault": null,
+            "stats": {
+              "badReads": 0,
+              "badWrites": 0,
+              "motorOff": 0,
+              "selectMismatch": 0,
+              "headMismatch": 0,
+              "overruns": 0
+            },
+            "drives": [
+              {
+                "pcn": 34,
+                "track": 34,
+                "changed": false,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              }
+            ]
+          }
+        }
+      },
+      "bootSector": {
+        "step": 23748525,
+        "before": {
+          "cs": 61440,
+          "ip": 7105,
+          "sp": 250,
+          "ss": 48
+        },
+        "after": {
+          "cs": 0,
+          "ip": 31744,
+          "sp": 250,
+          "ss": 48
+        },
+        "physical": 31744,
+        "firstBytes": [
+          235,
+          60,
+          144,
+          70,
+          82,
+          68,
+          79,
+          83,
+          53,
+          46,
+          49,
+          0,
+          2,
+          1,
+          1,
+          0
+        ],
+        "sha256": "02aa8525a3dce52cf544fd6acff21687973362da0bef1503428d6eb694659189",
+        "devices": {
+          "masterPic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 188,
+            "vectorBase": 8,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "slavePic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 253,
+            "vectorBase": 112,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "primaryDma": {
+            "command": 0,
+            "status": 4,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 31744,
+                "curAddr": 32256,
+                "baseCount": 511,
+                "curCount": 65535,
+                "mode": 1,
+                "transferType": 1,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "secondaryDma": {
+            "command": 0,
+            "status": 0,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 3,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": false,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "fdc": {
+            "dor": 28,
+            "ccr": 2,
+            "phase": "command",
+            "cmdBuf": [],
+            "cmdLen": 1,
+            "resultBuf": [],
+            "resultIdx": 0,
+            "pendingInt": [
+              {
+                "st0": 195,
+                "drive": 3
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              }
+            ],
+            "intPending": false,
+            "irq": false,
+            "driveBusy": 1,
+            "srt": 13,
+            "hut": 15,
+            "hlt": 1,
+            "nonDma": false,
+            "refusals": 0,
+            "lastRefusal": null,
+            "lastRefusalSymptom": null,
+            "lastRefusalAt": null,
+            "lastFault": null,
+            "stats": {
+              "badReads": 0,
+              "badWrites": 0,
+              "motorOff": 0,
+              "selectMismatch": 0,
+              "headMismatch": 0,
+              "overruns": 0
+            },
+            "drives": [
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": false,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              }
+            ]
+          }
+        }
+      },
+      "unexpectedInterrupt": null
+    },
+    "keyboardScript": {
+      "requested": "n\recho fd-boot-ok>fdboot.txt\rtype fdboot.txt\r",
+      "installerDeclined": true,
+      "commandQueued": true,
+      "injected": [
+        {
+          "step": 57704970,
+          "key": "n",
+          "scan": 49
+        },
+        {
+          "step": 58260403,
+          "key": "\r",
+          "scan": 28
+        },
+        {
+          "step": 70977720,
+          "key": "e",
+          "scan": 18
+        },
+        {
+          "step": 70979134,
+          "key": "c",
+          "scan": 46
+        },
+        {
+          "step": 70981798,
+          "key": "h",
+          "scan": 35
+        },
+        {
+          "step": 70986595,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 70989232,
+          "key": " ",
+          "scan": 57
+        },
+        {
+          "step": 70991869,
+          "key": "f",
+          "scan": 33
+        },
+        {
+          "step": 70995763,
+          "key": "d",
+          "scan": 32
+        },
+        {
+          "step": 70998400,
+          "key": "-",
+          "scan": 12
+        },
+        {
+          "step": 71001037,
+          "key": "b",
+          "scan": 48
+        },
+        {
+          "step": 71004934,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71007571,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71010268,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71014084,
+          "key": "-",
+          "scan": 12
+        },
+        {
+          "step": 71016721,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71019360,
+          "key": "k",
+          "scan": 37
+        },
+        {
+          "step": 71023257,
+          "key": "shift-down",
+          "scan": 42
+        },
+        {
+          "step": 71023783,
+          "key": ">",
+          "scan": 52
+        },
+        {
+          "step": 71026013,
+          "key": "shift-up",
+          "scan": 170
+        },
+        {
+          "step": 71026542,
+          "key": "f",
+          "scan": 33
+        },
+        {
+          "step": 71028773,
+          "key": "d",
+          "scan": 32
+        },
+        {
+          "step": 71032424,
+          "key": "b",
+          "scan": 48
+        },
+        {
+          "step": 71035058,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71037695,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71041574,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71044211,
+          "key": ".",
+          "scan": 52
+        },
+        {
+          "step": 71046848,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71050742,
+          "key": "x",
+          "scan": 45
+        },
+        {
+          "step": 71053379,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71056016,
+          "key": "\r",
+          "scan": 28
+        },
+        {
+          "step": 71063379,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71144845,
+          "key": "y",
+          "scan": 21
+        },
+        {
+          "step": 71147506,
+          "key": "p",
+          "scan": 25
+        },
+        {
+          "step": 71150142,
+          "key": "e",
+          "scan": 18
+        },
+        {
+          "step": 71155287,
+          "key": " ",
+          "scan": 57
+        },
+        {
+          "step": 71157927,
+          "key": "f",
+          "scan": 33
+        },
+        {
+          "step": 71160564,
+          "key": "d",
+          "scan": 32
+        },
+        {
+          "step": 71164377,
+          "key": "b",
+          "scan": 48
+        },
+        {
+          "step": 71167014,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71169651,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71173548,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71176185,
+          "key": ".",
+          "scan": 52
+        },
+        {
+          "step": 71178819,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71182716,
+          "key": "x",
+          "scan": 45
+        },
+        {
+          "step": 71185413,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71188053,
+          "key": "\r",
+          "scan": 28
+        }
+      ],
+      "remaining": []
+    },
+    "guestFile": {
+      "name": "FDBOOT  TXT",
+      "cluster": 2,
+      "size": 12,
+      "bytes": [
+        102,
+        100,
+        45,
+        98,
+        111,
+        111,
+        116,
+        45,
+        111,
+        107,
+        13,
+        10
+      ],
+      "text": "fd-boot-ok\r\n"
+    },
+    "final": {
+      "cs": 1715,
+      "ip": 605,
+      "pc": 28045,
+      "halted": false,
+      "shutdown": false,
+      "a20Enabled": false,
+      "cmosShutdown": 0
+    },
+    "screenText": [
+      "",
+      "FreeCom version 0.86 - WATCOMC - XMS_Swap [Dec 30 2024 22:10:51]",
+      "",
+      "         \u00db\u00db\u00db\u00db\u00db\u00db\u00db                         \u00db\u00db\u00db\u00db\u00db\u00db      \u00db\u00db\u00db\u00db\u00db\u00db     \u00db\u00db\u00db\u00db\u00db\u00db",
+      "         \u00db\u00db                              \u00db\u00db   \u00db\u00db    \u00db\u00db    \u00db\u00db   \u00db\u00db    \u00db\u00db",
+      "         \u00db\u00db                              \u00db\u00db    \u00db\u00db  \u00db\u00db      \u00db\u00db \u00db\u00db",
+      "         \u00db\u00db      \u00db \u00db\u00db\u00db\u00db   \u00db\u00db\u00db\u00db\u00db   \u00db\u00db\u00db\u00db\u00db  \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db  \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db\u00db  \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db   \u00db\u00db\u00db\u00db\u00db\u00db",
+      "         \u00db\u00db\u00db\u00db\u00db\u00db  \u00db\u00db      \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db        \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db      \u00db\u00db\u00db\u00db\u00db\u00db  \u00db\u00db\u00db\u00db\u00db\u00db  \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db         \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db      \u00db\u00db      \u00db\u00db      \u00db\u00db    \u00db\u00db  \u00db\u00db      \u00db\u00db         \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db      \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db    \u00db\u00db    \u00db\u00db   \u00db\u00db    \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db       \u00db\u00db\u00db\u00db\u00db   \u00db\u00db\u00db\u00db\u00db  \u00db\u00db\u00db\u00db\u00db\u00db      \u00db\u00db\u00db\u00db\u00db\u00db     \u00db\u00db\u00db\u00db\u00db\u00db",
+      "Do you want to proceed [Y,N]?Ns is not what you intend, please stop NOW!\u00c4\u00c4\u00c4\u00c4\u00c4\u00c4\u00c4\u00c4",
+      "A:\\>echo fd-boot-ok>fdboot.txt4 has been aborted.",
+      "A:\\>type fdboot.txt",
+      "fd-boot-ok",
+      "A:\\>",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "persistence": {
+      "priorOutputMediaSha256": null,
+      "linked": null
+    },
+    "executionRevision": "494d5971edab79d586d77f714d0fe7246686fc3b",
+    "sourceSha256": {
+      "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
+      "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+      "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+      "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+      "src/at-8042-a20.js": "cbf5f54ebe7f64854aeaba888a6a8a39d28e8739a46a6952e6e470ee39b7f6d6",
+      "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+      "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+      "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+      "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+      "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+      "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+      "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+      "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+      "scripts/lib/freedos-at-acceptance.mjs": "98c9703778019d04552601aaa9cba518a5b2d6971f61653addda183c5b034ee7",
+      "scripts/run-freedos14-at-acceptance.mjs": "5c7460db41a7628c84ddaf0d0e51d5f4b43f869e5441a9279768aeeb92553473"
+    },
+    "reset": {
+      "cs": 61440,
+      "ip": 65520,
+      "pc": 16777200,
+      "fetchPhysical": 16777200
+    },
+    "memory": {
+      "addressSpaceBytes": 16777216,
+      "installedRamBytes": 1179648,
+      "baseRamBytes": 655360,
+      "extendedRamBytes": 524288
+    },
+    "originalReportSha256": "4dd47c40297264f68ceb9b17b51cd1c106460b115cbc6ee8a0615ea0c327d36c"
+  },
+  "reboot": {
+    "schema": "astra.freedos14-at-acceptance.v1",
+    "passed": true,
+    "fullBootAccepted": true,
+    "diagnosticOnly": false,
+    "steps": 71130112,
+    "stopReason": "acceptance-observed",
+    "scope": "unchanged FreeDOS 1.4 floppy boot, explicit installer decline, and keyboard shell command",
+    "input": {
+      "name": "IBM 5170 Rev1 BIOS 1984-01-10",
+      "bytes": 65536,
+      "sha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+      "expectedSha256": "74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f",
+      "distribution": "external; ROM bytes are not stored by this repository",
+      "floppy": {
+        "bytes": 1228800,
+        "sha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815",
+        "bootSectorSha256": "02aa8525a3dce52cf544fd6acff21687973362da0bef1503428d6eb694659189",
+        "geometry": {
+          "cylinders": 80,
+          "heads": 2,
+          "sectors": 15,
+          "bytesPerSector": 512
+        }
+      }
+    },
+    "executionBoundaries": {
+      "int19": {
+        "step": 22985116,
+        "before": {
+          "cs": 61440,
+          "ip": 5803,
+          "sp": 256,
+          "ss": 48
+        },
+        "after": {
+          "cs": 61440,
+          "ip": 59122,
+          "sp": 250,
+          "ss": 48
+        },
+        "devices": {
+          "masterPic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 188,
+            "vectorBase": 8,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "slavePic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 253,
+            "vectorBase": 112,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "primaryDma": {
+            "command": 0,
+            "status": 0,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 254,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "secondaryDma": {
+            "command": 0,
+            "status": 0,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 3,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": false,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "fdc": {
+            "dor": 12,
+            "ccr": 2,
+            "phase": "command",
+            "cmdBuf": [],
+            "cmdLen": 1,
+            "resultBuf": [],
+            "resultIdx": 0,
+            "pendingInt": [
+              {
+                "st0": 32,
+                "drive": 0
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              }
+            ],
+            "intPending": false,
+            "irq": false,
+            "driveBusy": 1,
+            "srt": 13,
+            "hut": 15,
+            "hlt": 1,
+            "nonDma": false,
+            "refusals": 0,
+            "lastRefusal": null,
+            "lastRefusalSymptom": null,
+            "lastRefusalAt": null,
+            "lastFault": null,
+            "stats": {
+              "badReads": 0,
+              "badWrites": 0,
+              "motorOff": 0,
+              "selectMismatch": 0,
+              "headMismatch": 0,
+              "overruns": 0
+            },
+            "drives": [
+              {
+                "pcn": 34,
+                "track": 34,
+                "changed": false,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              }
+            ]
+          }
+        }
+      },
+      "bootSector": {
+        "step": 23748525,
+        "before": {
+          "cs": 61440,
+          "ip": 7105,
+          "sp": 250,
+          "ss": 48
+        },
+        "after": {
+          "cs": 0,
+          "ip": 31744,
+          "sp": 250,
+          "ss": 48
+        },
+        "physical": 31744,
+        "firstBytes": [
+          235,
+          60,
+          144,
+          70,
+          82,
+          68,
+          79,
+          83,
+          53,
+          46,
+          49,
+          0,
+          2,
+          1,
+          1,
+          0
+        ],
+        "sha256": "02aa8525a3dce52cf544fd6acff21687973362da0bef1503428d6eb694659189",
+        "devices": {
+          "masterPic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 188,
+            "vectorBase": 8,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "slavePic": {
+            "irr": 0,
+            "isr": 0,
+            "imr": 253,
+            "vectorBase": 112,
+            "icw4": 1,
+            "autoEOI": false,
+            "readISR": true,
+            "initPhase": 0,
+            "needICW3": true,
+            "initWarningAt": null,
+            "needICW4": true,
+            "intActive": false,
+            "lowestPriority": 7,
+            "rotateOnAutoEOI": false,
+            "pollPending": false,
+            "specialMask": false
+          },
+          "primaryDma": {
+            "command": 0,
+            "status": 4,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 31744,
+                "curAddr": 32256,
+                "baseCount": 511,
+                "curCount": 65535,
+                "mode": 1,
+                "transferType": 1,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "secondaryDma": {
+            "command": 0,
+            "status": 0,
+            "temp": 0,
+            "ff": false,
+            "hrq": false,
+            "pageScratch": 0,
+            "lowestPriority": 3,
+            "channels": [
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 3,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": false,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              },
+              {
+                "page": 0,
+                "baseAddr": 43690,
+                "curAddr": 43690,
+                "baseCount": 43690,
+                "curCount": 43690,
+                "mode": 1,
+                "transferType": 0,
+                "autoinit": false,
+                "decrement": false,
+                "masked": true,
+                "swRequest": false,
+                "dreqLevel": false
+              }
+            ]
+          },
+          "fdc": {
+            "dor": 28,
+            "ccr": 2,
+            "phase": "command",
+            "cmdBuf": [],
+            "cmdLen": 1,
+            "resultBuf": [],
+            "resultIdx": 0,
+            "pendingInt": [
+              {
+                "st0": 195,
+                "drive": 3
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              },
+              {
+                "st0": 32,
+                "drive": 0
+              }
+            ],
+            "intPending": false,
+            "irq": false,
+            "driveBusy": 1,
+            "srt": 13,
+            "hut": 15,
+            "hlt": 1,
+            "nonDma": false,
+            "refusals": 0,
+            "lastRefusal": null,
+            "lastRefusalSymptom": null,
+            "lastRefusalAt": null,
+            "lastFault": null,
+            "stats": {
+              "badReads": 0,
+              "badWrites": 0,
+              "motorOff": 0,
+              "selectMismatch": 0,
+              "headMismatch": 0,
+              "overruns": 0
+            },
+            "drives": [
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": false,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              },
+              {
+                "pcn": 0,
+                "track": 0,
+                "changed": true,
+                "idIndex": 0,
+                "writeProtect": false
+              }
+            ]
+          }
+        }
+      },
+      "unexpectedInterrupt": null
+    },
+    "keyboardScript": {
+      "requested": "n\rtype fdboot.txt\r",
+      "installerDeclined": true,
+      "commandQueued": true,
+      "commandPrompt": {
+        "step": 71000064,
+        "row": 14,
+        "column": 4,
+        "line": "A:\\>installation of FreeDOS 1.4 has been aborted."
+      },
+      "injected": [
+        {
+          "step": 57733471,
+          "key": "n",
+          "scan": 49
+        },
+        {
+          "step": 58281620,
+          "key": "\r",
+          "scan": 28
+        },
+        {
+          "step": 71001754,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71003108,
+          "key": "y",
+          "scan": 21
+        },
+        {
+          "step": 71007770,
+          "key": "p",
+          "scan": 25
+        },
+        {
+          "step": 71010407,
+          "key": "e",
+          "scan": 18
+        },
+        {
+          "step": 71013044,
+          "key": " ",
+          "scan": 57
+        },
+        {
+          "step": 71016941,
+          "key": "f",
+          "scan": 33
+        },
+        {
+          "step": 71019575,
+          "key": "d",
+          "scan": 32
+        },
+        {
+          "step": 71022212,
+          "key": "b",
+          "scan": 48
+        },
+        {
+          "step": 71026109,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71028746,
+          "key": "o",
+          "scan": 24
+        },
+        {
+          "step": 71031443,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71035259,
+          "key": ".",
+          "scan": 52
+        },
+        {
+          "step": 71037896,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71040533,
+          "key": "x",
+          "scan": 45
+        },
+        {
+          "step": 71044432,
+          "key": "t",
+          "scan": 20
+        },
+        {
+          "step": 71047069,
+          "key": "\r",
+          "scan": 28
+        }
+      ],
+      "remaining": []
+    },
+    "guestFile": {
+      "name": "FDBOOT  TXT",
+      "cluster": 2,
+      "size": 12,
+      "bytes": [
+        102,
+        100,
+        45,
+        98,
+        111,
+        111,
+        116,
+        45,
+        111,
+        107,
+        13,
+        10
+      ],
+      "text": "fd-boot-ok\r\n"
+    },
+    "final": {
+      "cs": 4376,
+      "ip": 12120,
+      "pc": 82136,
+      "halted": false,
+      "shutdown": false,
+      "a20Enabled": false,
+      "cmosShutdown": 0
+    },
+    "screenText": [
+      "",
+      "FreeCom version 0.86 - WATCOMC - XMS_Swap [Dec 30 2024 22:10:51]",
+      "",
+      "         \u00db\u00db\u00db\u00db\u00db\u00db\u00db                         \u00db\u00db\u00db\u00db\u00db\u00db      \u00db\u00db\u00db\u00db\u00db\u00db     \u00db\u00db\u00db\u00db\u00db\u00db",
+      "         \u00db\u00db                              \u00db\u00db   \u00db\u00db    \u00db\u00db    \u00db\u00db   \u00db\u00db    \u00db\u00db",
+      "         \u00db\u00db                              \u00db\u00db    \u00db\u00db  \u00db\u00db      \u00db\u00db \u00db\u00db",
+      "         \u00db\u00db      \u00db \u00db\u00db\u00db\u00db   \u00db\u00db\u00db\u00db\u00db   \u00db\u00db\u00db\u00db\u00db  \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db  \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db\u00db  \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db   \u00db\u00db\u00db\u00db\u00db\u00db",
+      "         \u00db\u00db\u00db\u00db\u00db\u00db  \u00db\u00db      \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db        \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db      \u00db\u00db\u00db\u00db\u00db\u00db  \u00db\u00db\u00db\u00db\u00db\u00db  \u00db\u00db     \u00db\u00db \u00db\u00db      \u00db\u00db         \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db      \u00db\u00db      \u00db\u00db      \u00db\u00db    \u00db\u00db  \u00db\u00db      \u00db\u00db         \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db      \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db \u00db\u00db   \u00db\u00db    \u00db\u00db    \u00db\u00db   \u00db\u00db    \u00db\u00db",
+      "         \u00db\u00db      \u00db\u00db       \u00db\u00db\u00db\u00db\u00db   \u00db\u00db\u00db\u00db\u00db  \u00db\u00db\u00db\u00db\u00db\u00db      \u00db\u00db\u00db\u00db\u00db\u00db     \u00db\u00db\u00db\u00db\u00db\u00db",
+      "Do you want to proceed [Y,N]?Ns is not what you intend, please stop NOW!\u00c4\u00c4\u00c4\u00c4\u00c4\u00c4\u00c4\u00c4",
+      "A:\\>type fdboot.txt FreeDOS 1.4 has been aborted.",
+      "fd-boot-ok",
+      "A:\\>",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "persistence": {
+      "priorOutputMediaSha256": "1462a0fa85bfe9920250725bbface8c637e66d49bad17793e0da01b2e9bc9815",
+      "linked": true
+    },
+    "executionRevision": "195b0b3044d5a11d7ec0511b07f516313ca6f543",
+    "sourceSha256": {
+      "src/i8086-machine.js": "c9d2d8b644426826710523fb0958a308a82b3ca6c327fc29bba2edf9300ca163",
+      "src/i8086.js": "814d2a96184f7b490905f25317197ec0dcea8128e234efcf3fe3f173f799300a",
+      "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
+      "src/experimental/i80286-protected.js": "b3e00b7bd10e1e02d9e9a27bf543f620229e5f9f888dddf4c9ef0a2127826e70",
+      "src/at-8042-a20.js": "cbf5f54ebe7f64854aeaba888a6a8a39d28e8739a46a6952e6e470ee39b7f6d6",
+      "src/at-system-control.js": "aaeecd1c9ea926f4d35481a46be3f64075367152144756786443041018c443e7",
+      "src/i8254.js": "4346fc1eb6b2d368480292372ac8cec7db8cac6baf94d6a88c7311b1809a8c30",
+      "src/i8259.js": "fcfca4a160bac3cf4b72ca0613c63ca702cd26d6822000ba75a0035ef87da278",
+      "src/i8237.js": "a2a774349848e797861108c59a9563a281ce1c1b561a201b8dc022d5584142ad",
+      "src/mc146818.js": "f6caa1e99c2f0fc323cab7a913df68435c5c13c4a86d3c89a8b55ccdde2ec80c",
+      "src/cga-card.js": "afb6141ce8420556e8e9acfff7642225d46f5509db20459bd6fdaba8d0b50fdc",
+      "src/upd765.js": "57399c67453d6458b0c44c1472ca176fa07910945eaed130dfdb7a43f1976874",
+      "src/machine-checkpoint.js": "576a8420212a8eedaf89dc0dff27cb26e8a7e73c89162e242d65b8e1cc3f0139",
+      "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
+      "scripts/lib/freedos-at-acceptance.mjs": "e6dbc560e65676a3199ce1299aea28abd2c3c6f62ac46ed1c0243c572498065a",
+      "scripts/run-freedos14-at-acceptance.mjs": "e230b830833e4b0c7603f32c18add01a1cd6d12fa27a46ce9c96392accf1d46d"
+    },
+    "reset": {
+      "cs": 61440,
+      "ip": 65520,
+      "pc": 16777200,
+      "fetchPhysical": 16777200
+    },
+    "memory": {
+      "addressSpaceBytes": 16777216,
+      "installedRamBytes": 1179648,
+      "baseRamBytes": 655360,
+      "extendedRamBytes": 524288
+    },
+    "originalReportSha256": "3acbdd59670f6014ce1a2cc7c4527ff86e54addec2e1f15777a4bef9e74a1904"
+  }
+}
