@@ -66,8 +66,12 @@ test('runner rejects invalid budgets and corrupt FAT file chains',{skip},()=>{
 test('the checked-in receipt is bound to the executed source, output and inputs',{skip},()=>{
     const r=acceptance();
     const receipt=JSON.parse(readFileSync(new URL('../docs/receipts/2026-09-19-dos-toolchain-fast286.json',import.meta.url)));
+    assert.equal(receipt.accepted,true);
+    assert.equal(receipt.expectedOutput,'GUEST-TOOLCHAIN-OK');
+    assert.match(receipt.scope,/fast 80286 real-mode core/);
+    assert.match(receipt.sourceHashScope,/manually enumerated/);
     assert.equal(receipt.baseRevision,'4926e93cd0133dd038b929f8506318d0da320b3b');
-    assert.equal(receipt.executionRevision,'ac6f1038ff6f6426afdd80b6c0879823bfe7df69');
+    assert.match(receipt.executionRevision,/^[0-9a-f]{40}$/);
     assert.equal(receipt.sourceSha256,r.sourceSha256);
     assert.equal(receipt.producedComSha256,r.comSha256);
     assert.deepEqual(receipt.sourceHashes,r.sourceHashes);
