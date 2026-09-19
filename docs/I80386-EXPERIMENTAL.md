@@ -276,6 +276,15 @@ reset while an external A20 gate is deliberately held low leaves bit 20 low and
 does not invent a second alias. The bounded board profile does not claim that
 unsupported combination can boot firmware.
 
+`scripts/run-i80386-at-bios-diagnostic.mjs` executes an externally supplied,
+hash-pinned IBM 5170 Rev1 ROM through this adapter. It admits a clean exact HEAD
+and hashes every tracked JavaScript source plus the harness before execution,
+then rejects source or HEAD changes afterward. Its result is always diagnostic:
+budget exhaustion, architectural shutdown, an explicit unsupported opcode, and
+a surfaced architectural fault are separate outcomes. HLT is left to the
+machine scheduler so a pending device interrupt can wake it; HLT alone is never
+reported as success. The runner does not claim POST or operating-system boot.
+
 ## REP and ISA continuation receipt
 
 The [continuation receipt](receipts/2026-09-19-386-rep-isa.json) binds execution
