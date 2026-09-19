@@ -53,6 +53,12 @@ bind actual inputs and source hashes. Full hosted CI, 286 fast/Harris corpora,
 native contracts and new bounded 386 jobs gate landing. Continuation claim above
 remains active for AT disk diagnosis, paging, privilege and application work.
 No full 386DX, Windows, Doom or physical-timing claim; external media stays external.
+Initial candidate `f6f85cc` passed CPU qualification `35467798134` and native
+qualification `35467798125`; CI `35467798130` had one failure: the new optional
+MOO parser test lacked its external-input census row (5429 pass, 272 skip).
+The corrected candidate registers the exact pinned corpus with explicit-env
+discovery matching both consumers. Focused census checks and required-input
+present/absent checks pass; fresh hosted qualification gates the corrected head.
 
 2026-09-19 DONE (qualified and landed at `3cd5927`) — Astra/Sol AT reset and 286 recovery milestone;
 exact candidate is the commit carrying this row. The active continuation claim
