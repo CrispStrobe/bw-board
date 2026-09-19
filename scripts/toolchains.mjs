@@ -17,6 +17,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { assemble } from '../src/i8086-asm.js';
 import { basicToAsm } from './basic.mjs';
+import { cToAsm } from './cc.mjs';
 import { runImage, runChain, runDos } from './run-dos.mjs';
 
 /**
@@ -57,8 +58,12 @@ export const TOOLCHAINS = Object.freeze([
       label: 'GW-BASIC interpreter', interpret: 'GWBASIC.EXE', ext: 'BAS', run: 'via-tool' },
     { id: 'qbasic', language: 'bas', kind: 'dos', tools: ['QBASIC.EXE'],
       label: 'QBasic', interpret: 'QBASIC.EXE', ext: 'BAS', run: 'via-tool' },
+    { id: 'cc-native', language: 'c', kind: 'native', tools: [],
+      label: 'Built-in C (printf/puts subset -> asm) — no compiler needed',
+      build: (src) => assemble(cToAsm(src), { format: 'com' }).bytes, run: 'com' },
+
     { id: 'tcc', language: 'c', kind: 'dos', tools: ['TCC.EXE'],
-      label: 'Turbo C', chain: true, ext: 'C', run: 'exe' },
+      label: 'Turbo C (full C, when installed)', chain: true, ext: 'C', run: 'exe' },
 ]);
 
 /** The uppercased basenames of the DOS binaries present in `dir`. */
