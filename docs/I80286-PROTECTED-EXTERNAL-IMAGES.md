@@ -41,9 +41,10 @@ only the seven exact PCjs differences listed in the receipt; changing saved SP,
 FLAGS, or any other byte fails qualification.
 
 `int4_tgate.img` remains a separately reported diagnostic input. The pinned PCjs
-reference resets with numeric `-1` during its cross-privilege task-gate path, so
-this qualification neither swallows that exception nor counts the image among
-the seven accepted programs.
+reference reset with numeric `-1` during a historical audit at the exact pinned
+oracle and input revisions. The positive receipt records that provenance but
+does not rerun or swallow the exception, and it does not count the image among
+the seven PCjs-compared programs.
 
 The pinned comparison therefore reports seven PCjs comparisons and eight local
 program results. Its successful status is

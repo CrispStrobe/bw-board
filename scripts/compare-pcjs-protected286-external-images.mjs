@@ -299,6 +299,8 @@ console.log(
         ownedAccepted: true,
         ownedResult: ownedDiagnostic,
         referenceAccepted: false,
+        referenceEvidence:
+          "historical audit at the exact pinned oracle and input revisions; not rerun by this receipt",
         reason:
           "PCjs resets with numeric -1 during the cross-privilege task-gate path",
       })),
