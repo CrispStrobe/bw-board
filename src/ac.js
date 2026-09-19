@@ -24,7 +24,7 @@
 
 import {
   findNet, junctionOpts, pwlKneeCurrent, smoothVov, MOS_GDS_FLOOR, MOS_SMOOTH_DELTA,
-  mosGds, mosK, mosTriode, mosVth,
+  ebersMollCompanion, ebersMollParams, mosGds, mosK, mosTriode, mosVth,
   shockleyParams, shockleyEval, shockleyJunctionFromTotal, kneeFromVf, JUNCTION_RD, junctionRd } from './mna.js';
 import { CooMatrix, SparseLU, toCSC } from './sparse.js';
 import { getDevice } from './devices.js';
@@ -64,6 +64,8 @@ function junctionG(part, vAcross, vf, rd) {
  * @param {Map<string, number>} args.controls
  * @param {number} args.vcc
  * @param {Map<string, number>} args.opVoltages - converged DC node voltages
+ * @param {Map<string, Map<string, number>>} [args.opBranchCurrents] - converged
+ *   DC terminal currents, positive into each part
  * @param {Map<string, object>} [args.deviceStates]
  * @param {Map<string, string>} [args.opRegions] - solveMNA's settled
  *   `opampRegions`: the region each op-amp / railed vcvs converged in at the
@@ -81,7 +83,7 @@ function junctionG(part, vAcross, vf, rd) {
  */
 export function acSweep(args) {
   const {
-    parts, nets, pinSources, controls, vcc, opVoltages,
+    parts, nets, pinSources, controls, vcc, opVoltages, opBranchCurrents,
     deviceStates, opRegions, sourceId, freqs, probes,
     nodeRegularizationSiemens = 1e-12, analysisProfile = 'interactive-v1',
     sourceBiasPolicy = 'waveform-at-current-board-time',
@@ -127,6 +129,20 @@ export function acSweep(args) {
   let nodeCount = 0;
   for (const net of nets) {
     if (!grounded.has(net.id)) nodeIndex.set(net.id, nodeCount++);
+  }
+
+  // An explicit positive SPICE RB sits between the authored base terminal and
+  // the intrinsic Ebers-Moll base. DC gives it a real hidden node; AC must do
+  // the same or it linearises a different circuit. Explicit Shockley NPNs
+  // without RB reuse the external base index and add no matrix row.
+  const exactNpn = new Map();
+  const bjtBaseIndex = new Map();
+  for (const part of parts) {
+    if (part.kind !== 'npn' || part.params?.model !== 'shockley') continue;
+    const params = ebersMollParams(part);
+    if (!params) continue;
+    exactNpn.set(part.id, params);
+    if (params.rb > 0) bjtBaseIndex.set(part.id, nodeCount++);
   }
   const idxOf = (netId) => (netId && !grounded.has(netId)) ? nodeIndex.get(netId) : undefined;
   const vOp = (netId) => netId ? (opVoltages.get(netId) ?? 0) : 0;
@@ -181,6 +197,14 @@ export function acSweep(args) {
     if (ia !== undefined && ib !== undefined) {
       addC(ia, ib, -g, -susc);
       addC(ib, ia, -g, -susc);
+    }
+  };
+  const addGIndexes = (ia, ib, g) => {
+    if (ia !== undefined) addC(ia, ia, g, 0);
+    if (ib !== undefined) addC(ib, ib, g, 0);
+    if (ia !== undefined && ib !== undefined) {
+      addC(ia, ib, -g, 0);
+      addC(ib, ia, -g, 0);
     }
   };
 
@@ -290,6 +314,38 @@ export function acSweep(args) {
           const nB = netOf(part.id, 'base');
           const nC = netOf(part.id, 'collector');
           const nE = netOf(part.id, 'emitter');
+          const em = part.kind === 'npn' ? exactNpn.get(part.id) : null;
+          if (em) {
+            const iExternalBase = idxOf(nB);
+            const iB = bjtBaseIndex.get(part.id) ?? iExternalBase;
+            const iC = idxOf(nC);
+            const iE = idxOf(nE);
+            let vB = vOp(nB);
+            if (em.rb > 0) {
+              const baseCurrent = opBranchCurrents?.get(part.id)?.get('base');
+              if (!Number.isFinite(baseCurrent)) {
+                throw new Error(`acSweep: ${part.id} is missing its converged base current for RB`);
+              }
+              vB -= baseCurrent * em.rb;
+              addGIndexes(iExternalBase, iB, 1 / em.rb);
+            }
+            const c = ebersMollCompanion(vB - vOp(nE), vB - vOp(nC), em);
+            const add = (row, col, value) => {
+              if (row !== undefined && col !== undefined) addC(row, col, value, 0);
+            };
+            // Vbe = Vb - Ve; Vbc = Vb - Vc. These are exactly the
+            // conductance rows of stampEbersMoll, without its DC offsets.
+            add(iB, iB, c.gpi + c.gmu);
+            add(iB, iE, -c.gpi);
+            add(iB, iC, -c.gmu);
+            add(iC, iB, c.gcF + c.gcR);
+            add(iC, iE, -c.gcF);
+            add(iC, iC, -c.gcR);
+            add(iE, iB, -(c.gpi + c.gmu + c.gcF + c.gcR));
+            add(iE, iE, c.gpi + c.gcF);
+            add(iE, iC, c.gmu + c.gcR);
+            break;
+          }
           const vJ = part.kind === 'npn'
             ? vOp(nB) - vOp(nE)
             : vOp(nE) - vOp(nB);

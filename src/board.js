@@ -2207,6 +2207,7 @@ export class BoardImpl {
       controls: biasControls,
       vcc: this.vcc,
       opVoltages: op.nodeVoltages,
+      opBranchCurrents: currentsIntoTerminals(op.branchCurrents),
       // The region each op-amp settled in at this bias. Without it the sweep
       // linearises a saturated or current-limited stage as if it were linear
       // and reports its ideal gain (spec-updates/ac-operating-region.md).
