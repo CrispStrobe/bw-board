@@ -278,12 +278,26 @@ When protected CPL exceeds IOPL, scalar IN/OUT consult the current 386 TSS
 I/O permission bitmap for every byte-wide port covered by the transfer. The
 bitmap offset and permission bytes use supervisor paging, missing or set bits
 raise #GP(0), and a transfer crossing port FFFF consults the trailing deny
-byte rather than wrapping its permission check. String I/O and task switching
-remain outside this profile. Per the original manual, a bitmap base at or
-beyond the TSS limit means that no bitmap is present and all ports are denied.
+byte rather than wrapping its permission check. Per the original manual, a
+bitmap base at or beyond the TSS limit means that no bitmap is present and all
+ports are denied.
 The pinned PCjs comparison covers one permitted byte access and one denied
 byte access as semantic evidence; it is not a physical access-order oracle or
-a protected-I/O hardware corpus.
+a protected-I/O hardware corpus. Task switching remains outside this profile.
+INS/OUTS use the same permission admission,
+preflight the memory side before a device callback, and expose each REP
+iteration as a separate interruptible executor step. Operand size selects the
+port width, address size selects SI/ESI or DI/EDI, OUTS accepts a source
+segment override, and INS always targets ES.
+
+VERR and VERW query descriptor type and privilege without requiring the
+descriptor P bit, as specified for the original 386. The pinned PCjs oracle
+agrees for P=0 accessible data, RPL rejection, execute-only code rejection,
+null selectors, unchanged non-ZF flags, and exact completion. The same PCjs
+revision reports a system descriptor as readable while the original manual
+and local implementation reject system types; that observed mismatch is kept
+outside the accepted cross-engine set rather than weakening the architectural
+check.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
@@ -302,8 +316,8 @@ is not claimed as independent original-386 hardware evidence. Intel's original
 REP exception table specifies #UD/interrupt 6
 when the prefix precedes an instruction outside its permitted list; those
 encodings therefore raise architectural #UD rather than an implementation
-refusal. REP INS/OUTS are on that permitted list but remain explicit
-implementation refusals until their per-iteration I/O semantics are added.
+refusal. REP INS/OUTS are included in the permitted string set and follow the
+same one-iteration-per-step boundary.
 If a later REPE/REPNE iteration faults before its comparison completes, a
 repeat-span checkpoint restores the flags from before the entire instruction,
 as specified by later Intel manuals. An interrupt or debug handoff ends that
