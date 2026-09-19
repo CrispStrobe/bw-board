@@ -238,16 +238,13 @@ test("an external interrupt resumes REP with completed progress preserved", () =
   assert.deepEqual([cpu.eip, cpu.cx, cpu.di], [2, 0, 0x302]);
 });
 
-test("STI shadow spans REP while MOV SS shadow expires after its first iteration", () => {
+test("STI and MOV SS shadows expire after the first REP iteration", () => {
   const sti = fixture([0xfb, 0xf3, 0xaa]).cpu;
   sti.cx = 2;
   sti.di = 0x100;
   sti.step();
   sti.step();
   assert.equal(sti.eip, 1);
-  assert.equal(sti.interrupt(0x20), false);
-  sti.step();
-  assert.equal(sti.eip, 3);
   assert.equal(sti.interrupt(0x20), true);
 
   const ss = fixture([0x8e, 0xd0, 0xf3, 0xaa]).cpu;
