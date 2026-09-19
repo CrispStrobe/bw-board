@@ -52,7 +52,7 @@ function install(write) {
   put(write, 0x100, [0x1f,0,0,2,0,0]);
   descriptor(write, 0x208, 0x1000, 0xffff, 0x9a);
   descriptor(write, 0x210, 0x300, 0x0f, 0x82);
-  descriptor(write, 0x218, 0x400, 0x67, 0x89);
+  descriptor(write, 0x218, 0x400, 0x66, 0x89);
   descriptor(write, 0x308, 0x500, 0xffff, 0x92);
   put(write, 0x1000, [
     0xb8,0x10,0,0x0f,0x00,0xd0,0x0f,0x00,0xc3,
@@ -95,5 +95,5 @@ if (
   execFileSync("git", ["rev-parse", "HEAD"], { cwd:repositoryRoot, encoding:"utf8" }).trim() !== executionRevision ||
   sources.some((path) => hash(readFileSync(new URL(path, import.meta.url))) !== sourceHashes[path])
 ) throw new Error("local execution sources changed during comparison");
-console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 LLDT/LTR/SLDT/STR plus one LDT data load; no task switch or privilege transition", sourceHashes, mutation, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
+console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 LLDT/LTR/SLDT/STR, short-TSS LTR admission, and one LDT data load; no task switch or privilege transition", sourceHashes, mutation, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
 process.exitCode = differences.length ? 1 : 0;

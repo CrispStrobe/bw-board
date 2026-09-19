@@ -178,8 +178,8 @@ The bounded protected system-register profile implements LLDT/LTR and
 SLDT/STR, including GDT type, presence, and limit checks, LTR busy-bit commit,
 and LDT-backed data/code lookup through supervisor page-table accesses. It also
 implements SMSW/LMSW, with CPL checks and the rule that LMSW cannot clear PE.
-Owned fault tests cover TI, type, not-present, short-TSS, and busy-write
-atomicity cases. A pinned PCjs comparison grades a ring-0 LDT load, TSS busy
+Owned tests cover TI, type, not-present, short-TSS LTR admission, and busy-write
+atomicity. A pinned PCjs comparison grades a ring-0 LDT load, short-TSS busy
 marking, selector stores, and one LDT data-segment load. Task switching,
 privilege transitions, and TSS I/O-map use remain outside this stage.
 

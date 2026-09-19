@@ -89,8 +89,9 @@ test("LLDT/LTR enforce privilege, table, type, presence, and TSS limit before co
   short.cpu.gdtr = { base: 0x100, limit: 0x0f };
   short.put(0x108, descriptor(0x400, 0x66, 0x89));
   short.cpu.ax = 8;
-  assert.throws(() => short.cpu.step(), (error) => error?.vector === 10);
-  assert.equal(short.cpu.tr.present, false);
+  short.cpu.step();
+  assert.equal(short.cpu.tr.limit, 0x66);
+  assert.equal(short.memory.get(0x10d), 0x8b);
 
   const user = fixture([0x0f, 0x00, 0xd0]);
   user.cpu.cr0 = 1;
@@ -100,6 +101,24 @@ test("LLDT/LTR enforce privilege, table, type, presence, and TSS limit before co
     () => user.cpu.step(),
     (error) => error?.vector === 13 && error.errorCode === 0,
   );
+});
+
+test("LDT index zero is usable while an unloaded LDT reference is #GP", () => {
+  const unloaded = fixture([0x8e, 0xd8]);
+  unloaded.cpu.cr0 = 1;
+  unloaded.cpu.ax = 4;
+  assert.throws(
+    () => unloaded.cpu.step(),
+    (error) => error?.vector === 13 && error.errorCode === 4,
+  );
+
+  const loaded = fixture([0x8e, 0xd8]);
+  loaded.cpu.cr0 = 1;
+  loaded.cpu.ldtr = { selector: 8, base: 0x300, limit: 7, present: true, type: 2 };
+  loaded.put(0x300, descriptor(0x567800, 0xffff, 0x92));
+  loaded.cpu.ax = 4;
+  loaded.cpu.step();
+  assert.equal(loaded.cpu.segmentCaches[3].base, 0x567800);
 });
 
 test("a failed LTR busy-bit write leaves TR unchanged", () => {

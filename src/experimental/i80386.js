@@ -369,7 +369,7 @@ export class ExperimentalI80386 {
     const table = selector & 4 ? this.ldtr : this.gdtr;
     const errorCode = selector & 0xfffc;
     if (selector & 4 && !table.present)
-      throw new I80386Fault(10, errorCode, "LDT is not loaded");
+      throw new I80386Fault(13, errorCode, "LDT is not loaded");
     const offset = selector & 0xfff8;
     if (offset + 7 > table.limit)
       throw new I80386Fault(13, errorCode, "selector outside descriptor table");
@@ -382,7 +382,7 @@ export class ExperimentalI80386 {
     };
   }
   _descriptor(selector) {
-    if (!(selector & 0xfff8))
+    if (!(selector & 0xfffc))
       throw new UnsupportedI80386("null protected selector");
     const { address: a, bytes: b } = this._descriptorBytes(selector);
     const access = b[5],
@@ -447,8 +447,6 @@ export class ExperimentalI80386 {
     const flags = bytes[6];
     let limit = (bytes[0] | (bytes[1] << 8) | ((flags & 15) << 16)) >>> 0;
     if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
-    if (kind === "tr" && limit < (type === 9 ? 0x67 : 0x2b))
-      throw new I80386Fault(10, errorCode, "TSS limit is too small");
     const cache = {
       selector: selector & 0xffff,
       base: (bytes[2] | (bytes[3] << 8) | (bytes[4] << 16) | (bytes[7] * 0x1000000)) >>> 0,
@@ -1149,16 +1147,15 @@ export class ExperimentalI80386 {
 
   _protectedCodeDescriptor(selector, external) {
     const code = (selector & 0xfffc) | (external ? 1 : 0);
-    if (!(selector & 0xfff8))
+    if (!(selector & 0xfffc))
       throw new I80386Fault(13, code, "null handler selector");
-    if (selector & 4)
-      throw new UnsupportedI80386(
-        "LDT handler selectors are outside the bounded profile",
-      );
+    const table = selector & 4 ? this.ldtr : this.gdtr;
+    if (selector & 4 && !table.present)
+      throw new I80386Fault(13, code, "LDT is not loaded");
     const off = selector & 0xfff8;
-    if (off + 7 > this.gdtr.limit)
-      throw new I80386Fault(13, code, "handler selector outside GDT");
-    const a = (this.gdtr.base + off) >>> 0;
+    if (off + 7 > table.limit)
+      throw new I80386Fault(13, code, "handler selector outside descriptor table");
+    const a = (table.base + off) >>> 0;
     const b = Array.from({ length: 8 }, (_, i) =>
       this._readLinear((a + i) >>> 0, 1, { supervisor: true }),
     );
