@@ -77,7 +77,7 @@ test("LAR/LSL enforce privilege while admitting conforming code", () => {
   conforming.cpu.cs = 3;
   conforming.cpu.gdtr = { base: 0x100, limit: 0x0f };
   conforming.put(0x108, descriptor(0, 0x3456, 0x9e));
-  conforming.cpu.bx = 8;
+  conforming.cpu.bx = 0x0b;
   conforming.cpu.step();
   assert.deepEqual([conforming.cpu.ax, conforming.cpu.eflags & 0x40], [0x3456, 0x40]);
 });

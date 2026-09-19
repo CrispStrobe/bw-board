@@ -473,9 +473,8 @@ export class ExperimentalI80386 {
     const code = !system && !!(type & 8);
     const conforming = code && !!(type & 4);
     const dpl = (access >>> 5) & 3;
-    if (
-      (conforming ? (selector & 3) : Math.max(this.currentPrivilegeLevel, selector & 3)) > dpl
-    ) return null;
+    if (!conforming && Math.max(this.currentPrivilegeLevel, selector & 3) > dpl)
+      return null;
     return bytes;
   }
   _markAccessed(descriptor) {
