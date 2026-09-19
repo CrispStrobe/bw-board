@@ -337,6 +337,17 @@ export const PCAT80286_BOOT = Object.freeze({
     ],
 });
 
+/** 640K conventional-RAM boot configuration for AT firmware and DOS guests. */
+export const PCAT80286_BOOT_640K = Object.freeze({
+    ...PCAT80286_BOOT,
+    regions:PCAT80286_BOOT.regions.map(region=>region.kind==='ram'&&region.start===0
+        ? {...region,end:0x9ffff}:region),
+    chips:PCAT80286_BOOT.chips.map(chip=>chip.kind==='rtc'?{...chip,
+        initialCmos:[[0x10,0x20],[0x14,0x21],[0x15,0x80],[0x16,0x02],
+            [0x17,0x00],[0x18,0x02],[0x2e,0x00],[0x2f,0xc5],
+            [0x30,0x00],[0x31,0x02],[0x32,0x19]]}:chip),
+});
+
 /**
  * The UART-shell example — the 8086's counterpart to the Z80 and 6502 serial
  * monitors. An 8086, 64K of RAM, a 32K ROM holding the reset vector, and a

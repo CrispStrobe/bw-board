@@ -20,6 +20,11 @@ extended memory `17h:18h=0200h`. Bytes `2Eh:2Fh=0045h` are the IBM checksum of
 configuration bytes `10h-20h`; `30h:31h` repeat the 512 KiB extended-memory
 size. This CMOS state survives the 8042 warm reset.
 
+`PCAT80286_BOOT_640K` retains the same hardware and maps conventional RAM
+through `9FFFFh`. Its CMOS base-memory word is `0280h` and its configuration
+checksum is `00C5h`. The receipt runner selects it with `AT_BASE_RAM_KB=640`;
+the 512K profile remains the default for the earlier bounded POST evidence.
+
 The profile includes cascaded 8259s, an 8254, RTC/CMOS, two 8237 register
 files, the AT page-register latches, port 61h refresh/timer status, CGA, a
 DMA-connected floppy controller, and the 8042 path used for A20 and CPU reset.

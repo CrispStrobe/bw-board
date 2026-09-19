@@ -4,7 +4,7 @@ import test from 'node:test';
 import { AT8042A20 } from '../src/at-8042-a20.js';
 import { ATDMAPageRegisters, ATSystemControl } from '../src/at-system-control.js';
 import { I8237 } from '../src/i8237.js';
-import { I8086Machine, PCAT80286_BOOT } from '../src/i8086-machine.js';
+import { I8086Machine, PCAT80286_BOOT, PCAT80286_BOOT_640K } from '../src/i8086-machine.js';
 
 test('AT DMA page latches are independent and reset controller page state', () => {
     const primary = new I8237();
@@ -185,6 +185,17 @@ test('boot profile separates 16MiB address space from one MiB installed RAM', ()
     const checksum=machine.chips.rtc1.ram.slice(0x10,0x21).reduce((sum,value)=>(sum+value)&0xffff,0);
     assert.equal(checksum,(machine.chips.rtc1.ram[0x2e]<<8)|machine.chips.rtc1.ram[0x2f]);
     assert.throws(()=>machine.chips.dma2.transfer(()=>0,()=>{}),/secondary DMA transfer is unsupported/);
+});
+
+test('640K boot profile maps conventional RAM and reports matching CMOS checksum', () => {
+    const machine=new I8086Machine(PCAT80286_BOOT_640K);
+    machine._write(0x9ffff,0x5a);
+    assert.equal(machine._read(0x9ffff),0x5a);
+    assert.equal(machine.chips.rtc1.ram[0x15],0x80);
+    assert.equal(machine.chips.rtc1.ram[0x16],0x02);
+    const checksum=machine.chips.rtc1.ram.slice(0x10,0x21)
+        .reduce((sum,value)=>(sum+value)&0xffff,0);
+    assert.equal(checksum,(machine.chips.rtc1.ram[0x2e]<<8)|machine.chips.rtc1.ram[0x2f]);
 });
 
 test('8042 reset is applied after OUT completes and preserves board state', () => {

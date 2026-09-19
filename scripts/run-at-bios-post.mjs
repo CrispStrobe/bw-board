@@ -5,7 +5,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 
-import {I8086Machine,PCAT80286_BOOT} from '../src/i8086-machine.js';
+import {I8086Machine,PCAT80286_BOOT,PCAT80286_BOOT_640K} from '../src/i8086-machine.js';
 
 const EXPECTED_ROM_SHA256='74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
 const DEFAULT_STEPS=2_000_000;
@@ -22,6 +22,9 @@ if(romSha256!==EXPECTED_ROM_SHA256)
 const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(process.env.AT_POST_STEPS);
 if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>30_000_000)
     throw new Error('AT_POST_STEPS must be an integer from 1 through 30000000');
+const baseRamKiB=process.env.AT_BASE_RAM_KB===undefined?512:Number(process.env.AT_BASE_RAM_KB);
+if(![512,640].includes(baseRamKiB))throw new Error('AT_BASE_RAM_KB must be 512 or 640');
+const machineProfile=baseRamKiB===640?PCAT80286_BOOT_640K:PCAT80286_BOOT;
 
 const resetRequests=[];
 const resetApplications=[];
@@ -31,8 +34,9 @@ const controllerPorts=[];
 const controllerWrites=[];
 const diskPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
+let reachedPost43=false;
 let machine;
-machine=new I8086Machine(PCAT80286_BOOT,{onPortAccess:event=>{
+machine=new I8086Machine(machineProfile,{onPortAccess:event=>{
     if(event.port===0x60||event.port===0x64) {
         controllerPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
         if(controllerPorts.length>128)controllerPorts.shift();
@@ -42,8 +46,10 @@ machine=new I8086Machine(PCAT80286_BOOT,{onPortAccess:event=>{
         resetRequests.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip});
     if(event.dir==='out'&&event.port===0x80&&event.value===0x30)
         checkpoints.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip});
-    if(event.dir==='out'&&event.port===0x80)
+    if(event.dir==='out'&&event.port===0x80) {
         postEvents.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,value:event.value});
+        if(machine.cpu.cs===0xf000&&machine.cpu.ip===0x16ab&&event.value===0x43)reachedPost43=true;
+    }
     if((event.port>=0x3f0&&event.port<=0x3f7)||(event.port<=0x0f)||
         (event.port>=0x80&&event.port<=0x8f)||(event.port>=0xc0&&event.port<=0xde)) {
         diskPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
@@ -88,11 +94,14 @@ for(;steps<stepLimit;steps++) {
     const before={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
     machine.step();
     const after={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
-    const reachedPost43=postEvents.some(event=>event.cs===0xf000&&event.ip===0x16ab&&event.value===0x43);
     if(!executionBoundaries.int19&&reachedPost43&&before.cs===0xf000&&before.ip===0x16ad)
         executionBoundaries.int19={step:steps,before,after,devices:deviceSnapshot()};
-    if(!executionBoundaries.bootSector&&after.cs===0&&after.ip===0x7c00)
-        executionBoundaries.bootSector={step:steps,before,after,devices:deviceSnapshot()};
+    const atBootSector=(after.cs===0&&after.ip===0x7c00)||(after.cs===0x07c0&&after.ip===0);
+    if(!executionBoundaries.bootSector&&atBootSector) {
+        const loaded=machine.mem.slice(0x7c00,0x7e00);
+        executionBoundaries.bootSector={step:steps,before,after,physical:0x7c00,
+            firstBytes:Array.from(loaded.slice(0,16)),sha256:sha(loaded),devices:deviceSnapshot()};
+    }
     if(!executionBoundaries.unexpectedInterrupt&&after.cs===0xf000&&after.ip===0x1805)
         executionBoundaries.unexpectedInterrupt={step:steps,before,after,devices:deviceSnapshot()};
     if(resetRequests.length>requestsBefore)resetApplications.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,
@@ -137,8 +146,8 @@ const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
         si:machine.cpu.si,di:machine.cpu.di,bp:machine.cpu.bp,sp:machine.cpu.sp,
         ds:machine.cpu.ds,es:machine.cpu.es,ss:machine.cpu.ss,flags:machine.cpu.flags,
         samples:progressSamples},
-    memory:{addressSpaceBytes:machine.mem.length,installedRamBytes:0x100000,
-        baseRamBytes:0x80000,extendedRamBytes:0x80000},
+    memory:{addressSpaceBytes:machine.mem.length,installedRamBytes:(baseRamKiB<<10)+0x80000,
+        baseRamBytes:baseRamKiB<<10,extendedRamBytes:0x80000},
     executionRevision:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),
     sourceSha256:Object.fromEntries([
         'src/i8086-machine.js','src/i8086.js','src/i8086-ram-words.js',
