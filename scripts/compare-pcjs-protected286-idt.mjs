@@ -131,6 +131,13 @@ for (const [name,value] of Object.entries(cases))
     if (JSON.stringify(value.reference) !== JSON.stringify(value.actual)) differences.push({case:name,reference:value.reference,actual:value.actual});
 if (JSON.stringify(selectorRplExpected) !== JSON.stringify(selectorRplActual))
     differences.push({case:'targetSelectorRpl',reference:selectorRplExpected,actual:selectorRplActual});
+const completionExpected={halted:true,cs:0x0008,ip:0x000f,sp:0x0100,errorRegister:0x0018,skippedIpRegister:0x000f};
+const completion = Object.fromEntries([['pcjs',cases.generalProtection.reference],['local',cases.generalProtection.actual]].map(([engine,result])=>
+    [engine,{halted:result.halted,cs:result.returned.cs,ip:result.returned.ip,sp:result.returned.sp,
+        errorRegister:result.returned.errorRegister,skippedIpRegister:result.returned.skippedIpRegister}]));
+for (const [engine,observed] of Object.entries(completion))
+    if (JSON.stringify(completionExpected) !== JSON.stringify(observed))
+        differences.push({case:`generalProtectionCompletion:${engine}`,reference:completionExpected,actual:observed});
 
 if (git('rev-parse','HEAD') !== PIN || git('status','--porcelain')) throw new Error('PCjs provenance changed during comparison');
 const localSources=['./compare-pcjs-protected286-idt.mjs','../src/i8086.js','../src/experimental/i80286-protected.js'];
@@ -146,5 +153,7 @@ console.log(JSON.stringify({oracle:'PCjs',revision:PIN,executionRevision,node:pr
             manualExpected:{sp0000:'entry at fffa',sp0002:'#SS before writes',sp0004:'#SS before writes'}}},
     sourceHashes:{...Object.fromEntries(localSources.map(path=>[path,hash(readFileSync(new URL(path,import.meta.url)))])),
         ...Object.fromEntries(pcjsSources.map(name=>[`pcjs:${name}.js`,hash(readFileSync(resolve(root,`machines/pcx86/modules/v2/${name}.js`)))]))},
-    mutation:mutation||null,status:differences.length?'fail':'pass',cases,selectorRpl:{reference:selectorRplExpected,actual:selectorRplActual},differences},null,2));
+    mutation:mutation||null,status:differences.length?'fail':'pass',cases,
+    generalProtectionCompletion:{expected:completionExpected,observed:completion},
+    selectorRpl:{reference:selectorRplExpected,actual:selectorRplActual},differences},null,2));
 process.exitCode=differences.length?1:0;

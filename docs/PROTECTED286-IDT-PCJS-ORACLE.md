@@ -8,6 +8,13 @@ trap-gate IF preservation, same-ring IRET, and a delivered #GP frame with its
 error code and restart IP. Timing, privilege changes, tasks, call gates, and
 32-bit gates are outside its claim.
 
+The #GP guest also performs a real recovery sequence. Its handler pops error
+code `0018` into AX, replaces saved restart IP `000d` with resume IP `000f`,
+pushes that replacement, and executes IRET. The oracle independently requires
+both engines to return to CS:IP `0008:000f` with SP `0100`, retain the captured
+error and replacement IP in registers, and execute the following HLT. Matching
+but incomplete executions therefore cannot pass.
+
 The Intel *80286 and 80287 Programmer's Reference Manual* (1987), INT pages
 8-42 through 8-49 and IRET pages 8-50 through 8-54, specifies that the RPL in
 an interrupt-gate target code selector is ignored and that the loaded visible

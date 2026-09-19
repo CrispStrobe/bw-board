@@ -69,6 +69,16 @@ jobs:
               echo "IDT oracle failed to reject $mutation mutation" >&2
               exit 1
             fi
+            MUTATION="$mutation" RECEIPT="$RECEIPT_DIR/rejected-$mutation.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          const expected=process.env.MUTATION === 'restart' ? 'generalProtection' : 'interruptGate';
+          assert.equal(report.mutation,process.env.MUTATION);
+          assert.equal(report.status,'fail');
+          assert.equal(report.differences.length,1);
+          assert.equal(report.differences[0].case,expected);
+          NODE
           done
       - name: Upload the fresh protected-mode PCjs receipt
         if: ${{ always() && env.RECEIPT_DIR != '' }}
