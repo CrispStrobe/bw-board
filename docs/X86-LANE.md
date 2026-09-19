@@ -13,24 +13,33 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The landed `3cd5927ba84977d472b7ed75f2075c478800b526` milestone adds
-genuine 286 reset state, exception escalation,
-#DF task entry, shutdown/NMI recovery and TF delivery. The unmodified IBM AT
-Rev1 firmware reaches warm-reset dispatch and its protected memory scan on
-the opt-in [AT boot profile](I80286-AT-BOOT.md). These are bounded progress
-results: POST completion and a firmware-driven DOS boot are still pending.
-The reset/recovery milestone passed [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35465977649)
-(5,411 passed, 270 optional skips), [80286 qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35465977631)
-(1,477,997 fast and Harris cases each; three revocations), and
-[native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35465977635)
-(228/228). Tag: `milestones/x86-at-reset-recovery-20260919`.
+The latest landed milestone is `9dc0f189c9da52e3fc8ee8789a5fd67f45657744`,
+tag `milestones/x86-at-dos-386-paging-20260919`. The functional AT profile
+executes the external IBM Rev1 BIOS, boots DOS 2.00/Command 2.02 from floppy,
+writes `at-boot-ok` to disk through the guest shell, then reads the exact file
+in a fresh boot without recreating it. The explicit 640KiB profile is required
+by this owned IO.SYS image. The checked-in receipts bind all 15 executed source
+files and link the two media hashes; BIOS and media bytes remain external.
+See [AT boot evidence](I80286-AT-BOOT.md).
 
-The next candidate introduces an independent native 32-bit
-[386 executor](I80386-EXPERIMENTAL.md), still opt-in and bounded. It is not yet
-a machine backend or an OS-capable 386. The AT worker continues keyboard and
-firmware disk boot; the CPU worker continues instruction and system semantics.
+Qualified candidate `155b779aebbe7c4718edc73091673e392336976d` passed
+[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35471008880)
+(5,462 pass, 272 optional skips, zero fail),
+[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35471008892)
+(full fast/Harris 286 corpora, 90 bounded 386 hardware samples and PCjs oracles),
+and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35471008891).
+The landing adds only the qualification ledger to that candidate.
 
-## Latest: common ISA, gates, tasks and existing binaries
+The independent [386 executor](I80386-EXPERIMENTAL.md) remains opt-in and
+incomplete. Paging, reset, scalar strings, arithmetic and same-ring fault
+recovery have bounded evidence. Continuing work adds REP restart, far-pointer
+loads, more ALU/control instructions and a separate AT adapter; these later
+changes are outside the qualified milestone until their own receipts pass.
+FreeDOS has reached its kernel banner but has no accepted shell result yet.
+Windows and Doom remain unexecuted acceptance targets. The reset/recovery
+(`3cd5927`) and initial 386/keyboard (`28911b2`) milestones remain in history.
+
+## Earlier milestone: common ISA, gates, tasks and existing binaries
 
 The opt-in protected executor now implements the common multiply/divide,
 frame/stack, pointer, bounds, BCD, port-string and selector-query families;

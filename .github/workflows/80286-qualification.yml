@@ -273,6 +273,40 @@ jobs:
             /revocation_list.txt
             /v1_ex_real_mode/8C.MOO.gz
             /v1_ex_real_mode/668C.MOO.gz
+            /v1_ex_real_mode/86.MOO.gz
+            /v1_ex_real_mode/87.MOO.gz
+            /v1_ex_real_mode/6687.MOO.gz
+            /v1_ex_real_mode/FE.0.MOO.gz
+            /v1_ex_real_mode/FE.1.MOO.gz
+            /v1_ex_real_mode/FF.0.MOO.gz
+            /v1_ex_real_mode/FF.1.MOO.gz
+            /v1_ex_real_mode/FF.2.MOO.gz
+            /v1_ex_real_mode/FF.4.MOO.gz
+            /v1_ex_real_mode/FF.6.MOO.gz
+            /v1_ex_real_mode/C4.MOO.gz
+            /v1_ex_real_mode/C5.MOO.gz
+            /v1_ex_real_mode/0FB2.MOO.gz
+            /v1_ex_real_mode/0FB4.MOO.gz
+            /v1_ex_real_mode/0FB5.MOO.gz
+            /v1_ex_real_mode/66C4.MOO.gz
+            /v1_ex_real_mode/66C5.MOO.gz
+            /v1_ex_real_mode/660FB2.MOO.gz
+            /v1_ex_real_mode/660FB4.MOO.gz
+            /v1_ex_real_mode/660FB5.MOO.gz
+            /v1_ex_real_mode/08.MOO.gz
+            /v1_ex_real_mode/09.MOO.gz
+            /v1_ex_real_mode/10.MOO.gz
+            /v1_ex_real_mode/11.MOO.gz
+            /v1_ex_real_mode/18.MOO.gz
+            /v1_ex_real_mode/19.MOO.gz
+            /v1_ex_real_mode/20.MOO.gz
+            /v1_ex_real_mode/21.MOO.gz
+            /v1_ex_real_mode/80.2.MOO.gz
+            /v1_ex_real_mode/81.3.MOO.gz
+            /v1_ex_real_mode/0C.MOO.gz
+            /v1_ex_real_mode/15.MOO.gz
+            /v1_ex_real_mode/1D.MOO.gz
+            /v1_ex_real_mode/25.MOO.gz
             /v1_ex_real_mode/01.MOO.gz
             /v1_ex_real_mode/6601.MOO.gz
             /v1_ex_real_mode/6701.MOO.gz
@@ -310,9 +344,9 @@ jobs:
           export I386_RECEIPTS
           echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs \
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs \
             | tee "$I386_RECEIPTS/tests.tap"
-          for profile in add-sizes byte-movx shifts segment-mov; do
+          for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete; do
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
               > "$I386_RECEIPTS/$profile.json"
           done
@@ -328,10 +362,11 @@ jobs:
           import fs from 'node:fs';
           const dir=process.env.I386_RECEIPTS;
           const read=name=>JSON.parse(fs.readFileSync(`${dir}/${name}.json`));
-          for(const [profile,count,excluded] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46]]) {
+          for(const [profile,count,excluded,prefixExcluded=0] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46],['xchg',9,16,58],['group5-basic',21,319,194],['far-pointer',30,955],['alu-complete',42,163]]) {
             const r=read(profile);
             assert.equal(r.accounting.admitted,count);
             assert.equal(r.accounting.exceptionExcluded,excluded);
+            assert.equal(r.accounting.profileExcluded,prefixExcluded);
             assert.equal(r.accounting.revoked,0);
             assert.equal(r.accounting.unsupported,0);
             assert.equal(r.accounting.failures,0);
