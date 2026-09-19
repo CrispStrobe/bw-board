@@ -310,7 +310,8 @@ export const PCAT80286 = Object.freeze({
 export const PCAT80286_BOOT = Object.freeze({
     clockHz:6_000_000,variant:'80286',cpuBackend:'protected286-experimental',memoryBytes:16<<20,
     a20:{controller:'8042',enabled:true,queueLimit:16,inputBusyCycles:12,responseDelayCycles:32,inputPort:0xb0,
-        allowReset:true,powerOnKeyboardBatCycles:4_200_000,keyboardAckCycles:60_000,keyboardBatCycles:4_200_000},
+        allowReset:true,powerOnKeyboardBatCycles:4_200_000,keyboardAckCycles:60_000,keyboardBatCycles:4_200_000,
+        keyboardUnlocked:true},
     hardwareReset:true,
     regions:[
         {kind:'ram',start:0,end:0x7ffff},
@@ -833,6 +834,7 @@ export class I8086Machine {
                 powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
                 keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
                 keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked,
                 allowReset:!!this.config.a20.allowReset,
                 onResetRequest:()=>{this._cpuResetPending=true;},
                 onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
@@ -2145,7 +2147,8 @@ export class I8086Machine {
                 allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0,
                 powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
                 keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
-                keyboardBatCycles:this.config.a20.keyboardBatCycles??null} : null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
@@ -2189,7 +2192,8 @@ export class I8086Machine {
                 allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0,
                 powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
                 keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
-                keyboardBatCycles:this.config.a20.keyboardBatCycles??null} : null
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
+                keyboardUnlocked:!!this.config.a20.keyboardUnlocked} : null
         });
     }
 

@@ -2,7 +2,8 @@
 export class AT8042A20 {
     constructor({a20Enabled=false,onA20Change=null,onIRQ=null,onResetRequest=null,allowReset=false,
         queueLimit=16,inputBusyCycles=0,responseDelayCycles=0,inputPort=0xb0,
-        powerOnKeyboardBatCycles=null,keyboardAckCycles=null,keyboardBatCycles=null}={}) {
+        powerOnKeyboardBatCycles=null,keyboardAckCycles=null,keyboardBatCycles=null,
+        keyboardUnlocked=false}={}) {
         if (!Number.isInteger(queueLimit)||queueLimit<1||queueLimit>256) throw new Error('AT 8042 queueLimit must be 1..256');
         this.initialA20Enabled=!!a20Enabled;
         this.onA20Change=onA20Change;
@@ -24,6 +25,7 @@ export class AT8042A20 {
         this.powerOnKeyboardBatCycles=powerOnKeyboardBatCycles;
         this.keyboardAckCycles=keyboardAckCycles;
         this.keyboardBatCycles=keyboardBatCycles;
+        this.keyboardUnlocked=!!keyboardUnlocked;
         if((keyboardAckCycles===null)!==(keyboardBatCycles===null))
             throw new Error('AT 8042 keyboard ACK and BAT timings must be configured together');
         if(keyboardAckCycles!==null&&keyboardAckCycles>=keyboardBatCycles)
@@ -74,7 +76,8 @@ export class AT8042A20 {
     }
     setA20Enabled(enabled) { this.outputPort=(this.outputPort&~2)|(enabled?2:0); this._publish(); }
     readStatus() {
-        return (this.outputQueue.length?1:0)|(this.inputBusyCyclesRemaining>0?2:0)|(this.systemFlag?4:0);
+        return (this.outputQueue.length?1:0)|(this.inputBusyCyclesRemaining>0?2:0)|
+            (this.systemFlag?4:0)|(this.keyboardUnlocked?0x10:0);
     }
     advance(cycles) {
         if(!Number.isFinite(cycles)||cycles<=0)return;

@@ -94,7 +94,8 @@ test('machine checkpoint preserves an in-flight timed 8042 response', () => {
 test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines', () => {
     const irq=[];
     const controller=new AT8042A20({powerOnKeyboardBatCycles:4_200_000,
-        keyboardAckCycles:60_000,keyboardBatCycles:4_200_000,onIRQ:level=>irq.push(level)});
+        keyboardAckCycles:60_000,keyboardBatCycles:4_200_000,keyboardUnlocked:true,
+        onIRQ:level=>irq.push(level)});
     controller.writeCommand(0x60);controller.writeData(1);
     controller.writeCommand(0xae);
     assert.equal(controller.keyboardSchedule.length,1,'AE does not synthesize another BAT');
@@ -105,6 +106,7 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     assert.equal(controller.readData(),0xaa);
     controller.writeData(0xff);
     controller.writeCommand(0xad);
+    assert.equal(controller.readStatus()&0x10,0x10,'AD does not change the physical unlocked switch');
     controller.advance(59_999);
     const saved=controller.getState();
     const restored=new AT8042A20({powerOnKeyboardBatCycles:4_200_000,

@@ -39,6 +39,8 @@ released by `AEh`. An `FFh` BAT countdown starts when the ACK reaches the
 enabled controller path, so a held ACK cannot make ACK and BAT arrive together.
 `E0h` reports both idle-high keyboard test inputs, with the
 clock input low while disabled; serial clock/data transitions are not modeled.
+The boot profile also declares the physical keyboard-inhibit switch unlocked,
+which drives status bit 4 independently of the `ADh`/`AEh` interface state.
 The second DMA controller currently supports BIOS register diagnostics only;
 16-bit transfers, address shifting, and cascade behavior remain unsupported.
 
