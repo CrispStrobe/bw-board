@@ -24,6 +24,11 @@ const PROFILES={
     files:['8C','668C'],
     scope:'6 fixed deterministic MOV from segment-register samples covering 16-bit and zero-extended 32-bit register destinations',
   },
+  xchg:{
+    files:['86','87','6687'],
+    scope:'9 fixed deterministic byte, word, and dword XCHG samples',
+    excludedPrefixes:[0xf0],
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
@@ -70,10 +75,10 @@ function execute(test,globalMasks,mutate) {
   return differences;
 }
 
-const results=[];let admitted=0,unsupported=0,revokedCount=0,exceptionExcluded=0;
+const results=[];let admitted=0,unsupported=0,revokedCount=0,exceptionExcluded=0,profileExcluded=0;
 for(const name of FILES){
   const path=resolve(root,`v1_ex_real_mode/${name}.MOO.gz`),moo=readMoo386(path);
-  const eligible=moo.tests.filter(test=>{if(revoked.has(test.hash)){revokedCount++;return false;}if(test.exception){exceptionExcluded++;return false;}return true;});
+  const eligible=moo.tests.filter(test=>{if(revoked.has(test.hash)){revokedCount++;return false;}if(test.exception){exceptionExcluded++;return false;}if(profile.excludedPrefixes?.includes(test.bytes[0])){profileExcluded++;return false;}return true;});
   const selected=[eligible[0],eligible[Math.floor(eligible.length/2)],eligible.at(-1)],cases=[];
   for(const test of selected){let differences;try{differences=execute(test,moo.masks,admitted===0?mutation:null);}catch(error){unsupported++;differences=[{field:'execution',actual:error.message}];}admitted++;cases.push({index:test.index,hash:test.hash,status:differences.length?'fail':'pass',differences});}
   results.push({file:`${name}.MOO.gz`,sha256:sha256(moo.compressed),publishedTests:moo.tests.length,sampled:cases});
@@ -84,5 +89,5 @@ const localSources=['./verify-i80386-moo-sample.mjs','./lib/moo386-v1.mjs','../s
 console.log(JSON.stringify({source:'SingleStepTests/80386 physical 386EX captures',revision:PIN,formatRevision:FORMAT_PIN,node:process.version,
   profile:profileName,scope:`${profile.scope}; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim`,
   sourceHashes:Object.fromEntries(localSources.map(path=>[path,sha256(readFileSync(new URL(path,import.meta.url)))])),revocationSha256:sha256(revocationBytes),mutation,
-  accounting:{files:FILES.length,admitted,unsupported,revoked:revokedCount,exceptionExcluded,failures:failures.length},results,failures},null,2));
+  accounting:{files:FILES.length,admitted,unsupported,revoked:revokedCount,exceptionExcluded,profileExcluded,failures:failures.length},results,failures},null,2));
 process.exitCode=failures.length?1:0;

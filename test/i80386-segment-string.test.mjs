@@ -50,6 +50,48 @@ test("MOV from segment register zero-extends 32-bit registers but writes 16-bit 
   assert.equal(cpu.cx, 0x9abc);
 });
 
+test("XCHG swaps byte, word, dword, accumulator, and memory operands", () => {
+  const { cpu, memory } = fixture([
+    0x86, 0xd8,
+    0x87, 0xd1,
+    0x66, 0x87, 0xfe,
+    0x93,
+    0x87, 0x1e, 0x00, 0x01,
+  ]);
+  cpu.eax = 0x111122aa;
+  cpu.ebx = 0x333344bb;
+  cpu.ecx = 0x55556666;
+  cpu.edx = 0x77778888;
+  cpu.esi = 0x9999aaaa;
+  cpu.edi = 0xbbbbcccc;
+  cpu.eflags = 0x8d7;
+  memory.set(0x100, 0x34);
+  memory.set(0x101, 0x12);
+  cpu.step();
+  assert.deepEqual([cpu.al, cpu.bl], [0xbb, 0xaa]);
+  cpu.step();
+  assert.deepEqual([cpu.cx, cpu.dx], [0x8888, 0x6666]);
+  cpu.step();
+  assert.deepEqual([cpu.esi, cpu.edi], [0xbbbbcccc, 0x9999aaaa]);
+  cpu.step();
+  assert.deepEqual([cpu.ax, cpu.bx], [0x44aa, 0x22bb]);
+  cpu.step();
+  assert.equal(cpu.bx, 0x1234);
+  assert.deepEqual([memory.get(0x100), memory.get(0x101)], [0xbb, 0x22]);
+  assert.equal(cpu.eflags, 0x8d7);
+});
+
+test("CLC, STC, and CMC change only carry", () => {
+  const { cpu } = fixture([0xf8, 0xf9, 0xf5]);
+  cpu.eflags = 0x8d7;
+  cpu.step();
+  assert.equal(cpu.eflags, 0x8d6);
+  cpu.step();
+  assert.equal(cpu.eflags, 0x8d7);
+  cpu.step();
+  assert.equal(cpu.eflags, 0x8d6);
+});
+
 test("LDT selectors 4..7 are not mistaken for null data selectors", () => {
   const { cpu } = fixture([0x8e, 0xd8]);
   cpu.cr0 = 1;
@@ -299,4 +341,10 @@ test("zero-count REP avoids memory and invalid REP encoding raises #UD", () => {
   const invalid = fixture([0xf3, 0x90]).cpu;
   assert.throws(() => invalid.step(), (error) => error?.vector === 6);
   assert.equal(invalid.eip, 0);
+  const validButUnsupported = fixture([0xf3, 0x6c]).cpu;
+  assert.throws(
+    () => validButUnsupported.step(),
+    (error) =>
+      error?.constructor.name === "UnsupportedI80386" && /6c/.test(error.message),
+  );
 });

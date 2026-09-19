@@ -1250,7 +1250,12 @@ export class ExperimentalI80386 {
     const stringOpcodes = [
       0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
     ];
-    if (repeat !== null && !stringOpcodes.includes(op))
+    const repeatIoOpcodes = [0x6c, 0x6d, 0x6e, 0x6f];
+    if (
+      repeat !== null &&
+      !stringOpcodes.includes(op) &&
+      !repeatIoOpcodes.includes(op)
+    )
       throw new I80386Fault(6, null, "REP prefix on non-string instruction");
     if (
       [
@@ -1300,6 +1305,12 @@ export class ExperimentalI80386 {
       this._push(this._reg(op - 0x50, width), width);
     else if (op >= 0x58 && op <= 0x5f)
       this._setReg(op - 0x58, width, this._pop(width));
+    else if (op >= 0x90 && op <= 0x97) {
+      const register = op - 0x90;
+      const accumulator = this._reg(0, width);
+      this._setReg(0, width, this._reg(register, width));
+      this._setReg(register, width, accumulator);
+    }
     else if (op >= 0x40 && op <= 0x47) {
       const n = op - 0x40,
         cf = this.eflags & CF;
@@ -1310,6 +1321,18 @@ export class ExperimentalI80386 {
         cf = this.eflags & CF;
       this._setReg(n, width, this._add(this._reg(n, width), 1, width, true));
       this.eflags = (this.eflags & ~CF) | cf;
+    } else if (op === 0x86 || op === 0x87) {
+      const exchangeWidth = op === 0x86 ? 8 : width;
+      const ea = this._decodeEA(address32, override);
+      this._operandPreflightWrite(ea, exchangeWidth);
+      const memoryOrRegister = this._operandRead(ea, exchangeWidth);
+      const register =
+        exchangeWidth === 8
+          ? this._reg8(ea.reg)
+          : this._reg(ea.reg, exchangeWidth);
+      this._operandWrite(ea, exchangeWidth, register);
+      if (exchangeWidth === 8) this._setReg8(ea.reg, memoryOrRegister);
+      else this._setReg(ea.reg, exchangeWidth, memoryOrRegister);
     } else if (
       [0x00, 0x02, 0x28, 0x2a, 0x30, 0x32, 0x38, 0x3a, 0x88, 0x8a].includes(op)
     ) {
@@ -1516,6 +1539,9 @@ export class ExperimentalI80386 {
       this._stiShadow = 2;
     } else if (op === 0xfc) this.eflags &= ~DF;
     else if (op === 0xfd) this.eflags |= DF;
+    else if (op === 0xf8) this.eflags &= ~CF;
+    else if (op === 0xf9) this.eflags |= CF;
+    else if (op === 0xf5) this.eflags ^= CF;
     else if (op === 0x17) {
       this._loadSeg(SEG_SS, this._pop(width) & 0xffff);
       this._interruptShadow = 2;

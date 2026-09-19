@@ -104,6 +104,12 @@ manual lists only the r/m16 form; the register upper-half policy follows pinned
 PCjs and fixed samples from the pinned SST386 physical 386EX capture; the
 hardware profile makes no protected-mode or timing claim.
 
+XCHG supports byte, word, and dword register/memory forms plus the accumulator
+short forms, with full write admission before a memory read. A pinned SST386
+profile grades nine fixed non-exception samples; LOCK-prefixed and exception
+inputs are counted and excluded because LOCK semantics remain outside this
+stage. CLC, STC, CMC, CLD, and STD provide the adjacent scalar flag controls.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A
@@ -118,7 +124,10 @@ boundary, and TF can trap after each completed iteration with restart EIP at
 the prefix. Intel's original REP exception table specifies #UD/interrupt 6
 when the prefix precedes an instruction outside its permitted list; those
 encodings therefore raise architectural #UD rather than an implementation
-refusal.
+refusal. REP INS/OUTS are on that permitted list but remain explicit
+implementation refusals until their per-iteration I/O semantics are added.
+If a later REPE/REPNE iteration faults before its comparison completes, the
+saved state retains the flags from the last completed iteration.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the
