@@ -174,6 +174,15 @@ undefined. That preliminary report was not retained and is not acceptance
 evidence or an implementation rule; the defined-CF full-circle cases are graded
 separately with a carry-flip negative control.
 
+The bounded protected system-register profile implements LLDT/LTR and
+SLDT/STR, including GDT type, presence, and limit checks, LTR busy-bit commit,
+and LDT-backed data/code lookup through supervisor page-table accesses. It also
+implements SMSW/LMSW, with CPL checks and the rule that LMSW cannot clear PE.
+Owned fault tests cover TI, type, not-present, short-TSS, and busy-write
+atomicity cases. A pinned PCjs comparison grades a ring-0 LDT load, TSS busy
+marking, selector stores, and one LDT data-segment load. Task switching,
+privilege transitions, and TSS I/O-map use remain outside this stage.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

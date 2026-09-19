@@ -96,6 +96,8 @@ export class ExperimentalI80386 {
     this.gs = 0;
     this.gdtr = { base: 0, limit: 0 };
     this.idtr = { base: 0, limit: 0x3ff };
+    this.ldtr = { selector: 0, base: 0, limit: 0, present: false };
+    this.tr = { selector: 0, base: 0, limit: 0, present: false };
     this.shutdown = false;
     this._interruptShadow = 0;
     this._nmiShadow = 0;
@@ -363,20 +365,26 @@ export class ExperimentalI80386 {
     return v >>> 0;
   }
 
+  _descriptorBytes(selector) {
+    const table = selector & 4 ? this.ldtr : this.gdtr;
+    const errorCode = selector & 0xfffc;
+    if (selector & 4 && !table.present)
+      throw new I80386Fault(10, errorCode, "LDT is not loaded");
+    const offset = selector & 0xfff8;
+    if (offset + 7 > table.limit)
+      throw new I80386Fault(13, errorCode, "selector outside descriptor table");
+    const address = (table.base + offset) >>> 0;
+    return {
+      address,
+      bytes: Array.from({ length: 8 }, (_, index) =>
+        this._readLinear((address + index) >>> 0, 1, { supervisor: true }),
+      ),
+    };
+  }
   _descriptor(selector) {
     if (!(selector & 0xfff8))
       throw new UnsupportedI80386("null protected selector");
-    if (selector & 4)
-      throw new UnsupportedI80386(
-        "LDT selectors are outside the bounded 386 profile",
-      );
-    const off = selector & 0xfff8;
-    if (off + 7 > this.gdtr.limit)
-      throw new UnsupportedI80386("selector outside GDT");
-    const a = (this.gdtr.base + off) >>> 0,
-      b = Array.from({ length: 8 }, (_, i) =>
-        this._readLinear((a + i) >>> 0, 1, { supervisor: true }),
-      );
+    const { address: a, bytes: b } = this._descriptorBytes(selector);
     const access = b[5],
       flags = b[6],
       dpl = (access >>> 5) & 3;
@@ -416,6 +424,45 @@ export class ExperimentalI80386 {
       descriptor.access |= 1;
     }
   }
+  _loadSystemRegister(kind, selector) {
+    const errorCode = selector & 0xfffc;
+    if (selector & 4)
+      throw new I80386Fault(13, errorCode, `${kind} selector must name GDT`);
+    if (!(selector & 0xfff8)) {
+      if (kind === "ldtr") {
+        this.ldtr = { selector: selector & 0xffff, base: 0, limit: 0, present: false };
+        return;
+      }
+      throw new I80386Fault(13, 0, "null TSS selector");
+    }
+    const { address, bytes } = this._descriptorBytes(selector);
+    const access = bytes[5];
+    const type = access & 15;
+    if (access & 0x10)
+      throw new I80386Fault(13, errorCode, `${kind} requires system descriptor`);
+    if (kind === "ldtr" ? type !== 2 : type !== 1 && type !== 9)
+      throw new I80386Fault(13, errorCode, `invalid ${kind} descriptor type`);
+    if (!(access & 0x80))
+      throw new I80386Fault(11, errorCode, `${kind} descriptor not present`);
+    const flags = bytes[6];
+    let limit = (bytes[0] | (bytes[1] << 8) | ((flags & 15) << 16)) >>> 0;
+    if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
+    if (kind === "tr" && limit < (type === 9 ? 0x67 : 0x2b))
+      throw new I80386Fault(10, errorCode, "TSS limit is too small");
+    const cache = {
+      selector: selector & 0xffff,
+      base: (bytes[2] | (bytes[3] << 8) | (bytes[4] << 16) | (bytes[7] * 0x1000000)) >>> 0,
+      limit,
+      present: true,
+      type,
+    };
+    if (kind === "tr") {
+      this._writeLinear((address + 5) >>> 0, 1, (access & 0xf0) | (type | 2), {
+        supervisor: true,
+      });
+    }
+    this[kind] = cache;
+  }
   _loadSeg(id, selector) {
     if (!this.protectedMode) {
       this._setSegValue(id, selector);
@@ -446,18 +493,8 @@ export class ExperimentalI80386 {
       return;
     }
     if (id !== SEG_CS) {
-      if (selector & 4)
-        throw new UnsupportedI80386(
-          "LDT selectors are outside the bounded 386 profile",
-        );
       const errorCode = selector & 0xfffc;
-      const offset = selector & 0xfff8;
-      if (offset + 7 > this.gdtr.limit)
-        throw new I80386Fault(13, errorCode, "selector outside GDT");
-      const address = (this.gdtr.base + offset) >>> 0;
-      const bytes = Array.from({ length: 8 }, (_, index) =>
-        this._readLinear((address + index) >>> 0, 1, { supervisor: true }),
-      );
+      const { address, bytes } = this._descriptorBytes(selector);
       const access = bytes[5];
       const flags = bytes[6];
       const dpl = (access >>> 5) & 3;
@@ -1038,6 +1075,8 @@ export class ExperimentalI80386 {
     state.repeatContext = this._repeatContext
       ? { ...this._repeatContext }
       : null;
+    state.ldtr = { ...this.ldtr };
+    state.tr = { ...this.tr };
     return state;
   }
 
@@ -1068,6 +1107,8 @@ export class ExperimentalI80386 {
     this._repeatContext = state.repeatContext
       ? { ...state.repeatContext }
       : null;
+    this.ldtr = { ...state.ldtr };
+    this.tr = { ...state.tr };
   }
 
   _faultClass(vector) {
@@ -1841,6 +1882,24 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if (op === 0x00) {
+      const ea = this._decodeEA(address32, override);
+      if (ea.reg > 3)
+        throw new UnsupportedI80386("0F 00 verification instruction");
+      if (!this.protectedMode)
+        throw new I80386Fault(6, null, "system selector instruction outside protected mode");
+      if (ea.reg >= 2) {
+        if ((this.cs & 3) !== 0)
+          throw new I80386Fault(13, 0, "LLDT/LTR require CPL0");
+        this._loadSystemRegister(
+          ea.reg === 2 ? "ldtr" : "tr",
+          this._operandRead(ea, 16),
+        );
+      } else {
+        this._operandWrite(ea, 16, ea.reg === 0 ? this.ldtr.selector : this.tr.selector);
+      }
+      return;
+    }
     if (op === 0xb2 || op === 0xb4 || op === 0xb5) {
       this._farPointerLoad(
         op === 0xb2 ? SEG_SS : op === 0xb4 ? SEG_FS : SEG_GS,
@@ -1895,8 +1954,19 @@ export class ExperimentalI80386 {
     }
     if (op === 0x01) {
       const ea = this._decodeEA(address32, override);
+      if (ea.reg === 4) {
+        this._operandWrite(ea, 16, this.cr0 & 0xffff);
+        return;
+      }
+      if (ea.reg === 6) {
+        if (this.protectedMode && (this.cs & 3) !== 0)
+          throw new I80386Fault(13, 0, "LMSW requires CPL0");
+        const value = this._operandRead(ea, 16);
+        this.cr0 = ((this.cr0 & ~15) | (value & 15) | (this.cr0 & 1)) >>> 0;
+        return;
+      }
       if (ea.isReg || (ea.reg !== 2 && ea.reg !== 3))
-        throw new UnsupportedI80386("only LGDT and LIDT are supported");
+        throw new UnsupportedI80386("0F 01 system extension");
       if (this.protectedMode && (this.cs & 3) !== 0)
         throw new I80386Fault(13, 0, "LGDT/LIDT require CPL0");
       const cache = this.segmentCaches[ea.seg];
