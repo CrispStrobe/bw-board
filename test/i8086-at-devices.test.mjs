@@ -113,8 +113,12 @@ test('RTC SET stages calendar writes, preserves independent weekday and commits 
     'live representation changes refuse instead of silently converting registers');
 
   const rollover=new MC146818(1,{initialUnixSeconds:Date.UTC(2099,11,31,23,59,59)/1000});
-  rollover.advance(1);rollover.write(0,9);assert.equal(rollover.read(1),0);
+  rollover.advance(2);rollover.write(0,9);assert.equal(rollover.read(1),0);
   rollover.write(0,8);assert.equal(rollover.read(1),1);
+  rollover.write(0,0);assert.equal(rollover.read(1),1,'bulk advance crosses the century and retains elapsed time');
+  rollover.write(0,0x0b);rollover.write(1,0x82);rollover.write(0,6);rollover.write(1,0);
+  rollover.write(0,0x0b);rollover.write(1,0x02);rollover.write(0,6);assert.equal(rollover.read(1),0,
+    'SET round trip preserves the bounded weekday-zero policy');
   const legacy=rollover.getState();legacy.v=1;delete legacy.dayOfWeek;
   delete legacy.setCalendar;delete legacy.pendingCalendar;
   const migrated=new MC146818(1);migrated.setState(legacy);assert.equal(migrated.getState().v,2);

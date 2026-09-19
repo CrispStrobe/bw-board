@@ -99,8 +99,9 @@ DM and 12/24-hour format, because changing either format requires firmware to
 reinitialize the affected registers. Setting SET also clears UIE. The bounded
 model keeps day-of-week independently writable, advances its two-digit year on
 a four-year cycle, and admits deterministic initial epochs only before 2100.
-Day-of-week zero is retained literally and advances to one at midnight, matching
-the chip's writable-register behavior rather than imposing Gregorian validation.
+Day-of-week zero is retained literally and advances to one at midnight. This is
+a deterministic bounded policy for firmware that writes zero outside the
+documented 1-through-7 range, not a claim that zero is a valid calendar value.
 Changing DM or 12/24-hour format outside SET refuses because the required
 calendar reinitialization cannot be inferred. The model migrates valid
 version-1 non-SET checkpoints; it refuses

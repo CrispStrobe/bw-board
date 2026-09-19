@@ -79,7 +79,7 @@ export class MC146818 {
         const c={second:this._dec(raw[0],59,'second',mode),minute:this._dec(raw[2],59,'minute',mode),hour,
             dayOfWeek:this._dec(raw[6],7,'day of week',mode),day:this._dec(raw[7],31,'day',mode),
             month:this._dec(raw[8],12,'month',mode),year:this._dec(raw[9],99,'year',mode)};
-        if(c.dayOfWeek<1||c.day<1||c.month<1)throw new Error('MC146818 invalid staged calendar date');
+        if(c.day<1||c.month<1)throw new Error('MC146818 invalid staged calendar date');
         return c;
     }
     _timeReg(r) {
@@ -178,9 +178,6 @@ export class MC146818 {
     _raise(flag) { this.ram[0x0c]|=flag; }
     advance(n) {
         if(!Number.isFinite(n)||n<0)return;
-        const elapsed=Math.floor((this.cyclePhase+n)/this.clockHz);
-        if(!(this.ram[0x0b]&0x80)&&this.seconds+elapsed>4102444800)
-            throw new Error('MC146818 deterministic time exceeds supported Date range');
         this.cyclePhase+=n;
         while(this.cyclePhase>=this.clockHz) {
             this.cyclePhase-=this.clockHz;
