@@ -129,6 +129,7 @@ test("VERR and VERW report selector accessibility through ZF", () => {
     { op: 0xe8, selector: 0x08, access: 0x9a, zf: false },
     { op: 0xe0, selector: 0x0b, access: 0x9e, cpl: 3, zf: true },
     { op: 0xe0, selector: 0x0b, access: 0x12, cpl: 3, zf: false },
+    { op: 0xe0, selector: 0x08, access: 0x12, zf: true },
     { op: 0xe0, selector: 0, access: null, zf: false },
     { op: 0xe0, selector: 0x10, access: null, zf: false },
   ];
@@ -143,6 +144,18 @@ test("VERR and VERW report selector accessibility through ZF", () => {
     f.cpu.eflags = item.zf ? 2 : 0x42;
     f.cpu.step();
     assert.equal(!!(f.cpu.eflags & 0x40), item.zf);
+  }
+});
+
+test("reserved 0F 00 extensions raise invalid opcode", () => {
+  for (const modrm of [0xf0, 0xf8]) {
+    const f = fixture([0x0f, 0x00, modrm]);
+    f.cpu.cr0 = 1;
+    assert.throws(
+      () => f.cpu.step(),
+      (error) => error?.vector === 6 && error.errorCode === null,
+    );
+    assert.equal(f.cpu.eip, 0);
   }
 });
 

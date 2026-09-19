@@ -439,7 +439,9 @@ export class ExperimentalI80386 {
       throw error;
     }
     const access = bytes[5];
-    if (!(access & 0x80) || !(access & 0x10)) return false;
+    // VERR/VERW test type and privilege without testing P.  This permits
+    // software to probe access rights before a segment becomes present.
+    if (!(access & 0x10)) return false;
     const code = !!(access & 8);
     const conforming = code && !!(access & 4);
     const readableOrWritable = !!(access & 2);
@@ -2571,7 +2573,7 @@ export class ExperimentalI80386 {
         );
       const ea = this._decodeEA(address32, override);
       if (ea.reg > 5)
-        throw new UnsupportedI80386("0F 00 verification instruction");
+        throw new I80386Fault(6, null, "invalid 0F 00 extension");
       if (!this.protectedMode)
         throw new I80386Fault(
           6,
