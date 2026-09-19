@@ -58,7 +58,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git -C "$PCJS_ROOT" rev-parse HEAD)" = c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70
           test -z "$(git -C "$PCJS_ROOT" status --porcelain)"
-          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,pcjsRevision:"c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,scope:"bounded protected-286 PCjs semantic oracle"},null,2)+"\n",{flag:"wx"});'
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,pcjsRevision:"c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,scope:"bounded protected-286 and same-ring 386 PCjs semantic oracles"},null,2)+"\n",{flag:"wx"});'
           node scripts/compare-pcjs-protected286.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286.json"
           node scripts/compare-pcjs-protected286-idt.mjs \

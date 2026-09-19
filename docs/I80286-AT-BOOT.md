@@ -76,7 +76,15 @@ Intel's *80286 and 80287 Programmer's Reference Manual* (1987), processor
 initialization chapter.
 
 Current source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)
-records execution at `9f99607fdbe8a6600ad4de0b11438a4b6d5899c4`.
+records execution at `d8ff0734e9283aa1ca5662bce70d6c8ad10da713`.
 Both [negative controls](receipts/2026-09-19-at-bios-post-negative.json) reject
 the same source when an acceptance fact is corrupted. The controller self-test
 returns 55h; command-byte bit 2 controls the status system flag.
+
+The longer [30M-step diagnostic](receipts/2026-09-19-at-post43-diagnostic.json)
+mounts the hash-recorded DOS floppy and reaches genuine POST37/38 (keyboard
+reset), then POST40/41/43 and INT19, without displayed POST errors. It does not
+prove boot-sector execution: later samples enter the BIOS unexpected-hardware-
+interrupt handler. PIC/FDC/DMA diagnosis and a graded DOS handoff remain next.
+Port 80h values alone are insufficient: DMA page-register tests also write
+those values, so genuine checkpoints must include their firmware CS:IP.

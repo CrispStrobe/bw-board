@@ -42,6 +42,10 @@ admitted same-ring profile do use architectural exceptions.
 interrupt- and trap-gate frames, IF/TF behavior, and IRET state. The owned
 tests additionally cover real-mode delivery, RF/restart EIP, the 80386 #DF
 matrix, shutdown, shadows, preflight atomicity, and host-error separation.
+PCjs omits RF in the observed #GP saved-flags image; that single bit is
+explicitly ungraded by the comparison and checked against Intel in owned tests.
+The [source-bound receipt](receipts/2026-09-19-386-bounded.json) preserves both
+observed states and the hardware sample accounting.
 
 The 386EX MOO corpus is suitable for register-level sampling in real mode, but
 its 16-bit external bus and SMM instrumentation are not a 386DX timing oracle.

@@ -34,7 +34,27 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implementation; qualification pending) — Astra/Sol AT reset and 286 recovery milestone;
+2026-09-19 DONE (implementation; qualification pending) — Astra/Sol bounded 386
+and AT keyboard POST milestone; exact candidate is the commit carrying this row.
+Adds opt-in native 32-bit execution, prefixes/SIB/aliases/stack widths, same-ring
+interrupt and trap gates, restartable admitted faults, IRET, RF/SS/NMI boundaries,
+and 386 double-fault classification. Pinned PCjs bootstrap/frame comparisons
+pass; the documented PCjs #GP RF omission is explicitly ungraded and Intel-tested.
+Exactly 84 admitted real-mode hardware samples pass; 888/2600/3111 exception
+cases are excluded by the three sample profiles, not counted as passes. Adds
+strict parser, stray-write comparison, rejecting frame/IF/RAM/write mutations,
+and hosted evidence jobs. AT keyboard scheduling, keylock state and host-command
+enable fixes let the unchanged external IBM Rev1 BIOS complete keyboard checks
+and reach POST43/INT19 without displayed POST errors. The 30M-step diagnostic
+later enters an unexpected-interrupt handler; full disk boot remains unproven.
+Fresh real DOS MASM/LINK/EXE2BIN guest succeeds on the separate BIOS-service
+machine. Combined focused CPU/AT/DOS: 35/35; device/checkpoint: 55/55. Receipts
+bind actual inputs and source hashes. Full hosted CI, 286 fast/Harris corpora,
+native contracts and new bounded 386 jobs gate landing. Continuation claim above
+remains active for AT disk diagnosis, paging, privilege and application work.
+No full 386DX, Windows, Doom or physical-timing claim; external media stays external.
+
+2026-09-19 DONE (qualified and landed at `3cd5927`) — Astra/Sol AT reset and 286 recovery milestone;
 exact candidate is the commit carrying this row. The active continuation claim
 above remains for firmware disk boot, 386 and versioned application acceptance.
 Adds opt-in hardware reset and AT boot profile, warm CPU reset preserving board
