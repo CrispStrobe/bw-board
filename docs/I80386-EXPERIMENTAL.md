@@ -224,12 +224,16 @@ the target code, new stack descriptor, complete new frame, and target offset
 before changing visible execution state. Outer IRET follows the original-386
 order: complete old frame, return code descriptor, return stack descriptor,
 then target offset; it does not eagerly validate the returned stack pointer.
-Task gates, nested-task returns, VM86 interrupt delivery and return to
-protected mode, and expand-down privilege stacks remain explicit refusals.
+Task gates, nested-task returns, and expand-down privilege stacks remain
+explicit refusals.
 Ring-0 IRETD can enter VM86 after validating its complete nine-dword frame and
 16-bit target. It constructs six real-address segment caches and executes the
 bounded 16-bit instruction profile there; I/O and privileged instructions use
 VM86 CPL3 admission rather than the visible CS selector bits.
+An admitted VM86 interrupt or trap enters a nonconforming inner-ring gate,
+builds the nine-dword VM86 frame on the 386 TSS-selected stack, clears the
+visible VM86 data segments, and can return through IRETD. Conforming VM86 gate
+targets remain an explicit refusal.
 
 Conforming code descriptors are admitted for interrupt gates, direct far
 control, call-gate targets, IRET, and RETF. Entry retains the caller CPL and

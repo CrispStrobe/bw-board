@@ -40,6 +40,14 @@ function fixture(target = 0x10) {
   return { cpu, memory };
 }
 
+function put(memory, address, bytes) {
+  bytes.forEach((value, index) => memory.set(address + index, value & 0xff));
+}
+
+function descriptor(base, access) {
+  return [0xff,0xff,base,base>>>8,base>>>16,access,0xcf,base>>>24];
+}
+
 test("IRETD enters VM86 with real-address caches and executes 16-bit code", () => {
   const { cpu, memory } = fixture();
   memory.set(0x12350, 0xb8);
@@ -80,4 +88,31 @@ test("VM86 privilege checks use CPL3 rather than visible CS RPL", () => {
   cpu.eflags &= ~0x3000;
   assert.throws(() => cpu.step(), (error) => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0);
   assert.equal(cpu.eip, 0x10);
+});
+
+test("a VM86 software interrupt builds the extended inner frame and IRETD returns", () => {
+  const { cpu, memory } = fixture();
+  cpu.gdtr = { base: 0x200, limit: 0x2ff };
+  cpu.idtr = { base: 0x300, limit: 0x7ff };
+  cpu.tr = { selector: 0x28, base: 0x600, limit: 0x67, present: true, type: 11 };
+  put(memory, 0x208, descriptor(0x100000, 0x9a));
+  put(memory, 0x210, descriptor(0x120000, 0x92));
+  put(memory, 0x604, [0,4,0,0,0x10,0]);
+  put(memory, 0x300 + 0x20 * 8, [0,1,8,0,0,0xee,0,0]);
+  put(memory, 0x12350, [0xcd,0x20]);
+  put(memory, 0x100100, [0xcf]);
+  cpu.step();
+  cpu.step();
+  assert.deepEqual([cpu.virtual8086,cpu.cs,cpu.eip,cpu.ss,cpu.esp],[false,8,0x100,0x10,0x3dc]);
+  const dword = (address) =>
+    [0,1,2,3].reduce((value, byte) => value + (memory.get(address + byte) ?? 0) * 2 ** (byte * 8), 0) >>> 0;
+  assert.deepEqual(
+    Array.from({ length: 9 }, (_, index) => dword(0x1203dc + index * 4)),
+    [0x12,0x1234,0x23202,0x200,0x2000,0x3000,0x4000,0x5000,0x6000],
+  );
+  cpu.step();
+  assert.deepEqual(
+    [cpu.virtual8086,cpu.cs,cpu.eip,cpu.ss,cpu.esp,cpu.es,cpu.ds,cpu.fs,cpu.gs],
+    [true,0x1234,0x12,0x2000,0x200,0x3000,0x4000,0x5000,0x6000],
+  );
 });

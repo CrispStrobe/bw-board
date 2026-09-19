@@ -1698,14 +1698,19 @@ export class ExperimentalI80386 {
       );
     if (![6, 7, 14, 15].includes(type) || b[4] !== 0)
       throw new I80386Fault(13, idtCode, "unsupported IDT gate");
-    if (software && dpl < (this.cs & 3))
+    const vm86 = this.virtual8086;
+    if (software && dpl < this.currentPrivilegeLevel)
       throw new I80386Fault(13, idtCode, "software interrupt gate privilege");
     if (!(access & 0x80))
       throw new I80386Fault(11, idtCode, "IDT gate not present");
     const selector = b[2] | (b[3] << 8),
       descriptor = this._ringCodeDescriptor(selector, external),
-      oldCpl = this.cs & 3,
+      oldCpl = this.currentPrivilegeLevel,
       targetCpl = descriptor.conforming ? oldCpl : descriptor.dpl;
+    if (vm86 && descriptor.conforming)
+      throw new UnsupportedI80386(
+        "conforming VM86 interrupt targets are outside the bounded profile",
+      );
     if (descriptor.dpl > oldCpl)
       throw new I80386Fault(
         13,
@@ -1724,6 +1729,7 @@ export class ExperimentalI80386 {
       sameFrame = null;
     if (targetCpl < oldCpl) {
       values.push(this.esp, this.ss);
+      if (vm86) values.push(this.es, this.ds, this.fs, this.gs);
       if (errorCode !== null) values.unshift(errorCode);
       innerFrame = this._innerInterruptStack(
         targetCpl,
@@ -1743,16 +1749,27 @@ export class ExperimentalI80386 {
     else this._commitStackFrame(sameFrame);
     this.cs = (selector & 0xfffc) | targetCpl;
     this.segmentCaches[SEG_CS] = descriptor;
+    if (vm86) {
+      for (const id of [SEG_ES, SEG_DS, SEG_FS, SEG_GS]) {
+        this._setSegValue(id, 0);
+        this.segmentCaches[id] = {
+          base: 0,
+          limit: 0,
+          default32: false,
+          present: false,
+          null: true,
+          code: false,
+          readable: false,
+          writable: false,
+        };
+      }
+    }
     this.eip = width === 32 ? offset : offset & 0xffff;
-    this.eflags &= ~(TF | NT | RF);
+    this.eflags &= ~(TF | NT | RF | 0x20000);
     if (type === 6 || type === 14) this.eflags &= ~IF;
   }
 
   _deliver(vector, returnEip, errorCode = null, options = {}) {
-    if (this.virtual8086)
-      throw new UnsupportedI80386(
-        "VM86 interrupt delivery is outside the bounded profile",
-      );
     if (this.protectedMode)
       this._deliverProtected(vector, returnEip, errorCode, options);
     else this._deliverReal(vector, returnEip);
