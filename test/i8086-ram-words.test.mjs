@@ -57,3 +57,18 @@ test('replaced machine bus and bulk memory restoration cannot bypass byte behavi
     machine.cpu._wr16(0,0,123);
     assert.equal(writes,2);
 });
+
+test('286 fast words retain 24-bit addresses instead of aliasing low machine RAM', () => {
+    const machine = new I8086Machine({variant:'80286', chips:[], regions:[{kind:'ram',start:0,end:0xfffff}]});
+    machine.mem[0x10] = 0x34; machine.mem[0x11] = 0x12;
+    assert.equal(machine.cpu._phys(0xffff, 0x20), 0x100010);
+    assert.equal(machine.cpu._rd16(0xffff, 0x20), 0xffff, 'unmapped 286 HMA reads open bus');
+    machine.cpu._wr16(0xffff, 0x20, 0xbeef);
+    assert.equal(machine.mem[0x10] | (machine.mem[0x11] << 8), 0x1234, 'HMA write did not alias low RAM');
+
+    for (const variant of ['8086','80186']) {
+        const legacy = new I8086Machine({variant, chips:[], regions:[{kind:'ram',start:0,end:0xfffff}]});
+        legacy.mem[0x10] = 0x34; legacy.mem[0x11] = 0x12;
+        assert.equal(legacy.cpu._rd16(0xffff, 0x20), 0x1234, `${variant} retains 20-bit bus wrapping`);
+    }
+});

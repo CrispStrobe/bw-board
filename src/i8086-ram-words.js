@@ -6,7 +6,7 @@ export function installI8086RamWordAccess(machine) {
     const machineRead = machine._read, machineWrite = machine._write;
     const rd16 = cpu._rd16, wr16 = cpu._wr16;
     cpu._rd16 = function(seg, off) {
-        const offset = off & 65535, address = ((seg << 4) + offset) & 0xfffff;
+        const offset = off & 65535, address = this._phys(seg, offset);
         if (this.busTrace === null && this.read === read && machine._read === machineRead &&
             machine.mem === memory && offset !== 65535 && (address & 4095) !== 4095) {
             const kind = machine._page[address >>> 12];
@@ -15,7 +15,7 @@ export function installI8086RamWordAccess(machine) {
         return rd16.call(this, seg, off);
     };
     cpu._wr16 = function(seg, off, value) {
-        const offset = off & 65535, address = ((seg << 4) + offset) & 0xfffff;
+        const offset = off & 65535, address = this._phys(seg, offset);
         if (this.busTrace === null && this.write === write && machine._write === machineWrite &&
             machine.mem === memory && offset !== 65535 && (address & 4095) !== 4095 &&
             (address < 0xa0000 || address > 0xbffff) && machine._page[address >>> 12] === 1) {

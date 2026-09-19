@@ -151,6 +151,15 @@ export class Unimplemented extends Error {
     }
 }
 
+/** Refusal used when the real-mode-qualified core is asked to continue in PE. */
+export class UnsupportedProtectedMode extends Error {
+    constructor(feature = 'execution') {
+        super(`80286 protected mode ${feature} is not supported by the real-mode core`);
+        this.name = 'UnsupportedProtectedMode';
+        this.feature = feature;
+    }
+}
+
 /** A 286 real-mode processor fault raised from DEEP inside an instruction (a
  *  memory access that crosses the segment's 0xFFFF boundary is #GP, vector 13).
  *  It is thrown so it unwinds the partially-run opcode; step() catches it and
@@ -1423,6 +1432,7 @@ export class I8086 {
      *  for opcodes this core has not reached, so the grinder counts those as
      *  NOT-YET and never as pass. */
     step() {
+        if ((this.msw & 1) && !this._protectedCapable) throw new UnsupportedProtectedMode();
         this._seg = -1;
         this._rep = 0;
         // The IP at the START of this instruction (before prefixes). A 286 FAULT
