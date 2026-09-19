@@ -227,10 +227,13 @@ const summary = (r) => ({ terminated: r.result.terminated, exitCode: r.result.ex
 /** Run an in-memory program image (no host file) — used to run a chain's own
  *  freshly built artifact in the same invocation. */
 export function runImage(bytes, kind, opts = {}, { write = (s) => process.stdout.write(s) } = {}) {
-    const { variant = '8086', preset = 'at', max = 20_000_000 } = opts;
+    const { variant = '8086', preset = 'at', max = 20_000_000, keys = '' } = opts;
     const machine = new I8086Machine({ ...PRESETS[preset], variant });
     let streamed = 0;
-    const dos = createDos8086(machine, { onChar: (ch) => { streamed++; write(ch); } }).install();
+    // Accept keystrokes as a string (converted to bytes) or a byte array, so a
+    // program that reads input (INT 21h/16h — e.g. a BASIC INPUT) can be driven.
+    const keyBytes = typeof keys === 'string' ? [...keys].map((c) => c.charCodeAt(0) & 0xff) : [...keys];
+    const dos = createDos8086(machine, { onChar: (ch) => { streamed++; write(ch); }, keys: keyBytes }).install();
     (kind === 'exe' ? dos.loadExe : dos.loadCom).call(dos, bytes);
     const result = dos.run(max);
     return { result, dos, machine, streamed };
