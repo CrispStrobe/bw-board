@@ -143,14 +143,24 @@ span is checked before stack memory effects, while paging accesses remain in
 architectural stack order. Instruction-fault rollback restores registers and
 SP/ESP; page-table and already-issued destination writes are not represented
 as transactional. A pinned 386EX profile grades 12 fixed non-exception cases.
-The samples also pin original-386 POPAD behavior with a 16-bit stack address:
-the discarded dword supplies ESP's upper half while the low SP advances.
+The samples also pin a physical 386EX POPAD behavior with a 16-bit stack
+address: the nominally discarded dword supplies ESP's upper half while the low
+SP advances. This differs from the Intel pseudocode's simple `throwaway` and is
+reported as a sampled 386EX observation rather than a general x86 claim.
+Real-mode PUSHA/PUSHAD implements the Intel-documented shutdown at an original
+SP/ESP of 1, 3, or 5 and #GP at 7, 9, 11, 13, or 15.
 Register encodings of FF /3 and /5 raise #UD before the bounded protected far
 transfer refusal.
 
 MOV moffs implements A0-A3 with independent operand and address sizes plus
 segment overrides. Stores do not read their destination, and complete segment
 spans are admitted before load or store effects.
+
+ROL, ROR, RCL, and RCR support the immediate, one, and CL-count groups at all
+three operand widths. Counts are masked to five bits, then reduced by the data
+width for ROL/ROR or the carry-ring width for 8/16-bit RCL/RCR. A zero effective
+count preserves flags; rotates update CF and define OF only for a count of one,
+while preserving SF/ZF/PF. Memory forms establish write intent before reads.
 
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index

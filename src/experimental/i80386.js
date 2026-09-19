@@ -669,6 +669,15 @@ export class ExperimentalI80386 {
     const bytes = width >>> 3;
     const stack32 = !!this.segmentCaches[SEG_SS].default32;
     const originalStack = stack32 ? this.esp : this.sp;
+    const savedStack = width === 32 ? this.esp >>> 0 : this.sp;
+    if (!this.protectedMode) {
+      if (savedStack === 1 || savedStack === 3 || savedStack === 5) {
+        this.shutdown = true;
+        return;
+      }
+      if ([7, 9, 11, 13, 15].includes(savedStack))
+        throw new I80386Fault(13, 0, "PUSHA real-mode stack boundary");
+    }
     const first = stack32
       ? (originalStack - bytes * 8) >>> 0
       : (originalStack - bytes * 8) & 0xffff;
@@ -678,7 +687,7 @@ export class ExperimentalI80386 {
       this._reg(1, width),
       this._reg(2, width),
       this._reg(3, width),
-      width === 32 ? originalStack >>> 0 : originalStack & 0xffff,
+      savedStack,
       this._reg(5, width),
       this._reg(6, width),
       this._reg(7, width),
@@ -1274,6 +1283,40 @@ export class ExperimentalI80386 {
     const mask = maskFor(width);
     const sign = width === 32 ? 0x80000000 : width === 16 ? 0x8000 : 0x80;
     const original = value & mask;
+    if (operation <= 3) {
+      if (operation <= 1) count %= width;
+      else if (width < 32) count %= width + 1;
+      if (count === 0) return width === 32 ? original >>> 0 : original;
+      let result = original;
+      let carry = this.eflags & CF ? 1 : 0;
+      for (let index = 0; index < count; index++) {
+        if (operation === 0) {
+          carry = result & sign ? 1 : 0;
+          result = ((result << 1) | carry) & mask;
+        } else if (operation === 1) {
+          carry = result & 1;
+          result = (result >>> 1) | (carry ? sign : 0);
+        } else if (operation === 2) {
+          const nextCarry = result & sign ? 1 : 0;
+          result = ((result << 1) | carry) & mask;
+          carry = nextCarry;
+        } else {
+          const nextCarry = result & 1;
+          result = (result >>> 1) | (carry ? sign : 0);
+          carry = nextCarry;
+        }
+      }
+      this.eflags = (this.eflags & ~CF) | (carry ? CF : 0);
+      if (count === 1) {
+        this.eflags &= ~OF;
+        const overflow =
+          operation === 1 || operation === 3
+            ? !!(result & sign) !== !!(result & (sign >>> 1))
+            : !!(result & sign) !== !!carry;
+        if (overflow) this.eflags |= OF;
+      }
+      return width === 32 ? result >>> 0 : result;
+    }
     let result;
     let carry;
     if (operation === 4) {

@@ -40,12 +40,12 @@ test("PUSHA stores the original stack pointer in architectural register order", 
     Array.from({ length: 8 }, (_, i) => read(f.memory, 0x1f0 + i * 2, 2)),
     [0x8888, 0xffff, 0xeeee, 0x0200, 0xdddd, 0xcccc, 0xbbbb, 0xaaaa],
   );
-  f.cpu.esp = 0x280;
+  f.cpu.esp = 0x12340280;
   f.cpu.step();
-  assert.equal(f.cpu.esp, 0x260);
+  assert.equal(f.cpu.esp, 0x12340260);
   assert.deepEqual(
     Array.from({ length: 8 }, (_, i) => read(f.memory, 0x260 + i * 4, 4)),
-    [0x77778888, 0x6666ffff, 0x5555eeee, 0x280, 0x4444dddd, 0x3333cccc, 0x2222bbbb, 0x1111aaaa],
+    [0x77778888, 0x6666ffff, 0x5555eeee, 0x12340280, 0x4444dddd, 0x3333cccc, 0x2222bbbb, 0x1111aaaa],
   );
 });
 
@@ -101,4 +101,27 @@ test("invalid register FF far forms raise #UD before protected far-transfer refu
       (error) => error?.vector === 6 && error.errorCode === null,
     );
   }
+});
+
+test("real-mode PUSHA applies the documented shutdown and #GP boundaries", () => {
+  for (const sp of [1, 3, 5]) {
+    const { cpu } = fixture([0x60]);
+    cpu.sp = sp;
+    cpu.step();
+    assert.equal(cpu.shutdown, true);
+    assert.equal(cpu.sp, sp);
+  }
+  for (const sp of [7, 9, 11, 13, 15]) {
+    const { cpu } = fixture([0x60]);
+    cpu.sp = sp;
+    assert.throws(
+      () => cpu.step(),
+      (error) => error?.vector === 13 && error.errorCode === 0,
+    );
+    assert.equal(cpu.sp, sp);
+  }
+  const pushad = fixture([0x66, 0x60]);
+  pushad.cpu.esp = 0x10021;
+  pushad.cpu.step();
+  assert.equal(pushad.cpu.shutdown, false);
 });
