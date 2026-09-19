@@ -40,7 +40,12 @@ for (const name of ["x86func", "x86help", "x86mods", "x86op0f", "x86ops"])
 const { default: CPU } = await import(moduleURL("cpux86"));
 const { default: Bus } = await import(moduleURL("bus"));
 const { default: Memory } = await import(moduleURL("memory"));
+const { default: X86 } = await import(moduleURL("x86"));
 class QuietBus extends Bus { printf() { return 0; } }
+const mutation = process.env.I386_SYSTEM_ORACLE_MUTATION ?? null;
+if (mutation !== null && mutation !== "busy" && mutation !== "budget")
+  throw new Error(`unknown mutation ${mutation}`);
+const stepLimit = mutation === "budget" ? 5 : 20;
 
 const put = (write, at, bytes) => bytes.forEach((value, index) => write(at + index, value));
 const descriptor = (write, at, base, limit, access, flags = 0) => put(write, at, [
@@ -61,17 +66,25 @@ function install(write) {
   ]);
 }
 function result(cpu, memory) {
+  const local = !!cpu.segmentCaches;
   return {
     ax: cpu.eax & 0xffff, bx: cpu.ebx & 0xffff, cx: cpu.ecx & 0xffff, ds: cpu.ds & 0xffff,
     dsBase: cpu.segmentCaches?.[3]?.base ?? cpu.segDS.base,
-    busyAccess: memory(0x21d),
+    busyAccess: memory(0x21d), cs: local ? cpu.cs : cpu.getCS(),
+    eip: local ? cpu.eip : cpu.getIP(), halted: local ? cpu.halted : !!(cpu.intFlags & X86.INTFLAG.HALT),
+    ldtr: local
+      ? [cpu.ldtr.selector, cpu.ldtr.base, cpu.ldtr.limit]
+      : [cpu.segLDT.sel, cpu.segLDT.base, cpu.segLDT.limit],
+    tr: local
+      ? [cpu.tr.selector, cpu.tr.base, cpu.tr.limit]
+      : [cpu.segTSS.sel, cpu.segTSS.base, cpu.segTSS.limit],
   };
 }
 function runLocal() {
   const memory = new Uint8Array(0x2000);
   const cpu = new I80386({ read:a=>memory[a], fetch:a=>memory[a], write:(a,v)=>{memory[a]=v;} });
   install((a,v)=>{memory[a]=v;});
-  for (let steps = 0; steps < 20 && !cpu.halted; steps++) cpu.step();
+  for (let steps = 0; steps < stepLimit && !cpu.halted; steps++) cpu.step();
   return result(cpu, (a) => memory[a]);
 }
 function runPCjs() {
@@ -80,20 +93,23 @@ function runPCjs() {
   if (!bus.addMemory(0, 0x2000, Memory.TYPE.RAM)) throw new Error("PCjs memory allocation failed");
   cpu.bus=bus; install((a,v)=>bus.setByteDirect(a,v));
   cpu.setCS(0); cpu.setIP(0); cpu.setDS(0); cpu.setES(0); cpu.setSS(0); cpu.setSP(0x800); cpu.setPS(2);
-  for (let steps = 0; steps < 20 && !cpu.flags.halt; steps++) cpu.stepCPU(0);
-  return result({eax:cpu.regEAX,ebx:cpu.regEBX,ecx:cpu.regECX,ds:cpu.getDS(),segDS:cpu.segDS}, (a)=>bus.getByteDirect(a));
+  for (let steps = 0; steps < stepLimit && !(cpu.intFlags & X86.INTFLAG.HALT); steps++) cpu.stepCPU(0);
+  return result({eax:cpu.regEAX,ebx:cpu.regEBX,ecx:cpu.regECX,ds:cpu.getDS(),segDS:cpu.segDS,segLDT:cpu.segLDT,segTSS:cpu.segTSS,getCS:()=>cpu.getCS(),getIP:()=>cpu.getIP(),intFlags:cpu.intFlags}, (a)=>bus.getByteDirect(a));
 }
 const reference = runPCjs();
 const actual = runLocal();
-const mutation = process.env.I386_SYSTEM_ORACLE_MUTATION ?? null;
 if (mutation === "busy") actual.busyAccess ^= 2;
-else if (mutation) throw new Error(`unknown mutation ${mutation}`);
-const differences = Object.keys(reference).filter((field) => reference[field] !== actual[field]).map((field) => ({ field, reference:reference[field], actual:actual[field] }));
+const expected = { ax:12, bx:16, cx:24, ds:12, dsBase:0x500, busyAccess:0x8b, cs:8, eip:0x18, halted:true, ldtr:[16,0x300,0x0f], tr:[24,0x400,0x66] };
+const differences = [];
+for (const field of Object.keys(expected)) {
+  if (JSON.stringify(reference[field]) !== JSON.stringify(expected[field])) differences.push({field:`reference.${field}`,expected:expected[field],actual:reference[field]});
+  if (JSON.stringify(actual[field]) !== JSON.stringify(expected[field])) differences.push({field:`actual.${field}`,expected:expected[field],actual:actual[field]});
+}
 verifyPin();
 verifyLocal();
 if (
   execFileSync("git", ["rev-parse", "HEAD"], { cwd:repositoryRoot, encoding:"utf8" }).trim() !== executionRevision ||
   sources.some((path) => hash(readFileSync(new URL(path, import.meta.url))) !== sourceHashes[path])
 ) throw new Error("local execution sources changed during comparison");
-console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 LLDT/LTR/SLDT/STR, short-TSS LTR admission, and one LDT data load; no task switch or privilege transition", sourceHashes, mutation, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
+console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 LLDT/LTR/SLDT/STR, short-TSS LTR admission, one LDT data load, and exact HLT completion; no task switch or privilege transition", sourceHashes, mutation, expected, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
 process.exitCode = differences.length ? 1 : 0;
