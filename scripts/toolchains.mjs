@@ -18,7 +18,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { assemble } from '../src/i8086-asm.js';
 import { basicToAsm } from './basic.mjs';
 import { cToAsm } from './cc.mjs';
-import { runImage, runChain, runDos } from './run-dos.mjs';
+import { runImage, runChain, runCompile, runDos } from './run-dos.mjs';
 
 /**
  * Machine "flavors" — a chip + board, mapped onto run-dos's variant + preset.
@@ -88,7 +88,7 @@ export const TOOLCHAINS = Object.freeze([
       build: (src) => assemble(cToAsm(src), { format: 'com' }).bytes, run: 'com' },
 
     { id: 'tcc', language: 'c', kind: 'dos', tools: ['TCC.EXE'],
-      label: 'Turbo C (full C, when installed)', chain: true, ext: 'C', run: 'exe' },
+      label: 'Turbo C (full C, when installed)', compile: 'TCC.EXE', ext: 'C', run: 'exe' },
 ]);
 
 /** The uppercased basenames of the DOS binaries present in `dir`. */
@@ -123,9 +123,26 @@ export function codeTabMenu({ available = new Set() } = {}) {
                 id: t.id, label: t.label, kind: t.kind, starter: starterTemplate(t.id),
             })),
         })),
-        flavors: Object.entries(FLAVORS).map(([id, f]) => ({ id, label: f.label })),
+        // variant/preset travel with each flavor so a browser host can boot the
+        // machine directly (it can't call runToolchain — that touches fs/DOS).
+        flavors: Object.entries(FLAVORS).map(([id, f]) => ({ id, label: f.label, variant: f.variant, preset: f.preset })),
         defaultFlavor: DEFAULT_FLAVOR,
     };
+}
+
+/**
+ * Browser-safe build: turn source TEXT into a runnable image with no filesystem
+ * and no DOS binary — the native toolchains only (built-in assembler, BASIC, C).
+ * Returns { bytes, run } where run is 'com' | 'exe'. A GUI host (lite's code tab)
+ * calls this to assemble in-process, then boots the bytes on the machine flavor
+ * itself; runToolchain is the CLI/Node counterpart that also drives DOS tools.
+ * Throws for a DOS-only toolchain (those need runToolchain with real binaries).
+ */
+export function buildArtifact(id, sourceText) {
+    const tc = TOOLCHAINS.find((t) => t.id === id);
+    if (!tc) throw new Error(`unknown toolchain '${id}' (see listToolchains)`);
+    if (tc.kind !== 'native') throw new Error(`toolchain '${id}' needs a DOS binary and is not browser-buildable; use runToolchain`);
+    return { bytes: tc.build(sourceText), run: tc.run };
 }
 
 /**
@@ -150,6 +167,12 @@ export function runToolchain(id, source, opts = {}, hooks = {}) {
     if (tc.chain) {
         const c = runChain({ source, ...common, bin: opts.bin, exe2bin: tc.run === 'com', run }, hooks);
         return { ...base, ok: c.ok, artifact: c.bin || c.exe, ran: c.ran, stages: c.stages };
+    }
+    if (tc.compile) {
+        // A single-tool compiler (Turbo C: TCC PROG.C -> PROG.EXE) does its own
+        // linking — not the MASM->LINK chain.
+        const c = runCompile({ source, tool: tc.compile, ext: tc.ext, ...common, bin: opts.bin, run }, hooks);
+        return { ...base, ok: c.ok, artifact: c.artifact, ran: c.ran, stages: c.stages };
     }
     if (tc.interpret) {
         // An interpreter runs the source directly: mount it, invoke the tool
