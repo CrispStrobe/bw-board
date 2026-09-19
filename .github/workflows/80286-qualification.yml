@@ -2,7 +2,7 @@ name: 80286 qualification
 
 on:
   push:
-    branches: ['lane/astra-286-integration']
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next']
   workflow_dispatch:
     inputs:
       evidence:
@@ -28,6 +28,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  dos-guest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out exact MIT-licensed DOS 2.0 inputs
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: microsoft/MS-DOS
+          ref: 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          path: ms-dos
+      - name: Admit all six DOS and toolchain inputs
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/ms-dos/v2.0/bin
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C ms-dos rev-parse HEAD)" = 2d04cacc5322951f187bb17e017c12920ac8ebe2
+          cd "$MSDOS_BIN_DIR"
+          sha256sum -c <<'HASHES'
+          1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1  MSDOS.SYS
+          4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a  COMMAND.COM
+          56d9d59d8cf6dbec648c3b391d3532bf4dffa8b615a096aca76312acbeecc7aa  SYSINIT.OBJ
+          bf3399d0ec33fd97c3789887b336208d9f4900524609c04985e16a124cbf4449  MASM.EXE
+          fe52892da7bd6832cb88a959cccd230f307e30c7c83a225b2e638f4ea25d76be  LINK.EXE
+          80ac337843421764bb019845f9ef802d35ef642045026b1788373cea756201e2  EXE2BIN.EXE
+          HASHES
+      - name: Boot, persist, build, link and execute under real DOS
+        env:
+          MSDOS_BIN_DIR: ${{ github.workspace }}/ms-dos/v2.0/bin
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/fast-286-dos-guest.XXXXXX")
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          node --test --test-reporter=spec \
+            test/dos-guest-persistence.test.mjs test/dos-toolchain-guest.test.mjs \
+            | tee "$RECEIPT_DIR/tests.log"
+          node scripts/run-dos-toolchain-guest.mjs 80286 \
+            | tee "$RECEIPT_DIR/dos-toolchain-fast286.json"
+      - name: Upload the exact-source DOS guest receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fast286-dos-guest-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
   fast-full:
     if: ${{ github.event_name == 'push' || (inputs.run_dos != true && (inputs.evidence == 'both' || inputs.evidence == 'full-semantic')) }}
     runs-on: ubuntu-24.04
