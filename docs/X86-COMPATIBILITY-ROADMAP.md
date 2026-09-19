@@ -49,9 +49,16 @@ default 64KiB configuration builds with NASM 2.16.01 to SHA-256
 Source and binary remain external. A capture build changes only POST/debug
 ports to 80h/E9h, with SHA-256
 `3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067`.
-The REP/ISA continuation at `a6de545` reaches POST00..06 and 08 in 802,807
-instructions, then refuses LLDT (0F00 at CS00D0:EIP2AAC); it retains `accepted:false` and `fullRomPass:false`. This does not
-qualify the entire diagnostic or establish independent hardware equivalence.
+The qualified REP/ISA snapshot at `a6de545` reaches POST00..06 and 08 in
+802,807 instructions, then refuses LLDT. The subsequent worker snapshot
+`f18b19a5d02640b90e0326010cf0fe3d5076e87c` adds system selectors, LEA and stack
+instructions and reaches POST20 in 804,291 instructions, then explicitly
+refuses privilege-changing IRET at CS00D0:EIP2B78. Both retain `accepted:false`
+and `fullRomPass:false`; the later snapshot awaits hosted qualification.
+This does not qualify the entire diagnostic or establish independent hardware
+equivalence. The separate 386 AT BIOS diagnostic at `2758458` reaches
+1,100,327 instructions and POST12, then refuses SIDT at F000:0667; it is not
+a 386 DOS boot.
 Continue pinned PCjs comparisons, resolving
 mismatches against Intel rather than silently adopting reference bugs.
 
