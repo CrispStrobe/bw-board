@@ -177,6 +177,25 @@ jobs:
             assert.deepEqual(report.differences.map(d=>d.case),expected);
           }
           NODE
+          node scripts/compare-pcjs-i80386-verr.mjs > "$RECEIPT_DIR/pcjs-i80386-verr.json"
+          for mutation in zf budget; do
+            if I386_VERR_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-i80386-verr.mjs > "$RECEIPT_DIR/rejected-verr-$mutation.json"; then
+              echo "VERR comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const read=name=>JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/${name}.json`));
+          assert.equal(read('pcjs-i80386-verr').status,'pass');
+          const zf=read('rejected-verr-zf');
+          assert.deepEqual(zf.differences.map(d=>d.field),['actual.bx']);
+          const budget=read('rejected-verr-budget');
+          assert.equal(budget.status,'fail');
+          assert.ok(budget.differences.some(d=>d.field==='actual.halted'));
+          assert.ok(budget.differences.some(d=>d.field==='reference.halted'));
+          NODE
           node scripts/compare-pcjs-i80386-system-selectors.mjs \
             | tee "$RECEIPT_DIR/pcjs-i80386-system-selectors.json"
           for mutation in busy budget; do
@@ -525,7 +544,7 @@ jobs:
           export I386_RECEIPTS
           echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs \
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs test/i80386-system-selectors.test.mjs test/i80386-lea.test.mjs test/i80386-segment-stack.test.mjs test/i80386-pop-rm.test.mjs test/i80386-protected-far.test.mjs test/i80386-io-bitmap.test.mjs test/i80386-conforming.test.mjs test/i80386-vm86.test.mjs test/i80386-arpl.test.mjs test/i80386-bound.test.mjs test/i80386-compiler-isa.test.mjs test/i80386-ata16.test.mjs \
             | tee "$I386_RECEIPTS/tests.tap"
           for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete pusha-popa moffs rotates rotate-full-circle lea segment-stack pop-rm push-imm8 imul-immediate setcc double-shift; do
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \

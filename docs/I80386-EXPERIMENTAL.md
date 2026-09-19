@@ -128,9 +128,8 @@ FE/FF implement INC/DEC with exact carry preservation, near indirect CALL/JMP,
 and PUSH r/m at 8/16/32-bit applicable widths. Effective addresses are decoded
 before stack changes, and target plus stack spans are admitted before commits.
 Real-mode immediate and indirect far CALL/JMP plus RETF are included with full
-pointer/frame preflight. Protected far transfers remain explicit valid but
-unsupported paths because descriptor gates and privilege changes are outside
-this stage. A pinned 386EX profile grades 21 fixed non-exception FE/FF samples;
+pointer/frame preflight. Protected far transfers and call gates now follow the
+bounded protection contracts below. A pinned 386EX profile grades 21 fixed non-exception FE/FF samples;
 exception and LOCK-prefixed inputs are counted and excluded.
 
 LES, LDS, LSS, LFS, and LGS load complete far pointers with independent
@@ -199,8 +198,8 @@ and LDT-backed data/code lookup through supervisor page-table accesses. It also
 implements SMSW/LMSW, with CPL checks and the rule that LMSW cannot clear PE.
 Owned tests cover TI, type, not-present, short-TSS LTR admission, and busy-write
 atomicity. A pinned PCjs comparison grades a ring-0 LDT load, short-TSS busy
-marking, selector stores, and one LDT data-segment load. Task switching,
-privilege transitions, and TSS I/O-map use remain outside this stage.
+marking, selector stores, and one LDT data-segment load. Task switching remains
+unsupported; privilege transitions and TSS I/O-map use follow the contracts below.
 
 LEA implements all admitted 16-bit and 32-bit effective-address forms with an
 independent destination operand size. It returns the offset without checking a
