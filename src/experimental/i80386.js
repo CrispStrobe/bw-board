@@ -454,6 +454,30 @@ export class ExperimentalI80386 {
     }
     return true;
   }
+  _queryDescriptor(selector, kind) {
+    if (!(selector & 0xfffc)) return null;
+    let bytes;
+    try {
+      ({ bytes } = this._descriptorBytes(selector));
+    } catch (error) {
+      if (error instanceof I80386Fault && error.vector === 13) return null;
+      throw error;
+    }
+    const access = bytes[5];
+    const system = !(access & 0x10);
+    const type = access & 15;
+    const validSystemTypes = kind === "lar"
+      ? new Set([1, 2, 3, 4, 5, 6, 7, 9, 11, 12, 14, 15])
+      : new Set([1, 2, 3, 9, 11]);
+    if (system && !validSystemTypes.has(type)) return null;
+    const code = !system && !!(type & 8);
+    const conforming = code && !!(type & 4);
+    const dpl = (access >>> 5) & 3;
+    if (
+      (conforming ? (selector & 3) : Math.max(this.currentPrivilegeLevel, selector & 3)) > dpl
+    ) return null;
+    return bytes;
+  }
   _markAccessed(descriptor) {
     if (!(descriptor.access & 1)) {
       this._writeLinear(
@@ -2656,6 +2680,34 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if (op === 0x02 || op === 0x03) {
+      if (!this.protectedMode || this.virtual8086)
+        throw new I80386Fault(6, null, "LAR/LSL are undefined outside protected mode");
+      const ea = this._decodeEA(address32, override);
+      const selector = this._operandRead(ea, 16);
+      const descriptor = this._queryDescriptor(selector, op === 0x02 ? "lar" : "lsl");
+      if (!descriptor) {
+        this.eflags &= ~ZF;
+        return;
+      }
+      let value;
+      if (op === 0x02) {
+        value = (
+          descriptor[5] << 8 |
+          (descriptor[6] & 0xf0) << 16
+        ) >>> 0;
+      } else {
+        value = (
+          descriptor[0] |
+          descriptor[1] << 8 |
+          (descriptor[6] & 15) << 16
+        ) >>> 0;
+        if (descriptor[6] & 0x80) value = ((value << 12) | 0xfff) >>> 0;
+      }
+      this._setReg(ea.reg, width, value);
+      this.eflags |= ZF;
+      return;
+    }
     if (op === 0xa0 || op === 0xa1 || op === 0xa8 || op === 0xa9) {
       const segment = op < 0xa8 ? SEG_FS : SEG_GS;
       if (op & 1) this._popSegment(segment, width);
