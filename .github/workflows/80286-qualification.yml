@@ -106,6 +106,21 @@ jobs:
           assert.deepEqual(r.differences.map(d=>d.case),[mutation==='frame'?'interrupt32':'trap32']);
           NODE
           done
+          node scripts/compare-pcjs-protected386-paging.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected386-paging.json"
+          if I386_PAGING_ORACLE_MUTATION=cr2 node scripts/compare-pcjs-protected386-paging.mjs \
+            > "$RECEIPT_DIR/rejected-386-paging-cr2.json"; then
+            echo "386 paging oracle accepted CR2 mutation" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const r=JSON.parse(fs.readFileSync(`${process.env.RECEIPT_DIR}/rejected-386-paging-cr2.json`));
+          assert.equal(r.status,'fail');
+          assert.equal(r.mutation,'cr2');
+          assert.deepEqual(r.differences.map(d=>d.field),['cr2','completion:local:cr2']);
+          NODE
           node --test test/i80286-protected-external-images.test.mjs \
             | tee "$RECEIPT_DIR/protected286-external-image-tests.log"
           for mutation in video taskreturn fixturehash sector taskstate; do
@@ -278,7 +293,7 @@ jobs:
           export I386_RECEIPTS
           echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-moo-parser.test.mjs \
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-moo-parser.test.mjs \
             | tee "$I386_RECEIPTS/tests.tap"
           for profile in add-sizes byte-movx shifts; do
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \

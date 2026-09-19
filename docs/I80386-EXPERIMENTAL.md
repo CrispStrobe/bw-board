@@ -24,7 +24,7 @@ suppress debug delivery at the segment-load boundary. Accepted NMI is blocked
 until IRET. Gate/frame checks complete before frame writes, and host bus
 callback errors remain host errors rather than guest exceptions.
 
-This stage deliberately refuses paging, VM86, LDT selectors, system
+This stage deliberately refuses VM86, LDT selectors, system
 segments, privilege-changing gates/IRET, tasking, and unimplemented opcodes.
 Only architecturally invalid encodings implemented by this profile raise #UD;
 valid instructions outside the profile still throw `UnsupportedI80386`.
