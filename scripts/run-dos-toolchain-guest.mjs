@@ -40,6 +40,11 @@ export const SOURCE=[
 
 const sha256=(b)=>createHash('sha256').update(b).digest('hex');
 const bytes=(s)=>Uint8Array.from(s,(c)=>c.charCodeAt(0));
+export function guestScope(variant) {
+    if(!['8086','80186','80286'].includes(variant))
+        throw new RangeError("guest variant must be '8086', '80186' or '80286'");
+    return `${variant} fast-core real mode on BIOS-service machine; not wired or protected-mode evidence`;
+}
 
 export function readFatFile(image,name) {
     const lay=layoutOf();
@@ -74,6 +79,7 @@ export function readFatFile(image,name) {
 
 export function runDosToolchainGuest({dir=process.env.MSDOS_BIN_DIR,variant='80286',budget=25_000_000,
     source=SOURCE,expectedOutput='GUEST-TOOLCHAIN-OK'}={}) {
+    const scope=guestScope(variant);
     if(!Number.isSafeInteger(budget)||budget<1||budget>100_000_000)
         throw new RangeError('guest budget must be a positive safe integer no greater than 100000000');
     if(typeof source!=='string'||!source.length)throw new TypeError('owned guest source must be a nonempty string');
@@ -117,7 +123,7 @@ export function runDosToolchainGuest({dir=process.env.MSDOS_BIN_DIR,variant='802
     const expectedCom=assemble(source,{format:'com'}).bytes;
     if(!Buffer.from(com).equals(Buffer.from(expectedCom)))
         throw new Error(`guest T.COM bytes ${sha256(com)} do not match expected ${sha256(expectedCom)}`);
-    return {variant,steps,screen,com,disk,inputHashes:{...INPUT_HASHES},
+    return {variant,scope,steps,screen,com,disk,inputHashes:{...INPUT_HASHES},
         sourceSha256:sha256(Buffer.from(source,'ascii')),comSha256:sha256(com),unsupported,
         sourceHashes:Object.fromEntries(SOURCE_PATHS.map(path=>[path,sha256(readFileSync(new URL(`../${path}`,import.meta.url)))]))};
 }
@@ -127,7 +133,7 @@ if(process.argv[1]===fileURLToPath(import.meta.url)) {
     const result=runDosToolchainGuest({variant:process.argv[2]||'80286'});
     const elapsedMS=performance.now()-started;
     const executionRevision=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
-    console.log(JSON.stringify({accepted:true,scope:'fast 80286 real-mode core on BIOS-service machine; not wired or protected-mode evidence',
+    console.log(JSON.stringify({accepted:true,scope:result.scope,
         sourceHashScope:'manually enumerated execution engine and guest harness files, not a transitive import closure',
         expectedOutput:'GUEST-TOOLCHAIN-OK',baseRevision:BASE_REVISION,executionRevision,node:process.version,elapsedMS,
         timingGraded:false,variant:result.variant,steps:result.steps,

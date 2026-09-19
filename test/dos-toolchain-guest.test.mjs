@@ -7,13 +7,20 @@ import {createHash} from 'node:crypto';
 import {assemble} from '../src/i8086-asm.js';
 import {findMsdosFiles,build,layoutOf,GEOM} from '../scripts/build-dos-image.mjs';
 import {findTools} from '../scripts/oracle-masm.mjs';
-import {SOURCE,runDosToolchainGuest,readFatFile} from '../scripts/run-dos-toolchain-guest.mjs';
+import {SOURCE,guestScope,runDosToolchainGuest,readFatFile} from '../scripts/run-dos-toolchain-guest.mjs';
 
 const dir=process.env.MSDOS_BIN_DIR;
 const media=findMsdosFiles(dir?[dir]:undefined),tools=findTools(dir);
 const skip=media.ok&&tools.ok?false:`Pinned MS-DOS 2 media/toolchain absent: ${media.reason||tools.missing.join(', ')}`;
 let accepted;
 const acceptance=()=>accepted??=runDosToolchainGuest({dir,variant:'80286'});
+
+test('guest receipt scope names only an admitted CPU variant',()=>{
+    for(const variant of ['8086','80186','80286'])
+        assert.equal(guestScope(variant),`${variant} fast-core real mode on BIOS-service machine; not wired or protected-mode evidence`);
+    for(const variant of ['286','i80286','80386',null,undefined])
+        assert.throws(()=>guestScope(variant),/guest variant must be '8086', '80186' or '80286'/);
+});
 
 test('optional FAT fixtures preserve the no-extra image and reject invalid plans',{skip},()=>{
     assert.equal(createHash('sha256').update(build(media.files).image).digest('hex'),
