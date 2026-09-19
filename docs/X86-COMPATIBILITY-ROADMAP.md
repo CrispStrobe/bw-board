@@ -10,7 +10,7 @@ usable and publish its exact source, input and qualification revisions.
 | Milestone | Required observable result | Current evidence |
 | --- | --- | --- |
 | Genuine AT reset | 286 reset CS F000, IP FFF0, hidden CS base FF0000; physical reset fetch FFFFF0; ROM far jump removes reset base; RAM-preserving controller reset | Implemented with hidden-cache and same-selector far-reload tests; AT firmware first fetch verified |
-| AT BIOS POST | Unmodified external IBM 5170 ROM executes timer, controller, memory and device checks; no host interception of firmware services | Rev1 passes the refresh/controller checks, warm reset and checkpoint 30; protected memory scan advances through installed extended RAM |
+| AT BIOS POST | Unmodified external IBM 5170 ROM executes timer, controller, memory and device checks; no host interception of firmware services | Rev1 completes the installed memory scan and keyboard reset, clears the observed 301/302 errors, and reaches genuine POST40; disk boot remains under investigation |
 | AT disk boot | Firmware reads actual mounted sectors via emulated controller/DMA and reaches an identifiable DOS shell; command/file round trip persists across reboot | Not yet demonstrated |
 | 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Landed at `3cd5927`; all three hosted qualification workflows green |
 | 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; system, paging and v86 work remains |
@@ -43,8 +43,13 @@ width do not establish DX timing/physical-bus equivalence. The published tests
 do not cover protected mode, v86, TF or interrupts. Respect revoked cases.
 [barotto/test386.asm](https://github.com/barotto/test386.asm)
 revision `cfd052d1e64d5375dea5a681c1eadeed64ceda2c` is a candidate independent
-CPU program; no execution result is claimed here. Review exact licensing and
-build inputs before vendoring. Continue pinned PCjs comparisons, resolving
+CPU program derived from PCjs test386, under GPL-3.0-or-later. Its unchanged
+default 64KiB configuration builds with NASM 2.16.01 to SHA-256
+`a53356b0c6073434c3deb8baeed5fbb5f0e61cd027d2923311f6d5be39ed3c8b`.
+Source and binary remain external; no execution result is claimed here. Default
+text output is disabled, so POST success alone cannot grade computational
+output; a separately recorded configuration will be needed for that acceptance.
+Continue pinned PCjs comparisons, resolving
 mismatches against Intel rather than silently adopting reference bugs.
 
 ## WIP revision discipline

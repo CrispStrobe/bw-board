@@ -67,6 +67,7 @@ export class ExperimentalI80386 {
     this._interruptShadow = 0;
     this._nmiShadow = 0;
     this._debugShadow = 0;
+    this._nmiActive = false;
     this.segmentCaches = {};
     for (const id of [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS])
       this.segmentCaches[id] = {
@@ -501,6 +502,7 @@ export class ExperimentalI80386 {
       "_interruptShadow",
       "_nmiShadow",
       "_debugShadow",
+      "_nmiActive",
     ])
       state[name] = this[name];
     state.segmentCaches = Object.fromEntries(
@@ -527,6 +529,7 @@ export class ExperimentalI80386 {
       "_interruptShadow",
       "_nmiShadow",
       "_debugShadow",
+      "_nmiActive",
     ])
       this[name] = state[name];
     this.segmentCaches = Object.fromEntries(
@@ -695,7 +698,7 @@ export class ExperimentalI80386 {
       try {
         this._deliver(current.vector, returnEip, current.errorCode, {
           external,
-          fault: !currentIsTrap,
+          fault: !currentIsTrap && current.vector !== 8,
         });
         return;
       } catch (next) {
@@ -719,14 +722,20 @@ export class ExperimentalI80386 {
   interrupt(vector, { nmi = false } = {}) {
     if (
       this.shutdown ||
-      (nmi ? this._nmiShadow : !(this.eflags & IF) || this._interruptShadow)
+      (nmi
+        ? this._nmiShadow || this._nmiActive
+        : !(this.eflags & IF) || this._interruptShadow)
     )
       return false;
+    if (nmi) this._nmiActive = true;
     try {
       this._deliver(vector & 255, this.eip, null, { external: true });
       return true;
     } catch (error) {
-      if (!(error instanceof I80386Fault)) throw error;
+      if (!(error instanceof I80386Fault)) {
+        if (nmi) this._nmiActive = false;
+        throw error;
+      }
       this._deliverFault(error, this.eip, { external: true });
       return !this.shutdown;
     }
@@ -777,6 +786,10 @@ export class ExperimentalI80386 {
   }
 
   _iret(width) {
+    if (this.protectedMode && this.eflags & NT)
+      throw new UnsupportedI80386(
+        "nested-task IRET is outside the bounded profile",
+      );
     const bytes = width >>> 3,
       stack32 = !!this.segmentCaches[SEG_SS].default32;
     const old = stack32 ? this.esp : this.sp;
@@ -784,6 +797,8 @@ export class ExperimentalI80386 {
     const target = this._readLinear(address, bytes);
     const selector = this._readLinear(address + bytes, bytes) & 0xffff;
     const flags = this._readLinear(address + bytes * 2, bytes);
+    if (this.protectedMode && flags & 0x20000)
+      throw new UnsupportedI80386("VM86 IRET is outside the bounded profile");
     if (this.protectedMode) {
       if ((selector & 3) !== (this.cs & 3))
         throw new UnsupportedI80386(
@@ -795,7 +810,11 @@ export class ExperimentalI80386 {
       this._markAccessed(descriptor);
       this.cs = selector;
       this.segmentCaches[SEG_CS] = descriptor;
-    } else this._loadSeg(SEG_CS, selector);
+    } else {
+      if (target > 0xffff)
+        throw new I80386Fault(13, 0, "real-mode IRET target exceeds CS limit");
+      this._loadSeg(SEG_CS, selector);
+    }
     if (stack32) this.esp = (old + bytes * 3) >>> 0;
     else this.sp = (old + bytes * 3) & 0xffff;
     this.eip = width === 32 ? target >>> 0 : target & 0xffff;
@@ -803,6 +822,8 @@ export class ExperimentalI80386 {
       width === 32
         ? (flags | 2) >>> 0
         : ((this.eflags & 0xffff0000) | flags | 2) >>> 0;
+    this._preserveRf = true;
+    this._nmiActive = false;
   }
 
   step() {
@@ -812,12 +833,14 @@ export class ExperimentalI80386 {
     const trace = !!(this.eflags & TF),
       debugInhibited = this._debugShadow > 0;
     this._suppressTrace = false;
+    this._preserveRf = false;
     try {
       const result = this._stepInstruction();
       this.eip >>>= 0;
       if (this._interruptShadow) this._interruptShadow--;
       if (this._nmiShadow) this._nmiShadow--;
       if (this._debugShadow) this._debugShadow--;
+      if (!this._preserveRf) this.eflags &= ~RF;
       if (
         trace &&
         !debugInhibited &&
@@ -829,6 +852,10 @@ export class ExperimentalI80386 {
         });
       return result;
     } catch (error) {
+      if (error instanceof UnsupportedI80386) {
+        this._restoreInstruction(state);
+        throw error;
+      }
       if (!(error instanceof I80386Fault)) throw error;
       this._restoreInstruction(state);
       if (!this.deliverFaults) throw error;
@@ -1021,7 +1048,7 @@ export class ExperimentalI80386 {
       this.eflags |= IF;
       this._interruptShadow = 2;
     } else if (op === 0x17) {
-      this._loadSeg(SEG_SS, this._pop(16));
+      this._loadSeg(SEG_SS, this._pop(width) & 0xffff);
       this._interruptShadow = 2;
       this._nmiShadow = 2;
       this._debugShadow = 2;

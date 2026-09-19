@@ -20,7 +20,7 @@ contributory, or page fault followed by contributory/page fault, becomes #DF;
 a fault during #DF delivery enters CPU shutdown. Fault stack images set RF,
 while traps and software INT do not. STI and MOV/POP SS interrupt shadows are
 modeled; MOV/POP SS also inhibit NMI and debug delivery through the following
-instruction. Gate/frame checks complete before frame writes, and host bus
+instruction. Accepted NMI is blocked until IRET. Gate/frame checks complete before frame writes, and host bus
 callback errors remain host errors rather than guest exceptions.
 
 This stage deliberately refuses paging, VM86, LDT selectors, system
@@ -30,6 +30,11 @@ valid instructions outside the profile still throw `UnsupportedI80386`.
 Descriptor and exception checks cover the flat, same-ring owned-program path;
 they are not a complete 80386 protection model. Cycle counts are placeholders
 and make no 386DX or 386EX timing claim.
+
+Ordinary MOV/POP segment loads still report null, table-limit, and not-present
+descriptor cases as implementation refusals. This stage does not claim their
+architectural fault delivery; gate target and frame failures within the
+admitted same-ring profile do use architectural exceptions.
 
 `scripts/compare-pcjs-protected386-faults.mjs` binds a clean PCjs revision
 `c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70` and compares independent 32-bit
@@ -57,4 +62,6 @@ respectively, before deterministic selection. Those cases are neither passes
 nor evidence of exception compatibility. The admitted total is only 84
 samples, not the full 386 corpus. Owned IMUL tests pass, but IMUL hardware
 qualification remains pending. Unsupported instruction/protection paths still
-raise a diagnostic refusal; precise architectural recovery is the next stage.
+raise a diagnostic refusal. The bounded same-ring recovery above does not
+qualify the excluded hardware exception cases or complete segment-load,
+paging, task, and privilege-transition recovery.

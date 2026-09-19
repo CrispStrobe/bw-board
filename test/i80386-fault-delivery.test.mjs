@@ -179,6 +179,11 @@ test("fault delivery distinguishes benign replacement, contributory #DF, and fai
   doubled.cpu.step();
   assert.deepEqual([doubled.cpu.eip, doubled.cpu.esp], [0x180, 0x3f0]);
   assert.equal(doubled.dword(0x1203f0), 0, "#DF always pushes error code zero");
+  assert.equal(
+    doubled.dword(0x1203fc) & 0x10000,
+    0,
+    "#DF is an abort and does not synthesize RF",
+  );
 
   const shutdown = protectedFixture();
   shutdown.put(0x400 + 13 * 8, gate(0x100, 0, 0x0e));
@@ -297,6 +302,32 @@ test("fault frames set RF while traps/software interrupts do not, and TF uses th
     0,
     "software INT frame does not invent RF",
   );
+
+  const ordinary = fixture();
+  ordinary.cpu.eflags |= 0x10000;
+  ordinary.put(0, [0x40]);
+  ordinary.cpu.step();
+  assert.equal(
+    ordinary.cpu.eflags & 0x10000,
+    0,
+    "ordinary completion clears RF",
+  );
+
+  const returned = protectedFixture();
+  returned.put(0x100000, [0xcf, 0x40]);
+  returned.put(0x120400, [1, 0, 0, 0, 8, 0, 0, 0, 2, 0, 1, 0]);
+  returned.cpu.step();
+  assert.equal(
+    returned.cpu.eflags & 0x10000,
+    0x10000,
+    "IRET preserves the popped RF value",
+  );
+  returned.cpu.step();
+  assert.equal(
+    returned.cpu.eflags & 0x10000,
+    0,
+    "the instruction after IRET clears RF",
+  );
 });
 
 test("STI and MOV SS inhibit interrupts and MOV SS inhibits debug through the following instruction", () => {
@@ -326,9 +357,20 @@ test("STI and MOV SS inhibit interrupts and MOV SS inhibits debug through the fo
   assert.equal(debug.cpu.ip, 3);
   assert.equal(debug.cpu.interrupt(2, { nmi: true }), true);
   assert.equal(
+    debug.cpu.interrupt(2, { nmi: true }),
+    false,
+    "NMI remains blocked until IRET",
+  );
+  assert.equal(
     debug.cpu.ip,
     0,
     "accepted NMI uses the real-mode vector after the MOV SS shadow",
+  );
+  debug.cpu._iret(16);
+  assert.equal(
+    debug.cpu.interrupt(2, { nmi: true }),
+    true,
+    "IRET releases NMI blocking",
   );
   debug.cpu._iret(16);
   debug.cpu.step();
@@ -341,4 +383,36 @@ test("STI and MOV SS inhibit interrupts and MOV SS inhibits debug through the fo
     4,
     "debug trap after MOV SS shadow saves the following instruction boundary",
   );
+});
+
+test("32-bit POP SS advances ESP by four and unsupported IRET modes are atomic", () => {
+  const pop = protectedFixture();
+  pop.put(0x100000, [0x17]);
+  pop.put(0x120400, [0x10, 0, 0, 0]);
+  pop.cpu.step();
+  assert.deepEqual([pop.cpu.ss, pop.cpu.esp], [0x10, 0x404]);
+
+  const nested = protectedFixture();
+  nested.cpu.eflags |= 0x4000;
+  nested.put(0x100000, [0xcf]);
+  assert.throws(() => nested.cpu.step(), /nested-task IRET/);
+  assert.deepEqual([nested.cpu.eip, nested.cpu.esp], [0, 0x400]);
+
+  const vm = protectedFixture();
+  vm.put(0x100000, [0xcf]);
+  vm.put(0x120400, [1, 0, 0, 0, 8, 0, 0, 0, 2, 0, 2, 0]);
+  assert.throws(() => vm.cpu.step(), /VM86 IRET/);
+  assert.deepEqual([vm.cpu.eip, vm.cpu.esp], [0, 0x400]);
+
+  const real = fixture();
+  real.cpu.ss = 0x100;
+  real.cpu._loadSeg(2, 0x100);
+  real.cpu.sp = 0x100;
+  real.put(0, [0x66, 0xcf]);
+  real.put(0x1100, [0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 0, 0]);
+  assert.throws(
+    () => real.cpu.step(),
+    (error) => error instanceof I80386Fault && error.vector === 13,
+  );
+  assert.deepEqual([real.cpu.eip, real.cpu.sp, real.cpu.cs], [0, 0x100, 0]);
 });
