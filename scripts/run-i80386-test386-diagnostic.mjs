@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import I80386, { UnsupportedI80386 } from "../src/experimental/i80386.js";
 
 const EXPECTED = "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067";
@@ -34,6 +35,9 @@ if (
   throw new Error("test386 input provenance mismatch");
 }
 const sourceRoot = resolve(args.source);
+const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const git = (cwd, ...gitArgs) =>
+  execFileSync("git", gitArgs, { cwd, encoding: "utf8" }).trim();
 const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: sourceRoot,
   encoding: "utf8",
@@ -64,12 +68,12 @@ const cpu = new I80386(
       if (port === 0xe9) output.push(value & 255);
     },
   },
-  { hardwareReset: true },
+  { hardwareReset: true, deliverFaults: true },
 );
 let steps = 0;
 let blocker = null;
 try {
-  while (steps < budget && !cpu.halted) {
+  while (steps < budget && !cpu.halted && !cpu.shutdown) {
     cpu.step();
     steps++;
   }
@@ -85,22 +89,38 @@ try {
   };
 }
 if (!blocker && !cpu.halted) {
-  blocker = {
-    name: "BudgetBoundary",
-    message: "bounded diagnostic reached " + budget + " instructions",
-    cs: cpu.cs,
-    eip: cpu.eip,
-    physical: cpu.pc,
-    opcode: read(cpu.pc),
-  };
+  blocker = cpu.shutdown
+    ? {
+        name: "CpuShutdown",
+        message: "architectural exception delivery entered shutdown",
+        cs: cpu.cs,
+        eip: cpu.eip,
+        physical: cpu.pc,
+        opcode: read(cpu.pc),
+      }
+    : {
+        name: "BudgetBoundary",
+        message: "bounded diagnostic reached " + budget + " instructions",
+        cs: cpu.cs,
+        eip: cpu.eip,
+        physical: cpu.pc,
+        opcode: read(cpu.pc),
+      };
+}
+if (git(sourceRoot, "rev-parse", "HEAD") !== sourceRevision ||
+    git(sourceRoot, "status", "--porcelain") !== "") {
+  throw new Error("test386 source provenance changed during execution");
 }
 const localSources = ["./run-i80386-test386-diagnostic.mjs", "../src/experimental/i80386.js"];
 const report = {
   schema: "astra.i80386-test386-diagnostic.v1",
   accepted: false,
   status: blocker ? "bounded-blocker" : "guest-halted", fullRomPass: false,
-  scope: "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
+  scope:
+    "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
   node: process.version, steps, post, output: Buffer.from(output).toString("latin1"), blocker,
+  executionRevision: git(repositoryRoot, "rev-parse", "HEAD"),
+  instructionBudget: budget,
   input: {
     bytes: rom.length,
     sha256: hash(rom),

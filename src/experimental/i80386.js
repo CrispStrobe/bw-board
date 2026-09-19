@@ -608,6 +608,97 @@ export class ExperimentalI80386 {
     this._preserveRf = true;
   }
 
+  _group3(op, width, address32, override) {
+    const operandWidth = op === 0xf6 ? 8 : width;
+    const ea = this._decodeEA(address32, override);
+    if (ea.reg === 1)
+      throw new I80386Fault(6, null, "invalid group-3 extension");
+    if (ea.reg === 0) {
+      const immediate = this._fetchN(operandWidth >>> 3);
+      this._setLogic(
+        this._operandRead(ea, operandWidth) & immediate,
+        operandWidth,
+      );
+      return;
+    }
+    if (ea.reg === 2 || ea.reg === 3)
+      this._operandPreflightWrite(ea, operandWidth);
+    const operand = this._operandRead(ea, operandWidth);
+    if (ea.reg === 2) {
+      this._operandWrite(ea, operandWidth, ~operand);
+      return;
+    }
+    if (ea.reg === 3) {
+      this._operandWrite(ea, operandWidth, this._add(0, operand, operandWidth, true));
+      return;
+    }
+
+    const bits = BigInt(operandWidth);
+    const unsignedOperand = BigInt.asUintN(operandWidth, BigInt(operand));
+    const signedOperand = BigInt.asIntN(operandWidth, BigInt(operand));
+    if (ea.reg === 4 || ea.reg === 5) {
+      const accumulator =
+        operandWidth === 8 ? this.al : this._reg(0, operandWidth);
+      const product =
+        ea.reg === 4
+          ? BigInt.asUintN(operandWidth, BigInt(accumulator)) * unsignedOperand
+          : BigInt.asIntN(operandWidth, BigInt(accumulator)) * signedOperand;
+      const raw = BigInt.asUintN(operandWidth * 2, product);
+      const low = Number(BigInt.asUintN(operandWidth, raw));
+      const high = Number(BigInt.asUintN(operandWidth, raw >> bits));
+      if (operandWidth === 8) this.ax = Number(BigInt.asUintN(16, raw));
+      else {
+        this._setReg(0, operandWidth, low);
+        this._setReg(2, operandWidth, high);
+      }
+      const fits =
+        ea.reg === 4
+          ? high === 0
+          : product === BigInt.asIntN(operandWidth, product);
+      this.eflags = fits
+        ? this.eflags & ~(CF | OF)
+        : this.eflags | CF | OF;
+      return;
+    }
+
+    if (unsignedOperand === 0n)
+      throw new I80386Fault(0, null, "division by zero");
+    let dividend;
+    if (operandWidth === 8) dividend = BigInt(this.ax);
+    else {
+      const low = BigInt.asUintN(
+        operandWidth,
+        BigInt(this._reg(0, operandWidth)),
+      );
+      const high = BigInt.asUintN(
+        operandWidth,
+        BigInt(this._reg(2, operandWidth)),
+      );
+      dividend = (high << bits) | low;
+    }
+    if (ea.reg === 7)
+      dividend = BigInt.asIntN(operandWidth * 2, dividend);
+    const divisor = ea.reg === 7 ? signedOperand : unsignedOperand;
+    if (divisor === 0n)
+      throw new I80386Fault(0, null, "division by zero");
+    const quotient = dividend / divisor;
+    const remainder = dividend % divisor;
+    const fits =
+      ea.reg === 7
+        ? quotient === BigInt.asIntN(operandWidth, quotient)
+        : quotient === BigInt.asUintN(operandWidth, quotient);
+    if (!fits) throw new I80386Fault(0, null, "division quotient overflow");
+    const q = Number(BigInt.asUintN(operandWidth, quotient));
+    const r = Number(BigInt.asUintN(operandWidth, remainder));
+    if (operandWidth === 8) {
+      this.al = q;
+      this.ah = r;
+    } else {
+      this._setReg(0, operandWidth, q);
+      this._setReg(2, operandWidth, r);
+    }
+  }
+
   _snapshotInstruction() {
     const state = {};
     for (const name of REG_NAMES) state[name] = this[name];
@@ -1125,6 +1216,8 @@ export class ExperimentalI80386 {
       const ea = this._decodeEA(address32, override);
       if (ea.reg !== 0) throw new UnsupportedI80386("C7 extension");
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
+    } else if (op === 0xf6 || op === 0xf7) {
+      this._group3(op, width, address32, override);
     } else if (op === 0x80 || op === 0x81 || op === 0x83) {
       const groupWidth = op === 0x80 ? 8 : width;
       const ea = this._decodeEA(address32, override),

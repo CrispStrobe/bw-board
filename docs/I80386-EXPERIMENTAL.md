@@ -71,6 +71,17 @@ Real mode and protected execution at or above IOPL are admitted. An access
 which requires a TSS I/O-permission bitmap is an explicit implementation
 refusal; the executor does not silently grant it.
 
+The F6/F7 group-3 profile implements TEST, NOT, NEG, MUL, IMUL, DIV, and
+IDIV at 8, 16, and 32 bits. Products and double-width dividends use exact
+BigInt intermediates. Divide-by-zero and quotient overflow raise #DE before
+changing accumulator/result registers. NOT and NEG perform write admission
+before reading a memory destination, including paging permissions. MUL/IMUL
+grade only their architecturally defined CF and OF results; other flags, and
+all DIV/IDIV flags, remain unchanged as an explicit deterministic treatment
+of architecturally undefined outputs. The pinned PCjs comparator covers
+non-faulting unsigned and signed multiply/divide plus NEG and has a rejecting
+quotient mutation. Owned tests cover #DE delivery and boundary failures.
+
 `scripts/run-i80386-test386-diagnostic.mjs` runs the unchanged 64 KiB capture
 build from pinned `ja1umi/test386` revision
 `cfd052d1e64d5375dea5a681c1eadeed64ceda2c`. It requires a clean source checkout
