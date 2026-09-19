@@ -4,7 +4,10 @@
 32-bit register and instruction-pointer model. It does not select or replace
 the production 8086/186/286 CPU.
 
-The current profile implements 16- and 32-bit register aliases, independent
+The current profile implements an explicit original-80386 hardware reset entry
+at physical `0xfffffff0`; an ordinary constructor retains the zero-based test
+fixture reset. The reset CS cache remains based at `0xffff0000` until a real CS
+reload. The current profile also implements 16- and 32-bit register aliases, independent
 operand- and address-size prefixes, 16-bit ModR/M and 32-bit ModR/M plus SIB
 addressing, bounded arithmetic and moves, near branches/calls, and 16/32-bit
 stack operands with stack addressing selected independently by SS.B. ES, CS,
@@ -57,6 +60,21 @@ operand for count zero.
 PSE, CR0.WP behavior from later processors, VM86, task/ring transitions, and
 TLB timing are outside this stage. Reloading CR3 takes effect immediately
 because this functional executor does not cache translations.
+
+The bounded I/O profile provides explicit `inPort(port, width)` and
+`outPort(port, value, width)` bus callbacks for 8-, 16-, and 32-bit IN/OUT.
+Real mode and protected execution at or above IOPL are admitted. An access
+which requires a TSS I/O-permission bitmap is an explicit implementation
+refusal; the executor does not silently grant it.
+
+`scripts/run-i80386-test386-diagnostic.mjs` runs the unchanged 64 KiB capture
+build from pinned `ja1umi/test386` revision
+`cfd052d1e64d5375dea5a681c1eadeed64ceda2c`. It requires a clean source checkout
+and exact ROM/provenance hashes, records POST port 80 and debug port e9 output,
+and stops at either the first unsupported instruction or a finite instruction
+budget. Its `accepted: false` and `fullRomPass: false` fields are deliberate:
+the artifact measures bounded progress and does not claim complete ROM,
+hardware, or timing compatibility.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the

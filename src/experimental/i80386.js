@@ -44,8 +44,30 @@ export class ExperimentalI80386 {
     this.read = bus.read ?? (() => 0);
     this.fetch = bus.fetch ?? this.read;
     this.write = bus.write ?? (() => {});
+    this.inPort = bus.inPort ?? (() => 0xff);
+    this.outPort = bus.outPort ?? (() => {});
     this.deliverFaults = !!options.deliverFaults;
     this.reset();
+    if (options.hardwareReset) this.hardwareReset();
+  }
+
+  hardwareReset() {
+    this.reset();
+    // Original 80386 reset leaves PE/PG clear while reporting ET and the
+    // architecturally defined cache-control reset values.
+    this.cr0 = 0x60000010;
+    this.cs = 0xf000;
+    this.eip = 0xfff0;
+    this.segmentCaches[SEG_CS] = {
+      base: 0xffff0000,
+      limit: 0xffff,
+      default32: false,
+      present: true,
+      code: true,
+      readable: true,
+      writable: false,
+    };
+    return this;
   }
 
   reset() {
@@ -557,6 +579,14 @@ export class ExperimentalI80386 {
     ][code];
   }
 
+  _checkIo() {
+    if (!this.protectedMode) return;
+    if ((this.cs & 3) > ((this.eflags >>> 12) & 3))
+      throw new UnsupportedI80386(
+        "protected I/O bitmap admission is outside the bounded profile",
+      );
+  }
+
   _snapshotInstruction() {
     const state = {};
     for (const name of REG_NAMES) state[name] = this[name];
@@ -957,7 +987,37 @@ export class ExperimentalI80386 {
       else break;
     } while (true);
     const width = operand32 ? 32 : 16;
-    if (op >= 0xb0 && op <= 0xb7) this._setReg8(op - 0xb0, this._fetch8());
+    if (
+      [
+        0x04, 0x05, 0x0c, 0x0d, 0x24, 0x25, 0x2c, 0x2d, 0x34, 0x35, 0x3c, 0x3d,
+      ].includes(op)
+    ) {
+      const byte = !(op & 1),
+        operation = op & 0x38,
+        operandWidth = byte ? 8 : width,
+        left = byte ? this.al : this._reg(0, operandWidth),
+        right = this._fetchN(operandWidth >>> 3);
+      let result = null;
+      if (operation === 0) result = this._add(left, right, operandWidth);
+      else if (operation === 8)
+        result = this._setLogic(left | right, operandWidth);
+      else if (operation === 0x20)
+        result = this._setLogic(left & right, operandWidth);
+      else if (operation === 0x28)
+        result = this._add(left, right, operandWidth, true);
+      else if (operation === 0x30)
+        result = this._setLogic(left ^ right, operandWidth);
+      else this._add(left, right, operandWidth, true);
+      if (result !== null) {
+        if (byte) this.al = result;
+        else this._setReg(0, operandWidth, result);
+      }
+    } else if (op === 0xa8 || op === 0xa9) {
+      const testWidth = op === 0xa8 ? 8 : width;
+      const left = testWidth === 8 ? this.al : this._reg(0, testWidth);
+      this._setLogic(left & this._fetchN(testWidth >>> 3), testWidth);
+    } else if (op >= 0xb0 && op <= 0xb7)
+      this._setReg8(op - 0xb0, this._fetch8());
     else if (op >= 0xb8 && op <= 0xbf)
       this._setReg(op - 0xb8, width, this._fetchN(width >>> 3));
     else if (op >= 0x50 && op <= 0x57)
@@ -1044,20 +1104,26 @@ export class ExperimentalI80386 {
       const ea = this._decodeEA(address32, override);
       if (ea.reg !== 0) throw new UnsupportedI80386("C7 extension");
       this._operandWrite(ea, width, this._fetchN(width >>> 3));
-    } else if (op === 0x83) {
+    } else if (op === 0x80 || op === 0x81 || op === 0x83) {
+      const groupWidth = op === 0x80 ? 8 : width;
       const ea = this._decodeEA(address32, override),
-        imm = (this._fetch8() << 24) >> 24;
-      if (ea.reg !== 7) this._operandPreflightWrite(ea, width);
-      const dst = this._operandRead(ea, width);
+        imm =
+          op === 0x83
+            ? (this._fetch8() << 24) >> 24
+            : this._fetchN(groupWidth >>> 3);
+      if (ea.reg !== 7) this._operandPreflightWrite(ea, groupWidth);
+      const dst = this._operandRead(ea, groupWidth);
       let out;
-      if (ea.reg === 0) out = this._add(dst, imm, width);
-      else if (ea.reg === 1) out = this._setLogic(dst | imm, width);
-      else if (ea.reg === 5) out = this._add(dst, imm, width, true);
+      if (ea.reg === 0) out = this._add(dst, imm, groupWidth);
+      else if (ea.reg === 1) out = this._setLogic(dst | imm, groupWidth);
+      else if (ea.reg === 4) out = this._setLogic(dst & imm, groupWidth);
+      else if (ea.reg === 5) out = this._add(dst, imm, groupWidth, true);
+      else if (ea.reg === 6) out = this._setLogic(dst ^ imm, groupWidth);
       else if (ea.reg === 7) {
-        this._add(dst, imm, width, true);
+        this._add(dst, imm, groupWidth, true);
         out = null;
-      } else throw new UnsupportedI80386("83 extension");
-      if (out !== null) this._operandWrite(ea, width, out);
+      } else throw new UnsupportedI80386("group-1 extension");
+      if (out !== null) this._operandWrite(ea, groupWidth, out);
     } else if ([0xc0, 0xc1, 0xd0, 0xd1, 0xd2, 0xd3].includes(op)) {
       const byte = (op & 1) === 0;
       const shiftWidth = byte ? 8 : width;
@@ -1090,6 +1156,26 @@ export class ExperimentalI80386 {
             : (this.eip + ((d << 16) >> 16)) & 0xffff;
       this._linear(SEG_CS, target, 1);
       this.eip = target;
+    } else if (op >= 0xe0 && op <= 0xe3) {
+      const displacement = (this._fetch8() << 24) >> 24;
+      let taken;
+      if (op === 0xe3) taken = (address32 ? this.ecx : this.cx) === 0;
+      else {
+        if (address32) this.ecx = (this.ecx - 1) >>> 0;
+        else this.cx = (this.cx - 1) & 0xffff;
+        const nonzero = (address32 ? this.ecx : this.cx) !== 0;
+        taken =
+          nonzero &&
+          (op === 0xe2 ||
+            (op === 0xe1 ? !!(this.eflags & ZF) : !(this.eflags & ZF)));
+      }
+      if (taken) {
+        const target = default32
+          ? (this.eip + displacement) >>> 0
+          : (this.eip + displacement) & 0xffff;
+        this._linear(SEG_CS, target, 1);
+        this.eip = target;
+      }
     } else if (op === 0xeb) {
       const d = (this._fetch8() << 24) >> 24,
         target = width === 32 ? (this.eip + d) >>> 0 : (this.eip + d) & 0xffff;
@@ -1111,6 +1197,32 @@ export class ExperimentalI80386 {
       if (stack32) this.esp = (this.esp + (width >>> 3)) >>> 0;
       else this.sp = (this.sp + (width >>> 3)) & 0xffff;
       this.eip = target;
+    } else if (op === 0x9e)
+      this.eflags = (this.eflags & ~0xd5) | (this.ah & 0xd5) | 2;
+    else if (op === 0x9f) this.ah = (this.eflags | 2) & 0xff;
+    else if (op === 0x9c) this._push(this.eflags, width);
+    else if (op === 0x9d) {
+      const value = this._pop(width);
+      this.eflags =
+        width === 32
+          ? (value | 2) >>> 0
+          : ((this.eflags & 0xffff0000) | value | 2) >>> 0;
+    } else if ([0xe4, 0xe5, 0xec, 0xed].includes(op)) {
+      this._checkIo();
+      const port = op < 0xec ? this._fetch8() : this.dx,
+        ioWidth = op === 0xe4 || op === 0xec ? 8 : width;
+      const value = this.inPort(port, ioWidth) >>> 0;
+      if (ioWidth === 8) this._setReg8(0, value);
+      else this._setReg(0, ioWidth, value);
+    } else if ([0xe6, 0xe7, 0xee, 0xef].includes(op)) {
+      this._checkIo();
+      const port = op < 0xee ? this._fetch8() : this.dx,
+        ioWidth = op === 0xe6 || op === 0xee ? 8 : width;
+      this.outPort(
+        port,
+        ioWidth === 8 ? this._reg8(0) : this._reg(0, ioWidth),
+        ioWidth,
+      );
     } else if (op === 0xcc) {
       this._suppressTrace = true;
       this._deliver(3, this.eip, null, { software: true });
@@ -1168,6 +1280,18 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if (op >= 0x80 && op <= 0x8f) {
+      const displacement = this._fetchN(width >>> 3);
+      if (this._condition(op & 15)) {
+        const target =
+          width === 32
+            ? (this.eip + (displacement | 0)) >>> 0
+            : (this.eip + ((displacement << 16) >> 16)) & 0xffff;
+        this._linear(SEG_CS, target, 1);
+        this.eip = target;
+      }
+      return;
+    }
     if (op === 0xb6 || op === 0xb7 || op === 0xbe || op === 0xbf) {
       const ea = this._decodeEA(address32, override),
         sourceWidth = op & 1 ? 16 : 8,
