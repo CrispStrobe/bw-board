@@ -8,7 +8,8 @@ const expectedInjectedKeys=[...'n\rtype fdboot.txt\r'];
 const evidence={passed:true,final:{halted:false,shutdown:false},
   executionBoundaries:{int19:{},unexpectedInterrupt:null,bootSector:{sha256:bootHash,devices:{primaryDma:{
     status:4,channels:[{},{},{page:0,baseAddr:0x7c00,baseCount:0x1ff,curAddr:0x7e00,curCount:0xffff}],
-  }}}},keyboardScript:{installerDeclined:true,commandQueued:true,requested:expectedRequested,
+  }}}},keyboardScript:{installerDeclined:true,commandQueued:true,
+    commandPrompt:{step:10,row:24,column:3,line:'A:\\>'},requested:expectedRequested,
     remaining:[],injected:expectedInjectedKeys.map(key=>({key}))},guestFile:{text:'fd-boot-ok\r\n'},
   screenText:['fd-boot-ok','A:\\>']};
 const options={expectedText:'fd-boot-ok\r\n',inputBootSectorSha256:bootHash,
@@ -21,6 +22,7 @@ test('FreeDOS acceptance binds decline, exact keys, DMA, file, prompt and prior 
     e=>e.keyboardScript.injected=[],
     e=>e.keyboardScript.requested='n\recho bad>fdboot.txt\r',
     e=>e.keyboardScript.installerDeclined=false,
+    e=>e.keyboardScript.commandPrompt.column=0,
     e=>e.executionBoundaries.bootSector.devices.primaryDma.status=0,
     e=>e.guestFile.text='wrong\r\n',
     e=>e.screenText=['fd-boot-ok','not a prompt'],

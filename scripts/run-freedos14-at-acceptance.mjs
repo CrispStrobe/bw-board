@@ -68,7 +68,7 @@ const encodeKeys=keys=>keys.flatMap(key=>key==='>'
     ? [{key:'shift-down',scan:0x2a},{key:'>',scan:0x34},{key:'shift-up',scan:0xaa}]
     : [{key,scan:scanCodes[key.toLowerCase()]}]);
 const keyScript=[];
-let installerDeclined=false,commandQueued=false;
+let installerDeclined=false,commandQueued=false,commandPrompt=null;
 
 const resetRequests=[];
 const resetApplications=[];
@@ -156,11 +156,15 @@ for(;steps<stepLimit;steps++) {
             keyScript.push(...encodeKeys(['n','\r']));
             requestedKeys.push('n','\r');
             installerDeclined=true;
-        } else if(installerDeclined&&!commandQueued&&keyScript.length===0&&
-            ui.some(line=>/^A:\\?>/.test(line))) {
-            keyScript.push(...encodeKeys(commandKeys));
-            requestedKeys.push(...commandKeys);
-            commandQueued=true;
+        } else if(installerDeclined&&!commandQueued&&keyScript.length===0) {
+            const promptRow=ui.findIndex(line=>/^A:\\?>/.test(line));
+            const cursor=machine._read(0x450)|(machine._read(0x451)<<8);
+            if(promptRow>=0&&(cursor>>8)===promptRow&&(cursor&0xff)>=3) {
+                commandPrompt={step:steps,row:promptRow,column:cursor&0xff,line:ui[promptRow]};
+                keyScript.push(...encodeKeys(commandKeys));
+                requestedKeys.push(...commandKeys);
+                commandQueued=true;
+            }
         }
     }
     if(keyScript.length&&executionBoundaries.bootSector) {
@@ -240,7 +244,8 @@ const passed=firstFetchTrace[1]===0xfffff0&&
     !machine.cpu.halted&&!machine.cpu.shutdown&&!hostRefusal;
 const screenText=renderScreen();
 const guestFile=expectedFile&&floppyImage?readFat12RootFile(floppyImage,expectedFile):null;
-const keyboardScript={requested:requestedKeys.join(''),installerDeclined,commandQueued,injected:injectedKeys,remaining:keyScript};
+const keyboardScript={requested:requestedKeys.join(''),installerDeclined,commandQueued,commandPrompt,
+    injected:injectedKeys,remaining:keyScript};
 const final={cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
     shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]};
 const gradingEvidence=structuredClone({passed,executionBoundaries,keyboardScript,guestFile,final,screenText});

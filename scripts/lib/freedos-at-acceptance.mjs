@@ -25,6 +25,10 @@ export function gradeFreeDosAtAcceptance(evidence, {
     !evidence.executionBoundaries?.unexpectedInterrupt &&
     boot.sha256 === inputBootSectorSha256 && dmaSector && mediaAdmitted &&
     keys?.installerDeclined === true && keys?.commandQueued === true &&
+    Number.isInteger(keys?.commandPrompt?.step) && keys.commandPrompt.step > 0 &&
+    Number.isInteger(keys.commandPrompt.row) && keys.commandPrompt.row >= 0 &&
+    Number.isInteger(keys.commandPrompt.column) && keys.commandPrompt.column >= 3 &&
+    /^A:\\?>/.test(keys.commandPrompt.line) &&
     keys?.requested === expectedRequested && keys?.remaining?.length === 0 &&
     JSON.stringify(injectedKeys) === JSON.stringify(expectedInjectedKeys) &&
     evidence.guestFile?.text === expectedText &&
