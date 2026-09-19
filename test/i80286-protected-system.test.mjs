@@ -110,7 +110,8 @@ test('inner entry rejects malformed TSS stacks atomically with external selector
     const f=privilegeFixture();enterUser(f);if(name==='not present')f.mem.set(0x21d,0x12);
     f.mem.set(0x504,selector&255);f.mem.set(0x505,selector>>8);
     const state=f.cpu.getProtectedState(),writes=f.writes.length;
-    assert.throws(()=>f.cpu.interrupt(0x30),e=>e instanceof ProtectedModeFault&&e.vector===vector&&e.errorCode===errorCode,name);
+    assert.throws(()=>f.cpu._deliverProtected(0x30,{external:true,returnIp:f.cpu.ip}),
+      e=>e instanceof ProtectedModeFault&&e.vector===vector&&e.errorCode===errorCode,name);
     assert.deepEqual(f.cpu.getProtectedState(),state);assert.equal(f.writes.length,writes);
   }
 });
@@ -118,7 +119,8 @@ test('inner entry rejects malformed TSS stacks atomically with external selector
 test('inner entry reports short TSS with EXT and leaves state and RAM unchanged',()=>{
   const f=privilegeFixture();enterUser(f);f.cpu.tr.limit=4;
   const state=f.cpu.getProtectedState(),writes=f.writes.length;
-  assert.throws(()=>f.cpu.interrupt(0x30),e=>e instanceof ProtectedModeFault&&e.vector===10&&e.errorCode===0x29);
+  assert.throws(()=>f.cpu._deliverProtected(0x30,{external:true,returnIp:f.cpu.ip}),
+    e=>e instanceof ProtectedModeFault&&e.vector===10&&e.errorCode===0x29);
   assert.deepEqual(f.cpu.getProtectedState(),state);assert.equal(f.writes.length,writes);
 });
 

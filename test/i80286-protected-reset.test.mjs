@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import I8086 from '../src/i8086.js';
 import ProtectedI80286 from '../src/experimental/i80286-protected.js';
+
+test('base CPU pc reports the 286 HMA while legacy variants retain 20-bit wrapping',()=>{
+  const bus={read:()=>0,fetch:()=>0,write:()=>{}};
+  const cpu286=new I8086(bus,{variant:'80286'});cpu286.cs=0xffff;cpu286.ip=0xffff;
+  const cpu8086=new I8086(bus,{variant:'8086'});cpu8086.cs=0xffff;cpu8086.ip=0xffff;
+  assert.equal(cpu286.pc,0x10ffef);
+  assert.equal(cpu8086.pc,0xffef);
+});
 
 test('hardwareReset uses the 286 hidden reset base until any far CS reload',()=>{
   const mem=new Map(),fetches=[];

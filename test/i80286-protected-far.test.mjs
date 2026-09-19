@@ -238,24 +238,24 @@ test('IDT task gates push an exception error word on the incoming task stack',()
 test('external task-gate selector faults retain EXT in the new task context',()=>{
   const f=fixture();installTasks(f);f.put(0x171028,[0x58,0]);f.cpu.deliverProtectedFaults=true;
   f.cpu.idtr={base:0x180000,limit:0x107};f.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
-  assert.throws(()=>f.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===0x59&&e.taskCommitted);
+  assert.throws(()=>f.cpu._deliverProtected(0x20,{external:true,returnIp:f.cpu.ip}),e=>e.vector===10&&e.errorCode===0x59&&e.taskCommitted);
   assert.equal(f.cpu.tr.selector,0x48);
 
   const nullTask=fixture();nullTask.cpu.deliverProtectedFaults=true;
   nullTask.cpu.idtr={base:0x180000,limit:0x107};nullTask.put(0x180100,[0,0,0,0,0,0x85,0,0]);
-  assert.throws(()=>nullTask.cpu.interrupt(0x20),e=>e.vector===13&&e.errorCode===1&&!e.taskCommitted);
+  assert.throws(()=>nullTask.cpu._deliverProtected(0x20,{external:true,returnIp:nullTask.cpu.ip}),e=>e.vector===13&&e.errorCode===1&&!e.taskCommitted);
 
   const nullStack=fixture();installTasks(nullStack);nullStack.put(0x171026,[0,0]);nullStack.cpu.deliverProtectedFaults=true;
   nullStack.cpu.idtr={base:0x180000,limit:0x107};nullStack.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
-  assert.throws(()=>nullStack.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===1&&e.taskCommitted);
+  assert.throws(()=>nullStack.cpu._deliverProtected(0x20,{external:true,returnIp:nullStack.cpu.ip}),e=>e.vector===10&&e.errorCode===1&&e.taskCommitted);
 
   const shortOld=fixture();installTasks(shortOld);shortOld.cpu.tr.limit=0x28;shortOld.cpu.deliverProtectedFaults=true;
   shortOld.cpu.idtr={base:0x180000,limit:0x107};shortOld.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
-  assert.throws(()=>shortOld.cpu.interrupt(0x20),e=>e.vector===10&&e.errorCode===0x49&&!e.taskCommitted);
+  assert.throws(()=>shortOld.cpu._deliverProtected(0x20,{external:true,returnIp:shortOld.cpu.ip}),e=>e.vector===10&&e.errorCode===0x49&&!e.taskCommitted);
 
   const badIp=fixture();installTasks(badIp,0x20);badIp.desc(0x208,0x100000,0x9a,0x10);badIp.cpu.deliverProtectedFaults=true;
   badIp.cpu.idtr={base:0x180000,limit:0x107};badIp.put(0x180100,[0,0,0x48,0,0,0x85,0,0]);
-  assert.throws(()=>badIp.cpu.interrupt(0x20),e=>e.vector===13&&e.errorCode===0&&e.taskCommitted,
+  assert.throws(()=>badIp.cpu._deliverProtected(0x20,{external:true,returnIp:badIp.cpu.ip}),e=>e.vector===13&&e.errorCode===0&&e.taskCommitted,
     'an offset #GP(0) does not acquire EXT');
 });
 

@@ -122,7 +122,6 @@ test('unsupported protected paths refuse without architectural side effects', ()
     ['software INT', [0xcd,0x21]],
     ['IRET', [0xcf]],
     ['REP', [0xf3,0x90]],
-    ['WAIT/NPX synchronization', [0x9b]],
   ]) {
     const f = fixture(); installBootstrap(f, bytes);
     for (let i = 0; i < 4; i++) f.cpu.step();
@@ -206,7 +205,7 @@ test('TF on the PE transition refuses trap delivery without touching the real-mo
   const f=fixture(); f.put(0, [0x0f,0x01,0xf0]);
   f.cpu.cs=0; f.cpu.ip=0; f.cpu.ax=1; f.cpu.flags=0x0102;
   const writes=f.writes.length, sp=f.cpu.sp;
-  assert.throws(() => f.cpu.step(), UnsupportedProtectedMode);
+  assert.throws(() => f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===1);
   assert.equal(f.cpu.msw&1, 1, 'LMSW committed before its post-instruction trap point');
   assert.equal(f.cpu.sp, sp); assert.equal(f.writes.length, writes, 'no real-mode interrupt frame or IVT path ran');
 });

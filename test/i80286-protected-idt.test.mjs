@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ProtectedI80286, {ProtectedModeFault, SEG_CS, SEG_DS} from '../src/experimental/i80286-protected.js';
-import {UnsupportedProtectedMode} from '../src/i8086.js';
 
 const TF=0x100, IF=0x200, OF=0x800, NT=0x4000;
 
@@ -49,8 +48,6 @@ test('same-ring INT gate pushes the full frame, normalizes gate RPL, and IRET re
   f.cpu.step();
   assert.equal(f.cpu.ip,8);assert.equal(f.cpu.sp,0x100);
   assert.equal(f.cpu.flags&(IF|TF|NT|0x3000),saved&(IF|TF|NT|0x3000),'ring0 IRET restores IF, TF, NT, and IOPL');
-  assert.throws(()=>f.cpu.step(),/nested-task IRET|trap\/IDT delivery/,
-    'restored NT or TF requires a supported task/trap path before further execution');
 });
 
 test('trap gates preserve IF; INT3 and INTO save the following IP',()=>{
@@ -103,8 +100,9 @@ test('delivered #UD has no error word while #NP and #SS retain their error frame
 
 test('bad software gate faults through #GP with the IDT error code',()=>{
   const f=fixture();boot(f,[0xcd,0x22]);
-  f.gate(0x22,0x100,{type:5,dpl:3}); // task gate is an explicit unsupported boundary
-  assert.throws(()=>f.cpu.step(),UnsupportedProtectedMode);
+  f.gate(0x22,0x100,{type:5,dpl:3});
+  f.cpu.step();
+  assert.equal(f.cpu.shutdown,true,'a failed #GP entry and failed #DF entry shut the CPU down');
 
   const invalid=fixture();boot(invalid,[0xcd,0x22]);
   invalid.gate(0x22,0x100,{type:4,dpl:3});invalid.gate(13,0x160,{type:6});
@@ -117,33 +115,30 @@ test('bad software gate faults through #GP with the IDT error code',()=>{
 test('entry and IRET preflight prevent partial stack or cache commits',()=>{
   const f=fixture();boot(f,[0xcd,0x20]);f.gate(0x20,0x100,{type:6,dpl:3});f.gate(12,0x180,{type:6});
   f.desc(0x208,0x100000,0x0f,0x9b); // competing target-IP #GP must lose to stack #SS
-  f.cpu.sp=4;const before=f.cpu.getProtectedState(),writes=f.writes.length;
-  assert.throws(()=>f.cpu.step(),e=>e instanceof UnsupportedProtectedMode&&/after #12/.test(e.message),
-    '#SS delivery on the same exhausted stack refuses nested delivery before target-IP #GP');
-  assert.deepEqual(f.cpu.getProtectedState(),before);assert.equal(f.writes.length,writes);
+  f.cpu.sp=4;const writes=f.writes.length;
+  f.cpu.step();
+  assert.equal(f.cpu.shutdown,true,'#SS followed by failed #DF enters shutdown');
+  assert.equal(f.writes.length,writes);
 
   const iret=fixture(true);boot(iret,[0xcf]);
   iret.cpu.sp=0xfa;iret.put(0x1200fa,[0x00,0x01,0x08,0x00,0x02,0x00]);
   iret.desc(0x208,0x100000,0xff,0x9b);
-  const iretBefore=iret.cpu.getProtectedState(),iretWrites=iret.writes.length;
-  assert.throws(()=>iret.cpu.step(),e=>e instanceof UnsupportedProtectedMode&&/after #13/.test(e.message));
-  assert.deepEqual(iret.cpu.getProtectedState(),iretBefore);
+  const iretWrites=iret.writes.length;
+  iret.cpu.step();assert.equal(iret.cpu.shutdown,true);
   assert.equal(iret.writes.length,iretWrites,'invalid IRET did not set descriptor A or change stack');
 });
 
 test('external interrupts set EXT in IDT delivery errors',()=>{
   const f=fixture();boot(f,[0x90]);f.gate(0x30,0,{type:4});f.gate(13,0x1a0,{type:6});
-  // Public interrupt faults while validating vector 30h, then the host sees
-  // that delivery fault directly; automatic nesting is deliberately absent.
   f.cpu._instrStartIp=5;
-  const before=f.cpu.getProtectedState(),writes=f.writes.length;
-  assert.throws(()=>f.cpu.interrupt(0x30),e=>e instanceof ProtectedModeFault
-    &&e.errorCode===((0x30<<3)|3)&&e.restartIp===8);
-  assert.deepEqual(f.cpu.getProtectedState(),before,'malformed external gate leaves suspended CPU state unchanged');
-  assert.equal(f.writes.length,writes);
+  f.cpu.interrupt(0x30);
+  assert.equal(f.cpu.ip,0x1a0);
+  assert.equal(f.word(0x1200f8),(0x30<<3)|3,'replacement #GP retains EXT in its error code');
+  assert.equal(f.word(0x1200fa),8,'replacement #GP saves the suspended instruction boundary');
 
-  const nullTarget=fixture();boot(nullTarget,[0x90]);nullTarget.gate(0x31,0,{type:6,selector:0});
-  assert.throws(()=>nullTarget.cpu.interrupt(0x31),e=>e instanceof ProtectedModeFault&&e.vector===13&&e.errorCode===1,
+  const nullTarget=fixture();boot(nullTarget,[0x90]);nullTarget.gate(0x31,0,{type:6,selector:0});nullTarget.gate(13,0x1a0);
+  nullTarget.cpu.interrupt(0x31);
+  assert.equal(nullTarget.word(0x1200f8),1,
     'external null target selector reports EXT with a zero selector index');
 });
 
@@ -172,9 +167,10 @@ test('same-ring entry accepts SP=0 but rejects partial frames from SP=2 or 4',()
   for(const sp of [2,4]) {
     const f=fixture();boot(f,[0x90]);f.gate(0x20,0x100,{type:6});f.gate(12,0x180,{type:6});
     f.desc(0x208,0x100000,0xffff,0x9a);f.cpu.sp=sp;
-    const before=f.cpu.getProtectedState(),writes=f.writes.length;
-    assert.throws(()=>f.cpu.interrupt(0x20),e=>e instanceof ProtectedModeFault&&e.vector===12);
-    assert.deepEqual(f.cpu.getProtectedState(),before);assert.equal(f.writes.length,writes);
+    const writes=f.writes.length;
+    f.cpu.interrupt(0x20);
+    assert.equal(f.cpu.shutdown,true,'a stack fault that cannot build #SS or #DF enters shutdown');
+    assert.equal(f.writes.length,writes);
     assert.equal(f.mem.get(0x20d),0x9a,'failed entry did not set target descriptor accessed bit');
   }
 });

@@ -73,10 +73,10 @@ export class ProtectedI80286 extends I8086 {
 
     canTakeInterrupt() {
         if (!(this.msw & 1)) return super.canTakeInterrupt();
-        return (this.flags & IF) !== 0 && this.intShadow === 0 && this._pmStiShadow === 0;
+        return !this.shutdown && (this.flags & IF) !== 0 && this.intShadow === 0 && this._pmStiShadow === 0;
     }
 
-    canTakeNmi() { return !(this.msw & 1) || this.intShadow === 0; }
+    canTakeNmi() { return !(this.msw & 1) || this.shutdown || this.intShadow === 0; }
 
     get pc() {
         if (!(this.msw & 1) && this._resetCodeBase !== null)
@@ -572,6 +572,16 @@ export class ProtectedI80286 extends I8086 {
             return 5;
         }
         if (op === 0x90) return 3;
+        if (op === 0x9b) {
+            if ((this.msw & 0x0a) === 0x0a) this._pmFault(7, 0, 'WAIT with MP and TS set');
+            return 3;
+        }
+        if (op >= 0xd8 && op <= 0xdf) {
+            if (this.msw & 0x0c) this._pmFault(7, 0, 'ESC with EM or TS set');
+            const operand = this._pmModRM();
+            if (!operand.isReg) this._pmOperandRead(operand, true);
+            return operand.isReg ? 2 : 8;
+        }
         if (op === 0xf5) { this.flags ^= CF; return 2; }
         if (op === 0xf8) { this.flags &= ~CF; return 2; }
         if (op === 0xf9) { this.flags |= CF; return 2; }
@@ -941,6 +951,7 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _taskSwitch(selector, kind, {checkPrivilege=true, errorCode=null, external=false} = {}) {
+        this._pmSuppressTrace=true;
         const returning = kind === 'iret';
         let raw;
         try {
@@ -1143,6 +1154,7 @@ export class ProtectedI80286 extends I8086 {
     _deliverProtected(vector, {software=false, external=false, returnIp=this.ip, errorCode=null} = {}) {
         if (!this.deliverProtectedFaults) throw new UnsupportedProtectedMode('interrupt/IDT delivery');
         if (this._deliveringProtected) throw new UnsupportedProtectedMode('nested exception/double-fault delivery');
+        if(software)this._pmSuppressTrace=true;
         this._deliveringProtected = true;
         try {
             const gate = this._gate(vector, software, external);
@@ -1239,15 +1251,43 @@ export class ProtectedI80286 extends I8086 {
         }
     }
 
+    _deliverFaultWithEscalation(fault, depth=0) {
+        try {
+            this._deliverProtected(fault.vector, {
+                external:fault.vector === 1 || fault.vector === 7 || fault.vector === 9,
+                returnIp:fault.restartIp,
+                errorCode:ERROR_CODE_VECTORS.has(fault.vector) ? fault.errorCode : null,
+            });
+            return;
+        } catch (deliveryFault) {
+            if (!(deliveryFault instanceof ProtectedModeFault)) throw deliveryFault;
+            const restartIp = deliveryFault.taskCommitted ? this.ip : fault.restartIp;
+            if (!DOUBLE_FAULT_CONTRIBUTORS.has(fault.vector)) {
+                if (depth >= 2) throw new UnsupportedProtectedMode(`recursive exception delivery: ${deliveryFault.message}`);
+                deliveryFault.restartIp=restartIp;
+                return this._deliverFaultWithEscalation(deliveryFault,depth+1);
+            }
+            fault = {...fault,restartIp};
+        }
+
+        try {
+            this._deliverProtected(8, {returnIp:fault.restartIp, errorCode:0});
+        } catch (doubleFaultFailure) {
+            if (!(doubleFaultFailure instanceof ProtectedModeFault)) throw doubleFaultFailure;
+            this.shutdown = true;
+            this.halted = false;
+            return;
+        }
+    }
+
     step() {
         if (!(this.msw & 1)) return super.step();
-        if (this.halted) return 0;
+        if (this.halted || this.shutdown) return 0;
         const snapshot = this.getProtectedState();
-        if ((this.msw & 1) && (this.flags & TF)) {
-            throw new UnsupportedProtectedMode('trap/IDT delivery');
-        }
         try {
             this._instrStartIp = this.ip;
+            const traceThis = (this.flags & TF) !== 0;
+            this._pmSuppressTrace=false;
             const priorShadow = this.intShadow;
             const priorStiShadow = this._pmStiShadow;
             this.intShadow = 0;
@@ -1271,6 +1311,17 @@ export class ProtectedI80286 extends I8086 {
             }
             const cycles = this._execProtected(op);
             if (this._pmRepContinues) this.intShadow = priorShadow;
+            if (traceThis && !this._pmSuppressTrace && this.intShadow === 0) {
+                try {
+                    this._deliverProtected(1, {external:true, returnIp:this.ip});
+                } catch (error) {
+                    if (!(error instanceof ProtectedModeFault)) throw error;
+                    // The instruction has retired.  Deliver an entry fault from
+                    // that completed boundary rather than rolling it back.
+                    error.restartIp = this.ip;
+                    this._deliverFaultWithEscalation(error);
+                }
+            }
             this.cycles += cycles; return cycles;
         }
         catch (e) {
@@ -1278,17 +1329,11 @@ export class ProtectedI80286 extends I8086 {
                 if (!e.taskCommitted) this.setProtectedState(snapshot);
                 e.restartIp = e.taskCommitted ? this.ip : snapshot.ip;
                 if (this.deliverProtectedFaults) {
-                    try {
-                        this._deliverProtected(e.vector, {returnIp:e.restartIp,
-                            errorCode:ERROR_CODE_VECTORS.has(e.vector) ? e.errorCode : null});
-                        return 0;
-                    } catch (nested) {
-                        if (!e.taskCommitted) this.setProtectedState(snapshot);
-                        throw new UnsupportedProtectedMode(`nested exception/double-fault delivery after #${e.vector}: ${nested.message}`);
-                    }
+                    this._deliverFaultWithEscalation(e);
+                    return 0;
                 }
             } else if (e instanceof UnsupportedProtectedMode) {
-                this.setProtectedState(snapshot);
+                if (!e.preserveProtectedState) this.setProtectedState(snapshot);
             }
             throw e;
         }
@@ -1296,8 +1341,8 @@ export class ProtectedI80286 extends I8086 {
 
     _fault(vector) {
         if (!(this.msw & 1)) return super._fault(vector);
-        if (vector === 1) throw new UnsupportedProtectedMode('trap/IDT delivery after PE transition');
-        if (this.deliverProtectedFaults) return this._deliverProtected(vector, {returnIp:this.ip});
+        if (this.deliverProtectedFaults)
+            return this._deliverProtected(vector, {external:vector===1||vector===7||vector===9,returnIp:this.ip});
         this._pmFault(vector, 0, 'IDT exception delivery is not implemented');
     }
 
@@ -1309,6 +1354,18 @@ export class ProtectedI80286 extends I8086 {
 
     interrupt(n) {
         if (!(this.msw & 1)) return super.interrupt(n);
+        if (this.shutdown) {
+            if ((n & 0xff) !== 2 || this._shutdownNmiFailed) return;
+            try {
+                const result=this._deliverProtected(2, {external:true, returnIp:this.ip});
+                this.shutdown=false;
+                return result;
+            } catch (error) {
+                this.shutdown=true;
+                this._shutdownNmiFailed=true;
+                throw error;
+            }
+        }
         if (this.deliverProtectedFaults) return this._deliverExternal(n);
         throw new UnsupportedProtectedMode('interrupt/IDT delivery');
     }
@@ -1317,11 +1374,12 @@ export class ProtectedI80286 extends I8086 {
         const resumeIp = this.ip;
         try { return this._deliverProtected(n, {external:true, returnIp:resumeIp}); }
         catch (e) {
-            // External entry occurs between instructions. A malformed gate is
-            // surfaced diagnostically, so its restart context is the currently
-            // suspended IP rather than the last decoder's _instrStartIp.
-            if (e instanceof ProtectedModeFault) e.restartIp = resumeIp;
-            throw e;
+            if (!(e instanceof ProtectedModeFault)) throw e;
+            // External entry occurs between instructions. Deliver its entry
+            // fault from the suspended boundary, retaining any task switch
+            // that committed before the failure.
+            e.restartIp = e.taskCommitted ? this.ip : resumeIp;
+            return this._deliverFaultWithEscalation(e);
         }
     }
 
