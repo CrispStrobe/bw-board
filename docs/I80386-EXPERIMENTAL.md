@@ -7,7 +7,11 @@ the production 8086/186/286 CPU.
 The current profile implements an explicit original-80386 hardware reset entry
 at physical `0xfffffff0`; an ordinary constructor retains the zero-based test
 fixture reset. The reset CS cache remains based at `0xffff0000` until a real CS
-reload. The current profile also implements 16- and 32-bit register aliases, independent
+reload. Reset CR0 clears PE, MP, EM, TS, and PG. Its ET value is selected by
+the explicit `none`, `80287`, or `80387` reset profile; original-386 undefined
+CR0 bits are deterministically zero rather than assigned later-processor cache
+semantics. EDX reports device ID 3 and a caller-selected byte-sized stepping.
+The current profile also implements 16- and 32-bit register aliases, independent
 operand- and address-size prefixes, 16-bit ModR/M and 32-bit ModR/M plus SIB
 addressing, bounded arithmetic and moves, near branches/calls, and 16/32-bit
 stack operands with stack addressing selected independently by SS.B. ES, CS,

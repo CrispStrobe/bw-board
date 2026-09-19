@@ -48,14 +48,23 @@ export class ExperimentalI80386 {
     this.outPort = bus.outPort ?? (() => {});
     this.deliverFaults = !!options.deliverFaults;
     this.reset();
-    if (options.hardwareReset) this.hardwareReset();
+    if (options.hardwareReset)
+      this.hardwareReset({
+        coprocessor: options.resetCoprocessor,
+        stepping: options.resetStepping,
+      });
   }
 
-  hardwareReset() {
+  hardwareReset({ coprocessor = "none", stepping = 0 } = {}) {
+    if (!["none", "80287", "80387"].includes(coprocessor))
+      throw new TypeError("reset coprocessor must be none, 80287, or 80387");
+    if (!Number.isInteger(stepping) || stepping < 0 || stepping > 0xff)
+      throw new TypeError("reset stepping must be an unsigned byte");
     this.reset();
-    // Original 80386 reset leaves PE/PG clear while reporting ET and the
-    // architecturally defined cache-control reset values.
-    this.cr0 = 0x60000010;
+    // Bits 5..30 are undefined on the original 80386 and are deterministically
+    // zero in this model. ERROR# selects ET; all other defined CR0 bits clear.
+    this.cr0 = coprocessor === "80387" ? 0x10 : 0;
+    this.edx = (0x300 | stepping) >>> 0;
     this.cs = 0xf000;
     this.eip = 0xfff0;
     this.segmentCaches[SEG_CS] = {
@@ -585,6 +594,18 @@ export class ExperimentalI80386 {
       throw new UnsupportedI80386(
         "protected I/O bitmap admission is outside the bounded profile",
       );
+  }
+
+  _popFlags(width) {
+    const value = this._pop(width);
+    const old = this.eflags >>> 0;
+    const cpl = this.protectedMode ? this.cs & 3 : 0;
+    const iopl = (old >>> 12) & 3;
+    let writable = 0x7fd5;
+    if (cpl !== 0) writable &= ~0x3000;
+    if (cpl > iopl) writable &= ~IF;
+    this.eflags = ((old & ~writable) | (value & writable) | 2) >>> 0;
+    this._preserveRf = true;
   }
 
   _snapshotInstruction() {
@@ -1170,7 +1191,7 @@ export class ExperimentalI80386 {
             (op === 0xe1 ? !!(this.eflags & ZF) : !(this.eflags & ZF)));
       }
       if (taken) {
-        const target = default32
+        const target = width === 32
           ? (this.eip + displacement) >>> 0
           : (this.eip + displacement) & 0xffff;
         this._linear(SEG_CS, target, 1);
@@ -1200,14 +1221,10 @@ export class ExperimentalI80386 {
     } else if (op === 0x9e)
       this.eflags = (this.eflags & ~0xd5) | (this.ah & 0xd5) | 2;
     else if (op === 0x9f) this.ah = (this.eflags | 2) & 0xff;
-    else if (op === 0x9c) this._push(this.eflags, width);
-    else if (op === 0x9d) {
-      const value = this._pop(width);
-      this.eflags =
-        width === 32
-          ? (value | 2) >>> 0
-          : ((this.eflags & 0xffff0000) | value | 2) >>> 0;
-    } else if ([0xe4, 0xe5, 0xec, 0xed].includes(op)) {
+    else if (op === 0x9c)
+      this._push((this.eflags & 0x7fd5) | 2, width);
+    else if (op === 0x9d) this._popFlags(width);
+    else if ([0xe4, 0xe5, 0xec, 0xed].includes(op)) {
       this._checkIo();
       const port = op < 0xec ? this._fetch8() : this.dx,
         ioWidth = op === 0xe4 || op === 0xec ? 8 : width;
@@ -1231,8 +1248,14 @@ export class ExperimentalI80386 {
       this._suppressTrace = true;
       this._deliver(vector, this.eip, null, { software: true });
     } else if (op === 0xcf) this._iret(width);
-    else if (op === 0xfa) this.eflags &= ~IF;
+    else if (op === 0xfa) {
+      if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
+        throw new I80386Fault(13, 0, "CLI requires CPL <= IOPL");
+      this.eflags &= ~IF;
+    }
     else if (op === 0xfb) {
+      if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
+        throw new I80386Fault(13, 0, "STI requires CPL <= IOPL");
       this.eflags |= IF;
       this._interruptShadow = 2;
     } else if (op === 0x17) {
@@ -1240,7 +1263,11 @@ export class ExperimentalI80386 {
       this._interruptShadow = 2;
       this._nmiShadow = 2;
       this._debugShadow = 1;
-    } else if (op === 0xf4) this.halted = true;
+    } else if (op === 0xf4) {
+      if (this.protectedMode && (this.cs & 3) !== 0)
+        throw new I80386Fault(13, 0, "HLT requires CPL 0");
+      this.halted = true;
+    }
     else if (op === 0x8e) {
       const ea = this._decodeEA(address32, override),
         ids = [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS];
