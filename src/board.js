@@ -61,12 +61,13 @@ const MNA_ONLY_KINDS = new Set([
 
 /** Exact first public DC-analysis envelope. Expanding it requires a model proof. */
 const OPERATING_POINT_KINDS = new Set([
-  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'vsource', 'isource',
+  'resistor', 'capacitor', 'inductor', 'diode', 'zener', 'npn', 'vsource', 'isource',
   'vcvs', 'vccs', 'gnd', 'vcc',
 ]);
 
 const DIODE_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs']);
 const ZENER_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'n', 'rs', 'vz', 'ibv']);
+const NPN_OPERATING_POINT_PARAMS = new Set(['model', 'is', 'beta', 'br', 'n', 'vaf', '_model']);
 const INDUCTOR_OPERATING_POINT_PARAMS = new Set(['henrys']);
 
 const CONTROLLED_SOURCE_TERMINALS = ['outp', 'outn', 'inp', 'inn'];
@@ -2375,7 +2376,7 @@ export class BoardImpl {
     for (const part of this._solveParts) {
       if (!OPERATING_POINT_KINDS.has(part.kind)) {
         throw new Error(`operatingPoint: unsupported part ${part.id} (${part.kind}); `
-          + 'the supported domain is static R/C/L/V/I, explicit Shockley D/Z, '
+          + 'the supported domain is static R/C/L/V/I, explicit Shockley D/Z/NPN, '
           + 'plus ideal VCVS/VCCS only');
       }
       if (part.kind === 'vsource' || part.kind === 'isource') {
@@ -2460,6 +2461,44 @@ export class BoardImpl {
         for (const terminal of ['anode', 'cathode']) {
           if (this._netForTerminal(part.id, terminal) === undefined) {
             throw new Error(`operatingPoint: unsupported zener ${part.id}; `
+              + `terminal ${terminal} is not connected to a supplied net`);
+          }
+        }
+      }
+      if (part.kind === 'npn') {
+        const params = part.params ?? {};
+        if (params.model !== 'shockley') {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + "model must be explicitly 'shockley'");
+        }
+        for (const name of ['is', 'beta']) {
+          if (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+              || params[name] <= 0) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `${name} must be an explicit finite number greater than zero`);
+          }
+        }
+        for (const name of ['br', 'n', 'vaf']) {
+          if (Object.prototype.hasOwnProperty.call(params, name)
+              && (typeof params[name] !== 'number' || !Number.isFinite(params[name])
+                || params[name] <= 0)) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+              + `${name} must be a finite number greater than zero when declared`);
+          }
+        }
+        if (Object.prototype.hasOwnProperty.call(params, '_model')
+            && (typeof params._model !== 'string' || !params._model.length)) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + '_model must be a non-empty inert source-model name when retained');
+        }
+        const extra = Object.keys(params).find(name => !NPN_OPERATING_POINT_PARAMS.has(name));
+        if (extra) {
+          throw new Error(`operatingPoint: unsupported npn ${part.id}; `
+            + `parameter ${extra} is outside the explicit Ebers-Moll DC domain`);
+        }
+        for (const terminal of ['base', 'collector', 'emitter']) {
+          if (this._netForTerminal(part.id, terminal) === undefined) {
+            throw new Error(`operatingPoint: unsupported npn ${part.id}; `
               + `terminal ${terminal} is not connected to a supplied net`);
           }
         }
@@ -2583,7 +2622,7 @@ export class BoardImpl {
     return {
       analysis: {
         kind: 'dc-operating-point',
-        scope: 'grounded-static-native-r-c-l-d-z-v-i-e-g-exact-ideal-l-explicit-shockley-d-z',
+        scope: 'grounded-static-native-r-c-l-d-z-q-v-i-e-g-exact-ideal-l-explicit-shockley-d-z-npn',
         supportedKinds: [...OPERATING_POINT_KINDS],
         capacitors: 'open',
         sources: waveformBias === 'dc-value' ? 'explicit-waveform-dcValue-bias'
@@ -2599,6 +2638,14 @@ export class BoardImpl {
         zeners: {
           model: 'explicit-shockley-with-breakdown',
           parameters: ['is', 'n', 'rs', 'vz', 'ibv'],
+          thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
+          temperatureModel: 'fixed',
+        },
+        npn: {
+          model: 'explicit-ebers-moll-with-forward-early-effect',
+          requiredParameters: ['is', 'beta'],
+          optionalParameters: ['br', 'n', 'vaf'],
+          defaults: { br: 1, n: 1, vaf: 'infinite' },
           thermalVoltage: JUNCTION_THERMAL_VOLTAGE,
           temperatureModel: 'fixed',
         },
