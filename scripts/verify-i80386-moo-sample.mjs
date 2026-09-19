@@ -77,8 +77,10 @@ const PROFILES={
     scope:'6 fixed deterministic PUSH imm8 samples spanning word and dword sign extension',
   },
   'imul-immediate':{
-    files:['69','6B','6669','666B'],
-    scope:'12 fixed deterministic signed immediate IMUL samples spanning word and dword operands',
+    // 6669 is excluded because its published BYTS chunks fail the strict v1
+    // framing contract; the verifier does not weaken parsing for one file.
+    files:['69','6B','666B'],
+    scope:'9 fixed deterministic signed immediate IMUL samples spanning word and dword operands; malformed 6669 source excluded',
   },
   setcc:{
     files:['0F90','0F91','0F92','0F93','0F94','0F95','0F96','0F97','0F98','0F99','0F9A','0F9B','0F9C','0F9D','0F9E','0F9F'],
@@ -86,7 +88,13 @@ const PROFILES={
   },
   'double-shift':{
     files:['0FA4','0FA5','0FAC','0FAD','660FA4','660FA5','660FAC','660FAD'],
-    scope:'24 fixed deterministic SHLD/SHRD samples spanning immediate and CL counts with word and dword operands',
+    samples:{
+      '0FA4':[25,2138,2432], '0FA5':[40,1375,2487],
+      '0FAC':[4,2170,2496], '0FAD':[16,1433,2489],
+      '660FA4':[25,2138,2432], '660FA5':[40,1375,2487],
+      '660FAC':[4,2170,2496], '660FAD':[16,1433,2489],
+    },
+    scope:'24 fixed count-one SHLD/SHRD samples spanning immediate and CL forms with word and dword operands; wider counts have undefined flags and are not graded',
   },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
