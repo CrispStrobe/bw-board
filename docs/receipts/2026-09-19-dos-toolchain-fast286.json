@@ -6,9 +6,9 @@
   "expectedOutput": "GUEST-TOOLCHAIN-OK",
   "date": "2026-09-19",
   "baseRevision": "4926e93cd0133dd038b929f8506318d0da320b3b",
-  "executionRevision": "6153dac3770964b9ee89d97f8dca8736d2b33126",
+  "executionRevision": "4f72c822de25d2b673382d0fa13f68a02f6ec56b",
   "node": "v22.23.2",
-  "elapsedMS": 1298.797847,
+  "elapsedMS": 951.120336,
   "timingGraded": false,
   "runner": "scripts/run-dos-toolchain-guest.mjs",
   "cpu": "80286 fast-core real mode",
@@ -34,7 +34,7 @@
     "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
     "scripts/build-dos-image.mjs": "2dec7fb129f65b3a657412b6f881962a56386236ffb9eca80da74b94080e037e",
     "scripts/oracle-masm.mjs": "127b56856d41f8cde222dff0c5b5dde024f3a6e13f0fec06f857f6b34c9336d6",
-    "scripts/run-dos-toolchain-guest.mjs": "f7d44a4f6a4ad745b536709b04f8aa7cc1c17ce608eb61827cbfb10101b4524d"
+    "scripts/run-dos-toolchain-guest.mjs": "3886bc720220c9c67db965bf5a785819f7b308b965caeec8efa55d5acd1fe731"
   },
   "inputSha256": {
     "MSDOS.SYS": "1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1",
