@@ -27,12 +27,19 @@ Editor reference machines, ELKS, then classic MINIX/286 protection, on 8086,
   expansion described below supersedes its instruction limitations.
 * Prove real Microsoft DOS 2 kernel and COMMAND.COM write a disk file, boot a
   fresh machine, read it, overwrite it, remount again and handle a missing file,
-  separately on 8086 and 80186. Exact Microsoft release hashes are checked.
+  separately on 8086, 80186 and the fast core's 80286 real-mode variant. Exact Microsoft release hashes are checked.
   Tests use existing external media and report absence explicitly; these are
   BIOS-service-machine tests, not wired-board or full-editor acceptance.
+* Boot that same real DOS guest on the fast 80286 variant and run Microsoft's
+  hash-pinned MASM 1.10, LINK 2.00 and EXE2BIN from its FAT12 disk. The guest
+  assembles and links an owned source, persists `T.COM`, executes it to print
+  `GUEST-TOOLCHAIN-OK`, and returns to COMMAND.COM. The persisted bytes are
+  independently compared with the repository assembler. The reproducible
+  runner is `scripts/run-dos-toolchain-guest.mjs`; the measured receipt is
+  [2026-09-19-dos-toolchain-fast286.json](receipts/2026-09-19-dos-toolchain-fast286.json).
 
-The 80186 row is an instruction variant with external PC-like hardware, not
-the 80186's integrated peripheral subsystem. No 286 alias to that core exists.
+The 80186 and 80286 rows are instruction variants with external PC-like hardware,
+not complete models of their integrated peripherals or a PC/AT chipset.
 Follow-up: carry arithmetic, remaining arithmetic/shift groups, near/far
 transfers, stack frames, REP strings, port transactions, software INT/IRET and
 real-mode faults now execute in the experimental Harris CPU. The historical

@@ -856,7 +856,8 @@ function name83(name) {
 /**
  * Assemble the whole disk.
  *
- * @param {{iosys: Uint8Array, msdos: Uint8Array, command: Uint8Array}} files
+ * @param {{iosys: Uint8Array, msdos: Uint8Array, command: Uint8Array,
+ *          extra?: Array<{name: string, data: Uint8Array, attr?: number}>}} files
  * @returns {{image: Uint8Array, entries: object[], sysSectors: number,
  *            dataStart: number, dosCurrentSeg: number}}
  */
@@ -871,7 +872,26 @@ export function buildDosImage(files, g = GEOM) {
         { name: 'IO.SYS', attr: 0x27, data: files.iosys },       // hidden+system+r/o+archive
         { name: 'MSDOS.SYS', attr: 0x27, data: files.msdos },
         { name: 'COMMAND.COM', attr: 0x20, data: files.command },
+        ...(files.extra || []).map((f) => ({...f, attr: f.attr ?? 0x20})),
     ];
+
+    // Preflight the complete directory before copying a byte. TypedArray#set
+    // otherwise reports an opaque bounds error after a too-large fixture has
+    // already partially populated the local image.
+    if(plan.length>g.rootEntries) fail(`${plan.length} files exceed the ${g.rootEntries}-entry root directory`);
+    const names=new Set();
+    let plannedClusters=0;
+    for(const f of plan) {
+        const normalized=name83(f.name);
+        if(names.has(normalized)) fail(`${f.name} collides with an existing FAT root name`);
+        names.add(normalized);
+        if(!(f.data instanceof Uint8Array)||f.data.length===0) fail(`${f.name} is empty`);
+        plannedClusters+=Math.ceil(f.data.length/lay.clusterBytes);
+    }
+    const availableClusters=Math.floor((g.totalSectors-lay.dataStart)/g.sectorsPerCluster);
+    if(plannedClusters>availableClusters) {
+        fail(`${plan.length} files require ${plannedClusters} clusters but the disk has ${availableClusters}`);
+    }
 
     let cluster = 2;
     const entries = [];
@@ -890,9 +910,8 @@ export function buildDosImage(files, g = GEOM) {
         cluster = first + clusters;
         entries.push({ ...f, first, clusters });
     }
-    if (cluster - 2 > (g.totalSectors - lay.dataStart) / g.sectorsPerCluster) {
-        fail('the three files do not fit on a 360K disk');
-    }
+    // The preflight above makes this equality a useful internal invariant.
+    if(cluster-2!==plannedClusters) fail('internal cluster allocation mismatch');
 
     // --- root directory ---------------------------------------------------
     const rootAt = lay.rootStart * g.bytesPerSector;
@@ -1004,7 +1023,8 @@ export function verifyDosImage({ image, entries, lay, sysSectors, dosCurrentSeg 
 /** Build IO.SYS and the whole disk from a directory of Microsoft binaries. */
 export function build(files) {
     const io = buildIoSys(files.sysinit);
-    const img = buildDosImage({ iosys: io.bytes, msdos: files.msdos, command: files.command });
+    const img = buildDosImage({ iosys: io.bytes, msdos: files.msdos, command: files.command,
+        extra: files.extra });
     return { ...img, iosys: io };
 }
 

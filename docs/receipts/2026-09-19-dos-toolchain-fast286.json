@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "date": "2026-09-19",
+  "runner": "scripts/run-dos-toolchain-guest.mjs",
+  "cpu": "80286 fast-core real mode",
+  "machine": "I8086Machine with DOSBOX8086 BIOS services",
+  "guest": "Microsoft MS-DOS 2.00",
+  "commands": [
+    "MASM T,T,T,NUL;",
+    "LINK T,T,NUL,NUL;",
+    "EXE2BIN T.EXE T.COM",
+    "T.COM"
+  ],
+  "steps": 1111040,
+  "result": "pass",
+  "observedOutput": "GUEST-TOOLCHAIN-OK",
+  "unsupportedServices": [],
+  "sourceSha256": "6d8b0c3f4aafa8e0d732ff9df4aaaeb8abde1b3754d2b6c86f9eb4565a417e3d",
+  "producedComSha256": "740ff31d4fe33e77b397d639e5f674fd451a7730ec5ba3f12c9ea9ba4e8412ca",
+  "inputSha256": {
+    "MSDOS.SYS": "1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1",
+    "COMMAND.COM": "4cc71b3692b894eef9a7c8b3ac0fc63a71bdfa08175089562fdc4c7c5b038e8a",
+    "SYSINIT.OBJ": "56d9d59d8cf6dbec648c3b391d3532bf4dffa8b615a096aca76312acbeecc7aa",
+    "MASM.EXE": "bf3399d0ec33fd97c3789887b336208d9f4900524609c04985e16a124cbf4449",
+    "LINK.EXE": "fe52892da7bd6832cb88a959cccd230f307e30c7c83a225b2e638f4ea25d76be",
+    "EXE2BIN.EXE": "80ac337843421764bb019845f9ef802d35ef642045026b1788373cea756201e2"
+  },
+  "limits": [
+    "This is a fast-core real-mode test, not wired-board or protected-mode evidence.",
+    "The machine supplies BIOS services; it is not a complete PC/AT peripheral model.",
+    "The external Microsoft binaries are hash-admitted and are not distributed by this repository."
+  ]
+}

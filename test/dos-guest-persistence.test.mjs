@@ -1,5 +1,6 @@
 // Real Microsoft DOS kernel + COMMAND.COM, with an emulated BIOS disk path.
-// Not a wired-board test, not an editor acceptance, and not an 80286 pass.
+// Not a wired-board test or an editor acceptance. The 80286 row exercises the
+// fast core's real-mode CPU contract over the same BIOS-service machine.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -45,7 +46,7 @@ function readNote(disk) {
     assert.fail('NOTE.TXT not present in actual disk root directory');
 }
 
-for(const variant of ['8086','80186']) test(`${variant}: real DOS shell writes, fresh-boot reads, overwrites and remounts file`,when,()=>{
+for(const variant of ['8086','80186','80286']) test(`${variant}: real DOS shell writes, fresh-boot reads, overwrites and remounts file`,when,()=>{
     for(const [name,hash] of Object.entries(hashes)) {
         assert.equal(createHash('sha256').update(found.files[name]).digest('hex'),hash,`wrong ${name} guest revision`);
     }
