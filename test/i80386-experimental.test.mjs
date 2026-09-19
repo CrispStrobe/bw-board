@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import I80386,{UnsupportedI80386} from '../src/experimental/i80386.js';
+
+function fixture(){
+  const mem=new Map(),reads=[],writes=[];
+  const cpu=new I80386({read:a=>{reads.push(a>>>0);return mem.get(a>>>0)??0;},fetch:a=>mem.get(a>>>0)??0,
+    write:(a,v)=>{writes.push([a>>>0,v&255]);mem.set(a>>>0,v&255);}});
+  const put=(a,b)=>b.forEach((v,i)=>mem.set((a+i)>>>0,v));
+  return{cpu,mem,reads,writes,put,word:a=>(mem.get(a)??0)|((mem.get(a+1)??0)<<8),
+    dword:a=>((mem.get(a)??0)|((mem.get(a+1)??0)<<8)|((mem.get(a+2)??0)<<16)|((mem.get(a+3)??0)*0x1000000))>>>0};
+}
+function descriptor(base,access=0x9a){return[0xff,0xff,base&255,(base>>>8)&255,(base>>>16)&255,access,0xcf,(base>>>24)&255];}
+
+test('owned real bytes enter 32-bit protected mode and execute SIB, stack, arithmetic, and near control flow',()=>{
+  const f=fixture();
+  f.put(0,[0x0f,0x01,0x16,0x00,0x01,0x0f,0x20,0xc0,0x66,0x83,0xc8,0x01,0x0f,0x22,0xc0,
+    0x66,0xea,0,0,0,0,8,0]);
+  f.put(0x100,[0x17,0,0,2,0,0]);f.put(0x208,descriptor(0x100000));f.put(0x210,descriptor(0x120000,0x92));
+  f.put(0x100000,[
+    0xb8,0x44,0x33,0x22,0x11, 0xbb,0x00,0x02,0,0, 0xb9,3,0,0,0,
+    0xba,0x10,0,0,0, 0x8e,0xda, 0x8e,0xd2, 0xbc,0,4,0,0,
+    0x89,0x44,0x8b,0x08, 0x83,0xc0,1, 0x50,0x5a,
+    0x49,0x75,0xfd, 0xe8,1,0,0,0, 0xf4, 0x43,0xc3,
+  ]);
+  for(let i=0;i<80&&!f.cpu.halted;i++)f.cpu.step();
+  assert.equal(f.cpu.halted,true);assert.equal(f.cpu.protectedMode,true);
+  assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.eax,f.cpu.ebx,f.cpu.ecx,f.cpu.edx,f.cpu.esp],
+    [8,47,0x11223345,0x201,0,0x11223345,0x400]);
+  assert.equal(f.dword(0x120214),0x11223344,'32-bit SIB store uses DS base and scaled ECX');
+});
+
+test('register aliases preserve upper halves and operand/address overrides select independently',()=>{
+  const f=fixture();f.cpu.eax=0x11223344;f.cpu.ax=0xabcd;assert.equal(f.cpu.eax,0x1122abcd);
+  f.cpu.ah=0x55;f.cpu.al=0x66;assert.equal(f.cpu.eax,0x11225566);
+  f.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
+  f.cpu.segmentCaches[3]={base:0,limit:0xffff,default32:false,present:true,code:false,writable:true};
+  f.cpu.ebx=0x100;f.cpu.esi=4;f.put(0,[0x66,0x67,0x8b,0x00,0xf4]);f.put(0x104,[0x34,0x12]);
+  f.cpu.step();assert.equal(f.cpu.eax,0x11221234);f.cpu.step();assert.equal(f.cpu.halted,true);
+});
+
+test('bounded system profile refuses paging and unsupported descriptors without partial mode claims',()=>{
+  const f=fixture();f.put(0,[0x0f,0x22,0xc0]);f.cpu.eax=0x80000001;
+  assert.throws(()=>f.cpu.step(),e=>e instanceof UnsupportedI80386&&/paging/.test(e.message));
+  assert.equal(f.cpu.cr0,0);
+});
