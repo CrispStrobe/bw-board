@@ -42,6 +42,10 @@ const descriptor = (base, access) => [
   (base >>> 24) & 255,
 ];
 const gate = (type) => [0x00, 0x01, 0x08, 0x00, 0, 0x80 | type, 0, 0];
+const systemDescriptor = (base, limit, access) => [
+  limit & 255, limit >>> 8, base & 255, base >>> 8, base >>> 16,
+  access, (limit >>> 16) & 15, base >>> 24,
+];
 
 function install(write, type, fault = false) {
   put(
@@ -184,6 +188,68 @@ function runPCjs(type, fault = false) {
   return { entry, returned: snapshot(view, (a) => bus.getByteDirect(a)) };
 }
 
+function installRing(write) {
+  install(write, 14);
+  write(0x100, 0x2f);
+  put(write, 0x218, descriptor(0x140000, 0xfa));
+  put(write, 0x220, descriptor(0x160000, 0xf2));
+  put(write, 0x228, systemDescriptor(0x600, 0x67, 0x89));
+  put(write, 0x604, [0x00, 0x04, 0, 0, 0x10, 0]);
+  put(write, 0x300 + 0x20 * 8, [0, 1, 8, 0, 0, 0xee, 0, 0]);
+  put(write, CODE, [
+    0x66, 0xb8, 0x10, 0, 0x8e, 0xd0, 0x8e, 0xd8, 0xbc, 0, 4, 0, 0,
+    0x66, 0xb8, 0x28, 0, 0x0f, 0x00, 0xd8,
+    0x6a, 0x23, 0x68, 0, 8, 0, 0, 0x9c, 0x6a, 0x1b, 0x6a, 0, 0xcf,
+  ]);
+  put(write, CODE + 0x100, [0xcf]);
+  put(write, 0x140000, [0xcd, 0x20, 0xf4]);
+}
+
+function ringResult(cpu, read, pcjs, visitedHandler, completed) {
+  return {
+    cs: pcjs ? cpu.getCS() : cpu.cs,
+    eip: pcjs ? cpu.getIP() >>> 0 : cpu.eip >>> 0,
+    ss: pcjs ? cpu.getSS() : cpu.ss,
+    esp: pcjs ? cpu.getSP() >>> 0 : cpu.esp >>> 0,
+    flags: (pcjs ? cpu.getPS() : cpu.eflags) & 0x3202,
+    visitedHandler,
+    completed,
+    frame: [0, 4, 8, 12, 16].map(delta => {
+      const address = STACK + 0x3ec + delta;
+      return (read(address) | (read(address + 1) << 8) |
+        (read(address + 2) << 16) | (read(address + 3) * 0x1000000)) >>> 0;
+    }),
+  };
+}
+
+function runRingLocal() {
+  const memory = new Uint8Array(1 << 24);
+  const cpu = new I80386({ read:a=>memory[a], fetch:a=>memory[a], write:(a,v)=>{memory[a]=v;} }, { deliverFaults:true });
+  installRing((a,v)=>{memory[a]=v;});
+  let visitedHandler=false;
+  const budget=Number(process.env.I386_FAULT_ORACLE_RING_BUDGET??80);
+  for (let steps=0; steps<budget && !(cpu.cs===0x1b && cpu.eip===2); steps++) {
+    if(cpu.cs===8&&cpu.eip===0x100)visitedHandler=true;
+    cpu.step();
+  }
+  return ringResult(cpu,a=>memory[a],false,visitedHandler,cpu.cs===0x1b&&cpu.eip===2);
+}
+
+function runRingPCjs() {
+  const cpu = new CPU({ id:"fault386.ring", model:80386 });
+  const bus = new QuietBus({ id:"fault386.ring.bus", busWidth:32 }, cpu);
+  if (!bus.addMemory(0,1<<24,Memory.TYPE.RAM)) throw new Error("PCjs memory allocation failed");
+  cpu.bus=bus; installRing((a,v)=>bus.setByteDirect(a,v));
+  cpu.setCS(0);cpu.setIP(0);cpu.setDS(0);cpu.setES(0);cpu.setSS(0);cpu.setSP(0);cpu.setPS(2);
+  let visitedHandler=false;
+  const budget=Number(process.env.I386_FAULT_ORACLE_RING_BUDGET??80);
+  for (let steps=0; steps<budget && !(cpu.getCS()===0x1b && cpu.getIP()===2); steps++) {
+    if(cpu.getCS()===8&&cpu.getIP()===0x100)visitedHandler=true;
+    cpu.stepCPU(0);
+  }
+  return ringResult(cpu,a=>bus.getByteDirect(a),true,visitedHandler,cpu.getCS()===0x1b&&cpu.getIP()===2);
+}
+
 const cases = {};
 for (const [name, type] of [
   ["interrupt32", 14],
@@ -194,12 +260,18 @@ cases.generalProtection = {
   reference: runPCjs(14, true),
   actual: runLocal(14, true),
 };
+cases.ringTransition = { reference: runRingPCjs(), actual: runRingLocal() };
 const mutation = process.env.I386_FAULT_ORACLE_MUTATION ?? null;
 if (mutation === "frame") cases.interrupt32.actual.entry.frame[0] ^= 1;
 else if (mutation === "if") cases.trap32.actual.entry.flags ^= 0x200;
+else if (mutation === "ring-stack") cases.ringTransition.actual.frame[3] ^= 1;
 else if (mutation)
   throw new Error(`unknown I386_FAULT_ORACLE_MUTATION: ${mutation}`);
 const differences = [];
+const expectedRing={cs:0x1b,eip:2,ss:0x23,esp:0x800,flags:2,visitedHandler:true,completed:true,frame:[2,0x1b,2,0x800,0x23]};
+for(const [engine,value] of Object.entries(cases.ringTransition))
+  if(JSON.stringify(value)!==JSON.stringify(expectedRing))
+    differences.push({case:"ringTransitionExpected",engine,expected:expectedRing,actual:value});
 for (const [name, value] of Object.entries(cases)) {
   const reference = structuredClone(value.reference);
   const actual = structuredClone(value.actual);
@@ -228,7 +300,7 @@ console.log(
       }).trim(),
       node: process.version,
       scope:
-        "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
+        "same-ring and ring-3-to-ring-0 80386 32-bit interrupt/trap gates, IRET, TSS stack selection, and #GP restart/error frame; architectural state only",
       knownOracleLimitations: {
         resumeFlag: {
           graded: false,

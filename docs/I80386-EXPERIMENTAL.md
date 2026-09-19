@@ -215,6 +215,16 @@ original manual; the pinned 386EX corpus has no SGDT/SIDT samples. A
 cross-page destination fault may update page-table accessed/dirty state but
 commits no pseudo-descriptor bytes.
 
+The protected interrupt profile includes nonconforming 16-bit and 32-bit
+interrupt/trap gates that enter a more privileged ring using the current
+386 TSS `SSn:ESPn`, plus same-task IRET back to an outer ring. Entry validates
+the target code, new stack descriptor, complete new frame, and target offset
+before changing visible execution state. Outer IRET follows the original-386
+order: complete old frame, return code descriptor, return stack descriptor,
+then target offset; it does not eagerly validate the returned stack pointer.
+Task gates, nested-task returns, VM86 returns, conforming transitions, and
+expand-down privilege stacks remain explicit refusals.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

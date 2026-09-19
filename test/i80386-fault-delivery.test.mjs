@@ -127,6 +127,91 @@ test("32-bit interrupt and 16-bit trap gates build independently expected same-r
   assert.equal(trap.cpu.eflags & 0x200, 0x200, "trap gates preserve IF");
 });
 
+test("ring-3 interrupt gates switch to the TSS stack and IRETD returns outward", () => {
+  const f = fixture({ deliverFaults: true });
+  f.cpu.cr0 = 1;
+  f.cpu.gdtr = { base: 0x200, limit: 0x2f };
+  f.cpu.idtr = { base: 0x400, limit: 0x7ff };
+  f.put(0x208, descriptor(0x100000, 0x9a));
+  f.put(0x210, descriptor(0x120000, 0x92));
+  f.put(0x218, descriptor(0x140000, 0xfa));
+  f.put(0x220, descriptor(0x160000, 0xf2));
+  f.put(0x400 + 0x20 * 8, gate(0x100, 8, 0x0e, 3));
+  f.cpu.tr = { selector: 0x28, base: 0x600, limit: 0x67, present: true, type: 11 };
+  f.put(0x604, [0x00, 0x04, 0, 0, 0x10, 0]);
+  f.cpu.cs = 0x1b;
+  f.cpu.ss = 0x23;
+  f.cpu.segmentCaches[1] = f.cpu._ringCodeDescriptor(0x1b);
+  f.cpu.segmentCaches[2] = f.cpu._ringStackDescriptor(0x23, 3, { returnPath: true });
+  f.cpu.esp = 0x800;
+  f.cpu.eflags = 0x202;
+  f.put(0x140000, [0xcd, 0x20]);
+  f.put(0x100100, [0xcf]);
+
+  f.cpu.step();
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp], [8, 0x100, 0x10, 0x3ec]);
+  assert.deepEqual([
+    f.dword(0x1203ec), f.dword(0x1203f0), f.dword(0x1203f4),
+    f.dword(0x1203f8), f.dword(0x1203fc),
+  ], [2, 0x1b, 0x202, 0x800, 0x23]);
+  f.cpu.step();
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp, f.cpu.eflags],
+    [0x1b, 2, 0x23, 0x800, 0x202]);
+});
+
+test("outer IRET validates the return stack selector before the target offset", () => {
+  const f = fixture();
+  f.cpu.cr0 = 1;
+  f.cpu.gdtr = { base: 0x200, limit: 0x2f };
+  f.put(0x208, descriptor(0x100000, 0x9a));
+  f.put(0x210, descriptor(0x120000, 0x92));
+  f.put(0x218, descriptor(0x140000, 0xfa, 0xff));
+  f.cpu.cs = 8; f.cpu.ss = 0x10; f.cpu.esp = 0x300;
+  f.cpu.segmentCaches[1] = f.cpu._ringCodeDescriptor(8);
+  f.cpu.segmentCaches[2] = f.cpu._ringStackDescriptor(0x10, 0, { returnPath: true });
+  f.put(0x100000, [0xcf]);
+  f.put(0x120300, [0x00,0x01,0,0, 0x1b,0,0,0, 2,2,0,0, 0,8,0,0, 0,0,0,0]);
+  assert.throws(() => f.cpu.step(), error => error instanceof I80386Fault && error.vector === 13 && error.errorCode === 0);
+  assert.deepEqual([f.cpu.cs, f.cpu.eip, f.cpu.ss, f.cpu.esp], [8, 0, 0x10, 0x300]);
+});
+
+test("external inner-stack selector faults carry EXT without an old-stack frame", () => {
+  const f = fixture();
+  f.cpu.cr0 = 1;
+  f.cpu.gdtr = { base: 0x200, limit: 0x17 };
+  f.cpu.idtr = { base: 0x400, limit: 0x7ff };
+  f.put(0x208, descriptor(0x100000, 0x9a));
+  f.put(0x210, descriptor(0x120000, 0x92));
+  f.put(0x400 + 0x20 * 8, gate(0x100, 8));
+  f.cpu.tr = { selector: 0x18, base: 0x600, limit: 0x67, present: true, type: 11 };
+  f.put(0x604, [0x00, 0x04, 0, 0, 0x30, 0]);
+  f.cpu.cs = 3; f.cpu.ss = 0x13; f.cpu.esp = 0x800;
+  const writes = f.writes.length;
+  assert.throws(
+    () => f.cpu._deliverProtected(0x20, 0x44, null, { external: true }),
+    error => error instanceof I80386Fault && error.vector === 10 && error.errorCode === 0x31,
+  );
+  assert.equal(f.writes.length, writes);
+  assert.deepEqual([f.cpu.cs, f.cpu.ss, f.cpu.esp], [3, 0x13, 0x800]);
+});
+
+test("IRETD restores full ESP independently of the returned stack B bit", () => {
+  const f = fixture();
+  f.cpu.cr0 = 1;
+  f.cpu.gdtr = { base: 0x200, limit: 0x27 };
+  f.put(0x208, descriptor(0x100000, 0x9a));
+  f.put(0x210, descriptor(0x120000, 0x92));
+  f.put(0x218, descriptor(0x140000, 0xfa));
+  f.put(0x220, descriptor(0x160000, 0xf2, 0xffff, 0x80));
+  f.cpu.cs=8;f.cpu.ss=0x10;f.cpu.esp=0x300;
+  f.cpu.segmentCaches[1]=f.cpu._ringCodeDescriptor(8);
+  f.cpu.segmentCaches[2]=f.cpu._ringStackDescriptor(0x10,0,{returnPath:true});
+  f.put(0x100000,[0xcf]);
+  f.put(0x120300,[1,0,0,0, 0x1b,0,0,0, 2,0,0,0, 0x00,0x08,0x34,0x12, 0x23,0,0,0]);
+  f.cpu.step();
+  assert.deepEqual([f.cpu.cs,f.cpu.eip,f.cpu.ss,f.cpu.esp],[0x1b,1,0x23,0x12340800]);
+});
+
 test("fault delivery distinguishes benign replacement, contributory #DF, and failed #DF shutdown", () => {
   const matrix = fixture().cpu;
   assert.equal(
