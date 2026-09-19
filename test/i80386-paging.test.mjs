@@ -381,3 +381,11 @@ test("far-pointer load faults in address order without partial register/cache co
   assert.equal(f.cpu.fs, 0);
   assert.deepEqual(f.cpu.segmentCaches[4], before);
 });
+
+test("protected far pointer reads retain byte-order page-fault behavior",()=>{
+  const f=fixture();f.map(0,0x3000);f.map(0x4000,0x6000);
+  f.put(0x3000,[0xff,0x2d,0xff,0x4f,0,0]);f.put(0x6fff,[0x78]);
+  assert.throws(()=>f.cpu.step(),error=>error instanceof I80386Fault&&error.vector===14);
+  assert.equal(f.cpu.cr2,0x5000);assert.equal(f.reads.includes(0x6fff),true);
+  assert.deepEqual([f.cpu.cs,f.cpu.eip],[0,0]);
+});
