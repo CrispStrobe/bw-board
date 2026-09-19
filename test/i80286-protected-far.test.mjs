@@ -57,6 +57,20 @@ test('call gate privilege and frame limits fault before changing registers or RA
   assert.deepEqual(f.cpu.getProtectedState(),before);assert.deepEqual(f.mem,mem);
 });
 
+test('invalid inner call-gate IP does not read preflighted parameter operands',()=>{
+  const f=fixture();f.desc(0x208,0x100000,0x9a,0x10);
+  f.put(0x230,[0x20,0,8,0,1,0xe4,0,0]);
+  f.cpu.cpl=3;f.cpu.segmentCaches[SEG_CS]=f.cpu._descriptor(0x23,SEG_CS,{privilegeCpl:3});f.cpu.cs=0x23;
+  f.cpu.segmentCaches[SEG_SS]=f.cpu._descriptor(0x2b,SEG_SS,{privilegeCpl:3});f.cpu.ss=0x2b;f.cpu.sp=0x200;
+  f.cpu.tr={selector:0x38,valid:true,base:0x160000,limit:0x2b};f.put(0x160002,[0,2,0x18,0]);
+  f.put(0x150200,[0x34,0x12]);
+  const beforeReads=f.reads.length,beforeMem=new Map(f.mem);
+  assert.throws(()=>f.cpu._farTransfer(0,0x33,true),e=>e.vector===13&&e.errorCode===0&&/offset/.test(e.reason));
+  assert.ok(!f.reads.slice(beforeReads).some(address=>address===0x150200||address===0x150201),
+    'parameter MMIO was preflighted without being consumed');
+  assert.deepEqual(f.mem,beforeMem,'invalid target IP made no writes');
+});
+
 test('outer RETF validates the return stack before a bad target offset',()=>{
   const f=fixture();f.desc(0x220,0x140000,0xfa,0x10);
   f.cpu.ss=0x18;f.cpu.segmentCaches[SEG_SS]=f.cpu._descriptor(0x18,SEG_SS);f.cpu.sp=0x200;

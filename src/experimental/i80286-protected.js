@@ -1015,8 +1015,8 @@ export class ProtectedI80286 extends I8086 {
         const words=gate.words,bytes=8+words*2,newSp=(stack.sp-bytes)&0xffff;
         const frame=this._cacheAddress(stackDescriptor,newSp,bytes,12);
         if(words)this._linear(SEG_SS,oldSp,words*2,'read');
-        const params=Array.from({length:words},(_,i)=>this._rd16(SEG_SS,(oldSp+i*2)&0xffff));
         if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
+        const params=Array.from({length:words},(_,i)=>this._rd16(SEG_SS,(oldSp+i*2)&0xffff));
         descriptor.selector=(gate.selector&0xfffc)|targetCpl;
         this._commitDescriptor(SEG_SS,stackDescriptor);this._commitDescriptor(SEG_CS,descriptor);
         this._writeFrameWord(frame+bytes-2,oldSs);this._writeFrameWord(frame+bytes-4,oldSp);
