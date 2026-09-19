@@ -147,3 +147,22 @@ test("double-shift write admission precedes source-segment reads", () => {
   assert.throws(() => cpu.step(), (error) => error?.vector === 13);
   assert.deepEqual([reads, writes, cpu.eip], [[], [], 0]);
 });
+
+test("TEST ModR/M forms set logic flags without writing either operand", () => {
+  const byte = fixture([0x84, 0xd8]).cpu;
+  byte.al = 0x80;
+  byte.bl = 0xff;
+  byte.eflags = 0x811;
+  byte.step();
+  assert.deepEqual([byte.al, byte.bl, byte.eflags & 0x8d5], [0x80, 0xff, 0x080]);
+
+  const { cpu, memory } = fixture([0x66, 0x85, 0x1e, 0x00, 0x02]);
+  [0xff, 0xff, 0xff, 0x7f].forEach((value, index) => memory.set(0x200 + index, value));
+  cpu.ebx = 0x80000000;
+  cpu.step();
+  assert.equal(cpu.eflags & 0xc4, 0x44);
+  assert.deepEqual(
+    [0, 1, 2, 3].map(index => memory.get(0x200 + index)),
+    [0xff, 0xff, 0xff, 0x7f],
+  );
+});

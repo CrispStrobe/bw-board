@@ -2381,6 +2381,13 @@ export class ExperimentalI80386 {
         cf = this.eflags & CF;
       this._setReg(n, width, this._add(this._reg(n, width), 1, width, true));
       this.eflags = (this.eflags & ~CF) | cf;
+    } else if (op === 0x84 || op === 0x85) {
+      const testWidth = op === 0x84 ? 8 : width;
+      const ea = this._decodeEA(address32, override);
+      const source = testWidth === 8
+        ? this._reg8(ea.reg)
+        : this._reg(ea.reg, testWidth);
+      this._setLogic(this._operandRead(ea, testWidth) & source, testWidth);
     } else if (op === 0x86 || op === 0x87) {
       const exchangeWidth = op === 0x86 ? 8 : width;
       const ea = this._decodeEA(address32, override);
