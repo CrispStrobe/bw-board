@@ -13,32 +13,35 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `4e95b488ca00784aa23a7bf3c2ce029f987a3167`,
-tag `milestones/x86-386-rep-rtc-20260919`. The functional AT profile executes
+The latest landed milestone is `833dca7219d24243b8b5e7ed4888d68aa3c61941`,
+tag `milestones/x86-386-system-stack-20260919`. The functional AT profile executes
 the external IBM Rev1 BIOS, boots DOS 2.00/Command 2.02 from floppy, writes
 `at-boot-ok` through the guest shell, then reads the exact file in a fresh boot.
 The explicit 640KiB profile is required by this owned IO.SYS image. Fresh
 receipts at `439560e` bind all 15 executed source files and link the media
 hashes; BIOS and media bytes remain external. See [AT boot evidence](I80286-AT-BOOT.md).
 
-Qualified candidate `3fa9afacbca4fb8b9ba02c59ab9003f8f56bf03d` passed
-[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35472633235)
-(5,507 pass, 272 optional skips, zero fail),
-[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35472633257)
-(full fast/Harris 286 corpora, 266 bounded 386 hardware samples and PCjs oracles),
-and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35472633215).
-Post-landing [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35472781189)
-and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35472781199)
-also passed. The landing adds only the qualification record to that candidate.
+Qualified candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` passed
+[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35473644024)
+(5,527 pass, 272 optional skips, zero fail),
+[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35473644021)
+(full fast/Harris 286 corpora, 362 bounded 386 hardware samples and PCjs oracles),
+and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35473644044).
+Post-landing [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35473831178)
+and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35473831160)
+also passed. The landing preserves an unrelated analog lane claim and adds
+only qualification documentation to that candidate.
 
 The independent [386 executor](I80386-EXPERIMENTAL.md) remains opt-in and
 incomplete. The landed stage includes paging, reset, REP restart, basic ALU,
 far-pointer loads, real-mode control transfers and a separate AT adapter.
-Continuation adds system selectors, LEA and additional stack instructions;
-these later changes await their own qualification. The unchanged external
-CPU diagnostic now reaches ring-transition setup and explicitly refuses
-privilege-changing IRET. FreeDOS reaches the FreeCom startup display on the
-286 AT profile; shell acceptance remains pending. Windows and Doom remain
+System selectors, descriptor stores, LEA and additional stack instructions
+are now landed. Continuation adds privilege-changing interrupt/return paths,
+protected far calls and call gates, and TSS I/O permissions; these later
+changes await their own qualification. The unchanged external CPU diagnostic
+now reaches conforming-code tests, which remain an explicit boundary in the
+current worker snapshot. FreeDOS reaches its shell prompt on the 286 AT
+profile; a file round trip remains pending. Windows and Doom remain
 unexecuted acceptance targets. Earlier milestones remain in history.
 
 ## Earlier milestone: common ISA, gates, tasks and existing binaries
