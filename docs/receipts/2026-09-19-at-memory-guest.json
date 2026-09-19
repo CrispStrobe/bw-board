@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "revision": "c08e23ed01cee4bf47eb5fc631551c70b383f3a4",
+  "revision": "974f088b0b94a6000eb676b7ec83b9b716efa4e2",
   "node": "v22.23.2",
   "accepted": true,
   "scope": "owned 80286 guest: original-AT 8042 D1 A20 enable, protected HMA fetch and bit-21 RAM write; not a full PC/AT",
@@ -10,7 +10,7 @@
     "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
     "src/at-8042-a20.js": "da5b3ab21d008357856cd8d8697f7de38579b855c9df002e9c97cf4f3694aea3",
     "src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
-    "src/experimental/i80286-protected.js": "7de93597db1c93ae7ed1a223d54cd1143acbdd5034166d54fbdc7b7968e310b7"
+    "src/experimental/i80286-protected.js": "9999564423d1af55b88aff91f707a076891ce4659a23e8a6ecc7b24ccebdb97c"
   },
   "expected": {
     "halted": true,

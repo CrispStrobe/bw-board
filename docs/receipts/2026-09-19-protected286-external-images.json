@@ -1,0 +1,744 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "inputRevision": "3ee4c6f1178e71db8926caf999416af7f4e340b3",
+  "manifestSha256": "78d06528c33ca6b575a3870a19b2f9f9fe222e0823e9ed5700e887f2f5e153a9",
+  "node": "v22.23.2",
+  "scope": "seven unchanged 512-byte protected-286 boot sectors; terminal-loop or repeated task-return semantic completion; architectural state, complete text VRAM, and mutated sector state",
+  "acceptedImages": [
+    "hellop.img",
+    "callgate.img",
+    "cgatep.img",
+    "ptr_validn.img",
+    "stakp.img",
+    "tasksw.img",
+    "taskgate.img"
+  ],
+  "diagnosticImages": [
+    {
+      "name": "int4_tgate.img",
+      "ownedAccepted": true,
+      "ownedResult": {
+        "name": "int4_tgate.img",
+        "accepted": true,
+        "referenceComparison": false,
+        "steps": 82,
+        "trSequence": [
+          48,
+          56,
+          48,
+          56,
+          48
+        ],
+        "cplSequence": [
+          0,
+          0,
+          3,
+          0,
+          3
+        ],
+        "text": "INTO\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+        "videoSha256": "11d3b096bc4bd768fd9bd91159435f0f6bef16d6789bf3f7af54decd42395e85",
+        "sectorSha256": "a65aac608420169245e6d50ac42169f649125306b390240b869bcc645ec92dea",
+        "ax": 128,
+        "bx": 0,
+        "cx": 0,
+        "dx": 0,
+        "sp": 33792,
+        "bp": 0,
+        "si": 0,
+        "di": 0,
+        "cs": 27,
+        "ds": 0,
+        "es": 0,
+        "ss": 35,
+        "ip": 32245,
+        "flags": 2194,
+        "cpl": 3,
+        "tr": 48,
+        "ldtr": 0,
+        "msw": 9
+      },
+      "referenceAccepted": false,
+      "referenceEvidence": "historical audit at the exact pinned oracle and input revisions; not rerun by this receipt",
+      "reason": "PCjs resets with numeric -1 during the cross-privilege task-gate path"
+    }
+  ],
+  "knownOracleDifferences": [
+    {
+      "images": [
+        "callgate.img",
+        "cgatep.img"
+      ],
+      "fields": [
+        "ds",
+        "es"
+      ],
+      "reference": {
+        "ds": 16,
+        "es": 40
+      },
+      "actual": {
+        "ds": 0,
+        "es": 0
+      },
+      "reason": "PCjs omits the 286 outer-RETF invalidation of inaccessible data segments"
+    },
+    {
+      "images": [
+        "tasksw.img",
+        "taskgate.img"
+      ],
+      "field": "flags",
+      "reference": 70,
+      "actual": 12358,
+      "reason": "PCjs drops IOPL=3 while loading the dispatcher TSS FLAGS image"
+    },
+    {
+      "images": [
+        "tasksw.img",
+        "taskgate.img"
+      ],
+      "field": "taskState and sector bytes",
+      "reference": "sets NT in outgoing tasks and saves phantom 82f8/81fc stacks",
+      "actual": "clears outgoing NT and saves unchanged task stacks 8300/8200",
+      "reason": "Intel 286 task-return state saves have no inter-task stack frame and clear outgoing NT"
+    }
+  ],
+  "sectorByteDifferences": {
+    "hellop.img": [],
+    "callgate.img": [],
+    "cgatep.img": [],
+    "ptr_validn.img": [],
+    "stakp.img": [],
+    "tasksw.img": [
+      {
+        "offset": 160,
+        "reference": 0,
+        "actual": 48
+      },
+      {
+        "offset": 204,
+        "reference": 64,
+        "actual": 0
+      },
+      {
+        "offset": 213,
+        "reference": 248,
+        "actual": 0
+      },
+      {
+        "offset": 214,
+        "reference": 130,
+        "actual": 131
+      },
+      {
+        "offset": 248,
+        "reference": 64,
+        "actual": 0
+      },
+      {
+        "offset": 257,
+        "reference": 252,
+        "actual": 0
+      },
+      {
+        "offset": 258,
+        "reference": 129,
+        "actual": 130
+      }
+    ],
+    "taskgate.img": [
+      {
+        "offset": 184,
+        "reference": 0,
+        "actual": 48
+      },
+      {
+        "offset": 228,
+        "reference": 64,
+        "actual": 0
+      },
+      {
+        "offset": 237,
+        "reference": 248,
+        "actual": 0
+      },
+      {
+        "offset": 238,
+        "reference": 130,
+        "actual": 131
+      },
+      {
+        "offset": 272,
+        "reference": 64,
+        "actual": 0
+      },
+      {
+        "offset": 281,
+        "reference": 252,
+        "actual": 0
+      },
+      {
+        "offset": 282,
+        "reference": 129,
+        "actual": 130
+      }
+    ]
+  },
+  "sourceHashes": {
+    "./compare-pcjs-protected286-external-images.mjs": "c1c9db144f497f70804a67c03df6f2ef8befc5fe1821e6dddec9dbc23d5e38b2",
+    "./lib/protected286-external-images.mjs": "552edb020a6834788b32c184f891e1d1fcd4676504e83cbfe1991062ecea0d1f",
+    "./lib/protected286-owned-engine.mjs": "e113e60090b5a5c952b1ab949b24100e3dd1d49583a83e23c612862fb20c8981",
+    "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
+    "../src/experimental/i80286-protected.js": "9999564423d1af55b88aff91f707a076891ce4659a23e8a6ecc7b24ccebdb97c"
+  },
+  "mutation": null,
+  "status": "pass-with-known-oracle-differences",
+  "reference": {
+    "hellop.img": {
+      "name": "hellop.img",
+      "kind": "finite",
+      "steps": 4142,
+      "retraceReads": 0,
+      "text": "Hello, Protected World!                                                         ",
+      "videoSha256": "8cefca371bb76500bf90b5a099e7bdc0dc6e014b20c5f335180fbdc232533760",
+      "sectorSha256": "e06b71c2067e7d8525085ab33ca0d9b8b1aaf7825e0551c61c3cac36fac32474",
+      "ax": 6912,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32768,
+      "bp": 32768,
+      "si": 31882,
+      "di": 46,
+      "cs": 8,
+      "ds": 16,
+      "es": 24,
+      "ss": 0,
+      "ip": 31856,
+      "flags": 70,
+      "cpl": 0,
+      "tr": 0,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "478c94f534e3c1172720616517c40e6e9c248097f319f76d74c93a6b992e483e"
+    },
+    "callgate.img": {
+      "name": "callgate.img",
+      "kind": "finite",
+      "steps": 4228,
+      "retraceReads": 0,
+      "text": "Hello from ring (3) via Call Gate !                                             ",
+      "videoSha256": "643af2b6855ad62eedf2da5663f3904a80395224ffc16dd33a7fb22e69d0f336",
+      "sectorSha256": "cfe094ff8c6e3521dd4a00ba1756b001d3458906d93cbaed6817426682af4ed5",
+      "ax": 40499,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32040,
+      "bp": 32768,
+      "si": 32024,
+      "di": 70,
+      "cs": 27,
+      "ds": 16,
+      "es": 40,
+      "ss": 35,
+      "ip": 31986,
+      "flags": 70,
+      "cpl": 3,
+      "tr": 48,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "474e9ee1d1d8a7b2dee00110e9a77ab6093d5b7a6783e26612caf7a820b84baa"
+    },
+    "cgatep.img": {
+      "name": "cgatep.img",
+      "kind": "finite",
+      "steps": 4229,
+      "retraceReads": 0,
+      "text": "Hello from ring (3) via Call Gate !                                             ",
+      "videoSha256": "643af2b6855ad62eedf2da5663f3904a80395224ffc16dd33a7fb22e69d0f336",
+      "sectorSha256": "29fe69d2239d306d326a0aa38b0e9e68f88a0a88c03f2abbbcdf162f660b5ad0",
+      "ax": 40499,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32046,
+      "bp": 32758,
+      "si": 32030,
+      "di": 70,
+      "cs": 27,
+      "ds": 16,
+      "es": 40,
+      "ss": 35,
+      "ip": 31992,
+      "flags": 70,
+      "cpl": 3,
+      "tr": 48,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "42f647611923358be5628ae27525f3eee440b0427440a124cad18c6c3f549443"
+    },
+    "ptr_validn.img": {
+      "name": "ptr_validn.img",
+      "kind": "finite",
+      "steps": 4143,
+      "retraceReads": 0,
+      "text": "RPL adjusted to 3.                                                              ",
+      "videoSha256": "288fa67bad4204c4f6c45fc2fcd69441c1fbc9b534655aa55a016949bfc915a5",
+      "sectorSha256": "34d0df1fd7dfe10991eef172ee2023e2f4192627204210bddeaaf469a57950e1",
+      "ax": 40499,
+      "bx": 0,
+      "cx": 0,
+      "dx": 27,
+      "sp": 31953,
+      "bp": 0,
+      "si": 31945,
+      "di": 36,
+      "cs": 27,
+      "ds": 35,
+      "es": 43,
+      "ss": 35,
+      "ip": 31924,
+      "flags": 6,
+      "cpl": 3,
+      "tr": 0,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "635606bdba37bb3907cfbab4be00a99b8290990872294b98fce6476d24b30946"
+    },
+    "stakp.img": {
+      "name": "stakp.img",
+      "kind": "finite",
+      "steps": 4148,
+      "retraceReads": 0,
+      "text": "Hello, Protected World!                                                         ",
+      "videoSha256": "8cefca371bb76500bf90b5a099e7bdc0dc6e014b20c5f335180fbdc232533760",
+      "sectorSha256": "a2e8fe4f4256135c743fad18337227c42abdb66f27bbef11ff7c75c4fcbd39c2",
+      "ax": 6912,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32768,
+      "bp": 32768,
+      "si": 31906,
+      "di": 46,
+      "cs": 8,
+      "ds": 16,
+      "es": 32,
+      "ss": 24,
+      "ip": 31871,
+      "flags": 70,
+      "cpl": 0,
+      "tr": 0,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "c7272704ac2f92f03d99230bacc22ecff95bd5fe1110b2bb2981f4f2fdc458b7"
+    },
+    "tasksw.img": {
+      "name": "tasksw.img",
+      "kind": "tasks",
+      "steps": 7297,
+      "retraceReads": 800,
+      "trSequence": [
+        48,
+        56,
+        64,
+        56,
+        72,
+        56,
+        64,
+        56
+      ],
+      "taskFrameHashes": [
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+        "df87f6793974c231528d61ec11de7cf9d5081cbdedf988bad12b3306b4ec28d7",
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983"
+      ],
+      "taskState": {
+        "dispatcher": {
+          "backlink": 0,
+          "flags": 70,
+          "sp": 33790
+        },
+        "task1": {
+          "backlink": 56,
+          "flags": 16454,
+          "sp": 33528
+        },
+        "task2": {
+          "backlink": 56,
+          "flags": 16454,
+          "sp": 33276
+        },
+        "descriptorAccess": {
+          "initial": 225,
+          "dispatcher": 227,
+          "task1": 225,
+          "task2": 225
+        }
+      },
+      "videoSha256": "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+      "sectorSha256": "0d016ce4f4488834f95f7b6b6673ed00c631678757925b1cb2153f6e1bb5b035",
+      "ax": 2,
+      "bx": 0,
+      "cx": 0,
+      "dx": 768,
+      "sp": 33790,
+      "bp": 0,
+      "si": 0,
+      "di": 4000,
+      "cs": 27,
+      "ds": 35,
+      "es": 43,
+      "ss": 35,
+      "ip": 32106,
+      "flags": 70,
+      "cpl": 3,
+      "tr": 56,
+      "ldtr": 80,
+      "msw": 9,
+      "inputSha256": "0d744b95bb559d893ab9c48b2811bf52204afc8e641020103dc686cc4db4d28e"
+    },
+    "taskgate.img": {
+      "name": "taskgate.img",
+      "kind": "tasks",
+      "steps": 7297,
+      "retraceReads": 800,
+      "trSequence": [
+        48,
+        56,
+        64,
+        56,
+        72,
+        56,
+        64,
+        56
+      ],
+      "taskFrameHashes": [
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+        "df87f6793974c231528d61ec11de7cf9d5081cbdedf988bad12b3306b4ec28d7",
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983"
+      ],
+      "taskState": {
+        "dispatcher": {
+          "backlink": 0,
+          "flags": 70,
+          "sp": 33790
+        },
+        "task1": {
+          "backlink": 56,
+          "flags": 16454,
+          "sp": 33528
+        },
+        "task2": {
+          "backlink": 56,
+          "flags": 16454,
+          "sp": 33276
+        },
+        "descriptorAccess": {
+          "initial": 225,
+          "dispatcher": 227,
+          "task1": 225,
+          "task2": 225
+        }
+      },
+      "videoSha256": "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+      "sectorSha256": "7c489a88cde1a78769fa246d224770771d84e8f18ef6012c38c69a36d24456c3",
+      "ax": 2,
+      "bx": 0,
+      "cx": 0,
+      "dx": 768,
+      "sp": 33790,
+      "bp": 0,
+      "si": 0,
+      "di": 4000,
+      "cs": 27,
+      "ds": 35,
+      "es": 4,
+      "ss": 35,
+      "ip": 32130,
+      "flags": 70,
+      "cpl": 3,
+      "tr": 56,
+      "ldtr": 80,
+      "msw": 9,
+      "inputSha256": "20ae379e490f6dea7f721c205e7e5589bef00dbcd0582802facff9de897fe7ca"
+    }
+  },
+  "observed": {
+    "hellop.img": {
+      "name": "hellop.img",
+      "kind": "finite",
+      "steps": 2142,
+      "retraceReads": 0,
+      "text": "Hello, Protected World!                                                         ",
+      "videoSha256": "8cefca371bb76500bf90b5a099e7bdc0dc6e014b20c5f335180fbdc232533760",
+      "sectorSha256": "e06b71c2067e7d8525085ab33ca0d9b8b1aaf7825e0551c61c3cac36fac32474",
+      "ax": 6912,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32768,
+      "bp": 32768,
+      "si": 31882,
+      "di": 46,
+      "cs": 8,
+      "ds": 16,
+      "es": 24,
+      "ss": 0,
+      "ip": 31856,
+      "flags": 70,
+      "cpl": 0,
+      "tr": 0,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "478c94f534e3c1172720616517c40e6e9c248097f319f76d74c93a6b992e483e"
+    },
+    "callgate.img": {
+      "name": "callgate.img",
+      "kind": "finite",
+      "steps": 2227,
+      "retraceReads": 0,
+      "text": "Hello from ring (3) via Call Gate !                                             ",
+      "videoSha256": "643af2b6855ad62eedf2da5663f3904a80395224ffc16dd33a7fb22e69d0f336",
+      "sectorSha256": "cfe094ff8c6e3521dd4a00ba1756b001d3458906d93cbaed6817426682af4ed5",
+      "ax": 40499,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32040,
+      "bp": 32768,
+      "si": 32024,
+      "di": 70,
+      "cs": 27,
+      "ds": 0,
+      "es": 0,
+      "ss": 35,
+      "ip": 31986,
+      "flags": 70,
+      "cpl": 3,
+      "tr": 48,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "474e9ee1d1d8a7b2dee00110e9a77ab6093d5b7a6783e26612caf7a820b84baa"
+    },
+    "cgatep.img": {
+      "name": "cgatep.img",
+      "kind": "finite",
+      "steps": 2228,
+      "retraceReads": 0,
+      "text": "Hello from ring (3) via Call Gate !                                             ",
+      "videoSha256": "643af2b6855ad62eedf2da5663f3904a80395224ffc16dd33a7fb22e69d0f336",
+      "sectorSha256": "29fe69d2239d306d326a0aa38b0e9e68f88a0a88c03f2abbbcdf162f660b5ad0",
+      "ax": 40499,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32046,
+      "bp": 32758,
+      "si": 32030,
+      "di": 70,
+      "cs": 27,
+      "ds": 0,
+      "es": 0,
+      "ss": 35,
+      "ip": 31992,
+      "flags": 70,
+      "cpl": 3,
+      "tr": 48,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "42f647611923358be5628ae27525f3eee440b0427440a124cad18c6c3f549443"
+    },
+    "ptr_validn.img": {
+      "name": "ptr_validn.img",
+      "kind": "finite",
+      "steps": 2142,
+      "retraceReads": 0,
+      "text": "RPL adjusted to 3.                                                              ",
+      "videoSha256": "288fa67bad4204c4f6c45fc2fcd69441c1fbc9b534655aa55a016949bfc915a5",
+      "sectorSha256": "34d0df1fd7dfe10991eef172ee2023e2f4192627204210bddeaaf469a57950e1",
+      "ax": 40499,
+      "bx": 0,
+      "cx": 0,
+      "dx": 27,
+      "sp": 31953,
+      "bp": 0,
+      "si": 31945,
+      "di": 36,
+      "cs": 27,
+      "ds": 35,
+      "es": 43,
+      "ss": 35,
+      "ip": 31924,
+      "flags": 6,
+      "cpl": 3,
+      "tr": 0,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "635606bdba37bb3907cfbab4be00a99b8290990872294b98fce6476d24b30946"
+    },
+    "stakp.img": {
+      "name": "stakp.img",
+      "kind": "finite",
+      "steps": 2148,
+      "retraceReads": 0,
+      "text": "Hello, Protected World!                                                         ",
+      "videoSha256": "8cefca371bb76500bf90b5a099e7bdc0dc6e014b20c5f335180fbdc232533760",
+      "sectorSha256": "a2e8fe4f4256135c743fad18337227c42abdb66f27bbef11ff7c75c4fcbd39c2",
+      "ax": 6912,
+      "bx": 0,
+      "cx": 0,
+      "dx": 0,
+      "sp": 32768,
+      "bp": 32768,
+      "si": 31906,
+      "di": 46,
+      "cs": 8,
+      "ds": 16,
+      "es": 32,
+      "ss": 24,
+      "ip": 31871,
+      "flags": 70,
+      "cpl": 0,
+      "tr": 0,
+      "ldtr": 0,
+      "msw": 1,
+      "inputSha256": "c7272704ac2f92f03d99230bacc22ecff95bd5fe1110b2bb2981f4f2fdc458b7"
+    },
+    "tasksw.img": {
+      "name": "tasksw.img",
+      "kind": "tasks",
+      "steps": 5297,
+      "retraceReads": 800,
+      "trSequence": [
+        48,
+        56,
+        64,
+        56,
+        72,
+        56,
+        64,
+        56
+      ],
+      "taskFrameHashes": [
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+        "df87f6793974c231528d61ec11de7cf9d5081cbdedf988bad12b3306b4ec28d7",
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983"
+      ],
+      "taskState": {
+        "dispatcher": {
+          "backlink": 0,
+          "flags": 12358,
+          "sp": 33790
+        },
+        "task1": {
+          "backlink": 56,
+          "flags": 70,
+          "sp": 33536
+        },
+        "task2": {
+          "backlink": 56,
+          "flags": 70,
+          "sp": 33280
+        },
+        "descriptorAccess": {
+          "initial": 225,
+          "dispatcher": 227,
+          "task1": 225,
+          "task2": 225
+        }
+      },
+      "videoSha256": "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+      "sectorSha256": "d4b0e4e03ae297a29ba53b5208f95c3d87c5bf6596b8db0180926163bae41cb8",
+      "ax": 2,
+      "bx": 0,
+      "cx": 0,
+      "dx": 768,
+      "sp": 33790,
+      "bp": 0,
+      "si": 0,
+      "di": 4000,
+      "cs": 27,
+      "ds": 35,
+      "es": 43,
+      "ss": 35,
+      "ip": 32106,
+      "flags": 12358,
+      "cpl": 3,
+      "tr": 56,
+      "ldtr": 80,
+      "msw": 9,
+      "inputSha256": "0d744b95bb559d893ab9c48b2811bf52204afc8e641020103dc686cc4db4d28e"
+    },
+    "taskgate.img": {
+      "name": "taskgate.img",
+      "kind": "tasks",
+      "steps": 5297,
+      "retraceReads": 800,
+      "trSequence": [
+        48,
+        56,
+        64,
+        56,
+        72,
+        56,
+        64,
+        56
+      ],
+      "taskFrameHashes": [
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+        "df87f6793974c231528d61ec11de7cf9d5081cbdedf988bad12b3306b4ec28d7",
+        "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983"
+      ],
+      "taskState": {
+        "dispatcher": {
+          "backlink": 0,
+          "flags": 12358,
+          "sp": 33790
+        },
+        "task1": {
+          "backlink": 56,
+          "flags": 70,
+          "sp": 33536
+        },
+        "task2": {
+          "backlink": 56,
+          "flags": 70,
+          "sp": 33280
+        },
+        "descriptorAccess": {
+          "initial": 225,
+          "dispatcher": 227,
+          "task1": 225,
+          "task2": 225
+        }
+      },
+      "videoSha256": "7fc13b159b8f3ce8e95a5a13330147ad900b5a70920a5fd2cc1fb71977cfd983",
+      "sectorSha256": "3148fd8a18dbef10ade9aa24ee5e370c4357359d48c7281f3b00ea13b1aa33fe",
+      "ax": 2,
+      "bx": 0,
+      "cx": 0,
+      "dx": 768,
+      "sp": 33790,
+      "bp": 0,
+      "si": 0,
+      "di": 4000,
+      "cs": 27,
+      "ds": 35,
+      "es": 4,
+      "ss": 35,
+      "ip": 32130,
+      "flags": 12358,
+      "cpl": 3,
+      "tr": 56,
+      "ldtr": 80,
+      "msw": 9,
+      "inputSha256": "20ae379e490f6dea7f721c205e7e5589bef00dbcd0582802facff9de897fe7ca"
+    }
+  },
+  "unexpectedDifferences": [],
+  "executionRevision": "974f088b0b94a6000eb676b7ec83b9b716efa4e2"
+}

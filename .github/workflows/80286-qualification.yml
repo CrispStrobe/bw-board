@@ -2,7 +2,7 @@ name: 80286 qualification
 
 on:
   push:
-    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa', 'lane/astra-x86-protection-at']
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt', 'lane/astra-x86-memory-isa', 'lane/astra-x86-protection-at', 'lane/astra-x86-tasks']
   workflow_dispatch:
     inputs:
       evidence:
@@ -69,6 +69,47 @@ jobs:
             | tee "$RECEIPT_DIR/pcjs-protected286-rep.json"
           node scripts/compare-pcjs-protected286-privilege.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286-privilege.json"
+          node scripts/compare-pcjs-protected286-common-isa.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-common-isa.json"
+          node scripts/compare-pcjs-protected286-external-images.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-external-images.json"
+          node --test test/i80286-protected-external-images.test.mjs \
+            | tee "$RECEIPT_DIR/protected286-external-image-tests.log"
+          for mutation in video taskreturn fixturehash sector taskstate; do
+            if EXTERNAL286_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-external-images.mjs \
+              > "$RECEIPT_DIR/rejected-external-$mutation.json"; then
+              echo "external image oracle failed to reject $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" RECEIPT="$RECEIPT_DIR/rejected-external-$mutation.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          const expected={
+            video:[['hellop.img','videoSha256']],
+            taskreturn:[['tasksw.img','trSequence']],
+            fixturehash:[['ptr_validn.img','inputSha256']],
+            sector:[['hellop.img','sectorSha256'],['hellop.img','sectorByteDifferences']],
+            taskstate:[['tasksw.img','known task-state oracle differences']],
+          };
+          assert.equal(report.mutation,process.env.MUTATION);
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.unexpectedDifferences.map(d=>[d.image,d.field]),expected[process.env.MUTATION]);
+          NODE
+          done
+          if COMMON_ISA_ORACLE_MUTATION=ax node scripts/compare-pcjs-protected286-common-isa.mjs \
+            > "$RECEIPT_DIR/rejected-common-isa-ax.json"; then
+            echo "common ISA oracle failed to reject register mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-common-isa-ax.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'ax');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['ax']);
+          NODE
           if PRIVILEGE_ORACLE_MUTATION=frame node scripts/compare-pcjs-protected286-privilege.mjs \
             > "$RECEIPT_DIR/rejected-privilege-frame.json"; then
             echo "protected privilege oracle failed to reject frame mutation" >&2
