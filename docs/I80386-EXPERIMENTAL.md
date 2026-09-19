@@ -22,3 +22,12 @@ The 386EX MOO corpus is suitable for register-level sampling in real mode, but
 its 16-bit external bus and SMM instrumentation are not a 386DX timing oracle.
 Protected-mode MOO inputs are not presently published in the pinned corpus, so
 they cannot validate this stage's protected-mode entry.
+
+`scripts/verify-i80386-moo-sample.mjs` requires the exact clean physical-capture
+revision `459d49fbe6280e9ed46fee887b58dacd9cb880ab`. It parses MOO 1.1 directly,
+applies published RM32 masks and the pinned revocation list, and samples fixed
+first/middle/last non-revoked cases from ADD files `01`, `6601`, `6701`, and
+`676601`. The receipt binds every compressed input and executed local source by
+SHA-256. This is register/RAM evidence across the four operand/address-size
+combinations; bus cycles are parsed only by the upstream format and remain
+ungraded here.
