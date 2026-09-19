@@ -259,12 +259,19 @@ export class ProtectedI80286 extends I8086 {
             return 4;
         }
         if (op === 0xcf) { this._iretProtected(); return 17; }
+        if (op === 0x9a) {
+            const ip=this._pmFetch16(),selector=this._pmFetch16();
+            this._farTransfer(ip,selector,true);
+            return 28;
+        }
+        if (op === 0xca || op === 0xcb) {
+            const discard=op===0xca?this._pmFetch16():0;
+            this._farReturn(discard);
+            return 25;
+        }
         if (op === 0xea) {
             const ip = this._pmFetch16(), selector = this._pmFetch16();
-            const descriptor = this._descriptor(selector, SEG_CS,{systemAsUnsupported:true});
-            if (ip > descriptor.limit) this._pmFault(13, 0, 'far-jump offset outside code segment');
-            this._commitDescriptor(SEG_CS, descriptor);
-            this.ip = ip;
+            this._farTransfer(ip,selector,false);
             return 15;
         }
         if (op === 0x8e) {
@@ -401,8 +408,12 @@ export class ProtectedI80286 extends I8086 {
                 this._pmPush(this._pmOperandRead(ea, true));
                 return 11;
             }
-            if (word && (ea.reg === 3 || ea.reg === 5))
-                throw new UnsupportedProtectedMode('far FE/FF control transfer');
+            if(word&&(ea.reg===3||ea.reg===5)){
+                if(ea.isReg)this._pmFault(6,0,'far control transfer requires memory pointer');
+                const ip=this._rd16(ea.id,ea.off),selector=this._rd16(ea.id,(ea.off+2)&0xffff);
+                this._farTransfer(ip,selector,ea.reg===3);
+                return ea.reg===3?28:15;
+            }
             this._pmFault(6, 0, 'unsupported FE/FF group');
         }
         if (op === 0xf6 || op === 0xf7) {
@@ -652,6 +663,74 @@ export class ProtectedI80286 extends I8086 {
         address &= 0xffffff;
         if (this.busTrace !== null) this.busTrace.push(1, address, 1, (address + 1) & 0xffffff);
         return (this.read(address) & 0xff) | ((this.read((address + 1) & 0xffffff) & 0xff) << 8);
+    }
+
+    _callGate(selector) {
+        const raw=this._rawDescriptor(selector),type=raw.access&0x0f;
+        if((raw.access&0x10)||type!==4)this._pmFault(13,selector&0xfffc,'far CALL requires code or 286 call gate');
+        if(Math.max(this.cpl,selector&3)>((raw.access>>5)&3))this._pmFault(13,selector&0xfffc,'call gate privilege');
+        if(!(raw.access&0x80))this._pmFault(11,selector&0xfffc,'call gate not present');
+        if(raw.bytes[4]&0xe0||raw.bytes[6]||raw.bytes[7])
+            this._pmFault(13,selector&0xfffc,'malformed 286 call gate');
+        return{offset:raw.bytes[0]|raw.bytes[1]<<8,selector:raw.bytes[2]|raw.bytes[3]<<8,
+            words:raw.bytes[4]&31};
+    }
+
+    _farTransfer(offset,selector,call) {
+        let descriptor,gate=null;
+        const raw=this._rawDescriptor(selector);
+        if(!(raw.access&0x10)) {
+            if(!call)this._pmFault(13,selector&0xfffc,'far JMP through system descriptor unsupported');
+            gate=this._callGate(selector);
+            descriptor=this._descriptor(gate.selector,SEG_CS,{ignoreRpl:true});
+            offset=gate.offset;
+        } else descriptor=this._descriptor(selector,SEG_CS);
+        const targetCpl=(descriptor.access>>5)&3;
+        if(targetCpl>this.cpl||(!gate&&targetCpl!==this.cpl))
+            this._pmFault(13,(gate?.selector??selector)&0xfffc,'far transfer privilege');
+        if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
+        if(!call){this._commitDescriptor(SEG_CS,descriptor);this.ip=offset;return;}
+        const oldIp=this.ip,oldCs=this.cs,oldSs=this.ss,oldSp=this.sp;
+        if(targetCpl===this.cpl){
+            const newSp=(oldSp-4)&0xffff,frame=this._cacheAddress(this.segmentCaches[SEG_SS],newSp,4,12);
+            this._commitDescriptor(SEG_CS,descriptor);
+            this._writeFrameWord(frame+2,oldCs);this._writeFrameWord(frame,oldIp);
+            this.sp=newSp;this.ip=offset;return;
+        }
+        const stack=this._tssStack(targetCpl),stackDescriptor=this._descriptor(stack.ss,SEG_SS,{privilegeCpl:targetCpl});
+        const words=gate.words,bytes=8+words*2,newSp=(stack.sp-bytes)&0xffff;
+        const frame=this._cacheAddress(stackDescriptor,newSp,bytes,12);
+        this._linear(SEG_SS,oldSp,words*2,'read');
+        const params=Array.from({length:words},(_,i)=>this._rd16(SEG_SS,(oldSp+i*2)&0xffff));
+        descriptor.selector=(gate.selector&0xfffc)|targetCpl;
+        this._commitDescriptor(SEG_SS,stackDescriptor);this._commitDescriptor(SEG_CS,descriptor);
+        this._writeFrameWord(frame+bytes-2,oldSs);this._writeFrameWord(frame+bytes-4,oldSp);
+        for(let i=0;i<words;i++)this._writeFrameWord(frame+4+i*2,params[i]);
+        this._writeFrameWord(frame+2,oldCs);this._writeFrameWord(frame,oldIp);
+        this.cpl=targetCpl;this.sp=newSp;this.ip=offset;
+    }
+
+    _farReturn(discard) {
+        discard&=0xffff;
+        this._linear(SEG_SS,this.sp,4,'read');
+        const ip=this._rd16(SEG_SS,this.sp),selector=this._rd16(SEG_SS,(this.sp+2)&0xffff);
+        const newCpl=selector&3;
+        if(newCpl<this.cpl)this._pmFault(13,selector&0xfffc,'far RET cannot return inward');
+        const descriptor=this._descriptor(selector,SEG_CS,{privilegeCpl:newCpl});
+        if(ip>descriptor.limit)this._pmFault(13,0,'far RET offset outside code segment');
+        if(newCpl===this.cpl){
+            this._commitDescriptor(SEG_CS,descriptor);this.ip=ip;this.sp=(this.sp+4+discard)&0xffff;return;
+        }
+        const frameBytes=8+discard;
+        this._linear(SEG_SS,this.sp,frameBytes,'read');
+        const outerSp=this._rd16(SEG_SS,(this.sp+4+discard)&0xffff);
+        const outerSs=this._rd16(SEG_SS,(this.sp+6+discard)&0xffff);
+        let stackDescriptor;
+        try{stackDescriptor=this._descriptor(outerSs,SEG_SS,{privilegeCpl:newCpl});}
+        catch(e){if(e instanceof ProtectedModeFault&&e.vector===11)e.vector=12;throw e;}
+        this._commitDescriptor(SEG_CS,descriptor);this._commitDescriptor(SEG_SS,stackDescriptor);
+        this.cpl=newCpl;this.ip=ip;this.sp=(outerSp+discard)&0xffff;
+        this._invalidateOuterDataSegments(newCpl);
     }
 
     _gate(vector, software, external) {
