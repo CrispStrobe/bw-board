@@ -3,6 +3,13 @@
  * than a widened view of the 16-bit production core.
  */
 export class UnsupportedI80386 extends Error {}
+export class I80386Fault extends Error {
+  constructor(vector, errorCode = null, reason = "80386 fault") {
+    super(reason);
+    this.vector = vector;
+    this.errorCode = errorCode;
+  }
+}
 
 const CF = 1,
   PF = 4,
@@ -12,6 +19,9 @@ const CF = 1,
   IF = 0x200,
   DF = 0x400,
   OF = 0x800;
+const TF = 0x100,
+  NT = 0x4000,
+  RF = 0x10000;
 const SEG_ES = 0,
   SEG_CS = 1,
   SEG_SS = 2,
@@ -30,10 +40,11 @@ function maskFor(width) {
 }
 
 export class ExperimentalI80386 {
-  constructor(bus = {}) {
+  constructor(bus = {}, options = {}) {
     this.read = bus.read ?? (() => 0);
     this.fetch = bus.fetch ?? this.read;
     this.write = bus.write ?? (() => {});
+    this.deliverFaults = !!options.deliverFaults;
     this.reset();
   }
 
@@ -51,6 +62,11 @@ export class ExperimentalI80386 {
     this.fs = 0;
     this.gs = 0;
     this.gdtr = { base: 0, limit: 0 };
+    this.idtr = { base: 0, limit: 0x3ff };
+    this.shutdown = false;
+    this._interruptShadow = 0;
+    this._nmiShadow = 0;
+    this._debugShadow = 0;
     this.segmentCaches = {};
     for (const id of [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS])
       this.segmentCaches[id] = {
@@ -211,8 +227,14 @@ export class ExperimentalI80386 {
   _linear(seg, off, size = 1) {
     const c = this.segmentCaches[seg];
     const end = off + size - 1;
-    if (!c?.present || off < 0 || end > c.limit || end > 0xffffffff)
-      throw new UnsupportedI80386("segment limit or presence fault");
+    if (!c?.present)
+      throw new I80386Fault(
+        seg === SEG_SS ? 12 : 11,
+        this._segValue(seg),
+        "segment not present",
+      );
+    if (off < 0 || end > c.limit || end > 0xffffffff)
+      throw new I80386Fault(seg === SEG_SS ? 12 : 13, 0, "segment limit fault");
     return (c.base + (off >>> 0)) >>> 0;
   }
   _readLinear(a, size) {
@@ -228,22 +250,22 @@ export class ExperimentalI80386 {
   _read(seg, off, width) {
     const cache = this.segmentCaches[seg];
     if (this.protectedMode && cache.code && !cache.readable)
-      throw new UnsupportedI80386("read from execute-only segment");
+      throw new I80386Fault(13, 0, "read from execute-only segment");
     return this._readLinear(this._linear(seg, off, width >>> 3), width >>> 3);
   }
   _write(seg, off, width, v) {
     const cache = this.segmentCaches[seg];
     if (this.protectedMode && !cache.writable)
-      throw new UnsupportedI80386("write to non-writable segment");
+      throw new I80386Fault(13, 0, "write to non-writable segment");
     this._writeLinear(this._linear(seg, off, width >>> 3), width >>> 3, v);
   }
   _fetch8() {
     if ((this._instructionBytes ?? 0) >= 15)
-      throw new UnsupportedI80386("instruction exceeds 15-byte limit");
+      throw new I80386Fault(13, 0, "instruction exceeds 15-byte limit");
     const a = this._linear(SEG_CS, this.eip, 1),
       v = this.fetch(a) & 255;
     this._instructionBytes = (this._instructionBytes ?? 0) + 1;
-    this.eip = (this.eip + 1) >>> 0;
+    this.eip += 1;
     return v;
   }
   _fetchN(size) {
@@ -463,6 +485,253 @@ export class ExperimentalI80386 {
     ][code];
   }
 
+  _snapshotInstruction() {
+    const state = {};
+    for (const name of REG_NAMES) state[name] = this[name];
+    for (const name of [
+      "eip",
+      "eflags",
+      "cs",
+      "ds",
+      "es",
+      "ss",
+      "fs",
+      "gs",
+      "halted",
+      "_interruptShadow",
+      "_nmiShadow",
+      "_debugShadow",
+    ])
+      state[name] = this[name];
+    state.segmentCaches = Object.fromEntries(
+      Object.entries(this.segmentCaches).map(([id, cache]) => [
+        id,
+        { ...cache },
+      ]),
+    );
+    return state;
+  }
+
+  _restoreInstruction(state) {
+    for (const name of REG_NAMES) this[name] = state[name];
+    for (const name of [
+      "eip",
+      "eflags",
+      "cs",
+      "ds",
+      "es",
+      "ss",
+      "fs",
+      "gs",
+      "halted",
+      "_interruptShadow",
+      "_nmiShadow",
+      "_debugShadow",
+    ])
+      this[name] = state[name];
+    this.segmentCaches = Object.fromEntries(
+      Object.entries(state.segmentCaches).map(([id, cache]) => [
+        id,
+        { ...cache },
+      ]),
+    );
+  }
+
+  _faultClass(vector) {
+    if (vector === 14) return "page";
+    if ([0, 9, 10, 11, 12, 13].includes(vector)) return "contributory";
+    return "benign";
+  }
+
+  _formsDoubleFault(first, second) {
+    const a = this._faultClass(first),
+      b = this._faultClass(second);
+    return (
+      (a === "contributory" && b === "contributory") ||
+      (a === "page" && (b === "contributory" || b === "page"))
+    );
+  }
+
+  _stackFrame(width, values) {
+    const bytes = width >>> 3,
+      stack32 = !!this.segmentCaches[SEG_SS].default32,
+      old = stack32 ? this.esp : this.sp,
+      next = stack32
+        ? (old - bytes * values.length) >>> 0
+        : (old - bytes * values.length) & 0xffff;
+    const address = this._linear(SEG_SS, next, bytes * values.length);
+    for (let i = 0; i < values.length; i++)
+      this._writeLinear(address + i * bytes, bytes, values[i]);
+    if (stack32) this.esp = next;
+    else this.sp = next;
+  }
+
+  _protectedCodeDescriptor(selector, external) {
+    const code = (selector & 0xfffc) | (external ? 1 : 0);
+    if (!(selector & 0xfff8))
+      throw new I80386Fault(13, code, "null handler selector");
+    if (selector & 4)
+      throw new UnsupportedI80386(
+        "LDT handler selectors are outside the bounded profile",
+      );
+    const off = selector & 0xfff8;
+    if (off + 7 > this.gdtr.limit)
+      throw new I80386Fault(13, code, "handler selector outside GDT");
+    const a = (this.gdtr.base + off) >>> 0;
+    const b = Array.from(
+      { length: 8 },
+      (_, i) => this.read((a + i) >>> 0) & 255,
+    );
+    const access = b[5],
+      flags = b[6];
+    if (!(access & 0x10) || !(access & 8))
+      throw new I80386Fault(13, code, "unsupported handler code descriptor");
+    if (access & 4)
+      throw new UnsupportedI80386(
+        "conforming handler code is outside the bounded profile",
+      );
+    if (((access >>> 5) & 3) !== 0)
+      throw new I80386Fault(
+        13,
+        code,
+        "handler code is less privileged than CPL",
+      );
+    if (!(access & 0x80))
+      throw new I80386Fault(11, code, "handler code not present");
+    let limit = (b[0] | (b[1] << 8) | ((flags & 15) << 16)) >>> 0;
+    if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
+    return {
+      base: (b[2] | (b[3] << 8) | (b[4] << 16) | (b[7] * 0x1000000)) >>> 0,
+      limit,
+      default32: !!(flags & 0x40),
+      present: true,
+      code: true,
+      readable: !!(access & 2),
+      writable: false,
+      access,
+      address: a,
+    };
+  }
+
+  _deliverReal(vector, returnEip) {
+    const entry = vector * 4;
+    if (entry + 3 > this.idtr.limit)
+      throw new I80386Fault(13, 0, "real-mode interrupt outside IDT");
+    const address = (this.idtr.base + entry) >>> 0;
+    const ip = this._readLinear(address, 2),
+      cs = this._readLinear(address + 2, 2);
+    this._stackFrame(16, [returnEip & 0xffff, this.cs, this.eflags]);
+    this.eflags &= ~(IF | TF);
+    this._loadSeg(SEG_CS, cs);
+    this.eip = ip;
+  }
+
+  _deliverProtected(
+    vector,
+    returnEip,
+    errorCode,
+    { software = false, external = false, fault = false } = {},
+  ) {
+    const idtCode = (vector << 3) | 2 | (external ? 1 : 0),
+      entry = vector * 8;
+    if (entry + 7 > this.idtr.limit)
+      throw new I80386Fault(13, idtCode, "interrupt outside IDT");
+    const a = (this.idtr.base + entry) >>> 0;
+    const b = Array.from(
+      { length: 8 },
+      (_, i) => this.read((a + i) >>> 0) & 255,
+    );
+    const access = b[5],
+      type = access & 31,
+      dpl = (access >>> 5) & 3;
+    if (type === 5)
+      throw new UnsupportedI80386(
+        "IDT task gates are outside the bounded profile",
+      );
+    if (![6, 7, 14, 15].includes(type) || b[4] !== 0)
+      throw new I80386Fault(13, idtCode, "unsupported IDT gate");
+    if (software && dpl < (this.cs & 3))
+      throw new I80386Fault(13, idtCode, "software interrupt gate privilege");
+    if (!(access & 0x80))
+      throw new I80386Fault(11, idtCode, "IDT gate not present");
+    const selector = b[2] | (b[3] << 8),
+      descriptor = this._protectedCodeDescriptor(selector, external);
+    if ((this.cs & 3) !== 0)
+      throw new UnsupportedI80386(
+        "privilege-changing interrupt gates are outside the bounded profile",
+      );
+    const width = type >= 14 ? 32 : 16;
+    const offset =
+      (b[0] |
+        (b[1] << 8) |
+        (width === 32 ? (b[6] | (b[7] << 8)) * 0x10000 : 0)) >>>
+      0;
+    if (offset > descriptor.limit)
+      throw new I80386Fault(13, 0, "handler offset outside code segment");
+    const savedFlags = fault ? this.eflags | RF : this.eflags;
+    const values = [returnEip, this.cs, savedFlags];
+    if (errorCode !== null) values.unshift(errorCode);
+    this._stackFrame(width, values);
+    this._markAccessed(descriptor);
+    this.cs = selector & 0xfffc;
+    this.segmentCaches[SEG_CS] = descriptor;
+    this.eip = width === 32 ? offset : offset & 0xffff;
+    this.eflags &= ~(TF | NT | RF);
+    if (type === 6 || type === 14) this.eflags &= ~IF;
+  }
+
+  _deliver(vector, returnEip, errorCode = null, options = {}) {
+    if (this.protectedMode)
+      this._deliverProtected(vector, returnEip, errorCode, options);
+    else this._deliverReal(vector, returnEip);
+    this.halted = false;
+  }
+
+  _deliverFault(fault, returnEip, { trap = false, external = false } = {}) {
+    let first = fault.vector,
+      current = fault,
+      currentIsTrap = trap;
+    for (;;) {
+      try {
+        this._deliver(current.vector, returnEip, current.errorCode, {
+          external,
+          fault: !currentIsTrap,
+        });
+        return;
+      } catch (next) {
+        if (!(next instanceof I80386Fault)) throw next;
+        if (current.vector === 8) {
+          this.shutdown = true;
+          return;
+        }
+        if (this._formsDoubleFault(first, next.vector)) {
+          current = new I80386Fault(8, 0, "double fault");
+          first = 8;
+        } else {
+          current = next;
+          first = next.vector;
+        }
+        currentIsTrap = false;
+      }
+    }
+  }
+
+  interrupt(vector, { nmi = false } = {}) {
+    if (
+      this.shutdown ||
+      (nmi ? this._nmiShadow : !(this.eflags & IF) || this._interruptShadow)
+    )
+      return false;
+    try {
+      this._deliver(vector & 255, this.eip, null, { external: true });
+      return true;
+    } catch (error) {
+      if (!(error instanceof I80386Fault)) throw error;
+      this._deliverFault(error, this.eip, { external: true });
+      return !this.shutdown;
+    }
+  }
+
   _shift(value, width, operation, count) {
     count &= 31;
     if (count === 0) return value;
@@ -507,7 +776,68 @@ export class ExperimentalI80386 {
     return width === 32 ? result >>> 0 : result;
   }
 
+  _iret(width) {
+    const bytes = width >>> 3,
+      stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const old = stack32 ? this.esp : this.sp;
+    const address = this._linear(SEG_SS, old, bytes * 3);
+    const target = this._readLinear(address, bytes);
+    const selector = this._readLinear(address + bytes, bytes) & 0xffff;
+    const flags = this._readLinear(address + bytes * 2, bytes);
+    if (this.protectedMode) {
+      if ((selector & 3) !== (this.cs & 3))
+        throw new UnsupportedI80386(
+          "privilege-changing IRET is outside the bounded profile",
+        );
+      const descriptor = this._protectedCodeDescriptor(selector, false);
+      if (target > descriptor.limit)
+        throw new I80386Fault(13, 0, "IRET target outside code segment");
+      this._markAccessed(descriptor);
+      this.cs = selector;
+      this.segmentCaches[SEG_CS] = descriptor;
+    } else this._loadSeg(SEG_CS, selector);
+    if (stack32) this.esp = (old + bytes * 3) >>> 0;
+    else this.sp = (old + bytes * 3) & 0xffff;
+    this.eip = width === 32 ? target >>> 0 : target & 0xffff;
+    this.eflags =
+      width === 32
+        ? (flags | 2) >>> 0
+        : ((this.eflags & 0xffff0000) | flags | 2) >>> 0;
+  }
+
   step() {
+    if (this.halted || this.shutdown) return 0;
+    const state = this._snapshotInstruction(),
+      restartEip = this.eip >>> 0;
+    const trace = !!(this.eflags & TF),
+      debugInhibited = this._debugShadow > 0;
+    this._suppressTrace = false;
+    try {
+      const result = this._stepInstruction();
+      this.eip >>>= 0;
+      if (this._interruptShadow) this._interruptShadow--;
+      if (this._nmiShadow) this._nmiShadow--;
+      if (this._debugShadow) this._debugShadow--;
+      if (
+        trace &&
+        !debugInhibited &&
+        !this._debugShadow &&
+        !this._suppressTrace
+      )
+        this._deliverFault(new I80386Fault(1, null, "single-step"), this.eip, {
+          trap: true,
+        });
+      return result;
+    } catch (error) {
+      if (!(error instanceof I80386Fault)) throw error;
+      this._restoreInstruction(state);
+      if (!this.deliverFaults) throw error;
+      this._deliverFault(error, restartEip);
+      return 0;
+    }
+  }
+
+  _stepInstruction() {
     if (this.halted) return 0;
     this._instructionBytes = 0;
     const default32 = !!this.segmentCaches[SEG_CS].default32;
@@ -678,13 +1008,35 @@ export class ExperimentalI80386 {
       if (stack32) this.esp = (this.esp + (width >>> 3)) >>> 0;
       else this.sp = (this.sp + (width >>> 3)) & 0xffff;
       this.eip = target;
+    } else if (op === 0xcc) {
+      this._suppressTrace = true;
+      this._deliver(3, this.eip, null, { software: true });
+    } else if (op === 0xcd) {
+      const vector = this._fetch8();
+      this._suppressTrace = true;
+      this._deliver(vector, this.eip, null, { software: true });
+    } else if (op === 0xcf) this._iret(width);
+    else if (op === 0xfa) this.eflags &= ~IF;
+    else if (op === 0xfb) {
+      this.eflags |= IF;
+      this._interruptShadow = 2;
+    } else if (op === 0x17) {
+      this._loadSeg(SEG_SS, this._pop(16));
+      this._interruptShadow = 2;
+      this._nmiShadow = 2;
+      this._debugShadow = 2;
     } else if (op === 0xf4) this.halted = true;
     else if (op === 0x8e) {
       const ea = this._decodeEA(address32, override),
         ids = [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS];
       if (ea.reg === 1 || ea.reg > 5)
-        throw new UnsupportedI80386("invalid MOV segment register");
+        throw new I80386Fault(6, null, "invalid MOV segment register");
       this._loadSeg(ids[ea.reg], this._operandRead(ea, 16));
+      if (ea.reg === 2) {
+        this._interruptShadow = 2;
+        this._nmiShadow = 2;
+        this._debugShadow = 2;
+      }
     } else if (op === 0xea) {
       const raw = this._fetchN(width >>> 3),
         off = width === 32 ? raw : raw & 0xffff,
@@ -746,14 +1098,16 @@ export class ExperimentalI80386 {
     }
     if (op === 0x01) {
       const ea = this._decodeEA(address32, override);
-      if (ea.isReg || ea.reg !== 2)
-        throw new UnsupportedI80386("only LGDT is supported");
+      if (ea.isReg || (ea.reg !== 2 && ea.reg !== 3))
+        throw new UnsupportedI80386("only LGDT and LIDT are supported");
       const a = this._linear(ea.seg, ea.off, 6),
         base = this._readLinear((a + 2) >>> 0, 4);
-      this.gdtr = {
+      const table = {
         limit: this._readLinear(a, 2),
         base: width === 16 ? base & 0xffffff : base,
       };
+      if (ea.reg === 2) this.gdtr = table;
+      else this.idtr = table;
       return;
     }
     if (op === 0x20 || op === 0x22) {

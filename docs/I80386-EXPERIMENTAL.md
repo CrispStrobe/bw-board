@@ -10,13 +10,32 @@ addressing, bounded arithmetic and moves, near branches/calls, and 16/32-bit
 stack operands with stack addressing selected independently by SS.B. ES, CS,
 SS, DS, FS, and GS have independent visible selectors and
 hidden base, limit, and default-size state. A real-mode bootstrap can use LGDT,
-MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
+LIDT, MOV CR0, and a far jump to enter a flat ring-0 32-bit code segment.
+
+The opt-in `deliverFaults` profile adds precise instruction restart for
+architectural faults, real-mode IVT delivery, same-ring ring-0 16- and 32-bit
+interrupt/trap gates, and same-ring IRET. It implements the 80386
+benign/contributory/page-fault pairing table: contributory followed by
+contributory, or page fault followed by contributory/page fault, becomes #DF;
+a fault during #DF delivery enters CPU shutdown. Fault stack images set RF,
+while traps and software INT do not. STI and MOV/POP SS interrupt shadows are
+modeled; MOV/POP SS also inhibit NMI and debug delivery through the following
+instruction. Gate/frame checks complete before frame writes, and host bus
+callback errors remain host errors rather than guest exceptions.
 
 This stage deliberately refuses paging, VM86, LDT selectors, system
-segments, privilege changes, interrupts, faults, tasking, and unimplemented
-opcodes. Descriptor checks cover the flat owned-program path; they are not a
-complete 80386 protection model. Cycle counts are placeholders and make no
-386DX or 386EX timing claim.
+segments, privilege-changing gates/IRET, tasking, and unimplemented opcodes.
+Only architecturally invalid encodings implemented by this profile raise #UD;
+valid instructions outside the profile still throw `UnsupportedI80386`.
+Descriptor and exception checks cover the flat, same-ring owned-program path;
+they are not a complete 80386 protection model. Cycle counts are placeholders
+and make no 386DX or 386EX timing claim.
+
+`scripts/compare-pcjs-protected386-faults.mjs` binds a clean PCjs revision
+`c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70` and compares independent 32-bit
+interrupt- and trap-gate frames, IF/TF behavior, and IRET state. The owned
+tests additionally cover real-mode delivery, RF/restart EIP, the 80386 #DF
+matrix, shutdown, shadows, preflight atomicity, and host-error separation.
 
 The 386EX MOO corpus is suitable for register-level sampling in real mode, but
 its 16-bit external bus and SMM instrumentation are not a 386DX timing oracle.
