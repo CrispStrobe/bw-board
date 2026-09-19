@@ -12,10 +12,10 @@ usable and publish its exact source, input and qualification revisions.
 | Genuine AT reset | 286 reset CS F000, IP FFF0, hidden CS base FF0000; physical reset fetch FFFFF0; ROM far jump removes reset base; RAM-preserving controller reset | Implemented with hidden-cache and same-selector far-reload tests; AT firmware first fetch verified |
 | AT BIOS POST | Unmodified external IBM 5170 ROM executes timer, controller, memory and device checks; no host interception of firmware services | Rev1 passes the refresh/controller checks, warm reset and checkpoint 30; protected memory scan advances through installed extended RAM |
 | AT disk boot | Firmware reads actual mounted sectors via emulated controller/DMA and reaches an identifiable DOS shell; command/file round trip persists across reboot | Not yet demonstrated |
-| 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Implemented and audited; exact-head qualification pending |
-| 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core under audit; system, paging and v86 work remains |
+| 286 recovery | Correct contributory-fault escalation, #DF task entry, shutdown/recovery, TF and SS shadows; NPX absent/emulation boundaries | Landed at `3cd5927`; all three hosted qualification workflows green |
+| 386DX CPU | 32-bit registers, FS/GS, operand/address prefixes, SIB, descriptor granularity/default sizes, system registers, protected gates/tasks, paging and v86 mode | Bounded independent 32-bit core passes owned PCjs and fixed real-mode hardware samples; system, paging and v86 work remains |
 | Windows | First Windows 3.0 standard mode on 286; then a separately identified 386 enhanced-mode configuration, desktop plus keyboard-driven application open/edit/save/reopen | Not demonstrated; exact external media must be identified |
-| Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Not demonstrated; loading an executable or printing a banner does not pass |
+| Doom | Exact DOS executable/WAD version, real DOS/extender startup, rendered gameplay, input and save/load or reproducible demo completion | Original shareware 1.9 inputs pinned externally; not executed; a banner does not pass |
 
 Windows 3.0 standard mode is the initial working target, not a claim covering
 all Windows releases. Doom's version and media hashes must be fixed before its
@@ -56,3 +56,24 @@ qualification require relevant fresh evidence. Ledger-only merges follow the
 repository's documented lean qualification rule. Never rename a failed or
 budget-exhausted diagnostic into acceptance, or hide unsupported cases in pass
 counts. Timing/performance claims require separately measured workloads.
+
+## External acceptance inputs prepared
+
+Original Doom shareware 1.9 DOS is available locally from the
+[id Software archive mirror](https://ftp.gwdg.de/pub/misc/ftp.idsoftware.com/idstuff/doom/doom19s.txt).
+Only input hashes and provenance are recorded here; no game bytes are vendored.
+The split installer payload was concatenated and its ZIP read without executing
+the installers. This is media preparation, not emulator execution evidence.
+
+FreeDOS 1.4 provides an additional independent OS target. Its untouched 1.2MB
+boot floppy comes from the [official floppy edition](https://www.freedos.org/download/)
+and the archive matches the project's
+[published SHA-256](https://www.freedos.org/download/verify.txt). The declared
+640KB conventional-memory requirement needs a corresponding machine and CMOS
+configuration; the existing 512KB boot profile does not satisfy it.
+
+- Doom 1.9 archive SHA-256: `cacf0142b31ca1af00796b4a0339e07992ac5f21bc3f81e7532fe1b5e1b486e6`.
+  `DOOM.EXE`: `b8020523561a5ad9706e009a52d61c578f37faafd85ac471962308406292ce27`.
+  `DOOM1.WAD`: `1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771`.
+- FreeDOS 1.4 archive SHA-256: `45b1fa7c52dd996c3bfa5e352ffcd410781b952a6ad629f15a4c9ec4bbaefc5a`.
+  `120m/x86BOOT.img`: `03df6088be016e57a6c44275f5bb9ab0244db71de1360957fd76ba83243b6a77`.

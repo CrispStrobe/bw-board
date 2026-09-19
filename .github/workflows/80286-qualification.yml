@@ -73,6 +73,21 @@ jobs:
             | tee "$RECEIPT_DIR/pcjs-protected286-common-isa.json"
           node scripts/compare-pcjs-protected286-external-images.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286-external-images.json"
+          node scripts/compare-pcjs-protected386.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected386.json"
+          if I386_ORACLE_MUTATION=result node scripts/compare-pcjs-protected386.mjs \
+            > "$RECEIPT_DIR/rejected-386-result.json"; then
+            echo "386 oracle failed to reject result mutation" >&2
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT_DIR+'/rejected-386-result.json'));
+          assert.equal(report.status,'fail');
+          assert.equal(report.mutation,'result');
+          assert.deepEqual(report.differences.map(d=>d.field),['result']);
+          NODE
           node --test test/i80286-protected-external-images.test.mjs \
             | tee "$RECEIPT_DIR/protected286-external-image-tests.log"
           for mutation in video taskreturn fixturehash sector taskstate; do
@@ -186,6 +201,111 @@ jobs:
         with:
           name: protected286-isa-pcjs-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ env.RECEIPT_DIR }}/pcjs-protected286-isa.json
+          if-no-files-found: error
+          retention-days: 30
+
+  sampled-386:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out pinned physical 386EX samples
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: SingleStepTests/80386
+          ref: 459d49fbe6280e9ed46fee887b58dacd9cb880ab
+          path: sst386
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /LICENSE
+            /README.md
+            /revocation_list.txt
+            /v1_ex_real_mode/01.MOO.gz
+            /v1_ex_real_mode/6601.MOO.gz
+            /v1_ex_real_mode/6701.MOO.gz
+            /v1_ex_real_mode/676601.MOO.gz
+            /v1_ex_real_mode/30.MOO.gz
+            /v1_ex_real_mode/6730.MOO.gz
+            /v1_ex_real_mode/88.MOO.gz
+            /v1_ex_real_mode/6788.MOO.gz
+            /v1_ex_real_mode/0FB6.MOO.gz
+            /v1_ex_real_mode/660FB6.MOO.gz
+            /v1_ex_real_mode/670FB6.MOO.gz
+            /v1_ex_real_mode/67660FB6.MOO.gz
+            /v1_ex_real_mode/0FBE.MOO.gz
+            /v1_ex_real_mode/660FBE.MOO.gz
+            /v1_ex_real_mode/670FBE.MOO.gz
+            /v1_ex_real_mode/67660FBE.MOO.gz
+            /v1_ex_real_mode/C1.4.MOO.gz
+            /v1_ex_real_mode/C1.5.MOO.gz
+            /v1_ex_real_mode/C1.7.MOO.gz
+            /v1_ex_real_mode/66C1.4.MOO.gz
+            /v1_ex_real_mode/66C1.5.MOO.gz
+            /v1_ex_real_mode/66C1.7.MOO.gz
+            /v1_ex_real_mode/67C1.4.MOO.gz
+            /v1_ex_real_mode/67C1.5.MOO.gz
+            /v1_ex_real_mode/67C1.7.MOO.gz
+            /v1_ex_real_mode/6766C1.4.MOO.gz
+            /v1_ex_real_mode/6766C1.5.MOO.gz
+            /v1_ex_real_mode/6766C1.7.MOO.gz
+      - name: Grade the bounded 386 profiles and reject corrupted evidence
+        env:
+          SST386_ROOT: ${{ github.workspace }}/sst386
+        run: |
+          set -euo pipefail
+          I386_RECEIPTS=$(mktemp -d "$RUNNER_TEMP/i386-samples.XXXXXX")
+          export I386_RECEIPTS
+          echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node --test test/i80386-experimental.test.mjs test/i80386-moo-parser.test.mjs \
+            | tee "$I386_RECEIPTS/tests.tap"
+          for profile in add-sizes byte-movx shifts; do
+            I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
+              > "$I386_RECEIPTS/$profile.json"
+          done
+          for mutation in ram stray-write; do
+            if I386_MOO_MUTATION="$mutation" node scripts/verify-i80386-moo-sample.mjs \
+              > "$I386_RECEIPTS/rejected-$mutation.json"; then
+              echo "386 hardware comparator accepted $mutation mutation" >&2
+              exit 1
+            fi
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const dir=process.env.I386_RECEIPTS;
+          const read=name=>JSON.parse(fs.readFileSync(`${dir}/${name}.json`));
+          for(const [profile,count,excluded] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111]]) {
+            const r=read(profile);
+            assert.equal(r.accounting.admitted,count);
+            assert.equal(r.accounting.exceptionExcluded,excluded);
+            assert.equal(r.accounting.revoked,0);
+            assert.equal(r.accounting.unsupported,0);
+            assert.equal(r.accounting.failures,0);
+          }
+          for(const mutation of ['ram','stray-write']) {
+            const r=read(`rejected-${mutation}`);
+            assert.equal(r.mutation,mutation);
+            assert.equal(r.accounting.unsupported,0);
+            assert.equal(r.failures.length,1);
+            assert.equal(r.failures[0].differences.length,1);
+            const field=r.failures[0].differences[0].field;
+            if(mutation==='stray-write')assert.equal(field,'unexpected-write:f00000');
+            else assert.match(field,/^ram:[0-9a-f]+$/);
+          }
+          assert.match(fs.readFileSync(`${dir}/tests.tap`,'utf8'),/^# skipped 0$/m);
+          fs.writeFileSync(`${dir}/context.json`,JSON.stringify({revision:process.env.GITHUB_SHA,
+            run:process.env.GITHUB_RUN_ID,node:process.version,scope:'bounded real-mode 386EX samples; not full 386DX compatibility'},null,2)+'\n');
+          NODE
+      - name: Upload source-bound 386 sample evidence
+        if: ${{ always() && env.I386_RECEIPTS != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sampled386-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.I386_RECEIPTS }}
           if-no-files-found: error
           retention-days: 30
 

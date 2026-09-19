@@ -13,12 +13,22 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The pending candidate adds genuine 286 reset state, exception escalation,
+The landed `3cd5927ba84977d472b7ed75f2075c478800b526` milestone adds
+genuine 286 reset state, exception escalation,
 #DF task entry, shutdown/NMI recovery and TF delivery. The unmodified IBM AT
 Rev1 firmware reaches warm-reset dispatch and its protected memory scan on
 the opt-in [AT boot profile](I80286-AT-BOOT.md). These are bounded progress
 results: POST completion and a firmware-driven DOS boot are still pending.
-The last completed milestone below remains the current qualified baseline.
+The reset/recovery milestone passed [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35465977649)
+(5,411 passed, 270 optional skips), [80286 qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35465977631)
+(1,477,997 fast and Harris cases each; three revocations), and
+[native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35465977635)
+(228/228). Tag: `milestones/x86-at-reset-recovery-20260919`.
+
+The next candidate introduces an independent native 32-bit
+[386 executor](I80386-EXPERIMENTAL.md), still opt-in and bounded. It is not yet
+a machine backend or an OS-capable 386. The AT worker continues keyboard and
+firmware disk boot; the CPU worker continues instruction and system semantics.
 
 ## Latest: common ISA, gates, tasks and existing binaries
 

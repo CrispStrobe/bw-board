@@ -26,8 +26,16 @@ they cannot validate this stage's protected-mode entry.
 `scripts/verify-i80386-moo-sample.mjs` requires the exact clean physical-capture
 revision `459d49fbe6280e9ed46fee887b58dacd9cb880ab`. It parses MOO 1.1 directly,
 applies published RM32 masks and the pinned revocation list, and samples fixed
-first/middle/last non-revoked cases from ADD files `01`, `6601`, `6701`, and
+first/middle/last non-revoked, non-exception cases from ADD files `01`, `6601`, `6701`, and
 `676601`. The receipt binds every compressed input and executed local source by
 SHA-256. This is register/RAM evidence across the four operand/address-size
-combinations; bus cycles are parsed only by the upstream format and remain
-ungraded here.
+combinations. Cycle chunks are skipped and remain ungraded.
+
+Additional bounded profiles cover byte XOR/MOV and byte MOVZX/MOVSX (36
+samples), and immediate SHL/SHR/SAR across operand/address sizes (36 samples).
+The three profiles exclude 888, 2,600 and 3,111 published exception cases,
+respectively, before deterministic selection. Those cases are neither passes
+nor evidence of exception compatibility. The admitted total is only 84
+samples, not the full 386 corpus. Owned IMUL tests pass, but IMUL hardware
+qualification remains pending. Unsupported instruction/protection paths still
+raise a diagnostic refusal; precise architectural recovery is the next stage.
