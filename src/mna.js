@@ -2880,11 +2880,11 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // an ammeter in either lead gets two different answers, which is the
       // defect class this engine keeps closing — the reader must describe the
       // element the solve stamped.
-      let vov = 0;
+      let outputConductanceActivation = 0;
       if (part.kind === 'nmos') {
         const vgs = vG - vS;
         const [vovS, dVovS] = smoothVov(vgs - vth, mosKsubthres(part));
-        vov = vovS;
+        outputConductanceActivation = dVovS;
         // Same law the stamp uses, at the same operating point. `dVovS` is
         // passed for real rather than as a placeholder 1: only `.id` is read
         // here, but an argument that lies is a claim nobody checks until
@@ -2896,7 +2896,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       } else {
         const vsg = vS - vG;
         const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth), mosKsubthres(part));
-        vov = vovS;
+        outputConductanceActivation = dVovS;
         const vsdE = Math.min(Math.max(vS - vD, 0), Math.max(vovS, 0));
         id = inTriode
           ? mosTriode(k, vovS, vsdE, dVovS, part.params).id   // must match stampPMOS
@@ -2904,8 +2904,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       }
       if (!inTriode) {
         // Same expression as the stamp, at the same operating point.
-        const taper = vov / (vov + MOS_SMOOTH_DELTA);
-        const gds = mosGds(part.params, id, taper);
+        const gds = mosGds(part.params, id, outputConductanceActivation);
         id += gds * (part.kind === 'nmos' ? (vD - vS) : (vS - vD));
       }
       currents.set('drain', part.kind === 'nmos' ? -id : id);
@@ -4441,13 +4440,16 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     if (idxD !== undefined) b[idxD] -= iEq;
     if (idxS !== undefined) b[idxS] += iEq;
 
-    // Stability Rds, TAPERED with conduction. A fixed 1 kΩ made a
+    // Output conductance, activated by the SAME threshold blend derivative
+    // as gm.  This is exactly zero below the blend and exactly one above it;
+    // vov/(vov+5mV) never reached one and therefore suppressed an explicitly
+    // stated LAMBDA at every ordinary operating point.
+    // A fixed 1 kΩ made a
     // sub-threshold drain a 1k/10k divider (0.458 V on the latch bench)
     // and the deep-cutoff branch that used to switch it to 1 nS was a
     // second Newton corner — the branch is gone; this expression IS the
     // cutoff behaviour (gds → the 1 nS leak as vov_s → 0).
-    const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
-    const gds = mosGds(part.params, id0, taper);
+    const gds = mosGds(part.params, id0, dVovS);
     if (idxD !== undefined) A.add(idxD, idxD, gds);
     if (idxS !== undefined) A.add(idxS, idxS, gds);
     if (idxD !== undefined && idxS !== undefined) {
@@ -4522,8 +4524,7 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     if (idxD !== undefined) b[idxD] += iEq;
 
     // Output conductance from the model — see the NMOS note and `mosGds`.
-    const taper = vovS / (vovS + MOS_SMOOTH_DELTA);
-    const gds = mosGds(part.params, id0, taper);
+    const gds = mosGds(part.params, id0, dVovS);
     if (idxD !== undefined) A.add(idxD, idxD, gds);
     if (idxS !== undefined) A.add(idxS, idxS, gds);
     if (idxD !== undefined && idxS !== undefined) {

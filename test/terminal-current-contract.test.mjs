@@ -26,26 +26,29 @@ test('OP/live conversion covers every supported kind, not a four-kind reverse li
   add('Z', 'zener', { model: 'shockley', is: 1e-14, n: 1, rs: 0, vz: 8.2, ibv: 1e-3 }, ['anode', 'cathode']);
   add('Q', 'npn', { model: 'shockley', is: 1e-14, beta: 100, br: 1, n: 1, vaf: 100 },
     ['base', 'collector', 'emitter']);
+  add('M', 'nmos', { model: 'level1', vth: 1, kp: 50e-6, w: 100e-6, l: 1e-6,
+    lambda: 0.01, bulkAtGround: true }, ['drain', 'gate', 'source']);
   add('L', 'inductor', { henrys: 1e-3 }, ['a', 'b']);
   add('C', 'capacitor', { farads: 1e-6 }, ['a', 'b']);
   add('I', 'isource', { amps: 1e-3 }, ['pos', 'neg']);
   add('E', 'vcvs', { gain: 2 }, ['outp', 'outn', 'inp', 'inn']);
   add('G', 'vccs', { gm: 1e-3 }, ['outp', 'outn', 'inp', 'inn']);
-  for (const id of ['RD', 'RZ', 'RBQ', 'RCQ', 'RL', 'RC', 'RI', 'RE', 'RG', 'RV']) {
+  for (const id of ['RD', 'RZ', 'RBQ', 'RCQ', 'RM', 'RL', 'RC', 'RI', 'RE', 'RG', 'RV']) {
     add(id, 'resistor', { ohms: 1000 }, ['a', 'b']);
   }
   const net = (id, refs) => ({ id, terminals: refs.map(ref => {
     const [part, terminal] = ref.split('.'); return { part, terminal };
   }) });
   const nets = [
-    net('in', ['V.pos', 'RD.a', 'RZ.a', 'RBQ.a', 'RCQ.a', 'RL.a', 'RC.a', 'E.inp', 'G.inp']),
+    net('in', ['V.pos', 'RD.a', 'RZ.a', 'RBQ.a', 'RCQ.a', 'RM.a', 'M.gate', 'RL.a', 'RC.a', 'E.inp', 'G.inp']),
     net('diode', ['RD.b', 'D.anode']), net('zener', ['RZ.b', 'Z.anode']),
     net('qbase', ['RBQ.b', 'Q.base']), net('qcollector', ['RCQ.b', 'Q.collector']),
+    net('mosdrain', ['RM.b', 'M.drain']),
     net('coil', ['RL.b', 'L.a']),
     net('cap', ['RC.b', 'C.a']), net('isource', ['I.pos', 'RI.a']),
     net('vcvs', ['E.outp', 'RE.a']), net('vccs', ['G.outp', 'RG.a']),
     net('rail', ['RAIL.vcc', 'RV.a']),
-    net('ground', ['GND.gnd', 'V.neg', 'D.cathode', 'Z.cathode', 'Q.emitter', 'L.b', 'C.b', 'I.neg',
+    net('ground', ['GND.gnd', 'V.neg', 'D.cathode', 'Z.cathode', 'Q.emitter', 'M.source', 'L.b', 'C.b', 'I.neg',
       'RI.b', 'RE.b', 'RG.b', 'RV.b', 'E.outn', 'E.inn', 'G.outn', 'G.inn']),
   ];
   const board = new BoardImpl(5);
