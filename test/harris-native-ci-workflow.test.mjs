@@ -31,6 +31,7 @@ function contract(source) {
     assert.match(source, /node scripts\/verify-harris-native-owned-memory-preview-mutations\.mjs/);
     assert.match(source, /node scripts\/verify-harris-native-memory-gather-fusion-mutations\.mjs/);
     assert.match(source, /grep -c '\^# mutation rejected:'/);
+    assert.match(source, /producer-counter-mutations\.tap"\)" -eq 25/);
     assert.match(source, /bus-output-sparse-mutations\.tap"\)" -eq 9/);
     assert.match(source, /owned-memory-preview-mutations\.tap"\)" -eq 7/);
     assert.match(source, /memory-input-fusion-mutations\.tap"\)" -eq 7/);
@@ -52,6 +53,7 @@ test('contract detects disappearing native inputs, skip acceptance and unpinned 
         workflow.replace('scripts/verify-harris-native-bus-output-sparse-mutations.mjs', 'scripts/missing-bus-output-mutations.mjs'),
         workflow.replace('scripts/verify-harris-native-owned-memory-preview-mutations.mjs', 'scripts/missing-preview-mutations.mjs'),
         workflow.replace('scripts/verify-harris-native-memory-gather-fusion-mutations.mjs', 'scripts/missing-input-fusion-mutations.mjs'),
+        workflow.replace('producer-counter-mutations.tap\")" -eq 25', 'producer-counter-mutations.tap\")" -eq 23'),
         workflow.replace('bus-output-sparse-mutations.tap\")" -eq 9', 'bus-output-sparse-mutations.tap\")" -eq 8'),
         workflow.replace('owned-memory-preview-mutations.tap\")" -eq 7', 'owned-memory-preview-mutations.tap\")" -eq 6'),
         workflow.replace('memory-input-fusion-mutations.tap\")" -eq 7', 'memory-input-fusion-mutations.tap\")" -eq 6'),
