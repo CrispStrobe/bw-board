@@ -6,7 +6,10 @@
   "expectedOutput": "GUEST-TOOLCHAIN-OK",
   "date": "2026-09-19",
   "baseRevision": "4926e93cd0133dd038b929f8506318d0da320b3b",
-  "executionRevision": "aabc7dfafb49ff8d781fd539453307cd48c0b42d",
+  "executionRevision": "27bd4d29f9968729b867741a81e4a9d1df2380f9",
+  "node": "v20.20.2",
+  "elapsedMS": 1102.60851,
+  "timingGraded": false,
   "runner": "scripts/run-dos-toolchain-guest.mjs",
   "cpu": "80286 fast-core real mode",
   "machine": "I8086Machine with DOSBOX8086 BIOS services",
@@ -30,7 +33,7 @@
     "src/i8086-asm.js": "3270c33885fbb6524ceaa727a1600570fe974e0bb4bc3488d1ecda894fdb0841",
     "scripts/build-dos-image.mjs": "2dec7fb129f65b3a657412b6f881962a56386236ffb9eca80da74b94080e037e",
     "scripts/oracle-masm.mjs": "127b56856d41f8cde222dff0c5b5dde024f3a6e13f0fec06f857f6b34c9336d6",
-    "scripts/run-dos-toolchain-guest.mjs": "2bdbb1f320aa65c1dcff6c599fb792a481f92f9a103b70711a8dfb847ef33e16"
+    "scripts/run-dos-toolchain-guest.mjs": "006414b3b3742be436b5954dbfd5b75f0e2126bb78e9592166e854fa750f75d7"
   },
   "inputSha256": {
     "MSDOS.SYS": "1edf5190671ed4edcc9e6cc095e5094749c58f1833a2e26e40ba7d3389e276d1",

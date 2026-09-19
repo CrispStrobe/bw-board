@@ -72,6 +72,9 @@ test('the checked-in receipt is bound to the executed source, output and inputs'
     assert.match(receipt.sourceHashScope,/manually enumerated/);
     assert.equal(receipt.baseRevision,'4926e93cd0133dd038b929f8506318d0da320b3b');
     assert.match(receipt.executionRevision,/^[0-9a-f]{40}$/);
+    assert.match(receipt.node,/^v\d+\./);
+    assert.ok(Number.isFinite(receipt.elapsedMS)&&receipt.elapsedMS>0);
+    assert.equal(receipt.timingGraded,false);
     assert.equal(receipt.sourceSha256,r.sourceSha256);
     assert.equal(receipt.producedComSha256,r.comSha256);
     assert.deepEqual(receipt.sourceHashes,r.sourceHashes);
