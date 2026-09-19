@@ -2408,22 +2408,22 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
     // to the convergence loop; choose its value from the exact boundary.
     for (const part of parts) {
       if (part.kind !== 'nmos' && part.kind !== 'pmos') continue;
-      // The SAME threshold the stamp used, body effect included — a region
-      // decision taken against VTO while the stamp conducts at a shifted
-      // threshold is the vceSat split one level down.
-      const vth = mosVth(
-        { ...part.params, vth: part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0),
-          bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined },
-        mosVsb.get(part.id) ?? 0);
-      const vgs = diodeVoltages.get(part.id) ?? 0; // vGS (nmos) / vSG (pmos)
-      const vov = vgs - Math.abs(vth);
       const netD = findNet(nets, part.id, 'drain');
       const netS = findNet(nets, part.id, 'source');
       const idxD = netD ? nodeIndex.get(netD) : undefined;
       const idxS = netS ? nodeIndex.get(netS) : undefined;
       const vD = idxD !== undefined ? solution[idxD] : 0;
       const vS = idxS !== undefined ? solution[idxS] : 0;
-      const vds = part.kind === 'nmos' ? vD - vS : vS - vD;
+      const rawVds = part.kind === 'nmos' ? vD - vS : vS - vD;
+      const bias = mosChannelBias(part, diodeVoltages.get(part.id) ?? 0, rawVds,
+        mosVsb.get(part.id) ?? 0, mosVdb.get(part.id) ?? 0);
+      // The SAME effective source and threshold the stamp used, body effect
+      // included. Reverse VDS swaps channel roles, not the authored bulk node.
+      const vth = mosVth(
+        { ...part.params, vth: part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0),
+          bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined }, bias.vsb);
+      const vov = bias.vgs - Math.abs(vth);
+      const vds = bias.vds;
       const region = mosRegions.get(part.id);
       let next = region;
       if (vov <= 0) next = 'saturation'; // cutoff path owns it; reset for clean re-entry
@@ -2903,11 +2903,15 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // THE SAME THRESHOLD AGAIN, third reader. `mosVsb` is not in scope here,
       // so it is recomputed from the solved node voltages — which is the
       // converged value the stamp iterated to, not one step behind it.
-      const vBulkRef = part.kind === 'nmos' ? (vS - vB) : (vB - vS);
+      const rawVgs = part.kind === 'nmos' ? vG - vS : vS - vG;
+      const rawVds = part.kind === 'nmos' ? vD - vS : vS - vD;
+      const rawVsb = part.kind === 'nmos' ? vS - vB : vB - vS;
+      const rawVdb = part.kind === 'nmos' ? vD - vB : vB - vD;
+      const bias = mosChannelBias(part, rawVgs, rawVds, rawVsb, rawVdb);
       const vth = mosVth(
         { ...part.params, vth: part.params.vth ?? (part.kind === 'nmos' ? 2.0 : -2.0),
           bulkExplicit: netB !== undefined },
-        vBulkRef);
+        bias.vsb);
       const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
       let id;
       // Same smoothed square law as the stamp — a hard-corner current read
@@ -2927,35 +2931,21 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // an ammeter in either lead gets two different answers, which is the
       // defect class this engine keeps closing — the reader must describe the
       // element the solve stamped.
-      let outputConductanceActivation = 0;
-      if (part.kind === 'nmos') {
-        const vgs = vG - vS;
-        const [vovS, dVovS] = smoothVov(vgs - vth, mosKsubthres(part));
-        outputConductanceActivation = dVovS;
-        // Same law the stamp uses, at the same operating point. `dVovS` is
-        // passed for real rather than as a placeholder 1: only `.id` is read
-        // here, but an argument that lies is a claim nobody checks until
-        // someone reads `.gm` off the same call.
-        const vdsE = Math.min(Math.max(vD - vS, 0), Math.max(vovS, 0));
-        id = inTriode
-          ? mosTriode(k, vovS, vdsE, dVovS, part.params).id   // must match stampNMOS
-          : k * vovS * vovS;
-      } else {
-        const vsg = vS - vG;
-        const [vovS, dVovS] = smoothVov(vsg - Math.abs(vth), mosKsubthres(part));
-        outputConductanceActivation = dVovS;
-        const vsdE = Math.min(Math.max(vS - vD, 0), Math.max(vovS, 0));
-        id = inTriode
-          ? mosTriode(k, vovS, vsdE, dVovS, part.params).id   // must match stampPMOS
-          : k * vovS * vovS;
-      }
+      const [vovS, dVovS] = smoothVov(bias.vgs - Math.abs(vth), mosKsubthres(part));
+      const outputConductanceActivation = dVovS;
+      const vdsE = Math.min(bias.vds, Math.max(vovS, 0));
+      id = inTriode
+        ? mosTriode(k, vovS, vdsE, dVovS, part.params).id
+        : k * vovS * vovS;
       if (!inTriode) {
         // Same expression as the stamp, at the same operating point.
         const gds = mosGds(part.params, id, outputConductanceActivation);
-        id += gds * (part.kind === 'nmos' ? (vD - vS) : (vS - vD));
+        id += gds * bias.vds;
       }
-      currents.set('drain', part.kind === 'nmos' ? -id : id);
-      currents.set('source', part.kind === 'nmos' ? id : -id);
+      let drainCurrent = part.kind === 'nmos' ? -id : id;
+      if (bias.reverse) drainCurrent = -drainCurrent;
+      currents.set('drain', drainCurrent);
+      currents.set('source', -drainCurrent);
       currents.set('gate', 0); // gate draws no DC current
 
       // THE BULK JUNCTIONS ARE PART OF THE BRANCH THE SOLVE STAMPED, so an
@@ -4444,12 +4434,26 @@ function stampMosBulkDiodes(A, b, part, nets, nodeIndex, groundNetId, idxS, idxD
   one(idxD, mosVdb.get(part.id));
 }
 
+/** Select the effective source and drain used by the symmetric MOS channel. */
+function mosChannelBias(part, vgs, vds, vsb = 0, vdb = 0) {
+  // A declined fourth node has no known bulk potential. Preserve the refusal
+  // path rather than pretending we can select a physically valid source.
+  if (part.params?.bulkUnplaced) return { reverse: false, vgs, vds, vsb };
+  const reverse = vds < 0;
+  return {
+    reverse,
+    vgs: reverse ? vgs - vds : vgs,
+    vds: reverse ? -vds : vds,
+    // A source-tied bulk stays on the AUTHORED source when the channel swaps.
+    // Therefore its voltage relative to the effective source is raw Vds.
+    vsb: part.params?.bulkOnSource ? (reverse ? vds : 0) : (reverse ? vdb : vsb),
+  };
+}
+
 function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, region = 'saturation', mosVds, mosVsb, mosVdb) {
   // ONE definition of the threshold, read by the stamp, the region FSM and the
   // extraction alike. Three readers of one number is how the vceSat split
   // happened; this one is a function call in all three places.
-  const vth = mosVth({...part.params, bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined},
-    mosVsb ? (mosVsb.get(part.id) ?? 0) : 0);
   const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
   const netG = findNet(nets, part.id, 'gate');
@@ -4457,12 +4461,20 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   const netS = findNet(nets, part.id, 'source');
 
   const idxG = netG ? nodeIndex.get(netG) : undefined;
-  const idxD = netD ? nodeIndex.get(netD) : undefined;
-  const idxS = netS ? nodeIndex.get(netS) : undefined;
+  const authoredIdxD = netD ? nodeIndex.get(netD) : undefined;
+  const authoredIdxS = netS ? nodeIndex.get(netS) : undefined;
 
-  const vgs = diodeVoltages.get(part.id) ?? 0;
+  const bias = mosChannelBias(part, diodeVoltages.get(part.id) ?? 0,
+    mosVds?.get(part.id) ?? 0, mosVsb?.get(part.id) ?? 0, mosVdb?.get(part.id) ?? 0);
+  const vgs = bias.vgs;
+  const vds = bias.vds;
+  const vth = mosVth({...part.params, bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined},
+    bias.vsb);
+  const idxD = bias.reverse ? authoredIdxS : authoredIdxD;
+  const idxS = bias.reverse ? authoredIdxD : authoredIdxS;
 
-  stampMosBulkDiodes(A, b, part, nets, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds);
+  stampMosBulkDiodes(A, b, part, nets, nodeIndex, groundNetId,
+    authoredIdxS, authoredIdxD, mosVsb, mosVdb, mosVds);
 
   if (region === 'triode') {
     // THE LEVEL-1 LINEAR REGION, WITH ITS SECOND TERM.
@@ -4483,7 +4495,6 @@ function stampNMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
     // saturation value — so the two regions now meet, and the FSM's hysteresis
     // is about which side to linearise on, not about a step in the current.
     const [vovS, dVovS] = smoothVov(vgs - vth, mosKsubthres(part));
-    const vds = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
     // Clamped at the boundary: past Vds = Vov the parabola turns over and
     // would report a FALLING current, which is what saturation replaces.
     const vdsEff = Math.min(Math.max(vds, 0), Math.max(vovS, 0));
@@ -4557,9 +4568,6 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   // ground and the source above it that is negative, i.e. a forward-biased
   // body junction, and `mosVth` clamps it to the no-shift case rather than
   // extrapolating a model that has no business there.
-  const vth = mosVth({ ...part.params, vth: part.params.vth ?? -2.0,
-    bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined },
-    mosVsb ? (mosVsb.get(part.id) ?? 0) : 0);
   const k = /** @type {number} */ (mosK(part.params)); // k, or KP/2*(W/L)
 
   const netG = findNet(nets, part.id, 'gate');
@@ -4567,20 +4575,27 @@ function stampPMOS(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages, regi
   const netS = findNet(nets, part.id, 'source');
 
   const idxG = netG ? nodeIndex.get(netG) : undefined;
-  const idxD = netD ? nodeIndex.get(netD) : undefined;
-  const idxS = netS ? nodeIndex.get(netS) : undefined;
+  const authoredIdxD = netD ? nodeIndex.get(netD) : undefined;
+  const authoredIdxS = netS ? nodeIndex.get(netS) : undefined;
 
   // For PMOS: Vsg > |Vth| to turn on
-  const vsg = diodeVoltages.get(part.id) ?? 0;
+  const bias = mosChannelBias(part, diodeVoltages.get(part.id) ?? 0,
+    mosVds?.get(part.id) ?? 0, mosVsb?.get(part.id) ?? 0, mosVdb?.get(part.id) ?? 0);
+  const vsg = bias.vgs;
+  const vsd = bias.vds;
+  const vth = mosVth({ ...part.params, vth: part.params.vth ?? -2.0,
+    bulkExplicit: findNet(nets, part.id, 'bulk') !== undefined }, bias.vsb);
+  const idxD = bias.reverse ? authoredIdxS : authoredIdxD;
+  const idxS = bias.reverse ? authoredIdxD : authoredIdxS;
 
-  stampMosBulkDiodes(A, b, part, nets, nodeIndex, groundNetId, idxS, idxD, mosVsb, mosVdb, mosVds);
+  stampMosBulkDiodes(A, b, part, nets, nodeIndex, groundNetId,
+    authoredIdxS, authoredIdxD, mosVsb, mosVdb, mosVds);
 
   if (region === 'triode') {
     // The level-1 linear region with its second term — see the NMOS note.
     // The stored variables are Vsg and Vsd, so every sign is already the
     // NMOS one and only the terminal roles swap.
     const [vovSt, dVovSt] = smoothVov(vsg - Math.abs(vth), mosKsubthres(part));
-    const vsd = mosVds ? (mosVds.get(part.id) ?? 0) : 0;
     const vsdEff = Math.min(Math.max(vsd, 0), Math.max(vovSt, 0));
     const tri = mosTriode(k, vovSt, vsdEff, dVovSt, part.params);
     const idTri = tri.id;
