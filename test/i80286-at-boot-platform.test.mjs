@@ -115,11 +115,15 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     controller.advance(1);
     assert.equal(controller.readStatus()&1,0,'disabled interface holds a due keyboard ACK');
     assert.equal(controller.nextWake(),Infinity,'held byte cannot create a zero-cycle wake loop');
-    controller.writeCommand(0xae);
+    controller.advance(9_000_000);
+    const held=controller.getState();
+    restored.setState(held);
+    assert.deepEqual(restored.getState(),held,'overdue disabled responses checkpoint at zero');
+    controller.writeCommand(0x60);controller.writeData(controller.commandByte&~0x10);
     assert.equal(controller.readData(),0xfa);
-    controller.advance(4_140_000);
     assert.equal(controller.readData(),0xaa);
     assert.deepEqual(irq,[false,true,false,true,false,true,false]);
+    assert.throws(()=>new AT8042A20({keyboardAckCycles:20,keyboardBatCycles:20}),/must precede/);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {

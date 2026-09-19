@@ -26,6 +26,8 @@ export class AT8042A20 {
         this.keyboardBatCycles=keyboardBatCycles;
         if((keyboardAckCycles===null)!==(keyboardBatCycles===null))
             throw new Error('AT 8042 keyboard ACK and BAT timings must be configured together');
+        if(keyboardAckCycles!==null&&keyboardAckCycles>=keyboardBatCycles)
+            throw new Error('AT 8042 keyboard ACK deadline must precede BAT deadline');
         this.reset();
     }
     reset() {
@@ -82,7 +84,7 @@ export class AT8042A20 {
                 this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
             }
         }
-        for(const event of this.keyboardSchedule)event.remaining-=cycles;
+        for(const event of this.keyboardSchedule)event.remaining=Math.max(0,event.remaining-cycles);
         this._releaseKeyboardSchedule();
     }
     nextWake() {
@@ -128,7 +130,8 @@ export class AT8042A20 {
     writeData(value) {
         value&=255;
         if(this.pendingCommand===0x60){
-            this.pendingCommand=null;this.commandByte=value;this.systemFlag=!!(value&4);this._publish();return;
+            this.pendingCommand=null;this.commandByte=value;this.systemFlag=!!(value&4);
+            this._releaseKeyboardSchedule();this._publish();return;
         }
         if(this.pendingCommand===null&&value===0xff&&this.keyboardAckCycles!==null) {
             this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa},
