@@ -38,8 +38,8 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implementation frozen; hosted qualification pending) — Astra/Sol
-386 system and stack continuation. Candidate is the commit carrying this row;
+2026-09-19 DONE (qualified; landing record below) — Astra/Sol
+386 system and stack continuation. Candidate is `68b6aa92d76ac9416451d9f0dc48db24c5254035`;
 source `a797266` adds LLDT/LTR/SLDT/STR, LDT lookup, SMSW/LMSW, SGDT/SIDT,
 LEA, segment PUSH/POP, POP r/m and PUSH imm8. Coordinator rejected a broad
 real-stack wrapping change; only selector-specific word transfers remain.
@@ -54,6 +54,12 @@ is acceptance. Source-bound receipt: `docs/receipts/2026-09-19-386-system-stack.
 286 DOS2 persistence retains unchanged dependency hashes. Ring transitions,
 FreeDOS shell acceptance and further platform fixes remain outside this freeze.
 No full 386DX, Windows, Doom, physical bus or timing claim.
+Candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` passed CI
+`35473644024` (5,527 pass, 272 skip, zero fail), CPU `35473644021`
+(full fast/Harris corpora, 362 bounded 386 samples and PCjs), and native
+`35473644044`. The landing preserves upstream `a95a4c6`'s unrelated analog
+lane claim; only that ledger row and qualification documentation differ from
+the qualified candidate. This follows the lean ledger-only integration rule.
 
 2026-09-19 DONE (qualified; landing record below) — Astra/Sol
 386 REP/ISA and RTC continuation. Frozen integration worktree

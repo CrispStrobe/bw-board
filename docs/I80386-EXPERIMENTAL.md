@@ -331,7 +331,11 @@ qualification passed at candidate `3fa9afa`: CI `35472633235`, CPU
 [The system/stack receipt](receipts/2026-09-19-386-system-stack.json) records
 source `a797266`: 362 bounded hardware samples, five PCjs comparisons, ten
 rejecting controls, and 111 focused tests (including the separately rerun
-external parser cases). Hosted qualification is pending for this snapshot.
+external parser cases). Candidate `68b6aa92d76ac9416451d9f0dc48db24c5254035` passed
+[CI](https://github.com/CrispStrobe/bw-board/actions/runs/35473644024)
+(5,527 pass, 272 skip),
+[CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35473644021)
+and [native contracts](https://github.com/CrispStrobe/bw-board/actions/runs/35473644044).
 The exact external test386 reaches POST20 and refuses outer IRET. The genuine
 386 AT BIOS reaches POST2A, then enters its CLI/HLT error path at F000:0C93;
 the diagnostic budget result does not establish successful POST or boot.
