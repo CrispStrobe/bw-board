@@ -20,11 +20,22 @@ const romSha256=sha(rom);
 if(romSha256!==EXPECTED_ROM_SHA256)
     throw new Error(`AT BIOS ROM SHA-256 mismatch: expected ${EXPECTED_ROM_SHA256}, got ${romSha256}`);
 const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(process.env.AT_POST_STEPS);
-if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>30_000_000)
-    throw new Error('AT_POST_STEPS must be an integer from 1 through 30000000');
+if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>60_000_000)
+    throw new Error('AT_POST_STEPS must be an integer from 1 through 60000000');
 const baseRamKiB=process.env.AT_BASE_RAM_KB===undefined?512:Number(process.env.AT_BASE_RAM_KB);
 if(![512,640].includes(baseRamKiB))throw new Error('AT_BASE_RAM_KB must be 512 or 640');
 const machineProfile=baseRamKiB===640?PCAT80286_BOOT_640K:PCAT80286_BOOT;
+const requestedKeys=[...(process.env.AT_KEY_SCRIPT??'')];
+const scanCodes={a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,
+    i:0x17,j:0x24,k:0x25,l:0x26,m:0x32,n:0x31,o:0x18,p:0x19,q:0x10,r:0x13,
+    s:0x1f,t:0x14,u:0x16,v:0x2f,w:0x11,x:0x2d,y:0x15,z:0x2c,' ':0x39,'\r':0x1c,
+    '0':0x0b,'1':0x02,'2':0x03,'3':0x04,'4':0x05,'5':0x06,'6':0x07,'7':0x08,'8':0x09,'9':0x0a,
+    '-':0x0c,'.':0x34};
+if(requestedKeys.some(key=>key!=='>'&&scanCodes[key.toLowerCase()]===undefined))
+    throw new Error('AT_KEY_SCRIPT contains an unsupported key');
+const keyScript=requestedKeys.flatMap(key=>key==='>'
+    ? [{key:'shift-down',scan:0x2a},{key:'>',scan:0x34},{key:'shift-up',scan:0xaa}]
+    : [{key,scan:scanCodes[key.toLowerCase()]}]);
 
 const resetRequests=[];
 const resetApplications=[];
@@ -34,6 +45,7 @@ const controllerPorts=[];
 const controllerWrites=[];
 const diskPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
+const injectedKeys=[];
 let reachedPost43=false;
 let machine;
 machine=new I8086Machine(machineProfile,{onPortAccess:event=>{
@@ -59,8 +71,10 @@ machine=new I8086Machine(machineProfile,{onPortAccess:event=>{
 machine.loadRom(rom,0xf0000);
 machine.loadRom(rom,0xff0000);
 let floppy=null;
+let floppyImage=null;
 if(process.env.AT_FLOPPY_IMAGE) {
     const bytes=fs.readFileSync(process.env.AT_FLOPPY_IMAGE);
+    floppyImage=bytes;
     const geometries={
         368640:{cylinders:40,heads:2,sectors:9,bytesPerSector:512},
         1228800:{cylinders:80,heads:2,sectors:15,bytesPerSector:512},
@@ -92,9 +106,19 @@ const deviceSnapshot=()=>({
 for(;steps<stepLimit;steps++) {
     const requestsBefore=resetRequests.length;
     const before={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
+    if(keyScript.length&&executionBoundaries.bootSector) {
+        const int16Ip=machine._read(0x58)|(machine._read(0x59)<<8);
+        const int16Cs=machine._read(0x5a)|(machine._read(0x5b)<<8);
+        const ringEmpty=(machine._read(0x41a)|(machine._read(0x41b)<<8))===
+            (machine._read(0x41c)|(machine._read(0x41d)<<8));
+        if(before.cs===int16Cs&&before.ip===int16Ip&&ringEmpty) {
+            const event=keyScript.shift();
+            if(machine.keyIn(event.scan))injectedKeys.push({step:steps,key:event.key,scan:event.scan});
+        }
+    }
     machine.step();
     const after={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
-    if(!executionBoundaries.int19&&reachedPost43&&before.cs===0xf000&&before.ip===0x16ad)
+    if(!executionBoundaries.int19&&reachedPost43&&before.cs===0xf000&&before.ip===0x16ab)
         executionBoundaries.int19={step:steps,before,after,devices:deviceSnapshot()};
     const atBootSector=(after.cs===0&&after.ip===0x7c00)||(after.cs===0x07c0&&after.ip===0);
     if(!executionBoundaries.bootSector&&atBootSector) {
@@ -129,13 +153,19 @@ const warmReset=gradedApplications.find(event=>event.cs===0xf000&&event.ip===0xf
 const passed=firstFetchTrace[1]===0xfffff0&&
     !!post30&&!!warmReset&&warmReset.step<post30.step&&
     !machine.cpu.halted&&!machine.cpu.shutdown;
+if(process.env.AT_FLOPPY_OUTPUT) {
+    if(!floppyImage)throw new Error('AT_FLOPPY_OUTPUT requires AT_FLOPPY_IMAGE');
+    fs.writeFileSync(process.env.AT_FLOPPY_OUTPUT,floppyImage);
+    floppy.output={path:process.env.AT_FLOPPY_OUTPUT,sha256:sha(floppyImage)};
+}
 const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
     scope:'bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30',
     diagnosticOnly:true,fullBootAccepted:false,mutation,stopReason,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,diskPorts,
+    executionBoundaries,diskPorts,keyboardScript:{requested:requestedKeys.join(''),
+        injected:injectedKeys,remaining:keyScript},
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
         shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]},
