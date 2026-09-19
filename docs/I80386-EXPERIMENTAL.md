@@ -42,10 +42,10 @@ Descriptor and exception checks cover the owned protected-mode programs below;
 they are not a complete 80386 protection model. Cycle counts are placeholders
 and make no 386DX or 386EX timing claim.
 
-Ordinary MOV/POP segment loads still report null, table-limit, and not-present
-descriptor cases as implementation refusals. This stage does not claim their
-architectural fault delivery; gate target and frame failures within the
-admitted same-ring profile do use architectural exceptions.
+MOV/POP data-segment loads check descriptor type, privilege and presence;
+null data selectors load an unusable cache, while null SS raises #GP. Invalid
+table bounds and descriptor admission raise architectural exceptions.
+Expand-down descriptors remain an explicit implementation refusal.
 
 The paging profile implements original-80386 two-level 4 KiB translation
 through CR3. It combines PDE/PTE present, U/S, and R/W permissions, applies
