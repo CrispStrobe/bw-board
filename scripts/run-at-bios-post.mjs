@@ -12,6 +12,33 @@ const DEFAULT_STEPS=2_000_000;
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const sourceHash=file=>sha(fs.readFileSync(path.join(root,file)));
+const readFat12RootFile=(image,requested)=>{
+    const u16=offset=>image[offset]|(image[offset+1]<<8);
+    const bytesPerSector=u16(11),sectorsPerCluster=image[13],reserved=u16(14);
+    const fats=image[16],rootEntries=u16(17),sectorsPerFat=u16(22);
+    if(bytesPerSector!==512||!sectorsPerCluster||!reserved||!fats||!rootEntries||!sectorsPerFat)
+        throw new Error('AT acceptance requires a valid FAT12 BIOS parameter block');
+    const [base='',extension='']=requested.toUpperCase().split('.');
+    if(!/^[A-Z0-9_-]{1,8}$/.test(base)||!/^([A-Z0-9_-]{0,3})$/.test(extension))
+        throw new Error('AT_EXPECT_FILE must be an 8.3 root filename');
+    const name=(base.padEnd(8)+extension.padEnd(3));
+    const rootOffset=(reserved+fats*sectorsPerFat)*bytesPerSector;
+    const rootSectors=Math.ceil(rootEntries*32/bytesPerSector);
+    const dataOffset=(reserved+fats*sectorsPerFat+rootSectors)*bytesPerSector;
+    for(let index=0;index<rootEntries;index++) {
+        const entry=rootOffset+index*32;
+        if(image[entry]===0)break;
+        if(image[entry]===0xe5||String.fromCharCode(...image.subarray(entry,entry+11))!==name)continue;
+        const cluster=u16(entry+26),size=image[entry+28]|(image[entry+29]<<8)|
+            (image[entry+30]<<16)|(image[entry+31]<<24);
+        if(cluster<2||size>sectorsPerCluster*bytesPerSector)
+            throw new Error('AT acceptance currently requires a single-cluster file');
+        const start=dataOffset+(cluster-2)*sectorsPerCluster*bytesPerSector;
+        return {name,cluster,size,bytes:Array.from(image.subarray(start,start+size)),
+            text:Buffer.from(image.subarray(start,start+size)).toString('ascii')};
+    }
+    return null;
+};
 const romPath=process.env.AT_BIOS_ROM;
 if(!romPath)throw new Error('AT_BIOS_ROM must name the external 64KiB IBM 5170 Rev1 ROM');
 const rom=fs.readFileSync(romPath);
@@ -25,6 +52,10 @@ if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>60_000_000)
 const baseRamKiB=process.env.AT_BASE_RAM_KB===undefined?512:Number(process.env.AT_BASE_RAM_KB);
 if(![512,640].includes(baseRamKiB))throw new Error('AT_BASE_RAM_KB must be 512 or 640');
 const machineProfile=baseRamKiB===640?PCAT80286_BOOT_640K:PCAT80286_BOOT;
+const expectedFile=process.env.AT_EXPECT_FILE??null;
+const expectedText=process.env.AT_EXPECT_TEXT??null;
+if((expectedFile===null)!==(expectedText===null))
+    throw new Error('AT_EXPECT_FILE and AT_EXPECT_TEXT must be supplied together');
 const requestedKeys=[...(process.env.AT_KEY_SCRIPT??'')];
 const scanCodes={a:0x1e,b:0x30,c:0x2e,d:0x20,e:0x12,f:0x21,g:0x22,h:0x23,
     i:0x17,j:0x24,k:0x25,l:0x26,m:0x32,n:0x31,o:0x18,p:0x19,q:0x10,r:0x13,
@@ -82,7 +113,7 @@ if(process.env.AT_FLOPPY_IMAGE) {
     const geometry=geometries[bytes.length];
     if(!geometry)throw new Error(`AT_FLOPPY_IMAGE must be an untouched 360KiB or 1.2MiB image, got ${bytes.length} bytes`);
     machine.chips.fdc1.insert(0,bytes,geometry);
-    floppy={bytes:bytes.length,sha256:sha(bytes),geometry};
+    floppy={bytes:bytes.length,sha256:sha(bytes),bootSectorSha256:sha(bytes.subarray(0,512)),geometry};
 }
 machine.reset();
 const reset={cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,
@@ -98,6 +129,8 @@ machine.cpu.busTrace=null;
 steps=1;
 const progressSamples=[];
 let stopReason=null;
+const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
+    String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,''));
 const deviceSnapshot=()=>({
     masterPic:machine.chips.pic1.getState(),slavePic:machine.chips.pic2.getState(),
     primaryDma:machine.chips.dma1.getState(),secondaryDma:machine.chips.dma2.getState(),
@@ -112,8 +145,11 @@ for(;steps<stepLimit;steps++) {
         const ringEmpty=(machine._read(0x41a)|(machine._read(0x41b)<<8))===
             (machine._read(0x41c)|(machine._read(0x41d)<<8));
         if(before.cs===int16Cs&&before.ip===int16Ip&&ringEmpty) {
-            const event=keyScript.shift();
-            if(machine.keyIn(event.scan))injectedKeys.push({step:steps,key:event.key,scan:event.scan});
+            const event=keyScript[0];
+            if(machine.keyIn(event.scan)) {
+                keyScript.shift();
+                injectedKeys.push({step:steps,key:event.key,scan:event.scan});
+            }
         }
     }
     machine.step();
@@ -134,13 +170,21 @@ for(;steps<stepLimit;steps++) {
         ax:machine.cpu.ax,bp:machine.cpu.bp,cx:machine.cpu.cx,es:machine.cpu.es,di:machine.cpu.di,
         esBase:machine.cpu.segmentCaches?.[0]?.base??null,
         dsBase:machine.cpu.segmentCaches?.[3]?.base??null});
+    if(expectedFile&&executionBoundaries.bootSector&&keyScript.length===0&&(steps&1023)===0) {
+        const observedFile=readFat12RootFile(floppyImage,expectedFile);
+        const observedScreen=renderScreen().join('\n');
+        if(observedFile?.text===expectedText&&observedScreen.includes(expectedText.trim())&&/\nA>\s*$/.test(observedScreen)) {
+            stopReason='acceptance-observed';
+            break;
+        }
+    }
     if(machine.cpu.shutdown||machine.cpu.halted) {
         stopReason=machine.cpu.shutdown?'cpu-shutdown':'cpu-halt';
         break;
     }
 }
 const mutation=process.env.AT_POST_MUTATION??null;
-if(mutation!==null&&!['dma-checkpoint','reset-preservation'].includes(mutation))
+if(mutation!==null&&!['dma-checkpoint','reset-preservation','guest-file','boot-sector','keyboard'].includes(mutation))
     throw new Error(`unknown AT_POST_MUTATION ${mutation}`);
 const gradedCheckpoints=mutation==='dma-checkpoint'
     ? checkpoints.map(event=>event.ip===0x0d9c?{...event,ip:0x0344}:event)
@@ -153,24 +197,33 @@ const warmReset=gradedApplications.find(event=>event.cs===0xf000&&event.ip===0xf
 const passed=firstFetchTrace[1]===0xfffff0&&
     !!post30&&!!warmReset&&warmReset.step<post30.step&&
     !machine.cpu.halted&&!machine.cpu.shutdown;
+const screenText=renderScreen();
+const guestFile=expectedFile&&floppyImage?readFat12RootFile(floppyImage,expectedFile):null;
+const gradedGuestText=mutation==='guest-file'?`${guestFile?.text??''}!`:guestFile?.text;
+const gradedBootHash=mutation==='boot-sector'?'0'.repeat(64):executionBoundaries.bootSector?.sha256;
+const gradedKeyboardCount=mutation==='keyboard'?0:injectedKeys.length;
+const fullBootAccepted=!!expectedFile&&!!executionBoundaries.int19&&!!executionBoundaries.bootSector&&
+    !executionBoundaries.unexpectedInterrupt&&keyScript.length===0&&gradedKeyboardCount>0&&
+    gradedBootHash===floppy?.bootSectorSha256&&gradedGuestText===expectedText&&
+    screenText.join('\n').includes(expectedText.trim());
 if(process.env.AT_FLOPPY_OUTPUT) {
     if(!floppyImage)throw new Error('AT_FLOPPY_OUTPUT requires AT_FLOPPY_IMAGE');
     fs.writeFileSync(process.env.AT_FLOPPY_OUTPUT,floppyImage);
     floppy.output={path:process.env.AT_FLOPPY_OUTPUT,sha256:sha(floppyImage)};
 }
 const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
-    scope:'bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30',
-    diagnosticOnly:true,fullBootAccepted:false,mutation,stopReason,
+    scope:fullBootAccepted?'genuine-reset IBM 5170 Rev1 BIOS, FDC/DMA DOS boot and keyboard shell command':
+        'bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30',
+    diagnosticOnly:!fullBootAccepted,fullBootAccepted,mutation,stopReason,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
     executionBoundaries,diskPorts,keyboardScript:{requested:requestedKeys.join(''),
         injected:injectedKeys,remaining:keyScript},
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
-    final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
+    guestFile,final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
         shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]},
-    screenText:Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
-        String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,'')),
+    screenText,
     devices:deviceSnapshot(),
     progress:{ax:machine.cpu.ax,bx:machine.cpu.bx,cx:machine.cpu.cx,dx:machine.cpu.dx,
         si:machine.cpu.si,di:machine.cpu.di,bp:machine.cpu.bp,sp:machine.cpu.sp,
@@ -186,4 +239,4 @@ const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
         'src/upd765.js','src/machine-checkpoint.js',
         'scripts/run-at-bios-post.mjs'].map(file=>[file,sourceHash(file)]))};
 process.stdout.write(`${JSON.stringify(report,null,2)}\n`);
-if(!passed)process.exitCode=1;
+if(!passed||(expectedFile&&!fullBootAccepted))process.exitCode=1;
