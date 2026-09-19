@@ -28,6 +28,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  protected-pcjs-oracle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Check out the pinned PCjs protected-mode oracle
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: jeffpar/pcjs
+          ref: c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70
+          path: pcjs
+          sparse-checkout: |
+            package.json
+            machines/modules/v2
+            machines/pcx86/modules/v2
+          sparse-checkout-cone-mode: false
+      - name: Compare the bounded protected-mode bootstrap with PCjs
+        env:
+          PCJS_ROOT: ${{ github.workspace }}/pcjs
+        run: |
+          set -euo pipefail
+          RECEIPT_DIR=$(mktemp -d "$RUNNER_TEMP/protected-286-pcjs.XXXXXX")
+          export RECEIPT_DIR
+          echo "RECEIPT_DIR=$RECEIPT_DIR" >> "$GITHUB_ENV"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git -C "$PCJS_ROOT" rev-parse HEAD)" = c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70
+          test -z "$(git -C "$PCJS_ROOT" status --porcelain)"
+          node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,pcjsRevision:"c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,scope:"bounded protected-286 PCjs semantic oracle"},null,2)+"\n",{flag:"wx"});'
+          node scripts/compare-pcjs-protected286.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286.json"
+      - name: Upload the fresh protected-mode PCjs receipt
+        if: ${{ always() && env.RECEIPT_DIR != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: protected286-pcjs-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ env.RECEIPT_DIR }}
+          if-no-files-found: error
+          retention-days: 30
+
   dos-guest:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
