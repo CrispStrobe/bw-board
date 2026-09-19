@@ -31,8 +31,9 @@ suppress debug delivery at the segment-load boundary. Accepted NMI is blocked
 until IRET. Gate/frame checks complete before frame writes, and host bus
 callback errors remain host errors rather than guest exceptions.
 
-This stage deliberately refuses VM86, task switching, expand-down privilege
-stacks, and unimplemented opcodes. LDT lookup, LLDT/LTR, protected call gates,
+The current profile implements bounded VM86 entry, interrupts and return as
+detailed below. It still refuses task switching, expand-down privilege stacks,
+and unimplemented opcodes. LDT lookup, LLDT/LTR, protected call gates,
 conforming code, and privilege-changing interrupt/return paths are implemented
 within the bounded contracts below.
 Only architecturally invalid encodings implemented by this profile raise #UD;
@@ -74,7 +75,7 @@ operand read, including zero-count shifts. The pinned PCjs group decoder also
 executes its memory writeback path when the shift helper returns the unchanged
 operand for count zero.
 
-PSE, CR0.WP behavior from later processors, VM86, task switching, and
+PSE, CR0.WP behavior from later processors, task switching, and
 TLB timing are outside this stage. Reloading CR3 takes effect immediately
 because this functional executor does not cache translations.
 

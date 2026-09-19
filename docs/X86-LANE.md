@@ -13,27 +13,34 @@ observable milestones and distinguishes the first Windows target from broader
 compatibility. Two Sol workers now own AT platform integration and the new
 386 core; Astra audits, integrates and maintains source-bound evidence.
 
-The latest landed milestone is `14d59084f14fdde5dba158e5ac2a3b25884e56e0`,
-tag `milestones/x86-386-protection-20260919`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35475646953)
-passed 5,554 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35475646987)
-and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35475647084)
+The latest landed milestone is `d128b384a9f9df986ae38db72bc7dae33a6b092e`,
+tag `milestones/x86-freedos-386-platform-20260919`. Its [CI](https://github.com/CrispStrobe/bw-board/actions/runs/35476376757)
+passed 5,559 tests with 272 skips and zero failures; [CPU qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35476376774)
+and [native qualification](https://github.com/CrispStrobe/bw-board/actions/runs/35476376827)
 also passed. The exact qualified candidate was fast-forwarded to master.
 
 The functional 286 AT profile executes the external IBM Rev1 BIOS, boots
 DOS 2.00/Command 2.02, writes a file through the guest shell and reads it in a
-fresh boot. FreeDOS 1.4 now also completes the guest write and fresh-remount
-read in source-bound worker receipts; that harness/evidence integration is
-pending its next qualification. BIOS and media bytes remain external. See
-[AT boot evidence](I80286-AT-BOOT.md).
+fresh boot. Unchanged official FreeDOS 1.4 also completes guest write and
+fresh-remount read acceptance. BIOS and media bytes remain external. See
+[AT boot evidence](I80286-AT-BOOT.md) and the
+[FreeDOS/platform receipt](receipts/2026-09-19-at-freedos-386-platform.json).
 
 The independent [386 executor](I80386-EXPERIMENTAL.md) remains opt-in and
-incomplete. The latest landed stage adds privilege-changing interrupts and
-returns, protected far calls and call gates, conforming code, and TSS I/O
-permissions. The unchanged external CPU diagnostic reaches VM86 IRET after
-805,601 steps. The [protection receipt](receipts/2026-09-19-386-protection.json)
-records exact source hashes and known reference-emulator differences.
-VM86, functional device pacing and larger-memory work continue separately.
+incomplete. Landed stages cover protected far control, privilege transitions,
+TSS I/O permissions and functional AT device pacing. The current continuation
+adds VM86 entry/interrupt/return, BIOS selector checks, common compiler ISA,
+and experimental ATA disk access. Real 386 DOS and BIOS disk acceptance are
+being measured separately. The unchanged test386 capture now reaches a named
+paging accessed-bit disagreement; it has not passed the complete ROM.
 Windows and Doom remain unexecuted acceptance targets.
+
+An isolated snapshot-copy comparison reduced median host time for the same
+million-step BIOS workload by 5.19 times. All six runs matched the recorded
+architectural state, POST trace and interrupts. This is a single-host workload
+result, not silicon timing or full-boot acceptance. The
+[benchmark receipt](receipts/2026-09-19-386-snapshot-performance.json) records
+exact source hashes, reconstruction, trial timings and report hashes.
 
 ## Earlier milestone: common ISA, gates, tasks and existing binaries
 

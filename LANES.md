@@ -48,9 +48,9 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implemented; exact-head qualification pending) — Astra/Sol
-FreeDOS persistence and bounded 386 AT platform. Candidate is the commit
-containing this row; platform diagnostic source is `46f1d04`. Unchanged official
+2026-09-19 DONE (qualified and landed) — Astra/Sol
+FreeDOS persistence and bounded 386 AT platform. Candidate and landing are
+`d128b384a9f9df986ae38db72bc7dae33a6b092e`; platform diagnostic source is `46f1d04`. Unchanged official
 FreeDOS 1.4 boots through IBM AT BIOS, declines installation, writes FDBOOT.TXT,
 and reads its exact bytes after a fresh machine remount. The two actual source
 revisions and media hashes are retained in the tracked evidence fixture.
@@ -62,6 +62,10 @@ addresses, not full 386 POST or DOS boot. Receipt:
 `docs/receipts/2026-09-19-at-freedos-386-platform.json`. No VM86, tasking,
 Windows, Doom or silicon timing claim. Snapshot copying is a measured future
 performance target, not a speedup included in this stage.
+Exact candidate CI `35476376757` passed (5,559 pass, 272 skip, zero fail),
+CPU `35476376774` and native `35476376827` passed. Guarded normal push
+advanced master from `14d5908` to this exact candidate. Tag:
+`milestones/x86-freedos-386-platform-20260919`.
 
 2026-09-19 DONE (qualified and landed) — Astra/Sol
 386 ring, far-control and I/O continuation. Candidate and landing are
