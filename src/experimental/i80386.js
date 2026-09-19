@@ -2244,8 +2244,18 @@ export class ExperimentalI80386 {
       const value = signed(this._reg(ea.reg, width));
       if (value < lower || value > upper)
         throw new I80386Fault(5, null, "BOUND range exceeded");
-    }
-    else if (op >= 0x90 && op <= 0x97) {
+    } else if (op === 0x69 || op === 0x6b) {
+      const ea = this._decodeEA(address32, override);
+      const source = BigInt.asIntN(width, BigInt(this._operandRead(ea, width)));
+      const rawImmediate = op === 0x69
+        ? this._fetchN(width >>> 3)
+        : (this._fetch8() << 24) >> 24;
+      const immediate = BigInt.asIntN(width, BigInt(rawImmediate));
+      const product = source * immediate;
+      this._setReg(ea.reg, width, Number(BigInt.asUintN(width, product)));
+      this.eflags &= ~(CF | OF);
+      if (product !== BigInt.asIntN(width, product)) this.eflags |= CF | OF;
+    } else if (op >= 0x90 && op <= 0x97) {
       const register = op - 0x90;
       const accumulator = this._reg(0, width);
       this._setReg(0, width, this._reg(register, width));
