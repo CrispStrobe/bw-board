@@ -157,7 +157,7 @@ for(;steps<stepLimit;steps++) {
             requestedKeys.push('n','\r');
             installerDeclined=true;
         } else if(installerDeclined&&!commandQueued&&keyScript.length===0&&
-            /^A:\\?>\s*$/.test([...ui].reverse().find(line=>line.trim()!=='')??'')) {
+            ui.some(line=>/^A:\\?>/.test(line))) {
             keyScript.push(...encodeKeys(commandKeys));
             requestedKeys.push(...commandKeys);
             commandQueued=true;
