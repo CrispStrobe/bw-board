@@ -233,6 +233,13 @@ both stacks. Complete pointer, old/new stack, descriptor, and target-limit
 checks precede visible control-state changes. Direct task descriptors and
 task gates remain explicit refusals.
 
+When protected CPL exceeds IOPL, scalar IN/OUT consult the current 386 TSS
+I/O permission bitmap for every byte-wide port covered by the transfer. The
+bitmap offset and permission bytes use supervisor paging, missing or set bits
+raise #GP(0), and a transfer crossing port FFFF consults the trailing deny
+byte rather than wrapping its permission check. String I/O and task switching
+remain outside this profile.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

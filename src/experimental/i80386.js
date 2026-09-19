@@ -819,12 +819,27 @@ export class ExperimentalI80386 {
     ][code];
   }
 
-  _checkIo() {
+  _checkIo(port, width) {
     if (!this.protectedMode) return;
-    if ((this.cs & 3) > ((this.eflags >>> 12) & 3))
-      throw new UnsupportedI80386(
-        "protected I/O bitmap admission is outside the bounded profile",
-      );
+    if ((this.cs & 3) <= ((this.eflags >>> 12) & 3)) return;
+    if (!this.tr.present || (this.tr.type !== 9 && this.tr.type !== 11))
+      throw new I80386Fault(13, 0, "I/O requires a current 386 TSS");
+    if (this.tr.limit < 0x67)
+      throw new I80386Fault(13, 0, "TSS lacks I/O bitmap offset");
+    const bitmap = this._readLinear((this.tr.base + 0x66) >>> 0, 2, {
+      supervisor: true,
+    });
+    for (let byte = 0; byte < (width >>> 3); byte++) {
+      const numberedPort = (port & 0xffff) + byte;
+      const offset = bitmap + (numberedPort >>> 3);
+      if (offset > this.tr.limit)
+        throw new I80386Fault(13, 0, "I/O bitmap ends before port permission");
+      const permissions = this._readLinear((this.tr.base + offset) >>> 0, 1, {
+        supervisor: true,
+      });
+      if (permissions & (1 << (numberedPort & 7)))
+        throw new I80386Fault(13, 0, "I/O bitmap denies port");
+    }
   }
 
   _popFlags(width) {
@@ -2284,16 +2299,16 @@ export class ExperimentalI80386 {
     else if (op === 0x9c) this._push((this.eflags & 0x7fd5) | 2, width);
     else if (op === 0x9d) this._popFlags(width);
     else if ([0xe4, 0xe5, 0xec, 0xed].includes(op)) {
-      this._checkIo();
       const port = op < 0xec ? this._fetch8() : this.dx,
         ioWidth = op === 0xe4 || op === 0xec ? 8 : width;
+      this._checkIo(port, ioWidth);
       const value = this.inPort(port, ioWidth) >>> 0;
       if (ioWidth === 8) this._setReg8(0, value);
       else this._setReg(0, ioWidth, value);
     } else if ([0xe6, 0xe7, 0xee, 0xef].includes(op)) {
-      this._checkIo();
       const port = op < 0xee ? this._fetch8() : this.dx,
         ioWidth = op === 0xe6 || op === 0xee ? 8 : width;
+      this._checkIo(port, ioWidth);
       this.outPort(
         port,
         ioWidth === 8 ? this._reg8(0) : this._reg(0, ioWidth),
