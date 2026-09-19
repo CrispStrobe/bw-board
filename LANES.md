@@ -20,9 +20,9 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 CLAIM — bwcx: exact explicit-NPN Ebers–Moll small-signal AC,
+2026-09-19 DONE — bwcx: exact explicit-NPN Ebers–Moll small-signal AC,
 isolated worktree `/mnt/volume1/code/wt/bwb-npn-ac-level1`, branch
-`lane/npn-ac-ebers-moll`, exact base `08c20f3a26c20755ae135cd6d8cf0939ee3b4c7a`.
+`lane/npn-ac-ebers-moll`, exact base `aec83d458ed5f638728148f9b389178e85716745`.
 Owns the exact-NPN branch in `src/ac.js`, the minimum operating-point data
 handoff in `src/board.js`, reuse/export of the existing Ebers–Moll parameter
 and Jacobian authority in `src/mna.js`, one focused AC test, and this row.
@@ -36,6 +36,16 @@ converged Ebers–Moll law, and preserve generic NPN/PNP byte-for-behavior. Prov
 the exact Jacobian/RB path, unchanged public DC state, and isolated old-model,
 RB-bypass and Early-effect mutations. No capacitance invention, CUI/importer,
 PMOS/MOS, generic transistor, tolerance, grid, workflow, or unrelated MNA work.
+Implemented at `19579ac`: AC reuses the exact DC Ebers–Moll parameter/Jacobian
+authority, reconstructs the converged intrinsic-base bias from the public
+positive-into-terminal current convention, and allocates a hidden AC base only
+for positive RB. The self-authored ngspice witness agrees within 20 nV; the
+focused AC/source/DC surface passes 32/32, and isolated old-model, RB-bypass and
+no-Early-effect mutations all fail the named witness. The exact 160-row replay
+passes native, oracle and comparison for every row and 130,240/130,240
+observations at unchanged tolerances (baseline: 40,490 failures), run
+`f2a043e4...`, raw CIFS SHA-256 `766c35c0...`. Generic NPN/PNP compatibility
+and the public DC operating point remain unchanged.
 
 2026-09-19 DONE — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
 replayed worktree `/mnt/volume1/code/wt/bwb-nmos-ac-level1-v2`, branch

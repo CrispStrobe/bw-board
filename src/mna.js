@@ -782,7 +782,7 @@ export function junctionModelOf(part, headroomV) {
  * @returns {{is: number, nVt: number, bf: number, br: number, vaf: number, rb: number} | null}
  *   null when this part is not on the exponential path.
  */
-function ebersMollParams(part) {
+export function ebersMollParams(part) {
   const model = part?._junctionModel ?? junctionModelOf(part, undefined);
   if (model !== 'shockley') return null;
   const cls = classDefaults(part.kind);
