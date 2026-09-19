@@ -70,7 +70,11 @@ function install(write) {
 function result(cpu, memory) {
   const local = !!cpu.segmentCaches;
   return {
-    ax: cpu.eax & 0xffff, bx: cpu.ebx >>> 0, cx: cpu.ecx & 0xffff, edi: cpu.edi >>> 0, ds: cpu.ds & 0xffff,
+    ax: cpu.eax & 0xffff,
+    bx: cpu.ebx >>> 0,
+    larDefined: (cpu.ebx & 0xfff0ffff) >>> 0,
+    larUndefinedNibble: (cpu.ebx >>> 16) & 15,
+    cx: cpu.ecx & 0xffff, edi: cpu.edi >>> 0, ds: cpu.ds & 0xffff,
     dsBase: cpu.segmentCaches?.[3]?.base ?? cpu.segDS.base,
     busyAccess: memory(0x21d), cs: local ? cpu.cs : cpu.getCS(),
     eip: local ? cpu.eip : cpu.getIP(), halted: local ? cpu.halted : !!(cpu.intFlags & X86.INTFLAG.HALT),
@@ -101,7 +105,7 @@ function runPCjs() {
 const reference = runPCjs();
 const actual = runLocal();
 if (mutation === "busy") actual.busyAccess ^= 2;
-const expected = { ax:0x20, bx:0x00801200, cx:24, edi:0x12345fff, ds:12, dsBase:0x500, busyAccess:0x8b, cs:8, eip:0x23, halted:true, ldtr:[16,0x300,0x0f], tr:[24,0x400,0x66] };
+const expected = { ax:0x20, larDefined:0x00801200, cx:24, edi:0x12345fff, ds:12, dsBase:0x500, busyAccess:0x8b, cs:8, eip:0x23, halted:true, ldtr:[16,0x300,0x0f], tr:[24,0x400,0x66] };
 const differences = [];
 for (const field of Object.keys(expected)) {
   if (JSON.stringify(reference[field]) !== JSON.stringify(expected[field])) differences.push({field:`reference.${field}`,expected:expected[field],actual:reference[field]});
@@ -113,5 +117,5 @@ if (
   execFileSync("git", ["rev-parse", "HEAD"], { cwd:repositoryRoot, encoding:"utf8" }).trim() !== executionRevision ||
   sources.some((path) => hash(readFileSync(new URL(path, import.meta.url))) !== sourceHashes[path])
 ) throw new Error("local execution sources changed during comparison");
-console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 32-bit LAR/LSL of a P=0 granular data descriptor after exact selector setup and HLT completion; no task switch or privilege transition", sourceHashes, mutation, expected, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
+console.log(JSON.stringify({ oracle:"PCjs", revision:PIN, executionRevision, scope:"owned ring-0 32-bit LAR/LSL of a P=0 granular data descriptor after exact selector setup and HLT completion; LAR limit-high nibble is architecturally undefined and recorded separately; no task switch or privilege transition", sourceHashes, mutation, expected, status:differences.length?"fail":"pass", reference, actual, differences }, null, 2));
 process.exitCode = differences.length ? 1 : 0;
