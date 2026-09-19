@@ -1,0 +1,253 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "executionRevision": "5128fa03d29dc8eec72a0c8e854a4911258daf9d",
+  "node": "v22.23.2",
+  "scope": "ring-0 16-bit 80286 interrupt/trap gates, same-ring IRET, delivered #GP frame; architectural state only",
+  "knownOracleLimitations": {
+    "provenance": "historical audit measurements at the same pinned PCjs revision; not rerun by this receipt",
+    "targetSelectorRpl": {
+      "graded": false,
+      "pcjsObserved": "selector 000b is rejected during gate delivery",
+      "manualExpected": "target selector RPL is ignored and visible CS is normalized to 0008",
+      "localObserved": {
+        "entryCS": 8,
+        "returnedCS": 8
+      }
+    },
+    "stackFrameBoundary": {
+      "graded": false,
+      "pcjsObserved": {
+        "sp0000": "entry at fffa",
+        "sp0002": "wrapped entry at fffc",
+        "sp0004": "wrapped entry at fffe"
+      },
+      "manualExpected": {
+        "sp0000": "entry at fffa",
+        "sp0002": "#SS before writes",
+        "sp0004": "#SS before writes"
+      }
+    }
+  },
+  "sourceHashes": {
+    "./compare-pcjs-protected286-idt.mjs": "5a8db5b399dfc2c99f5336ceed959033346b8676c5c18b1253cb6e1486bd3b82",
+    "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
+    "../src/experimental/i80286-protected.js": "364f342fa52024656b84d9a57b0e023f30811abe3f2ffd374e5ccb2ee56fa0a3",
+    "pcjs:x86help.js": "b69065dfd377e3037a54eeec0e42aedd8d77779e7c9511659c44c5d8d0556529",
+    "pcjs:segx86.js": "664eeaab6867e4e65d99f228cc38c03d68e6ccc7236802c018c6df00591b738e",
+    "pcjs:x86ops.js": "400acb7ed6a937c043eb2edee0fdf6c5b5a07016482fc50064b7e5d99d106b53"
+  },
+  "mutation": null,
+  "status": "pass",
+  "cases": {
+    "interruptGate": {
+      "reference": {
+        "entry": {
+          "cs": 8,
+          "ip": 256,
+          "ss": 16,
+          "sp": 250,
+          "flags": 2,
+          "frame": [
+            12,
+            8,
+            514
+          ]
+        },
+        "returned": {
+          "cs": 8,
+          "ip": 12,
+          "ss": 16,
+          "sp": 256,
+          "flags": 514,
+          "frame": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "actual": {
+        "entry": {
+          "cs": 8,
+          "ip": 256,
+          "ss": 16,
+          "sp": 250,
+          "flags": 2,
+          "frame": [
+            12,
+            8,
+            514
+          ]
+        },
+        "returned": {
+          "cs": 8,
+          "ip": 12,
+          "ss": 16,
+          "sp": 256,
+          "flags": 514,
+          "frame": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "trapGate": {
+      "reference": {
+        "entry": {
+          "cs": 8,
+          "ip": 256,
+          "ss": 16,
+          "sp": 250,
+          "flags": 514,
+          "frame": [
+            12,
+            8,
+            514
+          ]
+        },
+        "returned": {
+          "cs": 8,
+          "ip": 12,
+          "ss": 16,
+          "sp": 256,
+          "flags": 514,
+          "frame": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "actual": {
+        "entry": {
+          "cs": 8,
+          "ip": 256,
+          "ss": 16,
+          "sp": 250,
+          "flags": 514,
+          "frame": [
+            12,
+            8,
+            514
+          ]
+        },
+        "returned": {
+          "cs": 8,
+          "ip": 12,
+          "ss": 16,
+          "sp": 256,
+          "flags": 514,
+          "frame": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "generalProtection": {
+      "reference": {
+        "entry": {
+          "cs": 8,
+          "ip": 288,
+          "ss": 16,
+          "sp": 248,
+          "flags": 2,
+          "frame": [
+            24,
+            13,
+            8,
+            2
+          ]
+        },
+        "returned": {
+          "cs": 8,
+          "ip": 15,
+          "ss": 16,
+          "sp": 256,
+          "flags": 2,
+          "frame": [
+            0,
+            0,
+            0
+          ],
+          "errorRegister": 24,
+          "skippedIpRegister": 15
+        },
+        "halted": true
+      },
+      "actual": {
+        "entry": {
+          "cs": 8,
+          "ip": 288,
+          "ss": 16,
+          "sp": 248,
+          "flags": 2,
+          "frame": [
+            24,
+            13,
+            8,
+            2
+          ]
+        },
+        "returned": {
+          "cs": 8,
+          "ip": 15,
+          "ss": 16,
+          "sp": 256,
+          "flags": 2,
+          "frame": [
+            0,
+            0,
+            0
+          ],
+          "errorRegister": 24,
+          "skippedIpRegister": 15
+        },
+        "halted": true
+      }
+    }
+  },
+  "generalProtectionCompletion": {
+    "expected": {
+      "halted": true,
+      "cs": 8,
+      "ip": 15,
+      "sp": 256,
+      "errorRegister": 24,
+      "skippedIpRegister": 15
+    },
+    "observed": {
+      "pcjs": {
+        "halted": true,
+        "cs": 8,
+        "ip": 15,
+        "sp": 256,
+        "errorRegister": 24,
+        "skippedIpRegister": 15
+      },
+      "local": {
+        "halted": true,
+        "cs": 8,
+        "ip": 15,
+        "sp": 256,
+        "errorRegister": 24,
+        "skippedIpRegister": 15
+      }
+    }
+  },
+  "selectorRpl": {
+    "reference": {
+      "entryCS": 8,
+      "returnedCS": 8
+    },
+    "actual": {
+      "entryCS": 8,
+      "returnedCS": 8
+    }
+  },
+  "differences": []
+}

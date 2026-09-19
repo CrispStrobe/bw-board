@@ -33,8 +33,9 @@ An [opt-in protected executor](I80286-PROTECTED-EXPERIMENT.md) proves ring-0 GDT
 entry, separate hidden segment caches, accessed bits, high memory, bounded
 permission/limit checks and restart diagnostics. Its small instruction subset
 is isolated to preserve the production decoder's throughput. A pinned PCjs
-comparison independently matches the owned bootstrap. IDT delivery, full
-instruction coverage, privilege transitions, gates and tasks remain unfinished;
+comparison independently matches the owned bootstrap. Full
+instruction coverage, privilege transitions, call/task gates and comprehensive
+exception handling remain unfinished;
 the ordinary fast core explicitly refuses continued protected execution.
 
 [Native writer suppression](HARRIS-NATIVE-WRITER-SUPPRESSION.md) removes
@@ -48,8 +49,41 @@ Qualification now includes hash-pinned real DOS toolchain execution and the
 protected PCjs bootstrap, alongside the full real-mode 286 corpora and native
 contracts. These are separate acceptance results, not a full protected-mode or
 Windows/Doom compatibility claim. The next CPU milestone is broader protected
-instruction/address coverage followed by architectural exception delivery;
+instruction/address coverage followed by remaining exception and privilege machinery;
 the next machine milestone is PC/AT memory and A20 behavior.
+
+## Same-ring IDT continuation
+
+The optional protected executor now admits 286 ring-0 interrupt and trap gates,
+`INT`, `INT3`, `INTO`, same-ring `IRET`, and delivery of its supported
+#UD/#NP/#SS/#GP faults. Enable it with `{deliverProtectedFaults:true}`; the
+default preserves host-visible diagnostics. Frame construction and return
+validation preflight the full stack span. The gate selector is normalized,
+interrupt/trap IF behavior differs correctly, and protected IRET restores flags
+that real-mode IRET must clear.
+
+An owned guest now reaches its #GP handler, consumes the error code, replaces
+the faulting return address, returns through IRET and reaches HLT. The pinned
+PCjs comparison checks the full entry/return state and independently requires
+the expected guest completion. Its negative controls must fail for the exact
+corrupted frame, IF or restart-IP observation. See
+[the IDT oracle scope](PROTECTED286-IDT-PCJS-ORACLE.md) and
+[the source-bound receipt](receipts/2026-09-19-protected286-idt.json).
+
+Two PCjs disagreements are recorded separately: its handling of target-selector
+RPL and stack-frame wraparound. Those historical same-pin observations are not
+counted as passing differential cases. Local architectural boundary tests
+follow Intel's manual. Task/privilege transitions, TF single-step delivery and
+nested/double-fault delivery remain explicit unsupported boundaries. Malformed
+public hardware interrupt delivery returns a diagnostic fault to the host.
+
+This increment also incorporates upstream widget/PS2, gamepad, and terminal DOS
+runner work. The terminal runner supplies DOS services directly; the existing
+MASM/LINK/EXE2BIN acceptance boots the real DOS kernel. Keep those execution
+routes distinct. Its DOS receipt was refreshed because upstream changes altered
+`src/i8086-machine.js`, even though the guest output and instruction count stayed
+the same. Broader protected instruction/address coverage and PC/AT memory/A20
+remain the next implementation steps.
 
 ## Milestones and acceptance
 
