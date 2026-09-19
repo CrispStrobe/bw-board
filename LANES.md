@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
+2026-09-19 DONE — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
 isolated worktree `/mnt/volume1/code/wt/bwb-nmos-ac-level1`, branch
 `lane/nmos-ac-level1`, exact base `b14d0092db8603a2c7909391e5a86628e2002fc6`.
 Owns only the exact-NMOS branch of `src/ac.js`, one focused AC model test, and
@@ -22,9 +22,19 @@ model helpers at the converged bias for explicit `model:'level1'` grounded-bulk
 NMOS with the corpus' zero/default body effect; keep the legacy generic MOS and
 PMOS paths unchanged. Prove complex node response against self-authored
 ngspice in saturation and triode, unchanged DC/public state, and isolated
-legacy-k/flat-gds mutations. CUI admission and the exact 160-row replay follow
-only after Board qualification. No importer, tolerance, grid, oracle, Newton,
-capacitance invention, richer MOS fields, workflow, or unrelated AC change.
+legacy-k/flat-gds mutations. Implemented at
+`7ee0cda9934032a1d7b95601ec8d91b0f9ae9256`: exact grounded-bulk Level-1
+NMOS now linearises the converged DC law in saturation or triode, including
+`KP*W/(2L)`, lambda and the physical region boundary; generic interactive MOS
+and PMOS retain their compatibility path. Focused AC/source/DC surface passes
+28/28. Substituting legacy `k=0.5` or the old flat output conductance makes the
+named saturation/triode Jacobian tests red. On the exact 160-row selection,
+native and oracle both execute every OP and AC analysis and all 130,240 of
+130,240 observations pass at unchanged tolerances (baseline was 62,628
+failures); raw CIFS SHA-256 `be655b6f...`, run `a27c2ec0...`. CUI admission
+follows only after hosted Board qualification. No importer, tolerance, grid,
+oracle, Newton, capacitance invention, richer MOS fields, workflow, or
+unrelated AC change.
 
 2026-09-19 DONE — bwcx: exact Level-1 MOS triode/saturation boundary, isolated
 worktree `/mnt/volume1/code/wt/bwb-mos-region-boundary`, branch
