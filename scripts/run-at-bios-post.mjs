@@ -20,8 +20,8 @@ const romSha256=sha(rom);
 if(romSha256!==EXPECTED_ROM_SHA256)
     throw new Error(`AT BIOS ROM SHA-256 mismatch: expected ${EXPECTED_ROM_SHA256}, got ${romSha256}`);
 const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(process.env.AT_POST_STEPS);
-if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>20_000_000)
-    throw new Error('AT_POST_STEPS must be an integer from 1 through 20000000');
+if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>30_000_000)
+    throw new Error('AT_POST_STEPS must be an integer from 1 through 30000000');
 
 const resetRequests=[];
 const resetApplications=[];
@@ -45,6 +45,18 @@ machine=new I8086Machine(PCAT80286_BOOT,{onPortAccess:event=>{
 }});
 machine.loadRom(rom,0xf0000);
 machine.loadRom(rom,0xff0000);
+let floppy=null;
+if(process.env.AT_FLOPPY_IMAGE) {
+    const bytes=fs.readFileSync(process.env.AT_FLOPPY_IMAGE);
+    const geometries={
+        368640:{cylinders:40,heads:2,sectors:9,bytesPerSector:512},
+        1228800:{cylinders:80,heads:2,sectors:15,bytesPerSector:512},
+    };
+    const geometry=geometries[bytes.length];
+    if(!geometry)throw new Error(`AT_FLOPPY_IMAGE must be an untouched 360KiB or 1.2MiB image, got ${bytes.length} bytes`);
+    machine.chips.fdc1.insert(0,bytes,geometry);
+    floppy={bytes:bytes.length,sha256:sha(bytes),geometry};
+}
 machine.reset();
 const reset={cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,
     fetchPhysical:machine.cpu._codePhys(machine.cpu.ip)};
@@ -91,7 +103,7 @@ const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
     scope:'bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30',
     diagnosticOnly:true,fullBootAccepted:false,mutation,stopReason,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
-        expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository'},
+        expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,

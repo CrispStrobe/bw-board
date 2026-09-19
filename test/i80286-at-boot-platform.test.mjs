@@ -121,6 +121,10 @@ test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines
     assert.deepEqual(restored.getState(),held,'overdue disabled responses checkpoint at zero');
     controller.writeCommand(0x60);controller.writeData(controller.commandByte&~0x10);
     assert.equal(controller.readData(),0xfa);
+    assert.equal(controller.readData(),0xff,'BAT countdown starts only after held ACK reaches controller path');
+    controller.advance(4_199_999);
+    assert.equal(controller.readStatus()&1,0);
+    controller.advance(1);
     assert.equal(controller.readData(),0xaa);
     assert.deepEqual(irq,[false,true,false,true,false,true,false]);
     assert.throws(()=>new AT8042A20({keyboardAckCycles:20,keyboardBatCycles:20}),/must precede/);

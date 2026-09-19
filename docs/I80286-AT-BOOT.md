@@ -35,7 +35,9 @@ profile uses 10 ms for ACK and 700 ms for BAT at 6 MHz, both inside the IBM
 manual's stated response (within 20 ms) and BAT (600–900 ms) ranges. Toggling
 the 8042 interface with `ADh`/`AEh` does not manufacture another BAT byte;
 completed keyboard bytes remain held while the clock is disabled and are
-released by `AEh`. `E0h` reports both idle-high keyboard test inputs, with the
+released by `AEh`. An `FFh` BAT countdown starts when the ACK reaches the
+enabled controller path, so a held ACK cannot make ACK and BAT arrive together.
+`E0h` reports both idle-high keyboard test inputs, with the
 clock input low while disabled; serial clock/data transitions are not modeled.
 The second DMA controller currently supports BIOS register diagnostics only;
 16-bit transfers, address shifting, and cascade behavior remain unsupported.
