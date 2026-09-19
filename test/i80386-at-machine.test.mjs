@@ -40,7 +40,7 @@ test('experimental 386 AT cold board reset restores configured A20 before reset-
     'a CPU-only reset with the external A20 gate low does not invent a ROM alias');
   machine.reset();
   assert.equal(machine.a20Enabled, true, 'cold board reset restores the profile output-port state');
-  assert.equal(machine.step(), 4, 'IRQ wake executes and charges the handler HLT');
+  assert.equal(machine.step(), 4, 'completed reset-vector HLT receives functional charge');
   assert.equal(machine.cpu.halted, true);
 });
 
@@ -93,9 +93,30 @@ test('experimental 386 AT wakes HLT for a maskable PIC interrupt', () => {
   machine.mem[0x83] = 0x00;
   master.setIRQ(0, 1);
   machine.mem[0x300] = 0xf4;
-  machine.step();
+  const machineCycles = machine.cycles;
+  const cpuCycles = machine.cpu.cycles;
+  assert.equal(machine.step(), 4, 'IRQ wake executes and charges the handler HLT');
+  assert.equal(machine.cycles - machineCycles, 4);
+  assert.equal(machine.cpu.cycles - cpuCycles, 1);
   assert.equal(machine.cpu.halted, true, 'machine.step wakes, vectors, and executes the handler HLT');
   assert.equal(machine.cpu.eip, 0x301);
+});
+
+test('experimental 386 AT does not charge idle horizons or fault-only delivery as instructions', () => {
+  const idle = new ExperimentalI80386ATMachine();
+  idle.cpu.halted = true;
+  const idleCpuCycles = idle.cpu.cycles;
+  const idleElapsed = idle.step();
+  assert.ok(idleElapsed > 0);
+  assert.equal(idle.cpu.cycles, idleCpuCycles, 'an idle horizon completes no instruction');
+
+  const fault = new ExperimentalI80386ATMachine();
+  const faultCpuCycles = fault.cpu.cycles;
+  const originalStep = fault.cpu.step;
+  fault.cpu.step = () => 1; // Models a delivered fault whose instruction did not retire.
+  assert.equal(fault.step(), 1);
+  assert.equal(fault.cpu.cycles, faultCpuCycles);
+  fault.cpu.step = originalStep;
 });
 
 test('experimental 386 AT shutdown does not consume pending interrupt state', () => {
