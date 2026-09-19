@@ -412,6 +412,13 @@ the recalibrate, verify, initialize-parameters, seek and diagnostic commands
 used by the 1984 IBM AT fixed-disk BIOS. This profile and its command tests are
 still controller-level evidence until a firmware-issued sector round trip is
 recorded.
+`scripts/run-i80386-at-hdd-roundtrip.mjs` supplies a deterministic owned FAT16
+superfloppy with the same type-1 geometry. Its boot sector asks the real IBM
+INT 13h path to write and reread the final physical sector, which lies outside
+the declared FAT volume, and emits a success marker only after comparing the
+returned bytes. The runner requires native 16-bit 1F0h accesses and records
+every BIOS/guest task-file command. Until that runner produces an accepted
+source-bound report, the image and controller tests remain preparation only.
 
 ## REP and ISA continuation receipt
 
