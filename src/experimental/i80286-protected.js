@@ -373,14 +373,26 @@ export class ProtectedI80286 extends I8086 {
 
     _interrupt(n) {
         if (!(this.msw & 1)) return super._interrupt(n);
-        if (this.deliverProtectedFaults) return this._deliverProtected(n, {external:true, returnIp:this.ip});
+        if (this.deliverProtectedFaults) return this._deliverExternal(n);
         throw new UnsupportedProtectedMode('interrupt/IDT delivery after PE transition');
     }
 
     interrupt(n) {
         if (!(this.msw & 1)) return super.interrupt(n);
-        if (this.deliverProtectedFaults) return this._deliverProtected(n, {external:true, returnIp:this.ip});
+        if (this.deliverProtectedFaults) return this._deliverExternal(n);
         throw new UnsupportedProtectedMode('interrupt/IDT delivery');
+    }
+
+    _deliverExternal(n) {
+        const resumeIp = this.ip;
+        try { return this._deliverProtected(n, {external:true, returnIp:resumeIp}); }
+        catch (e) {
+            // External entry occurs between instructions. A malformed gate is
+            // surfaced diagnostically, so its restart context is the currently
+            // suspended IP rather than the last decoder's _instrStartIp.
+            if (e instanceof ProtectedModeFault) e.restartIp = resumeIp;
+            throw e;
+        }
     }
 
     getProtectedState() {

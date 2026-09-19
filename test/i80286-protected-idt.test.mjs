@@ -135,7 +135,12 @@ test('external interrupts set EXT in IDT delivery errors',()=>{
   const f=fixture();boot(f,[0x90]);f.gate(0x30,0,{type:4});f.gate(13,0x1a0,{type:6});
   // Public interrupt faults while validating vector 30h, then the host sees
   // that delivery fault directly; automatic nesting is deliberately absent.
-  assert.throws(()=>f.cpu.interrupt(0x30),e=>e instanceof ProtectedModeFault&&e.errorCode===((0x30<<3)|3));
+  f.cpu._instrStartIp=5;
+  const before=f.cpu.getProtectedState(),writes=f.writes.length;
+  assert.throws(()=>f.cpu.interrupt(0x30),e=>e instanceof ProtectedModeFault
+    &&e.errorCode===((0x30<<3)|3)&&e.restartIp===8);
+  assert.deepEqual(f.cpu.getProtectedState(),before,'malformed external gate leaves suspended CPU state unchanged');
+  assert.equal(f.writes.length,writes);
 
   const nullTarget=fixture();boot(nullTarget,[0x90]);nullTarget.gate(0x31,0,{type:6,selector:0});
   assert.throws(()=>nullTarget.cpu.interrupt(0x31),e=>e instanceof ProtectedModeFault&&e.vector===13&&e.errorCode===1,
