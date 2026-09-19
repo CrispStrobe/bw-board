@@ -9,6 +9,23 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-19 CLAIM — bwcx: exact explicit-NPN Ebers–Moll small-signal AC,
+isolated worktree `/mnt/volume1/code/wt/bwb-npn-ac-level1`, branch
+`lane/npn-ac-ebers-moll`, exact base `08c20f3a26c20755ae135cd6d8cf0939ee3b4c7a`.
+Owns the exact-NPN branch in `src/ac.js`, the minimum operating-point data
+handoff in `src/board.js`, reuse/export of the existing Ebers–Moll parameter
+and Jacobian authority in `src/mna.js`, one focused AC test, and this row.
+Measured family: 160 ADI-v5 common-emitter AC rows, each with one exact
+`NPN(IS=3n BF=200 VAF=130 RB=10)`. Bypassing CUI's guard on current master
+executes all rows but all 160 disagree: 40,490/130,240 observations fail and
+the largest complex-node error is 0.143111 V, because AC substitutes the old
+knee/beta model and omits both junctions, Early effect and intrinsic-base RB.
+Allocate an internal AC base only for explicit positive RB, linearise the same
+converged Ebers–Moll law, and preserve generic NPN/PNP byte-for-behavior. Prove
+the exact Jacobian/RB path, unchanged public DC state, and isolated old-model,
+RB-bypass and Early-effect mutations. No capacitance invention, CUI/importer,
+PMOS/MOS, generic transistor, tolerance, grid, workflow, or unrelated MNA work.
+
 2026-09-19 DONE — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
 replayed worktree `/mnt/volume1/code/wt/bwb-nmos-ac-level1-v2`, branch
 `lane/nmos-ac-level1-v2`, exact base `4bf004e1f5d4fca7f94427d793cc94c6b39b2876`.
