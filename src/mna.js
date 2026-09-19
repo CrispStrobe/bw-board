@@ -2933,7 +2933,7 @@ export function solveMNA(parts, nets, pinSources, controls, vcc, opts = {}) {
       // element the solve stamped.
       const [vovS, dVovS] = smoothVov(bias.vgs - Math.abs(vth), mosKsubthres(part));
       const outputConductanceActivation = dVovS;
-      const vdsE = Math.min(bias.vds, Math.max(vovS, 0));
+      const vdsE = Math.min(Math.max(bias.vds, 0), Math.max(vovS, 0));
       id = inTriode
         ? mosTriode(k, vovS, vdsE, dVovS, part.params).id
         : k * vovS * vovS;
