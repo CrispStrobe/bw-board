@@ -9,15 +9,25 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: Level-1 MOS reverse-VDS channel symmetry, isolated
+2026-09-19 DONE — bwcx: Level-1 MOS reverse-VDS channel symmetry, isolated
 worktree `/mnt/volume1/code/wt/bwb-mos-reverse-vds-symmetry`, branch
 `lane/mos-reverse-vds-symmetry`, exact base
 `d128b384a9f9df986ae38db72bc7dae33a6b092e`. Owns only the bounded MOS channel
 bias/stamp/region/current readers in `src/mna.js`, one focused self-authored
 reverse-terminal test, and this row. Prove ngspice source/drain-role agreement
 for negative authored VDS while preserving explicit bulk topology and ordinary
-positive-VDS behavior. Excludes junction constants, tolerance/solver policy,
-CUI/corpus/pins, PMOS model broadening, GAMMA/PHI admission and x86 work.
+positive-VDS behavior. The shared channel-bias transform now selects the
+effective source for stamping, body effect, region choice and current readback;
+the physical bulk junctions stay on their authored terminals, and an unplaced
+bulk remains on its refusal path. Self-authored reverse NMOS and PMOS currents
+match ngspice 42 within 1 pA; restoring the old no-swap choice makes both red.
+The focused MOS surface passes 76/76. A direct read-only replay of the four
+GMIN-stable ADI-v2 residuals moves each to within 0.5 microvolt of ngspice,
+while the two separately classified GMIN-sensitive rows do not move. Exact
+candidate `ae6f929e89f5eecdb237663e77985a2964c17344` passed CI `35477084087`
+and Harris/native qualification `35477083986`, then fast-forwarded master.
+Excludes junction constants, tolerance/solver policy, CUI/corpus/pins, PMOS
+model broadening, GAMMA/PHI admission and x86 work.
 
 2026-09-19 DONE — bwcx: exact Level-1 MOS bulk-junction default-temperature
 alignment, isolated worktree `/mnt/volume1/code/wt/bwb-mos-bulk-temperature`,
