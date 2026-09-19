@@ -58,6 +58,17 @@ before changing guest bytes; page-table A/D effects from completed walks remain
 visible. Architectural register state restarts at the instruction boundary.
 Interrupt frames translate and preflight their complete span before writing
 frame bytes; descriptor accessed-bit admission precedes frame writes.
+
+The unchanged 64 KiB `test386` capture disagrees with that missing-PTE
+ordering. Its first paging case uses a present PDE and absent PTE, then expects
+the PDE A bit to remain clear in the #PF handler (`test386-capture.lst`
+`A067-A071`). Pinned PCjs likewise checks PTE presence before installing the
+paged access handler that sets both A bits (`cpux86.js` `mapPageBlock`). The
+original 80386 manual says both corresponding A bits are set before a page
+read or write, but does not separately spell out this failed-walk boundary.
+The capture README says it was not run on physical hardware, so this remains a
+named oracle disagreement rather than a reason to rewrite the admitted paging
+contract.
 Memory read-modify-write instructions perform write admission before the
 operand read, including zero-count shifts. The pinned PCjs group decoder also
 executes its memory writeback path when the shift helper returns the unchanged
