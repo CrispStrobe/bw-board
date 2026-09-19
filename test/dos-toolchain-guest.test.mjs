@@ -5,9 +5,9 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {assemble} from '../src/i8086-asm.js';
-import {findMsdosFiles,build} from '../scripts/build-dos-image.mjs';
+import {findMsdosFiles,build,layoutOf,GEOM} from '../scripts/build-dos-image.mjs';
 import {findTools} from '../scripts/oracle-masm.mjs';
-import {SOURCE,runDosToolchainGuest} from '../scripts/run-dos-toolchain-guest.mjs';
+import {SOURCE,runDosToolchainGuest,readFatFile} from '../scripts/run-dos-toolchain-guest.mjs';
 
 const dir=process.env.MSDOS_BIN_DIR;
 const media=findMsdosFiles(dir?[dir]:undefined),tools=findTools(dir);
@@ -35,6 +35,32 @@ test('fast 286 boots real DOS and MASM/LINK/EXE2BIN build and run an owned progr
     assert.match(r.screen,/GUEST-BUILD-DONE\n\nA>/,'COMMAND.COM regained control after the program');
     assert.deepEqual([...r.com],[...assemble(SOURCE,{format:'com'}).bytes],
         'the file persisted by real DOS is the independently expected program');
+});
+
+test('runner rejects a built owned program that does not produce the acceptance marker',{skip},()=>{
+    const wrong=SOURCE.replace('GUEST-TOOLCHAIN-OK','WRONG-OWNED-OUTPUT');
+    assert.throws(()=>runDosToolchainGuest({dir,variant:'80286',source:wrong}),
+        /guest program did not print "GUEST-TOOLCHAIN-OK"/);
+});
+
+test('runner rejects invalid budgets and corrupt FAT file chains',{skip},()=>{
+    for(const budget of [0,-1,1.5,Infinity,100_000_001])
+        assert.throws(()=>runDosToolchainGuest({dir,budget}),/guest budget must be a positive safe integer/);
+    const disk=acceptance().disk.slice(),lay=layoutOf();
+    let at=-1;
+    for(let n=0;n<GEOM.rootEntries;n++){
+        const candidate=lay.rootStart*512+n*32;
+        if(Buffer.from(disk.subarray(candidate,candidate+11)).toString('ascii')==='T       COM'){at=candidate;break;}
+    }
+    assert.notEqual(at,-1);
+    new DataView(disk.buffer,disk.byteOffset+at,32).setUint32(28,lay.clusterBytes+1,true);
+    const cluster=disk[at+26]|disk[at+27]<<8,off=lay.fatStart*512+cluster+(cluster>>1);
+    if(cluster&1){disk[off]=(disk[off]&0x0f)|((cluster&0x0f)<<4);disk[off+1]=(cluster>>4)&0xff;}
+    else{disk[off]=cluster&0xff;disk[off+1]=(disk[off+1]&0xf0)|((cluster>>8)&0x0f);}
+    assert.throws(()=>readFatFile(disk,'T.COM'),/FAT chain loops/);
+    const oversized=acceptance().disk.slice();
+    new DataView(oversized.buffer,oversized.byteOffset+at,32).setUint32(28,0xffffffff,true);
+    assert.throws(()=>readFatFile(oversized,'T.COM'),/directory length .* exceeds disk data area/);
 });
 
 test('the checked-in receipt is bound to the executed source, output and inputs',{skip},()=>{
