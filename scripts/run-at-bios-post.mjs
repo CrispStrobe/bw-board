@@ -20,8 +20,8 @@ const romSha256=sha(rom);
 if(romSha256!==EXPECTED_ROM_SHA256)
     throw new Error(`AT BIOS ROM SHA-256 mismatch: expected ${EXPECTED_ROM_SHA256}, got ${romSha256}`);
 const stepLimit=process.env.AT_POST_STEPS===undefined?DEFAULT_STEPS:Number(process.env.AT_POST_STEPS);
-if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>10_000_000)
-    throw new Error('AT_POST_STEPS must be an integer from 1 through 10000000');
+if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>20_000_000)
+    throw new Error('AT_POST_STEPS must be an integer from 1 through 20000000');
 
 const resetRequests=[];
 const resetApplications=[];

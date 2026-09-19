@@ -899,19 +899,25 @@ export class I8086Machine {
             }
             const span = c.span || REGS.dmapage;
             const stride = c.stride || 1;
-            this._io.push({
+            const window={
                 name: c.name, regs: REGS.dmapage, stride,
                 chip: { read: (r) => dma.readPage(r), write: (r, v) => dma.writePage(r, v) },
                 start: c.at, end: c.at + stride * span - 1,
-            });
+            };
+            const overlap=this._io.find(other=>window.start<=other.end&&other.start<=window.end);
+            if(overlap)throw new Error(`machine config: "${overlap.name}" and "${window.name}" both claim I/O address ${Math.max(overlap.start,window.start).toString(16).toUpperCase()}h`);
+            this._io.push(window);
         }
 
         for (const c of atPageConfigs) {
             const primary=this.chips[c.primary],secondary=this.chips[c.secondary];
             const chip=new ATDMAPageRegisters({primary,secondary});
             this.chips[c.name]=chip;
-            this._io.push({name:c.name,regs:REGS.atdmapage,stride:1,chip,
-                start:c.at,end:c.at+(c.span||REGS.atdmapage)-1});
+            const window={name:c.name,regs:REGS.atdmapage,stride:1,chip,
+                start:c.at,end:c.at+(c.span||REGS.atdmapage)-1};
+            const overlap=this._io.find(other=>window.start<=other.end&&other.start<=window.end);
+            if(overlap)throw new Error(`machine config: "${overlap.name}" and "${window.name}" both claim I/O address ${Math.max(overlap.start,window.start).toString(16).toUpperCase()}h`);
+            this._io.push(window);
         }
 
         for (const c of config.chips || []) {
@@ -2126,7 +2132,8 @@ export class I8086Machine {
             cpuBackend:this.cpuBackend,
             memoryBytes:this.memoryBytes,
             a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
-                responseDelayStatusReads:this.config.a20.responseDelayStatusReads??0,inputPort:this.config.a20.inputPort??0xb0} : null,
+                inputBusyCycles:this.config.a20.inputBusyCycles??0,responseDelayCycles:this.config.a20.responseDelayCycles??0,
+                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
@@ -2166,7 +2173,8 @@ export class I8086Machine {
         return checkpointTopology('i8086', this.config, this.chips, this.devices, {
             variant:this.variant,cpuBackend:this.cpuBackend,memoryBytes:this.memoryBytes,
             a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
-                responseDelayStatusReads:this.config.a20.responseDelayStatusReads??0,inputPort:this.config.a20.inputPort??0xb0} : null
+                inputBusyCycles:this.config.a20.inputBusyCycles??0,responseDelayCycles:this.config.a20.responseDelayCycles??0,
+                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0} : null
         });
     }
 

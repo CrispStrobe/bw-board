@@ -70,6 +70,31 @@ test('8042 self-test sets system flag and opt-in reset preserves controller stat
     assert.equal(controller.outputPort&3,3,'CPU reset request does not disable A20');
 });
 
+test('machine checkpoint preserves an in-flight timed 8042 response', () => {
+    const config={clockHz:6_000_000,memoryBytes:1<<20,
+        a20:{controller:'8042',inputBusyCycles:12,responseDelayCycles:32},
+        regions:[{kind:'ram',start:0,end:0xfffff}],chips:[]};
+    const machine=new I8086Machine(config);
+    machine._a20Controller.writeCommand(0xaa);
+    machine._a20Controller.advance(7);
+    const checkpoint=machine.saveState();
+    machine._a20Controller.advance(25);
+    assert.equal(machine._a20Controller.readStatus()&1,1);
+    machine.loadState(checkpoint);
+    assert.equal(machine._a20Controller.readStatus()&7,6);
+    machine._a20Controller.advance(25);
+    assert.equal(machine._a20Controller.readStatus()&5,5);
+});
+
+test('second-pass AT page windows participate in I/O conflict validation', () => {
+    const config={clockHz:6_000_000,regions:[{kind:'ram',start:0,end:0xfffff}],chips:[
+        {kind:'dma',name:'dma1',at:0x00},{kind:'dma',name:'dma2',at:0xc0,stride:2},
+        {kind:'atdmapage',name:'pages',at:0x80,primary:'dma1',secondary:'dma2'},
+        {kind:'pic',name:'overlap',at:0x88},
+    ]};
+    assert.throws(()=>new I8086Machine(config),/"overlap" and "pages" both claim I\/O address 88h/);
+});
+
 test('boot profile separates 16MiB address space from one MiB installed RAM', () => {
     const machine=new I8086Machine(PCAT80286_BOOT);
     assert.equal(machine.mem.length,16<<20);
