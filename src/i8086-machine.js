@@ -310,7 +310,7 @@ export const PCAT80286 = Object.freeze({
 export const PCAT80286_BOOT = Object.freeze({
     clockHz:6_000_000,variant:'80286',cpuBackend:'protected286-experimental',memoryBytes:16<<20,
     a20:{controller:'8042',enabled:true,queueLimit:16,inputBusyCycles:12,responseDelayCycles:32,inputPort:0xb0,
-        allowReset:true},
+        allowReset:true,powerOnKeyboardBatCycles:4_200_000,keyboardAckCycles:60_000,keyboardBatCycles:4_200_000},
     hardwareReset:true,
     regions:[
         {kind:'ram',start:0,end:0x7ffff},
@@ -830,6 +830,9 @@ export class I8086Machine {
                 responseDelayCycles:this.config.a20.responseDelayCycles??0,
                 inputBusyCycles:this.config.a20.inputBusyCycles??0,
                 inputPort:this.config.a20.inputPort??0xb0,
+                powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
+                keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null,
                 allowReset:!!this.config.a20.allowReset,
                 onResetRequest:()=>{this._cpuResetPending=true;},
                 onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
@@ -2139,7 +2142,10 @@ export class I8086Machine {
             memoryBytes:this.memoryBytes,
             a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
                 inputBusyCycles:this.config.a20.inputBusyCycles??0,responseDelayCycles:this.config.a20.responseDelayCycles??0,
-                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0} : null,
+                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0,
+                powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
+                keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
@@ -2180,7 +2186,10 @@ export class I8086Machine {
             variant:this.variant,cpuBackend:this.cpuBackend,memoryBytes:this.memoryBytes,
             a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
                 inputBusyCycles:this.config.a20.inputBusyCycles??0,responseDelayCycles:this.config.a20.responseDelayCycles??0,
-                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0} : null
+                allowReset:!!this.config.a20.allowReset,inputPort:this.config.a20.inputPort??0xb0,
+                powerOnKeyboardBatCycles:this.config.a20.powerOnKeyboardBatCycles??null,
+                keyboardAckCycles:this.config.a20.keyboardAckCycles??null,
+                keyboardBatCycles:this.config.a20.keyboardBatCycles??null} : null
         });
     }
 

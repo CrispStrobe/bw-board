@@ -1,7 +1,8 @@
 /** Bounded, cycle-driven IBM AT 8042 keyboard/system-control model. */
 export class AT8042A20 {
     constructor({a20Enabled=false,onA20Change=null,onIRQ=null,onResetRequest=null,allowReset=false,
-        queueLimit=16,inputBusyCycles=0,responseDelayCycles=0,inputPort=0xb0}={}) {
+        queueLimit=16,inputBusyCycles=0,responseDelayCycles=0,inputPort=0xb0,
+        powerOnKeyboardBatCycles=null,keyboardAckCycles=null,keyboardBatCycles=null}={}) {
         if (!Number.isInteger(queueLimit)||queueLimit<1||queueLimit>256) throw new Error('AT 8042 queueLimit must be 1..256');
         this.initialA20Enabled=!!a20Enabled;
         this.onA20Change=onA20Change;
@@ -17,6 +18,14 @@ export class AT8042A20 {
         this.inputBusyCycles=inputBusyCycles;
         if(!Number.isInteger(inputPort)||inputPort<0||inputPort>255)throw new Error('AT 8042 inputPort must be a byte');
         this.inputPort=inputPort;
+        for(const [name,value] of Object.entries({powerOnKeyboardBatCycles,keyboardAckCycles,keyboardBatCycles}))
+            if(value!==null&&(!Number.isInteger(value)||value<1||value>100_000_000))
+                throw new Error(`AT 8042 ${name} must be null or 1..100000000 cycles`);
+        this.powerOnKeyboardBatCycles=powerOnKeyboardBatCycles;
+        this.keyboardAckCycles=keyboardAckCycles;
+        this.keyboardBatCycles=keyboardBatCycles;
+        if((keyboardAckCycles===null)!==(keyboardBatCycles===null))
+            throw new Error('AT 8042 keyboard ACK and BAT timings must be configured together');
         this.reset();
     }
     reset() {
@@ -28,6 +37,8 @@ export class AT8042A20 {
         this.inputBusyCyclesRemaining=0;
         this.delayedResponse=null;
         this.systemFlag=false;
+        this.keyboardSchedule=this.powerOnKeyboardBatCycles===null?[]:
+            [{remaining:this.powerOnKeyboardBatCycles,value:0xaa}];
         this._publish();
     }
     _publish() {
@@ -55,18 +66,26 @@ export class AT8042A20 {
         return (this.outputQueue.length?1:0)|(this.inputBusyCyclesRemaining>0?2:0)|(this.systemFlag?4:0);
     }
     advance(cycles) {
-        if(!this.delayedResponse||!Number.isFinite(cycles)||cycles<=0)return;
-        this.responseCyclesRemaining-=cycles;
-        this.inputBusyCyclesRemaining=Math.max(0,this.inputBusyCyclesRemaining-cycles);
-        if(this.responseCyclesRemaining>0)return;
-        const value=this.delayedResponse.value;
-        this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
+        if(!Number.isFinite(cycles)||cycles<=0)return;
+        if(this.delayedResponse) {
+            this.responseCyclesRemaining-=cycles;
+            this.inputBusyCyclesRemaining=Math.max(0,this.inputBusyCyclesRemaining-cycles);
+            if(this.responseCyclesRemaining<=0) {
+                const value=this.delayedResponse.value;
+                this.delayedResponse=null;this.responseCyclesRemaining=0;this.inputBusyCyclesRemaining=0;this._queue(value);
+            }
+        }
+        for(const event of this.keyboardSchedule)event.remaining-=cycles;
+        while(this.keyboardSchedule[0]?.remaining<=0) {
+            const event=this.keyboardSchedule.shift();
+            this._queue(event.value,true);
+        }
     }
     nextWake() {
-        if(!this.delayedResponse)return Infinity;
-        return this.inputBusyCyclesRemaining>0
+        const controller=!this.delayedResponse?Infinity:(this.inputBusyCyclesRemaining>0
             ? Math.min(this.inputBusyCyclesRemaining,this.responseCyclesRemaining)
-            : this.responseCyclesRemaining;
+            : this.responseCyclesRemaining);
+        return Math.min(controller,this.keyboardSchedule[0]?.remaining??Infinity);
     }
     readData() {
         if(!this.outputQueue.length)return 0xff;
@@ -92,6 +111,7 @@ export class AT8042A20 {
         if(value===0xc0){this._respond(this.inputPort);this.pendingCommand=null;return;}
         if(value===0xd0){if(this.outputQueue.length)throw new Error('AT 8042 D0 refused: output buffer is full');this.pendingCommand=null;this._respond(this.outputPort);return;}
         if(value===0xd1){this.pendingCommand=0xd1;return;}
+        if(value===0xe0){this._respond((this.commandByte&0x10)?0:1);this.pendingCommand=null;return;}
         if(value===0xfe){
             if(!this.allowReset)throw new Error('AT 8042 command feh is outside the bounded A20 subset unless CPU reset is enabled');
             this.pendingCommand=null;
@@ -105,7 +125,12 @@ export class AT8042A20 {
         if(this.pendingCommand===0x60){
             this.pendingCommand=null;this.commandByte=value;this.systemFlag=!!(value&4);this._publish();return;
         }
-        if(this.pendingCommand!==0xd1)throw new Error('AT 8042 data write refused: no D1 output-port command or 60h command-byte command is pending');
+        if(this.pendingCommand===null&&value===0xff&&this.keyboardAckCycles!==null) {
+            this.keyboardSchedule=[{remaining:this.keyboardAckCycles,value:0xfa},
+                {remaining:this.keyboardBatCycles,value:0xaa}];
+            return;
+        }
+        if(this.pendingCommand!==0xd1)throw new Error('AT 8042 data write refused: no D1 output-port command, 60h command-byte command, or configured keyboard reset is pending');
         if(!(value&1))throw new Error('AT 8042 output-port write refused: bit 0 low requests unsupported CPU reset');
         this.pendingCommand=null;this.outputPort=value;this._publish();
     }
@@ -120,6 +145,7 @@ export class AT8042A20 {
             pendingCommand:this.pendingCommand,outputQueue:this.outputQueue.map(e=>({...e})),
             responseCyclesRemaining:this.responseCyclesRemaining,inputBusyCyclesRemaining:this.inputBusyCyclesRemaining,
             delayedResponse:this.delayedResponse&&{...this.delayedResponse},
+            keyboardSchedule:this.keyboardSchedule.map(event=>({...event})),
             systemFlag:this.systemFlag};
     }
     validateState(s) {
@@ -135,6 +161,9 @@ export class AT8042A20 {
             !(s.delayedResponse===null||(s.delayedResponse&&Number.isInteger(s.delayedResponse.value)&&
                 s.delayedResponse.value>=0&&s.delayedResponse.value<=255))||
             (!!s.delayedResponse)!==(s.responseCyclesRemaining>0)||
+            !Array.isArray(s.keyboardSchedule)||s.keyboardSchedule.some(event=>!event||
+                !Number.isFinite(event.remaining)||event.remaining<=0||!Number.isInteger(event.value)||
+                ![0xaa,0xfa].includes(event.value))||
             typeof s.systemFlag!=='boolean')throw new Error('AT 8042 state is invalid');
     }
     setState(s) {
@@ -146,6 +175,7 @@ export class AT8042A20 {
         this.responseCyclesRemaining=s.responseCyclesRemaining;
         this.inputBusyCyclesRemaining=s.inputBusyCyclesRemaining;
         this.delayedResponse=s.delayedResponse&&{...s.delayedResponse};
+        this.keyboardSchedule=s.keyboardSchedule.map(event=>({...event}));
         this.systemFlag=s.systemFlag;
         this._irq=undefined;
         this._publish();

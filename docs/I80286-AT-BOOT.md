@@ -29,6 +29,11 @@ These are stable model parameters, not measured 8042 timing. Status polling
 never advances controller time. An 8042 `FEh` reset request
 is queued until the current OUT instruction completes. It resets the CPU
 without clearing RAM, CMOS, the controller system flag, A20, or machine time.
+The attached bounded keyboard schedules its power-on BAT completion and the
+`FAh`/`AAh` response sequence for an explicit `FFh` keyboard reset. The
+profile uses 10 ms for ACK and 700 ms for BAT at 6 MHz, both inside the IBM
+manual's stated response (within 20 ms) and BAT (600–900 ms) ranges. Toggling
+the 8042 interface with `ADh`/`AEh` does not manufacture another BAT byte.
 The second DMA controller currently supports BIOS register diagnostics only;
 16-bit transfers, address shifting, and cascade behavior remain unsupported.
 

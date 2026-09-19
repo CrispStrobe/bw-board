@@ -26,6 +26,7 @@ if(!Number.isInteger(stepLimit)||stepLimit<1||stepLimit>20_000_000)
 const resetRequests=[];
 const resetApplications=[];
 const checkpoints=[];
+const postEvents=[];
 const controllerPorts=[];
 const controllerWrites=[];
 let machine;
@@ -39,6 +40,8 @@ machine=new I8086Machine(PCAT80286_BOOT,{onPortAccess:event=>{
         resetRequests.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip});
     if(event.dir==='out'&&event.port===0x80&&event.value===0x30)
         checkpoints.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip});
+    if(event.dir==='out'&&event.port===0x80)
+        postEvents.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,value:event.value});
 }});
 machine.loadRom(rom,0xf0000);
 machine.loadRom(rom,0xff0000);
@@ -89,7 +92,7 @@ const report={schema:'astra.at-bios-post.v1',passed,stepLimit,steps,
     diagnosticOnly:true,fullBootAccepted:false,mutation,stopReason,
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository'},
-    reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,
+    reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     final:{cs:machine.cpu.cs,ip:machine.cpu.ip,pc:machine.cpu.pc,halted:machine.cpu.halted,
         shutdown:!!machine.cpu.shutdown,a20Enabled:machine.a20Enabled,cmosShutdown:machine.chips.rtc1.ram[0x0f]},

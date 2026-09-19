@@ -65,6 +65,10 @@ test('8042 self-test returns 55h while command-byte bit 2 controls system flag',
     assert.equal(controller.readStatus()&4,0,'command-byte system flag is visible in status');
     controller.writeCommand(0x60);controller.writeData(controller.commandByte|4);
     assert.equal(controller.readStatus()&4,4);
+    controller.writeCommand(0xe0);controller.advance(32);
+    assert.equal(controller.readData(),1,'E0 reports enabled keyboard clock input');
+    controller.writeCommand(0xad);controller.writeCommand(0xe0);controller.advance(32);
+    assert.equal(controller.readData(),0,'E0 reports disabled keyboard clock input');
     controller.writeCommand(0xfe);
     assert.equal(resets,1);
     assert.equal(controller.readStatus()&4,4);
@@ -85,6 +89,33 @@ test('machine checkpoint preserves an in-flight timed 8042 response', () => {
     assert.equal(machine._a20Controller.readStatus()&7,2);
     machine._a20Controller.advance(25);
     assert.equal(machine._a20Controller.readStatus()&5,1);
+});
+
+test('keyboard power-on and FF reset BAT bytes follow configured cycle deadlines', () => {
+    const irq=[];
+    const controller=new AT8042A20({powerOnKeyboardBatCycles:4_200_000,
+        keyboardAckCycles:60_000,keyboardBatCycles:4_200_000,onIRQ:level=>irq.push(level)});
+    controller.writeCommand(0x60);controller.writeData(1);
+    controller.writeCommand(0xae);
+    assert.equal(controller.keyboardSchedule.length,1,'AE does not synthesize another BAT');
+    for(let i=0;i<20;i++)controller.readStatus();
+    controller.advance(4_199_999);
+    assert.equal(controller.readStatus()&1,0);
+    controller.advance(1);
+    assert.equal(controller.readData(),0xaa);
+    controller.writeData(0xff);
+    controller.advance(59_999);
+    const saved=controller.getState();
+    const restored=new AT8042A20({powerOnKeyboardBatCycles:4_200_000,
+        keyboardAckCycles:60_000,keyboardBatCycles:4_200_000,onIRQ:()=>{}});
+    restored.setState(saved);
+    assert.deepEqual(restored.getState(),saved);
+    assert.equal(controller.readStatus()&1,0);
+    controller.advance(1);
+    assert.equal(controller.readData(),0xfa);
+    controller.advance(4_140_000);
+    assert.equal(controller.readData(),0xaa);
+    assert.deepEqual(irq,[false,true,false,true,false,true,false]);
 });
 
 test('second-pass AT page windows participate in I/O conflict validation', () => {
