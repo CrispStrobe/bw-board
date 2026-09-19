@@ -90,20 +90,20 @@ export class ProtectedI80286 extends I8086 {
             this._pmFault(13, selector & 0xfffc, 'system descriptor as segment');
         }
         const rpl = selector & 3;
+        const conforming = code && !!(access & 4);
         if (target === SEG_SS && (rpl !== privilegeCpl || dpl !== privilegeCpl)) this._pmFault(13, selector & 0xfffc, 'SS privilege');
-        if ((target === SEG_DS || target === SEG_ES) && Math.max(privilegeCpl,rpl) > dpl)
+        if ((target === SEG_DS || target === SEG_ES) && !conforming && Math.max(privilegeCpl,rpl) > dpl)
             this._pmFault(13, selector & 0xfffc, 'data segment privilege');
-        if (target === SEG_CS && !ignoreRpl && (dpl !== privilegeCpl || rpl > privilegeCpl))
+        if (target === SEG_CS && ((!conforming && !ignoreRpl && (dpl !== privilegeCpl || rpl > privilegeCpl)) ||
+            (conforming && dpl > privilegeCpl)))
             this._pmFault(13, selector & 0xfffc, 'code segment privilege');
-        if (expandDown) throw new UnsupportedProtectedMode('expand-down segments');
-        if (code && (access & 4)) throw new UnsupportedProtectedMode('conforming code segments');
         if (target === SEG_CS && !code) this._pmFault(13, selector & 0xfffc, 'far jump requires code');
         if (target === SEG_SS && (code || !writable)) this._pmFault(13, selector & 0xfffc, 'SS requires writable data');
         if ((target === SEG_DS || target === SEG_ES) && code && !readable) this._pmFault(13, selector & 0xfffc, 'unreadable code data segment');
         if (!present) this._pmFault(target === SEG_SS ? 12 : 11, selector & 0xfffc, 'segment not present');
         return {selector:target === SEG_CS ? (selector & 0xfffc) | privilegeCpl : selector,
             base: (b[2] | (b[3] << 8) | (b[4] << 16)) >>> 0,
-            limit: b[0] | (b[1] << 8), access: access | 1, code, writable, readable,
+            limit: b[0] | (b[1] << 8), access: access | 1, code, writable, readable, expandDown, conforming,
             usable:true,descriptorAccessAddress: a + 5, accessedWasSet: !!(access & 1)};
     }
 
@@ -154,7 +154,9 @@ export class ProtectedI80286 extends I8086 {
         if (!cache) this._pmFault(13, 0, 'invalid segment identity');
         if (cache.usable === false) this._pmFault(13, 0, 'null data segment');
         off &= 0xffff;
-        if (off + width - 1 > cache.limit) this._pmFault(id === SEG_SS ? 12 : 13, 0, 'segment limit');
+        const end = off + width - 1;
+        if (end > 0xffff || (cache.expandDown ? off <= cache.limit : end > cache.limit))
+            this._pmFault(id === SEG_SS ? 12 : 13, 0, 'segment limit');
         if (kind === 'fetch' && !cache.code) this._pmFault(13, 0, 'execute through non-code segment');
         if (kind === 'write' && (cache.code || !cache.writable)) this._pmFault(13, 0, 'write through non-writable segment');
         if (kind === 'read' && cache.code && !cache.readable) this._pmFault(13, 0, 'read through execute-only segment');
@@ -698,6 +700,7 @@ export class ProtectedI80286 extends I8086 {
             if(descriptor){this.flags|=ZF;this._r16set(ea.reg,op===0x02?descriptor.access<<8:descriptor.limit);}
             else this.flags&=~ZF;return ea.isReg?14:16;
         }
+        if(op===0x06){if(this.cpl!==0)this._pmFault(13,0,'CLTS privilege');this.msw&=~8;return 2;}
         if (op !== 0x00 && op !== 0x01) throw new UnsupportedProtectedMode(`0F ${op.toString(16).padStart(2,'0')}`);
         const ea = this._pmModRM();
         if (op === 0x00) {
@@ -801,6 +804,114 @@ export class ProtectedI80286 extends I8086 {
         return (this.read(address) & 0xff) | ((this.read((address + 1) & 0xffffff) & 0xff) << 8);
     }
 
+    _writePhysical16(address,value) {
+        address&=0xffffff;
+        if(this.busTrace!==null)this.busTrace.push(2,address,2,(address+1)&0xffffff);
+        this.write(address,value&255);this.write((address+1)&0xffffff,value>>8&255);
+    }
+
+    _taskDescriptor(selector, {busy=false, checkPrivilege=true, faultVector=13} = {}) {
+        let raw;
+        try { raw = this._rawDescriptor(selector, {gdtOnly:true}); }
+        catch (error) {
+            if (error instanceof ProtectedModeFault) error.vector = faultVector;
+            throw error;
+        }
+        const type = raw.access & 0x0f;
+        if ((raw.access & 0x10) || (busy ? type !== 3 : type !== 1))
+            this._pmFault(faultVector, selector & 0xfffc,
+                busy ? 'task return requires busy 286 TSS' : 'task switch requires available 286 TSS');
+        if (!(raw.access & 0x80)) this._pmFault(11, selector & 0xfffc, 'TSS not present');
+        if (checkPrivilege && !busy && Math.max(this.cpl, selector & 3) > ((raw.access >> 5) & 3))
+            this._pmFault(faultVector, selector & 0xfffc, 'TSS privilege');
+        return raw;
+    }
+
+    _taskImage(raw) {
+        if(raw.limit<0x2b)this._pmFault(10,raw.selector&0xfffc,'incoming TSS limit');
+        const w=off=>this._readPhysical16(raw.base+off);
+        return{backlink:w(0),ip:w(0x0e),flags:w(0x10),ax:w(0x12),cx:w(0x14),dx:w(0x16),bx:w(0x18),
+            sp:w(0x1a),bp:w(0x1c),si:w(0x1e),di:w(0x20),es:w(0x22),cs:w(0x24),ss:w(0x26),ds:w(0x28),ldt:w(0x2a)};
+    }
+
+    _saveCurrentTask(flags=this.flags) {
+        if (!this.tr.valid || this.tr.limit < 0x29)
+            this._pmFault(10, this.tr.selector & 0xfffc, 'current TSS invalid');
+        const values=[[0x0e,this.ip],[0x10,flags],[0x12,this.ax],[0x14,this.cx],[0x16,this.dx],[0x18,this.bx],
+            [0x1a,this.sp],[0x1c,this.bp],[0x1e,this.si],[0x20,this.di],[0x22,this.es],[0x24,this.cs],
+            [0x26,this.ss],[0x28,this.ds]];
+        for(const [off,value]of values)this._writePhysical16(this.tr.base+off,value);
+    }
+
+    _setTaskBusy(raw, busy) {
+        const address=(raw.address+5)&0xffffff;
+        if(this.busTrace!==null)this.busTrace.push(2,address);
+        this.write(address,(raw.access&~2)|(busy?2:0));
+    }
+
+    _taskLdt(selector) {
+        if (!(selector & 0xfffc)) return {selector,valid:false,base:0,limit:0};
+        let raw;
+        try { raw = this._rawDescriptor(selector, {gdtOnly:true}); }
+        catch (error) { if (error instanceof ProtectedModeFault) error.vector=10; throw error; }
+        if ((raw.access & 0x1f) !== 2) this._pmFault(10, selector & 0xfffc, 'task LDT descriptor type');
+        if (!(raw.access & 0x80)) this._pmFault(10, selector & 0xfffc, 'task LDT not present');
+        return {selector:selector & 0xffff,valid:true,base:raw.base,limit:raw.limit};
+    }
+
+    _taskSegment(selector, target, cpl) {
+        try { return this._descriptor(selector, target, {privilegeCpl:cpl}); }
+        catch (error) {
+            if (error instanceof ProtectedModeFault && error.vector === 13) error.vector=10;
+            throw error;
+        }
+    }
+
+    _taskSwitch(selector, kind, {checkPrivilege=true, errorCode=null} = {}) {
+        const returning = kind === 'iret';
+        const raw = this._taskDescriptor(selector, {
+            busy:returning,
+            checkPrivilege,
+            faultVector:returning ? 10 : 13,
+        });
+        const oldRaw = this.tr.valid ? this._rawDescriptor(this.tr.selector, {gdtOnly:true}) : null;
+
+        // SWITCH_TASKS commits the new busy bit before validating/saving the
+        // outgoing image. Memory effects before TR replacement remain visible.
+        if (!returning) this._setTaskBusy(raw, true);
+        this._saveCurrentTask(returning ? this.flags & ~NT : this.flags);
+        if (kind === 'call') this._writePhysical16(raw.base, this.tr.selector);
+        if (kind === 'jmp' || returning) this._setTaskBusy(oldRaw, false);
+        this.tr={selector:selector&0xffff,valid:true,base:raw.base,limit:raw.limit};
+
+        try {
+            const image=this._taskImage(raw);
+            const loadedFlags=(image.flags|2)&~0x8028;
+            Object.assign(this,{ax:image.ax,cx:image.cx,dx:image.dx,bx:image.bx,sp:image.sp,bp:image.bp,
+                si:image.si,di:image.di,ip:image.ip,
+                es:image.es,cs:image.cs,ss:image.ss,ds:image.ds,
+                flags:kind==='call' ? loadedFlags|NT : kind==='jmp' ? loadedFlags&~NT : loadedFlags});
+            this.msw|=8;
+            const newCpl=image.cs&3;
+            this.cpl=newCpl;
+            this.ldtr={selector:image.ldt,valid:false,base:0,limit:0};
+            for(const [id,value]of [[SEG_ES,image.es],[SEG_CS,image.cs],[SEG_SS,image.ss],[SEG_DS,image.ds]])
+                this.segmentCaches[id]={selector:value,base:0,limit:0,access:0,code:false,writable:false,
+                    readable:false,usable:false};
+            this.ldtr=this._taskLdt(image.ldt);
+            const ss=this._taskSegment(image.ss,SEG_SS,newCpl);this._commitDescriptor(SEG_SS,ss);
+            const cs=this._taskSegment(image.cs,SEG_CS,newCpl);this._commitDescriptor(SEG_CS,cs);
+            const ds=this._taskSegment(image.ds,SEG_DS,newCpl);this._commitDescriptor(SEG_DS,ds);
+            const es=this._taskSegment(image.es,SEG_ES,newCpl);this._commitDescriptor(SEG_ES,es);
+            if(image.ip>cs.limit)this._pmFault(13,0,'task IP outside code segment');
+            if(errorCode!==null)this._pmPush(errorCode);
+            this.halted=false;this.intShadow=0;this._pmStiShadow=0;
+        } catch (error) {
+            if (error instanceof ProtectedModeFault) error.taskCommitted=true;
+            throw error;
+        }
+    }
+
     _callGate(selector,raw=this._rawDescriptor(selector)) {
         const type=raw.access&0x0f;
         if((raw.access&0x10)||type!==4)this._pmFault(13,selector&0xfffc,'far CALL requires code or 286 call gate');
@@ -816,6 +927,15 @@ export class ProtectedI80286 extends I8086 {
         let descriptor,gate=null;
         const raw=this._rawDescriptor(selector);
         if(!(raw.access&0x10)) {
+            const type=raw.access&0x0f;
+            if(type===1||type===3||type===5){
+                if(type===5){
+                    if(Math.max(this.cpl,selector&3)>((raw.access>>5)&3))this._pmFault(13,selector&0xfffc,'task gate privilege');
+                    if(!(raw.access&0x80))this._pmFault(11,selector&0xfffc,'task gate not present');
+                }
+                const target=type===5?(raw.bytes[2]|raw.bytes[3]<<8):selector;
+                this._taskSwitch(target,call?'call':'jmp',{checkPrivilege:type!==5});return;
+            }
             gate=this._callGate(selector,raw);
             descriptor=this._descriptor(gate.selector,SEG_CS,{ignoreRpl:true});
             offset=gate.offset;
@@ -824,7 +944,7 @@ export class ProtectedI80286 extends I8086 {
         if(targetCpl>this.cpl||(!gate&&targetCpl!==this.cpl))
             this._pmFault(13,(gate?.selector??selector)&0xfffc,'far transfer privilege');
         if(!call){
-            if(targetCpl!==this.cpl)this._pmFault(13,gate?.selector??selector,'far JMP cannot change privilege');
+            if(targetCpl!==this.cpl)this._pmFault(13,(gate?.selector??selector)&0xfffc,'far JMP cannot change privilege');
             if(offset>descriptor.limit)this._pmFault(13,0,'far transfer offset outside code segment');
             this._commitDescriptor(SEG_CS,descriptor);this.ip=offset;return;
         }
@@ -869,10 +989,10 @@ export class ProtectedI80286 extends I8086 {
         const outerSp=this._rd16(SEG_SS,(this.sp+4+discard)&0xffff);
         const outerSs=this._rd16(SEG_SS,(this.sp+6+discard)&0xffff);
         const descriptor=this._descriptor(selector,SEG_CS,{privilegeCpl:newCpl});
-        if(ip>descriptor.limit)this._pmFault(13,0,'far RET offset outside code segment');
         let stackDescriptor;
         try{stackDescriptor=this._descriptor(outerSs,SEG_SS,{privilegeCpl:newCpl});}
         catch(e){if(e instanceof ProtectedModeFault&&e.vector===11)e.vector=12;throw e;}
+        if(ip>descriptor.limit)this._pmFault(13,0,'far RET offset outside code segment');
         this._commitDescriptor(SEG_CS,descriptor);this._commitDescriptor(SEG_SS,stackDescriptor);
         this.cpl=newCpl;this.ip=ip;this.sp=(outerSp+discard)&0xffff;
         this._invalidateOuterDataSegments(newCpl);
@@ -889,7 +1009,12 @@ export class ProtectedI80286 extends I8086 {
         const tail = this._readPhysical16(address + 6);
         const access = (reserved >> 8) & 0xff, type = access & 0x1f, dpl = (access >> 5) & 3;
         if ((reserved & 0xff) || tail) throw new UnsupportedProtectedMode('nonzero 286 IDT gate reserved fields');
-        if (type === 5) throw new UnsupportedProtectedMode('task gates');
+        if(type===5){
+            if((reserved&0xff)||tail||targetOffset)this._pmFault(13,errorCode,'malformed IDT task gate');
+            if(software&&this.cpl>dpl)this._pmFault(13,errorCode,'software task gate privilege');
+            if(!(access&0x80))this._pmFault(11,errorCode,'IDT task gate not present');
+            return{task:true,selector};
+        }
         if (type !== 6 && type !== 7) this._pmFault(13, errorCode, 'unsupported IDT gate type');
         if (software && this.cpl > dpl) this._pmFault(13, errorCode, 'software interrupt gate privilege');
         if (!(access & 0x80)) this._pmFault(11, errorCode, 'IDT gate not present');
@@ -904,7 +1029,8 @@ export class ProtectedI80286 extends I8086 {
 
     _cacheAddress(cache, offset, width, vector=12) {
         offset &= 0xffff;
-        if (cache.usable === false || offset + width - 1 > cache.limit)
+        const end = offset + width - 1;
+        if (cache.usable === false || end > 0xffff || (cache.expandDown ? offset <= cache.limit : end > cache.limit))
             this._pmFault(vector, 0, 'privilege stack frame outside limit');
         return (cache.base + offset) & 0xffffff;
     }
@@ -924,6 +1050,7 @@ export class ProtectedI80286 extends I8086 {
         this._deliveringProtected = true;
         try {
             const gate = this._gate(vector, software, external);
+            if(gate.task){this._taskSwitch(gate.selector,'call',{checkPrivilege:false,errorCode});return;}
             let descriptor;
             try { descriptor = this._descriptor(gate.selector, SEG_CS, {ignoreRpl:true}); }
             catch (e) {
@@ -966,8 +1093,11 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _iretProtected() {
+        if(this.flags&NT){
+            if(!this.tr.valid||this.tr.limit<1)this._pmFault(10,this.tr.selector&0xfffc,'nested-task IRET current TSS');
+            this._taskSwitch(this._readPhysical16(this.tr.base),'iret',{checkPrivilege:false});return;
+        }
         if (!this.deliverProtectedFaults) throw new UnsupportedProtectedMode('IRET/IDT delivery');
-        if (this.flags & NT) throw new UnsupportedProtectedMode('nested-task IRET');
         if (this.sp > 0xfffa) this._pmFault(12, 0, 'IRET frame wraps stack');
         this._linear(SEG_SS, this.sp, 6, 'read');
         const ip = this._rd16(SEG_SS, this.sp);
@@ -977,18 +1107,19 @@ export class ProtectedI80286 extends I8086 {
         if(newCpl<oldCpl)this._pmFault(13,selector&0xfffc,'IRET cannot return inward');
         if(newCpl>oldCpl)this._linear(SEG_SS,this.sp,10,'read');
         const descriptor = this._descriptor(selector, SEG_CS,{privilegeCpl:newCpl});
-        if (ip > descriptor.limit) this._pmFault(13, 0, 'IRET offset outside code segment');
         if(newCpl>oldCpl){
             const outerSp=this._rd16(SEG_SS,this.sp+6),outerSs=this._rd16(SEG_SS,this.sp+8);
             let stackDescriptor;
             try{stackDescriptor=this._descriptor(outerSs,SEG_SS,{privilegeCpl:newCpl});}
             catch(e){if(e instanceof ProtectedModeFault&&e.vector===11)e.vector=12;throw e;}
+            if(ip>descriptor.limit)this._pmFault(13,0,'IRET offset outside code segment');
             this._commitDescriptor(SEG_CS,descriptor);this._commitDescriptor(SEG_SS,stackDescriptor);
             this.cpl=newCpl;this.sp=outerSp;this.ip=ip;
             this.flags=this._pmReturnFlags(flags,oldCpl);
             this._invalidateOuterDataSegments(newCpl);
             return;
         }
+        if(ip>descriptor.limit)this._pmFault(13,0,'IRET offset outside code segment');
         this._commitDescriptor(SEG_CS, descriptor);
         this.sp = (this.sp + 6) & 0xffff; this.ip = ip;
         this.flags = this._pmReturnFlags(flags,oldCpl);
@@ -1048,15 +1179,15 @@ export class ProtectedI80286 extends I8086 {
         }
         catch (e) {
             if (e instanceof ProtectedModeFault) {
-                this.setProtectedState(snapshot);
-                e.restartIp = snapshot.ip;
+                if (!e.taskCommitted) this.setProtectedState(snapshot);
+                e.restartIp = e.taskCommitted ? this.ip : snapshot.ip;
                 if (this.deliverProtectedFaults) {
                     try {
-                        this._deliverProtected(e.vector, {returnIp:snapshot.ip,
+                        this._deliverProtected(e.vector, {returnIp:e.restartIp,
                             errorCode:ERROR_CODE_VECTORS.has(e.vector) ? e.errorCode : null});
                         return 0;
                     } catch (nested) {
-                        this.setProtectedState(snapshot);
+                        if (!e.taskCommitted) this.setProtectedState(snapshot);
                         throw new UnsupportedProtectedMode(`nested exception/double-fault delivery after #${e.vector}: ${nested.message}`);
                     }
                 }

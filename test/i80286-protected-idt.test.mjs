@@ -147,11 +147,20 @@ test('external interrupts set EXT in IDT delivery errors',()=>{
     'external null target selector reports EXT with a zero selector index');
 });
 
-test('IRET with current NT set refuses task return independently of TF',()=>{
+test('IRET with current NT set requires a valid current task for task return',()=>{
   const f=fixture();boot(f,[0xcf]);f.cpu.flags=0x4002;
   const before=f.cpu.getProtectedState(),writes=f.writes.length;
-  assert.throws(()=>f.cpu.step(),e=>e instanceof UnsupportedProtectedMode&&/nested-task IRET/.test(e.message));
+  f.cpu.deliverProtectedFaults=false;
+  assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===10);
   assert.deepEqual(f.cpu.getProtectedState(),before);assert.equal(f.writes.length,writes);
+});
+
+test('outer IRET validates SS before a simultaneously invalid target IP',()=>{
+  const f=fixture(true);boot(f,[0x90]);f.cpu.gdtr.limit=0x27;
+  f.desc(0x220,0x140000,0x10,0xfa);
+  f.cpu.sp=0xf6;
+  f.put(0x1200f6,[0x20,0,0x23,0,2,0,0,1,0,0]);
+  assert.throws(()=>f.cpu._iretProtected(),e=>e.vector===13&&e.errorCode===0&&/null selector/.test(e.reason));
 });
 
 test('same-ring entry accepts SP=0 but rejects partial frames from SP=2 or 4',()=>{
