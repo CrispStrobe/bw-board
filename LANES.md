@@ -38,7 +38,7 @@ and genuine AT reset/BIOS boot investigation and implementation. Subsequent
 FPGA, schematics and unrelated UI; no full compatibility claim without guest
 acceptance. External proprietary media stays outside public source/artifacts.
 
-2026-09-19 DONE (implementation; qualification pending) — Astra/Sol functional
+2026-09-19 DONE (qualified; landing record below) — Astra/Sol functional
 AT DOS disk boot and 386 paging/reset/ISA stage; candidate is the commit carrying
 this row. Two source-bound genuine-reset IBM Rev1 boots execute DOS 2.00 and
 Command 2.02: keyboard ECHO/TYPE writes 12 exact bytes, fresh-remount TYPE reads
@@ -65,6 +65,11 @@ all operand reads and preserves GDTR. A crossing-page regression checks
 ascending operand reads and CR2. Queued runs `35470133473`, `35470133428`,
 and `35470133415` were canceled as superseded, not counted as passes.
 The corrected candidate refreshes all bounded 386 receipts and qualifications.
+Corrected candidate `155b779aebbe7c4718edc73091673e392336976d` passed hosted
+CI `35471008880` (5,462 pass, 272 skip, zero fail), CPU `35471008892`
+(fast/Harris full corpora and bounded 386 oracle/sample jobs), and native
+`35471008891`. The landing contains only that qualified candidate and this
+qualification record; later REP/RTC/386-adapter work remains separate.
 
 2026-09-19 DONE (qualified; landed at `28911b2`) — Astra/Sol bounded 386
 and AT keyboard POST milestone; exact candidate is the commit carrying this row.
