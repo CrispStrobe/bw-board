@@ -261,6 +261,8 @@ export class ExperimentalI80386 {
   _linear(seg, off, size = 1) {
     const c = this.segmentCaches[seg];
     const end = off + size - 1;
+    if (c?.null)
+      throw new I80386Fault(13, 0, "use of null data selector");
     if (!c?.present)
       throw new I80386Fault(
         seg === SEG_SS ? 12 : 11,
@@ -424,6 +426,93 @@ export class ExperimentalI80386 {
         code: id === SEG_CS,
         writable: id !== SEG_CS,
       };
+      return;
+    }
+    if (id !== SEG_CS && !(selector & 0xfff8)) {
+      if (id === SEG_SS)
+        throw new I80386Fault(13, 0, "null stack selector");
+      this._setSegValue(id, selector);
+      this.segmentCaches[id] = {
+        base: 0,
+        limit: 0,
+        default32: false,
+        present: false,
+        null: true,
+        code: false,
+        readable: false,
+        writable: false,
+      };
+      return;
+    }
+    if (id !== SEG_CS) {
+      if (selector & 4)
+        throw new UnsupportedI80386(
+          "LDT selectors are outside the bounded 386 profile",
+        );
+      const errorCode = selector & 0xfffc;
+      const offset = selector & 0xfff8;
+      if (offset + 7 > this.gdtr.limit)
+        throw new I80386Fault(13, errorCode, "selector outside GDT");
+      const address = (this.gdtr.base + offset) >>> 0;
+      const bytes = Array.from({ length: 8 }, (_, index) =>
+        this._readLinear((address + index) >>> 0, 1, { supervisor: true }),
+      );
+      const access = bytes[5];
+      const flags = bytes[6];
+      const dpl = (access >>> 5) & 3;
+      const cpl = this.cs & 3;
+      const rpl = selector & 3;
+      const code = !!(access & 8);
+      const conformingOrExpandDown = !!(access & 4);
+      const readableOrWritable = !!(access & 2);
+      if (!(access & 0x10))
+        throw new I80386Fault(13, errorCode, "system segment in data register");
+      if (id === SEG_SS) {
+        if (code || !readableOrWritable || rpl !== cpl || dpl !== cpl)
+          throw new I80386Fault(13, errorCode, "invalid stack descriptor");
+      } else {
+        if (code && !readableOrWritable)
+          throw new I80386Fault(13, errorCode, "execute-only data selector");
+        if (
+          (!code || !conformingOrExpandDown) &&
+          (rpl > dpl || cpl > dpl)
+        )
+          throw new I80386Fault(13, errorCode, "data selector privilege");
+        if (code && conformingOrExpandDown && dpl > cpl)
+          throw new I80386Fault(13, errorCode, "conforming selector privilege");
+      }
+      if (!(access & 0x80))
+        throw new I80386Fault(
+          id === SEG_SS ? 12 : 11,
+          errorCode,
+          "segment not present",
+        );
+      if (!code && conformingOrExpandDown)
+        throw new UnsupportedI80386(
+          "expand-down data is outside the bounded 386 profile",
+        );
+      let limit =
+        (bytes[0] | (bytes[1] << 8) | ((flags & 15) << 16)) >>> 0;
+      if (flags & 0x80) limit = ((limit << 12) | 0xfff) >>> 0;
+      const descriptor = {
+        base:
+          (bytes[2] |
+            (bytes[3] << 8) |
+            (bytes[4] << 16) |
+            (bytes[7] * 0x1000000)) >>>
+          0,
+        limit,
+        default32: !!(flags & 0x40),
+        present: true,
+        code,
+        readable: !code || readableOrWritable,
+        writable: !code && readableOrWritable,
+        access,
+        address,
+      };
+      this._markAccessed(descriptor);
+      this._setSegValue(id, selector);
+      this.segmentCaches[id] = descriptor;
       return;
     }
     const d = this._descriptor(selector);
@@ -696,6 +785,45 @@ export class ExperimentalI80386 {
     } else {
       this._setReg(0, operandWidth, q);
       this._setReg(2, operandWidth, r);
+    }
+  }
+
+  _string(op, width, address32, override) {
+    const byte = !(op & 1);
+    const operandWidth = byte ? 8 : width;
+    const bytes = operandWidth >>> 3;
+    const sourceOffset = address32 ? this.esi : this.si;
+    const destinationOffset = address32 ? this.edi : this.di;
+    if (op === 0xa4 || op === 0xa5) {
+      const value = this._read(override ?? SEG_DS, sourceOffset, operandWidth);
+      this._write(SEG_ES, destinationOffset, operandWidth, value);
+    } else if (op === 0xa6 || op === 0xa7) {
+      const source = this._read(override ?? SEG_DS, sourceOffset, operandWidth);
+      const destination = this._read(SEG_ES, destinationOffset, operandWidth);
+      this._add(source, destination, operandWidth, true);
+    } else if (op === 0xaa || op === 0xab) {
+      this._write(
+        SEG_ES,
+        destinationOffset,
+        operandWidth,
+        byte ? this.al : this._reg(0, operandWidth),
+      );
+    } else if (op === 0xac || op === 0xad) {
+      const value = this._read(override ?? SEG_DS, sourceOffset, operandWidth);
+      if (byte) this.al = value;
+      else this._setReg(0, operandWidth, value);
+    } else {
+      const value = this._read(SEG_ES, destinationOffset, operandWidth);
+      this._add(byte ? this.al : this._reg(0, operandWidth), value, operandWidth, true);
+    }
+    const delta = this.eflags & DF ? -bytes : bytes;
+    if ([0xa4, 0xa5, 0xa6, 0xa7, 0xac, 0xad].includes(op)) {
+      if (address32) this.esi = (this.esi + delta) >>> 0;
+      else this.si = (this.si + delta) & 0xffff;
+    }
+    if ([0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xae, 0xaf].includes(op)) {
+      if (address32) this.edi = (this.edi + delta) >>> 0;
+      else this.di = (this.di + delta) & 0xffff;
     }
   }
 
@@ -1124,6 +1252,8 @@ export class ExperimentalI80386 {
         if (byte) this.al = result;
         else this._setReg(0, operandWidth, result);
       }
+    } else if ([0xa4, 0xa5, 0xa6, 0xa7, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf].includes(op)) {
+      this._string(op, width, address32, override);
     } else if (op === 0xa8 || op === 0xa9) {
       const testWidth = op === 0xa8 ? 8 : width;
       const left = testWidth === 8 ? this.al : this._reg(0, testWidth);
@@ -1345,13 +1475,14 @@ export class ExperimentalI80386 {
       if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
         throw new I80386Fault(13, 0, "CLI requires CPL <= IOPL");
       this.eflags &= ~IF;
-    }
-    else if (op === 0xfb) {
+    } else if (op === 0xfb) {
       if (this.protectedMode && (this.cs & 3) > ((this.eflags >>> 12) & 3))
         throw new I80386Fault(13, 0, "STI requires CPL <= IOPL");
       this.eflags |= IF;
       this._interruptShadow = 2;
-    } else if (op === 0x17) {
+    } else if (op === 0xfc) this.eflags &= ~DF;
+    else if (op === 0xfd) this.eflags |= DF;
+    else if (op === 0x17) {
       this._loadSeg(SEG_SS, this._pop(width) & 0xffff);
       this._interruptShadow = 2;
       this._nmiShadow = 2;
@@ -1360,17 +1491,19 @@ export class ExperimentalI80386 {
       if (this.protectedMode && (this.cs & 3) !== 0)
         throw new I80386Fault(13, 0, "HLT requires CPL 0");
       this.halted = true;
-    }
-    else if (op === 0x8e) {
+    } else if (op === 0x8c || op === 0x8e) {
       const ea = this._decodeEA(address32, override),
         ids = [SEG_ES, SEG_CS, SEG_SS, SEG_DS, SEG_FS, SEG_GS];
-      if (ea.reg === 1 || ea.reg > 5)
+      if (ea.reg > 5 || (op === 0x8e && ea.reg === 1))
         throw new I80386Fault(6, null, "invalid MOV segment register");
-      this._loadSeg(ids[ea.reg], this._operandRead(ea, 16));
-      if (ea.reg === 2) {
-        this._interruptShadow = 2;
-        this._nmiShadow = 2;
-        this._debugShadow = 1;
+      if (op === 0x8c) this._operandWrite(ea, 16, this._segValue(ids[ea.reg]));
+      else {
+        this._loadSeg(ids[ea.reg], this._operandRead(ea, 16));
+        if (ea.reg === 2) {
+          this._interruptShadow = 2;
+          this._nmiShadow = 2;
+          this._debugShadow = 1;
+        }
       }
     } else if (op === 0xea) {
       const raw = this._fetchN(width >>> 3),

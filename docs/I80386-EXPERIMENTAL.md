@@ -93,6 +93,21 @@ first unsupported instruction or a finite instruction
 budget. Its `accepted: false` and `fullRomPass: false` fields are deliberate:
 the artifact measures bounded progress and does not claim complete ROM,
 hardware, or timing compatibility.
+
+MOV to and from ES/CS/SS/DS/FS/GS uses a 16-bit segment operand, independent
+of the general operand-size default. Invalid encodings raise #UD. Protected
+data-register loads admit null selectors with an unusable cache, distinguish
+#GP, #NP, and #SS for the bounded GDT path, and leave LDT and expand-down data
+as explicit valid-but-unsupported paths. The original Intel 80386 manual lists
+8C only as `r/m16`; this executor therefore preserves a register destination's
+upper word when 66 is present. Pinned PCjs instead zeroes that upper word, so
+the upper half is recorded as an oracle difference and is not claimed as
+cross-model evidence.
+
+Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
+operand/address sizes, source overrides, fixed ES destinations, and DF index
+direction. REP/REPE/REPNE remains explicit unsupported work because precise
+mid-string fault and interrupt restart state is not yet modeled.
 `scripts/compare-pcjs-protected386-paging.mjs` runs an owned PG=1 guest against
 the pinned PCjs revision. It compares two CR3 mappings, successful reads, CR2,
 and the delivered #PF restart/error frame. PCjs omits Intel's RF bit in the
