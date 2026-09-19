@@ -37,6 +37,12 @@ test('LLDT and LTR retain ignored selector RPL bits in their visible registers',
   assert.equal(f.cpu.ldtr.selector,0x23);assert.equal(f.cpu.tr.selector,0x2b);
 });
 
+test('null LLDT invalidates its cache while preserving the visible selector RPL',()=>{
+  const f=fixture([0xb8,3,0,0x0f,0,0xd0,0x0f,0,0xc3]);
+  for(let i=0;i<3;i++)f.cpu.step();
+  assert.deepEqual(f.cpu.ldtr,{selector:3,valid:false,base:0,limit:0});assert.equal(f.cpu.bx,3);
+});
+
 test('LTR rejects busy TSS and LLDT privilege failures atomically',()=>{
   const busy=fixture([0xb8,0x28,0,0x0f,0,0xd8]);busy.mem.set(0x22d,0x83);
   busy.cpu.step();const busyState=busy.cpu.getProtectedState(),busyWrites=busy.writes.length;
@@ -62,9 +68,10 @@ test('guest IRET enters ring 3, LDT data works, and INT uses the TSS ring-0 stac
   put(0x100100,[0xcf]);put(0x100120,[0xf4]);
   put(0x160000,[0xb8,0x0f,0,0x8e,0xd8,0xa1,0,0,0xcd,0x30,0xcd,0x31]);put(0x170000,[0x34,0x12]);
   Object.assign(cpu,{cs:0,ip:0,ds:0,es:0,ss:0,sp:0x100,flags:2});
-  let sawInner=false,sawUserReturn=false;
+  let sawInner=false,sawUserReturn=false,sawOuter=false;
   for(let i=0;i<80&&!cpu.halted;i++){
     cpu.step();
+    if(!sawOuter&&cpu.cpl===3&&cpu.ip===0){sawOuter=true;assert.equal(cpu.ds,0,'outer IRET invalidated ring-0 DS');}
     if(cpu.cpl===0&&cpu.ip===0x100){sawInner=true;
       assert.equal(cpu.sp,0x2f6);assert.equal(mem.get(0x1302fe)|(mem.get(0x1302ff)<<8),0x33);
       assert.equal(mem.get(0x1302fc)|(mem.get(0x1302fd)<<8),0x100);
@@ -72,5 +79,13 @@ test('guest IRET enters ring 3, LDT data works, and INT uses the TSS ring-0 stac
     if(sawInner&&cpu.cpl===3&&cpu.ip===10)sawUserReturn=true;
   }
   assert.equal(cpu.halted,true);assert.equal(cpu.cpl,0);assert.equal(cpu.ax,0x1234);
-  assert.equal(sawInner,true);assert.equal(sawUserReturn,true);
+  assert.equal(sawOuter,true);assert.equal(sawInner,true);assert.equal(sawUserReturn,true);
+});
+
+test('outer IRET checks the full old-stack frame before an invalid CS descriptor',()=>{
+  const f=fixture([0xcf]);f.cpu.deliverProtectedFaults=true;f.cpu.sp=0x200;f.cpu.segmentCaches[2].limit=0x207;
+  f.mem.set(0x130200,0);f.mem.set(0x130201,0);f.mem.set(0x130202,0x3b);f.mem.set(0x130203,0);
+  const state=f.cpu.getProtectedState();
+  assert.throws(()=>f.cpu._iretProtected(),e=>e instanceof ProtectedModeFault&&e.vector===12&&e.errorCode===0);
+  assert.deepEqual(f.cpu.getProtectedState(),state);
 });

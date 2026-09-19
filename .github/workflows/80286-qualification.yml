@@ -67,6 +67,21 @@ jobs:
             | tee "$RECEIPT_DIR/pcjs-protected286-isa.json"
           node scripts/compare-pcjs-protected286-rep.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286-rep.json"
+          node scripts/compare-pcjs-protected286-privilege.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-privilege.json"
+          if PRIVILEGE_ORACLE_MUTATION=frame node scripts/compare-pcjs-protected286-privilege.mjs \
+            > "$RECEIPT_DIR/rejected-privilege-frame.json"; then
+            echo "protected privilege oracle failed to reject frame mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-privilege-frame.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'frame');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['firstFrame']);
+          NODE
           if REP_ORACLE_MUTATION=destination node scripts/compare-pcjs-protected286-rep.mjs \
             > "$RECEIPT_DIR/rejected-rep-destination.json"; then
             echo "protected REP oracle failed to reject destination mutation" >&2

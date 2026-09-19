@@ -2,9 +2,8 @@ import I8086, {
     UnsupportedProtectedMode,
 } from '../i8086.js';
 
-/** Host-visible diagnostic fault.  IDT gate delivery is outside this first
- * protected-mode slice, so callers must not mistake this for architectural
- * exception delivery. */
+/** Host-visible protected fault. With delivery disabled it is diagnostic;
+ * with delivery enabled the supported IDT subset delivers it architecturally. */
 export class ProtectedModeFault extends Error {
     constructor(vector, errorCode, restartIp, reason) {
         super(`80286 protected-mode #${vector} (${reason})`);
@@ -25,11 +24,10 @@ const ERROR_CODE_VECTORS = new Set([10, 11, 12, 13]);
 /**
  * Experimental, deliberately bounded 80286 protected-mode executor.
  *
- * It implements ring-0, GDT-only, expand-up 16-bit code/data segments. It
- * executes enough real instructions to enter protected mode, prove cached
- * 24-bit addressing, and optionally deliver same-ring interrupt/trap gates.
- * Tasks, LDT, privilege changes, expand-down segments, and REP fail before
- * execution.
+ * It implements expand-up 16-bit code/data segments through the GDT and LDT,
+ * restartable strings, and a bounded ring-0/ring-3 interrupt path using a 286
+ * TSS stack. Full task switches, task/call gates, conforming and expand-down
+ * segments remain explicit unsupported boundaries.
  */
 export class ProtectedI80286 extends I8086 {
     constructor(bus, {deliverProtectedFaults = false} = {}) {
@@ -76,7 +74,7 @@ export class ProtectedI80286 extends I8086 {
         throw new ProtectedModeFault(vector, errorCode, this._instrStartIp ?? this.ip, reason);
     }
 
-    _descriptor(selector, target, {ignoreRpl = false, privilegeCpl = this.cpl} = {}) {
+    _descriptor(selector, target, {ignoreRpl = false, privilegeCpl = this.cpl, systemAsUnsupported = false} = {}) {
         selector &= 0xffff;
         if ((selector & 0xfffc) === 0 && (target === SEG_DS || target === SEG_ES))
             return {selector,base:0,limit:0,access:0,code:false,writable:false,readable:false,usable:false};
@@ -85,7 +83,12 @@ export class ProtectedI80286 extends I8086 {
         const present = !!(access & 0x80), dpl = (access >> 5) & 3;
         const code = !!(access & 8), writable = !code && !!(access & 2);
         const readable = !code || !!(access & 2), expandDown = !code && !!(access & 4);
-        if (!(access & 0x10)) this._pmFault(13, selector & 0xfffc, 'system descriptor as segment');
+        if (!(access & 0x10)) {
+            const systemType=access&0x0f;
+            if (systemAsUnsupported&&(systemType===1||systemType===3||systemType===4||systemType===5))
+                throw new UnsupportedProtectedMode('far task or gate transfer');
+            this._pmFault(13, selector & 0xfffc, 'system descriptor as segment');
+        }
         const rpl = selector & 3;
         if (target === SEG_SS && (rpl !== privilegeCpl || dpl !== privilegeCpl)) this._pmFault(13, selector & 0xfffc, 'SS privilege');
         if ((target === SEG_DS || target === SEG_ES) && Math.max(privilegeCpl,rpl) > dpl)
@@ -258,7 +261,7 @@ export class ProtectedI80286 extends I8086 {
         if (op === 0xcf) { this._iretProtected(); return 17; }
         if (op === 0xea) {
             const ip = this._pmFetch16(), selector = this._pmFetch16();
-            const descriptor = this._descriptor(selector, SEG_CS);
+            const descriptor = this._descriptor(selector, SEG_CS,{systemAsUnsupported:true});
             if (ip > descriptor.limit) this._pmFault(13, 0, 'far-jump offset outside code segment');
             this._commitDescriptor(SEG_CS, descriptor);
             this.ip = ip;
@@ -580,7 +583,7 @@ export class ProtectedI80286 extends I8086 {
             if (this.cpl !== 0) this._pmFault(13, 0, ea.reg === 2 ? 'LLDT privilege' : 'LTR privilege');
             const selector = this._pmOperandRead(ea, true);
             if (ea.reg === 2 && (selector & 0xfffc) === 0) {
-                this.ldtr = {selector:0,valid:false,base:0,limit:0};
+                this.ldtr = {selector:selector&0xffff,valid:false,base:0,limit:0};
                 return 17;
             }
             const raw = this._rawDescriptor(selector,{gdtOnly:true});

@@ -52,6 +52,17 @@ forces FLAGS bit 1. A later IRET while NT is set explicitly refuses the
 unsupported task return. TF single-step delivery remains unsupported, so a
 subsequent instruction with restored TF also refuses before execution.
 
+LLDT/LTR cache 286 LDT and available-TSS descriptors; SLDT/STR expose their
+visible selectors. LTR sets the descriptor busy bit but does not perform or
+claim a task switch. LDT data and code selectors, legal null DS/ES loads, and
+CPL/RPL/DPL checks are supported for the bounded segment forms. A ring-3
+interrupt or trap may enter a nonconforming ring-0 handler using SS0:SP0 from
+the current TSS. The complete new frame is validated before descriptor or
+stack writes. Outer IRET validates the ten-byte old frame and restores the
+outer CS:IP and SS:SP; inaccessible cached DS/ES values become null. Full task
+switches, task gates, call gates, conforming segments, and expand-down segments
+remain unsupported.
+
 Each of CS, SS, DS, and ES has its own hidden descriptor cache. A load reads a
 286 descriptor, validates the bounded capability, sets the descriptor's
 accessed bit in memory, and retains its 24-bit base and 16-bit limit. Data and
@@ -72,9 +83,8 @@ const checkpoint = cpu.getProtectedState();
 cpu.setProtectedState(checkpoint);
 ```
 
-This slice refuses LDT selectors, system descriptors, null data selectors,
-privilege levels other than ring 0, conforming and expand-down segments, task
-gates and task returns, privilege-changing gates, nested/double-fault delivery,
+This slice refuses full task switches, task/call gates and task returns,
+conforming and expand-down segments, nested/double-fault delivery,
 far `CALL`/`RET`, TF single-step delivery, and all opcodes or address forms
 outside the lists above. With delivery disabled, a supported protection fault
 is surfaced as `ProtectedModeFault` with vector, error code, and restart IP.
@@ -123,3 +133,11 @@ prefix. The receipt requires both engines to finish the remaining copy with
 matching registers and memory. The owned executor uses one `step()` per REP
 iteration; PCjs may complete several iterations within one host step. Neither
 step count nor instruction timing is graded.
+
+`scripts/compare-pcjs-protected286-privilege.mjs` independently executes the
+owned LLDT/LTR and ring-transition guest. It IRETs from ring 0 to LDT ring-3
+code, reads LDT user data, enters ring 0 through a DPL-3 interrupt gate and
+TSS stack, checks the full inner frame, IRETs outward, and enters a second
+ring-0 handler that halts. It compares selectors, privilege, registers, stack,
+both observed frames, and completion with the exact pinned PCjs revision. It
+does not claim hardware task switching.
