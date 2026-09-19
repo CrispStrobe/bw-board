@@ -9,7 +9,13 @@ import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const cooperative='cooperative producer labels reconcile';
 const mutations=[
-    {name:'mislabelled bus-external producer',edits:[{file:'bus-circuit.c',from:'B(5)[i],PRODUCER_BUS_EXTERNAL)',
+    {name:'restored unchanged external writer submissions',edits:[{file:'bus-circuit.c',
+        from:'if(drivers[W(4)[i]]!=B(5)[i]&&\n       stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))',
+        to:'if((void)drivers,stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))'}]},
+    {name:'restored unchanged latch writer submissions',edits:[{file:'phase-circuit.c',
+        from:'if(CB(4)[W(7)[i]]!=B(11)[i]&&\n           write_owned_driver_tagged(c,W(7)[i],B(11)[i],PRODUCER_PHASE_LATCH))',
+        to:'if(write_owned_driver_tagged(c,W(7)[i],B(11)[i],PRODUCER_PHASE_LATCH))'}]},
+    {name:'mislabelled bus-external producer',pattern:'external producer has a positive isolated changed identity',edits:[{file:'bus-circuit.c',from:'B(5)[i],PRODUCER_BUS_EXTERNAL)',
         to:'B(5)[i],PRODUCER_OTHER)',prelude:'#define PRODUCER_OTHER 0\n'}]},
     {name:'mislabelled bus-output producer',edits:[{file:'bus-circuit.c',from:'(u8)output[i],PRODUCER_BUS_OUTPUT)',
         to:'(u8)output[i],PRODUCER_OTHER)',prelude:'#define PRODUCER_OTHER 0\n'}]},

@@ -49,7 +49,13 @@ u32 begin_bus_memory_clock(const u32*p,u32*fault) {
     if(W(7)[1])return failure(p,6,1,0,fault);
     if(W(7)[0])return failure(p,6,2,0,fault);
     u32 result=validate_bus_mapping(p,fault);if(result)return result;
-    for(u32 i=0;i<p[6];i++)if(stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))return failure(p,8,2,i,fault);
+    /* Validation above preserves the complete mapping/value fault order. After
+     * it succeeds, compare the authoritative raw four-state driver slot before
+     * entering the canonical queued writer. Repeated mappings still execute in
+     * input order, so the last submitted value retains authority. */
+    const u8*drivers=(u8*)(unsigned long)W(0)[4];
+    for(u32 i=0;i<p[6];i++)if(drivers[W(4)[i]]!=B(5)[i]&&
+       stage_bus_driver(W(0),W(4)[i],B(5)[i],PRODUCER_BUS_EXTERNAL))return failure(p,8,2,i,fault);
     if((result=settle(p,fault)))return result;
     gather(p);result=bus_begin();if(result)return failure(p,7,result,bus_error_pin(),fault);
     const u32*output=(u32*)(unsigned long)bus_output_ptr();
