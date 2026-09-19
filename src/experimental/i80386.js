@@ -1963,6 +1963,37 @@ export class ExperimentalI80386 {
     return width === 32 ? result >>> 0 : result;
   }
 
+  _doubleShift(destination, source, width, count, right) {
+    count &= 31;
+    if (count === 0) return destination;
+    const bits = BigInt(width);
+    const mask = (1n << bits) - 1n;
+    const dst = BigInt.asUintN(width, BigInt(destination));
+    const src = BigInt.asUintN(width, BigInt(source));
+    const shift = BigInt(count);
+    const joined = right ? (src << bits) | dst : (dst << bits) | src;
+    const raw = right
+      ? joined >> shift
+      : (joined << shift) >> bits;
+    const result = Number(raw & mask);
+    const carry = right
+      ? Number((joined >> (shift - 1n)) & 1n)
+      : Number((joined >> (bits * 2n - shift)) & 1n);
+    const sign = width === 32 ? 0x80000000 : 0x8000;
+    this.eflags &= ~(CF | PF | ZF | SF | OF);
+    if (carry) this.eflags |= CF;
+    if (result === 0) this.eflags |= ZF;
+    if (result & sign) this.eflags |= SF;
+    if (parity8(result)) this.eflags |= PF;
+    if (count === 1) {
+      const overflow = right
+        ? !!(destination & sign) !== !!(result & sign)
+        : !!(result & sign) !== !!carry;
+      if (overflow) this.eflags |= OF;
+    }
+    return width === 32 ? result >>> 0 : result;
+  }
+
   _iret(width) {
     if (this.protectedMode && !this.virtual8086 && this.eflags & NT)
       throw new UnsupportedI80386(
@@ -2626,6 +2657,23 @@ export class ExperimentalI80386 {
     if (op >= 0x90 && op <= 0x9f) {
       const ea = this._decodeEA(address32, override);
       this._operandWrite(ea, 8, this._condition(op & 15) ? 1 : 0);
+      return;
+    }
+    if (op === 0xa4 || op === 0xa5 || op === 0xac || op === 0xad) {
+      const ea = this._decodeEA(address32, override);
+      const count = op === 0xa4 || op === 0xac ? this._fetch8() : this.cl;
+      this._operandPreflightWrite(ea, width);
+      const destination = this._operandRead(ea, width);
+      if ((count & 31) !== 0) {
+        const result = this._doubleShift(
+          destination,
+          this._reg(ea.reg, width),
+          width,
+          count,
+          op === 0xac || op === 0xad,
+        );
+        this._operandWrite(ea, width, result);
+      }
       return;
     }
     if (op >= 0x80 && op <= 0x8f) {

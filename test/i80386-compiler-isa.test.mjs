@@ -92,3 +92,58 @@ test("SETcc memory faults before any destination write", () => {
   assert.throws(() => cpu.step(), (error) => error?.vector === 13);
   assert.deepEqual([reads, writes, cpu.eip], [[], [], 0]);
 });
+
+test("SHLD and SHRD combine 16- and 32-bit operands with defined flags", () => {
+  const left = fixture([0x66, 0x0f, 0xa4, 0xd8, 1]).cpu;
+  left.eax = 0x80000000;
+  left.ebx = 0;
+  left.eflags = 0x12;
+  left.step();
+  assert.equal(left.eax, 0);
+  assert.equal(left.eflags & 0x8c5, 0x845);
+  assert.equal(left.eflags & 0x10, 0x10, "AF is undefined and left unchanged");
+
+  const right = fixture([0x0f, 0xac, 0xd8, 1]).cpu;
+  right.ax = 1;
+  right.bx = 0;
+  right.eflags = 2;
+  right.step();
+  assert.equal(right.ax, 0);
+  assert.equal(right.eflags & 0x8c5, 0x45);
+});
+
+test("double shifts use CL and memory addressing without changing the source", () => {
+  const { cpu, memory } = fixture([
+    0x67, 0x66, 0x0f, 0xad, 0x15, 0x00, 0x04, 0x00, 0x00,
+  ]);
+  [0x78, 0x56, 0x34, 0x12].forEach((value, index) => memory.set(0x400 + index, value));
+  cpu.edx = 0xabcdef01;
+  cpu.cl = 4;
+  cpu.step();
+  const result = [0, 1, 2, 3].reduce(
+    (value, index) => value | ((memory.get(0x400 + index) ?? 0) << (index * 8)),
+    0,
+  ) >>> 0;
+  assert.equal(result, 0x11234567);
+  assert.equal(cpu.edx, 0xabcdef01);
+});
+
+test("double-shift write admission precedes source-segment reads", () => {
+  const reads = [];
+  const writes = [];
+  const bytes = [0x2e, 0x66, 0x0f, 0xa4, 0x16, 0x00, 0x01, 1];
+  const cpu = new I80386({
+    fetch: (address) => bytes[address] ?? 0,
+    read: (address) => { reads.push(address); return 0; },
+    write: (address, value) => writes.push([address, value]),
+  });
+  cpu.cr0 = 1;
+  cpu.segmentCaches[1] = {
+    ...cpu.segmentCaches[1],
+    code: true,
+    readable: true,
+    writable: false,
+  };
+  assert.throws(() => cpu.step(), (error) => error?.vector === 13);
+  assert.deepEqual([reads, writes, cpu.eip], [[], [], 0]);
+});
