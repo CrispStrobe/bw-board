@@ -1,57 +1,95 @@
 /**
- * `i8086-machine.js` must not statically import anything a downstream vendor
- * cannot take.
+ * The generated 8088 timing tables are an optional payload. The default
+ * i8086-machine import must remain usable by downstreams that do not vendor it.
  *
- * It used to import `./i8088-timing.js`, which imports `./i8088-cycles.js` — a
- * generated table of 974,864 bytes. Both static, so every bundle carrying this
- * machine carried the table, for a path that is opt-in, defaults to null, and
- * that NOTHING in this repo enables.
- *
- * brickwright-lite could not pay that in an editor bundle, so it removed the
- * whole cycle-timing path and declared the two files `absentByDesign`. A
- * downstream that drops a FEATURE to avoid a byte cost is the strongest signal
- * available that a dependency is in the wrong place — and it made this file
- * unvendorable, which cost a pin bump a whole extra divergence.
- *
- * The estimator is injected now. This test is what stops it coming back: the
- * next person to reach for a module-scope import of a large generated table
- * gets a red naming the file and the reason.
+ * This is a dependency boundary, not a file-size boundary. `i8086.js` is large
+ * handwritten core logic and belongs in the default graph; `i8088-timing.js`
+ * and its generated `i8088-cycles.js` payload do not. Walk the complete static
+ * relative-import graph so a small forwarding module cannot hide either file.
  */
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync, statSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-const staticImports = (file) => [...readFileSync(path.join(SRC, file), 'utf8')
-    .matchAll(/^\s*import\s[^;]*?from\s*'(\.[^']+)'/gm)].map(m => m[1]);
+const OPTIONAL_TIMING_PAYLOAD = new Set(['i8088-timing.js', 'i8088-cycles.js']);
 
-/** Anything this big is generated, and a generated table does not belong on a hot import. */
-const BIG = 100_000;
-
-test('i8086-machine.js statically imports nothing over 100 KB', () => {
-    const imports = staticImports('i8086-machine.js');
-    assert.ok(imports.length > 3,
-        `fixture: only ${imports.length} static imports found — the scan is not reading the file`);
-
-    const heavy = [];
-    for (const spec of imports) {
-        const resolved = path.join(SRC, spec);
-        const bytes = statSync(resolved).size;
-        // One hop: a small module re-exporting a huge one is the shape that hid this.
-        const via = staticImports(path.basename(spec))
-            .map(s => ({s, bytes: statSync(path.join(SRC, s)).size}))
-            .filter(x => x.bytes > BIG);
-        if (bytes > BIG) heavy.push(`${spec} (${bytes} bytes)`);
-        for (const v of via) heavy.push(`${spec} -> ${v.s} (${v.bytes} bytes)`);
+function staticRelativeImports(source) {
+    const specifiers = [];
+    const statements = [
+        /^\s*import\s+(?:[^;]*?\s+from\s+)?['"](\.[^'"]+)['"]/gm,
+        /^\s*export\s+(?:\*|\{[^}]*\})\s+from\s+['"](\.[^'"]+)['"]/gm,
+    ];
+    for (const pattern of statements) {
+        for (const match of source.matchAll(pattern)) specifiers.push(match[1]);
     }
+    return specifiers;
+}
 
-    assert.deepEqual(heavy, [],
-        'a static import reaches a generated table. Every bundle carrying this machine '
-        + 'now carries it, whether or not the feature is used — and a downstream that '
-        + 'cannot pay it must drop the whole path, which is what happened with '
-        + 'i8088-cycles.js. Inject the consumer instead, as enableI8088CycleTiming does.');
+function staticImportGraph(entry, read = file => readFileSync(path.join(SRC, file), 'utf8')) {
+    const parent = new Map([[entry, null]]);
+    const pending = [entry];
+    while (pending.length) {
+        const importer = pending.pop();
+        for (const specifier of staticRelativeImports(read(importer))) {
+            let dependency = path.posix.normalize(path.posix.join(path.posix.dirname(importer), specifier));
+            if (!path.posix.extname(dependency)) dependency += '.js';
+            if (parent.has(dependency)) continue;
+            parent.set(dependency, importer);
+            pending.push(dependency);
+        }
+    }
+    return parent;
+}
+
+function importPath(graph, target) {
+    if (!graph.has(target)) return null;
+    const result = [];
+    for (let file = target; file !== null; file = graph.get(file)) result.push(file);
+    return result.reverse();
+}
+
+test('the default i8086 machine graph excludes the optional 8088 timing payload', () => {
+    const graph = staticImportGraph('i8086-machine.js');
+    assert.ok(graph.size > 15,
+        `fixture: only ${graph.size} modules found — the scan is not traversing the machine graph`);
+
+    const violations = [...OPTIONAL_TIMING_PAYLOAD]
+        .map(file => importPath(graph, file))
+        .filter(Boolean)
+        .map(files => files.join(' -> '));
+    assert.deepEqual(violations, [],
+        'the default machine statically reaches the optional 8088 timing payload. '
+        + 'Inject the estimator, as enableI8088CycleTiming does. Import path(s):\n'
+        + violations.join('\n'));
+
+    assert.ok(graph.has('i8086.js'), 'fixture: the required CPU core is missing from the graph');
+});
+
+test('the boundary scan catches direct and transitive forbidden imports', () => {
+    const graphFor = sources => staticImportGraph('i8086-machine.js', file => {
+        assert.ok(Object.hasOwn(sources, file), `fixture has no source for ${file}`);
+        return sources[file];
+    });
+
+    const direct = graphFor({
+        'i8086-machine.js': "import './i8088-cycles.js';",
+        'i8088-cycles.js': '',
+    });
+    assert.deepEqual(importPath(direct, 'i8088-cycles.js'),
+        ['i8086-machine.js', 'i8088-cycles.js']);
+
+    const transitive = graphFor({
+        'i8086-machine.js': "export { helper } from './forwarder.js';",
+        'forwarder.js': "import {\n CycleEstimator\n} from './i8088-timing.js';\nexport const helper = CycleEstimator;",
+        'i8088-timing.js': "import { TABLES } from './i8088-cycles.js';\nexport const CycleEstimator = TABLES;",
+        'i8088-cycles.js': 'export const TABLES = {};',
+    });
+    assert.deepEqual(importPath(transitive, 'i8088-cycles.js'), [
+        'i8086-machine.js', 'forwarder.js', 'i8088-timing.js', 'i8088-cycles.js',
+    ]);
 });
 
 test('the estimator refuses BY NAME rather than throwing on new undefined', async () => {
