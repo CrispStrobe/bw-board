@@ -2275,6 +2275,19 @@ export class ExperimentalI80386 {
       const value = signed(this._reg(ea.reg, width));
       if (value < lower || value > upper)
         throw new I80386Fault(5, null, "BOUND range exceeded");
+    } else if (op === 0x63) {
+      if (!this.protectedMode || this.virtual8086)
+        throw new I80386Fault(6, null, "ARPL is undefined outside protected mode");
+      const ea = this._decodeEA(address32, override);
+      this._operandPreflightWrite(ea, 16);
+      const destination = this._operandRead(ea, 16);
+      const sourceRpl = this._reg(ea.reg, 16) & 3;
+      if ((destination & 3) < sourceRpl) {
+        this._operandWrite(ea, 16, (destination & ~3) | sourceRpl);
+        this.eflags |= ZF;
+      } else {
+        this.eflags &= ~ZF;
+      }
     } else if (op === 0x69 || op === 0x6b) {
       const ea = this._decodeEA(address32, override);
       const source = BigInt.asIntN(width, BigInt(this._operandRead(ea, width)));
