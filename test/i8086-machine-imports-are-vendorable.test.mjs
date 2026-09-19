@@ -4,8 +4,9 @@
  *
  * This is a dependency boundary, not a file-size boundary. `i8086.js` is large
  * handwritten core logic and belongs in the default graph; `i8088-timing.js`
- * and its generated `i8088-cycles.js` payload do not. Walk the complete static
- * relative-import graph so a small forwarding module cannot hide either file.
+ * and its generated `i8088-cycles.js` payload do not. Walk transitive relative
+ * imports and the import/re-export forms used in this repository so a small
+ * forwarding module cannot hide either file.
  */
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,7 +21,7 @@ function staticRelativeImports(source) {
     const specifiers = [];
     const statements = [
         /^\s*import\s+(?:[^;]*?\s+from\s+)?['"](\.[^'"]+)['"]/gm,
-        /^\s*export\s+(?:\*|\{[^}]*\})\s+from\s+['"](\.[^'"]+)['"]/gm,
+        /^\s*export\s+(?:\*(?:\s+as\s+[A-Za-z_$][\w$]*)?|\{[^}]*\})\s+from\s+['"](\.[^'"]+)['"]/gm,
     ];
     for (const pattern of statements) {
         for (const match of source.matchAll(pattern)) specifiers.push(match[1]);
@@ -89,6 +90,15 @@ test('the boundary scan catches direct and transitive forbidden imports', () => 
     });
     assert.deepEqual(importPath(transitive, 'i8088-cycles.js'), [
         'i8086-machine.js', 'forwarder.js', 'i8088-timing.js', 'i8088-cycles.js',
+    ]);
+
+    const namespaceReExport = graphFor({
+        'i8086-machine.js': "export * as timing from './i8088-timing.js';",
+        'i8088-timing.js': "export * from './i8088-cycles.js';",
+        'i8088-cycles.js': 'export const TABLES = {};',
+    });
+    assert.deepEqual(importPath(namespaceReExport, 'i8088-cycles.js'), [
+        'i8086-machine.js', 'i8088-timing.js', 'i8088-cycles.js',
     ]);
 });
 
