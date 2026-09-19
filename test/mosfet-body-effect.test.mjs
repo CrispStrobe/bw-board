@@ -70,7 +70,7 @@ describe('mosVth: Vth = VTO + GAMMA*(sqrt(PHI + Vsb) - sqrt(PHI))', () => {
 // ─── The smoothing under it ────────────────────────────────────────────────
 
 describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
-  it('is exactly zero, with zero slope, at and below -delta', () => {
+  it('is exactly zero, with zero slope, at and below threshold', () => {
     // THIS IS THE LOAD-BEARING ASSERTION. The previous form,
     // ½·(vov + √(vov² + δ²)), returned 6.24e-4 at vov = -1 V with derivative
     // 6.24e-4. Both are negligible; their RATIO is not. An off device on an
@@ -78,7 +78,7 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
     // gm = 2k·vov_s·dvov_s, so the node settles at vov_s/(2·dvov_s) — HALF A
     // VOLT, INDEPENDENT OF k. Weakening the device does not help: the phantom
     // current and the phantom conductance shrink together.
-    for (const vov of [-MOS_SMOOTH_DELTA, -0.06, -0.1, -1, -5, -50]) {
+    for (const vov of [0, -Number.EPSILON, -MOS_SMOOTH_DELTA, -0.06, -0.1, -1, -5, -50]) {
       const [s, d] = smoothVov(vov);
       assert.equal(s, 0, `vov ${vov} must give exactly 0, got ${s}`);
       assert.equal(d, 0, `vov ${vov} must give exactly slope 0, got ${d}`);
@@ -95,14 +95,13 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
 
   it('is continuous in value AND slope across both joins', () => {
     // THE TOLERANCES DERIVE FROM THE PROBE AND THE BAND, not from a constant.
-    // In band the slope is (vov + d)/(2d), so stepping across a join by h moves
-    // it by h/(2d) -- a number that depends on delta. A flat 1e-7 tolerance
-    // silently encoded delta = 0.05 and reddened the day delta moved to 0.005,
-    // accusing the function of a discontinuity it does not have.
+    // In band the slope is 4u - 3u², so its derivative is bounded by 4/d.
+    // A flat tolerance would silently encode one blend width and redden when
+    // delta moved, accusing the function of a discontinuity it does not have.
     const h = 1e-9;
-    const valueTol = 4 * h;                          // slope <= 1 either side
-    const slopeTol = 4 * h / MOS_SMOOTH_DELTA;       // d(slope)/d(vov) = 1/(2d)
-    for (const join of [-MOS_SMOOTH_DELTA, MOS_SMOOTH_DELTA]) {
+    const valueTol = 4 * h;                          // max slope is 4/3
+    const slopeTol = 8 * h / MOS_SMOOTH_DELTA;       // both sides of the probe
+    for (const join of [0, MOS_SMOOTH_DELTA]) {
       const [lo, dlo] = smoothVov(join - h);
       const [hi, dhi] = smoothVov(join + h);
       assert.ok(Math.abs(hi - lo) < valueTol,
@@ -111,7 +110,7 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
         `slope jump at ${join}: ${dhi - dlo} (tol ${slopeTol})`);
     }
     // And the tolerances must not be so loose that a real jump would pass:
-    // the old hyperbola's slope at -delta was 0.5*(1 - 1/sqrt(1+1)) = 0.146,
+    // the old hyperbola's slope at cutoff was 0.5,
     // which is orders above slopeTol at any delta this band takes.
     assert.ok(slopeTol < 0.01, `slopeTol ${slopeTol} would admit a real jump`);
   });
@@ -120,7 +119,7 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
     // The probe points are FRACTIONS OF THE BAND, so this stays in band when
     // delta moves. Absolute values would walk outside it and test the lines.
     const h = MOS_SMOOTH_DELTA * 2e-6;
-    for (const f of [-0.8, -0.4, 0, 0.4, 0.8]) {
+    for (const f of [0.1, 0.25, 0.5, 0.75, 0.9]) {
       const vov = f * MOS_SMOOTH_DELTA;
       const [, d] = smoothVov(vov);
       const numeric = (smoothVov(vov + h)[0] - smoothVov(vov - h)[0]) / (2 * h);
@@ -133,7 +132,7 @@ describe('smoothVov: C1, and EXACTLY ZERO below cutoff', () => {
     for (let vov = -MOS_SMOOTH_DELTA; vov <= MOS_SMOOTH_DELTA; vov += step) {
       const [s] = smoothVov(vov);
       assert.ok(s >= 0, `vov ${vov} gave a NEGATIVE overdrive ${s}`);
-      assert.ok(s <= Math.max(vov, 0) + MOS_SMOOTH_DELTA / 4 + 1e-12,
+      assert.ok(s <= Math.max(vov, 0) + 1e-12,
         `vov ${vov} overshoots: ${s}`);
     }
   });

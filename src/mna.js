@@ -4161,8 +4161,8 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
 /**
  * Smoothed overdrive, C1 and EXACTLY ZERO BELOW CUTOFF.
  *
- *   vov_s = 0                      vov ≤ −δ
- *         = (vov + δ)² / (4δ)      |vov| < δ
+ *   vov_s = 0                      vov ≤ 0
+ *         = δu²(2 − u), u=vov/δ    0 < vov < δ
  *         = vov                     vov ≥ δ
  *
  * The corner still has to be smoothed — a HARD cutoff branch (gOff below
@@ -4182,15 +4182,18 @@ function stampZener(A, b, part, nets, nodeIndex, groundNetId, diodeVoltages) {
  * shrink together. Corpus deck ADI #699's gate-drain node read −5.155 V
  * against ngspice's 0: not a near miss, a fixed point of the smoothing.
  *
- * Below −δ this returns 0 with derivative 0, so an off device stamps NOTHING
+ * At and below threshold this returns 0 with derivative 0, so an off device
+ * stamps NOTHING
  * and the node is left to GMIN, which ties it to the reference — the same
  * place ngspice puts it. That is the identical argument MOS_GDS_FLOOR settles
  * for the output conductance; a numerical aid must not out-argue GMIN on a
  * node it does not own.
  *
  * Above +δ it is the SQUARE LAW EXACTLY, where the old form ran 0.2 mV high at
- * vov = 3 V. Same parabolic-blend shape as `diodeCompanion`'s knee, for the
- * same reason and with matching slope at both joins.
+ * vov = 3 V. The one-sided cubic is C1 at both joins: value and slope are
+ * zero at cutoff, and value δ / slope one at the square-law join. Unlike the
+ * former symmetric parabola, it therefore cannot manufacture current at the
+ * exact Level-1 threshold.
  *
  * Returns [vov_s, d(vov_s)/d(vov)].
  */
@@ -4289,10 +4292,10 @@ function mosKsubthres(part) {
 
 function smoothVov(vov, ksub = 0) {
   if (ksub > 0) return softPlusVov(vov, ksub);
-  if (vov <= -MOS_SMOOTH_DELTA) return [0, 0];
+  if (vov <= 0) return [0, 0];
   if (vov >= MOS_SMOOTH_DELTA) return [vov, 1];
-  const u = vov + MOS_SMOOTH_DELTA;
-  return [(u * u) / (4 * MOS_SMOOTH_DELTA), u / (2 * MOS_SMOOTH_DELTA)];
+  const u = vov / MOS_SMOOTH_DELTA;
+  return [MOS_SMOOTH_DELTA * u * u * (2 - u), u * (4 - 3 * u)];
 }
 
 /**

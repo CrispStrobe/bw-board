@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { BoardImpl } from '../src/board.js';
+import { MOS_SMOOTH_DELTA, smoothVov } from '../src/mna.js';
 
 const NGSPICE_MATCHED_TEMP_C = 26.826895261366076;
 const PARAMS = Object.freeze({ model: 'level1', vth: 1, kp: 50e-6, w: 100e-6,
@@ -42,11 +43,11 @@ function commonSource(params = PARAMS, { disconnect = null, kind = 'nmos' } = {}
   return board;
 }
 
-function fixedBias(params = PARAMS) {
+function fixedBias(params = PARAMS, vg = 2) {
   const board = new BoardImpl(5);
   board.setNetlist([
     { id: 'VD', kind: 'vsource', params: { volts: 0.5 }, terminals: ['pos', 'neg'] },
-    { id: 'VG', kind: 'vsource', params: { volts: 2 }, terminals: ['pos', 'neg'] },
+    { id: 'VG', kind: 'vsource', params: { volts: vg }, terminals: ['pos', 'neg'] },
     { id: 'M1', kind: 'nmos', params: { ...params }, terminals: ['drain', 'gate', 'source'] },
     { id: 'G1', kind: 'gnd', params: {}, terminals: ['gnd'] },
   ], [
@@ -183,6 +184,38 @@ function assertUnchanged(board, before) {
 }
 
 describe('BoardImpl.operatingPoint explicit grounded-bulk Level-1 NMOS domain', () => {
+  it('is exactly cut off at threshold and joins the square law C1 from above', {
+    skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
+  }, () => {
+    assert.deepEqual(smoothVov(0), [0, 0], 'Level-1 threshold must stamp no current or gm');
+    assert.deepEqual(smoothVov(-Number.EPSILON), [0, 0]);
+    const half = smoothVov(MOS_SMOOTH_DELTA / 2);
+    assert.ok(Math.abs(half[0] - MOS_SMOOTH_DELTA * 3 / 8) < 1e-18);
+    assert.ok(Math.abs(half[1] - 5 / 4) < 1e-15);
+    assert.deepEqual(smoothVov(MOS_SMOOTH_DELTA), [MOS_SMOOTH_DELTA, 1]);
+
+    const cutoffOracle = ngspice(`VD drain 0 0.5
+VG gate 0 1
+M1 drain gate 0 0 NM W=100u L=1u
+.model NM NMOS(Level=1 VTO=1 KP=50u LAMBDA=0)`, ['@m1[id]']);
+    const cutoff = fixedBias({ ...PARAMS, lambda: 0 }, 1).operatingPoint();
+    const current = cutoff.branchCurrents.get('M1').get('drain');
+    assert.ok(Math.abs(current - cutoffOracle['@m1[id]']) < 1e-10,
+      `threshold current: ${current} vs ngspice ${cutoffOracle['@m1[id]']}`);
+    assert.ok(Math.abs(current) < 1e-10, `threshold must be physically cut off, read ${current}`);
+
+    // Inside the blend the current follows the declared one-sided C1 law;
+    // at its upper join it is the ordinary Level-1 square law exactly.
+    const k = PARAMS.kp * PARAMS.w / (2 * PARAMS.l);
+    for (const [vov, effective] of [[MOS_SMOOTH_DELTA / 2, half[0]],
+      [MOS_SMOOTH_DELTA, MOS_SMOOTH_DELTA]]) {
+      const result = fixedBias({ ...PARAMS, lambda: 0 }, PARAMS.vth + vov).operatingPoint();
+      const got = result.branchCurrents.get('M1').get('drain');
+      const expected = k * effective * effective;
+      assert.ok(Math.abs(got - expected) < 1e-10, `${vov}: ${got} vs ${expected}`);
+    }
+  });
+
   it('matches ngspice in saturation and triode with signed current and KCL', {
     skip: spawnSync('ngspice', ['--version'], { encoding: 'utf8' }).status !== 0,
   }, () => {
