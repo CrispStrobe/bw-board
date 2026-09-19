@@ -116,6 +116,17 @@ test('LGDT width, descriptor boundaries, and instruction length fail explicitly'
   assert.throws(()=>long.cpu.step(),/15-byte/);assert.equal(reads.length,15);
 });
 
+test('LGDT through execute-only CS faults before operand reads',()=>{
+  const f=fixture();
+  f.put(0,[0x2e,0x0f,0x01,0x16,0x00,0x01]);
+  f.cpu.cr0=1;
+  f.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:false,present:true,code:true,readable:false,writable:false};
+  const before={...f.cpu.gdtr};
+  assert.throws(()=>f.cpu.step(),error=>error instanceof I80386Fault&&error.vector===13&&error.errorCode===0);
+  assert.deepEqual(f.cpu.gdtr,before);
+  assert.equal(f.reads.length,0);
+});
+
 test('faulting PUSH preserves ESP and MOV stores do not read their destination',()=>{
   const push=fixture();push.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
   push.cpu.segmentCaches[2]={base:0,limit:0xff,default32:true,present:true,code:false,writable:true};push.cpu.esp=2;push.put(0,[0x50]);
