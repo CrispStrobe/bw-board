@@ -120,7 +120,7 @@ export class ExperimentalI80386 {
   }
   _operandRead(ea,width){return ea.isReg?(width===8?this._reg8(ea.rm):this._reg(ea.rm,width)):this._read(ea.seg,ea.off,width);}
   _operandWrite(ea,width,v){if(ea.isReg){if(width===8)this._setReg8(ea.rm,v);else this._setReg(ea.rm,width,v);}else this._write(ea.seg,ea.off,width,v);}
-  _setLogic(v,width){const mask=maskFor(width),r=v&mask;this.eflags&=~(CF|PF|AF|ZF|SF|OF);if(!r)this.eflags|=ZF;if(r&(width===32?0x80000000:0x8000))this.eflags|=SF;if(parity8(r))this.eflags|=PF;return width===32?r>>>0:r;}
+  _setLogic(v,width){const mask=maskFor(width),r=v&mask,sign=width===32?0x80000000:width===16?0x8000:0x80;this.eflags&=~(CF|PF|AF|ZF|SF|OF);if(!r)this.eflags|=ZF;if(r&sign)this.eflags|=SF;if(parity8(r))this.eflags|=PF;return width===32?r>>>0:r;}
   _add(a,b,width,subtract=false){
     const mask=maskFor(width),sign=width===32?0x80000000:width===16?0x8000:0x80;
     const am=width===32?a>>>0:a&mask,bm=width===32?b>>>0:b&mask;

@@ -141,6 +141,8 @@ test('byte aliases, MOVZX/MOVSX, and two-operand IMUL preserve native 32-bit sta
   const overflow=fixture();overflow.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
   overflow.cpu.eax=0x7fffffff;overflow.cpu.ecx=2;overflow.put(0,[0x0f,0xaf,0xc1]);overflow.cpu.step();
   assert.equal(overflow.cpu.eax,0xfffffffe);assert.equal(overflow.cpu.eflags&0x801,0x801);
+  const byteFlags=fixture();byteFlags.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};byteFlags.cpu.eax=0xf0;byteFlags.cpu.ebx=0x70;byteFlags.put(0,[0x30,0xd8]);byteFlags.cpu.step();
+  assert.equal(byteFlags.cpu.al,0x80);assert.equal(byteFlags.cpu.eflags&0xc4,0x80,'byte XOR sets SF from bit 7 and computes PF/ZF');
 });
 
 test('protected data access respects execute-only and non-writable code descriptors',()=>{

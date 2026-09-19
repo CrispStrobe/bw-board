@@ -7,7 +7,19 @@ import {readMoo386} from './lib/moo386-v1.mjs';
 
 const PIN='459d49fbe6280e9ed46fee887b58dacd9cb880ab';
 const FORMAT_PIN='c438962d2b30856817d8e59bd5f0f4c628596ca8';
-const FILES=['01','6601','6701','676601'];
+const PROFILES={
+  'add-sizes':{
+    files:['01','6601','6701','676601'],
+    scope:'12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes',
+  },
+  'byte-movx':{
+    files:['30','6730','88','6788','0FB6','660FB6','670FB6','67660FB6','0FBE','660FBE','670FBE','67660FBE'],
+    scope:'36 fixed deterministic byte XOR/MOV and MOVZX/MOVSX samples across their published address/operand-size forms',
+  },
+};
+const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
+if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);
+const FILES=profile.files;
 const root=process.env.SST386_ROOT;
 if(!root)throw new Error('Set SST386_ROOT to the pinned, clean SingleStepTests/80386 checkout');
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
@@ -62,7 +74,7 @@ verifyPin();
 const failures=results.flatMap(result=>result.sampled.filter(sample=>sample.status==='fail').map(sample=>({file:result.file,...sample})));
 const localSources=['./verify-i80386-moo-sample.mjs','./lib/moo386-v1.mjs','../src/experimental/i80386.js'];
 console.log(JSON.stringify({source:'SingleStepTests/80386 physical 386EX captures',revision:PIN,formatRevision:FORMAT_PIN,node:process.version,
-  scope:'12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim',
+  profile:profileName,scope:`${profile.scope}; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim`,
   sourceHashes:Object.fromEntries(localSources.map(path=>[path,sha256(readFileSync(new URL(path,import.meta.url)))])),revocationSha256:sha256(revocationBytes),mutation,
   accounting:{files:FILES.length,admitted,unsupported,revoked:revokedCount,failures:failures.length},results,failures},null,2));
 process.exitCode=failures.length?1:0;
