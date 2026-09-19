@@ -927,6 +927,7 @@ rather than each against the master it branched from.
 
 | lane | owner/session | worktree | exact scope | base SHA | status |
 | --- | --- | --- | --- | --- | --- |
+| 80286 functional integration and current Harris evidence | Astra coordinator / Sol agents, astra-286-sept19 | `/mnt/volume1/code/wt/astra-286-integration` plus isolated Sol worktrees | Preserve `lane/i80286-close-gap` ancestry; import dependency guard, blocking/broader fast real-mode vectors, CI/report tooling and refreshed Harris semantic/boot evidence; no protected-mode or physical-accuracy promotion. Astra owns landing; separate later Lite pin claim. | `9a2386f17aa1e255ccffe9f23ac845f789209a47` | CLAIMED 2026-09-19; explicit continuation of existing unmerged candidate `76d0b9bc38c3a6de46df1bf48c691c9444768349`, original worktree preserved. |
 | bw-board PR #11 integration | `/root` (2026-09-19) | `/mnt/volume1/code/wt/bwb-pr11-zener-20260919` | Audit current PR #11 checks, mergeability, and land `lane/zener-ibv-default-and-ideality`; no unrelated source changes | `b9efb2e` (`origin/master`) | DONE; PR #11 merged at `b9efb2e`; focused zener test 10/10 and hosted gates green |
 
 The earlier Lite PR #194 and Harris/native rows from the preceding claim commit
