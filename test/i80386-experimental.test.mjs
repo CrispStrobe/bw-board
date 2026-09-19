@@ -65,6 +65,13 @@ test('bounded system profile requires PE before paging and refuses unsupported d
   assert.equal(f.cpu.cr0,0);
 });
 
+test('real-mode visible CS low bits do not impose protected CPL checks',()=>{
+  const f=fixture();f.cpu._loadSeg(1,0x1001);f.cpu.eax=0x3456;f.put(0x10010,[0x0f,0x22,0xd8]);f.cpu.step();
+  assert.equal(f.cpu.cr3,0x3000);
+  f.put(0x10013,[0x0f,1,0x16,0x20,0]);f.put(0x20,[0xff,0,0x78,0x56,0x34,0x12]);f.cpu.step();
+  assert.deepEqual(f.cpu.gdtr,{limit:0xff,base:0x345678});
+});
+
 test('near branch targets use post-displacement EIP and truncate for 16-bit operands',()=>{
   const short=fixture();short.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,writable:false};
   short.put(0,[0xeb,2,0xf4,0xf4,0xb8,1,0,0,0]);short.cpu.step();assert.equal(short.cpu.eip,4,'EB is relative to the following instruction');

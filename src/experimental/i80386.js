@@ -471,6 +471,9 @@ export class ExperimentalI80386 {
   }
   _operandPreflightWrite(ea, width) {
     if (ea.isReg) return;
+    const cache = this.segmentCaches[ea.seg];
+    if (this.protectedMode && !cache.writable)
+      throw new I80386Fault(13, 0, "write to non-writable segment");
     const bytes = width >>> 3,
       linear = this._linear(ea.seg, ea.off, bytes);
     for (let i = 0; i < bytes; i++)
@@ -1060,7 +1063,7 @@ export class ExperimentalI80386 {
       const shiftWidth = byte ? 8 : width;
       const ea = this._decodeEA(address32, override);
       const count = op < 0xd0 ? this._fetch8() : op < 0xd2 ? 1 : this.cl;
-      if ((count & 31) !== 0) this._operandPreflightWrite(ea, shiftWidth);
+      this._operandPreflightWrite(ea, shiftWidth);
       const original = this._operandRead(ea, shiftWidth);
       if ((count & 31) !== 0)
         this._operandWrite(
@@ -1200,7 +1203,7 @@ export class ExperimentalI80386 {
       const ea = this._decodeEA(address32, override);
       if (ea.isReg || (ea.reg !== 2 && ea.reg !== 3))
         throw new UnsupportedI80386("only LGDT and LIDT are supported");
-      if ((this.cs & 3) !== 0)
+      if (this.protectedMode && (this.cs & 3) !== 0)
         throw new I80386Fault(13, 0, "LGDT/LIDT require CPL0");
       const a = this._linear(ea.seg, ea.off, 6),
         base = this._readLinear((a + 2) >>> 0, 4);
@@ -1220,7 +1223,7 @@ export class ExperimentalI80386 {
         register = m & 7;
       if (![0, 2, 3].includes(control))
         throw new I80386Fault(6, null, "invalid control register");
-      if ((this.cs & 3) !== 0)
+      if (this.protectedMode && (this.cs & 3) !== 0)
         throw new I80386Fault(13, 0, "MOV CR requires CPL0");
       if (op === 0x20) this._setReg(register, 32, this[`cr${control}`]);
       else {

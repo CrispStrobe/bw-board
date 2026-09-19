@@ -190,7 +190,7 @@ test("distinguishes missing PDE/PTE and rejects user writes with exact #PF bits"
   for (const [bytes, expected, label] of [
     [[0x01, 0x03], 7, "ADD RMW is a write access"],
     [[0x39, 0x03], 5, "CMP remains a read access"],
-    [[0xc1, 0x23, 0], 5, "count-zero shift remains a read access"],
+    [[0xc1, 0x23, 0], 7, "count-zero memory shift retains RMW write admission"],
   ]) {
     const rmw = fixture();
     rmw.map(0, 0x3000, 7);
@@ -278,6 +278,21 @@ test("segment checks precede paging and paged IDT/GDT/stack references use their
     segment.dword(0x2010) & 0x20,
     0,
     "segment fault occurs before the data-page walk",
+  );
+
+  const readonly = fixture();
+  readonly.map(0, 0x3000);
+  readonly.put(0x3000, [0x2e, 0x01, 0x03]);
+  readonly.cpu.ebx = 0x4000;
+  const cr2 = readonly.cpu.cr2;
+  assert.throws(
+    () => readonly.cpu.step(),
+    (e) => e instanceof I80386Fault && e.vector === 13,
+  );
+  assert.equal(
+    readonly.cpu.cr2,
+    cr2,
+    "read-only segment #GP wins over the missing page",
   );
 
   const system = fixture();

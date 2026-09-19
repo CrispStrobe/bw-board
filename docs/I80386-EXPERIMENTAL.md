@@ -49,6 +49,10 @@ before changing guest bytes; page-table A/D effects from completed walks remain
 visible. Architectural register state restarts at the instruction boundary.
 Interrupt frames translate and preflight their complete span before writing
 frame bytes; descriptor accessed-bit admission precedes frame writes.
+Memory read-modify-write instructions perform write admission before the
+operand read, including zero-count shifts. The pinned PCjs group decoder also
+executes its memory writeback path when the shift helper returns the unchanged
+operand for count zero.
 
 PSE, CR0.WP behavior from later processors, VM86, task/ring transitions, and
 TLB timing are outside this stage. Reloading CR3 takes effect immediately
