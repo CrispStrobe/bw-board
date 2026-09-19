@@ -98,7 +98,12 @@ written by firmware. Clearing SET validates and decodes them using the final
 DM and 12/24-hour format, because changing either format requires firmware to
 reinitialize the affected registers. Setting SET also clears UIE. The bounded
 model keeps day-of-week independently writable, advances its two-digit year on
-a four-year cycle, and migrates valid version-1 non-SET checkpoints; it refuses
+a four-year cycle, and admits deterministic initial epochs only before 2100.
+Day-of-week zero is retained literally and advances to one at midnight, matching
+the chip's writable-register behavior rather than imposing Gregorian validation.
+Changing DM or 12/24-hour format outside SET refuses because the required
+calendar reinitialization cannot be inferred. The model migrates valid
+version-1 non-SET checkpoints; it refuses
 version-1 checkpoints captured during an unrepresentable SET transaction.
 
 Historical source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)

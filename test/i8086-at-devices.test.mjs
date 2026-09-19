@@ -58,15 +58,14 @@ test('RTC flags latch while disabled and checkpoint restore is exact and atomic'
   assert.equal(m.restoreCheckpoint(bad).code,'INVALID_CHECKPOINT');assert.deepEqual(m.saveState(),before);
 });
 
-test('RTC BCD/binary 12-hour, SET, UIP, alarm and enable gating are deterministic',()=>{
+test('RTC SET, UIP, alarm and enable gating are deterministic',()=>{
   const noon=Date.UTC(1970,0,1,13,2,3)/1000,r=new MC146818(1_000_000,{initialUnixSeconds:noon});
   r.write(0,4);assert.equal(r.read(1),0x13); // BCD 24-hour
-  r.write(0,0x0b);r.write(1,0x04);r.write(0,4);assert.equal(r.read(1),0x81); // binary 12-hour: 1 PM
   r.write(0,1);r.write(1,0xc0);r.write(0,3);r.write(1,0xc0);r.write(0,5);r.write(1,0xc0);
-  r.write(0,0x0b);r.write(1,0x26);r.advance(1_000_000);assert.equal(r.ram[0x0c]&0x20,0x20);assert.equal(r._irq,true);
-  r.write(0,0x0b);r.write(1,0x86);const held=r.seconds;r.advance(2_000_000);assert.equal(r.seconds,held);
+  r.write(0,0x0b);r.write(1,0x22);r.advance(1_000_000);assert.equal(r.ram[0x0c]&0x20,0x20);assert.equal(r._irq,true);
+  r.write(0,0x0b);r.write(1,0x82);const held=r.seconds;r.advance(2_000_000);assert.equal(r.seconds,held);
   r.write(0,0x0a);r.cyclePhase=999_800;assert.equal(r.read(1)&0x80,0); // SET suppresses UIP
-  r.write(0,0x0b);r.write(1,0x06);r.write(0,0x0a);assert.equal(r.read(1)&0x80,0x80);
+  r.write(0,0x0b);r.write(1,0x02);r.write(0,0x0a);assert.equal(r.read(1)&0x80,0x80);
 });
 
 test('RTC SET stages calendar writes, preserves independent weekday and commits atomically',()=>{
@@ -97,6 +96,12 @@ test('RTC SET stages calendar writes, preserves independent weekday and commits 
   assert(live.pendingCalendar);const pending=live.getState(),pendingCopy=new MC146818(100);
   pendingCopy.setState(pending);assert.deepEqual(pendingCopy.getState(),pending);
   liveWrite(7,0x29);assert.equal(live.pendingCalendar,null,'a later field completes the valid leap date');
+  liveWrite(6,0);live.write(0,6);assert.equal(live.read(1),0,
+    'the hardware calendar register retains a firmware-written weekday zero');
+  const weekdayZero=new MC146818(1,{initialUnixSeconds:Date.UTC(2024,0,1,23,59,59)/1000});
+  weekdayZero.write(0,6);weekdayZero.write(1,0);weekdayZero.advance(1);weekdayZero.write(0,6);
+  assert.equal(weekdayZero.read(1),1,
+    'the next midnight advances a literal weekday zero into the documented range');
 
   const format=new MC146818(100,{initialUnixSeconds:0});
   const fw=(register,value)=>{format.write(0,register);format.write(1,value);};
@@ -104,6 +109,8 @@ test('RTC SET stages calendar writes, preserves independent weekday and commits 
   for(const [register,value] of [[9,24],[8,2],[7,29],[6,5],[4,13],[2,40],[0,39]])fw(register,value);
   fw(0x0b,0x06);format.write(0,2);assert.equal(format.read(1),40,
     'SET bytes are interpreted using the final binary mode, not the old BCD mode');
+  assert.throws(()=>fw(0x0b,0x02),/requires SET reinitialization/,
+    'live representation changes refuse instead of silently converting registers');
 
   const rollover=new MC146818(1,{initialUnixSeconds:Date.UTC(2099,11,31,23,59,59)/1000});
   rollover.advance(1);rollover.write(0,9);assert.equal(rollover.read(1),0);
@@ -111,6 +118,7 @@ test('RTC SET stages calendar writes, preserves independent weekday and commits 
   const legacy=rollover.getState();legacy.v=1;delete legacy.dayOfWeek;
   delete legacy.setCalendar;delete legacy.pendingCalendar;
   const migrated=new MC146818(1);migrated.setState(legacy);assert.equal(migrated.getState().v,2);
+  assert.throws(()=>new MC146818(1,{initialUnixSeconds:Date.UTC(2100,0,1)/1000}),/precede 2100/);
 });
 
 test('checkpoint rejects invalid RTC before CPU/RAM mutation and preserves acknowledged IRQ state',()=>{

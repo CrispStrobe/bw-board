@@ -2,7 +2,7 @@
 export class MC146818 {
     constructor(clockHz,{initialUnixSeconds=0,initialCmos=[],onIRQ=null,onNmiMask=null}={}) {
         if(!Number.isInteger(clockHz)||clockHz<1)throw new Error('MC146818 clockHz must be positive');
-        if(!Number.isSafeInteger(initialUnixSeconds)||initialUnixSeconds<0||initialUnixSeconds>8640000000)throw new Error('MC146818 initialUnixSeconds is outside the supported Date range');
+        if(!Number.isSafeInteger(initialUnixSeconds)||initialUnixSeconds<0||initialUnixSeconds>=4102444800)throw new Error('MC146818 initialUnixSeconds must precede 2100');
         this.clockHz=clockHz;
         this.initialUnixSeconds=initialUnixSeconds;
         if(!Array.isArray(initialCmos)||initialCmos.some(entry=>!Array.isArray(entry)||entry.length!==2||
@@ -140,7 +140,7 @@ export class MC146818 {
                     6:['dayOfWeek',7,'day of week'],7:['day',31,'day'],8:['month',12,'month'],
                     9:['year',99,'year']}[r];
                 const decoded=this._dec(value,max,name);
-                if((r===6||r===7||r===8)&&decoded<1)throw new Error(`MC146818 invalid ${name}`);
+                if((r===7||r===8)&&decoded<1)throw new Error(`MC146818 invalid ${name}`);
                 calendar[field]=decoded;
             }
             if(this._commitCalendar(calendar))this.pendingCalendar=null;
@@ -157,6 +157,8 @@ export class MC146818 {
         if(r===0x0b) {
             if(value&0x09)throw new Error('MC146818 DSE/square-wave modes are outside the bounded subset');
             const wasSet=!!(this.ram[r]&0x80),willSet=!!(value&0x80);
+            if(!wasSet&&!willSet&&((value^this.ram[r])&0x06))
+                throw new Error('MC146818 live DM/12-hour transition requires SET reinitialization');
             if(!wasSet&&willSet) {
                 this.setCalendar=Object.fromEntries([0,2,4,6,7,8,9].map(register=>[register,this._timeReg(register)]));
                 this.pendingCalendar=null;value&=~0x10;
@@ -177,7 +179,7 @@ export class MC146818 {
     advance(n) {
         if(!Number.isFinite(n)||n<0)return;
         const elapsed=Math.floor((this.cyclePhase+n)/this.clockHz);
-        if(!(this.ram[0x0b]&0x80)&&this.seconds+elapsed>8640000000)
+        if(!(this.ram[0x0b]&0x80)&&this.seconds+elapsed>4102444800)
             throw new Error('MC146818 deterministic time exceeds supported Date range');
         this.cyclePhase+=n;
         while(this.cyclePhase>=this.clockHz) {
@@ -236,14 +238,14 @@ export class MC146818 {
             ((s?.ram?.[0x0c]&0x10)&&(s?.ram?.[0x0b]&0x10));
         const calendar=s?.setCalendar,pending=s?.pendingCalendar;
         if(!s||s.v!==2||!Number.isInteger(s.index)||s.index<0||s.index>127||
-            typeof s.nmiMasked!=='boolean'||!Number.isSafeInteger(s.seconds)||s.seconds<0||s.seconds>8640000000||
-            !Number.isInteger(s.dayOfWeek)||s.dayOfWeek<1||s.dayOfWeek>7||
+            typeof s.nmiMasked!=='boolean'||!Number.isSafeInteger(s.seconds)||s.seconds<0||s.seconds>=4102444800||
+            !Number.isInteger(s.dayOfWeek)||s.dayOfWeek<0||s.dayOfWeek>7||
             (!!(s.ram?.[0x0b]&0x80)!==!!calendar)||
             !(calendar===null||(calendar&&Object.keys(calendar).length===7&&
                 [0,2,4,6,7,8,9].every(r=>Number.isInteger(calendar[r])&&calendar[r]>=0&&calendar[r]<=255)))||
             !(pending===null||(pending&&Object.values(pending).every(Number.isInteger)&&
                 pending.second>=0&&pending.second<=59&&pending.minute>=0&&pending.minute<=59&&
-                pending.hour>=0&&pending.hour<=23&&pending.dayOfWeek>=1&&pending.dayOfWeek<=7&&
+                pending.hour>=0&&pending.hour<=23&&pending.dayOfWeek>=0&&pending.dayOfWeek<=7&&
                 pending.day>=1&&pending.day<=31&&pending.month>=1&&pending.month<=12&&
                 pending.year>=0&&pending.year<=99))||
             (!!calendar&&!!pending)||
