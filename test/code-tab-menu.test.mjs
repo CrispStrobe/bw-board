@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { detectLanguage, starterTemplate, codeTabMenu, runToolchain, LANGUAGES } from '../scripts/toolchains.mjs';
+import { detectLanguage, starterTemplate, codeTabMenu, runToolchain, buildArtifact, LANGUAGES } from '../scripts/toolchains.mjs';
+import { runImage } from '../scripts/run-dos.mjs';
 
 test('detectLanguage maps file extensions to languages', () => {
     assert.equal(detectLanguage('prog.asm'), 'asm');
@@ -24,11 +25,34 @@ test('the code-tab menu lists every language with its available toolchains + mac
     assert.deepEqual(byLang.asm.toolchains.map((t) => t.id), ['nasm-native']);
     assert.deepEqual(byLang.bas.toolchains.map((t) => t.id), ['basic-native']);
     assert.deepEqual(byLang.c.toolchains.map((t) => t.id), ['cc-native']);
-    // Machine dropdown + a default.
-    assert.ok(menu.flavors.some((f) => f.id === '80286-at'));
+    // Machine dropdown + a default; each flavor carries the variant/preset a
+    // browser host needs to boot the machine directly.
+    const at = menu.flavors.find((f) => f.id === '80286-at');
+    assert.ok(at && at.variant === '80286' && at.preset === 'at');
     assert.equal(menu.defaultFlavor, '80286-at');
     // Each toolchain carries a starter the tab can preload.
     for (const l of menu.languages) for (const t of l.toolchains) assert.ok(t.starter.length > 0, `${t.id} has a starter`);
+});
+
+test('buildArtifact is a browser-safe (no fs, no DOS) build for native toolchains', () => {
+    // Build source TEXT straight to bytes, then boot on the flavor's machine —
+    // exactly what a GUI host does (it cannot call runToolchain).
+    const menu = codeTabMenu({ available: new Set() });
+    for (const l of menu.languages) {
+        for (const t of l.toolchains) {
+            const { bytes, run } = buildArtifact(t.id, starterTemplate(t.id));
+            assert.ok(bytes instanceof Uint8Array && bytes.length > 0, `${t.id} built bytes`);
+            let out = '';
+            const r = runImage(bytes, run, { variant: '80286', preset: 'at', max: 40_000_000 }, { write: (s) => { out += s; } });
+            assert.ok(r.result.terminated && r.result.exitCode === 0, `${t.id} bytes ran cleanly`);
+            assert.match(out, /Hello from/, `${t.id} printed its greeting`);
+        }
+    }
+});
+
+test('buildArtifact refuses a DOS-only toolchain (those need real binaries)', () => {
+    assert.throws(() => buildArtifact('masm', 'x'), /not browser-buildable/);
+    assert.throws(() => buildArtifact('tcc', 'x'), /not browser-buildable/);
 });
 
 test('every native starter template assembles and runs on the 286', () => {

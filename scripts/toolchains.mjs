@@ -123,9 +123,26 @@ export function codeTabMenu({ available = new Set() } = {}) {
                 id: t.id, label: t.label, kind: t.kind, starter: starterTemplate(t.id),
             })),
         })),
-        flavors: Object.entries(FLAVORS).map(([id, f]) => ({ id, label: f.label })),
+        // variant/preset travel with each flavor so a browser host can boot the
+        // machine directly (it can't call runToolchain — that touches fs/DOS).
+        flavors: Object.entries(FLAVORS).map(([id, f]) => ({ id, label: f.label, variant: f.variant, preset: f.preset })),
         defaultFlavor: DEFAULT_FLAVOR,
     };
+}
+
+/**
+ * Browser-safe build: turn source TEXT into a runnable image with no filesystem
+ * and no DOS binary — the native toolchains only (built-in assembler, BASIC, C).
+ * Returns { bytes, run } where run is 'com' | 'exe'. A GUI host (lite's code tab)
+ * calls this to assemble in-process, then boots the bytes on the machine flavor
+ * itself; runToolchain is the CLI/Node counterpart that also drives DOS tools.
+ * Throws for a DOS-only toolchain (those need runToolchain with real binaries).
+ */
+export function buildArtifact(id, sourceText) {
+    const tc = TOOLCHAINS.find((t) => t.id === id);
+    if (!tc) throw new Error(`unknown toolchain '${id}' (see listToolchains)`);
+    if (tc.kind !== 'native') throw new Error(`toolchain '${id}' needs a DOS binary and is not browser-buildable; use runToolchain`);
+    return { bytes: tc.build(sourceText), run: tc.run };
 }
 
 /**
