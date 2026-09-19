@@ -155,3 +155,14 @@ AT peripherals, Windows, Doom, or physical bus/cycle timing.
 ## FreeDOS 1.4 diagnostic
 
 The compact [FreeDOS diagnostic](receipts/2026-09-19-freedos14-diagnostic.json) binds the untouched official 1.2MiB image, Node 22 execution at `439560e`, and all executed source hashes. It reaches INT19, verifies the loaded boot sector, and displays the FreeCom 0.86 interface within a 40-million-instruction ceiling without a host refusal, shutdown, halt, or unexpected interrupt. No final shell prompt or keyboard interaction was observed, so `fullBootAccepted` remains false. This is bounded boot progression rather than a failed or accepted installation.
+
+The separate `scripts/run-freedos14-at-acceptance.mjs` runner recognizes the
+installer's displayed “Do you want to proceed” prompt and injects `N` through
+the real 8042 keyboard route. That follows SETUP.BAT's `UserAbortExit` path;
+no partition, format, copy, or other installation action is selected. Only
+after the returned `A:\>` prompt does it inject the requested shell command.
+It records one-million-instruction UI and BIOS keyboard-ring samples so a
+bounded run distinguishes slow logo/menu drawing from a stable wait. Write
+acceptance requires exact FAT12 file bytes and a final prompt; persistence
+requires a fresh machine mounting the saved-image hash and issuing only the
+read command.
