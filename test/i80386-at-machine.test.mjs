@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL,
+  PCAT80386_EXPERIMENTAL_4M,
 } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
@@ -28,6 +29,25 @@ test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 b
   assert.equal(machine.cpu.read(0x01000000), 0xff, '16MiB must not wrap to address zero');
   machine.setA20Enabled(true);
   assert.equal(machine.cpu.read(0x100000), 0x22);
+});
+
+test('experimental 386 AT 4MiB profile exposes only installed RAM and matching CMOS sizes', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M);
+  machine.cpu.write(0x45ffff, 0x5a);
+  machine.cpu.write(0x460000, 0xa5);
+  assert.equal(machine.cpu.read(0x45ffff), 0x5a);
+  assert.equal(machine.cpu.read(0x460000), 0xff, 'first byte beyond installed RAM is open bus');
+
+  const cmos = register => {
+    machine._out(0x70, register);
+    return machine._in(0x71);
+  };
+  assert.equal(cmos(0x15) | cmos(0x16) << 8, 640);
+  assert.equal(cmos(0x17) | cmos(0x18) << 8, 3456);
+  assert.equal(cmos(0x30) | cmos(0x31) << 8, 3456);
+  let checksum = 0;
+  for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
+  assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
 });
 
 test('experimental 386 AT cold board reset restores configured A20 before reset-vector fetch', () => {

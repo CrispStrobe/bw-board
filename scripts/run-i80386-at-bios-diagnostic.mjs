@@ -5,7 +5,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-import ExperimentalI80386ATMachine from '../src/experimental/i80386-at-machine.js';
+import ExperimentalI80386ATMachine, {
+  PCAT80386_EXPERIMENTAL,
+  PCAT80386_EXPERIMENTAL_4M,
+} from '../src/experimental/i80386-at-machine.js';
 import {I80386Fault, UnsupportedI80386} from '../src/experimental/i80386.js';
 
 const EXPECTED_ROM_SHA256 = '74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
@@ -33,11 +36,16 @@ if (rom.length !== 0x10000 || romSha256 !== EXPECTED_ROM_SHA256)
 const stepLimit = process.env.I80386_AT_STEPS === undefined ? 2_000_000 : Number(process.env.I80386_AT_STEPS);
 if (!Number.isInteger(stepLimit) || stepLimit < 1 || stepLimit > 20_000_000)
   throw new Error('I80386_AT_STEPS must be an integer from 1 through 20000000');
+const profileName = process.env.I80386_AT_PROFILE ?? 'bounded';
+const profile = profileName === 'bounded' ? PCAT80386_EXPERIMENTAL
+  : profileName === '4m' ? PCAT80386_EXPERIMENTAL_4M
+    : null;
+if (!profile) throw new Error("I80386_AT_PROFILE must be 'bounded' or '4m'");
 
 let steps = 0;
 const post = [];
 const interrupts = [];
-const machine = new ExperimentalI80386ATMachine(undefined, {
+const machine = new ExperimentalI80386ATMachine(profile, {
   onPortAccess(event) {
     if (event.port === 0x80 && event.dir === 'out' && post.length < 512)
       post.push({step: steps, cs: machine.cpu.cs, eip: machine.cpu.eip, value: event.value});
@@ -80,6 +88,7 @@ const report = {
   fullBootAccepted: false,
   diagnosticOnly: true,
   scope: 'bounded genuine-reset IBM 5170 Rev1 BIOS progression on the experimental 386 AT adapter',
+  profile: {name: profileName, installedRamBytes: profileName === '4m' ? 4 << 20 : 1152 << 10},
   outcome,
   stepLimit,
   steps,
@@ -97,4 +106,3 @@ const report = {
   node: process.version,
 };
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-

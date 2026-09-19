@@ -330,9 +330,13 @@ Byte devices receive 16- and 32-bit I/O as ordered little-endian byte cycles.
 The bridge routes PIC interrupts and NMI through the 386 interrupt API and
 wakes HLT through the ordinary machine scheduler.
 
-The profile retains the bounded AT platform's 640KiB conventional and 512KiB
-extended RAM; it does not claim a 4GiB installed-memory array or a complete
-386-class chipset. Legacy machine checkpoints, 16-bit debug-register snapshots
+The default profile retains the bounded AT platform's 640KiB conventional and
+512KiB extended RAM. `PCAT80386_EXPERIMENTAL_4M` is a separate opt-in profile
+with 640KiB conventional plus 3456KiB extended RAM, matching the base and
+extended sizes and checksum reported in CMOS. The surrounding 16MiB address
+space exists for AT ROM decode; undeclared ranges remain open bus. Neither
+profile claims a 4GiB installed-memory array or a complete 386-class chipset.
+Legacy machine checkpoints, 16-bit debug-register snapshots
 and 8088 cycle timing refuse explicitly because their codecs and timing tables
 cannot represent this CPU. This adapter proves reset, bus, A20, port and interrupt wiring only. It is
 not yet a 386 BIOS or operating-system boot qualification.

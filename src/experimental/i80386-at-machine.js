@@ -135,4 +135,24 @@ export const PCAT80386_EXPERIMENTAL = Object.freeze({
   // The reset ROM alias is decoded by the adapter without a 4GiB allocation.
 });
 
+/**
+ * Opt-in 4MiB installed-RAM profile. The 16MiB address space is retained for
+ * the original AT ROM aliases; only the declared RAM regions are writable.
+ */
+export const PCAT80386_EXPERIMENTAL_4M = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL,
+  regions: PCAT80386_EXPERIMENTAL.regions.map(region =>
+    region.kind === 'ram' && region.start === 0x100000
+      ? {...region, end: 0x45ffff}
+      : region),
+  chips: PCAT80386_EXPERIMENTAL.chips.map(chip => chip.kind === 'rtc' ? {
+    ...chip,
+    // 640KiB conventional plus 3456KiB extended is exactly 4MiB installed.
+    // The checksum covers CMOS registers 10h through 2Dh.
+    initialCmos: [[0x10, 0x20], [0x14, 0x21], [0x15, 0x80], [0x16, 0x02],
+      [0x17, 0x80], [0x18, 0x0d], [0x2e, 0x01], [0x2f, 0x50],
+      [0x30, 0x80], [0x31, 0x0d], [0x32, 0x19]],
+  } : chip),
+});
+
 export default ExperimentalI80386ATMachine;
