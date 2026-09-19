@@ -21,7 +21,7 @@ export const INPUT_HASHES=Object.freeze({
 });
 export const BASE_REVISION='4926e93cd0133dd038b929f8506318d0da320b3b';
 export const SOURCE_PATHS=Object.freeze([
-    'src/i8086.js','src/i8086-machine.js','src/i8086-dos.js','src/i8086-asm.js',
+    'src/i8086.js','src/i8086-machine.js','src/i8086-ram-words.js','src/i8086-dos.js','src/i8086-asm.js',
     'scripts/build-dos-image.mjs','scripts/oracle-masm.mjs','scripts/run-dos-toolchain-guest.mjs',
 ]);
 
