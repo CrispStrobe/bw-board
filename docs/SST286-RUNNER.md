@@ -1,5 +1,33 @@
 # SingleStepTests/80286 real-mode acceptance
 
+## Fresh exact-source receipts, 2026-09-19
+
+Candidate [`431acef1d5d1ff459414d6c4f8a67edd892e4f9a`](https://github.com/CrispStrobe/bw-board/commit/431acef1d5d1ff459414d6c4f8a67edd892e4f9a)
+has two fresh Harris receipts. The [full semantic receipt](receipts/2026-09-19-harris-real-mode.json)
+preserves its workflow context and complete per-file report. The independent
+Harris semantic job in [run 35438063007](https://github.com/CrispStrobe/bw-board/actions/runs/35438063007/job/105884021693)
+passed all 1,477,997 executed vectors from all 326 files, with three upstream
+revocations and zero failures, unsupported cases or budget exits. The overall
+workflow was red because its separate fast-core and wired-BIOS jobs failed; it
+must not be described as a green whole-80286 qualification or a passing fast
+full-corpus run.
+
+The [wired DOS receipt](receipts/2026-09-19-harris-wired-dos.json) preserves
+the context and complete result from [run 35438078252](https://github.com/CrispStrobe/bw-board/actions/runs/35438078252/job/105884101095).
+The reference net backend, with every optional performance switch disabled,
+reached the MS-DOS 2.00 `A>` prompt after 5,930,000 clocks and 355,799 ms on
+that hosted runner. It entered the boot sector, matched COMMAND.COM, traversed
+every recorded landmark through `commandCom`, and transferred 57,856 DMA bytes.
+The elapsed value identifies this receipt; it is not a speed floor or silicon
+timing result.
+
+Both contexts name exact candidate `431acef1d5d1ff459414d6c4f8a67edd892e4f9a`.
+Their embedded source hashes reproduce from that revision, and the DOS input
+hashes reproduce from the pinned Microsoft/MS-DOS revision. These are
+real-mode semantic and functional wired-boot results. They do not grade
+instruction timing, physical hardware, protected mode or an 80287. Older
+reports below remain immutable evidence for the source hashes they name.
+
 ## Refreshing evidence for a current candidate
 
 The checked-in reports below are immutable historical receipts. Their embedded
