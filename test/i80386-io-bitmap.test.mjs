@@ -35,6 +35,9 @@ test('IOPL admission bypasses an absent bitmap while missing and denied bitmap b
   const noTrailingByte=fixture([0xe4,0]);noTrailingByte.cpu.tr.limit=0x68;
   assert.throws(()=>noTrailingByte.cpu.step(),e=>e instanceof I80386Fault&&e.vector===13&&e.errorCode===0);
   assert.equal(noTrailingByte.ports.length,0,'bitmap base equal to the TSS limit means no bitmap');
+  const inclusiveLastByte=fixture([0xe4,0xf8]);inclusiveLastByte.cpu.tr.limit=0x87;
+  inclusiveLastByte.cpu.step();
+  assert.deepEqual(inclusiveLastByte.ports,[['in',0xf8,8]],'the byte at the inclusive TSS limit remains part of the bitmap');
 });
 
 test('port FFFF width crossing consults the mandatory trailing deny byte',()=>{

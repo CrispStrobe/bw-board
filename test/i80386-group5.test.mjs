@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import I80386, { UnsupportedI80386 } from "../src/experimental/i80386.js";
+import I80386 from "../src/experimental/i80386.js";
 
 function fixture(bytes) {
   const memory = new Map(bytes.map((value, index) => [index, value]));
@@ -72,11 +72,14 @@ test("PUSH r/m uses the old ESP effective address before stack update", () => {
   );
 });
 
-test("far indirect forms stay explicit refusals and reserved extensions are #UD", () => {
+test("protected far indirect forms fault precisely and reserved extensions are #UD", () => {
   for (const modrm of [0x18, 0x28]) {
     const cpu = fixture([0xff, modrm]).cpu;
     cpu.cr0 = 1;
-    assert.throws(() => cpu.step(), UnsupportedI80386);
+    assert.throws(
+      () => cpu.step(),
+      (error) => error?.vector === 13 && error?.errorCode === 0,
+    );
     assert.equal(cpu.eip, 0);
   }
   for (const bytes of [[0xfe, 0xd0], [0xff, 0xf8]]) {

@@ -834,7 +834,7 @@ export class ExperimentalI80386 {
     for (let byte = 0; byte < (width >>> 3); byte++) {
       const numberedPort = (port & 0xffff) + byte;
       const offset = bitmap + (numberedPort >>> 3);
-      if (offset >= this.tr.limit)
+      if (offset > this.tr.limit)
         throw new I80386Fault(13, 0, "I/O bitmap ends before port permission");
       const permissions = this._readLinear((this.tr.base + offset) >>> 0, 1, {
         supervisor: true,
