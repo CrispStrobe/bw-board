@@ -9,6 +9,23 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
+2026-09-19 CLAIM — bwcx: exact grounded-bulk Level-1 NMOS small-signal AC,
+isolated worktree `/mnt/volume1/code/wt/bwb-nmos-ac-level1`, branch
+`lane/nmos-ac-level1`, exact base `b14d0092db8603a2c7909391e5a86628e2002fc6`.
+Owns only the exact-NMOS branch of `src/ac.js`, one focused AC model test, and
+this ledger entry. Current measurement: bypassing CUI's deliberate
+semiconductor qualification guard executes all 160 exact ADI-v5 NMOS AC rows,
+but every AC analysis fails (62,628 of 130,240 combined OP/AC observations)
+because AC still uses legacy generic `k=0.5` plus flat `gds` instead of the DC
+Level-1 `KP*W/(2L)`, triode, lambda, and threshold laws. Reuse the exported DC
+model helpers at the converged bias for explicit `model:'level1'` grounded-bulk
+NMOS with the corpus' zero/default body effect; keep the legacy generic MOS and
+PMOS paths unchanged. Prove complex node response against self-authored
+ngspice in saturation and triode, unchanged DC/public state, and isolated
+legacy-k/flat-gds mutations. CUI admission and the exact 160-row replay follow
+only after Board qualification. No importer, tolerance, grid, oracle, Newton,
+capacitance invention, richer MOS fields, workflow, or unrelated AC change.
+
 2026-09-19 DONE — bwcx: exact Level-1 MOS triode/saturation boundary, isolated
 worktree `/mnt/volume1/code/wt/bwb-mos-region-boundary`, branch
 `lane/mos-region-boundary-exact`, exact base `6cb3c4d05ccbc6791b30c1d820dbe25844ef4dd3`.
