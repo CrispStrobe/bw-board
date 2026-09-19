@@ -106,14 +106,13 @@ order-of-magnitude — the *ranking* is what is stable:
 | AVR ATmega328P | avr8js ‡ | 16 MHz | ~12× |
 | 8051 | emu8051-stc (WASM) | — | ~3× |
 | RP2040 Cortex-M0+ | rp2040js † | 125 MHz | ~0.8–1.0× |
-| labwired STM32F0 | labwired (multi-arch WASM) | 48 MHz | ~0.1–0.2× |
+| labwired STM32F0 | labwired (forked multi-arch WASM) § | 48 MHz | ~1.2× |
 
 The three cores we own run tens of times faster than the real silicon. The
-third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051, and the
-peripheral-accurate labwired STM32/RISC-V/Xtensa engine — get progressively
-heavier: labwired models a whole SoC at full peripheral fidelity, so it runs
-well below real time. That is the tier's cost, and the budget the widgets pane
-plans against.
+third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051 and the
+peripheral-accurate labwired STM32/RISC-V/Xtensa engine — are heavier than the
+owned cores. The LabWired fork now clears real time on this loop while keeping
+the engine's whole-SoC peripheral model.
 
 † rp2040js's Thumb decoder is an 82-branch linear `if/else` chain; we run it
 through a **switch-dispatch fork** (`src/vendor/rp2040js-fast/`, default-on and
@@ -130,6 +129,14 @@ by an exhaustive 65,536-opcode differential, `test/avr-fast-dispatch-differentia
 Off-box the forked decoder roughly doubles the stock ~5–6× on the RTx loop (to
 ~12×), so the AVR row reflects the fork (what the widgets pane runs). Upstreaming
 it to avr8js is the end state.
+
+§ The adapter applies LabWired's own `recommended_tick_interval()` (512 on this
+single-core, walk-deleted STM32F0 bus; 1 on timing-sensitive or multi-core
+buses). The fork also has an observer/interrupt/IT/MMIO-guarded Thumb-1 RAM-loop
+basic-block path. On the same local artifact the exact per-cycle path measured
+0.07×, safe batching alone 0.25×, and the guarded block path had a four-run
+median of 1.23× (0.83–1.35×, 1.32× on the acceptance run).
+`LABWIRED_EXACT_TICK=1` keeps the benchmark's exact-policy A/B available.
 
 **Whole-system smokes** (each skips loudly without its local artifact):
 BBC BASIC 4 boots interactively on the 6502 machine with LCD state

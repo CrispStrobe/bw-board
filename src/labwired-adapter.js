@@ -150,7 +150,19 @@ export function createLabwiredAdapter (opts) {
   const systemYaml = opts.systemYaml
     ?? generateSystemYaml(opts.name ?? 'bw-labwired', opts.chipPath ?? './chip.yaml', pins);
 
-  const build = () => wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, undefined);
+  const build = () => {
+    const instance = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, firmware, undefined);
+    // LabWired knows which buses are fully event-scheduled and which still
+    // require a peripheral service pass after every instruction.  Use that
+    // answer instead of leaving every chip on the exact-but-slow default.
+    // Timing-sensitive devices and multi-core machines return 1 here, so this
+    // cannot widen a batch that the engine has not declared safe.
+    if (typeof instance.recommended_tick_interval === 'function'
+        && typeof instance.set_peripheral_tick_interval === 'function') {
+      instance.set_peripheral_tick_interval(instance.recommended_tick_interval());
+    }
+    return instance;
+  };
   let sim = build();
 
   let board = null;

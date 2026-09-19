@@ -108,6 +108,13 @@ async function benchLabwired() {
   const bin = new Uint8Array(u16.length * 2);
   u16.forEach((h, i) => { bin[i*2] = h & 0xff; bin[i*2+1] = (h >> 8) & 0xff; });
   const sim = wasm.WasmSimulator.new_from_config(systemYaml, chipYaml, toLoadableElf(bin), undefined);
+  // Measure the execution policy used by the adapter.  The engine returns 1
+  // for any bus that cannot safely batch and 512 for a walk-deleted bus such
+  // as this STM32F0 fixture.
+  if (process.env.LABWIRED_EXACT_TICK !== '1'
+      && sim.recommended_tick_interval && sim.set_peripheral_tick_interval) {
+    sim.set_peripheral_tick_interval(sim.recommended_tick_interval());
+  }
   const BATCH = 50_000;
   const N = Math.min(STEPS, 8_000_000);                  // rate-based; cap so the heavy engine stays quick
   sim.step_batch(BATCH);                                  // warm up + fail fast on a bad image
