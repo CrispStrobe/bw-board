@@ -19,6 +19,7 @@
  */
 
 import { I8086Machine, BREADBOARD8086 } from './i8086-machine.js';
+import { ps2On8255 } from './ps2.js';
 
 /**
  * @param {object} [opts]
@@ -33,6 +34,10 @@ export function createI8086Adapter(opts = {}) {
     let unloggedBoardInputs = false;
     let serialListener = null;
     const stats = { pinChangeCount: 0, advanceToCount: 0 };
+    // Pins a PS/2 bridge drives directly (the scancode byte lanes + the strobe).
+    // syncInputs must NOT re-sample these from board.readPin, or it would clobber
+    // the latched byte between frames — the capture, not the board, owns them.
+    const ps2Pins = new Set();
 
     const machine = new I8086Machine(config, {
         onPinChange(pin, level, tMs) {
@@ -60,9 +65,54 @@ export function createI8086Adapter(opts = {}) {
                 for (let bit = 0; bit < 8; bit++) {
                     if (out & (1 << bit)) continue;   // driven by the chip
                     const pin = `${c.name}.P${port.toUpperCase()}${bit}`;
+                    if (ps2Pins.has(pin)) continue;   // a PS/2 bridge owns this input
                     ppi.setInput(port, bit, board.readPin(pin));
                 }
             }
+        }
+    }
+
+    /**
+     * Auto-wire a PS/2 keyboard the way the 6502/z80 adapters do (bridgePS2),
+     * but onto an 8255: when a drawn board carries a `ps2` part whose data lines
+     * reach a PPI port and whose DA line reaches a PPI status bit, bridge the
+     * board's PS2Keyboard to that port via ps2On8255 and attach the capture so
+     * it is clocked each step. The wiring is INFERRED from the nets, so a learner
+     * draws a keyboard onto the board and it just works — the same shape as
+     * ps2OnVia's board detection, expressed for the PPI's ports.
+     */
+    function bridgePS2(b) {
+        if (!b || !b.parts || !b.nets) return;
+        for (const part of b.parts) {
+            if (part.kind !== 'ps2') continue;
+            const state = b.getDeviceState?.(part.id);
+            if (!state || !state._kbd) continue;
+            let ppiName = null, port = null, strobePort = 'c', strobeBit = 0;
+            const partOf = (id) => b.partMap ? b.partMap.get(id) : b.parts.find((pp) => pp.id === id);
+            for (const net of b.nets) {
+                const here = net.terminals.find((t) => t.part === part.id);
+                if (!here) continue;
+                if (/^d[0-7]$/.test(here.terminal)) {                    // a data line -> a PPI port pin
+                    const ppiTerm = net.terminals.find((t) => t.part !== part.id && partOf(t.part)?.kind === 'ppi');
+                    if (ppiTerm) {
+                        ppiName = ppiTerm.part;
+                        const m = String(ppiTerm.terminal).match(/^P([ABC])(\d)$/i);
+                        if (m) port = m[1].toLowerCase();
+                    }
+                } else if (here.terminal === 'da') {                    // DATA AVAILABLE -> a PPI status bit
+                    const ppiTerm = net.terminals.find((t) => t.part !== part.id && partOf(t.part)?.kind === 'ppi');
+                    const m = ppiTerm && String(ppiTerm.terminal).match(/^P([ABC])(\d)$/i);
+                    if (m) { strobePort = m[1].toLowerCase(); strobeBit = Number(m[2]); }
+                }
+            }
+            if (!port) port = 'a';                                      // XT convention: scancode byte at port A (0x60)
+            const chipEntry = config.chips.find((c) => c.kind === 'ppi' && (c.name === ppiName || !ppiName));
+            if (!chipEntry) continue;
+            const ppi = machine.chips[chipEntry.name];
+            if (!ppi) continue;
+            for (let i = 0; i < 8; i++) ps2Pins.add(`${chipEntry.name}.P${port.toUpperCase()}${i}`);
+            ps2Pins.add(`${chipEntry.name}.P${strobePort.toUpperCase()}${strobeBit}`);
+            machine.attachDevice(`ps2_${part.id}`, ps2On8255(state._kbd, ppi, { port, strobePort, strobeBit }));
         }
     }
 
@@ -112,6 +162,8 @@ export function createI8086Adapter(opts = {}) {
             // Reset fetches from FFFF:0000 and publishes the initial pin
             // state, which for a just-reset 8255 is "nothing driven".
             machine.reset();
+            ps2Pins.clear();
+            bridgePS2(b);        // auto-wire a drawn PS/2 keyboard onto its PPI
             syncInputs();
         },
 
