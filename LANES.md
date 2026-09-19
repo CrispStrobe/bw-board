@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: exact Level-1 MOS triode/saturation boundary, isolated
+2026-09-19 DONE — bwcx: exact Level-1 MOS triode/saturation boundary, isolated
 worktree `/mnt/volume1/code/wt/bwb-mos-region-boundary`, branch
 `lane/mos-region-boundary-exact`, exact base `6cb3c4d05ccbc6791b30c1d820dbe25844ef4dd3`.
 Owns only the MOS region decision in `src/mna.js`, focused boundary coverage in
@@ -21,8 +21,16 @@ meet in value and first derivative, so measure replacing branch-changing
 hysteresis with the exact physical boundary while preserving cutoff, declared
 VDMOS soft-plus, body/bulk behavior, PMOS symmetry, and historical latch
 convergence. Prove the exact common-gate ngspice witness and a mutation that
-restores the 0.95/1.05 band. No tolerance, Newton budget, importer/CUI/corpus,
-other device, workflow, or unrelated solver change.
+restores the 0.95/1.05 band. Implemented at `4ec2e5fe55fb79f8b62e2e56c55e2dc87e8e05ec`:
+the state still exposes a branch change to Newton, but its value now comes from
+the exact physical `Vds < Vov` boundary. The focused MOS/current/latch surface
+passes 64/64. Restoring the 0.95/1.05 band makes the named common-gate witness
+red at 11.9 microvolts on source; the candidate agrees with strict ngspice to
+0.25 picovolt on source, 1.8 picovolts on drain, and 0.12 femtoampere on supply.
+The provenance-qualified private replay closes the final row and passes 9/9
+observations at unchanged tolerances: run `f54f42bf...`, raw CIFS SHA-256
+`e5308b06...`. No tolerance, Newton budget, importer/CUI/corpus, other device,
+workflow, or unrelated solver change.
 
 2026-09-19 DONE — bwcx: explicit NPN base resistance, isolated worktree
 `/mnt/volume1/code/wt/bw-board-npn-rb`, branch `lane/npn-base-resistance`, base
