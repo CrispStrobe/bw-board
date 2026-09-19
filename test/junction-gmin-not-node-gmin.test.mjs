@@ -42,7 +42,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoardImpl } from '../src/board.js';
 import { NetlistBuilder } from '../src/builder.js';
-import { JUNCTION_GMIN, mosBulkJunction, JUNCTION_THERMAL_VOLTAGE, ebersMollCompanion }
+import { JUNCTION_GMIN, mosBulkJunction, JUNCTION_THERMAL_VOLTAGE,
+  MOS_BULK_THERMAL_VOLTAGE, ebersMollCompanion }
   from '../src/mna.js';
 
 const shockley = { model: 'shockley', is: 1e-14, n: 1, rs: 0 };
@@ -139,7 +140,7 @@ describe('the junction carries GMIN; the node does not', () => {
     }
     // Forward bias is untouched: 1e-12 * 0.7 V is 7e-13 A against milliamps.
     const v = 0.639395;
-    const diffusion = 1e-14 * (Math.exp(v / JUNCTION_THERMAL_VOLTAGE) - 1);
+    const diffusion = 1e-14 * (Math.exp(v / MOS_BULK_THERMAL_VOLTAGE) - 1);
     assert.ok(Math.abs(current(v) / diffusion - 1) < 1e-8,
       `forward ${v} V: ${current(v)} A vs diffusion ${diffusion} A`);
   });
