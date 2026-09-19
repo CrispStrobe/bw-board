@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {readFileSync,realpathSync} from 'node:fs';
 import {arch,cpus,hostname,loadavg,platform} from 'node:os';
 import {dirname,join} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import {performance} from 'node:perf_hooks';
 
 const BASE_REVISION='4926e93cd0133dd038b929f8506318d0da320b3b';
@@ -84,9 +84,13 @@ for(let round=0;round<warmups+rounds;round++){
         pairs.push({round:round-warmups+1,order,wallThroughputRatio:pair.candidate.periodsPerSecond/pair.base.periodsPerSecond});}
 }
 const ratios=pairs.map(p=>p.wallThroughputRatio),summary={median:median(ratios),min:Math.min(...ratios),max:Math.max(...ratios)};
+const measurementDirectory=realpathSync(new URL('..',import.meta.url));
+assert.equal(git(measurementDirectory,'status','--porcelain'),'','measurement harness must be clean');
 console.log(JSON.stringify({schemaVersion:1,workload:'unpaced-owned-harris-store-loop-native-writer-suppression',settings:{iterations,warmups,rounds},
+    measurementRevision:git(measurementDirectory,'rev-parse','HEAD'),
+    measurementSourceSHA256:hash(readFileSync(fileURLToPath(import.meta.url))),
     host:{hostname:hostname(),platform:platform(),arch:arch(),cpu:cpus()[0]?.model,node:process.version,loadavg:loadavg()},
     variants:Object.fromEntries(Object.entries(variants).map(([k,v])=>[k,v.provenance])),structural,wallThroughputRatio:summary,
-    performanceClaim:summary.median>1?'observed faster in this same-host sample':'no improvement observed',samples,pairs,
+    performanceClaim:summary.median>1&&summary.min>=.98?'observed faster across this same-host sample':'inconclusive host-noisy timing; structural writer reduction only',samples,pairs,
     limitations:['Unpaced synchronous memory-only workload; no DOS, browser, peripherals or real-time claim.','Same-host balanced order reduces but cannot remove host noise.',
         'Completion trace and fault parity cover this successful workload; existing fault and edited-wire oracles provide fault-path coverage.']},null,2));
