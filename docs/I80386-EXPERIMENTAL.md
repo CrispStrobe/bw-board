@@ -262,3 +262,15 @@ before the first CPU step, so FFFFFFF0h reaches the reset alias. A CPU-only
 reset while an external A20 gate is deliberately held low leaves bit 20 low and
 does not invent a second alias. The bounded board profile does not claim that
 unsupported combination can boot firmware.
+
+## REP and ISA continuation receipt
+
+The [continuation receipt](receipts/2026-09-19-386-rep-isa.json) binds execution
+revision `a6de5455456efa05d7fb6a8017067607201140e7`: 91 focused tests, 266
+admitted hardware samples, four owned PCjs comparisons and eight rejecting
+mutation controls. Exception and LOCK-prefix exclusions remain explicit.
+The unchanged diagnostic ROM reaches LLDT at CS00D0:EIP2AAC after 802,807
+instructions; `accepted` and `fullRomPass` remain false. The separate external
+IBM Rev1 BIOS probe now reaches SMSW at F000:060D after 1,100,307 instructions.
+Neither diagnostic is an accepted 386 OS boot. Hosted qualification and fresh
+DOS2 RTC-dependent persistence receipts still gate this continuation's landing.

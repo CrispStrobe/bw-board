@@ -1,0 +1,3991 @@
+{
+  "schema": "astra.386-bounded-evidence.v3",
+  "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+  "scope": "REP, far loads and control, full basic ALU, stack and rotate continuation; 266 bounded real-mode386EX samples plus owned PCjs comparisons; no full386DX, Windows or Doom compatibility",
+  "priorQualifiedMilestone": "9dc0f189c9da52e3fc8ee8789a5fd67f45657744",
+  "hardwareSamples": {
+    "add-sizes": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "add-sizes",
+      "scope": "12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 888,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "01.MOO.gz",
+          "sha256": "79ccbf4df357a49f180c5a07996d0fc55f7efa872bc727b499f0bb4f76b6facb",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "d9bae39cdbf8a4fe2ba05630029a239b9513dfdb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "b73be8d36102d3855d81661840d889b1e02803cb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "d6087393518f10deae57dd03379a627e16bf52ff",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6601.MOO.gz",
+          "sha256": "25152ba347c7a0ad272bb48f99035a2c0fcad9ebc71586e60824cdaee47e2848",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "60d9e17b14e402d4bc3ce99384270a1002bd9064",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "cae2902543018c3888b4d5f6db2af8640a36398f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "a3d9f8f4eafde9424ec4bdbb60a69eae07688d6b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6701.MOO.gz",
+          "sha256": "6e2b68b99a5831a02d5e38c12595245714ea80930615800d149f0a7096fa8e09",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "17bbced4a027d9f664ae8e5e76092e22fdee82e9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1240,
+              "hash": "7dc228f81f8120380eccda5f37c4d0e81ef06b55",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "b2c8b3f760a122cd60b1d03cbc228cea8a63f49a",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "676601.MOO.gz",
+          "sha256": "9f9f3347826eb4f9f1f5fb709074540d7647193c146b83dd74700919b200b272",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "402e3fa06bf78127149efde5d1ccdf0bc144ff43",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1239,
+              "hash": "31d872212c775ea1aea51f82abadd18bc563af52",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "2cec7f936f75084403e7556555e88afb4d711fcc",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "byte-movx": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "byte-movx",
+      "scope": "36 fixed deterministic byte XOR/MOV and MOVZX/MOVSX samples across their published address/operand-size forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 12,
+        "admitted": 36,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 2600,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "30.MOO.gz",
+          "sha256": "0d6e4e1b4f96f8fd1aab7df7a97112fade22c418934bdafbb6c9e9ad8ced6847",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b7752d42dc065fff02df5a85de16856275ca4776",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "b3f012ef37cd2b95633a2030367e0dae5c8217b0",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "1f32059230ec02f773d83c408361f767cb6299ba",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6730.MOO.gz",
+          "sha256": "5dcd6c9af6e4779a73e4c3a75e777d12a2c27940a961c8a70abcd02549be47f1",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "2d587bcf4896d5cdba692a4a3919d55711222ca0",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1234,
+              "hash": "fc96c574fbc928025b33ba1d2b2ea9850a4b461f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "62e6dd98b02eeac5b2fe7902e1d03ef370fc73ef",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "88.MOO.gz",
+          "sha256": "b019065d481b39abace7f61d2ea1225cc6ab5c964126d9c7430acfc15a0a8448",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "e17697c1a548b0a8e7b683521c074566a06d0288",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 499,
+              "hash": "41a53422e175dc39386a5ba4c986a8183a357908",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "a22e8fbe8468dee678e82035271e7e137eaecf02",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6788.MOO.gz",
+          "sha256": "8f7d3ef2fbf17ee46d363a814317f7eb794cc3d91e2383630cc1dfa3d29b6553",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "288a7baecf01b63508107cdbebb136d7a986597a",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 503,
+              "hash": "0b35dde5d0f1e6b4332e8f336f07e84c448ed4c2",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "407a0e01b1ec0a37c4357b36cfd7e7190b994847",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "0FB6.MOO.gz",
+          "sha256": "14b68c587e0d16397305f790d097409d23b9cd7489ce1645539d690af2fbbb53",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "cc10d42ac0c44c18dcfae98a2ed49c8ff7c5a979",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "825d91d8e2d8476dbc3a3d3e8e2561bf99b101dd",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "d04056b3bc81c12a7490aa4fe545764b83c2945c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "660FB6.MOO.gz",
+          "sha256": "33849d2b91de1ed4e8d38387e59c938f91a499a463bb67ddad1ad189d6b41c8a",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "57ccbcc3a1747977ce77771d63fb1c346c97e1a1",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "da1c430d10fe455dfb9239a3576559c295437095",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "ac5a5ea27e3325946ca67f11132688f64996d122",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "670FB6.MOO.gz",
+          "sha256": "43a915bd0378184d29ac69d63d413f8edfcaa764d8788f80ca85f24e315bc243",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "bcbde4e48fd84eaca0e613125a848f94abb7b355",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1242,
+              "hash": "dce50772b64c77a6f219ce5909192b9e8e1950fb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "09a67447d74f17ec945410989ca775d6db7e773b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67660FB6.MOO.gz",
+          "sha256": "806b7105317b10497d483cc9441f7f53650af7483b2389bd8fb228aeb4cb1e07",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b24c590bc22a9f5b3713b182e99fb089b56e1991",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1242,
+              "hash": "430268c601f20420fa333e081d757b19d2532fc4",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "6c3de0d6cd5ad41906d41202bc5ec27b50d1684d",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "0FBE.MOO.gz",
+          "sha256": "7f1652855236b58cd7ba559a3dcfb39e2d42bef69279852c2486f06bea0c46c9",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "9bcb584bf968aff64df4a66ee47cee28286087e7",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1249,
+              "hash": "4927310740a80ddd283cd92e59186f55ce81155b",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "4808cb8c10afc4016a5e59492b4f141085ce90b3",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "660FBE.MOO.gz",
+          "sha256": "e7f183085bf4d7121498dceed3aeff3b5b11465afe4464d441a3ed42761a8e18",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "42ef63603f078c10ba608a763bf74dd42d838070",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1249,
+              "hash": "272de13f62fc82de816434cffcc426ff2f7e6ae5",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "f78c5666e150c5b78ea9b1942212e0d697684009",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "670FBE.MOO.gz",
+          "sha256": "e9daf1e4d4e5746d1a20eeeb3f8728cfb810838fcbd9e7d0f954e122dca962d6",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "4a3ef0276fb970605ba6955c09d9c058026bf765",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "0fab5b529eea2f62da0ed68cfc183bf53d83ffd3",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "babc90e3607f69220afe7f8482a17e0ca317964c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67660FBE.MOO.gz",
+          "sha256": "d20013fff505111bbc1c96de8999a914fbdd49d11d9605168a1ddcabc62045cb",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "42e0103ac0b1535781b2106aefeea0e2435a9e74",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "f38c916442bfecdfefa1a3a65c6b9eaab0ca085d",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "4ad9e77231903654ac5cdd20ee14872b6f6c04e3",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "shifts": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "shifts",
+      "scope": "36 fixed deterministic non-exception immediate SHL/SHR/SAR samples across operand/address-size forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 12,
+        "admitted": 36,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 3111,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "C1.4.MOO.gz",
+          "sha256": "d7fbfef5011b60f9dbfe7f2063280e640c8f9eb4f5e8095764a9ca463fbcc96d",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "fbef0587038c5e8d0431434d168747a299c96f54",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "7948dc6f1b75c0f9a751c7f11be1a980334ea981",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "3233a70e82b57338774d8588fe1f339d00d04fa5",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "C1.5.MOO.gz",
+          "sha256": "e0a9e812deeb26b06813d758e43030d940553200df36837aa71f4d9294182755",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "ed8624e0fca5e9c906124b30cd4b6ecb374f82b9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "c3773dccb55f3e508c302078db4cc6781dd57812",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "ad5d45f1f52da8d913e2a33a8c849445014fc253",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "C1.7.MOO.gz",
+          "sha256": "4f068bacfc1022da4e854bd669b6f9240e1b0d8698010a3258f005f36493e584",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "9726c43769fa199cdb9ac9fe895e2628aab46eb2",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "0fbb08f60dc000977cfea2ff32aa0e03d8453d29",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "bd269e983d6f66087596e266ee1bbbe879185bf6",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66C1.4.MOO.gz",
+          "sha256": "6cbde2d6f99817eecb8f1921646643d39cd135c255decb2dc431ae15857e6ce3",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "1a5964ee2422c445269712e800a5d7db065f1dbe",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "e4e3cc0b8b7118cb5e993b6f33c3394d1ac0874b",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "6aa405a28334c23fb57f37124bbced9549ec785b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66C1.5.MOO.gz",
+          "sha256": "4df4754af05b8a99d8a2bb004c484c0f38e0e29ad1c3372cdcc695b743f53f82",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "6f49bcbbf92b454e865ea5e53980d4018b0458c3",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "46f8113dd66c456920dccbc999bac484913b77bb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "56d345260e0e3215c5cde530152912117da75945",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66C1.7.MOO.gz",
+          "sha256": "ef446c586fe4a7ec7b96a414774346dbd9864a9bf4888872616c0f05ebde392f",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "9514ec7002a48e818ecd26a762d07805c2665ab2",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "57e1fdb8621f560a98532bdcb22a6215b55452a9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "66fa41c01f2ff1bf06f7e4cdbfbee8f1f168f9d4",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67C1.4.MOO.gz",
+          "sha256": "bdc31ea2832e367202e9a976692eda3e6ca4f88a529dd2dcd3f91d8dfafc67f6",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 1,
+              "hash": "ff2d18b5b1ad1f1e5d8bded608614077025c30de",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1263,
+              "hash": "4b6233b2adcbdddd1e8b295701f0c81b25c9d616",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "b1ca234fa6f758eaada9a695180cf700cf28e3a4",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67C1.5.MOO.gz",
+          "sha256": "04169626826da1b2592d84fb686df91930d41ba482002b072485a15dcb1e1c24",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "fc645988ad9a477003456a530911d40f1e509076",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1263,
+              "hash": "81b5173156c3dbe4e3e017e6770e27a84608cc1f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "0e512d450de6165d559f2aff4cb67c7677da2e1a",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67C1.7.MOO.gz",
+          "sha256": "9e0d46378b8d4494f676c807f87b76061c795a63cef7dcdda45934ecd888b22e",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "e9bfc53ce4a324118a301f84791f08aff800eefc",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1263,
+              "hash": "0cdc7564678f361daf7dbf5e6795f12588c12cd5",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "77c0fd1632caa71d35b9d1ebb771f42a2bc13f75",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6766C1.4.MOO.gz",
+          "sha256": "a8bfa7ef2b908761ffdda781b18351563eadb125c134412bd73e3c965c118d10",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 1,
+              "hash": "c43c7a9f99112730e59842639986cbaef08d43b9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1263,
+              "hash": "4156a8c229c465293cde983fadb6005ac460f203",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "ca077195892888f9589bdeda5d1c416a9973e5fb",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6766C1.5.MOO.gz",
+          "sha256": "750b32213d7a772e9f26d53193c7a79301b67528a25c153db81e6c631dcf3431",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "d5856dcb5cf6110f38adfa9de72bdce97eae9299",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1263,
+              "hash": "0be704ec8c87dfadbe46087a89c3af17311fc1b8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "6bcc42e6c18af2e8f4be5d63d5cc5263b9fa463f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6766C1.7.MOO.gz",
+          "sha256": "fd580543670649651864a62c2e7d84df826c3820623718e183605b3ff9e4eb0f",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "99535b3a76dcdc4bad3b9004fc1c8b1e5e6b1a3d",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1263,
+              "hash": "13e79d99deeedf4eed7a06a426d736dbf6c7a97c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "09932133d99b8139a236ffea768151e466332b05",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "segment-mov": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "segment-mov",
+      "scope": "6 fixed deterministic MOV from segment-register samples covering 16-bit and zero-extended 32-bit register destinations; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 2,
+        "admitted": 6,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 46,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "8C.MOO.gz",
+          "sha256": "c445cabc355b0ac81c5b4603fb39ea080f42811cdbfcd744094303c54ba058d9",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0d0366a28d766e4af385cc62cd311a207c3640e2",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 500,
+              "hash": "9e23ea761ad2853a746e4f7607e4b5f2b8a36f38",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "f1aaf6c2cedd5f11b4d42bc768ee07a437a0f289",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "668C.MOO.gz",
+          "sha256": "ae3255242801086eceed752efdf5caa34c5fa3fb8096a239d9d09dcb2e8a1dff",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "612c954348ed962e90ea1dbd5c3eed305dfdb541",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 500,
+              "hash": "c4f2e9e16115922925cc1dd35ef666e63e3c0039",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "f7b41cc5d8a19b03c764d9f8b299c8381e9d66fe",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "xchg": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "xchg",
+      "scope": "9 fixed deterministic byte, word, and dword XCHG samples; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 3,
+        "admitted": 9,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 16,
+        "profileExcluded": 58,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "86.MOO.gz",
+          "sha256": "28163361442480a54da6f4365cc428cec3abe45879936ffe5dfc0fbba3d2672b",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "bdc6d87bccc796428ea66647618f3a3e958dd8ee",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 499,
+              "hash": "5b879999f54a7c3341b97f912404d5aec852b379",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 998,
+              "hash": "500d29015d135a183158fd0fa11957e3c504b9f4",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "87.MOO.gz",
+          "sha256": "581e27460390546194388c586545811f2726974c2ef7f77c97b326567791823a",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "545124279e3c2b32b9274a5b55452f3c3cf87965",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 500,
+              "hash": "72afc5f50ac121c0be08a520fd8b331fe6b007b1",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "402370b8e9a1d39561edc972f2fc6894081c0b56",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6687.MOO.gz",
+          "sha256": "fe0e16c6c0443ca3086d561d4335efe02f50549a3e4a054858a7fb846c2ffaef",
+          "publishedTests": 1000,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "2f6ac3e226cc96d7a8ba346ea1296a2ef95ee6b6",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 500,
+              "hash": "faae1c7fe7c8b0d699073acaf9cb5de4ffb2f02a",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 999,
+              "hash": "af259a24e9b135371dd3032fe549cfb6b9b65ba0",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "group5-basic": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "group5-basic",
+      "scope": "21 fixed deterministic FE/FF INC, DEC, near CALL/JMP, and PUSH samples; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 7,
+        "admitted": 21,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 319,
+        "profileExcluded": 194,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "FE.0.MOO.gz",
+          "sha256": "30efdfb812c58266f11b6ae2d4373f5af5a228039b4d99ee0d025d8956ce08c4",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "7777d1cac50dfa33d586aeeb0e84b36defd518f2",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "3ba71bc72c69ad969d3a2307e1f3934c9431948d",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "35bdb2cc6edd60e22043b8d34f437ad2a2e86dab",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "FE.1.MOO.gz",
+          "sha256": "8a3ac3ebdb7867a4a4b844d73e856686fd865d5933bec5d87b5e3ffa4a7ed2b5",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "14eca405f4578ce349eede47a7755468255abaff",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "edd8481774e628a54a20ded288c6d29a4e06b667",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "189293035eb2b1ee5041b40aec2d0e4e0e169f90",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "FF.0.MOO.gz",
+          "sha256": "a4b33b1f3a21db665aebbfbcef0529ac71c9a042df44a4ac10cdb94c1cb52a8d",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "f0ef5fc752357513a7470586d28538745d8ce2fe",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "05bfcaa89ebeab587c73acab439dd684be42d3c5",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "27643478f7b4e76bfd2862c8f28281c149341038",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "FF.1.MOO.gz",
+          "sha256": "bf09f0edff670cfc55d98e6ad8283fed9c6e0e47c5fd830a7dfba2937a8bcf7d",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0564fed631b59f4468c394dac4ba9cdc1c241bbd",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "e8029b617e097ab2b7575837b558b0d43620760d",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2498,
+              "hash": "8047afbff63948553823c78bf08b1b5c5056535f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "FF.2.MOO.gz",
+          "sha256": "50bc7ff30d7c0b13820c9695667a0250bfc7c6d347bb0841439dd5adfa9079d4",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "1cd8a9e41c380bf28efcd748ca52b222f965d952",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1259,
+              "hash": "6b91db8407600cfc530efe84c7ba59c10253f581",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "8e4520c1c63b17d6eb4252e358d5ee8b1fc7ac25",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "FF.4.MOO.gz",
+          "sha256": "c0dc04569505c20dd00e6e4d56e102badd2349595c56f77c0fb92675bf4354ac",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "80b7d369010edd71af17d93196464aa9e0fbaf0c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1259,
+              "hash": "93771a9708f54f7c0f8d8f35e0144fb32b77c14f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "85d24320c68490f79717aea6d383077559d8b442",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "FF.6.MOO.gz",
+          "sha256": "1575b0fbaf3144f7f309bd901eb7d2fa4a2972b18336c0056f7a6be7f5f68280",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0f39c6929927c4530eea8284f08b6c20e1395fa9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "501fed78158f66afb60d952ce6b3a19098600c2f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "4c9898495edca47953492f54ed68073505e306c1",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "far-pointer": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "far-pointer",
+      "scope": "30 fixed deterministic LES/LDS/LSS/LFS/LGS samples covering 16-bit and 32-bit pointer offsets; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 10,
+        "admitted": 30,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 955,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "C4.MOO.gz",
+          "sha256": "7553deded61bf518b0d8858edff575be0276fb4990e65f6793a78739f364cb0a",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "bd1276ab3df514e603ddcd37e6e9897d2895428f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1260,
+              "hash": "dc852160736b8fda2637b2e04b9447bc7174f101",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "d960341a07108087db4a706f11e4191d07ab2bec",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "C5.MOO.gz",
+          "sha256": "3a6aff941ca8dcd288cef3e0cc58553ab4e703939b78b2b8fbde798dcc44ee90",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "7ce2aa02f97aacfe494ea9a9190afa6f30d6d883",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1259,
+              "hash": "501bf33647c750f48281185b94c252b47d13dff6",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "8b128325fe9aadeafb3e24a91e056e01c6291d1d",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "0FB2.MOO.gz",
+          "sha256": "56ea490754665b9d0b633d2ce88affb402db0077948e179d2d1467e77333406a",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "5313a8398e16d7aed02a74f2371cf596c34060eb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "07b476d60debbc45b85c5b8edcb5145c4b04e2ff",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "9330dc1e146c12e82c6e49100a506f93fff5b57f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "0FB4.MOO.gz",
+          "sha256": "ed13fe36fbf7f2099cbc804eeddd1c204206f7466a8ffd1d328b36fbd747e335",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "1a8cb6b00ba667c21ba22488e102db90dd0d1785",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "ad0aa0574beda5b2b2173977412b1462842cec06",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2498,
+              "hash": "6a0b7cb99fab7f2011724c68187f26857a2f8d9f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "0FB5.MOO.gz",
+          "sha256": "aa16d8579ad631472fff9ab855149a1f276c01ae60ea4c67ee2aee23b9ea4903",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "6a015128c25d293818074b9cc73cba4c3a647377",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "e5c1a1941051b68fb3c56c6606c246467a2e497b",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "efd99c41c5aab165ef10adc91cedef046b2c43b9",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66C4.MOO.gz",
+          "sha256": "19abb24dc8df2fc2b3bf089079134bdba199eb1b83b54aece87c14e95c05fdb4",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "eba05f875fa9288007b9152de12c60bc5d4bcde7",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1261,
+              "hash": "9800f7d5c807b858952ef6a2665cb97b2d247f22",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "46ad5350386fc34a17c7c0c2f10eab457f5979d1",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66C5.MOO.gz",
+          "sha256": "283c2ba6635caf7ce7b65ce6f3cf02d83fc6a91f29014c838d4ee81b7b070e8f",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "af8a0fc4af5a97df43327ac7c218d65ccc8f4cda",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1260,
+              "hash": "332127a26c416d53a019a1e2fd4a32b08a044d00",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "0dd8a5fe109bec1f48aeb99af043a5afa11da1fa",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "660FB2.MOO.gz",
+          "sha256": "75bafb34dfee25ba824ebd14152003867184f45d5fc8401ee99924adbd84c4b0",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "50f305ed353d99f7e6860de7e5a14f63af79a543",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "5d498d5b6ecf4b0c179387c873d29cbad0587074",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "9f38bff5dffa0141cf9c8032cb6465c9264000ad",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "660FB4.MOO.gz",
+          "sha256": "2b02592bfcf077dc249966cebdb4451d343003d1edf4375392e2e7f9c7b94b57",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "dd60def1c25f90cee237f580dd15dad1a61726f6",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "0c1fa203993b4374a551f415fa665a3556ed22c6",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2498,
+              "hash": "af2e19e62a4ae711ccfa3e12ee33e39a099d34f7",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "660FB5.MOO.gz",
+          "sha256": "0aa2b57bc975d139101297cdbe6395bf82fc654ed091157ad2adb22319b8dff1",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "7240938feb38b713269196d1740b9387077744c8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "5489cbf9d355389d8c0803b3cbbf59b6c751246e",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "b3f7f0e5b15b4fe1cc01b32c809c70a42897c65d",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "alu-complete": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "alu-complete",
+      "scope": "42 fixed deterministic OR/ADC/SBB/AND samples spanning ModRM, group-1, accumulator, byte, and word forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 14,
+        "admitted": 42,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 163,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "08.MOO.gz",
+          "sha256": "a51f1774865b038daf7b79b790e0223cfa2fe812af41cce32f769ddc49547adc",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0e8750605c7c9399ce01ba425c9a36138b1b5f94",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1248,
+              "hash": "5c6a2613d515cdbfdd7ffda4e7f9026daa242839",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "62516217b36b399767152416b7709a6a1b18f5aa",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "09.MOO.gz",
+          "sha256": "fda1271b42cc5f0299284f6f9d3abf15d8881338d43d293bf45c428763438c39",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "c54e279edf95c8f87465da45b551224b0354fd24",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "2b45c60018192bb615daad9e76e21b51393ca505",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "76d385c35dbe941094798ce1ad3dfa0522c8b093",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "10.MOO.gz",
+          "sha256": "d38b0f6e279379941254d09769d55753bfbcee2e353964cec47d2903c3ee5ebd",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "98b9084630122197f1a449cdc94219bc0885023e",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "c806a0040654f8f7528fff04391923266ee64a41",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "ef89d359730a447388865eadef21c23d0c133a7e",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "11.MOO.gz",
+          "sha256": "6939a8d58107735b3576f6eb7d3008c9450f41afcd6cf744c270a2cbcf592161",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "409d485eb308acd3f5f614e4556aca696371ed0f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1252,
+              "hash": "31dfc255b1d2a165f38003bda9a1e2892dd16652",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "b44be745a8dc6f39226ec8fe670d0bc9e9013bd3",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "18.MOO.gz",
+          "sha256": "e1043693d2ce3bfcb39a644607e99620e8e46beac8e65efa8059b9a144e8a11b",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "e9c5ebb356676a6c2b46001d23c5204d3c5d30e6",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "3d0967edea1817b7786bfc1803f6ce6365822948",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "a716d9029fc82b708bd8cf1540f532e9848dae77",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "19.MOO.gz",
+          "sha256": "ee63eb53a815cfc977e4c599f20add5bd47f5d5525af196626ba89aef212dec5",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "115e1af531614690b183c00238a42f82675bf984",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1252,
+              "hash": "b839ce36fbea2415141990fbbe9e79dae9474a29",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "ed2390bfd029db97ec30201a7ee7d7d5df88a4b3",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "20.MOO.gz",
+          "sha256": "d537716baf9ebbbb70610a75e1da07fdb5dbda0bb23f3fb4eaa802d12fa00e18",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b0e66eebb179787d1aab3e3a905a72cbb137bd06",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "e1e4774241c8ee0795854df49442b870ae0a168a",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "e169f86fd30f6f7aab79efb3181806bfe89c1b84",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "21.MOO.gz",
+          "sha256": "f0ce652f51a27beaf89782075c279d2261b1199a96f29eaf6efdd9ab407d4e94",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "aeeff936196706f1f34e093b63408ec263d95561",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1252,
+              "hash": "57a904fc58bb8efa7d43d9b2dd7d9b06fa6f06aa",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "1f1406bf0fedf7a07c69a091f24127cdcb9a6339",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "80.2.MOO.gz",
+          "sha256": "fa7ffe11c6494946cca85b21ec36587c6f27e544db98f2fbb7bc91647b1522f1",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "20b91632a4ad20cb8f25d93d8af00b7943ba0f5f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "7602884349ca95846c7acb6096ea0719921b7a9e",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "7bc2e49fc5601c8bb00734762b10f722ac55cb0b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "81.3.MOO.gz",
+          "sha256": "90456ce7059ed23456b211e7e41f3dbafb5002abce1befbf8e4e4ce4c4dba371",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "6c2b18021bbba83549f300c45e28c8b166441714",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1249,
+              "hash": "8b10f706412675d576c66972c79976e805c6eb45",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "1f197095222b293e60e2d98d6487fd4e2184740f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "0C.MOO.gz",
+          "sha256": "27cd45ccc9cb78ed0892e5ba9518a03b70c413b5b059ab2aac5fcb4a6ea06e58",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "73095cfebab8f08051081bd1efaef0a74748afa9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "f99cf1f7968df2dd96b94a6a950e37ced2280df3",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "d3e5d70815ecabf742f3a558bf68d8c4e78d64c2",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "15.MOO.gz",
+          "sha256": "6839157a4255529a7395e48e87e4eec23400f21599d4de33d7e8bb25e63bb108",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "926bd1700b12ab1a0fab1e60cc6aa339fb97bab8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "632c743e0191d386c9b126febcd7e4fe2b231065",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "684c0c333ff4d2e62f9340bd417965fbc69c66f2",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "1D.MOO.gz",
+          "sha256": "022ff08a478799fdb7cd2a4f32d5bf6785f153210490538691b6412c1fa4f2ac",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "6ecce037e3a011f95de0baa1d9c77ab72fc2bb8c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "cf8cbda6bd95d3119d01daeed3bd135710868824",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "e43e1c0565a30811c4c9eb6ad60357c2d45babd3",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "25.MOO.gz",
+          "sha256": "b6c7602240c0ae6ad10e44abca117b5074e41b0431691558e9edaf1c1028b66d",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "4d3486c8ea97527704302cde77d109d0c39c91af",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "e78c85af82a8fd425032070b3b18f0f15819df5c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "3a35342df397ecb361c921dd34d225d5cb0e164f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "pusha-popa": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "pusha-popa",
+      "scope": "12 fixed deterministic PUSHA/POPA samples covering word and dword operand sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 405,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "60.MOO.gz",
+          "sha256": "442c72fdecd1ce19cfab1580e21d03ed024169487470cd108b17bd32208e046c",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "948141ab0208ecf730c476ce888fbc8b6cdf1f87",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1254,
+              "hash": "5907528e23c4b69dc8526ee7033a022f6bc7c711",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "8a9711c76a410c8b5f3cdbdec07862f5680cbf90",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "61.MOO.gz",
+          "sha256": "85d652a3243418c0ce55f0e19f90b049046f20354436a743f8584bb3ab53c269",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "51269be8706816f302cec5632bb0f894d5d00845",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1253,
+              "hash": "53ec63cce884f9be8ebde087ca69da81691cb1a8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "02fb9433190bc5cbf90195f05579913b2d587f1c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6660.MOO.gz",
+          "sha256": "7e71416d74be660ce7fe69a6e06f58a04049529de24454b4dadffbc4160c0ea0",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "aee984e39fdd8d6a123a58220877129e0d73ac55",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1256,
+              "hash": "5c85d8b34f1a933ebf5e5385a949611d78a085f8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "03c1fd4df92e8f84067e9a771b453a384d75a920",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6661.MOO.gz",
+          "sha256": "a40c14a63eda1fd92bc2f7180442977e8dc673194c9915384d04a23d30ef9f33",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "2c2b3ccba3ae932b8ae842cf03537265b1954ce8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "e02932545b034a2d8ba470a2d96e502b4126c3ee",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2498,
+              "hash": "d32a512d161528c708db335047a97a1ff6482634",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "moffs": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "moffs",
+      "scope": "24 fixed deterministic MOV moffs samples covering loads, stores, and operand/address-size forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 8,
+        "admitted": 24,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 452,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "A0.MOO.gz",
+          "sha256": "0314ad348bce030cdd8fc08c35a1aa54723a2b952c684d82ba541cd1b7880015",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 1,
+              "hash": "d507fb6789df760f86269de84916eca973a179fe",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1249,
+              "hash": "a1d25a969e8a365d9b3923ca20ba5d772a472043",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "5511730645f6d40a25da3309034115accd4e220b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "A1.MOO.gz",
+          "sha256": "d6eaec9fcc5b843e41a0867c8c94f71db769b1def0b9dbe4adc0095635fe79a1",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0ddab6c376e990605dd61a7825a4d12229a13c3c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "b4f92ad27a7ec0c899f7d5474caec9a85fa7e89c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "74ca8d1af6e99def0ae2ca4b79db660bebd6be02",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "A2.MOO.gz",
+          "sha256": "9b8fdf9e82601092a29da2803529b113671963e88b7a8a7fedbb17f70a7dd1ab",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "dc3894bb0d17c2d1c2dd0cc060b9e0f55d04cb0a",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1250,
+              "hash": "1b3b7cf5e503ebe61b41f442213299056111033b",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "ee9a07231519b08b86440dedbbd8b9f0661c358e",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "A3.MOO.gz",
+          "sha256": "3797263ec32044007a59f70423ff4f83fb79d8704a11f9aab3dc03f4c0c2d82f",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "0391b4d7b1fbda34db88767584cf4a303b096c74",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1249,
+              "hash": "4385fbb49542d5baa9ae5c0c2a201825c996a4ac",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "64726e6e82c2a18c3f6b780c6d5ba6e1e204dd51",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66A1.MOO.gz",
+          "sha256": "839d57c006de93a86ad05002468ea163309882ccc9887a88a30011bf6baaa19a",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "9bf55843a5b7621c545990e5bac02325e573b05f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "9b698ccbc0db1e78b0670e5484ee673f403ed691",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "34e99a71308455c719ceb98f8c78907221c49d3f",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66A3.MOO.gz",
+          "sha256": "4c5b233905d327f638589f46677a299f4296266d12632f9da0427dbca8e077a9",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "3200b7fddebef1bae832bb560995e0f130b99303",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1249,
+              "hash": "b120e7f84cb0d430623dfc3399698562fc62a7fe",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "90d4494d54029c0d8efeae421a897badd829a786",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67A1.MOO.gz",
+          "sha256": "59f70b8d6654dbc7f9c0c47f38b3a34c8fd154bb50bad8205c66dd44e2486387",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "ec7fbcf003295758e54cd985f63c69e03a4cb635",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1255,
+              "hash": "807d637a878aa9fbfa6a6b783821ada74afa1ef5",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "299021b7ec8e6f7e4df059efecc1a108abd9b09c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "67A3.MOO.gz",
+          "sha256": "c418a3db1dea461f5320ae887536fd894032344a78d06ef2055adc904de98d9e",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b5983cbb62cbc1e5c6f4bd3278ec18a2d2247615",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1255,
+              "hash": "0c4d0412b61b6b61477298282689271411035e74",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "7091c27823f6192943f51b560ee35c821c1021b6",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "rotates": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "rotates",
+      "scope": "36 fixed deterministic count-one ROL/ROR/RCL/RCR samples spanning byte, word, and dword forms; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 12,
+        "admitted": 36,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 904,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "D0.0.MOO.gz",
+          "sha256": "0907c69b9238da527ae6e31d13f4b48c2b1753fd603889b96990b99b063f5d1d",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "e17f108a3370f68a9d45727a33e33c6de2c09b24",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1248,
+              "hash": "9c4370dd9c788949f01e993ead35c19e4a0d5150",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "c8f3b8fe6230fdc925cce60eab058ebe7eee584c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D0.1.MOO.gz",
+          "sha256": "c380506df93d015a7088222bb50ae15ed7a5b64b8f86a30d59d87cdbc05273e4",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b0ee3ddb504779ca2d31ccb5acac036e5092b9a8",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1248,
+              "hash": "ace66593adea9a5d67113f827d5c3d4e971c3f07",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "4debd3da85748045ce2606d959a2d5e2e6607aa6",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D0.2.MOO.gz",
+          "sha256": "879bdddbcacbbca8ee1b7fe58e17380157210ffa9d1da564c9ecb5c49c26375d",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "e916435fb40b5ab57f7ca24cdb7826fe36312c6f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1248,
+              "hash": "670b55c519eb52b1210c67500de4adee310ad566",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "508d39bf63648d0ac27f50afc28cbce1f3cb1ae6",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D0.3.MOO.gz",
+          "sha256": "8da96760b78cec64138bac1984e00d6e1c3d47373d6bde705813525e71b9cb6b",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "a6cb1b6aef6f1fe6ad8551af3184ac09926e01bf",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1248,
+              "hash": "ffd93e8bf2809a666e74e4066f1ecf2e05e0aa5b",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2498,
+              "hash": "80dc4eb1e3443af510b6ea31a6c9569e51d3ba9a",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D1.0.MOO.gz",
+          "sha256": "e50e701a9aea9e762f0effeedae1fc8810b07495126ace36e24b67e0dd5d490a",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 1,
+              "hash": "5888629ff11822542cce358dd592fbc74358fdad",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "bf10f6f07b75faf0c7189ec6bebc8304cb130fcc",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "42a2d9b075d4a021346cdc7905a597a425de6f8d",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D1.1.MOO.gz",
+          "sha256": "33ff564f3510faa7a82871f147aca6ccaf1f01fea05db19d103247e1e3c243df",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "e68aedb8d71deccc2d8845d3248173aaa572c657",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "fcbc95d1277018ce03c00c09233024bc886b335f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "24b0fd60fee8fdec6ced92dea68ef8b7168bdb5c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D1.2.MOO.gz",
+          "sha256": "779a037468118bd308243b62ccc82dfd6cde36fd9ff6011d4e24fb1f4464bbeb",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b7b8058cd7c1464bbdc7c6da6f67ad38ca50545b",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "20c5557e41bc209e17d99337858e330af76627d1",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "6f6b6edea281399999aa4a209c6e4ac237773037",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "D1.3.MOO.gz",
+          "sha256": "f5d3be58825f14f22c1cd0c1959f1948753d05acadf16f624a210a7237ef2136",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "5262f59d32e93b7bd8c0443b08cd3649178d8382",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1247,
+              "hash": "06c1ff4589166017c03ddddf7e7c529e61929cb6",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "2313d394b74e69f194a31cbaaf7a6c23ecd541b2",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66D1.0.MOO.gz",
+          "sha256": "abcd242d3c0da9366eb137ac65bc9ab88011e97549ea0d5566f777f2cef3e4fe",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 1,
+              "hash": "e6bcb028e7dc369a395c40f1a2abccc7571b9fd0",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1245,
+              "hash": "38a6d2a3a76b00b28d5003a59ed1e3796b795fc5",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "5cbeec4f82d97dbd50d093088ae8fa0902674a22",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66D1.1.MOO.gz",
+          "sha256": "ef29a84dcd0c30b4591a7d5451599705f0a8d0537bb963178ffe4e1c73d5257b",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b7f819c044161f1f9a041cb7e3af7a0aa7935b9c",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1245,
+              "hash": "8e7b8ef6b65dc04b127553fb4900d3d36a314b01",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "dedeecee229444b73290fe42e703053af360dd3a",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66D1.2.MOO.gz",
+          "sha256": "9650a709c4ee66498c697751f333bc6e9bdbc93514d0e72ac161a7c015122850",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "33ba6eefdd4ea98c1ca1af1906f94eb9bbf8e4bd",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "f474398754f522c9ffa8e00b8f6aa610dbf7f160",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "1e58b2c29ddef0a908d6bf5ca980325b6dd42fdf",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "66D1.3.MOO.gz",
+          "sha256": "a60967de36cdef508f2da34589b3d9be0332e5e9e7b91c9a26257bb6104b5a1f",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "b046e35b2c22c3a365c5a7976db671dd689a6892",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1246,
+              "hash": "3267332ab9941aff1e79bf653ba4347986c1bc21",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "fc2e2a244400ae2978500c07bf66e1c7dc93f58c",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    },
+    "rotate-full-circle": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "rotate-full-circle",
+      "scope": "two exact physical ROL/ROR byte count-eight cases grading defined CF while the published mask excludes undefined OF; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": null,
+      "accounting": {
+        "files": 2,
+        "admitted": 2,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 134,
+        "profileExcluded": 0,
+        "failures": 0
+      },
+      "results": [
+        {
+          "file": "C0.0.MOO.gz",
+          "sha256": "11949a13fa8aa4a9c5e565dbbeb0abce536c745d5b77511013acaa1138529aac",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 66,
+              "hash": "a3e65d28d43bc5a14b30a1ad8f42142dfe2e6fa6",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "C0.1.MOO.gz",
+          "sha256": "cbafc9b504fb8ebb3310cd293c566a349f4b625e4e272b4240d4e4066d6326dc",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 67,
+              "hash": "5dee083c3fe88a961dc63a0d25fed44f658106b2",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": []
+    }
+  },
+  "negativeControls": {
+    "bootstrap": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "node": "v22.23.2",
+      "scope": "owned flat ring-0 32-bit bootstrap, SIB store, arithmetic loop, stack, near CALL/RET and HLT; no timing, paging, privilege, exception, or broad ISA claim",
+      "sourceHashes": {
+        "./compare-pcjs-protected386.mjs": "2c7b746b97e7157a19f33cbcf47d8a9ee0a75e0c9efe9fee23bf1184c91ea5df",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "mutation": "result",
+      "status": "fail",
+      "reference": {
+        "eax": 287454021,
+        "ebx": 513,
+        "ecx": 0,
+        "edx": 287454021,
+        "esp": 1024,
+        "eip": 47,
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "flags": 0,
+        "result": 287454020,
+        "halted": true
+      },
+      "actual": {
+        "eax": 287454021,
+        "ebx": 513,
+        "ecx": 0,
+        "edx": 287454021,
+        "esp": 1024,
+        "eip": 47,
+        "cs": 8,
+        "ds": 16,
+        "ss": 16,
+        "flags": 0,
+        "result": 287454021,
+        "halted": true
+      },
+      "differences": [
+        {
+          "field": "result",
+          "reference": 287454020,
+          "actual": 287454021
+        }
+      ]
+    },
+    "frame": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "node": "v22.23.2",
+      "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 770,
+          "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+          "localObserved": 66306
+        }
+      },
+      "sourceHashes": {
+        "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "mutation": "frame",
+      "status": "fail",
+      "cases": {
+        "interrupt32": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                17,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "trap32": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 512,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 512,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "generalProtection": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1008,
+              "flags": 0,
+              "frame": [
+                0,
+                14,
+                8,
+                770
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1008,
+              "flags": 0,
+              "frame": [
+                0,
+                14,
+                8,
+                66306
+              ]
+            }
+          }
+        }
+      },
+      "differences": [
+        {
+          "case": "interrupt32",
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                17,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "if": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "node": "v22.23.2",
+      "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 770,
+          "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+          "localObserved": 66306
+        }
+      },
+      "sourceHashes": {
+        "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "mutation": "if",
+      "status": "fail",
+      "cases": {
+        "interrupt32": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "trap32": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 512,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        "generalProtection": {
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1008,
+              "flags": 0,
+              "frame": [
+                0,
+                14,
+                8,
+                770
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1008,
+              "flags": 0,
+              "frame": [
+                0,
+                14,
+                8,
+                66306
+              ]
+            }
+          }
+        }
+      },
+      "differences": [
+        {
+          "case": "trap32",
+          "reference": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 512,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          },
+          "actual": {
+            "entry": {
+              "cs": 8,
+              "eip": 256,
+              "esp": 1012,
+              "flags": 0,
+              "frame": [
+                16,
+                8,
+                770,
+                0
+              ]
+            },
+            "returned": {
+              "cs": 8,
+              "eip": 16,
+              "esp": 1024,
+              "flags": 768,
+              "frame": [
+                0,
+                0,
+                0,
+                0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "paging": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "node": "v22.23.2",
+      "scope": "owned ring-0 4KiB paging guest: CR3 remap, reads, delivered #PF/CR2/frame; no timing/TLB claim",
+      "knownOracleLimitations": {
+        "resumeFlag": {
+          "graded": false,
+          "pcjsObserved": 2,
+          "intel386Expected": "RF set in saved EFLAGS for #PF",
+          "localObserved": 65538
+        }
+      },
+      "sourceHashes": {
+        "./compare-pcjs-protected386-paging.mjs": "4621e8b90f5c40663d9cbc1438c07aa7ff873816a052daad0d5005c986591016",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "mutation": "cr2",
+      "status": "fail",
+      "reference": {
+        "edx": 287454020,
+        "ecx": 1432778632,
+        "cr2": 32768,
+        "eip": 256,
+        "esp": 1008,
+        "frame": [
+          0,
+          59,
+          8,
+          2
+        ]
+      },
+      "actual": {
+        "edx": 287454020,
+        "ecx": 1432778632,
+        "cr2": 36864,
+        "eip": 256,
+        "esp": 1008,
+        "frame": [
+          0,
+          59,
+          8,
+          65538
+        ]
+      },
+      "differences": [
+        {
+          "field": "cr2",
+          "reference": 32768,
+          "actual": 36864
+        },
+        {
+          "field": "completion:local:cr2",
+          "reference": 32768,
+          "actual": 36864
+        }
+      ]
+    },
+    "group3": {
+      "oracle": "PCjs",
+      "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "scope": "non-faulting F6/F7 MUL/IMUL/DIV/IDIV/NEG register cases; only architecturally defined flags are graded",
+      "sourceHashes": {
+        "./compare-pcjs-i80386-group3.mjs": "5790b48fb7414c054c8f72dd48ad2f49000a7c3301c3d21feba0e23dde0c67a9",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "mutation": "quotient",
+      "status": "fail",
+      "observations": {
+        "mul8": {
+          "reference": {
+            "eax": 510,
+            "ebx": 2,
+            "edx": 0,
+            "flags": 2049
+          },
+          "actual": {
+            "eax": 510,
+            "ebx": 2,
+            "edx": 0,
+            "flags": 2049
+          }
+        },
+        "imul32": {
+          "reference": {
+            "eax": 2147483648,
+            "ebx": 4294967295,
+            "edx": 0,
+            "flags": 2049
+          },
+          "actual": {
+            "eax": 2147483648,
+            "ebx": 4294967295,
+            "edx": 0,
+            "flags": 2049
+          }
+        },
+        "div16": {
+          "reference": {
+            "eax": 128,
+            "ebx": 2,
+            "edx": 1
+          },
+          "actual": {
+            "eax": 129,
+            "ebx": 2,
+            "edx": 1
+          }
+        },
+        "idiv32": {
+          "reference": {
+            "eax": 4294967293,
+            "ebx": 2,
+            "edx": 4294967295
+          },
+          "actual": {
+            "eax": 4294967293,
+            "ebx": 2,
+            "edx": 4294967295
+          }
+        },
+        "neg16": {
+          "reference": {
+            "eax": 32768,
+            "ebx": 0,
+            "edx": 0,
+            "flags": 2181
+          },
+          "actual": {
+            "eax": 32768,
+            "ebx": 0,
+            "edx": 0,
+            "flags": 2181
+          }
+        }
+      },
+      "differences": [
+        {
+          "case": "div16",
+          "reference": {
+            "eax": 128,
+            "ebx": 2,
+            "edx": 1
+          },
+          "actual": {
+            "eax": 129,
+            "ebx": 2,
+            "edx": 1
+          }
+        }
+      ]
+    },
+    "ram": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "add-sizes",
+      "scope": "12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": "ram",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 888,
+        "profileExcluded": 0,
+        "failures": 1
+      },
+      "results": [
+        {
+          "file": "01.MOO.gz",
+          "sha256": "79ccbf4df357a49f180c5a07996d0fc55f7efa872bc727b499f0bb4f76b6facb",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "d9bae39cdbf8a4fe2ba05630029a239b9513dfdb",
+              "status": "fail",
+              "differences": [
+                {
+                  "field": "ram:a9bd",
+                  "expected": 25,
+                  "actual": 24
+                }
+              ]
+            },
+            {
+              "index": 1251,
+              "hash": "b73be8d36102d3855d81661840d889b1e02803cb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "d6087393518f10deae57dd03379a627e16bf52ff",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6601.MOO.gz",
+          "sha256": "25152ba347c7a0ad272bb48f99035a2c0fcad9ebc71586e60824cdaee47e2848",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "60d9e17b14e402d4bc3ce99384270a1002bd9064",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "cae2902543018c3888b4d5f6db2af8640a36398f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "a3d9f8f4eafde9424ec4bdbb60a69eae07688d6b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6701.MOO.gz",
+          "sha256": "6e2b68b99a5831a02d5e38c12595245714ea80930615800d149f0a7096fa8e09",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "17bbced4a027d9f664ae8e5e76092e22fdee82e9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1240,
+              "hash": "7dc228f81f8120380eccda5f37c4d0e81ef06b55",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "b2c8b3f760a122cd60b1d03cbc228cea8a63f49a",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "676601.MOO.gz",
+          "sha256": "9f9f3347826eb4f9f1f5fb709074540d7647193c146b83dd74700919b200b272",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "402e3fa06bf78127149efde5d1ccdf0bc144ff43",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1239,
+              "hash": "31d872212c775ea1aea51f82abadd18bc563af52",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "2cec7f936f75084403e7556555e88afb4d711fcc",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": [
+        {
+          "file": "01.MOO.gz",
+          "index": 0,
+          "hash": "d9bae39cdbf8a4fe2ba05630029a239b9513dfdb",
+          "status": "fail",
+          "differences": [
+            {
+              "field": "ram:a9bd",
+              "expected": 25,
+              "actual": 24
+            }
+          ]
+        }
+      ]
+    },
+    "stray-write": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "add-sizes",
+      "scope": "12 fixed deterministic ADD r/m,r samples spanning 16/32-bit operand and address sizes; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": "stray-write",
+      "accounting": {
+        "files": 4,
+        "admitted": 12,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 888,
+        "profileExcluded": 0,
+        "failures": 1
+      },
+      "results": [
+        {
+          "file": "01.MOO.gz",
+          "sha256": "79ccbf4df357a49f180c5a07996d0fc55f7efa872bc727b499f0bb4f76b6facb",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "d9bae39cdbf8a4fe2ba05630029a239b9513dfdb",
+              "status": "fail",
+              "differences": [
+                {
+                  "field": "unexpected-write:f00000",
+                  "actual": 90
+                }
+              ]
+            },
+            {
+              "index": 1251,
+              "hash": "b73be8d36102d3855d81661840d889b1e02803cb",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "d6087393518f10deae57dd03379a627e16bf52ff",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6601.MOO.gz",
+          "sha256": "25152ba347c7a0ad272bb48f99035a2c0fcad9ebc71586e60824cdaee47e2848",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "60d9e17b14e402d4bc3ce99384270a1002bd9064",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1251,
+              "hash": "cae2902543018c3888b4d5f6db2af8640a36398f",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "a3d9f8f4eafde9424ec4bdbb60a69eae07688d6b",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "6701.MOO.gz",
+          "sha256": "6e2b68b99a5831a02d5e38c12595245714ea80930615800d149f0a7096fa8e09",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "17bbced4a027d9f664ae8e5e76092e22fdee82e9",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1240,
+              "hash": "7dc228f81f8120380eccda5f37c4d0e81ef06b55",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "b2c8b3f760a122cd60b1d03cbc228cea8a63f49a",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        },
+        {
+          "file": "676601.MOO.gz",
+          "sha256": "9f9f3347826eb4f9f1f5fb709074540d7647193c146b83dd74700919b200b272",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 0,
+              "hash": "402e3fa06bf78127149efde5d1ccdf0bc144ff43",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 1239,
+              "hash": "31d872212c775ea1aea51f82abadd18bc563af52",
+              "status": "pass",
+              "differences": []
+            },
+            {
+              "index": 2499,
+              "hash": "2cec7f936f75084403e7556555e88afb4d711fcc",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": [
+        {
+          "file": "01.MOO.gz",
+          "index": 0,
+          "hash": "d9bae39cdbf8a4fe2ba05630029a239b9513dfdb",
+          "status": "fail",
+          "differences": [
+            {
+              "field": "unexpected-write:f00000",
+              "actual": 90
+            }
+          ]
+        }
+      ]
+    },
+    "carry": {
+      "source": "SingleStepTests/80386 physical 386EX captures",
+      "revision": "459d49fbe6280e9ed46fee887b58dacd9cb880ab",
+      "formatRevision": "c438962d2b30856817d8e59bd5f0f4c628596ca8",
+      "node": "v22.23.2",
+      "profile": "rotate-full-circle",
+      "scope": "two exact physical ROL/ROR byte count-eight cases grading defined CF while the published mask excludes undefined OF; architectural registers, final RAM, and write-footprint checks under published masks; no cycle/timing or protected-mode claim",
+      "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+      "sourceHashes": {
+        "./verify-i80386-moo-sample.mjs": "33c4339fa17252b23f678a6863fb5a1c3704c091d684b973a87d0410d491d333",
+        "./lib/moo386-v1.mjs": "0069476b69957fdf3524e31fbd5b3b8bfdefd8dc69865ec2ffb54731a9ab56ec",
+        "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+      },
+      "revocationSha256": "87f41741ea625392637133126608c8a281f444e333ae415cd5770977d13b8a50",
+      "mutation": "carry",
+      "accounting": {
+        "files": 2,
+        "admitted": 2,
+        "unsupported": 0,
+        "revoked": 0,
+        "exceptionExcluded": 134,
+        "profileExcluded": 0,
+        "failures": 1
+      },
+      "results": [
+        {
+          "file": "C0.0.MOO.gz",
+          "sha256": "11949a13fa8aa4a9c5e565dbbeb0abce536c745d5b77511013acaa1138529aac",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 66,
+              "hash": "a3e65d28d43bc5a14b30a1ad8f42142dfe2e6fa6",
+              "status": "fail",
+              "differences": [
+                {
+                  "field": "eflags",
+                  "expected": 4294705362,
+                  "actual": 4294707411,
+                  "mask": 4294965247
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "file": "C0.1.MOO.gz",
+          "sha256": "cbafc9b504fb8ebb3310cd293c566a349f4b625e4e272b4240d4e4066d6326dc",
+          "publishedTests": 2500,
+          "sampled": [
+            {
+              "index": 67,
+              "hash": "5dee083c3fe88a961dc63a0d25fed44f658106b2",
+              "status": "pass",
+              "differences": []
+            }
+          ]
+        }
+      ],
+      "failures": [
+        {
+          "file": "C0.0.MOO.gz",
+          "index": 66,
+          "hash": "a3e65d28d43bc5a14b30a1ad8f42142dfe2e6fa6",
+          "status": "fail",
+          "differences": [
+            {
+              "field": "eflags",
+              "expected": 4294705362,
+              "actual": 4294707411,
+              "mask": 4294965247
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "focusedTests": {
+    "pass": 91,
+    "fail": 0,
+    "skip": 0,
+    "scope": "all test/i80386*.test.mjs, including external MOO parser and opt-in AT adapter",
+    "tapSha256": "bd8cdb533b9f7290af14ff2092371ffb962373a1eb0f2453b5d872bcb7d94ad6"
+  },
+  "test386Diagnostic": {
+    "schema": "astra.i80386-test386-diagnostic.v1",
+    "accepted": false,
+    "status": "bounded-blocker",
+    "fullRomPass": false,
+    "scope": "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
+    "node": "v22.23.2",
+    "steps": 802807,
+    "post": [
+      {
+        "value": 0,
+        "width": 8
+      },
+      {
+        "value": 1,
+        "width": 8
+      },
+      {
+        "value": 2,
+        "width": 8
+      },
+      {
+        "value": 3,
+        "width": 8
+      },
+      {
+        "value": 4,
+        "width": 8
+      },
+      {
+        "value": 5,
+        "width": 8
+      },
+      {
+        "value": 6,
+        "width": 8
+      },
+      {
+        "value": 8,
+        "width": 8
+      }
+    ],
+    "output": "",
+    "blocker": {
+      "name": "UnsupportedI80386",
+      "message": "0f 00",
+      "cs": 208,
+      "eip": 10924,
+      "physical": 993964,
+      "opcode": 15
+    },
+    "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+    "instructionBudget": 2000000,
+    "input": {
+      "bytes": 65536,
+      "sha256": "3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067",
+      "provenanceSha256": "8445f111e459457b950cd4b616bd6de63cd5209ed2c265fdd60cb8fe1bbc6403",
+      "revision": "cfd052d1e64d5375dea5a681c1eadeed64ceda2c",
+      "sourceClean": true
+    },
+    "sourceHashes": {
+      "./run-i80386-test386-diagnostic.mjs": "4a4a3a5162251a261b20aa90f99e1eaceb90105ff13102048eb348751625af0d",
+      "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+    }
+  },
+  "limitations": [
+    "Published hardware exception inputs and profile-excluded LOCK prefixes are not passes.",
+    "Most hardware profiles select three deterministic eligible cases per file; the full-circle profile selects two explicit cases.",
+    "Rotate hardware coverage is 36 count-one cases plus two full-circle carry cases, not general variable-count coverage.",
+    "POPAD upperESP behavior on16-bit stacks follows measured386EX captures; not a general386DXhardware claim.",
+    "REP interruption policy and later-Intel fault-EFLAGS guidance remain separately documented.",
+    "Source-bound AT DOS acceptance must be refreshed for the RTC/harness changes before landing this continuation."
+  ],
+  "pcjsBootstrap": {
+    "oracle": "PCjs",
+    "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "node": "v22.23.2",
+    "scope": "owned flat ring-0 32-bit bootstrap, SIB store, arithmetic loop, stack, near CALL/RET and HLT; no timing, paging, privilege, exception, or broad ISA claim",
+    "sourceHashes": {
+      "./compare-pcjs-protected386.mjs": "2c7b746b97e7157a19f33cbcf47d8a9ee0a75e0c9efe9fee23bf1184c91ea5df",
+      "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+    },
+    "mutation": null,
+    "status": "pass",
+    "reference": {
+      "eax": 287454021,
+      "ebx": 513,
+      "ecx": 0,
+      "edx": 287454021,
+      "esp": 1024,
+      "eip": 47,
+      "cs": 8,
+      "ds": 16,
+      "ss": 16,
+      "flags": 0,
+      "result": 287454020,
+      "halted": true
+    },
+    "actual": {
+      "eax": 287454021,
+      "ebx": 513,
+      "ecx": 0,
+      "edx": 287454021,
+      "esp": 1024,
+      "eip": 47,
+      "cs": 8,
+      "ds": 16,
+      "ss": 16,
+      "flags": 0,
+      "result": 287454020,
+      "halted": true
+    },
+    "differences": []
+  },
+  "pcjsFaults": {
+    "oracle": "PCjs",
+    "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+    "node": "v22.23.2",
+    "scope": "same-ring ring-0 80386 32-bit interrupt/trap gates, IRET, and #GP restart/error frame; architectural state only",
+    "knownOracleLimitations": {
+      "resumeFlag": {
+        "graded": false,
+        "pcjsObserved": 770,
+        "intel386Expected": "RF set in the saved EFLAGS image for a fault",
+        "localObserved": 66306
+      }
+    },
+    "sourceHashes": {
+      "./compare-pcjs-protected386-faults.mjs": "110c9f915326a1234e3c28f63928c00ade6512093453d77d8bcf378015c2568c",
+      "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+    },
+    "mutation": null,
+    "status": "pass",
+    "cases": {
+      "interrupt32": {
+        "reference": {
+          "entry": {
+            "cs": 8,
+            "eip": 256,
+            "esp": 1012,
+            "flags": 0,
+            "frame": [
+              16,
+              8,
+              770,
+              0
+            ]
+          },
+          "returned": {
+            "cs": 8,
+            "eip": 16,
+            "esp": 1024,
+            "flags": 768,
+            "frame": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        "actual": {
+          "entry": {
+            "cs": 8,
+            "eip": 256,
+            "esp": 1012,
+            "flags": 0,
+            "frame": [
+              16,
+              8,
+              770,
+              0
+            ]
+          },
+          "returned": {
+            "cs": 8,
+            "eip": 16,
+            "esp": 1024,
+            "flags": 768,
+            "frame": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      "trap32": {
+        "reference": {
+          "entry": {
+            "cs": 8,
+            "eip": 256,
+            "esp": 1012,
+            "flags": 512,
+            "frame": [
+              16,
+              8,
+              770,
+              0
+            ]
+          },
+          "returned": {
+            "cs": 8,
+            "eip": 16,
+            "esp": 1024,
+            "flags": 768,
+            "frame": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        "actual": {
+          "entry": {
+            "cs": 8,
+            "eip": 256,
+            "esp": 1012,
+            "flags": 512,
+            "frame": [
+              16,
+              8,
+              770,
+              0
+            ]
+          },
+          "returned": {
+            "cs": 8,
+            "eip": 16,
+            "esp": 1024,
+            "flags": 768,
+            "frame": [
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      "generalProtection": {
+        "reference": {
+          "entry": {
+            "cs": 8,
+            "eip": 256,
+            "esp": 1008,
+            "flags": 0,
+            "frame": [
+              0,
+              14,
+              8,
+              770
+            ]
+          }
+        },
+        "actual": {
+          "entry": {
+            "cs": 8,
+            "eip": 256,
+            "esp": 1008,
+            "flags": 0,
+            "frame": [
+              0,
+              14,
+              8,
+              66306
+            ]
+          }
+        }
+      }
+    },
+    "differences": []
+  },
+  "pcjsPaging": {
+    "oracle": "PCjs",
+    "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+    "node": "v22.23.2",
+    "scope": "owned ring-0 4KiB paging guest: CR3 remap, reads, delivered #PF/CR2/frame; no timing/TLB claim",
+    "knownOracleLimitations": {
+      "resumeFlag": {
+        "graded": false,
+        "pcjsObserved": 2,
+        "intel386Expected": "RF set in saved EFLAGS for #PF",
+        "localObserved": 65538
+      }
+    },
+    "sourceHashes": {
+      "./compare-pcjs-protected386-paging.mjs": "4621e8b90f5c40663d9cbc1438c07aa7ff873816a052daad0d5005c986591016",
+      "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+    },
+    "mutation": null,
+    "status": "pass",
+    "reference": {
+      "edx": 287454020,
+      "ecx": 1432778632,
+      "cr2": 32768,
+      "eip": 256,
+      "esp": 1008,
+      "frame": [
+        0,
+        59,
+        8,
+        2
+      ]
+    },
+    "actual": {
+      "edx": 287454020,
+      "ecx": 1432778632,
+      "cr2": 32768,
+      "eip": 256,
+      "esp": 1008,
+      "frame": [
+        0,
+        59,
+        8,
+        65538
+      ]
+    },
+    "differences": []
+  },
+  "pcjsGroup3": {
+    "oracle": "PCjs",
+    "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+    "executionRevision": "a6de5455456efa05d7fb6a8017067607201140e7",
+    "scope": "non-faulting F6/F7 MUL/IMUL/DIV/IDIV/NEG register cases; only architecturally defined flags are graded",
+    "sourceHashes": {
+      "./compare-pcjs-i80386-group3.mjs": "5790b48fb7414c054c8f72dd48ad2f49000a7c3301c3d21feba0e23dde0c67a9",
+      "../src/experimental/i80386.js": "ef8699980d5bd26fa0eda855437f57bacb87c0964c712623498cf484ee0673a0"
+    },
+    "mutation": null,
+    "status": "pass",
+    "observations": {
+      "mul8": {
+        "reference": {
+          "eax": 510,
+          "ebx": 2,
+          "edx": 0,
+          "flags": 2049
+        },
+        "actual": {
+          "eax": 510,
+          "ebx": 2,
+          "edx": 0,
+          "flags": 2049
+        }
+      },
+      "imul32": {
+        "reference": {
+          "eax": 2147483648,
+          "ebx": 4294967295,
+          "edx": 0,
+          "flags": 2049
+        },
+        "actual": {
+          "eax": 2147483648,
+          "ebx": 4294967295,
+          "edx": 0,
+          "flags": 2049
+        }
+      },
+      "div16": {
+        "reference": {
+          "eax": 128,
+          "ebx": 2,
+          "edx": 1
+        },
+        "actual": {
+          "eax": 128,
+          "ebx": 2,
+          "edx": 1
+        }
+      },
+      "idiv32": {
+        "reference": {
+          "eax": 4294967293,
+          "ebx": 2,
+          "edx": 4294967295
+        },
+        "actual": {
+          "eax": 4294967293,
+          "ebx": 2,
+          "edx": 4294967295
+        }
+      },
+      "neg16": {
+        "reference": {
+          "eax": 32768,
+          "ebx": 0,
+          "edx": 0,
+          "flags": 2181
+        },
+        "actual": {
+          "eax": 32768,
+          "ebx": 0,
+          "edx": 0,
+          "flags": 2181
+        }
+      }
+    },
+    "differences": []
+  }
+}

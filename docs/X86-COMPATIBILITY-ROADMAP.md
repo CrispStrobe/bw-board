@@ -49,8 +49,8 @@ default 64KiB configuration builds with NASM 2.16.01 to SHA-256
 Source and binary remain external. A capture build changes only POST/debug
 ports to 80h/E9h, with SHA-256
 `3c4859cac2235f6ef5e8dbf3d706d8226ad860e2a624be3f9751981fadca4067`.
-The ALU continuation at `7a285e6` reaches POST00..06 and 08 in 797,926
-instructions, then refuses PUSHA (opcode60 at F000:2357); it retains `accepted:false` and `fullRomPass:false`. This does not
+The REP/ISA continuation at `a6de545` reaches POST00..06 and 08 in 802,807
+instructions, then refuses LLDT (0F00 at CS00D0:EIP2AAC); it retains `accepted:false` and `fullRomPass:false`. This does not
 qualify the entire diagnostic or establish independent hardware equivalence.
 Continue pinned PCjs comparisons, resolving
 mismatches against Intel rather than silently adopting reference bugs.
