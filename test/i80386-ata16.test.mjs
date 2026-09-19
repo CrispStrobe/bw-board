@@ -28,7 +28,7 @@ test('experimental ATA performs CHS sector reads and writes with a native word F
   assert.equal(ata.readRegister(7) & 0x49, 0x48);
   assert.equal(ata.readData16(), 0x0100);
   for (let word = 1; word < 256; word++) ata.readData16();
-  assert.equal(ata.readRegister(7), 0x40);
+  assert.equal(ata.readRegister(7), 0x50);
 
   ata.writeRegister(3, 1);
   ata.writeRegister(2, 1);
@@ -56,7 +56,7 @@ test('experimental ATA raises and acknowledges each multi-sector PIO block', () 
   assert.deepEqual(irq, [true, false, true], 'second read block becomes ready');
   ata.readRegister(7);
   for (let word = 0; word < 256; word++) ata.readData16();
-  assert.equal(ata.readRegister(7), 0x40);
+  assert.equal(ata.readRegister(7), 0x50);
 
   irq.length = 0;
   select(2);
@@ -91,7 +91,7 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   for (let word = 0; word < 256; word++) ata.writeData16(word);
   assert.deepEqual(ata.mediaBytes(), image(), 'commands and data are ignored while SRST is asserted');
   ata.writeRegister(7, 2, {control: true});
-  assert.equal(ata.readRegister(7, {alternate: true}), 0x40);
+  assert.equal(ata.readRegister(7, {alternate: true}), 0x50);
   ata.writeRegister(7, 0, {control: true});
   assert.deepEqual(irq, [true, false, true, false], 'reset cleared pending IRQ');
 
@@ -107,7 +107,7 @@ test('experimental ATA masks pending IRQ, resets transfers, and leaves device 1 
   assert.deepEqual(ata.mediaBytes(), before);
   ata.writeRegister(6, 0xa0);
   assert.equal(irq.at(-1), true, 'reselecting device 0 exposes its pending interrupt');
-  assert.equal(ata.readRegister(7), 0x48, 'reselecting device 0 restores its transfer');
+  assert.equal(ata.readRegister(7), 0x58, 'reselecting device 0 restores its transfer');
   assert.equal(ata.readData16(), 0x0100);
 });
 
@@ -121,6 +121,37 @@ test('experimental ATA rejects invalid CHS and unsupported commands without medi
   ata.writeRegister(7, 0x99);
   assert.equal(ata.readRegister(1), 0x04);
   assert.deepEqual(ata.mediaBytes(), initial);
+});
+
+test('experimental ATA covers the IBM AT BIOS diagnostic, parameter, seek, recalibrate, and verify commands', () => {
+  const ata = new ExperimentalATA16(image(), geometry);
+  const command = value => {
+    ata.writeRegister(7, value);
+    const status = ata.readRegister(7);
+    assert.equal(status, 0x50);
+  };
+  command(0x90);
+  assert.equal(ata.readRegister(1), 1);
+
+  ata.writeRegister(2, geometry.sectors);
+  ata.writeRegister(6, 0xa0 | geometry.heads - 1);
+  command(0x91);
+
+  ata.writeRegister(3, 2);
+  command(0x70);
+  ata.writeRegister(2, 1);
+  command(0x40);
+  assert.equal(ata.sectorCount, 0);
+
+  ata.writeRegister(4, 0x34);
+  ata.writeRegister(5, 0x12);
+  command(0x10);
+  assert.deepEqual([ata.cylinderHigh, ata.cylinderLow, ata.sectorNumber], [0, 0, 1]);
+
+  ata.writeRegister(2, geometry.sectors - 1);
+  ata.writeRegister(7, 0x91);
+  assert.equal(ata.readRegister(7), 0x51);
+  assert.equal(ata.readRegister(1), 0x04);
 });
 
 test('386 AT dispatches ATA data as one 16-bit port access and persists sector writes', () => {
@@ -152,5 +183,5 @@ test('386 AT dispatches ATA data as one 16-bit port access and persists sector w
   machine.reset();
   assert.deepEqual(Array.from(machine.ata.mediaBytes().slice(512, 518)),
     [0x00, 0x55, 0x01, 0x55, 0x02, 0x55], 'board reset retains disk media');
-  assert.equal(machine.cpu.inPort(0x1f7, 8), 0x40);
+  assert.equal(machine.cpu.inPort(0x1f7, 8), 0x50);
 });

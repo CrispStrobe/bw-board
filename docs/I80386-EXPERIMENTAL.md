@@ -406,6 +406,12 @@ WD1003/ATA compatibility claim remain outside this stage.
 The interrupt-pending, `nIEN`, software-reset and PIO block boundaries follow
 ATA-3 revision 7b sections 4.2.10, 5.2.7 and 8.2; device 1 remains explicitly
 absent rather than aliasing the writable master image.
+`PCAT80386_EXPERIMENTAL_4M_HDD` advertises one IBM BIOS drive type 1 in CMOS
+(306 cylinders, 4 heads, 17 sectors). The bounded controller also implements
+the recalibrate, verify, initialize-parameters, seek and diagnostic commands
+used by the 1984 IBM AT fixed-disk BIOS. This profile and its command tests are
+still controller-level evidence until a firmware-issued sector round trip is
+recorded.
 
 ## REP and ISA continuation receipt
 

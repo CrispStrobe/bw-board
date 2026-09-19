@@ -1,6 +1,8 @@
 const STATUS_ERR = 0x01;
 const STATUS_DRQ = 0x08;
 const STATUS_DRDY = 0x40;
+const STATUS_DSC = 0x10;
+const STATUS_IDLE = STATUS_DRDY | STATUS_DSC;
 
 /**
  * Bounded synchronous ATA task-file device for the experimental 386 AT.
@@ -30,7 +32,7 @@ export class ExperimentalATA16 {
     this.cylinderLow = 0;
     this.cylinderHigh = 0;
     this.driveHead = 0xa0;
-    this.status = STATUS_DRDY;
+    this.status = STATUS_IDLE;
     this.command = 0;
     this.control = 0;
     this.buffer = null;
@@ -65,7 +67,7 @@ export class ExperimentalATA16 {
 
   _fail(error = 0x04) {
     this.error = error;
-    this.status = STATUS_DRDY | STATUS_ERR;
+    this.status = STATUS_IDLE | STATUS_ERR;
     this.buffer = null;
     this.direction = null;
     this._raiseIRQ();
@@ -77,7 +79,7 @@ export class ExperimentalATA16 {
     this.buffer = this.image.slice(lba * 512, lba * 512 + 512);
     this.wordIndex = 0;
     this.direction = 'read';
-    this.status = STATUS_DRDY | STATUS_DRQ;
+    this.status = STATUS_IDLE | STATUS_DRQ;
     this._raiseIRQ();
   }
 
@@ -87,7 +89,7 @@ export class ExperimentalATA16 {
     this.buffer = new Uint8Array(512);
     this.wordIndex = 0;
     this.direction = 'write';
-    this.status = STATUS_DRDY | STATUS_DRQ;
+    this.status = STATUS_IDLE | STATUS_DRQ;
   }
 
   _advanceAddress() {
@@ -131,7 +133,7 @@ export class ExperimentalATA16 {
     }
     this.wordIndex = 0;
     this.direction = 'read';
-    this.status = STATUS_DRDY | STATUS_DRQ;
+    this.status = STATUS_IDLE | STATUS_DRQ;
     this._raiseIRQ();
   }
 
@@ -141,9 +143,40 @@ export class ExperimentalATA16 {
     this.command = command & 0xff;
     this.error = 0;
     this._clearIRQ();
-    if (this.command === 0x20) this._loadReadSector();
-    else if (this.command === 0x30) this._prepareWriteSector();
+    if (this.command === 0x20 || this.command === 0x21) this._loadReadSector();
+    else if (this.command === 0x30 || this.command === 0x31) this._prepareWriteSector();
     else if (this.command === 0xec) this._identify();
+    else if (this.command === 0x10 || this.command === 0x11) {
+      this.cylinderLow = 0;
+      this.cylinderHigh = 0;
+      this.sectorNumber = 1;
+      this.status = STATUS_IDLE;
+      this._raiseIRQ();
+    } else if (this.command === 0x40 || this.command === 0x41) {
+      let remaining = this.sectorCount === 0 ? 256 : this.sectorCount;
+      while (remaining-- > 0) {
+        const lba = this._lba();
+        if (lba < 0 || lba * 512 >= this.image.length) return this._fail(0x10);
+        if (remaining > 0) this._advanceAddress();
+      }
+      this.sectorCount = 0;
+      this.status = STATUS_IDLE;
+      this._raiseIRQ();
+    } else if (this.command === 0x60 || this.command === 0x91) {
+      if ((this.driveHead & 0x0f) + 1 !== this.geometry.heads ||
+          this.sectorCount !== this.geometry.sectors) return this._fail();
+      this.status = STATUS_IDLE;
+      this._raiseIRQ();
+    } else if (this.command === 0x70 || this.command === 0x71) {
+      const lba = this._lba();
+      if (lba < 0 || lba * 512 >= this.image.length) return this._fail(0x10);
+      this.status = STATUS_IDLE;
+      this._raiseIRQ();
+    } else if (this.command === 0x90) {
+      this.error = 1; // Device 0 passed; no Device 1 is attached.
+      this.status = STATUS_IDLE;
+      this._raiseIRQ();
+    }
     else this._fail();
   }
 
@@ -154,11 +187,11 @@ export class ExperimentalATA16 {
     const byte = this.wordIndex * 2;
     const value = this.buffer[byte] | this.buffer[byte + 1] << 8;
     if (++this.wordIndex === 256) {
-      if (this.command === 0x20 && this._advanceAddress()) this._loadReadSector();
+      if ((this.command === 0x20 || this.command === 0x21) && this._advanceAddress()) this._loadReadSector();
       else {
         this.buffer = null;
         this.direction = null;
-        this.status = STATUS_DRDY;
+        this.status = STATUS_IDLE;
       }
     }
     return value;
@@ -181,7 +214,7 @@ export class ExperimentalATA16 {
     else {
       this.buffer = null;
       this.direction = null;
-      this.status = STATUS_DRDY;
+      this.status = STATUS_IDLE;
       this._raiseIRQ();
     }
   }

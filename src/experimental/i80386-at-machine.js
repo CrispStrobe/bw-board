@@ -201,4 +201,15 @@ export const PCAT80386_EXPERIMENTAL_4M = Object.freeze({
   } : chip),
 });
 
+/** IBM drive type 1 (306 cylinders, 4 heads, 17 sectors) in CMOS drive C. */
+export const PCAT80386_EXPERIMENTAL_4M_HDD = Object.freeze({
+  ...PCAT80386_EXPERIMENTAL_4M,
+  chips: PCAT80386_EXPERIMENTAL_4M.chips.map(chip => chip.kind === 'rtc' ? {
+    ...chip,
+    initialCmos: [[0x10, 0x20], [0x12, 0x10], [0x14, 0x21],
+      [0x15, 0x80], [0x16, 0x02], [0x17, 0x80], [0x18, 0x0d],
+      [0x2e, 0x01], [0x2f, 0x60], [0x30, 0x80], [0x31, 0x0d], [0x32, 0x19]],
+  } : chip),
+});
+
 export default ExperimentalI80386ATMachine;

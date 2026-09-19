@@ -4,6 +4,7 @@ import test from 'node:test';
 import ExperimentalI80386ATMachine, {
   PCAT80386_EXPERIMENTAL,
   PCAT80386_EXPERIMENTAL_4M,
+  PCAT80386_EXPERIMENTAL_4M_HDD,
 } from '../src/experimental/i80386-at-machine.js';
 
 test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-address aliasing', () => {
@@ -17,6 +18,18 @@ test('experimental 386 AT fetches the reset ROM at FFFFFFF0 without broad high-a
   assert.equal(machine.cpu.read(0x10fffff0), 0xff);
   assert.equal(machine.step(), 4, 'completed reset-vector HLT receives functional charge');
   assert.equal(machine.cpu.halted, true);
+});
+
+test('experimental 386 HDD profile reports IBM type 1 drive C with a matching CMOS checksum', () => {
+  const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL_4M_HDD);
+  const cmos = register => {
+    machine._out(0x70, register);
+    return machine._in(0x71);
+  };
+  assert.equal(cmos(0x12), 0x10);
+  let checksum = 0;
+  for (let register = 0x10; register <= 0x2d; register++) checksum += cmos(register);
+  assert.equal(checksum & 0xffff, cmos(0x2f) | cmos(0x2e) << 8);
 });
 
 test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 bus', () => {
