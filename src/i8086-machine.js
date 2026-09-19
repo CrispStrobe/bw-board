@@ -36,6 +36,8 @@
  * @module
  */
 import { I8086 } from './i8086.js';
+import ProtectedI80286 from './experimental/i80286-protected.js';
+import { AT8042A20 } from './at-8042-a20.js';
 import {
     MACHINE_CHECKPOINT_SCHEMA, checkpointRefusal, checkpointSupport,
     checkpointTopology, cloneCheckpointValue, statePair, validateCheckpointEnvelope,
@@ -545,7 +547,21 @@ export class I8086Machine {
         this.config = config;
         this.hooks = hooks;
         this.clockHz = config.clockHz;
-        this.mem = new Uint8Array(1 << 20);
+        const memoryBytes=config.memoryBytes ?? (1 << 20);
+        if (!Number.isInteger(memoryBytes) || memoryBytes < (1 << 20) || memoryBytes > (1 << 24))
+            throw new Error('machine config: memoryBytes must be an integer from 1 MiB through 16 MiB');
+        if (config.a20 && config.a20.controller !== '8042')
+            throw new Error("machine config: a20.controller must be '8042'; port 92h fast A20 is not implemented");
+        if (config.cpuBackend && config.cpuBackend !== 'protected286-experimental')
+            throw new Error(`machine config: unknown cpuBackend ${config.cpuBackend}`);
+        if (config.cpuBackend === 'protected286-experimental' && (config.variant ?? '8086') !== '80286')
+            throw new Error("machine config: protected286-experimental requires variant '80286'");
+        this.memoryBytes=memoryBytes;
+        this.cpuBackend=config.cpuBackend ?? 'default';
+        this._a20Configured=!!config.a20;
+        this._a20Initial=!!config.a20?.enabled;
+        this._a20Enabled=this._a20Initial;
+        this.mem = new Uint8Array(memoryBytes);
         /** @type {Record<string, I8255|NS16C550|MC6850>} */
         this.chips = {};
         // Flattened advance schedule, built on first use. null = needs rebuild.
@@ -591,6 +607,10 @@ export class I8086Machine {
         /** Decoded windows, split by which bus they answer on. */
         this._io = [];
         this._mmio = [];
+        for (const r of this._mem) {
+            if (!Number.isInteger(r.start) || !Number.isInteger(r.end) || r.start < 0 || r.end < r.start || r.end >= memoryBytes)
+                throw new Error(`machine config: ${r.kind} region ${r.start}-${r.end} exceeds memoryBytes ${memoryBytes}`);
+        }
 
         // The PC speaker is not a bus chip — it observes an 8255 port and an
         // 8254 counter that ARE, so it is built in a second pass once they
@@ -720,6 +740,10 @@ export class I8086Machine {
         // number are different places and do not collide.
         for (const [busName, wins] of [['I/O', this._io], ['memory', this._mmio]]) {
             const sorted = [...wins].sort((a, b) => a.start - b.start);
+            if (busName === 'memory') for (const w of sorted) {
+                if (w.start < 0 || w.end >= memoryBytes)
+                    throw new Error(`machine config: memory window "${w.name}" exceeds memoryBytes ${memoryBytes}`);
+            }
             for (let i = 1; i < sorted.length; i++) {
                 const prev = sorted[i - 1], cur = sorted[i];
                 if (cur.start <= prev.end) {
@@ -733,6 +757,15 @@ export class I8086Machine {
                 }
             }
         }
+
+        if (this._a20Configured) {
+            for (const w of this._io) {
+                if ((w.start <= 0x60 && w.end >= 0x60) || (w.start <= 0x64 && w.end >= 0x64))
+                    throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${w.name}" at port 60h or 64h`);
+            }
+            this._a20Controller=new AT8042A20({a20Enabled:this._a20Initial,
+                onA20Change:(enabled)=>{ this._a20Enabled=enabled; }});
+        } else this._a20Controller=null;
 
         // The master PIC — the one step() polls to deliver INTR. A breadboard
         // has at most one; if there are several, the first declared wins.
@@ -895,16 +928,19 @@ export class I8086Machine {
         }
 
         this.variant = config.variant || '8086';
-        this.cpu = new I8086({
-            read: (a) => this._read(a),
-            write: (a, v) => this._write(a, v),
+        const cpuBus={
+            read: this._a20Configured ? (a) => this._read(this._applyA20(a)) : (a) => this._read(a),
+            write: this._a20Configured ? (a,v) => this._write(this._applyA20(a),v) : (a,v) => this._write(a,v),
             in: (p) => this._in(p),
             out: (p, v) => this._out(p, v),
             // Asked between REP iterations, so a long block move does not
             // starve the timer -- and so the 8086's mid-REP segment-override
             // erratum has something to happen to.
             intPending: () => !!(this._pic && this._pic.intActive),
-        }, { variant: this.variant });
+        };
+        this.cpu = this.cpuBackend === 'protected286-experimental'
+            ? new ProtectedI80286(cpuBus,{deliverProtectedFaults:true})
+            : new I8086(cpuBus,{variant:this.variant});
         // Interrupt-trap bridge (E6.8.3): a SOFTWARE INT n (INT/INT3/INTO and the
         // internal exceptions) executes inside the core, so the core emits it via
         // cpu.onInterrupt; forward it to the machine's single onInterrupt hook so
@@ -913,7 +949,7 @@ export class I8086Machine {
         // NOT from its shared _interrupt(n) funnel, which the hardware path also
         // uses and which would then double-fire against 'irq'/'nmi'.
         this.cpu.onInterrupt = (ev) => { if (this.hooks.onInterrupt) this.hooks.onInterrupt(ev); };
-        if (config.fastWords !== false) installI8086RamWordAccess(this);
+        if (config.fastWords !== false && this.cpuBackend === 'default') installI8086RamWordAccess(this);
     }
 
     /**
@@ -987,6 +1023,19 @@ export class I8086Machine {
     /** Machine time in (fractional) milliseconds. */
     get tMs() { return this.cycles * 1000 / this.clockHz; }
 
+    /** Apply the motherboard A20 gate to a CPU bus address. */
+    _applyA20(addr) {
+        addr &= 0xffffff;
+        return this._a20Configured && !this._a20Enabled ? addr & ~0x100000 : addr;
+    }
+
+    get a20Enabled() { return this._a20Configured ? this._a20Enabled : true; }
+
+    setA20Enabled(enabled) {
+        if (!this._a20Controller) throw new Error('A20 control is not configured on this machine');
+        this._a20Controller.setA20Enabled(!!enabled);
+    }
+
     // ---- the memory bus -------------------------------------------------
     /**
      * A 4 KB page table over the 1 MB space, so the common case is one array
@@ -1011,7 +1060,7 @@ export class I8086Machine {
      * wrong.
      */
     _buildPageTable() {
-        const PAGES = 1 << 8;                        // 1 MB / 4 KB
+        const PAGES = this.memoryBytes >>> 12;
         const t = new Uint8Array(PAGES);             // 0 unmapped, 1 ram, 2 rom, 3 slow
         for (let p = 0; p < PAGES; p++) {
             const lo = p << 12, hi = lo + 0xfff;
@@ -1075,7 +1124,9 @@ export class I8086Machine {
     _in(port) {
         this._catchUpChips();   // a chip must be current at the cycle it is read
         let val = 0xff;
-        for (const w of this._io) {
+        if (this._a20Controller && port === 0x60) val=this._a20Controller.readData();
+        else if (this._a20Controller && port === 0x64) val=this._a20Controller.readStatus();
+        else for (const w of this._io) {
             if (port >= w.start && port <= w.end) { val = w.chip.read(regOf(w, port)); break; }
         }
         this._chipDeadline = this._wakeHorizon();   // a latch read can change the horizon
@@ -1093,7 +1144,9 @@ export class I8086Machine {
         if (port >= 0x3b0 && port <= 0x3df) {
             this.displayRevision = (this.displayRevision + 1) >>> 0;
         }
-        for (const w of this._io) {
+        if (this._a20Controller && port === 0x60) this._a20Controller.writeData(val);
+        else if (this._a20Controller && port === 0x64) this._a20Controller.writeCommand(val);
+        else for (const w of this._io) {
             if (port >= w.start && port <= w.end) {
                 const reg = regOf(w, port);
                 w.chip.write(reg, val);
@@ -1189,7 +1242,9 @@ export class I8086Machine {
     loadRom(bytes, at) {
         const rom = this.config.regions.find((r) => r.kind === 'rom');
         const base = at ?? (rom ? rom.start : 0xf8000);
-        this.mem.set(bytes, base);
+        if (!Number.isInteger(base) || base < 0 || base + bytes.length > this.memoryBytes)
+            throw new RangeError('ROM image exceeds configured physical memory');
+        this.mem.set(bytes, base); // host load is raw physical and never A20-gated
         if (base <= 0xbffff && base + bytes.length > 0xa0000) {
             this.displayRevision = (this.displayRevision + 1) >>> 0;
         }
@@ -1204,6 +1259,7 @@ export class I8086Machine {
     reset() {
         this._chipDebt = 0;
         this.cpu.reset();
+        if (this._a20Controller) this._a20Controller.reset();
         this.cycles += 4;
         this._advanceChips(4);
         this._chipDeadline = this._wakeHorizon();
@@ -1940,6 +1996,9 @@ export class I8086Machine {
     _snapshotTopology() {
         return JSON.stringify({
             variant: this.variant,
+            cpuBackend:this.cpuBackend,
+            memoryBytes:this.memoryBytes,
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
@@ -1966,6 +2025,8 @@ export class I8086Machine {
         const reasons = [];
         if (this.cpu.busTrace !== null) reasons.push('bus trace is an externally-owned append cursor, not part of the snapshot');
         if (this._audioBus) reasons.push('audio mixer source phases and buffers are not covered by the chip state APIs');
+        if (this.cpuBackend === 'protected286-experimental')
+            reasons.push('experimental protected 286 hidden descriptor caches and system registers are not covered by the machine checkpoint codec');
         return checkpointSupport(this.chips, this.devices, reasons);
     }
 
@@ -1974,7 +2035,10 @@ export class I8086Machine {
         // 8086, so a checkpoint from the wrong variant must not restore. The
         // deep state codec guards it again inside loadState; this guards the
         // envelope before the state is even inspected.
-        return checkpointTopology('i8086', this.config, this.chips, this.devices, {variant: this.variant});
+        return checkpointTopology('i8086', this.config, this.chips, this.devices, {
+            variant:this.variant,cpuBackend:this.cpuBackend,memoryBytes:this.memoryBytes,
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial} : null
+        });
     }
 
     /** Kept for callers that only need the boolean; derived from checkpointSupport now. */
@@ -2033,6 +2097,8 @@ export class I8086Machine {
     }
 
     saveState() {
+        if (this.cpuBackend === 'protected286-experimental')
+            throw new Error('8086 checkpoint refused: experimental protected 286 hidden state is not covered');
         // Settle the accrued chip debt first: a snapshot must record chips at
         // the machine's current cycle, never a state they have not been advanced
         // to yet. This keeps the debt out of the serialised form entirely.
@@ -2065,12 +2131,16 @@ export class I8086Machine {
             machine: {
                 nmiPending: this._nmiPending,
                 kbdStrobe: this._kbdStrobe,
-                pinLevels: {...this._pinLevels}
+                pinLevels: {...this._pinLevels},
+                a20Enabled:this.a20Enabled,
+                a20Controller:this._a20Controller?.getState() ?? null
             }
         };
     }
 
     loadState(s) {
+        if (this.cpuBackend === 'protected286-experimental')
+            throw new Error('8086 checkpoint refused: experimental protected 286 hidden state is not covered');
         if (!s || s.v !== 2) {
             throw new Error(`8086 checkpoint refused: complete state version 2 required (got ${s?.v})`);
         }
@@ -2084,6 +2154,15 @@ export class I8086Machine {
         // check lives in the contract layer, as it does for m6502/z80.
         if (!s.cpu || !s.mem || !s.machine || !s.chips || !s.devices) {
             throw new Error('8086 checkpoint refused: snapshot is incomplete');
+        }
+        if (this._a20Controller) {
+            if (typeof s.machine.a20Enabled !== 'boolean')
+                throw new Error('8086 checkpoint refused: A20 enabled state must be boolean');
+            this._a20Controller.validateState(s.machine.a20Controller);
+            if (!!(s.machine.a20Controller.outputPort&2) !== !!s.machine.a20Enabled)
+                throw new Error('8086 checkpoint refused: A20 gate and 8042 output port disagree');
+        } else if (s.machine.a20Controller !== null || s.machine.a20Enabled !== true) {
+            throw new Error('8086 checkpoint refused: A20 state does not match machine topology');
         }
         for (const k of I8086Machine.CPU_STATE) {
             if (!(k in s.cpu)) throw new Error(`8086 checkpoint refused: CPU field '${k}' is missing`);
@@ -2127,6 +2206,7 @@ export class I8086Machine {
         this._nmiPending = !!s.machine.nmiPending;
         this._kbdStrobe = !!s.machine.kbdStrobe;
         this._pinLevels = {...s.machine.pinLevels};
+        if (this._a20Controller) this._a20Controller.setState(s.machine.a20Controller);
         // A restore replaces video memory wholesale without going through
         // _write, so a renderer holding a cached frame would keep drawing the
         // pre-restore screen until something unrelated moved the token.
