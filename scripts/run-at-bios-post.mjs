@@ -62,11 +62,16 @@ const postEvents=[];
 const controllerPorts=[];
 const controllerWrites=[];
 const diskPorts=[];
+const rtcPorts=[];
 const executionBoundaries={int19:null,bootSector:null,unexpectedInterrupt:null};
 const injectedKeys=[];
 let reachedPost43=false;
 let machine;
 machine=new I8086Machine(machineProfile,{onPortAccess:event=>{
+    if(event.port===0x70||event.port===0x71) {
+        rtcPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
+        if(rtcPorts.length>64)rtcPorts.shift();
+    }
     if(event.port===0x60||event.port===0x64) {
         controllerPorts.push({step:steps,cs:machine.cpu.cs,ip:machine.cpu.ip,...event});
         if(controllerPorts.length>128)controllerPorts.shift();
@@ -116,6 +121,7 @@ machine.cpu.busTrace=null;
 steps=1;
 const progressSamples=[];
 let stopReason=null;
+let hostRefusal=null;
 const renderScreen=()=>Array.from({length:25},(_,row)=>Array.from({length:80},(_,column)=>
     String.fromCharCode(machine._read(0xb8000+(row*80+column)*2)||0x20)).join('').replace(/\s+$/,''));
 const deviceSnapshot=()=>({
@@ -139,7 +145,16 @@ for(;steps<stepLimit;steps++) {
             }
         }
     }
-    machine.step();
+    try {
+        machine.step();
+    } catch(error) {
+        if(!(error instanceof Error)||!error.message.startsWith('MC146818 '))throw error;
+        hostRefusal={name:error.name,message:error.message,step:steps,before,
+            rtc:{index:machine.chips.rtc1.index,registerB:machine.chips.rtc1.ram[0x0b],
+                state:machine.chips.rtc1.getState()},recentPorts:[...rtcPorts]};
+        stopReason='host-device-refusal';
+        break;
+    }
     const after={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
     if(!executionBoundaries.int19&&reachedPost43&&before.cs===0xf000&&before.ip===0x16ab)
         executionBoundaries.int19={step:steps,before,after,devices:deviceSnapshot()};
@@ -184,7 +199,7 @@ const warmReset=gradedApplications.find(event=>event.cs===0xf000&&event.ip===0xf
     event.pc===0xfffff0&&event.cmosShutdown===1);
 const passed=firstFetchTrace[1]===0xfffff0&&
     !!post30&&!!warmReset&&warmReset.step<post30.step&&
-    !machine.cpu.halted&&!machine.cpu.shutdown;
+    !machine.cpu.halted&&!machine.cpu.shutdown&&!hostRefusal;
 const screenText=renderScreen();
 const guestFile=expectedFile&&floppyImage?readFat12RootFile(floppyImage,expectedFile):null;
 const keyboardScript={requested:requestedKeys.join(''),injected:injectedKeys,remaining:keyScript};
@@ -209,13 +224,13 @@ if(process.env.AT_FLOPPY_OUTPUT) {
 const report={schema:'astra.at-bios-post.v2',passed,stepLimit,steps,
     scope:fullBootAccepted?'genuine-reset IBM 5170 Rev1 BIOS, FDC/DMA DOS boot and keyboard shell command':
         'bounded genuine-reset IBM 5170 Rev1 POST progression through checkpoint 30',
-    diagnosticOnly:!fullBootAccepted,fullBootAccepted,mutation,stopReason,
+    diagnosticOnly:!fullBootAccepted,fullBootAccepted,mutation,stopReason,hostRefusal,
     persistence:{priorOutputMediaSha256,linked:priorOutputMediaSha256===null?null:
         priorOutputMediaSha256===floppy?.sha256},
     input:{name:'IBM 5170 Rev1 BIOS 1984-01-10',bytes:rom.length,sha256:romSha256,
         expectedSha256:EXPECTED_ROM_SHA256,distribution:'external; ROM bytes are not stored by this repository',floppy},
     reset,firstFetchTrace,resetRequests,resetApplications,checkpoint30:checkpoints,postEvents,
-    executionBoundaries,diskPorts,keyboardScript,
+    executionBoundaries,diskPorts,rtcPorts,keyboardScript,
     controller:{state:machine._a20Controller.getState(),writes:controllerWrites,recentPorts:controllerPorts},
     guestFile,final,
     screenText,
