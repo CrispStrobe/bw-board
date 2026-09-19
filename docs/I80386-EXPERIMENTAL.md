@@ -187,6 +187,12 @@ LEA implements all admitted 16-bit and 32-bit effective-address forms with an
 independent destination operand size. It returns the offset without checking a
 segment or issuing an operand bus read; the register ModRM encoding raises #UD.
 
+PUSH/POP ES, SS, DS, FS, and GS plus PUSH CS follow independent operand and
+stack-address sizes; POP CS has no encoding. A 32-bit segment push decrements
+the stack pointer by four while the original 80386 writes only the 16-bit
+selector. Segment-load faults restore the pre-instruction stack/register state,
+and POP SS establishes interrupt, NMI, and debug shadows.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

@@ -744,6 +744,32 @@ export class ExperimentalI80386 {
     for (const register of [3, 2, 1, 0])
       this._setReg(register, width, this._pop(width));
   }
+  _pushSegment(segment, width) {
+    if (width === 16) {
+      this._push(this._segValue(segment), 16);
+      return;
+    }
+    const stack32 = !!this.segmentCaches[SEG_SS].default32;
+    const next = stack32 ? (this.esp - 4) >>> 0 : (this.sp - 4) & 0xffff;
+    const linear = this._linear(SEG_SS, next, 4);
+    const physical = [0, 1].map((index) =>
+      this._translate((linear + index) >>> 0, { write: true }),
+    );
+    const selector = this._segValue(segment);
+    this.write(physical[0], selector & 255);
+    this.write(physical[1], selector >>> 8);
+    if (stack32) this.esp = next;
+    else this.sp = next;
+  }
+  _popSegment(segment, width) {
+    const selector = this._pop(width) & 0xffff;
+    this._loadSeg(segment, selector);
+    if (segment === SEG_SS) {
+      this._interruptShadow = 2;
+      this._nmiShadow = 2;
+      this._debugShadow = 1;
+    }
+  }
   _condition(code) {
     const f = this.eflags;
     const z = !!(f & ZF),
@@ -1569,6 +1595,10 @@ export class ExperimentalI80386 {
       this._push(this._reg(op - 0x50, width), width);
     else if (op >= 0x58 && op <= 0x5f)
       this._setReg(op - 0x58, width, this._pop(width));
+    else if ([0x06, 0x0e, 0x16, 0x1e].includes(op))
+      this._pushSegment([SEG_ES, SEG_CS, SEG_SS, SEG_DS][op >>> 3], width);
+    else if ([0x07, 0x17, 0x1f].includes(op))
+      this._popSegment(op === 0x07 ? SEG_ES : op === 0x17 ? SEG_SS : SEG_DS, width);
     else if (op === 0x60) this._pusha(width);
     else if (op === 0x61) this._popa(width);
     else if (op >= 0x90 && op <= 0x97) {
@@ -1820,12 +1850,7 @@ export class ExperimentalI80386 {
     else if (op === 0xf8) this.eflags &= ~CF;
     else if (op === 0xf9) this.eflags |= CF;
     else if (op === 0xf5) this.eflags ^= CF;
-    else if (op === 0x17) {
-      this._loadSeg(SEG_SS, this._pop(width) & 0xffff);
-      this._interruptShadow = 2;
-      this._nmiShadow = 2;
-      this._debugShadow = 1;
-    } else if (op === 0xf4) {
+    else if (op === 0xf4) {
       if (this.protectedMode && (this.cs & 3) !== 0)
         throw new I80386Fault(13, 0, "HLT requires CPL 0");
       this.halted = true;
@@ -1884,6 +1909,12 @@ export class ExperimentalI80386 {
 
   _step0f(address32, override, width) {
     const op = this._fetch8();
+    if (op === 0xa0 || op === 0xa1 || op === 0xa8 || op === 0xa9) {
+      const segment = op < 0xa8 ? SEG_FS : SEG_GS;
+      if (op & 1) this._popSegment(segment, width);
+      else this._pushSegment(segment, width);
+      return;
+    }
     if (op === 0x00) {
       const ea = this._decodeEA(address32, override);
       if (ea.reg > 3)
