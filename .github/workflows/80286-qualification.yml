@@ -65,6 +65,19 @@ jobs:
             | tee "$RECEIPT_DIR/pcjs-protected286-idt.json"
           node scripts/compare-pcjs-protected286-isa.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286-isa.json"
+          if ISA_ORACLE_MUTATION=result node scripts/compare-pcjs-protected286-isa.mjs \
+            > "$RECEIPT_DIR/rejected-isa-result.json"; then
+            echo "protected ISA oracle failed to reject result mutation" >&2
+            exit 1
+          fi
+          RECEIPT="$RECEIPT_DIR/rejected-isa-result.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          assert.equal(report.mutation,'result');
+          assert.equal(report.status,'fail');
+          assert.deepEqual(report.differences.map(d=>d.field),['result']);
+          NODE
           for mutation in frame if restart; do
             if IDT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-idt.mjs \
               > "$RECEIPT_DIR/rejected-$mutation.json"; then

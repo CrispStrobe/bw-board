@@ -81,3 +81,75 @@ test('near control-transfer limit faults restart register and stack state',()=>{
   assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===13);
   assert.deepEqual(f.cpu.getProtectedState(),state);assert.equal(f.writes.length,writes);
 });
+
+test('byte ADC and SBB consume carry and borrow without clearing protected control flags',()=>{
+  const f=fixture();boot(f,[0x14,0,0x1c,0]);
+  f.cpu.al=0xff;f.cpu.flags=0x7003;
+  f.cpu.step();assert.equal(f.cpu.al,0);assert.equal(f.cpu.flags&1,1);
+  assert.equal(f.cpu.flags&0x7000,0x7000);
+  f.cpu.step();assert.equal(f.cpu.al,0xff);assert.equal(f.cpu.flags&1,1);
+  assert.equal(f.cpu.flags&0x7000,0x7000);
+});
+
+test('mod1 negative and mod2 wrapped displacements address correctly and words honor limits',()=>{
+  const f=fixture();boot(f,[0x8b,0x47,0xff,0x8b,0x87,0xff,0xff,0x8b,0x47,0xff]);
+  f.cpu.bx=0x11;f.mem.set(0x120010,0x34);f.mem.set(0x120011,0x12);
+  f.cpu.step();assert.equal(f.cpu.ax,0x1234);
+  f.cpu.bx=2;f.mem.set(0x120001,0x78);f.mem.set(0x120002,0x56);
+  f.cpu.step();assert.equal(f.cpu.ax,0x5678);
+  f.cpu.bx=0x11;f.cpu.segmentCaches[SEG_DS].limit=0x10;
+  const state=f.cpu.getProtectedState();
+  assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===13);
+  assert.deepEqual(f.cpu.getProtectedState(),state);
+});
+
+test('all short Jcc predicates take and decline their decoder paths',()=>{
+  const trueFlags=[0x800,0,1,0,0x40,0,1,0,0x80,0,4,0,0x80,0,0x40,0];
+  const falseFlags=[0,0x800,0,1,0,0x40,0,1,0,0x80,0,4,0,0x80,0,0x40];
+  for(let condition=0;condition<16;condition++){
+    for(const take of [true,false]){
+      const f=fixture();boot(f,[0x70+condition,1,0x90]);
+      f.cpu.flags=2|(take?trueFlags[condition]:falseFlags[condition]);
+      const start=f.cpu.ip;f.cpu.step();
+      assert.equal(f.cpu.ip,start+2+(take?1:0),`Jcc ${condition.toString(16)} take=${take}`);
+    }
+  }
+});
+
+test('LOOP family updates CX and uses ZF while JCXZ leaves CX unchanged',()=>{
+  const cases=[
+    {op:0xe0,cx:2,zf:0,take:true,next:1},{op:0xe0,cx:2,zf:1,take:false,next:1},
+    {op:0xe1,cx:2,zf:1,take:true,next:1},{op:0xe1,cx:2,zf:0,take:false,next:1},
+    {op:0xe2,cx:1,zf:0,take:false,next:0},{op:0xe2,cx:2,zf:0,take:true,next:1},
+    {op:0xe3,cx:0,zf:0,take:true,next:0},{op:0xe3,cx:1,zf:0,take:false,next:1},
+  ];
+  for(const c of cases){
+    const f=fixture();boot(f,[c.op,1,0x90]);f.cpu.cx=c.cx;f.cpu.flags=2|(c.zf?0x40:0);
+    const start=f.cpu.ip;f.cpu.step();assert.equal(f.cpu.ip,start+2+(c.take?1:0));assert.equal(f.cpu.cx,c.next);
+  }
+});
+
+test('truncated Group 1 immediate faults before reading its data operand',()=>{
+  const f=fixture();boot(f,[0x83,0x06,0x00,0x20,0x01]);
+  f.cpu.segmentCaches[SEG_CS].limit=f.cpu.ip+3;
+  f.mem.set(0x122000,7);f.mem.set(0x122001,0);
+  const reads=f.reads.length,state=f.cpu.getProtectedState();
+  assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===13);
+  assert.deepEqual(f.cpu.getProtectedState(),state);
+  assert.ok(!f.reads.slice(reads).includes(0x122000));
+});
+
+test('RET with an out-of-limit target restores SP and all visible state',()=>{
+  const f=fixture();boot(f,[0xc3]);f.cpu.segmentCaches[SEG_CS].limit=0xff;
+  f.mem.set(0x130200,0x00);f.mem.set(0x130201,0x01);
+  const state=f.cpu.getProtectedState();
+  assert.throws(()=>f.cpu.step(),e=>e instanceof ProtectedModeFault&&e.vector===13);
+  assert.deepEqual(f.cpu.getProtectedState(),state);
+});
+
+test('memory INC preserves CF, IOPL, and NT while updating arithmetic flags',()=>{
+  const f=fixture();boot(f,[0xff,0x06,0x00,0x20]);
+  f.mem.set(0x122000,0xff);f.mem.set(0x122001,0x7f);f.cpu.flags=0x7003;
+  f.cpu.step();assert.equal(f.word(0x122000),0x8000);
+  assert.equal(f.cpu.flags&0x7001,0x7001);assert.ok(f.cpu.flags&0x880);
+});

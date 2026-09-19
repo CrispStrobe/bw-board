@@ -243,12 +243,16 @@ export class ProtectedI80286 extends I8086 {
             return ea.isReg?2:10;
         }
         if (op === 0x8c) {
-            const ea=this._pmModRM();if(ea.reg>3)this._pmFault(6,0,'invalid MOV from segment register');
-            this._pmOperandWrite(ea,true,[this.es,this.cs,this.ss,this.ds][ea.reg]);return ea.isReg?2:9;
+            const ea = this._pmModRM();
+            if (ea.reg > 3) this._pmFault(6, 0, 'invalid MOV from segment register');
+            this._pmOperandWrite(ea, true, [this.es, this.cs, this.ss, this.ds][ea.reg]);
+            return ea.isReg ? 2 : 9;
         }
         if (op === 0x8d) {
-            const ea=this._pmModRM();if(ea.isReg)this._pmFault(6,0,'LEA requires memory operand');
-            this._r16set(ea.reg,ea.off);return 3;
+            const ea = this._pmModRM();
+            if (ea.isReg) this._pmFault(6, 0, 'LEA requires memory operand');
+            this._r16set(ea.reg, ea.off);
+            return 3;
         }
         if (op === 0x84 || op === 0x85) {
             const word=!!(op&1),ea=this._pmModRM();
@@ -265,36 +269,95 @@ export class ProtectedI80286 extends I8086 {
             return 10;
         }
         if (op === 0xc6 || op === 0xc7) {
-            const word=!!(op&1),ea=this._pmModRM();if(ea.reg!==0)this._pmFault(6,0,'invalid MOV immediate group');
-            const value=word?this._pmFetch16():this._pmFetch8();this._pmOperandWrite(ea,word,value);return ea.isReg?4:10;
+            const word = !!(op & 1), ea = this._pmModRM();
+            if (ea.reg !== 0) this._pmFault(6, 0, 'invalid MOV immediate group');
+            const value = word ? this._pmFetch16() : this._pmFetch8();
+            this._pmOperandWrite(ea, word, value);
+            return ea.isReg ? 4 : 10;
         }
         if (op === 0x80 || op === 0x81 || op === 0x83) {
-            const word=!!(op&1),ea=this._pmModRM();
-            if(ea.reg!==7)this._pmPreflightWrite(ea,word);
-            const a=this._pmOperandRead(ea,word);
-            const b=op===0x81?this._pmFetch16():op===0x83?(this._pmFetchS8()&0xffff):this._pmFetch8();
-            const result=this._alu(ea.reg,a,b,word);if(ea.reg!==7)this._pmOperandWrite(ea,word,result);
-            return ea.isReg?4:17;
+            const word = !!(op & 1);
+            const ea = this._pmModRM();
+            // Finish decoding before touching a data operand. In particular,
+            // an immediate fetch fault must not read an MMIO destination.
+            const immediate = op === 0x81 ? this._pmFetch16() :
+                op === 0x83 ? (this._pmFetchS8() & 0xffff) : this._pmFetch8();
+            if (ea.reg !== 7) this._pmPreflightWrite(ea, word);
+            const operand = this._pmOperandRead(ea, word);
+            const result = this._alu(ea.reg, operand, immediate, word);
+            if (ea.reg !== 7) this._pmOperandWrite(ea, word, result);
+            return ea.isReg ? 4 : 17;
         }
         if (op === 0xfe || op === 0xff) {
-            const word=!!(op&1),ea=this._pmModRM();
-            if(ea.reg<=1){this._pmPreflightWrite(ea,word);const v=this._pmOperandRead(ea,word);
-                this._pmOperandWrite(ea,word,ea.reg?this._dec(v,word):this._inc(v,word));return ea.isReg?3:15;}
-            if(word&&ea.reg===2){const target=this._pmOperandRead(ea,true);this._pmCheckCodeOffset(target);this._pmPush(this.ip);this.ip=target;return 16;}
-            if(word&&ea.reg===4){const target=this._pmOperandRead(ea,true);this._pmCheckCodeOffset(target);this.ip=target;return 11;}
-            if(word&&ea.reg===6){this._pmPush(this._pmOperandRead(ea,true));return 11;}
-            if(word&&(ea.reg===3||ea.reg===5))throw new UnsupportedProtectedMode('far FE/FF control transfer');
-            this._pmFault(6,0,'unsupported FE/FF group');
+            const word = !!(op & 1), ea = this._pmModRM();
+            if (ea.reg <= 1) {
+                this._pmPreflightWrite(ea, word);
+                const value = this._pmOperandRead(ea, word);
+                this._pmOperandWrite(ea, word, ea.reg ? this._dec(value, word) : this._inc(value, word));
+                return ea.isReg ? 3 : 15;
+            }
+            if (word && ea.reg === 2) {
+                const target = this._pmOperandRead(ea, true);
+                this._pmCheckCodeOffset(target);
+                this._pmPush(this.ip);
+                this.ip = target;
+                return 16;
+            }
+            if (word && ea.reg === 4) {
+                const target = this._pmOperandRead(ea, true);
+                this._pmCheckCodeOffset(target);
+                this.ip = target;
+                return 11;
+            }
+            if (word && ea.reg === 6) {
+                this._pmPush(this._pmOperandRead(ea, true));
+                return 11;
+            }
+            if (word && (ea.reg === 3 || ea.reg === 5))
+                throw new UnsupportedProtectedMode('far FE/FF control transfer');
+            this._pmFault(6, 0, 'unsupported FE/FF group');
         }
-        if (op === 0xe8) {const d=this._pmFetch16(),s=d&0x8000?d-0x10000:d,target=(this.ip+s)&0xffff;
-            this._pmCheckCodeOffset(target);this._pmPush(this.ip);this.ip=target;return 19;}
-        if (op === 0xc3 || op === 0xc2) {const extra=op===0xc2?this._pmFetch16():0,target=this._pmPop();
-            this._pmCheckCodeOffset(target);this.sp=(this.sp+extra)&0xffff;this.ip=target;return 16;}
-        if (op >= 0x70 && op <= 0x7f) {const d=this._pmFetchS8();if(this._pmCondition(op&15)){const target=(this.ip+d)&0xffff;
-            this._pmCheckCodeOffset(target);this.ip=target;}return 4;}
-        if (op >= 0xe0 && op <= 0xe3) {const d=this._pmFetchS8();let take;
-            if(op===0xe3)take=this.cx===0;else{this.cx=(this.cx-1)&0xffff;take=this.cx!==0&&(op===0xe2||(op===0xe1?!!(this.flags&ZF):!(this.flags&ZF)));}
-            if(take){const target=(this.ip+d)&0xffff;this._pmCheckCodeOffset(target);this.ip=target;}return 5;}
+        if (op === 0xe8) {
+            const displacement = this._pmFetch16();
+            const signed = displacement & 0x8000 ? displacement - 0x10000 : displacement;
+            const target = (this.ip + signed) & 0xffff;
+            this._pmCheckCodeOffset(target);
+            this._pmPush(this.ip);
+            this.ip = target;
+            return 19;
+        }
+        if (op === 0xc3 || op === 0xc2) {
+            const extra = op === 0xc2 ? this._pmFetch16() : 0;
+            const target = this._pmPop();
+            this._pmCheckCodeOffset(target);
+            this.sp = (this.sp + extra) & 0xffff;
+            this.ip = target;
+            return 16;
+        }
+        if (op >= 0x70 && op <= 0x7f) {
+            const displacement = this._pmFetchS8();
+            if (this._pmCondition(op & 15)) {
+                const target = (this.ip + displacement) & 0xffff;
+                this._pmCheckCodeOffset(target);
+                this.ip = target;
+            }
+            return 4;
+        }
+        if (op >= 0xe0 && op <= 0xe3) {
+            const displacement = this._pmFetchS8();
+            let take;
+            if (op === 0xe3) take = this.cx === 0;
+            else {
+                this.cx = (this.cx - 1) & 0xffff;
+                take = this.cx !== 0 && (op === 0xe2 || (op === 0xe1 ? !!(this.flags & ZF) : !(this.flags & ZF)));
+            }
+            if (take) {
+                const target = (this.ip + displacement) & 0xffff;
+                this._pmCheckCodeOffset(target);
+                this.ip = target;
+            }
+            return 5;
+        }
         if (op === 0x90) return 3;
         if (op === 0xf4) { this.halted = true; return 2; }
         throw new UnsupportedProtectedMode(`opcode ${op.toString(16).padStart(2, '0')}`);

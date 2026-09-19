@@ -15,6 +15,7 @@ if(git('rev-parse','HEAD')!==PIN||git('status','--porcelain'))throw new Error('P
 const moduleURL=name=>pathToFileURL(resolve(root,`machines/pcx86/modules/v2/${name}.js`)).href;
 for(const name of ['x86func','x86help','x86mods','x86op0f','x86ops'])await import(moduleURL(name));
 const{default:CPU}=await import(moduleURL('cpux86')),{default:Bus}=await import(moduleURL('bus')),{default:Memory}=await import(moduleURL('memory'));
+const{default:X86}=await import(moduleURL('x86'));
 class QuietBus extends Bus{printf(){return 0;}}
 const hash=data=>createHash('sha256').update(data).digest('hex');
 const put=(write,at,bytes)=>bytes.forEach((value,i)=>write(at+i,value));
@@ -43,14 +44,21 @@ function reference(){
   for(let i=0;i<27;i++)cpu.stepCPU(0);
   return{ax:cpu.regEAX&0xffff,bx:cpu.regEBX&0xffff,cx:cpu.regECX&0xffff,si:cpu.regESI&0xffff,sp:cpu.getSP(),
     cs:cpu.getCS(),ds:cpu.getDS(),ss:cpu.getSS(),ip:cpu.getIP(),flags:cpu.getPS()&0x7fd5,
-    halted:true,result:word(a=>bus.getByteDirect(a))};
+    halted:!!(cpu.intFlags&X86.INTFLAG.HALT),result:word(a=>bus.getByteDirect(a))};
 }
-const expected=reference(),observed=actual(),differences=[];
+const expected=reference(),observed=actual(),mutation=process.env.ISA_ORACLE_MUTATION??null,differences=[];
+if(mutation!==null&&mutation!=='result')throw new Error(`unknown ISA_ORACLE_MUTATION: ${mutation}`);
+const completion={halted:true,result:17,cx:0,sp:0x200,ip:0x24};
+for(const [key,value] of Object.entries(completion)){
+  if(expected[key]!==value)throw new Error(`PCjs guest did not complete: ${key}`);
+  if(observed[key]!==value)throw new Error(`owned guest did not complete: ${key}`);
+}
+if(mutation==='result')observed.result^=1;
 for(const key of Object.keys(expected))if(JSON.stringify(expected[key])!==JSON.stringify(observed[key]))differences.push({field:key,reference:expected[key],actual:observed[key]});
 if(git('rev-parse','HEAD')!==PIN||git('status','--porcelain'))throw new Error('PCjs provenance changed during comparison');
 const sources=['./compare-pcjs-protected286-isa.mjs','../src/i8086.js','../src/experimental/i80286-protected.js'];
 console.log(JSON.stringify({oracle:'PCjs',revision:PIN,node:process.version,
   scope:'owned ring-0 arithmetic loop, 16-bit ModR/M high-memory RMW, near CALL/RET, and HLT; no timing, privilege, REP, or broad ISA claim',
   sourceHashes:Object.fromEntries(sources.map(path=>[path,hash(readFileSync(new URL(path,import.meta.url)))])),
-  status:differences.length?'fail':'pass',reference:expected,actual:observed,differences},null,2));
+  mutation,status:differences.length?'fail':'pass',reference:expected,actual:observed,differences},null,2));
 process.exitCode=differences.length?1:0;
