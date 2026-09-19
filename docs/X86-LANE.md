@@ -128,6 +128,50 @@ new capability, and introduce existing protected-mode binaries once their
 required instruction and machine contracts are covered. 386DX, Windows and
 Doom remain later acceptance targets, not results of this increment.
 
+## Restart, privilege and AT device increment (2026-09-19)
+
+The experimental protected executor now supports restartable byte/word strings
+with REP/REPE/REPNE and a wider common instruction subset. Each completed
+iteration survives a later fault. A pinned PCjs guest demonstrates a real #GP
+handler repairing the descriptor and returning to finish REP MOVSW.
+
+LLDT/LTR cache LDT/TSS descriptors, LTR marks the TSS busy, and bounded
+nonconforming privilege transitions use the TSS stack. A second PCjs guest
+returns to ring 3, reads LDT data, enters a ring-0 handler, returns outward,
+and enters a final handler. This is a privilege-transition result, not hardware
+task switching. The focused tests exercise fault codes, preflight behavior,
+flag permissions, descriptor caches, and machine interrupt arbitration.
+
+The opt-in [AT device profile](AT-DEVICE-PROFILE.md) adds keyboard command-byte
+and queue behavior, cascaded PIC delivery, and deterministic RTC/NMI handling.
+An owned IRQ8 guest reads status C, sends both EOIs, returns, and halts. Audit
+reproducers cover exact checkpoint restore after acknowledged keyboard/RTC
+interrupts, malformed RTC state rejected before machine mutation, and unrelated
+A20 changes preserving IRQ edges. Protected-machine checkpoint encoding remains
+explicitly unsupported.
+
+Upstream DOS chain execution, allocation/free/resize, and the toolchain
+registry were merged before integration checks. The real DOS kernel/shell
+still runs MASM, LINK, EXE2BIN and the generated COM to `GUEST-TOOLCHAIN-OK`
+in 1,111,040 steps. This uses the fast real-mode core and BIOS-service machine.
+No new wired throughput or full AT boot result is claimed.
+
+Receipts under `docs/receipts/2026-09-19-*` record affected source hashes and
+actual execution revisions. Local validation passed 93 focused tests (54 protected CPU, 20 AT/machine,
+19 DOS/toolchain); all five pinned PCjs guests passed and the new REP and
+privilege negative controls rejected exactly their intended field.
+Hosted qualification runs on the frozen combined
+head before landing; the milestone tag records run links without another code
+revision. The independently evolving lanes remain on their own scopes.
+
+Next acceptance targets are the remaining common protected instructions
+(including multiply/divide and far procedure transfers), call gates and task
+switching with fault tests, then a reproducible existing protected-mode binary.
+The AT side still needs keyboard protocol/reset and BIOS/disk/DMA integration.
+Choose and inventory an exact existing binary before broadening its required
+contracts. 386DX, Windows and Doom remain later milestones; this increment does
+not establish compatibility with them.
+
 ## Milestones and acceptance
 
 | Stage | Concrete acceptance | Still separate |

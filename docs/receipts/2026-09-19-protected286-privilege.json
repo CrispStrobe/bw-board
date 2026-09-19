@@ -1,0 +1,63 @@
+{
+  "oracle": "PCjs",
+  "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
+  "node": "v22.23.2",
+  "scope": "owned LLDT/LTR, outer IRET to ring 3, LDT data, TSS ring-0 INT frame and return; no task switch",
+  "sourceHashes": {
+    "./compare-pcjs-protected286-privilege.mjs": "59a4a732984fbb60e327ea9474c507842b9ae80d6e29496acd147018910f3e5e",
+    "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
+    "../src/experimental/i80286-protected.js": "7de93597db1c93ae7ed1a223d54cd1143acbdd5034166d54fbdc7b7968e310b7"
+  },
+  "mutation": null,
+  "status": "pass",
+  "reference": {
+    "ax": 4660,
+    "cs": 8,
+    "ds": 15,
+    "ss": 24,
+    "sp": 758,
+    "ip": 289,
+    "cpl": 0,
+    "halted": true,
+    "frame": [
+      12,
+      7,
+      514,
+      256,
+      51
+    ],
+    "firstFrame": [
+      10,
+      7,
+      514,
+      256,
+      51
+    ]
+  },
+  "actual": {
+    "ax": 4660,
+    "cs": 8,
+    "ds": 15,
+    "ss": 24,
+    "sp": 758,
+    "ip": 289,
+    "cpl": 0,
+    "halted": true,
+    "frame": [
+      12,
+      7,
+      514,
+      256,
+      51
+    ],
+    "firstFrame": [
+      10,
+      7,
+      514,
+      256,
+      51
+    ]
+  },
+  "differences": [],
+  "executionRevision": "c08e23ed01cee4bf47eb5fc631551c70b383f3a4"
+}

@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "revision": "fdd701c5ff79d9157c5430f9bc0204c87aab4aeb",
+  "revision": "c08e23ed01cee4bf47eb5fc631551c70b383f3a4",
   "node": "v22.23.2",
   "accepted": true,
   "scope": "owned 80286 guest: original-AT 8042 D1 A20 enable, protected HMA fetch and bit-21 RAM write; not a full PC/AT",
   "sourceHashes": {
     "scripts/run-at-memory-guest.mjs": "131250ddcd4f796d83f2f219c2c9822173b50d2643fef09f5dd8daec73aaee6a",
-    "src/i8086-machine.js": "a1a067d98ca9debcda5c1bea3fd38f2d0cd1c0e88e3a3743e0f2c32d8b4c5dc3",
+    "src/i8086-machine.js": "e5b24e9b732b2afcc67b2147263f941b0cfb92dd5666c4f0ad27ad15e273a036",
     "src/i8086-ram-words.js": "5bfdcf9743a73d1fc37afe78949f045d2aeb2d3d7b71561a694af96a443da6c5",
-    "src/at-8042-a20.js": "51d998d79885f5f12530b0b4f7bc05e12c7b6d30201cf8c86b28c9774e810d96",
+    "src/at-8042-a20.js": "da5b3ab21d008357856cd8d8697f7de38579b855c9df002e9c97cf4f3694aea3",
     "src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
-    "src/experimental/i80286-protected.js": "3c962e792de34eb2ebe1459d9adfdd9fc7cb254a9750cfcad519618e5f14dc60"
+    "src/experimental/i80286-protected.js": "7de93597db1c93ae7ed1a223d54cd1143acbdd5034166d54fbdc7b7968e310b7"
   },
   "expected": {
     "halted": true,
