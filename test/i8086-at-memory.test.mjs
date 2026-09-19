@@ -93,7 +93,7 @@ test('memory geometry and complete 8042 gate state participate in checkpoints',(
     assert.equal(m.restoreCheckpoint(queued),undefined);
     assert.equal(m._in(0x60),3,'queued D0 output byte survives checkpoint');
 
-    const bad=structuredClone(checkpoint); bad.state.machine.a20Controller.outputBuffer=999;
+    const bad=structuredClone(checkpoint); bad.state.machine.a20Controller.outputQueue=[{value:999,keyboard:false}];
     const before=m.saveState();
     assert.match(m.restoreCheckpoint(bad).refused,/8042 state is invalid/);
     assert.deepEqual(m.saveState(),before,'invalid controller state refuses before mutation');

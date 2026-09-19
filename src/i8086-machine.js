@@ -49,6 +49,7 @@ import { NS16C550 } from './ns16c550.js';
 import { MC6850 } from './mc6850.js';
 import { I8254 } from './i8254.js';
 import { I8259 } from './i8259.js';
+import { MC146818 } from './mc146818.js';
 
 /**
  * Opcodes whose cycle-table key carries the modrm reg field: 80-83, D0-D3,
@@ -147,7 +148,7 @@ const REGS = {
     // A card that tied XFER low would need one port and could not move two
     // converters at the same instant.
     dac0832: 4,
-    pic: 2,          // A0 selects command/status vs data/mask
+    pic: 2, rtc: 2,  // A0 selects command/status vs data/mask
     usart8251: 2,    // C/D selects data vs control/status
     cga: 16,         // the 3D0h-3DFh block (mode 3D8h, colour 3D9h, status 3DAh)
     hercules: 16,    // the 3B0h-3BFh block (mode 3B8h, status 3BAh, config 3BFh)
@@ -284,6 +285,21 @@ export const PCXT8086 = Object.freeze({
         // must not omit it.
         { kind: 'fdc', name: 'fdc1', at: 0x3f0, irq: 6, dma: 'dma1' },
         { kind: 'cga', name: 'cga1', at: 0x3d0 },                      // CGA at 3D0-3DFh (text page at B800:0000)
+    ],
+});
+
+/** Opt-in, bounded original-AT device profile; it is not a complete PC/AT. */
+export const PCAT80286 = Object.freeze({
+    clockHz:6_000_000,variant:'80286',memoryBytes:4<<20,
+    a20:{controller:'8042',enabled:false,queueLimit:16},
+    regions:[
+        {kind:'ram',start:0,end:0x9ffff},{kind:'rom',start:0xf0000,end:0xfffff},
+        {kind:'ram',start:0x100000,end:0x3fffff},
+    ],
+    chips:[
+        {kind:'pic',name:'pic1',at:0x20},
+        {kind:'pic',name:'pic2',at:0xa0,cascadeTo:'pic1',cascadeIrq:2},
+        {kind:'rtc',name:'rtc1',at:0x70,pic:'pic2',irq:0,initialUnixSeconds:0},
     ],
 });
 
@@ -602,6 +618,7 @@ export class I8086Machine {
         this.cycles = 0;
         this._pinLevels = {};
         this._nmiPending = false;
+        this._nmiMasked = false;
         /** Regions of the memory space, in declaration order. */
         this._mem = config.regions.map((r) => ({ ...r }));
         /** Decoded windows, split by which bus they answer on. */
@@ -655,6 +672,10 @@ export class I8086Machine {
                 chip = new I8259({
                     onInterrupt: (active) => { if (this.hooks.onIntr) this.hooks.onIntr(c.name, active); },
                 });
+            } else if (c.kind === 'rtc') {
+                chip = new MC146818(config.clockHz, {initialUnixSeconds:c.initialUnixSeconds ?? 0,
+                    onNmiMask:(masked)=>{if(!this._restoring)this._nmiMasked=masked;},
+                    onIRQ:(active)=>{if(this._restoring)return;const p=this.chips[c.pic]||this._pic;p?.setIRQ(c.irq??0,active?1:0);}});
             } else if (c.kind === 'usart8251') {
                 chip = new I8251({
                     onTx: (byte) => { if (this.hooks.onSerial) this.hooks.onSerial(byte, this.tMs); },
@@ -763,13 +784,33 @@ export class I8086Machine {
                 if ((w.start <= 0x60 && w.end >= 0x60) || (w.start <= 0x64 && w.end >= 0x64))
                     throw new Error(`machine config: AT 8042 A20 controller conflicts with I/O window "${w.name}" at port 60h or 64h`);
             }
-            this._a20Controller=new AT8042A20({a20Enabled:this._a20Initial,
-                onA20Change:(enabled)=>{ this._a20Enabled=enabled; }});
+            this._a20Controller=new AT8042A20({a20Enabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16,
+                onA20Change:(enabled)=>{ this._a20Enabled=enabled; },
+                onIRQ:(active)=>{if(!this._restoring)this._pic?.setIRQ(1,active?1:0);}});
         } else this._a20Controller=null;
 
         // The master PIC — the one step() polls to deliver INTR. A breadboard
         // has at most one; if there are several, the first declared wins.
-        this._pic = Object.values(this.chips).find((c) => c instanceof I8259) || null;
+        const picConfigs=(config.chips||[]).filter(c=>c.kind==='pic');
+        const rtcConfigs=(config.chips||[]).filter(c=>c.kind==='rtc');
+        if(rtcConfigs.length>1)throw new Error('machine config: bounded AT profile supports one RTC/NMI mask driver');
+        for(const c of rtcConfigs)if(!c.pic||!(this.chips[c.pic] instanceof I8259))throw new Error(`machine config: RTC ${c.name} names missing PIC ${c.pic??'(none)'}`);
+        const slaveNames=new Set(picConfigs.filter(c=>c.cascadeTo).map(c=>c.name));
+        const masters=picConfigs.filter(c=>!slaveNames.has(c.name));
+        if(masters.length>1&&picConfigs.some(c=>c.cascadeTo))throw new Error('machine config: cascaded PIC topology requires exactly one master');
+        this._pic=this.chips[masters[0]?.name]||null;
+        this._picCascade=null;
+        for(const c of picConfigs.filter(c=>c.cascadeTo)){
+            if(this._picCascade)throw new Error('machine config: bounded AT profile supports one slave PIC');
+            const master=this.chips[c.cascadeTo],slave=this.chips[c.name],line=c.cascadeIrq;
+            if(!(master instanceof I8259)||master===slave||!Number.isInteger(line)||line<0||line>7)throw new Error(`machine config: invalid PIC cascade ${c.name}`);
+            this._picCascade={master,slave,line};
+            const prior=slave.hooks.onInterrupt;slave.hooks.onInterrupt=(active)=>{prior?.(active);if(!this._restoring)master.setIRQ(line,active?1:0);};
+            master.setIRQ(line,slave.intActive?1:0);
+            const masterWrite=master.write.bind(master),slaveWrite=slave.write.bind(slave);
+            master.write=(reg,val)=>{if((reg&1)&&master.initPhase===2&&!(val&(1<<line)))throw new Error(`8259 cascade ICW3 must mark master IR${line}`);return masterWrite(reg,val);};
+            slave.write=(reg,val)=>{if((reg&1)&&slave.initPhase===2&&(val&7)!==line)throw new Error(`8259 slave ICW3 identity must be ${line}`);return slaveWrite(reg,val);};
+        }
 
         // The XT keyboard sits on the first 8255: its scancode is read at port A
         // and its acknowledge is the port-B bit-7 strobe. keyIn() latches a byte
@@ -790,7 +831,8 @@ export class I8086Machine {
                 this._irqLines[c.name] = { irq: c.irq, channel: c.irqChannel ?? 0 };
             } else if (chip && chip.hooks) {
                 chip.hooks.onIrqChange = (asserted) => {
-                    if (this._pic) this._pic.setIRQ(c.irq, asserted ? 1 : 0);
+                    const pic=this.chips[c.pic]||this._pic;
+                    if (pic) pic.setIRQ(c.irq, asserted ? 1 : 0);
                 };
             }
         }
@@ -1389,7 +1431,7 @@ export class I8086Machine {
      * IF is set. Either wakes a halted CPU. Returns true if one was taken.
      */
     _serviceInterrupts() {
-        if (this._nmiPending) {
+        if (this._nmiPending && !this._nmiMasked && (typeof this.cpu.canTakeNmi !== 'function' || this.cpu.canTakeNmi())) {
             this._nmiPending = false;
             // Interrupt trap (E6.8.3): source distinguishes the delivered lines
             // the machine drives — 'nmi' here, 'irq' below — from a software INT n
@@ -1405,7 +1447,10 @@ export class I8086Machine {
         // cannot be interrupted between the two. canTakeInterrupt() is both
         // halves.
         if (!this.cpu.canTakeInterrupt()) return false;
-        const vector = this._pic.acknowledge();
+        let vector;
+        if(this._picCascade&&this._pic._serviceable()===this._picCascade.line&&this._picCascade.slave.intActive){
+            this._pic.acknowledge(); vector=this._picCascade.slave.acknowledge();
+        } else vector=this._pic.acknowledge();
         if (this.hooks.onInterrupt) this.hooks.onInterrupt({ vector, source: 'irq' });
         this.cpu.interrupt(vector);   // pushes flags/cs/ip, clears halted
         return true;
@@ -1760,10 +1805,12 @@ export class I8086Machine {
      * latch a scancode and one with no 8259 has no wire to raise IRQ1 on.
      * Asked BEFORE a host offers a keyboard, so the offer matches the board.
      */
-    canTakeKeys() { return !!(this._kbdPpi && this._pic); }
+    canTakeKeys() { return !!(this._pic && (this._kbdPpi || this._a20Controller)); }
 
     keyIn(scancode) {
-        if (!this._kbdPpi || !this._pic) return false;
+        if (!this._pic) return false;
+        if(this._a20Controller)return this._a20Controller.injectSet1(scancode);
+        if (!this._kbdPpi) return false;
         this._kbdPpi.setInputPort('a', scancode & 0xff);   // scancode latched at port A (0x60)
         this._pic.setIRQ(1, 1);                             // the keyboard's IRQ1
         return true;
@@ -1998,11 +2045,11 @@ export class I8086Machine {
             variant: this.variant,
             cpuBackend:this.cpuBackend,
             memoryBytes:this.memoryBytes,
-            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial} : null,
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16} : null,
             regions: this.config.regions.map(r => [r.kind, r.start, r.end]),
             chips: (this.config.chips || []).map(c => [
                 c.kind, c.name, c.at ?? null, c.bus ?? 'io', c.span ?? null,
-                c.stride ?? 1, c.irq ?? null, c.irqChannel ?? null
+                c.stride ?? 1, c.irq ?? null, c.irqChannel ?? null,c.pic??null,c.cascadeTo??null,c.cascadeIrq??null,c.initialUnixSeconds??null
             ]),
             attached: Object.keys(this.devices || {}).sort()
         });
@@ -2037,7 +2084,7 @@ export class I8086Machine {
         // envelope before the state is even inspected.
         return checkpointTopology('i8086', this.config, this.chips, this.devices, {
             variant:this.variant,cpuBackend:this.cpuBackend,memoryBytes:this.memoryBytes,
-            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial} : null
+            a20:this._a20Configured ? {controller:'8042',initialEnabled:this._a20Initial,queueLimit:this.config.a20.queueLimit??16} : null
         });
     }
 
@@ -2130,6 +2177,7 @@ export class I8086Machine {
             mem: this.mem.slice(), chips, devices,
             machine: {
                 nmiPending: this._nmiPending,
+                nmiMasked: this._nmiMasked,
                 kbdStrobe: this._kbdStrobe,
                 pinLevels: {...this._pinLevels},
                 a20Enabled:this.a20Enabled,
@@ -2155,6 +2203,8 @@ export class I8086Machine {
         if (!s.cpu || !s.mem || !s.machine || !s.chips || !s.devices) {
             throw new Error('8086 checkpoint refused: snapshot is incomplete');
         }
+        if(typeof s.machine.nmiPending!=='boolean'||typeof s.machine.nmiMasked!=='boolean')
+            throw new Error('8086 checkpoint refused: NMI state must be boolean');
         if (this._a20Controller) {
             if (typeof s.machine.a20Enabled !== 'boolean')
                 throw new Error('8086 checkpoint refused: A20 enabled state must be boolean');
@@ -2194,16 +2244,23 @@ export class I8086Machine {
             if (!statePair(this.chips[name])) {
                 throw new Error(`8086 checkpoint refused: component '${name}' has no state API`);
             }
+            if(this.chips[name] instanceof MC146818)this.chips[name].validateState(s.chips[name]);
         }
         for (const name of deviceNames) {
             if (!statePair(this.devices[name])) {
                 throw new Error(`8086 checkpoint refused: component 'device:${name}' has no state API`);
             }
         }
+        const rtc=Object.values(this.chips).find(c=>c instanceof MC146818);
+        if(rtc&&s.machine.nmiMasked!==s.chips[Object.keys(this.chips).find(n=>this.chips[n]===rtc)].nmiMasked)
+            throw new Error('8086 checkpoint refused: NMI mask and RTC port 70 state disagree');
+        this._restoring=true;
+        try {
         for (const k of I8086Machine.CPU_STATE) this.cpu[k] = s.cpu[k];
         this.cycles = s.cycles;
         this.mem.set(s.mem);
         this._nmiPending = !!s.machine.nmiPending;
+        this._nmiMasked = s.machine.nmiMasked;
         this._kbdStrobe = !!s.machine.kbdStrobe;
         this._pinLevels = {...s.machine.pinLevels};
         if (this._a20Controller) this._a20Controller.setState(s.machine.a20Controller);
@@ -2218,6 +2275,9 @@ export class I8086Machine {
         for (const name of deviceNames) {
             const pair = statePair(this.devices[name]);
             this.devices[name][pair[1]](s.devices[name]);
+        }
+        } finally {
+            this._restoring=false;
         }
         // The restored chips are at the restored cycle: no debt is owed, and the
         // deadline is re-armed from their fresh state.

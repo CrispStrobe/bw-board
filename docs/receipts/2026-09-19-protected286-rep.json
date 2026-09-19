@@ -2,41 +2,49 @@
   "oracle": "PCjs",
   "revision": "c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",
   "node": "v22.23.2",
-  "scope": "owned ring-0 arithmetic loop, 16-bit ModR/M high-memory RMW, near CALL/RET, and HLT; no timing, privilege, REP, or broad ISA claim",
+  "scope": "owned ring-0 REP MOVSW with a delivered #GP, descriptor repair, IRET restart, and completion; architectural state only",
   "sourceHashes": {
-    "./compare-pcjs-protected286-isa.mjs": "7b0dfab95737d68ce1d077ed776bcad37f47d75e614b49f5e66ddaa650e44bb8",
+    "./compare-pcjs-protected286-rep.mjs": "6278f582a4eb180966548c68f01847e4a1bd7e2d7e63c0dbe1e25b62e1a67ac4",
     "../src/i8086.js": "e6a20a7157e6aaf439932cee69eb4d72472440c89414f6a031b37936314385b9",
     "../src/experimental/i80286-protected.js": "7de93597db1c93ae7ed1a223d54cd1143acbdd5034166d54fbdc7b7968e310b7"
   },
   "mutation": null,
   "status": "pass",
   "reference": {
-    "ax": 24,
-    "bx": 32,
+    "ax": 16,
     "cx": 0,
-    "si": 4,
+    "si": 20,
+    "di": 36,
     "sp": 512,
     "cs": 8,
     "ds": 16,
-    "ss": 24,
-    "ip": 36,
-    "flags": 4,
+    "ip": 30,
     "halted": true,
-    "result": 17
+    "recovered": true,
+    "destination": [
+      17,
+      34,
+      51,
+      68
+    ]
   },
   "actual": {
-    "ax": 24,
-    "bx": 32,
+    "ax": 16,
     "cx": 0,
-    "si": 4,
+    "si": 20,
+    "di": 36,
     "sp": 512,
     "cs": 8,
     "ds": 16,
-    "ss": 24,
-    "ip": 36,
-    "flags": 4,
+    "ip": 30,
     "halted": true,
-    "result": 17
+    "recovered": true,
+    "destination": [
+      17,
+      34,
+      51,
+      68
+    ]
   },
   "differences": [],
   "executionRevision": "c08e23ed01cee4bf47eb5fc631551c70b383f3a4"

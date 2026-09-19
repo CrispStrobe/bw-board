@@ -103,9 +103,9 @@ test('code and stack spans fault before the first forbidden bus cycle', () => {
 
 test('forbidden privilege and descriptor types fail before cache or accessed-bit commit', () => {
   for (const [name, access, error] of [
-    ['ring 1 code', 0xba, UnsupportedProtectedMode],
+    ['ring 1 code', 0xba, ProtectedModeFault],
     ['data as CS', 0x92, ProtectedModeFault],
-    ['system descriptor', 0x82, UnsupportedProtectedMode],
+    ['system descriptor', 0x82, ProtectedModeFault],
   ]) {
     const f = fixture(); installBootstrap(f, [0x90]); f.descriptor(0x208, 0x100000, 0xffff, access);
     for (let i = 0; i < 3; i++) f.cpu.step();
@@ -120,7 +120,7 @@ test('forbidden privilege and descriptor types fail before cache or accessed-bit
 test('unsupported protected paths refuse without architectural side effects', () => {
   for (const [name, bytes] of [
     ['software INT', [0xcd,0x21]], ['far CALL', [0x9a,0,0,8,0]],
-    ['IRET', [0xcf]], ['POP DS', [0x1f]], ['LDS', [0xc5,0x06,0,0]],
+    ['IRET', [0xcf]], ['LDS', [0xc5,0x06,0,0]],
     ['REP', [0xf3,0x90]],
   ]) {
     const f = fixture(); installBootstrap(f, bytes);
