@@ -273,6 +273,32 @@ jobs:
             /revocation_list.txt
             /v1_ex_real_mode/8C.MOO.gz
             /v1_ex_real_mode/668C.MOO.gz
+            /v1_ex_real_mode/60.MOO.gz
+            /v1_ex_real_mode/61.MOO.gz
+            /v1_ex_real_mode/6660.MOO.gz
+            /v1_ex_real_mode/6661.MOO.gz
+            /v1_ex_real_mode/A0.MOO.gz
+            /v1_ex_real_mode/A1.MOO.gz
+            /v1_ex_real_mode/A2.MOO.gz
+            /v1_ex_real_mode/A3.MOO.gz
+            /v1_ex_real_mode/66A1.MOO.gz
+            /v1_ex_real_mode/66A3.MOO.gz
+            /v1_ex_real_mode/67A1.MOO.gz
+            /v1_ex_real_mode/67A3.MOO.gz
+            /v1_ex_real_mode/D0.0.MOO.gz
+            /v1_ex_real_mode/D0.1.MOO.gz
+            /v1_ex_real_mode/D0.2.MOO.gz
+            /v1_ex_real_mode/D0.3.MOO.gz
+            /v1_ex_real_mode/D1.0.MOO.gz
+            /v1_ex_real_mode/D1.1.MOO.gz
+            /v1_ex_real_mode/D1.2.MOO.gz
+            /v1_ex_real_mode/D1.3.MOO.gz
+            /v1_ex_real_mode/66D1.0.MOO.gz
+            /v1_ex_real_mode/66D1.1.MOO.gz
+            /v1_ex_real_mode/66D1.2.MOO.gz
+            /v1_ex_real_mode/66D1.3.MOO.gz
+            /v1_ex_real_mode/C0.0.MOO.gz
+            /v1_ex_real_mode/C0.1.MOO.gz
             /v1_ex_real_mode/86.MOO.gz
             /v1_ex_real_mode/87.MOO.gz
             /v1_ex_real_mode/6687.MOO.gz
@@ -344,9 +370,9 @@ jobs:
           export I386_RECEIPTS
           echo "I386_RECEIPTS=$I386_RECEIPTS" >> "$GITHUB_ENV"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs \
+          node --test test/i80386-experimental.test.mjs test/i80386-fault-delivery.test.mjs test/i80386-paging.test.mjs test/i80386-reset-io.test.mjs test/i80386-group3.test.mjs test/i80386-segment-string.test.mjs test/i80386-moo-parser.test.mjs test/i80386-group5.test.mjs test/i80386-far-pointer.test.mjs test/i80386-alu-complete.test.mjs test/i80386-at-machine.test.mjs test/i80386-pusha-popa.test.mjs test/i80386-moffs.test.mjs test/i80386-rotate.test.mjs \
             | tee "$I386_RECEIPTS/tests.tap"
-          for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete; do
+          for profile in add-sizes byte-movx shifts segment-mov xchg group5-basic far-pointer alu-complete pusha-popa moffs rotates rotate-full-circle; do
             I386_MOO_PROFILE="$profile" node scripts/verify-i80386-moo-sample.mjs \
               > "$I386_RECEIPTS/$profile.json"
           done
@@ -357,12 +383,17 @@ jobs:
               exit 1
             fi
           done
+          if I386_MOO_PROFILE=rotate-full-circle I386_MOO_MUTATION=carry node scripts/verify-i80386-moo-sample.mjs \
+            > "$I386_RECEIPTS/rejected-carry.json"; then
+            echo "386 full-circle comparator accepted carry mutation" >&2
+            exit 1
+          fi
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import fs from 'node:fs';
           const dir=process.env.I386_RECEIPTS;
           const read=name=>JSON.parse(fs.readFileSync(`${dir}/${name}.json`));
-          for(const [profile,count,excluded,prefixExcluded=0] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46],['xchg',9,16,58],['group5-basic',21,319,194],['far-pointer',30,955],['alu-complete',42,163]]) {
+          for(const [profile,count,excluded,prefixExcluded=0] of [['add-sizes',12,888],['byte-movx',36,2600],['shifts',36,3111],['segment-mov',6,46],['xchg',9,16,58],['group5-basic',21,319,194],['far-pointer',30,955],['alu-complete',42,163],['pusha-popa',12,405],['moffs',24,452],['rotates',36,904],['rotate-full-circle',2,134]]) {
             const r=read(profile);
             assert.equal(r.accounting.admitted,count);
             assert.equal(r.accounting.exceptionExcluded,excluded);
@@ -371,6 +402,12 @@ jobs:
             assert.equal(r.accounting.unsupported,0);
             assert.equal(r.accounting.failures,0);
           }
+          const carry=read('rejected-carry');
+          assert.equal(carry.mutation,'carry');
+          assert.equal(carry.accounting.unsupported,0);
+          assert.equal(carry.failures.length,1);
+          assert.equal(carry.failures[0].differences.length,1);
+          assert.equal(carry.failures[0].differences[0].field,'eflags');
           for(const mutation of ['ram','stray-write']) {
             const r=read(`rejected-${mutation}`);
             assert.equal(r.mutation,mutation);
