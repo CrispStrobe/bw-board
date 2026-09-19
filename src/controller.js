@@ -108,6 +108,24 @@ export const WIDGET_DEFAULTS = {
   image:    { src: '', alt: '' },
 };
 
+/**
+ * Map an analog widget's value to a voltage for an ADC channel — the binding
+ * an analog stick/axis uses to reach the machine: a slider or a joystick axis
+ * (its numeric range) becomes 0..vref, which an ADC0809 converts to 0..255 for
+ * the program to read. Centre of the range lands at vref/2 (a stick at rest
+ * reads ~127). The value is clamped into range first, so a widget cannot
+ * present a voltage above the reference the converter can report.
+ *
+ * @param {number} value        the widget value (e.g. panel.getValue(name))
+ * @param {{ min?: number, max?: number, vref?: number }} [opts]
+ * @returns {number} volts in [0, vref]
+ */
+export function axisToVolts(value, { min = -100, max = 100, vref = 5 } = {}) {
+    if (max === min) return 0;
+    const clamped = Math.max(min, Math.min(max, Number(value) || 0));
+    return ((clamped - min) / (max - min)) * vref;
+}
+
 // ─── ControllerPanel ────────────────────────────────────────────────────────
 
 export class ControllerPanel {
