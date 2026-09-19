@@ -60,6 +60,7 @@ import { registerSAP1Chips } from './devices/sap1-chips.js';
 import { registerMCP4725 } from './devices/mcp4725.js';
 import { registerUM245R } from './devices/um245r.js';
 import { registerPS2Device } from './devices/ps2-device.js';
+import { registerPS2MouseDevice } from './devices/ps2-mouse-device.js';
 import { registerSimpleVGACard } from './devices/simplevga-card.js';
 import { registerSevenseg8, registerLedbank8 } from './devices/a2-displays.js';
 import { registerI2CSensors } from './devices/i2c-sensors.js';
@@ -115,6 +116,7 @@ export function registerAllDevices() {
   registerMCP4725();
   registerUM245R();
   registerPS2Device();
+  registerPS2MouseDevice();
   registerSimpleVGACard();
   registerSevenseg8();
   registerLedbank8();
