@@ -208,6 +208,11 @@ export function createDos8086(machine, io = {}) {
     let claimed = null;
     /** Next free paragraph for INT 21h/48h. Above a .COM's 64K arena. */
     let allocTop = 0x1800;
+    /** Top of the conventional-memory arena (640K), the paragraph past the last
+     *  one a program owns. DOS writes it into PSP:0002 so a program that sizes
+     *  its heap from there (LINK, MASM's larger passes) sees the whole arena
+     *  rather than the zero an unset field reports. Matches the 48h cap below. */
+    const MEM_TOP = 0xa000;
     /** How many times the program asked for a keystroke. A run with no input
      *  cannot be compared against one that had some, and this is how a
      *  consumer tells those apart from a real disagreement. */
@@ -1069,6 +1074,7 @@ export function createDos8086(machine, io = {}) {
             psp = at;
             for (let i = 0; i < 0x100; i++) wr8(psp, i, 0);
             wr8(psp, 0, 0xcd); wr8(psp, 1, 0x20);       // int 20h
+            wr16(psp, 0x02, MEM_TOP);                   // top-of-memory: the .COM owns to the arena top
             writeCommandTail(psp, args);
             for (let i = 0; i < bytes.length; i++) wr8(psp, 0x100 + i, bytes[i]);
             cpu.cs = psp; cpu.ds = psp; cpu.es = psp; cpu.ss = psp;
@@ -1097,6 +1103,7 @@ export function createDos8086(machine, io = {}) {
             const loadSeg = psp + 0x10;                 // the image sits above the PSP
             for (let i = 0; i < 0x100; i++) wr8(psp, i, 0);
             wr8(psp, 0, 0xcd); wr8(psp, 1, 0x20);
+            wr16(psp, 0x02, MEM_TOP);                   // top-of-memory: the .EXE owns to the arena top (LINK/MASM size their heap from here)
             writeCommandTail(psp, args);
             const image = bytes.subarray(imageStart, imageEnd);
             for (let i = 0; i < image.length; i++) {
