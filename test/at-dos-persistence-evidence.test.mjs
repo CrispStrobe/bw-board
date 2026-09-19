@@ -17,10 +17,15 @@ test('source-bound AT DOS receipts prove write then fresh-remount read without r
     assert.equal(reboot.input.floppy.sha256,outputHash);
     assert.deepEqual(reboot.persistence,{priorOutputMediaSha256:outputHash,linked:true});
     for(const receipt of [write,reboot]) {
+        assert.equal(receipt.fullBootAccepted,true);
+        assert.deepEqual(receipt.reset,{cs:0xf000,ip:0xfff0,pc:0xfffff0,fetchPhysical:0xfffff0});
+        assert.equal(receipt.memory.baseRamBytes,640<<10);
+        assert.equal(receipt.guestFile.size,12);
+        assert.deepEqual(receipt.guestFile.bytes,[...Buffer.from(expectedText)]);
         assert.equal(receipt.executionRevision,'c5a4b86cf39801c705ee1d61cf73dad3208333ee');
         assert.match(receipt.originalReportSha256,/^[0-9a-f]{64}$/);
-        for(const file of ['scripts/run-at-bios-post.mjs','scripts/lib/at-dos-acceptance.mjs'])
-            assert.equal(receipt.sourceSha256[file],sha(file),`${file} source binding`);
+        for(const [file,hash] of Object.entries(receipt.sourceSha256))
+            assert.equal(hash,sha(file),`${file} source binding`);
     }
     assert.equal(gradeAtDosAcceptance(write,{expectedText,
         inputBootSectorSha256:write.input.floppy.bootSectorSha256,

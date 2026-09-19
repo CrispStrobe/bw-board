@@ -892,7 +892,19 @@
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-at-bios-post.mjs": "a1850a116ec3b472392590987b409ed74f4d925a8e8427142ba001baace95544"
     },
-    "originalReportSha256": "d92f007664b65989f45bf17cdec9d3dccb38c6a7e782ce056cfa1f477e5b5186"
+    "originalReportSha256": "d92f007664b65989f45bf17cdec9d3dccb38c6a7e782ce056cfa1f477e5b5186",
+    "reset": {
+      "cs": 61440,
+      "ip": 65520,
+      "pc": 16777200,
+      "fetchPhysical": 16777200
+    },
+    "memory": {
+      "addressSpaceBytes": 16777216,
+      "installedRamBytes": 1179648,
+      "baseRamBytes": 655360,
+      "extendedRamBytes": 524288
+    }
   },
   "reboot": {
     "schema": "astra.at-bios-post.v2",
@@ -1637,6 +1649,18 @@
       "scripts/lib/at-dos-acceptance.mjs": "7e4e93e2632fd6b835baf79c0d466c43fad6cf3c3c463e2fb0c7784cc131f61f",
       "scripts/run-at-bios-post.mjs": "a1850a116ec3b472392590987b409ed74f4d925a8e8427142ba001baace95544"
     },
-    "originalReportSha256": "7baa965cf8012fc8a23a690eeae4b2468c7aafe98983cf5d7be21b04cb175687"
+    "originalReportSha256": "7baa965cf8012fc8a23a690eeae4b2468c7aafe98983cf5d7be21b04cb175687",
+    "reset": {
+      "cs": 61440,
+      "ip": 65520,
+      "pc": 16777200,
+      "fetchPhysical": 16777200
+    },
+    "memory": {
+      "addressSpaceBytes": 16777216,
+      "installedRamBytes": 1179648,
+      "baseRamBytes": 655360,
+      "extendedRamBytes": 524288
+    }
   }
 }
