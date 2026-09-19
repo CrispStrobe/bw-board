@@ -1,0 +1,2209 @@
+{
+  "schemaVersion": 1,
+  "workload": "unpaced-owned-harris-store-loop-native-writer-suppression",
+  "settings": {
+    "iterations": 2048,
+    "warmups": 2,
+    "rounds": 12
+  },
+  "measurementRevision": "eaceed9c83aad97de417e84e865202832a7b5836",
+  "measurementSourceSHA256": "5b32face18f2089407cf1ab818e105d564205465912b68652def201dcc9bf58d",
+  "host": {
+    "hostname": "ubuntu-2gb-fsn1-1",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS, no TSX)",
+    "node": "v20.20.2",
+    "loadavg": [
+      10.7,
+      9.34,
+      7.87
+    ]
+  },
+  "variants": {
+    "base": {
+      "revision": "4926e93cd0133dd038b929f8506318d0da320b3b",
+      "wasmSHA256": "fc2d82112657e86d81eabb4e40a965e39f5b5fee0099aff322309f85f7d4b9d0",
+      "manifestSHA256": "9759f425e35b87aabef132f95fe250649ef951cbc17dcf6a186c94f116b237a0",
+      "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+      "nativeSourceHashes": {
+        "src/experimental/wired-kernel/net-resolver.c": "6e8b63bd0bf32cc63a71f33e51873b2a839e4ec16fd239ba18a6c1d4c045ce56",
+        "src/experimental/wired-kernel/memory-banks.c": "191689bf28d779bcffc697302f5d11d30f5dadba35bbb5d26483cd9f48d629cb",
+        "src/experimental/wired-kernel/memory-circuit.c": "70d362496a22c8d2be67198780e86085dd3d05039cff8a975afdb54d3262e71c",
+        "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+        "src/experimental/wired-kernel/phase-circuit.c": "07512e4d0339c26e59d5b768b2cbcedcc8ec5a4bc0f36ebdb837c0ccb5d82e9b",
+        "src/experimental/wired-kernel/phase-schedule.c": "2e2572527decbe2ddcdfb1087b95bc50484ac6a1554938bf0e20f607a04c3929",
+        "src/experimental/wired-kernel/incremental-nets.c": "344aa6fa3389e0b4eebf596f940a047c3b2b2f1705f1b745c3c2d3039092343e",
+        "src/experimental/wired-kernel/bus-sequencer.c": "f7d23b1468fee3bf542ddc697937a250501ebb6d3d9c4b20de026db9a84ea4c3",
+        "src/experimental/wired-kernel/bus-circuit.c": "4f40f3173f12d836806b889b0f0bbef86a211900372a1f2d033b5adda537cd32"
+      },
+      "jsSourceHashes": {
+        "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+        "src/experimental/harris-80c286-boot-cpu.js": "e44f66cbd032e5887fae4f33a03b3100d910cffbfcbc88e354eaf7d1cbe9b5ab",
+        "src/experimental/harris-boot-rom.js": "7e184ed31af43f90775a7caa8f9c2de532abc57c9d42b1be590bb9ebc585c51b",
+        "src/experimental/harris-native-memory-board.js": "6cf2d11e88fdb48aaed4c857a3bb92be926f98930a844a46d3c42cab8585a7d2",
+        "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+        "src/experimental/wired-kernel/bus-circuit-image.js": "849fb24fff8908bdbdd8e4cc7fdbc17a2286b0844802146d64e200f8881bbf13",
+        "src/experimental/wired-kernel/memory-circuit.js": "96bf750a51b0b1cacc4af1eaf714ec9090c09f506bb2c8e23ee1977d494a1c4d"
+      }
+    },
+    "candidate": {
+      "revision": "e827ddaac2e5bfbbbc4b61ac95799c85b6c987be",
+      "wasmSHA256": "47c18553722978d127aead4f8f7a7b6882b38ed3fd0d0ed1ee5c92e68cfb04a6",
+      "manifestSHA256": "5e29ef0f854f42243834bcc59e51fa53b0b0485602df520503104c06f21ea0ff",
+      "compiler": "Ubuntu clang version 18.1.3 (1ubuntu1)\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin",
+      "nativeSourceHashes": {
+        "src/experimental/wired-kernel/net-resolver.c": "6e8b63bd0bf32cc63a71f33e51873b2a839e4ec16fd239ba18a6c1d4c045ce56",
+        "src/experimental/wired-kernel/memory-banks.c": "191689bf28d779bcffc697302f5d11d30f5dadba35bbb5d26483cd9f48d629cb",
+        "src/experimental/wired-kernel/memory-circuit.c": "70d362496a22c8d2be67198780e86085dd3d05039cff8a975afdb54d3262e71c",
+        "src/experimental/wired-kernel/phase-components.c": "3f4c4f432ab0bf7c2f7cae356b1fc89f2ce30a179c67a942c2f630e59bd4dfa7",
+        "src/experimental/wired-kernel/phase-circuit.c": "05ad4681fc2aa830d79a57cb4400c3224c6e271dbeee99279021a139bb447eea",
+        "src/experimental/wired-kernel/phase-schedule.c": "2e2572527decbe2ddcdfb1087b95bc50484ac6a1554938bf0e20f607a04c3929",
+        "src/experimental/wired-kernel/incremental-nets.c": "344aa6fa3389e0b4eebf596f940a047c3b2b2f1705f1b745c3c2d3039092343e",
+        "src/experimental/wired-kernel/bus-sequencer.c": "f7d23b1468fee3bf542ddc697937a250501ebb6d3d9c4b20de026db9a84ea4c3",
+        "src/experimental/wired-kernel/bus-circuit.c": "550e44cbe141101ef5adc211f898942791a7ab4028d29968d77fb2c36f00bdec"
+      },
+      "jsSourceHashes": {
+        "src/devices/bus-memory.js": "5a7fdaf4135f1cf40f58ac4050fdfabaae2d284a8342b8a0f95313cc06409587",
+        "src/experimental/harris-80c286-boot-cpu.js": "e44f66cbd032e5887fae4f33a03b3100d910cffbfcbc88e354eaf7d1cbe9b5ab",
+        "src/experimental/harris-boot-rom.js": "7e184ed31af43f90775a7caa8f9c2de532abc57c9d42b1be590bb9ebc585c51b",
+        "src/experimental/harris-native-memory-board.js": "6cf2d11e88fdb48aaed4c857a3bb92be926f98930a844a46d3c42cab8585a7d2",
+        "src/experimental/harris-80c286-memory-board.js": "6a15855cd9da71c3197fea426353b8118e2bdac4b170b1e5bc36f45ec7225aaf",
+        "src/experimental/wired-kernel/bus-circuit-image.js": "849fb24fff8908bdbdd8e4cc7fdbc17a2286b0844802146d64e200f8881bbf13",
+        "src/experimental/wired-kernel/memory-circuit.js": "96bf750a51b0b1cacc4af1eaf714ec9090c09f506bb2c8e23ee1977d494a1c4d"
+      }
+    }
+  },
+  "structural": {
+    "driverComparisonsSuppressed": 2004603,
+    "busExternalSuppressed": 573920,
+    "phaseLatchSuppressed": 1430683
+  },
+  "wallThroughputRatio": {
+    "median": 1.0181200805343926,
+    "min": 0.8378918568231462,
+    "max": 1.4925589549258178
+  },
+  "performanceClaim": "inconclusive host-noisy timing; structural writer reduction only",
+  "samples": [
+    {
+      "round": 1,
+      "position": 1,
+      "name": "base",
+      "wallMS": 750.5265090000003,
+      "periodsPerSecond": 76468.98452190445,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 1,
+      "position": 2,
+      "name": "candidate",
+      "wallMS": 669.9376409999995,
+      "periodsPerSecond": 85667.67485154643,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 2,
+      "position": 1,
+      "name": "candidate",
+      "wallMS": 376.79001699999935,
+      "periodsPerSecond": 152318.260597653,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 2,
+      "position": 2,
+      "name": "base",
+      "wallMS": 562.3813140000002,
+      "periodsPerSecond": 102051.75487036182,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 3,
+      "position": 1,
+      "name": "base",
+      "wallMS": 569.63526,
+      "periodsPerSecond": 100752.19009441235,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 3,
+      "position": 2,
+      "name": "candidate",
+      "wallMS": 559.4971269999987,
+      "periodsPerSecond": 102577.82789293953,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 4,
+      "position": 1,
+      "name": "candidate",
+      "wallMS": 400.49802699999964,
+      "periodsPerSecond": 143301.57986021752,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 4,
+      "position": 2,
+      "name": "base",
+      "wallMS": 463.06805499999973,
+      "periodsPerSecond": 123938.58608968402,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 5,
+      "position": 1,
+      "name": "base",
+      "wallMS": 441.1707290000013,
+      "periodsPerSecond": 130090.22636222956,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 5,
+      "position": 2,
+      "name": "candidate",
+      "wallMS": 409.057401,
+      "periodsPerSecond": 140303.047591113,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 6,
+      "position": 1,
+      "name": "candidate",
+      "wallMS": 663.3086189999995,
+      "periodsPerSecond": 86523.82670154939,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 6,
+      "position": 2,
+      "name": "base",
+      "wallMS": 590.1591379999991,
+      "periodsPerSecond": 97248.34591987643,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 7,
+      "position": 1,
+      "name": "base",
+      "wallMS": 461.5210729999999,
+      "periodsPerSecond": 124354.01839170195,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 7,
+      "position": 2,
+      "name": "candidate",
+      "wallMS": 515.0729080000001,
+      "periodsPerSecond": 111425.00238043968,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 8,
+      "position": 1,
+      "name": "candidate",
+      "wallMS": 528.1327950000014,
+      "periodsPerSecond": 108669.63866540394,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 8,
+      "position": 2,
+      "name": "base",
+      "wallMS": 518.4172060000001,
+      "periodsPerSecond": 110706.20213944055,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 9,
+      "position": 1,
+      "name": "base",
+      "wallMS": 506.91408799999954,
+      "periodsPerSecond": 113218.39609239672,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 9,
+      "position": 2,
+      "name": "candidate",
+      "wallMS": 498.5427259999997,
+      "periodsPerSecond": 115119.52137077221,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 10,
+      "position": 1,
+      "name": "candidate",
+      "wallMS": 466.4135959999985,
+      "periodsPerSecond": 123049.58623032975,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 10,
+      "position": 2,
+      "name": "base",
+      "wallMS": 390.80415399999947,
+      "periodsPerSecond": 146856.16673358102,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 11,
+      "position": 1,
+      "name": "base",
+      "wallMS": 435.24620499999946,
+      "periodsPerSecond": 131861.0003733406,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 11,
+      "position": 2,
+      "name": "candidate",
+      "wallMS": 457.72206599999845,
+      "periodsPerSecond": 125386.13333970269,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 12,
+      "position": 1,
+      "name": "candidate",
+      "wallMS": 575.4973080000018,
+      "periodsPerSecond": 99725.92261022326,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 1149802,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 61509,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    },
+    {
+      "round": 12,
+      "position": 2,
+      "name": "base",
+      "wallMS": 625.2612249999984,
+      "periodsPerSecond": 91788.83593813154,
+      "stateHash": "1b1722dd7ab961737503eb4ab9dfead720a7d378a9f39bfe367ecc428b6ebadd",
+      "physicalClock": 57459,
+      "retired": 6148,
+      "writes": [
+        2048,
+        2048
+      ],
+      "periods": 57392,
+      "completionTraceSHA256": "532a1270dbd267f0aac5074675b3c0083cf40de925e85f2645599d78c7656765",
+      "faultTrace": [],
+      "work": {
+        "driverComparisons": 3154405,
+        "valueChangingDriverWrites": 508310,
+        "dirtyNetResolutions": 508310,
+        "netDriverVisits": 1032982,
+        "evaluatorRows": 90184,
+        "dependencyProbes": 0,
+        "stagedDriverCopies": 0,
+        "committedEvaluatorOutputs": 32792,
+        "publishNetCopies": 508310,
+        "deltas": 483735,
+        "reverseIndexVisits": 278828,
+        "operationBitsetWordVisits": 28695
+      },
+      "producerWork": {
+        "producers": {
+          "other": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "busExternal": {
+            "attempts": 573920,
+            "changes": 0
+          },
+          "busOutput": {
+            "attempts": 159817,
+            "changes": 159817
+          },
+          "phaseController": {
+            "attempts": 215220,
+            "changes": 57392
+          },
+          "phaseLatch": {
+            "attempts": 1492192,
+            "changes": 61509
+          },
+          "memoryBank": {
+            "attempts": 623072,
+            "changes": 196800
+          },
+          "phaseSchedule": {
+            "attempts": 0,
+            "changes": 0
+          },
+          "evaluator": {
+            "attempts": 90184,
+            "changes": 32792
+          },
+          "fullScan": {
+            "attempts": 0,
+            "changes": 0
+          }
+        },
+        "memory": {
+          "settleCalls": 71740,
+          "passes": 112736,
+          "previewCalls": 112736,
+          "previewBanks": 450944,
+          "presentBanks": 77884,
+          "changedBanks": 45092,
+          "postMemorySettles": 112736,
+          "postMemorySettlesWithoutDriverChange": 88136,
+          "ownedPreviewCalls": 112736,
+          "checkedValidationBanks": 0,
+          "checkedValidationPinRecords": 0
+        }
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "round": 1,
+      "order": [
+        "base",
+        "candidate"
+      ],
+      "wallThroughputRatio": 1.1202930885921079
+    },
+    {
+      "round": 2,
+      "order": [
+        "candidate",
+        "base"
+      ],
+      "wallThroughputRatio": 1.4925589549258178
+    },
+    {
+      "round": 3,
+      "order": [
+        "base",
+        "candidate"
+      ],
+      "wallThroughputRatio": 1.0181200805343926
+    },
+    {
+      "round": 4,
+      "order": [
+        "candidate",
+        "base"
+      ],
+      "wallThroughputRatio": 1.1562305524166794
+    },
+    {
+      "round": 5,
+      "order": [
+        "base",
+        "candidate"
+      ],
+      "wallThroughputRatio": 1.0785056765175145
+    },
+    {
+      "round": 6,
+      "order": [
+        "candidate",
+        "base"
+      ],
+      "wallThroughputRatio": 0.8897202917244161
+    },
+    {
+      "round": 7,
+      "order": [
+        "base",
+        "candidate"
+      ],
+      "wallThroughputRatio": 0.896030573209647
+    },
+    {
+      "round": 8,
+      "order": [
+        "candidate",
+        "base"
+      ],
+      "wallThroughputRatio": 0.9816038899837658
+    },
+    {
+      "round": 9,
+      "order": [
+        "base",
+        "candidate"
+      ],
+      "wallThroughputRatio": 1.0167916641110513
+    },
+    {
+      "round": 10,
+      "order": [
+        "candidate",
+        "base"
+      ],
+      "wallThroughputRatio": 0.8378918568231462
+    },
+    {
+      "round": 11,
+      "order": [
+        "base",
+        "candidate"
+      ],
+      "wallThroughputRatio": 0.9508962694405056
+    },
+    {
+      "round": 12,
+      "order": [
+        "candidate",
+        "base"
+      ],
+      "wallThroughputRatio": 1.0864711551352668
+    }
+  ],
+  "limitations": [
+    "Unpaced synchronous memory-only workload; no DOS, browser, peripherals or real-time claim.",
+    "Same-host balanced order reduces but cannot remove host noise.",
+    "Completion trace and fault parity cover this successful workload; existing fault and edited-wire oracles provide fault-path coverage."
+  ]
+}
