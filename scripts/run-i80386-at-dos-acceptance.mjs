@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 
 import ExperimentalI80386ATMachine, {PCAT80386_EXPERIMENTAL} from '../src/experimental/i80386-at-machine.js';
+import {I80386Fault, UnsupportedI80386} from '../src/experimental/i80386.js';
 import {gradeAtDosAcceptance,readFat12RootFile} from './lib/at-dos-acceptance.mjs';
 
 const EXPECTED_ROM_SHA256='74e7b36b4ec0adc5ac3277a887579996c1d2aa755b9892ef3afe7485c10ce04f';
@@ -146,11 +147,20 @@ for(;steps<stepLimit;steps++) {
     try {
         machine.step();
     } catch(error) {
-        if(!(error instanceof Error)||!error.message.startsWith('MC146818 '))throw error;
-        hostRefusal={name:error.name,message:error.message,step:steps,before,
-            rtc:{index:machine.chips.rtc1.index,registerB:machine.chips.rtc1.ram[0x0b],
-                state:machine.chips.rtc1.getState()},recentPorts:[...rtcPorts]};
-        stopReason='host-device-refusal';
+        if(!(error instanceof UnsupportedI80386)&&!(error instanceof I80386Fault)&&
+            (!(error instanceof Error)||!error.message.startsWith('MC146818 ')))throw error;
+        hostRefusal={name:error.name,message:error.message,step:steps,before};
+        if(error instanceof UnsupportedI80386)stopReason='cpu-unsupported';
+        else if(error instanceof I80386Fault) {
+            stopReason='architectural-fault-surfaced';
+            hostRefusal.vector=error.vector;
+            hostRefusal.errorCode=error.errorCode;
+        } else {
+            stopReason='host-device-refusal';
+            hostRefusal.rtc={index:machine.chips.rtc1.index,registerB:machine.chips.rtc1.ram[0x0b],
+                state:machine.chips.rtc1.getState()};
+            hostRefusal.recentPorts=[...rtcPorts];
+        }
         break;
     }
     const after={cs:machine.cpu.cs,ip:machine.cpu.ip,sp:machine.cpu.sp,ss:machine.cpu.ss};
