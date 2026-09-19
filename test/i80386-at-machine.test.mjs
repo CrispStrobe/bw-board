@@ -30,6 +30,20 @@ test('experimental 386 AT A20 gates bit 20 and retains addresses above the 286 b
   assert.equal(machine.cpu.read(0x100000), 0x22);
 });
 
+test('experimental 386 AT cold board reset restores configured A20 before reset-vector fetch', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  const rom = new Uint8Array(0x10000);
+  rom[0xfff0] = 0xf4;
+  machine.loadRom(rom);
+  machine.setA20Enabled(false);
+  assert.equal(machine.cpu.read(0xfffffff0), 0xff,
+    'a CPU-only reset with the external A20 gate low does not invent a ROM alias');
+  machine.reset();
+  assert.equal(machine.a20Enabled, true, 'cold board reset restores the profile output-port state');
+  machine.step();
+  assert.equal(machine.cpu.halted, true);
+});
+
 test('experimental 386 AT bridges little-endian port widths and refuses legacy state/timing APIs', () => {
   const events = [];
   const machine = new ExperimentalI80386ATMachine(PCAT80386_EXPERIMENTAL, {
@@ -78,7 +92,19 @@ test('experimental 386 AT wakes HLT for a maskable PIC interrupt', () => {
   machine.mem[0x82] = 0x00;
   machine.mem[0x83] = 0x00;
   master.setIRQ(0, 1);
-  assert.equal(machine._serviceInterrupts(), true);
-  assert.equal(machine.cpu.halted, false);
-  assert.equal(machine.cpu.eip, 0x300);
+  machine.mem[0x300] = 0xf4;
+  machine.step();
+  assert.equal(machine.cpu.halted, true, 'machine.step wakes, vectors, and executes the handler HLT');
+  assert.equal(machine.cpu.eip, 0x301);
+});
+
+test('experimental 386 AT shutdown does not consume pending interrupt state', () => {
+  const machine = new ExperimentalI80386ATMachine();
+  machine.cpu.shutdown = true;
+  machine.cpu.eflags |= 0x200;
+  machine._nmiPending = true;
+  machine.chips.pic1.setIRQ(0, 1);
+  assert.equal(machine._serviceInterrupts(), false);
+  assert.equal(machine._nmiPending, true);
+  assert.equal(machine.chips.pic1.intActive, true);
 });

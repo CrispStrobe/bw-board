@@ -218,3 +218,9 @@ extended RAM; it does not claim a 4GiB installed-memory array or a complete
 and 8088 cycle timing refuse explicitly because their codecs and timing tables
 cannot represent this CPU. This adapter proves reset, bus, A20, port and interrupt wiring only. It is
 not yet a 386 BIOS or operating-system boot qualification.
+
+The configured cold board reset restores the 8042 output port with A20 enabled
+before the first CPU step, so FFFFFFF0h reaches the reset alias. A CPU-only
+reset while an external A20 gate is deliberately held low leaves bit 20 low and
+does not invent a second alias. The bounded board profile does not claim that
+unsupported combination can boot firmware.

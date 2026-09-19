@@ -68,6 +68,7 @@ export class ExperimentalI80386ATMachine extends I8086Machine {
 
   _serviceInterrupts() {
     const cpu = this.cpu;
+    if (cpu.shutdown) return false;
     if (this._nmiPending && !this._nmiMasked && !cpu._nmiShadow && !cpu._nmiActive) {
       this._nmiPending = false;
       if (this.hooks.onInterrupt) this.hooks.onInterrupt({vector: 2, source: 'nmi'});
