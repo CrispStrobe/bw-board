@@ -9,7 +9,7 @@ five-route evidence table, exact public receipts and local DOS input provenance.
 
 # Who is doing what in bw-board — claim before you start, release when you finish
 
-2026-09-19 CLAIM — bwcx: explicit NPN base resistance, isolated worktree
+2026-09-19 DONE — bwcx: explicit NPN base resistance, isolated worktree
 `/mnt/volume1/code/wt/bw-board-npn-rb`, branch `lane/npn-base-resistance`, base
 `5eb1f3013747c6f291b989b76afe5428269607c8`. Owns only the Ebers-Moll NPN
 internal-base/resistor stamp and current extraction in `src/mna.js`, strict
@@ -19,7 +19,14 @@ an intrinsic base node only for an explicit finite `rb > 0`; omitted/zero RB
 must retain the prior path and digits. Prove terminal-current KCL, public-state
 non-mutation, invalid/extra refusal, and removal/current-reader mutations. No
 PNP admission, other Gummel-Poon fields, CUI/Lite/corpus, tolerance, workflow,
-or unrelated MNA refactor.
+or unrelated MNA refactor. Implemented one hidden intrinsic-base MNA node only
+for explicit positive RB and the exact resistor terminal-current reader; the
+public node map does not expose solver state. The ADI-derived RB=10 bench agrees
+with ngspice for both node voltages, both source currents, all three transistor
+terminal currents and KCL; omitted and explicit zero RB are deeply identical.
+Focused surface 19/19, with isolated missing-stamp, wrong-current-reader and
+missing-public-admission mutations all red by name. Full-suite qualification
+is recorded on the final candidate rather than by a second source commit.
 
 2026-09-19 DONE — bwcx: exact Level-1 PMOS operating-point and explicit bulk
 terminal, isolated worktree `/mnt/volume1/code/wt/bwb-pmos-explicit-bulk`, branch
