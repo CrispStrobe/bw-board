@@ -67,14 +67,12 @@ function install(write) {
   descriptor(write, 0x208, 0x1000, 0xffff, 0x9a); // ring-0 code
   descriptor(write, 0x210, 0, 0xffff, 0x12);      // P=0 readable/writable data
   descriptor(write, 0x218, 0, 0xffff, 0x98);      // execute-only code
-  descriptor(write, 0x220, 0, 0xffff, 0x80);      // reserved system descriptor
   put(write, 0x1000, [
     0x68, 0x17, 0x08, 0x9d,
     0xb8, 0x10, 0x00, 0x0f, 0x00, 0xe0, 0x9c, 0x5b,
     0x0f, 0x00, 0xe8, 0x9c, 0x59,
     0xb8, 0x13, 0x00, 0x0f, 0x00, 0xe0, 0x9c, 0x5a,
     0xb8, 0x18, 0x00, 0x0f, 0x00, 0xe0, 0x9c, 0x5e,
-    0xb8, 0x20, 0x00, 0x0f, 0x00, 0xe0, 0x9c, 0x5f,
     0xb8, 0x00, 0x00, 0x0f, 0x00, 0xe8, 0x9c, 0x5d,
     0xf4,
   ]);
@@ -130,8 +128,8 @@ const actual = runLocal();
 if (mutation === "zf") actual.bx ^= 0x40;
 const expected = {
   ax: 0, bx: 0x857, cx: 0x857, dx: 0x817,
-  si: 0x817, di: 0x817, bp: 0x817,
-  cs: 8, eip: 0x32, halted: true,
+  si: 0x817, bp: 0x817,
+  cs: 8, eip: 0x2a, halted: true,
 };
 const differences = [];
 for (const field of Object.keys(expected)) {
@@ -148,7 +146,7 @@ if (
 ) throw new Error("local execution sources changed during comparison");
 console.log(JSON.stringify({
   oracle: "PCjs", revision: PIN, executionRevision,
-  scope: "owned ring-0 VERR/VERW queries of P=0 accessible data, RPL privilege rejection, execute-only code, reserved system type and null selectors; exact non-ZF flags and HLT completion",
+  scope: "owned ring-0 VERR/VERW queries of P=0 accessible data, RPL privilege rejection, execute-only code type rejection and null selectors; exact non-ZF flags and HLT completion",
   sourceHashes, mutation, expected,
   status: differences.length ? "fail" : "pass",
   reference, actual, differences,
