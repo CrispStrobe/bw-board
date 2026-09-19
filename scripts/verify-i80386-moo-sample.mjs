@@ -47,6 +47,10 @@ const PROFILES={
     files:['60','61','6660','6661'],
     scope:'12 fixed deterministic PUSHA/POPA samples covering word and dword operand sizes',
   },
+  'moffs':{
+    files:['A0','A1','A2','A3','66A1','66A3','67A1','67A3'],
+    scope:'24 fixed deterministic MOV moffs samples covering loads, stores, and operand/address-size forms',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

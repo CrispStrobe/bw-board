@@ -1461,6 +1461,18 @@ export class ExperimentalI80386 {
       const testWidth = op === 0xa8 ? 8 : width;
       const left = testWidth === 8 ? this.al : this._reg(0, testWidth);
       this._setLogic(left & this._fetchN(testWidth >>> 3), testWidth);
+    } else if (op >= 0xa0 && op <= 0xa3) {
+      const moveWidth = op & 1 ? width : 8;
+      const offset = this._fetchN(address32 ? 4 : 2);
+      const segment = override ?? SEG_DS;
+      if (op & 2) {
+        const value = moveWidth === 8 ? this.al : this._reg(0, moveWidth);
+        this._write(segment, offset, moveWidth, value);
+      } else {
+        const value = this._read(segment, offset, moveWidth);
+        if (moveWidth === 8) this.al = value;
+        else this._setReg(0, moveWidth, value);
+      }
     } else if (op >= 0xb0 && op <= 0xb7)
       this._setReg8(op - 0xb0, this._fetch8());
     else if (op >= 0xb8 && op <= 0xbf)

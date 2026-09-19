@@ -148,6 +148,10 @@ the discarded dword supplies ESP's upper half while the low SP advances.
 Register encodings of FF /3 and /5 raise #UD before the bounded protected far
 transfer refusal.
 
+MOV moffs implements A0-A3 with independent operand and address sizes plus
+segment overrides. Stores do not read their destination, and complete segment
+spans are admitted before load or store effects.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A
