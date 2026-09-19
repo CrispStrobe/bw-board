@@ -92,16 +92,47 @@ Reference* (1984), system-board memory map and system-control schematics, and
 Intel's *80286 and 80287 Programmer's Reference Manual* (1987), processor
 initialization chapter.
 
-Current source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)
+Historical source-bound [POST receipt](receipts/2026-09-19-at-bios-post.json)
 records execution at `d8ff0734e9283aa1ca5662bce70d6c8ad10da713`.
 Both [negative controls](receipts/2026-09-19-at-bios-post-negative.json) reject
 the same source when an acceptance fact is corrupted. The controller self-test
 returns 55h; command-byte bit 2 controls the status system flag.
 
-The longer [30M-step diagnostic](receipts/2026-09-19-at-post43-diagnostic.json)
+The earlier 512KiB [30M-step diagnostic](receipts/2026-09-19-at-post43-diagnostic.json)
 mounts the hash-recorded DOS floppy and reaches genuine POST37/38 (keyboard
 reset), then POST40/41/43 and INT19, without displayed POST errors. It does not
 prove boot-sector execution: later samples enter the BIOS unexpected-hardware-
-interrupt handler. PIC/FDC/DMA diagnosis and a graded DOS handoff remain next.
+interrupt handler. That result is superseded by the explicit 640KiB run below:
+the owned IO.SYS fixes SYSINIT at segment 9F84h, beyond the 512KiB RAM map.
 Port 80h values alone are insufficient: DMA page-register tests also write
 those values, so genuine checkpoints must include their firmware CS:IP.
+
+
+## Accepted DOS disk boot and persistence
+
+The [source-bound write/reboot evidence](../test/fixtures/at-dos-persistence-evidence.json)
+records two fresh machines executed at `c5a4b86cf39801c705ee1d61cf73dad3208333ee`.
+All 15 recorded CPU, device and harness hashes match the integrated stage.
+The BIOS starts at physical FFFFF0h, completes POST and INT19, and loads the
+mounted floppy through the FDC and DMA channel 2 into 0000:7C00. The machine
+then executes the owned boot/IO.SYS glue and external Microsoft MS-DOS2.00
+kernel with Command2.02. No firmware service is intercepted by the host.
+
+The write run injects date/time Enter keys followed by
+`echo at-boot-ok>atboot.txt` and `type atboot.txt` through the 8042 keyboard
+path. It finishes after 24,406,016 instructions. The fresh reboot mounts the
+saved image and injects only date/time Enter keys and `type atboot.txt`;
+it finishes after 24,318,976 instructions. Both display a standalone
+`at-boot-ok` line and return to the final `A>` prompt. The FAT12 file is
+exactly `at-boot-ok\r\n` (12 bytes), and the saved-image SHA-256 matches the
+second machine's input:
+`6d0b480a26daeb20d8a017c20d5ab5ba09926a75c5b73f311e270211f16c8c69`.
+
+The ordinary evidence test checks reset, 640KiB RAM, source binding, DMA
+address/count/terminal-count state, boot-sector hash, keyboard consumption,
+file bytes, final prompt and linked media. It rejects mutations to file
+contents, output, DMA completion, keyboard evidence and reboot media identity.
+The raw reports are represented by their hashes and retained grading fields;
+ROM and disk images remain external. This qualifies the named DOS boot and
+persistence workload on this functional AT profile. It does not qualify all
+AT peripherals, Windows, Doom, or physical bus/cycle timing.
