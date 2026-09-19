@@ -781,7 +781,9 @@ export class ProtectedI80286 extends I8086 {
         for(const id of [SEG_DS,SEG_ES]){
             const cache=this.segmentCaches[id];if(!cache||cache.usable===false)continue;
             const dpl=(cache.access>>5)&3,rpl=cache.selector&3;
-            if((!cache.code||!(cache.access&4))&&Math.max(newCpl,rpl)>dpl)this._commitDescriptor(id,{selector:0,base:0,limit:0,access:0,
+            const table=(cache.selector&4)?this.ldtr:this.gdtr,offset=cache.selector&0xfff8;
+            const outsideTable=!table.valid&&!!(cache.selector&4)||offset+7>table.limit;
+            if(outsideTable||((!cache.code||!(cache.access&4))&&Math.max(newCpl,rpl)>dpl))this._commitDescriptor(id,{selector:0,base:0,limit:0,access:0,
                 code:false,writable:false,readable:false,usable:false});
         }
     }

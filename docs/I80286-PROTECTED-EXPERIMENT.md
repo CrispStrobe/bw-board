@@ -1,10 +1,12 @@
 # Experimental 80286 protected-mode slice
 
-`ProtectedI80286` is an opt-in CPU helper. It executes one bounded ring-0,
-GDT-only protected-mode path without changing the production `i80286` target,
-which remains the vector-qualified real-mode core. Pass
+`ProtectedI80286` is an opt-in CPU helper. It executes a bounded 16-bit
+protected-mode subset with GDT/LDT segments and ring-0/ring-3 interrupt
+transitions without changing the production `i80286` target, which remains
+the vector-qualified real-mode core. Pass
 `{deliverProtectedFaults:true}` as the second constructor argument to enable
-the same-ring IDT subset. The default preserves host-visible diagnostic faults.
+the supported IDT and privilege-transition subset. The default preserves
+host-visible diagnostic faults.
 
 The supported entry sequence is `LGDT`, `LMSW`, and a direct far `JMP` to a
 present ring-0 nonconforming code descriptor. Protected execution supports
@@ -39,9 +41,10 @@ architectural instruction. That choice follows the manual's instruction-level
 wording; the PCjs receipt does not grade interrupt-shadow timing.
 
 The optional IDT subset supports 286 interrupt gates (type 6) and trap gates
-(type 7) targeting present ring-0 nonconforming code in the GDT. It implements
-`INT imm8`, `INT3`, `INTO`, public hardware interrupt entry, and same-ring
-`IRET`. Software interrupts enforce the gate DPL. The gate selector's RPL is
+(type 7) targeting present nonconforming code in the GDT. It implements
+`INT imm8`, `INT3`, `INTO`, public hardware interrupt entry, same-ring and
+ring-3-to-ring-0 entry, and same-ring or outer `IRET`. Software interrupts
+enforce the gate DPL. The gate selector's RPL is
 ignored on entry and visible CS is normalized to CPL. Entry preflights the
 entire six-byte frame, plus the two-byte error code where applicable, before
 writing. The observable push order is FLAGS, CS, IP, then error code. Both gate
@@ -70,8 +73,9 @@ stack word accesses check the full span before the first bus cycle. Instruction
 fetch checks every byte against the unwrapped logical CS offset, so decoding at
 `CS:FFFF` cannot continue from `CS:0000`.
 `pc` reports cached-CS-base plus IP. `getProtectedState()` and
-`setProtectedState()` include the visible registers, hidden caches, MSW,
-GDTR/IDTR, CPL, halt state, interrupt shadow, and cycle counter.
+`setProtectedState()` include the visible registers, hidden segment caches,
+MSW, GDTR/IDTR, cached LDTR/TR state, CPL, halt state, SS and STI interrupt
+shadows, and cycle counter.
 
 ```js
 import ProtectedI80286 from '../src/experimental/i80286-protected.js';
@@ -88,7 +92,7 @@ conforming and expand-down segments, nested/double-fault delivery,
 far `CALL`/`RET`, TF single-step delivery, and all opcodes or address forms
 outside the lists above. With delivery disabled, a supported protection fault
 is surfaced as `ProtectedModeFault` with vector, error code, and restart IP.
-With delivery enabled, #UD, #NP, #SS, and #GP raised by the bounded decoder are
+With delivery enabled, #UD, #TS, #NP, #SS, and #GP raised by the bounded decoder are
 restored to their instruction boundary and delivered through a valid supported
 gate; #NP/#SS/#GP push their error code. A malformed public hardware-interrupt
 gate still surfaces the diagnostic fault instead of recursively synthesizing
