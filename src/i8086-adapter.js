@@ -73,20 +73,26 @@ export function createI8086Adapter(opts = {}) {
     }
 
     /**
-     * Auto-wire a PS/2 keyboard the way the 6502/z80 adapters do (bridgePS2),
-     * but onto an 8255: when a drawn board carries a `ps2` part whose data lines
-     * reach a PPI port and whose DA line reaches a PPI status bit, bridge the
-     * board's PS2Keyboard to that port via ps2On8255 and attach the capture so
-     * it is clocked each step. The wiring is INFERRED from the nets, so a learner
-     * draws a keyboard onto the board and it just works — the same shape as
-     * ps2OnVia's board detection, expressed for the PPI's ports.
+     * Auto-wire a PS/2 device the way the 6502/z80 adapters do (bridgePS2), but
+     * onto an 8255: when a drawn board carries a `ps2` (keyboard) or `ps2mouse`
+     * part whose data lines reach a PPI port and whose DA line reaches a PPI
+     * status bit, bridge the board's device to that port via ps2On8255 and
+     * attach the capture so it is clocked each step. Keyboard and mouse are the
+     * same on the wire — any device the board exposes with a byte `fifo` rides
+     * the identical bridge — so a mouse auto-wires exactly as the keyboard does.
+     * The wiring is INFERRED from the nets; undrawn, a keyboard defaults to port
+     * A (0x60) and a mouse to port B so a board with both does not collide.
      */
     function bridgePS2(b) {
         if (!b || !b.parts || !b.nets) return;
         for (const part of b.parts) {
-            if (part.kind !== 'ps2') continue;
+            const isMouse = part.kind === 'ps2mouse';
+            if (part.kind !== 'ps2' && !isMouse) continue;
             const state = b.getDeviceState?.(part.id);
-            if (!state || !state._kbd) continue;
+            // Keyboard and mouse are the same on the wire: any device the board
+            // exposes with a byte `fifo` rides the identical capture + bridge.
+            const device = state && (state._kbd ?? state._mouse ?? state._ps2);
+            if (!device || !Array.isArray(device.fifo)) continue;
             let ppiName = null, port = null, strobePort = 'c', strobeBit = 0;
             const partOf = (id) => b.partMap ? b.partMap.get(id) : b.parts.find((pp) => pp.id === id);
             for (const net of b.nets) {
@@ -105,14 +111,16 @@ export function createI8086Adapter(opts = {}) {
                     if (m) { strobePort = m[1].toLowerCase(); strobeBit = Number(m[2]); }
                 }
             }
-            if (!port) port = 'a';                                      // XT convention: scancode byte at port A (0x60)
+            // Undrawn default: keyboard on port A (the XT 0x60 convention), a
+            // mouse on port B so a board carrying BOTH does not silently collide.
+            if (!port) port = isMouse ? 'b' : 'a';
             const chipEntry = config.chips.find((c) => c.kind === 'ppi' && (c.name === ppiName || !ppiName));
             if (!chipEntry) continue;
             const ppi = machine.chips[chipEntry.name];
             if (!ppi) continue;
             for (let i = 0; i < 8; i++) ps2Pins.add(`${chipEntry.name}.P${port.toUpperCase()}${i}`);
             ps2Pins.add(`${chipEntry.name}.P${strobePort.toUpperCase()}${strobeBit}`);
-            machine.attachDevice(`ps2_${part.id}`, ps2On8255(state._kbd, ppi, { port, strobePort, strobeBit }));
+            machine.attachDevice(`ps2_${part.id}`, ps2On8255(device, ppi, { port, strobePort, strobeBit }));
         }
     }
 

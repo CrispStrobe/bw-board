@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createI8086Adapter } from '../src/i8086-adapter.js';
 import { BLINK80286 } from '../src/i8086-machine.js';
-import PS2Keyboard, { SCAN_CODES } from '../src/ps2.js';
+import PS2Keyboard, { PS2Mouse, SCAN_CODES } from '../src/ps2.js';
 
 // A minimal board carrying a `ps2` part wired to ppi1: d0-d7 -> PA0-PA7 (the PC
 // 0x60 convention), da -> PC0 (a status bit a program polls).
@@ -55,6 +55,32 @@ test('syncInputs does not clobber the PS/2-owned pins (the capture owns port A)'
     // port A — the PS/2 bridge owns those inputs, so the latched byte survives.
     adapter.syncInputs();
     assert.equal(ppi.read(0) & 0xff, SCAN_CODES.a, 'the latched scancode survived syncInputs');
+});
+
+test('attachBoard auto-wires a drawn PS/2 MOUSE onto the 286 8255 (port B, undrawn)', () => {
+    const mouse = new PS2Mouse();
+    const parts = [{ id: 'mouse1', kind: 'ps2mouse' }, { id: 'ppi1', kind: 'ppi' }];
+    // Data lines wired to port B; DA to PC1 (a distinct status bit from the kbd).
+    const nets = [
+        ...Array.from({ length: 8 }, (_, i) => ({ terminals: [{ part: 'mouse1', terminal: `d${i}` }, { part: 'ppi1', terminal: `PB${i}` }] })),
+        { terminals: [{ part: 'mouse1', terminal: 'da' }, { part: 'ppi1', terminal: 'PC1' }] },
+    ];
+    const board = {
+        parts, nets, partMap: new Map(parts.map((p) => [p.id, p])),
+        getDeviceState: (id) => (id === 'mouse1' ? { _mouse: mouse } : null),
+        readPin: () => 0, setPin() {}, advanceTo() {},
+    };
+    const adapter = createI8086Adapter({ config: BLINK80286 });
+    adapter.attachBoard(board);
+    assert.ok(adapter.machine.devices && adapter.machine.devices.ps2_mouse1, 'the mouse capture auto-attached');
+
+    mouse.move(7, 0);                        // a 3-byte packet
+    const cap = adapter.machine.devices.ps2_mouse1;
+    const ppi = adapter.machine.chips.ppi1;
+    const b1 = (cap.advance(2000), ppi.read(1) & 0xff);   // byte 1 (buttons/signs) on port B
+    const dx = (cap.advance(2000), ppi.read(1) & 0xff);   // byte 2 (X)
+    assert.equal(b1 & 0x08, 0x08, 'the always-1 bit marks a mouse packet on port B');
+    assert.equal(dx, 7, 'the X delta reached port B');
 });
 
 test('no PS/2 part on the board means no bridge and no skipped pins', () => {
