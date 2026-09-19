@@ -128,6 +128,14 @@ shadows as MOV SS. A pinned 386EX profile grades 30 fixed real-mode samples;
 protected selector faults and page ordering are covered by owned tests rather
 than claimed as hardware-oracle coverage.
 
+The basic ALU families cover ADD, OR, ADC, SBB, AND, SUB, XOR, and CMP through
+their accumulator-immediate, ModRM direction, and group-1 immediate encodings
+at byte, word, and dword widths. ADC/SBB include carry or borrow in result and
+status-flag calculation. Memory-writing forms establish write permission and
+paging intent before reading the destination; CMP remains read-only. A pinned
+386EX profile grades 42 fixed OR/ADC/SBB/AND cases under the capture's published
+flag masks and does not infer values for undefined flags.
+
 Single-iteration MOVS, CMPS, STOS, LODS, and SCAS implement independent
 operand/address sizes, source overrides, fixed ES destinations, and DF index
 direction. REP/REPE/REPNE execute one string iteration per executor step. A

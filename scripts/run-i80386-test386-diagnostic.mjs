@@ -36,6 +36,13 @@ if (
 }
 const sourceRoot = resolve(args.source);
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const localSources = ["./run-i80386-test386-diagnostic.mjs", "../src/experimental/i80386.js"];
+const localSourceHashes = Object.fromEntries(
+  localSources.map((path) => [
+    path,
+    hash(readFileSync(new URL(path, import.meta.url))),
+  ]),
+);
 const git = (cwd, ...gitArgs) =>
   execFileSync("git", gitArgs, { cwd, encoding: "utf8" }).trim();
 const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -49,6 +56,7 @@ const sourceStatus = execFileSync("git", ["status", "--porcelain"], {
 if (sourceRevision !== provenance.revision || sourceStatus !== "") {
   throw new Error("test386 source checkout is not clean at the pinned revision");
 }
+const executionRevision = git(repositoryRoot, "rev-parse", "HEAD");
 const ram = new Map();
 const post = [];
 const output = [];
@@ -111,7 +119,17 @@ if (git(sourceRoot, "rev-parse", "HEAD") !== sourceRevision ||
     git(sourceRoot, "status", "--porcelain") !== "") {
   throw new Error("test386 source provenance changed during execution");
 }
-const localSources = ["./run-i80386-test386-diagnostic.mjs", "../src/experimental/i80386.js"];
+if (
+  hash(readFileSync(resolve(args.rom))) !== EXPECTED ||
+  hash(readFileSync(resolve(args.provenance))) !== hash(provenanceBytes) ||
+  git(repositoryRoot, "rev-parse", "HEAD") !== executionRevision ||
+  localSources.some(
+    (path) =>
+      hash(readFileSync(new URL(path, import.meta.url))) !== localSourceHashes[path],
+  )
+) {
+  throw new Error("test386 input or local execution source changed during execution");
+}
 const report = {
   schema: "astra.i80386-test386-diagnostic.v1",
   accepted: false,
@@ -119,7 +137,7 @@ const report = {
   scope:
     "unchanged pinned test386 capture ROM; diagnostic progress only, no full-ROM or hardware-timing claim",
   node: process.version, steps, post, output: Buffer.from(output).toString("latin1"), blocker,
-  executionRevision: git(repositoryRoot, "rev-parse", "HEAD"),
+  executionRevision,
   instructionBudget: budget,
   input: {
     bytes: rom.length,
@@ -128,12 +146,7 @@ const report = {
     revision: sourceRevision,
     sourceClean: true,
   },
-  sourceHashes: Object.fromEntries(
-    localSources.map((path) => [
-      path,
-      hash(readFileSync(new URL(path, import.meta.url))),
-    ]),
-  ),
+  sourceHashes: localSourceHashes,
 };
 writeFileSync(resolve(args.out), JSON.stringify(report, null, 2) + "\n");
 console.log(JSON.stringify(report, null, 2));

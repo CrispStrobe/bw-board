@@ -38,6 +38,10 @@ const PROFILES={
     files:['C4','C5','0FB2','0FB4','0FB5','66C4','66C5','660FB2','660FB4','660FB5'],
     scope:'30 fixed deterministic LES/LDS/LSS/LFS/LGS samples covering 16-bit and 32-bit pointer offsets',
   },
+  'alu-complete':{
+    files:['08','09','10','11','18','19','20','21','80.2','81.3','0C','15','1D','25'],
+    scope:'42 fixed deterministic OR/ADC/SBB/AND samples spanning ModRM, group-1, accumulator, byte, and word forms',
+  },
 };
 const profileName=process.env.I386_MOO_PROFILE??'add-sizes',profile=PROFILES[profileName];
 if(!profile)throw new Error(`unknown I386_MOO_PROFILE ${profileName}`);

@@ -608,15 +608,15 @@ export class ExperimentalI80386 {
     if (parity8(r)) this.eflags |= PF;
     return width === 32 ? r >>> 0 : r;
   }
-  _add(a, b, width, subtract = false) {
+  _add(a, b, width, subtract = false, carry = 0) {
     const mask = maskFor(width),
       sign = width === 32 ? 0x80000000 : width === 16 ? 0x8000 : 0x80;
     const am = width === 32 ? a >>> 0 : a & mask,
       bm = width === 32 ? b >>> 0 : b & mask;
-    const raw = subtract ? am - bm : am + bm,
+    const raw = subtract ? am - bm - carry : am + bm + carry,
       r = width === 32 ? raw >>> 0 : raw & mask;
     this.eflags &= ~(CF | PF | AF | ZF | SF | OF);
-    if (subtract ? am < bm : raw > mask) this.eflags |= CF;
+    if (subtract ? am < bm + carry : raw > mask) this.eflags |= CF;
     if (((am ^ bm ^ r) & 0x10) !== 0) this.eflags |= AF;
     if (!r) this.eflags |= ZF;
     if (r & sign) this.eflags |= SF;
@@ -628,6 +628,22 @@ export class ExperimentalI80386 {
     )
       this.eflags |= OF;
     return r;
+  }
+  _alu(operation, left, right, width) {
+    if (operation === 0x00) return this._add(left, right, width);
+    if (operation === 0x08) return this._setLogic(left | right, width);
+    if (operation === 0x10)
+      return this._add(left, right, width, false, this.eflags & CF ? 1 : 0);
+    if (operation === 0x18)
+      return this._add(left, right, width, true, this.eflags & CF ? 1 : 0);
+    if (operation === 0x20) return this._setLogic(left & right, width);
+    if (operation === 0x28) return this._add(left, right, width, true);
+    if (operation === 0x30) return this._setLogic(left ^ right, width);
+    if (operation === 0x38) {
+      this._add(left, right, width, true);
+      return null;
+    }
+    throw new UnsupportedI80386("ALU operation");
   }
   _push(v, width) {
     const bytes = width >>> 3,
@@ -1383,26 +1399,14 @@ export class ExperimentalI80386 {
     )
       throw new I80386Fault(6, null, "REP prefix on non-string instruction");
     if (
-      [
-        0x04, 0x05, 0x0c, 0x0d, 0x24, 0x25, 0x2c, 0x2d, 0x34, 0x35, 0x3c, 0x3d,
-      ].includes(op)
+      op < 0x40 && (op & 7) >= 4 && (op & 7) <= 5
     ) {
       const byte = !(op & 1),
         operation = op & 0x38,
         operandWidth = byte ? 8 : width,
         left = byte ? this.al : this._reg(0, operandWidth),
         right = this._fetchN(operandWidth >>> 3);
-      let result = null;
-      if (operation === 0) result = this._add(left, right, operandWidth);
-      else if (operation === 8)
-        result = this._setLogic(left | right, operandWidth);
-      else if (operation === 0x20)
-        result = this._setLogic(left & right, operandWidth);
-      else if (operation === 0x28)
-        result = this._add(left, right, operandWidth, true);
-      else if (operation === 0x30)
-        result = this._setLogic(left ^ right, operandWidth);
-      else this._add(left, right, operandWidth, true);
+      const result = this._alu(operation, left, right, operandWidth);
       if (result !== null) {
         if (byte) this.al = result;
         else this._setReg(0, operandWidth, result);
@@ -1459,7 +1463,9 @@ export class ExperimentalI80386 {
       if (exchangeWidth === 8) this._setReg8(ea.reg, memoryOrRegister);
       else this._setReg(ea.reg, exchangeWidth, memoryOrRegister);
     } else if (
-      [0x00, 0x02, 0x28, 0x2a, 0x30, 0x32, 0x38, 0x3a, 0x88, 0x8a].includes(op)
+      (op < 0x40 && (op & 7) <= 3 && !(op & 1)) ||
+      op === 0x88 ||
+      op === 0x8a
     ) {
       const ea = this._decodeEA(address32, override),
         toReg = !!(op & 2);
@@ -1473,23 +1479,19 @@ export class ExperimentalI80386 {
         this.cycles++;
         return 1;
       }
-      if (!toReg && op !== 0x38) this._operandPreflightWrite(ea, 8);
+      const operation = op & 0x38;
+      if (!toReg && operation !== 0x38) this._operandPreflightWrite(ea, 8);
       const src = toReg ? this._operandRead(ea, 8) : this._reg8(ea.reg),
         dst = toReg ? this._reg8(ea.reg) : this._operandRead(ea, 8);
-      let out = src;
-      if (op < 0x20) out = this._add(dst, src, 8);
-      else if (op < 0x30) out = this._add(dst, src, 8, true);
-      else if (op < 0x38) out = this._setLogic(dst ^ src, 8);
-      else {
-        this._add(dst, src, 8, true);
-        out = null;
-      }
+      const out = this._alu(operation, dst, src, 8);
       if (out !== null) {
         if (toReg) this._setReg8(ea.reg, out);
         else this._operandWrite(ea, 8, out);
       }
     } else if (
-      [0x01, 0x03, 0x29, 0x2b, 0x31, 0x33, 0x39, 0x3b, 0x89, 0x8b].includes(op)
+      (op < 0x40 && (op & 7) <= 3 && (op & 1)) ||
+      op === 0x89 ||
+      op === 0x8b
     ) {
       const ea = this._decodeEA(address32, override),
         toReg = !!(op & 2);
@@ -1503,19 +1505,13 @@ export class ExperimentalI80386 {
         this.cycles++;
         return 1;
       }
-      if (!toReg && op !== 0x39) this._operandPreflightWrite(ea, width);
+      const operation = op & 0x38;
+      if (!toReg && operation !== 0x38) this._operandPreflightWrite(ea, width);
       const src = toReg
           ? this._operandRead(ea, width)
           : this._reg(ea.reg, width),
         dst = toReg ? this._reg(ea.reg, width) : this._operandRead(ea, width);
-      let out = src;
-      if (op < 0x20) out = this._add(dst, src, width);
-      else if (op < 0x30) out = this._add(dst, src, width, true);
-      else if (op < 0x38) out = this._setLogic(dst ^ src, width);
-      else if (op < 0x40) {
-        this._add(dst, src, width, true);
-        out = null;
-      }
+      const out = this._alu(operation, dst, src, width);
       if (out !== null) {
         if (toReg) this._setReg(ea.reg, width, out);
         else this._operandWrite(ea, width, out);
@@ -1551,6 +1547,10 @@ export class ExperimentalI80386 {
       let out;
       if (ea.reg === 0) out = this._add(dst, imm, groupWidth);
       else if (ea.reg === 1) out = this._setLogic(dst | imm, groupWidth);
+      else if (ea.reg === 2)
+        out = this._add(dst, imm, groupWidth, false, this.eflags & CF ? 1 : 0);
+      else if (ea.reg === 3)
+        out = this._add(dst, imm, groupWidth, true, this.eflags & CF ? 1 : 0);
       else if (ea.reg === 4) out = this._setLogic(dst & imm, groupWidth);
       else if (ea.reg === 5) out = this._add(dst, imm, groupWidth, true);
       else if (ea.reg === 6) out = this._setLogic(dst ^ imm, groupWidth);
