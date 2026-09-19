@@ -2,7 +2,7 @@ name: 80286 qualification
 
 on:
   push:
-    branches: ['lane/astra-286-integration', 'lane/astra-x86-next']
+    branches: ['lane/astra-286-integration', 'lane/astra-x86-next', 'lane/astra-x86-idt']
   workflow_dispatch:
     inputs:
       evidence:
@@ -47,7 +47,7 @@ jobs:
             machines/modules/v2
             machines/pcx86/modules/v2
           sparse-checkout-cone-mode: false
-      - name: Compare the bounded protected-mode bootstrap with PCjs
+      - name: Compare the bounded protected-mode bootstrap and IDT gates with PCjs
         env:
           PCJS_ROOT: ${{ github.workspace }}/pcjs
         run: |
@@ -61,6 +61,25 @@ jobs:
           node --input-type=module -e 'import fs from "node:fs";fs.writeFileSync(process.env.RECEIPT_DIR+"/context.json",JSON.stringify({schemaVersion:1,revision:process.env.GITHUB_SHA,pcjsRevision:"c7f21b4fa2bdedac3d5c73094a6402fdc8b24c70",node:process.version,run:process.env.GITHUB_RUN_ID,attempt:process.env.GITHUB_RUN_ATTEMPT,scope:"bounded protected-286 PCjs semantic oracle"},null,2)+"\n",{flag:"wx"});'
           node scripts/compare-pcjs-protected286.mjs \
             | tee "$RECEIPT_DIR/pcjs-protected286.json"
+          node scripts/compare-pcjs-protected286-idt.mjs \
+            | tee "$RECEIPT_DIR/pcjs-protected286-idt.json"
+          for mutation in frame if restart; do
+            if IDT_ORACLE_MUTATION="$mutation" node scripts/compare-pcjs-protected286-idt.mjs \
+              > "$RECEIPT_DIR/rejected-$mutation.json"; then
+              echo "IDT oracle failed to reject $mutation mutation" >&2
+              exit 1
+            fi
+            MUTATION="$mutation" RECEIPT="$RECEIPT_DIR/rejected-$mutation.json" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const report=JSON.parse(fs.readFileSync(process.env.RECEIPT));
+          const expected=process.env.MUTATION === 'restart' ? 'generalProtection' : 'interruptGate';
+          assert.equal(report.mutation,process.env.MUTATION);
+          assert.equal(report.status,'fail');
+          assert.equal(report.differences.length,1);
+          assert.equal(report.differences[0].case,expected);
+          NODE
+          done
       - name: Upload the fresh protected-mode PCjs receipt
         if: ${{ always() && env.RECEIPT_DIR != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -18,19 +18,24 @@ export class ProtectedModeFault extends Error {
 
 export const SEG_ES = 0, SEG_CS = 1, SEG_SS = 2, SEG_DS = 3;
 const IDS = [SEG_ES, SEG_CS, SEG_SS, SEG_DS];
+const TF = 0x0100, IF = 0x0200, OF = 0x0800, NT = 0x4000;
+const ERROR_CODE_VECTORS = new Set([11, 12, 13]);
 
 /**
  * Experimental, deliberately bounded 80286 protected-mode executor.
  *
- * It implements ring-0, GDT-only, expand-up 16-bit code/data segments.  It
- * executes enough real instructions to enter protected mode and prove cached
- * 24-bit addressing.  Gates, tasks, LDT, privilege changes, expand-down
- * segments, REP, and protected interrupt delivery fail before execution.
+ * It implements ring-0, GDT-only, expand-up 16-bit code/data segments. It
+ * executes enough real instructions to enter protected mode, prove cached
+ * 24-bit addressing, and optionally deliver same-ring interrupt/trap gates.
+ * Tasks, LDT, privilege changes, expand-down segments, and REP fail before
+ * execution.
  */
 export class ProtectedI80286 extends I8086 {
-    constructor(bus) {
+    constructor(bus, {deliverProtectedFaults = false} = {}) {
         super(bus, {variant: '80286'});
         this._protectedCapable = true;
+        this.deliverProtectedFaults = !!deliverProtectedFaults;
+        this._deliveringProtected = false;
     }
 
     reset() { super.reset(); this.cpl = 0; this._initRealCaches(); }
@@ -56,7 +61,7 @@ export class ProtectedI80286 extends I8086 {
         throw new ProtectedModeFault(vector, errorCode, this._instrStartIp ?? this.ip, reason);
     }
 
-    _descriptor(selector, target) {
+    _descriptor(selector, target, {ignoreRpl = false} = {}) {
         selector &= 0xffff;
         if (selector & 4) throw new UnsupportedProtectedMode('LDT selectors');
         const offset = selector & 0xfff8;
@@ -73,14 +78,15 @@ export class ProtectedI80286 extends I8086 {
         const code = !!(access & 8), writable = !code && !!(access & 2);
         const readable = !code || !!(access & 2), expandDown = !code && !!(access & 4);
         if (!(access & 0x10)) throw new UnsupportedProtectedMode('system descriptors');
-        if (dpl !== 0 || (selector & 3) !== 0 || this.cpl !== 0) throw new UnsupportedProtectedMode('privilege levels other than ring 0');
+        if (dpl !== 0 || (!ignoreRpl && (selector & 3) !== 0) || this.cpl !== 0) throw new UnsupportedProtectedMode('privilege levels other than ring 0');
         if (expandDown) throw new UnsupportedProtectedMode('expand-down segments');
         if (target === SEG_CS && (access & 4)) throw new UnsupportedProtectedMode('conforming code segments');
         if (target === SEG_CS && !code) this._pmFault(13, selector & 0xfffc, 'far jump requires code');
         if (target === SEG_SS && (code || !writable)) this._pmFault(13, selector & 0xfffc, 'SS requires writable data');
         if ((target === SEG_DS || target === SEG_ES) && code && !readable) this._pmFault(13, selector & 0xfffc, 'unreadable code data segment');
         if (!present) this._pmFault(target === SEG_SS ? 12 : 11, selector & 0xfffc, 'segment not present');
-        return {selector, base: (b[2] | (b[3] << 8) | (b[4] << 16)) >>> 0,
+        return {selector:ignoreRpl ? (selector & 0xfffc) | this.cpl : selector,
+            base: (b[2] | (b[3] << 8) | (b[4] << 16)) >>> 0,
             limit: b[0] | (b[1] << 8), access: access | 1, code, writable, readable,
             descriptorAccessAddress: a + 5, accessedWasSet: !!(access & 1)};
     }
@@ -162,6 +168,16 @@ export class ProtectedI80286 extends I8086 {
     }
 
     _execProtected(op) {
+        if (op === 0xcc) { this._deliverProtected(3, {software:true, returnIp:this.ip}); return 23; }
+        if (op === 0xcd) {
+            const vector = this._pmFetch8();
+            this._deliverProtected(vector, {software:true, returnIp:this.ip}); return 23;
+        }
+        if (op === 0xce) {
+            if (this.flags & OF) this._deliverProtected(4, {software:true, returnIp:this.ip});
+            return 4;
+        }
+        if (op === 0xcf) { this._iretProtected(); return 17; }
         if (op === 0xea) {
             const ip = this._pmFetch16(), selector = this._pmFetch16();
             const descriptor = this._descriptor(selector, SEG_CS);
@@ -232,11 +248,88 @@ export class ProtectedI80286 extends I8086 {
     _pmPush(value) { const sp = (this.sp - 2) & 0xffff; this._wr16(SEG_SS, sp, value); this.sp = sp; }
     _pmPop() { const value = this._rd16(SEG_SS, this.sp); this.sp = (this.sp + 2) & 0xffff; return value; }
 
+    _readPhysical16(address) {
+        address &= 0xffffff;
+        if (this.busTrace !== null) this.busTrace.push(1, address, 1, (address + 1) & 0xffffff);
+        return (this.read(address) & 0xff) | ((this.read((address + 1) & 0xffffff) & 0xff) << 8);
+    }
+
+    _gate(vector, software, external) {
+        vector &= 0xff;
+        const errorCode = (vector << 3) | 2 | (external ? 1 : 0), offset = vector << 3;
+        if (offset + 7 > this.idtr.limit) this._pmFault(13, errorCode, 'IDT vector outside limit');
+        const address = (this.idtr.base + offset) & 0xffffff;
+        const targetOffset = this._readPhysical16(address);
+        const selector = this._readPhysical16(address + 2);
+        const reserved = this._readPhysical16(address + 4);
+        const tail = this._readPhysical16(address + 6);
+        const access = (reserved >> 8) & 0xff, type = access & 0x1f, dpl = (access >> 5) & 3;
+        if ((reserved & 0xff) || tail) throw new UnsupportedProtectedMode('nonzero 286 IDT gate reserved fields');
+        if (type === 5) throw new UnsupportedProtectedMode('task gates');
+        if (type !== 6 && type !== 7) this._pmFault(13, errorCode, 'unsupported IDT gate type');
+        if (software && this.cpl > dpl) this._pmFault(13, errorCode, 'software interrupt gate privilege');
+        if (!(access & 0x80)) this._pmFault(11, errorCode, 'IDT gate not present');
+        return {selector, offset:targetOffset, interrupt:type === 6};
+    }
+
+    _writeFrameWord(address, value) {
+        address &= 0xffffff;
+        if (this.busTrace !== null) this.busTrace.push(2, address, 2, (address + 1) & 0xffffff);
+        this.write(address, value & 0xff); this.write((address + 1) & 0xffffff, (value >> 8) & 0xff);
+    }
+
+    _deliverProtected(vector, {software=false, external=false, returnIp=this.ip, errorCode=null} = {}) {
+        if (!this.deliverProtectedFaults) throw new UnsupportedProtectedMode('interrupt/IDT delivery');
+        if (this._deliveringProtected) throw new UnsupportedProtectedMode('nested exception/double-fault delivery');
+        this._deliveringProtected = true;
+        try {
+            const gate = this._gate(vector, software, external);
+            let descriptor;
+            try { descriptor = this._descriptor(gate.selector, SEG_CS, {ignoreRpl:true}); }
+            catch (e) {
+                if (external && e instanceof ProtectedModeFault) e.errorCode |= 1;
+                throw e;
+            }
+            const pushesError = errorCode !== null;
+            const bytes = pushesError ? 8 : 6;
+            const newSp = (this.sp - bytes) & 0xffff;
+            const frameAddress = this._linear(SEG_SS, newSp, bytes, 'write');
+            if (gate.offset > descriptor.limit) this._pmFault(13, 0, 'gate offset outside code segment');
+            const savedFlags = this.flags, savedCs = this.cs;
+            let nextFlags = savedFlags & ~(TF | NT);
+            if (gate.interrupt) nextFlags &= ~IF;
+            this._commitDescriptor(SEG_CS, descriptor);
+            // Preserve the architectural bus order after the whole frame has
+            // been preflighted: FLAGS, CS, IP, then the optional error code.
+            this._writeFrameWord(frameAddress + bytes - 2, savedFlags);
+            this._writeFrameWord(frameAddress + bytes - 4, savedCs);
+            this._writeFrameWord(frameAddress + bytes - 6, returnIp);
+            if (pushesError) this._writeFrameWord(frameAddress, errorCode);
+            this.sp = newSp; this.ip = gate.offset; this.flags = nextFlags;
+            this.halted = false;
+        } finally { this._deliveringProtected = false; }
+    }
+
+    _iretProtected() {
+        if (!this.deliverProtectedFaults) throw new UnsupportedProtectedMode('IRET/IDT delivery');
+        if (this.flags & NT) throw new UnsupportedProtectedMode('nested-task IRET');
+        if (this.sp > 0xfffa) this._pmFault(12, 0, 'IRET frame wraps stack');
+        this._linear(SEG_SS, this.sp, 6, 'read');
+        const ip = this._rd16(SEG_SS, this.sp);
+        const selector = this._rd16(SEG_SS, this.sp + 2);
+        const flags = this._rd16(SEG_SS, this.sp + 4);
+        const descriptor = this._descriptor(selector, SEG_CS);
+        if (ip > descriptor.limit) this._pmFault(13, 0, 'IRET offset outside code segment');
+        this._commitDescriptor(SEG_CS, descriptor);
+        this.sp = (this.sp + 6) & 0xffff; this.ip = ip;
+        this.flags = (flags | 0x0002) & ~0x8028;
+    }
+
     step() {
         if (!(this.msw & 1)) return super.step();
         if (this.halted) return 0;
         const snapshot = this.getProtectedState();
-        if ((this.msw & 1) && (this.flags & 0x0100)) {
+        if ((this.msw & 1) && (this.flags & TF)) {
             throw new UnsupportedProtectedMode('trap/IDT delivery');
         }
         try {
@@ -247,12 +340,25 @@ export class ProtectedI80286 extends I8086 {
                 this._pmOverride = op === 0x26 ? SEG_ES : op === 0x2e ? SEG_CS : op === 0x36 ? SEG_SS : SEG_DS;
                 op = this._pmFetch8();
             }
-            const cycles = this._execProtected(op); this.cycles += cycles; return cycles;
+            const cycles = this._execProtected(op);
+            this.cycles += cycles; return cycles;
         }
         catch (e) {
-            if (e instanceof ProtectedModeFault || e instanceof UnsupportedProtectedMode) {
+            if (e instanceof ProtectedModeFault) {
                 this.setProtectedState(snapshot);
-                if (e instanceof ProtectedModeFault) e.restartIp = snapshot.ip;
+                e.restartIp = snapshot.ip;
+                if (this.deliverProtectedFaults) {
+                    try {
+                        this._deliverProtected(e.vector, {returnIp:snapshot.ip,
+                            errorCode:ERROR_CODE_VECTORS.has(e.vector) ? e.errorCode : null});
+                        return 0;
+                    } catch (nested) {
+                        this.setProtectedState(snapshot);
+                        throw new UnsupportedProtectedMode(`nested exception/double-fault delivery after #${e.vector}: ${nested.message}`);
+                    }
+                }
+            } else if (e instanceof UnsupportedProtectedMode) {
+                this.setProtectedState(snapshot);
             }
             throw e;
         }
@@ -261,17 +367,32 @@ export class ProtectedI80286 extends I8086 {
     _fault(vector) {
         if (!(this.msw & 1)) return super._fault(vector);
         if (vector === 1) throw new UnsupportedProtectedMode('trap/IDT delivery after PE transition');
+        if (this.deliverProtectedFaults) return this._deliverProtected(vector, {returnIp:this.ip});
         this._pmFault(vector, 0, 'IDT exception delivery is not implemented');
     }
 
     _interrupt(n) {
         if (!(this.msw & 1)) return super._interrupt(n);
+        if (this.deliverProtectedFaults) return this._deliverExternal(n);
         throw new UnsupportedProtectedMode('interrupt/IDT delivery after PE transition');
     }
 
     interrupt(n) {
         if (!(this.msw & 1)) return super.interrupt(n);
+        if (this.deliverProtectedFaults) return this._deliverExternal(n);
         throw new UnsupportedProtectedMode('interrupt/IDT delivery');
+    }
+
+    _deliverExternal(n) {
+        const resumeIp = this.ip;
+        try { return this._deliverProtected(n, {external:true, returnIp:resumeIp}); }
+        catch (e) {
+            // External entry occurs between instructions. A malformed gate is
+            // surfaced diagnostically, so its restart context is the currently
+            // suspended IP rather than the last decoder's _instrStartIp.
+            if (e instanceof ProtectedModeFault) e.restartIp = resumeIp;
+            throw e;
+        }
     }
 
     getProtectedState() {
