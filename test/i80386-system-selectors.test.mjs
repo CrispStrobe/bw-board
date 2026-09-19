@@ -121,6 +121,48 @@ test("LDT index zero is usable while an unloaded LDT reference is #GP", () => {
   assert.equal(loaded.cpu.segmentCaches[3].base, 0x567800);
 });
 
+test("VERR and VERW report selector accessibility through ZF", () => {
+  const cases = [
+    { op: 0xe0, selector: 0x08, access: 0x92, zf: true },
+    { op: 0xe8, selector: 0x08, access: 0x92, zf: true },
+    { op: 0xe0, selector: 0x08, access: 0x98, zf: false },
+    { op: 0xe8, selector: 0x08, access: 0x9a, zf: false },
+    { op: 0xe0, selector: 0x0b, access: 0x9e, cpl: 3, zf: true },
+    { op: 0xe0, selector: 0x0b, access: 0x12, cpl: 3, zf: false },
+    { op: 0xe0, selector: 0, access: null, zf: false },
+    { op: 0xe0, selector: 0x10, access: null, zf: false },
+  ];
+  for (const item of cases) {
+    const f = fixture([0x0f, 0x00, item.op]);
+    f.cpu.cr0 = 1;
+    f.cpu.cs = item.cpl ?? 0;
+    f.cpu.gdtr = { base: 0x100, limit: 0x0f };
+    if (item.access !== null)
+      f.put(0x108, descriptor(0, 0xffff, item.access));
+    f.cpu.ax = item.selector;
+    f.cpu.eflags = item.zf ? 2 : 0x42;
+    f.cpu.step();
+    assert.equal(!!(f.cpu.eflags & 0x40), item.zf);
+  }
+});
+
+test("VERR memory-operand paging faults propagate without changing ZF", () => {
+  const f = fixture([0x67, 0x0f, 0x00, 0x25, 0x00, 0x40, 0x00, 0x00]);
+  const put32 = (address, value) =>
+    f.put(address, [value, value >>> 8, value >>> 16, value >>> 24].map(v => v & 255));
+  put32(0x1000, 0x2003);
+  put32(0x2000, 0x0003);
+  f.cpu.cr0 = 0x80000001;
+  f.cpu.cr3 = 0x1000;
+  f.cpu.eflags = 0x42;
+  assert.throws(
+    () => f.cpu.step(),
+    (error) => error?.vector === 14 && error.errorCode === 0,
+  );
+  assert.equal(f.cpu.eflags & 0x40, 0x40);
+  assert.equal(f.cpu.eip, 0);
+});
+
 test("a failed LTR busy-bit write leaves TR unchanged", () => {
   const memory = new Map([[0, 0x0f], [1, 0x00], [2, 0xd8]]);
   const cpu = new I80386({

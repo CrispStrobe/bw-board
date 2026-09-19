@@ -429,6 +429,29 @@ export class ExperimentalI80386 {
       address: a,
     };
   }
+  _verifySelector(selector, write) {
+    if (!(selector & 0xfffc)) return false;
+    let bytes;
+    try {
+      ({ bytes } = this._descriptorBytes(selector));
+    } catch (error) {
+      if (error instanceof I80386Fault && error.vector === 13) return false;
+      throw error;
+    }
+    const access = bytes[5];
+    if (!(access & 0x80) || !(access & 0x10)) return false;
+    const code = !!(access & 8);
+    const conforming = code && !!(access & 4);
+    const readableOrWritable = !!(access & 2);
+    if (write ? code || !readableOrWritable : code && !readableOrWritable)
+      return false;
+    if (!conforming) {
+      const dpl = (access >>> 5) & 3;
+      if (Math.max(this.currentPrivilegeLevel, selector & 3) > dpl)
+        return false;
+    }
+    return true;
+  }
   _markAccessed(descriptor) {
     if (!(descriptor.access & 1)) {
       this._writeLinear(
@@ -2547,7 +2570,7 @@ export class ExperimentalI80386 {
           "system selector instruction is undefined in VM86",
         );
       const ea = this._decodeEA(address32, override);
-      if (ea.reg > 3)
+      if (ea.reg > 5)
         throw new UnsupportedI80386("0F 00 verification instruction");
       if (!this.protectedMode)
         throw new I80386Fault(
@@ -2555,6 +2578,14 @@ export class ExperimentalI80386 {
           null,
           "system selector instruction outside protected mode",
         );
+      if (ea.reg >= 4) {
+        const verified = this._verifySelector(
+          this._operandRead(ea, 16),
+          ea.reg === 5,
+        );
+        this.eflags = verified ? this.eflags | ZF : this.eflags & ~ZF;
+        return;
+      }
       if (ea.reg >= 2) {
         if (this.currentPrivilegeLevel !== 0)
           throw new I80386Fault(13, 0, "LLDT/LTR require CPL0");
