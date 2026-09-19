@@ -151,3 +151,41 @@ test('protected data access respects execute-only and non-writable code descript
   const read=fixture();read.cpu.cr0=1;read.cpu.segmentCaches[1]={base:0,limit:0xffff,default32:true,present:true,code:true,readable:false,writable:false};read.cpu.ebx=0x100;read.put(0,[0x2e,0x8b,3]);const before=read.reads.length;
   assert.throws(()=>read.cpu.step(),/execute-only/);assert.equal(read.reads.length,before);
 });
+
+test("bounded shifts honor operand width, count masking, and count-one overflow", () => {
+  const f = fixture();
+  f.cpu.segmentCaches[1] = {
+    base: 0,
+    limit: 0xffff,
+    default32: true,
+    present: true,
+    code: true,
+    writable: false,
+  };
+  f.cpu.eax = 0x40000001;
+  f.put(0, [0xc1, 0xe0, 1, 0xc1, 0xe8, 1, 0xc1, 0xf8, 1]);
+  f.cpu.step();
+  assert.equal(f.cpu.eax, 0x80000002);
+  assert.equal(f.cpu.eflags & 0x801, 0x800);
+  f.cpu.step();
+  assert.equal(f.cpu.eax, 0x40000001);
+  assert.equal(f.cpu.eflags & 0x801, 0x800);
+  f.cpu.step();
+  assert.equal(f.cpu.eax, 0x20000000);
+  assert.equal(f.cpu.eflags & 0x801, 1);
+  const zero = fixture();
+  zero.cpu.segmentCaches[1] = {
+    base: 0,
+    limit: 0xffff,
+    default32: true,
+    present: true,
+    code: true,
+    writable: false,
+  };
+  zero.cpu.eax = 0x80000000;
+  zero.cpu.ecx = 32;
+  zero.cpu.eflags = 0x8d7;
+  zero.put(0, [0xd3, 0xe0]);
+  zero.cpu.step();
+  assert.deepEqual([zero.cpu.eax, zero.cpu.eflags], [0x80000000, 0x8d7]);
+});
