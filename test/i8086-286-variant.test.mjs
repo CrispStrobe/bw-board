@@ -73,6 +73,74 @@ test("286 PUSH SP pushes the pre-decrement value; POPF/SAHF/IRET use 286 flag se
   assert.equal(popf('80186'), 0xffd7);
 });
 
+test('286 real-mode core retains HMA addresses while 8086/186 retain 20-bit wrapping', () => {
+  const run = (variant) => {
+    const {cpu, mem} = makeCpu(variant);
+    cpu.cs = 0x1000; cpu.ip = 0x100; cpu.ds = 0xffff; cpu.si = 0xffff;
+    mem.set(0x10100, 0x8a); mem.set(0x10101, 0x04); // MOV AL,[SI]
+    mem.set(0x0ffef, 0xa5); mem.set(0x10ffef, 0x5a);
+    cpu.step(); return cpu.al;
+  };
+  assert.equal(run('80286'), 0x5a, '286 exposes the real-mode HMA through its 24-bit bus');
+  assert.equal(run('8086'), 0xa5, '8086 still wraps at 1 MiB');
+  assert.equal(run('80186'), 0xa5, 'existing 8086-family variants still wrap at 1 MiB');
+
+  const fetched = makeCpu('80286');
+  fetched.cpu.cs = 0xffff; fetched.cpu.ip = 0xffff;
+  fetched.mem.set(0x0ffef, 0x90); fetched.mem.set(0x10ffef, 0xf4);
+  fetched.cpu.step(); assert.equal(fetched.cpu.halted, true, 'instruction fetch also retains the high address');
+
+  const traced = makeCpu('80286');
+  traced.cpu.cs = 0x1000; traced.cpu.ip = 0x100; traced.cpu.es = 0xffff; traced.cpu.di = 0xffff; traced.cpu.al = 0x5a;
+  traced.mem.set(0x10100, 0xaa); traced.cpu.busTrace = []; traced.cpu.step();
+  assert.equal(traced.mem.get(0x10ffef), 0x5a);
+  assert.ok(traced.cpu.busTrace.some((value, i, all) => value === 2 && all[i + 1] === 0x10ffef),
+    'traced stores report the same high physical address');
+});
+
+test('286 POP destination #GP retains the completed stack pop before fault entry', () => {
+  const {cpu, mem} = makeCpu('80286');
+  cpu.cs = 0x1000; cpu.ip = 0x100; cpu.ss = 0x2000; cpu.sp = 0x100;
+  cpu.ds = 0; cpu.si = 0xffff; cpu.flags = 2;
+  mem.set(0x10100, 0x8f); mem.set(0x10101, 0x04); // POP word [DS:SI] crosses segment top
+  mem.set(0x20100, 0x34); mem.set(0x20101, 0x12);
+  mem.set(13 * 4, 0x00); mem.set(13 * 4 + 1, 0x03); // #GP -> 0000:0300
+  let vector = null; cpu.onInterrupt = e => { vector = e.vector; };
+  cpu.step();
+  assert.equal(vector, 13);
+  assert.equal(cpu.sp, 0x00fc, 'pop adds two, then fault entry pushes three words');
+  assert.equal(mem.get(0x200fc) | (mem.get(0x200fd) << 8), 0x0100, 'fault restarts POP');
+});
+
+test('286 AAM-zero flags and signed divide endpoints match fault microcode boundaries', () => {
+  const aam = makeCpu('80286');
+  aam.cpu.cs = 0x1000; aam.cpu.ip = 0x100; aam.cpu.ss = 0x2000; aam.cpu.sp = 0x100;
+  aam.cpu.ax = 0x124a; aam.cpu.flags = 0x46;
+  aam.mem.set(0x10100, 0xd4); aam.mem.set(0x10101, 0x00);
+  let aamVector = null; aam.cpu.onInterrupt = e => { aamVector = e.vector; };
+  aam.cpu.step();
+  assert.equal(aamVector, 0, 'AAM zero delivers divide error');
+  assert.equal(aam.cpu.ax, 0x124a, 'fault leaves AX unchanged');
+  assert.equal(aam.cpu.flags & 0xc4, 0, 'SZP comes from the pre-final-shift remainder, not an invented zero');
+
+  const byte = makeCpu('80286');
+  byte.cpu.cs = 0x1000; byte.cpu.ip = 0x100; byte.cpu.ax = 0xff80; byte.cpu.bx = 1;
+  byte.mem.set(0x10100, 0xf6); byte.mem.set(0x10101, 0xfb); // IDIV BL: -128 / 1
+  byte.cpu.step(); assert.equal(byte.cpu.ax, 0x0080, '-128 is a valid signed-byte quotient');
+
+  const anomaly = makeCpu('80286');
+  anomaly.cpu.cs = 0x1000; anomaly.cpu.ip = 0x100; anomaly.cpu.ax = 0x81c1; anomaly.cpu.bx = 0x007c;
+  anomaly.mem.set(0x10100, 0xf6); anomaly.mem.set(0x10101, 0xfb);
+  anomaly.cpu.step();
+  assert.equal(anomaly.cpu.ax, 0xc180, '286 restoring divider retains the -128 overflow endpoint');
+
+  const word = makeCpu('80286');
+  word.cpu.cs = 0x1000; word.cpu.ip = 0x100; word.cpu.dx = 0xffff; word.cpu.ax = 0x8000; word.cpu.bx = 1;
+  word.mem.set(0x10100, 0xf7); word.mem.set(0x10101, 0xfb); // IDIV BX: -32768 / 1
+  word.cpu.step();
+  assert.equal(word.cpu.ax, 0x8000); assert.equal(word.cpu.dx, 0, '-32768 is a valid signed-word quotient');
+});
+
 test("the 80286 0x0F group executes SMSW/LMSW/LGDT/SGDT/CLTS in real mode", () => {
   // Self-contained: flat 1 MB memory so the descriptor-table operands are easy.
   const run = (bytes, before) => {
@@ -146,7 +214,7 @@ test("'80286' is byte-identical to '80186' across random real-mode instructions"
     //   executes: 0x62 BOUND reg-form, 0x63 ARPL, MOV Sreg 0x8c/0x8e (sreg>3, CS),
     //   LEA 0x8d reg-form, POP r/m 0x8f /≠0, LES/LDS 0xc4/0xc5 reg-form,
     //   MOV imm 0xc6/0xc7 /≠0, and the FE/FF group's invalid sub-ops.
-    const DIVERGENT = new Set([0x0f, 0x54, 0x9d, 0x9e, 0xcf, 0x69, 0x6b, 0x27, 0x2f, 0x37, 0x3f,
+    const DIVERGENT = new Set([0x0f, 0x54, 0x9d, 0x9e, 0xcf, 0x69, 0x6b, 0x27, 0x2f, 0x37, 0x3f, 0xd4, 0xf6, 0xf7,
         0x62, 0x63, 0x8c, 0x8d, 0x8e, 0x8f, 0xc4, 0xc5, 0xc6, 0xc7, 0xfe, 0xff]);
     if (DIVERGENT.has(bytes[0])) continue;
     const a = runOne('80186', init, bytes);

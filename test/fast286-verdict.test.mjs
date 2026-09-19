@@ -38,12 +38,24 @@ test('consecutive vectors see fresh zero-filled memory', async () => {
         .map(name => [name, name === 'flags' ? 2 : name === 'ip' ? 0x100 : 0]));
     const firstRegs = regs(); firstRegs.ax = 0xbeef;
     const first = {initial: {regs: firstRegs, ram: [[0x100,0xa3],[0x101,0x00],[0x102,0x02],[0x103,0xf4]]},
-        final: {regs: {ip: 0x104}, ram: [], masks: {}}, exception: null};
+        final: {regs: {ip: 0x104}, ram: [[0x200,0xef],[0x201,0xbe]], masks: {}}, exception: null};
     assert.equal(executeVariant(first, {}).status, 'pass');
     const second = {initial: {regs: regs(), ram: [[0x100,0xa1],[0x101,0x00],[0x102,0x02],[0x103,0xf4]]},
         final: {regs: {ax: 0, ip: 0x104}, ram: [], masks: {}}, exception: null};
     assert.equal(executeVariant(second, {}).status, 'pass',
         'the prior unlisted write at 0x200 must read as zero in the next vector');
+});
+
+test('FAST runner rejects nonzero writes absent from expected final memory', async () => {
+    const {executeVariant} = await import('../scripts/grind-i8086-286.mjs');
+    const regs = Object.fromEntries(['ax','bx','cx','dx','cs','ss','ds','es','sp','bp','si','di','ip','flags']
+        .map(name => [name, name === 'flags' ? 2 : name === 'ip' ? 0x100 : 0]));
+    regs.ax = 0xbeef;
+    const vector = {initial: {regs, ram: [[0x100,0xa3],[0x101,0x00],[0x102,0x02],[0x103,0xf4]]},
+        final: {regs: {ip: 0x104}, ram: [], masks: {}}, exception: null};
+    const result = executeVariant(vector, {});
+    assert.equal(result.status, 'fail');
+    assert.ok(result.diffs.some(diff => diff.address === 0x200 && diff.actual === 0xef && diff.expected === 0));
 });
 
 test('CLI refuses missing corpus and invalid limits before producing a report', () => {

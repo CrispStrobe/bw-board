@@ -14,8 +14,10 @@
  * THREE THINGS DIFFER FROM EVERY OTHER CORE HERE, and each one is a bug
  * waiting to happen in code that assumes the Z80 shape:
  *
- *   - Addresses are TWENTY bits. The bus sees a physical address, not a
- *     16-bit one: (seg << 4) + off, wrapped at 1 MB. There is no A20 gate.
+ *   - 8086/80186 addresses are TWENTY bits. The bus sees a physical address,
+ *     not a 16-bit one: (seg << 4) + off, wrapped at 1 MB. The 80286 variant
+ *     retains its real-mode address above 1 MB; the current breadboard machine
+ *     still decodes only 1 MB and does not claim an AT memory map or A20 gate.
  *   - Offsets wrap at SIXTEEN bits INSIDE the segment. A word read at
  *     offset 0xffff reads offset 0x0000 of the SAME segment for its high
  *     byte -- it does not spill into the next paragraph.
@@ -96,6 +98,23 @@
 /** A 16-bit word read as a signed number -- BOUND and IMUL both need it. */
 const NOOP = () => {};
 const sx16 = (v) => ((v & 0xffff) ^ 0x8000) - 0x8000;
+
+// The Harris 286's eight-step restoring divider can lose high remainder bits
+// on the exceptional byte-IDIV path and land on the accepted -128 endpoint.
+function idiv8Overflow286(numerator, divisor) {
+    if (!divisor || (numerator < 0) === (divisor < 0)) return null;
+    let remainder = Math.abs(numerator) >>> 8;
+    let quotient = Math.abs(numerator) & 0xff;
+    const denominator = Math.abs(divisor);
+    for (let bit = 0; bit < 8; bit++) {
+        remainder = ((remainder << 1) | (quotient >>> 7)) & 0xff;
+        quotient = (quotient << 1) & 0xff;
+        if (remainder >= denominator) { remainder -= denominator; quotient |= 1; }
+    }
+    return quotient === 0x80
+        ? {quotient: -128, remainder: numerator < 0 ? -remainder : remainder}
+        : null;
+}
 
 // Flag bits in FLAGS.
 const CF = 0x0001, PF = 0x0004, AF = 0x0010, ZF = 0x0040, SF = 0x0080;
@@ -281,6 +300,10 @@ export class I8086 {
     /** seg:off to a physical address. Both halves wrap: the offset at 16
      *  bits, the sum at 20 (the 8086 has no A20 gate to hold it open). */
     static phys(seg, off) { return (((seg & 0xffff) << 4) + (off & 0xffff)) & 0xfffff; }
+    _phys(seg, off) {
+        const address = ((seg & 0xffff) << 4) + (off & 0xffff);
+        return this._is286 ? address & 0xffffff : address & 0xfffff;
+    }
 
     /**
      * THE BUS TRACE (E6.8.4c). `cpu.busTrace = []` records the sequence of bus
@@ -316,19 +339,19 @@ export class I8086 {
     // byte-for-byte what it was.
     _rd8(seg, off) {
         return this.busTrace === null
-            ? this.read(I8086.phys(seg, off)) & 0xff
+            ? this.read(this._phys(seg, off)) & 0xff
             : this._rd8Traced(seg, off);
     }
 
     _rd8Traced(seg, off) {
-        const a = I8086.phys(seg, off);
+        const a = this._phys(seg, off);
         this.busTrace.push(1, a);
         return this.read(a) & 0xff;
     }
 
     _wr8(seg, off, v) {
-        if (this.busTrace === null) { this.write(I8086.phys(seg, off), v & 0xff); return; }
-        const a = I8086.phys(seg, off);
+        if (this.busTrace === null) { this.write(this._phys(seg, off), v & 0xff); return; }
+        const a = this._phys(seg, off);
         this.busTrace.push(2, a);
         this.write(a, v & 0xff);
     }
@@ -353,14 +376,14 @@ export class I8086 {
     _fetch8() {
         if (this.busTrace !== null) return this._fetch8Traced();
         if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
-        const b = this.fetch(I8086.phys(this.cs, this.ip)) & 0xff;
+        const b = this.fetch(this._phys(this.cs, this.ip)) & 0xff;
         this.ip = (this.ip + 1) & 0xffff;
         return b;
     }
 
     _fetch8Traced() {
         if (this._is286 && this._ibytes++ >= 10) throw new RealModeFault(13);   // 286 caps an instruction at 10 bytes
-        const a = I8086.phys(this.cs, this.ip);
+        const a = this._phys(this.cs, this.ip);
         // KIND 0 IS AN 'F' AND KIND 5 IS AN 'S', which is the queue-status
         // distinction the 8088 puts on its QS0/QS1 lines: F for the first byte
         // of an instruction OR of a prefix, S for every subsequent byte -- a
@@ -693,11 +716,14 @@ export class I8086 {
         if (d === 0) { this._fault(0); return; }
         const n = this.ax & 0x8000 ? this.ax - 65536 : this.ax;
         let q = Math.trunc(n / d);
-        const r = n % d;
-        // The range check is on the MAGNITUDE, so a quotient of exactly
-        // -128 faults where -127..127 does not: the microcode compares an
-        // absolute value against 0x7f and never sees the sign.
-        if (Math.abs(q) > 127) { this._fault(0); return; }
+        let r = n % d;
+        // The 8086 checks magnitude and rejects -128; the 286 accepts the full
+        // signed-byte range. This endpoint is observable before any REP quirk.
+        if (this._is286 ? (q < -128 || q > 127) : Math.abs(q) > 127) {
+            const endpoint = this._is286 ? idiv8Overflow286(n, d) : null;
+            if (!endpoint) { this._fault(0); return; }
+            q = endpoint.quotient; r = endpoint.remainder;
+        }
         if (this._rep) q = -q;
         this.al = q & 0xff; this.ah = r & 0xff;
     }
@@ -708,7 +734,7 @@ export class I8086 {
         if (n >= 0x80000000) n -= 0x100000000;
         let q = Math.trunc(n / d);
         const r = n % d;
-        if (Math.abs(q) > 32767) { this._fault(0); return; }   // magnitude, as above
+        if (this._is286 ? (q < -32768 || q > 32767) : Math.abs(q) > 32767) { this._fault(0); return; }
         if (this._rep) q = -q;
         this.ax = q & 0xffff; this.dx = r & 0xffff;
     }
@@ -798,10 +824,17 @@ export class I8086 {
      *  divides by zero and takes INT 0 like any other. */
     _aam(base) {
         if (base === 0) {
-            // AAM 0 divides by zero. Before it faults it leaves the flags of
-            // a ZERO result -- ZF and PF set, SF, AF and CF clear -- while AX
-            // itself is untouched, and INT 0 then pushes exactly that.
-            this.flags = (this.flags & ~(CF | AF | OF | SF | PF)) | ZF | PARITY[0];
+            // AAM 0 faults with AX untouched. The 286 leaves SZP from the
+            // divider's pre-final-shift remainder (AL >>> 1); older variants
+            // retain the historical zero-result behavior used by their vectors.
+            if (this._is286) {
+                const value = this.al >>> 1;
+                let f = this.flags & ~(PF | ZF | SF);
+                if (!value) f |= ZF;
+                if (value & 0x80) f |= SF;
+                this.flags = f | PARITY[value & 0xff];
+            }
+            else this.flags = (this.flags & ~(CF | AF | OF | SF | PF)) | ZF | PARITY[0];
             this._fault(0);
             return;
         }
@@ -1468,13 +1501,13 @@ export class I8086 {
             // `read` and a PREFIXED instruction leaks its bytes into the stream
             // while an unprefixed one does not -- a difference nobody reading a
             // log could explain.
-            const b = this.fetch(I8086.phys(this.cs, this.ip)) & 0xff;
+            const b = this.fetch(this._phys(this.cs, this.ip)) & 0xff;
             // Segment prefixes are 26/2E/36/3E; LOCK/REP and their alias
             // occupy F0-F3. Two masked tests keep ordinary opcodes out of
             // the prefix dispatch without changing a single bus fetch.
             if ((b & 0xe7) !== 0x26 && (b & 0xfc) !== 0xf0) {
                 if (this.busTrace !== null) {
-                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, I8086.phys(this.cs, this.ip));
+                    this.busTrace.push(this._fsOpcodeSeen ? 5 : 0, this._phys(this.cs, this.ip));
                     this._fsOpcodeSeen = true;
                     this._seqIp = (this.ip + 1) & 0xffff;
                     this._seqCs = this.cs;
@@ -1485,7 +1518,7 @@ export class I8086 {
             }
             // Not a closure per instruction: allocating one on every step is
             // measurable in a loop this hot, and the trace is off by default.
-            const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, I8086.phys(this.cs, this.ip));
+            const eaten = this.busTrace === null ? NOOP : () => this.busTrace.push(0, this._phys(this.cs, this.ip));
             if (b === 0x26 || b === 0x2e || b === 0x36 || b === 0x3e) {
                 eaten();
                 this.ip = (this.ip + 1) & 0xffff; n += 2;
@@ -1539,7 +1572,7 @@ export class I8086 {
         // comparison rather than a list.
         if (this.busTrace !== null
             && (this._tookBranch || this.ip !== this._seqIp || this.cs !== this._seqCs)) {
-            this.busTrace.push(6, I8086.phys(this.cs, this.ip));
+            this.busTrace.push(6, this._phys(this.cs, this.ip));
         }
 
         // The trap fires after the instruction has completed and committed.
@@ -1695,7 +1728,16 @@ export class I8086 {
             // so there is no behaviour to protect and no evidence they are
             // shadowed. Absent evidence, the narrower answer.
             case 0x8e: { const c = this._modrm(); if (this._is286 && (this.reg > 3 || this.reg === 1)) { this._fault(6); return 0; } this._sregSet(this.reg, this._rm16()); this.intShadow = 1; return this.mod === 3 ? 2 : 8 + c; }
-            case 0x8f: { const c = this._modrm(); if (this._is286 && this.reg !== 0) { this._fault(6); return 0; } this._rm16set(this._pop()); return this.mod === 3 ? 8 : 17 + c; }
+            case 0x8f: {
+                const c = this._modrm();
+                if (this._is286 && this.reg !== 0) { this._fault(6); return 0; }
+                const value = this._pop();
+                // A destination #GP happens after POP has consumed its stack
+                // word. Preserve that committed SP for the fault entry.
+                if (this._is286 && this.mod !== 3) this._restartRegs = this._snap286();
+                this._rm16set(value);
+                return this.mod === 3 ? 8 : 17 + c;
+            }
 
             // ---- 0x90-0x9f ----------------------------------------------
             case 0x90: return 3;                              // NOP = XCHG AX,AX

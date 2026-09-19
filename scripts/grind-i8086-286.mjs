@@ -14,12 +14,13 @@ import {fast286ExitCode, fast286Verdict} from './lib/fast286-verdict.mjs';
 import {I8086} from '../src/i8086.js';
 
 const REGS = ['ax','bx','cx','dx','cs','ss','ds','es','sp','bp','si','di','ip'];
-const mem = new Uint8Array(1 << 20);
-const generation = new Uint32Array(1 << 20);
+const mem = new Uint8Array(1 << 24);
+const generation = new Uint32Array(1 << 24);
 let currentGeneration = 0;
+const writes = new Set();
 const cpu = new I8086({
-    read: (a) => generation[a & 0xfffff] === currentGeneration ? mem[a & 0xfffff] : 0,
-    write: (a, v) => { a &= 0xfffff; mem[a] = v & 0xff; generation[a] = currentGeneration; },
+    read: (a) => generation[a & 0xffffff] === currentGeneration ? mem[a & 0xffffff] : 0,
+    write: (a, v) => { a &= 0xffffff; mem[a] = v & 0xff; generation[a] = currentGeneration; writes.add(a); },
     in: () => 0xff, out: () => {},
 }, {variant: '80286'});
 
@@ -28,8 +29,9 @@ const cpu = new I8086({
 function executeVariant(t, fileMasks) {
     currentGeneration = (currentGeneration + 1) >>> 0;
     if (currentGeneration === 0) { generation.fill(0); currentGeneration = 1; }
+    writes.clear();
     for (const [addr, val] of t.initial.ram) {
-        const a = addr & 0xfffff; mem[a] = val & 0xff; generation[a] = currentGeneration;
+        const a = addr & 0xffffff; mem[a] = val & 0xff; generation[a] = currentGeneration;
     }
     // Fresh internal state each vector: the cpu is reused, and leftover halted /
     // _rep / _seg / msw from the prior test's terminating HALT would corrupt the
@@ -50,7 +52,7 @@ function executeVariant(t, fileMasks) {
         // one past it. Consume it here (matching executeSST286) without
         // corrupting the memory the final state compares against.
         if (!cpu.halted) {
-            const p = ((cpu.cs << 4) + cpu.ip) & 0xfffff;
+            const p = cpu._phys(cpu.cs, cpu.ip);
             const saved = cpu.read(p);
             cpu.write(p, 0xf4);
             cpu.step();
@@ -79,7 +81,8 @@ function executeVariant(t, fileMasks) {
         }
     }
     const expected = new Map([...t.initial.ram, ...t.final.ram]);
-    for (const [addr, val] of expected) {
+    for (const addr of new Set([...expected.keys(), ...writes])) {
+        const val = expected.get(addr) ?? 0;
         // The pushed FLAGS word (at t.exception.flagAddress, two bytes) carries
         // the flags mask so undefined flag bits are not graded; every other byte
         // is compared exactly. Mirrors executeSST286's memory comparison.
