@@ -71,6 +71,9 @@ const TARGETS = {
     },
     ownDomain: 'z80-cycles',
     source: 'src/z80-debug.js',
+    // Extracted to debug-input-admission.js: seed sites are `admission.seed(`, the
+    // dedup write is in the module (not this file), so subtract none.
+    seedSite: {needle: 'admission.seed(', dedupWrites: 0},
     levels: [
       {name: 'keys', set: (t, v) => t.setKeys(v ? ['a'] : ['b']),
         fact: v => ({producer: 'z80.keys', payload: {names: v ? ['a'] : ['b']}})},
@@ -88,6 +91,7 @@ const TARGETS = {
     },
     ownDomain: 'm6502-cycles',
     source: 'src/m6502-debug.js',
+    seedSite: {needle: 'admission.seed(', dedupWrites: 0},
     levels: [
       {name: 'buttons', set: (t, v) => t.setButtons(v ? 0b0001 : 0b0010),
         fact: v => ({producer: 'm6502.buttons', payload: {mask: v ? 0b0001 : 0b0010}})}
@@ -102,6 +106,9 @@ const TARGETS = {
     },
     ownDomain: 'i8086-cycles',
     source: 'src/i8086-debug.js',
+    // Not extracted: seeds via `observedInputs.set(`, one of which is the in-file
+    // dedup write, so subtract it.
+    seedSite: {needle: 'observedInputs.set(', dedupWrites: 1},
     levels: [
       {name: 'gpio', set: (t, v) => t.setInput('ppi1', 'b', 0, v ? 1 : 0),
         fact: v => ({producer: 'i8086.gpio',
@@ -126,13 +133,17 @@ for (const [name, spec] of Object.entries(TARGETS)) {
       // same species this whole surface has been chasing all day, committed in
       // the test for it.
       //
-      // `observedInputs.set(` appears once inside publishInput (the dedup
-      // write) and once per replay SEED. So seeds = occurrences - 1.
+      // The replay SEED site — one per level — counted from the source, minus any
+      // in-file dedup write. z80/m6502 extracted the admission machinery to
+      // debug-input-admission.js, so their seed sites are `admission.seed(` and the
+      // dedup write is in the module (dedupWrites: 0); i8086 still writes
+      // `observedInputs.set(` in-file, so it subtracts its own dedup write.
       const src = readFileSync(new URL(`../${spec.source}`, import.meta.url), 'utf8');
-      const seeds = src.split('observedInputs.set(').length - 1 - 1;
+      const {needle, dedupWrites} = spec.seedSite;
+      const seeds = src.split(needle).length - 1 - dedupWrites;
       assert.equal(spec.levels.length, seeds,
-        `${spec.source} has ${seeds} replay seed sites and this table declares `
-        + `${spec.levels.length} levels: every seed site needs one`);
+        `${spec.source} has ${seeds} replay seed sites (${needle}) and this table `
+        + `declares ${spec.levels.length} levels: every seed site needs one`);
       assert.ok(spec.levels.length >= 1);
     });
 

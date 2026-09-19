@@ -37,6 +37,7 @@
 
 import { RP2040, GPIOPinState, ConsoleLogger, LogLevel } from 'rp2040js';
 import { buildBootrom } from './rp2040-bootrom.js';
+import { fastExecuteInstruction } from './vendor/rp2040js-fast/execute-instruction.js';
 
 export const RAM_START = 0x20000000;
 
@@ -84,6 +85,19 @@ export function createRp2040jsAdapter(opts = {}) {
   const rp2040 = new RP2040();
   const clock = rp2040.clock;
   const core = rp2040.core;
+  // FAST DISPATCH FORK (src/vendor/rp2040js-fast/execute-instruction.js):
+  // rp2040js decodes each Thumb halfword through an 82-branch linear
+  // if/else chain (~57% of emulation time; the RP2040 is the slowest core
+  // on the box). Point THIS core instance's executeInstruction at the
+  // switch-dispatch fork — a behavior-identical restructuring, verified by
+  // an exhaustive stock-vs-fork differential over all 65536 opcodes
+  // (test/rp2040-fast-dispatch-differential.test.mjs). Opt out with
+  // opts.fastDispatch === false (used by the A/B bench for the stock
+  // baseline) — nothing else in the tree passes it, so the app is always
+  // on the fork.
+  if (opts.fastDispatch !== false) {
+    core.executeInstruction = fastExecuteInstruction;
+  }
   // Errors only, and never throw: a program that escapes into unmapped
   // memory logs ONE line per instruction at warn level — a runaway loop
   // floods the host console (298 MB observed) and an emulated program's
@@ -292,5 +306,51 @@ export function createRp2040jsAdapter(opts = {}) {
     timeNs,
 
     stats,
+
+    /** The options this SoC was built with — replaceSoC() reuses them so a
+     *  replacement cannot silently differ in clock or vcc from the original. */
+    opts,
   };
+}
+
+/**
+ * Replace the whole SoC after a reset request, preserving flash.
+ *
+ * ROADMAP R1's remaining half. `machine.reset()` reaches the watchdog hook,
+ * which records a reset request and PARKS the core — rp2040js models the
+ * register and leaves the chip-reset ACTION to its host, deliberately. Nothing
+ * then constructed the replacement, so the machine stopped there: the defect
+ * was a missing consumer, not a broken mechanism.
+ *
+ * WHY A NEW SoC RATHER THAN AN IN-PLACE RESET. `createRp2040jsAdapter` closes
+ * over its `RP2040`, so a power-on cannot be faked by poking fields — and the
+ * triage proved that trying produces the WORSE failure: clearing core state
+ * alone got a second MicroPython banner while peripheral and controller state
+ * survived, so `main.py` still did not run. A half-reset machine that boots is
+ * harder to diagnose than one that visibly stops.
+ *
+ * WHAT SURVIVES, and it is the whole point: flash, because flash survives a
+ * power cycle on silicon. Everything else — USB, GPIO, DMA, alarms, core
+ * registers, peripheral state — returns to power-on values by construction,
+ * because they belong to the discarded `RP2040`.
+ *
+ * WHAT THIS DOES NOT DO, stated so a caller is not surprised: it does not
+ * rebind the HOST's side. A new SoC has a new `usbCtrl`, so a `USBCDC` must be
+ * re-attached to it; a board must be re-attached; `onSerial` must be
+ * re-registered. Those objects belong to the host and the adapter cannot reach
+ * them, which is the boundary the comment above the watchdog hook draws. This
+ * function is the half that is identical for every host; the rebinding is the
+ * half that is not.
+ *
+ * @param {ReturnType<typeof createRp2040jsAdapter>} previous  the parked SoC
+ * @param {object} [opts]  defaults to the previous SoC's own options
+ * @returns {ReturnType<typeof createRp2040jsAdapter>} a fresh SoC, booting the preserved flash
+ */
+export function replaceSoC (previous, opts = previous.opts ?? {}) {
+  // Copy flash OUT before constructing, because createRp2040jsAdapter's
+  // loadBootrom() resets the new SoC and that fills flash with 0xff.
+  const preserved = previous.rp2040.flash.slice();
+  const next = createRp2040jsAdapter(opts);
+  next.bootFromFlash(preserved);
+  return next;
 }

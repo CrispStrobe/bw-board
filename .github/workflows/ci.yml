@@ -257,6 +257,19 @@ jobs:
             /v1/00.json.gz
             /v1/8F.json.gz
             /v1/D0.6.json.gz
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The 80286 real-mode suite, for the FAST functional 286 variant grind
+          # (scripts/grind-i8086-286.mjs). Pinned to SST286_REVISION, the same sha
+          # scripts/lib/sst286.mjs names. The grinder reads /v1_real_mode/ and
+          # verifies each file's blob sha against `git ls-tree`, so keep .git.
+          repository: SingleStepTests/80286
+          ref: 37c73caf53dcd22d3dd369ff09305d13d117a4fe
+          path: 80286-vectors
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /v1_real_mode/
+            /revocation_list.txt
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
@@ -289,6 +302,30 @@ jobs:
         env:
           I8086_VECTORS: ${{ github.workspace }}/8086-vectors
         run: node scripts/grind-i8086.mjs
+
+      # DIAGNOSTIC (not a gate yet): grade the FAST functional 286 variant
+      # (i8086 core variant:'80286') against SingleStepTests/80286 real-mode, and
+      # print the summary so the exact gap is visible — the unimplemented 0x0F
+      # protected-mode group and any 286-vs-186 behavioural differences show up as
+      # `fail`/`unsupported` per opcode. Grinder exits 0 while the gap is open; it
+      # becomes a hard gate once the real-mode set is clean. Sampled (--limit) to
+      # keep the job quick; drop the limit for a full census.
+      - name: 286 real-mode variant — SST286 gap census (diagnostic)
+        # Purely diagnostic: it reports the gap, it never gates. continue-on-error
+        # so nothing here can red the vectors job while the 0x0F group is open.
+        continue-on-error: true
+        env:
+          I80286_VECTORS: ${{ github.workspace }}/80286-vectors
+        run: |
+          echo "--- diffs for a few simple shared opcodes (INC AX=40, ADD=00, MOV=88) ---"
+          node scripts/grind-i8086-286.mjs 40 00 88 --limit 2 || true
+          echo "--- full census (sampled) ---"
+          node scripts/grind-i8086-286.mjs --limit 200 > /tmp/286grind.txt || true
+          tail -1 /tmp/286grind.txt \
+            | node -e "try { const s=JSON.parse(require('fs').readFileSync(0,'utf8')).summary; \
+              console.log('286 variant vs SST286:', 'pass', s.pass, 'fail', s.fail, 'unsupported', s.unsupported, 'of', s.selected); \
+              console.log('fail opcodes:', JSON.stringify(s.failOpcodes)); \
+              console.log('reasons:', JSON.stringify(s.reasons)); } catch(e){ console.log('286 grind produced no summary:', e.message); }"
 
       - name: 8086 disassembler — all 646,000, on text and length
         env:

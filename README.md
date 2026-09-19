@@ -6,7 +6,8 @@ servo angles, motor speeds, and relay states — from pin-level physics, not
 shortcuts.
 
 Zero runtime dependencies. Runs in a browser or Node.js. MIT licensed.
-1357 tests, 0 failures. 129+ part kinds. Two vector-verified CPU cores.
+5,400+ tests, 0 failures. 129+ part kinds. Three vector-verified CPU cores
+(W65C02, Z80, and 8086/8088 — the last also as an 80186 and cycle-accurate).
 
 ## What is in this repo
 
@@ -46,7 +47,7 @@ service-side objdump listings for toolchain targets).
 
 ## The retro tier (2026-08)
 
-**Two CPU cores, ours, verified end to end against ground truth:**
+**Three CPU cores, ours, verified end to end against ground truth:**
 - `src/w65c02.js` — W65C02, 2,540,000/2,540,000 SingleStepTests vectors,
   both Klaus Dormann suites (52M instructions), 52.6M instructions in
   lockstep with vrEmu6502 (three documented, vector-adjudicated
@@ -55,6 +56,14 @@ service-side objdump listings for toolchain targets).
   the undocumented machinery: X/Y flags, the Q latch, MEMPTR, R per M1,
   interrupted-repeat block-op rules derived from the vectors themselves.
   Grinder: `scripts/grind-z80.mjs`.
+- `src/i8086.js` — 8086/8088, 646,000/646,000 SingleStepTests 8086 vectors,
+  plus the 80186 variant graded against 132,532 SingleStepTests v20 vectors
+  (`{variant:'80186'}`; shift-count masking and the reg=6 aliasing the suite
+  can't grade are pinned in `test/i8086-186.test.mjs`). Opt-in cycle accuracy
+  (`enableI8088CycleTiming`) charges instructions from a BIU scheduler
+  (`src/i8088-biu.js`) graded against the SingleStepTests 8088 bus traces.
+  Grinders: `scripts/grind-i8086.mjs`, `grind-i8086-v20.mjs`,
+  `grind-i8088-cycles.mjs`.
 
 **Composable machines** — a machine is a CONFIG (preset, declared
 MAP/CHIP pseudocode, or a hand-wired breadboard solved by the bus
@@ -68,9 +77,59 @@ extractors):
   IM 1 delivery in the machine layer. Presets: SEARLE, CPM64K.
   Extractor: `src/z80-extract.js` (MREQ/IORQ-aware, per-space
   contention).
+- `src/i8086-machine.js` — regions + PORT-mapped chips (8259 PIC, 8254 PIT,
+  8255 PPI, 8237 DMA, 8251 USART, CGA/EGA/Hercules, uPD765 FDC). Presets from
+  a minimal-GPIO breadboard (`BLINK8086`) up to a PC/XT that boots real MS-DOS.
+  Chip advance is deadline-batched, so the machine layer stays thin over the
+  core. **Speed (measured off-box on a fresh CI runner, functional path):**
+  ~150x a 4.77 MHz IBM XT for the bare core, and **~3.3x real time booting real
+  MS-DOS** through the full PC/XT. The *wired* path (GPIO pins driven into the
+  breadboard's MNA circuit solver) is not a single figure — it is the
+  functional speed gated by one circuit solve per pin edge, so it depends on
+  the circuit and how often the program toggles pins.
 - `src/vdu-decoder.js` — the BBC VDU byte protocol as typed events
   (graphics without video hardware); `src/devices/hd44780.js` — the
   parallel character LCD as a board part.
+
+**Real-time factor across the cores** — how fast each runs relative to the
+real part, measured off-box on a fresh CI runner (`scripts/bench-chips.mjs`,
+`.github/workflows/bench-chips.yml`; each core runs a small ALU + memory +
+branch loop). RTx = emulated cycles per wall-second ÷ the part's real clock, so
+**1.0× is real time**. A shared runner varies ±~25% run to run, so read these as
+order-of-magnitude — the *ranking* is what is stable:
+
+| Core | Engine | Clock | RTx (off-box) |
+|------|--------|-------|---------------|
+| 8086/8088 (`i8086.js`) | ours | 4.77 MHz | ~150× core · ~3.3× booting MS-DOS through the full PC/XT |
+| Z80 (`z80.js`) | ours | 4 MHz | ~80–100× |
+| 6502 (`w65c02.js`) | ours | 1 MHz | ~60–80× |
+| AVR ATmega328P | avr8js ‡ | 16 MHz | ~12× |
+| 8051 | emu8051-stc (WASM) | — | ~3× |
+| RP2040 Cortex-M0+ | rp2040js † | 125 MHz | ~0.8–1.0× |
+| labwired STM32F0 | labwired (multi-arch WASM) | 48 MHz | ~0.1–0.2× |
+
+The three cores we own run tens of times faster than the real silicon. The
+third-party JS engines (avr8js, rp2040js) and the WASM tiers — emu8051, and the
+peripheral-accurate labwired STM32/RISC-V/Xtensa engine — get progressively
+heavier: labwired models a whole SoC at full peripheral fidelity, so it runs
+well below real time. That is the tier's cost, and the budget the widgets pane
+plans against.
+
+† rp2040js's Thumb decoder is an 82-branch linear `if/else` chain; we run it
+through a **switch-dispatch fork** (`src/vendor/rp2040js-fast/`, default-on and
+behavior-identical — verified by an exhaustive 65,536-opcode stock-vs-fork
+differential, `test/rp2040-fast-dispatch-differential.test.mjs`). Off-box it is
+~1.11× on a realistic instruction mix and ~1.6× on decode-bound (MOVS-heavy)
+loops; the all-ADDS RTx loop above is its weak case, so the table figure is
+unchanged. Upstreaming the restructuring to rp2040js is the end state.
+
+‡ avr8js's instruction decoder is a 99-branch linear `if/else` chain; we run it
+through the same kind of **switch-dispatch fork** (`src/vendor/avr8js-fast/`,
+generated by `scripts/gen-avr8js-fast.mjs`, default-on in the adapter — verified
+by an exhaustive 65,536-opcode differential, `test/avr-fast-dispatch-differential`).
+Off-box the forked decoder roughly doubles the stock ~5–6× on the RTx loop (to
+~12×), so the AVR row reflects the fork (what the widgets pane runs). Upstreaming
+it to avr8js is the end state.
 
 **Whole-system smokes** (each skips loudly without its local artifact):
 BBC BASIC 4 boots interactively on the 6502 machine with LCD state

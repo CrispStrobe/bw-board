@@ -81,6 +81,11 @@ export function getTargetKinds() {
       description: 'Composable 8086 machine — breadboard, XT board with CGA and floppy, or DOS programs.',
     },
     {
+      kind: 'i80286',
+      label: 'Simulated (80286 real mode)',
+      description: 'The 8086 machine in its fast 80286 real-mode variant (186 ISA; protected-mode 0x0F group faults).',
+    },
+    {
       kind: 'attiny88',
       label: 'Simulated (ATtiny88)',
       description: 'AVR instruction-level emulation. ATtiny88 (blinkenrocket-class boards).',

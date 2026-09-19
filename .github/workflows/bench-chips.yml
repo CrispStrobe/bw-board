@@ -1,0 +1,76 @@
+name: Chip RTx benchmark
+
+# Real-time-factor (x real time) for the emulated cores, measured on a fresh,
+# quiet cloud runner rather than the memory-starved dev box (~30% noise there).
+# workflow_dispatch for a hand run; push on the lane branch for a receipt.
+on:
+  workflow_dispatch:
+    inputs:
+      instructions:
+        description: 'Steps per core'
+        required: false
+        default: '40000000'
+  push:
+    branches: ['lane/rtx-chip-benches', 'lane/rtx-labwired-and-docs', 'lane/avr-rtx-fork-reflect']
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev || npm i --omit=dev || true
+      # emu8051-stc is a public MIT sibling holding the built 8051 WASM. Checked
+      # out by a PINNED actions/checkout (not a raw `git clone`, which the CI
+      # external-input audit rejects as a moving ref — test/ci-external-input-pins).
+      # Same pin ci.yml uses. Lands in-workspace because Actions refuses a path
+      # outside it; the bench's ancestorCandidates() finds it there.
+      - name: Check out emu8051-stc (for the 8051 RTx)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: CrispStrobe/emu8051-stc
+          ref: 47c504191a8420676415a1b86766621d6ea0de86
+          path: emu8051-stc
+      # Emscripten's MODULARIZE output is CommonJS, but a `.js` under this
+      # "type":"module" repo is parsed as ESM (createEmu8051 comes back
+      # undefined). The marker makes the in-workspace layout load as CJS.
+      - name: Mark the emu8051 build as CommonJS
+        run: echo '{"type":"commonjs"}' > emu8051-stc/package.json
+      - name: Fetch prebuilt labwired-wasm (for the heavy-tier STM32F0 RTx)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The 21 MB engine is a build, not an npm dep — pull the pinned release
+          # the labwired-wasm workflow publishes. wasm-bindgen's nodejs glue reads
+          # `labwired_wasm_bg.wasm` beside `labwired_wasm.js`, so undo the release's
+          # `nodejs-` asset prefix into a proper out-dir. On any failure the bench
+          # SKIPs labwired rather than failing (benchLabwired throws -> tryBench).
+          mkdir -p lw/nodejs
+          if gh release download labwired-wasm-0c0cd0ec --repo "${{ github.repository }}" \
+               --pattern 'nodejs-*' --dir lw --clobber; then
+            cp lw/nodejs-labwired_wasm.js      lw/nodejs/labwired_wasm.js
+            cp lw/nodejs-labwired_wasm_bg.wasm lw/nodejs/labwired_wasm_bg.wasm
+            # The glue is CommonJS, but the repo is "type":"module", so require()
+            # would read it as ESM ("exports is not defined"). This out-dir marker
+            # (which wasm-bindgen normally ships) makes require() treat it as CJS.
+            printf '{"type":"commonjs"}' > lw/nodejs/package.json
+            echo "LABWIRED_WASM=$PWD/lw/nodejs" >> "$GITHUB_ENV"
+            echo "labwired-wasm ready at $PWD/lw/nodejs"
+          else
+            echo "labwired-wasm release download failed; labwired will SKIP"
+          fi
+      - name: RTx benchmark (three warmup+measure passes for a median)
+        run: |
+          set -euo pipefail
+          INSTR='${{ github.event.inputs.instructions || 40000000 }}'
+          for pass in 1 2 3; do
+            echo "===== pass $pass ====="
+            node scripts/bench-chips.mjs --instructions "$INSTR"
+          done

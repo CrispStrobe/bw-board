@@ -105,8 +105,10 @@ function regOf(w, addr) {
 /**
  * @typedef {object} MachineConfig
  * @property {number} clockHz CPU clock
- * @property {'8086'|'80186'} [variant] which chip the core is. Default
- *   '8086'. '80186' adds the fifteen opcodes the 186 put in the holes the
+ * @property {'8086'|'80186'|'80286'} [variant] which chip the core is. Default
+ *   '8086'. '80286' is the 186 real-mode ISA on this real-mode core (the 0x0F
+ *   protected-mode group faults as unimplemented). '80186' adds the fifteen
+ *   opcodes the 186 put in the holes the
  *   8086 left as decode aliases and masks shift counts to five bits, which
  *   is the one difference a program can SEE on an instruction both parts
  *   have. A breadboard 80188 is the reason this exists: same ISA, eight-bit
@@ -528,6 +530,20 @@ export class I8086Machine {
         // the site rather than left in a review comment.
         this._cycleEst = null;   // opt-in; see enableI8088CycleTiming()
         this._advList = null;
+        // DEADLINE-BATCHED CHIP ADVANCE. Advancing every chip on every
+        // instruction was measured at 30% of machine.step() (bench-i8086 +
+        // --prof), more than the CPU core itself, even after the Object.keys
+        // fix in _advanceChips. So the cycles a chip has not yet been charged
+        // are ACCRUED here and applied in one batch when the nearest chip
+        // event is actually due -- the same `nextWake` horizon _wakeHorizon
+        // uses for HLT. A chip is caught up lazily the instant anything reads
+        // it (_in/_out) or the machine is snapshotted, so nothing ever observes
+        // a stale chip; between those points the advance simply does not run.
+        // Equivalent to the per-instruction advance because chips do not change
+        // between events by definition, and an event fires at the instruction
+        // boundary that crosses its cycle either way.
+        this._chipDebt = 0;
+        this._chipDeadline = 0;
         // Monotonic invalidation token for a host renderer. It moves on the
         // events that can change what is VISIBLE -- video-window writes, display
         // control ports, an overlapping bulk load, a state restore -- and on
@@ -1026,10 +1042,12 @@ export class I8086Machine {
 
     // ---- the port bus ---------------------------------------------------
     _in(port) {
+        this._catchUpChips();   // a chip must be current at the cycle it is read
         let val = 0xff;
         for (const w of this._io) {
             if (port >= w.start && port <= w.end) { val = w.chip.read(regOf(w, port)); break; }
         }
+        this._chipDeadline = this._wakeHorizon();   // a latch read can change the horizon
         // Port-access trap (E6.8.3): the value handed back is the one the program
         // sees, so the hook fires AFTER the read and reports what was read. This
         // does not reopen the refusal to DUMP the port space (i8086-debug.js:22):
@@ -1040,6 +1058,7 @@ export class I8086Machine {
     }
 
     _out(port, val) {
+        this._catchUpChips();   // a chip must be current at the cycle it is written
         if (port >= 0x3b0 && port <= 0x3df) {
             this.displayRevision = (this.displayRevision + 1) >>> 0;
         }
@@ -1059,6 +1078,9 @@ export class I8086Machine {
                 break;
             }
         }
+        // The write may have changed a chip's next event (a loaded PIT counter,
+        // an unmasked PIC line): re-arm the deadline from the post-write state.
+        this._chipDeadline = this._wakeHorizon();
         // Port-access trap (E6.8.3): fires on EVERY OUT, decoded or not — a debug
         // watch on "anything touches port 61h" wants the access the program made,
         // not only the ones that hit a chip. Zero cost when no watch is set.
@@ -1149,9 +1171,11 @@ export class I8086Machine {
      * why every ROM image for one of these ends in a far jump.
      */
     reset() {
+        this._chipDebt = 0;
         this.cpu.reset();
         this.cycles += 4;
         this._advanceChips(4);
+        this._chipDeadline = this._wakeHorizon();
     }
 
     /**
@@ -1160,9 +1184,15 @@ export class I8086Machine {
      * reach the CPU through chip inputs, like the bench.
      */
     attachDevice(name, dev) {
+        // Settle the accrued debt on the CURRENT set first, so the newcomer is
+        // not charged cycles from before it existed; then re-arm the deadline
+        // with it included, or a device attached mid-run would not be advanced
+        // until the stale deadline happened to fire.
+        this._catchUpChips();
         this.devices = this.devices || {};
         this.devices[name] = dev;
         this._advList = null;   // schedule is stale
+        this._chipDeadline = this._wakeHorizon();
         return dev;
     }
 
@@ -1190,6 +1220,26 @@ export class I8086Machine {
         this._anyMs = anyMs;
         this._advList = list;
         return list;
+    }
+
+    /**
+     * Apply the accrued cycle debt to the chips and re-arm the deadline. Cheap
+     * when there is no debt (the deadline still has to be recomputed after any
+     * event, so it always runs _wakeHorizon). Called at the deadline in step(),
+     * and eagerly wherever a chip is about to be read so no reader sees a chip
+     * that is behind: _in, _out, and saveState.
+     */
+    _flushChips() {
+        this._catchUpChips();
+        this._chipDeadline = this._wakeHorizon();
+    }
+
+    /** Apply the accrued debt WITHOUT re-arming the deadline -- the caller
+     *  re-arms after whatever it does next, because a chip WRITE (loading a PIT
+     *  counter, say) changes the horizon and the deadline must be recomputed
+     *  from the post-write state, not the pre-write one. */
+    _catchUpChips() {
+        if (this._chipDebt > 0) { this._advanceChips(this._chipDebt); this._chipDebt = 0; }
     }
 
     _advanceChips(n) {
@@ -1322,11 +1372,11 @@ export class I8086Machine {
                 + '{CycleEstimator}. It is not imported here because its cycle '
                 + 'table is 975 KB and this path is opt-in.');
         }
-        if (on && this.variant === '80186') {
+        if (on && (this.variant === '80186' || this.variant === '80286')) {
             throw new Error(
-                'i8088 cycle tables do not cover the 80186: the 186 changed both '
-                + 'instruction timings and the prefetch queue, and no oracle for it '
-                + 'exists. Refusing rather than reporting 8088 numbers as 186 ones.');
+                `i8088 cycle tables do not cover the ${this.variant}: the 186/286 changed `
+                + 'both instruction timings and the prefetch queue, and no oracle for '
+                + 'either exists. Refusing rather than reporting 8088 numbers as 186/286 ones.');
         }
         if (!on) { this._cycleEst = null; return false; }
         this._cycleEst = new CycleEstimator();
@@ -1395,18 +1445,26 @@ export class I8086Machine {
     }
 
     step() {
-        // A hardware interrupt is checked before the next instruction; it
-        // also wakes a HLT that was waiting for the timer or the UART.
+        // The nearest chip event is due once the accrued debt reaches the
+        // deadline: apply it (which fires that event and, e.g., raises the PIT's
+        // IRQ) BEFORE the interrupt is checked for the next instruction. A
+        // hardware interrupt also wakes a HLT that was waiting for the timer or
+        // the UART.
+        if (this._chipDebt >= this._chipDeadline) this._flushChips();
         this._serviceInterrupts();
         if (this.cpu.halted) {
+            // A halted CPU jumps straight to the horizon. Settle any debt first
+            // so the jump is measured from where the chips actually are.
+            this._flushChips();
             const n = this._wakeHorizon();
             this.cycles += n;
             this._advanceChips(n);
+            this._chipDeadline = this._wakeHorizon();
             return n;
         }
         const n = this._cycleEst === null ? this.cpu.step() : this._stepTimed();
         this.cycles += n;
-        this._advanceChips(n);
+        this._chipDebt += n;      // accrued, not charged: see the deadline batch above
         return n;
     }
 
@@ -1944,6 +2002,10 @@ export class I8086Machine {
     }
 
     saveState() {
+        // Settle the accrued chip debt first: a snapshot must record chips at
+        // the machine's current cycle, never a state they have not been advanced
+        // to yet. This keeps the debt out of the serialised form entirely.
+        this._flushChips();
         const cpu = {};
         for (const k of I8086Machine.CPU_STATE) cpu[k] = this.cpu[k] ?? 0;
         // BOTH CONVENTIONS via the shared statePair, the same discovery
@@ -2046,6 +2108,10 @@ export class I8086Machine {
             const pair = statePair(this.devices[name]);
             this.devices[name][pair[1]](s.devices[name]);
         }
+        // The restored chips are at the restored cycle: no debt is owed, and the
+        // deadline is re-armed from their fresh state.
+        this._chipDebt = 0;
+        this._chipDeadline = this._wakeHorizon();
     }
 
     /**

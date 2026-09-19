@@ -12,6 +12,7 @@ import { replayAccepted, replayRefused, assertAdmissionVerdict } from './debug-r
 import { loadSNA, SNA_SIZE } from './zx-sna.js';
 import { loadZ80 } from './zx-z80file.js';
 import { installInstructionDebugEvents } from './instruction-debug-events.js';
+import { createInputAdmission, createCheckpointMethods, validButtonMask } from './debug-input-admission.js';
 
 /** @param {{ machine: import('./z80-machine.js').Z80Machine }} adapter */
 export function createZ80DebugTarget(adapter, opts = {}) {
@@ -71,14 +72,12 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   // adapter sync onto unloggedBoardInputs() retired that flag, so the gate has to
   // read the accessor HERE or it goes dead (the compensation-removal that let a
   // stated-un-replayable session still be handed a checkpoint).
-  const UNCAPTURED_INPUT_REASON = 'live board buffer-input sampling is not logged';
-  const hasUncapturedInputState = () => adapter?.unloggedBoardInputs?.() === true;
-
-  // ONE VALIDITY CHECK per producer, read by the FACE method (live) and by
-  // applyReplayInput (replay), so the live path cannot accept what replay will
-  // refuse — an un-replayable input that happens and is recorded is the inverse
-  // of the admission guarantee. The bound had drifted onto the replay path alone.
-  const validButtonMask = mask => Number.isSafeInteger(mask);
+  // The uncaptured-input predicate and its reason now live in the shared
+  // input-admission unit: admission.admission.hasUncapturedInputState() /
+  // admission.uncapturedInputReason. validButtonMask is imported from the same
+  // module. validKeyNames stays here — it is z80-specific (the ULA's 8x5 matrix),
+  // read by the FACE method (setKeys) AND applyReplayInput so the live path
+  // refuses exactly what replay refuses.
   const validKeyNames = names => Array.isArray(names) && names.length <= 40
     && names.every(name => typeof name === 'string' && name.length <= 16);
 
@@ -155,88 +154,28 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   // have to say so. Closing it needs a machine-side signal on `loadState`, and
   // until there is one this is the boundary — every rewind an input can observe,
   // not every rewind.
-  const observedInputs = new Map();
-  let inputListeners = [];
-  let admitters = [];
-  let inputTimeEpoch = 0;
-  let lastTicks = null;
+  // THE PAYLOAD IS THE RECORD; THE SIGNATURE IS THE COMPARISON — one pure function
+  // used by the live record AND the replay seed, so the two cannot dedup
+  // differently. buttons: identity on the RAW mask (the log says what the host
+  // sent; z80-machine.setButtons narrows it — the old `& 0x1f` seed against a raw
+  // record was defect R8). keys: order-INDEPENDENT — sort names FOR THE SIGNATURE
+  // ONLY (the ULA ANDs a bit per name, so ['a','b'] and ['b','a'] are one state,
+  // R9); the recorded payload keeps face order.
+  const signatureOf = (producer, payload) =>
+    producer === 'z80.keys'
+      ? JSON.stringify({names: [...payload.names].sort()})
+      : JSON.stringify(payload);
 
-  /**
-   * The input-fact clock's domain name, READ without advancing the clock.
-   * Named here because captureCheckpoint() and debugTime() stamp with it and a
-   * reader comparing two facts must be able to tell an epoch apart. The module
-   * (events) keeps its own epoch on the same `z80-cycles` base — see the seam
-   * note at the top.
-   */
-  const eventDomain = () =>
-    inputTimeEpoch ? `z80-cycles-rewind-${inputTimeEpoch}` : 'z80-cycles';
-
-  /**
-   * THE CLOCK IS INJECTABLE, AND THE EPOCH IS DERIVED RATHER THAN OWNED.
-   *
-   * `opts.debugTime` lets an integrator hand this target the clock the rest of
-   * that integration already uses. A consumer downstream gives this target's
-   * checkpoints and instruction events a SHARED epoch; a record half carrying
-   * its own would put one machine on two timelines, with a replayer comparing
-   * domains by equality seeing two runs where there is one. That hazard used to
-   * be sharpest HERE, because the event clock was named `z80-tstates` while the
-   * replay domain was `z80-cycles` — two names for one `machine.cycles`, so
-   * nothing collided and nothing complained. The module now stamps `z80-cycles`
-   * too (see the seam note above), so the base matches and that particular trap
-   * is closed by construction; the injectable clock remains for an integration
-   * that owns its own timeline.
-   *
-   * The default is this target's own clock below, so a standalone target
-   * behaves exactly as before.
-   *
-   * A CONSEQUENCE WORTH NAMING: with a clock injected, the domain string is a
-   * property of the INTEGRATION, not of this target. A test here asserting
-   * `z80-cycles-rewind-N` is describing the DEFAULT wiring, not this target.
-   */
-  const ownClock = () => {
-    const ticks = machine.cycles;
-    // The only rewind this machine has is loadState (z80-machine.js:448).
-    if (lastTicks !== null && ticks < lastTicks) inputTimeEpoch++;
-    lastTicks = ticks;
-    return {
-      ticks,
-      domain: eventDomain(),
-      hz: machine.clockHz
-    };
-  };
-  const clock = typeof opts.debugTime === 'function' ? opts.debugTime : ownClock;
-
-  let lastDomain = null;
-
-  /**
-   * Take the stamp, and CLEAR THE DEDUP MAP WHENEVER THE ERA CHANGES.
-   *
-   * The map must not survive a rewind. Constructed on the original version of
-   * this code: hold 'a', snapshot, run on, press 'b', restore, then press 'b'
-   * again in the restored era — a genuine a→b transition, DROPPED, because the
-   * map still remembered 'b' from the timeline that no longer exists. Two
-   * facts, one domain, the third gone without trace.
-   *
-   * The signal is the DOMAIN STRING, not a tick regression, and that is the
-   * point. An injected clock may know about a rewind this target cannot see —
-   * downstream's is bumped explicitly by `restoreCheckpoint` — so watching the
-   * domain inherits every trigger the clock has rather than only the one this
-   * target could detect for itself. It is also why the era gate lives HERE and
-   * not inside `ownClock`: an injected clock is not ours to put a side effect
-   * in.
-   *
-   * WHAT REMAINS UNCOVERED, stated rather than hidden: a clock whose own
-   * detection is deferred — downstream's bumps on the next `cpu.step` — leaves
-   * a window where a rewind has happened and the domain has not moved yet. An
-   * input arriving inside it is stamped on the old era. Narrower than detecting
-   * nothing, and the same window the integration's other events already sit in.
-   */
-  const stamp = () => {
-    const time = clock();
-    if (lastDomain !== null && time.domain !== lastDomain) observedInputs.clear();
-    lastDomain = time.domain;
-    return time;
-  };
+  // The shared INPUT-ADMISSION unit: the injectable clock + era gate, the ASK/TELL
+  // split, the dedup map — ONE implementation for both bridges
+  // (debug-input-admission.js). This target keeps its INPUT epoch there; the event
+  // module keeps its own on the same z80-cycles base (the seam noted at the top).
+  const admission = createInputAdmission({
+    machine, adapter, domainBase: 'z80-cycles', signatureOf,
+    admitLabel: 'z80-debug onDebugInputAdmission',
+    uncapturedInputReason: 'live board buffer-input sampling is not logged',
+    injectedClock: opts.debugTime,
+  });
 
   /**
    * Emit a fact, but only when the value has CHANGED.
@@ -279,82 +218,19 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // A serial byte is an EVENT: the ASK still comes before the byte reaches
       // the machine (a veto must), then TELL unconditionally on acceptance. The
       // dedup map is never touched — the same byte twice is two characters.
-      const input = {time: stamp(), producer: 'z80.serial', payload: {byte: value}};
-      if (!admit(input)) return false;
+      const input = {time: admission.stamp(), producer: 'z80.serial', payload: {byte: value}};
+      if (!admission.admit(input)) return false;
       const accepted = previousSendSerial(value) === true;
-      if (accepted) tell(input);
+      if (accepted) admission.tell(input);
       return accepted;
     };
     wrapped.rootDebugSendSerial = rawSendSerial;
     adapter.sendSerial = wrapped;
   }
 
-  // THE PAYLOAD IS THE RECORD; THE SIGNATURE IS THE COMPARISON. One pure function,
-  // used by the live record AND the replay seed on the payload each is about to
-  // write, so the two cannot dedup differently. What it computes is the key that
-  // decides "did the input CHANGE", which is not always the whole recorded value:
-  //   buttons: identity — the RAW mask. The log says what the host sent; the
-  //            machine narrows it (z80-machine.setButtons extracts its bits).
-  //            The old replay path masked the seed `& 0x1f` against a raw live
-  //            record — a replayed 0xFF seeded {"mask":31}, a live 0xFF signed
-  //            {"mask":255}, they did not match, and a fact was recorded that
-  //            never happened. R8 is that defect's regression test.
-  //   keys:    order-INDEPENDENT — sort the names FOR THE SIGNATURE ONLY. The
-  //            recorded payload keeps the face's order (honest), but the ULA ANDs
-  //            a bit per name (zx-ula.js) so ['a','b'] and ['b','a'] are one
-  //            machine state; the old signature was order-sensitive and recorded
-  //            the reorder as a change that did not happen. R9 is its regression test.
-  const signatureOf = (producer, payload) =>
-    producer === 'z80.keys'
-      ? JSON.stringify({names: [...payload.names].sort()})
-      : JSON.stringify(payload);
-
-  // THE ASK. Every admitter must accept, or the input does not happen. A verdict
-  // that is not {accepted: boolean} throws (assertAdmissionVerdict) rather than
-  // being read as a silent refusal.
-  const admit = input => {
-    for (const a of admitters) {
-      if (!assertAdmissionVerdict(a(input), 'z80-debug onDebugInputAdmission').accepted) return false;
-    }
-    return true;
-  };
-
-  const tell = input => {
-    // Each listener gets its own copy of the fact, TIME INCLUDED: a listener that
-    // stored a fact and mutated it would otherwise corrupt the log for the next
-    // listener (z80-replay-input.test.mjs:247). R5 is preserved by VALUE, not
-    // reference — the ASK and the TELL share ONE stamp (the incrementing clock
-    // makes a second stamp show as different ticks), and R5 asserts they are
-    // deep-equal rather than identical, because these copies cannot be identical.
-    for (const listener of inputListeners) {
-      listener({...input, time: {...input.time}, payload: {...input.payload}});
-    }
-  };
-
-  /**
-   * A LEVEL input, in the order the eight rules fix: one stamp (era gate first),
-   * the dedup read, the ASK before apply, apply, seed ON ACCEPTANCE, then TELL
-   * reusing the ASK's stamp. A refused ASK writes nothing; a deduped repeat is
-   * applied silently (neither asked nor told), because a held level must keep
-   * reaching the machine without being recorded again.
-   *
-   * @param {string} producer e.g. 'z80.keys'
-   * @param {string} key the dedup key
-   * @param {object} payload the recorded (and, for buttons, masked) value
-   * @param {() => (boolean|undefined)} apply returns false only if the machine refused
-   */
-  const level = (producer, key, payload, apply) => {
-    const time = stamp();
-    const signature = signatureOf(producer, payload);
-    if (observedInputs.get(key) === signature) return apply();   // deduped: applied silently
-    const input = {time, producer, payload: {...payload}};
-    if (!admit(input)) return false;                             // refused ASK writes nothing
-    const result = apply();
-    if (result === false) return result;                         // machine refused: only a fact it TOOK is a fact
-    observedInputs.set(key, signature);                          // seed on acceptance
-    tell(input);
-    return result;
-  };
+  // signatureOf (above), the ASK/TELL split, and the LEVEL flow (stamp → dedup →
+  // ASK → apply → seed → TELL) now live in the shared input-admission unit:
+  // admission.level / admission.admit / admission.tell / admission.stamp.
 
   // Call-class opcodes for step-over: CALL nn, CALL cc,nn, and RST n.
   const isCallClass = (op) => op === 0xcd || (op & 0xc7) === 0xc4 || (op & 0xc7) === 0xc7;
@@ -362,6 +238,14 @@ export function createZ80DebugTarget(adapter, opts = {}) {
   // Serial (an EVENT) records with NO dedup, in the adapter wrapper above via
   // `tell` — the same byte typed twice is two characters. The old publishEvent
   // helper is gone: the wrapper is the one event path and inlines the ASK.
+
+  const checkpointMethods = createCheckpointMethods({
+    machine, admission,
+    isHalted: () => cpu.halted,
+    haltReason: 'the halted Z80 cannot retire an instruction without a recorded interrupt input',
+    notRetiredReason: 'the Z80 did not retire an instruction',
+    resetWatch: () => { watchHit = null; },
+  });
 
   return {
     capabilities() {
@@ -377,7 +261,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // captureCheckpoint() cannot disagree about whether a checkpoint is sound.
       const checkpointRefusalReasons = [
         ...(checkpointStatus.supported ? [] : checkpointStatus.reasons),
-        ...(hasUncapturedInputState() ? [UNCAPTURED_INPUT_REASON] : [])
+        ...(admission.hasUncapturedInputState() ? [admission.uncapturedInputReason] : [])
       ];
       // extensions.inputAdmission === 'may-refuse' declares the ASK hook, which
       // canVetoDebugInput(target) reads (with m6502-debug, the first two to
@@ -418,75 +302,12 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      */
     onDebugEvent: debugEvents.onDebugEvent,
 
-    /**
-     * The event clock, READ without advancing it. On the same `z80-cycles` base
-     * as an input fact's stamp, so a consumer comparing a checkpoint against a
-     * debug input fact gets one clock. (The module's own event epoch may carry a
-     * different suffix after a rewind — the seam noted at the top.)
-     */
-    debugTime() {
-      return { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
-    },
-
-    /**
-     * A checkpoint of the machine, stamped with this target's event clock — the
-     * debug clock, not the machine's base time, so a consumer comparing it
-     * against a debug fact gets one clock, not two.
-     */
-    captureCheckpoint() {
-      // A snapshot over unlogged board inputs restores a machine that looks right
-      // and is not — the inputs it was sampling are not in the log. Refuse rather
-      // than hand back a checkpoint replayRefusalReasons() has already disowned.
-      if (hasUncapturedInputState()) {
-        return { code: 'INCOMPLETE_CHECKPOINT_STATE', refused: UNCAPTURED_INPUT_REASON };
-      }
-      const checkpoint = machine.captureCheckpoint();
-      if (!checkpoint.refused) {
-        checkpoint.time = { ticks: machine.cycles, domain: eventDomain(), hz: machine.clockHz };
-      }
-      return checkpoint;
-    },
-
-    /**
-     * Restore, and OPEN A FRESH EPOCH on success. A restore is a branch in
-     * history, not permission to run the clock backwards: renaming the domain
-     * stops two facts from different timelines being read as one that jumped,
-     * and the era gate (stamp()) then clears the dedup map on the next input
-     * because the domain string has changed. `ownClock`'s own rewind detection
-     * cannot see a restore that lands ABOVE the last stamped tick — it reads as
-     * ordinary forward motion — which is why the bump is explicit here. The
-     * module's own event epoch is left to its detection: the accepted seam.
-     */
-    restoreCheckpoint(checkpoint) {
-      if (hasUncapturedInputState()) {
-        return { code: 'INCOMPLETE_CHECKPOINT_STATE',
-          refused: 'cannot restore over a live board input source sampled outside the machine' };
-      }
-      const result = machine.restoreCheckpoint(checkpoint);
-      if (!result) { inputTimeEpoch++; lastTicks = machine.cycles; }
-      return result;
-    },
-
-    /** Execute one complete instruction for checked history replay. */
-    replayInstruction() {
-      const support = machine.checkpointSupport();
-      if (!support.supported) return {accepted: false, code: 'unsupported-replay',
-        reason: support.reasons.join('; ')};
-      if (cpu.halted) return {accepted: false, code: 'halted-without-instruction',
-        reason: 'the halted Z80 cannot retire an instruction without a recorded interrupt input'};
-      const before = machine.cycles;
-      let cycles;
-      watchHit = null;
-      try {
-        cycles = machine.step();
-      } finally {
-        // Replay reconstructs history; it must not arm a future live halt.
-        watchHit = null;
-      }
-      if (!(cycles > 0)) return {accepted: false, code: 'instruction-not-retired',
-        reason: 'the Z80 did not retire an instruction'};
-      return {accepted: true, boundary: 'instruction', cycles: machine.cycles - before};
-    },
+    // debugTime / captureCheckpoint / restoreCheckpoint / replayInstruction: the
+    // shared checkpoint methods (createCheckpointMethods), so a fix to the refusal
+    // gate has one home. On the same `z80-cycles` event clock as an input fact's
+    // stamp. replayInstruction's halt predicate and reason strings are the only
+    // per-CPU parts, passed in where checkpointMethods is built.
+    ...checkpointMethods,
 
     regs() {
       return {
@@ -634,7 +455,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // The recorded value is RAW — what the host sent. z80-machine.setButtons
       // narrows it to the Kempston bits; the log is not the machine's place to
       // narrow, and a masked record against a raw one is the defect R8 guards.
-      return level('z80.buttons', 'buttons', {mask}, () => machine.setButtons(mask));
+      return admission.level('z80.buttons', 'buttons', {mask}, () => machine.setButtons(mask));
     },
 
     /**
@@ -649,7 +470,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
       // that fails it must not be applied and recorded, or its own replay refuses
       // the fact it wrote. Same predicate, both paths — see applyReplayInput.
       if (!machine.ula || typeof machine.ula.setKeys !== 'function' || !validKeyNames(names)) return false;
-      return level('z80.keys', 'keys', {names: [...names]}, () => { machine.ula.setKeys(names); return true; });
+      return admission.level('z80.keys', 'keys', {names: [...names]}, () => { machine.ula.setKeys(names); return true; });
     },
 
     /**
@@ -718,14 +539,10 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * @returns {string[]}
      */
     replayRefusalReasons() {
-      return hasUncapturedInputState() ? [UNCAPTURED_INPUT_REASON] : [];
+      return admission.hasUncapturedInputState() ? [admission.uncapturedInputReason] : [];
     },
 
-    onDebugInput(listener) {
-      if (typeof listener !== 'function') throw new TypeError('debug input listener must be a function');
-      inputListeners.push(listener);
-      return () => { inputListeners = inputListeners.filter(l => l !== listener); };
-    },
+    onDebugInput: admission.onDebugInput,
 
     /**
      * The ASK half: register an admitter consulted BEFORE an input reaches the
@@ -736,11 +553,7 @@ export function createZ80DebugTarget(adapter, opts = {}) {
      * @param {(input: object) => {accepted: boolean}} admitter
      * @returns {() => void} unsubscribe
      */
-    onDebugInputAdmission(admitter) {
-      if (typeof admitter !== 'function') throw new TypeError('debug input admitter must be a function');
-      admitters.push(admitter);
-      return () => { admitters = admitters.filter(a => a !== admitter); };
-    },
+    onDebugInputAdmission: admission.onDebugInputAdmission,
 
     /**
      * Apply a recorded host-input fact — the APPLY half of the replay surface
@@ -779,11 +592,11 @@ export function createZ80DebugTarget(adapter, opts = {}) {
         // value dedups against it. (The old path masked the seed & 0x1f against a
         // raw live record; a replayed 0xFF then failed to dedup a live 0xFF and
         // recorded a fact that never happened. R8 is that defect's regression test.)
-        stamp();
+        admission.stamp();
         if (typeof machine.setButtons !== 'function' || machine.setButtons(payload.mask) === false) {
           return replayRefused('no-input-path', 'this machine has no joystick interface to receive a button mask');
         }
-        observedInputs.set('buttons', signatureOf('z80.buttons', {mask: payload.mask}));
+        admission.seed('buttons', 'z80.buttons', {mask: payload.mask});
         return replayAccepted();
       }
       if (input?.producer === 'z80.keys') {
@@ -800,9 +613,9 @@ export function createZ80DebugTarget(adapter, opts = {}) {
           return replayRefused('no-input-path', 'this machine has no ULA to receive key names');
         }
         // Direct apply + seed, era gate first — see the buttons branch above.
-        stamp();
+        admission.stamp();
         machine.ula.setKeys([...names]);
-        observedInputs.set('keys', signatureOf('z80.keys', {names: [...names]}));
+        admission.seed('keys', 'z80.keys', {names: [...names]});
         return replayAccepted();
       }
       if (input?.producer === 'z80.serial') {

@@ -107,6 +107,11 @@ const TF = 0x0100, IF = 0x0200, DF = 0x0400, OF = 0x0800;
 // flags word fails every test that touches the stack.
 const F_ON = 0xf002, F_OFF = 0x0028;
 const fixFlags = (f) => (f | F_ON) & ~F_OFF;
+// The 80286 flags word differs from the 8086's: bits 12-15 are IOPL (12-13) and
+// NT (14), settable in real mode, and bit 15 reads 0 — not the 8086's "bits
+// 12-15 always 1". So force only bit 1, and clear bits 3, 5 and 15.
+const F_ON286 = 0x0002, F_OFF286 = 0x8028;
+const fixFlags286 = (f) => (f | F_ON286) & ~F_OFF286;
 
 const PARITY = new Uint8Array(256);
 for (let i = 0; i < 256; i++) {
@@ -137,12 +142,19 @@ export class I8086 {
         // drift. Anything that reads this must treat '8086' as the fallback:
         // an unknown string is a caller error and is rejected here rather
         // than silently becoming a 186.
-        if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186') {
+        if (opts.variant !== undefined && opts.variant !== '8086' && opts.variant !== '80186' && opts.variant !== '80286') {
             throw new Error(`8086: unknown variant ${JSON.stringify(opts.variant)} `
-                + "-- expected '8086' or '80186'");
+                + "-- expected '8086', '80186' or '80286'");
         }
         this.variant = opts.variant || '8086';
-        this._is186 = this.variant === '80186';
+        // The 80286 in REAL MODE is the 80186 instruction set (the 15 hole-filling
+        // opcodes, the count-masking shifts, PUSH SP semantics) plus the 0x0F
+        // protected-mode group. This core is a real-mode functional core, so a
+        // '80286' is a superset of the 186 for everything real-mode software uses;
+        // _is286 is carried for the 0x0F group (LGDT/LIDT/SMSW/LMSW/... — not yet
+        // implemented; they fault as UnsupportedOpcode, the honest refusal).
+        this._is286 = this.variant === '80286';
+        this._is186 = this.variant === '80186' || this._is286;
         this.read = bus.read;
         /**
          * THE SAME BUS, UNDER A SECOND NAME. A fetch and a data read are
@@ -177,9 +189,16 @@ export class I8086 {
         this.ip = 0;
         // Power-on vector: FFFF:0000, the top sixteen bytes of the space.
         this.cs = 0xffff; this.ds = 0; this.es = 0; this.ss = 0;
-        this.flags = fixFlags(0);
+        this.flags = (this._is286 ? fixFlags286 : fixFlags)(0);
         this.halted = false;
         this.cycles = 0;
+        // 80286 real-mode state (only touched by the variant's 0x0F group).
+        // MSW: PE|MP|EM|TS in bits 0-3; SST286 fixes it at 0xfff0 before a test.
+        // GDTR/IDTR are loaded by LGDT/LIDT and read back by SGDT/SIDT; they are
+        // not part of the visible register set the vectors compare.
+        this.msw = 0xfff0;
+        this.gdtr = { base: 0, limit: 0 };
+        this.idtr = { base: 0, limit: 0 };
         /** null, or an array the bus operations are appended to. See _rd8. */
         this.busTrace = null;
         this._fsOpcodeSeen = false;
@@ -350,8 +369,12 @@ export class I8086 {
      *  is how period software tells an 8086 from its successors, so it is
      *  not a rough edge to smooth off. */
     _pushR16(i) {
+        const spBefore = this.sp;
         this.sp = (this.sp - 2) & 0xffff;
-        this._wr16(this.ss, this.sp, i === 4 ? this.sp : this._r16(i));
+        // PUSH SP: the 8086 pushes the ALREADY-decremented value; the 286 pushes
+        // the value from BEFORE the decrement. This is the canonical 8086-vs-286
+        // tell, so the variant must reproduce it.
+        this._wr16(this.ss, this.sp, i === 4 ? (this._is286 ? spBefore : this.sp) : this._r16(i));
     }
 
     // ---- ModR/M ---------------------------------------------------------
@@ -1130,6 +1153,59 @@ export class I8086 {
         }
     }
 
+    /**
+     * The 80286 two-byte (0x0F) group — real-mode EXECUTING subset only:
+     * SGDT/SIDT/LGDT/LIDT/SMSW/LMSW (0F 01 /0../6) and CLTS (0F 06). The
+     * protected-mode-only instructions (0F 00/02/03, and the register form of
+     * the descriptor-table loads) fault as #UD on a real-mode 286; those are
+     * added with the SST286 grade in front of us, so for now they throw
+     * Unimplemented (the grinder scores that as 'unsupported', not wrong).
+     * Cycle counts are nominal — this core does not grade 286 timing.
+     */
+    _exec0F286() {
+        const op2 = this._fetch8();
+        if (op2 === 0x01) {
+            const c = this._modrm();                 // ModR/M reg selects the sub-op
+            const seg = this.eaSeg, ea = this.ea;
+            switch (this.reg) {
+                case 0:                              // SGDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this._wr16(seg, ea, this.gdtr.limit & 0xffff);
+                    this._wr16(seg, (ea + 2) & 0xffff, this.gdtr.base & 0xffff);
+                    this._wr8(seg, (ea + 4) & 0xffff, (this.gdtr.base >> 16) & 0xff);
+                    this._wr8(seg, (ea + 5) & 0xffff, 0xff);   // 286 forces the top byte to 0xFF
+                    return 11 + c;
+                case 1:                              // SIDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this._wr16(seg, ea, this.idtr.limit & 0xffff);
+                    this._wr16(seg, (ea + 2) & 0xffff, this.idtr.base & 0xffff);
+                    this._wr8(seg, (ea + 4) & 0xffff, (this.idtr.base >> 16) & 0xff);
+                    this._wr8(seg, (ea + 5) & 0xffff, 0xff);
+                    return 12 + c;
+                case 2:                              // LGDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this.gdtr = { limit: this._rd16(seg, ea),
+                        base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
+                    return 11 + c;
+                case 3:                              // LIDT m
+                    if (this.mod === 3) throw new Unimplemented(0x0f01);
+                    this.idtr = { limit: this._rd16(seg, ea),
+                        base: (this._rd16(seg, (ea + 2) & 0xffff) | (this._rd8(seg, (ea + 4) & 0xffff) << 16)) >>> 0 };
+                    return 12 + c;
+                case 4:                              // SMSW r/m16
+                    this._rm16set(this.msw & 0xffff);
+                    return this.mod === 3 ? 2 : 3 + c;
+                case 6:                              // LMSW r/m16 — PE may be set, never cleared
+                    this.msw = (this._rm16() | (this.msw & 1)) & 0xffff;
+                    return this.mod === 3 ? 3 : 6 + c;
+                default:
+                    throw new Unimplemented(0x0f01);
+            }
+        }
+        if (op2 === 0x06) { this.msw &= ~0x08; return 2; }   // CLTS: clear the TS bit
+        throw new Unimplemented(0x0f00 | op2);
+    }
+
     /** INS: read the port in DX into ES:DI. No segment override applies to a
      *  string DESTINATION, so this does not consult _srcSeg(). */
     _ins(w) {
@@ -1336,9 +1412,12 @@ export class I8086 {
             case 0x06: this._push(this.es); return 10;
             case 0x07: this.es = this._pop(); this.intShadow = 1; return 8;
             case 0x0e: this._push(this.cs); return 10;
-            // POP CS is real on the 8086: there are no two-byte opcodes for
-            // 0x0f to introduce, so it decodes as the pop nobody wanted.
-            case 0x0f: this.cs = this._pop(); this.intShadow = 1; return 8;
+            // 0x0F: on the 8086/186 it is POP CS (no two-byte opcodes exist for
+            // it), a real segment-register load that raises the interrupt shadow.
+            // On the 80286 it is the two-byte-opcode prefix -> the 286 group.
+            case 0x0f:
+                if (this._is286) return this._exec0F286();
+                this.cs = this._pop(); this.intShadow = 1; return 8;
             case 0x16: this._push(this.ss); return 10;
             case 0x17: this.ss = this._pop(); this.intShadow = 1; return 8;
             case 0x1e: this._push(this.ds); return 10;
@@ -1439,8 +1518,8 @@ export class I8086 {
             case 0x9a: { const ip = this._fetch16(), cs = this._fetch16(); this._push(this.cs); this._push(this.ip); this.cs = cs; this.ip = ip; return 28; }
             case 0x9b: return 4;                              // WAIT, with no 8087 to wait for
             case 0x9c: this._push(this.flags); return 10;
-            case 0x9d: this.flags = fixFlags(this._pop()); return 8;
-            case 0x9e: this.flags = fixFlags((this.flags & 0xff00) | this.ah); return 4;
+            case 0x9d: this.flags = (this._is286 ? fixFlags286 : fixFlags)(this._pop()); return 8;
+            case 0x9e: this.flags = (this._is286 ? fixFlags286 : fixFlags)((this.flags & 0xff00) | this.ah); return 4;
             case 0x9f: this.ah = this.flags & 0xff; return 4;
 
             // ---- 0xa0-0xaf: accumulator moves, TEST imm, string ops ------
@@ -1478,7 +1557,7 @@ export class I8086 {
             case 0xcc: this._swInt(3); return 52;
             case 0xcd: { const v = this._fetch8(); this._swInt(v); return 51; }
             case 0xce: if (this.flags & OF) { this._swInt(4); return 53; } return 4;
-            case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = fixFlags(this._pop()); return 24;
+            case 0xcf: this.ip = this._pop(); this.cs = this._pop(); this.flags = (this._is286 ? fixFlags286 : fixFlags)(this._pop()); return 24;
 
             // ---- 0xd0-0xd7: shift group, BCD by immediate, SALC, XLAT ----
             case 0xd0: case 0xd1: case 0xd2: case 0xd3: {

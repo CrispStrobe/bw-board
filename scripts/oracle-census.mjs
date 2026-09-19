@@ -144,6 +144,19 @@ export const INPUTS = [
         ci: 'yes — the `vectors` job checks out v1_binary and grinds all 646,000 per push',
     },
     {
+        id: '80286-vectors', kind: 'oracle',
+        repository: 'SingleStepTests/80286',
+        ciCadence: 'push',   // the `vectors` job, diagnostic 286 census step
+        what: 'SingleStepTests 80286 real-mode — grades the fast functional 286 '
+            + "(src/i8086.js variant:'80286') and the cycle-accurate harris 286.",
+        env: 'I80286_VECTORS',
+        paths: [join(HOME, 'code', '80286-vectors', 'v1_real_mode')],
+        gates: ['scripts/grind-i8086-286.mjs', 'scripts/grind-i80286.mjs'],
+        obtain: 'git clone --depth 1 https://github.com/SingleStepTests/80286 ~/code/80286-vectors',
+        ciAvailable: true,
+        ci: 'yes — the `vectors` job checks out v1_real_mode and runs the diagnostic 286 gap census',
+    },
+    {
         id: '8088-vectors', kind: 'oracle',
         repository: 'SingleStepTests/v20',
         ciCadence: 'push',   // the `vectors186` job

@@ -17,6 +17,7 @@ import {
   AVRTWI, AVRSPI,
 } from 'avr8js';
 import { CHIPS, ATMEGA328P } from './avr-chips.js';
+import { fastAvrInstruction } from './vendor/avr8js-fast/instruction.js';
 import { installInstructionDebugEvents } from './instruction-debug-events.js';
 import { createTWIBridge } from './twi-bridge.js';
 import { createSPIBridge } from './spi-bridge.js';
@@ -64,6 +65,12 @@ export function createAvr8jsAdapter(opts = {}) {
   }
   if (opts.program) progMem.set(opts.program);
   const cpu = new CPU(progMem, chip.sramBytes);
+  // FAST-DISPATCH FORK (src/vendor/avr8js-fast/instruction.js): avr8js decodes
+  // each opcode through a 99-branch linear if/else chain (72.7% of ticks under
+  // --prof). fastAvrInstruction is a behavior-identical switch(opcode>>12)
+  // restructuring, verified by an exhaustive stock-vs-fork differential over all
+  // 65536 opcodes. Opt out with opts.fastDispatch === false (the A/B baseline).
+  const instr = opts.fastDispatch === false ? avrInstruction : fastAvrInstruction;
   const deviceAccessListeners = new Set();
   const publishDeviceAccess = (fact) => {
     for (const listener of [...deviceAccessListeners]) {
@@ -315,7 +322,7 @@ export function createAvr8jsAdapter(opts = {}) {
       // instruction and nothing else.
       const runOne = () => {
         const before = cpu.cycles;
-        avrInstruction(cpu);
+        instr(cpu);
         cpu.pc &= pcMask;
         cpu.tick();
         return cpu.cycles - before;

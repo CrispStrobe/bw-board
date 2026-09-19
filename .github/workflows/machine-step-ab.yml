@@ -1,0 +1,47 @@
+name: Machine step A/B
+
+# Interleaved A/B for the lean z80/6502 machine step() hot path vs the stock
+# master step(), on a quiet cloud runner. The stock machine is git-show'd from
+# origin/master into src/<name>.stock.js at runtime (so its relative imports
+# resolve) and is never committed. Report the RATIO; a same-code noise floor
+# accompanies it.
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: 'Steps per trial'
+        required: false
+        default: '30000000'
+  push:
+    branches: ['lane/machine-step-lean-hotpath', 'lane/avr8js-switch-dispatch']
+
+permissions:
+  contents: read
+
+jobs:
+  ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci --omit=dev || npm i --omit=dev || true
+      - name: Materialise the stock (origin/master) machine step for the A/B baseline
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth 1 origin master
+          git show origin/master:src/z80-machine.js   > src/z80-machine.stock.js
+          git show origin/master:src/m6502-machine.js > src/m6502-machine.stock.js
+          echo "stock copies written; they are untracked and never committed"
+      - name: A/B (interleaved, medians, same-code noise floor)
+        run: |
+          set -euo pipefail
+          STEPS='${{ github.event.inputs.steps || 30000000 }}'
+          for pass in 1 2 3; do
+            echo "===== pass $pass ====="
+            node scripts/bench-machine-step-ab.mjs "$STEPS" 15
+          done
